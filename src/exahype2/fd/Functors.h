@@ -43,13 +43,14 @@ namespace exahype2 {
       /**
        * The max eigenvalue is used if and only if you have adaptive time stepping.
        */
-      typedef std::function< double(
+      typedef std::function< void(
         const double * __restrict__ Q,
         const tarch::la::Vector<Dimensions,double>&  gridCellX,
         const tarch::la::Vector<Dimensions,double>&  gridCellH,
         double                                       t,
         double                                       dt,
-        int                                          normal
+        int                                          normal,
+        double* __restrict__                         maxEigen
       ) >   MaxEigenvalue;
   }
 }

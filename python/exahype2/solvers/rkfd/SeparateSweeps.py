@@ -65,13 +65,10 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       if ({{PREDICATES[PREDICATE_NO]}}) {
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
-        int primaryVarsIndices[25]={ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-                                      10,11,12,13,14,15,16,17,18,19,
-                                      20,21,22,53,54};
-        int auxiliaryVarsIndices[34]={23,24,25,26,27,28,29,30,31,32,
-                                        33,34,35,36,37,38,39,40,41,42,
-                                        43,44,45,46,47,48,49,50,51,52,
-                                        55,56,57,58}; 
+        {% if RECONSTRUCTION_STAGES != 0 %}
+        {{PRIMARY_VARS_INDICES}}
+        {{AUXILIARY_VARS_INDICES}}
+        {% endif %}
         
         dfor( dof, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
         {% if RECONSTRUCTION_STAGES==0 %}
@@ -110,13 +107,10 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       if ({{PREDICATES_RECONSTRUCTION[PREDICATE_NO]}}) {
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
-        int primaryVarsIndices[25]={ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-                                      10,11,12,13,14,15,16,17,18,19,
-                                      20,21,22,53,54};
-        int auxiliaryVarsIndices[34]={23,24,25,26,27,28,29,30,31,32,
-                                        33,34,35,36,37,38,39,40,41,42,
-                                        43,44,45,46,47,48,49,50,51,52,
-                                        55,56,57,58}; 
+        {% if RECONSTRUCTION_STAGES != 0 %}
+        {{PRIMARY_VARS_INDICES}}
+        {{AUXILIARY_VARS_INDICES}}
+        {% endif %}
         
         dfor( dof, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {                          
           for (int unknown : primaryVarsIndices) {
@@ -167,13 +161,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}} 
       {% else %}
       if ({{IS_UNDER_RECONSTRUCTION}}) {
-        ::exahype2::fd::fd4::reconstruct_first_derivatives(
-            patchData,
-            {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},  // int                     numberOfGridCellsPerPatchPerAxis,
-            {{HALO_SIZE}}, 
-            {{NUMBER_OF_UNKNOWNS}},
-            {{NUMBER_OF_AUXILIARY_VARIABLES}}
-          );
+        ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{RECONSTRUCTION_KERNEL_CALL}} 
       } else if ({{IS_UNDER_RKSTEP}}) {
         ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}} 
       }
@@ -269,8 +257,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
                     self._solver._name,
                     step)
 
-            d["IS_UNDER_RECONSTRUCTION"]=re_condition_text
-            d["IS_UNDER_RKSTEP"]=rk_condition_text
+            d["IS_UNDER_RECONSTRUCTION"] = re_condition_text
+            d["IS_UNDER_RKSTEP"] = rk_condition_text
 
 
         d["BUTCHER_TABLEAU_WEIGHTS"] = self._butcher_tableau.weight_matrix()

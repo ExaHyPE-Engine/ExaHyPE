@@ -23,13 +23,8 @@ def get_body_of_adm_constraints(patch_size, number_of_output_variable, so_flag):
     extra_derivative_assign="""
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
-        int primaryVarsIndices[25]={ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-                                      10,11,12,13,14,15,16,17,18,19,
-                                      20,21,22,53,54};
-        int auxiliaryVarsIndices[34]={23,24,25,26,27,28,29,30,31,32,
-                                        33,34,35,36,37,38,39,40,41,42,
-                                        43,44,45,46,47,48,49,50,51,52,
-                                        55,56,57,58}; 
+        {{PRIMARY_VARS_INDICES}}
+        {{AUXILIARY_VARS_INDICES}}
         
         dfor( dof, 3 ) {
           for (int unknown : auxiliaryVarsIndices) {
@@ -53,18 +48,6 @@ def get_body_of_adm_constraints(patch_size, number_of_output_variable, so_flag):
         tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(overlap);
 
         double gradQ[3*59]={ 0 };
-
-        /*for (int d=0; d<3; d++) {
-          tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
-          tarch::la::Vector<Dimensions,int> rightCell = currentCell;
-          leftCell(d)  -= 1;
-          rightCell(d) += 1;
-          const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*overlap);
-          const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*overlap);
-          for(int i=0; i<59; i++) {
-            gradQ[d*59+i] = ( oldQWithHalo[rightCellSerialised*(59+n_a_v)+i] - oldQWithHalo[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
-          }
-        }*/
 
         for (int d=0; d<3; d++) {
           tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
@@ -99,13 +82,8 @@ def get_body_of_Psi_Calc(patch_size, number_of_output_variable, so_flag):
     extra_derivative_assign="""
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
-        int primaryVarsIndices[25]={ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-                                      10,11,12,13,14,15,16,17,18,19,
-                                      20,21,22,53,54};
-        int auxiliaryVarsIndices[34]={23,24,25,26,27,28,29,30,31,32,
-                                        33,34,35,36,37,38,39,40,41,42,
-                                        43,44,45,46,47,48,49,50,51,52,
-                                        55,56,57,58}; 
+        {{PRIMARY_VARS_INDICES}}
+        {{AUXILIARY_VARS_INDICES}}
         
         dfor( dof, 3 ) {
           for (int unknown : auxiliaryVarsIndices) {
@@ -188,7 +166,9 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables, res
           double                                       dt,
           int                                          normal
         ) -> double {
-          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
+          double tem=1.0;
+          repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal, &tem );
+          return tem;
         },
         [&](
           double * __restrict__                        Q,
@@ -230,7 +210,9 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables, res
           double                                       dt,
           int                                          normal
         ) -> double {
-          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
+          double tem=1.0;
+          repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal, &tem );
+          return tem;
         },
         [&](
           double * __restrict__                        Q,

@@ -216,6 +216,10 @@ class CellCenteredFiniteDifferences(object):
 
         self._compute_kernel_call = "#error Not yet defined"
 
+        self._reconstruction_kernel_call = "#error Not yet defined"
+        self._primary_variables_indices = "#error Not yet defined"
+        self._auxiliary_variables_indices = "#error Not yet defined"
+
         self._compute_eigenvalue = False
         self._abstract_solver_user_declarations = ""
         self._abstract_solver_user_definitions = ""
@@ -1403,6 +1407,10 @@ The finest mesh width of """
         d["COMPUTE_KERNEL_CALL"] = jinja2.Template(
             self._compute_kernel_call, undefined=jinja2.DebugUndefined
         ).render(**d)
+
+        d["RECONSTRUCTION_KERNEL_CALL"] = jinja2.Template(self._reconstruction_kernel_call, undefined=jinja2.DebugUndefined).render(**d)
+        d["PRIMARY_VARS_INDICES"] = self._primary_variables_indices
+        d["AUXILIARY_VARS_INDICES"] = self._auxiliary_variables_indices
 
         d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = jinja2.Template(
             self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined

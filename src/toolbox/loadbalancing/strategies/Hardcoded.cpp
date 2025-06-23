@@ -17,12 +17,10 @@ toolbox::loadbalancing::strategies::Hardcoded::Hardcoded(
   std::initializer_list<int> splittingTrees,
   std::initializer_list<int> numberOfCells,
   std::initializer_list<int> destinationRanks,
-  std::initializer_list<peano4::SplitInstruction::Mode> modes,
-  bool handOutOnePartitionPerCore
+  std::initializer_list<peano4::SplitInstruction::Mode> modes
 ):
   AbstractLoadBalancing( nullptr, nullptr ),
-  _currentTimeStamp(0),
-  _handOutOnePartitionPerCore(handOutOnePartitionPerCore) {
+  _currentTimeStamp(0) {
   assertionEquals4( timeStamps.size(),       numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
   assertionEquals4( splittingTrees.size(),   numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
   assertionEquals4( destinationRanks.size(), numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
@@ -42,13 +40,35 @@ toolbox::loadbalancing::strategies::Hardcoded::Hardcoded(
     destinationRank++;
     mode++;
   }
-
-  // I would love to have some info output here, but some codes use the lb as static attribute
-  // so it might come up before the logging infrastructure is up. This means that the logInfo
-  // will crash.
-  // logInfo( "Hardcoded(...)", "created hardcoded load balancing strategy with " << _splits.size() << " decomposition(s)" );
 }
 
+
+toolbox::loadbalancing::strategies::Hardcoded::Hardcoded(
+  std::initializer_list<int> timeStamps,
+  std::initializer_list<int> splittingTrees,
+  std::initializer_list<int> numberOfCells,
+  std::initializer_list<int> destinationRanks,
+  peano4::SplitInstruction::Mode  mode
+):
+  AbstractLoadBalancing( nullptr, nullptr ),
+  _currentTimeStamp(0) {
+  assertionEquals4( timeStamps.size(),       numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
+  assertionEquals4( splittingTrees.size(),   numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
+  assertionEquals4( destinationRanks.size(), numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
+
+  auto timeStamp       = timeStamps.begin();
+  auto splittingTree   = splittingTrees.begin();
+  auto cells           = numberOfCells.begin();
+  auto destinationRank = destinationRanks.begin();
+
+  while (timeStamp!=timeStamps.end()) {
+    _splits.push( Split( *timeStamp, *splittingTree, *cells, *destinationRank, mode ) );
+    timeStamp++;
+    splittingTree++;
+    cells++;
+    destinationRank++;
+  }
+}
 
 
 toolbox::loadbalancing::strategies::Hardcoded::Split::Split( const Split& split ):
@@ -73,8 +93,13 @@ void toolbox::loadbalancing::strategies::Hardcoded::finishStep() {
   _currentTimeStamp++;
 
   while (not _splits.empty() and _currentTimeStamp>=_splits.front().timeStamp) {
+    if (_currentTimeStamp>_splits.front().timeStamp) {
+      logError( "finishStep()", "splitting instructions lag behind actual simulation evolution (current traversal " << _currentTimeStamp << " while split should have happened in step " << _splits.front().timeStamp << "). Try to catch up");
+    }
+
     Split split( _splits.front() );
     _splits.pop();
+
     if ( peano4::parallel::SpacetreeSet::getInstance().isLocalSpacetree( split.splittingTree) ) {
       if ( _state==State::SwitchedOff ) {
         logError(
@@ -82,18 +107,6 @@ void toolbox::loadbalancing::strategies::Hardcoded::finishStep() {
           "wanted to split " << split.numberOfCells << " cell(s) from tree " <<
           split.splittingTree << " and to deploy them to new tree on rank " << split.destinationRank <<
           ". However, load (re-)balancing is deactivated"
-        );
-      }
-      else if (
-        split.destinationRank == tarch::mpi::Rank::getInstance().getRank()
-        and
-        _handOutOnePartitionPerCore
-        and
-        static_cast<int>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()) >= tarch::multicore::Core::getInstance().getNumberOfThreads()
-      ) {
-        logWarning(
-          "finishStep()", "ignore instruction to split rank further by  cutting of " << split.numberOfCells << 
-          ", as lb is told not to overbook local cores"
         );
       }
       else if (not peano4::parallel::SpacetreeSet::getInstance().split(

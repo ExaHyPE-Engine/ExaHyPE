@@ -9,13 +9,8 @@
 
 
 std::map< int, tarch::multicore::BooleanSemaphore* >  swift2::TaskEnumerator::_resources;
-tarch::Enumerator                                     swift2::TaskEnumerator::_globalEnumerator;
 swift2::TaskEnumerator::ResourcesSemaphore            swift2::TaskEnumerator::_resourcesSemaphore;
 
-
-void swift2::TaskEnumerator::reset() {
-  _globalEnumerator.reset();
-}
 
 
 void swift2::TaskEnumerator::insertNumber(int number) {
@@ -42,26 +37,6 @@ void swift2::TaskEnumerator::insertNumbers(const tarch::la::Vector<TwoPowerD,int
       insertNumber( numbers[i] );
     }
   }
-}
-
-
-int swift2::TaskEnumerator::getNumber() {
-  return _globalEnumerator.getNumber();
-}
-
-
-void swift2::TaskEnumerator::releaseNumber( int value ) {
-  _globalEnumerator.releaseNumber(value);
-}
-
-
-int swift2::TaskEnumerator::size() const {
-  return _globalEnumerator.size();
-}
-
-
-std::string swift2::TaskEnumerator::toString() const {
-  return _globalEnumerator.toString();
 }
 
 

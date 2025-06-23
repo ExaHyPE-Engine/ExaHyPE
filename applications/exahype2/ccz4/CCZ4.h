@@ -121,16 +121,6 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
      * @return Max eigenvalue. Result has to be positive, so we are actually speaking
      *   about the maximum absolute eigenvalue.
      */
-    virtual double maxEigenvalue(
-      const double * __restrict__ Q, // Q[59+0],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal
-    ) override;
-    
-
     virtual void maxEigenvalue(
       const double * __restrict__ Q, // Q[59+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -209,40 +199,6 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-    static GPUCallableMethod double maxEigenvalue(
-      const double * __restrict__ Q, // Q[59+0],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      ::exahype2::Solver::Offloadable
-    ) {
-      const double np = 1.0;
-      #if defined(CCZ4EINSTEIN)
-      const double qmin = std::min({Q[0],Q[3],Q[5]});
-      const double alpha = std::max({1.0, Q[16]}) * std::max({1.0, pow(Q[54],1.0/np)}) / std::sqrt(qmin);
-      #else
-      const double alpha = 1.0;
-      #endif
-
-      constexpr double sqrtwo = 1.4142135623730951;
-      // NOTE parameters are stored in abstract superclass
-      const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});
-      const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
-      double tem = std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
-      bool flag = false;
-      return tem;
-    }
-
-    #if defined(GPUOffloadingOMP)
-    #pragma omp end declare target
-    #endif
-    
-
-    #if defined(GPUOffloadingOMP)
-    #pragma omp declare target
-    #endif
     static GPUCallableMethod void maxEigenvalue(
       const double * __restrict__ Q, // Q[59+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -267,14 +223,13 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
       const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
       double tem = std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
       bool flag = false;
-      maxEigenvalue[0] = tem;
+      maxEigenvalue[0]=tem;
     }
 
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     
-     
    
     
     /**

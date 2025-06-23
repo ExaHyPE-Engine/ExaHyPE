@@ -1,4 +1,4 @@
-// This file is part of the Peano's PETSc extension. For conditions of
+// This file is part of the Peano's multigrid extension. For conditions of
 // distribution and use, please see the copyright notice at
 // www.peano-framework.org
 #pragma once
@@ -11,6 +11,8 @@
 #include "tarch/multicore/BooleanSemaphore.h"
 
 #include "peano4/utils/Globals.h"
+
+#include "SolverStatistics.h"
 
 
 namespace mghype {
@@ -25,7 +27,7 @@ namespace mghype {
 /**
  * Abstract base class for all solvers
  */
-class mghype::matrixfree::solvers::Solver {
+class mghype::matrixfree::solvers::Solver: public mghype::matrixfree::solvers::SolverStatistics {
   public:
     /**
      * Construct the solver
@@ -37,37 +39,7 @@ class mghype::matrixfree::solvers::Solver {
      */
     Solver(const std::string&  name, double tolerance);
 
-    virtual bool terminationCriterionHolds();
-
-    void updateGlobalResidual(
-      double residual,
-      const tarch::la::Vector<Dimensions,double>&  h
-    );
-    
-    /*
-     * 
-     * @todo This name is not good. We should argue over a cycle
-     * residual or something similar. But in any case, it is not 
-     * a good name. 
-     */
-    void updateGlobalPrecondResidual(
-      double residual
-    );
-    void updateGlobalSolutionUpdates(
-      double deltaU,
-      const tarch::la::Vector<Dimensions,double>&  h
-    );
-    void updateMinMaxMeshSize(
-      const tarch::la::Vector<Dimensions,double>&  h
-    );
-
-    void clearGlobalPrecondResidualUpdate();
-
-    double getGlobalResidualMaxNorm() const;
-    std::array<double, 2> getGlobalPrecondResidualNorms() const;
-
     virtual std::string toString() const;
-    virtual std::string reportPrecondNorms() const;
 
     /**
      * End the traversal
@@ -93,59 +65,5 @@ class mghype::matrixfree::solvers::Solver {
      * Usually only used for debuggin purposes
      */
     std::string _name;
-
-    /**
-     * @see terminationCriterionHolds()
-     */
-    const double _tolerance;
-
-    /**
-     * Observed mesh width
-     */
-    double     _minH;
-
-    /**
-     * Observed mesh width
-     */
-    double     _maxH;
-
-    double     _globalResidualMaxNorm;
-    double     _globalResidualEukledianNormSquared;
-    double     _globalResidualHNormSquared;
-
-    double _initialGlobalResidualMaxNorm;
-    double _initialGlobalResidualEukledianNormSquared;
-    double _initialGlobalResidualHNormSquared;
-
-    double _previousGlobalResidualMaxNorm;
-    double _previousGlobalResidualEukledianNormSquared;
-    double _previousGlobalResidualHNormSquared;
-
-    double     _globalDeltaUMaxNorm;
-    double     _globalDeltaUEukledianNormSquared;
-    double     _globalDeltaUHNormSquared;
-
-    double _globalPrecondResidualMaxNorm;
-    double _globalPrecondResidualEukledianNormSquared;
-
-    /**
-     * Semaphore for global residual values
-     */
-    tarch::multicore::BooleanSemaphore  _semaphore;
-
-    /**
-     * Clear the global mesh stats
-     *
-     * Most solvers call this one in beginMeshSweep().
-     */
-    void clearGlobalResidualAndSolutionUpdate();
-
-    /**
-     * Synchronise the global stats between MPI ranks
-     *
-     * Becomes nop if there is no MPI. The routine also takes care of the
-     * minimum and maximum mesh size tracked.
-     */
-    void synchroniseGlobalResidualAndSolutionUpdate();
 };
 
