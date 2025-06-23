@@ -63,6 +63,7 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/multicore/multicore.cpp \
 	tarch/multicore/Core.cpp \
 	tarch/multicore/Lock.cpp \
+	tarch/multicore/TaskEnumerator.cpp \
 	tarch/multicore/MultiReadSingleWriteSemaphore.cpp \
 	tarch/multicore/MultiReadSingleWriteLock.cpp \
 	tarch/multicore/RecursiveLock.cpp \
@@ -80,6 +81,7 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/multicore/omp/RecursiveSemaphore.cpp \
 	tarch/multicore/omp/Tasks.cpp \
 	tarch/multicore/taskfusion/taskfusion.cpp \
+	tarch/multicore/taskfusion/FusableTasksQueue.cpp \
 	tarch/multicore/taskfusion/LogReadyTask.cpp \
 	tarch/multicore/taskfusion/ProcessReadyTask.cpp \
 	tarch/multicore/tbb/multicore.cpp \

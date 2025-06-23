@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/Enumerator.h"
+#include "tarch/multicore/TaskEnumerator.h"
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
 
@@ -50,60 +50,9 @@ namespace swift2 {
  *
  *
  */
-class swift2::TaskEnumerator {
+class swift2::TaskEnumerator: public tarch::multicore::TaskEnumerator {
   public:
     TaskEnumerator() = default;
-
-    void reset();
-
-    /**
-     * Create a new task number
-     *
-     * Returns a unique non-zero number which is not yet used anywhere else on
-     * this rank.
-     *
-     *
-     * ## Correlation to resources
-     *
-     * Resources are tied to numbers in the way that each vertex and cell
-     * number plus its underlying even (touch vertex first, touch cell, touch
-     * vertex last) identifies one unique counter: In practice, each number
-     * that we create can yield up to three resource entries. We don't know
-     * the correlation at this point, so we cannot lock any resources at this
-     * point.
-     *
-     *
-     * ## Thread safety
-     *
-     * The tarch::Enumerator is thread safe, so we don't have to protect the
-     * actual result number generation. However, once we have a new number,
-     * we also check if the resource map is properly initialised. For this, we
-     * need a semaphore, as we might alter the container.
-     */
-    int getNumber();
-
-    /**
-     * Free task number
-     *
-     * Free a number again. number has to be the result of a previous
-     * getNumber() call. While getNumber() can generate resources, we do not
-     * free them in releaseNumber().
-     *
-     * @see getNumber()
-     */
-    void releaseNumber( int value );
-
-    /**
-     * Number of numbers handed out so far.
-     *
-     * Decorator for tarch::Enumerator::size().
-     */
-    int size() const;
-
-    /**
-     * Decorator for tarch::Enumerator::toString().
-     */
-    std::string toString() const;
 
     /**
      * Lock resources
@@ -152,8 +101,6 @@ class swift2::TaskEnumerator {
     static void unlockResources( const tarch::la::Vector<TwoPowerD,int>& numbers );
 
   private:
-    static tarch::Enumerator _globalEnumerator;
-
     /**
      * Each task is tied to a resource, i.e. a unique number, which we can
      * lock and unlock again.
