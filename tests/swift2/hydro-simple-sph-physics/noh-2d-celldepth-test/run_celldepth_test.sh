@@ -26,7 +26,8 @@ PLOT_DELTA=0.01
 
 # if "false", will skip compiling if exec already exists, and
 # will skip running experiment if outputfile already exists
-REDO="false"
+# REDO="false"
+REDO="true"
 
 for N_PART in 512; do
     for CELL_SIZE_MAX in 2; do
