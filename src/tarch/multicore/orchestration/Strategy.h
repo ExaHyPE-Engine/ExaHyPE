@@ -86,8 +86,6 @@ public:
    * @param maxTasks How many tasks are to be fused at most. Has to be bigger
    *   than minTasks. If you set it to one however, you disable fusion and
    *   tasks go straight into the runtime system as proper tasks.
-   * @param timeoutNanoSeconds Timeout, i.e. time to wait for the right number
-   *   of fused tasks to arrive.
    *
    * @see Consult the page @ref documentation_tarch_task_fusion_strategies
    *   for recommendations and hints on task fusion strategies.
@@ -98,16 +96,15 @@ public:
     int device;
     int minTasks;
     int maxTasks;
-    std::chrono::microseconds timeoutMicroSeconds;
-    FuseInstruction(int device_, int minTasks_, int maxTasks_, const std::chrono::microseconds& timeoutMicroSeconds_ = std::chrono::microseconds(0)):
+    FuseInstruction(int device_, int minTasks_, int maxTasks_):
       device(device_),
       minTasks(minTasks_),
-      maxTasks(maxTasks_),
-      timeoutMicroSeconds(timeoutMicroSeconds_) {}
+      maxTasks(maxTasks_)
+      {}
 
     std::string toString() const {
       return "(#device=" + std::to_string(device) + ",min=" + std::to_string(minTasks)
-             + ",max=" + std::to_string(maxTasks) + ",timeout=" + std::to_string(timeoutMicroSeconds.count()) + "ms)";
+             + ",max=" + std::to_string(maxTasks) + ")";
     }
   };
 
