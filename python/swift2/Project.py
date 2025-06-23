@@ -137,6 +137,13 @@ class Project(object):
                 self._global_max_h, current_species_set.particle_model.max_h
             )
 
+    def __compute_global_min_h(self):
+        self._global_min_h = sys.float_info.max
+        for current_species_set in self._particle_species_set:
+            self._global_min_h = min(
+                self._global_min_h, current_species_set.particle_model.min_h
+            )
+
     def __export_constants(self):
         """
 
@@ -183,6 +190,7 @@ class Project(object):
         self._project.constants.export("PlotterPrecision", str(self._plotter_precision))
         self._project.constants.export_boolean_sequence("PeriodicBC", self._periodic_BC)
         self._project.constants.export("GlobalMaxH", str(self._global_max_h))
+        self._project.constants.export("GlobalMinH", str(self._global_min_h))
 
         build_string = "python3 "
         for i in sys.argv:
@@ -261,6 +269,20 @@ The coarsest regular mesh hence will host """
             + str((3**self._dimensions) ** (self.__real_max_mesh_size()[1]))
             + """ octants.
 
+The finest mesh chosen has a mesh width of h_min="""
+            + str(self._global_min_h)
+            + """.
+As Peano realises three-partitioning, the actual minimal mesh size will be h_min="""
+            + str(self.__real_min_mesh_size()[0])
+            + """.
+This corresponds to at least """
+            + str(self.__real_min_mesh_size()[1])
+            + """ spacetree levels.
+The coarsest regular mesh hence will host """
+            + str((3**self._dimensions) ** (self.__real_min_mesh_size()[1]))
+            + """ octants.
+
+
 Once this resultion is reached, the mesh will stop the initial load balancing, insert the
 particles and then kick off the simulation. The mesh might be refined and erased subsequently,
 but it will never become coarser than these constraints.
@@ -312,7 +334,28 @@ levels.
         return (h, level)
 
     def __real_max_mesh_size(self):
+        """!
+        
+        Return the max mesh size that the code really will use.
+        
+        See the explanation in the generated Readme.md file or in 
+        real_mesh_size why this value is smaller than the real mesh 
+        size.
+        
+        """
         return self.real_mesh_size(self._global_max_h)
+
+    def __real_min_mesh_size(self):
+        """!
+        
+        Return the min mesh size that the code really will use.
+        
+        See the explanation in the generated Readme.md file or in 
+        real_mesh_size why this value is smaller than the real mesh 
+        size.
+        
+        """
+        return self.real_mesh_size(self._global_min_h)
 
     def __configure_makefile(self):
         self._project.output.makefile.set_dimension(self._dimensions)
@@ -482,6 +525,7 @@ levels.
         """
         self.__generate_global_state_files()
         self.__compute_global_max_h()
+        self.__compute_global_min_h()
 
         #
         # Make plotting resort and filter the particles. For this, they need
@@ -603,7 +647,7 @@ levels.
         self.algorithm_step_plot.add_action_set(action_set_plot_grid)
 
         action_set_create_regular_grid = peano4.toolbox.CreateRegularGrid(
-            self._global_max_h
+            self._global_min_h
         )
         action_set_create_regular_grid.descend_invocation_order = (
             self.algorithm_step_create_grid.lowest_descend_invocation_order() - 1

@@ -15,6 +15,8 @@ timing() {
 }
 
 
+# Set path
+export PYTHONPATH=../../../../python
 
 # Script to run experiment (Noh 2D)
 
