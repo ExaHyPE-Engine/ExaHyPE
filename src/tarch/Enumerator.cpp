@@ -6,15 +6,21 @@
 #include <limits>
 
 
-tarch::Enumerator::Enumerator():
+tarch::logging::Log         tarch::Enumerator::_log( "tarch::Enumerator" );
+
+
+tarch::Enumerator::Enumerator(int max):
   _semaphore(),
-  _activeNumbers()
+  _activeNumbers(),
+  _max(max),
+  _lastNumberHandedOut(-1)
 {}
 
 
 void tarch::Enumerator::reset() {
   tarch::multicore::Lock lock( _semaphore );
   _activeNumbers.clear();
+  _lastNumberHandedOut = -1;
 }
 
 
@@ -26,18 +32,29 @@ int tarch::Enumerator::size() const {
 int tarch::Enumerator::getNumber() {
   tarch::multicore::Lock lock( _semaphore );
 
-  int                    result = _activeNumbers.size();
-  constexpr int          Increment  = 23;
-  constexpr int          Max    = std::numeric_limits<int>::max() - 2 * Increment;
-
-  assertion2(Max % Increment != 0, Increment, Max);
-
-  while (_activeNumbers.count(result) > 0) {
-    result = result % Max;
-    result += Increment;
+  if ( size()>=_max ) {
+    return NoNumber;
   }
-  _activeNumbers.insert(result);
-  return result;
+  else {
+    while (_activeNumbers.count(_lastNumberHandedOut) > 0) {
+      _lastNumberHandedOut++;
+      _lastNumberHandedOut = _lastNumberHandedOut % _max;
+    }
+
+    _activeNumbers.insert(_lastNumberHandedOut);
+    return _lastNumberHandedOut;
+  }
+}
+
+
+void tarch::Enumerator::setMax( int max ) {
+  for (auto& p: _activeNumbers) {
+    if (p>=_max) {
+      logError( "setMax(max)", "had handed out " << p << " while new max is set to " << max );
+      assertion(false);
+    }
+  }
+  _max = max;
 }
 
 

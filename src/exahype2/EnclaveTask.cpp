@@ -10,7 +10,7 @@
 tarch::logging::Log exahype2::EnclaveTask::_log("exahype2::EnclaveTask");
 
 
-tarch::Enumerator   exahype2::EnclaveTask::_enumerator;
+tarch::multicore::TaskEnumerator   exahype2::EnclaveTask::_enumerator;
 
 
 int exahype2::EnclaveTask::getNumberOfActiveTasks() { return _enumerator.size(); }

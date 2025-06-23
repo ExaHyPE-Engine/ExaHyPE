@@ -4,6 +4,9 @@ import peano4
 import mghype
 import numpy as np
 
+import toolbox.loadbalancing.api
+    
+
 print( """
 
 Peano 4 multigrid solver using Discontinuous Galerkin
@@ -14,6 +17,7 @@ parser = argparse.ArgumentParser(description='Multigrid - Poisson solver')
 parser.add_argument("-j",   "--parallel-builds",      dest="j",              type=int, default=-1, help="Parallel builds" )
 parser.add_argument("-pd",  "--peano-dir",            dest="peanodir",       default="../../..", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",              dest="verbose",        action="store_true", default=False, help="Verbose")
+parser.add_argument("-ib",  "--ill-balance",          dest="ill_balance",    action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, required=True, help="Polynomial Degree")
 parser.add_argument("-m",   "--meshsize",             dest="meshsize",       required=True, help="Mesh size")
@@ -100,9 +104,8 @@ project.add_solver(solver)
 # Configure build
 #
 build_mode = peano4.output.CompileMode.Release
+#build_mode = peano4.output.CompileMode.Stats
 #build_mode = peano4.output.CompileMode.Asserts
-
-#project.set_multicore_orchestration
 
 
 cube_size = 1.0
@@ -122,7 +125,44 @@ if args.max_trees>0:
 else:
     max_trees = "::exahype2::LoadBalancingConfiguration::UseNumberOfThreads"
 
-project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration(0.9, 0, false, {}, {})".format(max_trees, max_trees) )
+project.set_multicore_orchestration( """new ::tarch::multicore::orchestration::Hardcoded(
+  8,256,
+  tarch::multicore::Task::Host,
+  ::tarch::multicore::orchestration::Hardcoded::NoNestedParallelism,
+  ::tarch::multicore::orchestration::Hardcoded::NoTimeout,
+  ::tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks
+)""" )
+
+
+# 12, 531441
+
+if args.ill_balance:
+    tree_levels     = toolbox.loadbalancing.api.real_mesh_size_and_level(float(args.meshsize),1.0)[1]
+    split_iteration = toolbox.loadbalancing.api.compute_regular_mesh_construction_grid_construction_sweeps(tree_levels)
+    assert args.max_trees>0
+    
+    dimensions=2
+    new_partitions = [ int(3**(dimensions*tree_levels)/2) ]
+
+    for i in range(0,args.max_trees-2):
+        new_partitions.append( int(new_partitions[-1] / 2) )
+        
+    if new_partitions[-1]==0:
+        new_partitions = [ x+1 for x in new_partitions ]
+        
+    target_ranks = [0 for x in new_partitions]
+        
+    project.set_load_balancing( 
+        "toolbox::loadbalancing::strategies::Hardcoded", 
+        toolbox.loadbalancing.api.output.create_constructor_initialisation_string(split_iteration,
+                                                                                  0,
+                                                                                  new_partitions,
+                                                                                  target_ranks)
+    )
+else:
+    project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration(0.9, 0, false, {}, {})".format(max_trees, max_trees) )
+    
+    
 project.set_Peano4_installation( args.peanodir, build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)

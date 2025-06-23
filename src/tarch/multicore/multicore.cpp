@@ -78,6 +78,7 @@ tarch::multicore::orchestration::Strategy& tarch::multicore::getOrchestration() 
 
 
 void tarch::multicore::waitForTasks(const std::set<TaskNumber>& inDependencies) {
+  tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
   tarch::multicore::native::waitForTasks(inDependencies);
 }
 
@@ -142,6 +143,7 @@ void tarch::multicore::spawnTask(
   tarch::logging::Statistics::getInstance().inc(SpawnedTasksStatisticsIdentifier, 1, false, true);
 
   if (task->canFuse()) {
+    taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
     taskfusion::translateFusableTaskIntoTaskSequence(task, inDependencies, taskNumber);
   }
   else {
