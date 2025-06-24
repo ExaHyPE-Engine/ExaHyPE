@@ -28,7 +28,9 @@ Please notice the missing of certain installed libraries may lead to compiling e
 
 Depending on your system, you might have to load the GSL module separately
 before your next step, it is required by the external library of
-initial condition for black holes (no need for gauge wave scenario).
+initial condition for black holes (no need for gauge wave scenario). In principle the library is already implemented
+in the ExaHyPE and no external including is needed, but I keep the entry below just in case. GSL module is available
+for most of cluster system 
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 module load gsl
