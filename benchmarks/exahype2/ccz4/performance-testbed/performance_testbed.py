@@ -1,14 +1,12 @@
 import os
+import sys
 import argparse
-import dastgen2
-import shutil
-import numpy as np
 
 import peano4
 import exahype2
 import peano4.toolbox.particles
-from peano4.toolbox.blockstructured.DynamicAMR import DynamicAMR
 
+sys.path.insert(0, os.path.abspath("../../../../applications/exahype2/ccz4"))
 
 from Probe_file_gene import tracer_seeds_generate
 from ComputeFirstDerivatives import ComputeFirstDerivativesFD4RK

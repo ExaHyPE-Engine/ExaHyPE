@@ -232,7 +232,6 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
 
 
     
-     
    
     
     /**

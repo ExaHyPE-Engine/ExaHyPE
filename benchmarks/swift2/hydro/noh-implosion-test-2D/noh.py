@@ -534,11 +534,6 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation(args.peanodir, build_mode)
 
-    project.set_load_balancing(
-        "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-        "new toolbox::loadbalancing::DefaultConfiguration({})".format(args.trees),
-    )
-
     ###############################################################################
     # Initialisation snippet for the particle
     ###############################################################################

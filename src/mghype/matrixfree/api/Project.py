@@ -61,8 +61,7 @@ class Project:
     self._domain_size   = [1.0, 1.0, 1.0]
     self._dimensions    = 2
     
-    self._load_balancer_name      = ""
-    self._load_balancer_arguments = ""
+    self._load_balancer_configuration = ""
     self._Peano_src_directory = "."
 
     # does this get overwritten later?
@@ -86,27 +85,14 @@ class Project:
                                            plot_after_each_mesh_sweep = False,
                                            )
 
-    self._multicore_orchestration = "new ::tarch::multicore::orchestration::Hardcoded(8,256,tarch::multicore::Task::Host,::tarch::multicore::orchestration::Hardcoded::NoNestedParallelism,::tarch::multicore::orchestration::Hardcoded::NoTimeout)"
+    self._multicore_orchestration = "::tarch::multicore::orchestration::createDefaultStrategy()"
 
-  def  set_load_balancing(self, load_balancer_name, load_balancer_arguments):
+  def set_load_balancer(self, load_balancer_configuration=""):
     """!
-    
-    Set the load balancing scheme
-    
-    @param load_balancer_name: string
-        Should be full-qualified name of the load balancer. 
-        By default, I recommend to pass "toolbox::loadbalancing::RecursiveSubdivision"
-        
-    @param load_balancer_arguments: string
-        If your load balancing requires parameters, add them
-        here. It is a string that will be copied into the C++ class instantiation. 
-        Please add the brackets yourself, i.e. "(3,4,5)" is fine, but "3,4,5" is not. 
-        The only exception is the empty parameter list. Here, you can/should simply
-        add the empty string.
-        
+    @param load_balancer_configuration: string
+        User-defined load balancer configuration that shall be used.
     """
-    self._load_balancer_name      = load_balancer_name
-    self._load_balancer_arguments = load_balancer_arguments
+    self._load_balancer_configuration = load_balancer_configuration
 
   def set_Peano4_installation(self, src_path, mode=peano4.output.CompileMode.Release ):
     """!
@@ -215,8 +201,7 @@ class Project:
     self.dictionary = {
       "SOLVER_INSTANCES":         [(x.typename(), x.instance_name()) for x in self._solvers ],
       "AUX_SOLVER_INSTANCES":     [(x.typename(), x.instance_name()) for x in self._aux_solvers ],
-      "LOAD_BALANCER":            self._load_balancer_name,
-      "LOAD_BALANCER_ARGUMENTS":  self._load_balancer_arguments,
+      "LOAD_BALANCER_CONFIGURATION":  self._load_balancer_configuration,
       "MULTICORE_ORCHESTRATION":  self._multicore_orchestration,
     }
 
@@ -367,6 +352,7 @@ This is yet to be written, and we need to have a paper on our work.
 
   def set_multicore_orchestration(self, value):
       """! Set orchestration
+      
       value has to be a string which creates an orchestration object,
       i.e., an object of the type tarch::multicore::orchestration::Orchestration.
       You can either create it directly (in this case you need to add a new),

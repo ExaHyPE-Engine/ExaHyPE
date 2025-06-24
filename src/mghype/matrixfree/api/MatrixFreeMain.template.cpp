@@ -33,7 +33,6 @@
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
 #include "toolbox/finiteelements/UnitTests.h"
-#include "toolbox/loadbalancing/loadbalancing.h"
 
 {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
 #include <fenv.h>
@@ -66,7 +65,6 @@ bool selectNextAlgorithmicStep() {
   static tarch::la::Vector<Dimensions, double> minH = tarch::la::Vector<Dimensions, double>(
     std::numeric_limits<double>::max()
   );
-  static int globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
   
   static bool plotThenExit = false;
   const int MaxIterations = {{MAXITERATIONS}};

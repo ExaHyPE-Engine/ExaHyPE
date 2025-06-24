@@ -166,7 +166,7 @@ DINE.
 module load git
 module load autoconf 
 module load python
-module load oneAPI
+module load intel_comp
 module load compiler-rt tbb compiler
 module load intel_mpi
 module load gnu_comp/13.1.0

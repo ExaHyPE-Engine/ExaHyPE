@@ -75,8 +75,6 @@ mark these steps as private via a leading underscore.
     self._domain_offset = [0.0, 0.0, 0.0]
     self._domain_size   = [1.0, 1.0, 1.0]
     self._dimensions    = 2
-    self._load_balancer_name      = ""
-    self._load_balancer_arguments = ""
     self._Peano_src_directory = "."
     self._build_mode          = peano4.output.CompileMode.Asserts
     self._executable_name = executable
@@ -94,26 +92,7 @@ mark these steps as private via a leading underscore.
 
     self.preconditioner_type = preconditioner_type
     self.solver_type         = solver_type
-    
-  def  set_load_balancing(self, load_balancer_name, load_balancer_arguments):
-    """
-    
-      load_balancer_name: string
-        Should be full-qualified name of the load balancer. 
-        By default, I recommend to pass "toolbox::loadbalancing::RecursiveSubdivision"
-        
-      load_balancer_arguments: string
-        If your load balancing requires parameters, add them
-        here. It is a string that will be copied into the C++ class instantiation. 
-        Please add the brackets yourself, i.e. "(3,4,5)" is fine, but "3,4,5" is not. 
-        The only exception is the empty parameter list. Here, you can/should simply
-        add the empty string.
-        
-    """
-    self._load_balancer_name      = load_balancer_name
-    self._load_balancer_arguments = load_balancer_arguments
-    
-    
+
   """
    The standard extensions that I use for both Peano and ExaHyPE.
   """

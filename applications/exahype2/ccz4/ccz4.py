@@ -175,7 +175,8 @@ if __name__ == "__main__":
           flux=exahype2.solvers.PDETerms.None_Implementation,
           source_term=exahype2.solvers.PDETerms.User_Defined_Implementation,
           refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
-          eigenvalues = exahype2.solvers.PDETerms.User_Defined_Implementation
+          eigenvalues = exahype2.solvers.PDETerms.User_Defined_Implementation,
+          reconstruction_with_rk = args.SO_flag
         )
 
         #self._compute_kernel_call = exahype2.solvers.rkfd.fd4.kernels.create_compute_kernel_for_FD4(

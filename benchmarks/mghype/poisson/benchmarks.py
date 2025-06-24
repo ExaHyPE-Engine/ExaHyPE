@@ -117,14 +117,7 @@ project.set_global_simulation_parameters(
   max_iterations                   = max_iterations
 )
 
-if args.max_trees>0:
-    max_trees = args.max_trees
-else:
-    max_trees = "::exahype2::LoadBalancingConfiguration::UseNumberOfThreads"
-
-project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration(0.9, 0, false, {}, {})".format(max_trees, max_trees) )
 project.set_Peano4_installation( args.peanodir, build_mode )
-
 peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.output.makefile.add_cpp_file( args.peanodir + "/tests/multigrid/matrixfree/poisson/Scenario.cpp" )
 peano4_project.generate()
@@ -134,4 +127,3 @@ if args.j>0:
   os.system( "make -j{}".format(args.j) )
 else:
   os.system( "make -j$(nproc --all)" )
-  

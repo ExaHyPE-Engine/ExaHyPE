@@ -7,21 +7,16 @@
  
  1. @ref page_installation_home "Configure" Peano with multithreading support.
  2. Ensure that you have picked a proper load balancing scheme.
- 
- 
- ## Load balancing
- 
- The load balancing applies to both MPI and the multicore parallelism. To 
- select a load balancing, add
- 
- ~~~~~~~~~~~~~~~~~~~~~~~~~~
-    project.set_load_balancing(
-        "toolbox::loadbalancing::strategies::SpreadOut",
-        "(new ::exahype2::LoadBalancingConfiguration(0.98, 100, 8))",
-    )
- ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
- to your project. The exahype2.Project.set_load_balancing() provides more 
- information on variations. Also study exahype2::LoadBalancingConfiguration.
 
- */
+## Load balancing
+
+The load balancing applies to both MPI and the multicore parallelism. To configure the load balancer, add
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+to your project. Also study exahype2::LoadBalancingConfiguration.
+
+*/

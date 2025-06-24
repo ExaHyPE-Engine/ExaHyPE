@@ -529,7 +529,7 @@ class tarch::logging::Log {
      */
     std::string  _className;
 
-    std::chrono::system_clock::time_point  _startupTime;
+    static std::chrono::system_clock::time_point  _startupTime;
 
     #ifdef __APPLE__
     clock_serv_t cclock;

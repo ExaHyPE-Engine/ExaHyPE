@@ -97,7 +97,6 @@ project.set_global_simulation_parameters(
     periodic_BC=[False, False, False],
 )
 
-project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( "../../../../", peano4.output.CompileMode.Release )
 peano4_project = project.generate_Peano4_project(verbose=False)
 peano4_project.output.makefile.set_CXX_compiler("mpicxx")
