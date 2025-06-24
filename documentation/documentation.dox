@@ -365,6 +365,18 @@ The pattern is something like:
 
 [You can read further on the Doxygen website here.](https://www.doxygen.nl/manual/formulas.html)
 
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+Python struggles with escape signs in your documentation: It thinks that something starting 
+with a backslash is a command, even though it is imbedded into a LaTeX formula. In this case,
+please mark your comments as raw string by adding an r prefix:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                r"""! This is my fancy TeX string with an escape sign in @f$ x \gets 4 @f$ """ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                
+</div>
+
+
 ## Including hyperlinks
 
 Recall that a page typically begins with 

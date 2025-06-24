@@ -183,10 +183,6 @@ fuseADERSolvers(solver, solver2, "marker.x()[0]<=0.0")
 project.set_output_path("solutions")
 scenario.set_global_simulation_parameters(project)
 
-project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-    "new ::exahype2::LoadBalancingConfiguration(0.98)",
-)
 project.set_Peano4_installation("../../../", modes[args.mode])
 project = project.generate_Peano4_project(verbose=False)
 project.set_fenv_handler(True)
