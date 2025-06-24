@@ -428,7 +428,7 @@ if __name__ == "__main__":
       args.plot_start_time, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
       8,  # plotter precision
-      first_checkpoint_time_stamp=0,
+      first_checkpoint_time_stamp=args.restart_timestamp + 0.0,
       time_in_between_checkpoints=args.checkpoint_step_size
     )
 
@@ -507,9 +507,13 @@ if __name__ == "__main__":
         project.add_action_set_to_timestepping(dump_action_set)
 
     if args.add_tracer==2:
+        if args.CCZ4BBHType == 2:
+            puncture_position = [[2.0,0,0],[-2.0,0,0]]
+        elif args.CCZ4BBHType == 3:
+            puncture_position = [[3.5,0,0],[-3.5,0,0]]
         tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
         init_action_set = exahype2.tracer.InsertParticlesByCoordinates( 
-            particle_set=tracer_particles, coordinates=[[0.2,0,0],[-0.2,0,0]])
+            particle_set=tracer_particles, coordinates=puncture_position)
         init_action_set.descend_invocation_order = 0
         project.add_action_set_to_initialisation( init_action_set )
         
