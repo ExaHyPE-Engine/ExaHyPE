@@ -12,7 +12,7 @@ def initial():
   Q[3+5] = 0.0; //yz
 
   // LOH1
-  bool layerWidth = 1.0;
+  double layerWidth = 1.0;
   bool upperLayer = x(1) <= layerWidth;
 
   // HHS

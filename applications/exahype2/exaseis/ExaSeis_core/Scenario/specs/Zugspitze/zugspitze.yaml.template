@@ -1,0 +1,16 @@
+domain:
+  offset: [2661.23,  0.0 , 4358.459]
+  size:   [  80.85, 80.85,   80.85 ]
+  mode:   [ {{MODE}}, {{MODE}}, {{MODE}}  ]
+topography: 
+  coordinates: ["Z","X"]
+  top: false
+  perturbation: !ASAGI
+    file: zugspitze_25m_4345_100_2650_100.nc
+    parameters: [z]
+    var: z
+    components: !AffineMap
+      matrix:
+        y: [-0.001]
+      translation:
+        y: 0.0

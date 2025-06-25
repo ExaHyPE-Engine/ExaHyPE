@@ -168,38 +168,27 @@ dt, vx, vy, vz = zip(*sorted(zip(dt, vx, vy, vz)))
 Plot the data
 """
 
-plt.plot(
-    dt,
-    vx,
-    color="r",
-    linestyle="dashed",
-    marker="o",
-    label="velocity in x-direction as a function of time",
-)
+fig, axs = plt.subplots(3)
 
-plt.plot(
-    dt,
-    vy,
-    color="g",
-    linestyle="dashed",
-    marker="o",
-    label="velocity in y-direction as a function of time",
+axs[0].plot(
+  dt, vx, lw=4
 )
+axs[0].set(xlabel="t", ylabel="vx")
+axs[0].grid()
+
+axs[1].plot(
+  dt, vy, lw=4
+)
+axs[1].set(xlabel="t", ylabel="vy")
+axs[1].grid()
 
 if dim==3:
-  plt.plot(
-      dt,
-      vz,
-      color="b",
-      linestyle="dashed",
-      marker="o",
-      label="velocity in z-direction as a function of time",
+  axs[2].plot(
+    dt,vz, lw=4
   )
+  axs[2].set(xlabel="t", ylabel="vz")
+  axs[2].grid()
 
-plt.xticks(rotation=25)
-plt.xlabel("t")
-plt.ylabel("velocities")
-plt.title("velocities as a function of time", fontsize=20)
-plt.grid()
+fig.suptitle("velocities as a function of time", fontsize=20)
 plt.legend()
 plt.show()
