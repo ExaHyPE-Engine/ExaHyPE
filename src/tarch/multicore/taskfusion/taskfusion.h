@@ -173,7 +173,8 @@ namespace tarch {
        *
        * If the task is ready, somebody could have triggered the computation
        * instead of us. So we issue a consumer task now, as we may assume that
-       * there are many other tasks in there as well which are ready.
+       * there are many other tasks in there as well which are ready and should
+       * be done.
        *
        * After that, we while loop and wait until we know that the task is
        * complete.

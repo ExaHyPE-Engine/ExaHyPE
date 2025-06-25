@@ -246,10 +246,12 @@ void tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_L
 
 void tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_LazyConsumerTasks(const std::set<TaskNumber>& inDependencies) {
   bool tasksArePending         = false;
+  bool tasksAreReadyOrRunning  = false;
 
   for (auto taskNumber: inDependencies) {
     for (auto queue: fusableTaskQueue) {
       tasksArePending        |= queue.second->isTaskPending(taskNumber, false);
+      tasksAreReadyOrRunning |= queue.second->isTaskReadyOrRunning(taskNumber, true);
     }
   }
 
@@ -257,15 +259,24 @@ void tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_L
     native::waitForTasks(inDependencies);
   }
 
-  for (auto taskNumber: inDependencies) {
-    for (auto queue: fusableTaskQueue) {
-      if (queue.second->isTaskReady(tarch::multicore::taskfusion::FusableTasksQueue::AnyTask, false) ) {
-        Task* processTask = new ProcessReadyTask(taskNumber, *(queue.second));
-        tarch::multicore::native::spawnTask( processTask, tarch::multicore::NoInDependencies, taskNumber);
-      }
-      while (queue.second->isTaskReadyOrRunning(taskNumber, false)) {
-        queue.second->processOneTask(taskNumber);
+  if (tasksAreReadyOrRunning) {
+    for (auto taskNumber: inDependencies) {
+      for (auto queue: fusableTaskQueue) {
+        const tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(queue.second->getType());
+
+        if (
+          queue.second->readyTasks.size() >= instruction.minTasks
+        ) {
+          Task* processTask = new ProcessReadyTask(taskNumber, *(queue.second));
+          tarch::multicore::native::spawnTask( processTask, tarch::multicore::NoInDependencies, tarch::multicore::taskfusion::FusableTasksQueue::AnyTask);
+        }
+
+        while (queue.second->isTaskReadyOrRunning(taskNumber, false)) {
+          queue.second->processOneTask(taskNumber);
+        }
       }
     }
   }
 }
+
+

@@ -29,7 +29,7 @@ namespace tarch {
  */
 class tarch::multicore::taskfusion::FusableTasksQueue {
   public:
-    static const int AnyTask = -1;
+    static constexpr int AnyTask = -1;
 
     FusableTasksQueue(int type_);
     ~FusableTasksQueue()                        = default;
