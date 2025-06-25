@@ -35,6 +35,7 @@ class NewDGTracer(ActionSet):
         use_relative_deltas=False,
         initial_record_time=-1,
         last_record_time=1e8,
+        unknowns_to_store=0
     ):
         """
 
@@ -52,6 +53,8 @@ class NewDGTracer(ActionSet):
         self.d["ORDER"] = solver._basis.order
         self.d["NUMBER_OF_UNKNOWNS"] = solver._unknowns
         self.d["NUMBER_OF_AUXILIARY_VARIABLES"] = solver._auxiliary_variables
+
+        self.d["UNKNOWNS_TO_STORE"] = (unknowns_to_store if unknowns_to_store>0 else solver._unknowns)
 
         self.d["DATA_DELTA"] = data_delta_between_two_snapshots
         self.d["POSITION_DELTA"] = position_delta_between_two_snapshots
@@ -105,7 +108,8 @@ class NewDGTracer(ActionSet):
         and
         marker.isContained(_coordinates[i])
       ) {
-                                                   
+
+        constexpr int unknownsToStore = {{UNKNOWNS_TO_STORE}};
         constexpr int unknownsPerDoF = {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}};
         
         double data[unknownsPerDoF];
@@ -125,7 +129,7 @@ class NewDGTracer(ActionSet):
           i, i,
           fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
           _coordinates[i],
-          unknownsPerDoF,
+          unknownsToStore,
           data
         );
 

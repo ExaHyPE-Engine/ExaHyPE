@@ -1,0 +1,37 @@
+domain:
+  offset: [ -2.275, 0.0 ,  -2.275]
+  size:   [ 44.55, 44.55,  44.55]
+  mode:   [ {{MODE}}, {{MODE}}, {{MODE}}  ]
+topography: !Analytic
+  coordinates: ["Z","X"]
+  top: true
+  perturbation: !ConstantMap
+    map: 
+      y: 0
+  split:
+    coordinates: ["Z","Y"]
+    position: 20.0
+    perturbation: !AffineMap
+      matrix:
+        z: [1000.0,    0.0]
+        y: [0.0   , 1250.0]
+      translation:
+        z:  -5000.0
+        y: -25000.0
+      components:
+        - !AxisAlignedCuboidalDomainFilter
+          limits:
+            z: [-5000 ,35000]
+            y: [-25000,25000]
+          components: !ASAGI
+            file: tpv29_buffer_n.nc
+            parameters: [z]
+            var: z
+            components: !AffineMap
+              matrix:
+                x: [0.001]
+              translation:
+                x: 0.0
+        - !ConstantMap
+          map:
+            x: 0.0

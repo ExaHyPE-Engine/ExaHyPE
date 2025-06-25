@@ -1,0 +1,35 @@
+domain: 
+  offset: [4.5, 0.0, 4.5]
+  size:   [27., 27., 27.]
+  mode:   [ {{MODE}}, {{MODE}}, {{MODE}}  ]
+topography: !Analytic  
+  coordinates: ["Z","X"]
+  top: true
+  perturbation: !ConstantMap
+    map: 
+      y: 0
+  split:
+    coordinates: ["Z","Y"]
+    position: 20.0
+    perturbation: !FunctionMap
+      map: 
+        r1: return sqrt((y- 7.5)*(y- 7.5)+(z-9.5)*(z-9.5));
+        r2: return sqrt((y- 7.5)*(y- 7.5)+(z-30.5)*(z-30.5));
+      components: 
+      - !AxisAlignedCuboidalDomainFilter
+        limits:
+          r1: [0, 3.0]
+          r2: [0, 10000.0]
+        components: !FunctionMap
+          map:
+            x: return -0.3*(1.0 + cos( 3.14159265359 * r1/3.0));
+      - !AxisAlignedCuboidalDomainFilter
+        limits:
+          r1: [0, 10000.0] 
+          r2: [0, 3.0]
+        components: !FunctionMap
+          map:
+            x: return -0.3*(1.0 + cos( 3.14159265359 * r2/3.0));
+      - !ConstantMap
+          map:
+            x: 0.0

@@ -1,6 +1,6 @@
 
 
-def initial():
+def initial(pointwise_initial_conditions):
   return """
   std::fill_n(Q, (NumberOfAuxiliaryVariables + NumberOfUnknowns) * (Order + 1) * (Order + 1) * (Order + 1), 0);
 
@@ -11,16 +11,7 @@ def initial():
       const double t,
       const double dt, 
       {{SOLUTION_STORAGE_PRECISION}}* Q
-    ) -> void {
-      if( x[1] <= (1.0 + 1.0e-6) && center[1] < 1.0) {
-        Q[s::rho] = 2.6;
-        Q[s::cp ] = 4.0;
-        Q[s::cs ] = 2.0;
-      }else if(x[1] >= (1.0 - 1.0e-6) && center[1] > 1.0){
-        Q[s::rho] = 2.7;
-        Q[s::cp ] = 6.0;
-        Q[s::cs ] = 3.464;
-      }
+    ) -> void { """ + pointwise_initial_conditions + """
     }
   );
 
@@ -50,11 +41,11 @@ def initial():
   idx4 idx(Order + 1, Order + 1, Order + 1, NumberOfUnknowns + NumberOfAuxiliaryVariables);
 
   for (int k = 0; k < Order + 1; k++) { 
-    double computational_z = (offset_z + h[2] * QuadraturePoints1d[k]); //QuadPoints are in opposite order to exa1
+    double computational_z = (offset_z + h[2] * kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes[k]);
     for (int j = 0; j < Order + 1; j++) {
-      double computational_y = (offset_y + h[1] * QuadraturePoints1d[j]); //QuadPoints are in opposite order to exa1
+      double computational_y = (offset_y + h[1] * kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes[j]);
       for (int i = 0; i < Order + 1; i++) {
-        double computational_x = (offset_x + h[0] * QuadraturePoints1d[i]); //QuadPoints are in opposite order to exa1
+        double computational_x = (offset_x + h[0] * kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes[i]);
 
         if (_TOP != 0) { //  No PML on surface
           if (computational_x < dmp_pml_left_x) {
@@ -365,43 +356,9 @@ def refinement_criterion():
   return result;
 """
 
-def point_source():
-  return """
-  std::fill_n(forceVector, 9, 0.);
-
-  auto jacobian = Q[s::jacobian];
-
-  assertion2(n == 0, "Only a single pointSource for LOH1",n);
-
-  constexpr double t0 = 0.1;
-  constexpr double M0 = 1000.0;
-  
-  double f = M0*t/(t0*t0)*std::exp(-t/t0);
-  
-  forceVector[s::sigma + 4] = f;
-
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    forceVector[i] = forceVector[i] / jacobian;
-  }
-"""
-def init_point_source():
-  return """
-  pointSourceLocation[0][0] = 0.0;
-  pointSourceLocation[0][1] = 2.0;
-  pointSourceLocation[0][2] = 0.0;
-
-  context->correctPointSourceLocation(pointSourceLocation);
-"""
-
 def riemann_solver():
   return """
-  if (isBoundaryFace) {
-    auto* FIn  = faceIndex < Dimensions ? FR : FL;
-    auto* FOut = faceIndex < Dimensions ? FL : FR;
-    std::copy_n(FIn, NumberOfUnknowns*(Order+1)*(Order+1), FOut);
-  }
-
-  Numerics::riemannSolver<VariableShortcutsElasticSolver, {{CORRECTOR_COMPUTATION_PRECISION}}, Order, NumberOfUnknowns, NumberOfAuxiliaryVariables, 1>(
+  Numerics::riemannSolver<VariableShortcuts{{SOLVER_NAME}}, {{CORRECTOR_COMPUTATION_PRECISION}}, Order, NumberOfUnknowns, NumberOfAuxiliaryVariables, 1>(
     FL, FR, QL, QR, dt, direction, isBoundaryFace, faceIndex
   );
 """
@@ -416,22 +373,30 @@ def userIncludes():
 #include "../ExaSeis_core/Numerics/riemannsolver_pml.h"
 """
 
+def abstractUserDefinitions():
+  return """
+ContextCurvilinear<{{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}},
+  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Order + 1,
+  ({{NAMESPACE | join("::")}}::{{CLASSNAME}}::NumberOfUnknowns + {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NumberOfAuxiliaryVariables),
+  {{SOLUTION_STORAGE_PRECISION}}>* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::context;
+"""
+
 def abstractDeclarations():
   return """
 public:
   double QuadraturePoints1d[Order+1];
   
-private:
-  ContextCurvilinear<VariableShortcutsElasticSolver, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>* context;//(NumberOfUnknowns+NumberOfAuxiliaryVariables)>* context;
+protected:
+  static ContextCurvilinear<VariableShortcuts{{SOLVER_NAME}}, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>* context;
 
-  int                                                              pml_cell_width;
-  double                                                           pml_alpha_const;
-  double                                                           pml_alpha_scalar;
-  double                                                           pml_rel_error;
-  int                                                              pml_power;
+  static constexpr int     pml_cell_width    = 1;
+  static constexpr double  pml_alpha_const   = 1.5;
+  static constexpr double  pml_alpha_scalar  = 0.0;
+  static constexpr double  pml_rel_error     = 0.001;
+  static constexpr int     pml_power         = 1;
 """
 
-def abstractConstructor():
+def init_grid_step_implementation(scenario_string):
   return """
   std::copy_n(
     kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
@@ -439,13 +404,7 @@ def abstractConstructor():
     QuadraturePoints1d    
   );
 
-  std::string topography_string = "loh1.yaml";
-
-  pml_cell_width   = 3;
-  pml_power        = 1;
-  pml_alpha_const  = 1.5;
-  pml_alpha_scalar = 0.0;
-  pml_rel_error    = 0.001;
+  std::string topography_string = \"""" + scenario_string + """.yaml";
 
   //setting coarsestMeshLevel and maxAdaptiveMeshLevel
   double maxDSize = std::numeric_limits<double>::min();
@@ -478,16 +437,21 @@ def abstractConstructor():
     minDSize /= 3.0;
   }
 
-  context = new ContextCurvilinear<VariableShortcutsElasticSolver, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>(
+  context = new ContextCurvilinear<VariableShortcuts{{SOLVER_NAME}}, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>(
     topography_string,
     coarsestMeshLevel,
     realCoarsestMeshSize,
     depth,
     DomainOffset, DomainSize,
-    kernels::ElasticSolver::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
-    kernels::ElasticSolver::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::dudx
+    kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
+    kernels::{{SOLVER_NAME}}::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::dudx
   );
 
   std::cout << "PML is using " << pml_cell_width << " elements" << std::endl;
   std::cout << "Freesurface set at " << _TOP * 2 << std::endl;
+"""
+
+def abstractDestructor():
+  return """
+  delete context;
 """

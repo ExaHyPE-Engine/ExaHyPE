@@ -1,0 +1,39 @@
+!Switch
+[s_xx,s_yy,s_zz,s_xy,s_yz,s_xz]: !ConstantMap
+  map:
+    s_xx: -120.0
+    s_yy: 0
+    s_zz: 0
+    s_xy: 0.0
+    s_yz: 0    
+    s_xz: 70.0
+[n_yz]: !FunctionMap
+  map:
+    n_yz: |
+      if ((6.0 <= y) && (y <= 9.0)) {
+         if ((11.0 <= z) && (z <= 14.0)) {
+            return 8.0;
+         }
+         if ((18.5 <= z) && (z <= 21.5)) {
+            return 11.6;
+         }
+         if ((26.0 <= z) && (z <= 29.0)) {
+            return -8.0;
+         }         
+      }
+      return 0.0;
+[mu_s, mu_d, d_c, t_0, f_cy, f_wy, f_cz, f_wz]: !ConstantMap
+  map:
+     mu_s:   0.677
+     mu_d:   0.525
+     d_c:    0.4
+     t_0:    0.5
+     f_cy :  0.0
+     f_wy : 15.0
+     f_cz : 20.0
+     f_wz : 15.0
+[cohesion,forced_rupture_time]: !ConstantMap
+  map:
+    cohesion: 0.0
+    forced_rupture_time: 9999999.0
+

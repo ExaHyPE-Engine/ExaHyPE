@@ -1,6 +1,6 @@
 
 
-def initial():
+def initial(pointwise_initial_conditions):
   return """
   std::fill_n(Q, (NumberOfAuxiliaryVariables + NumberOfUnknowns) * (Order + 1) * (Order + 1) * (Order + 1), 0);
   context->initUnknownsPatch(Q, x, h, 0.0, 0.0,
@@ -10,16 +10,7 @@ def initial():
       const double t,
       const double dt, 
       {{SOLUTION_STORAGE_PRECISION}}* Q
-    ) -> void {
-      if( x[1] <= (1.0 + 1.0e-6) && center[1] < 1.0) {
-        Q[s::rho] = 2.6;
-        Q[s::cp ] = 4.0;
-        Q[s::cs ] = 2.0;
-      }else if(x[1] >= (1.0 - 1.0e-6) && center[1] > 1.0){
-        Q[s::rho] = 2.7;
-        Q[s::cp ] = 6.0;
-        Q[s::cs ] = 3.464;
-      }
+    ) -> void { """ + pointwise_initial_conditions + """
     }
   );
 """
@@ -243,7 +234,7 @@ def riemann_solver():
     std::copy_n(FIn, NumberOfUnknowns+NumberOfAuxiliaryVariables, FOut);
   }
 
-  Numerics::riemannSolver<VariableShortcutsElasticSolver, {{CORRECTOR_COMPUTATION_PRECISION}}, Order + 1, NumberOfUnknowns, (NumberOfUnknowns + NumberOfAuxiliaryVariables), 1>(
+  Numerics::riemannSolver<VariableShortcuts{{SOLVER_NAME}}, {{CORRECTOR_COMPUTATION_PRECISION}}, Order + 1, NumberOfUnknowns, (NumberOfUnknowns + NumberOfAuxiliaryVariables), 1>(
     FL, FR, QL, QR, dt, direction, isBoundaryFace, faceIndex
   );
 """
@@ -260,15 +251,23 @@ def userIncludes():
 #include "../ExaSeis_core/Numerics/riemannsolver_isotropic.h"
 """
 
+def abstractUserDefinitions():
+  return """
+ContextCurvilinear<{{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}},
+  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Order + 1,
+  ({{NAMESPACE | join("::")}}::{{CLASSNAME}}::NumberOfUnknowns + {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NumberOfAuxiliaryVariables),
+  {{SOLUTION_STORAGE_PRECISION}}>* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::context;
+"""
+
 def abstractDeclarations():
   return """
 public:
   double QuadraturePoints1d[Order+1];
-private:
-  ContextCurvilinear<VariableShortcutsElasticSolver, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>* context;//(NumberOfUnknowns+NumberOfAuxiliaryVariables)>* context;
+protected:
+  static ContextCurvilinear<VariableShortcuts{{SOLVER_NAME}}, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>* context;//(NumberOfUnknowns+NumberOfAuxiliaryVariables)>* context;
 """
 
-def abstractConstructor():
+def init_grid_step_implementation(scenario_string):
   return """
   std::copy_n(
     kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
@@ -276,7 +275,7 @@ def abstractConstructor():
     QuadraturePoints1d    
   );
 
-  std::string topography_string = "loh1.yaml";
+  std::string topography_string = \"""" + scenario_string + """.yaml";
 
   //setting coarsestMeshLevel and maxAdaptiveMeshLevel
   double maxDSize = std::numeric_limits<double>::min();
@@ -309,13 +308,13 @@ def abstractConstructor():
     minDSize /= 3.0;
   }
 
-  context = new ContextCurvilinear<VariableShortcutsElasticSolver, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>(
+  context = new ContextCurvilinear<VariableShortcuts{{SOLVER_NAME}}, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>(
     topography_string,
     coarsestMeshLevel,
     realCoarsestMeshSize,
     depth,
     DomainOffset, DomainSize,
-    kernels::ElasticSolver::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
-    kernels::ElasticSolver::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::dudx
+    kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
+    kernels::{{SOLVER_NAME}}::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::dudx
   );
 """
