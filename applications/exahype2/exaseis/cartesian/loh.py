@@ -53,8 +53,8 @@ theSolver.set_implementation(
 )
 
 theSolver.add_user_solver_includes("""
-#include "../ExaSeis_core/Numerics/routines_cartesian.h"
-#include "../ExaSeis_core/Numerics/riemannsolver_isotropic.h"
+#include "../ExaSeis_core/Numerics/cartesianRoutines.h"
+#include "../ExaSeis_core/Numerics/riemannsolverIsotropic.h"
 """)
 
 project.add_solver(theSolver)

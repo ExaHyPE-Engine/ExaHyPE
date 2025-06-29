@@ -370,7 +370,7 @@ def userIncludes():
 #define _TOP 1
 
 #include "../ExaSeis_core/Curvilinear/ContextCurvilinear.h"
-#include "../ExaSeis_core/Numerics/riemannsolver_pml.h"
+#include "../ExaSeis_core/Numerics/riemannsolverPML.h"
 """
 
 def abstractUserDefinitions():

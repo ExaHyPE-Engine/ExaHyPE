@@ -2,13 +2,13 @@
 #define ANISOTROPIC
 
 #include "idx.h"
-#include "riemannsolver_routines.h"
+#include "riemannsolverRoutines.h"
 
 namespace Numerics {
   // Getter routines
 
   template <class Shortcuts>
-    inline void get_stiffness_tensor(const double*Q, double& c11,double& c22,double& c33,double& c44,double& c55,double& c66,double& c12,double& c13,double& c23){
+    inline void getStiffnessTensor(const double*Q, double& c11,double& c22,double& c33,double& c44,double& c55,double& c66,double& c12,double& c13,double& c23){
       using s = Shortcuts;
       c11 = Q[s::c + 0];
       c22 = Q[s::c + 1];
@@ -23,7 +23,7 @@ namespace Numerics {
     }
 
   template <class Shortcuts>
-  inline void compute_parameters(const double* Q, double& rho, double& cp, double cs[], int direction) {
+  inline void computeParameters(const double* Q, double& rho, double& cp, double cs[], int direction) {
     using s = Shortcuts;
     rho = Q[s::rho];
 
@@ -48,7 +48,7 @@ namespace Numerics {
     }
   }
 
-  inline void riemannSolver_boundary(
+  inline void riemannSolverBoundary(
     int     faceIndex,
     double  r,
     double  vn,
@@ -68,16 +68,16 @@ namespace Numerics {
   ) {
     // if (faceIndex % 2  == 0) { //left face
     if (faceIndex < Dimensions) { //left face
-      riemannSolver_BC0(vn, Tn, zp, r, vn_hat, Tn_hat);
-      riemannSolver_BC0(vm, Tm, zs[0], r, vm_hat, Tm_hat);
-      riemannSolver_BC0(vl, Tl, zs[1], r, vl_hat, Tl_hat);
+      riemannSolverBC0(vn, Tn, zp, r, vn_hat, Tn_hat);
+      riemannSolverBC0(vm, Tm, zs[0], r, vm_hat, Tm_hat);
+      riemannSolverBC0(vl, Tl, zs[1], r, vl_hat, Tl_hat);
     }
 
     // if (faceIndex % 2 == 1) { //right face
     else { //right face
-      riemannSolver_BCn(vn, Tn, zp, r, vn_hat, Tn_hat);
-      riemannSolver_BCn(vm, Tm, zs[0], r, vm_hat, Tm_hat);
-      riemannSolver_BCn(vl, Tl, zs[1], r, vl_hat, Tl_hat);
+      riemannSolverBCn(vn, Tn, zp, r, vn_hat, Tn_hat);
+      riemannSolverBCn(vm, Tm, zs[0], r, vm_hat, Tm_hat);
+      riemannSolverBCn(vl, Tl, zs[1], r, vl_hat, Tl_hat);
     }
   }
 
@@ -116,43 +116,43 @@ namespace Numerics {
         double  rho_m, cp_m, cs_m[2], c11_m, c22_m, c33_m, c44_m, c55_m, c66_m, c12_m, c13_m, c23_m;
         double  rho_p, cp_p, cs_p[2], c11_p, c22_p, c33_p, c44_p, c55_p, c66_p, c12_p, c13_p, c23_p;
 
-        Numerics::get_stiffness_tensor<Shortcuts>(Q_m, c11_m, c22_m, c33_m, c44_m, c55_m, c66_m, c12_m, c13_m, c23_m);
-        Numerics::get_stiffness_tensor<Shortcuts>(Q_p, c11_p, c22_p, c33_p, c44_p, c55_p, c66_p, c12_p, c13_p, c23_p);
+        Numerics::getStiffnessTensor<Shortcuts>(Q_m, c11_m, c22_m, c33_m, c44_m, c55_m, c66_m, c12_m, c13_m, c23_m);
+        Numerics::getStiffnessTensor<Shortcuts>(Q_p, c11_p, c22_p, c33_p, c44_p, c55_p, c66_p, c12_p, c13_p, c23_p);
 
-        compute_parameters<Shortcuts>(Q_m, rho_m, cp_m, cs_m, direction);
-        compute_parameters<Shortcuts>(Q_p, rho_p, cp_p, cs_p, direction);
+        computeParameters<Shortcuts>(Q_m, rho_m, cp_m, cs_m, direction);
+        computeParameters<Shortcuts>(Q_p, rho_p, cp_p, cs_p, direction);
 
         double n_m[3], m_m[3], l_m[3];
         double n_p[3], m_p[3], l_p[3];
         double norm_p, norm_m;
 
-        get_normals<Shortcuts>(Q_m, direction, norm_m, n_m);
-        get_normals<Shortcuts>(Q_p, direction, norm_p, n_p);
+        getNormals<Shortcuts>(Q_m, direction, norm_m, n_m);
+        getNormals<Shortcuts>(Q_p, direction, norm_p, n_p);
 
         double Tx_m, Ty_m, Tz_m;
         double Tx_p, Ty_p, Tz_p;
-        compute_tractions<Shortcuts>(Q_p, n_p, Tx_p, Ty_p, Tz_p);
-        compute_tractions<Shortcuts>(Q_m, n_m, Tx_m, Ty_m, Tz_m);
+        computeTractions<Shortcuts>(Q_p, n_p, Tx_p, Ty_p, Tz_p);
+        computeTractions<Shortcuts>(Q_m, n_m, Tx_m, Ty_m, Tz_m);
 
         double vx_m, vy_m, vz_m;
         double vx_p, vy_p, vz_p;
-        get_velocities<Shortcuts>(Q_p, vx_p, vy_p, vz_p);
-        get_velocities<Shortcuts>(Q_m, vx_m, vy_m, vz_m);
+        getVelocities<Shortcuts>(Q_p, vx_p, vy_p, vz_p);
+        getVelocities<Shortcuts>(Q_m, vx_m, vy_m, vz_m);
 
-        create_local_basis(n_p, m_p, l_p);
-        create_local_basis(n_m, m_m, l_m);
+        createLocalBasis(n_p, m_p, l_p);
+        createLocalBasis(n_m, m_m, l_m);
 
         double Tn_m, Tm_m, Tl_m;
         double Tn_p, Tm_p, Tl_p;
 
         // rotate fields into l, m, n basis
-        rotate_into_orthogonal_basis(n_m, m_m, l_m, Tx_m, Ty_m, Tz_m, Tn_m, Tm_m, Tl_m);
-        rotate_into_orthogonal_basis(n_p, m_p, l_p, Tx_p, Ty_p, Tz_p, Tn_p, Tm_p, Tl_p);
+        rotateIntoOrthogonalBasis(n_m, m_m, l_m, Tx_m, Ty_m, Tz_m, Tn_m, Tm_m, Tl_m);
+        rotateIntoOrthogonalBasis(n_p, m_p, l_p, Tx_p, Ty_p, Tz_p, Tn_p, Tm_p, Tl_p);
 
         double vn_m, vm_m, vl_m;
         double vn_p, vm_p, vl_p;
-        rotate_into_orthogonal_basis(n_m, m_m, l_m, vx_m, vy_m, vz_m, vn_m, vm_m, vl_m);
-        rotate_into_orthogonal_basis(n_p, m_p, l_p, vx_p, vy_p, vz_p, vn_p, vm_p, vl_p);
+        rotateIntoOrthogonalBasis(n_m, m_m, l_m, vx_m, vy_m, vz_m, vn_m, vm_m, vl_m);
+        rotateIntoOrthogonalBasis(n_p, m_p, l_p, vx_p, vy_p, vz_p, vn_p, vm_p, vl_p);
 
         // extract local s-wave and p-wave impedances
         double zs_m[2];
@@ -181,7 +181,7 @@ namespace Numerics {
           // 0 absorbing 1 free surface
           double r = faceIndex == 2 ? 1 : 0;
           //	double r=1.;
-          riemannSolver_boundary(
+          riemannSolverBoundary(
             faceIndex,
             r,
             vn_m,
@@ -199,7 +199,7 @@ namespace Numerics {
             Tm_hat_m,
             Tl_hat_m
           );
-          riemannSolver_boundary(
+          riemannSolverBoundary(
             faceIndex,
             r,
             vn_p,
@@ -218,19 +218,19 @@ namespace Numerics {
             Tl_hat_p
           );
         } else {
-          riemannSolver_Nodal(vn_p, vn_m, Tn_p, Tn_m, zp_p, zp_m, vn_hat_p, vn_hat_m, Tn_hat_p, Tn_hat_m);
-          riemannSolver_Nodal(vm_p, vm_m, Tm_p, Tm_m, zs_p[0], zs_m[0], vm_hat_p, vm_hat_m, Tm_hat_p, Tm_hat_m);
-          riemannSolver_Nodal(vl_p, vl_m, Tl_p, Tl_m, zs_p[1], zs_m[1], vl_hat_p, vl_hat_m, Tl_hat_p, Tl_hat_m);
+          riemannSolverNodal(vn_p, vn_m, Tn_p, Tn_m, zp_p, zp_m, vn_hat_p, vn_hat_m, Tn_hat_p, Tn_hat_m);
+          riemannSolverNodal(vm_p, vm_m, Tm_p, Tm_m, zs_p[0], zs_m[0], vm_hat_p, vm_hat_m, Tm_hat_p, Tm_hat_m);
+          riemannSolverNodal(vl_p, vl_m, Tl_p, Tl_m, zs_p[1], zs_m[1], vl_hat_p, vl_hat_m, Tl_hat_p, Tl_hat_m);
         }
 
         // generate fluctuations in the local basis coordinates: n, m, l
-        compute_fluctuations_left(zp_m, Tn_m, Tn_hat_m, vn_m, vn_hat_m, FLn);
-        compute_fluctuations_left(zs_m[0], Tm_m, Tm_hat_m, vm_m, vm_hat_m, FLm);
-        compute_fluctuations_left(zs_m[1], Tl_m, Tl_hat_m, vl_m, vl_hat_m, FLl);
+        computeFluctuationsLeft(zp_m, Tn_m, Tn_hat_m, vn_m, vn_hat_m, FLn);
+        computeFluctuationsLeft(zs_m[0], Tm_m, Tm_hat_m, vm_m, vm_hat_m, FLm);
+        computeFluctuationsLeft(zs_m[1], Tl_m, Tl_hat_m, vl_m, vl_hat_m, FLl);
 
-        compute_fluctuations_right(zp_p, Tn_p, Tn_hat_p, vn_p, vn_hat_p, FRn);
-        compute_fluctuations_right(zs_p[0], Tm_p, Tm_hat_p, vm_p, vm_hat_p, FRm);
-        compute_fluctuations_right(zs_p[1], Tl_p, Tl_hat_p, vl_p, vl_hat_p, FRl);
+        computeFluctuationsRight(zp_p, Tn_p, Tn_hat_p, vn_p, vn_hat_p, FRn);
+        computeFluctuationsRight(zs_p[0], Tm_p, Tm_hat_p, vm_p, vm_hat_p, FRm);
+        computeFluctuationsRight(zs_p[1], Tl_p, Tl_hat_p, vl_p, vl_hat_p, FRl);
 
         // Consider acoustic boundary
         FL_n = FLn / zp_m;
@@ -259,10 +259,10 @@ namespace Numerics {
         }
 
         // rotate back to the physical coordinates x, y, z
-        rotate_into_physical_basis(n_m, m_m, l_m, FLn, FLm, FLl, FLx, FLy, FLz);
-        rotate_into_physical_basis(n_p, m_p, l_p, FRn, FRm, FRl, FRx, FRy, FRz);
-        rotate_into_physical_basis(n_m, m_m, l_m, FL_n, FL_m, FL_l, FL_x, FL_y, FL_z);
-        rotate_into_physical_basis(n_p, m_p, l_p, FR_n, FR_m, FR_l, FR_x, FR_y, FR_z);
+        rotateIntoPhysicalBasis(n_m, m_m, l_m, FLn, FLm, FLl, FLx, FLy, FLz);
+        rotateIntoPhysicalBasis(n_p, m_p, l_p, FRn, FRm, FRl, FRx, FRy, FRz);
+        rotateIntoPhysicalBasis(n_m, m_m, l_m, FL_n, FL_m, FL_l, FL_x, FL_y, FL_z);
+        rotateIntoPhysicalBasis(n_p, m_p, l_p, FR_n, FR_m, FR_l, FR_x, FR_y, FR_z);
 
         // construct flux fluctuation vectors obeying the eigen structure of the PDE
         // and choose physically motivated penalties such that we can prove

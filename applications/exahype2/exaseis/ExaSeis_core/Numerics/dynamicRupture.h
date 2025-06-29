@@ -1,13 +1,13 @@
 #pragma once
 
 #include "./idx.h"
-#include "routines_curvilinear.h"
-#include "riemannsolver_routines.h"
+#include "curvilinearRoutines.h"
+#include "riemannsolverRoutines.h"
 
-#include "../Curvilinear/ContextSlipWeakening.h"
+#include "../Curvilinear/ContextDynamicRupture.h"
 
 template <class Shortcuts, int basisSize, int numberOfVariables, int numberOfParameters, typename T>
-void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParameters, T>::initialstresstensor(
+void ContextDynamicRupture<Shortcuts, basisSize, numberOfVariables, numberOfParameters, T>::initialStressTensor(
   T& sxx, T& syy,
   T& szz, T& sxy,
   T& sxz, T& syz,
@@ -34,7 +34,7 @@ void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParam
 
 
 template <class Shortcuts, int basisSize, int numberOfVariables, int numberOfParameters, typename T>
-void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParameters, T>::prestress(
+void ContextDynamicRupture<Shortcuts, basisSize, numberOfVariables, numberOfParameters, T>::preStress(
   T& T0_n, T& T0_m, T& T0_l,
   double* const x, double t,
   T* const l, T* const m, T* const n
@@ -44,7 +44,7 @@ void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParam
   T Tx,Ty,Tz;
 
   // initial stress tensor
-  initialstresstensor(sxx, syy, szz, sxy, sxz, syz, x);
+  initialStressTensor(sxx, syy, szz, sxy, sxz, syz, x);
 
   //Extract tractions
   Tx = n[0] * sxx + n[1] * sxy + n[2] * sxz;
@@ -52,7 +52,7 @@ void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParam
   Tz = n[0] * sxz + n[1] * syz + n[2] * szz;
 
   // rotate tractions into local orthogonal coordinates
-  ::Numerics::rotate_into_orthogonal_basis(n,m,l,Tx,Ty,Tz,T0_n,T0_m,T0_l);
+  ::Numerics::rotateIntoOrthogonalBasis(n,m,l,Tx,Ty,Tz,T0_n,T0_m,T0_l);
   
   easi::ArraysAdapter<T> adapter;
   T n_yz;
@@ -72,7 +72,7 @@ void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParam
 }
 
 template <class Shortcuts, int basisSize, int numberOfVariables, int numberOfParameters, typename T>
-void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParameters, T>::TauStrength(
+void ContextDynamicRupture<Shortcuts, basisSize, numberOfVariables, numberOfParameters, T>::tauStrength(
   T& tau_str, T sigma_n, T S,
   double* const x, double t
 ){
@@ -119,7 +119,7 @@ void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParam
 
 
 template <class Shortcuts, int basisSize, int numberOfVariables, int numberOfParameters, typename T>
-T ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParameters, T>::boxcar(T& f, double x, T w) {
+T ContextDynamicRupture<Shortcuts, basisSize, numberOfVariables, numberOfParameters, T>::boxcar(T& f, double x, T w) {
   // f(x) is boxcar of unit amplitude in (x-w,x+w)
   T tol = 1e-8;
 
@@ -138,7 +138,7 @@ T ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParamete
 
 // solve for slip-rate (vv):
 template <class Shortcuts, int basisSize, int numberOfVariables, int numberOfParameters, typename T>
-void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParameters, T>::slip_weakening(
+void ContextDynamicRupture<Shortcuts, basisSize, numberOfVariables, numberOfParameters, T>::slipWeakening(
   T& v1, T& v2, T& Vel,
   T& tau1, T& tau2,
   T phi_1, T phi_2,
@@ -160,7 +160,7 @@ void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParam
 
 // Rupture Dynamics
 template <class Shortcuts, int basisSize, int numberOfVariables, int numberOfParameters, typename T>
-void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParameters, T>::SlipWeakeningFriction(
+void ContextDynamicRupture<Shortcuts, basisSize, numberOfVariables, numberOfParameters, T>::slipWeakeningFriction(
   T vn_p, T vn_m,
   T Tn_p, T Tn_m,
   T zn_p, T zn_m,
@@ -200,7 +200,7 @@ void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParam
   T T0_n=0;
 
   // get prestress (where normal traction is effective normal traction)
-  prestress(T0_n, T0_m, T0_l, x, 0.0, l, m, n);
+  preStress(T0_n, T0_m, T0_l, x, 0.0, l, m, n);
 
   vn_hat_m = (p_n - phi_n)/zn_p;   //! continuity of normal velocity
   Tn_hat_m = phi_n;                //! continuity of normal stress
@@ -212,11 +212,11 @@ void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParam
   T tau_str;
   T Vel = 0.0;
   T Tl, Tm, vv_l, vv_m; 
-  TauStrength(tau_str, sigma_n, S, x, t);
+  tauStrength(tau_str, sigma_n, S, x, t);
   
   if (tau_lock >= tau_str){
 
-    slip_weakening(vv_m,  vv_l, Vel, Tm, Tl, phi_m+T0_m, phi_l+T0_l, eta_s, tau_str, sigma_n);
+    slipWeakening(vv_m,  vv_l, Vel, Tm, Tl, phi_m+T0_m, phi_l+T0_l, eta_s, tau_str, sigma_n);
 
     Tm_hat_m = Tm - T0_m;
     Tl_hat_m = Tl - T0_l;

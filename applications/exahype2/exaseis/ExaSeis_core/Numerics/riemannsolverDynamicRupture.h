@@ -1,11 +1,11 @@
 #pragma once
 
-#include "../Curvilinear/ContextSlipWeakening.h"
-#include "riemannsolver_pml.h"
-#include "slipweakening.h"
+#include "../Curvilinear/ContextDynamicRupture.h"
+#include "riemannsolverPML.h"
+#include "dynamicRupture.h"
 
 template <class Shortcuts, int basisSize, int numberOfVariables, int numberOfParameters, typename T>
-void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParameters, T>::riemannSolver(
+void ContextDynamicRupture<Shortcuts, basisSize, numberOfVariables, numberOfParameters, T>::riemannSolver(
   T* FL, T* FR,
   const T* const QL, const T* const QR,
   const double t, const double dt,
@@ -70,40 +70,40 @@ void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParam
       T rho_m,cp_m,cs_m,mu_m,lam_m;
       T rho_p,cp_p,cs_p,mu_p,lam_p;
 
-      ::Numerics::compute_parameters<Shortcuts>(Q_m,rho_m,cp_m,cs_m,mu_m,lam_m);
-      ::Numerics::compute_parameters<Shortcuts>(Q_p,rho_p,cp_p,cs_p,mu_p,lam_p);
+      ::Numerics::computeParameters<Shortcuts>(Q_m,rho_m,cp_m,cs_m,mu_m,lam_m);
+      ::Numerics::computeParameters<Shortcuts>(Q_p,rho_p,cp_p,cs_p,mu_p,lam_p);
 
       T n_m[3],m_m[3],l_m[3];
       T n_p[3],m_p[3],l_p[3];
       T norm_p,norm_m;
 
-      ::Numerics::get_normals<Shortcuts>(Q_m,direction,norm_m,n_m);
-      ::Numerics::get_normals<Shortcuts>(Q_p,direction,norm_p,n_p);
+      ::Numerics::getNormals<Shortcuts>(Q_m,direction,norm_m,n_m);
+      ::Numerics::getNormals<Shortcuts>(Q_p,direction,norm_p,n_p);
 
       T Tx_m,Ty_m,Tz_m;
       T Tx_p,Ty_p,Tz_p;
-      ::Numerics::compute_tractions<Shortcuts>(Q_p,n_p,Tx_p,Ty_p,Tz_p);
-      ::Numerics::compute_tractions<Shortcuts>(Q_m,n_m,Tx_m,Ty_m,Tz_m);
+      ::Numerics::computeTractions<Shortcuts>(Q_p,n_p,Tx_p,Ty_p,Tz_p);
+      ::Numerics::computeTractions<Shortcuts>(Q_m,n_m,Tx_m,Ty_m,Tz_m);
 
       T vx_m,vy_m,vz_m;
       T vx_p,vy_p,vz_p;
-      ::Numerics::get_velocities<Shortcuts>(Q_p,vx_p,vy_p,vz_p);	
-      ::Numerics::get_velocities<Shortcuts>(Q_m,vx_m,vy_m,vz_m); 
+      ::Numerics::getVelocities<Shortcuts>(Q_p,vx_p,vy_p,vz_p);	
+      ::Numerics::getVelocities<Shortcuts>(Q_m,vx_m,vy_m,vz_m); 
           
-      ::Numerics::create_local_basis(n_p, m_p, l_p);
-      ::Numerics::create_local_basis(n_m, m_m, l_m);
+      ::Numerics::createLocalBasis(n_p, m_p, l_p);
+      ::Numerics::createLocalBasis(n_m, m_m, l_m);
 
       T Tn_m,Tm_m,Tl_m;
       T Tn_p,Tm_p,Tl_p;
 
       // rotate fields into l, m, n basis
-      ::Numerics::rotate_into_orthogonal_basis(n_m,m_m,l_m,Tx_m,Ty_m,Tz_m,Tn_m,Tm_m,Tl_m);
-      ::Numerics::rotate_into_orthogonal_basis(n_p,m_p,l_p,Tx_p,Ty_p,Tz_p,Tn_p,Tm_p,Tl_p);
+      ::Numerics::rotateIntoOrthogonalBasis(n_m,m_m,l_m,Tx_m,Ty_m,Tz_m,Tn_m,Tm_m,Tl_m);
+      ::Numerics::rotateIntoOrthogonalBasis(n_p,m_p,l_p,Tx_p,Ty_p,Tz_p,Tn_p,Tm_p,Tl_p);
 
       T vn_m,vm_m,vl_m;
       T vn_p,vm_p,vl_p;
-      ::Numerics::rotate_into_orthogonal_basis(n_m,m_m,l_m,vx_m,vy_m,vz_m,vn_m,vm_m,vl_m);      
-      ::Numerics::rotate_into_orthogonal_basis(n_p,m_p,l_p,vx_p,vy_p,vz_p,vn_p,vm_p,vl_p);      
+      ::Numerics::rotateIntoOrthogonalBasis(n_m,m_m,l_m,vx_m,vy_m,vz_m,vn_m,vm_m,vl_m);      
+      ::Numerics::rotateIntoOrthogonalBasis(n_p,m_p,l_p,vx_p,vy_p,vz_p,vn_p,vm_p,vl_p);      
 
       
       // extract local s-wave and p-wave impedances
@@ -147,12 +147,12 @@ void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParam
           QL[idx_QLR(i,j,s::curve_grid + 2 )] 
         };
 
-        ::Numerics::rotate_into_orthogonal_basis(n_m, m_m, l_m, Sx_m, Sy_m, Sz_m, Sn_m, Sm_m, Sl_m);
-        ::Numerics::rotate_into_orthogonal_basis(n_p, m_p, l_p, Sx_p, Sy_p, Sz_p, Sn_p, Sm_p, Sl_p);
+        ::Numerics::rotateIntoOrthogonalBasis(n_m, m_m, l_m, Sx_m, Sy_m, Sz_m, Sn_m, Sm_m, Sl_m);
+        ::Numerics::rotateIntoOrthogonalBasis(n_p, m_p, l_p, Sx_p, Sy_p, Sz_p, Sn_p, Sm_p, Sl_p);
   
         T S =  std::sqrt((Sl_p- Sl_m)*(Sl_p- Sl_m)+(Sm_p- Sm_m)*(Sm_p- Sm_m));
 
-        SlipWeakeningFriction(
+        slipWeakeningFriction(
           vn_p,vn_m, Tn_p,Tn_m, zp_p , zp_m, vn_hat_p , vn_hat_m, Tn_hat_p,Tn_hat_m, vm_p,vm_m,
           Tm_p,Tm_m, zs_p,zs_m, vm_hat_p, vm_hat_m, Tm_hat_p,Tm_hat_m, vl_p,vl_m,Tl_p,Tl_m, zs_p,
           zs_m, vl_hat_p , vl_hat_m, Tl_hat_p,Tl_hat_m, l_p, m_p, n_p, 
@@ -166,13 +166,13 @@ void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParam
         // 0 absorbing 1 free surface
         T r= faceIndex == surface ? 1 : 0;
 
-        ::Numerics::riemannSolver_boundary(faceIndex,r,
+        ::Numerics::riemannSolverBoundary(faceIndex,r,
             vn_m,vm_m,vl_m,
             Tn_m,Tm_m,Tl_m,
             zp_m,zs_m,
             vn_hat_m,vm_hat_m,vl_hat_m,
             Tn_hat_m,Tm_hat_m,Tl_hat_m);
-        ::Numerics::riemannSolver_boundary(faceIndex,r,
+        ::Numerics::riemannSolverBoundary(faceIndex,r,
             vn_p,vm_p,vl_p,
             Tn_p,Tm_p,Tl_p,
             zp_p,zs_p,
@@ -180,17 +180,17 @@ void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParam
             Tn_hat_p,Tm_hat_p,Tl_hat_p);      
       }
       else {
-        ::Numerics::riemannSolver_Nodal(vn_p, vn_m,
+        ::Numerics::riemannSolverNodal(vn_p, vn_m,
                 Tn_p, Tn_m,
                 zp_p , zp_m,
                 vn_hat_p , vn_hat_m,
                 Tn_hat_p, Tn_hat_m);
-        ::Numerics::riemannSolver_Nodal(vm_p, vm_m,
+        ::Numerics::riemannSolverNodal(vm_p, vm_m,
                 Tm_p, Tm_m,
                 zs_p , zs_m,
                 vm_hat_p , vm_hat_m,
                 Tm_hat_p, Tm_hat_m);
-        ::Numerics::riemannSolver_Nodal(vl_p, vl_m,
+        ::Numerics::riemannSolverNodal(vl_p, vl_m,
                 Tl_p, Tl_m,
                 zs_p , zs_m, 
                 vl_hat_p , vl_hat_m,
@@ -198,28 +198,28 @@ void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParam
       }
 
       //generate fluctuations in the local basis coordinates: n, m, l
-      ::Numerics::compute_fluctuations_left(zp_m,
+      ::Numerics::computeFluctuationsLeft(zp_m,
               Tn_m,Tn_hat_m,
               vn_m,vn_hat_m,
               FLn);
-      ::Numerics::compute_fluctuations_left(zs_m,
+      ::Numerics::computeFluctuationsLeft(zs_m,
               Tm_m,Tm_hat_m,
               vm_m,vm_hat_m,
               FLm);
-      ::Numerics::compute_fluctuations_left(zs_m,
+      ::Numerics::computeFluctuationsLeft(zs_m,
               Tl_m,Tl_hat_m,
               vl_m,vl_hat_m,
               FLl);
 
-      ::Numerics::compute_fluctuations_right(zp_p,
+      ::Numerics::computeFluctuationsRight(zp_p,
               Tn_p,Tn_hat_p,
               vn_p,vn_hat_p,
               FRn);
-      ::Numerics::compute_fluctuations_right(zs_p,
+      ::Numerics::computeFluctuationsRight(zs_p,
               Tm_p,Tm_hat_p,
               vm_p,vm_hat_p,
               FRm);
-      ::Numerics::compute_fluctuations_right(zs_p,
+      ::Numerics::computeFluctuationsRight(zs_p,
               Tl_p,Tl_hat_p,
               vl_p,vl_hat_p,
               FRl);
@@ -244,16 +244,16 @@ void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParam
       }
 
       // rotate back to the physical coordinates x, y, z
-      ::Numerics::rotate_into_physical_basis(n_m,m_m,l_m,
+      ::Numerics::rotateIntoPhysicalBasis(n_m,m_m,l_m,
               FLn,FLm,FLl,
               FLx,FLy,FLz);
-      ::Numerics::rotate_into_physical_basis(n_p,m_p,l_p,
+      ::Numerics::rotateIntoPhysicalBasis(n_p,m_p,l_p,
               FRn,FRm,FRl,
               FRx,FRy,FRz);
-      ::Numerics::rotate_into_physical_basis(n_m,m_m,l_m,
+      ::Numerics::rotateIntoPhysicalBasis(n_m,m_m,l_m,
               FL_n,FL_m,FL_l,
               FL_x,FL_y,FL_z);
-      ::Numerics::rotate_into_physical_basis(n_p,m_p,l_p,
+      ::Numerics::rotateIntoPhysicalBasis(n_p,m_p,l_p,
               FR_n,FR_m,FR_l,
               FR_x,FR_y,FR_z);
         
