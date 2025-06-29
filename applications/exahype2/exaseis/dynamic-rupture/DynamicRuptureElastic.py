@@ -176,13 +176,13 @@ def userIncludes():
 #define ASAGI_NOMPI
 #define _TOP 1
 
-#include "../ExaSeis_core/Curvilinear/ContextSlipWeakening.h"
-#include "../ExaSeis_core/Numerics/riemannsolver_slipweakening.h"
+#include "../ExaSeis_core/Curvilinear/ContextDynamicRupture.h"
+#include "../ExaSeis_core/Numerics/riemannsolverDynamicRupture.h"
 """
 
 def abstractUserDefinitions():
   return """
-ContextSlipWeakening<{{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}},
+ContextDynamicRupture<{{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}},
   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Order + 1,
   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NumberOfUnknowns,
   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NumberOfAuxiliaryVariables,
@@ -195,7 +195,7 @@ public:
   double QuadraturePoints1d[Order+1];
   
 protected:
-  static ContextSlipWeakening<VariableShortcuts{{SOLVER_NAME}}, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>* context;
+  static ContextDynamicRupture<VariableShortcuts{{SOLVER_NAME}}, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>* context;
 """
 
 def init_grid_step_implementation(scenario_string):
@@ -241,7 +241,7 @@ def init_grid_step_implementation(scenario_string):
 
   logTraceOutWith1Argument("Freesurface set at ", std::to_string(_TOP * 2));
 
-  context = new ContextSlipWeakening<VariableShortcuts{{SOLVER_NAME}}, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>(
+  context = new ContextDynamicRupture<VariableShortcuts{{SOLVER_NAME}}, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>(
     topography_string,
     // filename_rupture_model,
     coarsestMeshLevel,

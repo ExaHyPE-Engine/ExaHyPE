@@ -8,10 +8,10 @@
 #include "toolbox/curvi/kdTree/root.h"
 
 template <class Shortcuts, int basisSize, int numberOfVariables, int numberOfParameters, typename T>
-class ContextSlipWeakening: public ContextCurvilinear<Shortcuts, basisSize, numberOfVariables+numberOfParameters, T> {
+class ContextDynamicRupture: public ContextCurvilinear<Shortcuts, basisSize, numberOfVariables+numberOfParameters, T> {
 
 public:
-  ContextSlipWeakening(
+  ContextDynamicRupture(
     std::string& topography_string,
     int coarsestMeshLevel,
     double coarsestMeshSize, 
@@ -62,7 +62,7 @@ public:
     model->evaluate(query,adapter);
   }
 
-  ~ContextSlipWeakening() {
+  ~ContextDynamicRupture() {
     delete asagiReader;
   }
 
@@ -79,22 +79,22 @@ public:
     int surface = 2
   );
 
-  void initialstresstensor(
+  void initialStressTensor(
     T& sxx, T& syy, T& szz,
     T& sxy, T& sxz, T& syz,
     double* const x);
-  void prestress(
+  void preStress(
     T& T0_n, T& T0_m, T& T0_l,
     double* const x, double t,
     T* const l, T* const m, T* const n);
   T boxcar(T& f, double x, T w);
-  void TauStrength(T& tau_str, T sigma_n, T S, double* const x, double t);
-  void slip_weakening(
+  void tauStrength(T& tau_str, T sigma_n, T S, double* const x, double t);
+  void slipWeakening(
     T& v1, T& v2,
     T& Vel, T& tau1, T& tau2,
     T phi_1, T phi_2,
     T eta, T tau_str, T sigma_n);
-  void SlipWeakeningFriction(
+  void slipWeakeningFriction(
     T vn_p, T vn_m, 
     T Tn_p, T Tn_m,
     T zn_p, T zn_m,

@@ -30,13 +30,13 @@ def userIncludes():
 #define ASAGI_NOMPI
 #define _TOP 1
 
-#include "../ExaSeis_core/Curvilinear/ContextSlipWeakening.h"
-#include "../ExaSeis_core/Numerics/riemannsolver_pml_slipweakening.h"
+#include "../ExaSeis_core/Curvilinear/ContextDynamicRupture.h"
+#include "../ExaSeis_core/Numerics/riemannsolverPMLDynamicRupture.h"
 """
 
 def abstractUserDefinitions():
   return """
-ContextSlipWeakening<{{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}},
+ContextDynamicRupture<{{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}},
   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Order + 1,
   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NumberOfUnknowns,
   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NumberOfAuxiliaryVariables,
@@ -49,7 +49,7 @@ public:
   double QuadraturePoints1d[Order+1];
   
 protected:
-  static ContextSlipWeakening<VariableShortcutsElasticSolver, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>* context;
+  static ContextDynamicRupture<VariableShortcutsElasticSolver, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>* context;
 
   static constexpr int     pml_cell_width    = 1;
   static constexpr double  pml_alpha_const   = 1.5;
@@ -101,7 +101,7 @@ def init_grid_step_implementation(scenario_string):
 
   logTraceOutWith1Argument("Freesurface set at ", std::to_string(_TOP * 2));
 
-  context = new ContextSlipWeakening<VariableShortcutsElasticSolver, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>(
+  context = new ContextDynamicRupture<VariableShortcutsElasticSolver, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>(
     topography_string,
     coarsestMeshLevel,
     realCoarsestMeshSize,

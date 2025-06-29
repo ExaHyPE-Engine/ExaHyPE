@@ -2,10 +2,10 @@ import os, sys, peano4, exahype2
 
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
-sys.path.insert(0, os.path.abspath("../PML"))
+sys.path.insert(0, os.path.abspath("../pml"))
 
 import PMLElastic
-import DynamicRupture_core
+import DynamicRuptureElastic
 
 #sys.path.insert(0, os.path.abspath("../ExaSeis_core/Scenario"))
 #import TPV5, TPV26, TPV28, TPV29
@@ -67,22 +67,22 @@ theSolver.add_kernel_optimisations(
 )
 
 theSolver.set_implementation(
-    initial_conditions    = DynamicRupture_core.initial(my_scenario.initial_conditions()), #same as curvi, which still need to be templated for initial conditions
+    initial_conditions    = DynamicRuptureElastic.initial(my_scenario.initial_conditions()), #same as curvi, which still need to be templated for initial conditions
     boundary_conditions   = PMLElastic.boundary(),
     max_eigenvalue        = PMLElastic.eigenvalue(),
-    flux                  = DynamicRupture_core.flux(), #same as curvi
-    ncp                   = DynamicRupture_core.ncp(), # same as curvi
-    material_parameters   = DynamicRupture_core.multiplyMaterialParameterMatrix(), #same as curvi +u term
-    source_term           = DynamicRupture_core.algebraic_source(),
-    riemann_solver=DynamicRupture_core.riemann_solver()
+    flux                  = DynamicRuptureElastic.flux(), #same as curvi
+    ncp                   = DynamicRuptureElastic.ncp(), # same as curvi
+    material_parameters   = DynamicRuptureElastic.multiplyMaterialParameterMatrix(), #same as curvi +u term
+    source_term           = DynamicRuptureElastic.algebraic_source(),
+    riemann_solver=DynamicRuptureElastic.riemann_solver()
 )
 
-theSolver._finish_time_step_implementation   += DynamicRupture_core.finish_time_step_implementation(scenario_string)
-theSolver._abstract_solver_user_declarations += DynamicRupture_core.abstractDeclarations()
-theSolver._abstract_solver_user_definitions  += DynamicRupture_core.abstractUserDefinitions()
-theSolver._start_grid_initialisation_implementation += DynamicRupture_core.init_grid_step_implementation(scenario_string)
-theSolver._destructor_implementation +=  DynamicRupture_core.abstractDestructor()
-theSolver.add_user_solver_includes(DynamicRupture_core.userIncludes())
+theSolver._finish_time_step_implementation   += DynamicRuptureElastic.finish_time_step_implementation(scenario_string)
+theSolver._abstract_solver_user_declarations += DynamicRuptureElastic.abstractDeclarations()
+theSolver._abstract_solver_user_definitions  += DynamicRuptureElastic.abstractUserDefinitions()
+theSolver._start_grid_initialisation_implementation += DynamicRuptureElastic.init_grid_step_implementation(scenario_string)
+theSolver._destructor_implementation +=  DynamicRuptureElastic.abstractDestructor()
+theSolver.add_user_solver_includes(DynamicRuptureElastic.userIncludes())
 
 filename=scenario+"_l_"+str(min_level)+"_o_"+str(order)+"_pr_"+str(precision)
 project = exahype2.Project(["exahype2", "elastic"], "dynamicRupture", executable=filename)

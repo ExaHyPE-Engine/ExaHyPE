@@ -2,10 +2,10 @@ import os, sys, peano4, exahype2
 
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
-sys.path.insert(0, os.path.abspath("../PML"))
+sys.path.insert(0, os.path.abspath("../pml"))
 
 import PMLElastic
-import PMLSlipWeakening_core
+import PMLDynamicRuptureElastic
 
 #sys.path.insert(0, os.path.abspath("../ExaSeis_core/Scenario"))
 #import TPV5, TPV26, TPV28, TPV29
@@ -36,7 +36,7 @@ auxiliary_variables = {
 offset   = my_scenario.domain_offset
 size     = my_scenario.domain_size
 end_time = my_scenario.end_time
-plot_dt  = 0.5
+plot_dt  = 0.0
 order = 5
 min_level = 3
 max_depth = 0
@@ -71,16 +71,16 @@ theSolver.set_implementation(
     flux                  = PMLElastic.flux(),
     ncp                   = PMLElastic.ncp(),
     material_parameters   = PMLElastic.multiplyMaterialParameterMatrix(),
-    riemann_solver        = PMLSlipWeakening_core.riemann_solver(),
-    source_term           = PMLElastic.algebraic_source()+PMLSlipWeakening_core.algebraic_source()
+    riemann_solver        = PMLDynamicRuptureElastic.riemann_solver(),
+    source_term           = PMLElastic.algebraic_source()+PMLDynamicRuptureElastic.algebraic_source()
 )
 
-theSolver._finish_time_step_implementation += PMLSlipWeakening_core.finish_time_step_implementation(scenario_string)
-theSolver._abstract_solver_user_definitions  += PMLSlipWeakening_core.abstractUserDefinitions()
-theSolver._abstract_solver_user_declarations += PMLSlipWeakening_core.abstractDeclarations()
-theSolver._start_grid_initialisation_implementation += PMLSlipWeakening_core.init_grid_step_implementation(scenario_string)
+theSolver._finish_time_step_implementation += PMLDynamicRuptureElastic.finish_time_step_implementation(scenario_string)
+theSolver._abstract_solver_user_definitions  += PMLDynamicRuptureElastic.abstractUserDefinitions()
+theSolver._abstract_solver_user_declarations += PMLDynamicRuptureElastic.abstractDeclarations()
+theSolver._start_grid_initialisation_implementation += PMLDynamicRuptureElastic.init_grid_step_implementation(scenario_string)
 theSolver._destructor_implementation +=  PMLElastic.abstractDestructor()
-theSolver.add_user_solver_includes(PMLSlipWeakening_core.userIncludes())
+theSolver.add_user_solver_includes(PMLDynamicRuptureElastic.userIncludes())
 
 project = exahype2.Project(["exahype2", "elastic"], "pml", executable=scenario)
 

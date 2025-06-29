@@ -3,7 +3,7 @@
 namespace Numerics {
 
   template <class Shortcuts, typename T>
-  inline void compute_tractions(const T* Q, const T* n, T& Tx, T& Ty, T& Tz) {
+  inline void computeTractions(const T* Q, const T* n, T& Tx, T& Ty, T& Tz) {
     using s = Shortcuts;
     T    sigma_xx = Q[s::sigma + 0];
     T    sigma_yy = Q[s::sigma + 1];
@@ -18,7 +18,7 @@ namespace Numerics {
   }
 
   template <class Shortcuts, typename T>
-  inline void get_velocities(const T* Q, T& vx, T& vy, T& vz) {
+  inline void getVelocities(const T* Q, T& vx, T& vy, T& vz) {
     using s = Shortcuts;
     vx = Q[s::v + 0];
     vy = Q[s::v + 1];
@@ -28,7 +28,7 @@ namespace Numerics {
   // Transformation routines
   // Gram Schmidt orthonormalization
   template<typename T>
-  inline void Gram_Schmidt(T* y, T* z) {
+  inline void GramSchmidt(T* y, T* z) {
     T a_yz = y[0] * z[0] + y[1] * z[1] + y[2] * z[2];
 
     for (int i = 0; i < 3; i++) {
@@ -43,7 +43,7 @@ namespace Numerics {
   }
 
   template<typename T>
-  inline void create_local_basis(T* n, T* m, T* l) {
+  inline void createLocalBasis(T* n, T* m, T* l) {
 
 #if Dimensions == 2
     l[0] = 0.;
@@ -65,12 +65,12 @@ namespace Numerics {
     diff_norm2 = std::sqrt(pow(n[0] + m[0], 2) + pow(n[1] + m[1], 2) + pow(n[2] + m[2], 2));
 
     if (diff_norm1 >= tol && diff_norm2 >= tol) {
-      Gram_Schmidt(n, m);
+      GramSchmidt(n, m);
     } else {
       m[0] = 0.;
       m[1] = 0.;
       m[2] = 1.;
-      Gram_Schmidt(n, m);
+      GramSchmidt(n, m);
     }
     l[0] = n[1] * m[2] - n[2] * m[1];
     l[1] = -(n[0] * m[2] - n[2] * m[0]);
@@ -80,7 +80,7 @@ namespace Numerics {
   }
 
   template<typename T>
-  inline void riemannSolver_Nodal(
+  inline void riemannSolverNodal(
     T  v_p,
     T  v_m,
     T  sigma_p,
@@ -132,7 +132,7 @@ namespace Numerics {
   }
 
   template<typename T>
-  inline void riemannSolver_BC0(T v, T sigma, T z, T r, T& v_hat, T& sigma_hat) {
+  inline void riemannSolverBC0(T v, T sigma, T z, T r, T& v_hat, T& sigma_hat) {
     T p = 0.5 * (z * v + sigma);
     if (z > 0) {
       v_hat     = (1 + r) / z * p;
@@ -144,7 +144,7 @@ namespace Numerics {
   }
 
   template<typename T>
-  inline void riemannSolver_BCn(T v, T sigma, T z, T r, T& v_hat, T& sigma_hat) {
+  inline void riemannSolverBCn(T v, T sigma, T z, T r, T& v_hat, T& sigma_hat) {
     T q = 0.5 * (z * v - sigma);
     if (z > 0) {
       v_hat     = (1 + r) / z * q;
@@ -156,7 +156,7 @@ namespace Numerics {
   }
 
   template<typename T>
-  inline void rotate_into_orthogonal_basis(
+  inline void rotateIntoOrthogonalBasis(
     T* n, T* m, T* l, T Tx, T Ty, T Tz, T& Tn, T& Tm, T& Tl
   ) {
     Tn = Tx * n[0] + Ty * n[1] + Tz * n[2];
@@ -165,7 +165,7 @@ namespace Numerics {
   }
 
   template<typename T>
-  inline void rotate_into_physical_basis(
+  inline void rotateIntoPhysicalBasis(
     T* n, T* m, T* l, T Fn, T Fm, T Fl, T& Fx, T& Fy, T& Fz
   ) {
     Fx = n[0] * Fn + m[0] * Fm + l[0] * Fl;
@@ -175,12 +175,12 @@ namespace Numerics {
 
   // Solver
   template<typename T>
-  inline void compute_fluctuations_left(T z, T myT, T T_hat, T v, T v_hat, T& F) {
+  inline void computeFluctuationsLeft(T z, T myT, T T_hat, T v, T v_hat, T& F) {
     F = 0.5 * (z * (v - v_hat) + (myT - T_hat));
   }
 
   template<typename T>
-  inline void compute_fluctuations_right(T z, T myT, T T_hat, T v, T v_hat, T& F) {
+  inline void computeFluctuationsRight(T z, T myT, T T_hat, T v, T v_hat, T& F) {
     F = 0.5 * (z * (v - v_hat) - (myT - T_hat));
   }
 

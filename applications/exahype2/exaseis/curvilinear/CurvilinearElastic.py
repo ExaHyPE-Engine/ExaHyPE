@@ -247,8 +247,8 @@ def userIncludes():
 
 #include "../ExaSeis_core/Curvilinear/ContextCurvilinear.h"
 
-#include "../ExaSeis_core/Numerics/routines_curvilinear.h"
-#include "../ExaSeis_core/Numerics/riemannsolver_isotropic.h"
+#include "../ExaSeis_core/Numerics/curvilinearRoutines.h"
+#include "../ExaSeis_core/Numerics/riemannsolverIsotropic.h"
 """
 
 def abstractUserDefinitions():
