@@ -11,8 +11,17 @@ sys.path.insert(0, os.path.abspath(".."))
 from sweargs import SWEArgumentParser
 
 initial_conditions = """
-  const double bathymetryBeforeEarthquake = topologyParser.sampleBathymetry(x(0), x(1));
-  const double displacement               = topologyParser.sampleDisplacement(x(0), x(1));
+  static tarch::reader::NetCDFFieldParser fieldParser(
+    \"tohoku_gebco_ucsb3_2000m_hawaii_bath.nc\",
+    \"tohoku_gebco_ucsb3_2000m_hawaii_displ.nc\",
+    DomainSize(0),
+    DomainSize(1),
+    DomainOffset(0),
+    DomainOffset(1)
+  );
+
+  const double bathymetryBeforeEarthquake = fieldParser.sampleTopology(x(0), x(1));
+  const double displacement               = fieldParser.sampleDisplacement(x(0), x(1));
   const double bathymetryAfterEarthquake  = bathymetryBeforeEarthquake + displacement;
 
   using s  = VariableShortcuts;
@@ -70,19 +79,7 @@ riemann_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exa
 riemann_solver.add_user_solver_includes(
     """
 #include "../FWave.h"
-#include "../TopologyParser.h"
-"""
-)
-riemann_solver.add_solver_constants(
-    """
-TopologyParser topologyParser = TopologyParser(
-  \"tohoku_gebco_ucsb3_2000m_hawaii_bath.nc\",
-  \"tohoku_gebco_ucsb3_2000m_hawaii_displ.nc\",
-  DomainSize(0),
-  DomainSize(1),
-  DomainOffset(0),
-  DomainOffset(1)
-);
+#include "tarch/reader/NetCDFFieldParser.h"
 """
 )
 
@@ -137,8 +134,6 @@ project = project.generate_Peano4_project(verbose=True)
 if args.fpe:
     project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
-project.output.makefile.add_cpp_file("../NetCDFReader.cpp")
-project.output.makefile.add_cpp_file("../TopologyParser.cpp")
 project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
 

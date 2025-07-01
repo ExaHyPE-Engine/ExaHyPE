@@ -15,9 +15,24 @@ initial_conditions = """
     Q[i] = 0.0;
   }
 
+  static tarch::reader::NetCDFFieldParser fieldParser(
+    \"Tafjord_5m_EPSG25832.nc\",
+    \"ini_3.0Mm3_5m_EPSG25832.nc\",
+    DomainSize(0),
+    DomainSize(1),
+    DomainOffset(0),
+    DomainOffset(1),
+    "Band1",
+    "x",
+    "y",
+    "Band1",
+    "x",
+    "y"
+  );
+
   using s = VariableShortcuts;
-  Q[s::h] = topologyParser.sampleDisplacement(x(0), x(1));
-  Q[s::b] = topologyParser.sampleBathymetry(x(0), x(1));
+  Q[s::h] = fieldParser.sampleDisplacement(x(0), x(1));
+  Q[s::b] = fieldParser.sampleTopology(x(0), x(1));
 """
 
 boundary_conditions = """
@@ -95,25 +110,7 @@ riemann_solver.add_user_solver_includes(
 #include "../SWE.h"
 #include "../FrictionLaws.h"
 #include "../ComputeFirstDerivatives.h"
-#include "../TopologyParser.h"
-"""
-)
-riemann_solver.add_solver_constants(
-    """
-TopologyParser topologyParser = TopologyParser(
-  \"Tafjord_5m_EPSG25832.nc\",
-  \"ini_3.0Mm3_5m_EPSG25832.nc\",
-  DomainSize(0),
-  DomainSize(1),
-  DomainOffset(0),
-  DomainOffset(1),
-  "Band1",
-  "x",
-  "y",
-  "Band1",
-  "x",
-  "y"
-);
+#include "tarch/reader/NetCDFFieldParser.h"
 """
 )
 # riemann_solver._preprocess_reconstructed_patch = """
@@ -176,8 +173,6 @@ project = project.generate_Peano4_project(verbose=True)
 if args.fpe:
     project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
-project.output.makefile.add_cpp_file("../NetCDFReader.cpp")
-project.output.makefile.add_cpp_file("../TopologyParser.cpp")
 project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
 
