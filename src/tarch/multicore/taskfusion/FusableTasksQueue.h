@@ -17,6 +17,8 @@ namespace tarch {
   namespace multicore {
     namespace taskfusion {
       class FusableTasksQueue;
+      class ProcessOneReadyTask;
+      class ProcessSetOfReadyTasks;
     }
   }
 }
@@ -25,16 +27,29 @@ namespace tarch {
 /**
  * Represents a queue of fusable tasks
  *
- * @todo We might want to make the attributes private to have a stronger encapsulation
  */
 class tarch::multicore::taskfusion::FusableTasksQueue {
   public:
     static constexpr int AnyTask = -1;
 
+    friend class ProcessOneReadyTask;
+    friend class ProcessSetOfReadyTasks;
+
+
     FusableTasksQueue(int type_);
     ~FusableTasksQueue()                        = default;
     FusableTasksQueue(const FusableTasksQueue&) = delete;
 
+    /**
+     * Insert a new task that is pending
+     *
+     * Pending tasks are tasks that are not ready yet. At this point, it is
+     * enough to know the number of this task, as we assume that the task
+     * is an instance of LogReadyTask. That is: If the user wants to add a
+     * new task with incoming dependencies, then the user has to create an
+     * instance of LogReadyTask (with the same number as the fusable task)
+     * and inform the queue about this task.
+     */
     void insertPendingTask( int taskNumber );
 
     /**
@@ -57,37 +72,18 @@ class tarch::multicore::taskfusion::FusableTasksQueue {
     void insertReadyTask( Task* task, int taskNumber );
 
     /**
-     * Search for the one task we are waiting for. If you find it, process it.
+     * Drain all the ready tasks
      *
-     * @param taskNumber Task number that has to be processed. If you pass in
-     *   AnyTask, then the routine simply takes the first task (if there is one) and
-     *   finishes that one.
+     * This routine is used by tarch::multicore::taskfusion::processAllReadyTasks().
      */
-    void processOneTask(
-      int                taskNumber
-    );
-
     void drainReadyTasks();
 
     /**
-     * Process tasks from queue and fuse them
-     *
-     * Very simple implementation running through a few basic checks:
-     *
-     * - Get the instructions for the task type at this point and also the
-     *   size of the queue.
-     * - If we are ready to fuse, extract all the tasks to be fused from the
-     *   queue and hand them over to the fused routine.
-     * - Bookkeep that these tasks are now completed.
-     *
-     * If there are not enough tasks to be fused, the routine degenerates to
-     * nop.
-     *
-     * ## Threads-safety
-     *
-     * This routine is totally thread-safe
+     * Can be used with the queries below if you prefer those names over
+     * the boolean values. Makes it clearer what a function does.
      */
-    void processTasks();
+    static constexpr bool UseTryLockAndReturnTrueIfLockFailed = true;
+    static constexpr bool LockQueueAndReturnReliableResult    = false;
 
     /**
      * Look up if the task number to which this process task is tied to has already been done.
@@ -95,6 +91,9 @@ class tarch::multicore::taskfusion::FusableTasksQueue {
      * ## Thread safety
      *
      * This routine is totally thread-safe.
+     *
+     * Use UseTryLockAndReturnTrueIfLockFailed or LockQueueAndReturnReliableResult
+     * for the tryLock values if you are unsure.
      *
      * @param tryLock If set, we use a try lock (not a lock) and return false
      *                if the try fails. If it is unset, we use a proper lock.
@@ -117,39 +116,49 @@ class tarch::multicore::taskfusion::FusableTasksQueue {
     int getType() const;
 
     /**
+     * Not thread-safe, i.e. might return outdated information
+     */
+    int getNumberOfReadyTasks() const;
+  private:
+    static tarch::logging::Log                 _log;
+
+    const int                                  _type;
+
+    /**
      * Each task in the queue is identified through a pointer to the
      * task plus a task (dependency) number.
      */
-    using Tasks                = std::map< int, tarch::multicore::Task* >;
+    using ReadyTasks           = std::map< int, tarch::multicore::Task* >;
+
+    /**
+     * Map fusable task (number) onto the number of the ProcessReadyTask which actually
+     * handles them.
+     */
+    using RunningTasks         = std::map< int, int >;
+
     using TaskNumbers          = std::unordered_set< int >;
 
     /**
      * Tasks that are ready to go
      */
-    Tasks                                      readyTasks;
+    ReadyTasks                                 _readyTasks;
 
     /**
      * Tasks which are currently tied to a LogTask instance but are not
      * yet ready
      */
-    TaskNumbers                                pendingTasks;
+    TaskNumbers                                _pendingTasks;
 
     /**
-     * Tasks that are complete
+     * Tasks that are currently running
      */
-    TaskNumbers                                runningTasks;
+    RunningTasks                               _runningTasks;
 
-    tarch::multicore::BooleanSemaphore         pendingTasksSemaphore;
-    tarch::multicore::BooleanSemaphore         readyTasksSemaphore;
-    tarch::multicore::BooleanSemaphore         runningTasksSemaphore;
+    tarch::multicore::BooleanSemaphore         _pendingTasksSemaphore;
+    tarch::multicore::BooleanSemaphore         _readyTasksSemaphore;
+    tarch::multicore::BooleanSemaphore         _runningTasksSemaphore;
 
-    tarch::multicore::BooleanSemaphore         statisticsSemaphore;
-    tarch::timing::GlidingAverageMeasurement   numberOfPendingReadyTasksPerProcessTaskExecution;
-    tarch::timing::GlidingAverageMeasurement   probabilityThatTaskIsCompleted;
-
-  private:
-    static const std::string                   ProcessFusedTasksStatisticsIdentifier;
-    static tarch::logging::Log                 _log;
-
-    const int                                  _type;
+    tarch::multicore::BooleanSemaphore         _statisticsSemaphore;
+    tarch::timing::GlidingAverageMeasurement   _numberOfPendingReadyTasksPerProcessTaskExecution;
+    tarch::timing::GlidingAverageMeasurement   _probabilityThatTaskIsCompleted;
 };

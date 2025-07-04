@@ -76,23 +76,6 @@ namespace tarch {
         LazyEvaluation,
 
         /**
-         * Issue a consumer task if we need a task outcome and realise that there are too many tasks pendings
-         *
-         * This variant is very similar to LazyEvaluation, but it differs in
-         * that the lazy fusion is deployed to separate tasks. This can
-         * massively increase the concurrency. Once we have issued the lazy
-         * task, we process the one single task that we want to evaluate
-         * lazily.
-         *
-         * Consequently, the consumer tasks are issued rather lately, but this
-         * has the advantage that it is very likely that we have a large
-         * number of tasks pending in the system at the point the first
-         * consumer task is launched.
-         *
-         */
-        LazyConsumerTasks,
-
-        /**
          * Map each fusable task onto a producer-consumer task pair
          *
          * Whenever we get a task (in the example below we get three yellow

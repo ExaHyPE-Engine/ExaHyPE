@@ -37,6 +37,25 @@ namespace tarch {
      * the fusable tasks in a map indexed by the task type. The most important
      * type in the context of fusion therefore is FusableTaskQueue.
      *
+     *
+     * ## Some implementation lessons learned
+     *
+     * Originally, I thought we'd need a couple of these
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * while (queue.second->isTaskReadyOrRunning(taskNumber, false)) {
+     *   queue.second->processTasks();
+     * }
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * whenever we have to ensure that a task is done. After all, someone else
+     * might just have used this one as part of task fusion. However, such a
+     * while is toxic. It can always lead to deadlocks. Instead, every task has
+     * to be mapped onto a task dependency, and we have to ensure that we can
+     * properly wait for tasks. It is fine if a task is already done, and in
+     * this case we can prune the DAG and omit a wait, but otherwise, we have
+     * to ensure that we work with task dependencies.
+     *
      * @see Consult the page @ref documentation_tarch_task_fusion_strategies
      *   for recommendations and hints on task fusion strategies.
      */
@@ -142,46 +161,63 @@ namespace tarch {
       );
 
       /**
+       * If we run into a task wait, we have to be sure that fusable tasks are mapped onto proper tasks
+       *
        * Delegates to implementation-specific variants.
+       *
+       * @return The routine might have created new native tasks, i.e. the
+       *         calling routine has to wait for these native tasks.
        */
-      void ensureHeldBackTasksAreMappedOntoNativeTasks(const std::set<TaskNumber>& inDependencies);
+      bool ensureHeldBackTasksAreMappedOntoNativeTasks(const std::set<TaskNumber>& taskNumbers);
 
       /**
        * Implementation of waitForTasks() if we use LazyEvaluation.
        *
        * We don't know, at this point, what the type of each in dependency is.
-       * Therefore, we simply loop over all queues, i.e. all task types that we
-       * are aware of.
+       * Therefore, we loop over all queues, i.e. all task types that we
+       * are aware of, and look if any of the tasks we are interested in is
+       * still in there labelled as ready or running. This works, as we expect
+       * the user to have called ensureHeldBackTasksAreMappedOntoNativeTasks_EnsureAllTasksAreRunningReadyOrHaveCompleted()
+       * before. We use a try-lock here to avoid blocking. If this try fails,
+       * we have to assume that the task is still in the queue. If we assume
+       * that at least one task is running or is ready, we have to continue to
+       * do some work:
        *
-       * First, we look in each queue if it hosts the right task. If not, we
-       * try to invoke the fusion. If that fails, i.e. the task is not completed
-       * yet, we issue another loop over all task types, i.e. queues, and process
-       * one task at a time. This is a while loop, i.e. by the time we return
-       * we know that we have found the right task.
+       * First, we look in each queue if it hosts the a task that is ready or
+       * running. If this is the case, we invoke the task fusion and afterwards
+       * ensure that the task is really completed. After that, we return.
+       *
+       * The handling processTask() is a little bit tricky: This routine
+       * returns immediately if the task is not among the ready tasks. In most
+       * cases, this is the right thing to do. However, it could also be that
+       * we hit this routine on threads A and are being asked to process task
+       * t1. At the same time, thread B also hits the same routine triggered
+       * for task t2. As it happens B is faster and grabs t1. Now, if thread A
+       * checks for t1 to be ready or running, the routine processTask() will,
+       * rightly so, wait for the responsible task for t1 to finish its work.
+       * That means, we have to embed the whole handling into a separate task,
+       * so we can wait for it.
        *
        * @see ProcessReadyTask::processTasks() to trigger the actual lazy
        *      fusion of tasks.
        * @see ProcessReadyTask::hasTaskBeenProcessed() which is used to check
        *      if a particular task has completed already.
        */
-      void ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(const std::set<TaskNumber>& inDependencies);
+      bool ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(const std::set<TaskNumber>& inDependencies);
+
+      bool ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks(const std::set<TaskNumber>& inDependencies);
 
       /**
+       * Ensure tasks are not pending anymore
        *
-       *
-       * # Implementation
-       *
-       * If the task is ready, somebody could have triggered the computation
-       * instead of us. So we issue a consumer task now, as we may assume that
-       * there are many other tasks in there as well which are ready and should
-       * be done.
-       *
-       * After that, we while loop and wait until we know that the task is
-       * complete.
-       *
+       * If we want to ensure that a fusable task is mapped onto a proper task
+       * (set) already, then we first of all have to check if a fusable task
+       * is still pending, i.e. parked in the queue of tasks that are not
+       * ready yet. So we have to ensure that they are not blocked. If they are
+       * not yet among the ready tasks (or already running or have completed),
+       * then we add a wait here.
        */
-      void ensureHeldBackTasksAreMappedOntoNativeTasks_LazyConsumerTasks(const std::set<TaskNumber>& inDependencies);
-      void ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks(const std::set<TaskNumber>& inDependencies);
+      void ensureHeldBackTasksAreMappedOntoNativeTasks_EnsureAllTasksAreRunningReadyOrHaveCompleted(const std::set<TaskNumber>& inDependencies);
     } // namespace taskfusion
   }
 }

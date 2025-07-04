@@ -126,7 +126,9 @@ else:
     max_trees = "::exahype2::LoadBalancingConfiguration::UseNumberOfThreads"
 
 project.set_multicore_orchestration( """new ::tarch::multicore::orchestration::Hardcoded(
-  8,256,
+//  4,128, viel schlechter
+//  8,256,
+  32,256,
   tarch::multicore::Task::Host,
   ::tarch::multicore::orchestration::Hardcoded::NoNestedParallelism,
   ::tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks

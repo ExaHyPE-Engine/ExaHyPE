@@ -144,6 +144,12 @@ namespace tarch {
      * ever waiting for it later on (at least not via task dependencies).
      *
      *
+     * ## Usage with functors
+     *
+     * If you have a task object, you can directly call it. If you have only a
+     * functor, use tarch::multicore::TaskWithCopyOfFunctor.
+     *
+     *
      * ## OpenMP variant
      *
      * The OpenMP variant has to jump through a number of hoops:
@@ -195,6 +201,15 @@ namespace tarch {
     );
 
     /**
+     * This is a hint type which can be used to accelerate any taskwaits
+     */
+    enum class TaskWaitType {
+      Mixed,
+      ExclusivelyFusedTasks,
+      OnlyNativeTasks
+    };
+
+    /**
      * Wait for set of tasks
      *
      * Entries in inDependencies can be NoDependency. This is a trivial
@@ -217,13 +232,30 @@ namespace tarch {
      *
      * This routine degenerates to nop, as no task can be pending. spawnTask()
      * always executed the task straightaway.
+     *
+     *
+     *
+     * ## Optimisation
+     *
+     * If you know that you have exclusively native tasks, then we can skip
+     * the check if there are any fused tasks still pending that we have to map
+     * onto native tasks first.
+     *
+     * If you have exclusively fused tasks, then we can hand the baton on to
+     * the fusion subpackage, but in return ask it if there's a chance that
+     * some native tasks arise from the fusion. This is not the case for all
+     * fusion strategies. If so, we can skip the subsequent test for native
+     * tasks. See tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks().
+     *
+     *
+     * @param taskWaitType This is an optimisation hint. See description above.
      */
-    void waitForTasks(const std::set<TaskNumber>& inDependencies);
+    void waitForTasks(const std::set<TaskNumber>& inDependencies, TaskWaitType taskWaitType = TaskWaitType::Mixed);
 
     /**
      * Wrapper around waitForTasks() with a single-element set.
      */
-    void waitForTask(const int taskNumber);
+    void waitForTask(const int taskNumber, TaskWaitType taskWaitType = TaskWaitType::Mixed);
 
     /**
      * Fork-join task submission pattern
@@ -602,6 +634,8 @@ namespace tarch {
      * @param device Target device on which the fused tasks should be executed. Can
      *   be host if the tasks should end up on the host.
      */
+
+    // @todo make it an std::vector
     void processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device);
 
   } // namespace multicore

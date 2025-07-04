@@ -193,9 +193,8 @@ namespace tarch {
      *   tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
      *     tarch::multicore::Task::DontFuse,
      *     tarch::multicore::Task::DefaultPriority,
-     *     [=,this]()->bool {
+     *     [=,this]()->void {
      *        ...
-     *        return false;
      *     }
      *   );
      *
