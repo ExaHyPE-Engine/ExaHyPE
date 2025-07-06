@@ -162,14 +162,12 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_Producer
     processReadyTaskInDependencyNumber.insert( taskNumber );
   }
 
-/*
   tarch::multicore::Task* newFusionTask = new tarch::multicore::taskfusion::ProcessSetOfReadyTasks(taskNumber, taskQueue);
   tarch::multicore::spawnTask(
     newFusionTask,
     processReadyTaskInDependencyNumber,
     taskNumber
   );
-*/
 
   tarch::multicore::Task* newProcessTask = new tarch::multicore::taskfusion::ProcessOneReadyTask(taskNumber, taskQueue);
   tarch::multicore::spawnTask(
