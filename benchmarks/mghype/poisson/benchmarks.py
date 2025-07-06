@@ -131,7 +131,7 @@ project.set_multicore_orchestration( """new ::tarch::multicore::orchestration::H
   32,256,
   tarch::multicore::Task::Host,
   ::tarch::multicore::orchestration::Hardcoded::NoNestedParallelism,
-  ::tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks
+  ::tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskPairs
 )""" )
 
 

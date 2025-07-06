@@ -20,16 +20,6 @@
 
 
 
-/*
-
-Docu:
-
-- Jeder ProcessOneReadyTask ist genau "seinem" fusable task zugeordnet (number recycling)
-
-
-
- */
-
 namespace {
   /**
    * We map task types onto lists of tasks
@@ -149,19 +139,15 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_Producer
   const TaskNumber&      taskNumber,
   const tarch::multicore::orchestration::Strategy::FuseInstruction&  instruction
 ) {
-/*
   logDebug(
     "translateFusableTaskIntoTaskSequence(...)",
-    "spawn two tasks around " << taskNumber <<
+    "spawn three tasks around " << taskNumber <<
     " (min-tasks=" << instruction.minTasks <<
     ", max-tasks=" << instruction.maxTasks <<
     ")"
   );
 
-  muesssen drei Tasks sein: log ready, fuse, individual one
-  Viel Doku dazu
-
-  std::set<TaskNumber>  processReadyTaskInDependencyNumber;
+  std::set<TaskNumber>  processReadyTaskInDependencyNumber = tarch::multicore::NoInDependencies;
 
   if ( taskNumber==tarch::multicore::NoOutDependencies or inDependencies.empty() ) {
     taskQueue.insertReadyTask(
@@ -176,10 +162,21 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_Producer
     processReadyTaskInDependencyNumber.insert( taskNumber );
   }
 
-  Task* processTask = new ProcessReadyTask(taskNumber, taskNumber, taskQueue);
-  processTask->setPriority(task->getPriority()/2);
-  tarch::multicore::native::spawnTask( processTask, processReadyTaskInDependencyNumber, taskNumber);
+/*
+  tarch::multicore::Task* newFusionTask = new tarch::multicore::taskfusion::ProcessSetOfReadyTasks(taskNumber, taskQueue);
+  tarch::multicore::spawnTask(
+    newFusionTask,
+    processReadyTaskInDependencyNumber,
+    taskNumber
+  );
 */
+
+  tarch::multicore::Task* newProcessTask = new tarch::multicore::taskfusion::ProcessOneReadyTask(taskNumber, taskQueue);
+  tarch::multicore::spawnTask(
+    newProcessTask,
+    {taskNumber},
+    taskNumber
+  );
 }
 
 

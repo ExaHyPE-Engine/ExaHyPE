@@ -1,4 +1,5 @@
 #include "FusableTasksQueue.h"
+#include "ProcessOneReadyTask.h"
 
 
 #include "tarch/Assertions.h"
@@ -49,25 +50,26 @@ void tarch::multicore::taskfusion::FusableTasksQueue::movePendingTaskIntoReadyTa
 
 
 void tarch::multicore::taskfusion::FusableTasksQueue::drainReadyTasks() {
-  // @todo Pleaes complete with tasks
-/*
-  tarch::multicore::Lock readyTaskLock(readyTasksSemaphore);
+  int nextTaskNumber = AnyTask+1;
 
-  for (auto& p: readyTasks) {
-    int taskNumber = p.first;
-    tarch::multicore::Lock runningTaskLock(runningTasksSemaphore);
-    runningTasks.insert( taskNumber );
-    runningTaskLock.free();
+  while (nextTaskNumber!=AnyTask) {
+    tarch::multicore::Lock readyTaskLock(_readyTasksSemaphore);
+    nextTaskNumber = AnyTask;
+    if (not _readyTasks.empty()) {
+      nextTaskNumber = _readyTasks.begin()->first;
+    }
+    readyTaskLock.free();
 
-    p.second->run();
-    delete p.second;
-
-    runningTaskLock.lock();
-    runningTasks.erase( taskNumber );
+    if (nextTaskNumber!=AnyTask) {
+      tarch::multicore::Task* newProcessTask = new tarch::multicore::taskfusion::ProcessOneReadyTask(nextTaskNumber, *this);
+      tarch::multicore::spawnTask(
+        newProcessTask,
+        {nextTaskNumber},
+        nextTaskNumber
+      );
+      tarch::multicore::waitForTask(nextTaskNumber, TaskWaitType::OnlyNativeTasks);
+    }
   }
-
-  readyTasks.clear();
-*/
 }
 
 

@@ -33,20 +33,22 @@ namespace tarch {
  *   and and complete those guys.
  *
  *
- * ## Usage patterns
+ * ## Performance
  *
- * In one of my earliest attempts,
- * each ProcessSetOfReadyTasks instance is paired up with an instance of LogReadyTask
- * which runs before. That is, we know that an instance of LogReadyTask has put
- * the task of interest into the ready queue identified by _taskQueue. We
- * therefore can now lock this queue and start the processing of the fused
- * tasks and then pick our particular task that we are responsible for. This way,
- * we combine the fusion with an urgent return.
- *
- * If we benchmark this approach as we do if we pick the variant
+ * If we benchmark
  * FusionImplementation::ProducerConsumerTaskPairs, then our performance will
  * likely suffer quite a lot. We should, in practice avoid to have to many of
  * these ProcessSetOfReadyTasks instances.
+ *
+ *
+ * ## Usage patterns
+ *
+ * If a task has in-dependencies, then
+ * each ProcessSetOfReadyTasks instance is always paired up with an instance of LogReadyTask
+ * which runs before. That is, we know that an instance of LogReadyTask has put
+ * the task of interest into the ready queue identified by _taskQueue. This way,
+ * fusion does not kick in prior to the actual task depositing.
+ *
  *
  *
  * ## Implementations (with historic information on bugs)
@@ -66,6 +68,11 @@ namespace tarch {
  *
  * When either of them takes ownership of a fusable task, it registers itself
  * as owner. Therefore, no cross-dependencies aka deadlocks can arise anymore.
+ *
+ * This deadlock is also the reason why we work with three different task types
+ * in general, and we avoid that they are merged into each other.
+ *
+ * @image html multicore_task_flow-01.png
  *
  *
  * ## Statistics
