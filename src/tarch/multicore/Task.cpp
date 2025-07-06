@@ -39,7 +39,7 @@ void tarch::multicore::Task::setPriority(int priority) {
 
 int tarch::multicore::Task::getTaskType() const { return _taskType; }
 
-void tarch::multicore::Task::fuse(const std::list<Task*>& otherTasks, int /*device*/) {
+void tarch::multicore::Task::fuse(const std::vector<Task*>& otherTasks, int /*device*/) {
   assertion(canFuse());
   for (auto pp : otherTasks) {
     tarch::multicore::Task* currentTask = pp;

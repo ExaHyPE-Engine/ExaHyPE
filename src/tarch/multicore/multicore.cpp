@@ -172,7 +172,7 @@ void tarch::multicore::spawnTask(
 }
 
 
-void tarch::multicore::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
+void tarch::multicore::processFusedTask(Task* myTask, const std::vector<tarch::multicore::Task*>& tasksOfSameType, int device) {
   myTask->fuse(tasksOfSameType, device);
   for (auto& p: tasksOfSameType) {
     delete p;

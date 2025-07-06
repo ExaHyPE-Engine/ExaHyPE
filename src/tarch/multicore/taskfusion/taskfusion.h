@@ -152,6 +152,9 @@ namespace tarch {
         const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction
       );
 
+      /**
+       *
+       */
       void translateFusableTaskIntoTaskSequence_EagerConsumerTasks(
         Task*                  task,
         FusableTasksQueue&     taskQueue,
@@ -171,25 +174,27 @@ namespace tarch {
       bool ensureHeldBackTasksAreMappedOntoNativeTasks(const std::set<TaskNumber>& taskNumbers);
 
       /**
-       * Implementation of waitForTasks() if we use LazyEvaluation.
+       * Preamble of waitForTasks() if we use LazyEvaluation.
        *
        * We don't know, at this point, what the type of each in dependency is.
        * Therefore, we loop over all queues, i.e. all task types that we
        * are aware of, and look if any of the tasks we are interested in is
        * still in there labelled as ready or running. This works, as we expect
        * the user to have called ensureHeldBackTasksAreMappedOntoNativeTasks_EnsureAllTasksAreRunningReadyOrHaveCompleted()
-       * before. We use a try-lock here to avoid blocking. If this try fails,
+       * before, i.e. all in-dependencies are in that state.
+       * We use a try-lock here to avoid blocking. If this try fails,
        * we have to assume that the task is still in the queue. If we assume
        * that at least one task is running or is ready, we have to continue to
        * do some work:
        *
        * First, we look in each queue if it hosts the a task that is ready or
        * running. If this is the case, we invoke the task fusion and afterwards
-       * ensure that the task is really completed. After that, we return.
+       * ensure that the task is really completed by spawning
+       * ProcessOneReadyTask.
        *
-       * The handling processTask() is a little bit tricky: This routine
-       * returns immediately if the task is not among the ready tasks. In most
-       * cases, this is the right thing to do. However, it could also be that
+       * It is important that ProcessOneReadyTask and ProcessSetOfReadyTasks
+       * are modelled independently to avoid deadlocks:
+       * In most cases, the two tasks just follow each other. However, it could also be that
        * we hit this routine on threads A and are being asked to process task
        * t1. At the same time, thread B also hits the same routine triggered
        * for task t2. As it happens B is faster and grabs t1. Now, if thread A
@@ -198,6 +203,22 @@ namespace tarch {
        * That means, we have to embed the whole handling into a separate task,
        * so we can wait for it.
        *
+       *
+       * ## Concurrency level
+       *
+       * The routine seems to basically create two tasks that run after each
+       * other and then tells the invoking code part to wait for it. So it
+       * seems not to alter the concurrency level. However, it actually
+       * increases it: If we wait for multiple input tasks, it issues these
+       * pairs of tasks per unfulfilled in-dependency.
+       *
+       * Despite this observation, it remains clear that the eager invocation
+       * yields a higher concurrency level. See
+       * translateFusableTaskIntoTaskSequence_EagerConsumerTasks() and
+       * ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks()
+       * for details.
+       *
+       *
        * @see ProcessReadyTask::processTasks() to trigger the actual lazy
        *      fusion of tasks.
        * @see ProcessReadyTask::hasTaskBeenProcessed() which is used to check
@@ -205,6 +226,15 @@ namespace tarch {
        */
       bool ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(const std::set<TaskNumber>& inDependencies);
 
+      /**
+       * Preamble of waitForTasks() if we use EagerEvaluation.
+       *
+       * This routine is very similar to ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation()
+       * besides the fact that it never ever spawns a fusion task. If the eager
+       * scheme results in fusion tasks, then these fusion tasks have already
+       * been created by the time we spawned the tasks. We don't create them by
+       * the time we wait for a task.
+       */
       bool ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks(const std::set<TaskNumber>& inDependencies);
 
       /**

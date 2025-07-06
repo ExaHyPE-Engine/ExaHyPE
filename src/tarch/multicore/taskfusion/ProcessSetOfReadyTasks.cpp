@@ -53,23 +53,24 @@ void tarch::multicore::taskfusion::ProcessSetOfReadyTasks::run() {
       _taskQueue._readyTasks.erase( firstTaskNumber );
 
       // extract sequence
-      int tasksToExtract = instruction.maxTasks-1;
+      int tasksToExtract = std::min( instruction.maxTasks-1, static_cast<int>(_taskQueue._readyTasks.size()) );
       FusableTasksQueue::ReadyTasks::iterator iterator = _taskQueue._readyTasks.begin();
 
-        // @todo Vector would be better, as we know how many taskst hereare
-        // @todo Can we grab all of them in one go if the set of ready tasks is small?
-        std::list< Task* > extractedTaskPointers;
-        std::list< int >   extractedTaskNumbers;
+      std::vector< Task* > extractedTaskPointers;
+      std::vector< int >   extractedTaskNumbers;
 
+      extractedTaskPointers.reserve(tasksToExtract);
+      extractedTaskNumbers.reserve(tasksToExtract);
 
       tarch::multicore::Lock runningTaskLock(_taskQueue._runningTasksSemaphore);
       _taskQueue._runningTasks[ firstTaskNumber ] = _taskNumber;
-      while (tasksToExtract>0 and iterator != _taskQueue._readyTasks.end()) {
+      while (tasksToExtract>0) {
         tasksToExtract--;
         extractedTaskNumbers.push_back( iterator->first );
         extractedTaskPointers.push_back( iterator->second );
         _taskQueue._runningTasks[ iterator->first ] = _taskNumber;
         iterator = _taskQueue._readyTasks.erase( iterator );
+        assertion( iterator != _taskQueue._readyTasks.end() or tasksToExtract==0 );
       }
       runningTaskLock.free();
       readyTaskLock.free();

@@ -351,17 +351,6 @@ namespace tarch {
      * therefore use the stats interface to maintain the BSP counters. However,
      * I disable any statistics sampling, so I get a spot-on overview of the
      * number of forked subtasks at any point.
-     *
-     *
-     *
-     * @todo Speak to OpenMP. It would be totally great, if we could say that
-     *   the task wait shall not(!) issue a new scheduling point. We would like
-     *   to distinguish taskwaits which priorities throughput vs algorithmic
-     *   latency.
-     *
-     * @todo Speak to OpenMP that we would like a taskyield() which does not (!)
-     *   continue with a sibling. This is important for producer-consumer
-     *   patterns.
      */
     void spawnAndWait(const std::vector<Task*>& tasks);
 
@@ -634,9 +623,7 @@ namespace tarch {
      * @param device Target device on which the fused tasks should be executed. Can
      *   be host if the tasks should end up on the host.
      */
-
-    // @todo make it an std::vector
-    void processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device);
+    void processFusedTask(Task* myTask, const std::vector<tarch::multicore::Task*>& tasksOfSameType, int device);
 
   } // namespace multicore
 } // namespace tarch
