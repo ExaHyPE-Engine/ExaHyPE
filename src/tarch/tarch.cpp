@@ -43,7 +43,7 @@ int tarch::convertMemorySize(long long value, MemoryUsageFormat format) {
     {
       long long usageMB ((value + (MegaByte / 2)) / MegaByte);
       if (usageMB > std::numeric_limits<int>::max()) {
-        logError("convertMemorySize()", "cannot cast result to return value: " << usageMB);
+        logError("convertMemorySize()", "Cannot cast result to return value: " << usageMB);
       }
       result = static_cast<int>(usageMB);
       break;
@@ -52,7 +52,7 @@ int tarch::convertMemorySize(long long value, MemoryUsageFormat format) {
     {
       long long usageGB ((value + (GigaByte / 2)) / GigaByte);
       if (usageGB > std::numeric_limits<int>::max()) {
-        logError("convertMemorySize()", "cannot cast result to return value: " << usageGB);
+        logError("convertMemorySize()", "Cannot cast result to return value: " << usageGB);
       }
       result = static_cast<int>(usageGB);
       break;
@@ -116,11 +116,11 @@ int tarch::getMemoryUsage(MemoryUsageFormat format) {
   f = fopen(work, "r");
 
   if (f == NULL) {
-    logError("getMemoryUsage()", "can't open file " << work);
+    logError("getMemoryUsage()", "Can't open file " << work);
     return(0);
   }
   if (fgets(work, sizeof(work), f) == NULL) {
-    logError("getMemoryUsage","error while reading from file");
+    logError("getMemoryUsage","Error while reading from file");
   }
   fclose(f);
   strtok(work, " ");

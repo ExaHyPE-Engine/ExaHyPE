@@ -1,7 +1,8 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-
 #include "State.h"
+
+#include <iostream>
 
 std::string toString(const toolbox::loadbalancing::State state) {
   switch (state) {

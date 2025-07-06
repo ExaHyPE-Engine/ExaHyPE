@@ -2,9 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "config.h"
 
+#if defined(__linux)
+#include <cfenv>
 #include <fenv.h>
 #pragma float_control(precise, on)
 #pragma STDC FENV_ACCESS ON
+#endif
 
 #include "peano4/parallel/Node.h"
 #include "peano4/peano4.h"
@@ -275,7 +278,10 @@ int main(int argc, char** argv) {
 
   peano4::init(&argc, &argv, DomainOffset, DomainSize, 0);
 
+#if defined(__linux)
+  //feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
   feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+#endif
 
   int returnCode = runTests();
 

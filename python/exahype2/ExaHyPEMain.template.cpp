@@ -38,9 +38,12 @@
 #include <iomanip>
 
 {% if FENV == True -%}
+#if defined(__linux)
+#include <cfenv>
 #include <fenv.h>
 #pragma float_control(precise, on)
 #pragma STDC FENV_ACCESS ON
+#endif
 {% endif -%}
 
 #ifdef UseScorePUser
@@ -496,7 +499,10 @@ int main(int argc, char** argv) {
 #endif
 
   {% if FENV == True -%}
+#if defined(__linux)
+  //feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
   feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+#endif
   {% endif -%}
 
   {{SUBNAMESPACE}}repositories::initLogFilters();
