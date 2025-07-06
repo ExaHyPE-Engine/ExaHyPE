@@ -2,10 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#define CompilerHasProcStat
 #define CompilerHasUTSName
 #define CompilerHasTimespec
+
+#if not defined(__APPLE__)
 #define CompilerHasSysinfo
+#define CompilerHasProcStat
+#endif
 
 #define LittleEndian
 

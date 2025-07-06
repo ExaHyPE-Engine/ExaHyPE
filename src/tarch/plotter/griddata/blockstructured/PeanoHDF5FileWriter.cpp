@@ -18,7 +18,6 @@ tarch::logging::Log tarch::plotter::griddata::blockstructured::PeanoHDF5FileWrit
 );
 
 void tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::removeClosingTags(bool removeTemporalGrid) {
-
   std::fstream in(_xmfFile, std::ios::in | std::ios::out | std::ios::binary);
   if (!in.is_open()) {
     logWarning("removeClosingTags()", "Could not open " + _xmfFile);
@@ -34,7 +33,7 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::removeClosi
   }
 
   // Choose how much to read from the end of the file, big enough to include all closing tags
-  constexpr std::streamsize bufferSize = 200;
+  static const std::streampos bufferSize = 200;
 
   // This is the relative reading position. If file size is smaller than bufferSize, we start from reading at the
   // beginning. If file size is bigger than bufferSize, for example 1500. We start reading at fileSize-bufferSize =
