@@ -3,10 +3,10 @@
 #include "../Numerics/idx.h"
 #include "CurvilinearDerivatives.h"
 
-#include "toolbox/curvi/coordinate.h"
-#include "toolbox/curvi/geometry/block.h"
-#include "toolbox/curvi/interface/interface.h"
-#include "toolbox/curvi/kdTree/root.h"
+#include "toolbox/curvi/Coordinate.h"
+#include "toolbox/curvi/geometry/Block.h"
+#include "toolbox/curvi/interface/Interface.h"
+#include "toolbox/curvi/kdTree/Root.h"
 
 template <class Shortcuts, int basisSize, int numberOfData, typename T>
 class ContextCurvilinear{
@@ -37,27 +37,27 @@ public:
     domainOffset[2] = _domainOffset[2];
 
     uint elements_l[3];
-    elements_l[Coordinate::X] = std::round(_domainSize[0] / coarsestMeshSize);
-    elements_l[Coordinate::Y] = std::round(_domainSize[1] / coarsestMeshSize);
-    elements_l[Coordinate::Z] = std::round(_domainSize[2] / coarsestMeshSize);
+    elements_l[toolbox::curvi::Coordinate::X] = std::round(_domainSize[0] / coarsestMeshSize);
+    elements_l[toolbox::curvi::Coordinate::Y] = std::round(_domainSize[1] / coarsestMeshSize);
+    elements_l[toolbox::curvi::Coordinate::Z] = std::round(_domainSize[2] / coarsestMeshSize);
 
     double size[3];
-    size[Coordinate::X] = _domainSize[0];
-    size[Coordinate::Y] = _domainSize[1];
-    size[Coordinate::Z] = _domainSize[2];
+    size[toolbox::curvi::Coordinate::X] = _domainSize[0];
+    size[toolbox::curvi::Coordinate::Y] = _domainSize[1];
+    size[toolbox::curvi::Coordinate::Z] = _domainSize[2];
 
     double offset[3];
-    offset[Coordinate::X] = domainOffset[0];
-    offset[Coordinate::Y] = domainOffset[1];
-    offset[Coordinate::Z] = domainOffset[2];
+    offset[toolbox::curvi::Coordinate::X] = domainOffset[0];
+    offset[toolbox::curvi::Coordinate::Y] = domainOffset[1];
+    offset[toolbox::curvi::Coordinate::Z] = domainOffset[2];
 
-    interface = new Curvi::Interface(topography_string, offset, size, elements_l, basisSize - 1);
+    interface = new toolbox::curvi::Interface(topography_string, offset, size, elements_l, basisSize - 1);
 
     interface->initTree();
 
   }
 
-  Root* getRoot() { return interface->getRoot(); }
+  toolbox::curvi::Root* getRoot() { return interface->getRoot(); }
 
   ~ContextCurvilinear() {
     delete interface;
@@ -88,26 +88,35 @@ public:
       int ex = std::round((center[0] - domainOffset[0] - dx[0] / 2.0) / dx[0]);
 
 #ifndef QUICK_IDENTITY
-      Block element = interface->getElement(nodes, ez, ey, ex);
+      toolbox::curvi::Block element = interface->getElement(nodes, ez, ey, ex);
       int   index_offset[3];
       element.getIndexOffset(index_offset);
 
       for (int k = 0; k < basisSize; k++) {
-        int e_k = index_offset[Coordinate::Z] + k;
+        int e_k = index_offset[toolbox::curvi::Coordinate::Z] + k;
         for (int j = 0; j < basisSize; j++) {
-          int e_j = index_offset[Coordinate::Y] + j;
+          int e_j = index_offset[toolbox::curvi::Coordinate::Y] + j;
           for (int i = 0; i < basisSize; i++) {
-            int e_i = index_offset[Coordinate::X] + i;
+            int e_i = index_offset[toolbox::curvi::Coordinate::X] + i;
 
             // x,y,z
             luh[id_xyzf(k, j, i, Shortcuts::curve_grid + 0)] = element(
-              2, Coordinate::Z, e_k, Coordinate::Y, e_j, Coordinate::X, e_i
+              2,
+              toolbox::curvi::Coordinate::Z, e_k,
+              toolbox::curvi::Coordinate::Y, e_j,
+              toolbox::curvi::Coordinate::X, e_i
             );
             luh[id_xyzf(k, j, i, Shortcuts::curve_grid + 1)] = element(
-              1, Coordinate::Z, e_k, Coordinate::Y, e_j, Coordinate::X, e_i
+              1, 
+              toolbox::curvi::Coordinate::Z, e_k,
+              toolbox::curvi::Coordinate::Y, e_j,
+              toolbox::curvi::Coordinate::X, e_i
             );
             luh[id_xyzf(k, j, i, Shortcuts::curve_grid + 2)] = element(
-              0, Coordinate::Z, e_k, Coordinate::Y, e_j, Coordinate::X, e_i
+              0,
+              toolbox::curvi::Coordinate::Z, e_k,
+              toolbox::curvi::Coordinate::Y, e_j,
+              toolbox::curvi::Coordinate::X, e_i
             );
           }
         }
@@ -187,12 +196,12 @@ public:
   void correctPointSourceLocation(double pointSourceLocation[][3]){
 
     for (int p = 0; p < 1; p++) {
-      Coordinate dir_top = static_cast<Coordinate>(_TOP);
+      toolbox::curvi::Coordinate dir_top = static_cast<toolbox::curvi::Coordinate>(_TOP);
       double     coords[3];
       // invert coordinates as curvi order is zyx
-      coords[Coordinate::X] = pointSourceLocation[p][0];
-      coords[Coordinate::Y] = pointSourceLocation[p][1];
-      coords[Coordinate::Z] = pointSourceLocation[p][2];
+      coords[toolbox::curvi::Coordinate::X] = pointSourceLocation[p][0];
+      coords[toolbox::curvi::Coordinate::Y] = pointSourceLocation[p][1];
+      coords[toolbox::curvi::Coordinate::Z] = pointSourceLocation[p][2];
 
       pointSourceLocation[p][_TOP] = this->interface->invertProjection(dir_top, coords);
     }
@@ -244,7 +253,7 @@ public:
   double max_dx;
 
 protected:
-  Curvi::Interface* interface;
+  toolbox::curvi::Interface* interface;
 
   double nodes[basisSize];
   double dudx[basisSize][basisSize];
