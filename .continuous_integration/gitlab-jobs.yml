@@ -14,7 +14,7 @@ stages:
   - Applications
   - Benchmarks
 
-.BeforeScriptWithCMakeSanitiser:
+.BeforeScriptSanitiser:
   before_script:
     - !reference [".BeforeScript", "before_script"]
     - python3 .continuous_integration/sanitise_path.py build/CTestTestfile.cmake build/CMakeCache.txt install/PeanoTargets.cmake
@@ -52,7 +52,7 @@ Unit_Tests:
   extends:
     - .Tags
     - .Variables
-    - .BeforeScriptWithCMakeSanitiser
+    - .BeforeScriptSanitiser
     - .Unit_Tests
   needs:
     - job: Build
@@ -67,7 +67,7 @@ ExaHyPE2_FV_Tests:
     - .Tags
     - .Variables
     - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
+    - .BeforeScriptSanitiser
     - .ExaHyPE2_FV_Tests
   needs:
     - job: Build
@@ -82,7 +82,7 @@ ExaHyPE2_ADERDG_Tests:
     - .Tags
     - .Variables
     - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
+    - .BeforeScriptSanitiser
     - .ExaHyPE2_ADERDG_Tests
   needs:
     - job: Build
@@ -97,7 +97,7 @@ ExaHyPE2_ADERDG_AMR_Tests:
     - .Tags
     - .Variables
     - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
+    - .BeforeScriptSanitiser
     - .ExaHyPE2_ADERDG_AMR_Tests
   needs:
     - job: Build
@@ -112,7 +112,7 @@ ExaHyPE2_ADERDG_WettingDrying_Tests:
     - .Tags
     - .Variables
     - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
+    - .BeforeScriptSanitiser
     - .ExaHyPE2_ADERDG_WettingDrying_Tests
   needs:
     - job: Build
@@ -127,7 +127,7 @@ ExaHyPE2_ADERDG_Limiting_Tests:
     - .Tags
     - .Variables
     - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
+    - .BeforeScriptSanitiser
     - .ExaHyPE2_ADERDG_Limiting_Tests
   needs:
     - job: Build
@@ -142,7 +142,7 @@ MGHyPE_MatrixFree_Tests:
     - .Tags
     - .Variables
     - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
+    - .BeforeScriptSanitiser
     - .MGHyPE_MatrixFree_Tests
   needs:
     - job: Build
@@ -157,7 +157,7 @@ MGHyPE_MatrixFree_Tests:
 #     - .Tags
 #     - .Variables
 #     - .RunOnlyOn
-#     - .BeforeScriptWithCMakeSanitiser
+#     - .BeforeScriptSanitiser
 #     - .SWIFT2_Dastgen
 #   needs:
 #     - job: Build
@@ -172,7 +172,7 @@ SWIFT2_Sod1D:
     - .Tags
     - .Variables
     - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
+    - .BeforeScriptSanitiser
     - .SWIFT2_Sod1D
   needs:
     - job: Build
@@ -187,7 +187,7 @@ SWIFT2_Noh2D:
     - .Tags
     - .Variables
     - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
+    - .BeforeScriptSanitiser
     - .SWIFT2_Noh2D
   needs:
     - job: Build
@@ -202,7 +202,7 @@ ExaHyPE2_Tutorials:
     - .Tags
     - .Variables
     - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
+    - .BeforeScriptSanitiser
     - .ExaHyPE2_Tutorials
   needs:
     - job: Build
@@ -217,7 +217,7 @@ ExaHyPE2_NavierStokes:
     - .Tags
     - .Variables
     - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
+    - .BeforeScriptSanitiser
     - .ExaHyPE2_NavierStokes
   needs:
     - job: Build
@@ -232,7 +232,7 @@ ExaHyPE2_ShallowWater:
     - .Tags
     - .Variables
     - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
+    - .BeforeScriptSanitiser
     - .ExaHyPE2_ShallowWater
   needs:
     - job: Build
@@ -247,7 +247,7 @@ ExaHyPE2_ExaSeis:
     - .Tags
     - .Variables
     - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
+    - .BeforeScriptSanitiser
     - .ExaHyPE2_ExaSeis
   needs:
     - job: Build
@@ -262,7 +262,7 @@ ExaHyPE2_ArtificialTsunami:
     - .Tags
     - .Variables
     - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
+    - .BeforeScriptSanitiser
     - .ExaHyPE2_ArtificialTsunami
   needs:
     - job: Build
@@ -277,7 +277,7 @@ ExaHyPE2_Kernels:
     - .Tags
     - .Variables
     - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
+    - .BeforeScriptSanitiser
     - .ExaHyPE2_Kernels
   needs:
     - job: Build
@@ -292,7 +292,7 @@ ExaHyPE2_GaugeWave_FV:
     - .Tags
     - .Variables
     - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
+    - .BeforeScriptSanitiser
     - .ExaHyPE2_GaugeWave_FV
   needs:
     - job: Build
@@ -307,7 +307,7 @@ ExaHyPE2_SBH:
     - .Tags
     - .Variables
     - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
+    - .BeforeScriptSanitiser
     - .ExaHyPE2_SBH
   needs:
     - job: Build
@@ -322,7 +322,7 @@ ExaHyPE2_SBH:
 #    - .Tags
 #    - .Variables
 #    - .RunOnlyOn
-#    - .BeforeScriptWithCMakeSanitiser
+#    - .BeforeScriptSanitiser
 #    - .ExaHyPE2_SBH_Coupled
 #  needs:
 #    - job: Build

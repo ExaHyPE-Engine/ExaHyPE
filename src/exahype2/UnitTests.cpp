@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "UnitTests.h"
 
-#include "config.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 
 #include "tests/EnclaveBookkeepingTest.h"

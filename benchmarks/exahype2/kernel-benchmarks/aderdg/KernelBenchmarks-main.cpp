@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "KernelBenchmarks-main.h"
 
-#include "config.h"
 #include "Constants.h"
 
 #include "repositories/DataRepository.h"

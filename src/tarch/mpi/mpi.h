@@ -3,7 +3,6 @@
 #pragma once
 
 
-#include "config.h"
 #include "tarch/CompilerSpecificSettings.h"
 
 

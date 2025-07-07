@@ -13,7 +13,6 @@
 
 #if defined(SharedTBB)
 #include <sstream>
-#include "config.h"
 #include <tbb/global_control.h>
 #include <tbb/info.h>
 #include <oneapi/tbb/task_arena.h>

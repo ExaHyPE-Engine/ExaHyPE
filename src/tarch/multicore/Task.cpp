@@ -3,7 +3,6 @@
 #include "Task.h"
 
 #include "BooleanSemaphore.h"
-#include "config.h"
 #include "Core.h"
 #include "Lock.h"
 #include "multicore.h"

@@ -186,12 +186,11 @@ class Project (object):
       if make_clean_first:
         print("clean up project ... in {}".format(self.directory))
         try:
-          if make_clean_first:
-            subprocess.check_call(["make", "clean"], cwd=self.directory)
+          subprocess.check_call(["make", "clean"], cwd=self.directory, stderr=subprocess.DEVNULL)
           self.is_built = False
           print("clean complete")
         except Exception as e:
-          print("clean failed (" + str(e) + ") - continue anyway")
+          pass
 
       if not self.is_built:
         print("start to compile with concurrency level of " + str(number_of_parallel_builds) + " ...")

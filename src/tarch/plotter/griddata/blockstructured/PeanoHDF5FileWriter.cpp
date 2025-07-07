@@ -87,8 +87,8 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::removeClosi
   // When we truncate the file to the newFileSize, we essentially leave out the closing tags from the end of the file,
   // removing them. With this approach, we do not have to rewrite the entire file
   try {
-    std::filesystem::resize_file(_xmfFile, newFileSize);
-  } catch (const std::filesystem::filesystem_error& e) {
+    fs::resize_file(_xmfFile, newFileSize);
+  } catch (const fs::filesystem_error& e) {
     logWarning("removeClosingTags()", "Failed to truncate file: " + std::string(e.what()));
     return;
   }
@@ -215,7 +215,7 @@ tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::PeanoHDF5FileWri
     break;
 
   case IndexFileMode::AppendNewData:
-    if (not std::filesystem::exists(_xmfFile)) {
+    if (not fs::exists(_xmfFile)) {
       logInfo("PeanoHDF5FileWriter()", "No XMF file " << _xmfFile << " found. Create new one");
       createEmptyXMFFile(0.0);
     } else {
@@ -247,7 +247,7 @@ tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::PeanoHDF5FileWri
             << timeStamp << " smaller than current timestep: " << currentTimeVal
             << ". Removing contents of XMF and continuing simulation with " << timeStamp
         );
-        std::filesystem::remove(_xmfFile);
+        fs::remove(_xmfFile);
         clear();
         createEmptyXMFFile(timeStamp);
       } else {
@@ -676,7 +676,7 @@ bool tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::writeToFile
           }
         }
 
-        std::filesystem::path file_path(_hdf5FileName);
+        fs::path file_path(_hdf5FileName);
         std::string           xmfRelativeName = file_path.filename().string();
 
         for (int unk = 0; unk < _numUnknowns; ++unk) {
@@ -713,7 +713,7 @@ bool tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::writeToFile
         dataset with center=node.
          */
 
-        /*std::filesystem::path file_path(_hdf5FileName);
+        /*fs::path file_path(_hdf5FileName);
         std::string xmfRelativeName = file_path.filename().string();
 
         if(_dimensions == 2) {
@@ -747,7 +747,7 @@ bool tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::writeToFile
         This approach always fails with invalid stride error.
          */
 
-        /*std::filesystem::path file_path(_hdf5FileName);
+        /*fs::path file_path(_hdf5FileName);
         std::string xmfRelativeName = file_path.filename().string();
 
          for (int i = 0; i < _numUnknowns; i++) {

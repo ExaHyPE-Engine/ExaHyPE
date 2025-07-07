@@ -33,9 +33,6 @@ class DaStGenToLegacyTool(object):
   __Template_Prologue = """  
 #include "peano4/utils/Globals.h"
 
-// have to know whether we are using MPI
-#include "config.h"
-
 Constant: Dimensions;
 Packed-Type: short int;
 """

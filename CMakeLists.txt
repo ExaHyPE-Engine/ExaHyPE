@@ -81,6 +81,7 @@ endif()
 add_library(PeanoOptions INTERFACE)
 target_compile_features(PeanoOptions INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 install(TARGETS PeanoOptions EXPORT PeanoTargets)
+include(Filesystem)
 
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
   target_compile_options(PeanoOptions INTERFACE

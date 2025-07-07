@@ -18,8 +18,6 @@
 #include <ctime>
 #include <chrono>
 
-#include "config.h"
-
 namespace tarch {
   namespace logging {
     class Log;

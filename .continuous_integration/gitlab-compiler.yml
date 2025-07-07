@@ -3,12 +3,6 @@
 include:
   - .continuous_integration/templates/variables.yml
 
-
-# This file is included from the top-level gitlab-ci file, meaning that this stage is a sub-stage of the
-# main BuildSystem job.
-stages:
-  - Compiler
-
 ########################################################
 # Define one sub-pipeline per toolchain:
 ########################################################
@@ -34,7 +28,7 @@ GCC:
                             -DWITH_MPI=OFF"
   trigger:
     include:
-      - .continuous_integration/pipelines/cmake.yml
+      - .continuous_integration/gitlab-jobs.yml
     strategy: depend
 
 GCC_SharedOMP_MPI:
@@ -58,7 +52,7 @@ GCC_SharedOMP_MPI:
                             -DWITH_MPI=ON"
   trigger:
     include:
-      - .continuous_integration/pipelines/cmake.yml
+      - .continuous_integration/gitlab-jobs.yml
     strategy: depend
 
 Intel:
@@ -82,7 +76,7 @@ Intel:
                             -DWITH_MPI=OFF"
   trigger:
     include:
-      - .continuous_integration/pipelines/cmake.yml
+      - .continuous_integration/gitlab-jobs.yml
     strategy: depend
 
 Intel_SharedOMP_MPI:
@@ -106,7 +100,7 @@ Intel_SharedOMP_MPI:
                             -DWITH_MPI=ON"
   trigger:
     include:
-      - .continuous_integration/pipelines/cmake.yml
+      - .continuous_integration/gitlab-jobs.yml
     strategy: depend
 
 # Intel_SharedSYCL_MPI:
@@ -130,7 +124,7 @@ Intel_SharedOMP_MPI:
 #                             -DWITH_MPI=ON"
 #   trigger:
 #     include:
-#       - .continuous_integration/pipelines/cmake.yml
+#       - .continuous_integration/gitlab-jobs.yml
 #     strategy: depend
 
 LLVM:
@@ -154,7 +148,7 @@ LLVM:
                             -DWITH_MPI=OFF"
   trigger:
     include:
-      - .continuous_integration/pipelines/cmake.yml
+      - .continuous_integration/gitlab-jobs.yml
     strategy: depend
 
 LLVM_SharedOMP_MPI:
@@ -178,7 +172,7 @@ LLVM_SharedOMP_MPI:
                             -DWITH_MPI=ON"
   trigger:
     include:
-      - .continuous_integration/pipelines/cmake.yml
+      - .continuous_integration/gitlab-jobs.yml
     strategy: depend
 
 NVIDIA:
@@ -202,7 +196,7 @@ NVIDIA:
                             -DWITH_MPI=OFF"
   trigger:
     include:
-      - .continuous_integration/pipelines/cmake.yml
+      - .continuous_integration/gitlab-jobs.yml
     strategy: depend
 
 AMD:
@@ -226,7 +220,7 @@ AMD:
                             -DWITH_MPI=OFF"
   trigger:
     include:
-      - .continuous_integration/pipelines/cmake.yml
+      - .continuous_integration/gitlab-jobs.yml
     strategy: depend
 
 # AMD_SharedOMP_MPI:
@@ -250,5 +244,5 @@ AMD:
 #                             -DWITH_MPI=ON"
 #   trigger:
 #     include:
-#       - .continuous_integration/pipelines/cmake.yml
+#       - .continuous_integration/gitlab-jobs.yml
 #     strategy: depend

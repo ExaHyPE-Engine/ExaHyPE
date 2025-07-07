@@ -7,7 +7,6 @@
 
 #include <iomanip>
 
-#include "config.h"
 #include "Constants.h"
 #include "ccz4-main.h"
 #include "exahype2/UnitTests.h"

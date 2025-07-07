@@ -1,6 +1,7 @@
 #include "tarch/plotter/griddata/unstructured/vtk/VTUTextFileWriter.h"
 
-#include <filesystem>
+#include "tarch/Filesystem.h"
+
 #include <fstream>
 #include <iomanip>
 #include <stdio.h>
@@ -50,7 +51,7 @@ tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter::VTUTextFileWrite
     tarch::plotter::PVDTimeSeriesWriter::appendNewData(indexFileName, fileName + ".vtu", timeStamp);
     break;
   case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData:
-    if (not std::filesystem::exists(indexFileName + ".pvd")) {
+    if (not fs::exists(indexFileName + ".pvd")) {
       logInfo("PeanoTextPatchFileWriter(...)", "no index file " << indexFileName << " found. Create new one");
       tarch::plotter::PVDTimeSeriesWriter::createEmptyIndexFile(indexFileName);
     } else if (tarch::la::smaller(

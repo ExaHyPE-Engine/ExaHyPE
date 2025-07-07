@@ -15,13 +15,7 @@ git clone https://gitlab.lrz.de/hpcsoftware/Peano.git
 git checkout applications-ccz4
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-then configure and compile the Peano under main directory following 
-
-~~~~~~~~~~~~~~~~~~~~~~~
-libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-./configure CC=icx CXX=icpx --with-mpi=mpiicpc --with-multithreading=omp CXXFLAGS="-Ofast -std=c++20 -fiopenmp -march=native -mtune=native -fma -fomit-frame-pointer -Wno-attributes=clang:: -w" LDFLAGS="-fiopenmp" --enable-loadbalancing --enable-exahype --enable-particles --enable-blockstructured --enable-finiteelements
-make -j
-~~~~~~~~~~~~~~~~~~~~~~~
+then configure and compile Peano.
 
 Please notice the missing of certain installed libraries may lead to compiling errors, please check
 \ref tutorials_exahype2_applications_exagrype_faq if necessary.  
