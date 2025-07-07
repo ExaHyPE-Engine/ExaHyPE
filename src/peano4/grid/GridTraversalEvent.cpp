@@ -138,7 +138,7 @@ MPI_Datatype peano4::grid::GridTraversalEvent::Datatype = MPI_DATATYPE_NULL;
 #endif
 
 MPI_Datatype peano4::grid::GridTraversalEvent::getForkDatatype() { return Datatype; }
-MPI_Datatype peano4::grid::GridTraversalEvent::getGlobalCommunciationDatatype() { return Datatype; }
+MPI_Datatype peano4::grid::GridTraversalEvent::getGlobalCommunicationDatatype() { return Datatype; }
 MPI_Datatype peano4::grid::GridTraversalEvent::getJoinDatatype() { return Datatype; }
 MPI_Datatype peano4::grid::GridTraversalEvent::getBoundaryExchangeDatatype() { return Datatype; }
 MPI_Datatype peano4::grid::GridTraversalEvent::getMultiscaleDataExchangeDatatype() { return Datatype; }
@@ -150,7 +150,7 @@ void peano4::grid::GridTraversalEvent::freeForkDatatype() {
   }
 }
 
-void peano4::grid::GridTraversalEvent::freeGlobalCommunciationDatatype() {
+void peano4::grid::GridTraversalEvent::freeGlobalCommunicationDatatype() {
   if (Datatype != MPI_DATATYPE_NULL) {
     MPI_Type_free(&Datatype);
     Datatype = MPI_DATATYPE_NULL;
@@ -356,7 +356,7 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
   getJoinDatatype();
   getBoundaryExchangeDatatype();
   getMultiscaleDataExchangeDatatype();
-  getGlobalCommunciationDatatype();
+  getGlobalCommunicationDatatype();
 #endif
 }
 
@@ -366,7 +366,7 @@ void peano4::grid::GridTraversalEvent::shutdownDatatype() {
   freeJoinDatatype();
   freeBoundaryExchangeDatatype();
   freeMultiscaleDataExchangeDatatype();
-  freeGlobalCommunciationDatatype();
+  freeGlobalCommunicationDatatype();
 #else
   MPI_Datatype type = Datatype;
   MPI_Type_free(&type);

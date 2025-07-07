@@ -13,7 +13,7 @@ namespace peano4 {
    * The map namespaces hosts various map implementations. I use the maps to
    * look up stacks for spacetree id+stack number combinations. The semantics
    * of the classes is only described for STDStackMap which is a plain wrapper
-   * around the C++ maps adding some semaphores. Whereever other classes
+   * around the C++ maps adding some semaphores. Wherever other classes
    * contain documentation, this documentation describes implementation
    * details.
    */

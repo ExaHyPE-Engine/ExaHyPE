@@ -53,7 +53,7 @@ MPI_Datatype tarch::mpi::IntegerMessage::getForkDatatype() {
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype tarch::mpi::IntegerMessage::getGlobalCommunciationDatatype() {
+MPI_Datatype tarch::mpi::IntegerMessage::getGlobalCommunicationDatatype() {
   return Datatype;
 }
 
@@ -86,7 +86,7 @@ void tarch::mpi::IntegerMessage::freeForkDatatype() {
 
 
 [[clang::map_mpi_datatype]]
-void tarch::mpi::IntegerMessage::freeGlobalCommunciationDatatype() {
+void tarch::mpi::IntegerMessage::freeGlobalCommunicationDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
     Datatype = MPI_DATATYPE_NULL;
@@ -175,7 +175,7 @@ void tarch::mpi::IntegerMessage::initDatatype() {
   getJoinDatatype();
   getBoundaryExchangeDatatype();
   getMultiscaleDataExchangeDatatype();
-  getGlobalCommunciationDatatype();
+  getGlobalCommunicationDatatype();
   #endif
 }
 
@@ -186,7 +186,7 @@ void tarch::mpi::IntegerMessage::shutdownDatatype() {
   freeJoinDatatype();
   freeBoundaryExchangeDatatype();
   freeMultiscaleDataExchangeDatatype();
-  freeGlobalCommunciationDatatype();
+  freeGlobalCommunicationDatatype();
   #else
   MPI_Datatype type = Datatype;
   MPI_Type_free( &type );

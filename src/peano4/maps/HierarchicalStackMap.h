@@ -77,7 +77,7 @@ class peano4::maps::HierarchicalStackMap {
      * everytime we lazily insert new stacks, we run risk that we break the
      * consistency of the underlying container. Originally, I worked with
      * thread-safe accessors only. This resulted in disappointing timings and
-     * notably speedup. With a carelfull distinction, I got down the runtime
+     * notably speedup. With a careful distinction, I got down the runtime
      * to two third of the original.
      *
      * @return A stack of type T. Actually, it is a pointer and this routine is

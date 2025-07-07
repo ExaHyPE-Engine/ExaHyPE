@@ -75,7 +75,7 @@ struct peano4::grid::GridStatistics {
     static MPI_Datatype  getMultiscaleDataExchangeDatatype();
 
     [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getGlobalCommunciationDatatype();
+    static MPI_Datatype  getGlobalCommunicationDatatype();
 
     [[clang::map_mpi_datatype]]
     static void  freeForkDatatype();
@@ -90,7 +90,7 @@ struct peano4::grid::GridStatistics {
     static void  freeMultiscaleDataExchangeDatatype();
 
     [[clang::map_mpi_datatype]]
-    static void  freeGlobalCommunciationDatatype();
+    static void  freeGlobalCommunicationDatatype();
 
     /**
      * @return The rank of the sender of an object. It only make ssense to call

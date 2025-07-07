@@ -44,7 +44,7 @@ void exahype2::RefinementControlService::receiveDanglingMessages() {
     if (flag) {
       const int rank = status.MPI_SOURCE;
       int       numberOfMessages;
-      MPI_Get_count(&status, peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(), &numberOfMessages);
+      MPI_Get_count(&status, peano4::grid::GridControlEvent::getGlobalCommunicationDatatype(), &numberOfMessages);
 
       logDebug("receiveDanglingMessages()", "got " << numberOfMessages << " event(s) from rank " << rank);
 
@@ -53,7 +53,7 @@ void exahype2::RefinementControlService::receiveDanglingMessages() {
       MPI_Mrecv(
         receiveBuffer.data(),
         numberOfMessages,
-        peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(),
+        peano4::grid::GridControlEvent::getGlobalCommunicationDatatype(),
         &msg,
         MPI_STATUS_IGNORE
       );
@@ -166,7 +166,7 @@ void exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() {
         MPI_Isend(
           _copyOfCommittedEvents.data(),
           _copyOfCommittedEvents.size(),
-          peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(),
+          peano4::grid::GridControlEvent::getGlobalCommunicationDatatype(),
           rank,
           _reductionTag,
           tarch::mpi::Rank::getInstance().getCommunicator(),

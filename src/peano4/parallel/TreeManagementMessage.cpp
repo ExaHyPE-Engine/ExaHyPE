@@ -79,7 +79,7 @@ MPI_Datatype peano4::parallel::TreeManagementMessage::getForkDatatype() {
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype peano4::parallel::TreeManagementMessage::getGlobalCommunciationDatatype() {
+MPI_Datatype peano4::parallel::TreeManagementMessage::getGlobalCommunicationDatatype() {
   return Datatype;
 }
 
@@ -112,7 +112,7 @@ void peano4::parallel::TreeManagementMessage::freeForkDatatype() {
 
 
 [[clang::map_mpi_datatype]]
-void peano4::parallel::TreeManagementMessage::freeGlobalCommunciationDatatype() {
+void peano4::parallel::TreeManagementMessage::freeGlobalCommunicationDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
     Datatype = MPI_DATATYPE_NULL;
@@ -213,7 +213,7 @@ void peano4::parallel::TreeManagementMessage::initDatatype() {
   getJoinDatatype();
   getBoundaryExchangeDatatype();
   getMultiscaleDataExchangeDatatype();
-  getGlobalCommunciationDatatype();
+  getGlobalCommunicationDatatype();
   #endif
 }
 
@@ -224,7 +224,7 @@ void peano4::parallel::TreeManagementMessage::shutdownDatatype() {
   freeJoinDatatype();
   freeBoundaryExchangeDatatype();
   freeMultiscaleDataExchangeDatatype();
-  freeGlobalCommunciationDatatype();
+  freeGlobalCommunicationDatatype();
   #else
   MPI_Datatype type = Datatype;
   MPI_Type_free( &type );

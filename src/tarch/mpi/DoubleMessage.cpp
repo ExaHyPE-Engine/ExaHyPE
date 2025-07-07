@@ -53,7 +53,7 @@ MPI_Datatype tarch::mpi::DoubleMessage::getForkDatatype() {
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype tarch::mpi::DoubleMessage::getGlobalCommunciationDatatype() {
+MPI_Datatype tarch::mpi::DoubleMessage::getGlobalCommunicationDatatype() {
   return Datatype;
 }
 
@@ -86,7 +86,7 @@ void tarch::mpi::DoubleMessage::freeForkDatatype() {
 
 
 [[clang::map_mpi_datatype]]
-void tarch::mpi::DoubleMessage::freeGlobalCommunciationDatatype() {
+void tarch::mpi::DoubleMessage::freeGlobalCommunicationDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
     Datatype = MPI_DATATYPE_NULL;
@@ -175,7 +175,7 @@ void tarch::mpi::DoubleMessage::initDatatype() {
   getJoinDatatype();
   getBoundaryExchangeDatatype();
   getMultiscaleDataExchangeDatatype();
-  getGlobalCommunciationDatatype();
+  getGlobalCommunicationDatatype();
   #endif
 }
 
@@ -186,7 +186,7 @@ void tarch::mpi::DoubleMessage::shutdownDatatype() {
   freeJoinDatatype();
   freeBoundaryExchangeDatatype();
   freeMultiscaleDataExchangeDatatype();
-  freeGlobalCommunciationDatatype();
+  freeGlobalCommunicationDatatype();
   #else
   MPI_Datatype type = Datatype;
   MPI_Type_free( &type );

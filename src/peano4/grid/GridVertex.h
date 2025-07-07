@@ -118,13 +118,13 @@ public:
   static MPI_Datatype getJoinDatatype();
   static MPI_Datatype getBoundaryExchangeDatatype();
   static MPI_Datatype getMultiscaleDataExchangeDatatype();
-  static MPI_Datatype getGlobalCommunciationDatatype();
+  static MPI_Datatype getGlobalCommunicationDatatype();
 
   static void freeForkDatatype();
   static void freeJoinDatatype();
   static void freeBoundaryExchangeDatatype();
   static void freeMultiscaleDataExchangeDatatype();
-  static void freeGlobalCommunciationDatatype();
+  static void freeGlobalCommunicationDatatype();
 
   /**
    * @return The rank of the sender of an object. It only make ssense to call

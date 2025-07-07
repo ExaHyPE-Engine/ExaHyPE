@@ -565,9 +565,9 @@ MPI_Datatype peano4::stacks::translateContextIntoDatatype( peano4::grid::Travers
        return T::getJoinDatatype();
      case peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
        assertionMsg(false, "periodic boundary data is never exchanged via MPI" );
-       return T::getGlobalCommunciationDatatype();
+       return T::getGlobalCommunicationDatatype();
    }
    assertionMsg(false, "no valid case statement found. This may not happen" );
-   return T::getGlobalCommunciationDatatype();
+   return T::getGlobalCommunicationDatatype();
 }
 #endif
