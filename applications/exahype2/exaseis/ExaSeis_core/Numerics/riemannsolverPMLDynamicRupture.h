@@ -34,12 +34,12 @@ void ContextDynamicRupture<Shortcuts, basisSize, numberOfVariables, numberOfPara
 
   bool is_fault = (direction == 0);
 
-  Root* root = this->interface->getRoot();
-  InnerNode* fault_node = static_cast<InnerNode*>(root->getChild());
+  toolbox::curvi::Root* root = this->interface->getRoot();
+  toolbox::curvi::InnerNode* fault_node = static_cast<toolbox::curvi::InnerNode*>(root->getChild());
 
-  Coordinate fault_coords[2];
+  toolbox::curvi::Coordinate fault_coords[2];
   fault_node->getCoordinates(fault_coords);
-  Coordinate fault_normal = fault_node->getFaceNormal();
+  toolbox::curvi::Coordinate fault_normal = fault_node->getFaceNormal();
   T position = fault_node->getPosition();
 
   for (int i = 0; i < basisSize; i++) {

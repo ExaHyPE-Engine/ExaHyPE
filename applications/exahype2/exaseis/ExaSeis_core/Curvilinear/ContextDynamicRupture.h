@@ -4,8 +4,8 @@
 
 #include "asagi_reader.h"
 
-#include "toolbox/curvi/kdTree/innerNode.h"
-#include "toolbox/curvi/kdTree/root.h"
+#include "toolbox/curvi/kdTree/InnerNode.h"
+#include "toolbox/curvi/kdTree/Root.h"
 
 template <class Shortcuts, int basisSize, int numberOfVariables, int numberOfParameters, typename T>
 class ContextDynamicRupture: public ContextCurvilinear<Shortcuts, basisSize, numberOfVariables+numberOfParameters, T> {

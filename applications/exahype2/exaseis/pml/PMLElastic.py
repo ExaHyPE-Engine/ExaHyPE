@@ -38,7 +38,7 @@ def initial(pointwise_initial_conditions):
   double offset_y = x[1] - h[1] * 0.5;
   double offset_z = x[2] - h[2] * 0.5;
 
-  idx4 idx(Order + 1, Order + 1, Order + 1, NumberOfUnknowns + NumberOfAuxiliaryVariables);
+  toolbox::curvi::idx4 idx(Order + 1, Order + 1, Order + 1, NumberOfUnknowns + NumberOfAuxiliaryVariables);
 
   for (int k = 0; k < Order + 1; k++) { 
     double computational_z = (offset_z + h[2] * kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes[k]);
@@ -147,7 +147,7 @@ def flux():
 
   std::fill_n(F, NumberOfUnknowns, 0.0);
 
-  idx2 idx_pml(Dimensions, 9);
+  toolbox::curvi::idx2 idx_pml(Dimensions, 9);
 
   switch (normal) {
     case 0: {
@@ -188,7 +188,7 @@ def flux():
 
 def ncp():
   return """
-  idx2 idx_pml(Dimensions, 9);
+  toolbox::curvi::idx2 idx_pml(Dimensions, 9);
   auto        rho       = Q[s::rho];
   auto        cp        = Q[s::cp];
   auto        cs        = Q[s::cs];
@@ -287,7 +287,7 @@ def algebraic_source():
   auto alpha_y = (pml_alpha_const + pml_alpha_scalar * dmp_pml_y);
   auto alpha_z = (pml_alpha_const + pml_alpha_scalar * dmp_pml_z);
 
-  idx2 idx_pml(Dimensions, 9);
+  toolbox::curvi::idx2 idx_pml(Dimensions, 9);
 
   const auto* Q_pml = Q + s::pml;
   auto*       S_pml = S + s::pml;
@@ -335,7 +335,7 @@ def multiplyMaterialParameterMatrix():
   auto lambda  = rho * cp * cp - 2 * mu;
   auto rho_inv = 1.0 / (rho * jacobian);
 
-  idx2 idx_pml(Dimensions, 9);
+  toolbox::curvi::idx2 idx_pml(Dimensions, 9);
 
   // Rhs uses the same formula regardless of dimension, hence no switch necessary
 
