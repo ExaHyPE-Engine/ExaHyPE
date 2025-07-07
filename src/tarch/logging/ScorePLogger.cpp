@@ -13,8 +13,6 @@
 
 #include "../mpi/Rank.h"
 
-#include "config.h"
-
 #ifdef UseScoreP
 #include <scorep/SCOREP_User.h>
 #endif

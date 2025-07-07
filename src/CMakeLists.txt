@@ -1,12 +1,5 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/config.h")
-
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/config.h
-  DESTINATION "${CMAKE_INSTALL_PREFIX}/include"
-)
-
 set(SOURCE_EXTENSIONS_TO_GLOB
   "*.c"
   "*.cxx"

@@ -12,15 +12,9 @@ under various setup and optimization.
 
 # Run the benchmark
 
-To run the benchmark, configure and compile the Peano under main directory following
+To run the benchmark, configure and compile Peano.
 
-~~~~~~~~~~~~~~~~~~~~~~~
-libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-./configure CC=icx CXX=icpx --with-mpi=mpiicpc --with-multithreading=omp CXXFLAGS="-Ofast -std=c++20 -fiopenmp -march=native -mtune=native -fma -fomit-frame-pointer -Wno-attributes=clang:: -w" LDFLAGS="-fiopenmp" --enable-loadbalancing --enable-exahype --enable-particles --enable-blockstructured --enable-finiteelements
-make -j
-~~~~~~~~~~~~~~~~~~~~~~~
-
-then enter this subdirectory and add the python path as
+Then enter this subdirectory and add the python path as
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 cd ./benchmarks/exahype2/ccz4/performance-testbed/

@@ -1,10 +1,10 @@
 #include "PeanoTextPatchFileWriter.h"
 
-#include <filesystem>
 #include <fstream>
 #include <iomanip>
 
 #include "tarch/Assertions.h"
+#include "tarch/Filesystem.h"
 #include "tarch/mpi/Lock.h"
 #include "tarch/mpi/Rank.h"
 
@@ -179,7 +179,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
   case IndexFileMode::NoIndexFile:
     break;
   case IndexFileMode::AppendNewData:
-    if (not std::filesystem::exists(_indexFile)) {
+    if (not fs::exists(_indexFile)) {
       logDebug("PeanoTextPatchFileWriter()", "No index file " << _indexFile << " found. Create new one.");
       createEmptyIndexFile();
     } else if (tarch::la::smaller(
@@ -280,7 +280,7 @@ int tarch::plotter::griddata::blockstructured::restartPreprocess(const std::stri
   //std::cout<<targetLine<<std::endl;
   if (targetLine != -1){
     std::ifstream infile2(fileName+".peano-patch-file");
-    //std::filesystem::path filePath(fileName);
+    //fs::path filePath(fileName);
     std::ofstream tempFile(fileName+"-temp.txt");
     currentLine=0;
 

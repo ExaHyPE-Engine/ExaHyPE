@@ -2,17 +2,15 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "config.h"
-
 #ifdef UseHDF5
 
 #include "PatchWriter.h"
+#include "tarch/Filesystem.h"
 #include "tarch/logging/Log.h"
 
 #include <cmath>
 #include <cstdlib>
 #include <exception>
-#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <memory>

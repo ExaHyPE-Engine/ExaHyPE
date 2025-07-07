@@ -13,8 +13,6 @@
 
 #include "../mpi/Rank.h"
 
-#include "config.h"
-
 #ifdef UseNVIDIA
 #include <nvtx3/nvToolsExt.h>
 #endif

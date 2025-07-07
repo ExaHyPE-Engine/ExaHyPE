@@ -9,9 +9,6 @@
 // user includes
 {{SOLVER_INCLUDES}}
 
-#include "config.h"
-
-
 #include "exahype2/CellData.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"

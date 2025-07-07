@@ -13,8 +13,6 @@
 
 #include "../mpi/Rank.h"
 
-#include "config.h"
-
 #ifdef UseITAC
 #include <VT.h>
 #endif

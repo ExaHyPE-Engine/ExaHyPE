@@ -11,8 +11,6 @@
 #if defined(SharedCPP)
 #include <sstream>
 
-#include "config.h"
-
 tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 tarch::multicore::Core::Core():

@@ -13,8 +13,6 @@
 
 #include "../mpi/Rank.h"
 
-#include "config.h"
-
 
 tarch::logging::Log tarch::logging::ITTLogger::_log( "tarch::logging::ITTLogger" );
 

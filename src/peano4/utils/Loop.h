@@ -3,7 +3,6 @@
 #pragma once
 
 #include "Compare.h"
-#include "config.h"
 #include "Decrement.h"
 #include "Globals.h"
 #include "Increment.h"

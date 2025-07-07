@@ -3,8 +3,6 @@
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Core.h"
 
-#include "config.h"
-
 #include "tarch/logging/LogFilter.h"
 #include "tarch/logging/CommandLineLogger.h"
 

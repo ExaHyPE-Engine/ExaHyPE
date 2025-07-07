@@ -7,26 +7,6 @@
 
 Some frequently asked questions and problems are discussed below.
 
-
-# Autotools
-
-- ***configure fails with ...*** Before you start
-  any further investigation, update to the latest version of the autotools,
-  ensure your configure script suits this version, and rerun the build system
-  configuration:
-  ~~~~~~~~~~~~~~~~~~~
-  autoreconf --install
-  libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-  ~~~~~~~~~~~~~~~~~~~
-
-- ***checking host system type... Invalid configuration `./configure': machine `./configure-unknown' not recognized*** We got this
-  recently on a number of new Linux installations. In this case, adding
-  ~~~~~~~~~~~~~~~~~~~
-  --build=x86_64 --host=x86_64
-  ~~~~~~~~~~~~~~~~~~~
-  to your configure call seems to be necessary.
-
-
 # CMake
 
 - ***Why am I seeing "Permission Denied" errors when using CCACHE in a Docker container on MacOS?***

@@ -2,10 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <string>
-#include "config.h"
-
 
 namespace peano4 {
   namespace stacks {
