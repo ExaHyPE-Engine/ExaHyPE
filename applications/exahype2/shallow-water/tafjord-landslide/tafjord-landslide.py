@@ -85,18 +85,24 @@ adjust_solution = r"""
 """
 
 parser = exahype2.ArgumentParser()
+parser.add_argument(
+    "--friction",
+    type=float,
+    help="Friction parameter.",
+)
 parser.set_defaults(
     min_depth=3,
     end_time=40.0,
     time_step_relaxation=0.45,
     degrees_of_freedom=7,
+    friction=200.0
 )
 args = parser.parse_args()
 
 constants = {
     "g": [9.81, "double"],
     "phi": [25.0, "double"],
-    "invXi": [1.0 / 200.0, "double"],
+    "invXi": [1.0 / args.friction, "double"],
     "hThreshold": [1e-1, "double"],
 }
 constants["mu"] = [
