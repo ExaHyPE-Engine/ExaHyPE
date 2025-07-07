@@ -83,7 +83,7 @@ void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally(
         MPI_Irecv(
           receiveBuffer.data(),
           numberOfReceivedMessages.getValue(),
-          T::getGlobalCommunciationDatatype(),
+          T::getGlobalCommunicationDatatype(),
           rank,
           _SieveReductionTag,
           tarch::mpi::Rank::getInstance().getCommunicator(),
@@ -96,7 +96,7 @@ void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally(
         MPI_Isend(
           sendBuffer.data(),
           numberOfParticlesToSend, // this is important
-          T::getGlobalCommunciationDatatype(),
+          T::getGlobalCommunicationDatatype(),
           rank,
           _SieveReductionTag,
           tarch::mpi::Rank::getInstance().getCommunicator(),

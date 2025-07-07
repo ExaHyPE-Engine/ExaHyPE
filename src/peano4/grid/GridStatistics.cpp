@@ -126,7 +126,7 @@ MPI_Datatype peano4::grid::GridStatistics::getForkDatatype() {
 }
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype peano4::grid::GridStatistics::getGlobalCommunciationDatatype() {
+MPI_Datatype peano4::grid::GridStatistics::getGlobalCommunicationDatatype() {
   return Datatype;
 }
 
@@ -156,7 +156,7 @@ void peano4::grid::GridStatistics::freeForkDatatype() {
 
 
 [[clang::map_mpi_datatype]]
-void peano4::grid::GridStatistics::freeGlobalCommunciationDatatype() {
+void peano4::grid::GridStatistics::freeGlobalCommunicationDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
     Datatype = MPI_DATATYPE_NULL;
@@ -286,7 +286,7 @@ void peano4::grid::GridStatistics::initDatatype() {
   getJoinDatatype();
   getBoundaryExchangeDatatype();
   getMultiscaleDataExchangeDatatype();
-  getGlobalCommunciationDatatype();
+  getGlobalCommunicationDatatype();
   #endif
 }
 
@@ -297,7 +297,7 @@ void peano4::grid::GridStatistics::shutdownDatatype() {
   freeJoinDatatype();
   freeBoundaryExchangeDatatype();
   freeMultiscaleDataExchangeDatatype();
-  freeGlobalCommunciationDatatype();
+  freeGlobalCommunicationDatatype();
   #else
   MPI_Datatype type = Datatype;
   MPI_Type_free( &type );

@@ -65,7 +65,7 @@ class MPI(object):
     static MPI_Datatype  getMultiscaleDataExchangeDatatype();
 
     [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getGlobalCommunciationDatatype();
+    static MPI_Datatype  getGlobalCommunicationDatatype();
 
     [[clang::map_mpi_datatype]]
     static void  freeForkDatatype();
@@ -80,7 +80,7 @@ class MPI(object):
     static void  freeMultiscaleDataExchangeDatatype();
 
     [[clang::map_mpi_datatype]]
-    static void  freeGlobalCommunciationDatatype();
+    static void  freeGlobalCommunicationDatatype();
 
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -153,7 +153,7 @@ MPI_Datatype """
 [[clang::map_mpi_datatype]]
 MPI_Datatype """
             + full_qualified_name
-            + """::getGlobalCommunciationDatatype() {
+            + """::getGlobalCommunicationDatatype() {
   return Datatype;
 }
 
@@ -196,7 +196,7 @@ void """
 [[clang::map_mpi_datatype]]
 void """
             + full_qualified_name
-            + """::freeGlobalCommunciationDatatype() {
+            + """::freeGlobalCommunicationDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
     Datatype = MPI_DATATYPE_NULL;
@@ -338,7 +338,7 @@ void """
   getJoinDatatype();
   getBoundaryExchangeDatatype();
   getMultiscaleDataExchangeDatatype();
-  getGlobalCommunciationDatatype();
+  getGlobalCommunicationDatatype();
   #endif
 }
 
@@ -351,7 +351,7 @@ void """
   freeJoinDatatype();
   freeBoundaryExchangeDatatype();
   freeMultiscaleDataExchangeDatatype();
-  freeGlobalCommunciationDatatype();
+  freeGlobalCommunicationDatatype();
   #else
   MPI_Datatype type = Datatype;
   MPI_Type_free( &type );
