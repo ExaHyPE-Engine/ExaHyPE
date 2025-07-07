@@ -18,12 +18,14 @@ GCC:
                             -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
+                            -DENABLE_CURVI=ON \
                             -DENABLE_SWIFT=ON \
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
                             -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
+                            -DWITH_EASI=ON \
                             -DWITH_MULTITHREADING=no \
                             -DWITH_MPI=OFF"
   trigger:
@@ -42,12 +44,14 @@ GCC_SharedOMP_MPI:
                             -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
+                            -DENABLE_CURVI=ON \
                             -DENABLE_SWIFT=ON \
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
                             -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
+                            -DWITH_EASI=ON \
                             -DWITH_MULTITHREADING=omp \
                             -DWITH_MPI=ON"
   trigger:
@@ -66,12 +70,14 @@ Intel:
                             -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
+                            -DENABLE_CURVI=ON \
                             -DENABLE_SWIFT=ON \
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
                             -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
+                            -DWITH_EASI=ON \
                             -DWITH_MULTITHREADING=no \
                             -DWITH_MPI=OFF"
   trigger:
@@ -90,12 +96,14 @@ Intel_SharedOMP_MPI:
                             -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
+                            -DENABLE_CURVI=ON \
                             -DENABLE_SWIFT=ON \
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
                             -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
+                            -DWITH_EASI=ON \
                             -DWITH_MULTITHREADING=omp \
                             -DWITH_MPI=ON"
   trigger:
@@ -114,12 +122,14 @@ Intel_SharedOMP_MPI:
 #                             -DENABLE_EXAHYPE=ON \
 #                             -DENABLE_LOADBALANCING=ON \
 #                             -DENABLE_BLOCKSTRUCTURED=ON \
+#                             -DENABLE_CURVI=ON \
 #                             -DENABLE_SWIFT=ON \
 #                             -DENABLE_PARTICLES=ON \
 #                             -DENABLE_MGHYPE=ON \
 #                             -DENABLE_FINITEELEMENTS=ON \
 #                             -DWITH_HDF5=ON \
 #                             -DWITH_NETCDF=ON \
+#                             -DWITH_EASI=ON \
 #                             -DWITH_MULTITHREADING=sycl \
 #                             -DWITH_MPI=ON"
 #   trigger:
@@ -138,12 +148,14 @@ LLVM:
                             -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
+                            -DENABLE_CURVI=ON \
                             -DENABLE_SWIFT=ON \
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
                             -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
+                            -DWITH_EASI=ON \
                             -DWITH_MULTITHREADING=no \
                             -DWITH_MPI=OFF"
   trigger:
@@ -162,12 +174,14 @@ LLVM_SharedOMP_MPI:
                             -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
+                            -DENABLE_CURVI=ON \
                             -DENABLE_SWIFT=ON \
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
                             -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
+                            -DWITH_EASI=ON \
                             -DWITH_MULTITHREADING=omp \
                             -DWITH_MPI=ON"
   trigger:
@@ -186,12 +200,14 @@ NVIDIA:
                             -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
+                            -DENABLE_CURVI=ON \
                             -DENABLE_SWIFT=ON \
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
                             -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
+                            -DWITH_EASI=ON \
                             -DWITH_MULTITHREADING=no \
                             -DWITH_MPI=OFF"
   trigger:
@@ -210,12 +226,14 @@ AMD:
                             -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
+                            -DENABLE_CURVI=ON \
                             -DENABLE_SWIFT=ON \
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
                             -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
+                            -DWITH_EASI=ON \
                             -DWITH_MULTITHREADING=no \
                             -DWITH_MPI=OFF"
   trigger:
@@ -234,12 +252,14 @@ AMD:
 #                             -DENABLE_EXAHYPE=ON \
 #                             -DENABLE_LOADBALANCING=ON \
 #                             -DENABLE_BLOCKSTRUCTURED=ON \
+#                             -DENABLE_CURVI=ON \
 #                             -DENABLE_SWIFT=ON \
 #                             -DENABLE_PARTICLES=ON \
 #                             -DENABLE_MGHYPE=ON \
 #                             -DENABLE_FINITEELEMENTS=ON \
 #                             -DWITH_HDF5=ON \
 #                             -DWITH_NETCDF=ON \
+#                             -DWITH_EASI=ON \
 #                             -DWITH_MULTITHREADING=omp \
 #                             -DWITH_MPI=ON"
 #   trigger:

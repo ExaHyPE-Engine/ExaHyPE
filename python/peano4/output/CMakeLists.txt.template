@@ -119,8 +119,8 @@ if(TARGET Peano::ToolboxFiniteElements{{DIMENSIONS}}d_${mode_lower})
   target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxFiniteElements{{DIMENSIONS}}d_${mode_lower})
 endif()
 
-if(TARGET Peano::ToolboxCurvi{{DIMENSIONS}}d_${mode_lower})
-  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxCurvi{{DIMENSIONS}}d_${mode_lower})
+if(TARGET Peano::ToolboxCurvi_${mode_lower})
+  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxCurvi_${mode_lower})
 endif()
 
 if(TARGET Peano::ExaHyPE2Core{{DIMENSIONS}}d_${mode_lower})
