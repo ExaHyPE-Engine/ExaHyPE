@@ -17,8 +17,8 @@ def construct_marker_name(task_name):
 
 
 def create_vertex_marker(task_name,
-                         full_qualified_enumerator_type = "tarch::Enumerator",
-                         enumerator_include = """ #include "tarch/Enumerator.h" """
+                         full_qualified_enumerator_type = "tarch::multicore::TaskEnumerator",
+                         enumerator_include = """ #include "tarch/multicore/TaskEnumerator.h" """
                          ):
     """!
 
@@ -35,8 +35,8 @@ def create_vertex_marker(task_name,
     mesh:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    cell_marker_for_tasks   = peano4.toolbox.EnumerateCellsAndVertices.create_cell_marker(current_species_set.name)
-    vertex_marker_for_tasks = peano4.toolbox.EnumerateCellsAndVertices.create_vertex_marker(current_species_set.name)
+    cell_marker_for_tasks   = peano4.toolbox.api.EnumerateCellsAndVertices.create_cell_marker(current_species_set.name)
+    vertex_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVertices.create_vertex_marker(current_species_set.name)
 
     self._project.datamodel.add_cell(cell_marker_for_tasks)
     self._project.datamodel.add_vertex(vertex_marker_for_tasks)
@@ -107,9 +107,8 @@ class AssignNumbersToMesh(ActionSet):
     Gives each mesh entity a unique number
 
     Also ensure that a vertex knows about the numbers of the adjacent cells.
-    The numbers are unique per tree, but not unique globally or even per rank.
-    At the moment, we ignore face data here, i.e. we only assign numbers to
-    cells and vertices.
+    The numbers are unique per rank, but not unique globally. We achieve 
+    uniqueness by relying on the tarch::Enumerator.
 
     """
 
@@ -126,6 +125,7 @@ class AssignNumbersToMesh(ActionSet):
           manipulated.
 
         """
+        super( AssignNumbersToMesh, self ).__init__()
         self._task_name = task_name
         pass
 

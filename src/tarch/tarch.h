@@ -49,8 +49,16 @@ namespace tarch {
 }
 
 /**
+ * Generic identifier for inlined functions
+ *
  * This is the marker that is to be used after the argument list of a
- * function declaration.
+ * function declaration. Peano defines its own marker, so it is fairly
+ * easy to disable it if we use a compiler that doesn't support it
+ * aka non-Clang. The remark above is true for declarations (where
+ * the marker is usually to be used), but it seems to fail for
+ * static functions where the implementation is in the header. See
+ * the documentation of tarch::la::smaller() for a discussion of flags
+ * that cause compiler warnings and what to do about them.
  */
 #if defined(UseManualInlining)
 #define InlineMethod __attribute__((always_inline))

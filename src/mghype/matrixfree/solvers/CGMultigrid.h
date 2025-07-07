@@ -83,7 +83,7 @@ namespace cgmultigrid{
   extern tarch::logging::Log  _log;
 
 } // namespace cgmultigrid
- }// namespace solvers
+} // namespace solvers
 } // namespace matrixfree
 } // namespace mghype
 

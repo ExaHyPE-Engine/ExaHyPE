@@ -3,8 +3,7 @@
 #pragma once
 
 
-#include <unordered_set>
-#include <list>
+#include <map>
 
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/BooleanSemaphore.h"
@@ -25,66 +24,43 @@ namespace tarch {
      * large physical tasks instead of being processed one by one. This can
      * reduce task administration overheads, but it also allows the routine
      * handling a set of tasks to exploit commonalities or the larger intra-task
-     * concurrency.
+     * concurrency. Due to the latter argument, task fusion is Peano's favourite
+     * technique to keep GPUs busy.
      *
-     *
-     * Whenever we get a task (in the example below we get three yellow tasks)
-     * with dependencies that can be fused, we split each task up into two
-     * tasks each:
-     *
-     * @image html multicore_task_flow-00.png
-     *
-     * One task is a preparation task (red), and the other one is the actual
-     * processing (green). The prep task has all the complex incoming dependencies. The
-     * processing task is part of a straight task sequence. Both the prep task
-     * and the processing task know the actual task, which is not part of the
-     * actual task graph anymore. It is associated with these two wrapper
-     * classes.
-     *
-     * @image html multicore_task_flow-01.png
-     *
-     * If the prep task becomes active, we do not evaluate the task. Instead,
-     * we dump the task into the queue of ready tasks.
-     *
-     * @image html multicore_task_flow-02.png
-     * @image html multicore_task_flow-03.png
-     *
-     * The preparation is done through tarch::multicore::taskfusion::LogReadyTask,
-     * which is rather trivial. The actual task execution and fusion is then
-     * realised through and instance of ProcessReadyTask which holds also all
-     * race condition logic. See the class documentation. This processing task
-     * finally also serves as placeholder for outgoing dependencies.
+     * There are many ways how task fusion can be implemented. In Peano, the
+     * different strategies are controlled through FusionImplementation which
+     * in turn is set by the multicore orchestration. More information is
+     * provided in the context of @ref documentation_tarch_task_fusion_strategies.
+     * Here, we summarise more low-level implementation details.
      *
      * To ensure that fusion is only applied to tasks of the same type, we store
-     * the fusable tasks in a map indexed by the task type. This map is called
-     * pendingTasksThatCanBeFused.
+     * the fusable tasks in a map indexed by the task type. The most important
+     * type in the context of fusion therefore is FusableTaskQueue.
+     *
+     * @see Consult the page @ref documentation_tarch_task_fusion_strategies
+     *   for recommendations and hints on task fusion strategies.
      */
     namespace taskfusion {
+      struct FusableTasksQueue;
+
       /**
-       * Task queue of tasks which we hold back
+       * Delegates to implementation-specific variants, i.e. to the one
+       * selected by the orchestration.
        */
-      struct ReadyFusableTasks {
-        ~ReadyFusableTasks()                       = default;
-        ReadyFusableTasks(const ReadyFusableTasks&) = delete;
-
-        /**
-         * Each task in the queue is identified through a pointer to the
-         * task plus a task (dependency) number.
-         */
-        using Tasks = std::list< std::pair<tarch::multicore::Task*, int> >;
-        using FinishedTaskNumbers = std::unordered_set<int>;
-
-        Tasks                                      tasks;
-        FinishedTaskNumbers                        completedTaskNumbers;
-        tarch::multicore::BooleanSemaphore         semaphore;
-        int                                        type;
-        tarch::timing::GlidingAverageMeasurement   numberOfPendingReadyTasksPerProcessTaskExecution;
-
-        ReadyFusableTasks(int type_):
-          type(type_) {}
-      };
+      void translateFusableTaskIntoTaskSequence(
+        Task*                  task,
+        std::set<TaskNumber>   inDependencies,
+        const TaskNumber&      taskNumber
+      );
 
       /**
+       * Run over all known queues and invoke drainReadyTasks() on each one.
+       */
+      void processAllReadyTasks();
+
+      /**
+       * Realisation for translateFusableTaskIntoTaskSequence() for ProducerConsumerTaskPairs
+       *
        * Translate a single task into a sequence of (fusable tasks)
        *
        * This routine makes a decision if to spawn a task as native task
@@ -126,14 +102,85 @@ namespace tarch {
        * If the max number of tasks that should be fused is smaller one, the
        * user has, by definition switched off all fusion. We therefore
        * immediately spawn the task as a native one.
+       *
+       *
+       * ## Partial serialisation
+       *
+       * The whole idea of the fusion is that multiple tasks are bundled into
+       * one. If there are too many instances of ProcessReadyTask, then they
+       * will all grab from the fusion queue and there will never be enough
+       * tasks. So it makes sense to serialise the ProcessReadyTask instances
+       * if there are less than two times the max tasks in the queue.
        */
-      void translateFusableTaskIntoTaskSequence(
-        Task*                        task,
-        const std::set<TaskNumber>&  inDependencies,
-        const TaskNumber&            taskNumber
+      void translateFusableTaskIntoTaskSequence_ProducerConsumerTaskPairs(
+        Task*                  task,
+        FusableTasksQueue&     taskQueue,
+        std::set<TaskNumber>   inDependencies,
+        const TaskNumber&      taskNumber,
+        const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction
       );
 
-      void processAllReadyTasks();
+      /**
+       * Implementation of translateFusableTaskIntoTaskSequence() if we use LazyEvaluation.
+       *
+       * @see @ref documentation_tarch_task_fusion_strategies for some context for this routine.
+       */
+      void translateFusableTaskIntoTaskSequence_LazyEvaluation(
+        Task*                  task,
+        FusableTasksQueue&     taskQueue,
+        std::set<TaskNumber>   inDependencies,
+        const TaskNumber&      taskNumber,
+        const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction
+      );
+
+      void translateFusableTaskIntoTaskSequence_EagerConsumerTasks(
+        Task*                  task,
+        FusableTasksQueue&     taskQueue,
+        std::set<TaskNumber>   inDependencies,
+        const TaskNumber&      taskNumber,
+        const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction
+      );
+
+      /**
+       * Delegates to implementation-specific variants.
+       */
+      void ensureHeldBackTasksAreMappedOntoNativeTasks(const std::set<TaskNumber>& inDependencies);
+
+      /**
+       * Implementation of waitForTasks() if we use LazyEvaluation.
+       *
+       * We don't know, at this point, what the type of each in dependency is.
+       * Therefore, we simply loop over all queues, i.e. all task types that we
+       * are aware of.
+       *
+       * First, we look in each queue if it hosts the right task. If not, we
+       * try to invoke the fusion. If that fails, i.e. the task is not completed
+       * yet, we issue another loop over all task types, i.e. queues, and process
+       * one task at a time. This is a while loop, i.e. by the time we return
+       * we know that we have found the right task.
+       *
+       * @see ProcessReadyTask::processTasks() to trigger the actual lazy
+       *      fusion of tasks.
+       * @see ProcessReadyTask::hasTaskBeenProcessed() which is used to check
+       *      if a particular task has completed already.
+       */
+      void ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(const std::set<TaskNumber>& inDependencies);
+
+      /**
+       *
+       *
+       * # Implementation
+       *
+       * If the task is ready, somebody could have triggered the computation
+       * instead of us. So we issue a consumer task now, as we may assume that
+       * there are many other tasks in there as well which are ready.
+       *
+       * After that, we while loop and wait until we know that the task is
+       * complete.
+       *
+       */
+      void ensureHeldBackTasksAreMappedOntoNativeTasks_LazyConsumerTasks(const std::set<TaskNumber>& inDependencies);
+      void ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks(const std::set<TaskNumber>& inDependencies);
     } // namespace taskfusion
   }
 }

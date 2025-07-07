@@ -18,6 +18,7 @@ parser.add_argument("-pt",   "--plot-sweep",     dest="plot_after_each_mesh_swee
 parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
+parser.add_argument("-c",   "--coarse-level",       dest="coarsest_level", type=int, default=0, help="coarsest_level")
 parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.3, help="Mesh size")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
@@ -57,11 +58,12 @@ solver = mghype.matrixfree.solvers.api.CollocatedMG("CollocatedMG",
                                                     correction_matrix = correction_matrix,
                                                     correction_matrix_scaling = correction_matrix_scaling,
                                                     solver_tolerance=0.01,
-                                                    pre_smoothing_steps =5,
+                                                    pre_smoothing_steps =6,
                                                     post_smoothing_steps=5,
                                                     restriction_matrix=intergridOperators.restriction(),
                                                     prolongation_matrix=intergridOperators.prolongation(),
                                                     descend_order=0,
+                                                    coarsest_level=args.coarsest_level
                                                     )
 
 project.add_solver(solver)
@@ -84,9 +86,14 @@ project.set_global_simulation_parameters(
   offset                = [ 0.0       for _ in range(args.dimensions) ],
   domain_size           = [ cube_size for _ in range(args.dimensions) ],
   plot_after_each_mesh_sweep       = args.plot_after_each_mesh_sweep,
+  max_iterations                   = 2000
 )
 
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
+'''
+The first attempt to parallelise this code was a failure. So we comment out the load balancing.
+'''
+# project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration(0.9, 0, false, 8, 50)" )
+
 project.set_Peano4_installation( args.peanodir, build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)

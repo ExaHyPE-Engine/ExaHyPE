@@ -124,3 +124,8 @@ double tarch::timing::GlidingAverageMeasurement::min() const {
 bool tarch::timing::GlidingAverageMeasurement::hasFullSetOfMeasurements() const {
   return _values.size()==_maxEntries;
 }
+
+
+int tarch::timing::GlidingAverageMeasurement::getObservationSpan() const {
+  return _maxEntries;
+}

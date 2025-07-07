@@ -1,3 +1,7 @@
+""" 
+ This file is part of the MGHyPE project within Peano 4. For conditions of distribution and 
+ use, please see the copyright notice at www.peano-framework.org
+"""
 import peano4
 import dastgen2
 from abc import abstractmethod
@@ -6,6 +10,11 @@ class Solver:
   """!
 
   Abstract base class for matrix free solvers.
+  
+  ## Data associated with mesh entities
+  
+  We always assign data to vertices, cells and faces, even though your 
+  particular solver subclass might not require those guys. 
 
   """
 

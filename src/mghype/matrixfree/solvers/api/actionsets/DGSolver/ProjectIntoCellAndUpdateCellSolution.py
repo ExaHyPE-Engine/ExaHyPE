@@ -23,7 +23,8 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
       faceSol( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getSolution(s);
 
     // next, we need to project solution on face onto the cell...
-    auto projection = repositories::{{SOLVER_INSTANCE}}.getCellFromFaceMatrix(marker.x(), marker.h()) * faceSol;
+    auto projection = repositories::{{SOLVER_INSTANCE}}.applyCellFromFaceMatrix(marker.x(), marker.h(), faceSol);
+
     // loop over each face, finish updating residual as we go
     for (int f=0; f<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; f++)
     {
@@ -32,11 +33,18 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
         fineGridCell{{SOLVER_NAME}}.getResidual(f)- projection(f));
     }
 
+    // update global residual before multiplying by the preconditioner
+    for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++) {
+      double res = fineGridCell{{SOLVER_NAME}}.getResidual( i );
+      _solverStatistics.updateGlobalResidual(res, marker.h());
+    }
+
     // multiply by "smoother" / preconditioner
-    fineGridCell{{SOLVER_NAME}}.setResidual(
-      repositories::{{SOLVER_INSTANCE}}.getInvertedApproxSystemMatrix(marker.x(),marker.h()) 
-      * fineGridCell{{SOLVER_NAME}}.getResidual()
-    );
+    fineGridCell{{SOLVER_NAME}}.setResidual( repositories::{{SOLVER_INSTANCE}}.applyInvertedApproxSystemMatrix(
+      marker.x(),
+      marker.h(),
+      fineGridCell{{SOLVER_NAME}}.getResidual()
+    ));
 
     for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++) {
       double res = fineGridCell{{SOLVER_NAME}}.getResidual( i );
@@ -44,9 +52,8 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
       fineGridCell{{SOLVER_NAME}}.setSolution( i,
         fineGridCell{{SOLVER_NAME}}.getSolution( i ) + du
       );
-      repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(res, marker.h());
-      repositories::{{SOLVER_INSTANCE}}.updateGlobalSolutionUpdates(du, marker.h()(0));
-      repositories::{{SOLVER_INSTANCE}}.updateMinMaxMeshSize( marker.h() );
+      _solverStatistics.updateGlobalSolutionUpdates(du, marker.h()(0));
+      _solverStatistics.updateMinMaxMeshSize( marker.h() );
     }
 
     logTraceOutWith2Arguments( "ProjectOntoCells", fineGridCell{{SOLVER_NAME}}.getResidual(), fineGridCell{{SOLVER_NAME}}.getSolution() );
@@ -70,6 +77,15 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_BEGIN_TRAVERSAL:
+      result = jinja2.Template("""
+  _solverStatistics.clearGlobalPrecondResidualUpdate();
+  _solverStatistics.clearGlobalResidualAndSolutionUpdate();
+""").render(**self.d)      
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
+      result = jinja2.Template("""
+  repositories::{{SOLVER_INSTANCE}}.merge( _solverStatistics );
+""").render(**self.d)
     return result
 
   def get_action_set_name(self):
@@ -108,4 +124,16 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
 #include "peano4/utils/Loop.h"
 """
 
+  def get_attributes(self):
+        """!
+
+        Return attributes as copied and pasted into the generated class.
+
+        Please note that action sets are not persistent, i.e. there is one
+        object creation per grid sweep per tree.
+
+        """
+        return """
+  ::mghype::matrixfree::solvers::SolverStatistics _solverStatistics;        
+"""        
 

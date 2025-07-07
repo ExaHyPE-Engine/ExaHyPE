@@ -6,34 +6,22 @@
 
 tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createBSP() {
   return new Hardcoded(
-    std::numeric_limits<int>::max(), // numberOfTasksToHoldBack
-    std::numeric_limits<int>::max(), // min tasks to fuse
-    0,                               // max tasks to fuse
+    0,                               // min tasks to fuse
+    1,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
-    false,                           // fuseTasksImmediatelyWhenSpawned
-    1
+    NoNestedParallelism,
+    FusionImplementation::LazyEvaluation
   );
 }
 
 tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createNative() {
+  // @todo equals createBSP
   return new Hardcoded(
-    0,                               // numberOfTasksToHoldBack
-    std::numeric_limits<int>::max(), // min tasks to fuse
-    0,                               // max tasks to fuse
+    0,                               // min tasks to fuse
+    1,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
-    false,                           // fuseTasksImmediatelyWhenSpawned
-    1
-  );
-}
-
-tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createBackfill() {
-  return new Hardcoded(
-    std::numeric_limits<int>::max(), // numberOfTasksToHoldBack
-    std::numeric_limits<int>::max(), // min tasks to fuse
-    0,                               // max tasks to fuse
-    tarch::multicore::Task::Host,    // deviceForFusedTasks
-    false,                           // fuseTasksImmediatelyWhenSpawned
-    1
+    NoNestedParallelism,
+    FusionImplementation::LazyEvaluation
   );
 }
 
@@ -44,39 +32,41 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
   [[maybe_unused]] int   targetDevice
 ) {
   return new Hardcoded(
-    std::numeric_limits<int>::max(),   // numberOfTasksToHoldBack
     numberOfTasksToFuse,               // tasksToFuse
     numberOfTasksToFuse,               // tasksToFuse
     targetDevice,                      // deviceForFusedTasks
-    fuseImmediately,                   // fuseTasksImmediatelyWhenSpawned
-    1
+    NoNestedParallelism,
+    FusionImplementation::LazyEvaluation
   );
 }
 
 tarch::multicore::orchestration::Hardcoded::Hardcoded(
-  int  numberOfTasksToHoldBack,
   int  minTasksToFuse,
   int  maxTasksToFuse,
   int  deviceForFusedTasks,
-  bool fuseTasksImmediatelyWhenSpawned,
-  int  maxNestedConcurrency
+  int  maxNestedConcurrency,
+  FusionImplementation fusionImplementation
 ):
-  _numberOfTasksToHoldBack(numberOfTasksToHoldBack),
   _minTasksToFuse(minTasksToFuse),
   _maxTasksToFuse(maxTasksToFuse),
   _deviceForFusedTasks(deviceForFusedTasks),
-  _fuseTasksImmediatelyWhenSpawned(fuseTasksImmediatelyWhenSpawned),
-  _maxNestedConcurrency(maxNestedConcurrency) {}
+  _maxNestedConcurrency(maxNestedConcurrency),
+  _fusionImplementation(fusionImplementation)
+{}
+
 
 void tarch::multicore::orchestration::Hardcoded::startBSPSection(int /*nestedParallelismLevel*/) {}
 
+
 void tarch::multicore::orchestration::Hardcoded::endBSPSection(int /*nestedParallelismLevel*/) {}
+
 
 tarch::multicore::orchestration::Hardcoded::FuseInstruction tarch::multicore::orchestration::Hardcoded::fuse(int /*taskType*/) {
   return tarch::multicore::orchestration::Hardcoded::FuseInstruction(
     _deviceForFusedTasks, _minTasksToFuse, _maxTasksToFuse
   );
 }
+
 
 tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::Hardcoded::paralleliseForkJoinSection(
   [[maybe_unused]] int nestedParallelismLevel,
@@ -91,11 +81,16 @@ tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orc
 }
 
 
-
 void tarch::multicore::orchestration::Hardcoded::updateFuseStatistics(
   int    taskType,
   int    queueSize,
-  double averageNumberOfPendingReadyTasksPerProcessTaskExecution
+  double averageNumberOfPendingReadyTasksPerProcessTaskExecution,
+  double probabilityThatTaskIsCompleted
 ) {
   // empty on purpose
+}
+
+
+tarch::multicore::orchestration::FusionImplementation tarch::multicore::orchestration::Hardcoded::getFusionImplementation() const {
+  return _fusionImplementation;
 }

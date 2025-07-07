@@ -152,6 +152,9 @@ namespace exahype2 {
     ~CellData();
 
     std::string toString() const;
+
+    static int in(int index[Dimensions+2]);
+    static int out(int index[Dimensions+2]);
   };
 
 //  using CellData = CellData<double, double>;

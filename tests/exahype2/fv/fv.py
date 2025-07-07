@@ -219,7 +219,7 @@ fv_solver = available_solvers[args.solver](
   }
   F[normal] = Q[normal];
 """,
-    eigenvalues="return 1.0;",
+    eigenvalues="maxEigenvalue[0] = 1.0;",
 )
 fv_solver.plot_description = ", ".join({"v": args.dimensions}.keys())
 fv_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])

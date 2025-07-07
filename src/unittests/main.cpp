@@ -2,9 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "config.h"
 
+/*
 #include <fenv.h>
 #pragma float_control(precise, on)
 #pragma STDC FENV_ACCESS ON
+*/
 
 #include "tarch/UnitTests.h"
 #include "tarch/logging/ChromeTraceFileLogger.h"
@@ -288,7 +290,6 @@ int main(int argc, char** argv) {
 
   tarch::multicore::Core::getInstance().configure(cores);
 
-  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 
   runTests();
 

@@ -1,7 +1,7 @@
 #include "LogReadyTask.h"
+#include "FusableTasksQueue.h"
 
 #include "tarch/multicore/Lock.h"
-
 #include "tarch/logging/Statistics.h"
 
 
@@ -9,11 +9,12 @@ const std::string tarch::multicore::taskfusion::LogReadyTask::SubmitFusedTasksSt
 tarch::logging::Log tarch::multicore::taskfusion::LogReadyTask::_log( "tarch::multicore::taskfusion::LogReadyTask" );
 
 
-tarch::multicore::taskfusion::LogReadyTask::LogReadyTask( Task* task, int taskNumber, ReadyFusableTasks* taskQueue ):
+tarch::multicore::taskfusion::LogReadyTask::LogReadyTask( Task* task, int taskNumber, FusableTasksQueue& taskQueue ):
   Task(DontFuse,DefaultPriority),
   _task(task),
   _taskNumber(taskNumber),
   _taskQueue(taskQueue) {
+  _taskQueue.insertPendingTask( _taskNumber );
 }
 
 
@@ -22,17 +23,7 @@ void tarch::multicore::taskfusion::LogReadyTask::run() {
 
   logDebug( "run(...)", "task of type " << _task->getTaskType() << " is now ready to run. Put into ready queue" );
 
-  insertReadyTask(_task, _taskNumber, _taskQueue);
+  _taskQueue.movePendingTaskIntoReadyTaskQueue( _task, _taskNumber );
 }
 
-
-void tarch::multicore::taskfusion::LogReadyTask::insertReadyTask( Task* task, int taskNumber, ReadyFusableTasks* taskQueue ) {
-  tarch::multicore::Lock lock(taskQueue->semaphore);
-
-  ReadyFusableTasks::FinishedTaskNumbers::iterator p = taskQueue->completedTaskNumbers.find( taskNumber );
-  if ( p != taskQueue->completedTaskNumbers.end() ) {
-    taskQueue->completedTaskNumbers.erase(p);
-  }
-  taskQueue->tasks.push_back( std::pair<tarch::multicore::Task*, int>(task, taskNumber) );
-}
 

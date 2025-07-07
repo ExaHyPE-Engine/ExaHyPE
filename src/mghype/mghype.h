@@ -14,14 +14,36 @@ namespace mghype {
   /**
    * Compute a weighted linear combination of matrices
    *
-   * @Sean, Alex: Can we please have docu here on what is computed adn what the parameters mean?
-   *  Some links to why and where it is used would be great, too.
+   * @see applyMatrixFromHWeightedLinearCombination() for a description 
+   *   of the arguments.
    */
   template <int Rows, int Cols>
   tarch::la::Matrix< Rows, Cols, double > composeMatrixFromHWeightedLinearCombination(
     const std::vector< tarch::la::Matrix< Rows, Cols, double > >&   matrices,
     const std::vector<int>&                                         scaleFactors,
     const tarch::la::Vector<Dimensions, double>&                    h
+  );
+
+
+  /**
+   * Apply a series of vectors to another vector
+   *
+   * Compute
+   *
+   * @f$
+   *  r = \sum _i h^{s_i} M_i v
+   * @f$
+   *
+   * which is the standard operation that we need in any multigrid code. The
+   * @f$ s_i @f$ from above are from scaleFactors, while the @f$ M_i @f$ are
+   * the elements from matrices.
+   */
+  template <int Rows, int Cols>
+  tarch::la::Vector< Rows, double > applyMatrixFromHWeightedLinearCombination(
+    const std::vector< tarch::la::Matrix< Rows, Cols, double > >&   matrices,
+    const std::vector<int>&                                         scaleFactors,
+    const tarch::la::Vector<Dimensions, double>&                    h,
+    const tarch::la::Vector< Cols, double >&                        v
   );
 }
 

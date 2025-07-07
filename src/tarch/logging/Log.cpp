@@ -42,10 +42,11 @@
 
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
+std::chrono::system_clock::time_point tarch::logging::Log::_startupTime{ std::chrono::system_clock::now() };
+
+
 tarch::logging::Log::Log(const std::string& className):
   _className( className ) {
-
-  _startupTime = std::chrono::system_clock::now();
 }
 
 tarch::logging::Log::~Log() {}

@@ -5,10 +5,10 @@
 
 #include <functional>
 
-#include "../tarch/multicore/Task.h"
+#include "tarch/multicore/Task.h"
+#include "tarch/multicore/TaskEnumerator.h"
 #include "config.h"
 #include "peano4/datamanagement/CellMarker.h"
-#include "tarch/Enumerator.h"
 
 
 namespace exahype2 {
@@ -181,5 +181,5 @@ public:
    */
   static int reserveTaskNumber();
 private:
-  static tarch::Enumerator                  _enumerator;
+  static tarch::multicore::TaskEnumerator                  _enumerator;
 };

@@ -6,11 +6,34 @@ tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPA
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   Solver("{{CLASSNAME}}", {{SOLVER_TOLERANCE}} ),
-  _state(State::Solve)
+  _state(State::Solve), _updateSolution(false)
 {}
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() {}
+
+
+{% if CUSTOM_INIT_VERTEX!="" %}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initVertex(
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h,
+  tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value,
+  tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
+) {
+{{CUSTOM_INIT_VERTEX}}
+}
+{% endif %}
+
+
+{% if CUSTOM_BOUNDARY_CONDITIONS!="" %}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setBoundaryConditions(
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h,
+  tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value
+) {
+{{CUSTOM_BOUNDARY_CONDITIONS}}
+}
+{% endif %}
 
 
 {% if LOCAL_ASSEMBLY_MATRIX is defined %}
@@ -50,7 +73,7 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
 
 
 {% if MASS_MATRIX is defined  %}
-tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMassMatrix(
+tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getRhsMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
@@ -84,7 +107,7 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
 {% endif %}
 
 
-{{NAMESPACE | join("::")}}::vertexdata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getVertexDoFType(
+{{NAMESPACE | join("::")}}::vertexdata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getVertexType(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h
 ) {
@@ -101,7 +124,7 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
 }
 
 
-{{NAMESPACE | join("::")}}::celldata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellDoFType(
+{{NAMESPACE | join("::")}}::celldata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellType(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h
 ) {
@@ -111,6 +134,12 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend() {
   _state = State::Suspend;
+
+  // we don't want to update the solution immediately when we
+  // revisit this solver. We will have updated the solution itself 
+  // during the DGCGCoupling, and we don't want to re-update the
+  // solution with an out-of-date residual.
+  _updateSolution = false;
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSuspended() const {
@@ -125,6 +154,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
   if ( _state == State::Solve ) {
     synchroniseGlobalResidualAndSolutionUpdate();
+    
+    // if we were already in State::Solve, then we've done at 
+    // least one sweep, and we can safely re-enable solution updates.
+    _updateSolution = true;
   }
 
   if (
@@ -138,13 +171,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
   _state = State::Solve;
 }
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateSolution() const {
+  return 
+    _state == State::Solve
+    and
+    _updateSolution;
+}
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update() const {
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateResidual() const {
   return _state == State::Solve;
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::State {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getState() const {
   return _state;
 }
-
 {{ABSTRACT_SOLVER_IMPLEMENTATION_EXTRAS}}

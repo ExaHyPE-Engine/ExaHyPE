@@ -78,6 +78,7 @@ tarch::multicore::orchestration::Strategy& tarch::multicore::getOrchestration() 
 
 
 void tarch::multicore::waitForTasks(const std::set<TaskNumber>& inDependencies) {
+  tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
   tarch::multicore::native::waitForTasks(inDependencies);
 }
 
@@ -142,6 +143,7 @@ void tarch::multicore::spawnTask(
   tarch::logging::Statistics::getInstance().inc(SpawnedTasksStatisticsIdentifier, 1, false, true);
 
   if (task->canFuse()) {
+    taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
     taskfusion::translateFusableTaskIntoTaskSequence(task, inDependencies, taskNumber);
   }
   else {
@@ -163,8 +165,7 @@ void tarch::multicore::processFusedTask(Task* myTask, const std::list<tarch::mul
 
 void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<Task*>& tasks) {
   for (auto& p : tasks) {
-    while (p->run()) {
-    }
+    p->run();
     delete p;
   }
 }
@@ -175,8 +176,7 @@ void tarch::multicore::native::spawnTask(
   const std::set<TaskNumber>& /*inDependencies*/,
   const TaskNumber& /*taskNumber*/
 ) {
-  while (job->run()) {
-  }
+  job->run();
   delete job;
 }
 

@@ -47,14 +47,28 @@ class GaussLobatto(MatrixGenerator):
 
     r_press = self.poly_degree # polynomial order for p
     self.block_matrix = mghype.api.matrixgenerators.blockmatrix.DGPoisson2dPenaltyBlockMatrix(r_press)
-    #self.block_matrix = DGPoisson2dBlockMatrix(r_press)
+
+  def get_nodal_points_1d(self):
+    """
+    Get the nodal points in the interval [-1,1].
+    These are the nodes used for constructing the Lagrangian basis functions.
+    Note, that they might be different from the quadrature points used for integration.
+    """
+    return self.block_matrix.basis.nodal_points(self.poly_degree)
 
   def get_points1d(self):
     """!
+    
+    Get spacing of integration points over unit interval
+    
     Overwriting the method in base class. Let's produce Gauss-Lobatto
     points. Standard behaviour is Legendre points using built-in stuff
     from scipy.
-    We borrow the method from the wikipedia page
+    
+    We borrow the method from the wikipedia page.
+    
+    This routine returns the points in the interval [-1,1]. If you 
+    have to rescale them, use get_points_unit_interval() instead.
     """
     # let p be the poly degree. Then p+1 is the number of points we aim for
     # So we gather the n'th polynomial Pn, then return [-1,1], as well as the roots
@@ -265,7 +279,7 @@ class GaussLobatto(MatrixGenerator):
   def get_face_face_riemann_problem_matrix(self):
     """
     Averaging matrix.
-    Implement separately for GLMatrixFree class, taking into account solutions_per_face_node and projections_per_face_node.
+    Implement separately for GaussLobattoMatrixFree class, taking into account solutions_per_face_node and projections_per_face_node.
     Now assume there are 2 "solutions" (i.e. f-variables: q^f and u^f) and two sets of projections: q^pm an.
     """
 
@@ -281,7 +295,7 @@ class GaussLobatto(MatrixGenerator):
     return matrix
   
 
-class GLMatrixFree(GaussLobatto):
+class GaussLobattoMatrixFree(GaussLobatto):
   """!
   
   
@@ -293,7 +307,7 @@ class GLMatrixFree(GaussLobatto):
                solutions_per_face_node,   # number of solutions   we hold per node.
                projections_per_face_node # number of projections  we hold per node.
               ):
-    super( GLMatrixFree, self ).__init__(dimensions,
+    super( GaussLobattoMatrixFree, self ).__init__(dimensions,
                                          poly_degree,
                                          unknowns_per_cell_node,
                                          solutions_per_face_node
@@ -637,15 +651,15 @@ class GLMatrixFree(GaussLobatto):
     Return the superclass's matrix, alongside a array of length
     1 for scale factor. Hardcoding the number
     """
-    return [super(GLMatrixFree,self).get_cell_system_matrix_for_laplacian()], [0]
+    return [super(GaussLobattoMatrixFree,self).get_cell_system_matrix_for_laplacian()], [0]
 
   def get_cell_mass_matrix(self):
     """!
     Return the superclass's matrix, alongside a array of length
     1 for scale factor. Hardcoding the number
     """
-    return [super(GLMatrixFree,self).get_cell_mass_matrix()], [2]
+    return [super(GaussLobattoMatrixFree,self).get_cell_mass_matrix()], [2]
   
   def get_cell_identity_matrix(self):
-    return [super(GLMatrixFree,self).get_cell_identity_matrix()], [0]
+    return [super(GaussLobattoMatrixFree,self).get_cell_identity_matrix()], [0]
   

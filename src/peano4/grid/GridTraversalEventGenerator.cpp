@@ -412,6 +412,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   return event;
 }
 
+
 peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createPrunedEnterCellTraversalEvent( SpacetreeState spacetreeState, const GridTraversalEvent& event ) const {
   GridTraversalEvent result = event;
 
@@ -469,6 +470,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
 
   return result;
 }
+
 
 peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createEnterCellTraversalEvent(
   [[maybe_unused]] GridVertex                                coarseGridVertices[TwoPowerD],
@@ -637,6 +639,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   return event;
 }
 
+
 peano4::grid::FaceType peano4::grid::GridTraversalEventGenerator::getFaceType(
   [[maybe_unused]] GridVertex                         coarseGridVertices[TwoPowerD],
   [[maybe_unused]] tarch::la::Vector<Dimensions,int>  positionOfCell,
@@ -686,6 +689,7 @@ peano4::grid::FaceType peano4::grid::GridTraversalEventGenerator::getFaceType(
   return result;
 }
 
+
 peano4::grid::CellType peano4::grid::GridTraversalEventGenerator::getCellType(
   [[maybe_unused]] GridVertex                         coarseGridVertices[TwoPowerD],
   [[maybe_unused]] tarch::la::Vector<Dimensions,int>  positionOfCell
@@ -726,6 +730,42 @@ peano4::grid::CellType peano4::grid::GridTraversalEventGenerator::getCellType(
     return CellType::Persistent;
   }
 }
+
+
+peano4::grid::VertexType peano4::grid::GridTraversalEventGenerator::getVertexType(
+  [[maybe_unused]] GridVertex                         coarseGridVertices[TwoPowerD],
+  [[maybe_unused]] tarch::la::Vector<Dimensions,int>  position
+) {
+  #if Dimensions==2 or Dimensions==3
+  if (
+    coarseGridVertices[0].getState()==GridVertex::State::Refined
+    and
+    coarseGridVertices[1].getState()==GridVertex::State::Refined
+    and
+    coarseGridVertices[2].getState()==GridVertex::State::Refined
+    and
+    coarseGridVertices[3].getState()==GridVertex::State::Refined
+    #if Dimensions==3
+    and
+    coarseGridVertices[4].getState()==GridVertex::State::Refined
+    and
+    coarseGridVertices[5].getState()==GridVertex::State::Refined
+    and
+    coarseGridVertices[6].getState()==GridVertex::State::Refined
+    and
+    coarseGridVertices[7].getState()==GridVertex::State::Refined
+    #endif
+  ) {
+    return VertexType::Persistent;
+  }
+  #endif
+  return getVertexType(
+    coarseGridVertices,
+    position,
+    Dimensions-1
+  );
+}
+
 
 peano4::grid::VertexType peano4::grid::GridTraversalEventGenerator::getVertexType(
   [[maybe_unused]] GridVertex                         coarseGridVertices[TwoPowerD],
@@ -805,6 +845,7 @@ peano4::grid::VertexType peano4::grid::GridTraversalEventGenerator::getVertexTyp
   return result;
 }
 
+
 int peano4::grid::GridTraversalEventGenerator::getTreeOwningSpacetreeNode(
   [[maybe_unused]] GridVertex                                vertices[TwoPowerD],
   [[maybe_unused]] const SplitSpecification&                 splitTriggered,
@@ -848,6 +889,7 @@ int peano4::grid::GridTraversalEventGenerator::getTreeOwningSpacetreeNode(
 
   return id;
 }
+
 
 tarch::la::Vector< TwoPowerD, int >  peano4::grid::GridTraversalEventGenerator::getAdjacentRanksOfFace( GridVertex fineGridVertices[TwoPowerD], int faceNumber, bool calledByReceivingProcess ) const {
   tarch::la::Vector< TwoPowerD, int >  adjacentRanksOfFace(InvalidRank);

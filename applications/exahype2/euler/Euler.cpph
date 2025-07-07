@@ -1,13 +1,14 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-double applications::exahype2::euler::maxEigenvalue(
+void applications::exahype2::euler::maxEigenvalue(
   [[maybe_unused]] const double* const __restrict__             Q,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
-  [[maybe_unused]] const int                                    normal
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] double* const __restrict__                   maxEigenvalue
 ) {
   using s = VariableShortcuts;
 
@@ -19,7 +20,7 @@ double applications::exahype2::euler::maxEigenvalue(
   nonCriticalAssertion(Q[s::rho] == Q[s::rho]);
   #endif
 
-  const double irho = 1.0 / Q[s::rho];
+  const double irho = 1.0 / std::fabs(Q[s::rho]);
   const double p = (GAMMA - 1.0) * (Q[s::e] - 0.5 * irho * (Q[s::u] * Q[s::u] + Q[s::v] * Q[s::v]
   #if Dimensions == 3
     + Q[s::w] * Q[s::w]
@@ -30,7 +31,7 @@ double applications::exahype2::euler::maxEigenvalue(
   assertion(tarch::la::greaterEquals(p, 0.0));
   #endif
 
-  const double speedOfSound = sqrt(GAMMA * p * irho);
+  const double speedOfSound = sqrt(GAMMA * std::fabs(p) * irho);
   const double u_n          = Q[normal + 1] * irho;
   const double result       = std::fmax(std::fabs(u_n - speedOfSound), std::fabs(u_n + speedOfSound));
 
@@ -38,7 +39,7 @@ double applications::exahype2::euler::maxEigenvalue(
   assertion(tarch::la::greaterEquals(result, 0.0));
   #endif
 
-  return result;
+  maxEigenvalue[0] = result;
 }
 
 void applications::exahype2::euler::flux(

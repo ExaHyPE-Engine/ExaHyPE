@@ -189,9 +189,8 @@ double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
     }
 
     double result = 0.0;
+    double tem = 0.0;
     for (int normal=0; normal<Dimensions; normal++) {
-      result = std::max(
-        result,
         maxEigenvalue(
           QGathered,
           ::exahype2::fd::getGridCellCentre( patchCentre, patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
@@ -199,9 +198,10 @@ double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
           t,
           dt,
           normal,
+          &tem,
           ::exahype2::Solver::Offloadable::Yes
-        )
-      );
+        );
+      result =std::max(result, tem);
     }
 
     delete[] QGathered;

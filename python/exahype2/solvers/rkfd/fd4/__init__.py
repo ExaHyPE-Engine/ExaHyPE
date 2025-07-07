@@ -4,9 +4,13 @@ from exahype2.solvers.PDETerms import PDETerms
 
 from .GlobalFixedTimeStep import GlobalFixedTimeStep
 from .GlobalAdaptiveTimeStep import GlobalAdaptiveTimeStep
+from .GlobalAdaptiveTimeStepInExaGRyPE import GlobalAdaptiveTimeStepInExaGRyPE
 from .GlobalAdaptiveTimeStepWithEnclaveTasking import (
     GlobalAdaptiveTimeStepWithEnclaveTasking,
 )
+
+from .FD4DSLKernelExaGRyPE import timeStepWithFD4InExaGRyPE
+from .DerivativesCalDSLKernelExaGRyPE import DerivativesCalInExaGRyPE
 
 
 from .kernels import SolverVariant
