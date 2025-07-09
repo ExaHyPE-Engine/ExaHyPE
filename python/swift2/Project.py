@@ -51,6 +51,7 @@ class Project(object):
         self._dimensions = 2
         self._min_terminal_time = 1.0
         self._max_terminal_time = 0.0
+        self._make_initial_grid_coarse = False
         self._first_plot_time_stamp = 0.0
         self._time_in_between_plots = 0.1
         self._load_balancer_name = ""
@@ -335,25 +336,25 @@ levels.
 
     def __real_max_mesh_size(self):
         """!
-        
+
         Return the max mesh size that the code really will use.
-        
-        See the explanation in the generated Readme.md file or in 
-        real_mesh_size why this value is smaller than the real mesh 
+
+        See the explanation in the generated Readme.md file or in
+        real_mesh_size why this value is smaller than the real mesh
         size.
-        
+
         """
         return self.real_mesh_size(self._global_max_h)
 
     def __real_min_mesh_size(self):
         """!
-        
+
         Return the min mesh size that the code really will use.
-        
-        See the explanation in the generated Readme.md file or in 
-        real_mesh_size why this value is smaller than the real mesh 
+
+        See the explanation in the generated Readme.md file or in
+        real_mesh_size why this value is smaller than the real mesh
         size.
-        
+
         """
         return self.real_mesh_size(self._global_min_h)
 
@@ -372,6 +373,7 @@ levels.
         time_in_between_plots,
         periodic_BC=[False, False, False],
         plotter_precision=5,
+        initial_grid_coarse=False,
     ):
         """
 
@@ -389,12 +391,18 @@ levels.
           If you specify a valid max time however, you can stop the sim as soon as the
           most advanced cell exceeds this threshold.
 
+        initial_grid_coarse: Bool
+          If true, make the initial grid coarse, i.e. according to max cell size, which
+          is specified via max_h in the added particle species. Otherwise, make initial
+          grid fine, i.e. according to the particle species' min_h.
+
         """
         self._domain_offset = offset
         self._domain_size = domain_size
         self._dimensions = dimensions
         self._max_terminal_time = max_end_time
         self._min_terminal_time = min_end_time
+        self._make_initial_grid_coarse = initial_grid_coarse
         self._first_plot_time_stamp = first_plot_time_stamp
         self._time_in_between_plots = time_in_between_plots
         self._periodic_BC = []
@@ -646,8 +654,11 @@ levels.
         action_set_plot_grid.parallel = True
         self.algorithm_step_plot.add_action_set(action_set_plot_grid)
 
+        init_gridsize = self._global_min_h
+        if self._make_initial_grid_coarse:
+            init_gridsize = self._global_max_h
         action_set_create_regular_grid = peano4.toolbox.CreateRegularGrid(
-            self._global_min_h
+            init_gridsize
         )
         action_set_create_regular_grid.descend_invocation_order = (
             self.algorithm_step_create_grid.lowest_descend_invocation_order() - 1
