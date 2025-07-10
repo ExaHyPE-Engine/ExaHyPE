@@ -3,14 +3,14 @@
 #include <algorithm>
 
 
-double applications::exahype2::ccz4::maxEigenvalue(
-        const double* const Q,
-        int                 normal,
-        const double        CCZ4e,
-        const double        CCZ4ds,
-        const double        CCZ4GLMc,
-        const double        CCZ4GLMd,
-        double*             maxEigenvalue
+void applications::exahype2::ccz4::maxEigenvalue(
+  const double* const Q,
+  int                 normal,
+  const double        CCZ4e,
+  const double        CCZ4ds,
+  const double        CCZ4GLMc,
+  const double        CCZ4GLMd,
+  double*             maxEigenvalue
 ) {
   const double np = 1.0;
   const double qmin = std::min({Q[0],Q[3],Q[5]});
