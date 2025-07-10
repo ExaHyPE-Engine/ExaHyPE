@@ -27,7 +27,7 @@ export PYTHONPATH=../../../../python
 # REDO="false"
 REDO="true"
 
-for N_PART in 512 256 128 64 32; do
+for N_PART in 2048 1024 512 256 128 64 32; do
   for CELL_SIZE_MAX in 2 0.67 0.23; do
     for CELL_SIZE_MIN in 2 0.67 0.23 0.075 0.025 0.0083 0.003; do
 

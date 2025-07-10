@@ -13,12 +13,12 @@ PLOT_DELTA=0.01
 
 # if "false", will skip compiling if exec already exists, and
 # will skip running experiment if outputfile already exists
-# REDO="false"
-REDO="true"
+REDO="false"
+# REDO="true"
 
-for N_PART in 512 256 128 64 32; do
+for N_PART in 2048 1024 512 256 128 64 32; do
   for CELL_SIZE_MAX in 2 0.67 0.23; do
-    for CELL_SIZE_MIN in 2 0.67 0.23 0.075 0.025 0.0083 0.003; do
+    for CELL_SIZE_MIN in 2 0.67 0.23 0.075 0.025 0.0083 0.003 0.001; do
 
       # don't try to build with cell_min > cell_max
       if (( $(echo "$CELL_SIZE_MIN > $CELL_SIZE_MAX" |bc -l) )); then
