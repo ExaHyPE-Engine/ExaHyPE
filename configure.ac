@@ -399,21 +399,18 @@ AM_CONDITIONAL([VTK_LIBRARY_VERSION_9],[test "$vtk_version" = "9"])
 #
 # HDF5
 #
-# This macro defines the variable with_hdf5
-#
-#AX_LIB_HDF5
-
 AC_ARG_WITH(hdf5,
   AS_HELP_STRING([--with-hdf5],[enable HDF5 support [default=no]]),
   [ AC_MSG_CHECKING(for hdf5)
     case "${withval}" in
-      no)    AC_MSG_RESULT(no);                       use_hdf5=false ;;
-      *)     AC_MSG_RESULT(build with HDF5 support);  use_hdf5=true  ;;
+      no)    AC_MSG_RESULT(no);   use_hdf5=false ;;
+      *)     AC_MSG_RESULT(yes);  use_hdf5=true  ;;
     esac ],
   [ AC_MSG_CHECKING(for hdf5); AC_MSG_RESULT(no); use_hdf5=false ])
+AM_CONDITIONAL([UseHDF5],[test "x$use_hdf5" = xtrue])
 
 if test "$use_hdf5" == true; then
-  AC_DEFINE([UseHDF5], [1], [UseHDF5])
+  AC_DEFINE([UseHDF5], [UseHDF5], [UseHDF5])
 fi
 
 
@@ -427,7 +424,7 @@ AC_ARG_WITH(netcdf,
       no)    AC_MSG_RESULT(no);    use_netcdf=false ;;
       *)     AC_MSG_RESULT(yes);   use_netcdf=true  ;;
     esac ],
-  [ AC_MSG_CHECKING(for openblas); AC_MSG_RESULT(no); use_netcdf=false ])
+  [ AC_MSG_CHECKING(for netcdf); AC_MSG_RESULT(no); use_netcdf=false ])
 AM_CONDITIONAL([UseNetCDF],[test "x$use_netcdf" = xtrue])
 
 if test "$use_netcdf" == true; then
@@ -472,6 +469,106 @@ AM_CONDITIONAL([UseOpenblas],[test "x$use_openblas" = xtrue])
 
 if test "$use_openblas" == true; then
   AC_DEFINE([UseOpenblas], [UseOpenblas], [UseOpenblas])
+fi
+
+
+#
+# HDF5 (parallel version requires --with-mpi)
+#
+if test "$use_hdf5" != false; then
+  AC_PATH_PROG([PKG_CONFIG], [pkg-config])
+
+  HDF5_INCLUDE_DIR=`$PKG_CONFIG --cflags hdf5_cpp`
+  HDF5_LIBS_DIR=`$PKG_CONFIG --libs-only-L hdf5_cpp`
+  HDF5_LIBS=`$PKG_CONFIG --libs-only-l hdf5_cpp`
+
+  CXXFLAGS_PEANO_2D_RELEASE=" $CXXFLAGS_PEANO_2D_RELEASE ${HDF5_INCLUDE_DIR} "
+  CXXFLAGS_PEANO_2D_STATS="   $CXXFLAGS_PEANO_2D_STATS ${HDF5_INCLUDE_DIR} "
+  CXXFLAGS_PEANO_2D_ASSERTS=" $CXXFLAGS_PEANO_2D_ASSERTS ${HDF5_INCLUDE_DIR} "
+  CXXFLAGS_PEANO_2D_TRACE="   $CXXFLAGS_PEANO_2D_TRACE ${HDF5_INCLUDE_DIR} "
+  CXXFLAGS_PEANO_2D_DEBUG="   $CXXFLAGS_PEANO_2D_DEBUG ${HDF5_INCLUDE_DIR} "
+
+  CXXFLAGS_PEANO_3D_RELEASE=" $CXXFLAGS_PEANO_3D_RELEASE ${HDF5_INCLUDE_DIR} "
+  CXXFLAGS_PEANO_3D_STATS="   $CXXFLAGS_PEANO_3D_STATS ${HDF5_INCLUDE_DIR} "
+  CXXFLAGS_PEANO_3D_ASSERTS=" $CXXFLAGS_PEANO_3D_ASSERTS ${HDF5_INCLUDE_DIR} "
+  CXXFLAGS_PEANO_3D_TRACE="   $CXXFLAGS_PEANO_3D_TRACE ${HDF5_INCLUDE_DIR} "
+  CXXFLAGS_PEANO_3D_DEBUG="   $CXXFLAGS_PEANO_3D_DEBUG ${HDF5_INCLUDE_DIR} "
+
+  LDADD_PEANO_2D_RELEASE=" $LDADD_PEANO_2D_RELEASE ${HDF5_LIBS} "
+  LDADD_PEANO_2D_STATS="   $LDADD_PEANO_2D_STATS ${HDF5_LIBS} "
+  LDADD_PEANO_2D_ASSERTS=" $LDADD_PEANO_2D_ASSERTS ${HDF5_LIBS} "
+  LDADD_PEANO_2D_TRACE="   $LDADD_PEANO_2D_TRACE ${HDF5_LIBS} "
+  LDADD_PEANO_2D_DEBUG="   $LDADD_PEANO_2D_DEBUG ${HDF5_LIBS} "
+
+  LDADD_PEANO_3D_RELEASE=" $LDADD_PEANO_3D_RELEASE ${HDF5_LIBS} "
+  LDADD_PEANO_3D_STATS="   $LDADD_PEANO_3D_STATS ${HDF5_LIBS} "
+  LDADD_PEANO_3D_ASSERTS=" $LDADD_PEANO_3D_ASSERTS ${HDF5_LIBS} "
+  LDADD_PEANO_3D_TRACE="   $LDADD_PEANO_3D_TRACE ${HDF5_LIBS} "
+  LDADD_PEANO_3D_DEBUG="   $LDADD_PEANO_3D_DEBUG ${HDF5_LIBS} "
+
+  LDFLAGS_PEANO_RELEASE+=" ${HDF5_LIBS_DIR} "
+  LDFLAGS_PEANO_STATS+="   ${HDF5_LIBS_DIR} "
+  LDFLAGS_PEANO_ASSERTS+=" ${HDF5_LIBS_DIR} "
+  LDFLAGS_PEANO_TRACE+="   ${HDF5_LIBS_DIR} "
+  LDFLAGS_PEANO_DEBUG+="   ${HDF5_LIBS_DIR} "
+
+  AC_MSG_NOTICE([HDF5_INCLUDE_DIR: ${HDF5_INCLUDE_DIR}])
+  AC_MSG_NOTICE([HDF5_LIBS_DIR: ${HDF5_LIBS_DIR}])
+  AC_MSG_NOTICE([HDF5_LIBS: ${HDF5_LIBS}])
+
+  AC_SUBST([HDF5_INCLUDE_DIR])
+  AC_SUBST([HDF5_LIBS_DIR])
+  AC_SUBST([HDF5_LIBS])
+fi
+
+
+#
+# NetCDF
+#
+if test "$use_netcdf" != false; then
+  AC_PATH_PROG([PKG_CONFIG], [pkg-config])
+
+  NETCDF_INCLUDE_DIR=`$PKG_CONFIG --cflags netcdf`
+  NETCDF_LIBS_DIR=`$PKG_CONFIG --libs-only-L netcdf`
+  NETCDF_LIBS=`$PKG_CONFIG --libs-only-l netcdf`
+
+  CXXFLAGS_PEANO_2D_RELEASE=" $CXXFLAGS_PEANO_2D_RELEASE ${NETCDF_INCLUDE_DIR} "
+  CXXFLAGS_PEANO_2D_STATS="   $CXXFLAGS_PEANO_2D_STATS ${NETCDF_INCLUDE_DIR} "
+  CXXFLAGS_PEANO_2D_ASSERTS=" $CXXFLAGS_PEANO_2D_ASSERTS ${NETCDF_INCLUDE_DIR} "
+  CXXFLAGS_PEANO_2D_TRACE="   $CXXFLAGS_PEANO_2D_TRACE ${NETCDF_INCLUDE_DIR} "
+  CXXFLAGS_PEANO_2D_DEBUG="   $CXXFLAGS_PEANO_2D_DEBUG ${NETCDF_INCLUDE_DIR} "
+
+  CXXFLAGS_PEANO_3D_RELEASE=" $CXXFLAGS_PEANO_3D_RELEASE ${NETCDF_INCLUDE_DIR} "
+  CXXFLAGS_PEANO_3D_STATS="   $CXXFLAGS_PEANO_3D_STATS ${NETCDF_INCLUDE_DIR} "
+  CXXFLAGS_PEANO_3D_ASSERTS=" $CXXFLAGS_PEANO_3D_ASSERTS ${NETCDF_INCLUDE_DIR} "
+  CXXFLAGS_PEANO_3D_TRACE="   $CXXFLAGS_PEANO_3D_TRACE ${NETCDF_INCLUDE_DIR} "
+  CXXFLAGS_PEANO_3D_DEBUG="   $CXXFLAGS_PEANO_3D_DEBUG ${NETCDF_INCLUDE_DIR} "
+
+  LDADD_PEANO_2D_RELEASE=" $LDADD_PEANO_2D_RELEASE ${NETCDF_LIBS} "
+  LDADD_PEANO_2D_STATS="   $LDADD_PEANO_2D_STATS ${NETCDF_LIBS} "
+  LDADD_PEANO_2D_ASSERTS=" $LDADD_PEANO_2D_ASSERTS ${NETCDF_LIBS} "
+  LDADD_PEANO_2D_TRACE="   $LDADD_PEANO_2D_TRACE ${NETCDF_LIBS} "
+  LDADD_PEANO_2D_DEBUG="   $LDADD_PEANO_2D_DEBUG ${NETCDF_LIBS} "
+
+  LDADD_PEANO_3D_RELEASE=" $LDADD_PEANO_3D_RELEASE ${NETCDF_LIBS} "
+  LDADD_PEANO_3D_STATS="   $LDADD_PEANO_3D_STATS ${NETCDF_LIBS} "
+  LDADD_PEANO_3D_ASSERTS=" $LDADD_PEANO_3D_ASSERTS ${NETCDF_LIBS} "
+  LDADD_PEANO_3D_TRACE="   $LDADD_PEANO_3D_TRACE ${NETCDF_LIBS} "
+  LDADD_PEANO_3D_DEBUG="   $LDADD_PEANO_3D_DEBUG ${NETCDF_LIBS} "
+
+  LDFLAGS_PEANO_RELEASE+=" ${NETCDF_LIBS_DIR} "
+  LDFLAGS_PEANO_STATS+="   ${NETCDF_LIBS_DIR} "
+  LDFLAGS_PEANO_ASSERTS+=" ${NETCDF_LIBS_DIR} "
+  LDFLAGS_PEANO_TRACE+="   ${NETCDF_LIBS_DIR} "
+  LDFLAGS_PEANO_DEBUG+="   ${NETCDF_LIBS_DIR} "
+
+  AC_MSG_NOTICE([NETCDF_INCLUDE_DIR: ${NETCDF_INCLUDE_DIR}])
+  AC_MSG_NOTICE([NETCDF_LIBS_DIR: ${NETCDF_LIBS_DIR}])
+  AC_MSG_NOTICE([NETCDF_LIBS: ${NETCDF_LIBS}])
+
+  AC_SUBST([NETCDF_INCLUDE_DIR])
+  AC_SUBST([NETCDF_LIBS_DIR])
+  AC_SUBST([NETCDF_LIBS])
 fi
 
 
@@ -749,6 +846,20 @@ AM_CONDITIONAL([UseExaHyPE],[test "x$toolbox_exahype" = xtrue])
 
 
 #
+# Curvi
+#
+AC_ARG_ENABLE(curvi,
+  AS_HELP_STRING([--enable-curvi],[enable Curvi [default=false]]),
+  [ AC_MSG_CHECKING(for curvi)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    toolbox_curvi=false ;;
+      *)     AC_MSG_RESULT(yes);   toolbox_curvi=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for curvi); AC_MSG_RESULT(no); toolbox_curvi=false ])
+AM_CONDITIONAL([UseToolboxCurvi],[test "x$toolbox_curvi" = xtrue])
+
+
+#
 # SWIFT 2
 #
 AC_ARG_ENABLE(swift,
@@ -1016,6 +1127,32 @@ if test "$toolbox_exahype" != false; then
   LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/exahype2 "
   LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/exahype2 "
   LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/exahype2 "
+fi
+
+
+#
+# Curvi
+#
+if test "$toolbox_curvi" != false; then
+  AC_DEFINE([UseToolboxCurvi], [1], [UseToolboxCurvi])
+
+  LDADD_PEANO_2D_RELEASE=" -lToolboxCurvi2d         $LDADD_PEANO_2D_RELEASE "
+  LDADD_PEANO_2D_STATS="   -lToolboxCurvi2d_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lToolboxCurvi2d_asserts $LDADD_PEANO_2D_ASSERTS "
+  LDADD_PEANO_2D_TRACE="   -lToolboxCurvi2d_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lToolboxCurvi2d_debug   $LDADD_PEANO_2D_DEBUG "
+
+  LDADD_PEANO_3D_RELEASE=" -lToolboxCurvi3d         $LDADD_PEANO_3D_RELEASE "
+  LDADD_PEANO_3D_STATS="   -lToolboxCurvi3d_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lToolboxCurvi3d_asserts $LDADD_PEANO_3D_ASSERTS "
+  LDADD_PEANO_3D_TRACE="   -lToolboxCurvi3d_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lToolboxCurvi3d_debug   $LDADD_PEANO_3D_DEBUG "
+
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/toolbox/curvi "
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/toolbox/curvi "
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/toolbox/curvi "
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/toolbox/curvi "
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/toolbox/curvi "
 fi
 
 
@@ -1356,6 +1493,7 @@ AC_CONFIG_FILES([Makefile
   src/toolbox/finiteelements/Makefile
   src/toolbox/loadbalancing/Makefile
   src/toolbox/particles/Makefile
+  src/toolbox/curvi/Makefile
   src/tbb/Makefile
   src/convert/Makefile
   src/exahype2/Makefile

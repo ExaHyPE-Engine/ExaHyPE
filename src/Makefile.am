@@ -13,6 +13,7 @@ SUBDIRS = . \
 	toolbox/loadbalancing \
 	toolbox/multiprecision \
 	toolbox/particles \
+	toolbox/curvi \
 	convert \
 	exahype2 \
 	mghype \
