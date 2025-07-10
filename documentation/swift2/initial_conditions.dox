@@ -6,7 +6,7 @@ Swift 2 always runs through the same sequence of setup steps prior to the
 actual calculation:
 
 1. Create a regular mesh that is just as fine that it can accommodate the
-   largest predicted search radius of all particles.
+   smallest predicted search radius of all particles.
 2. Insert the particles (initial condition).
 3. Run a set of initialisation steps, where particles can define some
    "warm up" calculation steps and are also sorted once more, should they
@@ -14,17 +14,19 @@ actual calculation:
 
 # The initial (regular) mesh
 
-The first step is important, even though particles are allowed to change
+The first step is important, even when particles are allowed to change
 their search radius. It is important to tell the code base right from
 the start what the biggest and smallest radius might be, but the radius
 can change freely in-between those thresholds. Actually the radius might
 even become smaller, but the mesh width you pass in initially is used to
-constrain the AMR throughout the simulation.
+constrain the AMR throughout the simulation. See
+@ref initial_smoothing_lengths_and_search_radii for details on how to tweak the
+initial search radii.
 
-The dynamic  mesh refinement might decide to introduce an extremely fine
+The dynamic mesh refinement might decide to introduce an extremely fine
 mesh in some places and to erase the mesh somewhere else.
 However, we have to start somewhere, as we do not want to run the initial
-insertion of particles into a single cell, then great this initial grid
+insertion of particles into a single cell, then create this initial grid
 (which is obviously guided by the particle distribution) and finally create
 the adaptive grid. Instead, the code creates some initial grid and load
 balances this one. After that, it inserts the particles (in parallel) and
@@ -32,7 +34,7 @@ might still change both the load balancing and the mesh structure. But we
 have to start somewhere.
 
 By default, the initial grid is a regular mesh controlled by the potential
-maximal particle search radius. As pointed out: this search radius can
+minimal particle search radius. As pointed out: this search radius can
 change over time and thus is solely an initial indicator. You can alter the
 initial mesh and hence start with an adaptive one right from the start. For
 this, you can take the step algorithm_step_create_grid which is an attribute
@@ -42,18 +44,32 @@ to establish a stationary grid, so ensure that you define a stationary
 grid, i.e. not a grid where you sometimes erase parts and sometimes add
 parts.
 
+We have chosen the default initial grid to be fully refined so that there
+will be a sufficient number of cells to distribute among sub-trees to occupy
+many cores from the very beginning, i.e. without waiting for the adaptive
+refinement to kick in later. You can instead only create a coarse grid by
+passing the `initial_grid_coarse=True` argument to
+Project.set_global_simulation_parameters() in your python script. See
+python/swift2/Project.py for more.
+
+
+
 
 ## Altering the initial mesh size
 
-To alter the initial mesh size, you have to tell each individual particle 
+To alter the initial mesh size, you have to tell each individual particle
 species that you are using what its maximum mesh size will be. Most codes set
 this quantity in the particle's definition in the Python script, i.e. through
-the Python constructor.
+the Python constructor via the `min_h` and `max_h` parameters in the particle
+constructor (see e.g. python/swift2/particle/SPHParticle.py and
+swift2.particle.SPHParticle()).
 
-As Peano uses three-partitioning, the mesh size choices can seem to appear 
+As Peano uses three-partitioning, the mesh size choices can seem to appear
 weird. Each Python script run produces a README-xxxx.md file which provides
-details on the arising mesh sizes. Alternatively, you can study the 
+details on the arising mesh sizes. Alternatively, you can study the
 implementation in swift2.Project.__compute_global_max_h().
+
+
 
 
 ## Implementation
@@ -71,7 +87,7 @@ this quantity into the action set swift2.Project.action_set_create_regular_grid:
 
 Here is what happens from hereon:
 
-- The global main file (cmp SWIFTMain.template.cpp) enters its phase 1. This 
+- The global main file (cmp SWIFTMain.template.cpp) enters its phase 1. This
   means setting up the (initial) grid.
 - It then runs over the mesh in a while loop.
 - Per mesh traversal, the action set from action_set_create_regular_grid will
@@ -83,14 +99,14 @@ Here is what happens from hereon:
 
 ## Load balancing
 
-At this moment, we enable any load balancing only throughout the grid 
-construction by default. That means: by default, we work with a static 
+At this moment, we enable any load balancing only throughout the grid
+construction by default. That means: by default, we work with a static
 domain decomposition. As soon as we insert the particles, we disable any
 mesh load balancing. More sophisticated code variants switch on the load
-balancing every few iterations or enable it to rebalance it after each 
+balancing every few iterations or enable it to rebalance it after each
 time step, but this is not enabled in the baseline version.
 
-It makes sense to play around with different load balancing schemes and 
+It makes sense to play around with different load balancing schemes and
 initial mesh construction strategies. Switching the load balancing scheme
 is done in the Python script vi the function swift2.Project.set_load_balancing().
 
@@ -98,22 +114,22 @@ is done in the Python script vi the function swift2.Project.set_load_balancing()
 
 ## Playing around with the maximum particle radius
 
-There is no direct reason why you cannot pick the maximum particle radius 
-relatively small, even though the particle radii eventually might become 
-bigger. If you do this, it can happen that the original mesh is too fine and
-particles are inserted into a fine mesh where a search radius overlaps more 
-than one neighbouring cell. In this case, the code will have to resort to a
-multiscale sorting approach, i.e. will have to move particles up within the 
-grid hierarchy. So you work with an overly refined mesh and introduce some 
-(initial) sorting overhead, but it might nevertheless be reasonable as it 
-gives the load balancing more granularity.
+From the grid's perspective, there is no direct reason why you cannot pick the
+maximum particle radius relatively small, even though the particle radii
+eventually might become bigger. If you do this, it can happen that the original
+mesh is too fine and particles are inserted into a fine mesh where a search
+radius overlaps more than one neighbouring cell. In this case, the code will
+have to resort to a multiscale sorting approach, i.e. will have to move
+particles up within the grid hierarchy. So you work with an overly refined mesh
+and introduce some (initial) sorting overhead, but it might nevertheless be
+reasonable as it gives the load balancing more granularity.
 
 
 # Initial conditions
 
 The initial conditions are added by one mesh sweep modelled by the project's
 attribute algorithm_step_initial_conditions. It represents the grid sweep,
-i.e. mesh sweep, which sets up the inition condition. That is, if you
+i.e. mesh sweep, which sets up the initial condition. That is, if you
 want to insert particles, you have to add action sets to this algorithm
 step calling add_action_set(). The passed action sets have to
 throw all the particles you want to have into your mesh.
@@ -208,6 +224,44 @@ given a parameter
 
 and you can use peano4::datamanagement::CellMarker::isContained() to check
 if a particle should be fitted into a cell.
+
+
+
+
+
+# Initial Smoothing Lengths and Search Radii
+
+The particles' initial smoothing lengths and search radii need special
+attention because those quantities don't only play a role with the physics and
+hydrodynamics equations to be solved, but are also instrumental in the core
+algorithms and grid construction.
+
+The particles' smoothing lengths, interaction radii, and search radii are
+related quantities. See the discussion in @ref swift_terminology for details.
+
+The initial maximal search radii of particles can be set indirectly through the
+maximal and minimal smoothing lengths, which are set by the `h_hydro_max` and
+`h_hydro_min` parameters of the particle species (see
+SPHParticle.set_parameters() in
+python/swift2/particle/SPHLeapfrogFixedSearchRadius.py). Note that those
+parameters are min/max particle *smoothing lengths*, not search radii.
+To convert between smoothing lengths and search radii, look into
+swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius() and
+swift2.sphtools.sph_kernel_get_interaction_radius().
+
+However, for some experiments it may also be convenient to limit the (initial)
+search radii by the imposed (initial) cell sizes. We do this directly in the
+code snippets specifyig the initial conditions in python/swift2/scenario/*.py.
+The initial cell sizes can be set via the `min_h` and `max_h` arguments
+to the particle constructor (see e.g. python/swift2/particle/SPHParticle.py and
+swift2.particle.SPHParticle()).
+
+Regarding the actual smoothing lengths of particles, we require the user to
+provide an initial guess. The better the guess is, the fewer iterations we need
+to do to determine it in the initial setup. A guess of zero will lead to problems.
+Usually, the guess `a * dx`, where `a` is a factor of ~ a few and `dx` is the
+mean interparticle distance (e.g. boxsize / # particles per dimension) is good
+enough.
 
 
 */
