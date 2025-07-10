@@ -19,20 +19,135 @@ namespace tarch {
        */
       enum class FusionImplementation {
         /**
+         * This option effectively disables fusion as well and all fusable tasks are eagerly executed.
+         *
          * Completely disable any fusion and map each task that can be fused on
          * a normal task due to a call to native::spawnTask() in
          * translateFusableTaskIntoTaskSequence().
          * ensureHeldBackTasksAreMappedOntoNativeTasks() deteriorates to
          * nop.
+         *
+         * <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
+         * This variant might require OpenMP 6, as the tasks might have transparent incoming or outgoing dependencies.
+         * </div>
+         *
+         * Mainly there for debugging reasons.
          */
         DisableFusionAndMapOntoNativeTask,
-        DisableFusionAndProcessImmediately,
+
         /**
-         * All fusable tasks are parked in a big queue. If the
+         * Disable the fusion and process each fusable task immediately
+         *
+         * Supported for all backends. Created for debugging only, as it disables the fusion.
+         *
+         * <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
+         * This variant might require OpenMP 6, as the tasks might have transparent incoming or outgoing dependencies.
+         * </div>
+         *
+         */
+        DisableFusionAndProcessImmediately,
+
+        /**
+         * All fusable tasks are parked in a big queue and we fuse lazily as we need the outcome
+         *
+         * All fusable tasks are enqueued into a separate queue. When a new
+         * task with in-dependencies is launched, we doublecheck if the
+         * predecessing tasks is still pending in a fusable queue. This is done
+         * in the parent namespace and leads to a call of
+         * ensureHeldBackTasksAreMappedOntoNativeTasks_EnsureAllTasksAreRunningReadyOrHaveCompleted().
+         *
+         * After we know that they are either running or ready, we trigger the
+         * fusion. The core routines to study how this is all implemented is
+         * tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation().
+         *
+         * This variant should work no matter what backend people use. It
+         * reliably leads to large batches of tasks, as it is lazy and hence
+         * waits for enough tasks to be collected. The disadvantage is that it
+         * might trigger the fusion rather late.
+         *
+         * To understand this routine, it makes sense to study ProducerConsumerTaskPairs
+         * and EagerConsumerTasks, too. Notably ProducerConsumerTaskPairs
+         * provides context about important implementational considerations.
          */
         LazyEvaluation,
-        LazyConsumerTasks,
+
+        /**
+         * Map each fusable task onto a producer-consumer task pair
+         *
+         * Whenever we get a task (in the example below we get three yellow
+         * tasks) with dependencies that can be fused, we split each task up
+         * into three tasks each:
+         *
+         * @image html multicore_task_flow-01.png
+         *
+         * One task is a preparation task (red), and the other one is the
+         * actual processing (green). In-between there's a fusion task (blue).
+         *
+         * If we spawn a task without in-dependencies, i.e. a ready task, we
+         * deposit this task in a separate queue (an instance of FusableTaskQueue).
+         * If there in in-dependencies, we create a LogReadyTask instance with
+         * those independencies, which takes the actual task and desposits it
+         * in the queue once it becomes ready.
+         *
+         * The fusion task comes next and grabs an arbitrary number of tasks
+         * to be fused. Also, it marks those tasks within FusableTaskQueue
+         * and leaves its task number. We need this to avoid deadlocks.
+         *
+         * The process task finally takes the particular task from the queue
+         * and handles it (unless it is done already).
+         *
+         * @image html multicore_task_flow-03.png
+         *
+         * <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
+         * This variant might require OpenMP 6.
+         * </div>
+         *
+         *
+         * <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;">
+         * This variant tripples the number of tasks pending in the system and hence
+         * has the potential to lead to out-of-memory situations.
+         * </div>
+         *
+         * ## Related strategies
+         *
+         * EagerConsumerTasks is similar but does not spawn the final process
+         * task yet. This is only spawned once we need it. Further to that, it
+         * spawns ProcessSetOfReadyTasks, i.e. the fusion, if and only if there
+         * are already enough ready tasks.
+         *
+         * LazyEvaluation moves this whole task sequence (besides the log ready
+         * task part) into a lazy evaluation.
+         *
+         * @see ProcessSetOfReadyTasks
+         * @see FusableTaskQueue
+         */
         ProducerConsumerTaskPairs,
+
+        /**
+         * Issue consumer task that fuses upon spawning a task if the queue is big enough
+         *
+         * The idea here is that we enqueue any fusable task into our internal
+         * queue and then immediately check how many tasks we have pending in
+         * this queue. If the queue is big enough, i.e. holds more tasks than
+         * the lower threshold of the strategy, then we issue a consumer task.
+         *
+         * The arising task pattern can be similar to LazyEvaluation, but it
+         * turns out to be significantly different: Lazy invocation of consumer
+         * tasks means that the consumer tasks drops in later. That can be bad
+         * for schemes which offload to GPUs, e.g., and hence need a large
+         * overlap.
+         *
+         * From an implementation point of view, this variant can be seen as a
+         * hybrid between lazy evaluation and producer-consumer tasks.
+         * By default, we enqueue all tasks into the respective task queues.
+         * This is the same strategy we followed for the lazy schemes.
+         * However, we also check how many tasks are already in there and if
+         * this number if big enough, we spawn one of our consumer tasks.
+         *
+         * <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
+         * This variant might require OpenMP 6.
+         * </div>
+         */
         EagerConsumerTasks
       };
     } // namespace orchestration

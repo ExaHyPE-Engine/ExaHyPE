@@ -77,15 +77,35 @@ tarch::multicore::orchestration::Strategy& tarch::multicore::getOrchestration() 
 }
 
 
-void tarch::multicore::waitForTasks(const std::set<TaskNumber>& inDependencies) {
-  tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
-  tarch::multicore::native::waitForTasks(inDependencies);
+void tarch::multicore::waitForTasks(const std::set<TaskNumber>& inDependencies, TaskWaitType taskWaitType) {
+  if (not inDependencies.empty()) {
+    switch (taskWaitType) {
+      case TaskWaitType::Mixed:
+        tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
+        tarch::multicore::native::waitForTasks(inDependencies);
+        break;
+      case TaskWaitType::ExclusivelyFusedTasks:
+        {
+          bool checkNative = tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
+          if (checkNative) {
+            tarch::multicore::native::waitForTasks(inDependencies);
+          }
+          else {
+            logDebug( "waitForTasks(...)", "checked all fused tasks and will skip native ones" );
+          }
+        }
+        break;
+      case TaskWaitType::OnlyNativeTasks:
+        tarch::multicore::native::waitForTasks(inDependencies);
+        break;
+    }
+  }
 }
 
 
-void tarch::multicore::waitForTask(const int taskNumber) {
+void tarch::multicore::waitForTask(const int taskNumber, TaskWaitType taskWaitType) {
   std::set<int> tmp{taskNumber};
-  waitForTasks(tmp);
+  waitForTasks(tmp, taskWaitType);
 }
 
 
@@ -152,7 +172,7 @@ void tarch::multicore::spawnTask(
 }
 
 
-void tarch::multicore::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
+void tarch::multicore::processFusedTask(Task* myTask, const std::vector<tarch::multicore::Task*>& tasksOfSameType, int device) {
   myTask->fuse(tasksOfSameType, device);
   for (auto& p: tasksOfSameType) {
     delete p;

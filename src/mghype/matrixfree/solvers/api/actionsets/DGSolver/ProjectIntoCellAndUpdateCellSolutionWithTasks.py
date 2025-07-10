@@ -30,7 +30,7 @@ class ProjectIntoCellAndUpdateCellSolutionWithTasks(ActionSet):
      * this, we have to wait for the residual calculation to complete.
      */
     int taskNumber = fineGridCell{{TASK_MARKER}}.getNumber() * 2;
-    tarch::multicore::waitForTasks({taskNumber+0,taskNumber+1});
+    tarch::multicore::waitForTasks({taskNumber+0,taskNumber+1}, tarch::multicore::TaskWaitType::ExclusivelyFusedTasks);
     
 
     /**
