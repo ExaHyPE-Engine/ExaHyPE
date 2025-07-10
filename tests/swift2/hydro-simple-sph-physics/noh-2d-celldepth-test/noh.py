@@ -271,31 +271,10 @@ particle.h_hydro_max = hydro_h_max
 particle.set_parameters()
 
 
-
 # Add particle to the SWIFT project --------------------------------------------
 # Notice that you any change to the particle will not take effect after adding
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
-
-#  if args.realisation.split(".")[1] == Storage_ContinuousPerVertex:
-particle_set.generator = (
-    peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(
-        particle_set
-    )
-)
-#  elif args.realisation.split(".")[1] == Storage_GlobalContinuous:
-#  particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(
-#      particle_set
-#  )
-#  else:
-#  particle_set.generator = (
-#      peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
-#          particle_set
-#      )
-#  )
-
-
-
 
 
 
@@ -317,6 +296,22 @@ project.set_global_simulation_parameters(
     time_in_between_plots=args.plot_delta,
     periodic_BC=periodic_boundary_conditions,
     plotter_precision=8,
+)
+
+parallelisation = "domain-decomposition"
+#  parallelisation = "task-graph"
+#  parallelisation = "multisweep-task-graph"
+#  storage = "scattered"
+#  storage = "continuous-per-vertex"
+storage = "global-continuous"
+sorting = "multiscale-sort"
+#  sorting = "bucket-sort"
+kernel_optimisation = "no-optimisation"
+project.set_realisation(
+    parallelisation=parallelisation,
+    storage=storage,
+    sorting=sorting,
+    kernel_optimisation=kernel_optimisation,
 )
 
 project.set_Peano4_installation(args.peanodir, build_mode)

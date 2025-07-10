@@ -130,7 +130,7 @@ parser.add_argument(
     "-t",
     "--trees",
     dest="trees",
-    default=1,
+    default=0,
     type=int,
     help="Number of trees (subdomains) (0 uses all threads)",
 )
@@ -284,22 +284,6 @@ particle.set_parameters()
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
 
-#  if args.realisation.split(".")[1] == Storage_ContinuousPerVertex:
-particle_set.generator = (
-    peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(
-        particle_set
-    )
-)
-#  elif args.realisation.split(".")[1] == Storage_GlobalContinuous:
-#  particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(
-#      particle_set
-#  )
-#  else:
-#  particle_set.generator = (
-#      peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
-#          particle_set
-#      )
-#  )
 
 
 if args.debug:
