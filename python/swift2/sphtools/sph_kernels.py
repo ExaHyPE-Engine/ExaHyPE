@@ -582,6 +582,10 @@ def sph_kernel_dWdr(
 
 
 def sph_kernel_get_interaction_radius(h: Union[float, np.ndarray], kernel: str, ndim: int):
+    """!
+    Computes the interaction radius (compact support radius) for a given smoothing length h,
+    SPH kernel `kernel`, and kernel dimension `ndim`.
+    """
     return sph_kernel_get_H(h, kernel, ndim)
 
 
