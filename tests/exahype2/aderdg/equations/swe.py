@@ -48,6 +48,33 @@ class SWE_W_Bathymetry(Equation):
     BTimesDeltaQ[3] = 0.0;
 """
 
+    def riemann_solver(self):
+        return """
+  //Compute max eigenvalue over face
+  double smax = 0.0;
+  for(int xy=0; xy<Order+1; xy++){
+    smax = std::max(smax, maxEigenvalue(&QL[xy*4], x, h, t, dt, direction));
+    smax = std::max(smax, maxEigenvalue(&QR[xy*4], x, h, t, dt, direction));
+  }
+
+  for(int xy=0; xy<Order+1; xy++){
+
+    // h gets added term from bathimetry, u and v are regular Rusanov, b does not change
+    FL[xy*4+0] = 0.5*(FL[xy*4+0]+FR[xy*4+0] + smax*(QL[xy*4+0]+QL[xy*4+3]-QR[xy*4+0]-QR[xy*4+3]) );
+    FL[xy*4+1] = 0.5*(FL[xy*4+1]+FR[xy*4+1] + smax*(QL[xy*4+1]-QR[xy*4+1]) );
+    FL[xy*4+2] = 0.5*(FL[xy*4+2]+FR[xy*4+2] + smax*(QL[xy*4+2]-QR[xy*4+2]) );
+    FL[xy*4+3] = 0.0;
+
+    FR[xy*4+0] = FL[xy*4+0];
+    FR[xy*4+1] = FL[xy*4+1];
+    FR[xy*4+2] = FL[xy*4+2];
+    FR[xy*4+3] = 0.0;
+
+    //Contribution from NCP
+    FL[xy*4+direction+1] += 0.5*9.81*0.5*(QL[xy*4+0]+QR[xy*4+0])*(QR[xy*4+3]+QR[xy*4+0]-QL[xy*4+3]-QL[xy*4+0]);
+    FR[xy*4+direction+1] -= 0.5*9.81*0.5*(QL[xy*4+0]+QR[xy*4+0])*(QR[xy*4+3]+QR[xy*4+0]-QL[xy*4+3]-QL[xy*4+0]);
+  }
+"""
 
 class SWE_WO_Bathymetry(Equation):
     def __init__(self, dimensions=2):
@@ -77,32 +104,4 @@ class SWE_WO_Bathymetry(Equation):
     F[2] = Q[1 + normal] * Q[2] * ih;
 
     F[normal+1] += 0.5 * grav * Q[0] * Q[0];
-"""
-
-    def riemann_solver(self):
-        return """
-  //Compute max eigenvalue over face
-  double smax = 0.0;
-  for(int xy=0; xy<Order+1; xy++){
-    smax = std::max(smax, maxEigenvalue(&QL[xy*4], x, h, t, dt, direction));
-    smax = std::max(smax, maxEigenvalue(&QR[xy*4], x, h, t, dt, direction));
-  }
-
-  for(int xy=0; xy<Order+1; xy++){
-
-    // h gets added term from bathimetry, u and v are regular Rusanov, b does not change
-    FL[xy*4+0] = 0.5*(FL[xy*4+0]+FR[xy*4+0] + smax*(QL[xy*4+0]+QL[xy*4+3]-QR[xy*4+0]-QR[xy*4+3]) );
-    FL[xy*4+1] = 0.5*(FL[xy*4+1]+FR[xy*4+1] + smax*(QL[xy*4+1]-QR[xy*4+1]) );
-    FL[xy*4+2] = 0.5*(FL[xy*4+2]+FR[xy*4+2] + smax*(QL[xy*4+2]-QR[xy*4+2]) );
-    FL[xy*4+3] = 0.0;
-
-    FR[xy*4+0] = FL[xy*4+0];
-    FR[xy*4+1] = FL[xy*4+1];
-    FR[xy*4+2] = FL[xy*4+2];
-    FR[xy*4+3] = 0.0;
-
-    //Contribution from NCP
-    FL[xy*4+direction+1] += 0.5*9.81*0.5*(QL[xy*4+0]+QR[xy*4+0])*(QR[xy*4+3]+QR[xy*4+0]-QL[xy*4+3]-QL[xy*4+0]);
-    FR[xy*4+direction+1] -= 0.5*9.81*0.5*(QL[xy*4+0]+QR[xy*4+0])*(QR[xy*4+3]+QR[xy*4+0]-QL[xy*4+3]-QL[xy*4+0]);
-  }
 """
