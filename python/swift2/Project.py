@@ -133,14 +133,14 @@ class Project(object):
 
     def __compute_global_max_h(self):
         """!
-            
-        Run over all species specified and find out what their maximum 
+
+        Run over all species specified and find out what their maximum
         (coarsest) h is. This value is then used to constrain the mesh
         adaptivity: The mesh should never be coarser than this, but also
         the initial mesh should meet this global maximum h.
-        
+
         The outcome is stored in self._global_max_h.
-        
+
         """
         self._global_max_h = 0.0
         for current_species_set in self._particle_species_set:
@@ -335,7 +335,7 @@ levels.
 
         Peano uses three-partitioning. That is, it will neve be able to match
         given refinement instructions exactly. All it can do is to approximate
-        them. 
+        them.
 
         @return Tuple of mesh size and mesh levels
 
@@ -670,9 +670,7 @@ levels.
         init_gridsize = self._global_min_h
         if self._make_initial_grid_coarse:
             init_gridsize = self._global_max_h
-        action_set_create_regular_grid = peano4.toolbox.CreateRegularGrid(
-            init_gridsize
-        )
+        action_set_create_regular_grid = peano4.toolbox.CreateRegularGrid(init_gridsize)
         action_set_create_regular_grid.descend_invocation_order = (
             self.algorithm_step_create_grid.lowest_descend_invocation_order() - 1
         )

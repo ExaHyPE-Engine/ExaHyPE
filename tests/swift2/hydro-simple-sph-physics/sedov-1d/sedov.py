@@ -203,7 +203,7 @@ KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 depth = 0
 cellsize = domain_size[0]
 while cellsize > args.cell_size_min:
-    cellsize /= 3.
+    cellsize /= 3.0
     depth += 1
     if depth == 100:
         raise ValueError("Suspicious depth")

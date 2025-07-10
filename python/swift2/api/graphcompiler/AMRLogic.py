@@ -8,18 +8,12 @@ from peano4.solversteps import Steps
 from swift2.actionsets.DynamicMeshRefinementAnalysis import (
     DynamicMeshRefinementAnalysis,
 )
-from swift2.actionsets.ScatterGlobalMemory import (
-    ScatterGlobalMemory
-)
+from swift2.actionsets.ScatterGlobalMemory import ScatterGlobalMemory
 from swift2.actionsets.DynamicMeshRefinementTrigger import DynamicMeshRefinementTrigger
 
 
 def add_dynamic_mesh_refinement_and_particle_resorting(
-    steps,
-    alter_position,
-    species_sets,
-    sort_with_lifts_and_drops,
-    verbose
+    steps, alter_position, species_sets, sort_with_lifts_and_drops, verbose
 ):
     """!
 
@@ -265,7 +259,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting(
                 #   Realise AMR
                 # ===============
                 #
-                #steps_to_realise_amr = {(i + 2) % len(steps)}
+                # steps_to_realise_amr = {(i + 2) % len(steps)}
                 steps_to_realise_amr = {(i - 1) % len(steps)}
                 if verbose:
                     print(
@@ -316,11 +310,10 @@ def add_dynamic_mesh_refinement_and_particle_resorting(
                             current_species_set.name, i
                         )
                     )
-#                assert (
-#                    not current_species_set.generator.gather_particles
-#                ), "the aggressive AMR is not compatible with particles that gather data in memory pools"
- # @todo Scattering is not in yet
-
+            #                assert (
+            #                    not current_species_set.generator.gather_particles
+            #                ), "the aggressive AMR is not compatible with particles that gather data in memory pools"
+            # @todo Scattering is not in yet
 
             if global_steps_to_realise_amr[i]:
                 action_set_dynamic_AMR = DynamicMeshRefinementTrigger()
@@ -369,7 +362,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting(
                     action_set_gather.parallel = True
 
                     action_set_scatter = ScatterGlobalMemory(
-                            particle_set=current_species_set,
+                        particle_set=current_species_set,
                     )
                     action_set_scatter.descend_invocation_order = (
                         steps[i].lowest_descend_invocation_order() - 1
@@ -390,5 +383,3 @@ def add_dynamic_mesh_refinement_and_particle_resorting(
                                 current_species_set.name, i, (i + 1) % (len(steps))
                             )
                         )
-
-

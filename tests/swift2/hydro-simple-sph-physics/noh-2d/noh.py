@@ -247,7 +247,7 @@ KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 depth = 0
 cellsize = domain_size[0]
 while cellsize > args.cell_size_min:
-    cellsize /= 3.
+    cellsize /= 3.0
     depth += 1
     if depth == 100:
         raise ValueError("Suspicious depth")
@@ -283,7 +283,6 @@ particle.set_parameters()
 # Notice that you any change to the particle will not take effect after adding
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
-
 
 
 if args.debug:
