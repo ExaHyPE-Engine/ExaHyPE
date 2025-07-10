@@ -248,7 +248,7 @@ dx = domain_size[0] / args.particle_number
 hydro_H_max = 0.49999 * args.cell_size_min
 if hydro_H_max < 3. * dx:
     raise ValueError("Too small hydro_H_max", 3. * dx, hydro_H_max)
-hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
+hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_interaction_radius(
     hydro_H_max, kernel, hydro_dimensions
 )
 

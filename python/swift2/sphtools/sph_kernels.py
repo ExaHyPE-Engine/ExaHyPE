@@ -581,7 +581,7 @@ def sph_kernel_dWdr(
     return dWdr
 
 
-def sph_kernel_get_search_radius(h: Union[float, np.ndarray], kernel: str, ndim: int):
+def sph_kernel_get_interaction_radius(h: Union[float, np.ndarray], kernel: str, ndim: int):
     return sph_kernel_get_H(h, kernel, ndim)
 
 
@@ -614,7 +614,7 @@ def sph_kernel_get_H(h: Union[float, np.ndarray], kernel: str, ndim: int):
     return h * sph_kernel_H_over_h[ndim - 1][kernel]
 
 
-def sph_kernel_get_smoothing_length_from_search_radius(
+def sph_kernel_get_smoothing_length_from_interaction_radius(
     H: Union[float, np.ndarray], kernel: str, ndim: int
 ):
     """!
