@@ -213,7 +213,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
 
 offset = [0, 0, 0]
 domain_size = [2, 2, 2]
-periodic_boundary_conditions = [True, True, True]
+periodic_boundary_conditions = [False, False, False]
 
 # HYDRO_DIMENSION can be smaller than the Peano4 dimensions
 HYDRO_DIMENSIONS = hydro_dimensions
