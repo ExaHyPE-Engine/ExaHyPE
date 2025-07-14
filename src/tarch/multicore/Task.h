@@ -145,7 +145,7 @@ namespace tarch {
        *         negative number means local host anything greater or equal to
        *         zero denotes an accelerator.
        */
-      virtual void fuse(const std::list<Task*>& otherTasks, int targetDevice = Host);
+      virtual void fuse(const std::vector<Task*>& otherTasks, int targetDevice = Host);
 
       virtual std::string toString() const;
     };
@@ -193,9 +193,8 @@ namespace tarch {
      *   tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
      *     tarch::multicore::Task::DontFuse,
      *     tarch::multicore::Task::DefaultPriority,
-     *     [=,this]()->bool {
+     *     [=,this]()->void {
      *        ...
-     *        return false;
      *     }
      *   );
      *

@@ -377,54 +377,31 @@ Peano supports both task-based and data parallelism. The former is specific to
 extensions such as Swift or ExaHyPE, i.e. each has their own tasking approach.
 There are some generic recommendations though, and we discuss them below. All
 Peano codes can support data parallelism by a textbook non-overlapping domain
-decomposition. Actually, we have a tree decomposition.
+decomposition. Actually, we use the same tree-based multiscale domain 
+decomposition that we also use for MPI.
 
-To enable a tree deccomposition, a load balancing scheme has to be activated.
+
+To enable the tree deccomposition, a load balancing scheme has to be activated.
 This makes Peano yield multiple trees and these trees are then either distibuted
 among ranks or among threads or both. 
 Therefore, the generic domain decomposition tweaks and flaws are discussed in a 
 section of its own above on data decomposition.
 
 
-### Introducing tasks makes my code significantly slower
+### Tasks make the code slower
 
-If tasks make your system slower, there can be multiple reasons:
-
-1. The tasks are too tiny.
-2. 
-
-@todo This has to be worked out. Does usually not happen for OpenMP. But TBB/SYCL are different stories.
+In this case, the tasks are typically too small.
+Tiny tasks flood the system and then induce a massive overhead.
+In this case, @ref documentation_tarch_task_fusion_strategies "task fusion" is the number one technique that might ride to our 
+rescue.
 
 
+### The code shows significant spinning time
 
-This could be a sign of a scheduler flaw. Peano offers multiple different 
-multithreading schedulers: It can map tasks onto native OpenMP/TBB/... tasks
-or it can introduce an additional, bespoke tasking layer. If your code
-becomes significantly slower (or even hangs) once you have increased 
-the concurrency level, you might want to alter the scheduling. I 
-recommend that you start with native tasking, i.e. a scheme which 
-maps each task directly onto a native TBB/OpenMP/... task. For many
-codes, this disables them to offload many tasks to GPU or the balance
-between grid traversals. However, a native tasking is a good starting
-point to understand your scaling and the also plays along well with 
-mainstream performance analysis tools.
-
-This could either be a scheduler flaw, or you have too few enclave tasks.
-The scheduler flaw is discussed in @ref peano_performance_optimisation "Peano's generic performance optimisation section", but
-ExaHyPE offers a special command line argument to switch between different
-tasking schemes. Run the code with help and use
-
-     --threading-model native
-
-or another option afterwards to play around with various threading schemes.
-
-If this does not work, switch to task-based kernels.
-
-@todo Does the code use enclave tasks and yield many tasks? In this case,
-    you might have encountered a scheduler flaw. Change the multicore scheduler
-    on the command line.
-
-
+If these spinning times are introduced through tarch::multicore::waitForTasks(), 
+then it might pay off to pass in one of the hint flags if you know that all the 
+tasks you wait for are either fused or native. Further to that, you have to 
+play around with @ref documentation_tarch_task_fusion_strategies "different task fusion strategies".
 
 
 ## MPI optimisation

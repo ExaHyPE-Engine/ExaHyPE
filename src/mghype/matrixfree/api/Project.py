@@ -377,7 +377,7 @@ This is yet to be written, and we need to have a paper on our work.
       A typical usage looks similar to 
       
       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-project.set_multicore_orchestration( "new ::tarch::multicore::orchestration::Hardcoded(8,256,tarch::multicore::Task::Host,::tarch::multicore::orchestration::Hardcoded::NoNestedParallelism,::tarch::multicore::orchestration::Hardcoded::NoTimeout,::tarch::multicore::orchestration::FusionImplementation::LazyEvaluation)" )
+project.set_multicore_orchestration( "new ::tarch::multicore::orchestration::Hardcoded(8,256,tarch::multicore::Task::Host,::tarch::multicore::orchestration::Hardcoded::NoNestedParallelism,::tarch::multicore::orchestration::FusionImplementation::LazyEvaluation)" )
       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       """
       self._multicore_orchestration = value
