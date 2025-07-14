@@ -30,7 +30,7 @@ from CCZ4Solver import (
 from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStep
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
 
-
+#python3 performance-studies.py -lbm tailored -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6 --interpolation-method linear -cs 5.4 --plot
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -152,6 +152,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--interpolation-method",
         dest="interpolation_method",
+        choices=["linear", "matrix", "secondOrder"],
+        default="linear",
         help="Set method to interpolate between solvers",
     )
 
