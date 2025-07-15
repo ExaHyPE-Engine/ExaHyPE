@@ -7,6 +7,11 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
   foreach(dimension IN LISTS PEANO_DIMENSIONS)
     add_executable(UnitTests${dimension}d_${mode_lower})
     add_test(NAME UnitTests${dimension}d_${mode_lower} COMMAND UnitTests${dimension}d_${mode_lower})
+    if(WITH_MPI)
+      add_test(NAME UnitTests${dimension}d_${mode_lower}_parallel
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${CMAKE_BINARY_DIR}/UnitTests${dimension}d_${mode_lower}
+      )
+    endif()
 
     target_sources(UnitTests${dimension}d_${mode_lower} PRIVATE main.cpp)
     target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE PeanoOptions)

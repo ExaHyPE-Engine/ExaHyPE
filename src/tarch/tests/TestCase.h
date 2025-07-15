@@ -2,17 +2,16 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/tests/TestMacros.h"
+#include "TestMacros.h"
 #include "tarch/CompilerSpecificSettings.h"
-#include <string>
 
+#include <string>
 
 namespace tarch {
   namespace tests {
     class TestCase;
-  }
-}
-
+  } // namespace tests
+} // namespace tarch
 
 /**
  * Represents one test case. Every test case should be a subclass of this
@@ -22,26 +21,6 @@ namespace tarch {
  *
  * If you implement your own tests, inherit from this class, implement
  * run() and add the test to a test case collection of your choice.
- *
- *
- * <h2> Implementation remarks </h2>
- *
- * Whenever you write a test case implementation, we recommend to add the
- * code block
- *
- * \code
-#ifdef UseTestSpecificCompilerSettings
-#pragma optimize("",off)
-#endif
-   \endcode
- * at the very beginning of your implementation and
- * \code
-#ifdef UseTestSpecificCompilerSettings
-#pragma optimize("",on)
-#endif
-   \endcode
- *
- * at the end of the implementation file.
  *
  *
  * <h2> Unit tests in libraries </h2>
@@ -55,48 +34,47 @@ namespace tarch {
  * @author Tobias Weinzierl
  */
 class tarch::tests::TestCase {
-  protected:
-    /**
-     * Name of the test case.
-     */
-    const std::string _testCaseName;
+protected:
+  /**
+   * Name of the test case.
+   */
+  const std::string _testCaseName;
 
-    /**
-     * Error counter. This counter is increased on errors iff you use the
-     * validate macros within your test cases.
-     */
-    int _errors;
+  /**
+   * Error counter. This counter is increased on errors iff you use the
+   * validate macros within your test cases.
+   */
+  int _errors;
 
-    /**
-     * Indicate within macro if one specific validation failed.
-     */
-    bool _error;
+  /**
+   * Indicate within macro if one specific validation failed.
+   */
+  bool _error;
 
-    TestCase() = delete;
+  TestCase() = delete;
 
-  public:
-    /**
-     * Constructor.
-     *
-     * @param testCaseName Name of the test case. Should be a fully qualified name.
-     */
-    TestCase( const std::string& testCaseName );
+public:
+  /**
+   * Constructor.
+   *
+   * @param testCaseName Name of the test case. Should be a fully qualified name.
+   */
+  TestCase(const std::string& testCaseName);
 
-    /**
-     * Destructor.
-     */
-    virtual ~TestCase();
+  /**
+   * Destructor.
+   */
+  virtual ~TestCase();
 
-    /**
-     * @return Number of errors.
-     */
-    int getNumberOfErrors() const;
+  /**
+   * @return Number of errors.
+   */
+  int getNumberOfErrors() const;
 
-    std::string getTestCaseName() const;
+  std::string getTestCaseName() const;
 
-    /**
-     * This routine is triggered by the TestCaseCollection
-     */
-    virtual void run() = 0;
+  /**
+   * This routine is triggered by the TestCaseCollection
+   */
+  virtual void run() = 0;
 };
-
