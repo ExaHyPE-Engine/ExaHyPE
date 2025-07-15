@@ -16,7 +16,7 @@ initial_conditions = """
     Q[i] = 0.0;
   }
 
-  static tarch::reader::TopologyParser topologyParser(
+  static tarch::reader::NetCDFFieldParser fieldParser(
     \"Tafjord_5m_EPSG25832.nc\",
     \"ini_3.0Mm3_5m_EPSG25832.nc\",
     DomainSize(0),
@@ -31,8 +31,8 @@ initial_conditions = """
     "y"
   );
 
-  Q[s::h] = topologyParser.sampleDisplacement(x(0), x(1));
-  Q[s::z] = topologyParser.sampleTopology(x(0), x(1));
+  Q[s::h] = fieldParser.sampleDisplacement(x(0), x(1));
+  Q[s::z] = fieldParser.sampleTopology(x(0), x(1));
 """
 
 boundary_conditions = """
@@ -141,7 +141,7 @@ regular_solver.set_implementation(
 regular_solver.set_plotter(args.plotter)
 regular_solver.add_user_solver_includes(
     """
-#include "tarch/reader/TopologyParser.h"
+#include "tarch/reader/NetCDFFieldParser.h"
 """
 )
 regular_solver.add_kernel_optimisations(
@@ -176,7 +176,7 @@ limiting_solver.set_implementation(
 limiting_solver.set_plotter(args.plotter)
 limiting_solver.add_user_solver_includes(
     """
-#include "tarch/reader/TopologyParser.h"
+#include "tarch/reader/NetCDFFieldParser.h"
 """
 )
 

@@ -7,10 +7,10 @@
 #include <string>
 
 namespace tarch::reader {
-  class NetCDFReader;
+  class NetCDFFileReader;
 } // namespace tarch::reader
 
-class tarch::reader::NetCDFReader {
+class tarch::reader::NetCDFFileReader {
 public:
   /**
    * @brief Opens a netCDF file, returns ncid.

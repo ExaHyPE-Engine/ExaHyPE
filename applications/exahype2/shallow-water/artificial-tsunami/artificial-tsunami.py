@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath(".."))
 from PDE import *
 
 initial_conditions = """
-  static tarch::reader::TopologyParser topologyParser(
+  static tarch::reader::NetCDFFieldParser fieldParser(
     \"artificial_bath_1000.nc\",
     \"artificial_displ_1000.nc\",
     DomainSize(0),
@@ -19,8 +19,8 @@ initial_conditions = """
     DomainOffset(1)
   );
 
-  const double bathymetryBeforeEarthquake = topologyParser.sampleTopology(x(0), x(1));
-  const double displacement               = topologyParser.sampleDisplacement(x(0), x(1));
+  const double bathymetryBeforeEarthquake = fieldParser.sampleTopology(x(0), x(1));
+  const double displacement               = fieldParser.sampleDisplacement(x(0), x(1));
   const double bathymetryAfterEarthquake  = bathymetryBeforeEarthquake + displacement;
 
   Q[s::h]  = -std::min(bathymetryBeforeEarthquake, 0.0);
@@ -85,7 +85,7 @@ aderdg_solver.set_plotter(args.plotter)
 aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)
 aderdg_solver.add_user_solver_includes(
     """
-#include "tarch/reader/TopologyParser.h"
+#include "tarch/reader/NetCDFFieldParser.h"
 """
 )
 

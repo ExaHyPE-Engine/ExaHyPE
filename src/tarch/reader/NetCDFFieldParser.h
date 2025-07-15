@@ -4,18 +4,18 @@
 
 #ifdef UseNetCDF
 
-#include "NetCDFReader.h"
+#include "NetCDFFileReader.h"
 #include "tarch/logging/Log.h"
 
 namespace tarch::reader {
-  class TopologyParser;
+  class NetCDFFieldParser;
 } // namespace tarch::reader
 
-class tarch::reader::TopologyParser {
+class tarch::reader::NetCDFFieldParser {
 private:
   static tarch::logging::Log _log;
 
-  NetCDFReader _netCDFReader;
+  NetCDFFileReader _netCDFFileReader;
 
   double* _topology     = nullptr;
   double* _displacement = nullptr;
@@ -83,7 +83,7 @@ private:
   );
 
 public:
-  TopologyParser(
+  NetCDFFieldParser(
     const char* bathymetryFilePath,
     const char* displacementFilePath,
     double      lengthOfSimulationDomainInX,
@@ -98,7 +98,7 @@ public:
     const char* ncDisplacementKeyY = "y"
   );
 
-  TopologyParser(
+  NetCDFFieldParser(
     const char* bathymetryFilePath,
     double      lengthOfSimulationDomainInX,
     double      lengthOfSimulationDomainInY,
@@ -109,7 +109,7 @@ public:
     const char* ncTopologyKeyY = "y"
   );
 
-  ~TopologyParser();
+  ~NetCDFFieldParser();
 
   double sampleTopology(double x, double y);
   double sampleDisplacement(double x, double y);

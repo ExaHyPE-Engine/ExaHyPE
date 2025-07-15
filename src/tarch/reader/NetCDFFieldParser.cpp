@@ -1,6 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "TopologyParser.h"
+#include "NetCDFFieldParser.h"
 
 #ifdef UseNetCDF
 
@@ -9,9 +9,9 @@
 #include <cstring>
 #include <stdexcept>
 
-tarch::logging::Log tarch::reader::TopologyParser::_log("tarch::reader::TopologyParser");
+tarch::logging::Log tarch::reader::NetCDFFieldParser::_log("tarch::reader::NetCDFFieldParser");
 
-tarch::reader::TopologyParser::TopologyParser(
+tarch::reader::NetCDFFieldParser::NetCDFFieldParser(
   const char* topologyFilePath,
   const char* displacementFilePath,
   double      lengthOfSimulationDomainInX,
@@ -40,7 +40,7 @@ tarch::reader::TopologyParser::TopologyParser(
   this->parseDisplacementFile(displacementFilePath);
 }
 
-tarch::reader::TopologyParser::TopologyParser(
+tarch::reader::NetCDFFieldParser::NetCDFFieldParser(
   const char* topologyFilePath,
   double      lengthOfSimulationDomainInX,
   double      lengthOfSimulationDomainInY,
@@ -61,29 +61,29 @@ tarch::reader::TopologyParser::TopologyParser(
   this->parseTopologyFile(topologyFilePath);
 }
 
-tarch::reader::TopologyParser::~TopologyParser() {
+tarch::reader::NetCDFFieldParser::~NetCDFFieldParser() {
   delete[] this->_topology;
   delete[] this->_displacement;
 }
 
-void tarch::reader::TopologyParser::parseTopologyFile(const char* topologyFilePath) {
+void tarch::reader::NetCDFFieldParser::parseTopologyFile(const char* topologyFilePath) {
   logDebug("parseTopologyFile()", "Parse topology file with keys (" << _ncTopologyKey << ", " << _ncTopologyKeyX << ", " << _ncTopologyKeyY << ")");
 
   int ncid = -1;
 
-  if ((ncid = _netCDFReader.open(topologyFilePath)) == -1) {
+  if ((ncid = _netCDFFileReader.open(topologyFilePath)) == -1) {
     std::stringstream ss;
     ss << "Topology file " << topologyFilePath << " could not be opened.";
     throw std::runtime_error(ss.str());
   }
 
   // Read x-dimension of topology
-  if ((_lengthOfTopologyInX = _netCDFReader.getDimension(ncid, _ncTopologyKeyX)) == 0) {
+  if ((_lengthOfTopologyInX = _netCDFFileReader.getDimension(ncid, _ncTopologyKeyX)) == 0) {
     throw std::runtime_error("Topology x-dimension could not be read.");
   }
 
   // Read y-dimension of topology
-  if ((_lengthOfTopologyInY = _netCDFReader.getDimension(ncid, _ncTopologyKeyY)) == 0) {
+  if ((_lengthOfTopologyInY = _netCDFFileReader.getDimension(ncid, _ncTopologyKeyY)) == 0) {
     throw std::runtime_error("Topology y-dimension could not be read.");
   }
 
@@ -91,7 +91,7 @@ void tarch::reader::TopologyParser::parseTopologyFile(const char* topologyFilePa
   {
     double tmp[_lengthOfTopologyInX];
     std::memset(tmp, 0, _lengthOfTopologyInX * sizeof(double));
-    if (_netCDFReader.readVariable1D(ncid, _ncTopologyKeyX, tmp) == -1) {
+    if (_netCDFFileReader.readVariable1D(ncid, _ncTopologyKeyX, tmp) == -1) {
       throw std::runtime_error("Topology x-indices could not be read.");
     }
     _minXCoordinateInTopology = tmp[0];
@@ -102,7 +102,7 @@ void tarch::reader::TopologyParser::parseTopologyFile(const char* topologyFilePa
   {
     double tmp[_lengthOfTopologyInY];
     std::memset(tmp, 0, _lengthOfTopologyInY * sizeof(double));
-    if (_netCDFReader.readVariable1D(ncid, _ncTopologyKeyY, tmp) == -1) {
+    if (_netCDFFileReader.readVariable1D(ncid, _ncTopologyKeyY, tmp) == -1) {
       throw std::runtime_error("Topology y-indices could not be read.");
     }
     _minYCoordinateInTopology = tmp[0];
@@ -111,34 +111,34 @@ void tarch::reader::TopologyParser::parseTopologyFile(const char* topologyFilePa
 
   // Read topology
   _topology = new double[_lengthOfTopologyInX * _lengthOfTopologyInY];
-  if (_netCDFReader.readVariable2D(ncid, _ncTopologyKey, _topology) == -1) {
+  if (_netCDFFileReader.readVariable2D(ncid, _ncTopologyKey, _topology) == -1) {
     throw std::runtime_error("Topology could not be read.");
   }
 
   // Close topology netCDF file
-  if (_netCDFReader.close(ncid) == -1) {
+  if (_netCDFFileReader.close(ncid) == -1) {
     throw std::runtime_error("Topology file could not be closed.");
   }
 }
 
-void tarch::reader::TopologyParser::parseDisplacementFile(const char* displacementFilePath) {
+void tarch::reader::NetCDFFieldParser::parseDisplacementFile(const char* displacementFilePath) {
   logDebug("parseDisplacementFile()", "Parse displacement file with keys (" << _ncDisplacementKey << ", " << _ncDisplacementKeyX << ", " << _ncDisplacementKeyY << ")");
 
   int ncid = -1;
 
-  if ((ncid = _netCDFReader.open(displacementFilePath)) == -1) {
+  if ((ncid = _netCDFFileReader.open(displacementFilePath)) == -1) {
     std::stringstream ss;
     ss << "Displacement file " << displacementFilePath << " could not be opened.";
     throw std::runtime_error(ss.str());
   }
 
   // Read x-dimension of displacement
-  if ((_lengthOfDisplacementInX = _netCDFReader.getDimension(ncid, _ncDisplacementKeyX)) == 0) {
+  if ((_lengthOfDisplacementInX = _netCDFFileReader.getDimension(ncid, _ncDisplacementKeyX)) == 0) {
     throw std::runtime_error("Displacement x-dimension could not be read.");
   }
 
   // Read y-dimension of displacement
-  if ((_lengthOfDisplacementInY = _netCDFReader.getDimension(ncid, _ncDisplacementKeyY)) == 0) {
+  if ((_lengthOfDisplacementInY = _netCDFFileReader.getDimension(ncid, _ncDisplacementKeyY)) == 0) {
     throw std::runtime_error("Displacement y-dimension could not be read.");
   }
 
@@ -146,7 +146,7 @@ void tarch::reader::TopologyParser::parseDisplacementFile(const char* displaceme
   {
     double tmp[_lengthOfDisplacementInX];
     std::memset(tmp, 0, _lengthOfDisplacementInX * sizeof(double));
-    if (_netCDFReader.readVariable1D(ncid, _ncDisplacementKeyX, tmp) == -1) {
+    if (_netCDFFileReader.readVariable1D(ncid, _ncDisplacementKeyX, tmp) == -1) {
       throw std::runtime_error("Displacement x-indices could not be read.");
     }
     _minXCoordinateInDisplacement = tmp[0];
@@ -157,7 +157,7 @@ void tarch::reader::TopologyParser::parseDisplacementFile(const char* displaceme
   {
     double tmp[_lengthOfDisplacementInY];
     std::memset(tmp, 0, _lengthOfDisplacementInY * sizeof(double));
-    if (_netCDFReader.readVariable1D(ncid, _ncDisplacementKeyY, tmp) == -1) {
+    if (_netCDFFileReader.readVariable1D(ncid, _ncDisplacementKeyY, tmp) == -1) {
       throw std::runtime_error("Displacement y-indices could not be read.");
     }
     _minYCoordinateInDisplacement = tmp[0];
@@ -166,17 +166,17 @@ void tarch::reader::TopologyParser::parseDisplacementFile(const char* displaceme
 
   // Read displacement
   _displacement = new double[_lengthOfDisplacementInX * _lengthOfDisplacementInY];
-  if (_netCDFReader.readVariable2D(ncid, _ncDisplacementKey, _displacement) == -1) {
+  if (_netCDFFileReader.readVariable2D(ncid, _ncDisplacementKey, _displacement) == -1) {
     throw std::runtime_error("Displacement could not be read.");
   }
 
   // Close displacement netCDF file
-  if (_netCDFReader.close(ncid) == -1) {
+  if (_netCDFFileReader.close(ncid) == -1) {
     throw std::runtime_error("Displacement file could not be closed.");
   }
 }
 
-double tarch::reader::TopologyParser::sampleTopology(double x, double y) {
+double tarch::reader::NetCDFFieldParser::sampleTopology(double x, double y) {
   const auto xCDF = transformIndexSimulationToCDFRange(
     x,
     _lengthOfSimulationDomainInX,
@@ -214,7 +214,7 @@ double tarch::reader::TopologyParser::sampleTopology(double x, double y) {
   )];
 }
 
-double tarch::reader::TopologyParser::sampleDisplacement(double x, double y) {
+double tarch::reader::NetCDFFieldParser::sampleDisplacement(double x, double y) {
   const auto xCDF = transformIndexSimulationToCDFRange(
     x,
     _lengthOfSimulationDomainInX,
@@ -252,7 +252,7 @@ double tarch::reader::TopologyParser::sampleDisplacement(double x, double y) {
   )];
 }
 
-double tarch::reader::TopologyParser::transformIndexSimulationToCDFRange(
+double tarch::reader::NetCDFFieldParser::transformIndexSimulationToCDFRange(
   double coordinateOfDimensionZInSimulationSpace,
   double sizeOfSimulationSpaceInZDirection,
   double minIndexOfCDFspaceInZDirection,
@@ -270,7 +270,7 @@ double tarch::reader::TopologyParser::transformIndexSimulationToCDFRange(
   return m * coordinateOfDimensionZInSimulationSpace + b;
 }
 
-int tarch::reader::TopologyParser::transformIndexCDFRangeToArray(
+int tarch::reader::NetCDFFieldParser::transformIndexCDFRangeToArray(
   double      xCoordinateInCDFMesh,
   double      yCoordinateInCDFMesh,
   double      minXCoordinateInCDFMesh,
