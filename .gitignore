@@ -301,6 +301,7 @@ src/unittests/UnitTests*
 
 # Output files
 *patch-file*
+*.o.*
 *.vtu
 *.pvd
 *.h5
@@ -313,18 +314,17 @@ src/unittests/UnitTests*
 *.out
 *.txt
 *.csv
-
-*.o.*
-*.trs*
 *.xml
+*.trs*
 *.def
+*.tmp
+*.trs
+*.sh
+*.yaml
 
 # Misc
 .DS_Store
 /Debug/
-*.tmp
-*.trs
-*.sh
 compile_commands.json
 
 # Profiling

@@ -115,9 +115,4 @@ project.set_global_simulation_parameters(
 project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration()")
 project.set_Peano4_installation( "../../../../", peano4.output.CompileMode.Release )
 peano4_project = project.generate_Peano4_project(verbose=False)
-peano4_project.output.makefile.set_CXX_compiler("mpicxx")
-peano4_project.output.makefile.add_CXX_flag("-fopenmp -DUSE_ASAGI")
-peano4_project.output.makefile.add_library(
-    "-fopenmp -llua -leasi -lyaml-cpp -limpalajit -lasagi -lnetcdf -lnuma -lmpi -DUSE_ASAGI"
-)
 peano4_project.build(make_clean_first=True)

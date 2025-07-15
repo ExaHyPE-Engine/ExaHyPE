@@ -11,26 +11,24 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
   string(TOLOWER ${mode} mode_lower)
   string(TOUPPER ${mode} mode_upper)
 
-  foreach(dimension IN LISTS PEANO_DIMENSIONS)
-    add_library(ToolboxCurvi${dimension}d_${mode_lower} STATIC)
-    target_sources(ToolboxCurvi${dimension}d_${mode_lower} PRIVATE ${SOURCES} ${HEADERS})
-    target_link_libraries(ToolboxCurvi${dimension}d_${mode_lower} PRIVATE PeanoOptions Peano4Core${dimension}d_${mode_lower})
-    target_compile_definitions(ToolboxCurvi${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} Dimensions=${dimension})
-    target_compile_options(ToolboxCurvi${dimension}d_${mode_lower} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
+  add_library(ToolboxCurvi_${mode_lower} STATIC)
+  target_sources(ToolboxCurvi_${mode_lower} PRIVATE ${SOURCES} ${HEADERS})
+  target_link_libraries(ToolboxCurvi_${mode_lower} PRIVATE PeanoOptions)
+  target_compile_definitions(ToolboxCurvi_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS})
+  target_compile_options(ToolboxCurvi_${mode_lower} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
-    install(TARGETS ToolboxCurvi${dimension}d_${mode_lower}
-      EXPORT                      ${PROJECT_NAME}Targets
-      RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
-              COMPONENT           ${PROJECT_NAME}_Runtime
-      LIBRARY DESTINATION         ${CMAKE_INSTALL_LIBDIR}
-              COMPONENT           ${PROJECT_NAME}_Runtime
-              NAMELINK_COMPONENT  ${PROJECT_NAME}_Devel
-      ARCHIVE DESTINATION         ${CMAKE_INSTALL_LIBDIR}
-              COMPONENT           ${PROJECT_NAME}_Devel
-      PUBLIC_HEADER DESTINATION   ${CMAKE_INSTALL_INCLUDEDIR}
-      PRIVATE_HEADER DESTINATION  ${CMAKE_INSTALL_INCLUDEDIR}
-    )
-  endforeach()
+  install(TARGETS ToolboxCurvi_${mode_lower}
+    EXPORT                      ${PROJECT_NAME}Targets
+    RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
+            COMPONENT           ${PROJECT_NAME}_Runtime
+    LIBRARY DESTINATION         ${CMAKE_INSTALL_LIBDIR}
+            COMPONENT           ${PROJECT_NAME}_Runtime
+            NAMELINK_COMPONENT  ${PROJECT_NAME}_Devel
+    ARCHIVE DESTINATION         ${CMAKE_INSTALL_LIBDIR}
+            COMPONENT           ${PROJECT_NAME}_Devel
+    PUBLIC_HEADER DESTINATION   ${CMAKE_INSTALL_INCLUDEDIR}
+    PRIVATE_HEADER DESTINATION  ${CMAKE_INSTALL_INCLUDEDIR}
+  )
 endforeach()
 
 foreach(pattern IN LISTS HEADER_EXTENSIONS_TO_GLOB)

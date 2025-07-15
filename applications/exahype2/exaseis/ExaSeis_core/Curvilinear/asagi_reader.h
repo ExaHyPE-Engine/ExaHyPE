@@ -4,7 +4,7 @@
 #include <asagi.h>
 #include <easi/util/AsagiReader.h>
 
-#ifdef USE_ASAGI
+#ifdef UseAsagi
 
 enum NUMACache_Mode
 {
