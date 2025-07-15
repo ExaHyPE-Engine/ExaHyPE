@@ -6,7 +6,7 @@ import argparse
 import subprocess
 
 # Some repository setup.
-peano_repo_rootdir = "."
+repo_rootdir = "."
 python_venv_dir = ".formatting_python_env"
 
 # These can be overwritten by optional cmdline arg
@@ -23,19 +23,19 @@ black_checked = False
 clang_checked = False
 
 
-def get_peano_root():
+def get_root():
     """
     Get the root dir of the repository.
 
     returns:
-    peano_root: str
-        Root of Peano repo
+    rootdir: str
+        Root of repo
     """
 
     cmd = "git rev-parse --show-toplevel"
 
     if verbose:
-        print("Searching for Peano root dir via git.")
+        print("Searching for root dir via git.")
         print("Running '{}'.".format(cmd))
 
     gitrevparse = subprocess.run(
@@ -51,12 +51,12 @@ def get_peano_root():
     return rootdir
 
 
-def get_default_clang_format(peano_root):
+def get_default_clang_format(root):
     """
     Try and find the default clang format style file
     """
 
-    clang_format_style_file = os.path.join(peano_root, default_clang_format_file_name)
+    clang_format_style_file = os.path.join(root, default_clang_format_file_name)
 
     if not os.path.exists(clang_format_style_file):
         raise FileNotFoundError(
@@ -66,8 +66,8 @@ def get_default_clang_format(peano_root):
     return clang_format_style_file
 
 
-def get_venv_path(peano_root):
-    return os.path.join(peano_root, python_venv_dir)
+def get_venv_path(root):
+    return os.path.join(root, python_venv_dir)
 
 
 def git_is_available():
@@ -122,7 +122,11 @@ def check_black(black_cmd):
                 capture_output=True,
             )
         except Exception as e:
-            print( "Failed to invoke formatter: {} Check that black is available and consult Peano's documentation for information on required packages and settings".format(e) )
+            print(
+                "Failed to invoke formatter: {} Check that black is available and consult the documentation for information on required packages and settings".format(
+                    e
+                )
+            )
 
         # Now check the version
         stdout = run.stdout.decode("UTF-8")
@@ -188,9 +192,8 @@ def install_black_formatting_tool():
     """
     Installs a specific version of `black`
     """
-    venv_path = get_venv_path(peano_root)
+    venv_path = get_venv_path(root)
 
-    # Basically Peano/.formatting_python_venv/bin/python3
     bfepython = os.path.join(venv_path, "bin", "python3")
 
     if not os.path.exists(bfepython):
@@ -221,9 +224,8 @@ def install_clang_formatting_tool():
     """
     Installs a specific version of `clang-format`
     """
-    venv_path = get_venv_path(peano_root)
+    venv_path = get_venv_path(root)
 
-    # Basically Peano/.formatting_python_venv/bin/python3
     clangpython = os.path.join(venv_path, "bin", "python3")
 
     if not os.path.exists(clangpython):
@@ -250,12 +252,12 @@ def install_clang_formatting_tool():
     return
 
 
-def setup_venv(peano_root):
+def setup_venv(root):
     """
     Set up a virtual env for the formatting tools, if it doesn't exist yet.
     """
 
-    venv_path = get_venv_path(peano_root)
+    venv_path = get_venv_path(root)
 
     if not os.path.exists(venv_path):
         print("Python formatting env not found, installing it.")
@@ -275,21 +277,20 @@ def setup_venv(peano_root):
         install_clang_formatting_tool()
 
 
-def get_black_command(peano_root):
+def get_black_command(root):
     """!
-    
-    Get the full command used to invoke the python formatter 'black'.
+    Get the full command used to invoke the Python formatter 'black'.
     First get the path to the 'black' executable. It should be in the
-    $PEANO_REPOSITORY_ROOT/$PYTHON_VENV_DIR/bin/ directory.
+    $ROOT_REPOSITORY_ROOT/$PYTHON_VENV_DIR/bin/ directory.
 
     If that directory doesn't exist, we first need to set up a venv
     there and install a specific version of 'black'.
     """
 
     # Check if venv exists, and create it if it doesn't.
-    setup_venv(peano_root)
+    setup_venv(root)
 
-    venv_path = get_venv_path(peano_root)
+    venv_path = get_venv_path(root)
     black_path = os.path.join(venv_path, "bin", "black")
 
     if not os.path.exists(black_path):
@@ -307,7 +308,7 @@ def get_clang_command(clang_format_file):
     """
     Get the full command used to invoke the clang-format tool.
     First get the path to the 'clang-format' executable. It should be in the
-    $PEANO_REPOSITORY_ROOT/$PYTHON_VENV_DIR/bin/ directory.
+    $ROOT_REPOSITORY_ROOT/$PYTHON_VENV_DIR/bin/ directory.
 
     If that directory doesn't exist, or if the executable doesn't exist, we
     first need to set up a venv there and install a specific version of
@@ -315,9 +316,9 @@ def get_clang_command(clang_format_file):
     """
 
     # Check if venv exists, and create it if it doesn't.
-    setup_venv(peano_root)
+    setup_venv(root)
 
-    venv_path = get_venv_path(peano_root)
+    venv_path = get_venv_path(root)
     clang_path = os.path.join(venv_path, "bin", "clang-format")
 
     if not os.path.exists(clang_path):
@@ -341,7 +342,7 @@ def get_clang_command(clang_format_file):
     return clang_cmd
 
 
-def setup_parser(peano_root, clangfile):
+def setup_parser(root, clangfile):
     """
     Set up the argument parser.
     """
@@ -434,7 +435,7 @@ def is_cppfile(filename):
     return False
 
 
-def run_python_formatter(filename, dry_run, peano_root):
+def run_python_formatter(filename, dry_run, root):
     """
     Run the black formatter on the provided file.
     If dry_run is True, don't modify the file, just report
@@ -444,7 +445,7 @@ def run_python_formatter(filename, dry_run, peano_root):
     and the dry_run flag was provided, or 0 otherwise.
     """
 
-    black_cmd = get_black_command(peano_root)
+    black_cmd = get_black_command(root)
 
     # First run in dry-run mode to accurately count whether we
     # need to/do format through the return code.
@@ -520,12 +521,12 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
 
 if __name__ == "__main__":
     if git_is_available():
-        peano_root = get_peano_root()
+        root = get_root()
     else:
-        peano_root = peano_repo_rootdir
-    clang_format_file = get_default_clang_format(peano_root)
+        root = repo_rootdir
+    clang_format_file = get_default_clang_format(root)
 
-    parser = setup_parser(peano_root, clang_format_file)
+    parser = setup_parser(root, clang_format_file)
     args = parser.parse_args()
 
     # Are we using default clang file?
@@ -567,7 +568,7 @@ if __name__ == "__main__":
         if os.path.isdir(args.files[0]):
             if verbose:
                 print("Formatting all files in this directory.")
-            for root, dirs, files in os.walk(peano_root):
+            for root, dirs, files in os.walk(root):
                 # Check if 'python_venv_dir' is in the list of subdirectories
                 if python_venv_dir in dirs:
                     # If it's present, remove it from the list of subdirectories to skip it in the iteration.
@@ -639,7 +640,7 @@ if __name__ == "__main__":
             # by default git returns paths relative to root of the repository.
             # We want this script to run from any subdirectory, so we need a
             # full path here.
-            fullpathf = os.path.join(peano_root, f)
+            fullpathf = os.path.join(root, f)
             if not os.path.exists(fullpathf):
                 if verbose:
                     print(
@@ -667,7 +668,7 @@ if __name__ == "__main__":
     formatted_files = []
     for f in filelist:
         if is_pythonfile(f):
-            return_code = run_python_formatter(f, dry_run, peano_root)
+            return_code = run_python_formatter(f, dry_run, root)
             nmodified += return_code
             if return_code != 0:
                 formatted_files.append(f)
