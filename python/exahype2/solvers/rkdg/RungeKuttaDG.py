@@ -17,10 +17,8 @@ from exahype2.solvers.ButcherTableau import RungeKutta_steps
 from exahype2.solvers.PDETerms import PDETerms
 
 import jinja2
-import math
 
 from abc import abstractmethod
-from enum import Enum
 
 import exahype2
 import exahype2.solvers.rkdg.actionsets
@@ -35,6 +33,7 @@ from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFac
 from exahype2.solvers.Storage import Storage
 import peano4.toolbox.blockstructured.PlotPatchesInHDF5Format
 
+from peano4.Logger import log
 
 class RungeKuttaDG(object):
     r"""!
@@ -1112,18 +1111,17 @@ We use RK("""
         return "instanceOf" + self._name
 
 
-    def add_to_Peano4_datamodel(self, datamodel, verbose):
+    def add_to_Peano4_datamodel(self, datamodel):
         """
         Add all required data to the Peano4 project's datamodel
         so it is properly built up
         """
-        if verbose:
-            print("Polynomial basis")
-            print("----------")
-            print(str(self._basis))
-            print("Face projections")
-            print("----------")
-            print(str(self._face_projections))
+        log.debug("Polynomial basis")
+        log.debug("----------")
+        log.debug(str(self._basis))
+        log.debug("Face projections")
+        log.debug("----------")
+        log.debug(str(self._face_projections))
         datamodel.add_cell(self._cell_label)
         datamodel.add_cell(self._current_time_step)
         datamodel.add_cell(self._rhs_estimates)

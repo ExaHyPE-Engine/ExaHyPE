@@ -1,15 +1,14 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import peano4
-import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
-
-import dastgen2
-
 import os
 import sys
+import logging
 
-import exahype2.grid
-import exahype2.solvers
+import peano4
+import dastgen2
+import exahype2
+
+from peano4.Logger import setup_logging, log
 
 class Project(object):
     """!
@@ -751,6 +750,11 @@ thus appreciate any citation of the original release paper
         generate_Peano4_project() again to get a new snapshot/version of the
         Peano setup.
         """
+        if verbose:
+            setup_logging(level=logging.DEBUG)
+        else:
+            setup_logging(level=logging.INFO)
+
         # self._project.cleanup()
 
         self.__configure_makefile()
@@ -766,13 +770,12 @@ thus appreciate any citation of the original release paper
         self._project.solversteps.add_step(self.perform_time_step)
 
         for solver in self._solvers:
-            if verbose:
-                print("---------------------------------------")
-                print("Create data for solver " + solver._name)
-                print("---------------------------------------")
-                print(str(solver))
+            log.debug("---------------------------------------")
+            log.debug("Create data for solver " + solver._name)
+            log.debug("---------------------------------------")
+            log.debug(str(solver))
 
-            solver.add_to_Peano4_datamodel(self._project.datamodel, verbose)
+            solver.add_to_Peano4_datamodel(self._project.datamodel)
 
             solver.add_use_data_statements_to_Peano4_solver_step(self.create_grid_with_refinement)
             solver.add_use_data_statements_to_Peano4_solver_step(self.create_grid_without_refinement)

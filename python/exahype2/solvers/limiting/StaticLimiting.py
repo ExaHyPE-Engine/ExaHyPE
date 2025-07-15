@@ -318,7 +318,7 @@ Type:                   """ + self.__class__.__name__
         )
         return result
 
-    def add_to_Peano4_datamodel(self, datamodel, verbose):
+    def add_to_Peano4_datamodel(self, datamodel):
       datamodel.add_cell(self._cell_label)
       datamodel.add_face(self._face_label)
 

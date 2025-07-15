@@ -11,6 +11,8 @@ from .Helper import write_file
 
 from .Overwrite import Overwrite
 
+from peano4.Logger import log
+
 class Jinja2TemplatedHeaderFile(object):
   def __init__(self,headerfile_template,classname,namespace,subdirectory,dictionary,default_overwrite=True,apply_iteratively=False):
     """
@@ -41,7 +43,7 @@ class Jinja2TemplatedHeaderFile(object):
          Usually, this is an absolute file name.
     """
     if template_file!=None and write_file(overwrite,self.default_overwrite,full_qualified_filename):
-      print( "write " + full_qualified_filename )
+      log.debug("Write " + full_qualified_filename )
 
       template_loader = jinja2.FileSystemLoader(searchpath=os.path.split(template_file)[0])
       templateEnv = jinja2.Environment(loader=template_loader, undefined=jinja2.DebugUndefined)

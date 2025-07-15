@@ -20,6 +20,8 @@ from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.aderdg.Architectures import Architectures
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 
+from peano4.Logger import log
+
 """
 Used to have a central way for all of this class' descendants to differentiate between Gauss-Legendre
 and Gauss-Lobatto nodes, helps to avoid having to constantly pass a string and ensure that this string is
@@ -766,15 +768,14 @@ Material parameters:    """
 #include "repositories/SolverRepository.h"
 """ + "#include <stdfloat>" if self._use_half_precision else ""
 
-    def add_to_Peano4_datamodel(self, datamodel, verbose):
-        if verbose:
-          print("Patch data")
-          print("----------")
-          print(str(self._current_time_step))
-          print("Patch overlap data")
-          print("----------")
-          print(str(self._rhs_estimates_projection))
-          print(str(self._flux_estimates_projection))
+    def add_to_Peano4_datamodel(self, datamodel):
+        log.debug("Patch data")
+        log.debug("----------")
+        log.debug(str(self._current_time_step))
+        log.debug("Patch overlap data")
+        log.debug("----------")
+        log.debug(str(self._rhs_estimates_projection))
+        log.debug(str(self._flux_estimates_projection))
         datamodel.add_cell(self._cell_label)
         datamodel.add_cell(self._current_time_step)
         datamodel.add_cell(self._previous_time_step)

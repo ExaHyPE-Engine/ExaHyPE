@@ -10,6 +10,7 @@ try:
     import peano4.toolbox
     import peano4.visualisation
 
+    from .Logger import log
     from .Project import Project
 except ImportError as error:
     raise Exception("Peano core project files cannot be loaded: {}".format(error))

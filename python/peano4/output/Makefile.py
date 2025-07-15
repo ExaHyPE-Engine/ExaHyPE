@@ -11,6 +11,8 @@ from .Helper import write_file
 
 from .CompileMode import CompileMode
 
+from peano4.Logger import log
+
 
 class Makefile(object):
     """Represents the created Makefile of a Peano 4 project"""
@@ -237,7 +239,7 @@ the SISC paper
 
     def add_CXX_flag(self, value, force=False):
         if value in self.d["CXXFLAGS"] and not force:
-            print(
+            log.warning(
                 "CXXFLAG "
                 + value
                 + " is already in list of flags. Ignored as force attribute is not set"
@@ -253,7 +255,7 @@ the SISC paper
 
     def add_Fortran_flag(self, value, force=False):
         if value in self.d["FCFLAGS"] and not force:
-            print(
+            log.warning(
                 "FCFLAGS "
                 + value
                 + " is already in list of flags. Ignored as force attribute is not set"
@@ -560,7 +562,7 @@ then this message can typically be ignored.
         # Encapsulate file generation as a function
         def generate_output_file(input_file_path, output_file_path):
             if write_file(overwrite, self.default_overwrite, output_file_path):
-                print("write " + output_file_path)
+                log.debug("Write " + output_file_path)
                 template_loader = jinja2.FileSystemLoader(searchpath=os.path.split(input_file_path)[0])
                 templateEnv = jinja2.Environment(loader=template_loader)
                 template = templateEnv.get_template(os.path.split(input_file_path)[1])

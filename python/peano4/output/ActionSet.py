@@ -1,7 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import os
-import re
 
 from .Helper import write_file
 
@@ -9,18 +8,16 @@ from .Overwrite import Overwrite
 
 import peano4.solversteps.ActionSet
 
+from peano4.Logger import log
+
 class ActionSet(object):
   def __init__(self,classname,namespace,subdirectory,implementation = None):
     """!
-     
      Implementation of an Action Set
-    
      Please consult peano4.solversteps.ActionSet for a description.
-     
      implementation Should be of type peano4.solversteps.Mapping or None. If
                     it is None, then the generated stuff will be a sole
                     interface.
-                    
     """
     self.classname    = classname
     self.namespace    = namespace
@@ -89,8 +86,7 @@ class ActionSet(object):
       default_overwrite = False
 
     if write_file(overwrite,default_overwrite,filename):
-      import inspect, os
-      print( "{} written by {}".format(filename, os.path.basename(inspect.getfile(self.__class__))))
+      log.debug("Write {}".format(filename))
 
       with open( filename, "w" ) as outputfile:
           full_qualified_classname = self.__get_full_qualified_class_name()
@@ -165,8 +161,7 @@ class ActionSet(object):
     if self.implementation.user_should_modify_template():
       default_overwrite = False
     if write_file(overwrite,default_overwrite,filename):
-      import inspect, os
-      print( "{} written by {}".format(filename, os.path.basename(inspect.getfile(self.__class__))))
+      log.debug("Write {}".format(filename))
       outputfile = open( filename, "w" )
 
       #full_qualified_classname = self.__get_full_qualified_class_name()
