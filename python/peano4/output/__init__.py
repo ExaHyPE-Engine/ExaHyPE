@@ -6,7 +6,6 @@ from .CompileMode                                   import CompileModes
 from .CompileMode                                   import string_to_mode
 from .Constants                                     import Constants
 from .Helper                                        import Overwrite
-from .InvokeExternalTool                            import InvokeExternalTool
 from .Makefile                                      import Makefile
 from .ActionSet                                     import ActionSet
 from .Output                                        import Output

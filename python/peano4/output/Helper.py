@@ -4,6 +4,8 @@ import os
 
 from .Overwrite import Overwrite
 
+from peano4.Logger import log
+
 def write_file(overwrite,overwrite_is_default,full_qualified_filename):
   """
     overwrite is of type Overwrite and is what the user passes in
@@ -21,5 +23,5 @@ def write_file(overwrite,overwrite_is_default,full_qualified_filename):
     else:
       return True
   else:
-    print("Error: undefined overwrite strategy")
+    log.error("Undefined overwrite strategy")
     return True

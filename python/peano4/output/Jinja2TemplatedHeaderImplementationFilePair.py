@@ -11,6 +11,8 @@ from .Helper import write_file
 
 from .Overwrite import Overwrite
 
+from peano4.Logger import log
+
 class Jinja2TemplatedHeaderImplementationFilePair(object):
   """!
 Represents a pair of C++ header and implementation files
@@ -54,8 +56,7 @@ dictionary entries besides the ones manually handed over by the user.
 
   def __generate_file(self,overwrite,full_qualified_filename,template_file):
     if template_file!=None and write_file(overwrite,self.default_overwrite,full_qualified_filename):
-      import inspect
-      print( "{} written by {} (from template {})".format(full_qualified_filename, os.path.basename(inspect.getfile(self.__class__)),  template_file))
+      log.debug("Write {}".format(full_qualified_filename))
 
       template_loader = jinja2.FileSystemLoader(searchpath=os.path.split(template_file)[0])
       templateEnv = jinja2.Environment(loader=template_loader, undefined=jinja2.DebugUndefined)

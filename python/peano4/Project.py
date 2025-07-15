@@ -1,6 +1,5 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
 import gc
 import os
 import re
@@ -12,6 +11,8 @@ import peano4.output
 import peano4.datamodel
 import peano4.solversteps
 import peano4.runner
+
+from .Logger import log
 
 class Project (object):
   """!
@@ -34,7 +35,7 @@ class Project (object):
       project_name  Simple string.
     """
     if sys.version_info.major < 3:
-      print( "Warning: should be invoked through python3, i.e. with newer Python version" )
+      log.warning("Should be invoked through Python3, i.e. with newer Python version")
 
     if subdirectory and not os.path.exists(subdirectory):
       os.mkdir(subdirectory)
@@ -130,11 +131,11 @@ class Project (object):
       ExaHyPE). It really strips everything down to the stuff you
       absolutely need to translate and run the code.
     """
-    print( "generate all code ..." )
+    log.info("Generate all code ...")
     self.is_generated = True
     self.is_built = False
     if len(self.output.artefacts)>0:
-      print( "some artefacts have already been added to repository ... assume this is intentional (by higher abstraction layer, e.g.)")
+      log.info("Some artefacts have already been added to repository ... assume this is intentional (by higher abstraction layer, e.g.)")
 
     self.output.readme.add_package_description( self.constants.readme_entry() )
 
@@ -149,14 +150,14 @@ class Project (object):
     else:
       self.constants.generate(overwrite, self.directory)
 
-    print("generation complete")
+    log.info("Generation complete")
 
     if throw_away_data_after_generation:
       self.datamodel = None
       self.solversteps = None
       self.output      = None
       gc.collect()
-      print("threw away all data and ran garbage collection")
+      log.info("Threw away all data and ran garbage collection")
 
   def build(self,
             make=True,
@@ -184,45 +185,43 @@ class Project (object):
 
     if make:
       if make_clean_first:
-        print("clean up project ... in {}".format(self.directory))
+        log.info("Clean up project ... in {}".format(self.directory))
         try:
           subprocess.check_call(["make", "clean"], cwd=self.directory, stderr=subprocess.DEVNULL)
           self.is_built = False
-          print("clean complete")
+          log.info("Clean complete")
         except Exception as e:
           pass
 
       if not self.is_built:
-        print("start to compile with concurrency level of " + str(number_of_parallel_builds) + " ...")
+        log.info("Start to compile with concurrency level of " + str(number_of_parallel_builds) + " ...")
         try:
           process = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], cwd=self.directory, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
           # Extract warnings and errors from error message
           error_message = process.stderr.decode().strip()
-          warnings = re.findall(r"(?i)warning:.*", error_message)
-          errors = re.findall(r"(?i)error:.*", error_message)
+          warnings = re.findall(r"(?i)Warning:.*", error_message)
+          errors = re.findall(r"(?i)Error:.*", error_message)
           # Print warnings into the terminal
-          if warnings:
-            print("\nWarnings ({}):".format(len(warnings)))
-            print("\n".join(warnings))
+          # if warnings:
+          #   log.warning("\n".join(warnings))
           if errors:
-            print("\nErrors ({}):".format(len(errors)))
             error_message = "\n".join(errors)
           # Check the return code for linker errors
           # Raise exception with errors
           if process.returncode != 0:
             linker_error_message = process.stderr.decode().strip() + "\n" + error_message
             raise Exception(linker_error_message)
-          print("compile completed successfully")
+          log.info("Compile completed successfully")
           self.is_built = True
           self.build_was_successful = True
         except Exception as e:
           self.is_built = True
           self.build_was_successful = False
-          print(str(e))
-          print("compile was not successful")
+          log.error(str(e))
+          log.error("Compile was not successful")
           sys.exit(1)
       else:
-        print("cannot build as code generation has not been successful")
+        log.error("Cannot build as code generation has not been successful")
 
     if throw_away_data_after_build:
       self.cleanup()
@@ -230,7 +229,7 @@ class Project (object):
       self.solversteps  = None
       self.output       = None
       gc.collect()
-      print("threw away all data and ran garbage collection")
+      log.info("Threw away all data and ran garbage collection")
 
   def run(self, executable, args=[], prefix=None, pipefile=None, rebuild_if_required=True):
     """!
@@ -246,7 +245,7 @@ class Project (object):
       self.build()
 
     if not rebuild_if_required or (self.is_built and self.build_was_successful):
-      print( "run executable " + str(executable))
+      log.info("Run executable " + str(executable))
 
       invocation  = []
       if prefix!=None:
@@ -262,19 +261,19 @@ class Project (object):
           result = subprocess.run( invocation, stdout=open( pipefile, "w" ), stderr=subprocess.PIPE )
         if result.returncode==0:
           if pipefile==None:
-            print( result.stdout.decode("utf-8") )
+            log.info(result.stdout.decode("utf-8"))
           if result.stderr!=None:
-            print( result.stderr.decode("utf-8") )
-          print( "run completed without error code, but check for warnings and numerical assertions/errors" )
+            log.info(result.stderr.decode("utf-8"))
+          log.info("Run completed without error code, but check for warnings and numerical assertions/errors")
         else:
-          print( result.stderr.decode("utf-8") )
-          print( "run failed" )
+          log.error(result.stderr.decode("utf-8"))
+          log.error("Run failed")
         success = True
       except Exception as e:
-        print( "run of application was not successful: " + str(e) )
-        print( "invocation: " + str(invocation) )
+        log.error("Run of application was not successful: " + str(e))
+        log.error("Invocation: " + str(invocation))
     else:
-      print( "cannot run as code compilation has not been successful" )
+      log.error("Cannot run as code compilation has not been successful")
     return success
 
 

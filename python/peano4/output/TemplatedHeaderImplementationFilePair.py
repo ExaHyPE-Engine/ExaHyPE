@@ -9,6 +9,8 @@ from .Helper import write_file
 
 from .Overwrite import Overwrite
 
+from peano4.Logger import log
+
 class TemplatedHeaderImplementationFilePair(object):
   def __init__(self,headfile_template,cppfile_template,classname,namespace,subdirectory,dictionary,default_overwrite=True):
     """
@@ -43,8 +45,7 @@ class TemplatedHeaderImplementationFilePair(object):
 
   def generate_file(self,overwrite,full_qualified_filename,template_file):
     if template_file!=None and write_file(overwrite,self.default_overwrite,full_qualified_filename):
-      import inspect
-      print( "{} written by {}".format(full_qualified_filename, os.path.basename(inspect.getfile(self.__class__))))
+      log.debug("Write " + full_qualified_filename )
       with open( os.path.realpath(template_file), "r" ) as input:
         template = input.read()
         with open( full_qualified_filename, "w" ) as output:

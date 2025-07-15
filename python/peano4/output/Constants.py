@@ -7,6 +7,8 @@ from .Helper import write_file
 
 from .Overwrite  import Overwrite
 
+from peano4.Logger import log
+
 class Constants(object):
   """!
     Representative of generated Constants.h holding all user-defined constants
@@ -180,7 +182,7 @@ These constants are available to the application within its namespace.
   def generate(self, overwrite, directory, subdirectory=""):
     filename = directory + "/" + subdirectory + "Constants.h"
     if write_file(overwrite,self.default_overwrite,filename):
-      print( "write " + filename )
+      log.debug("Write {}".format(filename))
 
       #for i in self.cppfiles:
       #  self.d[ 'SOURCES' ] += " "

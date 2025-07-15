@@ -13,6 +13,8 @@ import exahype2.solvers.fv.actionsets
 from exahype2.solvers import PDETerms
 from exahype2.solvers.Storage import Storage
 
+from peano4.Logger import log
+
 class FV(object):
     """!
     Abstract finite volume solver step sizes that works on patch-based AMR with a halo layer of one.
@@ -1034,21 +1036,20 @@ The finest mesh width of """
     def get_name_of_global_instance(self):
         return "instanceOf" + self._name
 
-    def add_to_Peano4_datamodel(self, datamodel, verbose):
+    def add_to_Peano4_datamodel(self, datamodel):
         """
         Add all required data to the Peano project's datamodel
         so it is properly built up.
         """
-        if verbose:
-            print("Patch data")
-            print("----------")
-            print(str(self._patch))
-            print(str(self._patch_reconstructed))
-            print("----------")
-            print("Patch overlap data")
-            print(str(self._patch_overlap_old))
-            print(str(self._patch_overlap_new))
-            print("----------")
+        log.debug("Patch data")
+        log.debug("----------")
+        log.debug(str(self._patch))
+        log.debug(str(self._patch_reconstructed))
+        log.debug("----------")
+        log.debug("Patch overlap data")
+        log.debug(str(self._patch_overlap_old))
+        log.debug(str(self._patch_overlap_new))
+        log.debug("----------")
         datamodel.add_cell(self._cell_label)
         datamodel.add_cell(self._patch)
         datamodel.add_cell(self._patch_reconstructed)
