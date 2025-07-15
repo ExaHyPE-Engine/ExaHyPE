@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath(".."))
 from FWave import fWave
 
 initial_conditions = """
-  static tarch::reader::TopologyParser topologyParser(
+  static tarch::reader::NetCDFFieldParser fieldParser(
     \"chile_gebco_usgs_2000m_bath.nc\",
     \"chile_gebco_usgs_2000m_displ.nc\",
     DomainSize(0),
@@ -19,8 +19,8 @@ initial_conditions = """
     DomainOffset(1)
   );
 
-  const double bathymetryBeforeEarthquake = topologyParser.sampleTopology(x(0), x(1));
-  const double displacement               = topologyParser.sampleDisplacement(x(0), x(1));
+  const double bathymetryBeforeEarthquake = fieldParser.sampleTopology(x(0), x(1));
+  const double displacement               = fieldParser.sampleDisplacement(x(0), x(1));
   const double bathymetryAfterEarthquake  = bathymetryBeforeEarthquake + displacement;
 
   Q[s::h]  = -std::min(bathymetryBeforeEarthquake, 0.0);
@@ -80,7 +80,7 @@ riemann_solver.set_implementation(
 riemann_solver.set_plotter(args.plotter)
 riemann_solver.add_user_solver_includes(
     """
-#include "tarch/reader/TopologyParser.h"
+#include "tarch/reader/NetCDFFieldParser.h"
 """
 )
 
