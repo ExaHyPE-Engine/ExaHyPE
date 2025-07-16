@@ -228,7 +228,7 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
     _joining.insert(_joinTriggered.begin(), _joinTriggered.end());
     _joinTriggered.clear();
 
-    const auto oldState = _spacetreeState;
+    [[maybe_unused]] const auto oldState = _spacetreeState;
     switch (_spacetreeState) {
     case SpacetreeState::EmptyRun:
       _spacetreeState = SpacetreeState::NewFromSplit;
@@ -1317,10 +1317,10 @@ void peano4::grid::Spacetree::descend(const AutomatonState& state, GridVertex ve
 }
 
 void peano4::grid::Spacetree::receiveAndMergeUserData(
-  const AutomatonState&     state,
-  TraversalObserver&        observer,
-  const GridTraversalEvent& enterCellTraversalEvent,
-  GridVertex                fineGridVertices[TwoPowerD]
+  [[maybe_unused]] const AutomatonState&  state,
+  TraversalObserver&                      observer,
+  const GridTraversalEvent&               enterCellTraversalEvent,
+  GridVertex                              fineGridVertices[TwoPowerD]
 ) {
   logTraceInWith3Arguments("receiveAndMergeUserData()", state.toString(), enterCellTraversalEvent.toString(), _id);
 

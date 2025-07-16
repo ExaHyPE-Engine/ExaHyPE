@@ -24,6 +24,7 @@ public:
    * @param skipFirstNLines int indicating how many initial lines to skip. Defaults to 0.
    */
   CSVReader(const std::string& filepath, const int skipFirstNLines = 0);
+  ~CSVReader();
 
   /**
    * @brief Returns the line of the CSV file indicated by the row parameter.
@@ -32,16 +33,14 @@ public:
    *
    * @return the CSV line as a const std::string.
    */
-  const std::string getRow(const int row);
-
-  ~CSVReader();
+  std::string getRow(const int row) const;
 
   /**
    * @brief Returns the number of rows contained in the CSV file. Available rows are [0, numberOfRows).
    *
    * @return number of rows in CSV file as int.
    */
-  const int getNumberOfRows() { return numberOfRows; }
+  int getNumberOfRows() const;
 
   /**
    * @brief Helper function to extract fundamental/primitive values from a CSV line.
@@ -58,14 +57,14 @@ public:
     if (std::is_fundamental_v<T> == false) {
       throw std::runtime_error("Template type is not fundamental.");
     }
-    // length of string till last found match
+    // Length of string till last found match
     size_t lastMatch = 0;
-    // length of string till next found match
+    // Length of string till next found match
     size_t nextMatch = 0;
-    // count posts of the fence
+    // Count posts of the fence
     int numberOfMatches = 0;
 
-    // loop over separator occurances in row and get substring of value, if possible
+    // Loop over separator occurrences in row and get substring of value, if possible
     while ((nextMatch = row.find(separator, lastMatch)) != std::string::npos) {
       ++numberOfMatches;
       if (numberOfMatches > valueIndex) {
@@ -74,9 +73,10 @@ public:
         return extractedValue;
       }
 
-      // if value not yet between lastMatch and nextMatch, increment lastMatch
+      // If value not yet between lastMatch and nextMatch, increment lastMatch
       lastMatch = nextMatch + 1;
     }
+
     std::stringstream ss;
     ss << "No match found for valueIndex " << valueIndex << " and separator \"" << separator << "\" in row \"" << row
        << "\".";

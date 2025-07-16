@@ -9,7 +9,7 @@
 #include "peano4/grid/Spacetree.h"
 
 template <class Container>
-void peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(Container& stackContainer, int master, int worker) {}
+void peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(Container& /*stackContainer*/, int /*master*/, int /*worker*/) {}
 
 template <class Container>
 void peano4::parallel::SpacetreeSet::deleteAllStacks(Container& stackContainer, int spacetreeId) {
@@ -64,13 +64,10 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(Contai
 }
 
 template <class Container>
-void peano4::parallel::SpacetreeSet::exchangeAllVerticalDataExchangeStacks(Container& stackContainer, int spacetreeId, int parentId) {
-  logTraceInWith2Arguments("exchangeAllVerticalDataExchangeStacks()", spacetreeId, parentId);
-  logTraceOutWith2Arguments("exchangeAllVerticalDataExchangeStacks()", spacetreeId, parentId);
-}
+void peano4::parallel::SpacetreeSet::exchangeAllVerticalDataExchangeStacks(Container& /*stackContainer*/, int /*spacetreeId*/, int /*parentId*/) {}
 
 template <class Container>
-void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(Container& stackContainer, int spacetreeId, bool symmetricDataCardinality) {
+void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(Container& stackContainer, int spacetreeId, [[maybe_unused]] bool symmetricDataCardinality) {
   logTraceInWith2Arguments("exchangeAllHorizontalDataExchangeStacks()", spacetreeId, symmetricDataCardinality);
   assertionMsg(symmetricDataCardinality, "Haven't implemented the asymmetric case yet, but would be simple: Just need the integer messages as I do for the vertical data flow" );
 
@@ -106,7 +103,7 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(Con
       stackContainer.getForPush(targetId, targetStack)->clone(*stackContainer.getForPop(sourceStackKey));
 
 #if PeanoDebug > 0
-      const int comparisonStackForTarget = Node::getInstance().getOutputStackNumberForHorizontalDataExchange(spacetreeId);
+      [[maybe_unused]] const int comparisonStackForTarget = Node::getInstance().getOutputStackNumberForHorizontalDataExchange(spacetreeId);
       assertion8(
         stackContainer.getForPush(targetId,targetStack)->size() == stackContainer.getForPush(spacetreeId, comparisonStackForTarget)->size()
         or

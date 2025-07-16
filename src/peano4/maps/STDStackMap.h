@@ -34,8 +34,11 @@ class peano4::maps::STDStackMap {
      * you have to wrap it into  a semaphore manually.
      */
     void createStack(const StackKey& key);
+
   public:
-    ~STDStackMap();
+    ~STDStackMap() {
+      assertionMsg( _data.empty(), "forgot to call clear()" );
+    }
 
     bool empty(int treeId, int stackId) const;
 
@@ -221,13 +224,6 @@ void peano4::maps::STDStackMap<T>::clear() {
 
   _data.clear();
 }
-
-
-template <typename T>
-peano4::maps::STDStackMap<T>::~STDStackMap() {
-  assertionMsg( _data.empty(), "forgot to call clear()" );
-}
-
 
 template <typename T>
 void peano4::maps::STDStackMap<T>::garbageCollection(int spacetree) {

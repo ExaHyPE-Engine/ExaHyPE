@@ -274,7 +274,7 @@ void peano4::parallel::SpacetreeSet::createObserverCloneIfRequired(peano4::grid:
   assertion2(_clonedObserver.count(treeId) == 1 and _clonedObserver[treeId] != nullptr, treeId, _clonedObserver.count(treeId));
 }
 
-void peano4::parallel::SpacetreeSet::streamLocalVertexInformationToMasterThroughVerticalStacks(int spacetreeId, int parentId, const std::set<int>& joiningIds) {
+void peano4::parallel::SpacetreeSet::streamLocalVertexInformationToMasterThroughVerticalStacks([[maybe_unused]] int spacetreeId, [[maybe_unused]] int parentId, const std::set<int>& /*joiningIds*/) {
   logTraceInWith2Arguments("streamLocalVertexInformationToMasterThroughVerticalStacks()", spacetreeId, parentId);
 
   /*

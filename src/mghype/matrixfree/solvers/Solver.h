@@ -38,6 +38,7 @@ class mghype::matrixfree::solvers::Solver: public mghype::matrixfree::solvers::S
      *   been reduced to 10% of their initial value.
      */
     Solver(const std::string&  name, double tolerance);
+    virtual ~Solver() = default;
 
     virtual std::string toString() const;
 

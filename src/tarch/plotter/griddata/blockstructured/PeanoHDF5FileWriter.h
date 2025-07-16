@@ -205,7 +205,7 @@ public:
      */
     virtual void plotCell(int index, double* values) override;
 
-    template <typename T> void plotCell(int index, T value) {
+    template <typename T> void plotCell(int /*index*/, T /*value*/) {
       // This function does not make sense for HDF5. No op.
     }
     template <typename T> void plotCell(int index, T* values);

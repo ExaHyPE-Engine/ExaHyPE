@@ -143,12 +143,12 @@ void toolbox::blockstructured::tests::IandRVolumetricTest::
           * (destinationPatchSize + 2 * destinationHaloSize) * NumberOfUnknowns;
 #endif
 
-      double sourceData[sourceSize];
+      double* sourceData = new double[sourceSize];
       for (int i = 0; i < sourceSize; i++)
         sourceData[i] = i;
 
-      double destinationDataLinear[destinationSize];
-      double destinationDataSecondOrder[destinationSize];
+      double* destinationDataLinear = new double[destinationSize];
+      double* destinationDataSecondOrder = new double[destinationSize];
 
       interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(
         sourcePatchSize,
@@ -236,6 +236,10 @@ void toolbox::blockstructured::tests::IandRVolumetricTest::
         offset2 += (double)sourceWidth * sourceWidth * patchRatio;
       }
 #endif
+
+      delete[] sourceData;
+      delete[] destinationDataLinear;
+      delete[] destinationDataSecondOrder;
     }
   }
 }

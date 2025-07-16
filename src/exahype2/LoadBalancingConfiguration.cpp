@@ -53,8 +53,8 @@ double exahype2::LoadBalancingConfiguration::getWorstCaseBalancingRatio(toolbox:
   return _loadBalancingQuality;
 }
 
-int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing::State state) { return _minSizeOfTree; }
+int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing::State) { return _minSizeOfTree; }
 
-peano4::SplitInstruction::Mode exahype2::LoadBalancingConfiguration::getMode(toolbox::loadbalancing::State state) {
+peano4::SplitInstruction::Mode exahype2::LoadBalancingConfiguration::getMode(toolbox::loadbalancing::State) {
   return _mode;
 }

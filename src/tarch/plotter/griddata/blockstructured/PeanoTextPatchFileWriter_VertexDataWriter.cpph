@@ -1,6 +1,6 @@
 
 template<typename T>
-void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( int index, T* values ) {
+void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( int /*index*/, T* values ) {
   for (int i=0; i<_numberOfUnknowns; i++) {
     if ( std::isnan(values[i]) ) {
       _out << " nan";

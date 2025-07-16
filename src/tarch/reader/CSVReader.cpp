@@ -23,7 +23,13 @@ tarch::reader::CSVReader::CSVReader(const std::string& filepath, const int skipF
   numberOfRows = csvLines.size();
 }
 
-const std::string tarch::reader::CSVReader::getRow(const int rowIndex) {
+tarch::reader::CSVReader::~CSVReader() {
+  numberOfRows = -1;
+  csvLines.clear();
+  csvLines.shrink_to_fit();
+}
+
+std::string tarch::reader::CSVReader::getRow(const int rowIndex) const {
   if (rowIndex >= numberOfRows) {
     std::stringstream ss;
     ss << "Illegal row index " << rowIndex << " for maximum number of rows " << numberOfRows << ".";
@@ -33,8 +39,6 @@ const std::string tarch::reader::CSVReader::getRow(const int rowIndex) {
   return csvLines.at(rowIndex);
 }
 
-tarch::reader::CSVReader::~CSVReader() {
-  numberOfRows = -1;
-  csvLines.clear();
-  csvLines.shrink_to_fit();
+int tarch::reader::CSVReader::getNumberOfRows() const {
+  return numberOfRows;
 }

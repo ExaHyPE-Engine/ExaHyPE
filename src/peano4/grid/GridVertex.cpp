@@ -6,16 +6,16 @@
 #include <sstream>
 
 peano4::grid::GridVertex::GridVertex(
-  const State                                  __state,
-  const tarch::la::Vector<TwoPowerD, int>&     __adjacentRanks,
-  const tarch::la::Vector<TwoPowerD, int>&     __backupOfAdjacentRanks,
-  const bool                                   __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep,
-  const bool                                   __isAntecessorOfRefinedVertexInCurrentTreeSweep,
-  const bool                                   __hasBeenParentOfSubtreeVertexInPreviousTreeSweep,
-  const bool                                   __isParentOfSubtreeVertexInCurrentTreeSweep,
-  const int                                    __numberOfAdjacentRefinedLocalCells,
-  const tarch::la::Vector<Dimensions, double>& __x,
-  const int                                    __level
+  const State                                                   __state,
+  const tarch::la::Vector<TwoPowerD, int>&                      __adjacentRanks,
+  const tarch::la::Vector<TwoPowerD, int>&                      __backupOfAdjacentRanks,
+  const bool                                                    __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep,
+  const bool                                                    __isAntecessorOfRefinedVertexInCurrentTreeSweep,
+  const bool                                                    __hasBeenParentOfSubtreeVertexInPreviousTreeSweep,
+  const bool                                                    __isParentOfSubtreeVertexInCurrentTreeSweep,
+  const int                                                     __numberOfAdjacentRefinedLocalCells,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& __x,
+  const int                                                     __level
 ) {
   setState(__state);
   setAdjacentRanks(__adjacentRanks);

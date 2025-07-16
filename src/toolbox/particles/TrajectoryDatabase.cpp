@@ -45,7 +45,7 @@ toolbox::particles::TrajectoryDatabase::Entry::~Entry() {
 
 toolbox::particles::TrajectoryDatabase::TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta, double dataDelta, double timeDelta, bool clearDatabaseAfterFlush, bool deltasAreRelative ):
   _fileName(""),
-  _timeDelta(0.0),
+  _timeDelta(timeDelta),
   _dataDelta(dataDelta),
   _positionDelta(positionDelta),
   _maxDataDelta(0.0),

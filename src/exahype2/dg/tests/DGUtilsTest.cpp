@@ -153,7 +153,7 @@ void exahype2::dg::tests::DGUtilsTest::testComputeGradientOnConstantSolution() {
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
 
   // 1 unknown, 1 auxiliary variable
-  double cellQin[2*nodesPerCell];
+  double* cellQin = new double[2*nodesPerCell];
   double gradientValues[2*Dimensions];
   for(int i=0; i<2*nodesPerCell; i++){
     cellQin[i] = 1.0;
@@ -173,5 +173,7 @@ void exahype2::dg::tests::DGUtilsTest::testComputeGradientOnConstantSolution() {
       validateNumericalEquals(gradientValues[var], 0.0);
     }
   }
+
+  delete[] cellQin;
   #endif
 }

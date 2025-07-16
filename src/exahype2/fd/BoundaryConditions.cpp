@@ -247,8 +247,8 @@ void exahype2::fd::applySommerfeldConditions(
     maxEigenvalue,
     [&] (
       double* __restrict__                         Q,
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH
+      const tarch::la::Vector<Dimensions,double>&  /*faceCentre*/,
+      const tarch::la::Vector<Dimensions,double>&  /*gridCellH*/
     ) -> void {
       for (int i=0; i<numberOfUnknowns+numberOfAuxiliaryVariables; i++) {
         Q[i] = 0.0;

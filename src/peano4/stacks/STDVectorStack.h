@@ -448,7 +448,7 @@ class peano4::stacks::STDVectorStack {
 
       _data.resize(numberOfElements, T(T::ObjectConstruction::NoData));
       _currentElement = numberOfElements;
-      assertionEquals( _data.size(), numberOfElements );
+      assertionEquals(static_cast<int>(_data.size()), numberOfElements );
 
       assertion( _ioMPIRequest == nullptr );
       _ioMPIRequest = new MPI_Request;

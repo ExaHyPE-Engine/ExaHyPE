@@ -33,8 +33,8 @@ std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesLocal(
   GridVertex                vertices[TwoPowerD],
   const SplitSpecification& splitTriggered,
   const std::set<int>&      splitting,
-  const std::set<int>&      joinTriggered,
-  const std::set<int>&      joining
+  const std::set<int>&      /*joinTriggered*/,
+  const std::set<int>&      /*joining*/
 ) const {
   std::bitset<TwoTimesD> result;
 
@@ -77,7 +77,7 @@ bool peano4::grid::GridTraversalEventGenerator::isVertexAdjacentToLocalSpacetree
   GridVertex                vertex,
   const SplitSpecification& splitTriggered,
   const std::set<int>&      splitting,
-  const std::set<int>&      joinTriggered,
+  const std::set<int>&      /*joinTriggered*/,
   const std::set<int>&      joining,
   bool                      splittingIsConsideredLocal,
   bool                      joiningIsConsideredLocal
@@ -108,7 +108,7 @@ bool peano4::grid::GridTraversalEventGenerator::isSpacetreeNodeLocal(
   GridVertex                vertices[TwoPowerD],
   const SplitSpecification& splitTriggered,
   const std::set<int>&      splitting,
-  const std::set<int>&      joinTriggered,
+  const std::set<int>&      /*joinTriggered*/,
   const std::set<int>&      joining,
   bool                      splittingIsConsideredLocal,
   bool                      joiningIsConsideredLocal
@@ -135,9 +135,9 @@ std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesAdj
   GridVertex                vertices[TwoPowerD],
   const SplitSpecification& splitTriggered,
   const std::set<int>&      splitting,
-  const std::set<int>&      joinTriggered,
-  const std::set<int>&      joining,
-  bool                      calledByLeaveCell
+  const std::set<int>&      /*joinTriggered*/,
+  const std::set<int>&      /*joining*/,
+  bool                      /*calledByLeaveCell*/
 ) const {
   std::bitset<TwoPowerD> result;
   for (int j = 0; j < TwoPowerD; j++) {
@@ -159,8 +159,8 @@ std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesAdjace
   GridVertex                vertices[TwoPowerD],
   const SplitSpecification& splitTriggered,
   const std::set<int>&      splitting,
-  const std::set<int>&      joinTriggered,
-  const std::set<int>&      joining,
+  const std::set<int>&      /*joinTriggered*/,
+  const std::set<int>&      /*joining*/,
   bool                      calledByLeaveCell
 ) const {
   std::bitset<TwoTimesD> result;
@@ -270,7 +270,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   const std::set<int>&                      splitting,
   const std::set<int>&                      joinTriggered,
   const std::set<int>&                      joining,
-  const std::set<int>&                      hasSplit,
+  const std::set<int>&                      /*hasSplit*/,
   const tarch::la::Vector<Dimensions, int>& relativePositionToFather,
   bool                                      spacetreeStateIsRunning
 ) const {

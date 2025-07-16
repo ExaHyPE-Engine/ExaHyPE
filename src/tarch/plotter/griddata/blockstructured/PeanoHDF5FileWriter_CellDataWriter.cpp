@@ -12,8 +12,8 @@ tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::CellDataWriter::
   const std::string&                                              identifier,
   int                                                             unknownsPerAxis,
   int                                                             numberOfUnknowns,
-  const std::string&                                              description,
-  const std::string&                                              metaData,
+  const std::string&                                              /*description*/,
+  const std::string&                                              /*metaData*/,
   double*                                                         mapping,
   tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter& writer
 ):
@@ -80,15 +80,15 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::CellDataWri
 }
 
 void tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::CellDataWriter::plotCell(
-  [[maybe_unused]] int index,
-  double               value
+  int     /*index*/,
+  double  /*value*/
 ) {
   // This function does not make sense for HDF5. No op.
 }
 
 void tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::CellDataWriter::plotCell(
-  [[maybe_unused]] int index,
-  double*              values
+  int     /*index*/,
+  double* values
 ) {
   if (_unknownsWritten == false) {
     try {
@@ -97,7 +97,7 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::CellDataWri
       for (int unknown = 0; unknown < _numberOfUnknowns; ++unknown) {
         std::vector<double> separated_values;
 
-        for (size_t i = unknown; i < _cardinality; i += _numberOfUnknowns) {
+        for (int i = unknown; i < _cardinality; i += _numberOfUnknowns) {
           separated_values.push_back(values[i]);
         }
 
@@ -123,7 +123,6 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::CellDataWri
       */
 
       /*if(_writer._dimensions == 2){
-
           hsize_t dims[3];
           dims[0] = _numberOfCellsPerAxis;
           dims[1] = _numberOfCellsPerAxis;
@@ -134,8 +133,7 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::CellDataWri
           DataSet valuesDataset = patchGroup.createDataSet("unknowns", _writer._doubleType, dataspaceValues);
           valuesDataset.write(values, _writer._doubleType);
 
-        }else if(_writer._dimensions == 3){
-
+        } else if(_writer._dimensions == 3){
           hsize_t dims[4];
           dims[0] = _numberOfCellsPerAxis;
           dims[1] = _numberOfCellsPerAxis;
@@ -146,7 +144,6 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::CellDataWri
 
           DataSet valuesDataset = patchGroup.createDataSet("unknowns", _writer._doubleType, dataspaceValues);
           valuesDataset.write(values, _writer._doubleType);
-
         }*/
 
       _unknownsWritten = true;
@@ -158,10 +155,7 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::CellDataWri
 
 void tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::CellDataWriter::close() {}
 
-void tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::CellDataWriter::assignRemainingCellsDefaultValues(
-) {
-  assertionMsg(false, "not implemented");
-}
+void tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::CellDataWriter::assignRemainingCellsDefaultValues() {}
 
 int tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::CellDataWriter::getFirstCellWithinPatch(
   int index

@@ -18,7 +18,7 @@ class exahype2::dg::tests::CellIntegralTest : public tarch::tests::TestCase {
     const double _Order4_MassMatrixDiagonal1d[4+1];
     const double _Order4_StiffnessOperator1d[(4+1)*(4+1)];
     const double _Order4_DerivativeOperator1d[(4+1)*(4+1)];
-    const double _Order4_BasisFunctionValuesLeft1d[4+1];
+    //const double _Order4_BasisFunctionValuesLeft1d[4+1];
 
     const double _Order2_QuadraturePoints1d[2+1];
     const double _Order2_MassMatrixDiagonal1d[2+1];

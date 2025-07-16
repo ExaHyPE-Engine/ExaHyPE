@@ -132,25 +132,4 @@ further variables, e.g. All validation macros automatically set a test
 to failed if they fail, and they write a verbose message on the reason
 why some tests failed to the terminal.
 
-Tests tend to become spaghetti code and some of them are very expensive
-to translate as the compiler's optimiser has a hard time to translate
-the long code fragments. I thus recommend to insert
-
-~~~~~~~~~~~~~~~~~
-#include "tarch/CompilerSpecificSettings.h"
-
-#ifdef UseTestSpecificCompilerSettings 
-#pragma optimize("", off)
-#endif
-
-// All the implementation
-
-#ifdef UseTestSpecificCompilerSettings 
-#pragma optimize("", on)
-#endif
-~~~~~~~~~~~~~~~~~
-
-into your implementation file around all your code. This switches off
-all optimisation explicitly for the tests.
-
 */

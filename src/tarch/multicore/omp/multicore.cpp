@@ -17,13 +17,11 @@ void tarch::multicore::native::spawnTasks(const std::vector<Task*>& tasks) {
   logDebug("spawnTasks()", "Spawn " << tasks.size() << " tasks as taskloop");
 
 #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(Task::DefaultPriority) untied
-  for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
-    {
-      while (tasks[i]->run()) {
-        Core::getInstance().yield();
-      }
-      delete tasks[i];
+  for (auto* task : tasks) {
+    while (task->run()) {
+      Core::getInstance().yield();
     }
+    delete task;
   }
 
   waitForAllTasks();

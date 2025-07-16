@@ -4,17 +4,17 @@
 
 
 void exahype2::dg::average::solveRiemannProblem_pointwise_in_situ(
-  ::exahype2::dg::Flux                         flux,
+  ::exahype2::dg::Flux                         /*flux*/,
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  cellSize,
-  double                                       t,
-  double                                       dt,
+  double                                       /*t*/,
+  double                                       /*dt*/,
   int                                          order,
   int                                          unknowns,
   int                                          auxiliaryVariables,
   int                                          faceNumber,
   const double* __restrict__                   quadraturePoints,
-  bool                                         useFlux,
+  bool                                         /*useFlux*/,
   const double* __restrict__                   projectedValues,
   double* __restrict__                         solution
 ) {

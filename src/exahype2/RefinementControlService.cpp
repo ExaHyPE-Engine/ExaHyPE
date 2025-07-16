@@ -42,11 +42,9 @@ void exahype2::RefinementControlService::receiveDanglingMessages() {
     MPI_Status  status;
     MPI_Improbe(MPI_ANY_SOURCE, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &msg, &status);
     if (flag) {
-      const int rank = status.MPI_SOURCE;
       int       numberOfMessages;
       MPI_Get_count(&status, peano4::grid::GridControlEvent::getGlobalCommunicationDatatype(), &numberOfMessages);
-
-      logDebug("receiveDanglingMessages()", "got " << numberOfMessages << " event(s) from rank " << rank);
+      logDebug("receiveDanglingMessages()", "Got " << numberOfMessages << " event(s) from rank " << status.MPI_SOURCE);
 
       std::vector<peano4::grid::GridControlEvent> receiveBuffer;
       receiveBuffer.resize(numberOfMessages);
@@ -65,7 +63,7 @@ void exahype2::RefinementControlService::receiveDanglingMessages() {
 
       logDebug(
         "receiveDanglingMessages()",
-        "now hold "
+        "Now hold "
           << _remoteNewEvents.size() << " new remote events and " << _committedEvents.size()
           << " committed events (valid for this traversal)"
       );
@@ -110,7 +108,7 @@ void exahype2::RefinementControlService::finishStep() {
   if (not _committedEvents.empty()) {
     logDebug(
       "finishStep()",
-      "activate "
+      "Activate "
         << _committedEvents.size()
         << " refinement/erase instructions (can be taken into account in next grid sweep). Keep "
         << _localNewEvents.size() << " local event(s) to be re-delivered later (max lifetime " << maxLifetime
@@ -156,7 +154,7 @@ void exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() {
   _sendRequests.clear();
 
   logDebug(
-    "triggerSendOfCopyOfCommittedEvents()", "share my " << _copyOfCommittedEvents.size() << " event(s) with others"
+    "triggerSendOfCopyOfCommittedEvents()", "Share my " << _copyOfCommittedEvents.size() << " event(s) with others"
   );
   if (_copyOfCommittedEvents.size() > 0) {
     _sendRequests = std::vector<MPI_Request*>(tarch::mpi::Rank::getInstance().getNumberOfRanks(), nullptr);

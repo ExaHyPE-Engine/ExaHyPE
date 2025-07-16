@@ -34,7 +34,7 @@ tarch::la::Vector<Dimensions,double>  exahype2::dg::getQuadraturePoint(
   const tarch::la::Vector<Dimensions,double>&  cellCentre,
   const tarch::la::Vector<Dimensions,double>&  cellSize,
   const tarch::la::Vector<Dimensions,int>&     index,
-  int                                 polynomialOrder,
+  int                                 /*polynomialOrder*/,
   const T* __restrict__          quadraturePoints
 ) {
   tarch::la::Vector<Dimensions,double> result;

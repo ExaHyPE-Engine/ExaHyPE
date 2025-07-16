@@ -61,6 +61,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 #ifndef SharedMemoryParallelisation
 
 bool tarch::multicore::Core::init() {
+  _numberOfThreads = 1;
   return isInitialised();
 }
 
@@ -68,7 +69,7 @@ void tarch::multicore::Core::shutdown() {}
 
 bool tarch::multicore::Core::isInitialised() const { return true; }
 
-int tarch::multicore::Core::getNumberOfThreads() const { return 1; }
+int tarch::multicore::Core::getNumberOfThreads() const { return _numberOfThreads; }
 
 int tarch::multicore::Core::getCoreNumber() const {
 #ifdef CompilerHasSysinfo

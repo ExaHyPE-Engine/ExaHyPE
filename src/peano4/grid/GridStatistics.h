@@ -53,8 +53,6 @@ struct peano4::grid::GridStatistics {
     void   setMinH(const tarch::la::Vector<Dimensions,double>& value);
     double   getMinH(int index) const;
     void   setMinH(int index, double value);
-    GridStatistics(const GridStatistics& copy) = default;
-
 
     #ifdef Parallel
     /**

@@ -34,6 +34,7 @@ public:
     const tarch::la::Vector<Dimensions, double>& __h
   );
   GridControlEvent(const GridControlEvent& copy) = default;
+  ~GridControlEvent() = default;
 
   inline peano4::grid::GridControlEvent::RefinementControl getRefinementControl() const { return _refinementControl; }
   inline void setRefinementControl(RefinementControl value) { _refinementControl = value; }

@@ -246,13 +246,14 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
             d["ASPECT_INCLUDES"] += filtered_includes+ "\n"
         d["CONSTRUCTOR_ARGUMENTS"] = self._get_constructor_arguments()
         if self.__use_default_copy_constructor():
-            d["METHOD_DECLARATIONS"] += (
-                "    "
-                + dastgen2.get_unqualified_class_name(self._full_qualified_name)
-                + "(const "
-                + dastgen2.get_unqualified_class_name(self._full_qualified_name)
-                + "& copy) = default;"
-            )
+            pass
+            # d["METHOD_DECLARATIONS"] += (
+            #     "    "
+            #     + dastgen2.get_unqualified_class_name(self._full_qualified_name)
+            #     + "(const "
+            #     + dastgen2.get_unqualified_class_name(self._full_qualified_name)
+            #     + "& copy) = default;"
+            # )
         else:
             d["METHOD_DECLARATIONS"] += (
                 "    "

@@ -12,7 +12,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
   Flux                                           flux,
   NonConservativeProduct                         nonconservativeProduct,
   Source                                         source,
-  PointSources                                   pointSources,
+  PointSources                                   /*pointSources*/,
   const double* __restrict__                     quadratureNodes,
   const double* __restrict__                     massMatrixDiagonal,
   const double* __restrict__                     stiffnessMatrix,
@@ -20,7 +20,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
   bool                                           evaluateFlux,
   bool                                           evaluateNonconservativeProduct,
   bool                                           evaluateSource,
-  bool                                           evaluatePointSources
+  bool                                           /*evaluatePointSources*/
 ) {
   exahype2::enumerator::AoSLexicographicEnumerator enumeratorIn(
     1,           // number of cells in one memory chunk
@@ -53,7 +53,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
 
     const int nodesPerAxis = order+1;
     const int strideQ=unknowns+auxiliaryVariables;
-    const int nodesPerCell = getNodesPerCell(nodesPerAxis);
+    //const int nodesPerCell = getNodesPerCell(nodesPerAxis);
 
     dfor( dof, order+1 ) {
       for(int var=0; var<unknowns; var++){
@@ -259,7 +259,7 @@ void exahype2::dg::multiplyWithInvertedMassMatrix_GaussLegendre(
   ::exahype2::CellData<double, double>&          cellData,
   const int                                      order,
   const int                                      unknowns,
-  const int                                      auxiliaryVariables,
+  const int                                      /*auxiliaryVariables*/,
   const double* __restrict__                     massMatrixDiagonal1d
 ) {
   exahype2::enumerator::AoSLexicographicEnumerator enumerator(

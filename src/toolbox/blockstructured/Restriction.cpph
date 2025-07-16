@@ -199,7 +199,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_second_order(
   const int                normal = marker.getSelectedFaceNumber() % Dimensions;
   T*                       stencilCenterValues = new T[unknowns];
   tarch::la::DynamicMatrix A(2, 2);
-  int                      row = 0;
+  //int                      row = 0;
 
   A(0, 0) = 1.0 / 3.0;
   A(0, 1) = 1.0 / 18.0;
@@ -252,7 +252,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_second_order(
 
   dfor(kCoarse, faceDimensions){
     tarch::la::Vector<Dimensions, int> fineCenter = kCoarse * 3 + tarch::la::Vector<Dimensions, int>(1) + fineDataStart;
-    fineCenter(normal) = (marker.getSelectedFaceNumber() < Dimensions xor swapInsideOutside) ? overlap + 1: overlap - 2;
+    fineCenter(normal) = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ? overlap + 1: overlap - 2;
 
     int centerIndex = serialiseVoxelIndexInOverlap(
       fineCenter,
@@ -303,10 +303,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_second_order(
 
     tarch::la::DynamicMatrix coarseMatrix(overlap, 2);
     for (int i = 0; i < overlap; i++) {
-      int distance = (marker.getSelectedFaceNumber() < Dimensions
-                      xor swapInsideOutside)
-                       ? i * 3 + 3 - overlap
-                       : overlap - 3 - i * 3;
+      int distance = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ? i * 3 + 3 - overlap : overlap - 3 - i * 3;
 
       coarseMatrix(i, 0) = (1.0 / 3.0) * distance;
       coarseMatrix(i, 1) = (1.0 / 18.0) * distance * distance;
@@ -314,10 +311,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_second_order(
     tarch::la::DynamicMatrix coarseValues = coarseMatrix * derivatives;
     for (int i = 0; i < overlap; i++) {
       tarch::la::Vector<Dimensions, int> coarseCell = kCoarse + coarseStart;
-      coarseCell(normal
-      ) = (marker.getSelectedFaceNumber() < Dimensions xor swapInsideOutside)
-            ? i + overlap
-            : overlap - i - 1;
+      coarseCell(normal) = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ? i + overlap : overlap - i - 1;
       int index = serialiseVoxelIndexInOverlap(
         coarseCell,
         numberOfDoFsPerAxisInPatch,
@@ -348,7 +342,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_third_order(
   T*        stencilCenterValues = new T[unknowns];
 
   tarch::la::DynamicMatrix A(3, 3);
-  int                      row = 0;
+  //int                      row = 0;
 
   A(0, 0) = 1.0 / 3.0;
   A(0, 1) = 1.0 / 18.0;
@@ -432,13 +426,8 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_third_order(
   faceDimensions(normal)                            = (overlap - 1) / 3 + 1;
 
   dfor(kCoarse, faceDimensions) {
-    tarch::la::Vector<Dimensions, int>
-      fineCenter = kCoarse * 3 + tarch::la::Vector<Dimensions, int>(1)
-                   + fineDataStart;
-    fineCenter(normal
-    ) = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside)
-          ? overlap + 1
-          : overlap - 2;
+    tarch::la::Vector<Dimensions, int> fineCenter = kCoarse * 3 + tarch::la::Vector<Dimensions, int>(1) + fineDataStart;
+    fineCenter(normal) = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ? overlap + 1 : overlap - 2;
 
     int centerIndex = serialiseVoxelIndexInOverlap(
       fineCenter,
@@ -504,10 +493,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_third_order(
 
     tarch::la::DynamicMatrix coarseMatrix(overlap, 3);
     for (int i = 0; i < overlap; i++) {
-      int distance       = ((marker.getSelectedFaceNumber() < Dimensions)
-                      xor swapInsideOutside)
-                             ? i * 3 + 3 - overlap
-                             : overlap - 3 - i * 3;
+      int distance = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ? i * 3 + 3 - overlap : overlap - 3 - i * 3;
       coarseMatrix(i, 0) = (1.0 / 3.0) * distance;
       coarseMatrix(i, 1) = (1.0 / 18.0) * distance * distance;
       coarseMatrix(i, 2) = (1.0 / 162.0) * distance * distance * distance;
@@ -516,10 +502,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_third_order(
     tarch::la::DynamicMatrix coarseValues = coarseMatrix * derivatives;
     for (int i = 0; i < overlap; i++) {
       tarch::la::Vector<Dimensions, int> coarseCell = kCoarse + coarseStart;
-      coarseCell(normal
-      ) = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside)
-            ? i + overlap
-            : overlap - i - 1;
+      coarseCell(normal) = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ? i + overlap : overlap - i - 1;
       int index = serialiseVoxelIndexInOverlap(
         coarseCell,
         numberOfDoFsPerAxisInPatch,
@@ -555,12 +538,9 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_matrix(
     numberOfDoFsPerAxisInPatch
   );
 
-  const int normal        = marker.getSelectedFaceNumber() % Dimensions;
-  const int matrixColumns = 2 * overlap
-                            * std::
-                              pow(numberOfDoFsPerAxisInPatch, Dimensions - 1);
-  const int matrixRows = overlap
-                         * std::pow(numberOfDoFsPerAxisInPatch, Dimensions - 1);
+  const int normal = marker.getSelectedFaceNumber() % Dimensions;
+  const int matrixColumns = 2 * overlap * std:: pow(numberOfDoFsPerAxisInPatch, Dimensions - 1);
+  //const int matrixRows = overlap * std::pow(numberOfDoFsPerAxisInPatch, Dimensions - 1);
 
   const int i = (normal + 1) % Dimensions;
 #if Dimensions == 3
@@ -593,10 +573,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_matrix(
       overlap,
       normal
     );
-    int newIndex = (marker.getSelectedFaceNumber() < Dimensions
-                    xor swapInsideOutside)
-                     ? kFine(normal)
-                     : 2 * overlap - kFine(normal) - 1;
+    int newIndex = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ? kFine(normal) : 2 * overlap - kFine(normal) - 1;
     int base     = overlap * 2;
     for (int d = 1; d < Dimensions; d++) {
       newIndex += kFine((normal + d) % Dimensions) * base;
@@ -610,8 +587,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_matrix(
 
   dfor(kCoarse, coarseFaceDimensions) {
     auto coarseCoords = kCoarse + coarseStart;
-    coarseCoords(normal
-    ) = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside)
+    coarseCoords(normal) = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside)
           ? overlap + kCoarse(normal)
           : overlap - kCoarse(normal) - 1;
     int coarseIndex = serialiseVoxelIndexInOverlap(
@@ -698,11 +674,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       dfore(kFine, numberOfDoFsPerAxisInPatch, normal, 0) {
         for (int iFine = 0; iFine < 2 * overlap; iFine++) {
           tarch::la::Vector<Dimensions, int> src = kFine;
-          src(normal
-          )                 = ((marker.getSelectedFaceNumber() < Dimensions)
-               xor swapInsideOutside)
-                                ? iFine
-                                : 2 * overlap - iFine - 1;
+          src(normal) = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ? iFine : 2 * overlap - iFine - 1;
           int srcLinearised = serialiseVoxelIndexInOverlap(
             src,
             numberOfDoFsPerAxisInPatch,
@@ -1128,16 +1100,11 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
   bool mapFromInnerHalfOfHalo
     = not swapInsideOutside; // mapOuterCoarseGridHaloOntoInnerFineGridHalo
   const int normal = marker.getSelectedFaceNumber() % Dimensions;
-  T scaleFineGridVolume = std::pow(3.0, -static_cast<double>(Dimensions - 1))
-                               / std::min(3.0, static_cast<double>(overlap));
-  const bool pickLeftHalfOfHalo = (marker.getSelectedFaceNumber() < Dimensions)
-                                  xor mapFromInnerHalfOfHalo;
+  T scaleFineGridVolume = std::pow(3.0, -static_cast<double>(Dimensions - 1)) / std::min(3.0, static_cast<double>(overlap));
+  const bool pickLeftHalfOfHalo = (marker.getSelectedFaceNumber() < Dimensions) xor mapFromInnerHalfOfHalo;
 
-  const double volumeHCoarse = marker.h()(0)
-                               / static_cast<double>(numberOfDoFsPerAxisInPatch)
-                               * 3.0;
-  const double volumeHFine = marker.h()(0)
-                             / static_cast<double>(numberOfDoFsPerAxisInPatch);
+  const double volumeHCoarse = marker.h()(0) / static_cast<double>(numberOfDoFsPerAxisInPatch) * 3.0;
+  const double volumeHFine = marker.h()(0) / static_cast<double>(numberOfDoFsPerAxisInPatch);
 
   tarch::la::Vector<Dimensions, double> leftBottomCornerOfHaloFine = marker.x();
   tarch::la::Vector<Dimensions, double> leftBottomCornerOfHaloCoarse = marker.x(
@@ -1245,9 +1212,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_inject(
   assertion1(overlap == 1 or overlap % 3 == 1, overlap);
 
   const int  normal = marker.getSelectedFaceNumber() % Dimensions;
-  const bool pickLeftHalfOfHaloOnFineGrid = (marker.getSelectedFaceNumber()
-                                             >= Dimensions)
-                                            xor swapInsideOutside;
+  const bool pickLeftHalfOfHaloOnFineGrid = (marker.getSelectedFaceNumber() >= Dimensions) xor swapInsideOutside;
 
   dfore(kFine, numberOfDoFsPerAxisInPatch, normal, 0) {
     tarch::la::Vector<Dimensions, int> fineVolume                = kFine;
@@ -1325,8 +1290,7 @@ void toolbox::blockstructured::internal::clearHalfOfHaloLayerAoS(
   T*                                        value
 ) {
   const int  normal = marker.getSelectedFaceNumber() % Dimensions;
-  const bool left   = (marker.getSelectedFaceNumber() < Dimensions)
-                    xor clearInnerPart;
+  const bool left   = (marker.getSelectedFaceNumber() < Dimensions) xor clearInnerPart;
 
   // clear fine grid data structure
   dfore(k, numberOfDoFsPerAxisInPatch, normal, 0) {

@@ -146,8 +146,8 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
           *              interface.
           * @param value Value for the cell.
           */
-        void plotCell( int index, double  value  );
-        void plotCell( int index, double* values );
+        virtual void plotCell( int index, double  value  ) override;
+        virtual void plotCell( int index, double* values ) override;
 
         template<typename T>
         void plotCell( int index, T value );

@@ -81,22 +81,22 @@ void exahype2::fv::internal::projectValuesOntoParticle_piecewiseLinear(
 
 template <typename Particle>
 void exahype2::fv::internal::projectValuesOntoParticle_piecewiseConstant(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const double* __restrict__ Q,
-  Particle& particle,
-  int       destinationIndex
+  const peano4::datamanagement::CellMarker& /*marker*/,
+  int                                       /*voxelsPerAxis*/,
+  int                                       /*unknownsPerVoxel*/,
+  const double* __restrict__ /*Q*/,
+  Particle& /*particle*/,
+  int       /*destinationIndex*/
 ) {}
 
 template <typename Particle>
 void exahype2::fv::internal::projectValuesOntoParticle_piecewiseLinear(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const double* __restrict__ Q,
-  Particle& particle,
-  int       destinationIndex
+  const peano4::datamanagement::CellMarker& /*marker*/,
+  int                                       /*voxelsPerAxis*/,
+  int                                       /*unknownsPerVoxel*/,
+  const double* __restrict__ /*Q*/,
+  Particle& /*particle*/,
+  int       /*destinationIndex*/
 ) {}
 
 template <int SourceIndex, int DestIndex, typename Particle>

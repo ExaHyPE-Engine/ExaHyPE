@@ -370,7 +370,7 @@ OpenMP for the multithreading support. All required flags are automatically adde
 mkdir build && cd build
 
 # Configure Peano with whatever we need
-CC=gcc CXX=g++ cmake .. -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON -DWITH_MULTITHREADING=omp
+CC=gcc CXX=g++ cmake .. -DENABLE_EXTENSION_EXAHYPE=ON -DENABLE_TOOLBOX_LOADBALANCING=ON -DENABLE_TOOLBOX_BLOCKSTRUCTURED=ON -DWITH_MULTITHREADING=omp
 
 # Compile and check build. You might want to add -jX to build on X cores in parallel
 echo "Starting compilation"

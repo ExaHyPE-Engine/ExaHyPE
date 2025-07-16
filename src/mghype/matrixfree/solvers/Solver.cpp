@@ -15,8 +15,8 @@ mghype::matrixfree::solvers::Solver::Solver(
   const std::string&  name,
   double              tolerance
 ):
-  _name(name),
-  SolverStatistics(tolerance) {
+  SolverStatistics(tolerance),
+  _name(name) {
   const std::string      prefix = "Abstract";
   std::string::size_type index  = _name.find( prefix );
   if (index!=std::string::npos) {

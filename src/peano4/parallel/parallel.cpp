@@ -5,7 +5,7 @@
 #include "tarch/logging/Log.h"
 #include "tarch/mpi/Rank.h"
 
-int peano4::parallel::getTaskType(const std::string& className) {
+int peano4::parallel::getTaskType([[maybe_unused]] const std::string& className) {
   static int taskTypeCounter = -1;
   taskTypeCounter++;
 

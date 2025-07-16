@@ -47,7 +47,7 @@ namespace exahype2 {
      * its kth unknown. Pass in {-1,0,0} for example to access the left
      * neighbour of a cell.
      */
-    const double* __restrict__ operator()(const tarch::la::Vector<Dimensions, int>& relativeCellPosition) const;
+    const double* operator()(const tarch::la::Vector<Dimensions, int>& relativeCellPosition) const;
     double operator()(const tarch::la::Vector<Dimensions, int>& relativeCellPosition, int unknown) const;
 
     double centre(int unknown) const;
@@ -56,8 +56,8 @@ namespace exahype2 {
      * Return access to the left neighbour. Left means left along coordinate
      * axis normal.
      */
-    const double* __restrict__ left(int normal) const;
-    const double* __restrict__ right(int normal) const;
+    const double* left(int normal) const;
+    const double* right(int normal) const;
 
     double left(int normal, int unknown) const;
     double right(int normal, int unknown) const;
