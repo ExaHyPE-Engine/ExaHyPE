@@ -210,7 +210,7 @@ namespace {
     double*                                   QDifferentialSourceTermGathered
   ) {
     double* AdvectionDeltaQ = new double[QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables];
-    double AdvectionDeltaTem;
+    //double AdvectionDeltaTem;
 
     tarch::la::Vector<Dimensions, int> centralVolume        = volumeIndex;
     tarch::la::Vector<Dimensions, int> leftAdjacentVolume1  = volumeIndex;
@@ -300,7 +300,7 @@ template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::fd4::internal::computeAuxiliaryVariables_LoopBody(
   double* __restrict__ QIn,
   const QInEnumeratorType&                     QInEnumerator,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
+  const tarch::la::Vector<Dimensions, double>& /*patchCentre*/,
   const tarch::la::Vector<Dimensions, double>& patchSize,
   int                                          patchIndex,
   const tarch::la::Vector<Dimensions, int>&    volumeIndex,
@@ -626,17 +626,17 @@ template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::fd4::internal::computeKreissOligerDissipationTerm_LoopBody(
   const double* __restrict__ QIn,
   const QInEnumeratorType&                     QInEnumerator,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
+  const tarch::la::Vector<Dimensions, double>& /*patchCentre*/,
+  const tarch::la::Vector<Dimensions, double>& /*patchSize*/,
   int                                          patchIndex,
   const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-  double                                       t,
-  double                                       dt,
+  double                                       /*t*/,
+  double                                       /*dt*/,
   int                                          normal,
   double* __restrict__ QKODsp,
   const QOutEnumeratorType& QKODspEnumerator
 ) {
-  double KOGathered[QInEnumerator._numberOfUnknowns];
+  double* KOGathered = new double[QInEnumerator._numberOfUnknowns];
 
   tarch::la::Vector<Dimensions, int> centralVolume        = volumeIndex;
   tarch::la::Vector<Dimensions, int> leftAdjacentVolume1  = volumeIndex;
@@ -675,6 +675,8 @@ void exahype2::fd::fd4::internal::computeKreissOligerDissipationTerm_LoopBody(
   for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
     QKODsp[QKODspEnumerator(patchIndex, volumeIndex, unknown)] = KOGathered[unknown];
   }
+
+  delete[] KOGathered;
 }
 
 template <typename QOutEnumeratorType>
@@ -683,7 +685,7 @@ void exahype2::fd::fd4::internal::updateSolutionWithDifferentialSourceTerm_LoopB
   const double* __restrict__ QDiffSrcY,
   const double* __restrict__ QDiffSrcZ,
   const QOutEnumeratorType&                    QDiffSrcEnumerator,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
+  const tarch::la::Vector<Dimensions, double>& /*patchCentre*/,
   const tarch::la::Vector<Dimensions, double>& patchSize,
   int                                          patchIndex,
   const tarch::la::Vector<Dimensions, int>&    volumeIndex,
@@ -728,7 +730,7 @@ void exahype2::fd::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
   const double* __restrict__ QKODspY,
   const double* __restrict__ QKODspZ,
   const QOutEnumeratorType&                    QKODspEnumerator,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
+  const tarch::la::Vector<Dimensions, double>& /*patchCentre*/,
   const tarch::la::Vector<Dimensions, double>& patchSize,
   int                                          patchIndex,
   const tarch::la::Vector<Dimensions, int>&    volumeIndex,
@@ -1029,8 +1031,8 @@ void exahype2::fd::fd4::internal::updateSolutionWithFlux_LoopBody(
   const double* __restrict__ QFluxY,
   const double* __restrict__ QFluxZ,
   const QOutEnumeratorType&                    QFluxEnumerator,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
+  const tarch::la::Vector<Dimensions, double>& /*patchCentre*/,
+  const tarch::la::Vector<Dimensions, double>& /*patchSize*/,
   int                                          patchIndex,
   const tarch::la::Vector<Dimensions, int>&    volumeIndex,
   int                                          unknown,
@@ -1038,7 +1040,7 @@ void exahype2::fd::fd4::internal::updateSolutionWithFlux_LoopBody(
   double* __restrict__ QOut,
   const QOutEnumeratorType& QOutEnumerator
 ) {
-  auto updateAlongOneCoordinateDirection = [=](const double* __restrict__ QFlux, int normal) {
+  auto updateAlongOneCoordinateDirection = [=](const double* __restrict__ QFlux, int /*normal*/) {
     // F here is defined on the LEFT of the equation.
     double QFluxterm = QFlux[QFluxEnumerator(patchIndex, volumeIndex, unknown)];
     // take care we have an extra minus sign because we moved the terms to the RIGHT!

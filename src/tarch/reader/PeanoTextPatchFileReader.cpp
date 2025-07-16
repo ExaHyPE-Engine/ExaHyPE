@@ -6,10 +6,10 @@ void tarch::reader::readInCheckpointFiles(
   const std::vector<std::string>&  checkpointFilesOfSolver,
   std::vector<double>&             domainDataFromFiles,
   std::vector<double>&             offsetIndex,
-  int numberOfUnknowns,
-  int numberOfAuxiliaries,
-  int dimension,
-  int patchSize
+  int /*numberOfUnknowns*/,
+  int /*numberOfAuxiliaries*/,
+  int /*dimension*/,
+  int /*patchSize*/
 ) {
   domainDataFromFiles.clear();
   offsetIndex.clear();

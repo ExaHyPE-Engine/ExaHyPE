@@ -89,24 +89,26 @@ void tarch::reader::NetCDFFieldParser::parseTopologyFile(const char* topologyFil
 
   // Get max and min x
   {
-    double tmp[_lengthOfTopologyInX];
+    double* tmp = new double[_lengthOfTopologyInX];
     std::memset(tmp, 0, _lengthOfTopologyInX * sizeof(double));
     if (_netCDFFileReader.readVariable1D(ncid, _ncTopologyKeyX, tmp) == -1) {
       throw std::runtime_error("Topology x-indices could not be read.");
     }
     _minXCoordinateInTopology = tmp[0];
     _maxXCoordinateInTopology = tmp[_lengthOfTopologyInX - 1];
+    delete[] tmp;
   }
 
   // Get max and min y
   {
-    double tmp[_lengthOfTopologyInY];
+    double* tmp = new double[_lengthOfTopologyInY];
     std::memset(tmp, 0, _lengthOfTopologyInY * sizeof(double));
     if (_netCDFFileReader.readVariable1D(ncid, _ncTopologyKeyY, tmp) == -1) {
       throw std::runtime_error("Topology y-indices could not be read.");
     }
     _minYCoordinateInTopology = tmp[0];
     _maxYCoordinateInTopology = tmp[_lengthOfTopologyInY - 1];
+    delete[] tmp;
   }
 
   // Read topology
@@ -144,24 +146,26 @@ void tarch::reader::NetCDFFieldParser::parseDisplacementFile(const char* displac
 
   // Get max and min x
   {
-    double tmp[_lengthOfDisplacementInX];
+    double* tmp = new double[_lengthOfDisplacementInX];
     std::memset(tmp, 0, _lengthOfDisplacementInX * sizeof(double));
     if (_netCDFFileReader.readVariable1D(ncid, _ncDisplacementKeyX, tmp) == -1) {
       throw std::runtime_error("Displacement x-indices could not be read.");
     }
     _minXCoordinateInDisplacement = tmp[0];
     _maxXCoordinateInDisplacement = tmp[_lengthOfDisplacementInX - 1];
+    delete[] tmp;
   }
 
   // Get max and min y
   {
-    double tmp[_lengthOfDisplacementInY];
+    double* tmp = new double[_lengthOfDisplacementInY];
     std::memset(tmp, 0, _lengthOfDisplacementInY * sizeof(double));
     if (_netCDFFileReader.readVariable1D(ncid, _ncDisplacementKeyY, tmp) == -1) {
       throw std::runtime_error("Displacement y-indices could not be read.");
     }
     _minYCoordinateInDisplacement = tmp[0];
     _maxYCoordinateInDisplacement = tmp[_lengthOfDisplacementInY - 1];
+    delete[] tmp;
   }
 
   // Read displacement

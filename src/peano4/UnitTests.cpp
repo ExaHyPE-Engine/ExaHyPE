@@ -6,7 +6,9 @@
 #include "peano4/grid/tests/GridTraversalEventGeneratorTest.h"
 #include "peano4/grid/tests/SpacetreeTest.h"
 #include "peano4/parallel/tests/NodeTest.h"
+#ifdef Parallel
 #include "peano4/parallel/tests/PingPongTest.h"
+#endif
 #include "peano4/utils/tests/LinearisedTest.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 
@@ -18,7 +20,9 @@ tarch::tests::TestCase* peano4::getUnitTests() {
   result->addTestCase(new peano4::grid::tests::GridTraversalEventGeneratorTest());
 
   result->addTestCase(new peano4::parallel::tests::NodeTest());
+#ifdef Parallel
   result->addTestCase(new peano4::parallel::tests::PingPongTest());
+#endif
 
   result->addTestCase(new peano4::utils::tests::LinearisedTest());
 

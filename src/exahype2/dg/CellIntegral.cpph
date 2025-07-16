@@ -13,7 +13,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
   bool                                           evaluateFlux,
   bool                                           evaluateNonconservativeProduct,
   bool                                           evaluateSource,
-  bool                                           evaluatePointSources
+  bool                                           /*evaluatePointSources*/
 ) {
   exahype2::enumerator::AoSLexicographicEnumerator enumeratorIn(
     1,           // number of cells in one memory chunk
@@ -41,7 +41,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
 
     const int nodesPerAxis = order+1;
     const int strideQ=unknowns+auxiliaryVariables;
-    const int nodesPerCell = getNodesPerCell(nodesPerAxis);
+    //const int nodesPerCell = getNodesPerCell(nodesPerAxis);
 
     dfor( dof, order+1 ) {
       double fluxValues[unknowns];

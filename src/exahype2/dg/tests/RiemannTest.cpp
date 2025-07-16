@@ -146,7 +146,7 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
 }
 
 void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForConstantSolutionOrder0() {
-  const int order        = 0;
+  //const int order        = 0;
 
   double QIn[]     = {0.1,0.2,0.3,0.4,0.5};
   double leftQ[]   = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};

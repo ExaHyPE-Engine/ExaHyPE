@@ -57,7 +57,13 @@ class peano4::maps::HierarchicalStackMap {
 
   public:
     HierarchicalStackMap();
-    ~HierarchicalStackMap();
+    ~HierarchicalStackMap() {
+      for (auto& p: _data) {
+        for (auto& pp: p._stackNumberToData) {
+          delete pp.second;
+        }
+      }
+    }
 
     bool empty(int treeId, int stackId) const;
 
@@ -212,22 +218,10 @@ std::set<peano4::maps::StackKey>  peano4::maps::HierarchicalStackMap<T>::getKeys
   return result;
 }
 
-
-template <typename T>
-peano4::maps::HierarchicalStackMap<T>::~HierarchicalStackMap() {
-  for (auto& p: _data) {
-    for (auto& pp: p._stackNumberToData) {
-      delete pp.second;
-    }
-  }
-}
-
-
 template <typename T>
 peano4::maps::HierarchicalStackMap<T>::HierarchicalStackMap():
   _data(peano4::parallel::Node::MaxSpacetreesPerRank) {
 }
-
 
 template <typename T>
 void peano4::maps::HierarchicalStackMap<T>::garbageCollection(int spacetree) {

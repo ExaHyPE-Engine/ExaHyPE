@@ -13,12 +13,12 @@ exahype2::fv::tests::CopyPatchTest::CopyPatchTest():
 void exahype2::fv::tests::CopyPatchTest::run() { testMethod(testCopyPatch); }
 
 void exahype2::fv::tests::CopyPatchTest::testCopyPatch() {
-  constexpr int    NumberOfUnknowns              = 5;
-  constexpr int    NumberOfAuxiliaryVariables    = 2;
+  // constexpr int    NumberOfUnknowns              = 5;
+  // constexpr int    NumberOfAuxiliaryVariables    = 2;
   constexpr int    NumberOfVolumesPerAxisInPatch = 17;
   constexpr int    HaloSize                      = 1;
-  double*          QinWithHalo                   = nullptr;
-  double*          QOutWithoutHalo               = nullptr;
+  // double*          QinWithHalo                   = nullptr;
+  // double*          QOutWithoutHalo               = nullptr;
   std::vector<int> source{}, dest{}, source2{}, dest2{};
 
   dfor(k, NumberOfVolumesPerAxisInPatch) {
@@ -30,7 +30,7 @@ void exahype2::fv::tests::CopyPatchTest::testCopyPatch() {
   }
 
 #if Dimensions == 2
-  constexpr int SourceSerialised = NumberOfVolumesPerAxisInPatch + 3 * HaloSize;
+  //constexpr int SourceSerialised = NumberOfVolumesPerAxisInPatch + 3 * HaloSize;
   constexpr int Offset           = NumberOfVolumesPerAxisInPatch;
   for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
     for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {

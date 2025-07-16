@@ -143,25 +143,9 @@ namespace exahype2 {
         ) InlineMethod;
 
         template <class QOutEnumeratorType>
-        static double reduceMaxEigenvalue_LoopBody(
+        inline static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QOut,
           const QOutEnumeratorType&                    QOutEnumerator,
-          exahype2::fd::MaxEigenvalue                  maxEigenvalue,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
-          int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-          double                                       t,
-          double                                       dt
-        ) InlineMethod;
-
-        /**
-         * Specialisation without the gather.
-         */
-        template <>
-        double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QOut,
-          const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
           exahype2::fd::MaxEigenvalue                  maxEigenvalue,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -175,7 +159,7 @@ namespace exahype2 {
          * Overloaded version with static function calls.
          */
         template <typename Solver, class QOutEnumeratorType>
-        static double reduceMaxEigenvalue_LoopBody(
+        inline static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QOut,
           const QOutEnumeratorType&                    QOutEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
@@ -193,6 +177,22 @@ namespace exahype2 {
         static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QOut,
           const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt
+        ) InlineMethod;
+
+        /**
+         * Specialisation without the gather.
+         */
+        template <>
+        inline double reduceMaxEigenvalue_LoopBody(
+          const double* __restrict__                   QOut,
+          const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
+          exahype2::fd::MaxEigenvalue                  maxEigenvalue,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,

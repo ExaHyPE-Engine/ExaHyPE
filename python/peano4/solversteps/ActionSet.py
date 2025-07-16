@@ -127,26 +127,6 @@ class ActionSet(object):
 
     @abstractmethod
     def get_constructor_body(self):
-        """! Define a tailored constructor body
-
-        By default, the constructor of an action set is empty. If you you assign
-        attributes to your action set, you however might want to initialise them
-        here. We do not support initialisation lists, to all has to be done via
-        setters unless you create attributes on the heap.
-
-        The constructor's signature will look similar to
-
-
-               EnumerateAndInitSolution2petsc_actionsets_InitVertexDoFs0(int treeNumber);
-
-
-        where the treeNumber is -1 if this is the global instance of the
-        action set owned by a rank, or a number greater or equal 0 if this action
-        set is a clone of the glocal action set that's used by one tree traversal.
-
-        @see get_attributes() to add attributes to your action set
-
-        """
         return "// @todo Should be overwritten\n"
 
     def get_static_initialisations(self, full_qualified_classname):

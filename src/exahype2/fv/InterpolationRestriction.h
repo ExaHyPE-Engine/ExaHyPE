@@ -73,7 +73,7 @@ namespace toolbox {
       double* __restrict__ fineGridFaceValues
     ) {
       int normal = marker.getSelectedFaceNumber() % 3;
-      int patchIndexLinear = (Dimensions == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) : marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) * 3 + marker.getRelativePositionWithinFatherCell()((normal + 2) % Dimensions);
+      //int patchIndexLinear = (Dimensions == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) : marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) * 3 + marker.getRelativePositionWithinFatherCell()((normal + 2) % Dimensions);
 
       interpolateHaloLayer_AoS_matrix(
         marker,

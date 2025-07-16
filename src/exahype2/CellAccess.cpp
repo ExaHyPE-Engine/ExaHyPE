@@ -26,7 +26,7 @@ int exahype2::CellAccess::size() const {
 }
 
 
-const double* __restrict__ exahype2::CellAccess::operator()(
+const double* exahype2::CellAccess::operator()(
   const tarch::la::Vector<Dimensions, int>& relativeCellPosition
 ) const {
   if constexpr (Dimensions == 2) {
@@ -48,14 +48,14 @@ double exahype2::CellAccess::operator()(const tarch::la::Vector<Dimensions, int>
 }
 
 
-const double* __restrict__ exahype2::CellAccess::left(int normal) const {
+const double* exahype2::CellAccess::left(int normal) const {
   tarch::la::Vector<Dimensions, int> relativePosition(0);
   relativePosition(normal) = -1;
   return (*this)(relativePosition);
 }
 
 
-const double* __restrict__ exahype2::CellAccess::right(int normal) const {
+const double* exahype2::CellAccess::right(int normal) const {
   tarch::la::Vector<Dimensions, int> relativePosition(0);
   relativePosition(normal) = 1;
   return (*this)(relativePosition);

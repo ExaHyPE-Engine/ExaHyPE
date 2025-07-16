@@ -9,7 +9,7 @@ For a general overview and all options on how to retrieve and configure the proj
     cd myPeanoDirectory
     pip3 install -e .
     mkdir build && cd build
-    CC=gcc CXX=g++ cmake .. -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON
+    CC=gcc CXX=g++ cmake .. -DENABLE_EXTENSION_EXAHYPE=ON -DENABLE_TOOLBOX_LOADBALANCING=ON -DENABLE_TOOLBOX_BLOCKSTRUCTURED=ON
     make -j && make test
     cd ../applications/exahype2/navier-stokes/scenario/
     python3 scenario.py

@@ -23,14 +23,6 @@
 #include "toolbox/blockstructured/UnitTests.h"
 #endif
 
-#ifdef UseToolboxFiniteElements
-#include "toolbox/finiteelements/UnitTests.h"
-#endif
-
-#ifdef UseToolboxMultiprecision
-#include "toolbox/multiprecision/UnitTests.h"
-#endif
-
 #ifdef UseToolboxParticles
 #include "toolbox/particles/assignmentchecks/UnitTests.h"
 #include "toolbox/particles/UnitTests.h"
@@ -62,20 +54,6 @@ int runTests() {
 
 #ifdef UseToolboxBlockstructured
   tests = toolbox::blockstructured::getUnitTests();
-  tests->run();
-  unitTestsErrors += tests->getNumberOfErrors();
-  delete tests;
-#endif
-
-#ifdef UseToolboxFiniteElements
-  tests = toolbox::finiteelements::getUnitTests();
-  tests->run();
-  unitTestsErrors += tests->getNumberOfErrors();
-  delete tests;
-#endif
-
-#ifdef UseToolboxMultiprecision
-  tests = toolbox::multiprecision::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;

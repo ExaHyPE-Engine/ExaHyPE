@@ -162,10 +162,10 @@ tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::PeanoHDF5FileWri
 ):
   _hdf5FileName(hdf5FileName),
   _xmfFile(xmfFileName),
+  _hasMapping(false),
   _writtenToFile(false),
   _noIndexFileModeOff(true),
   _dimensions(dimension),
-  _hasMapping(false),
   _patchCounter(0) {
 
   assertion(dimension >= 2);
@@ -425,6 +425,8 @@ std::vector<double> tarch::plotter::griddata::blockstructured::PeanoHDF5FileWrit
   } catch (std::exception& e) {
     logError("readMapping()", "File " << _hdf5FileName << " could not be opened: " << e.what());
   }
+
+  return std::vector<double>();
 }
 
 std::pair<double, double> tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::readOffsetAndSize2(
@@ -438,6 +440,8 @@ std::pair<double, double> tarch::plotter::griddata::blockstructured::PeanoHDF5Fi
   } catch (std::exception& e) {
     logError("readOffsetAndSize2()", "File " << _hdf5FileName << " could not be opened: " << e.what());
   }
+
+  return std::pair<double, double>();
 }
 
 std::tuple<double, double, double> tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::readOffsetAndSize3(
@@ -451,6 +455,8 @@ std::tuple<double, double, double> tarch::plotter::griddata::blockstructured::Pe
   } catch (std::exception& e) {
     logError("readOffsetAndSize3()", "File " << _hdf5FileName << " could not be opened: " << e.what());
   }
+
+  return std::tuple<double, double, double>();
 }
 
 bool tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::writeToFile() {

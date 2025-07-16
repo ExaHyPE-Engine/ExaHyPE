@@ -17,7 +17,7 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::CellDataWri
       for (int unknown = 0; unknown < _numberOfUnknowns; ++unknown) {
         std::vector<float> separated_values;
 
-        for (size_t i = unknown; i < _cardinality; i += _numberOfUnknowns) {
+        for (int i = unknown; i < _cardinality; i += _numberOfUnknowns) {
           separated_values.push_back((float)values[i]);
         }
 

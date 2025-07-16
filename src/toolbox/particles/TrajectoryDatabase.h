@@ -31,13 +31,12 @@ private:
   static tarch::logging::Log _log;
 
   std::string _fileName;
+  double      _timeDelta;
   double      _dataDelta;
   double      _positionDelta;
   double      _maxDataDelta;
   double      _maxPositionDelta;
   int         _numberOfDataPointsPerParticle;
-
-  double _timeDelta;
 
   const int _deltaBetweenTwoDatabaseFlushes;
   int       _thresholdForNextDatabaseFlush;

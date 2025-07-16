@@ -34,8 +34,6 @@ void peano4::utils::tests::LinearisedTest::testLinearisedVectorWithoutLookup() {
   constexpr int                      Max = 3;
   tarch::la::Vector<Dimensions, int> counter(0);
 
-  int expectedIndex = 0;
-
   std::vector<int> limits(Dimensions, Max);
 
   bool done = false;
@@ -171,7 +169,6 @@ void peano4::utils::tests::LinearisedTest::testLinearisedVector() {
   constexpr int                      Max = MaxTable * 2;
   tarch::la::Vector<Dimensions, int> counter(0);
 
-  int              expectedIndex = 0;
   std::vector<int> limits(Dimensions, Max);
 
   bool done = false;

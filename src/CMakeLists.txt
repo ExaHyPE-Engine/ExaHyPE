@@ -22,19 +22,19 @@ add_subdirectory(tarch)
 add_subdirectory(peano4)
 add_subdirectory(toolbox)
 
-if(WITH_PETSC)
-  add_subdirectory(petsc)
-endif()
+# if(WITH_PETSC)
+#   add_subdirectory(petsc)
+# endif()
 
-if(ENABLE_EXAHYPE)
+if(ENABLE_EXTENSION_EXAHYPE)
   add_subdirectory(exahype2)
 endif()
 
-if(ENABLE_MGHYPE)
+if(ENABLE_EXTENSION_MGHYPE)
   add_subdirectory(mghype)
 endif()
 
-if(ENABLE_SWIFT)
+if(ENABLE_EXTENSION_SWIFT)
   add_subdirectory(swift2)
 endif()
 

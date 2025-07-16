@@ -178,15 +178,6 @@ void tarch::logging::Statistics::writeToCSV([[maybe_unused]] std::string filenam
 
   filename += ".csv";
 
-  // only for stats
-  int totalNumberOfEntries = 0;
-  for (auto& p: _dataSetMap) {
-    totalNumberOfEntries += p.second._data.size();
-  }
-  for (auto& p: _logMessageMap) {
-    totalNumberOfEntries += p.second._data.size();
-  }
-
   std::ofstream file( filename );
   file << "t";
   for (auto& p: _dataSetMap) {
@@ -262,6 +253,8 @@ void tarch::logging::Statistics::writeToCSV([[maybe_unused]] std::string filenam
   // close output file
   file.close();
   #else
-  logDebug("writeToCSV(string)", "No statistics available. Recompile with -DTrackStatistics for runtime sampling");
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logInfo("writeToCSV()", "No statistics available. Recompile with -DTrackStatistics for runtime sampling.");
+  }
   #endif
 }

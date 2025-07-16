@@ -7,6 +7,39 @@
 #include "tarch/CompilerSpecificSettings.h"
 
 namespace exahype2 {
+  #if defined(GPUOffloadingOMP)
+  #pragma omp declare target
+  #endif
+
+  // Constructs a tarch::la::Vector<N, int> from variadic args
+  template <int N, typename... Args>
+  struct VolumeIndex {
+    static_assert(N > 0, "VolumeIndex<N,...> must have N > 0");
+
+    using VectorType = tarch::la::Vector<N, int>;
+
+    static inline GPUCallableMethod
+    VectorType generate(Args... args) InlineMethod {
+      VectorType result;
+      fillVector<0>(result, args...);  // Start recursion at index 0
+      return result;
+    }
+
+  private:
+    // Recursive fill function
+    template <int I, class FirstArg, class... RestArgs>
+    static inline GPUCallableMethod
+    void fillVector(VectorType& vector, FirstArg arg, RestArgs... rest) InlineMethod {
+      vector(I) = arg;
+      fillVector<I + 1>(vector, rest...);
+    }
+
+    // Termination case
+    template <int I>
+    static inline GPUCallableMethod
+    void fillVector(VectorType&) InlineMethod {}
+  };
+
   /**
    * A lot of the loop routines expect a voxel (or face) index which is
    * a vector over integers. Syntactically, I can just hand over
@@ -23,62 +56,15 @@ namespace exahype2 {
    * loop is to be unrolled. The unrolling happens via template magic, i.e.
    * the compiler takes care of that.
    */
-
-  #if defined(GPUOffloadingOMP)
-  #pragma omp declare target
-  #endif
-  // Base case for recursion
-  template <int N, typename... Args>
-  struct VolumeIndex {
-    using VectorType = tarch::la::Vector<N, int>;
-
-    static inline GPUCallableMethod
-    VectorType generate(Args... args) InlineMethod {
-      VectorType result;
-      fillVector<0>(result, args...); // Start with index 0
-      return result;
-    }
-
-  private:
-    template <int I, class... RestArgs>
-    static inline GPUCallableMethod
-    void fillVector(VectorType& vector, int arg, RestArgs... args) InlineMethod {
-      vector(I) = arg;
-      fillVector<I + 1>(vector, args...);
-    }
-
-    // Termination condition when all arguments are processed
-    template <int I>
-    static inline GPUCallableMethod
-    void fillVector(VectorType&) InlineMethod {}
-  };
-  #if defined(GPUOffloadingOMP)
-  #pragma omp end declare target
-  #endif
-
-  #if defined(GPUOffloadingOMP)
-  #pragma omp declare target
-  #endif
-  // Partial specialisation to handle the base case (N=0)
-  template <class... Args>
-  struct VolumeIndex<0, Args...> {
-    using VectorType = tarch::la::Vector<0, int>;
-    static inline GPUCallableMethod
-    VectorType generate(Args...) InlineMethod { return VectorType(); }
-  };
-  #if defined(GPUOffloadingOMP)
-  #pragma omp end declare target
-  #endif
-
-  #if defined(GPUOffloadingOMP)
-  #pragma omp declare target
-  #endif
+  // Factory function: Deduces N from argument count
   template <class... Args>
   static inline GPUCallableMethod
   auto volumeIndex(Args... args) InlineMethod {
     constexpr int N = sizeof...(args);
+    static_assert(N > 0, "volumeIndex() must be called with at least one argument");
     return VolumeIndex<N, Args...>::generate(args...);
   }
+
   #if defined(GPUOffloadingOMP)
   #pragma omp end declare target
   #endif

@@ -6,26 +6,27 @@ compute_primitive_variables = r"""
 
   const auto u0 = Q[s::rhoU + 0] * irho;
   const auto u1 = Q[s::rhoU + 1] * irho;
-  #if Dimensions == 3
+#if Dimensions == 3
   const auto u2 = Q[s::rhoU + 2] * irho;
   const auto u2sq = u2 * u2;
-  #else
+#else
   const auto u2sq = 0.0;
-  #endif
+#endif
 
-  const auto uSq = u0 * u0 + u1 * u1 + u2sq;
-  const auto internalE = Q[s::rhoE] - 0.5 * Q[s::rho] * uSq;
-  const auto p = (GAMMA - 1.0) * internalE;
-  const auto speedOfSound = std::sqrt(GAMMA * p * irho);
 #if Dimensions == 3
   const auto u_n = (normal == 0) ? u0 : (normal == 1) ? u1 : u2;
 #else
   const auto u_n = (normal == 0) ? u0 : u1;
 #endif
+
+  const auto uSq = u0 * u0 + u1 * u1 + u2sq;
+  const auto internalE = Q[s::rhoE] - 0.5 * Q[s::rho] * uSq;
+  const auto p = (GAMMA - 1.0) * internalE;
 """
 
 max_eigenvalue = r"""
   {compute_primitive_variables}
+  const auto speedOfSound = std::sqrt(GAMMA * p * irho);
   const auto result = std::fmax(std::fabs(u_n - speedOfSound), std::fabs(u_n + speedOfSound));
   return result;
 """.format(compute_primitive_variables=compute_primitive_variables)

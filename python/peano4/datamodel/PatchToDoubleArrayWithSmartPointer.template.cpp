@@ -103,13 +103,18 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
 
 
 {% if DATA_ASSOCIATION == 1 -%}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker, int spacetreeId) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
+  [[maybe_unused]] peano4::grid::TraversalObserver::SendReceiveContext context,
+  [[maybe_unused]] const {{CLASSNAME}}& neighbour,
+  [[maybe_unused]] const peano4::datamanagement::VertexMarker& marker,
+  [[maybe_unused]] int spacetreeId
+) {
   {{MERGE_METHOD_DEFINITION}}
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
-  const peano4::datamanagement::VertexMarker& marker
+  [[maybe_unused]] const peano4::datamanagement::VertexMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
 ) const {
   return {{SEND_CONDITION}};
@@ -117,7 +122,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
-  const peano4::datamanagement::VertexMarker& marker
+  [[maybe_unused]] const peano4::datamanagement::VertexMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
 ) const {
   return {{RECEIVE_AND_MERGE_CONDITION}};
@@ -125,7 +130,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
 
 
 ::peano4::grid::LoadStoreComputeFlag {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadStoreComputeFlag(
-  const peano4::datamanagement::VertexMarker& marker
+  [[maybe_unused]] const peano4::datamanagement::VertexMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
 ) {
   return {{LOAD_STORE_COMPUTE_FLAG}};
@@ -134,13 +139,18 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
 
 
 {% if DATA_ASSOCIATION == 2 -%}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker, int spacetreeId) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
+  [[maybe_unused]] peano4::grid::TraversalObserver::SendReceiveContext context,
+  [[maybe_unused]] const {{CLASSNAME}}& neighbour,
+  [[maybe_unused]] const peano4::datamanagement::FaceMarker& marker,
+  [[maybe_unused]] int spacetreeId
+) {
   {{MERGE_METHOD_DEFINITION}}
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
-  const peano4::datamanagement::FaceMarker& marker
+  [[maybe_unused]] const peano4::datamanagement::FaceMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
 ) const {
   return {{SEND_CONDITION}};
@@ -148,7 +158,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
-  const peano4::datamanagement::FaceMarker& marker
+  [[maybe_unused]] const peano4::datamanagement::FaceMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
 ) const {
   return {{RECEIVE_AND_MERGE_CONDITION}};
@@ -156,7 +166,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
 
 
 ::peano4::grid::LoadStoreComputeFlag {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadStoreComputeFlag(
-  const peano4::datamanagement::FaceMarker& marker
+  [[maybe_unused]] const peano4::datamanagement::FaceMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
 ) {
   return {{LOAD_STORE_COMPUTE_FLAG}};
@@ -165,13 +175,18 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
 
 
 {% if DATA_ASSOCIATION == 3 -%}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::CellMarker& marker, int spacetreeId) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
+  [[maybe_unused]] peano4::grid::TraversalObserver::SendReceiveContext context,
+  [[maybe_unused]] const {{CLASSNAME}}& neighbour,
+  [[maybe_unused]] const peano4::datamanagement::CellMarker& marker,
+  [[maybe_unused]] int spacetreeId
+) {
   {{MERGE_METHOD_DEFINITION}}
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
-  const peano4::datamanagement::CellMarker& marker
+  [[maybe_unused]] const peano4::datamanagement::CellMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
 ) const {
   return {{SEND_CONDITION}};
@@ -179,7 +194,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
-  const peano4::datamanagement::CellMarker& marker
+  [[maybe_unused]] const peano4::datamanagement::CellMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
 ) const {
   return {{RECEIVE_AND_MERGE_CONDITION}};
@@ -187,7 +202,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
 
 
 ::peano4::grid::LoadStoreComputeFlag {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadStoreComputeFlag(
-  const peano4::datamanagement::CellMarker& marker
+  [[maybe_unused]] const peano4::datamanagement::CellMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
 ) {
   return {{LOAD_STORE_COMPUTE_FLAG}};

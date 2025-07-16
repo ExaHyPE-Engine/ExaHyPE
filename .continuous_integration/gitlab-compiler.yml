@@ -14,18 +14,7 @@ GCC:
     CC: "gcc"
     CXX: "g++"
     IMAGE_TAG: "${IMAGE_GCC}"
-    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
-                            -DENABLE_EXAHYPE=ON \
-                            -DENABLE_LOADBALANCING=ON \
-                            -DENABLE_BLOCKSTRUCTURED=ON \
-                            -DENABLE_CURVI=ON \
-                            -DENABLE_SWIFT=ON \
-                            -DENABLE_PARTICLES=ON \
-                            -DENABLE_MGHYPE=ON \
-                            -DENABLE_FINITEELEMENTS=ON \
-                            -DWITH_HDF5=ON \
-                            -DWITH_NETCDF=ON \
-                            -DWITH_EASI=ON \
+    CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
                             -DWITH_MULTITHREADING=no \
                             -DWITH_MPI=OFF"
   trigger:
@@ -40,18 +29,7 @@ GCC_SharedOMP_MPI:
     CC: "gcc"
     CXX: "g++"
     IMAGE_TAG: "${IMAGE_GCC}"
-    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
-                            -DENABLE_EXAHYPE=ON \
-                            -DENABLE_LOADBALANCING=ON \
-                            -DENABLE_BLOCKSTRUCTURED=ON \
-                            -DENABLE_CURVI=ON \
-                            -DENABLE_SWIFT=ON \
-                            -DENABLE_PARTICLES=ON \
-                            -DENABLE_MGHYPE=ON \
-                            -DENABLE_FINITEELEMENTS=ON \
-                            -DWITH_HDF5=ON \
-                            -DWITH_NETCDF=ON \
-                            -DWITH_EASI=ON \
+    CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
                             -DWITH_MULTITHREADING=omp \
                             -DWITH_MPI=ON"
   trigger:
@@ -66,18 +44,7 @@ Intel:
     CC: "icx"
     CXX: "icpx"
     IMAGE_TAG: "${IMAGE_INTEL}"
-    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
-                            -DENABLE_EXAHYPE=ON \
-                            -DENABLE_LOADBALANCING=ON \
-                            -DENABLE_BLOCKSTRUCTURED=ON \
-                            -DENABLE_CURVI=ON \
-                            -DENABLE_SWIFT=ON \
-                            -DENABLE_PARTICLES=ON \
-                            -DENABLE_MGHYPE=ON \
-                            -DENABLE_FINITEELEMENTS=ON \
-                            -DWITH_HDF5=ON \
-                            -DWITH_NETCDF=ON \
-                            -DWITH_EASI=ON \
+    CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
                             -DWITH_MULTITHREADING=no \
                             -DWITH_MPI=OFF"
   trigger:
@@ -92,50 +59,13 @@ Intel_SharedOMP_MPI:
     CC: "icx"
     CXX: "icpx"
     IMAGE_TAG: "${IMAGE_INTEL}"
-    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
-                            -DENABLE_EXAHYPE=ON \
-                            -DENABLE_LOADBALANCING=ON \
-                            -DENABLE_BLOCKSTRUCTURED=ON \
-                            -DENABLE_CURVI=ON \
-                            -DENABLE_SWIFT=ON \
-                            -DENABLE_PARTICLES=ON \
-                            -DENABLE_MGHYPE=ON \
-                            -DENABLE_FINITEELEMENTS=ON \
-                            -DWITH_HDF5=ON \
-                            -DWITH_NETCDF=ON \
-                            -DWITH_EASI=ON \
+    CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
                             -DWITH_MULTITHREADING=omp \
                             -DWITH_MPI=ON"
   trigger:
     include:
       - .continuous_integration/gitlab-jobs.yml
     strategy: depend
-
-# Intel_SharedSYCL_MPI:
-#   extends: .Variables
-#   stage: Compiler
-#   variables:
-#     CC: "icx"
-#     CXX: "icpx"
-#     IMAGE_TAG: "${IMAGE_INTEL}"
-#     CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
-#                             -DENABLE_EXAHYPE=ON \
-#                             -DENABLE_LOADBALANCING=ON \
-#                             -DENABLE_BLOCKSTRUCTURED=ON \
-#                             -DENABLE_CURVI=ON \
-#                             -DENABLE_SWIFT=ON \
-#                             -DENABLE_PARTICLES=ON \
-#                             -DENABLE_MGHYPE=ON \
-#                             -DENABLE_FINITEELEMENTS=ON \
-#                             -DWITH_HDF5=ON \
-#                             -DWITH_NETCDF=ON \
-#                             -DWITH_EASI=ON \
-#                             -DWITH_MULTITHREADING=sycl \
-#                             -DWITH_MPI=ON"
-#   trigger:
-#     include:
-#       - .continuous_integration/gitlab-jobs.yml
-#     strategy: depend
 
 LLVM:
   extends: .Variables
@@ -144,18 +74,7 @@ LLVM:
     CC: "clang"
     CXX: "clang++"
     IMAGE_TAG: "${IMAGE_LLVM}"
-    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
-                            -DENABLE_EXAHYPE=ON \
-                            -DENABLE_LOADBALANCING=ON \
-                            -DENABLE_BLOCKSTRUCTURED=ON \
-                            -DENABLE_CURVI=ON \
-                            -DENABLE_SWIFT=ON \
-                            -DENABLE_PARTICLES=ON \
-                            -DENABLE_MGHYPE=ON \
-                            -DENABLE_FINITEELEMENTS=ON \
-                            -DWITH_HDF5=ON \
-                            -DWITH_NETCDF=ON \
-                            -DWITH_EASI=ON \
+    CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
                             -DWITH_MULTITHREADING=no \
                             -DWITH_MPI=OFF"
   trigger:
@@ -170,18 +89,7 @@ LLVM_SharedOMP_MPI:
     CC: "clang"
     CXX: "clang++"
     IMAGE_TAG: "${IMAGE_LLVM}"
-    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
-                            -DENABLE_EXAHYPE=ON \
-                            -DENABLE_LOADBALANCING=ON \
-                            -DENABLE_BLOCKSTRUCTURED=ON \
-                            -DENABLE_CURVI=ON \
-                            -DENABLE_SWIFT=ON \
-                            -DENABLE_PARTICLES=ON \
-                            -DENABLE_MGHYPE=ON \
-                            -DENABLE_FINITEELEMENTS=ON \
-                            -DWITH_HDF5=ON \
-                            -DWITH_NETCDF=ON \
-                            -DWITH_EASI=ON \
+    CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
                             -DWITH_MULTITHREADING=omp \
                             -DWITH_MPI=ON"
   trigger:
@@ -196,18 +104,7 @@ NVIDIA:
     CC: "nvc"
     CXX: "nvc++"
     IMAGE_TAG: "${IMAGE_NVIDIA}"
-    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
-                            -DENABLE_EXAHYPE=ON \
-                            -DENABLE_LOADBALANCING=ON \
-                            -DENABLE_BLOCKSTRUCTURED=ON \
-                            -DENABLE_CURVI=ON \
-                            -DENABLE_SWIFT=ON \
-                            -DENABLE_PARTICLES=ON \
-                            -DENABLE_MGHYPE=ON \
-                            -DENABLE_FINITEELEMENTS=ON \
-                            -DWITH_HDF5=ON \
-                            -DWITH_NETCDF=ON \
-                            -DWITH_EASI=ON \
+    CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
                             -DWITH_MULTITHREADING=no \
                             -DWITH_MPI=OFF"
   trigger:
@@ -222,47 +119,10 @@ AMD:
     CC: "amdclang"
     CXX: "amdclang++"
     IMAGE_TAG: "${IMAGE_AMD}"
-    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
-                            -DENABLE_EXAHYPE=ON \
-                            -DENABLE_LOADBALANCING=ON \
-                            -DENABLE_BLOCKSTRUCTURED=ON \
-                            -DENABLE_CURVI=ON \
-                            -DENABLE_SWIFT=ON \
-                            -DENABLE_PARTICLES=ON \
-                            -DENABLE_MGHYPE=ON \
-                            -DENABLE_FINITEELEMENTS=ON \
-                            -DWITH_HDF5=ON \
-                            -DWITH_NETCDF=ON \
-                            -DWITH_EASI=ON \
+    CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
                             -DWITH_MULTITHREADING=no \
                             -DWITH_MPI=OFF"
   trigger:
     include:
       - .continuous_integration/gitlab-jobs.yml
     strategy: depend
-
-# AMD_SharedOMP_MPI:
-#   extends: .Variables
-#   stage: Compiler
-#   variables:
-#     CC: "amdclang"
-#     CXX: "amdclang++"
-#     IMAGE_TAG: "${IMAGE_AMD}"
-#     CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
-#                             -DENABLE_EXAHYPE=ON \
-#                             -DENABLE_LOADBALANCING=ON \
-#                             -DENABLE_BLOCKSTRUCTURED=ON \
-#                             -DENABLE_CURVI=ON \
-#                             -DENABLE_SWIFT=ON \
-#                             -DENABLE_PARTICLES=ON \
-#                             -DENABLE_MGHYPE=ON \
-#                             -DENABLE_FINITEELEMENTS=ON \
-#                             -DWITH_HDF5=ON \
-#                             -DWITH_NETCDF=ON \
-#                             -DWITH_EASI=ON \
-#                             -DWITH_MULTITHREADING=omp \
-#                             -DWITH_MPI=ON"
-#   trigger:
-#     include:
-#       - .continuous_integration/gitlab-jobs.yml
-#     strategy: depend

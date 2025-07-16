@@ -1245,7 +1245,7 @@ void toolbox::blockstructured::
       for (int d = 0; d < Dimensions; d++)
         destinationDimensionsProduct *= destinationSpan(d);
 
-      int                                   row = 0;
+      int row = 0;
       tarch::la::Vector<Dimensions, T> normalisedCornerPosition
         = (1.0 / numberOfDoFsPerAxisInDestinationPatch)
           * (tarch::la::convertScalar<T>(destinationCorner1) + tarch::la::Vector<Dimensions, T>(0.5 - haloDestinationPatch));
@@ -1962,12 +1962,9 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_matrix(
     numberOfDoFsPerAxisInPatch
   );
 
-  const int normal        = marker.getSelectedFaceNumber() % Dimensions;
-  const int matrixColumns = 2 * overlap
-                            * std::
-                              pow(numberOfDoFsPerAxisInPatch, Dimensions - 1);
-  const int matrixRows = overlap
-                         * std::pow(numberOfDoFsPerAxisInPatch, Dimensions - 1);
+  const int normal = marker.getSelectedFaceNumber() % Dimensions;
+  const int matrixColumns = 2 * overlap * std::pow(numberOfDoFsPerAxisInPatch, Dimensions - 1);
+  const int matrixRows = overlap * std::pow(numberOfDoFsPerAxisInPatch, Dimensions - 1);
 
   fineFaceDimensions(normal)   = overlap;
   coarseFaceDimensions(normal) = 2 * overlap;

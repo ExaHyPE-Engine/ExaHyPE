@@ -82,14 +82,14 @@ class Exahype2(CMakePackage, CudaPackage):
 
     def cmake_args(self):
         args = [
-            "-DENABLE_LOADBALANCING=ON",
-            "-DENABLE_BLOCKSTRUCTURED=ON",
-            "-DENABLE_EXAHYPE=ON",
+            "-DENABLE_TOOLBOX_LOADBALANCING=ON",
+            "-DENABLE_TOOLBOX_BLOCKSTRUCTURED=ON",
+            "-DENABLE_EXTENSIONEXAHYPE=ON",
             "-DWITH_LIBXSMM=OFF",
             self.define_from_variant("WITH_MPI", "mpi"),
             self.define_from_variant("WITH_HDF5", "hdf5"),
             self.define_from_variant("WITH_NETCDF", "netcdf"),
-            self.define_from_variant("ENABLE_PARTICLES", "tracer"),
+            self.define_from_variant("ENABLE_TOOLBOX_PARTICLES", "tracer"),
         ]
 
         if self.spec.satisfies("+omp"):
