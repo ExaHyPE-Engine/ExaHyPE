@@ -1,0 +1,33 @@
+/**
+
+@page benchmarks_exahype2_euler_smooth_setup Convergence Tests (Euler Equations)
+
+\tableofcontents
+
+This is a simple benchmark used to perform convergence tests for a solver.
+It uses the Euler equations to advance a 2D setup where the density follows a sine wave,
+and the initial velocity is constant in the x direction. The domain is centred around the
+origin.
+
+## Compilation
+Peano should be built with the following options: --enable-exahype, --enable-loadbalancing,
+ --enable-blockstructured
+The relevant mesh size and timestep size should be set in the python script directly. For 
+the mesh size, $p$ should be modified in the expression $\frac{0.2}{p}$ where $p$ is the
+number of cells that are desired in each coordinate direction.
+
+
+## Postproccessing
+The output after a run will be 2 snapshots of teh solution, one at the start and one at the
+end (this can be modified), as Peano patch files. These can be converted to vtk files for 
+visualisation in Paraview.
+
+~~~~~~~~~~~~~~~~~~~~~~~
+     pvpython ../../../../python/peano4/visualisation/render.py --filter-fine-grid solution-CCZ4DG2RK2.peano-patch-file
+~~~~~~~~~~~~~~~~~~~~~~~
+The paraview module should be loaded where neccessary (system dependent) for this command.
+
+In order to directly ocmpare results, my preferred method is to apply a plot over line filter
+in Paraview, with fixed spacing between plot points such that they are always at the centre of
+a cell for every resolution. This is converted to a csv file and read in Python using the csv
+library. Plots can then be generated using this data.

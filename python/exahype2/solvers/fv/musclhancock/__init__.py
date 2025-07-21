@@ -7,3 +7,7 @@ from .GlobalAdaptiveTimeStep                        import GlobalAdaptiveTimeSte
 
 from .kernels import SolverVariant
 from .kernels import RiemannKernelVariant
+
+
+from .MUSCLHancockDSLKernel2D import timeStepWithMUSCLHancock as timeStepWithMUSCLHancock2d
+from .MUSCLHancockDSLKernel3D import timeStepWithMUSCLHancock as timeStepWithMUSCLHancock3d
