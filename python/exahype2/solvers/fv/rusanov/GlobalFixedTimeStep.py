@@ -67,7 +67,7 @@ class GlobalFixedTimeStep(SingleSweep):
     self._compute_eigenvalue                  = True
 
     self._user_action_set_includes += """
-#include "exahype2/fv/rusanov/rusanov.h"
+#include "kernels/rusanov.h"
 """
 
     self.set_implementation(
@@ -155,6 +155,5 @@ class GlobalFixedTimeStep(SingleSweep):
   @property
   def user_action_set_includes(self):
     return super(GlobalFixedTimeStep, self).user_action_set_includes + """
-#include "exahype2/fv/rusanov/rusanov.h"
 #include "kernels/rusanov.h"
 """

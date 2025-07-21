@@ -1,6 +1,6 @@
 #include "EulerFVSod.h"
 #include "exahype2/RefinementControl.h"
-
+#include <cmath>
 
 tarch::logging::Log benchmarks::exahype2::euler::sod_shocktube::EulerFVSod::_log( "examples::exahype2::test::euler_sod::benchmark::euler_sod" );
 
@@ -12,7 +12,7 @@ void benchmarks::exahype2::euler::sod_shocktube::EulerFVSod::initialCondition(
 ) {
   logTraceInWith3Arguments( "initialCondition(...)", volumeCentre, volumeH, gridIsConstructed );
   // Initial data
-  constexpr double gamma = 1.39999999999999991118;
+  /*constexpr double gamma = 1.39999999999999991118;
   constexpr double x_0 = 0.50000000000000000000;
 
   constexpr double rho_5 = 0.12500000000000000000; // right states
@@ -35,7 +35,13 @@ void benchmarks::exahype2::euler::sod_shocktube::EulerFVSod::initialCondition(
     p = P_5;
   }
   Q[3] = p / (gamma - 1) + 0.5 / Q[0] * (Q[1] * Q[1]); // j*j, j=rho*v !!! ; assumes: Q[2]=0.
-
+  */
+  constexpr double gamma = 1.39999999999999991118;
+  constexpr double p = 1.0;
+  Q[0] = 1.0 + 0.2 * std::cos((2.0 * volumeCentre[0]) * 3.1415);
+  Q[1] = 1.0;
+  Q[2] = 0.0;
+  Q[3] = p / (gamma - 1) + 0.5 / Q[0] * (Q[1] * Q[1]);
   logTraceOut( "initialCondition(...)" );
 }
 
@@ -55,13 +61,14 @@ void benchmarks::exahype2::euler::sod_shocktube::EulerFVSod::boundaryConditions(
   logTraceOut( "boundaryConditions(...)" );
 }
 
-double ::benchmarks::exahype2::euler::sod_shocktube::EulerFVSod::maxEigenvalue(
+void ::benchmarks::exahype2::euler::sod_shocktube::EulerFVSod::maxEigenvalue(
   const double * __restrict__ Q, // Q[4+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   double                                       dt,
-  int                                          normal
+  int                                          normal,
+  double* __restrict__                         maxEigenvalue
 )  {
   logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
   const double irho = 1.0 / Q[0];
@@ -80,7 +87,7 @@ double ::benchmarks::exahype2::euler::sod_shocktube::EulerFVSod::maxEigenvalue(
     break;
   }
   logTraceOut("maxEigenvalue(...)");
-  return result;
+  maxEigenvalue[0] = result;
 }
 
 void ::benchmarks::exahype2::euler::sod_shocktube::EulerFVSod::flux(
