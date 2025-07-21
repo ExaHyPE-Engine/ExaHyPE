@@ -21,7 +21,7 @@ namespace exahype2 {
         double                                       t,
         double                                       dt,
         double * __restrict__ S
-      ) >  Source;
+      ) >  SourceFunctor;
 
       typedef std::function< void(
         const double * __restrict__ Q,
@@ -31,7 +31,7 @@ namespace exahype2 {
         double                                       dt,
         int                                          normal,
         double * __restrict__ F
-      ) >  Flux;
+      ) >  FluxFunctor;
 
       typedef std::function< void(
         const double * __restrict__                  Q,
@@ -42,16 +42,17 @@ namespace exahype2 {
         double                                       dt,
         int                                          normal,
         double * __restrict__                        BTimesDeltaQ
-      ) >   NonconservativeProduct;
+      ) >   NonconservativeProductFunctor;
 
-      typedef std::function< double(
+      typedef std::function< void(
         const double * __restrict__ Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
         double                                       dt,
-        int                                          normal
-      ) >   MaxEigenvalue;
+        int                                          normal,
+        double* __restrict__                         maxEigenvalue
+      ) >   MaxEigenvalueFunctor;
     }
   }
 }

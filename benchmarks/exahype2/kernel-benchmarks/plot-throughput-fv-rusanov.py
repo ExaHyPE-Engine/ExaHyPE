@@ -20,9 +20,10 @@ plt.rcParams.update(
 
 
 Devices = ["host", "device"]
-CallSemantics = ["functors", "stateless"]
-DataFlow = ["batched", "patch-wise"]
-
+#CallSemantics = ["functors", "stateless"]
+CallSemantics = ["serial", "omp", "sycl"]
+#DataFlow = ["batched", "patch-wise"]
+DataFlow = ["AoS"]
 Markers = ["o", "s", "<", ">", "^", "v", "D"]
 Colours = [
     "#ff0000",

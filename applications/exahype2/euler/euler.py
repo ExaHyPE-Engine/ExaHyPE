@@ -16,6 +16,8 @@ class Euler:
 
         "RusanovGlobalFixedADERDG": exahype2.solvers.aderdg.GlobalFixedTimeStep,
         "RusanovGlobalAdaptiveADERDG": exahype2.solvers.aderdg.GlobalAdaptiveTimeStep,
+
+        "MUSCLGlobalFixedFV": exahype2.solvers.fv.musclhancock.GlobalFixedTimeStep,
     }
 
     def setup_parser(self):
@@ -279,7 +281,7 @@ class Euler:
                 "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
                 "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
                 "flux": "applications::exahype2::euler::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
-                "eigenvalues": "return applications::exahype2::euler::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
+                "eigenvalues": "applications::exahype2::euler::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, maxEigenvalue);",
             }
         elif "RKDG" in args.solver:
             solver_params.update(
