@@ -18,8 +18,6 @@ tarch::multicore::TaskEnumerator::TaskEnumerator():
   for (auto& p: _enumerator) {
     p->setMax(newMax);
   }
-
-  logInfo( "TaskEnumerator()", newMax << " task numbers are available per enumerator" );
 }
 
 

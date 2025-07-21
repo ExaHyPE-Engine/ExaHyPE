@@ -114,6 +114,27 @@ if __name__ == "__main__":
         nargs="+",
         help="Pick kernels that have to be tested",
     )
+    parser.add_argument(
+        "--enable-soa-conversion",
+        dest="soa_conversion",
+        choices=['true', 'false', 'ignore'],
+        default='ignore',
+        help="Enable compiler-driver AoS to SoA conversions. Triggers adding flags to the compiler call, while ignore adds nothing and can therefore be used with unpatched compilers, too"
+    )
+    parser.add_argument(
+        "--enable-soa-offload",
+        dest='soa_offload',
+        choices=['true', 'false'],
+        default='false',
+        help="Enable OpenMP offload for converted kernels - you still must ensure OpenMP flags are set up correctly!",
+    )
+    parser.add_argument(
+        "--validate",
+        dest="validate",
+        choices=['true', 'false'],
+        default='true',
+        help="Validate that results of all kernels yield the same result"
+    )
     args = parser.parse_args()
 
     ########################################################################################
@@ -262,6 +283,18 @@ if __name__ == "__main__":
     )
     peano4_project.output.makefile.add_CXX_flag("-D" + GAMMA_HYDRO_SYMBOL)
     peano4_project.output.makefile.add_CXX_flag("-D" + KERNEL_SYMBOL)
+
+    if args.validate == 'true':
+        peano4_project.output.makefile.add_CXX_flag("-DValidateSWIFTKernelOutcomes")
+        
+    if args.soa_conversion == 'true':
+        peano4_project.output.makefile.add_CXX_flag("-fsoa-conversion-attributes")
+    elif args.soa_conversion == 'false':
+        peano4_project.output.makefile.add_CXX_flag("-fno-soa-conversion-attributes")
+    else:
+        pass # do not add any flags that an unsuspecting compiler might be unaware of
+    if args.soa_offload == 'true':
+        peano4_project.output.makefile.add_CXX_flag("-DSOA_OFFLOAD")
 
     peano4_project.output.makefile.add_cpp_file( "NohProblem.cpp" )
 
