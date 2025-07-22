@@ -56,14 +56,16 @@
 
 using namespace {{NAMESPACE | join("::")}};
 
-tarch::logging::Log _log("");
+namespace {
+  tarch::logging::Log _log("");
 
-tarch::timing::Measurement gridConstructionMeasurement;
-tarch::timing::Measurement timeStepMeasurement;
-tarch::timing::Measurement plotMeasurement;
+  tarch::timing::Measurement gridConstructionMeasurement;
+  tarch::timing::Measurement timeStepMeasurement;
+  tarch::timing::Measurement plotMeasurement;
 
-static double printNextTimeStep = 0.0;
-static bool haveReceivedNonCriticalAssertion = false;
+  static double printNextTimeStep = 0.0;
+  static bool haveReceivedNonCriticalAssertion = false;
+} // namespace
 
 /**
  * Decide which step to run next

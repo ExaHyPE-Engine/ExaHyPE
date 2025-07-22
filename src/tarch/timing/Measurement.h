@@ -4,9 +4,9 @@
 #pragma once
 
 
-#include <string>
-
 #include "tarch/logging/Log.h"
+
+#include <string>
 
 
 namespace tarch::timing {
@@ -140,6 +140,16 @@ public:
 
   double max() const;
   double min() const;
+
+  /**
+   * @return The index of the measurement at which the minimum value occurred.
+   */
+  int getMinMeasurement() const;
+
+  /**
+   * @return The index of the measurement at which the maximum value occurred.
+   */
+  int getMaxMeasurement() const;
 
   void erase();
 

@@ -69,7 +69,7 @@
 .ExaHyPE2_Kernels:
   parallel:
     matrix:
-    - kernel: [aderdg, aderdg-fused]
+    - kernel: [fv, aderdg, aderdg-fused]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/kernel-benchmarks/$kernel; PYTHONPATH=$CI_PROJECT_DIR/python python3 $kernel.py;"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/kernel-benchmarks/$kernel; ./KernelBenchmarks.Release"

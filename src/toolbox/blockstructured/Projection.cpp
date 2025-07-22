@@ -66,7 +66,7 @@ void toolbox::blockstructured::projectPatchSolutionOntoFaces(
   for(int d=0; d<Dimensions; d++) {
     /**
      * d-loop over all dimensions except d. The vector k's entry d is set
-     * to 0. We start with the left/bottom face, i.e. the one closer to the
+     * to 0. We start with the left/bottom face, i.e. the one closer to the 
      * coordinate system's origin.
      */
     dfore(k,numberOfVolumesPerAxisInPatch,d,0) {
@@ -75,23 +75,30 @@ void toolbox::blockstructured::projectPatchSolutionOntoFaces(
         tarch::la::Vector<Dimensions,int> overlapCell = k;
         patchCell(d)   = i;
         overlapCell(d) = i+haloSize;
-
+          
         int patchCellSerialised   = peano4::utils::dLinearised(patchCell,numberOfVolumesPerAxisInPatch);
         int overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,numberOfVolumesPerAxisInPatch,haloSize,d);
-        for (int j=0; j<unknowns+auxiliaryVariables; j++) {
-          faces[d][overlapCellSerialised*(unknowns+auxiliaryVariables)+j] =
-            Q[patchCellSerialised*(unknowns+auxiliaryVariables)+j];
-          if (Q[patchCellSerialised*(unknowns+auxiliaryVariables)+j]!=17.0) std::cerr << "not good";
+        for (int j=0; j<unknowns; j++) {
+          assertion6(
+            false
+            or
+            Q[patchCellSerialised*unknowns+j]==Q[patchCellSerialised*unknowns+j], j,i,k,d, patchCell, overlapCell
+          );
+          faces[d][overlapCellSerialised*unknowns+j] = Q[patchCellSerialised*unknowns+j];
         }
-
+  
         patchCell(d)   = i+numberOfVolumesPerAxisInPatch-haloSize;
         overlapCell(d) = i;
-
-        patchCellSerialised   = peano4::utils::dLinearised(patchCell,12);
-        overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,numberOfVolumesPerAxisInPatch,haloSize,d);
-        for (int j=0; j<unknowns+auxiliaryVariables; j++) {
-          faces[d+Dimensions][overlapCellSerialised*(unknowns+auxiliaryVariables)+j] =
-            Q[patchCellSerialised*(unknowns+auxiliaryVariables)+j];
+          
+        patchCellSerialised   = peano4::utils::dLinearised(patchCell, numberOfVolumesPerAxisInPatch);
+        overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, numberOfVolumesPerAxisInPatch, haloSize, d);
+        for (int j=0; j<unknowns; j++) {
+          assertion6(
+            false
+            or
+            Q[patchCellSerialised*unknowns+j]==Q[patchCellSerialised*unknowns+j], j,i,k,d, patchCell, overlapCell
+          );
+          faces[d+Dimensions][overlapCellSerialised*unknowns+j] = Q[patchCellSerialised*unknowns+j];
         }
       }
     }

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "exahype2/EnclaveTask.h"
+#include "exahype2/CellData.h"
 
 #include "peano4/datamanagement/CellMarker.h"
 
@@ -60,6 +61,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::Encla
 
     {% if CAN_FUSE %}
     virtual void fuse(const std::list<Task*>& otherTasks) override;
+    static void fuse(::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}>& patchData);
     {% endif %}
 };
 

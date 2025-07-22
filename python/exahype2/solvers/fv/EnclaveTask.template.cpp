@@ -239,4 +239,18 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, _t + _dt, tarch::la::min(_marker.h()), tarch::la::max(_marker.h()));
 }
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}>& patchData) {
+  // Before swap: QIn is with halo, QOut is without halo
+  // After swap: QIn is without halo, QOut is with halo (that is reconstructed as next step)
+  std::swap(patchData.QInFlattened, patchData.QOutFlattened);
+  kernels::{{SOLVER_NAME}}::reconstructPatchFused(patchData, TARGET_DEVICE);
+  // QOut of patch reconstruction is now QIn for the Riemann solver
+  // QIn for patch reconstruction is now QOut of the Riemann solver
+  std::swap(patchData.QInFlattened, patchData.QOutFlattened);
+
+  const auto maxEigenvalue = {{FUSED_COMPUTE_KERNEL_CALL}}
+
+  {{COMPUTE_NEW_TIME_STEP_SIZE}}
+  repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, patchData.t + patchData.dt, tarch::la::min(patchData.cellSize[0]), tarch::la::max(patchData.cellSize[0]));
+}
 {% endif %}
