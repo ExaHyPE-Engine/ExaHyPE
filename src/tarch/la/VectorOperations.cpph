@@ -1,4 +1,16 @@
 template <int Size, typename Scalar>
+tarch::la::Vector<Size, Scalar> tarch::la::floor(const Vector<Size, Scalar>& vector) {
+  Vector<Size, Scalar> result;
+#ifdef CompilerICC
+#pragma ivdep
+#endif
+  for (int i = 0; i < Size; i++) {
+    result(i) = std::floor(vector(i));
+  }
+  return result;
+}
+
+template <int Size, typename Scalar>
 std::vector<Scalar> tarch::la::toSTLVector(const Vector<Size, Scalar>& vector) {
   std::vector<Scalar> result(Size);
   for (int i=0; i<Size; i++) result[i] = vector(i);

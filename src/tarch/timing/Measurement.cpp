@@ -3,13 +3,13 @@
 
 #include "Measurement.h"
 
-#include <cmath>
-#include <limits>
-#include <sstream>
-
 #include "tarch/Assertions.h"
 #include "tarch/la/Scalar.h"
 #include "tarch/la/ScalarOperations.h"
+
+#include <cmath>
+#include <limits>
+#include <sstream>
 
 
 tarch::logging::Log tarch::timing::Measurement::_log("tarch::timing::Measurement");
@@ -58,9 +58,7 @@ double tarch::timing::Measurement::getMeanValueOfNextStep(double newValue) const
 double tarch::timing::Measurement::getAccumulatedValue() const { return _accumulatedValue; }
 
 
-double tarch::timing::Measurement::getMostRecentValue() const {
-  return _lastValue;
-}
+double tarch::timing::Measurement::getMostRecentValue() const { return _lastValue; }
 
 
 double tarch::timing::Measurement::getValue() const {
@@ -117,10 +115,10 @@ void tarch::timing::Measurement::setValue(const double& value) {
     _maxMeasurement = _numberOfMeasurements;
   }
 
-  _accumulatedValue     += value;
-  _accumulatedSquares   += value * value;
+  _accumulatedValue += value;
+  _accumulatedSquares += value * value;
   _numberOfMeasurements += 1.0;
-  _lastValue             = value;
+  _lastValue = value;
 
   logDebug(
     "setValue",
@@ -182,5 +180,8 @@ double tarch::timing::Measurement::min() const {
   return _min;
 }
 
+int tarch::timing::Measurement::getMinMeasurement() const { return static_cast<int>(_minMeasurement); }
+
+int tarch::timing::Measurement::getMaxMeasurement() const { return static_cast<int>(_maxMeasurement); }
 
 double tarch::timing::Measurement::getAccuracy() const { return _accuracy; }

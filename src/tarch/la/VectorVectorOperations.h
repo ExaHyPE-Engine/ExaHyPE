@@ -54,6 +54,14 @@ namespace tarch {
     Vector<Size, Scalar> multiplyComponents(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs) InlineMethod;
 
     /**
+     * Divides every component of the vectors with each other and writes the
+     * results into result.
+     */
+    template <int Size, typename Scalar>
+    inline GPUCallableMethod
+    Vector<Size, Scalar> divideComponents(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs) InlineMethod;
+
+    /**
      * Performs the dot (=inner) product of two vectors.
      *
      * For the outer dot product consult the file MatrixVectorOperations.h.

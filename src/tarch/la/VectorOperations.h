@@ -158,6 +158,9 @@ namespace tarch {
     int count(const Vector<Size, Scalar>& vector, const Scalar& value);
 
     template <int Size, typename Scalar>
+    Vector<Size, Scalar> floor(const Vector<Size, Scalar>& vector);
+
+    template <int Size, typename Scalar>
     int isEntryNan(const Vector<Size, Scalar>& vector);
 
     template <int Size, typename Scalar>

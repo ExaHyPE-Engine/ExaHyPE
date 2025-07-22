@@ -108,16 +108,13 @@ void tarch::accelerator::copyTo(
 #ifdef UseUSM
     std::memcpy(target, source, sizeInBytes);
 #else
-    using UnmanagedView = Kokkos::View<const unsigned char*, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-    UnmanagedView tmpView(static_cast<const unsigned char*>(source), sizeInBytes);
-    auto          tmpViewMirror = Kokkos::create_mirror(Kokkos::DefaultExecutionSpace::memory_space(), tmpView);
-    Kokkos::deep_copy(tmpViewMirror, tmpView);
-    auto* targetCast = static_cast<unsigned char*>(target);
-    Kokkos::parallel_for(
-      "CopyFrom::HostToDevice",
-      sizeInBytes / sizeof(unsigned char),
-      KOKKOS_LAMBDA(const int i) { targetCast[i] = tmpViewMirror(i); }
-    );
+    using SrcViewType = Kokkos::View<const unsigned char*, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+    SrcViewType src_view(static_cast<const unsigned char*>(source), sizeInBytes);
+
+    using DstViewType = Kokkos::View<unsigned char*, Kokkos::DefaultExecutionSpace::memory_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+    DstViewType dst_view(static_cast<unsigned char*>(target), sizeInBytes);
+
+    Kokkos::deep_copy(dst_view, src_view);
 #endif
     break;
   }
@@ -149,17 +146,13 @@ void tarch::accelerator::copyFrom(
 #ifdef UseUSM
     std::memcpy(target, source, sizeInBytes);
 #else
-    using UnmanagedView = Kokkos::View<const unsigned char*, Kokkos::DefaultExecutionSpace::memory_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-    UnmanagedView                   tmpView(static_cast<const unsigned char*>(source), sizeInBytes);
-    UnmanagedView::host_mirror_type tmpViewMirror = Kokkos::create_mirror_view(tmpView);
-    Kokkos::deep_copy(tmpViewMirror, tmpView);
-    Kokkos::RangePolicy<Kokkos::DefaultHostExecutionSpace> copyPolicy(0, sizeInBytes / sizeof(unsigned char));
-    unsigned char* targetCast = static_cast<unsigned char*>(target);
-    Kokkos::parallel_for(
-      "CopyFrom::DeviceToHost",
-      copyPolicy,
-      KOKKOS_LAMBDA(const int i) { targetCast[i] = tmpViewMirror(i); }
-    );
+    using SrcViewType = Kokkos::View<const unsigned char*, Kokkos::DefaultExecutionSpace::memory_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+    SrcViewType src_view(static_cast<const unsigned char*>(source), sizeInBytes);
+
+    using DstViewType = Kokkos::View<unsigned char*, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+    DstViewType dst_view(static_cast<unsigned char*>(target), sizeInBytes);
+
+    Kokkos::deep_copy(dst_view, src_view);
 #endif
     break;
   }
