@@ -8,8 +8,8 @@ void exahype2::fv::copyHalfOfHalo(
   int    haloSize,  // same as overlap
   int    normal,
   bool   isRightLayer,
-  const T* __restrict__   srcQ,
-  T* __restrict__         destQ
+  const T* NOALIAS   srcQ,
+  T* NOALIAS         destQ
 ) {
   dfore(k,numberOfGridCellsPerPatchPerAxis,normal,0) {
     for (int i= (isRightLayer ? haloSize : 0); i< (isRightLayer ? 2*haloSize : haloSize); i++) {
@@ -26,7 +26,7 @@ void exahype2::fv::copyHalfOfHalo(
 
 template<typename T>
 void exahype2::fv::validatePatch (
-  const T *__restrict__ Q,
+  const T *NOALIAS Q,
   int unknowns,
   int auxiliaryVariables,
   int numberOfVolumesPerAxisInPatch,

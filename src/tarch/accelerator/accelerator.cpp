@@ -22,8 +22,8 @@ void* tarch::accelerator::allocateRawData(
 
   // Aligned alloc requires size to be a multiple of the alignment
   void* data = std::aligned_alloc(
-    AlignmentOnHeap,
-    padSizeToAlignment(sizeInBytes, AlignmentOnHeap)
+    ALIGNMENT_ON_HEAP,
+    padSizeToAlignment(sizeInBytes, ALIGNMENT_ON_HEAP)
   );
   assertion(data);
 

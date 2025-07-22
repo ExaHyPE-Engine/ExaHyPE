@@ -7,7 +7,7 @@
 namespace TP_bindding {
 	
 	//calculate the soccz4 quantites use the real physics quantities given in TP lib
-	inline void SOCCZ4Cal(double* __restrict__ Q){
+	inline void SOCCZ4Cal(double* NOALIAS Q){
 		//take care: the metric below are all non-conformal, i.e. without tilde
     	double g_cov[3][3] = { {Q[0], Q[1], Q[2]}, {Q[1], Q[3], Q[4]}, {Q[2], Q[4], Q[5]} };
     	double det = Q[0]*Q[3]*Q[5] - Q[0]*Q[4]*Q[4] - Q[1]*Q[1]*Q[5] + 2*Q[1]*Q[2]*Q[4] -Q[2]*Q[2]*Q[3];
@@ -39,7 +39,7 @@ namespace TP_bindding {
 	}
 
 	//use this to calculate the gradient
-	inline void GradientCal(const double* X, double* __restrict__ Q, double* LgradQ, int nVars, TP::TwoPunctures* tp, bool low_res=false)
+	inline void GradientCal(const double* X, double* NOALIAS Q, double* LgradQ, int nVars, TP::TwoPunctures* tp, bool low_res=false)
         {
 		constexpr double epsilon = 1e-4;
 		double Qp1[nVars],Qm1[nVars],Qp2[nVars],Qm2[nVars];
@@ -62,7 +62,7 @@ namespace TP_bindding {
 	}
 	
 	//calculate the auxiliary variables using Q and its gradient
-	inline void AuxiliaryCal(double* __restrict__ Q, double* LgradQ, int nVars){
+	inline void AuxiliaryCal(double* NOALIAS Q, double* LgradQ, int nVars){
 		double gradQ[3][59]={0};
 		for (int d=0;d<3;d++)
   		for (int i=0;i<nVars;i++) {gradQ[d][i]=LgradQ[d*nVars+i];}

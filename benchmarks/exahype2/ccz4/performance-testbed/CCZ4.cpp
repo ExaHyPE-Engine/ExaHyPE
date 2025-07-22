@@ -129,7 +129,7 @@ benchmarks::exahype2::ccz4::CCZ4::CCZ4() {
 }
 
 void benchmarks::exahype2::ccz4::CCZ4::initialCondition(
-  double * __restrict__ Q,
+  double * NOALIAS Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   bool                                         gridIsConstructed
@@ -178,12 +178,12 @@ void benchmarks::exahype2::ccz4::CCZ4::initialCondition(
 
 
 void benchmarks::exahype2::ccz4::CCZ4::sourceTerm(
-  const double * __restrict__                  Q, // Q[59+0]
+  const double * NOALIAS                  Q, // Q[59+0]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   double                                       dt,
-  double * __restrict__                        S  // S[59
+  double * NOALIAS                        S  // S[59
 ) {
 #if !defined(GPUOffloadingOMP)
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
@@ -231,8 +231,8 @@ void benchmarks::exahype2::ccz4::CCZ4::sourceTerm(
 
 
 void benchmarks::exahype2::ccz4::CCZ4::boundaryConditions(
-  const double * __restrict__                  Qinside, // Qinside[59+0]
-  double * __restrict__                        Qoutside, // Qoutside[59+0]
+  const double * NOALIAS                  Qinside, // Qinside[59+0]
+  double * NOALIAS                        Qoutside, // Qoutside[59+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -248,7 +248,7 @@ void benchmarks::exahype2::ccz4::CCZ4::boundaryConditions(
 
 
 double benchmarks::exahype2::ccz4::CCZ4::maxEigenvalue(
-  const double * __restrict__ Q, // Q[59+0],
+  const double * NOALIAS Q, // Q[59+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -261,14 +261,14 @@ double benchmarks::exahype2::ccz4::CCZ4::maxEigenvalue(
 
 
 void benchmarks::exahype2::ccz4::CCZ4::nonconservativeProduct(
-  const double * __restrict__ Q, // Q[59+0],
-  const double * __restrict__             deltaQ, // [59+0]
+  const double * NOALIAS Q, // Q[59+0],
+  const double * NOALIAS             deltaQ, // [59+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double * __restrict__ BgradQ // BgradQ[59]
+  double * NOALIAS BgradQ // BgradQ[59]
 )  {
 #if !defined(GPUOffloadingOMP)
   logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, volumeH, t, normal );
@@ -289,14 +289,14 @@ void benchmarks::exahype2::ccz4::CCZ4::nonconservativeProduct(
 #pragma omp declare target
 #endif
 void benchmarks::exahype2::ccz4::CCZ4::nonconservativeProduct(
-  const double * __restrict__ Q, // Q[59+0],
-  const double * __restrict__             deltaQ, // [59+0]
+  const double * NOALIAS Q, // Q[59+0],
+  const double * NOALIAS             deltaQ, // [59+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double * __restrict__ BgradQ, // BgradQ[59]
+  double * NOALIAS BgradQ, // BgradQ[59]
   Offloadable
 )
 {
@@ -318,7 +318,7 @@ void benchmarks::exahype2::ccz4::CCZ4::nonconservativeProduct(
 #endif
 
 ::exahype2::RefinementCommand benchmarks::exahype2::ccz4::CCZ4::refinementCriterion(
-  const double * __restrict__ Q,
+  const double * NOALIAS Q,
   const tarch::la::Vector<Dimensions,double>& volumeCentre,
   const tarch::la::Vector<Dimensions,double>& volumeH,
   double t

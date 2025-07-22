@@ -32,8 +32,8 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
   );
 
   for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++) {
-    const double* __restrict__                  cellQin  = cellData.QIn[currentCell];
-    double* __restrict__                        cellQout = cellData.QOut[currentCell];
+    const double* NOALIAS                  cellQin  = cellData.QIn[currentCell];
+    double* NOALIAS                        cellQout = cellData.QOut[currentCell];
     const tarch::la::Vector<Dimensions,double>  x        = cellData.cellCentre[currentCell];
     const tarch::la::Vector<Dimensions,double>  h        = cellData.cellSize[currentCell];
     const double                                t        = cellData.t;

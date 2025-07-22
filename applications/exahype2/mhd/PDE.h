@@ -3,8 +3,8 @@
 
 // Fortran functions:
 extern "C" {
-    void pdeflux_(double* F,  const double * __restrict__ Q, int* normal);
-    void pdeeigenvalues_(double* lambda, const double * __restrict__ Q, double* nv);
+    void pdeflux_(double* F,  const double * NOALIAS Q, int* normal);
+    void pdeeigenvalues_(double* lambda, const double * NOALIAS Q, double* nv);
 }/* extern "C" */
 
 

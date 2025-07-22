@@ -37,12 +37,12 @@ namespace exahype2 {
         #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void copySolution_LoopBody(
-          const double* __restrict__                QIn,
+          const double* NOALIAS                QIn,
           const QInEnumeratorType&                  QInEnumerator,
           int                                       patchIndex,
           const tarch::la::Vector<Dimensions,int>&  volumeIndex,
           int                                       unknown,
-          double* __restrict__                      QOut,
+          double* NOALIAS                      QOut,
           const QOutEnumeratorType&                 QOutEnumerator
         ) InlineMethod;
         #if defined(GPUOffloadingOMP)
@@ -63,7 +63,7 @@ namespace exahype2 {
           int                                       patchIndex,
           const tarch::la::Vector<Dimensions,int>&  volumeIndex,
           int                                       unknown,
-          double* __restrict__                      QOut,
+          double* NOALIAS                      QOut,
           const QOutEnumeratorType&                 QOutEnumerator
         ) InlineMethod;
         #if defined(GPUOffloadingOMP)
@@ -94,7 +94,7 @@ namespace exahype2 {
          */
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void addAlgebraicSourceTerm_LoopBody(
-          const double* __restrict__                   QIn,
+          const double* NOALIAS                   QIn,
           const QInEnumeratorType&                     QInEnumerator,
           exahype2::fd::Source                         AlgebraicSource,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
@@ -103,7 +103,7 @@ namespace exahype2 {
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           double                                       t,
           double                                       dt,
-          double* __restrict__                         QOut,
+          double* NOALIAS                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
 
@@ -113,7 +113,7 @@ namespace exahype2 {
          */
         template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
         static void addAlgebraicSourceTerm_LoopBody(
-          const double* __restrict__                   QIn,
+          const double* NOALIAS                   QIn,
           const QInEnumeratorType&                     QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -121,7 +121,7 @@ namespace exahype2 {
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           double                                       t,
           double                                       dt,
-          double* __restrict__                         QOut,
+          double* NOALIAS                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
 
@@ -130,7 +130,7 @@ namespace exahype2 {
          */
         template <typename Solver>
         static void addAlgebraicSourceTerm_LoopBody(
-          const double* __restrict__                   QIn,
+          const double* NOALIAS                   QIn,
           const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -138,13 +138,13 @@ namespace exahype2 {
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           double                                       t,
           double                                       dt,
-          double* __restrict__                         QOut,
+          double* NOALIAS                         QOut,
           const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator
         ) InlineMethod;
 
         template <class QOutEnumeratorType>
         inline static double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QOut,
+          const double* NOALIAS                   QOut,
           const QOutEnumeratorType&                    QOutEnumerator,
           exahype2::fd::MaxEigenvalue                  maxEigenvalue,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
@@ -160,7 +160,7 @@ namespace exahype2 {
          */
         template <typename Solver, class QOutEnumeratorType>
         inline static double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QOut,
+          const double* NOALIAS                   QOut,
           const QOutEnumeratorType&                    QOutEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -175,7 +175,7 @@ namespace exahype2 {
          */
         template <typename Solver>
         static double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QOut,
+          const double* NOALIAS                   QOut,
           const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -190,7 +190,7 @@ namespace exahype2 {
          */
         template <>
         inline double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QOut,
+          const double* NOALIAS                   QOut,
           const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
           exahype2::fd::MaxEigenvalue                  maxEigenvalue,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,

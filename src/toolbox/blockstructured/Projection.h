@@ -2,8 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/utils/Globals.h"
+#include "tarch/CompilerSpecificSettings.h"
 
+#include "peano4/utils/Globals.h"
 
 namespace toolbox {
   namespace blockstructured {
@@ -31,11 +32,11 @@ namespace toolbox {
       int    haloSize,
       int    unknowns,
       int    auxiliaryVariables,
-      const double* __restrict__ Q,
-      double* __restrict__ leftFace,
-      double* __restrict__ bottomFace,
-      double* __restrict__ rightFace,
-      double* __restrict__ topFace
+      const double* NOALIAS Q,
+      double* NOALIAS leftFace,
+      double* NOALIAS bottomFace,
+      double* NOALIAS rightFace,
+      double* NOALIAS topFace
     );
 
     void projectPatchSolutionOntoFaces(
@@ -43,13 +44,13 @@ namespace toolbox {
       int    haloSize,
       int    unknowns,
       int    auxiliaryVariables,
-      const double* __restrict__ Q,
-      double* __restrict__ leftFace,
-      double* __restrict__ bottomFace,
-      double* __restrict__ frontFace,
-      double* __restrict__ rightFace,
-      double* __restrict__ topFace,
-      double* __restrict__ backFace
+      const double* NOALIAS Q,
+      double* NOALIAS leftFace,
+      double* NOALIAS bottomFace,
+      double* NOALIAS frontFace,
+      double* NOALIAS rightFace,
+      double* NOALIAS topFace,
+      double* NOALIAS backFace
     );
 
     void projectPatchSolutionOntoFaces(
@@ -57,7 +58,7 @@ namespace toolbox {
       int    haloSize,
       int    unknowns,
       int    auxiliaryVariables,
-      const double* __restrict__ Q,
+      const double* NOALIAS Q,
       double* faces[2*Dimensions]
     );
 
@@ -102,11 +103,11 @@ namespace toolbox {
       int    haloSize,
       int    unknowns,
       int    auxiliaryVariables,
-      const double* __restrict__ Q,
-      double* __restrict__ leftFace,
-      double* __restrict__ bottomFace,
-      double* __restrict__ rightFace,
-      double* __restrict__ topFace
+      const double* NOALIAS Q,
+      double* NOALIAS leftFace,
+      double* NOALIAS bottomFace,
+      double* NOALIAS rightFace,
+      double* NOALIAS topFace
     );
 
     void projectPatchHaloOntoFaces(
@@ -114,13 +115,13 @@ namespace toolbox {
       int    haloSize,
       int    unknowns,
       int    auxiliaryVariables,
-      const double* __restrict__ Q,
-      double* __restrict__ leftFace,
-      double* __restrict__ bottomFace,
-      double* __restrict__ frontFace,
-      double* __restrict__ rightFace,
-      double* __restrict__ topFace,
-      double* __restrict__ backFace
+      const double* NOALIAS Q,
+      double* NOALIAS leftFace,
+      double* NOALIAS bottomFace,
+      double* NOALIAS frontFace,
+      double* NOALIAS rightFace,
+      double* NOALIAS topFace,
+      double* NOALIAS backFace
     );
 
     void projectPatchHaloOntoFaces(
@@ -128,7 +129,7 @@ namespace toolbox {
       int    haloSize,
       int    unknowns,
       int    auxiliaryVariables,
-      const double* __restrict__ Q,
+      const double* NOALIAS Q,
       double* faces[2*Dimensions]
     );
 
@@ -137,11 +138,11 @@ namespace toolbox {
       int    haloSize,
       int    unknowns,
       int    auxiliaryVariables,
-      const double* __restrict__ Q,
-      double* __restrict__ leftFace,
-      double* __restrict__ bottomFace,
-      double* __restrict__ rightFace,
-      double* __restrict__ topFace
+      const double* NOALIAS Q,
+      double* NOALIAS leftFace,
+      double* NOALIAS bottomFace,
+      double* NOALIAS rightFace,
+      double* NOALIAS topFace
     );
 
     void extrapolatePatchSolutionAndProjectExtrapolatedHaloOntoFaces(
@@ -149,13 +150,13 @@ namespace toolbox {
       int    haloSize,
       int    unknowns,
       int    auxiliaryVariables,
-      const double* __restrict__ Q,
-      double* __restrict__ leftFace,
-      double* __restrict__ bottomFace,
-      double* __restrict__ frontFace,
-      double* __restrict__ rightFace,
-      double* __restrict__ topFace,
-      double* __restrict__ backFace
+      const double* NOALIAS Q,
+      double* NOALIAS leftFace,
+      double* NOALIAS bottomFace,
+      double* NOALIAS frontFace,
+      double* NOALIAS rightFace,
+      double* NOALIAS topFace,
+      double* NOALIAS backFace
     );
 
     void extrapolatePatchSolutionAndProjectExtrapolatedHaloOntoFaces(
@@ -163,7 +164,7 @@ namespace toolbox {
       int    haloSize,
       int    unknowns,
       int    auxiliaryVariables,
-      const double* __restrict__ Q,
+      const double* NOALIAS Q,
       double* faces[2*Dimensions]
     );
   }

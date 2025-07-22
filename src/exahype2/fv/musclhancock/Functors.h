@@ -15,37 +15,37 @@ namespace exahype2 {
   namespace fv {
     namespace musclhancock {
       typedef std::function< void(
-        const double * __restrict__ Q,
+        const double * NOALIAS Q,
         const tarch::la::Vector<Dimensions,double>&  volumeX,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
         double                                       dt,
-        double * __restrict__ S
+        double * NOALIAS S
       ) >  Source;
 
       typedef std::function< void(
-        const double * __restrict__ Q,
+        const double * NOALIAS Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
         double                                       dt,
         int                                          normal,
-        double * __restrict__ F
+        double * NOALIAS F
       ) >  Flux;
 
       typedef std::function< void(
-        const double * __restrict__                  Q,
-        const double * __restrict__                  deltaQ,
+        const double * NOALIAS                  Q,
+        const double * NOALIAS                  deltaQ,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
         double                                       dt,
         int                                          normal,
-        double * __restrict__                        BTimesDeltaQ
+        double * NOALIAS                        BTimesDeltaQ
       ) >   NonconservativeProduct;
 
       typedef std::function< double(
-        const double * __restrict__ Q,
+        const double * NOALIAS Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,

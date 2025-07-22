@@ -19,7 +19,7 @@
 #endif
 
 void applications::exahype2::ccz4::gaugeWave(
-  double * __restrict__ Q, // Q[64+0],
+  double * NOALIAS Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  x,
   double t
 ) {
@@ -52,7 +52,7 @@ void applications::exahype2::ccz4::gaugeWave(
 }
 
 void applications::exahype2::ccz4::diagonal_gaugeWave(
-  double * __restrict__ Q, // Q[64+0],
+  double * NOALIAS Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  x,
   double t
 ) {
@@ -91,7 +91,7 @@ void applications::exahype2::ccz4::diagonal_gaugeWave(
 }
 
 void applications::exahype2::ccz4::linearWave(
-  double * __restrict__ Q, // Q[64+0],
+  double * NOALIAS Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  X,
   double t
 ) {
@@ -117,7 +117,7 @@ void applications::exahype2::ccz4::linearWave(
 }
 
 void applications::exahype2::ccz4::flat(
-  double * __restrict__ Q, // Q[64+0],
+  double * NOALIAS Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  x,
   double t
 ) {
@@ -131,7 +131,7 @@ void applications::exahype2::ccz4::flat(
 
 #ifdef IncludeTwoPunctures
 void applications::exahype2::ccz4::ApplyTwoPunctures(
-  double * __restrict__ Q, // Q[64+0],
+  double * NOALIAS Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  X,
   double t,
   TP::TwoPunctures* tp,

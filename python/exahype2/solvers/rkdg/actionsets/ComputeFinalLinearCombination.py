@@ -84,7 +84,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       [&](
-        const double * __restrict__ Q,
+        const double * NOALIAS Q,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
         double                                       dt,

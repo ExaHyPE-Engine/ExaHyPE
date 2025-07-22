@@ -45,7 +45,7 @@ void benchmarks::exahype2::ccz4::prepareTwoPunctures() {
 }
 
 ::exahype2::RefinementCommand benchmarks::exahype2::ccz4::CCZ4SBH_FD4::refinementCriterion(
-  const double* __restrict__ Q, // Q[59+0]
+  const double* NOALIAS Q, // Q[59+0]
   const tarch::la::Vector<Dimensions, double>& volumeX,
   const tarch::la::Vector<Dimensions, double>& meshCellH,
   double                                       t
@@ -58,7 +58,7 @@ void benchmarks::exahype2::ccz4::prepareTwoPunctures() {
 benchmarks::exahype2::ccz4::CCZ4SBH_FD4::CCZ4SBH_FD4() { prepareTwoPunctures(); }
 
 void benchmarks::exahype2::ccz4::CCZ4SBH_FD4::initialCondition(
-  double* __restrict__ Q,
+  double* NOALIAS Q,
   const tarch::la::Vector<Dimensions, double>& meshCellCentre,
   const tarch::la::Vector<Dimensions, double>& meshCellH,
   bool                                         gridIsConstructed

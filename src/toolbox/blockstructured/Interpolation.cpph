@@ -8,8 +8,8 @@ void toolbox::blockstructured::internal::
     int                                       numberOfDoFsPerAxisInPatch,
     int                                       overlap,
     int                                       unknowns,
-    const T* __restrict__ fineGridCellValuesLeft,
-    const T* __restrict__ fineGridCellValuesRight,
+    const T* NOALIAS fineGridCellValuesLeft,
+    const T* NOALIAS fineGridCellValuesRight,
     T* fineGridFaceValues
   ) {
   logTraceInWith3Arguments(
@@ -80,8 +80,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       overlap,
   int                                       unknowns,
-  const T* __restrict__ coarseGridFaceValues,
-  T* __restrict__ fineGridFaceValues
+  const T* NOALIAS coarseGridFaceValues,
+  T* NOALIAS fineGridFaceValues
 ) {
   logTraceInWith4Arguments(
     "interpolateHaloLayer_AoS_piecewise_constant(...)",
@@ -141,9 +141,9 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       overlap,
   int                                       unknowns,
-  const T* __restrict__ coarseGridCellValues,
-  const T* __restrict__ coarseGridFaceValues,
-  T* __restrict__ fineGridFaceValues
+  const T* NOALIAS coarseGridCellValues,
+  const T* NOALIAS coarseGridFaceValues,
+  T* NOALIAS fineGridFaceValues
 ) {
   logTraceInWith4Arguments(
     "interpolateHaloLayer_AoS_piecewise_constant(...)",
@@ -223,8 +223,8 @@ void toolbox::blockstructured::interpolateCell_AoS_piecewise_constant(
   const peano4::datamanagement::CellMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       unknowns,
-  const T* __restrict__ coarseGridCellValues,
-  T* __restrict__ fineGridCellValues
+  const T* NOALIAS coarseGridCellValues,
+  T* NOALIAS fineGridCellValues
 ) {
   logTraceInWith3Arguments(
     "interpolateCell_AoS_piecewise_constant(...)",
@@ -249,8 +249,8 @@ void toolbox::blockstructured::internal::interpolateCell_AoS_piecewise_constant(
   const tarch::la::Vector<Dimensions, int>& relativePositionWithinFatherCell,
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       unknowns,
-  const T* __restrict__ coarseGridCellValues,
-  T* __restrict__ fineGridCellValues
+  const T* NOALIAS coarseGridCellValues,
+  T* NOALIAS fineGridCellValues
 ) {
   static internal::CellInterpolationMap  cellInterpolationMap;
   internal::CellInterpolationOperatorKey key(numberOfDoFsPerAxisInPatch);
@@ -294,8 +294,8 @@ void toolbox::blockstructured::
     int                                       numberOfDoFsPerAxisInPatch,
     int                                       overlap,
     int                                       unknowns,
-    const T* __restrict__ coarseGridFaceValues,
-    T* __restrict__ fineGridFaceValues
+    const T* NOALIAS coarseGridFaceValues,
+    T* NOALIAS fineGridFaceValues
   ) {
   logTraceInWith4Arguments(
     "interpolateHaloLayer_AoS_linear_with_constant_extrapolation(...)",
@@ -359,9 +359,9 @@ void toolbox::blockstructured::
     int                                       numberOfDoFsPerAxisInPatch,
     int                                       overlap,
     int                                       unknowns,
-    const T* __restrict__ coarseGridCellValues,
-    const T* __restrict__ coarseGridFaceValues,
-    T* __restrict__ fineGridFaceValues
+    const T* NOALIAS coarseGridCellValues,
+    const T* NOALIAS coarseGridFaceValues,
+    T* NOALIAS fineGridFaceValues
   ) {
   logTraceInWith4Arguments(
     "interpolateHaloLayer_AoS_linear_with_constant_extrapolation(...)",
@@ -445,8 +445,8 @@ void toolbox::blockstructured::
     const peano4::datamanagement::CellMarker& marker,
     int                                       numberOfDoFsPerAxisInPatch,
     int                                       unknowns,
-    const T* __restrict__ coarseGridCellValues,
-    T* __restrict__ fineGridCellValues
+    const T* NOALIAS coarseGridCellValues,
+    T* NOALIAS fineGridCellValues
   ) {
   logTraceInWith3Arguments(
     "interpolateCell_AoS_linear_with_constant_extrapolation(...)",
@@ -474,8 +474,8 @@ void toolbox::blockstructured::
     int                                       numberOfDoFsPerAxisInPatch,
     int                                       overlap,
     int                                       unknowns,
-    const T* __restrict__ coarseGridFaceValues,
-    T* __restrict__ fineGridFaceValues
+    const T* NOALIAS coarseGridFaceValues,
+    T* NOALIAS fineGridFaceValues
   ) {
   logTraceInWith4Arguments(
     "interpolateHaloLayer_AoS_linear_with_linear_extrapolation(...)",
@@ -538,9 +538,9 @@ void toolbox::blockstructured::
     int                                       numberOfDoFsPerAxisInPatch,
     int                                       overlap,
     int                                       unknowns,
-    const T* __restrict__ coarseGridCellValues,
-    const T* __restrict__ coarseGridFaceValues,
-    T* __restrict__ fineGridFaceValues
+    const T* NOALIAS coarseGridCellValues,
+    const T* NOALIAS coarseGridFaceValues,
+    T* NOALIAS fineGridFaceValues
   ) {
   logTraceInWith4Arguments(
     "interpolateHaloLayer_AoS_linear_with_linear_extrapolation(...)",
@@ -623,8 +623,8 @@ void toolbox::blockstructured::
     const peano4::datamanagement::CellMarker& marker,
     int                                       numberOfDoFsPerAxisInPatch,
     int                                       unknowns,
-    const T* __restrict__ coarseGridCellValues,
-    T* __restrict__ fineGridCellValues
+    const T* NOALIAS coarseGridCellValues,
+    T* NOALIAS fineGridCellValues
   ) {
   logTraceInWith3Arguments(
     "interpolateCell_AoS_linear_with_linear_extrapolation(...)",
@@ -652,8 +652,8 @@ void toolbox::blockstructured::
     int                                       numberOfDoFsPerAxisInPatch,
     int                                       overlap,
     int                                       unknowns,
-    const T* __restrict__ coarseGridFaceValues,
-    T* __restrict__ fineGridFaceValues
+    const T* NOALIAS coarseGridFaceValues,
+    T* NOALIAS fineGridFaceValues
   ) {
   logTraceInWith4Arguments(
     "interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)",
@@ -717,9 +717,9 @@ void toolbox::blockstructured::
     int                                       numberOfDoFsPerAxisInPatch,
     int                                       overlap,
     int                                       unknowns,
-    const T* __restrict__ coarseGridCellValues,
-    const T* __restrict__ coarseGridFaceValues,
-    T* __restrict__ fineGridFaceValues
+    const T* NOALIAS coarseGridCellValues,
+    const T* NOALIAS coarseGridFaceValues,
+    T* NOALIAS fineGridFaceValues
   ) {
   logTraceInWith4Arguments(
     "interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)",
@@ -804,8 +804,8 @@ void toolbox::blockstructured::
     const peano4::datamanagement::CellMarker& marker,
     int                                       numberOfDoFsPerAxisInPatch,
     int                                       unknowns,
-    const T* __restrict__ coarseGridCellValues,
-    T* __restrict__ fineGridCellValues
+    const T* NOALIAS coarseGridCellValues,
+    T* NOALIAS fineGridCellValues
   ) {
   logTraceInWith3Arguments(
     "interpolateCell_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)",
@@ -835,8 +835,8 @@ void toolbox::blockstructured::
     int                                       numberOfDoFsPerAxisInPatch,
     int                                       overlap,
     int                                       unknowns,
-    const T* __restrict__ coarseGridFaceValues,
-    T* __restrict__ fineGridFaceValues
+    const T* NOALIAS coarseGridFaceValues,
+    T* NOALIAS fineGridFaceValues
   ) {
   logTraceInWith4Arguments(
     "interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)",
@@ -901,9 +901,9 @@ void toolbox::blockstructured::
     int                                       numberOfDoFsPerAxisInPatch,
     int                                       overlap,
     int                                       unknowns,
-    const T* __restrict__ coarseGridCellValues,
-    const T* __restrict__ coarseGridFaceValues,
-    T* __restrict__ fineGridFaceValues
+    const T* NOALIAS coarseGridCellValues,
+    const T* NOALIAS coarseGridFaceValues,
+    T* NOALIAS fineGridFaceValues
   ) {
   logTraceInWith4Arguments(
     "interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)",
@@ -990,8 +990,8 @@ void toolbox::blockstructured::
     int haloSourcePatch,
     int haloDestinationPatch,
     int unknowns,
-    const T* __restrict__ sourceValues,
-    T* __restrict__ destinationValues
+    const T* NOALIAS sourceValues,
+    T* NOALIAS destinationValues
 ) {
   assertion(numberOfDoFsPerAxisInDestinationPatch > numberOfDoFsPerAxisInSourcePatch);
 
@@ -1066,11 +1066,11 @@ void toolbox::blockstructured::
     int haloSourcePatch,
     int haloDestinationPatch,
     int unknowns,
-    const T* __restrict__ interpolationData,
-    const int* __restrict__ columnIndices,
-    const int* __restrict__ rowIndices,
-    const T* __restrict__ sourceValues,
-    T* __restrict__ destinationValues
+    const T* NOALIAS interpolationData,
+    const int* NOALIAS columnIndices,
+    const int* NOALIAS rowIndices,
+    const T* NOALIAS sourceValues,
+    T* NOALIAS destinationValues
   ) {
   int destinationSize
     = (numberOfDoFsPerAxisInDestinationPatch + 2 * haloDestinationPatch)
@@ -1099,8 +1099,8 @@ void toolbox::blockstructured::
     int haloSourcePatch,
     int haloDestinationPatch,
     int unknowns,
-    const T* __restrict__ sourceValues,
-    T* __restrict__ destinationValues
+    const T* NOALIAS sourceValues,
+    T* NOALIAS destinationValues
   ) {
   int                                indices[18];
   tarch::la::Vector<Dimensions, int> stencil[18];
@@ -1316,8 +1316,8 @@ void toolbox::blockstructured::
     int haloSourcePatch,
     int haloDestinationPatch,
     int unknowns,
-    const T* __restrict__ sourceValues,
-    T* __restrict__ destinationValues
+    const T* NOALIAS sourceValues,
+    T* NOALIAS destinationValues
   ) {
   assertion(numberOfDoFsPerAxisInDestinationPatch > numberOfDoFsPerAxisInSourcePatch);
 
@@ -1338,8 +1338,8 @@ void toolbox::blockstructured::
     const peano4::datamanagement::CellMarker& marker,
     int                                       numberOfDoFsPerAxisInPatch,
     int                                       unknowns,
-    const T* __restrict__ coarseGridCellValues,
-    T* __restrict__ fineGridCellValues
+    const T* NOALIAS coarseGridCellValues,
+    T* NOALIAS fineGridCellValues
   ) {
   logTraceInWith3Arguments(
     "interpolateCell_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)",
@@ -1367,8 +1367,8 @@ void toolbox::blockstructured::internal::interpolateCell_AoS_linear(
   const tarch::la::Vector<Dimensions, int>& relativePositionWithinFatherCell,
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       unknowns,
-  const T* __restrict__ coarseGridCellValues,
-  T* __restrict__ fineGridCellValues,
+  const T* NOALIAS coarseGridCellValues,
+  T* NOALIAS fineGridCellValues,
   bool extrapolateLinearly
 ) {
   static internal::CellInterpolationMap  cellInterpolationMap;
@@ -1409,8 +1409,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       overlap,
   int                                       unknowns,
-  const T* __restrict__                     coarseGridFaceValues,
-  T* __restrict__                           fineGridFaceValues
+  const T* NOALIAS                     coarseGridFaceValues,
+  T* NOALIAS                           fineGridFaceValues
 ) {
   const int normal = marker.getSelectedFaceNumber() % Dimensions;
   const int i      = (normal + 1) % Dimensions;
@@ -1660,8 +1660,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_third_order(
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       overlap,
   int                                       unknowns,
-  const T* __restrict__ coarseGridFaceValues,
-  T* __restrict__ fineGridFaceValues
+  const T* NOALIAS coarseGridFaceValues,
+  T* NOALIAS fineGridFaceValues
 ) {
   const int normal = marker.getSelectedFaceNumber() % Dimensions;
   const int i      = (normal + 1) % Dimensions;
@@ -1947,13 +1947,13 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_matrix(
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       overlap,
   int                                       unknowns,
-  const T* __restrict__ interpolationData,
-  const int* __restrict__ columnIndices,
-  const int* __restrict__ rowIndices,
+  const T* NOALIAS interpolationData,
+  const int* NOALIAS columnIndices,
+  const int* NOALIAS rowIndices,
   int dataStart,
   int rowIndicesStart,
-  const T* __restrict__ coarseGridFaceValues,
-  T* __restrict__ fineGridFaceValues
+  const T* NOALIAS coarseGridFaceValues,
+  T* NOALIAS fineGridFaceValues
 ) {
   tarch::la::Vector<Dimensions, int> fineFaceDimensions(
     numberOfDoFsPerAxisInPatch
@@ -2038,10 +2038,10 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       overlap,
   int                                       unknowns,
-  const T* __restrict__ normalInterpolationMatrix1d,
-  const T* __restrict__ tangentialInterpolationMatrix1d,
-  const T* __restrict__ coarseGridFaceValues,
-  T* __restrict__ fineGridFaceValues
+  const T* NOALIAS normalInterpolationMatrix1d,
+  const T* NOALIAS tangentialInterpolationMatrix1d,
+  const T* NOALIAS coarseGridFaceValues,
+  T* NOALIAS fineGridFaceValues
 ) {
   logTraceInWith3Arguments(
     "interpolateHaloLayer_AoS_tensor_product(...)",
@@ -2147,11 +2147,11 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
   [[maybe_unused]] int numberOfDoFsPerAxisInPatch,
   [[maybe_unused]] int overlap,
   [[maybe_unused]] int unknowns,
-  [[maybe_unused]] const T* __restrict__ normalInterpolationMatrix1d,
-  [[maybe_unused]] const T* __restrict__ tangentialInterpolationMatrix1d,
-  [[maybe_unused]] const T* __restrict__ coarseGridCellValues,
-  [[maybe_unused]] const T* __restrict__ coarseGridFaceValues,
-  [[maybe_unused]] T* __restrict__ fineGridFaceValues
+  [[maybe_unused]] const T* NOALIAS normalInterpolationMatrix1d,
+  [[maybe_unused]] const T* NOALIAS tangentialInterpolationMatrix1d,
+  [[maybe_unused]] const T* NOALIAS coarseGridCellValues,
+  [[maybe_unused]] const T* NOALIAS coarseGridFaceValues,
+  [[maybe_unused]] T* NOALIAS fineGridFaceValues
 ) {
   assertion(false);
 }
@@ -2162,12 +2162,12 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_matrix(
   [[maybe_unused]] int numberOfDoFsPerAxisInPatch,
   [[maybe_unused]] int overlap,
   [[maybe_unused]] int unknowns,
-  [[maybe_unused]] const T* __restrict__ interpolationData,
-  [[maybe_unused]] const int* __restrict__ columnIndices,
-  [[maybe_unused]] const int* __restrict__ rowIndices,
-  [[maybe_unused]] const T* __restrict__ coarseGridCellValues,
-  [[maybe_unused]] const T* __restrict__ coarseGridFaceValues,
-  [[maybe_unused]] T* __restrict__ fineGridFaceValues
+  [[maybe_unused]] const T* NOALIAS interpolationData,
+  [[maybe_unused]] const int* NOALIAS columnIndices,
+  [[maybe_unused]] const int* NOALIAS rowIndices,
+  [[maybe_unused]] const T* NOALIAS coarseGridCellValues,
+  [[maybe_unused]] const T* NOALIAS coarseGridFaceValues,
+  [[maybe_unused]] T* NOALIAS fineGridFaceValues
 ) {
   assertion(false);
 }
@@ -2178,9 +2178,9 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
   [[maybe_unused]] int numberOfDoFsPerAxisInPatch,
   [[maybe_unused]] int overlap,
   [[maybe_unused]] int unknowns,
-  [[maybe_unused]] const T* __restrict__ coarseGridCellValues,
-  [[maybe_unused]] const T* __restrict__ coarseGridFaceValues,
-  [[maybe_unused]] T* __restrict__ fineGridFaceValues
+  [[maybe_unused]] const T* NOALIAS coarseGridCellValues,
+  [[maybe_unused]] const T* NOALIAS coarseGridFaceValues,
+  [[maybe_unused]] T* NOALIAS fineGridFaceValues
 ) {
   assertion(false);
 }
@@ -2191,9 +2191,9 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_third_order(
   [[maybe_unused]] int numberOfDoFsPerAxisInPatch,
   [[maybe_unused]] int overlap,
   [[maybe_unused]] int unknowns,
-  [[maybe_unused]] const T* __restrict__ coarseGridCellValues,
-  [[maybe_unused]] const T* __restrict__ coarseGridFaceValues,
-  [[maybe_unused]] T* __restrict__ fineGridFaceValues
+  [[maybe_unused]] const T* NOALIAS coarseGridCellValues,
+  [[maybe_unused]] const T* NOALIAS coarseGridFaceValues,
+  [[maybe_unused]] T* NOALIAS fineGridFaceValues
 ) {
   assertion(false);
 }
@@ -2203,9 +2203,9 @@ void toolbox::blockstructured::interpolateCell_AoS_tensor_product(
   [[maybe_unused]] const peano4::datamanagement::CellMarker& marker,
   [[maybe_unused]] int numberOfDoFsPerAxisInPatch,
   [[maybe_unused]] int unknowns,
-  [[maybe_unused]] const T* __restrict__ interpolationMatrix1d,
-  [[maybe_unused]] const T* __restrict__ coarseGridCellValues,
-  [[maybe_unused]] T* __restrict__ fineGridCellValues
+  [[maybe_unused]] const T* NOALIAS interpolationMatrix1d,
+  [[maybe_unused]] const T* NOALIAS coarseGridCellValues,
+  [[maybe_unused]] T* NOALIAS fineGridCellValues
 ) {
   assertion(false);
 }
@@ -2215,11 +2215,11 @@ void toolbox::blockstructured::interpolateCell_AoS_matrix(
   [[maybe_unused]] const peano4::datamanagement::CellMarker& marker,
   [[maybe_unused]] int numberOfDoFsPerAxisInPatch,
   [[maybe_unused]] int unknowns,
-  [[maybe_unused]] const T* __restrict__ interpolationData,
-  [[maybe_unused]] const int* __restrict__ columnIndices,
-  [[maybe_unused]] const int* __restrict__ rowIndices,
-  [[maybe_unused]] const T* __restrict__ coarseGridCellValues,
-  [[maybe_unused]] T* __restrict__ fineGridCellValues
+  [[maybe_unused]] const T* NOALIAS interpolationData,
+  [[maybe_unused]] const int* NOALIAS columnIndices,
+  [[maybe_unused]] const int* NOALIAS rowIndices,
+  [[maybe_unused]] const T* NOALIAS coarseGridCellValues,
+  [[maybe_unused]] T* NOALIAS fineGridCellValues
 ) {
   assertion(false);
 }
@@ -2229,8 +2229,8 @@ void toolbox::blockstructured::interpolateCell_AoS_second_order(
   [[maybe_unused]] const peano4::datamanagement::CellMarker& marker,
   [[maybe_unused]] int numberOfDoFsPerAxisInPatch,
   [[maybe_unused]] int unknowns,
-  [[maybe_unused]] const T* __restrict__ coarseGridCellValues,
-  [[maybe_unused]] T* __restrict__ fineGridCellValues
+  [[maybe_unused]] const T* NOALIAS coarseGridCellValues,
+  [[maybe_unused]] T* NOALIAS fineGridCellValues
 ) {
   assertion(false);
 }
@@ -2240,8 +2240,8 @@ void toolbox::blockstructured::interpolateCell_AoS_third_order(
   [[maybe_unused]] const peano4::datamanagement::CellMarker& marker,
   [[maybe_unused]] int numberOfDoFsPerAxisInPatch,
   [[maybe_unused]] int unknowns,
-  [[maybe_unused]] const T* __restrict__ coarseGridCellValues,
-  [[maybe_unused]] T* __restrict__ fineGridCellValues
+  [[maybe_unused]] const T* NOALIAS coarseGridCellValues,
+  [[maybe_unused]] T* NOALIAS fineGridCellValues
 ) {
   assertion(false);
 }

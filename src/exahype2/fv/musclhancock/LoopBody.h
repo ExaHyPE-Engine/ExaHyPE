@@ -27,12 +27,12 @@ namespace exahype2 {
         #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void copySolution_LoopBody(
-          const double* __restrict__                QIn,
+          const double* NOALIAS                QIn,
           const QInEnumeratorType&                  QInEnumerator,
           int                                       patchIndex,
           const tarch::la::Vector<Dimensions,int>&  volumeIndex,
           int                                       unknown,
-          double* __restrict__                      QOut,
+          double* NOALIAS                      QOut,
           const QOutEnumeratorType&                 QOutEnumerator
         ) InlineMethod;
         #if defined(GPUOffloadingOMP)
@@ -41,7 +41,7 @@ namespace exahype2 {
 
         template <class QInEnumeratorType, class QInterEnumeratorType>
         void computeTimeDerivative_LoopBody(
-            const double* __restrict__                          QIn,
+            const double* NOALIAS                          QIn,
             const QInEnumeratorType                             QInEnumerator,
             exahype2::fv::musclhancock::Flux                    flux,
             exahype2::fv::musclhancock::NonconservativeProduct  ncp,
@@ -52,13 +52,13 @@ namespace exahype2 {
             const tarch::la::Vector<Dimensions,int>&            volumeIndex,
             double                                              t,
             double                                              dt,
-            double* __restrict__                                timederivative,
+            double* NOALIAS                                timederivative,
             QInterEnumeratorType                                QInterEnumerator
         ) InlineMethod; 
 
         template <class QInEnumeratorType, class QInterEnumeratorType>
         void computeQonFace_LoopBody(
-            const double* __restrict__                   QIn,
+            const double* NOALIAS                   QIn,
             const QInEnumeratorType                      QInEnumerator,
             const tarch::la::Vector<Dimensions,double>&  patchCentre,
             const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -66,19 +66,19 @@ namespace exahype2 {
             const tarch::la::Vector<Dimensions,int>&     volumeIndex,
             double                                       t,
             double                                       dt,
-            double* __restrict__                         timederivative,
-            double* __restrict__                         QfaceXneg,
-            double* __restrict__                         QfaceXpos,
-            double* __restrict__                         QfaceYneg,
-            double* __restrict__                         QfaceYpos,
-            double* __restrict__                         QfaceZneg,
-            double* __restrict__                         QfaceZpos,
+            double* NOALIAS                         timederivative,
+            double* NOALIAS                         QfaceXneg,
+            double* NOALIAS                         QfaceXpos,
+            double* NOALIAS                         QfaceYneg,
+            double* NOALIAS                         QfaceYpos,
+            double* NOALIAS                         QfaceZneg,
+            double* NOALIAS                         QfaceZpos,
             QInterEnumeratorType                         QInterEnumerator
         ) InlineMethod;
 
         template <class QInEnumeratorType, class QMaxEigenvalueEnumeratorType>
         static void computeMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QIn,
+          const double* NOALIAS                   QIn,
           QInEnumeratorType                            QInEnumerator,
           exahype2::fv::musclhancock::MaxEigenvalue         maxEigenvalue,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
@@ -88,7 +88,7 @@ namespace exahype2 {
           double                                       t,
           double                                       dt,
           int                                          normal,
-          double* __restrict__                         QMaxEigenvalue,
+          double* NOALIAS                         QMaxEigenvalue,
           QMaxEigenvalueEnumeratorType                 QMaxEigenvalueEnumerator
         )  InlineMethod;
 
@@ -100,11 +100,11 @@ namespace exahype2 {
         #endif
         template <typename QInEnumeratorType, typename QInterEnumeratorType, typename QMaxEigenvalueEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithEigenvalueDamping_LoopBody(
-          const double* __restrict__                   QIn,
+          const double* NOALIAS                   QIn,
           const QInEnumeratorType                      QInEnumerator,
-          const double* __restrict__                   tempMaxEigenvalueX,
-          const double* __restrict__                   tempMaxEigenvalueY,
-          const double* __restrict__                   tempMaxEigenvalueZ,
+          const double* NOALIAS                   tempMaxEigenvalueX,
+          const double* NOALIAS                   tempMaxEigenvalueY,
+          const double* NOALIAS                   tempMaxEigenvalueZ,
           const QMaxEigenvalueEnumeratorType &         eigenvalueEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -112,14 +112,14 @@ namespace exahype2 {
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           int                                          unknown,
           double                                       dt,
-          double* __restrict__                         QOut,
+          double* NOALIAS                         QOut,
           const QOutEnumeratorType &                   QOutEnumerator,
-          double* __restrict__                         QfaceXneg,
-          double* __restrict__                         QfaceXpos,
-          double* __restrict__                         QfaceYneg,
-          double* __restrict__                         QfaceYpos,
-          double* __restrict__                         QfaceZneg,
-          double* __restrict__                         QfaceZpos,
+          double* NOALIAS                         QfaceXneg,
+          double* NOALIAS                         QfaceXpos,
+          double* NOALIAS                         QfaceYneg,
+          double* NOALIAS                         QfaceYpos,
+          double* NOALIAS                         QfaceZneg,
+          double* NOALIAS                         QfaceZpos,
           QInterEnumeratorType                         QInterEnumerator
         ) InlineMethod;
         #if defined(GPUOffloadingOMP)
@@ -131,8 +131,8 @@ namespace exahype2 {
         #endif
         template <class QInEnumeratorType, class QInterEnumeratorType, class QFluxEnumeratorType>
         static void computeFlux_LoopBody(
-          double* __restrict__                         QfaceNLeft,
-          double* __restrict__                         QfaceNRight,
+          double* NOALIAS                         QfaceNLeft,
+          double* NOALIAS                         QfaceNRight,
           QInterEnumeratorType                         QInterEnumerator,
           QInEnumeratorType                            QInEnumerator,
           exahype2::fv::musclhancock::Flux         flux,
@@ -143,8 +143,8 @@ namespace exahype2 {
           double                                       t,
           double                              dt,
           int                                 normal,
-          double* __restrict__                QFluxL,
-          double* __restrict__                QFluxR,
+          double* NOALIAS                QFluxL,
+          double* NOALIAS                QFluxR,
           QFluxEnumeratorType                 QFluxEnumerator
 
         ) InlineMethod;
@@ -157,12 +157,12 @@ namespace exahype2 {
         #endif
         template <typename QFluxEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithFlux_LoopBody(
-          const double* __restrict__                   tempFluxXL,
-          const double* __restrict__                   tempFluxYL,
-          const double* __restrict__                   tempFluxZL,
-          const double* __restrict__                   tempFluxXR,
-          const double* __restrict__                   tempFluxYR,
-          const double* __restrict__                   tempFluxZR,
+          const double* NOALIAS                   tempFluxXL,
+          const double* NOALIAS                   tempFluxYL,
+          const double* NOALIAS                   tempFluxZL,
+          const double* NOALIAS                   tempFluxXR,
+          const double* NOALIAS                   tempFluxYR,
+          const double* NOALIAS                   tempFluxZR,
           const QFluxEnumeratorType                   fluxEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -170,7 +170,7 @@ namespace exahype2 {
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           int                                          unknown,
           double                                       dt,
-          double* __restrict__                         QOut,
+          double* NOALIAS                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
         #if defined(GPUOffloadingOMP)
@@ -179,8 +179,8 @@ namespace exahype2 {
 
         template <class QInEnumeratorType, class QInterEnumeratorType, class QNCPFaceEnumeratorType>
         static void computeDTerm_LoopBody(
-            double* __restrict__                           QfaceNLeft,
-            double* __restrict__                           QfaceNRight,
+            double* NOALIAS                           QfaceNLeft,
+            double* NOALIAS                           QfaceNRight,
             QInterEnumeratorType                           QInterEnumerator,
             QInEnumeratorType                              QInEnumerator,
             exahype2::fv::musclhancock::NonconservativeProduct  ncp,
@@ -191,7 +191,7 @@ namespace exahype2 {
             double                                         t,
             double                                         dt,
             int                                            normal,
-            double* __restrict__                           QD,
+            double* NOALIAS                           QD,
             const QNCPFaceEnumeratorType                   QNcpEnumerator
         ) InlineMethod;
 
@@ -203,9 +203,9 @@ namespace exahype2 {
         #endif
         template <typename QNCPFaceEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithDTerm_LoopBody(
-          const double* __restrict__                   QDX,
-          const double* __restrict__                   QDY,
-          const double* __restrict__                   QDZ,
+          const double* NOALIAS                   QDX,
+          const double* NOALIAS                   QDY,
+          const double* NOALIAS                   QDZ,
           const QNCPFaceEnumeratorType                 ncpEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -213,7 +213,7 @@ namespace exahype2 {
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           int                                          unknown,
           double                                       dt,
-          double* __restrict__                         QOut,
+          double* NOALIAS                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
         #if defined(GPUOffloadingOMP)
@@ -222,7 +222,7 @@ namespace exahype2 {
 
         template <class QInEnumeratorType, class QInterEnumeratorType, class QOutEnumeratorType>
         void updateSolutionwithNCPandSource_LoopBody(
-          const double* __restrict__                   QIn,
+          const double* NOALIAS                   QIn,
           const QInterEnumeratorType                   QInterEnumerator,
           const QInEnumeratorType                     QInEnumerator,
           exahype2::fv::musclhancock::NonconservativeProduct  ncp,
@@ -234,7 +234,7 @@ namespace exahype2 {
           double                                       t,
           double                                       dt,
           double*                                      timeDerivative,
-          double* __restrict__                         QOut,
+          double* NOALIAS                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator,
           bool                                         evalNCP,
           bool                                         evalSRC
@@ -242,7 +242,7 @@ namespace exahype2 {
 
         template <class QInEnumeratorType>
         static double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QIn,
+          const double* NOALIAS                   QIn,
           QInEnumeratorType                            QInEnumerator,
           exahype2::fv::musclhancock::MaxEigenvalue         maxEigenvalue,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,

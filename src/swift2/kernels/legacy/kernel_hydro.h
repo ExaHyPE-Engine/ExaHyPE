@@ -44,7 +44,7 @@ namespace swift2 {
 #pragma error "Hydro dimension undefined"
 #endif
 
-      static const double kernel_coeffs[(kernel_degree + 1) * (kernel_ivals + 1)] __attribute__((aligned(AlignmentOnHeap
+      static const double kernel_coeffs[(kernel_degree + 1) * (kernel_ivals + 1)] __attribute__((aligned(ALIGNMENT_ON_HEAP
       )))
       = {
         6.0,  0.0,  -2.4, 0.0,  0.368, /* 0 < u < 0.2 */

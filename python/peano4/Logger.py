@@ -19,10 +19,7 @@ class _SimpleColorFormatter(logging.Formatter):
         return f"{color}{message}{_RESET_CODE}"
 
 def setup_logging(level=logging.INFO):
-    formatter = _SimpleColorFormatter(
-        "[%(asctime)s] [%(levelname)s]: %(message)s",
-        "%Y-%m-%d %H:%M:%S"
-    )
+    formatter = _SimpleColorFormatter("[%(levelname)s]: %(message)s")
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(formatter)
 

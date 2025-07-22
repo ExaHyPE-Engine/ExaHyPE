@@ -91,7 +91,7 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       [&](
-        const double * __restrict__ Q,
+        const double * NOALIAS Q,
         const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
         const tarch::la::Vector<Dimensions,double>&  gridCellH,
         double                                       t,

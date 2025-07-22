@@ -249,8 +249,8 @@ namespace swift2 {
        */
       template <typename Particle>
       bool forceKernelDistanceCheck(
-        Particle* __restrict__ localParticle,
-        const Particle* __restrict__ activeParticle
+        Particle* NOALIAS localParticle,
+        const Particle* NOALIAS activeParticle
       );
     } // namespace legacy
   }   // namespace kernels

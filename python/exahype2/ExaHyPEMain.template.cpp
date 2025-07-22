@@ -523,7 +523,7 @@ int main(int argc, char** argv) {
       // Print final timestep information
       {{SUBNAMESPACE}}repositories::printTimeStep(false);
       logInfo("main()", "Terminated successfully");
-      int returnCode = EXIT_SUCCESS;
+      returnCode = EXIT_SUCCESS;
     }
 
     if (timeStepMeasurement.getNumberOfMeasurements() > 0) {

@@ -10,11 +10,11 @@ void toolbox::blockstructured::projectPatchSolutionOntoFaces(
     int    haloSize,
     int    unknowns,
     int    auxiliaryVariables,
-    const double* __restrict__ Q,
-    double* __restrict__ leftFace,
-    double* __restrict__ bottomFace,
-    double* __restrict__ rightFace,
-    double* __restrict__ topFace
+    const double* NOALIAS Q,
+    double* NOALIAS leftFace,
+    double* NOALIAS bottomFace,
+    double* NOALIAS rightFace,
+    double* NOALIAS topFace
 ) {
   assertionEquals( Dimensions, 2 );
   double* faces[4] = { leftFace, bottomFace, rightFace, topFace };
@@ -34,13 +34,13 @@ void toolbox::blockstructured::projectPatchSolutionOntoFaces(
     int    haloSize,
     int    unknowns,
     int    auxiliaryVariables,
-    const double* __restrict__ Q,
-    double* __restrict__ leftFace,
-    double* __restrict__ bottomFace,
-    double* __restrict__ frontFace,
-    double* __restrict__ rightFace,
-    double* __restrict__ topFace,
-    double* __restrict__ backFace
+    const double* NOALIAS Q,
+    double* NOALIAS leftFace,
+    double* NOALIAS bottomFace,
+    double* NOALIAS frontFace,
+    double* NOALIAS rightFace,
+    double* NOALIAS topFace,
+    double* NOALIAS backFace
 ) {
   assertionEquals( Dimensions, 3 );
   double* faces[6] = { leftFace, bottomFace, frontFace, rightFace, topFace, backFace};
@@ -60,7 +60,7 @@ void toolbox::blockstructured::projectPatchSolutionOntoFaces(
     int    haloSize,
     int    unknowns,
     int    auxiliaryVariables,
-    const double* __restrict__ Q,
+    const double* NOALIAS Q,
     double* faces[2*Dimensions]
 ) {
   for(int d=0; d<Dimensions; d++) {
@@ -104,11 +104,11 @@ void toolbox::blockstructured::projectPatchHaloOntoFaces(
     int    haloSize,
     int    unknowns,
     int    auxiliaryVariables,
-    const double* __restrict__ Q,
-    double* __restrict__ leftFace,
-    double* __restrict__ bottomFace,
-    double* __restrict__ rightFace,
-    double* __restrict__ topFace
+    const double* NOALIAS Q,
+    double* NOALIAS leftFace,
+    double* NOALIAS bottomFace,
+    double* NOALIAS rightFace,
+    double* NOALIAS topFace
 ) {
   assertionEquals( Dimensions, 2 );
   double* faces[4] = { leftFace, bottomFace, rightFace, topFace };
@@ -128,13 +128,13 @@ void toolbox::blockstructured::projectPatchHaloOntoFaces(
     int    haloSize,
     int    unknowns,
     int    auxiliaryVariables,
-    const double* __restrict__ Q,
-    double* __restrict__ leftFace,
-    double* __restrict__ bottomFace,
-    double* __restrict__ frontFace,
-    double* __restrict__ rightFace,
-    double* __restrict__ topFace,
-    double* __restrict__ backFace
+    const double* NOALIAS Q,
+    double* NOALIAS leftFace,
+    double* NOALIAS bottomFace,
+    double* NOALIAS frontFace,
+    double* NOALIAS rightFace,
+    double* NOALIAS topFace,
+    double* NOALIAS backFace
 ) {
   assertionEquals( Dimensions, 3 );
   double* faces[6] = { leftFace, bottomFace, frontFace, rightFace, topFace, backFace};
@@ -154,7 +154,7 @@ void toolbox::blockstructured::projectPatchHaloOntoFaces(
     int    haloSize,
     int    unknowns,
     int    auxiliaryVariables,
-    const double* __restrict__ Q,
+    const double* NOALIAS Q,
     double* faces[2*Dimensions]
 ) {
   for(int d=0; d<Dimensions; d++) {
@@ -198,11 +198,11 @@ void toolbox::blockstructured::extrapolatePatchSolutionAndProjectExtrapolatedHal
     int    haloSize,
     int    unknowns,
     int    auxiliaryVariables,
-    const double* __restrict__ Q,
-    double* __restrict__ leftFace,
-    double* __restrict__ bottomFace,
-    double* __restrict__ rightFace,
-    double* __restrict__ topFace
+    const double* NOALIAS Q,
+    double* NOALIAS leftFace,
+    double* NOALIAS bottomFace,
+    double* NOALIAS rightFace,
+    double* NOALIAS topFace
 ) {
   assertionEquals( Dimensions, 2 );
   double* faces[4] = { leftFace, bottomFace, rightFace, topFace };
@@ -222,13 +222,13 @@ void toolbox::blockstructured::extrapolatePatchSolutionAndProjectExtrapolatedHal
     int    haloSize,
     int    unknowns,
     int    auxiliaryVariables,
-    const double* __restrict__ Q,
-    double* __restrict__ leftFace,
-    double* __restrict__ bottomFace,
-    double* __restrict__ frontFace,
-    double* __restrict__ rightFace,
-    double* __restrict__ topFace,
-    double* __restrict__ backFace
+    const double* NOALIAS Q,
+    double* NOALIAS leftFace,
+    double* NOALIAS bottomFace,
+    double* NOALIAS frontFace,
+    double* NOALIAS rightFace,
+    double* NOALIAS topFace,
+    double* NOALIAS backFace
 ) {
   assertionEquals( Dimensions, 3 );
   double* faces[6] = { leftFace, bottomFace, frontFace, rightFace, topFace, backFace};
@@ -248,7 +248,7 @@ void toolbox::blockstructured::extrapolatePatchSolutionAndProjectExtrapolatedHal
     int    haloSize,
     int    unknowns,
     int    auxiliaryVariables,
-    const double* __restrict__ Q,
+    const double* NOALIAS Q,
     double* faces[2*Dimensions]
 ) {
   assertion(false);

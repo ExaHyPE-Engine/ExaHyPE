@@ -38,8 +38,8 @@ namespace exahype2 {
      */
     void applyBoundaryConditions(
       std::function< void(
-        const double* __restrict__                   Qinside,
-        double * __restrict__                        Qoutside,
+        const double* NOALIAS                   Qinside,
+        double * NOALIAS                        Qoutside,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
         double                                       dt,
@@ -53,8 +53,8 @@ namespace exahype2 {
       int                                          unknowns,
       int                                          auxiliaryVariables,
       int                                          faceNumber,
-      const double* __restrict__                   quadraturePoints,
-      double* __restrict__                         Q
+      const double* NOALIAS                   quadraturePoints,
+      double* NOALIAS                         Q
     );
   }
 }

@@ -3,9 +3,9 @@ template <typename QStoreType>
 QStoreType exahype2::dg::evaluatePolynomial(
   const peano4::datamanagement::CellMarker&    marker,
   int                                          order,
-  const double* __restrict__                   QuadratureNodes1d,
+  const double* NOALIAS                   QuadratureNodes1d,
   int                                          unknownsPerDoF,
-  const QStoreType* __restrict__               Q,
+  const QStoreType* NOALIAS               Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   int                                          unknown
 ) {
@@ -35,7 +35,7 @@ tarch::la::Vector<Dimensions,double>  exahype2::dg::getQuadraturePoint(
   const tarch::la::Vector<Dimensions,double>&  cellSize,
   const tarch::la::Vector<Dimensions,int>&     index,
   int                                 /*polynomialOrder*/,
-  const T* __restrict__          quadraturePoints
+  const T* NOALIAS          quadraturePoints
 ) {
   tarch::la::Vector<Dimensions,double> result;
 

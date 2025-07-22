@@ -30,7 +30,7 @@
  * For the machine name. If it doesn't work, switch it off in the file
  * CompilerSpecificSettings.h.
  */
-#ifdef CompilerHasUTSName
+#ifdef COMPILER_HAS_UTS_NAME
 #include <sys/utsname.h>
 #endif
 
@@ -98,7 +98,7 @@ void tarch::logging::Log::indent( bool indent, const std::string& trace, Message
 std::string tarch::logging::Log::getMachineInformation() {
   std::ostringstream message;
 
-  #ifdef CompilerHasUTSName
+  #ifdef COMPILER_HAS_UTS_NAME
   utsname* utsdata = new utsname();
   assertion( utsdata!=NULL );
   uname(utsdata);

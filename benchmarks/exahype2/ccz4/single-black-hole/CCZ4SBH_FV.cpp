@@ -57,7 +57,7 @@ void benchmarks::exahype2::ccz4::prepareTwoPunctures() {
 benchmarks::exahype2::ccz4::CCZ4SBH_FV::CCZ4SBH_FV() { prepareTwoPunctures(); }
 
 void benchmarks::exahype2::ccz4::CCZ4SBH_FV::initialCondition(
-  double* __restrict__ Q,
+  double* NOALIAS Q,
   const tarch::la::Vector<Dimensions, double>& volumeCentre,
   const tarch::la::Vector<Dimensions, double>& volumeH,
   bool                                         gridIsConstructed

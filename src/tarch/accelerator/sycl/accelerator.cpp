@@ -31,8 +31,8 @@ void* tarch::accelerator::allocateRawData(
   switch (location) {
   case MemoryLocation::Heap:
     data = std::aligned_alloc(
-      AlignmentOnHeap,
-      tarch::padSizeToAlignment(sizeInBytes, AlignmentOnHeap)
+      ALIGNMENT_ON_HEAP,
+      tarch::padSizeToAlignment(sizeInBytes, ALIGNMENT_ON_HEAP)
     );
     break;
   case MemoryLocation::Device: {

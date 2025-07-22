@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/CompilerSpecificSettings.h"
 
 namespace toolbox {
   namespace blockstructured {
@@ -27,11 +28,11 @@ namespace toolbox {
      */
     void copyUnknown(
       int                                numberOfDoFsPerAxisInPatch,
-      const double* __restrict__         source,
+      const double* NOALIAS         source,
       int                                sourceIndex,
       int                                sourceUnknowns,
       int                                sourceHalo,
-      double* __restrict__               dest,
+      double* NOALIAS               dest,
       int                                destIndex,
       int                                destUnknowns,
       int                                destHalo
@@ -42,20 +43,20 @@ namespace toolbox {
      */
     void copyUnknowns(
       int                                numberOfDoFsPerAxisInPatch,
-      const double* __restrict__         source,
+      const double* NOALIAS         source,
       int                                sourceHalo,
-      double* __restrict__               dest,
+      double* NOALIAS               dest,
       int                                destHalo,
       int                                unknowns
     );
 
     double copyUnknownAndComputeMaxDifference(
       int                                numberOfDoFsPerAxisInPatch,
-      const double* __restrict__         source,
+      const double* NOALIAS         source,
       int                                sourceIndex,
       int                                sourceUnknowns,
       int                                sourceHalo,
-      double* __restrict__               dest,
+      double* NOALIAS               dest,
       int                                destIndex,
       int                                destUnknowns,
       int                                destHalo

@@ -15,7 +15,7 @@
 tarch::logging::Log benchmarks::exahype2::ccz4::CCZ4::_log("benchmarks::exahype2::ccz4::CCZ4");
 
 void benchmarks::exahype2::ccz4::CCZ4::initialCondition(
-  double* __restrict__ Q,
+  double* NOALIAS Q,
   const tarch::la::Vector<Dimensions, double>& volumeX,
   const tarch::la::Vector<Dimensions, double>& volumeH,
   bool                                         gridIsConstructed
@@ -54,8 +54,8 @@ void benchmarks::exahype2::ccz4::CCZ4::initialCondition(
 }
 
 void benchmarks::exahype2::ccz4::CCZ4::boundaryConditions(
-  const double* __restrict__ Qinside, // Qinside[59+0]
-  double* __restrict__ Qoutside,      // Qoutside[59+0]
+  const double* NOALIAS Qinside, // Qinside[59+0]
+  double* NOALIAS Qoutside,      // Qoutside[59+0]
   const tarch::la::Vector<Dimensions, double>& faceCentre,
   const tarch::la::Vector<Dimensions, double>& volumeH,
   double                                       t,
@@ -68,7 +68,7 @@ void benchmarks::exahype2::ccz4::CCZ4::boundaryConditions(
 }
 
 ::exahype2::RefinementCommand benchmarks::exahype2::ccz4::CCZ4::refinementCriterion(
-  const double* __restrict__ Q,
+  const double* NOALIAS Q,
   const tarch::la::Vector<Dimensions, double>& volumeCentre,
   const tarch::la::Vector<Dimensions, double>& volumeH,
   double                                       t

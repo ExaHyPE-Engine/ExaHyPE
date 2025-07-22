@@ -6,6 +6,7 @@
 #include "Interpolation.h"
 
 #include "tarch/Assertions.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/la/DynamicMatrix.h"
 #include "tarch/la/DynamicMatrixOperations.h"
 #include "tarch/la/GramSchmidt.h"
@@ -251,7 +252,7 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__ tangentialRestrictionMatrix1d,
+      const double* NOALIAS tangentialRestrictionMatrix1d,
       T*      fineGridValues,
       T*      coarseGridValues
     );
@@ -261,9 +262,9 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__ restrictionData,
-      const int* __restrict__ columnIndices,
-      const int* __restrict__ rowIndices,
+      const double* NOALIAS restrictionData,
+      const int* NOALIAS columnIndices,
+      const int* NOALIAS rowIndices,
       T*      fineGridValues,
       T*      coarseGridValues
     );
@@ -306,8 +307,8 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ normalRestrictionMatrix1d,
-      const double* __restrict__ tangentialRestrictionMatrix1d,
+      const double* NOALIAS normalRestrictionMatrix1d,
+      const double* NOALIAS tangentialRestrictionMatrix1d,
       T*      fineGridValues,
       T*      coarseGridValues
     );
@@ -318,9 +319,9 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ restrictionData,
-      const int* __restrict__ columnIndices,
-      const int* __restrict__ rowIndices,
+      const double* NOALIAS restrictionData,
+      const int* NOALIAS columnIndices,
+      const int* NOALIAS rowIndices,
       int     dataOffset,
       int     rowIndicesOffset,
       T*      fineGridValues,
@@ -528,8 +529,8 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ normalRestrictionMatrix1d,
-      const double* __restrict__ tangentialRestrictionMatrix1d,
+      const double* NOALIAS normalRestrictionMatrix1d,
+      const double* NOALIAS tangentialRestrictionMatrix1d,
       T*      fineGridValues,
       T*      coarseGridValues,
       bool    swapInsideOutside = false
@@ -541,9 +542,9 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ restrictionMatrixData,
-      const int* __restrict__ columnIndices,
-      const int* __restrict__ rowIndices,
+      const double* NOALIAS restrictionMatrixData,
+      const int* NOALIAS columnIndices,
+      const int* NOALIAS rowIndices,
       int     dataOffset,
       int     rowIndicesOffset,
       T*      fineGridValues,

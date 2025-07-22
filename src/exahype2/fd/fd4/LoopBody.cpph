@@ -11,7 +11,7 @@ namespace {
    */
   template <class QInEnumeratorType>
   void computeCentralDifferencesForDifferentialSourceTerm(
-    const double* __restrict__ QIn,
+    const double* NOALIAS QIn,
     const QInEnumeratorType&                  QInEnumerator,
     const tarch::la::Vector<Dimensions,double>&    patchSize,
     int                                       patchIndex,
@@ -119,7 +119,7 @@ namespace {
    */
   template <class QInEnumeratorType>
   void computeCentralDifferencesWithLimiterForDifferentialSourceTerm(
-    const double* __restrict__ QIn,
+    const double* NOALIAS QIn,
     const QInEnumeratorType&                  QInEnumerator,
     int                                       patchIndex,
     const tarch::la::Vector<Dimensions, int>& volumeIndex,
@@ -202,7 +202,7 @@ namespace {
    */
   template <class QInEnumeratorType>
   void addLopsidedAvectionToDifferentialSourceTerm(
-    const double* __restrict__ QIn,
+    const double* NOALIAS QIn,
     const QInEnumeratorType&                  QInEnumerator,
     int                                       patchIndex,
     const tarch::la::Vector<Dimensions, int>& volumeIndex,
@@ -298,7 +298,7 @@ namespace {
 
 template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::fd4::internal::computeAuxiliaryVariables_LoopBody(
-  double* __restrict__ QIn,
+  double* NOALIAS QIn,
   const QInEnumeratorType&                     QInEnumerator,
   const tarch::la::Vector<Dimensions, double>& /*patchCentre*/,
   const tarch::la::Vector<Dimensions, double>& patchSize,
@@ -488,7 +488,7 @@ void exahype2::fd::fd4::internal::computeAuxiliaryVariables_LoopBody(
 
 template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
-  const double* __restrict__ QIn,
+  const double* NOALIAS QIn,
   const QInEnumeratorType&                     QInEnumerator,
   exahype2::fd::NonconservativeProduct         DifferentialSource,
   const tarch::la::Vector<Dimensions, double>& patchCentre,
@@ -498,7 +498,7 @@ void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double* __restrict__ QDiffSrc,
+  double* NOALIAS QDiffSrc,
   const QOutEnumeratorType&     QDiffSrcEnumerator,
   DifferentialSourceTermVariant variant
 ) {
@@ -556,7 +556,7 @@ void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
 
 template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
-  const double* __restrict__ QIn,
+  const double* NOALIAS QIn,
   const QInEnumeratorType&                     QInEnumerator,
   const tarch::la::Vector<Dimensions, double>& patchCentre,
   const tarch::la::Vector<Dimensions, double>& patchSize,
@@ -565,7 +565,7 @@ void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double* __restrict__ QDiffSrc,
+  double* NOALIAS QDiffSrc,
   const QOutEnumeratorType&     QDiffSrcEnumerator,
   DifferentialSourceTermVariant variant
 ) {
@@ -624,7 +624,7 @@ void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
 
 template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::fd4::internal::computeKreissOligerDissipationTerm_LoopBody(
-  const double* __restrict__ QIn,
+  const double* NOALIAS QIn,
   const QInEnumeratorType&                     QInEnumerator,
   const tarch::la::Vector<Dimensions, double>& /*patchCentre*/,
   const tarch::la::Vector<Dimensions, double>& /*patchSize*/,
@@ -633,7 +633,7 @@ void exahype2::fd::fd4::internal::computeKreissOligerDissipationTerm_LoopBody(
   double                                       /*t*/,
   double                                       /*dt*/,
   int                                          normal,
-  double* __restrict__ QKODsp,
+  double* NOALIAS QKODsp,
   const QOutEnumeratorType& QKODspEnumerator
 ) {
   double* KOGathered = new double[QInEnumerator._numberOfUnknowns];
@@ -681,9 +681,9 @@ void exahype2::fd::fd4::internal::computeKreissOligerDissipationTerm_LoopBody(
 
 template <typename QOutEnumeratorType>
 void exahype2::fd::fd4::internal::updateSolutionWithDifferentialSourceTerm_LoopBody(
-  const double* __restrict__ QDiffSrcX,
-  const double* __restrict__ QDiffSrcY,
-  const double* __restrict__ QDiffSrcZ,
+  const double* NOALIAS QDiffSrcX,
+  const double* NOALIAS QDiffSrcY,
+  const double* NOALIAS QDiffSrcZ,
   const QOutEnumeratorType&                    QDiffSrcEnumerator,
   const tarch::la::Vector<Dimensions, double>& /*patchCentre*/,
   const tarch::la::Vector<Dimensions, double>& patchSize,
@@ -691,10 +691,10 @@ void exahype2::fd::fd4::internal::updateSolutionWithDifferentialSourceTerm_LoopB
   const tarch::la::Vector<Dimensions, int>&    volumeIndex,
   int                                          unknown,
   double                                       dt,
-  double* __restrict__ QOut,
+  double* NOALIAS QOut,
   const QOutEnumeratorType& QOutEnumerator
 ) {
-  auto updateAlongOneCoordinateDirection = [=](const double* __restrict__ QDiffSrc, int normal) {
+  auto updateAlongOneCoordinateDirection = [=](const double* NOALIAS QDiffSrc, int normal) {
     // QDiffSrc is B_i*deltaQ_i for the central volume, and B here is defined on the LEFT of the equation.
     double QDiffSrcTerm = QDiffSrc[QDiffSrcEnumerator(patchIndex, volumeIndex, unknown)];
     // take care we have an extra minus sign because we moved the diffsrc terms to the RIGHT!
@@ -726,9 +726,9 @@ void exahype2::fd::fd4::internal::updateSolutionWithDifferentialSourceTerm_LoopB
 template <typename QOutEnumeratorType>
 void exahype2::fd::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
   const double KOSigma,
-  const double* __restrict__ QKODspX,
-  const double* __restrict__ QKODspY,
-  const double* __restrict__ QKODspZ,
+  const double* NOALIAS QKODspX,
+  const double* NOALIAS QKODspY,
+  const double* NOALIAS QKODspZ,
   const QOutEnumeratorType&                    QKODspEnumerator,
   const tarch::la::Vector<Dimensions, double>& /*patchCentre*/,
   const tarch::la::Vector<Dimensions, double>& patchSize,
@@ -736,10 +736,10 @@ void exahype2::fd::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
   const tarch::la::Vector<Dimensions, int>&    volumeIndex,
   int                                          unknown,
   double                                       dt,
-  double* __restrict__ QOut,
+  double* NOALIAS QOut,
   const QOutEnumeratorType& QOutEnumerator
 ) {
-  auto updateAlongOneCoordinateDirection = [=](const double* __restrict__ QKODsp, int normal) {
+  auto updateAlongOneCoordinateDirection = [=](const double* NOALIAS QKODsp, int normal) {
     double QKODspTerm = QKODsp[QKODspEnumerator(patchIndex, volumeIndex, unknown)];
 
     int flag = 0;
@@ -786,7 +786,7 @@ void exahype2::fd::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
 
 template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::fd4::internal::computeFlux_LoopBody(
-  const double* __restrict__ QIn,
+  const double* NOALIAS QIn,
   const QInEnumeratorType&                     QInEnumerator,
   exahype2::fd::Flux                           flux,
   const tarch::la::Vector<Dimensions, double>& patchCentre,
@@ -796,7 +796,7 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double* __restrict__ QFlux,
+  double* NOALIAS QFlux,
   const QOutEnumeratorType& QFluxEnumerator
 ) {
   double* tempQ         = new double[QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables];
@@ -905,7 +905,7 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
 
 template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::fd4::internal::computeFlux_LoopBody(
-  const double* __restrict__ QIn,
+  const double* NOALIAS QIn,
   const QInEnumeratorType&                     QInEnumerator,
   const tarch::la::Vector<Dimensions, double>& patchCentre,
   const tarch::la::Vector<Dimensions, double>& patchSize,
@@ -914,7 +914,7 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double* __restrict__ QFlux,
+  double* NOALIAS QFlux,
   const QOutEnumeratorType& QFluxEnumerator
 ) {
   double* tempQ         = new double[QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables];
@@ -1027,9 +1027,9 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
 
 template <typename QOutEnumeratorType>
 void exahype2::fd::fd4::internal::updateSolutionWithFlux_LoopBody(
-  const double* __restrict__ QFluxX,
-  const double* __restrict__ QFluxY,
-  const double* __restrict__ QFluxZ,
+  const double* NOALIAS QFluxX,
+  const double* NOALIAS QFluxY,
+  const double* NOALIAS QFluxZ,
   const QOutEnumeratorType&                    QFluxEnumerator,
   const tarch::la::Vector<Dimensions, double>& /*patchCentre*/,
   const tarch::la::Vector<Dimensions, double>& /*patchSize*/,
@@ -1037,10 +1037,10 @@ void exahype2::fd::fd4::internal::updateSolutionWithFlux_LoopBody(
   const tarch::la::Vector<Dimensions, int>&    volumeIndex,
   int                                          unknown,
   double                                       dt,
-  double* __restrict__ QOut,
+  double* NOALIAS QOut,
   const QOutEnumeratorType& QOutEnumerator
 ) {
-  auto updateAlongOneCoordinateDirection = [=](const double* __restrict__ QFlux, int /*normal*/) {
+  auto updateAlongOneCoordinateDirection = [=](const double* NOALIAS QFlux, int /*normal*/) {
     // F here is defined on the LEFT of the equation.
     double QFluxterm = QFlux[QFluxEnumerator(patchIndex, volumeIndex, unknown)];
     // take care we have an extra minus sign because we moved the terms to the RIGHT!

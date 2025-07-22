@@ -11,8 +11,8 @@
 
 
 void applications::exahype2::ccz4::enforceCCZ4constraints(
-  const double* __restrict__  oldQ,
-  double* __restrict__        dQdt,
+  const double* NOALIAS  oldQ,
+  double* NOALIAS        dQdt,
   double                      timeStepSize
 ) {
   double newQ[59];

@@ -6,7 +6,7 @@ void exahype2::fv::projectValuesOntoParticle_piecewiseConstant(
   const peano4::datamanagement::CellMarker& marker,
   int                                       voxelsPerAxis,
   int                                       unknownsPerVoxel,
-  const double* __restrict__ Q,
+  const double* NOALIAS Q,
   Particle& particle
 ) {
   internal::projectValuesOntoParticle_piecewiseConstant<
@@ -20,7 +20,7 @@ void exahype2::fv::projectValuesOntoParticle_piecewiseLinear(
   const peano4::datamanagement::CellMarker& marker,
   int                                       voxelsPerAxis,
   int                                       unknownsPerVoxel,
-  const double* __restrict__ Q,
+  const double* NOALIAS Q,
   Particle& particle
 ) {
   internal::projectValuesOntoParticle_piecewiseLinear<
@@ -34,7 +34,7 @@ void exahype2::fv::internal::projectValuesOntoParticle_piecewiseConstant(
   const peano4::datamanagement::CellMarker& marker,
   int                                       voxelsPerAxis,
   int                                       unknownsPerVoxel,
-  const double* __restrict__ Q,
+  const double* NOALIAS Q,
   Particle& particle,
   int       destinationIndex
 ) {
@@ -59,7 +59,7 @@ void exahype2::fv::internal::projectValuesOntoParticle_piecewiseLinear(
   const peano4::datamanagement::CellMarker& marker,
   int                                       voxelsPerAxis,
   int                                       unknownsPerVoxel,
-  const double* __restrict__ Q,
+  const double* NOALIAS Q,
   Particle& particle,
   int       destinationIndex
 ) {
@@ -84,7 +84,7 @@ void exahype2::fv::internal::projectValuesOntoParticle_piecewiseConstant(
   const peano4::datamanagement::CellMarker& /*marker*/,
   int                                       /*voxelsPerAxis*/,
   int                                       /*unknownsPerVoxel*/,
-  const double* __restrict__ /*Q*/,
+  const double* NOALIAS /*Q*/,
   Particle& /*particle*/,
   int       /*destinationIndex*/
 ) {}
@@ -94,7 +94,7 @@ void exahype2::fv::internal::projectValuesOntoParticle_piecewiseLinear(
   const peano4::datamanagement::CellMarker& /*marker*/,
   int                                       /*voxelsPerAxis*/,
   int                                       /*unknownsPerVoxel*/,
-  const double* __restrict__ /*Q*/,
+  const double* NOALIAS /*Q*/,
   Particle& /*particle*/,
   int       /*destinationIndex*/
 ) {}
@@ -104,7 +104,7 @@ void exahype2::fv::projectValueOntoParticle_piecewiseConstant(
   const peano4::datamanagement::CellMarker& marker,
   int                                       voxelsPerAxis,
   int                                       unknownsPerVoxel,
-  const double* __restrict__ Q,
+  const double* NOALIAS Q,
   Particle& particle
 ) {
   particle.setData(
@@ -125,7 +125,7 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant(
   const peano4::datamanagement::CellMarker& marker,
   int                                       voxelsPerAxis,
   int                                       unknownsPerVoxel,
-  const double* __restrict__ Q,
+  const double* NOALIAS Q,
   Particle& particle
 ) {
   for (int unknown = 0; unknown < unknownsPerVoxel; unknown++) {
@@ -141,7 +141,7 @@ void exahype2::fv::projectValueOntoParticle_piecewiseLinear(
   const peano4::datamanagement::CellMarker& marker,
   int                                       voxelsPerAxis,
   int                                       unknownsPerVoxel,
-  const double* __restrict__ Q,
+  const double* NOALIAS Q,
   Particle& particle
 ) {
   particle.setData(DestIndex) = internal::projectValueOntoParticle_piecewiseLinear(marker, voxelsPerAxis, unknownsPerVoxel, Q, particle.getX(), SourceIndex);
@@ -152,7 +152,7 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear(
   const peano4::datamanagement::CellMarker& marker,
   int                                       voxelsPerAxis,
   int                                       unknownsPerVoxel,
-  const double* __restrict__ Q,
+  const double* NOALIAS Q,
   Particle& particle
 ) {
   for (int unknown = 0; unknown < unknownsPerVoxel; unknown++) {
@@ -168,7 +168,7 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
   const peano4::datamanagement::CellMarker& marker,
   int                                       voxelsPerAxis,
   int                                       unknownsPerVoxel,
-  const double* __restrict__ Q,
+  const double* NOALIAS Q,
   double                                timeStepSize,
   tarch::la::Vector<Dimensions, int>    indices,
   tarch::la::Vector<Dimensions, double> factors,
@@ -189,7 +189,7 @@ void exahype2::fv::updateParticleState(
   const peano4::datamanagement::CellMarker& marker,
   int                                       voxelsPerAxis,
   int                                       unknownsPerVoxel,
-  const double* __restrict__ Q,
+  const double* NOALIAS Q,
   tarch::la::Vector<Dimensions, double> DomainSize,
   tarch::la::Vector<Dimensions, double> DomainOffset,
   tarch::la::Vector<Dimensions, double> PeriodicBC

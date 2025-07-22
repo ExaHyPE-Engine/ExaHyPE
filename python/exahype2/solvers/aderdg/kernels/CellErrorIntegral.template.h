@@ -11,7 +11,7 @@ namespace {{ item }} {
 {%- endfor %}
 
 void cellErrorIntegral(
-  std::function< void(
+  std::function<void(
     const tarch::la::Vector<Dimensions, double>&  x,
     const double                                  t,
     const double                                  dt,

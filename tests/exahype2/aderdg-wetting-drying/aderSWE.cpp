@@ -7,7 +7,7 @@ tarch::logging::Log   exahype::limiting::swe::aderSWE::_log( "exahype::limiting:
 
 
 double exahype::limiting::swe::aderSWE::maxEigenvalue(
-  [[maybe_unused]] const double* __restrict__ Q, // Q[4+0]
+  [[maybe_unused]] const double* NOALIAS Q, // Q[4+0]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      h,
   [[maybe_unused]] double                                            t,
@@ -31,13 +31,13 @@ double exahype::limiting::swe::aderSWE::maxEigenvalue(
 }
 
 void exahype::limiting::swe::aderSWE::flux(
-  [[maybe_unused]] const double* __restrict__ Q, // Q[4+0]
+  [[maybe_unused]] const double* NOALIAS Q, // Q[4+0]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      h_,
   [[maybe_unused]] double                                            t,
   [[maybe_unused]] double                                            dt,
   [[maybe_unused]] int                                               normal,
-  [[maybe_unused]] double* __restrict__       F // F[4]
+  [[maybe_unused]] double* NOALIAS       F // F[4]
 ) {
 
   static constexpr double g = 9.81;
@@ -74,14 +74,14 @@ void exahype::limiting::swe::aderSWE::flux(
 }
 
 void exahype::limiting::swe::aderSWE::nonconservativeProduct(
-  [[maybe_unused]] const double* __restrict__ Q, // Q[4+0]
-  [[maybe_unused]] const double* __restrict__ deltaQ, // deltaQ[4+0]
+  [[maybe_unused]] const double* NOALIAS Q, // Q[4+0]
+  [[maybe_unused]] const double* NOALIAS deltaQ, // deltaQ[4+0]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      h,
   [[maybe_unused]] double                                            t,
   [[maybe_unused]] double                                            dt,
   [[maybe_unused]] int                                               normal,
-  [[maybe_unused]] double* __restrict__       BTimesDeltaQ // BTimesDeltaQ[4]
+  [[maybe_unused]] double* NOALIAS       BTimesDeltaQ // BTimesDeltaQ[4]
 ) {
 
   static constexpr double g = 9.81;

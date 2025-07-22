@@ -36,7 +36,7 @@ class examples::exahype2::mgccz4::FiniteVolumeMGCCZ4: public AbstractFiniteVolum
     //#pragma omp declare target
     //#endif
     void adjustSolution(
-      double * __restrict__ Q,
+      double * NOALIAS Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -51,12 +51,12 @@ class examples::exahype2::mgccz4::FiniteVolumeMGCCZ4: public AbstractFiniteVolum
     //#pragma omp declare target
     //#endif
     void sourceTerm(
-      const double * __restrict__ Q,
+      const double * NOALIAS Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
-      double * __restrict__ S
+      double * NOALIAS S
     );
     //#if defined(GPUOffloadingOMP)
     //#pragma omp end declare target
@@ -64,8 +64,8 @@ class examples::exahype2::mgccz4::FiniteVolumeMGCCZ4: public AbstractFiniteVolum
     
     
     virtual void boundaryConditions(
-      const double * __restrict__ Qinside, // Qinside[59+0]
-      double * __restrict__ Qoutside, // Qoutside[59+0]
+      const double * NOALIAS Qinside, // Qinside[59+0]
+      double * NOALIAS Qoutside, // Qoutside[59+0]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -75,7 +75,7 @@ class examples::exahype2::mgccz4::FiniteVolumeMGCCZ4: public AbstractFiniteVolum
 
     
     double maxEigenvalue(
-      const double * __restrict__ Q, // Q[59+0],
+      const double * NOALIAS Q, // Q[59+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -83,13 +83,13 @@ class examples::exahype2::mgccz4::FiniteVolumeMGCCZ4: public AbstractFiniteVolum
     );
  
     void nonconservativeProduct(
-      const double * __restrict__ Q, // Q[59+0],
-      const double * __restrict__             deltaQ, // [59+0]
+      const double * NOALIAS Q, // Q[59+0],
+      const double * NOALIAS             deltaQ, // [59+0]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       int                                          normal,
-      double * __restrict__ BgradQ // BgradQ[59]
+      double * NOALIAS BgradQ // BgradQ[59]
     );
 };
 

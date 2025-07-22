@@ -21,7 +21,7 @@ double  exahype2::fv::getVolumeLength(
 
 
 std::string exahype2::fv::plotVolume(
-  const double* __restrict__ Q,
+  const double* NOALIAS Q,
   int    unknowns
 ) {
   std::string result = "(" + std::to_string(Q[0]);
@@ -74,7 +74,7 @@ namespace {
 
 template <typename T>
 std::string exahype2::fv::plotPatch(
-  const T* __restrict__ Q,
+  const T* NOALIAS Q,
   int    unknowns,
   int    auxiliaryVariables,
   int    numberOfVolumesPerAxisInPatch,
@@ -142,12 +142,12 @@ std::string exahype2::fv::plotPatch(
   return result.str();
 }
 
-template std::string exahype2::fv::plotPatch<float>(const float* __restrict__, int, int, int, int, bool);
-template std::string exahype2::fv::plotPatch<double>(const double* __restrict__, int, int, int, int, bool);
+template std::string exahype2::fv::plotPatch<float>(const float* NOALIAS, int, int, int, int, bool);
+template std::string exahype2::fv::plotPatch<double>(const double* NOALIAS, int, int, int, int, bool);
 
 template <typename T>
 std::string exahype2::fv::plotPatchOverlap(
-  const T* __restrict__ Q,
+  const T* NOALIAS Q,
   int    unknowns,
   int    auxiliaryVariables,
   int    numberOfVolumesPerAxisInPatch,
@@ -229,5 +229,5 @@ std::string exahype2::fv::plotPatchOverlap(
   return result.str();
 }
 
-template std::string exahype2::fv::plotPatchOverlap<float>(const float* __restrict__, int, int, int, int, int, bool);
-template std::string exahype2::fv::plotPatchOverlap<double>(const double* __restrict__, int, int, int, int, int, bool);
+template std::string exahype2::fv::plotPatchOverlap<float>(const float* NOALIAS, int, int, int, int, int, bool);
+template std::string exahype2::fv::plotPatchOverlap<double>(const double* NOALIAS, int, int, int, int, int, bool);

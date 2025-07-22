@@ -22,8 +22,8 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const double* NOALIAS coarseGridFaceValues,
+      double* NOALIAS fineGridFaceValues
     ) {
       interpolateHaloLayer_AoS_tensor_product(
         marker,
@@ -44,9 +44,9 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const double* NOALIAS coarseGridCellValues,
+      const double* NOALIAS coarseGridFaceValues,
+      double* NOALIAS fineGridFaceValues
     ) {
       interpolateHaloLayer_AoS_tensor_product(
         marker,
@@ -68,9 +68,9 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const double* NOALIAS coarseGridCellValues,
+      const double* NOALIAS coarseGridFaceValues,
+      double* NOALIAS fineGridFaceValues
     ) {
       int normal = marker.getSelectedFaceNumber() % 3;
       //int patchIndexLinear = (Dimensions == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) : marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) * 3 + marker.getRelativePositionWithinFatherCell()((normal + 2) % Dimensions);
@@ -95,9 +95,9 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const double* NOALIAS coarseGridCellValues,
+      const double* NOALIAS coarseGridFaceValues,
+      double* NOALIAS fineGridFaceValues
     ) {
       interpolateHaloLayer_AoS_second_order(
         marker,
@@ -116,9 +116,9 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const double* NOALIAS coarseGridCellValues,
+      const double* NOALIAS coarseGridFaceValues,
+      double* NOALIAS fineGridFaceValues
     ) {
       interpolateHaloLayer_AoS_third_order(
         marker,
@@ -137,8 +137,8 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      double* __restrict__ fineGridCellValues
+      const double* NOALIAS coarseGridCellValues,
+      double* NOALIAS fineGridCellValues
     ) {
       interpolateCell_AoS_tensor_product(
         marker,
@@ -175,8 +175,8 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      double* __restrict__ fineGridCellValues
+      const double* NOALIAS coarseGridCellValues,
+      double* NOALIAS fineGridCellValues
     ) {
       interpolateCell_AoS_matrix(
         marker,
@@ -195,8 +195,8 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      double* __restrict__ fineGridCellValues
+      const double* NOALIAS coarseGridCellValues,
+      double* NOALIAS fineGridCellValues
     ) {
       interpolateCell_AoS_second_order(
         marker,
@@ -212,8 +212,8 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      double* __restrict__ fineGridCellValues
+      const double* NOALIAS coarseGridCellValues,
+      double* NOALIAS fineGridCellValues
     ) {
       interpolateCell_AoS_third_order(
         marker,
@@ -332,8 +332,8 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const double* NOALIAS coarseGridFaceValues,
+      double* NOALIAS fineGridFaceValues
     ) {
       int normal = marker.getSelectedFaceNumber() % 3;
       int patchIndexLinear = (Dimensions == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) : marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) * 3 + marker.getRelativePositionWithinFatherCell()((normal + 2) % Dimensions);
@@ -360,8 +360,8 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const double* NOALIAS coarseGridFaceValues,
+      double* NOALIAS fineGridFaceValues
     ) {
       interpolateHaloLayer_AoS_second_order(
         marker,
@@ -379,8 +379,8 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const double* NOALIAS coarseGridFaceValues,
+      double* NOALIAS fineGridFaceValues
     ) {
       interpolateHaloLayer_AoS_third_order(
         marker,

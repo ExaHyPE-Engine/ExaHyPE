@@ -112,6 +112,21 @@ NVIDIA:
       - .continuous_integration/gitlab-jobs.yml
     strategy: depend
 
+NVIDIA_SharedOMP_MPI:
+  extends: .Variables
+  stage: Compiler
+  variables:
+    CC: "nvc"
+    CXX: "nvc++"
+    IMAGE_TAG: "${IMAGE_NVIDIA}"
+    CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
+                            -DWITH_MULTITHREADING=omp \
+                            -DWITH_MPI=ON"
+  trigger:
+    include:
+      - .continuous_integration/gitlab-jobs.yml
+    strategy: depend
+
 AMD:
   extends: .Variables
   stage: Compiler

@@ -7,8 +7,8 @@ void exahype2::dg::copyOneSideOfFaceProjection(
   int    numberOfProjectedQuantities,
   int    normal,
   int    isRightFaceHalf,
-  const double* __restrict__   srcQ,
-  double* __restrict__         destQ
+  const double* NOALIAS   srcQ,
+  double* NOALIAS         destQ
 ) {
   ::exahype2::fv::copyHalfOfHalo(
     unknownsPlusAuxiliaryVariables,
@@ -25,7 +25,7 @@ void exahype2::dg::copyOneSideOfFaceProjection(
 double  exahype2::dg::getQuadratureWeight(
   const tarch::la::Vector<3,double>&  cellSize,
   const tarch::la::Vector<3,int>&     index,
-  const double* __restrict__          quadratureWeights
+  const double* NOALIAS          quadratureWeights
 ) {
   double result = 1.0;
   for (int d=0; d<Dimensions; d++) {
@@ -108,13 +108,13 @@ int exahype2::dg::cellIndexToHullIndex(
 
 
 void exahype2::dg::computeGradient(
-        const double* __restrict__ const QCell,
-        const double* __restrict__ const derivativeOperator,
+        const double* NOALIAS const QCell,
+        const double* NOALIAS const derivativeOperator,
         const double                     invDx,
         const int                        nodesPerAxis,
         const int                        strideQ,
         const int                        scalarIndex,
-        double* __restrict__             gradQ
+        double* NOALIAS             gradQ
         ){
 
   tarch::la::Vector<Dimensions,int> strides = getStrides(nodesPerAxis);
@@ -139,8 +139,8 @@ void exahype2::dg::computeGradient(
 
 
 void exahype2::dg::subtractCell(
-    double* __restrict__        QOut,
-    const double* __restrict__  Qsubstract,
+    double* NOALIAS        QOut,
+    const double* NOALIAS  Qsubstract,
     const int                   order,
     const int                   unknowns,
     const int                   auxiliaryVariables
@@ -158,7 +158,7 @@ void exahype2::dg::subtractCell(
 
 
 std::string exahype2::dg::plotCell(
-  const double* __restrict__ Q,
+  const double* NOALIAS Q,
   const int order,
   const int unknowns,
   const int auxiliaryVariables
@@ -174,7 +174,7 @@ std::string exahype2::dg::plotCell(
 
 
 std::string exahype2::dg::plotFace(
-  const double* __restrict__  Q,
+  const double* NOALIAS  Q,
   const int                   order,
   const int                   unknowns,
   const int                   auxiliaryVariables,

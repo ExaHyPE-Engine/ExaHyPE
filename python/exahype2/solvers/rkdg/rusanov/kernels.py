@@ -18,32 +18,32 @@ def create_Riemann_solver_call(polynomial_basis,
   if isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and face_projections==FaceProjections.Solution:
     return """solveRiemannProblem_pointwise_in_situ(
       [&](
-        const double * __restrict__                  Q,
+        const double * NOALIAS                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
         double                                       dt,
         int                                          normal,
-        double * __restrict__                        F
+        double * NOALIAS                        F
       )->void {
         {% if FLUX_IMPLEMENTATION!="<none>" %}
         repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,dt,normal,F);
         {% endif %}
       }, //flux
       [&](
-          const double * __restrict__                  Q,
-          const double * __restrict__                  deltaQ,
+          const double * NOALIAS                  Q,
+          const double * NOALIAS                  deltaQ,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
           double                                       dt,
           int                                          normal,
-          double * __restrict__                        F
+          double * NOALIAS                        F
         ) -> void {
           {% if NCP_IMPLEMENTATION!="<none>" %}
           repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, deltaQ, x, t, dt, normal, F);
           {% endif %}
       }, //ncp
       [&](
-          const double * __restrict__                  Q,
+          const double * NOALIAS                  Q,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
           double                                       dt,
@@ -69,32 +69,32 @@ def create_Riemann_solver_call(polynomial_basis,
   elif isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and number_of_face_projections==2:
     return """solveRiemannProblem_pointwise_in_situ_with_gradient_projection(
       [&](
-        const double * __restrict__                  Q,
+        const double * NOALIAS                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
         double                                       dt,
         int                                          normal,
-        double * __restrict__                        F
+        double * NOALIAS                        F
       )->void {
         {% if FLUX_IMPLEMENTATION!="<none>" %}
         repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,dt,normal,F);
         {% endif %}
       }, //flux
       [&](
-          const double * __restrict__                  Q,
-          const double * __restrict__                  deltaQ,
+          const double * NOALIAS                  Q,
+          const double * NOALIAS                  deltaQ,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
           double                                       dt,
           int                                          normal,
-          double * __restrict__                        F
+          double * NOALIAS                        F
         ) -> void {
           {% if NCP_IMPLEMENTATION!="<none>" %}
           repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, deltaQ, x, t, dt, normal, F);
           {% endif %}          
       }, //ncp
       [&](
-          const double * __restrict__                  Q,
+          const double * NOALIAS                  Q,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
           double                                       dt,

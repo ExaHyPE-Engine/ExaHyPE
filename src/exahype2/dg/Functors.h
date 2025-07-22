@@ -17,7 +17,7 @@ namespace exahype2 {
   namespace dg {
     struct PointSource {
       const tarch::la::Vector<Dimensions,double>&  x;
-      const double* __restrict__                   values;
+      const double* NOALIAS                   values;
     };
 
     /**
@@ -35,22 +35,22 @@ namespace exahype2 {
      * spatial averaging, e.g.
      */
     typedef std::function< void(
-      const double * __restrict__                  Q,
+      const double * NOALIAS                  Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double * __restrict__                        F
+      double * NOALIAS                        F
     ) >  Flux;
 
     typedef std::function< void(
-      const double * __restrict__                  Q,
-      const double * __restrict__                  dQdx,
+      const double * NOALIAS                  Q,
+      const double * NOALIAS                  dQdx,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double * __restrict__                        F
+      double * NOALIAS                        F
     ) >   NonConservativeProduct;
 
     /**
@@ -67,11 +67,11 @@ namespace exahype2 {
      *
      */
     typedef std::function< void(
-      const double * __restrict__                  Q,
+      const double * NOALIAS                  Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       double                                       dt,
-      double * __restrict__                        S
+      double * NOALIAS                        S
     ) >   Source;
 
     /**
@@ -79,7 +79,7 @@ namespace exahype2 {
      * of the underlying cell rather than only a point.
      */
     typedef std::function< std::vector<PointSource>(
-      const double * __restrict__                  Q,
+      const double * NOALIAS                  Q,
       const tarch::la::Vector<Dimensions,double>&  cellCentre,
       const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
@@ -87,7 +87,7 @@ namespace exahype2 {
     ) >   PointSources;
 
     typedef std::function< double(
-      const double * __restrict__                  Q,
+      const double * NOALIAS                  Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       double                                       dt,
@@ -101,8 +101,8 @@ namespace exahype2 {
      * to a given face.
      */
     typedef std::function< void(
-      const double * __restrict__                  Qinside,
-      double * __restrict__                        Qoutside,
+      const double * NOALIAS                  Qinside,
+      double * NOALIAS                        Qoutside,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal

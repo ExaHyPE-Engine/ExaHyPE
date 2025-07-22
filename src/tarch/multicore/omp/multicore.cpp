@@ -14,20 +14,30 @@ namespace {
 
 void tarch::multicore::native::spawnTasks(const std::vector<Task*>& tasks) {
   assertion(not tasks.empty());
-  logDebug("spawnTasks()", "Spawn " << tasks.size() << " tasks as taskloop");
+  logDebug("spawnTasks()", "Spawn " << tasks.size() << " tasks");
 
+#if not defined(TASKLOOP_NOT_SUPPORTED)
 #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(Task::DefaultPriority) untied
-  for (auto* task : tasks) {
-    while (task->run()) {
-      Core::getInstance().yield();
+#endif
+  for (auto& p : tasks) {
+#if defined(TASKLOOP_NOT_SUPPORTED)
+#pragma omp task priority(Task::DefaultPriority) untied
+#endif
+    {
+      while (p->run()) {
+        Core::getInstance().yield();
+      }
+      delete p;
     }
-    delete task;
   }
 
   waitForAllTasks();
 }
 
 void tarch::multicore::native::spawnTask(Task* task, const void* const inDependency, const void* const outDependency) {
+#if defined(TASK_DEPENDENCIES_NOT_SUPPORTED)
+#pragma omp task priority(task->getPriority()) untied
+#else
   assertion(inDependency);
   assertion(outDependency);
 
@@ -42,6 +52,7 @@ void tarch::multicore::native::spawnTask(Task* task, const void* const inDepende
   depend(in : static_cast<const char*>(inDependency)[0]) \
   depend(out : static_cast<const char*>(outDependency)[0]) \
   untied
+#endif
   {
     while (task->run()) {
       Core::getInstance().yield();
@@ -51,12 +62,16 @@ void tarch::multicore::native::spawnTask(Task* task, const void* const inDepende
 }
 
 void tarch::multicore::native::spawnTask(Task* task, const void* const outDependency) {
+#if defined(TASK_DEPENDENCIES_NOT_SUPPORTED)
+#pragma omp task priority(task->getPriority()) untied
+#else
   assertion(outDependency);
   logDebug("spawnTask()", "Fire task with with outgoing data dependency " << outDependency);
 
 #pragma omp task priority(task->getPriority()) \
   depend(out : static_cast<const char*>(outDependency)[0]) \
   untied
+#endif
   {
     while (task->run()) {
       Core::getInstance().yield();
@@ -78,9 +93,13 @@ void tarch::multicore::native::spawnTask(Task* task) {
 }
 
 void tarch::multicore::native::waitForTask(const void* const inDependency) {
+#if defined(TASK_DEPENDENCIES_NOT_SUPPORTED)
+#pragma omp taskwait
+#else
   assertion(inDependency);
   logDebug("waitForTask()", "Wait for task with incoming data dependency " << inDependency << " to terminate");
 #pragma omp taskwait depend(in : static_cast<const char*>(inDependency)[0])
+#endif
 }
 
 void tarch::multicore::native::waitForAllTasks() {

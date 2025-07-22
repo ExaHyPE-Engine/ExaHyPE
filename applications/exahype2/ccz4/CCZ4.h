@@ -70,7 +70,7 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
      *  which make the solution follow
      */
     ::exahype2::RefinementCommand refinementCriterion(
-      const double * __restrict__ Q, // Q[59+0],
+      const double * NOALIAS Q, // Q[59+0],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t
@@ -81,7 +81,7 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
 #endif
 
     void initialCondition(
-      double * __restrict__ Q,
+      double * NOALIAS Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       bool                                         gridIsConstructed
@@ -91,8 +91,8 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
     
     
     virtual void boundaryConditions(
-      const double * __restrict__ Qinside, // Qinside[59+0]
-      double * __restrict__ Qoutside, // Qoutside[59+0]
+      const double * NOALIAS Qinside, // Qinside[59+0]
+      double * NOALIAS Qoutside, // Qoutside[59+0]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -104,12 +104,12 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
   public:
     
     void sourceTerm(
-      const double * __restrict__ Q,
+      const double * NOALIAS Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
-      double * __restrict__ S
+      double * NOALIAS S
     ) override;
     
 
@@ -122,7 +122,7 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
      *   about the maximum absolute eigenvalue.
      */
     virtual double maxEigenvalue(
-      const double * __restrict__ Q, // Q[59+0],
+      const double * NOALIAS Q, // Q[59+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -133,14 +133,14 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
     
     
     virtual void nonconservativeProduct(
-      const double * __restrict__ Q, // Q[59+0],
-      const double * __restrict__             deltaQ, // [59+0]
+      const double * NOALIAS Q, // Q[59+0],
+      const double * NOALIAS             deltaQ, // [59+0]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double * __restrict__ BgradQ // BgradQ[59]
+      double * NOALIAS BgradQ // BgradQ[59]
     ) override;
     
     
@@ -164,12 +164,12 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
     #pragma omp declare target
     #endif
     static GPUCallableMethod void sourceTerm(
-       const double * __restrict__ Q,
+       const double * NOALIAS Q,
        const tarch::la::Vector<Dimensions,double>&  volumeCentre,
        const tarch::la::Vector<Dimensions,double>&  volumeH,
        double                                       t,
        double                                       dt,
-       double * __restrict__ S,
+       double * NOALIAS S,
        ::exahype2::Solver::Offloadable
      ) {
       std::memset(S, 0, NumberOfUnknowns*sizeof(double));
@@ -200,7 +200,7 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
     #pragma omp declare target
     #endif
     static GPUCallableMethod double maxEigenvalue(
-      const double * __restrict__ Q, // Q[59+0],
+      const double * NOALIAS Q, // Q[59+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -252,14 +252,14 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
     #pragma omp declare target
     #endif
     static GPUCallableMethod void nonconservativeProduct(
-      const double * __restrict__                  Q,         // Q[5+0],
-      const double * __restrict__                  deltaQ,    // [5+0]
+      const double * NOALIAS                  Q,         // Q[5+0],
+      const double * NOALIAS                  deltaQ,    // [5+0]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double * __restrict__                        BgradQ,     // BgradQ[5]
+      double * NOALIAS                        BgradQ,     // BgradQ[5]
       ::exahype2::Solver::Offloadable
     );
     #if defined(GPUOffloadingOMP)

@@ -43,8 +43,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      timeStamp,
   double                                      timeStepSize,
-  double* __restrict__                        QIn,
-  double* __restrict__                        QOut
+  double* NOALIAS                        QIn,
+  double* NOALIAS                        QOut
 ) {
   ::exahype2::CellData cellData(
     QIn,
@@ -74,7 +74,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
   double                                      dt,
-  const double* __restrict__                  linearCombinationOfPreviousShots
+  const double* NOALIAS                  linearCombinationOfPreviousShots
 ):
   ::exahype2::EnclaveTask<double>(
     _enclaveTaskTypeId,
@@ -117,7 +117,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   double                                      t,
   double                                      dt,
   std::shared_ptr< double[] >                 linearCombinationOfPreviousShots,
-  double* __restrict__                        output
+  double* NOALIAS                        output
 ):
   ::exahype2::EnclaveTask<double>(
     _enclaveTaskTypeId,

@@ -95,8 +95,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask<
       const ::peano4::datamanagement::CellMarker& marker, 
       double                                      t,
       double                                      dt,
-      double* __restrict__                        reconstructedPatch,
-      double* __restrict__                        targetPatch
+      double* NOALIAS                        reconstructedPatch,
+      double* NOALIAS                        targetPatch
     );
     
 
@@ -111,8 +111,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask<
       const ::peano4::datamanagement::CellMarker& marker, 
       double                                      t,
       double                                      dt,
-      double* __restrict__                        reconstructedPatch,
-      double* __restrict__                        output
+      double* NOALIAS                        reconstructedPatch,
+      double* NOALIAS                        output
     );
 
 

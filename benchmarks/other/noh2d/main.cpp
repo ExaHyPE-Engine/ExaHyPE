@@ -95,7 +95,7 @@ auto ReferenceHydroKernel = [](Tree *supernode, Tree *leaf) {
     auto *activeRegionParent = leaf->getRegionParent(activeRegion, true);
     auto activeRegionIter = Tree::InsideRegionLeafsIterator(activeRegionParent, activeRegion);
 
-    auto nonsymIact = [](Tree * __restrict__ leaf, Tree * __restrict__ activeCell) {
+    auto nonsymIact = [](Tree * NOALIAS leaf, Tree * NOALIAS activeCell) {
         for (auto localIdx = 0; localIdx < leaf->items.size(); localIdx++) {
             auto *pi = &leaf->items[localIdx];
             auto hi = pi->h;
@@ -127,7 +127,7 @@ auto ReferenceHydroKernel = [](Tree *supernode, Tree *leaf) {
         }
     };
 
-    auto symIact = [](Tree * __restrict__ leaf, Tree * __restrict__ activeCell) {
+    auto symIact = [](Tree * NOALIAS leaf, Tree * NOALIAS activeCell) {
         for (auto localIdx = 0; localIdx < leaf->items.size(); localIdx++) {
             auto *pi = &leaf->items[localIdx];
             auto hi = pi->h;

@@ -30,7 +30,7 @@ class examples::exahype2::mgccz4::ADERDGMGCCZ4: public AbstractADERDGMGCCZ4 {
 
     
     void adjustSolution(
-      double * __restrict__ Q,
+      double * NOALIAS Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t
     )  override;
@@ -39,8 +39,8 @@ class examples::exahype2::mgccz4::ADERDGMGCCZ4: public AbstractADERDGMGCCZ4 {
 
     
     virtual void boundaryConditions(
-      const double * __restrict__                  Qinside, // Qinside[59+0]
-      double * __restrict__                        Qoutside, // Qoutside[59+0]
+      const double * NOALIAS                  Qinside, // Qinside[59+0]
+      double * NOALIAS                        Qoutside, // Qoutside[59+0]
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal
@@ -50,7 +50,7 @@ class examples::exahype2::mgccz4::ADERDGMGCCZ4: public AbstractADERDGMGCCZ4 {
 
     
     double maxEigenvalue(
-      const double * __restrict__ Q, // Q[59+0],
+      const double * NOALIAS Q, // Q[59+0],
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal
@@ -63,21 +63,21 @@ class examples::exahype2::mgccz4::ADERDGMGCCZ4: public AbstractADERDGMGCCZ4 {
 
     
     void nonconservativeProduct(
-      const double * __restrict__                  Q, // Q[59+0],
-      const double * __restrict__                  deltaQ, // deltaQ[59+0]
+      const double * NOALIAS                  Q, // Q[59+0],
+      const double * NOALIAS                  deltaQ, // deltaQ[59+0]
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal,
-      double * __restrict__                        BgradQ // BgradQ[59]
+      double * NOALIAS                        BgradQ // BgradQ[59]
     ) override;
 
     virtual void algebraicSource(
-      const double * __restrict__ Q, // Q[59+0],
+      const double * NOALIAS Q, // Q[59+0],
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
-      double * __restrict__ S // S[59]
+      double * NOALIAS S // S[59]
     ) override;
 };
 

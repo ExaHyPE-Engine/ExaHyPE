@@ -126,7 +126,7 @@ namespace exahype2 {
      * @return Data of one volume as tuple.
      */
     std::string plotGridCell(
-      const double* __restrict__ Q,
+      const double* NOALIAS Q,
       int    unknowns
     );
 
@@ -144,7 +144,7 @@ namespace exahype2 {
      *   exactly unknowns+auxiliaryVariables entries
      */
     void validatePatch(
-      const double* __restrict__ Q,
+      const double* NOALIAS Q,
       int    unknowns,
       int    auxiliaryVariables,
       int    numberOfGridCellsPerPatchPerAxis,
@@ -163,7 +163,7 @@ namespace exahype2 {
      * Assumes all data are held as AoS.
      */
     std::string plotPatch(
-      const double* __restrict__ Q,
+      const double* NOALIAS Q,
       int    unknowns,
       int    auxiliaryVariables,
       int    numberOfGridCellsPerPatchPerAxis,
@@ -173,7 +173,7 @@ namespace exahype2 {
 
 
     std::string plotPatchOverlap(
-      const double* __restrict__ Q,
+      const double* NOALIAS Q,
       int    unknowns,
       int    auxiliaryVariables,
       int    numberOfGridCellsPerPatchPerAxis,

@@ -99,8 +99,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask<
       const ::peano4::datamanagement::CellMarker& marker,
       double                                      timeStamp,
       double                                      timeStepSize,
-      double* __restrict__                        QIn,
-      double* __restrict__                        QOut
+      double* NOALIAS                        QIn,
+      double* NOALIAS                        QOut
     );
 
     /**
@@ -166,7 +166,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask<
       const ::peano4::datamanagement::CellMarker& marker,
       double                                      timeStamp,
       double                                      timeStepSize,
-      const double* __restrict__                  linearCombinationOfPreviousShots
+      const double* NOALIAS                  linearCombinationOfPreviousShots
     );
     
     {{CLASSNAME}}(
@@ -174,7 +174,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask<
       double                                      timeStamp,
       double                                      timeStepSize,
       std::shared_ptr< double[] >                 linearCombinationOfPreviousShots,
-      double* __restrict__                        output
+      double* NOALIAS                        output
     );
 
 #ifdef UseSmartMPI

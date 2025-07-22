@@ -37,7 +37,7 @@ public:
   CCZ4SBH_FV();
 
   virtual void initialCondition(
-    double* __restrict__ Q,
+    double* NOALIAS Q,
     const tarch::la::Vector<Dimensions, double>& volumeCentre,
     const tarch::la::Vector<Dimensions, double>& volumeH,
     bool                                         gridIsConstructed

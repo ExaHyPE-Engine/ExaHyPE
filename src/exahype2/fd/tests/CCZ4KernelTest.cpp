@@ -189,25 +189,25 @@
 //     false, // do not copy the old solution. Abuse this to get the RHS directly
 //     ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection,
 //     [&](
-//       const double * __restrict__ Q,
+//       const double * NOALIAS Q,
 //       const tarch::la::Vector<Dimensions,double>&  faceCentre,
 //       const tarch::la::Vector<Dimensions,double>&  volumeH,
 //       double                                       t,
 //       double                                       dt,
 //       int                                          normal,
-//       double * __restrict__ F
+//       double * NOALIAS F
 //     )->void {
       
 //     },
 //     [&](
-//       const double * __restrict__                  Q,
-//       const double * __restrict__     deltaQ,
+//       const double * NOALIAS                  Q,
+//       const double * NOALIAS     deltaQ,
 //       const tarch::la::Vector<Dimensions,double>&  faceCentre,
 //       const tarch::la::Vector<Dimensions,double>&  volumeH,
 //       double                                       t,
 //       double                                       dt,
 //       int                                          normal,
-//       double * __restrict__ BTimesDeltaQ
+//       double * NOALIAS BTimesDeltaQ
 //     )->void {   
 //       double gradQSerialised[unknowns*3];
 //       for (int i=0; i<unknowns; i++) {
@@ -223,12 +223,12 @@
 //       applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, gradQSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);     
 //     },
 //     [&](
-//       const double * __restrict__ Q,
+//       const double * NOALIAS Q,
 //       const tarch::la::Vector<Dimensions,double>&  volumeX,
 //       const tarch::la::Vector<Dimensions,double>&  volumeH,
 //       double                                       t,
 //       double                                       dt,
-//       double * __restrict__ S
+//       double * NOALIAS S
 //     )->void {
 //       std::memset(S, 0, unknowns*sizeof(double));
 //       applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3, CCZ4SO);   

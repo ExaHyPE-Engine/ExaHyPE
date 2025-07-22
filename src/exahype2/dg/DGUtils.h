@@ -49,7 +49,7 @@ namespace exahype2 {
       const tarch::la::Vector<Dimensions,double>&  cellSize,
       const tarch::la::Vector<Dimensions,int>&     index,
       int                                 polynomialOrder,
-      const T* __restrict__          quadraturePoints
+      const T* NOALIAS          quadraturePoints
     );
 
     /**
@@ -68,7 +68,7 @@ namespace exahype2 {
     double  getQuadratureWeight(
       const tarch::la::Vector<3,double>&  cellSize,
       const tarch::la::Vector<3,int>&     index,
-      const double* __restrict__          quadratureWeights
+      const double* NOALIAS          quadratureWeights
     );
 
 
@@ -164,21 +164,21 @@ namespace exahype2 {
      * @param strideQ: total number of variables over which the gradient should be computed
      */
     void computeGradient(
-        const double* __restrict__ const QCell,
-        const double* __restrict__ const derivativeOperator,
+        const double* NOALIAS const QCell,
+        const double* NOALIAS const derivativeOperator,
         const double                     invDx,
         const int                        nodesPerAxis,
         const int                        strideQ,
         const int                        scalarIndex,
-        double* __restrict__             gradQ
+        double* NOALIAS             gradQ
         );
 
     /*
      * Substracts contents of one cell array from another.
      */
     void subtractCell(
-        double* __restrict__        QOut,
-        const double* __restrict__  Qsubstract,
+        double* NOALIAS        QOut,
+        const double* NOALIAS  Qsubstract,
         const int                   order,
         const int                   unknowns,
         const int                   auxiliaryVariables
@@ -192,7 +192,7 @@ namespace exahype2 {
      */
 
     std::string plotCell(
-        const double* __restrict__ Q,
+        const double* NOALIAS Q,
         const int order,
         const int unknowns,
         const int auxiliaryVariables
@@ -209,7 +209,7 @@ namespace exahype2 {
      * See the discussion around ExaHyPE's lexicographic ordering.
      */
     std::string plotFace(
-      const double* __restrict__ Q,
+      const double* NOALIAS Q,
       const int order,
       const int unknowns,
       const int auxiliaryVariables,
@@ -258,9 +258,9 @@ namespace exahype2 {
     QStoreType evaluatePolynomial(
       const peano4::datamanagement::CellMarker&    marker,
       int                                          order,
-      const double* __restrict__                   QuadratureNodes1d,
+      const double* NOALIAS                   QuadratureNodes1d,
       int                                          unknownsPerDoF,
-      const QStoreType* __restrict__               Q,
+      const QStoreType* NOALIAS               Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       int                                          unknown
     );
@@ -274,8 +274,8 @@ namespace exahype2 {
       int    numberOfProjectedQuantities,
       int    normal,
       int    isRightFaceHalf,
-      const double* __restrict__   srcQ,
-      double* __restrict__         destQ
+      const double* NOALIAS   srcQ,
+      double* NOALIAS         destQ
     );
   }
 }

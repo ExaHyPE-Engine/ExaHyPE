@@ -114,7 +114,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * @param t Time
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
-      const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
       const tarch::la::Vector<Dimensions,double>&  meshCellH,
       double                                       t
@@ -122,7 +122,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
 
     virtual void initialCondition(
-      double * __restrict__ Q,
+      double * NOALIAS Q,
       const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
       const tarch::la::Vector<Dimensions,double>&  meshCellH,
       bool                                         gridIsConstructed
@@ -138,8 +138,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * to the Riemann solver, i.e. flux and eigenvalues.
      */
     virtual void boundaryConditions(
-      const double * __restrict__ Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      double * __restrict__ Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const double * NOALIAS Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      double * NOALIAS Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  meshCellH,
       double                                       t,

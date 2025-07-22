@@ -4,7 +4,7 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/CompilerSpecificSettings.h"
 
-#ifdef CompilerHasSysinfo
+#ifdef COMPILER_HAS_SYSINFO
 #include <sched.h>
 #endif
 
@@ -51,7 +51,7 @@ int tarch::multicore::Core::getNumberOfThreads() const {
 }
 
 int tarch::multicore::Core::getCoreNumber() const {
-  #ifdef CompilerHasSysinfo
+  #ifdef COMPILER_HAS_SYSINFO
     return sched_getcpu();
   #else
     //  https://stackoverflow.com/questions/33745364/sched-getcpu-equivalent-for-os-x

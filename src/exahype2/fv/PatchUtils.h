@@ -230,7 +230,7 @@ namespace exahype2 {
      * @return Data of one volume as tuple.
      */
     std::string plotVolume(
-      const double* __restrict__ Q,
+      const double* NOALIAS Q,
       int unknowns
     );
 
@@ -249,7 +249,7 @@ namespace exahype2 {
      */
     template<typename T>
     void validatePatch(
-      const T* __restrict__ Q,
+      const T* NOALIAS Q,
       int    unknowns,
       int    auxiliaryVariables,
       int    numberOfVolumesPerAxisInPatch,
@@ -269,7 +269,7 @@ namespace exahype2 {
      */
     template<typename T>
     std::string plotPatch(
-      const T* __restrict__ Q,
+      const T* NOALIAS Q,
       int    unknowns,
       int    auxiliaryVariables,
       int    numberOfVolumesPerAxisInPatch,
@@ -279,7 +279,7 @@ namespace exahype2 {
 
     template<typename T>
     std::string plotPatchOverlap(
-      const T* __restrict__ Q,
+      const T* NOALIAS Q,
       int    unknowns,
       int    auxiliaryVariables,
       int    numberOfGridCellsPerPatchPerAxis,
@@ -302,8 +302,8 @@ namespace exahype2 {
       int    haloSize,  // same as overlap
       int    normal,
       bool   isRightLayer,
-      const T* __restrict__   srcQ,
-      T* __restrict__         destQ
+      const T* NOALIAS   srcQ,
+      T* NOALIAS         destQ
     );
   }
 }
