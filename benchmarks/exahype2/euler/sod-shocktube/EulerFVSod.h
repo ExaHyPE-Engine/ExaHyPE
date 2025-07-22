@@ -29,13 +29,14 @@ class benchmarks::exahype2::euler::sod_shocktube::EulerFVSod: public benchmarks:
     )  override;
   
   public:
-    virtual double maxEigenvalue(
+    virtual void maxEigenvalue(
       const double * __restrict__ Q, // Q[4+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
-      int                                          normal
+      int                                          normal,
+      double* __restrict__                         maxEigenvalue
     ) override;
     
     virtual void flux(
