@@ -8,13 +8,10 @@ set(KOKKOS_VERSION 4.5.01)
 find_package(Kokkos CONFIG)
 
 if(NOT Kokkos_FOUND)
-  kokkos_populate_user_args(Kokkos_USER_CMAKE_ARGS)
-
   message(STATUS "Installing Kokkos from GitHub Release ${KOKKOS_VERSION} using ${AVAILABLE_PROCESSOR_COUNT} processors")
 
-  #execute_process(COMMAND git config --global --add safe.directory ${CMAKE_BINARY_DIR}/_deps/kokkos-src)
+  kokkos_populate_user_args(Kokkos_USER_CMAKE_ARGS)
 
-  cmake_policy(SET CMP0169 OLD)
   include(FetchContent)
   set(FETCHCONTENT_QUIET ON)
   FetchContent_Declare(
@@ -23,7 +20,6 @@ if(NOT Kokkos_FOUND)
     GIT_TAG ${KOKKOS_VERSION}
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
   )
-
   if(NOT Kokkos_POPULATED)
     FetchContent_Populate(Kokkos)
     FetchContent_GetProperties(Kokkos)
@@ -31,7 +27,6 @@ if(NOT Kokkos_FOUND)
 
   set(kokkos_BINARY_DIR ${CMAKE_BINARY_DIR}/Kokkos-build)
   set(kokkos_INSTALL_DIR ${CMAKE_BINARY_DIR}/Kokkos-install)
-
   file(MAKE_DIRECTORY ${kokkos_BINARY_DIR})
   file(MAKE_DIRECTORY ${kokkos_INSTALL_DIR})
 

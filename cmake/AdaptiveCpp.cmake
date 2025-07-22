@@ -1,6 +1,5 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
 set(ADAPTIVE_CPP_VERSION 24.10.0)
 set(ACPP_TARGETS generic)
 
@@ -17,7 +16,6 @@ find_package(AdaptiveCpp CONFIG)
 if(NOT ${AdaptiveCpp_FOUND})
   message(STATUS "Installing AdaptiveCpp from GitHub Release ${ADAPTIVE_CPP_VERSION} using ${AVAILABLE_PROCESSOR_COUNT} processors")
 
-  cmake_policy(SET CMP0169 OLD)
   include(FetchContent)
   set(FETCHCONTENT_QUIET ON)
   FetchContent_Declare(
@@ -32,7 +30,6 @@ if(NOT ${AdaptiveCpp_FOUND})
 
   set(adaptivecpp_BINARY_DIR ${CMAKE_BINARY_DIR}/AdaptiveCpp-build)
   set(adaptivecpp_INSTALL_DIR ${CMAKE_BINARY_DIR}/AdaptiveCpp-install)
-
   file(MAKE_DIRECTORY ${adaptivecpp_BINARY_DIR})
   file(MAKE_DIRECTORY ${adaptivecpp_INSTALL_DIR})
 

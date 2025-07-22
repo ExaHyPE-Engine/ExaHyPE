@@ -30,7 +30,7 @@ We however use a whole set of tools around it.
 ## Required
 
 - C++17/C++20-compatible C++ compiler.
-- GNU Autotools (Automake) to set up the system <b>or alternatively</b> CMake (3.21 or newer).
+- CMake (3.30 or newer).
 
 ## Recommended
 
@@ -311,7 +311,7 @@ Peano currently relies on the following Python packages/projects:
 If you don't use Fortran in your own code, ignore this section.
 
 Peano's core does not use any Fortran at all. However, some users use Fortran
-for their domain-specific programming. If you want to have a seemless
+for their domain-specific programming. If you want to have a seamless
 integration of your particular Fortran choice through 's Python API,
 invoke `./configure` ensuring that the Fortran variables---in particular
 the environment variable `FC` identifying the compiler---are properly
@@ -322,36 +322,6 @@ For many codes and the GNU Fortran compiler, you need the flag
 argument before you invoke `configure`. As the Peano's core does not use
 Fortran---it is only applications built on top of ---you can redefine
 the flags later on.
-
-
-# Sample Installation Script for Autotools
-
-Please find below a sample shell script for Autotools that will install Peano with ExaHyPE
-enabled. Here we use GCC and G++ as the C and C++ compiler, as well as
-OpenMP for the multithreading support. We also include some flags to suppress warnings.
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{bash}
-#!/bin/sh
-
-# Cleanup the Peano directory if files from previous builds are present (comment-in to use)
-#make clean && make distclean
-
-# Prepare environment
-libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing;
-
-# Configure Peano with whatever we need
-CC=gcc CXX=g++ ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp CXXFLAGS="-std=c++20 -O3 -fopenmp -Wno-attributes" LDFLAGS="-fopenmp"
-
-# Compile and check build. You might want to add -jX to build on X cores in parallel
-echo "Starting compilation"
-make
-echo "Compilation complete. Now Checking..."
-
-# Checks installation and runs the unit tests
-make check
-
-exit 0
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 # Sample Installation Script for CMake

@@ -274,82 +274,17 @@ the SISC paper
 
     def parse_configure_script_outcome(self, directory):
         """
-        directory should point to the directory which holds the ./configure script.
-        It furthermore has to be invoked after configure has passed successfully.
-        This script does not accept relative paths. We then search for the subdirectory
-        src and parse the Makefile there.
+        directory should point to the directory which holds the generated CMake build.
         """
         if 'PEANO_SRC_ROOT_DIR' in os.environ:
           directory = os.environ['PEANO_SRC_ROOT_DIR']
 
         self.d["CONFIGUREPATH"] = directory
 
-        if 'PEANO_CMAKE_BUILD_DIR' in os.environ: # If this environment flag has been set, favour CMake
+        if 'PEANO_CMAKE_BUILD_DIR' in os.environ: # If this environment flag has been set, use this CMake build directory
             self.d["CMAKE_BUILD_DIR"] = os.environ['PEANO_CMAKE_BUILD_DIR']
-        else: # If not, and an Automake configuration is present, favour this instead
-          try:
-              input_file = directory + "/config.log"
-              input = open(input_file, "r")
-              self.configure_call = ""
-              print("Parse configure outcome " + input_file + " to extract configure settings")
-
-              for line in input:
-                  if "./configure" in line and self.configure_call == "":
-                      print("Found the configure call info " + line)
-                      self.configure_call = line.strip()
-
-              input_file = directory + "/src/Makefile"
-              input = open(input_file, "r")
-              print("Parse configure outcome " + input_file + " to extract compile settings")
-              MakefileConstants = [
-                  "CXXFLAGS_PEANO_2D_RELEASE",
-                  "CXXFLAGS_PEANO_2D_STATS",
-                  "CXXFLAGS_PEANO_2D_ASSERTS",
-                  "CXXFLAGS_PEANO_2D_TRACE",
-                  "CXXFLAGS_PEANO_2D_DEBUG",
-                  "CXXFLAGS_PEANO_3D_RELEASE",
-                  "CXXFLAGS_PEANO_3D_STATS",
-                  "CXXFLAGS_PEANO_3D_ASSERTS",
-                  "CXXFLAGS_PEANO_3D_TRACE",
-                  "CXXFLAGS_PEANO_3D_DEBUG",
-                  "LDFLAGS_PEANO_RELEASE",
-                  "LDFLAGS_PEANO_STATS",
-                  "LDFLAGS_PEANO_ASSERTS",
-                  "LDFLAGS_PEANO_TRACE",
-                  "LDFLAGS_PEANO_DEBUG",
-                  "LDADD_PEANO_2D_RELEASE",
-                  "LDADD_PEANO_2D_STATS",
-                  "LDADD_PEANO_2D_ASSERTS",
-                  "LDADD_PEANO_2D_TRACE",
-                  "LDADD_PEANO_2D_DEBUG",
-                  "LDADD_PEANO_3D_RELEASE",
-                  "LDADD_PEANO_3D_STATS",
-                  "LDADD_PEANO_3D_ASSERTS",
-                  "LDADD_PEANO_3D_TRACE",
-                  "LDADD_PEANO_3D_DEBUG",
-                  "CXX",
-                  "FC",
-                  "CXXFLAGS",
-                  "LDFLAGS",
-                  "LIBS",
-              ]
-
-              for line in input:
-                  for constant in MakefileConstants:
-                      if re.search(constant + " *=", line) and line.startswith(constant):
-                          try:
-                              flags = line.split("=", 1)[1].strip()
-                              self.d[constant] = flags
-                          except:
-                              print("Error in " + line + " for token " + constant)
-              self.d["MULTITHREADING"] = re.search(r"--with-multithreading=([\w-]+)", self.configure_call).group(1).strip() if "--with-multithreading=" in self.configure_call else "no"
-              self.d["GPU"] = re.search(r"--with-gpu=([\w-]+)", self.configure_call).group(1).strip() if "--with-gpu=" in self.configure_call else "no"
-              print("Found the setting for multithreading: " + self.d["MULTITHREADING"])
-              print("Found the setting for GPU: " + self.d["GPU"])
-              return
-          except IOError:
-              self.d["CMAKE_BUILD_DIR"] = next((path for path in (os.path.join(directory, subdir) for subdir in os.listdir(directory)) if os.path.isfile(os.path.join(path, "PeanoTargets.cmake"))), "")
-              pass # If there is no Automake configuration we try CMake as last attempt
+        else: # If not, search for the next available build directory
+            self.d["CMAKE_BUILD_DIR"] = next((path for path in (os.path.join(directory, subdir) for subdir in os.listdir(directory)) if os.path.isfile(os.path.join(path, "PeanoTargets.cmake"))), "")
 
         if self.d["CMAKE_BUILD_DIR"] != "":
             cmake_cache_file = self.d["CMAKE_BUILD_DIR"] + "/CMakeCache.txt"
@@ -381,7 +316,7 @@ the SISC paper
         else: # Nothing has been configured so far
               raise Exception("""
   Error: if you call parse_configure_script_outcome(), please hand over directory where
-  ./configure had been called. You passed """ + directory
+  the CMake build had been generated. You passed """ + directory
                               )
 
     def add_h_file(self, filename, generated=False):
@@ -572,10 +507,5 @@ then this message can typically be ignored.
         file_dir = os.path.dirname(os.path.realpath(__file__))
 
         generate_output_file(os.path.join(file_dir, "Gitignore.template"), os.path.join(directory, ".gitignore"))
-
-        if self.d["CMAKE_BUILD_DIR"] != "":
-            generate_output_file(os.path.join(file_dir, "CMakeLists.txt.template"), os.path.join(directory, "CMakeLists.txt"))
-            # Shortcut to the CMake build. Used to mirror Autotools.
-            generate_output_file(os.path.join(file_dir, "Makefile.cmake.template"), os.path.join(directory, "Makefile"))
-        else:
-            generate_output_file(os.path.join(file_dir, "Makefile.template"), os.path.join(directory, "Makefile"))
+        generate_output_file(os.path.join(file_dir, "CMakeLists.txt.template"), os.path.join(directory, "CMakeLists.txt"))
+        generate_output_file(os.path.join(file_dir, "Makefile.cmake.template"), os.path.join(directory, "Makefile"))
