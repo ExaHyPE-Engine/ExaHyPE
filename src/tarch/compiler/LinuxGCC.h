@@ -31,3 +31,5 @@
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions inline
 
 #define OpenMPTaskGroup
+
+#undef OpenMP6Syntax
