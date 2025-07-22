@@ -117,8 +117,13 @@ class SingleSweep(FV):
             patch_reconstructed=self._patch_reconstructed,
             solver_name=self._name,
             precision=self._storage_precision,
-            guard="not marker.willBeRefined() and not marker.hasBeenRefined()" + (" and marker.willBeSkeletonCell()" if self._use_enclave_tasking else ""),
-            add_assertions_to_halo_exchange=True
+            guard="not marker.willBeRefined() and not marker.hasBeenRefined()"
+            + (
+                " and /*marker.willBeSkeletonCell()*/ false"
+                if self._use_enclave_tasking
+                else ""
+            ),
+            add_assertions_to_halo_exchange=True,
         )
 
     def set_implementation(

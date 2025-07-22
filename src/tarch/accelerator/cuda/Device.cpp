@@ -26,10 +26,9 @@ bool tarch::accelerator::Device::init() {
     std::size_t free = 0, total = 0;
     CHECK_CUDA_ERROR(cudaMemGetInfo(&free, &total));
 
-    constexpr int MB = 1024 * 1024;
     logInfo("init()", "[" << device << "]: " << prop->name);
     logDebug("init()", "  " << prop->major << "." << prop->minor << " CC");
-    logDebug("init()", "  " << free / MB << " MB free of " << total / MB << " MB total global memory");
+    logDebug("init()", "  " << free / (1024 * 1024) << " MB free of " << total / (1024 * 1024) << " MB total global memory");
     logDebug("init()", "  " << prop->totalConstMem << " bytes constant memory");
     logDebug("init()", "  " << prop->multiProcessorCount << " SMs");
     logDebug("init()", "  " << prop->maxBlocksPerMultiProcessor << " blocks per SM");

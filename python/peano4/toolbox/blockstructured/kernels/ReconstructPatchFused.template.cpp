@@ -4,9 +4,32 @@
 
 #include "peano4/utils/Loop.h"
 
-{% set fused_loop_path = "Loop.template.h" %}
+{% if GPU != "no" %}
+{% set fused_loop_path = GPU ~ "/Loop.macro.h" %}
+{% elif MULTITHREADING != "no" %}
+{% set fused_loop_path = MULTITHREADING ~ "/Loop.macro.h" %}
+{% else %}
+{% set fused_loop_path = "Loop.macro.h" %}
+{% endif %}
 
 {% import fused_loop_path as fused with context %}
+
+{% if GPU == "cuda" %}
+{{ fused.defineGlobalKernel() }}
+{% elif GPU == "cpp" %}
+#include "tarch/accelerator/cpp/cartesian_product.h"
+#include <ranges>
+#include <execution>
+#include <numeric>
+{% elif GPU == "sycl" or MULTITHREADING == "sycl" %}
+#include "tarch/accelerator/sycl/Device.h"
+#pragma push_macro("Dimensions")
+#undef Dimensions
+#include <sycl/sycl.hpp>
+#pragma pop_macro("Dimensions")
+{% elif GPU == "kokkos" %}
+#include "Kokkos_Core.hpp"
+{% endif %}
 
 void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatchFused(
   ::exahype2::CellData<{{PRECISION}}, {{PRECISION}}>& patchData,

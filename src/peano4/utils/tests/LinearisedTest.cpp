@@ -97,14 +97,14 @@ void peano4::utils::tests::LinearisedTest::testDelinearisedWithoutLookup() {
 void peano4::utils::tests::LinearisedTest::testKeyComputationForLinearisedLookup() {
   std::set<int> usedKeys;
 
-  for (int max = 2; max <= MaxTable; max++) {
+  for (int max = 2; max <= MAX_TABLE; max++) {
     tarch::la::Vector<Dimensions, int> counter(0);
     bool                               done = false;
 
     while (!done) {
       int key = getKeyForDLinearisedLookup(counter, max);
 
-      validateWithParams1(key < MaxIndexOfLinearisation * (MaxTable - 1), key);
+      validateWithParams1(key < MaxIndexOfLinearisation * (MAX_TABLE - 1), key);
       validateWithParams1(usedKeys.find(key) == usedKeys.end(), key);
       usedKeys.insert(key);
 
@@ -121,7 +121,7 @@ void peano4::utils::tests::LinearisedTest::testKeyComputationForLinearisedLookup
 }
 
 void peano4::utils::tests::LinearisedTest::testLookupTableLinearised() {
-  for (int max = 2; max <= MaxTable; max++) {
+  for (int max = 2; max <= MAX_TABLE; max++) {
     tarch::la::Vector<Dimensions, int> counter(0);
     bool                               done = false;
     while (!done) {
@@ -142,7 +142,7 @@ void peano4::utils::tests::LinearisedTest::testLookupTableLinearised() {
 
       for (int d = 0; d < Dimensions; d++) {
         counter(d)++;
-        if (counter(d) < MaxTable /*max*/)
+        if (counter(d) < MAX_TABLE /*max*/)
           break;
         counter(d) = 0;
         if (d == Dimensions - 1)
@@ -153,7 +153,7 @@ void peano4::utils::tests::LinearisedTest::testLookupTableLinearised() {
 }
 
 void peano4::utils::tests::LinearisedTest::testLookupTableDelinearised() {
-  for (int max = 2; max <= MaxTable; max++) {
+  for (int max = 2; max <= MAX_TABLE; max++) {
     for (int value = 0; value < tarch::la::aPowI(Dimensions, max); value++) {
       int                                key      = getKeyForDDeLinearisedLookup(value, max);
       tarch::la::Vector<Dimensions, int> expected = dDelinearisedWithoutLookup(value, max);
@@ -166,7 +166,7 @@ void peano4::utils::tests::LinearisedTest::testLookupTableDelinearised() {
 }
 
 void peano4::utils::tests::LinearisedTest::testLinearisedVector() {
-  constexpr int                      Max = MaxTable * 2;
+  constexpr int                      Max = MAX_TABLE * 2;
   tarch::la::Vector<Dimensions, int> counter(0);
 
   std::vector<int> limits(Dimensions, Max);
@@ -195,7 +195,7 @@ void peano4::utils::tests::LinearisedTest::testLinearisedVector() {
 }
 
 void peano4::utils::tests::LinearisedTest::testDelinearisedVector() {
-  constexpr int Max = MaxTable * 2;
+  constexpr int Max = MAX_TABLE * 2;
   for (int index = 0; index < tarch::la::aPowI(Dimensions, Max); ++index) {
     tarch::la::Vector<Dimensions, int> result = dDelinearisedWithoutLookup(index, Max);
 

@@ -50,7 +50,7 @@
 
   Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> teamPolicy(numberOfPatches, Kokkos::AUTO);
   Kokkos::parallel_reduce(
-    "patch-loop",
+    "riemann-patch-loop",
     teamPolicy,
     KOKKOS_LAMBDA (const Kokkos::TeamPolicy<>::member_type& teamMember, {{COMPUTE_PRECISION}}& maxEigenvalueAfterTimeStep) {
     const int patchIndex                                    = teamMember.league_rank();
@@ -66,7 +66,7 @@
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}}
-      ), [=,&maxEigenvalueAfterTimeStep](const int x, const int y, const int z) {
+      ), [=, &maxEigenvalueAfterTimeStep](const int x, const int y, const int z) {
         const auto volume = ::exahype2::volumeIndex(x, y, z);
     {% else %}
     Kokkos::parallel_for(
@@ -74,7 +74,7 @@
         teamMember,
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}}
-      ), [=,&maxEigenvalueAfterTimeStep](const int x, const int y) {
+      ), [=, &maxEigenvalueAfterTimeStep](const int x, const int y) {
         const auto volume = ::exahype2::volumeIndex(x, y);
     {% endif %}
         const auto volumeSize = ::exahype2::fv::getVolumeSize(patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}});

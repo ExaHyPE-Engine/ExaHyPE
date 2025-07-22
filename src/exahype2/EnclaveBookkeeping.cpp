@@ -5,7 +5,7 @@
 tarch::logging::Log exahype2::EnclaveBookkeeping::_log("exahype2::EnclaveBookkeeping");
 
 exahype2::EnclaveBookkeeping::~EnclaveBookkeeping() {
-  //clear();
+  // clear();
 }
 
 void exahype2::EnclaveBookkeeping::bookmarkTask(tarch::multicore::Task* task) {
@@ -15,10 +15,7 @@ void exahype2::EnclaveBookkeeping::bookmarkTask(tarch::multicore::Task* task) {
   tarch::multicore::Lock lock(pendingTasksSemaphore);
 
   if (pendingTasks.count(task->getTaskType()) == 0) {
-    logInfo(
-      "bookmarkTask()",
-      "Construct new enclave task queue for task type " << task->getTaskType()
-    );
+    logDebug("bookmarkTask()", "Construct new enclave task queue for task type " << task->getTaskType());
     pendingTasks[task->getTaskType()] = std::list<tarch::multicore::Task*>();
   }
 
@@ -27,7 +24,7 @@ void exahype2::EnclaveBookkeeping::bookmarkTask(tarch::multicore::Task* task) {
 
 void exahype2::EnclaveBookkeeping::clear() {
   for (auto& [taskType, taskList] : pendingTasks) {
-    for (tarch::multicore::Task* task: taskList) {
+    for (tarch::multicore::Task* task : taskList) {
       delete task;
     }
     taskList.clear();
