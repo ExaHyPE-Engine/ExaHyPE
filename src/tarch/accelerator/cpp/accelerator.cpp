@@ -26,8 +26,8 @@ void* tarch::accelerator::allocateRawData(
   case MemoryLocation::Device:
   case MemoryLocation::Pinned:
     data = std::aligned_alloc(
-      AlignmentOnHeap,
-      padSizeToAlignment(sizeInBytes, AlignmentOnHeap)
+      ALIGNMENT_ON_HEAP,
+      padSizeToAlignment(sizeInBytes, ALIGNMENT_ON_HEAP)
     );
     break;
   }

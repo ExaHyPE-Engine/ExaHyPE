@@ -18,7 +18,7 @@ InType tarch::plotter::byteSwap(const InType inVal) {
 
 template <class InType>
 InType tarch::plotter::byteSwapForParaviewBinaryFiles(const InType inVal) {
-  #if defined(LittleEndian)
+  #if defined(LITTLE_ENDIAN)
   return byteSwap(inVal);
   #else
   return inVal;

@@ -185,13 +185,13 @@ class Project (object):
 
     if make:
       if make_clean_first:
-        log.info("Clean up project ... in {}".format(self.directory))
+        log.info("Clean up project in {}".format(self.directory))
         try:
           subprocess.check_call(["make", "clean"], cwd=self.directory, stderr=subprocess.DEVNULL)
-          self.is_built = False
-          log.info("Clean complete")
         except Exception as e:
           pass
+        self.is_built = False
+        log.info("Clean complete")
 
       if not self.is_built:
         log.info("Start to compile with concurrency level of " + str(number_of_parallel_builds) + " ...")

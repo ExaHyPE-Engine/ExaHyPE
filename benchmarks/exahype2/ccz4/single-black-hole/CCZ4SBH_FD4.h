@@ -53,7 +53,7 @@ class benchmarks::exahype2::ccz4::CCZ4SBH_FD4: public benchmarks::exahype2::ccz4
      *  which make the solution follow
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
-      const double * __restrict__ Q, // Q[59+0],
+      const double * NOALIAS Q, // Q[59+0],
       const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
       const tarch::la::Vector<Dimensions,double>&  meshCellH,
       double                                       t
@@ -61,7 +61,7 @@ class benchmarks::exahype2::ccz4::CCZ4SBH_FD4: public benchmarks::exahype2::ccz4
     
 
     virtual void initialCondition(
-      double * __restrict__ Q,
+      double * NOALIAS Q,
       const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
       const tarch::la::Vector<Dimensions,double>&  meshCellH,
       bool                                         gridIsConstructed

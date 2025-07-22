@@ -159,7 +159,7 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables, res
     return """
       ::exahype2::fd::applySommerfeldConditions(
         [&](
-          const double * __restrict__                  Q,
+          const double * NOALIAS                  Q,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  gridCellH,
           double                                       t,
@@ -169,7 +169,7 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables, res
           return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
         },
         [&](
-          double * __restrict__                        Q,
+          double * NOALIAS                        Q,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  gridCellH
         ) -> void {
@@ -201,7 +201,7 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables, res
     return """
       ::exahype2::fd::applySommerfeldConditions(
         [&](
-          const double * __restrict__                  Q,
+          const double * NOALIAS                  Q,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  gridCellH,
           double                                       t,
@@ -211,7 +211,7 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables, res
           return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
         },
         [&](
-          double * __restrict__                        Q,
+          double * NOALIAS                        Q,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  gridCellH
         ) -> void {

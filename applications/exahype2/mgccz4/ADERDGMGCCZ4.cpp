@@ -27,7 +27,7 @@ examples::exahype2::mgccz4::ADERDGMGCCZ4::ADERDGMGCCZ4() {
 }
 
 void examples::exahype2::mgccz4::ADERDGMGCCZ4::adjustSolution(
-  double * __restrict__ Q,
+  double * NOALIAS Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t
 ) {
@@ -58,12 +58,12 @@ void examples::exahype2::mgccz4::ADERDGMGCCZ4::adjustSolution(
 }
 
 void examples::exahype2::mgccz4::ADERDGMGCCZ4::algebraicSource(
-  const double * __restrict__ Q,
+  const double * NOALIAS Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
-  double * __restrict__ S
+  double * NOALIAS S
 ) {
   constexpr int nVars = 59;
   for(int i=0; i<nVars; i++){
@@ -78,7 +78,7 @@ void examples::exahype2::mgccz4::ADERDGMGCCZ4::algebraicSource(
 }
 
 double examples::exahype2::mgccz4::ADERDGMGCCZ4::maxEigenvalue(
-  const double * __restrict__ Q, // Q[64+0],
+  const double * NOALIAS Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   int                                          normal
@@ -131,12 +131,12 @@ double examples::exahype2::mgccz4::ADERDGMGCCZ4::maxEigenvalue(
 
 
 void examples::exahype2::mgccz4::ADERDGMGCCZ4::nonconservativeProduct(
-  const double * __restrict__                  Q, // Q[64+0],
-  const double * __restrict__                  deltaQ, // [64+0]
+  const double * NOALIAS                  Q, // Q[64+0],
+  const double * NOALIAS                  deltaQ, // [64+0]
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   int                                          normal,
-  double * __restrict__ BgradQ // BgradQ[64]
+  double * NOALIAS BgradQ // BgradQ[64]
 ) {
   logTraceInWith3Arguments( "nonconservativeProduct(...)", x, t, normal );
 
@@ -162,8 +162,8 @@ void examples::exahype2::mgccz4::ADERDGMGCCZ4::nonconservativeProduct(
 }
 
 void examples::exahype2::mgccz4::ADERDGMGCCZ4::boundaryConditions(
-  const double * __restrict__                  Qinside,
-  double * __restrict__                        Qoutside,
+  const double * NOALIAS                  Qinside,
+  double * NOALIAS                        Qoutside,
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   int                                          normal

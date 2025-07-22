@@ -2,10 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <string>
-
 #include "ScalarOperations.h"
+
 #include "tarch/Assertions.h"
+#include "tarch/CompilerSpecificSettings.h"
+
+#include <string>
 
 namespace tarch {
   namespace la {
@@ -157,8 +159,8 @@ public:
    */
   template<typename T=double>
   void batchedMultiplyAoS(
-    T* __restrict__ result,
-    const T* __restrict__ x,
+    T* NOALIAS result,
+    const T* NOALIAS x,
     int batchCount,
     int resultSize,
     int firstRow
@@ -169,8 +171,8 @@ public:
    */
   template<typename T=double>
   void batchedMultiplyAoS(
-    T* __restrict__ result,
-    const T* __restrict__ x,
+    T* NOALIAS result,
+    const T* NOALIAS x,
     int batchCount
   );
 

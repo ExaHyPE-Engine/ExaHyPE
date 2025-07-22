@@ -1,5 +1,8 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+
+print("ExaHyPE 2 (C) www.peano-framework.org")
+
 import exahype2.tracer
 import exahype2.grid
 import exahype2.symhype
@@ -14,5 +17,3 @@ import exahype2.solvers.limiting
 from .ArgumentParser import ArgumentParser
 from .Project import Project
 from .ExaHyPEMain import ExaHyPEMain
-
-print("ExaHyPE 2 (C) www.peano-framework.org")

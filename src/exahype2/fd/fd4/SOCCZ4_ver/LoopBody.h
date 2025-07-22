@@ -27,7 +27,7 @@ namespace exahype2 {
         #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void computeAuxiliaryVariables_LoopBody(
-          double* __restrict__                           QIn,
+          double* NOALIAS                           QIn,
           const QInEnumeratorType&                       QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&    patchCentre,
           const tarch::la::Vector<Dimensions,double>&    patchSize,
@@ -49,7 +49,7 @@ namespace exahype2 {
         #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void computeDifferentialSourceTerm_LoopBody(
-          const double* __restrict__                     QIn,
+          const double* NOALIAS                     QIn,
           const QInEnumeratorType&                       QInEnumerator,
           exahype2::fd::NonconservativeProduct           DifferentialSource,
           const tarch::la::Vector<Dimensions,double>&    patchCentre,
@@ -59,7 +59,7 @@ namespace exahype2 {
           double                                         t,
           double                                         dt,
           int                                            normal,
-          double* __restrict__                           QDiffSrc,
+          double* NOALIAS                           QDiffSrc,
           const QOutEnumeratorType&                      QDiffSrcEnumerator,
           DifferentialSourceTermVariant                  variant
         ) InlineMethod;
@@ -71,7 +71,7 @@ namespace exahype2 {
 
         template <>
         void computeDifferentialSourceTerm_LoopBody(
-          const double* __restrict__                     QIn,
+          const double* NOALIAS                     QIn,
           const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
           exahype2::fd::NonconservativeProduct           DifferentialSource,
           const tarch::la::Vector<Dimensions,double>&    patchCentre,
@@ -81,7 +81,7 @@ namespace exahype2 {
           double                                         t,
           double                                         dt,
           int                                            normal,
-          double* __restrict__                           QDiffSrc,
+          double* NOALIAS                           QDiffSrc,
           const exahype2::enumerator::AoSLexicographicEnumerator& QDiffSrcEnumerator,
           DifferentialSourceTermVariant                  variant
         ) InlineMethod;
@@ -93,7 +93,7 @@ namespace exahype2 {
          */
         template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
         static void computeDifferentialSourceTerm_LoopBody(
-          const double* __restrict__                     QIn,
+          const double* NOALIAS                     QIn,
           const QInEnumeratorType&                       QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&    patchCentre,
           const tarch::la::Vector<Dimensions,double>&    patchSize,
@@ -102,7 +102,7 @@ namespace exahype2 {
           double                                         t,
           double                                         dt,
           int                                            normal,
-          double* __restrict__                           QDiffSrc,
+          double* NOALIAS                           QDiffSrc,
           const QOutEnumeratorType&                      QDiffSrcEnumerator,
           DifferentialSourceTermVariant                  variant
         ) InlineMethod;
@@ -124,9 +124,9 @@ namespace exahype2 {
         #endif
         template <typename QOutEnumeratorType>
         static void updateSolutionWithDifferentialSourceTerm_LoopBody(
-          const double* __restrict__                   QDiffSrcX,
-          const double* __restrict__                   QDiffSrcY,
-          const double* __restrict__                   QDiffSrcZ,
+          const double* NOALIAS                   QDiffSrcX,
+          const double* NOALIAS                   QDiffSrcY,
+          const double* NOALIAS                   QDiffSrcZ,
           const QOutEnumeratorType&                    QDiffSrcEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -134,7 +134,7 @@ namespace exahype2 {
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           int                                          unknown,
           double                                       dt,
-          double* __restrict__                         QOut,
+          double* NOALIAS                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
         #if defined(GPUOffloadingOMP)
@@ -153,7 +153,7 @@ namespace exahype2 {
         #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void computeKreissOligerDissipationTerm_LoopBody(
-          const double* __restrict__                     QIn,
+          const double* NOALIAS                     QIn,
           const QInEnumeratorType&                       QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&    patchCentre,
           const tarch::la::Vector<Dimensions,double>&    patchSize,
@@ -162,7 +162,7 @@ namespace exahype2 {
           double                                         t,
           double                                         dt,
           int                                            normal,
-          double* __restrict__                           QKODsp,
+          double* NOALIAS                           QKODsp,
           const QOutEnumeratorType&                      QKODspEnumerator
         ) InlineMethod;
 
@@ -183,9 +183,9 @@ namespace exahype2 {
         template <typename QOutEnumeratorType>
         static void updateSolutionWithKODissipationTerm_LoopBody(
           const double                                 KOSigma,
-          const double* __restrict__                   QKODspX,
-          const double* __restrict__                   QKODspY,
-          const double* __restrict__                   QKODspZ,
+          const double* NOALIAS                   QKODspX,
+          const double* NOALIAS                   QKODspY,
+          const double* NOALIAS                   QKODspZ,
           const QOutEnumeratorType&                    QKODspEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -193,7 +193,7 @@ namespace exahype2 {
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           int                                          unknown,
           double                                       dt,
-          double* __restrict__                         QOut,
+          double* NOALIAS                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
         #if defined(GPUOffloadingOMP)
@@ -218,7 +218,7 @@ namespace exahype2 {
         #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void computeFlux_LoopBody(
-          const double* __restrict__                   QIn,
+          const double* NOALIAS                   QIn,
           const QInEnumeratorType&                     QInEnumerator,
           exahype2::fd::Flux                           flux,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
@@ -228,7 +228,7 @@ namespace exahype2 {
           double                                       t,
           double                                       dt,
           int                                          normal,
-          double* __restrict__                         QFlux,
+          double* NOALIAS                         QFlux,
           const QOutEnumeratorType&                    QFluxEnumerator
         ) InlineMethod;
 
@@ -238,7 +238,7 @@ namespace exahype2 {
          */
         template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
         static void computeFlux_LoopBody(
-          const double* __restrict__                   QIn,
+          const double* NOALIAS                   QIn,
           const QInEnumeratorType&                     QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -247,7 +247,7 @@ namespace exahype2 {
           double                                       t,
           double                                       dt,
           int                                          normal,
-          double* __restrict__                         QFlux,
+          double* NOALIAS                         QFlux,
           const QOutEnumeratorType&                    QFluxEnumerator
         ) InlineMethod;
 
@@ -268,9 +268,9 @@ namespace exahype2 {
         #endif
         template <typename QOutEnumeratorType>
         static void updateSolutionWithFlux_LoopBody(
-          const double* __restrict__                   tempFluxX,
-          const double* __restrict__                   tempFluxY,
-          const double* __restrict__                   tempFluxZ,
+          const double* NOALIAS                   tempFluxX,
+          const double* NOALIAS                   tempFluxY,
+          const double* NOALIAS                   tempFluxZ,
           const QOutEnumeratorType&                    fluxEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -278,7 +278,7 @@ namespace exahype2 {
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           int                                          unknown,
           double                                       dt,
-          double* __restrict__                         QOut,
+          double* NOALIAS                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
         #if defined(GPUOffloadingOMP)

@@ -20,7 +20,7 @@
  * For the machine name. If it doesn't work, switch it off in the file
  * CompilerSpecificSettings.h.
  */
-#ifdef CompilerHasUTSName
+#ifdef COMPILER_HAS_UTS_NAME
 #include <sys/utsname.h>
 #endif
 

@@ -49,8 +49,8 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
   double                                      dt,
-  double* __restrict__                        reconstructedPatch,
-  double* __restrict__                        targetPatch
+  double* NOALIAS                        reconstructedPatch,
+  double* NOALIAS                        targetPatch
 ) {
   ::exahype2::CellData  patchData( reconstructedPatch, marker.x(), marker.h(), t, dt, targetPatch );
 
@@ -93,8 +93,8 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
   double                                      dt,
-  double* __restrict__                        reconstructedPatch,
-  double* __restrict__                        output
+  double* NOALIAS                        reconstructedPatch,
+  double* NOALIAS                        output
 ):
   ::exahype2::EnclaveTask(
     _enclaveTaskTypeId,

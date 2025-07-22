@@ -2,7 +2,7 @@
 
 
 exahype2::CellAccess::CellAccess(
-  const double* __restrict__ QIn,
+  const double* NOALIAS QIn,
   int haloSize,
   int unknowns,
   int numberOfAuxiliaryVariables,

@@ -15,11 +15,11 @@ void exahype2::dg::laxfriedrichs::solveRiemannProblem_pointwise_in_situ(
   int                                          unknowns,
   int                                          auxiliaryVariables,
   int                                          faceNumber,
-  const double* __restrict__                   quadraturePoints,
+  const double* NOALIAS                   quadraturePoints,
   bool                                         useFlux,
   bool                                         useNcp,
-  const double* __restrict__                   projectedValues,
-  double* __restrict__                         solution
+  const double* NOALIAS                   projectedValues,
+  double* NOALIAS                         solution
 ) {
   int normal = faceNumber%Dimensions;
   tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * cellSize;

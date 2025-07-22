@@ -6,7 +6,7 @@
 
 
 void exahype2::fv::mapInnerNeighbourVoxelAlongBoundayOntoAuxiliaryVariable(
-  double* __restrict__ Q,
+  double* NOALIAS Q,
   int    unknowns,
   int    auxiliaryVariables,
   int    numberOfVolumesPerAxisInPatch,

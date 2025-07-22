@@ -13,10 +13,10 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
   NonConservativeProduct                         nonconservativeProduct,
   Source                                         source,
   PointSources                                   /*pointSources*/,
-  const double* __restrict__                     quadratureNodes,
-  const double* __restrict__                     massMatrixDiagonal,
-  const double* __restrict__                     stiffnessMatrix,
-  const double* __restrict__                     derivativeOperator,
+  const double* NOALIAS                     quadratureNodes,
+  const double* NOALIAS                     massMatrixDiagonal,
+  const double* NOALIAS                     stiffnessMatrix,
+  const double* NOALIAS                     derivativeOperator,
   bool                                           evaluateFlux,
   bool                                           evaluateNonconservativeProduct,
   bool                                           evaluateSource,
@@ -44,8 +44,8 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
   double* ncpValues       = evaluateNonconservativeProduct ? new double[unknowns]                      : nullptr;
 
   for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++) {
-    const double* __restrict__                  cellQin  = cellData.QIn[currentCell];
-    double* __restrict__                        cellQout = cellData.QOut[currentCell];
+    const double* NOALIAS                  cellQin  = cellData.QIn[currentCell];
+    double* NOALIAS                        cellQout = cellData.QOut[currentCell];
     const tarch::la::Vector<Dimensions,double>  x        = cellData.cellCentre[currentCell];
     const tarch::la::Vector<Dimensions,double>  h        = cellData.cellSize[currentCell];
     const double                                t        = cellData.t;
@@ -200,7 +200,7 @@ void exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
   const int                               unknowns,
   const int                               auxiliaryVariables,
   MaxEigenvalue                           maxEigenvalue,
-  const double* __restrict__              QuadratureNodes1d
+  const double* NOALIAS              QuadratureNodes1d
 ) {
   ::exahype2::enumerator::AoSLexicographicEnumerator  enumerator(
     1, // number of patches stored per continuous memory segment
@@ -241,12 +241,12 @@ void exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
 
 
 void exahype2::dg::internal::copySolution(
-  const double* __restrict__                    cellQin,
+  const double* NOALIAS                    cellQin,
   const int                                     order,
   const int                                     unknowns,
   const int                                     auxiliaryVariables,
   const tarch::la::Vector<Dimensions,int>&      node,
-  double* __restrict__                          cellQout
+  double* NOALIAS                          cellQout
 ) {
   const int nodeSerialised = peano4::utils::dLinearised( node, order+1 );
   for(int var=0; var<unknowns+auxiliaryVariables; var++) {
@@ -260,7 +260,7 @@ void exahype2::dg::multiplyWithInvertedMassMatrix_GaussLegendre(
   const int                                      order,
   const int                                      unknowns,
   const int                                      /*auxiliaryVariables*/,
-  const double* __restrict__                     massMatrixDiagonal1d
+  const double* NOALIAS                     massMatrixDiagonal1d
 ) {
   exahype2::enumerator::AoSLexicographicEnumerator enumerator(
     1,           // number of cells in one memory chunk
@@ -272,7 +272,7 @@ void exahype2::dg::multiplyWithInvertedMassMatrix_GaussLegendre(
 
   for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++) {
     dfor( dof, order+1 ) {
-      double* __restrict__  cellQInOut = cellData.QOut[currentCell];
+      double* NOALIAS  cellQInOut = cellData.QOut[currentCell];
 
       #if Dimensions==2
       double diagonal = massMatrixDiagonal1d[ dof(0) ] * massMatrixDiagonal1d[ dof(1) ] * (cellData.cellSize[currentCell])(0) * (cellData.cellSize[currentCell])(1);

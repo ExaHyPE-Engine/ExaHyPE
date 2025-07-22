@@ -6,7 +6,7 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Task.h"
 
-#ifdef CompilerHasSysinfo
+#ifdef COMPILER_HAS_SYSINFO
 #include <sched.h>
 #endif
 
@@ -17,7 +17,7 @@ tarch::logging::Log tarch::multicore::Core::_log(
 std::string tarch::multicore::printUnmaskedThreads() {
   std::stringstream out;
   out << "(";
-#ifdef CompilerHasSysinfo
+#ifdef COMPILER_HAS_SYSINFO
   cpu_set_t mask;
   sched_getaffinity(0, sizeof(cpu_set_t), &mask);
 
@@ -36,7 +36,7 @@ std::string tarch::multicore::printUnmaskedThreads() {
 }
 
 int tarch::multicore::getNumberOfUnmaskedThreads() {
-#ifdef CompilerHasSysinfo
+#ifdef COMPILER_HAS_SYSINFO
   cpu_set_t mask;
   sched_getaffinity(0, sizeof(cpu_set_t), &mask);
 
@@ -72,7 +72,7 @@ bool tarch::multicore::Core::isInitialised() const { return true; }
 int tarch::multicore::Core::getNumberOfThreads() const { return _numberOfThreads; }
 
 int tarch::multicore::Core::getCoreNumber() const {
-#ifdef CompilerHasSysinfo
+#ifdef COMPILER_HAS_SYSINFO
   return sched_getcpu();
 #else
   //  https://stackoverflow.com/questions/33745364/sched-getcpu-equivalent-for-os-x

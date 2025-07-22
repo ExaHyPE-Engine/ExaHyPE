@@ -81,10 +81,10 @@ namespace exahype2 {
         int                                          unknowns,
         int                                          auxiliaryVariables,
         int                                          faceNumber,
-        const double* __restrict__                   quadraturePoints,
+        const double* NOALIAS                   quadraturePoints,
         bool                                         useFlux,
-        const double* __restrict__                   projectedValues,
-        double* __restrict__                         solution
+        const double* NOALIAS                   projectedValues,
+        double* NOALIAS                         solution
       );
 
       template <

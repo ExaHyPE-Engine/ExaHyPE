@@ -11,9 +11,9 @@ void exahype2::dg::interpolateRiemannSolution(
   const peano4::datamanagement::FaceMarker&  marker,
   int                                        order,
   int                                        unknowns,
-  const double* __restrict__                 InterpolationMatrix1d,
-  const double* __restrict__                 coarseGridFaceQ,
-  double* __restrict__                       fineGridFaceQ
+  const double* NOALIAS                 InterpolationMatrix1d,
+  const double* NOALIAS                 coarseGridFaceQ,
+  double* NOALIAS                       fineGridFaceQ
 ) {
   exahype2::enumerator::FaceAoSLexicographicEnumerator faceEnumerator(
     marker.getSelectedFaceNumber(),
@@ -72,9 +72,9 @@ void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
   int                                        numberOfProjectedQuantities,
   int                                        unknowns,
   int                                        auxiliaryVariables,
-  const double* __restrict__                 RestrictionMatrix1d,
-  const double* __restrict__                 fineGridFaceQ,
-  double* __restrict__                       coarseGridFaceQ
+  const double* NOALIAS                 RestrictionMatrix1d,
+  const double* NOALIAS                 fineGridFaceQ,
+  double* NOALIAS                       coarseGridFaceQ
 ) {
   assertion(numberOfProjectedQuantities>=1);
   // @todo Remove as it should work in principle for other values as well, but I haven't tested it
@@ -139,7 +139,7 @@ void exahype2::dg::clearSolutionProjection(
   int                           unknowns,
   int                           auxiliaryVariables,
   int                           numberOfProjectedQuantities,
-  double* __restrict__          faceQ
+  double* NOALIAS          faceQ
 ) {
   #if Dimensions==2
   const int numberOfDoFs = (order+1);
@@ -153,7 +153,7 @@ void exahype2::dg::clearSolutionProjection(
 void exahype2::dg::clearRiemannResult(
   int                           order,
   int                           unknowns,
-  double* __restrict__          faceQ
+  double* NOALIAS          faceQ
 ) {
   clearSolutionProjection(
     order,
@@ -165,15 +165,15 @@ void exahype2::dg::clearRiemannResult(
 }
 
 void exahype2::dg::projectVolumetricDataOntoFaces(
-  [[maybe_unused]] const double* __restrict__          cellQ,
+  [[maybe_unused]] const double* NOALIAS          cellQ,
   [[maybe_unused]] int                                 order,
   [[maybe_unused]] int                                 unknowns,
   [[maybe_unused]] int                                 auxiliaryVariables,
-  [[maybe_unused]] const double* const __restrict__    BasisFunctionValuesLeft,
-  [[maybe_unused]] double* const __restrict__          faceQLeft,
-  [[maybe_unused]] double* const __restrict__          faceQRight,
-  [[maybe_unused]] double* const __restrict__          faceQBottom,
-  [[maybe_unused]] double* const __restrict__          faceQUp
+  [[maybe_unused]] const double* const NOALIAS    BasisFunctionValuesLeft,
+  [[maybe_unused]] double* const NOALIAS          faceQLeft,
+  [[maybe_unused]] double* const NOALIAS          faceQRight,
+  [[maybe_unused]] double* const NOALIAS          faceQBottom,
+  [[maybe_unused]] double* const NOALIAS          faceQUp
 ) {
 #if Dimensions==2
   exahype2::enumerator::AoSLexicographicEnumerator     cellEnumerator(1,order+1,0,unknowns,auxiliaryVariables);
@@ -219,17 +219,17 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
 }
 
 void exahype2::dg::projectVolumetricDataOntoFaces(
-  [[maybe_unused]] const double* __restrict__          cellQ,
+  [[maybe_unused]] const double* NOALIAS          cellQ,
   [[maybe_unused]] int                                 order,
   [[maybe_unused]] int                                 unknowns,
   [[maybe_unused]] int                                 auxiliaryVariables,
-  [[maybe_unused]] const double* const __restrict__    BasisFunctionValuesLeft,
-  [[maybe_unused]] double* const __restrict__          faceQLeft,
-  [[maybe_unused]] double* const __restrict__          faceQRight,
-  [[maybe_unused]] double* const __restrict__          faceQBottom,
-  [[maybe_unused]] double* const __restrict__          faceQUp,
-  [[maybe_unused]] double* const __restrict__          faceQFront,
-  [[maybe_unused]] double* const __restrict__          faceQBack
+  [[maybe_unused]] const double* const NOALIAS    BasisFunctionValuesLeft,
+  [[maybe_unused]] double* const NOALIAS          faceQLeft,
+  [[maybe_unused]] double* const NOALIAS          faceQRight,
+  [[maybe_unused]] double* const NOALIAS          faceQBottom,
+  [[maybe_unused]] double* const NOALIAS          faceQUp,
+  [[maybe_unused]] double* const NOALIAS          faceQFront,
+  [[maybe_unused]] double* const NOALIAS          faceQBack
 ) {
 #if Dimensions==3
   exahype2::enumerator::AoSLexicographicEnumerator     cellEnumerator(1,order+1,0,unknowns,auxiliaryVariables);
@@ -300,47 +300,47 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
 }
 
 void exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
-  [[maybe_unused]] const double* __restrict__          cellQ,
+  [[maybe_unused]] const double* NOALIAS          cellQ,
   [[maybe_unused]] int                                 order,
   [[maybe_unused]] int                                 unknowns,
   [[maybe_unused]] int                                 auxiliaryVariables,
-  [[maybe_unused]] const double* const __restrict__    BasisFunctionValuesLeft,
-  [[maybe_unused]] double* const __restrict__          faceQLeft,
-  [[maybe_unused]] double* const __restrict__          faceQRight,
-  [[maybe_unused]] double* const __restrict__          faceQBottom,
-  [[maybe_unused]] double* const __restrict__          faceQUp
+  [[maybe_unused]] const double* const NOALIAS    BasisFunctionValuesLeft,
+  [[maybe_unused]] double* const NOALIAS          faceQLeft,
+  [[maybe_unused]] double* const NOALIAS          faceQRight,
+  [[maybe_unused]] double* const NOALIAS          faceQBottom,
+  [[maybe_unused]] double* const NOALIAS          faceQUp
 ) {
   assertionMsg(false, "not implemented yet");
 }
 
 void exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
-  [[maybe_unused]] const double* __restrict__          cellQ,
+  [[maybe_unused]] const double* NOALIAS          cellQ,
   [[maybe_unused]] int                                 order,
   [[maybe_unused]] int                                 unknowns,
   [[maybe_unused]] int                                 auxiliaryVariables,
-  [[maybe_unused]] const double* const __restrict__    BasisFunctionValuesLeft,
-  [[maybe_unused]] double* const __restrict__          faceQLeft,
-  [[maybe_unused]] double* const __restrict__          faceQRight,
-  [[maybe_unused]] double* const __restrict__          faceQBottom,
-  [[maybe_unused]] double* const __restrict__          faceQUp,
-  [[maybe_unused]] double* const __restrict__          faceQFront,
-  [[maybe_unused]] double* const __restrict__          faceQBack
+  [[maybe_unused]] const double* const NOALIAS    BasisFunctionValuesLeft,
+  [[maybe_unused]] double* const NOALIAS          faceQLeft,
+  [[maybe_unused]] double* const NOALIAS          faceQRight,
+  [[maybe_unused]] double* const NOALIAS          faceQBottom,
+  [[maybe_unused]] double* const NOALIAS          faceQUp,
+  [[maybe_unused]] double* const NOALIAS          faceQFront,
+  [[maybe_unused]] double* const NOALIAS          faceQBack
 ) {
   assertionMsg(false, "not implemented yet");
 }
 
 void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-  [[maybe_unused]] const double* const __restrict__    faceQLeft,
-  [[maybe_unused]] const double* const __restrict__    faceQRight,
-  [[maybe_unused]] const double* const __restrict__    faceQBottom,
-  [[maybe_unused]] const double* const __restrict__    faceQUp,
+  [[maybe_unused]] const double* const NOALIAS    faceQLeft,
+  [[maybe_unused]] const double* const NOALIAS    faceQRight,
+  [[maybe_unused]] const double* const NOALIAS    faceQBottom,
+  [[maybe_unused]] const double* const NOALIAS    faceQUp,
   [[maybe_unused]] int                                 order,
   [[maybe_unused]] int                                 unknowns,
   [[maybe_unused]] const int                           auxiliaryVariables,
   [[maybe_unused]] const tarch::la::Vector<2,double>&  cellSize,
-  [[maybe_unused]] const double* const __restrict__    BasisFunctionValuesLeft,
-  [[maybe_unused]] const double* __restrict__          MassMatrixDiagonal1d,
-  [[maybe_unused]] double* __restrict__                cellQ
+  [[maybe_unused]] const double* const NOALIAS    BasisFunctionValuesLeft,
+  [[maybe_unused]] const double* NOALIAS          MassMatrixDiagonal1d,
+  [[maybe_unused]] double* NOALIAS                cellQ
 ) {
 #if Dimensions==2
   [[maybe_unused]] const int strideQ = unknowns + auxiliaryVariables;
@@ -387,19 +387,19 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
 }
 
 void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-  [[maybe_unused]] const double* const __restrict__    faceQLeft,
-  [[maybe_unused]] const double* const __restrict__    faceQRight,
-  [[maybe_unused]] const double* const __restrict__    faceQBottom,
-  [[maybe_unused]] const double* const __restrict__    faceQUp,
-  [[maybe_unused]] const double* const __restrict__    faceQFront,
-  [[maybe_unused]] const double* const __restrict__    faceQBack,
+  [[maybe_unused]] const double* const NOALIAS    faceQLeft,
+  [[maybe_unused]] const double* const NOALIAS    faceQRight,
+  [[maybe_unused]] const double* const NOALIAS    faceQBottom,
+  [[maybe_unused]] const double* const NOALIAS    faceQUp,
+  [[maybe_unused]] const double* const NOALIAS    faceQFront,
+  [[maybe_unused]] const double* const NOALIAS    faceQBack,
   [[maybe_unused]] int                                 order,
   [[maybe_unused]] int                                 unknowns,
   [[maybe_unused]] const int                           auxiliaryVariables,
   [[maybe_unused]] const tarch::la::Vector<3,double>&  cellSize,
-  [[maybe_unused]] const double* const __restrict__    BasisFunctionValuesLeft,
-  [[maybe_unused]] const double* __restrict__          MassMatrixDiagonal1d,
-  [[maybe_unused]] double* __restrict__                cellQ
+  [[maybe_unused]] const double* const NOALIAS    BasisFunctionValuesLeft,
+  [[maybe_unused]] const double* NOALIAS          MassMatrixDiagonal1d,
+  [[maybe_unused]] double* NOALIAS                cellQ
 ) {
 #if Dimensions==3
   exahype2::enumerator::AoSLexicographicEnumerator QEnumerator(

@@ -90,12 +90,12 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
     unknowns,
     auxiliaryVariables,
     [&](
-        const double * __restrict__                  Q,
+        const double * NOALIAS                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
         double                                       dt,
         int                                          normal,
-        double * __restrict__                        F
+        double * NOALIAS                        F
         ) -> void {
         eulerFlux(Q,x,t,dt,normal,F);
       },
@@ -134,12 +134,12 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
     unknowns,
     auxiliaryVariables,
     [&](
-        const double * __restrict__                  Q,
+        const double * NOALIAS                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
         double                                       dt,
         int                                          normal,
-        double * __restrict__                        F
+        double * NOALIAS                        F
         ) -> void {
         eulerFlux(Q,x,t,dt,normal,F);
       },
@@ -221,12 +221,12 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder4OnStationarySetup() {
     unknowns,
     auxiliaryVariables,
     [&](
-        const double * __restrict__                  Q,
+        const double * NOALIAS                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
         double                                       dt,
         int                                          normal,
-        double * __restrict__                        F
+        double * NOALIAS                        F
         ) -> void {
         eulerFlux(Q,x,t,dt,normal,F);
       },
@@ -331,12 +331,12 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
       unknowns,
       auxiliaryVariables,
       [&](
-          const double * __restrict__                  Q,
+          const double * NOALIAS                  Q,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
           double                                       dt,
           int                                          normal,
-          double * __restrict__                        F
+          double * NOALIAS                        F
           ) -> void {
           eulerFlux(Q,x,t,dt,normal,F);
         },
@@ -457,18 +457,18 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
 
     rusanov::solveRiemannProblem_pointwise_in_situ(
       [&](
-          const double * __restrict__                  Q,
+          const double * NOALIAS                  Q,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
           double                                       dt,
           int                                          normal,
-          double * __restrict__                        F
+          double * NOALIAS                        F
           ) -> void {
           eulerFlux(Q,x,t,dt,normal,F);
       },
       nullptr,
       [&](
-        const double * __restrict__                 Q,
+        const double * NOALIAS                 Q,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
         double                                      dt,
@@ -658,23 +658,23 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
     unknowns,
     auxiliaryVariables,
     [&](
-        const double * __restrict__                  Q,
+        const double * NOALIAS                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
         double                                       dt,
         int                                          normal,
-        double * __restrict__                        F
+        double * NOALIAS                        F
         ) -> void {
         elasticFlux(Q,x,t,dt,normal,F);
     },
     [&](
-        const double * __restrict__                  Q,
-        const double * __restrict__                  dQdx,
+        const double * NOALIAS                  Q,
+        const double * NOALIAS                  dQdx,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
         double                                       dt,
         int                                          normal,
-        double * __restrict__                        BgradQ
+        double * NOALIAS                        BgradQ
       ) -> void{
       elasticNonConservativeProduct(Q, dQdx, x, t, dt, normal, BgradQ);
     },
@@ -793,28 +793,28 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
 
     rusanov::solveRiemannProblem_pointwise_in_situ(
       [&](
-          const double * __restrict__                  Q,
+          const double * NOALIAS                  Q,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
           double                                       dt,
           int                                          normal,
-          double * __restrict__                        F
+          double * NOALIAS                        F
           ) -> void {
           elasticFlux(Q,x,t,dt,normal,F);
       },
       [&](
-          const double * __restrict__                  Q,
-          const double * __restrict__                  dQdx,
+          const double * NOALIAS                  Q,
+          const double * NOALIAS                  dQdx,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
           double                                       dt,
           int                                          normal,
-          double * __restrict__                        BgradQ
+          double * NOALIAS                        BgradQ
         ) -> void{
         elasticNonConservativeProduct(Q, dQdx, x, t, dt, normal, BgradQ);
       },
       [&](
-        const double * __restrict__                 Q,
+        const double * NOALIAS                 Q,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
         double                                      dt,

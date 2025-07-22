@@ -14,8 +14,8 @@
 
 void exahype2::fd::applyBoundaryConditions(
   std::function< void(
-    const double* __restrict__                   Qinside,
-    double * __restrict__                        Qoutside,
+    const double* NOALIAS                   Qinside,
+    double * NOALIAS                        Qoutside,
     const tarch::la::Vector<Dimensions,double>&  faceCentre,
     const tarch::la::Vector<Dimensions,double>&  volumeH,
     double                                       t,
@@ -30,7 +30,7 @@ void exahype2::fd::applyBoundaryConditions(
   int                                          overlap,
   int                                          unknownsPlusAuxiliaryVariables,
   int                                          faceNumber,
-  double* __restrict__                         Q
+  double* NOALIAS                         Q
 ) {
   static tarch::logging::Log _log( "exahype2::fd" );
   logTraceInWith4Arguments( "applyBoundaryConditions(...)", faceCentre, patchSize, numberOfGridCellsPerPatchPerAxis, faceNumber);
@@ -85,7 +85,7 @@ void exahype2::fd::applyBoundaryConditions(
 
 void exahype2::fd::applySommerfeldConditions(
   std::function< double(
-    const double* __restrict__                   Q,
+    const double* NOALIAS                   Q,
     const tarch::la::Vector<Dimensions,double>&  faceCentre,
     const tarch::la::Vector<Dimensions,double>&  gridCellH,
     double                                       t,
@@ -93,7 +93,7 @@ void exahype2::fd::applySommerfeldConditions(
     int                                          normal
   ) >   maxEigenvalue,
   std::function< void(
-    double* __restrict__                         Q,
+    double* NOALIAS                         Q,
     const tarch::la::Vector<Dimensions,double>&  faceCentre,
     const tarch::la::Vector<Dimensions,double>&  gridCellH
   ) >   farFieldSolution,
@@ -107,8 +107,8 @@ void exahype2::fd::applySommerfeldConditions(
   int                                          numberOfAuxiliaryVariables,
   int                                          faceNumber,
   const tarch::la::Vector<Dimensions,double>&  systemOrigin,
-  double* __restrict__                         Qold,
-  double* __restrict__                         Qnew,
+  double* NOALIAS                         Qold,
+  double* NOALIAS                         Qnew,
   double                                       CheckpointTimeStamp
 ) {
   static tarch::logging::Log _log( "exahype2::fd" );
@@ -222,7 +222,7 @@ void exahype2::fd::applySommerfeldConditions(
 
 void exahype2::fd::applySommerfeldConditions(
   std::function< double(
-    const double* __restrict__                   Q,
+    const double* NOALIAS                   Q,
     const tarch::la::Vector<Dimensions,double>&  faceCentre,
     const tarch::la::Vector<Dimensions,double>&  gridCellH,
     double                                       t,
@@ -239,14 +239,14 @@ void exahype2::fd::applySommerfeldConditions(
   int                                          numberOfAuxiliaryVariables,
   int                                          faceNumber,
   const tarch::la::Vector<Dimensions,double>&  systemOrigin,
-  double* __restrict__                         Qold,
-  double* __restrict__                         Qnew,
+  double* NOALIAS                         Qold,
+  double* NOALIAS                         Qnew,
   double                                       CheckpointTimeStamp
 ) {
   applySommerfeldConditions(
     maxEigenvalue,
     [&] (
-      double* __restrict__                         Q,
+      double* NOALIAS                         Q,
       const tarch::la::Vector<Dimensions,double>&  /*faceCentre*/,
       const tarch::la::Vector<Dimensions,double>&  /*gridCellH*/
     ) -> void {

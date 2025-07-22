@@ -10,7 +10,7 @@ namespace tarch {
      * Create data on the heap of the host.
      *
      * The alignment of this routine can be controlled via the compile
-     * time constant AlignmentOnHeap. It is typically set (to a default)
+     * time constant ALIGNMENT_ON_HEAP. It is typically set (to a default)
      * within the corresponding compiler-specific header-file in
      * tarch/compiler.
      */

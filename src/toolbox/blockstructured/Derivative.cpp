@@ -6,11 +6,11 @@
 
 void toolbox::blockstructured::computeGradient(
   int                                numberOfDoFsPerAxisInPatch,
-  const double* __restrict__         source,
+  const double* NOALIAS         source,
   int                                sourceIndex,
   int                                sourceUnknowns,
   int                                sourceHalo,
-  double* __restrict__               dest,
+  double* NOALIAS               dest,
   const tarch::la::Vector<Dimensions,int>&   destIndex,
   int                                destUnknowns,
   int                                destHalo,
@@ -43,11 +43,11 @@ void toolbox::blockstructured::computeGradient(
 
 double toolbox::blockstructured::computeGradientAndReturnMaxDifference(
   int                                numberOfDoFsPerAxisInPatch,
-  const double* __restrict__         source,
+  const double* NOALIAS         source,
   int                                sourceIndex,
   int                                sourceUnknowns,
   int                                sourceHalo,
-  double* __restrict__               dest,
+  double* NOALIAS               dest,
   const tarch::la::Vector<Dimensions,int>&   destIndex,
   int                                destUnknowns,
   int                                destHalo,

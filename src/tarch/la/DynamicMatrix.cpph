@@ -1,8 +1,8 @@
 
 template<typename T>
 void tarch::la::DynamicMatrix::batchedMultiplyAoS(
-  T* __restrict__ result,
-  const T* __restrict__ x,
+  T* NOALIAS result,
+  const T* NOALIAS x,
   int batchSize,
   int resultSize,
   int firstRow
@@ -34,8 +34,8 @@ void tarch::la::DynamicMatrix::batchedMultiplyAoS(
 
 template<typename T>
 void tarch::la::DynamicMatrix::batchedMultiplyAoS(
-  T* __restrict__ result,
-  const T* __restrict__ x,
+  T* NOALIAS result,
+  const T* NOALIAS x,
   int batchCount
 ) {
   batchedMultiplyAoS(result, x, batchCount, _rows, 0);

@@ -25,8 +25,8 @@ void* tarch::internal::allocateRawData(
   case MemoryLocation::Heap:
   case MemoryLocation::Device:
     data = std::aligned_alloc(
-      AlignmentOnHeap,
-      padSizeToAlignment(sizeInBytes, AlignmentOnHeap)
+      ALIGNMENT_ON_HEAP,
+      padSizeToAlignment(sizeInBytes, ALIGNMENT_ON_HEAP)
     );
     break;
   }

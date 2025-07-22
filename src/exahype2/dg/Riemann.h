@@ -184,9 +184,9 @@ namespace exahype2 {
       const peano4::datamanagement::FaceMarker&  marker,
       int                                        order,
       int                                        unknowns,
-      const double* __restrict__                 InterpolationMatrix1d,
-      const double* __restrict__                 coarseGridFaceQ,
-      double* __restrict__                       fineGridFaceQ
+      const double* NOALIAS                 InterpolationMatrix1d,
+      const double* NOALIAS                 coarseGridFaceQ,
+      double* NOALIAS                       fineGridFaceQ
     );
 
     /**
@@ -236,9 +236,9 @@ namespace exahype2 {
       int                                        numberOfProjectedQuantities,
       int                                        unknowns,
       int                                        auxiliaryVariables,
-      const double* __restrict__                 RestrictionMatrix1d,
-      const double* __restrict__                 fineGridFaceQ,
-      double* __restrict__                       coarseGridFaceQ
+      const double* NOALIAS                 RestrictionMatrix1d,
+      const double* NOALIAS                 fineGridFaceQ,
+      double* NOALIAS                       coarseGridFaceQ
     );
 
     /**
@@ -289,15 +289,15 @@ namespace exahype2 {
      *   from above.
      */
     void projectVolumetricDataOntoFaces(
-      const double* __restrict__          cellQ,
+      const double* NOALIAS          cellQ,
       int                                 order,
       int                                 unknowns,
       int                                 auxiliaryVariables,
-      const double* const __restrict__    BasisFunctionValuesLeft,
-      double* const __restrict__          faceQLeft,
-      double* const __restrict__          faceQRight,
-      double* const __restrict__          faceQBottom,
-      double* const __restrict__          faceQUp
+      const double* const NOALIAS    BasisFunctionValuesLeft,
+      double* const NOALIAS          faceQLeft,
+      double* const NOALIAS          faceQRight,
+      double* const NOALIAS          faceQBottom,
+      double* const NOALIAS          faceQUp
     );
 
     /**
@@ -312,7 +312,7 @@ namespace exahype2 {
       int                           unknowns,
       int                           auxiliaryVariables,
       int                           numberOfProjectedQuantities,
-      double* __restrict__          faceQ
+      double* NOALIAS          faceQ
     );
 
     /**
@@ -321,53 +321,53 @@ namespace exahype2 {
     void clearRiemannResult(
       int                           order,
       int                           unknowns,
-      double* __restrict__          faceQ
+      double* NOALIAS          faceQ
     );
 
     /**
      * 3d counterpart to other projectVolumetricDataOntoFaces() variant.
      */
     void projectVolumetricDataOntoFaces(
-      const double* __restrict__          cellQ,
+      const double* NOALIAS          cellQ,
       int                                 order,
       int                                 unknowns,
       int                                 auxiliaryVariables,
-      const double* const __restrict__    BasisFunctionValuesLeft,
-      double* const __restrict__          faceQLeft,
-      double* const __restrict__          faceQRight,
-      double* const __restrict__          faceQBottom,
-      double* const __restrict__          faceQUp,
-      double* const __restrict__          faceQFront,
-      double* const __restrict__          faceQBack
+      const double* const NOALIAS    BasisFunctionValuesLeft,
+      double* const NOALIAS          faceQLeft,
+      double* const NOALIAS          faceQRight,
+      double* const NOALIAS          faceQBottom,
+      double* const NOALIAS          faceQUp,
+      double* const NOALIAS          faceQFront,
+      double* const NOALIAS          faceQBack
     );
 
     void projectVolumetricDataAndGradientOntoFaces(
-      const double* __restrict__          cellQ,
+      const double* NOALIAS          cellQ,
       int                                 order,
       int                                 unknowns,
       int                                 auxiliaryVariables,
-      const double* const __restrict__    BasisFunctionValuesLeft,
-      double* const __restrict__          faceQLeft,
-      double* const __restrict__          faceQRight,
-      double* const __restrict__          faceQBottom,
-      double* const __restrict__          faceQUp
+      const double* const NOALIAS    BasisFunctionValuesLeft,
+      double* const NOALIAS          faceQLeft,
+      double* const NOALIAS          faceQRight,
+      double* const NOALIAS          faceQBottom,
+      double* const NOALIAS          faceQUp
     );
 
     /**
      * 3d counterpart to other projectVolumetricDataOntoFaces() variant.
      */
     void projectVolumetricDataAndGradientOntoFaces(
-      const double* __restrict__          cellQ,
+      const double* NOALIAS          cellQ,
       int                                 order,
       int                                 unknowns,
       int                                 auxiliaryVariables,
-      const double* const __restrict__    BasisFunctionValuesLeft,
-      double* const __restrict__          faceQLeft,
-      double* const __restrict__          faceQRight,
-      double* const __restrict__          faceQBottom,
-      double* const __restrict__          faceQUp,
-      double* const __restrict__          faceQFront,
-      double* const __restrict__          faceQBack
+      const double* const NOALIAS    BasisFunctionValuesLeft,
+      double* const NOALIAS          faceQLeft,
+      double* const NOALIAS          faceQRight,
+      double* const NOALIAS          faceQBottom,
+      double* const NOALIAS          faceQUp,
+      double* const NOALIAS          faceQFront,
+      double* const NOALIAS          faceQBack
     );
 
     /**
@@ -402,17 +402,17 @@ namespace exahype2 {
      * @see projectVolumetricDataOntoFaces()
      */
     void integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-      const double* const __restrict__    faceQLeft,
-      const double* const __restrict__    faceQRight,
-      const double* const __restrict__    faceQBottom,
-      const double* const __restrict__    faceQUp,
+      const double* const NOALIAS    faceQLeft,
+      const double* const NOALIAS    faceQRight,
+      const double* const NOALIAS    faceQBottom,
+      const double* const NOALIAS    faceQUp,
       int                                 order,
       int                                 unknowns,
       const int                           auxiliaryVariables,
       const tarch::la::Vector<2,double>&  cellSize,
-      const double* const __restrict__    BasisFunctionValuesLeft,
-      const double* __restrict__          MassMatrixDiagonal1d,
-      double* __restrict__                cellQ
+      const double* const NOALIAS    BasisFunctionValuesLeft,
+      const double* NOALIAS          MassMatrixDiagonal1d,
+      double* NOALIAS                cellQ
     );
 
     /**
@@ -428,19 +428,19 @@ namespace exahype2 {
      * into the screen.
      */
     void integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-      const double* const __restrict__    faceQLeft,
-      const double* const __restrict__    faceQRight,
-      const double* const __restrict__    faceQBottom,
-      const double* const __restrict__    faceQUp,
-      const double* const __restrict__    faceQFront,
-      const double* const __restrict__    faceQBack,
+      const double* const NOALIAS    faceQLeft,
+      const double* const NOALIAS    faceQRight,
+      const double* const NOALIAS    faceQBottom,
+      const double* const NOALIAS    faceQUp,
+      const double* const NOALIAS    faceQFront,
+      const double* const NOALIAS    faceQBack,
       int                                 order,
       int                                 unknowns,
       const int                           auxiliaryVariables,
       const tarch::la::Vector<3,double>&  cellSize,
-      const double* const __restrict__    BasisFunctionValuesLeft,
-      const double* __restrict__          MassMatrixDiagonal1d,
-      double* __restrict__                cellQ
+      const double* const NOALIAS    BasisFunctionValuesLeft,
+      const double* NOALIAS          MassMatrixDiagonal1d,
+      double* NOALIAS                cellQ
     );
   }
 }

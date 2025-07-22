@@ -8,11 +8,6 @@
 {% endif %}
 
 {% macro loopOverDimensions() %}
-  #if defined(SharedOMP)
-  #pragma omp simd
-  #else
-  #pragma unroll
-  #endif
   for (int normal = 0; normal < {{DIMENSIONS}}; normal++) { // Loop over directions
     #ifdef GPUOffloadingOff
     assertion(normal >= 0);

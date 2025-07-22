@@ -328,7 +328,7 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
       }; //approximate background solution at infinity 
       ::exahype2::fd::applySommerfeldConditions(
         [&](
-          const double * __restrict__                  Q,
+          const double * NOALIAS                  Q,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  gridCellH,
           double                                       t,
@@ -338,7 +338,7 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
           return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
         },
         [&](
-          double * __restrict__                        Q,
+          double * NOALIAS                        Q,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  gridCellH
         ) -> void {
@@ -649,7 +649,7 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
       }; //approximate background solution at infinity 
       ::exahype2::fd::applySommerfeldConditions(
         [&](
-          const double * __restrict__                  Q,
+          const double * NOALIAS                  Q,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  gridCellH,
           double                                       t,
@@ -659,7 +659,7 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
           return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
         },
         [&](
-          double * __restrict__                        Q,
+          double * NOALIAS                        Q,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  gridCellH
         ) -> void {

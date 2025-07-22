@@ -36,8 +36,8 @@ class HandleBoundary(AbstractRKFDActionSet):
   TemplateHandleBoundary_KernelCalls = """
       ::exahype2::fd::applyBoundaryConditions(
         [&](
-          const double * __restrict__                  Qinside,
-          double * __restrict__                        Qoutside,
+          const double * NOALIAS                  Qinside,
+          double * NOALIAS                        Qoutside,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  volumeH,
           double                                       t,
@@ -58,8 +58,8 @@ class HandleBoundary(AbstractRKFDActionSet):
       );
       ::exahype2::fd::applyBoundaryConditions(
         [&](
-          const double * __restrict__                  Qinside,
-          double * __restrict__                        Qoutside,
+          const double * NOALIAS                  Qinside,
+          double * NOALIAS                        Qoutside,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  volumeH,
           double                                       t,

@@ -29,7 +29,7 @@ namespace exahype2 {
   class CellAccess {
   public:
     CellAccess(
-      const double* __restrict__ QIn,
+      const double* NOALIAS QIn,
       int haloSize,
       int unknowns,
       int numberOfAuxiliaryVariables,
@@ -65,7 +65,7 @@ namespace exahype2 {
     std::string toString() const;
 
   private:
-    const double* __restrict__ _QIn;
+    const double* NOALIAS _QIn;
     const int _haloSize;
     const int _unknowns;
     const int _numberOfAuxiliaryVariables;

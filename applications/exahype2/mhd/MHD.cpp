@@ -8,7 +8,7 @@ tarch::logging::Log   examples::exahype2::finitevolumes::MHD::_log( "examples::e
 
 
 void examples::exahype2::finitevolumes::MHD::initialCondition(
-  double * __restrict__ Q,
+  double * NOALIAS Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   bool                                         gridIsConstructed
@@ -30,7 +30,7 @@ void examples::exahype2::finitevolumes::MHD::initialCondition(
 
 
 double examples::exahype2::finitevolumes::MHD::maxEigenvalue(
-  const double * __restrict__ Q, // Q[9+0],
+  const double * NOALIAS Q, // Q[9+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -54,12 +54,12 @@ double examples::exahype2::finitevolumes::MHD::maxEigenvalue(
 
 
 void examples::exahype2::finitevolumes::MHD::flux(
-  const double * __restrict__ Q, // Q[9+0],
+  const double * NOALIAS Q, // Q[9+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal,
-  double * __restrict__ F // F[9]
+  double * NOALIAS F // F[9]
 ) {
   logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
   pdeflux_(F, Q, &normal);
@@ -68,8 +68,8 @@ void examples::exahype2::finitevolumes::MHD::flux(
 
 
 void examples::exahype2::finitevolumes::MHD::boundaryConditions(
-  const double * __restrict__ Qinside, // Qinside[9+0]
-  double * __restrict__ Qoutside, // Qoutside[9+0]
+  const double * NOALIAS Qinside, // Qinside[9+0]
+  double * NOALIAS Qoutside, // Qoutside[9+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,

@@ -171,10 +171,10 @@ namespace exahype2 {
       NonConservativeProduct                         nonconservativeProduct,
       Source                                         source,
       PointSources                                   pointSources,
-      const double* __restrict__                     QuadratureNodes1d,
-      const double* __restrict__                     MassMatrixDiagonal1d,
-      const double* __restrict__                     StiffnessMatrix1d,
-      const double* __restrict__                     DerivativeOperator1d,
+      const double* NOALIAS                     QuadratureNodes1d,
+      const double* NOALIAS                     MassMatrixDiagonal1d,
+      const double* NOALIAS                     StiffnessMatrix1d,
+      const double* NOALIAS                     DerivativeOperator1d,
       bool                                           evaluateFlux,
       bool                                           evaluateNonconservativeProduct,
       bool                                           evaluateSource,
@@ -228,7 +228,7 @@ namespace exahype2 {
       const int                                      order,
       const int                                      unknowns,
       const int                                      auxiliaryVariables,
-      const double* __restrict__                     MassMatrixDiagonal1d
+      const double* NOALIAS                     MassMatrixDiagonal1d
     );
 
 
@@ -242,7 +242,7 @@ namespace exahype2 {
       const int                             unknowns,
       const int                             auxiliaryVariables,
       MaxEigenvalue                         maxEigenvalue,
-      const double* __restrict__            QuadratureNodes1d
+      const double* NOALIAS            QuadratureNodes1d
     );
 
     namespace internal {
@@ -257,12 +257,12 @@ namespace exahype2 {
        *  Das aber erst machen, nachdem wir die Enumeratoren da haben
        */
       void copySolution(
-        const double* __restrict__                    cellQin,
+        const double* NOALIAS                    cellQin,
         const int                                     order,
         const int                                     unknowns,
         const int                                     auxiliaryVariables,
         const tarch::la::Vector<Dimensions,int>&      node,
-        double* __restrict__                          cellQout
+        double* NOALIAS                          cellQout
       );
     }
   }

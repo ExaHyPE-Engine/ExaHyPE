@@ -33,7 +33,7 @@ examples::exahype2::mgccz4::FiniteVolumeMGCCZ4::FiniteVolumeMGCCZ4() {
 
 
 void examples::exahype2::mgccz4::FiniteVolumeMGCCZ4::adjustSolution(
-  double * __restrict__ Q,
+  double * NOALIAS Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -70,12 +70,12 @@ void examples::exahype2::mgccz4::FiniteVolumeMGCCZ4::adjustSolution(
 
 
 void examples::exahype2::mgccz4::FiniteVolumeMGCCZ4::sourceTerm(
-  const double * __restrict__                  Q, // Q[64+0]
+  const double * NOALIAS                  Q, // Q[64+0]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   double                                       dt,
-  double * __restrict__                        S  // S[64
+  double * NOALIAS                        S  // S[64
 ) {
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
   for(int i=0; i<NumberOfUnknowns; i++){
@@ -94,8 +94,8 @@ void examples::exahype2::mgccz4::FiniteVolumeMGCCZ4::sourceTerm(
 
 
 void examples::exahype2::mgccz4::FiniteVolumeMGCCZ4::boundaryConditions(
-  const double * __restrict__                  Qinside, // Qinside[64+0]
-  double * __restrict__                        Qoutside, // Qoutside[64+0]
+  const double * NOALIAS                  Qinside, // Qinside[64+0]
+  double * NOALIAS                        Qoutside, // Qoutside[64+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -111,7 +111,7 @@ void examples::exahype2::mgccz4::FiniteVolumeMGCCZ4::boundaryConditions(
 
 
 double examples::exahype2::mgccz4::FiniteVolumeMGCCZ4::maxEigenvalue(
-  const double * __restrict__ Q, // Q[64+0],
+  const double * NOALIAS Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -163,13 +163,13 @@ double examples::exahype2::mgccz4::FiniteVolumeMGCCZ4::maxEigenvalue(
 
 
 void examples::exahype2::mgccz4::FiniteVolumeMGCCZ4::nonconservativeProduct(
-  const double * __restrict__ Q, // Q[64+0],
-  const double * __restrict__             deltaQ, // [64+0]
+  const double * NOALIAS Q, // Q[64+0],
+  const double * NOALIAS             deltaQ, // [64+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal,
-  double * __restrict__ BgradQ // BgradQ[64]
+  double * NOALIAS BgradQ // BgradQ[64]
 )  {
 #if !defined(GPUOffloadingOMP)
   logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, volumeH, t, normal );

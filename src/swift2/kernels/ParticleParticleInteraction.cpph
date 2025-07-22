@@ -13,7 +13,7 @@
 
 template <typename Particle>
 bool swift2::kernels::forceKernelDistanceCheck(
-  Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle
+  Particle* NOALIAS localParticle, const Particle* NOALIAS activeParticle
 ) {
 
   const double h_a = localParticle->getSmoothingLength();

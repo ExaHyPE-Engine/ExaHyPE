@@ -8,12 +8,12 @@
 #endif
 template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fv::musclhancock::internal::copySolution_LoopBody(
-  const double* __restrict__                QIn,
+  const double* NOALIAS                QIn,
   const QInEnumeratorType&                  QInEnumerator,
   int                                       patchIndex,
   const tarch::la::Vector<Dimensions,int>&  volumeIndex,
   int                                       unknown,
-  double* __restrict__                      QOut,
+  double* NOALIAS                      QOut,
   const QOutEnumeratorType&                 QOutEnumerator
 ) {
   QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
@@ -24,7 +24,7 @@ void exahype2::fv::musclhancock::internal::copySolution_LoopBody(
 
 template <class QInEnumeratorType, class QInterEnumeratorType>
 void exahype2::fv::musclhancock::internal::computeTimeDerivative_LoopBody(
-    const double* __restrict__                          QIn,
+    const double* NOALIAS                          QIn,
     const QInEnumeratorType                             QInEnumerator,
     exahype2::fv::musclhancock::Flux                    flux,
     exahype2::fv::musclhancock::NonconservativeProduct  ncp,
@@ -35,7 +35,7 @@ void exahype2::fv::musclhancock::internal::computeTimeDerivative_LoopBody(
     const tarch::la::Vector<Dimensions,int>&            volumeIndex,
     double                                              t,
     double                                              dt,
-    double* __restrict__                                timederivative,
+    double* NOALIAS                                timederivative,
     QInterEnumeratorType                                QInterEnumerator
 ) {
   double QInGathered[QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables];
@@ -120,7 +120,7 @@ void exahype2::fv::musclhancock::internal::computeTimeDerivative_LoopBody(
 
 template <class QInEnumeratorType, class QInterEnumeratorType>
 void exahype2::fv::musclhancock::internal::computeQonFace_LoopBody(
-    const double* __restrict__                   QIn,
+    const double* NOALIAS                   QIn,
     const QInEnumeratorType                     QInEnumerator,
     const tarch::la::Vector<Dimensions,double>&  patchCentre,
     const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -128,13 +128,13 @@ void exahype2::fv::musclhancock::internal::computeQonFace_LoopBody(
     const tarch::la::Vector<Dimensions,int>&     volumeIndex,
     double                                       t,
     double                                       dt,
-    double* __restrict__                         timederivative,
-    double* __restrict__                         QfaceXneg,
-    double* __restrict__                         QfaceXpos,
-    double* __restrict__                         QfaceYneg,
-    double* __restrict__                         QfaceYpos,
-    double* __restrict__                         QfaceZneg,
-    double* __restrict__                         QfaceZpos,
+    double* NOALIAS                         timederivative,
+    double* NOALIAS                         QfaceXneg,
+    double* NOALIAS                         QfaceXpos,
+    double* NOALIAS                         QfaceYneg,
+    double* NOALIAS                         QfaceYpos,
+    double* NOALIAS                         QfaceZneg,
+    double* NOALIAS                         QfaceZpos,
     QInterEnumeratorType                         QInterEnumerator
 ) {
     double QInGathered[QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables];
@@ -177,7 +177,7 @@ void exahype2::fv::musclhancock::internal::computeQonFace_LoopBody(
 
 template <class QInEnumeratorType, class QMaxEigenvalueEnumeratorType>
 void exahype2::fv::musclhancock::internal::computeMaxEigenvalue_LoopBody(
-    const double* __restrict__                   QIn,
+    const double* NOALIAS                   QIn,
     QInEnumeratorType                            QInEnumerator,
     exahype2::fv::musclhancock::MaxEigenvalue         maxEigenvalue,
     const tarch::la::Vector<Dimensions,double>&  patchCentre,
@@ -187,7 +187,7 @@ void exahype2::fv::musclhancock::internal::computeMaxEigenvalue_LoopBody(
     double                                       t,
     double                                       dt,
     int                                          normal,
-    double* __restrict__                         QMaxEigenvalue,
+    double* NOALIAS                         QMaxEigenvalue,
     QMaxEigenvalueEnumeratorType                 QMaxEigenvalueEnumerator
 ) {
     double QInGathered[QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables];
@@ -217,11 +217,11 @@ void exahype2::fv::musclhancock::internal::computeMaxEigenvalue_LoopBody(
 #endif
 template <typename QInEnumeratorType, typename QInterEnumeratorType, typename QMaxEigenvalueEnumeratorType, typename QOutEnumeratorType>
 void exahype2::fv::musclhancock::internal::updateSolutionWithEigenvalueDamping_LoopBody(
-  const double* __restrict__                   QIn,
+  const double* NOALIAS                   QIn,
   const QInEnumeratorType                      QInEnumerator,
-  const double* __restrict__                   tempMaxEigenvalueX,
-  const double* __restrict__                   tempMaxEigenvalueY,
-  const double* __restrict__                   tempMaxEigenvalueZ,
+  const double* NOALIAS                   tempMaxEigenvalueX,
+  const double* NOALIAS                   tempMaxEigenvalueY,
+  const double* NOALIAS                   tempMaxEigenvalueZ,
   const QMaxEigenvalueEnumeratorType &         eigenvalueEnumerator,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -229,17 +229,17 @@ void exahype2::fv::musclhancock::internal::updateSolutionWithEigenvalueDamping_L
   const tarch::la::Vector<Dimensions,int>&     volumeIndex,
   int                                          unknown,
   double                                       dt,
-  double* __restrict__                         QOut,
+  double* NOALIAS                         QOut,
   const QOutEnumeratorType &                   QOutEnumerator,
-  double* __restrict__                         QfaceXneg,
-  double* __restrict__                         QfaceXpos, 
-  double* __restrict__                         QfaceYneg,
-  double* __restrict__                         QfaceYpos,
-  double* __restrict__                         QfaceZneg,
-  double* __restrict__                         QfaceZpos,
+  double* NOALIAS                         QfaceXneg,
+  double* NOALIAS                         QfaceXpos, 
+  double* NOALIAS                         QfaceYneg,
+  double* NOALIAS                         QfaceYpos,
+  double* NOALIAS                         QfaceZneg,
+  double* NOALIAS                         QfaceZpos,
   QInterEnumeratorType                         QInterEnumerator
 ) {
-  auto updateAlongOneDirection = [=](const double* __restrict__ tempMaxEigenvalue, const double* __restrict__ QfaceNLeft, const double* __restrict__ QfaceNRight, int normal) {
+  auto updateAlongOneDirection = [=](const double* NOALIAS tempMaxEigenvalue, const double* NOALIAS QfaceNLeft, const double* NOALIAS QfaceNRight, int normal) {
     tarch::la::Vector<Dimensions,int> leftVolume   = volumeIndex;
     tarch::la::Vector<Dimensions,int> rightVolume  = volumeIndex;
     leftVolume(normal)--;
@@ -270,8 +270,8 @@ void exahype2::fv::musclhancock::internal::updateSolutionWithEigenvalueDamping_L
 
 template <class QInEnumeratorType, class QInterEnumeratorType, class QFluxEnumeratorType>
 void exahype2::fv::musclhancock::internal::computeFlux_LoopBody(
-  double* __restrict__                         QfaceNLeft,
-  double* __restrict__                         QfaceNRight,
+  double* NOALIAS                         QfaceNLeft,
+  double* NOALIAS                         QfaceNRight,
   QInterEnumeratorType                         QInterEnumerator,
   QInEnumeratorType                            QInEnumerator,
   exahype2::fv::musclhancock::Flux                  flux,
@@ -282,8 +282,8 @@ void exahype2::fv::musclhancock::internal::computeFlux_LoopBody(
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double* __restrict__                         QFluxL,
-  double* __restrict__                         QFluxR,
+  double* NOALIAS                         QFluxL,
+  double* NOALIAS                         QFluxR,
   QFluxEnumeratorType                          QFluxEnumerator
 ) {
   double QLeft[QInEnumerator._numberOfUnknowns], QRight[QInEnumerator._numberOfUnknowns];
@@ -323,12 +323,12 @@ void exahype2::fv::musclhancock::internal::computeFlux_LoopBody(
 
 template <typename QFluxEnumeratorType, typename QOutEnumeratorType>
 void exahype2::fv::musclhancock::internal::updateSolutionWithFlux_LoopBody(
-    const double* __restrict__                   tempFluxXL,
-    const double* __restrict__                   tempFluxYL,
-    const double* __restrict__                   tempFluxZL,
-    const double* __restrict__                   tempFluxXR,
-    const double* __restrict__                   tempFluxYR,
-    const double* __restrict__                   tempFluxZR,
+    const double* NOALIAS                   tempFluxXL,
+    const double* NOALIAS                   tempFluxYL,
+    const double* NOALIAS                   tempFluxZL,
+    const double* NOALIAS                   tempFluxXR,
+    const double* NOALIAS                   tempFluxYR,
+    const double* NOALIAS                   tempFluxZR,
     const QFluxEnumeratorType                    fluxEnumerator,
     const tarch::la::Vector<Dimensions,double>&  patchCentre,
     const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -336,10 +336,10 @@ void exahype2::fv::musclhancock::internal::updateSolutionWithFlux_LoopBody(
     const tarch::la::Vector<Dimensions,int>&     volumeIndex,
     int                                          unknown,
     double                                       dt,
-    double* __restrict__                         QOut,
+    double* NOALIAS                         QOut,
     const QOutEnumeratorType&                    QOutEnumerator
 ) {
-  auto updateAlongOneDirection = [=](const double* __restrict__ tempFluxNL, const double* __restrict__ tempFluxNR, int normal) {
+  auto updateAlongOneDirection = [=](const double* NOALIAS tempFluxNL, const double* NOALIAS tempFluxNR, int normal) {
     tarch::la::Vector<Dimensions,int> leftVolume   = volumeIndex;
     tarch::la::Vector<Dimensions,int> rightVolume  = volumeIndex;
     leftVolume(normal)--;
@@ -364,8 +364,8 @@ void exahype2::fv::musclhancock::internal::updateSolutionWithFlux_LoopBody(
 
 template <class QInEnumeratorType, class QInterEnumeratorType, class QNCPFaceEnumeratorType>
 void exahype2::fv::musclhancock::internal::computeDTerm_LoopBody(
-  double* __restrict__                           QfaceNLeft,
-  double* __restrict__                           QfaceNRight,
+  double* NOALIAS                           QfaceNLeft,
+  double* NOALIAS                           QfaceNRight,
   QInterEnumeratorType                           QInterEnumerator,
   QInEnumeratorType                              QInEnumerator,
   exahype2::fv::musclhancock::NonconservativeProduct  ncp,
@@ -376,7 +376,7 @@ void exahype2::fv::musclhancock::internal::computeDTerm_LoopBody(
   double                                         t,
   double                                         dt,
   int                                            normal,
-  double* __restrict__                           QD,
+  double* NOALIAS                           QD,
   const QNCPFaceEnumeratorType                   QNcpEnumerator
 ) {
   double QAverage[QInEnumerator._numberOfUnknowns];
@@ -412,9 +412,9 @@ void exahype2::fv::musclhancock::internal::computeDTerm_LoopBody(
 
 template <typename QNCPFaceEnumeratorType, typename QOutEnumeratorType>
 void exahype2::fv::musclhancock::internal::updateSolutionWithDTerm_LoopBody(
-  const double* __restrict__                   QDX,
-  const double* __restrict__                   QDY,
-  const double* __restrict__                   QDZ,
+  const double* NOALIAS                   QDX,
+  const double* NOALIAS                   QDY,
+  const double* NOALIAS                   QDZ,
   const QNCPFaceEnumeratorType                 ncpEnumerator,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -422,10 +422,10 @@ void exahype2::fv::musclhancock::internal::updateSolutionWithDTerm_LoopBody(
   const tarch::la::Vector<Dimensions,int>&     volumeIndex,
   int                                          unknown,
   double                                       dt,
-  double* __restrict__                         QOut,
+  double* NOALIAS                         QOut,
   const QOutEnumeratorType&                    QOutEnumerator
 ) {
-  auto updateAlongOneCoordinateDirection = [=](const double* __restrict__ QD, int normal) {
+  auto updateAlongOneCoordinateDirection = [=](const double* NOALIAS QD, int normal) {
     tarch::la::Vector<Dimensions,int> leftFace   = volumeIndex;
     tarch::la::Vector<Dimensions,int> rightFace  = volumeIndex;
     leftFace(normal)--;
@@ -446,7 +446,7 @@ void exahype2::fv::musclhancock::internal::updateSolutionWithDTerm_LoopBody(
 //function on working
 template <class QInEnumeratorType, class QInterEnumeratorType, class QOutEnumeratorType>
 void exahype2::fv::musclhancock::internal::updateSolutionwithNCPandSource_LoopBody(
-  const double* __restrict__                   QIn,
+  const double* NOALIAS                   QIn,
   const QInterEnumeratorType                   QInterEnumerator,
   const QInEnumeratorType                      QInEnumerator,
   exahype2::fv::musclhancock::NonconservativeProduct  ncp,
@@ -458,7 +458,7 @@ void exahype2::fv::musclhancock::internal::updateSolutionwithNCPandSource_LoopBo
   double                                       t,
   double                                       dt,
   double*                                      timeDerivative,
-  double* __restrict__                         QOut,
+  double* NOALIAS                         QOut,
   const QOutEnumeratorType&                    QOutEnumerator,
   bool                                         evalNCP,
   bool                                         evalSRC
@@ -519,7 +519,7 @@ void exahype2::fv::musclhancock::internal::updateSolutionwithNCPandSource_LoopBo
 //function on working
 template <class QInEnumeratorType>
 double exahype2::fv::musclhancock::internal::reduceMaxEigenvalue_LoopBody(
-  const double* __restrict__                   QIn,
+  const double* NOALIAS                   QIn,
   QInEnumeratorType                            QInEnumerator,
     exahype2::fv::musclhancock::MaxEigenvalue         maxEigenvalue,
     const tarch::la::Vector<Dimensions,double>&  patchCentre,

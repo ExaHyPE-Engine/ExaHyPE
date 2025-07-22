@@ -7,13 +7,13 @@
 #include <limits.h>
 #include <iostream>
 
-#if defined(CompilerHasProcStat)
+#if defined(COMPILER_HAS_PROC_STAT)
 #include <unistd.h>
 #endif
 
 #include <cstdlib>
 #include <cstring>
-#if defined(CompilerHasSysinfo) // for Linux OS
+#if defined(COMPILER_HAS_SYSINFO) // for Linux OS
 #include <sys/sysinfo.h>
 #else // for Mac OS support
 #include <sys/sysctl.h>
@@ -61,7 +61,7 @@ int tarch::convertMemorySize(long long value, MemoryUsageFormat format) {
   return result;
 }
 
-#if defined(CompilerHasSysinfo)
+#if defined(COMPILER_HAS_SYSINFO)
 
 int tarch::getTotalMemory(MemoryUsageFormat format) {
   struct sysinfo info;
@@ -77,7 +77,7 @@ int tarch::getFreeMemory(MemoryUsageFormat format) {
   return convertMemorySize(info.freeram, format);
 }
 
-#else // defined(CompilerHasSysinfo)
+#else // defined(COMPILER_HAS_SYSINFO)
 
 int tarch::getTotalMemory(MemoryUsageFormat format) {
   int mib[] = { CTL_HW, HW_MEMSIZE };
@@ -100,12 +100,12 @@ int tarch::getFreeMemory(MemoryUsageFormat format) {
   }
 }
 
-#endif // defined(CompilerHasSysinfo)
+#endif // defined(COMPILER_HAS_SYSINFO)
 
 int tarch::getMemoryUsage(MemoryUsageFormat format) {
   static tarch::logging::Log _log("tarch");
 
-#if defined(CompilerHasProcStat)
+#if defined(COMPILER_HAS_PROC_STAT)
   char   work[4096];
   FILE*  f    = NULL;
   char*  pCh  = NULL;

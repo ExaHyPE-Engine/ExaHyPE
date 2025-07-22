@@ -2,22 +2,26 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#define CompilerHasUTSName
-#define CompilerHasTimespec
+#define COMPILER_HAS_UTS_NAME
+#define COMPILER_HAS_TIMESPEC
 
-#if not defined(__APPLE__)
-#define CompilerHasSysinfo
-#define CompilerHasProcStat
+#if !defined(__APPLE__)
+#define COMPILER_HAS_SYSINFO
+#define COMPILER_HAS_PROC_STAT
 #endif
 
-#define LittleEndian
+#if !defined(LITTLE_ENDIAN)
+#define LITTLE_ENDIAN
+#endif
 
-#if !defined(AlignmentOnHeap)
-#define AlignmentOnHeap 16
+#if !defined(ALIGNMENT_ON_HEAP)
+#define ALIGNMENT_ON_HEAP 16
 #endif
 
 #if defined(__NVCOMPILER)
-#define NOALIAS // nvc++ does seem to give incorrect results with the __restrict__ keyword in inlined functions
+#define NOALIAS // nvc++ does seem to give incorrect results with the NOALIAS keyword in inlined functions
+#define TASKLOOP_NOT_SUPPORTED
+#define TASK_DEPENDENCIES_NOT_SUPPORTED
 #else
 #define NOALIAS __restrict__
 #endif

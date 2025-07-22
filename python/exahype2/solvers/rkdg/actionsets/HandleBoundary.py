@@ -51,8 +51,8 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
     TemplateHandleBoundary_KernelCalls = """
     ::exahype2::dg::applyBoundaryConditions(
       [&](
-        const double * __restrict__                  Qinside,
-        double * __restrict__                        Qoutside,
+        const double * NOALIAS                  Qinside,
+        double * NOALIAS                        Qoutside,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
         double                                       dt,

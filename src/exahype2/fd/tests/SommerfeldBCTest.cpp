@@ -46,7 +46,7 @@ void exahype2::fd::tests::SommerfeldBCTest::flatSolutionTest() {
 
   ::exahype2::fd::applySommerfeldConditions(
     [&](
-        const double * __restrict__                  Q,
+        const double * NOALIAS                  Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  gridCellH,
         double                                       t,
@@ -56,7 +56,7 @@ void exahype2::fd::tests::SommerfeldBCTest::flatSolutionTest() {
         return 2.0;
     },
     [&](
-        double * __restrict__                        Q,
+        double * NOALIAS                        Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  gridCellH
     ) -> void {
@@ -107,7 +107,7 @@ void exahype2::fd::tests::SommerfeldBCTest::flatSolutionTest() {
 
   ::exahype2::fd::applySommerfeldConditions(
     [&](
-        const double * __restrict__                  Q,
+        const double * NOALIAS                  Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  gridCellH,
         double                                       t,
@@ -117,7 +117,7 @@ void exahype2::fd::tests::SommerfeldBCTest::flatSolutionTest() {
         return 2.0;
     },
     [&](
-        double * __restrict__                        Q,
+        double * NOALIAS                        Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  gridCellH
     ) -> void {

@@ -7,13 +7,13 @@ tarch::logging::Log   exahype::limiting::swe::fvSWE::_log( "exahype::limiting::s
 
 
 void exahype::limiting::swe::fvSWE::eigenvalues(
-  [[maybe_unused]] const double* const __restrict__             Q, // Q[3+1]
+  [[maybe_unused]] const double* const NOALIAS             Q, // Q[3+1]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,
-  [[maybe_unused]] double* const __restrict__                   L
+  [[maybe_unused]] double* const NOALIAS                   L
 ) {
 
   static constexpr double g = 9.81;
@@ -27,13 +27,13 @@ void exahype::limiting::swe::fvSWE::eigenvalues(
 }
 
 void exahype::limiting::swe::fvSWE::flux(
-  [[maybe_unused]] const double* const __restrict__             Q, // Q[3+1]
+  [[maybe_unused]] const double* const NOALIAS             Q, // Q[3+1]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h_,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,
-  [[maybe_unused]] double* const __restrict__                   F  // F[3]
+  [[maybe_unused]] double* const NOALIAS                   F  // F[3]
 ) {
 
   static constexpr double g = 9.81;
@@ -48,22 +48,22 @@ void exahype::limiting::swe::fvSWE::flux(
 
 extern "C" {
   double rpn2_augmented_wrapper(
-    const double* __restrict__ ql,
-    const double* __restrict__ qr,
-    double* __restrict__ amdq,
-    double* __restrict__ apdq, const int* normal);
+    const double* NOALIAS ql,
+    const double* NOALIAS qr,
+    double* NOALIAS amdq,
+    double* NOALIAS apdq, const int* normal);
 }
 
 double exahype::limiting::swe::fvSWE::solveRiemannProblem(
-  [[maybe_unused]] const double* const __restrict__             QL, // QL[3+1]
-  [[maybe_unused]] const double* const __restrict__             QR, // QR[3+1]
+  [[maybe_unused]] const double* const NOALIAS             QL, // QL[3+1]
+  [[maybe_unused]] const double* const NOALIAS             QR, // QR[3+1]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,
-  [[maybe_unused]] double* const __restrict__                   FL, // FL[3]
-  [[maybe_unused]] double* const __restrict__                   FR  // FR[3]
+  [[maybe_unused]] double* const NOALIAS                   FL, // FL[3]
+  [[maybe_unused]] double* const NOALIAS                   FR  // FR[3]
 ) {
 #if 0
   double smax = rpn2_augmented_wrapper(QL, QR, FL, FR, &normal);

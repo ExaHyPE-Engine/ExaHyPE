@@ -65,39 +65,39 @@ def create_compute_kernel_for_FD4(flux_implementation,
   false, // Runge-Kutta, so no need to copy old data over or to take dt into account
   ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection,
   [&](
-    const double * __restrict__ Q,
+    const double * NOALIAS Q,
     const tarch::la::Vector<Dimensions,double>&  faceCentre,
     const tarch::la::Vector<Dimensions,double>&  volumeH,
     double                                       t,
     double                                       dt,
     int                                          normal,
-    double * __restrict__ F
+    double * NOALIAS F
   )->void {
     {% if FLUX_IMPLEMENTATION!="<none>" %}
     repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, dt, normal, F );
     {% endif %}
   },
   [&](
-    const double * __restrict__                  Q,
-    const double * __restrict__     deltaQ,
+    const double * NOALIAS                  Q,
+    const double * NOALIAS     deltaQ,
     const tarch::la::Vector<Dimensions,double>&  faceCentre,
     const tarch::la::Vector<Dimensions,double>&  volumeH,
     double                                       t,
     double                                       dt,
     int                                          normal,
-    double * __restrict__ BTimesDeltaQ
+    double * NOALIAS BTimesDeltaQ
   )->void {
     {% if NCP_IMPLEMENTATION!="<none>" %}
     repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, dt, normal, BTimesDeltaQ );
     {% endif %}
   },
   [&](
-    const double * __restrict__ Q,
+    const double * NOALIAS Q,
     const tarch::la::Vector<Dimensions,double>&  volumeX,
     const tarch::la::Vector<Dimensions,double>&  volumeH,
     double                                       t,
     double                                       dt,
-    double * __restrict__ S
+    double * NOALIAS S
   )->void {
     {% if SOURCE_IMPLEMENTATION!="<none>" %}
     repositories::{{SOLVER_INSTANCE}}.sourceTerm( Q, volumeX, volumeH, t, dt, S );

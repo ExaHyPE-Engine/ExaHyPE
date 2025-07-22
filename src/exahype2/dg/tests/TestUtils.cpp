@@ -1,12 +1,12 @@
 #include "TestUtils.h"
 
 void exahype2::dg::tests::eulerFlux(
-  [[maybe_unused]] const double * __restrict__                  Q,
+  [[maybe_unused]] const double * NOALIAS                  Q,
   [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,
   [[maybe_unused]] int                                          normal,
-  [[maybe_unused]] double * __restrict__                        F
+  [[maybe_unused]] double * NOALIAS                        F
 ) {
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
@@ -22,11 +22,11 @@ void exahype2::dg::tests::eulerFlux(
 }
 
 void exahype2::dg::tests::eulerSource(
-  [[maybe_unused]] const double * __restrict__                  Q,
+  [[maybe_unused]] const double * NOALIAS                  Q,
   [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,
-  [[maybe_unused]] double * __restrict__                        S
+  [[maybe_unused]] double * NOALIAS                        S
 ) {
   S[0] = 0.0;
   S[1] = 0.0;
@@ -36,7 +36,7 @@ void exahype2::dg::tests::eulerSource(
 }
 
 double exahype2::dg::tests::eulerEigenvalue(
-  [[maybe_unused]] const double * __restrict__                 Q,
+  [[maybe_unused]] const double * NOALIAS                 Q,
   [[maybe_unused]] const tarch::la::Vector<Dimensions,double>& x,
   [[maybe_unused]] double                                      t,
   [[maybe_unused]] double                                       dt,
@@ -67,8 +67,8 @@ double exahype2::dg::tests::eulerEigenvalue(
 }
 
 void exahype2::dg::tests::eulerBoundaryConditions(
-  [[maybe_unused]] const double * __restrict__                  Qinside,
-  [[maybe_unused]] double * __restrict__                         Qoutside,
+  [[maybe_unused]] const double * NOALIAS                  Qinside,
+  [[maybe_unused]] double * NOALIAS                         Qoutside,
   [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,
@@ -82,7 +82,7 @@ void exahype2::dg::tests::eulerBoundaryConditions(
 }
 
 void exahype2::dg::tests::eulerInitial(
-  [[maybe_unused]] double* __restrict__  Q,
+  [[maybe_unused]] double* NOALIAS  Q,
   [[maybe_unused]] int                   node
 ) {
   Q[0] = 1.00000000000000;
@@ -92,7 +92,7 @@ void exahype2::dg::tests::eulerInitial(
   Q[4] = 2.57000000000000;
 }
 
-void exahype2::dg::tests::elasticInitial(double * __restrict__ Q) {
+void exahype2::dg::tests::elasticInitial(double * NOALIAS Q) {
   for(int i=0; i<9; i++){
     Q[i] = 1.0; //6 stresses, 3 velocities
   }
@@ -103,12 +103,12 @@ void exahype2::dg::tests::elasticInitial(double * __restrict__ Q) {
 }
 
 void exahype2::dg::tests::elasticFlux(
-  [[maybe_unused]] const double * __restrict__                  Q,
+  [[maybe_unused]] const double * NOALIAS                  Q,
   [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,
   [[maybe_unused]] int                                          normal,
-  [[maybe_unused]] double * __restrict__                        F
+  [[maybe_unused]] double * NOALIAS                        F
 ) {
   //stresses
   for(int i=0; i<6; i++){
@@ -136,11 +136,11 @@ void exahype2::dg::tests::elasticFlux(
 }
 
 void exahype2::dg::tests::elasticSource(
-  [[maybe_unused]] const double * __restrict__                  Q,
+  [[maybe_unused]] const double * NOALIAS                  Q,
   [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,
-  [[maybe_unused]] double * __restrict__                        S
+  [[maybe_unused]] double * NOALIAS                        S
 ) {
   S[0] = 1.0;
   S[1] = 1.0;
@@ -154,7 +154,7 @@ void exahype2::dg::tests::elasticSource(
 }
 
 double exahype2::dg::tests::elasticEigenvalue(
-  [[maybe_unused]] const double * __restrict__                 Q,
+  [[maybe_unused]] const double * NOALIAS                 Q,
   [[maybe_unused]] const tarch::la::Vector<Dimensions,double>& x,
   [[maybe_unused]] double                                      t,
   [[maybe_unused]] double                                       dt,
@@ -165,8 +165,8 @@ double exahype2::dg::tests::elasticEigenvalue(
 }
 
 void exahype2::dg::tests::elasticBoundaryConditions(
-  [[maybe_unused]] const double * __restrict__                  Qinside,
-  [[maybe_unused]] double * __restrict__                        Qoutside,
+  [[maybe_unused]] const double * NOALIAS                  Qinside,
+  [[maybe_unused]] double * NOALIAS                        Qoutside,
   [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,
@@ -187,13 +187,13 @@ void exahype2::dg::tests::elasticBoundaryConditions(
 }
 
 void exahype2::dg::tests::elasticNonConservativeProduct(
-  [[maybe_unused]] const double * __restrict__                  Q,
-  [[maybe_unused]] const double * __restrict__                  deltaQ,
+  [[maybe_unused]] const double * NOALIAS                  Q,
+  [[maybe_unused]] const double * NOALIAS                  deltaQ,
   [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  faceCentre,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,
   [[maybe_unused]] int                                          normal,
-  [[maybe_unused]] double * __restrict__                        BgradQ // BgradQ[9]
+  [[maybe_unused]] double * NOALIAS                        BgradQ // BgradQ[9]
 ) {
   //Lamé parameters
   double mu = Q[9] * Q[11] * Q[11]; //rho*cs^2
@@ -234,8 +234,8 @@ void exahype2::dg::tests::elasticNonConservativeProduct(
 }
 
 void exahype2::dg::tests::testBoundaryConditions(
-  [[maybe_unused]] const double * __restrict__                  Qinside,
-  [[maybe_unused]] double * __restrict__                        Qoutside,
+  [[maybe_unused]] const double * NOALIAS                  Qinside,
+  [[maybe_unused]] double * NOALIAS                        Qoutside,
   [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,
@@ -248,7 +248,7 @@ void exahype2::dg::tests::testBoundaryConditions(
 }
 
 double exahype2::dg::tests::testEigenvalue(
-  [[maybe_unused]] const double * __restrict__                 Q,
+  [[maybe_unused]] const double * NOALIAS                 Q,
   [[maybe_unused]] const tarch::la::Vector<Dimensions,double>& x,
   [[maybe_unused]] double                                      t,
   [[maybe_unused]] double                                      dt,
@@ -259,8 +259,8 @@ double exahype2::dg::tests::testEigenvalue(
 }
 
 void exahype2::dg::tests::secondTestBoundaryConditions(
-  [[maybe_unused]] const double * __restrict__                  Qinside,
-  [[maybe_unused]] double * __restrict__                        Qoutside,
+  [[maybe_unused]] const double * NOALIAS                  Qinside,
+  [[maybe_unused]] double * NOALIAS                        Qoutside,
   [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,

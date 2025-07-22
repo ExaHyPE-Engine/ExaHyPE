@@ -29,7 +29,7 @@ double  exahype2::fd::getGridCellLength(
 
 
 std::string exahype2::fd::plotGridCell(
-  const double* __restrict__ Q,
+  const double* NOALIAS Q,
   int    unknowns
 ) {
   return exahype2::fv::plotVolume(Q,unknowns);
@@ -37,7 +37,7 @@ std::string exahype2::fd::plotGridCell(
 
 
 std::string exahype2::fd::plotPatch(
-  const double* __restrict__ Q,
+  const double* NOALIAS Q,
   int    unknowns,
   int    auxiliaryVariables,
   int    numberOfVolumesPerAxisInPatch,
@@ -56,7 +56,7 @@ std::string exahype2::fd::plotPatch(
 
 
 std::string exahype2::fd::plotPatchOverlap(
-  const double* __restrict__ Q,
+  const double* NOALIAS Q,
   int    unknowns,
   int    auxiliaryVariables,
   int    numberOfGridCellsPerPatchPerAxis,
@@ -77,7 +77,7 @@ std::string exahype2::fd::plotPatchOverlap(
 
 
 void exahype2::fd::validatePatch (
-  const double *__restrict__ Q, int unknowns,
+  const double *NOALIAS Q, int unknowns,
   int auxiliaryVariables,
   int numberOfVolumesPerAxisInPatch, int haloSize,
   const std::string &location,

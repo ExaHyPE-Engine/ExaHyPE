@@ -4,6 +4,7 @@
 
 #include "Enumeration.h"
 
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/DynamicMatrix.h"
 #include "tarch/la/DynamicMatrixOperations.h"
@@ -315,10 +316,10 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T* __restrict__ normalInterpolationMatrix1d,
-      const T* __restrict__ tangentialInterpolationMatrix1d,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T* NOALIAS normalInterpolationMatrix1d,
+      const T* NOALIAS tangentialInterpolationMatrix1d,
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     template<typename T=double>
@@ -327,11 +328,11 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T* __restrict__ normalInterpolationMatrix1d,
-      const T* __restrict__ tangentialInterpolationMatrix1d,
-      const T* __restrict__ coarseGridCellValues,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T* NOALIAS normalInterpolationMatrix1d,
+      const T* NOALIAS tangentialInterpolationMatrix1d,
+      const T* NOALIAS coarseGridCellValues,
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     template<typename T=double>
@@ -340,12 +341,12 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T*      __restrict__ interpolationData,
-      const int* __restrict__ columnIndices,
-      const int* __restrict__ rowIndices,
-      const T* __restrict__ coarseGridCellValues,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T*      NOALIAS interpolationData,
+      const int* NOALIAS columnIndices,
+      const int* NOALIAS rowIndices,
+      const T* NOALIAS coarseGridCellValues,
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     template<typename T=double>
@@ -354,9 +355,9 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T* __restrict__ coarseGridCellValues,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T* NOALIAS coarseGridCellValues,
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     template<typename T=double>
@@ -365,8 +366,8 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     template<typename T=double>
@@ -375,9 +376,9 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T* __restrict__ coarseGridCellValues,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T* NOALIAS coarseGridCellValues,
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     template<typename T=double>
@@ -386,8 +387,8 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     template<typename T=double>
@@ -396,13 +397,13 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T* __restrict__   interpolationData,
-      const int* __restrict__ columnIndices,
-      const int* __restrict__ rowIndices,
+      const T* NOALIAS   interpolationData,
+      const int* NOALIAS columnIndices,
+      const int* NOALIAS rowIndices,
       int dataStart,
       int rowIndicesStart,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     template<typename T=double>
@@ -410,9 +411,9 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const T* __restrict__ interpolationMatrix1d,
-      const T* __restrict__ coarseGridCellValues,
-      T* __restrict__       fineGridCellValues
+      const T* NOALIAS interpolationMatrix1d,
+      const T* NOALIAS coarseGridCellValues,
+      T* NOALIAS       fineGridCellValues
     );
 
     template<typename T=double>
@@ -420,11 +421,11 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const T* __restrict__   interpolationData,
-      const int* __restrict__ columnIndices,
-      const int* __restrict__ rowIndices,
-      const T* __restrict__   coarseGridCellValues,
-      T* __restrict__         fineGridCellValues
+      const T* NOALIAS   interpolationData,
+      const int* NOALIAS columnIndices,
+      const int* NOALIAS rowIndices,
+      const T* NOALIAS   coarseGridCellValues,
+      T* NOALIAS         fineGridCellValues
     );
 
     template<typename T=double>
@@ -432,8 +433,8 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const T* __restrict__ coarseGridCellValues,
-      T* __restrict__       fineGridCellValues
+      const T* NOALIAS coarseGridCellValues,
+      T* NOALIAS       fineGridCellValues
     );
 
     template<typename T=double>
@@ -441,8 +442,8 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const T* __restrict__ coarseGridCellValues,
-      T* __restrict__       fineGridCellValues
+      const T* NOALIAS coarseGridCellValues,
+      T* NOALIAS       fineGridCellValues
     );
 
 
@@ -455,8 +456,8 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     /**
@@ -480,9 +481,9 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T* __restrict__ coarseGridCellValues,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T* NOALIAS coarseGridCellValues,
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     /**
@@ -501,8 +502,8 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const T* __restrict__ coarseGridCellValues,
-      T* __restrict__       fineGridCellValues
+      const T* NOALIAS coarseGridCellValues,
+      T* NOALIAS       fineGridCellValues
     );
 
     template<typename T=double>
@@ -511,8 +512,8 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     template<typename T=double>
@@ -521,9 +522,9 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T* __restrict__ coarseGridCellValues,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T* NOALIAS coarseGridCellValues,
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     template<typename T=double>
@@ -531,8 +532,8 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const T* __restrict__ coarseGridCellValues,
-      T* __restrict__       fineGridCellValues
+      const T* NOALIAS coarseGridCellValues,
+      T* NOALIAS       fineGridCellValues
     );
 
     template<typename T=double>
@@ -541,8 +542,8 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     template<typename T=double>
@@ -551,9 +552,9 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T* __restrict__ coarseGridCellValues,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T* NOALIAS coarseGridCellValues,
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     template<typename T=double>
@@ -561,8 +562,8 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const T* __restrict__ coarseGridCellValues,
-      T* __restrict__       fineGridCellValues
+      const T* NOALIAS coarseGridCellValues,
+      T* NOALIAS       fineGridCellValues
     );
 
     /**
@@ -574,8 +575,8 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     template<typename T=double>
@@ -584,9 +585,9 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T* __restrict__ coarseGridCellValues,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T* NOALIAS coarseGridCellValues,
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     template<typename T=double>
@@ -594,8 +595,8 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const T* __restrict__ coarseGridCellValues,
-      T* __restrict__       fineGridCellValues
+      const T* NOALIAS coarseGridCellValues,
+      T* NOALIAS       fineGridCellValues
     );
 
     template<typename T=double>
@@ -604,8 +605,8 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     template<typename T=double>
@@ -614,9 +615,9 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const T* __restrict__ coarseGridCellValues,
-      const T* __restrict__ coarseGridFaceValues,
-      T* __restrict__       fineGridFaceValues
+      const T* NOALIAS coarseGridCellValues,
+      const T* NOALIAS coarseGridFaceValues,
+      T* NOALIAS       fineGridFaceValues
     );
 
     template<typename T=double>
@@ -624,8 +625,8 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const T* __restrict__ coarseGridCellValues,
-      T* __restrict__       fineGridCellValues
+      const T* NOALIAS coarseGridCellValues,
+      T* NOALIAS       fineGridCellValues
     );
 
     /**
@@ -696,11 +697,11 @@ namespace toolbox {
       int haloSourcePatch,
       int haloDestinationPatch,
       int unknowns,
-      const T* __restrict__   interpolationData,
-      const int* __restrict__ columnIndices,
-      const int* __restrict__ rowIndices,
-      const T* __restrict__   sourceValues,
-      T* __restrict__         destinationValues
+      const T* NOALIAS   interpolationData,
+      const int* NOALIAS columnIndices,
+      const int* NOALIAS rowIndices,
+      const T* NOALIAS   sourceValues,
+      T* NOALIAS         destinationValues
     );
 
     template<typename T=double>
@@ -710,8 +711,8 @@ namespace toolbox {
       int haloSourcePatch,
       int haloDestinationPatch,
       int unknowns,
-      const T* __restrict__ sourceValues,
-      T* __restrict__       destinationValues
+      const T* NOALIAS sourceValues,
+      T* NOALIAS       destinationValues
     );
 
     template<typename T=double>
@@ -721,8 +722,8 @@ namespace toolbox {
       int haloSourcePatch,
       int haloDestinationPatch,
       int unknowns,
-      const T* __restrict__ sourceValues,
-      T* __restrict__       destinationValues
+      const T* NOALIAS sourceValues,
+      T* NOALIAS       destinationValues
     );
 
     template<typename T=double>
@@ -732,8 +733,8 @@ namespace toolbox {
       int haloSourcePatch,
       int haloDestinationPatch,
       int unknowns,
-      const T* __restrict__ sourceValues,
-      T* __restrict__       destinationValues
+      const T* NOALIAS sourceValues,
+      T* NOALIAS       destinationValues
     );
 
     namespace internal {
@@ -987,8 +988,8 @@ namespace toolbox {
         int                                       numberOfDoFsPerAxisInPatch,
         int                                       overlap,
         int                                       unknowns,
-        const T* __restrict__ fineGridCellValuesLeft,
-        const T* __restrict__ fineGridCellValuesRight,
+        const T* NOALIAS fineGridCellValuesLeft,
+        const T* NOALIAS fineGridCellValuesRight,
         T* fineGridFaceValues
       );
 
@@ -1002,7 +1003,7 @@ namespace toolbox {
             relativePositionWithinFatherCell,
         int numberOfDoFsPerAxisInPatch,
         int unknowns,
-        const T* __restrict__ fineGridValues,
+        const T* NOALIAS fineGridValues,
         T* coarseGridValues
       );
 
@@ -1012,7 +1013,7 @@ namespace toolbox {
             relativePositionWithinFatherCell,
         int numberOfDoFsPerAxisInPatch,
         int unknowns,
-        const T* __restrict__ fineGridValues,
+        const T* NOALIAS fineGridValues,
         T* coarseGridValues,
         bool    extrapolateLinearly
       );

@@ -23,8 +23,8 @@ namespace exahype2 {
     template<typename T>
     void applyBoundaryConditions(
       std::function< void(
-        const T* __restrict__                        Qinside,
-        T * __restrict__                             Qoutside,
+        const T* NOALIAS                        Qinside,
+        T * NOALIAS                             Qoutside,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
@@ -39,7 +39,7 @@ namespace exahype2 {
       int                                          overlap,
       int                                          unknowns,
       int                                          faceNumber,
-      T* __restrict__                              Q
+      T* NOALIAS                              Q
     );
   }
 }

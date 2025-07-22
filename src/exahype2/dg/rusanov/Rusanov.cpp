@@ -15,11 +15,11 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
   [[maybe_unused]] int                                          unknowns,
   [[maybe_unused]] int                                          auxiliaryVariables,
   [[maybe_unused]] int                                          faceNumber,
-  [[maybe_unused]] const double* __restrict__                   quadraturePoints,
+  [[maybe_unused]] const double* NOALIAS                   quadraturePoints,
   [[maybe_unused]] bool                                         evaluateFlux,
   [[maybe_unused]] bool                                         evaluateNonconservativeProduct,
-  [[maybe_unused]] const double* __restrict__                   projectedValues,
-  [[maybe_unused]] double* __restrict__                         solution
+  [[maybe_unused]] const double* NOALIAS                   projectedValues,
+  [[maybe_unused]] double* NOALIAS                         solution
 ) {
   tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * cellSize;
   faceOffset(faceNumber%Dimensions) += 0.5 * cellSize(faceNumber%Dimensions);
@@ -136,11 +136,11 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ_with_gradient_
   [[maybe_unused]] int                                          unknowns,
   [[maybe_unused]] int                                          auxiliaryVariables,
   [[maybe_unused]] int                                          faceNumber,
-  [[maybe_unused]] const double* __restrict__                   quadraturePoints,
+  [[maybe_unused]] const double* NOALIAS                   quadraturePoints,
   [[maybe_unused]] bool                                         evaluateFlux,
   [[maybe_unused]] bool                                         evaluateNonconservativeProduct,
-  [[maybe_unused]] const double* __restrict__                   projectedValues,
-  [[maybe_unused]] double* __restrict__                         solution
+  [[maybe_unused]] const double* NOALIAS                   projectedValues,
+  [[maybe_unused]] double* NOALIAS                         solution
 ) {
   assertionMsg(false, "not implemented yet");
 }

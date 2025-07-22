@@ -27,8 +27,8 @@ namespace exahype2 {
      */
     void applyBoundaryConditions(
       std::function< void(
-        const double* __restrict__                   Qinside,
-        double * __restrict__                        Qoutside,
+        const double* NOALIAS                   Qinside,
+        double * NOALIAS                        Qoutside,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
@@ -43,7 +43,7 @@ namespace exahype2 {
       int                                          overlap,
       int                                          unknownsPlusAuxiliaryVariables,
       int                                          faceNumber,
-      double* __restrict__                         Q
+      double* NOALIAS                         Q
     );
 
     /**
@@ -66,7 +66,7 @@ namespace exahype2 {
 self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
       ::exahype2::fd::applySommerfeldConditions(
         [&](
-          const double * __restrict__                  Q,
+          const double * NOALIAS                  Q,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  gridCellH,
           double                                       t,
@@ -76,7 +76,7 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
           return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
         },
         [&](
-          double * __restrict__                        Q,
+          double * NOALIAS                        Q,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  gridCellH
         ) -> void {
@@ -104,7 +104,7 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
      */
     void applySommerfeldConditions(
       std::function< double(
-        const double* __restrict__                   Q,
+        const double* NOALIAS                   Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  gridCellH,
         double                                       t,
@@ -112,7 +112,7 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
         int                                          normal
       ) >   maxEigenvalue,
       std::function< void(
-        double* __restrict__                         Q,
+        double* NOALIAS                         Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  gridCellH
       ) >   farFieldSolution,
@@ -126,8 +126,8 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
       int                                          numberOfAuxiliaryVariables,
       int                                          faceNumber,
       const tarch::la::Vector<Dimensions,double>&  systemOrigin,
-      double* __restrict__                         Qold,
-      double* __restrict__                         Qnew,
+      double* NOALIAS                         Qold,
+      double* NOALIAS                         Qnew,
       double                                       CheckpointTimeStamp
     );
 
@@ -139,7 +139,7 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
      */
     void applySommerfeldConditions(
       std::function< double(
-        const double* __restrict__                   Q,
+        const double* NOALIAS                   Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  gridCellH,
         double                                       t,
@@ -156,8 +156,8 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
       int                                          numberOfAuxiliaryVariables,
       int                                          faceNumber,
       const tarch::la::Vector<Dimensions,double>&  systemOrigin,
-      double* __restrict__                         Qold,
-      double* __restrict__                         Qnew,
+      double* NOALIAS                         Qold,
+      double* NOALIAS                         Qnew,
       double                                       CheckpointTimeStamp
     );
   }

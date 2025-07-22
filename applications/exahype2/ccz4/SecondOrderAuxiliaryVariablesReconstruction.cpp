@@ -7,7 +7,7 @@ namespace {
    * Templated recompute function which works with a function.
    */
   template <void (*recompute_LoopBody)(
-      double* __restrict__                                       QIn,
+      double* NOALIAS                                       QIn,
       const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
       const tarch::la::Vector<Dimensions,double>&  patchCentre,
       const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -238,7 +238,7 @@ void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_4thOrder(
 
 
 void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_centralDifferences_LoopBody(
-  double* __restrict__                                       QIn,
+  double* NOALIAS                                       QIn,
   const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -279,7 +279,7 @@ void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_cent
 
 
 void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_leftDifferences_LoopBody(
-  double* __restrict__                                       QIn,
+  double* NOALIAS                                       QIn,
   const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -318,7 +318,7 @@ void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_left
 
 
 void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_rightDifferences_LoopBody(
-  double* __restrict__                                       QIn,
+  double* NOALIAS                                       QIn,
   const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -355,7 +355,7 @@ void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_righ
 
 
 void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody(
-  double* __restrict__                                       QIn,
+  double* NOALIAS                                       QIn,
   const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,

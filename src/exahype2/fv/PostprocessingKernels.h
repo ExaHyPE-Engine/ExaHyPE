@@ -45,7 +45,7 @@ namespace exahype2 {
      *
      */
     void mapInnerNeighbourVoxelAlongBoundayOntoAuxiliaryVariable(
-        double* __restrict__ Q,
+        double* NOALIAS Q,
         int    unknowns,
         int    auxiliaryVariables,
         int    numberOfVolumesPerAxisInPatch,

@@ -2,10 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-#include "peano4/utils/Globals.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/la/Vector.h"
 
+#include "peano4/utils/Globals.h"
 
 namespace toolbox {
   namespace blockstructured {
@@ -28,11 +28,11 @@ namespace toolbox {
      */
     void computeGradient(
       int                                numberOfDoFsPerAxisInPatch,
-      const double* __restrict__         source,
+      const double* NOALIAS         source,
       int                                sourceIndex,
       int                                sourceUnknowns,
       int                                sourceHalo,
-      double* __restrict__               dest,
+      double* NOALIAS               dest,
       const tarch::la::Vector<Dimensions,int>&   destIndex,
       int                                destUnknowns,
       int                                destHalo,
@@ -42,11 +42,11 @@ namespace toolbox {
 
     double computeGradientAndReturnMaxDifference(
       int                                numberOfDoFsPerAxisInPatch,
-      const double* __restrict__         source,
+      const double* NOALIAS         source,
       int                                sourceIndex,
       int                                sourceUnknowns,
       int                                sourceHalo,
-      double* __restrict__               dest,
+      double* NOALIAS               dest,
       const tarch::la::Vector<Dimensions,int>&   destIndex,
       int                                destUnknowns,
       int                                destHalo,

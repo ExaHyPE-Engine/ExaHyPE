@@ -7,9 +7,9 @@
 
 void toolbox::blockstructured::copyUnknowns(
   int                                numberOfDoFsPerAxisInPatch,
-  const double* __restrict__         source,
+  const double* NOALIAS         source,
   int                                sourceHalo,
-  double* __restrict__               dest,
+  double* NOALIAS               dest,
   int                                destHalo,
   int                                unknowns
 ) {
@@ -38,11 +38,11 @@ void toolbox::blockstructured::copyUnknowns(
 
 void toolbox::blockstructured::copyUnknown(
   int                                numberOfDoFsPerAxisInPatch,
-  const double* __restrict__         source,
+  const double* NOALIAS         source,
   int                                sourceIndex,
   int                                sourceUnknowns,
   int                                sourceHalo,
-  double* __restrict__               dest,
+  double* NOALIAS               dest,
   int                                destIndex,
   int                                destUnknowns,
   int                                destHalo
@@ -72,11 +72,11 @@ void toolbox::blockstructured::copyUnknown(
 
 double toolbox::blockstructured::copyUnknownAndComputeMaxDifference(
   int                                numberOfDoFsPerAxisInPatch,
-  const double* __restrict__         source,
+  const double* NOALIAS         source,
   int                                sourceIndex,
   int                                sourceUnknowns,
   int                                sourceHalo,
-  double* __restrict__               dest,
+  double* NOALIAS               dest,
   int                                destIndex,
   int                                destUnknowns,
   int                                destHalo

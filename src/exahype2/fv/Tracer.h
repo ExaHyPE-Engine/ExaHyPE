@@ -43,7 +43,7 @@ namespace exahype2 {
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const double* __restrict__ Q,
+      const double* NOALIAS Q,
       Particle& particle
     );
 
@@ -87,7 +87,7 @@ namespace exahype2 {
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const double* __restrict__ Q,
+      const double* NOALIAS Q,
       Particle& particle
     );
 
@@ -96,7 +96,7 @@ namespace exahype2 {
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const double* __restrict__ Q,
+      const double* NOALIAS Q,
       Particle& particle
     );
 
@@ -110,7 +110,7 @@ namespace exahype2 {
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const double* __restrict__ Q,
+      const double* NOALIAS Q,
       Particle& particle
     );
 
@@ -157,7 +157,7 @@ namespace exahype2 {
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const double* __restrict__ Q,
+      const double* NOALIAS Q,
       double                                timeStepSize,
       tarch::la::Vector<Dimensions, int>    indices,
       tarch::la::Vector<Dimensions, double> factors,
@@ -184,7 +184,7 @@ namespace exahype2 {
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const double* __restrict__ Q,
+      const double* NOALIAS Q,
       Particle& particle
     );
 
@@ -193,7 +193,7 @@ namespace exahype2 {
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const double* __restrict__ Q,
+      const double* NOALIAS Q,
       Particle& particle
     );
     /**
@@ -217,7 +217,7 @@ namespace exahype2 {
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const double* __restrict__ Q,
+      const double* NOALIAS Q,
       tarch::la::Vector<Dimensions, double> DomainSize,
       tarch::la::Vector<Dimensions, double> DomainOffset,
       tarch::la::Vector<Dimensions, double> PeriodicBC
@@ -314,7 +314,7 @@ namespace exahype2 {
         const peano4::datamanagement::CellMarker& marker,
         int                                       voxelsPerAxis,
         int                                       unknownsPerVoxel,
-        const double* __restrict__ Q,
+        const double* NOALIAS Q,
         const tarch::la::Vector<Dimensions, double>& particleX,
         int                                          unknown
       );
@@ -328,7 +328,7 @@ namespace exahype2 {
         const peano4::datamanagement::CellMarker& marker,
         int                                       voxelsPerAxis,
         int                                       unknownsPerVoxel,
-        const double* __restrict__ Q,
+        const double* NOALIAS Q,
         const tarch::la::Vector<Dimensions, double>& particleX,
         int                                          unknown
       );
@@ -344,7 +344,7 @@ namespace exahype2 {
         const peano4::datamanagement::CellMarker& marker,
         int                                       voxelsPerAxis,
         int                                       unknownsPerVoxel,
-        const double* __restrict__ Q,
+        const double* NOALIAS Q,
         Particle& particle,
         int       destinationIndex
       );
@@ -354,7 +354,7 @@ namespace exahype2 {
         const peano4::datamanagement::CellMarker& marker,
         int                                       voxelsPerAxis,
         int                                       unknownsPerVoxel,
-        const double* __restrict__ Q,
+        const double* NOALIAS Q,
         Particle& particle,
         int       destinationIndex
       );
@@ -367,7 +367,7 @@ namespace exahype2 {
         const peano4::datamanagement::CellMarker& marker,
         int                                       voxelsPerAxis,
         int                                       unknownsPerVoxel,
-        const double* __restrict__ Q,
+        const double* NOALIAS Q,
         Particle& particle,
         int       destinationIndex
       );
@@ -380,7 +380,7 @@ namespace exahype2 {
         const peano4::datamanagement::CellMarker& marker,
         int                                       voxelsPerAxis,
         int                                       unknownsPerVoxel,
-        const double* __restrict__ Q,
+        const double* NOALIAS Q,
         Particle& particle,
         int       destinationIndex
       );
