@@ -6,8 +6,10 @@ import peano4.solversteps
 
 import jinja2
 
+
 class EnclaveTasking(AbstractFVActionSet):
-    _Template_TouchCellFirstTime = jinja2.Template("""
+    _Template_TouchCellFirstTime = jinja2.Template(
+        """
   if ({{GUARD}}) {
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
@@ -43,11 +45,12 @@ class EnclaveTasking(AbstractFVActionSet):
     ));
     {% endif %}
   }
-""")
+"""
+    )
 
     def __init__(self, solver):
         super(EnclaveTasking, self).__init__(solver)
-        self.guard = "not marker.willBeRefined() and not marker.hasBeenRefined() and marker.willBeEnclaveCell()"
+        self.guard = "not marker.willBeRefined() and not marker.hasBeenRefined() /*and marker.willBeEnclaveCell()*/"
         self.new_accessor = "fineGridCell" + solver._patch.name
         self.old_accessor = "fineGridCell" + solver._patch_reconstructed.name
         self.face_accessor = "fineGridFaces" + solver._patch_overlap_new.name
@@ -58,9 +61,12 @@ class EnclaveTasking(AbstractFVActionSet):
         d["OLD_ACCESSOR"] = self.old_accessor
         d["FACE_ACCESSOR"] = self.face_accessor
 
-    def get_body_of_operation(self,operation_name):
+    def get_body_of_operation(self, operation_name):
         result = ""
-        if operation_name == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME
+        ):
             d = {}
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
@@ -71,7 +77,9 @@ class EnclaveTasking(AbstractFVActionSet):
     def get_body_of_unprepareTraversal(self):
         result = ""
         if self._solver._can_fuse:
-            result += "::exahype2::EnclaveBookkeeping::getInstance().fusePendingTasks();"
+            result += (
+                "::exahype2::EnclaveBookkeeping::getInstance().fusePendingTasks();"
+            )
         return result
 
     def get_action_set_name(self):
@@ -79,8 +87,12 @@ class EnclaveTasking(AbstractFVActionSet):
 
     def get_includes(self):
         result = super(EnclaveTasking, self).get_includes()
-        result += """
-#include "tasks/""" + self._solver._name + """EnclaveTask.h"
+        result += (
+            """
+#include "tasks/"""
+            + self._solver._name
+            + """EnclaveTask.h"
 #include "exahype2/EnclaveBookkeeping.h"
 """
+        )
         return result

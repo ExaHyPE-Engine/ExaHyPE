@@ -6,6 +6,7 @@ import peano4.solversteps
 
 import jinja2
 
+
 class UpdatePatch(AbstractFVActionSet):
     _Template_TouchCellFirstTime = jinja2.Template(
         """
@@ -77,18 +78,25 @@ class UpdatePatch(AbstractFVActionSet):
 
     def _add_action_set_entries_to_dictionary(self, d):
         d["GUARD"] = self.guard
-        d["ENCLAVE_GUARD"] = "marker.willBeSkeletonCell()" if self._solver._use_enclave_tasking else "true"
+        d["ENCLAVE_GUARD"] = (
+            "false /*marker.willBeSkeletonCell()*/"
+            if self._solver._use_enclave_tasking
+            else "true"
+        )
         d["OLD_ACCESSOR"] = self.old_accessor
         d["NEW_ACCESSOR"] = self.new_accessor
 
     def get_body_of_operation(self, operation_name):
         result = ""
-        if operation_name == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-          d = {}
-          self._solver._init_dictionary_with_default_parameters(d)
-          self._solver.add_entries_to_text_replacement_dictionary(d)
-          self._add_action_set_entries_to_dictionary(d)
-          result = self._Template_TouchCellFirstTime.render(**d)
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME
+        ):
+            d = {}
+            self._solver._init_dictionary_with_default_parameters(d)
+            self._solver.add_entries_to_text_replacement_dictionary(d)
+            self._add_action_set_entries_to_dictionary(d)
+            result = self._Template_TouchCellFirstTime.render(**d)
         return result
 
     def get_action_set_name(self):

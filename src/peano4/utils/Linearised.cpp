@@ -4,21 +4,21 @@
 
 #include "Loop.h"
 
-int                                peano4::utils::lookupTableDLinearised[MaxIndexOfLinearisation * (MaxTable - 1)];
-tarch::la::Vector<Dimensions, int> peano4::utils::lookupTableDDeLinearised[MaxIndexOfLinearisation * (MaxTable - 1)];
+int                                peano4::utils::lookupTableDLinearised[MaxIndexOfLinearisation * (MAX_TABLE - 1)];
+tarch::la::Vector<Dimensions, int> peano4::utils::lookupTableDDeLinearised[MaxIndexOfLinearisation * (MAX_TABLE - 1)];
 
 void peano4::utils::setupLookupTableForDLinearised() {
-  for (int max = 2; max <= MaxTable; max++) {
+  for (int max = 2; max <= MAX_TABLE; max++) {
     dfor(k, max) { lookupTableDLinearised[getKeyForDLinearisedLookup(k, max)] = dLinearisedWithoutLookup(k, max); }
   }
 }
 
 void peano4::utils::setupLookupTableForDDelinearised() {
-  for (int max = 2; max <= MaxTable; max++) {
+  for (int max = 2; max <= MAX_TABLE; max++) {
     for (int value = 0; value < tarch::la::aPowI(Dimensions, max); value++) {
       int key = peano4::utils::getKeyForDDeLinearisedLookup(value, max);
 #if defined(GPUOffloadingOff) && !defined(SharedSYCL)
-      assertion3(key >= 0 && key < MaxIndexOfLinearisation * (MaxTable - 1), key, max, MaxIndexOfLinearisation);
+      assertion3(key >= 0 && key < MaxIndexOfLinearisation * (MAX_TABLE - 1), key, max, MaxIndexOfLinearisation);
 #endif
       lookupTableDDeLinearised[key] = dDelinearisedWithoutLookup(value, max);
     }

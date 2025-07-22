@@ -8,8 +8,8 @@
 #include "Increment.h"
 #include "Linearised.h"
 #include "LoopDirection.h"
-#include "tarch/accelerator/accelerator.h"
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 
 #include <bitset>

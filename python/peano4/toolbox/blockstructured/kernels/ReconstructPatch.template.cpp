@@ -4,7 +4,7 @@
 
 #include "peano4/utils/Loop.h"
 
-{% import 'Loop.template.h' as patch with context %}{# get template macros #}
+{% import 'Loop.macro.h' as patch with context %}{# get template macros #}
 
 void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatch(
   const {{PRECISION}}* NOALIAS const  QIn,

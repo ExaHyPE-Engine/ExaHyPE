@@ -65,7 +65,7 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     min_volume_h=min_h,
     max_volume_h=max_h,
     time_step_relaxation=args.time_step_relaxation,
-    use_enclave_tasking=args.use_enclave_tasking,
+    use_enclave_tasking=args.enclave_tasking,
     number_of_enclave_tasks=args.ntasks,
 )
 

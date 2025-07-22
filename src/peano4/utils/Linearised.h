@@ -3,28 +3,26 @@
 #pragma once
 
 #include "Globals.h"
-#include "tarch/accelerator/accelerator.h"
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 
 #include <bitset>
 
 // #define DLINEAR_USE_LOOKUP
-//  Default max value for precomputed lookup tables.
-//  Can be overridden at compile time: -DMaxTable=10
-#ifndef MaxTable
-#define MaxTable 16
+#ifndef MAX_TABLE
+#define MAX_TABLE 16
 #endif
-static_assert(MaxTable >= 2, "MaxTable must be at least 2.");
+static_assert(MAX_TABLE >= 2, "MAX_TABLE must be at least 2.");
 
 namespace peano4 {
   namespace utils {
-    constexpr int MaxIndexOfLinearisation = BasePowerExponent<MaxTable, Dimensions>::value; // Number of possible
-                                                                                            // entries in a
-                                                                                            // d-dimensional grid
+    constexpr int MaxIndexOfLinearisation = BasePowerExponent<MAX_TABLE, Dimensions>::value; // Number of possible
+                                                                                             // entries in a
+                                                                                             // d-dimensional grid
 
-    extern int                                lookupTableDLinearised[MaxIndexOfLinearisation * (MaxTable - 1)];
-    extern tarch::la::Vector<Dimensions, int> lookupTableDDeLinearised[MaxIndexOfLinearisation * (MaxTable - 1)];
+    extern int                                lookupTableDLinearised[MaxIndexOfLinearisation * (MAX_TABLE - 1)];
+    extern tarch::la::Vector<Dimensions, int> lookupTableDDeLinearised[MaxIndexOfLinearisation * (MAX_TABLE - 1)];
 
     inline GPUCallableMethod int getKeyForDLinearisedLookup(const tarch::la::Vector<Dimensions, int>& counter, int max);
     inline GPUCallableMethod int getKeyForDDeLinearisedLookup(int value, int max);
