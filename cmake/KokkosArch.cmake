@@ -6,8 +6,8 @@ string(REGEX MATCH "^(sm_|gfx|spir)(.+)$" _matched "${WITH_GPU_ARCH}")
 if(NOT _matched)
   message(FATAL_ERROR "Invalid GPU architecture: ${WITH_GPU_ARCH}")
 endif()
-set(_ARCH_PREFIX "${CMAKE_MATCH_1}"  CACHE INTERNAL "")
-set(_ARCH_SUFFIX "${CMAKE_MATCH_2}"  CACHE INTERNAL "")
+set(_ARCH_PREFIX "${CMAKE_MATCH_1}" CACHE INTERNAL "")
+set(_ARCH_SUFFIX "${CMAKE_MATCH_2}" CACHE INTERNAL "")
 
 # maps suffix→CMake tag
 set(_KOKKOS_CUDA_MAP

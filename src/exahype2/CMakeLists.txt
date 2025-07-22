@@ -22,10 +22,6 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
       add_sycl_to_target(TARGET ExaHyPE2Core${dimension}d_${mode_lower} SOURCES ${SOURCES})
     endif()
 
-    if(${AdaptiveCpp_FOUND})
-      add_sycl_to_target(TARGET ExaHyPE2Core${dimension}d_${mode_lower} SOURCES ${SOURCES})
-    endif()
-
     install(TARGETS ExaHyPE2Core${dimension}d_${mode_lower}
       EXPORT                      ${PROJECT_NAME}Targets
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}

@@ -4,10 +4,10 @@
 include(CheckCXXSourceRuns)
 include(CMakePushCheckState)
 
-set(_FILESYSTEM_TEST_RPOGRAM "
+set(_FILESYSTEM_TEST_PROGRAM "
 #include <iostream>
 
-#ifdef EXPERIMENTAL_FS
+#ifdef USE_EXPERIMENTAL_FS
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
 #else
@@ -21,65 +21,69 @@ int main(int argc, char* argv[]) {
   return 0;
 }")
 
-function(test_program filesystem_libraries use_experimental_fs is_ok)
+function(check_filesystem_support out_libs_var out_defines_var out_success_var use_experimental)
   cmake_push_check_state(RESET)
-  set(${is_ok} TRUE PARENT_SCOPE)
-  if(${use_experimental_fs})
-    set(CMAKE_REQUIRED_DEFINITIONS "-DEXPERIMENTAL_FS")
-    set(TEST_SUFFIX "EXPERIMENTAL")
+
+  set(${out_success_var} TRUE PARENT_SCOPE)
+
+  if(use_experimental)
+    set(CMAKE_REQUIRED_DEFINITIONS -DUSE_EXPERIMENTAL_FS)
+    set(TEST_SUFFIX EXPERIMENTAL)
   else()
-    set(TEST_SUFFIX "NATIVE")
+    set(TEST_SUFFIX NATIVE)
   endif()
 
-  check_cxx_source_runs("${_FILESYSTEM_TEST_RPOGRAM}" _FILESYSTEM_${TEST_SUFFIX})
+  set(lib_candidates "")
+  list(APPEND lib_candidates "") # First try: no explicit link
+  list(APPEND lib_candidates "stdc++fs" "c++fs") # Fallbacks
 
-  if(_FILESYSTEM_${TEST_SUFFIX})
-    # Compiler has a native support for std::filesystem
-    set(${filesystem_libraries} "" PARENT_SCOPE)
-  else()
-    set(CMAKE_REQUIRED_LIBRARIES "stdc++fs")
-    check_cxx_source_runs("${_FILESYSTEM_TEST_RPOGRAM}" _FILESYSTEM_STDCPPFS_${TEST_SUFFIX})
-
-    if(_FILESYSTEM_STDCPPFS_${TEST_SUFFIX})
-      set(${filesystem_libraries} "stdc++fs" PARENT_SCOPE)
+  set(lib_found "")
+  foreach(lib ${lib_candidates})
+    if(lib)
+      set(CMAKE_REQUIRED_LIBRARIES ${lib})
     else()
-      set(CMAKE_REQUIRED_LIBRARIES "c++fs")
-      check_cxx_source_runs("${_FILESYSTEM_TEST_RPOGRAM}" _FILESYSTEM_CPPFS_${TEST_SUFFIX})
+      unset(CMAKE_REQUIRED_LIBRARIES)
+    endif()
 
-      if(_FILESYSTEM_CPPFS_${TEST_SUFFIX})
-        set(${filesystem_libraries} "c++fs" PARENT_SCOPE)
-      else()
-        set(${is_ok} FALSE PARENT_SCOPE)
-      endif()
+    check_cxx_source_runs("${_FILESYSTEM_TEST_PROGRAM}" _FS_TEST_${TEST_SUFFIX}_${lib})
+
+    if(_FS_TEST_${TEST_SUFFIX}_${lib})
+      set(lib_found "${lib}")
+      break()
+    endif()
+  endforeach()
+
+  if(lib_found STREQUAL "" AND NOT _FS_TEST_${TEST_SUFFIX}_)
+    set(${out_success_var} FALSE PARENT_SCOPE)
+  else()
+    set(${out_libs_var} "${lib_found}" PARENT_SCOPE)
+    if(use_experimental)
+      set(${out_defines_var} "USE_EXPERIMENTAL_FS" PARENT_SCOPE)
+    else()
+      set(${out_defines_var} "" PARENT_SCOPE)
     endif()
   endif()
+
   cmake_pop_check_state()
 endfunction()
 
-set(Filesystem_LIBRARIES "")
-set(IS_OK FALSE)
-test_program(Filesystem_LIBRARIES FALSE IS_OK)
+set(Filesystem_LIBS "")
+set(Filesystem_DEFINES "")
+set(FILESYSTEM_SUPPORTED FALSE)
 
-IF(IS_OK)
-  set(IS_STD_FILESYSTEM_SUPPORT TRUE)
-else()
-  set(Filesystem_LIBRARIES "")
-  set(USE_EXPERIMENTAL_FS TRUE)
-  test_program(Filesystem_LIBRARIES TRUE IS_OK)
+check_filesystem_support(Filesystem_LIBS Filesystem_DEFINES FILESYSTEM_SUPPORTED FALSE)
 
-  if(IS_OK)
-    set(IS_STD_FILESYSTEM_SUPPORT FALSE)
-  else()
-    message(FATAL_ERROR "C++ compiler does not support std[::experimental]::filesystem")
-  endif()
+if(NOT FILESYSTEM_SUPPORTED)
+  check_filesystem_support(Filesystem_LIBS Filesystem_DEFINES FILESYSTEM_SUPPORTED TRUE)
 endif()
 
-if(DEFINED Filesystem_LIBRARIES)
-  if(Filesystem_LIBRARIES)
-    set_property(TARGET PeanoOptions APPEND PROPERTY INTERFACE_LINK_LIBRARIES ${Filesystem_LIBRARIES})
-  endif()
+if(NOT FILESYSTEM_SUPPORTED)
+  message(FATAL_ERROR "Your compiler does not support std::filesystem or std::experimental::filesystem.")
+endif()
 
-  if(NOT IS_STD_FILESYSTEM_SUPPORT)
-    set_property(TARGET PeanoOptions APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS EXPERIMENTAL_FS)
-  endif()
+if(Filesystem_LIBS)
+  set_property(TARGET PeanoOptions APPEND PROPERTY INTERFACE_LINK_LIBRARIES ${Filesystem_LIBS})
+endif()
+if(Filesystem_DEFINES)
+  set_property(TARGET PeanoOptions APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS ${Filesystem_DEFINES})
 endif()

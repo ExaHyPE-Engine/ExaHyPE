@@ -1,6 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.27)
 
 set(PEANO_PROJECT_NAME "Peano")
 set(PEANO_PROJECT_DESCRIPTION "Peano is an open source framework for solvers on dynamically adaptive Cartesian meshes")
