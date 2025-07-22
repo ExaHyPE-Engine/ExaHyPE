@@ -83,7 +83,7 @@ namespace toolbox {
      *
      * I recommend never to insert a particle directly, but always to run
      * through this routine and to combine it with a particle sorting step.
-     * On the one hand, thisensures that
+     * On the one hand, this ensures that
      * particles are inserted in a consistent way, i.e. stored next to their
      * closest neighbour. On the other hand, this ensures that a
      * particle is never assigned to a hanging vertex and then lost. If you
@@ -96,6 +96,9 @@ namespace toolbox {
      * - Find which vertex in the cell is the closest vertex.
      * - Set the particle state to local. As we know that we insert only into
      *   local cells, we can do this without any fear.
+     *
+     * @see updateContainedInAdjacentCellProperty() which is called by this
+     *   routine for newParticles.
      */
     template <typename Particle, typename ParticleSet>
     void insertParticleIntoCell(
@@ -117,17 +120,17 @@ namespace toolbox {
      * @see the explanation in Particle.py
      */
     void updateContainedInAdjacentCellProperty(
-      const peano4::datamanagement::CellMarker&  marker,
-      const std::bitset<Dimensions>&             assignedVertex,
-      auto&                                      particle
+      const peano4::datamanagement::CellMarker& marker,
+      const std::bitset<Dimensions>&            assignedVertex,
+      auto&                                     particle
     );
 
     /**
      * We are
      */
     void updateContainedInAdjacentCellProperty(
-      const peano4::datamanagement::VertexMarker&  marker,
-      auto&                                        particle
+      const peano4::datamanagement::VertexMarker& marker,
+      auto&                                       particle
     );
 
     /**
@@ -153,9 +156,9 @@ namespace toolbox {
      * @see the explanation in toolbox.particles.Particle
      */
     void updateContainedInAdjacentCellProperty(
-      const tarch::la::Vector< Dimensions, double >&  x,
-      const tarch::la::Vector< Dimensions, double >&  h,
-      auto&                                           particle
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
+      auto&                                        particle
     );
 
     bool particleAssignedToVertexWillBeLocal(

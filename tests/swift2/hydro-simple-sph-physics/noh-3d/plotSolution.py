@@ -19,7 +19,15 @@
 #
 ##############################################################################
 
+# ----------------------------------------------------------------------------
 # Computes the analytical solution of the Noh problem and plots the SPH answer
+#
+# Usage: python3 plotSolution.py <snapshot-time>
+#
+# The script will look for the snapshot output with simulation time closest to
+# the provided <snapshot-time> in `particles.pvd` and create a plot of that
+# time.
+# ----------------------------------------------------------------------------
 
 
 # Parameters
@@ -27,6 +35,8 @@ gas_gamma = 5.0 / 3.0  # Polytropic index
 rho0 = 1.0  # Background density
 P0 = 1.0e-6  # Background pressure
 v0 = 1
+
+plot_errorbars = False
 
 import matplotlib
 
@@ -53,10 +63,10 @@ time = reader.get_snapshot_time()
 
 x = partData.x[:, 0]
 y = partData.x[:, 1]
-z = partData.x[:, 1]
+z = partData.x[:, 2]
 vx = partData.v[:, 0]
 vy = partData.v[:, 1]
-vz = partData.v[:, 1]
+vz = partData.v[:, 2]
 u = partData.u
 #  S = partData.S # doesn't exist yet?
 P = partData.pressure
@@ -116,9 +126,10 @@ u_s = P_s / (rho_s * (gas_gamma - 1.0))  # internal energy
 s_s = P_s / rho_s**gas_gamma  # entropic function
 
 # Plot the interesting quantities
-plt.figure(figsize=(7, 7 / 1.6))
+fig = plt.figure(figsize=(7, 7 / 1.6))
+fig.suptitle(f"Noh 3D, t={time:.3f}")
 
-line_color = "C4"
+line_color = "C1"
 binned_color = "C2"
 binned_marker_size = 4
 
@@ -126,7 +137,7 @@ scatter_props = dict(
     marker=".",
     ms=1,
     markeredgecolor="none",
-    alpha=0.2,
+    alpha=0.4,
     zorder=-1,
     rasterized=True,
     linestyle="none",
@@ -141,43 +152,49 @@ cols = 2
 plt.subplot(rows, cols, 1)
 plt.plot(r, v, **scatter_props)
 plt.plot(x_s, v_s, "--", color=line_color, alpha=0.8, lw=1.2)
-plt.errorbar(r_bin, v_bin, yerr=v_sigma_bin, **errorbar_props)
+if plot_errorbars:
+    plt.errorbar(r_bin, v_bin, yerr=v_sigma_bin, **errorbar_props)
 plt.xlabel("${\\rm{Radius}}~r$", labelpad=0)
 plt.ylabel("${\\rm{Velocity}}~v_r$", labelpad=-4)
 plt.xlim(0, 0.5)
-plt.ylim(-1.2, 0.4)
+#  plt.ylim(-1.2, 0.4)
 
 # Density profile --------------------------------
 plt.subplot(rows, cols, 2)
 plt.plot(r, rho, **scatter_props)
 plt.plot(x_s, rho_s, "--", color=line_color, alpha=0.8, lw=1.2)
-plt.errorbar(r_bin, rho_bin, yerr=rho_sigma_bin, **errorbar_props)
+if plot_errorbars:
+    plt.errorbar(r_bin, rho_bin, yerr=rho_sigma_bin, **errorbar_props)
 plt.xlabel("${\\rm{Radius}}~r$", labelpad=0)
 plt.ylabel("${\\rm{Density}}~\\rho$", labelpad=0)
 plt.xlim(0, 0.5)
-plt.ylim(0.95, 19)
+#  plt.ylim(0.95, 19)
 
 # Pressure profile --------------------------------
 plt.subplot(rows, cols, 3)
 plt.plot(r, P, **scatter_props)
 plt.plot(x_s, P_s, "--", color=line_color, alpha=0.8, lw=1.2)
-plt.errorbar(r_bin, P_bin, yerr=P_sigma_bin, **errorbar_props)
+if plot_errorbars:
+    plt.errorbar(r_bin, P_bin, yerr=P_sigma_bin, **errorbar_props)
 plt.xlabel("${\\rm{Radius}}~r$", labelpad=0)
 plt.ylabel("${\\rm{Pressure}}~P$", labelpad=0)
 plt.xlim(0, 0.5)
-plt.ylim(-0.5, 11)
+#  plt.ylim(-0.5, 11)
 
 # Internal energy profile -------------------------
 plt.subplot(rows, cols, 4)
 plt.plot(r, u, **scatter_props)
 plt.plot(x_s, u_s, "--", color=line_color, alpha=0.8, lw=1.2)
-plt.errorbar(r_bin, u_bin, yerr=u_sigma_bin, **errorbar_props)
+if plot_errorbars:
+    plt.errorbar(r_bin, u_bin, yerr=u_sigma_bin, **errorbar_props)
 plt.xlabel("${\\rm{Radius}}~r$", labelpad=0)
 plt.ylabel("${\\rm{Internal~Energy}}~u$", labelpad=0)
 plt.xlim(0, 0.5)
-plt.ylim(-0.05, 0.8)
+#  plt.ylim(-0.05, 0.8)
+
 
 plt.tight_layout()
 
-plt.savefig("NohProfile.png", dpi=200)
-print("Saved NohProfile.png")
+fname = f"NohProfile{time:.4f}.png"
+plt.savefig(fname, dpi=200)
+print("Saved", fname)

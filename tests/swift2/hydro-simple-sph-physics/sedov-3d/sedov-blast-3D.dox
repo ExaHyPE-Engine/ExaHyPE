@@ -1,0 +1,36 @@
+/**
+
+ @page tests_swift2_hydro_simple_sph_sedov_blast_3D  Sedov Blast 3D (Simple SPH)
+
+
+Injects (relatively) high energy into the center of a uniform gas field, leading
+to a Sedov-Taylor blast. Here in 1D.
+See e.g. Section 4 in Springel and Hernquist, Mon. Not. R. Astron. Soc. 333,
+649–664 (2002).
+(https://ui.adsabs.harvard.edu/abs/2002MNRAS.333..649S/abstract)
+
+
+
+## Create the setup
+
+To create the setup and executable, use the
+
+	python3 sedov.py
+
+script. Consult the ```run.sh`` script for a possible configuration.
+
+
+## Postprocessing
+
+use the script
+
+        python3 plotSolution.py
+
+to generate the output plot. It should look something like this:
+
+
+  @image html SedovBlastN64.png
+
+ */
+
+

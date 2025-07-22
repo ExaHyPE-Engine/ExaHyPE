@@ -1,3 +1,4 @@
+#include "equation_of_state.h"
 #include "hydro_dimensions.h"
 #include "kernel_hydro.h"
 
@@ -17,6 +18,9 @@ void swift2::kernels::legacy::first_init_particle(Particle* particle) {
   particle->setSmoothingLengthConverged(false);
 
   // Artificial viscosity scheme
+  particle->setSoundSpeed(
+    eos::gas_soundspeed_from_internal_energy(particle->getU())
+  );
   particle->setV_sig_AV(2.0 * particle->getSoundSpeed());
   particle->setBalsara(0.0);
 

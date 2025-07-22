@@ -1,6 +1,6 @@
-#include <random>
-
 #include "peano4/utils/Loop.h"
+
+#include <random>
 
 
 namespace {
@@ -11,7 +11,11 @@ namespace {
 
 
 template <class T>
-void toolbox::particles::init(T& particle, const tarch::la::Vector<Dimensions, double>& x, double searchRadius) {
+void toolbox::particles::init(
+  T&                                           particle,
+  const tarch::la::Vector<Dimensions, double>& x,
+  double                                       searchRadius
+) {
 #if PeanoDebug > 0
   particle.setDebugX(x);
   particle.setDebugH(0.0);
@@ -29,32 +33,52 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(
   double                                       spacing,
   const tarch::la::Vector<Dimensions, double>& voxelX,
   const tarch::la::Vector<Dimensions, double>& voxelH,
-  bool                                         addNoise
+  bool                                         addNoise,
+  double                                       noiseScale
 ) {
   std::vector<T*> result;
 
   double continuousParticlesPerAxis = voxelH(0) / spacing;
-  int    particlesPerAxis           = static_cast<int>(std::floor(continuousParticlesPerAxis));
+  int particlesPerAxis = static_cast<int>(std::floor(continuousParticlesPerAxis)
+  );
   continuousParticlesPerAxis -= particlesPerAxis;
-  assertion4(continuousParticlesPerAxis >= 0.0, continuousParticlesPerAxis, particlesPerAxis, voxelH(0), spacing);
-  assertion4(continuousParticlesPerAxis <= 1.0, continuousParticlesPerAxis, particlesPerAxis, voxelH(0), spacing);
+  assertion4(
+    continuousParticlesPerAxis >= 0.0,
+    continuousParticlesPerAxis,
+    particlesPerAxis,
+    voxelH(0),
+    spacing
+  );
+  assertion4(
+    continuousParticlesPerAxis <= 1.0,
+    continuousParticlesPerAxis,
+    particlesPerAxis,
+    voxelH(0),
+    spacing
+  );
 
-  const double areaOfGridSpannedByCellLocalCartesianGridAlongOneAxis = particlesPerAxis * spacing;
-  assertion(tarch::la::smallerEquals(areaOfGridSpannedByCellLocalCartesianGridAlongOneAxis, voxelH(0)));
+  const double areaOfGridSpannedByCellLocalCartesianGridAlongOneAxis
+    = particlesPerAxis * spacing;
+  assertion(tarch::la::smallerEquals(
+    areaOfGridSpannedByCellLocalCartesianGridAlongOneAxis,
+    voxelH(0)
+  ));
 
   if (particlesPerAxis > 0) {
     const double particleSpacing = voxelH(0) / particlesPerAxis;
 
     const tarch::la::Vector<Dimensions, double>
-      offset = voxelX - 0.5 * areaOfGridSpannedByCellLocalCartesianGridAlongOneAxis;
+      offset = voxelX
+               - 0.5 * areaOfGridSpannedByCellLocalCartesianGridAlongOneAxis;
 
     dfor(k, particlesPerAxis) {
-      tarch::la::Vector<Dimensions, double> x = offset + particleSpacing * tarch::la::convertScalar<double>(k);
-      T*                                    newParticle = new T();
+      tarch::la::Vector<Dimensions, double>
+         x = offset + particleSpacing * tarch::la::convertScalar<double>(k);
+      T* newParticle = new T();
 
       if (addNoise) {
         for (int d = 0; d < Dimensions; d++) {
-          x(d) += (randomDist(e2) - 0.5) * particleSpacing;
+          x(d) += (randomDist(e2) - 0.5) * particleSpacing * noiseScale;
         }
       }
 
@@ -68,21 +92,29 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(
 
 
 template <class T>
-std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMesh(
-  double                                       spacing,
-  const tarch::la::Vector<Dimensions, double>& voxelX,
-  const tarch::la::Vector<Dimensions, double>& voxelH,
-  const tarch::la::Vector<Dimensions, double>& domainOffset,
-  const tarch::la::Vector<Dimensions, double>& domainSize,
-  bool                                         addNoise
-) {
+std::vector<T*> toolbox::particles::
+  createParticlesAlignedWithGlobalCartesianMesh(
+    double                                       spacing,
+    const tarch::la::Vector<Dimensions, double>& voxelX,
+    const tarch::la::Vector<Dimensions, double>& voxelH,
+    const tarch::la::Vector<Dimensions, double>& domainOffset,
+    const tarch::la::Vector<Dimensions, double>& domainSize,
+    bool                                         addNoise,
+    double                                       noiseScale
+  ) {
   static tarch::logging::Log _log("toolbox::particles");
   logTraceInWith4Arguments(
-    "createParticlesAlignedWithGlobalCartesianMesh(...)", spacing, voxelX, domainOffset, addNoise
+    "createParticlesAlignedWithGlobalCartesianMesh(...)",
+    spacing,
+    voxelX,
+    domainOffset,
+    addNoise
   );
   std::vector<T*> result;
 
-  tarch::la::Vector<Dimensions, double> biasedOffset = domainOffset + 0.5 * tarch::la::remainder(domainOffset, spacing);
+  tarch::la::Vector<Dimensions, double>
+    biasedOffset = domainOffset
+                   + 0.5 * tarch::la::remainder(domainOffset, spacing);
 
   tarch::la::Vector<Dimensions, int>    particlesPerAxis;
   tarch::la::Vector<Dimensions, double> firstParticleX;
@@ -103,20 +135,24 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
     if (tarch::la::greaterEquals(rightX, voxelX(d) + 0.5 * voxelH(d)) or tarch::la::greaterEquals(rightX, domainOffset(d) + domainSize(d)))
       rightParticleNumberAlongAxis--;
 
-    particlesPerAxis(d) = std::max(0, rightParticleNumberAlongAxis - leftParticleNumberAlongAxis + 1);
-    firstParticleX(d)   = biasedOffset(d) + spacing * leftParticleNumberAlongAxis;
+    particlesPerAxis(d) = std::max(
+      0,
+      rightParticleNumberAlongAxis - leftParticleNumberAlongAxis + 1
+    );
+    firstParticleX(d) = biasedOffset(d) + spacing * leftParticleNumberAlongAxis;
   }
 
   const double RelativeAccuracyForGeometricChecks = 0.01 * voxelH(0);
 
   dfor(k, particlesPerAxis) {
-    tarch::la::Vector<Dimensions, double> x = firstParticleX + spacing * tarch::la::convertScalar<double>(k);
+    tarch::la::Vector<Dimensions, double>
+      x = firstParticleX + spacing * tarch::la::convertScalar<double>(k);
 
     T* newParticle = new T();
 
     if (addNoise) {
       for (int d = 0; d < Dimensions; d++) {
-        x(d) += (randomDist(e2) - 0.5) * spacing;
+        x(d) += (randomDist(e2) - 0.5) * spacing * noiseScale;
       }
     }
 
@@ -124,6 +160,9 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
     result.push_back(newParticle);
   }
 
-  logTraceOutWith1Argument("createParticlesAlignedWithGlobalCartesianMesh(...)", result.size());
+  logTraceOutWith1Argument(
+    "createParticlesAlignedWithGlobalCartesianMesh(...)",
+    result.size()
+  );
   return result;
 }
