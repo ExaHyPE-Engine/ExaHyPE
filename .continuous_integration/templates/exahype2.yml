@@ -50,7 +50,7 @@
 .ExaHyPE2_ShallowWater:
   parallel:
     matrix:
-    - scenario: [artificial-tsunami, chile-tsunami, circular-island, dam-break-landslide, oscillating-lake, radial-dam-break, tafjord-landslide, three-mounds-channel, tohoku-tsunami]
+    - scenario: [artificial-tsunami, artificial-meteo-tsunami, chile-tsunami, circular-island, dam-break-landslide, oscillating-lake, radial-dam-break, tafjord-landslide, three-mounds-channel, tohoku-tsunami]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/shallow-water/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py;"
 
