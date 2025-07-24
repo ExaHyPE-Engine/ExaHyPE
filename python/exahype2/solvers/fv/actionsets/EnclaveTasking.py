@@ -50,7 +50,7 @@ class EnclaveTasking(AbstractFVActionSet):
 
     def __init__(self, solver):
         super(EnclaveTasking, self).__init__(solver)
-        self.guard = "not marker.willBeRefined() and not marker.hasBeenRefined() /*and marker.willBeEnclaveCell()*/"
+        self.guard = "not marker.willBeRefined() and not marker.hasBeenRefined() and marker.willBeEnclaveCell()"
         self.new_accessor = "fineGridCell" + solver._patch.name
         self.old_accessor = "fineGridCell" + solver._patch_reconstructed.name
         self.face_accessor = "fineGridFaces" + solver._patch_overlap_new.name
