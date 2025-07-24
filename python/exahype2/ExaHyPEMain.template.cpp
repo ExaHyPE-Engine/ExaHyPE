@@ -519,7 +519,7 @@ int main(int argc, char** argv) {
     }
 
     if (haveReceivedNonCriticalAssertion) {
-      logInfo("main()", "Terminated gracefully after noncritical assertion");
+      logWarning("main()", "Terminated gracefully after noncritical assertion");
       returnCode = EXIT_FAILURE;
     } else {
       // Print final timestep information

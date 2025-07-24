@@ -79,7 +79,7 @@ class UpdatePatch(AbstractFVActionSet):
     def _add_action_set_entries_to_dictionary(self, d):
         d["GUARD"] = self.guard
         d["ENCLAVE_GUARD"] = (
-            "false /*marker.willBeSkeletonCell()*/"
+            "marker.willBeSkeletonCell()"
             if self._solver._use_enclave_tasking
             else "true"
         )

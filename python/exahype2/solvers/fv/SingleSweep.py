@@ -105,7 +105,7 @@ class SingleSweep(FV):
 
     def create_action_sets(self):
         """
-        Call superclass routine and then reconfigure the update cell call.
+        Call superclass routine and then reconfigure for the single sweep setup.
         This operation is implicitly called via the superconstructor.
         """
         super(SingleSweep, self).create_action_sets()
@@ -119,7 +119,7 @@ class SingleSweep(FV):
             precision=self._storage_precision,
             guard="not marker.willBeRefined() and not marker.hasBeenRefined()"
             + (
-                " and /*marker.willBeSkeletonCell()*/ false"
+                " and marker.willBeSkeletonCell()"
                 if self._use_enclave_tasking
                 else ""
             ),
