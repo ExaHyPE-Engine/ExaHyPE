@@ -27,16 +27,16 @@ class HHS1(Scenario):
 
     def initial_conditions(self):
         return """
-        Q[s::rho] = 2.7;
-        Q[s::cp ] = 6.0;
-        Q[s::cs ] = 3.464;
+        Q[Shortcuts::rho] = 2.7;
+        Q[Shortcuts::cp ] = 6.0;
+        Q[Shortcuts::cs ] = 3.464;
 """
 
     def point_source():
         return """
   std::fill_n(forceVector, 9, 0.);
 
-  auto jacobian = Q[s::jacobian];
+  auto jacobian = Q[Shortcuts::jacobian];
 
   assertion2(n == 0, "Only a single pointSource for HHS1",n);
 
@@ -45,7 +45,7 @@ class HHS1(Scenario):
   
   double f = M0*t/(t0*t0)*std::exp(-t/t0);
   
-  forceVector[s::sigma + 4] = f;
+  forceVector[Shortcuts::sigma + 4] = f;
 
   for (int i = 0; i < NumberOfUnknowns; i++) {
     forceVector[i] = forceVector[i] / jacobian;

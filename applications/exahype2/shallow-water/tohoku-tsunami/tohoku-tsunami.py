@@ -23,10 +23,10 @@ initial_conditions = """
   const double displacement               = fieldParser.sampleDisplacement(x(0), x(1));
   const double bathymetryAfterEarthquake  = bathymetryBeforeEarthquake + displacement;
 
-  Q[s::h]  = -std::min(bathymetryBeforeEarthquake, 0.0);
-  Q[s::hu] = 0.0;
-  Q[s::hv] = 0.0;
-  Q[s::z]  = bathymetryAfterEarthquake;
+  Q[Shortcuts::h]  = -std::min(bathymetryBeforeEarthquake, 0.0);
+  Q[Shortcuts::hu] = 0.0;
+  Q[Shortcuts::hv] = 0.0;
+  Q[Shortcuts::z]  = bathymetryAfterEarthquake;
 """
 
 boundary_conditions = """

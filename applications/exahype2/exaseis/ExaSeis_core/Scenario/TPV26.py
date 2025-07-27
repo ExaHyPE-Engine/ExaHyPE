@@ -57,9 +57,9 @@ class TPV26(Scenario):
 
     def initial_conditions(self):
         return """
-      Q[s::rho] = 2.67;
-      Q[s::cp ] = 6.0;
-      Q[s::cs ] = 3.464;
+      Q[Shortcuts::rho] = 2.67;
+      Q[Shortcuts::cp ] = 6.0;
+      Q[Shortcuts::cs ] = 3.464;
 """
     
     def generate_required_files(self, order):

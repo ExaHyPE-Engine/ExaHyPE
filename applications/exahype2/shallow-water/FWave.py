@@ -56,12 +56,12 @@ fWave = r"""
   double uRight = 0.0;
 
   // Not const here as they may get reassigned due to boundary conditions
-  double hLeft = QL[s::h];
-  double hRight = QR[s::h];
-  double huLeft = QL[s::hu + normal];
-  double huRight = QR[s::hu + normal];
-  double bLeft = QL[s::z];
-  double bRight = QR[s::z];
+  double hLeft = QL[Shortcuts::h];
+  double hRight = QR[Shortcuts::h];
+  double huLeft = QL[Shortcuts::hu + normal];
+  double huRight = QR[Shortcuts::hu + normal];
+  double bLeft = QL[Shortcuts::z];
+  double bRight = QR[Shortcuts::z];
 
   //! Wet/dry state of our Riemann-problem
   WetDryState wetDryState = WetDryState::WetWet; // Assume everything is wet
@@ -214,8 +214,8 @@ fWave = r"""
 #endif
 
   // Set net-updates
-  FL[s::h] = hUpdateLeft;
-  FR[s::h] = hUpdateRight;
+  FL[Shortcuts::h] = hUpdateLeft;
+  FR[Shortcuts::h] = hUpdateRight;
   FL[normal + 1] = huUpdateLeft;
   FR[normal + 1] = huUpdateRight;
 

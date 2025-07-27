@@ -23,17 +23,17 @@ def boundary():
 
 def eigenvalue():
   return """
-  auto cp  = Q[s::cp];
-  auto cs  = Q[s::cs];
-  auto q_x = Q[s::metric_derivative + 0];
-  auto q_y = Q[s::metric_derivative + 1];
-  auto q_z = Q[s::metric_derivative + 2];
-  auto r_x = Q[s::metric_derivative + 3];
-  auto r_y = Q[s::metric_derivative + 4];
-  auto r_z = Q[s::metric_derivative + 5];
-  auto s_x = Q[s::metric_derivative + 6];
-  auto s_y = Q[s::metric_derivative + 7];
-  auto s_z = Q[s::metric_derivative + 8];
+  auto cp  = Q[Shortcuts::cp];
+  auto cs  = Q[Shortcuts::cs];
+  auto q_x = Q[Shortcuts::metric_derivative + 0];
+  auto q_y = Q[Shortcuts::metric_derivative + 1];
+  auto q_z = Q[Shortcuts::metric_derivative + 2];
+  auto r_x = Q[Shortcuts::metric_derivative + 3];
+  auto r_y = Q[Shortcuts::metric_derivative + 4];
+  auto r_z = Q[Shortcuts::metric_derivative + 5];
+  auto s_x = Q[Shortcuts::metric_derivative + 6];
+  auto s_y = Q[Shortcuts::metric_derivative + 7];
+  auto s_z = Q[Shortcuts::metric_derivative + 8];
 
   double lambda[9] = {0.};
 
@@ -54,20 +54,20 @@ def eigenvalue():
 
 def flux():
   return """
-  auto sigma_xx = Q[s::sigma + 0];
-  auto sigma_yy = Q[s::sigma + 1];
-  auto sigma_zz = Q[s::sigma + 2];
-  auto sigma_xy = Q[s::sigma + 3];
-  auto sigma_xz = Q[s::sigma + 4];
-  auto sigma_yz = Q[s::sigma + 5];
+  auto sigma_xx = Q[Shortcuts::sigma + 0];
+  auto sigma_yy = Q[Shortcuts::sigma + 1];
+  auto sigma_zz = Q[Shortcuts::sigma + 2];
+  auto sigma_xy = Q[Shortcuts::sigma + 3];
+  auto sigma_xz = Q[Shortcuts::sigma + 4];
+  auto sigma_yz = Q[Shortcuts::sigma + 5];
 
-  auto jacobian = Q[s::jacobian];
+  auto jacobian = Q[Shortcuts::jacobian];
 
   switch (normal) {
     case 0: {
-      auto q_x = Q[s::metric_derivative + 0];
-      auto q_y = Q[s::metric_derivative + 1];
-      auto q_z = Q[s::metric_derivative + 2];
+      auto q_x = Q[Shortcuts::metric_derivative + 0];
+      auto q_y = Q[Shortcuts::metric_derivative + 1];
+      auto q_z = Q[Shortcuts::metric_derivative + 2];
       F[0]       = -jacobian * (q_x * sigma_xx + q_y * sigma_xy + q_z * sigma_xz);
       F[1]       = -jacobian * (q_x * sigma_xy + q_y * sigma_yy + q_z * sigma_yz);
       F[2]       = -jacobian * (q_x * sigma_xz + q_y * sigma_yz + q_z * sigma_zz);
@@ -79,9 +79,9 @@ def flux():
       F[8]       = 0.0;
     } break;
     case 1: {
-      auto r_x = Q[s::metric_derivative + 3];
-      auto r_y = Q[s::metric_derivative + 4];
-      auto r_z = Q[s::metric_derivative + 5];
+      auto r_x = Q[Shortcuts::metric_derivative + 3];
+      auto r_y = Q[Shortcuts::metric_derivative + 4];
+      auto r_z = Q[Shortcuts::metric_derivative + 5];
       F[0]       = -jacobian * (r_x * sigma_xx + r_y * sigma_xy + r_z * sigma_xz);
       F[1]       = -jacobian * (r_x * sigma_xy + r_y * sigma_yy + r_z * sigma_yz);
       F[2]       = -jacobian * (r_x * sigma_xz + r_y * sigma_yz + r_z * sigma_zz);
@@ -93,9 +93,9 @@ def flux():
       F[8]       = 0.0;
     } break;
     case 2: {
-      auto s_x = Q[s::metric_derivative + 6];
-      auto s_y = Q[s::metric_derivative + 7];
-      auto s_z = Q[s::metric_derivative + 8];
+      auto s_x = Q[Shortcuts::metric_derivative + 6];
+      auto s_y = Q[Shortcuts::metric_derivative + 7];
+      auto s_z = Q[Shortcuts::metric_derivative + 8];
       F[0]       = -jacobian * (s_x * sigma_xx + s_y * sigma_xy + s_z * sigma_xz);
       F[1]       = -jacobian * (s_x * sigma_xy + s_y * sigma_yy + s_z * sigma_yz);
       F[2]       = -jacobian * (s_x * sigma_xz + s_y * sigma_yz + s_z * sigma_zz);
@@ -116,9 +116,9 @@ def ncp():
       auto u_q = deltaQ[0];
       auto v_q = deltaQ[1];
       auto w_q = deltaQ[2];
-      auto q_x = Q[s::metric_derivative + 0];
-      auto q_y = Q[s::metric_derivative + 1];
-      auto q_z = Q[s::metric_derivative + 2];
+      auto q_x = Q[Shortcuts::metric_derivative + 0];
+      auto q_y = Q[Shortcuts::metric_derivative + 1];
+      auto q_z = Q[Shortcuts::metric_derivative + 2];
       BTimesDeltaQ[0]  = 0;
       BTimesDeltaQ[1]  = 0;
       BTimesDeltaQ[2]  = 0;
@@ -133,9 +133,9 @@ def ncp():
       auto u_r = deltaQ[0];
       auto v_r = deltaQ[1];
       auto w_r = deltaQ[2];
-      auto r_x = Q[s::metric_derivative + 3];
-      auto r_y = Q[s::metric_derivative + 4];
-      auto r_z = Q[s::metric_derivative + 5];
+      auto r_x = Q[Shortcuts::metric_derivative + 3];
+      auto r_y = Q[Shortcuts::metric_derivative + 4];
+      auto r_z = Q[Shortcuts::metric_derivative + 5];
       BTimesDeltaQ[0]  = 0;
       BTimesDeltaQ[1]  = 0;
       BTimesDeltaQ[2]  = 0;
@@ -150,9 +150,9 @@ def ncp():
       auto u_s = deltaQ[0];
       auto v_s = deltaQ[1];
       auto w_s = deltaQ[2];
-      auto s_x = Q[s::metric_derivative + 6];
-      auto s_y = Q[s::metric_derivative + 7];
-      auto s_z = Q[s::metric_derivative + 8];
+      auto s_x = Q[Shortcuts::metric_derivative + 6];
+      auto s_y = Q[Shortcuts::metric_derivative + 7];
+      auto s_z = Q[Shortcuts::metric_derivative + 8];
       BTimesDeltaQ[0]  = 0;
       BTimesDeltaQ[1]  = 0;
       BTimesDeltaQ[2]  = 0;
@@ -168,12 +168,12 @@ def ncp():
 
 def multiplyMaterialParameterMatrix():
   return """
-  auto rho      = Q[s::rho];
-  auto c_p      = Q[s::cp];
-  auto c_s      = Q[s::cs];
+  auto rho      = Q[Shortcuts::rho];
+  auto c_p      = Q[Shortcuts::cp];
+  auto c_s      = Q[Shortcuts::cs];
   auto mu       = rho * c_s * c_s;
   auto lambda   = rho * c_p * c_p - 2 * mu;
-  auto jacobian = Q[s::jacobian];
+  auto jacobian = Q[Shortcuts::jacobian];
   auto rho_inv  = 1.0 / (rho * jacobian);
 
   // identical in all dimensions so no need for switch
@@ -202,7 +202,7 @@ def point_source():
   return """
   std::fill_n(forceVector, 9, 0.);
 
-  auto jacobian = Q[s::jacobian];
+  auto jacobian = Q[Shortcuts::jacobian];
 
   assertion2(n == 0, "Only a single pointSource for LOH1",n);
 
@@ -211,7 +211,7 @@ def point_source():
   
   double f = M0*t/(t0*t0)*std::exp(-t/t0);
   
-  forceVector[s::sigma + 4] = f;
+  forceVector[Shortcuts::sigma + 4] = f;
 
   for (int i = 0; i < NumberOfUnknowns; i++) {
     forceVector[i] = forceVector[i] / jacobian;

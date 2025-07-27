@@ -12,20 +12,20 @@ from HLLEM import hllem
 initial_conditions = """
   const double omega = std::sqrt(0.2 * g);
 
-  Q[s::z] = 0.1 * (std::pow(x[0], 2) + std::pow(x[1], 2));
-  Q[s::h] = std::fmax(0.0, 0.05 * (2 * x[0] * std::cos(omega * 0) + 2 * x[1] * std::sin(omega * 0)) + 0.075 - Q[s::z]);
-  Q[s::hu] = 0.5 * omega * std::sin(omega * 0) * Q[s::h];
-  Q[s::hv] = 0.5 * omega * std::cos(omega * 0) * Q[s::h];
+  Q[Shortcuts::z] = 0.1 * (std::pow(x[0], 2) + std::pow(x[1], 2));
+  Q[Shortcuts::h] = std::fmax(0.0, 0.05 * (2 * x[0] * std::cos(omega * 0) + 2 * x[1] * std::sin(omega * 0)) + 0.075 - Q[Shortcuts::z]);
+  Q[Shortcuts::hu] = 0.5 * omega * std::sin(omega * 0) * Q[Shortcuts::h];
+  Q[Shortcuts::hv] = 0.5 * omega * std::cos(omega * 0) * Q[Shortcuts::h];
 
-  //Q[s::h] = 0.025 * (1.0 - std::sqrt((x(0) * x(0)) + (x(1) * x(1))));
-  //Q[s::z] = -0.2 * (1.0 - std::sqrt((x(0) * x(0)) + (x(1) * x(1)))) - 0.1;
+  //Q[Shortcuts::h] = 0.025 * (1.0 - std::sqrt((x(0) * x(0)) + (x(1) * x(1))));
+  //Q[Shortcuts::z] = -0.2 * (1.0 - std::sqrt((x(0) * x(0)) + (x(1) * x(1)))) - 0.1;
 """
 
 boundary_conditions = """
-  Qoutside[s::h]  = Qinside[s::h];
-  Qoutside[s::hu] = -Qinside[s::hu];
-  Qoutside[s::hv] = -Qinside[s::hv];
-  Qoutside[s::z]  = Qinside[s::z];
+  Qoutside[Shortcuts::h]  = Qinside[Shortcuts::h];
+  Qoutside[Shortcuts::hu] = -Qinside[Shortcuts::hu];
+  Qoutside[Shortcuts::hv] = -Qinside[Shortcuts::hv];
+  Qoutside[Shortcuts::z]  = Qinside[Shortcuts::z];
 """
 
 refinement_criterion = """

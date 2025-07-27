@@ -28,9 +28,9 @@ class Zugspitze(Scenario):
 
     def initial_conditions(self):
         return """
-        Q[s::rho] = 2.67;
-        Q[s::cp ] = 6.0;
-        Q[s::cs ] = 3.464;
+        Q[Shortcuts::rho] = 2.67;
+        Q[Shortcuts::cp ] = 6.0;
+        Q[Shortcuts::cs ] = 3.464;
 """
 
     #TODO: is this point source correct?
@@ -38,11 +38,9 @@ class Zugspitze(Scenario):
     # and is a 1-to-1 copy of LOH1
     def point_source(self):
         return """
-  VariableShortcutsElasticSolver s;
-
   std::fill_n(forceVector, 9, 0.);
 
-  auto jacobian = Q[s.jacobian];
+  auto jacobian = Q[Shortcuts::jacobian];
 
   assertion2(n == 0, "Only a single pointSource for Zugspitze",n);
 
@@ -53,7 +51,7 @@ class Zugspitze(Scenario):
   
   double f =  M0*t/(t0*t0)*std::exp(-t/t0);
   
-  forceVector[s.sigma + 4] = f;
+  forceVector[Shortcuts::sigma + 4] = f;
 
   for (int i = 0; i < NumberOfUnknowns; i++) {
     forceVector[i] = forceVector[i] / jacobian;

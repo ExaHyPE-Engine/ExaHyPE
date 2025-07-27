@@ -10,26 +10,26 @@ sys.path.insert(0, os.path.abspath(".."))
 from PDE import max_eigenvalue, flux
 
 initial_conditions = """
-  Q[s::rho]       = 1.0;
-  Q[s::rhoU + 0]  = 0.0;
-  Q[s::rhoU + 1]  = 0.0;
+  Q[Shortcuts::rho]       = 1.0;
+  Q[Shortcuts::rhoU + 0]  = 0.0;
+  Q[Shortcuts::rhoU + 1]  = 0.0;
 #if Dimensions == 2
-  Q[s::rhoE]      = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2)) < 0.2) ? (1.0) : (1.01));
+  Q[Shortcuts::rhoE]      = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2)) < 0.2) ? (1.0) : (1.01));
 #else
-  Q[s::rhoU + 2]  = 0.0;
-  Q[s::rhoE]      = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2) + std::pow(0.5 - x(2), 2)) < 0.2) ? (1.0) : (1.01));
+  Q[Shortcuts::rhoU + 2]  = 0.0;
+  Q[Shortcuts::rhoE]      = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2) + std::pow(0.5 - x(2), 2)) < 0.2) ? (1.0) : (1.01));
 #endif
 """
 
 boundary_conditions = """
   // Reflective boundary conditions
-  Qoutside[s::rho]      = Qinside[s::rho];
-  Qoutside[s::rhoU + 0] = -Qinside[s::rhoU + 0];
-  Qoutside[s::rhoU + 1] = -Qinside[s::rhoU + 1];
+  Qoutside[Shortcuts::rho]      = Qinside[Shortcuts::rho];
+  Qoutside[Shortcuts::rhoU + 0] = -Qinside[Shortcuts::rhoU + 0];
+  Qoutside[Shortcuts::rhoU + 1] = -Qinside[Shortcuts::rhoU + 1];
 #if Dimensions == 3
-  Qoutside[s::rhoU + 2] = -Qinside[s::rhoU + 2];
+  Qoutside[Shortcuts::rhoU + 2] = -Qinside[Shortcuts::rhoU + 2];
 #endif
-  Qoutside[s::rhoE]     = Qinside[s::rhoE];
+  Qoutside[Shortcuts::rhoE]     = Qinside[Shortcuts::rhoE];
 """
 
 refinement_criterion = """

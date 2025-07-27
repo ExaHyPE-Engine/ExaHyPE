@@ -15,15 +15,15 @@ void tutorials::exahype2::acoustic::PlanarAcousticSolver::initialCondition(
   // Simple translation in positive diagonal direction
   const double val = cos(-std::numbers::pi * (x[0] + x[1]));
 
-  Q[s::v + 0] = val;
-  Q[s::v + 1] = val;
+  Q[Shortcuts::v + 0] = val;
+  Q[Shortcuts::v + 1] = val;
 
   constexpr double K0  = 4.0;
   constexpr double rho = 1.0;
 
   // These are defined by the eigenvector of the plane wave operator
   const double kr = std::sqrt(2 * K0 * rho);
-  Q[s::p]         = kr * val;
+  Q[Shortcuts::p]         = kr * val;
 }
 
 void tutorials::exahype2::acoustic::PlanarAcousticSolver::boundaryConditions(
@@ -66,13 +66,13 @@ void tutorials::exahype2::acoustic::PlanarAcousticSolver::flux(
 
   switch (normal) {
   case 0: // Flux in x-direction
-    F[s::p]     = K0 * Q[s::v + normal];
-    F[s::v + 0] = Q[s::p] / rho;
-    F[s::v + 1] = 0.0;
+    F[Shortcuts::p]     = K0 * Q[Shortcuts::v + normal];
+    F[Shortcuts::v + 0] = Q[Shortcuts::p] / rho;
+    F[Shortcuts::v + 1] = 0.0;
     break;
   case 1: // Flux in y-direction
-    F[s::p]     = K0 * Q[s::v + normal];
-    F[s::v + 0] = 0.0;
-    F[s::v + 1] = Q[s::p] / rho;
+    F[Shortcuts::p]     = K0 * Q[Shortcuts::v + normal];
+    F[Shortcuts::v + 0] = 0.0;
+    F[Shortcuts::v + 1] = Q[Shortcuts::p] / rho;
   }
 }

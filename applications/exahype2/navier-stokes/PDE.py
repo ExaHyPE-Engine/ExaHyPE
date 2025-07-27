@@ -2,12 +2,12 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 compute_primitive_variables = r"""
-  const auto irho = 1.0 / Q[s::rho];
+  const auto irho = 1.0 / Q[Shortcuts::rho];
 
-  const auto u0 = Q[s::rhoU + 0] * irho;
-  const auto u1 = Q[s::rhoU + 1] * irho;
+  const auto u0 = Q[Shortcuts::rhoU + 0] * irho;
+  const auto u1 = Q[Shortcuts::rhoU + 1] * irho;
 #if Dimensions == 3
-  const auto u2 = Q[s::rhoU + 2] * irho;
+  const auto u2 = Q[Shortcuts::rhoU + 2] * irho;
   const auto u2sq = u2 * u2;
 #else
   const auto u2sq = 0.0;
@@ -20,7 +20,7 @@ compute_primitive_variables = r"""
 #endif
 
   const auto uSq = u0 * u0 + u1 * u1 + u2sq;
-  const auto internalE = Q[s::rhoE] - 0.5 * Q[s::rho] * uSq;
+  const auto internalE = Q[Shortcuts::rhoE] - 0.5 * Q[Shortcuts::rho] * uSq;
   const auto p = (GAMMA - 1.0) * internalE;
 """
 
@@ -34,15 +34,15 @@ max_eigenvalue = r"""
 flux = r"""
   {compute_primitive_variables}
 
-  F[s::rho] = Q[s::rhoU + normal];
+  F[Shortcuts::rho] = Q[Shortcuts::rhoU + normal];
 
-  F[s::rhoU + 0] = Q[s::rhoU + 0] * u_n;
-  F[s::rhoU + 1] = Q[s::rhoU + 1] * u_n;
+  F[Shortcuts::rhoU + 0] = Q[Shortcuts::rhoU + 0] * u_n;
+  F[Shortcuts::rhoU + 1] = Q[Shortcuts::rhoU + 1] * u_n;
 #if Dimensions == 3
-  F[s::rhoU + 2] = Q[s::rhoU + 2] * u_n;
+  F[Shortcuts::rhoU + 2] = Q[Shortcuts::rhoU + 2] * u_n;
 #endif
 
-  F[s::rhoU + normal] += p;
+  F[Shortcuts::rhoU + normal] += p;
 
-  F[s::rhoE] = (Q[s::rhoE] + p) * u_n;
+  F[Shortcuts::rhoE] = (Q[Shortcuts::rhoE] + p) * u_n;
 """.format(compute_primitive_variables=compute_primitive_variables)

@@ -9,8 +9,6 @@ namespace ExaSeis {
     static void metricDerivatives(
       double dudx[][num_nodes], const T* const coordinates, const double* const dx, T* derivatives
     ) {
-      using s = Shortcuts;
-
       T x_der_x, x_der_y, x_der_z;
       T y_der_x, y_der_y, y_der_z;
       T z_der_x, z_der_y, z_der_z;
@@ -21,15 +19,15 @@ namespace ExaSeis {
         for (int j = 0; j < num_nodes; j++) {
           for (int i = 0; i < num_nodes; i++) {
 
-            computeDerivatives_x_3D(dudx, k, j, i, coordinates, s::curve_grid + 0, x_der_x, dx[0]);
-            computeDerivatives_y_3D(dudx, k, j, i, coordinates, s::curve_grid + 0, x_der_y, dx[1]);
-            computeDerivatives_z_3D(dudx, k, j, i, coordinates, s::curve_grid + 0, x_der_z, dx[2]);
-            computeDerivatives_x_3D(dudx, k, j, i, coordinates, s::curve_grid + 1, y_der_x, dx[0]);
-            computeDerivatives_y_3D(dudx, k, j, i, coordinates, s::curve_grid + 1, y_der_y, dx[1]);
-            computeDerivatives_z_3D(dudx, k, j, i, coordinates, s::curve_grid + 1, y_der_z, dx[2]);
-            computeDerivatives_x_3D(dudx, k, j, i, coordinates, s::curve_grid + 2, z_der_x, dx[0]);
-            computeDerivatives_y_3D(dudx, k, j, i, coordinates, s::curve_grid + 2, z_der_y, dx[1]);
-            computeDerivatives_z_3D(dudx, k, j, i, coordinates, s::curve_grid + 2, z_der_z, dx[2]);
+            computeDerivatives_x_3D(dudx, k, j, i, coordinates, Shortcuts::curve_grid + 0, x_der_x, dx[0]);
+            computeDerivatives_y_3D(dudx, k, j, i, coordinates, Shortcuts::curve_grid + 0, x_der_y, dx[1]);
+            computeDerivatives_z_3D(dudx, k, j, i, coordinates, Shortcuts::curve_grid + 0, x_der_z, dx[2]);
+            computeDerivatives_x_3D(dudx, k, j, i, coordinates, Shortcuts::curve_grid + 1, y_der_x, dx[0]);
+            computeDerivatives_y_3D(dudx, k, j, i, coordinates, Shortcuts::curve_grid + 1, y_der_y, dx[1]);
+            computeDerivatives_z_3D(dudx, k, j, i, coordinates, Shortcuts::curve_grid + 1, y_der_z, dx[2]);
+            computeDerivatives_x_3D(dudx, k, j, i, coordinates, Shortcuts::curve_grid + 2, z_der_x, dx[0]);
+            computeDerivatives_y_3D(dudx, k, j, i, coordinates, Shortcuts::curve_grid + 2, z_der_y, dx[1]);
+            computeDerivatives_z_3D(dudx, k, j, i, coordinates, Shortcuts::curve_grid + 2, z_der_z, dx[2]);
 
             T jacobian = x_der_x * (y_der_y * z_der_z - y_der_z * z_der_y)
                               - x_der_y * (y_der_x * z_der_z - y_der_z * z_der_x)
