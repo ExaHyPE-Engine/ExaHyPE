@@ -25,7 +25,7 @@ Again, the extensions are kind of tools that allow you to write simulations for 
 They are typically not "ready to use" products, even though some of these applications can almost be used as such.
 
 <br /><br />
-<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+<div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
 Peano (with any extension) is <b>not</b> a code. It is a tool to build your code. 
 However, some of the applications built on top of Peano with all its toolboxes and extensions provide "ready to use" options.
 All components are integrated into one repository, one code base, and documented on these pages.
@@ -40,13 +40,11 @@ All components are integrated into one repository, one code base, and documented
 - Getting started
   - @subpage page_installation_home
   - @subpage page_compiler_specific_settings_home
-  - @subpage page_third_party_home
   - @subpage page_architecture_home
   - @subpage page_faq_home
 - Contributing
   - @subpage page_conventions_home
   - @subpage page_version_control_home
-  - @subpage page_documentation_home
   - @subpage page_continuous_integration
 - @subpage page_tutorials_overview
 - Extensions

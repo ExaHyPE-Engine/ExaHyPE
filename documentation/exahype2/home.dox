@@ -18,40 +18,45 @@ ExaHyPE 2 is a rewrite of the ExaHyPE engine developed under the umbrella of the
 ExaHyPE has received funding from the European Union’s Horizon 2020 research
 and innovation programme under grant agreement No 671698 (ExaHyPE).
 
-
 - \subpage page_exahype_faq
-- \subpage page_exahype_solvers
 - Applications and user guides
   - \subpage page_exahype2_tutorials
+  - \subpage page_symhype_tutorials
   - \subpage page_exahype_applications
   - \subpage page_exahype_benchmarks
-- Realisation of numerics
+- Solvers
   - \subpage documentation_exahype2_solvers_finite_volumes
-  - \subpage exahype2_fv_rusanov
   - \subpage exahype2_dg
   - \subpage exahype2_dg_DG_AMD
   - \subpage documentation_exahype2_solvers_aderdg
   - \subpage documentation_exahype2_solvers_enclave_solvers
-- Core functionality, numerics and ingredients
+- Numerics (Explanation of core numerical ingredients)
+  - \subpage page_tutorials_exahype2_numerics_finite_volumes
+  - \subpage page_tutorials_exahype2_numerics_discontinous-Galerkin
+  - \subpage page_tutorials_exahype2_numerics_finite-differences
+  - \subpage page_tutorials_exahype2_numerics_Runge-Kutta
+  - \subpage page_tutorials_exahype2_numerics_ADER-DG
+- Core functionality
   - \subpage page_exahype_tracer
   - \subpage page_exahype_boundary_conditions
   - \subpage page_exahype_amr
-  - \subpage benchmarks_peano4_interpolation_restriction_performance
 - Postprocessing and data analysis
   - \subpage page_exahype_visualisation
   - \subpage page_exahype_checkpointing
   - \subpage page_exahype_extend-visualisation
-- Advanced features
-  - \subpage page_exahype2_coupling
 - HPC  
   - \subpage page_exahype_runtime_analysis
   - \subpage page_exahype_performance_optimisation
   - \subpage page_exahype_parallelisation
   - \subpage page_exahype_multicore
   - \subpage page_exahype_gpu
-- Utilities
+- Miscellaneous
   - \subpage exahype2_enumerator
-
+  - \subpage tutorials_exahype2_design-patterns
+  - \subpage tutorials_exahype_gpu
+  - \subpage page_exahype2_coupling
+  - \subpage tutorials_exahype2_coupling
+  - \subpage tutorials_exahype2_additional_mesh_sweeps
 
 # Building the ExaHyPE 2 extension
 

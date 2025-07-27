@@ -1,0 +1,83 @@
+/**
+
+@page page_tutorials_symhype_advection The Advection Equation
+
+\tableofcontents
+
+# Advection Equation
+
+This is one of the simplest equations we can define and it appears as follows:
+
+@f$
+    \frac{\partial}{\partial t}\left(
+    \begin{array}{lr} q_x \\
+                      q_y \\
+                      q_z
+                      \end{array} \right) +
+    \nabla \begin{pmatrix}
+                      q_x  & 0   & 0 \\
+                      0    & q_y & 0 \\
+                      0    & 0   & q_z
+    \end{pmatrix}  = \vec{0}
+@f$
+
+This equation describes the transport of a quantity q by the motion of a fluid, such as the movement of a particle in a river.
+
+To implement this equation, the following things are needed: the initial condition,
+the boundary conditions, the maximal eigenvalue, the flux, and (optionally) the refinement criterion.
+
+
+## Initial Conditions
+
+We start with the initial conditions: here we define a starting configuration in which the quantity in direction i is equal to the
+position in that direction x_i.
+
+
+## Boundary Conditions
+
+Then we can define our boundary conditions.
+You can choose any boundary conditions you prefer but we have chosen to use the
+homogeneous Neumann boundary conditions.
+
+
+## Eigenvalues
+
+Next, we can define the largest eigenvalue of our system.
+This is important because it defines a lot of the behaviour of the PDE,
+and among others the maximum allowable timestep for which a lot of solvers remain stable.
+The eigenvalues of the advection equations are equal to the velocity of the fluid, which here we set uniformly to 1.
+
+
+## Flux
+
+Finally, let's define our flux in x- and y-direction according to our advection equation.
+The directions of the flux are defined by the normal parameter.
+This parameter defines through which surface, and therefore in which direction,
+the flux is being computed. Here if the normal is 0, we are computing the flux in the x-direction and if the normal is 1, we are computing the flux in the y-direction.
+For higher dimensions, there would logically be additional directions to implement the flux in.
+
+Our fluxes in x- and y-directions are:
+
+@f$
+    F_x = \begin{pmatrix}
+                      u_x \\
+                      0 \\
+                      0
+    \end{pmatrix},
+    F_y =\begin{pmatrix}
+                      0 \\
+                      u_y \\
+                      0
+    \end{pmatrix}
+@f$
+
+
+## Result
+
+| t=0.0 s                     |  t=0.5 s                   |
+| :--------------------------:|:-------------------------: |
+| ![](Advection2D_start.png) | ![](Advection2D_end.png)  |
+
+The measured quantity in x-direction respectively at time t=0.0 s and t=0.5 s.
+
+*/

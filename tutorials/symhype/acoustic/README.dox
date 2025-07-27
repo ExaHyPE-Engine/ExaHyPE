@@ -1,0 +1,58 @@
+/**
+
+@page page_tutorials_symhype_acoustic The Acoustic Wave Equation
+
+\tableofcontents
+
+# Two-dimensional Acoustic Wave Equation
+
+The acoustic wave equation describes the propagation of a wave through a material.
+This equation assumes that all movements are only small perturbations over the background flow field.
+They can be obtained by linearising the more general Euler equation over this background field.
+This clearly cannot work for complex flows, e.g., for supersonic “booms”.
+We describe our material by the parameters K_0, which is the so-called bulk-modulus and by the density @f$ \rho_0 @f$.
+Waves propagate through the material with a velocity of @f$ c=\sqrt{\rho K_0} @f$.
+
+We solve here for velocity v and pressure p in one dimension
+
+@f$
+    \partial_t \begin{pmatrix}
+                p\\v_x\\v_y
+               \end{pmatrix}
+               + \nabla \cdot F
+               \begin{pmatrix}
+                p\\v_x\\v_y
+               \end{pmatrix} = 0
+@f$
+
+Where v_x and v_y denote the velocity in x- and y-direction respectively.
+
+Further, the flux is given by:
+
+@f$
+    F = \left[
+       \begin{pmatrix}
+                0 & K_0 & 0\\
+                \frac{1}{\rho_0} & 0 & 0\\
+                0 & 0 & 0
+               \end{pmatrix},
+               \begin{pmatrix}
+                0 & 0 & K_0\\
+                0 & 0 & 0\\
+                \frac{1}{\rho_0} & 0 & 0
+               \end{pmatrix} \right]
+@f$
+
+The eigenvalues of the flux are -c, 0 and c.
+These equations are telling us that the change in time of the velocity is proportional to the gradient of pressure.
+
+
+## Result
+
+| t=0.5 s                    |  t=1.0 s                   |
+| :-------------------------:|:-------------------------: |
+| ![](Acoustic2D_start.png) | ![](Acoustic2D_end.png)   |
+
+The computed pressure of the 2D acoustic wave equation at times t=0.5 s and t=1.0 s.
+
+*/

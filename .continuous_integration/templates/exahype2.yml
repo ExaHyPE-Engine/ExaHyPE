@@ -33,11 +33,17 @@
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-limiting; PYTHONPATH=$CI_PROJECT_DIR/python python3 $test.py; OMP_NUM_THREADS=1 ./ADERDG-Limiting"
 
 .ExaHyPE2_Tutorials:
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/exahype2/acoustic; PYTHONPATH=$CI_PROJECT_DIR/python ipython Acoustic.ipynb;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd documentation/exahype2/tutorials; PYTHONPATH=$CI_PROJECT_DIR/python ipython SWE.ipynb;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd documentation/exahype2/tutorials; PYTHONPATH=$CI_PROJECT_DIR/python python3 euler.py;"
+
+.SymHyPE_Tutorials:
   parallel:
     matrix:
     - tutorial: [euler, acoustic, elastic, advection, swe]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/exahype2/symhype/$tutorial; PYTHONPATH=$CI_PROJECT_DIR/python python3 $tutorial.py;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/symhype/$tutorial; PYTHONPATH=$CI_PROJECT_DIR/python python3 $tutorial.py;"
 
 .ExaHyPE2_NavierStokes:
   parallel:

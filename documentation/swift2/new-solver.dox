@@ -374,7 +374,7 @@ particles interact if:
 Without the or, we could end up with non-symmetric forces.
 
 
-<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
+<div style="color:Black ; background-color: #fcc ; padding: 10px; border: 1px solid green;">
 Due to the symmetry the force calculation, the smoothing length has to be at
 most @f$ 1/\gamma_{\text{kernel}} \approx 1/2@f$ of the search radius.
 Otherwise, we miss out on particles.
@@ -464,7 +464,7 @@ the compute kernel without these internal checks:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;">
+<div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid green;">
 If often start with kernels similar to densityKernelWithoutChecks() and add in
 their documentation with which predicate they have to be combined. So I write
 in the docu "please use ::swift2::kernels::localParticleCanBeUpdatedInCellKernel() with it".
@@ -568,7 +568,7 @@ manually per file. Worse, the Python API overwrite the Makefile. It might make s
 design a proper makefile manually and then to disable the overwriting in the
 Peano 4 project that is produced by Swift's Python API.
 
-<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
+<div style="color:Black ; background-color: #fcc ; padding: 10px; border: 1px solid green;">
 We ran sometimes into issues when we studied the success of our vectorisation
 "only" via performance analysis tools such as Advisor or MAQAO. The tools
 showed that we use vectorisation. Still, the code remained slow. In many of

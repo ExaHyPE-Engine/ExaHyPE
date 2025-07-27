@@ -171,7 +171,7 @@ There's no cell enumerator, as you never get more than one cell.
 ## Sequence and parallelisation of actions
 
 
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+<div style="color:Black ; background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
 The term parallelisation here has noting to do with domain decomposition. It simply 
 means that you might want to do various things for a cell/vertex/face when you hit
 it for the first/last time and these things can run in parallel. 

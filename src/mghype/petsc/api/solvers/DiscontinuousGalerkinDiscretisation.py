@@ -405,7 +405,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     the updates for the cell. It evaluates @f$ \int _{\partial \text{cell}_v} (n,\tilde{\mathcal{M}}(\hat u )) v dS(x) @f$.
   
   
-  <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+  <div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
     Within Peano, it is important to distinguish data on cell and faces carefully 
     from each other. Furthermore
     (i) we can read data associated with faces within cells;
@@ -491,7 +491,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
 
 
 
-  <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+  <div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
   The write-down as one big matrix as above works if and only if the 
   chosen Riemann solver yield a linear combination of the @f$ u^-/u^+ @f$
   or @f$ x^-/x^+ @f$ values respectively. In many sophisticated solvers,

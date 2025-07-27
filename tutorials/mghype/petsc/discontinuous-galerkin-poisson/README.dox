@@ -96,7 +96,7 @@
 
  Here we demonstrate how a simple weak formulation resulting from the classical Poisson equation can be implemented within the solver interface.
  
- <div style="background-color: #ffc0cb; padding: 10px; border: 1px solid black;"> 
+ <div style="color:Black ; background-color: #ffc0cb; padding: 10px; border: 1px solid black;"> 
  We emphasize that this straightforward discretization cannot be used to build a working solver since it leads to a singular matrix! However, it is instructive to discuss it as a first simple example to illustrate the general structure and design philosophy of the solver. The naïve discretisation is then extended to the correct \ref Interior penalty formulation at the end of this tutorial.
  </div>
  

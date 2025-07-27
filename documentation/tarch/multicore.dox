@@ -34,7 +34,7 @@ where value is
  tarch::multicore.
 
 <br /><br />
-<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+<div style="color:Black ; background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
 As of today (2025-03-29), OpenMP's tasking implementation is not 100% stable. As 
 long as you don't use task dependencies excessively, you should be fine, but if you
 use complex task graphs, you might run into occasional seg faults in the OpenMP

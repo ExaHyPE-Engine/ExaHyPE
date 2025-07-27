@@ -167,7 +167,7 @@ Possible ways to do so can be:
   of trees) for ExaHyPE, e.g.
 
 
-<div style="background-color:#75e12f">
+<div style="color:Black ; background-color:#75e12f">
  Domain decomposition introduces a severe overhead. Therefore, your runtime might go down as you 
  increase the number of trees. More trees means more effort to keep data consistent between 
  subpartitions. Therefore, it can be advantageous to limit the number of trees, i.e. not to 
@@ -233,7 +233,7 @@ There are some generic ideas that you can try out:
 
 
 
-<div style="background-color:#75e12f">
+<div style="color:Black ; background-color:#75e12f">
  Tweaking the load balancing manually is the last resort. Most codes benefit from 
  employing a 
  @ref toolbox_loadbalancing "cascade of different load balancing schemes" and

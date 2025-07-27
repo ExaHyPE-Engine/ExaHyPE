@@ -13,7 +13,7 @@ then each value for \f$ p_x \f$ etc.
 
 @image html GaussLobatto.png
 
-<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+<div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
 We refer to the points which host weights of Lagrangian polynomials as ***nodes***. Each node can hold 
 multiple ***unknowns*** which are weights of the shape functions. 
 </div>
@@ -36,7 +36,7 @@ huge array per cell, we end up with an array of doubles of size
 denoting the polynomial order.
 
 
-<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+<div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
 A solver in Peano has a unique geometric layout of its nodes, and each and every
 node holds the same number of unknowns (though some solvers allow you to change
 the number of unknowns held by cells, facets and vertices). If you need 
