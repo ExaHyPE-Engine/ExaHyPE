@@ -300,7 +300,7 @@ class FV(object):
         self._flux_implementation = PDETerms.None_Implementation
         self._ncp_implementation = PDETerms.None_Implementation
         self._eigenvalues_implementation = PDETerms.None_Implementation
-        self._max_eigenvalue_implementation = PDETerms.None_Implementation
+        self._max_eigenvalue_implementation = PDETerms.User_Defined_Implementation
         self._riemann_solver_implementation = PDETerms.None_Implementation
         self._source_term_implementation = PDETerms.None_Implementation
         self._diffusive_source_term_implementation = PDETerms.None_Implementation

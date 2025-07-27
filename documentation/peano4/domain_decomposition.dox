@@ -7,7 +7,7 @@
 
 
 
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+<div style="color:Black ; background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
 This page will frequently refer to action sets and their order. It therefore
 is reasonable to study @ref peano_action_sets "the description of action sets"
 first. 
@@ -30,7 +30,7 @@ tree tasks and user-defined tasks. This section discusses solely the
 tree decomposition aspect within Peano, i.e. ignores that there might be tasks as well.
 
 
-<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+<div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
 Each subtree is completely independent: If Peano cuts a tree into chunks,
 these trees do not share any data anymore, no matter whether they are 
 deployed onto separate ranks or separate treads or a mixture of those. 
@@ -169,7 +169,7 @@ It will try to stay close to 100, but the constraints have a higher priority
 than your request.
 
 
-<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+<div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
 Load balancing schemes make ***recommendations*** to Peano how to split up 
 the mesh. However, a split() call is never strict, i.e. Peano might decide
 to ignore it or to implement it only partially. This happens whenever the mesh 
@@ -650,7 +650,7 @@ However, nothing stops you from having a singleton data or static
 data set somewhere and to let all action sets write into this one.
 You just have to ensure that you protected writes with semaphores.
 
-<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+<div style="color:Black ; background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
   If a lot of action sets all hit the same static data concurrently,
   you get a lot of lock overhead. In this case I recommend that 
   each data set creates its own local data and reduces all information
@@ -691,7 +691,7 @@ are triggered after all the global trees have synchronised.
 - Every action set copies the old data set into its local copy.
 
 
-<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+<div style="color:Black ; background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
   These MPI/thread-global barriers can be very expensive and have the potential
   to lead to deadlocks/timeouts. Use them with care and localise their
   behaviour.

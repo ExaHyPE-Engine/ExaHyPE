@@ -195,6 +195,21 @@ SWIFT2_Noh2D:
     - Build
   retry: 0
 
+SymHyPE_Tutorials:
+  stage: Tutorials
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptSanitiser
+    - .SymHyPE_Tutorials
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 0
+
 ExaHyPE2_Tutorials:
   stage: Tutorials
   allow_failure: false

@@ -160,7 +160,7 @@ formatter on generated files.
 
 
 
-<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+<div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
 Our formatting scripts works only within a virtual environment. To create such 
 an environment, follow the following steps:
 

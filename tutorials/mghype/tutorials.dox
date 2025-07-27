@@ -4,7 +4,7 @@
 
 @image html documentation/icons/MGHyPE.png
 
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;">
+<div style="color:Black ; background-color: #ccf ; padding: 10px; border: 1px solid green;">
 The first few tutorials are based upon Jupyter notebooks. Please browse through
 the links below and study the webpages. However, they are created ***from*** the
 notebooks automatically, i.e. you get the full experience only by studying the

@@ -192,7 +192,7 @@ class ADERDG(object):
         self._diffusive_source_term_implementation= PDETerms.None_Implementation
         self._point_sources_implementation        = PDETerms.None_Implementation
         self._init_point_sources_implementation   = PDETerms.None_Implementation
-        self._max_eigenvalue_implementation       = PDETerms.None_Implementation
+        self._max_eigenvalue_implementation       = PDETerms.User_Defined_Implementation
         self._adjust_solution_implementation      = PDETerms.None_Implementation
         self._material_param_implementation       = PDETerms.None_Implementation
         self._precision_criterion_implementation  = PDETerms.None_Implementation

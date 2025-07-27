@@ -52,7 +52,7 @@ Paraview with Python. In this case, you might have to install it manually
 
 # Command-line conversion with a C++ executable
 
-<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+<div style="color:Black ; background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
 This variant has not been maintained for a while and might require some debugging. On the other hand, 
 nothing has changed here for months, i.e. it might as well also work.
 </div>

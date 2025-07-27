@@ -6,7 +6,7 @@ This simple example discusses the most basic steps behind a Discontinuous
 Galerkin solver. 
 
  
-<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+<div style="color:Black ; background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
 We are currently in the progress of restructuring our directories: We used to have a top-level
 python directory and a top-level src directory. In the future, we plan to merge all of these
 in one place (src) and to have api subdirectories within the C++ folders which hold the 

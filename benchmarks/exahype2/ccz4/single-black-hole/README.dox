@@ -15,7 +15,7 @@ so forth. Therefore, this benchmark combines two different solvers - a
 dissipative Finite Volume scheme and a higher order scheme - to obtain a
 compromise between accuracy and stability. 
 
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+<div style="color:Black ; background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
   For this benchmark, the following extensions are mandatory:
   
   - blockstructured (`--enable-blockstructured`)
