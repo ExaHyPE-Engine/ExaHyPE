@@ -35,20 +35,20 @@ initial_conditions = define_radial_dam + """
     Q[i] = 0.0;
   }
 
-  Q[s::h] = isInsideDam ? INITIAL_WATER_HEIGHT_INSIDE_DAM : INITIAL_WATER_HEIGHT_OUTSIDE_DAM;
+  Q[Shortcuts::h] = isInsideDam ? INITIAL_WATER_HEIGHT_INSIDE_DAM : INITIAL_WATER_HEIGHT_OUTSIDE_DAM;
 
   if (isDryRing) {
-    Q[s::h] = 0.0; // Dry ring
+    Q[Shortcuts::h] = 0.0; // Dry ring
   }
 
-  Q[s::z] = isDryRing ? BATHYMETRY_DRY_RING : 0.0;
+  Q[Shortcuts::z] = isDryRing ? BATHYMETRY_DRY_RING : 0.0;
 """
 
 boundary_conditions = """
-  Qoutside[s::h]  = Qinside[s::h];
-  Qoutside[s::hu] = -Qinside[s::hu];
-  Qoutside[s::hv] = -Qinside[s::hv];
-  Qoutside[s::z]  = Qinside[s::z];
+  Qoutside[Shortcuts::h]  = Qinside[Shortcuts::h];
+  Qoutside[Shortcuts::hu] = -Qinside[Shortcuts::hu];
+  Qoutside[Shortcuts::hv] = -Qinside[Shortcuts::hv];
+  Qoutside[Shortcuts::z]  = Qinside[Shortcuts::z];
 """
 
 refinement_criterion = define_radial_dam + """

@@ -29,13 +29,13 @@ class LOH1(Scenario):
     def initial_conditions(self):
         return """
       if( x[1] <= (1.0 + 1.0e-6) && center[1] < 1.0) {
-        Q[s::rho] = 2.6;
-        Q[s::cp ] = 4.0;
-        Q[s::cs ] = 2.0;
+        Q[Shortcuts::rho] = 2.6;
+        Q[Shortcuts::cp ] = 4.0;
+        Q[Shortcuts::cs ] = 2.0;
       }else if(x[1] >= (1.0 - 1.0e-6) && center[1] > 1.0){
-        Q[s::rho] = 2.7;
-        Q[s::cp ] = 6.0;
-        Q[s::cs ] = 3.464;
+        Q[Shortcuts::rho] = 2.7;
+        Q[Shortcuts::cp ] = 6.0;
+        Q[Shortcuts::cs ] = 3.464;
       }
 """
 
@@ -43,7 +43,7 @@ class LOH1(Scenario):
         return """
   std::fill_n(forceVector, 9, 0.);
 
-  auto jacobian = Q[s::jacobian];
+  auto jacobian = Q[Shortcuts::jacobian];
 
   assertion2(n == 0, "Only a single pointSource for LOH1",n);
 
@@ -52,7 +52,7 @@ class LOH1(Scenario):
   
   double f = M0*t/(t0*t0)*std::exp(-t/t0);
   
-  forceVector[s::sigma + 4] = f;
+  forceVector[Shortcuts::sigma + 4] = f;
 
   for (int i = 0; i < NumberOfUnknowns; i++) {
     forceVector[i] = forceVector[i] / jacobian;

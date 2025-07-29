@@ -27,7 +27,7 @@ initial_conditions = """
   constexpr double INITIAL_WATER_HEIGHT = 100.0;
   constexpr double INITIAL_BATHYMETRY_BEFORE_EARTHQUAKE = -100.0;
 
-  Q[s::h] = INITIAL_WATER_HEIGHT;
+  Q[Shortcuts::h] = INITIAL_WATER_HEIGHT;
 
   auto displacementX = [](double x) { return std::sin((x / 500.0 + 1.0) * tarch::la::PI); };
   auto displacementY = [](double y) { return -std::pow(y / 500.0, 2) + 1.0; };
@@ -36,17 +36,17 @@ initial_conditions = """
   const double bathymetryAfterEarthquake = INITIAL_BATHYMETRY_BEFORE_EARTHQUAKE + displacement(x(0), x(1));
 
   if (std::abs(x(0)) <= 500 and std::abs(x(1)) <= 500) { // Center of domain is [0, 0]
-    Q[s::z] = bathymetryAfterEarthquake;
+    Q[Shortcuts::z] = bathymetryAfterEarthquake;
   } else {
-    Q[s::z] = INITIAL_BATHYMETRY_BEFORE_EARTHQUAKE;
+    Q[Shortcuts::z] = INITIAL_BATHYMETRY_BEFORE_EARTHQUAKE;
   }
 """
 
 boundary_conditions = """
-  Qoutside[s::h]  = Qinside[s::h];
-  Qoutside[s::hu] = -Qinside[s::hu];
-  Qoutside[s::hv] = -Qinside[s::hv];
-  Qoutside[s::z]  = Qinside[s::z];
+  Qoutside[Shortcuts::h]  = Qinside[Shortcuts::h];
+  Qoutside[Shortcuts::hu] = -Qinside[Shortcuts::hu];
+  Qoutside[Shortcuts::hv] = -Qinside[Shortcuts::hv];
+  Qoutside[Shortcuts::z]  = Qinside[Shortcuts::z];
 """
 
 refinement_criterion = """

@@ -15,10 +15,10 @@ void applications::exahype2::swe::FVRusanovSolver::initialCondition(
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const bool                                   gridIsConstructed
 ) {
-  Q[s::h]  = 100;
-  Q[s::hu] = 0;
-  Q[s::hv] = 0;
-  Q[s::b]  = -100;
+  Q[Shortcuts::h]  = 100;
+  Q[Shortcuts::hu] = 0;
+  Q[Shortcuts::hv] = 0;
+  Q[Shortcuts::b]  = -100;
 }
 
 
@@ -30,10 +30,10 @@ void applications::exahype2::swe::FVRusanovSolver::boundaryConditions(
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const int                                    normal
 ) {
-  Qoutside[s::h]  = Qinside[s::h];
-  Qoutside[s::hu] = -Qinside[s::hu];
-  Qoutside[s::hv] = -Qinside[s::hv];
-  Qoutside[s::b]  = Qinside[s::b];
+  Qoutside[Shortcuts::h]  = Qinside[Shortcuts::h];
+  Qoutside[Shortcuts::hu] = -Qinside[Shortcuts::hu];
+  Qoutside[Shortcuts::hv] = -Qinside[Shortcuts::hv];
+  Qoutside[Shortcuts::b]  = Qinside[Shortcuts::b];
 }
 
 
@@ -58,20 +58,20 @@ double applications::exahype2::swe::FVRusanovSolver::maxEigenvalue(
   [[maybe_unused]] const int                                    normal
 ) {
   double L[3];
-  L[s::h]  = 0.0;
-  L[s::hu] = 0.0;
-  L[s::hv] = 0.0;
+  L[Shortcuts::h]  = 0.0;
+  L[Shortcuts::hu] = 0.0;
+  L[Shortcuts::hv] = 0.0;
 
   constexpr double DRY_TOL = std::numeric_limits<double>::epsilon();
-  if (Q[s::h] <= DRY_TOL) {
+  if (Q[Shortcuts::h] <= DRY_TOL) {
     return 0.0;
   }
 
-  const double u = Q[s::hu + normal] / Q[s::h];
-  const double c = std::sqrt(GRAV * Q[s::h]);
-  L[s::h]        = u;
-  L[s::hu]       = u + c;
-  L[s::hv]       = u - c;
+  const double u = Q[Shortcuts::hu + normal] / Q[Shortcuts::h];
+  const double c = std::sqrt(GRAV * Q[Shortcuts::h]);
+  L[Shortcuts::h]        = u;
+  L[Shortcuts::hu]       = u + c;
+  L[Shortcuts::hv]       = u - c;
 
   return std::fmax(std::fabs(L[0]), std::fmax(std::fabs(L[1]), std::fabs(L[2])));
 }
@@ -86,22 +86,22 @@ void applications::exahype2::swe::FVRusanovSolver::flux(
   [[maybe_unused]] const int                                    normal,
   [[maybe_unused]] double* const NOALIAS                        F // F[3]
 ) {
-  F[s::h]  = 0.0;
-  F[s::hu] = 0.0;
-  F[s::hv] = 0.0;
-  F[s::b]  = 0.0;
+  F[Shortcuts::h]  = 0.0;
+  F[Shortcuts::hu] = 0.0;
+  F[Shortcuts::hv] = 0.0;
+  F[Shortcuts::b]  = 0.0;
 
   constexpr double DRY_TOL = std::numeric_limits<double>::epsilon();
-  if (Q[s::h] <= DRY_TOL) {
+  if (Q[Shortcuts::h] <= DRY_TOL) {
     return;
   }
 
-  const double ih = 1.0 / Q[s::h];
+  const double ih = 1.0 / Q[Shortcuts::h];
 
-  F[s::h]  = Q[s::hu + normal];
-  F[s::hu] = Q[s::hu + normal] * Q[s::hu] * ih;
-  F[s::hv] = Q[s::hu + normal] * Q[s::hv] * ih;
-  F[s::hu + normal] += 0.5 * GRAV * Q[s::h] * Q[s::h];
+  F[Shortcuts::h]  = Q[Shortcuts::hu + normal];
+  F[Shortcuts::hu] = Q[Shortcuts::hu + normal] * Q[Shortcuts::hu] * ih;
+  F[Shortcuts::hv] = Q[Shortcuts::hu + normal] * Q[Shortcuts::hv] * ih;
+  F[Shortcuts::hu + normal] += 0.5 * GRAV * Q[Shortcuts::h] * Q[Shortcuts::h];
 }
 
 
@@ -115,17 +115,17 @@ void applications::exahype2::swe::FVRusanovSolver::nonconservativeProduct(
   [[maybe_unused]] const int                                    normal,
   [[maybe_unused]] double* const NOALIAS                        BTimesDeltaQ // BTimesDeltaQ[3]
 ) {
-  BTimesDeltaQ[s::h]  = 0.0;
-  BTimesDeltaQ[s::hu] = 0.0;
-  BTimesDeltaQ[s::hv] = 0.0;
-  BTimesDeltaQ[s::b]  = 0.0;
+  BTimesDeltaQ[Shortcuts::h]  = 0.0;
+  BTimesDeltaQ[Shortcuts::hu] = 0.0;
+  BTimesDeltaQ[Shortcuts::hv] = 0.0;
+  BTimesDeltaQ[Shortcuts::b]  = 0.0;
 
   constexpr double DRY_TOL = std::numeric_limits<double>::epsilon();
-  if (Q[s::h] <= DRY_TOL) {
+  if (Q[Shortcuts::h] <= DRY_TOL) {
     return;
   }
 
-  BTimesDeltaQ[s::hu + normal] = GRAV * Q[s::h] * (deltaQ[s::h] + deltaQ[s::b]);
+  BTimesDeltaQ[Shortcuts::hu + normal] = GRAV * Q[Shortcuts::h] * (deltaQ[Shortcuts::h] + deltaQ[Shortcuts::b]);
 }
 
 namespace corriolis_force {
@@ -319,13 +319,13 @@ void applications::exahype2::swe::FVRusanovSolver::sourceTerm(
    */
 
   // default values
-  S[s::h]  = 0;
-  S[s::hu] = 0;
-  S[s::hv] = 0;
+  S[Shortcuts::h]  = 0;
+  S[Shortcuts::hu] = 0;
+  S[Shortcuts::hv] = 0;
 
   // Skip dry cells
   constexpr double DRY_TOL = std::numeric_limits<double>::epsilon();
-  if (Q[s::h] <= DRY_TOL) {
+  if (Q[Shortcuts::h] <= DRY_TOL) {
     return;
   }
 
@@ -341,24 +341,24 @@ void applications::exahype2::swe::FVRusanovSolver::sourceTerm(
   const auto xCoord = x(0);
   const auto yCoord = x(1);
 
-  const auto uVel = Q[s::hu] / Q[s::h];
-  const auto vVel = Q[s::hv] / Q[s::h];
+  const auto uVel = Q[Shortcuts::hu] / Q[Shortcuts::h];
+  const auto vVel = Q[Shortcuts::hv] / Q[Shortcuts::h];
 
   // Update Source term
-  S[s::hu] = corriolis_force::sphere(xCoord, yCoord) * uVel;
-  S[s::hv] = -corriolis_force::sphere(xCoord, yCoord) * vVel;
+  S[Shortcuts::hu] = corriolis_force::sphere(xCoord, yCoord) * uVel;
+  S[Shortcuts::hv] = -corriolis_force::sphere(xCoord, yCoord) * vVel;
 
-  S[s::hu] += manningFriction(Q[s::h], Q[s::hu], Q[s::hv]) * Q[s::hu];
-  S[s::hv] += manningFriction(Q[s::h], Q[s::hu], Q[s::hv]) * Q[s::hv];
+  S[Shortcuts::hu] += manningFriction(Q[Shortcuts::h], Q[Shortcuts::hu], Q[Shortcuts::hv]) * Q[Shortcuts::hu];
+  S[Shortcuts::hv] += manningFriction(Q[Shortcuts::h], Q[Shortcuts::hu], Q[Shortcuts::hv]) * Q[Shortcuts::hv];
 
   auto wrapperAtmosphericPressure = [](const auto x, const auto y, const auto t) {
     return atmosphericPressure(x, y, t);
   };
 
-  S[s::hu] += -math::differentiation::numeric_3D::central_difference::
+  S[Shortcuts::hu] += -math::differentiation::numeric_3D::central_difference::
                 partialX(wrapperAtmosphericPressure, xCoord, yCoord, t)
               / waterDensity;
-  S[s::hv] += -math::differentiation::numeric_3D::central_difference::
+  S[Shortcuts::hv] += -math::differentiation::numeric_3D::central_difference::
                 partialY(wrapperAtmosphericPressure, xCoord, yCoord, t)
               / waterDensity;
 }

@@ -22,17 +22,17 @@ initial_conditions = """
   insideTheSquare &= (x[1] <= (initCenterY + squareSide * 0.5));
 
   // Assign initial conditions based on the position of the material region
-  Q[s::h]       = (insideTheSquare ? initHeight : 0.0);
-  Q[s::hu]      = 0.0;
-  Q[s::hu + 1]  = 0.0;
-  Q[s::z]       = (DomainSize[0] - x[0]) * slopeAngleTan;
+  Q[Shortcuts::h]       = (insideTheSquare ? initHeight : 0.0);
+  Q[Shortcuts::hu]      = 0.0;
+  Q[Shortcuts::hu + 1]  = 0.0;
+  Q[Shortcuts::z]       = (DomainSize[0] - x[0]) * slopeAngleTan;
 """
 
 boundary_conditions = """
-  Qoutside[s::h]  = Qinside[s::h];
-  Qoutside[s::hu] = -Qinside[s::hu];
-  Qoutside[s::hv] = -Qinside[s::hv];
-  Qoutside[s::z]  = Qinside[s::z];
+  Qoutside[Shortcuts::h]  = Qinside[Shortcuts::h];
+  Qoutside[Shortcuts::hu] = -Qinside[Shortcuts::hu];
+  Qoutside[Shortcuts::hv] = -Qinside[Shortcuts::hv];
+  Qoutside[Shortcuts::z]  = Qinside[Shortcuts::z];
 """
 
 refinement_criterion = """
@@ -70,10 +70,10 @@ limiting_criterion = """
 """
 
 adjust_solution = r"""
-  if (Q[s::h] < hThreshold) {
-    Q[s::h]  = std::fmax(0.0, Q[s::h]);
-    Q[s::hu] = 0.0;
-    Q[s::hv] = 0.0;
+  if (Q[Shortcuts::h] < hThreshold) {
+    Q[Shortcuts::h]  = std::fmax(0.0, Q[Shortcuts::h]);
+    Q[Shortcuts::hu] = 0.0;
+    Q[Shortcuts::hv] = 0.0;
   }
 """
 

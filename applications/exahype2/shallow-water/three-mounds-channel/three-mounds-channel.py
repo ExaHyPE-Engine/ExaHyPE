@@ -20,15 +20,15 @@ initial_conditions = """
   const double m2 = 1.0 - 0.10 * std::sqrt((x(0) - 15.0) * (x(0) - 15.0) + (x(1) - 7.50) * (x(1) - 7.50));
   const double m3 = 1.0 - 0.28 * std::sqrt((x(0) - 30.0) * (x(0) - 30.0) + (x(1) - 15.0) * (x(1) - 15.0));
 
-  Q[s::h] = x[0] <= 5.0 ? INITIAL_WATER_HEIGHT_DAM : 0.0;
-  Q[s::z] = std::max({0.0, m1, m2, m3});
+  Q[Shortcuts::h] = x[0] <= 5.0 ? INITIAL_WATER_HEIGHT_DAM : 0.0;
+  Q[Shortcuts::z] = std::max({0.0, m1, m2, m3});
 """
 
 boundary_conditions = """
-  Qoutside[s::h]  = Qinside[s::h];
-  Qoutside[s::hu] = -Qinside[s::hu];
-  Qoutside[s::hv] = -Qinside[s::hv];
-  Qoutside[s::z]  = Qinside[s::z];
+  Qoutside[Shortcuts::h]  = Qinside[Shortcuts::h];
+  Qoutside[Shortcuts::hu] = -Qinside[Shortcuts::hu];
+  Qoutside[Shortcuts::hv] = -Qinside[Shortcuts::hv];
+  Qoutside[Shortcuts::z]  = Qinside[Shortcuts::z];
 """
 
 refinement_criterion = """

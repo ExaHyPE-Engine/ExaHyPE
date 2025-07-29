@@ -79,7 +79,7 @@ public:
   ) {
 
     if (tarch::la::equals(t, 0.0)) {
-      // int           numberOfData = s::NumberOfUnknowns + s::NumberOfAuxiliaryVariables;
+      // int           numberOfData = Shortcuts::NumberOfUnknowns + Shortcuts::NumberOfAuxiliaryVariables;
       kernels::idx4 id_xyzf(basisSize, basisSize, basisSize, numberOfData);
       kernels::idx3 id_xyz(basisSize, basisSize, basisSize);
 
@@ -209,7 +209,7 @@ public:
 
   void getElementSize(const T* const luh, tarch::la::Vector<Dimensions, double>& dx) {
 
-    // int           numberOfData = s::NumberOfUnknowns + s::NumberOfAuxiliaryVariables;
+    // int           numberOfData = Shortcuts::NumberOfUnknowns + Shortcuts::NumberOfAuxiliaryVariables;
     kernels::idx4 id_xyzf(basisSize, basisSize, basisSize, numberOfData);
 
     dx[0] = 0;
@@ -235,7 +235,7 @@ public:
     int center_i1 = int(std::ceil(basisSize / 2.0));
     int center_i2 = int(std::floor(basisSize / 2.0));
 
-    // int           numberOfData = s::NumberOfUnknowns + s::NumberOfAuxiliaryVariables;
+    // int           numberOfData = Shortcuts::NumberOfUnknowns + Shortcuts::NumberOfAuxiliaryVariables;
     kernels::idx4 id_xyzf(basisSize, basisSize, basisSize, numberOfData);
 
     center[0] = (luh[id_xyzf(center_i1, center_i1, center_i1, Shortcuts::curve_grid + 0)]

@@ -31,14 +31,14 @@ hllem = r"""
    ****
    */
 
-  const double hLeft   = QL[s::h];
-  const double hRight  = QR[s::h];
-  const double huLeft  = QL[s::hu];
-  const double huRight = QR[s::hu];
-  const double hvLeft  = QL[s::hv];
-  const double hvRight = QR[s::hv];
-  const double bLeft   = QL[s::z];
-  const double bRight  = QR[s::z];
+  const double hLeft   = QL[Shortcuts::h];
+  const double hRight  = QR[Shortcuts::h];
+  const double huLeft  = QL[Shortcuts::hu];
+  const double huRight = QR[Shortcuts::hu];
+  const double hvLeft  = QL[Shortcuts::hv];
+  const double hvRight = QR[Shortcuts::hv];
+  const double bLeft   = QL[Shortcuts::z];
+  const double bRight  = QR[Shortcuts::z];
 
   // Compute dry tolerance according to KURGANOV. Does not work!
   //const double dryTol = std::pow(h[0], 4);
@@ -99,12 +99,12 @@ hllem = r"""
   const double hRoe     = 0.5 * (hLeft + hRight);
 
   double dJump[3] = {0.0};
-  dJump[s::hu + normal] = 0.5 * g * hRoe * deltaEta;
+  dJump[Shortcuts::hu + normal] = 0.5 * g * hRoe * deltaEta;
 
   const double netUpdates[3] {
-    0.5 * (fluxLeft[s::h]  + fluxRight[s::h])  - 0.5 * maxWaveSpeed * deltaEta,
-    0.5 * (fluxLeft[s::hu] + fluxRight[s::hu]) - 0.5 * maxWaveSpeed * (huRight - huLeft),
-    0.5 * (fluxLeft[s::hv] + fluxRight[s::hv]) - 0.5 * maxWaveSpeed * (hvRight - hvLeft)
+    0.5 * (fluxLeft[Shortcuts::h]  + fluxRight[Shortcuts::h])  - 0.5 * maxWaveSpeed * deltaEta,
+    0.5 * (fluxLeft[Shortcuts::hu] + fluxRight[Shortcuts::hu]) - 0.5 * maxWaveSpeed * (huRight - huLeft),
+    0.5 * (fluxLeft[Shortcuts::hv] + fluxRight[Shortcuts::hv]) - 0.5 * maxWaveSpeed * (hvRight - hvLeft)
   };
 
   for (int i = 0; i < 3; i++){
@@ -112,11 +112,11 @@ hllem = r"""
     FR[i] = netUpdates[i] - dJump[i];
   }
 
-  if (QL[s::h] < dryTol) {
-    FL[s::hu] = FL[s::hv] = 0.0;
+  if (QL[Shortcuts::h] < dryTol) {
+    FL[Shortcuts::hu] = FL[Shortcuts::hv] = 0.0;
   }
-  if (QR[s::h] < dryTol) {
-    FR[s::hu] = FR[s::hv] = 0.0;
+  if (QR[Shortcuts::h] < dryTol) {
+    FR[Shortcuts::hu] = FR[Shortcuts::hv] = 0.0;
   }
 
   return maxWaveSpeed;

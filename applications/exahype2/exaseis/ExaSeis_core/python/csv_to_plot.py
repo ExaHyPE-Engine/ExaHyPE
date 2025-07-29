@@ -24,7 +24,7 @@ var_name = "Value" if args.variable_name==None else args.variable_name
 
 
 """
-Extract some metadata about the positions of the various informations in the csv file.
+Extract some metadata about the positions of the various information in the csv file.
 These should always be the same but it's safer to check.
 """
 try:

@@ -25,15 +25,15 @@ initial_conditions = """
     return std::sqrt(std::pow(x - xc, 2) + std::pow(y - yc, 2));
   };
 
-  Q[s::h] = h0 + (A / h0 * std::pow(1.0 / (std::cosh(gamma * (x(0) - 2.5))), 2));
-  Q[s::z] = r(x(0), x(1)) <= rc ? 0.93 * (1.0 - r(x(0), x(1)) / rc) : 0.0;
+  Q[Shortcuts::h] = h0 + (A / h0 * std::pow(1.0 / (std::cosh(gamma * (x(0) - 2.5))), 2));
+  Q[Shortcuts::z] = r(x(0), x(1)) <= rc ? 0.93 * (1.0 - r(x(0), x(1)) / rc) : 0.0;
 """
 
 boundary_conditions = """
-  Qoutside[s::h]  = Qinside[s::h];
-  Qoutside[s::hu] = -Qinside[s::hu];
-  Qoutside[s::hv] = -Qinside[s::hv];
-  Qoutside[s::z]  = Qinside[s::z];
+  Qoutside[Shortcuts::h]  = Qinside[Shortcuts::h];
+  Qoutside[Shortcuts::hu] = -Qinside[Shortcuts::hu];
+  Qoutside[Shortcuts::hv] = -Qinside[Shortcuts::hv];
+  Qoutside[Shortcuts::z]  = Qinside[Shortcuts::z];
 """
 
 refinement_criterion = """

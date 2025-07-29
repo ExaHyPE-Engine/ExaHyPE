@@ -15,15 +15,15 @@ rusanov_aderdg = r"""
 
   // Wave speed estimation based on the flux Jacobian
   auto sL{0.0};
-  if (QavgL[s::h] > hThreshold) {
-    const auto VnL{QavgL[s::hu + direction] / QavgL[s::h]};
-    const auto cL{std::sqrt(g * QavgL[s::h])};
+  if (QavgL[Shortcuts::h] > hThreshold) {
+    const auto VnL{QavgL[Shortcuts::hu + direction] / QavgL[Shortcuts::h]};
+    const auto cL{std::sqrt(g * QavgL[Shortcuts::h])};
     sL = std::fmax(std::fabs(VnL - cL), std::fabs(VnL + cL));
   }
   auto sR{0.0};
-  if (QavgR[s::h] > hThreshold) {
-    const auto VnR{QavgR[s::hu + direction] / QavgR[s::h]};
-    const auto cR{std::sqrt(g * QavgR[s::h])};
+  if (QavgR[Shortcuts::h] > hThreshold) {
+    const auto VnR{QavgR[Shortcuts::hu + direction] / QavgR[Shortcuts::h]};
+    const auto cR{std::sqrt(g * QavgR[Shortcuts::h])};
     sR = std::fmax(std::fabs(VnR - cR), std::fabs(VnR + cR));
   }
   const auto smax{std::fmax(sR, sL)};
@@ -38,7 +38,7 @@ rusanov_aderdg = r"""
       FR[j]       = rusanovFlux;
     }
     // Ignore flux for flow topography
-    j     = xy * N + s::z;
+    j     = xy * N + Shortcuts::z;
     FL[j] = 0.0;
     FR[j] = 0.0;
   }
@@ -73,16 +73,16 @@ rusanov_fv = r"""
   }
 
   auto sL{0.0};
-  if (QL[s::h] > hThreshold) {
-    const auto hL{QL[s::h] > hThreshold ? QL[s::h] : hThreshold};
-    const auto momentumL{std::sqrt(QL[s::hu] * QL[s::hu] + QL[s::hv] * QL[s::hv])};
+  if (QL[Shortcuts::h] > hThreshold) {
+    const auto hL{QL[Shortcuts::h] > hThreshold ? QL[Shortcuts::h] : hThreshold};
+    const auto momentumL{std::sqrt(QL[Shortcuts::hu] * QL[Shortcuts::hu] + QL[Shortcuts::hv] * QL[Shortcuts::hv])};
     sL = 2.0 * g * momentumL * invXi / (hL * hL);
   }
 
   auto sR{0.0};
-  if (QL[s::h] > hThreshold) {
-    const auto hR{QR[s::h] > hThreshold ? QR[s::h] : hThreshold};
-    const auto momentumR{std::sqrt(QR[s::hu] * QR[s::hu] + QR[s::hv] * QR[s::hv])};
+  if (QL[Shortcuts::h] > hThreshold) {
+    const auto hR{QR[Shortcuts::h] > hThreshold ? QR[Shortcuts::h] : hThreshold};
+    const auto momentumR{std::sqrt(QR[Shortcuts::hu] * QR[Shortcuts::hu] + QR[Shortcuts::hv] * QR[Shortcuts::hv])};
     sR = 2.0 * g * momentumR * invXi / (hR * hR);
   }
 

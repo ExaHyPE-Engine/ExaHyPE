@@ -8,10 +8,9 @@ namespace Numerics {
   // Getter routines
   template <class Shortcuts, typename T>
   inline void computeParameters(const T* Q, T& rho, T& cp, T& cs, T& mu, T& lam) {
-    using s = Shortcuts;
-    rho = Q[s::rho];
-    cp  = Q[s::cp];
-    cs  = Q[s::cs];
+    rho = Q[Shortcuts::rho];
+    cp  = Q[Shortcuts::cp];
+    cs  = Q[Shortcuts::cs];
     mu  = cs * cs * rho;
     lam = rho * cp * cp - 2.0 * mu;
   }
@@ -70,7 +69,6 @@ namespace Numerics {
     T FL_n, FL_m, FL_l, FR_n, FR_m, FR_l;
     T FL_x, FL_y, FL_z, FR_x, FR_y, FR_z;
 
-    using s = Shortcuts;
     for (int i = 0; i < basisSize; i++) {
 #pragma simd
       for (int j = 0; j < basisSize; j++) {
@@ -218,33 +216,33 @@ namespace Numerics {
         // construct flux fluctuation vectors obeying the eigen structure of the PDE
         // and choose physically motivated penalties such that we can prove
         // numerical stability.
-        F_p[s::v + 0] = norm_p / rho_p * FRx;
-        F_m[s::v + 0] = norm_m / rho_m * FLx;
+        F_p[Shortcuts::v + 0] = norm_p / rho_p * FRx;
+        F_m[Shortcuts::v + 0] = norm_m / rho_m * FLx;
 
-        F_p[s::v + 1] = norm_p / rho_p * FRy;
-        F_m[s::v + 1] = norm_m / rho_m * FLy;
+        F_p[Shortcuts::v + 1] = norm_p / rho_p * FRy;
+        F_m[Shortcuts::v + 1] = norm_m / rho_m * FLy;
 
-        F_p[s::v + 2] = norm_p / rho_p * FRz;
-        F_m[s::v + 2] = norm_m / rho_m * FLz;
+        F_p[Shortcuts::v + 2] = norm_p / rho_p * FRz;
+        F_m[Shortcuts::v + 2] = norm_m / rho_m * FLz;
 
-        F_m[s::sigma + 0] = norm_m * ((2 * mu_m + lam_m) * n_m[0] * FL_x + lam_m * n_m[1] * FL_y + lam_m * n_m[2] * FL_z);
-        F_m[s::sigma + 1] = norm_m * ((2 * mu_m + lam_m) * n_m[1] * FL_y + lam_m * n_m[0] * FL_x + lam_m * n_m[2] * FL_z);
-        F_m[s::sigma + 2] = norm_m * ((2 * mu_m + lam_m) * n_m[2] * FL_z + lam_m * n_m[0] * FL_x + lam_m * n_m[1] * FL_y);
+        F_m[Shortcuts::sigma + 0] = norm_m * ((2 * mu_m + lam_m) * n_m[0] * FL_x + lam_m * n_m[1] * FL_y + lam_m * n_m[2] * FL_z);
+        F_m[Shortcuts::sigma + 1] = norm_m * ((2 * mu_m + lam_m) * n_m[1] * FL_y + lam_m * n_m[0] * FL_x + lam_m * n_m[2] * FL_z);
+        F_m[Shortcuts::sigma + 2] = norm_m * ((2 * mu_m + lam_m) * n_m[2] * FL_z + lam_m * n_m[0] * FL_x + lam_m * n_m[1] * FL_y);
 
-        F_p[s::sigma + 0] = -norm_p
+        F_p[Shortcuts::sigma + 0] = -norm_p
                            * ((2 * mu_p + lam_p) * n_p[0] * FR_x + lam_p * n_p[1] * FR_y + lam_p * n_p[2] * FR_z);
-        F_p[s::sigma + 1] = -norm_p
+        F_p[Shortcuts::sigma + 1] = -norm_p
                            * ((2 * mu_p + lam_p) * n_p[1] * FR_y + lam_p * n_p[0] * FR_x + lam_p * n_p[2] * FR_z);
-        F_p[s::sigma + 2] = -norm_p
+        F_p[Shortcuts::sigma + 2] = -norm_p
                            * ((2 * mu_p + lam_p) * n_p[2] * FR_z + lam_p * n_p[0] * FR_x + lam_p * n_p[1] * FR_y);
 
-        F_m[s::sigma + 3] = norm_m * mu_m * (n_m[1] * FL_x + n_m[0] * FL_y);
-        F_m[s::sigma + 4] = norm_m * mu_m * (n_m[2] * FL_x + n_m[0] * FL_z);
-        F_m[s::sigma + 5] = norm_m * mu_m * (n_m[2] * FL_y + n_m[1] * FL_z);
+        F_m[Shortcuts::sigma + 3] = norm_m * mu_m * (n_m[1] * FL_x + n_m[0] * FL_y);
+        F_m[Shortcuts::sigma + 4] = norm_m * mu_m * (n_m[2] * FL_x + n_m[0] * FL_z);
+        F_m[Shortcuts::sigma + 5] = norm_m * mu_m * (n_m[2] * FL_y + n_m[1] * FL_z);
 
-        F_p[s::sigma + 3] = -norm_p * mu_p * (n_p[1] * FR_x + n_p[0] * FR_y);
-        F_p[s::sigma + 4] = -norm_p * mu_p * (n_p[2] * FR_x + n_p[0] * FR_z);
-        F_p[s::sigma + 5] = -norm_p * mu_p * (n_p[2] * FR_y + n_p[1] * FR_z);
+        F_p[Shortcuts::sigma + 3] = -norm_p * mu_p * (n_p[1] * FR_x + n_p[0] * FR_y);
+        F_p[Shortcuts::sigma + 4] = -norm_p * mu_p * (n_p[2] * FR_x + n_p[0] * FR_z);
+        F_p[Shortcuts::sigma + 5] = -norm_p * mu_p * (n_p[2] * FR_y + n_p[1] * FR_z);
       }
     }
   }
