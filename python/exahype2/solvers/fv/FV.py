@@ -329,6 +329,8 @@ class FV(object):
         self._finish_time_step_implementation = ""
         self._print_time_step_implementation = ""
         self._constructor_implementation = ""
+        self._start_simulation_implementation = ""
+        self._finish_simulation_implementation = ""
 
         self._interpolation = "piecewise_constant"
         self._restriction = "averaging"
@@ -1567,6 +1569,12 @@ The finest mesh width of """
         ).render(**d)
         d["CONSTRUCTOR_IMPLEMENTATION"] = jinja2.Template(
             self._constructor_implementation, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["START_SIMULATION_IMPLEMENTATION"] = jinja2.Template(
+            self._start_simulation_implementation, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["FINISH_SIMULATION_IMPLEMENTATION"] = jinja2.Template(
+            self._finish_simulation_implementation, undefined=jinja2.DebugUndefined
         ).render(**d)
 
         d["PREPROCESS_RECONSTRUCTED_PATCH"] = jinja2.Template(

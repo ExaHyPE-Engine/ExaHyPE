@@ -4,7 +4,6 @@ import sys, os, argparse
 import peano4, exahype2
 
 sys.path.insert(0, os.path.abspath("../../../../tests/exahype2/aderdg"))
-import peano4.output
 import scenarios
 
 available_scenarios = {
@@ -130,7 +129,7 @@ project = exahype2.Project(
     namespace=["benchmarks", "exahype2", "kernelbenchmarks"],
     project_name="KernelBenchmarks",
     directory=".",
-    executable=f"KernelBenchmarks.{args.build_mode}",
+    executable="KernelBenchmarks",
 )
 project.add_solver(ader_solver)
 
@@ -148,7 +147,7 @@ project.set_global_simulation_parameters(
 project.set_Peano4_installation(
     "../../../../", mode=peano4.output.string_to_mode(args.build_mode)
 )
-project = project.generate_Peano4_project(verbose=True)
+project = project.generate_Peano4_project(verbose=False)
 
 accuracy = args.accuracy
 if accuracy < 0:
@@ -170,7 +169,7 @@ project.constants.export_const_with_type(
 
 formatted_num_threads = "{{{}}}".format(", ".join(str(val) for val in args.num_threads))
 project.constants.export_const_with_type(
-    "NumberOfLaunchingThreads", str(formatted_num_threads),     
+    "NumberOfLaunchingThreads", str(formatted_num_threads),
     "tarch::la::Vector<%s, int>" % len(args.num_threads),
 )
 
@@ -196,6 +195,3 @@ makefile.add_h_file("Variants.h")
 makefile.add_cpp_file("KernelBenchmarks-main.cpp")
 
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
-
-print(project)
-print(ader_solver)

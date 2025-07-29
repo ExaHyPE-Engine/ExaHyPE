@@ -67,8 +67,8 @@ class ErrorMeasurement:
         time_delta_between_snapshots,
         clear_database_after_flush,
     ):
-        solver._constructor_implementation += (
-            create_constructor_implementation_for_error_measurement(
+        solver._start_simulation_implementation += (
+            create_start_simulation_implementation_for_error_measurement(
                 delta_between_database_flushes=delta_between_database_flushes,
                 output_file_name=output_file_name,
                 data_delta_between_snapshots=data_delta_between_snapshots,
@@ -107,7 +107,7 @@ void {{"{{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}"}}::setError(double* error) 
             solver._solver_user_definitions += create_solver_user_definitions(False, error_measurement_implementation)
 
 
-def create_constructor_implementation_for_error_measurement(
+def create_start_simulation_implementation_for_error_measurement(
     delta_between_database_flushes,
     output_file_name,
     data_delta_between_snapshots,
@@ -116,7 +116,6 @@ def create_constructor_implementation_for_error_measurement(
 ):
     Template = jinja2.Template(
         """
-  // TODO: MPI might be not be initialised here. Neeeds to be moved somewhere else.
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     _errorDatabase.setDeltaBetweenTwoDatabaseFlushes({{FLUSH_DELTA}});
     _errorDatabase.setOutputFileName("{{FILENAME}}");

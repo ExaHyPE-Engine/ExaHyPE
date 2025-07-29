@@ -7,31 +7,30 @@ project = exahype2.Project(
     ["tests", "exahype2", "aderdg"], ".", executable="ADERDG-Limiting"
 )
 
+parser = exahype2.ArgumentParser("ExaHyPE 2 - ADER-DG Limiting Testing Script")
+parser.set_defaults(
+    min_depth=3,
+    degrees_of_freedom=6,
+)
+args = parser.parse_args()
+
 use_aderdg = True
 use_fv = True
 use_limiting = use_aderdg and use_fv
 with_limiting = 1  # 0 - all ADER, 1 - limit, 2 - all FV
-build_modes = {
-    "Release": peano4.output.CompileMode.Release,
-    "Debug": peano4.output.CompileMode.Debug,
-}
-curr_build_mode = "Release"
 
 dimensions = 2
-min_level = 3
-max_depth = 0
-ndof = 6
-order = ndof - 1
+order = args.degrees_of_freedom - 1
 end_time = 2.0
+plot_interval = 0.00  # 0.05
 CFL = 0.5
 unknowns = {"rho": 1, "rhoU": 1, "rhoV": 1, "rhoE": 1}
 auxiliary = {}
-plot_interval = 0.00  # 0.05
 
-offset = [-1.0, -1.0, -1.0][0:dimensions]
 size = [2.0, 2.0, 2.0][0:dimensions]
-max_h = 1.1 * min(size) / (3.0**min_level)
-min_h = max_h / (3.0**max_depth)
+offset = [-1.0, -1.0, -1.0][0:dimensions]
+max_h = 1.1 * min(size) / (3.0**args.min_depth)
+min_h = max_h / (3.0**args.amr_levels)
 
 Gamma = 1.4
 OriginalShockPosition = 0.111
@@ -203,7 +202,7 @@ project.set_global_simulation_parameters(
 )
 
 project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
-project.set_Peano4_installation("../../../", build_modes[curr_build_mode])
+project.set_Peano4_installation("../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
 project.set_fenv_handler(True)
-project.build(make_clean_first=True)
+project.build()

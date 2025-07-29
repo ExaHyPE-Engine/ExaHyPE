@@ -7,17 +7,22 @@ project = exahype2.Project(
     ["tests", "exahype2", "aderdg"], ".", executable="ADERDG-Limiting"
 )
 
+parser = exahype2.ArgumentParser("ExaHyPE 2 - ADER-DG Limiting Testing Script")
+parser.set_defaults(
+    min_depth=3,
+    degrees_of_freedom=6,
+)
+args = parser.parse_args()
+
 dimensions = 2
-min_level = 3
-max_depth = 0
-order = 5
+order = args.degrees_of_freedom - 1
 end_time = 1.0
 plot_interval = 0.0  # 0.1
 
-offset = [-1.0, -1.0, -1.0][0:dimensions]
 size = [2.0, 2.0, 2.0][0:dimensions]
-max_h = 1.1 * min(size) / (3.0**min_level)
-min_h = max_h / (3.0**max_depth)
+offset = [-1.0, -1.0, -1.0][0:dimensions]
+max_h = 1.1 * min(size) / (3.0**args.min_depth)
+min_h = max_h / (3.0**args.amr_levels)
 
 initial_conditions = """
   Q[0] = 4.0;
@@ -128,8 +133,6 @@ project.add_solver(limiter)
 
 project.set_output_path("solutions")
 
-build_mode = peano4.output.CompileMode.Release
-
 project.set_global_simulation_parameters(
     dimensions=dimensions,
     offset=offset[0:dimensions],
@@ -142,7 +145,7 @@ project.set_global_simulation_parameters(
 )
 
 project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
-project.set_Peano4_installation("../../../", build_mode)
+project.set_Peano4_installation("../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
 project.set_fenv_handler(False)
-project.build(make_clean_first=True)
+project.build()

@@ -122,5 +122,4 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     int index = Indexing::getFaceIndex(cellCentre, cellSize, axis);
     return _depthLevel.faces[axis % Dimensions][index].data();
   }
-
 } // namespace benchmarks::exahype2::kernelbenchmarks

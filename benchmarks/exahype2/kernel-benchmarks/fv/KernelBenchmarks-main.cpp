@@ -291,6 +291,9 @@ int main(int argc, char** argv) {
     benchmarks::exahype2::kernelbenchmarks::DomainSize
   );
 
+  repositories::initLogFilters();
+  repositories::startSimulation();
+
   createGrid();
   logInfo("main()", "Created grid with " << _cells.size() << " cells");
   initGrid();
@@ -348,7 +351,6 @@ int main(int argc, char** argv) {
   double                     nextMaxPlotTimeStamp = FirstPlotTimeStamp;
   bool                       continueToSolve      = true;
 
-  repositories::startSimulation();
   while (continueToSolve) {
     if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp
         or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) {
@@ -447,7 +449,7 @@ int main(int argc, char** argv) {
   repositories::finishSimulation();
 
   if (haveReceivedNonCriticalAssertion) {
-    logInfo("main()", "Terminated gracefully after noncritical assertion");
+    logWarning("main()", "Terminated gracefully after noncritical assertion");
     returnCode = EXIT_FAILURE;
   } else {
     // Print final timestep information

@@ -79,14 +79,13 @@ namespace benchmarks {
         ss << "total compute time: " << timingComputeKernel.getValue() << " |\n\t";
         ss << "average compute time per cell: " << (timingComputeKernel.getValue() / numberOfCells) << " |\n\t";
         ss << timingComputeKernel.toString() << " |\n\t";
-        ss << "total time including launch time: " << timingKernelLaunch.getValue() << " |\n\t";
-        ss << "average total time per cell: " << (timingKernelLaunch.getValue() / numberOfCells);
-        ss << " |\n\t" << timingKernelLaunch.toString();
+        //ss << "total time including launch time: " << timingKernelLaunch.getValue() << " |\n\t";
+        //ss << "average total time per cell: " << (timingKernelLaunch.getValue() / numberOfCells);
+        //ss << " |\n\t" << timingKernelLaunch.toString();
         logInfo("reportRuntime()", ss.str());
 
-
         std::ostringstream snapshotFileName;
-        snapshotFileName << "ader-benchmarks-prec-" 
+        snapshotFileName << "ader-benchmarks-prec-"
                          << typeid(SolverPrecision).name()
                          << ".csv";
         std::ofstream file( snapshotFileName.str(), std::ios_base::app );
@@ -96,10 +95,10 @@ namespace benchmarks {
               << timingComputeKernel.getValue() << ","
               << timingKernelLaunch.getValue() << ","
               << (timingComputeKernel.getValue() / numberOfCells) << ","
-              << (timingKernelLaunch.getValue() / numberOfCells) << ","
-              << timingKernelLaunch.max() << ","
-              << timingKernelLaunch.min() << ","
-              << timingKernelLaunch.getStandardDeviation()
+              // << (timingKernelLaunch.getValue() / numberOfCells) << ","
+              // << timingKernelLaunch.max() << ","
+              // << timingKernelLaunch.min() << ","
+              // << timingKernelLaunch.getStandardDeviation()
               << std::endl;
       }
     } // namespace kernelbenchmarks
