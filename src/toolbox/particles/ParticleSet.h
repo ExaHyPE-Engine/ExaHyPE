@@ -68,7 +68,7 @@ public:
   typedef T             DoFType;
   typedef std::list<T*> ParticleList;
 
-  using SieveParticles = SieveParticles<T>;
+  // using SieveParticles = SieveParticles<T>;
 
 #if PeanoDebug >= 1
   void                                  setDebugX(const tarch::la::Vector<Dimensions, double>& data);
@@ -166,7 +166,7 @@ public:
   /**
    * @return A copy of all the particles that have to be sieved.
    */
-  static SieveParticles cloneParticlesToBeSieved();
+  static SieveParticles<T> cloneParticlesToBeSieved();
 
   /**
    * Make routine from SieveParticles public
@@ -369,7 +369,7 @@ protected:
    * see fit.
    *
    */
-  static SieveParticles _sieveParticles;
+  static SieveParticles<T> _sieveParticles;
 
 #if PeanoDebug >= 1
   tarch::la::Vector<Dimensions, double> _debugX;

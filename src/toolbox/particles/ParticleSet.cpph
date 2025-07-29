@@ -297,7 +297,7 @@ void toolbox::particles::ParticleSet<T>::finishedTraversal(
 
 
 template <typename T>
-typename toolbox::particles::ParticleSet<T>::SieveParticles toolbox::particles::ParticleSet<T>::cloneParticlesToBeSieved() {
+typename toolbox::particles::SieveParticles<T> toolbox::particles::ParticleSet<T>::cloneParticlesToBeSieved() {
   return _sieveParticles.cloneParticlesToBeSieved();
 }
 

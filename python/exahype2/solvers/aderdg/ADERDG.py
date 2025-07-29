@@ -167,6 +167,8 @@ class ADERDG(object):
         self._precompute_picard_precision           = False
         self._use_half_precision                    = False
 
+        self._additional_precisions = None
+
         # Used by children classes or setters in order to add constants or includes to the corresponding part
         self._solver_constants = ""
         self._user_action_set_includes = ""
@@ -511,7 +513,7 @@ Material parameters:    """
         )
 
         self._rhs_estimates_projection.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_cell_data_to_compute_kernels_default_guard(),
+            self._provide_face_data_to_compute_kernels_default_guard(),
             self._load_face_data_default_guard(),
             self._store_face_data_default_guard()
         )
@@ -1075,6 +1077,8 @@ Material parameters:    """
         d["CORRECTOR_COMPUTATION_PRECISION"]  = self._corrector_computation_precision
 
         d["COMPUTATION_PRECISIONS"] = self._predictor_computation_precisions[:]
+        if self._additional_precisions!=None and self._additional_precisions not in d["COMPUTATION_PRECISIONS"]:
+            d["COMPUTATION_PRECISIONS"].append(self._additional_precisions)            
         if self._corrector_computation_precision not in d["COMPUTATION_PRECISIONS"]:
             d["COMPUTATION_PRECISIONS"].append(self._corrector_computation_precision)
         if self._precompute_picard_precision!=False and self._precompute_picard_precision not in d["COMPUTATION_PRECISIONS"]:

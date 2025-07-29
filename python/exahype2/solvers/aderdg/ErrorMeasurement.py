@@ -38,30 +38,34 @@ class ErrorMeasurement(exahype2.solvers.ErrorMeasurement):
             guard="_solverState == SolverState::GridInitialisation or _solverState == SolverState::TimeStep"
         )
 
-        solver._action_set_postprocess_solution = EmptyPostprocessSolution(
-            solver=solver
-        )
+        if solver._action_set_postprocess_solution == None: 
+          solver._action_set_postprocess_solution = EmptyPostprocessSolution(
+              solver=solver
+          )
 
         if isinstance(solver, GlobalAdaptiveTimeStep):
             solver._action_set_postprocess_solution._compute_kernel += (
-                create_postprocessing_kernel_for_error_measurement_for_adaptive_timestepping()
+                create_postprocessing_kernel_for_error_measurement_for_adaptive_timestepping(
+                  solver._provide_cell_data_to_compute_kernels_default_guard()
+                )
             )
         elif isinstance(solver, GlobalFixedTimeStep):
             solver._action_set_postprocess_solution._compute_kernel += (
-                create_postprocessing_kernel_for_error_measurement_for_fixed_timestepping()
+                create_postprocessing_kernel_for_error_measurement_for_fixed_timestepping(
+                  solver._provide_cell_data_to_compute_kernels_default_guard()
+                )
             )
 
         solver._action_set_postprocess_solution.descend_invocation_order = 3
 
 
-def create_postprocessing_kernel_for_error_measurement_for_fixed_timestepping():
+def create_postprocessing_kernel_for_error_measurement_for_fixed_timestepping(guard):
     return """
     if ((
       repositories::{{SOLVER_INSTANCE}}.getSolverState() == {{SOLVER_NAME}}::SolverState::GridInitialisation
       or
       repositories::{{SOLVER_INSTANCE}}.isFirstGridSweepOfTimeStep())
-      and
-      not marker.willBeRefined() and not marker.hasBeenRefined()
+      and """ + guard + """
     ) {
       double errors[3]{};
 
@@ -90,14 +94,13 @@ def create_postprocessing_kernel_for_error_measurement_for_fixed_timestepping():
 """
 
 
-def create_postprocessing_kernel_for_error_measurement_for_adaptive_timestepping():
+def create_postprocessing_kernel_for_error_measurement_for_adaptive_timestepping(guard):
     return """
     if ((
       repositories::{{SOLVER_INSTANCE}}.getSolverState() == {{SOLVER_NAME}}::SolverState::GridInitialisation
       or
       repositories::{{SOLVER_INSTANCE}}.isFirstGridSweepOfTimeStep())
-      and
-      not marker.willBeRefined() and not marker.hasBeenRefined()
+      and """ + guard + """
     ) {
       double errors[3]{};
 

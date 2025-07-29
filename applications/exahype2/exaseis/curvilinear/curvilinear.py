@@ -2,6 +2,9 @@ import os, sys, peano4, exahype2
 
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
+import os, sys
+import subprocess
+
 import CurvilinearElastic
 
 sys.path.insert(0, os.path.abspath("../ExaSeis_core"))
@@ -75,7 +78,8 @@ theSolver._abstract_solver_user_definitions  += CurvilinearElastic.abstractUserD
 theSolver._start_grid_initialisation_implementation += CurvilinearElastic.init_grid_step_implementation(scenario_string)
 theSolver.add_user_solver_includes(CurvilinearElastic.userIncludes())
 
-project = exahype2.Project(["exahype2", "elastic"], "curvi", executable=scenario+"_l_"+str(min_level)+"_o_"+str(order)+"_pr_"+precision)
+filename = scenario+"_l"+str(min_level)+"_o"+str(order)+"_pr_"+precision
+project = exahype2.Project(["exahype2", "elastic"], "curvi", executable="LOH1")
 
 project.add_solver(theSolver)
 
@@ -84,7 +88,7 @@ if use_tracers:
       exahype2.tracer.NewDGTracer(
         coordinates=my_scenario.tracer_coordinates,
         solver=theSolver,
-        filename=scenario+"_level_"+str(min_level)+"-order-"+str(order)+"-precision-"+str(precision),
+        filename=filename,
         data_delta_between_two_snapshots=1e16, time_delta_between_two_snapshots=0.01,
         output_precision=10, clear_database_after_flush=False
     ))
@@ -104,3 +108,6 @@ project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration()")
 project.set_Peano4_installation( "../../../../", peano4.output.CompileMode.Release )
 peano4_project = project.generate_Peano4_project(verbose=False)
 peano4_project.build(make_clean_first=True)
+
+os.rename("LOH1", filename)
+subprocess.run("make distclean", shell = True, executable="/bin/bash")

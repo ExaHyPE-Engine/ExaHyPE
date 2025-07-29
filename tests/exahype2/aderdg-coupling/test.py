@@ -130,20 +130,13 @@ solver.set_implementation(
     riemann_solver=scenario._equation.riemann_solver(),
 )
 
-if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementation:
-    exahype2.solvers.aderdg.ErrorMeasurement(
-        solver,
-        error_measurement_implementation=scenario.analytical_solution(),
-        output_file_name="Error_" + scenario.__class__.__name__,
-    )
-
 project.add_solver(solver)
 
 ################################################
 
 solver2 = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     name=scenario.__class__.__name__+"2",
-    order=order+1,
+    order=order,
     min_cell_h=min_h,
     max_cell_h=max_h,
     time_step_relaxation=0.9,
@@ -165,18 +158,29 @@ solver2.set_implementation(
     riemann_solver=scenario._equation.riemann_solver(),
 )
 
-if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementation:
-    exahype2.solvers.aderdg.ErrorMeasurement(
-        solver2,
-        error_measurement_implementation=scenario.analytical_solution(),
-        output_file_name="Error_" + scenario.__class__.__name__,
-    )
+################################################
 
 project.add_solver(solver2)
 
 from fuseADERSolvers import fuseADERSolvers
 
-fuseADERSolvers(solver, solver2, "marker.x()[0]<=0.0")
+fuseADERSolvers(
+  solver, solver2, 
+  "\nmarker.x()[0]<=(DomainOffset[0]+0.5*DomainSize[0]+0.51*marker.h()[0])\n", 
+  "\nmarker.x()[0]>=(DomainOffset[0]+0.5*DomainSize[0]+0.49*marker.h()[0])\n"
+)
+
+if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementation:
+    exahype2.solvers.aderdg.ErrorMeasurement(
+        solver,
+        error_measurement_implementation=scenario.analytical_solution(),
+        output_file_name="Error_" + scenario.__class__.__name__,
+    )
+    exahype2.solvers.aderdg.ErrorMeasurement(
+        solver2,
+        error_measurement_implementation=scenario.analytical_solution(),
+        output_file_name="Error2_" + scenario.__class__.__name__,
+    )
 
 ################################################
 
