@@ -91,17 +91,13 @@ namespace Numerics {
     T& sigma_hat_m
   ) {
 
-    T phi   = 0;
-    T v_hat = 0;
-    T eta   = 0;
-
     T p = z_p * v_p + sigma_p;
     T q = z_m * v_m - sigma_m;
 
     if (z_p > 0 && z_m > 0) {
-      eta = (z_p * z_m) / (z_p + z_m);
 
-      phi = eta * (p / z_p - q / z_m);
+      T eta = (z_p * z_m) / (z_p + z_m);
+      T phi = eta * (p / z_p - q / z_m);
 
       sigma_hat_p = phi;
       sigma_hat_m = phi;

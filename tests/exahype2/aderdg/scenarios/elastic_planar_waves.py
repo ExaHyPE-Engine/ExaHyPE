@@ -14,7 +14,7 @@ class ElasticPlanarWaves(Scenario):
     Scenario reproduced from Dumbser & Käser, https://doi.org/10.1111/j.1365-246X.2006.03120.x (Chapter 5, p. 328)
     """
 
-    _plot_dt = 0.0
+    _plot_dt = 0.2
     _offset = -1.0
     _domain_size = 2.0
     _periodic_bc = True
@@ -36,7 +36,7 @@ class ElasticPlanarWaves(Scenario):
   constexpr double cs   = 2.0;
 
   const double val_x = cos( -std::numbers::pi*x[0]);
-  const double val_y = cos( -std::numbers::pi*x[1]);
+  const double val_y = 0.0;//cos( -std::numbers::pi*x[1]);
 """ + (
             """
   const double val_z = cos( -std::numbers::pi*x[2]);
@@ -92,7 +92,7 @@ class ElasticPlanarWaves(Scenario):
   constexpr double w = -2*M_PI;
 
   const double val_x = cos( w*t -std::numbers::pi*x[0]);
-  const double val_y = cos( w*t -std::numbers::pi*x[1]);
+  const double val_y = 0.0;//cos( w*t -std::numbers::pi*x[1]);
 """ + (
             """
   const double val_z = cos( -std::numbers::pi*x[2]);
