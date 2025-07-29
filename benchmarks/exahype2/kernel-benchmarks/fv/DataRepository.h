@@ -74,16 +74,13 @@ namespace benchmarks::exahype2::kernelbenchmarks {
 
     ~DataRepository() = default;
 
-
     double* getCellQ(int index);
-
     double* getCellQ(
       const tarch::la::Vector<Dimensions, double>& cellCentre,
       const tarch::la::Vector<Dimensions, double>& cellSize
     );
 
     double* getFaceQNew(int index, int axis);
-
     double* getFaceQNew(
       const tarch::la::Vector<Dimensions, double>& cellCentre,
       const tarch::la::Vector<Dimensions, double>& cellSize,
@@ -92,13 +89,13 @@ namespace benchmarks::exahype2::kernelbenchmarks {
 
     int getFaceCardinality();
     // QReconstructed is not stored explicitly anymore, as it is just used to store the patch+halo temporarily before
-    // riemann step but we still need its size, therefore the getter
+    // the Riemann step but we still need its size, therefore the getter.
     int getCellQReconstructedCardinality();
     int getCellQCardinality();
 
   private:
-    friend class celldata::FVSolverQ;
-    friend class celldata::FVSolverQReconstructed;
+    friend struct celldata::FVSolverQ;
+    friend struct celldata::FVSolverQReconstructed;
 
     using CellQ    = std::array<double, celldata::FVSolverQ::Cardinality>;
     using FaceQNew = std::array<double, facedata::FVSolverQNew::Cardinality>;

@@ -10,16 +10,18 @@
   parallel:
     matrix:
     - scenario: [AcousticPlanarWaves, AdvectionLinear, ElasticPlanarWaves, EulerGaussianBell, EulerIsotropicVortex, SWERadialDamBreak, SWERestingLake]
+      build_type: [Debug, Release]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg; PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg.py -s $scenario;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg; PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg.py -s $scenario -m $build_type -md 2;"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg; OMP_NUM_THREADS=1 ./ADERDG;"
 
 .ExaHyPE2_ADERDG_AMR_Tests:
   parallel:
     matrix:
-    - test: [swe]
+    - build_type: [Debug, Release]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-amr; PYTHONPATH=$CI_PROJECT_DIR/python python3 $test.py; OMP_NUM_THREADS=1 ./ADERDG-AMR"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-amr; PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg-amr.py -m $build_type -md 2;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-amr; OMP_NUM_THREADS=1 ./ADERDG-AMR;"
 
 .ExaHyPE2_ADERDG_WettingDrying_Tests:
   script:
@@ -29,8 +31,10 @@
   parallel:
     matrix:
     - test: [static-limiting-swe, static-limiting-euler-airfoil, posteriori-limiting-euler-shock, posteriori-limiting-landslide]
+      build_type: [Debug, Release]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-limiting; PYTHONPATH=$CI_PROJECT_DIR/python python3 $test.py; OMP_NUM_THREADS=1 ./ADERDG-Limiting"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-limiting; PYTHONPATH=$CI_PROJECT_DIR/python python3 $test.py -m $build_type -md 2;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-limiting; OMP_NUM_THREADS=1 ./ADERDG-Limiting;"
 
 .ExaHyPE2_Tutorials:
   script:
@@ -76,9 +80,10 @@
   parallel:
     matrix:
     - kernel: [fv, aderdg, aderdg-fused]
+      build_type: [Debug, Release]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/kernel-benchmarks/$kernel; PYTHONPATH=$CI_PROJECT_DIR/python python3 $kernel.py;"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/kernel-benchmarks/$kernel; ./KernelBenchmarks.Release"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/kernel-benchmarks/$kernel; PYTHONPATH=$CI_PROJECT_DIR/python python3 $kernel.py -m $build_type;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/kernel-benchmarks/$kernel; ./KernelBenchmarks"
 
 .ExaHyPE2_GaugeWave_FV:
   script:

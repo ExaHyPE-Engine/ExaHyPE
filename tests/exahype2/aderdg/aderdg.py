@@ -69,8 +69,9 @@ solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
 )
 
 solver.add_kernel_optimisations(
-    polynomials=polynomials, is_linear=scenario._equation.is_linear,
-    precision = args.precision
+    polynomials=polynomials,
+    is_linear=scenario._equation.is_linear,
+    precision=args.precision
 )
 
 solver.set_implementation(
@@ -97,5 +98,5 @@ scenario.set_global_simulation_parameters(project)
 project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
 project.set_Peano4_installation("../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
-project.set_fenv_handler(True)
+project.set_fenv_handler(args.fpe)
 project.build(make_clean_first=True)

@@ -4,7 +4,6 @@ import sys, os, argparse
 import peano4, exahype2
 
 sys.path.insert(0, os.path.abspath("../../../../tests/exahype2/aderdg"))
-import peano4.output
 import scenarios
 
 available_scenarios = {
@@ -117,7 +116,7 @@ project = exahype2.Project(
     namespace=["benchmarks", "exahype2", "kernelbenchmarks"],
     project_name="KernelBenchmarks",
     directory=".",
-    executable=f"KernelBenchmarks.{args.build_mode}",
+    executable="KernelBenchmarks",
 )
 project.add_solver(ader_solver)
 
@@ -133,7 +132,7 @@ project.set_global_simulation_parameters(
 )
 
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
-project = project.generate_Peano4_project(verbose=True)
+project = project.generate_Peano4_project(verbose=False)
 
 accuracy = args.accuracy
 if accuracy < 0:
@@ -162,6 +161,3 @@ else:
 
 project.output.makefile.add_cpp_file("KernelBenchmarks-main.cpp")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
-
-print(project)
-print(ader_solver)

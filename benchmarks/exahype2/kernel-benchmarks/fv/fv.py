@@ -80,7 +80,7 @@ project = exahype2.Project(
     namespace=["benchmarks", "exahype2", "kernelbenchmarks"],
     project_name="KernelBenchmarks",
     directory=".",
-    executable="KernelBenchmarks." + str(args.build_mode),
+    executable="KernelBenchmarks",
 )
 
 fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
