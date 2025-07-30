@@ -118,7 +118,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
-  // [nk] Checks if _solverState is in the Suspended state and return.
+  // Checks if _solverState is in the Suspended state and return.
   // Prevents nullification of eigenvalues if the solver is suspended
   if (_solverState == SolverState::Suspended) {
     assertion(_solverState != SolverState::GridConstruction);

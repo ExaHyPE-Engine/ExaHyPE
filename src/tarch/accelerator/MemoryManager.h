@@ -4,11 +4,10 @@
 
 #include "Device.h"
 #include "MemoryLocation.h"
-
-#include "tarch/tarch.h"
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/tarch.h"
 
 #include <list>
 #include <map>
@@ -26,6 +25,25 @@ namespace tarch::accelerator {
  * from here. As it is not freed afterwards, we avoid overheads that arise
  * from frequent re-allocation.
  *
+ * As introduced in:
+ *
+ * @InProceedings{10.1007/978-3-031-32041-5_4,
+ *   author="Wille, Mario
+ *   and Weinzierl, Tobias
+ *   and Brito Gadeschi, Gonzalo
+ *   and Bader, Michael",
+ *   editor="Bhatele, Abhinav
+ *   and Hammond, Jeff
+ *   and Baboulin, Marc
+ *   and Kruse, Carola",
+ *   title="Efficient GPU Offloading with OpenMP for a Hyperbolic Finite Volume Solver on Dynamically Adaptive Meshes",
+ *   booktitle="High Performance Computing",
+ *   year="2023",
+ *   publisher="Springer Nature Switzerland",
+ *   address="Cham",
+ *   pages="65--85",
+ *   isbn="978-3-031-32041-5"
+ * }
  */
 class tarch::accelerator::MemoryManager {
 private:
@@ -36,13 +54,13 @@ private:
   /**
    * Map of pages (memory blocks) per size.
    */
-  typedef std::map<std::size_t, std::vector<std::pair<void*, MemoryLocation>>> FreePages;
+  typedef std::unordered_map<std::size_t, std::vector<std::pair<void*, MemoryLocation>>> FreePages;
 
   /**
    * Counterpart of FreePages, i.e. map of memory blocks (addresses) onto
    * sizes.
    */
-  typedef std::map<void*, std::pair<std::size_t, MemoryLocation>> UsedPages;
+  typedef std::unordered_map<void*, std::pair<std::size_t, MemoryLocation>> UsedPages;
 
   struct MemoryPages {
     FreePages freePages;
@@ -95,9 +113,7 @@ public:
 
   template <class T>
   T* allocate(std::size_t count, MemoryLocation location, int device = Device::DefaultDevice) {
-    return reinterpret_cast<T*>(
-      allocate(count * sizeof(T), location, device)
-    );
+    return reinterpret_cast<T*>(allocate(count * sizeof(T), location, device));
   }
 
   /**

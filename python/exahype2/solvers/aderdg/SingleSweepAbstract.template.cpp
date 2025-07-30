@@ -157,7 +157,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   case SolverState::GridInitialisation:
     _solverState = SolverState::InitialPrediction;
     break;
-    // [nk] Checks if _solverState is in the suspended state and return.
+    // Checks if _solverState is in the suspended state and return.
     // Prevents nullification of eigenvalues if the solver is suspended
   case SolverState::Suspended:
     {% if USE_SEPARATE_SWEEPS is sameas True %}
@@ -165,7 +165,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
     {% else %}
     _solverState = (_minTimeStamp == 0) ? SolverState::InitialPrediction : SolverState::TimeStep;
     {% endif %}
-    return; // [nk] return if suspended
+    return; // Return if suspended
   case SolverState::Plotting:
     {% if USE_SEPARATE_SWEEPS is sameas True %}
     _solverState = SolverState::InitialPrediction;

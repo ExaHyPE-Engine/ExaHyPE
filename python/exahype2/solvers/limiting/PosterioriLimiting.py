@@ -201,7 +201,7 @@ class PosterioriLimiting(object):
         self._action_set_spread_limiter_status.descend_invocation_order         = 1
         self._action_set_copy_convert_and_project_data.descend_invocation_order = 1000
 
-        # [nk] The limiter solver should be called to recompute TROUBLED cells and their neighbors LIMITER_TO_REGULAR based on the projections
+        # The limiter solver should be called to recompute TROUBLED cells and their neighbors LIMITER_TO_REGULAR based on the projections
         # that are sent from CopyAndConvertPatch action.
         update_patch_guard = (
            " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::LimiterSolver"

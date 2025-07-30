@@ -5,12 +5,12 @@
 #include "DGMatrices.h"
 #include "Quadrature.h"
 #include "BufferSizes.h"
-
-#include "exahype2/dg/DGUtils.h"
-
 {% if USE_LIBXSMM %}
 #include "Gemms.h"
 {% endif %}
+
+#include "exahype2/dg/DGUtils.h"
+#include "tarch/accelerator/MemoryManager.h"
 
 #include <cstring>
 #include <algorithm>
@@ -53,6 +53,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   const double                                      timeStepSize
 ) {
   pCompType memory[getFusedSTPVISize()] __attribute__((aligned({{ALIGNMENT}})));
+  //pCompType* memory = tarch::accelerator::MemoryManager::getInstance().allocate<pCompType>(getFusedSTPVISize(), tarch::MemoryLocation::Heap, tarch::accelerator::Device::DefaultDevice);
 
   pCompType* lQi   = memory + getlQiShift();
   pCompType* lQhi  = memory + getlQhiShift();
@@ -284,7 +285,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   //*****************************
   //****** Volume Integral ******
   //*****************************
-  // [nk] We start accumulate volume terms of the corrector here as soon as the predictor is computed
+  // We start accumulate volume terms of the corrector here as soon as the predictor is computed.
   // Here we use that Kxi already consists 1D spatial weights. Two other spatial weights have the same
   // indexing, therefore they cancel out.
   pCompType coeffVolume[{{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}] __attribute__((aligned({{ALIGNMENT}})));
@@ -330,6 +331,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
     }
   }
 {% endif %}
+
+  //tarch::accelerator::MemoryManager::getInstance().free(memory, tarch::accelerator::Device::DefaultDevice);
 
   // Return number of Picard iterations, std::min to avoid doing a +1 if the loop has not been exited early.
   return std::min(numberOfPicardIterations + 1, {{2*NUMBER_OF_DOF+1}});
@@ -378,7 +381,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
     {% endif %}
   };
 
-  for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) {  // Time DOFs
+  for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) { // Time DOFs
 {% if USE_NCP %}
     std::memset(gradQ, 0, {{(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED*DIMENSIONS}} * sizeof(pCompType));
 
@@ -424,7 +427,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
       F[0] = &lFi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}}];
       F[1] = &lFi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}];
 
-      // [nk] Convert an xyz index into a {indexX, indexY} structure.
+      // Convert an xyz index into a {indexX, indexY} structure.
       // Note: In general, the flattened index is constructed from outer to inner dimensions in the following order: time -> z -> y -> x -> variables.
       const tarch::la::Vector<Dimensions, int> index = {xyz % {{NUMBER_OF_DOF}}, xyz / {{NUMBER_OF_DOF}} };
 {% endif %}
@@ -432,12 +435,12 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
       F[0] = &lFi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}}];
       F[1] = &lFi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}];
       F[2] = &lFi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}];
-      // [nk] Convert an xyz index into a {indexX, indexY, indexZ} structure.
+      // Convert an xyz index into a {indexX, indexY, indexZ} structure.
       // Note: In general, the flattened index is constructed from outer to inner dimensions in the following order: time -> z -> y -> x -> variables.
       const tarch::la::Vector<Dimensions, int> index = {xyz % {{NUMBER_OF_DOF}}, (xyz % {{NUMBER_OF_DOF**(DIMENSIONS - 1)}}) / {{NUMBER_OF_DOF}} xyz / {{NUMBER_OF_DOF ** DIMENSIONS}}};
 {% endif %}
 
-      // [nk] Calculate the exact time-node position for the flux calculation.
+      // Calculate the exact time-node position for the flux calculation.
       // -- Time positions are calculated as: t = tk + dt * tau
       //    - t (timePosition)        : Time node in the global system.
       //    - t_{k}                   : Current timestamp.
@@ -445,7 +448,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
       //    - tau                     : Time node in the reference cell (normalized to [0, 1]).
       const double timePosition = timeStamp + Quadrature<pCompType>::nodes[t] * timeStepSize;
 
-      // [nk] Calculate the exact space-node position for the flux calculation.
+      // Calculate the exact space-node position for the flux calculation.
       // -- Space positions are calculated as: x = xc + dx * (r - 0.5)
       //    - x (nodePosition) : Node coordinates in the global coordinate system.
       //    - r                : Node coordinates in the reference cell (normalized to [0, 1]^dimensions).
@@ -454,7 +457,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
       //    - rc = 0.5         : Cell center coordinates in the reference cell.
       tarch::la::Vector<Dimensions, double> nodePosition = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, {{NUMBER_OF_DOF - 1}}, Quadrature<pCompType>::nodes);
 
-      // [nk] Measure the flux contribution to the local cell time evaluation.
+      // Measure the flux contribution to the local cell time evaluation.
       // Note: No connections with neighboring cells are considered during this step (e.g., no Riemann solver is used).
       //       The numerical fluxes from neighbors (penalty) are considered during the correction stage.
       for (int d = 0; d < Dimensions; d++) {
@@ -476,7 +479,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 {% endif %}{# USE_FLUX #}
 
     // Compute the contribution of the initial condition (uh) to the right-hand side (rhs).
-    // [nk] ADER-DG allows discontinuities in time as well. Time evaluation ranges from 0 to infinity.
+    // ADER-DG allows discontinuities in time as well. Time evaluation ranges from 0 to infinity.
     // Following the upwinding principle, the "upstream" value of the corrector (luh) from the previous time step is used.
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
       const pCompType weight = Quadrature<pCompType>::weights3[xyz] * DGMatrices<pCompType>::FLCoeff[t];
@@ -490,7 +493,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 
 {% if USE_FLUX %}
     // Compute the "derivatives" (contributions of the stiffness matrix).
-    // [nk] Note: Kx_i here is not the pure stiffness matrix K itself but a Kronecker product of 1D weights (weights1) with it.
+    // Note: Kx_i here is not the pure stiffness matrix K itself but a Kronecker product of 1D weights (weights1) with it.
     // Therefore, weights3 is not a 3D spatial weight but a combination (Kronecker product) of 1D time weights and 2D spatial weights.
 
     // x-direction (independent from the y- and z-derivatives)
