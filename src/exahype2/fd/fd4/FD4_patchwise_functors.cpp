@@ -3,7 +3,6 @@
 #include "exahype2/fd/LoopBody.h"
 #include "exahype2/fd/fd4/LoopBody.h"
 
-#include "tarch/multicore/otter.h"
 #include "tarch/accelerator/accelerator.h"
 
 void exahype2::fd::fd4::timeStep_patchwise_heap_functors(

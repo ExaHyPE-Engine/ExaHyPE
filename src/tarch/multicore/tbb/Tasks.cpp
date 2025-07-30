@@ -6,7 +6,6 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/multicore.h"
-#include "tarch/multicore/otter.h"
 #include "tarch/services/ServiceRepository.h"
 
 #include "tarch/multicore/BooleanSemaphore.h"

@@ -24,7 +24,6 @@
 #include "tarch/CompilerSpecificSettings.h"
 
 #include "tarch/multicore/smartScheduling.h"
-#include "tarch/multicore/otter.h"
 
 #include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"

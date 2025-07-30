@@ -32,7 +32,6 @@
 #include "NohProblem.h"
 
 #include "tarch/timing/Measurement.h"
-#include "tarch/multicore/otter.h"
 
 
 #include "globaldata/HydroPart.h"
