@@ -56,7 +56,7 @@ def create_postprocessing_kernel_for_error_measurement():
     #endif
 
     repositories::{{SOLVER_INSTANCE}}.analyticalSolution(
-      volumeX,
+      x,
       timeStamp,
       timeStepSize,
       value,

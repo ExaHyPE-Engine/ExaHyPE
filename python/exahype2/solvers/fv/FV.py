@@ -305,6 +305,7 @@ class FV(object):
         self._source_term_implementation = PDETerms.None_Implementation
         self._diffusive_source_term_implementation = PDETerms.None_Implementation
         self._adjust_solution_implementation = PDETerms.None_Implementation
+        self._limiter_implementation = PDETerms.None_Implementation
 
         self._use_stateless_initial_conditions = False
         self._use_stateless_boundary_conditions = False
@@ -317,6 +318,7 @@ class FV(object):
         self._use_stateless_source_term = False
         self._use_stateless_diffusive_source_term = False
         self._use_stateless_adjust_solution = False
+        self._use_stateless_limiter = False
 
         self._compute_eigenvalue = True
         self._time_stepping_code_snippets = None
@@ -1603,6 +1605,7 @@ The finest mesh width of """
         d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
         d["DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION"] = self._diffusive_source_term_implementation
         d["ADJUST_SOLUTION_IMPLEMENTATION"] = self._adjust_solution_implementation
+        d["LIMITER_IMPLEMENTATION"] = self._limiter_implementation
 
         d["STATELESS_INITIAL_CONDITIONS"] = self._use_stateless_initial_conditions
         d["STATELESS_BOUNDARY_CONDITIONS"] = self._use_stateless_boundary_conditions
@@ -1615,6 +1618,7 @@ The finest mesh width of """
         d["STATELESS_SOURCE_TERM"] = self._use_stateless_source_term
         d["STATELESS_DIFFUSIVE_SOURCE_TERM"] = self._use_stateless_diffusive_source_term
         d["STATELESS_ADJUST_SOLUTION"] = self._use_stateless_adjust_solution
+        d["STATELESS_LIMITER"] = self._use_stateless_limiter
 
         d["CAN_FUSE"] = self._can_fuse
         d["USE_ENCLAVE_TASKING"] = self._use_enclave_tasking

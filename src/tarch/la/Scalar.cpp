@@ -1,11 +1,13 @@
 #include "tarch/la/Scalar.h"
 
+#include "tarch/CompilerSpecificSettings.h"
+
 #include <algorithm>
 #include <cmath>
 
-#include "tarch/CompilerSpecificSettings.h"
-
 double tarch::la::max(double a, double b, double c) { return std::max(a, std::max(b, c)); }
+
+double tarch::la::min(double a, double b, double c) { return std::min(a, std::min(b, c)); }
 
 double tarch::la::relativeEpsNormaledAgainstValueGreaterOne(double valueA, double valueB, double eps) {
   return std::max(std::abs(valueA), std::abs(valueB)) <= 1.0 ? eps : eps * std::max(std::abs(valueA), std::abs(valueB));

@@ -420,11 +420,11 @@ def is_cppfile(filename):
 
     for suf in suffixes:
         if filename.endswith(suf):
-            # Don't format jinja template files. clang-format can't handle those.
-            if filename.endswith(".template" + suf):
+            # Don't format Jinja2 template or macro files. clang-format can't handle those.
+            if filename.endswith((".template" + suf, ".macro" + suf)):
                 if verbose:
                     print(
-                        "File '{}' looks like a jinja template file. Skipping.".format(
+                        "File '{}' looks like a Jinja2 template file. Skipping.".format(
                             filename
                         )
                     )

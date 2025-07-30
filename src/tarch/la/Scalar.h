@@ -36,7 +36,9 @@ namespace tarch {
      * If you have only one argument, set valueB=valueA.
      */
     double relativeEpsNormaledAgainstValueGreaterOne(
-      double valueA, double valueB = std::numeric_limits<double>::min(), double eps = NUMERICAL_ZERO_DIFFERENCE
+      double valueA,
+      double valueB = std::numeric_limits<double>::min(),
+      double eps    = NUMERICAL_ZERO_DIFFERENCE
     );
 
     /**
@@ -54,7 +56,9 @@ namespace tarch {
      * If you have only one argument, set valueB=valueA.
      */
     double relativeEps(
-      double valueA, double valueB = std::numeric_limits<double>::min(), double eps = NUMERICAL_ZERO_DIFFERENCE
+      double valueA,
+      double valueB = std::numeric_limits<double>::min(),
+      double eps    = NUMERICAL_ZERO_DIFFERENCE
     );
 
     /**
@@ -62,6 +66,11 @@ namespace tarch {
      * function for this.
      */
     double max(double a, double b, double c);
+
+    /**
+     * The minimum of three values to complement max()
+     */
+    double min(double a, double b, double c);
 
     /**
      * Wrapper around std::pow which is redirected to Intel's implementation on

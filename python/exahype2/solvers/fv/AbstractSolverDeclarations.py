@@ -157,6 +157,13 @@ class AbstractSolverDeclarations:
       {{COMPUTE_PRECISION}}* const NOALIAS          Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
     ) = 0;
     {% endif %}
+
+    {% if LIMITER_IMPLEMENTATION=="<user-defined>" and LIMITER_IMPLEMENTATION!="<none>" %}
+    virtual {{COMPUTE_PRECISION}} limit(
+      const {{COMPUTE_PRECISION}} a,
+      const {{COMPUTE_PRECISION}} b
+    ) = 0;
+    {% endif %}
 """,
             undefined=jinja2.DebugUndefined,
         )

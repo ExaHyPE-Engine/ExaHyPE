@@ -52,10 +52,12 @@
 .ExaHyPE2_NavierStokes:
   parallel:
     matrix:
-    - scenario: [breaking-dam, gaussian-explosion, point-explosion]
-      dimensions: [2, 3]
+    - scenario: [breaking-dam, gaussian-bell, gaussian-explosion, point-explosion, smooth-convergence]
+      dimensions: [2]
+      build_type: [Debug, Release]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/navier-stokes/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -d $dimensions;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/navier-stokes/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -d $dimensions -m $build_type -md 4 -ns 0;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/navier-stokes/$scenario; OMP_NUM_THREADS=1 ./NavierStokes;"
 
 .ExaHyPE2_ShallowWater:
   parallel:

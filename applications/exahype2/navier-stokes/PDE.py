@@ -29,7 +29,9 @@ max_eigenvalue = r"""
   const auto speedOfSound = std::sqrt(GAMMA * p * irho);
   const auto result = std::fmax(std::fabs(u_n - speedOfSound), std::fabs(u_n + speedOfSound));
   return result;
-""".format(compute_primitive_variables=compute_primitive_variables)
+""".format(
+    compute_primitive_variables=compute_primitive_variables
+)
 
 flux = r"""
   {compute_primitive_variables}
@@ -45,4 +47,16 @@ flux = r"""
   F[Shortcuts::rhoU + normal] += p;
 
   F[Shortcuts::rhoE] = (Q[Shortcuts::rhoE] + p) * u_n;
-""".format(compute_primitive_variables=compute_primitive_variables)
+""".format(
+    compute_primitive_variables=compute_primitive_variables
+)
+
+source_term = r"""
+  S[Shortcuts::rho]       = 0.0;
+  S[Shortcuts::rhoU + 0]  = 0.0;
+  S[Shortcuts::rhoU + 1]  = -Q[Shortcuts::rho] * GRAVITY;
+#if Dimensions == 3
+  S[Shortcuts::rhoU + 2]  = 0.0;
+#endif
+  S[Shortcuts::rhoE]      = -Q[Shortcuts::rhoU + 1] * GRAVITY;
+"""

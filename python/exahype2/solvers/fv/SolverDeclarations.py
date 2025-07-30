@@ -256,6 +256,24 @@ class SolverDeclarations:
     #endif
     {% endif %}
 
+    {% if LIMITER_IMPLEMENTATION!="<user-defined>" and LIMITER_IMPLEMENTATION!="<none>" %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
+    {{COMPUTE_PRECISION}} limit(
+      [[maybe_unused]] const {{COMPUTE_PRECISION}} a,
+      [[maybe_unused]] const {{COMPUTE_PRECISION}} b
+    ) InlineMethod {
+      {% if LIMITER_IMPLEMENTATION!="<empty>" %}
+      {{LIMITER_IMPLEMENTATION}}
+      {% endif %}
+    }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
+
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     void initialCondition(
       {{COMPUTE_PRECISION}}* const NOALIAS                          Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -377,6 +395,13 @@ class SolverDeclarations:
       const double                                                  t,
       const double                                                  dt,
       {{COMPUTE_PRECISION}}* const NOALIAS                          Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+    ) override final;
+    {% endif %}
+
+    {% if LIMITER_IMPLEMENTATION=="<user-defined>" and LIMITER_IMPLEMENTATION!="<none>" %}
+    {{COMPUTE_PRECISION}} limit(
+      const {{COMPUTE_PRECISION}} a,
+      const {{COMPUTE_PRECISION}} b
     ) override final;
     {% endif %}
 """,
