@@ -9,11 +9,9 @@ import jinja2
 
 class EmptyPostprocessSolution(AbstractFVActionSet):
     """
-
     PostprocessSolution differs from other action sets, as I only create it once. See
     FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
     can also completely overwrite it.
-
     """
 
     def __init__(self, solver):
@@ -121,3 +119,11 @@ class VolumeWisePostprocessSolution(AbstractFVActionSet):
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
+
+    def get_includes(self):
+        return (
+            super().get_includes()
+            + """
+#include "exahype2/fv/PatchUtils.h"
+"""
+        )

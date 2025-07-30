@@ -118,11 +118,7 @@ class SingleSweep(FV):
             solver_name=self._name,
             precision=self._storage_precision,
             guard="not marker.willBeRefined() and not marker.hasBeenRefined()"
-            + (
-                " and marker.willBeSkeletonCell()"
-                if self._use_enclave_tasking
-                else ""
-            ),
+            + (" and marker.willBeSkeletonCell()" if self._use_enclave_tasking else ""),
             add_assertions_to_halo_exchange=True,
         )
 
@@ -139,6 +135,7 @@ class SingleSweep(FV):
         source_term=None,
         diffusive_source_term=None,
         adjust_solution=None,
+        limiter=None,
     ):
         if initial_conditions is not None:
             self._initial_conditions_implementation = initial_conditions
@@ -214,6 +211,13 @@ class SingleSweep(FV):
             self._adjust_solution_implementation = adjust_solution
             if adjust_solution is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_adjust_solution = True
+            else:
+                self._can_fuse = False
+
+        if limiter is not None:
+            self._limiter_implementation = limiter
+            if limiter is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_limiter = True
             else:
                 self._can_fuse = False
 

@@ -16,7 +16,7 @@ initial_conditions = """
 #if Dimensions == 3
   Q[Shortcuts::rhoU + 2] = 0.0;
 #endif
-  Q[Shortcuts::rhoE] = ((x(0) < 0.5) ? (1.0) : (0));
+  Q[Shortcuts::rhoE] = ((x(0) < 0.5) ? (1.01) : (1.0));
 """
 
 boundary_conditions = """
@@ -45,10 +45,14 @@ refinement_criterion = """
 """
 
 parser = exahype2.ArgumentParser("ExaHyPE 2 Navier-Stokes Breaking Dam Argument Parser")
+parser.set_defaults(
+    min_depth=6,
+    degrees_of_freedom=16,
+)
 args = parser.parse_args()
 
 size = [1.0, 1.0, 1.0]
-max_h = (1.1 * min(size) / (3.0**args.min_depth))
+max_h = 1.1 * min(size) / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
 
 riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
@@ -77,7 +81,7 @@ project = exahype2.Project(
     namespace=["applications", "exahype2", "navierstokes"],
     project_name="BreakingDam",
     directory=".",
-    executable=f"BreakingDam{args.dimensions}D.{args.build_mode}",
+    executable="NavierStokes",
 )
 project.add_solver(riemann_solver)
 
@@ -89,8 +93,8 @@ else:
 
 project.set_global_simulation_parameters(
     dimensions=args.dimensions,
-    size=size[0:args.dimensions],
-    offset=[0.0, 0.0, 0.0][0:args.dimensions],
+    size=size[0 : args.dimensions],
+    offset=[0.0, 0.0, 0.0][0 : args.dimensions],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     first_plot_time_stamp=0.0,
@@ -102,8 +106,12 @@ project.set_global_simulation_parameters(
     ],
 )
 
-project.set_load_balancer(f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees}, {args.trees})")
-project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
+project.set_load_balancer(
+    f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees}, {args.trees})"
+)
+project.set_Peano4_installation(
+    "../../../../", mode=peano4.output.string_to_mode(args.build_mode)
+)
 project = project.generate_Peano4_project(verbose=False)
 project.set_fenv_handler(args.fpe)
 project.output.makefile.set_target_device(args.target_device)

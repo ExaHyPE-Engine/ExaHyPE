@@ -159,6 +159,15 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::adjustSolution(
   // @todo Implement
 }
 {% endif %}
+
+{% if LIMITER_IMPLEMENTATION=="<user-defined>" and LIMITER_IMPLEMENTATION!="<none>" %}
+{{COMPUTE_PRECISION}} {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::limit(
+  [[maybe_unused]] const {{COMPUTE_PRECISION}} a,
+  [[maybe_unused]] const {{COMPUTE_PRECISION}} b
+) {
+  // @todo Implement
+}
+{% endif %}
 """,
             undefined=jinja2.DebugUndefined,
         )
