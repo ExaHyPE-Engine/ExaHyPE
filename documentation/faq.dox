@@ -265,54 +265,6 @@ undefined reference to for_write_seq_list
   amend your log filter. See \ref tarch_logging for more info.
 
 
-# External tools
-
-- ***doxygen shows a lot of code as if it were preformatted (source) code, even though it should be proper class/function documentations*** This
-  is a known bug in Doxygen. Update to a newer version of the tool (at least 1.9.7) from
-  <a href="https://www.doxygen.nl/files">https://www.doxygen.nl/files</a> and you should
-  be fine.
-- ***The Intel performance and correctness tools yield invalid or messed-up results*** Ensure
-  you have built your code with -DTBB_USE_ASSERT -DTBB_USE_THREADING_TOOLS.
-  Please consult the vendor-specific \ref compiler_specific_settings "supercomputer/tool remarks"
-- ***I struggle to configure Peano 4 with Otter*** First, ensure you
-  add --with-otter to your configure call. If the configure fails,
-  run through the following checks one by one:
-  -  Ensure that you have added
-~~~~~~~~~~~~~~~~~~~~~
-CXXFLAGS="... -Iyour-path/otter/include"
-~~~~~~~~~~~~~~~~~~~~~
-  - Ensure that you have added
-~~~~~~~~~~~~~~~~~~~~~
-LIBS="... -lotter-task-graph -lotf2
-~~~~~~~~~~~~~~~~~~~~~
-    to your libraries. Depending on your system, you might need the explicit linking to otf2 or not.
-  - Ensure that you have added
-~~~~~~~~~~~~~~~~~~~~~
-LDFLAGS="... --Lyour-path/otter/build/lib -L/opt/otf2/lib"
-~~~~~~~~~~~~~~~~~~~~~
-    Once again, you might need the explicit OTF2 link or not.
-  - Add the libraries to your library path
-~~~~~~~~~~~~~~~~~~~~~
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:your-path/otter/build/lib:/opt/otf2/lib
-~~~~~~~~~~~~~~~~~~~~~
-    as the checks otherwise will fail.
-- ***pvpython does not find jinja2 and other Python packages***
-  On some systems, pvpython seems to overwrite/redefine the Python package
-  paths. That means, you manually have to add them to the PYTHONPATH
-  before you invoke pvpython. I do so through
-~~~~~~~~~~~~~~~~~~~~~
-export PYTHONPATH=../Peano/python:/usr/lib/python3/dist-packages
-~~~~~~~~~~~~~~~~~~~~~
-- ***paraview/pyvista is not there in my Jupyter notebook even though I have installed it***
-  Some Jupyter notebooks seem to fire up their own Python environment. You
-  can always type in
-~~~~~~~~~~~~~~~~~~~~~~
-import sys
-!{sys.executable} -m pip install --break-system-packages pyvista
-~~~~~~~~~~~~~~~~~~~~~~
-  and then you should have it within your notebook.
-
-
 # Debugging
 
 - ***I can't see my log/trace statements.*** There's a whole set of

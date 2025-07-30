@@ -3,7 +3,6 @@
 
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Assertions.h"
-#include "tarch/multicore/otter.h"
 
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target

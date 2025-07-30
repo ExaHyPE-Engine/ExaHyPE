@@ -31,7 +31,6 @@
 #include "tarch/logging/Statistics.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/multicore.h"
-#include "tarch/multicore/otter.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 #include "tarch/timing/Measurement.h"
@@ -269,12 +268,7 @@ void step() {
   case repositories::StepRepository::Steps::CreateGridButPostponeRefinement: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("create-grid-but-postpone-refinement");
 
-    OTTER_PHASE_SWITCH(otter::phase::create_grid_no_refine);
-
     repositories::startGridConstructionStep();
-
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
-    OTTER_TASK_START(step_task);
 
     observers::CreateGridButPostponeRefinement observer;
     watch.start();
@@ -282,31 +276,18 @@ void step() {
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_IMPLICIT(children);
-    OTTER_TASK_END(step_task);
-    OTTER_TASK_WAIT_IMPLICIT(descendants);
-
     repositories::finishGridConstructionStep();
   } break;
   case repositories::StepRepository::Steps::CreateGrid: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("create-grid");
 
-    OTTER_PHASE_SWITCH(otter::phase::create_grid);
-
     repositories::startGridConstructionStep();
-
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
-    OTTER_TASK_START(step_task);
 
     observers::CreateGrid observer;
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
-
-    OTTER_TASK_WAIT_IMPLICIT(children);
-    OTTER_TASK_END(step_task);
-    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishGridConstructionStep();
 
@@ -326,8 +307,6 @@ void step() {
     }
 
     tarch::logging::LogFilter::getInstance().switchProgramPhase("create-grid-and-converge-load-balancing");
-
-    OTTER_PHASE_SWITCH(otter::phase::create_grid_converge);
 
     // The smaller here corresponds to the -1 below
     if (::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() < 0 and repositories::loadBalancer.isEnabled(false)) {
@@ -349,18 +328,11 @@ void step() {
 
     repositories::startGridConstructionStep();
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
-    OTTER_TASK_START(step_task);
-
     observers::CreateGridButPostponeRefinement observer;
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
-
-    OTTER_TASK_WAIT_IMPLICIT(children);
-    OTTER_TASK_END(step_task);
-    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishGridConstructionStep();
 
@@ -386,12 +358,7 @@ void step() {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("init-grid");
     repositories::loadBalancer.enable(false);
 
-    OTTER_PHASE_SWITCH(otter::phase::init);
-
     repositories::startGridInitialisationStep();
-
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
-    OTTER_TASK_START(step_task);
 
     observers::InitGrid observer;
     observers::InitGrid::prepareTraversal();
@@ -400,10 +367,6 @@ void step() {
     watch.stop();
     observers::InitGrid::unprepareTraversal();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
-
-    OTTER_TASK_WAIT_IMPLICIT(children);
-    OTTER_TASK_END(step_task);
-    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishGridInitialisationStep();
   } break;
@@ -414,12 +377,7 @@ void step() {
     const double minTimeStepSize = repositories::getMinTimeStepSize();
     const double maxTimeStepSize = repositories::getMaxTimeStepSize();
 
-    OTTER_PHASE_SWITCH(otter::phase::plot);
-
     repositories::startPlottingStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
-
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
-    OTTER_TASK_START(step_task);
 
     observers::PlotSolution observer;
     observers::PlotSolution::prepareTraversal();
@@ -428,10 +386,6 @@ void step() {
     watch.stop();
     observers::PlotSolution::unprepareTraversal();
     plotMeasurement.setValue(watch.getCalendarTime());
-
-    OTTER_TASK_WAIT_IMPLICIT(children);
-    OTTER_TASK_END(step_task);
-    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishPlottingStep();
   } break;
@@ -442,12 +396,7 @@ void step() {
     const double minTimeStepSize = repositories::getMinTimeStepSize();
     const double maxTimeStepSize = repositories::getMaxTimeStepSize();
 
-    OTTER_PHASE_SWITCH(otter::phase::plot);
-
     repositories::startPlottingStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
-
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
-    OTTER_TASK_START(step_task);
 
     observers::CheckpointSolution observer;
     observers::CheckpointSolution::prepareTraversal();
@@ -456,10 +405,6 @@ void step() {
     watch.stop();
     observers::CheckpointSolution::unprepareTraversal();
     plotMeasurement.setValue(watch.getCalendarTime());
-
-    OTTER_TASK_WAIT_IMPLICIT(children);
-    OTTER_TASK_END(step_task);
-    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishPlottingStep();
   } break;
@@ -477,13 +422,7 @@ void step() {
     const double minMeshSize     = repositories::getMinMeshSize();
     const double maxMeshSize     = repositories::getMaxMeshSize();
 
-
-    OTTER_PHASE_SWITCH(otter::phase::timestep);
-
     repositories::startTimeStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
-
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
-    OTTER_TASK_START(step_task);
 
     observers::TimeStep observer;
     observers::TimeStep::prepareTraversal();
@@ -492,10 +431,6 @@ void step() {
     watch.stop();
     observers::TimeStep::unprepareTraversal();
     timeStepMeasurement.setValue(watch.getCalendarTime());
-
-    OTTER_TASK_WAIT_IMPLICIT(children);
-    OTTER_TASK_END(step_task);
-    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishTimeStep();
   } break;
@@ -571,8 +506,6 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().clear();
 
-  OTTER_INITIALISE();
-
 #if defined(SharedOMP)
 #pragma omp parallel
   {
@@ -623,8 +556,6 @@ int main(int argc, char** argv) {
 #endif
 
   tarch::logging::Statistics::getInstance().writeToCSV();
-
-  OTTER_FINALISE();
 
   repositories::finishSimulation();
 

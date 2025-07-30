@@ -25,19 +25,16 @@ Again, the extensions are kind of tools that allow you to write simulations for 
 They are typically not "ready to use" products, even though some of these applications can almost be used as such.
 
 <br /><br />
-<div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
-Peano (with any extension) is <b>not</b> a code. It is a tool to build your code. 
+<div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid green;">
+Peano (with any extension) is <b>not</b> a code. It is a tool to build your code.
 However, some of the applications built on top of Peano with all its toolboxes and extensions provide "ready to use" options.
 All components are integrated into one repository, one code base, and documented on these pages.
 </div>
 
 
-
-
-
 # Content
 
-- Getting started
+- Getting Started
   - @subpage page_installation_home
   - @subpage page_compiler_specific_settings_home
   - @subpage page_architecture_home
@@ -46,21 +43,22 @@ All components are integrated into one repository, one code base, and documented
   - @subpage page_conventions_home
   - @subpage page_version_control_home
   - @subpage page_continuous_integration
+  - @subpage page_documentation_home
 - @subpage page_tutorials_overview
+- The Core
+  - @subpage page_tarch_home
+  - @subpage page_peano4_home
+  - @subpage page_toolbox_home
+  - @subpage page_dastgen_home
 - Extensions
   - @subpage page_exahype2_home
   - @subpage page_multigrid_home
   - @subpage page_swift2_home
-- The C++ core
-  - @subpage page_peano4_home
-  - @subpage page_toolbox_home
-  - @subpage page_tarch_home
-- The Python core
-  - @subpage page_dastgen_home
 
 This is the documentation of Peano which is generated automatically through Doxygen.
 Peano comprises the core Peano 4 modules, the Python API, and a set of Peano extensions as well as benchmarks.
 The most important extensions at the moment are ExaHyPE 2, our PETSc toolkit and a prototype version of Swift 2.
+
 
 # History
 
@@ -83,6 +81,5 @@ as one required library or framework out of many.
 Peano had been an external (git) dependency.
 The second generation, ExaHyPE 2, is merged into Peano as an extension.
 This document therefore covers ExaHyPE 2, too.
-
 
 */

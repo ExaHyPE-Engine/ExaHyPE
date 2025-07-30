@@ -49,7 +49,6 @@
 
 
 #include "tarch/timing/Measurement.h"
-#include "tarch/multicore/otter.h"
 
 
 tarch::logging::Log _log("::");
@@ -357,7 +356,6 @@ void {{NAMESPACE | join("::")}}::step() {
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "initial-conditions" );
         watch.start();
-        OTTER_PHASE_SWITCH("initial-conditions");
         observers::InitialConditions  observer;
         observers::InitialConditions::prepareTraversal();
         repositories::startInitialisationStep();
@@ -372,7 +370,6 @@ void {{NAMESPACE | join("::")}}::step() {
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "plot" );
         watch.start();
-        OTTER_PHASE_SWITCH("plot");
         observers::Plot  observer;
         observers::Plot::prepareTraversal();
         repositories::startPlotStep();
@@ -387,7 +384,6 @@ void {{NAMESPACE | join("::")}}::step() {
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "time-step" );
         watch.start();
-        OTTER_PHASE_SWITCH("{{SOLVERSTEP_NAMES[0]}}");
         observers::{{SOLVERSTEP_NAMES[0]}}  observer;
         observers::{{SOLVERSTEP_NAMES[0]}}::prepareTraversal();
         repositories::startTimeStep();
@@ -400,7 +396,6 @@ void {{NAMESPACE | join("::")}}::step() {
     {% for STEP_NUMBER in range(1,SOLVERSTEP_NAMES|length-1) %}
     case repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[STEP_NUMBER]}}:
       {
-        OTTER_PHASE_SWITCH("{{SOLVERSTEP_NAMES[STEP_NUMBER]}}");
         repositories::startIntermediateStep();
         observers::{{SOLVERSTEP_NAMES[STEP_NUMBER]}}  observer;
         observers::{{SOLVERSTEP_NAMES[STEP_NUMBER]}}::prepareTraversal();
@@ -412,7 +407,6 @@ void {{NAMESPACE | join("::")}}::step() {
     {% endfor %}
     case repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[-1]}}:
       {
-        OTTER_PHASE_SWITCH("{{SOLVERSTEP_NAMES[-1]}}");
         observers::{{SOLVERSTEP_NAMES[-1]}}  observer;
         observers::{{SOLVERSTEP_NAMES[-1]}}::prepareTraversal();
         repositories::startIntermediateStep();
@@ -427,7 +421,6 @@ void {{NAMESPACE | join("::")}}::step() {
     {% for STEP_NUMBER in range(0,INITIALISATIONSTEP_NAMES|length) %}
     case repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}:
       {
-        OTTER_PHASE_SWITCH("{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}");
         repositories::startInitialisationStep();
         observers::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}  observer;
         observers::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}::prepareTraversal();
@@ -443,7 +436,6 @@ void {{NAMESPACE | join("::")}}::step() {
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "cleanup" );
         watch.start();
-        OTTER_PHASE_SWITCH("cleanup");
         observers::Cleanup  observer;
         observers::Cleanup::prepareTraversal();
         repositories::startCleanupStep();
@@ -475,8 +467,6 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().clear();
 
-  OTTER_INITIALISE();
-
   if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
     while ({{NAMESPACE | join("::")}}::selectNextAlgorithmicStep()) {
       {{NAMESPACE | join("::")}}::step();
@@ -494,8 +484,6 @@ int main(int argc, char** argv) {
       {{NAMESPACE | join("::")}}::step();
     }
   }
-
-  OTTER_FINALISE();
 
   {{NAMESPACE | join("::")}}::repositories::DataRepository::shutdownDatatypes();
 

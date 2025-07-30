@@ -22,7 +22,6 @@
 #include "tarch/logging/Statistics.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/multicore.h"
-#include "tarch/multicore/otter.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
@@ -251,8 +250,6 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().clear();
 
-  OTTER_INITIALISE();
-
 #if defined(SharedOMP)
 #pragma omp parallel
   {
@@ -313,9 +310,6 @@ int main(int argc, char** argv) {
 #endif
 
   tarch::logging::Statistics::getInstance().writeToCSV();
-
-  OTTER_FINALISE();
-
 
   peano4::shutdownSingletons();
   repositories::DataRepository::shutdownDatatypes();
