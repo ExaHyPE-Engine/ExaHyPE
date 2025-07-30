@@ -5,10 +5,11 @@
 #include "DGMatrices.h"
 #include "Quadrature.h"
 #include "BufferSizes.h"
-
 {% if USE_LIBXSMM %}
 #include "Gemms.h"
 {% endif %}
+
+#include "tarch/accelerator/MemoryManager.h"
 
 #include <cstring>
 #include <algorithm>
@@ -46,6 +47,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% endif %}
 ) {
   pCompType memory[getFusedSTPVISize()] __attribute__((aligned({{ALIGNMENT}})));
+  // TODO: Use the memory manager for very high ADER-DG orders where the stack is not enough or when offloading to the GPU
+  //pCompType* memory = tarch::accelerator::MemoryManager::getInstance().allocate<pCompType>(getFusedSTPVISize(), tarch::MemoryLocation::Heap, tarch::accelerator::Device::DefaultDevice);
 
   pCompType* lQi   = memory + getlQiShift();
   pCompType* lQhi  = memory + getlQhiShift();
@@ -604,6 +607,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
             );
     }
   }
+
+  //tarch::accelerator::MemoryManager::getInstance().free(memory, tarch::accelerator::Device::DefaultDevice);
 
   return -1; // No picard iteration in linear case
 }

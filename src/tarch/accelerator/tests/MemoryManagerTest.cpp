@@ -8,12 +8,10 @@
 tarch::accelerator::tests::MemoryManagerTest::MemoryManagerTest():
   TestCase("tarch::accelerator::tests::MemoryManagerTest") {}
 
-
 void tarch::accelerator::tests::MemoryManagerTest::run() {
   testMethod(testMemoryAllocationsForOneDevice);
   testMethod(testMemoryAllocationsForMultipleDevices);
 }
-
 
 void tarch::accelerator::tests::MemoryManagerTest::testMemoryAllocationsForOneDevice() {
   static constexpr int NumberOfDataElements = 10000;

@@ -78,7 +78,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
     case SolverState::Suspended:
     case SolverState::Plotting:
     case SolverState::RegularSolver:
-      // [nk] If the plotting happened, the regular solver should starts its routine even if _numberOfTroubledCellsThisTimeStep != 0
+      // If the plotting happened, the regular solver should starts its routine even if _numberOfTroubledCellsThisTimeStep != 0.
       // - It is done, because in that case the plotting state happened right after the limiter solver state, where the same check is not performed.
       // - Otherwise we are stuck in the limiter solver, since _numberOfTroubledCellsThisTimeStep is set to zero in the regular solver state after the limiter.
       _solverState = ((_numberOfTroubledCellsThisTimeStep == 0) or (_solverState == SolverState::Plotting) ?
@@ -91,8 +91,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
       _solverState = SolverState::LimiterSolver;
       break;
     case SolverState::LimiterSolver:
-      // [nk] TODO: Potential bug if the limiter solver has more than one grid sweeps
-      // - It will change the state to the regular solver even if only the first sweep is finished
+      // TODO: Potential bug if the limiter solver has more than one grid sweeps.
+      // - It will change the state to the regular solver even if only the first sweep is finished.
       // - Potentially to fix it we can store isFinished status in each solver, which returns true as soon as all sweeps are done.
       _solverState = SolverState::RegularSolver;
       break;

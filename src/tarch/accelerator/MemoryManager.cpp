@@ -1,82 +1,68 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "MemoryManager.h"
-#include "accelerator.h"
 
+#include "accelerator.h"
 #include "tarch/Assertions.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Lock.h"
 
-tarch::logging::Log tarch::accelerator::MemoryManager::_log(
-  "tarch::accelerator::MemoryManager"
-);
+tarch::logging::Log tarch::accelerator::MemoryManager::_log("tarch::accelerator::MemoryManager");
 
 tarch::accelerator::MemoryManager& tarch::accelerator::MemoryManager::getInstance() {
   static tarch::accelerator::MemoryManager singleton;
   return singleton;
 }
 
-void* tarch::accelerator::MemoryManager::allocate(
-  std::size_t    sizeInBytes,
-  MemoryLocation location,
-  int            device
-) {
-  tarch::multicore::Lock lock(_semaphore);
-
-  // Is device initialised?
-  if (_memoryPages.count(device) == 0) {
-    _memoryPages.insert(std::make_pair(device, MemoryPages()));
+void* tarch::accelerator::MemoryManager::allocate(std::size_t sizeInBytes, MemoryLocation location, int device) {
+  {
+    tarch::multicore::Lock lock(_semaphore);
+    if (_memoryPages.find(device) == _memoryPages.end()) {
+      _memoryPages.emplace(device, MemoryPages{});
+    }
   }
 
+  MemoryPages&           pages = _memoryPages.at(device);
+  tarch::multicore::Lock lock(_semaphore);
+
+  auto& freeList = pages.freePages[sizeInBytes];
+
   // Is a free page left? If not, insert one.
-  if (_memoryPages.at(device).freePages[sizeInBytes].empty()) {
+  if (freeList.empty()) {
     // TODO: We should also check for the memory location here.
     // Not only the size but also the memory location should
     // be used for a lookup.
-    _memoryPages.at(device).freePages[sizeInBytes].push_back(std::make_pair(
-      accelerator::allocateRawData(sizeInBytes, location, device),
-      location
-    ));
+    freeList.emplace_back(accelerator::allocateRawData(sizeInBytes, location, device), location);
   }
 
-  // Grab fitting page
-  void* resultPtr = _memoryPages.at(device).freePages.at(sizeInBytes).back().first;
-  const MemoryLocation resultLocation = _memoryPages.at(device).freePages.at(sizeInBytes).back().second;
-  assertion(resultPtr);
-  _memoryPages.at(device).freePages.at(sizeInBytes).pop_back();
+  // Take last free block
+  auto [ptr, loc] = freeList.back();
+  freeList.pop_back();
+
+  assertion(ptr);
+  assertion(pages.usedPages.count(ptr) == 0);
 
   // Memorise page meta data, i.e. size and location
-  assertion(_memoryPages.at(device).usedPages.count(resultPtr) == 0);
-  _memoryPages.at(device).usedPages.insert(
-    std::make_pair(resultPtr, std::make_pair(sizeInBytes, resultLocation))
-  );
+  pages.usedPages[ptr] = {sizeInBytes, loc};
 
-  // Return result
-  return resultPtr;
+  return ptr;
 }
 
 void tarch::accelerator::MemoryManager::free(void* pointer, int device) {
-  tarch::multicore::Lock lock(_semaphore);
   assertion(pointer);
 
-  assertion(_memoryPages.count(device) == 1);
-  assertion(_memoryPages.at(device).usedPages.count(pointer) == 1);
+  MemoryPages&           pages = _memoryPages.at(device);
+  tarch::multicore::Lock lock(_semaphore);
 
-  const std::size_t size = _memoryPages.at(device).usedPages.at(pointer).first;
-  const MemoryLocation location = _memoryPages.at(device)
-                                    .usedPages.at(pointer)
-                                    .second;
-  _memoryPages.at(device).usedPages.erase(pointer);
+  assertion(pages.usedPages.count(pointer) == 1);
+  auto [size, loc] = pages.usedPages[pointer];
+  pages.usedPages.erase(pointer);
 
-  assertion(_memoryPages.at(device).freePages.count(size) == 1);
-  _memoryPages.at(device).freePages.at(size).push_back(
-    std::make_pair(pointer, location)
-  );
+  assertion(pages.freePages.count(size) == 1);
+  pages.freePages[size].emplace_back(pointer, loc);
 }
 
-tarch::accelerator::MemoryManager::~MemoryManager() {
-  clearWithoutLock();
-}
+tarch::accelerator::MemoryManager::~MemoryManager() { clearWithoutLock(); }
 
 void tarch::accelerator::MemoryManager::clearWithoutLock() {
   for (auto& memoryPage : _memoryPages) {
@@ -92,10 +78,14 @@ void tarch::accelerator::MemoryManager::clearWithoutLock() {
       );
     }
 
-    for (auto& p : memoryPage.second.freePages)
+    for (auto& p : memoryPage.second.freePages) {
       for (auto& pp : p.second) {
         accelerator::freeRawData(pp.first, pp.second, device);
       }
+    }
+
+    memoryPage.second.freePages.clear();
+    memoryPage.second.usedPages.clear();
   }
 
   _memoryPages.clear();
@@ -106,8 +96,8 @@ void tarch::accelerator::MemoryManager::clear() {
   clearWithoutLock();
 }
 
-const std::map<int, tarch::accelerator::MemoryManager::MemoryPages>&
-tarch::accelerator::MemoryManager::getMemoryPages() const {
+const std::map<int, tarch::accelerator::MemoryManager::MemoryPages>& tarch::accelerator::MemoryManager::getMemoryPages(
+) const {
   return _memoryPages;
 }
 
@@ -147,17 +137,11 @@ int tarch::accelerator::MemoryManager::getUsedAllocatedMemory(MemoryUsageFormat 
   return convertMemorySize(getUsedAllocatedMemoryInBytes(), format);
 }
 
-int tarch::accelerator::MemoryManager::getFreeAllocatedMemory(
-  MemoryUsageFormat format,
-  int               device
-) const {
+int tarch::accelerator::MemoryManager::getFreeAllocatedMemory(MemoryUsageFormat format, int device) const {
   return convertMemorySize(getFreeAllocatedMemoryInBytes(device), format);
 }
 
-int tarch::accelerator::MemoryManager::getUsedAllocatedMemory(
-  MemoryUsageFormat format,
-  int               device
-) const {
+int tarch::accelerator::MemoryManager::getUsedAllocatedMemory(MemoryUsageFormat format, int device) const {
   return convertMemorySize(getUsedAllocatedMemoryInBytes(device), format);
 }
 
@@ -197,32 +181,28 @@ std::string tarch::accelerator::MemoryManager::getStatistics() {
   std::ostringstream msg;
 
   if (not MemoryManager::getInstance().getMemoryPages().empty()) {
-    msg << MemoryManager::getInstance().getNumberOfUsedPages() +
-           MemoryManager::getInstance().getNumberOfFreePages()
+    msg << MemoryManager::getInstance().getNumberOfUsedPages() + MemoryManager::getInstance().getNumberOfFreePages()
         << " Page(s): ";
 
     for (const auto& memoryPage : MemoryManager::getInstance().getMemoryPages()) {
       msg << "(#" << memoryPage.first << ":";
       msg << MemoryManager::getInstance().getNumberOfUsedPages(memoryPage.first) << "/"
-          << MemoryManager::getInstance().getNumberOfFreePages(memoryPage.first)
-          << ")";
+          << MemoryManager::getInstance().getNumberOfFreePages(memoryPage.first) << ")";
     }
     msg << " (used/free)";
 
-    msg << ", Managed: "
-      << MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::MByte) << "/"
+    msg
+      << ", Managed: " << MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::MByte) << "/"
       << MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::MByte) << "/"
-      << MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::MByte) +
-         MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::MByte);
+      << MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::MByte)
+           + MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::MByte);
 
     msg << " MB (used/free/total), ";
 
     // TODO: Use memory locations to report device and host memory.
   }
 
-  msg << "System: "
-      << getMemoryUsage(MemoryUsageFormat::MByte) << "/"
-      << getFreeMemory(MemoryUsageFormat::MByte) << "/"
+  msg << "System: " << getMemoryUsage(MemoryUsageFormat::MByte) << "/" << getFreeMemory(MemoryUsageFormat::MByte) << "/"
       << getTotalMemory(MemoryUsageFormat::MByte);
   msg << " MB (used/free/total)";
 
