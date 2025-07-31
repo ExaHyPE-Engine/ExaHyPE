@@ -5,40 +5,33 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
   string(TOUPPER ${mode} mode_upper)
 
   foreach(dimension IN LISTS PEANO_DIMENSIONS)
-    add_executable(UnitTests${dimension}d_${mode_lower})
-    add_test(NAME UnitTests${dimension}d_${mode_lower} COMMAND UnitTests${dimension}d_${mode_lower})
+    add_executable(UnitTests${mode}${dimension}d)
+    add_test(NAME UnitTests${mode}${dimension}d COMMAND UnitTests${mode}${dimension}d)
     if(WITH_MPI)
-      add_test(NAME UnitTests${dimension}d_${mode_lower}_parallel
-        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${CMAKE_BINARY_DIR}/UnitTests${dimension}d_${mode_lower}
+      add_test(NAME UnitTests${mode}${dimension}dParallel
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${CMAKE_BINARY_DIR}/UnitTests${mode}${dimension}d
       )
     endif()
 
-    target_sources(UnitTests${dimension}d_${mode_lower} PRIVATE main.cpp)
-    target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE PeanoOptions)
-    target_compile_definitions(UnitTests${dimension}d_${mode_lower} PRIVATE Dimensions=${dimension} ${PEANO_${mode_upper}_DEFINITIONS})
-    target_compile_options(UnitTests${dimension}d_${mode_lower} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
+    target_sources(UnitTests${mode}${dimension}d PRIVATE main.cpp)
+    target_link_libraries(UnitTests${mode}${dimension}d PRIVATE PeanoOptions Peano4${mode}${dimension}d)
+    target_compile_definitions(UnitTests${mode}${dimension}d PRIVATE Dimensions=${dimension} ${PEANO_${mode_upper}_DEFINITIONS})
+    target_compile_options(UnitTests${mode}${dimension}d PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
-    target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE Peano4Core${dimension}d_${mode_lower})
     if(ENABLE_TOOLBOX_PARTICLES)
-      target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE ToolboxParticles${dimension}d_${mode_lower})
+      target_link_libraries(UnitTests${mode}${dimension}d PRIVATE ToolboxParticles${mode}${dimension}d)
     endif()
     if(ENABLE_TOOLBOX_BLOCKSTRUCTURED)
-      target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE ToolboxBlockStructured${dimension}d_${mode_lower})
+      target_link_libraries(UnitTests${mode}${dimension}d PRIVATE ToolboxBlockStructured${mode}${dimension}d)
     endif()
     if(ENABLE_TOOLBOX_LOADBALANCING)
-      target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE ToolboxLoadBalancing${dimension}d_${mode_lower})
+      target_link_libraries(UnitTests${mode}${dimension}d PRIVATE ToolboxLoadBalancing${mode}${dimension}d)
     endif()
-    if(ENABLE_EXTENSION_EXAHYPE)
-      target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE ExaHyPE2Core${dimension}d_${mode_lower})
-    endif()
-    if(ENABLE_EXTENSION_MGHYPE)
-      target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE Multigrid${dimension}d_${mode_lower})
-    endif()
-    if(ENABLE_EXTENSION_SWIFT)
-      target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE SWIFT2Core${dimension}d_${mode_lower})
+    if(ENABLE_EXAHYPE)
+      target_link_libraries(UnitTests${mode}${dimension}d PRIVATE ExaHyPE2${mode}${dimension}d)
     endif()
 
-    install(TARGETS UnitTests${dimension}d_${mode_lower}
+    install(TARGETS UnitTests${mode}${dimension}d
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
               COMPONENT           ${PROJECT_NAME}_Runtime
       LIBRARY DESTINATION         ${CMAKE_INSTALL_LIBDIR}

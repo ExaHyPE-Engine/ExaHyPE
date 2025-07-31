@@ -2,34 +2,34 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "UnitTests.h"
 
-#include "tarch/accelerator/tests/MemoryManagerTest.h"
-#include "tarch/la/tests/DynamicMatrixTest.h"
-#include "tarch/la/tests/GramSchmidtTest.h"
-#include "tarch/la/tests/LUDecompositionTest.h"
-#include "tarch/la/tests/MatrixTest.h"
-#include "tarch/la/tests/MatrixVectorTest.h"
-#include "tarch/la/tests/ScalarTest.h"
-#include "tarch/la/tests/VectorTest.h"
-#include "tarch/mpi/tests/StringTest.h"
-#include "tarch/multicore/tests/SpawnTaskTest.h"
-#include "tarch/tests/TreeTestCaseCollection.h"
+#include "accelerator/tests/MemoryManagerTest.h"
+#include "la/tests/DynamicMatrixTest.h"
+#include "la/tests/GramSchmidtTest.h"
+#include "la/tests/LUDecompositionTest.h"
+#include "la/tests/MatrixTest.h"
+#include "la/tests/MatrixVectorTest.h"
+#include "la/tests/ScalarTest.h"
+#include "la/tests/VectorTest.h"
+#include "mpi/tests/StringTest.h"
+#include "multicore/tests/SpawnTaskTest.h"
+#include "tests/TreeTestCaseCollection.h"
 
 tarch::tests::TestCase* tarch::getUnitTests() {
-  tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();
+  tarch::tests::TreeTestCaseCollection* result = new tests::TreeTestCaseCollection();
 
-  result->addTestCase(new tarch::la::tests::GramSchmidtTest());
-  result->addTestCase(new tarch::la::tests::LUDecompositionTest());
-  result->addTestCase(new tarch::la::tests::MatrixTest());
-  result->addTestCase(new tarch::la::tests::MatrixVectorTest());
-  result->addTestCase(new tarch::la::tests::ScalarTest());
-  result->addTestCase(new tarch::la::tests::VectorTest());
-  result->addTestCase(new tarch::la::tests::DynamicMatrixTest());
+  result->addTestCase(new la::tests::GramSchmidtTest());
+  result->addTestCase(new la::tests::LUDecompositionTest());
+  result->addTestCase(new la::tests::MatrixTest());
+  result->addTestCase(new la::tests::MatrixVectorTest());
+  result->addTestCase(new la::tests::ScalarTest());
+  result->addTestCase(new la::tests::VectorTest());
+  result->addTestCase(new la::tests::DynamicMatrixTest());
 
-  result->addTestCase(new tarch::mpi::tests::StringTest());
+  result->addTestCase(new mpi::tests::StringTest());
 
-  result->addTestCase(new tarch::accelerator::tests::MemoryManagerTest());
+  result->addTestCase(new accelerator::tests::MemoryManagerTest());
 
-  result->addTestCase(new tarch::multicore::tests::SpawnTaskTest());
+  result->addTestCase(new multicore::tests::SpawnTaskTest());
 
   return result;
 }

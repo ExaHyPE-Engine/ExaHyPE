@@ -11,7 +11,7 @@
 
 
 tarch::la::tests::MatrixVectorTest::MatrixVectorTest():
-  TestCase ("tarch::la::MatrixVectorTest") {
+  TestCase ("tarch::la::tests::MatrixVectorTest") {
 }
 
 

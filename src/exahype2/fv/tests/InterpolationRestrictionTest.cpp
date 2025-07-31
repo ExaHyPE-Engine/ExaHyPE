@@ -312,13 +312,13 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInt
       fineGridFaceValues
     );
 
-    std::cout<<std::setprecision(1);
-    for (int i=0;i<5;i++){
-      for (int j=0;j<12;j++){
-        std::cout<<fineGridFaceValues[i*12+j] << " ";
-      }
-      std::cout<<"\n";
-    }
+    // std::cout<<std::setprecision(1);
+    // for (int i=0;i<5;i++){
+    //   for (int j=0;j<12;j++){
+    //     std::cout<<fineGridFaceValues[i*12+j] << " ";
+    //   }
+    //   std::cout<<"\n";
+    // }
   }
 /*
   {

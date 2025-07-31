@@ -8,7 +8,7 @@
 
 
 tarch::la::tests::LUDecompositionTest::LUDecompositionTest():
-  TestCase ("tarch::la::LUDecompositionTest") {
+  TestCase ("tarch::la::tests::LUDecompositionTest") {
 }
 
 

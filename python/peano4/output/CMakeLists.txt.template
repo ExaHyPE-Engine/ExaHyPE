@@ -100,37 +100,24 @@ target_compile_definitions({{EXECUTABLENAME}} PRIVATE ${GENERATED_CXXFLAGS} TARG
   target_link_libraries({{EXECUTABLENAME}} PRIVATE {{ lib[2:] }})
 {% endfor %}
 
-target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::Peano4Core{{DIMENSIONS}}d_${mode_lower})
+target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::Peano4{{MODE}}{{DIMENSIONS}}d)
 
-# Link against additional extension targets, if they exist.
-if(TARGET Peano::ToolboxLoadBalancing{{DIMENSIONS}}d_${mode_lower})
-  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxLoadBalancing{{DIMENSIONS}}d_${mode_lower})
+if(TARGET Peano::ToolboxLoadBalancing{{MODE}}{{DIMENSIONS}}d)
+  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxLoadBalancing{{MODE}}{{DIMENSIONS}}d)
 endif()
 
-if(TARGET Peano::ToolboxBlockStructured{{DIMENSIONS}}d_${mode_lower})
-  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxBlockStructured{{DIMENSIONS}}d_${mode_lower})
+if(TARGET Peano::ToolboxBlockStructured{{MODE}}{{DIMENSIONS}}d)
+  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxBlockStructured{{MODE}}{{DIMENSIONS}}d)
 endif()
 
-if(TARGET Peano::ToolboxParticles{{DIMENSIONS}}d_${mode_lower})
-  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxParticles{{DIMENSIONS}}d_${mode_lower})
+if(TARGET Peano::ToolboxParticles{{MODE}}{{DIMENSIONS}}d)
+  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxParticles{{MODE}}{{DIMENSIONS}}d)
 endif()
 
-if(TARGET Peano::ToolboxFiniteElements{{DIMENSIONS}}d_${mode_lower})
-  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxFiniteElements{{DIMENSIONS}}d_${mode_lower})
+if(TARGET Peano::ToolboxCurvi{{MODE}})
+  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxCurvi{{MODE}})
 endif()
 
-if(TARGET Peano::ToolboxCurvi_${mode_lower})
-  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxCurvi_${mode_lower})
-endif()
-
-if(TARGET Peano::ExaHyPE2Core{{DIMENSIONS}}d_${mode_lower})
-  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ExaHyPE2Core{{DIMENSIONS}}d_${mode_lower})
-endif()
-
-if(TARGET Peano::Multigrid{{DIMENSIONS}}d_${mode_lower})
-  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::Multigrid{{DIMENSIONS}}d_${mode_lower})
-endif()
-
-if(TARGET Peano::SWIFT2Core{{DIMENSIONS}}d_${mode_lower})
-  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::SWIFT2Core{{DIMENSIONS}}d_${mode_lower})
+if(TARGET Peano::ExaHyPE2{{MODE}}{{DIMENSIONS}}d)
+  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ExaHyPE2{{MODE}}{{DIMENSIONS}}d)
 endif()

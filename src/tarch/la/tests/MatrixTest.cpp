@@ -10,7 +10,7 @@
 
 
 tarch::la::tests::MatrixTest::MatrixTest():
-  TestCase ("tarch::la::MatrixTest") {
+  TestCase ("tarch::la::tests::MatrixTest") {
 }
 
 

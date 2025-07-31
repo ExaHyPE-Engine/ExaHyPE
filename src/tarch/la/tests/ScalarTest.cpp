@@ -7,7 +7,7 @@
 
 
 tarch::la::tests::ScalarTest::ScalarTest():
-  TestCase("tarch::la::ScalarTest") {
+  TestCase("tarch::la::tests::ScalarTest") {
 }
 
 

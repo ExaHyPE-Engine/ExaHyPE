@@ -1,85 +1,87 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-template <typename inType, typename outType, int NumFaceTypes>
-exahype2::CellData<inType, outType, NumFaceTypes>::CellData(
-  inType* const                                QIn_,
-  const tarch::la::Vector<Dimensions, double>& cellCentre_,
-  const tarch::la::Vector<Dimensions, double>& cellSize_,
-  double                                       t_,
-  double                                       dt_,
-  outType* const                               QOut_,
-  tarch::MemoryLocation                        memoryLocation_,
-  int                                          targetDevice_
-):
-  CellData(1, memoryLocation_, targetDevice_) {
-  QIn[0]        = QIn_;
-  cellCentre[0] = cellCentre_;
-  cellSize[0]   = cellSize_;
-  t             = t_;
-  dt            = dt_;
-  QOut[0]       = QOut_;
-}
+namespace exahype2 {
+  template <typename inType, typename outType, int NumFaceTypes>
+  CellData<inType, outType, NumFaceTypes>::CellData(
+    inType* const                                QIn_,
+    const tarch::la::Vector<Dimensions, double>& cellCentre_,
+    const tarch::la::Vector<Dimensions, double>& cellSize_,
+    double                                       t_,
+    double                                       dt_,
+    outType* const                               QOut_,
+    tarch::MemoryLocation                        memoryLocation_,
+    int                                          targetDevice_
+  ):
+    CellData(1, memoryLocation_, targetDevice_) {
+    QIn[0]        = QIn_;
+    cellCentre[0] = cellCentre_;
+    cellSize[0]   = cellSize_;
+    t             = t_;
+    dt            = dt_;
+    QOut[0]       = QOut_;
+  }
 
-template <typename inType, typename outType, int NumFaceTypes>
-exahype2::CellData<inType, outType, NumFaceTypes>::CellData(
-  inType* const                                QIn_,
-  inType* const                                faces_[NumFaceTypes][TwoTimesD],
-  const tarch::la::Vector<Dimensions, double>& cellCentre_,
-  const tarch::la::Vector<Dimensions, double>& cellSize_,
-  double                                       t_,
-  double                                       dt_,
-  outType* const                               QOut_,
-  tarch::MemoryLocation                        memoryLocation_,
-  int                                          targetDevice_
-):
-  CellData(1, memoryLocation_, targetDevice_) {
-  QIn[0]        = QIn_;
-  cellCentre[0] = cellCentre_;
-  cellSize[0]   = cellSize_;
-  t             = t_;
-  dt            = dt_;
-  QOut[0]       = QOut_;
+  template <typename inType, typename outType, int NumFaceTypes>
+  CellData<inType, outType, NumFaceTypes>::CellData(
+    inType* const                                QIn_,
+    inType* const                                faces_[NumFaceTypes][TwoTimesD],
+    const tarch::la::Vector<Dimensions, double>& cellCentre_,
+    const tarch::la::Vector<Dimensions, double>& cellSize_,
+    double                                       t_,
+    double                                       dt_,
+    outType* const                               QOut_,
+    tarch::MemoryLocation                        memoryLocation_,
+    int                                          targetDevice_
+  ):
+    CellData(1, memoryLocation_, targetDevice_) {
+    QIn[0]        = QIn_;
+    cellCentre[0] = cellCentre_;
+    cellSize[0]   = cellSize_;
+    t             = t_;
+    dt            = dt_;
+    QOut[0]       = QOut_;
 
-  for (int type = 0; type < NumFaceTypes; ++type) {
-    for (int d = 0; d < TwoTimesD; ++d) {
-      faces[type][d] = faces_[type][d];
+    for (int type = 0; type < NumFaceTypes; ++type) {
+      for (int d = 0; d < TwoTimesD; ++d) {
+        faces[type][d] = faces_[type][d];
+      }
     }
   }
-}
 
-template <typename inType, typename outType, int NumFaceTypes>
-exahype2::CellData<inType, outType, NumFaceTypes>::CellData(int numberOfCells_, tarch::MemoryLocation memoryLocation_, int targetDevice_):
-  numberOfCells(numberOfCells_),
-  memoryLocation(memoryLocation_),
-  targetDevice(targetDevice_) {
+  template <typename inType, typename outType, int NumFaceTypes>
+  CellData<inType, outType, NumFaceTypes>::CellData(int numberOfCells_, tarch::MemoryLocation memoryLocation_, int targetDevice_):
+    numberOfCells(numberOfCells_),
+    memoryLocation(memoryLocation_),
+    targetDevice(targetDevice_) {
 
-  QIn           = tarch::accelerator::MemoryManager::getInstance().allocate<inType*>(numberOfCells_, memoryLocation_, targetDevice_);
-  faces         = tarch::accelerator::MemoryManager::getInstance().allocate<inType* [NumFaceTypes][TwoTimesD]>(numberOfCells_, memoryLocation_, targetDevice_);
-  cellCentre    = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<Dimensions, double>>(numberOfCells_, memoryLocation_, targetDevice_);
-  cellSize      = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<Dimensions, double>>(numberOfCells_, memoryLocation_, targetDevice_);
-  QOut          = tarch::accelerator::MemoryManager::getInstance().allocate<outType*>(numberOfCells_, memoryLocation_, targetDevice_);
-  maxEigenvalue = tarch::accelerator::MemoryManager::getInstance().allocate<outType>(numberOfCells_, memoryLocation_, targetDevice_);
-}
-
-template <typename inType, typename outType, int NumFaceTypes>
-exahype2::CellData<inType, outType, NumFaceTypes>::~CellData() {
-  tarch::accelerator::MemoryManager::getInstance().free(QIn, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(faces, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(cellCentre, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(cellSize, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(QOut, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(maxEigenvalue, targetDevice);
-}
-
-template <typename inType, typename outType, int NumFaceTypes>
-std::string exahype2::CellData<inType, outType, NumFaceTypes>::toString() const {
-  std::ostringstream msg;
-  msg << "[";
-  for (int i = 0; i < numberOfCells; i++) {
-    msg << "(x=" << cellCentre[i] << ",h=" << cellSize[i] << ",t=" << t << ",dt=" << dt
-        << ",lambda=" << maxEigenvalue[i] << ")";
+    QIn           = tarch::accelerator::MemoryManager::getInstance().allocate<inType*>(numberOfCells_, memoryLocation_, targetDevice_);
+    faces         = tarch::accelerator::MemoryManager::getInstance().allocate<inType* [NumFaceTypes][TwoTimesD]>(numberOfCells_, memoryLocation_, targetDevice_);
+    cellCentre    = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<Dimensions, double>>(numberOfCells_, memoryLocation_, targetDevice_);
+    cellSize      = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<Dimensions, double>>(numberOfCells_, memoryLocation_, targetDevice_);
+    QOut          = tarch::accelerator::MemoryManager::getInstance().allocate<outType*>(numberOfCells_, memoryLocation_, targetDevice_);
+    maxEigenvalue = tarch::accelerator::MemoryManager::getInstance().allocate<outType>(numberOfCells_, memoryLocation_, targetDevice_);
   }
-  msg << "]";
-  return msg.str();
+
+  template <typename inType, typename outType, int NumFaceTypes>
+  CellData<inType, outType, NumFaceTypes>::~CellData() {
+    tarch::accelerator::MemoryManager::getInstance().free(QIn, targetDevice);
+    tarch::accelerator::MemoryManager::getInstance().free(faces, targetDevice);
+    tarch::accelerator::MemoryManager::getInstance().free(cellCentre, targetDevice);
+    tarch::accelerator::MemoryManager::getInstance().free(cellSize, targetDevice);
+    tarch::accelerator::MemoryManager::getInstance().free(QOut, targetDevice);
+    tarch::accelerator::MemoryManager::getInstance().free(maxEigenvalue, targetDevice);
+  }
+
+  template <typename inType, typename outType, int NumFaceTypes>
+  std::string CellData<inType, outType, NumFaceTypes>::toString() const {
+    std::ostringstream msg;
+    msg << "[";
+    for (int i = 0; i < numberOfCells; i++) {
+      msg << "(x=" << cellCentre[i] << ",h=" << cellSize[i] << ",t=" << t << ",dt=" << dt
+          << ",lambda=" << maxEigenvalue[i] << ")";
+    }
+    msg << "]";
+    return msg.str();
+  }
 }

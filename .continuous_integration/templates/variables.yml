@@ -15,9 +15,7 @@
     APPTAINER_BINDDIR: "/dine/data/do009/peano"
     APPTAINER_IMAGEDIR: "/dine/data/do009/peano/images"
     CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
-                            -DENABLE_EXTENSION_EXAHYPE=ON \
-                            -DENABLE_EXTENSION_SWIFT=ON \
-                            -DENABLE_EXTENSION_MGHYPE=ON \
+                            -DENABLE_EXAHYPE=ON \
                             -DENABLE_TOOLBOX_LOADBALANCING=ON \
                             -DENABLE_TOOLBOX_BLOCKSTRUCTURED=ON \
                             -DENABLE_TOOLBOX_PARTICLES=ON \

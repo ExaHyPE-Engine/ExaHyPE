@@ -2,29 +2,29 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "UnitTests.h"
 
-#include "peano4/grid/tests/GridControlEventTest.h"
-#include "peano4/grid/tests/GridTraversalEventGeneratorTest.h"
-#include "peano4/grid/tests/SpacetreeTest.h"
-#include "peano4/parallel/tests/NodeTest.h"
+#include "grid/tests/GridControlEventTest.h"
+#include "grid/tests/GridTraversalEventGeneratorTest.h"
+#include "grid/tests/SpacetreeTest.h"
+#include "parallel/tests/NodeTest.h"
 #ifdef Parallel
-#include "peano4/parallel/tests/PingPongTest.h"
+#include "parallel/tests/PingPongTest.h"
 #endif
-#include "peano4/utils/tests/LinearisedTest.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
+#include "utils/tests/LinearisedTest.h"
 
 tarch::tests::TestCase* peano4::getUnitTests() {
   tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();
 
-  result->addTestCase(new peano4::grid::tests::SpacetreeTest());
-  result->addTestCase(new peano4::grid::tests::GridControlEventTest());
-  result->addTestCase(new peano4::grid::tests::GridTraversalEventGeneratorTest());
+  result->addTestCase(new grid::tests::SpacetreeTest());
+  result->addTestCase(new grid::tests::GridControlEventTest());
+  result->addTestCase(new grid::tests::GridTraversalEventGeneratorTest());
 
-  result->addTestCase(new peano4::parallel::tests::NodeTest());
+  result->addTestCase(new parallel::tests::NodeTest());
 #ifdef Parallel
-  result->addTestCase(new peano4::parallel::tests::PingPongTest());
+  result->addTestCase(new parallel::tests::PingPongTest());
 #endif
 
-  result->addTestCase(new peano4::utils::tests::LinearisedTest());
+  result->addTestCase(new utils::tests::LinearisedTest());
 
   return result;
 }

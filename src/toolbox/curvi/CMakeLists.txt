@@ -11,13 +11,13 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
   string(TOLOWER ${mode} mode_lower)
   string(TOUPPER ${mode} mode_upper)
 
-  add_library(ToolboxCurvi_${mode_lower} STATIC)
-  target_sources(ToolboxCurvi_${mode_lower} PRIVATE ${SOURCES} ${HEADERS})
-  target_link_libraries(ToolboxCurvi_${mode_lower} PRIVATE PeanoOptions)
-  target_compile_definitions(ToolboxCurvi_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS})
-  target_compile_options(ToolboxCurvi_${mode_lower} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
+  add_library(ToolboxCurvi${mode} STATIC)
+  target_sources(ToolboxCurvi${mode} PRIVATE ${SOURCES} ${HEADERS})
+  target_link_libraries(ToolboxCurvi${mode} PRIVATE PeanoOptions Tarch${mode})
+  target_compile_definitions(ToolboxCurvi${mode} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS})
+  target_compile_options(ToolboxCurvi${mode} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
-  install(TARGETS ToolboxCurvi_${mode_lower}
+  install(TARGETS ToolboxCurvi${mode}
     EXPORT                      ${PROJECT_NAME}Targets
     RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
             COMPONENT           ${PROJECT_NAME}_Runtime
