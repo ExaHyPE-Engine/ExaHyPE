@@ -29,7 +29,7 @@ We however use a whole set of tools around it.
 
 ## Required
 
-- C++17/C++20-compatible C++ compiler.
+- C++20/C++23-compatible C++ compiler.
 - CMake (3.30 or newer).
 
 ## Recommended
@@ -40,7 +40,6 @@ We however use a whole set of tools around it.
 
 ## Optional
 
-- BLAS
 - The Visualization Toolkit (VTK) if you want to use the built-in visualisation facilities.
 - NVHPC, LLVM Clang, ROCm, AdaptiveCpp or Intel oneAPI for GPU offloading.
 - HDF5.
@@ -58,11 +57,10 @@ but these are all optional.
 
 # Configure Peano
 
-Peano is compiled using, CMake, after you have cloned the repository, 
+Peano is compiled using, CMake, after you have cloned the repository,
 you will have to to set up your installation using it.
 This will allow you to build the Peano core libraries and is a step
-required before you use any application or tool built on top of Peano
-such as ExaHyPE or our PETSc multigrid environment.
+required before you use any application or tool built on top of Peano such as ExaHyPE.
 
 ## CMake
 
@@ -99,8 +97,7 @@ Handing in .. does the job for most of the setups.
 <div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid black;">
 This might be the right time to look ahead and study the tutorials of the codes you wanna use.
 All of them need different toolboxes and extensions. ExaHyPE, for example, requires
-you to activate BLOCKSTRUCTURED and EXAHYPE at least (LOADBALANCING is recommended),
-while the SPH code Swift needs at least PARTICLES and SWIFT.
+you to activate BLOCKSTRUCTURED, LOADBALANCING and EXAHYPE at least (PARTICLES is recommended).
 </div>
 
 Configure by pressing c and then q to finish the configuration. Next, continue
@@ -125,36 +122,12 @@ with x being the number of parallel builds to use.
 
 Once you have compiled, we recommend that you run all tests using
 
-    make check
-
-for the autotools or
-
     make test
 
 for CMake.
 
 The call launches Peano's unit test, i.e. all the unit tests for the
 core plus the extensions that you have enabled.
-
-The test target is written such that it works out-of-the-box for
-non-MPI calls. If you have configured with MPI, then the unit
-tests will fail. But this does not mean that the unit tests are broken.
-It is simply due to the fact that the Makefile's test target does not
-know that you have to use the `mpirun` prefix. To make a long story
-short: If you use MPI and you want to run the unit tests, you have to do
-so manually.
-
-To run 2D and 3D tests individually, use
-
-    ./UnitTests2d
-    ./UnitTests3d
-
-in your build directory.
-You can run these builds with different core counts and also MPI support
-if you have compiled with MPI. The executables contain both node
-correctness tests and MPI ping-pong tests, i.e. you can both assess a
-valid build plus a working MPI environment.
-
 
 <div style="color:Black ; background-color: #ccf ; padding: 10px; border: 1px solid black;">
 Good time to stop. Jump straight into one of the tutorials if you want to.
@@ -173,14 +146,6 @@ You need to specify the installation path by amending the `CMAKE_INSTALL_PREFIX`
 mkdir build
 cd build
 cmake Peano-src -DCMAKE_INSTALL_PREFIX=<install_path>
-make install
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The autotools allow you to do the same by passing in --prefix=mydir into the ./configure command and then you call
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-./configure --prefix=mydir -- all the other parameters
-make
 make install
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -248,53 +213,6 @@ Peano currently relies on the following Python packages/projects:
 
 @include ../requirements.txt
 
-
-# Fortran
-
-If you don't use Fortran in your own code, ignore this section.
-
-Peano's core does not use any Fortran at all. However, some users use Fortran
-for their domain-specific programming. If you want to have a seamless
-integration of your particular Fortran choice through 's Python API,
-invoke `./configure` ensuring that the Fortran variables---in particular
-the environment variable `FC` identifying the compiler---are properly
-set.
-
-For many codes and the GNU Fortran compiler, you need the flag
-`-fdefault-real-8`. You can export `FCFLAGS` and make it contain this
-argument before you invoke `configure`. As the Peano's core does not use
-Fortran---it is only applications built on top of ---you can redefine
-the flags later on.
-
-
-# Sample Installation Script for CMake
-
-Please find below a sample shell script for CMake that will install Peano with ExaHyPE
-enabled. Here we use GCC and G++ as the C and C++ compiler, as well as
-OpenMP for the multithreading support. All required flags are automatically added by CMake.
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{bash}
-#!/bin/sh
-
-# Cleanup the Peano directory if files from previous builds are present (comment-in to use)
-#rm -rf build
-
-# Prepare environment
-mkdir build && cd build
-
-# Configure Peano with whatever we need
-CC=gcc CXX=g++ cmake .. -DENABLE_EXTENSION_EXAHYPE=ON -DENABLE_TOOLBOX_LOADBALANCING=ON -DENABLE_TOOLBOX_BLOCKSTRUCTURED=ON -DWITH_MULTITHREADING=omp
-
-# Compile and check build. You might want to add -jX to build on X cores in parallel
-echo "Starting compilation"
-make
-echo "Compilation complete. Now Checking..."
-
-# Checks installation and runs the unit tests
-make test
-
-exit 0
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Containers
 

@@ -8,7 +8,7 @@
 #include "tests/InterpolationTest.h"
 
 tarch::tests::TestCase* toolbox::blockstructured::getUnitTests() {
-  tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection("blockstructured");
+  tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();
 
   result->addTestCase(new toolbox::blockstructured::tests::InterpolationTest());
   result->addTestCase(new toolbox::blockstructured::tests::IandRInMatricesTest());

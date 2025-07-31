@@ -12,17 +12,17 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
   string(TOUPPER ${mode} mode_upper)
 
   foreach(dimension IN LISTS PEANO_DIMENSIONS)
-    add_library(ExaHyPE2Core${dimension}d_${mode_lower} STATIC)
-    target_sources(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE ${SOURCES} ${HEADERS})
-    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE PeanoOptions ToolboxBlockStructured${dimension}d_${mode_lower} ToolboxLoadBalancing${dimension}d_${mode_lower})
-    target_compile_definitions(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} Dimensions=${dimension})
-    target_compile_options(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
+    add_library(ExaHyPE2${mode}${dimension}d STATIC)
+    target_sources(ExaHyPE2${mode}${dimension}d PRIVATE ${SOURCES} ${HEADERS})
+    target_link_libraries(ExaHyPE2${mode}${dimension}d PRIVATE PeanoOptions ToolboxBlockStructured${mode}${dimension}d ToolboxLoadBalancing${mode}${dimension}d)
+    target_compile_definitions(ExaHyPE2${mode}${dimension}d PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} Dimensions=${dimension})
+    target_compile_options(ExaHyPE2${mode}${dimension}d PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
     if(${AdaptiveCpp_FOUND})
-      add_sycl_to_target(TARGET ExaHyPE2Core${dimension}d_${mode_lower} SOURCES ${SOURCES})
+      add_sycl_to_target(TARGET ExaHyPE2${mode}${dimension}d SOURCES ${SOURCES})
     endif()
 
-    install(TARGETS ExaHyPE2Core${dimension}d_${mode_lower}
+    install(TARGETS ExaHyPE2${mode}${dimension}d
       EXPORT                      ${PROJECT_NAME}Targets
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
               COMPONENT           ${PROJECT_NAME}_Runtime

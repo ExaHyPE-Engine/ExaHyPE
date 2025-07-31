@@ -11,17 +11,17 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
   string(TOLOWER ${mode} mode_lower)
   string(TOUPPER ${mode} mode_upper)
 
-  add_library(Tarch_${mode_lower} STATIC)
-  target_sources(Tarch_${mode_lower} PRIVATE ${SOURCES} ${HEADERS})
-  target_link_libraries(Tarch_${mode_lower} PRIVATE PeanoOptions)
-  target_compile_definitions(Tarch_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS})
-  target_compile_options(Tarch_${mode_lower} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
+  add_library(Tarch${mode} STATIC)
+  target_sources(Tarch${mode} PRIVATE ${SOURCES} ${HEADERS})
+  target_link_libraries(Tarch${mode} PRIVATE PeanoOptions)
+  target_compile_definitions(Tarch${mode} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS})
+  target_compile_options(Tarch${mode} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
   if(${AdaptiveCpp_FOUND})
-    add_sycl_to_target(TARGET Tarch_${mode_lower} SOURCES ${SOURCES})
+    add_sycl_to_target(TARGET Tarch${mode} SOURCES ${SOURCES})
   endif()
 
-  install(TARGETS Tarch_${mode_lower}
+  install(TARGETS Tarch${mode}
     EXPORT                      ${PROJECT_NAME}Targets
     RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
             COMPONENT           ${PROJECT_NAME}_Runtime

@@ -8,7 +8,7 @@
 
 
 tarch::la::tests::GramSchmidtTest::GramSchmidtTest():
-  TestCase ("tarch::la::GramSchmidtTest") {
+  TestCase ("tarch::la::tests::GramSchmidtTest") {
 }
 
 

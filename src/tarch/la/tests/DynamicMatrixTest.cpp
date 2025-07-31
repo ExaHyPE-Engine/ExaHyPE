@@ -3,7 +3,7 @@
 
 
 tarch::la::tests::DynamicMatrixTest::DynamicMatrixTest():
-  TestCase ("tarch::la::DynamicMatrixTest") {
+  TestCase ("tarch::la::tests::DynamicMatrixTest") {
 }
 
 

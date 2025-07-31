@@ -1,1 +1,0 @@
-{% include 'DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.template.cpp' %}

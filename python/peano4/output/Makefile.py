@@ -219,15 +219,15 @@ the SISC paper
         for example. Debug is the default.
         """
         if mode == CompileMode.Debug:
-            self.d["MODE"] = "DEBUG"
+            self.d["MODE"] = "Debug"
         elif mode == CompileMode.Asserts:
-            self.d["MODE"] = "ASSERTS"
+            self.d["MODE"] = "Asserts"
         elif mode == CompileMode.Stats:
-            self.d["MODE"] = "STATS"
+            self.d["MODE"] = "Stats"
         elif mode == CompileMode.Trace:
-            self.d["MODE"] = "TRACE"
+            self.d["MODE"] = "Trace"
         elif mode == CompileMode.Release:
-            self.d["MODE"] = "RELEASE"
+            self.d["MODE"] = "Release"
         else:
             assert False
 
