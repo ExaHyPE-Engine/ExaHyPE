@@ -24,19 +24,16 @@ Therefore, the default master is called ```p4```.
 
 # Dependencies and Prerequisites
 
-Peano's core is plain C++17/C++20 code.
-We however use a whole set of tools around it.
+Peano's core is plain C++20/C++23 code.
+We however use a whole set of tools and extensions around it.
 
 ## Required
 
 - C++20/C++23-compatible C++ compiler.
-- CMake (3.30 or newer).
-
-## Recommended
-
-- MPI. MPI's multithreaded support is required.
-- Intel's Threading Build Blocks, C++ threads or OpenMP for multithreading.
-- Python 3 (optional but recommended; not required if you work only with the C++ baseline).
+- CMake 3.27 or newer.
+- Python 3.11 or newer.
+- MPI. MPI's multithreaded support is recommended.
+- OpenMP for multithreading
 
 ## Optional
 
@@ -54,6 +51,7 @@ If you prefer Windows or MacOS, it should work as long as you provide the
 mandatory tools from above, but we won't be able to help.
 Peano is well-integrated with a number of @ref page_third_party_home "third party tools",
 but these are all optional.
+
 
 # Configure Peano
 

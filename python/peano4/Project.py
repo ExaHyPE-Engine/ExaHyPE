@@ -12,15 +12,15 @@ import peano4.datamodel
 import peano4.solversteps
 import peano4.runner
 
-from .Logger import log
+from .Logger import log, setup_logging
 
 class Project (object):
   """!
   Represents a Peano 4 project.
 
   namespace Sequence of strings representing the (nested) namespace. Pass in
-    [ "examples", "algebraicmg" ] for example if you wanna write a solver that
-    is embedded into the namespace examples::algebraicmg.
+    [ "tests", "exahype2" ] for example if you wanna write a solver that
+    is embedded into the namespace tests::exahype2.
 
 
   ## Global project properties
@@ -31,11 +31,11 @@ class Project (object):
   """
 
   def __init__(self, namespace, project_name, directory = ".", subdirectory = "", executable = ""):
-    """!
-      project_name  Simple string.
-    """
-    if sys.version_info.major < 3:
-      log.warning("Should be invoked through Python3, i.e. with newer Python version")
+    setup_logging()
+
+    if sys.version_info < (3, 11):
+        log.error("Python 3.11 or higher is required. Current version: %s", sys.version)
+        sys.exit(1)
 
     if subdirectory and not os.path.exists(subdirectory):
       os.mkdir(subdirectory)
