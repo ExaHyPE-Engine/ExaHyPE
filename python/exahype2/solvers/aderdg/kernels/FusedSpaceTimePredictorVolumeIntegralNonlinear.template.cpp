@@ -31,8 +31,8 @@ pCompType picardIteration(
   pCompType* NOALIAS                            gradQ,
   pCompType* NOALIAS                            new_lQi_slice,
   const cStoreType* const NOALIAS               luh,
-  const tarch::la::Vector<Dimensions, double>&  cellCentre,
-  const tarch::la::Vector<Dimensions, double>&  cellSize,
+  const tarch::la::Vector<DIMENSIONS, double>&  cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&  cellSize,
   const double                                  timeStamp,
   const double                                  timeStepSize
 );
@@ -44,11 +44,11 @@ pCompType picardIteration(
 template <typename cStoreType, typename pCompType, typename pStoreType>
 int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&  solver,
-  pStoreType* const NOALIAS                         lQhbnd[TwoTimesD],
-  pStoreType* const NOALIAS                         lFhbnd[TwoTimesD],
+  pStoreType* const NOALIAS                         lQhbnd[TWO_TIMES_D],
+  pStoreType* const NOALIAS                         lFhbnd[TWO_TIMES_D],
   cStoreType* const NOALIAS                         luh,
-  const tarch::la::Vector<Dimensions, double>&      cellCentre,
-  const tarch::la::Vector<Dimensions, double>&      cellSize,
+  const tarch::la::Vector<DIMENSIONS, double>&      cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&      cellSize,
   const double                                      timeStamp,
   const double                                      timeStepSize
 ) {
@@ -88,7 +88,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   //****** Picard ******
   //********************
 
-  const double invDx[Dimensions] = {1.0 / cellSize[0], 1.0 / cellSize[1]
+  const double invDx[DIMENSIONS] = {1.0 / cellSize[0], 1.0 / cellSize[1]
     {% if DIMENSIONS == 3 %}
       , 1.0 / cellSize[2]
     {% endif %}
@@ -144,7 +144,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
         // Matrix-Vector Products
         for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) {
-          #ifdef SharedOMP
+          #ifdef WITH_OPENMP
           #pragma omp simd aligned(lQhi,lQi:{{ALIGNMENT}})
           #endif
           for (int n = 0; n < {{NUMBER_OF_DATA_PADDED}}; n++) {
@@ -152,14 +152,14 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
               * lQi[(((t * {{NUMBER_OF_DOF_3D}} + z) * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n];
           }
 {% if USE_FLUX %}
-          #ifdef SharedOMP
+          #ifdef WITH_OPENMP
           #pragma omp simd aligned(lFhi,lFi:{{ALIGNMENT}})
           #endif
           for (int n = 0; n<{{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
             lFhi[((z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{0*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] += Quadrature<pCompType>::weights1[t]
               * lFi[(((t * {{NUMBER_OF_DOF_3D}} + z) * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{0*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}];
           }
-          #ifdef SharedOMP
+          #ifdef WITH_OPENMP
           #pragma omp simd aligned(lFhi,lFi:{{ALIGNMENT}})
           #endif
           for (int n = 0; n<{{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
@@ -167,7 +167,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
               * lFi[(((t * {{NUMBER_OF_DOF_3D}} + z) * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}];
           }
 {% if DIMENSIONS==3%}
-          #ifdef SharedOMP
+          #ifdef WITH_OPENMP
           #pragma omp simd aligned(lFhi,lFi:{{ALIGNMENT}})
           #endif
           for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
@@ -177,7 +177,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
 {% endif %}
 {% endif %}{# USE_FLUX #}
 {% if USE_NCP or USE_SOURCE %}
-          #ifdef SharedOMP
+          #ifdef WITH_OPENMP
           #pragma omp simd aligned(lShi,lSi:{{ALIGNMENT}})
           #endif
           for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
@@ -193,7 +193,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   //**************************
   //****** Extrapolator ******
   //**************************
-  for (int i = 0; i < 2 *Dimensions; i++) {
+  for (int i = 0; i < 2 *DIMENSIONS; i++) {
     std::memset(lQhbnd[i], 0, {{NUMBER_OF_DATA*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
     std::memset(lFhbnd[i], 0, {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
   }
@@ -202,22 +202,22 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   for (int yz = 0; yz < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; yz++) {
     // Matrix-Vector Products
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-      #ifdef SharedOMP
+      #ifdef WITH_OPENMP
       #pragma omp simd aligned(lQhbnd,lQhi:{{ALIGNMENT}})
       #endif
       for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
         lQhbnd[0][n + {{NUMBER_OF_DATA}} * yz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * yz)] * DGMatrices<pCompType>::FLCoeff[x];
-        lQhbnd[Dimensions][n + {{NUMBER_OF_DATA}} * yz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * yz)] * DGMatrices<pCompType>::FRCoeff[x];
+        lQhbnd[DIMENSIONS][n + {{NUMBER_OF_DATA}} * yz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * yz)] * DGMatrices<pCompType>::FRCoeff[x];
 {% if USE_FLUX %}
 {% if NUMBER_OF_DATA != NUMBER_OF_UNKNOWNS %}
       }
-      #ifdef SharedOMP
+      #ifdef WITH_OPENMP
       #pragma omp simd aligned(lFhbnd,lFhi:{{ALIGNMENT}})
       #endif
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
 {% endif %}
         lFhbnd[0][n + {{NUMBER_OF_UNKNOWNS}} * yz] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (x + {{NUMBER_OF_DOF}} * yz)] * DGMatrices<pCompType>::FLCoeff[x];
-        lFhbnd[Dimensions][n + {{NUMBER_OF_UNKNOWNS}} * yz] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (x + {{NUMBER_OF_DOF}} * yz)] * DGMatrices<pCompType>::FRCoeff[x];
+        lFhbnd[DIMENSIONS][n + {{NUMBER_OF_UNKNOWNS}} * yz] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (x + {{NUMBER_OF_DOF}} * yz)] * DGMatrices<pCompType>::FRCoeff[x];
 {% endif %}{# USE_FLUX #}
       }
     }
@@ -234,22 +234,22 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
       const int z = 0;
       const int x = xz;
 {% endif %}
-      #ifdef SharedOMP
+      #ifdef WITH_OPENMP
       #pragma omp simd aligned(lQhbnd,lQhi:{{ALIGNMENT}})
       #endif
       for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
         lQhbnd[1][n + {{NUMBER_OF_DATA}} * xz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * (y + {{NUMBER_OF_DOF_3D}} * z))] * DGMatrices<pCompType>::FLCoeff[y];
-        lQhbnd[1 + Dimensions][n + {{NUMBER_OF_DATA}} * xz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * (y + {{NUMBER_OF_DOF_3D}} * z))] * DGMatrices<pCompType>::FRCoeff[y];
+        lQhbnd[1 + DIMENSIONS][n + {{NUMBER_OF_DATA}} * xz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * (y + {{NUMBER_OF_DOF_3D}} * z))] * DGMatrices<pCompType>::FRCoeff[y];
 {% if USE_FLUX %}
 {% if NUMBER_OF_DATA != NUMBER_OF_UNKNOWNS %}
       }
-      #ifdef SharedOMP
+      #ifdef WITH_OPENMP
       #pragma omp simd aligned(lFhbnd,lFhi:{{ALIGNMENT}})
       #endif
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
 {% endif %}
         lFhbnd[1][n + {{NUMBER_OF_UNKNOWNS}} * xz] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (y + {{NUMBER_OF_DOF}} * xz) + {{1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] * DGMatrices<pCompType>::FLCoeff[y];
-        lFhbnd[1 + Dimensions][n + {{NUMBER_OF_UNKNOWNS}} * xz] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (y + {{NUMBER_OF_DOF}} * xz) + {{1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] * DGMatrices<pCompType>::FRCoeff[y];
+        lFhbnd[1 + DIMENSIONS][n + {{NUMBER_OF_UNKNOWNS}} * xz] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (y + {{NUMBER_OF_DOF}} * xz) + {{1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] * DGMatrices<pCompType>::FRCoeff[y];
 {% endif %}{# USE_FLUX #}
       }
     }
@@ -260,22 +260,22 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; xy++) {
     // Matrix-Vector Products
     for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
-      #ifdef SharedOMP
+      #ifdef WITH_OPENMP
       #pragma omp simd aligned(lQhbnd,lQhi:{{ALIGNMENT}})
       #endif
       for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
         lQhbnd[2][n + {{NUMBER_OF_DATA}} * xy] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (xy + {{NUMBER_OF_DOF*NUMBER_OF_DOF}} * z)] * DGMatrices<pCompType>::FLCoeff[z];
-        lQhbnd[2 + Dimensions][n + {{NUMBER_OF_DATA}} * xy] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (xy + {{NUMBER_OF_DOF*NUMBER_OF_DOF}} * z)] * DGMatrices<pCompType>::FRCoeff[z];
+        lQhbnd[2 + DIMENSIONS][n + {{NUMBER_OF_DATA}} * xy] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (xy + {{NUMBER_OF_DOF*NUMBER_OF_DOF}} * z)] * DGMatrices<pCompType>::FRCoeff[z];
 {% if USE_FLUX %}
 {% if NUMBER_OF_DATA != NUMBER_OF_UNKNOWNS %}
       }
-      #ifdef SharedOMP
+      #ifdef WITH_OPENMP
       #pragma omp simd aligned(lFhbnd,lFhi:{{ALIGNMENT}})
       #endif
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
 {% endif %}
         lFhbnd[2][n + {{NUMBER_OF_UNKNOWNS}} * xy] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (z + {{NUMBER_OF_DOF}} * xy) + {{2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] * DGMatrices<pCompType>::FLCoeff[z];
-        lFhbnd[2 + Dimensions][n + {{NUMBER_OF_UNKNOWNS}} * xy] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (z + {{NUMBER_OF_DOF}} * xy) + {{2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] * DGMatrices<pCompType>::FRCoeff[z];
+        lFhbnd[2 + DIMENSIONS][n + {{NUMBER_OF_UNKNOWNS}} * xy] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (z + {{NUMBER_OF_DOF}} * xy) + {{2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] * DGMatrices<pCompType>::FRCoeff[z];
 {% endif %}{# USE_FLUX #}
       }
     }
@@ -323,7 +323,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
 
 {% if USE_NCP or USE_SOURCE %}
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
-    #ifdef SharedOMP
+    #ifdef WITH_OPENMP
     #pragma omp simd aligned(luh,lShi:{{ALIGNMENT}})
     #endif
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
@@ -341,11 +341,11 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
 {% for PRECISION_NUM in range(0,PREDICTOR_COMPUTATION_PRECISIONS|length) %}
 template int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                     solver,
-  {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  lQhbnd[TwoTimesD],
-  {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  lFhbnd[TwoTimesD],
+  {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  lQhbnd[TWO_TIMES_D],
+  {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  lFhbnd[TWO_TIMES_D],
   {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS       luh,
-  const tarch::la::Vector<Dimensions, double>&        cellCentre,
-  const tarch::la::Vector<Dimensions, double>&        cellSize,
+  const tarch::la::Vector<DIMENSIONS, double>&        cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&        cellSize,
   const double                                        timeStamp,
   const double                                        timeStepSize
 );
@@ -361,21 +361,21 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
   pCompType* NOALIAS                                gradQ,
   pCompType* NOALIAS                                new_lQi_slice,
   const cStoreType* const NOALIAS                   luh,
-  const tarch::la::Vector<Dimensions, double>&      cellCentre,
-  const tarch::la::Vector<Dimensions, double>&      cellSize,
+  const tarch::la::Vector<DIMENSIONS, double>&      cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&      cellSize,
   const double                                      timeStamp,
   const double                                      timeStepSize
 ) {
   const pCompType* Kxi    = DGMatrices<pCompType>::Kxi;
   const pCompType* iK1_T  = DGMatrices<pCompType>::iK1_T;
 
-  const double invDx[Dimensions] = {1.0 / cellSize[0], 1.0 / cellSize[1]
+  const double invDx[DIMENSIONS] = {1.0 / cellSize[0], 1.0 / cellSize[1]
     {% if DIMENSIONS == 3 %}
       , 1.0 / cellSize[2]
     {% endif %}
   };
 
-  const double dtByDx[Dimensions] = {timeStepSize * invDx[0], timeStepSize * invDx[1]
+  const double dtByDx[DIMENSIONS] = {timeStepSize * invDx[0], timeStepSize * invDx[1]
     {% if DIMENSIONS == 3 %}
       , timeStepSize * invDx[2]
     {% endif %}
@@ -429,7 +429,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 
       // Convert an xyz index into a {indexX, indexY} structure.
       // Note: In general, the flattened index is constructed from outer to inner dimensions in the following order: time -> z -> y -> x -> variables.
-      const tarch::la::Vector<Dimensions, int> index = {xyz % {{NUMBER_OF_DOF}}, xyz / {{NUMBER_OF_DOF}} };
+      const tarch::la::Vector<DIMENSIONS, int> index = {xyz % {{NUMBER_OF_DOF}}, xyz / {{NUMBER_OF_DOF}} };
 {% endif %}
 {% if DIMENSIONS==3 %}
       F[0] = &lFi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}}];
@@ -437,7 +437,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
       F[2] = &lFi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}];
       // Convert an xyz index into a {indexX, indexY, indexZ} structure.
       // Note: In general, the flattened index is constructed from outer to inner dimensions in the following order: time -> z -> y -> x -> variables.
-      const tarch::la::Vector<Dimensions, int> index = {xyz % {{NUMBER_OF_DOF}}, (xyz % {{NUMBER_OF_DOF**(DIMENSIONS - 1)}}) / {{NUMBER_OF_DOF}} xyz / {{NUMBER_OF_DOF ** DIMENSIONS}}};
+      const tarch::la::Vector<DIMENSIONS, int> index = {xyz % {{NUMBER_OF_DOF}}, (xyz % {{NUMBER_OF_DOF**(DIMENSIONS - 1)}}) / {{NUMBER_OF_DOF}} xyz / {{NUMBER_OF_DOF ** DIMENSIONS}}};
 {% endif %}
 
       // Calculate the exact time-node position for the flux calculation.
@@ -455,12 +455,12 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
       //    - dx               : Spatial step size.
       //    - xc               : Cell center coordinates in the global coordinate system.
       //    - rc = 0.5         : Cell center coordinates in the reference cell.
-      tarch::la::Vector<Dimensions, double> nodePosition = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, {{NUMBER_OF_DOF - 1}}, Quadrature<pCompType>::nodes);
+      tarch::la::Vector<DIMENSIONS, double> nodePosition = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, {{NUMBER_OF_DOF - 1}}, Quadrature<pCompType>::nodes);
 
       // Measure the flux contribution to the local cell time evaluation.
       // Note: No connections with neighboring cells are considered during this step (e.g., no Riemann solver is used).
       //       The numerical fluxes from neighbors (penalty) are considered during the correction stage.
-      for (int d = 0; d < Dimensions; d++) {
+      for (int d = 0; d < DIMENSIONS; d++) {
 {% if STATELESS_FLUX %}
         {{FULL_QUALIFIED_SOLVER_NAME}}::flux(
 {% else %}
@@ -483,7 +483,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
     // Following the upwinding principle, the "upstream" value of the corrector (luh) from the previous time step is used.
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
       const pCompType weight = Quadrature<pCompType>::weights3[xyz] * DGMatrices<pCompType>::FLCoeff[t];
-      #ifdef SharedOMP
+      #ifdef WITH_OPENMP
       #pragma omp simd aligned(rhs,luh:{{ALIGNMENT}})
       #endif
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
@@ -545,13 +545,13 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
       // Calculate the exact space and time nodes' positions for the source and NCP calculation.
 {% if USE_NCP or USE_SOURCE or USE_DIFFUSIVE_SOURCE %}
 {% if DIMENSIONS==2 %}
-      const tarch::la::Vector<Dimensions, int> index = {xyz % {{NUMBER_OF_DOF}}, xyz / {{NUMBER_OF_DOF}} };
+      const tarch::la::Vector<DIMENSIONS, int> index = {xyz % {{NUMBER_OF_DOF}}, xyz / {{NUMBER_OF_DOF}} };
 {% endif %}
 {% if DIMENSIONS==3 %}
-      const tarch::la::Vector<Dimensions, int> index = {xyz % {{NUMBER_OF_DOF}}, (xyz % {{NUMBER_OF_DOF**(DIMENSIONS - 1)}}) / {{NUMBER_OF_DOF}} xyz / {{NUMBER_OF_DOF ** DIMENSIONS}}};
+      const tarch::la::Vector<DIMENSIONS, int> index = {xyz % {{NUMBER_OF_DOF}}, (xyz % {{NUMBER_OF_DOF**(DIMENSIONS - 1)}}) / {{NUMBER_OF_DOF}} xyz / {{NUMBER_OF_DOF ** DIMENSIONS}}};
 {% endif %}
       const double timePosition = timeStamp + Quadrature<pCompType>::nodes[t] * timeStepSize;
-      tarch::la::Vector<Dimensions, double> nodePosition = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, {{NUMBER_OF_DOF - 1}}, Quadrature<pCompType>::nodes);
+      tarch::la::Vector<DIMENSIONS, double> nodePosition = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, {{NUMBER_OF_DOF - 1}}, Quadrature<pCompType>::nodes);
 {% endif %}
 
 {% if USE_NCP %}
@@ -594,7 +594,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 {% endif %}
 
 {% if USE_NCP %}
-      for (int d = 0; d < Dimensions; d++) {
+      for (int d = 0; d < DIMENSIONS; d++) {
         // NCP are computed at nodes positions during the prediction stage, since only local evaluation should be considered.
 {% if STATELESS_NCP %}
         {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(
@@ -611,7 +611,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
           tmpNCP
         );
 
-        #ifdef SharedOMP
+        #ifdef WITH_OPENMP
         #pragma omp simd aligned(lSi,tmpNCP:{{ALIGNMENT}})
         #endif
         for(int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
@@ -623,7 +623,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 
       // Update rhs
       const pCompType updateSize = Quadrature<pCompType>::weights1[t] * Quadrature<pCompType>::weights3[xyz] * timeStepSize;
-      #ifdef SharedOMP
+      #ifdef WITH_OPENMP
       #pragma omp simd aligned(rhs,lSi:{{ALIGNMENT}})
       #endif
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
@@ -664,8 +664,8 @@ template {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} {{FULL_QUALIFIED_NA
   {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS  gradQ,
   {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS  new_lQi_slice,
   const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS           luh,
-  const tarch::la::Vector<Dimensions, double>&                  cellCentre,
-  const tarch::la::Vector<Dimensions, double>&                  cellSize,
+  const tarch::la::Vector<DIMENSIONS, double>&                  cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&                  cellSize,
   const double                                                  timeStamp,
   const double                                                  timeStepSize
 );

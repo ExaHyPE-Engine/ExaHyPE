@@ -11,18 +11,18 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
   string(TOLOWER ${mode} mode_lower)
   string(TOUPPER ${mode} mode_upper)
 
-  foreach(dimension IN LISTS PEANO_DIMENSIONS)
-    add_library(Peano4${mode}${dimension}d STATIC)
-    target_sources(Peano4${mode}${dimension}d PRIVATE ${SOURCES} ${HEADERS})
-    target_link_libraries(Peano4${mode}${dimension}d PRIVATE PeanoOptions Tarch${mode})
-    target_compile_definitions(Peano4${mode}${dimension}d PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} Dimensions=${dimension})
-    target_compile_options(Peano4${mode}${dimension}d PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
+  foreach(dimensions IN LISTS PEANO_DIMENSIONS)
+    add_library(Peano4${mode}${dimensions}d STATIC)
+    target_sources(Peano4${mode}${dimensions}d PRIVATE ${SOURCES} ${HEADERS})
+    target_link_libraries(Peano4${mode}${dimensions}d PRIVATE PeanoOptions Tarch${mode})
+    target_compile_definitions(Peano4${mode}${dimensions}d PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} DIMENSIONS=${dimensions})
+    target_compile_options(Peano4${mode}${dimensions}d PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
     if(${AdaptiveCpp_FOUND})
-      add_sycl_to_target(TARGET Peano4${mode}${dimension}d SOURCES ${SOURCES})
+      add_sycl_to_target(TARGET Peano4${mode}${dimensions}d SOURCES ${SOURCES})
     endif()
 
-    install(TARGETS Peano4${mode}${dimension}d
+    install(TARGETS Peano4${mode}${dimensions}d
       EXPORT                      ${PROJECT_NAME}Targets
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
               COMPONENT           ${PROJECT_NAME}_Runtime

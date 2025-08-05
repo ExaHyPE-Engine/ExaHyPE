@@ -17,7 +17,7 @@ namespace toolbox {
      *   halo of one cell around each patch, then this parameter is 1.
      */
     int serialiseVoxelIndexInOverlap(
-      const tarch::la::Vector<Dimensions,int>& overlapCell,
+      const tarch::la::Vector<DIMENSIONS,int>& overlapCell,
       int                                      numberOfDoFsPerAxisInPatch,
       int                                      overlap,
       int                                      normal
@@ -29,7 +29,7 @@ namespace toolbox {
      * routine serialises the number of patches.
      */
     int serialisePatchIndexInOverlap(
-      const tarch::la::Vector<Dimensions,int>& patchIndex,
+      const tarch::la::Vector<DIMENSIONS,int>& patchIndex,
       int                                      normal
     );
 
@@ -43,7 +43,7 @@ namespace toolbox {
      * @param markerIndex Typically returned by getRelativePositionWithinFatherCell().
      */
     int serialiseMarkerIn3x3PatchAssembly(
-      const tarch::la::Vector<Dimensions,int>& markerIndex,
+      const tarch::la::Vector<DIMENSIONS,int>& markerIndex,
       int                                      numberOfDoFsPerAxisInPatch
     );
   }

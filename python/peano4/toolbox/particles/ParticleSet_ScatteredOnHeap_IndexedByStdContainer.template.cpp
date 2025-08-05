@@ -55,7 +55,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
   else if ( iteratorToExistingCopy!=end() ) {
     neighbourParticle->setParallelState( incomingParticleWillBeLocal ? DoFType::ParallelState::Local : DoFType::ParallelState::Virtual );
 
-    #if PeanoDebug>0
+    #if PEANO_DEBUG>0
     neighbourParticle->setDebugX( (*iteratorToExistingCopy)->getDebugX() );
     int neighbourPartID = neighbourParticle->getPartid();
     #else
@@ -119,7 +119,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
   else {
     neighbourParticle->setParallelState( incomingParticleWillBeLocal ? DoFType::ParallelState::Local : DoFType::ParallelState::Virtual );
 
-    #if PeanoDebug>0
+    #if PEANO_DEBUG>0
     int neighbourPartID = neighbourParticle->getPartid();
     #else
     int neighbourPartID = -1;
@@ -261,7 +261,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& othe
     _container.push_back( newParticle );
   }
   logDebug( "clone()", "copied " << otherSet.size() << " objects over into local one of size " << size() );
-  #if PeanoDebug>=1
+  #if PEANO_DEBUG>=1
   _debugX = otherSet._debugX;
   _debugH = otherSet._debugH;
   #endif

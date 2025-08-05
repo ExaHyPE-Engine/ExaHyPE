@@ -40,24 +40,24 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * never called. So I embed the (empty) implementation directly into the
      * header.
      */
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static GPUCallableMethod double maxEigenvalue(
+    static GPU_CALLABLE_METHOD double maxEigenvalue(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       int                                          normal,
       Offloadable
     )
-    #if defined(GPUOffloadingSYCL)
+    #if defined(WITH_GPU_SYCL)
     {}
     #else
     ;
     #endif
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -73,8 +73,8 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      */
     virtual double maxEigenvalue(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       int                                          normal
@@ -94,25 +94,25 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * never called. So I embed the (empty) implementation directly into the
      * header.
      */
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static GPUCallableMethod void flux(
+    static GPU_CALLABLE_METHOD void flux(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       int                                          normal,
       double * NOALIAS                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     )
-    #if defined(GPUOffloadingSYCL)
+    #if defined(WITH_GPU_SYCL)
     {}
     #else
     ;
     #endif
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -120,8 +120,8 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     {% if FLUX_IMPLEMENTATION!="<none>" %}
     virtual void flux(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -142,26 +142,26 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * never called. So I embed the (empty) implementation directly into the
      * header.
      */
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static GPUCallableMethod void nonconservativeProduct(
+    static GPU_CALLABLE_METHOD void nonconservativeProduct(
       const double * NOALIAS                  Q,       // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * NOALIAS                  deltaQ,  // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       int                                          normal,
       double * NOALIAS                        BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     )
-    #if defined(GPUOffloadingSYCL)
+    #if defined(WITH_GPU_SYCL)
     {}
     #else
     ;
     #endif
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -170,8 +170,8 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     virtual void nonconservativeProduct(
       const double * NOALIAS                  Q,      // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -192,24 +192,24 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * never called. So I embed the (empty) implementation directly into the
      * header.
      */
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static GPUCallableMethod void sourceTerm(
+    static GPU_CALLABLE_METHOD void sourceTerm(
       const double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       double * NOALIAS S,
       Offloadable
     )
-    #if defined(GPUOffloadingSYCL)
+    #if defined(WITH_GPU_SYCL)
     {}
     #else
     ;
     #endif
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -217,8 +217,8 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     virtual void sourceTerm(
       const double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       double * NOALIAS S
@@ -241,8 +241,8 @@ def create_abstract_solver_definitions(flux_implementation, ncp_implementation, 
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  gridCellH,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
   double                                       t,
   double                                       dt,
   int                                          normal
@@ -255,8 +255,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% if FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
  const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
- const tarch::la::Vector<Dimensions,double>&  faceCentre,
- const tarch::la::Vector<Dimensions,double>&  gridCellH,
+ const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+ const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
  double                                       t,
  double                                       dt,
  int                                          normal,
@@ -271,8 +271,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * NOALIAS                  Q,      // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  gridCellH,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -284,11 +284,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-#if !defined(GPUOffloadingSYCL)
+#if !defined(WITH_GPU_SYCL)
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * NOALIAS                  Q,
-  const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
-  const tarch::la::Vector<Dimensions,double>&  gridCellH,
+  const tarch::la::Vector<DIMENSIONS,double>&  gridCellCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
   double                                       t,
   double                                       dt,
   double * NOALIAS                        S
@@ -305,14 +305,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 
 
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(GPUOffloadingOMP)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp declare target
 #endif
-#if !defined(GPUOffloadingSYCL)
-GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+#if !defined(WITH_GPU_SYCL)
+GPU_CALLABLE_METHOD double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -321,21 +321,21 @@ GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenva
   {{EIGENVALUES_IMPLEMENTATION}};
 }
 #endif
-#if defined(GPUOffloadingOMP)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 
 {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(GPUOffloadingOMP)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp declare target
 #endif
-#if !defined(GPUOffloadingSYCL)
-GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
+#if !defined(WITH_GPU_SYCL)
+GPU_CALLABLE_METHOD void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -349,22 +349,22 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   {% endif %}
 }
 #endif
-#if defined(GPUOffloadingOMP)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 
 {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(GPUOffloadingOMP)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp declare target
 #endif
-#if !defined(GPUOffloadingSYCL)
-GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
+#if !defined(WITH_GPU_SYCL)
+GPU_CALLABLE_METHOD void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
       const double * NOALIAS                  Q,        // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * NOALIAS                  deltaQ,   // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -378,21 +378,21 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
   {% endif %}
 }
 #endif
-#if defined(GPUOffloadingOMP)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(GPUOffloadingOMP)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp declare target
 #endif
-#if !defined(GPUOffloadingSYCL)
-GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+#if !defined(WITH_GPU_SYCL)
+GPU_CALLABLE_METHOD void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
       const double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       double * NOALIAS S,
@@ -405,7 +405,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   {% endif %}
 }
 #endif
-#if defined(GPUOffloadingOMP)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp end declare target
 #endif
 {% endif %}
@@ -426,8 +426,8 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     virtual void sourceTerm(
       const double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       double * NOALIAS S
@@ -444,8 +444,8 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      */
     virtual double maxEigenvalue(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       int                                          normal
@@ -456,8 +456,8 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     virtual void flux(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -470,8 +470,8 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     virtual void nonconservativeProduct(
       const double * NOALIAS                  Q,        // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * NOALIAS                  deltaQ,   // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -495,19 +495,19 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static GPUCallableMethod void sourceTerm(
+    static GPU_CALLABLE_METHOD void sourceTerm(
        const double * NOALIAS Q,
-       const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
-       const tarch::la::Vector<Dimensions,double>&  gridCellH,
+       const tarch::la::Vector<DIMENSIONS,double>&  gridCellCentre,
+       const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
        double                                       t,
        double                                       dt,
        double * NOALIAS S,
        Offloadable
      );
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -528,18 +528,18 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static GPUCallableMethod double maxEigenvalue(
+    static GPU_CALLABLE_METHOD double maxEigenvalue(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       int                                          normal,
       Offloadable
     );
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -560,20 +560,20 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static GPUCallableMethod void flux(
+    static GPU_CALLABLE_METHOD void flux(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       int                                          normal,
       double * NOALIAS                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -594,21 +594,21 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static GPUCallableMethod void nonconservativeProduct(
+    static GPU_CALLABLE_METHOD void nonconservativeProduct(
       const double * NOALIAS                  Q,         
       const double * NOALIAS                  deltaQ,    
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  gridCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       int                                          normal,
       double * NOALIAS                        BTimesDeltaQ,
       Offloadable
     );
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}    
@@ -627,8 +627,8 @@ def create_solver_definitions(flux_implementation, ncp_implementation, eigenvalu
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  gridCellH,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
   double                                       t,
   double                                       dt,
   int                                          normal
@@ -643,8 +643,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  gridCellH,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -661,8 +661,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * NOALIAS                  Q,      // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  gridCellH,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -678,8 +678,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * NOALIAS                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  gridCellX,
-  const tarch::la::Vector<Dimensions,double>&  gridCellH,
+  const tarch::la::Vector<DIMENSIONS,double>&  gridCellX,
+  const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
   double                                       t,
   double                                       dt,
   double * NOALIAS                        S  // S[{{NUMBER_OF_UNKNOWNS}}]
@@ -700,33 +700,33 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 
 
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+GPU_CALLABLE_METHOD double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  gridCellH,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
   double                                       t,
   int                                          normal,
   Offloadable
 )  {
   // @todo implement
 }
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 {% endif %}
 
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
+GPU_CALLABLE_METHOD void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  gridCellH,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -735,21 +735,21 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 )  {
   // @todo implement
 }
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 {% endif %}
 
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
+GPU_CALLABLE_METHOD void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * NOALIAS                  Q,        // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const double * NOALIAS                  deltaQ,   // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  gridCellH,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -758,7 +758,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
 )  {
   // @todo implement
 }
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 {% endif %}
@@ -766,13 +766,13 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
 
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+GPU_CALLABLE_METHOD void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * NOALIAS Q,
-  const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
-  const tarch::la::Vector<Dimensions,double>&  gridCellH,
+  const tarch::la::Vector<DIMENSIONS,double>&  gridCellCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
   double                                       t,
   double                                       dt,
   double * NOALIAS S,
@@ -780,7 +780,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 ) {
   // @todo implement
 }
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 {% endif %}

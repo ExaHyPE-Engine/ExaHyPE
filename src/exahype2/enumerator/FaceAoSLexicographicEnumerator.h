@@ -50,12 +50,12 @@ namespace exahype2::enumerator {
     /**
      *
      * @param faceNumber An integer value between 0 (inclusive) and
-     *   2 * Dimensions (exclusive). Standard Peano enumeration of faces.
-     *   While you can pass in a number bigger than Dimensions, i.e.,
+     *   2 * DIMENSIONS (exclusive). Standard Peano enumeration of faces.
+     *   While you can pass in a number bigger than DIMENSIONS, i.e.,
      *   while you can distinguish between left and right face, both
      *   the left and right face have the same dof enumeration. Consequently,
      *   the initialisation with i gives you the same as the initialisation
-     *   with i+Dimensions.
+     *   with i+DIMENSIONS.
      *
      * @param numberOfDoFsPerAxisInCell Number of volumes per direction
      *   if you work with block-structured Finite Volumes, order+1 if you
@@ -68,32 +68,32 @@ namespace exahype2::enumerator {
      *   properties such as the first derivative along the normal. Some
      *   code snippets within ExaHyPE 2 call the haloSize overlap.
      */
-    inline GPUCallableMethod FaceAoSLexicographicEnumerator(
+    inline GPU_CALLABLE_METHOD FaceAoSLexicographicEnumerator(
       int faceNumber,
       int numberOfDoFsPerAxisInCell,
       int haloSize,
       int numberOfUnknowns,
       int numberOfAuxiliaryVariables
-    ) InlineMethod:
+    ):
       _faceNumber(faceNumber),
       _numberOfDoFsPerAxisInCell(numberOfDoFsPerAxisInCell),
       _haloSize(haloSize),
       _numberOfUnknowns(numberOfUnknowns),
       _numberOfAuxiliaryVariables(numberOfAuxiliaryVariables) {}
 
-    inline GPUCallableMethod int operator()(const tarch::la::Vector<Dimensions, int>& dofIndex, int unknown) const InlineMethod {
+    inline GPU_CALLABLE_METHOD int operator()(const tarch::la::Vector<DIMENSIONS, int>& dofIndex, int unknown) const {
       int base   = 1;
       int result = 0;
-      for (int d = 0; d < Dimensions; d++) {
+      for (int d = 0; d < DIMENSIONS; d++) {
         result += dofIndex(d) * base;
-        if (d == _faceNumber % Dimensions) {
-#if defined(GPUOffloadingOff)
+        if (d == _faceNumber % DIMENSIONS) {
+#if !defined(WITH_GPU)
           assertion2(dofIndex(d) >= 0, toString(), dofIndex);
           assertion2(dofIndex(d) < 2 * _haloSize, toString(), dofIndex);
 #endif
           base *= (2 * _haloSize);
         } else {
-#if defined(GPUOffloadingOff)
+#if !defined(WITH_GPU)
           assertion2(dofIndex(d) >= 0, toString(), dofIndex);
           assertion2(dofIndex(d) < _numberOfDoFsPerAxisInCell, toString(), dofIndex);
 #endif
@@ -103,12 +103,12 @@ namespace exahype2::enumerator {
       return result * (_numberOfUnknowns + _numberOfAuxiliaryVariables) + unknown;
     }
 
-#if defined(GPUOffloadingOff)
+#if !defined(WITH_GPU)
     std::string toString() const;
 #endif
 
-    inline GPUCallableMethod int size() const InlineMethod {
-#if Dimensions == 2
+    inline GPU_CALLABLE_METHOD int size() const {
+#if DIMENSIONS == 2
       return (_numberOfDoFsPerAxisInCell)* (2 * _haloSize) * (_numberOfUnknowns + _numberOfAuxiliaryVariables);
 #else
       return (_numberOfDoFsPerAxisInCell * _numberOfDoFsPerAxisInCell) * (2 * _haloSize) * (_numberOfUnknowns + _numberOfAuxiliaryVariables);

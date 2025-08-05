@@ -15,7 +15,7 @@ double toolbox::particles::internal::relativeReleaseOwnershipSpatialSortingToler
 }
 
 
-double toolbox::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(const tarch::la::Vector< Dimensions, double >& h) {
+double toolbox::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(const tarch::la::Vector< DIMENSIONS, double >& h) {
   return ReleaseOwnershipSpatialSortingTolerance * tarch::la::max(h);
 }
 
@@ -30,7 +30,7 @@ double toolbox::particles::internal::relativeGrabOwnershipSpatialSortingToleranc
 }
 
 
-double toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(const tarch::la::Vector< Dimensions, double >& h) {
+double toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(const tarch::la::Vector< DIMENSIONS, double >& h) {
   return GrabOwnershipSpatialSortingTolerance * tarch::la::max(h);
 }
 
@@ -45,13 +45,13 @@ bool toolbox::particles::internal::fitsIntoLevel(double searchRadius, const ::pe
 }
 
 
-std::bitset<Dimensions> toolbox::particles::internal::getParticleAssociationWithinCell(
-  const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& cellCentre
+std::bitset<DIMENSIONS> toolbox::particles::internal::getParticleAssociationWithinCell(
+  const tarch::la::Vector<DIMENSIONS, double>& x, const tarch::la::Vector<DIMENSIONS, double>& cellCentre
 ) {
-  std::bitset<Dimensions> destAssociation;
+  std::bitset<DIMENSIONS> destAssociation;
 
   // marker.x() gives me the centre of the cell
-  for (int d = 0; d < Dimensions; d++) {
+  for (int d = 0; d < DIMENSIONS; d++) {
     destAssociation[d] = tarch::la::greaterEquals(x(d), cellCentre(d));
   }
 

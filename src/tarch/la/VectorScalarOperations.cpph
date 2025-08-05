@@ -1,5 +1,5 @@
 template <int Size, typename Scalar>
-inline GPUCallableMethod
+inline GPU_CALLABLE_METHOD
 tarch::la::Vector<Size, Scalar>& tarch::la::operator*=(Vector<Size, Scalar>& vector, const Scalar& scalar) {
 #ifdef CompilerICC
 #pragma forceinline recursive
@@ -22,7 +22,7 @@ tarch::la::Vector<Size, Scalar> tarch::la::remainder(const Vector<Size, Scalar>&
 
 
 template <int Size, typename Scalar>
-inline GPUCallableMethod
+inline GPU_CALLABLE_METHOD
 tarch::la::Vector<Size, Scalar>& tarch::la::operator/=(Vector<Size, Scalar>& vector, const Scalar& scalar) {
 #ifdef CompilerICC
 #pragma forceinline recursive
@@ -35,7 +35,7 @@ tarch::la::Vector<Size, Scalar>& tarch::la::operator/=(Vector<Size, Scalar>& vec
 
 
 template <int Size, typename Scalar>
-inline GPUCallableMethod
+inline GPU_CALLABLE_METHOD
 tarch::la::Vector<Size, Scalar>& tarch::la::operator+=(Vector<Size, Scalar>& vector, const Scalar& scalar) {
 #ifdef CompilerICC
 #pragma forceinline recursive
@@ -48,7 +48,7 @@ tarch::la::Vector<Size, Scalar>& tarch::la::operator+=(Vector<Size, Scalar>& vec
 
 
 template <int Size, typename Scalar>
-inline GPUCallableMethod
+inline GPU_CALLABLE_METHOD
 tarch::la::Vector<Size, Scalar>& tarch::la::operator-=(Vector<Size, Scalar>& vector, const Scalar& scalar) {
 #ifdef CompilerICC
 #pragma forceinline recursive
@@ -61,7 +61,7 @@ tarch::la::Vector<Size, Scalar>& tarch::la::operator-=(Vector<Size, Scalar>& vec
 
 
 template <int Size, typename Scalar>
-inline GPUCallableMethod
+inline GPU_CALLABLE_METHOD
 tarch::la::Vector<Size, Scalar> tarch::la::operator/(const Vector<Size, Scalar>& vector, const Scalar& scalar) {
   Vector<Size, Scalar> result;
 #ifdef CompilerICC
@@ -76,14 +76,14 @@ tarch::la::Vector<Size, Scalar> tarch::la::operator/(const Vector<Size, Scalar>&
 
 
 template <int Size, typename Scalar>
-inline GPUCallableMethod
+inline GPU_CALLABLE_METHOD
 tarch::la::Vector<Size, Scalar> tarch::la::operator+(const Scalar& scalar, const Vector<Size, Scalar>& vector) {
   return vector + scalar;
 }
 
 
 template <int Size, typename Scalar>
-inline GPUCallableMethod
+inline GPU_CALLABLE_METHOD
 tarch::la::Vector<Size, Scalar> tarch::la::operator*(const Vector<Size, Scalar>& vector, const Scalar& scalar) {
   Vector<Size, Scalar> result;
 #ifdef CompilerICC
@@ -98,7 +98,7 @@ tarch::la::Vector<Size, Scalar> tarch::la::operator*(const Vector<Size, Scalar>&
 
 
 template <int Size, typename Scalar>
-inline GPUCallableMethod
+inline GPU_CALLABLE_METHOD
 tarch::la::Vector<Size, Scalar> tarch::la::operator*(const Scalar& scalar, const Vector<Size, Scalar>& vector) {
   Vector<Size, Scalar> result;
 #ifdef CompilerICC
@@ -112,7 +112,7 @@ tarch::la::Vector<Size, Scalar> tarch::la::operator*(const Scalar& scalar, const
 
 
 template <int Size, typename Scalar>
-inline GPUCallableMethod
+inline GPU_CALLABLE_METHOD
 tarch::la::Vector<Size, Scalar> tarch::la::operator+(const Vector<Size, Scalar>& vector, const Scalar& scalar) {
   Vector<Size, Scalar> result;
 #ifdef CompilerICC
@@ -126,7 +126,7 @@ tarch::la::Vector<Size, Scalar> tarch::la::operator+(const Vector<Size, Scalar>&
 
 
 template <int Size, typename Scalar>
-inline GPUCallableMethod
+inline GPU_CALLABLE_METHOD
 tarch::la::Vector<Size, Scalar> tarch::la::operator-(const Vector<Size, Scalar>& vector, const Scalar& scalar) {
   Vector<Size, Scalar> result;
 #ifdef CompilerICC

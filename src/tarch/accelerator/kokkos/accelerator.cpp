@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/accelerator.h"
 
-#if defined(GPUOffloadingKokkos)
+#if defined(WITH_GPU_KOKKOS)
 
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
@@ -26,7 +26,7 @@ void* tarch::accelerator::allocateRawData(
     data = Kokkos::kokkos_malloc<Kokkos::HostSpace>(sizeInBytes);
     break;
   case MemoryLocation::Device:
-#ifdef UseUSM
+#ifdef WITH_USM
     data = Kokkos::kokkos_malloc<Kokkos::SharedSpace>(sizeInBytes);
 #else
     data = Kokkos::kokkos_malloc<Kokkos::DefaultExecutionSpace::memory_space>(sizeInBytes);
@@ -39,7 +39,7 @@ void* tarch::accelerator::allocateRawData(
 
   assertion(data);
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     Device::getInstance().getMemoryBlockTable()[data] = sizeInBytes;
@@ -58,7 +58,7 @@ void tarch::accelerator::freeRawData(
     return;
   }
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     auto itr = Device::getInstance().getMemoryBlockTable().find(data);
@@ -75,7 +75,7 @@ void tarch::accelerator::freeRawData(
     Kokkos::kokkos_free<Kokkos::HostSpace>(data);
     break;
   case MemoryLocation::Device:
-#ifdef UseUSM
+#ifdef WITH_USM
     Kokkos::kokkos_free<Kokkos::SharedSpace>(data);
 #else
     Kokkos::kokkos_free<Kokkos::DefaultExecutionSpace::memory_space>(data);
@@ -105,7 +105,7 @@ void tarch::accelerator::copyTo(
     break;
   case MemoryLocation::Device: {
     logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to device");
-#ifdef UseUSM
+#ifdef WITH_USM
     std::memcpy(target, source, sizeInBytes);
 #else
     using SrcViewType = Kokkos::View<const unsigned char*, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
@@ -143,7 +143,7 @@ void tarch::accelerator::copyFrom(
     break;
   case MemoryLocation::Device: {
     logDebug("copyFrom()", "Copy " << sizeInBytes << " bytes from device to host");
-#ifdef UseUSM
+#ifdef WITH_USM
     std::memcpy(target, source, sizeInBytes);
 #else
     using SrcViewType = Kokkos::View<const unsigned char*, Kokkos::DefaultExecutionSpace::memory_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
@@ -163,4 +163,4 @@ void tarch::accelerator::copyFrom(
   }
 }
 
-#endif // defined(GPUOffloadingKokkos)
+#endif // defined(WITH_GPU_KOKKOS)

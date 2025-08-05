@@ -26,8 +26,8 @@
     teamPolicy,
     KOKKOS_LAMBDA (const Kokkos::TeamPolicy<>::member_type& teamMember, {{COMPUTE_PRECISION}}& maxEigenvalueAfterTimeStep) {
     const int patchIndex                                    = teamMember.league_rank();
-    const tarch::la::Vector<Dimensions, double> patchCentre = patchCentres[patchIndex];
-    const tarch::la::Vector<Dimensions, double> patchSize   = patchSizes[patchIndex];
+    const tarch::la::Vector<DIMENSIONS, double> patchCentre = patchCentres[patchIndex];
+    const tarch::la::Vector<DIMENSIONS, double> patchSize   = patchSizes[patchIndex];
 
     const {{COMPUTE_PRECISION}}* const QIn = QInFlattened + (patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %});
     {{COMPUTE_PRECISION}}* const QOut      = QOutFlattened + (patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %});

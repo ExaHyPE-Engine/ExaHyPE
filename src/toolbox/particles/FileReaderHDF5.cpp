@@ -11,7 +11,7 @@ tarch::logging::Log  toolbox::particles::FileReaderHDF5::_log( "toolbox::particl
 
 void toolbox::particles::FileReaderHDF5::readHDF5File( const std::string& filename ) {
 
-#ifdef UseHDF5
+#ifdef WITH_HDF5
 
   logInfo( "readHDF5File()", "Entering filereader..." );
 
@@ -74,7 +74,7 @@ void toolbox::particles::FileReaderHDF5::readHDF5File( const std::string& filena
 
 }
 
-#ifdef UseHDF5
+#ifdef WITH_HDF5
 std::vector< int > toolbox::particles::FileReaderHDF5::readIntScalar( 
        const H5::H5File&   file, 
        const H5std_string& groupName, 
@@ -234,13 +234,13 @@ std::vector< double > toolbox::particles::FileReaderHDF5::readDoubleScalar(
 }
 
 
-std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReaderHDF5::readDoubleArray( 
+std::list< tarch::la::Vector<DIMENSIONS,double> > toolbox::particles::FileReaderHDF5::readDoubleArray( 
     const H5::H5File& file, 
     const H5std_string& groupName, 
     const H5std_string& datasetName 
 ){
 
-  std::list< tarch::la::Vector<Dimensions,double> > result;
+  std::list< tarch::la::Vector<DIMENSIONS,double> > result;
 
   /*
    * Open the specified group
@@ -349,11 +349,11 @@ std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReader
    */
 
   /* First construct a single row of the list */
-  tarch::la::Vector<Dimensions,double> tmpDataArray;
+  tarch::la::Vector<DIMENSIONS,double> tmpDataArray;
 
   for (i = 0; i < LengthDataBufferX; i++)
   {
-    for (j = 0; j < Dimensions; j++)
+    for (j = 0; j < DIMENSIONS; j++)
     {
       tmpDataArray[j] = dataBuffer[i][j];
     }
@@ -369,13 +369,13 @@ std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReader
 }
 
 
-std::vector< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReaderHDF5::readFloatArray( 
+std::vector< tarch::la::Vector<DIMENSIONS,double> > toolbox::particles::FileReaderHDF5::readFloatArray( 
     const H5::H5File& file, 
     const H5std_string& groupName, 
     const H5std_string& datasetName 
 ){
 
-  std::vector< tarch::la::Vector<Dimensions,double> > result;
+  std::vector< tarch::la::Vector<DIMENSIONS,double> > result;
 
   /*
    * Open the specified group
@@ -483,11 +483,11 @@ std::vector< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileRead
    */
 
   /* First construct a single row of the list */
-  tarch::la::Vector<Dimensions,double> tmpDataArray;
+  tarch::la::Vector<DIMENSIONS,double> tmpDataArray;
 
   for (i = 0; i < LengthDataBufferX; i++)
   {
-    for (j = 0; j < Dimensions; j++)
+    for (j = 0; j < DIMENSIONS; j++)
     {
       tmpDataArray[j] = dataBuffer[i][j];
     }
@@ -520,14 +520,14 @@ bool toolbox::particles::FileReaderHDF5::isVoxelEmpty() const {
           _ParticleIDsWithinVoxel.empty());
 }
 
-std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReaderHDF5::getParticlesWithinVoxel(
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
+std::list< tarch::la::Vector<DIMENSIONS,double> > toolbox::particles::FileReaderHDF5::getParticlesWithinVoxel(
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
+  const tarch::la::Vector<DIMENSIONS,double>&  h,
   bool remove
 ) {
-  std::list< tarch::la::Vector<Dimensions,double> > result;
+  std::list< tarch::la::Vector<DIMENSIONS,double> > result;
 
-  std::list< tarch::la::Vector<Dimensions,double> >::iterator p = _Coordinates.begin();
+  std::list< tarch::la::Vector<DIMENSIONS,double> >::iterator p = _Coordinates.begin();
   std::list<int>::iterator pind = _ParticleIndex.begin();
 
   // Make sure we're starting with a clean slate.
@@ -540,7 +540,7 @@ std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReader
 
     bool overlaps = true;
 
-    for (int d=0; d<Dimensions; d++) {
+    for (int d=0; d<DIMENSIONS; d++) {
       overlaps &= tarch::la::smallerEquals( x(d) - h(d) / 2.0, (*p)(d) );
       overlaps &= tarch::la::greaterEquals( x(d) + h(d) / 2.0, (*p)(d) );
     }
@@ -595,7 +595,7 @@ bool toolbox::particles::FileReaderHDF5::getNumberOfCoordinates() const {
 }
 
 
-std::vector < tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReaderHDF5::getVelocityWithinVoxel() const {
+std::vector < tarch::la::Vector<DIMENSIONS,double> > toolbox::particles::FileReaderHDF5::getVelocityWithinVoxel() const {
   return _VelocityWithinVoxel;
 }
 

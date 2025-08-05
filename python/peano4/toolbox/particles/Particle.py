@@ -30,7 +30,7 @@ class Particle(DaStGen2):
     If you want to attributes to a particle, use the data subattribute.
     An all-time classic is the call
 
-           add_attribute( peano4.dastgen2.Peano4DoubleArray("v","Dimensions") )
+           add_attribute( peano4.dastgen2.Peano4DoubleArray("v","DIMENSIONS") )
 
     ## Pre-defined fields
 
@@ -89,7 +89,7 @@ class Particle(DaStGen2):
     
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     self.data.add_attribute(
-        dastgen2.attributes.BooleanArray("containedInAdjacentCell", "TwoPowerD", compress=True)
+        dastgen2.attributes.BooleanArray("containedInAdjacentCell", "TWO_POWER_D", compress=True)
     )
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
@@ -125,16 +125,16 @@ class Particle(DaStGen2):
 
         self.name = name
         # Is used in subclases
-        self.partid = dastgen2.attributes.Integer("partid", ifdefs=["PeanoDebug > 0"], initval="-1")
+        self.partid = dastgen2.attributes.Integer("partid", ifdefs=["PEANO_DEBUG > 0"], initval="-1")
 
-        self.data.add_attribute(peano4.dastgen2.Peano4DoubleArray("x", "Dimensions"))
+        self.data.add_attribute(peano4.dastgen2.Peano4DoubleArray("x", "DIMENSIONS"))
         self.data.add_attribute(
-            peano4.dastgen2.Peano4DoubleArray("cellH", "Dimensions")
+            peano4.dastgen2.Peano4DoubleArray("cellH", "DIMENSIONS")
         )
         self.data.add_attribute(dastgen2.attributes.Double("searchRadius"))
         self.data.add_attribute(self.partid)
         self.data.add_attribute(
-            dastgen2.attributes.BooleanArray("containedInAdjacentCell", "TwoPowerD", compress=True)
+            dastgen2.attributes.BooleanArray("containedInAdjacentCell", "TWO_POWER_D", compress=True)
         )
 
         #

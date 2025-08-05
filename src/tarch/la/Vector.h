@@ -26,8 +26,8 @@ namespace tarch {
      * looks similar to
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     * tarch::la::Vector< Dimensions, int > myVector = ...
-     * tarch::la::Vector< Dimensions, double > converted = tarch::la::convertScalar<double>( myVector );
+     * tarch::la::Vector< DIMENSIONS, int > myVector = ...
+     * tarch::la::Vector< DIMENSIONS, double > converted = tarch::la::convertScalar<double>( myVector );
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      * The conversion assumes that C++ natively supports a conversion from
@@ -77,7 +77,7 @@ std::string toString(const tarch::la::Vector<Size,Scalar>& vector);
  * only if it has to hand over raw pointers to MPI, e.g.
  *
  */
-#if defined(GPUOffloadingOMP)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp declare target
 #endif
 template <int Size, typename Scalar>
@@ -89,10 +89,10 @@ struct tarch::la::Vector {
     /**
      * Clang requires the always_inline attribute, as it otherwise makes weird decisions.
      */
-    inline Vector() InlineMethod = default;
+    inline Vector() = default;
 
-    inline GPUCallableMethod
-    Vector(const Scalar* values) InlineMethod;
+    inline GPU_CALLABLE_METHOD
+    Vector(const Scalar* values);
 
     /**
      * Initialisation via initialisation list.
@@ -101,41 +101,41 @@ struct tarch::la::Vector {
      * routine relies on an iterator and the iterator within the C++ std lib
      * won't be inlined.
      */
-    inline GPUCallableMethod
-    Vector(std::initializer_list<Scalar> values) InlineMethod;
+    inline GPU_CALLABLE_METHOD
+    Vector(std::initializer_list<Scalar> values);
 
-    inline GPUCallableMethod
-    Vector(const std::bitset<Size>& values) InlineMethod;
+    inline GPU_CALLABLE_METHOD
+    Vector(const std::bitset<Size>& values);
 
     /**
      * Construct new vector and initialise all components with initialValue.
      */
-    inline GPUCallableMethod
-    Vector(const Scalar& initialValue) InlineMethod;
+    inline GPU_CALLABLE_METHOD
+    Vector(const Scalar& initialValue);
 
-    inline ~Vector() InlineMethod = default;
+    inline ~Vector() = default;
 
     /**
      * Assignment operator for any vector type.
      *
      * Default assignment as this class needs to be trivially copyable.
      */
-    inline GPUCallableMethod
-    Vector<Size, Scalar>& operator = (const Vector<Size, Scalar>& toAssign) InlineMethod = default;
+    inline GPU_CALLABLE_METHOD
+    Vector<Size, Scalar>& operator = (const Vector<Size, Scalar>& toAssign) = default;
 
     /**
      * Copy constructor to copy from any vector type.
      *
      * @see operator= for default copy.
      */
-    inline GPUCallableMethod
-    Vector(const Vector<Size, Scalar>& toCopy) InlineMethod = default;
+    inline GPU_CALLABLE_METHOD
+    Vector(const Vector<Size, Scalar>& toCopy) = default;
 
     /**
      * Returns the number of components of the vector.
      */
-    inline GPUCallableMethod
-    int size() const InlineMethod;
+    inline GPU_CALLABLE_METHOD
+    int size() const;
 
     /**
      * Returns read-only ref. to component of given index.
@@ -146,9 +146,9 @@ struct tarch::la::Vector {
      *   calls, i.e. vector element accesses, as function calls and does not vectorise
      *   loops containing vector element accesses.
      */
-    inline GPUCallableMethod
-    const Scalar& operator[] (int index) const InlineMethod {
-      #if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+    inline GPU_CALLABLE_METHOD
+    const Scalar& operator[] (int index) const {
+      #if !defined(WITH_GPU)
       assertion3(index >= 0, index, Size, ::toString(*this));
       assertion3(index < Size, index, Size, ::toString(*this));
       #endif
@@ -160,9 +160,9 @@ struct tarch::la::Vector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline GPUCallableMethod
-    Scalar& operator[] (int index) InlineMethod {
-      #if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+    inline GPU_CALLABLE_METHOD
+    Scalar& operator[] (int index) {
+      #if !defined(WITH_GPU)
       assertion3(index >= 0, index, Size, ::toString(*this));
       assertion3(index < Size, index, Size, ::toString(*this));
       #endif
@@ -180,9 +180,9 @@ struct tarch::la::Vector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline GPUCallableMethod
-    const Scalar& operator() (int index) const InlineMethod {
-      #if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+    inline GPU_CALLABLE_METHOD
+    const Scalar& operator() (int index) const {
+      #if !defined(WITH_GPU)
       assertion3(index >= 0, index, Size, ::toString(*this));
       assertion3(index < Size, index, Size, ::toString(*this));
       #endif
@@ -194,9 +194,9 @@ struct tarch::la::Vector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline GPUCallableMethod
-    Scalar& operator() (int index) InlineMethod {
-      #if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+    inline GPU_CALLABLE_METHOD
+    Scalar& operator() (int index) {
+      #if !defined(WITH_GPU)
       assertion3(index >= 0, index, Size, ::toString(*this));
       assertion3(index < Size, index, Size, ::toString(*this));
       #endif
@@ -208,17 +208,17 @@ struct tarch::la::Vector {
      * beautiful one as it harms the OO idea, but in many cases it is
      * convenient to have this operation.
      */
-    inline GPUCallableMethod
-    Scalar* data() InlineMethod {
+    inline GPU_CALLABLE_METHOD
+    Scalar* data() {
       return _values;
     }
 
-    inline GPUCallableMethod
-    const Scalar* data() const InlineMethod {
+    inline GPU_CALLABLE_METHOD
+    const Scalar* data() const {
       return _values;
     }
 };
-#if defined(GPUOffloadingOMP)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp end declare target
 #endif
 

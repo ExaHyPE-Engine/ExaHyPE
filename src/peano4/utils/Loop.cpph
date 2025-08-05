@@ -1,31 +1,31 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-inline GPUCallableMethod tarch::la::Vector<Dimensions, int> peano4::utils::dStartVector() {
-  tarch::la::Vector<Dimensions, int> result(0);
+inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::utils::dStartVector() {
+  tarch::la::Vector<DIMENSIONS, int> result(0);
   return result;
 }
 
-inline GPUCallableMethod tarch::la::Vector<Dimensions, int> peano4::utils::dStartVector(int dim, int value) {
-  tarch::la::Vector<Dimensions, int> result(0);
-#if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::utils::dStartVector(int dim, int value) {
+  tarch::la::Vector<DIMENSIONS, int> result(0);
+#if !defined(WITH_GPU)
   assertion2(dim >= 0, dim, value);
-  assertion2(dim < Dimensions, dim, value);
+  assertion2(dim < DIMENSIONS, dim, value);
   assertion2(value >= 0, dim, value);
 #endif
   result(dim) = value;
   return result;
 }
 
-inline GPUCallableMethod tarch::la::Vector<Dimensions, int> peano4::utils::dStartVector(
+inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::utils::dStartVector(
   int                  max,
   const LoopDirection& direction
 ) {
-  tarch::la::Vector<Dimensions, int> result;
-#if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+  tarch::la::Vector<DIMENSIONS, int> result;
+#if !defined(WITH_GPU)
   assertion2(max > 0 && max <= 3, max, direction);
 #endif
-  for (int i = 0; i < Dimensions; i++) {
+  for (int i = 0; i < DIMENSIONS; i++) {
     if (direction[i]) {
       result(i) = 0;
     } else {

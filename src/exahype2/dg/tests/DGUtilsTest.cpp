@@ -27,18 +27,18 @@ void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder1() {
 
   peano4::grid::GridTraversalEvent    dummyEvent;
 
-  #if Dimensions==2
+  #if DIMENSIONS==2
   dummyEvent.setX( {0.4,0.6} );
   dummyEvent.setH( {0.2,0.2} );
   double Q0[] = {1.2,1.2,1.2,1.2};
-  tarch::la::Vector<Dimensions,double>  xCentre     = {0.5,0.7};
-  tarch::la::Vector<Dimensions,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP1[0],0.6+0.2*QuadratureNodes1dP1[0]};
+  tarch::la::Vector<DIMENSIONS,double>  xCentre     = {0.5,0.7};
+  tarch::la::Vector<DIMENSIONS,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP1[0],0.6+0.2*QuadratureNodes1dP1[0]};
   #else
   dummyEvent.setX( {0.4,0.6,0.8} );
   dummyEvent.setH( {0.2,0.2,0.2} );
   double Q0[] = {1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2};
-  tarch::la::Vector<Dimensions,double>  xCentre = {0.5,0.7,0.9};
-  tarch::la::Vector<Dimensions,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP1[0],0.6+0.2*QuadratureNodes1dP1[0],0.8+0.2*QuadratureNodes1dP1[0]};
+  tarch::la::Vector<DIMENSIONS,double>  xCentre = {0.5,0.7,0.9};
+  tarch::la::Vector<DIMENSIONS,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP1[0],0.6+0.2*QuadratureNodes1dP1[0],0.8+0.2*QuadratureNodes1dP1[0]};
   #endif
 
   peano4::datamanagement::CellMarker  cellMarker(dummyEvent);
@@ -73,14 +73,14 @@ void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder2() {
 
   peano4::grid::GridTraversalEvent    dummyEvent;
 
-  #if Dimensions==2
+  #if DIMENSIONS==2
   dummyEvent.setX( {0.4,0.6} );
   dummyEvent.setH( {0.2,0.2} );
   double Q0[] = { 1.2, 1.2, 1.2,
                   1.2, 1.2, 1.2,
                   1.2, 1.2, 1.2 };
-  tarch::la::Vector<Dimensions,double>  xCentre     = {0.5,0.7};
-  tarch::la::Vector<Dimensions,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP2[0],0.6+0.2*QuadratureNodes1dP2[0]};
+  tarch::la::Vector<DIMENSIONS,double>  xCentre     = {0.5,0.7};
+  tarch::la::Vector<DIMENSIONS,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP2[0],0.6+0.2*QuadratureNodes1dP2[0]};
   #else
   dummyEvent.setX( {0.4,0.6,0.8} );
   dummyEvent.setH( {0.2,0.2,0.2} );
@@ -93,8 +93,8 @@ void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder2() {
                   1.2, 1.2, 1.2,
                   1.2, 1.2, 1.2,
                   1.2, 1.2, 1.2 };
-  tarch::la::Vector<Dimensions,double>  xCentre = {0.5,0.7,0.9};
-  tarch::la::Vector<Dimensions,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP1[0],0.6+0.2*QuadratureNodes1dP1[0],0.8+0.2*QuadratureNodes1dP1[0]};
+  tarch::la::Vector<DIMENSIONS,double>  xCentre = {0.5,0.7,0.9};
+  tarch::la::Vector<DIMENSIONS,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP1[0],0.6+0.2*QuadratureNodes1dP1[0],0.8+0.2*QuadratureNodes1dP1[0]};
   #endif
 
   peano4::datamanagement::CellMarker  cellMarker(dummyEvent);
@@ -129,32 +129,32 @@ void exahype2::dg::tests::DGUtilsTest::testGetIndex() {
   const int nodesPerAxis = order+1;
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
 
-  validateEquals(nodesPerCell, std::pow(nodesPerAxis,Dimensions));
+  validateEquals(nodesPerCell, std::pow(nodesPerAxis,DIMENSIONS));
 
-  tarch::la::Vector<Dimensions,int> strides = getStrides(nodesPerAxis);
-  validateEquals(strides[Dimensions-1], std::pow(nodesPerAxis,Dimensions-1));
+  tarch::la::Vector<DIMENSIONS,int> strides = getStrides(nodesPerAxis);
+  validateEquals(strides[DIMENSIONS-1], std::pow(nodesPerAxis,DIMENSIONS-1));
 
-  tarch::la::Vector<Dimensions,int> firstIndex = getIndex(0, strides);
-  for(int i=0; i<Dimensions; i++){
+  tarch::la::Vector<DIMENSIONS,int> firstIndex = getIndex(0, strides);
+  for(int i=0; i<DIMENSIONS; i++){
     validateEquals(firstIndex[i], 0);
   }
 
-  tarch::la::Vector<Dimensions,int> lastIndex = getIndex(nodesPerCell-1, strides);
-  for(int i=0; i<Dimensions; i++){
+  tarch::la::Vector<DIMENSIONS,int> lastIndex = getIndex(nodesPerCell-1, strides);
+  for(int i=0; i<DIMENSIONS; i++){
     validateEquals(lastIndex[i], nodesPerAxis-1);
   }
 }
 
 
 void exahype2::dg::tests::DGUtilsTest::testComputeGradientOnConstantSolution() {
-  #if Dimensions==2
+  #if DIMENSIONS==2
   const int order        = 3;
   const int nodesPerAxis = order+1;
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
 
   // 1 unknown, 1 auxiliary variable
   double* cellQin = new double[2*nodesPerCell];
-  double gradientValues[2*Dimensions];
+  double gradientValues[2*DIMENSIONS];
   for(int i=0; i<2*nodesPerCell; i++){
     cellQin[i] = 1.0;
   }
@@ -169,7 +169,7 @@ void exahype2::dg::tests::DGUtilsTest::testComputeGradientOnConstantSolution() {
       node,
       gradientValues
       );
-    for(int var=0; var<Dimensions; var++){
+    for(int var=0; var<DIMENSIONS; var++){
       validateNumericalEquals(gradientValues[var], 0.0);
     }
   }

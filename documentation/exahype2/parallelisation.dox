@@ -142,7 +142,7 @@ and then add the additional data exchange.
 ~~~~~~~~~~~~~~~~~~~
 void mynamespace::MyFancySolver::finishTimeStep() {
   MyFancyAbstractSolver::finishTimeStep();
-  #ifdef Parallel
+  #ifdef WITH_MPI
   // additional data exchange
   #endif
 }
@@ -202,7 +202,7 @@ to your solver. The implementation should first invoke the superclass
 and then add the additional data exchange.
 
 void mynamespace::MyFancySolver::finishTimeStep()
-MyFancyAbstractSolver::finishTimeStep(); \#ifdef Parallel // additional
+MyFancyAbstractSolver::finishTimeStep(); \#ifdef WITH_MPI // additional
 data exchange \#endif
 
  internally realises these two steps for all of its solver attributes

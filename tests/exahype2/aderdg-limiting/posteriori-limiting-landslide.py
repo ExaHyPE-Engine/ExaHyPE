@@ -41,7 +41,7 @@ dmp_relaxation_parameter = 0.02  # the diff scaling
 landslide_zoo = {
     # avalanche-down-the-W
     "DownTheWForm": """
-  const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {{ {initCenterX}, {initCenterY} }};
+  const tarch::la::Vector<DIMENSIONS, double>& granularMaterialCenter = {{ {initCenterX}, {initCenterY} }};
   const bool nearCentre = tarch::la::norm2(x - granularMaterialCenter) < {initRadius};
   Q[0] = (nearCentre ? {initHeight} : 0.0); // Granular material height (h)
   Q[1] = 0.0;
@@ -59,7 +59,7 @@ landslide_zoo = {
     ),
     # avalanche-down-the-hyperbolic-par
     "DownTheHyperbolicPar": """
-  const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {{ {initCenterX}, {initCenterY} }};
+  const tarch::la::Vector<DIMENSIONS, double>& granularMaterialCenter = {{ {initCenterX}, {initCenterY} }};
   const bool nearCentre = tarch::la::norm2(x - granularMaterialCenter) < {initRadius};
   Q[0] = (nearCentre ? {initHeight} : 0.0); // Granular material height (h)
   Q[1] = 0.0;
@@ -79,7 +79,7 @@ landslide_zoo = {
     ),
     # avalanche-down-the-revolve-par
     "DownTheRevolvePar": """
-  const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {{ {initCenterX}, {initCenterY} }};
+  const tarch::la::Vector<DIMENSIONS, double>& granularMaterialCenter = {{ {initCenterX}, {initCenterY} }};
   const bool nearCentre = tarch::la::norm2(x - granularMaterialCenter) < {initRadius};
   Q[0] = (nearCentre ? {initHeight} : 0.0); // Granular material height (h)
   Q[1] = 0.0;
@@ -99,7 +99,7 @@ landslide_zoo = {
     ),
     # avalanche-down-the-slope-with-jump
     "DownTheSlopeWithJump": """
-  const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {{ {initCenterX}, {initCenterY} }};
+  const tarch::la::Vector<DIMENSIONS, double>& granularMaterialCenter = {{ {initCenterX}, {initCenterY} }};
   const bool nearCentre = tarch::la::norm2(x - granularMaterialCenter) < {initRadius};
   const double zeta{{ {initZetaDegree} * tarch::la::PI / 180.0}}; // translation from degrees to radians
   Q[0] = (nearCentre ? {initHeight} : 0.0); // Granular material height (h)
@@ -122,7 +122,7 @@ landslide_zoo = {
     ),
     # avalanche-down-the-slope-with-plateau
     "DownTheSlopeWithPlateau": """
-  const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {{ {initCenterX}, {initCenterY} }};
+  const tarch::la::Vector<DIMENSIONS, double>& granularMaterialCenter = {{ {initCenterX}, {initCenterY} }};
   const bool nearCentre = tarch::la::norm2(x - granularMaterialCenter) < {initRadius};
   const double zeta{{{initZetaDegree} * tarch::la::PI / 180.0}}; // translation from degrees to radians
   Q[0] = (nearCentre ? {initHeight} : 0.0); // Granular material height (h)
@@ -153,7 +153,7 @@ landslide_zoo = {
     ),
     # avalanche-down-the-slope
     "DownTheSlope": """
-  const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {{ {initCenterX}, {initCenterY} }};
+  const tarch::la::Vector<DIMENSIONS, double>& granularMaterialCenter = {{ {initCenterX}, {initCenterY} }};
   const bool nearCentre = tarch::la::norm2(x - granularMaterialCenter) < {initRadius};
   const double zeta{{{initZetaDegree} * tarch::la::PI / 180.0}}; // translation from degrees to radians
   Q[0] = (nearCentre ? {initHeight} : 0.0); // Granular material height (h)

@@ -10,10 +10,6 @@
 #include <string>
 #include <vector>
 
-#if defined(SharedOMP) || defined(SharedTBB) || defined(SharedCPP) || defined(SharedSYCL)
-#define SharedMemoryParallelisation
-#endif
-
 namespace tarch {
   /**
    @namespace tarch::multicore
@@ -34,10 +30,10 @@ namespace tarch {
   and
 
   ~~~~~~~~~~~~~~~~~~~~~~~~
-  #if defined(SharedMemoryParallelisation)
+  #if defined(WITH_MULTITHREADING)
   ~~~~~~~~~~~~~~~~~~~~~~~~
 
-   With the symbol SharedMemoryParallelisation, you make your code independent of
+   With the symbol WITH_MULTITHREADING, you make your code independent of
    OpenMP, TBB or C++ threading.
 
 

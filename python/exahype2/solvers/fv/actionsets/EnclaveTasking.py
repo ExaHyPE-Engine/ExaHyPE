@@ -20,8 +20,8 @@ class EnclaveTasking(AbstractFVActionSet):
     auto* /*const*/ QIn = {{OLD_ACCESSOR}}.value;
     auto* /*const*/ QOut = {{NEW_ACCESSOR}}.value;
 
-    {{STORAGE_PRECISION}}* faces[1][TwoTimesD];
-    for (int d = 0; d < TwoTimesD; ++d) {
+    {{STORAGE_PRECISION}}* faces[1][TWO_TIMES_D];
+    for (int d = 0; d < TWO_TIMES_D; ++d) {
       faces[0][d] = {{FACE_ACCESSOR}}(d).value;
     }
 

@@ -147,9 +147,9 @@ in a way that they distinguish the various backends we support. That is,
 they yield a string of the form 
 
 ~~~~~~~~~~~~~~~~~~~~~~
-#if defined(GPUOffloadingSYCL)
+#if defined(WITH_GPU_SYCL)
 exahype::fv::rusanov::sycl::timeStepWithRusanovPatchwiseStateless(...)
-#else if defined(GPUOffloadingOMP)
+#else if defined(WITH_GPU_OMP_TARGET)
 ...
 #endif
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -174,8 +174,8 @@ redefine the routine
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 virtual bool patchCanUseStatelessPDETerms( 
-  const tarch::la::Vector<Dimensions,double>&  patchCentre, 
-  const tarch::la::Vector<Dimensions,double>& patchH, double t, double dt 
+  const tarch::la::Vector<DIMENSIONS,double>&  patchCentre, 
+  const tarch::la::Vector<DIMENSIONS,double>& patchH, double t, double dt 
 ) const;
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -249,7 +249,7 @@ very simple to digest:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 bool benchmarks::exahype2::ccz4::tasks::CCZ4FVEnclaveTask::fuse(const std::list<Task*>& otherTasks, int targetDevice) {
   ...
-  #if defined(GPUOffloadingOMP)
+  #if defined(WITH_GPU_OMP_TARGET)
     if (targetDevice >= 0) {
       foundOffloadingBranch = true;
       ::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseHeapStateless<
@@ -258,7 +258,7 @@ bool benchmarks::exahype2::ccz4::tasks::CCZ4FVEnclaveTask::fuse(const std::list<
     }
   #endif
 
-  #if defined(GPUOffloadingSYCL)
+  #if defined(WITH_GPU_SYCL)
     if (targetDevice >= 0 or targetDevice == Host) {
       foundOffloadingBranch = true;
       ::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseHeapStateless<

@@ -16,7 +16,7 @@ namespace examples {
 
 
 class examples::grid::MyObserver: public
-  #if PeanoDebug>0
+  #if PEANO_DEBUG>0
   peano4::grid::TraversalVTKPlotter
   #else
   peano4::grid::TraversalObserver
@@ -32,13 +32,13 @@ class examples::grid::MyObserver: public
     virtual ~MyObserver();
 
     void beginTraversal(
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  h
     ) override;
 
     void endTraversal(
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  h
     ) override;
 
     void enterCell(

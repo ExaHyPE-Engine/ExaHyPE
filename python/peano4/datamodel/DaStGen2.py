@@ -296,8 +296,8 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
     
     self.data             = dastgen2.DataModel(name)
     
-    self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "debugX", "Dimensions", ifdefs=["PeanoDebug>0"] ) )
-    self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "debugH", "Dimensions", ifdefs=["PeanoDebug>0"] ) )
+    self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "debugX", "DIMENSIONS", ifdefs=["PEANO_DEBUG>0"] ) )
+    self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "debugH", "DIMENSIONS", ifdefs=["PEANO_DEBUG>0"] ) )
     
     self.peano4_mpi_and_storage_aspect = peano4.dastgen2.MPIAndStorageAspect(peano4.datamodel.DoFAssociation.Undef)
 

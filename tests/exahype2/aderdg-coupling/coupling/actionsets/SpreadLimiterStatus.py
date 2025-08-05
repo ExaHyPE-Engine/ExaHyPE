@@ -11,13 +11,13 @@ class SpreadLimiterStatus(AbstractLimiterActionSet):
       if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker()==celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::TROUBLED) return;
 
       bool hasTroubledNeighbour = false;
-      for(int d=0; d<2*Dimensions; d++){
+      for(int d=0; d<2*DIMENSIONS; d++){
         hasTroubledNeighbour |= fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getTroubled_Marker()==facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED;
       }
 
       if(hasTroubledNeighbour){
         fineGridCell{{SOLVER_NAME}}CellLabel.setTroubled_Marker(celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::LIMITER_TO_REGULAR);
-        for(int d=0; d<2*Dimensions; d++){
+        for(int d=0; d<2*DIMENSIONS; d++){
           fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(
             std::max(fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getTroubled_Marker(),
             facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::LIMITER_TO_REGULAR

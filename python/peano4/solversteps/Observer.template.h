@@ -82,8 +82,8 @@ public:
    */
   static void unprepareTraversal();
 
-  virtual void beginTraversal(const tarch::la::Vector<Dimensions,double>& x, const tarch::la::Vector<Dimensions,double>& h) override;
-  virtual void endTraversal(const tarch::la::Vector<Dimensions,double>& x, const tarch::la::Vector<Dimensions,double>& h) override;
+  virtual void beginTraversal(const tarch::la::Vector<DIMENSIONS,double>& x, const tarch::la::Vector<DIMENSIONS,double>& h) override;
+  virtual void endTraversal(const tarch::la::Vector<DIMENSIONS,double>& x, const tarch::la::Vector<DIMENSIONS,double>& h) override;
 
   {%- if VERTICES %}
   virtual void sendVertex(int position, int toStack, peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) override;

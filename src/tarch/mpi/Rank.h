@@ -14,7 +14,7 @@ namespace tarch {
   namespace mpi {
     class Rank;
 
-    #ifdef Parallel
+    #ifdef WITH_MPI
     /**
      * Returns a string representation of the mpi status. For a detailed
      * description of the mpi status itself see the file mpi.h.
@@ -79,7 +79,7 @@ class tarch::mpi::Rank {
      */
     int _numberOfProcessors;
 
-    #ifdef Parallel
+    #ifdef WITH_MPI
     /**
      * MPI Communicator this process belongs to.
      */
@@ -230,7 +230,7 @@ class tarch::mpi::Rank {
      */
     void barrier(std::function<void()> waitor = []() -> void {} );
 
-    #ifdef Parallel
+    #ifdef WITH_MPI
     /**
      * Wrapper around allreduce
      *
@@ -415,7 +415,7 @@ class tarch::mpi::Rank {
      */
     static int getGlobalMasterRank();
 
-    #ifdef Parallel
+    #ifdef WITH_MPI
     /**
      * @return Communicator of Peano
      */
@@ -423,7 +423,7 @@ class tarch::mpi::Rank {
     #endif
 
     inline int getNumberOfRanks() const {
-      #ifdef Parallel
+      #ifdef WITH_MPI
       assertion(_initIsCalled);
       #endif
       return _numberOfProcessors;

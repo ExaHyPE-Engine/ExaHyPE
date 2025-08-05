@@ -16,7 +16,7 @@
 tarch::logging::Log _log("examples::grid");
 
 
-std::bitset<Dimensions> periodicBC = 0;
+std::bitset<DIMENSIONS> periodicBC = 0;
 
 #include "peano4/UnitTests.h"
 #include "tarch/UnitTests.h"
@@ -48,7 +48,7 @@ void runSerial() {
   examples::grid::MyObserver emptyObserver;
 
   peano4::initSingletons(
-#if Dimensions==2
+#if DIMENSIONS==2
     {0.0, 0.0},
     {1.0, 1.0},
 #else
@@ -61,7 +61,7 @@ void runSerial() {
   
   // You wouldn't do this usually. We always work against the set.
   peano4::grid::Spacetree         spacetree(
-#if Dimensions==2
+#if DIMENSIONS==2
     {0.0, 0.0},
     {1.0, 1.0}
 #else
@@ -74,11 +74,11 @@ void runSerial() {
   for (int i=0; i<2*examples::grid::MyObserver::GridRefinementIterations + examples::grid::MyObserver::StationaryIterations; i++) {
 	tarch::logging::CommandLineLogger::getInstance().closeOutputStreamAndReopenNewOne();
 
-    #if PeanoDebug>0
+    #if PEANO_DEBUG>0
 	  emptyObserver.beginTraversalOnRank(false);
     #endif
     spacetree.traverse( emptyObserver );
-    #if PeanoDebug>0
+    #if PEANO_DEBUG>0
     emptyObserver.endTraversalOnRank(false);
     #endif
 
@@ -103,7 +103,7 @@ void updateDomainDecomposition() {
 
     if ( peano4::parallel::SpacetreeSet::getInstance().isLocalSpacetree(spacetreeOfInterest) ) {
       if (
-        peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells()>=ThreePowerD
+        peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells()>=THREE_POWER_D
         and
         peano4::parallel::SpacetreeSet::getInstance().split(0,peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells()/3,targetRank)
         and
@@ -118,7 +118,7 @@ void updateDomainDecomposition() {
   else if (
     phase==1
     and
-    peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells()>=ThreePowerD*2
+    peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells()>=THREE_POWER_D*2
   ) {
     const int spacetreeOfInterest = 1;
 
@@ -136,7 +136,7 @@ void updateDomainDecomposition() {
   else if (
     phase==2
     and
-    peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells()>=ThreePowerD*4
+    peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells()>=THREE_POWER_D*4
   ) {
     const int spacetreeOfInterest = periodicBC==0 ? 1 : 0;
     if ( peano4::parallel::SpacetreeSet::getInstance().isLocalSpacetree(spacetreeOfInterest) ) {
@@ -152,7 +152,7 @@ void updateDomainDecomposition() {
   else if (
     phase==3
     and
-    peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells()>=ThreePowerD*6
+    peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells()>=THREE_POWER_D*6
   ) {
     const int spacetreeOfInterest = 2;
     if ( peano4::parallel::SpacetreeSet::getInstance().isLocalSpacetree(spacetreeOfInterest) ) {
@@ -165,7 +165,7 @@ void updateDomainDecomposition() {
   else if (
     phase==4
     and
-    peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells()>=ThreePowerD*8
+    peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells()>=THREE_POWER_D*8
   ) {
     const int spacetreeOfInterest = 2;
     if ( peano4::parallel::SpacetreeSet::getInstance().isLocalSpacetree(spacetreeOfInterest) ) {
@@ -178,7 +178,7 @@ void updateDomainDecomposition() {
   else if (
     phase==5
     and
-    peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells()>=ThreePowerD*10
+    peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells()>=THREE_POWER_D*10
   ) {
     const int spacetreeOfInterest = 1;
     if ( peano4::parallel::SpacetreeSet::getInstance().isLocalSpacetree(spacetreeOfInterest) ) {
@@ -193,7 +193,7 @@ void updateDomainDecomposition() {
 
 void runParallel() {
   peano4::initSingletons(
-#if Dimensions==2
+#if DIMENSIONS==2
     {0.0, 0.0},
     {1.0, 1.0},
 #else
@@ -209,11 +209,11 @@ void runParallel() {
     peano4::parallel::Node::getInstance().setNextProgramStep(14);
     for (int i=0; i<2*examples::grid::MyObserver::GridRefinementIterations + examples::grid::MyObserver::StationaryIterations; i++) {
       tarch::logging::CommandLineLogger::getInstance().closeOutputStreamAndReopenNewOne();
-      #if PeanoDebug>0
+      #if PEANO_DEBUG>0
       emptyObserver.beginTraversalOnRank(true);
       #endif
       peano4::parallel::SpacetreeSet::getInstance().traverse( emptyObserver );
-      #if PeanoDebug>0
+      #if PEANO_DEBUG>0
       emptyObserver.endTraversalOnRank(true);
       #endif
 
@@ -230,11 +230,11 @@ void runParallel() {
 
       tarch::logging::CommandLineLogger::getInstance().closeOutputStreamAndReopenNewOne();
 
-      #if PeanoDebug>0
+      #if PEANO_DEBUG>0
       emptyObserver.beginTraversalOnRank(true);
       #endif
       peano4::parallel::SpacetreeSet::getInstance().traverse(emptyObserver);
-      #if PeanoDebug>0
+      #if PEANO_DEBUG>0
       emptyObserver.endTraversalOnRank(true);
       #endif
     }
@@ -281,13 +281,13 @@ int main(int argc, char** argv) {
   else {
     srand( time(NULL) );
     periodicBC = 0;
-    for (int i=0; i<Dimensions; i++) {
+    for (int i=0; i<DIMENSIONS; i++) {
       periodicBC[i] = rand() < RAND_MAX / 5;
     }
     logInfo( "main(...)", "use a random periodic boundary condition choice: " << periodicBC );
   }
 
-  #if defined(Parallel) or defined(SharedMemoryParallelisation)
+  #if defined(WITH_MPI) or defined(WITH_MULTITHREADING)
   runParallel();
   #else
   runSerial();

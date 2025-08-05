@@ -13,7 +13,7 @@ initial_conditions = """
   Q[Shortcuts::rho]       = 1.0;
   Q[Shortcuts::rhoU + 0]  = 0.0;
   Q[Shortcuts::rhoU + 1]  = 0.0;
-#if Dimensions == 2
+#if DIMENSIONS == 2
   Q[Shortcuts::rhoE]      = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2)) < 0.2) ? (1.0) : (1.01));
 #else
   Q[Shortcuts::rhoU + 2]  = 0.0;
@@ -26,7 +26,7 @@ boundary_conditions = """
   Qoutside[Shortcuts::rho]      = Qinside[Shortcuts::rho];
   Qoutside[Shortcuts::rhoU + 0] = -Qinside[Shortcuts::rhoU + 0];
   Qoutside[Shortcuts::rhoU + 1] = -Qinside[Shortcuts::rhoU + 1];
-#if Dimensions == 3
+#if DIMENSIONS == 3
   Qoutside[Shortcuts::rhoU + 2] = -Qinside[Shortcuts::rhoU + 2];
 #endif
   Qoutside[Shortcuts::rhoE]     = Qinside[Shortcuts::rhoE];
@@ -35,10 +35,10 @@ boundary_conditions = """
 refinement_criterion = """
   auto result = ::exahype2::RefinementCommand::Keep;
 
-#if Dimensions == 3
-  tarch::la::Vector<Dimensions, double> circleCentre = {0.5, 0.5, 0.5};
+#if DIMENSIONS == 3
+  tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.5, 0.5};
 #else
-  tarch::la::Vector<Dimensions, double> circleCentre = {0.5, 0.5};
+  tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.5};
 #endif
 
   if (tarch::la::equals(t, 0.0)) {

@@ -80,7 +80,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize(bo
         """
         return """
   if (isLastGridSweepOfTimeStep()) {
-#ifdef Parallel
+#ifdef WITH_MPI
     double newMaxEigenvalue = _maxEigenvalueThisTimeStep;
     tarch::mpi::Rank::getInstance().allReduce(
       &newMaxEigenvalue,

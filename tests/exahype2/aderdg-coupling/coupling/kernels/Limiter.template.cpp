@@ -12,7 +12,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::regularToLimiterFace(
   constexpr int fromPoints  = {{REGULAR_SOLVER_ORDER}} + 1;
   constexpr int toPoints    = {{LIMITER_SOLVER_ORDER}} + 1;
 
-#if Dimensions==3
+#if DIMENSIONS==3
   const int toSize    = toPoints*toPoints*numVars;
 #else
   const int toSize    = toPoints*numVars;
@@ -27,24 +27,24 @@ void {{FULL_QUALIFIED_NAMESPACE}}::regularToLimiterFace(
   std::fill_n(Qto, toSize, 0.0);
 
   //For each point we project to
-  dfore(dofTo, toPoints, Dimensions-1, 0) {
+  dfore(dofTo, toPoints, DIMENSIONS-1, 0) {
     const int dofToSerialised = dofTo[0]
-  #if Dimensions==3
+  #if DIMENSIONS==3
     + dofTo[1] * toPoints
   #endif
     ;
 
     //Compute the contribution from each contributing point
-    dfore(dofFrom, fromPoints, Dimensions-1, 0) {
+    dfore(dofFrom, fromPoints, DIMENSIONS-1, 0) {
       const int dofFromSerialised = dofFrom[0]
-  #if Dimensions==3
+  #if DIMENSIONS==3
         + dofFrom[1] * fromPoints
   #endif
     ;
 
       for(int var=0; var<numVars; var++){
         Qto[dofToSerialised*numVars+var] += Qfrom[dofFromSerialised*numVars+var] * proj[dofTo[0]*fromPoints+dofFrom[0]]
-  #if Dimensions==3
+  #if DIMENSIONS==3
           * proj[dofTo[1]*fromPoints+dofFrom[1]]
   #endif
         ;
@@ -67,7 +67,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::limiterToRegularFace(
   constexpr int fromPoints  = {{LIMITER_SOLVER_ORDER}} + 1;
   constexpr int toPoints    = {{REGULAR_SOLVER_ORDER}} + 1;
 
-#if Dimensions==3
+#if DIMENSIONS==3
   const int toSize    = toPoints*toPoints*numVars;
 #else
   const int toSize    = toPoints*numVars;
@@ -82,24 +82,24 @@ void {{FULL_QUALIFIED_NAMESPACE}}::limiterToRegularFace(
   std::fill_n(Qto, toSize, 0.0);
 
   //For each point we project to
-  dfore(dofTo, toPoints, Dimensions-1, 0) {
+  dfore(dofTo, toPoints, DIMENSIONS-1, 0) {
     const int dofToSerialised = dofTo[0]
-  #if Dimensions==3
+  #if DIMENSIONS==3
     + dofTo[1] * toPoints
   #endif
     ;
 
     //Compute the contribution from each contributing point
-    dfore(dofFrom, fromPoints, Dimensions-1, 0) {
+    dfore(dofFrom, fromPoints, DIMENSIONS-1, 0) {
       const int dofFromSerialised = dofFrom[0]
-  #if Dimensions==3
+  #if DIMENSIONS==3
         + dofFrom[1] * fromPoints
   #endif
     ;
 
       for(int var=0; var<numVars; var++){
         Qto[dofToSerialised*numVars+var] += Qfrom[dofFromSerialised*numVars+var] * proj[dofTo[0]*fromPoints+dofFrom[0]]
-  #if Dimensions==3
+  #if DIMENSIONS==3
           * proj[dofTo[1]*fromPoints+dofFrom[1]]
   #endif
         ;

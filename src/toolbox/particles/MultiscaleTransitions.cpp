@@ -17,7 +17,7 @@ double toolbox::particles::relativeSpatialOwnershipTolerance(const ::peano4::dat
 
 
 toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftParticleAssociatedWithVertex(
-  bool isLocal, double searchRadius, const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker marker
+  bool isLocal, double searchRadius, const tarch::la::Vector<DIMENSIONS, double>& x, const peano4::datamanagement::VertexMarker marker
 ) {
   const double tolerance = internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
   if (not isLocal) {
@@ -31,7 +31,7 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftPar
     and
     peano4::datamanagement::CellMarker::isContained(x, marker.getInvokingParentCellsCentre(), marker.h() * 3.0, tolerance)
   ) {
-    std::bitset<Dimensions> target = internal::getParticleAssociationWithinCell(x, marker.getInvokingParentCellsCentre());
+    std::bitset<DIMENSIONS> target = internal::getParticleAssociationWithinCell(x, marker.getInvokingParentCellsCentre());
     if (
       marker.isParentVertexLocal(target.to_ulong())
       and
@@ -49,17 +49,17 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftPar
 
 
 toolbox::particles::ParticleReassociationInstruction toolbox::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
-  bool isLocal, double searchRadius, const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::CellMarker& marker, int numberOfVertexWithinCell
+  bool isLocal, double searchRadius, const tarch::la::Vector<DIMENSIONS, double>& x, const peano4::datamanagement::CellMarker& marker, int numberOfVertexWithinCell
 ) {
   if (not isLocal) {
     return ParticleReassociationInstruction_Keep;
   } else {
-    const std::bitset<Dimensions> currentAssociation = numberOfVertexWithinCell;
-    const std::bitset<Dimensions> destAssociation    = internal::getParticleAssociationWithinCell(x, marker.x());
+    const std::bitset<DIMENSIONS> currentAssociation = numberOfVertexWithinCell;
+    const std::bitset<DIMENSIONS> destAssociation    = internal::getParticleAssociationWithinCell(x, marker.x());
 
     // marker.x() gives me the centre of the cell
     bool remainsOnSameLevel = internal::fitsIntoLevel(searchRadius, marker);
-    for (int d = 0; d < Dimensions; d++) {
+    for (int d = 0; d < DIMENSIONS; d++) {
       remainsOnSameLevel &= tarch::la::smallerEquals(std::abs(x(d) - marker.x()(d)), marker.h()(d) * ReleaseOwnershipSpatialSortingTolerance);
     }
 
@@ -80,16 +80,16 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::getPart
         "lift particle at " << x << " from cell " << marker.toString() << " as difference is " << (x - marker.x())
       );
 
-      const std::bitset<Dimensions> coarseDestAssociation = internal::getParticleAssociationWithinCell(x, marker.getInvokingParentCellsCentre());
+      const std::bitset<DIMENSIONS> coarseDestAssociation = internal::getParticleAssociationWithinCell(x, marker.getInvokingParentCellsCentre());
 
-      return coarseDestAssociation.to_ulong() + TwoPowerD;
+      return coarseDestAssociation.to_ulong() + TWO_POWER_D;
     }
   }
   return -65536;
 }
 
 
-bool toolbox::particles::dropParticle(double searchRadius, const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker& marker) {
+bool toolbox::particles::dropParticle(double searchRadius, const tarch::la::Vector<DIMENSIONS, double>& x, const peano4::datamanagement::VertexMarker& marker) {
   bool result = internal::fitsIntoLevel(searchRadius, marker)
             and marker.isContainedInAdjacentCells(x, 0.5, internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE);
 
@@ -104,7 +104,7 @@ bool toolbox::particles::dropParticle(double searchRadius, const tarch::la::Vect
 }
 
 
-bool toolbox::particles::sieveParticle(double searchRadius, const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker& marker) {
+bool toolbox::particles::sieveParticle(double searchRadius, const tarch::la::Vector<DIMENSIONS, double>& x, const peano4::datamanagement::VertexMarker& marker) {
   bool belongsIntoNeighbouringCells = marker.isContainedInAdjacentCells(
     x, 0.5, internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
@@ -126,13 +126,13 @@ bool toolbox::particles::particleWillBeDroppedFurther(double searchRadius, const
 }
 
 
-std::bitset<TwoPowerD> toolbox::particles::getAdjacentCellsOwningParticle(const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker& marker) {
-  std::bitset<TwoPowerD> result = 0;
+std::bitset<TWO_POWER_D> toolbox::particles::getAdjacentCellsOwningParticle(const tarch::la::Vector<DIMENSIONS, double>& x, const peano4::datamanagement::VertexMarker& marker) {
+  std::bitset<TWO_POWER_D> result = 0;
 
   dfor2(k) {
-    tarch::la::Vector<Dimensions, int> adjacentCell(k);
-    tarch::la::Vector<Dimensions, double>
-      adjacentCellCentre = marker.x() + tarch::la::multiplyComponents(tarch::la::convertScalar<double>(adjacentCell) + tarch::la::Vector<Dimensions, double>(-0.5), marker.h());
+    tarch::la::Vector<DIMENSIONS, int> adjacentCell(k);
+    tarch::la::Vector<DIMENSIONS, double>
+      adjacentCellCentre = marker.x() + tarch::la::multiplyComponents(tarch::la::convertScalar<double>(adjacentCell) + tarch::la::Vector<DIMENSIONS, double>(-0.5), marker.h());
     result[kScalar]      = peano4::datamanagement::CellMarker::isContained(
       x, adjacentCellCentre, marker.h(), internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
     );

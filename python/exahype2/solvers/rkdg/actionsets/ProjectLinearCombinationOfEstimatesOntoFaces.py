@@ -81,7 +81,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
 
     double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value;
     
-    #if Dimensions==2
+    #if DIMENSIONS==2
     ::exahype2::dg::projectVolumetricDataOntoFaces(
       QIn,
       {{ORDER}},
@@ -93,7 +93,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).value, //down
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).value  //up
     );
-    #elif Dimensions==3
+    #elif DIMENSIONS==3
     ::exahype2::dg::projectVolumetricDataOntoFaces(
       QIn,
       {{ORDER}},
@@ -116,15 +116,15 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     {{COMPUTE_TIME_STEP_SIZE}}    
     const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
     
-    for (int d=0; d<Dimensions; d++) {
+    for (int d=0; d<DIMENSIONS; d++) {
       {{FACE_METADATA_ACCESSOR}}(d).setUpdated(           1,true);
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdated(0,true);
+      {{FACE_METADATA_ACCESSOR}}(d+DIMENSIONS).setUpdated(0,true);
 
       {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(           1, timeStamp );
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdatedTimeStamp(0, timeStamp );
+      {{FACE_METADATA_ACCESSOR}}(d+DIMENSIONS).setUpdatedTimeStamp(0, timeStamp );
 
       logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << d << ")(1)" );
-      logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << (d+Dimensions) << ")(0)" );
+      logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << (d+DIMENSIONS) << ")(0)" );
     }
   }
   {% endfor %}

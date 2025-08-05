@@ -63,7 +63,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other
     );
     value = _dataSmartPointer.get();
 
-    #if Dimensions==2
+    #if DIMENSIONS==2
     std::copy_n( other.value, {{CARDINALITY_2D}}, value );
     #else
     std::copy_n( other.value, {{CARDINALITY_3D}}, value );
@@ -227,7 +227,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::set( int index, {{FLOAT_TYPE}} v
   _dataSmartPointer[index] = value;
 }
 
-#ifdef Parallel
+#ifdef WITH_MPI
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
   int errorCode = MPI_Type_vector(
     1,           // number of blocks (count)

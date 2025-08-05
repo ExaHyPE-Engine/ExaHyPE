@@ -1,6 +1,6 @@
 #include "tarch/multicore/multicore.h"
 
-#if defined(SharedOMP)
+#if defined(WITH_OPENMP)
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/logging/Log.h"

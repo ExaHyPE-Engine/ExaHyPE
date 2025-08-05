@@ -14,16 +14,8 @@ namespace tarch {
   }
 }
 
-
-
-#if defined(SharedCPP)
-  #include "cpp/BooleanSemaphore.h"
-#elif defined(SharedTBB)
-  #include "tbb/BooleanSemaphore.h"
-#elif defined(SharedOMP)
-  #include "omp/BooleanSemaphore.h"
-#elif defined(SharedSYCL)
-  #include "sycl/BooleanSemaphore.h"
+#if defined(WITH_OPENMP)
+#include "omp/BooleanSemaphore.h"
 #elif !defined(_TARCH_MULTICORE_BOOLEAN_SEMAPHORE_H_)
 #define _TARCH_MULTICORE_BOOLEAN_SEMAPHORE_H_
 

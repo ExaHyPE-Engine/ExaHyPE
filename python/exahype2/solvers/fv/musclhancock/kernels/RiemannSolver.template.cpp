@@ -22,8 +22,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::updateSolutionWithRiemann(
   {{STORAGE_PRECISION}}* NOALIAS const              QOut,
   const double                                      timeStamp,
   const double                                      timeStepSize,
-  const tarch::la::Vector<Dimensions, double>&      patchCentre,
-  const tarch::la::Vector<Dimensions, double>&      patchSize
+  const tarch::la::Vector<DIMENSIONS, double>&      patchCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&      patchSize
 ) {
   {% if COMPUTE_MAX_EIGENVALUE==True %}
   double maxEigenvalueAfterTimeStep = 0.0;

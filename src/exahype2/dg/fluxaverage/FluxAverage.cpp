@@ -7,8 +7,8 @@ void exahype2::dg::fluxaverage::solveRiemannProblem_pointwise_in_situ(
   ::exahype2::dg::Flux                         flux,
   ::exahype2::dg::NonConservativeProduct       nonConservativeProduct,
   ::exahype2::dg::MaxEigenvalue                maxEigenvalue,
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  cellSize,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  cellSize,
   double                                       t,
   double                                       dt,
   int                                          order,
@@ -21,8 +21,8 @@ void exahype2::dg::fluxaverage::solveRiemannProblem_pointwise_in_situ(
   const double* NOALIAS                   projectedValues,
   double* NOALIAS                         solution
 ) {
-  tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * cellSize;
-  faceOffset(faceNumber%Dimensions) += 0.5 * cellSize(faceNumber%Dimensions);
+  tarch::la::Vector<DIMENSIONS,double> faceOffset = faceCentre - 0.5 * cellSize;
+  faceOffset(faceNumber%DIMENSIONS) += 0.5 * cellSize(faceNumber%DIMENSIONS);
 
   exahype2::enumerator::FaceAoSLexicographicEnumerator inputEnumerator (faceNumber,order+1,1,unknowns,auxiliaryVariables);
   exahype2::enumerator::FaceAoSLexicographicEnumerator outputEnumerator(faceNumber,order+1,1,unknowns,0);
@@ -33,18 +33,18 @@ void exahype2::dg::fluxaverage::solveRiemannProblem_pointwise_in_situ(
   double* fluxValuesRight = new double[unknowns];
   double* ncpValues       = new double[unknowns];
 
-  dfore(dof,order+1,faceNumber % Dimensions,0) {
-    tarch::la::Vector<Dimensions,double> x;
-    for (int d=0; d<Dimensions; d++) {
+  dfore(dof,order+1,faceNumber % DIMENSIONS,0) {
+    tarch::la::Vector<DIMENSIONS,double> x;
+    for (int d=0; d<DIMENSIONS; d++) {
       x(d)  = faceOffset(d);
-      x(d) += (d==faceNumber % Dimensions) ? 0.0 : quadraturePoints[dof(d)] * cellSize(d);
+      x(d) += (d==faceNumber % DIMENSIONS) ? 0.0 : quadraturePoints[dof(d)] * cellSize(d);
     }
 
-    tarch::la::Vector<Dimensions,int>    leftDoF  = dof;
-    tarch::la::Vector<Dimensions,int>    rightDoF = dof;
+    tarch::la::Vector<DIMENSIONS,int>    leftDoF  = dof;
+    tarch::la::Vector<DIMENSIONS,int>    rightDoF = dof;
 
-    leftDoF(faceNumber % Dimensions)  = 0;
-    rightDoF(faceNumber % Dimensions) = 1;
+    leftDoF(faceNumber % DIMENSIONS)  = 0;
+    rightDoF(faceNumber % DIMENSIONS) = 1;
 
     //initialize solution to 0
     for(int var=0; var<unknowns; var++){
@@ -64,14 +64,14 @@ void exahype2::dg::fluxaverage::solveRiemannProblem_pointwise_in_situ(
                     x, //TODO: add positioning
                     t,
                     dt,
-                    faceNumber%Dimensions );
+                    faceNumber%DIMENSIONS );
 
     double rightEigenvalue = maxEigenvalue(
                     projectedValues + inputEnumerator(rightDoF,0),
                     x, //TODO: add positioning
                     t,
                     dt,
-                    faceNumber%Dimensions );
+                    faceNumber%DIMENSIONS );
 
     double maxEigenvalue = std::max(leftEigenvalue,rightEigenvalue);
 
@@ -85,13 +85,13 @@ void exahype2::dg::fluxaverage::solveRiemannProblem_pointwise_in_situ(
             x,
             t,
             dt,
-            faceNumber%Dimensions, //normal
+            faceNumber%DIMENSIONS, //normal
             fluxValuesLeft);
       flux( projectedValues + inputEnumerator (rightDoF, 0),
             x,
             t,
             dt,
-            faceNumber%Dimensions, //normal
+            faceNumber%DIMENSIONS, //normal
             fluxValuesRight);
 
       for(int var=0; var<unknowns; var++){
@@ -107,7 +107,7 @@ void exahype2::dg::fluxaverage::solveRiemannProblem_pointwise_in_situ(
           x, //TODO: add positioning
           t,
           dt,
-          faceNumber%Dimensions, //normal
+          faceNumber%DIMENSIONS, //normal
           ncpValues);
 
       for(int var=0; var<unknowns; var++){

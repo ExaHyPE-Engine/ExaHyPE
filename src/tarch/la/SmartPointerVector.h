@@ -61,9 +61,9 @@ struct tarch::la::SmartPointerVector {
     /**
      * Clang requires the always_inline attribute, as it otherwise makes weird decisions.
      */
-    SmartPointerVector() InlineMethod;
+    SmartPointerVector();
 
-    SmartPointerVector( const Scalar* values ) InlineMethod;
+    SmartPointerVector( const Scalar* values );
 
     /**
      * Initialisation via initialisation list.
@@ -74,7 +74,7 @@ struct tarch::la::SmartPointerVector {
      */
     SmartPointerVector( std::initializer_list<Scalar> values );
 
-    SmartPointerVector( const std::bitset<Size>& values ) InlineMethod;
+    SmartPointerVector( const std::bitset<Size>& values );
 
     /**
      * Construct new SmartPointerVector and initialize all components with initialValue.
@@ -119,7 +119,7 @@ struct tarch::la::SmartPointerVector {
      * We do not allow assignment of a SmartPointerVector this itself. Consequently, we can
      * insert an ivdep statement and thus allow the compiler to optimise.
      */
-    inline SmartPointerVector<Size,Scalar>& operator= (const SmartPointerVector<Size,Scalar>& toAssign) InlineMethod;
+    inline SmartPointerVector<Size,Scalar>& operator= (const SmartPointerVector<Size,Scalar>& toAssign);
 
     /**
      * Conversion assignment operator
@@ -148,8 +148,8 @@ struct tarch::la::SmartPointerVector {
      *   calls, i.e. SmartPointerVector element accesses, as function calls and does not SmartPointerVectorise
      *   loops containing SmartPointerVector element accesses.
      */
-    inline const Scalar& operator[] (int index) const InlineMethod {
-#if defined(GPUOffloadingOff)
+    inline const Scalar& operator[] (int index) const {
+#if !defined(WITH_GPU)
           assertion3 ( index >= 0, index, Size, ::toString(*this) );
           assertion4 ( index < Size, index, Size, ::toString(*this), "you may not take the indexth entry from a SmartPointerVector with only Size components" );
 #endif
@@ -161,8 +161,8 @@ struct tarch::la::SmartPointerVector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline Scalar& operator[] (int index) InlineMethod {
-#if defined(GPUOffloadingOff)
+    inline Scalar& operator[] (int index) {
+#if !defined(WITH_GPU)
           assertion3 ( index >= 0, index, Size, ::toString(*this) );
           assertion3 ( index < Size, index, Size, ::toString(*this) );
 #endif
@@ -180,8 +180,8 @@ struct tarch::la::SmartPointerVector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline const Scalar& operator() (int index) const InlineMethod {
-#if defined(GPUOffloadingOff)
+    inline const Scalar& operator() (int index) const {
+#if !defined(WITH_GPU)
           assertion3 ( index >= 0, index, Size, ::toString(*this) );
           assertion3 ( index < Size, index, Size, ::toString(*this) );
 #endif
@@ -193,8 +193,8 @@ struct tarch::la::SmartPointerVector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline Scalar& operator() (int index) InlineMethod {
-#if defined(GPUOffloadingOff)
+    inline Scalar& operator() (int index) {
+#if !defined(WITH_GPU)
         assertion3 ( index >= 0, index, Size, ::toString(*this) );
         assertion3 ( index < Size, index, Size, ::toString(*this) );
 #endif

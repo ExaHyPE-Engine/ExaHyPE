@@ -26,4 +26,4 @@ if(OFFLOADING_FLAGS)
   message(STATUS "Using SYCL offloading flags: ${OFFLOADING_FLAGS}")
 endif()
 
-target_compile_definitions(PeanoOptions INTERFACE GPUOffloadingSYCL)
+target_compile_definitions(PeanoOptions INTERFACE WITH_GPU_SYCL WITH_GPU)

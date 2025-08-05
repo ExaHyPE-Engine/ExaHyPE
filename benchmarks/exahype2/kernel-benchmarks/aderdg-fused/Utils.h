@@ -12,7 +12,7 @@ namespace benchmarks {
     namespace kernelbenchmarks {
       constexpr int NumberOfInputEntriesPerCell
         = (AderSolver::Order + 1) * (AderSolver::Order + 1)
-#if Dimensions == 3
+#if DIMENSIONS == 3
           * (AderSolver::Order + 1)
 #endif
           * (AderSolver::NumberOfUnknowns + AderSolver::NumberOfAuxiliaryVariables);
@@ -29,8 +29,8 @@ namespace benchmarks {
        */
       inline void initInputData(
         SolverPrecision*                            Q,
-        const tarch::la::Vector<Dimensions, double> CellCenter,
-        const tarch::la::Vector<Dimensions, double> CellSize
+        const tarch::la::Vector<DIMENSIONS, double> CellCenter,
+        const tarch::la::Vector<DIMENSIONS, double> CellSize
       ) {
         // for (int i = 0; i < NumberOfInputEntriesPerCell; i++) {
         //   Q[i] = std::sin(1.0 * i / (NumberOfInputEntriesPerCell) * tarch::la::PI);

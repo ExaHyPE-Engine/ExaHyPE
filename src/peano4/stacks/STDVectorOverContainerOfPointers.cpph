@@ -3,28 +3,28 @@ tarch::logging::Log peano4::stacks::STDVectorOverContainerOfPointers<T>::_log("p
                                                                               "STDVectorOverContainerOfPointers<T>");
 
 
-#ifdef Parallel
+#ifdef WITH_MPI
 
 template <class T>
 void peano4::stacks::STDVectorOverContainerOfPointers<T>::workInReceivedMetaData() {
   assertion(_metaDataSizeBuffer != nullptr);
-#if PeanoDebug >= 1
+#if PEANO_DEBUG >= 1
   assertion(_metaDataDebugBuffer != nullptr);
 #endif
 
   for (int i = 0; i < Base::_currentElement; i++) {
-#if PeanoDebug >= 1 and Dimensions == 2
-    tarch::la::Vector<Dimensions, double> x = {
+#if PEANO_DEBUG >= 1 and DIMENSIONS == 2
+    tarch::la::Vector<DIMENSIONS, double> x = {
       _metaDataDebugBuffer[i * 2 * 2 + 0], _metaDataDebugBuffer[i * 2 * 2 + 1]};
-    tarch::la::Vector<Dimensions, double> h = {
+    tarch::la::Vector<DIMENSIONS, double> h = {
       _metaDataDebugBuffer[i * 2 * 2 + 2], _metaDataDebugBuffer[i * 2 * 2 + 3]};
     Base::_data[i].setDebugX(x);
     Base::_data[i].setDebugH(h);
 #endif
-#if PeanoDebug >= 1 and Dimensions == 3
-    tarch::la::Vector<Dimensions, double> x = {
+#if PEANO_DEBUG >= 1 and DIMENSIONS == 3
+    tarch::la::Vector<DIMENSIONS, double> x = {
       _metaDataDebugBuffer[i * 2 * 3 + 0], _metaDataDebugBuffer[i * 2 * 3 + 1], _metaDataDebugBuffer[i * 2 * 3 + 2]};
-    tarch::la::Vector<Dimensions, double> h = {
+    tarch::la::Vector<DIMENSIONS, double> h = {
       _metaDataDebugBuffer[i * 2 * 3 + 3], _metaDataDebugBuffer[i * 2 * 3 + 4], _metaDataDebugBuffer[i * 2 * 3 + 5]};
     Base::_data[i].setDebugX(x);
     Base::_data[i].setDebugH(h);
@@ -69,13 +69,13 @@ int peano4::stacks::STDVectorOverContainerOfPointers<T>::prepareMetaDataToSendOu
     int sizeOfThisStackEntry = Base::_data[i].size();
     flattenedDataSize += sizeOfThisStackEntry;
     _metaDataSizeBuffer[i] = sizeOfThisStackEntry;
-#if PeanoDebug >= 1 and Dimensions == 2
+#if PEANO_DEBUG >= 1 and DIMENSIONS == 2
     _metaDataDebugBuffer[i * 2 * 2 + 0] = Base::_data[i].getDebugX()[0];
     _metaDataDebugBuffer[i * 2 * 2 + 1] = Base::_data[i].getDebugX()[1];
     _metaDataDebugBuffer[i * 2 * 2 + 2] = Base::_data[i].getDebugH()[0];
     _metaDataDebugBuffer[i * 2 * 2 + 3] = Base::_data[i].getDebugH()[1];
 #endif
-#if PeanoDebug >= 1 and Dimensions == 3
+#if PEANO_DEBUG >= 1 and DIMENSIONS == 3
     _metaDataDebugBuffer[i * 2 * 3 + 0] = Base::_data[i].getDebugX()[0];
     _metaDataDebugBuffer[i * 2 * 3 + 1] = Base::_data[i].getDebugX()[1];
     _metaDataDebugBuffer[i * 2 * 3 + 2] = Base::_data[i].getDebugX()[2];
@@ -124,7 +124,7 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::triggerNonBlockingData
 
 template <class T>
 peano4::stacks::STDVectorOverContainerOfPointers<T>::STDVectorOverContainerOfPointers() {
-#ifdef Parallel
+#ifdef WITH_MPI
   _metaDataSizeMPIRequest  = nullptr;
   _metaDataDebugMPIRequest = nullptr;
   Base::_ioMPIRequest      = nullptr;
@@ -167,7 +167,7 @@ template <class T>
 void peano4::stacks::STDVectorOverContainerOfPointers<T>::startSend(
   peano4::grid::TraversalObserver::SendReceiveContext context, int rank, int tag, MPI_Comm comm
 ) {
-#ifdef Parallel
+#ifdef WITH_MPI
   assertion(Base::_ioMode == IOMode::None);
 
   Base::_ioMode = IOMode::MPISend;
@@ -185,8 +185,8 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::startSend(
   logDebug("startSend(int,int)", Base::toString());
 
   _metaDataSizeBuffer = new int[Base::_currentElement];
-#if PeanoDebug >= 1
-  _metaDataDebugBuffer = new double[Base::_currentElement * 2 * Dimensions];
+#if PEANO_DEBUG >= 1
+  _metaDataDebugBuffer = new double[Base::_currentElement * 2 * DIMENSIONS];
 #endif
 
   int flattenedDataSize = prepareMetaDataToSendOut();
@@ -202,18 +202,18 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::startSend(
   );
   logDebug("startSend(int,int)", "sent out size meta data of size " << Base::_currentElement);
 
-#if PeanoDebug >= 1
+#if PEANO_DEBUG >= 1
   _metaDataDebugMPIRequest = new MPI_Request;
   MPI_Isend(
     _metaDataDebugBuffer,
-    Base::_currentElement * 2 * Dimensions,
+    Base::_currentElement * 2 * DIMENSIONS,
     MPI_DOUBLE,
     Base::_ioRank,
     Base::_ioTag,
     comm,
     _metaDataDebugMPIRequest
   );
-  logDebug("startSend(int,int)", "sent out debug meta data of size " << Base::_currentElement * 2 * Dimensions);
+  logDebug("startSend(int,int)", "sent out debug meta data of size " << Base::_currentElement * 2 * DIMENSIONS);
 #endif
 
   if (flattenedDataSize > 0) {
@@ -242,7 +242,7 @@ template <class T>
 void peano4::stacks::STDVectorOverContainerOfPointers<T>::startReceive(
   peano4::grid::TraversalObserver::SendReceiveContext context, int rank, int tag, MPI_Comm comm, int numberOfElements
 ) {
-#ifdef Parallel
+#ifdef WITH_MPI
   assertion3(Base::_ioMode == IOMode::None, rank, tag, numberOfElements);
   assertion3(numberOfElements > 0, rank, tag, numberOfElements);
 
@@ -268,8 +268,8 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::startReceive(
   _metaDataSizeBuffer     = new int[Base::_currentElement];
   _metaDataSizeMPIRequest = new MPI_Request;
 
-#if PeanoDebug >= 1
-  _metaDataDebugBuffer     = new double[Base::_currentElement * 2 * Dimensions];
+#if PEANO_DEBUG >= 1
+  _metaDataDebugBuffer     = new double[Base::_currentElement * 2 * DIMENSIONS];
   _metaDataDebugMPIRequest = new MPI_Request;
 #endif
 
@@ -279,10 +279,10 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::startReceive(
     "received all meta data from rank " << rank << " on tag " << tag << " with " << numberOfElements << " entries"
   );
 
-#if PeanoDebug >= 1
+#if PEANO_DEBUG >= 1
   MPI_Irecv(
     _metaDataDebugBuffer,
-    numberOfElements * 2 * Dimensions,
+    numberOfElements * 2 * DIMENSIONS,
     MPI_DOUBLE,
     Base::_ioRank,
     Base::_ioTag,
@@ -290,7 +290,7 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::startReceive(
     _metaDataDebugMPIRequest
   );
   logDebug(
-    "startReceive(int,int,int)", "trigger receive of debug data with cardinality " << numberOfElements * 2 * Dimensions
+    "startReceive(int,int,int)", "trigger receive of debug data with cardinality " << numberOfElements * 2 * DIMENSIONS
   );
 #endif
 
@@ -304,7 +304,7 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::startReceive(
 
 template <class T>
 bool peano4::stacks::STDVectorOverContainerOfPointers<T>::tryToFinishSendOrReceive() {
-#ifdef Parallel
+#ifdef WITH_MPI
   logTraceInWith4Arguments(
     "tryToFinishSendOrReceive()", ::toString(Base::_ioMode), Base::size(), Base::_ioRank, Base::_ioTag
   );

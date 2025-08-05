@@ -238,7 +238,7 @@ std::vector< peano4::grid::GridControlEvent >  """
 
     def get_body_of_unprepareTraversal(self):
         return """
-    #if defined(Parallel)
+    #if defined(WITH_MPI)
     #error not implemented yet
     #endif
 _oldGridControlEvents.clear();

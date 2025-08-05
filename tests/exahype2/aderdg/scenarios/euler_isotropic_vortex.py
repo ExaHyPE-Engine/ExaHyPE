@@ -78,7 +78,7 @@ class EulerIsotropicVortex(Scenario):
             + """;
 
   const double t_capped = t  - (int) t / 10;
-  tarch::la::Vector<Dimensions,double> pos = { (x[0] - u_inf*t_capped) < -5.0 ? (x[0] - u_inf*t_capped) + 10. : (x[0] - u_inf*t_capped),
+  tarch::la::Vector<DIMENSIONS,double> pos = { (x[0] - u_inf*t_capped) < -5.0 ? (x[0] - u_inf*t_capped) + 10. : (x[0] - u_inf*t_capped),
                                                (x[1] - v_inf*t_capped) < -5.0 ? (x[1] - v_inf*t_capped) + 10. : (x[1] - v_inf*t_capped) };
 
   static constexpr double epsilon = 5.0;

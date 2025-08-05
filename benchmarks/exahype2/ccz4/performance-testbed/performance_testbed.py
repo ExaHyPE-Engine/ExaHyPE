@@ -430,11 +430,11 @@ if __name__ == "__main__":
                 # or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStepWithEnclaveTasking no fixed enclave version yet
             ):
                 self.postprocess_updated_patch += """
-    #if Dimensions==2
+    #if DIMENSIONS==2
     constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
     #endif
 
-    #if Dimensions==3
+    #if DIMENSIONS==3
     constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
     #endif
 """
@@ -444,11 +444,11 @@ if __name__ == "__main__":
             # """
             else:
                 self.postprocess_updated_patch += """
-    #if Dimensions==2
+    #if DIMENSIONS==2
     constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
     #endif
 
-    #if Dimensions==3
+    #if DIMENSIONS==3
     constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
     #endif
 """

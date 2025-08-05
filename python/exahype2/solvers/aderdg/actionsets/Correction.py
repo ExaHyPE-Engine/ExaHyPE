@@ -16,7 +16,7 @@ class Correction(AbstractADERDGActionSet):
 
     {{COMPUTE_TIME_STEP_SIZE}}
 
-#if Dimensions == 2
+#if DIMENSIONS == 2
     constexpr int SpaceFaceSize = {{ORDER}} + 1;
 #else
     constexpr int SpaceFaceSize = ({{ORDER}} + 1) * ({{ORDER}} + 1);
@@ -33,7 +33,7 @@ class Correction(AbstractADERDGActionSet):
     {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFace{{SOLVER_NAME}}QFluxEstimates.value + FluxElementsPerFace;
     {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFace{{SOLVER_NAME}}QEstimates.value;
     {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFace{{SOLVER_NAME}}QEstimates.value + BasisElementsPerFace;
-    const int direction = marker.getSelectedFaceNumber() % Dimensions;
+    const int direction = marker.getSelectedFaceNumber() % DIMENSIONS;
     const int faceNumber  = marker.getSelectedFaceNumber();
     const bool isBoundary = fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary();
     const auto& faceCentre = marker.x();
@@ -50,7 +50,7 @@ class Correction(AbstractADERDGActionSet):
     {{SOLUTION_STORAGE_PRECISION}}* QNew = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     constexpr int FluxElementsPerFace = kernels::{{SOLVER_NAME}}::getBndFluxSize();
 
-    for (int d = 0; d < Dimensions; d++) {
+    for (int d = 0; d < DIMENSIONS; d++) {
       const int direction = d;
 
       // Negative face
@@ -62,9 +62,9 @@ class Correction(AbstractADERDGActionSet):
       }
 
       // Positive face
-      if (!fineGridFaces{{SOLVER_NAME}}FaceLabel(d + Dimensions).getIsHanging()) {
+      if (!fineGridFaces{{SOLVER_NAME}}FaceLabel(d + DIMENSIONS).getIsHanging()) {
         // If above hanging face, the Riemann fluxes have been received from the other side and are therefore on that side.
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + Dimensions).value + (fineGridFaces{{SOLVER_NAME}}FaceLabel(d + Dimensions).getAboveHanging() ? FluxElementsPerFace : 0);
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).value + (fineGridFaces{{SOLVER_NAME}}FaceLabel(d + DIMENSIONS).getAboveHanging() ? FluxElementsPerFace : 0);
         const int orientation = 1;
         {{FACE_INTEGRAL_CALL}}
       }

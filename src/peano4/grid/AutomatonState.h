@@ -4,7 +4,7 @@
 
 #include <string>
 
-#ifdef Parallel
+#ifdef WITH_MPI
 #include <functional>
 #include <mpi.h>
 #endif
@@ -27,11 +27,11 @@ public:
   AutomatonState() = default;
   AutomatonState(
     const int                                         __level,
-    const tarch::la::Vector<Dimensions, double>&      __x,
-    const tarch::la::Vector<Dimensions, double>&      __h,
+    const tarch::la::Vector<DIMENSIONS, double>&      __x,
+    const tarch::la::Vector<DIMENSIONS, double>&      __h,
     const bool                                        __inverted,
-    const std::bitset<Dimensions>&                    __evenFlags,
-    const tarch::la::Vector<DimensionsTimesTwo, int>& __accessNumber
+    const std::bitset<DIMENSIONS>&                    __evenFlags,
+    const tarch::la::Vector<TWO_TIMES_D, int>& __accessNumber
   );
 
   AutomatonState(const AutomatonState& copy);
@@ -47,31 +47,31 @@ public:
   inline int  getLevel() const { return _level; }
   inline void setLevel(int value) { _level = value; }
 
-  inline tarch::la::Vector<Dimensions, double> getX() const { return _x; }
-  inline void                                  setX(const tarch::la::Vector<Dimensions, double>& value) { _x = value; }
+  inline tarch::la::Vector<DIMENSIONS, double> getX() const { return _x; }
+  inline void                                  setX(const tarch::la::Vector<DIMENSIONS, double>& value) { _x = value; }
   inline double                                getX(int index) const { return _x(index); }
   inline void                                  setX(int index, double value) { _x(index) = value; }
 
-  inline tarch::la::Vector<Dimensions, double> getH() const { return _h; }
-  inline void                                  setH(const tarch::la::Vector<Dimensions, double>& value) { _h = value; }
+  inline tarch::la::Vector<DIMENSIONS, double> getH() const { return _h; }
+  inline void                                  setH(const tarch::la::Vector<DIMENSIONS, double>& value) { _h = value; }
   inline double                                getH(int index) const { return _h(index); }
   inline void                                  setH(int index, double value) { _h(index) = value; }
 
   inline bool getInverted() const { return _inverted; }
   inline void setInverted(bool value) { _inverted = value; }
 
-  inline std::bitset<Dimensions> getEvenFlags() const { return _evenFlags; }
-  inline void                    setEvenFlags(const std::bitset<Dimensions>& value) { _evenFlags = value; }
+  inline std::bitset<DIMENSIONS> getEvenFlags() const { return _evenFlags; }
+  inline void                    setEvenFlags(const std::bitset<DIMENSIONS>& value) { _evenFlags = value; }
   inline bool                    getEvenFlags(int index) const { return _evenFlags[index]; }
   inline void                    setEvenFlags(int index, bool value) { _evenFlags[index] = value; }
   inline void                    flipEvenFlags(int index) { _evenFlags[index] = not _evenFlags[index]; }
 
-  inline tarch::la::Vector<DimensionsTimesTwo, int> getAccessNumber() const { return _accessNumber; }
-  inline void setAccessNumber(const tarch::la::Vector<DimensionsTimesTwo, int>& value) { _accessNumber = value; }
+  inline tarch::la::Vector<TWO_TIMES_D, int> getAccessNumber() const { return _accessNumber; }
+  inline void setAccessNumber(const tarch::la::Vector<TWO_TIMES_D, int>& value) { _accessNumber = value; }
   inline int  getAccessNumber(int index) const { return _accessNumber(index); }
   inline void setAccessNumber(int index, int value) { _accessNumber(index) = value; }
 
-#ifdef Parallel
+#ifdef WITH_MPI
   /**
    * Hands out MPI datatype if we work without the LLVM MPI extension.
    * If we work with this additional feature, this is the routine where
@@ -141,7 +141,7 @@ public:
   );
 #endif
 
-#ifdef Parallel
+#ifdef WITH_MPI
   static void sendAndPollDanglingMessages(
     const peano4::grid::AutomatonState& message,
     int                                 destination,
@@ -160,13 +160,13 @@ public:
 
 private:
   int                                        _level;
-  tarch::la::Vector<Dimensions, double>      _x;
-  tarch::la::Vector<Dimensions, double>      _h;
+  tarch::la::Vector<DIMENSIONS, double>      _x;
+  tarch::la::Vector<DIMENSIONS, double>      _h;
   bool                                       _inverted;
-  std::bitset<Dimensions>                    _evenFlags;
-  tarch::la::Vector<DimensionsTimesTwo, int> _accessNumber;
+  std::bitset<DIMENSIONS>                    _evenFlags;
+  tarch::la::Vector<TWO_TIMES_D, int> _accessNumber;
 
-#ifdef Parallel
+#ifdef WITH_MPI
 private:
   int _senderDestinationRank;
 

@@ -260,7 +260,7 @@ class StaticLimiting(object):
             self._store_face_data_default_guard()
             + " and not repositories::"
             + self.get_name_of_global_instance()
-            + ".PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]"
+            + ".PeriodicBC[marker.getSelectedFaceNumber()%DIMENSIONS]"
             + " and not marker.hasBeenRefined() and fineGridFace"
             + self._name
             + "FaceLabel.getBoundary()"

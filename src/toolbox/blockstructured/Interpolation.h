@@ -999,7 +999,7 @@ namespace toolbox {
        */
       template<typename T=double>
        void interpolateCell_AoS_piecewise_constant(
-        const tarch::la::Vector<Dimensions, int>&
+        const tarch::la::Vector<DIMENSIONS, int>&
             relativePositionWithinFatherCell,
         int numberOfDoFsPerAxisInPatch,
         int unknowns,
@@ -1009,7 +1009,7 @@ namespace toolbox {
 
       template<typename T=double>
       void interpolateCell_AoS_linear(
-        const tarch::la::Vector<Dimensions, int>&
+        const tarch::la::Vector<DIMENSIONS, int>&
             relativePositionWithinFatherCell,
         int numberOfDoFsPerAxisInPatch,
         int unknowns,

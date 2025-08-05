@@ -11,8 +11,8 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESP
 {% if ADMISSIBILITY_IMPLEMENTATION=="<user-defined>" %}
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isPhysicallyAdmissible(
   const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const                         Q,
-  const tarch::la::Vector<Dimensions,double>& x,
-  const tarch::la::Vector<Dimensions,double>& h,
+  const tarch::la::Vector<DIMENSIONS,double>& x,
+  const tarch::la::Vector<DIMENSIONS,double>& h,
   const double timeStamp
 ){
   return true;

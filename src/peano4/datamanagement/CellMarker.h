@@ -6,7 +6,7 @@
 #include "peano4/utils/Globals.h"
 #include "tarch/la/Vector.h"
 
-#ifdef Parallel
+#ifdef WITH_MPI
 #include <functional>
 #include <mpi.h>
 #endif
@@ -38,9 +38,9 @@ std::ostream& operator<<(std::ostream& out, const peano4::datamanagement::CellMa
  */
 struct peano4::datamanagement::CellMarker {
 private:
-  tarch::la::Vector<Dimensions, double> _centre;
+  tarch::la::Vector<DIMENSIONS, double> _centre;
 
-  tarch::la::Vector<Dimensions, double> _h;
+  tarch::la::Vector<DIMENSIONS, double> _h;
 
   bool _hasBeenRefined;
   bool _willBeRefined;
@@ -59,7 +59,7 @@ private:
   /**
    * Entries from (0,1,2). (0,0) or (0,0,0) is the left, bottom cell.
    */
-  tarch::la::Vector<Dimensions, int> _relativePositionOfCellWithinFatherCell;
+  tarch::la::Vector<DIMENSIONS, int> _relativePositionOfCellWithinFatherCell;
 
 public:
   CellMarker(const peano4::grid::GridTraversalEvent& event);
@@ -106,19 +106,19 @@ public:
    *
    * ~~~~~~~~~~~~~~~~~~~~~~~~~
    * marker.x() - 0.5 * marker.h() +
-   * tarch::la::multiplyComponents(tarch::la::Vector<Dimensions,double>(targetVertex),marker.h())
+   * tarch::la::multiplyComponents(tarch::la::Vector<DIMENSIONS,double>(targetVertex),marker.h())
    * ~~~~~~~~~~~~~~~~~~~~~~~~~
    *
    *
    * @return Centre of cell.
    */
-  inline tarch::la::Vector<Dimensions, double> x() const { return _centre; }
+  inline tarch::la::Vector<DIMENSIONS, double> x() const { return _centre; }
 
   /**
    * See getInvokingCellCentre(). This routine gives you the centre of its
    * parent cell.
    */
-  tarch::la::Vector<Dimensions, double> getInvokingParentCellsCentre() const;
+  tarch::la::Vector<DIMENSIONS, double> getInvokingParentCellsCentre() const;
 
   /**
    * Is x contained within cell identified by marker object
@@ -152,7 +152,7 @@ public:
    *
    */
   bool isContained(
-    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
     double                                       tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   ) const;
 
@@ -174,26 +174,26 @@ public:
    *
    */
   static bool isContained(
-    const tarch::la::Vector<Dimensions, double>& x,
-    const tarch::la::Vector<Dimensions, double>& cellCentre,
-    const tarch::la::Vector<Dimensions, double>& h,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
     double                                       tolerance
   );
 
   bool overlaps(
-    const tarch::la::Vector<Dimensions, double>& offset,
-    const tarch::la::Vector<Dimensions, double>& size
+    const tarch::la::Vector<DIMENSIONS, double>& offset,
+    const tarch::la::Vector<DIMENSIONS, double>& size
   ) const;
 
   /**
    * @return Size of cell
    */
-  inline tarch::la::Vector<Dimensions, double> h() const { return _h; }
+  inline tarch::la::Vector<DIMENSIONS, double> h() const { return _h; }
 
   /**
    * @return Offset of cell, i.e. the bottom left vertex's coordinate
    */
-  inline tarch::la::Vector<Dimensions, double> getOffset() const { return _centre - 0.5 * _h; }
+  inline tarch::la::Vector<DIMENSIONS, double> getOffset() const { return _centre - 0.5 * _h; }
 
   std::string toString() const;
 
@@ -256,11 +256,11 @@ public:
    */
   inline bool willBeSkeletonCell() const { return not _willBeEnclave; }
 
-  inline tarch::la::Vector<Dimensions, int> getRelativePositionWithinFatherCell() const {
+  inline tarch::la::Vector<DIMENSIONS, int> getRelativePositionWithinFatherCell() const {
     return _relativePositionOfCellWithinFatherCell;
   }
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   /**
    * Used for debugging
    */
@@ -269,7 +269,7 @@ public:
   }
 #endif
 
-#ifdef Parallel
+#ifdef WITH_MPI
   /**
    * To be called prior to any MPI usage of this class.
    */

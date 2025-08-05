@@ -69,4 +69,4 @@ endif()
 
 set(ONLY_IF_GPU_FIND_DEPENDENCY "find_dependency(Kokkos)")
 target_link_libraries(PeanoOptions INTERFACE Kokkos::kokkos)
-target_compile_definitions(PeanoOptions INTERFACE GPUOffloadingKokkos)
+target_compile_definitions(PeanoOptions INTERFACE WITH_GPU_KOKKOS WITH_GPU)

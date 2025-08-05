@@ -2,15 +2,15 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 {% macro loopOverDimensions() %}
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
   #endif
   for (int normal = 0; normal < {{DIMENSIONS}}; normal++) { // Loop over directions
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(normal >= 0);
-    assertion(normal < Dimensions);
+    assertion(normal < DIMENSIONS);
     #endif
 
 {% if DIMENSIONS==2 %}

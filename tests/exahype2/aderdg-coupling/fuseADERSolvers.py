@@ -45,7 +45,7 @@ def different_basis_postprocessing_kernel(condition, order, proj, solver_name):
       constexpr int fromPoints = {{ORDER}} + 1;
       constexpr int toPoints = """ + str(order) + """ + 1;
 
-      #if Dimensions == 2
+      #if DIMENSIONS == 2
       constexpr int SpaceFaceSize      = fromPoints;
       constexpr int SpaceFaceSize2     = toPoints;
       #else
@@ -61,15 +61,15 @@ def different_basis_postprocessing_kernel(condition, order, proj, solver_name):
                                                                
       constexpr double proj[toPoints*fromPoints] = {""" + proj + """};
 
-      for (int d = 0; d < Dimensions; d++) {
+      for (int d = 0; d < DIMENSIONS; d++) {
         // Projected solution estimations
         dg2dgFace(
           fineGridFaces""" + solver_name + """Estimates(d).value + BasisElementsPerFace2, 
           fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value + BasisElementsPerFace,
           proj, toPoints, fromPoints, ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}));
         dg2dgFace(
-          fineGridFaces""" + solver_name + """Estimates(d+Dimensions).value, 
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + Dimensions).value,
+          fineGridFaces""" + solver_name + """Estimates(d+DIMENSIONS).value, 
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + DIMENSIONS).value,
           proj, toPoints, fromPoints, ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}));
 
         // Projected flux estimations
@@ -78,8 +78,8 @@ def different_basis_postprocessing_kernel(condition, order, proj, solver_name):
           fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value + FluxElementsPerFace,
           proj, toPoints, fromPoints, {{NUMBER_OF_UNKNOWNS}});
         dg2dgFace(
-          fineGridFaces""" + solver_name + """FluxEstimates(d+Dimensions).value, 
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + Dimensions).value, 
+          fineGridFaces""" + solver_name + """FluxEstimates(d+DIMENSIONS).value, 
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).value, 
           proj, toPoints, fromPoints, {{NUMBER_OF_UNKNOWNS}});
       }
 
@@ -96,7 +96,7 @@ def same_basis_postprocessing_kernel(condition, order, solver_name):
 
       constexpr int fromPoints = {{ORDER}} + 1;
 
-      #if Dimensions == 2
+      #if DIMENSIONS == 2
       constexpr int SpaceFaceSize      = fromPoints;
       #else
       constexpr int SpaceFaceSize      = fromPoints*fromPoints;
@@ -105,7 +105,7 @@ def same_basis_postprocessing_kernel(condition, order, solver_name):
       constexpr int FluxElementsPerFace   = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
       constexpr int BasisElementsPerFace  = SpaceFaceSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
 
-      for (int d = 0; d < Dimensions; d++) {
+      for (int d = 0; d < DIMENSIONS; d++) {
         // Projected solution estimations
         std::copy_n(
           fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value + BasisElementsPerFace,
@@ -113,9 +113,9 @@ def same_basis_postprocessing_kernel(condition, order, solver_name):
           fineGridFaces""" + solver_name + """Estimates(d).value + BasisElementsPerFace
         );
         std::copy_n(
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value,
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+DIMENSIONS).value,
           BasisElementsPerFace,
-          fineGridFaces""" + solver_name + """Estimates(d+Dimensions).value
+          fineGridFaces""" + solver_name + """Estimates(d+DIMENSIONS).value
         );
 
         // Projected flux estimations
@@ -125,9 +125,9 @@ def same_basis_postprocessing_kernel(condition, order, solver_name):
           fineGridFaces""" + solver_name + """FluxEstimates(d).value + FluxElementsPerFace
         );
         std::copy_n(
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + Dimensions).value,
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).value,
           FluxElementsPerFace,
-          fineGridFaces""" + solver_name + """FluxEstimates(d+Dimensions).value
+          fineGridFaces""" + solver_name + """FluxEstimates(d+DIMENSIONS).value
         );
       }
     }
@@ -142,7 +142,7 @@ def dg2dgFace():
 template<typename pTo, typename pFrom>
 inline void dg2dgFace(pTo* Qto, const pFrom* Qfrom, const double* proj, int toPoints, int fromPoints, int numVars){
 
-#if Dimensions==3
+#if DIMENSIONS==3
   const int toSize = toPoints*toPoints*numVars;
 #else
   const int toSize = toPoints*numVars;
@@ -151,24 +151,24 @@ inline void dg2dgFace(pTo* Qto, const pFrom* Qfrom, const double* proj, int toPo
   std::fill_n(Qto, toSize, 0.0);
 
   //For each point we project to
-  dfore(dofTo, toPoints, Dimensions-1, 0) {
+  dfore(dofTo, toPoints, DIMENSIONS-1, 0) {
     const int dofToSerialised = dofTo[0]
-  #if Dimensions==3
+  #if DIMENSIONS==3
     + dofTo[1] * toPoints
   #endif
     ;
 
     //Compute the contribution from each contributing point
-    dfore(dofFrom, fromPoints, Dimensions-1, 0) {
+    dfore(dofFrom, fromPoints, DIMENSIONS-1, 0) {
       const int dofFromSerialised = dofFrom[0]
-  #if Dimensions==3
+  #if DIMENSIONS==3
         + dofFrom[1] * fromPoints
   #endif
     ;
 
       for(int var=0; var<numVars; var++){
         Qto[dofToSerialised*numVars+var] += Qfrom[dofFromSerialised*numVars+var] * proj[dofTo[0]*fromPoints+dofFrom[0]]
-  #if Dimensions==3
+  #if DIMENSIONS==3
           * proj[dofTo[1]*fromPoints+dofFrom[1]]
   #endif
         ;

@@ -86,7 +86,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     /**
      * Alias for periodic boundary conditions.
      */
-    static std::bitset<Dimensions> PeriodicBC;
+    static std::bitset<DIMENSIONS> PeriodicBC;
 
     double getMinTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
     double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
@@ -100,16 +100,16 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
-      const tarch::la::Vector<Dimensions,double>&  meshCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  meshCellCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  meshCellH,
       double                                       t
     ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
 
     virtual void initialCondition(
       double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
-      const tarch::la::Vector<Dimensions,double>&  meshCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  meshCellCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  meshCellH,
       bool                                         gridIsConstructed
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
@@ -125,8 +125,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     virtual void boundaryConditions(
       const double * NOALIAS Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       double * NOALIAS Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  meshCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  meshCellH,
       double                                       t,
       int                                          normal
     ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
@@ -225,13 +225,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     SolverState  getSolverState() const;
 
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
     static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
     static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
     {{SOLVER_CONSTANTS}}
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 

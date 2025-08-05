@@ -1,7 +1,7 @@
 #include "tarch/multicore/multicore.h"
 
 
-#if !defined(SharedMemoryParallelisation)
+#if !defined(WITH_MULTITHREADING)
 #include "tarch/multicore/BooleanSemaphore.h"
 tarch::multicore::BooleanSemaphore::BooleanSemaphore() {
 }

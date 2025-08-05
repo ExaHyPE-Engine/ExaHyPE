@@ -5,8 +5,8 @@ namespace exahype2 {
   template <typename inType, typename outType, int NumFaceTypes>
   CellData<inType, outType, NumFaceTypes>::CellData(
     inType* const                                QIn_,
-    const tarch::la::Vector<Dimensions, double>& cellCentre_,
-    const tarch::la::Vector<Dimensions, double>& cellSize_,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre_,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize_,
     double                                       t_,
     double                                       dt_,
     outType* const                               QOut_,
@@ -25,9 +25,9 @@ namespace exahype2 {
   template <typename inType, typename outType, int NumFaceTypes>
   CellData<inType, outType, NumFaceTypes>::CellData(
     inType* const                                QIn_,
-    inType* const                                faces_[NumFaceTypes][TwoTimesD],
-    const tarch::la::Vector<Dimensions, double>& cellCentre_,
-    const tarch::la::Vector<Dimensions, double>& cellSize_,
+    inType* const                                faces_[NumFaceTypes][TWO_TIMES_D],
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre_,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize_,
     double                                       t_,
     double                                       dt_,
     outType* const                               QOut_,
@@ -43,7 +43,7 @@ namespace exahype2 {
     QOut[0]       = QOut_;
 
     for (int type = 0; type < NumFaceTypes; ++type) {
-      for (int d = 0; d < TwoTimesD; ++d) {
+      for (int d = 0; d < TWO_TIMES_D; ++d) {
         faces[type][d] = faces_[type][d];
       }
     }
@@ -56,9 +56,9 @@ namespace exahype2 {
     targetDevice(targetDevice_) {
 
     QIn           = tarch::accelerator::MemoryManager::getInstance().allocate<inType*>(numberOfCells_, memoryLocation_, targetDevice_);
-    faces         = tarch::accelerator::MemoryManager::getInstance().allocate<inType* [NumFaceTypes][TwoTimesD]>(numberOfCells_, memoryLocation_, targetDevice_);
-    cellCentre    = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<Dimensions, double>>(numberOfCells_, memoryLocation_, targetDevice_);
-    cellSize      = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<Dimensions, double>>(numberOfCells_, memoryLocation_, targetDevice_);
+    faces         = tarch::accelerator::MemoryManager::getInstance().allocate<inType* [NumFaceTypes][TWO_TIMES_D]>(numberOfCells_, memoryLocation_, targetDevice_);
+    cellCentre    = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<DIMENSIONS, double>>(numberOfCells_, memoryLocation_, targetDevice_);
+    cellSize      = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<DIMENSIONS, double>>(numberOfCells_, memoryLocation_, targetDevice_);
     QOut          = tarch::accelerator::MemoryManager::getInstance().allocate<outType*>(numberOfCells_, memoryLocation_, targetDevice_);
     maxEigenvalue = tarch::accelerator::MemoryManager::getInstance().allocate<outType>(numberOfCells_, memoryLocation_, targetDevice_);
   }

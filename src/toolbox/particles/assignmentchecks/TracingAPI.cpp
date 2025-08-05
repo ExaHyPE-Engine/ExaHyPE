@@ -27,11 +27,11 @@ void toolbox::particles::assignmentchecks::startMeshSweep(
 
 void toolbox::particles::assignmentchecks::eraseParticle(
   const std::string&                           particleName,
-  const tarch::la::Vector<Dimensions, double>& particleX,
+  const tarch::la::Vector<DIMENSIONS, double>& particleX,
   const int                                    particleID,
   bool                                         isLocal,
-  const tarch::la::Vector<Dimensions, double>& vertexX,
-  const tarch::la::Vector<Dimensions, double>& vertexH,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace
 ) {
@@ -77,15 +77,15 @@ void toolbox::particles::assignmentchecks::eraseParticle(
 
 void toolbox::particles::assignmentchecks::assignParticleToVertex(
   const std::string&                           particleName,
-  const tarch::la::Vector<Dimensions, double>& particleX,
+  const tarch::la::Vector<DIMENSIONS, double>& particleX,
   const int                                    particleID,
   bool                                         isLocal,
-  const tarch::la::Vector<Dimensions, double>& vertexX,
-  const tarch::la::Vector<Dimensions, double>& vertexH,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace,
-  const tarch::la::Vector<Dimensions, double>& prevVertexX,
-  const tarch::la::Vector<Dimensions, double>& prevVertexH,
+  const tarch::la::Vector<DIMENSIONS, double>& prevVertexX,
+  const tarch::la::Vector<DIMENSIONS, double>& prevVertexH,
   bool                                         particleIsNew,
   bool reassignmentOnSameTreeDepthAllowed
 ) {
@@ -212,7 +212,7 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
 
   bool shift = false;
 
-  for (int i = 0; i < Dimensions; i++) {
+  for (int i = 0; i < DIMENSIONS; i++) {
     if (vertexIndNew(i) != vertexIndOld(i)) {
       shift = true;
       break;
@@ -231,11 +231,11 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
 
 void toolbox::particles::assignmentchecks::moveParticle(
   const std::string&                           particleName,
-  const tarch::la::Vector<Dimensions, double>& oldParticleX,
-  const tarch::la::Vector<Dimensions, double>& newParticleX,
+  const tarch::la::Vector<DIMENSIONS, double>& oldParticleX,
+  const tarch::la::Vector<DIMENSIONS, double>& newParticleX,
   const int                                    particleID,
-  const tarch::la::Vector<Dimensions, double>& vertexX,
-  const tarch::la::Vector<Dimensions, double>& vertexH,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace
 ) {
@@ -361,11 +361,11 @@ void toolbox::particles::assignmentchecks::moveParticle(
 
 void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   const std::string&                           particleName,
-  const tarch::la::Vector<Dimensions, double>& particleX,
+  const tarch::la::Vector<DIMENSIONS, double>& particleX,
   const int                                    particleID,
   bool                                         isLocal,
-  const tarch::la::Vector<Dimensions, double>& vertexX,
-  const tarch::la::Vector<Dimensions, double>& vertexH,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace
 ) {
@@ -446,11 +446,11 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
 
 void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   const std::string&                           particleName,
-  const tarch::la::Vector<Dimensions, double>& particleX,
+  const tarch::la::Vector<DIMENSIONS, double>& particleX,
   const int                                    particleID,
   bool                                         isLocal,
-  const tarch::la::Vector<Dimensions, double>& vertexX,
-  const tarch::la::Vector<Dimensions, double>& vertexH,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace
 ) {
@@ -523,59 +523,59 @@ void toolbox::particles::assignmentchecks::startMeshSweep(
 
 void toolbox::particles::assignmentchecks::eraseParticle(
   const std::string&                           particleName,
-  const tarch::la::Vector<Dimensions, double>& particleX,
+  const tarch::la::Vector<DIMENSIONS, double>& particleX,
   const int                                    particleID,
   bool                                         isLocal,
-  const tarch::la::Vector<Dimensions, double>& vertexX,
-  const tarch::la::Vector<Dimensions, double>& vertexH,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace
 ) {}
 
 void toolbox::particles::assignmentchecks::assignParticleToVertex(
   const std::string&                           particleName,
-  const tarch::la::Vector<Dimensions, double>& particleX,
+  const tarch::la::Vector<DIMENSIONS, double>& particleX,
   const int                                    particleID,
   bool                                         isLocal,
-  const tarch::la::Vector<Dimensions, double>& vertexX,
-  const tarch::la::Vector<Dimensions, double>& vertexH,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace,
-  const tarch::la::Vector<Dimensions, double>& prevVertexX,
-  const tarch::la::Vector<Dimensions, double>& prevVertexH,
+  const tarch::la::Vector<DIMENSIONS, double>& prevVertexX,
+  const tarch::la::Vector<DIMENSIONS, double>& prevVertexH,
   bool                                         particleIsNew,
   bool reassignmentOnSameTreeDepthAllowed
 ) {}
 
 void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   const std::string&                           particleName,
-  const tarch::la::Vector<Dimensions, double>& particleX,
+  const tarch::la::Vector<DIMENSIONS, double>& particleX,
   const int                                    particleID,
   bool                                         isLocal,
-  const tarch::la::Vector<Dimensions, double>& vertexX,
-  const tarch::la::Vector<Dimensions, double>& vertexH,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace
 ) {}
 
 void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   const std::string&                           particleName,
-  const tarch::la::Vector<Dimensions, double>& particleX,
+  const tarch::la::Vector<DIMENSIONS, double>& particleX,
   const int                                    particleID,
   bool                                         isLocal,
-  const tarch::la::Vector<Dimensions, double>& vertexX,
-  const tarch::la::Vector<Dimensions, double>& vertexH,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace
 ) {}
 
 void toolbox::particles::assignmentchecks::moveParticle(
   const std::string&                           particleName,
-  const tarch::la::Vector<Dimensions, double>& oldParticleX,
-  const tarch::la::Vector<Dimensions, double>& newParticleX,
+  const tarch::la::Vector<DIMENSIONS, double>& oldParticleX,
+  const tarch::la::Vector<DIMENSIONS, double>& newParticleX,
   const int                                    particleID,
-  const tarch::la::Vector<Dimensions, double>& vertexX,
-  const tarch::la::Vector<Dimensions, double>& vertexH,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace
 ) {}

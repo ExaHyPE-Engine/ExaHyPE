@@ -8,7 +8,7 @@ exahype2::EnclaveTask<T, NumFaceTypes>::EnclaveTask(
   double                                      t,
   double                                      dt,
   T* NOALIAS const                            QIn,
-  T* NOALIAS const                            faces[NumFaceTypes][TwoTimesD],
+  T* NOALIAS const                            faces[NumFaceTypes][TWO_TIMES_D],
   T* NOALIAS const                            QOut,
   Functor                                     functor
 ):
@@ -24,7 +24,7 @@ exahype2::EnclaveTask<T, NumFaceTypes>::EnclaveTask(
   assertion(_QOut != nullptr);
 
   for (int type = 0; type < NumFaceTypes; ++type) {
-    for (int d = 0; d < TwoTimesD; ++d) {
+    for (int d = 0; d < TWO_TIMES_D; ++d) {
       _faces[type][d] = faces[type][d];
     }
   }

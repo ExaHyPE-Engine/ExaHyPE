@@ -8,8 +8,8 @@ tarch::logging::Log tutorials::exahype2::acoustic::PlanarAcousticSolver::_log(
 
 void tutorials::exahype2::acoustic::PlanarAcousticSolver::initialCondition(
   [[maybe_unused]] double* const NOALIAS                        Q, // Q[3+0]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const bool                                   gridIsConstructed
 ) {
   // Simple translation in positive diagonal direction
@@ -29,8 +29,8 @@ void tutorials::exahype2::acoustic::PlanarAcousticSolver::initialCondition(
 void tutorials::exahype2::acoustic::PlanarAcousticSolver::boundaryConditions(
   [[maybe_unused]] const double* const NOALIAS                  Qinside,  // Qinside[3+0]
   [[maybe_unused]] double* const NOALIAS                        Qoutside, // Qoutside[3+0]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const int                                    normal
 ) {
@@ -40,8 +40,8 @@ void tutorials::exahype2::acoustic::PlanarAcousticSolver::boundaryConditions(
 
 double tutorials::exahype2::acoustic::PlanarAcousticSolver::maxEigenvalue(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[3+0]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal
@@ -54,8 +54,8 @@ double tutorials::exahype2::acoustic::PlanarAcousticSolver::maxEigenvalue(
 
 void tutorials::exahype2::acoustic::PlanarAcousticSolver::flux(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[3+0]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,

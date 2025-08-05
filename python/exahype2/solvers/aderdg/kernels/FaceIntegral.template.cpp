@@ -27,7 +27,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
     for (int zy = 0; zy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; zy++) {
       const cCompType scaledWeight = scaling * timeStepSize * Quadrature<cCompType>::weights2[zy];
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-        #ifdef SharedOMP
+        #ifdef WITH_OPENMP
         #pragma omp simd aligned(lduh,FCoeff,lFhbnd:{{ALIGNMENT}})
         #endif
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
@@ -42,7 +42,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
         const cCompType scaledWeight = scaling * timeStepSize * Quadrature<cCompType>::weights2[z * {{NUMBER_OF_DOF}} + x];
         for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
-          #ifdef SharedOMP
+          #ifdef WITH_OPENMP
           #pragma omp simd aligned(lduh,FCoeff,lFhbnd:{{ALIGNMENT}})
           #endif
           for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
@@ -57,7 +57,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
     for (int yx = 0; yx < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; yx++) {
       const cCompType scaledWeight = scaling * timeStepSize * Quadrature<cCompType>::weights2[yx];
       for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
-        #ifdef SharedOMP
+        #ifdef WITH_OPENMP
         #pragma omp simd aligned(lduh,FCoeff,lFhbnd:{{ALIGNMENT}})
         #endif
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {

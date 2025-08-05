@@ -7,9 +7,9 @@
 
 peano4::grid::GridControlEvent::GridControlEvent(
   const RefinementControl                      __refinementControl,
-  const tarch::la::Vector<Dimensions, double>& __offset,
-  const tarch::la::Vector<Dimensions, double>& __width,
-  const tarch::la::Vector<Dimensions, double>& __h
+  const tarch::la::Vector<DIMENSIONS, double>& __offset,
+  const tarch::la::Vector<DIMENSIONS, double>& __width,
+  const tarch::la::Vector<DIMENSIONS, double>& __h
 ) {
   setRefinementControl(__refinementControl);
   setOffset(__offset);
@@ -32,7 +32,7 @@ std::string peano4::grid::GridControlEvent::toString() const {
   return out.str();
 }
 
-#ifdef Parallel
+#ifdef WITH_MPI
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype peano4::grid::GridControlEvent::Datatype = MPI_DATATYPE_NULL;
@@ -100,13 +100,13 @@ void peano4::grid::GridControlEvent::initDatatype() {
   blocklen[counter] = 1;
   counter++;
   subtypes[counter] = MPI_DOUBLE;
-  blocklen[counter] = Dimensions;
+  blocklen[counter] = DIMENSIONS;
   counter++;
   subtypes[counter] = MPI_DOUBLE;
-  blocklen[counter] = Dimensions;
+  blocklen[counter] = DIMENSIONS;
   counter++;
   subtypes[counter] = MPI_DOUBLE;
-  blocklen[counter] = Dimensions;
+  blocklen[counter] = DIMENSIONS;
   counter++;
 
   MPI_Aint baseFirstInstance;
@@ -219,7 +219,7 @@ void peano4::grid::GridControlEvent::receive(
 }
 #endif
 
-#ifdef Parallel
+#ifdef WITH_MPI
 void peano4::grid::GridControlEvent::sendAndPollDanglingMessages(
   const peano4::grid::GridControlEvent& message,
   int                                   destination,

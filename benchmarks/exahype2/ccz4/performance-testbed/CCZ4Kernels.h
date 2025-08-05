@@ -18,7 +18,7 @@ namespace applications {
       /**
        * @see source() for a discussion of annotations.
        */
-      #if defined(SharedOMP)
+      #if defined(WITH_OPENMP)
       #pragma omp declare simd
       #endif
       static inline void ncp(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal,
@@ -32,7 +32,7 @@ namespace applications {
         const double CCZ4xi,
         const double CCZ4mu,
         const double CCZ4SO
-      ) InlineMethod;
+      );
 
       /**
        * The source term is one out of two terms that we use in our CCZ4
@@ -50,7 +50,7 @@ namespace applications {
        *
        * @see ncp()
        */
-      #if defined(SharedOMP)
+      #if defined(WITH_OPENMP)
       #pragma omp declare simd
       #endif
       static inline void source(double* S, const double* const Q,
@@ -68,9 +68,9 @@ namespace applications {
         const double CCZ4k2,
         const double CCZ4k3,
         const double CCZ4SO
-      ) InlineMethod;
+      );
 
-      #if defined(SharedOMP)
+      #if defined(WITH_OPENMP)
       #pragma omp declare simd
       #endif
       static inline double maxEigenvalue(
@@ -80,13 +80,13 @@ namespace applications {
         const double        CCZ4ds,
         const double        CCZ4GLMc,
         const double        CCZ4GLMd
-      ) InlineMethod;
+      );
 
 
       /**
        * @todo Han
        */
-      #if defined(SharedOMP)
+      #if defined(WITH_OPENMP)
       #pragma omp declare simd
       #endif
       static inline double maxEigenvalue(
@@ -96,7 +96,7 @@ namespace applications {
         const double        CCZ4ds,
         const double        CCZ4GLMc,
         const double        CCZ4GLMd
-      ) InlineMethod;
+      );
 
       /**
        * This is a postprocessing routine to monitor if the physical constraints

@@ -23,15 +23,15 @@ namespace exahype2 {
      * for many compilers). To avoid the implied multiple symbol errors, I
      * declare the function as static.
      */
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static inline GPUCallableMethod
+    static inline GPU_CALLABLE_METHOD
     tarch::la::Vector<2, double> getVolumeSize(
       const tarch::la::Vector<2, double>& h,
       const int numberOfVolumesPerAxisInPatch
-    ) InlineMethod {
-      #if defined(GPUOffloadingOff)
+    ) {
+      #if !defined(WITH_GPU)
       assertion2(numberOfVolumesPerAxisInPatch >= 1, h, numberOfVolumesPerAxisInPatch);
       #endif
       tarch::la::Vector<2, double> volumeSize;
@@ -40,19 +40,19 @@ namespace exahype2 {
       }
       return volumeSize;
     }
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static inline GPUCallableMethod
+    static inline GPU_CALLABLE_METHOD
     tarch::la::Vector<3, double> getVolumeSize(
       const tarch::la::Vector<3, double>& h,
       const int numberOfVolumesPerAxisInPatch
-    ) InlineMethod {
-      #if defined(GPUOffloadingOff)
+    ) {
+      #if !defined(WITH_GPU)
       assertion2(numberOfVolumesPerAxisInPatch >= 1, h, numberOfVolumesPerAxisInPatch);
       #endif
       tarch::la::Vector<3, double> volumeSize;
@@ -61,35 +61,35 @@ namespace exahype2 {
       }
       return volumeSize;
     }
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static inline GPUCallableMethod
+    static inline GPU_CALLABLE_METHOD
     tarch::la::Vector<2, double> getFaceSize(
       const tarch::la::Vector<2, double>& h,
       const int numberOfVolumesPerAxisInPatch
-    ) InlineMethod {
+    ) {
       return getVolumeSize(h, numberOfVolumesPerAxisInPatch);
     }
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static inline GPUCallableMethod
+    static inline GPU_CALLABLE_METHOD
     tarch::la::Vector<3, double> getFaceSize(
       const tarch::la::Vector<3, double>& h,
       const int numberOfVolumesPerAxisInPatch
-    ) InlineMethod {
+    ) {
       return getVolumeSize(h,numberOfVolumesPerAxisInPatch);
     }
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 
@@ -108,16 +108,16 @@ namespace exahype2 {
      * @param h      Size of the cell
      * @param index  Index of Finite Volume (in lexicographic ordering)
      */
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static inline GPUCallableMethod
+    static inline GPU_CALLABLE_METHOD
     tarch::la::Vector<2, double> getVolumeCentre(
       const tarch::la::Vector<2, double>& x,
       const tarch::la::Vector<2, double>& h,
       const int numberOfVolumesPerAxisInPatch,
       const tarch::la::Vector<2, int>& index
-    ) InlineMethod {
+    ) {
       tarch::la::Vector<2, double> volumeSize = getVolumeSize(h, numberOfVolumesPerAxisInPatch);
       tarch::la::Vector<2, double> result     = x - 0.5 * h + 0.5 * volumeSize;
       for (int d = 0; d < 2; d++) {
@@ -125,20 +125,20 @@ namespace exahype2 {
       }
       return result;
     }
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static inline GPUCallableMethod
+    static inline GPU_CALLABLE_METHOD
     tarch::la::Vector<3, double> getVolumeCentre(
       const tarch::la::Vector<3, double>& x,
       const tarch::la::Vector<3, double>& h,
       const int numberOfVolumesPerAxisInPatch,
       const tarch::la::Vector<3, int>& index
-    ) InlineMethod {
+    ) {
       tarch::la::Vector<3, double> volumeSize = getVolumeSize(h, numberOfVolumesPerAxisInPatch);
       tarch::la::Vector<3, double> result     = x - 0.5 * h + 0.5 * volumeSize;
       for (int d = 0; d < 3; d++) {
@@ -146,14 +146,14 @@ namespace exahype2 {
       }
       return result;
     }
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static inline GPUCallableMethod
+    static inline GPU_CALLABLE_METHOD
     tarch::la::Vector<2, double> getFaceCentre(
       const tarch::la::Vector<2, double>& x,
       const tarch::la::Vector<2, double>& h,
@@ -161,7 +161,7 @@ namespace exahype2 {
       const int overlap,
       const int normal,
       const tarch::la::Vector<2, int>& index
-    ) InlineMethod {
+    ) {
       tarch::la::Vector<2, double> volumeSize = getFaceSize(h, numberOfVolumesPerAxisInPatch);
       tarch::la::Vector<2, double> result;
       for (int d = 0; d < 2; d++) {
@@ -174,14 +174,14 @@ namespace exahype2 {
       }
       return result;
     }
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static inline GPUCallableMethod
+    static inline GPU_CALLABLE_METHOD
     tarch::la::Vector<3, double> getFaceCentre(
       const tarch::la::Vector<3, double>& x,
       const tarch::la::Vector<3, double>& h,
@@ -189,7 +189,7 @@ namespace exahype2 {
       const int overlap,
       const int normal,
       const tarch::la::Vector<3, int>& index
-    ) InlineMethod {
+    ) {
       tarch::la::Vector<3, double> volumeSize = getVolumeSize(h, numberOfVolumesPerAxisInPatch);
       tarch::la::Vector<3, double> result     = x - 0.5 * h + 0.5 * volumeSize;
       for (int d = 0; d < 3; d++) {
@@ -202,7 +202,7 @@ namespace exahype2 {
       }
       return result;
     }
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 

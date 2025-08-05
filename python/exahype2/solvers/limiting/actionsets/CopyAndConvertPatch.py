@@ -16,7 +16,7 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
     facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker faceStatus = facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED;
     sendFaceProjection  = (ownStatus == celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::TROUBLED);
     sendFaceProjection |= (ownStatus == celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::LIMITER_TO_REGULAR);
-    for (int d = 0; d < 2 * Dimensions; d++) {
+    for (int d = 0; d < 2 * DIMENSIONS; d++) {
       faceStatus = fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getTroubled_Marker();
       sendFaceProjection |= (faceStatus == facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED);
       sendFaceProjection |= (faceStatus == facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::LIMITER_TO_REGULAR);
@@ -33,9 +33,9 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
       {% if LIMITER_USE_ADJUST_SOLUTION %}
       // Adjust the projected solution
       // - That is done to get rid off disturbances that come from the projection, if needed.
-#if Dimensions == 2
+#if DIMENSIONS == 2
       constexpr int xyzvarSize = {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DOF_LIMITER}};
-#elif Dimensions == 3
+#elif DIMENSIONS == 3
       constexpr int xyzvarSize = {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DOF_LIMITER}};
 #endif
 

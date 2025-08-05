@@ -154,7 +154,7 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
     // double timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
         
-    for(int d=0; d<Dimensions; d++) {
+    for(int d=0; d<DIMENSIONS; d++) {
       /**
        * d-loop over all dimensions except d. The vector k's entry d is set
        * to 0. We start with the left/bottom face, i.e. the one closer to the 
@@ -162,8 +162,8 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
        */
       dfore(k,{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},d,0) {
         for (int i=0; i<{{OVERLAP}}; i++) {
-          tarch::la::Vector<Dimensions,int> patchCell   = k;
-          tarch::la::Vector<Dimensions,int> overlapCell = k;
+          tarch::la::Vector<DIMENSIONS,int> patchCell   = k;
+          tarch::la::Vector<DIMENSIONS,int> overlapCell = k;
           patchCell(d)   = i;
           overlapCell(d) = i+{{OVERLAP}};
           
@@ -231,13 +231,13 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
 
           {% if RECONSTRUCTION_STAGES==0 or PREDICATE_NO==PREDICATES|length-RECONSTRUCTION_STAGES-1 %}
           for (int j=0; j<{{NUMBER_OF_UNKNOWNS}}; j++) {
-            {{FACES_ACCESSOR}}(d+Dimensions).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] = 
+            {{FACES_ACCESSOR}}(d+DIMENSIONS).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] = 
               {{CELL_ACCESSOR}}.value[ enumeratorWithAuxiliaryVariables(0,patchCell,j) ];
 
             {% if PREDICATE_NO<PREDICATES|length-RECONSTRUCTION_STAGES %}
               {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO+1]|length) %}
               {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO+1][WEIGHT_NO]!=0 %}
-                {{FACES_ACCESSOR}}(d+Dimensions).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] += 
+                {{FACES_ACCESSOR}}(d+DIMENSIONS).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] += 
                   timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO+1][WEIGHT_NO]}} * 
                   fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},patchCell,j) ];
               {% endif %}
@@ -246,13 +246,13 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
           }
           {% else %}
           for (int j : primaryVarsIndices) {
-            {{FACES_ACCESSOR}}(d+Dimensions).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] = 
+            {{FACES_ACCESSOR}}(d+DIMENSIONS).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] = 
               {{CELL_ACCESSOR}}.value[ enumeratorWithAuxiliaryVariables(0,patchCell,j) ];
 
             {% if PREDICATE_NO<PREDICATES|length-RECONSTRUCTION_STAGES %}
               {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO+1]|length) %}
               {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO+1][WEIGHT_NO]!=0 %}
-                {{FACES_ACCESSOR}}(d+Dimensions).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] += 
+                {{FACES_ACCESSOR}}(d+DIMENSIONS).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] += 
                   timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO+1][WEIGHT_NO]}} * 
                   fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},patchCell,j) ];
               {% endif %}
@@ -260,13 +260,13 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
             {% endif %}
           }
           for (int j : auxiliaryVarsIndices) {
-            {{FACES_ACCESSOR}}(d+Dimensions).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] = 0;
+            {{FACES_ACCESSOR}}(d+DIMENSIONS).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] = 0;
             // actually no need for this initialization as we do overwritten in reconstruction, but we keep it for safety.
           }
           {% endif %}
 
           for (int j={{NUMBER_OF_UNKNOWNS}}; j<{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}; j++) {
-            {{FACES_ACCESSOR}}(d+Dimensions).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] = 
+            {{FACES_ACCESSOR}}(d+DIMENSIONS).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] = 
               {{CELL_ACCESSOR}}.value[ enumeratorWithAuxiliaryVariables(0,patchCell,j) ];
           }
         } // overlap depth loop
@@ -291,7 +291,7 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
     // double timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
         
-    for(int d=0; d<Dimensions; d++) {
+    for(int d=0; d<DIMENSIONS; d++) {
       /**
        * d-loop over all dimensions except d. The vector k's entry d is set
        * to 0. We start with the left/bottom face, i.e. the one closer to the 
@@ -299,8 +299,8 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
        */
       dfore(k,{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},d,0) {
         for (int i=0; i<{{OVERLAP}}; i++) {
-          tarch::la::Vector<Dimensions,int> patchCell   = k;
-          tarch::la::Vector<Dimensions,int> overlapCell = k;
+          tarch::la::Vector<DIMENSIONS,int> patchCell   = k;
+          tarch::la::Vector<DIMENSIONS,int> overlapCell = k;
           patchCell(d)   = i;
           overlapCell(d) = i+{{OVERLAP}};
           
@@ -348,13 +348,13 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
             fineGridCellEulerRKFDQ.value[ enumeratorWithAuxiliaryVariables(0,patchCell,0) ]
           );
           for (int j : primaryVarsIndices) {
-            {{FACES_ACCESSOR}}(d+Dimensions).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] = 
+            {{FACES_ACCESSOR}}(d+DIMENSIONS).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] = 
               {{CELL_ACCESSOR}}.value[ enumeratorWithAuxiliaryVariables(0,patchCell,j) ];
 
             {% if PREDICATE_NO<PREDICATES|length %}
               {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO]|length) %}
               {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
-                {{FACES_ACCESSOR}}(d+Dimensions).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] += 
+                {{FACES_ACCESSOR}}(d+DIMENSIONS).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] += 
                    timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
                   fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},patchCell,j) ];
               {% endif %}
@@ -362,12 +362,12 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
             {% endif %}
           }
           for (int j : auxiliaryVarsIndices) {
-            {{FACES_ACCESSOR}}(d+Dimensions).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] =
+            {{FACES_ACCESSOR}}(d+DIMENSIONS).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] =
               fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},patchCell,j) ];
           } //abuse of RHS, auxiliary variables are stored there.
 
           for (int j={{NUMBER_OF_UNKNOWNS}}; j<{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}; j++) {
-            {{FACES_ACCESSOR}}(d+Dimensions).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] = 
+            {{FACES_ACCESSOR}}(d+DIMENSIONS).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] = 
               {{CELL_ACCESSOR}}.value[ enumeratorWithAuxiliaryVariables(0,patchCell,j) ];
           }
         } // overlap depth loop
@@ -376,11 +376,11 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
   } // if predicate holds, i.e. right RK step
   {% endfor %} // all the predicates are done now
 
-  for (int d=0; d<Dimensions; d++) {
+  for (int d=0; d<DIMENSIONS; d++) {
     {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1,true);
     {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(1,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
-    {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdated(0,true);
-    {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdatedTimeStamp(0,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
+    {{FACE_METADATA_ACCESSOR}}(d+DIMENSIONS).setUpdated(0,true);
+    {{FACE_METADATA_ACCESSOR}}(d+DIMENSIONS).setUpdatedTimeStamp(0,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
   }  
   logTraceOut( "touchCellLastTime(...)---ProjectPatchOntoFaces" );
 """

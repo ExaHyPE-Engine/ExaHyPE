@@ -8,7 +8,7 @@
 
 void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatch(
   const {{PRECISION}}* NOALIAS const  QIn,
-  {{PRECISION}}* NOALIAS const        faces[TwoTimesD],
+  {{PRECISION}}* NOALIAS const        faces[TWO_TIMES_D],
   {{PRECISION}}* NOALIAS const        QOut
 ) {
   {{ patch.loopOverCells() }}

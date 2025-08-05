@@ -18,7 +18,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceUnknownsProlongation(
   {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS             lFhbndFine,
   const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS lQhbndCoarse,
   const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS lFhbndCoarse,
-  const tarch::la::Vector<Dimensions - 1, int>&            subfaceIndex
+  const tarch::la::Vector<DIMENSIONS - 1, int>&            subfaceIndex
 ) {
 {% if DIMENSIONS==3%}
   double* tmpX = static_cast<double *>(_mm_malloc(sizeof(double) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}}));
@@ -54,7 +54,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceUnknownsProlongation(
 void {{FULL_QUALIFIED_NAMESPACE}}::faceFluxRestriction(
   {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS             lFhbndCoarse,
   const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS lFhbndFine,
-  const tarch::la::Vector<Dimensions - 1, int>&            subfaceIndex
+  const tarch::la::Vector<DIMENSIONS - 1, int>&            subfaceIndex
 ) {
 {% if DIMENSIONS==3%}
   double* tmpX = static_cast<double *>(_mm_malloc(sizeof(double) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}}));
@@ -83,7 +83,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceFluxRestriction(
 void {{FULL_QUALIFIED_NAMESPACE}}::cellUnknownsProlongation(
   {{SOLUTION_STORAGE_PRECISION}}* NOALIAS             luhFine,
   const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS luhCoarse,
-  const tarch::la::Vector<Dimensions, int>&           subcellIndex
+  const tarch::la::Vector<DIMENSIONS, int>&           subcellIndex
 ) {
   {{SOLUTION_STORAGE_PRECISION}}** projector = DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::fineGridProjector1d;
 
@@ -123,7 +123,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellUnknownsProlongation(
 void {{FULL_QUALIFIED_NAMESPACE}}::cellUnknownsRestriction(
   const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS luhFine,
   {{SOLUTION_STORAGE_PRECISION}}* NOALIAS             luhCoarse,
-  const tarch::la::Vector<Dimensions, int>&           subcellIndex
+  const tarch::la::Vector<DIMENSIONS, int>&           subcellIndex
 ) {
   double* tmpX = static_cast<double *>(_mm_malloc(sizeof(double) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}}));
 {% if DIMENSIONS==3 %}

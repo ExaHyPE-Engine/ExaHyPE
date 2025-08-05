@@ -1,15 +1,15 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-inline GPUCallableMethod void peano4::utils::dDec(tarch::la::Vector<Dimensions, int>& counter, int max) {
-#if defined(GPUOffloadingOff) and !defined(SharedSYCL)
-  for (int i = 0; i < Dimensions - 1; i++) {
+inline GPU_CALLABLE_METHOD void peano4::utils::dDec(tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
+#if !defined(WITH_GPU)
+  for (int i = 0; i < DIMENSIONS - 1; i++) {
     assertion(counter(i) >= 0);
   }
 #endif
 
   counter(0)--;
-  for (int i = 0; i < Dimensions - 1; i++) {
+  for (int i = 0; i < DIMENSIONS - 1; i++) {
     if (counter(i) < 0) {
       counter(i) = max - 1;
       counter(i + 1)--;

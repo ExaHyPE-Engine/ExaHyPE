@@ -32,7 +32,7 @@ namespace peano4 {
  */
 template <class Face> class peano4::datamanagement::FaceEnumerator {
 private:
-  Face* _faces[TwoTimesD];
+  Face* _faces[TWO_TIMES_D];
 
 public:
   /**
@@ -40,8 +40,8 @@ public:
    * with this routine.
    */
   FaceEnumerator() {
-#if PeanoDebug > 0
-    for (int i = 0; i < TwoTimesD; i++) {
+#if PEANO_DEBUG > 0
+    for (int i = 0; i < TWO_TIMES_D; i++) {
       _faces[i] = nullptr;
     }
 #endif
@@ -53,7 +53,7 @@ public:
    */
   FaceEnumerator(Face* firstFace) {
     assertion(firstFace != nullptr);
-    for (int i = 0; i < TwoTimesD; i++) {
+    for (int i = 0; i < TWO_TIMES_D; i++) {
       _faces[i] = firstFace + i;
     }
   }
@@ -64,7 +64,7 @@ public:
    */
   void setPointer(int i, Face* value) {
     assertion(i >= 0);
-    assertion(i < TwoTimesD);
+    assertion(i < TWO_TIMES_D);
     assertion(value != nullptr);
     _faces[i] = value;
   }
@@ -74,7 +74,7 @@ public:
    */
   Face& operator()(int i) const {
     assertion1(i >= 0, i);
-    assertion1(i < TwoTimesD, i);
+    assertion1(i < TWO_TIMES_D, i);
     assertion1(_faces[i] != nullptr, i);
     return *(_faces[i]);
   }

@@ -26,7 +26,7 @@ class AdvectionLinear(Scenario):
         return """
   Q[0] = x[0];
   Q[1] = x[1];
-#if Dimensions==3
+#if DIMENSIONS==3
   Q[2] = x[2];
 #endif
 """
@@ -35,7 +35,7 @@ class AdvectionLinear(Scenario):
         return """
   Qoutside[0] = x[0] - t;
   Qoutside[1] = x[1] - t;
-#if Dimensions==3
+#if DIMENSIONS==3
   Qoutside[2] = x[2] - t;
 #endif
 """

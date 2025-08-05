@@ -34,7 +34,7 @@ exahype2::tests::EnclaveBookkeepingTest::EnclaveBookkeepingTest():
   TestCase("exahype2::tests::EnclaveBookkeepingTest") {}
 
 void exahype2::tests::EnclaveBookkeepingTest::run() {
-#ifdef SharedOMP
+#ifdef WITH_OPENMP
 #pragma omp parallel
     {
 #pragma omp master
@@ -42,7 +42,7 @@ void exahype2::tests::EnclaveBookkeepingTest::run() {
       {
         testMethod([this]() { testFusePendingTasks(); });
       }
-#ifdef SharedOMP
+#ifdef WITH_OPENMP
     }
 #endif
 }

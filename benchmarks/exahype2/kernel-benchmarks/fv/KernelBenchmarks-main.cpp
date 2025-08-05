@@ -35,7 +35,7 @@ namespace {
   bool                       haveReceivedNonCriticalAssertion = false;
 
   std::vector<peano4::datamanagement::CellMarker> _cells;
-  const tarch::la::Vector<Dimensions, double>     CellSize = DomainSize / static_cast<double>(GridLength);
+  const tarch::la::Vector<DIMENSIONS, double>     CellSize = DomainSize / static_cast<double>(GridLength);
 } // namespace
 
 void reportRuntime(const tarch::timing::Measurement& measurement) {
@@ -113,7 +113,7 @@ void plotGrid() {
   snapshotFileName << "solutions/solution-FVSolver-" << counter;
 
   auto writer = tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-    Dimensions,
+    DIMENSIONS,
     snapshotFileName.str(),
     "solutions/solution-FVSolver",
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
@@ -152,8 +152,8 @@ void plotGrid() {
 void invokeFVSolverBoundaryConditions(
   const double* NOALIAS                        Qinside,
   double* NOALIAS                              Qoutside,
-  const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
   double                                       t,
   double                                       dt,
   int                                          normal
@@ -165,16 +165,16 @@ void applyBoundaryConditionsToAxis(int axis, double t, double dt) {
   const double ratio = DomainSize[0] / CellSize[0];
   const int    depth = static_cast<int>(std::round(std::log(ratio) / std::log(3.0)));
   dfore(volume, GridLength, axis, 0) {
-    tarch::la::Vector<Dimensions, double> faceOffset = CellSize / 2.0;
+    tarch::la::Vector<DIMENSIONS, double> faceOffset = CellSize / 2.0;
     // --- Low Boundary ---
-    tarch::la::Vector<Dimensions, double>
+    tarch::la::Vector<DIMENSIONS, double>
       faceCenterLow = tarch::la::multiplyComponents(tarch::la::convertScalar<double>(volume), CellSize) + faceOffset
                       + DomainOffset;
     int faceIndexLow    = DataRepository::Indexing::getFaceIndex(faceCenterLow, CellSize, axis);
     faceCenterLow[axis] = DomainOffset[axis];
 
     // --- High Boundary ---
-    tarch::la::Vector<Dimensions, double> faceCenterHigh = faceCenterLow;
+    tarch::la::Vector<DIMENSIONS, double> faceCenterHigh = faceCenterLow;
     faceCenterHigh[axis] = DomainSize[axis] - faceOffset[axis] + DomainOffset[axis]; // high cell Centre
     int faceIndexHigh    = DataRepository::Indexing::getFaceIndex(faceCenterHigh, CellSize, axis);
     faceCenterHigh[axis] = DomainSize[axis] + DomainOffset[axis]; // High face centre
@@ -195,7 +195,7 @@ void applyBoundaryConditionsToAxis(int axis, double t, double dt) {
     );
 
     // Apply BC to high face
-    double* highFacePtr = DataRepository::getInstance().getFaceQNew(faceIndexHigh, axis + Dimensions);
+    double* highFacePtr = DataRepository::getInstance().getFaceQNew(faceIndexHigh, axis + DIMENSIONS);
     ::exahype2::fv::applyBoundaryConditions<double>(
       invokeFVSolverBoundaryConditions,
       faceCenterHigh,
@@ -205,7 +205,7 @@ void applyBoundaryConditionsToAxis(int axis, double t, double dt) {
       AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
       1,
       AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables,
-      axis + Dimensions,
+      axis + DIMENSIONS,
       highFacePtr
     );
   }
@@ -215,7 +215,7 @@ void applyBoundaryConditions() {
   const double t  = 0.0;
   const double dt = 0.0;
 
-  for (int axis = 0; axis < Dimensions; ++axis) {
+  for (int axis = 0; axis < DIMENSIONS; ++axis) {
     applyBoundaryConditionsToAxis(axis, t, dt);
   }
 }
@@ -223,8 +223,8 @@ void applyBoundaryConditions() {
 void projectPatchOntoFaces() {
   for (auto& marker : _cells) {
     double* QOut = DataRepository::getInstance().getCellQ(marker.x(), marker.h());
-    double* faces[TwoTimesD];
-    for (int i = 0; i < TwoTimesD; i++) {
+    double* faces[TWO_TIMES_D];
+    for (int i = 0; i < TWO_TIMES_D; i++) {
       faces[i] = DataRepository::getInstance().getFaceQNew(marker.x(), marker.h(), i);
     }
     toolbox::blockstructured::projectPatchSolutionOntoFaces(
@@ -256,10 +256,10 @@ void applyInitialConditions() {
   }
 }
 
-peano4::datamanagement::CellMarker createMarkerFromIndex(const tarch ::la ::Vector<Dimensions, int>& index) {
-  tarch::la::Vector<Dimensions, double> cellIndex        = tarch::la::convertScalar<double>(index);
-  tarch::la::Vector<Dimensions, double> cellPositionBase = DomainOffset + CellSize / 2.0;
-  tarch::la::Vector<Dimensions, double>
+peano4::datamanagement::CellMarker createMarkerFromIndex(const tarch ::la ::Vector<DIMENSIONS, int>& index) {
+  tarch::la::Vector<DIMENSIONS, double> cellIndex        = tarch::la::convertScalar<double>(index);
+  tarch::la::Vector<DIMENSIONS, double> cellPositionBase = DomainOffset + CellSize / 2.0;
+  tarch::la::Vector<DIMENSIONS, double>
                                    cellPosition = cellPositionBase + tarch::la::multiplyComponents(cellIndex, CellSize);
   peano4::grid::GridTraversalEvent event;
   event.setX(cellPosition);
@@ -269,7 +269,7 @@ peano4::datamanagement::CellMarker createMarkerFromIndex(const tarch ::la ::Vect
 
 void createGrid() {
   repositories::startGridConstructionStep();
-  _cells.reserve(std::pow(GridLength, Dimensions));
+  _cells.reserve(std::pow(GridLength, DIMENSIONS));
   dfor(volume, GridLength) { _cells.push_back(createMarkerFromIndex(volume)); }
   repositories::finishGridConstructionStep();
 }
@@ -303,9 +303,9 @@ int main(int argc, char** argv) {
 
   ::exahype2::CellData<double, double> patchData(_cells.size(), tarch::MemoryLocation::Device);
   int                                  faceCardinality      = grid.getFaceCardinality();
-  double*                              facesFlattened       = new double[_cells.size() * TwoTimesD * faceCardinality];
+  double*                              facesFlattened       = new double[_cells.size() * TWO_TIMES_D * faceCardinality];
   double*                              facesFlattenedDevice = tarch::allocateMemory<double>(
-    _cells.size() * TwoTimesD * faceCardinality,
+    _cells.size() * TWO_TIMES_D * faceCardinality,
     tarch::MemoryLocation::Device
   );
 
@@ -320,20 +320,20 @@ int main(int argc, char** argv) {
   );
   double* QOutFlattenedHost = grid.getCellQ(0);
 
-  tarch::la::Vector<Dimensions, double>* cellCentresHost = new tarch::la::Vector<Dimensions, double>[_cells.size()];
-  tarch::la::Vector<Dimensions, double>* cellSizeHost    = new tarch::la::Vector<Dimensions, double>[_cells.size()];
+  tarch::la::Vector<DIMENSIONS, double>* cellCentresHost = new tarch::la::Vector<DIMENSIONS, double>[_cells.size()];
+  tarch::la::Vector<DIMENSIONS, double>* cellSizeHost    = new tarch::la::Vector<DIMENSIONS, double>[_cells.size()];
 
   for (int patchIndex = 0; patchIndex < _cells.size(); patchIndex++) {
     cellCentresHost[patchIndex] = _cells[patchIndex].x();
     cellSizeHost[patchIndex]    = _cells[patchIndex].h();
   }
-  tarch::copyTo<tarch::la::Vector<Dimensions, double>, tarch::la::Vector<Dimensions, double>>(
+  tarch::copyTo<tarch::la::Vector<DIMENSIONS, double>, tarch::la::Vector<DIMENSIONS, double>>(
     patchData.cellCentre,
     cellCentresHost,
     _cells.size(),
     tarch::MemoryLocation::Device
   );
-  tarch::copyTo<tarch::la::Vector<Dimensions, double>, tarch::la::Vector<Dimensions, double>>(
+  tarch::copyTo<tarch::la::Vector<DIMENSIONS, double>, tarch::la::Vector<DIMENSIONS, double>>(
     patchData.cellSize,
     cellSizeHost,
     _cells.size(),
@@ -371,12 +371,12 @@ int main(int argc, char** argv) {
     applyBoundaryConditions();
 
     for (int patchIndex = 0; patchIndex < _cells.size(); patchIndex++) {
-      for (int f = 0; f < TwoTimesD; ++f) {
+      for (int f = 0; f < TWO_TIMES_D; ++f) {
         std::copy_n(
           grid.getFaceQNew(_cells[patchIndex].x(), _cells[patchIndex].h(), f),
           faceCardinality,
           &facesFlattened
-            [patchIndex * TwoTimesD * faceCardinality // Skip whole patches
+            [patchIndex * TWO_TIMES_D * faceCardinality // Skip whole patches
              + f * faceCardinality                    // Move to the f-th face inside the patch
         ]
         );
@@ -391,7 +391,7 @@ int main(int argc, char** argv) {
     tarch::copyTo<double, double>(
       facesFlattenedDevice,
       facesFlattened,
-      _cells.size() * TwoTimesD * faceCardinality,
+      _cells.size() * TWO_TIMES_D * faceCardinality,
       tarch::MemoryLocation::Device
     );
 

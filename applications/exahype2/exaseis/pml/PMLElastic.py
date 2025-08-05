@@ -7,7 +7,7 @@ def initial(pointwise_initial_conditions):
   context->initUnknownsPatch(Q, x, h, 0.0, 0.0,
   [&](
       const {{SOLUTION_STORAGE_PRECISION}}* const x,
-      const tarch::la::Vector<Dimensions,double>& center,
+      const tarch::la::Vector<DIMENSIONS,double>& center,
       const double t,
       const double dt, 
       {{SOLUTION_STORAGE_PRECISION}}* Q
@@ -147,7 +147,7 @@ def flux():
 
   std::fill_n(F, NumberOfUnknowns, 0.0);
 
-  toolbox::curvi::idx2 idx_pml(Dimensions, 9);
+  toolbox::curvi::idx2 idx_pml(DIMENSIONS, 9);
 
   switch (normal) {
     case 0: {
@@ -188,7 +188,7 @@ def flux():
 
 def ncp():
   return """
-  toolbox::curvi::idx2 idx_pml(Dimensions, 9);
+  toolbox::curvi::idx2 idx_pml(DIMENSIONS, 9);
   auto        rho       = Q[Shortcuts::rho];
   auto        cp        = Q[Shortcuts::cp];
   auto        cs        = Q[Shortcuts::cs];
@@ -287,7 +287,7 @@ def algebraic_source():
   auto alpha_y = (pml_alpha_const + pml_alpha_scalar * dmp_pml_y);
   auto alpha_z = (pml_alpha_const + pml_alpha_scalar * dmp_pml_z);
 
-  toolbox::curvi::idx2 idx_pml(Dimensions, 9);
+  toolbox::curvi::idx2 idx_pml(DIMENSIONS, 9);
 
   const auto* Q_pml = Q + Shortcuts::pml;
   auto*       S_pml = S + Shortcuts::pml;
@@ -335,7 +335,7 @@ def multiplyMaterialParameterMatrix():
   auto lambda  = rho * cp * cp - 2 * mu;
   auto rho_inv = 1.0 / (rho * jacobian);
 
-  toolbox::curvi::idx2 idx_pml(Dimensions, 9);
+  toolbox::curvi::idx2 idx_pml(DIMENSIONS, 9);
 
   // Rhs uses the same formula regardless of dimension, hence no switch necessary
 
@@ -409,9 +409,9 @@ def init_grid_step_implementation(scenario_string):
   //setting coarsestMeshLevel and maxAdaptiveMeshLevel
   double maxDSize = std::numeric_limits<double>::min();
   double minDSize = std::numeric_limits<double>::max();
-  tarch::la::Vector<Dimensions, double> sizes = DomainSize;
+  tarch::la::Vector<DIMENSIONS, double> sizes = DomainSize;
   
-  for(int i=0; i<Dimensions; i++){
+  for(int i=0; i<DIMENSIONS; i++){
     if(sizes[i]>maxDSize){
       maxDSize = sizes[i];
     }

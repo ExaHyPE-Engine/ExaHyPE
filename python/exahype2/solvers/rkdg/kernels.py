@@ -42,7 +42,7 @@ def create_abstract_solver_declarations(
     #endif
     static double maxEigenvalue(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -62,7 +62,7 @@ def create_abstract_solver_declarations(
      */
     virtual double maxEigenvalue(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal
@@ -79,7 +79,7 @@ def create_abstract_solver_declarations(
     #endif
     static void flux(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -94,7 +94,7 @@ def create_abstract_solver_declarations(
     {% if FLUX_IMPLEMENTATION!="<none>" %}
     virtual void flux(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -114,7 +114,7 @@ def create_abstract_solver_declarations(
     static void nonconservativeProduct(
       const double * NOALIAS                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -130,7 +130,7 @@ def create_abstract_solver_declarations(
     virtual void nonconservativeProduct(
       const double * NOALIAS                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * NOALIAS                  deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -149,7 +149,7 @@ def create_abstract_solver_declarations(
     #endif
     static void sourceTerm(
       const double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
       double                                       t,
       double                                       dt,
       double * NOALIAS S,
@@ -163,7 +163,7 @@ def create_abstract_solver_declarations(
     {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     virtual void sourceTerm(
       const double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
       double                                       t,
       double                                       dt,
       double * NOALIAS S
@@ -181,7 +181,7 @@ def create_abstract_solver_declarations(
     #endif
     void pointSource(
       const double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
       double                                       t,
       double                                       dt,
       double * NOALIAS S,
@@ -195,7 +195,7 @@ def create_abstract_solver_declarations(
     {% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
     virtual void pointSource(
       const double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
       double                                       t,
       double                                       dt,
       double * NOALIAS S
@@ -228,7 +228,7 @@ def create_abstract_solver_definitions(
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal
@@ -240,7 +240,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% if FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -254,7 +254,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * NOALIAS                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -267,7 +267,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * NOALIAS                  Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
   double                                       t,
   double                                       dt,
   double * NOALIAS                        S
@@ -284,7 +284,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 #error Point sources not yet implemented
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
   const double * NOALIAS                  Q,
-  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
   double                                       t,
   double                                       dt,
   double * NOALIAS                        S
@@ -303,7 +303,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
 #endif
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -322,7 +322,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
       double                                       t,
   double                                       dt,
   int                                          normal,
@@ -347,7 +347,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
       const double * NOALIAS                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
       double                                       t,
   double                                       dt,
   int                                          normal,
@@ -371,7 +371,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
       const double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
       double                                       t,
       double                                       dt,
       double * NOALIAS S,
@@ -394,7 +394,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
       const double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
       double                                       t,
       double                                       dt,
       double * NOALIAS S,
@@ -439,7 +439,7 @@ def create_solver_declarations(
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     virtual void sourceTerm(
       const double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
       double                                       t,
       double                                       dt,
       double * NOALIAS S
@@ -450,7 +450,7 @@ def create_solver_declarations(
     #error point sources not defined yet
     virtual void pointSource(
       const double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
       double                                       t,
       double                                       dt,
       double * NOALIAS S
@@ -467,7 +467,7 @@ def create_solver_declarations(
      */
     virtual double maxEigenvalue(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal
@@ -477,7 +477,7 @@ def create_solver_declarations(
     {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     virtual void flux(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -489,7 +489,7 @@ def create_solver_declarations(
     virtual void nonconservativeProduct(
       const double * NOALIAS                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -517,8 +517,8 @@ def create_solver_declarations(
     #endif
      static void sourceTerm(
        const double * NOALIAS Q,
-       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-       const tarch::la::Vector<Dimensions,double>&  volumeH,
+       const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+       const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
        double                                       t,
        double                                       dt,
        double * NOALIAS S,
@@ -550,8 +550,8 @@ def create_solver_declarations(
     #endif
      static void pointSource(
        const double * NOALIAS Q,
-       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-       const tarch::la::Vector<Dimensions,double>&  volumeH,
+       const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+       const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
        double                                       t,
        double                                       dt,
        double * NOALIAS S,
@@ -582,7 +582,7 @@ def create_solver_declarations(
     #endif
     static double maxEigenvalue(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -613,7 +613,7 @@ def create_solver_declarations(
     #endif
     static void flux(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -646,7 +646,7 @@ def create_solver_declarations(
     static void nonconservativeProduct(
       const double * NOALIAS                  Q,       // Q[5+0],
       const double * NOALIAS                  deltaQ,    // deltaQ[5+0]
-      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -683,7 +683,7 @@ def create_solver_definitions(
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal
@@ -697,7 +697,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -713,7 +713,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * NOALIAS                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -728,7 +728,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * NOALIAS                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
   double                                       t,
   double                                       dt,
   double * NOALIAS                        S  // S[{{NUMBER_OF_UNKNOWNS}}]
@@ -750,7 +750,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
     #endif
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -769,7 +769,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
     #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -790,7 +790,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * NOALIAS                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -810,7 +810,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
     #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * NOALIAS Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
   double                                       t,
   double                                       dt,
   double * NOALIAS S,
@@ -830,7 +830,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 #error  point sources not implemented yet
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * NOALIAS Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
   double                                       t,
   double                                       dt,
   double * NOALIAS S,
@@ -866,7 +866,7 @@ def get_face_merge_implementation(patch_overlap):
     }
     template = """
   
-  #if Dimensions==2
+  #if DIMENSIONS==2
   constexpr int nodesPerFace = {DOFS_PER_AXIS};
   #else
   constexpr int nodesPerFace = {DOFS_PER_AXIS}*{DOFS_PER_AXIS};
@@ -874,7 +874,7 @@ def get_face_merge_implementation(patch_overlap):
   
   constexpr int strideQ = {UNKNOWNS};
     
-  const int faceDimension = marker.getSelectedFaceNumber()%Dimensions;
+  const int faceDimension = marker.getSelectedFaceNumber()%DIMENSIONS;
   //if the outer normal is positive, the normal points to the right so the face is on the right
   const int faceLR = (marker.outerNormal()[faceDimension]>0.0 ? 1 : 0);
 
@@ -950,7 +950,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       [&](
         const double * NOALIAS                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<DIMENSIONS,double>&  x,
         double                                       t,
         double                                       dt,
         int                                          normal,
@@ -963,7 +963,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
       [&](
           const double * NOALIAS                  Q,
           const double * NOALIAS                  deltaQ,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
           double                                       t,
           double                                       dt,
           int                                          normal,
@@ -975,7 +975,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
         }, //ncp
       [&](
         const double * NOALIAS                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<DIMENSIONS,double>&  x,
         double                                       t,
         double                                       dt,
         double * NOALIAS                        S
@@ -986,8 +986,8 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
       }, //source
       [&](
         const double * NOALIAS                  Q,
-        const tarch::la::Vector<Dimensions,double>&  cellCentre,
-        const tarch::la::Vector<Dimensions,double>&  cellH,
+        const tarch::la::Vector<DIMENSIONS,double>&  cellCentre,
+        const tarch::la::Vector<DIMENSIONS,double>&  cellH,
         double                                       t,
         double                                       dt
       ) -> std::vector<::exahype2::dg::PointSource> {
@@ -1039,7 +1039,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
 def create_add_solver_contributions_call(polynomial_basis):
     if isinstance(polynomial_basis, GaussLegendreBasis):
         return """integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-    #if Dimensions==2
+    #if DIMENSIONS==2
       fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(0).value, //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(2).value, //right
       fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(1).value, //down

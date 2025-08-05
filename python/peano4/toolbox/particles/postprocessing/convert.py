@@ -28,7 +28,7 @@ parser.add_argument(
     dest="dimensions",
     type=int,
     required=True,
-    help="Dimensions of underlying simulation, i.e. 2 or 3",
+    help="DIMENSIONS of underlying simulation, i.e. 2 or 3",
 )
 parser.add_argument(
     "-o",

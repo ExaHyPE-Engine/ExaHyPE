@@ -23,7 +23,7 @@ void toolbox::blockstructured::tests::InterpolationTest::run() {
 
 
 void toolbox::blockstructured::tests::InterpolationTest::testInterpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear() {
-  #if Dimensions==3
+  #if DIMENSIONS==3
   const int NumberOfUnknowns = 3;
   const int SourcePatchSize = 4;
   const int SourceHaloSize = 3;
@@ -58,7 +58,7 @@ void toolbox::blockstructured::tests::InterpolationTest::testInterpolateCellData
 
 
 void toolbox::blockstructured::tests::InterpolationTest::testRestrictCellForBreakingDam() {
-  #if Dimensions==2 and PeanoDebug>0
+  #if DIMENSIONS==2 and PEANO_DEBUG>0
   peano4::grid::GridTraversalEvent    dummyEvent;
   peano4::datamanagement::CellMarker  cellMarker(dummyEvent);
   cellMarker.setRelativePositionWithinFatherCell( 0,0 );
@@ -128,7 +128,7 @@ void toolbox::blockstructured::tests::InterpolationTest::testRestrictCellForBrea
 
 
 void toolbox::blockstructured::tests::InterpolationTest::testRestrictHaloLayer_AoS_averaging() {
-  #if Dimensions==2
+  #if DIMENSIONS==2
   peano4::grid::GridTraversalEvent    dummyEvent;
   dummyEvent.setRelativePositionToFather(0,0);
   dummyEvent.setRelativePositionToFather(1,0);

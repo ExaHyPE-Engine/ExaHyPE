@@ -405,11 +405,11 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     __Template_TouchCellFirstTime = jinja2.Template(
         """
   std::list< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
-  std::vector< int >                            numberOfCoalescedLocalParticlesPerVertex( TwoPowerD );
+  std::vector< int >                            numberOfCoalescedLocalParticlesPerVertex( TWO_POWER_D );
   std::vector< bool >                           localParticleIsContainedInCell;
   
   _numberOfActiveParticlesAdded.push_back(0);
-  for (int i=0; i<TwoPowerD; i++) {
+  for (int i=0; i<TWO_POWER_D; i++) {
     // Keep track of number of particles
     _numberOfActiveParticlesPerVertex.push_back( fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size() );
     _numberOfActiveParticlesAdded.back()        += fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
@@ -422,8 +422,8 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     
     // Construct the two local particle sets
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
-      std::bitset<TwoPowerD> mask = 0;
-      mask.set(TwoPowerD-i-1);
+      std::bitset<TWO_POWER_D> mask = 0;
+      mask.set(TWO_POWER_D-i-1);
       bool isLocal = (mask & p->getContainedInAdjacentCell()).any();
       assertionEquals4( 
         isLocal, 
@@ -443,7 +443,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
   assertion1( 
     not numberOfCoalescedActiveParticlesPerVertex.empty()
     and
-    (numberOfCoalescedActiveParticlesPerVertex.size() % TwoPowerD == 0),
+    (numberOfCoalescedActiveParticlesPerVertex.size() % TWO_POWER_D == 0),
     numberOfCoalescedActiveParticlesPerVertex.size()
   );
   {{PARTICLE_PARTICLE_INTERACTION_KERNEL}}
@@ -455,7 +455,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
         """
   assertion( not _numberOfActiveParticlesAdded.empty() );
   assertion( _activeParticles.size()>=_numberOfActiveParticlesAdded.back() );
-  assertion( _numberOfActiveParticlesPerVertex.size()>=TwoPowerD );
+  assertion( _numberOfActiveParticlesPerVertex.size()>=TWO_POWER_D );
   
 
   // More elegant way to write
@@ -469,7 +469,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
   );
     
   _numberOfActiveParticlesPerVertex.erase( 
-    std::prev(_numberOfActiveParticlesPerVertex.end(),TwoPowerD ),
+    std::prev(_numberOfActiveParticlesPerVertex.end(),TWO_POWER_D ),
     _numberOfActiveParticlesPerVertex.end()
   );
   

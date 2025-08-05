@@ -39,7 +39,7 @@ void   tarch::mpi::DoubleMessage::setValue(double value) {
 
 
 
-#ifdef Parallel
+#ifdef WITH_MPI
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype tarch::mpi::DoubleMessage::Datatype = MPI_DATATYPE_NULL;
@@ -248,7 +248,7 @@ void tarch::mpi::DoubleMessage::receive(
 }
 #endif
 
-#ifdef Parallel
+#ifdef WITH_MPI
 void tarch::mpi::DoubleMessage::sendAndPollDanglingMessages(const tarch::mpi::DoubleMessage& message, int destination, int tag, MPI_Comm communicator ) {
   tarch::mpi::DoubleMessage::send(
     message, destination, tag,

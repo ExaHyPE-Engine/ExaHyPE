@@ -17,15 +17,15 @@ static_assert(MAX_TABLE >= 2, "MAX_TABLE must be at least 2.");
 
 namespace peano4 {
   namespace utils {
-    constexpr int MaxIndexOfLinearisation = BasePowerExponent<MAX_TABLE, Dimensions>::value; // Number of possible
+    constexpr int MaxIndexOfLinearisation = BasePowerExponent<MAX_TABLE, DIMENSIONS>::value; // Number of possible
                                                                                              // entries in a
                                                                                              // d-dimensional grid
 
     extern int                                lookupTableDLinearised[MaxIndexOfLinearisation * (MAX_TABLE - 1)];
-    extern tarch::la::Vector<Dimensions, int> lookupTableDDeLinearised[MaxIndexOfLinearisation * (MAX_TABLE - 1)];
+    extern tarch::la::Vector<DIMENSIONS, int> lookupTableDDeLinearised[MaxIndexOfLinearisation * (MAX_TABLE - 1)];
 
-    inline GPUCallableMethod int getKeyForDLinearisedLookup(const tarch::la::Vector<Dimensions, int>& counter, int max);
-    inline GPUCallableMethod int getKeyForDDeLinearisedLookup(int value, int max);
+    inline GPU_CALLABLE_METHOD int getKeyForDLinearisedLookup(const tarch::la::Vector<DIMENSIONS, int>& counter, int max);
+    inline GPU_CALLABLE_METHOD int getKeyForDDeLinearisedLookup(int value, int max);
 
     /**
      * Map d-dimensional vector onto integer index
@@ -38,27 +38,27 @@ namespace peano4 {
      * @return the linearisation of the counter, i.e. the k-th component is
      *         multiplied by max^k and the results are accumulated.
      */
-    inline GPUCallableMethod int dLinearised(const std::bitset<Dimensions>& counter);
-    inline GPUCallableMethod int dLinearised(const tarch::la::Vector<Dimensions, int>& counter, int max);
-    inline GPUCallableMethod int dLinearisedWithoutLookup(const tarch::la::Vector<Dimensions, int>& counter, int max);
+    inline GPU_CALLABLE_METHOD int dLinearised(const std::bitset<DIMENSIONS>& counter);
+    inline GPU_CALLABLE_METHOD int dLinearised(const tarch::la::Vector<DIMENSIONS, int>& counter, int max);
+    inline GPU_CALLABLE_METHOD int dLinearisedWithoutLookup(const tarch::la::Vector<DIMENSIONS, int>& counter, int max);
 
     /**
      * Special 2d variant of dLinearised that works also if you compile with other
      * dimensions.
      */
-    inline GPUCallableMethod int d2Linearised(const tarch::la::Vector<2, int>& counter, int max);
+    inline GPU_CALLABLE_METHOD int d2Linearised(const tarch::la::Vector<2, int>& counter, int max);
 
     /**
      * Special 3d variant of dLinearised that works also if you compile with other
      * dimensions.
      */
-    inline GPUCallableMethod int d3Linearised(const tarch::la::Vector<3, int>& counter, int max);
+    inline GPU_CALLABLE_METHOD int d3Linearised(const tarch::la::Vector<3, int>& counter, int max);
 
     /**
      * Counterpart of dLinearised().
      */
-    inline GPUCallableMethod tarch::la::Vector<Dimensions, int> dDelinearised(int value, int max);
-    inline GPUCallableMethod tarch::la::Vector<Dimensions, int> dDelinearisedWithoutLookup(int value, int max);
+    inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> dDelinearised(int value, int max);
+    inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> dDelinearisedWithoutLookup(int value, int max);
 
     void setupLookupTableForDLinearised();
     void setupLookupTableForDDelinearised();

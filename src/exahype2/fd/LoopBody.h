@@ -29,10 +29,10 @@ namespace exahype2 {
       );
 
       namespace internal {
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+        #if defined(WITH_OPENMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(WITH_GPU_OMP_TARGET))
         #pragma omp declare simd
         #endif
-        #if defined(GPUOffloadingOMP)
+        #if defined(WITH_GPU_OMP_TARGET)
         #pragma omp declare target
         #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
@@ -40,33 +40,33 @@ namespace exahype2 {
           const double* NOALIAS                QIn,
           const QInEnumeratorType&                  QInEnumerator,
           int                                       patchIndex,
-          const tarch::la::Vector<Dimensions,int>&  volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&  volumeIndex,
           int                                       unknown,
           double* NOALIAS                      QOut,
           const QOutEnumeratorType&                 QOutEnumerator
-        ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
+        );
+        #if defined(WITH_GPU_OMP_TARGET)
         #pragma omp end declare target
         #endif
 
         /**
          * The complicated way to write =0.
          */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+        #if defined(WITH_OPENMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(WITH_GPU_OMP_TARGET))
         #pragma omp declare simd
         #endif
-        #if defined(GPUOffloadingOMP)
+        #if defined(WITH_GPU_OMP_TARGET)
         #pragma omp declare target
         #endif
         template <class QOutEnumeratorType>
         static void clearSolution_LoopBody(
           int                                       patchIndex,
-          const tarch::la::Vector<Dimensions,int>&  volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&  volumeIndex,
           int                                       unknown,
           double* NOALIAS                      QOut,
           const QOutEnumeratorType&                 QOutEnumerator
-        ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
+        );
+        #if defined(WITH_GPU_OMP_TARGET)
         #pragma omp end declare target
         #endif
 
@@ -97,15 +97,15 @@ namespace exahype2 {
           const double* NOALIAS                   QIn,
           const QInEnumeratorType&                     QInEnumerator,
           exahype2::fd::Source                         AlgebraicSource,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
           double                                       t,
           double                                       dt,
           double* NOALIAS                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
-        ) InlineMethod;
+        );
 
         /**
          * Overloaded version which uses static invocation instead of a
@@ -115,15 +115,15 @@ namespace exahype2 {
         static void addAlgebraicSourceTerm_LoopBody(
           const double* NOALIAS                   QIn,
           const QInEnumeratorType&                     QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
           double                                       t,
           double                                       dt,
           double* NOALIAS                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
-        ) InlineMethod;
+        );
 
         /**
          * Specialised version.
@@ -132,28 +132,28 @@ namespace exahype2 {
         static void addAlgebraicSourceTerm_LoopBody(
           const double* NOALIAS                   QIn,
           const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
           double                                       t,
           double                                       dt,
           double* NOALIAS                         QOut,
           const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator
-        ) InlineMethod;
+        );
 
         template <class QOutEnumeratorType>
         inline static double reduceMaxEigenvalue_LoopBody(
           const double* NOALIAS                   QOut,
           const QOutEnumeratorType&                    QOutEnumerator,
           exahype2::fd::MaxEigenvalue                  maxEigenvalue,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
           double                                       t,
           double                                       dt
-        ) InlineMethod;
+        );
 
         /**
          * Overloaded version with static function calls.
@@ -162,13 +162,13 @@ namespace exahype2 {
         inline static double reduceMaxEigenvalue_LoopBody(
           const double* NOALIAS                   QOut,
           const QOutEnumeratorType&                    QOutEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
           double                                       t,
           double                                       dt
-        ) InlineMethod;
+        );
 
         /**
          * Overloaded version with static function calls.
@@ -177,13 +177,13 @@ namespace exahype2 {
         static double reduceMaxEigenvalue_LoopBody(
           const double* NOALIAS                   QOut,
           const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
           double                                       t,
           double                                       dt
-        ) InlineMethod;
+        );
 
         /**
          * Specialisation without the gather.
@@ -193,13 +193,13 @@ namespace exahype2 {
           const double* NOALIAS                   QOut,
           const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
           exahype2::fd::MaxEigenvalue                  maxEigenvalue,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
           double                                       t,
           double                                       dt
-        ) InlineMethod;
+        );
       }
     }
 }

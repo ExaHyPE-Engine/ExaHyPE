@@ -44,8 +44,8 @@ namespace variant1 {
                           int                                         numberOfCells,
                           double                                      timeStamp,
                           double                                      timeStepSize,
-                          const tarch::la::Vector<Dimensions, double> cellCenter,
-                          const tarch::la::Vector<Dimensions, double> cellSize
+                          const tarch::la::Vector<DIMENSIONS, double> cellCenter,
+                          const tarch::la::Vector<DIMENSIONS, double> cellSize
                         );
 } // namespace variant1
 
@@ -55,8 +55,8 @@ namespace variant2 {
                           int                                         numberOfCells,
                           double                                      timeStamp,
                           double                                      timeStepSize,
-                          const tarch::la::Vector<Dimensions, double> cellCenter,
-                          const tarch::la::Vector<Dimensions, double> cellSize
+                          const tarch::la::Vector<DIMENSIONS, double> cellCenter,
+                          const tarch::la::Vector<DIMENSIONS, double> cellSize
                         );
 } // namespace variant2
 
@@ -66,8 +66,8 @@ namespace variant3 {
                           int                                         numberOfCells,
                           double                                      timeStamp,
                           double                                      timeStepSize,
-                          const tarch::la::Vector<Dimensions, double> cellCenter,
-                          const tarch::la::Vector<Dimensions, double> cellSize
+                          const tarch::la::Vector<DIMENSIONS, double> cellCenter,
+                          const tarch::la::Vector<DIMENSIONS, double> cellSize
                         );
 } // namespace variant3
 
@@ -77,8 +77,8 @@ namespace variant4 {
                           int                                         numberOfCells,
                           double                                      timeStamp,
                           double                                      timeStepSize,
-                          const tarch::la::Vector<Dimensions, double> cellCenter,
-                          const tarch::la::Vector<Dimensions, double> cellSize
+                          const tarch::la::Vector<DIMENSIONS, double> cellCenter,
+                          const tarch::la::Vector<DIMENSIONS, double> cellSize
                         );
 } // namespace variant4
 
@@ -88,8 +88,8 @@ namespace variant5 {
                           int                                         numberOfCells,
                           double                                      timeStamp,
                           double                                      timeStepSize,
-                          const tarch::la::Vector<Dimensions, double> cellCenter,
-                          const tarch::la::Vector<Dimensions, double> cellSize
+                          const tarch::la::Vector<DIMENSIONS, double> cellCenter,
+                          const tarch::la::Vector<DIMENSIONS, double> cellSize
                         );
 } // namespace variant5
 
@@ -99,7 +99,7 @@ namespace variant6 {
                           int                                         numberOfCells,
                           double                                      timeStamp,
                           double                                      timeStepSize,
-                          const tarch::la::Vector<Dimensions, double> cellCenter,
-                          const tarch::la::Vector<Dimensions, double> cellSize
+                          const tarch::la::Vector<DIMENSIONS, double> cellCenter,
+                          const tarch::la::Vector<DIMENSIONS, double> cellSize
                         );
 } // namespace variant6

@@ -22,20 +22,20 @@ namespace exahype2 {
          * 2 neighbouring cells on each side of the central one. The computation requires    
    * us to have access to 2 halo layers on each side of a given patch.
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(WITH_OPENMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(WITH_GPU_OMP_TARGET))
         #pragma omp declare simd
         #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void computeAuxiliaryVariables_LoopBody(
           double* NOALIAS                           QIn,
           const QInEnumeratorType&                       QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&    patchCentre,
-          const tarch::la::Vector<Dimensions,double>&    patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&    patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&    patchSize,
           int                                            patchIndex,
-          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&       volumeIndex,
           int                                            normal,
           const QOutEnumeratorType&                      QOutEnumerator
-        ) InlineMethod;
+        );
 
         /**
          * This function calculates the source term that involves B_i\nabla_iQ where
@@ -44,7 +44,7 @@ namespace exahype2 {
          * scheme with a five-point stancil. This requires one to have access to at 
          * least two halo layers on each side of a given patch.
          */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+        #if defined(WITH_OPENMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(WITH_GPU_OMP_TARGET))
         #pragma omp declare simd
         #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
@@ -52,17 +52,17 @@ namespace exahype2 {
           const double* NOALIAS                     QIn,
           const QInEnumeratorType&                       QInEnumerator,
           exahype2::fd::NonconservativeProduct           DifferentialSource,
-          const tarch::la::Vector<Dimensions,double>&    patchCentre,
-          const tarch::la::Vector<Dimensions,double>&    patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&    patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&    patchSize,
           int                                            patchIndex,
-          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&       volumeIndex,
           double                                         t,
           double                                         dt,
           int                                            normal,
           double* NOALIAS                           QDiffSrc,
           const QOutEnumeratorType&                      QDiffSrcEnumerator,
           DifferentialSourceTermVariant                  variant
-        ) InlineMethod;
+        );
 
 
 /*
@@ -74,17 +74,17 @@ namespace exahype2 {
           const double* NOALIAS                     QIn,
           const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
           exahype2::fd::NonconservativeProduct           DifferentialSource,
-          const tarch::la::Vector<Dimensions,double>&    patchCentre,
-          const tarch::la::Vector<Dimensions,double>&    patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&    patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&    patchSize,
           int                                            patchIndex,
-          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&       volumeIndex,
           double                                         t,
           double                                         dt,
           int                                            normal,
           double* NOALIAS                           QDiffSrc,
           const exahype2::enumerator::AoSLexicographicEnumerator& QDiffSrcEnumerator,
           DifferentialSourceTermVariant                  variant
-        ) InlineMethod;
+        )
 */
 
 
@@ -95,17 +95,17 @@ namespace exahype2 {
         static void computeDifferentialSourceTerm_LoopBody(
           const double* NOALIAS                     QIn,
           const QInEnumeratorType&                       QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&    patchCentre,
-          const tarch::la::Vector<Dimensions,double>&    patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&    patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&    patchSize,
           int                                            patchIndex,
-          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&       volumeIndex,
           double                                         t,
           double                                         dt,
           int                                            normal,
           double* NOALIAS                           QDiffSrc,
           const QOutEnumeratorType&                      QDiffSrcEnumerator,
           DifferentialSourceTermVariant                  variant
-        ) InlineMethod;
+        );
 
 
         /**
@@ -116,10 +116,10 @@ namespace exahype2 {
 	 * QDiffSrcEnumerator, which is identical to QOutEnumerator, is aware that we
          * work with volume centres.
          */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+        #if defined(WITH_OPENMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(WITH_GPU_OMP_TARGET))
         #pragma omp declare simd
         #endif
-        #if defined(GPUOffloadingOMP)
+        #if defined(WITH_GPU_OMP_TARGET)
         #pragma omp declare target
         #endif
         template <typename QOutEnumeratorType>
@@ -128,16 +128,16 @@ namespace exahype2 {
           const double* NOALIAS                   QDiffSrcY,
           const double* NOALIAS                   QDiffSrcZ,
           const QOutEnumeratorType&                    QDiffSrcEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
           int                                          unknown,
           double                                       dt,
           double* NOALIAS                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
-        ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
+        );
+        #if defined(WITH_GPU_OMP_TARGET)
         #pragma omp end declare target
         #endif
 
@@ -148,23 +148,23 @@ namespace exahype2 {
          * finite difference scheme used in other parts of the equations. It requires
 	 * us to have access to at least 3 halo layers on each side of a given patch.
          */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+        #if defined(WITH_OPENMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(WITH_GPU_OMP_TARGET))
         #pragma omp declare simd
         #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void computeKreissOligerDissipationTerm_LoopBody(
           const double* NOALIAS                     QIn,
           const QInEnumeratorType&                       QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&    patchCentre,
-          const tarch::la::Vector<Dimensions,double>&    patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&    patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&    patchSize,
           int                                            patchIndex,
-          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&       volumeIndex,
           double                                         t,
           double                                         dt,
           int                                            normal,
           double* NOALIAS                           QKODsp,
           const QOutEnumeratorType&                      QKODspEnumerator
-        ) InlineMethod;
+        );
 
         /**
          * Add the Kreiss Oliger dissipation contributions to one volume.
@@ -174,10 +174,10 @@ namespace exahype2 {
 	 * QKODspEnumerator, which is identical to QOutEnumerator, is aware that we
          * work with volume centres.
          */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+        #if defined(WITH_OPENMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(WITH_GPU_OMP_TARGET))
         #pragma omp declare simd
         #endif
-        #if defined(GPUOffloadingOMP)
+        #if defined(WITH_GPU_OMP_TARGET)
         #pragma omp declare target
         #endif
         template <typename QOutEnumeratorType>
@@ -187,16 +187,16 @@ namespace exahype2 {
           const double* NOALIAS                   QKODspY,
           const double* NOALIAS                   QKODspZ,
           const QOutEnumeratorType&                    QKODspEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
           int                                          unknown,
           double                                       dt,
           double* NOALIAS                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
-        ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
+        );
+        #if defined(WITH_GPU_OMP_TARGET)
         #pragma omp end declare target
         #endif
 
@@ -213,7 +213,7 @@ namespace exahype2 {
          * this temporary array, before we scatter it into the image.
          *
          */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+        #if defined(WITH_OPENMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(WITH_GPU_OMP_TARGET))
         #pragma omp declare simd
         #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
@@ -221,16 +221,16 @@ namespace exahype2 {
           const double* NOALIAS                   QIn,
           const QInEnumeratorType&                     QInEnumerator,
           exahype2::fd::Flux                           flux,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
           double                                       t,
           double                                       dt,
           int                                          normal,
           double* NOALIAS                         QFlux,
           const QOutEnumeratorType&                    QFluxEnumerator
-        ) InlineMethod;
+        );
 
 
         /**
@@ -240,16 +240,16 @@ namespace exahype2 {
         static void computeFlux_LoopBody(
           const double* NOALIAS                   QIn,
           const QInEnumeratorType&                     QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
           double                                       t,
           double                                       dt,
           int                                          normal,
           double* NOALIAS                         QFlux,
           const QOutEnumeratorType&                    QFluxEnumerator
-        ) InlineMethod;
+        );
 
 
         /**
@@ -260,10 +260,10 @@ namespace exahype2 {
          * We therefore simply can take these flux components, scale them
          * with dt, and add them to the solution.
          */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+        #if defined(WITH_OPENMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(WITH_GPU_OMP_TARGET))
         #pragma omp declare simd
         #endif
-        #if defined(GPUOffloadingOMP)
+        #if defined(WITH_GPU_OMP_TARGET)
         #pragma omp declare target
         #endif
         template <typename QOutEnumeratorType>
@@ -272,19 +272,19 @@ namespace exahype2 {
           const double* NOALIAS                   tempFluxY,
           const double* NOALIAS                   tempFluxZ,
           const QOutEnumeratorType&                    fluxEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
           int                                          unknown,
           double                                       dt,
           double* NOALIAS                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
-        ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
+        );
+        #if defined(WITH_GPU_OMP_TARGET)
         #pragma omp end declare target
         #endif
-      }
+      };
     }
   }
 }

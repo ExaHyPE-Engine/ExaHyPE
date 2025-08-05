@@ -14,7 +14,7 @@ toolbox::particles::tests::TestHelpers::TestHelpers():
 
 
 void toolbox::particles::tests::TestHelpers::testParticleAssignedToVertexWillBeLocal() {
-  #if Dimensions==2
+  #if DIMENSIONS==2
   peano4::datamanagement::VertexMarker markerAFromYellowRank;
   peano4::datamanagement::VertexMarker markerBFromYellowRank;
   peano4::datamanagement::VertexMarker markerCFromYellowRank;
@@ -77,8 +77,8 @@ void toolbox::particles::tests::TestHelpers::testParticleAssignedToVertexWillBeL
   markerDFromGreyRank._isAdjacentCellLocal.flip();
   markerDFromGreyRank._isLocal = 0b1101;
 
-  tarch::la::Vector<Dimensions, double> x1 = {0.545015,0.5};
-  tarch::la::Vector<Dimensions, double> x2 = {0.554996,0.5};
+  tarch::la::Vector<DIMENSIONS, double> x1 = {0.545015,0.5};
+  tarch::la::Vector<DIMENSIONS, double> x2 = {0.554996,0.5};
 
   validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerAFromYellowRank ), x1, markerAFromYellowRank.toString(), markerAFromYellowRank.x() );
   validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerAFromYellowRank ), x2, markerAFromYellowRank.toString(), markerAFromYellowRank.x() );

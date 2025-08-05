@@ -20,7 +20,7 @@
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/utils/Globals.h"
 
-#if defined(GPUOffloadingOMP)
+#if defined(WITH_GPU_OMP_TARGET)
 #include "exahype2/dg/rusanov/omp/Rusanov.h"
 #endif
 
@@ -103,8 +103,8 @@ namespace exahype2 {
       void solveRiemannProblem_pointwise_in_situ(
         ::exahype2::dg::Flux                         flux,
         ::exahype2::dg::NonConservativeProduct       ncp,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  cellSize,
+        const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+        const tarch::la::Vector<DIMENSIONS,double>&  cellSize,
         double                                       t,
         double                                       dt,
         int                                          order,

@@ -45,7 +45,7 @@ If only one of the build systems has been configured, the code generator will ch
 - ***My compiler yields warnings of the type***
   ~~~~~~~~~~~~~~~~~~~
 ./peano4/grid/GridTraversalEvent.h:161:7: warning: unknown attribute 'compress' ignored [-Wunknown-attributes]
- [[clang::pack]]  std::bitset<TwoPowerD>   _hasBeenRefined;
+ [[clang::pack]]  std::bitset<TWO_POWER_D>   _hasBeenRefined;
   ~~~~~~~~~~~~~~~~~~~
   Please consult your compiler options. Usually re-configuring with the flag
   ```-Wno-unknown-attributes``` eliminates the warnings.
@@ -275,7 +275,7 @@ undefined reference to for_write_seq_list
       (sub)class name and won't apply your filter.
   -   Ensure that your main code is translated with a reasonable debug
       flag. The makefile has to translate your code with
-      `-DPeanoDebug=4` (or 1 if you are only interested in tracing).
+      `-DPEANO_DEBUG=4` (or 1 if you are only interested in tracing).
   -   Ensure you link to libraries which are built with a reasonable
       debug level. For this, run your code and search for the header
 
@@ -383,7 +383,7 @@ Parallelisation
     MPI queue. How do I know what certain MPI messages tags mean?** All
     tags used in  are registered through the operation
     `tarch::mpi::Rank::reserveFreeTag`. If you translate with any
-    positive value of `PeanoDebug` (the trace, debug and assert library
+    positive value of `PEANO_DEBUG` (the trace, debug and assert library
     variants of  do so, e.g.) then you get a list of tag semantics at
     startup. These lists are the same as the ones you use in release
     mode, i.e. when this information is not dumped. Please note that the

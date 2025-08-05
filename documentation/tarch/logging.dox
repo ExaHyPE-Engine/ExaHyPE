@@ -18,24 +18,24 @@ essential logging and tracing macros.
 
 When we build Peano, we do distinguish different "debug" levels:
 
--   If a code is translated with `-DPeanoDebug=0`, all logging, tracing
+-   If a code is translated with `-DPEANO_DEBUG=0`, all logging, tracing
     and assertion macros are disabled, i.e. replaced by empty
     statements. Warning, information and error messages are still
     displayed.
 
--   If a code is translated with `-DPeanoDebug=1`, all macros from
-    `-DPeanoDebug=0` remain defined. This time however, all tracing
+-   If a code is translated with `-DPEANO_DEBUG=1`, all macros from
+    `-DPEANO_DEBUG=0` remain defined. This time however, all tracing
     functionality is enabled. With this mode, it is possible to do
     production runs plus to extract some performance data, e.g.
 
--   If a code is translated with `-DPeanoDebug=2`, all the tracing
-    macros from `-DPeanoDebug=1` remain defined. On top of this, Peano's
+-   If a code is translated with `-DPEANO_DEBUG=2`, all the tracing
+    macros from `-DPEANO_DEBUG=1` remain defined. On top of this, Peano's
     assertions now are enabled, i.e. assertion macros do not degenerate
     to nop but actually run tests. This might increase the runtime
     significantly yet the code permanently runs test.
 
--   If a code is translated with `-DPeanoDebug=4`, logging and assertion
-    macros from `-DPeanoDebug=4` remain defined. Furthermore, any debug
+-   If a code is translated with `-DPEANO_DEBUG=4`, logging and assertion
+    macros from `-DPEANO_DEBUG=4` remain defined. Furthermore, any debug
     information written through Peano's log interface is now not
     discarded (removed at compile time) but actually shown. This is the
     slowest mode yielding most of the data.
@@ -260,8 +260,8 @@ For performance reasons, it is important to take two facts into account:
     the log filter then is hold persistently.
 
 Whether a log message is written or not results from the combination of
-compile flags (`PeanoDebug` flag) plus the log filters you have in
-place. If you translate with `-DPeanoDebug=0`, debug log filters play no
+compile flags (`PEANO_DEBUG` flag) plus the log filters you have in
+place. If you translate with `-DPEANO_DEBUG=0`, debug log filters play no
 role, as the underlying messages are not written anyway. In this
 context, you have to pay attention against which libraries you link.
 Peano builds the technical architecture, the core and tools in different
@@ -287,7 +287,7 @@ Assertions
 
 Peano provides its own assertion format which is independent of C++
 assertions. Assertions are offered through macros, and if you choose a
-`PeanoDebug` level which does not support assertions, then they are
+`PEANO_DEBUG` level which does not support assertions, then they are
 removed at compile time from your code.
 
 Peano's assertions interlink with the logging, i.e. before they shut

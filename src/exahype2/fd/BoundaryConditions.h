@@ -29,14 +29,14 @@ namespace exahype2 {
       std::function< void(
         const double* NOALIAS                   Qinside,
         double * NOALIAS                        Qoutside,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+        const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
         double                                       t,
         double                                       dt,
         int                                          normal
       ) >   boundaryCondition,
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  patchSize,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
       double                                       t,
       double                                       dt,
       int                                          numberOfGridCellsPerPatchPerAxis,
@@ -67,8 +67,8 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
       ::exahype2::fd::applySommerfeldConditions(
         [&](
           const double * NOALIAS                  Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  gridCellH,
+          const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
           double                                       t,
           double                                       dt,
           int                                          normal
@@ -77,14 +77,14 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
         },
         [&](
           double * NOALIAS                        Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  gridCellH
+          const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  gridCellH
         ) -> void {
           repositories::{{SOLVER_INSTANCE}}.initialCondition( Q, faceCentre, gridCellH, true );
         },
         marker.x(),
         marker.h(),
-        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
+        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<DIMENSIONS ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
         {{OVERLAP}},
@@ -105,19 +105,19 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
     void applySommerfeldConditions(
       std::function< double(
         const double* NOALIAS                   Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  gridCellH,
+        const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+        const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
         double                                       t,
         double                                       dt,
         int                                          normal
       ) >   maxEigenvalue,
       std::function< void(
         double* NOALIAS                         Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  gridCellH
+        const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+        const tarch::la::Vector<DIMENSIONS,double>&  gridCellH
       ) >   farFieldSolution,
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  patchSize,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
       double                                       t,
       double                                       dt,
       int                                          numberOfGridCellsPerPatchPerAxis,
@@ -125,7 +125,7 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
       int                                          numberOfUnknowns,
       int                                          numberOfAuxiliaryVariables,
       int                                          faceNumber,
-      const tarch::la::Vector<Dimensions,double>&  systemOrigin,
+      const tarch::la::Vector<DIMENSIONS,double>&  systemOrigin,
       double* NOALIAS                         Qold,
       double* NOALIAS                         Qnew,
       double                                       CheckpointTimeStamp
@@ -140,14 +140,14 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
     void applySommerfeldConditions(
       std::function< double(
         const double* NOALIAS                   Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  gridCellH,
+        const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+        const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
         double                                       t,
         double                                       dt,
         int                                          normal
       ) >   maxEigenvalue,
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  patchSize,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
       double                                       t,
       double                                       dt,
       int                                          numberOfGridCellsPerPatchPerAxis,
@@ -155,7 +155,7 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
       int                                          numberOfUnknowns,
       int                                          numberOfAuxiliaryVariables,
       int                                          faceNumber,
-      const tarch::la::Vector<Dimensions,double>&  systemOrigin,
+      const tarch::la::Vector<DIMENSIONS,double>&  systemOrigin,
       double* NOALIAS                         Qold,
       double* NOALIAS                         Qnew,
       double                                       CheckpointTimeStamp

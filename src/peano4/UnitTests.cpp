@@ -6,7 +6,7 @@
 #include "grid/tests/GridTraversalEventGeneratorTest.h"
 #include "grid/tests/SpacetreeTest.h"
 #include "parallel/tests/NodeTest.h"
-#ifdef Parallel
+#ifdef WITH_MPI
 #include "parallel/tests/PingPongTest.h"
 #endif
 #include "tarch/tests/TreeTestCaseCollection.h"
@@ -20,7 +20,7 @@ tarch::tests::TestCase* peano4::getUnitTests() {
   result->addTestCase(new grid::tests::GridTraversalEventGeneratorTest());
 
   result->addTestCase(new parallel::tests::NodeTest());
-#ifdef Parallel
+#ifdef WITH_MPI
   result->addTestCase(new parallel::tests::PingPongTest());
 #endif
 

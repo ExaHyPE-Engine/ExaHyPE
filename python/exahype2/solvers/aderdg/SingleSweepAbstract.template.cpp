@@ -11,10 +11,10 @@
 
 tarch::logging::Log     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}");
 
-std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
+std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
 {% if USE_POINT_SOURCE %}
-double                  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::pointSourceLocation[NumberOfPointSources][Dimensions]{};
+double                  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::pointSourceLocation[NumberOfPointSources][DIMENSIONS]{};
 {% endif %}
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
@@ -118,8 +118,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 {% if ADAPTIVE_PRECISION_IMPLEMENTATION!="<empty>" and ADAPTIVE_PRECISION_IMPLEMENTATION!="<user-defined>" and ADAPTIVE_PRECISION_IMPLEMENTATION!="<none>"%}
     exahype2::PrecisionCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::precisionCriterion(
       const {{SOLUTION_STORAGE_PRECISION}} * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&         x,
-      const tarch::la::Vector<Dimensions,double>&         h,
+      const tarch::la::Vector<DIMENSIONS,double>&         x,
+      const tarch::la::Vector<DIMENSIONS,double>&         h,
       double                                              t,
       SolverState                                         currentState
     ) {
@@ -216,7 +216,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if (isLastGridSweepOfTimeStep()) {
-#ifdef Parallel
+#ifdef WITH_MPI
     double newMinTimeStamp    = _minTimeStampThisTimeStep;
     double newMaxTimeStamp    = _maxTimeStampThisTimeStep;
     double newMinCellH        = _minCellHThisTimeStep;

@@ -134,7 +134,7 @@ class ParticleTreeAnalysis(ActionSet):
   
   __Template_TouchCellLastTime = jinja2.Template("""
   int count = 0;
-  for (int i=0; i<TwoPowerD; i++) {
+  for (int i=0; i<TWO_POWER_D; i++) {
     count += fineGridVertices{{PARTICLE_SET_NAME}}(i).size();
   }
   

@@ -42,10 +42,10 @@ namespace peano4 {
  *   over pointers. Again, up to the implementation to decide what to use, but
  *   some remarks are blow.
  * - merge()
- * - void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
- * - void setDebugH( const tarch::la::Vector<Dimensions,double>& data );
- * - tarch::la::Vector<Dimensions,double> getDebugX() const;
- * - tarch::la::Vector<Dimensions,double> getDebugH() const;
+ * - void setDebugX( const tarch::la::Vector<DIMENSIONS,double>& data );
+ * - void setDebugH( const tarch::la::Vector<DIMENSIONS,double>& data );
+ * - tarch::la::Vector<DIMENSIONS,double> getDebugX() const;
+ * - tarch::la::Vector<DIMENSIONS,double> getDebugH() const;
  *
  * as well as the static routines
  *
@@ -175,7 +175,7 @@ private:
 
   typedef peano4::stacks::STDVectorStack<T> Base;
 
-#ifdef Parallel
+#ifdef WITH_MPI
   MPI_Request* _metaDataSizeMPIRequest;
   MPI_Request* _metaDataDebugMPIRequest;
 
@@ -339,8 +339,8 @@ public:
    *   exchanged explicitly.
    * - There's a debug meta data buffer which I befill if and only if we work
    *   with meta data. It is a long sequence of doubles. Per stack entry, I
-   *   hold 2*Dimensions data points: Dimensions entries encode the x value of
-   *   the debug data, and a further Dimensions entries encode the h value.
+   *   hold 2*DIMENSIONS data points: DIMENSIONS entries encode the x value of
+   *   the debug data, and a further DIMENSIONS entries encode the h value.
    * - The actual data has to be flattened (serialised) too, as I cannot
    *   transfer any pointers. This serialised data is held in yet another
    *   buffer and has to be copied forth and back. Obviously, there's no need

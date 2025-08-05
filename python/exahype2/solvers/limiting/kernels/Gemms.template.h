@@ -98,7 +98,7 @@ void {{gemm}}(const long double* A, const long double* B, long double* C);
 
 {% if force_coeff_matrix %}
   double {{B}}[{{gemms.LDB*gemms.K}}] __attribute__((aligned({{ALIGNMENT}})));
-  #ifdef SharedOMP
+  #ifdef WITH_OPENMP
   #pragma omp simd aligned({{Bp}},{{true_Bp}}:{{ALIGNMENT}})
   #endif
   for (int it = 0; it < {{gemms.LDB*gemms.K}}; it++) {
@@ -110,7 +110,7 @@ void {{gemm}}(const long double* A, const long double* B, long double* C);
 {% if gemms.beta == 0 %}
   // Reset {{C}}
   for (int it_1 = 0; it_1 < {{gemms.N}}; it_1++) {
-    #ifdef SharedOMP
+    #ifdef WITH_OPENMP
     #pragma omp simd aligned({{Cp}}:{{ALIGNMENT}})
     #endif
     for (int it_3 = 0; it_3 < {{gemms.M}}; it_3++) {
@@ -121,7 +121,7 @@ void {{gemm}}(const long double* A, const long double* B, long double* C);
 
 for (int it_1 = 0; it_1 < {{gemms.N}}; it_1++) {
   for (int it_2 = 0; it_2 < {{gemms.K}}; it_2++) {
-    #ifdef SharedOMP
+    #ifdef WITH_OPENMP
     #pragma omp simd aligned({{Cp}},{{Ap}},{{true_Bp}}:{{ALIGNMENT}})
     #endif
     for (int it_3 = 0; it_3 < {{gemms.M}}; it_3++) {

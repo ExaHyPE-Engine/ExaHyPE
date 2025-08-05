@@ -139,7 +139,7 @@ namespace toolbox {
      * Implementation of liftParticleAssociatedWithVertex() without the template
      */
     ParticleReassociationInstruction liftParticleAssociatedWithVertex(
-      bool isLocal, double searchRadius, const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker marker
+      bool isLocal, double searchRadius, const tarch::la::Vector<DIMENSIONS, double>& x, const peano4::datamanagement::VertexMarker marker
     );
 
     /**
@@ -227,7 +227,7 @@ namespace toolbox {
     template <typename Particle>
     bool sieveParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker);
 
-    bool sieveParticle(double searchRadius, const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker& marker);
+    bool sieveParticle(double searchRadius, const tarch::la::Vector<DIMENSIONS, double>& x, const peano4::datamanagement::VertexMarker& marker);
 
     template <typename Particle>
     bool dropParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker);
@@ -238,7 +238,7 @@ namespace toolbox {
      * This is the actual implementation, i.e. the template delegates to this
      * one. Through the method, we can unittest the drop logic.
      */
-    bool dropParticle(double searchRadius, const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker& marker);
+    bool dropParticle(double searchRadius, const tarch::la::Vector<DIMENSIONS, double>& x, const peano4::datamanagement::VertexMarker& marker);
 
     /**
      * Will the particle be dropped further throughout the traversal
@@ -355,7 +355,7 @@ namespace toolbox {
     );
 
     ParticleReassociationInstruction getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
-      bool isLocal, double searchRadius, const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::CellMarker& marker, int numberOfVertexWithinCell
+      bool isLocal, double searchRadius, const tarch::la::Vector<DIMENSIONS, double>& x, const peano4::datamanagement::CellMarker& marker, int numberOfVertexWithinCell
     );
 
     /**
@@ -376,7 +376,7 @@ namespace toolbox {
      * @param particle The particle of interest to be studied.
      * @param x        Vertex centre.
      */
-    std::bitset<TwoPowerD> getAdjacentCellsOwningParticle(const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker& marker);
+    std::bitset<TWO_POWER_D> getAdjacentCellsOwningParticle(const tarch::la::Vector<DIMENSIONS, double>& x, const peano4::datamanagement::VertexMarker& marker);
   }   // namespace particles
 } // namespace toolbox
 

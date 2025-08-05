@@ -329,8 +329,8 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
       ::exahype2::fd::applySommerfeldConditions(
         [&](
           const double * NOALIAS                  Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  gridCellH,
+          const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
           double                                       t,
           double                                       dt,
           int                                          normal
@@ -339,8 +339,8 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
         },
         [&](
           double * NOALIAS                        Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  gridCellH
+          const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  gridCellH
         ) -> void {
           for (int i=0; i<"""
             + str(self._unknowns + self._auxiliary_variables)
@@ -352,7 +352,7 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
         },
         marker.x(),
         marker.h(),
-        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
+        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<DIMENSIONS ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
         {{OVERLAP}},
@@ -650,8 +650,8 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
       ::exahype2::fd::applySommerfeldConditions(
         [&](
           const double * NOALIAS                  Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  gridCellH,
+          const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
           double                                       t,
           double                                       dt,
           int                                          normal
@@ -660,8 +660,8 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
         },
         [&](
           double * NOALIAS                        Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  gridCellH
+          const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  gridCellH
         ) -> void {
           for (int i=0; i<"""
             + str(self._unknowns + self._auxiliary_variables)
@@ -673,7 +673,7 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
         },
         marker.x(),
         marker.h(),
-        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
+        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<DIMENSIONS ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
         {{OVERLAP}},

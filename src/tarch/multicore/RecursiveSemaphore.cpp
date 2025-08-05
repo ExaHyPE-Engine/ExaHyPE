@@ -1,7 +1,7 @@
 #include "tarch/multicore/RecursiveSemaphore.h"
 
 
-#ifndef SharedMemoryParallelisation
+#ifndef WITH_MULTITHREADING
 tarch::multicore::RecursiveSemaphore::RecursiveSemaphore() {
 }
 

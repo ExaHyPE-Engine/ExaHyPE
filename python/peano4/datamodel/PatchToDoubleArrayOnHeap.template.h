@@ -41,29 +41,29 @@
 
 struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   private:
-    #if Parallel
+    #if WITH_MPI
     static MPI_Datatype   Datatype;
     #endif
 
-    #if PeanoDebug>=1
-    tarch::la::Vector<Dimensions,double> _debugX;
-    tarch::la::Vector<Dimensions,double> _debugH;
+    #if PEANO_DEBUG>=1
+    tarch::la::Vector<DIMENSIONS,double> _debugX;
+    tarch::la::Vector<DIMENSIONS,double> _debugH;
     #endif
 
   public:
     typedef {{FLOAT_TYPE}} DoFType;
 
-    #if Dimensions==2
+    #if DIMENSIONS==2
     static constexpr int Cardinality = {{CARDINALITY_2D}};
     #else
     static constexpr int Cardinality = {{CARDINALITY_3D}};
     #endif
 
-    #if PeanoDebug>=1
-    void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
-    void setDebugH( const tarch::la::Vector<Dimensions,double>& data );
-    tarch::la::Vector<Dimensions,double> getDebugX() const;
-    tarch::la::Vector<Dimensions,double> getDebugH() const;
+    #if PEANO_DEBUG>=1
+    void setDebugX( const tarch::la::Vector<DIMENSIONS,double>& data );
+    void setDebugH( const tarch::la::Vector<DIMENSIONS,double>& data );
+    tarch::la::Vector<DIMENSIONS,double> getDebugX() const;
+    tarch::la::Vector<DIMENSIONS,double> getDebugH() const;
     #endif
   
     /**
@@ -184,7 +184,7 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     void set(int index, {{FLOAT_TYPE}} value);
 
   
-    #ifdef Parallel
+    #ifdef WITH_MPI
     /**
      * Initialises the MPI datatype.
      */

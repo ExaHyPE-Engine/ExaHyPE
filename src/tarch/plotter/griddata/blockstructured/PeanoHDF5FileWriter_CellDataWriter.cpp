@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "PeanoHDF5FileWriter.h"
 
-#ifdef UseHDF5
+#ifdef WITH_HDF5
 
 #include "tarch/la/ScalarOperations.h"
 

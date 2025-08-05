@@ -14,14 +14,14 @@ peano4::datamanagement::FaceMarker::FaceMarker(const peano4::grid::GridTraversal
   _select(select),
   _isLocal(event.getIsFaceLocal()),
   _relativePositionOfCellWithinFatherCell(event.getRelativePositionToFather()) {
-  for (int faceNumber = 0; faceNumber < 2 * Dimensions; faceNumber++) {
+  for (int faceNumber = 0; faceNumber < 2 * DIMENSIONS; faceNumber++) {
     _hasBeenRefined[faceNumber] = false;
     _willBeRefined[faceNumber]  = false;
 
-    const int normal = faceNumber % Dimensions;
-    for (int i = 0; i < TwoPowerD; i++) {
-      std::bitset<Dimensions> studiedVertex = i;
-      studiedVertex.set(normal, faceNumber >= Dimensions);
+    const int normal = faceNumber % DIMENSIONS;
+    for (int i = 0; i < TWO_POWER_D; i++) {
+      std::bitset<DIMENSIONS> studiedVertex = i;
+      studiedVertex.set(normal, faceNumber >= DIMENSIONS);
       _hasBeenRefined.set(faceNumber, _hasBeenRefined[faceNumber] or event.getHasBeenRefined(studiedVertex.to_ulong()));
       _willBeRefined.set(faceNumber, _willBeRefined[faceNumber] or event.getWillBeRefined(studiedVertex.to_ulong()));
     }
@@ -37,26 +37,26 @@ std::string peano4::datamanagement::FaceMarker::toString() const {
   return msg.str();
 }
 
-tarch::la::Vector<Dimensions, int> peano4::datamanagement::FaceMarker::getRelativePositionWithinFatherCell() const {
+tarch::la::Vector<DIMENSIONS, int> peano4::datamanagement::FaceMarker::getRelativePositionWithinFatherCell() const {
   assertion1(_select >= 0, toString());
   return getRelativePositionWithinFatherCell(_select);
 }
 
-tarch::la::Vector<Dimensions, int> peano4::datamanagement::FaceMarker::getRelativePositionWithinFatherCell(
+tarch::la::Vector<DIMENSIONS, int> peano4::datamanagement::FaceMarker::getRelativePositionWithinFatherCell(
   int i
 ) const {
   assertion2(i >= 0, i, toString());
-  tarch::la::Vector<Dimensions, int> result = _relativePositionOfCellWithinFatherCell;
-  const int                          normal = i % Dimensions;
-  result(normal) += i >= Dimensions ? 1 : 0;
+  tarch::la::Vector<DIMENSIONS, int> result = _relativePositionOfCellWithinFatherCell;
+  const int                          normal = i % DIMENSIONS;
+  result(normal) += i >= DIMENSIONS ? 1 : 0;
   return result;
 }
 
-tarch::la::Vector<Dimensions - 1, int> peano4::datamanagement::FaceMarker::getRelativePositionWithinFatherFace() const {
-  tarch::la::Vector<Dimensions - 1, int> result;
-  const int                              normal = getSelectedFaceNumber() % Dimensions;
+tarch::la::Vector<DIMENSIONS - 1, int> peano4::datamanagement::FaceMarker::getRelativePositionWithinFatherFace() const {
+  tarch::la::Vector<DIMENSIONS - 1, int> result;
+  const int                              normal = getSelectedFaceNumber() % DIMENSIONS;
   int                                    pos    = 0;
-  for (int d = 0; d < Dimensions; d++) {
+  for (int d = 0; d < DIMENSIONS; d++) {
     if (d != normal) {
       result[pos] = _relativePositionOfCellWithinFatherCell[d];
       pos++;
@@ -66,6 +66,6 @@ tarch::la::Vector<Dimensions - 1, int> peano4::datamanagement::FaceMarker::getRe
 }
 
 bool peano4::datamanagement::FaceMarker::isInteriorFaceWithinPatch() const {
-  int normal = getSelectedFaceNumber() % Dimensions;
+  int normal = getSelectedFaceNumber() % DIMENSIONS;
   return getRelativePositionWithinFatherCell()(normal) == 1 or getRelativePositionWithinFatherCell()(normal) == 2;
 }

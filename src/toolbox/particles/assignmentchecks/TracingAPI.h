@@ -27,7 +27,7 @@ namespace toolbox {
      *
      * ## Enable assignment checks
      *
-     * By default, the assignment checks are enabled as soon as PeanoDebug is
+     * By default, the assignment checks are enabled as soon as PEANO_DEBUG is
      * set to a value greater than 0. However, you can explicitly disable it
      * by adding
      *
@@ -61,11 +61,11 @@ namespace toolbox {
        */
       void eraseParticle(
         const std::string&                           particleName,
-        const tarch::la::Vector<Dimensions, double>& particleX,
+        const tarch::la::Vector<DIMENSIONS, double>& particleX,
         const int                                    particleID,
         bool                                         isLocal,
-        const tarch::la::Vector<Dimensions, double>& vertexX,
-        const tarch::la::Vector<Dimensions, double>& vertexH,
+        const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+        const tarch::la::Vector<DIMENSIONS, double>& vertexH,
         int                                          treeId,
         const std::string&                           trace
       );
@@ -95,11 +95,11 @@ namespace toolbox {
        */
       void moveParticle(
         const std::string&                           particleName,
-        const tarch::la::Vector<Dimensions, double>& oldParticleX,
-        const tarch::la::Vector<Dimensions, double>& newParticleX,
+        const tarch::la::Vector<DIMENSIONS, double>& oldParticleX,
+        const tarch::la::Vector<DIMENSIONS, double>& newParticleX,
         const int                                    particleID,
-        const tarch::la::Vector<Dimensions, double>& vertexX,
-        const tarch::la::Vector<Dimensions, double>& vertexH,
+        const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+        const tarch::la::Vector<DIMENSIONS, double>& vertexH,
         int                                          treeId,
         const std::string&                           trace
       );
@@ -223,15 +223,15 @@ namespace toolbox {
        */
       void assignParticleToVertex(
         const std::string&                           particleName,
-        const tarch::la::Vector<Dimensions, double>& particleX,
+        const tarch::la::Vector<DIMENSIONS, double>& particleX,
         const int                                    particleID,
         bool                                         isLocal,
-        const tarch::la::Vector<Dimensions, double>& vertexX,
-        const tarch::la::Vector<Dimensions, double>& vertexH,
+        const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+        const tarch::la::Vector<DIMENSIONS, double>& vertexH,
         int                                          treeId,
         const std::string&                           trace,
-        const tarch::la::Vector<Dimensions, double>& prevVertexX,
-        const tarch::la::Vector<Dimensions, double>& prevVertexH,
+        const tarch::la::Vector<DIMENSIONS, double>& prevVertexX,
+        const tarch::la::Vector<DIMENSIONS, double>& prevVertexH,
         bool                                         particleIsNew = false,
         bool reassignmentOnSameTreeDepthAllowed                    = false
       );
@@ -246,11 +246,11 @@ namespace toolbox {
        */
       void detachParticleFromVertex(
         const std::string&                           particleName,
-        const tarch::la::Vector<Dimensions, double>& particleX,
+        const tarch::la::Vector<DIMENSIONS, double>& particleX,
         const int                                    particleID,
         bool                                         isLocal,
-        const tarch::la::Vector<Dimensions, double>& vertexX,
-        const tarch::la::Vector<Dimensions, double>& vertexH,
+        const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+        const tarch::la::Vector<DIMENSIONS, double>& vertexH,
         int                                          treeId,
         const std::string&                           trace
       );
@@ -264,11 +264,11 @@ namespace toolbox {
        */
       void assignParticleToSieveSet(
         const std::string&                           particleName,
-        const tarch::la::Vector<Dimensions, double>& particleX,
+        const tarch::la::Vector<DIMENSIONS, double>& particleX,
         const int                                    particleID,
         bool                                         isLocal,
-        const tarch::la::Vector<Dimensions, double>& vertexX,
-        const tarch::la::Vector<Dimensions, double>& vertexH,
+        const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+        const tarch::la::Vector<DIMENSIONS, double>& vertexH,
         int                                          treeId,
         const std::string&                           trace
       );
@@ -329,7 +329,7 @@ namespace toolbox {
        */
       void ensureDatabaseIsEmpty();
 
-      using ParticlePosition = tarch::la::Vector<Dimensions, double>;
+      using ParticlePosition = tarch::la::Vector<DIMENSIONS, double>;
 
       /**
        * Record the current particle positions in a vector.
@@ -368,8 +368,8 @@ namespace toolbox {
       void traceParticleMovements(
         const ParticleContainer&                     container,
         const std::vector<ParticlePosition>&         recordedPositions,
-        const tarch::la::Vector<Dimensions, double>& vertexX,
-        const tarch::la::Vector<Dimensions, double>& vertexH,
+        const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+        const tarch::la::Vector<DIMENSIONS, double>& vertexH,
         int                                          spacetreeId
       );
 

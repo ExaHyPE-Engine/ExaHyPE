@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ExecutionPolicy.h"
 
-#if defined(GPUOffloadingCUDA)
+#if defined(WITH_GPU_CUDA)
 
 tarch::accelerator::cuda::ExecutionPolicy::ExecutionPolicy():
   _state(Automatic),

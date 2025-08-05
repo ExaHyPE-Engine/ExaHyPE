@@ -19,18 +19,18 @@ void toolbox::blockstructured::internal::
     overlap
   );
 
-  const int normal = marker.getSelectedFaceNumber() % Dimensions;
+  const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
   dfore(kFine, numberOfDoFsPerAxisInPatch, normal, 0) {
     for (int iFine = 0; iFine < overlap; iFine++) {
-      tarch::la::Vector<Dimensions, int> fineVolumeLeftDest = kFine;
-      tarch::la::Vector<Dimensions, int> fineVolumeLeftSrc  = kFine;
+      tarch::la::Vector<DIMENSIONS, int> fineVolumeLeftDest = kFine;
+      tarch::la::Vector<DIMENSIONS, int> fineVolumeLeftSrc  = kFine;
 
       fineVolumeLeftDest(normal) = iFine;
       fineVolumeLeftSrc(normal)  = numberOfDoFsPerAxisInPatch - overlap + iFine;
 
-      tarch::la::Vector<Dimensions, int> fineVolumeRightDest = kFine;
-      tarch::la::Vector<Dimensions, int> fineVolumeRightSrc  = kFine;
+      tarch::la::Vector<DIMENSIONS, int> fineVolumeRightDest = kFine;
+      tarch::la::Vector<DIMENSIONS, int> fineVolumeRightSrc  = kFine;
 
       fineVolumeRightDest(normal) = iFine + overlap;
       fineVolumeRightSrc(normal)  = iFine;
@@ -91,7 +91,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
     unknowns
   );
 
-  const int normal = marker.getSelectedFaceNumber() % Dimensions;
+  const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
   static internal::FaceInterpolationMap faceInterpolationMap;
   internal::FaceInterpolationOperatorKey
@@ -109,7 +109,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
   tarch::la::DynamicMatrix* P = faceInterpolationMap[key];
   lock.free();
 
-#if Dimensions == 2
+#if DIMENSIONS == 2
   const int patchSize = numberOfDoFsPerAxisInPatch * 2 * overlap;
 #else
   const int patchSize = numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch
@@ -154,7 +154,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
   );
 
   if (marker.isInteriorFaceWithinPatch()) {
-#if Dimensions == 2
+#if DIMENSIONS == 2
     const int patchSize = numberOfDoFsPerAxisInPatch
                           * numberOfDoFsPerAxisInPatch;
 #else
@@ -171,11 +171,11 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
       tarch::MemoryLocation::Heap
     );
 
-    tarch::la::Vector<Dimensions, int>
+    tarch::la::Vector<DIMENSIONS, int>
       leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
-    tarch::la::Vector<Dimensions, int>
+    tarch::la::Vector<DIMENSIONS, int>
       rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
-    leftAdjacentPatchIndex(marker.getSelectedFaceNumber() % Dimensions)--;
+    leftAdjacentPatchIndex(marker.getSelectedFaceNumber() % DIMENSIONS)--;
 
     internal::interpolateCell_AoS_piecewise_constant(
       leftAdjacentPatchIndex,
@@ -246,7 +246,7 @@ void toolbox::blockstructured::interpolateCell_AoS_piecewise_constant(
 
 template<typename T>
 void toolbox::blockstructured::internal::interpolateCell_AoS_piecewise_constant(
-  const tarch::la::Vector<Dimensions, int>& relativePositionWithinFatherCell,
+  const tarch::la::Vector<DIMENSIONS, int>& relativePositionWithinFatherCell,
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       unknowns,
   const T* NOALIAS coarseGridCellValues,
@@ -263,7 +263,7 @@ void toolbox::blockstructured::internal::interpolateCell_AoS_piecewise_constant(
   tarch::la::DynamicMatrix* P = cellInterpolationMap[key];
   lock.free();
 
-#if Dimensions == 2
+#if DIMENSIONS == 2
   const int patchSize = numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch;
 #else
   const int patchSize = numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch
@@ -305,7 +305,7 @@ void toolbox::blockstructured::
     unknowns
   );
 
-  const int normal = marker.getSelectedFaceNumber() % Dimensions;
+  const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
   static internal::FaceInterpolationMap faceInterpolationMap;
   internal::FaceInterpolationOperatorKey
@@ -325,7 +325,7 @@ void toolbox::blockstructured::
   tarch::la::DynamicMatrix* P = faceInterpolationMap[key];
   lock.free();
 
-#if Dimensions == 2
+#if DIMENSIONS == 2
   const int patchSize = numberOfDoFsPerAxisInPatch * 2 * overlap;
 #else
   const int patchSize = numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch
@@ -372,7 +372,7 @@ void toolbox::blockstructured::
   );
 
   if (marker.isInteriorFaceWithinPatch()) {
-#if Dimensions == 2
+#if DIMENSIONS == 2
     const int patchSize = numberOfDoFsPerAxisInPatch
                           * numberOfDoFsPerAxisInPatch;
 #else
@@ -389,11 +389,11 @@ void toolbox::blockstructured::
       tarch::MemoryLocation::Heap
     );
 
-    tarch::la::Vector<Dimensions, int>
+    tarch::la::Vector<DIMENSIONS, int>
       leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
-    tarch::la::Vector<Dimensions, int>
+    tarch::la::Vector<DIMENSIONS, int>
       rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
-    leftAdjacentPatchIndex(marker.getSelectedFaceNumber() % Dimensions)--;
+    leftAdjacentPatchIndex(marker.getSelectedFaceNumber() % DIMENSIONS)--;
 
     internal::interpolateCell_AoS_linear(
       leftAdjacentPatchIndex,
@@ -485,7 +485,7 @@ void toolbox::blockstructured::
     unknowns
   );
 
-  const int normal = marker.getSelectedFaceNumber() % Dimensions;
+  const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
   static internal::FaceInterpolationMap faceInterpolationMap;
   internal::FaceInterpolationOperatorKey
@@ -505,7 +505,7 @@ void toolbox::blockstructured::
   tarch::la::DynamicMatrix* P = faceInterpolationMap[key];
   lock.free();
 
-#if Dimensions == 2
+#if DIMENSIONS == 2
   const int patchSize = numberOfDoFsPerAxisInPatch * 2 * overlap;
 #else
   const int patchSize = numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch
@@ -551,7 +551,7 @@ void toolbox::blockstructured::
   );
 
   if (marker.isInteriorFaceWithinPatch()) {
-#if Dimensions == 2
+#if DIMENSIONS == 2
     const int patchSize = numberOfDoFsPerAxisInPatch
                           * numberOfDoFsPerAxisInPatch;
 #else
@@ -568,11 +568,11 @@ void toolbox::blockstructured::
       tarch::MemoryLocation::Heap
     );
 
-    tarch::la::Vector<Dimensions, int>
+    tarch::la::Vector<DIMENSIONS, int>
       leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
-    tarch::la::Vector<Dimensions, int>
+    tarch::la::Vector<DIMENSIONS, int>
       rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
-    leftAdjacentPatchIndex(marker.getSelectedFaceNumber() % Dimensions)--;
+    leftAdjacentPatchIndex(marker.getSelectedFaceNumber() % DIMENSIONS)--;
 
     internal::interpolateCell_AoS_linear(
       leftAdjacentPatchIndex,
@@ -663,7 +663,7 @@ void toolbox::blockstructured::
     unknowns
   );
 
-  const int normal = marker.getSelectedFaceNumber() % Dimensions;
+  const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
   static internal::FaceInterpolationMap faceInterpolationMap;
   internal::FaceInterpolationOperatorKey
@@ -683,7 +683,7 @@ void toolbox::blockstructured::
   tarch::la::DynamicMatrix* P = faceInterpolationMap[key];
   lock.free();
 
-#if Dimensions == 2
+#if DIMENSIONS == 2
   const int patchSize = numberOfDoFsPerAxisInPatch * 2 * overlap;
 #else
   const int patchSize = numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch * 2 * overlap;
@@ -730,7 +730,7 @@ void toolbox::blockstructured::
   );
 
   if (marker.isInteriorFaceWithinPatch()) {
-#if Dimensions == 2
+#if DIMENSIONS == 2
     const int patchSize = numberOfDoFsPerAxisInPatch
                           * numberOfDoFsPerAxisInPatch;
 #else
@@ -747,11 +747,11 @@ void toolbox::blockstructured::
       tarch::MemoryLocation::Heap
     );
 
-    tarch::la::Vector<Dimensions, int>
+    tarch::la::Vector<DIMENSIONS, int>
       leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
-    tarch::la::Vector<Dimensions, int>
+    tarch::la::Vector<DIMENSIONS, int>
       rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
-    leftAdjacentPatchIndex(marker.getSelectedFaceNumber() % Dimensions)--;
+    leftAdjacentPatchIndex(marker.getSelectedFaceNumber() % DIMENSIONS)--;
 
     internal::interpolateCell_AoS_linear(
       leftAdjacentPatchIndex,
@@ -846,7 +846,7 @@ void toolbox::blockstructured::
     unknowns
   );
 
-  const int normal = marker.getSelectedFaceNumber() % Dimensions;
+  const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
   static internal::FaceInterpolationMap faceInterpolationMap;
   internal::FaceInterpolationOperatorKey
@@ -866,7 +866,7 @@ void toolbox::blockstructured::
   tarch::la::DynamicMatrix* P = faceInterpolationMap[key];
   lock.free();
 
-#if Dimensions == 2
+#if DIMENSIONS == 2
   const int patchSize = numberOfDoFsPerAxisInPatch * 2 * overlap;
 #else
   const int patchSize = numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch
@@ -914,7 +914,7 @@ void toolbox::blockstructured::
   );
 
   if (marker.isInteriorFaceWithinPatch()) {
-#if Dimensions == 2
+#if DIMENSIONS == 2
     const int patchSize = numberOfDoFsPerAxisInPatch
                           * numberOfDoFsPerAxisInPatch;
 #else
@@ -931,11 +931,11 @@ void toolbox::blockstructured::
       tarch::MemoryLocation::Heap
     );
 
-    tarch::la::Vector<Dimensions, int>
+    tarch::la::Vector<DIMENSIONS, int>
       leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
-    tarch::la::Vector<Dimensions, int>
+    tarch::la::Vector<DIMENSIONS, int>
       rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
-    leftAdjacentPatchIndex(marker.getSelectedFaceNumber() % Dimensions)--;
+    leftAdjacentPatchIndex(marker.getSelectedFaceNumber() % DIMENSIONS)--;
 
     internal::interpolateCell_AoS_linear(
       leftAdjacentPatchIndex,
@@ -1006,17 +1006,17 @@ void toolbox::blockstructured::
     }
 
     dfor(sourceVolume, numberOfDoFsPerAxisInSourcePatch + 2 * haloSourcePatch) {
-      tarch::la::Vector<Dimensions, T> normalisedSourcePosition = tarch::la::multiplyComponents(
-        tarch::la::Vector<Dimensions, T>(1.0 / numberOfDoFsPerAxisInSourcePatch),
-        tarch::la::convertScalar<T>(sourceVolume) + tarch::la::Vector<Dimensions, T>(0.5 - haloSourcePatch)
+      tarch::la::Vector<DIMENSIONS, T> normalisedSourcePosition = tarch::la::multiplyComponents(
+        tarch::la::Vector<DIMENSIONS, T>(1.0 / numberOfDoFsPerAxisInSourcePatch),
+        tarch::la::convertScalar<T>(sourceVolume) + tarch::la::Vector<DIMENSIONS, T>(0.5 - haloSourcePatch)
       );
-      tarch::la::Vector<Dimensions, T> normalisedDestinationPosition = tarch::la::multiplyComponents(
-        tarch::la::Vector<Dimensions, T>(1.0 / numberOfDoFsPerAxisInDestinationPatch),
-        tarch::la::convertScalar<T>(destinationVolume) + tarch::la::Vector<Dimensions, T>(0.5 - haloDestinationPatch)
+      tarch::la::Vector<DIMENSIONS, T> normalisedDestinationPosition = tarch::la::multiplyComponents(
+        tarch::la::Vector<DIMENSIONS, T>(1.0 / numberOfDoFsPerAxisInDestinationPatch),
+        tarch::la::convertScalar<T>(destinationVolume) + tarch::la::Vector<DIMENSIONS, T>(0.5 - haloDestinationPatch)
       );
 
       int outsidePatchAlongCoordinateAxis = 0;
-      for (int d = 0; d < Dimensions; d++) {
+      for (int d = 0; d < DIMENSIONS; d++) {
         //outsidePatchAlongCoordinateAxis += (sourceVolume(d) < haloSourcePatch) ? 1 : 0;
         //outsidePatchAlongCoordinateAxis +=  (sourceVolume(d) >= haloSourcePatch + numberOfDoFsPerAxisInSourcePatch) ? 1 : 0;
         if (sourceVolume(d) < haloSourcePatch)
@@ -1027,21 +1027,19 @@ void toolbox::blockstructured::
       const bool isFromUnitialisedDiagonal = outsidePatchAlongCoordinateAxis > 1;
 
       T weight = 1.0;
-      for (int d = 0; d < Dimensions; d++) {
+      for (int d = 0; d < DIMENSIONS; d++) {
         T distanceAlongCoordinateAxis = std::abs(normalisedDestinationPosition(d) - normalisedSourcePosition(d));
         T h = 1.0 / static_cast<T>(numberOfDoFsPerAxisInSourcePatch);
         distanceAlongCoordinateAxis = 1.0 - distanceAlongCoordinateAxis / h;
         weight *= std::max(0.0, distanceAlongCoordinateAxis);
       }
-      #if !defined(SharedSYCL)
       assertion(tarch::la::greaterEquals(weight, 0.0));
       assertion(tarch::la::smallerEquals(weight, 1.0));
-      #endif
 
-      tarch::la::Vector<Dimensions, int> amendedSourceVolume = sourceVolume;
+      tarch::la::Vector<DIMENSIONS, int> amendedSourceVolume = sourceVolume;
       if (isFromUnitialisedDiagonal) {
         #pragma unroll
-        for (int d = 0; d < Dimensions; d++) {
+        for (int d = 0; d < DIMENSIONS; d++) {
           amendedSourceVolume(d) = std::max(amendedSourceVolume(d), haloSourcePatch);
           amendedSourceVolume(d) = std::min(amendedSourceVolume(d), haloSourcePatch + numberOfDoFsPerAxisInSourcePatch - 1);
         }
@@ -1103,30 +1101,30 @@ void toolbox::blockstructured::
     T* NOALIAS destinationValues
   ) {
   int                                indices[18];
-  tarch::la::Vector<Dimensions, int> stencil[18];
+  tarch::la::Vector<DIMENSIONS, int> stencil[18];
   T*                                 centerValues = new T[unknowns];
-  int numberOfDerivatives                         = (Dimensions == 2) ? 5 : 9;
+  int numberOfDerivatives                         = (DIMENSIONS == 2) ? 5 : 9;
 
   dfor(volume, numberOfDoFsPerAxisInSourcePatch + 2) {
-    tarch::la::Vector<Dimensions, int>
+    tarch::la::Vector<DIMENSIONS, int>
       sourceVolume = volume
-                     + tarch::la::Vector<Dimensions, int>(haloSourcePatch - 1);
+                     + tarch::la::Vector<DIMENSIONS, int>(haloSourcePatch - 1);
     int outsidePatchAlongCoordinateAxis = 0;
-    for (int d = 0; d < Dimensions; d++) {
+    for (int d = 0; d < DIMENSIONS; d++) {
       if (sourceVolume(d) < haloSourcePatch || sourceVolume(d) >= numberOfDoFsPerAxisInSourcePatch + haloSourcePatch) {
         outsidePatchAlongCoordinateAxis++;
       }
     }
 
-    tarch::la::Vector<Dimensions, int> stencilOffset(0);
-    for (int d = 0; d < Dimensions; d++) {
+    tarch::la::Vector<DIMENSIONS, int> stencilOffset(0);
+    for (int d = 0; d < DIMENSIONS; d++) {
       if (sourceVolume(d) == 0)
         stencilOffset(d) = 1;
       if (sourceVolume(d) == numberOfDoFsPerAxisInSourcePatch + 2 * haloSourcePatch - 1)
         stencilOffset = -1;
     }
-    for (int d1 = 0; d1 < Dimensions; d1++) {
-      for (int d2 = d1 + 1; d2 < Dimensions; d2++) {
+    for (int d1 = 0; d1 < DIMENSIONS; d1++) {
+      for (int d2 = d1 + 1; d2 < DIMENSIONS; d2++) {
         if (sourceVolume(d1) == haloSourcePatch and sourceVolume(d2) == haloSourcePatch) {
           stencilOffset(d1) = 1;
           stencilOffset(d2) = 1;
@@ -1150,21 +1148,21 @@ void toolbox::blockstructured::
       int stencilSize = 0;
       dfor(offset, 3) {
         if (
-          offset != tarch::la::Vector<Dimensions, int>(1) - stencilOffset and
-#if Dimensions == 3
+          offset != tarch::la::Vector<DIMENSIONS, int>(1) - stencilOffset and
+#if DIMENSIONS == 3
           !(offset(0) + stencilOffset(0) != 1
             and offset(1) + stencilOffset(1) != 1
             and offset(2) + stencilOffset(2) != 1)
-#elif Dimensions == 2
+#elif DIMENSIONS == 2
           !(offset(0) + stencilOffset(0) != 1
             and offset(1) + stencilOffset(1) != 1)
 #endif
         ) {
           stencil[stencilSize] = stencilOffset + offset
-                                 - tarch::la::Vector<Dimensions, int>(1);
+                                 - tarch::la::Vector<DIMENSIONS, int>(1);
           indices[stencilSize] = peano4::utils::dLinearised(
             sourceVolume + offset + stencilOffset
-              - tarch::la::Vector<Dimensions, int>(1),
+              - tarch::la::Vector<DIMENSIONS, int>(1),
             numberOfDoFsPerAxisInSourcePatch + 2 * haloSourcePatch
           );
           stencilSize++;
@@ -1192,13 +1190,13 @@ void toolbox::blockstructured::
       tarch::la::DynamicMatrix A(stencilSize, numberOfDerivatives);
       for (int row = 0; row < stencilSize; row++) {
         int                                 column = 0;
-        tarch::la::Vector<Dimensions, int>& cell   = stencil[row];
-        for (int a = 0; a < Dimensions; a++) {
+        tarch::la::Vector<DIMENSIONS, int>& cell   = stencil[row];
+        for (int a = 0; a < DIMENSIONS; a++) {
           A(row, column) = cell(a);
           column++;
         }
-        for (int a = 0; a < Dimensions; a++) {
-          for (int b = a; b < Dimensions; b++) {
+        for (int a = 0; a < DIMENSIONS; a++) {
+          for (int b = a; b < DIMENSIONS; b++) {
             A(row, column) = 0.5 * cell(a) * cell(b);
             column++;
           }
@@ -1220,18 +1218,18 @@ void toolbox::blockstructured::
       inverseR.multiplyBySmallMatrix(result, c);
       tarch::la::DynamicMatrix x(inverseR.rows(), c.cols(), result);
 
-      tarch::la::Vector<Dimensions, int> destinationCorner1
-        = (sourceVolume - tarch::la::Vector<Dimensions, int>(haloSourcePatch)
+      tarch::la::Vector<DIMENSIONS, int> destinationCorner1
+        = (sourceVolume - tarch::la::Vector<DIMENSIONS, int>(haloSourcePatch)
           ) * numberOfDoFsPerAxisInDestinationPatch
             / numberOfDoFsPerAxisInSourcePatch
-          + tarch::la::Vector<Dimensions, int>(haloDestinationPatch);
-      tarch::la::Vector<Dimensions, int> destinationCorner2
+          + tarch::la::Vector<DIMENSIONS, int>(haloDestinationPatch);
+      tarch::la::Vector<DIMENSIONS, int> destinationCorner2
         = (sourceVolume
-           - tarch::la::Vector<Dimensions, int>(haloSourcePatch - 1)
+           - tarch::la::Vector<DIMENSIONS, int>(haloSourcePatch - 1)
           ) * numberOfDoFsPerAxisInDestinationPatch
             / numberOfDoFsPerAxisInSourcePatch
-          + tarch::la::Vector<Dimensions, int>(haloDestinationPatch);
-      for (int d = 0; d < Dimensions; d++) {
+          + tarch::la::Vector<DIMENSIONS, int>(haloDestinationPatch);
+      for (int d = 0; d < DIMENSIONS; d++) {
         destinationCorner1(d) = std::max(0, destinationCorner1(d));
         destinationCorner2(d) = std::min(
           numberOfDoFsPerAxisInDestinationPatch + 2 * haloDestinationPatch,
@@ -1239,20 +1237,20 @@ void toolbox::blockstructured::
         );
       }
 
-      tarch::la::Vector<Dimensions, int>
+      tarch::la::Vector<DIMENSIONS, int>
           destinationSpan = destinationCorner2 - destinationCorner1;
       int destinationDimensionsProduct = 1;
-      for (int d = 0; d < Dimensions; d++)
+      for (int d = 0; d < DIMENSIONS; d++)
         destinationDimensionsProduct *= destinationSpan(d);
 
       int row = 0;
-      tarch::la::Vector<Dimensions, T> normalisedCornerPosition
+      tarch::la::Vector<DIMENSIONS, T> normalisedCornerPosition
         = (1.0 / numberOfDoFsPerAxisInDestinationPatch)
-          * (tarch::la::convertScalar<T>(destinationCorner1) + tarch::la::Vector<Dimensions, T>(0.5 - haloDestinationPatch));
-      tarch::la::Vector<Dimensions, T> normalisedSourcePosition
+          * (tarch::la::convertScalar<T>(destinationCorner1) + tarch::la::Vector<DIMENSIONS, T>(0.5 - haloDestinationPatch));
+      tarch::la::Vector<DIMENSIONS, T> normalisedSourcePosition
         = (1.0 / numberOfDoFsPerAxisInSourcePatch)
-          * (tarch::la::convertScalar<T>(sourceVolume) + tarch::la::Vector<Dimensions, T>(0.5 - haloSourcePatch));
-      tarch::la::Vector<Dimensions, T>
+          * (tarch::la::convertScalar<T>(sourceVolume) + tarch::la::Vector<DIMENSIONS, T>(0.5 - haloSourcePatch));
+      tarch::la::Vector<DIMENSIONS, T>
         cornerDisplacement = (normalisedCornerPosition
                               - normalisedSourcePosition)
                              * (T)numberOfDoFsPerAxisInSourcePatch;
@@ -1262,19 +1260,19 @@ void toolbox::blockstructured::
       int writeIndex = 0;
 
       dfor(localDestinationVolume, destinationSpan) {
-        tarch::la::Vector<Dimensions, T>
+        tarch::la::Vector<DIMENSIONS, T>
           displacement = cornerDisplacement
                          + ((T)numberOfDoFsPerAxisInSourcePatch
                             / numberOfDoFsPerAxisInDestinationPatch)
                              * tarch::la::convertScalar<
                              T>(localDestinationVolume);
 
-        for (int a = 0; a < Dimensions; a++) {
+        for (int a = 0; a < DIMENSIONS; a++) {
           matrixData[writeIndex] = displacement(a);
           writeIndex++;
         }
-        for (int a = 0; a < Dimensions; a++) {
-          for (int b = a; b < Dimensions; b++) {
+        for (int a = 0; a < DIMENSIONS; a++) {
+          for (int b = a; b < DIMENSIONS; b++) {
             matrixData[writeIndex] = 0.5 * displacement(a) * displacement(b);
             writeIndex++;
           }
@@ -1290,7 +1288,7 @@ void toolbox::blockstructured::
 
       int destinationVolumeNumber = 0;
       dfor(localDestinationVolume, destinationSpan) {
-        tarch::la::Vector<Dimensions, int>
+        tarch::la::Vector<DIMENSIONS, int>
             destinationVolume = destinationCorner1 + localDestinationVolume;
         int destinationIndex  = peano4::utils::dLinearised(
           destinationVolume,
@@ -1364,7 +1362,7 @@ void toolbox::blockstructured::
 
 template<typename T>
 void toolbox::blockstructured::internal::interpolateCell_AoS_linear(
-  const tarch::la::Vector<Dimensions, int>& relativePositionWithinFatherCell,
+  const tarch::la::Vector<DIMENSIONS, int>& relativePositionWithinFatherCell,
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       unknowns,
   const T* NOALIAS coarseGridCellValues,
@@ -1384,7 +1382,7 @@ void toolbox::blockstructured::internal::interpolateCell_AoS_linear(
   tarch::la::DynamicMatrix* P = cellInterpolationMap[key];
   lock.free();
 
-#if Dimensions == 2
+#if DIMENSIONS == 2
   const int patchSize = numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch;
 #else
   const int patchSize = numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch
@@ -1412,29 +1410,29 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
   const T* NOALIAS                     coarseGridFaceValues,
   T* NOALIAS                           fineGridFaceValues
 ) {
-  const int normal = marker.getSelectedFaceNumber() % Dimensions;
-  const int i      = (normal + 1) % Dimensions;
-#if Dimensions == 3
-  const int j = (normal + 2) % Dimensions;
+  const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
+  const int i      = (normal + 1) % DIMENSIONS;
+#if DIMENSIONS == 3
+  const int j = (normal + 2) % DIMENSIONS;
 #endif
 
-  tarch::la::Vector<Dimensions, int> coarseStart(0);
+  tarch::la::Vector<DIMENSIONS, int> coarseStart(0);
   coarseStart(i
   ) = marker.getRelativePositionWithinFatherCell()(i)
       * numberOfDoFsPerAxisInPatch / 3;
-#if Dimensions == 3
+#if DIMENSIONS == 3
   coarseStart(j
   ) = marker.getRelativePositionWithinFatherCell()(j)
       * numberOfDoFsPerAxisInPatch / 3;
 #endif
 
-  tarch::la::Vector<Dimensions, int> coarseEnd(0);
+  tarch::la::Vector<DIMENSIONS, int> coarseEnd(0);
   coarseEnd(i
   ) = ((marker.getRelativePositionWithinFatherCell()(i) + 1
        ) * numberOfDoFsPerAxisInPatch
        + 2)
       / 3;
-#if Dimensions == 3
+#if DIMENSIONS == 3
   coarseEnd(j
   ) = ((marker.getRelativePositionWithinFatherCell()(j) + 1
        ) * numberOfDoFsPerAxisInPatch
@@ -1442,38 +1440,38 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
       / 3;
 #endif
 
-  tarch::la::Vector<Dimensions, int> fineDataStart(0);
+  tarch::la::Vector<DIMENSIONS, int> fineDataStart(0);
   fineDataStart(i
   ) = (marker.getRelativePositionWithinFatherCell()(i)
        * numberOfDoFsPerAxisInPatch)
       % 3;
-#if Dimensions == 3
+#if DIMENSIONS == 3
   fineDataStart(j
   ) = (marker.getRelativePositionWithinFatherCell()(j)
        * numberOfDoFsPerAxisInPatch)
       % 3;
 #endif
 
-  tarch::la::Vector<Dimensions, int> faceDimensions = coarseEnd - coarseStart;
+  tarch::la::Vector<DIMENSIONS, int> faceDimensions = coarseEnd - coarseStart;
   faceDimensions(normal)                            = (overlap - 1) / 3 + 1;
 
   int                                indices[18];
-  tarch::la::Vector<Dimensions, int> stencil[18];
+  tarch::la::Vector<DIMENSIONS, int> stencil[18];
   T*                                 centerValues = new T[unknowns];
 
   dfor(kCoarse, faceDimensions) {
-    tarch::la::Vector<Dimensions, int> center = kCoarse + coarseStart;
+    tarch::la::Vector<DIMENSIONS, int> center = kCoarse + coarseStart;
     center(normal
-    ) = (marker.getSelectedFaceNumber() < Dimensions)
+    ) = (marker.getSelectedFaceNumber() < DIMENSIONS)
           ? overlap - kCoarse(normal) - 1
           : overlap + kCoarse(normal);
-    tarch::la::Vector<Dimensions, int> stencilOffset(0);
+    tarch::la::Vector<DIMENSIONS, int> stencilOffset(0);
 
     if (center(i) == 0)
       stencilOffset(i) = 1;
     if (center(i) == numberOfDoFsPerAxisInPatch - 1)
       stencilOffset(i) = -1;
-#if Dimensions == 3
+#if DIMENSIONS == 3
     if (center(j) == 0)
       stencilOffset(j) = 1;
     if (center(j) == numberOfDoFsPerAxisInPatch - 1)
@@ -1483,21 +1481,21 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
     int stencilSize = 0;
     dfor(offset, 3) {
       if (
-        offset != tarch::la::Vector<Dimensions, int>(1) - stencilOffset and
-#if Dimensions == 3
+        offset != tarch::la::Vector<DIMENSIONS, int>(1) - stencilOffset and
+#if DIMENSIONS == 3
         !(offset(0) + stencilOffset(0) != 1
           and offset(1) + stencilOffset(1) != 1
           and offset(2) + stencilOffset(2) != 1)
-#elif Dimensions == 2
+#elif DIMENSIONS == 2
         !(offset(0) + stencilOffset(0) != 1
           and offset(1) + stencilOffset(1) != 1)
 #endif
       ) {
         stencil[stencilSize] = stencilOffset + offset
-                               - tarch::la::Vector<Dimensions, int>(1);
+                               - tarch::la::Vector<DIMENSIONS, int>(1);
         indices[stencilSize] = serialiseVoxelIndexInOverlap(
           center + offset + stencilOffset
-            - tarch::la::Vector<Dimensions, int>(1),
+            - tarch::la::Vector<DIMENSIONS, int>(1),
           numberOfDoFsPerAxisInPatch,
           overlap,
           normal
@@ -1527,17 +1525,17 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
       }
     }
 
-    int                      numberOfDerivatives = (Dimensions == 2) ? 5 : 9;
+    int                      numberOfDerivatives = (DIMENSIONS == 2) ? 5 : 9;
     tarch::la::DynamicMatrix A(stencilSize, numberOfDerivatives);
     for (int row = 0; row < stencilSize; row++) {
       int                                 column = 0;
-      tarch::la::Vector<Dimensions, int>& cell   = stencil[row];
-      for (int a = 0; a < Dimensions; a++) {
+      tarch::la::Vector<DIMENSIONS, int>& cell   = stencil[row];
+      for (int a = 0; a < DIMENSIONS; a++) {
         A(row, column) = cell(a);
         column++;
       }
-      for (int a = 0; a < Dimensions; a++) {
-        for (int b = a; b < Dimensions; b++) {
+      for (int a = 0; a < DIMENSIONS; a++) {
+        for (int b = a; b < DIMENSIONS; b++) {
           A(row, column) = 0.5 * cell(a) * cell(b);
           column++;
         }
@@ -1555,15 +1553,15 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
     tarch::la::DynamicMatrix inverseR = tarch::la::invertUpperTriangular(R);
     tarch::la::DynamicMatrix x        = inverseR * c;
 
-    tarch::la::Vector<Dimensions, int> fineStart(0);
-    tarch::la::Vector<Dimensions, int> fineEnd(3);
+    tarch::la::Vector<DIMENSIONS, int> fineStart(0);
+    tarch::la::Vector<DIMENSIONS, int> fineEnd(3);
 
     if (kCoarse(i) == 0)
       fineStart(i
       ) = (marker.getRelativePositionWithinFatherCell()(i)
            * numberOfDoFsPerAxisInPatch)
           % 3;
-#if Dimensions == 3
+#if DIMENSIONS == 3
     if (kCoarse(j) == 0)
       fineStart(j
       ) = (marker.getRelativePositionWithinFatherCell()(j)
@@ -1580,7 +1578,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
     if (kCoarse(i) == faceDimensions(i) - 1)
       fineEnd(i) = modulus;
 
-#if Dimensions == 3
+#if DIMENSIONS == 3
     modulus = (marker.getRelativePositionWithinFatherCell()(j) + 1)
               * numberOfDoFsPerAxisInPatch;
     if (modulus % 3 != 0)
@@ -1591,16 +1589,16 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
       fineEnd(j) = modulus;
 #endif
 
-    tarch::la::Vector<Dimensions, int> fineDimensions = fineEnd - fineStart;
+    tarch::la::Vector<DIMENSIONS, int> fineDimensions = fineEnd - fineStart;
     fineDimensions(normal) = std::min(overlap - kCoarse(normal) * 3, 3);
     if (fineDimensions(normal) % 3 != 0)
       fineDimensions(normal) = fineDimensions(normal) % 3;
     else
       fineDimensions(normal) = 3;
-#if Dimensions == 3
+#if DIMENSIONS == 3
     int fineDimensionsProduct = fineDimensions(normal) * fineDimensions(i)
                                 * fineDimensions(j);
-#elif Dimensions == 2
+#elif DIMENSIONS == 2
     int fineDimensionsProduct = fineDimensions(normal) * fineDimensions(i);
 #endif
     tarch::la::DynamicMatrix
@@ -1608,15 +1606,15 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
     int row = 0;
 
     dfor(kFine, fineDimensions) {
-      tarch::la::Vector<Dimensions, int>
-          cell   = fineStart + kFine - tarch::la::Vector<Dimensions, int>(1);
+      tarch::la::Vector<DIMENSIONS, int>
+          cell   = fineStart + kFine - tarch::la::Vector<DIMENSIONS, int>(1);
       int column = 0;
-      for (int a = 0; a < Dimensions; a++) {
+      for (int a = 0; a < DIMENSIONS; a++) {
         fineMatrix(row, column) = (1.0 / 3.0) * cell(a);
         column++;
       }
-      for (int a = 0; a < Dimensions; a++) {
-        for (int b = a; b < Dimensions; b++) {
+      for (int a = 0; a < DIMENSIONS; a++) {
+        for (int b = a; b < DIMENSIONS; b++) {
           fineMatrix(row, column) = (1.0 / 18.0) * cell(a) * cell(b);
           column++;
         }
@@ -1626,15 +1624,15 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
     tarch::la::DynamicMatrix fineValues = fineMatrix * x;
 
     int fineCellNumber = 0;
-    tarch::la::Vector<Dimensions, int>
+    tarch::la::Vector<DIMENSIONS, int>
       fineCorner = kCoarse * 3 + fineStart - fineDataStart;
     fineCorner(normal
-    )            = (marker.getSelectedFaceNumber() < Dimensions)
+    )            = (marker.getSelectedFaceNumber() < DIMENSIONS)
                      ? (kCoarse(normal) * 3)
                      : overlap + (kCoarse(normal) * 3);
 
     dfor(kFine, fineDimensions) {
-      tarch::la::Vector<Dimensions, int> fineCell = kFine + fineCorner;
+      tarch::la::Vector<DIMENSIONS, int> fineCell = kFine + fineCorner;
       int                                index = serialiseVoxelIndexInOverlap(
         fineCell,
         numberOfDoFsPerAxisInPatch,
@@ -1663,29 +1661,29 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_third_order(
   const T* NOALIAS coarseGridFaceValues,
   T* NOALIAS fineGridFaceValues
 ) {
-  const int normal = marker.getSelectedFaceNumber() % Dimensions;
-  const int i      = (normal + 1) % Dimensions;
-#if Dimensions == 3
-  const int j = (normal + 2) % Dimensions;
+  const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
+  const int i      = (normal + 1) % DIMENSIONS;
+#if DIMENSIONS == 3
+  const int j = (normal + 2) % DIMENSIONS;
 #endif
 
-  tarch::la::Vector<Dimensions, int> coarseStart(0);
+  tarch::la::Vector<DIMENSIONS, int> coarseStart(0);
   coarseStart(i
   ) = marker.getRelativePositionWithinFatherCell()(i)
       * numberOfDoFsPerAxisInPatch / 3;
-#if Dimensions == 3
+#if DIMENSIONS == 3
   coarseStart(j
   ) = marker.getRelativePositionWithinFatherCell()(j)
       * numberOfDoFsPerAxisInPatch / 3;
 #endif
 
-  tarch::la::Vector<Dimensions, int> coarseEnd(0);
+  tarch::la::Vector<DIMENSIONS, int> coarseEnd(0);
   coarseEnd(i
   ) = ((marker.getRelativePositionWithinFatherCell()(i) + 1
        ) * numberOfDoFsPerAxisInPatch
        + 2)
       / 3;
-#if Dimensions == 3
+#if DIMENSIONS == 3
   coarseEnd(j
   ) = ((marker.getRelativePositionWithinFatherCell()(j) + 1
        ) * numberOfDoFsPerAxisInPatch
@@ -1693,39 +1691,39 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_third_order(
       / 3;
 #endif
 
-  tarch::la::Vector<Dimensions, int> fineDataStart(0);
+  tarch::la::Vector<DIMENSIONS, int> fineDataStart(0);
   fineDataStart(i
   ) = (marker.getRelativePositionWithinFatherCell()(i)
        * numberOfDoFsPerAxisInPatch)
       % 3;
-#if Dimensions == 3
+#if DIMENSIONS == 3
   fineDataStart(j
   ) = (marker.getRelativePositionWithinFatherCell()(j)
        * numberOfDoFsPerAxisInPatch)
       % 3;
 #endif
 
-  tarch::la::Vector<Dimensions, int> faceDimensions = coarseEnd - coarseStart;
+  tarch::la::Vector<DIMENSIONS, int> faceDimensions = coarseEnd - coarseStart;
   faceDimensions(normal)                            = (overlap - 1) / 3 + 1;
 
   T*                                 centerValues = new T[unknowns];
   int                                indices[32];
-  tarch::la::Vector<Dimensions, int> stencil[32];
+  tarch::la::Vector<DIMENSIONS, int> stencil[32];
 
 
   dfor(kCoarse, faceDimensions) {
-    tarch::la::Vector<Dimensions, int> center = kCoarse + coarseStart;
+    tarch::la::Vector<DIMENSIONS, int> center = kCoarse + coarseStart;
     center(normal
-    ) = (marker.getSelectedFaceNumber() < Dimensions)
+    ) = (marker.getSelectedFaceNumber() < DIMENSIONS)
           ? overlap - kCoarse(normal) - 1
           : overlap + kCoarse(normal);
-    tarch::la::Vector<Dimensions, int> stencilOffset(0);
+    tarch::la::Vector<DIMENSIONS, int> stencilOffset(0);
 
     if (center(i) == 0)
       stencilOffset(i) = 1;
     if (center(i) == numberOfDoFsPerAxisInPatch - 1)
       stencilOffset(i) = -1;
-#if Dimensions == 3
+#if DIMENSIONS == 3
     if (center(j) == 0)
       stencilOffset(j) = 1;
     if (center(j) == numberOfDoFsPerAxisInPatch - 1)
@@ -1734,12 +1732,12 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_third_order(
 
     int stencilSize = 0;
     dfor(offset, 3) {
-      if (offset != tarch::la::Vector<Dimensions, int>(1) - stencilOffset) {
+      if (offset != tarch::la::Vector<DIMENSIONS, int>(1) - stencilOffset) {
         stencil[stencilSize] = stencilOffset + offset
-                               - tarch::la::Vector<Dimensions, int>(1);
+                               - tarch::la::Vector<DIMENSIONS, int>(1);
         indices[stencilSize] = serialiseVoxelIndexInOverlap(
           center + offset + stencilOffset
-            - tarch::la::Vector<Dimensions, int>(1),
+            - tarch::la::Vector<DIMENSIONS, int>(1),
           numberOfDoFsPerAxisInPatch,
           overlap,
           normal
@@ -1748,9 +1746,9 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_third_order(
       }
     }
 
-    for (int axis = 0; axis < Dimensions; axis++) {
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
       if (center(axis) > 1) {
-        tarch::la::Vector<Dimensions, int> offset(0);
+        tarch::la::Vector<DIMENSIONS, int> offset(0);
         offset(axis)         = -2;
         stencil[stencilSize] = stencilOffset + offset;
         indices[stencilSize] = serialiseVoxelIndexInOverlap(
@@ -1762,7 +1760,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_third_order(
         stencilSize++;
       }
       if (center(axis) < numberOfDoFsPerAxisInPatch - 2) {
-        tarch::la::Vector<Dimensions, int> offset(0);
+        tarch::la::Vector<DIMENSIONS, int> offset(0);
         offset(axis)         = 2;
         stencil[stencilSize] = stencilOffset + offset;
         indices[stencilSize] = serialiseVoxelIndexInOverlap(
@@ -1795,25 +1793,25 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_third_order(
       }
     }
 
-    int                      numberOfDerivatives = (Dimensions == 2) ? 9 : 19;
+    int                      numberOfDerivatives = (DIMENSIONS == 2) ? 9 : 19;
     tarch::la::DynamicMatrix A(stencilSize, numberOfDerivatives);
 
     for (int row = 0; row < stencilSize; row++) {
       int                                 column = 0;
-      tarch::la::Vector<Dimensions, int>& cell   = stencil[row];
-      for (int a = 0; a < Dimensions; a++) {
+      tarch::la::Vector<DIMENSIONS, int>& cell   = stencil[row];
+      for (int a = 0; a < DIMENSIONS; a++) {
         A(row, column) = cell(a);
         column++;
       }
-      for (int a = 0; a < Dimensions; a++) {
-        for (int b = a; b < Dimensions; b++) {
+      for (int a = 0; a < DIMENSIONS; a++) {
+        for (int b = a; b < DIMENSIONS; b++) {
           A(row, column) = 0.5 * cell(a) * cell(b);
           column++;
         }
       }
-      for (int a = 0; a < Dimensions; a++) {
-        for (int b = a; b < Dimensions; b++) {
-          for (int c = b; c < Dimensions; c++) {
+      for (int a = 0; a < DIMENSIONS; a++) {
+        for (int b = a; b < DIMENSIONS; b++) {
+          for (int c = b; c < DIMENSIONS; c++) {
             A(row, column) = (1.0 / 6.0) * cell(a) * cell(b) * cell(c);
             column++;
           }
@@ -1829,8 +1827,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_third_order(
 
     tarch::la::DynamicMatrix inverseR = tarch::la::invertUpperTriangular(R);
     tarch::la::DynamicMatrix x        = inverseR * c;
-    tarch::la::Vector<Dimensions, int> fineStart(0);
-    tarch::la::Vector<Dimensions, int> fineEnd(3);
+    tarch::la::Vector<DIMENSIONS, int> fineStart(0);
+    tarch::la::Vector<DIMENSIONS, int> fineEnd(3);
 
 
     if (kCoarse(i) == 0)
@@ -1838,7 +1836,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_third_order(
       ) = (marker.getRelativePositionWithinFatherCell()(i)
            * numberOfDoFsPerAxisInPatch)
           % 3;
-#if Dimensions == 3
+#if DIMENSIONS == 3
     if (kCoarse(j) == 0)
       fineStart(j
       ) = (marker.getRelativePositionWithinFatherCell()(j)
@@ -1855,7 +1853,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_third_order(
     if (kCoarse(i) == faceDimensions(i) - 1)
       fineEnd(i) = modulus;
 
-#if Dimensions == 3
+#if DIMENSIONS == 3
     modulus = (marker.getRelativePositionWithinFatherCell()(j) + 1)
               * numberOfDoFsPerAxisInPatch;
     if (modulus % 3 != 0)
@@ -1866,17 +1864,17 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_third_order(
       fineEnd(j) = modulus;
 #endif
 
-    tarch::la::Vector<Dimensions, int> fineDimensions = fineEnd - fineStart;
+    tarch::la::Vector<DIMENSIONS, int> fineDimensions = fineEnd - fineStart;
     fineDimensions(normal) = std::min(overlap - kCoarse(normal) * 3, 3);
     if (fineDimensions(normal) % 3 != 0)
       fineDimensions(normal) = fineDimensions(normal) % 3;
     else
       fineDimensions(normal) = 3;
 
-#if Dimensions == 3
+#if DIMENSIONS == 3
     int fineDimensionsProduct = fineDimensions(normal) * fineDimensions(i)
                                 * fineDimensions(j);
-#elif Dimensions == 2
+#elif DIMENSIONS == 2
     int fineDimensionsProduct = fineDimensions(normal) * fineDimensions(i);
 #endif
 
@@ -1885,22 +1883,22 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_third_order(
     int row = 0;
 
     dfor(kFine, fineDimensions) {
-      tarch::la::Vector<Dimensions, int>
-          cell   = fineStart + kFine - tarch::la::Vector<Dimensions, int>(1);
+      tarch::la::Vector<DIMENSIONS, int>
+          cell   = fineStart + kFine - tarch::la::Vector<DIMENSIONS, int>(1);
       int column = 0;
-      for (int a = 0; a < Dimensions; a++) {
+      for (int a = 0; a < DIMENSIONS; a++) {
         fineMatrix(row, column) = (1.0 / 3.0) * cell(a);
         column++;
       }
-      for (int a = 0; a < Dimensions; a++) {
-        for (int b = a; b < Dimensions; b++) {
+      for (int a = 0; a < DIMENSIONS; a++) {
+        for (int b = a; b < DIMENSIONS; b++) {
           fineMatrix(row, column) = (1.0 / 18.0) * cell(a) * cell(b);
           column++;
         }
       }
-      for (int a = 0; a < Dimensions; a++) {
-        for (int b = a; b < Dimensions; b++) {
-          for (int c = b; c < Dimensions; c++) {
+      for (int a = 0; a < DIMENSIONS; a++) {
+        for (int b = a; b < DIMENSIONS; b++) {
+          for (int c = b; c < DIMENSIONS; c++) {
             fineMatrix(
               row,
               column
@@ -1914,15 +1912,15 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_third_order(
     tarch::la::DynamicMatrix fineValues = fineMatrix * x;
 
     int fineCellNumber = 0;
-    tarch::la::Vector<Dimensions, int>
+    tarch::la::Vector<DIMENSIONS, int>
       fineCorner = kCoarse * 3 + fineStart - fineDataStart;
     fineCorner(normal
-    )            = (marker.getSelectedFaceNumber() < Dimensions)
+    )            = (marker.getSelectedFaceNumber() < DIMENSIONS)
                      ? (kCoarse(normal) * 3)
                      : overlap + (kCoarse(normal) * 3);
 
     dfor(kFine, fineDimensions) {
-      tarch::la::Vector<Dimensions, int> fineCell = kFine + fineCorner;
+      tarch::la::Vector<DIMENSIONS, int> fineCell = kFine + fineCorner;
       int                                index = serialiseVoxelIndexInOverlap(
         fineCell,
         numberOfDoFsPerAxisInPatch,
@@ -1955,16 +1953,16 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_matrix(
   const T* NOALIAS coarseGridFaceValues,
   T* NOALIAS fineGridFaceValues
 ) {
-  tarch::la::Vector<Dimensions, int> fineFaceDimensions(
+  tarch::la::Vector<DIMENSIONS, int> fineFaceDimensions(
     numberOfDoFsPerAxisInPatch
   );
-  tarch::la::Vector<Dimensions, int> coarseFaceDimensions(
+  tarch::la::Vector<DIMENSIONS, int> coarseFaceDimensions(
     numberOfDoFsPerAxisInPatch
   );
 
-  const int normal = marker.getSelectedFaceNumber() % Dimensions;
-  const int matrixColumns = 2 * overlap * std::pow(numberOfDoFsPerAxisInPatch, Dimensions - 1);
-  const int matrixRows = overlap * std::pow(numberOfDoFsPerAxisInPatch, Dimensions - 1);
+  const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
+  const int matrixColumns = 2 * overlap * std::pow(numberOfDoFsPerAxisInPatch, DIMENSIONS - 1);
+  const int matrixRows = overlap * std::pow(numberOfDoFsPerAxisInPatch, DIMENSIONS - 1);
 
   fineFaceDimensions(normal)   = overlap;
   coarseFaceDimensions(normal) = 2 * overlap;
@@ -1978,12 +1976,12 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_matrix(
       overlap,
       normal
     );
-    int newIndex = (marker.getSelectedFaceNumber() >= Dimensions)
+    int newIndex = (marker.getSelectedFaceNumber() >= DIMENSIONS)
                      ? kCoarse(normal)
                      : 2 * overlap - kCoarse(normal) - 1;
     int base     = overlap * 2;
-    for (int d = 1; d < Dimensions; d++) {
-      newIndex += kCoarse((normal + d) % Dimensions) * base;
+    for (int d = 1; d < DIMENSIONS; d++) {
+      newIndex += kCoarse((normal + d) % DIMENSIONS) * base;
       base *= numberOfDoFsPerAxisInPatch;
     }
     for (int unknown = 0; unknown < unknowns; unknown++) {
@@ -1994,7 +1992,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_matrix(
 
   dfor(kFine, fineFaceDimensions) {
     auto fineCoords = kFine;
-    fineCoords(normal)  = (marker.getSelectedFaceNumber() < Dimensions)
+    fineCoords(normal)  = (marker.getSelectedFaceNumber() < DIMENSIONS)
                         ? overlap - kFine(normal) - 1
                         : overlap + kFine(normal);
 
@@ -2007,8 +2005,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_matrix(
 
     int row  = kFine(normal);
     int base = overlap;
-    for (int d = 1; d < Dimensions; d++) {
-      row += kFine((normal + d) % Dimensions) * base;
+    for (int d = 1; d < DIMENSIONS; d++) {
+      row += kFine((normal + d) % DIMENSIONS) * base;
       base *= numberOfDoFsPerAxisInPatch;
     }
 
@@ -2050,13 +2048,13 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
     overlap
   );
 
-  const int normal = marker.getSelectedFaceNumber() % Dimensions;
+  const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
   dfore(kFine, numberOfDoFsPerAxisInPatch, normal, 0) {
     for (int iFine = 0; iFine < overlap; iFine++) {
-      tarch::la::Vector<Dimensions, int> dest = kFine;
+      tarch::la::Vector<DIMENSIONS, int> dest = kFine;
       dest(normal
-      ) = (marker.getSelectedFaceNumber() < Dimensions)
+      ) = (marker.getSelectedFaceNumber() < DIMENSIONS)
             ? iFine
             : 2 * overlap - iFine - 1;
 
@@ -2077,9 +2075,9 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
 
       dfore(kCoarse, numberOfDoFsPerAxisInPatch, normal, 0) {
         for (int iCoarse = 0; iCoarse < 2 * overlap; iCoarse++) {
-          tarch::la::Vector<Dimensions, int> src = kCoarse;
+          tarch::la::Vector<DIMENSIONS, int> src = kCoarse;
           src(normal
-          )                 = (marker.getSelectedFaceNumber() < Dimensions)
+          )                 = (marker.getSelectedFaceNumber() < DIMENSIONS)
                                 ? iCoarse
                                 : 2 * overlap - iCoarse - 1;
           int srcLinearised = serialiseVoxelIndexInOverlap(
@@ -2090,7 +2088,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
           );
 
           T weight = 1.0;
-          for (int d = 0; d < Dimensions; d++) {
+          for (int d = 0; d < DIMENSIONS; d++) {
             if (d == normal) {
               int col = iCoarse;
               int row = iFine;

@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "DevicePropertiesCache.h"
 
-#if defined(GPUOffloadingCUDA)
+#if defined(WITH_GPU_CUDA)
 
 #include "ErrorCheck.h"
 #include "tarch/Assertions.h"

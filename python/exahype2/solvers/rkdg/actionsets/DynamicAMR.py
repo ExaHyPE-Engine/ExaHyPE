@@ -91,7 +91,7 @@ class DynamicAMR( AbstractRungeKuttaDGActionSet ):
       coarseGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(marker.getSelectedFaceNumber()).value
     );
   
-    bool isLeftEntryOnCoarseFaceLabel = marker.getSelectedFaceNumber() >= Dimensions;
+    bool isLeftEntryOnCoarseFaceLabel = marker.getSelectedFaceNumber() >= DIMENSIONS;
     coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).setUpdated( isLeftEntryOnCoarseFaceLabel ? 0 : 1,true);
     coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).setUpdatedTimeStamp( 
       isLeftEntryOnCoarseFaceLabel ? 0 : 1,

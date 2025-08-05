@@ -156,7 +156,7 @@ namespace tarch {
        */
       std::function<bool()> _taskFunctor;
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
       std::string _taskDescription;
 #endif
 
@@ -174,7 +174,7 @@ namespace tarch {
         int                          taskType,
         int                          priority,
         const std::function<bool()>& taskFunctor
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
         ,
         const std::string& taskDescription = ""
 #endif

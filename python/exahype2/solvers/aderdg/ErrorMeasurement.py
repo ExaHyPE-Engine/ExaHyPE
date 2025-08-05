@@ -71,7 +71,7 @@ def create_postprocessing_kernel_for_error_measurement_for_fixed_timestepping(gu
 
       kernels::{{SOLVER_NAME}}::cellErrorIntegral(
         [&](
-          const tarch::la::Vector<Dimensions, double>&  x,
+          const tarch::la::Vector<DIMENSIONS, double>&  x,
           const double                                  t,
           const double                                  dt,
           const {{SOLUTION_STORAGE_PRECISION}}*         Q_,
@@ -106,7 +106,7 @@ def create_postprocessing_kernel_for_error_measurement_for_adaptive_timestepping
 
       kernels::{{SOLVER_NAME}}::cellErrorIntegral(
         [&](
-          const tarch::la::Vector<Dimensions, double>&  x,
+          const tarch::la::Vector<DIMENSIONS, double>&  x,
           const double                                  t,
           const double                                  dt,
           const {{SOLUTION_STORAGE_PRECISION}}*         Q_,

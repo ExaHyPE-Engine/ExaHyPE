@@ -9,7 +9,7 @@ void ContextSlipWeakening<Shortcuts, basisSize, numberOfVariables, numberOfParam
   T* FL, T* FR,
   const T* const QL, const T* const QR,
   const double t, const double dt,
-  const tarch::la::Vector<Dimensions, double>& cellSize,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const int direction,
   bool isBoundaryFace,
   int faceIndex,

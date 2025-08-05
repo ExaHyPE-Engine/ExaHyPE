@@ -170,8 +170,8 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
   int                                       unknownsPerVoxel,
   const double* NOALIAS Q,
   double                                timeStepSize,
-  tarch::la::Vector<Dimensions, int>    indices,
-  tarch::la::Vector<Dimensions, double> factors,
+  tarch::la::Vector<DIMENSIONS, int>    indices,
+  tarch::la::Vector<DIMENSIONS, double> factors,
   Particle&                             particle
 ) {
   for (int unknown = 0; unknown < unknownsPerVoxel; unknown++) {
@@ -190,9 +190,9 @@ void exahype2::fv::updateParticleState(
   int                                       voxelsPerAxis,
   int                                       unknownsPerVoxel,
   const double* NOALIAS Q,
-  tarch::la::Vector<Dimensions, double> DomainSize,
-  tarch::la::Vector<Dimensions, double> DomainOffset,
-  tarch::la::Vector<Dimensions, double> PeriodicBC
+  tarch::la::Vector<DIMENSIONS, double> DomainSize,
+  tarch::la::Vector<DIMENSIONS, double> DomainOffset,
+  tarch::la::Vector<DIMENSIONS, double> PeriodicBC
 ) {
   // 🔹 Step 1: Interpolation (Store values directly in the particle)
   projectValuesOntoParticle_piecewiseLinear<
@@ -205,7 +205,7 @@ void exahype2::fv::updateParticleState(
   particle.setData(6, -9.81);
 
   // 🔹 Step 3: Perform Integration
-  tarch::la::Vector<Dimensions, double> newPosition;
+  tarch::la::Vector<DIMENSIONS, double> newPosition;
 
   newPosition = explicitEulerIntegration(particle, timeStepSize);
 
@@ -219,10 +219,10 @@ void exahype2::fv::updateParticleState(
 }
 
 template <typename Particle>
-tarch::la::Vector<Dimensions, double> exahype2::fv::explicitEulerIntegration(Particle& particle, double timeStepSize) {
-  tarch::la::Vector<Dimensions, double> newPosition;
+tarch::la::Vector<DIMENSIONS, double> exahype2::fv::explicitEulerIntegration(Particle& particle, double timeStepSize) {
+  tarch::la::Vector<DIMENSIONS, double> newPosition;
   // Set initial acceleration for testing purposes
-  for (int d = 0; d < Dimensions; ++d) {
+  for (int d = 0; d < DIMENSIONS; ++d) {
     double velocity     = particle.getData(3 + d);
     double acceleration = particle.getData(5 + d);
     velocity += acceleration * timeStepSize; // Update velocity
@@ -239,11 +239,11 @@ tarch::la::Vector<Dimensions, double> exahype2::fv::explicitEulerIntegration(Par
 template <typename Particle>
 void exahype2::fv::handleBoundaryCollisions(
   Particle&                              particle,
-  tarch::la::Vector<Dimensions, double>& newPosition,
-  tarch::la::Vector<Dimensions, double>  DomainSize,
-  tarch::la::Vector<Dimensions, double>  DomainOffset
+  tarch::la::Vector<DIMENSIONS, double>& newPosition,
+  tarch::la::Vector<DIMENSIONS, double>  DomainSize,
+  tarch::la::Vector<DIMENSIONS, double>  DomainOffset
 ) {
-  for (int d = 0; d < Dimensions; d++) {
+  for (int d = 0; d < DIMENSIONS; d++) {
     double lowerBound = DomainOffset[d];
     double upperBound = DomainOffset[d] + DomainSize[d];
 

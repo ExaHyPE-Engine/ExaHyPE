@@ -5,36 +5,35 @@
 #include "Device.h"
 #include "MemoryLocation.h"
 
-#if defined(GPUOffloadingCUDA)
+#if defined(WITH_GPU_CUDA)
 #include "cuda/Device.h" // To get access to the __device__ keyword
 #endif
 
-#if defined(GPUOffloadingKokkos)
+#if defined(WITH_GPU_KOKKOS)
 #include "kokkos/Device.h" // To get access to the KOKKOS_FUNCTION keyword
 #endif
 
 #include "tarch/CompilerSpecificSettings.h"
 
 namespace tarch {
-  // https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#nvcc-identification-macro
-  // defined(_NVHPC_CUDA) || defined(__NVCOMPILER_CUDA__) || defined(__CUDACC__) || defined(NVCC) || defined(__NVCC__)
-  #if defined(GPUOffloadingCUDA) or defined(GPUOffloadingHIP) or (defined(GPUOffloadingCPP) and defined(_NVHPC_STDPAR_GPU))
-    #define GPUCallableMethod __host__ __device__
-    GPUCallableMethod void gpuAbort();
-  #elif defined(GPUOffloadingSYCL)
-    #define GPUCallableMethod
-    void gpuAbort();
-  #elif defined(GPUOffloadingOMP)
-    #define GPUCallableMethod
-    #pragma omp declare target
-    void gpuAbort();
-    #pragma omp end declare target
-  #elif defined(GPUOffloadingKokkos)
-    #define GPUCallableMethod KOKKOS_FUNCTION
-  #else
-    #define GPUCallableMethod
-    #define GPUOffloadingOff // No device accelerator chosen
-  #endif
+// https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#nvcc-identification-macro
+// defined(_NVHPC_CUDA) || defined(__NVCOMPILER_CUDA__) || defined(__CUDACC__) || defined(NVCC) || defined(__NVCC__)
+#if defined(WITH_GPU_CUDA) or (defined(WITH_GPU_STDPAR) and defined(_NVHPC_STDPAR_GPU))
+#define GPU_CALLABLE_METHOD __host__ __device__
+GPU_CALLABLE_METHOD void gpuAbort();
+#elif defined(WITH_GPU_SYCL)
+#define GPU_CALLABLE_METHOD
+void gpuAbort();
+#elif defined(WITH_GPU_OMP_TARGET)
+#define GPU_CALLABLE_METHOD
+#pragma omp declare target
+void gpuAbort();
+#pragma omp end declare target
+#elif defined(WITH_GPU_KOKKOS)
+#define GPU_CALLABLE_METHOD KOKKOS_FUNCTION
+#else
+#define GPU_CALLABLE_METHOD
+#endif
 
   namespace accelerator {
     void* allocateRawData(

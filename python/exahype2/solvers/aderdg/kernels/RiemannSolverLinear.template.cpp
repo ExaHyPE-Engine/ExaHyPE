@@ -18,8 +18,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   const cCompType* NOALIAS const                    QR,
   const double                                      timeStamp,
   const double                                      timeStepSize,
-  const tarch::la::Vector<Dimensions, double>&      faceCentre,
-  const tarch::la::Vector<Dimensions, double>&      cellSize,
+  const tarch::la::Vector<DIMENSIONS, double>&      faceCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&      cellSize,
   const int                                         direction,
   const bool                                        isBoundary,
   const int                                         faceNumber
@@ -57,7 +57,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
 
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
-    #ifdef SharedOMP
+    #ifdef WITH_OPENMP
     #pragma omp simd aligned(QavL,QavR,QL,QR:{{ALIGNMENT}})
     #endif
     for (int n = 0; n < {{NUMBER_OF_DATA_PADDED}}; n++) {
@@ -95,7 +95,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 
   cCompType Qavg[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned({{ALIGNMENT}})));
 
-  #ifdef SharedOMP
+  #ifdef WITH_OPENMP
   #pragma omp simd aligned(Qavg,QavR,QavL:{{ALIGNMENT}})
   #endif
   for (int n = 0; n < {{NUMBER_OF_DATA_PADDED}}; n++) {
@@ -118,7 +118,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 {% endif %}
 
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
-    #ifdef SharedOMP
+    #ifdef WITH_OPENMP
     #pragma omp simd aligned(Qdiff,QR,QL:{{ALIGNMENT}})
     #endif
     for (int n = 0 ; n < {{NUMBER_OF_UNKNOWNS}} ; n++) {
@@ -157,7 +157,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     );
 {% endif %}{# USE_MATERIAL_PARAMETERS #}
 
-    #ifdef SharedOMP
+    #ifdef WITH_OPENMP
     #pragma omp simd aligned(FL,ncp:{{ALIGNMENT}})
     #endif
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
@@ -196,7 +196,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     );
 {% endif %}{# USE_MATERIAL_PARAMETERS #}
 
-    #ifdef SharedOMP
+    #ifdef WITH_OPENMP
     #pragma omp simd aligned(FL,fluxValues:{{ALIGNMENT}})
     #endif
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
@@ -204,7 +204,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     }
 {% endif %}{# USE_FLUX #}
 
-    #ifdef SharedOMP
+    #ifdef WITH_OPENMP
     #pragma omp simd aligned(FR,FL,Qdiff:{{ALIGNMENT}})
     #endif
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
@@ -223,8 +223,8 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  QR,
   const double                                              timeStamp,
   const double                                              timeStepSize,
-  const tarch::la::Vector<Dimensions, double>&              faceCentre,
-  const tarch::la::Vector<Dimensions, double>&              cellSize,
+  const tarch::la::Vector<DIMENSIONS, double>&              faceCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&              cellSize,
   const int                                                 direction,
   const bool                                                isBoundary,
   const int                                                 faceNumber

@@ -145,7 +145,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
         """
   // Start template in python/peano4/toolbox/particles/api/UpdateParticleGridAssociation_Reassign.py
 
-  for (int i=0; i<TwoPowerD; i++) {
+  for (int i=0; i<TWO_POWER_D; i++) {
     vertexdata::{{PARTICLES_CONTAINER}}::iterator p = fineGridVertices{{PARTICLES_CONTAINER}}(i).begin();
     while ( p!=fineGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
 
@@ -154,7 +154,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
           p, marker, i
         );
 
-      #if PeanoDebug > 0
+      #if PEANO_DEBUG > 0
       int partID = (*p)->getPartid();
       #else
       int partID = -1;
@@ -197,14 +197,14 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
         case 1:
         case 2:
         case 3:
-        #if Dimensions==3
+        #if DIMENSIONS==3
         case 4:
         case 5:
         case 6:
         case 7:
         #endif
           p = fineGridVertices{{PARTICLES_CONTAINER}}(instruction).move(p,fineGridVertices{{PARTICLES_CONTAINER}}(i));
-          tarch::la::Vector<Dimensions, double> newVertexPosition = 
+          tarch::la::Vector<DIMENSIONS, double> newVertexPosition = 
             marker.x()
             -
             tarch::la::multiplyComponents(
@@ -213,7 +213,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
             )
             +
             tarch::la::multiplyComponents(
-              tarch::la::Vector<Dimensions,double>(target),
+              tarch::la::Vector<DIMENSIONS,double>(target),
               3.0*marker.h()
             );
           toolbox::particles::updateContainedInAdjacentCellProperty(newVertexPosition, marker.h()*3.0, *p );
@@ -242,18 +242,18 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
           );
           _numberOfParticleReassignmentsOnCurrentLevel++;
           break;
-        case 0+TwoPowerD:
-        case 1+TwoPowerD:
-        case 2+TwoPowerD:
-        case 3+TwoPowerD:
-        #if Dimensions==3
-        case 4+TwoPowerD:
-        case 5+TwoPowerD:
-        case 6+TwoPowerD:
-        case 7+TwoPowerD:
+        case 0+TWO_POWER_D:
+        case 1+TWO_POWER_D:
+        case 2+TWO_POWER_D:
+        case 3+TWO_POWER_D:
+        #if DIMENSIONS==3
+        case 4+TWO_POWER_D:
+        case 5+TWO_POWER_D:
+        case 6+TWO_POWER_D:
+        case 7+TWO_POWER_D:
         #endif
           (*p)->setCellH(3.0 * marker.h());
-          tarch::la::Vector<Dimensions, double> newVertexX = 
+          tarch::la::Vector<DIMENSIONS, double> newVertexX = 
               marker.x()
               -
               tarch::la::multiplyComponents(
@@ -262,7 +262,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
               )
               +
               tarch::la::multiplyComponents(
-                tarch::la::Vector<Dimensions,double>( std::bitset<Dimensions>(instruction) ),
+                tarch::la::Vector<DIMENSIONS,double>( std::bitset<DIMENSIONS>(instruction) ),
                 3.0*marker.h()
               );
           toolbox::particles::updateContainedInAdjacentCellProperty(newVertexX, marker.h()*3.0, *p );
@@ -289,7 +289,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
             marker.x(),
             marker.h()
           );
-          coarseGridVertices{{PARTICLES_CONTAINER}}(instruction-TwoPowerD).push_back(*p);
+          coarseGridVertices{{PARTICLES_CONTAINER}}(instruction-TWO_POWER_D).push_back(*p);
           p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
           _numberOfLifts ++;
           break;

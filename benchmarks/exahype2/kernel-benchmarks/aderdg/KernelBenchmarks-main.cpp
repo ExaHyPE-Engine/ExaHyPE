@@ -45,8 +45,8 @@ tarch::logging::Log _log("::");
 
 constexpr double TimeStamp    = 0.0;
 constexpr double TimeStepSize = 1e-6;
-const tarch::la::Vector<Dimensions,double> CellCenter = benchmarks::exahype2::kernelbenchmarks::DomainOffset + 0.5*benchmarks::exahype2::kernelbenchmarks::DomainSize;
-const tarch::la::Vector<Dimensions,double> CellSize = benchmarks::exahype2::kernelbenchmarks::DomainSize / 81.0;
+const tarch::la::Vector<DIMENSIONS,double> CellCenter = benchmarks::exahype2::kernelbenchmarks::DomainOffset + 0.5*benchmarks::exahype2::kernelbenchmarks::DomainSize;
+const tarch::la::Vector<DIMENSIONS,double> CellSize = benchmarks::exahype2::kernelbenchmarks::DomainSize / 81.0;
 // constexpr int    HaloSize     = 1;
 
 static_assert(Accuracy >= std::numeric_limits<double>::epsilon() || Accuracy == 0.0);
@@ -54,7 +54,7 @@ static_assert(Accuracy >= std::numeric_limits<double>::epsilon() || Accuracy == 
 constexpr int NumberOfInputEntriesPerCell
   = (AderSolver::Order + 1)
   * (AderSolver::Order + 1)
-#if Dimensions == 3
+#if DIMENSIONS == 3
   * (AderSolver::Order + 1)
 #endif
   * (AderSolver::NumberOfUnknowns + AderSolver::NumberOfAuxiliaryVariables);
@@ -63,7 +63,7 @@ constexpr int NumberOfOutputEntriesPerCell
   = 0;
 //   = AderSolver::Order
 //   * AderSolver::Order
-// #if Dimensions == 3
+// #if DIMENSIONS == 3
 //   * AderSolver::Order
 // #endif
 //   * (AderSolver::NumberOfUnknowns + AderSolver::NumberOfAuxiliaryVariables);
@@ -71,7 +71,7 @@ constexpr int NumberOfOutputEntriesPerCell
 constexpr int NumberOfFiniteVolumesPerCell
   = AderSolver::Order
   * AderSolver::Order
-#if Dimensions == 3
+#if DIMENSIONS == 3
   * AderSolver::Order
 #endif
   ;
@@ -246,24 +246,24 @@ void reportRuntime(
 */
 double runKernels(int device, exahype2::CellData<double, double>& cellData, int cellIndex, tarch::timing::Measurement& measurement){
   double boundaryData[kernels::AderSolver::getBndFaceTotalSize()];
-  double* lQhbnd[2*Dimensions] = {
+  double* lQhbnd[2*DIMENSIONS] = {
     boundaryData,
     boundaryData  +   kernels::AderSolver::getBndFaceSize(),
     boundaryData  + 2*kernels::AderSolver::getBndFaceSize(),
     boundaryData  + 3*kernels::AderSolver::getBndFaceSize()
-#if Dimensions==3
+#if DIMENSIONS==3
     ,boundaryData + 4*kernels::AderSolver::getBndFaceSize(),
      boundaryData + 5*kernels::AderSolver::getBndFaceSize()
 #endif
   };
 
   double boundaryFlux[kernels::AderSolver::getBndFluxTotalSize()];
-  double* lFhbnd[2*Dimensions] = {
+  double* lFhbnd[2*DIMENSIONS] = {
       boundaryFlux,
       boundaryFlux  +   kernels::AderSolver::getBndFluxSize(),
       boundaryFlux  + 2*kernels::AderSolver::getBndFluxSize(),
       boundaryFlux  + 3*kernels::AderSolver::getBndFluxSize()
-#if Dimensions==3
+#if DIMENSIONS==3
       ,boundaryFlux + 4*kernels::AderSolver::getBndFluxSize(),
        boundaryFlux + 5*kernels::AderSolver::getBndFluxSize()
 #endif
@@ -277,19 +277,19 @@ double runKernels(int device, exahype2::CellData<double, double>& cellData, int 
     CellCenter, CellSize, TimeStamp, TimeStepSize
   );
 
-  for (int d = 0; d < Dimensions; d++) {
+  for (int d = 0; d < DIMENSIONS; d++) {
     const int direction = d;
 
     //For the Riemann solver, we wrap the domain as though it had periodic boundary
     // conditions and solve the problem between the left and right faces of the cell.
-    tarch::la::Vector<Dimensions, double> faceCentre = CellCenter;
+    tarch::la::Vector<DIMENSIONS, double> faceCentre = CellCenter;
 //    faceCentre[d] -= 0.5 * CellSize[d];
 
     kernels::AderSolver::riemannSolver<double>(
       repositories::instanceOfAderSolver,
-      lFhbnd[d+Dimensions],
+      lFhbnd[d+DIMENSIONS],
       lFhbnd[d],
-      lQhbnd[d+Dimensions],
+      lQhbnd[d+DIMENSIONS],
       lQhbnd[d],
       TimeStamp,
       TimeStepSize,
@@ -315,7 +315,7 @@ double runKernels(int device, exahype2::CellData<double, double>& cellData, int 
     faceCentre[d] += CellSize[d];
     kernels::AderSolver::faceIntegral(
       cellData.QIn[cellIndex],
-      lFhbnd[d+Dimensions],
+      lFhbnd[d+DIMENSIONS],
       direction,
       1,
       inverseDxDirection,
@@ -371,7 +371,7 @@ void runBenchmarks(int numberOfCells) {
     int sample = 0;
     while (sample <= NumberOfSamples) {
       // Reset output data
-      #if defined(SharedOMP)
+      #if defined(WITH_OPENMP)
       #pragma omp parallel num_threads(NumberOfLaunchingThreads)
       #endif
       for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
@@ -386,7 +386,7 @@ void runBenchmarks(int numberOfCells) {
         timingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
       // } endParallelFor
       // }
-      // #if defined(SharedOMP)
+      // #if defined(WITH_OPENMP)
       // }
       // #endif
       }
@@ -406,17 +406,17 @@ void runBenchmarks(int numberOfCells) {
   } // AssessHostKernels
 
 //   if constexpr (AssessDeviceKernels) {
-// #if defined(GPUOffloadingOMP)
+// #if defined(WITH_GPU_OMP_TARGET)
 
-// #endif // GPUOffloadingOMP
+// #endif // WITH_GPU_OMP_TARGET
 
-// #if defined(GPUOffloadingSYCL)
+// #if defined(WITH_GPU_SYCL)
 
-// #endif // GPUOffloadingSYCL
+// #endif // WITH_GPU_SYCL
 
-// #if defined(GPUOffloadingCPP)
+// #if defined(WITH_GPU_STDPAR)
 
-// #endif // GPUOffloadingCPP
+// #endif // WITH_GPU_STDPAR
 //   }
 
   for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
@@ -473,7 +473,7 @@ int main(int argc, char** argv) {
     "performing accuracy checks with precision: "
     << Accuracy
   );
-#if defined(GPUOffloadingSYCL)
+#if defined(WITH_GPU_SYCL)
   logInfo(
     "main()",
     "set SYCL_DEVICE_FILTER=gpu or ONEAPI_DEVICE_SELECTOR=cuda:0 when using SYCL on the device"
@@ -484,7 +484,7 @@ int main(int argc, char** argv) {
   );
 #endif
 
-// #if defined(SharedOMP)
+// #if defined(WITH_OPENMP)
 //   #pragma omp parallel
 //   {
 //     #pragma omp master
@@ -495,7 +495,7 @@ int main(int argc, char** argv) {
         runBenchmarks(NumberOfCellsToStudy[i]);
         freeOutcome(NumberOfCellsToStudy[i]);
       }
-// #if defined(SharedOMP)
+// #if defined(WITH_OPENMP)
 //     }
 //   }
 // #endif

@@ -71,14 +71,14 @@ inline void ConsReadIn(double* cons, std::string line)
 }
 
 
-inline tarch::la::Vector<Dimensions*2,int> FindCellIndex(
+inline tarch::la::Vector<DIMENSIONS*2,int> FindCellIndex(
   const double* coor,
-  tarch::la::Vector<Dimensions,double> Offset,
+  tarch::la::Vector<DIMENSIONS,double> Offset,
   double volumeH,
   int patchSize
 ) {
 	//std::cout<<Offset(0)<<" "<<Offset(1)<<" "<<Offset(2)<<" "<< volumeH <<std::endl;
-	tarch::la::Vector<Dimensions*2,int> index= {0,0,0,0,0,0};
+	tarch::la::Vector<DIMENSIONS*2,int> index= {0,0,0,0,0,0};
 	for (int i=0;i<patchSize;i++){
 		if (coor[0]>(Offset(0)+i*volumeH) and coor[0]<(Offset(0)+(i+1)*volumeH))
 			{index(0)=i;
@@ -115,7 +115,7 @@ inline tarch::la::Vector<Dimensions*2,int> FindCellIndex(
 }
 
 //output index for 8 nearest cells
-inline void FindInterIndex(tarch::la::Vector<Dimensions,int>* InterIndex, tarch::la::Vector<Dimensions*2,int> IndexOfCell)
+inline void FindInterIndex(tarch::la::Vector<DIMENSIONS,int>* InterIndex, tarch::la::Vector<DIMENSIONS*2,int> IndexOfCell)
 {	
 	int x[2],y[2],z[2];
 	
@@ -152,10 +152,10 @@ inline void FindInterIndex(tarch::la::Vector<Dimensions,int>* InterIndex, tarch:
 //do the real interpolation
 inline void Interpolation(
   double* result,
-  tarch::la::Vector<Dimensions,int>* IndexForInter,
+  tarch::la::Vector<DIMENSIONS,int>* IndexForInter,
   double* raw,
   const double* coor,
-  tarch::la::Vector<Dimensions,double> Offset,
+  tarch::la::Vector<DIMENSIONS,double> Offset,
   double volumeH,
   int patchSize
 ){

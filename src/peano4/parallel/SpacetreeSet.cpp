@@ -28,15 +28,15 @@ peano4::parallel::SpacetreeSet::SpacetreeSet():
 peano4::parallel::SpacetreeSet& peano4::parallel::SpacetreeSet::getInstance() { return _singleton; }
 
 void peano4::parallel::SpacetreeSet::init(
-  const tarch::la::Vector<Dimensions, double>& offset,
-  const tarch::la::Vector<Dimensions, double>& width,
-  const std::bitset<Dimensions>&               periodicBC
+  const tarch::la::Vector<DIMENSIONS, double>& offset,
+  const tarch::la::Vector<DIMENSIONS, double>& width,
+  const std::bitset<DIMENSIONS>&               periodicBC
 ) {
   _requestMessageTag = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::SpacetreeSet - request message");
   _answerMessageTag  = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::SpacetreeSet - answer message", Node::MaxSpacetreesPerRank);
   tarch::services::ServiceRepository::getInstance().addService(this, "peano4::parallel::SpacetreeSet");
 
-#ifdef Parallel
+#ifdef WITH_MPI
   assertion4(
     (peano4::parallel::Node::getInstance().getNumberOfRegisteredTrees() == 1
      and tarch::mpi::Rank::getInstance().getRank() == 0
@@ -74,7 +74,7 @@ std::string peano4::parallel::SpacetreeSet::toString(SpacetreeSetState state) {
 }
 
 void peano4::parallel::SpacetreeSet::answerQuestions() {
-#ifdef Parallel
+#ifdef WITH_MPI
   std::vector<peano4::parallel::TreeManagementMessage> unansweredMessagesThatIanAnswerNow;
 
   std::vector<peano4::parallel::TreeManagementMessage>::iterator p = _unansweredMessages.begin();
@@ -182,7 +182,7 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
 }
 
 void peano4::parallel::SpacetreeSet::receiveDanglingMessages() {
-#ifdef Parallel
+#ifdef WITH_MPI
 
   if (tarch::mpi::Rank::getInstance().isMessageInQueue(_requestMessageTag)) {
     logTraceIn("receiveDanglingMessages()");
@@ -207,7 +207,7 @@ void peano4::parallel::SpacetreeSet::receiveDanglingMessages() {
 void peano4::parallel::SpacetreeSet::addSpacetree(int masterId, int newTreeId) {
   logTraceInWith2Arguments("addSpacetree()", masterId, newTreeId);
   if (peano4::parallel::Node::getInstance().getRank(masterId) != peano4::parallel::Node::getInstance().getRank(newTreeId)) {
-#ifdef Parallel
+#ifdef WITH_MPI
     const int targetRank = peano4::parallel::Node::getInstance().getRank(newTreeId);
 
     TreeManagementMessage message;
@@ -226,7 +226,7 @@ void peano4::parallel::SpacetreeSet::addSpacetree(int masterId, int newTreeId) {
     TreeManagementMessage::receive(message, targetRank, getAnswerTag(masterId), tarch::mpi::Rank::getInstance().getCommunicator());
     assertion1(message.getAction() == TreeManagementMessage::Action::Acknowledgement, message.toString());
 #else
-    assertionMsg(false, "Parallel build disabled");
+    assertionMsg(false, "MPI build disabled");
 #endif
   } else {
     peano4::grid::Spacetree newTree(
@@ -521,7 +521,7 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
     }
   }
 
-#ifdef SharedOMP
+#ifdef WITH_OPENMP
 #pragma omp parallel
   {
 #pragma omp master
@@ -546,7 +546,7 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
 
       exchangeHorizontalDataBetweenTrees(observer);
     }
-#ifdef SharedOMP
+#ifdef WITH_OPENMP
   }
 #endif
 
@@ -592,7 +592,7 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserve
         logDebug(
           "traverse(Observer)", "Parent tree " << p->_masterId << " is not local on this rank. Remove child reference"
         );
-#ifdef Parallel
+#ifdef WITH_MPI
         TreeManagementMessage message(
           p->_masterId, p->_id, TreeManagementMessage::Action::RemoveChildTreeFromBooksAsChildBecameEmpty
         );
@@ -672,7 +672,7 @@ peano4::grid::GridStatistics peano4::parallel::SpacetreeSet::getGridStatistics()
       0, // __stationarySweeps,
       false,
       false,
-      tarch::la::Vector<Dimensions, double>(std::numeric_limits<double>::max()) // minH
+      tarch::la::Vector<DIMENSIONS, double>(std::numeric_limits<double>::max()) // minH
     );
     logTraceOutWith1Argument("getGridStatistics()", result.toString());
     return result;
@@ -717,7 +717,7 @@ bool peano4::parallel::SpacetreeSet::split(int treeId, const peano4::SplitInstru
     int newSpacetreeId = -1;
 
     if (tarch::mpi::Rank::getInstance().getRank() != targetRank) {
-#ifdef Parallel
+#ifdef WITH_MPI
       logDebug("split()", "Request new tree on rank " << targetRank);
       peano4::parallel::TreeManagementMessage requestMessage;
       requestMessage.setMasterSpacetreeId(treeId);

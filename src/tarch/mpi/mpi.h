@@ -6,7 +6,7 @@
 #include "tarch/CompilerSpecificSettings.h"
 
 
-#ifdef Parallel
+#ifdef WITH_MPI
 #include <mpi.h>
 #endif
 

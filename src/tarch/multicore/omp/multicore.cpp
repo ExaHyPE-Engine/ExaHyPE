@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/multicore/multicore.h"
 
-#if defined(SharedOMP)
+#if defined(WITH_OPENMP)
 
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Core.h"

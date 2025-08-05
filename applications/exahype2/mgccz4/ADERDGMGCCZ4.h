@@ -31,7 +31,7 @@ class examples::exahype2::mgccz4::ADERDGMGCCZ4: public AbstractADERDGMGCCZ4 {
     
     void adjustSolution(
       double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
       double                                       t
     )  override;
     
@@ -41,7 +41,7 @@ class examples::exahype2::mgccz4::ADERDGMGCCZ4: public AbstractADERDGMGCCZ4 {
     virtual void boundaryConditions(
       const double * NOALIAS                  Qinside, // Qinside[59+0]
       double * NOALIAS                        Qoutside, // Qoutside[59+0]
-      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
       double                                       t,
       int                                          normal
     )  override;
@@ -51,7 +51,7 @@ class examples::exahype2::mgccz4::ADERDGMGCCZ4: public AbstractADERDGMGCCZ4 {
     
     double maxEigenvalue(
       const double * NOALIAS Q, // Q[59+0],
-      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
       double                                       t,
       int                                          normal
     ) override;
@@ -65,7 +65,7 @@ class examples::exahype2::mgccz4::ADERDGMGCCZ4: public AbstractADERDGMGCCZ4 {
     void nonconservativeProduct(
       const double * NOALIAS                  Q, // Q[59+0],
       const double * NOALIAS                  deltaQ, // deltaQ[59+0]
-      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
       double                                       t,
       int                                          normal,
       double * NOALIAS                        BgradQ // BgradQ[59]
@@ -73,8 +73,8 @@ class examples::exahype2::mgccz4::ADERDGMGCCZ4: public AbstractADERDGMGCCZ4 {
 
     virtual void algebraicSource(
       const double * NOALIAS Q, // Q[59+0],
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  h,
       double                                       t,
       double                                       dt,
       double * NOALIAS S // S[59]

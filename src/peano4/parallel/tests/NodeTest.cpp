@@ -36,11 +36,11 @@ void peano4::parallel::tests::NodeTest::testTagCalculation() {
 
 
 void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryExchange() {
-  #if Dimensions==2
+  #if DIMENSIONS==2
   //
   // Top right corner
   //
-  tarch::la::Vector<TwoPowerD,int>  flagsTopRightVertex(peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition);
+  tarch::la::Vector<TWO_POWER_D,int>  flagsTopRightVertex(peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition);
   flagsTopRightVertex(0) = 0;
 
   std::set< peano4::parallel::Node::PeriodicBoundaryStackIdentifier > resultTopRightVertex = peano4::parallel::Node::getOutputStacksForPeriodicBoundaryExchange(flagsTopRightVertex);
@@ -52,7 +52,7 @@ void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryEx
 
   std::stringstream resultContentTopRightVertex;
   for (auto& p: resultTopRightVertex) {
-    resultContentTopRightVertex << "(" << p.first << "," << std::bitset<2*Dimensions>(p.second) << ")";
+    resultContentTopRightVertex << "(" << p.first << "," << std::bitset<2*DIMENSIONS>(p.second) << ")";
   }
   validateWithParams3( resultTopRightVertex.count(key0)==1, key0.first, key0.second, resultContentTopRightVertex.str() );
   validateWithParams3( resultTopRightVertex.count(key1)==1, key1.first, key1.second, resultContentTopRightVertex.str() );
@@ -65,7 +65,7 @@ void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryEx
   //
   // bottom left vertex
   //
-  tarch::la::Vector<TwoPowerD,int>  flagsBottomLeftVertex(peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition);
+  tarch::la::Vector<TWO_POWER_D,int>  flagsBottomLeftVertex(peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition);
   flagsBottomLeftVertex(3) = 0;
 
   std::set< peano4::parallel::Node::PeriodicBoundaryStackIdentifier > resultBottomLeftVertex = peano4::parallel::Node::getOutputStacksForPeriodicBoundaryExchange(flagsBottomLeftVertex);
@@ -77,7 +77,7 @@ void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryEx
 
   std::stringstream resultContentBottomLeftVertex;
   for (auto& p: resultBottomLeftVertex) {
-    resultContentBottomLeftVertex << "(" << p.first << "," << std::bitset<2*Dimensions>(p.second) << ")";
+    resultContentBottomLeftVertex << "(" << p.first << "," << std::bitset<2*DIMENSIONS>(p.second) << ")";
   }
   validateWithParams3( resultBottomLeftVertex.count(key3)==1, key3.first, key3.second, resultContentBottomLeftVertex.str() );
   validateWithParams3( resultBottomLeftVertex.count(key4)==1, key4.first, key4.second, resultContentBottomLeftVertex.str() );
@@ -105,8 +105,8 @@ void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryEx
   validateEquals( peano4::parallel::Node::mapPeriodicBoundaryExchangeOutputStackOntoInputStack(13), 16 );
   validateEquals( peano4::parallel::Node::mapPeriodicBoundaryExchangeOutputStackOntoInputStack(14), 15 );
   #endif
-  #if Dimensions==3
-  tarch::la::Vector<TwoPowerD,int>  flags(peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition);
+  #if DIMENSIONS==3
+  tarch::la::Vector<TWO_POWER_D,int>  flags(peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition);
   flags(0) = 0;
 
   std::set< peano4::parallel::Node::PeriodicBoundaryStackIdentifier > result = peano4::parallel::Node::getOutputStacksForPeriodicBoundaryExchange(flags);
@@ -116,12 +116,12 @@ void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryEx
 
 
 void peano4::parallel::tests::NodeTest::testGetPeriodicBoundaryNumber() {
-  #if Dimensions==2
-  tarch::la::Vector<TwoPowerD,int>  flags(1);
+  #if DIMENSIONS==2
+  tarch::la::Vector<TWO_POWER_D,int>  flags(1);
   flags(0) = peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition;
   flags(1) = peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition;
 
-  std::bitset<2*Dimensions> result = peano4::parallel::Node::getPeriodicBoundaryNumber(flags);
+  std::bitset<2*DIMENSIONS> result = peano4::parallel::Node::getPeriodicBoundaryNumber(flags);
   validateEqualsWithParams1( result.to_ulong(), 2, flags );
   #endif
 }

@@ -69,7 +69,7 @@ private:
   double _maxTimestamp;
 
   struct Entry {
-    tarch::la::Vector<Dimensions, double> x;
+    tarch::la::Vector<DIMENSIONS, double> x;
     double                                timestamp;
     double*                               data;
     /**
@@ -80,7 +80,7 @@ private:
 
     Entry(const Entry&);
     ~Entry();
-    Entry(const TrajectoryDatabase& database, const tarch::la::Vector<Dimensions, double>& x_, double timestamp_);
+    Entry(const TrajectoryDatabase& database, const tarch::la::Vector<DIMENSIONS, double>& x_, double timestamp_);
   };
 
   std::map<std::pair<int, int>, std::list<Entry>> _data;
@@ -97,7 +97,7 @@ private:
    * The routine is not thread-safe, i.e. you have to protect it from outside.
    */
   AddSnapshotAction getAction(
-    const std::pair<int, int>& number, const tarch::la::Vector<Dimensions, double>& x, double timestamp
+    const std::pair<int, int>& number, const tarch::la::Vector<DIMENSIONS, double>& x, double timestamp
   );
 
   /**
@@ -111,7 +111,7 @@ private:
    */
   AddSnapshotAction getAction(
     const std::pair<int, int>&                   number,
-    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
     double                                       timestamp,
     int                                          numberOfDataEntries,
     double*                                      data
@@ -289,15 +289,15 @@ public:
    * is thread-safe.
    */
   void addParticleSnapshot(
-    const std::pair<int, int>& number, double timestamp, const tarch::la::Vector<Dimensions, double>& x
+    const std::pair<int, int>& number, double timestamp, const tarch::la::Vector<DIMENSIONS, double>& x
   );
 
-  void addParticleSnapshot(int number0, int number1, double timestamp, const tarch::la::Vector<Dimensions, double>& x);
+  void addParticleSnapshot(int number0, int number1, double timestamp, const tarch::la::Vector<DIMENSIONS, double>& x);
 
   void addParticleSnapshot(
     const std::pair<int, int>&                   number,
     double                                       timestamp,
-    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
     int                                          numberOfDataEntries,
     double*                                      data
   );
@@ -306,7 +306,7 @@ public:
     int                                          number0,
     int                                          number1,
     double                                       timestamp,
-    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
     int                                          numberOfDataEntries,
     double*                                      data
   );

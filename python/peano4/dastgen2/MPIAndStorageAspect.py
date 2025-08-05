@@ -138,7 +138,7 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
     {{name}}( ObjectConstruction ):
         {{name}}() {}
     
-#ifdef Parallel
+#ifdef WITH_MPI
     static void sendAndPollDanglingMessages(const {{full_qualified_name}}& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
     static void receiveAndPollDanglingMessages({{full_qualified_name}}& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
 #endif
@@ -192,7 +192,7 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
         result = (
             super(MPIAndStorageAspect, self).get_implementation(full_qualified_name)
             + """
-#ifdef Parallel
+#ifdef WITH_MPI
 void {{full_qualified_name}}::sendAndPollDanglingMessages(const {{full_qualified_name}}& message, int destination, int tag, MPI_Comm communicator ) {
   {{full_qualified_name}}::send(
     message, destination, tag,

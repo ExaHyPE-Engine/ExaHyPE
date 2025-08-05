@@ -93,7 +93,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if (isLastGridSweepOfTimeStep()) {
-#ifdef Parallel
+#ifdef WITH_MPI
     if (_solverState == SolverState::LimiterStatusSpreadingToNeighbours) {
       int newNumberOfTroubleCells = _numberOfTroubledCells;
       tarch::mpi::Rank::getInstance().allReduce(
@@ -189,8 +189,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getNumberOfTroubledCells() cons
 {% if ADMISSIBILITY_IMPLEMENTATION!="<empty>" and ADMISSIBILITY_IMPLEMENTATION!="<user-defined>" %}
 bool {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::isPhysicallyAdmissible(
   const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const Q,
-  const tarch::la::Vector<Dimensions, double>&      x,
-  const tarch::la::Vector<Dimensions, double>&      h,
+  const tarch::la::Vector<DIMENSIONS, double>&      x,
+  const tarch::la::Vector<DIMENSIONS, double>&      h,
   const double timeStamp
 ){
   {% if ADMISSIBILITY_IMPLEMENTATION!="<none>"%}

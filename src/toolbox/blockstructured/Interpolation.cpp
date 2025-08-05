@@ -7,7 +7,7 @@ tarch::multicore::BooleanSemaphore toolbox::blockstructured::interpolationMapSem
 
 tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
   createPiecewiseConstantInterpolationMatrix(int numberOfDoFsPerAxisInPatch) {
-#if Dimensions == 2
+#if DIMENSIONS == 2
   const int patchSize = numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch;
   const int numberOfPatches = 3 * 3;
 #else
@@ -23,7 +23,7 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
 
   int currentRow = 0;
   dfor3(patchIndex) dfor(volumeIndex, numberOfDoFsPerAxisInPatch) {
-    tarch::la::Vector<Dimensions, int>
+    tarch::la::Vector<DIMENSIONS, int>
       sourceCell = (volumeIndex + patchIndex * numberOfDoFsPerAxisInPatch) / 3;
     int sourceCellLinearised = peano4::utils::dLinearised(
       sourceCell,
@@ -67,7 +67,7 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
   assertionEquals1(P1d.cols(), numberOfDoFsPerAxisInPatch, P1d.toString());
   assertionEquals1(P1d.rows(), 3 * numberOfDoFsPerAxisInPatch, P1d.toString());
 
-#if Dimensions == 3
+#if DIMENSIONS == 3
   tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix(P1d, P1d, false);
 #else
   tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix(P1d);
@@ -104,7 +104,7 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
   assertionEquals1(P1d.cols(), numberOfDoFsPerAxisInPatch, P1d.toString());
   assertionEquals1(P1d.rows(), 3 * numberOfDoFsPerAxisInPatch, P1d.toString());
 
-#if Dimensions == 3
+#if DIMENSIONS == 3
   tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix(P1d, P1d, false);
 #else
   tarch::la::DynamicMatrix* P               = new tarch::la::DynamicMatrix(P1d);
@@ -255,7 +255,7 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
   );
 
   logTraceOut("createLinearInterpolationMatrix(...)");
-#if Dimensions == 3
+#if DIMENSIONS == 3
   return new tarch::la::DynamicMatrix(P2d, P1d, false);
 #else
   return new tarch::la::DynamicMatrix(P2d);

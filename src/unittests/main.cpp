@@ -6,15 +6,15 @@
 #include "tarch/logging/Log.h"
 #include "tarch/logging/LogFilter.h"
 
-#ifdef UseToolboxBlockstructured
+#ifdef ENABLE_TOOLBOX_BLOCKSTRUCTURED
 #include "toolbox/blockstructured/UnitTests.h"
 #endif
 
-#ifdef UseToolboxParticles
+#ifdef ENABLE_TOOLBOX_PARTICLES
 #include "toolbox/particles/UnitTests.h"
 #endif
 
-#ifdef UseExaHyPE
+#ifdef ENABLE_EXAHYPE
 #include "exahype2/UnitTests.h"
 #endif
 
@@ -41,21 +41,21 @@ int runTests() {
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
 
-#ifdef UseToolboxBlockstructured
+#ifdef ENABLE_TOOLBOX_BLOCKSTRUCTURED
   tests = toolbox::blockstructured::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
 #endif
 
-#ifdef UseToolboxParticles
+#ifdef ENABLE_TOOLBOX_PARTICLES
   tests = toolbox::particles::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
 #endif
 
-#ifdef UseExaHyPE
+#ifdef ENABLE_EXAHYPE
   tests = exahype2::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
@@ -219,7 +219,7 @@ int main(int argc, char** argv) {
     )
   );
 
-#if Dimensions == 2
+#if DIMENSIONS == 2
   auto DomainOffset = {0.0, 0.0};
   auto DomainSize   = {1.0, 1.0};
 #else

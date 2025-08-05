@@ -47,7 +47,7 @@ void runTests() {
 void runParallel(double h, int flopsPerCell) {
   logTraceInWith1Argument( "runParallel", h );
   peano4::parallel::SpacetreeSet::getInstance().init(
-    #if Dimensions==2
+    #if DIMENSIONS==2
     {0.0, 0.0},
     {1.0, 1.0},
     #else
@@ -66,7 +66,7 @@ void runParallel(double h, int flopsPerCell) {
     int numberOfGridConstructionSteps = 0;
     while (
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells() <
-      tarch::mpi::Rank::getInstance().getNumberOfRanks() * ThreePowerD
+      tarch::mpi::Rank::getInstance().getNumberOfRanks() * THREE_POWER_D
       and
       numberOfGridConstructionSteps<20
     ) {
@@ -121,7 +121,7 @@ void runParallel(double h, int flopsPerCell) {
     logInfo( "runParallel(...)", "start parallel traversals (step #5)" );
     logInfo( "runParallel(...)", "grid statistics = " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().toString() );
 
-    #if PeanoDebug>=2
+    #if PEANO_DEBUG>=2
     const int Iterations=2;
     #else
     const int Iterations=20;

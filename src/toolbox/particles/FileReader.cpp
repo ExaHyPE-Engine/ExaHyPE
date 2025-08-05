@@ -21,11 +21,11 @@ void toolbox::particles::FileReader::readDatFile( const std::string& filename, c
 
   while ( std::getline(fin,line) ){
     std::stringstream currentLine(line);
-    tarch::la::Vector<Dimensions,double> newEntry;
+    tarch::la::Vector<DIMENSIONS,double> newEntry;
 
     int entry = 0;
     std::string token;
-    while ( std::getline(currentLine, token, ' ') and entry<Dimensions ) {
+    while ( std::getline(currentLine, token, ' ') and entry<DIMENSIONS ) {
       if (token!="") {
         newEntry(entry) = scale*std::atof( token.c_str() );
         entry++;
@@ -55,18 +55,18 @@ bool toolbox::particles::FileReader::getNumberOfCoordinates() const {
 }
 
 
-std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReader::getParticlesWithinVoxel(
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
+std::list< tarch::la::Vector<DIMENSIONS,double> > toolbox::particles::FileReader::getParticlesWithinVoxel(
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
+  const tarch::la::Vector<DIMENSIONS,double>&  h,
   bool remove
 ) {
-  std::list< tarch::la::Vector<Dimensions,double> > result;
+  std::list< tarch::la::Vector<DIMENSIONS,double> > result;
 
-  std::list< tarch::la::Vector<Dimensions,double> >::iterator p = _data.begin();
+  std::list< tarch::la::Vector<DIMENSIONS,double> >::iterator p = _data.begin();
   while ( p!=_data.end() ) {
     bool overlaps = true;
 
-    for (int d=0; d<Dimensions; d++) {
+    for (int d=0; d<DIMENSIONS; d++) {
       overlaps &= tarch::la::smallerEquals( x(d)-h(d)/2.0, (*p)(d) );
       overlaps &= tarch::la::greaterEquals( x(d)+h(d)/2.0, (*p)(d) );
     }

@@ -24,17 +24,17 @@ namespace examples {
     namespace mgccz4 {
       void gaugeWave(
         double * NOALIAS Q, // Q[64+0],
-        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<DIMENSIONS,double>&  x,
         double t
       );
       void linearWave(
         double * NOALIAS Q, // Q[64+0],
-        const tarch::la::Vector<Dimensions,double>&  X,
+        const tarch::la::Vector<DIMENSIONS,double>&  X,
         double t
       );
       void forcedflat(
         double * NOALIAS Q, // Q[64+0],
-        const tarch::la::Vector<Dimensions,double>&  X,
+        const tarch::la::Vector<DIMENSIONS,double>&  X,
         double t
       );
     }

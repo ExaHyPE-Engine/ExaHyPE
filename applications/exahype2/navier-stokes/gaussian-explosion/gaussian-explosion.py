@@ -24,10 +24,10 @@ initial_conditions = """
 
   // Manual offset to make the wave originate slightly to the left of the center
   // --- helps to detect if wave is moving to the left or right.
-#if Dimensions == 2
-  const tarch::la::Vector<Dimensions, double> circleCentre = {0.5, 0.3};
+#if DIMENSIONS == 2
+  const tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.3};
 #else
-  const tarch::la::Vector<Dimensions, double> circleCentre = {0.18, 0.3, 0.6};
+  const tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.18, 0.3, 0.6};
 #endif
 
   const double peakDeviation = MaxAdmissibleCellH;
@@ -37,7 +37,7 @@ initial_conditions = """
   Q[Shortcuts::rho] = 0.1;
   Q[Shortcuts::rhoU + 0] = 0.0;
   Q[Shortcuts::rhoU + 1] = 0.0;
-#if Dimensions == 3
+#if DIMENSIONS == 3
   Q[Shortcuts::rhoU + 2] = 0.0;
 #endif
   Q[Shortcuts::rhoE] = 1.0 + std::exp(exponent);
@@ -48,7 +48,7 @@ boundary_conditions = """
   Qoutside[Shortcuts::rho]      = Qinside[Shortcuts::rho];
   Qoutside[Shortcuts::rhoU + 0] = -Qinside[Shortcuts::rhoU + 0];
   Qoutside[Shortcuts::rhoU + 1] = -Qinside[Shortcuts::rhoU + 1];
-#if Dimensions == 3
+#if DIMENSIONS == 3
   Qoutside[Shortcuts::rhoU + 2] = -Qinside[Shortcuts::rhoU + 2];
 #endif
   Qoutside[Shortcuts::rhoE]     = Qinside[Shortcuts::rhoE];
@@ -57,10 +57,10 @@ boundary_conditions = """
 refinement_criterion = """
   auto result = ::exahype2::RefinementCommand::Keep;
 
-#if Dimensions == 3
-  tarch::la::Vector<Dimensions, double> circleCentre = {0.5, 0.5, 0.5};
+#if DIMENSIONS == 3
+  tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.5, 0.5};
 #else
-  tarch::la::Vector<Dimensions, double> circleCentre = {0.5, 0.5};
+  tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.5};
 #endif
 
   if (tarch::la::equals(t, 0.0)) {

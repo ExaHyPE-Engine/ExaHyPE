@@ -16,7 +16,7 @@ void toolbox::blockstructured::projectPatchSolutionOntoFaces(
     double* NOALIAS rightFace,
     double* NOALIAS topFace
 ) {
-  assertionEquals( Dimensions, 2 );
+  assertionEquals( DIMENSIONS, 2 );
   double* faces[4] = { leftFace, bottomFace, rightFace, topFace };
   projectPatchSolutionOntoFaces(
     numberOfVolumesPerAxisInPatch,
@@ -42,7 +42,7 @@ void toolbox::blockstructured::projectPatchSolutionOntoFaces(
     double* NOALIAS topFace,
     double* NOALIAS backFace
 ) {
-  assertionEquals( Dimensions, 3 );
+  assertionEquals( DIMENSIONS, 3 );
   double* faces[6] = { leftFace, bottomFace, frontFace, rightFace, topFace, backFace};
   projectPatchSolutionOntoFaces(
     numberOfVolumesPerAxisInPatch,
@@ -61,9 +61,9 @@ void toolbox::blockstructured::projectPatchSolutionOntoFaces(
     int    unknowns,
     int    auxiliaryVariables,
     const double* NOALIAS Q,
-    double* faces[2*Dimensions]
+    double* faces[2*DIMENSIONS]
 ) {
-  for(int d=0; d<Dimensions; d++) {
+  for(int d=0; d<DIMENSIONS; d++) {
     /**
      * d-loop over all dimensions except d. The vector k's entry d is set
      * to 0. We start with the left/bottom face, i.e. the one closer to the 
@@ -71,8 +71,8 @@ void toolbox::blockstructured::projectPatchSolutionOntoFaces(
      */
     dfore(k,numberOfVolumesPerAxisInPatch,d,0) {
       for (int i=0; i<haloSize; i++) {
-        tarch::la::Vector<Dimensions,int> patchCell   = k;
-        tarch::la::Vector<Dimensions,int> overlapCell = k;
+        tarch::la::Vector<DIMENSIONS,int> patchCell   = k;
+        tarch::la::Vector<DIMENSIONS,int> overlapCell = k;
         patchCell(d)   = i;
         overlapCell(d) = i+haloSize;
           
@@ -98,7 +98,7 @@ void toolbox::blockstructured::projectPatchSolutionOntoFaces(
             or
             Q[patchCellSerialised*unknowns+j]==Q[patchCellSerialised*unknowns+j], j,i,k,d, patchCell, overlapCell
           );
-          faces[d+Dimensions][overlapCellSerialised*unknowns+j] = Q[patchCellSerialised*unknowns+j];
+          faces[d+DIMENSIONS][overlapCellSerialised*unknowns+j] = Q[patchCellSerialised*unknowns+j];
         }
       }
     }
@@ -117,7 +117,7 @@ void toolbox::blockstructured::projectPatchHaloOntoFaces(
     double* NOALIAS rightFace,
     double* NOALIAS topFace
 ) {
-  assertionEquals( Dimensions, 2 );
+  assertionEquals( DIMENSIONS, 2 );
   double* faces[4] = { leftFace, bottomFace, rightFace, topFace };
   projectPatchHaloOntoFaces(
     numberOfVolumesPerAxisInPatch,
@@ -143,7 +143,7 @@ void toolbox::blockstructured::projectPatchHaloOntoFaces(
     double* NOALIAS topFace,
     double* NOALIAS backFace
 ) {
-  assertionEquals( Dimensions, 3 );
+  assertionEquals( DIMENSIONS, 3 );
   double* faces[6] = { leftFace, bottomFace, frontFace, rightFace, topFace, backFace};
   projectPatchHaloOntoFaces(
     numberOfVolumesPerAxisInPatch,
@@ -162,9 +162,9 @@ void toolbox::blockstructured::projectPatchHaloOntoFaces(
     int    unknowns,
     int    auxiliaryVariables,
     const double* NOALIAS Q,
-    double* faces[2*Dimensions]
+    double* faces[2*DIMENSIONS]
 ) {
-  for(int d=0; d<Dimensions; d++) {
+  for(int d=0; d<DIMENSIONS; d++) {
     /**
      * d-loop over all dimensions except d. The vector k's entry d is set
      * to 0. We start with the left/bottom face, i.e. the one closer to the
@@ -172,8 +172,8 @@ void toolbox::blockstructured::projectPatchHaloOntoFaces(
      */
     dfore(k,numberOfVolumesPerAxisInPatch,d,0) {
       for (int i=0; i<haloSize; i++) {
-        tarch::la::Vector<Dimensions,int> patchCell   = k + tarch::la::Vector<Dimensions,int>(haloSize);
-        tarch::la::Vector<Dimensions,int> overlapCell = k;
+        tarch::la::Vector<DIMENSIONS,int> patchCell   = k + tarch::la::Vector<DIMENSIONS,int>(haloSize);
+        tarch::la::Vector<DIMENSIONS,int> overlapCell = k;
         patchCell(d)   = i;
         overlapCell(d) = i; // this is correct
 
@@ -191,7 +191,7 @@ void toolbox::blockstructured::projectPatchHaloOntoFaces(
         patchCellSerialised   = peano4::utils::dLinearised(patchCell,numberOfVolumesPerAxisInPatch+2*haloSize);
         overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,numberOfVolumesPerAxisInPatch,haloSize,d);
         for (int j=0; j<unknowns+auxiliaryVariables; j++) {
-          faces[d+Dimensions][overlapCellSerialised*(unknowns+auxiliaryVariables)+j] =
+          faces[d+DIMENSIONS][overlapCellSerialised*(unknowns+auxiliaryVariables)+j] =
             Q[patchCellSerialised*(unknowns+auxiliaryVariables)+j];
         }
       }
@@ -211,7 +211,7 @@ void toolbox::blockstructured::extrapolatePatchSolutionAndProjectExtrapolatedHal
     double* NOALIAS rightFace,
     double* NOALIAS topFace
 ) {
-  assertionEquals( Dimensions, 2 );
+  assertionEquals( DIMENSIONS, 2 );
   double* faces[4] = { leftFace, bottomFace, rightFace, topFace };
   extrapolatePatchSolutionAndProjectExtrapolatedHaloOntoFaces(
     numberOfVolumesPerAxisInPatch,
@@ -237,7 +237,7 @@ void toolbox::blockstructured::extrapolatePatchSolutionAndProjectExtrapolatedHal
     double* NOALIAS topFace,
     double* NOALIAS backFace
 ) {
-  assertionEquals( Dimensions, 3 );
+  assertionEquals( DIMENSIONS, 3 );
   double* faces[6] = { leftFace, bottomFace, frontFace, rightFace, topFace, backFace};
   extrapolatePatchSolutionAndProjectExtrapolatedHaloOntoFaces(
     numberOfVolumesPerAxisInPatch,
@@ -256,10 +256,10 @@ void toolbox::blockstructured::extrapolatePatchSolutionAndProjectExtrapolatedHal
     int    unknowns,
     int    auxiliaryVariables,
     const double* NOALIAS Q,
-    double* faces[2*Dimensions]
+    double* faces[2*DIMENSIONS]
 ) {
   assertion(false);
-  for(int d=0; d<Dimensions; d++) {
+  for(int d=0; d<DIMENSIONS; d++) {
     /**
      * d-loop over all dimensions except d. The vector k's entry d is set
      * to 0. We start with the left/bottom face, i.e. the one closer to the
@@ -267,8 +267,8 @@ void toolbox::blockstructured::extrapolatePatchSolutionAndProjectExtrapolatedHal
      */
     dfore(k,numberOfVolumesPerAxisInPatch,d,0) {
       for (int i=0; i<haloSize; i++) {
-        tarch::la::Vector<Dimensions,int> patchCell   = k + tarch::la::Vector<Dimensions,int>(haloSize);
-        tarch::la::Vector<Dimensions,int> overlapCell = k;
+        tarch::la::Vector<DIMENSIONS,int> patchCell   = k + tarch::la::Vector<DIMENSIONS,int>(haloSize);
+        tarch::la::Vector<DIMENSIONS,int> overlapCell = k;
         patchCell(d)   = i;
         overlapCell(d) = i; // this is correct
 
@@ -286,7 +286,7 @@ void toolbox::blockstructured::extrapolatePatchSolutionAndProjectExtrapolatedHal
         patchCellSerialised   = peano4::utils::dLinearised(patchCell,numberOfVolumesPerAxisInPatch+2*haloSize);
         overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,numberOfVolumesPerAxisInPatch,haloSize,d);
         for (int j=0; j<unknowns+auxiliaryVariables; j++) {
-          faces[d+Dimensions][overlapCellSerialised*(unknowns+auxiliaryVariables)+j] =
+          faces[d+DIMENSIONS][overlapCellSerialised*(unknowns+auxiliaryVariables)+j] =
             Q[patchCellSerialised*(unknowns+auxiliaryVariables)+j];
         }
       }

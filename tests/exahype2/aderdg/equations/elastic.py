@@ -12,7 +12,7 @@ class Elastic(Equation):
 
     def eigenvalues(self):
         return """
-#if Dimensions==2
+#if DIMENSIONS==2
   const double cp = Q[6];
   const double cs = Q[7];
 #else

@@ -145,7 +145,7 @@ if __name__ == "__main__":
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         const int n_a_v=6;
         dfor(cell,patchSize) {
-          tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
+          tarch::la::Vector<DIMENSIONS,int> currentCell = cell + tarch::la::Vector<DIMENSIONS,int>(1);
 
           // This constraint routine will evaluate both the solution per voxel
           // plus the derivative. The latter is something that we don't have, i.e.
@@ -158,8 +158,8 @@ if __name__ == "__main__":
           // loop up and down. So we look three times for the respective
           // directional gradients
           for (int d=0; d<3; d++) {
-            tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
-            tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+            tarch::la::Vector<DIMENSIONS,int> leftCell  = currentCell;
+            tarch::la::Vector<DIMENSIONS,int> rightCell = currentCell;
             leftCell(d)  -= 1;
             rightCell(d) += 1;
             const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
@@ -209,15 +209,15 @@ if __name__ == "__main__":
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         dfor(cell,patchSize) {
-          tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
+          tarch::la::Vector<DIMENSIONS,int> currentCell = cell + tarch::la::Vector<DIMENSIONS,int>(1);
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
 
           // Lets look left vs right and compute the gradient. Then, lets
           // loop up and down. So we look three times for the respective
           // directional gradients
           for (int d=0; d<3; d++) {
-            tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
-            tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+            tarch::la::Vector<DIMENSIONS,int> leftCell  = currentCell;
+            tarch::la::Vector<DIMENSIONS,int> rightCell = currentCell;
             leftCell(d)  -= 1;
             rightCell(d) += 1;
             const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);

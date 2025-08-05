@@ -30,11 +30,7 @@ namespace exahype2 {
           bool                                  evaluateAlgebraicSource, //real source
           bool                                  copyOldTimeStepAndScaleWithTimeStepSize,
           DifferentialSourceTermVariant variant
-        )
-        #if defined(UseManualInlining)
-        __attribute__((always_inline))
-        #endif
-        ;
+        );
       }
     }
   }

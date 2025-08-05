@@ -35,7 +35,7 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
            your particle type. You can use it to set the particle attributes.
 
         computational_domain_offset: [Float]
-           Has to be an array with Dimensions entries that specifies the global domain
+           Has to be an array with DIMENSIONS entries that specifies the global domain
            offset. You can pass in an array of floats, and this is definitely the
            default use case. However, you can also pass in an arbitrary array of
            strings, as long as these strings make sense in the generated C++ code
@@ -86,7 +86,7 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
   // Start of template in python/peano4/toolbox/particles/InsertParticlesAlongCartesianLayoutIntoUnrefinedCells.py
 
   if ( not marker.hasBeenRefined() and not marker.willBeRefined() ) {
-    #if Dimensions==2
+    #if DIMENSIONS==2
     tarch::la::Vector<2,double> domainOffset = { {{DOMAIN_OFFSET[0]}}, {{DOMAIN_OFFSET[1]}} };
     tarch::la::Vector<2,double> domainSize   = { {{DOMAIN_SIZE[0]}}, {{DOMAIN_SIZE[1]}} };
     #else

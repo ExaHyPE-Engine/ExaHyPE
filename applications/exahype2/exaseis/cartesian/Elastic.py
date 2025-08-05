@@ -117,10 +117,10 @@ def refinement_criterion():
   return """
   auto result = ::exahype2::RefinementCommand::Keep;
 
-  tarch::la::Vector<Dimensions, double> sourceLocation = {
+  tarch::la::Vector<DIMENSIONS, double> sourceLocation = {
     pointSourceLocation[0][0],
     pointSourceLocation[0][1],
-    #if Dimensions == 3
+    #if DIMENSIONS == 3
     pointSourceLocation[0][2]
     #endif
   };

@@ -80,7 +80,7 @@ private:
 
   bool _isViewConsistent;
 
-#ifdef Parallel
+#ifdef WITH_MPI
   /**
    * Required for local stats, but also replicated in cell count metrics
    */

@@ -54,7 +54,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     static std::string toString(SolverState);
 
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
     static constexpr int NumberOfFiniteVolumesPerAxisPerPatch = {{NUMBER_OF_VOLUMES_PER_AXIS}};
@@ -83,7 +83,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     static constexpr double MinAdmissibleCellH   = MinAdmissiblePatchH;
 
     {{SOLVER_CONSTANTS}}
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 
@@ -93,7 +93,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     /**
      * Alias for periodic boundary conditions.
      */
-    static std::bitset<Dimensions> PeriodicBC;
+    static std::bitset<DIMENSIONS> PeriodicBC;
 
     double getMinTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
     double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;

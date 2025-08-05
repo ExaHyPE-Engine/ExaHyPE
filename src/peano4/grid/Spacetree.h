@@ -81,8 +81,8 @@ class peano4::grid::Spacetree {
      *   not splitable.
      */
     bool isCellSplitCandidate(
-      GridVertex                         coarseGridVertices[TwoPowerD],
-      GridVertex                         fineGridVertices[TwoPowerD]
+      GridVertex                         coarseGridVertices[TWO_POWER_D],
+      GridVertex                         fineGridVertices[TWO_POWER_D]
     ) const;
 
     int              _id;
@@ -112,7 +112,7 @@ class peano4::grid::Spacetree {
     /**
      * Indicate per axis whether we have periodic boundary conditions.
      */
-    const std::bitset<Dimensions>      _periodicBC;
+    const std::bitset<DIMENSIONS>      _periodicBC;
 
     /**
      * A split is identified by a tuple of id and cell count which tells the
@@ -174,8 +174,8 @@ class peano4::grid::Spacetree {
      */
     void evaluateGridControlEvents(
       const AutomatonState& fineGridState,
-      GridVertex            coarseGridVertices[TwoPowerD],
-      GridVertex            fineGridVertices[TwoPowerD]
+      GridVertex            coarseGridVertices[TWO_POWER_D],
+      GridVertex            fineGridVertices[TWO_POWER_D]
     );
 
     /**
@@ -199,8 +199,8 @@ class peano4::grid::Spacetree {
      * neighbours about the topology, too.
      */
     void markVerticesAroundForkedCell(
-      GridVertex            coarseGridVertices[TwoPowerD],
-      GridVertex            fineGridVertices[TwoPowerD]
+      GridVertex            coarseGridVertices[TWO_POWER_D],
+      GridVertex            fineGridVertices[TWO_POWER_D]
     ) const;
 
 
@@ -248,7 +248,7 @@ class peano4::grid::Spacetree {
      */
     void descend(
       const AutomatonState& state,
-      GridVertex            vertices[TwoPowerD],
+      GridVertex            vertices[TWO_POWER_D],
       TraversalObserver&    observer
     );
 
@@ -257,7 +257,7 @@ class peano4::grid::Spacetree {
      * respective counter. Upon storage, we then refine if the counter
      * equals 2^d. This way we avoid hanging vertices within the domain.
      */
-    static void incrementNumberOfAdjacentRefinedLocalCells(GridVertex  vertices[TwoPowerD]);
+    static void incrementNumberOfAdjacentRefinedLocalCells(GridVertex  vertices[TWO_POWER_D]);
 
     /**
      * Takes a state (describing a node in the tree) and returns the
@@ -271,9 +271,9 @@ class peano4::grid::Spacetree {
      */
     static void refineState(
       const AutomatonState&              coarseGrid,
-      AutomatonState                     fineGrid[ThreePowerD],
-      tarch::la::Vector<Dimensions,int>  fineGridPosition = tarch::la::Vector<Dimensions,int>(0),
-      int                                axis = Dimensions-1
+      AutomatonState                     fineGrid[THREE_POWER_D],
+      tarch::la::Vector<DIMENSIONS,int>  fineGridPosition = tarch::la::Vector<DIMENSIONS,int>(0),
+      int                                axis = DIMENSIONS-1
     );
 
     /**
@@ -285,7 +285,7 @@ class peano4::grid::Spacetree {
      * to find out who actually owns a cell.
      */
     bool isSpacetreeNodeLocal(
-      GridVertex    vertices[TwoPowerD],
+      GridVertex    vertices[TWO_POWER_D],
       bool          splittingIsConsideredLocal,
       bool          joiningIsConsideredLocal
     ) const;
@@ -293,11 +293,11 @@ class peano4::grid::Spacetree {
 
 
     bool areAllVerticesRefined(
-      GridVertex            vertices[TwoPowerD]
+      GridVertex            vertices[TWO_POWER_D]
     ) const;
 
     bool areAllVerticesUnrefined(
-      GridVertex            vertices[TwoPowerD]
+      GridVertex            vertices[TWO_POWER_D]
     ) const;
 
     /**
@@ -305,7 +305,7 @@ class peano4::grid::Spacetree {
      * terminology.
      */
     bool areAllVerticesNonHanging(
-      GridVertex            vertices[TwoPowerD]
+      GridVertex            vertices[TWO_POWER_D]
     ) const;
 
 
@@ -326,24 +326,24 @@ class peano4::grid::Spacetree {
      */
     void loadVertices(
       const AutomatonState&                        fineGridState,
-      GridVertex                                   coarseGridVertices[TwoPowerD],
-      GridVertex                                   fineGridVertices[TwoPowerD],
-      const tarch::la::Vector<Dimensions,int>&     cellPositionWithin3x3Patch,
+      GridVertex                                   coarseGridVertices[TWO_POWER_D],
+      GridVertex                                   fineGridVertices[TWO_POWER_D],
+      const tarch::la::Vector<DIMENSIONS,int>&     cellPositionWithin3x3Patch,
       TraversalObserver&                           observer
     );
 
     void storeVertices(
       const AutomatonState&                        fineGridState,
-      GridVertex                                   coarseGridVertices[TwoPowerD],
-      GridVertex                                   fineGridVertices[TwoPowerD],
-      const tarch::la::Vector<Dimensions,int>&     cellPositionWithin3x3Patch,
+      GridVertex                                   coarseGridVertices[TWO_POWER_D],
+      GridVertex                                   fineGridVertices[TWO_POWER_D],
+      const tarch::la::Vector<DIMENSIONS,int>&     cellPositionWithin3x3Patch,
       TraversalObserver&                           observer
     );
 
     /**
      * Little helper. Should likely go into la or utils.
      */
-    static tarch::la::Vector<Dimensions,int> convertToIntegerVector( const std::bitset<Dimensions>& in );
+    static tarch::la::Vector<DIMENSIONS,int> convertToIntegerVector( const std::bitset<DIMENSIONS>& in );
 
     /**
      * This operation has multiple purposes
@@ -371,8 +371,8 @@ class peano4::grid::Spacetree {
      */
     void updateVertexAfterLoad(
       GridVertex&                               vertex,
-      GridVertex                                fineGridVertices[TwoPowerD],
-      const tarch::la::Vector<Dimensions,int>&  fineVertexPositionWithinPatch,
+      GridVertex                                fineGridVertices[TWO_POWER_D],
+      const tarch::la::Vector<DIMENSIONS,int>&  fineVertexPositionWithinPatch,
       TraversalObserver&                        observer
     );
 
@@ -403,7 +403,7 @@ class peano4::grid::Spacetree {
      * of the indices within the event. So no fancy arithmetics is required here
      * anymore.
      */
-    void receiveAndMergeUserData(const AutomatonState& state, TraversalObserver&  observer, const GridTraversalEvent&  enterCellTraversalEvent, GridVertex  fineGridVertices[TwoPowerD]);
+    void receiveAndMergeUserData(const AutomatonState& state, TraversalObserver&  observer, const GridTraversalEvent&  enterCellTraversalEvent, GridVertex  fineGridVertices[TWO_POWER_D]);
 
     /**
      * Send user data
@@ -447,7 +447,7 @@ class peano4::grid::Spacetree {
      * @see peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree()
      *   for a discussion of the splitting process and the required data flows.
      */
-    void sendUserData(const AutomatonState& state, TraversalObserver&  observer, const GridTraversalEvent&  enterCellTraversalEvent, GridVertex  fineGridVertices[TwoPowerD]);
+    void sendUserData(const AutomatonState& state, TraversalObserver&  observer, const GridTraversalEvent&  enterCellTraversalEvent, GridVertex  fineGridVertices[TWO_POWER_D]);
 
 
     /**
@@ -538,8 +538,8 @@ class peano4::grid::Spacetree {
      * @see splitCellTopDown()
      */
     void splitOrJoinCellBottomUp(
-      GridVertex                                vertex[TwoPowerD],
-      GridVertex                                fineGridVertices[TwoPowerD]
+      GridVertex                                vertex[TWO_POWER_D],
+      GridVertex                                fineGridVertices[TWO_POWER_D]
     );
 
     /**
@@ -567,8 +567,8 @@ class peano4::grid::Spacetree {
      * @see splitOrJoinCellBottomUp()
      */
     void splitCellTopDown(
-      GridVertex                                vertex[TwoPowerD],
-      GridVertex                                fineGridVertices[TwoPowerD]
+      GridVertex                                vertex[TWO_POWER_D],
+      GridVertex                                fineGridVertices[TWO_POWER_D]
     );
 
     /**
@@ -624,8 +624,8 @@ class peano4::grid::Spacetree {
      * @see updateVertexBeforeStore()
      */
     void mergeCellFromWorkerWithMasterThroughoutJoin(
-      GridVertex                                vertex[TwoPowerD],
-      GridVertex                                fineGridVertices[TwoPowerD]
+      GridVertex                                vertex[TWO_POWER_D],
+      GridVertex                                fineGridVertices[TWO_POWER_D]
     );
 
     /**
@@ -643,8 +643,8 @@ class peano4::grid::Spacetree {
      */
     bool shouldEraseAdjacencyInformation(
       const GridVertex&                  vertex,
-      GridVertex                         coarseGridVertices[TwoPowerD],
-      tarch::la::Vector<Dimensions,int>  fineVertexPositionWithinPatch
+      GridVertex                         coarseGridVertices[TWO_POWER_D],
+      tarch::la::Vector<DIMENSIONS,int>  fineVertexPositionWithinPatch
     ) const;
 
     /**
@@ -708,16 +708,16 @@ class peano4::grid::Spacetree {
      */
     void updateVertexBeforeStore(
       GridVertex&                               vertex,
-      GridVertex                                fineGridVertices[TwoPowerD],
-      const tarch::la::Vector<Dimensions,int>&  fineVertexPositionWithinPatch
+      GridVertex                                fineGridVertices[TWO_POWER_D],
+      const tarch::la::Vector<DIMENSIONS,int>&  fineVertexPositionWithinPatch
     );
 
     /**
      * Determines whether to restrict a vertex to the coarser level or not.
      */
     static bool restrictToCoarseGrid(
-      const tarch::la::Vector<Dimensions,int>&  coarseVertexPosition,
-      const tarch::la::Vector<Dimensions,int>&  fineVertexPosition
+      const tarch::la::Vector<DIMENSIONS,int>&  coarseVertexPosition,
+      const tarch::la::Vector<DIMENSIONS,int>&  fineVertexPosition
     );
 
     /**
@@ -733,16 +733,16 @@ class peano4::grid::Spacetree {
      * on a cell that is local, and on a cell whose parent is local, too.
      */
     static void updateVertexRanksWithinCell(
-      GridVertex  fineGridVertices[TwoPowerD],
+      GridVertex  fineGridVertices[TWO_POWER_D],
 	  int         newId
     );
 
     /**
      * @todo
      */
-    tarch::la::Vector<TwoPowerD,int> getAdjacentRanksForNewVertex(
-      GridVertex                                   coarseGridVertices[TwoPowerD],
-      const tarch::la::Vector<Dimensions,int>&     vertexPositionWithin3x3Patch
+    tarch::la::Vector<TWO_POWER_D,int> getAdjacentRanksForNewVertex(
+      GridVertex                                   coarseGridVertices[TWO_POWER_D],
+      const tarch::la::Vector<DIMENSIONS,int>&     vertexPositionWithin3x3Patch
     ) const;
 
     /**
@@ -810,9 +810,9 @@ class peano4::grid::Spacetree {
      *
      * @return -1  (TraversalObserver::NoData) if there's no neighbour or face is not local.
      */
-    int  getNeighbourTrees( GridVertex vertex[TwoPowerD], int faceNumber, bool calledByReceivingProcess ) const;
+    int  getNeighbourTrees( GridVertex vertex[TWO_POWER_D], int faceNumber, bool calledByReceivingProcess ) const;
 
-    bool isFaceAlongPeriodicBoundaryCondition(GridVertex vertex[TwoPowerD], int faceNumber, bool calledByReceivingProcess) const;
+    bool isFaceAlongPeriodicBoundaryCondition(GridVertex vertex[TWO_POWER_D], int faceNumber, bool calledByReceivingProcess) const;
 
 
     /**
@@ -947,8 +947,8 @@ class peano4::grid::Spacetree {
     Spacetree(
       int newId,
       int masterId,
-      const tarch::la::Vector<Dimensions,double>&  offset,
-      const tarch::la::Vector<Dimensions,double>&  width,
+      const tarch::la::Vector<DIMENSIONS,double>&  offset,
+      const tarch::la::Vector<DIMENSIONS,double>&  width,
       bool  traversalInverted
     );
 
@@ -1016,9 +1016,9 @@ class peano4::grid::Spacetree {
 
   public:
     Spacetree(
-      const tarch::la::Vector<Dimensions,double>&  offset,
-      const tarch::la::Vector<Dimensions,double>&  width,
-      const std::bitset<Dimensions>&               periodicBC = 0
+      const tarch::la::Vector<DIMENSIONS,double>&  offset,
+      const tarch::la::Vector<DIMENSIONS,double>&  width,
+      const std::bitset<DIMENSIONS>&               periodicBC = 0
     );
 
     ~Spacetree() = default;

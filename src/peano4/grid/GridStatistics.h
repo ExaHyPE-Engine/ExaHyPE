@@ -10,7 +10,7 @@
 
 #include <string>
 
-#ifdef Parallel
+#ifdef WITH_MPI
 #include <mpi.h>
 #include <functional>
 #endif
@@ -33,7 +33,7 @@ namespace grid{
 struct peano4::grid::GridStatistics {
   public:
     GridStatistics() {}
-    GridStatistics(int  __numberOfLocalUnrefinedCells, int  __numberOfRemoteUnrefinedCells, int  __numberOfLocalRefinedCells, int  __numberOfRemoteRefinedCells, int  __stationarySweeps, bool  __coarseningHasBeenVetoed, bool  __removedEmptySubtree, tarch::la::Vector<Dimensions,double>  __minH);
+    GridStatistics(int  __numberOfLocalUnrefinedCells, int  __numberOfRemoteUnrefinedCells, int  __numberOfLocalRefinedCells, int  __numberOfRemoteRefinedCells, int  __stationarySweeps, bool  __coarseningHasBeenVetoed, bool  __removedEmptySubtree, tarch::la::Vector<DIMENSIONS,double>  __minH);
 
     int   getNumberOfLocalUnrefinedCells() const;
     void   setNumberOfLocalUnrefinedCells(int value);
@@ -49,12 +49,12 @@ struct peano4::grid::GridStatistics {
     void   setCoarseningHasBeenVetoed(bool value);
     bool   getRemovedEmptySubtree() const;
     void   setRemovedEmptySubtree(bool value);
-    tarch::la::Vector<Dimensions,double>   getMinH() const;
-    void   setMinH(const tarch::la::Vector<Dimensions,double>& value);
+    tarch::la::Vector<DIMENSIONS,double>   getMinH() const;
+    void   setMinH(const tarch::la::Vector<DIMENSIONS,double>& value);
     double   getMinH(int index) const;
     void   setMinH(int index, double value);
 
-    #ifdef Parallel
+    #ifdef WITH_MPI
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -136,7 +136,7 @@ struct peano4::grid::GridStatistics {
     GridStatistics( ObjectConstruction ):
         GridStatistics() {}
     
-#ifdef Parallel
+#ifdef WITH_MPI
     static void sendAndPollDanglingMessages(const peano4::grid::GridStatistics& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
     static void receiveAndPollDanglingMessages(peano4::grid::GridStatistics& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
 #endif
@@ -152,9 +152,9 @@ struct peano4::grid::GridStatistics {
     [[clang::pack_range(0,std::numeric_limits<int>::max())]]  int   _stationarySweeps;
     [[clang::pack]]  bool   _coarseningHasBeenVetoed;
     [[clang::pack]]  bool   _removedEmptySubtree;
-    tarch::la::Vector<Dimensions,double>   _minH;
+    tarch::la::Vector<DIMENSIONS,double>   _minH;
 
-    #ifdef Parallel
+    #ifdef WITH_MPI
     private:
       int _senderDestinationRank;
 

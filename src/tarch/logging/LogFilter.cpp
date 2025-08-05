@@ -46,7 +46,7 @@ std::string tarch::logging::LogFilter::FilterListEntry::toString() const {
   msg << "(";
   msg << "target:" << _targetName << ",";
   msg << _namespaceName << ",";
-  #ifdef Parallel
+  #ifdef WITH_MPI
   msg << "rank:" << _rank;
   msg << ",";
   #endif
@@ -112,7 +112,7 @@ tarch::logging::LogFilter& tarch::logging::LogFilter::getInstance() {
 }
 
 void tarch::logging::LogFilter::switchProgramPhase(const std::string& activeProgramPhase) {
-  #if PeanoDebug>=4
+  #if PEANO_DEBUG>=4
   //std::cout << "Switch program phase to " << activeProgramPhase << " and, hence, activate potentially different filter set" << std::endl;
   #endif
 
@@ -125,7 +125,7 @@ void tarch::logging::LogFilter::switchProgramPhase(const std::string& activeProg
 }
 
 bool tarch::logging::LogFilter::writeDebug([[maybe_unused]] const std::string& className) {
-  #if PeanoDebug>=4
+  #if PEANO_DEBUG>=4
   return !filterOut(FilterListEntry::TargetDebug,className);
   #else
   return false;
@@ -141,7 +141,7 @@ bool tarch::logging::LogFilter::writeWarning(const std::string& className) {
 }
 
 bool tarch::logging::LogFilter::writeTrace([[maybe_unused]] const std::string& className) {
-  #if PeanoDebug>=1
+  #if PEANO_DEBUG>=1
   const bool result = !filterOut(FilterListEntry::TargetTrace,className);
   return result;
   #else
@@ -175,7 +175,7 @@ bool tarch::logging::LogFilter::filterOut(
         ( _activeProgramPhase.find( p->_programPhase,0 )==0 or p->_programPhase==FilterListEntry::AlwaysOn )
         and
         ( className.find(p->_namespaceName,0)==0 )
-        #ifdef Parallel
+        #ifdef WITH_MPI
         and
         (p->_rank == FilterListEntry::AnyRank || p->_rank == tarch::mpi::Rank::getInstance().getRank())
         #endif

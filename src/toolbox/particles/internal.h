@@ -65,10 +65,10 @@ namespace toolbox {
     namespace internal {
       double relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
       double relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker);
-      double relativeReleaseOwnershipSpatialSortingTolerance(const tarch::la::Vector< Dimensions, double >& h);
+      double relativeReleaseOwnershipSpatialSortingTolerance(const tarch::la::Vector< DIMENSIONS, double >& h);
       double relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
       double relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker);
-      double relativeGrabOwnershipSpatialSortingTolerance(const tarch::la::Vector< Dimensions, double >& h);
+      double relativeGrabOwnershipSpatialSortingTolerance(const tarch::la::Vector< DIMENSIONS, double >& h);
 
       bool fitsIntoLevel(double searchRadius, const ::peano4::datamanagement::CellMarker& marker);
       bool fitsIntoLevel(double searchRadius, const ::peano4::datamanagement::VertexMarker& marker);
@@ -85,7 +85,7 @@ namespace toolbox {
        *                 it is the left bottom vertex, 10 is the right bottom
        *                 one, and so forth.
        */
-      std::bitset<Dimensions> getParticleAssociationWithinCell(const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& cellCentre);
+      std::bitset<DIMENSIONS> getParticleAssociationWithinCell(const tarch::la::Vector<DIMENSIONS, double>& x, const tarch::la::Vector<DIMENSIONS, double>& cellCentre);
     } // namespace internal
   }   // namespace particles
 } // namespace toolbox

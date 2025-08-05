@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Device.h"
 
-#if defined(GPUOffloadingSYCL)
+#if defined(WITH_GPU_SYCL)
 
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/accelerator.h"
@@ -10,11 +10,7 @@
 #include "tarch/multicore/Lock.h"
 
 #include <map>
-
-#pragma push_macro("Dimensions")
-#undef Dimensions
 #include <sycl/sycl.hpp>
-#pragma pop_macro("Dimensions")
 
 namespace {
   std::map<int, sycl::queue> syclQueues;
@@ -99,4 +95,4 @@ void* tarch::accelerator::getSYCLQueue(int number) {
   return &syclQueues[number];
 }
 
-#endif // defined(GPUOffloadingSYCL)
+#endif // defined(WITH_GPU_SYCL)

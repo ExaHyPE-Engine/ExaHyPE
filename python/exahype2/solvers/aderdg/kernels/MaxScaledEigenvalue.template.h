@@ -13,8 +13,8 @@ namespace {{ item }} {
 double maxScaledEigenvalue(
   {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
   const {{SOLUTION_STORAGE_PRECISION}}* const   luh,
-  const tarch::la::Vector<Dimensions, double>&  cellCentre,
-  const tarch::la::Vector<Dimensions, double>&  cellSize,
+  const tarch::la::Vector<DIMENSIONS, double>&  cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&  cellSize,
   const double                                  timeStamp,
   const double                                  timeStepSize
 );

@@ -12,7 +12,7 @@ namespace peano4 {
       MPIReceive
     };
 
-    #if !defined(Parallel)
+    #if !defined(WITH_MPI)
     /**
      * My stacks need send and receive signature.
      */

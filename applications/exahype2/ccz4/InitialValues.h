@@ -21,29 +21,29 @@ namespace applications {
     namespace ccz4 {
       void gaugeWave(
         double * NOALIAS Q, // Q[64+0],
-        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<DIMENSIONS,double>&  x,
         double t
       );
       void diagonal_gaugeWave(
         double * NOALIAS Q, // Q[64+0],
-        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<DIMENSIONS,double>&  x,
         double t
       );
       void linearWave(
         double * NOALIAS Q, // Q[64+0],
-        const tarch::la::Vector<Dimensions,double>&  X,
+        const tarch::la::Vector<DIMENSIONS,double>&  X,
         double t
       );
       void flat(
         double * NOALIAS Q, // Q[64+0],
-        const tarch::la::Vector<Dimensions,double>&  X,
+        const tarch::la::Vector<DIMENSIONS,double>&  X,
         double t
       );
 
       #ifdef IncludeTwoPunctures
       void ApplyTwoPunctures(
         double * NOALIAS Q, // Q[64+0],
-        const tarch::la::Vector<Dimensions,double>&  X,
+        const tarch::la::Vector<DIMENSIONS,double>&  X,
         double t,
 	TP::TwoPunctures* tp,
         bool low_res

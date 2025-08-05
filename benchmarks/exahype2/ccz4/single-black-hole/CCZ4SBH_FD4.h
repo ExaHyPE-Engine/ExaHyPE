@@ -54,16 +54,16 @@ class benchmarks::exahype2::ccz4::CCZ4SBH_FD4: public benchmarks::exahype2::ccz4
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
       const double * NOALIAS Q, // Q[59+0],
-      const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
-      const tarch::la::Vector<Dimensions,double>&  meshCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  meshCellCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  meshCellH,
       double                                       t
     ) override;
     
 
     virtual void initialCondition(
       double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
-      const tarch::la::Vector<Dimensions,double>&  meshCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  meshCellCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  meshCellH,
       bool                                         gridIsConstructed
     ) override;
     

@@ -38,7 +38,7 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         auto localParticlesIterator = activeParticles.begin();
         // There is some parallelism here if you wanna exploit it
-        for (int vertex=0; vertex<TwoPowerD; vertex++) {
+        for (int vertex=0; vertex<TWO_POWER_D; vertex++) {
           auto* firstParticle = *localParticlesIterator;
           std::advance( localParticlesIterator, numberOfActiveParticles[vertex] );
           // This loop encodes vector-level parallelism (SIMD)
@@ -118,21 +118,21 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
   {% if PARTICLE_CELL_UPDATE_KERNEL!=None %}
   std::list< globaldata::{{LOCAL_PARTICLE}}* >   localParticles;
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >  _activeParticles;
-  std::vector< int >                             numberOfCoalescedLocalParticlesPerVertex( TwoPowerD );
-  std::vector< int >                            _numberOfActiveParticlesPerVertex( TwoPowerD ); // stay compatible with coalesced version
+  std::vector< int >                             numberOfCoalescedLocalParticlesPerVertex( TWO_POWER_D );
+  std::vector< int >                            _numberOfActiveParticlesPerVertex( TWO_POWER_D ); // stay compatible with coalesced version
   std::vector< bool >                           localParticleIsContainedInCell;
   auto& numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex;
   auto& activeParticles                           = _activeParticles;
   
-  for (int i=0; i<TwoPowerD; i++) {
+  for (int i=0; i<TWO_POWER_D; i++) {
     numberOfCoalescedActiveParticlesPerVertex[i] = fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
     for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
       activeParticles.push_front( p );
     }
     numberOfCoalescedLocalParticlesPerVertex[i] = fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i).size();
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
-      std::bitset<TwoPowerD> mask = 0;
-      mask.set(TwoPowerD-i-1);
+      std::bitset<TWO_POWER_D> mask = 0;
+      mask.set(TWO_POWER_D-i-1);
       bool isLocal = (mask & p->getContainedInAdjacentCell()).any();
       assertionEquals4( 
         isLocal, 

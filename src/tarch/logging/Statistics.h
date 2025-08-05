@@ -22,7 +22,7 @@ namespace tarch {
  * This interface only logs data if you have translated with
  *
  * ~~~~~~~~~~~~~~~~~~~~~
- * CXXFLAGS="... -DTrackStatistics"
+ * CXXFLAGS="... -DTRACK_STATISTICS"
  * ~~~~~~~~~~~~~~~~~~~~~
  *
  * To get the stats right, you might want to invoke the clear() operation 
@@ -77,7 +77,7 @@ class tarch::logging::Statistics {
      */
     static Statistics& getInstance();
 
-    #ifdef TrackStatistics
+    #ifdef TRACK_STATISTICS
       /**
        * Log one particular value
        *

@@ -67,7 +67,7 @@ class SWERestingLake(Scenario):
   initialCondition(
       _Q,
       x,
-      tarch::la::Vector<Dimensions, double>(),
+      tarch::la::Vector<DIMENSIONS, double>(),
       true
   );
 

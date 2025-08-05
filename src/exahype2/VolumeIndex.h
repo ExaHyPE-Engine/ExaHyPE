@@ -7,7 +7,7 @@
 #include "tarch/CompilerSpecificSettings.h"
 
 namespace exahype2 {
-  #if defined(GPUOffloadingOMP)
+  #if defined(WITH_GPU_OMP_TARGET)
   #pragma omp declare target
   #endif
 
@@ -18,8 +18,8 @@ namespace exahype2 {
 
     using VectorType = tarch::la::Vector<N, int>;
 
-    static inline GPUCallableMethod
-    VectorType generate(Args... args) InlineMethod {
+    static inline GPU_CALLABLE_METHOD
+    VectorType generate(Args... args) {
       VectorType result;
       fillVector<0>(result, args...);  // Start recursion at index 0
       return result;
@@ -28,16 +28,16 @@ namespace exahype2 {
   private:
     // Recursive fill function
     template <int I, class FirstArg, class... RestArgs>
-    static inline GPUCallableMethod
-    void fillVector(VectorType& vector, FirstArg arg, RestArgs... rest) InlineMethod {
+    static inline GPU_CALLABLE_METHOD
+    void fillVector(VectorType& vector, FirstArg arg, RestArgs... rest) {
       vector(I) = arg;
       fillVector<I + 1>(vector, rest...);
     }
 
     // Termination case
     template <int I>
-    static inline GPUCallableMethod
-    void fillVector(VectorType&) InlineMethod {}
+    static inline GPU_CALLABLE_METHOD
+    void fillVector(VectorType&) {}
   };
 
   /**
@@ -58,14 +58,14 @@ namespace exahype2 {
    */
   // Factory function: Deduces N from argument count
   template <class... Args>
-  static inline GPUCallableMethod
-  auto volumeIndex(Args... args) InlineMethod {
+  static inline GPU_CALLABLE_METHOD
+  auto volumeIndex(Args... args) {
     constexpr int N = sizeof...(args);
     static_assert(N > 0, "volumeIndex() must be called with at least one argument");
     return VolumeIndex<N, Args...>::generate(args...);
   }
 
-  #if defined(GPUOffloadingOMP)
+  #if defined(WITH_GPU_OMP_TARGET)
   #pragma omp end declare target
   #endif
 } // namespace exahype2

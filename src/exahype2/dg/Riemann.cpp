@@ -23,7 +23,7 @@ void exahype2::dg::interpolateRiemannSolution(
     0                      // auxiliaryVariables
   );
 
-  #if Dimensions==2
+  #if DIMENSIONS==2
   const int totalNumberOfValues = (order+1) * 2 * unknowns;
   const int InterpolationMatrixDimensions = (order+1);   // no of rows/cols
   #else
@@ -32,11 +32,11 @@ void exahype2::dg::interpolateRiemannSolution(
   #endif
   std::fill_n( fineGridFaceQ, totalNumberOfValues, 0.0 );
 
-  const int normal = marker.getSelectedFaceNumber()%Dimensions;
+  const int normal = marker.getSelectedFaceNumber()%DIMENSIONS;
   dfore(fineGridDoF,order+1,normal,0) {
     dfore(coarseGridDoF,order+1,normal,0) {
       double tensorProductWeight = 1.0;
-      for (int d=0; d<Dimensions; d++) {
+      for (int d=0; d<DIMENSIONS; d++) {
         if (d!=normal) {
           int subMatrix = marker.getRelativePositionWithinFatherCell()(d);
           assertion(subMatrix>=0);
@@ -53,8 +53,8 @@ void exahype2::dg::interpolateRiemannSolution(
         }
       }
 
-      tarch::la::Vector<Dimensions,int> shiftedFineGridDoF = fineGridDoF;
-      tarch::la::Vector<Dimensions,int> shiftedCoarseGridDoF  = coarseGridDoF;
+      tarch::la::Vector<DIMENSIONS,int> shiftedFineGridDoF = fineGridDoF;
+      tarch::la::Vector<DIMENSIONS,int> shiftedCoarseGridDoF  = coarseGridDoF;
       for (int leftRight=0; leftRight<2; leftRight++)
       for (int unknown=0; unknown<unknowns; unknown++) {
         shiftedFineGridDoF(normal) = leftRight;
@@ -88,7 +88,7 @@ void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
     auxiliaryVariables
   );
 
-  #if Dimensions==2
+  #if DIMENSIONS==2
   [[maybe_unused]] const int totalNumberOfValues = (order+1) * (numberOfProjectedQuantities*2) * (unknowns+auxiliaryVariables);
   const int RestrictionMatrixDimensions = (order+1);   // no of rows/cols
   #else
@@ -96,12 +96,12 @@ void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
   const int RestrictionMatrixDimensions = (order+1)*(order+1);
   #endif
 
-  const int normal        = marker.getSelectedFaceNumber()%Dimensions;
-  const int leftRightFace = marker.getSelectedFaceNumber() < Dimensions ? 1 : 0;
+  const int normal        = marker.getSelectedFaceNumber()%DIMENSIONS;
+  const int leftRightFace = marker.getSelectedFaceNumber() < DIMENSIONS ? 1 : 0;
   dfore(fineGridDoF,order+1,normal,0) {
     dfore(coarseGridDoF,order+1,normal,0) {
       double tensorProductWeight = 1.0;
-      for (int d=0; d<Dimensions; d++) {
+      for (int d=0; d<DIMENSIONS; d++) {
         if (d!=normal) {
           int subMatrix = marker.getRelativePositionWithinFatherCell()(d);
           assertion(subMatrix>=0);
@@ -118,8 +118,8 @@ void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
         }
       }
 
-      tarch::la::Vector<Dimensions,int> shiftedFineGridDoF    = fineGridDoF;
-      tarch::la::Vector<Dimensions,int> shiftedCoarseGridDoF  = coarseGridDoF;
+      tarch::la::Vector<DIMENSIONS,int> shiftedFineGridDoF    = fineGridDoF;
+      tarch::la::Vector<DIMENSIONS,int> shiftedCoarseGridDoF  = coarseGridDoF;
       for (int leftRight=leftRightFace * numberOfProjectedQuantities; leftRight<(leftRightFace+1)*numberOfProjectedQuantities; leftRight++)
       for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
         shiftedFineGridDoF(normal)    = leftRight;
@@ -141,7 +141,7 @@ void exahype2::dg::clearSolutionProjection(
   int                           numberOfProjectedQuantities,
   double* NOALIAS          faceQ
 ) {
-  #if Dimensions==2
+  #if DIMENSIONS==2
   const int numberOfDoFs = (order+1);
   #else
   const int numberOfDoFs = (order+1) * (order+1);
@@ -175,7 +175,7 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
   [[maybe_unused]] double* const NOALIAS          faceQBottom,
   [[maybe_unused]] double* const NOALIAS          faceQUp
 ) {
-#if Dimensions==2
+#if DIMENSIONS==2
   exahype2::enumerator::AoSLexicographicEnumerator     cellEnumerator(1,order+1,0,unknowns,auxiliaryVariables);
   exahype2::enumerator::FaceAoSLexicographicEnumerator leftRightFaceEnumerator(0,order+1,1,unknowns,auxiliaryVariables);
   exahype2::enumerator::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,order+1,1,unknowns,auxiliaryVariables);
@@ -231,7 +231,7 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
   [[maybe_unused]] double* const NOALIAS          faceQFront,
   [[maybe_unused]] double* const NOALIAS          faceQBack
 ) {
-#if Dimensions==3
+#if DIMENSIONS==3
   exahype2::enumerator::AoSLexicographicEnumerator     cellEnumerator(1,order+1,0,unknowns,auxiliaryVariables);
   exahype2::enumerator::FaceAoSLexicographicEnumerator leftRightFaceEnumerator(0,order+1,1,unknowns,auxiliaryVariables);
   exahype2::enumerator::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,order+1,1,unknowns,auxiliaryVariables);
@@ -342,7 +342,7 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
   [[maybe_unused]] const double* NOALIAS          MassMatrixDiagonal1d,
   [[maybe_unused]] double* NOALIAS                cellQ
 ) {
-#if Dimensions==2
+#if DIMENSIONS==2
   [[maybe_unused]] const int strideQ = unknowns + auxiliaryVariables;
 
   exahype2::enumerator::AoSLexicographicEnumerator QEnumerator(
@@ -354,9 +354,9 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
   );
 
   exahype2::enumerator::FaceAoSLexicographicEnumerator leftFaceEnumerator  (0,            order+1, 1, unknowns, 0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator rightFaceEnumerator (0+Dimensions, order+1, 1, unknowns, 0);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator rightFaceEnumerator (0+DIMENSIONS, order+1, 1, unknowns, 0);
   exahype2::enumerator::FaceAoSLexicographicEnumerator bottomFaceEnumerator(1,            order+1, 1, unknowns, 0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator upperFaceEnumerator (1+Dimensions, order+1, 1, unknowns, 0);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator upperFaceEnumerator (1+DIMENSIONS, order+1, 1, unknowns, 0);
 
   dfor( dof, order+1 ) {
     const double coeffLeft    = MassMatrixDiagonal1d[dof[1]]*BasisFunctionValuesLeft[dof[0]]       * cellSize(1);
@@ -365,10 +365,10 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
     const double coeffBottom  = MassMatrixDiagonal1d[dof[0]]*BasisFunctionValuesLeft[dof[1]]       * cellSize(0);
     const double coeffUp      = MassMatrixDiagonal1d[dof[0]]*BasisFunctionValuesLeft[order-dof[1]] * cellSize(0);
 
-    tarch::la::Vector<Dimensions,int>    leftDoF    = dof;
-    tarch::la::Vector<Dimensions,int>    rightDoF   = dof;
-    tarch::la::Vector<Dimensions,int>    bottomDoF  = dof;
-    tarch::la::Vector<Dimensions,int>    upperDoF   = dof;
+    tarch::la::Vector<DIMENSIONS,int>    leftDoF    = dof;
+    tarch::la::Vector<DIMENSIONS,int>    rightDoF   = dof;
+    tarch::la::Vector<DIMENSIONS,int>    bottomDoF  = dof;
+    tarch::la::Vector<DIMENSIONS,int>    upperDoF   = dof;
 
     leftDoF(0)    = 1;
     rightDoF(0)   = 0;
@@ -401,7 +401,7 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
   [[maybe_unused]] const double* NOALIAS          MassMatrixDiagonal1d,
   [[maybe_unused]] double* NOALIAS                cellQ
 ) {
-#if Dimensions==3
+#if DIMENSIONS==3
   exahype2::enumerator::AoSLexicographicEnumerator QEnumerator(
     1,           // number of cells in one memory chunk
     order+1,     // numberOfDoFsPerAxisInCell
@@ -411,11 +411,11 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
   );
 
   exahype2::enumerator::FaceAoSLexicographicEnumerator leftFaceEnumerator  (0,            order+1, 1, unknowns, 0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator rightFaceEnumerator (0+Dimensions, order+1, 1, unknowns, 0);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator rightFaceEnumerator (0+DIMENSIONS, order+1, 1, unknowns, 0);
   exahype2::enumerator::FaceAoSLexicographicEnumerator bottomFaceEnumerator(1,            order+1, 1, unknowns, 0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator upperFaceEnumerator( 1+Dimensions, order+1, 1, unknowns, 0);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator upperFaceEnumerator( 1+DIMENSIONS, order+1, 1, unknowns, 0);
   exahype2::enumerator::FaceAoSLexicographicEnumerator frontFaceEnumerator( 2,            order+1, 1, unknowns, 0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator backFaceEnumerator(  2+Dimensions, order+1, 1, unknowns, 0);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator backFaceEnumerator(  2+DIMENSIONS, order+1, 1, unknowns, 0);
 
   dfor( dof, order+1 ) {
     //coefficients of faces in x direction
@@ -428,12 +428,12 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
     const double coeffFront   = MassMatrixDiagonal1d[dof[0]]          * MassMatrixDiagonal1d[dof[1]]          * BasisFunctionValuesLeft[dof[2]]       * cellSize(0) * cellSize(1);
     const double coeffBack    = MassMatrixDiagonal1d[dof[0]]          * MassMatrixDiagonal1d[dof[1]]          * BasisFunctionValuesLeft[order-dof[2]] * cellSize(0) * cellSize(1);
 
-    tarch::la::Vector<Dimensions,int> leftDoF      = dof;
-    tarch::la::Vector<Dimensions,int> rightDoF     = dof;
-    tarch::la::Vector<Dimensions,int> frontDoF     = dof;
-    tarch::la::Vector<Dimensions,int> backDoF      = dof;
-    tarch::la::Vector<Dimensions,int> bottomDoF    = dof;
-    tarch::la::Vector<Dimensions,int> upperDoF     = dof;
+    tarch::la::Vector<DIMENSIONS,int> leftDoF      = dof;
+    tarch::la::Vector<DIMENSIONS,int> rightDoF     = dof;
+    tarch::la::Vector<DIMENSIONS,int> frontDoF     = dof;
+    tarch::la::Vector<DIMENSIONS,int> backDoF      = dof;
+    tarch::la::Vector<DIMENSIONS,int> bottomDoF    = dof;
+    tarch::la::Vector<DIMENSIONS,int> upperDoF     = dof;
 
     leftDoF(0)    = 1;
     rightDoF(0)   = 0;

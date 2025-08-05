@@ -21,8 +21,8 @@ class exahype2::PlotFilter {
      * - last plot
      */
     struct FilterEntry {
-      tarch::la::Vector<Dimensions,double> offset;
-      tarch::la::Vector<Dimensions,double> size;
+      tarch::la::Vector<DIMENSIONS,double> offset;
+      tarch::la::Vector<DIMENSIONS,double> size;
       int                                  frequency;
       int                                  nextPlot;
     };
@@ -31,8 +31,8 @@ class exahype2::PlotFilter {
 
   public:
     typedef std::tuple<
-      tarch::la::Vector<Dimensions,double>,
-      tarch::la::Vector<Dimensions,double>,
+      tarch::la::Vector<DIMENSIONS,double>,
+      tarch::la::Vector<DIMENSIONS,double>,
       int
     > FilterEntryTuple;
 

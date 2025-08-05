@@ -30,7 +30,7 @@ time_in_between_plots = end_time_ / number_of_snapshots_
 initial_conditions_ = """
 for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
     Q[i] = std::sin(x(0) * tarch::la::PI) * std::sin(x(1) * tarch::la::PI)
-    #if Dimensions == 3
+    #if DIMENSIONS == 3
       * std::sin(x(2) * tarch::la::PI)
     #endif
     ;
@@ -46,7 +46,7 @@ for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
 flux_ = """
   F[0] = 0.0;
   F[1] = 0.0;
-  #if Dimensions == 3
+  #if DIMENSIONS == 3
   F[2] = 0.0;
   #endif
   F[normal] = Q[normal];"""

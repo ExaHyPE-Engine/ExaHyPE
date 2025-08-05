@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#ifdef UseHDF5
+#ifdef WITH_HDF5
 
 #include "PatchWriter.h"
 #include "tarch/Filesystem.h"

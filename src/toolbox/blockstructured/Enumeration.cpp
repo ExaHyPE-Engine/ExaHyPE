@@ -2,17 +2,17 @@
 
 
 int toolbox::blockstructured::serialiseVoxelIndexInOverlap(
-  const tarch::la::Vector<Dimensions,int>& overlapCell,
+  const tarch::la::Vector<DIMENSIONS,int>& overlapCell,
   int                                      numberOfDoFsPerAxisInPatch,
   int                                      overlap,
   int                                      normal
 ) {
   assertion4(normal>=0,         overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
-  assertion4(normal<Dimensions, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
+  assertion4(normal<DIMENSIONS, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
 
   int base   = 1;
   int result = 0;
-  for (int d=0; d<Dimensions; d++) {
+  for (int d=0; d<DIMENSIONS; d++) {
     result += overlapCell(d) * base;
     if (d==normal) {
       assertion4(overlapCell(d)>=0,         overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
@@ -30,15 +30,15 @@ int toolbox::blockstructured::serialiseVoxelIndexInOverlap(
 
 
 int toolbox::blockstructured::serialisePatchIndexInOverlap(
-  const tarch::la::Vector<Dimensions,int>& patchIndex,
+  const tarch::la::Vector<DIMENSIONS,int>& patchIndex,
   int                                      normal
 ) {
   assertion2(normal>=0,         patchIndex, normal);
-  assertion2(normal<Dimensions, patchIndex, normal);
+  assertion2(normal<DIMENSIONS, patchIndex, normal);
 
   int base   = 1;
   int result = 0;
-  for (int d=0; d<Dimensions; d++) {
+  for (int d=0; d<DIMENSIONS; d++) {
     if (d!=normal) {
       result += patchIndex(d) * base;
       assertion2(patchIndex(d)>=0, patchIndex, normal);
@@ -51,10 +51,10 @@ int toolbox::blockstructured::serialisePatchIndexInOverlap(
 
 
 int toolbox::blockstructured::serialiseMarkerIn3x3PatchAssembly(
-  const tarch::la::Vector<Dimensions,int>& markerIndex,
+  const tarch::la::Vector<DIMENSIONS,int>& markerIndex,
   int                                      numberOfDoFsPerAxisInPatch
 ) {
-  #if Dimensions==2
+  #if DIMENSIONS==2
   const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
   return (markerIndex(0) + markerIndex(1)*3) * patchSize;
   #else

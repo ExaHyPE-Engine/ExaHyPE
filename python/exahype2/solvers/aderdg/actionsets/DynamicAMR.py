@@ -27,18 +27,18 @@ class DynamicAMR(AbstractADERDGActionSet):
 
         self._Template_CreateHangingFace = """
   if ({{INTERPOLATE_GUARD}}) {
-    const double timeStamp = fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(marker.getSelectedFaceNumber() < Dimensions ? 1 : 0);
+    const double timeStamp = fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(marker.getSelectedFaceNumber() < DIMENSIONS ? 1 : 0);
 
     // Needs to declare and define timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
 
-    #if Dimensions == 2
+    #if DIMENSIONS == 2
     constexpr int SpaceFaceSize      = {{ORDER}} + 1;
     #else
     constexpr int SpaceFaceSize      = ({{ORDER}} + 1) * ({{ORDER}} + 1);
     #endif
 
-    int facePosition = marker.getSelectedFaceNumber() < Dimensions ? 0 : SpaceFaceSize;
+    int facePosition = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : SpaceFaceSize;
 
     if (!marker.isInteriorFaceWithinPatch()) {
       // Interpolate both estimates and fluxes
@@ -59,7 +59,7 @@ class DynamicAMR(AbstractADERDGActionSet):
 """
 
         self._Template_DestroyHangingFace = """
-  #if Dimensions == 2
+  #if DIMENSIONS == 2
   constexpr int SpaceFaceSize      = {{ORDER}} + 1;
   #else
   constexpr int SpaceFaceSize      = ({{ORDER}} + 1) * ({{ORDER}} + 1);
@@ -69,7 +69,7 @@ class DynamicAMR(AbstractADERDGActionSet):
 
   if ({{DELETE_GUARD}}) {
 
-    int facePosition = marker.getSelectedFaceNumber() < Dimensions ? 0 : 1;
+    int facePosition = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : 1;
     auto* FOut = coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value + (1-facePosition) * FluxElementsPerFace;
 
     //Delete the elements on the side of the face that the Riemann fluxes will be merged onto. Because of the
@@ -79,13 +79,13 @@ class DynamicAMR(AbstractADERDGActionSet):
 
   if ({{RESTRICT_GUARD}}) {
 
-    int facePosition = marker.getSelectedFaceNumber() < Dimensions ? 0 : 1;
+    int facePosition = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : 1;
 
     // Fluxes
     kernels::{{SOLVER_NAME}}::faceFluxRestriction(
       coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value + (1-facePosition) * FluxElementsPerFace, // const double* lQhbndCoarse
       fineGridFace{{SOLVER_NAME}}QFluxEstimates.value + facePosition * FluxElementsPerFace, // double* lQhbndFine
-      marker.getRelativePositionWithinFatherFace() // const tarch::la::Vector<Dimensions - 1, int>& subfaceIndex
+      marker.getRelativePositionWithinFatherFace() // const tarch::la::Vector<DIMENSIONS - 1, int>& subfaceIndex
     );
   }
 """

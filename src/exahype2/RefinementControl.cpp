@@ -40,8 +40,8 @@ exahype2::RefinementControl::RefinementControl(double tolerance):
 void exahype2::RefinementControl::clear() { _newEvents.clear(); }
 
 void exahype2::RefinementControl::addCommand(
-  const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
   exahype2::RefinementCommand                  command,
   int                                          lifetime
 ) {
@@ -52,8 +52,8 @@ void exahype2::RefinementControl::addCommand(
 
   switch (command) {
   case exahype2::RefinementCommand::Refine: {
-    tarch::la::Vector<Dimensions, double> expandedWidth   = (1.0 + _tolerance) * h;
-    tarch::la::Vector<Dimensions, double> refinedMeshSize = (1.0 + _tolerance) * 1.0 / 3.0 * h;
+    tarch::la::Vector<DIMENSIONS, double> expandedWidth   = (1.0 + _tolerance) * h;
+    tarch::la::Vector<DIMENSIONS, double> refinedMeshSize = (1.0 + _tolerance) * 1.0 / 3.0 * h;
 
     peano4::grid::GridControlEvent newEvent(
       peano4::grid::GridControlEvent::RefinementControl::Refine,
@@ -74,9 +74,9 @@ void exahype2::RefinementControl::addCommand(
   case exahype2::RefinementCommand::Keep:
     break;
   case exahype2::RefinementCommand::Erase: {
-    tarch::la::Vector<Dimensions, double> expandedWidth   = (1.0 + _tolerance) * h;
-    tarch::la::Vector<Dimensions, double> shift           = 0.5 * (expandedWidth - h);
-    tarch::la::Vector<Dimensions, double> refinedMeshSize = 3.1 * h;
+    tarch::la::Vector<DIMENSIONS, double> expandedWidth   = (1.0 + _tolerance) * h;
+    tarch::la::Vector<DIMENSIONS, double> shift           = 0.5 * (expandedWidth - h);
+    tarch::la::Vector<DIMENSIONS, double> refinedMeshSize = 3.1 * h;
 
     peano4::grid::GridControlEvent newEvent(
       peano4::grid::GridControlEvent::RefinementControl::Erase,

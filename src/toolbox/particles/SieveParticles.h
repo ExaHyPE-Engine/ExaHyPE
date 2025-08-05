@@ -172,9 +172,9 @@ public:
    *   particles.
    */
   void exchangeSieveListsGlobally(
-        const tarch::la::Vector<Dimensions,double>   domainOffset,
-        const tarch::la::Vector<Dimensions,double>   domainSize,
-        const std::bitset<Dimensions>                periodicBC
+        const tarch::la::Vector<DIMENSIONS,double>   domainOffset,
+        const tarch::la::Vector<DIMENSIONS,double>   domainSize,
+        const std::bitset<DIMENSIONS>                periodicBC
       );
 
   /**

@@ -4,7 +4,7 @@
 
 #include <string>
 
-#ifdef Parallel
+#ifdef WITH_MPI
 #include <functional>
 #include <mpi.h>
 #endif
@@ -27,77 +27,77 @@ struct peano4::grid::GridTraversalEvent {
 public:
   GridTraversalEvent() = default;
   GridTraversalEvent(
-    const tarch::la::Vector<Dimensions, double>& __x,
-    const tarch::la::Vector<Dimensions, double>& __h,
-    const std::bitset<TwoPowerD>&                __hasBeenRefined,
-    const std::bitset<TwoPowerD>&                __willBeRefined,
-    const std::bitset<TwoPowerD>&                __isVertexLocal,
-    const std::bitset<TwoPowerD>&                __isParentVertexLocal,
-    const std::bitset<TwoPowerD>&                __isVertexParentOfSubtree,
-    const std::bitset<TwoTimesD>&                __isFaceLocal,
+    const tarch::la::Vector<DIMENSIONS, double>& __x,
+    const tarch::la::Vector<DIMENSIONS, double>& __h,
+    const std::bitset<TWO_POWER_D>&                __hasBeenRefined,
+    const std::bitset<TWO_POWER_D>&                __willBeRefined,
+    const std::bitset<TWO_POWER_D>&                __isVertexLocal,
+    const std::bitset<TWO_POWER_D>&                __isParentVertexLocal,
+    const std::bitset<TWO_POWER_D>&                __isVertexParentOfSubtree,
+    const std::bitset<TWO_TIMES_D>&                __isFaceLocal,
     const bool                                   __isCellLocal,
     const bool                                   __isParentCellLocal,
-    const std::bitset<TwoPowerD>&                __isVertexAdjacentToParallelDomainBoundary,
-    const std::bitset<TwoTimesD>&                __isFaceAdjacentToParallelDomainBoundary,
-    const tarch::la::Vector<TwoPowerD, int>&     __numberOfAdjacentTreesPerVertex,
-    const std::bitset<ThreePowerD>&              __isAdjacentCellLocal,
-    const tarch::la::Vector<TwoPowerD, int>&     __vertexDataFrom,
-    const tarch::la::Vector<TwoPowerD, int>&     __vertexDataTo,
-    const tarch::la::Vector<TwoTimesD, int>&     __faceDataFrom,
-    const tarch::la::Vector<TwoTimesD, int>&     __faceDataTo,
+    const std::bitset<TWO_POWER_D>&                __isVertexAdjacentToParallelDomainBoundary,
+    const std::bitset<TWO_TIMES_D>&                __isFaceAdjacentToParallelDomainBoundary,
+    const tarch::la::Vector<TWO_POWER_D, int>&     __numberOfAdjacentTreesPerVertex,
+    const std::bitset<THREE_POWER_D>&              __isAdjacentCellLocal,
+    const tarch::la::Vector<TWO_POWER_D, int>&     __vertexDataFrom,
+    const tarch::la::Vector<TWO_POWER_D, int>&     __vertexDataTo,
+    const tarch::la::Vector<TWO_TIMES_D, int>&     __faceDataFrom,
+    const tarch::la::Vector<TWO_TIMES_D, int>&     __faceDataTo,
     const int                                    __cellData,
-    const tarch::la::Vector<Dimensions, int>&    __relativePositionToFather,
+    const tarch::la::Vector<DIMENSIONS, int>&    __relativePositionToFather,
     const int                                    __invokingSpacetree,
     const bool                                   __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing
   );
   GridTraversalEvent(const GridTraversalEvent& copy);
 
-  inline tarch::la::Vector<Dimensions, double> getX() const { return _x; }
+  inline tarch::la::Vector<DIMENSIONS, double> getX() const { return _x; }
   inline double                                getX(int index) const { return _x[index]; }
   inline void                                  setX(int index, double value) { _x[index] = value; }
-  inline void                                  setX(const tarch::la::Vector<Dimensions, double>& value) { _x = value; }
+  inline void                                  setX(const tarch::la::Vector<DIMENSIONS, double>& value) { _x = value; }
 
-  inline tarch::la::Vector<Dimensions, double> getH() const { return _h; }
+  inline tarch::la::Vector<DIMENSIONS, double> getH() const { return _h; }
   inline double                                getH(int index) const { return _h[index]; }
   inline void                                  setH(int index, double value) { _h[index] = value; }
-  inline void                                  setH(const tarch::la::Vector<Dimensions, double>& value) { _h = value; }
+  inline void                                  setH(const tarch::la::Vector<DIMENSIONS, double>& value) { _h = value; }
 
-  inline std::bitset<TwoPowerD> getHasBeenRefined() const { return _hasBeenRefined; }
+  inline std::bitset<TWO_POWER_D> getHasBeenRefined() const { return _hasBeenRefined; }
   inline bool                   getHasBeenRefined(int index) const { return _hasBeenRefined[index]; }
   inline void                   setHasBeenRefined(int index, bool value) { _hasBeenRefined[index] = value; }
-  inline void                   setHasBeenRefined(const std::bitset<TwoPowerD>& value) { _hasBeenRefined = value; }
+  inline void                   setHasBeenRefined(const std::bitset<TWO_POWER_D>& value) { _hasBeenRefined = value; }
   inline void                   flipHasBeenRefined(int index) { _hasBeenRefined[index] = not _hasBeenRefined[index]; }
 
-  inline std::bitset<TwoPowerD> getWillBeRefined() const { return _willBeRefined; }
+  inline std::bitset<TWO_POWER_D> getWillBeRefined() const { return _willBeRefined; }
   inline bool                   getWillBeRefined(int index) const { return _willBeRefined[index]; }
   inline void                   setWillBeRefined(int index, bool value) { _willBeRefined[index] = value; }
-  inline void                   setWillBeRefined(const std::bitset<TwoPowerD>& value) { _willBeRefined = value; }
+  inline void                   setWillBeRefined(const std::bitset<TWO_POWER_D>& value) { _willBeRefined = value; }
   inline void                   flipWillBeRefined(int index) { _willBeRefined[index] = not _willBeRefined[index]; }
 
-  inline std::bitset<TwoPowerD> getIsVertexLocal() const { return _isVertexLocal; }
+  inline std::bitset<TWO_POWER_D> getIsVertexLocal() const { return _isVertexLocal; }
   inline bool                   getIsVertexLocal(int index) const { return _isVertexLocal[index]; }
   inline void                   setIsVertexLocal(int index, bool value) { _isVertexLocal[index] = value; }
-  inline void                   setIsVertexLocal(const std::bitset<TwoPowerD>& value) { _isVertexLocal = value; }
+  inline void                   setIsVertexLocal(const std::bitset<TWO_POWER_D>& value) { _isVertexLocal = value; }
   inline void                   flipIsVertexLocal(int index) { _isVertexLocal[index] = not _isVertexLocal[index]; }
 
-  inline std::bitset<TwoPowerD> getIsParentVertexLocal() const { return _isParentVertexLocal; }
+  inline std::bitset<TWO_POWER_D> getIsParentVertexLocal() const { return _isParentVertexLocal; }
   inline bool                   getIsParentVertexLocal(int index) const { return _isParentVertexLocal[index]; }
   inline void                   setIsParentVertexLocal(int index, bool value) { _isParentVertexLocal[index] = value; }
-  inline void setIsParentVertexLocal(const std::bitset<TwoPowerD>& value) { _isParentVertexLocal = value; }
+  inline void setIsParentVertexLocal(const std::bitset<TWO_POWER_D>& value) { _isParentVertexLocal = value; }
   inline void flipIsParentVertexLocal(int index) { _isParentVertexLocal[index] = not _isParentVertexLocal[index]; }
 
-  inline std::bitset<TwoPowerD> getIsVertexParentOfSubtree() const { return _isVertexParentOfSubtree; }
+  inline std::bitset<TWO_POWER_D> getIsVertexParentOfSubtree() const { return _isVertexParentOfSubtree; }
   inline bool                   getIsVertexParentOfSubtree(int index) const { return _isVertexParentOfSubtree[index]; }
   inline void setIsVertexParentOfSubtree(int index, bool value) { _isVertexParentOfSubtree[index] = value; }
-  inline void setIsVertexParentOfSubtree(const std::bitset<TwoPowerD>& value) { _isVertexParentOfSubtree = value; }
+  inline void setIsVertexParentOfSubtree(const std::bitset<TWO_POWER_D>& value) { _isVertexParentOfSubtree = value; }
   inline void flipIsVertexParentOfSubtree(int index) {
     _isVertexParentOfSubtree[index] = not _isVertexParentOfSubtree[index];
   }
 
-  inline std::bitset<TwoTimesD> getIsFaceLocal() const { return _isFaceLocal; }
+  inline std::bitset<TWO_TIMES_D> getIsFaceLocal() const { return _isFaceLocal; }
   inline bool                   getIsFaceLocal(int index) const { return _isFaceLocal[index]; }
   inline void                   setIsFaceLocal(int index, bool value) { _isFaceLocal[index] = value; }
-  inline void                   setIsFaceLocal(const std::bitset<TwoTimesD>& value) { _isFaceLocal = value; }
+  inline void                   setIsFaceLocal(const std::bitset<TWO_TIMES_D>& value) { _isFaceLocal = value; }
   inline void                   flipIsFaceLocal(int index) { _isFaceLocal[index] = not _isFaceLocal[index]; }
 
   inline bool getIsCellLocal() const { return _isCellLocal; }
@@ -106,7 +106,7 @@ public:
   inline bool getIsParentCellLocal() const { return _isParentCellLocal; }
   inline void setIsParentCellLocal(bool value) { _isParentCellLocal = value; }
 
-  inline std::bitset<TwoPowerD> getIsVertexAdjacentToParallelDomainBoundary() const {
+  inline std::bitset<TWO_POWER_D> getIsVertexAdjacentToParallelDomainBoundary() const {
     return _isVertexAdjacentToParallelDomainBoundary;
   }
   inline bool getIsVertexAdjacentToParallelDomainBoundary(int index) const {
@@ -115,17 +115,17 @@ public:
   inline void setIsVertexAdjacentToParallelDomainBoundary(int index, bool value) {
     _isVertexAdjacentToParallelDomainBoundary[index] = value;
   }
-  inline void setIsVertexAdjacentToParallelDomainBoundary(const std::bitset<TwoPowerD>& value) {
+  inline void setIsVertexAdjacentToParallelDomainBoundary(const std::bitset<TWO_POWER_D>& value) {
     _isVertexAdjacentToParallelDomainBoundary = value;
   }
   inline void flipIsVertexAdjacentToParallelDomainBoundary(int index) {
     _isVertexAdjacentToParallelDomainBoundary[index] = not _isVertexAdjacentToParallelDomainBoundary[index];
   }
 
-  inline std::bitset<TwoTimesD> getIsFaceAdjacentToParallelDomainBoundary() const {
+  inline std::bitset<TWO_TIMES_D> getIsFaceAdjacentToParallelDomainBoundary() const {
     return _isFaceAdjacentToParallelDomainBoundary;
   }
-  inline void setIsFaceAdjacentToParallelDomainBoundary(const std::bitset<TwoTimesD>& value) {
+  inline void setIsFaceAdjacentToParallelDomainBoundary(const std::bitset<TWO_TIMES_D>& value) {
     _isFaceAdjacentToParallelDomainBoundary = value;
   }
   inline bool getIsFaceAdjacentToParallelDomainBoundary(int index) const {
@@ -138,10 +138,10 @@ public:
     _isFaceAdjacentToParallelDomainBoundary[index] = not _isFaceAdjacentToParallelDomainBoundary[index];
   }
 
-  inline tarch::la::Vector<TwoPowerD, int> getNumberOfAdjacentTreesPerVertex() const {
+  inline tarch::la::Vector<TWO_POWER_D, int> getNumberOfAdjacentTreesPerVertex() const {
     return _numberOfAdjacentTreesPerVertex;
   }
-  inline void setNumberOfAdjacentTreesPerVertex(const tarch::la::Vector<TwoPowerD, int>& value) {
+  inline void setNumberOfAdjacentTreesPerVertex(const tarch::la::Vector<TWO_POWER_D, int>& value) {
     _numberOfAdjacentTreesPerVertex = value;
   }
   inline int  getNumberOfAdjacentTreesPerVertex(int index) const { return _numberOfAdjacentTreesPerVertex[index]; }
@@ -149,37 +149,37 @@ public:
     _numberOfAdjacentTreesPerVertex[index] = value;
   }
 
-  inline std::bitset<ThreePowerD> getIsAdjacentCellLocal() const { return _isAdjacentCellLocal; }
-  inline void setIsAdjacentCellLocal(const std::bitset<ThreePowerD>& value) { _isAdjacentCellLocal = value; }
+  inline std::bitset<THREE_POWER_D> getIsAdjacentCellLocal() const { return _isAdjacentCellLocal; }
+  inline void setIsAdjacentCellLocal(const std::bitset<THREE_POWER_D>& value) { _isAdjacentCellLocal = value; }
   inline bool getIsAdjacentCellLocal(int index) const { return _isAdjacentCellLocal[index]; }
   inline void setIsAdjacentCellLocal(int index, bool value) { _isAdjacentCellLocal[index] = value; }
   inline void flipIsAdjacentCellLocal(int index) { _isAdjacentCellLocal[index] = not _isAdjacentCellLocal[index]; }
 
-  inline tarch::la::Vector<TwoPowerD, int> getVertexDataFrom() const { return _vertexDataFrom; }
-  inline void setVertexDataFrom(const tarch::la::Vector<TwoPowerD, int>& value) { _vertexDataFrom = value; }
+  inline tarch::la::Vector<TWO_POWER_D, int> getVertexDataFrom() const { return _vertexDataFrom; }
+  inline void setVertexDataFrom(const tarch::la::Vector<TWO_POWER_D, int>& value) { _vertexDataFrom = value; }
   inline int  getVertexDataFrom(int index) const { return _vertexDataFrom[index]; }
   inline void setVertexDataFrom(int index, int value) { _vertexDataFrom[index] = value; }
 
-  inline tarch::la::Vector<TwoPowerD, int> getVertexDataTo() const { return _vertexDataTo; }
-  inline void setVertexDataTo(const tarch::la::Vector<TwoPowerD, int>& value) { _vertexDataTo = value; }
+  inline tarch::la::Vector<TWO_POWER_D, int> getVertexDataTo() const { return _vertexDataTo; }
+  inline void setVertexDataTo(const tarch::la::Vector<TWO_POWER_D, int>& value) { _vertexDataTo = value; }
   inline int  getVertexDataTo(int index) const { return _vertexDataTo[index]; }
   inline void setVertexDataTo(int index, int value) { _vertexDataTo[index] = value; }
 
-  inline tarch::la::Vector<TwoTimesD, int> getFaceDataFrom() const { return _faceDataFrom; }
-  inline void setFaceDataFrom(const tarch::la::Vector<TwoTimesD, int>& value) { _faceDataFrom = value; }
+  inline tarch::la::Vector<TWO_TIMES_D, int> getFaceDataFrom() const { return _faceDataFrom; }
+  inline void setFaceDataFrom(const tarch::la::Vector<TWO_TIMES_D, int>& value) { _faceDataFrom = value; }
   inline int  getFaceDataFrom(int index) const { return _faceDataFrom[index]; }
   inline void setFaceDataFrom(int index, int value) { _faceDataFrom[index] = value; }
 
-  inline tarch::la::Vector<TwoTimesD, int> getFaceDataTo() const { return _faceDataTo; }
-  inline void setFaceDataTo(const tarch::la::Vector<TwoTimesD, int>& value) { _faceDataTo = value; }
+  inline tarch::la::Vector<TWO_TIMES_D, int> getFaceDataTo() const { return _faceDataTo; }
+  inline void setFaceDataTo(const tarch::la::Vector<TWO_TIMES_D, int>& value) { _faceDataTo = value; }
   inline int  getFaceDataTo(int index) const { return _faceDataTo[index]; }
   inline void setFaceDataTo(int index, int value) { _faceDataTo[index] = value; }
 
   inline int  getCellData() const { return _cellData; }
   inline void setCellData(int value) { _cellData = value; }
 
-  inline tarch::la::Vector<Dimensions, int> getRelativePositionToFather() const { return _relativePositionToFather; }
-  inline void setRelativePositionToFather(const tarch::la::Vector<Dimensions, int>& value) {
+  inline tarch::la::Vector<DIMENSIONS, int> getRelativePositionToFather() const { return _relativePositionToFather; }
+  inline void setRelativePositionToFather(const tarch::la::Vector<DIMENSIONS, int>& value) {
     _relativePositionToFather = value;
   }
   inline int  getRelativePositionToFather(int index) const { return _relativePositionToFather[index]; }
@@ -194,7 +194,7 @@ public:
     _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing = value;
   }
 
-#ifdef Parallel
+#ifdef WITH_MPI
   /**
    * Hands out MPI datatype if we work without the LLVM MPI extension.
    * If we work with this additional feature, this is the routine where
@@ -270,7 +270,7 @@ public:
   GridTraversalEvent(ObjectConstruction):
     GridTraversalEvent() {}
 
-#ifdef Parallel
+#ifdef WITH_MPI
   static void sendAndPollDanglingMessages(
     const peano4::grid::GridTraversalEvent& message,
     int                                     destination,
@@ -288,30 +288,30 @@ public:
   std::string toString() const;
 
 private:
-  tarch::la::Vector<Dimensions, double> _x;
-  tarch::la::Vector<Dimensions, double> _h;
-  std::bitset<TwoPowerD>                _hasBeenRefined;
-  std::bitset<TwoPowerD>                _willBeRefined;
-  std::bitset<TwoPowerD>                _isVertexLocal;
-  std::bitset<TwoPowerD>                _isParentVertexLocal;
-  std::bitset<TwoPowerD>                _isVertexParentOfSubtree;
-  std::bitset<TwoTimesD>                _isFaceLocal;
+  tarch::la::Vector<DIMENSIONS, double> _x;
+  tarch::la::Vector<DIMENSIONS, double> _h;
+  std::bitset<TWO_POWER_D>                _hasBeenRefined;
+  std::bitset<TWO_POWER_D>                _willBeRefined;
+  std::bitset<TWO_POWER_D>                _isVertexLocal;
+  std::bitset<TWO_POWER_D>                _isParentVertexLocal;
+  std::bitset<TWO_POWER_D>                _isVertexParentOfSubtree;
+  std::bitset<TWO_TIMES_D>                _isFaceLocal;
   bool                                  _isCellLocal;
   bool                                  _isParentCellLocal;
-  std::bitset<TwoPowerD>                _isVertexAdjacentToParallelDomainBoundary;
-  std::bitset<TwoTimesD>                _isFaceAdjacentToParallelDomainBoundary;
-  tarch::la::Vector<TwoPowerD, int>     _numberOfAdjacentTreesPerVertex;
-  std::bitset<ThreePowerD>              _isAdjacentCellLocal;
-  tarch::la::Vector<TwoPowerD, int>     _vertexDataFrom;
-  tarch::la::Vector<TwoPowerD, int>     _vertexDataTo;
-  tarch::la::Vector<TwoTimesD, int>     _faceDataFrom;
-  tarch::la::Vector<TwoTimesD, int>     _faceDataTo;
+  std::bitset<TWO_POWER_D>                _isVertexAdjacentToParallelDomainBoundary;
+  std::bitset<TWO_TIMES_D>                _isFaceAdjacentToParallelDomainBoundary;
+  tarch::la::Vector<TWO_POWER_D, int>     _numberOfAdjacentTreesPerVertex;
+  std::bitset<THREE_POWER_D>              _isAdjacentCellLocal;
+  tarch::la::Vector<TWO_POWER_D, int>     _vertexDataFrom;
+  tarch::la::Vector<TWO_POWER_D, int>     _vertexDataTo;
+  tarch::la::Vector<TWO_TIMES_D, int>     _faceDataFrom;
+  tarch::la::Vector<TWO_TIMES_D, int>     _faceDataTo;
   int                                   _cellData;
-  tarch::la::Vector<Dimensions, int>    _relativePositionToFather;
+  tarch::la::Vector<DIMENSIONS, int>    _relativePositionToFather;
   int                                   _invokingSpacetree;
   bool                                  _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
 
-#ifdef Parallel
+#ifdef WITH_MPI
 private:
   int _senderDestinationRank;
 

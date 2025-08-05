@@ -30,13 +30,13 @@ namespace exahype2::enumerator {
    * @see enumerator.h for a generic description of attribute semantics.
    */
   struct SoALexicographicEnumerator {
-    inline GPUCallableMethod SoALexicographicEnumerator(
+    inline GPU_CALLABLE_METHOD SoALexicographicEnumerator(
       int numberOfCells,
       int numberOfDoFsPerAxisInCell,
       int haloSize,
       int numberOfUnknowns,
       int numberOfAuxiliaryVariables
-    ) InlineMethod:
+    ):
       _numberOfCells(numberOfCells),
       _numberOfDoFsPerAxisInCell(numberOfDoFsPerAxisInCell),
       _haloSize(haloSize),
@@ -49,8 +49,8 @@ namespace exahype2::enumerator {
      * The index always refers to the interior of the cells. So you can use negative
      * indices if you want.
      */
-    inline GPUCallableMethod int operator()(int cellIndex, const tarch::la::Vector<Dimensions, int>& dofIndex, int unknown) const InlineMethod {
-#if Dimensions == 2
+    inline GPU_CALLABLE_METHOD int operator()(int cellIndex, const tarch::la::Vector<DIMENSIONS, int>& dofIndex, int unknown) const {
+#if DIMENSIONS == 2
       return unknown * _numberOfCells * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
         + (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
         + (dofIndex(1) + _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
@@ -64,15 +64,15 @@ namespace exahype2::enumerator {
 #endif
     }
 
-#if defined(GPUOffloadingOff)
+#if !defined(WITH_GPU)
     std::string toString() const;
 #endif
 
     /**
      * Returns the total size.
      */
-    inline GPUCallableMethod int size() const InlineMethod {
-#if Dimensions == 2
+    inline GPU_CALLABLE_METHOD int size() const {
+#if DIMENSIONS == 2
       return _numberOfCells
         * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
         * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)

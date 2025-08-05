@@ -40,13 +40,13 @@ namespace exahype2 {
       std::function< void(
         const double* NOALIAS                   Qinside,
         double * NOALIAS                        Qoutside,
-        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<DIMENSIONS,double>&  x,
         double                                       t,
         double                                       dt,
         int                                          normal
       ) >   boundaryCondition,
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  cellSize,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  cellSize,
       double                                       t,
       double                                       dt,
       int                                          order,

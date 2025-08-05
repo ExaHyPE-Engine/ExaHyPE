@@ -228,7 +228,7 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
         d["ASPECT_ATTRIBUTES"] = ""
         d["ASPECT_METHOD_DECLARATIONS"] = ""
         # Inlcudes to peano4 should not exist in tarch
-        # As tarch do not uses the definition Dimensions, but peano4 needs it (2 or 3 for example)
+        # As tarch do not uses the definition DIMENSIONS, but peano4 needs it (2 or 3 for example)
         d["ASPECT_INCLUDES"] = ""
         for i in self._aspects:
             

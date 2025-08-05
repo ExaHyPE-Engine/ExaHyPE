@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#ifdef Parallel
+#ifdef WITH_MPI
 #include <mpi.h>
 #endif
 
@@ -288,7 +288,7 @@ class tarch::logging::CommandLineLogger {
      *
      * <h2> Debugging </h2>
      *
-     * If you PeanoDebug symbol is bigger than 0, the routine gives you some hint
+     * If you PEANO_DEBUG symbol is bigger than 0, the routine gives you some hint
      * which trace objects are still on the stack, i.e. which traceIn has not yet
      * been matched by a traceOut.
      */

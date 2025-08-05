@@ -18,7 +18,7 @@
 
 void examples::exahype2::mgccz4::gaugeWave(
   double * NOALIAS Q, // Q[64+0],
-  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
   double t
 ) {
   constexpr int nVars = 64;
@@ -54,7 +54,7 @@ void examples::exahype2::mgccz4::gaugeWave(
 
 void examples::exahype2::mgccz4::linearWave(
   double * NOALIAS Q, // Q[64+0],
-  const tarch::la::Vector<Dimensions,double>&  X,
+  const tarch::la::Vector<DIMENSIONS,double>&  X,
   double t
 ) {
   constexpr int nVars = 64;
@@ -80,7 +80,7 @@ void examples::exahype2::mgccz4::linearWave(
 
 void examples::exahype2::mgccz4::forcedflat(
   double * NOALIAS Q, // Q[64+0],
-  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
   double t
 ) {
   constexpr int nVars = 64;

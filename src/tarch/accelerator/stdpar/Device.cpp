@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/Device.h"
 
-#if defined(GPUOffloadingCPP)
+#if defined(WITH_GPU_STDPAR)
 
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/accelerator.h"
@@ -24,4 +24,4 @@ int tarch::accelerator::Device::getNumberOfDevices() const {
   return 1;
 }
 
-#endif // defined(GPUOffloadingCPP)
+#endif // defined(WITH_GPU_STDPAR)

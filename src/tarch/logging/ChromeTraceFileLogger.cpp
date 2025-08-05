@@ -143,7 +143,7 @@ void tarch::logging::ChromeTraceFileLogger::debug(
     if (_outputStream!=nullptr) {
       nextEntry();
       *_outputStream << eventEntry;
-      #if PeanoDebug>=4
+      #if PEANO_DEBUG>=4
       _outputStream->flush();
       #endif
     }
@@ -164,7 +164,7 @@ void tarch::logging::ChromeTraceFileLogger::info(long int timestampMS, int rank,
     if (_outputStream!=nullptr) {
       nextEntry();
       *_outputStream << eventEntry;
-      #if PeanoDebug>=4
+      #if PEANO_DEBUG>=4
       _outputStream->flush();
       #endif
     }
@@ -185,7 +185,7 @@ void tarch::logging::ChromeTraceFileLogger::warning(long int timestampMS, int ra
     if (_outputStream!=nullptr) {
     	nextEntry();
     	*_outputStream << eventEntry;
-      #if PeanoDebug>=4
+      #if PEANO_DEBUG>=4
       _outputStream->flush();
       #endif
     }
@@ -207,7 +207,7 @@ void tarch::logging::ChromeTraceFileLogger::traceIn(long int timestampMS, int ra
 			 << " \"tid\": " << threadId << ","
 			 << " \"args\": { \"params\": \"" + args + "\"}"
 			 " }";
-    #if PeanoDebug>=4
+    #if PEANO_DEBUG>=4
     _outputStream->flush();
     #endif
   }
@@ -229,7 +229,7 @@ void tarch::logging::ChromeTraceFileLogger::traceOut(long int timestampMS, int r
 			 << " \"tid\": " << threadId << ","
 			 << " \"args\": { \"result\": \"" + args + "\"}"
 			 " }";
-    #if PeanoDebug>=4
+    #if PEANO_DEBUG>=4
     _outputStream->flush();
     #endif
   }
@@ -261,7 +261,7 @@ void tarch::logging::ChromeTraceFileLogger::indent( bool, const std::string&, co
 
 void tarch::logging::ChromeTraceFileLogger::setOutputFile( const std::string&  outputLogFileName ) {
   std::ostringstream myOutputFileName;
-  #ifdef Parallel
+  #ifdef WITH_MPI
   if (!outputLogFileName.empty()) {
     myOutputFileName << "rank-" << tarch::mpi::Rank::getInstance().getRank() << "-" << outputLogFileName;
   }

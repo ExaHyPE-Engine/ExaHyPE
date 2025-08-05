@@ -8,82 +8,77 @@
 #include "tarch/accelerator/accelerator.h"
 
 #include <cmath>
-
-// Workaround for SYCL
-#pragma push_macro("Dimensions")
-#undef Dimensions
 #include <complex>
-#pragma pop_macro("Dimensions")
 
 namespace tarch {
   namespace la {
     /**
      * Returns the absolute value of a type by redirecting to std::abs.
      */
-    inline GPUCallableMethod
-    double abs(double value) InlineMethod;
+    inline GPU_CALLABLE_METHOD
+    double abs(double value);
 
     /**
      * Returns the absolute value of the given int.
      */
-    inline GPUCallableMethod
-    int abs(int value) InlineMethod;
+    inline GPU_CALLABLE_METHOD
+    int abs(int value);
 
-    inline GPUCallableMethod
-    double abs(const std::complex<double>& value) InlineMethod;
+    inline GPU_CALLABLE_METHOD
+    double abs(const std::complex<double>& value);
 
     /**
      * Computes the i-th power of a in integer arithmetic.
      */
-    inline GPUCallableMethod
-    int aPowI(int i, int a) InlineMethod;
+    inline GPU_CALLABLE_METHOD
+    int aPowI(int i, int a);
 
     /**
      * @param tolerance Absolute tolerance when we compare two values.
      */
-    inline GPUCallableMethod
-    bool greater(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod;
+    inline GPU_CALLABLE_METHOD
+    bool greater(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
     /**
      * @param tolerance Absolute tolerance when we compare two values.
      */
-    inline GPUCallableMethod
-    bool greaterEquals(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod;
+    inline GPU_CALLABLE_METHOD
+    bool greaterEquals(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
     /**
      * @param tolerance Absolute tolerance when we compare two values.
      */
-    inline GPUCallableMethod
-    bool equals(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod;
+    inline GPU_CALLABLE_METHOD
+    bool equals(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
     /**
      * @param tolerance Absolute tolerance when we compare two values.
      */
-    inline GPUCallableMethod
-    bool smaller(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod;
+    inline GPU_CALLABLE_METHOD
+    bool smaller(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
     /**
      * @param tolerance Absolute tolerance when we compare two values.
      */
-    inline GPUCallableMethod
-    bool smallerEquals(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod;
+    inline GPU_CALLABLE_METHOD
+    bool smallerEquals(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
     /**
      * @param tolerance Absolute tolerance when we compare two values.
      */
-    inline GPUCallableMethod
-    bool equals(const std::complex<double>& lhs, const std::complex<double>& rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod;
+    inline GPU_CALLABLE_METHOD
+    bool equals(const std::complex<double>& lhs, const std::complex<double>& rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
     /**
      * @return -10, or 1 depending on the sign of value
      */
-    inline GPUCallableMethod
-    int sign(double value, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod;
+    inline GPU_CALLABLE_METHOD
+    int sign(double value, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
-    inline GPUCallableMethod
-    int round(double value) InlineMethod;
-    inline GPUCallableMethod
-    int round(float value) InlineMethod;
+    inline GPU_CALLABLE_METHOD
+    int round(double value);
+    inline GPU_CALLABLE_METHOD
+    int round(float value);
   }
 }
 

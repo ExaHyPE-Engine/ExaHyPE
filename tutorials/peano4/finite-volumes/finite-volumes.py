@@ -93,10 +93,10 @@ perform_time_step.use_cell(patch)
 perform_time_step.use_face(patch_overlap)
 # @todo Darf ich den Face gleich wieder ueberschreiben? Nachbar bekommt ja dann GS-meassig den neuen mit u.U.
 functor = """
-  auto eigenvalues = [](double Q[5], const tarch::la::Vector<Dimensions,double>& x, int normal, double lambda[5]) -> void {
+  auto eigenvalues = [](double Q[5], const tarch::la::Vector<DIMENSIONS,double>& x, int normal, double lambda[5]) -> void {
     constexpr double gamma = 1.4;
     const double irho = 1./Q[0];
-    #if Dimensions==3
+    #if DIMENSIONS==3
     const double p = (gamma-1) * (Q[4] - 0.5*irho*Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]);
     #else
     const double p = (gamma-1) * (Q[4] - 0.5*irho*Q[1]*Q[1]+Q[2]*Q[2]);
@@ -119,7 +119,7 @@ functor = """
     assertion4( lambda[4]==lambda[4], u_n, c, x, normal );
   };
   
-  auto flux = [](double Q[5], const tarch::la::Vector<Dimensions,double>& x, int normal, double F[5]) -> void {
+  auto flux = [](double Q[5], const tarch::la::Vector<DIMENSIONS,double>& x, int normal, double F[5]) -> void {
     assertion5( Q[0]==Q[0], Q[0], Q[1], Q[2], Q[3], Q[4] );    
     assertion5( Q[1]==Q[1], Q[0], Q[1], Q[2], Q[3], Q[4] );    
     assertion5( Q[2]==Q[2], Q[0], Q[1], Q[2], Q[3], Q[4] );    
@@ -129,7 +129,7 @@ functor = """
     assertion5( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4] );
     constexpr double gamma = 1.4;
     const double irho = 1./Q[0];
-    #if Dimensions==3
+    #if DIMENSIONS==3
     const double p = (gamma-1) * (Q[4] - 0.5*irho*Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]);
     #else
     const double p = (gamma-1) * (Q[4] - 0.5*irho*Q[1]*Q[1]+Q[2]*Q[2]);
@@ -141,7 +141,7 @@ functor = """
           F[0] = Q[1];
           F[1] = irho*Q[1]*Q[1] + p;
           F[2] = irho*Q[2]*Q[1];
-          F[3] = (Dimensions==3) ? irho*Q[3]*Q[1] : 0.0;
+          F[3] = (DIMENSIONS==3) ? irho*Q[3]*Q[1] : 0.0;
           F[4] = irho*(Q[4]+p)*Q[1];
         }
         break;
@@ -150,7 +150,7 @@ functor = """
           F[0] = Q[2];
           F[1] = irho*Q[1]*Q[2];
           F[2] = irho*Q[2]*Q[2] + p;
-          F[3] = (Dimensions==3) ? irho*Q[3]*Q[2] : 0.0;
+          F[3] = (DIMENSIONS==3) ? irho*Q[3]*Q[2] : 0.0;
           F[4] = irho*(Q[4]+p)*Q[2];
         }
         break;
@@ -159,7 +159,7 @@ functor = """
           F[0] = Q[3];
           F[1] = irho*Q[1]*Q[3];
           F[2] = irho*Q[2]*Q[3];
-          F[3] = (Dimensions==3) ? irho*Q[3]*Q[3] + p : 0.0;
+          F[3] = (DIMENSIONS==3) ? irho*Q[3]*Q[3] + p : 0.0;
           F[4] = irho*(Q[4]+p)*Q[3];
         }
         break;
@@ -172,7 +172,7 @@ functor = """
     assertion( F[4]==F[4] );
   };
 
-  auto splitRiemann1d = [&flux, &eigenvalues](double QL[5], double QR[5], const tarch::la::Vector<Dimensions,double>& x, double dx, double dt, int normal, double F[5]) -> void {{
+  auto splitRiemann1d = [&flux, &eigenvalues](double QL[5], double QR[5], const tarch::la::Vector<DIMENSIONS,double>& x, double dx, double dt, int normal, double F[5]) -> void {{
     double averageQ[5]; 
     for (int unknown=0; unknown<5; unknown++) {{
       averageQ[unknown] = 0.5 * (QL[unknown] + QR[unknown]);    
@@ -204,18 +204,18 @@ functor = """
   double dx = marker.h()(0) / PatchSize;
   assertion( dx>=tarch::la::NUMERICAL_ZERO_DIFFERENCE );
   dfor(cell,PatchSize) {{ // DOFS_PER_AXIS
-    tarch::la::Vector<Dimensions,double> voxelCentre = marker.x()
-                                           - static_cast<double>((PatchSize/2+HaloSize)) * tarch::la::Vector<Dimensions,double>(dx)
-                                           + tarch::la::multiplyComponents(cell.convertScalar<double>(), tarch::la::Vector<Dimensions,double>(dx));
+    tarch::la::Vector<DIMENSIONS,double> voxelCentre = marker.x()
+                                           - static_cast<double>((PatchSize/2+HaloSize)) * tarch::la::Vector<DIMENSIONS,double>(dx)
+                                           + tarch::la::multiplyComponents(cell.convertScalar<double>(), tarch::la::Vector<DIMENSIONS,double>(dx));
     
-    tarch::la::Vector<Dimensions,int> currentVoxel = cell + tarch::la::Vector<Dimensions,int>(HaloSize); // OVERLAP / Halo layer size
+    tarch::la::Vector<DIMENSIONS,int> currentVoxel = cell + tarch::la::Vector<DIMENSIONS,int>(HaloSize); // OVERLAP / Halo layer size
     int currentVoxelSerialised = peano4::utils::dLinearised(currentVoxel,PatchSize + 2*HaloSize);
     
     double accumulatedNumericalFlux[] = { 0.0, 0.0, 0.0, 0.0, 0.0 };
     double numericalFlux[5];
-    for (int d=0; d<Dimensions; d++) {
-      tarch::la::Vector<Dimensions,int> neighbourVoxel = currentVoxel;
-      tarch::la::Vector<Dimensions,double> x = voxelCentre;
+    for (int d=0; d<DIMENSIONS; d++) {
+      tarch::la::Vector<DIMENSIONS,int> neighbourVoxel = currentVoxel;
+      tarch::la::Vector<DIMENSIONS,double> x = voxelCentre;
       
       neighbourVoxel(d) -= 1;
       int neighbourVoxelSerialised = peano4::utils::dLinearised(neighbourVoxel,PatchSize + 2*HaloSize);

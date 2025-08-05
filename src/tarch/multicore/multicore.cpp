@@ -37,7 +37,7 @@ void tarch::multicore::waitForTask(const void* const inDependency) { native::wai
 
 void tarch::multicore::waitForAllTasks() { native::waitForAllTasks(); }
 
-#ifndef SharedMemoryParallelisation
+#ifndef WITH_MULTITHREADING
 
 void tarch::multicore::native::spawnTask(Task* task, const void* const, const void* const) {
   while (task->run()) {};
@@ -65,4 +65,4 @@ void tarch::multicore::native::waitForTask(const void* const) {}
 
 void tarch::multicore::native::waitForAllTasks() {}
 
-#endif // SharedMemoryParallelisation
+#endif // WITH_MULTITHREADING

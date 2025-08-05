@@ -202,11 +202,11 @@ if __name__ == "__main__":
         
         if SuperClass==exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep:
           self.postprocess_updated_patch += """{
-    #if Dimensions==2
+    #if DIMENSIONS==2
     constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
     #endif
 
-    #if Dimensions==3
+    #if DIMENSIONS==3
     constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
     #endif
 

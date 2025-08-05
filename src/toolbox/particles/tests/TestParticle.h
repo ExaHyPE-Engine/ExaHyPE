@@ -17,11 +17,11 @@ namespace toolbox {
 
 class toolbox::particles::tests::TestParticle {
 public:
-  TestParticle(const tarch::la::Vector<Dimensions, double>& x, double h);
+  TestParticle(const tarch::la::Vector<DIMENSIONS, double>& x, double h);
 
-  tarch::la::Vector<Dimensions, double> getX() const;
+  tarch::la::Vector<DIMENSIONS, double> getX() const;
   double                                getSearchRadius() const;
 
-  tarch::la::Vector<Dimensions, double> _x;
+  tarch::la::Vector<DIMENSIONS, double> _x;
   double                                _h;
 };

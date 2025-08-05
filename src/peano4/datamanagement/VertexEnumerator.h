@@ -51,12 +51,12 @@ namespace peano4 {
  */
 template <class Vertex> struct peano4::datamanagement::VertexEnumerator {
 private:
-  Vertex* _vertices[TwoPowerD];
+  Vertex* _vertices[TWO_POWER_D];
 
 public:
   VertexEnumerator() {
-#if PeanoDebug > 0
-    for (int i = 0; i < TwoPowerD; i++) {
+#if PEANO_DEBUG > 0
+    for (int i = 0; i < TWO_POWER_D; i++) {
       _vertices[i] = nullptr;
     }
 #endif
@@ -68,7 +68,7 @@ public:
    */
   VertexEnumerator(Vertex* firstVertex) {
     assertion(firstVertex != nullptr);
-    for (int i = 0; i < TwoPowerD; i++) {
+    for (int i = 0; i < TWO_POWER_D; i++) {
       _vertices[i] = firstVertex + i;
     }
   }
@@ -79,7 +79,7 @@ public:
    */
   void setPointer(int i, Vertex* value) {
     assertion(i >= 0);
-    assertion(i < TwoPowerD);
+    assertion(i < TWO_POWER_D);
     assertion(value != nullptr);
     _vertices[i] = value;
   }
@@ -95,7 +95,7 @@ public:
    */
   Vertex& operator()(int i) const {
     assertion1(i >= 0, i);
-    assertion1(i < TwoPowerD, i);
+    assertion1(i < TWO_POWER_D, i);
     assertion1(_vertices[i] != nullptr, i);
     return *(_vertices[i]);
   }

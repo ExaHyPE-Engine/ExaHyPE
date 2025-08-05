@@ -139,7 +139,7 @@ namespace tarch {
 
 
 
-#if PeanoDebug>=2
+#if PEANO_DEBUG>=2
 #define nonCriticalAssertion(expr) if (!(expr)) { \
   ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, "" ); \
 }

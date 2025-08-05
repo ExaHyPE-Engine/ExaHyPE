@@ -106,10 +106,10 @@ class UpdateFaceLabel(ActionSet):
   _Template_CreateFace = """
   logTraceInWith1Argument( "createPersistentFace()", marker.toString() );
 
-  tarch::la::Vector<Dimensions, double> offset(DomainOffset);
-  tarch::la::Vector<Dimensions, double> size(DomainSize);
+  tarch::la::Vector<DIMENSIONS, double> offset(DomainOffset);
+  tarch::la::Vector<DIMENSIONS, double> size(DomainSize);
   bool isBoundary = false;
-  for (int d=0; d<Dimensions; d++) {
+  for (int d=0; d<DIMENSIONS; d++) {
     isBoundary |= tarch::la::equals( marker.x()(d), offset(d) );
     isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
   }
@@ -208,7 +208,7 @@ def create_face_label(solver_name):
         _Boundary     = _Boundary or neighbour._Boundary;
         _AboveHanging = _AboveHanging or neighbour._AboveHanging;
   
-        const int normal         = marker.getSelectedFaceNumber() % Dimensions;
+        const int normal         = marker.getSelectedFaceNumber() % DIMENSIONS;
         const int neighbourEntry = marker.outerNormal()(normal)<0.0 ? 0 : 1;
   
         _Updated[ neighbourEntry ]          = neighbour._Updated[ neighbourEntry ];

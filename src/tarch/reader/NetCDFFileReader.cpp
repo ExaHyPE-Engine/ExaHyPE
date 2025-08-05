@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "NetCDFFileReader.h"
 
-#ifdef UseNetCDF
+#ifdef WITH_NETCDF
 
 #include <netcdf.h>
 #include <sys/stat.h>

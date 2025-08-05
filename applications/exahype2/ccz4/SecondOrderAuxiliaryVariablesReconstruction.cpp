@@ -9,10 +9,10 @@ namespace {
   template <void (*recompute_LoopBody)(
       double* NOALIAS                                       QIn,
       const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
-      const tarch::la::Vector<Dimensions,double>&  patchCentre,
-      const tarch::la::Vector<Dimensions,double>&  patchSize,
+      const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
       int                                          patchIndex,
-      const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+      const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
       int                                          normal
   )>
   void recomputeAuxiliaryVariablesFD4(
@@ -26,7 +26,7 @@ namespace {
     ::exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);
 
     for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
-      if (Dimensions==2) {
+      if (DIMENSIONS==2) {
           for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
           for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
             recompute_LoopBody(
@@ -163,7 +163,7 @@ void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_4thOrder(
   ::exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);
 
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
-    if (Dimensions==2) {
+    if (DIMENSIONS==2) {
         for (int x = -1; x < numberOfGridCellsPerPatchPerAxis+1; x++)
         for (int y =  0; y < numberOfGridCellsPerPatchPerAxis;   y++) {
           internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody(
@@ -240,15 +240,15 @@ void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_4thOrder(
 void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_centralDifferences_LoopBody(
   double* NOALIAS                                       QIn,
   const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
-  const tarch::la::Vector<Dimensions,double>&  patchCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
   int                                          patchIndex,
-  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
   int                                          normal
 ) {
-  tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
-  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume  = volumeIndex;
-  tarch::la::Vector<Dimensions,int> rightAdjacentVolume  = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>       centralVolume  = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume  = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume  = volumeIndex;
 
   rightAdjacentVolume(normal)++;
    leftAdjacentVolume(normal)--;
@@ -281,14 +281,14 @@ void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_cent
 void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_leftDifferences_LoopBody(
   double* NOALIAS                                       QIn,
   const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
-  const tarch::la::Vector<Dimensions,double>&  patchCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
   int                                          patchIndex,
-  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
   int                                          normal
 ) {
-  tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
-  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume  = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>       centralVolume  = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume  = volumeIndex;
 
    leftAdjacentVolume(normal)--;
 
@@ -320,14 +320,14 @@ void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_left
 void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_rightDifferences_LoopBody(
   double* NOALIAS                                       QIn,
   const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
-  const tarch::la::Vector<Dimensions,double>&  patchCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
   int                                          patchIndex,
-  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
   int                                          normal
 ) {
-  tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
-  tarch::la::Vector<Dimensions,int> rightAdjacentVolume  = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>       centralVolume  = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume  = volumeIndex;
 
   rightAdjacentVolume(normal)++;
 
@@ -357,17 +357,17 @@ void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_righ
 void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody(
   double* NOALIAS                                       QIn,
   const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
-  const tarch::la::Vector<Dimensions,double>&  patchCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
   int                                          patchIndex,
-  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
   int                                          normal
 ) {
-  tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
-  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume1 = volumeIndex;
-  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume2 = volumeIndex;
-  tarch::la::Vector<Dimensions,int> rightAdjacentVolume1 = volumeIndex;
-  tarch::la::Vector<Dimensions,int> rightAdjacentVolume2 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>       centralVolume  = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume2 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume2 = volumeIndex;
 
   rightAdjacentVolume1(normal)++;
   rightAdjacentVolume2(normal)++;

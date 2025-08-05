@@ -16,12 +16,12 @@ namespace toolbox {
 
 class toolbox::particles::assignmentchecks::tests::TestParticle {
 private:
-  tarch::la::Vector<Dimensions, double> _x;
+  tarch::la::Vector<DIMENSIONS, double> _x;
   int                                   _partid;
   bool                                  _isLocal;
 
   // helper variables of vertex particle is associated with
-  tarch::la::Vector<Dimensions, double> _vertexH;
+  tarch::la::Vector<DIMENSIONS, double> _vertexH;
   int                                   _depth;
 
 public:
@@ -30,22 +30,22 @@ public:
 
 public:
   TestParticle(
-    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
     int                                          particleID,
     bool                                         local = false
   );
 
   int                                   getDepth() const;
   int                                   getPartid() const;
-  tarch::la::Vector<Dimensions, double> getVertexH() const;
-  tarch::la::Vector<Dimensions, double> getX() const;
+  tarch::la::Vector<DIMENSIONS, double> getVertexH() const;
+  tarch::la::Vector<DIMENSIONS, double> getX() const;
   bool                                  isLocal() const;
   TestParticle::ParallelState           getParallelState() const;
 
   void setDepth(const int depth);
   void setPartid(const int partid);
   void setIsLocal(const bool isLocal);
-  void setVertexH(const tarch::la::Vector<Dimensions, double>& x);
-  void setX(const tarch::la::Vector<Dimensions, double>& x);
+  void setVertexH(const tarch::la::Vector<DIMENSIONS, double>& x);
+  void setX(const tarch::la::Vector<DIMENSIONS, double>& x);
   void setParallelState(const TestParticle::ParallelState parallelState);
 };

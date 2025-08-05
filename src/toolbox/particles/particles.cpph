@@ -27,8 +27,8 @@ Iterator toolbox::particles::
 template <typename Particle>
 bool toolbox::particles::particleWillStayWithinComputationalDomain(
   const Particle&                              particle,
-  const tarch::la::Vector<Dimensions, double>& domainOffset,
-  const tarch::la::Vector<Dimensions, double>& domainWidth
+  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
+  const tarch::la::Vector<DIMENSIONS, double>& domainWidth
 ) {
   return particle.getParallelState() == Particle::ParallelState::Local
          and tarch::la::allGreaterEquals(particle.getX(), domainOffset)
@@ -50,12 +50,12 @@ void toolbox::particles::insertParticlesIntoCell(
 template <typename Particle>
 void toolbox::particles::updateContainedInAdjacentCellProperty(
   const peano4::datamanagement::CellMarker& marker,
-  const std::bitset<Dimensions>&            assignedVertex,
+  const std::bitset<DIMENSIONS>&            assignedVertex,
   Particle&                                 particle
 ) {
-  const tarch::la::Vector<Dimensions, double> vertexPositionOfAssignedVertex
+  const tarch::la::Vector<DIMENSIONS, double> vertexPositionOfAssignedVertex
     = marker.getOffset()
-      + tarch::la::multiplyComponents(tarch::la::Vector<Dimensions, double>(assignedVertex), marker.h());
+      + tarch::la::multiplyComponents(tarch::la::Vector<DIMENSIONS, double>(assignedVertex), marker.h());
   updateContainedInAdjacentCellProperty(vertexPositionOfAssignedVertex, marker.h(), particle);
 }
 
@@ -69,13 +69,13 @@ void toolbox::particles::updateContainedInAdjacentCellProperty(
 
 template <typename Particle>
 void toolbox::particles::updateContainedInAdjacentCellProperty(
-  const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
   Particle&                                    particle
 ) {
-  std::bitset<TwoPowerD> result = 0;
+  std::bitset<TWO_POWER_D> result = 0;
 
-  dfor2(k) tarch::la::Vector<Dimensions, double>
+  dfor2(k) tarch::la::Vector<DIMENSIONS, double>
     adjacentCellCentre = x - 0.5 * h + tarch::la::multiplyComponents(tarch::la::convertScalar<double>(k), h);
 
   result[kScalar] = peano4::datamanagement::CellMarker::isContained(
@@ -97,8 +97,8 @@ void toolbox::particles::insertParticleIntoCell(
   int                                                    spacetreeId
 ) {
   static tarch::logging::Log _log("toolbox::particles");
-  std::bitset<Dimensions>    targetVertex;
-  for (int d = 0; d < Dimensions; d++) {
+  std::bitset<DIMENSIONS>    targetVertex;
+  for (int d = 0; d < DIMENSIONS; d++) {
     assertion4(
       tarch::la::greaterEquals(newParticle->getX()(d), marker.x()(d) - marker.h()(d) / 2.0),
       marker.toString(),
@@ -140,9 +140,9 @@ void toolbox::particles::insertParticleIntoCell(
   // TODO add a global simulation particle_count that checks particle id for duplicates and if not, it increases the
   // count.
 
-  tarch::la::Vector<Dimensions, double>
+  tarch::la::Vector<DIMENSIONS, double>
     vertexX = marker.x() - 0.5 * marker.h()
-              + tarch::la::multiplyComponents(tarch::la::Vector<Dimensions, double>(targetVertex), marker.h());
+              + tarch::la::multiplyComponents(tarch::la::Vector<DIMENSIONS, double>(targetVertex), marker.h());
 
   toolbox::particles::assignmentchecks::assignParticleToVertex(
     toolbox::particles::assignmentchecks::pruneTypeName<Particle>(),

@@ -38,8 +38,8 @@ public:
 
   virtual void initialCondition(
     double* NOALIAS Q,
-    const tarch::la::Vector<Dimensions, double>& volumeCentre,
-    const tarch::la::Vector<Dimensions, double>& volumeH,
+    const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& volumeH,
     bool                                         gridIsConstructed
   ) override;
 
@@ -101,6 +101,6 @@ public:
 
 private:
   static bool isCellOverlappingWithBHImpactArea(
-    const tarch::la::Vector<Dimensions, double>& cellCentre, const tarch::la::Vector<Dimensions, double>& cellH
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre, const tarch::la::Vector<DIMENSIONS, double>& cellH
   );
 };

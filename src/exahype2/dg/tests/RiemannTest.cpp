@@ -16,7 +16,7 @@ void exahype2::dg::tests::RiemannTest::run() {
 void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForConstantSolutionOrder3() {
   const int order        = 3;
   const int nodesPerAxis = order+1;
-  #if Dimensions==2
+  #if DIMENSIONS==2
   const int nodesPerCell = nodesPerAxis * nodesPerAxis;
   #else
   const int nodesPerCell = nodesPerAxis * nodesPerAxis * nodesPerAxis;
@@ -56,7 +56,7 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
     QxR,
     QyL,
     QyR
-    #if Dimensions==3
+    #if DIMENSIONS==3
     ,QzL,
     QzR
     #endif
@@ -72,7 +72,7 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
   validateNumericalEquals( QxL[7], -1.0 );
   validateNumericalEquals( QxL[8],  0.0 );
   validateNumericalEquals( QxL[9],  0.0 );
-  #if Dimensions==3
+  #if DIMENSIONS==3
   validateNumericalEquals( QxL[20],  0.0 );
   validateNumericalEquals( QxL[21],  0.0 );
   validateNumericalEquals( QxL[22],  1.0 );
@@ -100,7 +100,7 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
   validateNumericalEquals( QyL[11], -1.0 );
   validateNumericalEquals( QyL[12],  1.0 );
   validateNumericalEquals( QyL[13], -1.0 );
-  #if Dimensions==3
+  #if DIMENSIONS==3
   exahype2::enumerator::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,3+1,1,1,1);
 
   validateEquals( bottomTopFaceEnumerator({0,0,0},0), 0 );
@@ -130,7 +130,7 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
   validateNumericalEquals( QyL[27], -1.0 );
   #endif
 
-  #if Dimensions==3
+  #if DIMENSIONS==3
   validateNumericalEquals( QzL[0],   0.0 );
   validateNumericalEquals( QzL[1],   0.0 );
   validateNumericalEquals( QzL[2],   0.0 );
@@ -153,12 +153,12 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
   double rightQ[]  = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
   double bottomQ[] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
   double topQ[]    = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
-  #if Dimensions==3
+  #if DIMENSIONS==3
   double frontQ[]  = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
   double backQ[]   = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
   #endif
 
-  #if Dimensions==2
+  #if DIMENSIONS==2
   ::exahype2::dg::projectVolumetricDataOntoFaces(
     QIn,
     0,
@@ -172,7 +172,7 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
   );
   #endif
 
-  #if Dimensions==3
+  #if DIMENSIONS==3
   ::exahype2::dg::projectVolumetricDataOntoFaces(
     QIn,
     0,

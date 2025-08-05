@@ -33,10 +33,10 @@ namespace toolbox {
       int                                sourceUnknowns,
       int                                sourceHalo,
       double* NOALIAS               dest,
-      const tarch::la::Vector<Dimensions,int>&   destIndex,
+      const tarch::la::Vector<DIMENSIONS,int>&   destIndex,
       int                                destUnknowns,
       int                                destHalo,
-      const tarch::la::Vector<Dimensions,double>&  volumeH
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeH
     );
 
 
@@ -47,10 +47,10 @@ namespace toolbox {
       int                                sourceUnknowns,
       int                                sourceHalo,
       double* NOALIAS               dest,
-      const tarch::la::Vector<Dimensions,int>&   destIndex,
+      const tarch::la::Vector<DIMENSIONS,int>&   destIndex,
       int                                destUnknowns,
       int                                destHalo,
-      const tarch::la::Vector<Dimensions,double>&  volumeH
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeH
     );
   }
 }

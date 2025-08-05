@@ -11,8 +11,8 @@ namespace {
 
 
 template <class T>
-void toolbox::particles::init(T& particle, const tarch::la::Vector<Dimensions, double>& x, double searchRadius) {
-#if PeanoDebug > 0
+void toolbox::particles::init(T& particle, const tarch::la::Vector<DIMENSIONS, double>& x, double searchRadius) {
+#if PEANO_DEBUG > 0
   particle.setDebugX(x);
   particle.setDebugH(0.0);
 #endif
@@ -27,8 +27,8 @@ void toolbox::particles::init(T& particle, const tarch::la::Vector<Dimensions, d
 template <class T>
 std::vector<T*> toolbox::particles::createEquallySpacedParticles(
   double                                       spacing,
-  const tarch::la::Vector<Dimensions, double>& voxelX,
-  const tarch::la::Vector<Dimensions, double>& voxelH,
+  const tarch::la::Vector<DIMENSIONS, double>& voxelX,
+  const tarch::la::Vector<DIMENSIONS, double>& voxelH,
   bool                                         addNoise
 ) {
   std::vector<T*> result;
@@ -45,15 +45,15 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(
   if (particlesPerAxis > 0) {
     const double particleSpacing = voxelH(0) / particlesPerAxis;
 
-    const tarch::la::Vector<Dimensions, double>
+    const tarch::la::Vector<DIMENSIONS, double>
       offset = voxelX - 0.5 * areaOfGridSpannedByCellLocalCartesianGridAlongOneAxis;
 
     dfor(k, particlesPerAxis) {
-      tarch::la::Vector<Dimensions, double> x = offset + particleSpacing * tarch::la::convertScalar<double>(k);
+      tarch::la::Vector<DIMENSIONS, double> x = offset + particleSpacing * tarch::la::convertScalar<double>(k);
       T*                                    newParticle = new T();
 
       if (addNoise) {
-        for (int d = 0; d < Dimensions; d++) {
+        for (int d = 0; d < DIMENSIONS; d++) {
           x(d) += (randomDist(e2) - 0.5) * particleSpacing;
         }
       }
@@ -70,10 +70,10 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(
 template <class T>
 std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMesh(
   double                                       spacing,
-  const tarch::la::Vector<Dimensions, double>& voxelX,
-  const tarch::la::Vector<Dimensions, double>& voxelH,
-  const tarch::la::Vector<Dimensions, double>& domainOffset,
-  const tarch::la::Vector<Dimensions, double>& domainSize,
+  const tarch::la::Vector<DIMENSIONS, double>& voxelX,
+  const tarch::la::Vector<DIMENSIONS, double>& voxelH,
+  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
+  const tarch::la::Vector<DIMENSIONS, double>& domainSize,
   bool                                         addNoise
 ) {
   static tarch::logging::Log _log("toolbox::particles");
@@ -82,11 +82,11 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
   );
   std::vector<T*> result;
 
-  tarch::la::Vector<Dimensions, double> biasedOffset = domainOffset + 0.5 * tarch::la::remainder(domainOffset, spacing);
+  tarch::la::Vector<DIMENSIONS, double> biasedOffset = domainOffset + 0.5 * tarch::la::remainder(domainOffset, spacing);
 
-  tarch::la::Vector<Dimensions, int>    particlesPerAxis;
-  tarch::la::Vector<Dimensions, double> firstParticleX;
-  for (int d = 0; d < Dimensions; d++) {
+  tarch::la::Vector<DIMENSIONS, int>    particlesPerAxis;
+  tarch::la::Vector<DIMENSIONS, double> firstParticleX;
+  for (int d = 0; d < DIMENSIONS; d++) {
     int leftParticleNumberAlongAxis = static_cast<int>(
       std::round((voxelX(d) - 0.5 * voxelH(d) - biasedOffset(d)) / spacing)
     );
@@ -110,12 +110,12 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
   const double RelativeAccuracyForGeometricChecks = 0.01 * voxelH(0);
 
   dfor(k, particlesPerAxis) {
-    tarch::la::Vector<Dimensions, double> x = firstParticleX + spacing * tarch::la::convertScalar<double>(k);
+    tarch::la::Vector<DIMENSIONS, double> x = firstParticleX + spacing * tarch::la::convertScalar<double>(k);
 
     T* newParticle = new T();
 
     if (addNoise) {
-      for (int d = 0; d < Dimensions; d++) {
+      for (int d = 0; d < DIMENSIONS; d++) {
         x(d) += (randomDist(e2) - 0.5) * spacing;
       }
     }

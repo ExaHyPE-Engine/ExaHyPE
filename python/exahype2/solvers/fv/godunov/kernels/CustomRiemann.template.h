@@ -29,14 +29,14 @@
 {% macro gatherQ() %}
   // Gather data
   {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
   #endif
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
     const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(10) }}{##}
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(QIn[indexWithHalo]));
     #endif
     QInGathered[unknown] = QIn[indexWithHalo];
@@ -47,30 +47,30 @@
   solver.sourceTerm(QInGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, sourceGathered);
   {% endif %}
 
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
   #endif
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; unknown++) {
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(sourceGathered[unknown]));
     #endif
     const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(4) }}{##}
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(QIn[indexWithHalo]));
     #endif
     QOutGathered[unknown] = QIn[indexWithHalo] + timeStepSize * sourceGathered[unknown];
   } // unknown
 
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
   #endif
   for (int unknown = {{NUMBER_OF_UNKNOWNS}}; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
     const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(4) }}{##}
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(QIn[indexWithHalo]));
     #endif
     QOutGathered[unknown] = QIn[indexWithHalo];
@@ -78,7 +78,7 @@
   {% endif %}
 
   {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
@@ -104,7 +104,7 @@
     const auto volumeCentreLeft  = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeLeft);
     const auto volumeCentreRight = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeRight);
 
-    #if defined(SharedOMP)
+    #if defined(WITH_OPENMP)
     #pragma omp simd
     #else
     #pragma unroll
@@ -113,7 +113,7 @@
       const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(10) }}{##}
       const int indexWithHaloLeft = {{ id.indexWithHalo('volumeLeft', 'unknown') | indent(6) }}{##}
       const int indexWithHaloRight = {{ id.indexWithHalo('volumeRight', 'unknown') | indent(6) }}{##}
-      #ifdef GPUOffloadingOff
+      #if !defined(WITH_GPU)
       assertion(std::isfinite(QIn[indexWithHalo]));
       assertion(std::isfinite(QIn[indexWithHaloLeft]));
       assertion(std::isfinite(QIn[indexWithHaloRight]));
@@ -131,30 +131,30 @@
   solver.diffusiveSourceTerm(QInGathered, gradQGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, sourceGathered);
   {% endif %}
 
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
   #endif
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; unknown++) {
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(sourceGathered[unknown]));
     #endif
     const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(4) }}{##}
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(QIn[indexWithHalo]));
     #endif
     QOutGathered[unknown] = QIn[indexWithHalo] + timeStepSize * sourceGathered[unknown];
   } // unknown
 
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
   #endif
   for (int unknown = {{NUMBER_OF_UNKNOWNS}}; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
     const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(4) }}{##}
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(QIn[indexWithHalo]));
     #endif
     QOutGathered[unknown] = QIn[indexWithHalo];
@@ -162,14 +162,14 @@
   {% endif %}
 
   {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION=="<none>" and SOURCE_TERM_IMPLEMENTATION=="<none>" %}
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
   #endif
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
     const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(4) }}{##}
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(QIn[indexWithHalo]));
     #endif
     QInGathered[unknown] = QIn[indexWithHalo];
@@ -179,13 +179,13 @@
 {% endmacro %}
 
 {% macro scatterQ() %}
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
   #endif
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) { // Scatter data into QOut
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(QOutGathered[unknown]));
     #endif
     const int index = {{ id.index('volume', 'unknown') | indent(4) }}{##}
@@ -197,7 +197,7 @@
   const auto volumeCentreLeft  = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeLeft);
   const auto volumeCentreRight = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeRight);
 
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
@@ -206,7 +206,7 @@
     const int indexWithHaloLeft = {{ id.indexWithHalo('volumeLeft', 'unknown') | indent(6) }}{##}
     const int indexWithHaloRight = {{ id.indexWithHalo('volumeRight', 'unknown') | indent(6) }}{##}
 
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(QIn[indexWithHaloLeft]));
     assertion(std::isfinite(QIn[indexWithHaloRight]));
     #endif
@@ -224,7 +224,7 @@
   const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRight = solver.solveRiemannProblem(QInGathered, QInGatheredRight, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGathered, rightGoingFluxGathered);
   {% endif %}
 
-  #ifdef GPUOffloadingOff
+  #if !defined(WITH_GPU)
   assertion(std::isfinite(maxEigenvalueGatheredLeft));
   assertion(std::isfinite(maxEigenvalueGatheredRight));
   #endif
@@ -232,13 +232,13 @@
   // Compute max eigenvalue (wave speed) after time step
   maxEigenvalueAfterTimeStep = std::fmax(maxEigenvalueAfterTimeStep, std::fmax(maxEigenvalueGatheredLeft, maxEigenvalueGatheredRight));
 
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
   #endif
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; unknown++) { // Compute fluxes and perform time step
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(QInGathered[unknown]));
     assertion(std::isfinite(QInGatheredLeft[unknown]));
     assertion(std::isfinite(QInGatheredRight[unknown]));
@@ -255,7 +255,7 @@
 
     QOutGathered[unknown] += timeStepSize / patchSize(normal) * {{NUMBER_OF_VOLUMES_PER_AXIS}} * (fluxLeft - fluxRight);
 
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(fluxLeft));
     assertion(std::isfinite(fluxRight));
     assertion(std::isfinite(QOutGathered[unknown]));

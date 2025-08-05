@@ -625,10 +625,10 @@ namespace toolbox {
         const peano4::datamanagement::CellMarker& fineGridCellMarker,
         int                                       numberOfDoFsPerAxisInPatch,
         std::function<void(
-          tarch::la::Vector<Dimensions, int>    coarseVolume,
-          tarch::la::Vector<Dimensions, int>    fineVolume,
-          tarch::la::Vector<Dimensions, double> coarseVolumeCentre,
-          tarch::la::Vector<Dimensions, double> fineVolumeCentre,
+          tarch::la::Vector<DIMENSIONS, int>    coarseVolume,
+          tarch::la::Vector<DIMENSIONS, int>    fineVolume,
+          tarch::la::Vector<DIMENSIONS, double> coarseVolumeCentre,
+          tarch::la::Vector<DIMENSIONS, double> fineVolumeCentre,
           double                                coarseVolumeH,
           double                                fineVolumeH
         )>                                        update

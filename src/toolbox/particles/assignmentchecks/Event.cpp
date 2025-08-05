@@ -6,9 +6,9 @@
 toolbox::particles::assignmentchecks::internal::Event::Event(
   Type                                         type_,
   bool                                         isLocal_,
-  const tarch::la::Vector<Dimensions, double>& vertexX_,
-  const tarch::la::Vector<Dimensions, double>& particleX_,
-  const tarch::la::Vector<Dimensions, double>& vertexH_,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexX_,
+  const tarch::la::Vector<DIMENSIONS, double>& particleX_,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexH_,
   int                                          treeId_,
   const std::string&                           trace_,
   const int                                    meshSweepIndex_
@@ -26,9 +26,9 @@ toolbox::particles::assignmentchecks::internal::Event::Event(
 toolbox::particles::assignmentchecks::internal::Event::Event(
   Type                                         type_,
   bool                                         isLocal_,
-  const tarch::la::Vector<Dimensions, double>& vertexX_,
-  const tarch::la::Vector<Dimensions, double>& particleX_,
-  const tarch::la::Vector<Dimensions, double>& vertexH_,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexX_,
+  const tarch::la::Vector<DIMENSIONS, double>& particleX_,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexH_,
   int                                          treeId_,
   const std::string&                           trace_
 ):
@@ -47,9 +47,9 @@ toolbox::particles::assignmentchecks::internal::Event::
   Event(Type type_, bool isLocal_, int treeId_, const std::string& trace_):
   type(type_),
   isLocal(isLocal_),
-  vertexX(tarch::la::Vector<Dimensions, double>(0.0)),
+  vertexX(tarch::la::Vector<DIMENSIONS, double>(0.0)),
   previousParticleX(0.0),
-  vertexH(tarch::la::Vector<Dimensions, double>(0.0)),
+  vertexH(tarch::la::Vector<DIMENSIONS, double>(0.0)),
   treeId(treeId_),
   trace(trace_) {
   assertion(type == Type::AssignToSieveSet or type == Type::Erase);
@@ -59,9 +59,9 @@ toolbox::particles::assignmentchecks::internal::Event::
 toolbox::particles::assignmentchecks::internal::Event::Event(Type type_):
   type(type_),
   isLocal(false),
-  vertexX(tarch::la::Vector<Dimensions, double>(0.0)),
+  vertexX(tarch::la::Vector<DIMENSIONS, double>(0.0)),
   previousParticleX(0.0),
-  vertexH(tarch::la::Vector<Dimensions, double>(0.0)),
+  vertexH(tarch::la::Vector<DIMENSIONS, double>(0.0)),
   treeId(-1),
   trace("no-trace") {
   assertion(type == Type::NotFound);
@@ -70,9 +70,9 @@ toolbox::particles::assignmentchecks::internal::Event::Event(Type type_):
 
 toolbox::particles::assignmentchecks::internal::Event::Event(
   Type                                         type_,
-  const tarch::la::Vector<Dimensions, double>& vertexX_,
-  const tarch::la::Vector<Dimensions, double>& previousParticleX_,
-  const tarch::la::Vector<Dimensions, double>& vertexH_,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexX_,
+  const tarch::la::Vector<DIMENSIONS, double>& previousParticleX_,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexH_,
   int                                          treeId_,
   const std::string&                           trace_
 ):

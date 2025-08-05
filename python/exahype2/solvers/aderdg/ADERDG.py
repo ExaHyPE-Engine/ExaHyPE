@@ -301,7 +301,7 @@ Name:                   """
 Type:                   """
             + self.__class__.__module__
             + """
-Dimensions:             """
+DIMENSIONS:             """
             + str(self._dimensions)
             + """
 Use enclave tasking:    """
@@ -733,7 +733,7 @@ Material parameters:    """
             self._store_face_data_default_guard()
             + " and not repositories::"
             + self.get_name_of_global_instance()
-            + ".PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]"
+            + ".PeriodicBC[marker.getSelectedFaceNumber()%DIMENSIONS]"
             + " and not marker.hasBeenRefined() and fineGridFace"
             + self._name
             + "FaceLabel.getBoundary()"
@@ -1438,13 +1438,13 @@ def get_face_overlap_merge_implementation(patch_overlap):
         "UNKNOWNS": patch_overlap.no_of_unknowns,
     }
     Template = """
-#if Dimensions == 2
+#if DIMENSIONS == 2
   constexpr int SpaceFaceSize = {DOFS_PER_AXIS} * {UNKNOWNS}; // Order + 1
 #else
   constexpr int SpaceFaceSize = {DOFS_PER_AXIS} * {DOFS_PER_AXIS} * {UNKNOWNS}; // (Order + 1)^2
 #endif
 
-  const int faceDimension = marker.getSelectedFaceNumber() % Dimensions;
+  const int faceDimension = marker.getSelectedFaceNumber() % DIMENSIONS;
   // If the outer normal is positive, the normal points to the right so the face is on the right.
   const int faceLR = (marker.outerNormal()[faceDimension] > 0.0 ? 0 : 1);
 

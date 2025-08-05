@@ -29,7 +29,7 @@
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other) {
-  #if PeanoDebug>=1
+  #if PEANO_DEBUG>=1
   _debugX = other._debugX;
   _debugH = other._debugH;
   #endif
@@ -62,7 +62,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
   std::ostringstream result;
   result << "(";
-  #if PeanoDebug>=1
+  #if PEANO_DEBUG>=1
   result << "x=" << _debugX;
   result << ",";
   result << "h=" << _debugH;
@@ -72,29 +72,29 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
 }
 
 
-#if PeanoDebug>=1
+#if PEANO_DEBUG>=1
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugX( const tarch::la::Vector<Dimensions,double>& data ) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugX( const tarch::la::Vector<DIMENSIONS,double>& data ) {
   _debugX = data;
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugH( const tarch::la::Vector<Dimensions,double>& data ) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugH( const tarch::la::Vector<DIMENSIONS,double>& data ) {
   assertion2(data(0) > 0.0, data, toString());
   assertion2(data(1) > 0.0, data, toString());
-  #if Dimensions==3
+  #if DIMENSIONS==3
   assertion2(data(2) > 0.0, data, toString());
   #endif
   _debugH = data;
 }
 
 
-tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugX() const {
+tarch::la::Vector<DIMENSIONS,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugX() const {
   return _debugX;
 }
 
 
-tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugH() const {
+tarch::la::Vector<DIMENSIONS,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugH() const {
   return _debugH;
 }
 #endif
@@ -210,7 +210,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::set( int index, {{FLOAT_TYPE}} v
   value[index] = v;
 }
 
-#ifdef Parallel
+#ifdef WITH_MPI
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
   int errorCode = MPI_Type_vector(
     1,           // number of blocks (count)

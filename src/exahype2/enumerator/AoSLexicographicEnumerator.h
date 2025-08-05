@@ -35,13 +35,13 @@ namespace exahype2::enumerator {
    *   active information, i.e. data you write to.
    */
   struct AoSLexicographicEnumerator {
-    inline GPUCallableMethod AoSLexicographicEnumerator(
+    inline GPU_CALLABLE_METHOD AoSLexicographicEnumerator(
       int numberOfCells,
       int numberOfDoFsPerAxisInCell,
       int haloSize,
       int numberOfUnknowns,
       int numberOfAuxiliaryVariables
-    ) InlineMethod:
+    ):
       _numberOfCells(numberOfCells),
       _numberOfDoFsPerAxisInCell(numberOfDoFsPerAxisInCell),
       _haloSize(haloSize),
@@ -55,8 +55,8 @@ namespace exahype2::enumerator {
      * indices if you want.
      *
      */
-    inline GPUCallableMethod int operator()(int cellIndex, const tarch::la::Vector<Dimensions, int>& dofIndex, int unknown) const InlineMethod {
-#if Dimensions == 2
+    inline GPU_CALLABLE_METHOD int operator()(int cellIndex, const tarch::la::Vector<DIMENSIONS, int>& dofIndex, int unknown) const {
+#if DIMENSIONS == 2
       return (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfUnknowns + _numberOfAuxiliaryVariables)
            + (dofIndex(1) + _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfUnknowns + _numberOfAuxiliaryVariables)
            + (dofIndex(0) + _haloSize) * (_numberOfUnknowns + _numberOfAuxiliaryVariables)
@@ -70,12 +70,12 @@ namespace exahype2::enumerator {
 #endif
     }
 
-#if defined(GPUOffloadingOff)
+#if !defined(WITH_GPU)
     std::string toString() const;
 #endif
 
-    inline GPUCallableMethod int size() const {
-#if Dimensions == 2
+    inline GPU_CALLABLE_METHOD int size() const {
+#if DIMENSIONS == 2
       return _numberOfCells
         * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
         * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
@@ -89,8 +89,8 @@ namespace exahype2::enumerator {
 #endif
     }
 
-    inline GPUCallableMethod int numberOfDofsPerCell() const InlineMethod {
-#if Dimensions == 2
+    inline GPU_CALLABLE_METHOD int numberOfDofsPerCell() const {
+#if DIMENSIONS == 2
       return (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize);
 #else
       return (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize);

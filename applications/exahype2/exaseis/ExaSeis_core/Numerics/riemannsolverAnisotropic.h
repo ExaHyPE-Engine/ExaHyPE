@@ -65,7 +65,7 @@ namespace Numerics {
     double& Tl_hat
   ) {
     // if (faceIndex % 2  == 0) { //left face
-    if (faceIndex < Dimensions) { //left face
+    if (faceIndex < DIMENSIONS) { //left face
       riemannSolverBC0(vn, Tn, zp, r, vn_hat, Tn_hat);
       riemannSolverBC0(vm, Tm, zs[0], r, vm_hat, Tm_hat);
       riemannSolverBC0(vl, Tl, zs[1], r, vl_hat, Tl_hat);

@@ -16,8 +16,8 @@ double updateSolutionWithRiemann(
   {{STORAGE_PRECISION}}* NOALIAS const            QOut,
   const double                                    timeStamp,
   const double                                    timeStepSize,
-  const tarch::la::Vector<Dimensions, double>&    patchCentre,
-  const tarch::la::Vector<Dimensions, double>&    patchSize
+  const tarch::la::Vector<DIMENSIONS, double>&    patchCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&    patchSize
 );
 
 {% for item in NAMESPACE -%}

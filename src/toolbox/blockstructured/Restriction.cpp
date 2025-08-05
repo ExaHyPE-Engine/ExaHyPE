@@ -10,10 +10,10 @@ void toolbox::blockstructured::internal::projectCells_AoS(
   const peano4::datamanagement::CellMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
   std::function<void(
-    tarch::la::Vector<Dimensions, int>    coarseVolume,
-    tarch::la::Vector<Dimensions, int>    fineVolume,
-    tarch::la::Vector<Dimensions, double> coarseVolumeCentre,
-    tarch::la::Vector<Dimensions, double> fineVolumeCentre,
+    tarch::la::Vector<DIMENSIONS, int>    coarseVolume,
+    tarch::la::Vector<DIMENSIONS, int>    fineVolume,
+    tarch::la::Vector<DIMENSIONS, double> coarseVolumeCentre,
+    tarch::la::Vector<DIMENSIONS, double> fineVolumeCentre,
     double                                coarseVolumeH,
     double                                fineVolumeH
   )>                                        update
@@ -30,9 +30,9 @@ void toolbox::blockstructured::internal::projectCells_AoS(
   const double volumeHFine = marker.h()(0)
                              / static_cast<double>(numberOfDoFsPerAxisInPatch);
 
-  tarch::la::Vector<Dimensions, double> leftBottomOfFineCell = marker.getOffset(
+  tarch::la::Vector<DIMENSIONS, double> leftBottomOfFineCell = marker.getOffset(
   );
-  tarch::la::Vector<Dimensions, double> leftBottomOfCoarseCell
+  tarch::la::Vector<DIMENSIONS, double> leftBottomOfCoarseCell
     = marker.getOffset()
       - tarch::la::multiplyComponents(
         marker.h(),
@@ -41,21 +41,21 @@ void toolbox::blockstructured::internal::projectCells_AoS(
       );
 
   dfor(kFine, numberOfDoFsPerAxisInPatch) {
-    tarch::la::Vector<Dimensions, int>
+    tarch::la::Vector<DIMENSIONS, int>
       kCoarse = (kFine
                  + numberOfDoFsPerAxisInPatch
                      * marker.getRelativePositionWithinFatherCell())
                 / 3;
 
-    tarch::la::Vector<Dimensions, double>
+    tarch::la::Vector<DIMENSIONS, double>
       volumeXCoarse = leftBottomOfCoarseCell
                       + volumeHCoarse * tarch::la::convertScalar<double>(kCoarse)
                       + 0.5
-                          * tarch::la::Vector<Dimensions, double>(volumeHCoarse);
-    tarch::la::Vector<Dimensions, double>
+                          * tarch::la::Vector<DIMENSIONS, double>(volumeHCoarse);
+    tarch::la::Vector<DIMENSIONS, double>
       volumeXFine = leftBottomOfFineCell
                     + volumeHFine * tarch::la::convertScalar<double>(kFine)
-                    + 0.5 * tarch::la::Vector<Dimensions, double>(volumeHFine);
+                    + 0.5 * tarch::la::Vector<DIMENSIONS, double>(volumeHFine);
 
     update(
       kCoarse,

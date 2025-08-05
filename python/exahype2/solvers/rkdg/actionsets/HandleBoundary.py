@@ -29,7 +29,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
   if (
     {{PREDICATES[PREDICATE_NO]}}
     and
-    not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]
+    not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%DIMENSIONS]
     and
     not marker.hasBeenRefined() 
     and 
@@ -53,7 +53,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
       [&](
         const double * NOALIAS                  Qinside,
         double * NOALIAS                        Qoutside,
-        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<DIMENSIONS,double>&  x,
         double                                       t,
         double                                       dt,
         int                                          normal
@@ -75,7 +75,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
 
     TemplateHandleBoundary_Epilogue = """
 
-    if (marker.getSelectedFaceNumber()<Dimensions) {
+    if (marker.getSelectedFaceNumber()<DIMENSIONS) {
       fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdatedTimeStamp(0, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(1) );
       fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp    (0, fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(1) );
       fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp    (0, fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp(1) );

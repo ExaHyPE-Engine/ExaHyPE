@@ -51,31 +51,31 @@ inline void initialTask(
 
   // Assume that the faces for a given cell are one after another
   // in typical Peano order, e.g. left, lower, right, upper
-  SolverPrecision* lQhbnd[2 * Dimensions] = {
+  SolverPrecision* lQhbnd[2 * DIMENSIONS] = {
     &myFaceData->QIn[faceId][0][kernels::AderSolver::getBndFaceSize()],
     &myFaceData->QIn[faceId][1][kernels::AderSolver::getBndFaceSize()],
-#if Dimensions == 3
+#if DIMENSIONS == 3
     &myFaceData->QIn[faceId][2][kernels::AderSolver::getBndFaceSize()],
 #endif
-    &myFaceData->QIn[faceId][Dimensions + 0][0],
-    &myFaceData->QIn[faceId][Dimensions + 1][0]
-#if Dimensions == 3
+    &myFaceData->QIn[faceId][DIMENSIONS + 0][0],
+    &myFaceData->QIn[faceId][DIMENSIONS + 1][0]
+#if DIMENSIONS == 3
     ,
-    &myFaceData->QIn[faceId][Dimensions + 2][0]
+    &myFaceData->QIn[faceId][DIMENSIONS + 2][0]
 #endif
   };
 
-  SolverPrecision* lFhbnd[2 * Dimensions] = {
+  SolverPrecision* lFhbnd[2 * DIMENSIONS] = {
     &myFaceData->QOut[faceId][0][kernels::AderSolver::getBndFluxSize()],
     &myFaceData->QOut[faceId][1][kernels::AderSolver::getBndFluxSize()],
-#if Dimensions == 3
+#if DIMENSIONS == 3
     &myFaceData->QOut[faceId][2][kernels::AderSolver::getBndFluxSize()],
 #endif
-    &myFaceData->QOut[faceId][Dimensions + 0][0],
-    &myFaceData->QOut[faceId][Dimensions + 1][0]
-#if Dimensions == 3
+    &myFaceData->QOut[faceId][DIMENSIONS + 0][0],
+    &myFaceData->QOut[faceId][DIMENSIONS + 1][0]
+#if DIMENSIONS == 3
     ,
-    &myFaceData->QOut[faceId][Dimensions + 2][0]
+    &myFaceData->QOut[faceId][DIMENSIONS + 2][0]
 #endif
   };
 
@@ -105,8 +105,8 @@ inline void firstTask(
 
   tarch::timing::Watch watchKernelCompute("::runBenchmarks", "assessKernel(...)", false);
 
-  tarch::la::Vector<Dimensions, double> faceCenter = myFaceData->cellCentre[faceId];
-  faceCenter[faceDirection % Dimensions] += 0.5 * myFaceData->cellSize[faceId][faceDirection % Dimensions];
+  tarch::la::Vector<DIMENSIONS, double> faceCenter = myFaceData->cellCentre[faceId];
+  faceCenter[faceDirection % DIMENSIONS] += 0.5 * myFaceData->cellSize[faceId][faceDirection % DIMENSIONS];
 
   // We are assuming that there are no boundaries okay
   // In a real ExaHyPE application boundaries will exist
@@ -141,37 +141,37 @@ inline void secondTask(
 
   // Assume that the faces for a given cell are one after another
   // in typical Peano order, e.g. left, lower, right, upper
-  SolverPrecision* lQhbnd[2 * Dimensions] = {
+  SolverPrecision* lQhbnd[2 * DIMENSIONS] = {
     &myFaceData->QIn[faceId][0][kernels::AderSolver::getBndFaceSize()],
     &myFaceData->QIn[faceId][1][kernels::AderSolver::getBndFaceSize()],
-#if Dimensions == 3
+#if DIMENSIONS == 3
     &myFaceData->QIn[faceId][2][kernels::AderSolver::getBndFaceSize()],
 #endif
-    &myFaceData->QIn[faceId][Dimensions + 0][0],
-    &myFaceData->QIn[faceId][Dimensions + 1][0]
-#if Dimensions == 3
+    &myFaceData->QIn[faceId][DIMENSIONS + 0][0],
+    &myFaceData->QIn[faceId][DIMENSIONS + 1][0]
+#if DIMENSIONS == 3
     ,
-    &myFaceData->QIn[faceId][Dimensions + 2][0]
+    &myFaceData->QIn[faceId][DIMENSIONS + 2][0]
 #endif
   };
 
-  SolverPrecision* lFhbnd[2 * Dimensions] = {
+  SolverPrecision* lFhbnd[2 * DIMENSIONS] = {
     &myFaceData->QOut[faceId][0][kernels::AderSolver::getBndFluxSize()],
     &myFaceData->QOut[faceId][1][kernels::AderSolver::getBndFluxSize()],
-#if Dimensions == 3
+#if DIMENSIONS == 3
     &myFaceData->QOut[faceId][2][kernels::AderSolver::getBndFluxSize()],
 #endif
-    &myFaceData->QOut[faceId][Dimensions + 0][0],
-    &myFaceData->QOut[faceId][Dimensions + 1][0]
-#if Dimensions == 3
+    &myFaceData->QOut[faceId][DIMENSIONS + 0][0],
+    &myFaceData->QOut[faceId][DIMENSIONS + 1][0]
+#if DIMENSIONS == 3
     ,
-    &myFaceData->QOut[faceId][Dimensions + 2][0]
+    &myFaceData->QOut[faceId][DIMENSIONS + 2][0]
 #endif
   };
 
   tarch::timing::Watch watchKernelCompute("::runBenchmarks", "assessKernel(...)", false);
 
-  for (int d = 0; d < Dimensions; d++) {
+  for (int d = 0; d < DIMENSIONS; d++) {
     const int direction = d;
 
     const double inverseDxDirection = 1.0 / myCellData->cellSize[cellId][d];
@@ -188,7 +188,7 @@ inline void secondTask(
     // Positive face
     kernels::AderSolver::faceIntegral(
       myCellData->QIn[cellId],
-      &myFaceData->QOut[faceId][d + Dimensions][0],
+      &myFaceData->QOut[faceId][d + DIMENSIONS][0],
       direction,
       1,
       inverseDxDirection,
@@ -226,8 +226,8 @@ void variant3::runBenchmarks(
   int                                         numberOfCells,
   double                                      timeStamp,
   double                                      timeStepSize,
-  const tarch::la::Vector<Dimensions, double> cellCenter,
-  const tarch::la::Vector<Dimensions, double> cellSize
+  const tarch::la::Vector<DIMENSIONS, double> cellCenter,
+  const tarch::la::Vector<DIMENSIONS, double> cellSize
 ) {
 
   tarch::timing::Measurement timingComputeKernel;
@@ -250,7 +250,7 @@ void variant3::runBenchmarks(
     initInputData(cellData.QIn[cellIndex], cellCenter, cellSize);
     std::memset(cellData.QOut[cellIndex], 0.0, NumberOfOutputEntriesPerCell * sizeof(SolverPrecision));
 
-    for (int i = 0; i < Dimensions; i++) {
+    for (int i = 0; i < DIMENSIONS; i++) {
       cellFaceData.QIn[cellIndex][i] = tarch::allocateMemory<SolverPrecision>(
         2 * kernels::AderSolver::getBndFaceSize(),
         tarch::MemoryLocation::Heap
@@ -261,9 +261,9 @@ void variant3::runBenchmarks(
       );
     }
     // Stitch faces together by connecting the left and right faces of any given cell
-    for (int i = 0; i < Dimensions; i++) {
-      cellFaceData.QIn[cellIndex][i + Dimensions]  = cellFaceData.QIn[cellIndex][i];
-      cellFaceData.QOut[cellIndex][i + Dimensions] = cellFaceData.QOut[cellIndex][i];
+    for (int i = 0; i < DIMENSIONS; i++) {
+      cellFaceData.QIn[cellIndex][i + DIMENSIONS]  = cellFaceData.QIn[cellIndex][i];
+      cellFaceData.QOut[cellIndex][i + DIMENSIONS] = cellFaceData.QOut[cellIndex][i];
     }
 
     cellFaceData.t[cellIndex]          = timeStamp;
@@ -276,7 +276,7 @@ void variant3::runBenchmarks(
 
   int numberOfThreads = 1;
 
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   for (int threadIndex = 0; threadIndex < NumberOfLaunchingThreads.size(); threadIndex++) {
     numberOfThreads = NumberOfLaunchingThreads[threadIndex];
   #endif
@@ -293,7 +293,7 @@ void variant3::runBenchmarks(
 
       tarch::timing::Watch watchKernelLaunch("::runBenchmarks", "assessKernel(...)", false);
 
-      #if defined(SharedOMP)
+      #if defined(WITH_OPENMP)
       #pragma omp parallel num_threads(NumberOfLaunchingThreads[threadIndex])
       #endif
       for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
@@ -303,7 +303,7 @@ void variant3::runBenchmarks(
         firstTask(&cellFaceData, cellIndex, 0, timingComputeKernel);
         firstTask(&cellFaceData, cellIndex, 1, timingComputeKernel);
       }
-      #if defined(SharedOMP)
+      #if defined(WITH_OPENMP)
       #pragma omp parallel num_threads(NumberOfLaunchingThreads[threadIndex])
       #endif
       for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
@@ -320,7 +320,7 @@ void variant3::runBenchmarks(
     // allocateAndStoreOutcome(cellData.QOut, cellData.maxEigenvalue, numberOfCells);
     // validateOutcome(cellData.QOut, cellData.maxEigenvalue, numberOfCells);
 
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   }//threadIndex
   #endif
 
@@ -328,7 +328,7 @@ void variant3::runBenchmarks(
     tarch::freeMemory(cellData.QIn[cellIndex], tarch::MemoryLocation::Heap);
     tarch::freeMemory(cellData.QOut[cellIndex], tarch::MemoryLocation::Heap);
 
-    for (int i = 0; i < Dimensions; i++) {
+    for (int i = 0; i < DIMENSIONS; i++) {
       tarch::freeMemory(cellFaceData.QIn[cellIndex][i], tarch::MemoryLocation::Heap);
       tarch::freeMemory(cellFaceData.QOut[cellIndex][i], tarch::MemoryLocation::Heap);
     }

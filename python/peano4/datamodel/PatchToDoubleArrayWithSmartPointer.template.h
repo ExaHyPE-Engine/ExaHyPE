@@ -45,7 +45,7 @@
 
 struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   private:
-    #if Parallel
+    #if WITH_MPI
     static MPI_Datatype   Datatype;
     #endif
 
@@ -70,7 +70,7 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       NoData
     };
 
-    #if Dimensions==2
+    #if DIMENSIONS==2
     static constexpr int Cardinality = {{CARDINALITY_2D}};
     #else
     static constexpr int Cardinality = {{CARDINALITY_3D}};
@@ -246,7 +246,7 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
 
   void set(int index, {{FLOAT_TYPE}} value);
 
-  #ifdef Parallel
+  #ifdef WITH_MPI
   /**
    * Initialises the MPI datatype.
    */

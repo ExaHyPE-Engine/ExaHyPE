@@ -51,7 +51,7 @@ int tarch::mpi::Rank::reserveFreeTag([[maybe_unused]] const std::string& fullQua
   // We also may not use the instance, as the instance might not be up yet. I
   // also saw other stuff with cout, so better ignore it
   /*
-  #if PeanoDebug>0
+  #if PEANO_DEBUG>0
   if ( getInstance()._rank==getGlobalMasterRank() ) {
     std::cout << "assigned message " << fullQualifiedMessageName
               << " the free tag " << result << " (" << numberOfTags << " consecutive tags reserved)" << std::endl;
@@ -71,7 +71,7 @@ bool tarch::mpi::Rank::isInitialised() const {
 
 
 void tarch::mpi::Rank::ensureThatMessageQueuesAreEmpty( [[maybe_unused]] int fromRank, [[maybe_unused]] int tag ) {
-  #ifdef Parallel
+  #ifdef WITH_MPI
   int          flag;
   MPI_Iprobe(fromRank, tag, _communicator, &flag, MPI_STATUS_IGNORE);
   if (flag!=0) {
@@ -83,7 +83,7 @@ void tarch::mpi::Rank::ensureThatMessageQueuesAreEmpty( [[maybe_unused]] int fro
 
 
 void tarch::mpi::Rank::plotMessageQueues() {
-  #ifdef Parallel
+  #ifdef WITH_MPI
   int          flag;
   MPI_Status   status;
   MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, _communicator, &flag, &status);
@@ -204,7 +204,7 @@ void tarch::mpi::Rank::suspendTimeouts( bool timeoutsDisabled ) {
 }
 
 
-#ifdef Parallel
+#ifdef WITH_MPI
 std::string tarch::mpi::MPIReturnValueToString( int result ) {
   std::ostringstream out;
 
@@ -258,7 +258,7 @@ std::string tarch::mpi::MPIStatusToString( const MPI_Status& status ) {
 #endif
 
 
-#ifdef Parallel
+#ifdef WITH_MPI
 tarch::mpi::Rank::Rank():
   _initIsCalled(false),
   _rank(-1),
@@ -279,7 +279,7 @@ tarch::mpi::Rank::Rank():
 
 tarch::mpi::Rank::~Rank() {}
 
-#ifdef Parallel
+#ifdef WITH_MPI
 void tarch::mpi::Rank::allReduce(
   const void *sendbuf, void *recvbuf, int count,
   MPI_Datatype datatype,
@@ -349,7 +349,7 @@ void tarch::mpi::Rank::reduce(
 
 
 void tarch::mpi::Rank::barrier([[maybe_unused]] std::function<void()> waitor) {
-  #ifdef Parallel
+  #ifdef WITH_MPI
   logTraceIn( "barrier()" );
 
   if (getNumberOfRanks()>1) {
@@ -379,7 +379,7 @@ void tarch::mpi::Rank::barrier([[maybe_unused]] std::function<void()> waitor) {
 
 
 bool tarch::mpi::Rank::isMessageInQueue([[maybe_unused]] int tag) const {
-  #ifdef Parallel
+  #ifdef WITH_MPI
   int  flag        = 0;
   MPI_Iprobe(
     MPI_ANY_SOURCE, tag,
@@ -394,7 +394,7 @@ bool tarch::mpi::Rank::isMessageInQueue([[maybe_unused]] int tag) const {
 void tarch::mpi::Rank::shutdown() {
   logTraceIn( "shutdown()" );
 
-#ifdef Parallel
+#ifdef WITH_MPI
   assertion(_rank!=-1);
 
   IntegerMessage::shutdownDatatype();
@@ -416,7 +416,7 @@ int tarch::mpi::Rank::getGlobalMasterRank() {
 
 
 bool tarch::mpi::Rank::isGlobalMaster() const {
-  #ifdef Parallel
+  #ifdef WITH_MPI
   assertion(_initIsCalled);
   return getRank() == getGlobalMasterRank();
   #else
@@ -440,7 +440,7 @@ void tarch::mpi::Rank::logStatus() const {
   #endif
 
   statusMessage << ", rank=" << _rank;
-  #ifdef Parallel
+  #ifdef WITH_MPI
   statusMessage << ", communicator=" << _communicator;
   #endif
   statusMessage << ", #processors=" << _numberOfProcessors;
@@ -464,10 +464,10 @@ bool tarch::mpi::Rank::validateMaxTagIsSupported() {
 }
 
 bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char*** argv) {
-  #ifdef Parallel
+  #ifdef WITH_MPI
   int result = MPI_SUCCESS;
 
-  #if defined( SharedMemoryParallelisation )
+  #if defined( WITH_MULTITHREADING )
   int initThreadProvidedThreadLevelSupport;
   result = MPI_Init_thread( argc, argv, MPI_THREAD_MULTIPLE, &initThreadProvidedThreadLevelSupport );
   if (initThreadProvidedThreadLevelSupport!=MPI_THREAD_MULTIPLE ) {
@@ -527,7 +527,7 @@ tarch::mpi::Rank& tarch::mpi::Rank::getInstance() {
 }
 
 
-#ifdef Parallel
+#ifdef WITH_MPI
 MPI_Comm tarch::mpi::Rank::getCommunicator() const {
   assertion(_initIsCalled);
   return _communicator;
@@ -552,7 +552,7 @@ void tarch::mpi::Rank::setDeadlockTimeOut( int value ) {
 void tarch::mpi::Rank::abort([[maybe_unused]] int errorCode) {
   std::cout.flush();
   std::cerr.flush();
-  #ifdef Parallel
+  #ifdef WITH_MPI
   MPI_Abort(MPI_COMM_WORLD,errorCode);
   #else
   std::abort();

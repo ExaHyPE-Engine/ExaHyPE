@@ -49,7 +49,7 @@ tarch::logging::Log::Log(const std::string& className):
 
 tarch::logging::Log::~Log() {}
 
-#if PeanoDebug>=4
+#if PEANO_DEBUG>=4
 void tarch::logging::Log::debug(const std::string& methodName, Message message) {
   if (LogFilter::getInstance().writeDebug( _className )) {
     UseLogService::getInstance().debug(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message());
@@ -73,7 +73,7 @@ void tarch::logging::Log::error(const std::string& methodName, Message message) 
   UseLogService::getInstance().error(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message());
 }
 
-#if PeanoDebug>=1
+#if PEANO_DEBUG>=1
 void tarch::logging::Log::traceIn(const std::string& methodName, Message message) {
   if (LogFilter::getInstance().writeTrace( _className )) {
     UseLogService::getInstance().traceIn(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message());
@@ -105,14 +105,14 @@ std::string tarch::logging::Log::getMachineInformation() {
 
   message << "[" << utsdata->nodename << "]";
 
-  #ifdef Parallel
+  #ifdef WITH_MPI
   message << ",";
   #endif
 
   delete utsdata;
   #endif
 
-  #ifdef Parallel
+  #ifdef WITH_MPI
   if (tarch::mpi::Rank::getInstance().isInitialised()) {
     message << "rank:" << tarch::mpi::Rank::getInstance().getRank();
   } else {

@@ -36,7 +36,7 @@ class InitialCondition(AbstractADERDGActionSet):
     }
 {% endif %}
 
-#if Dimensions==2
+#if DIMENSIONS==2
     constexpr int SpaceBasisSize     = {{ORDER+1}} * {{ORDER+1}} * {{NUMBER_OF_UNKNOWNS+NUMBER_OF_AUXILIARY_VARIABLES}};
 #else
     constexpr int SpaceBasisSize     = {{ORDER+1}} * {{ORDER+1}} * {{ORDER+1}} * {{NUMBER_OF_UNKNOWNS+NUMBER_OF_AUXILIARY_VARIABLES}};

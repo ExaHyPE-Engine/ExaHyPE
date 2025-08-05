@@ -15,7 +15,7 @@ class SolveRiemannProblem(AbstractLimiterActionSet):
     constexpr int NumberOfVariables = repositories::{{REGULAR_SOLVER_INSTANCE}}.NumberOfUnknowns;
     constexpr int NumberOfParameters = repositories::{{REGULAR_SOLVER_INSTANCE}}.NumberOfAuxiliaryVariables;
 
-    #if Dimensions == 2
+    #if DIMENSIONS == 2
     constexpr int RegularFaceSize = RegularSolverPoints;
     constexpr int LimiterFaceSize = LimiterSolverPoints;
     #else
@@ -30,7 +30,7 @@ class SolveRiemannProblem(AbstractLimiterActionSet):
     constexpr int BasisElementsPerFace2 = LimiterFaceSize * (NumberOfVariables + NumberOfParameters);
 
     if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker()==celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::REGULAR){
-      for(int d=0; d<Dimensions; d++){
+      for(int d=0; d<DIMENSIONS; d++){
         if( fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getTroubled_Marker()==facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED ){
           //Regular face to Limiter
           // Projected solution estimations
@@ -47,18 +47,18 @@ class SolveRiemannProblem(AbstractLimiterActionSet):
           );
         }
 
-        if( fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getTroubled_Marker()==facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED ){
+        if( fineGridFaces{{SOLVER_NAME}}FaceLabel(d+DIMENSIONS).getTroubled_Marker()==facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED ){
           //Regular face to Limiter
           // Projected solution estimations
           kernels::{{SOLVER_NAME}}::regularToLimiterFace(
-            fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value,
-            fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value,
+            fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+DIMENSIONS).value,
+            fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+DIMENSIONS).value,
             NumberOfVariables+NumberOfParameters
           );
           // Projected flux estimations
           kernels::{{SOLVER_NAME}}::regularToLimiterFace(
-            fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value,
-            fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value,
+            fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+DIMENSIONS).value,
+            fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+DIMENSIONS).value,
             NumberOfVariables
           );
         }
@@ -66,7 +66,7 @@ class SolveRiemannProblem(AbstractLimiterActionSet):
       }
     }
     if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker()==celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::TROUBLED){
-      for(int d=0; d<Dimensions; d++){
+      for(int d=0; d<DIMENSIONS; d++){
 
         // Projected solution estimations
         kernels::{{SOLVER_NAME}}::limiterToRegularFace(
@@ -83,14 +83,14 @@ class SolveRiemannProblem(AbstractLimiterActionSet):
 
         // Projected solution estimations
         kernels::{{SOLVER_NAME}}::limiterToRegularFace(
-          fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value,
-          fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value,
+          fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+DIMENSIONS).value,
+          fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+DIMENSIONS).value,
           NumberOfVariables+NumberOfParameters
         );
         // Projected flux estimations
         kernels::{{SOLVER_NAME}}::limiterToRegularFace(
-          fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value,
-          fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value,
+          fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+DIMENSIONS).value,
+          fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+DIMENSIONS).value,
           NumberOfVariables
         );
       }
@@ -107,7 +107,7 @@ class SolveRiemannProblem(AbstractLimiterActionSet):
   #   constexpr int NumberOfVariables = repositories::{{REGULAR_SOLVER_INSTANCE}}.NumberOfUnknowns;
   #   constexpr int NumberOfParameters = repositories::{{REGULAR_SOLVER_INSTANCE}}.NumberOfAuxiliaryVariables;
     
-  #   #if Dimensions==2
+  #   #if DIMENSIONS==2
   #   constexpr int spaceFaceSize      = (Order+1);
   #   #else
   #   constexpr int spaceFaceSize      = (Order+1)*(Order+1);
@@ -117,28 +117,28 @@ class SolveRiemannProblem(AbstractLimiterActionSet):
   #   constexpr int fluxElementsPerFace   = spaceFaceSize*NumberOfVariables;
 
   #   if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker()==celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::REGULAR){
-  #     for(int d=0; d<Dimensions; d++){
+  #     for(int d=0; d<DIMENSIONS; d++){
   #       if( fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getTroubled_Marker()==facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED ){
   #         //Regular face to Limiter
   #         std::copy_n(fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d).value+basisElementsPerFace, basisElementsPerFace, fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d).value+basisElementsPerFace);
   #         std::copy_n(fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsPerFace, fluxElementsPerFace, fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsPerFace);
   #       }
 
-  #       if( fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getTroubled_Marker()==facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED ){
+  #       if( fineGridFaces{{SOLVER_NAME}}FaceLabel(d+DIMENSIONS).getTroubled_Marker()==facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED ){
   #         //Regular face to Limiter
-  #         std::copy_n(fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value, basisElementsPerFace, fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value);
-  #         std::copy_n(fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value, fluxElementsPerFace, fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value);
+  #         std::copy_n(fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+DIMENSIONS).value, basisElementsPerFace, fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+DIMENSIONS).value);
+  #         std::copy_n(fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+DIMENSIONS).value, fluxElementsPerFace, fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+DIMENSIONS).value);
   #       }
 
   #     }
   #   }
   #   if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker()==celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::TROUBLED){
-  #     for(int d=0; d<Dimensions; d++){
+  #     for(int d=0; d<DIMENSIONS; d++){
   #         std::copy_n(fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d).value+basisElementsPerFace, basisElementsPerFace, fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d).value+basisElementsPerFace);
   #         std::copy_n(fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsPerFace, fluxElementsPerFace, fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsPerFace);
 
-  #         std::copy_n(fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value, basisElementsPerFace, fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value);
-  #         std::copy_n(fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value, fluxElementsPerFace, fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value);
+  #         std::copy_n(fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+DIMENSIONS).value, basisElementsPerFace, fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+DIMENSIONS).value);
+  #         std::copy_n(fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+DIMENSIONS).value, fluxElementsPerFace, fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+DIMENSIONS).value);
   #     }
   #   }
 

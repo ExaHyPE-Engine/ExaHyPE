@@ -99,7 +99,7 @@ std::string tarch::logging::CommandLineLogger::addSeparators(std::string::size_t
 void tarch::logging::CommandLineLogger::closeOutputStreamAndReopenNewOne() {
   _iterationCounter ++;
 
-  #if PeanoDebug>0
+  #if PEANO_DEBUG>0
   if ( _indentTraces.size()>0 ) {
     while (not _indentTraces.empty()) {
       logWarning( "closeOutputStreamAndReopenNewOne()", "tag still open: " << _indentTraces.top() );
@@ -194,7 +194,7 @@ std::string tarch::logging::CommandLineLogger::constructMessageString(
 
 
 void tarch::logging::CommandLineLogger::debug(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
-  #if !defined(PeanoDebug) || PeanoDebug<1
+  #if !defined(PEANO_DEBUG) || PEANO_DEBUG<1
   assertion(false);
   #endif
 
@@ -284,7 +284,7 @@ void tarch::logging::CommandLineLogger::traceOut(long int timestampNanoseconds, 
 
 
 void tarch::logging::CommandLineLogger::indent( [[maybe_unused]] bool indent, [[maybe_unused]] const std::string& trace, [[maybe_unused]] const std::string& message ) {
-  #if PeanoDebug>=1
+  #if PEANO_DEBUG>=1
   tarch::multicore::Lock lockCout( _semaphore );
   if (indent) {
     _indent+=NumberOfIndentSpaces;
@@ -350,7 +350,7 @@ void tarch::logging::CommandLineLogger::reopenOutputStream() {
 
 
 void tarch::logging::CommandLineLogger::setOutputFile( const std::string&  outputLogFileName ) {
-  #ifdef Parallel
+  #ifdef WITH_MPI
   if (!outputLogFileName.empty()) {
     std::ostringstream myOutputFileName;
     myOutputFileName << "rank-" << tarch::mpi::Rank::getInstance().getRank() << "-" << outputLogFileName;

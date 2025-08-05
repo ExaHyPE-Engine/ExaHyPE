@@ -33,7 +33,7 @@ class peano4::grid::PeanoCurve {
     static constexpr int NumberOfBaseStacks = 3;
 
     /**
-     * In principle, there are Dimensions axes along which we can have periodic
+     * In principle, there are DIMENSIONS axes along which we can have periodic
      * boundary conditions. The faces along the x axis can wrap over, those along
      * the y axis can wrap over, those along the z axis, too. For each direction,
      * we need two stacks. The first one is for data flow along the coordinate
@@ -47,7 +47,7 @@ class peano4::grid::PeanoCurve {
      * read from (those are the lower ones). They are followed by stacks to write
      * to. The two stacks are swapped over after each iteration.
      */
-    static constexpr int NumberOfPeriodicBoundaryConditionStacks = 2*(ThreePowerD-1);
+    static constexpr int NumberOfPeriodicBoundaryConditionStacks = 2*(THREE_POWER_D-1);
 
     /**
      * Standard (serial) number of stacks required per spacetree
@@ -83,7 +83,7 @@ class peano4::grid::PeanoCurve {
      * |              | stacks                |
      *
      */
-    static constexpr int MaxNumberOfCoreStacksPerSpacetreeInstance = NumberOfBaseStacks + Dimensions*2 + NumberOfPeriodicBoundaryConditionStacks;
+    static constexpr int MaxNumberOfCoreStacksPerSpacetreeInstance = NumberOfBaseStacks + DIMENSIONS*2 + NumberOfPeriodicBoundaryConditionStacks;
 
     static bool isTraversePositiveAlongAxis(
       const AutomatonState&  state,
@@ -112,9 +112,9 @@ class peano4::grid::PeanoCurve {
      * traversal. So a typical loop over all vertices of a cell along the Peano
      * SFC reads as
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     * const std::bitset<Dimensions> coordinates = PeanoCurve::getFirstVertexIndex(state);
-     * for (int i=0; i<TwoPowerD; i++) {
-     *   std::bitset<Dimensions> currentLocalVertexIndex( coordinates ^ std::bitset<Dimensions>(i) );
+     * const std::bitset<DIMENSIONS> coordinates = PeanoCurve::getFirstVertexIndex(state);
+     * for (int i=0; i<TWO_POWER_D; i++) {
+     *   std::bitset<DIMENSIONS> currentLocalVertexIndex( coordinates ^ std::bitset<DIMENSIONS>(i) );
      *   logDebug( "loadVertices(...)", "handle vertex " << currentLocalVertexIndex );
      * }
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -122,7 +122,7 @@ class peano4::grid::PeanoCurve {
      * We heavily exploit bitsets here. They allow us, for example, to invert
      * the whole direction by a simple flip.
      */
-    static std::bitset<Dimensions> getFirstVertexIndex( const AutomatonState& cell );
+    static std::bitset<DIMENSIONS> getFirstVertexIndex( const AutomatonState& cell );
 
     /**
      *
@@ -135,12 +135,12 @@ class peano4::grid::PeanoCurve {
      *
      * @return 0 or 1 if it is about in/out stacks
      */
-    static int getVertexReadStackNumber(const AutomatonState& state, const std::bitset<Dimensions>& vertex );
+    static int getVertexReadStackNumber(const AutomatonState& state, const std::bitset<DIMENSIONS>& vertex );
 
     /**
      * @return 0 or 1 if it is about in/out stacks
      */
-    static int getVertexWriteStackNumber(const AutomatonState& state, const std::bitset<Dimensions>& vertex );
+    static int getVertexWriteStackNumber(const AutomatonState& state, const std::bitset<DIMENSIONS>& vertex );
 
     /**
      * Faces are enumerated following the same paradigm as the vertices. Face 0

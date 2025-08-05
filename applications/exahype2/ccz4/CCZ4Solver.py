@@ -471,7 +471,7 @@ def construct_FD4_ncp():
 
     deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
-  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
+  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%DIMENSIONS, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
 """
 
 
@@ -485,7 +485,7 @@ def construct_FV_ncp():
 
     deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
-  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
+  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%DIMENSIONS, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
 """
 
 
@@ -505,13 +505,13 @@ def construct_FV_source_term():
 
 def construct_FD4_eigenvalues():
     return """
-  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%DIMENSIONS, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
 """
 
 
 def construct_FV_eigenvalues():
     return """
-  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%DIMENSIONS, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
 """
 
 
@@ -1081,7 +1081,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
 
     deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
-  ::applications::exahype2::ccz4::ncpSecondOrderFormulation(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
+  ::applications::exahype2::ccz4::ncpSecondOrderFormulation(BTimesDeltaQ, Q, deltaQSerialised, normal%DIMENSIONS, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
 """,
             flux=exahype2.solvers.PDETerms.None_Implementation,
             source_term="""
@@ -1091,7 +1091,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
             refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             eigenvalues="""
           // do we only set Q
-  return ::applications::exahype2::ccz4::maxEigenvalueSecondOrderFormulation(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+  return ::applications::exahype2::ccz4::maxEigenvalueSecondOrderFormulation(Q, normal%DIMENSIONS, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
 """,
         )
 
@@ -1258,7 +1258,7 @@ def construct_DG_ncp():
 
     dQdxSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
-  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, dQdxSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
+  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, dQdxSerialised, normal%DIMENSIONS, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
 """
 
 
@@ -1271,7 +1271,7 @@ def construct_DG_source_term():
 
 def construct_DG_eigenvalues():
     return """
-  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%DIMENSIONS, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
 """
 
 

@@ -53,7 +53,7 @@ protected:
   const double                             _t;
   const double                             _dt;
   T* NOALIAS const                         _QIn;
-  T* NOALIAS                               _faces[NumFaceTypes][TwoTimesD];
+  T* NOALIAS                               _faces[NumFaceTypes][TWO_TIMES_D];
   T* NOALIAS const                         _QOut;
   Functor                                  _functor;
 
@@ -80,7 +80,7 @@ public:
     double                                    t,
     double                                    dt,
     T* NOALIAS const                          QIn,
-    T* NOALIAS const                          faces[NumFaceTypes][TwoTimesD],
+    T* NOALIAS const                          faces[NumFaceTypes][TWO_TIMES_D],
     T* NOALIAS const                          QOut,
     Functor                                   functor
   );

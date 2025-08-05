@@ -28,7 +28,7 @@ namespace toolbox {
      * insertParticleIntoCell() which then in turn will toggle to Local.
      */
     template <class T>
-    void init(T& particle, const tarch::la::Vector<Dimensions, double>& x, double searchRadius);
+    void init(T& particle, const tarch::la::Vector<DIMENSIONS, double>& x, double searchRadius);
 
     /**
      * Create equally spaced particles for one cell
@@ -55,8 +55,8 @@ namespace toolbox {
     template <class T>
     std::vector<T*> createEquallySpacedParticles(
       double                                       spacingH,
-      const tarch::la::Vector<Dimensions, double>& voxelX,
-      const tarch::la::Vector<Dimensions, double>& voxelH,
+      const tarch::la::Vector<DIMENSIONS, double>& voxelX,
+      const tarch::la::Vector<DIMENSIONS, double>& voxelH,
       bool                                         addNoise
     );
 
@@ -74,10 +74,10 @@ namespace toolbox {
     template <class T>
     std::vector<T*> createParticlesAlignedWithGlobalCartesianMesh(
       double                                       spacingH,
-      const tarch::la::Vector<Dimensions, double>& voxelX,
-      const tarch::la::Vector<Dimensions, double>& voxelH,
-      const tarch::la::Vector<Dimensions, double>& domainOffset,
-      const tarch::la::Vector<Dimensions, double>& domainSize,
+      const tarch::la::Vector<DIMENSIONS, double>& voxelX,
+      const tarch::la::Vector<DIMENSIONS, double>& voxelH,
+      const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
+      const tarch::la::Vector<DIMENSIONS, double>& domainSize,
       bool                                         addNoise
     );
   } // namespace particles

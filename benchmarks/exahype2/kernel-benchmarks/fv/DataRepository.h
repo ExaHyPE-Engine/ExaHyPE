@@ -37,8 +37,8 @@ namespace benchmarks::exahype2::kernelbenchmarks {
        * faceIndexHigh = faceIndexLow + 1
        */
       static int linearise(
-        const tarch::la::Vector<Dimensions, int>&    cellCentre,
-        const tarch::la::Vector<Dimensions, double>& cellSize
+        const tarch::la::Vector<DIMENSIONS, int>&    cellCentre,
+        const tarch::la::Vector<DIMENSIONS, double>& cellSize
       );
 
       /**
@@ -53,14 +53,14 @@ namespace benchmarks::exahype2::kernelbenchmarks {
        * | x_2 x_1 x_3 | * | N+1 | = | index_y |
        * | x_3 x_1 x_2 | | (N+1)*N | | index_z |
        */
-      static tarch::la::Vector<Dimensions, int> getFaceIndices(
-        const tarch::la::Vector<Dimensions, double>& cellCentre,
-        const tarch::la::Vector<Dimensions, double>& cellSize
+      static tarch::la::Vector<DIMENSIONS, int> getFaceIndices(
+        const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+        const tarch::la::Vector<DIMENSIONS, double>& cellSize
       );
 
       static int getFaceIndex(
-        const tarch::la::Vector<Dimensions, double>& cellCentre,
-        const tarch::la::Vector<Dimensions, double>& cellSize,
+        const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+        const tarch::la::Vector<DIMENSIONS, double>& cellSize,
         int                                          axis
       );
     };
@@ -76,14 +76,14 @@ namespace benchmarks::exahype2::kernelbenchmarks {
 
     double* getCellQ(int index);
     double* getCellQ(
-      const tarch::la::Vector<Dimensions, double>& cellCentre,
-      const tarch::la::Vector<Dimensions, double>& cellSize
+      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+      const tarch::la::Vector<DIMENSIONS, double>& cellSize
     );
 
     double* getFaceQNew(int index, int axis);
     double* getFaceQNew(
-      const tarch::la::Vector<Dimensions, double>& cellCentre,
-      const tarch::la::Vector<Dimensions, double>& cellSize,
+      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+      const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       int                                          axis
     );
 
@@ -106,7 +106,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
       // Other cellData would go here also as a std::vector<CellQ...>
 
       // Stores faces based on linearised order (face GridSize = 3^Depth * (3^Depth)+1) (not based on cellKeys)
-      std::array<std::vector<FaceQNew>, Dimensions> faces;
+      std::array<std::vector<FaceQNew>, DIMENSIONS> faces;
     };
 
     DepthLevel _depthLevel;

@@ -9,9 +9,9 @@
 
 {% macro loopOverDimensions() %}
   for (int normal = 0; normal < {{DIMENSIONS}}; normal++) { // Loop over directions
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(normal >= 0);
-    assertion(normal < Dimensions);
+    assertion(normal < DIMENSIONS);
     #endif
 
     {% if DIMENSIONS==2 %}
@@ -98,7 +98,7 @@
     const {{COMPUTE_PRECISION}}* const QIn = &QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}];
     {{COMPUTE_PRECISION}}* const QOut      = &QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
 
-    const tarch::la::Vector<Dimensions, double> patchCentre {
+    const tarch::la::Vector<DIMENSIONS, double> patchCentre {
       patchCentres[patchIndex * {{DIMENSIONS}}],
       patchCentres[patchIndex * {{DIMENSIONS}} + 1]
       {% if DIMENSIONS==3 %}
@@ -106,7 +106,7 @@
       patchCentres[patchIndex * {{DIMENSIONS}} + 2]
       {% endif %}
     };
-    const tarch::la::Vector<Dimensions, double> patchSize {
+    const tarch::la::Vector<DIMENSIONS, double> patchSize {
       patchSizes[patchIndex * {{DIMENSIONS}}],
       patchSizes[patchIndex * {{DIMENSIONS}} + 1]
       {% if DIMENSIONS==3 %}

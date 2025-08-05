@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/accelerator.h"
 
-#if defined(GPUOffloadingCUDA)
+#if defined(WITH_GPU_CUDA)
 
 #include "Device.h"
 
@@ -33,7 +33,7 @@ void* tarch::accelerator::allocateRawData(
   case MemoryLocation::Device:
     assertion1(device >= 0, device);
     CHECK_CUDA_ERROR(cudaSetDevice(device));
-#ifdef UseUSM
+#ifdef WITH_USM
     CHECK_CUDA_ERROR(cudaMallocManaged(&data, sizeInBytes));
 #else
     CHECK_CUDA_ERROR(cudaMalloc(&data, sizeInBytes));
@@ -42,7 +42,7 @@ void* tarch::accelerator::allocateRawData(
   case MemoryLocation::Pinned:
     assertion1(device >= 0, device);
     CHECK_CUDA_ERROR(cudaSetDevice(device));
-#ifdef UseUSM
+#ifdef WITH_USM
     CHECK_CUDA_ERROR(cudaMallocManaged(&data, sizeInBytes));
 #else
     CHECK_CUDA_ERROR(cudaMallocHost(&data, sizeInBytes));
@@ -52,7 +52,7 @@ void* tarch::accelerator::allocateRawData(
 
   assertion(data);
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     Device::getInstance().getMemoryBlockTable()[data] = sizeInBytes;
@@ -71,7 +71,7 @@ void tarch::accelerator::freeRawData(
     return;
   }
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     auto itr = Device::getInstance().getMemoryBlockTable().find(data);
@@ -121,7 +121,7 @@ void tarch::accelerator::copyTo(
     assertion1(device >= 0, device);
     logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to device");
     CHECK_CUDA_ERROR(cudaSetDevice(device));
-#ifdef UseUSM
+#ifdef WITH_USM
     CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToHost, deviceStreamGet()));
 #else
     CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToDevice, deviceStreamGet()));
@@ -151,7 +151,7 @@ void tarch::accelerator::copyFrom(
     assertion1(device >= 0, device);
     logDebug("copyFrom()", "Copy " << sizeInBytes << " bytes from device to host");
     CHECK_CUDA_ERROR(cudaSetDevice(device));
-#ifdef UseUSM
+#ifdef WITH_USM
     CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToHost, deviceStreamGet()));
 #else
     CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyDeviceToHost, deviceStreamGet()));
@@ -160,4 +160,4 @@ void tarch::accelerator::copyFrom(
   }
 }
 
-#endif // defined(GPUOffloadingCUDA)
+#endif // defined(WITH_GPU_CUDA)

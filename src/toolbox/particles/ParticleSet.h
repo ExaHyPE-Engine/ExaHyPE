@@ -70,11 +70,11 @@ public:
 
   // using SieveParticles = SieveParticles<T>;
 
-#if PeanoDebug >= 1
-  void                                  setDebugX(const tarch::la::Vector<Dimensions, double>& data);
-  void                                  setDebugH(const tarch::la::Vector<Dimensions, double>& data);
-  tarch::la::Vector<Dimensions, double> getDebugX() const;
-  tarch::la::Vector<Dimensions, double> getDebugH() const;
+#if PEANO_DEBUG >= 1
+  void                                  setDebugX(const tarch::la::Vector<DIMENSIONS, double>& data);
+  void                                  setDebugH(const tarch::la::Vector<DIMENSIONS, double>& data);
+  tarch::la::Vector<DIMENSIONS, double> getDebugX() const;
+  tarch::la::Vector<DIMENSIONS, double> getDebugH() const;
 #endif
 
   std::string toString(bool addBrackets = true) const;
@@ -144,7 +144,7 @@ public:
    */
   static bool registeredAnyResorting();
 
-#ifdef Parallel
+#ifdef WITH_MPI
   static void initDatatype();
 
   static void shutdownDatatype();
@@ -158,9 +158,9 @@ public:
    * after particles have been started to be resorted.
    */
   static void finishedTraversal(
-      const tarch::la::Vector<Dimensions,double>   domainOffset,
-      const tarch::la::Vector<Dimensions,double>   domainSize,
-      const std::bitset<Dimensions>                periodicBC
+      const tarch::la::Vector<DIMENSIONS,double>   domainOffset,
+      const tarch::la::Vector<DIMENSIONS,double>   domainSize,
+      const std::bitset<DIMENSIONS>                periodicBC
   );
 
   /**
@@ -371,9 +371,9 @@ protected:
    */
   static SieveParticles<T> _sieveParticles;
 
-#if PeanoDebug >= 1
-  tarch::la::Vector<Dimensions, double> _debugX;
-  tarch::la::Vector<Dimensions, double> _debugH;
+#if PEANO_DEBUG >= 1
+  tarch::la::Vector<DIMENSIONS, double> _debugX;
+  tarch::la::Vector<DIMENSIONS, double> _debugH;
 #endif
 };
 

@@ -30,7 +30,7 @@ void exahype2::fv::tests::ApplySplit1DRiemannToPatchTest::testIterateGrid() {
   constexpr int                               NumberOfUnknowns              = 5;
   constexpr int                               NumberOfAuxiliaryVariables    = 0;
   constexpr double                            dt                            = 0.1;
-  const tarch::la::Vector<Dimensions, double> volumeH                       = {0.01, 0.01};
+  const tarch::la::Vector<DIMENSIONS, double> volumeH                       = {0.01, 0.01};
 
   double* Qout = new double[500];
   double* Qcmp = new double[500];

@@ -13,7 +13,7 @@ peano4::grid::tests::GridControlEventTest::GridControlEventTest():
   TestCase("peano4::grid::tests::GridControlEventTest") {}
 
 void peano4::grid::tests::GridControlEventTest::testMerge1() {
-#if Dimensions == 2
+#if DIMENSIONS == 2
   std::vector<GridControlEvent> events;
 
   events.push_back(GridControlEvent(
@@ -55,7 +55,7 @@ void peano4::grid::tests::GridControlEventTest::testMerge1() {
 }
 
 void peano4::grid::tests::GridControlEventTest::testMerge2() {
-#if Dimensions == 2
+#if DIMENSIONS == 2
   const double tolerance = 0.1;
 
   GridControlEvent event0(
@@ -98,7 +98,7 @@ void peano4::grid::tests::GridControlEventTest::testMerge2() {
 }
 
 void peano4::grid::tests::GridControlEventTest::testMerge3() {
-#if Dimensions == 2
+#if DIMENSIONS == 2
   std::vector<GridControlEvent> events;
 
   events.push_back(GridControlEvent(
@@ -118,7 +118,7 @@ void peano4::grid::tests::GridControlEventTest::testMerge3() {
 // Der zweite Fehler ist, dass offensichtlich Merge Events nicht ausgetauscht werden oder nicht lange genug ueberleben
 
 void peano4::grid::tests::GridControlEventTest::testSortWithinMerge() {
-#if Dimensions == 3
+#if DIMENSIONS == 3
   std::list<GridControlEvent> events;
 
   events.push_back(GridControlEvent(

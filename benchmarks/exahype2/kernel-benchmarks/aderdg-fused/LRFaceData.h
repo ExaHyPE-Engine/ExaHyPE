@@ -23,8 +23,8 @@ namespace exahype2 {
      * the input data has been handled.
      */
     inType* (*QIn)[2];
-    tarch::la::Vector<Dimensions, double>* faceCentre;
-    tarch::la::Vector<Dimensions, double>* faceSize;
+    tarch::la::Vector<DIMENSIONS, double>* faceCentre;
+    tarch::la::Vector<DIMENSIONS, double>* faceSize;
 
     double* t;
     double* dt;
@@ -71,8 +71,8 @@ namespace exahype2 {
      */
     FaceData(
       inType*                                      QIn_[2],
-      const tarch::la::Vector<Dimensions, double>& faceCentre_,
-      const tarch::la::Vector<Dimensions, double>& faceSize_,
+      const tarch::la::Vector<DIMENSIONS, double>& faceCentre_,
+      const tarch::la::Vector<DIMENSIONS, double>& faceSize_,
       double                                       t_,
       double                                       dt_,
       outType*                                     QOut_[2],
@@ -99,8 +99,8 @@ namespace exahype2 {
 template <typename inType, typename outType>
 exahype2::FaceData<inType, outType>::FaceData(
   inType*                                      QIn_[2],
-  const tarch::la::Vector<Dimensions, double>& faceCentre_,
-  const tarch::la::Vector<Dimensions, double>& faceSize_,
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre_,
+  const tarch::la::Vector<DIMENSIONS, double>& faceSize_,
   double                                       t_,
   double                                       dt_,
   outType*                                     QOut_[2],
@@ -129,12 +129,12 @@ exahype2::FaceData<inType, outType>::
     memoryLocation_,
     targetDevice_
   );
-  faceCentre = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<Dimensions, double>>(
+  faceCentre = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<DIMENSIONS, double>>(
     numberOfFaces_,
     memoryLocation_,
     targetDevice_
   );
-  faceSize = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<Dimensions, double>>(
+  faceSize = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<DIMENSIONS, double>>(
     numberOfFaces_,
     memoryLocation_,
     targetDevice_

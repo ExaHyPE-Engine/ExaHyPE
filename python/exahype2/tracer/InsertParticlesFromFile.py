@@ -29,8 +29,8 @@ class InsertParticlesFromFile(ActionSet):
   if (not marker.willBeRefined()) {
     tarch::multicore::Lock lock( _semaphore );
 
-    std::list< tarch::la::Vector<Dimensions,double> > coords = _fileReader.getParticlesWithinVoxel(marker.x(), marker.h(), true);
-    std::list< tarch::la::Vector<Dimensions,double> >::iterator p = coords.begin();
+    std::list< tarch::la::Vector<DIMENSIONS,double> > coords = _fileReader.getParticlesWithinVoxel(marker.x(), marker.h(), true);
+    std::list< tarch::la::Vector<DIMENSIONS,double> >::iterator p = coords.begin();
     //for (auto* p: coords) {
     while ( p!=coords.end() ) {
       globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
@@ -64,7 +64,7 @@ class InsertParticlesFromFile(ActionSet):
   } else {
     logInfo( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId << " (boundary vertices might host redundant particle data)" );
   }
-  #if !defined(Parallel) and !defined(SharedMemoryParallelisation)
+  #if !defined(WITH_MPI) and !defined(WITH_MULTITHREADING)
   assertion( _particleNumberOnThisTree>0 );
   #endif
 """

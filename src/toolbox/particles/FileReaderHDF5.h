@@ -10,7 +10,7 @@
 #include <list> 
 #include <vector> 
 
-#ifdef UseHDF5
+#ifdef WITH_HDF5
 #include "H5Cpp.h"
 #endif
 
@@ -36,10 +36,10 @@ class toolbox::particles::FileReaderHDF5 {
     static tarch::logging::Log                           _log;
 
     /* Coordinates */
-    std::list< tarch::la::Vector<Dimensions,double> >    _Coordinates;
+    std::list< tarch::la::Vector<DIMENSIONS,double> >    _Coordinates;
 
     /* Other fields in the HDF5 file */
-    std::vector< tarch::la::Vector<Dimensions,double> >  _Velocity;
+    std::vector< tarch::la::Vector<DIMENSIONS,double> >  _Velocity;
     std::vector<double>                                  _Mass;
     std::vector<double>                                  _SmoothingLength;
     std::vector<double>                                  _InternalEnergy;
@@ -54,7 +54,7 @@ class toolbox::particles::FileReaderHDF5 {
     /* If you are adding additional quantities, don't forget to update them
      * in FileReaderHDF5.clearVoxel() and FileReaderHDF5.isVoxelEmpty() 
      * as well */
-    std::vector< tarch::la::Vector<Dimensions,double> >  _VelocityWithinVoxel;
+    std::vector< tarch::la::Vector<DIMENSIONS,double> >  _VelocityWithinVoxel;
     std::vector<double>                                  _MassWithinVoxel;
     std::vector<double>                                  _SmoothingLengthWithinVoxel;
     std::vector<double>                                  _InternalEnergyWithinVoxel;
@@ -70,7 +70,7 @@ class toolbox::particles::FileReaderHDF5 {
      */
     void readHDF5File( const std::string& filename );
 
-#ifdef UseHDF5
+#ifdef WITH_HDF5
 
     /**
      * Read a set of integers from an HDF5 file
@@ -105,7 +105,7 @@ class toolbox::particles::FileReaderHDF5 {
        const H5std_string& datasetName );
 
     /**
-     * Read a Dimensions array of doubles from an HDF5 file
+     * Read a DIMENSIONS array of doubles from an HDF5 file
      * This is used for Coordinates, which are stored as a list.
      * We read the full dataset.
      * @TODO in future large-scale sims we might want to use hyperslabs to
@@ -115,13 +115,13 @@ class toolbox::particles::FileReaderHDF5 {
      * @param groupName         name of the group where the relevant dataset lives.
      * @param datasetName       name of dataset that will be read.
      */
-    std::list< tarch::la::Vector<Dimensions,double> > readDoubleArray( 
+    std::list< tarch::la::Vector<DIMENSIONS,double> > readDoubleArray( 
        const H5::H5File&   file, 
        const H5std_string& groupName, 
        const H5std_string& datasetName );
 
     /**
-     * Read a Dimensions array of floats from an HDF5 file
+     * Read a DIMENSIONS array of floats from an HDF5 file
      * This is used to read velocities, which are stored in a vector container.
      * We read the full dataset.
      * @TODO in future large-scale sims we might want to use hyperslabs to
@@ -131,7 +131,7 @@ class toolbox::particles::FileReaderHDF5 {
      * @param groupName         name of the group where the relevant dataset lives.
      * @param datasetName       name of dataset that will be read.
      */
-    std::vector< tarch::la::Vector<Dimensions,double> > readFloatArray( 
+    std::vector< tarch::la::Vector<DIMENSIONS,double> > readFloatArray( 
        const H5::H5File&   file, 
        const H5std_string& groupName, 
        const H5std_string& datasetName );
@@ -164,9 +164,9 @@ class toolbox::particles::FileReaderHDF5 {
      * @see peano4::datamanagement::CellMarker::x()
      * @see peano4::datamanagement::VertexMarker::x()
      */
-    std::list< tarch::la::Vector<Dimensions,double> > getParticlesWithinVoxel(
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
+    std::list< tarch::la::Vector<DIMENSIONS,double> > getParticlesWithinVoxel(
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  h,
       bool remove
     );
 
@@ -191,7 +191,7 @@ class toolbox::particles::FileReaderHDF5 {
     /* 
      * Get methods for data other than Coordinates.
      */
-    std::vector< tarch::la::Vector<Dimensions,double> > getVelocityWithinVoxel() const;
+    std::vector< tarch::la::Vector<DIMENSIONS,double> > getVelocityWithinVoxel() const;
     std::vector<double>                                 getMassWithinVoxel() const;
     std::vector<double>                                 getSmoothingLengthWithinVoxel() const;
     std::vector<double>                                 getInternalEnergyWithinVoxel() const;

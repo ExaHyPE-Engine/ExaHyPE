@@ -30,9 +30,9 @@ namespace toolbox {
 
           Type                                  type;
           bool                                  isLocal;
-          tarch::la::Vector<Dimensions, double> vertexX;
-          tarch::la::Vector<Dimensions, double> previousParticleX;
-          tarch::la::Vector<Dimensions, double> vertexH;
+          tarch::la::Vector<DIMENSIONS, double> vertexX;
+          tarch::la::Vector<DIMENSIONS, double> previousParticleX;
+          tarch::la::Vector<DIMENSIONS, double> vertexH;
           int                                   treeId;
           std::string                           trace;
           int                                   meshSweepIndex;
@@ -43,9 +43,9 @@ namespace toolbox {
           Event(
             Type                                         type_,
             bool                                         isLocal_,
-            const tarch::la::Vector<Dimensions, double>& vertexX_,
-            const tarch::la::Vector<Dimensions, double>& particleX,
-            const tarch::la::Vector<Dimensions, double>& vertexH_,
+            const tarch::la::Vector<DIMENSIONS, double>& vertexX_,
+            const tarch::la::Vector<DIMENSIONS, double>& particleX,
+            const tarch::la::Vector<DIMENSIONS, double>& vertexH_,
             int                                          treeId_,
             const std::string&                           trace_,
             int                                          meshSweepIndex_
@@ -59,9 +59,9 @@ namespace toolbox {
           Event(
             Type                                         type_,
             bool                                         isLocal_,
-            const tarch::la::Vector<Dimensions, double>& vertexX_,
-            const tarch::la::Vector<Dimensions, double>& particleX,
-            const tarch::la::Vector<Dimensions, double>& vertexH_,
+            const tarch::la::Vector<DIMENSIONS, double>& vertexX_,
+            const tarch::la::Vector<DIMENSIONS, double>& particleX,
+            const tarch::la::Vector<DIMENSIONS, double>& vertexH_,
             int                                          treeId_,
             const std::string&                           trace_
           );
@@ -74,9 +74,9 @@ namespace toolbox {
            */
           Event(
             Type                                         type_,
-            const tarch::la::Vector<Dimensions, double>& vertexX_,
-            const tarch::la::Vector<Dimensions, double>& previousParticleX_,
-            const tarch::la::Vector<Dimensions, double>& vertexH_,
+            const tarch::la::Vector<DIMENSIONS, double>& vertexX_,
+            const tarch::la::Vector<DIMENSIONS, double>& previousParticleX_,
+            const tarch::la::Vector<DIMENSIONS, double>& vertexH_,
             int                                          treeId_,
             const std::string&                           trace_
           );

@@ -13,7 +13,7 @@ initial_conditions = """
   Q[Shortcuts::rho] = 0.1;
   Q[Shortcuts::rhoU + 0] = 0.0;
   Q[Shortcuts::rhoU + 1] = 0.0;
-#if Dimensions == 3
+#if DIMENSIONS == 3
   Q[Shortcuts::rhoU + 2] = 0.0;
 #endif
   Q[Shortcuts::rhoE] = ((x(0) < 0.5) ? (1.01) : (1.0));
@@ -24,7 +24,7 @@ boundary_conditions = """
   Qoutside[Shortcuts::rho]      = Qinside[Shortcuts::rho];
   Qoutside[Shortcuts::rhoU + 0] = -Qinside[Shortcuts::rhoU + 0];
   Qoutside[Shortcuts::rhoU + 1] = -Qinside[Shortcuts::rhoU + 1];
-#if Dimensions == 3
+#if DIMENSIONS == 3
   Qoutside[Shortcuts::rhoU + 2] = -Qinside[Shortcuts::rhoU + 2];
 #endif
   Qoutside[Shortcuts::rhoE]     = Qinside[Shortcuts::rhoE];

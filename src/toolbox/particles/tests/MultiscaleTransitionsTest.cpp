@@ -16,7 +16,7 @@ toolbox::particles::tests::MultiscaleTransitionsTest::MultiscaleTransitionsTest(
   TestCase("toolbox::particles::tests::MultiscaleTransitionsTest") {}
 
 void toolbox::particles::tests::MultiscaleTransitionsTest::testSievePredicate() {
-#if Dimensions == 2
+#if DIMENSIONS == 2
   TestParticle                         particle({0.721487, 0.624479}, 0.0001);
   peano4::datamanagement::VertexMarker marker;
 
@@ -26,7 +26,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testSievePredicate() 
   marker._select     = 1;
   marker._isAdjacentCellLocal.set();
 
-  tarch::la::Vector<Dimensions, double> cornerVertex1 = {
+  tarch::la::Vector<DIMENSIONS, double> cornerVertex1 = {
     marker._cellCentre(0) + 0.5 * marker._h(0), marker._cellCentre(1) - 0.5 * marker._h(1)};
   //  (debugX=[0.75,0.5],debugH=[0,0],x=[0.721487,0.624479],ParallelState=Local,searchRadius=0.0001,MoveState=Moved,CellHasUpdatedParticle=0,v=[-0.728231,1.39488],a=[-7.97473,-4.38055],energyKin=1.23859,energyPot=2.3109,energyTot=1.07232)
   //  into
@@ -71,7 +71,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testSievePredicate() 
 }
 
 void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex01() {
-  #if Dimensions==2
+  #if DIMENSIONS==2
   const int select = 0;
   peano4::datamanagement::VertexMarker marker;
 
@@ -87,7 +87,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   marker._relativePositionOfCellWithinFatherCell = {0,0};
   marker._isAdjacentCellLocal.set();
 
-  tarch::la::Vector<Dimensions,double> x = {0.554725,0.166678};
+  tarch::la::Vector<DIMENSIONS,double> x = {0.554725,0.166678};
   const double                         searchRadius = 0.0185185;
   toolbox::particles::ParticleReassociationInstruction liftInstruction;
   bool                                                 drop;
@@ -168,7 +168,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::run() {
 }
 
 void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex02() {
-  #if Dimensions==2
+  #if DIMENSIONS==2
   const int select = 0;
   peano4::datamanagement::VertexMarker marker;
 
@@ -185,7 +185,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   marker._select     = 2;
   marker._isAdjacentCellLocal.set();
 
-  tarch::la::Vector<Dimensions,double> x = {0.504975,0.1667};
+  tarch::la::Vector<DIMENSIONS,double> x = {0.504975,0.1667};
   const double                         searchRadius = 0.0185185;
   toolbox::particles::ParticleReassociationInstruction liftInstruction;
   bool                                                 drop;
@@ -226,7 +226,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
 
 
 void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex03() {
-  #if Dimensions==2
+  #if DIMENSIONS==2
   peano4::datamanagement::VertexMarker marker;
 
   const double  meshSize = 1.0/3.0/3.0;
@@ -243,7 +243,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   marker._isAdjacentCellLocal  = 0b110110000;
 
   double searchRadius = 0.00555556;
-  tarch::la::Vector<Dimensions,double> x = {0.0555708, 0.322228};
+  tarch::la::Vector<DIMENSIONS,double> x = {0.0555708, 0.322228};
   toolbox::particles::ParticleReassociationInstruction liftInstruction;
 
   // Vertex 0 should trigger a lift globally => we see this in the trace
@@ -341,7 +341,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
 
 
 void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex04() {
-  #if Dimensions==2
+  #if DIMENSIONS==2
   const int select = 0;
   peano4::datamanagement::VertexMarker marker;
 
@@ -358,7 +358,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   marker._select     = 2;
   marker._isAdjacentCellLocal = 0b000100110;
 
-  tarch::la::Vector<Dimensions,double> x = {4.99999996463071805231e-01, 5.00000003548028204570e-01};
+  tarch::la::Vector<DIMENSIONS,double> x = {4.99999996463071805231e-01, 5.00000003548028204570e-01};
   const double                         searchRadius = 0.15;
   toolbox::particles::ParticleReassociationInstruction liftInstruction;
   bool                                                 drop;

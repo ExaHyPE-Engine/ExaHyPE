@@ -41,8 +41,8 @@ This is required for the Riemann-solver (again, don't ask) and the time-stepping
 
     double exahype2::training::acoustic::PlanarAcousticSolver::maxEigenvalue(
       [[maybe_unused]] const double* const NOALIAS   Q, // Q[3+0]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal
@@ -57,8 +57,8 @@ Next is the flux, we have already defined it above, so let's look at the impleme
 
     void exahype2::training::acoustic::PlanarAcousticSolver::flux(
       [[maybe_unused]] const double* const NOALIAS   Q, // Q[3+0]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
@@ -88,8 +88,8 @@ and we prescribe a sinus for the initial conditions:
 
     void exahype2::training::acoustic::PlanarAcousticSolver::initialCondition(
       [[maybe_unused]] double* const NOALIAS Q, // Q[3+0]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const bool                                   gridIsConstructed
     ) {
       const double val = cos(-std::numbers::pi * (x[0] + x[1])); // Simple translation in positive diagonal direction

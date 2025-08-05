@@ -48,8 +48,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
      */
     ::exahype2::RefinementCommand refinementCriterion(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
-      const tarch::la::Vector<Dimensions,double>&  meshCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  meshCellCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  meshCellH,
       double                                       t
     ) override;
     {% endif %}
@@ -58,8 +58,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     void initialCondition(
       double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
-      const tarch::la::Vector<Dimensions,double>&  meshCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  meshCellCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  meshCellH,
       bool                                         gridIsConstructed
     ) override;
     {% endif %}
@@ -69,8 +69,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
     virtual void boundaryConditions(
       const double * NOALIAS Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       double * NOALIAS Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  meshCellH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  meshCellH,
       double                                       t,
       int                                          normal
     )  override;

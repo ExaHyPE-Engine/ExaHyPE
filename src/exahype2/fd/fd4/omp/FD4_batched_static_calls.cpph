@@ -44,7 +44,7 @@ namespace exahype2 {
           const bool evaluateKODissipation = KOSigma>0.0;
 
           // STEP 1: copy solution from old array to new array, or set all to zero
-          if ( Dimensions==3 and copyOldTimeStepAndScaleWithTimeStepSize ) {
+          if ( DIMENSIONS==3 and copyOldTimeStepAndScaleWithTimeStepSize ) {
             #pragma omp taskloop default(shared) collapse(5)
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
@@ -63,7 +63,7 @@ namespace exahype2 {
               );
             }
           }
-          else if (Dimensions==3 and not copyOldTimeStepAndScaleWithTimeStepSize){
+          else if (DIMENSIONS==3 and not copyOldTimeStepAndScaleWithTimeStepSize){
             #pragma omp taskloop default(shared) collapse(4)
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
@@ -81,7 +81,7 @@ namespace exahype2 {
               }
             }
           }
-          else if (Dimensions==2 and copyOldTimeStepAndScaleWithTimeStepSize) {
+          else if (DIMENSIONS==2 and copyOldTimeStepAndScaleWithTimeStepSize) {
             #pragma omp taskloop default(shared) collapse(4)
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
@@ -118,7 +118,7 @@ namespace exahype2 {
 
 
           // Step 2: Add source terms
-          if (Dimensions==2 and evaluateAlgebraicSource) {
+          if (DIMENSIONS==2 and evaluateAlgebraicSource) {
             #pragma omp taskloop default(shared) collapse(3)
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
@@ -138,7 +138,7 @@ namespace exahype2 {
               );
             }
           }
-          else if (Dimensions==3 and evaluateAlgebraicSource) {
+          else if (DIMENSIONS==3 and evaluateAlgebraicSource) {
             #pragma omp taskloop default(shared) collapse(4)
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
@@ -161,7 +161,7 @@ namespace exahype2 {
           }
 
           // STEP 3: Evaluate flux and update solution accordingly
-          if (evaluateFlux and Dimensions==2) {
+          if (evaluateFlux and DIMENSIONS==2) {
             #pragma omp taskloop default(shared) collapse(3)
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
@@ -221,7 +221,7 @@ namespace exahype2 {
                 );
             }
           }
-          else if (evaluateFlux and Dimensions==3) {
+          else if (evaluateFlux and DIMENSIONS==3) {
             #pragma omp taskloop default(shared) collapse(4)
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
@@ -306,7 +306,7 @@ namespace exahype2 {
           }
 
           // STEP 4: Evaluate differential source and update solution accordingly
-          if (evaluateDifferentialSource and Dimensions==2) {
+          if (evaluateDifferentialSource and DIMENSIONS==2) {
             #pragma omp taskloop default(shared) collapse(3)
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
@@ -367,7 +367,7 @@ namespace exahype2 {
               );
             }
           }
-          else if (evaluateDifferentialSource and Dimensions==3) {
+          else if (evaluateDifferentialSource and DIMENSIONS==3) {
             #pragma omp taskloop default(shared) collapse(4)
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
@@ -454,7 +454,7 @@ namespace exahype2 {
           }
 
           // STEP 5: compute the Kreiss Oliger dissipation and add it to the solution
-          if (evaluateKODissipation and Dimensions==2) {
+          if (evaluateKODissipation and DIMENSIONS==2) {
             #pragma omp taskloop default(shared) collapse(3)
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
@@ -513,7 +513,7 @@ namespace exahype2 {
                 );
             }
           }
-          else if (evaluateKODissipation and Dimensions==3) {
+          else if (evaluateKODissipation and DIMENSIONS==3) {
               #pragma omp taskloop default(shared) collapse(4)
               for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
               for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
@@ -633,13 +633,13 @@ void exahype2::fd::fd4::omp::timeStep_batched_heap_multicore_static_calls(
 
   double* tempFluxX =  evaluateFlux                                                ? tarch::allocateMemory( fluxEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
   double* tempFluxY =  evaluateFlux                                                ? tarch::allocateMemory( fluxEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempFluxZ = (evaluateFlux and Dimensions==3)                             ? tarch::allocateMemory( fluxEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxZ = (evaluateFlux and DIMENSIONS==3)                             ? tarch::allocateMemory( fluxEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
   double* tempDifferentialSourceX =  evaluateDifferentialSource                    ? tarch::allocateMemory( differentialSourceEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
   double* tempDifferentialSourceY =  evaluateDifferentialSource                    ? tarch::allocateMemory( differentialSourceEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempDifferentialSourceZ = (evaluateDifferentialSource and Dimensions==3) ? tarch::allocateMemory( differentialSourceEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempDifferentialSourceZ = (evaluateDifferentialSource and DIMENSIONS==3) ? tarch::allocateMemory( differentialSourceEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
   double* tempKODissipationX      =  evaluateKODissipation                         ? tarch::allocateMemory( KODissipationEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
   double* tempKODissipationY      =  evaluateKODissipation                         ? tarch::allocateMemory( KODissipationEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempKODissipationZ      = (evaluateKODissipation      and Dimensions==3) ? tarch::allocateMemory( KODissipationEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempKODissipationZ      = (evaluateKODissipation      and DIMENSIONS==3) ? tarch::allocateMemory( KODissipationEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
 
   internal::timeStep_batched_heap_multicore_static_calls<Solver, numberOfGridCellsPerPatchPerAxis, haloSize, unknowns, auxiliaryVariables, TempDataEnumerator>(
     patchData,

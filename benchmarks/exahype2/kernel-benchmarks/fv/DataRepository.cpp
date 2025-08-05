@@ -13,15 +13,15 @@
 
 namespace benchmarks::exahype2::kernelbenchmarks {
   int DataRepository::Indexing::linearise(
-    const tarch::la::Vector<Dimensions, int>&    cellIndex,
-    const tarch::la::Vector<Dimensions, double>& cellSize
+    const tarch::la::Vector<DIMENSIONS, int>&    cellIndex,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize
   ) {
     const double ratio = DomainSize[0] / cellSize[0];
     const int    depth = static_cast<int>(std::round(std::log(ratio) / std::log(3.0)));
 
     int index  = 0;
     int stride = 1;
-    for (int i = 0; i < Dimensions; ++i) {
+    for (int i = 0; i < DIMENSIONS; ++i) {
       index += cellIndex[i] * stride;
 
       int dimSize = (i == 0) ? (std::pow(3, depth) + 1) : std::pow(3, depth);
@@ -30,13 +30,13 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     return index;
   }
 
-  tarch::la::Vector<Dimensions, int> DataRepository::Indexing::getFaceIndices(
-    const tarch::la::Vector<Dimensions, double>& cellCentre,
-    const tarch::la::Vector<Dimensions, double>& cellSize
+  tarch::la::Vector<DIMENSIONS, int> DataRepository::Indexing::getFaceIndices(
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize
   ) {
-    tarch::la::Vector<Dimensions, int>    faceIndices;
-    tarch::la::Vector<Dimensions, double> cellCentreOffset = cellCentre - DomainOffset; // remove Offset
-    tarch::la::Vector<Dimensions, int>    cellIndex        = tarch::la::convertScalar<int>(
+    tarch::la::Vector<DIMENSIONS, int>    faceIndices;
+    tarch::la::Vector<DIMENSIONS, double> cellCentreOffset = cellCentre - DomainOffset; // remove Offset
+    tarch::la::Vector<DIMENSIONS, int>    cellIndex        = tarch::la::convertScalar<int>(
       tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize))
     );
     // vector: x_1, x_2, x_3
@@ -44,7 +44,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     // vector: x_2, x_1, x_3
     std::swap(cellIndex[0], cellIndex[1]);
     faceIndices[1] = linearise(cellIndex, cellSize);
-#if Dimensions == 3
+#if DIMENSIONS == 3
     // vector: x_3, x_1, x_2
     std::swap(cellIndex[0], cellIndex[2]);
     faceIndices[2] = linearise(cellIndex, cellSize);
@@ -53,27 +53,27 @@ namespace benchmarks::exahype2::kernelbenchmarks {
   }
 
   int DataRepository::Indexing::getFaceIndex(
-    const tarch::la::Vector<Dimensions, double>& cellCentre,
-    const tarch::la::Vector<Dimensions, double>& cellSize,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     int                                          axis
   ) {
-    tarch::la::Vector<Dimensions, double> cellCentreOffset = cellCentre - DomainOffset; // remove Offset
-    tarch::la::Vector<Dimensions, int>    cellIndex        = tarch::la::convertScalar<int>(
+    tarch::la::Vector<DIMENSIONS, double> cellCentreOffset = cellCentre - DomainOffset; // remove Offset
+    tarch::la::Vector<DIMENSIONS, int>    cellIndex        = tarch::la::convertScalar<int>(
       tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize))
     );
     // permute as described in getFaceIndices()
-    for (int i = 1; i <= axis % Dimensions; ++i) {
+    for (int i = 1; i <= axis % DIMENSIONS; ++i) {
       std::swap(cellIndex[0], cellIndex[i]);
     }
     int faceIndex = linearise(cellIndex, cellSize);
-    return axis >= Dimensions ? faceIndex + 1 : faceIndex;
+    return axis >= DIMENSIONS ? faceIndex + 1 : faceIndex;
   }
 
   DataRepository::DataRepository() {
-    int cellCount = std::pow(GridLength, Dimensions);
-    int faceCount = std::pow(GridLength, Dimensions - 1) * (GridLength + 1);
+    int cellCount = std::pow(GridLength, DIMENSIONS);
+    int faceCount = std::pow(GridLength, DIMENSIONS - 1) * (GridLength + 1);
     _depthLevel.Q.resize(cellCount);
-    for (int axis = 0; axis < Dimensions; ++axis) {
+    for (int axis = 0; axis < DIMENSIONS; ++axis) {
       _depthLevel.faces[axis].resize(faceCount);
     }
   }
@@ -92,11 +92,11 @@ namespace benchmarks::exahype2::kernelbenchmarks {
   double* DataRepository::getCellQ(int index) { return _depthLevel.Q[index].data(); }
 
   double* DataRepository::getCellQ(
-    const tarch::la::Vector<Dimensions, double>& cellCentre,
-    const tarch::la::Vector<Dimensions, double>& cellSize
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize
   ) {
-    tarch::la::Vector<Dimensions, double> cellCentreOffset = cellCentre - DomainOffset; // remove Offset
-    tarch::la::Vector<Dimensions, int>    cellIndex        = tarch::la::convertScalar<int>(
+    tarch::la::Vector<DIMENSIONS, double> cellCentreOffset = cellCentre - DomainOffset; // remove Offset
+    tarch::la::Vector<DIMENSIONS, int>    cellIndex        = tarch::la::convertScalar<int>(
       tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize))
     );
     int index = peano4::utils::dLinearised(cellIndex, GridLength);
@@ -104,8 +104,8 @@ namespace benchmarks::exahype2::kernelbenchmarks {
   }
 
   double* DataRepository::getFaceQNew(int index, int axis) {
-    auto& faceData = _depthLevel.faces[axis % Dimensions];
-    if (axis >= Dimensions) {
+    auto& faceData = _depthLevel.faces[axis % DIMENSIONS];
+    if (axis >= DIMENSIONS) {
       // high face
       return faceData[index + 1].data();
     } else {
@@ -115,11 +115,11 @@ namespace benchmarks::exahype2::kernelbenchmarks {
   }
 
   double* DataRepository::getFaceQNew(
-    const tarch::la::Vector<Dimensions, double>& cellCentre,
-    const tarch::la::Vector<Dimensions, double>& cellSize,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     int                                          axis
   ) {
     int index = Indexing::getFaceIndex(cellCentre, cellSize, axis);
-    return _depthLevel.faces[axis % Dimensions][index].data();
+    return _depthLevel.faces[axis % DIMENSIONS][index].data();
   }
 } // namespace benchmarks::exahype2::kernelbenchmarks

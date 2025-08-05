@@ -36,7 +36,7 @@ namespace exahype2 {
        */
       void eulerFlux(
               const double * NOALIAS                  Q,
-              const tarch::la::Vector<Dimensions,double>&  x,
+              const tarch::la::Vector<DIMENSIONS,double>&  x,
               double                                       t,
               double                                       dt,
               int                                          normal,
@@ -45,7 +45,7 @@ namespace exahype2 {
 
       void eulerSource(
             const double * NOALIAS                  Q,
-            const tarch::la::Vector<Dimensions,double>&  x,
+            const tarch::la::Vector<DIMENSIONS,double>&  x,
             double                                       t,
             double                                       dt,
             double * NOALIAS                        S
@@ -53,7 +53,7 @@ namespace exahype2 {
 
       double eulerEigenvalue(
           const double * NOALIAS                 Q,
-          const tarch::la::Vector<Dimensions,double>& x,
+          const tarch::la::Vector<DIMENSIONS,double>& x,
           double                                      t,
           double                                       dt,
           int                                         normal
@@ -62,7 +62,7 @@ namespace exahype2 {
       void eulerBoundaryConditions(
               const double * NOALIAS                  Qinside,
               double * NOALIAS                         Qoutside,
-              const tarch::la::Vector<Dimensions,double>&  x,
+              const tarch::la::Vector<DIMENSIONS,double>&  x,
               double                                       t,
               double                                       dt,
               int                                          normal
@@ -79,7 +79,7 @@ namespace exahype2 {
 
       void elasticFlux(
               const double * NOALIAS                  Q,
-              const tarch::la::Vector<Dimensions,double>&  x,
+              const tarch::la::Vector<DIMENSIONS,double>&  x,
               double                                       t,
               double                                       dt,
               int                                          normal,
@@ -88,7 +88,7 @@ namespace exahype2 {
 
       void elasticSource(
             const double * NOALIAS                  Q,
-            const tarch::la::Vector<Dimensions,double>&  x,
+            const tarch::la::Vector<DIMENSIONS,double>&  x,
             double                                       t,
             double                                       dt,
             double * NOALIAS                        S
@@ -96,7 +96,7 @@ namespace exahype2 {
 
       double elasticEigenvalue(
           const double * NOALIAS                 Q,
-          const tarch::la::Vector<Dimensions,double>& x,
+          const tarch::la::Vector<DIMENSIONS,double>& x,
           double                                      t,
           double                                      dt,
           int                                         normal
@@ -105,7 +105,7 @@ namespace exahype2 {
       void elasticBoundaryConditions(
               const double * NOALIAS                  Qinside,
               double * NOALIAS                        Qoutside,
-              const tarch::la::Vector<Dimensions,double>&  x,
+              const tarch::la::Vector<DIMENSIONS,double>&  x,
               double                                       t,
               double                                       dt,
               int                                          normal
@@ -113,7 +113,7 @@ namespace exahype2 {
 
       void elasticNonConservativeProduct(  const double * NOALIAS  Q,
           const double * NOALIAS                                   deltaQ,
-          const tarch::la::Vector<Dimensions,double>&                   faceCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&                   faceCentre,
           double                                                        t,
           double                                                        dt,
           int                                                           normal,
@@ -125,7 +125,7 @@ namespace exahype2 {
       void testBoundaryConditions(
               const double * NOALIAS                  Qinside,
               double * NOALIAS                        Qoutside,
-              const tarch::la::Vector<Dimensions,double>&  x,
+              const tarch::la::Vector<DIMENSIONS,double>&  x,
               double                                       t,
               double                                       dt,
               int                                          normal
@@ -135,7 +135,7 @@ namespace exahype2 {
       void secondTestBoundaryConditions(
               const double * NOALIAS                  Qinside,
               double * NOALIAS                        Qoutside,
-              const tarch::la::Vector<Dimensions,double>&  x,
+              const tarch::la::Vector<DIMENSIONS,double>&  x,
               double                                       t,
               double                                       dt,
               int                                          normal
@@ -144,7 +144,7 @@ namespace exahype2 {
 
       double testEigenvalue(
           const double * NOALIAS                 Q,
-          const tarch::la::Vector<Dimensions,double>& x,
+          const tarch::la::Vector<DIMENSIONS,double>& x,
           double                                      t,
           double                                      dt,
           int                                         normal

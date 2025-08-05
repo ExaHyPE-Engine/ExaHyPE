@@ -141,14 +141,14 @@ return controlEvents;
    * @param h Root cell size
    */
   virtual void beginTraversal(
-    const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& h
+    const tarch::la::Vector<DIMENSIONS, double>& x, const tarch::la::Vector<DIMENSIONS, double>& h
   ) = 0;
 
   /**
    * @see beginTraversal()
    */
   virtual void endTraversal(
-    const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& h
+    const tarch::la::Vector<DIMENSIONS, double>& x, const tarch::la::Vector<DIMENSIONS, double>& h
   ) = 0;
 
   /**

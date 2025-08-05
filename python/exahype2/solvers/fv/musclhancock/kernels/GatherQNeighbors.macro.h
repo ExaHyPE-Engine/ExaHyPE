@@ -7,7 +7,7 @@
   const auto volumeCentreLeft  = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeLeft);
   const auto volumeCentreRight = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeRight);
 
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
@@ -18,7 +18,7 @@
     const int indexWithHaloRight = {{ id.indexWithHalo('volumeRight', 'unknown') | indent(6) }}{##}
     const int indexWithHaloRightRight = {{ id.indexWithHalo('volumeRightRight', 'unknown') | indent(6) }}{##}
 
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(QIn[indexWithHaloLeftLeft]));
     assertion(std::isfinite(QIn[indexWithHaloLeft]));
     assertion(std::isfinite(QIn[indexWithHaloRight]));
