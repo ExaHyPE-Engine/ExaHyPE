@@ -3,7 +3,7 @@ name = "Peano"
 version = "4.0.0"
 description = "Peano Python API"
 license = {file = "LICENSE"}
-requires-python = ">=3.7"
+requires-python = ">=3.11"
 authors = [
   { name="Tobias Weinzierl", email="tobias.weinzierl@durham.ac.uk" },
   { name="Sean Baccas" },
