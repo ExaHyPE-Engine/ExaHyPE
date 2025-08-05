@@ -10,43 +10,15 @@
 {% import 'Loop.template.h' as loop with context %}{# get template macros #}
 
 {% macro loopOverPatches() %}
-  const int     numberOfPatches = patchData.numberOfCells;
-  const double* patchCentres    = patchData.cellCentre[0].data();
-  const double* patchSizes      = patchData.cellSize[0].data();
-  const double  timeStamp       = patchData.t;
-  const double  timeStepSize    = patchData.dt;
-
-  using UnmanagedConstView = Kokkos::View<
-    const {{COMPUTE_PRECISION}}*,
-    Kokkos::HostSpace,
-    Kokkos::MemoryTraits<Kokkos::Unmanaged>
-  >;
-  using UnmanagedView = Kokkos::View<
-    {{COMPUTE_PRECISION}}*,
-    Kokkos::HostSpace,
-    Kokkos::MemoryTraits<Kokkos::Unmanaged>
-  >;
-
-  const int viewSizeIn = numberOfPatches * {% if DIMENSIONS == 3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %};
-  const int viewSizeOut = numberOfPatches * {% if DIMENSIONS == 3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %};
+  const int     numberOfPatches                    = patchData.numberOfCells;
+  const {{STORAGE_PRECISION}}* const QInFlattened  = patchData.QInFlattened;
+  {{STORAGE_PRECISION}}* const       QOutFlattened = patchData.QOutFlattened;
+  auto*         patchCentres                       = patchData.cellCentre;
+  auto*         patchSizes                         = patchData.cellSize;
+  const double  timeStamp                          = patchData.t;
+  const double  timeStepSize                       = patchData.dt;
 
   double maxEigenvalueAfterTimeStep = 0.0;
-
-  // Initialise Kokkos Views for data transfer
-  UnmanagedConstView patchCentresHost(patchCentres, patchData.numberOfCells);
-  auto patchCentresDevice = Kokkos::create_mirror(Kokkos::DefaultExecutionSpace::memory_space(), patchCentresHost);
-  Kokkos::deep_copy(patchCentresDevice, patchCentresHost);
-
-  UnmanagedConstView patchSizesHost(patchSizes, patchData.numberOfCells);
-  auto patchSizesDevice = Kokkos::create_mirror(Kokkos::DefaultExecutionSpace::memory_space(), patchSizesHost);
-  Kokkos::deep_copy(patchSizesDevice, patchSizesHost);
-
-  UnmanagedView QInFlattenedHost(patchData.QInFlattened, viewSizeIn);
-  auto QInFlattened = Kokkos::create_mirror(Kokkos::DefaultExecutionSpace::memory_space(), QInFlattenedHost);
-  Kokkos::deep_copy(QInFlattened, QInFlattenedHost);
-
-  UnmanagedView QOutFlattenedHost(patchData.QOutFlattened, viewSizeOut);
-  auto QOutFlattened = Kokkos::create_mirror(Kokkos::DefaultExecutionSpace::memory_space(), QOutFlattenedHost);
 
   Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> teamPolicy(numberOfPatches, Kokkos::AUTO);
   Kokkos::parallel_reduce(
@@ -54,11 +26,11 @@
     teamPolicy,
     KOKKOS_LAMBDA (const Kokkos::TeamPolicy<>::member_type& teamMember, {{COMPUTE_PRECISION}}& maxEigenvalueAfterTimeStep) {
     const int patchIndex                                    = teamMember.league_rank();
-    const tarch::la::Vector<Dimensions, double> patchCentre = patchCentresDevice(patchIndex);
-    const tarch::la::Vector<Dimensions, double> patchSize   = patchSizesDevice(patchIndex);
+    const tarch::la::Vector<Dimensions, double> patchCentre = patchCentres[patchIndex];
+    const tarch::la::Vector<Dimensions, double> patchSize   = patchSizes[patchIndex];
 
-    {{COMPUTE_PRECISION}}* const QIn  = QInFlattened.data() + (patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %});
-    {{COMPUTE_PRECISION}}* QOut       = QOutFlattened.data() + (patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %});
+    const {{COMPUTE_PRECISION}}* const QIn = QInFlattened + (patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %});
+    {{COMPUTE_PRECISION}}* const QOut      = QOutFlattened + (patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %});
     {% if DIMENSIONS == 3 %}
     Kokkos::parallel_for(
       Kokkos::TeamThreadMDRange(
@@ -91,8 +63,6 @@
         {{ riemann.scatterQ() | indent(4) }}
     });
   }, Kokkos::Max<{{COMPUTE_PRECISION}}>(maxEigenvalueAfterTimeStep));
-
-  Kokkos::deep_copy(QOutFlattenedHost, QOutFlattened);
 
   {% if COMPUTE_MAX_EIGENVALUE==True %}
   return maxEigenvalueAfterTimeStep;
