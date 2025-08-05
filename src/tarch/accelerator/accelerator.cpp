@@ -11,7 +11,7 @@ namespace {
   tarch::logging::Log _log("tarch::accelerator");
 } // namespace
 
-#if defined(GPUOffloadingOff)
+#if !defined(WITH_GPU)
 
 void* tarch::accelerator::allocateRawData(
   std::size_t                     sizeInBytes,
@@ -27,7 +27,7 @@ void* tarch::accelerator::allocateRawData(
   );
   assertion(data);
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     Device::getInstance().getMemoryBlockTable()[data] = sizeInBytes;
@@ -42,7 +42,7 @@ void tarch::accelerator::freeRawData(void* data, MemoryLocation, int) {
     return;
   }
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     auto itr = Device::getInstance().getMemoryBlockTable().find(data);
@@ -87,7 +87,7 @@ void tarch::accelerator::copyFrom(
   std::memcpy(target, source, sizeInBytes);
 }
 
-#endif // defined(GPUOffloadingOff)
+#endif // WITH_GPU
 
 void* tarch::accelerator::reallocateRawData(
   void*          data,
@@ -98,7 +98,7 @@ void* tarch::accelerator::reallocateRawData(
   assertion(data);
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   std::size_t currentSizeInBytes = 0;
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());

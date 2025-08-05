@@ -19,7 +19,7 @@ class MPI(object):
 
     def get_include(self):
         return """
-#ifdef Parallel
+#ifdef WITH_MPI
   #include <mpi.h>
   #include <functional>
 #endif
@@ -27,7 +27,7 @@ class MPI(object):
 
     def get_attributes(self):
         return """
-    #ifdef Parallel
+    #ifdef WITH_MPI
     private:
       int                  _senderDestinationRank;
 
@@ -46,7 +46,7 @@ class MPI(object):
     def get_method_declarations(self, full_qualified_name):
         return (
             """
-    #ifdef Parallel
+    #ifdef WITH_MPI
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -133,7 +133,7 @@ class MPI(object):
     def get_implementation(self, full_qualified_name):
         result = (
             """
-#ifdef Parallel
+#ifdef WITH_MPI
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype """

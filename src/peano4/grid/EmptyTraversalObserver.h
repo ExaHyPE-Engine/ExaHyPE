@@ -24,13 +24,13 @@ class peano4::grid::EmptyTraversalObserver: public peano4::grid::TraversalObserv
 
   public:
     virtual void beginTraversal(
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  h
     ) override;
 
     virtual void endTraversal(
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  h
     ) override;
 
     virtual void enterCell(

@@ -299,19 +299,19 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVSpaceWithoutHaloFromFVWithHalo(
 bool {{FULL_QUALIFIED_NAMESPACE}}::isPhysicallyAdmissible(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                   solver,
   const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const luh,
-  const tarch::la::Vector<Dimensions, double>&      cellCentre,
-  const tarch::la::Vector<Dimensions, double>&      cellSize,
+  const tarch::la::Vector<DIMENSIONS, double>&      cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&      cellSize,
   const double                                      timeStamp
 ) {
-  const tarch::la::Vector<Dimensions, double>& bottomLeftPosition = cellCentre - 0.5 * cellSize;
+  const tarch::la::Vector<DIMENSIONS, double>& bottomLeftPosition = cellCentre - 0.5 * cellSize;
   bool result = true;
 
   int linearisedIndex = 0;
   dfor(index, {{NUMBER_OF_DOF}}) {
-    tarch::la::Vector<Dimensions, double> relativeNodePosition;
+    tarch::la::Vector<DIMENSIONS, double> relativeNodePosition;
     relativeNodePosition(0) = Quadrature<double>::nodes[index(0)];
     relativeNodePosition(1) = Quadrature<double>::nodes[index(1)];
-    #if Dimensions==3
+    #if DIMENSIONS==3
     relativeNodePosition(2) = Quadrature<double>::nodes[index(2)];
     #endif
 

@@ -59,7 +59,7 @@ def create_vertex_marker(task_name,
     )
     dastgen_marker.data.add_attribute(
         peano4.dastgen2.Peano4IntegerArray(
-            name="AdjacentCellNumber", cardinality="TwoPowerD"
+            name="AdjacentCellNumber", cardinality="TWO_POWER_D"
         )
     )
     dastgen_marker.data.add_attribute(
@@ -141,7 +141,7 @@ class AssignNumbersToMesh(ActionSet):
         ):
             return """
             fineGridVertex{}.setNumber(tarch::Enumerator::NoNumber);
-            for (int i=0; i<TwoPowerD; i++) {{
+            for (int i=0; i<TWO_POWER_D; i++) {{
               fineGridVertex{}.setAdjacentCellNumber(i,tarch::Enumerator::NoNumber);
             }}
             """.format(
@@ -191,9 +191,9 @@ class AssignNumbersToMesh(ActionSet):
               fineGridCell{}.setNumber( fineGridCell{}.getEnumerator().getNumber() );
               logDebug( "touchCellFirstTime(...)", "set number " << fineGridCell{}.toString() );
             }}
-            for (int i=0; i<TwoPowerD; i++) {{
+            for (int i=0; i<TWO_POWER_D; i++) {{
               fineGridVertices{}(i).setAdjacentCellNumber(
-                TwoPowerD-1-i,
+                TWO_POWER_D-1-i,
                 fineGridCell{}.getNumber()
               );
             }}
@@ -243,7 +243,7 @@ class ClearNumbersOnMesh(ActionSet):
         if operation_name == ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
             return """
             fineGridVertex{}.setNumber(tarch::Enumerator::NoNumber);
-            for (int i=0; i<TwoPowerD; i++) fineGridVertex{}.setAdjacentCellNumber(i,tarch::Enumerator::NoNumber);
+            for (int i=0; i<TWO_POWER_D; i++) fineGridVertex{}.setAdjacentCellNumber(i,tarch::Enumerator::NoNumber);
             logDebug( "touchVertexFirstTime(...)", "reset " << fineGridVertex{}.toString() );
             """.format(
                 construct_marker_name(self._task_name),

@@ -146,7 +146,7 @@ material_dependent_basal_friction = friction_coefficients + r"""
     if (tarch::la::equals(ubar, 0.0)) {
       const double hx = Q[Shortcuts::hx] / h(0);
       const double hy = Q[Shortcuts::hy] / h(1);
-      const tarch::la::Vector<Dimensions, double> frictionVector = {std::tan(Zeta) - hx, -hy};
+      const tarch::la::Vector<DIMENSIONS, double> frictionVector = {std::tan(Zeta) - hx, -hy};
       const double frictionVectorMagnitude = tarch::la::norm2(frictionVector);
       if (tarch::la::greater(Mu, frictionVectorMagnitude)) {
         Mu = frictionVectorMagnitude;

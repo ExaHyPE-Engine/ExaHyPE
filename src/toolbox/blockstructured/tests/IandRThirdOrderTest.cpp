@@ -63,7 +63,7 @@ void toolbox::blockstructured::tests::IandRThirdOrderTest::
       for (int k = 0; k < 3; k++) {
         peano4::grid::GridTraversalEvent dummyEvent;
         dummyEvent.setRelativePositionToFather(
-          tarch::la::Vector<Dimensions, int>{i, j, k}
+          tarch::la::Vector<DIMENSIONS, int>{i, j, k}
         );
 
         for (int axis = 0; axis < 3; axis++) {
@@ -200,7 +200,7 @@ void toolbox::blockstructured::tests::IandRThirdOrderTest::
       for (int k = 0; k < 3; k++) {
         peano4::grid::GridTraversalEvent dummyEvent;
         dummyEvent.setRelativePositionToFather(
-          tarch::la::Vector<Dimensions, int>{i, j, k}
+          tarch::la::Vector<DIMENSIONS, int>{i, j, k}
         );
 
         for (int axis = 0; axis < 3; axis++) {

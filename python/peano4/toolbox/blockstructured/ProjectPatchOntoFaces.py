@@ -98,7 +98,7 @@ class ProjectPatchOntoFaces(ActionSet):
 
   __Template_TouchCellLastTime_Core = """
  // @todo Might want to use routine from Projection.h in toolbox.
-    for(int d=0; d<Dimensions; d++) {{
+    for(int d=0; d<DIMENSIONS; d++) {{
       /**
        * d-loop over all dimensions except d. The vector k's entry d is set
        * to 0. We start with the left/bottom face, i.e. the one closer to the 
@@ -106,8 +106,8 @@ class ProjectPatchOntoFaces(ActionSet):
        */
       dfore(k,{DOFS_PER_AXIS},d,0) {{
         for (int i=0; i<{OVERLAP}; i++) {{
-          tarch::la::Vector<Dimensions,int> patchCell   = k;
-          tarch::la::Vector<Dimensions,int> overlapCell = k;
+          tarch::la::Vector<DIMENSIONS,int> patchCell   = k;
+          tarch::la::Vector<DIMENSIONS,int> overlapCell = k;
           patchCell(d)   = i;
           overlapCell(d) = i+{OVERLAP};
           
@@ -136,7 +136,7 @@ class ProjectPatchOntoFaces(ActionSet):
               {CELL_ACCESSOR}.value[patchCellSerialised*{UNKNOWNS}+j]=={CELL_ACCESSOR}.value[patchCellSerialised*{UNKNOWNS}+j], j,i,k,d, patchCell, overlapCell, 
               marker.toString() 
             );
-            {FACES_ACCESSOR}(d+Dimensions).value[overlapCellSerialised*{UNKNOWNS}+j] = 
+            {FACES_ACCESSOR}(d+DIMENSIONS).value[overlapCellSerialised*{UNKNOWNS}+j] = 
               {CELL_ACCESSOR}.value[patchCellSerialised*{UNKNOWNS}+j];
           }}
         }}

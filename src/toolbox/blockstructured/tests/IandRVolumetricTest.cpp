@@ -21,7 +21,7 @@ void toolbox::blockstructured::tests::IandRVolumetricTest::run() {
 
 void toolbox::blockstructured::tests::IandRVolumetricTest::
   testMatrixInterpolation() {
-#if Dimensions == 3
+#if DIMENSIONS == 3
   const int NumberOfUnknowns    = 3;
   const int sourceHaloSize      = 3;
   const int destinationHaloSize = 1;
@@ -125,7 +125,7 @@ void toolbox::blockstructured::tests::IandRVolumetricTest::
     for (int sourcePatchSize = 2; sourcePatchSize < destinationPatchSize;
          sourcePatchSize++) {
 
-#if Dimensions == 3
+#if DIMENSIONS == 3
       const int sourceSize = (sourcePatchSize + 2 * sourceHaloSize)
                              * (sourcePatchSize + 2 * sourceHaloSize)
                              * (sourcePatchSize + 2 * sourceHaloSize)
@@ -134,7 +134,7 @@ void toolbox::blockstructured::tests::IandRVolumetricTest::
         = (destinationPatchSize + 2 * destinationHaloSize)
           * (destinationPatchSize + 2 * destinationHaloSize)
           * (destinationPatchSize + 2 * destinationHaloSize) * NumberOfUnknowns;
-#elif Dimensions == 2
+#elif DIMENSIONS == 2
       const int sourceSize = (sourcePatchSize + 2 * sourceHaloSize)
                              * (sourcePatchSize + 2 * sourceHaloSize)
                              * NumberOfUnknowns;
@@ -174,19 +174,19 @@ void toolbox::blockstructured::tests::IandRVolumetricTest::
       int    destinationWidth = destinationPatchSize + 2 * destinationHaloSize;
       double patchRatio       = (double)sourcePatchSize / destinationPatchSize;
 
-#if Dimensions == 3
+#if DIMENSIONS == 3
       double offset1 = ((double)sourceHaloSize - 0.5 - 0.5 * patchRatio)
                          * sourceWidth * sourceWidth
                        + ((double)sourceHaloSize - 0.5 - 0.5 * patchRatio
                          ) * sourceWidth
                        + ((double)sourceHaloSize - 0.5 - 0.5 * patchRatio);
-#elif Dimensions == 2
+#elif DIMENSIONS == 2
       double offset1 = ((double)sourceHaloSize - 0.5 - 0.5 * patchRatio
                        ) * sourceWidth
                        + ((double)sourceHaloSize - 0.5 - 0.5 * patchRatio);
 #endif
 
-#if Dimensions == 3
+#if DIMENSIONS == 3
       double offset2 = 0.0;
       for (int k = 0; k < destinationWidth; k++) {
 #endif
@@ -202,14 +202,14 @@ void toolbox::blockstructured::tests::IandRVolumetricTest::
               outsidePatchAlongCoordinateAxis++;
             if (j >= destinationPatchSize + destinationHaloSize)
               outsidePatchAlongCoordinateAxis++;
-#if Dimensions == 3
+#if DIMENSIONS == 3
             if (k < destinationHaloSize)
               outsidePatchAlongCoordinateAxis++;
             if (k >= destinationPatchSize + destinationHaloSize)
               outsidePatchAlongCoordinateAxis++;
 #endif
             if (outsidePatchAlongCoordinateAxis <= 1) {
-#if Dimensions == 3
+#if DIMENSIONS == 3
               int index = i + j * destinationWidth
                           + k * destinationWidth * destinationWidth;
               validateNumericalEqualsWithEpsWithParams1(
@@ -218,7 +218,7 @@ void toolbox::blockstructured::tests::IandRVolumetricTest::
                 0.0001,
                 index
               );
-#elif Dimensions == 2
+#elif DIMENSIONS == 2
             int index = i + j * destinationWidth;
             validateNumericalEqualsWithEpsWithParams1(
               destinationDataSecondOrder[index],
@@ -232,7 +232,7 @@ void toolbox::blockstructured::tests::IandRVolumetricTest::
           offset3 += (double)sourceWidth * patchRatio;
         }
 
-#if Dimensions == 3
+#if DIMENSIONS == 3
         offset2 += (double)sourceWidth * sourceWidth * patchRatio;
       }
 #endif

@@ -5,15 +5,15 @@
 tarch::logging::Log  peano4::grid::EmptyTraversalObserver::_log( "peano4::grid::EmptyTraversalObserver" );
 
 void peano4::grid::EmptyTraversalObserver::beginTraversal(
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  h
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>&  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>&  h
 ) {
   logInfo( "beginTraversal(...)", "begin traversal" );
 }
 
 void peano4::grid::EmptyTraversalObserver::endTraversal(
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  h
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>&  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>&  h
 ) {
   logInfo( "endTraversal(...)", "end traversal" );
 }

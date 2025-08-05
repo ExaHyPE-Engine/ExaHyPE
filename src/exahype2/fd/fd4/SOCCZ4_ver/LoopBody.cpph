@@ -13,18 +13,18 @@ namespace {
     const double* NOALIAS     QIn,
     const QInEnumeratorType&       QInEnumerator,
     int                            patchIndex,
-    const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+    const tarch::la::Vector<DIMENSIONS,int>&       volumeIndex,
     int                                            normal,
     double*                        CentralQ,
     double*                        DeltaQ
   ) {
-    tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
-    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume1 = volumeIndex;
-    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume2 = volumeIndex;
-    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume3 = volumeIndex;
-    tarch::la::Vector<Dimensions,int> rightAdjacentVolume1 = volumeIndex;
-    tarch::la::Vector<Dimensions,int> rightAdjacentVolume2 = volumeIndex;
-    tarch::la::Vector<Dimensions,int> rightAdjacentVolume3 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int>       centralVolume  = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume1 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume2 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume3 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume1 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume2 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume3 = volumeIndex;
 
     rightAdjacentVolume1(normal)++;
     rightAdjacentVolume2(normal)++;
@@ -57,18 +57,18 @@ namespace {
     const double* NOALIAS     QIn,
     const QInEnumeratorType&       QInEnumerator,
     int                            patchIndex,
-    const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+    const tarch::la::Vector<DIMENSIONS,int>&       volumeIndex,
     int                                            normal,
     double*                        CentralQ,
     double*                        DeltaQ
   ) {
-    tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
-    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume1 = volumeIndex;
-    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume2 = volumeIndex;
-    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume3 = volumeIndex;
-    tarch::la::Vector<Dimensions,int> rightAdjacentVolume1 = volumeIndex;
-    tarch::la::Vector<Dimensions,int> rightAdjacentVolume2 = volumeIndex;
-    tarch::la::Vector<Dimensions,int> rightAdjacentVolume3 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int>       centralVolume  = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume1 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume2 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume3 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume1 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume2 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume3 = volumeIndex;
 
     rightAdjacentVolume1(normal)++;
     rightAdjacentVolume2(normal)++;
@@ -140,19 +140,19 @@ namespace {
     const double* NOALIAS                     QIn,
     const QInEnumeratorType&                       QInEnumerator,
     int                                            patchIndex,
-    const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+    const tarch::la::Vector<DIMENSIONS,int>&       volumeIndex,
     int                                            normal,
     double*                                        QDifferentialSourceTermGathered
   ) {
     double*                 AdvectionDeltaQ = new double[QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables];
 
-    tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
-    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume1 = volumeIndex;
-    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume2 = volumeIndex;
-    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume3 = volumeIndex;
-    tarch::la::Vector<Dimensions,int> rightAdjacentVolume1 = volumeIndex;
-    tarch::la::Vector<Dimensions,int> rightAdjacentVolume2 = volumeIndex;
-    tarch::la::Vector<Dimensions,int> rightAdjacentVolume3 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int>       centralVolume  = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume1 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume2 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume3 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume1 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume2 = volumeIndex;
+    tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume3 = volumeIndex;
 
     rightAdjacentVolume1(normal)++;
     rightAdjacentVolume2(normal)++;
@@ -199,19 +199,19 @@ template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::fd4::internal::computeAuxiliaryVariables_LoopBody(
   double* NOALIAS                         QIn,
   const QInEnumeratorType&                     QInEnumerator,
-  const tarch::la::Vector<Dimensions,double>&  patchCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
   int                                          patchIndex,
-  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
   int                                          normal,
   const QOutEnumeratorType&                    QOutEnumerator
 ) {
 
-  tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
-  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume1 = volumeIndex;
-  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume2 = volumeIndex;
-  tarch::la::Vector<Dimensions,int> rightAdjacentVolume1 = volumeIndex;
-  tarch::la::Vector<Dimensions,int> rightAdjacentVolume2 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>       centralVolume  = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume2 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume2 = volumeIndex;
 
   rightAdjacentVolume1(normal)++;
   rightAdjacentVolume2(normal)++;
@@ -271,10 +271,10 @@ void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
   const double* NOALIAS                     QIn,
   const QInEnumeratorType&                       QInEnumerator,
   exahype2::fd::NonconservativeProduct           DifferentialSource,
-  const tarch::la::Vector<Dimensions,double>&    patchCentre,
-  const tarch::la::Vector<Dimensions,double>&    patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&    patchCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&    patchSize,
   int                                            patchIndex,
-  const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&       volumeIndex,
   double                                         t,
   double                                         dt,
   int                                            normal,
@@ -355,10 +355,10 @@ template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
   const double* NOALIAS                     QIn,
   const QInEnumeratorType&                       QInEnumerator,
-  const tarch::la::Vector<Dimensions,double>&    patchCentre,
-  const tarch::la::Vector<Dimensions,double>&    patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&    patchCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&    patchSize,
   int                                            patchIndex,
-  const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&       volumeIndex,
   double                                         t,
   double                                         dt,
   int                                            normal,
@@ -440,10 +440,10 @@ template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::fd4::internal::computeKreissOligerDissipationTerm_LoopBody(
   const double* NOALIAS                     QIn,
   const QInEnumeratorType&                       QInEnumerator,
-  const tarch::la::Vector<Dimensions,double>&    patchCentre,
-  const tarch::la::Vector<Dimensions,double>&    patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&    patchCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&    patchSize,
   int                                            patchIndex,
-  const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&       volumeIndex,
   double                                         t,
   double                                         dt,
   int                                            normal,
@@ -452,13 +452,13 @@ void exahype2::fd::fd4::internal::computeKreissOligerDissipationTerm_LoopBody(
 ) {
   double KOGathered[QInEnumerator._numberOfUnknowns];
 
-  tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
-  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume1 = volumeIndex;
-  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume2 = volumeIndex;
-  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume3 = volumeIndex;
-  tarch::la::Vector<Dimensions,int> rightAdjacentVolume1 = volumeIndex;
-  tarch::la::Vector<Dimensions,int> rightAdjacentVolume2 = volumeIndex;
-  tarch::la::Vector<Dimensions,int> rightAdjacentVolume3 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>       centralVolume  = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume2 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume3 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume2 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume3 = volumeIndex;
 
   rightAdjacentVolume1(normal)++;
   rightAdjacentVolume2(normal)++;
@@ -497,10 +497,10 @@ void exahype2::fd::fd4::internal::updateSolutionWithDifferentialSourceTerm_LoopB
   const double* NOALIAS                   QDiffSrcY,
   const double* NOALIAS                   QDiffSrcZ,
   const QOutEnumeratorType&                    QDiffSrcEnumerator,
-  const tarch::la::Vector<Dimensions,double>&  patchCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
   int                                          patchIndex,
-  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
   int                                          unknown,
   double                                       dt,
   double* NOALIAS                         QOut,
@@ -512,7 +512,7 @@ void exahype2::fd::fd4::internal::updateSolutionWithDifferentialSourceTerm_LoopB
     //take care we have an extra minus sign because we moved the diffsrc terms to the RIGHT!
     QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * QDiffSrcTerm;
 
-    #if !defined(GPUOffloadingOMP) and  !defined(GPUOffloadingSYCL)
+    #if !defined(WITH_GPU_OMP_TARGET) and  !defined(WITH_GPU_SYCL)
     assertion8(
       QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
       QDiffSrcTerm, QDiffSrcTerm,
@@ -525,7 +525,7 @@ void exahype2::fd::fd4::internal::updateSolutionWithDifferentialSourceTerm_LoopB
 
                      updateAlongOneCoordinateDirection( QDiffSrcX, 0 );
                      updateAlongOneCoordinateDirection( QDiffSrcY, 1 );
-  if (Dimensions==3) updateAlongOneCoordinateDirection( QDiffSrcZ, 2 );
+  if (DIMENSIONS==3) updateAlongOneCoordinateDirection( QDiffSrcZ, 2 );
 }
 
 
@@ -536,10 +536,10 @@ void exahype2::fd::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
   const double* NOALIAS                   QKODspY,
   const double* NOALIAS                   QKODspZ,
   const QOutEnumeratorType&                    QKODspEnumerator,
-  const tarch::la::Vector<Dimensions,double>&  patchCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
   int                                          patchIndex,
-  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
   int                                          unknown,
   double                                       dt,
   double* NOALIAS                         QOut,
@@ -562,7 +562,7 @@ void exahype2::fd::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
       }
     }
 
-    #if !defined(GPUOffloadingOMP) and  !defined(GPUOffloadingSYCL)
+    #if !defined(WITH_GPU_OMP_TARGET) and  !defined(WITH_GPU_SYCL)
     assertion8(
       QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
       QKODspTerm, QKODspTerm,
@@ -575,7 +575,7 @@ void exahype2::fd::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
 
                      updateAlongOneCoordinateDirection( QKODspX, 0 );
                      updateAlongOneCoordinateDirection( QKODspY, 1 );
-  if (Dimensions==3) updateAlongOneCoordinateDirection( QKODspZ, 2 );
+  if (DIMENSIONS==3) updateAlongOneCoordinateDirection( QKODspZ, 2 );
 }
 
 
@@ -584,10 +584,10 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
   const double* NOALIAS                     QIn,
   const QInEnumeratorType&                       QInEnumerator,
   exahype2::fd::Flux                             flux,
-  const tarch::la::Vector<Dimensions,double>&    patchCentre,
-  const tarch::la::Vector<Dimensions,double>&    patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&    patchCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&    patchSize,
   int                                            patchIndex,
-  const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&       volumeIndex,
   double                                         t,
   double                                         dt,
   int                                            normal,
@@ -602,10 +602,10 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
     QFluxGathered[unknown] = 0.0;
   }
 
-  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume1 = volumeIndex;
-  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume2 = volumeIndex;
-  tarch::la::Vector<Dimensions,int> rightAdjacentVolume1 = volumeIndex;
-  tarch::la::Vector<Dimensions,int> rightAdjacentVolume2 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume2 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume2 = volumeIndex;
 
   rightAdjacentVolume1(normal) += 1;
   rightAdjacentVolume2(normal) += 2;
@@ -695,10 +695,10 @@ template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::fd4::internal::computeFlux_LoopBody(
   const double* NOALIAS                     QIn,
   const QInEnumeratorType&                       QInEnumerator,
-  const tarch::la::Vector<Dimensions,double>&    patchCentre,
-  const tarch::la::Vector<Dimensions,double>&    patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&    patchCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&    patchSize,
   int                                            patchIndex,
-  const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&       volumeIndex,
   double                                         t,
   double                                         dt,
   int                                            normal,
@@ -713,10 +713,10 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
     QFluxGathered[unknown] = 0.0;
   }
 
-  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume1 = volumeIndex;
-  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume2 = volumeIndex;
-  tarch::la::Vector<Dimensions,int> rightAdjacentVolume1 = volumeIndex;
-  tarch::la::Vector<Dimensions,int> rightAdjacentVolume2 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int>  leftAdjacentVolume2 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<DIMENSIONS,int> rightAdjacentVolume2 = volumeIndex;
 
   rightAdjacentVolume1(normal) += 1;
   rightAdjacentVolume2(normal) += 2;
@@ -812,10 +812,10 @@ void exahype2::fd::fd4::internal::updateSolutionWithFlux_LoopBody(
   const double* NOALIAS                   QFluxY,
   const double* NOALIAS                   QFluxZ,
   const QOutEnumeratorType&                    QFluxEnumerator,
-  const tarch::la::Vector<Dimensions,double>&  patchCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
   int                                          patchIndex,
-  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
   int                                          unknown,
   double                                       dt,
   double* NOALIAS                         QOut,
@@ -831,6 +831,6 @@ void exahype2::fd::fd4::internal::updateSolutionWithFlux_LoopBody(
 
                      updateAlongOneCoordinateDirection( QFluxX, 0 );
                      updateAlongOneCoordinateDirection( QFluxY, 1 );
-  if (Dimensions==3) updateAlongOneCoordinateDirection( QFluxZ, 2 );
+  if (DIMENSIONS==3) updateAlongOneCoordinateDirection( QFluxZ, 2 );
 }
 

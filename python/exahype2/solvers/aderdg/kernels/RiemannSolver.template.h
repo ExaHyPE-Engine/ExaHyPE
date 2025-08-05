@@ -19,8 +19,8 @@ void riemannSolver(
   const cCompType* NOALIAS const                QR,
   const double                                  timeStamp,
   const double                                  timeStepSize,
-  const tarch::la::Vector<Dimensions, double>&  faceCentre,
-  const tarch::la::Vector<Dimensions, double>&  cellSize,
+  const tarch::la::Vector<DIMENSIONS, double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&  cellSize,
   const int                                     direction,
   const bool                                    isBoundary,
   const int                                     faceNumber

@@ -5,7 +5,7 @@
 
 {% macro addSourceAndNCP() %}
   {% if SOURCE_TERM_IMPLEMENTATION!="<none>" or NCP_IMPLEMENTATION!="<none>" %}
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
@@ -16,7 +16,7 @@
   {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
   // apply source term to extrapolated QIn and add to evolved values in QOut
   {{ terms.applySource('QInGathered', 'sourceGathered', 'volumeCentre', 'timeStamp + 0.5 * timeStepSize') }}
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
@@ -29,7 +29,7 @@
   for (int normal = 0; normal < {{DIMENSIONS}}; normal ++) {
     // apply ncp to extrapolated QIn and subtract from evolved values in QOut
     {{ terms.applyNCP('QInGathered', 'slopeGathered[normal]', 'cellCenteredNCPGathered[normal]', 'volumeCentre', 'timeStamp + 0.5 * timeStepSize') }}
-    #if defined(SharedOMP)
+    #if defined(WITH_OPENMP)
     #pragma omp simd
     #else
     #pragma unroll
@@ -43,7 +43,7 @@
 {% endmacro %}
 
 {% macro gatherSlopes() %}
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
@@ -53,7 +53,7 @@
     {{ terms.applyLimiter('QInGathered[unknown] - QInGatheredLeft[unknown]', 'QInGatheredLeft[unknown] - QInGatheredLeftLeft[unknown]', 'slopeGatheredLeft[normal][unknown]') }}
     {{ terms.applyLimiter('QInGatheredRightRight[unknown] - QInGatheredRight[unknown]', 'QInGatheredRight[unknown] - QInGathered[unknown]', 'slopeGatheredRight[normal][unknown]') }}
 
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(slopeGathered[normal][unknown]));
     assertion(std::isfinite(slopeGatheredLeft[normal][unknown]));
     assertion(std::isfinite(slopeGatheredRight[normal][unknown]));
@@ -62,7 +62,7 @@
 {% endmacro %}
 
 {% macro boundaryExtrapolation() %}
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
@@ -98,7 +98,7 @@
   {{ terms.applyNCP('QInGatheredRight', 'slopeGatheredRight[normal]', 'cellCenteredNCPGatheredRight', 'volumeCentreRight', 'timeStamp') }}
   {% endif %}
 
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
@@ -139,7 +139,7 @@
     extrapolatedBoundaryLeftNeighborRightBoundary[unknown] += 0.5 * timeStepSize * updateLeftNeighborRightBoundary;
     extrapolatedBoundaryRightNeighborLeftBoundary[unknown] += 0.5 * timeStepSize * updateRightNeighborLeftBoundary;
 
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(extrapolatedBoundaryLeft[unknown]));
     assertion(std::isfinite(extrapolatedBoundaryRight[unknown]));
     assertion(std::isfinite(extrapolatedBoundaryLeftNeighborRightBoundary[unknown]));

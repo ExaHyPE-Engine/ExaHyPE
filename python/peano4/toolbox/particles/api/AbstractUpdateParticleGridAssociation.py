@@ -289,13 +289,13 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 
   // Start template in python/peano4/toolbox/particles/api/AbstractUpdateParticleGridAssociation.py
 
-  for (int i=0; i<TwoPowerD; i++) {
+  for (int i=0; i<TWO_POWER_D; i++) {
     if ( marker.isParentVertexLocal(i) ) {
       // Define inside for loop, as sieve will define it as well
       vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin();
       while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
 
-        #if PeanoDebug > 0
+        #if PEANO_DEBUG > 0
         int partID = (*p)->getPartid();
         #else
         int partID = -1;
@@ -386,8 +386,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         """
   // Start template in python/peano4/toolbox/particles/api/AbstractUpdateParticleGridAssociation.py
 
-  std::bitset<Dimensions> target;
-  for (int d=0; d<Dimensions; d++) {
+  std::bitset<DIMENSIONS> target;
+  for (int d=0; d<DIMENSIONS; d++) {
     target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
   }
 
@@ -397,13 +397,13 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     _numberOfLifts+=fineGridVertex{{PARTICLES_CONTAINER}}.size();
     for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}}) {
 
-      #if PeanoDebug > 0
+      #if PEANO_DEBUG > 0
       int partID = p->getPartid();
       #else
       int partID = -1;
       #endif
       
-      tarch::la::Vector< Dimensions, double > coarseGridVertexX = 
+      tarch::la::Vector< DIMENSIONS, double > coarseGridVertexX = 
               marker.x()
               -
               tarch::la::multiplyComponents(
@@ -412,7 +412,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
               )
               +
               tarch::la::multiplyComponents(
-                tarch::la::Vector<Dimensions,double>(target),
+                tarch::la::Vector<DIMENSIONS,double>(target),
                 3.0*marker.h()
               );
               
@@ -448,7 +448,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     _numberOfLiftsIntoSieveSet += fineGridVertex{{PARTICLES_CONTAINER}}.size();
     for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}}) {
 
-      #if PeanoDebug > 0
+      #if PEANO_DEBUG > 0
       int partID = p->getPartid();
       #else
       int partID = -1;

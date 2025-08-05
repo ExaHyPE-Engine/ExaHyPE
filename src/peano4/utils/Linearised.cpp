@@ -5,7 +5,7 @@
 #include "Loop.h"
 
 int                                peano4::utils::lookupTableDLinearised[MaxIndexOfLinearisation * (MAX_TABLE - 1)];
-tarch::la::Vector<Dimensions, int> peano4::utils::lookupTableDDeLinearised[MaxIndexOfLinearisation * (MAX_TABLE - 1)];
+tarch::la::Vector<DIMENSIONS, int> peano4::utils::lookupTableDDeLinearised[MaxIndexOfLinearisation * (MAX_TABLE - 1)];
 
 void peano4::utils::setupLookupTableForDLinearised() {
   for (int max = 2; max <= MAX_TABLE; max++) {
@@ -15,9 +15,9 @@ void peano4::utils::setupLookupTableForDLinearised() {
 
 void peano4::utils::setupLookupTableForDDelinearised() {
   for (int max = 2; max <= MAX_TABLE; max++) {
-    for (int value = 0; value < tarch::la::aPowI(Dimensions, max); value++) {
+    for (int value = 0; value < tarch::la::aPowI(DIMENSIONS, max); value++) {
       int key = peano4::utils::getKeyForDDeLinearisedLookup(value, max);
-#if defined(GPUOffloadingOff) && !defined(SharedSYCL)
+#if !defined(WITH_GPU)
       assertion3(key >= 0 && key < MaxIndexOfLinearisation * (MAX_TABLE - 1), key, max, MaxIndexOfLinearisation);
 #endif
       lookupTableDDeLinearised[key] = dDelinearisedWithoutLookup(value, max);

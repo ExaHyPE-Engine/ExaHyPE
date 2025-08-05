@@ -40,8 +40,8 @@ namespace toolbox {
     template <typename Particle>
     bool particleWillStayWithinComputationalDomain(
       const Particle&                              particle,
-      const tarch::la::Vector<Dimensions, double>& domainOffset,
-      const tarch::la::Vector<Dimensions, double>& domainWidth
+      const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
+      const tarch::la::Vector<DIMENSIONS, double>& domainWidth
     );
 
     /**
@@ -111,7 +111,7 @@ namespace toolbox {
     template <typename Particle>
     void updateContainedInAdjacentCellProperty(
       const peano4::datamanagement::CellMarker& marker,
-      const std::bitset<Dimensions>&            assignedVertex,
+      const std::bitset<DIMENSIONS>&            assignedVertex,
       Particle&                                 particle
     );
 
@@ -142,13 +142,13 @@ namespace toolbox {
      */
     template <typename Particle>
     void updateContainedInAdjacentCellProperty(
-      const tarch::la::Vector<Dimensions, double>& x,
-      const tarch::la::Vector<Dimensions, double>& h,
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& h,
       Particle&                                    particle
     );
 
     bool particleAssignedToVertexWillBeLocal(
-      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& x,
       const peano4::datamanagement::VertexMarker&  marker
     );
 
@@ -170,12 +170,12 @@ namespace toolbox {
      *
      * @param Position of particle as "seen" from receiving side
      */
-    tarch::la::Vector<Dimensions, double> mirrorParticleAlongPeriodicDomains(
-      const tarch::la::Vector<Dimensions, double>& x,
+    tarch::la::Vector<DIMENSIONS, double> mirrorParticleAlongPeriodicDomains(
+      const tarch::la::Vector<DIMENSIONS, double>& x,
       const peano4::datamanagement::VertexMarker&  marker,
-      const tarch::la::Vector<Dimensions, double>  domainOffset,
-      const tarch::la::Vector<Dimensions, double>  domainSize,
-      const std::bitset<Dimensions>                periodicBC
+      const tarch::la::Vector<DIMENSIONS, double>  domainOffset,
+      const tarch::la::Vector<DIMENSIONS, double>  domainSize,
+      const std::bitset<DIMENSIONS>                periodicBC
     );
 
     /**
@@ -188,11 +188,11 @@ namespace toolbox {
      * to a particle. This function is intended to be run on global particle
      * lists, such as is used e.g. in exchangeSieveListsGlobally().
      */
-    tarch::la::Vector<Dimensions, double> applyPeriodicBoundaryConditions(
-      const tarch::la::Vector<Dimensions, double>& x,
-      const tarch::la::Vector<Dimensions, double>  domainOffset,
-      const tarch::la::Vector<Dimensions, double>  domainSize,
-      const std::bitset<Dimensions>                periodicBC
+    tarch::la::Vector<DIMENSIONS, double> applyPeriodicBoundaryConditions(
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>  domainOffset,
+      const tarch::la::Vector<DIMENSIONS, double>  domainSize,
+      const std::bitset<DIMENSIONS>                periodicBC
     );
   } // namespace particles
 } // namespace toolbox

@@ -128,7 +128,7 @@ _spacetreeId              = treeNumber;
 #pragma clang optimize off
 tarch::multicore::Lock lock (_coordinatesSemaphore);
 if (_coordinates==nullptr) {
-  _coordinates = new tarch::la::Vector<Dimensions,double>["""
+  _coordinates = new tarch::la::Vector<DIMENSIONS,double>["""
             + str(self.d["N"])
             + """];
 
@@ -151,7 +151,7 @@ if (_coordinates==nullptr) {
                     + str(self._coordinates[i][1])
                     + ";\n"
                 )
-                result += " #if Dimensions==3\n"
+                result += " #if DIMENSIONS==3\n"
                 result += (
                     " _coordinates["
                     + str(i)
@@ -182,7 +182,7 @@ if (_coordinates==nullptr) {
                     + str(self._coordinates[i][1])
                     + ";\n"
                 )
-                result += " assertion(Dimensions==2);\n"
+                result += " assertion(DIMENSIONS==2);\n"
                 result += "\n"
                 assert (
                     dimensions == -1 or dimensions == 2
@@ -199,7 +199,7 @@ if (_coordinates==nullptr) {
     def get_static_initialisations(self, full_qualified_classname):
         return (
             """
-tarch::la::Vector<Dimensions,double>*  """
+tarch::la::Vector<DIMENSIONS,double>*  """
             + full_qualified_classname
             + """::_coordinates = nullptr;
 tarch::multicore::BooleanSemaphore     """
@@ -211,7 +211,7 @@ tarch::multicore::BooleanSemaphore     """
     def get_attributes(self):
         return f"""
     static tarch::multicore::BooleanSemaphore     _coordinatesSemaphore;
-    static tarch::la::Vector<Dimensions,double>*  _coordinates;
+    static tarch::la::Vector<DIMENSIONS,double>*  _coordinates;
     
     int                                        _spacetreeId;
 """

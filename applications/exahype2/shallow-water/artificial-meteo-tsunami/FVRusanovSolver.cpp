@@ -11,8 +11,8 @@ tarch::logging::Log applications::exahype2::swe::FVRusanovSolver::_log("applicat
 
 void applications::exahype2::swe::FVRusanovSolver::initialCondition(
   [[maybe_unused]] double* const NOALIAS                        Q, // Q[3+1]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const bool                                   gridIsConstructed
 ) {
   Q[Shortcuts::h]  = 100;
@@ -25,8 +25,8 @@ void applications::exahype2::swe::FVRusanovSolver::initialCondition(
 void applications::exahype2::swe::FVRusanovSolver::boundaryConditions(
   [[maybe_unused]] const double* const NOALIAS                  Qinside,  // Qinside[3+1]
   [[maybe_unused]] double* const NOALIAS                        Qoutside, // Qoutside[3+1]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const int                                    normal
 ) {
@@ -39,8 +39,8 @@ void applications::exahype2::swe::FVRusanovSolver::boundaryConditions(
 
 ::exahype2::RefinementCommand applications::exahype2::swe::FVRusanovSolver::refinementCriterion(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[3+1]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t
 ) {
   auto result = ::exahype2::RefinementCommand::Keep;
@@ -51,8 +51,8 @@ void applications::exahype2::swe::FVRusanovSolver::boundaryConditions(
 
 double applications::exahype2::swe::FVRusanovSolver::maxEigenvalue(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[3+1]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal
@@ -79,8 +79,8 @@ double applications::exahype2::swe::FVRusanovSolver::maxEigenvalue(
 
 void applications::exahype2::swe::FVRusanovSolver::flux(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[3+1]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,
@@ -108,8 +108,8 @@ void applications::exahype2::swe::FVRusanovSolver::flux(
 void applications::exahype2::swe::FVRusanovSolver::nonconservativeProduct(
   [[maybe_unused]] const double* const NOALIAS                  Q,      // Q[3+1]
   [[maybe_unused]] const double* const NOALIAS                  deltaQ, // deltaQ[3+1]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,
@@ -304,8 +304,8 @@ namespace {
 
 void applications::exahype2::swe::FVRusanovSolver::sourceTerm(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[3+1]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] double* const NOALIAS                        S // S[3]

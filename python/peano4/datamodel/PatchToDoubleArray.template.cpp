@@ -12,21 +12,21 @@
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() {
-#if Dimensions == 2
+#if DIMENSIONS == 2
   memset(value, 0, {{CARDINALITY_2D}} * sizeof({{FLOAT_TYPE}}));
-#elif Dimensions == 3
+#elif DIMENSIONS == 3
   memset(value, 0, {{CARDINALITY_3D}} * sizeof({{FLOAT_TYPE}}));
 #endif
 }
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(const {{CLASSNAME}}& other) {
-  #if PeanoDebug>=1
+  #if PEANO_DEBUG>=1
   _debugX = other._debugX;
   _debugH = other._debugH;
   #endif
 
-  #if Dimensions==2
+  #if DIMENSIONS==2
   std::copy(other.value, other.value+{{CARDINALITY_2D}},value);
   #else
   std::copy(other.value, other.value+{{CARDINALITY_3D}},value);
@@ -35,12 +35,12 @@
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}& {{NAMESPACE | join("::")}}::{{CLASSNAME}}::operator=(const {{CLASSNAME}}& other) {
-  #if PeanoDebug>=1
+  #if PEANO_DEBUG>=1
   _debugX = other._debugX;
   _debugH = other._debugH;
   #endif
   
-  #if Dimensions==2
+  #if DIMENSIONS==2
   std::copy(other.value, other.value+{{CARDINALITY_2D}},value);
   #else
   std::copy(other.value, other.value+{{CARDINALITY_3D}},value);
@@ -52,7 +52,7 @@
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
   std::ostringstream result;
   result << "(";
-  #if PeanoDebug>=1
+  #if PEANO_DEBUG>=1
   result << "x=" << _debugX;
   result << ",";
   result << "h=" << _debugH;
@@ -62,24 +62,24 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
 }
 
 
-#if PeanoDebug>=1
+#if PEANO_DEBUG>=1
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugX( const tarch::la::Vector<Dimensions,double>& data ) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugX( const tarch::la::Vector<DIMENSIONS,double>& data ) {
   _debugX = data;
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugH( const tarch::la::Vector<Dimensions,double>& data ) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugH( const tarch::la::Vector<DIMENSIONS,double>& data ) {
   _debugH = data;
 }
 
 
-tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugX() const {
+tarch::la::Vector<DIMENSIONS,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugX() const {
   return _debugX;
 }
 
 
-tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugH() const {
+tarch::la::Vector<DIMENSIONS,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugH() const {
   return _debugH;
 }
 #endif
@@ -195,24 +195,24 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::set( int index, {{FLOAT_TYPE}} v
 }
 
 
-#ifdef Parallel
+#ifdef WITH_MPI
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
   {{NAMESPACE | join("::")}}::{{CLASSNAME}}  instances[2];
  
-  #if PeanoDebug>=1
+  #if PEANO_DEBUG>=1
     MPI_Datatype subtypes[] = { {{MPI_FLOAT_TYPE}}, {{MPI_FLOAT_TYPE}}, {{MPI_FLOAT_TYPE}} };
 
-    #if Dimensions==2
-    int blocklen[] = { Dimensions, Dimensions, {{MPI_ELEMENTS_PER_FLOAT}}*{{CARDINALITY_2D}} };
+    #if DIMENSIONS==2
+    int blocklen[] = { DIMENSIONS, DIMENSIONS, {{MPI_ELEMENTS_PER_FLOAT}}*{{CARDINALITY_2D}} };
     #else
-    int blocklen[] = { Dimensions, Dimensions, {{MPI_ELEMENTS_PER_FLOAT}}*{{CARDINALITY_3D}} };
+    int blocklen[] = { DIMENSIONS, DIMENSIONS, {{MPI_ELEMENTS_PER_FLOAT}}*{{CARDINALITY_3D}} };
     #endif
 
     const int NumberOfAttributes = 3;
   #else   
     MPI_Datatype subtypes[] = { {{MPI_FLOAT_TYPE}} };
     
-    #if Dimensions==2
+    #if DIMENSIONS==2
     int blocklen[] = { {{MPI_ELEMENTS_PER_FLOAT}}*{{CARDINALITY_2D}} };
     #else
     int blocklen[] = { {{MPI_ELEMENTS_PER_FLOAT}}*{{CARDINALITY_3D}} };
@@ -227,7 +227,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
   MPI_Get_address( &instances[1], &baseSecondInstance );
   MPI_Aint  disp[ NumberOfAttributes ];
   int       currentAddress = 0;
-  #if PeanoDebug>=1
+  #if PEANO_DEBUG>=1
   MPI_Get_address( &(instances[0]._debugX.data()[0]), &disp[currentAddress] );
   currentAddress++;
   MPI_Get_address( &(instances[0]._debugH.data()[0]), &disp[currentAddress] );

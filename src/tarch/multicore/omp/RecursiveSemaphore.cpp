@@ -1,6 +1,6 @@
 #include "tarch/multicore/multicore.h"
 
-#ifdef SharedOMP
+#ifdef WITH_OPENMP
 #include "RecursiveSemaphore.h"
 
 tarch::multicore::RecursiveSemaphore::RecursiveSemaphore() {

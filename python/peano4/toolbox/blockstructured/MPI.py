@@ -25,10 +25,10 @@ def get_face_merge_implementation(patch_overlap):
   
   
   template = """
-  auto serialisePatchIndex = [](tarch::la::Vector<Dimensions,int> overlapCell, int normal) {{
+  auto serialisePatchIndex = [](tarch::la::Vector<DIMENSIONS,int> overlapCell, int normal) {{
     int base   = 1;
     int result = 0;
-    for (int d=0; d<Dimensions; d++) {{
+    for (int d=0; d<DIMENSIONS; d++) {{
       result += overlapCell(d) * base;
       if (d==normal) {{
         base *= {OVERLAP}*2;
@@ -45,10 +45,10 @@ def get_face_merge_implementation(patch_overlap):
     case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
     case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
       {{
-        const int faceNormal = marker.getSelectedFaceNumber() % Dimensions;
+        const int faceNormal = marker.getSelectedFaceNumber() % DIMENSIONS;
         dfore(i,{DOFS_PER_AXIS},faceNormal,0) {{
           for (int j=0; j<{OVERLAP}; j++) {{
-            tarch::la::Vector<Dimensions,int> volume = i;
+            tarch::la::Vector<DIMENSIONS,int> volume = i;
             volume(faceNormal) += marker.outerNormal()(faceNormal)>0 ? j + {OVERLAP} : j;
             
             int volumeSerialised = serialisePatchIndex(volume, faceNormal);

@@ -1,13 +1,13 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-inline GPUCallableMethod int peano4::utils::dCmp(
-  const tarch::la::Vector<Dimensions, int>& counter,
-  const tarch::la::Vector<Dimensions, int>& max
+inline GPU_CALLABLE_METHOD int peano4::utils::dCmp(
+  const tarch::la::Vector<DIMENSIONS, int>& counter,
+  const tarch::la::Vector<DIMENSIONS, int>& max
 ) {
   int result = true;
-  for (int i = 0; i < Dimensions; i++) {
-#if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+  for (int i = 0; i < DIMENSIONS; i++) {
+#if !defined(WITH_GPU)
     assertion2(counter(i) <= max(i), counter, max);
     assertion2(counter(i) >= 0, counter, max);
 #endif
@@ -16,10 +16,10 @@ inline GPUCallableMethod int peano4::utils::dCmp(
   return result;
 }
 
-inline GPUCallableMethod int peano4::utils::dCmp(const tarch::la::Vector<Dimensions, int>& counter, int max) {
+inline GPU_CALLABLE_METHOD int peano4::utils::dCmp(const tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
   int result = true;
-  for (int i = 0; i < Dimensions; i++) {
-#if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+  for (int i = 0; i < DIMENSIONS; i++) {
+#if !defined(WITH_GPU)
     assertion2(counter(i) <= max, counter, max);
     assertion2(counter(i) >= 0, counter, max);
 #endif
@@ -28,11 +28,11 @@ inline GPUCallableMethod int peano4::utils::dCmp(const tarch::la::Vector<Dimensi
   return result;
 }
 
-inline GPUCallableMethod bool peano4::utils::dCmpLinearOrder(
-  const tarch::la::Vector<Dimensions, int>& counter,
-  const tarch::la::Vector<Dimensions, int>& max
+inline GPU_CALLABLE_METHOD bool peano4::utils::dCmpLinearOrder(
+  const tarch::la::Vector<DIMENSIONS, int>& counter,
+  const tarch::la::Vector<DIMENSIONS, int>& max
 ) {
-  for (int i = Dimensions - 1; i >= 0; i--) {
+  for (int i = DIMENSIONS - 1; i >= 0; i--) {
     if (counter(i) > max(i)) {
       return false;
     } else if (counter(i) < max(i)) {

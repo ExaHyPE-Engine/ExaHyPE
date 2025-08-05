@@ -41,4 +41,4 @@ if(OFFLOADING_FLAGS)
   message(STATUS "Using OpenMP offloading flags: ${OFFLOADING_FLAGS}")
 endif()
 
-target_compile_definitions(PeanoOptions INTERFACE GPUOffloadingOMP)
+target_compile_definitions(PeanoOptions INTERFACE WITH_GPU_OMP_TARGET WITH_GPU)

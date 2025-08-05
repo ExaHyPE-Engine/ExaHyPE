@@ -34,8 +34,8 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
   for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++) {
     const double* NOALIAS                  cellQin  = cellData.QIn[currentCell];
     double* NOALIAS                        cellQout = cellData.QOut[currentCell];
-    const tarch::la::Vector<Dimensions,double>  x        = cellData.cellCentre[currentCell];
-    const tarch::la::Vector<Dimensions,double>  h        = cellData.cellSize[currentCell];
+    const tarch::la::Vector<DIMENSIONS,double>  x        = cellData.cellCentre[currentCell];
+    const tarch::la::Vector<DIMENSIONS,double>  h        = cellData.cellSize[currentCell];
     const double                                t        = cellData.t;
     const double                                dt       = cellData.dt;
 
@@ -55,12 +55,12 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
 
       if(evaluateFlux){
         // direction in which flux contributions are being computed
-        for(int dim=0; dim<Dimensions; dim++)
+        for(int dim=0; dim<DIMENSIONS; dim++)
         for(int i=0; i<nodesPerAxis; i++){
           // compute contributing node real position
-          tarch::la::Vector<Dimensions,int> contributingNodeIndex = dof;
+          tarch::la::Vector<DIMENSIONS,int> contributingNodeIndex = dof;
           contributingNodeIndex[dim] = i;
-          tarch::la::Vector<Dimensions,double> position = getQuadraturePoint(
+          tarch::la::Vector<DIMENSIONS,double> position = getQuadraturePoint(
               x,
               h,
               contributingNodeIndex,
@@ -79,7 +79,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
 
           // Coefficient within matrix is tensor product over dimensions, too
           double coeff = Solver::StiffnessOperator1d[i+dof(dim)*nodesPerAxis];
-          for (int dd=0; dd<Dimensions; dd++) {
+          for (int dd=0; dd<DIMENSIONS; dd++) {
             coeff *= (dd==dim) ? 1.0 : Solver::MassMatrixDiagonal1d[ dof(dd) ] * h(dd);
           }
 
@@ -91,7 +91,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
 
       if(evaluateSource){
         //compute real node position
-        tarch::la::Vector<Dimensions,double> position = getQuadraturePoint(
+        tarch::la::Vector<DIMENSIONS,double> position = getQuadraturePoint(
           x,
           h,
           dof,
@@ -108,7 +108,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
           Solver::Offloadable::Yes
         );
 
-        #if Dimensions==2
+        #if DIMENSIONS==2
         double coeff = Solver::MassMatrixDiagonal1d[ dof(0) ] * Solver::MassMatrixDiagonal1d[ dof(1) ] * tarch::la::volume(h);
         #else
         double coeff = Solver::MassMatrixDiagonal1d[ dof(0) ] * Solver::MassMatrixDiagonal1d[ dof(1) ] * Solver::MassMatrixDiagonal1d[ dof(2) ] * tarch::la::volume(h);
@@ -124,18 +124,18 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
       if (evaluateNonconservativeProduct) {
 
         //compute real node position
-        tarch::la::Vector<Dimensions,double> position = getQuadraturePoint( x,
+        tarch::la::Vector<DIMENSIONS,double> position = getQuadraturePoint( x,
           h,
           dof,
           order,
           Solver::QuadraturePoints1d);
 
         double coeff = 1.0;
-        for (int dd=0; dd<Dimensions; dd++) {
+        for (int dd=0; dd<DIMENSIONS; dd++) {
           coeff *= Solver::MassMatrixDiagonal1d[ dof(dd) ] * h(dd);
         }
 
-        for(int dim=0; dim<Dimensions; dim++) {
+        for(int dim=0; dim<DIMENSIONS; dim++) {
           //computes gradient values in all directions for the given node
           std::fill(gradientValues, &gradientValues[strideQ-1], 0.0);
 
@@ -143,7 +143,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
 
           // computing gradients in direction dim
           for(int node=0; node<nodesPerAxis; node++){
-            tarch::la::Vector<Dimensions,int> contributingNodeIndex = dof;
+            tarch::la::Vector<DIMENSIONS,int> contributingNodeIndex = dof;
             contributingNodeIndex[dim] = node;
             const double coeffDerivative = invDx * Solver::DerivativeOperator1d[node + nodesPerAxis*dof(dim)];
 

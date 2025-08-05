@@ -58,7 +58,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
   return instance;
 }
 
-#ifndef SharedMemoryParallelisation
+#ifndef WITH_MULTITHREADING
 
 bool tarch::multicore::Core::init() {
   _numberOfThreads = 1;

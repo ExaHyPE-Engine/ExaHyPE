@@ -39,7 +39,7 @@ void   tarch::mpi::IntegerMessage::setValue(int value) {
 
 
 
-#ifdef Parallel
+#ifdef WITH_MPI
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype tarch::mpi::IntegerMessage::Datatype = MPI_DATATYPE_NULL;
@@ -248,7 +248,7 @@ void tarch::mpi::IntegerMessage::receive(
 }
 #endif
 
-#ifdef Parallel
+#ifdef WITH_MPI
 void tarch::mpi::IntegerMessage::sendAndPollDanglingMessages(const tarch::mpi::IntegerMessage& message, int destination, int tag, MPI_Comm communicator ) {
   tarch::mpi::IntegerMessage::send(
     message, destination, tag,

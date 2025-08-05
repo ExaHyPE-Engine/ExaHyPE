@@ -46,7 +46,7 @@
 #endif
 {% endif -%}
 
-#ifdef UseScorePUser
+#ifdef WITH_SCOREP_USER
 #include <scorep/SCOREP_User.h>
 #else
 #define SCOREP_USER_REGION_DEFINE(handle)
@@ -83,7 +83,7 @@ bool selectNextAlgorithmicStep() {
   static double                                 nextMaxCheckpointTimeStamp            = {{SUBNAMESPACE}}FirstCheckpointTimeStamp;
   static double                                 nextMinCheckpointTimeStamp            = {{SUBNAMESPACE}}FirstCheckpointTimeStamp;
   static bool                                   haveJustWrittenSnapshot               = false;
-  static tarch::la::Vector<Dimensions, double>  minH                                  = tarch::la::Vector<Dimensions, double>(std::numeric_limits<double>::max());
+  static tarch::la::Vector<DIMENSIONS, double>  minH                                  = tarch::la::Vector<DIMENSIONS, double>(std::numeric_limits<double>::max());
   static int                                    globalNumberOfTrees                   = 0;
   bool                                          continueToSolve                       = true;
 
@@ -496,7 +496,7 @@ int main(int argc, char** argv) {
   int returnCode = EXIT_SUCCESS;
   peano4::init(&argc, &argv, {{SUBNAMESPACE}}DomainOffset, {{SUBNAMESPACE}}DomainSize, {{SUBNAMESPACE}}PeriodicBC);
 
-#ifdef UseTargetDART
+#ifdef WITH_TARGETDART
   td_init((void *) &main);
 #endif
 

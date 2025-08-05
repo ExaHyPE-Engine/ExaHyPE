@@ -59,7 +59,7 @@ namespace toolbox {
       int    unknowns,
       int    auxiliaryVariables,
       const double* NOALIAS Q,
-      double* faces[2*Dimensions]
+      double* faces[2*DIMENSIONS]
     );
 
     /**
@@ -130,7 +130,7 @@ namespace toolbox {
       int    unknowns,
       int    auxiliaryVariables,
       const double* NOALIAS Q,
-      double* faces[2*Dimensions]
+      double* faces[2*DIMENSIONS]
     );
 
     void extrapolatePatchSolutionAndProjectExtrapolatedHaloOntoFaces(
@@ -165,7 +165,7 @@ namespace toolbox {
       int    unknowns,
       int    auxiliaryVariables,
       const double* NOALIAS Q,
-      double* faces[2*Dimensions]
+      double* faces[2*DIMENSIONS]
     );
   }
 }

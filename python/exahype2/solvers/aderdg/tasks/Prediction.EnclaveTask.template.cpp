@@ -29,7 +29,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const double                                    timeStamp,
   const double                                    timeStepSize,
   {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         QOld,
-  {{SOLUTION_STORAGE_PRECISION}}* NOALIAS const   faces[2][TwoTimesD],
+  {{SOLUTION_STORAGE_PRECISION}}* NOALIAS const   faces[2][TWO_TIMES_D],
   {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         QNew
 ) {
   auto lQhbnd = faces[0];
@@ -42,7 +42,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const double                                    timeStamp,
   const double                                    timeStepSize,
   {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         QOld,
-  {{SOLUTION_STORAGE_PRECISION}}* NOALIAS const   faces[2][TwoTimesD],
+  {{SOLUTION_STORAGE_PRECISION}}* NOALIAS const   faces[2][TWO_TIMES_D],
   {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         QNew
 ):
   ::exahype2::EnclaveTask<{{SOLUTION_STORAGE_PRECISION}}, 2>(
@@ -87,7 +87,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   int cellIndex = 0;
   for (auto& otherTask: otherTasks) {
     cellData.QIn[cellIndex]               = static_cast<Prediction{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_QIn;
-    for (int f = 0; f < TwoTimesD; ++f) {
+    for (int f = 0; f < TWO_TIMES_D; ++f) {
       cellData.faces[0][cellIndex][f]     = static_cast<Prediction{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_faces[0][f];
       cellData.faces[1][cellIndex][f]     = static_cast<Prediction{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_faces[1][f];
     }
@@ -101,7 +101,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   cellData.t                              = _t;
   cellData.dt                             = _dt;
   cellData.QIn[cellIndex]                 = _QIn;
-  for (int f = 0; f < TwoTimesD; ++f) {
+  for (int f = 0; f < TWO_TIMES_D; ++f) {
     cellData.faces[0][cellIndex][f]       = _faces[0][f];
     cellData.faces[1][cellIndex][f]       = _faces[1][f];
   }

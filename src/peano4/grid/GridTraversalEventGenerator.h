@@ -95,14 +95,14 @@ private:
    * @param spacetreeStateIsRunning  spacetreeState == SpacetreeState::Running
    */
   GridTraversalEvent createGenericCellTraversalEvent(
-    GridVertex                                coarseGridVertices[TwoPowerD],
-    GridVertex                                fineGridVertices[TwoPowerD],
+    GridVertex                                coarseGridVertices[TWO_POWER_D],
+    GridVertex                                fineGridVertices[TWO_POWER_D],
     const AutomatonState&                     state,
     const SplitSpecification&                 splitTriggered,
     const std::set<int>&                      splitting,
     const std::set<int>&                      joinTriggered,
     const std::set<int>&                      joining,
-    const tarch::la::Vector<Dimensions, int>& relativePositionToFather,
+    const tarch::la::Vector<DIMENSIONS, int>& relativePositionToFather,
     bool                                      spacetreeStateIsRunning
   ) const;
 
@@ -144,8 +144,8 @@ private:
    * but is does the job for the time being.
    */
   static FaceType getFaceType(
-    GridVertex                         coarseGridVertices[TwoPowerD],
-    tarch::la::Vector<Dimensions, int> positionOfCell,
+    GridVertex                         coarseGridVertices[TWO_POWER_D],
+    tarch::la::Vector<DIMENSIONS, int> positionOfCell,
     int                                faceNumber
   );
 
@@ -155,8 +155,8 @@ private:
    * routine runs over all @f$ 2^d @f$ vertices and analyses their status
    * w.r.t. inside.
    */
-  std::bitset<TwoPowerD> areVerticesAdjacentToParallelDomainBoundary(
-    GridVertex                vertices[TwoPowerD],
+  std::bitset<TWO_POWER_D> areVerticesAdjacentToParallelDomainBoundary(
+    GridVertex                vertices[TWO_POWER_D],
     const SplitSpecification& splitTriggered,
     const std::set<int>&      splitting,
     const std::set<int>&      joinTriggered,
@@ -164,8 +164,8 @@ private:
     bool                      calledByLeaveCell
   ) const;
 
-  std::bitset<TwoTimesD> areFacesAdjacentToParallelDomainBoundary(
-    GridVertex                vertices[TwoPowerD],
+  std::bitset<TWO_TIMES_D> areFacesAdjacentToParallelDomainBoundary(
+    GridVertex                vertices[TWO_POWER_D],
     const SplitSpecification& splitTriggered,
     const std::set<int>&      splitting,
     const std::set<int>&      joinTriggered,
@@ -177,8 +177,8 @@ private:
    * Vertices are local. I consider splitting and joining vertices to be
    * local, too. It is therefore consistent with areFacesLocal().
    */
-  std::bitset<TwoPowerD> areVerticesLocal(
-    GridVertex                vertices[TwoPowerD],
+  std::bitset<TWO_POWER_D> areVerticesLocal(
+    GridVertex                vertices[TWO_POWER_D],
     const SplitSpecification& splitTriggered,
     const std::set<int>&      splitting,
     const std::set<int>&      joinTriggered,
@@ -217,8 +217,8 @@ private:
    * @see peano4::grid::Spacetree::loadVertices() for the location where these
    *   lists are set for hanging and new vertices.
    */
-  std::bitset<TwoTimesD> areFacesLocal(
-    GridVertex                vertices[TwoPowerD],
+  std::bitset<TWO_TIMES_D> areFacesLocal(
+    GridVertex                vertices[TWO_POWER_D],
     const SplitSpecification& splitTriggered,
     const std::set<int>&      splitting,
     const std::set<int>&      joinTriggered,
@@ -284,7 +284,7 @@ public:
    * two.
    */
   bool isSpacetreeNodeLocal(
-    GridVertex                vertices[TwoPowerD],
+    GridVertex                vertices[TWO_POWER_D],
     const SplitSpecification& splitTriggered,
     const std::set<int>&      splitting,
     const std::set<int>&      joinTriggered,
@@ -328,15 +328,15 @@ public:
    * @param createEnterCellTraversalEvent Piped through to createGenericCellTraversalEvent().
    */
   GridTraversalEvent createEnterCellTraversalEvent(
-    GridVertex                                coarseGridVertices[TwoPowerD],
-    GridVertex                                fineGridVertices[TwoPowerD],
+    GridVertex                                coarseGridVertices[TWO_POWER_D],
+    GridVertex                                fineGridVertices[TWO_POWER_D],
     const AutomatonState&                     state,
     const SplitSpecification&                 splitTriggered,
     const std::set<int>&                      splitting,
     const std::set<int>&                      joinTriggered,
     const std::set<int>&                      joining,
     const std::set<int>&                      hasSplit,
-    const tarch::la::Vector<Dimensions, int>& relativePositionToFather,
+    const tarch::la::Vector<DIMENSIONS, int>& relativePositionToFather,
     bool                                      spacetreeStateIsRunning
   ) const;
 
@@ -344,15 +344,15 @@ public:
    * Create description of a leave cell traversal.
    */
   GridTraversalEvent createLeaveCellTraversalEvent(
-    GridVertex                                coarseGridVertices[TwoPowerD],
-    GridVertex                                fineGridVertices[TwoPowerD],
+    GridVertex                                coarseGridVertices[TWO_POWER_D],
+    GridVertex                                fineGridVertices[TWO_POWER_D],
     const AutomatonState&                     state,
     const SplitSpecification&                 splitTriggered,
     const std::set<int>&                      splitting,
     const std::set<int>&                      joinTriggered,
     const std::set<int>&                      joining,
     const std::set<int>&                      hasSplit,
-    const tarch::la::Vector<Dimensions, int>& relativePositionToFather,
+    const tarch::la::Vector<DIMENSIONS, int>& relativePositionToFather,
     bool                                      spacetreeStateIsRunning
   ) const;
 
@@ -405,8 +405,8 @@ public:
    * @see getFaceType()
    */
   static CellType getCellType(
-    GridVertex                         coarseGridVertices[TwoPowerD],
-    tarch::la::Vector<Dimensions, int> positionOfCell
+    GridVertex                         coarseGridVertices[TWO_POWER_D],
+    tarch::la::Vector<DIMENSIONS, int> positionOfCell
   );
 
   /**
@@ -419,14 +419,14 @@ public:
    * directly.
    */
   static VertexType getVertexType(
-    GridVertex                         coarseGridVertices[TwoPowerD],
-    tarch::la::Vector<Dimensions, int> position,
+    GridVertex                         coarseGridVertices[TWO_POWER_D],
+    tarch::la::Vector<DIMENSIONS, int> position,
     int                                dimension
   );
 
   static VertexType getVertexType(
-    GridVertex                         coarseGridVertices[TwoPowerD],
-    tarch::la::Vector<Dimensions, int> position
+    GridVertex                         coarseGridVertices[TWO_POWER_D],
+    tarch::la::Vector<DIMENSIONS, int> position
   );
 
   /**
@@ -452,7 +452,7 @@ public:
    *
    */
   int getTreeOwningSpacetreeNode(
-    GridVertex                vertices[TwoPowerD],
+    GridVertex                vertices[TWO_POWER_D],
     const SplitSpecification& splitTriggered,
     const std::set<int>&      splitting,
     const std::set<int>&      joinTriggered,
@@ -465,8 +465,8 @@ public:
    *  adjacency list and not the new data. In most cases, I could thus call
    *  it calledByReceivingProcess.
    */
-  tarch::la::Vector<TwoPowerD, int> getAdjacentRanksOfFace(
-    GridVertex vertex[TwoPowerD],
+  tarch::la::Vector<TWO_POWER_D, int> getAdjacentRanksOfFace(
+    GridVertex vertex[TWO_POWER_D],
     int        faceNumber,
     bool       useBackedUpAdjacencyInformation
   ) const;

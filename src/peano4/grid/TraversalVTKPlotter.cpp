@@ -32,8 +32,8 @@ peano4::grid::TraversalVTKPlotter::TraversalVTKPlotter( const std::string& filen
 peano4::grid::TraversalVTKPlotter::~TraversalVTKPlotter() {}
 
 void peano4::grid::TraversalVTKPlotter::beginTraversal(
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>& h
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>& h
 ) {
   static int counter = -1;
   counter++;
@@ -61,8 +61,8 @@ void peano4::grid::TraversalVTKPlotter::beginTraversal(
 }
 
 void peano4::grid::TraversalVTKPlotter::endTraversal(
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>& h
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>& h
 ) {
   assertion(_writer!=nullptr);
 
@@ -109,7 +109,7 @@ void peano4::grid::TraversalVTKPlotter::enterCell(
 void peano4::grid::TraversalVTKPlotter::plotCell(
   const GridTraversalEvent& event
 ) {
-  int vertexIndices[TwoPowerD];
+  int vertexIndices[TWO_POWER_D];
 
   dfor2(k)
     assertion( _vertexWriter!=nullptr );
@@ -121,9 +121,9 @@ void peano4::grid::TraversalVTKPlotter::plotCell(
   assertion( _cellWriter!=nullptr );
   int cellIndex = -1;
 
-  #if Dimensions==2
+  #if DIMENSIONS==2
   cellIndex = _cellWriter->plotQuadrangle(vertexIndices);
-  #elif Dimensions==3
+  #elif DIMENSIONS==3
   cellIndex = _cellWriter->plotHexahedron(vertexIndices);
   #else
   logError( "enterCell(...)", "supports only 2d and 3d" );

@@ -2,11 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#ifdef Parallel
+#ifdef WITH_MPI
 #include <mpi.h>
 #endif
 
-#if PeanoDebug>=1
+#if PEANO_DEBUG>=1
 #include <stdio.h>
 #include <stdlib.h>
 #endif
@@ -35,7 +35,7 @@
     std::cerr.precision(20); \
   }
 
-  #if PeanoDebug>=2
+  #if PEANO_DEBUG>=2
     #include "tarch/logging/Log.h"
     #define assertionTriggersExit { \
       std::cout.flush(); \

@@ -9,6 +9,6 @@ namespace peano4 {
     /**
      * Is used by the z-loop. See macro dforz.
      */
-    typedef std::bitset<Dimensions> LoopDirection;
+    typedef std::bitset<DIMENSIONS> LoopDirection;
   } // namespace utils
 } // namespace peano4

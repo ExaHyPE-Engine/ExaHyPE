@@ -16,8 +16,8 @@ public:
     int coarsestMeshLevel,
     double coarsestMeshSize, 
     double maxAdaptiveDepth, 
-    tarch::la::Vector<Dimensions,double> _domainOffset, 
-    tarch::la::Vector<Dimensions,double> _domainSize,
+    tarch::la::Vector<DIMENSIONS,double> _domainOffset, 
+    tarch::la::Vector<DIMENSIONS,double> _domainSize,
     T* _nodes,
     T* _dudx
   ): ContextCurvilinear<Shortcuts, basisSize, numberOfVariables+numberOfParameters, T>(
@@ -72,7 +72,7 @@ public:
     T* FL, T* FR,
     const T* const QL, const T* const QR,
     const double t, const double dt,
-    const tarch::la::Vector<Dimensions, double>& cellSize,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     const int direction,
     bool isBoundaryFace,
     int faceIndex,
@@ -114,7 +114,7 @@ public:
     double* const x, T S, double t);
 
 public:
-  double domainSize[Dimensions];
+  double domainSize[DIMENSIONS];
 
   AsagiReader* asagiReader;
   easi::Component* model;

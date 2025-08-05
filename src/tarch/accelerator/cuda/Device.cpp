@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Device.h"
 
-#if defined(GPUOffloadingCUDA)
+#if defined(WITH_GPU_CUDA)
 
 #include "DevicePropertiesCache.h"
 
@@ -85,4 +85,4 @@ cudaStream_t tarch::accelerator::deviceStreamGet() {
   return activeStream;
 }
 
-#endif // defined(GPUOffloadingCUDA)
+#endif // defined(WITH_GPU_CUDA)

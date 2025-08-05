@@ -13,7 +13,7 @@
 
 
 #if !defined(AssignmentChecks) and !defined(noAssignmentChecks) \
-  and PeanoDebug > 0
+  and PEANO_DEBUG > 0
 #define AssignmentChecks
 #endif
 
@@ -197,7 +197,7 @@ namespace toolbox {
            * */
           void shiftIdentifierVertexInd(
             ParticleIdentifier&                       identifier,
-            tarch::la::Vector<Dimensions, long long>& newVertexInd,
+            tarch::la::Vector<DIMENSIONS, long long>& newVertexInd,
             const int                                 newVertexDepth
           );
 

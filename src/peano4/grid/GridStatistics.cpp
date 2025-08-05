@@ -3,7 +3,7 @@
 #include <sstream>
 #include <algorithm>
 
-peano4::grid::GridStatistics::GridStatistics(int  __numberOfLocalUnrefinedCells, int  __numberOfRemoteUnrefinedCells, int  __numberOfLocalRefinedCells, int  __numberOfRemoteRefinedCells, int  __stationarySweeps, bool  __coarseningHasBeenVetoed, bool  __removedEmptySubtree, tarch::la::Vector<Dimensions,double>  __minH){
+peano4::grid::GridStatistics::GridStatistics(int  __numberOfLocalUnrefinedCells, int  __numberOfRemoteUnrefinedCells, int  __numberOfLocalRefinedCells, int  __numberOfRemoteRefinedCells, int  __stationarySweeps, bool  __coarseningHasBeenVetoed, bool  __removedEmptySubtree, tarch::la::Vector<DIMENSIONS,double>  __minH){
   setNumberOfLocalUnrefinedCells( __numberOfLocalUnrefinedCells);
   setNumberOfRemoteUnrefinedCells( __numberOfRemoteUnrefinedCells);
   setNumberOfLocalRefinedCells( __numberOfLocalRefinedCells);
@@ -92,11 +92,11 @@ void   peano4::grid::GridStatistics::setRemovedEmptySubtree(bool value) {
   _removedEmptySubtree = value;
 }
 
-tarch::la::Vector<Dimensions,double>   peano4::grid::GridStatistics::getMinH() const {
+tarch::la::Vector<DIMENSIONS,double>   peano4::grid::GridStatistics::getMinH() const {
   return   _minH;
 }
 
-void   peano4::grid::GridStatistics::setMinH(const tarch::la::Vector<Dimensions,double>& value) {
+void   peano4::grid::GridStatistics::setMinH(const tarch::la::Vector<DIMENSIONS,double>& value) {
   _minH = value;
 }
 
@@ -113,7 +113,7 @@ void   peano4::grid::GridStatistics::setMinH(int index, double value) {
 
 
 
-#ifdef Parallel
+#ifdef WITH_MPI
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype peano4::grid::GridStatistics::Datatype = MPI_DATATYPE_NULL;
@@ -236,7 +236,7 @@ void peano4::grid::GridStatistics::initDatatype() {
   blocklen[counter] = 1;
   counter++;
   subtypes[counter] = MPI_DOUBLE;
-  blocklen[counter] = Dimensions;
+  blocklen[counter] = DIMENSIONS;
   counter++;
 
   MPI_Aint  baseFirstInstance;
@@ -355,7 +355,7 @@ void peano4::grid::GridStatistics::receive(
 }
 #endif
 
-#ifdef Parallel
+#ifdef WITH_MPI
 void peano4::grid::GridStatistics::sendAndPollDanglingMessages(const peano4::grid::GridStatistics& message, int destination, int tag, MPI_Comm communicator ) {
   peano4::grid::GridStatistics::send(
     message, destination, tag,

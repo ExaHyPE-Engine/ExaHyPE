@@ -76,7 +76,7 @@ bool selectNextAlgorithmicStep() {
   static bool                                   haveJustWrittenSnapshot               = false;
   static bool                                   haveReceivedNoncriticialAssertion     = false;
   static bool                                   addGridSweepWithoutGridRefinementNext = false;
-  static tarch::la::Vector<Dimensions, double>  minH                                  = tarch::la::Vector<Dimensions, double>(
+  static tarch::la::Vector<DIMENSIONS, double>  minH                                  = tarch::la::Vector<DIMENSIONS, double>(
                                                                                           std::numeric_limits<double>::max()
                                                                                         );
   static int                                    globalNumberOfTrees                   = 0;
@@ -237,7 +237,7 @@ void step() {
   auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
 
   static tarch::logging::Log _log("");
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
 #else
   if (tarch::mpi::Rank::getInstance().isGlobalMaster())
 #endif
@@ -446,7 +446,7 @@ int main(int argc, char** argv) {
 
   repositories::DataRepository::initDatatypes();
 
-  #if PeanoDebug >= 2
+  #if PEANO_DEBUG >= 2
   tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection();
   unitTests->addTestCase(peano4::getUnitTests());
   unitTests->addTestCase(tarch::getUnitTests());
@@ -464,7 +464,7 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().clear();
 
-#if defined(SharedOMP)
+#if defined(WITH_OPENMP)
 #pragma omp parallel
   {
 #pragma omp master
@@ -514,7 +514,7 @@ int main(int argc, char** argv) {
           step();
         }
       }
-#if defined(SharedOMP)
+#if defined(WITH_OPENMP)
     }
   }
 #endif

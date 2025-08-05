@@ -26,7 +26,7 @@ class Advection(Equation):
             """
     F[0] = 0.0;
     F[1] = 0.0;
-#if Dimensions == 3
+#if DIMENSIONS == 3
     F[2] = 0.0;
 #endif
 

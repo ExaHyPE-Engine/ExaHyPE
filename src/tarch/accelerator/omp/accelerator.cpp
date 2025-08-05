@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/accelerator.h"
 
-#if defined(GPUOffloadingOMP)
+#if defined(WITH_GPU_OMP_TARGET)
 
 #ifndef _OPENMP
 #error "_OPENMP is not defined. Please compile with OpenMP support enabled."
@@ -34,7 +34,7 @@ void* tarch::accelerator::allocateRawData(
     );
     break;
   case MemoryLocation::Device:
-#ifdef UseUSM
+#ifdef WITH_USM
     data = omp_alloc(sizeInBytes, llvm_omp_target_shared_mem_alloc);
 #else
     assertion1(device >= 0, device);
@@ -42,7 +42,7 @@ void* tarch::accelerator::allocateRawData(
 #endif
     break;
   case MemoryLocation::Pinned:
-#ifdef UseUSM
+#ifdef WITH_USM
     data = omp_alloc(sizeInBytes, llvm_omp_target_shared_mem_alloc);
 #else
     data = omp_alloc(sizeInBytes, llvm_omp_target_host_mem_alloc);
@@ -52,7 +52,7 @@ void* tarch::accelerator::allocateRawData(
 
   assertion(data);
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     Device::getInstance().getMemoryBlockTable()[data] = sizeInBytes;
@@ -71,7 +71,7 @@ void tarch::accelerator::freeRawData(
     return;
   }
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     auto itr = Device::getInstance().getMemoryBlockTable().find(data);
@@ -88,7 +88,7 @@ void tarch::accelerator::freeRawData(
     std::free(data); //omp_free(data);
     break;
   case MemoryLocation::Device:
-#ifdef UseUSM
+#ifdef WITH_USM
     omp_free(data, llvm_omp_target_shared_mem_alloc);
 #else
     assertion1(device >= 0, device);
@@ -96,7 +96,7 @@ void tarch::accelerator::freeRawData(
 #endif
     break;
   case MemoryLocation::Pinned:
-#ifdef UseUSM
+#ifdef WITH_USM
     omp_free(data, llvm_omp_target_shared_mem_alloc);
 #else
     omp_free(data, llvm_omp_target_host_mem_alloc);
@@ -122,7 +122,7 @@ void tarch::accelerator::copyTo(
   case MemoryLocation::Device:
   case MemoryLocation::Pinned:
     logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to device");
-#ifdef UseUSM
+#ifdef WITH_USM
     std::memcpy(target, source, sizeInBytes);
 #else
     assertion1(device >= 0, device);
@@ -149,7 +149,7 @@ void tarch::accelerator::copyFrom(
   case MemoryLocation::Device:
   case MemoryLocation::Pinned:
     logDebug("copyFrom()", "Copy " << sizeInBytes << " bytes from device to host");
-#ifdef UseUSM
+#ifdef WITH_USM
     std::memcpy(target, source, sizeInBytes);
 #else
     assertion1(device >= 0, device);
@@ -159,4 +159,4 @@ void tarch::accelerator::copyFrom(
   }
 }
 
-#endif // defined(GPUOffloadingOMP)
+#endif // defined(WITH_GPU_OMP_TARGET)

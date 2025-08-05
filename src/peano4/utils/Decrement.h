@@ -18,7 +18,7 @@ namespace peano4 {
      * smaller than 0, the component is set to max and the next component is
      * decremented by one.
      */
-    inline GPUCallableMethod void dDec(tarch::la::Vector<Dimensions, int>& counter, int max);
+    inline GPU_CALLABLE_METHOD void dDec(tarch::la::Vector<DIMENSIONS, int>& counter, int max);
   } // namespace utils
 } // namespace peano4
 

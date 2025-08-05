@@ -47,7 +47,7 @@ class EulerGaussianBell(Scenario):
     Therefore we find the point x - v*t, and then shift this by instances
     of 1.0 until we find the point within the domain.
   */
-  tarch::la::Vector<Dimensions,double> pos = { (x[0] - t) + (int)(t + .5 - x[0]),
+  tarch::la::Vector<DIMENSIONS,double> pos = { (x[0] - t) + (int)(t + .5 - x[0]),
                                                (x[1] - t) + (int)(t + .5 - x[1]) };
 
   solution[0] = 0.02*(1.0+std::exp(-0.5*tarch::la::norm2(pos)*tarch::la::norm2(pos)/0.01));

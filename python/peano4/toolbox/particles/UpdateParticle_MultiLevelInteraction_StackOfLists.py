@@ -202,13 +202,13 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
         """
   std::list< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
   std::list< globaldata::{{LOCAL_PARTICLE}}* >  particlesAssociatedWithLocalVertices;
-  std::vector< int >                            numberOfLocalParticlesPerVertex( TwoPowerD );
-  std::vector< int >                            _numberOfActiveParticlesPerVertex( TwoPowerD ); // stay compatible with coalesced version
+  std::vector< int >                            numberOfLocalParticlesPerVertex( TWO_POWER_D );
+  std::vector< int >                            _numberOfActiveParticlesPerVertex( TWO_POWER_D ); // stay compatible with coalesced version
   std::vector< bool >                           localParticleIsContainedInCell;
   auto& numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex;
 
   _numberOfActiveParticlesAdded.push_back(0);
-  for (int i=0; i<TwoPowerD; i++) {
+  for (int i=0; i<TWO_POWER_D; i++) {
     // Keep track of number of particles
     _numberOfActiveParticlesPerVertex.push_back( fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size() );
     _numberOfActiveParticlesAdded.back() += fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
@@ -222,8 +222,8 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
     
     // Construct the two local particle sets
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
-      std::bitset<TwoPowerD> mask = 0;
-      mask.set(TwoPowerD-i-1);
+      std::bitset<TWO_POWER_D> mask = 0;
+      mask.set(TWO_POWER_D-i-1);
       bool isLocal = (mask & p->getContainedInAdjacentCell()).any();
       assertionEquals4( 
         isLocal, 
@@ -249,7 +249,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
         """
   assertion( not _numberOfActiveParticlesAdded.empty() );
   assertion( _activeParticles.size()>=_numberOfActiveParticlesAdded.back() );
-  assertion( _numberOfActiveParticlesPerVertex.size()>=TwoPowerD );
+  assertion( _numberOfActiveParticlesPerVertex.size()>=TWO_POWER_D );
   
 
   // More elegant way to write
@@ -263,7 +263,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
   );
     
   _numberOfActiveParticlesPerVertex.erase( 
-    std::prev(_numberOfActiveParticlesPerVertex.end(),TwoPowerD ),
+    std::prev(_numberOfActiveParticlesPerVertex.end(),TWO_POWER_D ),
     _numberOfActiveParticlesPerVertex.end()
   );
   

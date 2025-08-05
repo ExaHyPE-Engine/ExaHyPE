@@ -358,7 +358,7 @@ Name:                   """
 Type:                   """
             + self.__class__.__module__
             + """
-Dimensions:             """
+DIMENSIONS:             """
             + str(self._dimensions)
             + """
 Use enclave tasking:    """

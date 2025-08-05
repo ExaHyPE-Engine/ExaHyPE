@@ -4,7 +4,7 @@
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Assertions.h"
 
-#if defined(GPUOffloadingOMP)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp declare target
 #endif
 template <class QInEnumeratorType, class QOutEnumeratorType>
@@ -12,31 +12,31 @@ void exahype2::fd::internal::copySolution_LoopBody(
   const double* NOALIAS                QIn,
   const QInEnumeratorType&                  QInEnumerator,
   int                                       patchIndex,
-  const tarch::la::Vector<Dimensions,int>&  volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&  volumeIndex,
   int                                       unknown,
   double* NOALIAS                      QOut,
   const QOutEnumeratorType&                 QOutEnumerator
 ) {
   QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
 }
-#if defined(GPUOffloadingOMP)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp end declare target
 #endif
 
-#if defined(GPUOffloadingOMP)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp declare target
 #endif
 template <class QOutEnumeratorType>
 void exahype2::fd::internal::clearSolution_LoopBody(
   int                                       patchIndex,
-  const tarch::la::Vector<Dimensions,int>&  volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&  volumeIndex,
   int                                       unknown,
   double* NOALIAS                      QOut,
   const QOutEnumeratorType&                 QOutEnumerator
 ) {
   QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = 0.0;
 }
-#if defined(GPUOffloadingOMP)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp end declare target
 #endif
 
@@ -45,10 +45,10 @@ void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
   const double* NOALIAS                   QIn,
   const QInEnumeratorType&                     QInEnumerator,
   exahype2::fd::Source          	       AlgebraicSource,
-  const tarch::la::Vector<Dimensions,double>&  patchCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
   int                                          patchIndex,
-  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
   double                                       t,
   double                                       dt,
   double* NOALIAS                         QOut,
@@ -88,10 +88,10 @@ template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
   const double* NOALIAS                   QIn,
   const QInEnumeratorType&                     QInEnumerator,
-  const tarch::la::Vector<Dimensions,double>&  patchCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
   int                                          patchIndex,
-  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
   double                                       t,
   double                                       dt,
   double* NOALIAS                         QOut,
@@ -132,10 +132,10 @@ template <typename Solver>
 void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
   const double* NOALIAS                   QIn,
   const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
-  const tarch::la::Vector<Dimensions,double>&  patchCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
   int                                          patchIndex,
-  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
   double                                       t,
   double                                       dt,
   double* NOALIAS                         QOut,
@@ -170,17 +170,17 @@ double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
     const double* NOALIAS                   QOut,
     const QOutEnumeratorType&                    QOutEnumerator,
     exahype2::fd::MaxEigenvalue                  maxEigenvalue,
-    const tarch::la::Vector<Dimensions,double>&  patchCentre,
-    const tarch::la::Vector<Dimensions,double>&  patchSize,
+    const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+    const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
     int                                          patchIndex,
-    const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+    const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
     double                                       t,
     double                                       dt
 ) {
     double* QGathered = new double[QOutEnumerator._numberOfUnknowns+QOutEnumerator._numberOfAuxiliaryVariables];
 
     // gather
-    #if defined(SharedOMP)
+    #if defined(WITH_OPENMP)
     #pragma omp simd
     #endif
     for (int unknown=0; unknown<QOutEnumerator._numberOfUnknowns+QOutEnumerator._numberOfAuxiliaryVariables; unknown++) {
@@ -188,7 +188,7 @@ double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
     }
 
     double result = 0.0;
-    for (int normal=0; normal<Dimensions; normal++) {
+    for (int normal=0; normal<DIMENSIONS; normal++) {
       result = std::max(
         result,
         maxEigenvalue(
@@ -212,15 +212,15 @@ template <typename Solver>
 double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
     const double* NOALIAS                   QOut,
     const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
-    const tarch::la::Vector<Dimensions,double>&  patchCentre,
-    const tarch::la::Vector<Dimensions,double>&  patchSize,
+    const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+    const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
     int                                          patchIndex,
-    const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+    const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
     double                                       t,
     double                                       dt
 ) {
     double result = 0.0;
-    for (int normal=0; normal<Dimensions; normal++) {
+    for (int normal=0; normal<DIMENSIONS; normal++) {
       result = std::max(
         result,
         Solver::maxEigenvalue(
@@ -242,15 +242,15 @@ double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
     const double* NOALIAS                   QOut,
     const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
     exahype2::fd::MaxEigenvalue                  maxEigenvalue,
-    const tarch::la::Vector<Dimensions,double>&  patchCentre,
-    const tarch::la::Vector<Dimensions,double>&  patchSize,
+    const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+    const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
     int                                          patchIndex,
-    const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+    const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
     double                                       t,
     double                                       dt
 ) {
     double result = 0.0;
-    for (int normal=0; normal<Dimensions; normal++) {
+    for (int normal=0; normal<DIMENSIONS; normal++) {
       result = std::max(
         result,
         maxEigenvalue(

@@ -39,7 +39,7 @@ void   peano4::parallel::StartTraversalMessage::setStepIdentifier(int value) {
 
 
 
-#ifdef Parallel
+#ifdef WITH_MPI
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype peano4::parallel::StartTraversalMessage::Datatype = MPI_DATATYPE_NULL;
@@ -248,7 +248,7 @@ void peano4::parallel::StartTraversalMessage::receive(
 }
 #endif
 
-#ifdef Parallel
+#ifdef WITH_MPI
 void peano4::parallel::StartTraversalMessage::sendAndPollDanglingMessages(const peano4::parallel::StartTraversalMessage& message, int destination, int tag, MPI_Comm communicator ) {
   peano4::parallel::StartTraversalMessage::send(
     message, destination, tag,

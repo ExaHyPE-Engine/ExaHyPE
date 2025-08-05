@@ -2,19 +2,15 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/accelerator.h"
 
-#if defined(GPUOffloadingSYCL)
+#if defined(WITH_GPU_SYCL)
 
 #include "Device.h"
 
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
 
-#pragma push_macro("Dimensions")
-#undef Dimensions
-#include <sycl/sycl.hpp>
-#pragma pop_macro("Dimensions")
-
 #include <cstring>
+#include <sycl/sycl.hpp>
 
 namespace {
   tarch::logging::Log _log("tarch::accelerator::sycl");
@@ -38,7 +34,7 @@ void* tarch::accelerator::allocateRawData(
   case MemoryLocation::Device: {
     assertion1(device >= 0, device);
     sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
-#ifdef UseUSM
+#ifdef WITH_USM
     data = sycl::malloc_shared(sizeInBytes, queue);
 #else
     data = sycl::malloc_device(sizeInBytes, queue);
@@ -48,7 +44,7 @@ void* tarch::accelerator::allocateRawData(
   case MemoryLocation::Pinned: {
     assertion1(device >= 0, device);
     sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
-#ifdef UseUSM
+#ifdef WITH_USM
     data = sycl::malloc_shared(sizeInBytes, queue);
 #else
     data = sycl::malloc_host(sizeInBytes, queue);
@@ -58,7 +54,7 @@ void* tarch::accelerator::allocateRawData(
 
   assertion(data);
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     Device::getInstance().getMemoryBlockTable()[data] = sizeInBytes;
@@ -77,7 +73,7 @@ void tarch::accelerator::freeRawData(
     return;
   }
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     auto itr = Device::getInstance().getMemoryBlockTable().find(data);
@@ -120,7 +116,7 @@ void tarch::accelerator::copyTo(
     break;
   case MemoryLocation::Device:
   case MemoryLocation::Pinned: {
-#ifdef UseUSM
+#ifdef WITH_USM
     std::memcpy(target, source, sizeInBytes);
 #else
     assertion1(device >= 0, device);
@@ -151,7 +147,7 @@ void tarch::accelerator::copyFrom(
     break;
   case MemoryLocation::Device:
   case MemoryLocation::Pinned: {
-#ifdef UseUSM
+#ifdef WITH_USM
     std::memcpy(target, source, sizeInBytes);
 #else
     assertion1(device >= 0, device);
@@ -164,4 +160,4 @@ void tarch::accelerator::copyFrom(
   }}
 }
 
-#endif // defined(GPUOffloadingSYCL)
+#endif // defined(WITH_GPU_SYCL)

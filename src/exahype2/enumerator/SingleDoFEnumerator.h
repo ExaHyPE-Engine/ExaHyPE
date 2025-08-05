@@ -10,10 +10,10 @@ namespace exahype2::enumerator {
    * all data therein are ordered lexicographically and stored in as AoS.
    */
   struct SingleDoFEnumerator {
-    inline GPUCallableMethod SingleDoFEnumerator(
+    inline GPU_CALLABLE_METHOD SingleDoFEnumerator(
       int numberOfUnknowns,
       int numberOfAuxiliaryVariables
-    ) InlineMethod:
+    ):
       _numberOfUnknowns(numberOfUnknowns),
       _numberOfAuxiliaryVariables(numberOfAuxiliaryVariables) {}
 
@@ -24,15 +24,15 @@ namespace exahype2::enumerator {
      * indices if you want.
      *
      */
-    inline GPUCallableMethod int operator()(int, const tarch::la::Vector<Dimensions, int>&, int unknown) const InlineMethod {
+    inline GPU_CALLABLE_METHOD int operator()(int, const tarch::la::Vector<DIMENSIONS, int>&, int unknown) const {
       return unknown;
     }
 
-#if defined(GPUOffloadingOff)
+#if !defined(WITH_GPU)
     std::string toString() const;
 #endif
 
-    inline GPUCallableMethod int size() const InlineMethod {
+    inline GPU_CALLABLE_METHOD int size() const {
       return (_numberOfUnknowns + _numberOfAuxiliaryVariables);
     }
 

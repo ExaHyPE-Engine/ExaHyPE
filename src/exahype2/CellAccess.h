@@ -47,8 +47,8 @@ namespace exahype2 {
      * its kth unknown. Pass in {-1,0,0} for example to access the left
      * neighbour of a cell.
      */
-    const double* operator()(const tarch::la::Vector<Dimensions, int>& relativeCellPosition) const;
-    double operator()(const tarch::la::Vector<Dimensions, int>& relativeCellPosition, int unknown) const;
+    const double* operator()(const tarch::la::Vector<DIMENSIONS, int>& relativeCellPosition) const;
+    double operator()(const tarch::la::Vector<DIMENSIONS, int>& relativeCellPosition, int unknown) const;
 
     double centre(int unknown) const;
 

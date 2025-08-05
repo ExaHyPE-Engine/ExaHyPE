@@ -8,9 +8,9 @@ namespace peano4 {
   void init(
     int*                                         argc,
     char***                                      argv,
-    const tarch::la::Vector<Dimensions, double>& offset,
-    const tarch::la::Vector<Dimensions, double>& width,
-    const std::bitset<Dimensions>&               periodicBC = 0
+    const tarch::la::Vector<DIMENSIONS, double>& offset,
+    const tarch::la::Vector<DIMENSIONS, double>& width,
+    const std::bitset<DIMENSIONS>&               periodicBC = 0
   );
 
   void shutdown();

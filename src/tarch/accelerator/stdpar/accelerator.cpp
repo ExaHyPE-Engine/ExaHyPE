@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/accelerator.h"
 
-#if defined(GPUOffloadingCPP)
+#if defined(WITH_GPU_STDPAR)
 
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
@@ -10,7 +10,7 @@
 #include <cstring>
 
 namespace {
-  tarch::logging::Log _log("tarch::accelerator::cpp");
+  tarch::logging::Log _log("tarch::accelerator::stdpar");
 } // namespace
 
 void* tarch::accelerator::allocateRawData(
@@ -34,7 +34,7 @@ void* tarch::accelerator::allocateRawData(
 
   assertion(data);
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     Device::getInstance().getMemoryBlockTable()[data] = sizeInBytes;
@@ -53,7 +53,7 @@ void tarch::accelerator::freeRawData(
     return;
   }
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     auto itr = Device::getInstance().getMemoryBlockTable().find(data);
@@ -112,4 +112,4 @@ void tarch::accelerator::copyFrom(
   }
 }
 
-#endif // defined(GPUOffloadingCPP)
+#endif // defined(WITH_GPU_STDPAR)

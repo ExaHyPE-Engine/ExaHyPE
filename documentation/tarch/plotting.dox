@@ -29,7 +29,7 @@ similar to
  
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-    Dimensions, snapshotFileName.str(), "grid",
+    DIMENSIONS, snapshotFileName.str(), "grid",
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
     repositories::getMinTimeStamp()
   );    

@@ -4,7 +4,7 @@
 
 #include <string>
 
-#ifdef Parallel
+#ifdef WITH_MPI
   #include <mpi.h>
   #include <functional>
 #endif
@@ -36,7 +36,7 @@ struct peano4::parallel::TreeEntry {
     TreeEntry(const TreeEntry& copy) = default;
 
 
-    #ifdef Parallel
+    #ifdef WITH_MPI
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -118,7 +118,7 @@ struct peano4::parallel::TreeEntry {
     TreeEntry( ObjectConstruction ):
     TreeEntry() {}
 
-#ifdef Parallel
+#ifdef WITH_MPI
     static void sendAndPollDanglingMessages(const peano4::parallel::TreeEntry& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
     static void receiveAndPollDanglingMessages(peano4::parallel::TreeEntry& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
 #endif
@@ -130,7 +130,7 @@ struct peano4::parallel::TreeEntry {
     [[clang::pack_range(0,std::numeric_limits<int>::max())]]  int   _id;
     [[clang::pack_range(-1,std::numeric_limits<int>::max())]]  int   _master;
 
-    #ifdef Parallel
+    #ifdef WITH_MPI
     private:
       int _senderDestinationRank;
 

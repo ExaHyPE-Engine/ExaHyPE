@@ -43,8 +43,8 @@ void projectOnFVSpaceWithoutHaloFromFVWithHalo(
 bool isPhysicallyAdmissible(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                     solver,
   const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const   luh,
-  const tarch::la::Vector<Dimensions, double>&        cellCentre,
-  const tarch::la::Vector<Dimensions, double>&        cellSize,
+  const tarch::la::Vector<DIMENSIONS, double>&        cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&        cellSize,
   const double                                        timeStamp
 );
 

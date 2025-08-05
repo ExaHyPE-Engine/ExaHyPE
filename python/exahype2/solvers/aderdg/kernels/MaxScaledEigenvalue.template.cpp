@@ -11,8 +11,8 @@
 double {{FULL_QUALIFIED_NAMESPACE}}::maxScaledEigenvalue(
   [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&  solver,
   const {{SOLUTION_STORAGE_PRECISION}}* const       luh,
-  const tarch::la::Vector<Dimensions, double>&      cellCentre,
-  const tarch::la::Vector<Dimensions, double>&      cellSize,
+  const tarch::la::Vector<DIMENSIONS, double>&      cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&      cellSize,
   const double                                      timeStamp,
   const double                                      timeStepSize
 ) {
@@ -25,14 +25,14 @@ double {{FULL_QUALIFIED_NAMESPACE}}::maxScaledEigenvalue(
 {% if DIMENSIONS == 3 %}
       for (int k = 0; k < {{NUMBER_OF_DOF}}; k++) {
         const int                                linearisedIndex = i + {{NUMBER_OF_DOF}} * j + {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * k;
-        const tarch::la::Vector<Dimensions, int> index           = {i, j, k};
+        const tarch::la::Vector<DIMENSIONS, int> index           = {i, j, k};
 {% else %}
         const int                                linearisedIndex = i + {{NUMBER_OF_DOF}} * j;
-        const tarch::la::Vector<Dimensions, int> index           = {i, j};
+        const tarch::la::Vector<DIMENSIONS, int> index           = {i, j};
 {% endif %}
 
         double denominator = 0.0;
-        for (int d = 0; d < Dimensions; d++) {
+        for (int d = 0; d < DIMENSIONS; d++) {
 {% if STATELESS_MAX_EIGENVALUE %}
           denominator += {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(
 {% else %}

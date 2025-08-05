@@ -51,7 +51,7 @@ namespace {
       previousZeroDataEntries = 0;
       return std::to_string(value);
     }
-    #if PeanoDebug>0
+    #if PEANO_DEBUG>0
     else {
       return "," + std::to_string(value);
     }
@@ -87,7 +87,7 @@ std::string exahype2::fv::plotPatch(
 
   if (prettyPrint) result << std::endl;
 
-  #if Dimensions==2
+  #if DIMENSIONS==2
   for (int y=0; y<PatchSize; y++) {
     for (int x=0; x<PatchSize; x++) {
       int index = (y*PatchSize+x) * (unknowns+auxiliaryVariables);
@@ -156,13 +156,13 @@ std::string exahype2::fv::plotPatchOverlap(
   bool   prettyPrint
 ) {
   assertion(normal>=0);
-  assertion(normal<Dimensions);
+  assertion(normal<DIMENSIONS);
 
   std::ostringstream result;
   if (prettyPrint) {
     result << std::endl;
 
-    #if Dimensions==2
+    #if DIMENSIONS==2
     if (normal==0) {
       for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
         for (int x=0; x<2*haloSize; x++) {
@@ -207,7 +207,7 @@ std::string exahype2::fv::plotPatchOverlap(
   else {
     int entry = 0;
     for (int overlap=0; overlap<2*haloSize; overlap++)
-    #if Dimensions==3
+    #if DIMENSIONS==3
     for (int i=0; i<numberOfVolumesPerAxisInPatch; i++)
     #endif
     for (int ii=0; ii<numberOfVolumesPerAxisInPatch; ii++)

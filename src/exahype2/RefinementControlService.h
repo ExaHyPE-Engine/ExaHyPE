@@ -193,7 +193,7 @@ private:
    */
   std::vector<peano4::grid::GridControlEvent> _committedEvents;
 
-#ifdef Parallel
+#ifdef WITH_MPI
   std::vector<MPI_Request*>                   _sendRequests;
   std::vector<peano4::grid::GridControlEvent> _copyOfCommittedEvents;
 

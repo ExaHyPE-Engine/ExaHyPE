@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#ifdef UseNetCDF
+#ifdef WITH_NETCDF
 
 #include <string>
 

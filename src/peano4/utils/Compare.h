@@ -15,7 +15,7 @@ namespace peano4 {
      *
      * @return true if all entries of counter are smaller max
      */
-    inline GPUCallableMethod int dCmp(const tarch::la::Vector<Dimensions, int>& counter, int max);
+    inline GPU_CALLABLE_METHOD int dCmp(const tarch::la::Vector<DIMENSIONS, int>& counter, int max);
 
     /**
      * Element-wise comparison for the for d-dimensional for loops
@@ -27,9 +27,9 @@ namespace peano4 {
      * @return true if all entries of counter are smaller than their corresponding
      *         entries in max
      */
-    inline GPUCallableMethod int dCmp(
-      const tarch::la::Vector<Dimensions, int>& counter,
-      const tarch::la::Vector<Dimensions, int>& max
+    inline GPU_CALLABLE_METHOD int dCmp(
+      const tarch::la::Vector<DIMENSIONS, int>& counter,
+      const tarch::la::Vector<DIMENSIONS, int>& max
     );
 
     /**
@@ -37,9 +37,9 @@ namespace peano4 {
      *
      * @returns true, if dLinearised(counter, XXX) < dLinearised(max, XXX)
      */
-    inline GPUCallableMethod bool dCmpLinearOrder(
-      const tarch::la::Vector<Dimensions, int>& counter,
-      const tarch::la::Vector<Dimensions, int>& max
+    inline GPU_CALLABLE_METHOD bool dCmpLinearOrder(
+      const tarch::la::Vector<DIMENSIONS, int>& counter,
+      const tarch::la::Vector<DIMENSIONS, int>& max
     );
   } // namespace utils
 } // namespace peano4

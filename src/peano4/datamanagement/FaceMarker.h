@@ -32,12 +32,12 @@ private:
   /**
    * Centre of the underlying cell
    */
-  tarch::la::Vector<Dimensions, double> _cellCentre;
+  tarch::la::Vector<DIMENSIONS, double> _cellCentre;
 
   /**
    * Size of the underlying cell
    */
-  tarch::la::Vector<Dimensions, double> _h;
+  tarch::la::Vector<DIMENSIONS, double> _h;
 
   bool _cellIsLocal;
 
@@ -46,19 +46,19 @@ private:
   /**
    * @see hasBeenRefined()
    */
-  std::bitset<2 * Dimensions> _hasBeenRefined;
+  std::bitset<2 * DIMENSIONS> _hasBeenRefined;
 
   /**
    * @see hasBeenRefined()
    */
-  std::bitset<2 * Dimensions> _willBeRefined;
+  std::bitset<2 * DIMENSIONS> _willBeRefined;
 
-  std::bitset<2 * Dimensions> _isLocal;
+  std::bitset<2 * DIMENSIONS> _isLocal;
 
   /**
    * Entries from (0,1,2). (0,0) or (0,0,0) is the left, bottom cell.
    */
-  tarch::la::Vector<Dimensions, int> _relativePositionOfCellWithinFatherCell;
+  tarch::la::Vector<DIMENSIONS, int> _relativePositionOfCellWithinFatherCell;
 
 public:
   /**
@@ -82,7 +82,7 @@ public:
   /**
    * Return the number of the face.
    *
-   * If you use the modulo Dimensions, then you implicitly know along which
+   * If you use the modulo DIMENSIONS, then you implicitly know along which
    * coordinate axis the corresponding face normal points.
    *
    * @see FaceEnumerator for a discussion of the face ordering.
@@ -94,10 +94,10 @@ public:
   /**
    * Center of a particular face with respective reference cell.
    */
-  inline tarch::la::Vector<Dimensions, double> x(int i) const {
-    tarch::la::Vector<Dimensions, double> result(_cellCentre);
-    int                                   normal = i % Dimensions;
-    result(normal) += i >= Dimensions ? _h(normal) / 2.0 : -_h(normal) / 2.0;
+  inline tarch::la::Vector<DIMENSIONS, double> x(int i) const {
+    tarch::la::Vector<DIMENSIONS, double> result(_cellCentre);
+    int                                   normal = i % DIMENSIONS;
+    result(normal) += i >= DIMENSIONS ? _h(normal) / 2.0 : -_h(normal) / 2.0;
     return result;
   }
 
@@ -109,7 +109,7 @@ public:
    *
    * @see select(int)
    */
-  inline tarch::la::Vector<Dimensions, double> x() const { return x(_select); }
+  inline tarch::la::Vector<DIMENSIONS, double> x() const { return x(_select); }
 
   /**
    * This operation gives you the normal of a certain face.
@@ -129,35 +129,35 @@ public:
    *
    * @image html FaceEnumerator.png
    */
-  inline tarch::la::Vector<Dimensions, double> normal(int i) const {
-    tarch::la::Vector<Dimensions, double> result(0.0);
-    int                                   index = i % Dimensions;
-    result(index) += i < Dimensions ? -_h(index) : _h(index);
+  inline tarch::la::Vector<DIMENSIONS, double> normal(int i) const {
+    tarch::la::Vector<DIMENSIONS, double> result(0.0);
+    int                                   index = i % DIMENSIONS;
+    result(index) += i < DIMENSIONS ? -_h(index) : _h(index);
     return result;
   }
-  inline tarch::la::Vector<Dimensions, double> normal() const { return normal(_select); }
+  inline tarch::la::Vector<DIMENSIONS, double> normal() const { return normal(_select); }
 
   /**
    * This operation gives you the outer normal of a cell. Different to
    * normal(int), the normal however is oriented along the domain
    * boundaries, i.e. it always points outside from the local domain.
    */
-  inline tarch::la::Vector<Dimensions, double> outerNormal(int i) const {
-    tarch::la::Vector<Dimensions, double> result(0.0);
-    int                                   index        = i % Dimensions;
-    bool                                  negativeSign = i < Dimensions;
+  inline tarch::la::Vector<DIMENSIONS, double> outerNormal(int i) const {
+    tarch::la::Vector<DIMENSIONS, double> result(0.0);
+    int                                   index        = i % DIMENSIONS;
+    bool                                  negativeSign = i < DIMENSIONS;
     if (not _cellIsLocal) {
       negativeSign = not negativeSign;
     }
     result(index) += negativeSign ? -_h(index) : _h(index);
     return result;
   }
-  inline tarch::la::Vector<Dimensions, double> outerNormal() const { return outerNormal(_select); }
+  inline tarch::la::Vector<DIMENSIONS, double> outerNormal() const { return outerNormal(_select); }
 
   /**
    * Size of the underlying cell
    */
-  inline tarch::la::Vector<Dimensions, double> h() const { return _h; }
+  inline tarch::la::Vector<DIMENSIONS, double> h() const { return _h; }
 
   std::string toString() const;
 
@@ -184,14 +184,14 @@ public:
    * (0,1,2,3) x (0,1,2) x (0,1,2) or (0,1,2) x (0,1,2,3) x (0,1,2) or
    * (0,1,2) x (0,1,2) x (0,1,2,3).
    */
-  tarch::la::Vector<Dimensions, int> getRelativePositionWithinFatherCell() const;
-  tarch::la::Vector<Dimensions, int> getRelativePositionWithinFatherCell(int i) const;
+  tarch::la::Vector<DIMENSIONS, int> getRelativePositionWithinFatherCell() const;
+  tarch::la::Vector<DIMENSIONS, int> getRelativePositionWithinFatherCell(int i) const;
 
   /**
    * Return relative position of a subface within its father face. The
-   * result is from (0,1,2)^(Dimensions-1)
+   * result is from (0,1,2)^(DIMENSIONS-1)
    */
-  tarch::la::Vector<Dimensions - 1, int> getRelativePositionWithinFatherFace() const;
+  tarch::la::Vector<DIMENSIONS - 1, int> getRelativePositionWithinFatherFace() const;
 
   /**
    * The term patch here refers to a 3x3 or 3x3x3 refinement. The routine

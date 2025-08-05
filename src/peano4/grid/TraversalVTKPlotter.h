@@ -77,13 +77,13 @@ class peano4::grid::TraversalVTKPlotter: public peano4::grid::TraversalObserver 
     virtual ~TraversalVTKPlotter();
 
     virtual void beginTraversal(
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  h
     ) override;
 
     virtual void endTraversal(
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  h
     ) override;
 
     virtual void loadCell(

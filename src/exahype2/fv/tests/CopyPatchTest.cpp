@@ -22,14 +22,14 @@ void exahype2::fv::tests::CopyPatchTest::testCopyPatch() {
   std::vector<int> source{}, dest{}, source2{}, dest2{};
 
   dfor(k, NumberOfVolumesPerAxisInPatch) {
-    tarch::la::Vector<Dimensions, int> tmpSource                = k + tarch::la::Vector<Dimensions, int>(HaloSize);
+    tarch::la::Vector<DIMENSIONS, int> tmpSource                = k + tarch::la::Vector<DIMENSIONS, int>(HaloSize);
     int                                tmpSourceSerialised      = peano4::utils::dLinearised(tmpSource, NumberOfVolumesPerAxisInPatch + HaloSize * 2);
     int                                tmpDestinationSerialised = peano4::utils::dLinearised(k, NumberOfVolumesPerAxisInPatch);
     source.push_back(tmpSourceSerialised);
     dest.push_back(tmpDestinationSerialised);
   }
 
-#if Dimensions == 2
+#if DIMENSIONS == 2
   //constexpr int SourceSerialised = NumberOfVolumesPerAxisInPatch + 3 * HaloSize;
   constexpr int Offset           = NumberOfVolumesPerAxisInPatch;
   for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {

@@ -6,9 +6,9 @@
 toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   ParticleIdentifier(
     const std::string&                           particleName__,
-    const tarch::la::Vector<Dimensions, double>& particleX__,
-    const tarch::la::Vector<Dimensions, double>& vertexX,
-    const tarch::la::Vector<Dimensions, double>& vertexH,
+    const tarch::la::Vector<DIMENSIONS, double>& particleX__,
+    const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+    const tarch::la::Vector<DIMENSIONS, double>& vertexH,
     const int                                    particleID__,
     const int                                    treeID__
   ):
@@ -22,8 +22,8 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
 toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   ParticleIdentifier(
     const std::string&                              particleName__,
-    const tarch::la::Vector<Dimensions, double>&    particleX__,
-    const tarch::la::Vector<Dimensions, long long>& vertexInd__,
+    const tarch::la::Vector<DIMENSIONS, double>&    particleX__,
+    const tarch::la::Vector<DIMENSIONS, long long>& vertexInd__,
     const int                                       vertexDepth__,
     const int                                       particleID__,
     const int                                       treeID__
@@ -36,15 +36,15 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   treeID(treeID__) {}
 
 
-tarch::la::Vector<Dimensions, long long> toolbox::particles::assignmentchecks::
+tarch::la::Vector<DIMENSIONS, long long> toolbox::particles::assignmentchecks::
   internal::ParticleIdentifier::getVertexInd(
-    const tarch::la::Vector<Dimensions, double>& vertexX,
-    const tarch::la::Vector<Dimensions, double>& vertexH
+    const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+    const tarch::la::Vector<DIMENSIONS, double>& vertexH
   ) {
 
-  tarch::la::Vector<Dimensions, long long> ind;
+  tarch::la::Vector<DIMENSIONS, long long> ind;
 
-  for (size_t i = 0; i < Dimensions; i++) {
+  for (size_t i = 0; i < DIMENSIONS; i++) {
     // Round to 12 significant digits
     double indf = std::round(vertexX(i) / vertexH(i) * 1e12) * 1e-12;
     ind(i)      = static_cast<long long>(indf);
@@ -56,8 +56,8 @@ tarch::la::Vector<Dimensions, long long> toolbox::particles::assignmentchecks::
 
 int toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   getVertexDepth(
-    const tarch::la::Vector<Dimensions, double>& vertexX,
-    const tarch::la::Vector<Dimensions, double>& vertexH
+    const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+    const tarch::la::Vector<DIMENSIONS, double>& vertexH
   ) {
 
   constexpr double boxsize = 243.;
@@ -76,7 +76,7 @@ int toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   numericalEquals(const ParticleIdentifier& rhs) const {
 
-  for (size_t i = 0; i < Dimensions; i++) {
+  for (size_t i = 0; i < DIMENSIONS; i++) {
     if (vertexInd(i) != rhs.vertexInd(i))
       return false;
   }
@@ -110,7 +110,7 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   if (treeID > rhs.treeID)
     return false;
 
-  for (int d = 0; d < Dimensions; d++) {
+  for (int d = 0; d < DIMENSIONS; d++) {
     if (vertexInd(d) < rhs.vertexInd(d))
       return true;
     if (vertexInd(d) > rhs.vertexInd(d))

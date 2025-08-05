@@ -49,7 +49,7 @@ def create_postprocessing_kernel_for_error_measurement():
     double errors[3] = {0.0, 0.0, 0.0};
     double solution[{{NUMBER_OF_UNKNOWNS}}];
 
-    #if Dimensions==2
+    #if DIMENSIONS==2
     const double cellVolume = h[0] * h[1];
     #else
     const double cellVolume = h[0] * h[1] * h[2];

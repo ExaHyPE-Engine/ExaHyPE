@@ -20,9 +20,9 @@ toolbox::particles::assignmentchecks::tests::TestHelpers::TestHelpers():
 
 
 bool toolbox::particles::assignmentchecks::tests::internal::liftParticle(
-  const tarch::la::Vector<Dimensions, double> particleX,
-  const tarch::la::Vector<Dimensions, double> vertexX,
-  const tarch::la::Vector<Dimensions, double> vertexH,
+  const tarch::la::Vector<DIMENSIONS, double> particleX,
+  const tarch::la::Vector<DIMENSIONS, double> vertexX,
+  const tarch::la::Vector<DIMENSIONS, double> vertexH,
   const int                                   depth
 ) {
 
@@ -30,7 +30,7 @@ bool toolbox::particles::assignmentchecks::tests::internal::liftParticle(
     return false;
   }
 
-  tarch::la::Vector<Dimensions, double> dv = vertexX - particleX;
+  tarch::la::Vector<DIMENSIONS, double> dv = vertexX - particleX;
 
   if (tarch::la::oneSmaller(dv, -1. * vertexH)) {
     return true;
@@ -43,8 +43,8 @@ bool toolbox::particles::assignmentchecks::tests::internal::liftParticle(
 
 
 bool toolbox::particles::assignmentchecks::tests::internal::dropParticle(
-  const tarch::la::Vector<Dimensions, double> particleX,
-  const tarch::la::Vector<Dimensions, double> vertexH,
+  const tarch::la::Vector<DIMENSIONS, double> particleX,
+  const tarch::la::Vector<DIMENSIONS, double> vertexH,
   const int                                   depth,
   const int                                   maxVertexDepth
 ) {
@@ -53,10 +53,10 @@ bool toolbox::particles::assignmentchecks::tests::internal::dropParticle(
     return false;
   }
 
-  tarch::la::Vector<Dimensions, double> vHnew   = vertexH / 3.;
-  tarch::la::Vector<Dimensions, double> vertexX = findVertexX(particleX, vHnew);
+  tarch::la::Vector<DIMENSIONS, double> vHnew   = vertexH / 3.;
+  tarch::la::Vector<DIMENSIONS, double> vertexX = findVertexX(particleX, vHnew);
 
-  tarch::la::Vector<Dimensions, double> dv = vertexX - particleX;
+  tarch::la::Vector<DIMENSIONS, double> dv = vertexX - particleX;
 
   if (tarch::la::allSmaller(dv, vHnew) and tarch::la::allGreater(dv, -1. * vHnew)) {
     return true;
@@ -77,14 +77,14 @@ int toolbox::particles::assignmentchecks::tests::internal::findVertexInd(
 }
 
 
-tarch::la::Vector<Dimensions, double> toolbox::particles::assignmentchecks::
+tarch::la::Vector<DIMENSIONS, double> toolbox::particles::assignmentchecks::
   tests::internal::findVertexX(
-    const tarch::la::Vector<Dimensions, double> x,
-    const tarch::la::Vector<Dimensions, double> vertexH
+    const tarch::la::Vector<DIMENSIONS, double> x,
+    const tarch::la::Vector<DIMENSIONS, double> vertexH
   ) {
-  tarch::la::Vector<Dimensions, double> vertexX;
+  tarch::la::Vector<DIMENSIONS, double> vertexX;
 
-  for (int i = 0; i < Dimensions; i++) {
+  for (int i = 0; i < DIMENSIONS; i++) {
     int vertexInd = internal::findVertexInd(x(i), vertexH(i));
     vertexX(i)    = 2 * vertexInd * vertexH(i);
   }
@@ -99,20 +99,20 @@ toolbox::particles::assignmentchecks::tests::TestParticle* toolbox::particles::
     bool                                                       bx,
     bool                                                       by,
     bool                                                       bz,
-    tarch::la::Vector<Dimensions, double>                      boundary
+    tarch::la::Vector<DIMENSIONS, double>                      boundary
   ) {
 
-  tarch::la::Vector<Dimensions, double> virtualPartX = original->getX();
+  tarch::la::Vector<DIMENSIONS, double> virtualPartX = original->getX();
 
   if (bx) {
     virtualPartX(0) += boundary(0);
   }
-#if Dimensions > 1
+#if DIMENSIONS > 1
   if (by) {
     virtualPartX(1) += boundary(1);
   }
 #endif
-#if Dimensions > 2
+#if DIMENSIONS > 2
   if (bz) {
     virtualPartX(2) += boundary(2);
   }
@@ -137,13 +137,13 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
   namespace ac = ::toolbox::particles::assignmentchecks;
 
-  tarch::la::Vector<Dimensions, double> particleAX;
-  tarch::la::Vector<Dimensions, double> particleBX;
-  tarch::la::Vector<Dimensions, double> vertexX;
-  tarch::la::Vector<Dimensions, double> vertexH;
+  tarch::la::Vector<DIMENSIONS, double> particleAX;
+  tarch::la::Vector<DIMENSIONS, double> particleBX;
+  tarch::la::Vector<DIMENSIONS, double> vertexX;
+  tarch::la::Vector<DIMENSIONS, double> vertexH;
   int                                   treeId = 1;
 
-  for (int i = 0; i < Dimensions; i++) {
+  for (int i = 0; i < DIMENSIONS; i++) {
     particleAX(i) = 1.;
     particleBX(i) = 2.;
     vertexX(i)    = 1.;
@@ -346,9 +346,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   int                                   treeId            = 1;
   bool                                  isLocal           = true;
   double                                positionTolerance = 1.;
-  tarch::la::Vector<Dimensions, double> particleX;
-  tarch::la::Vector<Dimensions, double> vertexX;
-  tarch::la::Vector<Dimensions, double> vertexH;
+  tarch::la::Vector<DIMENSIONS, double> particleX;
+  tarch::la::Vector<DIMENSIONS, double> vertexX;
+  tarch::la::Vector<DIMENSIONS, double> vertexH;
 
   std::string trace;
 
@@ -364,7 +364,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
       int particleID = p;
 
-      for (int i = 0; i < Dimensions; i++) {
+      for (int i = 0; i < DIMENSIONS; i++) {
         particleX(i) = p;
         vertexX(i)   = p;
         vertexH(i)   = p;
@@ -441,7 +441,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
     int particleID = p;
 
-    for (int i = 0; i < Dimensions; i++) {
+    for (int i = 0; i < DIMENSIONS; i++) {
       particleX(i) = p;
       vertexX(i)   = p;
       vertexH(i)   = p;
@@ -496,9 +496,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   eventDatabase.setMaxParticleSnapshotsToKeepTrackOf(20);
 
   double                                positionTolerance = 1.;
-  tarch::la::Vector<Dimensions, double> particleX;
-  tarch::la::Vector<Dimensions, double> vertexX;
-  tarch::la::Vector<Dimensions, double> vertexH;
+  tarch::la::Vector<DIMENSIONS, double> particleX;
+  tarch::la::Vector<DIMENSIONS, double> vertexX;
+  tarch::la::Vector<DIMENSIONS, double> vertexH;
 
   std::string trace;
 
@@ -529,7 +529,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
         int particleID = p;
 
-        for (int i = 0; i < Dimensions; i++) {
+        for (int i = 0; i < DIMENSIONS; i++) {
           particleX(i) = p;
           vertexX(i)   = p;
           vertexH(i)   = p;
@@ -636,14 +636,14 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   double positionTolerance = 1.;
   double dt                = 1.;
 
-  tarch::la::Vector<Dimensions, double> particleX;
-  tarch::la::Vector<Dimensions, double> vertexX;
-  tarch::la::Vector<Dimensions, double> vertexH;
+  tarch::la::Vector<DIMENSIONS, double> particleX;
+  tarch::la::Vector<DIMENSIONS, double> vertexX;
+  tarch::la::Vector<DIMENSIONS, double> vertexH;
 
   // particle displacement each step
-  tarch::la::Vector<Dimensions, double> dx;
+  tarch::la::Vector<DIMENSIONS, double> dx;
 
-  for (int i = 0; i < Dimensions; i++) {
+  for (int i = 0; i < DIMENSIONS; i++) {
     particleX(i) = 1.;
     vertexX(i)   = 1.;
     vertexH(i)   = 1.;
@@ -658,7 +658,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     ac::startMeshSweep(sweepname);
 
     // move particle
-    for (int i = 0; i < Dimensions; i++) {
+    for (int i = 0; i < DIMENSIONS; i++) {
       particleX(i) += dx(i) * dt;
     }
 
@@ -736,7 +736,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testParticleWalkSameTreeLevel() {
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
 
   logTraceIn("testParticleWalkSameTreeLevel()");
 
@@ -750,19 +750,19 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   std::string particleName = "TestParticle";
 
   // coordinates of particles
-  tarch::la::Vector<Dimensions, double> localPartX;
+  tarch::la::Vector<DIMENSIONS, double> localPartX;
   // particle displacement each step
-  tarch::la::Vector<Dimensions, double> dx;
+  tarch::la::Vector<DIMENSIONS, double> dx;
   // Assume we have vertices of a single size.
-  tarch::la::Vector<Dimensions, double> vertexH;
-  tarch::la::Vector<Dimensions, double> vertexX;
-  tarch::la::Vector<Dimensions, double> prevVertexX;
+  tarch::la::Vector<DIMENSIONS, double> vertexH;
+  tarch::la::Vector<DIMENSIONS, double> vertexX;
+  tarch::la::Vector<DIMENSIONS, double> prevVertexX;
 
   // Initialise values
   double vertexH_default = 3.;
   double dt              = 1.;
 
-  for (int i = 0; i < Dimensions; i++) {
+  for (int i = 0; i < DIMENSIONS; i++) {
     localPartX(i) = 51.5;
     dx(i)         = -1.;
     vertexH(i)    = vertexH_default;
@@ -841,7 +841,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     // find current vertex particle is assigned to.
     int prevVertexInd = vertexInd;
     vertexInd         = internal::findVertexInd(localPartX(0), vertexH(0));
-    for (int i = 0; i < Dimensions; i++) {
+    for (int i = 0; i < DIMENSIONS; i++) {
       prevVertexX(i) = vertexX(i);
     }
     vertexX = internal::findVertexX(localPartX, vertexH);
@@ -927,7 +927,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testParticleLiftDrop() {
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
 
   logTraceIn("testParticleLiftDrop()");
 
@@ -941,16 +941,16 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   std::string particleName = "TestParticle";
 
   // coordinates of particles
-  tarch::la::Vector<Dimensions, double> localPartX;
-  tarch::la::Vector<Dimensions, double> vertexH, prevVertexH;
-  tarch::la::Vector<Dimensions, double> vertexX, prevVertexX;
+  tarch::la::Vector<DIMENSIONS, double> localPartX;
+  tarch::la::Vector<DIMENSIONS, double> vertexH, prevVertexH;
+  tarch::la::Vector<DIMENSIONS, double> vertexX, prevVertexX;
 
   // Initialise values
   double vertexH_default = 3.;
   int    depth           = 3;
   int    maxVertexDepth  = 5;
 
-  for (int i = 0; i < Dimensions; i++) {
+  for (int i = 0; i < DIMENSIONS; i++) {
     localPartX(i) = 51.5;
     vertexH(i)    = vertexH_default;
     vertexX(i)    = 27.;
@@ -1105,7 +1105,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
 ) {
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   logTraceIn("testParticleWalk()");
 
   namespace ac = toolbox::particles::assignmentchecks;
@@ -1117,11 +1117,11 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
   std::string particleName = "TestParticle";
 
   // coordinates of particles
-  tarch::la::Vector<Dimensions, double> localPartX;
+  tarch::la::Vector<DIMENSIONS, double> localPartX;
   // particle displacement each step
-  tarch::la::Vector<Dimensions, double> dx;
-  tarch::la::Vector<Dimensions, double> vertexH, prevVertexH;
-  tarch::la::Vector<Dimensions, double> vertexX, prevVertexX;
+  tarch::la::Vector<DIMENSIONS, double> dx;
+  tarch::la::Vector<DIMENSIONS, double> vertexH, prevVertexH;
+  tarch::la::Vector<DIMENSIONS, double> vertexX, prevVertexX;
 
   // Initialise values
   double vertexH_default = 3.;
@@ -1129,7 +1129,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
   int    depth           = 4;
   int    maxVertexDepth  = 6;
 
-  for (int i = 0; i < Dimensions; i++) {
+  for (int i = 0; i < DIMENSIONS; i++) {
     localPartX(i) = 51.5;
     dx(i)         = -1.;
     vertexH(i)    = vertexH_default;
@@ -1297,7 +1297,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testPeriodicBoundaryConditions() {
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
 
   logTraceIn("testPeriodicBoundaryConditions()");
 
@@ -1311,18 +1311,18 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   std::string particleName = "TestParticle";
 
   // (Initial) particle position
-  tarch::la::Vector<Dimensions, double> localPartX_init;
+  tarch::la::Vector<DIMENSIONS, double> localPartX_init;
   // particle displacement each step
-  tarch::la::Vector<Dimensions, double> dx;
+  tarch::la::Vector<DIMENSIONS, double> dx;
   // position of boundaries.
   // This should be a plane, but in this simplified test,
   // where the particle is always travelling diagonally,
   // a single point does the trick.
-  tarch::la::Vector<Dimensions, double> boundary;
-  tarch::la::Vector<Dimensions, double> zero_corner;
+  tarch::la::Vector<DIMENSIONS, double> boundary;
+  tarch::la::Vector<DIMENSIONS, double> zero_corner;
 
-  tarch::la::Vector<Dimensions, double> vertexH_init, prevVertexH;
-  tarch::la::Vector<Dimensions, double> vertexX, prevVertexX;
+  tarch::la::Vector<DIMENSIONS, double> vertexH_init, prevVertexH;
+  tarch::la::Vector<DIMENSIONS, double> vertexX, prevVertexX;
 
   // Initialise values
   double vertexH_default = 3.;
@@ -1330,7 +1330,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   int    depth           = 4;
   int    maxVertexDepth  = 5;
 
-  for (int i = 0; i < Dimensions; i++) {
+  for (int i = 0; i < DIMENSIONS; i++) {
     localPartX_init(i) = 7.5;
     dx(i)              = -0.3;
     vertexH_init(i)    = vertexH_default;
@@ -1390,7 +1390,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       vertexX = internal::findVertexX(p->getX(), p->getVertexH());
 
       // update particle position.
-      tarch::la::Vector<Dimensions, double> partX = p->getX();
+      tarch::la::Vector<DIMENSIONS, double> partX = p->getX();
       partX += dt * dx;
       p->setX(partX);
 
@@ -1510,7 +1510,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       if (vertexInd == 0) {
         // we're at the (0, 0, 0) boundary vertex. Replicate the particle
         // across the boundary.
-        tarch::la::Vector<Dimensions, double>
+        tarch::la::Vector<DIMENSIONS, double>
                       virtualPartX = p->getX() + boundary;
         TestParticle* replica      = new TestParticle(
           virtualPartX,
@@ -1676,7 +1676,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testPeriodicBoundaryConditionsCorner() {
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
 
   logTraceIn("testPeriodicBoundaryConditionsCorner()");
 
@@ -1690,18 +1690,18 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   std::string particleName = "TestParticle";
 
   // (Initial) particle position
-  tarch::la::Vector<Dimensions, double> localPartX_init;
+  tarch::la::Vector<DIMENSIONS, double> localPartX_init;
   // particle displacement each step
-  tarch::la::Vector<Dimensions, double> dx;
+  tarch::la::Vector<DIMENSIONS, double> dx;
   // position of boundaries.
   // This should be a plane, but in this simplified test,
   // where the particle is always travelling diagonally,
   // a single point does the trick.
-  tarch::la::Vector<Dimensions, double> boundary;
-  tarch::la::Vector<Dimensions, double> zero_corner;
+  tarch::la::Vector<DIMENSIONS, double> boundary;
+  tarch::la::Vector<DIMENSIONS, double> zero_corner;
 
-  tarch::la::Vector<Dimensions, double> vertexH_init, prevVertexH;
-  tarch::la::Vector<Dimensions, double> vertexX, prevVertexX;
+  tarch::la::Vector<DIMENSIONS, double> vertexH_init, prevVertexH;
+  tarch::la::Vector<DIMENSIONS, double> vertexX, prevVertexX;
 
   // Initialise values
   double vertexH_default = 0.33333333;
@@ -1709,7 +1709,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   int    depth           = 1;
   int    maxVertexDepth  = 2;
 
-  for (int i = 0; i < Dimensions; i++) {
+  for (int i = 0; i < DIMENSIONS; i++) {
     localPartX_init(i) = 0.01;
     dx(i)              = 0.000001;
     vertexH_init(i)    = vertexH_default;
@@ -1770,7 +1770,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       vertexX = internal::findVertexX(p->getX(), p->getVertexH());
 
       // update particle position.
-      tarch::la::Vector<Dimensions, double> partX = p->getX();
+      tarch::la::Vector<DIMENSIONS, double> partX = p->getX();
       partX += dt * dx;
       p->setX(partX);
 
@@ -1892,7 +1892,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       if (vertexInd == 0) {
         // we're at the (0, 0, 0) boundary vertex. Replicate the particle
         // across the boundary.
-        if (Dimensions > 0) {
+        if (DIMENSIONS > 0) {
           ac::tests::TestParticle* mirror1 = internal::
             mirrorParticleAlongPeriodicBoundary(p, true, false, false, boundary);
           mirroredParticleSet.push_back(mirror1);
@@ -1901,7 +1901,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
             "Creating virtual particle at " << mirror1->getX();
           );
         }
-        if (Dimensions > 1) {
+        if (DIMENSIONS > 1) {
           ac::tests::TestParticle* mirror2 = internal::
             mirrorParticleAlongPeriodicBoundary(p, true, true, false, boundary);
           mirroredParticleSet.push_back(mirror2);
@@ -1917,7 +1917,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
             "Creating virtual particle at " << mirror3->getX();
           );
         }
-        if (Dimensions > 2) {
+        if (DIMENSIONS > 2) {
           ac::tests::TestParticle* mirror4 = internal::
             mirrorParticleAlongPeriodicBoundary(p, true, true, true, boundary);
           mirroredParticleSet.push_back(mirror4);
@@ -2038,7 +2038,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
 void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
 
   logTraceIn("testSieveSet()");
 
@@ -2052,18 +2052,18 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
   std::string particleName = "TestParticle";
 
   // (Initial) particle position
-  tarch::la::Vector<Dimensions, double> localPartX_init;
+  tarch::la::Vector<DIMENSIONS, double> localPartX_init;
   // particle displacement each step
-  tarch::la::Vector<Dimensions, double> dx;
+  tarch::la::Vector<DIMENSIONS, double> dx;
 
-  tarch::la::Vector<Dimensions, double> vertexH, prevVertexH;
-  tarch::la::Vector<Dimensions, double> vertexX, prevVertexX;
+  tarch::la::Vector<DIMENSIONS, double> vertexH, prevVertexH;
+  tarch::la::Vector<DIMENSIONS, double> vertexX, prevVertexX;
 
   // Initialise values
   double vertexH_default = 3.;
   double dt              = 1.;
 
-  for (int i = 0; i < Dimensions; i++) {
+  for (int i = 0; i < DIMENSIONS; i++) {
     localPartX_init(i) = 7.5;
     dx(i)              = 0.3 * vertexH_default;
     vertexH(i)         = vertexH_default;
@@ -2119,7 +2119,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
       vertexX = internal::findVertexX(p->getX(), p->getVertexH());
 
       // update particle position.
-      tarch::la::Vector<Dimensions, double> partX = p->getX();
+      tarch::la::Vector<DIMENSIONS, double> partX = p->getX();
       partX += dt * dx;
       p->setX(partX);
 

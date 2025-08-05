@@ -28,7 +28,7 @@ exahype2::RefinementControlService::~RefinementControlService() {
 void exahype2::RefinementControlService::shutdown() {}
 
 void exahype2::RefinementControlService::receiveDanglingMessages() {
-#ifdef Parallel
+#ifdef WITH_MPI
   int guardFlag;
   MPI_Iprobe(
     MPI_ANY_SOURCE, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &guardFlag, MPI_STATUS_IGNORE
@@ -116,7 +116,7 @@ void exahype2::RefinementControlService::finishStep() {
     );
   }
 
-#ifdef Parallel
+#ifdef WITH_MPI
   freeAllPendingSendRequests();
   _copyOfCommittedEvents = _committedEvents;
   triggerSendOfCopyOfCommittedEvents();
@@ -130,7 +130,7 @@ void exahype2::RefinementControlService::finishStep() {
   _committedEvents = ::peano4::grid::merge(_committedEvents);
 }
 
-#ifdef Parallel
+#ifdef WITH_MPI
 void exahype2::RefinementControlService::freeAllPendingSendRequests() {
   while (not _sendRequests.empty()) {
     std::vector<MPI_Request*>::iterator p = _sendRequests.begin();

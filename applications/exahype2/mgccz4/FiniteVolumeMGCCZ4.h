@@ -32,33 +32,33 @@ class examples::exahype2::mgccz4::FiniteVolumeMGCCZ4: public AbstractFiniteVolum
     FiniteVolumeMGCCZ4();   
 
     
-    //#if defined(GPUOffloadingOMP)
+    //#if defined(WITH_GPU_OMP_TARGET)
     //#pragma omp declare target
     //#endif
     void adjustSolution(
       double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
       double                                       t,
       double                                       dt
     )  override;
-    //#if defined(GPUOffloadingOMP)
+    //#if defined(WITH_GPU_OMP_TARGET)
     //#pragma omp end declare target
     //#endif
     
     
-    //#if defined(GPUOffloadingOMP)
+    //#if defined(WITH_GPU_OMP_TARGET)
     //#pragma omp declare target
     //#endif
     void sourceTerm(
       const double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
       double                                       t,
       double                                       dt,
       double * NOALIAS S
     );
-    //#if defined(GPUOffloadingOMP)
+    //#if defined(WITH_GPU_OMP_TARGET)
     //#pragma omp end declare target
     //#endif
     
@@ -66,8 +66,8 @@ class examples::exahype2::mgccz4::FiniteVolumeMGCCZ4: public AbstractFiniteVolum
     virtual void boundaryConditions(
       const double * NOALIAS Qinside, // Qinside[59+0]
       double * NOALIAS Qoutside, // Qoutside[59+0]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
       double                                       t,
       int                                          normal
     )  override;
@@ -76,8 +76,8 @@ class examples::exahype2::mgccz4::FiniteVolumeMGCCZ4: public AbstractFiniteVolum
     
     double maxEigenvalue(
       const double * NOALIAS Q, // Q[59+0],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
       double                                       t,
       int                                          normal
     );
@@ -85,8 +85,8 @@ class examples::exahype2::mgccz4::FiniteVolumeMGCCZ4: public AbstractFiniteVolum
     void nonconservativeProduct(
       const double * NOALIAS Q, // Q[59+0],
       const double * NOALIAS             deltaQ, // [59+0]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
       double                                       t,
       int                                          normal,
       double * NOALIAS BgradQ // BgradQ[59]

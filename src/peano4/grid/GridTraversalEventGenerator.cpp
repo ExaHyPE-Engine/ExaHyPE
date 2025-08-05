@@ -12,15 +12,15 @@ tarch::logging::Log peano4::grid::GridTraversalEventGenerator::_log("peano4::gri
 peano4::grid::GridTraversalEventGenerator::GridTraversalEventGenerator(int id):
   _id(id) {}
 
-std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesLocal(
-  GridVertex                vertices[TwoPowerD],
+std::bitset<TWO_POWER_D> peano4::grid::GridTraversalEventGenerator::areVerticesLocal(
+  GridVertex                vertices[TWO_POWER_D],
   const SplitSpecification& splitTriggered,
   const std::set<int>&      splitting,
   const std::set<int>&      joinTriggered,
   const std::set<int>&      joining
 ) const {
-  std::bitset<TwoPowerD> bitset;
-  for (int i = 0; i < TwoPowerD; i++) {
+  std::bitset<TWO_POWER_D> bitset;
+  for (int i = 0; i < TWO_POWER_D; i++) {
     bitset.set(
       i,
       isVertexAdjacentToLocalSpacetree(vertices[i], splitTriggered, splitting, joinTriggered, joining, true, true)
@@ -29,28 +29,28 @@ std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesLoc
   return bitset;
 }
 
-std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesLocal(
-  GridVertex                vertices[TwoPowerD],
+std::bitset<TWO_TIMES_D> peano4::grid::GridTraversalEventGenerator::areFacesLocal(
+  GridVertex                vertices[TWO_POWER_D],
   const SplitSpecification& splitTriggered,
   const std::set<int>&      splitting,
   const std::set<int>&      /*joinTriggered*/,
   const std::set<int>&      /*joining*/
 ) const {
-  std::bitset<TwoTimesD> result;
+  std::bitset<TWO_TIMES_D> result;
 
-  for (int faceNumber = 0; faceNumber < TwoTimesD; faceNumber++) {
+  for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
     bool isLocal = false;
 
-    const int normal = faceNumber % Dimensions;
-    const bool upper = faceNumber >= Dimensions;
+    const int normal = faceNumber % DIMENSIONS;
+    const bool upper = faceNumber >= DIMENSIONS;
 
-    for (int i = 0; i < TwoPowerD; i++) {
-      std::bitset<Dimensions> studiedVertex(i);
+    for (int i = 0; i < TWO_POWER_D; i++) {
+      std::bitset<DIMENSIONS> studiedVertex(i);
       studiedVertex.set(normal, upper);
       const int vertexIndex = static_cast<int>(studiedVertex.to_ulong());
       const GridVertex& vertex = vertices[vertexIndex];
 
-      std::bitset<Dimensions> studiedEntry = TwoPowerD - vertexIndex - 1;
+      std::bitset<DIMENSIONS> studiedEntry = TWO_POWER_D - vertexIndex - 1;
 
       studiedEntry.set(normal, 0);
       int currentRank = vertex.getAdjacentRanks(static_cast<int>(studiedEntry.to_ulong()));
@@ -82,7 +82,7 @@ bool peano4::grid::GridTraversalEventGenerator::isVertexAdjacentToLocalSpacetree
   bool                      splittingIsConsideredLocal,
   bool                      joiningIsConsideredLocal
 ) const {
-  for (int i = 0; i < TwoPowerD; i++) {
+  for (int i = 0; i < TWO_POWER_D; i++) {
     const auto adjacentRank = vertex.getAdjacentRanks(i);
 
     assertion(splitTriggered.count(adjacentRank) <= 1);
@@ -105,7 +105,7 @@ bool peano4::grid::GridTraversalEventGenerator::isVertexAdjacentToLocalSpacetree
 }
 
 bool peano4::grid::GridTraversalEventGenerator::isSpacetreeNodeLocal(
-  GridVertex                vertices[TwoPowerD],
+  GridVertex                vertices[TWO_POWER_D],
   const SplitSpecification& splitTriggered,
   const std::set<int>&      splitting,
   const std::set<int>&      /*joinTriggered*/,
@@ -114,7 +114,7 @@ bool peano4::grid::GridTraversalEventGenerator::isSpacetreeNodeLocal(
   bool                      joiningIsConsideredLocal
 ) const {
   dfor2(k)
-    const int rank = vertices[kScalar].getAdjacentRanks(TwoPowerD - kScalar - 1);
+    const int rank = vertices[kScalar].getAdjacentRanks(TWO_POWER_D - kScalar - 1);
     const auto isHanging = vertices[kScalar].getState() == GridVertex::State::HangingVertex;
 
     if (
@@ -131,20 +131,20 @@ bool peano4::grid::GridTraversalEventGenerator::isSpacetreeNodeLocal(
   return true;
 }
 
-std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesAdjacentToParallelDomainBoundary(
-  GridVertex                vertices[TwoPowerD],
+std::bitset<TWO_POWER_D> peano4::grid::GridTraversalEventGenerator::areVerticesAdjacentToParallelDomainBoundary(
+  GridVertex                vertices[TWO_POWER_D],
   const SplitSpecification& splitTriggered,
   const std::set<int>&      splitting,
   const std::set<int>&      /*joinTriggered*/,
   const std::set<int>&      /*joining*/,
   bool                      /*calledByLeaveCell*/
 ) const {
-  std::bitset<TwoPowerD> result;
-  for (int j = 0; j < TwoPowerD; j++) {
-    tarch::la::Vector<TwoPowerD, int> adjacency = vertices[j].getBackupOfAdjacentRanks();
+  std::bitset<TWO_POWER_D> result;
+  for (int j = 0; j < TWO_POWER_D; j++) {
+    tarch::la::Vector<TWO_POWER_D, int> adjacency = vertices[j].getBackupOfAdjacentRanks();
     bool                              oneLocal  = false;
     bool                              oneRemote = false;
-    for (int i = 0; i < TwoPowerD; i++) {
+    for (int i = 0; i < TWO_POWER_D; i++) {
       bool valid = adjacency(i) >= 0 or adjacency(i) == peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition;
       bool local = adjacency(i) == _id or splitting.count(adjacency(i)) > 0 or splitTriggered.count(adjacency(i)) > 0;
       oneLocal |= (valid and local);
@@ -155,22 +155,22 @@ std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesAdj
   return result;
 }
 
-std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesAdjacentToParallelDomainBoundary(
-  GridVertex                vertices[TwoPowerD],
+std::bitset<TWO_TIMES_D> peano4::grid::GridTraversalEventGenerator::areFacesAdjacentToParallelDomainBoundary(
+  GridVertex                vertices[TWO_POWER_D],
   const SplitSpecification& splitTriggered,
   const std::set<int>&      splitting,
   const std::set<int>&      /*joinTriggered*/,
   const std::set<int>&      /*joining*/,
   bool                      calledByLeaveCell
 ) const {
-  std::bitset<TwoTimesD> result;
-  for (int j = 0; j < TwoTimesD; j++) {
+  std::bitset<TWO_TIMES_D> result;
+  for (int j = 0; j < TWO_TIMES_D; j++) {
     // @todo
-    tarch::la::Vector<TwoPowerD, int> adjacency = getAdjacentRanksOfFace(vertices, j, calledByLeaveCell);
-    // tarch::la::Vector< TwoPowerD, int > adjacency = getAdjacentRanksOfFace(vertices, i, false);
+    tarch::la::Vector<TWO_POWER_D, int> adjacency = getAdjacentRanksOfFace(vertices, j, calledByLeaveCell);
+    // tarch::la::Vector< TWO_POWER_D, int > adjacency = getAdjacentRanksOfFace(vertices, i, false);
     bool oneLocal  = false;
     bool oneRemote = false;
-    for (int i = 0; i < TwoPowerD; i++) {
+    for (int i = 0; i < TWO_POWER_D; i++) {
       // @todo noch rueber auf vertices
       // So ganz stimmt es natuerlich net, weil das ist ja jetzt eins zu frueh
       bool valid = adjacency(i) >= 0 or adjacency(i) == peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition;
@@ -199,14 +199,14 @@ std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesAdjace
 }
 
 peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createGenericCellTraversalEvent(
-  GridVertex                                coarseGridVertices[TwoPowerD],
-  GridVertex                                fineGridVertices[TwoPowerD],
+  GridVertex                                coarseGridVertices[TWO_POWER_D],
+  GridVertex                                fineGridVertices[TWO_POWER_D],
   const AutomatonState&                     state,
   const SplitSpecification&                 splitTriggered,
   const std::set<int>&                      splitting,
   const std::set<int>&                      joinTriggered,
   const std::set<int>&                      joining,
-  const tarch::la::Vector<Dimensions, int>& relativePositionToFather,
+  const tarch::la::Vector<DIMENSIONS, int>& relativePositionToFather,
   bool                                      spacetreeStateIsRunning
 ) const {
   GridTraversalEvent event;
@@ -234,7 +234,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   dfor2(k) {
     if (fineGridVertices[kScalar].getState() != GridVertex::State::HangingVertex) {
       dfor2(j) {
-        tarch::la::Vector<Dimensions, int> entryIn3x3Patch = k + j;
+        tarch::la::Vector<DIMENSIONS, int> entryIn3x3Patch = k + j;
         int                                owningTree      = fineGridVertices[kScalar].getAdjacentRanks(jScalar);
         event.setIsAdjacentCellLocal(peano4::utils::dLinearised(entryIn3x3Patch, 3), owningTree == _id);
         event.setIsVertexParentOfSubtree(
@@ -249,7 +249,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   dfor2(k) {
     std::set<int> neighbourIds;
 
-    for (int i = 0; i < TwoPowerD; i++) {
+    for (int i = 0; i < TWO_POWER_D; i++) {
       if (fineGridVertices[kScalar].getAdjacentRanks(i) >= 0) {
         neighbourIds.insert(fineGridVertices[kScalar].getAdjacentRanks(i));
       }
@@ -263,15 +263,15 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
 }
 
 peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createLeaveCellTraversalEvent(
-  GridVertex                                coarseGridVertices[TwoPowerD],
-  GridVertex                                fineGridVertices[TwoPowerD],
+  GridVertex                                coarseGridVertices[TWO_POWER_D],
+  GridVertex                                fineGridVertices[TWO_POWER_D],
   const AutomatonState&                     state,
   const SplitSpecification&                 splitTriggered,
   const std::set<int>&                      splitting,
   const std::set<int>&                      joinTriggered,
   const std::set<int>&                      joining,
   const std::set<int>&                      /*hasSplit*/,
-  const tarch::la::Vector<Dimensions, int>& relativePositionToFather,
+  const tarch::la::Vector<DIMENSIONS, int>& relativePositionToFather,
   bool                                      spacetreeStateIsRunning
 ) const {
   GridTraversalEvent event = createGenericCellTraversalEvent(
@@ -298,9 +298,9 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     areFacesAdjacentToParallelDomainBoundary(fineGridVertices, splitTriggered, splitting, joinTriggered, joining, true)
   );
 
-  const std::bitset<Dimensions> coordinates = PeanoCurve::getFirstVertexIndex(state);
-  for (int i = 0; i < TwoPowerD; i++) {
-    const std::bitset<Dimensions> vertexIndex(coordinates ^ std::bitset<Dimensions>(i));
+  const std::bitset<DIMENSIONS> coordinates = PeanoCurve::getFirstVertexIndex(state);
+  for (int i = 0; i < TWO_POWER_D; i++) {
+    const std::bitset<DIMENSIONS> vertexIndex(coordinates ^ std::bitset<DIMENSIONS>(i));
     const int                     stackNumber = PeanoCurve::getVertexWriteStackNumber(state, vertexIndex);
 
     event.setVertexDataFrom(i, vertexIndex.to_ulong());
@@ -337,7 +337,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     }
   }
 
-  for (int i = 0; i < 2 * Dimensions; i++) {
+  for (int i = 0; i < 2 * DIMENSIONS; i++) {
     int       faceIndex   = PeanoCurve::getFaceNumberAlongCurve(state, i);
     FaceType  type        = getFaceType(coarseGridVertices, relativePositionToFather, faceIndex);
     const int stackNumber = PeanoCurve::getFaceWriteStackNumber(state, faceIndex);
@@ -392,10 +392,10 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     }
   }
 
-#if !defined(SharedMemoryParallelisation)
-  for (int i = 0; i < TwoPowerD; i++)
+#if !defined(WITH_MULTITHREADING)
+  for (int i = 0; i < TWO_POWER_D; i++)
     assertion1(event.getIsVertexLocal(i) or not event.getIsVertexAdjacentToParallelDomainBoundary(i), event.toString());
-  for (int i = 0; i < TwoTimesD; i++)
+  for (int i = 0; i < TWO_TIMES_D; i++)
     assertion1(event.getIsFaceLocal(i) or not event.getIsFaceAdjacentToParallelDomainBoundary(i), event.toString());
 #endif
 
@@ -460,15 +460,15 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
 }
 
 peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createEnterCellTraversalEvent(
-  GridVertex                                coarseGridVertices[TwoPowerD],
-  GridVertex                                fineGridVertices[TwoPowerD],
+  GridVertex                                coarseGridVertices[TWO_POWER_D],
+  GridVertex                                fineGridVertices[TWO_POWER_D],
   const AutomatonState&                     state,
   const SplitSpecification&                 splitTriggered,
   const std::set<int>&                      splitting,
   const std::set<int>&                      joinTriggered,
   const std::set<int>&                      joining,
   const std::set<int>&                      hasSplit,
-  const tarch::la::Vector<Dimensions, int>& relativePositionToFather,
+  const tarch::la::Vector<DIMENSIONS, int>& relativePositionToFather,
   bool                                      spacetreeStateIsRunning
 ) const {
   GridTraversalEvent event = createGenericCellTraversalEvent(
@@ -495,16 +495,16 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     areFacesAdjacentToParallelDomainBoundary(fineGridVertices, splitTriggered, splitting, joinTriggered, joining, false)
   );
 
-#if !defined(SharedMemoryParallelisation)
-  for (int i = 0; i < TwoPowerD; i++)
+#if !defined(WITH_MULTITHREADING)
+  for (int i = 0; i < TWO_POWER_D; i++)
     assertion1(event.getIsVertexLocal(i) or not event.getIsVertexAdjacentToParallelDomainBoundary(i), event.toString());
-  for (int i = 0; i < TwoTimesD; i++)
+  for (int i = 0; i < TWO_TIMES_D; i++)
     assertion1(event.getIsFaceLocal(i) or not event.getIsFaceAdjacentToParallelDomainBoundary(i), event.toString());
 #endif
 
-  const std::bitset<Dimensions> coordinates = PeanoCurve::getFirstVertexIndex(state);
-  for (int i = 0; i < TwoPowerD; i++) {
-    const std::bitset<Dimensions> vertexIndex(coordinates ^ std::bitset<Dimensions>(i));
+  const std::bitset<DIMENSIONS> coordinates = PeanoCurve::getFirstVertexIndex(state);
+  for (int i = 0; i < TWO_POWER_D; i++) {
+    const std::bitset<DIMENSIONS> vertexIndex(coordinates ^ std::bitset<DIMENSIONS>(i));
     const int                     stackNumber    = PeanoCurve::getVertexReadStackNumber(state, vertexIndex);
     const int                     vertexPosition = vertexIndex.to_ulong();
 
@@ -555,7 +555,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     );
   }
 
-  for (int i = 0; i < 2 * Dimensions; i++) {
+  for (int i = 0; i < 2 * DIMENSIONS; i++) {
     int       faceIndex   = PeanoCurve::getFaceNumberAlongCurve(state, i);
     FaceType  type        = getFaceType(coarseGridVertices, relativePositionToFather, faceIndex);
     const int stackNumber = PeanoCurve::getFaceReadStackNumber(state, faceIndex);
@@ -618,10 +618,10 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     event.setCellData(TraversalObserver::NoData);
   }
 
-#if !defined(SharedMemoryParallelisation)
-  for (int i = 0; i < TwoPowerD; i++)
+#if !defined(WITH_MULTITHREADING)
+  for (int i = 0; i < TWO_POWER_D; i++)
     assertion1(event.getIsVertexLocal(i) or not event.getIsVertexAdjacentToParallelDomainBoundary(i), event.toString());
-  for (int i = 0; i < TwoTimesD; i++)
+  for (int i = 0; i < TWO_TIMES_D; i++)
     assertion1(event.getIsFaceLocal(i) or not event.getIsFaceAdjacentToParallelDomainBoundary(i), event.toString());
 #endif
 
@@ -629,19 +629,19 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
 }
 
 peano4::grid::FaceType peano4::grid::GridTraversalEventGenerator::getFaceType(
-  GridVertex                         coarseGridVertices[TwoPowerD],
-  tarch::la::Vector<Dimensions, int> positionOfCell,
+  GridVertex                         coarseGridVertices[TWO_POWER_D],
+  tarch::la::Vector<DIMENSIONS, int> positionOfCell,
   int                                faceNumber
 ) {
   bool allVerticesAreHanging         = true;
   bool allVerticesAreDeleteOrHanging = true;
   bool allVerticesAreNewOrHanging    = true;
 
-  const int normal = faceNumber % Dimensions;
-  for (int i = 0; i < TwoPowerD; i++) {
-    std::bitset<Dimensions> studiedVertex = i;
-    studiedVertex.set(normal, faceNumber >= Dimensions);
-    switch (getVertexType(coarseGridVertices, positionOfCell + tarch::la::Vector<Dimensions, int>(studiedVertex))) {
+  const int normal = faceNumber % DIMENSIONS;
+  for (int i = 0; i < TWO_POWER_D; i++) {
+    std::bitset<DIMENSIONS> studiedVertex = i;
+    studiedVertex.set(normal, faceNumber >= DIMENSIONS);
+    switch (getVertexType(coarseGridVertices, positionOfCell + tarch::la::Vector<DIMENSIONS, int>(studiedVertex))) {
     case VertexType::Hanging:
       break;
     case VertexType::New:
@@ -673,15 +673,15 @@ peano4::grid::FaceType peano4::grid::GridTraversalEventGenerator::getFaceType(
 }
 
 peano4::grid::CellType peano4::grid::GridTraversalEventGenerator::getCellType(
-  GridVertex                         coarseGridVertices[TwoPowerD],
-  tarch::la::Vector<Dimensions, int> positionOfCell
+  GridVertex                         coarseGridVertices[TWO_POWER_D],
+  tarch::la::Vector<DIMENSIONS, int> positionOfCell
 ) {
   bool allVerticesAreDelete = true;
   bool allVerticesAreNew    = true;
 
-  for (int i = 0; i < TwoPowerD; i++) {
-    std::bitset<Dimensions> vectorPosition = i;
-    switch (getVertexType(coarseGridVertices, positionOfCell + tarch::la::Vector<Dimensions, int>(vectorPosition))) {
+  for (int i = 0; i < TWO_POWER_D; i++) {
+    std::bitset<DIMENSIONS> vectorPosition = i;
+    switch (getVertexType(coarseGridVertices, positionOfCell + tarch::la::Vector<DIMENSIONS, int>(vectorPosition))) {
     case VertexType::Hanging:
       break;
     case VertexType::Persistent:
@@ -709,7 +709,7 @@ peano4::grid::CellType peano4::grid::GridTraversalEventGenerator::getCellType(
 }
 
 peano4::grid::VertexType peano4::grid::GridTraversalEventGenerator::
-  getVertexType(GridVertex coarseGridVertices[TwoPowerD], tarch::la::Vector<Dimensions, int> position, int dimension) {
+  getVertexType(GridVertex coarseGridVertices[TWO_POWER_D], tarch::la::Vector<DIMENSIONS, int> position, int dimension) {
   // Helper lambda to determine the base case
   auto baseCase = [](const GridVertex& vertex) -> VertexType {
     switch (vertex.getState()) {
@@ -744,7 +744,7 @@ peano4::grid::VertexType peano4::grid::GridTraversalEventGenerator::
     return getVertexType(coarseGridVertices, position, dimension - 1);
   }
 
-  tarch::la::Vector<Dimensions, int> positionCopy = position;
+  tarch::la::Vector<DIMENSIONS, int> positionCopy = position;
   position(dimension)                             = 0;
   VertexType lhs                                  = getVertexType(coarseGridVertices, position, dimension - 1);
   positionCopy(dimension)                         = 1;
@@ -763,16 +763,16 @@ peano4::grid::VertexType peano4::grid::GridTraversalEventGenerator::
 }
 
 peano4::grid::VertexType peano4::grid::GridTraversalEventGenerator::getVertexType(
-  GridVertex                         coarseGridVertices[TwoPowerD],
-  tarch::la::Vector<Dimensions, int> position
+  GridVertex                         coarseGridVertices[TWO_POWER_D],
+  tarch::la::Vector<DIMENSIONS, int> position
 ) {
-#if Dimensions == 2 or Dimensions == 3
+#if DIMENSIONS == 2 or DIMENSIONS == 3
   if (
     coarseGridVertices[0].getState() == GridVertex::State::Refined
     and coarseGridVertices[1].getState() == GridVertex::State::Refined
     and coarseGridVertices[2].getState() == GridVertex::State::Refined
     and coarseGridVertices[3].getState() == GridVertex::State::Refined
-#if Dimensions == 3
+#if DIMENSIONS == 3
     and coarseGridVertices[4].getState() == GridVertex::State::Refined
     and coarseGridVertices[5].getState() == GridVertex::State::Refined
     and coarseGridVertices[6].getState() == GridVertex::State::Refined
@@ -782,11 +782,11 @@ peano4::grid::VertexType peano4::grid::GridTraversalEventGenerator::getVertexTyp
     return VertexType::Persistent;
   }
 #endif
-  return getVertexType(coarseGridVertices, position, Dimensions - 1);
+  return getVertexType(coarseGridVertices, position, DIMENSIONS - 1);
 }
 
 int peano4::grid::GridTraversalEventGenerator::getTreeOwningSpacetreeNode(
-  GridVertex                vertices[TwoPowerD],
+  GridVertex                vertices[TWO_POWER_D],
   const SplitSpecification& splitTriggered,
   const std::set<int>&      splitting,
   const std::set<int>&      joinTriggered,
@@ -799,8 +799,8 @@ int peano4::grid::GridTraversalEventGenerator::getTreeOwningSpacetreeNode(
   dfor2(
     k
   ) if (vertices[kScalar].getState() != GridVertex::State::HangingVertex
-        and vertices[kScalar].getAdjacentRanks(TwoPowerD - kScalar - 1) != InvalidRank) {
-    weakId = vertices[kScalar].getAdjacentRanks(TwoPowerD - kScalar - 1);
+        and vertices[kScalar].getAdjacentRanks(TWO_POWER_D - kScalar - 1) != InvalidRank) {
+    weakId = vertices[kScalar].getAdjacentRanks(TWO_POWER_D - kScalar - 1);
   }
   if (vertices[kScalar].getState() != GridVertex::State::HangingVertex
       and isVertexAdjacentToLocalSpacetree(
@@ -813,7 +813,7 @@ int peano4::grid::GridTraversalEventGenerator::getTreeOwningSpacetreeNode(
         false
       )) {
     assertion8(
-      id == NotSetYet or vertices[kScalar].getAdjacentRanks(TwoPowerD - kScalar - 1) == id,
+      id == NotSetYet or vertices[kScalar].getAdjacentRanks(TWO_POWER_D - kScalar - 1) == id,
       id,
       kScalar,
       vertices[kScalar].toString(),
@@ -823,7 +823,7 @@ int peano4::grid::GridTraversalEventGenerator::getTreeOwningSpacetreeNode(
       vertices[3].toString(),
       _id
     );
-    id = vertices[kScalar].getAdjacentRanks(TwoPowerD - kScalar - 1);
+    id = vertices[kScalar].getAdjacentRanks(TWO_POWER_D - kScalar - 1);
   }
   enddforx assertion1(
     id != NotSetYet
@@ -838,13 +838,13 @@ int peano4::grid::GridTraversalEventGenerator::getTreeOwningSpacetreeNode(
   return id;
 }
 
-tarch::la::Vector<TwoPowerD, int> peano4::grid::GridTraversalEventGenerator::
-  getAdjacentRanksOfFace(GridVertex fineGridVertices[TwoPowerD], int faceNumber, bool calledByReceivingProcess) const {
-  tarch::la::Vector<TwoPowerD, int> adjacentRanksOfFace(InvalidRank);
+tarch::la::Vector<TWO_POWER_D, int> peano4::grid::GridTraversalEventGenerator::
+  getAdjacentRanksOfFace(GridVertex fineGridVertices[TWO_POWER_D], int faceNumber, bool calledByReceivingProcess) const {
+  tarch::la::Vector<TWO_POWER_D, int> adjacentRanksOfFace(InvalidRank);
 
   int counter = 0;
-  const int normal  = faceNumber % Dimensions;
-  const bool isLowerFace = faceNumber < Dimensions;
+  const int normal  = faceNumber % DIMENSIONS;
+  const bool isLowerFace = faceNumber < DIMENSIONS;
 
   dfore(i, 2, normal, isLowerFace ? 0 : 1) {
     const int currentVertexIndex = peano4::utils::dLinearised(i, 2);
@@ -856,7 +856,7 @@ tarch::la::Vector<TwoPowerD, int> peano4::grid::GridTraversalEventGenerator::
       or (not calledByReceivingProcess and state == GridVertex::State::Delete);
 
     for (int bit = 0; bit <= 1; ++bit) {
-      std::bitset<Dimensions> studiedEntry = TwoPowerD - currentVertexIndex - 1;
+      std::bitset<DIMENSIONS> studiedEntry = TWO_POWER_D - currentVertexIndex - 1;
       studiedEntry.set(normal, bit);
 
       const int entryIndex = static_cast<int>(studiedEntry.to_ulong());

@@ -32,7 +32,7 @@ const tarch::multicore::BooleanSemaphore& tarch::accelerator::Device::getMemoryB
 }
 
 void tarch::accelerator::Device::checkForMemoryLeaks() {
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   tarch::multicore::Lock lock(_memoryBlockSemaphore);
 
   if (!_memoryBlockTable.empty()) {
@@ -48,7 +48,7 @@ void tarch::accelerator::Device::checkForMemoryLeaks() {
 #endif
 }
 
-#if defined(GPUOffloadingOff)
+#if !defined(WITH_GPU)
 
 bool tarch::accelerator::Device::init() {
   return isInitialised();
@@ -64,4 +64,4 @@ bool tarch::accelerator::Device::isInitialised() const { return true; }
 
 int tarch::accelerator::Device::getNumberOfDevices() const { return 0; }
 
-#endif // defined(GPUOffloadingOff)
+#endif // WITH_GPU

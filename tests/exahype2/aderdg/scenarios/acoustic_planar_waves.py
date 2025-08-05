@@ -33,14 +33,14 @@ class AcousticPlanarWaves(Scenario):
   // simple translation in positive diagonal direction
   const double val = cos( - std::numbers::pi*(
       x[0] + x[1]
-#if Dimensions==3
+#if DIMENSIONS==3
       + x[2]
 #endif
   ));
 
   Q[1] = val;
   Q[2] = val;
-#if Dimensions==3
+#if DIMENSIONS==3
   Q[3] = val;
 #endif
 
@@ -52,7 +52,7 @@ class AcousticPlanarWaves(Scenario):
             + """;
 
   // These are defined by the eigenvector of the plane wave operator
-#if Dimensions==3
+#if DIMENSIONS==3
   const double kr = K0*std::sqrt(rho/(3.0*K0)) + 2*std::sqrt(K0*rho/3.0);
 #else
   const double kr = std::sqrt(2*K0*rho);
@@ -65,11 +65,11 @@ class AcousticPlanarWaves(Scenario):
     def analytical_solution(self):
         return (
             """
-  const double w = 2*std::sqrt(Dimensions)*M_PI;
+  const double w = 2*std::sqrt(DIMENSIONS)*M_PI;
 
   const double val = cos( w*t - std::numbers::pi*(
       x[0] + x[1]
-#if Dimensions==3
+#if DIMENSIONS==3
     + x[2]
 #endif
   ));
@@ -84,7 +84,7 @@ class AcousticPlanarWaves(Scenario):
             + str(self._rho)
             + """;
 
-#if Dimensions==3
+#if DIMENSIONS==3
   solution[3] = val;
   const double kr = K0*std::sqrt(rho/(3.0*K0)) + 2*std::sqrt(K0*rho/3.0);
 #else

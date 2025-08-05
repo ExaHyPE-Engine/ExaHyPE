@@ -23,9 +23,9 @@ namespace exahype2 {
     ) {
       double result = std::numeric_limits<double>::max();
 
-      for (int d=0; d<Dimensions; d++) {
+      for (int d=0; d<DIMENSIONS; d++) {
         result = std::min(result, faceLabelEnumerator(d).getNewTimeStamp(0) );
-        result = std::min(result, faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1) );
+        result = std::min(result, faceLabelEnumerator(d+DIMENSIONS).getNewTimeStamp(1) );
       }
 
       return result;
@@ -66,7 +66,7 @@ namespace exahype2 {
     bool   oneIsAhead  = false;
     bool   oneIsBehind = false;
 
-    for (int d=0; d<Dimensions; d++) {
+    for (int d=0; d<DIMENSIONS; d++) {
       double leftNeighbourTimeStamp = faceLabelEnumerator(d).getNewTimeStamp(0);
       if (
         not faceLabelEnumerator(d).getBoundary()
@@ -84,9 +84,9 @@ namespace exahype2 {
         oneIsBehind = true;
       }
 
-      double rightNeighbourTimeStamp = faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1);
+      double rightNeighbourTimeStamp = faceLabelEnumerator(d+DIMENSIONS).getNewTimeStamp(1);
       if (
-        not faceLabelEnumerator(d+Dimensions).getBoundary()
+        not faceLabelEnumerator(d+DIMENSIONS).getBoundary()
         and
         tarch::la::greater(rightNeighbourTimeStamp,cellLabel.getTimeStamp())
       ) {
@@ -94,7 +94,7 @@ namespace exahype2 {
         oneIsAhead = true;
       }
       if (
-        not faceLabelEnumerator(d+Dimensions).getBoundary()
+        not faceLabelEnumerator(d+DIMENSIONS).getBoundary()
         and
         tarch::la::smaller(rightNeighbourTimeStamp,cellLabel.getTimeStamp())
       ) {
@@ -209,7 +209,7 @@ namespace exahype2 {
 
     double       maxOfMatchingTimeStamps = -1.0;
     const double currentFutureTimeStamp  = cellLabel.getTimeStamp() + timeStepSize;
-    for (int d=0; d<Dimensions; d++) {
+    for (int d=0; d<DIMENSIONS; d++) {
       if (
         not faceLabelEnumerator(d).getBoundary()
         and
@@ -220,9 +220,9 @@ namespace exahype2 {
       if (
         not faceLabelEnumerator(d).getBoundary()
         and
-        tarch::la::equals( faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1), currentFutureTimeStamp, relativeTolerance)
+        tarch::la::equals( faceLabelEnumerator(d+DIMENSIONS).getNewTimeStamp(1), currentFutureTimeStamp, relativeTolerance)
       ) {
-        maxOfMatchingTimeStamps = std::max(maxOfMatchingTimeStamps,faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1));
+        maxOfMatchingTimeStamps = std::max(maxOfMatchingTimeStamps,faceLabelEnumerator(d+DIMENSIONS).getNewTimeStamp(1));
       }
     }
 

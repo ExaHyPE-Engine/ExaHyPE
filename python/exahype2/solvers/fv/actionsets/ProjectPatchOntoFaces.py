@@ -39,13 +39,13 @@ class ProjectPatchOntoFaces( peano4.toolbox.blockstructured.ProjectPatchOntoFace
     self.d[ "CELL_METADATA_ACCESSOR" ] = "fineGridCell""" + solver._cell_label.name
 
     self.__Template_TouchCellLastTime_Core += """
-  for (int d=0; d<Dimensions; d++) {{
+  for (int d=0; d<DIMENSIONS; d++) {{
     {FACE_METADATA_ACCESSOR}(d).setUpdated(1,true);
     {FACE_METADATA_ACCESSOR}(d).setUpdatedTimeStamp(1,{CELL_METADATA_ACCESSOR}.getTimeStamp());
-    {FACE_METADATA_ACCESSOR}(d+Dimensions).setUpdated(0,true);
-    {FACE_METADATA_ACCESSOR}(d+Dimensions).setUpdatedTimeStamp(0,{CELL_METADATA_ACCESSOR}.getTimeStamp());
+    {FACE_METADATA_ACCESSOR}(d+DIMENSIONS).setUpdated(0,true);
+    {FACE_METADATA_ACCESSOR}(d+DIMENSIONS).setUpdatedTimeStamp(0,{CELL_METADATA_ACCESSOR}.getTimeStamp());
     logDebug( "touchCellLastTime(...)", "update {FACE_METADATA_ACCESSOR}(" << d << ")(1)" );
-    logDebug( "touchCellLastTime(...)", "update {FACE_METADATA_ACCESSOR}(" << (d+Dimensions) << ")(0)" );
+    logDebug( "touchCellLastTime(...)", "update {FACE_METADATA_ACCESSOR}(" << (d+DIMENSIONS) << ")(0)" );
   }}  
 """
 

@@ -162,7 +162,7 @@ class PlotPatchesInHDF5Format(ActionSet):
 
     __Template_TouchCellFirstTime_CellPlot = """
   if ({{GUARD_PREDICATE}}) {
-    int vertexIndices[TwoPowerD];
+    int vertexIndices[TWO_POWER_D];
 
     const double PatchScaling = 1.0;
 
@@ -195,7 +195,7 @@ class PlotPatchesInHDF5Format(ActionSet):
 
     __Template_TouchCellFirstTime_VertexPlot = """
 if ( {{GUARD_PREDICATE}} ) {
-    int vertexIndices[TwoPowerD];
+    int vertexIndices[TWO_POWER_D];
 
     const double PatchScaling = 1.0;
 
@@ -240,12 +240,12 @@ if ( {{GUARD_PREDICATE}} ) {
   }
 
   _writer = new tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter(
-    Dimensions, snapshotFileName.str(), "{{FILENAME}}",
+    DIMENSIONS, snapshotFileName.str(), "{{FILENAME}}",
     tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::IndexFileMode::AppendNewData,
     {{TIMESTAMP}}
   );
 
-  #if Dimensions==2
+  #if DIMENSIONS==2
   {{MAPPING_2D}}
   #else
   {{MAPPING_3D}}

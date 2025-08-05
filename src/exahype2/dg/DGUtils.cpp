@@ -28,7 +28,7 @@ double  exahype2::dg::getQuadratureWeight(
   const double* NOALIAS          quadratureWeights
 ) {
   double result = 1.0;
-  for (int d=0; d<Dimensions; d++) {
+  for (int d=0; d<DIMENSIONS; d++) {
     result *= cellSize(d) * quadratureWeights[ index(d) ];
   }
   return result;
@@ -38,28 +38,28 @@ double  exahype2::dg::getQuadratureWeight(
 
 int exahype2::dg::getNodesPerCell(int nodesPerAxis){
   int nodesPerCell=nodesPerAxis;
-  for(int d=1; d<Dimensions; d++) {
+  for(int d=1; d<DIMENSIONS; d++) {
     nodesPerCell *= nodesPerAxis;
   }
   return nodesPerCell;
 }
 
-tarch::la::Vector<Dimensions,int> exahype2::dg::getStrides(int nodesPerAxis){
-  tarch::la::Vector<Dimensions,int> strides(1);
-  for(int i=1; i<Dimensions; i++){
+tarch::la::Vector<DIMENSIONS,int> exahype2::dg::getStrides(int nodesPerAxis){
+  tarch::la::Vector<DIMENSIONS,int> strides(1);
+  for(int i=1; i<DIMENSIONS; i++){
     strides[i] = strides[i-1]*nodesPerAxis;
   }
   return strides;
 }
 
-tarch::la::Vector<Dimensions,int> exahype2::dg::getIndex(
+tarch::la::Vector<DIMENSIONS,int> exahype2::dg::getIndex(
     int                                   node,
-    tarch::la::Vector<Dimensions,int>  strides
+    tarch::la::Vector<DIMENSIONS,int>  strides
 ){
 
-  tarch::la::Vector<Dimensions,int> index(0);
+  tarch::la::Vector<DIMENSIONS,int> index(0);
   int tmp = 0;
-  for(int d=Dimensions-1; d>=0; d--){
+  for(int d=DIMENSIONS-1; d>=0; d--){
     index[d] = (node - tmp) / strides[d];
     tmp += strides[d]*index[d];
   }
@@ -69,7 +69,7 @@ tarch::la::Vector<Dimensions,int> exahype2::dg::getIndex(
 
 
 int exahype2::dg::cellIndexToHullIndex(
-    const tarch::la::Vector<Dimensions,int>&  indexCell,
+    const tarch::la::Vector<DIMENSIONS,int>&  indexCell,
     const int                                 direction,
     const int                                 orientation,
     const int                                 nodesPerAxis
@@ -92,7 +92,7 @@ int exahype2::dg::cellIndexToHullIndex(
   int HullIndex = 0;
   int stride = 1;
 
-  for(int dim=0; dim<Dimensions; dim++){
+  for(int dim=0; dim<DIMENSIONS; dim++){
     if(dim!=direction){
       HullIndex += indexCell[dim]*stride;
       stride *= nodesPerAxis;
@@ -117,10 +117,10 @@ void exahype2::dg::computeGradient(
         double* NOALIAS             gradQ
         ){
 
-  tarch::la::Vector<Dimensions,int> strides = getStrides(nodesPerAxis);
-  tarch::la::Vector<Dimensions,int> index   = getIndex(scalarIndex, strides);
+  tarch::la::Vector<DIMENSIONS,int> strides = getStrides(nodesPerAxis);
+  tarch::la::Vector<DIMENSIONS,int> index   = getIndex(scalarIndex, strides);
 
-  for(int dim=0; dim<Dimensions; dim++){
+  for(int dim=0; dim<DIMENSIONS; dim++){
 
     for(int var=0; var<strideQ; var++){
       gradQ[dim*strideQ+var] = 0.0;
@@ -168,7 +168,7 @@ std::string exahype2::dg::plotCell(
     order+1,
     unknowns,
     auxiliaryVariables,
-    Dimensions==2
+    DIMENSIONS==2
   );
 }
 
@@ -188,6 +188,6 @@ std::string exahype2::dg::plotFace(
     order+1,
     numberOfQuantitiesProjectedOntoFace,
     normal,
-    Dimensions==2
+    DIMENSIONS==2
   );
 }

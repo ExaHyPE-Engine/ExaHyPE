@@ -20,7 +20,7 @@
 
 void applications::exahype2::ccz4::gaugeWave(
   double * NOALIAS Q, // Q[64+0],
-  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
   double t
 ) {
   constexpr int nVars = 59;
@@ -53,7 +53,7 @@ void applications::exahype2::ccz4::gaugeWave(
 
 void applications::exahype2::ccz4::diagonal_gaugeWave(
   double * NOALIAS Q, // Q[64+0],
-  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
   double t
 ) {
   constexpr int nVars = 59;
@@ -92,7 +92,7 @@ void applications::exahype2::ccz4::diagonal_gaugeWave(
 
 void applications::exahype2::ccz4::linearWave(
   double * NOALIAS Q, // Q[64+0],
-  const tarch::la::Vector<Dimensions,double>&  X,
+  const tarch::la::Vector<DIMENSIONS,double>&  X,
   double t
 ) {
   constexpr int nVars = 59;
@@ -118,7 +118,7 @@ void applications::exahype2::ccz4::linearWave(
 
 void applications::exahype2::ccz4::flat(
   double * NOALIAS Q, // Q[64+0],
-  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
   double t
 ) {
   std::memset(Q, .0, 59*sizeof(double));
@@ -132,7 +132,7 @@ void applications::exahype2::ccz4::flat(
 #ifdef IncludeTwoPunctures
 void applications::exahype2::ccz4::ApplyTwoPunctures(
   double * NOALIAS Q, // Q[64+0],
-  const tarch::la::Vector<Dimensions,double>&  X,
+  const tarch::la::Vector<DIMENSIONS,double>&  X,
   double t,
   TP::TwoPunctures* tp,
   bool low_res

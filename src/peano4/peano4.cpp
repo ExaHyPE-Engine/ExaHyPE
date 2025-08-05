@@ -35,60 +35,42 @@ void writeCopyrightMessage() {
     logInfo("writeCopyrightMessage()", "Peano 4 (C) www.peano-framework.org");
     std::string buildInfo = "Build: ";
 
-    buildInfo += std::to_string(Dimensions);
+    buildInfo += std::to_string(DIMENSIONS);
     buildInfo += "d";
 
-#ifdef Parallel
-    buildInfo += ", MPI (";
+#if defined(WITH_MPI)
+    buildInfo += ", MPI Enabled";
+    buildInfo += " [";
     buildInfo += std::to_string(tarch::mpi::Rank::getInstance().getNumberOfRanks());
-    buildInfo += " Ranks)";
+    buildInfo += " Rank(s)]";
 #endif
 
-#if defined(SharedOMP)
-    buildInfo += ", SharedOMP";
-    buildInfo += " (";
+#if defined(WITH_OPENMP)
+    buildInfo += ", OpenMP Enabled";
+    buildInfo += " [";
     buildInfo += std::to_string(tarch::multicore::Core::getInstance().getNumberOfThreads());
-    buildInfo += " Threads)";
-#elif defined(SharedTBB)
-    buildInfo += ", SharedTBB";
-    buildInfo += " (";
-    buildInfo += std::to_string(tarch::multicore::Core::getInstance().getNumberOfThreads());
-    buildInfo += " Threads)";
-#elif defined(SharedSYCL)
-    buildInfo += ", SharedSYCL";
-    buildInfo += " (";
-    buildInfo += std::to_string(tarch::multicore::Core::getInstance().getNumberOfThreads());
-    buildInfo += " Threads)";
-#elif defined(SharedCPP)
-    buildInfo += ", SharedCPP";
-    buildInfo += " (";
-    buildInfo += std::to_string(tarch::multicore::Core::getInstance().getNumberOfThreads());
-    buildInfo += " Threads)";
+    buildInfo += " Thread(s)]";
 #endif
 
-#if defined(GPUOffloadingOMP)
-    buildInfo += ", GPUOffloadingOMP";
-    buildInfo += " (";
+#if defined(WITH_GPU)
+    buildInfo += ", GPU Backend: ";
+#if defined(WITH_GPU_OMP_TARGET)
+    buildInfo += "OpenMP Target";
+#elif defined(WITH_GPU_SYCL)
+    buildInfo += "SYCL";
+#elif defined(WITH_GPU_STDPAR)
+    buildInfo += "Standard Parallelism";
+#elif defined(WITH_GPU_CUDA)
+    buildInfo += "CUDA";
+#elif defined(WITH_GPU_KOKKOS)
+    buildInfo += "Kokkos";
+#endif
+    buildInfo += " [";
     buildInfo += std::to_string(tarch::accelerator::Device::getInstance().getNumberOfDevices());
-    buildInfo += " GPUs)";
-#elif defined(GPUOffloadingSYCL)
-    buildInfo += ", GPUOffloadingSYCL";
-    buildInfo += " (";
-    buildInfo += std::to_string(tarch::accelerator::Device::getInstance().getNumberOfDevices());
-    buildInfo += " GPUs)";
-#elif defined(GPUOffloadingCPP)
-    buildInfo += ", GPUOffloadingCPP";
-    buildInfo += " (";
-    buildInfo += std::to_string(tarch::accelerator::Device::getInstance().getNumberOfDevices());
-    buildInfo += " GPUs)";
-#elif defined(GPUOffloadingCUDA)
-    buildInfo += ", GPUOffloadingCUDA";
-    buildInfo += " (";
-    buildInfo += std::to_string(tarch::accelerator::Device::getInstance().getNumberOfDevices());
-    buildInfo += " GPUs)";
+    buildInfo += " Device(s)]";
 #endif
 
-    buildInfo += ", Debug Level=" + std::to_string(PeanoDebug);
+    buildInfo += ", Debug Level=" + std::to_string(PEANO_DEBUG);
 
     logInfo("writeCopyrightMessage()", buildInfo);
   }
@@ -99,9 +81,9 @@ void writeCopyrightMessage() {
 void peano4::init(
   int*                                         argc,
   char***                                      argv,
-  const tarch::la::Vector<Dimensions, double>& offset,
-  const tarch::la::Vector<Dimensions, double>& width,
-  const std::bitset<Dimensions>&               periodicBC
+  const tarch::la::Vector<DIMENSIONS, double>& offset,
+  const tarch::la::Vector<DIMENSIONS, double>& width,
+  const std::bitset<DIMENSIONS>&               periodicBC
 ) {
   peano4::utils::setupLookupTableForDLinearised();
   peano4::utils::setupLookupTableForDDelinearised();

@@ -11,14 +11,14 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
   string(TOLOWER ${mode} mode_lower)
   string(TOUPPER ${mode} mode_upper)
 
-  foreach(dimension IN LISTS PEANO_DIMENSIONS)
-    add_library(ToolboxBlockStructured${mode}${dimension}d STATIC)
-    target_sources(ToolboxBlockStructured${mode}${dimension}d PRIVATE ${SOURCES} ${HEADERS})
-    target_link_libraries(ToolboxBlockStructured${mode}${dimension}d PRIVATE PeanoOptions Peano4${mode}${dimension}d)
-    target_compile_definitions(ToolboxBlockStructured${mode}${dimension}d PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} Dimensions=${dimension})
-    target_compile_options(ToolboxBlockStructured${mode}${dimension}d PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
+  foreach(dimensions IN LISTS PEANO_DIMENSIONS)
+    add_library(ToolboxBlockStructured${mode}${dimensions}d STATIC)
+    target_sources(ToolboxBlockStructured${mode}${dimensions}d PRIVATE ${SOURCES} ${HEADERS})
+    target_link_libraries(ToolboxBlockStructured${mode}${dimensions}d PRIVATE PeanoOptions Peano4${mode}${dimensions}d)
+    target_compile_definitions(ToolboxBlockStructured${mode}${dimensions}d PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} DIMENSIONS=${dimensions})
+    target_compile_options(ToolboxBlockStructured${mode}${dimensions}d PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
-    install(TARGETS ToolboxBlockStructured${mode}${dimension}d
+    install(TARGETS ToolboxBlockStructured${mode}${dimensions}d
       EXPORT                      ${PROJECT_NAME}Targets
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
               COMPONENT           ${PROJECT_NAME}_Runtime

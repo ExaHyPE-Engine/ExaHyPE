@@ -77,7 +77,7 @@
     const double timeStepSize                           = patchData.dt;
 
     {% if GPU == "omp" %}
-    #ifdef UseTargetDART // Use nowait to spawn tasks asynchronously
+    #ifdef WITH_TARGETDART // Use nowait to spawn tasks asynchronously
     {% if COMPUTE_MAX_EIGENVALUE==True %}
     #pragma omp target teams distribute device(targetDevice) nowait \
     map(to: \
@@ -131,7 +131,7 @@
       const {{COMPUTE_PRECISION}}* const QIn = &QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}];
       {{COMPUTE_PRECISION}}* const QOut      = &QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
 
-      const tarch::la::Vector<Dimensions, double> patchCentre {
+      const tarch::la::Vector<DIMENSIONS, double> patchCentre {
         patchCentres[patchIndex * {{DIMENSIONS}}],
         patchCentres[patchIndex * {{DIMENSIONS}} + 1]
         {% if DIMENSIONS==3 %}
@@ -139,7 +139,7 @@
         patchCentres[patchIndex * {{DIMENSIONS}} + 2]
         {% endif %}
       };
-      const tarch::la::Vector<Dimensions, double> patchSize {
+      const tarch::la::Vector<DIMENSIONS, double> patchSize {
         patchSizes[patchIndex * {{DIMENSIONS}}],
         patchSizes[patchIndex * {{DIMENSIONS}} + 1]
         {% if DIMENSIONS==3 %}
@@ -160,7 +160,7 @@
     } // patchIndex
   } // task
 
-  #ifdef UseTargetDART
+  #ifdef WITH_TARGETDART
   #pragma omp taskwait
   #endif
 

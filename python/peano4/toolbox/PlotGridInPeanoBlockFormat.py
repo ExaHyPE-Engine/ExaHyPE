@@ -89,7 +89,7 @@ class PlotGridInPeanoBlockFormat(ActionSet):
 
   __Template_TouchCellFirstTime = jinja2.Template(""" 
   if ( {{GUARD_PREDICATE}} ) {
-  int vertexIndices[TwoPowerD];
+  int vertexIndices[TWO_POWER_D];
 
   int indices = _writer->plotPatch(
     marker.x() - marker.h() * 0.5,
@@ -125,7 +125,7 @@ class PlotGridInPeanoBlockFormat(ActionSet):
 
   {% if TIMESTAMP==\"""" + NoMetaFile + """\" %}
   _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-    Dimensions, snapshotFileName.str(), "{{FILENAME}}",
+    DIMENSIONS, snapshotFileName.str(), "{{FILENAME}}",
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::NoIndexFile,
     0.0
   );
@@ -133,13 +133,13 @@ class PlotGridInPeanoBlockFormat(ActionSet):
   static int timeStep = -1;
   timeStep++;
   _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-    Dimensions, snapshotFileName.str(), "{{FILENAME}}",
+    DIMENSIONS, snapshotFileName.str(), "{{FILENAME}}",
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
     timeStep
   );
   {% else %}
   _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-    Dimensions, snapshotFileName.str(), "{{FILENAME}}",
+    DIMENSIONS, snapshotFileName.str(), "{{FILENAME}}",
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
     {{TIMESTAMP}}
   );    

@@ -92,8 +92,8 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       [&](
         const double * NOALIAS Q,
-        const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
-        const tarch::la::Vector<Dimensions,double>&  gridCellH,
+        const tarch::la::Vector<DIMENSIONS,double>&  gridCellCentre,
+        const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
         double                                       t,
         double                                       dt,
         int                                          normal

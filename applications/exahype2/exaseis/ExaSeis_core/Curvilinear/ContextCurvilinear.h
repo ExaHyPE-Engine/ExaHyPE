@@ -17,8 +17,8 @@ public:
     int coarsestMeshLevel,
     double coarsestMeshSize, 
     double maxAdaptiveDepth, 
-    tarch::la::Vector<Dimensions,double> _domainOffset, 
-    tarch::la::Vector<Dimensions,double> _domainSize,
+    tarch::la::Vector<DIMENSIONS,double> _domainOffset, 
+    tarch::la::Vector<DIMENSIONS,double> _domainSize,
     T* _nodes,
     T* _dudx
   ):
@@ -65,13 +65,13 @@ public:
 
   void initUnknownsPatch(
     T*                                           luh,
-    const tarch::la::Vector<Dimensions, double>& center,
-    const tarch::la::Vector<Dimensions, double>& dx,
+    const tarch::la::Vector<DIMENSIONS, double>& center,
+    const tarch::la::Vector<DIMENSIONS, double>& dx,
     double                                       t,
     double                                       dt,
     std::function<void(
       const T* const x,
-      const tarch::la::Vector<Dimensions,double>& center,
+      const tarch::la::Vector<DIMENSIONS,double>& center,
       const double t,
       const double dt, 
       T* Q
@@ -163,7 +163,7 @@ public:
         }
       }
 
-      tarch::la::Vector<Dimensions, double> curv_center;
+      tarch::la::Vector<DIMENSIONS, double> curv_center;
       getElementCenter(luh, curv_center);
       for (int k = 0; k < basisSize; k++) {
         for (int j = 0; j < basisSize; j++) {
@@ -207,7 +207,7 @@ public:
     }
   }
 
-  void getElementSize(const T* const luh, tarch::la::Vector<Dimensions, double>& dx) {
+  void getElementSize(const T* const luh, tarch::la::Vector<DIMENSIONS, double>& dx) {
 
     // int           numberOfData = Shortcuts::NumberOfUnknowns + Shortcuts::NumberOfAuxiliaryVariables;
     kernels::idx4 id_xyzf(basisSize, basisSize, basisSize, numberOfData);
@@ -231,7 +231,7 @@ public:
     }
   }
 
-  void getElementCenter(const T* const luh, tarch::la::Vector<Dimensions, double>& center) {
+  void getElementCenter(const T* const luh, tarch::la::Vector<DIMENSIONS, double>& center) {
     int center_i1 = int(std::ceil(basisSize / 2.0));
     int center_i2 = int(std::floor(basisSize / 2.0));
 

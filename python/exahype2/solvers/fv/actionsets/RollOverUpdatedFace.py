@@ -22,7 +22,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
   """
   TemplateHandleFace = jinja2.Template( """
     if ( {{GUARD}} ) {
-      const int normal = marker.getSelectedFaceNumber() % Dimensions;
+      const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
       
       logTraceInWith3Arguments( "touchFaceLastTime(...)", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), marker.toString(), normal );
       
@@ -55,7 +55,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
         
         dfore(k,{{DOFS_PER_AXIS}},normal,0) {
           for (int i=0; i<{{OVERLAP}}; i++) {
-            tarch::la::Vector<Dimensions,int> overlapCell = k;
+            tarch::la::Vector<DIMENSIONS,int> overlapCell = k;
             overlapCell(normal) = i;
             const int index = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,{{DOFS_PER_AXIS}},{{OVERLAP}},normal);
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{NEW_ACCESSOR}}[" << index << "]->{{OLD_ACCESSOR}}[" << index << "]" );
@@ -107,7 +107,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
           See above: Now done via function        
         dfore(k,{{DOFS_PER_AXIS}},normal,0) {
           for (int i={{OVERLAP}}; i<2*{{OVERLAP}}; i++) {
-            tarch::la::Vector<Dimensions,int> overlapCell = k;
+            tarch::la::Vector<DIMENSIONS,int> overlapCell = k;
             overlapCell(normal) = i;
             const int index = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,{{DOFS_PER_AXIS}},{{OVERLAP}},normal);
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{NEW_ACCESSOR}}[" << index << "]->{{OLD_ACCESSOR}}[" << index << "]" );

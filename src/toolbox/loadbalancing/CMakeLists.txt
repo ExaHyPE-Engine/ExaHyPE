@@ -11,14 +11,14 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
   string(TOLOWER ${mode} mode_lower)
   string(TOUPPER ${mode} mode_upper)
 
-  foreach(dimension IN LISTS PEANO_DIMENSIONS)
-    add_library(ToolboxLoadBalancing${mode}${dimension}d STATIC)
-    target_sources(ToolboxLoadBalancing${mode}${dimension}d PRIVATE ${SOURCES} ${HEADERS})
-    target_link_libraries(ToolboxLoadBalancing${mode}${dimension}d PRIVATE PeanoOptions Peano4${mode}${dimension}d)
-    target_compile_definitions(ToolboxLoadBalancing${mode}${dimension}d PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} Dimensions=${dimension})
-    target_compile_options(ToolboxLoadBalancing${mode}${dimension}d PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
+  foreach(dimensions IN LISTS PEANO_DIMENSIONS)
+    add_library(ToolboxLoadBalancing${mode}${dimensions}d STATIC)
+    target_sources(ToolboxLoadBalancing${mode}${dimensions}d PRIVATE ${SOURCES} ${HEADERS})
+    target_link_libraries(ToolboxLoadBalancing${mode}${dimensions}d PRIVATE PeanoOptions Peano4${mode}${dimensions}d)
+    target_compile_definitions(ToolboxLoadBalancing${mode}${dimensions}d PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} DIMENSIONS=${dimensions})
+    target_compile_options(ToolboxLoadBalancing${mode}${dimensions}d PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
-    install(TARGETS ToolboxLoadBalancing${mode}${dimension}d
+    install(TARGETS ToolboxLoadBalancing${mode}${dimensions}d
       EXPORT                      ${PROJECT_NAME}Targets
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
               COMPONENT           ${PROJECT_NAME}_Runtime

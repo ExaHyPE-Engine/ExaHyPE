@@ -6,8 +6,8 @@ tarch::logging::Log tutorials::exahype2::swe::SWESolver::_log("tutorials::exahyp
 
 void tutorials::exahype2::swe::SWESolver::initialCondition(
   [[maybe_unused]] double* const NOALIAS                        Q, // Q[4+0]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const bool                                   gridIsConstructed
 ) {
   Q[Shortcuts::hu + 0] = 0.0; // v_x
@@ -19,8 +19,8 @@ void tutorials::exahype2::swe::SWESolver::initialCondition(
 void tutorials::exahype2::swe::SWESolver::boundaryConditions(
   [[maybe_unused]] const double* const NOALIAS                  Qinside,  // Qinside[4+0]
   [[maybe_unused]] double* const NOALIAS                        Qoutside, // Qoutside[4+0]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const int                                    normal
 ) {
@@ -32,8 +32,8 @@ void tutorials::exahype2::swe::SWESolver::boundaryConditions(
 
 ::exahype2::RefinementCommand tutorials::exahype2::swe::SWESolver::refinementCriterion(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[4+0]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t
 ) {
   return tarch::la::norm2(x) < 0.6 ? ::exahype2::RefinementCommand::Refine : ::exahype2::RefinementCommand::Keep;
@@ -41,8 +41,8 @@ void tutorials::exahype2::swe::SWESolver::boundaryConditions(
 
 double tutorials::exahype2::swe::SWESolver::maxEigenvalue(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[4+0]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal
@@ -55,8 +55,8 @@ double tutorials::exahype2::swe::SWESolver::maxEigenvalue(
 
 void tutorials::exahype2::swe::SWESolver::flux(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[4+0]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,
@@ -72,8 +72,8 @@ void tutorials::exahype2::swe::SWESolver::flux(
 void tutorials::exahype2::swe::SWESolver::nonconservativeProduct(
   [[maybe_unused]] const double* const NOALIAS                  Q,      // Q[4+0]
   [[maybe_unused]] const double* const NOALIAS                  deltaQ, // deltaQ[4+0]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,

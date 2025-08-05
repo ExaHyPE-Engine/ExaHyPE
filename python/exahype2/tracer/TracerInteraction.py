@@ -21,7 +21,7 @@ def perserveCartesianTracerLayout(solver, particle_spacing):
 //Run over local set
 for (auto* p: localParticles) {
   if ( marker.isContained( p->getX() ) ) {
-    tarch::la::Vector<Dimensions,double> updatedX = p->getX();
+    tarch::la::Vector<DIMENSIONS,double> updatedX = p->getX();
     for (auto* pp: activeParticles) {
       if (p->getNumber()!=pp->getNumber()) {
         updatedX += repositories::"""

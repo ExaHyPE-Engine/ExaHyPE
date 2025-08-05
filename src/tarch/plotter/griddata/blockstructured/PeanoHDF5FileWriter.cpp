@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "PeanoHDF5FileWriter.h"
 
-#ifdef UseHDF5
+#ifdef WITH_HDF5
 
 #include "tarch/Assertions.h"
 #include "tarch/mpi/Lock.h"
@@ -557,21 +557,21 @@ bool tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::writeToFile
 
             _xmfFileOut << "        <Grid Name=\"Patch_" << patchIndex << "\" GridType=\"Uniform\">\n";
 
-            // 2DSMesh => Dimensions="dimsY dimsX"
+            // 2DSMesh => DIMENSIONS="dimsY dimsX"
             _xmfFileOut
-              << "          <Topology TopologyType=\"2DSMesh\" Dimensions=\"" << dimsY << " " << dimsX << "\"/>\n";
+              << "          <Topology TopologyType=\"2DSMesh\" DIMENSIONS=\"" << dimsY << " " << dimsX << "\"/>\n";
 
             // X array
             _xmfFileOut << "          <Geometry GeometryType=\"X_Y\">\n";
             _xmfFileOut
-              << "            <DataItem Dimensions=\"" << dimsY << " " << dimsX
+              << "            <DataItem DIMENSIONS=\"" << dimsY << " " << dimsX
               << "\" NumberType=\"Float\" Precision=\"8\" Format=\"XML\">\n";
             _xmfFileOut << Xarray.str();
             _xmfFileOut << "            </DataItem>\n";
 
             // Y array
             _xmfFileOut
-              << "            <DataItem Dimensions=\"" << dimsY << " " << dimsX
+              << "            <DataItem DIMENSIONS=\"" << dimsY << " " << dimsX
               << "\" NumberType=\"Float\" Precision=\"8\" Format=\"XML\">\n";
             _xmfFileOut << Yarray.str();
             _xmfFileOut << "            </DataItem>\n";
@@ -607,28 +607,28 @@ bool tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::writeToFile
             _xmfFileOut << "        <Grid Name=\"Patch_" << patchIndex << "\" GridType=\"Uniform\">\n";
 
             _xmfFileOut
-              << "          <Topology TopologyType=\"3DSMesh\" Dimensions=\"" << dimsZ << " " << dimsY << " " << dimsX
+              << "          <Topology TopologyType=\"3DSMesh\" DIMENSIONS=\"" << dimsZ << " " << dimsY << " " << dimsX
               << "\"/>\n";
 
             _xmfFileOut << "          <Geometry GeometryType=\"X_Y_Z\">\n";
 
             // X array
             _xmfFileOut
-              << "            <DataItem Dimensions=\"" << dimsZ << " " << dimsY << " " << dimsX
+              << "            <DataItem DIMENSIONS=\"" << dimsZ << " " << dimsY << " " << dimsX
               << "\" NumberType=\"Float\" Precision=\"8\" Format=\"XML\">\n";
             _xmfFileOut << Xarray.str();
             _xmfFileOut << "            </DataItem>\n";
 
             // Y array
             _xmfFileOut
-              << "            <DataItem Dimensions=\"" << dimsZ << " " << dimsY << " " << dimsX
+              << "            <DataItem DIMENSIONS=\"" << dimsZ << " " << dimsY << " " << dimsX
               << "\" NumberType=\"Float\" Precision=\"8\" Format=\"XML\">\n";
             _xmfFileOut << Yarray.str();
             _xmfFileOut << "            </DataItem>\n";
 
             // Z array
             _xmfFileOut
-              << "            <DataItem Dimensions=\"" << dimsZ << " " << dimsY << " " << dimsX
+              << "            <DataItem DIMENSIONS=\"" << dimsZ << " " << dimsY << " " << dimsX
               << "\" NumberType=\"Float\" Precision=\"8\" Format=\"XML\">\n";
             _xmfFileOut << Zarray.str();
             _xmfFileOut << "            </DataItem>\n";
@@ -647,15 +647,15 @@ bool tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::writeToFile
             _xmfFileOut << "        <Grid Name=\"Patch_" << patchIndex << "\" GridType=\"Uniform\">\n";
 
             _xmfFileOut
-              << "          <Topology TopologyType=\"2DCoRectMesh\" Dimensions=\"" << dims << " " << dims << "\"/>\n";
+              << "          <Topology TopologyType=\"2DCoRectMesh\" DIMENSIONS=\"" << dims << " " << dims << "\"/>\n";
 
             // geometry: expected in order y,x by xdmf
             _xmfFileOut << "          <Geometry GeometryType=\"ORIGIN_DXDY\">\n";
             _xmfFileOut
-              << "            <DataItem Dimensions=\"2\" NumberType=\"Float\" Precision=\"8\" Format=\"XML\">"
+              << "            <DataItem DIMENSIONS=\"2\" NumberType=\"Float\" Precision=\"8\" Format=\"XML\">"
               << offsetY << " " << offsetX << "</DataItem>\n";
             _xmfFileOut
-              << "            <DataItem Dimensions=\"2\" NumberType=\"Float\" Precision=\"8\" Format=\"XML\">" << dy
+              << "            <DataItem DIMENSIONS=\"2\" NumberType=\"Float\" Precision=\"8\" Format=\"XML\">" << dy
               << " " << dx << "</DataItem>\n";
             _xmfFileOut << "          </Geometry>\n";
           } else if (_dimensions == 3) {
@@ -668,15 +668,15 @@ bool tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::writeToFile
             _xmfFileOut << "        <Grid Name=\"Patch_" << patchIndex << "\" GridType=\"Uniform\">\n";
 
             _xmfFileOut
-              << "          <Topology TopologyType=\"3DCoRectMesh\" Dimensions=\"" << dims << " " << dims << " " << dims
+              << "          <Topology TopologyType=\"3DCoRectMesh\" DIMENSIONS=\"" << dims << " " << dims << " " << dims
               << "\"/>\n";
 
             _xmfFileOut << "          <Geometry GeometryType=\"ORIGIN_DXDYDZ\">\n";
             _xmfFileOut
-              << "            <DataItem Dimensions=\"3\" NumberType=\"Float\" Precision=\"8\" Format=\"XML\">"
+              << "            <DataItem DIMENSIONS=\"3\" NumberType=\"Float\" Precision=\"8\" Format=\"XML\">"
               << offsetZ << " " << offsetY << " " << offsetX << "</DataItem>\n";
             _xmfFileOut
-              << "            <DataItem Dimensions=\"3\" NumberType=\"Float\" Precision=\"8\" Format=\"XML\">" << dz
+              << "            <DataItem DIMENSIONS=\"3\" NumberType=\"Float\" Precision=\"8\" Format=\"XML\">" << dz
               << " " << dy << " " << dx << "</DataItem>\n";
             _xmfFileOut << "          </Geometry>\n";
           }
@@ -695,11 +695,11 @@ bool tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::writeToFile
 
           if (_dimensions == 2) {
             _xmfFileOut
-              << "            <DataItem Dimensions=\"" << _dofsPerAxis << " " << _dofsPerAxis
+              << "            <DataItem DIMENSIONS=\"" << _dofsPerAxis << " " << _dofsPerAxis
               << "\" NumberType=\"Float\" Precision=\"8\" Format=\"HDF\">\n";
           } else if (_dimensions == 3) {
             _xmfFileOut
-              << "            <DataItem Dimensions=\"" << _dofsPerAxis << " " << _dofsPerAxis << " " << _dofsPerAxis
+              << "            <DataItem DIMENSIONS=\"" << _dofsPerAxis << " " << _dofsPerAxis << " " << _dofsPerAxis
               << "\" NumberType=\"Float\" Precision=\"8\" Format=\"HDF\">\n";
           }
 
@@ -728,7 +728,7 @@ bool tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::writeToFile
         unknownCenterType << "\">\n"
                          << "            <DataItem Format=\"HDF\" NumberType=\"Float\" Precision=\"8\" "
 
-                         << "Dimensions=\"" << _dofsPerAxis << " " << _dofsPerAxis << " " << _numUnknowns << "\">\n"
+                         << "DIMENSIONS=\"" << _dofsPerAxis << " " << _dofsPerAxis << " " << _numUnknowns << "\">\n"
                          << "              " << xmfRelativeName << ":/Patch_" << patchIndex << "/unknowns\n"
                          << "            </DataItem>\n"
                          << "          </Attribute>\n";
@@ -739,7 +739,7 @@ bool tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::writeToFile
         unknownCenterType << "\">\n"
                      << "            <DataItem Format=\"HDF\" NumberType=\"Float\" Precision=\"8\" "
 
-                     << "Dimensions=\"" << _dofsPerAxis << " " << _dofsPerAxis << " " << _dofsPerAxis << " " <<
+                     << "DIMENSIONS=\"" << _dofsPerAxis << " " << _dofsPerAxis << " " << _dofsPerAxis << " " <<
         _numUnknowns << "\">\n"
                      << "              " << xmfRelativeName << ":/Patch_" << patchIndex << "/unknowns\n"
                      << "            </DataItem>\n"
@@ -759,16 +759,16 @@ bool tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::writeToFile
          for (int i = 0; i < _numUnknowns; i++) {
               _xmfFileOut << "          <Attribute Name=\"unknown_" << i << "\" AttributeType=\"Scalar\" Center=\"" <<
         unknownCenterType << "\">\n"
-               << "            <DataItem ItemType=\"HyperSlab\" Dimensions=\"" << _dofsPerAxis * _dofsPerAxis << "\"
+               << "            <DataItem ItemType=\"HyperSlab\" DIMENSIONS=\"" << _dofsPerAxis * _dofsPerAxis << "\"
         NumberType=\"Float\" Precision=\"8\">\n"
 
-               << "             <DataItem Dimensions=\"3\" Format=\"XML\"> 0 " << i << " </DataItem>\n"  //START: Where
+               << "             <DataItem DIMENSIONS=\"3\" Format=\"XML\"> 0 " << i << " </DataItem>\n"  //START: Where
         to start reading in the array
-               << "             <DataItem Dimensions=\"3\" Format=\"XML\"> " << _dofsPerAxis * _dofsPerAxis << " 1
+               << "             <DataItem DIMENSIONS=\"3\" Format=\"XML\"> " << _dofsPerAxis * _dofsPerAxis << " 1
         </DataItem>\n"  // COUNT: How many elements you want to read along each axis
-               << "             <DataItem Dimensions=\"3\" Format=\"XML\"> 1 " << _numUnknowns << " </DataItem>\n"
+               << "             <DataItem DIMENSIONS=\"3\" Format=\"XML\"> 1 " << _numUnknowns << " </DataItem>\n"
         //STRIDE: How many elements to skip between each selection
-               << "             <DataItem Dimensions=\"" << _dofsPerAxis * _dofsPerAxis << " " << _numUnknowns << "\"
+               << "             <DataItem DIMENSIONS=\"" << _dofsPerAxis * _dofsPerAxis << " " << _numUnknowns << "\"
         Format=\"HDF\"> " << xmfRelativeName << ":/Patch_" << patchIndex << "/unknowns\n" << "</DataItem>\n"
 
                << "            </DataItem>\n"

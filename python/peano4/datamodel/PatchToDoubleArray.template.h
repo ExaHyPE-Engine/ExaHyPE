@@ -43,31 +43,31 @@
 
 
 struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
-  #if Parallel
+  #ifdef WITH_MPI
   private:
     static MPI_Datatype   Datatype;
   public:
   #endif
-  #if PeanoDebug>=1
+  #if PEANO_DEBUG>=1
   private:
-    tarch::la::Vector<Dimensions,double> _debugX;
-    tarch::la::Vector<Dimensions,double> _debugH;
+    tarch::la::Vector<DIMENSIONS,double> _debugX;
+    tarch::la::Vector<DIMENSIONS,double> _debugH;
 
 
   public:
-    void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
-    void setDebugH( const tarch::la::Vector<Dimensions,double>& data );
-    tarch::la::Vector<Dimensions,double> getDebugX() const;
-    tarch::la::Vector<Dimensions,double> getDebugH() const;
+    void setDebugX( const tarch::la::Vector<DIMENSIONS,double>& data );
+    void setDebugH( const tarch::la::Vector<DIMENSIONS,double>& data );
+    tarch::la::Vector<DIMENSIONS,double> getDebugX() const;
+    tarch::la::Vector<DIMENSIONS,double> getDebugH() const;
   #endif
 
-  #if Dimensions==2
+  #if DIMENSIONS==2
   alignas(ALIGNMENT_ON_HEAP) {{FLOAT_TYPE}}                                 value[{{CARDINALITY_2D}}];
   #else
   alignas(ALIGNMENT_ON_HEAP) {{FLOAT_TYPE}}                                 value[{{CARDINALITY_3D}}];
   #endif
 
-  #if Dimensions==2
+  #if DIMENSIONS==2
   static constexpr int Cardinality = {{CARDINALITY_2D}};
   #else
   static constexpr int Cardinality = {{CARDINALITY_3D}};
@@ -151,7 +151,7 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
 
   void set(int index, {{FLOAT_TYPE}} value);
   
-  #ifdef Parallel
+  #ifdef WITH_MPI
   /**
    * Initialises the MPI datatype.
    */

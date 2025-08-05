@@ -16,14 +16,14 @@ void exahype2::fd::applyBoundaryConditions(
   std::function< void(
     const double* NOALIAS                   Qinside,
     double * NOALIAS                        Qoutside,
-    const tarch::la::Vector<Dimensions,double>&  faceCentre,
-    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+    const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
     double                                       t,
     double                                       dt,
     int                                          normal
   ) >   boundaryCondition,
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
   double                                       t,
   double                                       dt,
   int                                          numberOfGridCellsPerPatchPerAxis,
@@ -43,25 +43,25 @@ void exahype2::fd::applyBoundaryConditions(
     0
   );
 
-  tarch::la::Vector<Dimensions,double> volumeH    = exahype2::fd::getGridCellSize(patchSize, numberOfGridCellsPerPatchPerAxis);
-  tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * patchSize;
-  faceOffset(faceNumber%Dimensions) += 0.5 * patchSize(faceNumber%Dimensions);
+  tarch::la::Vector<DIMENSIONS,double> volumeH    = exahype2::fd::getGridCellSize(patchSize, numberOfGridCellsPerPatchPerAxis);
+  tarch::la::Vector<DIMENSIONS,double> faceOffset = faceCentre - 0.5 * patchSize;
+  faceOffset(faceNumber%DIMENSIONS) += 0.5 * patchSize(faceNumber%DIMENSIONS);
 
-  dfore(volume,numberOfGridCellsPerPatchPerAxis,faceNumber % Dimensions,0) {
-    tarch::la::Vector<Dimensions,int> insideGridCell  = volume;
-    tarch::la::Vector<Dimensions,int> outsideGridCell = volume;
-    tarch::la::Vector<Dimensions,double> x          = faceOffset + tarch::la::multiplyComponents( tarch::la::convertScalar<double>(volume)+tarch::la::Vector<Dimensions,double>(0.5), volumeH);
+  dfore(volume,numberOfGridCellsPerPatchPerAxis,faceNumber % DIMENSIONS,0) {
+    tarch::la::Vector<DIMENSIONS,int> insideGridCell  = volume;
+    tarch::la::Vector<DIMENSIONS,int> outsideGridCell = volume;
+    tarch::la::Vector<DIMENSIONS,double> x          = faceOffset + tarch::la::multiplyComponents( tarch::la::convertScalar<double>(volume)+tarch::la::Vector<DIMENSIONS,double>(0.5), volumeH);
 
-    x(faceNumber%Dimensions) -= 0.5 * volumeH(faceNumber%Dimensions);
+    x(faceNumber%DIMENSIONS) -= 0.5 * volumeH(faceNumber%DIMENSIONS);
 
     for (int layer=0; layer<overlap; layer++) {
-      if (faceNumber<Dimensions) {
-        insideGridCell(faceNumber % Dimensions)  = overlap-layer;
-        outsideGridCell(faceNumber % Dimensions) = overlap-1-layer;
+      if (faceNumber<DIMENSIONS) {
+        insideGridCell(faceNumber % DIMENSIONS)  = overlap-layer;
+        outsideGridCell(faceNumber % DIMENSIONS) = overlap-1-layer;
       }
       else {
-        insideGridCell(faceNumber % Dimensions)  = layer+overlap-1;
-        outsideGridCell(faceNumber % Dimensions) = layer+overlap;
+        insideGridCell(faceNumber % DIMENSIONS)  = layer+overlap-1;
+        outsideGridCell(faceNumber % DIMENSIONS) = layer+overlap;
       }
 
       logDebug(
@@ -86,19 +86,19 @@ void exahype2::fd::applyBoundaryConditions(
 void exahype2::fd::applySommerfeldConditions(
   std::function< double(
     const double* NOALIAS                   Q,
-    const tarch::la::Vector<Dimensions,double>&  faceCentre,
-    const tarch::la::Vector<Dimensions,double>&  gridCellH,
+    const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+    const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
     double                                       t,
     double                                       dt,
     int                                          normal
   ) >   maxEigenvalue,
   std::function< void(
     double* NOALIAS                         Q,
-    const tarch::la::Vector<Dimensions,double>&  faceCentre,
-    const tarch::la::Vector<Dimensions,double>&  gridCellH
+    const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+    const tarch::la::Vector<DIMENSIONS,double>&  gridCellH
   ) >   farFieldSolution,
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
   double                                       t,
   double                                       dt,
   int                                          numberOfGridCellsPerPatchPerAxis,
@@ -106,7 +106,7 @@ void exahype2::fd::applySommerfeldConditions(
   int                                          numberOfUnknowns,
   int                                          numberOfAuxiliaryVariables,
   int                                          faceNumber,
-  const tarch::la::Vector<Dimensions,double>&  systemOrigin,
+  const tarch::la::Vector<DIMENSIONS,double>&  systemOrigin,
   double* NOALIAS                         Qold,
   double* NOALIAS                         Qnew,
   double                                       CheckpointTimeStamp
@@ -125,38 +125,38 @@ void exahype2::fd::applySommerfeldConditions(
 
   double* QInf = tarch::allocateMemory<double>( numberOfUnknowns+numberOfAuxiliaryVariables, tarch::MemoryLocation::Heap );
 
-  tarch::la::Vector<Dimensions,double> volumeH    = exahype2::fd::getGridCellSize(patchSize, numberOfGridCellsPerPatchPerAxis);
-  tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * patchSize;
-  faceOffset(faceNumber%Dimensions) += 0.5 * patchSize(faceNumber%Dimensions);
+  tarch::la::Vector<DIMENSIONS,double> volumeH    = exahype2::fd::getGridCellSize(patchSize, numberOfGridCellsPerPatchPerAxis);
+  tarch::la::Vector<DIMENSIONS,double> faceOffset = faceCentre - 0.5 * patchSize;
+  faceOffset(faceNumber%DIMENSIONS) += 0.5 * patchSize(faceNumber%DIMENSIONS);
   //std::cout<<"face offseet: "<<faceOffset<<std::endl;
 
-  dfore(volume,numberOfGridCellsPerPatchPerAxis,faceNumber % Dimensions,0) {
-    tarch::la::Vector<Dimensions,int> insideGridCell  = volume;
-    tarch::la::Vector<Dimensions,int> outsideGridCell = volume;
-    tarch::la::Vector<Dimensions,double> x          = faceOffset + tarch::la::multiplyComponents( tarch::la::convertScalar<double>(volume)+tarch::la::Vector<Dimensions,double>(0.5), volumeH);
+  dfore(volume,numberOfGridCellsPerPatchPerAxis,faceNumber % DIMENSIONS,0) {
+    tarch::la::Vector<DIMENSIONS,int> insideGridCell  = volume;
+    tarch::la::Vector<DIMENSIONS,int> outsideGridCell = volume;
+    tarch::la::Vector<DIMENSIONS,double> x          = faceOffset + tarch::la::multiplyComponents( tarch::la::convertScalar<double>(volume)+tarch::la::Vector<DIMENSIONS,double>(0.5), volumeH);
 
-    tarch::la::Vector<Dimensions,double> xOnLayer = x;
-    //if (faceNumber<Dimensions) {
-    //  xOnLayer(faceNumber%Dimensions) -=  volumeH(faceNumber%Dimensions);
+    tarch::la::Vector<DIMENSIONS,double> xOnLayer = x;
+    //if (faceNumber<DIMENSIONS) {
+    //  xOnLayer(faceNumber%DIMENSIONS) -=  volumeH(faceNumber%DIMENSIONS);
     //}
     //std::cout<<"xonlayer: "<<xOnLayer<<std::endl;
 
     for (int layer=0; layer<overlap; layer++) {
-      if (faceNumber<Dimensions) {
-        insideGridCell(faceNumber % Dimensions)  = overlap-layer;
-        outsideGridCell(faceNumber % Dimensions) = overlap-1-layer;
+      if (faceNumber<DIMENSIONS) {
+        insideGridCell(faceNumber % DIMENSIONS)  = overlap-layer;
+        outsideGridCell(faceNumber % DIMENSIONS) = overlap-1-layer;
         //std::cout<<"x: "<<x<<std::endl;
-        //std::cout<<"shift: "<< -layer * volumeH(faceNumber%Dimensions)<<std::endl;
-        xOnLayer(faceNumber%Dimensions) = x(faceNumber%Dimensions) - layer * volumeH(faceNumber%Dimensions); //for each layer the x is different
-        xOnLayer(faceNumber%Dimensions) -=  volumeH(faceNumber%Dimensions); //due to shortcut above we need to remove another layer to make coordinate correct
+        //std::cout<<"shift: "<< -layer * volumeH(faceNumber%DIMENSIONS)<<std::endl;
+        xOnLayer(faceNumber%DIMENSIONS) = x(faceNumber%DIMENSIONS) - layer * volumeH(faceNumber%DIMENSIONS); //for each layer the x is different
+        xOnLayer(faceNumber%DIMENSIONS) -=  volumeH(faceNumber%DIMENSIONS); //due to shortcut above we need to remove another layer to make coordinate correct
         //std::cout<<"xOnlayer: "<<xOnLayer<<std::endl;
       }
       else {
-        insideGridCell(faceNumber % Dimensions)  = layer+overlap-1;
-        outsideGridCell(faceNumber % Dimensions) = layer+overlap;
+        insideGridCell(faceNumber % DIMENSIONS)  = layer+overlap-1;
+        outsideGridCell(faceNumber % DIMENSIONS) = layer+overlap;
         //std::cout<<"x: "<<x<<std::endl;
-        //std::cout<<"shift: "<< +layer * volumeH(faceNumber%Dimensions)<<std::endl;
-        xOnLayer(faceNumber%Dimensions) = x(faceNumber%Dimensions) + layer * volumeH(faceNumber%Dimensions); //for each layer the x is different
+        //std::cout<<"shift: "<< +layer * volumeH(faceNumber%DIMENSIONS)<<std::endl;
+        xOnLayer(faceNumber%DIMENSIONS) = x(faceNumber%DIMENSIONS) + layer * volumeH(faceNumber%DIMENSIONS); //for each layer the x is different
         //std::cout<<"xOnlayer: "<<xOnLayer<<std::endl;
       }
       //std::cout<<"xOnlayer: "<<xOnLayer<<std::endl;
@@ -174,7 +174,7 @@ void exahype2::fd::applySommerfeldConditions(
       }
       
       const double rOnLayer=tarch::la::norm2(xOnLayer-systemOrigin);
-      const double waveSpeed=maxEigenvalue( Qold + enumerator(outsideGridCell,0), faceCentre, volumeH, t, dt, faceNumber % Dimensions); 
+      const double waveSpeed=maxEigenvalue( Qold + enumerator(outsideGridCell,0), faceCentre, volumeH, t, dt, faceNumber % DIMENSIONS); 
       //std::cout<<"rOnlayer: "<<rOnLayer<<" waveSpeed: "<<waveSpeed<<std::endl;
 
       logDebug(
@@ -193,11 +193,11 @@ void exahype2::fd::applySommerfeldConditions(
       //do something here, we have Qold, Qnew, waveSpeed, xOnLayer, rOnLayer, dt, volumeH, Qinf
       //we try the first approach first to see if it is already sufficient.
       double dtInverse=1/dt;
-      double spaceFactor=waveSpeed*rOnLayer/volumeH(faceNumber%Dimensions)/xOnLayer(faceNumber%Dimensions);
+      double spaceFactor=waveSpeed*rOnLayer/volumeH(faceNumber%DIMENSIONS)/xOnLayer(faceNumber%DIMENSIONS);
       //std::cout<<"dtInverse: "<<dtInverse<<" spaceFactor: "<<spaceFactor<<std::endl;
 
-      //logInfo("text","factor "<< spaceFactor <<" waveSpeed "<<waveSpeed<<" rOnLayer "<<rOnLayer<<" volumeH "<<volumeH(faceNumber%Dimensions)
-      //  <<" xOnLayer "<<xOnLayer(faceNumber%Dimensions));
+      //logInfo("text","factor "<< spaceFactor <<" waveSpeed "<<waveSpeed<<" rOnLayer "<<rOnLayer<<" volumeH "<<volumeH(faceNumber%DIMENSIONS)
+      //  <<" xOnLayer "<<xOnLayer(faceNumber%DIMENSIONS));
 
       for(int i=0; i<numberOfUnknowns; i++) {
         double numerator=-(waveSpeed/rOnLayer)*((Qold + enumerator(outsideGridCell,0))[i]+(Qold+enumerator(insideGridCell,0))[i]-2*QInf[i])
@@ -223,14 +223,14 @@ void exahype2::fd::applySommerfeldConditions(
 void exahype2::fd::applySommerfeldConditions(
   std::function< double(
     const double* NOALIAS                   Q,
-    const tarch::la::Vector<Dimensions,double>&  faceCentre,
-    const tarch::la::Vector<Dimensions,double>&  gridCellH,
+    const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+    const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
     double                                       t,
     double                                       dt,
     int                                          normal
   ) >   maxEigenvalue,
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
   double                                       t,
   double                                       dt,
   int                                          numberOfGridCellsPerPatchPerAxis,
@@ -238,7 +238,7 @@ void exahype2::fd::applySommerfeldConditions(
   int                                          numberOfUnknowns,
   int                                          numberOfAuxiliaryVariables,
   int                                          faceNumber,
-  const tarch::la::Vector<Dimensions,double>&  systemOrigin,
+  const tarch::la::Vector<DIMENSIONS,double>&  systemOrigin,
   double* NOALIAS                         Qold,
   double* NOALIAS                         Qnew,
   double                                       CheckpointTimeStamp
@@ -247,8 +247,8 @@ void exahype2::fd::applySommerfeldConditions(
     maxEigenvalue,
     [&] (
       double* NOALIAS                         Q,
-      const tarch::la::Vector<Dimensions,double>&  /*faceCentre*/,
-      const tarch::la::Vector<Dimensions,double>&  /*gridCellH*/
+      const tarch::la::Vector<DIMENSIONS,double>&  /*faceCentre*/,
+      const tarch::la::Vector<DIMENSIONS,double>&  /*gridCellH*/
     ) -> void {
       for (int i=0; i<numberOfUnknowns+numberOfAuxiliaryVariables; i++) {
         Q[i] = 0.0;

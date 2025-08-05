@@ -111,10 +111,10 @@ namespace applications {
         void recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody(
           double* NOALIAS                                       QIn,
           const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
           int                                          normal
         );
 
@@ -125,10 +125,10 @@ namespace applications {
         void recomputeAuxiliaryVariablesFD4_centralDifferences_LoopBody(
           double* NOALIAS                                       QIn,
           const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
           int                                          normal
         );
 
@@ -139,10 +139,10 @@ namespace applications {
         void recomputeAuxiliaryVariablesFD4_leftDifferences_LoopBody(
           double* NOALIAS                                       QIn,
           const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
           int                                          normal
         );
 
@@ -153,10 +153,10 @@ namespace applications {
         void recomputeAuxiliaryVariablesFD4_rightDifferences_LoopBody(
           double* NOALIAS                                       QIn,
           const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<DIMENSIONS,int>&     volumeIndex,
           int                                          normal
         );
       }

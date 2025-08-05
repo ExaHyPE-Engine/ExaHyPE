@@ -45,10 +45,10 @@ tarch::logging::Log _log("::");
 
 constexpr double timeStamp    = 0.0;
 constexpr double timeStepSize = 1e-6;
-const tarch::la::Vector<Dimensions, double>
+const tarch::la::Vector<DIMENSIONS, double>
   cellCenter = benchmarks::exahype2::kernelbenchmarks::DomainOffset
                + 0.5 * benchmarks::exahype2::kernelbenchmarks::DomainSize;
-const tarch::la::Vector<Dimensions, double> cellSize = benchmarks::exahype2::kernelbenchmarks::DomainSize / 81.0;
+const tarch::la::Vector<DIMENSIONS, double> cellSize = benchmarks::exahype2::kernelbenchmarks::DomainSize / 81.0;
 // constexpr int    HaloSize     = 1;
 
 static_assert(Accuracy >= std::numeric_limits<double>::epsilon() || Accuracy == 0.0);
@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
   logInfo("main()", "number of samples per measurement: " << NumberOfSamples);
   logInfo("main()", "floating-point exception handler enabled: " << std::boolalpha << EnableFPE);
   logInfo("main()", "performing accuracy checks with precision: " << Accuracy);
-#if defined(GPUOffloadingSYCL)
+#if defined(WITH_GPU_SYCL)
   logInfo("main()", "set SYCL_DEVICE_FILTER=gpu or ONEAPI_DEVICE_SELECTOR=cuda:0 when using SYCL on the device");
   logInfo("main()", "set SYCL_PI_TRACE=2 in case of runtime errors");
 #endif

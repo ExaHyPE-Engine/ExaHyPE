@@ -90,7 +90,7 @@ class tarch::logging::LogFilter {
 
     FilterList  _filterlist;
 
-    #if !defined(SharedMemoryParallelisation) && PeanoDebug>=1
+    #if !defined(WITH_MULTITHREADING) && PEANO_DEBUG>=1
     std::stack<std::string> _indentTraces;
     #endif
 

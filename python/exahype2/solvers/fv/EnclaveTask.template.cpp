@@ -27,14 +27,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
   const double                                    timeStamp,
   const double                                    timeStepSize,
   {{STORAGE_PRECISION}}* NOALIAS                  QIn,
-  {{STORAGE_PRECISION}}* NOALIAS const            faces[1][TwoTimesD],
+  {{STORAGE_PRECISION}}* NOALIAS const            faces[1][TWO_TIMES_D],
   {{STORAGE_PRECISION}}* NOALIAS                  QOut
 ) {
   std::swap(QIn, QOut);
   kernels::{{SOLVER_NAME}}::reconstructPatch(QIn, faces[0], QOut);
   std::swap(QIn, QOut);
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   ::exahype2::fv::validatePatch(
     QIn,
     {{NUMBER_OF_UNKNOWNS}},
@@ -53,7 +53,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
   {% endif %}
   {{POSTPROCESS_UPDATED_PATCH}}
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   ::exahype2::fv::validatePatch(
     QOut,
     {{NUMBER_OF_UNKNOWNS}},
@@ -73,7 +73,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
   const double                                    timeStamp,
   const double                                    timeStepSize,
   {{STORAGE_PRECISION}}* NOALIAS                  QIn,
-  {{STORAGE_PRECISION}}* NOALIAS const            faces[1][TwoTimesD],
+  {{STORAGE_PRECISION}}* NOALIAS const            faces[1][TWO_TIMES_D],
   {{STORAGE_PRECISION}}* NOALIAS                  QOut
 ):
   ::exahype2::EnclaveTask<{{STORAGE_PRECISION}}>(
@@ -121,7 +121,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   int patchIndex = 0;
   for (auto& otherTask: otherTasks) {
     patchData.QIn[patchIndex]               = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_QIn;
-    for (int f = 0; f < TwoTimesD; ++f) {
+    for (int f = 0; f < TWO_TIMES_D; ++f) {
       patchData.faces[0][patchIndex][f]     = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_faces[0][f];
     }
     patchData.QOut[patchIndex]              = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_QOut;
@@ -134,7 +134,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   patchData.t                             = _t;
   patchData.dt                            = _dt;
   patchData.QIn[patchIndex]               = _QIn;
-  for (int f = 0; f < TwoTimesD; ++f) {
+  for (int f = 0; f < TWO_TIMES_D; ++f) {
     patchData.faces[0][patchIndex][f]     = _faces[0][f];
   }
   patchData.QOut[patchIndex]              = _QOut;
@@ -148,7 +148,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     TARGET_DEVICE
   );
   patchData.facesFlattened = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(
-    numberOfPatches * TwoTimesD * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %},
+    numberOfPatches * TWO_TIMES_D * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %},
     tarch::MemoryLocation::Pinned,
     TARGET_DEVICE
   );
@@ -170,12 +170,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
       &patchData.QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}]
     );
 
-    for (int f = 0; f < TwoTimesD; ++f) {
+    for (int f = 0; f < TWO_TIMES_D; ++f) {
       std::copy_n(
         patchData.faces[0][patchIndex][f],
         {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %},
         &patchData.facesFlattened[
-          patchIndex * TwoTimesD * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %} // Skip whole patches
+          patchIndex * TWO_TIMES_D * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %} // Skip whole patches
           + f * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %} // Move to the f-th face inside the patch
         ]
       );
@@ -191,7 +191,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
     auto* const QIn = &patchData.QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
     ::exahype2::fv::validatePatch(
       QIn,
       {{NUMBER_OF_UNKNOWNS}},
@@ -219,7 +219,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 
     {{POSTPROCESS_UPDATED_PATCH}}
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
     ::exahype2::fv::validatePatch(
       QOut,
       {{NUMBER_OF_UNKNOWNS}},

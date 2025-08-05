@@ -52,13 +52,13 @@ void toolbox::blockstructured::tests::IandRSecondOrderTest::compareInterpolateLi
       for (int k = 0; k < 3; k++) {
         peano4::grid::GridTraversalEvent dummyEvent;
         dummyEvent.setRelativePositionToFather(
-          tarch::la::Vector<Dimensions, int>{i, j, k}
+          tarch::la::Vector<DIMENSIONS, int>{i, j, k}
         );
 
         for (int axis = 0; axis < 3; axis++) {
           peano4::datamanagement::FaceMarker faceMarker1(dummyEvent, axis);
           peano4::datamanagement::FaceMarker
-            faceMarker2(dummyEvent, axis + Dimensions);
+            faceMarker2(dummyEvent, axis + DIMENSIONS);
 
           for (int n = 0; n < faceSize; n++)
             coarseData[n] = static_cast<double>(n + 1) / 16.0;
@@ -162,13 +162,13 @@ void toolbox::blockstructured::tests::IandRSecondOrderTest::compareRestrictLinea
       for (int k = 0; k < 3; k++) {
         peano4::grid::GridTraversalEvent dummyEvent;
         dummyEvent.setRelativePositionToFather(
-          tarch::la::Vector<Dimensions, int>{i, j, k}
+          tarch::la::Vector<DIMENSIONS, int>{i, j, k}
         );
 
         for (int axis = 0; axis < 3; axis++) {
           peano4::datamanagement::FaceMarker faceMarker1(dummyEvent, axis);
           peano4::datamanagement::FaceMarker
-            faceMarker2(dummyEvent, axis + Dimensions);
+            faceMarker2(dummyEvent, axis + DIMENSIONS);
 
           for (int n = 0; n < faceSize; n++)
             fineData[n] = static_cast<double>(n + 1) / 16.0;

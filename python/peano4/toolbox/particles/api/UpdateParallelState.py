@@ -166,7 +166,7 @@ for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
     logDebug( "touchVertexLastTime(...)", "particle has left domain=" << p->toString() << " (attached to vertex " << marker.toString() << ", will be deleted after this sweep but should be inflying on other tree)" );
     _numberOfParticlesThatHaveLeftTheirDomain++;
 
-    #if PeanoDebug > 0
+    #if PEANO_DEBUG > 0
     int partID = p->getPartid();
     #else
     int partID = -1;
@@ -216,7 +216,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     p++;
   }
   else {
-    #if PeanoDebug > 0
+    #if PEANO_DEBUG > 0
     int partID = (*p)->getPartid();
     #else
     int partID = -1;
@@ -243,7 +243,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
       _treeNumber,
       "UpdateParallelState::__Template_TouchVertexLastTime"
     );
-    // #if !defined(Parallel)
+    // #if !defined(WITH_MPI)
     // This assertion breaks when running without MPI on 1 tree with periodic
     // boundary conditions on. It doesn't account for periodic BCs being mapped
     // onto a boundary exchange too.

@@ -20,7 +20,7 @@ namespace Numerics{
   inline void riemannSolverBoundary(int faceIndex,T r, T vn , T vm , T vl, T Tn , T Tm ,T Tl , T zp, T zs , T& vn_hat , T& vm_hat ,T& vl_hat , T& Tn_hat , T& Tm_hat ,T& Tl_hat)
   {
     // if (faceIndex % 2  == 0) { //left face
-    if (faceIndex < Dimensions) { //left face
+    if (faceIndex < DIMENSIONS) { //left face
       riemannSolverBC0(vn, Tn, zp, r, vn_hat, Tn_hat);
       riemannSolverBC0(vm, Tm, zs, r, vm_hat, Tm_hat);
       riemannSolverBC0(vl, Tl, zs, r, vl_hat, Tl_hat);	
@@ -247,7 +247,7 @@ namespace Numerics{
 
         T norm_p_qr=norm_p;
         T norm_m_qr=norm_m;
-        kernels::idx2 idx_pml(Dimensions,9);
+        kernels::idx2 idx_pml(DIMENSIONS,9);
 
         F_p[Shortcuts::pml + idx_pml(0,0)] = n_p[0]*dmp_pml_x_p*norm_p*FRx;
         F_m[Shortcuts::pml + idx_pml(0,0)] = n_m[0]*dmp_pml_x_m*norm_m*FLx;

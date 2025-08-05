@@ -25,3 +25,9 @@
 #else
 #define NOALIAS __restrict__
 #endif
+
+#if defined(__GNUC__) || defined(__clang__)
+#define INLINE_METHOD inline __attribute__((always_inline))
+#else
+#define INLINE_METHOD inline
+#endif

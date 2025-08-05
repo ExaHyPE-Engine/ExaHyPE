@@ -9,7 +9,7 @@ void ContextDynamicRupture<Shortcuts, basisSize, numberOfVariables, numberOfPara
   T* FL, T* FR,
   const T* const QL, const T* const QR,
   const double t, const double dt,
-  const tarch::la::Vector<Dimensions, double>& cellSize,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const int direction,
   bool isBoundaryFace,
   int faceIndex,
@@ -301,7 +301,7 @@ void ContextDynamicRupture<Shortcuts, basisSize, numberOfVariables, numberOfPara
 
       T norm_p_qr=norm_p;
       T norm_m_qr=norm_m;
-      ::kernels::idx2 idx_pml(Dimensions,9);
+      ::kernels::idx2 idx_pml(DIMENSIONS,9);
 
       F_p[Shortcuts::pml + idx_pml(0,0)] = n_p[0]*dmp_pml_x_p*norm_p*FRx;
       F_m[Shortcuts::pml + idx_pml(0,0)] = n_m[0]*dmp_pml_x_m*norm_m*FLx;

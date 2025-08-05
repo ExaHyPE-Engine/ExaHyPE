@@ -113,7 +113,7 @@ fWave = r"""
   const double waveSpeeds[2] {einfeldtSpeeds[0], einfeldtSpeeds[1]};
   const double deltaLambda = waveSpeeds[1] - waveSpeeds[0];
 
-#ifdef GPUOffloadingOff
+#if !defined(WITH_GPU)
   // Wave speed of the 1st wave family should be less than the speed of the 2nd wave family.
   assertion(waveSpeeds[0] < waveSpeeds[1]);
   assertion(std::fabs(deltaLambda) > 0); // Make sure we do not divide by 0
@@ -205,7 +205,7 @@ fWave = r"""
   // Compute maximum wave speed (-> CFL-condition)
   const double maxWaveSpeed = std::fmax(std::fabs(waveSpeeds[0]), std::fabs(waveSpeeds[1]));
 
-#ifdef GPUOffloadingOff
+#if !defined(WITH_GPU)
   assertion(!std::isnan(hUpdateLeft));
   assertion(!std::isnan(hUpdateRight));
   assertion(!std::isnan(huUpdateLeft));

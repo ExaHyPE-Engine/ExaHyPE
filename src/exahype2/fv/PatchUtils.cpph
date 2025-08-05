@@ -13,7 +13,7 @@ void exahype2::fv::copyHalfOfHalo(
 ) {
   dfore(k,numberOfGridCellsPerPatchPerAxis,normal,0) {
     for (int i= (isRightLayer ? haloSize : 0); i< (isRightLayer ? 2*haloSize : haloSize); i++) {
-      tarch::la::Vector<Dimensions,int> overlapCell = k;
+      tarch::la::Vector<DIMENSIONS,int> overlapCell = k;
       overlapCell(normal) = i;
       const int index = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,numberOfGridCellsPerPatchPerAxis,haloSize,normal);
       for (int j=0; j<unknownsPlusAuxiliaryVariables; j++) {
@@ -41,7 +41,7 @@ void exahype2::fv::validatePatch (
     int index = peano4::utils::dLinearised(k,PatchSize) * (unknowns+auxiliaryVariables);
 
     int outsidePatchAlongCoordinateAxis = 0;
-    for (int d=0; d<Dimensions; d++) {
+    for (int d=0; d<DIMENSIONS; d++) {
       if (k(d)<haloSize) outsidePatchAlongCoordinateAxis++;
       if (k(d)>=haloSize+numberOfVolumesPerAxisInPatch) outsidePatchAlongCoordinateAxis++;
     }

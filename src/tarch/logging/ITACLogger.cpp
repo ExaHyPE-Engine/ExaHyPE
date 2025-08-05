@@ -27,7 +27,7 @@ tarch::logging::ITACLogger  tarch::logging::ITACLogger::_singleton;
 tarch::logging::ITACLogger::ITACLogger():
   _firstTraceWritten(false) {
   #ifdef UseITAC
-  #if !defined(Parallel)
+  #if !defined(WITH_MPI)
   VT_initialize();
   #endif
   #endif
@@ -42,7 +42,7 @@ tarch::logging::ITACLogger& tarch::logging::ITACLogger::getInstance() {
 tarch::logging::ITACLogger::~ITACLogger() {
   close();
   #ifdef UseITAC
-  #if !defined(Parallel)
+  #if !defined(WITH_MPI)
   VT_finalize();
   #endif
   #endif
@@ -116,7 +116,7 @@ std::string tarch::logging::ITACLogger::constructMessageString(
 
 
 void tarch::logging::ITACLogger::debug(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
-  #if !defined(PeanoDebug) || PeanoDebug<1
+  #if !defined(PEANO_DEBUG) || PEANO_DEBUG<1
   assertion(false);
   #endif
 

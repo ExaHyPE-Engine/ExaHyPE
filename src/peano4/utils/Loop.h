@@ -21,13 +21,13 @@ namespace peano4 {
      *
      * @return a vector containing zero values only.
      */
-    inline GPUCallableMethod tarch::la::Vector<Dimensions, int> dStartVector();
+    inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector();
 
     /**
      * @return a vector containing only zero values besides the dim-th entry. This
      *         entry is set value.
      */
-    inline GPUCallableMethod tarch::la::Vector<Dimensions, int> dStartVector(int dim, int value);
+    inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector(int dim, int value);
 
     /**
      * Creates a start vector. Each component is set either 0 or max-1 depending
@@ -35,12 +35,12 @@ namespace peano4 {
      *
      * @return a start vector for an oscillating loop.
      */
-    inline GPUCallableMethod tarch::la::Vector<Dimensions, int> dStartVector(int max, const LoopDirection& direction);
+    inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector(int max, const LoopDirection& direction);
   }
 }
 
 #define dfor(counter, max) \
-  for (tarch::la::Vector<Dimensions, int> counter = peano4::utils::dStartVector(); peano4::utils::dCmp(counter, max); \
+  for (tarch::la::Vector<DIMENSIONS, int> counter = peano4::utils::dStartVector(); peano4::utils::dCmp(counter, max); \
        peano4::utils::dInc(counter, max))
 
 #define d2for(counter, max) \
@@ -73,19 +73,19 @@ namespace peano4 {
       } \
     }
 
-#if Dimensions == 2
+#if DIMENSIONS == 2
 #define dfor2(counter) \
-  for (int counter##Scalar = 0, AA##counter = 0, BB##counter = 0; counter##Scalar < TwoPowerD; counter##Scalar++) { \
-    tarch::la::Vector<Dimensions, int> counter; \
+  for (int counter##Scalar = 0, AA##counter = 0, BB##counter = 0; counter##Scalar < TWO_POWER_D; counter##Scalar++) { \
+    tarch::la::Vector<DIMENSIONS, int> counter; \
     counter(0)  = AA##counter; \
     counter(1)  = BB##counter; \
     AA##counter = !AA##counter; \
     BB##counter = !(AA##counter ^ BB##counter);
 #else
 #define dfor2(counter) \
-  for (int counter##Scalar = 0, AA##counter = 0, BB##counter = 0, CC##counter = 0; counter##Scalar < TwoPowerD; \
+  for (int counter##Scalar = 0, AA##counter = 0, BB##counter = 0, CC##counter = 0; counter##Scalar < TWO_POWER_D; \
        counter##Scalar++) { \
-    tarch::la::Vector<Dimensions, int> counter; \
+    tarch::la::Vector<DIMENSIONS, int> counter; \
     counter(0)  = AA##counter; \
     counter(1)  = BB##counter; \
     counter(2)  = CC##counter; \
@@ -95,11 +95,11 @@ namespace peano4 {
 #endif
 
 #define dfor3(counter) \
-  for (int counter##Scalar = 0; counter##Scalar < ThreePowerD; counter##Scalar++) { \
-    tarch::la::Vector<Dimensions, int> counter; \
+  for (int counter##Scalar = 0; counter##Scalar < THREE_POWER_D; counter##Scalar++) { \
+    tarch::la::Vector<DIMENSIONS, int> counter; \
     { \
       int copy##counter##Scalar = counter##Scalar; \
-      for (int counter##ddd = Dimensions - 1; counter##ddd >= 0; counter##ddd--) { \
+      for (int counter##ddd = DIMENSIONS - 1; counter##ddd >= 0; counter##ddd--) { \
         int counter##aPowI = 1; \
         for (int counter##jjj = 0; counter##jjj < counter##ddd; counter##jjj++) { \
           counter##aPowI *= 3; \
@@ -122,7 +122,7 @@ namespace peano4 {
  * throughout the for-loop.
  */
 #define dfore(counter, max, dim, value) \
-  for (tarch::la::Vector<Dimensions, int> counter = peano4::utils::dStartVector(dim, value); \
+  for (tarch::la::Vector<DIMENSIONS, int> counter = peano4::utils::dStartVector(dim, value); \
        peano4::utils::dCmp(counter, max); \
        peano4::utils::dInc(counter, max, dim))
 
@@ -157,7 +157,7 @@ namespace peano4 {
  */
 #define zfor(counter, max, direction) \
   { \
-    for (tarch::la::Vector<Dimensions, int> counter = peano4::utils::dStartVector(max, direction); \
+    for (tarch::la::Vector<DIMENSIONS, int> counter = peano4::utils::dStartVector(max, direction); \
          peano4::utils::dCmp(counter, max); \
          peano4::utils::dInc(counter, max, direction)) {
 
@@ -166,7 +166,7 @@ namespace peano4 {
  * A lookup table is used for dim=2 and dim=3, for higher dimensions
  * the standard zfor is used instead.
  */
-#if Dimensions == 2
+#if DIMENSIONS == 2
 // First entry is direction, second entry is cell, third entry is tuples
 static constexpr int lookupzfor3[4][9][2] = {
   {{2, 2}, {1, 2}, {0, 2}, {0, 1}, {1, 1}, {2, 1}, {2, 0}, {1, 0}, {0, 0}},
@@ -177,13 +177,13 @@ static constexpr int lookupzfor3[4][9][2] = {
 
 #define zfor3(counter, direction) \
   { \
-    tarch::la::Vector<Dimensions, int> counter; \
+    tarch::la::Vector<DIMENSIONS, int> counter; \
     int                                counter##initDir = static_cast<int>(direction.to_ulong()); \
     for (int counter##i = 0; counter##i < 9; ++counter##i) { \
       counter(0) = lookupzfor3[counter##initDir][counter##i][0]; \
       counter(1) = lookupzfor3[counter##initDir][counter##i][1];
 
-#elif Dimensions == 3
+#elif DIMENSIONS == 3
 static constexpr int lookupzfor3[8][27][3] = {
   {{2, 2, 2}, {1, 2, 2}, {0, 2, 2}, {0, 1, 2}, {1, 1, 2}, {2, 1, 2}, {2, 0, 2}, {1, 0, 2}, {0, 0, 2},
    {0, 0, 1}, {1, 0, 1}, {2, 0, 1}, {2, 1, 1}, {1, 1, 1}, {0, 1, 1}, {0, 2, 1}, {1, 2, 1}, {2, 2, 1},
@@ -213,7 +213,7 @@ static constexpr int lookupzfor3[8][27][3] = {
 
 #define zfor3(counter, direction) \
   { \
-    tarch::la::Vector<Dimensions, int> counter; \
+    tarch::la::Vector<DIMENSIONS, int> counter; \
     int                                counter##initDir = static_cast<int>(direction.to_ulong()); \
     for (int counter##i = 0; counter##i < 27; ++counter##i) { \
       counter(0) = lookupzfor3[counter##initDir][counter##i][0]; \

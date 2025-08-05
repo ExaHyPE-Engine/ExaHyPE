@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/Device.h"
 
-#if defined(GPUOffloadingKokkos)
+#if defined(WITH_GPU_KOKKOS)
 
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/accelerator.h"
@@ -35,4 +35,4 @@ int tarch::accelerator::Device::getNumberOfDevices() const {
   return numberOfDevices;
 }
 
-#endif // defined(GPUOffloadingKokkos)
+#endif // defined(WITH_GPU_KOKKOS)

@@ -8,8 +8,8 @@ tarch::logging::Log   exahype::limiting::swe::fvSWE::_log( "exahype::limiting::s
 
 void exahype::limiting::swe::fvSWE::eigenvalues(
   [[maybe_unused]] const double* const NOALIAS             Q, // Q[3+1]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,
@@ -28,8 +28,8 @@ void exahype::limiting::swe::fvSWE::eigenvalues(
 
 void exahype::limiting::swe::fvSWE::flux(
   [[maybe_unused]] const double* const NOALIAS             Q, // Q[3+1]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h_,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h_,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,
@@ -57,8 +57,8 @@ extern "C" {
 double exahype::limiting::swe::fvSWE::solveRiemannProblem(
   [[maybe_unused]] const double* const NOALIAS             QL, // QL[3+1]
   [[maybe_unused]] const double* const NOALIAS             QR, // QR[3+1]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,

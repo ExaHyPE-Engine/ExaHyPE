@@ -23,7 +23,7 @@ tarch::logging::Log    peano4::parallel::Node::_log("peano4::parallel::Node");
 peano4::parallel::Node peano4::parallel::Node::_singleton;
 
 void peano4::parallel::Node::initMPIDatatypes() {
-#ifdef Parallel
+#ifdef WITH_MPI
   StartTraversalMessage::initDatatype();
   TreeManagementMessage::initDatatype();
 
@@ -37,7 +37,7 @@ void peano4::parallel::Node::initMPIDatatypes() {
 }
 
 void peano4::parallel::Node::shutdownMPIDatatypes() {
-#ifdef Parallel
+#ifdef WITH_MPI
   StartTraversalMessage::shutdownDatatype();
   TreeManagementMessage::shutdownDatatype();
 
@@ -121,7 +121,7 @@ void peano4::parallel::Node::registerId(int id, int masterId) {
   tarch::multicore::Lock lock(_semaphore);
   assertion2(_treeEntries.count(id) == 0, id, masterId);
   assertion2(id != masterId, id, masterId);
-#ifndef Parallel
+#ifndef WITH_MPI
   assertion(isGlobalMaster(id) or _treeEntries.count(masterId) == 1);
 #endif
 
@@ -136,7 +136,7 @@ void peano4::parallel::Node::registerId(int id, int masterId) {
 }
 
 void peano4::parallel::Node::createPendingCommunicators() {
-#ifdef Parallel
+#ifdef WITH_MPI
   const int        n = MaxSpacetreesPerRank;
   std::vector<int> local(n), global(n);
   for (int i = 0; i < n; ++i) {
@@ -193,16 +193,16 @@ int peano4::parallel::Node::getInputStackNumberForVerticalDataExchange(int id) {
   return grid::PeanoCurve::MaxNumberOfCoreStacksPerSpacetreeInstance + id * StacksPerCommunicationPartner + 3;
 }
 
-std::bitset<2 * Dimensions> peano4::parallel::Node::getPeriodicBoundaryNumber(
-  const tarch::la::Vector<TwoPowerD, int>& flags
+std::bitset<2 * DIMENSIONS> peano4::parallel::Node::getPeriodicBoundaryNumber(
+  const tarch::la::Vector<TWO_POWER_D, int>& flags
 ) {
-  std::bitset<2 * Dimensions> result;
+  std::bitset<2 * DIMENSIONS> result;
 
-  for (int d = 0; d < 2 * Dimensions; d++) {
+  for (int d = 0; d < 2 * DIMENSIONS; d++) {
     bool                                        allFlagsSet = true;
-    dfor2(k) tarch::la::Vector<Dimensions, int> entry;
+    dfor2(k) tarch::la::Vector<DIMENSIONS, int> entry;
     entry                 = k;
-    entry(d % Dimensions) = d / Dimensions;
+    entry(d % DIMENSIONS) = d / DIMENSIONS;
     allFlagsSet &= flags(utils::dLinearised(entry, 2)) == grid::Spacetree::RankOfPeriodicBoundaryCondition;
     enddforx if (allFlagsSet) { result.set(d); }
   }
@@ -210,12 +210,12 @@ std::bitset<2 * Dimensions> peano4::parallel::Node::getPeriodicBoundaryNumber(
 }
 
 int peano4::parallel::Node::getOutputStackForPeriodicBoundaryExchange(int faceNumber) {
-  tarch::la::Vector<Dimensions, int> neighbour(1);
-  int                                normal    = faceNumber % Dimensions;
-  bool                               lookRight = faceNumber < Dimensions;
+  tarch::la::Vector<DIMENSIONS, int> neighbour(1);
+  int                                normal    = faceNumber % DIMENSIONS;
+  bool                               lookRight = faceNumber < DIMENSIONS;
   neighbour(normal) += lookRight ? 1 : -1;
   int linearisedIndex = utils::dLinearised(neighbour, 3);
-  if (linearisedIndex >= ThreePowerD / 2)
+  if (linearisedIndex >= THREE_POWER_D / 2)
     linearisedIndex--;
   const int baseIndex = grid::PeanoCurve::MaxNumberOfCoreStacksPerSpacetreeInstance
                         - grid::PeanoCurve::NumberOfPeriodicBoundaryConditionStacks;
@@ -233,7 +233,7 @@ std::string peano4::parallel::Node::toString(const std::set<PeriodicBoundaryStac
     } else {
       msg << ",";
     }
-    msg << "(stack=" << p.first << ",bnd=" << std::bitset<Dimensions>(p.second) << ")";
+    msg << "(stack=" << p.first << ",bnd=" << std::bitset<DIMENSIONS>(p.second) << ")";
   }
   msg << "}";
 
@@ -241,14 +241,14 @@ std::string peano4::parallel::Node::toString(const std::set<PeriodicBoundaryStac
 }
 
 std::set<peano4::parallel::Node::PeriodicBoundaryStackIdentifier> peano4::parallel::Node::
-  getOutputStacksForPeriodicBoundaryExchange(const tarch::la::Vector<TwoPowerD, int>& flags) {
-  std::bitset<2 * Dimensions> boundaryNumbers = getPeriodicBoundaryNumber(flags);
+  getOutputStacksForPeriodicBoundaryExchange(const tarch::la::Vector<TWO_POWER_D, int>& flags) {
+  std::bitset<2 * DIMENSIONS> boundaryNumbers = getPeriodicBoundaryNumber(flags);
   logTraceInWith2Arguments("getOutputStacksForPeriodicBoundaryExchange()", flags, boundaryNumbers);
 
-  std::unordered_set<std::bitset<2 * Dimensions>> powerSet;
-  for (int i = 0; i < 2 * Dimensions; i++) {
+  std::unordered_set<std::bitset<2 * DIMENSIONS>> powerSet;
+  for (int i = 0; i < 2 * DIMENSIONS; i++) {
     if (boundaryNumbers[i]) {
-      std::bitset<2 * Dimensions> newEntry(0);
+      std::bitset<2 * DIMENSIONS> newEntry(0);
       newEntry.set(i);
       powerSet.insert(newEntry);
 
@@ -262,16 +262,16 @@ std::set<peano4::parallel::Node::PeriodicBoundaryStackIdentifier> peano4::parall
 
   std::set<peano4::parallel::Node::PeriodicBoundaryStackIdentifier> result;
   int                                                               currentStackNumber = 0;
-  dfor3(neighbour) if (neighbour != tarch::la::Vector<Dimensions, int>(1)) {
-    std::bitset<2 * Dimensions> requiredEntryForThisDirection(0);
-    std::bitset<Dimensions>     direction(0);
-    for (int d = 0; d < Dimensions; d++) {
+  dfor3(neighbour) if (neighbour != tarch::la::Vector<DIMENSIONS, int>(1)) {
+    std::bitset<2 * DIMENSIONS> requiredEntryForThisDirection(0);
+    std::bitset<DIMENSIONS>     direction(0);
+    for (int d = 0; d < DIMENSIONS; d++) {
       if (neighbour(d) > 1) {
         requiredEntryForThisDirection[d] = true;
         direction[d]                     = true;
       }
       if (neighbour(d) < 1) {
-        requiredEntryForThisDirection[d + Dimensions] = true;
+        requiredEntryForThisDirection[d + DIMENSIONS] = true;
         direction[d]                                  = true;
       }
     }
@@ -297,9 +297,9 @@ std::set<peano4::parallel::Node::PeriodicBoundaryStackIdentifier> peano4::parall
 
     /*
       for (auto p: powerSet) {
-        std::bitset<Dimensions> stackAnnotation(0);
-        for (int i=0; i<Dimensions; i++) {
-          stackAnnotation.set( i, std::bitset<2*Dimensions>(p)[i] or std::bitset<2*Dimensions>(p)[i+Dimensions] );
+        std::bitset<DIMENSIONS> stackAnnotation(0);
+        for (int i=0; i<DIMENSIONS; i++) {
+          stackAnnotation.set( i, std::bitset<2*DIMENSIONS>(p)[i] or std::bitset<2*DIMENSIONS>(p)[i+DIMENSIONS] );
         }
         peano4::parallel::Node::PeriodicBoundaryStackIdentifier
       newEntry(getOutputStackForPeriodicBoundaryExchange(p),stackAnnotation.to_ulong()); assertion5(
@@ -391,7 +391,7 @@ int peano4::parallel::Node::getTreeNumberTiedToExchangeStackNumber(int number) {
 }
 
 bool peano4::parallel::Node::continueToRun() {
-#ifdef Parallel
+#ifdef WITH_MPI
   logTraceIn("continueToRun()");
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     for (int i = 1; i < tarch::mpi::Rank::getInstance().getNumberOfRanks(); i++) {
@@ -430,7 +430,7 @@ void peano4::parallel::Node::shutdown() {
     tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
   });
 
-#ifdef Parallel
+#ifdef WITH_MPI
   for (int i = 0; i < MaxSpacetreesPerRank; i++) {
     if (_dataExchangeCommunicators[i] != MPI_COMM_NULL) {
       MPI_Comm_free(&(_dataExchangeCommunicators[i]));

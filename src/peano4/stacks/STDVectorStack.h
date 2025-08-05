@@ -23,7 +23,7 @@ namespace peano4 {
 
     typedef STDVectorStack< peano4::grid::GridVertex > GridVertexStack;
 
-    #if defined(Parallel)
+    #if defined(WITH_MPI)
     template <class T>
     MPI_Datatype translateContextIntoDatatype( peano4::grid::TraversalObserver::SendReceiveContext context );
     #endif
@@ -95,7 +95,7 @@ class peano4::stacks::STDVectorStack {
     IOMode              _ioMode;
     int                 _ioRank;
     int                 _ioTag;
-    #ifdef Parallel
+    #ifdef WITH_MPI
     MPI_Request*        _ioMPIRequest;
     #endif
 
@@ -114,7 +114,7 @@ class peano4::stacks::STDVectorStack {
       _ioMode(IOMode::None),
       _ioRank(-1),
       _ioTag(-1)
-      #ifdef Parallel
+      #ifdef WITH_MPI
       ,
       _ioMPIRequest(nullptr)
       #endif
@@ -130,13 +130,13 @@ class peano4::stacks::STDVectorStack {
       _data(),
       _currentElement(0),
       _ioMode(IOMode::None)
-      #ifdef Parallel
+      #ifdef WITH_MPI
 	    ,
       _ioMPIRequest(nullptr)
       #endif
     {
       assertionMsg( stack._currentElement==0, "may not copy non-empty stack" );
-      #ifdef Parallel
+      #ifdef WITH_MPI
       assertionMsg( stack._ioMPIRequest==nullptr, "may not copy sending/receiving stack" );
       #endif
     }
@@ -405,7 +405,7 @@ class peano4::stacks::STDVectorStack {
       [[maybe_unused]] int tag,
       [[maybe_unused]] MPI_Comm comm
     ) {
-      #ifdef Parallel
+      #ifdef WITH_MPI
       assertion( _ioMode==IOMode::None );
       assertion( _ioMPIRequest==nullptr );
       _ioMode = IOMode::MPISend;
@@ -438,7 +438,7 @@ class peano4::stacks::STDVectorStack {
       [[maybe_unused]] MPI_Comm comm,
       [[maybe_unused]] int numberOfElements
     ) {
-      #ifdef Parallel
+      #ifdef WITH_MPI
       assertion3( _ioMode==IOMode::None, rank, tag, numberOfElements );
       assertion3( numberOfElements>0, rank, tag, numberOfElements );
 
@@ -481,7 +481,7 @@ class peano4::stacks::STDVectorStack {
      * @return finished send/receive already.
      */
     bool tryToFinishSendOrReceive() {
-      #ifdef Parallel
+      #ifdef WITH_MPI
       logTraceInWith4Arguments( "tryToFinishSendOrReceive()", ::toString(_ioMode), size(), _ioRank,_ioTag );
       bool result = true;
       if ( _ioMode==IOMode::MPISend or _ioMode==IOMode::MPIReceive ) {
@@ -551,7 +551,7 @@ void peano4::stacks::STDVectorStack<double>::startSend(peano4::grid::TraversalOb
 template <>
 void peano4::stacks::STDVectorStack<double>::startReceive(peano4::grid::TraversalObserver::SendReceiveContext, int rank, int tag, MPI_Comm comm, int numberOfElements);
 
-#if defined(Parallel)
+#if defined(WITH_MPI)
 template <class T>
 MPI_Datatype peano4::stacks::translateContextIntoDatatype( peano4::grid::TraversalObserver::SendReceiveContext context ) {
    switch (context) {

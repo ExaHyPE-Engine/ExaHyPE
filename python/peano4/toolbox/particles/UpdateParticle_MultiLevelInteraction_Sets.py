@@ -121,20 +121,20 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
     __Template_TouchCellFirstTime = jinja2.Template(
         """
   {{SET_IMPLEMENTATION}}< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
-  std::vector< int >                            numberOfCoalescedLocalParticlesPerVertex( TwoPowerD );
-  std::vector< int >                            _numberOfActiveParticlesPerVertex( TwoPowerD ); // stay compatible with coalesced version
+  std::vector< int >                            numberOfCoalescedLocalParticlesPerVertex( TWO_POWER_D );
+  std::vector< int >                            _numberOfActiveParticlesPerVertex( TWO_POWER_D ); // stay compatible with coalesced version
   std::vector< bool >                           localParticleIsContainedInCell;
   auto& numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex;
 
-  for (int i=0; i<TwoPowerD; i++) {
+  for (int i=0; i<TWO_POWER_D; i++) {
     numberOfCoalescedActiveParticlesPerVertex[i] = -1;
     numberOfCoalescedLocalParticlesPerVertex[i]  = -1;
     for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
       _activeParticles.insert( p );
     }
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
-      std::bitset<TwoPowerD> mask = 0;
-      mask.set(TwoPowerD-i-1);
+      std::bitset<TWO_POWER_D> mask = 0;
+      mask.set(TWO_POWER_D-i-1);
       bool isLocal = (mask & p->getContainedInAdjacentCell()).any();
       assertionEquals4( 
         isLocal, 
@@ -155,7 +155,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
 
     __Template_TouchCellLastTime = jinja2.Template(
         """
-  for (int i=0; i<TwoPowerD; i++) {
+  for (int i=0; i<TWO_POWER_D; i++) {
     for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
       _activeParticles.erase( p );
     }

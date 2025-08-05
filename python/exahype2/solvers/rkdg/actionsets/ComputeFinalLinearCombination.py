@@ -85,7 +85,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       [&](
         const double * NOALIAS Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<DIMENSIONS,double>&  x,
         double                                       t,
         double                                       dt,
         int                                          normal
@@ -111,7 +111,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
     #error Have to tweak compute final projection
     {% endif %}
     
-    #if Dimensions==2
+    #if DIMENSIONS==2
     ::exahype2::dg::projectVolumetricDataOntoFaces(
       newQ,
       {{ORDER}},
@@ -123,7 +123,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).value, //down
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).value  //up
     );
-    #elif Dimensions==3
+    #elif DIMENSIONS==3
     ::exahype2::dg::projectVolumetricDataOntoFaces(
       newQ,
       {{ORDER}},
@@ -152,7 +152,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
           {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
           {{ORDER}},
           {{NUMBER_OF_FACE_PROJECTIONS}},
-          marker.getSelectedFaceNumber() % Dimensions,
+          marker.getSelectedFaceNumber() % DIMENSIONS,
           leftRight==1,
           fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value,
           fineGridFace{{UNKNOWN_IDENTIFIER}}OldSolutionProjection.value

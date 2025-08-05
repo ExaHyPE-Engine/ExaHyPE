@@ -6,14 +6,14 @@
 
 {% macro gatherQ() %}
   // Gather data
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
   #endif
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
     const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(10) }}{##}
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(QIn[indexWithHalo]));
     #endif
     QInGathered[unknown] = QIn[indexWithHalo];
@@ -21,19 +21,19 @@
   }
   {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
   {{ terms.applySource('QInGathered', 'sourceGathered', 'volumeCentre', 'timeStamp') }}
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
   #endif
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; unknown++) {
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(sourceGathered[unknown]));
     #endif
     QInExtrapolationUpdate[unknown] = sourceGathered[unknown];
   }
   {% else %}
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll

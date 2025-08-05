@@ -13,7 +13,7 @@ void toolbox::blockstructured::copyUnknowns(
   int                                destHalo,
   int                                unknowns
 ) {
-  #if Dimensions==2
+  #if DIMENSIONS==2
   for (int x=0; x<numberOfDoFsPerAxisInPatch; x++)
   for (int y=0; y<numberOfDoFsPerAxisInPatch; y++)
   for (int unknown=0; unknown<unknowns; unknown++) {
@@ -21,7 +21,7 @@ void toolbox::blockstructured::copyUnknowns(
     int destIndexLinearised   = (x + destHalo + (y+destHalo)*(numberOfDoFsPerAxisInPatch+2*destHalo) ) * unknowns + unknown;
     dest[destIndexLinearised] = source[sourceIndexLinearised];
   }
-  #elif Dimensions==3
+  #elif DIMENSIONS==3
   for (int x=0; x<numberOfDoFsPerAxisInPatch; x++)
   for (int y=0; y<numberOfDoFsPerAxisInPatch; y++)
   for (int z=0; z<numberOfDoFsPerAxisInPatch; z++)
@@ -31,7 +31,7 @@ void toolbox::blockstructured::copyUnknowns(
     dest[destIndexLinearised] = source[sourceIndexLinearised];
   }
   #else
-    #error Dimensions not supported
+    #error DIMENSIONS not supported
   #endif
 }
 
@@ -47,7 +47,7 @@ void toolbox::blockstructured::copyUnknown(
   int                                destUnknowns,
   int                                destHalo
 ) {
-  #if Dimensions==2
+  #if DIMENSIONS==2
   for (int x=0; x<numberOfDoFsPerAxisInPatch; x++)
   for (int y=0; y<numberOfDoFsPerAxisInPatch; y++) {
     int sourceIndexLinearised = (x + sourceHalo + (y+sourceHalo)*(numberOfDoFsPerAxisInPatch+2*sourceHalo) ) * sourceUnknowns + sourceIndex;
@@ -55,7 +55,7 @@ void toolbox::blockstructured::copyUnknown(
     dest[destIndexLinearised] = source[sourceIndexLinearised];
     assertion5( source[sourceIndexLinearised]>0.0, sourceIndexLinearised, x, y, sourceIndex, sourceUnknowns ); // @todo raus
   }
-  #elif Dimensions==3
+  #elif DIMENSIONS==3
   for (int x=0; x<numberOfDoFsPerAxisInPatch; x++)
   for (int y=0; y<numberOfDoFsPerAxisInPatch; y++)
   for (int z=0; z<numberOfDoFsPerAxisInPatch; z++) {
@@ -64,7 +64,7 @@ void toolbox::blockstructured::copyUnknown(
     dest[destIndexLinearised] = source[sourceIndexLinearised];
   }
   #else
-    #error Dimensions not supported
+    #error DIMENSIONS not supported
   #endif
 }
 
@@ -82,7 +82,7 @@ double toolbox::blockstructured::copyUnknownAndComputeMaxDifference(
   int                                destHalo
 ) {
   double result = 0.0;
-  #if Dimensions==2
+  #if DIMENSIONS==2
   for (int x=0; x<numberOfDoFsPerAxisInPatch; x++)
   for (int y=0; y<numberOfDoFsPerAxisInPatch; y++) {
     int sourceIndexLinearised = (x + sourceHalo + (y+sourceHalo)*(numberOfDoFsPerAxisInPatch+2*sourceHalo) ) * sourceUnknowns + sourceIndex;
@@ -92,7 +92,7 @@ double toolbox::blockstructured::copyUnknownAndComputeMaxDifference(
     assertion5( source[sourceIndexLinearised]>0.0, sourceIndexLinearised, x, y, sourceIndex, sourceUnknowns ); // @todo raus
     result = std::max( result, delta );
   }
-  #elif Dimensions==3
+  #elif DIMENSIONS==3
   for (int x=0; x<numberOfDoFsPerAxisInPatch; x++)
   for (int y=0; y<numberOfDoFsPerAxisInPatch; y++)
   for (int z=0; z<numberOfDoFsPerAxisInPatch; z++) {
@@ -103,7 +103,7 @@ double toolbox::blockstructured::copyUnknownAndComputeMaxDifference(
     result = std::max( result, delta );
   }
   #else
-    #error Dimensions not supported
+    #error DIMENSIONS not supported
   #endif
   return result;
 }

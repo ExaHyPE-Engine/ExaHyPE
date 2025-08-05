@@ -71,8 +71,8 @@ class benchmarks::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
      */
     ::exahype2::RefinementCommand refinementCriterion(
       const double * NOALIAS Q, // Q[59+0],
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
       double                                       t
     ) override;
     
@@ -82,8 +82,8 @@ class benchmarks::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
 
     void initialCondition(
       double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
       bool                                         gridIsConstructed
     ) override;
     
@@ -93,8 +93,8 @@ class benchmarks::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
     virtual void boundaryConditions(
       const double * NOALIAS Qinside, // Qinside[59+0]
       double * NOALIAS Qoutside, // Qoutside[59+0]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
       double                                       t,
       int                                          normal
     )  override;
@@ -105,8 +105,8 @@ class benchmarks::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
     
     void sourceTerm(
       const double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
       double                                       t,
       double                                       dt,
       double * NOALIAS S
@@ -123,8 +123,8 @@ class benchmarks::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
      */
     virtual double maxEigenvalue(
       const double * NOALIAS Q, // Q[59+0],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
       double                                       t,
       double                                       dt,
       int                                          normal
@@ -139,8 +139,8 @@ class benchmarks::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
     virtual void nonconservativeProduct(
       const double * NOALIAS Q, // Q[59+0],
       const double * NOALIAS             deltaQ, // [59+0]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -164,13 +164,13 @@ class benchmarks::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static GPUCallableMethod void sourceTerm(
+    static GPU_CALLABLE_METHOD void sourceTerm(
        const double * NOALIAS Q,
-       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-       const tarch::la::Vector<Dimensions,double>&  volumeH,
+       const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+       const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
        double                                       t,
        double                                       dt,
        double * NOALIAS S,
@@ -179,7 +179,7 @@ class benchmarks::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
       memset(S, 0, NumberOfUnknowns*sizeof(double));
       applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3, CCZ4SO);
     }
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     
@@ -200,13 +200,13 @@ class benchmarks::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static GPUCallableMethod double maxEigenvalue(
+    static GPU_CALLABLE_METHOD double maxEigenvalue(
       const double * NOALIAS Q, // Q[59+0],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -229,7 +229,7 @@ class benchmarks::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
       return tem;
     }
 
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     
@@ -253,21 +253,21 @@ class benchmarks::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
-    static GPUCallableMethod void nonconservativeProduct(
+    static GPU_CALLABLE_METHOD void nonconservativeProduct(
       const double * NOALIAS                  Q,         // Q[5+0],
       const double * NOALIAS                  deltaQ,    // [5+0]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
       double                                       t,
       double                                       dt,
       int                                          normal,
       double * NOALIAS                        BgradQ,     // BgradQ[5]
       ::exahype2::Solver::Offloadable
     );
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
         

@@ -20,7 +20,7 @@ exahype2::fd::tests::SommerfeldBCTest::SommerfeldBCTest():
 
 
 void exahype2::fd::tests::SommerfeldBCTest::run() {
-  #if Dimensions == 3 // This test scenario is only valid for three dimensions
+  #if DIMENSIONS == 3 // This test scenario is only valid for three dimensions
   testMethod(flatSolutionTest);
   #endif
 }
@@ -47,8 +47,8 @@ void exahype2::fd::tests::SommerfeldBCTest::flatSolutionTest() {
   ::exahype2::fd::applySommerfeldConditions(
     [&](
         const double * NOALIAS                  Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  gridCellH,
+        const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+        const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
         double                                       t,
         double                                       dt,
         int                                          normal
@@ -57,8 +57,8 @@ void exahype2::fd::tests::SommerfeldBCTest::flatSolutionTest() {
     },
     [&](
         double * NOALIAS                        Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  gridCellH
+        const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+        const tarch::la::Vector<DIMENSIONS,double>&  gridCellH
     ) -> void {
       Q[0] = 0.0;
       Q[1] = 1.0;
@@ -108,8 +108,8 @@ void exahype2::fd::tests::SommerfeldBCTest::flatSolutionTest() {
   ::exahype2::fd::applySommerfeldConditions(
     [&](
         const double * NOALIAS                  Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  gridCellH,
+        const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+        const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
         double                                       t,
         double                                       dt,
         int                                          normal
@@ -118,8 +118,8 @@ void exahype2::fd::tests::SommerfeldBCTest::flatSolutionTest() {
     },
     [&](
         double * NOALIAS                        Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  gridCellH
+        const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+        const tarch::la::Vector<DIMENSIONS,double>&  gridCellH
     ) -> void {
       Q[0] = 0.0;
       Q[1] = 1.0;

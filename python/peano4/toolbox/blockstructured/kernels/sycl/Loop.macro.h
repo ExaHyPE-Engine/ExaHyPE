@@ -39,7 +39,7 @@
       using FaceType          = const {{PRECISION}}(*)[{{FACES_PER_DOF*UNKNOWNS}}];
       const int patchIndex    = item.get_group(0);
       const auto* const QIn   = &QInFlattened[patchIndex  * {{DOFS*UNKNOWNS}}];
-      const auto* const faces = reinterpret_cast<FaceType>(&facesFlattened[patchIndex * TwoTimesD * {{FACES_PER_DOF*UNKNOWNS}}]);
+      const auto* const faces = reinterpret_cast<FaceType>(&facesFlattened[patchIndex * TWO_TIMES_D * {{FACES_PER_DOF*UNKNOWNS}}]);
       auto* const QOut        = &QOutFlattened[patchIndex * {{DOFS_WITH_OVERLAP*UNKNOWNS}}];
 
       {{ loopOverCells() | indent(2) }}

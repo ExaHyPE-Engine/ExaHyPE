@@ -146,7 +146,7 @@ def create_finish_time_step_implementation_for_error_measurement(guard):
     if ("""
         + guard
         + """) {
-      #ifdef Parallel
+      #ifdef WITH_MPI
       double errorsThisTimeStamp[3] = {_errors[0], _errors[1], _errors[2]};
 
       tarch::mpi::Rank::getInstance().allReduce(
@@ -199,7 +199,7 @@ def create_solver_user_abstract_declarations():
      * @param sol           Analytical solution of the equation
      */
     virtual void analyticalSolution(
-      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<DIMENSIONS, double>&  x,
       const double                                  t,
       const double                                  dt,
       const double*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -211,7 +211,7 @@ def create_solver_user_abstract_declarations():
 def create_solver_user_declarations():
     return """
       virtual void analyticalSolution(
-        const tarch::la::Vector<Dimensions, double>&  x,
+        const tarch::la::Vector<DIMENSIONS, double>&  x,
         const double                                  t,
         const double                                  dt,
         const double*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -225,7 +225,7 @@ def create_solver_user_definitions(user_defined, error_measurement_implementatio
         return(
         """
     void {{"{{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}"}}::analyticalSolution(
-      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<DIMENSIONS, double>&  x,
       const double                                  t,
       const double                                  dt,
       const double*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -240,7 +240,7 @@ def create_solver_user_definitions(user_defined, error_measurement_implementatio
     else:
         return """
     void {{"{{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}"}}::analyticalSolution(
-      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<DIMENSIONS, double>&  x,
       const double                                  t,
       const double                                  dt,
       const double*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]

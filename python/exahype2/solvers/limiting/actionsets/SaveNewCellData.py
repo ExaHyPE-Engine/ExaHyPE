@@ -20,19 +20,19 @@ class SaveNewCellData(AbstractLimiterActionSet):
       localMinPerVariables, localMaxPerVariables
     );
 
-    for (int d = 0; d < Dimensions; d++) {
+    for (int d = 0; d < DIMENSIONS; d++) {
       // Projection of cell local min and max
       std::copy_n(localMinPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + NumberOfObservables);
-      std::copy_n(localMinPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + Dimensions).value);
+      std::copy_n(localMinPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).value);
       std::copy_n(localMaxPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + 3 * NumberOfObservables);
-      std::copy_n(localMaxPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + Dimensions).value + 2 * NumberOfObservables);
+      std::copy_n(localMaxPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).value + 2 * NumberOfObservables);
     }
     {% endif %}
 
     {% if RESET_TROUBLED_MARKERS %}
     // Resetting troubled markers
     fineGridCell{{SOLVER_NAME}}CellLabel.setTroubled_Marker(celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::REGULAR);
-    for (int d = 0; d < 2 * Dimensions; d++) {
+    for (int d = 0; d < 2 * DIMENSIONS; d++) {
       fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::REGULAR);
     }
     {% endif %}

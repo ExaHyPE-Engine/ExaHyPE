@@ -23,9 +23,9 @@ peano4::grid::tests::SpacetreeTest::SpacetreeTest():
 
 
 void peano4::grid::tests::SpacetreeTest::testRestrictToCoarseGrid() {
-  #if Dimensions==2
-  tarch::la::Vector<Dimensions,int>  positionInPatch;
-  tarch::la::Vector<Dimensions,int>  coarsePosition;
+  #if DIMENSIONS==2
+  tarch::la::Vector<DIMENSIONS,int>  positionInPatch;
+  tarch::la::Vector<DIMENSIONS,int>  coarsePosition;
 
   positionInPatch = {0,0};
   coarsePosition  = {0,0};
@@ -59,11 +59,11 @@ void peano4::grid::tests::SpacetreeTest::testRestrictToCoarseGrid() {
 
 
 void peano4::grid::tests::SpacetreeTest::testGetAdjacentDomainIds() {
-  #if Dimensions==2
+  #if DIMENSIONS==2
   Spacetree tree( {0.0,0.0}, {1.0,1.0} );
   tree._id = 1;
 
-  GridVertex fineGridVertices[TwoPowerD];
+  GridVertex fineGridVertices[TWO_POWER_D];
 
   fineGridVertices[0].setState( GridVertex::State::New );
   fineGridVertices[0].setAdjacentRanks( {1,1,1,1} );

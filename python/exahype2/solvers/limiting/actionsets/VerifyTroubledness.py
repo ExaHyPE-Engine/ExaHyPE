@@ -29,15 +29,15 @@ class VerifyTroubledness(AbstractLimiterActionSet):
 
       {% if USE_DMP %}
       constexpr int NumberOfObservables = repositories::{{SOLVER_INSTANCE}}.NumberOfDMPObservables;
-      double boundaryMinPerVariables[2 * Dimensions * NumberOfObservables];
-      double boundaryMaxPerVariables[2 * Dimensions * NumberOfObservables];
+      double boundaryMinPerVariables[2 * DIMENSIONS * NumberOfObservables];
+      double boundaryMaxPerVariables[2 * DIMENSIONS * NumberOfObservables];
 
-      for (int d = 0; d < Dimensions; d++) {
+      for (int d = 0; d < DIMENSIONS; d++) {
         std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value,                                        NumberOfObservables, &boundaryMinPerVariables[d * NumberOfObservables]);
-        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + Dimensions).value + NumberOfObservables,     NumberOfObservables, &boundaryMinPerVariables[(d + Dimensions) * NumberOfObservables]);
+        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).value + NumberOfObservables,     NumberOfObservables, &boundaryMinPerVariables[(d + DIMENSIONS) * NumberOfObservables]);
 
         std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + 2 * NumberOfObservables,              NumberOfObservables, &boundaryMaxPerVariables[d * NumberOfObservables]);
-        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + Dimensions).value + 3 * NumberOfObservables, NumberOfObservables, &boundaryMaxPerVariables[(d + Dimensions) * NumberOfObservables]);
+        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).value + 3 * NumberOfObservables, NumberOfObservables, &boundaryMaxPerVariables[(d + DIMENSIONS) * NumberOfObservables]);
       }
 
       isUnTroubled &= kernels::{{SOLVER_NAME}}::discreteMaximumPrincipleAndMinAndMaxSearch(
@@ -53,7 +53,7 @@ class VerifyTroubledness(AbstractLimiterActionSet):
       if (!isUnTroubled) {
         repositories::{{SOLVER_INSTANCE}}.addTroubledCell();
         fineGridCell{{SOLVER_NAME}}CellLabel.setTroubled_Marker(celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::TROUBLED);
-        for (int d = 0; d < 2 * Dimensions; d++) {
+        for (int d = 0; d < 2 * DIMENSIONS; d++) {
           fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED);
         }
       }

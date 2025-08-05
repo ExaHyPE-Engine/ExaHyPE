@@ -8,8 +8,8 @@ tarch::logging::Log   exahype::limiting::swe::aderSWE::_log( "exahype::limiting:
 
 double exahype::limiting::swe::aderSWE::maxEigenvalue(
   [[maybe_unused]] const double* NOALIAS Q, // Q[4+0]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&      x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&      h,
   [[maybe_unused]] double                                            t,
   [[maybe_unused]] double                                            dt,
   [[maybe_unused]] int                                               normal
@@ -32,8 +32,8 @@ double exahype::limiting::swe::aderSWE::maxEigenvalue(
 
 void exahype::limiting::swe::aderSWE::flux(
   [[maybe_unused]] const double* NOALIAS Q, // Q[4+0]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      h_,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&      x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&      h_,
   [[maybe_unused]] double                                            t,
   [[maybe_unused]] double                                            dt,
   [[maybe_unused]] int                                               normal,
@@ -76,8 +76,8 @@ void exahype::limiting::swe::aderSWE::flux(
 void exahype::limiting::swe::aderSWE::nonconservativeProduct(
   [[maybe_unused]] const double* NOALIAS Q, // Q[4+0]
   [[maybe_unused]] const double* NOALIAS deltaQ, // deltaQ[4+0]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&      x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&      h,
   [[maybe_unused]] double                                            t,
   [[maybe_unused]] double                                            dt,
   [[maybe_unused]] int                                               normal,
@@ -120,8 +120,8 @@ void exahype::limiting::swe::aderSWE::riemannSolver(
   const double* const QR, // QR[4+0]
   const double t,
   const double dt,
-  const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
   const int direction,
   bool isBoundaryFace,
   int faceIndex

@@ -89,7 +89,7 @@ an old EuroPar publication:
        }
 
 {% endif %}
-{% if SharedOMP %}
+{% if WITH_OPENMP %}
 
 ### OpenMP parallelisation
 
@@ -106,7 +106,7 @@ tasking mechanism. It is described in
 
 {% endif %}
 
-{% if SharedOMP %}
+{% if WITH_OPENMP %}
 
 Peano relies on a mixture of classic domain decomposition and task-based
 parallelism. The domain decomposition provides the baseline performance,

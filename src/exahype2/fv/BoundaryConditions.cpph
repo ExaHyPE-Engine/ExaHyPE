@@ -6,14 +6,14 @@ void exahype2::fv::applyBoundaryConditions(
   std::function< void(
     const T* NOALIAS                        Qinside,
     T * NOALIAS                             Qoutside,
-    const tarch::la::Vector<Dimensions,double>&  faceCentre,
-    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+    const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
     double                                       t,
     double                                       dt,
     int                                          normal
   ) >   boundaryCondition,
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
   double                                       t,
   double                                       dt,
   int                                          numberOfVolumesPerAxisInPatch,
@@ -24,12 +24,12 @@ void exahype2::fv::applyBoundaryConditions(
 ) {
   static tarch::logging::Log _log( "exahype2::fv" );
 
-  auto serialisePatchIndex = [&](tarch::la::Vector<Dimensions,int> overlapCell) {{
+  auto serialisePatchIndex = [&](tarch::la::Vector<DIMENSIONS,int> overlapCell) {{
     int base   = 1;
     int result = 0;
-    for (int d=0; d<Dimensions; d++) {{
+    for (int d=0; d<DIMENSIONS; d++) {{
       result += overlapCell(d) * base;
-      if (d==faceNumber % Dimensions) {{
+      if (d==faceNumber % DIMENSIONS) {{
         base *= 2*overlap;
       }}
       else {{
@@ -41,21 +41,21 @@ void exahype2::fv::applyBoundaryConditions(
 
   logTraceInWith4Arguments( "applyBoundaryConditions(...)", faceCentre, patchSize, numberOfVolumesPerAxisInPatch, faceNumber);
 
-  tarch::la::Vector<Dimensions,double> volumeH    = exahype2::fv::getVolumeSize(patchSize, numberOfVolumesPerAxisInPatch);
-  tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * patchSize;
-  faceOffset(faceNumber%Dimensions) += 0.5 * patchSize(faceNumber%Dimensions);
+  tarch::la::Vector<DIMENSIONS,double> volumeH    = exahype2::fv::getVolumeSize(patchSize, numberOfVolumesPerAxisInPatch);
+  tarch::la::Vector<DIMENSIONS,double> faceOffset = faceCentre - 0.5 * patchSize;
+  faceOffset(faceNumber%DIMENSIONS) += 0.5 * patchSize(faceNumber%DIMENSIONS);
 
-  dfore(volume,numberOfVolumesPerAxisInPatch,faceNumber % Dimensions,0) {
-    tarch::la::Vector<Dimensions,int> insideVolume  = volume;
-    tarch::la::Vector<Dimensions,int> outsideVolume = volume;
-    tarch::la::Vector<Dimensions,double> x          = faceOffset + tarch::la::multiplyComponents( tarch::la::convertScalar<double>(volume)+tarch::la::Vector<Dimensions,double>(0.5), volumeH);
+  dfore(volume,numberOfVolumesPerAxisInPatch,faceNumber % DIMENSIONS,0) {
+    tarch::la::Vector<DIMENSIONS,int> insideVolume  = volume;
+    tarch::la::Vector<DIMENSIONS,int> outsideVolume = volume;
+    tarch::la::Vector<DIMENSIONS,double> x          = faceOffset + tarch::la::multiplyComponents( tarch::la::convertScalar<double>(volume)+tarch::la::Vector<DIMENSIONS,double>(0.5), volumeH);
 
-    x(faceNumber%Dimensions) -= 0.5 * volumeH(faceNumber%Dimensions);
+    x(faceNumber%DIMENSIONS) -= 0.5 * volumeH(faceNumber%DIMENSIONS);
 
     for (int layer=0; layer<overlap; layer++){
-    if (faceNumber<Dimensions) {
-      insideVolume(faceNumber % Dimensions)  = overlap-layer;
-      outsideVolume(faceNumber % Dimensions) = overlap-1-layer;
+    if (faceNumber<DIMENSIONS) {
+      insideVolume(faceNumber % DIMENSIONS)  = overlap-layer;
+      outsideVolume(faceNumber % DIMENSIONS) = overlap-1-layer;
   
       int insideVolumeSerialised  = serialisePatchIndex(insideVolume);
       int outsideVolumeSerialised = serialisePatchIndex(outsideVolume);
@@ -74,8 +74,8 @@ void exahype2::fv::applyBoundaryConditions(
       );
     }
     else {
-      insideVolume(faceNumber % Dimensions)  = layer+overlap-1;
-      outsideVolume(faceNumber % Dimensions) = layer+overlap;
+      insideVolume(faceNumber % DIMENSIONS)  = layer+overlap-1;
+      outsideVolume(faceNumber % DIMENSIONS) = layer+overlap;
 
       int insideVolumeSerialised  = serialisePatchIndex(insideVolume);
       int outsideVolumeSerialised = serialisePatchIndex(outsideVolume);

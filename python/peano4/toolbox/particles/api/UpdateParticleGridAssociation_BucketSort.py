@@ -109,7 +109,7 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
 
     toolbox::particles::ParticleReassociationInstruction instruction = toolbox::particles::liftParticleAssociatedWithVertex(**p, marker);
 
-    #if PeanoDebug > 0
+    #if PEANO_DEBUG > 0
     int partID = (*p)->getPartid();
     #else
     int partID = -1;
@@ -151,7 +151,7 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
       case 1:
       case 2:
       case 3:
-      #if Dimensions==3
+      #if DIMENSIONS==3
       case 4:
       case 5:
       case 6:

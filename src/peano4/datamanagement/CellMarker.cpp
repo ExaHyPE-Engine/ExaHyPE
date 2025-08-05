@@ -23,7 +23,7 @@ peano4::datamanagement::CellMarker::CellMarker(const peano4::grid::GridTraversal
   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(
     event.getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing()
   ) {
-  for (int i = 0; i < TwoPowerD; i++) {
+  for (int i = 0; i < TWO_POWER_D; i++) {
     _isOneVertexHanging |= event.getVertexDataTo(i) == peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity;
     _isOneVertexHanging |= event.getVertexDataFrom(i)
                            == peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity;
@@ -43,20 +43,20 @@ peano4::datamanagement::CellMarker::CellMarker(const peano4::grid::GridTraversal
 }
 
 bool peano4::datamanagement::CellMarker::isContained(
-  const tarch::la::Vector<Dimensions, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
   double                                       tolerance
 ) const {
   return isContained(x, _centre, _h, tolerance);
 }
 
 bool peano4::datamanagement::CellMarker::isContained(
-  const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& cellCentre,
-  const tarch::la::Vector<Dimensions, double>& h,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
   double                                       tolerance
 ) {
   bool result = true;
-  for (int d = 0; d < Dimensions; d++) {
+  for (int d = 0; d < DIMENSIONS; d++) {
     result &= tarch::la::greaterEquals(x(d), cellCentre(d) - h(d) / 2.0, tolerance);
     result &= tarch::la::smallerEquals(x(d), cellCentre(d) + h(d) / 2.0, tolerance);
   }
@@ -64,12 +64,12 @@ bool peano4::datamanagement::CellMarker::isContained(
 }
 
 bool peano4::datamanagement::CellMarker::overlaps(
-  const tarch::la::Vector<Dimensions, double>& offset,
-  const tarch::la::Vector<Dimensions, double>& size
+  const tarch::la::Vector<DIMENSIONS, double>& offset,
+  const tarch::la::Vector<DIMENSIONS, double>& size
 ) const {
   bool overlaps = true;
 
-  for (int d = 0; d < Dimensions; d++) {
+  for (int d = 0; d < DIMENSIONS; d++) {
     overlaps &= tarch::la::smallerEquals(_centre(d) - _h(d) / 2.0, offset(d) + size(d));
     overlaps &= tarch::la::greaterEquals(_centre(d) + _h(d) / 2.0, offset(d));
   }
@@ -77,9 +77,9 @@ bool peano4::datamanagement::CellMarker::overlaps(
   return overlaps;
 }
 
-tarch::la::Vector<Dimensions, double> peano4::datamanagement::CellMarker::getInvokingParentCellsCentre() const {
-  tarch::la::Vector<Dimensions, double> result = _centre;
-  for (int d = 0; d < Dimensions; d++) {
+tarch::la::Vector<DIMENSIONS, double> peano4::datamanagement::CellMarker::getInvokingParentCellsCentre() const {
+  tarch::la::Vector<DIMENSIONS, double> result = _centre;
+  for (int d = 0; d < DIMENSIONS; d++) {
     assertion1(_relativePositionOfCellWithinFatherCell(d) >= 0, toString());
     assertion1(_relativePositionOfCellWithinFatherCell(d) <= 2, toString());
     if (_relativePositionOfCellWithinFatherCell(d) == 0) {
@@ -104,7 +104,7 @@ std::string peano4::datamanagement::CellMarker::toString() const {
   return msg.str();
 }
 
-#ifdef Parallel
+#ifdef WITH_MPI
 MPI_Datatype peano4::datamanagement::CellMarker::Datatype;
 
 void peano4::datamanagement::CellMarker::sendAndPollDanglingMessages(
@@ -182,7 +182,7 @@ void peano4::datamanagement::CellMarker::initDatatype() {
     MPI_INT
   };
 
-  int blocklen[] = {Dimensions, Dimensions, 1, 1, 1, 1, 1, 1, Dimensions};
+  int blocklen[] = {DIMENSIONS, DIMENSIONS, 1, 1, 1, 1, 1, 1, DIMENSIONS};
 
   const int NumberOfAttributes = 9;
 

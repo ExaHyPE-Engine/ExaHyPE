@@ -5,7 +5,7 @@ def initial(pointwise_initial_conditions):
   context->initUnknownsPatch(Q, x, h, 0.0, 0.0,
   [&](
       const {{SOLUTION_STORAGE_PRECISION}}* const x,
-      const tarch::la::Vector<Dimensions,double>& center,
+      const tarch::la::Vector<DIMENSIONS,double>& center,
       const double t,
       const double dt, 
       {{SOLUTION_STORAGE_PRECISION}}* Q
@@ -211,9 +211,9 @@ def init_grid_step_implementation(scenario_string):
   //setting coarsestMeshLevel and maxAdaptiveMeshLevel
   double maxDSize = std::numeric_limits<double>::min();
   double minDSize = std::numeric_limits<double>::max();
-  tarch::la::Vector<Dimensions, double> sizes = DomainSize;
+  tarch::la::Vector<DIMENSIONS, double> sizes = DomainSize;
   
-  for(int i=0; i<Dimensions; i++){
+  for(int i=0; i<DIMENSIONS; i++){
     if(sizes[i]>maxDSize){
       maxDSize = sizes[i];
     }

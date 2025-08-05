@@ -2,11 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Vector.h"
 
-#if defined(SharedSYCL) or defined(GPUOffloadingSYCL)
-#pragma push_macro("Dimensions")
-#undef Dimensions
+#if defined(WITH_GPU_SYCL)
 #include <sycl/sycl.hpp>
-#pragma pop_macro("Dimensions")
 #endif
 
 static_assert(
@@ -29,7 +26,7 @@ static_assert(
   "Vector should be trivially copyable!"
 );
 
-#if defined(SharedSYCL) or defined(GPUOffloadingSYCL)
+#if defined(WITH_GPU_SYCL)
 static_assert(
   sycl::is_device_copyable<tarch::la::Vector<1, int>>::value,
   "Vector should be SYCL device copyable!"

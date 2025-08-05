@@ -16,12 +16,11 @@
 
 namespace exahype2 {
   namespace fd {
-#if Dimensions == 2
+#if DIMENSIONS == 2
     static inline tarch::la::Vector<2,double>  getGridCellSize(
       const tarch::la::Vector<2,double>&  h,
       int                                 numberOfGridCellsPerPatchPerAxis
     )
-    //InlineMethod
     {
       return ::exahype2::fv::getVolumeSize(h,numberOfGridCellsPerPatchPerAxis);
     }
@@ -30,7 +29,6 @@ namespace exahype2 {
       const tarch::la::Vector<2,double>&  h,
       int                                 numberOfGridCellsPerPatchPerAxis
     )
-    //InlineMethod
     {
       return ::exahype2::fv::getFaceSize(h,numberOfGridCellsPerPatchPerAxis);
     }
@@ -56,7 +54,6 @@ namespace exahype2 {
       int                                 numberOfGridCellsPerPatchPerAxis,
       const tarch::la::Vector<2,int>&     index
     )
-    //InlineMethod
     {
       return ::exahype2::fv::getVolumeCentre(x,h,numberOfGridCellsPerPatchPerAxis,index);
     }
@@ -69,18 +66,16 @@ namespace exahype2 {
       int                                 normal,
       const tarch::la::Vector<2,int>&     index
     )
-    //InlineMethod
     {
       return ::exahype2::fv::getFaceCentre(x,h,numberOfGridCellsPerPatchPerAxis,overlap,normal,index);
     }
 #endif
 
-#if Dimensions == 3
+#if DIMENSIONS == 3
     static inline tarch::la::Vector<3,double>  getGridCellSize(
       const tarch::la::Vector<3,double>&  h,
       int                                 numberOfGridCellsPerPatchPerAxis
     )
-    //InlineMethod
     {
       return ::exahype2::fv::getVolumeSize(h,numberOfGridCellsPerPatchPerAxis);
     }
@@ -89,7 +84,6 @@ namespace exahype2 {
       const tarch::la::Vector<3,double>&  h,
       int                                 numberOfGridCellsPerPatchPerAxis
     )
-    //InlineMethod
     {
       return ::exahype2::fv::getFaceSize(h,numberOfGridCellsPerPatchPerAxis);
     }
@@ -100,7 +94,6 @@ namespace exahype2 {
       int                                 numberOfGridCellsPerPatchPerAxis,
       const tarch::la::Vector<3,int>&     index
     )
-    //InlineMethod
     {
       return ::exahype2::fv::getVolumeCentre(x,h,numberOfGridCellsPerPatchPerAxis,index);
     }
@@ -113,7 +106,6 @@ namespace exahype2 {
       int                                 normal,
       const tarch::la::Vector<3,int>&     index
     )
-    //InlineMethod
     {
       return ::exahype2::fv::getFaceCentre(x,h,numberOfGridCellsPerPatchPerAxis,overlap,normal,index);
     }

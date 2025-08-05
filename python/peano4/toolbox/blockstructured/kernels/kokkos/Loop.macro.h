@@ -22,7 +22,7 @@
 
   const int numberOfPatches = patchData.numberOfCells;
   ViewType     QInFlattened(patchData.QInFlattened, numberOfPatches, {{DOFS*UNKNOWNS}});
-  ViewFaceType facesFlattened(patchData.facesFlattened, numberOfPatches, TwoTimesD, {{FACES_PER_DOF*UNKNOWNS}});
+  ViewFaceType facesFlattened(patchData.facesFlattened, numberOfPatches, TWO_TIMES_D, {{FACES_PER_DOF*UNKNOWNS}});
   ViewType     QOutFlattened(patchData.QOutFlattened, numberOfPatches, {{DOFS_WITH_OVERLAP*UNKNOWNS}});
 
   Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> teamPolicy(numberOfPatches, Kokkos::AUTO);

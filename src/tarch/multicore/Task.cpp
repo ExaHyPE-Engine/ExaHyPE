@@ -49,14 +49,14 @@ tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor(
   int                          taskType,
   int                          priority,
   const std::function<bool()>& taskFunctor
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   ,
   const std::string& taskDescription
 #endif
 ):
   Task(taskType, priority),
   _taskFunctor(taskFunctor)
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   ,
   _taskDescription(taskDescription)
 #endif
@@ -66,7 +66,7 @@ tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor(
 bool tarch::multicore::TaskWithCopyOfFunctor::run() { return _taskFunctor(); }
 
 std::string tarch::multicore::TaskWithCopyOfFunctor::toString() const {
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   return _taskDescription;
 #else
   return "";

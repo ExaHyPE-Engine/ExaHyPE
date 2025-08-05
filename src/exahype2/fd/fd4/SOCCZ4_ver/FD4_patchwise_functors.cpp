@@ -33,19 +33,19 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
   logDebug( "timeStep_patchwise_heap_functors(...)", "size of temp flux field=" << QOutEnumerator.size() );
   double* tempFluxX =  evaluateFlux                                                ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
   double* tempFluxY =  evaluateFlux                                                ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempFluxZ = (evaluateFlux and Dimensions==3)                             ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxZ = (evaluateFlux and DIMENSIONS==3)                             ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
   double* tempDifferentialSourceX =  evaluateDifferentialSource                    ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
   double* tempDifferentialSourceY =  evaluateDifferentialSource                    ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempDifferentialSourceZ = (evaluateDifferentialSource and Dimensions==3) ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempDifferentialSourceZ = (evaluateDifferentialSource and DIMENSIONS==3) ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
   double* tempKODissipationX      =  evaluateKODissipation                         ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
   double* tempKODissipationY      =  evaluateKODissipation                         ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempKODissipationZ      = (evaluateKODissipation      and Dimensions==3) ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempKODissipationZ      = (evaluateKODissipation      and DIMENSIONS==3) ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
 
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt : 1.0;
 
     // STEP 1: copy solution from old array to new array, or set all to zero
-    if ( Dimensions==3 and copyOldTimeStepAndScaleWithTimeStepSize ) {
+    if ( DIMENSIONS==3 and copyOldTimeStepAndScaleWithTimeStepSize ) {
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
       for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
       for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
@@ -61,7 +61,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
         );
       }
     }
-    else if (Dimensions==3 and not copyOldTimeStepAndScaleWithTimeStepSize){
+    else if (DIMENSIONS==3 and not copyOldTimeStepAndScaleWithTimeStepSize){
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
       for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
       for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
@@ -77,7 +77,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
         }
       }
     }
-    else if (Dimensions==2 and copyOldTimeStepAndScaleWithTimeStepSize) {
+    else if (DIMENSIONS==2 and copyOldTimeStepAndScaleWithTimeStepSize) {
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
       for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
       for (int unknown=0; unknown<unknowns; unknown++) {
@@ -108,7 +108,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
     }
 
     // STEP 1.5: Calculate and update auxiliary variables
-    if (Dimensions==2) {
+    if (DIMENSIONS==2) {
 
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
       for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
@@ -138,7 +138,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
         );
       }
 
-    } else if (Dimensions==3) {
+    } else if (DIMENSIONS==3) {
 
         for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
         for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
@@ -190,7 +190,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
 
 
     // Step 2: Add source terms
-    if (Dimensions==2 and evaluateAlgebraicSource) {
+    if (DIMENSIONS==2 and evaluateAlgebraicSource) {
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
       for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
         ::exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
@@ -208,7 +208,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
         );
       }
     }
-    else if (Dimensions==3 and evaluateAlgebraicSource) {
+    else if (DIMENSIONS==3 and evaluateAlgebraicSource) {
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
       for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
       for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++) {
@@ -229,7 +229,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
     }
 
     // STEP 3: Evaluate flux and update solution accordingly
-    if (evaluateFlux and Dimensions==2) {
+    if (evaluateFlux and DIMENSIONS==2) {
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
       for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
         internal::computeFlux_LoopBody(
@@ -282,7 +282,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
         );
       }
     }
-    else if (evaluateFlux and Dimensions==3) {
+    else if (evaluateFlux and DIMENSIONS==3) {
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
       for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
       for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++) {
@@ -358,7 +358,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
     }
 
     // STEP 4: Evaluate differential source and update solution accordingly
-    if (evaluateDifferentialSource and Dimensions==2) {
+    if (evaluateDifferentialSource and DIMENSIONS==2) {
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
       for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
         internal::computeDifferentialSourceTerm_LoopBody(
@@ -412,7 +412,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
         );
       }
     }
-    else if (evaluateDifferentialSource and Dimensions==3) {
+    else if (evaluateDifferentialSource and DIMENSIONS==3) {
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
       for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
       for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++) {
@@ -490,7 +490,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
     }
 
     // STEP 5: compute the Kreiss Oliger dissipation and add it to the solution
-    if (evaluateKODissipation and Dimensions==2) {
+    if (evaluateKODissipation and DIMENSIONS==2) {
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
       for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
         internal::computeKreissOligerDissipationTerm_LoopBody(
@@ -540,7 +540,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
         );
       }
     }
-    else if (evaluateKODissipation and Dimensions==3) {
+    else if (evaluateKODissipation and DIMENSIONS==3) {
         for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
         for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
         for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++) {

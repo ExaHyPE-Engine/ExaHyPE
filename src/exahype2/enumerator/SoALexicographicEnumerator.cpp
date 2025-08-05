@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "SoALexicographicEnumerator.h"
 
-#if defined(GPUOffloadingOff)
+#if !defined(WITH_GPU)
 std::string exahype2::enumerator::SoALexicographicEnumerator::toString() const {
   std::ostringstream msg;
   msg
@@ -14,7 +14,7 @@ std::string exahype2::enumerator::SoALexicographicEnumerator::toString() const {
     << ",#number-of-auxiliary-variables=" << _numberOfAuxiliaryVariables
     << ")";
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   msg
     << ", index-sequence=["
     << "," << (*this)(0, {0, 0}, 0) << "," << (*this)(1, {0, 0}, 0) << ",..."

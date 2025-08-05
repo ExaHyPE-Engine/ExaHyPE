@@ -73,7 +73,7 @@ namespace toolbox {
       double* NOALIAS fineGridFaceValues
     ) {
       int normal = marker.getSelectedFaceNumber() % 3;
-      //int patchIndexLinear = (Dimensions == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) : marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) * 3 + marker.getRelativePositionWithinFatherCell()((normal + 2) % Dimensions);
+      //int patchIndexLinear = (DIMENSIONS == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % DIMENSIONS) : marker.getRelativePositionWithinFatherCell()((normal + 1) % DIMENSIONS) * 3 + marker.getRelativePositionWithinFatherCell()((normal + 2) % DIMENSIONS);
 
       interpolateHaloLayer_AoS_matrix(
         marker,
@@ -336,7 +336,7 @@ namespace toolbox {
       double* NOALIAS fineGridFaceValues
     ) {
       int normal = marker.getSelectedFaceNumber() % 3;
-      int patchIndexLinear = (Dimensions == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) : marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) * 3 + marker.getRelativePositionWithinFatherCell()((normal + 2) % Dimensions);
+      int patchIndexLinear = (DIMENSIONS == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % DIMENSIONS) : marker.getRelativePositionWithinFatherCell()((normal + 1) % DIMENSIONS) * 3 + marker.getRelativePositionWithinFatherCell()((normal + 2) % DIMENSIONS);
 
       interpolateHaloLayer_AoS_matrix(
         marker,
@@ -403,7 +403,7 @@ namespace toolbox {
       double*                                   coarseGridValues
     ) {
       int normal = marker.getSelectedFaceNumber() % 3;
-      int patchIndexLinear = (Dimensions == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) : marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) + 3 * marker.getRelativePositionWithinFatherCell()((normal + 2) % Dimensions);
+      int patchIndexLinear = (DIMENSIONS == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % DIMENSIONS) : marker.getRelativePositionWithinFatherCell()((normal + 1) % DIMENSIONS) + 3 * marker.getRelativePositionWithinFatherCell()((normal + 2) % DIMENSIONS);
 
       restrictHaloLayer_AoS_matrix(
         marker,
@@ -470,7 +470,7 @@ namespace toolbox {
       bool                                      swapInsideOutside = false
     ) {
       int normal = marker.getSelectedFaceNumber() % 3;
-      int patchIndexLinear = (Dimensions == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) : marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) + 3 * marker.getRelativePositionWithinFatherCell()((normal + 2) % Dimensions);
+      int patchIndexLinear = (DIMENSIONS == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % DIMENSIONS) : marker.getRelativePositionWithinFatherCell()((normal + 1) % DIMENSIONS) + 3 * marker.getRelativePositionWithinFatherCell()((normal + 2) % DIMENSIONS);
 
       restrictInnerHalfOfHaloLayer_AoS_matrix(
         marker,

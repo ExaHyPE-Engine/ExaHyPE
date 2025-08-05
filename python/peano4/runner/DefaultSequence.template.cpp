@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
     tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
 
-  #if Dimensions==2
+  #if DIMENSIONS==2
   auto DomainOffset = {0.0, 0.0};
   auto DomainSize   = {1.0, 1.0};
   #else

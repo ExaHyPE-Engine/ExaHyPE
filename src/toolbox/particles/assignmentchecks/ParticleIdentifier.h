@@ -36,8 +36,8 @@ namespace toolbox {
         struct ParticleIdentifier {
 
           std::string                              particleName;
-          tarch::la::Vector<Dimensions, double>    particleX;
-          tarch::la::Vector<Dimensions, long long> vertexInd;
+          tarch::la::Vector<DIMENSIONS, double>    particleX;
+          tarch::la::Vector<DIMENSIONS, long long> vertexInd;
           int                                      vertexDepth;
           int                                      particleID;
           int                                      treeID;
@@ -51,17 +51,17 @@ namespace toolbox {
 
           ParticleIdentifier(
             const std::string&                           particleName__,
-            const tarch::la::Vector<Dimensions, double>& particleX__,
-            const tarch::la::Vector<Dimensions, double>& vertexX,
-            const tarch::la::Vector<Dimensions, double>& vertexH,
+            const tarch::la::Vector<DIMENSIONS, double>& particleX__,
+            const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+            const tarch::la::Vector<DIMENSIONS, double>& vertexH,
             const int                                    particleID__,
             const int                                    treeId__
           );
 
           ParticleIdentifier(
             const std::string&                              particleName__,
-            const tarch::la::Vector<Dimensions, double>&    particleX__,
-            const tarch::la::Vector<Dimensions, long long>& vertexInd__,
+            const tarch::la::Vector<DIMENSIONS, double>&    particleX__,
+            const tarch::la::Vector<DIMENSIONS, long long>& vertexInd__,
             const int                                       vertexDepth__,
             const int                                       particleID__,
             const int                                       treeID__
@@ -70,9 +70,9 @@ namespace toolbox {
           /**
            * Compute an integer vertex "index" given its position and size
            */
-          static tarch::la::Vector<Dimensions, long long> getVertexInd(
-            const tarch::la::Vector<Dimensions, double>& vertexX,
-            const tarch::la::Vector<Dimensions, double>& vertexH
+          static tarch::la::Vector<DIMENSIONS, long long> getVertexInd(
+            const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+            const tarch::la::Vector<DIMENSIONS, double>& vertexH
           );
 
           /**
@@ -82,8 +82,8 @@ namespace toolbox {
            * used to raise an error if we're out of the assumed box size.
            */
           static int getVertexDepth(
-            const tarch::la::Vector<Dimensions, double>& vertexX,
-            const tarch::la::Vector<Dimensions, double>& vertexH
+            const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+            const tarch::la::Vector<DIMENSIONS, double>& vertexH
           );
         };
 

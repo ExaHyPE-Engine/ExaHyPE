@@ -12,8 +12,8 @@ namespace exahype2 {
   namespace fd {
       typedef std::function< void(
         const double * NOALIAS Q,
-        const tarch::la::Vector<Dimensions,double>&  gridCellX,
-        const tarch::la::Vector<Dimensions,double>&  gridCellH,
+        const tarch::la::Vector<DIMENSIONS,double>&  gridCellX,
+        const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
         double                                       t,
         double                                       dt,
         double * NOALIAS 		             AlgeSrc
@@ -21,8 +21,8 @@ namespace exahype2 {
 
       typedef std::function< void(
         const double * NOALIAS Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  gridCellH,
+        const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+        const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
         double                                       t,
         double                                       dt,
         int                                          normal,
@@ -32,8 +32,8 @@ namespace exahype2 {
       typedef std::function< void(
         const double * NOALIAS                  Q,
         const double * NOALIAS                  deltaQ,
-        const tarch::la::Vector<Dimensions,double>&  gridCellX,
-        const tarch::la::Vector<Dimensions,double>&  gridCellH,
+        const tarch::la::Vector<DIMENSIONS,double>&  gridCellX,
+        const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
         double                                       t,
         double                                       dt,
         int                                          normal,
@@ -45,8 +45,8 @@ namespace exahype2 {
        */
       typedef std::function< double(
         const double * NOALIAS Q,
-        const tarch::la::Vector<Dimensions,double>&  gridCellX,
-        const tarch::la::Vector<Dimensions,double>&  gridCellH,
+        const tarch::la::Vector<DIMENSIONS,double>&  gridCellX,
+        const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
         double                                       t,
         double                                       dt,
         int                                          normal

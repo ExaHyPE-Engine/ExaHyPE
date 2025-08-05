@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "NetCDFFieldParser.h"
 
-#ifdef UseNetCDF
+#ifdef WITH_NETCDF
 
 #include "tarch/la/ScalarOperations.h"
 

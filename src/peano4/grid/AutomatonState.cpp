@@ -7,11 +7,11 @@
 
 peano4::grid::AutomatonState::AutomatonState(
   const int                                         __level,
-  const tarch::la::Vector<Dimensions, double>&      __x,
-  const tarch::la::Vector<Dimensions, double>&      __h,
+  const tarch::la::Vector<DIMENSIONS, double>&      __x,
+  const tarch::la::Vector<DIMENSIONS, double>&      __h,
   const bool                                        __inverted,
-  const std::bitset<Dimensions>&                    __evenFlags,
-  const tarch::la::Vector<DimensionsTimesTwo, int>& __accessNumber
+  const std::bitset<DIMENSIONS>&                    __evenFlags,
+  const tarch::la::Vector<TWO_TIMES_D, int>& __accessNumber
 ) {
   setLevel(__level);
   setX(__x);
@@ -63,7 +63,7 @@ std::string peano4::grid::AutomatonState::toString() const {
   return out.str();
 }
 
-#ifdef Parallel
+#ifdef WITH_MPI
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype peano4::grid::AutomatonState::Datatype = MPI_DATATYPE_NULL;
@@ -133,10 +133,10 @@ void peano4::grid::AutomatonState::initDatatype() {
   blocklen[counter] = 1;
   counter++;
   subtypes[counter] = MPI_DOUBLE;
-  blocklen[counter] = Dimensions;
+  blocklen[counter] = DIMENSIONS;
   counter++;
   subtypes[counter] = MPI_DOUBLE;
-  blocklen[counter] = Dimensions;
+  blocklen[counter] = DIMENSIONS;
   counter++;
   subtypes[counter] = MPI_BYTE;
   blocklen[counter] = 1;
@@ -145,7 +145,7 @@ void peano4::grid::AutomatonState::initDatatype() {
   blocklen[counter] = 1;
   counter++;
   subtypes[counter] = MPI_INT;
-  blocklen[counter] = DimensionsTimesTwo;
+  blocklen[counter] = TWO_TIMES_D;
   counter++;
 
   MPI_Aint baseFirstInstance;
@@ -262,7 +262,7 @@ void peano4::grid::AutomatonState::receive(
 }
 #endif
 
-#ifdef Parallel
+#ifdef WITH_MPI
 void peano4::grid::AutomatonState::sendAndPollDanglingMessages(
   const peano4::grid::AutomatonState& message,
   int                                 destination,

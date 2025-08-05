@@ -16,8 +16,8 @@ namespace {
    * which is way less elegant, yet knows how often the underlying while
    * loop is to be unrolled.
    */
-  inline tarch::la::Vector<Dimensions,int> gridCellIndex2d( int x, int y ) {
-    tarch::la::Vector<Dimensions,int> result;
+  inline tarch::la::Vector<DIMENSIONS,int> gridCellIndex2d( int x, int y ) {
+    tarch::la::Vector<DIMENSIONS,int> result;
     result(0) = x;
     result(1) = y;
     return result;
@@ -27,8 +27,8 @@ namespace {
   /**
    * @see gridCellIndex2d()
    */
-  inline tarch::la::Vector<Dimensions,int> gridCellIndex3d( int x, int y, int z ) {
-    tarch::la::Vector<Dimensions,int> result;
+  inline tarch::la::Vector<DIMENSIONS,int> gridCellIndex3d( int x, int y, int z ) {
+    tarch::la::Vector<DIMENSIONS,int> result;
     result(0) = x;
     result(1) = y;
     result(2) = z;

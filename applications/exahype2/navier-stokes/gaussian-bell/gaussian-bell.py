@@ -14,11 +14,11 @@ initial_conditions = """
 
   Q[Shortcuts::rhoU + 0] = 1.0 * Q[Shortcuts::rho];
   Q[Shortcuts::rhoU + 1] = 1.0 * Q[Shortcuts::rho];
-#if Dimensions == 3
+#if DIMENSIONS == 3
   Q[Shortcuts::rhoU + 2] = 1.0 * Q[Shortcuts::rho];
 #endif
 
-  const tarch::la::Vector<Dimensions, double> momenta(1.0 * Q[Shortcuts::rho]);
+  const tarch::la::Vector<DIMENSIONS, double> momenta(1.0 * Q[Shortcuts::rho]);
 
   // Should lead to a constant pressure over the domain given the initial conditions
   Q[Shortcuts::rhoE] = PRESSURE / (GAMMA - 1.0) + 0.5 * (momenta * momenta) / Q[Shortcuts::rho];
@@ -30,11 +30,11 @@ analytical_solution = """
   // position x - v*t but accounting for periodicity.
   // Therefore we find the point x - v*t, and then shift this by instances
   // of 1.0 until we find the point within the domain.
-#if Dimensions == 2
-  tarch::la::Vector<Dimensions, double> pos = { (x[0] - t) + (int)(t + .5 - x[0]),
+#if DIMENSIONS == 2
+  tarch::la::Vector<DIMENSIONS, double> pos = { (x[0] - t) + (int)(t + .5 - x[0]),
                                                 (x[1] - t) + (int)(t + .5 - x[1]) };
 #else
-  tarch::la::Vector<Dimensions, double> pos = { (x[0] - t) + (int)(t + .5 - x[0]),
+  tarch::la::Vector<DIMENSIONS, double> pos = { (x[0] - t) + (int)(t + .5 - x[0]),
                                                 (x[1] - t) + (int)(t + .5 - x[1]),
                                                 (x[2] - t) + (int)(t + .5 - x[2]) };
 #endif
@@ -42,11 +42,11 @@ analytical_solution = """
   solution[Shortcuts::rho] = 0.02 * (1.0 + std::exp(-0.5 * tarch::la::norm2(pos) * tarch::la::norm2(pos) / 0.01));
   solution[Shortcuts::rhoU + 0] = 1.0 * solution[Shortcuts::rho];
   solution[Shortcuts::rhoU + 1] = 1.0 * solution[Shortcuts::rho];
-#if Dimensions == 3
+#if DIMENSIONS == 3
   solution[Shortcuts::rhoU + 2] = 1.0 * solution[Shortcuts::rho];
 #endif
 
-  const tarch::la::Vector<Dimensions, double> momenta(1.0 * solution[Shortcuts::rho]);
+  const tarch::la::Vector<DIMENSIONS, double> momenta(1.0 * solution[Shortcuts::rho]);
 
   // Should lead to a constant p over the domain given the initial conditions
   solution[Shortcuts::rhoE] = PRESSURE / (GAMMA - 1.0) + 0.5 * (momenta * momenta) / solution[Shortcuts::rho];

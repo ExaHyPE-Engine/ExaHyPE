@@ -15,12 +15,12 @@ class HandleBoundary(AbstractADERDGActionSet):
 
     _Template_HandleBoundary = """
   if ({{PREDICATE}}) {
-    const double timeStamp = fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(marker.getSelectedFaceNumber() < Dimensions ? 1 : 0);
+    const double timeStamp = fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(marker.getSelectedFaceNumber() < DIMENSIONS ? 1 : 0);
 
     // Needs to declare and define timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
 
-    #if Dimensions == 2
+    #if DIMENSIONS == 2
     constexpr int SpaceFaceSize      = {{ORDER}} + 1;
     #else
     constexpr int SpaceFaceSize      = ({{ORDER}} + 1) * ({{ORDER}} + 1);
@@ -29,22 +29,22 @@ class HandleBoundary(AbstractADERDGActionSet):
     constexpr int FluxElementsByFace   = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
     constexpr int BasisElementsByFace  = SpaceFaceSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
 
-    const int normal = marker.getSelectedFaceNumber() % Dimensions;
-    const bool isLeftFace = marker.getSelectedFaceNumber() < Dimensions;
+    const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
+    const bool isLeftFace = marker.getSelectedFaceNumber() < DIMENSIONS;
 
     {{CORRECTOR_COMPUTATION_PRECISION}}* FIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (!isLeftFace ? 0 : FluxElementsByFace);
     {{CORRECTOR_COMPUTATION_PRECISION}}* FOut = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (!isLeftFace ? FluxElementsByFace : 0);
     {{CORRECTOR_COMPUTATION_PRECISION}}* QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (!isLeftFace ? 0 : BasisElementsByFace);
     {{CORRECTOR_COMPUTATION_PRECISION}}* QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (!isLeftFace ? BasisElementsByFace : 0);
 
-    tarch::la::Vector<Dimensions, double> faceOffset = marker.x() - 0.5 * marker.h();
+    tarch::la::Vector<DIMENSIONS, double> faceOffset = marker.x() - 0.5 * marker.h();
     faceOffset(normal) += 0.5 * marker.h()(normal);
 
     dfore(dof, {{ORDER}} + 1, normal, 0) {
-        tarch::la::Vector<Dimensions, double> nodePosition;
+        tarch::la::Vector<DIMENSIONS, double> nodePosition;
         int dofSerialised = 0;
         int basis         = 1;
-        for (int d = 0; d < Dimensions; d++) {
+        for (int d = 0; d < DIMENSIONS; d++) {
           nodePosition(d)  = faceOffset(d);
           nodePosition(d) += (d == normal) ? 0.0 : kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes[dof(d)] * marker.h()(d);
           dofSerialised += (d == normal) ? 0 : dof(d) * basis;

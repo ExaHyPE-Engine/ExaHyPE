@@ -10,14 +10,14 @@
 
 void {{FULL_QUALIFIED_NAMESPACE}}::cellErrorIntegral(
   std::function<void(
-    const tarch::la::Vector<Dimensions, double>&  x,
+    const tarch::la::Vector<DIMENSIONS, double>&  x,
     const double                                  t,
     const double                                  dt,
     const {{SOLUTION_STORAGE_PRECISION}}*         Q,
     double*                                       solution
   )>                                              exactSolutionFunctor,
-  const tarch::la::Vector<Dimensions, double>&    cellCentre,
-  const tarch::la::Vector<Dimensions, double>&    cellSize,
+  const tarch::la::Vector<DIMENSIONS, double>&    cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&    cellSize,
   double                                          timeStamp,
   double                                          timeStepSize,
   {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         Q,

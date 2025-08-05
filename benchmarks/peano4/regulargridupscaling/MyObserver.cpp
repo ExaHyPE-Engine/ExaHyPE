@@ -30,8 +30,8 @@ examples::regulargridupscaling::MyObserver::~MyObserver() {
 
 
 void examples::regulargridupscaling::MyObserver::beginTraversal(
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
+  const tarch::la::Vector<DIMENSIONS,double>&  h
 ) {
   _accumulator     = 0.0;
   _taskAccumulator = 0.0;
@@ -39,8 +39,8 @@ void examples::regulargridupscaling::MyObserver::beginTraversal(
 
 
 void examples::regulargridupscaling::MyObserver::endTraversal(
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
+  const tarch::la::Vector<DIMENSIONS,double>&  h
 ) {
   tarch::multicore::processPendingTasks();
   logDebug( "endTraversal", _accumulator );
@@ -68,14 +68,14 @@ void examples::regulargridupscaling::MyObserver::enterCell(
       assertion(IntegrationAccuracy>=1);
       peano4::parallel::Tasks(
     	[&]() -> bool {
-          tarch::la::Matrix<TwoPowerD,TwoPowerD,double>  localStiffnessMatrix =
+          tarch::la::Matrix<TWO_POWER_D,TWO_POWER_D,double>  localStiffnessMatrix =
             toolbox::finiteelements::getPoissonMatrixWithJumpingCoefficient(
               event.getX(), event.getH(), IntegrationAccuracy,
-      	      [](const tarch::la::Vector<Dimensions,double>& x) -> double {
+      	      [](const tarch::la::Vector<DIMENSIONS,double>& x) -> double {
         	    const double Theta = 32.0;
                 return 1.0
-         	           + 0.3/Dimensions * std::exp(-Theta * x(0)) * std::cos( tarch::la::PI * x(0) * Theta )
-                       + 0.3/Dimensions * std::exp(-Theta * x(1)) * std::cos( tarch::la::PI * x(1) * Theta );
+         	           + 0.3/DIMENSIONS * std::exp(-Theta * x(0)) * std::cos( tarch::la::PI * x(0) * Theta )
+                       + 0.3/DIMENSIONS * std::exp(-Theta * x(1)) * std::cos( tarch::la::PI * x(1) * Theta );
               }
     	    );
           // just to ensure we cannot remove it.
@@ -106,11 +106,11 @@ std::vector< peano4::grid::GridControlEvent > examples::regulargridupscaling::My
 
   peano4::grid::GridControlEvent newEvent;
   newEvent.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Refine );
-  #if Dimensions==2
+  #if DIMENSIONS==2
     newEvent.setOffset( {0.0,0.0} );
     newEvent.setWidth( {1.0,1.0} );
     newEvent.setH( {_h,_h} );
-  #elif Dimensions==3
+  #elif DIMENSIONS==3
     newEvent.setOffset( {0.0,0.0,0.0} );
     newEvent.setWidth( {1.0,1.0,1.0} );
     newEvent.setH( {_h,_h,_h} );

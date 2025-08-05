@@ -38,7 +38,7 @@
 //   // holds valid test data.
 
 //   // make no sense to test in 2d
-//   #if Dimensions==3
+//   #if DIMENSIONS==3
 //   constexpr int unknowns = 59;
 //   constexpr int auxiliaryVariables = 0;
 //   constexpr int numberOfDoFsPerAxisInCell = 30;
@@ -66,7 +66,7 @@
 //         volumeCoordinates(i) += (double(currentPosition(i))+0.5)*cellSize(i)/numberOfDoFsPerAxisInCell; //current position
 //       }
 //       //notice if you index using this routie the index need to start from 0 not -halo!
-//       int CellIndexSerialised  = peano4::utils::dLinearised((currentPosition+tarch::la::Vector<Dimensions,int>(3)),
+//       int CellIndexSerialised  = peano4::utils::dLinearised((currentPosition+tarch::la::Vector<DIMENSIONS,int>(3)),
 //                                                               numberOfDoFsPerAxisInCellWithHalos);
 
 //       //assign quantities
@@ -86,7 +86,7 @@
 //         volumeCoordinates(i) += (double(currentPosition(i))+0.5)*cellSize(i)/numberOfDoFsPerAxisInCell; //current position
 //       }
 
-//       int CellIndexSerialised  = peano4::utils::dLinearised((currentPosition+tarch::la::Vector<Dimensions,int>(3)),
+//       int CellIndexSerialised  = peano4::utils::dLinearised((currentPosition+tarch::la::Vector<DIMENSIONS,int>(3)),
 //                                                               numberOfDoFsPerAxisInCellWithHalos);
 //       //assign quantities
 //       double **g, **K;
@@ -190,8 +190,8 @@
 //     ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection,
 //     [&](
 //       const double * NOALIAS Q,
-//       const tarch::la::Vector<Dimensions,double>&  faceCentre,
-//       const tarch::la::Vector<Dimensions,double>&  volumeH,
+//       const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+//       const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
 //       double                                       t,
 //       double                                       dt,
 //       int                                          normal,
@@ -202,8 +202,8 @@
 //     [&](
 //       const double * NOALIAS                  Q,
 //       const double * NOALIAS     deltaQ,
-//       const tarch::la::Vector<Dimensions,double>&  faceCentre,
-//       const tarch::la::Vector<Dimensions,double>&  volumeH,
+//       const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+//       const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
 //       double                                       t,
 //       double                                       dt,
 //       int                                          normal,
@@ -224,8 +224,8 @@
 //     },
 //     [&](
 //       const double * NOALIAS Q,
-//       const tarch::la::Vector<Dimensions,double>&  volumeX,
-//       const tarch::la::Vector<Dimensions,double>&  volumeH,
+//       const tarch::la::Vector<DIMENSIONS,double>&  volumeX,
+//       const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
 //       double                                       t,
 //       double                                       dt,
 //       double * NOALIAS S

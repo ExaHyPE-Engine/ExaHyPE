@@ -72,11 +72,7 @@ class tarch::la::ShallowMatrix {
     inline Scalar & operator() (
       int rowIndex,
       int colIndex
-    )
-      #ifdef UseManualInlining
-      __attribute__((always_inline))
-      #endif
-      {
+    ) {
         assertion5( rowIndex >= 0, Rows, Cols, rowIndex, colIndex, toString() );
         assertion5( colIndex >= 0, Rows, Cols, rowIndex, colIndex, toString() );
         assertion5( rowIndex < Rows, Rows, Cols, rowIndex, colIndex, toString() );
@@ -90,11 +86,7 @@ class tarch::la::ShallowMatrix {
     inline const Scalar & operator() (
       int rowIndex,
       int colIndex
-    ) const
-      #ifdef UseManualInlining
-      __attribute__((always_inline))
-      #endif
-      {
+    ) const {
         assertion5( rowIndex >= 0, Rows, Cols, rowIndex, colIndex, toString() );
         assertion5( colIndex >= 0, Rows, Cols, rowIndex, colIndex, toString() );
         assertion5( rowIndex < Rows, Rows, Cols, rowIndex, colIndex, toString() );

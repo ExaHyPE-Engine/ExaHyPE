@@ -73,11 +73,7 @@ namespace exahype2 {
         Flux                          flux,
         NonconservativeProduct        DifferentialSource,
         Source                        AlgebraicSource
-      )
-      #if defined(UseManualInlining)
-      __attribute__((always_inline))
-      #endif
-      ;
+      );
 
       /**
        * Helper routine to reconstruct the first derivatives
@@ -98,11 +94,7 @@ namespace exahype2 {
         int                                   haloSize,
         int                                   unknowns,
         int                                   auxiliaryVariables
-      )
-      #if defined(UseManualInlining)
-      __attribute__((always_inline))
-      #endif
-      ;
+      );
 
       template <
         typename Solver,
@@ -120,11 +112,7 @@ namespace exahype2 {
         bool                                  evaluateAlgebraicSource, //real source
         bool                                  copyOldTimeStepAndScaleWithTimeStepSize,
         DifferentialSourceTermVariant         variant
-      )
-      #if defined(UseManualInlining)
-      __attribute__((always_inline))
-      #endif
-      ;
+      );
 
 
       template <
@@ -143,11 +131,7 @@ namespace exahype2 {
         bool                                  evaluateAlgebraicSource, //real source
         bool                                  copyOldTimeStepAndScaleWithTimeStepSize,
         DifferentialSourceTermVariant         variant
-      )
-      #if defined(UseManualInlining)
-      __attribute__((always_inline))
-      #endif
-      ;
+      );
 
 
       template <
@@ -166,27 +150,23 @@ namespace exahype2 {
         bool                                  evaluateAlgebraicSource, //real source
         bool                                  copyOldTimeStepAndScaleWithTimeStepSize,
         DifferentialSourceTermVariant         variant
-      )
-      #if defined(UseManualInlining)
-      __attribute__((always_inline))
-      #endif
-      ;
+      );
     }
   }
 }
 
 
 
-#if defined(GPUOffloadingOMP) or defined(SharedOMP)
+#if defined(WITH_GPU_OMP_TARGET) or defined(WITH_OPENMP)
 #include "exahype2/fd/fd4/omp/FD4.h"
 #endif
 
-//#if defined(GPUOffloadingCPP) or defined(SharedCPP)
+//#if defined(WITH_GPU_STDPAR)
 //#include "exahype2/fd/fd4/cpp/FD4.h"
 //#endif
 
 /*
-#if defined(GPUOffloadingSYCL) or defined(SharedSYCL)
+#if defined(WITH_GPU_SYCL)
 #include "exahype2/fd/fd4/sycl/FD4.h"
 #endif
 */

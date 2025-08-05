@@ -43,7 +43,7 @@ namespace Numerics {
   template<typename T>
   inline void createLocalBasis(T* n, T* m, T* l) {
 
-#if Dimensions == 2
+#if DIMENSIONS == 2
     l[0] = 0.;
     l[1] = 0.;
     l[2] = 1.0;
@@ -51,7 +51,7 @@ namespace Numerics {
     m[0] = n[1] * l[2] - n[2] * l[1];
     m[1] = -(n[0] * l[2] - n[2] * l[0]);
     m[2] = n[0] * l[1] - n[1] * l[0];
-#elif Dimensions == 3
+#elif DIMENSIONS == 3
 
     T tol, diff_norm1, diff_norm2;
     tol  = 1e-12;

@@ -216,7 +216,7 @@ void finishGridConstructionStep() {
   loadBalancer.update();
 
   gridStatisticsAfterGridConstruction = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics();
-  #ifdef Parallel
+  #ifdef WITH_MPI
   if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
     for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++ ) {
       if (rank!=tarch::mpi::Rank::getGlobalMasterRank()) {

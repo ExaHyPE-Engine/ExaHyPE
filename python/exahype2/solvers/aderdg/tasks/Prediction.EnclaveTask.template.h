@@ -28,7 +28,7 @@ private:
     const double                                    timeStamp,
     const double                                    timeStepSize,
     {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         QIn,
-    {{SOLUTION_STORAGE_PRECISION}}* NOALIAS const   faces[2][TwoTimesD],
+    {{SOLUTION_STORAGE_PRECISION}}* NOALIAS const   faces[2][TWO_TIMES_D],
     {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         QOut
   );
 
@@ -40,7 +40,7 @@ public:
     const double                                    timeStamp,
     const double                                    timeStepSize,
     {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         QIn,
-    {{SOLUTION_STORAGE_PRECISION}}* NOALIAS const   faces[2][TwoTimesD],
+    {{SOLUTION_STORAGE_PRECISION}}* NOALIAS const   faces[2][TWO_TIMES_D],
     {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         QOut
   );
 

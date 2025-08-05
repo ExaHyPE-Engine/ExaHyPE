@@ -120,7 +120,7 @@ namespace exahype2 {
      *
      * This is a natural extension of projectAllValuesOntoParticle_piecewiseLinear()
      * which accepts two additional arguments. The first one is the time step size,
-     * and the second one is a set of Dimensions integers. The routine takes the
+     * and the second one is a set of DIMENSIONS integers. The routine takes the
      * input data and maps it onto the particle attributes. After that, it assumes
      * that the indices indicies[0], indicies[1] and indicies[2] actually denote
      * the particle's velocities and it updates the velocity according to an
@@ -159,8 +159,8 @@ namespace exahype2 {
       int                                       unknownsPerVoxel,
       const double* NOALIAS Q,
       double                                timeStepSize,
-      tarch::la::Vector<Dimensions, int>    indices,
-      tarch::la::Vector<Dimensions, double> factors,
+      tarch::la::Vector<DIMENSIONS, int>    indices,
+      tarch::la::Vector<DIMENSIONS, double> factors,
       Particle&                             particle
     );
 
@@ -218,9 +218,9 @@ namespace exahype2 {
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
       const double* NOALIAS Q,
-      tarch::la::Vector<Dimensions, double> DomainSize,
-      tarch::la::Vector<Dimensions, double> DomainOffset,
-      tarch::la::Vector<Dimensions, double> PeriodicBC
+      tarch::la::Vector<DIMENSIONS, double> DomainSize,
+      tarch::la::Vector<DIMENSIONS, double> DomainOffset,
+      tarch::la::Vector<DIMENSIONS, double> PeriodicBC
     );
 
 
@@ -235,7 +235,7 @@ namespace exahype2 {
      * @return The updated particle position after one explicit Euler step.
      */
     template <typename Particle>
-    tarch::la::Vector<Dimensions, double> explicitEulerIntegration(Particle& particle, double timeStepSize);
+    tarch::la::Vector<DIMENSIONS, double> explicitEulerIntegration(Particle& particle, double timeStepSize);
 
     /**
      * Handle boundary collisions and apply reflection with a damping factor.
@@ -253,9 +253,9 @@ namespace exahype2 {
     template <typename Particle>
     void handleBoundaryCollisions(
       Particle&                              particle,
-      tarch::la::Vector<Dimensions, double>& newPosition,
-      tarch::la::Vector<Dimensions, double>  DomainSize,
-      tarch::la::Vector<Dimensions, double>  DomainOffset
+      tarch::la::Vector<DIMENSIONS, double>& newPosition,
+      tarch::la::Vector<DIMENSIONS, double>  DomainSize,
+      tarch::la::Vector<DIMENSIONS, double>  DomainOffset
     );
 
 
@@ -272,10 +272,10 @@ namespace exahype2 {
        * Q is not surrounded by a halo layer. If you have a halo layer, you have
        * to add (1,1,1) to the result and then increment voxelsPerAxis by two.
        */
-      tarch::la::Vector<Dimensions, int> mapParticleOntoVoxel(
+      tarch::la::Vector<DIMENSIONS, int> mapParticleOntoVoxel(
         const peano4::datamanagement::CellMarker&    marker,
         int                                          voxelsPerAxis,
-        const tarch::la::Vector<Dimensions, double>& particleX
+        const tarch::la::Vector<DIMENSIONS, double>& particleX
       );
       /**
        * Similar to mapParticleOntoVoxel() but this time, we always take the
@@ -291,10 +291,10 @@ namespace exahype2 {
        * @see projectValueOntoParticle_piecewiseLinear() for an example where
        *   this helper routine is used
        */
-      tarch::la::Vector<Dimensions, int> mapBiasedParticleOntoVoxel(
+      tarch::la::Vector<DIMENSIONS, int> mapBiasedParticleOntoVoxel(
         const peano4::datamanagement::CellMarker&    marker,
         int                                          voxelsPerAxis,
-        const tarch::la::Vector<Dimensions, double>& particleX
+        const tarch::la::Vector<DIMENSIONS, double>& particleX
       );
 
       /**
@@ -315,7 +315,7 @@ namespace exahype2 {
         int                                       voxelsPerAxis,
         int                                       unknownsPerVoxel,
         const double* NOALIAS Q,
-        const tarch::la::Vector<Dimensions, double>& particleX,
+        const tarch::la::Vector<DIMENSIONS, double>& particleX,
         int                                          unknown
       );
 
@@ -329,7 +329,7 @@ namespace exahype2 {
         int                                       voxelsPerAxis,
         int                                       unknownsPerVoxel,
         const double* NOALIAS Q,
-        const tarch::la::Vector<Dimensions, double>& particleX,
+        const tarch::la::Vector<DIMENSIONS, double>& particleX,
         int                                          unknown
       );
 

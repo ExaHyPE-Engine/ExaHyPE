@@ -26,13 +26,13 @@ class toolbox::particles::FileReader {
   private:
     static tarch::logging::Log                         _log;
 
-    std::list< tarch::la::Vector<Dimensions,double> >  _data;
+    std::list< tarch::la::Vector<DIMENSIONS,double> >  _data;
   public:
     /**
      * Read DAT file
      *
      * A dat file is a simple text file where we have one particle description per line. Each
-     * line holds exactly Dimensions double values.
+     * line holds exactly DIMENSIONS double values.
      */
     void readDatFile( const std::string& filename, const double scale );
 
@@ -62,9 +62,9 @@ class toolbox::particles::FileReader {
      * @see peano4::datamanagement::CellMarker::x()
      * @see peano4::datamanagement::VertexMarker::x()
      */
-    std::list< tarch::la::Vector<Dimensions,double> > getParticlesWithinVoxel(
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
+    std::list< tarch::la::Vector<DIMENSIONS,double> > getParticlesWithinVoxel(
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  h,
       bool remove
     );
 

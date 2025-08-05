@@ -4,7 +4,7 @@
 
 #include <string>
 
-#ifdef Parallel
+#ifdef WITH_MPI
 #include <functional>
 #include <mpi.h>
 #endif
@@ -39,14 +39,14 @@ public:
   GridVertex() = default;
   GridVertex(
     const State                                  __state,
-    const tarch::la::Vector<TwoPowerD, int>&     __adjacentRanks,
-    const tarch::la::Vector<TwoPowerD, int>&     __backupOfAdjacentRanks,
+    const tarch::la::Vector<TWO_POWER_D, int>&     __adjacentRanks,
+    const tarch::la::Vector<TWO_POWER_D, int>&     __backupOfAdjacentRanks,
     const bool                                   __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep,
     const bool                                   __isAntecessorOfRefinedVertexInCurrentTreeSweep,
     const bool                                   __hasBeenParentOfSubtreeVertexInPreviousTreeSweep,
     const bool                                   __isParentOfSubtreeVertexInCurrentTreeSweep,
     const int                                    __numberOfAdjacentRefinedLocalCells,
-    const tarch::la::Vector<Dimensions, double>& __x,
+    const tarch::la::Vector<DIMENSIONS, double>& __x,
     const int                                    __level
   );
   GridVertex(const GridVertex& copy);
@@ -55,13 +55,13 @@ public:
   inline peano4::grid::GridVertex::State getState() const { return _state; }
   inline void                            setState(State value) { _state = value; }
 
-  inline tarch::la::Vector<TwoPowerD, int> getAdjacentRanks() const { return _adjacentRanks; }
-  inline void setAdjacentRanks(const tarch::la::Vector<TwoPowerD, int>& value) { _adjacentRanks = value; }
+  inline tarch::la::Vector<TWO_POWER_D, int> getAdjacentRanks() const { return _adjacentRanks; }
+  inline void setAdjacentRanks(const tarch::la::Vector<TWO_POWER_D, int>& value) { _adjacentRanks = value; }
   inline int  getAdjacentRanks(int index) const { return _adjacentRanks[index]; }
   inline void setAdjacentRanks(int index, int value) { _adjacentRanks[index] = value; }
 
-  inline tarch::la::Vector<TwoPowerD, int> getBackupOfAdjacentRanks() const { return _backupOfAdjacentRanks; }
-  inline void                              setBackupOfAdjacentRanks(const tarch::la::Vector<TwoPowerD, int>& value) {
+  inline tarch::la::Vector<TWO_POWER_D, int> getBackupOfAdjacentRanks() const { return _backupOfAdjacentRanks; }
+  inline void                              setBackupOfAdjacentRanks(const tarch::la::Vector<TWO_POWER_D, int>& value) {
     _backupOfAdjacentRanks = value;
   }
   inline int  getBackupOfAdjacentRanks(int index) const { return _backupOfAdjacentRanks(index); }
@@ -98,9 +98,9 @@ public:
   inline int  getNumberOfAdjacentRefinedLocalCells() const { return _numberOfAdjacentRefinedLocalCells; }
   inline void setNumberOfAdjacentRefinedLocalCells(int value) { _numberOfAdjacentRefinedLocalCells = value; }
 
-#if PeanoDebug > 0
-  inline tarch::la::Vector<Dimensions, double> getX() const { return _x; }
-  inline void                                  setX(const tarch::la::Vector<Dimensions, double>& value) { _x = value; }
+#if PEANO_DEBUG > 0
+  inline tarch::la::Vector<DIMENSIONS, double> getX() const { return _x; }
+  inline void                                  setX(const tarch::la::Vector<DIMENSIONS, double>& value) { _x = value; }
   inline double                                getX(int index) const { return _x(index); }
   inline void                                  setX(int index, double value) { _x(index) = value; }
 #endif
@@ -108,7 +108,7 @@ public:
   inline int  getLevel() const { return _level; }
   inline void setLevel(int value) { _level = value; }
 
-#ifdef Parallel
+#ifdef WITH_MPI
   /**
    * Hands out MPI datatype if we work without the LLVM MPI extension.
    * If we work with this additional feature, this is the routine where
@@ -183,7 +183,7 @@ public:
   GridVertex(ObjectConstruction):
     GridVertex() {}
 
-#ifdef Parallel
+#ifdef WITH_MPI
   static void sendAndPollDanglingMessages(
     const peano4::grid::GridVertex& message,
     int                             destination,
@@ -202,21 +202,21 @@ public:
 
 private:
   State                             _state;
-  tarch::la::Vector<TwoPowerD, int> _adjacentRanks;
-  tarch::la::Vector<TwoPowerD, int> _backupOfAdjacentRanks;
+  tarch::la::Vector<TWO_POWER_D, int> _adjacentRanks;
+  tarch::la::Vector<TWO_POWER_D, int> _backupOfAdjacentRanks;
   bool                              _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep;
   bool                              _isAntecessorOfRefinedVertexInCurrentTreeSweep;
   bool                              _hasBeenParentOfSubtreeVertexInPreviousTreeSweep;
   bool                              _isParentOfSubtreeVertexInCurrentTreeSweep;
   int                               _numberOfAdjacentRefinedLocalCells;
 
-#if PeanoDebug > 0
-  tarch::la::Vector<Dimensions, double> _x;
+#if PEANO_DEBUG > 0
+  tarch::la::Vector<DIMENSIONS, double> _x;
 #endif
 
   int _level;
 
-#ifdef Parallel
+#ifdef WITH_MPI
 private:
   int _senderDestinationRank;
 

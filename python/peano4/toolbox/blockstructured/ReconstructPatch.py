@@ -103,8 +103,8 @@ class ReconstructPatch(ActionSet):
     auto* /*const*/ QIn = {CELL_ACCESSOR}.value;
     auto* /*const*/ QOut = {RECONSTRUCTED_ACCESSOR}.value;
 
-    {PRECISION}* faces[TwoTimesD];
-    for (int d = 0; d < TwoTimesD; ++d) {{
+    {PRECISION}* faces[TWO_TIMES_D];
+    for (int d = 0; d < TWO_TIMES_D; ++d) {{
       faces[d] = {FACE_ACCESSOR}(d).value;
     }}
 

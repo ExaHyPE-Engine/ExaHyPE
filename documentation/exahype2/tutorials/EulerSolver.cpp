@@ -13,8 +13,8 @@ double airfoilSymmetric(double x, double c = 100, double t = 0.12) {
 
 void tutorials::exahype2::euler::EulerSolver::initialCondition(
   [[maybe_unused]] double* const NOALIAS                        Q, // Q[4+0]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const bool                                   gridIsConstructed
 ) {
   const double y     = airfoilSymmetric(x[0]);
@@ -29,8 +29,8 @@ void tutorials::exahype2::euler::EulerSolver::initialCondition(
 void tutorials::exahype2::euler::EulerSolver::boundaryConditions(
   [[maybe_unused]] const double* const NOALIAS                  Qinside,  // Qinside[4+0]
   [[maybe_unused]] double* const NOALIAS                        Qoutside, // Qoutside[4+0]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const int                                    normal
 ) {
@@ -49,8 +49,8 @@ void tutorials::exahype2::euler::EulerSolver::boundaryConditions(
 
 double tutorials::exahype2::euler::EulerSolver::maxEigenvalue(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[4+0]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal
@@ -67,8 +67,8 @@ double tutorials::exahype2::euler::EulerSolver::maxEigenvalue(
 
 void tutorials::exahype2::euler::EulerSolver::flux(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[4+0]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,

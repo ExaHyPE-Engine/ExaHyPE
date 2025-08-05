@@ -51,7 +51,7 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
   constexpr int auxiliaryVariables = 0;
   constexpr int order = 2;
 
-  #if Dimensions==2
+  #if DIMENSIONS==2
   const tarch::la::Vector<2, double> x({0.0, 0.0});
   const tarch::la::Vector<2, double> cellSize({1.0, 1.0});
   constexpr int numberOfDoFs = (order+1)*(order+1);
@@ -91,7 +91,7 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
     auxiliaryVariables,
     [&](
         const double * NOALIAS                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<DIMENSIONS,double>&  x,
         double                                       t,
         double                                       dt,
         int                                          normal,
@@ -135,7 +135,7 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
     auxiliaryVariables,
     [&](
         const double * NOALIAS                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<DIMENSIONS,double>&  x,
         double                                       t,
         double                                       dt,
         int                                          normal,
@@ -182,7 +182,7 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder4OnStationarySetup() {
   constexpr int auxiliaryVariables = 0;
   constexpr int order = 4;
 
-  #if Dimensions==2
+  #if DIMENSIONS==2
   const tarch::la::Vector<2, double> x({0.0, 0.0});
   const tarch::la::Vector<2, double> cellSize({1.0, 1.0});
   constexpr int numberOfDoFs = (order+1)*(order+1);
@@ -222,7 +222,7 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder4OnStationarySetup() {
     auxiliaryVariables,
     [&](
         const double * NOALIAS                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<DIMENSIONS,double>&  x,
         double                                       t,
         double                                       dt,
         int                                          normal,
@@ -257,10 +257,10 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder4OnStationarySetup() {
 void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
   validate(false);
 
-  file_stream << "Starting Euler test in " << Dimensions << " dimensions\n\n";
+  file_stream << "Starting Euler test in " << DIMENSIONS << " dimensions\n\n";
 
   // geometry
-#if Dimensions==2
+#if DIMENSIONS==2
   const tarch::la::Vector<2, double> x({0.0, 0.0});
   const tarch::la::Vector<2, double> cellSize({1.0, 1.0});
 #else
@@ -290,13 +290,13 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
   double* QRight = new double[2*nodesPerFace*strideQ];
   double* QDown = new double[2*nodesPerFace*strideQ];
   double* QUp = new double[2*nodesPerFace*strideQ];
-#if Dimensions==3
+#if DIMENSIONS==3
   double* QFront = new double[2*nodesPerFace*strideQ];
   double* QBack = new double[2*nodesPerFace*strideQ];
 #endif
 
   //values of the rusanov fluxes on the faces
-  double* QHullForRiemann = new double[2*Dimensions*2*nodesPerFace*unknowns];
+  double* QHullForRiemann = new double[2*DIMENSIONS*2*nodesPerFace*unknowns];
 
 
   ::exahype2::CellData cellData(
@@ -332,7 +332,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
       auxiliaryVariables,
       [&](
           const double * NOALIAS                  Q,
-          const tarch::la::Vector<Dimensions,double>&  x,
+          const tarch::la::Vector<DIMENSIONS,double>&  x,
           double                                       t,
           double                                       dt,
           int                                          normal,
@@ -374,19 +374,19 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
     QRight,
     QDown,
     QUp
-#if Dimensions==3
+#if DIMENSIONS==3
     ,QFront,
     QBack
 #endif
   );
 
-  double* F[2*Dimensions];
+  double* F[2*DIMENSIONS];
 
   F[0] = QLeft;
   F[1] = QRight;
   F[2] = QDown;
   F[3] = QUp;
-#if Dimensions==3
+#if DIMENSIONS==3
   F[4] = QFront;
   F[5] = QBack;
 #endif
@@ -405,14 +405,14 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
     QLeft,
     QUp,
     QDown
-#if Dimensions==3
+#if DIMENSIONS==3
     ,QBack,
     QFront
 #endif
   );
 
 
-  for(int f=0; f<2*Dimensions; f++){
+  for(int f=0; f<2*DIMENSIONS; f++){
 
     double* currentFace = F[f];
     file_stream << "\nFace " << f << ": \n";
@@ -432,13 +432,13 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
   // next steps. In addition information about whether the faces are at the boundary
   // is provided since at the boundary the flux must be computed with boundary values
   // instead of using the extrapolated solution from the neighbour.
-  double* QHull[Dimensions*2];
-#if Dimensions==2
+  double* QHull[DIMENSIONS*2];
+#if DIMENSIONS==2
   QHull[0] = QLeft;
   QHull[2] = QRight;
   QHull[1] = QDown;
   QHull[3] = QUp;
-#elif Dimensions==3
+#elif DIMENSIONS==3
   QHull[0] = QLeft;
   QHull[3] = QRight;
   QHull[1] = QDown;
@@ -448,17 +448,17 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
 #endif
 
 
-  for(int i=0; i<2*Dimensions*2*nodesPerFace*strideQ; i++){
+  for(int i=0; i<2*DIMENSIONS*2*nodesPerFace*strideQ; i++){
     QHullForRiemann[i] = 0.0;
   }
 
 
-  for(int face=0; face<2*Dimensions; face++){
+  for(int face=0; face<2*DIMENSIONS; face++){
 
     rusanov::solveRiemannProblem_pointwise_in_situ(
       [&](
           const double * NOALIAS                  Q,
-          const tarch::la::Vector<Dimensions,double>&  x,
+          const tarch::la::Vector<DIMENSIONS,double>&  x,
           double                                       t,
           double                                       dt,
           int                                          normal,
@@ -469,7 +469,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
       nullptr,
       [&](
         const double * NOALIAS                 Q,
-        const tarch::la::Vector<Dimensions,double>& x,
+        const tarch::la::Vector<DIMENSIONS,double>& x,
         double                                      t,
         double                                      dt,
         int                                         normal
@@ -495,7 +495,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
 
 
   file_stream << "\nRusanov Fluxes per Face:\n";
-  for(int f=0; f<2*Dimensions; f++){
+  for(int f=0; f<2*DIMENSIONS; f++){
     file_stream << "At face " << f << "\n";
     for(int i=0; i<2*nodesPerFace; i++){
       file_stream << "at node " << i << ": [";
@@ -510,7 +510,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
   //  The contributions from the computed rusanov flux are then added to the nodes
   //  within the cell.
   integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-#if Dimensions==2
+#if DIMENSIONS==2
     &QHullForRiemann[(0*2+0)*nodesPerFace*unknowns], //left
     &QHullForRiemann[(2*2+0)*nodesPerFace*unknowns], //right
     &QHullForRiemann[(1*2+0)*nodesPerFace*unknowns], //down
@@ -571,7 +571,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
   delete[] QRight;
   delete[] QDown;
   delete[] QUp;
-#if Dimensions==3
+#if DIMENSIONS==3
   delete[] QFront;
   delete[] QBack;
 #endif
@@ -584,10 +584,10 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
 void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
 
 
-  file_stream << "\n\nStarting Elastic test in " << Dimensions << " dimensions\n\n";
+  file_stream << "\n\nStarting Elastic test in " << DIMENSIONS << " dimensions\n\n";
 
   // geometry
-#if Dimensions==2
+#if DIMENSIONS==2
   const tarch::la::Vector<2, double> x({0.0, 0.0});
   const tarch::la::Vector<2, double> cellSize({1.0, 1.0});
 #else
@@ -617,13 +617,13 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
   double* QRight = new double[2*nodesPerFace*strideQ];
   double* QDown = new double[2*nodesPerFace*strideQ];
   double* QUp = new double[2*nodesPerFace*strideQ];
-#if Dimensions==3
+#if DIMENSIONS==3
   double* QFront = new double[2*nodesPerFace*strideQ];
   double* QBack = new double[2*nodesPerFace*strideQ];
 #endif
 
   //values of the rusanov fluxes on the faces
-  double* QHullForRiemann = new double[2*Dimensions*2*nodesPerFace*strideQ];
+  double* QHullForRiemann = new double[2*DIMENSIONS*2*nodesPerFace*strideQ];
 
 
   ::exahype2::CellData cellData(
@@ -659,7 +659,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
     auxiliaryVariables,
     [&](
         const double * NOALIAS                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<DIMENSIONS,double>&  x,
         double                                       t,
         double                                       dt,
         int                                          normal,
@@ -670,7 +670,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
     [&](
         const double * NOALIAS                  Q,
         const double * NOALIAS                  dQdx,
-        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<DIMENSIONS,double>&  x,
         double                                       t,
         double                                       dt,
         int                                          normal,
@@ -710,19 +710,19 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
     QRight,
     QDown,
     QUp
-#if Dimensions==3
+#if DIMENSIONS==3
     ,QFront,
     QBack
 #endif
   );
 
-  double* F[2*Dimensions];
+  double* F[2*DIMENSIONS];
 
   F[0] = QLeft;
   F[1] = QRight;
   F[2] = QDown;
   F[3] = QUp;
-#if Dimensions==3
+#if DIMENSIONS==3
   F[4] = QFront;
   F[5] = QBack;
 #endif
@@ -741,14 +741,14 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
     QLeft,
     QUp,
     QDown
-#if Dimensions==3
+#if DIMENSIONS==3
     ,QBack,
     QFront
 #endif
   );
 
 
-  for(int f=0; f<2*Dimensions; f++){
+  for(int f=0; f<2*DIMENSIONS; f++){
 
     double* currentFace = F[f];
     file_stream << "\nFace " << f << ": \n";
@@ -768,13 +768,13 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
   // next steps. In addition information about whether the faces are at the boundary
   // is provided since at the boundary the flux must be computed with boundary values
   // instead of using the extrapolated solution from the neighbour.
-  double* QHull[Dimensions*2];
-#if Dimensions==2
+  double* QHull[DIMENSIONS*2];
+#if DIMENSIONS==2
   QHull[0] = QLeft;
   QHull[2] = QRight;
   QHull[1] = QDown;
   QHull[3] = QUp;
-#elif Dimensions==3
+#elif DIMENSIONS==3
   QHull[0] = QLeft;
   QHull[3] = QRight;
   QHull[1] = QDown;
@@ -784,17 +784,17 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
 #endif
 
 
-  for(int i=0; i<2*Dimensions*2*nodesPerFace*unknowns; i++){
+  for(int i=0; i<2*DIMENSIONS*2*nodesPerFace*unknowns; i++){
     QHullForRiemann[i] = 0.0;
   }
 
 
-  for(int face=0; face<2*Dimensions; face++){
+  for(int face=0; face<2*DIMENSIONS; face++){
 
     rusanov::solveRiemannProblem_pointwise_in_situ(
       [&](
           const double * NOALIAS                  Q,
-          const tarch::la::Vector<Dimensions,double>&  x,
+          const tarch::la::Vector<DIMENSIONS,double>&  x,
           double                                       t,
           double                                       dt,
           int                                          normal,
@@ -805,7 +805,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
       [&](
           const double * NOALIAS                  Q,
           const double * NOALIAS                  dQdx,
-          const tarch::la::Vector<Dimensions,double>&  x,
+          const tarch::la::Vector<DIMENSIONS,double>&  x,
           double                                       t,
           double                                       dt,
           int                                          normal,
@@ -815,7 +815,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
       },
       [&](
         const double * NOALIAS                 Q,
-        const tarch::la::Vector<Dimensions,double>& x,
+        const tarch::la::Vector<DIMENSIONS,double>& x,
         double                                      t,
         double                                      dt,
         int                                         normal
@@ -841,7 +841,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
 
 
   file_stream << "\nRusanov Fluxes per Face:\n";
-  for(int f=0; f<2*Dimensions; f++){
+  for(int f=0; f<2*DIMENSIONS; f++){
     file_stream << "At face " << f << "\n";
     for(int i=0; i<2*nodesPerFace; i++){
       file_stream << "at node " << i << ": [";
@@ -856,7 +856,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
   //  The contributions from the computed rusanov flux are then added to the nodes
   //  within the cell.
   integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-#if Dimensions==2
+#if DIMENSIONS==2
     &QHullForRiemann[(0*2+0)*nodesPerFace*unknowns], //left
     &QHullForRiemann[(2*2+0)*nodesPerFace*unknowns], //right
     &QHullForRiemann[(1*2+0)*nodesPerFace*unknowns], //down
@@ -917,7 +917,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
   delete[] QRight;
   delete[] QDown;
   delete[] QUp;
-#if Dimensions==3
+#if DIMENSIONS==3
   delete[] QFront;
   delete[] QBack;
 #endif

@@ -7,7 +7,7 @@ void peano4::stacks::STDVectorStack<double>::startSend(
   [[maybe_unused]] int tag,
   [[maybe_unused]] MPI_Comm comm
 ) {
-  #ifdef Parallel
+  #ifdef WITH_MPI
   assertion( _ioMode==IOMode::None );
   _ioMode = IOMode::MPISend;
   _ioTag  = tag;
@@ -33,7 +33,7 @@ void peano4::stacks::STDVectorStack<double>::startReceive(
   [[maybe_unused]] MPI_Comm comm,
   [[maybe_unused]] int numberOfElements
 ) {
-  #ifdef Parallel
+  #ifdef WITH_MPI
   logTraceInWith3Arguments( "startReceive(int,int,int)", rank, tag, numberOfElements );
   assertion3( _ioMode==IOMode::None, rank, tag, numberOfElements );
   assertion3( numberOfElements>0, rank, tag, numberOfElements );

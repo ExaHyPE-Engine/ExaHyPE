@@ -156,8 +156,8 @@ Initial conditions:
 
     void exahype2::training::swe::SWESolver::initialCondition(
       [[maybe_unused]] double* const NOALIAS Q, // Q[4+0]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const bool                                   gridIsConstructed
     ) {
       Q[Shortcuts::hu + 0] = 0.0; // v_x
@@ -171,8 +171,8 @@ Boundary conditions:
     void exahype2::training::swe::SWESolver::boundaryConditions(
       [[maybe_unused]] const double* const NOALIAS   Qinside, // Qinside[4+0]
       [[maybe_unused]] double* const NOALIAS         Qoutside, // Qoutside[4+0]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const int                                    normal
     ) {
@@ -186,8 +186,8 @@ Max eigenvalue:
 
     double exahype2::training::swe::SWESolver::maxEigenvalue(
       [[maybe_unused]] const double* const NOALIAS   Q, // Q[4+0]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal
@@ -202,8 +202,8 @@ Flux:
 
     void exahype2::training::swe::SWESolver::flux(
       [[maybe_unused]] const double* const NOALIAS   Q, // Q[4+0]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
@@ -223,8 +223,8 @@ Nonconservative product:
     void exahype2::training::swe::SWESolver::nonconservativeProduct(
       [[maybe_unused]] const double* const NOALIAS   Q, // Q[4+0]
       [[maybe_unused]] const double* const NOALIAS   deltaQ, // deltaQ[4+0]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
@@ -240,8 +240,8 @@ Refinement criterion:
 
     ::exahype2::RefinementCommand exahype2::training::swe::SWESolver::refinementCriterion(
       [[maybe_unused]] const double* const NOALIAS   Q, // Q[4+0]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t
     ) {
       return ::exahype2::RefinementCommand::Keep;
@@ -261,8 +261,8 @@ Initial conditions:
 
     void exahype2::training::swe::SWESolver::initialCondition(
       [[maybe_unused]] double* const NOALIAS Q, // Q[4+0]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const bool                                   gridIsConstructed
     ) {
       Q[Shortcuts::hu + 0] = 0.0; // v_x
@@ -275,8 +275,8 @@ Flux:
 
     void exahype2::training::swe::SWESolver::flux(
       [[maybe_unused]] const double* const NOALIAS   Q, // Q[4+0]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
@@ -294,8 +294,8 @@ Nonconservative product:
     void exahype2::training::swe::SWESolver::nonconservativeProduct(
       [[maybe_unused]] const double* const NOALIAS   Q, // Q[4+0]
       [[maybe_unused]] const double* const NOALIAS   deltaQ, // deltaQ[4+0]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
@@ -320,8 +320,8 @@ Refinement criterion:
 
     ::exahype2::RefinementCommand exahype2::training::swe::SWESolver::refinementCriterion(
       [[maybe_unused]] const double* const NOALIAS   Q, // Q[4+0]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t
     ) {
       return (std::abs(::tarch::la::norm2(x) - 0.5) < 0.2 ?

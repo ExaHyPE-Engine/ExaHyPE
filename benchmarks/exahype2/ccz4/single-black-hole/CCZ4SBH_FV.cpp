@@ -58,8 +58,8 @@ benchmarks::exahype2::ccz4::CCZ4SBH_FV::CCZ4SBH_FV() { prepareTwoPunctures(); }
 
 void benchmarks::exahype2::ccz4::CCZ4SBH_FV::initialCondition(
   double* NOALIAS Q,
-  const tarch::la::Vector<Dimensions, double>& volumeCentre,
-  const tarch::la::Vector<Dimensions, double>& volumeH,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeH,
   bool                                         gridIsConstructed
 ) {
   logTraceInWith3Arguments("initialCondition(...)", volumeCentre, volumeH, gridIsConstructed);
@@ -85,8 +85,8 @@ bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::areAllFaceConnectedCellsOverlapping
 ) {
   if (isCellOverlappingWithBHImpactArea(marker)) {
     bool result = true;
-    for (int d = 0; d < Dimensions; d++) {
-      tarch::la::Vector<Dimensions, double> neighbourCellCentre = marker.x();
+    for (int d = 0; d < DIMENSIONS; d++) {
+      tarch::la::Vector<DIMENSIONS, double> neighbourCellCentre = marker.x();
 
       neighbourCellCentre(d) = marker.x()(d) - marker.h()(d);
       result &= isCellOverlappingWithBHImpactArea(neighbourCellCentre, marker.h());
@@ -104,9 +104,9 @@ bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::areBothAdjacentCellsOverlappingWith
   const peano4::datamanagement::CellMarker& marker, int faceNumber
 ) {
   if (isCellOverlappingWithBHImpactArea(marker)) {
-    const int                             normal             = faceNumber % Dimensions;
-    tarch::la::Vector<Dimensions, double> adjacentCellCentre = marker.x();
-    adjacentCellCentre(normal) += faceNumber >= Dimensions ? marker.h()(normal) : -marker.h()(normal);
+    const int                             normal             = faceNumber % DIMENSIONS;
+    tarch::la::Vector<DIMENSIONS, double> adjacentCellCentre = marker.x();
+    adjacentCellCentre(normal) += faceNumber >= DIMENSIONS ? marker.h()(normal) : -marker.h()(normal);
     return isCellOverlappingWithBHImpactArea(adjacentCellCentre, marker.h());
   } else {
     return false;
@@ -116,10 +116,10 @@ bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::areBothAdjacentCellsOverlappingWith
 bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::areBothAdjacentCellsOverlappingWithBHImpactArea(
   const peano4::datamanagement::FaceMarker& marker
 ) {
-  const int normal = marker.getSelectedFaceNumber() % Dimensions;
+  const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
-  tarch::la::Vector<Dimensions, double> leftCellCentre  = marker.x();
-  tarch::la::Vector<Dimensions, double> rightCellCentre = marker.x();
+  tarch::la::Vector<DIMENSIONS, double> leftCellCentre  = marker.x();
+  tarch::la::Vector<DIMENSIONS, double> rightCellCentre = marker.x();
 
   leftCellCentre(normal)  -= 0.5 * marker.h()(normal);
   rightCellCentre(normal) += 0.5 * marker.h()(normal);
@@ -131,10 +131,10 @@ bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::areBothAdjacentCellsOverlappingWith
 bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::isOneAdjacentCellOverlappingWithBHImpactArea(
   const peano4::datamanagement::FaceMarker& marker
 ) {
-  const int normal = marker.getSelectedFaceNumber() % Dimensions;
+  const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
-  tarch::la::Vector<Dimensions, double> leftCellCentre  = marker.x();
-  tarch::la::Vector<Dimensions, double> rightCellCentre = marker.x();
+  tarch::la::Vector<DIMENSIONS, double> leftCellCentre  = marker.x();
+  tarch::la::Vector<DIMENSIONS, double> rightCellCentre = marker.x();
 
   leftCellCentre(normal)  -= 0.5 * marker.h()(normal);
   rightCellCentre(normal) += 0.5 * marker.h()(normal);
@@ -144,7 +144,7 @@ bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::isOneAdjacentCellOverlappingWithBHI
 }
 
 bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::isCellOverlappingWithBHImpactArea(
-  const tarch::la::Vector<Dimensions, double>& cellCentre, const tarch::la::Vector<Dimensions, double>& cellH
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre, const tarch::la::Vector<DIMENSIONS, double>& cellH
 ) {
   return tarch::la::norm2(cellCentre) - tarch::la::norm2(0.5 * cellH) < BlackHoleFVRegion;
 }

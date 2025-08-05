@@ -16,7 +16,7 @@
 namespace exahype2 {
   namespace dg {
     struct PointSource {
-      const tarch::la::Vector<Dimensions,double>&  x;
+      const tarch::la::Vector<DIMENSIONS,double>&  x;
       const double* NOALIAS                   values;
     };
 
@@ -36,7 +36,7 @@ namespace exahype2 {
      */
     typedef std::function< void(
       const double * NOALIAS                  Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -46,7 +46,7 @@ namespace exahype2 {
     typedef std::function< void(
       const double * NOALIAS                  Q,
       const double * NOALIAS                  dQdx,
-      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -68,7 +68,7 @@ namespace exahype2 {
      */
     typedef std::function< void(
       const double * NOALIAS                  Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
       double                                       t,
       double                                       dt,
       double * NOALIAS                        S
@@ -80,15 +80,15 @@ namespace exahype2 {
      */
     typedef std::function< std::vector<PointSource>(
       const double * NOALIAS                  Q,
-      const tarch::la::Vector<Dimensions,double>&  cellCentre,
-      const tarch::la::Vector<Dimensions,double>&  h,
+      const tarch::la::Vector<DIMENSIONS,double>&  cellCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  h,
       double                                       t,
       double                                       dt
     ) >   PointSources;
 
     typedef std::function< double(
       const double * NOALIAS                  Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
       double                                       t,
       double                                       dt,
       int                                          normal
@@ -103,7 +103,7 @@ namespace exahype2 {
     typedef std::function< void(
       const double * NOALIAS                  Qinside,
       double * NOALIAS                        Qoutside,
-      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
       double                                       t,
       int                                          normal
     ) >   BoundaryConditions;

@@ -34,7 +34,7 @@ class SWERadialDamBreak(Scenario):
   // the left domain boundary.
   const int numberOfCells = DomainSize[0]/(2*h[0]);
 
-  tarch::la::Vector<Dimensions, double> damBreakCenter = {
+  tarch::la::Vector<DIMENSIONS, double> damBreakCenter = {
     DomainOffset[0] + (numberOfCells * h[0]),
     0.0
   };

@@ -34,7 +34,7 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(Contai
     }
   } else if (sourceRank == tarch::mpi::Rank::getInstance().getRank()) {
     // Send stuff to the new worker via MPI
-#ifdef Parallel
+#ifdef WITH_MPI
     const auto metaInfo = Node::getInstance().getGridDataExchangeMetaInformation(master, worker, Node::ExchangeMode::VerticalData);
     const int messageSize = stackContainer.holdsStack(master, sourceStack) ? stackContainer.getForPop(master, sourceStack)->size() : 0;
     logDebug("streamDataFromSplittingTreeToNewTree()", "Send stack " << sourceStack << " from tree " << master << " on rank " << sourceRank << " through tag " << metaInfo.first << " to tree " << worker << " on rank " << destinationRank << " with size " << messageSize);
@@ -44,10 +44,10 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(Contai
       stackContainer.getForPush(master, sourceStack)->startSend(grid::TraversalObserver::SendReceiveContext::ForkDomain, destinationRank, metaInfo.first, metaInfo.second);
     }
 #else
-    assertionMsg(false, "Parallel build disabled");
+    assertionMsg(false, "MPI build disabled");
 #endif
   } else if (destinationRank == tarch::mpi::Rank::getInstance().getRank()) {
-#ifdef Parallel
+#ifdef WITH_MPI
     const int destinationStack = grid::PeanoCurve::getOutputStackNumber(getInstance().getSpacetree(worker)._root);
     const auto metaInfo = Node::getInstance().getGridDataExchangeMetaInformation(master, worker, Node::ExchangeMode::VerticalData);
     tarch::mpi::IntegerMessage message;
@@ -57,7 +57,7 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(Contai
       stackContainer.getForPush(worker, destinationStack)->startReceive(grid::TraversalObserver::SendReceiveContext::ForkDomain, sourceRank, metaInfo.first, metaInfo.second, message.getValue());
     }
 #else
-    assertionMsg(false, "Parallel build disabled");
+    assertionMsg(false, "MPI build disabled");
 #endif
   }
   logTraceOutWith2Arguments("streamDataFromSplittingTreeToNewTree()", master, worker);
@@ -102,7 +102,7 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(Con
       assertion4(stackContainer.getForPush(targetId, targetStack)->empty(), spacetreeId, targetId, sourceStackKey.second, targetStack);
       stackContainer.getForPush(targetId, targetStack)->clone(*stackContainer.getForPop(sourceStackKey));
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
       [[maybe_unused]] const int comparisonStackForTarget = Node::getInstance().getOutputStackNumberForHorizontalDataExchange(spacetreeId);
       assertion8(
         stackContainer.getForPush(targetId,targetStack)->size() == stackContainer.getForPush(spacetreeId, comparisonStackForTarget)->size()

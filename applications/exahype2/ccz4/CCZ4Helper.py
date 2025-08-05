@@ -1,11 +1,11 @@
 def get_body_of_enforceCCZ4constraint():
 	return """
   {
-    #if Dimensions==2
+    #if DIMENSIONS==2
     constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
     #endif
 
-    #if Dimensions==3
+    #if DIMENSIONS==3
     constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
     #endif
 
@@ -45,15 +45,15 @@ def get_body_of_adm_constraints(patch_size, number_of_output_variable, so_flag):
     if (not marker.willBeRefined() and repositories::instanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction and repositories::instanceOfCCZ4.getSolverState()==CCZ4::SolverState::RungeKuttaSubStep0) {"""+extra_derivative_assign+"""
 
       dfor(cell,patchSize) {
-        tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(overlap);
+        tarch::la::Vector<DIMENSIONS,int> currentCell = cell + tarch::la::Vector<DIMENSIONS,int>(overlap);
 
         double gradQ[3*59]={ 0 };
 
         for (int d=0; d<3; d++) {
-          tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
-          tarch::la::Vector<Dimensions,int> rightCell = currentCell;
-          tarch::la::Vector<Dimensions,int> DouleftCell  = currentCell;
-          tarch::la::Vector<Dimensions,int> DourightCell = currentCell;
+          tarch::la::Vector<DIMENSIONS,int> leftCell  = currentCell;
+          tarch::la::Vector<DIMENSIONS,int> rightCell = currentCell;
+          tarch::la::Vector<DIMENSIONS,int> DouleftCell  = currentCell;
+          tarch::la::Vector<DIMENSIONS,int> DourightCell = currentCell;
           leftCell(d)  -= 1; DouleftCell(d)    -= 2;
           rightCell(d) += 1; DourightCell(d)  += 2; 
           const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*overlap);
@@ -104,13 +104,13 @@ def get_body_of_Psi_Calc(patch_size, number_of_output_variable, so_flag):
     if (not marker.willBeRefined() and repositories::instanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction and repositories::instanceOfCCZ4.getSolverState()==CCZ4::SolverState::RungeKuttaSubStep0) {"""+extra_derivative_assign+"""
 
       dfor(cell,patchSize) {
-        tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(overlap);
+        tarch::la::Vector<DIMENSIONS,int> currentCell = cell + tarch::la::Vector<DIMENSIONS,int>(overlap);
 
         double gradQ[3*59]={ 0 };
 
         /*for (int d=0; d<3; d++) {
-          tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
-          tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+          tarch::la::Vector<DIMENSIONS,int> leftCell  = currentCell;
+          tarch::la::Vector<DIMENSIONS,int> rightCell = currentCell;
           leftCell(d)  -= 1;
           rightCell(d) += 1;
           const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*overlap);
@@ -121,10 +121,10 @@ def get_body_of_Psi_Calc(patch_size, number_of_output_variable, so_flag):
         }*/
 
         for (int d=0; d<3; d++) {
-          tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
-          tarch::la::Vector<Dimensions,int> rightCell = currentCell;
-          tarch::la::Vector<Dimensions,int> DouleftCell  = currentCell;
-          tarch::la::Vector<Dimensions,int> DourightCell = currentCell;
+          tarch::la::Vector<DIMENSIONS,int> leftCell  = currentCell;
+          tarch::la::Vector<DIMENSIONS,int> rightCell = currentCell;
+          tarch::la::Vector<DIMENSIONS,int> DouleftCell  = currentCell;
+          tarch::la::Vector<DIMENSIONS,int> DourightCell = currentCell;
           leftCell(d)  -= 1; DouleftCell(d)    -= 2;
           rightCell(d) += 1; DourightCell(d)  += 2; 
           const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*overlap);
@@ -160,8 +160,8 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables, res
       ::exahype2::fd::applySommerfeldConditions(
         [&](
           const double * NOALIAS                  Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  gridCellH,
+          const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
           double                                       t,
           double                                       dt,
           int                                          normal
@@ -170,8 +170,8 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables, res
         },
         [&](
           double * NOALIAS                        Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  gridCellH
+          const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  gridCellH
         ) -> void {
           for (int i=0; i<"""+str(unknowns + auxiliary_variables)+"""; i++) {
             Q[i] = 0.0;
@@ -184,7 +184,7 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables, res
         },
         marker.x(),
         marker.h(),
-        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
+        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<DIMENSIONS ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
         {{OVERLAP}},
@@ -202,8 +202,8 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables, res
       ::exahype2::fd::applySommerfeldConditions(
         [&](
           const double * NOALIAS                  Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  gridCellH,
+          const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  gridCellH,
           double                                       t,
           double                                       dt,
           int                                          normal
@@ -212,8 +212,8 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables, res
         },
         [&](
           double * NOALIAS                        Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  gridCellH
+          const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  gridCellH
         ) -> void {
           for (int i=0; i<"""+str(unknowns + auxiliary_variables)+"""; i++) {
             Q[i] = 0.0;
@@ -223,7 +223,7 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables, res
         },
         marker.x(),
         marker.h(),
-        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
+        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<DIMENSIONS ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
         {{OVERLAP}},

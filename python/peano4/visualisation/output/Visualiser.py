@@ -58,7 +58,7 @@ def validate(
 
     if snapshot_dimensions != dimensions and dimensions > 0:
         print(
-            "Dimensions not compatible with dimensions from previous files in the snapshot"
+            "DIMENSIONS not compatible with dimensions from previous files in the snapshot"
         )
         return
     dimensions = snapshot_dimensions

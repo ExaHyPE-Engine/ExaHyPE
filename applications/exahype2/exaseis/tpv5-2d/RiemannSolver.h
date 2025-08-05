@@ -51,7 +51,7 @@ void riemannSolver_BCn(double v,double sigma, double z, double r, double& v_hat,
 void riemannSolver_boundary(int faceIndex,double r, double vn , double vm, double Tn , double Tm, double zp, double zs , double& vn_hat , double& vm_hat, double& Tn_hat , double& Tm_hat)
 {
 
-  if (faceIndex < Dimensions) { //left face
+  if (faceIndex < DIMENSIONS) { //left face
 
     riemannSolver_BC0(vn, Tn, zp, r, vn_hat, Tn_hat);
     riemannSolver_BC0(vm, Tm, zs, r, vm_hat, Tm_hat);

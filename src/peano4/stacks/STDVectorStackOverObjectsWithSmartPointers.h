@@ -66,7 +66,7 @@ private:
   int    _ioRank;
   int    _ioTag;
 
-#ifdef Parallel
+#ifdef WITH_MPI
   MPI_Request* _ioMPIRequest;
 #endif
 
@@ -273,7 +273,7 @@ public:
    * block rather than the "original" stack data.
    *
    * The meta data has to be treated (almost) in the same way: In this case,
-   * we create manually a buffer over 2 * Dimensions * no of elements doubles
+   * we create manually a buffer over 2 * DIMENSIONS * no of elements doubles
    * and then copy the meta data over one by one. That means: we do not
    * expect T's datatype to encapsulate the meta data - which also doesn't
    * make any sense as T's data itself is scattered over the memory since it

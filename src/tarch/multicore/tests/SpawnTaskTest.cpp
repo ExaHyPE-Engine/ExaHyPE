@@ -51,7 +51,7 @@ tarch::multicore::tests::SpawnTaskTest::SpawnTaskTest():
   TestCase("tarch::multicore::tests::SpawnTaskTest") {}
 
 void tarch::multicore::tests::SpawnTaskTest::run() {
-#ifdef SharedOMP
+#ifdef WITH_OPENMP
 #pragma omp parallel
   {
 #pragma omp master
@@ -62,7 +62,7 @@ void tarch::multicore::tests::SpawnTaskTest::run() {
       testMethod([this]() { testSpawnTaskWithInAndOutDependency(); });
       testMethod([this]() { testSpawnTasks(); });
     }
-#ifdef SharedOMP
+#ifdef WITH_OPENMP
   }
 #endif
 }

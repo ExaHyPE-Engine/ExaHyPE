@@ -25,11 +25,11 @@ namespace exahype2 {
     inType**                                QIn;
     inType*                                 QInFlattened;
 
-    inType*                                 (*faces)[NumFaceTypes][TwoTimesD];
+    inType*                                 (*faces)[NumFaceTypes][TWO_TIMES_D];
     inType*                                 facesFlattened;
 
-    tarch::la::Vector<Dimensions, double>*  cellCentre;
-    tarch::la::Vector<Dimensions, double>*  cellSize;
+    tarch::la::Vector<DIMENSIONS, double>*  cellCentre;
+    tarch::la::Vector<DIMENSIONS, double>*  cellSize;
 
     outType**                               QOut;
     outType*                                QOutFlattened;
@@ -44,8 +44,8 @@ namespace exahype2 {
 
     CellData(
       inType* const                                QIn_,
-      const tarch::la::Vector<Dimensions, double>& cellCentre_,
-      const tarch::la::Vector<Dimensions, double>& cellSize_,
+      const tarch::la::Vector<DIMENSIONS, double>& cellCentre_,
+      const tarch::la::Vector<DIMENSIONS, double>& cellSize_,
       double                                       t_,
       double                                       dt_,
       outType* const                               QOut_,
@@ -55,9 +55,9 @@ namespace exahype2 {
 
     CellData(
       inType* const                                QIn_,
-      inType* const                                faces_[NumFaceTypes][TwoTimesD],
-      const tarch::la::Vector<Dimensions, double>& cellCentre_,
-      const tarch::la::Vector<Dimensions, double>& cellSize_,
+      inType* const                                faces_[NumFaceTypes][TWO_TIMES_D],
+      const tarch::la::Vector<DIMENSIONS, double>& cellCentre_,
+      const tarch::la::Vector<DIMENSIONS, double>& cellSize_,
       double                                       t_,
       double                                       dt_,
       outType* const                               QOut_,

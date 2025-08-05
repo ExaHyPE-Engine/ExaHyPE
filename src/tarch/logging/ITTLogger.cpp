@@ -102,7 +102,7 @@ std::string tarch::logging::ITTLogger::constructMessageString(
 
 
 void tarch::logging::ITTLogger::debug(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
-  #if !defined(PeanoDebug) || PeanoDebug<1
+  #if !defined(PEANO_DEBUG) || PEANO_DEBUG<1
   assertion(false);
   #endif
 

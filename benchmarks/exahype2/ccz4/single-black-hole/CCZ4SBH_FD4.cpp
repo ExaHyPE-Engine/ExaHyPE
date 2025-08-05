@@ -46,11 +46,11 @@ void benchmarks::exahype2::ccz4::prepareTwoPunctures() {
 
 ::exahype2::RefinementCommand benchmarks::exahype2::ccz4::CCZ4SBH_FD4::refinementCriterion(
   const double* NOALIAS Q, // Q[59+0]
-  const tarch::la::Vector<Dimensions, double>& volumeX,
-  const tarch::la::Vector<Dimensions, double>& meshCellH,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeX,
+  const tarch::la::Vector<DIMENSIONS, double>& meshCellH,
   double                                       t
 ) {
-  return tarch::la::norm2(volumeX) - std::sqrt(Dimensions)*meshCellH(0) < BlackHoleFVRegion
+  return tarch::la::norm2(volumeX) - std::sqrt(DIMENSIONS)*meshCellH(0) < BlackHoleFVRegion
        ? ::exahype2::RefinementCommand::Refine
        : ::exahype2::RefinementCommand::Keep;
 }
@@ -59,8 +59,8 @@ benchmarks::exahype2::ccz4::CCZ4SBH_FD4::CCZ4SBH_FD4() { prepareTwoPunctures(); 
 
 void benchmarks::exahype2::ccz4::CCZ4SBH_FD4::initialCondition(
   double* NOALIAS Q,
-  const tarch::la::Vector<Dimensions, double>& meshCellCentre,
-  const tarch::la::Vector<Dimensions, double>& meshCellH,
+  const tarch::la::Vector<DIMENSIONS, double>& meshCellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& meshCellH,
   bool                                         gridIsConstructed
 ) {
   logTraceInWith3Arguments("initialCondition(...)", meshCellCentre, meshCellH, gridIsConstructed);

@@ -82,7 +82,7 @@ int """ + full_qualified_classname + """::domainPatchCount=0;
 """
     elif self._restart_from_checkpoint and self._loading_scheme=="local-loading":
       return """
-    static inline std::map< tarch::la::Vector<Dimensions,double> , std::string, tarch::la::VectorCompare<Dimensions> > OffsetIndexMap{ tarch::la::VectorCompare<Dimensions>(1e-5) };
+    static inline std::map< tarch::la::Vector<DIMENSIONS,double> , std::string, tarch::la::VectorCompare<DIMENSIONS> > OffsetIndexMap{ tarch::la::VectorCompare<DIMENSIONS>(1e-5) };
     static constexpr size_t memoryLimit = 100ULL * 1024 * 1024 * 1024;
     static tarch::reader::CheckpointFilesManager subFilesManager{memoryLimit};
 """
@@ -123,20 +123,20 @@ int """ + full_qualified_classname + """::domainPatchCount=0;
 if ({{PREDICATE}}) { 
   logTraceIn( "touchCellFirstTime(...)---RestartingFromCheckpoint" );
   
-  #if Dimensions==2
+  #if DIMENSIONS==2
     tarch::la::Vector<2,double> offset;
     const int totalVolumeCount={{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}};
-  #elif Dimensions==3
+  #elif DIMENSIONS==3
     tarch::la::Vector<3,double> offset;
     const int totalVolumeCount={{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}};
   #endif
 
   for (int i=0;i<domainPatchCount;i++) {
       bool FoundCell = false;
-      #if Dimensions==2
+      #if DIMENSIONS==2
       offset[0]=offsetIndex[i*2+0];
       offset[1]=offsetIndex[i*2+1];
-      #elif Dimensions==3
+      #elif DIMENSIONS==3
       offset[0]=offsetIndex[i*3+0];
       offset[1]=offsetIndex[i*3+1];
       offset[2]=offsetIndex[i*3+2];
@@ -167,10 +167,10 @@ if ({{PREDICATE}}) {
 if ({{PREDICATE}}) {
   logTraceIn( "touchCellFirstTime(...)---RestartingFromCheckpoint" );
   
-  #if Dimensions==2
+  #if DIMENSIONS==2
     tarch::la::Vector<2,double> offset;
     const int totalCellCount={{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}};
-  #elif Dimensions==3
+  #elif DIMENSIONS==3
     tarch::la::Vector<3,double> offset;
     const int totalCellCount={{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}};
   #endif
@@ -215,10 +215,10 @@ if ({{PREDICATE}}) {
     if self._loading_scheme=="global-loading":
       return """        
       tarch::reader::readInCheckpointFiles(CheckpointFilesOf{{SOLVER_NAME}}, domainDataFromFiles, offsetIndex,
-                                             {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, Dimensions, {{NUMBER_OF_VOLUMES_PER_AXIS}});
-      #if Dimensions==2
+                                             {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, DIMENSIONS, {{NUMBER_OF_VOLUMES_PER_AXIS}});
+      #if DIMENSIONS==2
       domainPatchCount=offsetIndex.size()/2;
-      #elif Dimensions==3
+      #elif DIMENSIONS==3
       domainPatchCount=offsetIndex.size()/3;
       #endif
 """

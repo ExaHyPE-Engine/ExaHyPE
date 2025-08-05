@@ -4,28 +4,28 @@
 #include "peano4/peano4.h"
 
 bool toolbox::particles::particleAssignedToVertexWillBeLocal(
-  const tarch::la::Vector<Dimensions, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
   const peano4::datamanagement::VertexMarker&  marker
 ) {
-  std::bitset<TwoPowerD> adjacentCellWhichHostsParticle = getAdjacentCellsOwningParticle(x, marker);
+  std::bitset<TWO_POWER_D> adjacentCellWhichHostsParticle = getAdjacentCellsOwningParticle(x, marker);
   return adjacentCellWhichHostsParticle.to_ulong() & marker.areAdjacentCellsLocal().to_ulong();
 }
 
-tarch::la::Vector<Dimensions, double> toolbox::particles::mirrorParticleAlongPeriodicDomains(
-  const tarch::la::Vector<Dimensions, double>& x,
+tarch::la::Vector<DIMENSIONS, double> toolbox::particles::mirrorParticleAlongPeriodicDomains(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
   const peano4::datamanagement::VertexMarker&  marker,
-  const tarch::la::Vector<Dimensions, double>  domainOffset,
-  const tarch::la::Vector<Dimensions, double>  domainSize,
-  const std::bitset<Dimensions>                periodicBC
+  const tarch::la::Vector<DIMENSIONS, double>  domainOffset,
+  const tarch::la::Vector<DIMENSIONS, double>  domainSize,
+  const std::bitset<DIMENSIONS>                periodicBC
 ) {
-  tarch::la::Vector<Dimensions, double> result = x;
+  tarch::la::Vector<DIMENSIONS, double> result = x;
 
   // TODO:  Implement a generalised periodic boundary condition system that supports 3D, domain offsets, and full
   // periodicity control.
   double lowerBound = 0.0;
   double upperBound = domainSize[1];
 
-  for (int d = 0; d < Dimensions; d++) {
+  for (int d = 0; d < DIMENSIONS; d++) {
     if (periodicBC[d] and not marker.isContainedInAdjacentCellsByDimension(x, d)) {
       if (tarch::la::smallerEquals(x(d), lowerBound)) {
         result(d) += domainSize(d);
@@ -39,15 +39,15 @@ tarch::la::Vector<Dimensions, double> toolbox::particles::mirrorParticleAlongPer
   return result;
 }
 
-tarch::la::Vector<Dimensions, double> toolbox::particles::applyPeriodicBoundaryConditions(
-  const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>  domainOffset,
-  const tarch::la::Vector<Dimensions, double>  domainSize,
-  const std::bitset<Dimensions>                periodicBC
+tarch::la::Vector<DIMENSIONS, double> toolbox::particles::applyPeriodicBoundaryConditions(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>  domainOffset,
+  const tarch::la::Vector<DIMENSIONS, double>  domainSize,
+  const std::bitset<DIMENSIONS>                periodicBC
 ) {
-  tarch::la::Vector<Dimensions, double> result = x;
+  tarch::la::Vector<DIMENSIONS, double> result = x;
 
-  for (int d = 0; d < Dimensions; d++) {
+  for (int d = 0; d < DIMENSIONS; d++) {
     if (periodicBC[d]) {
       if (tarch::la::smaller(result(d), domainOffset(d))) {
         result(d) += domainSize(d);

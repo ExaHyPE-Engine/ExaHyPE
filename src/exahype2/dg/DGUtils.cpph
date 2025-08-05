@@ -6,14 +6,14 @@ QStoreType exahype2::dg::evaluatePolynomial(
   const double* NOALIAS                   QuadratureNodes1d,
   int                                          unknownsPerDoF,
   const QStoreType* NOALIAS               Q,
-  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
   int                                          unknown
 ) {
   QStoreType result = 0.0;
   dfor(currentDoF,order+1) {
     double denominator = 1.0;
     double enumerator  = 1.0;
-    for (int d=0; d<Dimensions; d++) {
+    for (int d=0; d<DIMENSIONS; d++) {
       for (int i=0; i<order+1; i++) {
         if ( i!=currentDoF(d) ) {
           double normalisedQuadratePointDistance = QuadratureNodes1d[currentDoF(d)]-QuadratureNodes1d[i];
@@ -30,18 +30,18 @@ QStoreType exahype2::dg::evaluatePolynomial(
 }
 
 template<typename T>
-tarch::la::Vector<Dimensions,double>  exahype2::dg::getQuadraturePoint(
-  const tarch::la::Vector<Dimensions,double>&  cellCentre,
-  const tarch::la::Vector<Dimensions,double>&  cellSize,
-  const tarch::la::Vector<Dimensions,int>&     index,
+tarch::la::Vector<DIMENSIONS,double>  exahype2::dg::getQuadraturePoint(
+  const tarch::la::Vector<DIMENSIONS,double>&  cellCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  cellSize,
+  const tarch::la::Vector<DIMENSIONS,int>&     index,
   int                                 /*polynomialOrder*/,
   const T* NOALIAS          quadraturePoints
 ) {
-  tarch::la::Vector<Dimensions,double> result;
+  tarch::la::Vector<DIMENSIONS,double> result;
 
   result(0) = quadraturePoints[index(0)];
   result(1) = quadraturePoints[index(1)];
-#if Dimensions==3
+#if DIMENSIONS==3
   result(2) = quadraturePoints[index(2)];
 #endif
 

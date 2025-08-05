@@ -124,7 +124,7 @@ void tarch::logging::Statistics::updateDataSnapshot(const std::string& identifie
 }
 
 
-#ifdef TrackStatistics
+#ifdef TRACK_STATISTICS
 void tarch::logging::Statistics::log( const std::string& identifier, const std::string& value ) {
   tarch::multicore::Lock lock(_semaphore);
   if ( _logMessageMap.count( identifier )==0 ) {
@@ -167,7 +167,7 @@ void tarch::logging::Statistics::inc( const std::string& identifier, double valu
 #endif
 
 void tarch::logging::Statistics::writeToCSV([[maybe_unused]] std::string filename) {
-#ifdef TrackStatistics
+#ifdef TRACK_STATISTICS
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     logInfo("writeToCSV()", "Write statistics to file(s) " << filename << "-rank-<rank>.csv");
   }
@@ -254,7 +254,7 @@ void tarch::logging::Statistics::writeToCSV([[maybe_unused]] std::string filenam
   file.close();
   #else
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo("writeToCSV()", "No statistics available. Recompile with -DTrackStatistics for runtime sampling.");
+    logInfo("writeToCSV()", "No statistics available. Recompile with -DTRACK_STATISTICS for runtime sampling.");
   }
   #endif
 }

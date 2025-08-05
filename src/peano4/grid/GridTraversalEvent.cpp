@@ -6,26 +6,26 @@
 #include <sstream>
 
 peano4::grid::GridTraversalEvent::GridTraversalEvent(
-  const tarch::la::Vector<Dimensions, double>& __x,
-  const tarch::la::Vector<Dimensions, double>& __h,
-  const std::bitset<TwoPowerD>&                __hasBeenRefined,
-  const std::bitset<TwoPowerD>&                __willBeRefined,
-  const std::bitset<TwoPowerD>&                __isVertexLocal,
-  const std::bitset<TwoPowerD>&                __isParentVertexLocal,
-  const std::bitset<TwoPowerD>&                __isVertexParentOfSubtree,
-  const std::bitset<TwoTimesD>&                __isFaceLocal,
+  const tarch::la::Vector<DIMENSIONS, double>& __x,
+  const tarch::la::Vector<DIMENSIONS, double>& __h,
+  const std::bitset<TWO_POWER_D>&                __hasBeenRefined,
+  const std::bitset<TWO_POWER_D>&                __willBeRefined,
+  const std::bitset<TWO_POWER_D>&                __isVertexLocal,
+  const std::bitset<TWO_POWER_D>&                __isParentVertexLocal,
+  const std::bitset<TWO_POWER_D>&                __isVertexParentOfSubtree,
+  const std::bitset<TWO_TIMES_D>&                __isFaceLocal,
   const bool                                   __isCellLocal,
   const bool                                   __isParentCellLocal,
-  const std::bitset<TwoPowerD>&                __isVertexAdjacentToParallelDomainBoundary,
-  const std::bitset<TwoTimesD>&                __isFaceAdjacentToParallelDomainBoundary,
-  const tarch::la::Vector<TwoPowerD, int>&     __numberOfAdjacentTreesPerVertex,
-  const std::bitset<ThreePowerD>&              __isAdjacentCellLocal,
-  const tarch::la::Vector<TwoPowerD, int>&     __vertexDataFrom,
-  const tarch::la::Vector<TwoPowerD, int>&     __vertexDataTo,
-  const tarch::la::Vector<TwoTimesD, int>&     __faceDataFrom,
-  const tarch::la::Vector<TwoTimesD, int>&     __faceDataTo,
+  const std::bitset<TWO_POWER_D>&                __isVertexAdjacentToParallelDomainBoundary,
+  const std::bitset<TWO_TIMES_D>&                __isFaceAdjacentToParallelDomainBoundary,
+  const tarch::la::Vector<TWO_POWER_D, int>&     __numberOfAdjacentTreesPerVertex,
+  const std::bitset<THREE_POWER_D>&              __isAdjacentCellLocal,
+  const tarch::la::Vector<TWO_POWER_D, int>&     __vertexDataFrom,
+  const tarch::la::Vector<TWO_POWER_D, int>&     __vertexDataTo,
+  const tarch::la::Vector<TWO_TIMES_D, int>&     __faceDataFrom,
+  const tarch::la::Vector<TWO_TIMES_D, int>&     __faceDataTo,
   const int                                    __cellData,
-  const tarch::la::Vector<Dimensions, int>&    __relativePositionToFather,
+  const tarch::la::Vector<DIMENSIONS, int>&    __relativePositionToFather,
   const int                                    __invokingSpacetree,
   const bool                                   __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing
 ) {
@@ -131,7 +131,7 @@ std::string peano4::grid::GridTraversalEvent::toString() const {
   return out.str();
 }
 
-#ifdef Parallel
+#ifdef WITH_MPI
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype peano4::grid::GridTraversalEvent::Datatype = MPI_DATATYPE_NULL;
@@ -214,10 +214,10 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
 
   int counter       = 0;
   subtypes[counter] = MPI_DOUBLE;
-  blocklen[counter] = Dimensions;
+  blocklen[counter] = DIMENSIONS;
   counter++;
   subtypes[counter] = MPI_DOUBLE;
-  blocklen[counter] = Dimensions;
+  blocklen[counter] = DIMENSIONS;
   counter++;
   subtypes[counter] = MPI_UNSIGNED_LONG;
   blocklen[counter] = 1;
@@ -250,28 +250,28 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
   blocklen[counter] = 1;
   counter++;
   subtypes[counter] = MPI_INT;
-  blocklen[counter] = TwoPowerD;
+  blocklen[counter] = TWO_POWER_D;
   counter++;
   subtypes[counter] = MPI_UNSIGNED_LONG;
   blocklen[counter] = 1;
   counter++;
   subtypes[counter] = MPI_INT;
-  blocklen[counter] = TwoPowerD;
+  blocklen[counter] = TWO_POWER_D;
   counter++;
   subtypes[counter] = MPI_INT;
-  blocklen[counter] = TwoPowerD;
+  blocklen[counter] = TWO_POWER_D;
   counter++;
   subtypes[counter] = MPI_INT;
-  blocklen[counter] = TwoTimesD;
+  blocklen[counter] = TWO_TIMES_D;
   counter++;
   subtypes[counter] = MPI_INT;
-  blocklen[counter] = TwoTimesD;
+  blocklen[counter] = TWO_TIMES_D;
   counter++;
   subtypes[counter] = MPI_INT;
   blocklen[counter] = 1;
   counter++;
   subtypes[counter] = MPI_INT;
-  blocklen[counter] = Dimensions;
+  blocklen[counter] = DIMENSIONS;
   counter++;
   subtypes[counter] = MPI_INT;
   blocklen[counter] = 1;
@@ -426,7 +426,7 @@ void peano4::grid::GridTraversalEvent::receive(
 }
 #endif
 
-#ifdef Parallel
+#ifdef WITH_MPI
 void peano4::grid::GridTraversalEvent::sendAndPollDanglingMessages(
   const peano4::grid::GridTraversalEvent& message,
   int                                     destination,

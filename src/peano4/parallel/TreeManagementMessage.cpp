@@ -65,7 +65,7 @@ void   peano4::parallel::TreeManagementMessage::setAction(Action value) {
 
 
 
-#ifdef Parallel
+#ifdef WITH_MPI
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype peano4::parallel::TreeManagementMessage::Datatype = MPI_DATATYPE_NULL;
@@ -286,7 +286,7 @@ void peano4::parallel::TreeManagementMessage::receive(
 }
 #endif
 
-#ifdef Parallel
+#ifdef WITH_MPI
 void peano4::parallel::TreeManagementMessage::sendAndPollDanglingMessages(const peano4::parallel::TreeManagementMessage& message, int destination, int tag, MPI_Comm communicator ) {
   peano4::parallel::TreeManagementMessage::send(
     message, destination, tag,

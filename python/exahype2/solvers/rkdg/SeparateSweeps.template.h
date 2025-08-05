@@ -46,8 +46,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
       const double * NOALIAS                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
       double                                       t
     ) override;
     {% endif %}
@@ -56,9 +56,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     virtual void initialCondition(
       double * NOALIAS Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
-      const tarch::la::Vector<Dimensions,int>&     index,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  h,
+      const tarch::la::Vector<DIMENSIONS,int>&     index,
       bool                                         gridIsConstructed
     ) override;
     {% endif %}
@@ -68,7 +68,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
     virtual void boundaryConditions(
       const double * NOALIAS Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       double * NOALIAS Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
       double                                       t,
       int                                          normal
     )  override;

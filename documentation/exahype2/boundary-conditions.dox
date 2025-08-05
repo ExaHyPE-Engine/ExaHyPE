@@ -119,7 +119,7 @@ use those to inform the actual value. This requires work however:
 
 -   Introduce a new material parameter that stores the directional
     derivative. If you need the non-homogeneous Neumann conditions all
-    around the domain, you will need `Dimensions` material parameter per
+    around the domain, you will need `DIMENSIONS` material parameter per
     unknown:
 
 -   Compute the derivatives per volume after each time step in a Finite

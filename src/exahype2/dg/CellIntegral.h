@@ -261,7 +261,7 @@ namespace exahype2 {
         const int                                     order,
         const int                                     unknowns,
         const int                                     auxiliaryVariables,
-        const tarch::la::Vector<Dimensions,int>&      node,
+        const tarch::la::Vector<DIMENSIONS,int>&      node,
         double* NOALIAS                          cellQout
       );
     }

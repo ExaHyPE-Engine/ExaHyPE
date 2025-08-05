@@ -12,8 +12,8 @@ namespace {{ item }} {
 
 std::vector<int> pointSources(
   {{FULL_QUALIFIED_SOLVER_NAME}}&              solver,
-  const tarch::la::Vector<Dimensions, double>& cellCentre,
-  const tarch::la::Vector<Dimensions, double>& cellSize
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize
 );
 
 {% for item in NAMESPACE -%}

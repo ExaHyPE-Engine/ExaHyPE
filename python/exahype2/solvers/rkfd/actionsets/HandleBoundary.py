@@ -22,13 +22,13 @@ class HandleBoundary(AbstractRKFDActionSet):
     if (
       {{PREDICATE}}
       and
-      not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]
+      not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%DIMENSIONS]
       and
       not marker.hasBeenRefined() 
       and 
       fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary()
     ) {
-      logTraceInWith3Arguments( "touchFaceFirstTime(...)", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), (repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]), marker.toString() );
+      logTraceInWith3Arguments( "touchFaceFirstTime(...)", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), (repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%DIMENSIONS]), marker.toString() );
       
 """
 
@@ -38,8 +38,8 @@ class HandleBoundary(AbstractRKFDActionSet):
         [&](
           const double * NOALIAS                  Qinside,
           double * NOALIAS                        Qoutside,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  volumeH,
+          const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
           double                                       t,
           double                                       dt,
           int                                          normal
@@ -48,7 +48,7 @@ class HandleBoundary(AbstractRKFDActionSet):
         },  
         marker.x(),
         marker.h(),
-        {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
+        {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(marker.getSelectedFaceNumber()<DIMENSIONS ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
         {{OVERLAP}},
@@ -60,8 +60,8 @@ class HandleBoundary(AbstractRKFDActionSet):
         [&](
           const double * NOALIAS                  Qinside,
           double * NOALIAS                        Qoutside,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  volumeH,
+          const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+          const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
           double                                       t,
           double                                       dt,
           int                                          normal
@@ -70,7 +70,7 @@ class HandleBoundary(AbstractRKFDActionSet):
         },  
         marker.x(),
         marker.h(),
-        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
+        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<DIMENSIONS ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
         {{OVERLAP}},
@@ -83,7 +83,7 @@ class HandleBoundary(AbstractRKFDActionSet):
 
   TemplateHandleBoundary_Epilogue = """     
 
-      bool isLeftEntryOutside = marker.getSelectedFaceNumber() < Dimensions;
+      bool isLeftEntryOutside = marker.getSelectedFaceNumber() < DIMENSIONS;
       double innerTimeStamp;
       
       innerTimeStamp = {{FACE_METADATA_ACCESSOR}}.getUpdatedTimeStamp( isLeftEntryOutside ? 1 : 0 );

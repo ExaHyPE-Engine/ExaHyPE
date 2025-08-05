@@ -13,11 +13,11 @@ namespace {{ item }} {
 template <typename cStoreType, typename pCompType, typename pStoreType>
 int fusedSpaceTimePredictorVolumeIntegral{{NAME_SUFFIX}}(
   {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  pStoreType* const NOALIAS                     lQhbnd[TwoTimesD],
-  pStoreType* const NOALIAS                     lFhbnd[TwoTimesD],
+  pStoreType* const NOALIAS                     lQhbnd[TWO_TIMES_D],
+  pStoreType* const NOALIAS                     lFhbnd[TWO_TIMES_D],
   cStoreType* const NOALIAS                     luh,
-  const tarch::la::Vector<Dimensions, double>&  cellCentre,
-  const tarch::la::Vector<Dimensions, double>&  cellSize,
+  const tarch::la::Vector<DIMENSIONS, double>&  cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&  cellSize,
   const double                                  timeStamp,
   const double                                  timeStepSize
 {% if USE_POINT_SOURCE %}

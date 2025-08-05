@@ -171,10 +171,10 @@ class Project(object):
         self._project.constants.add_include("""#include "tarch/la/Vector.h" """)
         self._project.constants.add_include("""#include "peano4/utils/Globals.h" """)
         self._project.constants.export_const_with_type(
-            "DomainOffset", offset_string, "tarch::la::Vector<Dimensions,double>"
+            "DomainOffset", offset_string, "tarch::la::Vector<DIMENSIONS,double>"
         )
         self._project.constants.export_const_with_type(
-            "DomainSize", size_string, "tarch::la::Vector<Dimensions,double>"
+            "DomainSize", size_string, "tarch::la::Vector<DIMENSIONS,double>"
         )
         self._project.constants.export("MinTerminalTime", str(self._min_terminal_time))
         if self._max_terminal_time >= self._min_terminal_time:

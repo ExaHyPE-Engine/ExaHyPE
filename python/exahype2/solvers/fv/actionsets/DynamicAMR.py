@@ -100,7 +100,7 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}QUpdate(marker.getSelectedFaceNumber()).value
     );
 
-    bool isLeftEntryOnCoarseFaceLabel = marker.getSelectedFaceNumber() >= Dimensions;
+    bool isLeftEntryOnCoarseFaceLabel = marker.getSelectedFaceNumber() >= DIMENSIONS;
     double newTimeStamp = std::max( coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ), fineGridFace""" + solver._face_label.name + """.getUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ));
     coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdated( isLeftEntryOnCoarseFaceLabel ? 0 : 1,true);
     coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1,newTimeStamp);
@@ -143,10 +143,10 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
     // A coarse face might have been non-persistent before. So it might
     // not carry a valid boundary flag, and we have to re-analyse it and
     // set it accordingly.    
-    tarch::la::Vector<Dimensions, double> offset(DomainOffset);
-    tarch::la::Vector<Dimensions, double> size(DomainSize);
+    tarch::la::Vector<DIMENSIONS, double> offset(DomainOffset);
+    tarch::la::Vector<DIMENSIONS, double> size(DomainSize);
     bool isBoundary = false;
-    for (int d=0; d<Dimensions; d++) {
+    for (int d=0; d<DIMENSIONS; d++) {
       isBoundary |= tarch::la::equals( marker.x()(d), offset(d) );
       isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
     }
@@ -214,7 +214,7 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{UNKNOWNS}},
       fineGridFace""" + solver._name + """QUpdate.value
     );
-    const int leftRightEntry = marker.getSelectedFaceNumber()<Dimensions ? 0 : 1;
+    const int leftRightEntry = marker.getSelectedFaceNumber()<DIMENSIONS ? 0 : 1;
     fineGridFace""" + solver._face_label.name + """.setNewTimeStamp(leftRightEntry,coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getNewTimeStamp(leftRightEntry));
     fineGridFace""" + solver._face_label.name + """.setOldTimeStamp(leftRightEntry,coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getOldTimeStamp(leftRightEntry));
 
@@ -226,10 +226,10 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
 
     logTraceInWith1Argument( "createHangingFace(...)", marker.toString() );
 
-    int normal = marker.getSelectedFaceNumber() % Dimensions;
+    int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
     dfore(i, {{DOFS_PER_AXIS}}, normal, 0) {
       for( int j=0; j<2*{{OVERLAP}}; j++) {
-        tarch::la::Vector<Dimensions, int> dof = i;
+        tarch::la::Vector<DIMENSIONS, int> dof = i;
         dof(normal) = j;
 
         int serialisedDoF = ::toolbox::blockstructured::serialiseVoxelIndexInOverlap(
@@ -322,7 +322,7 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{FINE_GRID_CELL}}.value
   );
 
-  #if PeanoDebug > 0
+  #if PEANO_DEBUG > 0
   ::exahype2::fv::validatePatch(
     {{FINE_GRID_CELL}}.value,
     {{UNKNOWNS}},
@@ -350,7 +350,7 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{COARSE_GRID_CELL}}.value
   );
 
-  #if PeanoDebug > 0
+  #if PEANO_DEBUG > 0
   // Exploit the fact that we can "reuse" some FV utils here
   ::exahype2::fv::validatePatch(
     {{FINE_GRID_CELL}}.value,

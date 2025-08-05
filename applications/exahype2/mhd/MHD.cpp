@@ -9,14 +9,14 @@ tarch::logging::Log   examples::exahype2::finitevolumes::MHD::_log( "examples::e
 
 void examples::exahype2::finitevolumes::MHD::initialCondition(
   double * NOALIAS Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
   bool                                         gridIsConstructed
 ) {
   logTraceInWith3Arguments( "initialCondition(...)", volumeCentre, volumeH, gridIsConstructed );
 
-  double xd[Dimensions];
-  for (int d=0; d< Dimensions; d++) xd[d] = 0.0;//x[d];
+  double xd[DIMENSIONS];
+  for (int d=0; d< DIMENSIONS; d++) xd[d] = 0.0;//x[d];
   double t = 0;
   alfenwave_(&xd[0], &Q[0], &t);
   for(int i=0; i<9; i++){
@@ -31,8 +31,8 @@ void examples::exahype2::finitevolumes::MHD::initialCondition(
 
 double examples::exahype2::finitevolumes::MHD::maxEigenvalue(
   const double * NOALIAS Q, // Q[9+0],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
   double                                       t,
   int                                          normal
 ) {
@@ -55,8 +55,8 @@ double examples::exahype2::finitevolumes::MHD::maxEigenvalue(
 
 void examples::exahype2::finitevolumes::MHD::flux(
   const double * NOALIAS Q, // Q[9+0],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
   double                                       t,
   int                                          normal,
   double * NOALIAS F // F[9]
@@ -70,8 +70,8 @@ void examples::exahype2::finitevolumes::MHD::flux(
 void examples::exahype2::finitevolumes::MHD::boundaryConditions(
   const double * NOALIAS Qinside, // Qinside[9+0]
   double * NOALIAS Qoutside, // Qoutside[9+0]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
   double                                       t,
   int                                          normal
 ) {

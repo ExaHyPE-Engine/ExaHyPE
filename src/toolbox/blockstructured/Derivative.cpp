@@ -11,16 +11,16 @@ void toolbox::blockstructured::computeGradient(
   int                                sourceUnknowns,
   int                                sourceHalo,
   double* NOALIAS               dest,
-  const tarch::la::Vector<Dimensions,int>&   destIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&   destIndex,
   int                                destUnknowns,
   int                                destHalo,
-  const tarch::la::Vector<Dimensions,double>&  volumeH
+  const tarch::la::Vector<DIMENSIONS,double>&  volumeH
 ) {
   dfor(k,numberOfDoFsPerAxisInPatch) {
-    for (int d=0; d<Dimensions; d++) {
-      tarch::la::Vector<Dimensions,int> sourceVolumeLeft  = k + tarch::la::Vector<Dimensions,int>(sourceHalo);
-      tarch::la::Vector<Dimensions,int> sourceVolumeRight = k + tarch::la::Vector<Dimensions,int>(sourceHalo);
-      tarch::la::Vector<Dimensions,int> destVolume        = k + tarch::la::Vector<Dimensions,int>(destHalo);
+    for (int d=0; d<DIMENSIONS; d++) {
+      tarch::la::Vector<DIMENSIONS,int> sourceVolumeLeft  = k + tarch::la::Vector<DIMENSIONS,int>(sourceHalo);
+      tarch::la::Vector<DIMENSIONS,int> sourceVolumeRight = k + tarch::la::Vector<DIMENSIONS,int>(sourceHalo);
+      tarch::la::Vector<DIMENSIONS,int> destVolume        = k + tarch::la::Vector<DIMENSIONS,int>(destHalo);
 
       if (k(d)<=numberOfDoFsPerAxisInPatch/2) {
         sourceVolumeRight(d)++;
@@ -48,17 +48,17 @@ double toolbox::blockstructured::computeGradientAndReturnMaxDifference(
   int                                sourceUnknowns,
   int                                sourceHalo,
   double* NOALIAS               dest,
-  const tarch::la::Vector<Dimensions,int>&   destIndex,
+  const tarch::la::Vector<DIMENSIONS,int>&   destIndex,
   int                                destUnknowns,
   int                                destHalo,
-  const tarch::la::Vector<Dimensions,double>&  volumeH
+  const tarch::la::Vector<DIMENSIONS,double>&  volumeH
 ) {
   double result = 0.0;
   dfor(k,numberOfDoFsPerAxisInPatch) {
-    for (int d=0; d<Dimensions; d++) {
-      tarch::la::Vector<Dimensions,int> sourceVolumeLeft  = k + tarch::la::Vector<Dimensions,int>(sourceHalo);
-      tarch::la::Vector<Dimensions,int> sourceVolumeRight = k + tarch::la::Vector<Dimensions,int>(sourceHalo);
-      tarch::la::Vector<Dimensions,int> destVolume        = k + tarch::la::Vector<Dimensions,int>(destHalo);
+    for (int d=0; d<DIMENSIONS; d++) {
+      tarch::la::Vector<DIMENSIONS,int> sourceVolumeLeft  = k + tarch::la::Vector<DIMENSIONS,int>(sourceHalo);
+      tarch::la::Vector<DIMENSIONS,int> sourceVolumeRight = k + tarch::la::Vector<DIMENSIONS,int>(sourceHalo);
+      tarch::la::Vector<DIMENSIONS,int> destVolume        = k + tarch::la::Vector<DIMENSIONS,int>(destHalo);
 
       if (k(d)<=numberOfDoFsPerAxisInPatch/2) {
         sourceVolumeRight(d)++;

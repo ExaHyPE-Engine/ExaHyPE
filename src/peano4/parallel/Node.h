@@ -28,7 +28,7 @@ namespace peano4::parallel {
  */
 class peano4::parallel::Node {
 public:
-#if !defined(Parallel)
+#if !defined(WITH_MPI)
   typedef int MPI_Comm;
 #ifndef MPI_COMM_NULL
 #define MPI_COMM_NULL 0
@@ -135,7 +135,7 @@ public:
    * and it is a stack that does realise periodic boundary conditions along
    * the y axis.
    *
-   * The second argument (as sketched above) is of type std::bitset<Dimensions>.
+   * The second argument (as sketched above) is of type std::bitset<DIMENSIONS>.
    * Unfortunately, bitsets do not work properly within the pair type as they
    * seem not to define the comparison operator properly. So I use an int
    * here and wrap it into a bitset whenever necessary.
@@ -165,13 +165,13 @@ public:
    *
    * For the powerset, I'd like to use
    *
-   *      std::set< std::bitset<2*Dimensions> > powerSet;
+   *      std::set< std::bitset<2*DIMENSIONS> > powerSet;
    *
    * but C++ defines no comparison operator on bitsets and therefore you can't use
    * it in a set.
    */
   static std::set<PeriodicBoundaryStackIdentifier> getOutputStacksForPeriodicBoundaryExchange(
-    const tarch::la::Vector<TwoPowerD, int>& flags
+    const tarch::la::Vector<TWO_POWER_D, int>& flags
   );
 
   static std::string toString(const std::set<PeriodicBoundaryStackIdentifier>& data);
@@ -408,5 +408,5 @@ private:
    * per vertex, and now have to work backwards which periodic faces they
    * do represent.
    */
-  static std::bitset<2 * Dimensions> getPeriodicBoundaryNumber(const tarch::la::Vector<TwoPowerD, int>& flags);
+  static std::bitset<2 * DIMENSIONS> getPeriodicBoundaryNumber(const tarch::la::Vector<TWO_POWER_D, int>& flags);
 };

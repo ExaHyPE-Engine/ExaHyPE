@@ -10,7 +10,7 @@
 tarch::logging::Log toolbox::particles::TrajectoryDatabase::_log( "toolbox::particles::TrajectoryDatabase" );
 
 
-toolbox::particles::TrajectoryDatabase::Entry::Entry( const TrajectoryDatabase& database, const tarch::la::Vector<Dimensions,double>&  x_, double  timestamp_ ):
+toolbox::particles::TrajectoryDatabase::Entry::Entry( const TrajectoryDatabase& database, const tarch::la::Vector<DIMENSIONS,double>&  x_, double  timestamp_ ):
   x(x_),
   timestamp(timestamp_),
   numberOfDataEntries(database._numberOfDataPointsPerParticle) {
@@ -121,7 +121,7 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
     logDebug( "dumpCSVFile()", "dump particle trajectory database " << snapshotFileName.str() );
     std::ofstream file( snapshotFileName.str() );
     file << std::scientific;
-    #if Dimensions==2
+    #if DIMENSIONS==2
     file << "number(0), number(1), t, x(0), x(1), data " << std::endl;
     #else
     file << "number(0), number(1), t, x(0), x(1), x(2), data " << std::endl;
@@ -135,7 +135,7 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
 			 << ", "
 			 //<< std::setprecision (6)
 			 << snapshot.timestamp;
-        #if Dimensions==2
+        #if DIMENSIONS==2
         file //<< std::setprecision (_precision) 
              << ", "
              << snapshot.x(0)
@@ -205,7 +205,7 @@ void toolbox::particles::TrajectoryDatabase::setTimeDeltaBetweenTwoSnapshots( do
 
 toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::TrajectoryDatabase::getAction(
   const std::pair<int, int>&                    number,
-  const tarch::la::Vector<Dimensions,double>&   x,
+  const tarch::la::Vector<DIMENSIONS,double>&   x,
   double                                        timestamp
 ) {
   toolbox::particles::TrajectoryDatabase::AddSnapshotAction result;
@@ -218,7 +218,7 @@ toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::Tr
     return toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Append;
   }
   else {
-    tarch::la::Vector<Dimensions,double> oldX = _data.at(number).front().x;
+    tarch::la::Vector<DIMENSIONS,double> oldX = _data.at(number).front().x;
     double delta = tarch::la::norm2(oldX-x);
     _maxPositionDelta = std::max(delta,_maxPositionDelta);
     if (
@@ -253,7 +253,7 @@ toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::Tr
 
 toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::TrajectoryDatabase::getAction(
   const std::pair<int, int>&                   number,
-  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
   double                                       timestamp,
   int                                          numberOfDataEntries,
   double*                                      data
@@ -305,7 +305,7 @@ bool toolbox::particles::TrajectoryDatabase::dumpDatabaseSnapshot() {
 void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
   const std::pair<int, int>&                   number,
   double                                       timestamp,
-  const tarch::la::Vector<Dimensions,double>&  x
+  const tarch::la::Vector<DIMENSIONS,double>&  x
 ) {
   if ( _rank<0 ) {
     _rank = tarch::mpi::Rank::getInstance().getRank();
@@ -342,7 +342,7 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
   int                                          number0,
   int                                          number1,
   double                                       timestamp,
-  const tarch::la::Vector<Dimensions,double>&  x
+  const tarch::la::Vector<DIMENSIONS,double>&  x
 ) {
   addParticleSnapshot(
     std::pair<int,int>(number0,number1),
@@ -355,7 +355,7 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
 void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
   const std::pair<int, int>&                   number,
   double                                       timestamp,
-  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
   int                                          numberOfDataEntries,
   double*                                      data
 ) {
@@ -397,7 +397,7 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
   int                                          number0,
   int                                          number1,
   double                                       timestamp,
-  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
   int                                          numberOfDataEntries,
   double*                                      data
 ) {

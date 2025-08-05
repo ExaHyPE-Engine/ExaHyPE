@@ -80,7 +80,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     marker,
     t,
     dt,
-    #if Dimensions==2
+    #if DIMENSIONS==2
     tarch::allocateMemory({{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}), tarch::MemoryLocation::Heap),
     nullptr,
     {{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
@@ -125,7 +125,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     dt,
     linearCombinationOfPreviousShots.get(),
     output,
-    #if Dimensions==2
+    #if DIMENSIONS==2
     {{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
     {{NUMBER_OF_DOFS_PER_CELL_2D}}* {{NUMBER_OF_UNKNOWNS}},
     #else
@@ -201,7 +201,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::moveTask(int rank, int tag, MPI_
 smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank, int tag, MPI_Comm communicator) {
   peano4::grid::GridTraversalEvent dummyEvent;
   const int NumberOfInputValues =
-    #if Dimensions==2
+    #if DIMENSIONS==2
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}};
     #else
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}};
@@ -290,7 +290,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
   logInfo( "receiveOutcome(...)", "rank=" << rank << ", tag=" << tag );
   peano4::grid::GridTraversalEvent dummyEvent;
   const int NumberOfResultValues =
-    #if Dimensions==2
+    #if DIMENSIONS==2
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}};
     #else
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}};
@@ -396,7 +396,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   //
   bool foundOffloadingBranch = false;
 
-  #if defined(GPUOffloadingOMP)
+  #if defined(WITH_GPU_OMP_TARGET)
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
     ::exahype2::dg::{{KERNEL_NAMESPACE}}::omp::{{FUSED_VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS_GPU}}
@@ -410,7 +410,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   }
   #endif
 
-  #if defined(GPUOffloadingSYCL)
+  #if defined(WITH_GPU_SYCL)
   if (targetDevice>=0 or targetDevice==Host) {
     foundOffloadingBranch = true;
     ::exahype2::dg::{{KERNEL_NAMESPACE}}::sycl::{{FUSED_VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS_GPU}}

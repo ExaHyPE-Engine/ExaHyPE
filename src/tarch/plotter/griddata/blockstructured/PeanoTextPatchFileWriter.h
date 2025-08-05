@@ -238,7 +238,7 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
      * to dump data.
      *
      * @param dimension     I make this a free parameter, even though most
-     *   codes will pass in the compile time parameter Dimensions. However,
+     *   codes will pass in the compile time parameter DIMENSIONS. However,
      *   there are codes which plot submanifolds for example or want to write
      *   3d data within a 2d code, as they implement a 2.5d model.
      * @param fileName      Name of the file to write. Has to be unique per

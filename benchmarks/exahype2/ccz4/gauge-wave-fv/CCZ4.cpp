@@ -16,8 +16,8 @@ tarch::logging::Log benchmarks::exahype2::ccz4::CCZ4::_log("benchmarks::exahype2
 
 void benchmarks::exahype2::ccz4::CCZ4::initialCondition(
   double* NOALIAS Q,
-  const tarch::la::Vector<Dimensions, double>& volumeX,
-  const tarch::la::Vector<Dimensions, double>& volumeH,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeX,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeH,
   bool                                         gridIsConstructed
 ) {
   constexpr int    nVars       = 59;
@@ -56,8 +56,8 @@ void benchmarks::exahype2::ccz4::CCZ4::initialCondition(
 void benchmarks::exahype2::ccz4::CCZ4::boundaryConditions(
   const double* NOALIAS Qinside, // Qinside[59+0]
   double* NOALIAS Qoutside,      // Qoutside[59+0]
-  const tarch::la::Vector<Dimensions, double>& faceCentre,
-  const tarch::la::Vector<Dimensions, double>& volumeH,
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeH,
   double                                       t,
   int                                          normal
 ) {
@@ -69,8 +69,8 @@ void benchmarks::exahype2::ccz4::CCZ4::boundaryConditions(
 
 ::exahype2::RefinementCommand benchmarks::exahype2::ccz4::CCZ4::refinementCriterion(
   const double* NOALIAS Q,
-  const tarch::la::Vector<Dimensions, double>& volumeCentre,
-  const tarch::la::Vector<Dimensions, double>& volumeH,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeH,
   double                                       t
 ) {
   return ::exahype2::RefinementCommand::Keep;

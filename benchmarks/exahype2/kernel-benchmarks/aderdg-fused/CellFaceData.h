@@ -22,9 +22,9 @@ namespace exahype2 {
      * QIn may not be const, as some kernels delete it straightaway once
      * the input data has been handled.
      */
-    inType* (*QIn)[2 * Dimensions];
-    tarch::la::Vector<Dimensions, double>* cellCentre;
-    tarch::la::Vector<Dimensions, double>* cellSize;
+    inType* (*QIn)[2 * DIMENSIONS];
+    tarch::la::Vector<DIMENSIONS, double>* cellCentre;
+    tarch::la::Vector<DIMENSIONS, double>* cellSize;
 
     double* t;
     double* dt;
@@ -57,7 +57,7 @@ namespace exahype2 {
     /**
      * Out values.
      */
-    outType* (*QOut)[2 * Dimensions];
+    outType* (*QOut)[2 * DIMENSIONS];
 
     /**
      * Construct patch data object for one single cell.
@@ -70,12 +70,12 @@ namespace exahype2 {
      * read it later.
      */
     CellFaceData(
-      inType*                                      QIn_[2 * Dimensions],
-      const tarch::la::Vector<Dimensions, double>& cellCentre_,
-      const tarch::la::Vector<Dimensions, double>& cellSize_,
+      inType*                                      QIn_[2 * DIMENSIONS],
+      const tarch::la::Vector<DIMENSIONS, double>& cellCentre_,
+      const tarch::la::Vector<DIMENSIONS, double>& cellSize_,
       double                                       t_,
       double                                       dt_,
-      outType*                                     QOut_[2 * Dimensions],
+      outType*                                     QOut_[2 * DIMENSIONS],
       tarch::MemoryLocation                        memoryLocation_ = tarch::MemoryLocation::Heap,
       int                                          targetDevice_   = tarch::accelerator::Device::DefaultDevice
     );
@@ -97,12 +97,12 @@ namespace exahype2 {
 
 template <typename inType, typename outType>
 exahype2::CellFaceData<inType, outType>::CellFaceData(
-  inType*                                      QIn_[2 * Dimensions],
-  const tarch::la::Vector<Dimensions, double>& cellCentre_,
-  const tarch::la::Vector<Dimensions, double>& cellSize_,
+  inType*                                      QIn_[2 * DIMENSIONS],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre_,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize_,
   double                                       t_,
   double                                       dt_,
-  outType*                                     QOut_[2 * Dimensions],
+  outType*                                     QOut_[2 * DIMENSIONS],
   tarch::MemoryLocation                        memoryLocation_,
   int                                          targetDevice_
 ):
@@ -123,17 +123,17 @@ exahype2::CellFaceData<inType, outType>::
   memoryLocation(memoryLocation_),
   targetDevice(targetDevice_) {
 
-  QIn = reinterpret_cast<inType* (*)[2 * Dimensions]>(tarch::accelerator::MemoryManager::getInstance().allocate<inType*>(
-    2 * Dimensions * numberOfCells_,
+  QIn = reinterpret_cast<inType* (*)[2 * DIMENSIONS]>(tarch::accelerator::MemoryManager::getInstance().allocate<inType*>(
+    2 * DIMENSIONS * numberOfCells_,
     memoryLocation_,
     targetDevice_
   ));
-  cellCentre = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<Dimensions, double>>(
+  cellCentre = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<DIMENSIONS, double>>(
     numberOfCells_,
     memoryLocation_,
     targetDevice_
   );
-  cellSize = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<Dimensions, double>>(
+  cellSize = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<DIMENSIONS, double>>(
     numberOfCells_,
     memoryLocation_,
     targetDevice_
@@ -145,8 +145,8 @@ exahype2::CellFaceData<inType, outType>::
     targetDevice_
   );
   id   = tarch::accelerator::MemoryManager::getInstance().allocate<int>(numberOfCells_, memoryLocation_, targetDevice_);
-  QOut = reinterpret_cast<inType* (*)[2 * Dimensions]>(tarch::accelerator::MemoryManager::getInstance().allocate<outType*>(
-    2 * Dimensions * numberOfCells_,
+  QOut = reinterpret_cast<inType* (*)[2 * DIMENSIONS]>(tarch::accelerator::MemoryManager::getInstance().allocate<outType*>(
+    2 * DIMENSIONS * numberOfCells_,
     memoryLocation_,
     targetDevice_
   ));

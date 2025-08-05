@@ -121,7 +121,7 @@ if (
 ) {
   double IniRecord={{INI_RECORD}};
   double LastRecord={{LAST_RECORD}};
-  for (int i=0; i<TwoPowerD; i++) {
+  for (int i=0; i<TWO_POWER_D; i++) {
     for (auto* p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
       if (
         p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local

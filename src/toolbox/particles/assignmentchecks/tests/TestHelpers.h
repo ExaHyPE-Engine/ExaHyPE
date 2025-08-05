@@ -23,9 +23,9 @@ namespace toolbox {
            * at shallowest point in tree (= depth == 0)
            */
           bool liftParticle(
-            const tarch::la::Vector<Dimensions, double> particleX,
-            const tarch::la::Vector<Dimensions, double> vertexX,
-            const tarch::la::Vector<Dimensions, double> vertexH,
+            const tarch::la::Vector<DIMENSIONS, double> particleX,
+            const tarch::la::Vector<DIMENSIONS, double> vertexX,
+            const tarch::la::Vector<DIMENSIONS, double> vertexH,
             const int                                   depth
           );
 
@@ -36,8 +36,8 @@ namespace toolbox {
            * depth doesn't exceed maxVertexDepth.
            */
           bool dropParticle(
-            const tarch::la::Vector<Dimensions, double> particleX,
-            const tarch::la::Vector<Dimensions, double> vertexH,
+            const tarch::la::Vector<DIMENSIONS, double> particleX,
+            const tarch::la::Vector<DIMENSIONS, double> vertexH,
             const int                                   depth,
             const int                                   maxVertexDepth
           );
@@ -52,9 +52,9 @@ namespace toolbox {
            * Find position of vertex with size `vertexH` covering position `x`
            * assuming all vertices start at (0, 0, 0).
            */
-          tarch::la::Vector<Dimensions, double> findVertexX(
-            const tarch::la::Vector<Dimensions, double> x,
-            const tarch::la::Vector<Dimensions, double> vertexH
+          tarch::la::Vector<DIMENSIONS, double> findVertexX(
+            const tarch::la::Vector<DIMENSIONS, double> x,
+            const tarch::la::Vector<DIMENSIONS, double> vertexH
           );
 
           /**
@@ -74,7 +74,7 @@ namespace toolbox {
             bool                                  bx,
             bool                                  by,
             bool                                  bz,
-            tarch::la::Vector<Dimensions, double> boundary
+            tarch::la::Vector<DIMENSIONS, double> boundary
           );
 
 

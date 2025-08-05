@@ -25,14 +25,14 @@ namespace exahype2 {
       std::function< void(
         const T* NOALIAS                        Qinside,
         T * NOALIAS                             Qoutside,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+        const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
         double                                       t,
         double                                       dt,
         int                                          normal
       ) >   boundaryCondition,
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  patchSize,
+      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  patchSize,
       double                                       t,
       double                                       dt,
       int                                          numberOfVolumesPerAxisInPatch,

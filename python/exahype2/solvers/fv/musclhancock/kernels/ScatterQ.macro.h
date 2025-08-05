@@ -6,13 +6,13 @@
 
 {% macro scatterQ() %}
   {{ muscl.addSourceAndNCP() }}
-  #if defined(SharedOMP)
+  #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
   #endif
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) { // Scatter data into QOut
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(QOutGathered[unknown]));
     #endif
     const int index = {{ id.index('volume', 'unknown') | indent(4) }}{##}

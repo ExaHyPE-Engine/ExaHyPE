@@ -53,16 +53,16 @@ bool peano4::grid::overlaps(const peano4::grid::AutomatonState& state, const pea
          and tarch::la::allSmallerEquals(state.getX(), event.getOffset() + event.getWidth());
 }
 
-bool peano4::grid::overlaps(const tarch::la::Vector<Dimensions, double>& x, const GridControlEvent& event) {
+bool peano4::grid::overlaps(const tarch::la::Vector<DIMENSIONS, double>& x, const GridControlEvent& event) {
   return tarch::la::allGreaterEquals(x, event.getOffset())
          and tarch::la::allSmallerEquals(x, event.getOffset() + event.getWidth());
 }
 
 peano4::grid::GridVertex peano4::grid::createVertex(
   [[maybe_unused]] GridVertex::State                            state,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>&  x,
   [[maybe_unused]] int                                          level,
-  [[maybe_unused]] const tarch::la::Vector<TwoPowerD,int>&      adjacentRanks,
+  [[maybe_unused]] const tarch::la::Vector<TWO_POWER_D,int>&      adjacentRanks,
   [[maybe_unused]] bool                                         isNewFineGridVertex
 ) {
   GridVertex result;
@@ -75,7 +75,7 @@ peano4::grid::GridVertex peano4::grid::createVertex(
   result.setHasBeenParentOfSubtreeVertexInPreviousTreeSweep(false);
   result.setIsParentOfSubtreeVertexInCurrentTreeSweep(false);
 
-#if PeanoDebug > 0
+#if PEANO_DEBUG > 0
   result.setX(x);
 #endif
   result.setLevel(level);
@@ -151,7 +151,7 @@ void peano4::grid::internal::sort(std::list<peano4::grid::GridControlEvent>& eve
 
   auto compare = [](const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs) -> bool {
     if ( tarch::la::smaller( tarch::la::volume(lhs.getH()), tarch::la::volume(rhs.getH()) ) ) return true; 
-    for (int d = 0; d < Dimensions; d++) {
+    for (int d = 0; d < DIMENSIONS; d++) {
       if (tarch::la::smaller(lhs.getOffset(d), rhs.getOffset(d)))
         return true;
       if (tarch::la::greater(lhs.getOffset(d), rhs.getOffset(d)))
@@ -235,10 +235,10 @@ void peano4::grid::clear(GridStatistics& statistics, bool isGlobalMasterTree) {
   statistics.setCoarseningHasBeenVetoed(false);
   statistics.setRemovedEmptySubtree(false);
   statistics.setStationarySweeps(statistics.getStationarySweeps() + 1);
-  statistics.setMinH(tarch::la::Vector<Dimensions, double>(std::numeric_limits<double>::max()));
+  statistics.setMinH(tarch::la::Vector<DIMENSIONS, double>(std::numeric_limits<double>::max()));
 }
 
-bool peano4::grid::isSpacetreeNodeRefined(GridVertex vertices[TwoPowerD]) {
+bool peano4::grid::isSpacetreeNodeRefined(GridVertex vertices[TWO_POWER_D]) {
   bool result = false;
   dfor2(k) result |= willVertexBeRefined(vertices[kScalar]);
   result |= hasVertexBeenRefined(vertices[kScalar]);
@@ -255,18 +255,18 @@ bool peano4::grid::hasVertexBeenRefined(const GridVertex& vertex) {
          or vertex.getState() == GridVertex::State::Erasing;
 }
 
-std::bitset<TwoPowerD> peano4::grid::willVerticesBeRefined(GridVertex vertices[TwoPowerD]) {
-  std::bitset<TwoPowerD> bitset;
-  for (int i = 0; i < TwoPowerD; i++) {
+std::bitset<TWO_POWER_D> peano4::grid::willVerticesBeRefined(GridVertex vertices[TWO_POWER_D]) {
+  std::bitset<TWO_POWER_D> bitset;
+  for (int i = 0; i < TWO_POWER_D; i++) {
     assertion(not willVertexBeRefined(vertices[i]) or vertices[i].getState() != GridVertex::State::HangingVertex);
     bitset.set(i, willVertexBeRefined(vertices[i]));
   }
   return bitset;
 }
 
-std::bitset<TwoPowerD> peano4::grid::haveVerticesBeenRefined(GridVertex vertices[TwoPowerD]) {
-  std::bitset<TwoPowerD> bitset;
-  for (int i = 0; i < TwoPowerD; i++) {
+std::bitset<TWO_POWER_D> peano4::grid::haveVerticesBeenRefined(GridVertex vertices[TWO_POWER_D]) {
+  std::bitset<TWO_POWER_D> bitset;
+  for (int i = 0; i < TWO_POWER_D; i++) {
     assertion(not hasVertexBeenRefined(vertices[i]) or vertices[i].getState() != GridVertex::State::HangingVertex);
     bitset.set(i, hasVertexBeenRefined(vertices[i]));
   }
@@ -337,7 +337,7 @@ bool peano4::grid::internal::twoEventsOverlap(
   const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs
 ) {
   bool twoEventsOverlap = true;
-  for (int d = 0; d < Dimensions; d++) {
+  for (int d = 0; d < DIMENSIONS; d++) {
     twoEventsOverlap &= lhs.getOffset()(d) + lhs.getWidth()(d) >= rhs.getOffset()(d);
     twoEventsOverlap &= lhs.getOffset()(d) <= rhs.getOffset()(d) + rhs.getWidth()(d);
   }
@@ -368,8 +368,8 @@ bool peano4::grid::internal::refinementEventOverrulesCoarsening(
 bool peano4::grid::internal::twoEventsAreAdjacent(
   const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs, double tolerance
 ) {
-  tarch::la::Vector<Dimensions, double> boundingEventOffset = tarch::la::min(lhs.getOffset(), rhs.getOffset());
-  tarch::la::Vector<Dimensions, double>
+  tarch::la::Vector<DIMENSIONS, double> boundingEventOffset = tarch::la::min(lhs.getOffset(), rhs.getOffset());
+  tarch::la::Vector<DIMENSIONS, double>
     boundingEventSize = tarch::la::max(lhs.getOffset() + lhs.getWidth(), rhs.getOffset() + rhs.getWidth())
                         - boundingEventOffset;
 
@@ -384,15 +384,15 @@ bool peano4::grid::internal::twoEventsAreAdjacent(
 peano4::grid::GridControlEvent peano4::grid::internal::createBoundingBoxEvent(
   const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs
 ) {
-  tarch::la::Vector<Dimensions, double> boundingEventOffset = tarch::la::min(lhs.getOffset(), rhs.getOffset());
-  tarch::la::Vector<Dimensions, double>
+  tarch::la::Vector<DIMENSIONS, double> boundingEventOffset = tarch::la::min(lhs.getOffset(), rhs.getOffset());
+  tarch::la::Vector<DIMENSIONS, double>
     boundingEventSize = tarch::la::max(lhs.getOffset() + lhs.getWidth(), rhs.getOffset() + rhs.getWidth())
                         - boundingEventOffset;
   return GridControlEvent(rhs.getRefinementControl(), boundingEventOffset, boundingEventSize, rhs.getH());
 };
 
 void peano4::grid::reduceGridControlEvents([[maybe_unused]] std::vector<GridControlEvent>& events) {
-#ifdef Parallel
+#ifdef WITH_MPI
   std::vector<GridControlEvent> localEvents = events;
   int                           localSize   = events.size();
   int*                          sizes       = new int[tarch::mpi::Rank::getInstance().getNumberOfRanks()];

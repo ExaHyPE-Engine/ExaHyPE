@@ -118,7 +118,7 @@ void toolbox::blockstructured::GlobalDatabase::dumpCSVFile() {
 
   }
   else {
-    #if PeanoDebug>=1
+    #if PEANO_DEBUG>=1
     logInfo( "dumpCSVFile()", "Particle trajectory database is empty. Do not dump " << snapshotFileName.str() );
     #endif
   }

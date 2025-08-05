@@ -202,9 +202,9 @@ namespace peano4 {
      */
     GridVertex createVertex(
       GridVertex::State                            state,
-      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& x,
       int                                          level,
-      const tarch::la::Vector<TwoPowerD, int>&     adjacentRanks,
+      const tarch::la::Vector<TWO_POWER_D, int>&     adjacentRanks,
       bool                                         isNewFineGridVertex
     );
 
@@ -221,7 +221,7 @@ namespace peano4 {
      * - erasing If none of the other vertices holds another flag of this list,
      *     then this cell is to be removed.
      */
-    bool isSpacetreeNodeRefined(GridVertex vertices[TwoPowerD]);
+    bool isSpacetreeNodeRefined(GridVertex vertices[TWO_POWER_D]);
 
     /**
      * A vertex will be refined if it is already refined or currently refining.
@@ -242,8 +242,8 @@ namespace peano4 {
      *   find out whether a cell is refined, you can compare the result to zero.
      *   You can also use isSpacetreeNodeRefined() instead.
      */
-    std::bitset<TwoPowerD> willVerticesBeRefined(GridVertex vertices[TwoPowerD]);
-    std::bitset<TwoPowerD> haveVerticesBeenRefined(GridVertex vertices[TwoPowerD]);
+    std::bitset<TWO_POWER_D> willVerticesBeRefined(GridVertex vertices[TWO_POWER_D]);
+    std::bitset<TWO_POWER_D> haveVerticesBeenRefined(GridVertex vertices[TWO_POWER_D]);
 
     enum class VertexType { New, Hanging, Persistent, Delete };
     enum class FaceType { New, Hanging, Persistent, Delete };
@@ -283,7 +283,7 @@ namespace peano4 {
 
     std::string toString(SpacetreeState state);
 
-    bool overlaps(const tarch::la::Vector<Dimensions, double>& x, const GridControlEvent& event);
+    bool overlaps(const tarch::la::Vector<DIMENSIONS, double>& x, const GridControlEvent& event);
     bool overlaps(const AutomatonState& x, const GridControlEvent& event);
 
     /**

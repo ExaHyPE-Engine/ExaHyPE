@@ -20,7 +20,7 @@ namespace toolbox {
      *   halo layer size if you have a halo
      *
      * @param source Pointer to the source data. This is the whole input patch stored as AoS.
-     *   It has the dimensions @f$ (numberOfDoFsPerAxisInPatch+2*sourceHalo)^Dimensions \cdot sourceUnknowns @f$.
+     *   It has the dimensions @f$ (numberOfDoFsPerAxisInPatch+2*sourceHalo)^DIMENSIONS \cdot sourceUnknowns @f$.
      *
      * @param sourceIndex Which index in source is to be copied over to the destination field.
      *   Has to be greater equals to zero and has to be smaller than sourceUnknowns.

@@ -20,10 +20,10 @@ void peano4::utils::tests::LinearisedTest::run() {
 }
 
 void peano4::utils::tests::LinearisedTest::testLinearisedBitset() {
-  constexpr int TotalCombinations = 1 << Dimensions;
+  constexpr int TotalCombinations = 1 << DIMENSIONS;
 
   for (int i = 0; i < TotalCombinations; i++) {
-    std::bitset<Dimensions> bits(i);
+    std::bitset<DIMENSIONS> bits(i);
     int                     result = dLinearised(bits);
 
     validateEqualsWithParams1(result, i, bits);
@@ -32,15 +32,15 @@ void peano4::utils::tests::LinearisedTest::testLinearisedBitset() {
 
 void peano4::utils::tests::LinearisedTest::testLinearisedVectorWithoutLookup() {
   constexpr int                      Max = 3;
-  tarch::la::Vector<Dimensions, int> counter(0);
+  tarch::la::Vector<DIMENSIONS, int> counter(0);
 
-  std::vector<int> limits(Dimensions, Max);
+  std::vector<int> limits(DIMENSIONS, Max);
 
   bool done = false;
   while (!done) {
     int manualIndex = 0;
     int factor      = 1;
-    for (int d = 0; d < Dimensions; d++) {
+    for (int d = 0; d < DIMENSIONS; d++) {
       manualIndex += counter(d) * factor;
       factor *= Max;
     }
@@ -48,12 +48,12 @@ void peano4::utils::tests::LinearisedTest::testLinearisedVectorWithoutLookup() {
     int actual = dLinearisedWithoutLookup(counter, Max);
     validateEqualsWithParams1(actual, manualIndex, counter);
 
-    for (int d = 0; d < Dimensions; d++) {
+    for (int d = 0; d < DIMENSIONS; d++) {
       counter(d)++;
       if (counter(d) < Max)
         break;
       counter(d) = 0;
-      if (d == Dimensions - 1)
+      if (d == DIMENSIONS - 1)
         done = true;
     }
   }
@@ -61,22 +61,22 @@ void peano4::utils::tests::LinearisedTest::testLinearisedVectorWithoutLookup() {
 
 void peano4::utils::tests::LinearisedTest::testLinearisedVectorRoundTripWithoutLookup() {
   constexpr int                      Max = 3;
-  tarch::la::Vector<Dimensions, int> counter(0);
+  tarch::la::Vector<DIMENSIONS, int> counter(0);
 
   bool done = false;
   while (!done) {
     int                                lin      = dLinearisedWithoutLookup(counter, Max);
-    tarch::la::Vector<Dimensions, int> restored = dDelinearisedWithoutLookup(lin, Max);
-    for (int d = 0; d < Dimensions; d++) {
+    tarch::la::Vector<DIMENSIONS, int> restored = dDelinearisedWithoutLookup(lin, Max);
+    for (int d = 0; d < DIMENSIONS; d++) {
       validateEqualsWithParams1(restored(d), counter(d), counter);
     }
 
-    for (int d = 0; d < Dimensions; d++) {
+    for (int d = 0; d < DIMENSIONS; d++) {
       counter(d)++;
       if (counter(d) < Max)
         break;
       counter(d) = 0;
-      if (d == Dimensions - 1)
+      if (d == DIMENSIONS - 1)
         done = true;
     }
   }
@@ -84,10 +84,10 @@ void peano4::utils::tests::LinearisedTest::testLinearisedVectorRoundTripWithoutL
 
 void peano4::utils::tests::LinearisedTest::testDelinearisedWithoutLookup() {
   constexpr int Max   = 3;
-  constexpr int Total = BasePowerExponent<Max, Dimensions>::value;
+  constexpr int Total = BasePowerExponent<Max, DIMENSIONS>::value;
 
   for (int value = 0; value < Total; value++) {
-    tarch::la::Vector<Dimensions, int> coords     = dDelinearisedWithoutLookup(value, Max);
+    tarch::la::Vector<DIMENSIONS, int> coords     = dDelinearisedWithoutLookup(value, Max);
     int                                recomputed = dLinearisedWithoutLookup(coords, Max);
 
     validateEqualsWithParams1(recomputed, value, coords);
@@ -98,7 +98,7 @@ void peano4::utils::tests::LinearisedTest::testKeyComputationForLinearisedLookup
   std::set<int> usedKeys;
 
   for (int max = 2; max <= MAX_TABLE; max++) {
-    tarch::la::Vector<Dimensions, int> counter(0);
+    tarch::la::Vector<DIMENSIONS, int> counter(0);
     bool                               done = false;
 
     while (!done) {
@@ -108,12 +108,12 @@ void peano4::utils::tests::LinearisedTest::testKeyComputationForLinearisedLookup
       validateWithParams1(usedKeys.find(key) == usedKeys.end(), key);
       usedKeys.insert(key);
 
-      for (int d = 0; d < Dimensions; d++) {
+      for (int d = 0; d < DIMENSIONS; d++) {
         counter(d)++;
         if (counter(d) < max)
           break;
         counter(d) = 0;
-        if (d == Dimensions - 1)
+        if (d == DIMENSIONS - 1)
           done = true;
       }
     }
@@ -122,11 +122,11 @@ void peano4::utils::tests::LinearisedTest::testKeyComputationForLinearisedLookup
 
 void peano4::utils::tests::LinearisedTest::testLookupTableLinearised() {
   for (int max = 2; max <= MAX_TABLE; max++) {
-    tarch::la::Vector<Dimensions, int> counter(0);
+    tarch::la::Vector<DIMENSIONS, int> counter(0);
     bool                               done = false;
     while (!done) {
       bool valid = true;
-      for (int d = 0; d < Dimensions; d++) {
+      for (int d = 0; d < DIMENSIONS; d++) {
         if (counter(d) >= max) {
           valid = false;
           break;
@@ -140,12 +140,12 @@ void peano4::utils::tests::LinearisedTest::testLookupTableLinearised() {
         validateEqualsWithParams3(actual, expected, counter, max, key);
       }
 
-      for (int d = 0; d < Dimensions; d++) {
+      for (int d = 0; d < DIMENSIONS; d++) {
         counter(d)++;
         if (counter(d) < MAX_TABLE /*max*/)
           break;
         counter(d) = 0;
-        if (d == Dimensions - 1)
+        if (d == DIMENSIONS - 1)
           done = true;
       }
     }
@@ -154,11 +154,11 @@ void peano4::utils::tests::LinearisedTest::testLookupTableLinearised() {
 
 void peano4::utils::tests::LinearisedTest::testLookupTableDelinearised() {
   for (int max = 2; max <= MAX_TABLE; max++) {
-    for (int value = 0; value < tarch::la::aPowI(Dimensions, max); value++) {
+    for (int value = 0; value < tarch::la::aPowI(DIMENSIONS, max); value++) {
       int                                key      = getKeyForDDeLinearisedLookup(value, max);
-      tarch::la::Vector<Dimensions, int> expected = dDelinearisedWithoutLookup(value, max);
-      tarch::la::Vector<Dimensions, int> actual   = lookupTableDDeLinearised[key];
-      for (int d = 0; d < Dimensions; d++) {
+      tarch::la::Vector<DIMENSIONS, int> expected = dDelinearisedWithoutLookup(value, max);
+      tarch::la::Vector<DIMENSIONS, int> actual   = lookupTableDDeLinearised[key];
+      for (int d = 0; d < DIMENSIONS; d++) {
         validateEqualsWithParams1(actual(d), expected(d), value);
       }
     }
@@ -167,15 +167,15 @@ void peano4::utils::tests::LinearisedTest::testLookupTableDelinearised() {
 
 void peano4::utils::tests::LinearisedTest::testLinearisedVector() {
   constexpr int                      Max = MAX_TABLE * 2;
-  tarch::la::Vector<Dimensions, int> counter(0);
+  tarch::la::Vector<DIMENSIONS, int> counter(0);
 
-  std::vector<int> limits(Dimensions, Max);
+  std::vector<int> limits(DIMENSIONS, Max);
 
   bool done = false;
   while (!done) {
     int manualIndex = 0;
     int factor      = 1;
-    for (int d = 0; d < Dimensions; d++) {
+    for (int d = 0; d < DIMENSIONS; d++) {
       manualIndex += counter(d) * factor;
       factor *= Max;
     }
@@ -183,12 +183,12 @@ void peano4::utils::tests::LinearisedTest::testLinearisedVector() {
     int actual = dLinearised(counter, Max);
     validateEqualsWithParams1(actual, manualIndex, counter);
 
-    for (int d = 0; d < Dimensions; d++) {
+    for (int d = 0; d < DIMENSIONS; d++) {
       counter(d)++;
       if (counter(d) < Max)
         break;
       counter(d) = 0;
-      if (d == Dimensions - 1)
+      if (d == DIMENSIONS - 1)
         done = true;
     }
   }
@@ -196,17 +196,17 @@ void peano4::utils::tests::LinearisedTest::testLinearisedVector() {
 
 void peano4::utils::tests::LinearisedTest::testDelinearisedVector() {
   constexpr int Max = MAX_TABLE * 2;
-  for (int index = 0; index < tarch::la::aPowI(Dimensions, Max); ++index) {
-    tarch::la::Vector<Dimensions, int> result = dDelinearisedWithoutLookup(index, Max);
+  for (int index = 0; index < tarch::la::aPowI(DIMENSIONS, Max); ++index) {
+    tarch::la::Vector<DIMENSIONS, int> result = dDelinearisedWithoutLookup(index, Max);
 
     int                                value = index;
-    tarch::la::Vector<Dimensions, int> expected(0);
-    for (int d = 0; d < Dimensions; ++d) {
+    tarch::la::Vector<DIMENSIONS, int> expected(0);
+    for (int d = 0; d < DIMENSIONS; ++d) {
       expected(d) = value % Max;
       value /= Max;
     }
 
-    for (int d = 0; d < Dimensions; ++d) {
+    for (int d = 0; d < DIMENSIONS; ++d) {
       validateEqualsWithParams1(result(d), expected(d), index);
     }
   }

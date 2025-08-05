@@ -29,8 +29,8 @@ class AbstractSolverDeclarations:
      */
     virtual void initialCondition(
       {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
+      const tarch::la::Vector<DIMENSIONS, double>&  x,
+      const tarch::la::Vector<DIMENSIONS, double>&  h,
       const bool                                    gridIsConstructed
     ) = 0;
     {% endif %}
@@ -45,8 +45,8 @@ class AbstractSolverDeclarations:
     virtual void boundaryConditions(
       const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS    Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS          Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
+      const tarch::la::Vector<DIMENSIONS, double>&  x,
+      const tarch::la::Vector<DIMENSIONS, double>&  h,
       const double                                  t,
       const int                                     normal
     ) = 0;
@@ -73,8 +73,8 @@ class AbstractSolverDeclarations:
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
       const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
+      const tarch::la::Vector<DIMENSIONS, double>&  x,
+      const tarch::la::Vector<DIMENSIONS, double>&  h,
       const double                                  t
     ) = 0;
     {% endif %}
@@ -83,8 +83,8 @@ class AbstractSolverDeclarations:
     {% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
     virtual double maxEigenvalue(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>&                    x,
-      const tarch::la::Vector<Dimensions, double>&                    h,
+      const tarch::la::Vector<DIMENSIONS, double>&                    x,
+      const tarch::la::Vector<DIMENSIONS, double>&                    h,
       const double                                                    t,
       const double                                                    dt,
       const int                                                       normal
@@ -94,8 +94,8 @@ class AbstractSolverDeclarations:
     {% if FLUX_IMPLEMENTATION=="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" %}
     virtual void flux(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>&                    x,
-      const tarch::la::Vector<Dimensions, double>&                    h,
+      const tarch::la::Vector<DIMENSIONS, double>&                    x,
+      const tarch::la::Vector<DIMENSIONS, double>&                    h,
       const double                                                    t,
       const double                                                    dt,
       const int                                                       normal,
@@ -107,8 +107,8 @@ class AbstractSolverDeclarations:
     virtual void nonconservativeProduct(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>&                    x,
-      const tarch::la::Vector<Dimensions, double>&                    h,
+      const tarch::la::Vector<DIMENSIONS, double>&                    x,
+      const tarch::la::Vector<DIMENSIONS, double>&                    h,
       const double                                                    t,
       const double                                                    dt,
       const int                                                       normal,
@@ -119,8 +119,8 @@ class AbstractSolverDeclarations:
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     virtual void algebraicSource(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q,
-      const tarch::la::Vector<Dimensions, double>&                    x,
-      const tarch::la::Vector<Dimensions, double>&                    h,
+      const tarch::la::Vector<DIMENSIONS, double>&                    x,
+      const tarch::la::Vector<DIMENSIONS, double>&                    h,
       const double                                                    t,
       const double                                                    dt,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS        S
@@ -131,8 +131,8 @@ class AbstractSolverDeclarations:
     virtual void diffusiveAlgebraicSource(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q,
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  deltaQ,
-      const tarch::la::Vector<Dimensions, double>&                    x,
-      const tarch::la::Vector<Dimensions, double>&                    h,
+      const tarch::la::Vector<DIMENSIONS, double>&                    x,
+      const tarch::la::Vector<DIMENSIONS, double>&                    h,
       const double                                                    t,
       const double                                                    dt,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS        S
@@ -142,8 +142,8 @@ class AbstractSolverDeclarations:
     {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" and MATERIAL_PARAM_IMPLEMENTATION!="<none>" %}
     virtual void multiplyMaterialParameterMatrix(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q,
-      const tarch::la::Vector<Dimensions, double>&                    x,
-      const tarch::la::Vector<Dimensions, double>&                    h,
+      const tarch::la::Vector<DIMENSIONS, double>&                    x,
+      const tarch::la::Vector<DIMENSIONS, double>&                    h,
       const double                                                    t,
       const double                                                    dt,
       const int                                                       normal,
@@ -170,8 +170,8 @@ class AbstractSolverDeclarations:
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const double                                                    t,
       const double                                                    dt,
-      const tarch::la::Vector<Dimensions, double>&                    x,
-      const tarch::la::Vector<Dimensions, double>&                    h,
+      const tarch::la::Vector<DIMENSIONS, double>&                    x,
+      const tarch::la::Vector<DIMENSIONS, double>&                    h,
       const int                                                       direction,
       const bool                                                      isBoundaryFace,
       const int                                                       faceIndex
@@ -180,8 +180,8 @@ class AbstractSolverDeclarations:
 
     {% if ADJUST_SOLUTION_IMPLEMENTATION=="<user-defined>" and ADJUST_SOLUTION_IMPLEMENTATION!="<none>" %}
     virtual void adjustSolution(
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
+      const tarch::la::Vector<DIMENSIONS, double>&  x,
+      const tarch::la::Vector<DIMENSIONS, double>&  h,
       const double                                  t,
       const double                                  dt,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -190,7 +190,7 @@ class AbstractSolverDeclarations:
     {% endfor %}
 
     {% if INIT_POINT_SOURCES_IMPLEMENTATION=="<user-defined>" and INIT_POINT_SOURCES_IMPLEMENTATION!="<none>" %}
-    virtual void initPointSourceLocations(double location[NumberOfPointSources][Dimensions]) = 0;
+    virtual void initPointSourceLocations(double location[NumberOfPointSources][DIMENSIONS]) = 0;
     {% endif %}
 """,
             undefined=jinja2.DebugUndefined,

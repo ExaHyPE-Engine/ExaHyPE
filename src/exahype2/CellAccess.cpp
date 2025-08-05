@@ -16,7 +16,7 @@ exahype2::CellAccess::CellAccess(
 
 
 int exahype2::CellAccess::size() const {
-  if constexpr (Dimensions == 2) {
+  if constexpr (DIMENSIONS == 2) {
     return (_numberOfDoFsPerAxisInPatch + 2 * _haloSize) * (_numberOfDoFsPerAxisInPatch + 2 * _haloSize)
            * (_unknowns + _numberOfAuxiliaryVariables);
   } else {
@@ -27,9 +27,9 @@ int exahype2::CellAccess::size() const {
 
 
 const double* exahype2::CellAccess::operator()(
-  const tarch::la::Vector<Dimensions, int>& relativeCellPosition
+  const tarch::la::Vector<DIMENSIONS, int>& relativeCellPosition
 ) const {
-  if constexpr (Dimensions == 2) {
+  if constexpr (DIMENSIONS == 2) {
     int voxelShift = relativeCellPosition(0)
                      + relativeCellPosition(1) * (_numberOfDoFsPerAxisInPatch + 2 * _haloSize);
     return _QIn + voxelShift * (_unknowns + _numberOfAuxiliaryVariables);
@@ -42,35 +42,35 @@ const double* exahype2::CellAccess::operator()(
 }
 
 
-double exahype2::CellAccess::operator()(const tarch::la::Vector<Dimensions, int>& relativeCellPosition, int unknown)
+double exahype2::CellAccess::operator()(const tarch::la::Vector<DIMENSIONS, int>& relativeCellPosition, int unknown)
   const {
   return *((*this)(relativeCellPosition) + unknown);
 }
 
 
 const double* exahype2::CellAccess::left(int normal) const {
-  tarch::la::Vector<Dimensions, int> relativePosition(0);
+  tarch::la::Vector<DIMENSIONS, int> relativePosition(0);
   relativePosition(normal) = -1;
   return (*this)(relativePosition);
 }
 
 
 const double* exahype2::CellAccess::right(int normal) const {
-  tarch::la::Vector<Dimensions, int> relativePosition(0);
+  tarch::la::Vector<DIMENSIONS, int> relativePosition(0);
   relativePosition(normal) = 1;
   return (*this)(relativePosition);
 }
 
 
 double exahype2::CellAccess::left(int normal, int unknown) const {
-  tarch::la::Vector<Dimensions, int> relativePosition(0);
+  tarch::la::Vector<DIMENSIONS, int> relativePosition(0);
   relativePosition(normal) = -1;
   return (*this)(relativePosition, unknown);
 }
 
 
 double exahype2::CellAccess::right(int normal, int unknown) const {
-  tarch::la::Vector<Dimensions, int> relativePosition(0);
+  tarch::la::Vector<DIMENSIONS, int> relativePosition(0);
   relativePosition(normal) = 1;
   return (*this)(relativePosition, unknown);
 }

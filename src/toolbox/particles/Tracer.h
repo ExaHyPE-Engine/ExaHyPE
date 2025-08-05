@@ -29,23 +29,23 @@ namespace toolbox {
 
      //(ParticleAccessor accessor, ) {
 
-          accessor.x(Particle&)       -> tarch::la::Vector< Dimensions, double>&;
-          accessor.x(const Particle&) -> const tarch::la::Vector< Dimensions, double>&;
+          accessor.x(Particle&)       -> tarch::la::Vector< DIMENSIONS, double>&;
+          accessor.x(const Particle&) -> const tarch::la::Vector< DIMENSIONS, double>&;
 
-          accessor.v(Particle&)       -> tarch::la::Vector< Dimensions, double>&;
-          accessor.v(const Particle&) -> const tarch::la::Vector< Dimensions, double>&;
+          accessor.v(Particle&)       -> tarch::la::Vector< DIMENSIONS, double>&;
+          accessor.v(const Particle&) -> const tarch::la::Vector< DIMENSIONS, double>&;
     */
     //    };
 
     template <typename Particle>
     struct ParticleAccessorIdentity {
-      static tarch::la::Vector<Dimensions, double>& x(Particle& particle) { return particle.x(); }
+      static tarch::la::Vector<DIMENSIONS, double>& x(Particle& particle) { return particle.x(); }
 
-      static const tarch::la::Vector<Dimensions, double>& x(const Particle& particle) { return particle.x(); }
+      static const tarch::la::Vector<DIMENSIONS, double>& x(const Particle& particle) { return particle.x(); }
 
-      static tarch::la::Vector<Dimensions, double>& v(Particle& particle) { return particle.v(); }
+      static tarch::la::Vector<DIMENSIONS, double>& v(Particle& particle) { return particle.v(); }
 
-      static const tarch::la::Vector<Dimensions, double>& v(const Particle& particle) { return particle.v(); }
+      static const tarch::la::Vector<DIMENSIONS, double>& v(const Particle& particle) { return particle.v(); }
     };
 
     /**

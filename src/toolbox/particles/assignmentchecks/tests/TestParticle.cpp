@@ -4,7 +4,7 @@
 #include "TestParticle.h"
 
 toolbox::particles::assignmentchecks::tests::TestParticle::TestParticle(
-  const tarch::la::Vector<Dimensions, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
   int                                          particleID,
   bool                                         isLocal
 ):
@@ -23,12 +23,12 @@ int toolbox::particles::assignmentchecks::tests::TestParticle::getPartid(
   return _partid;
 }
 
-tarch::la::Vector<Dimensions, double> toolbox::particles::assignmentchecks::
+tarch::la::Vector<DIMENSIONS, double> toolbox::particles::assignmentchecks::
   tests::TestParticle::getVertexH() const {
   return _vertexH;
 }
 
-tarch::la::Vector<Dimensions, double> toolbox::particles::assignmentchecks::
+tarch::la::Vector<DIMENSIONS, double> toolbox::particles::assignmentchecks::
   tests::TestParticle::getX() const {
   return _x;
 }
@@ -69,13 +69,13 @@ void toolbox::particles::assignmentchecks::tests::TestParticle::setIsLocal(
 
 
 void toolbox::particles::assignmentchecks::tests::TestParticle::setVertexH(
-  const tarch::la::Vector<Dimensions, double>& vertexH
+  const tarch::la::Vector<DIMENSIONS, double>& vertexH
 ) {
   _vertexH = vertexH;
 }
 
 void toolbox::particles::assignmentchecks::tests::TestParticle::setX(
-  const tarch::la::Vector<Dimensions, double>& x
+  const tarch::la::Vector<DIMENSIONS, double>& x
 ) {
   _x = x;
 }

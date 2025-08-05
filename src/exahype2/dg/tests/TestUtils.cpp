@@ -2,7 +2,7 @@
 
 void exahype2::dg::tests::eulerFlux(
   [[maybe_unused]] const double * NOALIAS                  Q,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>&  x,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,
   [[maybe_unused]] int                                          normal,
@@ -23,7 +23,7 @@ void exahype2::dg::tests::eulerFlux(
 
 void exahype2::dg::tests::eulerSource(
   [[maybe_unused]] const double * NOALIAS                  Q,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>&  x,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,
   [[maybe_unused]] double * NOALIAS                        S
@@ -37,7 +37,7 @@ void exahype2::dg::tests::eulerSource(
 
 double exahype2::dg::tests::eulerEigenvalue(
   [[maybe_unused]] const double * NOALIAS                 Q,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>& x,
   [[maybe_unused]] double                                      t,
   [[maybe_unused]] double                                       dt,
   [[maybe_unused]] int                                          normal
@@ -69,7 +69,7 @@ double exahype2::dg::tests::eulerEigenvalue(
 void exahype2::dg::tests::eulerBoundaryConditions(
   [[maybe_unused]] const double * NOALIAS                  Qinside,
   [[maybe_unused]] double * NOALIAS                         Qoutside,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>&  x,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,
   [[maybe_unused]] int                                          normal
@@ -104,7 +104,7 @@ void exahype2::dg::tests::elasticInitial(double * NOALIAS Q) {
 
 void exahype2::dg::tests::elasticFlux(
   [[maybe_unused]] const double * NOALIAS                  Q,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>&  x,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,
   [[maybe_unused]] int                                          normal,
@@ -137,7 +137,7 @@ void exahype2::dg::tests::elasticFlux(
 
 void exahype2::dg::tests::elasticSource(
   [[maybe_unused]] const double * NOALIAS                  Q,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>&  x,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,
   [[maybe_unused]] double * NOALIAS                        S
@@ -155,7 +155,7 @@ void exahype2::dg::tests::elasticSource(
 
 double exahype2::dg::tests::elasticEigenvalue(
   [[maybe_unused]] const double * NOALIAS                 Q,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>& x,
   [[maybe_unused]] double                                      t,
   [[maybe_unused]] double                                       dt,
   [[maybe_unused]] int                                          normal
@@ -167,7 +167,7 @@ double exahype2::dg::tests::elasticEigenvalue(
 void exahype2::dg::tests::elasticBoundaryConditions(
   [[maybe_unused]] const double * NOALIAS                  Qinside,
   [[maybe_unused]] double * NOALIAS                        Qoutside,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>&  x,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,
   [[maybe_unused]] int                                          normal
@@ -189,7 +189,7 @@ void exahype2::dg::tests::elasticBoundaryConditions(
 void exahype2::dg::tests::elasticNonConservativeProduct(
   [[maybe_unused]] const double * NOALIAS                  Q,
   [[maybe_unused]] const double * NOALIAS                  deltaQ,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,
   [[maybe_unused]] int                                          normal,
@@ -236,7 +236,7 @@ void exahype2::dg::tests::elasticNonConservativeProduct(
 void exahype2::dg::tests::testBoundaryConditions(
   [[maybe_unused]] const double * NOALIAS                  Qinside,
   [[maybe_unused]] double * NOALIAS                        Qoutside,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>&  x,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,
   [[maybe_unused]] int                                          normal
@@ -249,7 +249,7 @@ void exahype2::dg::tests::testBoundaryConditions(
 
 double exahype2::dg::tests::testEigenvalue(
   [[maybe_unused]] const double * NOALIAS                 Q,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>& x,
   [[maybe_unused]] double                                      t,
   [[maybe_unused]] double                                      dt,
   [[maybe_unused]] int                                         normal
@@ -261,7 +261,7 @@ double exahype2::dg::tests::testEigenvalue(
 void exahype2::dg::tests::secondTestBoundaryConditions(
   [[maybe_unused]] const double * NOALIAS                  Qinside,
   [[maybe_unused]] double * NOALIAS                        Qoutside,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>&  x,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt,
   [[maybe_unused]] int                                          normal

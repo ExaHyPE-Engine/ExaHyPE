@@ -64,7 +64,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::prepareTraversal() {
 }
 
 
-void {{FULL_QUALIFIED_CLASSNAME}}::beginTraversal(const tarch::la::Vector<Dimensions,double>& x, const tarch::la::Vector<Dimensions,double>& h) {
+void {{FULL_QUALIFIED_CLASSNAME}}::beginTraversal(const tarch::la::Vector<DIMENSIONS,double>& x, const tarch::la::Vector<DIMENSIONS,double>& h) {
   logTraceInWith2Arguments("beginTraversal()", x, h);
   {%- for action_set in ACTIVE_ACTION_SETS %}
   {{ action_set.name }}.beginTraversal();
@@ -82,7 +82,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::beginTraversal(const tarch::la::Vector<Dimens
   {%- endfor %}
 
   {%- if FACES %}
-  for (int i = 0; i < TwoTimesD; i++) {
+  for (int i = 0; i < TWO_TIMES_D; i++) {
     {%- for face in FACES %}
     repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPush(key)->push({{ face.full_qualified_type }}());
     {%- endfor %}
@@ -90,7 +90,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::beginTraversal(const tarch::la::Vector<Dimens
   {%- endif %}
 
   {%- if VERTICES %}
-  for (int i = 0; i < TwoPowerD; i++) {
+  for (int i = 0; i < TWO_POWER_D; i++) {
     {%- for vertex in VERTICES %}
     repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPush(key)->push({{ vertex.full_qualified_type }}());
     {%- endfor %}
@@ -107,11 +107,11 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadCell(const peano4::grid::GridTraversalEve
   repositories::DataRepository::DataKey keyOut(_spacetreeId, peano4::grid::PeanoCurve::CallStack);
 
   {%- for vertex in VERTICES %}
-  auto view{{ vertex.logical_type_name }} = repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPush(keyOut)->pushBlock(TwoPowerD);
+  auto view{{ vertex.logical_type_name }} = repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPush(keyOut)->pushBlock(TWO_POWER_D);
   {%- endfor %}
 
   {%- if VERTICES %}
-  for (int i = 0; i < TwoPowerD; i++) {
+  for (int i = 0; i < TWO_POWER_D; i++) {
     int inVertexStack          = event.getVertexDataFrom(i);
     int outVertexStackPosition = event.getVertexDataTo(i);
     const bool isInOutStack    = peano4::grid::PeanoCurve::isInOutStack(inVertexStack);
@@ -148,11 +148,11 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadCell(const peano4::grid::GridTraversalEve
   {%- endif %}
 
   {%- for face in FACES %}
-  auto view{{ face.logical_type_name }} = repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPush(keyOut)->pushBlock(TwoTimesD);
+  auto view{{ face.logical_type_name }} = repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPush(keyOut)->pushBlock(TWO_TIMES_D);
   {%- endfor %}
 
   {%- if FACES %}
-  for (int i = 0; i < TwoTimesD; i++) {
+  for (int i = 0; i < TWO_TIMES_D; i++) {
     const int inFaceStack           = event.getFaceDataFrom(i);
     const int outFaceStackPosition  = event.getFaceDataTo(i);
     const bool isInOutStack         = peano4::grid::PeanoCurve::isInOutStack(inFaceStack);
@@ -228,13 +228,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell(const peano4::grid::GridTraversalEv
   repositories::DataRepository::DataKey key(_spacetreeId, peano4::grid::PeanoCurve::CallStack);
 
   {%- for vertex in VERTICES %}
-  peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> fineGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TwoPowerD - 1));
-  peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> coarseGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TwoPowerD * 2 - 1));
+  peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> fineGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TWO_POWER_D - 1));
+  peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> coarseGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TWO_POWER_D * 2 - 1));
   {%- endfor %}
 
   {%- for face in FACES %}
-  peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> fineGrid{{ face.logical_type_name }}(&repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPop(key)->top(TwoTimesD - 1));
-  peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> coarseGrid{{ face.logical_type_name }}(&repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPop(key)->top(TwoTimesD * 2 - 1));
+  peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> fineGrid{{ face.logical_type_name }}(&repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPop(key)->top(TWO_TIMES_D - 1));
+  peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> coarseGrid{{ face.logical_type_name }}(&repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPop(key)->top(TWO_TIMES_D * 2 - 1));
   {%- endfor %}
 
   {%- for cell in CELLS %}
@@ -244,7 +244,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell(const peano4::grid::GridTraversalEv
 
   {%- if VERTICES %}
   peano4::datamanagement::VertexMarker vertexMarker(event);
-  for (int i = 0; i < TwoPowerD; i++) {
+  for (int i = 0; i < TWO_POWER_D; i++) {
     const int inVertexStack = event.getVertexDataFrom(i);
     const int pick          = event.getVertexDataTo(i);
     vertexMarker.select(pick);
@@ -321,7 +321,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell(const peano4::grid::GridTraversalEv
 
   {%- if FACES %}
   peano4::datamanagement::FaceMarker faceMarker(event);
-  for (int i = 0; i < TwoTimesD; i++) {
+  for (int i = 0; i < TWO_TIMES_D; i++) {
     const int inFaceStack   = event.getFaceDataFrom(i);
     const int pick          = event.getFaceDataTo(i);
     faceMarker.select(pick);
@@ -471,13 +471,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell(const peano4::grid::GridTraversalEv
   repositories::DataRepository::DataKey key(_spacetreeId, peano4::grid::PeanoCurve::CallStack);
 
   {%- for vertex in VERTICES %}
-  peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> fineGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TwoPowerD - 1));
-  peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> coarseGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TwoPowerD * 2 - 1));
+  peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> fineGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TWO_POWER_D - 1));
+  peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> coarseGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TWO_POWER_D * 2 - 1));
   {%- endfor %}
 
   {%- for face in FACES %}
-  peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> fineGrid{{ face.logical_type_name }}(&repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPop(key)->top(TwoTimesD - 1));
-  peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> coarseGrid{{ face.logical_type_name }}(&repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPop(key)->top(TwoTimesD * 2 - 1));
+  peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> fineGrid{{ face.logical_type_name }}(&repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPop(key)->top(TWO_TIMES_D - 1));
+  peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> coarseGrid{{ face.logical_type_name }}(&repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPop(key)->top(TWO_TIMES_D * 2 - 1));
   {%- endfor %}
 
   {%- for cell in CELLS %}
@@ -540,7 +540,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell(const peano4::grid::GridTraversalEv
 
   {%- if FACES %}
   peano4::datamanagement::FaceMarker faceMarker(event);
-  for (int i = 0; i < TwoTimesD; i++) {
+  for (int i = 0; i < TWO_TIMES_D; i++) {
     const int outFaceStack  = event.getFaceDataTo(i);
     const int pick          = event.getFaceDataFrom(i);
     faceMarker.select(pick);
@@ -629,7 +629,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell(const peano4::grid::GridTraversalEv
 
   {%- if VERTICES %}
   peano4::datamanagement::VertexMarker vertexMarker(event);
-  for (int i = 0; i < TwoPowerD; i++) {
+  for (int i = 0; i < TWO_POWER_D; i++) {
     const int outVertexStack  = event.getVertexDataTo(i);
     const int pick            = event.getVertexDataFrom(i);
     vertexMarker.select(pick);
@@ -739,11 +739,11 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeCell(const peano4::grid::GridTraversalEv
   {%- endif %}
 
   {%- for face in FACES | reverse %}
-  auto view{{ face.logical_type_name }} = repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPop(keyIn)->popBlock(TwoTimesD);
+  auto view{{ face.logical_type_name }} = repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPop(keyIn)->popBlock(TWO_TIMES_D);
   {%- endfor %}
 
   {%- if FACES %}
-  for (int i = 0; i < TwoTimesD; i++) {
+  for (int i = 0; i < TWO_TIMES_D; i++) {
     const int inFaceStackPosition  = event.getFaceDataFrom(i);
     const int outFaceStack         = event.getFaceDataTo(i);
     const bool isInOutStack        = peano4::grid::PeanoCurve::isInOutStack(outFaceStack);
@@ -774,11 +774,11 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeCell(const peano4::grid::GridTraversalEv
   {%- endif %}
 
   {%- for vertex in VERTICES %}
-  auto view{{ vertex.logical_type_name }} = repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPop(keyIn)->popBlock(TwoPowerD);
+  auto view{{ vertex.logical_type_name }} = repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPop(keyIn)->popBlock(TWO_POWER_D);
   {%- endfor %}
 
   {%- if VERTICES %}
-  for (int i = 0; i < TwoPowerD; i++) {
+  for (int i = 0; i < TWO_POWER_D; i++) {
     const int inVertexStackPosition   = event.getVertexDataFrom(i);
     const int outVertexStack          = event.getVertexDataTo(i);
     const bool isInOutStack           = peano4::grid::PeanoCurve::isInOutStack(outVertexStack);
@@ -812,7 +812,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeCell(const peano4::grid::GridTraversalEv
 }
 
 
-void {{FULL_QUALIFIED_CLASSNAME}}::endTraversal(const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& h) {
+void {{FULL_QUALIFIED_CLASSNAME}}::endTraversal(const tarch::la::Vector<DIMENSIONS, double>& x, const tarch::la::Vector<DIMENSIONS, double>& h) {
   logTraceInWith2Arguments("endTraversal()", x, h);
   {%- for action_set in ACTIVE_ACTION_SETS %}
   {{ action_set.name }}.endTraversal();
@@ -825,7 +825,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::endTraversal(const tarch::la::Vector<Dimensio
   {%- endfor %}
 
   {%- if FACES %}
-  for (int i = 0; i < TwoTimesD; i++) {
+  for (int i = 0; i < TWO_TIMES_D; i++) {
     {%- for face in FACES %}
     repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPop(key)->pop();
     {%- endfor %}
@@ -833,7 +833,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::endTraversal(const tarch::la::Vector<Dimensio
   {%- endif %}
 
   {%- if VERTICES %}
-  for (int i = 0; i < TwoPowerD; i++) {
+  for (int i = 0; i < TWO_POWER_D; i++) {
     {%- for vertex in VERTICES %}
     repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPop(key)->pop();
     {%- endfor %}
@@ -862,7 +862,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendVertex(int position, int toStack, peano4:
 
   {%- for vertex in VERTICES %}
   {
-    const {{vertex.full_qualified_type}}& data = repositories::DataRepository::_{{vertex.logical_type_name}}Stack.getForPop(key)->top(TwoPowerD - 1 - position);
+    const {{vertex.full_qualified_type}}& data = repositories::DataRepository::_{{vertex.logical_type_name}}Stack.getForPop(key)->top(TWO_POWER_D - 1 - position);
     if (
       peano4::grid::storePersistently({{vertex.full_qualified_type}}::loadStoreComputeFlag(marker))
       and
@@ -886,7 +886,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeVertex(int position, int fromS
   {
     {{vertex.full_qualified_type}}& data = repositories::DataRepository::_{{vertex.logical_type_name}}Stack.getForPush(
       repositories::DataRepository::DataKey(_spacetreeId, peano4::grid::PeanoCurve::CallStack)
-    )->top(TwoPowerD - 1 - position);
+    )->top(TWO_POWER_D - 1 - position);
 
     if (peano4::grid::loadPersistently({{vertex.full_qualified_type}}::loadStoreComputeFlag(marker)) and data.receiveAndMerge(marker)) {
       auto incomingData = std::move(repositories::DataRepository::_{{vertex.logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->pop());
@@ -910,7 +910,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendFace(int position, int toStack, peano4::g
 
   {%- for face in FACES %}
   {
-    const {{face.full_qualified_type}}& data = repositories::DataRepository::_{{face.logical_type_name}}Stack.getForPop(key)->top(TwoTimesD - 1 - position);
+    const {{face.full_qualified_type}}& data = repositories::DataRepository::_{{face.logical_type_name}}Stack.getForPop(key)->top(TWO_TIMES_D - 1 - position);
     if (
       peano4::grid::storePersistently({{face.full_qualified_type}}::loadStoreComputeFlag(marker))
       and
@@ -934,7 +934,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
   {
     {{face.full_qualified_type}}& data = repositories::DataRepository::_{{face.logical_type_name}}Stack.getForPush(
       repositories::DataRepository::DataKey(_spacetreeId, peano4::grid::PeanoCurve::CallStack)
-    )->top(TwoTimesD - 1 - position);
+    )->top(TWO_TIMES_D - 1 - position);
 
     if (peano4::grid::loadPersistently({{face.full_qualified_type}}::loadStoreComputeFlag(marker)) and data.receiveAndMerge(marker)) {
       auto incomingData = std::move(repositories::DataRepository::_{{face.logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->pop());

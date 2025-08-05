@@ -22,16 +22,13 @@
 #include <cub/cub.cuh>
 {{ fused.defineGlobalKernel() }}
 {% elif GPU == "cpp" %}
-#include "tarch/accelerator/cpp/cartesian_product.h"
+#include "tarch/accelerator/stdpar/cartesian_product.h"
 #include <ranges>
 #include <execution>
 #include <numeric>
 {% elif GPU == "sycl" or MULTITHREADING == "sycl" %}
 #include "tarch/accelerator/sycl/Device.h"
-#pragma push_macro("Dimensions")
-#undef Dimensions
 #include <sycl/sycl.hpp>
-#pragma pop_macro("Dimensions")
 {% elif GPU == "kokkos" %}
 #include "Kokkos_Core.hpp"
 {% endif %}

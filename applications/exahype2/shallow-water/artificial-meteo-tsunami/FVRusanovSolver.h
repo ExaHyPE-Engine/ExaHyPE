@@ -19,8 +19,8 @@ private:
 public:
   void initialCondition(
     double* const NOALIAS                        Q, // Q[3+1]
-    const tarch::la::Vector<Dimensions, double>& x,
-    const tarch::la::Vector<Dimensions, double>& h,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
     const bool                                   gridIsConstructed
   ) override final;
 
@@ -28,8 +28,8 @@ public:
   void boundaryConditions(
     const double* const NOALIAS                  Qinside,  // Qinside[3+1]
     double* const NOALIAS                        Qoutside, // Qoutside[3+1]
-    const tarch::la::Vector<Dimensions, double>& x,
-    const tarch::la::Vector<Dimensions, double>& h,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
     const double                                 t,
     const int                                    normal
   ) override final;
@@ -37,16 +37,16 @@ public:
 
   ::exahype2::RefinementCommand refinementCriterion(
     const double* const NOALIAS                  Q, // Q[3+1]
-    const tarch::la::Vector<Dimensions, double>& x,
-    const tarch::la::Vector<Dimensions, double>& h,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
     const double                                 t
   ) override final;
 
 
   double maxEigenvalue(
     const double* const NOALIAS                  Q, // Q[3+1]
-    const tarch::la::Vector<Dimensions, double>& x,
-    const tarch::la::Vector<Dimensions, double>& h,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
     const double                                 t,
     const double                                 dt,
     const int                                    normal
@@ -55,8 +55,8 @@ public:
 
   void flux(
     const double* const NOALIAS                  Q, // Q[3+1]
-    const tarch::la::Vector<Dimensions, double>& x,
-    const tarch::la::Vector<Dimensions, double>& h,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
     const double                                 t,
     const double                                 dt,
     const int                                    normal,
@@ -67,8 +67,8 @@ public:
   void nonconservativeProduct(
     const double* const NOALIAS                  Q,      // Q[3+1]
     const double* const NOALIAS                  deltaQ, // deltaQ[3+1]
-    const tarch::la::Vector<Dimensions, double>& x,
-    const tarch::la::Vector<Dimensions, double>& h,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
     const double                                 t,
     const double                                 dt,
     const int                                    normal,
@@ -78,8 +78,8 @@ public:
 
   void sourceTerm(
     const double* const NOALIAS                  Q, // Q[3+1]
-    const tarch::la::Vector<Dimensions, double>& x,
-    const tarch::la::Vector<Dimensions, double>& h,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
     const double                                 t,
     const double                                 dt,
     double* const NOALIAS                        S // S[3]

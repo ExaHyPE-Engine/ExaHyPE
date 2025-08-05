@@ -19,7 +19,7 @@ toolbox::loadbalancing::Statistics::Statistics():
   _numberOfStateUpdatesWithoutAnySplit(0),
   _isViewConsistent(false) {
 
-#ifdef Parallel
+#ifdef WITH_MPI
   _globalNumberOfInnerUnrefinedCellsRequest           = nullptr;
   _globalNumberOfSplitsRequest                        = nullptr;
   _globalNumberOfTreesRequest                         = nullptr;
@@ -28,7 +28,7 @@ toolbox::loadbalancing::Statistics::Statistics():
 }
 
 void toolbox::loadbalancing::Statistics::waitForGlobalDataExchange() {
-#ifdef Parallel
+#ifdef WITH_MPI
   if (_globalNumberOfInnerUnrefinedCellsRequest != nullptr) {
     MPI_Wait(_globalNumberOfInnerUnrefinedCellsRequest, MPI_STATUS_IGNORE);
     MPI_Wait(_globalNumberOfSplitsRequest, MPI_STATUS_IGNORE);
@@ -62,7 +62,7 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
     _globalNumberOfTrees                         = _localNumberOfTrees;
     _globalNumberOfRanksWithEnabledLoadBalancing = _isLocalLoadBalancingEnabled ? 1 : 0;
   } else {
-#ifdef Parallel
+#ifdef WITH_MPI
     waitForGlobalDataExchange();
 
     _globalNumberOfInnerUnrefinedCells           = _globalNumberOfInnerUnrefinedCellsBufferIn;

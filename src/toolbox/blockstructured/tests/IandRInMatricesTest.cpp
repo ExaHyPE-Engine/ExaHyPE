@@ -911,7 +911,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
   constexpr int patchSize = 5;
   constexpr int overlap   = 3;
   constexpr int unknowns  = 1;
-  const int faceSize = unknowns * std::pow(patchSize, Dimensions - 1) * overlap
+  const int faceSize = unknowns * std::pow(patchSize, DIMENSIONS - 1) * overlap
                        * 2;
 
   double* coarseData = tarch::allocateMemory<double>(
@@ -939,22 +939,22 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
       for (int k = 0; k < 3; k++) {
         peano4::grid::GridTraversalEvent dummyEvent;
         dummyEvent.setRelativePositionToFather(
-          tarch::la::Vector<Dimensions, int>{i, j, k}
+          tarch::la::Vector<DIMENSIONS, int>{i, j, k}
         );
 
         for (int axis = 0; axis < 3; axis++) {
           peano4::datamanagement::FaceMarker marker1(dummyEvent, axis);
           int                                patchIndexLinear = -1;
-          if constexpr (Dimensions == 2)
+          if constexpr (DIMENSIONS == 2)
             patchIndexLinear = marker1.getRelativePositionWithinFatherCell()(
-              (axis + 1) % Dimensions
+              (axis + 1) % DIMENSIONS
             );
-          if constexpr (Dimensions == 3)
+          if constexpr (DIMENSIONS == 3)
             patchIndexLinear = marker1.getRelativePositionWithinFatherCell()(
-                                 (axis + 1) % Dimensions
+                                 (axis + 1) % DIMENSIONS
                                ) * 3
                                + marker1.getRelativePositionWithinFatherCell()(
-                                 (axis + 2) % Dimensions
+                                 (axis + 2) % DIMENSIONS
                                );
 
           for (int n = 0; n < faceSize; n++)
@@ -972,7 +972,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
             coarseData,
             fineDataTensorProduct
           );
-          if constexpr (Dimensions == 2)
+          if constexpr (DIMENSIONS == 2)
             interpolateHaloLayer_AoS_matrix(
               marker1,
               patchSize,
@@ -986,7 +986,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
               coarseData,
               fineDataMatrix
             );
-          if constexpr (Dimensions == 3)
+          if constexpr (DIMENSIONS == 3)
             interpolateHaloLayer_AoS_matrix(
               marker1,
               patchSize,
@@ -1016,7 +1016,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
             fineDataMatrix[n] = 0;
 
           peano4::datamanagement::FaceMarker
-            marker2(dummyEvent, axis + Dimensions);
+            marker2(dummyEvent, axis + DIMENSIONS);
           interpolateHaloLayer_AoS_tensor_product(
             marker2,
             patchSize,
@@ -1027,7 +1027,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
             coarseData,
             fineDataTensorProduct
           );
-          if constexpr (Dimensions == 2)
+          if constexpr (DIMENSIONS == 2)
             interpolateHaloLayer_AoS_matrix(
               marker2,
               patchSize,
@@ -1041,7 +1041,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
               coarseData,
               fineDataMatrix
             );
-          if constexpr (Dimensions == 3)
+          if constexpr (DIMENSIONS == 3)
             interpolateHaloLayer_AoS_matrix(
               marker2,
               patchSize,
@@ -1061,7 +1061,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
               fineDataTensorProduct[n],
               fineDataMatrix[n],
               0.01,
-              axis + Dimensions,
+              axis + DIMENSIONS,
               n
             );
         }
@@ -1367,7 +1367,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
   constexpr int patchSize = 5;
   constexpr int overlap   = 3;
   constexpr int unknowns  = 5;
-  const int faceSize = unknowns * std::pow(patchSize, Dimensions - 1) * overlap
+  const int faceSize = unknowns * std::pow(patchSize, DIMENSIONS - 1) * overlap
                        * 2;
 
   double* fineData = tarch::allocateMemory<double>(
@@ -1390,35 +1390,35 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
     for (int j = 0; j < 3; j++) {
       for (int k = 0; k < 3; k++) {
         peano4::grid::GridTraversalEvent dummyEvent;
-        if constexpr (Dimensions == 2){
+        if constexpr (DIMENSIONS == 2){
           dummyEvent.setRelativePositionToFather(
-            tarch::la::Vector<Dimensions, int>{i, j}
+            tarch::la::Vector<DIMENSIONS, int>{i, j}
           );
         }
-        if constexpr (Dimensions == 3){
+        if constexpr (DIMENSIONS == 3){
           dummyEvent.setRelativePositionToFather(
-            tarch::la::Vector<Dimensions, int>{i, j, k}
+            tarch::la::Vector<DIMENSIONS, int>{i, j, k}
           );
         }
 
-        for (int axis = 0; axis < Dimensions; axis++) {
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
           peano4::datamanagement::FaceMarker marker1(dummyEvent, axis);
           peano4::datamanagement::FaceMarker
-            marker2(dummyEvent, axis + Dimensions);
+            marker2(dummyEvent, axis + DIMENSIONS);
 
           int patchIndexLinear = -1;
-          if constexpr (Dimensions == 2)
+          if constexpr (DIMENSIONS == 2)
             patchIndexLinear = marker1.getRelativePositionWithinFatherCell()(
-              (axis + 1) % Dimensions
+              (axis + 1) % DIMENSIONS
             );
-          if constexpr (Dimensions == 3)
+          if constexpr (DIMENSIONS == 3)
             patchIndexLinear
               = marker1.getRelativePositionWithinFatherCell()(
-                  (axis + 1) % Dimensions
+                  (axis + 1) % DIMENSIONS
                 )
                 + 3
                     * marker1.getRelativePositionWithinFatherCell()(
-                      (axis + 2) % Dimensions
+                      (axis + 2) % DIMENSIONS
                     );
 
           for (int n = 0; n < faceSize; n++)
@@ -1436,7 +1436,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
             fineData,
             coarseDataTensorProduct
           );
-          if constexpr (Dimensions == 2)
+          if constexpr (DIMENSIONS == 2)
             restrictHaloLayer_AoS_matrix(
               marker1,
               patchSize,
@@ -1450,7 +1450,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
               fineData,
               coarseDataMatrix
             );
-          if constexpr (Dimensions == 3)
+          if constexpr (DIMENSIONS == 3)
             restrictHaloLayer_AoS_matrix(
               marker1,
               patchSize,
@@ -1490,7 +1490,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
             fineData,
             coarseDataTensorProduct
           );
-          if constexpr (Dimensions == 2)
+          if constexpr (DIMENSIONS == 2)
             restrictHaloLayer_AoS_matrix(
               marker2,
               patchSize,
@@ -1504,7 +1504,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
               fineData,
               coarseDataMatrix
             );
-          if constexpr (Dimensions == 3)
+          if constexpr (DIMENSIONS == 3)
             restrictHaloLayer_AoS_matrix(
               marker2,
               patchSize,
@@ -1524,7 +1524,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
               coarseDataTensorProduct[n],
               coarseDataMatrix[n],
               0.01,
-              axis + Dimensions,
+              axis + DIMENSIONS,
               n,
               marker1.getRelativePositionWithinFatherCell()
             );

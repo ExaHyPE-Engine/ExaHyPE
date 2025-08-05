@@ -4,7 +4,7 @@
 
 #include <string>
 
-#ifdef Parallel
+#ifdef WITH_MPI
 #include <functional>
 #include <mpi.h>
 #endif
@@ -29,9 +29,9 @@ public:
   GridControlEvent() = default;
   GridControlEvent(
     const RefinementControl                      __refinementControl,
-    const tarch::la::Vector<Dimensions, double>& __offset,
-    const tarch::la::Vector<Dimensions, double>& __width,
-    const tarch::la::Vector<Dimensions, double>& __h
+    const tarch::la::Vector<DIMENSIONS, double>& __offset,
+    const tarch::la::Vector<DIMENSIONS, double>& __width,
+    const tarch::la::Vector<DIMENSIONS, double>& __h
   );
   GridControlEvent(const GridControlEvent& copy) = default;
   ~GridControlEvent() = default;
@@ -39,22 +39,22 @@ public:
   inline peano4::grid::GridControlEvent::RefinementControl getRefinementControl() const { return _refinementControl; }
   inline void setRefinementControl(RefinementControl value) { _refinementControl = value; }
 
-  inline tarch::la::Vector<Dimensions, double> getOffset() const { return _offset; }
-  inline void   setOffset(const tarch::la::Vector<Dimensions, double>& value) { _offset = value; }
+  inline tarch::la::Vector<DIMENSIONS, double> getOffset() const { return _offset; }
+  inline void   setOffset(const tarch::la::Vector<DIMENSIONS, double>& value) { _offset = value; }
   inline double getOffset(int index) const { return _offset(index); }
   inline void   setOffset(int index, double value) { _offset(index) = value; }
 
-  inline tarch::la::Vector<Dimensions, double> getWidth() const { return _width; }
-  inline void   setWidth(const tarch::la::Vector<Dimensions, double>& value) { _width = value; }
+  inline tarch::la::Vector<DIMENSIONS, double> getWidth() const { return _width; }
+  inline void   setWidth(const tarch::la::Vector<DIMENSIONS, double>& value) { _width = value; }
   inline double getWidth(int index) const { return _width(index); }
   inline void   setWidth(int index, double value) { _width(index) = value; }
 
-  inline tarch::la::Vector<Dimensions, double> getH() const { return _h; }
-  inline void                                  setH(const tarch::la::Vector<Dimensions, double>& value) { _h = value; }
+  inline tarch::la::Vector<DIMENSIONS, double> getH() const { return _h; }
+  inline void                                  setH(const tarch::la::Vector<DIMENSIONS, double>& value) { _h = value; }
   inline double                                getH(int index) const { return _h(index); }
   inline void                                  setH(int index, double value) { _h(index) = value; }
 
-#ifdef Parallel
+#ifdef WITH_MPI
   /**
    * Hands out MPI datatype if we work without the LLVM MPI extension.
    * If we work with this additional feature, this is the routine where
@@ -129,7 +129,7 @@ public:
   GridControlEvent(ObjectConstruction):
     GridControlEvent() {}
 
-#ifdef Parallel
+#ifdef WITH_MPI
   static void sendAndPollDanglingMessages(
     const peano4::grid::GridControlEvent& message,
     int                                   destination,
@@ -148,11 +148,11 @@ public:
 
 private:
   RefinementControl                     _refinementControl;
-  tarch::la::Vector<Dimensions, double> _offset;
-  tarch::la::Vector<Dimensions, double> _width;
-  tarch::la::Vector<Dimensions, double> _h;
+  tarch::la::Vector<DIMENSIONS, double> _offset;
+  tarch::la::Vector<DIMENSIONS, double> _width;
+  tarch::la::Vector<DIMENSIONS, double> _h;
 
-#ifdef Parallel
+#ifdef WITH_MPI
 private:
   int _senderDestinationRank;
 

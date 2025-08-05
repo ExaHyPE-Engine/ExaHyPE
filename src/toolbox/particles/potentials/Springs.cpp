@@ -1,12 +1,12 @@
 #include "Springs.h"
 
 
-tarch::la::Vector<Dimensions,double> toolbox::particles::potentials::springPotential(
-  const tarch::la::Vector<Dimensions,double>& p1,
-  const tarch::la::Vector<Dimensions,double>& p2,
+tarch::la::Vector<DIMENSIONS,double> toolbox::particles::potentials::springPotential(
+  const tarch::la::Vector<DIMENSIONS,double>& p1,
+  const tarch::la::Vector<DIMENSIONS,double>& p2,
   double h
 ) {
-  tarch::la::Vector<Dimensions,double> deltaX = p2-p1;
+  tarch::la::Vector<DIMENSIONS,double> deltaX = p2-p1;
   double distance           = tarch::la::norm2( deltaX );
 
   double force = 0.0;

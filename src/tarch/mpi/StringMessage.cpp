@@ -28,7 +28,7 @@ void   tarch::mpi::StringMessage::setData(const std::string& value) {
 }
 
 
-#ifdef Parallel
+#ifdef WITH_MPI
 void tarch::mpi::StringMessage::sendAndPollDanglingMessages(const tarch::mpi::StringMessage& message, int destination, int tag ) {
   tarch::mpi::StringMessage::send(
     message, destination, tag,
@@ -63,7 +63,7 @@ void tarch::mpi::StringMessage::receiveAndPollDanglingMessages(tarch::mpi::Strin
 }
 #endif
     
-#ifdef Parallel
+#ifdef WITH_MPI
 
 int tarch::mpi::StringMessage::getSenderRank() const {
   return _senderDestinationRank;

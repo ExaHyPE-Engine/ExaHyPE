@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#ifdef Parallel
+#ifdef WITH_MPI
 #include <mpi.h>
 #endif
 #include <iostream>
@@ -30,7 +30,7 @@ namespace tarch {
   }
 }
 
-#if PeanoDebug>=4
+#if PEANO_DEBUG>=4
 /**
  * @see logInfo() macro
  */
@@ -48,7 +48,7 @@ namespace tarch {
 #define logDebug(methodName, logMacroMessageStream)
 #endif
 
-#if PeanoDebug>=1
+#if PEANO_DEBUG>=1
 #define logTraceIn(methodName) \
   { \
     auto logMacroMessage = [&](void) -> std::string { \
@@ -592,7 +592,7 @@ class tarch::logging::Log {
      * @param methodName method name
      * @param logMacroMessage    log logMacroMessage
      */
-    #if PeanoDebug>=4
+    #if PEANO_DEBUG>=4
       void debug(const std::string& methodName, Message logMacroMessage);
     #else
       inline void debug([[maybe_unused]] const std::string& methodName, [[maybe_unused]] Message logMacroMessage) const {}
@@ -649,7 +649,7 @@ class tarch::logging::Log {
      */
     void error(const std::string& methodName, Message logMacroMessage);
 
-    #if PeanoDebug>=1
+    #if PEANO_DEBUG>=1
     void traceIn(const std::string& methodName, Message logMacroMessage);
     void traceOut(const std::string& methodName, Message logMacroMessage);
     #else

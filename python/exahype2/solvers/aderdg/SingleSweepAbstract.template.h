@@ -63,7 +63,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     static std::string toString(SolverState);
 
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
     static constexpr int Order                      = {{ORDER}};
@@ -77,7 +77,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     {% if USE_POINT_SOURCE %}
     static constexpr int NumberOfPointSources = {{NUMBER_OF_POINT_SOURCES}};
-    static double pointSourceLocation[NumberOfPointSources][Dimensions];
+    static double pointSourceLocation[NumberOfPointSources][DIMENSIONS];
     {% endif %}
 
     /**
@@ -96,7 +96,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * coarser MinH.
      */
     static constexpr double MinAdmissibleCellH  = {{MIN_CELL_H}};
-    #if defined(GPUOffloadingOMP)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 
@@ -106,7 +106,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     /**
      * Alias for periodic boundary conditions.
      */
-    static std::bitset<Dimensions> PeriodicBC;
+    static std::bitset<DIMENSIONS> PeriodicBC;
 
     double getMinTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
     double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
@@ -125,8 +125,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual ::exahype2::PrecisionCommand precisionCriterion(
       const {{SOLUTION_STORAGE_PRECISION}} * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&         x,
-      const tarch::la::Vector<Dimensions,double>&         h,
+      const tarch::la::Vector<DIMENSIONS,double>&         x,
+      const tarch::la::Vector<DIMENSIONS,double>&         h,
       double                                              t,
       SolverState                                         currentState
     ) {% if ADAPTIVE_PRECISION_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};

@@ -8,7 +8,7 @@ import peano4.solversteps
 class PredictionOnHangingCells(AbstractADERDGActionSet):
     _Template_TouchCellFirstTime = """
   bool isHangingCell = false;
-  for (int d = 0; d < 2 * Dimensions; d++) {
+  for (int d = 0; d < 2 * DIMENSIONS; d++) {
     if (fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()) {
       isHangingCell = true;
       break;
@@ -19,7 +19,7 @@ class PredictionOnHangingCells(AbstractADERDGActionSet):
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
     {{COMPUTE_TIME_STEP_SIZE}}
 
-#if Dimensions == 2
+#if DIMENSIONS == 2
     constexpr int SpaceFaceSize         = {{ORDER}} + 1;
     constexpr int SpaceBasisSize        = ({{ORDER}} + 1) * ({{ORDER}} + 1);
 #else
@@ -36,29 +36,29 @@ class PredictionOnHangingCells(AbstractADERDGActionSet):
 
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
-    {{CORRECTOR_COMPUTATION_PRECISION}}* lQhbnd[TwoTimesD] = {
+    {{CORRECTOR_COMPUTATION_PRECISION}}* lQhbnd[TWO_TIMES_D] = {
       fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).value + BasisElementsPerFace,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).value + BasisElementsPerFace,
-#if Dimensions==3
+#if DIMENSIONS==3
       fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + BasisElementsPerFace,
 #endif
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0 + Dimensions).value,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1 + Dimensions).value,
-#if Dimensions==3
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2 + Dimensions).value
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0 + DIMENSIONS).value,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1 + DIMENSIONS).value,
+#if DIMENSIONS==3
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2 + DIMENSIONS).value
 #endif
     };
 
-    {{CORRECTOR_COMPUTATION_PRECISION}}* lFhbnd[TwoTimesD] = {
+    {{CORRECTOR_COMPUTATION_PRECISION}}* lFhbnd[TWO_TIMES_D] = {
       fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0).value + FluxElementsPerFace,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1).value + FluxElementsPerFace,
-#if Dimensions==3
+#if DIMENSIONS==3
       fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(2).value + FluxElementsPerFace,
 #endif
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0 + Dimensions).value,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1 + Dimensions).value,
-#if Dimensions==3
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(2 + Dimensions).value
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0 + DIMENSIONS).value,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1 + DIMENSIONS).value,
+#if DIMENSIONS==3
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(2 + DIMENSIONS).value
 #endif
     };
 
@@ -82,7 +82,7 @@ class PredictionOnHangingCells(AbstractADERDGActionSet):
      * performing them on the coarse faces and projecting those to the fine faces, to the
      * degree that the later breaks many simulations.
      */
-    for (int d = 0; d < Dimensions; d++) {
+    for (int d = 0; d < DIMENSIONS; d++) {
       int direction = d;
 
       // Left values
@@ -102,13 +102,13 @@ class PredictionOnHangingCells(AbstractADERDGActionSet):
       }
 
       // Right values
-      if (fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getIsHanging()) {
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FL = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + Dimensions).value;
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + Dimensions).value + FluxElementsPerFace;
-        {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + Dimensions).value;
-        {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + Dimensions).value + BasisElementsPerFace;
+      if (fineGridFaces{{SOLVER_NAME}}FaceLabel(d+DIMENSIONS).getIsHanging()) {
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FL = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).value;
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).value + FluxElementsPerFace;
+        {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + DIMENSIONS).value;
+        {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + DIMENSIONS).value + BasisElementsPerFace;
         const int orientation = 1;
-        const int faceNumber  = d + Dimensions;
+        const int faceNumber  = d + DIMENSIONS;
         const bool isBoundary = false;
         auto faceCentre = marker.x();
         faceCentre[d] += 0.5 * marker.h()[d];

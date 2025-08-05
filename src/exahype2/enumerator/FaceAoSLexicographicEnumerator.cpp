@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "FaceAoSLexicographicEnumerator.h"
 
-#if defined(GPUOffloadingOff)
+#if !defined(WITH_GPU)
 std::string exahype2::enumerator::FaceAoSLexicographicEnumerator::toString() const {
   std::ostringstream msg;
   msg

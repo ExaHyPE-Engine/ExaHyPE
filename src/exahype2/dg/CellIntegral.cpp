@@ -46,8 +46,8 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
   for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++) {
     const double* NOALIAS                  cellQin  = cellData.QIn[currentCell];
     double* NOALIAS                        cellQout = cellData.QOut[currentCell];
-    const tarch::la::Vector<Dimensions,double>  x        = cellData.cellCentre[currentCell];
-    const tarch::la::Vector<Dimensions,double>  h        = cellData.cellSize[currentCell];
+    const tarch::la::Vector<DIMENSIONS,double>  x        = cellData.cellCentre[currentCell];
+    const tarch::la::Vector<DIMENSIONS,double>  h        = cellData.cellSize[currentCell];
     const double                                t        = cellData.t;
     const double                                dt       = cellData.dt;
 
@@ -62,12 +62,12 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
 
       if(evaluateFlux){
         // direction in which flux contributions are being computed
-        for(int dim=0; dim<Dimensions; dim++)
+        for(int dim=0; dim<DIMENSIONS; dim++)
         for(int i=0; i<nodesPerAxis; i++){
           // compute contributing node real position
-          tarch::la::Vector<Dimensions,int> contributingNodeIndex = dof;
+          tarch::la::Vector<DIMENSIONS,int> contributingNodeIndex = dof;
           contributingNodeIndex[dim] = i;
-          tarch::la::Vector<Dimensions,double> position = getQuadraturePoint(
+          tarch::la::Vector<DIMENSIONS,double> position = getQuadraturePoint(
               x,
               h,
               contributingNodeIndex,
@@ -87,7 +87,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
           // the mass matrix. We integrate over the whole cell, but the h-terms
           // are eliminated along the derivative direction.
           double coeff = stiffnessMatrix[i+dof(dim)*nodesPerAxis];
-          for (int dd=0; dd<Dimensions; dd++) {
+          for (int dd=0; dd<DIMENSIONS; dd++) {
             coeff *= (dd==dim) ? 1.0 : massMatrixDiagonal[ dof(dd) ] * h(dd);
           }
 
@@ -99,7 +99,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
 
       if(evaluateSource){
         //compute real node position
-        tarch::la::Vector<Dimensions,double> position = getQuadraturePoint(
+        tarch::la::Vector<DIMENSIONS,double> position = getQuadraturePoint(
           x,
           h,
           dof,
@@ -116,7 +116,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
           sourceValues
         );
 
-        #if Dimensions==2
+        #if DIMENSIONS==2
         double coeff = massMatrixDiagonal[ dof(0) ] * massMatrixDiagonal[ dof(1) ] * tarch::la::volume(h);
         #else
         double coeff = massMatrixDiagonal[ dof(0) ] * massMatrixDiagonal[ dof(1) ] * massMatrixDiagonal[ dof(2) ] * tarch::la::volume(h);
@@ -131,7 +131,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
 
       if (evaluateNonconservativeProduct) {
         //compute real node position
-        tarch::la::Vector<Dimensions,double> position = getQuadraturePoint(
+        tarch::la::Vector<DIMENSIONS,double> position = getQuadraturePoint(
           x,
           h,
           dof,
@@ -141,11 +141,11 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
 
         // Mass matrix.
         double coeff = 1.0;
-        for (int dd=0; dd<Dimensions; dd++) {
+        for (int dd=0; dd<DIMENSIONS; dd++) {
           coeff *= massMatrixDiagonal[ dof(dd) ] * h(dd);
         }
 
-        for(int dim=0; dim<Dimensions; dim++) {
+        for(int dim=0; dim<DIMENSIONS; dim++) {
           //computes gradient values in all directions for the given node
           std::fill(gradientValues, &gradientValues[strideQ-1], 0.0);
 
@@ -153,7 +153,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
 
           // computing gradients in direction dim
           for(int node=0; node<nodesPerAxis; node++){
-            tarch::la::Vector<Dimensions,int> contributingNodeIndex = dof;
+            tarch::la::Vector<DIMENSIONS,int> contributingNodeIndex = dof;
             contributingNodeIndex[dim] = node;
             const double coeffDerivative = invDx * derivativeOperator[node + nodesPerAxis*dof(dim)];
 
@@ -214,7 +214,7 @@ void exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
     double eigenvalue = std::numeric_limits<double>::min();
 
     dfor(k,order+1) {
-      for(int direction=0; direction<Dimensions; direction++) {
+      for(int direction=0; direction<DIMENSIONS; direction++) {
         double nodeEigenvalue = maxEigenvalue(
           cellData.QOut[cellIndex] + enumerator(0,k,0),
           getQuadraturePoint(
@@ -245,7 +245,7 @@ void exahype2::dg::internal::copySolution(
   const int                                     order,
   const int                                     unknowns,
   const int                                     auxiliaryVariables,
-  const tarch::la::Vector<Dimensions,int>&      node,
+  const tarch::la::Vector<DIMENSIONS,int>&      node,
   double* NOALIAS                          cellQout
 ) {
   const int nodeSerialised = peano4::utils::dLinearised( node, order+1 );
@@ -274,7 +274,7 @@ void exahype2::dg::multiplyWithInvertedMassMatrix_GaussLegendre(
     dfor( dof, order+1 ) {
       double* NOALIAS  cellQInOut = cellData.QOut[currentCell];
 
-      #if Dimensions==2
+      #if DIMENSIONS==2
       double diagonal = massMatrixDiagonal1d[ dof(0) ] * massMatrixDiagonal1d[ dof(1) ] * (cellData.cellSize[currentCell])(0) * (cellData.cellSize[currentCell])(1);
       #else
       double diagonal = massMatrixDiagonal1d[ dof(0) ]
