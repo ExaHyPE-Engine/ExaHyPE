@@ -27,6 +27,7 @@ void exahype2::fv::tests::InterpolationRestrictionTest::run() {
 
 
 void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInterpolationWithTensorProduct1() {
+#if DIMENSIONS==2
   static constexpr double  NormalInterpolationMatrix1d[]     = {
     0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
     0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
@@ -52,8 +53,6 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInt
     0.0,0.0,0.0,0.0,1.0
   };
 
-
-  #if DIMENSIONS==2
   peano4::grid::GridTraversalEvent    dummEvent;
   dummEvent.setRelativePositionToFather( {0,0} );
 
@@ -171,8 +170,9 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestrictionWi
   };
 
   peano4::grid::GridTraversalEvent    dummEvent;
-  int face=3;
-  #if DIMENSIONS==2
+  //int face=3;
+
+#if DIMENSIONS==2
   dummEvent.setRelativePositionToFather( {0,0} );
 
   //peano4::datamanagement::FaceMarker  marker(dummEvent);
@@ -253,9 +253,7 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestrictionWi
 
 
 void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInterpolationWithTensorProduct2() {
-
-  //@tobias: you can just ignore it as I am just testing the schme in my stupid way.
-
+#if DIMENSIONS==2
   static constexpr double  NormalInterpolationMatrix1d[]     = {
     0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
     0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
@@ -281,8 +279,6 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInt
     0.0,0.0,0.0,0.0,1.0
   };
 
-
-  #if DIMENSIONS==2
   peano4::grid::GridTraversalEvent    dummEvent;
   dummEvent.setRelativePositionToFather( {0,2} );
 

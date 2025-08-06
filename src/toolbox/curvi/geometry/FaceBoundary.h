@@ -75,8 +75,8 @@ namespace toolbox {
     private:
       Edge left_edge;
       Edge right_edge;
-      Edge bottom_edge;
       Edge top_edge;
+      Edge bottom_edge;
 
       Coordinate coords[2];
       int        index_size[3];

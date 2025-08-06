@@ -30,7 +30,6 @@ namespace toolbox {
 
       void multiplyToTopography(std::function<double(double, double)> factor);
 
-
     private:
       bool isInit;
 

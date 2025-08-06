@@ -1,4 +1,5 @@
-
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "toolbox/curvi/interface/Interface.h"
 
 toolbox::curvi::Interface::
@@ -45,9 +46,7 @@ void toolbox::curvi::Interface::initTree() {
 
 toolbox::curvi::Root* toolbox::curvi::Interface::getRoot() { return root; }
 
-
 double toolbox::curvi::Interface::invertProjection(Coordinate coord, double coords[3]) {
-
   Coordinate mu = coord;
   Coordinate xi, eta;
   getPlane(mu, xi, eta);
@@ -102,9 +101,7 @@ double toolbox::curvi::Interface::invertProjection(Coordinate coord, double coor
 toolbox::curvi::Block toolbox::curvi::Interface::getElement(double* nodes, int ez, int ey, int ex) {
   /*Check if element is in boundary*/
   if ((ez >= 0 && ey >= 0 && ex >= 0)
-      && (ez < elements[Coordinate::Z] && ey < elements[Coordinate::Y] && ex < elements[Coordinate::X])) {
-
-
+      && (ez < static_cast<int>(elements[Coordinate::Z]) && ey < static_cast<int>(elements[Coordinate::Y]) && ex < static_cast<int>(elements[Coordinate::X]))) {
     int index_size[3];
     index_size[Coordinate::X] = modes[Coordinate::X];
     index_size[Coordinate::Y] = modes[Coordinate::Y];
@@ -124,7 +121,6 @@ toolbox::curvi::Block toolbox::curvi::Interface::getElement(double* nodes, int e
 
     BlockBoundary boundary = root->traverse(center_index);
     Block         element(boundary, index_offset, index_size);
-
 
     std::function<void(const Block&, int, int, int, Block&)> interpolation =
       [&](const Block& in, int elt_z, int elt_y, int elt_x, Block& out) {
@@ -192,4 +188,6 @@ toolbox::curvi::Block toolbox::curvi::Interface::getElement(double* nodes, int e
       order + 1
     );
   }
+
+  return Block();
 }

@@ -90,7 +90,7 @@ class Enumeration(Attribute):
         if self._initval is not None and not for_constructor:
             namestring += " = " + str(self._initval)
         if self.compress:
-            return [(namestring, self._enum_name(), "[[clang::pack]]")]
+            return [(namestring, self._enum_name(), "")]
         else:
             return [(namestring, self._enum_name(), "")]
 

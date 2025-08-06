@@ -86,7 +86,7 @@ class BooleanArray(Boolean):
                 (
                     "_" + self._name + "[" + self._cardinality + "]",
                     "bool",
-                    "[[clang::pack]]",
+                    "",
                     ["defined(" + LLVMSymbol + ")"],
                 ),
                 (

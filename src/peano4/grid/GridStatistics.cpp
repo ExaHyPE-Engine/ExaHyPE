@@ -119,34 +119,26 @@ void   peano4::grid::GridStatistics::setMinH(int index, double value) {
 MPI_Datatype peano4::grid::GridStatistics::Datatype = MPI_DATATYPE_NULL;
 #endif
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype peano4::grid::GridStatistics::getForkDatatype() {
   return Datatype;
 }
 
-[[clang::map_mpi_datatype]]
 MPI_Datatype peano4::grid::GridStatistics::getGlobalCommunicationDatatype() {
   return Datatype;
 }
 
-[[clang::map_mpi_datatype]]
 MPI_Datatype peano4::grid::GridStatistics::getJoinDatatype() {
   return Datatype;
 }
 
-[[clang::map_mpi_datatype]]
 MPI_Datatype peano4::grid::GridStatistics::getBoundaryExchangeDatatype() {
   return Datatype;
 }
 
-[[clang::map_mpi_datatype]]
 MPI_Datatype peano4::grid::GridStatistics::getMultiscaleDataExchangeDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 void peano4::grid::GridStatistics::freeForkDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
@@ -154,8 +146,6 @@ void peano4::grid::GridStatistics::freeForkDatatype() {
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void peano4::grid::GridStatistics::freeGlobalCommunicationDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
@@ -163,8 +153,6 @@ void peano4::grid::GridStatistics::freeGlobalCommunicationDatatype() {
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void peano4::grid::GridStatistics::freeJoinDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
@@ -172,8 +160,6 @@ void peano4::grid::GridStatistics::freeJoinDatatype() {
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void peano4::grid::GridStatistics::freeBoundaryExchangeDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
@@ -181,8 +167,6 @@ void peano4::grid::GridStatistics::freeBoundaryExchangeDatatype() {
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void peano4::grid::GridStatistics::freeMultiscaleDataExchangeDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);

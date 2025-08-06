@@ -1,3 +1,5 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "toolbox/curvi/kdTree/InnerNode.h"
 
 #include "toolbox/curvi/kdTree/Leaf.h"
@@ -5,8 +7,7 @@
 toolbox::curvi::InnerNode::InnerNode(const YAML::Node& node) {
   isInit = false;
 
-  if (bool(node["coordinates"]) & bool(node["perturbation"]) & bool(node["position"])) {
-
+  if (bool(node["coordinates"]) && bool(node["perturbation"]) && bool(node["position"])) {
     /*set up coordinates position and index of fault*/
     std::vector<std::string> coords_s = node["coordinates"].as<std::vector<std::string>>();
 

@@ -72,7 +72,7 @@ namespace toolbox {
       const double* NOALIAS coarseGridFaceValues,
       double* NOALIAS fineGridFaceValues
     ) {
-      int normal = marker.getSelectedFaceNumber() % 3;
+      //int normal = marker.getSelectedFaceNumber() % 3;
       //int patchIndexLinear = (DIMENSIONS == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % DIMENSIONS) : marker.getRelativePositionWithinFatherCell()((normal + 1) % DIMENSIONS) * 3 + marker.getRelativePositionWithinFatherCell()((normal + 2) % DIMENSIONS);
 
       interpolateHaloLayer_AoS_matrix(

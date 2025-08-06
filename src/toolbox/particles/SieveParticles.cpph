@@ -24,11 +24,6 @@ tarch::multicore::BooleanSemaphore toolbox::particles::SieveParticles<T>::_parti
 
 
 template <typename T>
-toolbox::particles::SieveParticles<T>::~SieveParticles() {
-}
-
-
-template <typename T>
 void toolbox::particles::SieveParticles<T>::deleteParticles(ParticleList& list) {
   for (auto* p : list) {
     delete p;

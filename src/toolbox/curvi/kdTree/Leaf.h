@@ -10,16 +10,17 @@ namespace toolbox {
     public:
       Leaf();
 
+      virtual ~Leaf() override = default;
 
-      void init(BlockBoundary& a_boundary, uint modes[3]);
+      void init(BlockBoundary& a_boundary, uint modes[3]) override;
 
-      std::string toString(int depth = 0);
+      std::string toString(int depth = 0) override;
 
-      Block traverse();
+      Block traverse() override;
 
-      BlockBoundary traverse(int index[3]);
+      BlockBoundary traverse(int index[3]) override;
 
-      BlockBoundary traverseProjection(double coordinate[3]);
+      BlockBoundary traverseProjection(double coordinate[3]) override;
 
       void checkInit();
 

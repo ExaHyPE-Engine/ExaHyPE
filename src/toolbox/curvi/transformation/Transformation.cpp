@@ -9,8 +9,6 @@ void toolbox::curvi::Transformation::metricDerivativesAndJacobian3D(
   std::vector<int>    range_x,
   Block&              out
 ) {
-
-  double jacobian;
   double q_x, r_x, s_x;
   double q_y, r_y, s_y;
   double q_z, r_z, s_z;

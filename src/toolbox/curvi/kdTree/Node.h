@@ -15,6 +15,8 @@ namespace toolbox {
   namespace curvi {
     class Node {
     public:
+      virtual ~Node() = default;
+
       virtual BlockBoundary traverse(int index[3])                   = 0;
       virtual BlockBoundary traverseProjection(double coordinate[3]) = 0;
       virtual Block         traverse()                               = 0;

@@ -16,7 +16,7 @@ initial_conditions = """
   Q[Shortcuts::rho]      = 1.0;
   Q[Shortcuts::rhoU + 0] = U0 * std::sin(x(0)) * std::cos(x(1));
   Q[Shortcuts::rhoU + 1] = -U0 * std::cos(x(0)) * std::sin(x(1));
-#if Dimensions == 3
+#if DIMENSIONS == 3
   Q[Shortcuts::rhoU + 2] = 0.0;
 #endif
 
@@ -47,7 +47,7 @@ analytical_solution = """
   // Velocity components with time decay
   solution[Shortcuts::rhoU + 0] = expVelocityFactor * std::sin(x(0)) * std::cos(x(1));
   solution[Shortcuts::rhoU + 1] = -expVelocityFactor * std::cos(x(0)) * std::sin(x(1));
-#if Dimensions == 3
+#if DIMENSIONS == 3
   solution[Shortcuts::rhoU + 2] = 0.0;
 #endif
 

@@ -135,7 +135,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadCell(const peano4::grid::GridTraversalEve
 
       if (dataResidesOnIntermediateStack or dataResidesOnInputStack) {
         assertion(not repositories::DataRepository::_{{vertex.logical_type_name}}Stack.getForPop(vertexKeyIn)->empty());
-        view{{vertex.logical_type_name}}.set(outVertexStackPosition, std::move(repositories::DataRepository::_{{vertex.logical_type_name}}Stack.getForPop(vertexKeyIn)->pop()));
+        view{{vertex.logical_type_name}}.set(outVertexStackPosition, repositories::DataRepository::_{{vertex.logical_type_name}}Stack.getForPop(vertexKeyIn)->pop());
       } else if (initialiseStackContentForNewData) {
         {{vertex.full_qualified_type}} data;
         view{{vertex.logical_type_name}}.set(outVertexStackPosition, data);
@@ -176,7 +176,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadCell(const peano4::grid::GridTraversalEve
 
       if (dataResidesOnIntermediateStack or dataResidesOnInputStack) {
         assertion(not repositories::DataRepository::_{{face.logical_type_name}}Stack.getForPop(faceKeyIn)->empty());
-        view{{face.logical_type_name}}.set(outFaceStackPosition, std::move(repositories::DataRepository::_{{face.logical_type_name}}Stack.getForPop(faceKeyIn)->pop()));
+        view{{face.logical_type_name}}.set(outFaceStackPosition, repositories::DataRepository::_{{face.logical_type_name}}Stack.getForPop(faceKeyIn)->pop());
       } else if (initialiseStackContentForNewData) {
         {{face.full_qualified_type}} data;
         view{{face.logical_type_name}}.set(outFaceStackPosition, data);
@@ -207,7 +207,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadCell(const peano4::grid::GridTraversalEve
 
     if (dataResidesOnInputStack) {
       assertion(not repositories::DataRepository::_{{cell.logical_type_name}}Stack.getForPop(cellKeyIn)->empty());
-      view.set(0, std::move(repositories::DataRepository::_{{cell.logical_type_name}}Stack.getForPop(cellKeyIn)->pop()));
+      view.set(0, repositories::DataRepository::_{{cell.logical_type_name}}Stack.getForPop(cellKeyIn)->pop());
     } else if (initialiseStackContentForNewData) {
       {{cell.full_qualified_type}} data;
       view.set(0, data);
@@ -889,7 +889,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeVertex(int position, int fromS
     )->top(TWO_POWER_D - 1 - position);
 
     if (peano4::grid::loadPersistently({{vertex.full_qualified_type}}::loadStoreComputeFlag(marker)) and data.receiveAndMerge(marker)) {
-      auto incomingData = std::move(repositories::DataRepository::_{{vertex.logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->pop());
+      auto incomingData = repositories::DataRepository::_{{vertex.logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->pop();
       logDebug("receiveAndMergeVertex()", "Merge " << incomingData.toString() << " into " << data.toString() << " within marker " << marker.toString());
       data.merge(context, incomingData, marker, _spacetreeId);
     }
@@ -937,7 +937,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
     )->top(TWO_TIMES_D - 1 - position);
 
     if (peano4::grid::loadPersistently({{face.full_qualified_type}}::loadStoreComputeFlag(marker)) and data.receiveAndMerge(marker)) {
-      auto incomingData = std::move(repositories::DataRepository::_{{face.logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->pop());
+      auto incomingData = repositories::DataRepository::_{{face.logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->pop();
       logDebug("receiveAndMergeFace()", "Merge " << incomingData.toString() << " into " << data.toString() << " within marker " << marker.toString());
       data.merge(context, incomingData, marker, _spacetreeId);
     }
@@ -985,7 +985,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeCell(int fromStack, peano4::gr
     )->top();
 
     if (peano4::grid::loadPersistently({{cell.full_qualified_type}}::loadStoreComputeFlag(marker)) and data.receiveAndMerge(marker)) {
-      auto incomingData = std::move(repositories::DataRepository::_{{cell.logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->pop());
+      auto incomingData = repositories::DataRepository::_{{cell.logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->pop();
       logDebug("receiveAndMergeCell()", "Merge " << incomingData.toString() << " into " << data.toString());
       data.merge(context, incomingData, marker, _spacetreeId);
     }

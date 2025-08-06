@@ -45,38 +45,26 @@ void   peano4::parallel::StartTraversalMessage::setStepIdentifier(int value) {
 MPI_Datatype peano4::parallel::StartTraversalMessage::Datatype = MPI_DATATYPE_NULL;
 #endif
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype peano4::parallel::StartTraversalMessage::getForkDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype peano4::parallel::StartTraversalMessage::getGlobalCommunicationDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype peano4::parallel::StartTraversalMessage::getJoinDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype peano4::parallel::StartTraversalMessage::getBoundaryExchangeDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype peano4::parallel::StartTraversalMessage::getMultiscaleDataExchangeDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 void peano4::parallel::StartTraversalMessage::freeForkDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
@@ -84,8 +72,6 @@ void peano4::parallel::StartTraversalMessage::freeForkDatatype() {
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void peano4::parallel::StartTraversalMessage::freeGlobalCommunicationDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
@@ -93,8 +79,6 @@ void peano4::parallel::StartTraversalMessage::freeGlobalCommunicationDatatype() 
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void peano4::parallel::StartTraversalMessage::freeJoinDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
@@ -102,8 +86,6 @@ void peano4::parallel::StartTraversalMessage::freeJoinDatatype() {
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void peano4::parallel::StartTraversalMessage::freeBoundaryExchangeDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
@@ -111,8 +93,6 @@ void peano4::parallel::StartTraversalMessage::freeBoundaryExchangeDatatype() {
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void peano4::parallel::StartTraversalMessage::freeMultiscaleDataExchangeDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);

@@ -52,38 +52,20 @@ class MPI(object):
      * If we work with this additional feature, this is the routine where
      * the lazy initialisation is done and the datatype is also cached.
      */
-    [[clang::map_mpi_datatype]]
     static MPI_Datatype  getForkDatatype();
-
-    [[clang::map_mpi_datatype]]
     static MPI_Datatype  getJoinDatatype();
-
-    [[clang::map_mpi_datatype]]
     static MPI_Datatype  getBoundaryExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
     static MPI_Datatype  getMultiscaleDataExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunicationDatatype();
 
-    [[clang::map_mpi_datatype]]
     static void  freeForkDatatype();
-
-    [[clang::map_mpi_datatype]]
     static void  freeJoinDatatype();
-
-    [[clang::map_mpi_datatype]]
     static void  freeBoundaryExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
     static void  freeMultiscaleDataExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
     static void  freeGlobalCommunicationDatatype();
 
     /**
-     * @return The rank of the sender of an object. It only make ssense to call
+     * @return The rank of the sender of an object. It only make sense to call
      *         this routine after you've invoked receive with MPI_ANY_SOURCE.
      */
     int getSenderRank() const;
@@ -141,48 +123,36 @@ MPI_Datatype """
             + """::Datatype = MPI_DATATYPE_NULL;
 #endif
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype """
             + full_qualified_name
             + """::getForkDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype """
             + full_qualified_name
             + """::getGlobalCommunicationDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype """
             + full_qualified_name
             + """::getJoinDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype """
             + full_qualified_name
             + """::getBoundaryExchangeDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype """
             + full_qualified_name
             + """::getMultiscaleDataExchangeDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 void """
             + full_qualified_name
             + """::freeForkDatatype() {
@@ -192,8 +162,6 @@ void """
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void """
             + full_qualified_name
             + """::freeGlobalCommunicationDatatype() {
@@ -203,8 +171,6 @@ void """
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void """
             + full_qualified_name
             + """::freeJoinDatatype() {
@@ -214,8 +180,6 @@ void """
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void """
             + full_qualified_name
             + """::freeBoundaryExchangeDatatype() {
@@ -225,8 +189,6 @@ void """
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void """
             + full_qualified_name
             + """::freeMultiscaleDataExchangeDatatype() {
@@ -236,14 +198,11 @@ void """
   }
 }
 
-
 int """
             + full_qualified_name
             + """::getSenderRank() const {
   return _senderDestinationRank;
 }
-
-
 
 void """
             + full_qualified_name

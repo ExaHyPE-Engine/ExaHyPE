@@ -2,48 +2,38 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "Matrix.h"
 
 namespace tarch {
   namespace la {
-    template<int Rows, int Cols, typename Scalar>
-    Matrix<Rows,Cols,Scalar>& operator*= (
-      Matrix<Rows,Cols,Scalar>&  matrix,
-      const Scalar&              scalar
-    );
+    template <int Rows, int Cols, typename Scalar>
+    Matrix<Rows, Cols, Scalar>& operator*=(Matrix<Rows, Cols, Scalar>& matrix, const Scalar& scalar);
 
     /**
-      * Multiplies every component of the matrix with the scalar
-      *
-      * No temporary objects are created during the operation.
+     * Multiplies every component of the matrix with the scalar
+     *
+     * No temporary objects are created during the operation.
      */
-    template<int Rows, int Cols, typename Scalar>
-    Matrix<Rows,Cols,Scalar> operator*(
-      const Matrix<Rows,Cols,Scalar>&  matrix,
-      const Scalar&                    scalar
-    );
+    template <int Rows, int Cols, typename Scalar>
+    Matrix<Rows, Cols, Scalar> operator*(const Matrix<Rows, Cols, Scalar>& matrix, const Scalar& scalar);
 
     /**
-      * Multiplies every component of the matrix with the scalar
-      *
-      * No temporary objects are created during the operation.
+     * Multiplies every component of the matrix with the scalar
+     *
+     * No temporary objects are created during the operation.
      */
-    template<int Rows, int Cols, typename Scalar>
-    Matrix<Rows,Cols,Scalar> operator*(
-      const Scalar&                    scalar,
-      const Matrix<Rows,Cols,Scalar>&  matrix
+    template <int Rows, int Cols, typename Scalar>
+    Matrix<Rows, Cols, Scalar> operator*(const Scalar& scalar, const Matrix<Rows, Cols, Scalar>& matrix);
+
+
+    template <int Rows, int Cols>
+    Matrix<Rows, Cols, std::complex<double>> operator*(
+      const double&                                   scalar,
+      const Matrix<Rows, Cols, std::complex<double>>& matrix
     );
 
-
-    template<int Rows, int Cols>
-    Matrix<Rows,Cols,std::complex<double> > operator*(
-      const double&                                  scalar,
-      const Matrix<Rows,Cols,std::complex<double> >&  matrix
-    );
-
-  }
-}
-
+  } // namespace la
+} // namespace tarch
 
 
 #include "tarch/la/MatrixScalarOperations.cpph"
-

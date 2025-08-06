@@ -72,7 +72,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testSievePredicate() 
 
 void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex01() {
   #if DIMENSIONS==2
-  const int select = 0;
+  //const int select = 0;
   peano4::datamanagement::VertexMarker marker;
 
   const double  meshSize = 0.111111;
@@ -169,7 +169,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::run() {
 
 void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex02() {
   #if DIMENSIONS==2
-  const int select = 0;
+  //const int select = 0;
   peano4::datamanagement::VertexMarker marker;
 
   const double  meshSize = 0.037037;
@@ -342,7 +342,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
 
 void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex04() {
   #if DIMENSIONS==2
-  const int select = 0;
+  //const int select = 0;
   peano4::datamanagement::VertexMarker marker;
 
   const double  meshSize = 1.0/3.0;
@@ -361,7 +361,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   tarch::la::Vector<DIMENSIONS,double> x = {4.99999996463071805231e-01, 5.00000003548028204570e-01};
   const double                         searchRadius = 0.15;
   toolbox::particles::ParticleReassociationInstruction liftInstruction;
-  bool                                                 drop;
+  //bool                                                 drop;
 
   // Vertex 1 triggers a global lift
   marker._select  = 1;

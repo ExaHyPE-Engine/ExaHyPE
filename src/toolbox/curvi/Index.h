@@ -18,7 +18,6 @@ namespace toolbox {
         return range;
       }
 
-
       static std::vector<double> getRange(int start, int size, double dx, double ox = 0) {
         std::vector<int>    index_range = getIndexRange(start, size);
         std::vector<double> range;
@@ -32,8 +31,9 @@ namespace toolbox {
     class idx2 {
     public:
       idx2(int a_J, int a_I):
-        J_(a_J),
-        I_(a_I) {
+        I_(a_I),
+        J_(a_J) {
+
         if (a_J <= 0 || a_I <= 0) {
           std::stringstream ss;
           ss << "Can't initialze index with 0 offset: " << a_J << " " << a_I;
@@ -58,9 +58,10 @@ namespace toolbox {
     class idx3 {
     public:
       idx3(int a_K, int a_J, int a_I):
-        K_(a_K),
+        I_(a_I),
         J_(a_J),
-        I_(a_I) {
+        K_(a_K) {
+
         if (a_K <= 0 || a_J <= 0 || a_I <= 0) {
           std::stringstream ss;
           ss << "Can't initialze index with 0 offset: " << a_K << " " << a_J << " " << a_I;
@@ -69,7 +70,6 @@ namespace toolbox {
       };
 
       int operator()(int k, int j, int i) const {
-
         if (i < 0 || i > I_) {
           std::stringstream ss;
           ss << "I: " << i << " out of scope : " << I_ << std::endl;
@@ -100,14 +100,12 @@ namespace toolbox {
     class idx4 {
     public:
       idx4(int a_L, int a_K, int a_J, int a_I):
-        L_(a_L),
-        K_(a_K),
+        I_(a_I),
         J_(a_J),
-        I_(a_I) {};
+        K_(a_K),
+        L_(a_L) {};
 
       int operator()(int l, int k, int j, int i) const {
-
-
         if (i < 0 || i > I_) {
           std::stringstream ss;
           ss << "I: " << i << " out of scope : " << I_ << std::endl;
@@ -141,19 +139,17 @@ namespace toolbox {
       int L_;
     };
 
-
     class idx6 {
     public:
       idx6(int a_N, int a_M, int a_L, int a_K, int a_J, int a_I):
-        N_(a_N),
-        M_(a_M),
-        L_(a_L),
-        K_(a_K),
+        I_(a_I),
         J_(a_J),
-        I_(a_I) {};
+        K_(a_K),
+        L_(a_L),
+        M_(a_M),
+        N_(a_N) {};
 
       int operator()(int n, int m, int l, int k, int j, int i) const {
-
         if (i < 0 || i > I_) {
           std::stringstream ss;
           ss << "I: " << i << " out of scope : " << I_ << std::endl;
@@ -205,16 +201,15 @@ namespace toolbox {
     class idx7 {
     public:
       idx7(int a_O, int a_N, int a_M, int a_L, int a_K, int a_J, int a_I):
-        O_(a_O),
-        N_(a_N),
-        M_(a_M),
-        L_(a_L),
-        K_(a_K),
+        I_(a_I),
         J_(a_J),
-        I_(a_I) {};
+        K_(a_K),
+        L_(a_L),
+        M_(a_M),
+        N_(a_N),
+        O_(a_O) {};
 
       int operator()(int o, int n, int m, int l, int k, int j, int i) const {
-
         if (i < 0 || i > I_) {
           std::stringstream ss;
           ss << "I: " << i << " out of scope : " << I_ << std::endl;

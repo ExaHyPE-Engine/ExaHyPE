@@ -71,38 +71,26 @@ void   peano4::parallel::TreeManagementMessage::setAction(Action value) {
 MPI_Datatype peano4::parallel::TreeManagementMessage::Datatype = MPI_DATATYPE_NULL;
 #endif
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype peano4::parallel::TreeManagementMessage::getForkDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype peano4::parallel::TreeManagementMessage::getGlobalCommunicationDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype peano4::parallel::TreeManagementMessage::getJoinDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype peano4::parallel::TreeManagementMessage::getBoundaryExchangeDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype peano4::parallel::TreeManagementMessage::getMultiscaleDataExchangeDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 void peano4::parallel::TreeManagementMessage::freeForkDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
@@ -110,8 +98,6 @@ void peano4::parallel::TreeManagementMessage::freeForkDatatype() {
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void peano4::parallel::TreeManagementMessage::freeGlobalCommunicationDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
@@ -119,8 +105,6 @@ void peano4::parallel::TreeManagementMessage::freeGlobalCommunicationDatatype() 
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void peano4::parallel::TreeManagementMessage::freeJoinDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
@@ -128,8 +112,6 @@ void peano4::parallel::TreeManagementMessage::freeJoinDatatype() {
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void peano4::parallel::TreeManagementMessage::freeBoundaryExchangeDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
@@ -137,8 +119,6 @@ void peano4::parallel::TreeManagementMessage::freeBoundaryExchangeDatatype() {
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void peano4::parallel::TreeManagementMessage::freeMultiscaleDataExchangeDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);

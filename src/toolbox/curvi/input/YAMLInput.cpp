@@ -27,8 +27,7 @@ toolbox::curvi::YAMLInput::YAMLInput(std::string input_file) {
 }
 
 void toolbox::curvi::YAMLInput::parseDomain(double a_offset[3], double a_size[3]) {
-  if (bool(config["domain"]) & bool(config["domain"]["offset"]) & bool(config["domain"]["size"])) {
-
+  if (bool(config["domain"]) && bool(config["domain"]["offset"]) && bool(config["domain"]["size"])) {
     std::vector<double> offset = config["domain"]["offset"].as<std::vector<double>>();
     std::vector<double> size   = config["domain"]["size"].as<std::vector<double>>();
 
@@ -50,7 +49,6 @@ void toolbox::curvi::YAMLInput::parseDomain(double a_offset[3], double a_size[3]
     throw std::invalid_argument(ss.str());
   }
 }
-
 
 void toolbox::curvi::YAMLInput::parseGrid(uint a_grid[3], uint ez, uint ey, uint ex) {
   std::vector<uint> grid;
@@ -75,7 +73,7 @@ void toolbox::curvi::YAMLInput::parseGrid(uint a_grid[3], uint ez, uint ey, uint
 }
 
 void toolbox::curvi::YAMLInput::parseModes(uint a_mode[3]) {
-  if (bool(config["domain"]) & bool(config["domain"]["mode"])) {
+  if (bool(config["domain"]) && bool(config["domain"]["mode"])) {
     std::vector<uint> mode = config["domain"]["mode"].as<std::vector<uint>>();
     std::copy_n(mode.data(), 3, a_mode);
   } else {
@@ -87,7 +85,6 @@ void toolbox::curvi::YAMLInput::parseModes(uint a_mode[3]) {
     throw std::invalid_argument(ss.str());
   }
 }
-
 
 toolbox::curvi::Root* toolbox::curvi::YAMLInput::parse(double offset[3], double size[3], uint grid[3]) {
   Root* root = new Root(config["topography"], offset, size, grid);

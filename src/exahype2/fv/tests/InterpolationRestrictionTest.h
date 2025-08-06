@@ -70,6 +70,6 @@ Aborted (core dumped)
 
   public:
     InterpolationRestrictionTest();
-    
+
     virtual void run();
 };
