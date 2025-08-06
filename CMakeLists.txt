@@ -89,7 +89,6 @@ if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
     -Wall
     -Wextra
     -Kieee
-    --diag_suppress=unrecognized_attribute
   )
 else()
   target_compile_options(PeanoOptions INTERFACE
@@ -97,11 +96,9 @@ else()
     -Wall
     -Wextra
     -Wpedantic
-    -Wno-attributes
-    -Wno-unused-parameter
-    -Wnon-virtual-dtor
     -Wreturn-type
-    -Wno-system-headers
+    -Wnon-virtual-dtor
+    -Wno-unused-parameter
   )
 endif()
 

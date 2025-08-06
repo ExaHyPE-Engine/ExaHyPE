@@ -3,7 +3,7 @@
 #pragma once
 
 #include "ScalarOperations.h"
-
+#include "Vector.h"
 #include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
 
@@ -111,48 +111,66 @@ namespace tarch {
 
     template <int Size, typename Scalar>
     bool oneEquals(
-      const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance = NUMERICAL_ZERO_DIFFERENCE
+      const Vector<Size, Scalar>& lhs,
+      const Scalar&               cmp,
+      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
     );
 
     template <int Size, typename Scalar>
     bool oneGreater(
-      const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance = NUMERICAL_ZERO_DIFFERENCE
+      const Vector<Size, Scalar>& lhs,
+      const Scalar&               cmp,
+      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
     );
 
     template <int Size, typename Scalar>
     bool oneGreaterEquals(
-      const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance = NUMERICAL_ZERO_DIFFERENCE
+      const Vector<Size, Scalar>& lhs,
+      const Scalar&               cmp,
+      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
     );
 
     template <int Size, typename Scalar>
     bool allGreater(
-      const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance = NUMERICAL_ZERO_DIFFERENCE
+      const Vector<Size, Scalar>& lhs,
+      const Scalar&               cmp,
+      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
     );
 
     template <int Size, typename Scalar>
     bool allGreaterEquals(
-      const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance = NUMERICAL_ZERO_DIFFERENCE
+      const Vector<Size, Scalar>& lhs,
+      const Scalar&               cmp,
+      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
     );
 
 
     template <int Size, typename Scalar>
     bool oneSmaller(
-      const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance = NUMERICAL_ZERO_DIFFERENCE
+      const Vector<Size, Scalar>& lhs,
+      const Scalar&               cmp,
+      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
     );
 
     template <int Size, typename Scalar>
     bool oneSmallerEquals(
-      const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance = NUMERICAL_ZERO_DIFFERENCE
+      const Vector<Size, Scalar>& lhs,
+      const Scalar&               cmp,
+      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
     );
 
     template <int Size, typename Scalar>
     bool allSmaller(
-      const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance = NUMERICAL_ZERO_DIFFERENCE
+      const Vector<Size, Scalar>& lhs,
+      const Scalar&               cmp,
+      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
     );
 
     template <int Size, typename Scalar>
     bool allSmallerEquals(
-      const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance = NUMERICAL_ZERO_DIFFERENCE
+      const Vector<Size, Scalar>& lhs,
+      const Scalar&               cmp,
+      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
     );
 
 

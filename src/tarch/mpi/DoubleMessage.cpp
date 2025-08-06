@@ -46,37 +46,26 @@ MPI_Datatype tarch::mpi::DoubleMessage::Datatype = MPI_DATATYPE_NULL;
 #endif
 
 
-[[clang::map_mpi_datatype]]
 MPI_Datatype tarch::mpi::DoubleMessage::getForkDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype tarch::mpi::DoubleMessage::getGlobalCommunicationDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype tarch::mpi::DoubleMessage::getJoinDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype tarch::mpi::DoubleMessage::getBoundaryExchangeDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 MPI_Datatype tarch::mpi::DoubleMessage::getMultiscaleDataExchangeDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
 void tarch::mpi::DoubleMessage::freeForkDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
@@ -84,8 +73,6 @@ void tarch::mpi::DoubleMessage::freeForkDatatype() {
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void tarch::mpi::DoubleMessage::freeGlobalCommunicationDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
@@ -93,8 +80,6 @@ void tarch::mpi::DoubleMessage::freeGlobalCommunicationDatatype() {
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void tarch::mpi::DoubleMessage::freeJoinDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
@@ -102,8 +87,6 @@ void tarch::mpi::DoubleMessage::freeJoinDatatype() {
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void tarch::mpi::DoubleMessage::freeBoundaryExchangeDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
@@ -111,8 +94,6 @@ void tarch::mpi::DoubleMessage::freeBoundaryExchangeDatatype() {
   }
 }
 
-
-[[clang::map_mpi_datatype]]
 void tarch::mpi::DoubleMessage::freeMultiscaleDataExchangeDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);

@@ -152,19 +152,18 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   if (not(particleIsNew and (not checkNewParticles))) {
     // skip the newly added event.
 
-    const bool isDropping = previousEvent.type
+    [[maybe_unused]] const bool isDropping = previousEvent.type
                               == internal::Event::Type::DetachFromVertex
                             and tarch::la::
                               allGreater(previousEvent.vertexH, vertexH);
-    const bool isLifting = previousEvent.type
+    [[maybe_unused]] const bool isLifting = previousEvent.type
                              == internal::Event::Type::DetachFromVertex
                            and tarch::la::
                              allSmaller(previousEvent.vertexH, vertexH);
-    const bool isDroppingFromSieveSet = previousEvent.type
+    [[maybe_unused]] const bool isDroppingFromSieveSet = previousEvent.type
                                         == internal::Event::Type::
                                           AssignToSieveSet;
-
-    const bool isDetached
+    [[maybe_unused]] const bool isDetached
       = reassignmentOnSameTreeDepthAllowed
           ? (previousEvent.type == internal::Event::Type::DetachFromVertex)
           : (
@@ -256,7 +255,7 @@ void toolbox::particles::assignmentchecks::moveParticle(
   // TODO: This may not fail any more, as we don't use the floating point based
   // fuzzy search in the map any more. However, needs to be checked. For now, it
   // won't harm to keep this.
-  tarch::la::Vector dx = tarch::la::abs(oldParticleX - newParticleX);
+  [[maybe_unused]] tarch::la::Vector dx = tarch::la::abs(oldParticleX - newParticleX);
   assertion5(
     tarch::la::allSmaller(dx, tarch::la::max(vertexH)),
     "particle moved more than vertex size",

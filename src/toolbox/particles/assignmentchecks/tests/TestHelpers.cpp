@@ -11,10 +11,6 @@ namespace {
   tarch::logging::Log _log("toolbox::particles::assignmentchecks");
 } // namespace
 
-#ifdef UseTestSpecificCompilerSettings
-#pragma optimize("", off)
-#endif
-
 toolbox::particles::assignmentchecks::tests::TestHelpers::TestHelpers():
   TestCase("toolbox::particles::assignmentchecks::tests::TestHelpers") {}
 
@@ -345,7 +341,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
   int                                   treeId            = 1;
   bool                                  isLocal           = true;
-  double                                positionTolerance = 1.;
+  //double                                positionTolerance = 1.;
   tarch::la::Vector<DIMENSIONS, double> particleX;
   tarch::la::Vector<DIMENSIONS, double> vertexX;
   tarch::la::Vector<DIMENSIONS, double> vertexH;
@@ -457,7 +453,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         treeId
       );
 
-    size_t nEntries = eventDatabase.getTotalParticleEntries(identifier);
+    [[maybe_unused]] size_t nEntries = eventDatabase.getTotalParticleEntries(identifier);
     // we add 4 events per sweep.
     assertion4(
       nEntries == (meshSweepNames.size() * 4),
@@ -495,7 +491,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   // snapshots. re-initialize with enough "space".
   eventDatabase.setMaxParticleSnapshotsToKeepTrackOf(20);
 
-  double                                positionTolerance = 1.;
+  //double                                positionTolerance = 1.;
   tarch::la::Vector<DIMENSIONS, double> particleX;
   tarch::la::Vector<DIMENSIONS, double> vertexX;
   tarch::la::Vector<DIMENSIONS, double> vertexH;
@@ -633,7 +629,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
   int    particleID        = 1;
   int    treeId            = 1;
-  double positionTolerance = 1.;
+  //double positionTolerance = 1.;
   double dt                = 1.;
 
   tarch::la::Vector<DIMENSIONS, double> particleX;
@@ -706,7 +702,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     treeId
   );
 
-  int nEntries = eventDatabase.getTotalParticleEntries(identifier);
+  [[maybe_unused]] int nEntries = eventDatabase.getTotalParticleEntries(identifier);
   // reduce nEventsToKeep by 1 here, as we always substitute the past
   // trajectory with the last event (and modify its trace to signify that)
   assertion6(
@@ -2196,7 +2192,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
     spacetreeId
   );
 
-  size_t nEntries = eventDatabase.getTotalParticleEntries(identifier);
+  [[maybe_unused]] size_t nEntries = eventDatabase.getTotalParticleEntries(identifier);
   // we add 4 events per sweep, and 1 initial one
   assertion5(
     nEntries == (nsweeps * 4 + 1),
@@ -2236,7 +2232,3 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::run() {
   testMethod(testPeriodicBoundaryConditionsCorner);
   testMethod(testSieveSet);
 }
-
-#ifdef UseTestSpecificCompilerSettings
-#pragma optimize("", on)
-#endif

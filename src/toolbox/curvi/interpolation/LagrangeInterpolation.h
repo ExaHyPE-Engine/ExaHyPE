@@ -80,7 +80,7 @@ namespace toolbox {
             denominator *= (range[i] - range[j]);
           }
 
-          for (int j = i + 1; j < range.size(); j++) {
+          for (int j = i + 1; j < static_cast<int>(range.size()); j++) {
             nominator *= (position - range[j]);
             denominator *= (range[i] - range[j]);
           }

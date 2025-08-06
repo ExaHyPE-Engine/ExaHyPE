@@ -20,6 +20,7 @@ toolbox::curvi::FaceBoundary::FaceBoundary(const FaceBoundary& other):
   right_edge(other.right_edge),
   top_edge(other.top_edge),
   bottom_edge(other.bottom_edge) {
+
   std::copy_n(other.coords, 2, coords);
   std::copy_n(other.index_size, 3, index_size);
   position = other.position;
@@ -42,11 +43,12 @@ toolbox::curvi::FaceBoundary& toolbox::curvi::FaceBoundary::operator=(FaceBounda
 
 toolbox::curvi::FaceBoundary::
   FaceBoundary(Coordinate a_coords[2], double a_position, Edge& a_left, Edge& a_right, Edge& a_bottom, Edge& a_top):
-  position(a_position),
   left_edge(a_left),
   right_edge(a_right),
+  top_edge(a_top),
   bottom_edge(a_bottom),
-  top_edge(a_top) {
+  position(a_position) {
+
   std::copy_n(a_coords, 2, coords);
 
   // if(a_left.size() != a_right.size()){
@@ -69,9 +71,10 @@ toolbox::curvi::FaceBoundary::
 toolbox::curvi::FaceBoundary::FaceBoundary(const Face& face):
   left_edge(Edge(face.getCoord(0))),
   right_edge(Edge(face.getCoord(0))),
-  bottom_edge(Edge(face.getCoord(1))),
-  top_edge(Edge(face.getCoord(1))) {
-  /*Copy position, indeces and coordinates from face*/
+  top_edge(Edge(face.getCoord(1))),
+  bottom_edge(Edge(face.getCoord(1))) {
+
+  /*Copy position, indices and coordinates from face*/
   face.getIndexSize(index_size);
   face.getCoord(coords);
   position = face.getPosition();
@@ -116,10 +119,10 @@ toolbox::curvi::FaceBoundary::
   FaceBoundary(double offset[3], double size[3], int a_index_size[3], Coordinate a_coords[2]):
   left_edge(Edge(a_coords[0])),
   right_edge(Edge(a_coords[0])),
-  bottom_edge(Edge(a_coords[1])),
-  top_edge(Edge(a_coords[1])) {
+  top_edge(Edge(a_coords[1])),
+  bottom_edge(Edge(a_coords[1])) {
 
-  /*Set position, indeces*/
+  /*Set position, indices*/
   std::copy_n(a_coords, 2, coords);
   std::copy_n(a_index_size, 3, index_size);
   /*Test input arguments*/
@@ -162,7 +165,6 @@ toolbox::curvi::FaceBoundary::
   bottom_edge.resize(index_size_eta * NCOORDS);
   top_edge.resize(index_size_eta * NCOORDS);
 
-
   /*init top and bottom line*/
   {
     idx2   idx(NCOORDS, index_size_eta);
@@ -202,7 +204,6 @@ toolbox::curvi::Coordinate toolbox::curvi::FaceBoundary::getCoord(int i) const {
 
 void toolbox::curvi::FaceBoundary::getCoord(Coordinate a_coord[2]) const { std::copy_n(coords, 2, a_coord); }
 
-
 int toolbox::curvi::FaceBoundary::getIndexSize(int i) const { return index_size[i]; }
 
 void toolbox::curvi::FaceBoundary::getIndexSize(int a_index_size[3]) const { std::copy_n(index_size, 3, a_index_size); }
@@ -228,6 +229,8 @@ toolbox::curvi::Edge& toolbox::curvi::FaceBoundary::getEdge(Coordinate coord, bo
   if (coord == coords[0] && !upper) {
     return bottom_edge;
   }
+
+  throw std::logic_error("Unhandled case in toolbox::curvi::FaceBoundary::getEdge");
 }
 
 void toolbox::curvi::FaceBoundary::setEdge(Coordinate coord, bool upper, const Edge& other) {
@@ -276,7 +279,7 @@ void toolbox::curvi::FaceBoundary::
   Coordinate xi  = c == coords[0] ? coords[1] : coords[0];
 
   // To keep the Face Boundary valid
-  // the intersection path needs to have the same size as its paralell edges
+  // the intersection path needs to have the same size as its parallel edges
   Edge o_edge = getEdge(eta, false);
 
   if (o_edge.size() != cutting_edge.size()) {

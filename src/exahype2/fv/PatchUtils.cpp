@@ -39,7 +39,7 @@ namespace {
    */
   template<typename T>
   std::string prettyFormat( T value, bool isFirst ) {
-    static int previousZeroDataEntries = 0;
+    [[maybe_unused]] static int previousZeroDataEntries = 0;
 
     // first entry equals zero
     if ( tarch::la::equals(value,0.0,1e-8) and isFirst ) {

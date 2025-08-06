@@ -113,7 +113,7 @@ public:
    * creates shallow copies, the destructor does not(!) free the memory. You
    * have to do this manually via a call to deleteParticles().
    */
-  virtual ~SieveParticles();
+  virtual ~SieveParticles() = default;
 
   /**
    * Deep clear.

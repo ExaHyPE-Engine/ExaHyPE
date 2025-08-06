@@ -27,7 +27,6 @@ toolbox::curvi::Face::Face():
   index_offset{0, 0, 0},
   index_size{0, 0, 0} {}
 
-
 toolbox::curvi::Face::Face(
   const Coordinate                      a_coords[2],
   const int                             a_index_offset[3],
@@ -35,8 +34,9 @@ toolbox::curvi::Face::Face(
   const double                          a_position,
   std::function<double(double, double)> a_perturbation
 ):
-  perturbation(a_perturbation),
-  position(a_position) {
+  position(a_position),
+  perturbation(a_perturbation) {
+
   std::copy_n(a_coords, 2, coords);
   std::copy_n(a_index_offset, 3, index_offset);
   std::copy_n(a_index_size, 3, index_size);
@@ -263,8 +263,8 @@ toolbox::curvi::Edge toolbox::curvi::Face::split(Face& other, Face& left, Face& 
   /* We assume this face lies in the X Y plane, the other face in the Y Z plane*/
   /* The index cut happens in the Y coordinate */
 
-  // Find shared coordiante:
-  Coordinate x, y, z;
+  // Find shared coordinate:
+  Coordinate x{}, y{}, z{};
   if (coords[0] == other.coords[0] || coords[0] == other.coords[1]) {
     y = coords[0];
     x = coords[1];
@@ -279,7 +279,7 @@ toolbox::curvi::Edge toolbox::curvi::Face::split(Face& other, Face& left, Face& 
 
   z = getNormal(x, y);
 
-  /*** Cut Indeces ***/
+  /*** Cut Indices ***/
   int index_intersection_x = other.index_offset[x];
   int index_intersection_z = index_offset[z];
 

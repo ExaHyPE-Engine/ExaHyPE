@@ -6,7 +6,6 @@
 
 namespace toolbox {
   namespace curvi {
-
     enum Coordinate { Z = 0, Y = 1, X = 2 };
 
 #define NCOORDS 3
@@ -17,6 +16,5 @@ namespace toolbox {
     Coordinate stringToCoord(std::string c);
     Coordinate getNormal(Coordinate c1, Coordinate c2);
     void       getPlane(Coordinate c1, Coordinate& c2, Coordinate& c3);
-
   } // namespace curvi
 } // namespace toolbox

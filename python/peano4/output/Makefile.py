@@ -64,8 +64,6 @@ MODE                    = {{MODE}}
     def readme_package_descriptor(self):
         return jinja2.Template(
             """
-{% if Parallel %}
-
 ### MPI parallelisation
 
 Peano's distributed memory parallelisation is based upon plain space-filling
@@ -88,9 +86,6 @@ an old EuroPar publication:
          isbn={978-3-540-37784-9}
        }
 
-{% endif %}
-{% if WITH_OPENMP %}
-
 ### OpenMP parallelisation
 
 Peano 4 run uses a wrapper around OpenMP to obtain a high task efficiency.
@@ -103,10 +98,6 @@ tasking mechanism. It is described in
          year = {2021},
          author = {Holger Schulz and Gonzalo Brito Gadeschi and Oleksandr Rudyy and Tobias Weinzierl},
       }
-
-{% endif %}
-
-{% if WITH_OPENMP %}
 
 Peano relies on a mixture of classic domain decomposition and task-based
 parallelism. The domain decomposition provides the baseline performance,
@@ -126,9 +117,6 @@ the SISC paper
          URL = {https://doi.org/10.1137/19M1276194},
          eprint = {https://doi.org/10.1137/19M1276194}
        }
-
-{% endif %}
-
 """
         ).render(**self.d)
 

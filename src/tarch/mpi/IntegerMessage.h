@@ -6,7 +6,7 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in
 // here
 //
-#pragma once 
+#pragma once
 
 #include <string>
 
@@ -49,34 +49,16 @@ struct tarch::mpi::IntegerMessage {
      * If we work with this additional feature, this is the routine where
      * the lazy initialisation is done and the datatype is also cached.
      */
-    [[clang::map_mpi_datatype]]
     static MPI_Datatype  getForkDatatype();
-
-    [[clang::map_mpi_datatype]]
     static MPI_Datatype  getJoinDatatype();
-
-    [[clang::map_mpi_datatype]]
     static MPI_Datatype  getBoundaryExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
     static MPI_Datatype  getMultiscaleDataExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunicationDatatype();
 
-    [[clang::map_mpi_datatype]]
     static void  freeForkDatatype();
-
-    [[clang::map_mpi_datatype]]
     static void  freeJoinDatatype();
-
-    [[clang::map_mpi_datatype]]
     static void  freeBoundaryExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
     static void  freeMultiscaleDataExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
     static void  freeGlobalCommunicationDatatype();
 
     /**
@@ -129,7 +111,7 @@ struct tarch::mpi::IntegerMessage {
     static void sendAndPollDanglingMessages(const tarch::mpi::IntegerMessage& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
     static void receiveAndPollDanglingMessages(tarch::mpi::IntegerMessage& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
 #endif
-    
+
 
     std::string toString() const;
 
@@ -152,11 +134,4 @@ struct tarch::mpi::IntegerMessage {
       static MPI_Datatype  Datatype;
       #endif
     #endif
-
-
-
 };
-
-  
-
-

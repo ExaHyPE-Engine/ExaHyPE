@@ -42,13 +42,6 @@ If only one of the build systems has been configured, the code generator will ch
   Unfortunately, this disables some error checking in the checkpoint and file output routines.
   If that does not help, you might want to reduce the optimisation level. On 
   Intel, switching from -fast to -O3 does work in some cases.
-- ***My compiler yields warnings of the type***
-  ~~~~~~~~~~~~~~~~~~~
-./peano4/grid/GridTraversalEvent.h:161:7: warning: unknown attribute 'compress' ignored [-Wunknown-attributes]
- [[clang::pack]]  std::bitset<TWO_POWER_D>   _hasBeenRefined;
-  ~~~~~~~~~~~~~~~~~~~
-  Please consult your compiler options. Usually re-configuring with the flag
-  ```-Wno-unknown-attributes``` eliminates the warnings.
 
 - ***My C++ version is too old***
   Try to rerun configure with

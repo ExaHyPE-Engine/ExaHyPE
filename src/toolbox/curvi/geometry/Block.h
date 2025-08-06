@@ -33,7 +33,6 @@ namespace toolbox {
         int                                                      mode_x
       ) const;
 
-
       Block resample(
         std::function<void(const Block&, int, int, int, Block&)> func,
         int                                                      in_z,
@@ -79,8 +78,8 @@ namespace toolbox {
     private:
       std::vector<double> nodes;
       Coordinate          coords[3];
-      int                 index_offset[3];
       int                 index_size[3];
+      int                 index_offset[3];
     };
   } // namespace curvi
 } // namespace toolbox

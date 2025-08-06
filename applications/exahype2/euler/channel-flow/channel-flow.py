@@ -13,7 +13,7 @@ initial_conditions = """
   Q[Shortcuts::rho]      = 1.0;
   Q[Shortcuts::rhoU + 0] = 0.0; // Flow in x-direction
   Q[Shortcuts::rhoU + 1] = 0.0; // No vertical velocity
-#if Dimensions == 3
+#if DIMENSIONS == 3
   Q[Shortcuts::rhoU + 2] = 0.0;
 #endif
   Q[Shortcuts::rhoE] = 1.0 / (GAMMA - 1.0) + 0.5 * (Q[Shortcuts::rhoU + 0] * Q[Shortcuts::rhoU + 0] + Q[Shortcuts::rhoU + 1] * Q[Shortcuts::rhoU + 1]) / Q[Shortcuts::rho];

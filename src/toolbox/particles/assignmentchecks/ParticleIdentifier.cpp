@@ -59,16 +59,11 @@ int toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
     const tarch::la::Vector<DIMENSIONS, double>& vertexX,
     const tarch::la::Vector<DIMENSIONS, double>& vertexH
   ) {
-
-  constexpr double boxsize = 243.;
-
-  double maxX = tarch::la::normMax(vertexX);
-  assertion3(maxX < boxsize, maxX, boxsize, "Hardcoded boxsize too small.");
-
+  constexpr double BoxSize = 243.;
+  [[maybe_unused]] double maxX = tarch::la::normMax(vertexX);
+  assertion3(maxX < BoxSize, maxX, BoxSize, "Hardcoded boxsize too small.");
   double maxH = tarch::la::normMax(vertexH);
-
-  int result = static_cast<int>(boxsize / maxH);
-
+  int result = static_cast<int>(BoxSize / maxH);
   return result;
 }
 

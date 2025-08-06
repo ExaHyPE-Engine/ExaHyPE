@@ -3,10 +3,11 @@
 #pragma once
 
 #include "ScalarOperations.h"
+#include "Vector.h"
 
+#include <limits>
 #include <sstream>
 #include <vector>
-#include <limits>
 
 /**
  * Forward declaration

@@ -11,7 +11,7 @@ toolbox::curvi::BlockBoundary::BlockBoundary(Coordinate c0, Coordinate c1, Coord
 }
 
 toolbox::curvi::BlockBoundary::BlockBoundary(Face topography, bool top, int n_depth, double depth) {
-  /*We asume topography is in the eta xi plane at the bottom of the domain*/
+  /*We assume topography is in the eta xi plane at the bottom of the domain*/
 
   Coordinate coords_topo[2];
   topography.getCoord(coords_topo);
@@ -19,7 +19,7 @@ toolbox::curvi::BlockBoundary::BlockBoundary(Face topography, bool top, int n_de
   Coordinate xi  = topography.getCoord(0);
   Coordinate mu  = getNormal(eta, xi);
 
-  // set coordiantes for block
+  // set coordinates for block
   coords[2] = eta;
   coords[1] = xi;
   coords[0] = mu;
@@ -43,7 +43,6 @@ toolbox::curvi::BlockBoundary::BlockBoundary(Face topography, bool top, int n_de
   std::vector<int> range_xi;
   topography.getIndexRange(xi, range_xi);
 
-
   double offset_block[3];
   offset_block[eta] = topography(eta, eta, range_eta.front(), xi, range_xi.front());
   offset_block[xi]  = topography(xi, eta, range_eta.front(), xi, range_xi.front());
@@ -57,7 +56,6 @@ toolbox::curvi::BlockBoundary::BlockBoundary(Face topography, bool top, int n_de
   size_block[xi]  = topography(xi, eta, range_eta.back(), xi, range_xi.back()) - offset_block[xi];
   size_block[mu]  = depth;
   //---------------------------------------//
-
 
   double offset_other[3];
   double size_other[3];
@@ -109,7 +107,6 @@ toolbox::curvi::BlockBoundary::BlockBoundary(Face topography, bool top, int n_de
   stop_eta_false_xi_true[mu] += size_block[mu];
   stop_eta_true_xi_false[mu] += size_block[mu];
   stop_eta_true_xi_true[mu] += size_block[mu];
-
 
   Edge edge_eta_false_xi_false(mu, start_eta_false_xi_false, stop_eta_false_xi_false, n_depth);
   Edge edge_eta_true_xi_false(mu, start_eta_true_xi_false, stop_eta_true_xi_false, n_depth);
@@ -196,52 +193,45 @@ toolbox::curvi::BlockBoundary::BlockBoundary(Face topography, bool top, int n_de
   checkConformity();
 }
 
-
 double& toolbox::curvi::BlockBoundary::operator()(BlockFace face, Coordinate coord, int j, int i) {
   if (face == LEFT) {
     idx3 idx(NCOORDS, index_size[1], index_size[2]);
     return left_face(coord, j, i);
-  }
-  if (face == RIGHT) {
+  } else if (face == RIGHT) {
     idx3 idx(NCOORDS, index_size[1], index_size[2]);
     return right_face(coord, j, i);
-  }
-  if (face == BOTTOM) {
+  } else if (face == BOTTOM) {
     idx3 idx(NCOORDS, index_size[2], index_size[0]);
     return bottom_face(coord, j, i);
-  }
-  if (face == TOP) {
+  } else if (face == TOP) {
     idx3 idx(NCOORDS, index_size[2], index_size[0]);
     return top_face(coord, j, i);
-  }
-  if (face == FRONT) {
+  } else if (face == FRONT) {
     idx3 idx(NCOORDS, index_size[1], index_size[0]);
     return front_face(coord, j, i);
-  }
-  if (face == BACK) {
+  } else if (face == BACK) {
     idx3 idx(NCOORDS, index_size[0], index_size[0]);
     return back_face(coord, j, i);
+  } else {
+    throw std::runtime_error("Invalid face in toolbox::curvi::BlockBoundary::operator()");
   }
 };
 
 const toolbox::curvi::Face& toolbox::curvi::BlockBoundary::getFace(BlockFace face) {
   if (face == LEFT) {
     return left_face;
-  }
-  if (face == RIGHT) {
+  } else if (face == RIGHT) {
     return right_face;
-  }
-  if (face == BOTTOM) {
+  } else if (face == BOTTOM) {
     return bottom_face;
-  }
-  if (face == TOP) {
+  } else if (face == TOP) {
     return top_face;
-  }
-  if (face == FRONT) {
+  } else if (face == FRONT) {
     return front_face;
-  }
-  if (face == BACK) {
+  } else if (face == BACK) {
     return back_face;
+  } else {
+    throw std::runtime_error("Invalid face in toolbox::curvi::BlockBoundary::getFace");
   }
 }
 
@@ -269,6 +259,8 @@ const toolbox::curvi::Face& toolbox::curvi::BlockBoundary::getFace(Coordinate co
       return front_face;
     }
   }
+
+  throw std::domain_error("Invalid coordinate in toolbox::curvi::BlockBoundary::getFace");
 }
 
 void toolbox::curvi::BlockBoundary::setFace(BlockFace face, const Face& other) {
@@ -319,7 +311,6 @@ void toolbox::curvi::BlockBoundary::setFace(Coordinate coord, bool upper, Face o
 }
 
 void toolbox::curvi::BlockBoundary::split(Face& face, BlockBoundary& left, BlockBoundary& right) {
-
   /* We assume we split in the xi-mu plane*/
   Coordinate xi  = face.getCoord(1);
   Coordinate mu  = face.getCoord(0);
@@ -352,11 +343,11 @@ void toolbox::curvi::BlockBoundary::split(Face& face, BlockBoundary& left, Block
   }
 
   // Check if face covers mu and xi
-  bool face_covers_mu = face_index_offset[mu] < getFace(mu, false).getIndexOffset(mu);
-  face_covers_mu &= face_index_offset[mu] + face_index_range[mu] > getFace(mu, true).getIndexOffset(mu);
+  // bool face_covers_mu = face_index_offset[mu] < getFace(mu, false).getIndexOffset(mu);
+  // face_covers_mu &= face_index_offset[mu] + face_index_range[mu] > getFace(mu, true).getIndexOffset(mu);
 
-  bool face_covers_xi = face_index_offset[xi] < getFace(xi, false).getIndexOffset(xi);
-  face_covers_xi &= face_index_offset[xi] + face_index_range[xi] > getFace(xi, true).getIndexOffset(xi);
+  // bool face_covers_xi = face_index_offset[xi] < getFace(xi, false).getIndexOffset(xi);
+  // face_covers_xi &= face_index_offset[xi] + face_index_range[xi] > getFace(xi, true).getIndexOffset(xi);
 
   // Set unchanged faces in resulting blocks
   left.setFace(eta, false, getFace(eta, false));

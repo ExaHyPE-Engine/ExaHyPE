@@ -104,7 +104,7 @@ class Boolean(Attribute):
             and not self._is_const
             and not self._is_constexpr
         ):
-            packstring = "[[clang::pack]]"
+            packstring = ""
             return [(namestring, typestring, packstring)]
         else:
             return [(namestring, typestring, "")]

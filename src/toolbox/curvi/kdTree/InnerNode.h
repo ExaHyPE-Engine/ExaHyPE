@@ -10,17 +10,17 @@ namespace toolbox {
     public:
       InnerNode(const YAML::Node& node);
 
-      ~InnerNode();
+      virtual ~InnerNode() override;
 
-      std::string toString(int depth = 0);
+      std::string toString(int depth = 0) override;
 
-      void init(BlockBoundary& boundary, uint modes[3]);
+      void init(BlockBoundary& boundary, uint modes[3]) override;
 
-      BlockBoundary traverse(int a_index[3]);
+      BlockBoundary traverse(int a_index[3]) override;
 
-      BlockBoundary traverseProjection(double coordinate[3]);
+      BlockBoundary traverseProjection(double coordinate[3]) override;
 
-      Block traverse();
+      Block traverse() override;
 
       void setPosition(double a_position);
 

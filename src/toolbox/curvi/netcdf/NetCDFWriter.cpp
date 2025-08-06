@@ -2,9 +2,9 @@
 
 toolbox::curvi::NetCDFWriter::NetCDFWriter(std::string filename, int a_nz, int a_ny, int a_nx):
   m_filename(filename),
-  nz(a_nz),
+  nx(a_nx),
   ny(a_ny),
-  nx(a_nx) {
+  nz(a_nz) {
 
   if (nz == 1) {
     dims = 2;

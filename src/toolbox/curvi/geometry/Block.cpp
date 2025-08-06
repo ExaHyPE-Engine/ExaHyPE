@@ -89,7 +89,6 @@ toolbox::curvi::Block toolbox::curvi::Block::
   return resample(func, mode_z, mode_y, mode_x, mode_z, mode_y, mode_x);
 }
 
-
 toolbox::curvi::Block toolbox::curvi::Block::resample(
   std::function<void(const Block&, int, int, int, Block&)> func,
   int                                                      in_z,
@@ -99,7 +98,6 @@ toolbox::curvi::Block toolbox::curvi::Block::resample(
   int                                                      out_y,
   int                                                      out_x
 ) const {
-
   if ((index_size[0] - 1) % (in_z - 1) != 0 || (index_size[1] - 1) % (in_y - 1) != 0
       || (index_size[2] - 1) % (in_x - 1) != 0) {
     std::stringstream ss;
@@ -116,7 +114,7 @@ toolbox::curvi::Block toolbox::curvi::Block::resample(
   int elements_y = (index_size[1] - 1) / (in_y - 1);
   int elements_x = (index_size[2] - 1) / (in_x - 1);
 
-  /*the firest index of implicit elements*/
+  /*the first index of implicit elements*/
   int start_elements_z = (index_offset[0]) / (in_z - 1);
   int start_elements_y = (index_offset[1]) / (in_y - 1);
   int start_elements_x = (index_offset[2]) / (in_x - 1);
@@ -136,10 +134,8 @@ toolbox::curvi::Block toolbox::curvi::Block::resample(
 
   result_nodes.resize(i_indexSize[2] * i_indexSize[1] * i_indexSize[0] * NCOORDS);
 
-  double position[3];
-  idx4   id(NCOORDS, nodes.size(), nodes.size(), nodes.size());
-  Block  result(coords, i_indexOffset, i_indexSize, result_nodes);
-
+  idx4  id(NCOORDS, nodes.size(), nodes.size(), nodes.size());
+  Block result(coords, i_indexOffset, i_indexSize, result_nodes);
 
   for (int e_z = 0; e_z < elements_z; e_z++) {
     for (int e_y = 0; e_y < elements_y; e_y++) {
@@ -152,10 +148,8 @@ toolbox::curvi::Block toolbox::curvi::Block::resample(
   return result;
 }
 
-
 toolbox::curvi::Block toolbox::curvi::Block::
   getMetricDerivatives(double** dudx, int nodes_z, int nodes_y, int nodes_x, double dx[3]) const {
-
 
   std::function<void(const Block&, int, int, int, Block&)> compute_metric_derivatives =
     [&](const Block& in, int e_z, int e_y, int e_x, Block& out) {
@@ -390,16 +384,18 @@ double& toolbox::curvi::Block::
 
   if (orientation_kji)
     return (*this)(d, k, j, i);
-  if (orientation_kij)
+  else if (orientation_kij)
     return (*this)(d, k, i, j);
-  if (orientation_ikj)
+  else if (orientation_ikj)
     return (*this)(d, i, k, j);
-  if (orientation_jki)
+  else if (orientation_jki)
     return (*this)(d, j, k, i);
-  if (orientation_ijk)
+  else if (orientation_ijk)
     return (*this)(d, i, j, k);
-  if (orientation_jik)
+  else if (orientation_jik)
     return (*this)(d, j, i, k);
+  else
+    throw std::runtime_error("Invalid coordinate ordering in toolbox::curvi::Block::operator()");
 }
 
 const double& toolbox::curvi::Block::
@@ -413,28 +409,26 @@ const double& toolbox::curvi::Block::
 
   if (orientation_kji)
     return (*this)(d, k, j, i);
-  if (orientation_kij)
+  else if (orientation_kij)
     return (*this)(d, k, i, j);
-  if (orientation_ikj)
+  else if (orientation_ikj)
     return (*this)(d, i, k, j);
-  if (orientation_jki)
+  else if (orientation_jki)
     return (*this)(d, j, k, i);
-  if (orientation_ijk)
+  else if (orientation_ijk)
     return (*this)(d, i, j, k);
-  if (orientation_jik)
+  else if (orientation_jik)
     return (*this)(d, j, i, k);
+  else
+    throw std::runtime_error("Invalid coordinate ordering in toolbox::curvi::Block::operator()");
 }
 
 std::string toolbox::curvi::Block::toString() const {
   std::stringstream ss;
   ss << "Coodinates: " << coordToString(coords[0]) << " " << coordToString(coords[1]) << " " << coordToString(coords[2])
      << " " << std::endl;
-
   ss << "Index Offset: " << index_offset[0] << " " << index_offset[1] << " " << index_offset[2] << " " << std::endl;
-
-
   ss << "Index Size: " << index_size[0] << " " << index_size[1] << " " << index_size[2] << " " << std::endl;
-
   return ss.str();
 }
 
@@ -463,7 +457,6 @@ void toolbox::curvi::Block::appendToNetCDF(std::string filename, std::string pre
   writer.write(start, count, nodes);
   writer.close();
 }
-
 
 void toolbox::curvi::Block::toNetCDF(std::string filename) const {
   size_t start[3] = {0, 0, 0};

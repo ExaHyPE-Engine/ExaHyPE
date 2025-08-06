@@ -5,11 +5,9 @@
 std::string toolbox::curvi::coordToString(Coordinate c) {
   if (c == Coordinate::X) {
     return "X";
-  }
-  if (c == Coordinate::Y) {
+  } else if (c == Coordinate::Y) {
     return "Y";
-  }
-  if (c == Coordinate::Z) {
+  } else {
     return "Z";
   }
 }
@@ -17,11 +15,9 @@ std::string toolbox::curvi::coordToString(Coordinate c) {
 std::string toolbox::curvi::coordToLowercaseString(Coordinate c) {
   if (c == Coordinate::X) {
     return "x";
-  }
-  if (c == Coordinate::Y) {
+  } else if (c == Coordinate::Y) {
     return "y";
-  }
-  if (c == Coordinate::Z) {
+  } else {
     return "z";
   }
 }
@@ -29,11 +25,9 @@ std::string toolbox::curvi::coordToLowercaseString(Coordinate c) {
 toolbox::curvi::Coordinate toolbox::curvi::stringToCoord(std::string s) {
   if (s == coordToString(Coordinate::X)) {
     return Coordinate::X;
-  }
-  if (s == coordToString(Coordinate::Y)) {
+  } else if (s == coordToString(Coordinate::Y)) {
     return Coordinate::Y;
-  }
-  if (s == coordToString(Coordinate::Z)) {
+  } else {
     return Coordinate::Z;
   }
 }

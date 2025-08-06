@@ -1,3 +1,5 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "toolbox/curvi/kdTree/Root.h"
 
 toolbox::curvi::Root::Root(const YAML::Node& node, double a_offset[3], double a_size[3], uint a_grid[3]) {
@@ -7,7 +9,7 @@ toolbox::curvi::Root::Root(const YAML::Node& node, double a_offset[3], double a_
   std::copy_n(a_offset, 3, offset);
   std::copy_n(a_grid, 3, grid);
   // check if required parameters exist
-  if (bool(node) && bool(node["top"]) & bool(node["coordinates"]) & bool(node["perturbation"])) {
+  if (bool(node) && bool(node["top"]) && bool(node["coordinates"]) && bool(node["perturbation"])) {
 
     /*set up coordinates and position of topography*/
     top = node["top"].as<bool>();
