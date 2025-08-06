@@ -31,7 +31,7 @@ boundary_conditions = """
 """
 
 parser = exahype2.ArgumentParser(
-    "ExaHyPE 2 Navier-Stokes Smooth Convergence Argument Parser"
+    "ExaHyPE 2 Euler Smooth Convergence Argument Parser"
 )
 parser.set_defaults(
     min_depth=6,
@@ -66,10 +66,10 @@ riemann_solver.set_implementation(
 riemann_solver.set_plotter(args.plotter)
 
 project = exahype2.Project(
-    namespace=["applications", "exahype2", "navierstokes"],
+    namespace=["applications", "exahype2", "euler"],
     project_name="SmoothConvergence",
     directory=".",
-    executable="NavierStokes",
+    executable="Euler",
 )
 project.add_solver(riemann_solver)
 

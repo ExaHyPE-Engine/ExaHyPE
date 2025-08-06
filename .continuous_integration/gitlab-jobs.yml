@@ -163,7 +163,7 @@ ExaHyPE2_Tutorials:
     - Build
   retry: 0
 
-ExaHyPE2_NavierStokes:
+ExaHyPE2_Euler:
   stage: Applications
   allow_failure: false
   extends:
@@ -171,7 +171,7 @@ ExaHyPE2_NavierStokes:
     - .Variables
     - .RunOnlyOn
     - .BeforeScriptSanitiser
-    - .ExaHyPE2_NavierStokes
+    - .ExaHyPE2_Euler
   needs:
     - job: Build
   dependencies:

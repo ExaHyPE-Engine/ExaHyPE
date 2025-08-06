@@ -1,6 +1,6 @@
 /**
 
-@page applications_exahype2_navier_stokes_point_explosion Point Explosion
+@page applications_exahype2_euler_point_explosion Point Explosion
 
 Scenario simulating a point explosion in the middle of the simulation plane.
 

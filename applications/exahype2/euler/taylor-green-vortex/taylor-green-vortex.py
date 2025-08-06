@@ -10,82 +10,69 @@ sys.path.insert(0, os.path.abspath(".."))
 from PDE import max_eigenvalue, flux
 
 initial_conditions = """
-  /**
-   * With plain DG, Rusanov, and without an additional limiter, we cannot solve
-   * discontinuous initial conditions. At the moment, most of the scenarios
-   * are physically meaningless. The only setup that should work
-   * out-of-the-box is the Gaussian, as it is infinitely smooth. Having said
-   * this, the Gaussian still can run into problems if it is too steep: If the
-   * polynomial order and mesh resolution are too low, the Gaussian continues
-   * to look like a discontinuous initial condition and thus introduces
-   * problems. Therefore, we scale its diameter with the maximum cell width. In
-   * a real setup, we should also take the polynomial order into account.
-   */
+  constexpr double U0 = 1.0; // Initial amplitude of velocity
+  constexpr double Pressure0 = 100 / GAMMA; // Reference pressure
 
-  // Manual offset to make the wave originate slightly to the left of the center
-  // --- helps to detect if wave is moving to the left or right.
-#if DIMENSIONS == 2
-  const tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.3};
-#else
-  const tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.18, 0.3, 0.6};
-#endif
-
-  const double peakDeviation = MaxAdmissibleCellH;
-  const double distance = tarch::la::norm2(x - circleCentre);
-  const double exponent = -(distance * distance) / 2.0 / peakDeviation / peakDeviation;
-
-  Q[Shortcuts::rho] = 0.1;
-  Q[Shortcuts::rhoU + 0] = 0.0;
-  Q[Shortcuts::rhoU + 1] = 0.0;
-#if DIMENSIONS == 3
+  Q[Shortcuts::rho]      = 1.0;
+  Q[Shortcuts::rhoU + 0] = U0 * std::sin(x(0)) * std::cos(x(1));
+  Q[Shortcuts::rhoU + 1] = -U0 * std::cos(x(0)) * std::sin(x(1));
+#if Dimensions == 3
   Q[Shortcuts::rhoU + 2] = 0.0;
 #endif
-  Q[Shortcuts::rhoE] = 1.0 + std::exp(exponent);
+
+  const double pressure = Pressure0 + (Q[Shortcuts::rho] * U0) * (1.0 / 4.0) * (std::cos(2.0 * x(0)) + std::cos(2.0 * x(1)));
+  // Total energy: internal energy + kinetic energy
+  Q[Shortcuts::rhoE] = pressure / (GAMMA - 1.0) + 0.5  * (Q[Shortcuts::rhoU + 0] * Q[Shortcuts::rhoU + 0] + Q[Shortcuts::rhoU + 1] * Q[Shortcuts::rhoU + 1]);
 """
 
 boundary_conditions = """
-  // Reflective boundary conditions
-  Qoutside[Shortcuts::rho]      = Qinside[Shortcuts::rho];
-  Qoutside[Shortcuts::rhoU + 0] = -Qinside[Shortcuts::rhoU + 0];
-  Qoutside[Shortcuts::rhoU + 1] = -Qinside[Shortcuts::rhoU + 1];
-#if DIMENSIONS == 3
-  Qoutside[Shortcuts::rhoU + 2] = -Qinside[Shortcuts::rhoU + 2];
-#endif
-  Qoutside[Shortcuts::rhoE]     = Qinside[Shortcuts::rhoE];
 """
 
 refinement_criterion = """
   auto result = ::exahype2::RefinementCommand::Keep;
-
-#if DIMENSIONS == 3
-  tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.5, 0.5};
-#else
-  tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.5};
-#endif
-
-  if (tarch::la::equals(t, 0.0)) {
-    if (tarch::la::norm2(x - circleCentre) < 0.1) {
-      result = ::exahype2::RefinementCommand::Refine;
-    }
-  }
-
   return result;
 """
 
-parser = exahype2.ArgumentParser(
-    "ExaHyPE 2 Navier-Stokes Gaussian Explosion Argument Parser"
-)
+analytical_solution = """
+  constexpr double Viscosity = 1.0;
+  const double C = 100.0 / GAMMA;
+
+  // Time decay factors for velocity and pressure
+  const double expVelocityFactor = std::exp(-2.0 * Viscosity * t); // Time decay factor for velocity
+  const double expPressureFactor = std::exp(-4.0 * Viscosity * t); // Time decay factor for pressure
+
+  // Set the initial conditions for the Taylor-Green vortex
+  solution[Shortcuts::rho] = 1.0; // Constant density
+
+  // Velocity components with time decay
+  solution[Shortcuts::rhoU + 0] = expVelocityFactor * std::sin(x(0)) * std::cos(x(1));
+  solution[Shortcuts::rhoU + 1] = -expVelocityFactor * std::cos(x(0)) * std::sin(x(1));
+#if Dimensions == 3
+  solution[Shortcuts::rhoU + 2] = 0.0;
+#endif
+
+  // Pressure with time decay and the given formula
+  double pressure = expPressureFactor * (std::cos(2.0 * x(0)) + std::cos(2.0 * x(1)))*(1.0 / 4.0) + C;
+
+  // Total energy: internal energy + kinetic energy
+  solution[Shortcuts::rhoE] = pressure / (GAMMA - 1.0) + 0.5 * (Q[Shortcuts::rhoU + 0] * Q[Shortcuts::rhoU + 0] + Q[Shortcuts::rhoU + 1] * Q[Shortcuts::rhoU + 1]);
+"""
+
+parser = exahype2.ArgumentParser("ExaHyPE 2 Euler Taylor-Green Vortex Argument Parser")
 parser.set_defaults(
-    min_depth=6,
+    min_depth=5,
     degrees_of_freedom=16,
+    periodic_boundary_conditions_x=True,
+    periodic_boundary_conditions_y=True,
+    periodic_boundary_conditions_z=True,
 )
 args = parser.parse_args()
 
-size = [1.0, 1.0, 1.0]
+size = [2*3.14159265359, 2*3.14159265359, 2*3.14159265359]
 max_h = 1.1 * min(size) / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
 
-riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+riemann_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": args.dimensions, "rhoE": 1},
@@ -103,15 +90,22 @@ riemann_solver.set_implementation(
     refinement_criterion=refinement_criterion,
     max_eigenvalue=max_eigenvalue,
     flux=flux,
+    limiter=exahype2.solvers.fv.musclhancock.Limiter.vanalbada
 )
 
 riemann_solver.set_plotter(args.plotter)
 
+exahype2.solvers.fv.ErrorMeasurement(
+    riemann_solver,
+    error_measurement_implementation=analytical_solution,
+    output_file_name="Error",
+)
+
 project = exahype2.Project(
-    namespace=["applications", "exahype2", "navierstokes"],
-    project_name="GaussianExplosion",
+    namespace=["applications", "exahype2", "euler"],
+    project_name="TaylorGreenVortex",
     directory=".",
-    executable="NavierStokes",
+    executable="Euler",
 )
 project.add_solver(riemann_solver)
 

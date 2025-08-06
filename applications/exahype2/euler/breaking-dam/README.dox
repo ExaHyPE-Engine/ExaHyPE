@@ -1,6 +1,6 @@
 /**
 
-@page applications_exahype2_navier_stokes_breaking_dam Breaking Dam
+@page applications_exahype2_euler_breaking_dam Breaking Dam
 
 Scenario simulating a breaking dam starting on the left part of the simulation plane.
 
