@@ -56,9 +56,9 @@ For this, we specify the (nested) namespaces, the name of our main file and our 
 """
 my_project = exahype2.Project(
     namespace=["tutorials", "symhype", "euler"],
-    project_name="Euler" + str(dimensions) + "D",
+    project_name="Euler",
     directory=".",
-    executable="Euler" + str(dimensions) + "D." + str(compile_mode),
+    executable="Euler",
 )
 
 """
@@ -132,7 +132,7 @@ This gives us then a complete description of a 'scenario'.
 """
 
 # Initial conditions as specified in the documentation.
-my_pde.initial_values[0] = 1  # rho
+my_pde.initial_values[0] = 1.0  # rho
 my_pde.initial_values[1] = 0  # u
 my_pde.initial_values[2] = 0  # v
 

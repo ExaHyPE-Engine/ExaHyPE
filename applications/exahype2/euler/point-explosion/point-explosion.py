@@ -10,13 +10,15 @@ sys.path.insert(0, os.path.abspath(".."))
 from PDE import max_eigenvalue, flux
 
 initial_conditions = """
-  Q[Shortcuts::rho] = 0.1;
-  Q[Shortcuts::rhoU + 0] = 0.0;
-  Q[Shortcuts::rhoU + 1] = 0.0;
-#if DIMENSIONS == 3
-  Q[Shortcuts::rhoU + 2] = 0.0;
+  Q[Shortcuts::rho]       = 1.0;
+  Q[Shortcuts::rhoU + 0]  = 0.0;
+  Q[Shortcuts::rhoU + 1]  = 0.0;
+#if DIMENSIONS == 2
+  Q[Shortcuts::rhoE]      = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2)) < 0.2) ? (1.0) : (1.01));
+#else
+  Q[Shortcuts::rhoU + 2]  = 0.0;
+  Q[Shortcuts::rhoE]      = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2) + std::pow(0.5 - x(2), 2)) < 0.2) ? (1.0) : (1.01));
 #endif
-  Q[Shortcuts::rhoE] = ((x(0) < 0.5) ? (1.01) : (1.0));
 """
 
 boundary_conditions = """
@@ -33,18 +35,24 @@ boundary_conditions = """
 refinement_criterion = """
   auto result = ::exahype2::RefinementCommand::Keep;
 
+#if DIMENSIONS == 3
+  tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.5, 0.5};
+#else
+  tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.5};
+#endif
+
   if (tarch::la::equals(t, 0.0)) {
-    if (x(0) < 0.5) {
+    if (tarch::la::norm2(x - circleCentre) < 0.1) {
       result = ::exahype2::RefinementCommand::Refine;
-    } else {
-      result = ::exahype2::RefinementCommand::Erase;
     }
   }
 
   return result;
 """
 
-parser = exahype2.ArgumentParser("ExaHyPE 2 Navier-Stokes Breaking Dam Argument Parser")
+parser = exahype2.ArgumentParser(
+    "ExaHyPE 2 Euler Point Explosion Argument Parser"
+)
 parser.set_defaults(
     min_depth=6,
     degrees_of_freedom=16,
@@ -78,10 +86,10 @@ riemann_solver.set_implementation(
 riemann_solver.set_plotter(args.plotter)
 
 project = exahype2.Project(
-    namespace=["applications", "exahype2", "navierstokes"],
-    project_name="BreakingDam",
+    namespace=["applications", "exahype2", "euler"],
+    project_name="PointExplosion",
     directory=".",
-    executable="NavierStokes",
+    executable="Euler",
 )
 project.add_solver(riemann_solver)
 

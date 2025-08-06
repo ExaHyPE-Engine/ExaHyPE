@@ -1,6 +1,6 @@
 /**
 
-@page applications_exahype2_navier_stokes_gaussian_explosion Gaussian Explosion
+@page applications_exahype2_euler_gaussian_explosion Gaussian Explosion
 
 Scenario simulating a gaussian explosion in the middle of the simulation plane.
 

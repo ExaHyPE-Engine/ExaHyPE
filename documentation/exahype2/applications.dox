@@ -10,8 +10,8 @@
   - \subpage applications_exahype2_ExaGRyPE
 - Tsunamis and Flooding
   - \subpage applications_exahype2_shallow_water
-- Computational Fluid Dynamics
-  - \subpage applications_exahype2_navier_stokes
+- Computational Fluid Dynamics and Atmospheric
+  - \subpage applications_exahype2_euler
 
 This directory holds links to some showcase applications of ExaHyPE. Many of these
 applications are the base for some cooked-down @ref page_exahype_benchmarks "benchmarks".

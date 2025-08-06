@@ -52,7 +52,7 @@ my_project = exahype2.Project(
     namespace=["tutorials", "symhype", "swe"],
     project_name="SWE",
     directory=".",
-    executable="SWE." + str(compile_mode),
+    executable="SWE",
 )
 
 """
@@ -129,7 +129,7 @@ This gives us then a complete description of a 'scenario'.
 """
 
 # Initial conditions as specified in the documentation.
-my_pde.initial_values[0] = 1  # Water height (h)
+my_pde.initial_values[0] = 1.0  # Water height (h)
 my_pde.initial_values[1] = 0  # x-momentum (hu)
 my_pde.initial_values[2] = 0  # y-momentum (hv)
 

@@ -61,9 +61,9 @@ For this, we specify the (nested) namespaces, the name of our main file and our 
 """
 my_project = exahype2.Project(
     namespace=["tutorials", "symhype", "advection"],
-    project_name="Advection" + str(dimensions) + "D",
+    project_name="Advection",
     directory=".",
-    executable="Advection" + str(dimensions) + "D." + str(compile_mode),
+    executable="Advection",
 )
 
 """

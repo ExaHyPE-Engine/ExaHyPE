@@ -49,15 +49,15 @@
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/symhype/$tutorial; PYTHONPATH=$CI_PROJECT_DIR/python python3 $tutorial.py;"
 
-.ExaHyPE2_NavierStokes:
+.ExaHyPE2_Euler:
   parallel:
     matrix:
-    - scenario: [breaking-dam, gaussian-bell, gaussian-explosion, point-explosion, smooth-convergence]
+    - scenario: [breaking-dam, channel-flow, gaussian-bell, gaussian-explosion, point-explosion, smooth-convergence, taylor-green-vortex]
       dimensions: [2]
       build_type: [Debug, Release]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/navier-stokes/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -d $dimensions -m $build_type -md 4 -ns 0;"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/navier-stokes/$scenario; OMP_NUM_THREADS=1 ./NavierStokes;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/euler/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -d $dimensions -m $build_type -md 4 -ns 0;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/euler/$scenario; OMP_NUM_THREADS=1 ./Euler;"
 
 .ExaHyPE2_ShallowWater:
   parallel:

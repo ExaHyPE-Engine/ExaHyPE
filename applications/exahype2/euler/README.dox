@@ -1,0 +1,32 @@
+/**
+
+@page applications_exahype2_euler Euler
+
+# How to Build and Run
+
+For a general overview and all options on how to retrieve and configure the project, refer to @ref page_installation_home.
+
+    cd myPeanoDirectory
+    pip3 install -e .
+    mkdir build && cd build
+    CC=gcc CXX=g++ cmake ..
+    make -j && make test
+    cd ../applications/exahype2/euler/scenario/
+    python3 scenario.py
+
+Where `CC=gcc CXX=g++` can be any set of compilers.
+
+# Visualise the Simulation Output
+
+    python3 myPeanoDirectory/python/peano4/visualisation/render.py solutions/solution-.peano-patch-file
+
+# Scenarios
+
+\li \subpage applications_exahype2_euler_breaking_dam
+\li \subpage applications_exahype2_euler_channel_flow
+\li \subpage applications_exahype2_euler_gaussian_bell
+\li \subpage applications_exahype2_euler_gaussian_explosion
+\li \subpage applications_exahype2_euler_point_explosion
+\li \subpage applications_exahype2_euler_taylor_green_vortex
+
+*/

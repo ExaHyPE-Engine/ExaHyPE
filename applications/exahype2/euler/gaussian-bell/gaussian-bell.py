@@ -53,7 +53,7 @@ analytical_solution = """
 """
 
 parser = exahype2.ArgumentParser(
-    "ExaHyPE 2 Navier-Stokes Gaussian Bell Argument Parser"
+    "ExaHyPE 2 Euler Gaussian Bell Argument Parser"
 )
 parser.set_defaults(
     min_depth=6,
@@ -88,17 +88,17 @@ riemann_solver.set_implementation(
 
 riemann_solver.set_plotter(args.plotter)
 
-# exahype2.solvers.fv.ErrorMeasurement(
-#     riemann_solver,
-#     error_measurement_implementation=analytical_solution,
-#     output_file_name="Error",
-# )
+exahype2.solvers.fv.ErrorMeasurement(
+    riemann_solver,
+    error_measurement_implementation=analytical_solution,
+    output_file_name="Error",
+)
 
 project = exahype2.Project(
-    namespace=["applications", "exahype2", "navierstokes"],
+    namespace=["applications", "exahype2", "euler"],
     project_name="GaussianBell",
     directory=".",
-    executable="NavierStokes",
+    executable="Euler",
 )
 
 project.add_solver(riemann_solver)
