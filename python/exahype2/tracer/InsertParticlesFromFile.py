@@ -59,14 +59,10 @@ class InsertParticlesFromFile(ActionSet):
 
     __Template_EndTraversal = jinja2.Template(
         """
-  if (_particleNumberOnThisTree==0) {
-    logWarning( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId );
-  } else {
-    logInfo( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId << " (boundary vertices might host redundant particle data)" );
+  //assertion(_particleNumberOnThisTree > 0);
+  if (_particleNumberOnThisTree > 0) {
+    logInfo("endIteration()", "Inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId << " (boundary vertices might host redundant particle data)");
   }
-  #if !defined(WITH_MPI) and !defined(WITH_MULTITHREADING)
-  assertion( _particleNumberOnThisTree>0 );
-  #endif
 """
     )
 

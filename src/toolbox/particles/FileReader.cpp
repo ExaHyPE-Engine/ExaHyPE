@@ -16,7 +16,8 @@ void toolbox::particles::FileReader::readDatFile( const std::string& filename, c
   std::string line;
 
   if (not fin) {
-    logError( "readDatFile(string)", "was not able to open file " << filename );
+    logError( "readDatFile()", "Was not able to open file " << filename );
+    std::abort();
   }
 
   while ( std::getline(fin,line) ){
@@ -36,7 +37,7 @@ void toolbox::particles::FileReader::readDatFile( const std::string& filename, c
 
   fin.close();
 
-  logInfo( "readDatFile(string)", "read " << _data.size() << " particle positions from file " << filename );
+  logInfo( "readDatFile()", "Read " << _data.size() << " particle positions from file " << filename );
 }
 
 

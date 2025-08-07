@@ -1,17 +1,14 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+import os
+
 import peano4.datamodel.DaStGen2
 
+from peano4.Logger import log
 from peano4.datamodel.DoF import DoF
 from peano4.datamodel.DaStGen2 import DaStGen2Generator
 
 from .Particle import Particle
-
-import dastgen2
-import os
-
-
-from enum import Enum
 
 
 class AbstractParticleSetGenerator(object):
@@ -270,18 +267,13 @@ class ParticleSet(DoF):
 
     particle: Particle
       Link to particle definition
-
     """
 
     def __init__(self, particle):
         DoF.__init__(self, particle.name + "Set")
 
         if particle.association != peano4.datamodel.DoFAssociation.Global:
-            print(
-                "Warning: particle "
-                + particle.name
-                + " is not (yet) added to project via add_global_object() and thus has invalid DoF association"
-            )
+            log.warning("Particle " + particle.name + " is not (yet) added to project via add_global_object() and thus has invalid DoF association")
 
         self.particle_model = particle
         # self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
