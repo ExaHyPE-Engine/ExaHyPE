@@ -530,7 +530,7 @@ int main(int argc, char** argv) {
 
     if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
       logInfo("main()", "Average cell updates per second: " << repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells() / timeStepMeasurement.getValue());
-      logInfo("main()", "Average time per mesh sweep:     " << timeStepMeasurement.getValue() << "s\t");
+      //logInfo("main()", "Average time per mesh sweep:     " << timeStepMeasurement.getValue() << "s\t");
       logInfo("main()", "Time stepping:                   " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString());
     }
     if (gridConstructionMeasurement.getNumberOfMeasurements() > 0) {

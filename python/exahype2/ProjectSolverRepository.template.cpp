@@ -202,7 +202,7 @@ void finishTimeStep() {
   loadBalancer.update();
 
   {% for item in TRACERS -%}
-  logInfo("finishTimeStep()", vertexdata::{{ item }}Set::printParticleStateStatistics());
+  logDebug("finishTimeStep()", vertexdata::{{ item }}Set::printParticleStateStatistics());
   {%- endfor %}
 }
 
