@@ -181,3 +181,46 @@ def generate_split_yaml(peano_tree: Tree, output_yaml_file: str) -> None:
         print(f"Complete tree structure written to {output_yaml_file}")
     except IOError as e:
         print(f"Error writing to YAML file: {e}")
+
+def reset_tree_to_single_subtree(peano_tree: Tree) -> Tree:
+    """
+    Reset all tree nodes to belong to subtree 0, effectively erasing all splitting.
+    This returns the tree to its initial state where all nodes belong to a single subtree.
+    
+    Args:
+        peano_tree: Tree object to reset
+        
+    Returns:
+        Modified Tree object with all nodes assigned to subtree 0
+    """
+    print(f"Resetting tree '{peano_tree._name}' - moving all nodes to subtree 0")
+    
+    # Reset all nodes in all levels to subtree 0
+    for level in range(peano_tree._max_level):
+        size = 3**(level + 1)
+        
+        if peano_tree._dimension == 2:
+            for a in range(size):
+                for b in range(size):
+                    current_node = peano_tree._tree_arrays[level][a][b]
+                    if current_node[0] == 1:  # Node exists (weight = 1)
+                        # Reset to subtree 0 while preserving weight
+                        peano_tree._tree_arrays[level][a][b] = (1, 0)
+                        
+        elif peano_tree._dimension == 3:
+            for a in range(size):
+                for b in range(size):
+                    for c in range(size):
+                        current_node = peano_tree._tree_arrays[level][a][b][c]
+                        if current_node[0] == 1:  # Node exists (weight = 1)
+                            # Reset to subtree 0 while preserving weight
+                            peano_tree._tree_arrays[level][a][b][c] = (1, 0)
+    
+    # Update tree metadata after reset
+    peano_tree._subtree_count = 1
+    peano_tree.update_split_pattern()
+    
+    print(f"Reset completed. All {int(peano_tree._leaf_count)} nodes now belong to subtree 0")
+    print(f"New split pattern: {peano_tree._split_pattern}")
+    
+    return peano_tree

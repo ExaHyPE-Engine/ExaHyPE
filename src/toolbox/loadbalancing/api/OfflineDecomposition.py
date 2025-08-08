@@ -8,7 +8,7 @@ from Tree import Tree
 from Input.GridPatchFileReader import *
 from Input.RegularGridGenerator import *
 from Visualize.TreeVisualizer import TreeVisualizer
-from Strategies.SplitTrees import split_finest_level, generate_split_yaml
+import Strategies.SplitTrees as split_strategy
 
 
 """
@@ -60,7 +60,7 @@ if args.n_splits is not None:
     print("="*50)
     
     finest_split_start_time = time.time()
-    tree = split_finest_level(tree, args.n_splits)
+    tree = split_strategy.split_finest_level(tree, args.n_splits)
     finest_split_end_time = time.time()
 
     time3 = finest_split_end_time
@@ -71,11 +71,14 @@ if args.n_splits is not None:
     print("\nTree after finest level splitting:")
     print(tree)
     
+    # Reset tree to single subtree
+    tree = split_strategy.reset_tree_to_single_subtree(tree)
+
     # Generate YAML output for the split results
     print("\n" + "="*50)
-    print("GENERATING SPLIT RESULTS YAML")
+    print("GENERATING TREE YAML (after resetting to single subtree)")
     print("="*50)
-    generate_split_yaml(tree, args.output_yaml)
+    split_strategy.generate_split_yaml(tree, args.output_yaml)
     
 else:
     time3 = time2
