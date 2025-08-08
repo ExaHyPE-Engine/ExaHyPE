@@ -108,110 +108,76 @@ def split_finest_level(peano_tree: Tree, number_of_splits: int) -> Tree: # might
     
     return peano_tree
 
-# def generate_split_yaml(peano_tree: Tree, output_yaml_file: str) -> None:
-#     """
-#     Generate a YAML file describing the split pattern of the tree.
-#     (dump a "yaml" (or whatever) file (for Peano, different format))
+def generate_split_yaml(peano_tree: Tree, output_yaml_file: str) -> None:
+    """
+    Generate a YAML file describing the complete tree structure with spatial layout.
     
-#     Args:
-#         peano_tree: Tree object to generate YAML from
-#         output_yaml_file: Path to the output YAML file
+    Args:
+        peano_tree: Tree object to generate YAML from
+        output_yaml_file: Path to the output YAML file
         
-#     Returns:
-#         None
-#     """
-#     split_data = {
-#         'name': peano_tree._name,
-#         'dimension': peano_tree._dimension,
-#         'max_level': peano_tree._max_level,
-#         'subtree_count': peano_tree._subtree_count,
-#         'split_pattern': peano_tree._split_pattern
-#     }
+    Returns:
+        None
+    """
+    # Convert tree arrays to readable format
+    tree_levels = []
     
-#     try:
-#         with open(output_yaml_file, 'w') as file:
-#             yaml.dump(split_data, file, default_flow_style=False)
-#         print(f"Split pattern written to {output_yaml_file}")
-#     except IOError as e:
-#         print(f"Error writing to YAML file: {e}")
-
-# def _apply_finest_level_split(peano_tree, level, source_subtree, target_subtree, nodes_to_move):
-#     """
-#     Apply a single split operation at the finest level only.
-    
-#     Args:
-#         peano_tree: Tree object
-#         level: Level to apply split (should be finest level)
-#         source_subtree: Source subtree ID
-#         target_subtree: Target subtree ID  
-#         nodes_to_move: Number of nodes to move
+    for level in range(peano_tree._max_level):
+        size = 3**(level + 1)
         
-#     Returns:
-#         Number of nodes actually moved
-#     """
-#     moved_count = 0
-#     size = 3**(level + 1)
-    
-#     if peano_tree._dimension == 2:
-#         # 2D case
-#         for a in range(size):
-#             for b in range(size):
-#                 if moved_count >= nodes_to_move:
-#                     break
-                    
-#                 # Check if this node belongs to the source subtree
-#                 current_node = peano_tree._tree_arrays[level][a][b]
-#                 if current_node[0] == 1 and current_node[1] == source_subtree:
-#                     # Move this node to the target subtree
-#                     peano_tree._tree_arrays[level][a][b] = (1, target_subtree)
-#                     moved_count += 1
+        # Create dictionary with row numbers as keys
+        level_data = {}
+        
+        if peano_tree._dimension == 2:
+            # Convert 2D array to numbered rows
+            for a in range(size):
+                row_data = []
+                for b in range(size):
+                    weight, subtree_id = peano_tree._tree_arrays[level][a][b]
+                    row_data.append(f"({int(weight)},{int(subtree_id)})")
+                level_data[a] = ", ".join(row_data)  # 1-indexed rows
             
-#             if moved_count >= nodes_to_move:
-#                 break
-                
-#     elif peano_tree._dimension == 3:
-#         # 3D case
-#         for a in range(size):
-#             for b in range(size):
-#                 for c in range(size):
-#                     if moved_count >= nodes_to_move:
-#                         break
-                        
-#                     # Check if this node belongs to the source subtree
-#                     current_node = peano_tree._tree_arrays[level][a][b][c]
-#                     if current_node[0] == 1 and current_node[1] == source_subtree:
-#                         # Move this node to the target subtree
-#                         peano_tree._tree_arrays[level][a][b][c] = (1, target_subtree)
-#                         moved_count += 1
-                
-#                 if moved_count >= nodes_to_move:
-#                     break
-            
-#             if moved_count >= nodes_to_move:
-#                 break
-    
-#     return moved_count
-
-# def _count_unique_subtrees(peano_tree):
-#     """Count the number of unique subtrees in the tree"""
-#     subtree_ids = set()
-    
-#     for level in range(peano_tree._max_level):
-#         size = 3**(level + 1)
+        elif peano_tree._dimension == 3:
+            # Convert 3D array to numbered planes and rows
+            for a in range(size):
+                plane_data = {}
+                for b in range(size):
+                    row_data = []
+                    for c in range(size):
+                        weight, subtree_id = peano_tree._tree_arrays[level][a][b][c]
+                        row_data.append(f"({int(weight)},{int(subtree_id)})")
+                    plane_data[b + 1] = ", ".join(row_data)  # 1-indexed rows
+                level_data[a] = plane_data  # 1-indexed planes
         
-#         if peano_tree._dimension == 2:
-#             for a in range(size):
-#                 for b in range(size):
-#                     current_node = peano_tree._tree_arrays[level][a][b]
-#                     if current_node[0] == 1:
-#                         subtree_ids.add(current_node[1])
-        
-#         elif peano_tree._dimension == 3:
-#             for a in range(size):
-#                 for b in range(size):
-#                     for c in range(size):
-#                         current_node = peano_tree._tree_arrays[level][a][b][c]
-#                         if current_node[0] == 1:
-#                             subtree_ids.add(current_node[1])
+        tree_levels.append({
+            'level': level + 1,
+            'size': size,
+            'data': level_data
+        })
     
-#     return len(subtree_ids)
+    # Create the complete YAML structure
+    split_data = {
+        'title': f"Complete Tree Structure from {peano_tree._name}",
+        'description': "Spatial representation of tree with (weight, subtree_id) tuples",
+        'version': "2.0",
+        'tree_info': {
+            'name': peano_tree._name,
+            'dimension': peano_tree._dimension,
+            'max_level': peano_tree._max_level,
+            'domain_offset': list(peano_tree._domain_offset),
+            'domain_size': list(peano_tree._domain_size),
+            'total_leaf_count': int(peano_tree._leaf_count),
+            'subtree_count': peano_tree._subtree_count
+        },
+        'split_summary': {
+            'subtree_distribution': [int(count) for count in peano_tree._split_pattern]
+        },
+        'tree_structure': tree_levels
+    }
+    
+    try:
+        with open(output_yaml_file, 'w') as file:
+            yaml.dump(split_data, file, default_flow_style=False, sort_keys=False)
+        print(f"Complete tree structure written to {output_yaml_file}")
+    except IOError as e:
+        print(f"Error writing to YAML file: {e}")

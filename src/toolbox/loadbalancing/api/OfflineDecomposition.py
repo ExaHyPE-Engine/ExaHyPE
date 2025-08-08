@@ -8,7 +8,7 @@ from Tree import Tree
 from Input.GridPatchFileReader import *
 from Input.RegularGridGenerator import *
 from Visualize.TreeVisualizer import TreeVisualizer
-from Strategies.SplitTrees import split_finest_level
+from Strategies.SplitTrees import split_finest_level, generate_split_yaml
 
 
 """
@@ -32,20 +32,21 @@ parser.add_argument("-plot", 	"--plot-tree", 		dest="plot_flag", 	default=False,
 parser.add_argument("-d",   	"--grid-dimension", dest="dimension",  	type=int, required=True, help="Dimension" )
 parser.add_argument("-level",   "--max-level", 		dest="max_level",  	type=int, default=0, help="Dimension" )
 parser.add_argument("-split", "--n-splits", 	dest="n_splits", type=int, help="Number of splits to create (integer)")
+parser.add_argument("-output", "--output-yaml", dest="output_yaml", type=str, default="output.yaml", help="Output YAML file for split results")
 
 args = parser.parse_args()
 
 time1 = time.time()
 
 if args.file_path != None:
-	name = "Files-"+args.file_path
-	tree = GridPatchFileReader(name=name, file_path=args.file_path, dimension=args.dimension)
+    name = "Files-"+args.file_path
+    tree = GridPatchFileReader(name=name, file_path=args.file_path, dimension=args.dimension)
 elif args.max_level > 0:
-	name = "Regular-Grid-Generator"
-	tree = RegularGridGenerator(name=name, max_level=args.max_level, dimension=args.dimension)
+    name = "Regular-Grid-Generator"
+    tree = RegularGridGenerator(name=name, max_level=args.max_level, dimension=args.dimension)
 else:
-	print("No input file specified nor required parameter for Generation, quiting...")
-	sys.exit(1)
+    print("No input file specified nor required parameter for Generation, quiting...")
+    sys.exit(1)
 
 time2 = time.time()
 
@@ -70,12 +71,18 @@ if args.n_splits is not None:
     print("\nTree after finest level splitting:")
     print(tree)
     
+    # Generate YAML output for the split results
+    print("\n" + "="*50)
+    print("GENERATING SPLIT RESULTS YAML")
+    print("="*50)
+    generate_split_yaml(tree, args.output_yaml)
+    
 else:
     time3 = time2
 
 if args.plot_flag:
-	TreeVisualizer(tree, args.dimension)
-	print("Figure Saved.")
+    TreeVisualizer(tree, args.dimension)
+    print("Figure Saved.")
 
 time4 = time.time()
 
