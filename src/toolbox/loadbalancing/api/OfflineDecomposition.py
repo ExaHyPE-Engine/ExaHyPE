@@ -56,6 +56,13 @@ print(tree)
 # Apply finest level splitting if number of splits is provided
 if args.n_splits is not None:
     print("\n" + "="*50)
+    print("INITIALLY RESETTING TREE TO SINGLE SUBTREE")
+    print("="*50)
+    
+    # Reset tree to single subtree
+    tree = split_strategy.reset_tree_to_single_subtree(tree)
+
+    print("\n" + "="*50)
     print("APPLYING FINEST LEVEL SPLITTING")
     print("="*50)
     
@@ -71,12 +78,9 @@ if args.n_splits is not None:
     print("\nTree after finest level splitting:")
     print(tree)
     
-    # Reset tree to single subtree
-    tree = split_strategy.reset_tree_to_single_subtree(tree)
-
     # Generate YAML output for the split results
     print("\n" + "="*50)
-    print("GENERATING TREE YAML (after resetting to single subtree)")
+    print("GENERATING SPLIT RESULTS YAML")
     print("="*50)
     split_strategy.generate_split_yaml(tree, args.output_yaml)
     
