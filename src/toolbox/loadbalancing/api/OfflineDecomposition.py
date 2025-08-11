@@ -1,7 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import numpy as np
-import sys, time
+import sys, time, os
 import argparse
 
 from Tree import Tree
@@ -54,6 +54,32 @@ time2 = time.time()
 print("Original tree:")
 print(tree)
 
+# Save original tree visualization if plotting is enabled
+viz_start_time = time2
+if args.plot_flag:
+    # Generate filename for original tree
+    if args.file_path:
+        base_name = f"Files-{os.path.basename(args.file_path)}"
+    else:
+        base_name = "TreeStructure"
+    
+    original_plot_filename = f"{base_name}_l{args.max_level}_original"
+    # Replace path separators to create a safe filename
+    original_plot_filename = original_plot_filename.replace('/', '_').replace('\\', '_')
+    
+    print("\n" + "="*50)
+    print("GENERATING ORIGINAL TREE VISUALIZATION")
+    print("="*50)
+    
+    TreeVisualizer(tree, args.grid_dimension, original_plot_filename)
+    print(f"Original tree visualization saved as {original_plot_filename}.pdf and {original_plot_filename}.png")
+
+viz_end_time = time.time()
+
+# Initialize split timing variables
+split_start_time = 0.0
+split_end_time = 0.0
+
 # Apply finest level splitting if number of splits is provided
 if args.num_splits is not None:
     print("\n" + "="*50)
@@ -67,14 +93,11 @@ if args.num_splits is not None:
     print("APPLYING FINEST LEVEL SPLITTING")
     print("="*50)
     
-    finest_split_start_time = time.time()
+    split_start_time = time.time()
     tree = split_strategy.split_finest_level(tree, args.num_splits)
-    finest_split_end_time = time.time()
+    split_end_time = time.time()
 
-    time3 = finest_split_end_time
-
-    # Then report using the actual measured times:
-    print(f"Finest Level Splitting Time Cost: {(finest_split_end_time - finest_split_start_time):.4f} seconds")
+    print(f"Finest Level Splitting Time Cost: {(split_end_time - split_start_time):.4f} seconds")
 
     print("\nTree after finest level splitting:")
     print(tree)
@@ -85,22 +108,31 @@ if args.num_splits is not None:
     print("="*50)
     split_strategy.generate_split_yaml(tree, args.output_yaml)
     
-else:
-    time3 = time2
-
-if args.plot_flag:
-    # Generate a descriptive filename based on the tree configuration
-    if args.num_splits is not None:
-        plot_filename = f"{filename}_l{args.max_level}_s{args.num_splits}"
-    else:
-        plot_filename = f"{filename}_l{args.max_level}"
+    # Save split tree visualization if plotting is enabled
+    if args.plot_flag:
+        if args.file_path:
+            base_name = f"Files-{os.path.basename(args.file_path)}"
+        else:
+            base_name = "TreeStructure"
+            
+        split_plot_filename = f"{base_name}_l{args.max_level}_s{args.num_splits}"
+        split_plot_filename = split_plot_filename.replace('/', '_').replace('\\', '_')
+        
+        print("\n" + "="*50)
+        print("GENERATING SPLIT TREE VISUALIZATION")
+        print("="*50)
+        
+        TreeVisualizer(tree, args.grid_dimension, split_plot_filename)
+        print(f"Split tree visualization saved as {split_plot_filename}.pdf and {split_plot_filename}.png")
     
-    TreeVisualizer(tree, args.grid_dimension, plot_filename)
-    print(f"Figure Saved as {plot_filename}.pdf and {plot_filename}.png")
-
-time4 = time.time()
+    time3 = time.time()
+else:
+    time3 = viz_end_time
 
 print('='*40)
 print(f"Input Time Cost: {(time2-time1):.4f} seconds")
-if args.plot_flag: 
-    print(f"Visualization Time Cost: {(time4-time3):.4f} seconds")
+if args.plot_flag:
+    print(f"Visualization Time Cost: {(viz_end_time-viz_start_time):.4f} seconds")
+if args.num_splits is not None:
+    print(f"Splitting Time Cost: {(split_end_time-split_start_time):.4f} seconds")
+print(f"Total Time Cost: {(time3-time1):.4f} seconds")
