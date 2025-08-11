@@ -108,7 +108,7 @@ def split_finest_level(peano_tree: Tree, number_of_splits: int) -> Tree: # might
     
     return peano_tree
 
-def generate_split_yaml(peano_tree: Tree, output_yaml_file: str) -> None:
+def generate_tree_yaml(peano_tree: Tree, output_yaml_file: str) -> None:
     """
     Generate a YAML file describing the complete tree structure with spatial layout.
     

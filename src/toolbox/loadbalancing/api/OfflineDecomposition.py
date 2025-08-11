@@ -54,8 +54,24 @@ time2 = time.time()
 print("Original tree:")
 print(tree)
 
+# Generate YAML output for the original tree
+print("\n" + "="*50)
+print("GENERATING ORIGINAL TREE YAML")
+print("="*50)
+
+# Create original tree output filename
+if args.file_path:
+    original_yaml_filename = f"Files-{os.path.basename(args.file_path)}_original.yaml"
+else:
+    original_yaml_filename = f"TreeStructure_l{args.max_level}_original.yaml"
+
+# Replace path separators to create a safe filename
+original_yaml_filename = original_yaml_filename.replace('/', '_').replace('\\', '_')
+
+split_strategy.generate_tree_yaml(tree, original_yaml_filename)
+
 # Save original tree visualization if plotting is enabled
-viz_start_time = time2
+viz_start_time = time.time()
 if args.plot_flag:
     # Generate filename for original tree
     if args.file_path:
@@ -106,8 +122,20 @@ if args.num_splits is not None:
     print("\n" + "="*50)
     print("GENERATING SPLIT RESULTS YAML")
     print("="*50)
-    split_strategy.generate_split_yaml(tree, args.output_yaml)
-    
+
+    # Create split tree output filename based on input type and number of splits
+    if args.file_path:
+        split_yaml_filename = f"Files-{os.path.basename(args.file_path)}_s{args.num_splits}_split.yaml"
+    else:
+        split_yaml_filename = f"TreeStructure_l{args.max_level}_s{args.num_splits}_split.yaml"
+
+    # Replace path separators to create a safe filename
+    split_yaml_filename = split_yaml_filename.replace('/', '_').replace('\\', '_')
+
+    # Use the generated filename instead of args.output_yaml
+    split_strategy.generate_tree_yaml(tree, split_yaml_filename)
+    print(f"Split tree YAML saved as {split_yaml_filename}")
+
     # Save split tree visualization if plotting is enabled
     if args.plot_flag:
         if args.file_path:
