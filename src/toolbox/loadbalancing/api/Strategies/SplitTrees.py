@@ -129,16 +129,16 @@ def generate_tree_yaml(peano_tree: Tree, output_yaml_file: str) -> None:
         level_data = {}
         
         if peano_tree._dimension == 2:
-            # Convert 2D array to numbered rows
+            # Convert 2D array to numbered rows (0-indexed)
             for a in range(size):
                 row_data = []
                 for b in range(size):
                     weight, subtree_id = peano_tree._tree_arrays[level][a][b]
                     row_data.append(f"({int(weight)},{int(subtree_id)})")
-                level_data[a] = ", ".join(row_data)  # 1-indexed rows
+                level_data[a] = ", ".join(row_data)  # Keep 0-indexed rows
             
         elif peano_tree._dimension == 3:
-            # Convert 3D array to numbered planes and rows
+            # Convert 3D array to numbered planes and rows (0-indexed)
             for a in range(size):
                 plane_data = {}
                 for b in range(size):
@@ -146,8 +146,8 @@ def generate_tree_yaml(peano_tree: Tree, output_yaml_file: str) -> None:
                     for c in range(size):
                         weight, subtree_id = peano_tree._tree_arrays[level][a][b][c]
                         row_data.append(f"({int(weight)},{int(subtree_id)})")
-                    plane_data[b + 1] = ", ".join(row_data)  # 1-indexed rows
-                level_data[a] = plane_data  # 1-indexed planes
+                    plane_data[b] = ", ".join(row_data)  # Changed to 0-indexed rows
+                level_data[a] = plane_data  # Changed to 0-indexed planes
         
         tree_levels.append({
             'level': level + 1,
