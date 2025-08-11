@@ -15,35 +15,36 @@ import Strategies.SplitTrees as split_strategy
     The script for doing the offline decomposition (tree splitting)
 
     example for file input tree:
-    python3 OfflineDecomposition.py -file Input/example2 -d 3 -plot
+    python3 OfflineDecomposition.py -f Input/example2 -d 3 -p
 
     example for artificial generated tree (regular grid):
-    python3 OfflineDecomposition.py -d 2 -level 4
-    python3 OfflineDecomposition.py -d 3 -level 3 -plot
+    python3 OfflineDecomposition.py -d 2 -l 4
+    python3 OfflineDecomposition.py -d 3 -l 3 -p
 
     example for artificial generated tree with finest level splitting:
-    python3 OfflineDecomposition.py -d 3 -level 3 -plot -split 3
+    python3 OfflineDecomposition.py -d 3 -l 3 -p -s 3
 """
 
 
-parser = argparse.ArgumentParser(description='Grid Patch File Reader')
-parser.add_argument("-file", 	"--file-path", 		dest="file_path", 	type=str,  help="file path" )
-parser.add_argument("-plot", 	"--plot-tree", 		dest="plot_flag", 	default=False, action="store_true",  help="Plot current Tree structure" )
-parser.add_argument("-d",   	"--grid-dimension", dest="dimension",  	type=int, required=True, help="Dimension" )
-parser.add_argument("-level",   "--max-level", 		dest="max_level",  	type=int, default=0, help="Dimension" )
-parser.add_argument("-split", "--n-splits", 	dest="n_splits", type=int, help="Number of splits to create (integer)")
-parser.add_argument("-output", "--output-yaml", dest="output_yaml", type=str, default="output.yaml", help="Output YAML file for split results")
-
+parser = argparse.ArgumentParser(description='Offline Tree Decomposition for Load Balancing')
+parser.add_argument("-f", 	"--file", 		dest="file_path", 	    type=str,                           help="Path to input grid patch file (e.g., Input/example2)" )
+parser.add_argument("-p", 	"--plot", 		dest="plot_flag", 	    default=False, action="store_true", help="Generate and save visualization plots of the tree structure" )
+parser.add_argument("-d",   "--dimension",  dest="grid_dimension",  type=int, required=True,            help="Spatial dimension of the grid (2 for 2D, 3 for 3D)" )
+parser.add_argument("-l",   "--max-level",  dest="max_level",  	    type=int, default=0,                help="Maximum refinement level for artificial regular grid generation" )
+parser.add_argument("-s",   "--splits", 	dest="num_splits",      type=int,                           help="Number of additional subtrees to create via finest-level splitting")
+parser.add_argument("-o",   "--output",     dest="output_yaml",     type=str, default="output.yaml",    help="Output YAML file path for storing split results and tree structure")
 args = parser.parse_args()
 
 time1 = time.time()
 
 if args.file_path != None:
     name = "Files-"+args.file_path
-    tree = GridPatchFileReader(name=name, file_path=args.file_path, dimension=args.dimension)
+    filename = args.file_path
+    tree = GridPatchFileReader(name=name, file_path=args.file_path, dimension=args.grid_dimension)
 elif args.max_level > 0:
     name = "Regular-Grid-Generator"
-    tree = RegularGridGenerator(name=name, max_level=args.max_level, dimension=args.dimension)
+    filename="TreeStructure"
+    tree = RegularGridGenerator(name=name, max_level=args.max_level, dimension=args.grid_dimension)
 else:
     print("No input file specified nor required parameter for Generation, quiting...")
     sys.exit(1)
@@ -54,7 +55,7 @@ print("Original tree:")
 print(tree)
 
 # Apply finest level splitting if number of splits is provided
-if args.n_splits is not None:
+if args.num_splits is not None:
     print("\n" + "="*50)
     print("INITIALLY RESETTING TREE TO SINGLE SUBTREE")
     print("="*50)
@@ -67,7 +68,7 @@ if args.n_splits is not None:
     print("="*50)
     
     finest_split_start_time = time.time()
-    tree = split_strategy.split_finest_level(tree, args.n_splits)
+    tree = split_strategy.split_finest_level(tree, args.num_splits)
     finest_split_end_time = time.time()
 
     time3 = finest_split_end_time
@@ -88,8 +89,14 @@ else:
     time3 = time2
 
 if args.plot_flag:
-    TreeVisualizer(tree, args.dimension)
-    print("Figure Saved.")
+    # Generate a descriptive filename based on the tree configuration
+    if args.num_splits is not None:
+        plot_filename = f"{filename}_l{args.max_level}_s{args.num_splits}"
+    else:
+        plot_filename = f"{filename}_l{args.max_level}"
+    
+    TreeVisualizer(tree, args.grid_dimension, plot_filename)
+    print(f"Figure Saved as {plot_filename}.pdf and {plot_filename}.png")
 
 time4 = time.time()
 

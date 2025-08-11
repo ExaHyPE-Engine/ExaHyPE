@@ -8,7 +8,18 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from Tree import Tree
 
 
-def TreeVisualizer(input_tree, dimension):
+def TreeVisualizer(input_tree, dimension, filename="TreeStructure"):
+    """
+    Visualize tree structure with customizable output filename.
+    
+    Args:
+        input_tree: Tree object to visualize
+        dimension: 2 or 3 for 2D/3D visualization
+        filename: Base filename for output files (without extension)
+        
+    Returns:
+        None (saves files and displays plot)
+    """
     fig = plt.figure(figsize=(9*input_tree._max_level, 8))
     axes=[]
     for level in range(input_tree._max_level):
@@ -16,7 +27,7 @@ def TreeVisualizer(input_tree, dimension):
 
         indices = []
         subtree_ids = []
-        # extrat the existing nodes and their indices from the tree arrays and 
+        # extract the existing nodes and their indices from the tree arrays and 
         # plot them in a 3D/2D scatter
         if dimension==3:
             for a in range(3**(level+1)):
@@ -63,9 +74,9 @@ def TreeVisualizer(input_tree, dimension):
             axes[level].set_ylim([-1,3**(1+level)]) 
             axes[level].set_title("Level="+str(level+1))
 
-    # Save the figure BEFORE showing it
-    plt.savefig("TreeStructure.pdf")
-    plt.savefig("TreeStructure.png")
+    # Save the figure BEFORE showing it with custom filename
+    plt.savefig(f"{filename}.pdf")
+    plt.savefig(f"{filename}.png")
     
     # Show the plot after saving
     plt.show()
