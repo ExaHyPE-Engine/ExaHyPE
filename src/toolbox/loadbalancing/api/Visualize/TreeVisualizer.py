@@ -63,7 +63,9 @@ def TreeVisualizer(input_tree, dimension):
             axes[level].set_ylim([-1,3**(1+level)]) 
             axes[level].set_title("Level="+str(level+1))
 
-    # Show the 3D plot
-    plt.show()
+    # Save the figure BEFORE showing it
     plt.savefig("TreeStructure.pdf")
-    plt.savefig("TreeStrucutre.png")
+    plt.savefig("TreeStructure.png")
+    
+    # Show the plot after saving
+    plt.show()
