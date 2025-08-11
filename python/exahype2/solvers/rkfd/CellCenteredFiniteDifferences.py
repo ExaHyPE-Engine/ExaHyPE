@@ -1162,8 +1162,6 @@ The finest mesh width of """
             plot_grid_action_set = peano4.toolbox.PlotGridInPeanoBlockFormat(
                 filename=output_path + "grid-" + self._name,
                 cell_unknown=None,
-                guard="repositories::plotFilter.plotPatch(marker) and "
-                + self._load_cell_data_default_guard(),
                 additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
@@ -1232,20 +1230,6 @@ The finest mesh width of """
         )
         checkpoint_patches_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
         step.add_action_set(checkpoint_patches_action_set)
-
-        if self._plot_grid_properties:
-            checkpoint_grid_action_set = peano4.toolbox.PlotGridInPeanoBlockFormat(
-                filename=output_path + "grid-" + self._name,
-                cell_unknown=None,
-                guard=self._load_cell_data_default_guard(),
-                additional_includes="""
-#include "../repositories/SolverRepository.h"
-""",
-            )
-            checkpoint_grid_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
-            step.add_action_set(checkpoint_grid_action_set)
-
-        pass
 
     def add_actions_to_perform_time_step(self, step):
         """
