@@ -114,7 +114,7 @@ option(WITH_SCOREP_USER "Build with Score-P user regions instrumentation" OFF)
 option(ENABLE_TOOLBOX_PARTICLES "Enable the particles toolbox" ON)
 option(ENABLE_TOOLBOX_BLOCKSTRUCTURED "Enable the blockstructured toolbox" ON)
 option(ENABLE_TOOLBOX_LOADBALANCING "Enable the loadbalancing toolbox" ON)
-option(ENABLE_TOOLBOX_CURVI "Enable the Curvi toolbox" ON)
+option(ENABLE_TOOLBOX_CURVI "Enable the Curvi toolbox" OFF)
 
 option(ENABLE_EXAHYPE "Enable the ExaHyPE 2 extension" ON)
 
