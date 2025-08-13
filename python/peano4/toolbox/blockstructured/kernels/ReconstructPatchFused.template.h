@@ -9,8 +9,8 @@ namespace {{ item }} {
 {%- endfor %}
 
 void reconstructPatchFused(
-  ::exahype2::CellData<{{PRECISION}}, {{PRECISION}}>& patchData,
-  const int                                           targetDevice
+  ::exahype2::CellData<{{PRECISION}}, {{PRECISION}}, 3>& patchData,
+  const int                                              targetDevice
 );
 
 {% for item in NAMESPACE -%}

@@ -72,7 +72,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     DataRepository(DataRepository&&)                 = delete;
     DataRepository& operator=(DataRepository&&)      = delete;
 
-    ~DataRepository() = default;
+    ~DataRepository();
 
     double* getCellQ(int index);
     double* getCellQ(
@@ -86,6 +86,14 @@ namespace benchmarks::exahype2::kernelbenchmarks {
       const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       int                                          axis
     );
+    double* getFaceQNewDevice(
+      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+      const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+      int                                          axis
+    );
+
+    void copyFacesToDevice();
+    void copyFacesFromDevice();
 
     int getFaceCardinality();
     // QReconstructed is not stored explicitly anymore, as it is just used to store the patch+halo temporarily before
@@ -107,6 +115,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
 
       // Stores faces based on linearised order (face GridSize = 3^Depth * (3^Depth)+1) (not based on cellKeys)
       std::array<std::vector<FaceQNew>, DIMENSIONS> faces;
+      std::array<double*, DIMENSIONS>               facesDevice;
     };
 
     DepthLevel _depthLevel;

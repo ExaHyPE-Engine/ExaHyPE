@@ -75,6 +75,15 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     _depthLevel.Q.resize(cellCount);
     for (int axis = 0; axis < DIMENSIONS; ++axis) {
       _depthLevel.faces[axis].resize(faceCount);
+      _depthLevel.facesDevice[axis] = tarch::allocateMemory<double>(
+        faceCount * getFaceCardinality(),
+        tarch::MemoryLocation::Pinned
+      );
+    }
+  }
+  DataRepository::~DataRepository() {
+    for (int axis = 0; axis < DIMENSIONS; ++axis) {
+      tarch::freeMemory(_depthLevel.facesDevice[axis], tarch::MemoryLocation::Pinned);
     }
   }
 
@@ -121,5 +130,38 @@ namespace benchmarks::exahype2::kernelbenchmarks {
   ) {
     int index = Indexing::getFaceIndex(cellCentre, cellSize, axis);
     return _depthLevel.faces[axis % DIMENSIONS][index].data();
+  }
+
+  double* DataRepository::getFaceQNewDevice(
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    int                                          axis
+  ) {
+    int index = Indexing::getFaceIndex(cellCentre, cellSize, axis);
+    return _depthLevel.facesDevice[axis % DIMENSIONS] + index * getFaceCardinality();
+  }
+
+  void DataRepository::copyFacesToDevice() {
+    int faceCount = std::pow(GridLength, DIMENSIONS - 1) * (GridLength + 1);
+    for (int axis = 0; axis < DIMENSIONS; ++axis) {
+      tarch::copyTo<double, double>(
+        _depthLevel.facesDevice[axis],
+        _depthLevel.faces[axis][0].data(),
+        faceCount * getFaceCardinality(),
+        tarch::MemoryLocation::Pinned
+      );
+    }
+  }
+
+  void DataRepository::copyFacesFromDevice() {
+    int faceCount = std::pow(GridLength, DIMENSIONS - 1) * (GridLength + 1);
+    for (int axis = 0; axis < DIMENSIONS; ++axis) {
+      tarch::copyFrom<double, double>(
+        _depthLevel.facesDevice[axis],
+        _depthLevel.faces[axis][0].data(),
+        faceCount * getFaceCardinality(),
+        tarch::MemoryLocation::Pinned
+      );
+    }
   }
 } // namespace benchmarks::exahype2::kernelbenchmarks

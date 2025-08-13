@@ -19,7 +19,7 @@ class Elastic(Equation):
   const double cp = Q[10];
   const double cs = Q[11];
 #endif
-  return std::max(std::abs(cp), std::abs(cs));
+  return std::fmax(std::abs(cp), std::abs(cs));
 """
 
     def flux(self):

@@ -13,15 +13,16 @@
 {% endif %}
 
 {% import fused_loop_path as fused with context %}
+{% import 'CopyPatchAndFillHalo.macro.h' as operation with context %}{# get template macros #}
 
 {% if GPU == "cuda" %}
-{{ fused.defineGlobalKernel() }}
+{{ fused.defineGlobalKernel(operation) }}
 {% elif GPU == "cpp" %}
 #include "tarch/accelerator/stdpar/cartesian_product.h"
 #include <ranges>
 #include <execution>
 #include <numeric>
-{% elif GPU == "sycl" or MULTITHREADING == "sycl" %}
+{% elif GPU == "sycl" %}
 #include "tarch/accelerator/sycl/Device.h"
 #include <sycl/sycl.hpp>
 {% elif GPU == "kokkos" %}
@@ -29,8 +30,8 @@
 {% endif %}
 
 void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatchFused(
-  ::exahype2::CellData<{{PRECISION}}, {{PRECISION}}>& patchData,
-  const int                                           targetDevice
+  ::exahype2::CellData<{{PRECISION}}, {{PRECISION}}, 3>& patchData,
+  const int                                              targetDevice
 ) {
-  {{ fused.loopOverPatches() }}
+  {{ fused.loopOverPatches(operation) }}
 }

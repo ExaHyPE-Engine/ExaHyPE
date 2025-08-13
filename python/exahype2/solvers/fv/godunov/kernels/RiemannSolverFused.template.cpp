@@ -26,7 +26,7 @@
 #include <ranges>
 #include <execution>
 #include <numeric>
-{% elif GPU == "sycl" or MULTITHREADING == "sycl" %}
+{% elif GPU == "sycl" %}
 #include "tarch/accelerator/sycl/Device.h"
 #include <sycl/sycl.hpp>
 {% elif GPU == "kokkos" %}
@@ -34,9 +34,9 @@
 {% endif %}
 
 double {{FULL_QUALIFIED_NAMESPACE}}::updateSolutionWithRiemannFused(
-  [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&                    solver,
-  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}>& patchData,
-  const int                                                           targetDevice
+  [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&                       solver,
+  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData,
+  const int                                                              targetDevice
 ) {
   {{ fused.loopOverPatches() }}
 }

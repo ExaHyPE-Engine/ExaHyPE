@@ -22,7 +22,7 @@ class Euler(Equation):
   const double c = std::sqrt(Gamma * p * irho);
   const double u = Q[normal + 1] * irho;
 
-  return std::max(std::abs(u-c), std::abs(u+c));
+  return std::fmax(std::abs(u-c), std::abs(u+c));
 """
             if self.dimensions == 3
             else """
@@ -35,7 +35,7 @@ class Euler(Equation):
   const double c = std::sqrt(Gamma * p * irho);
   const double u = Q[normal + 1] * irho;
 
-  return std::max(std::abs(u-c), std::abs(u+c));
+  return std::fmax(std::abs(u-c), std::abs(u+c));
 """
         )
 

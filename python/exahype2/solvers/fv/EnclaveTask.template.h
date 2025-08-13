@@ -23,7 +23,7 @@ namespace {{ item }} {
  *
  * @author Tobias Weinzierl
  */
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::EnclaveTask<{{STORAGE_PRECISION}}, 1> {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::EnclaveTask<{{STORAGE_PRECISION}}, 3> {
   private:
     static tarch::logging::Log _log;
 
@@ -41,7 +41,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::Encla
       const double                                    timeStamp,
       const double                                    timeStepSize,
       {{STORAGE_PRECISION}}* NOALIAS                  QIn,
-      {{STORAGE_PRECISION}}* NOALIAS const            faces[1][TWO_TIMES_D],
+      {{STORAGE_PRECISION}}* NOALIAS const            faces[3][TWO_TIMES_D],
       {{STORAGE_PRECISION}}* NOALIAS                  QOut
     );
 
@@ -53,7 +53,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::Encla
       const double                                    timeStamp,
       const double                                    timeStepSize,
       {{STORAGE_PRECISION}}* NOALIAS                  QIn,
-      {{STORAGE_PRECISION}}* NOALIAS const            faces[1][TWO_TIMES_D],
+      {{STORAGE_PRECISION}}* NOALIAS const            faces[3][TWO_TIMES_D],
       {{STORAGE_PRECISION}}* NOALIAS                  QOut
     );
 
@@ -61,7 +61,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::Encla
 
     {% if CAN_FUSE %}
     virtual void fuse(const std::list<Task*>& otherTasks) override;
-    static void fuse(::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}>& patchData);
+    static void fuse(::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData);
     {% endif %}
 };
 

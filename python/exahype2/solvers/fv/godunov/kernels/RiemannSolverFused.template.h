@@ -11,9 +11,9 @@ namespace {{ item }} {
 {%- endfor %}
 
 double updateSolutionWithRiemannFused(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&                                     solver,
-  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}>& patchData,
-  const int                                                           targetDevice
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                                        solver,
+  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData,
+  const int                                                              targetDevice
 );
 
 {% for item in NAMESPACE -%}

@@ -4,12 +4,12 @@
 
 #include "parallel/Node.h"
 #include "parallel/SpacetreeSet.h"
+#include "tarch/NonCriticalAssertions.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/mpi/BooleanSemaphore.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/multicore.h"
-#include "tarch/NonCriticalAssertions.h"
 #include "tarch/tarch.h"
 #include "utils/Globals.h"
 
@@ -34,26 +34,23 @@ void writeCopyrightMessage() {
   if (not wrote and tarch::mpi::Rank::getInstance().getRank() == tarch::mpi::Rank::getGlobalMasterRank()) {
     logInfo("writeCopyrightMessage()", "Peano 4 (C) www.peano-framework.org");
     std::string buildInfo = "Build: ";
-
     buildInfo += std::to_string(DIMENSIONS);
     buildInfo += "d";
 
 #if defined(WITH_MPI)
-    buildInfo += ", MPI Enabled";
-    buildInfo += " [";
+    buildInfo += ", MPI: ";
     buildInfo += std::to_string(tarch::mpi::Rank::getInstance().getNumberOfRanks());
-    buildInfo += " Rank(s)]";
+    buildInfo += " Rank(s)";
 #endif
 
 #if defined(WITH_OPENMP)
-    buildInfo += ", OpenMP Enabled";
-    buildInfo += " [";
+    buildInfo += ", OpenMP: ";
     buildInfo += std::to_string(tarch::multicore::Core::getInstance().getNumberOfThreads());
-    buildInfo += " Thread(s)]";
+    buildInfo += " Thread(s)";
 #endif
 
 #if defined(WITH_GPU)
-    buildInfo += ", GPU Backend: ";
+    buildInfo += ", GPU Backend ";
 #if defined(WITH_GPU_OMP_TARGET)
     buildInfo += "OpenMP Target";
 #elif defined(WITH_GPU_SYCL)
@@ -65,12 +62,12 @@ void writeCopyrightMessage() {
 #elif defined(WITH_GPU_KOKKOS)
     buildInfo += "Kokkos";
 #endif
-    buildInfo += " [";
+    buildInfo += ": ";
     buildInfo += std::to_string(tarch::accelerator::Device::getInstance().getNumberOfDevices());
-    buildInfo += " Device(s)]";
+    buildInfo += " Device(s)";
 #endif
 
-    buildInfo += ", Debug Level=" + std::to_string(PEANO_DEBUG);
+    buildInfo += ", Debug Level: " + std::to_string(PEANO_DEBUG);
 
     logInfo("writeCopyrightMessage()", buildInfo);
   }

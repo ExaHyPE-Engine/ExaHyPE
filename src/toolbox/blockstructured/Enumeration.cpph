@@ -1,0 +1,71 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+inline GPU_CALLABLE_METHOD int toolbox::blockstructured::serialiseVoxelIndexInOverlap(
+  const tarch::la::Vector<DIMENSIONS, int>& overlapCell,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       normal
+) {
+#if !defined(WITH_GPU)
+  assertion4(normal >= 0, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
+  assertion4(normal < DIMENSIONS, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
+#endif
+
+  int base   = 1;
+  int result = 0;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    result += overlapCell(d) * base;
+    if (d == normal) {
+#if !defined(WITH_GPU)
+      assertion4(overlapCell(d) >= 0, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
+      assertion4(overlapCell(d) < 2 * overlap, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
+#endif
+      base *= overlap * 2;
+    } else {
+#if !defined(WITH_GPU)
+      assertion4(overlapCell(d) >= 0, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
+      assertion4(overlapCell(d) < numberOfDoFsPerAxisInPatch, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
+#endif
+      base *= numberOfDoFsPerAxisInPatch;
+    }
+  }
+  return result;
+}
+
+inline GPU_CALLABLE_METHOD int toolbox::blockstructured::serialisePatchIndexInOverlap(
+  const tarch::la::Vector<DIMENSIONS, int>& patchIndex,
+  int                                       normal
+) {
+#if !defined(WITH_GPU)
+  assertion2(normal >= 0, patchIndex, normal);
+  assertion2(normal < DIMENSIONS, patchIndex, normal);
+#endif
+
+  int base   = 1;
+  int result = 0;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    if (d != normal) {
+      result += patchIndex(d) * base;
+#if !defined(WITH_GPU)
+      assertion2(patchIndex(d) >= 0, patchIndex, normal);
+      assertion2(patchIndex(d) < 3, patchIndex, normal);
+#endif
+      base *= 3;
+    }
+  }
+  return result;
+}
+
+inline GPU_CALLABLE_METHOD int toolbox::blockstructured::serialiseMarkerIn3x3PatchAssembly(
+  const tarch::la::Vector<DIMENSIONS, int>& markerIndex,
+  int                                       numberOfDoFsPerAxisInPatch
+) {
+#if DIMENSIONS == 2
+  const int patchSize = numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch;
+  return (markerIndex(0) + markerIndex(1) * 3) * patchSize;
+#else
+  const int patchSize = numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch;
+  return (markerIndex(0) + markerIndex(1) * 3 + markerIndex(2) * 3 * 3) * patchSize;
+#endif
+}

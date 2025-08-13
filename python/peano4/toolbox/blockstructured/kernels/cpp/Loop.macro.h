@@ -1,9 +1,7 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-{% import 'CopyPatchAndFillHalo.macro.h' as cp with context %}{# get template macros #}
-
-{% macro loopOverCells() %}
+{% macro loopOverCells(operation) %}
   auto ids = std::views::cartesian_product(
     std::views::iota(0, numberOfPatches),
     std::views::iota(0, {{DOFS_PER_AXIS}}),
@@ -12,24 +10,15 @@
   );
 
   std::for_each_n(std::execution::par_unseq, ids.begin(), std::ranges::size(ids),
-    [QInFlattened, facesFlattened, QOutFlattened](auto idx) {
+    [{{ operation.parameters_passed_to_inner_loop() }}](auto idx) {
       auto [patchIndex, x, y, z] = idx;
-
-      using FaceType          = const {{PRECISION}}(*)[{{FACES_PER_DOF*UNKNOWNS}}];
-      const auto* const QIn   = &QInFlattened[patchIndex  * {{DOFS*UNKNOWNS}}];
-      const auto* const faces = reinterpret_cast<FaceType>(&facesFlattened[patchIndex * TWO_TIMES_D * {{FACES_PER_DOF*UNKNOWNS}}]);
-      auto* const QOut        = &QOutFlattened[patchIndex * {{DOFS_WITH_OVERLAP*UNKNOWNS}}];
-
-      {{ cp.copyPatchAndFillHalo() | indent(4) }}
+      {{ operation.setup_patch_loop() | indent(4) }}
+      {{ operation.inner_loop_macro() | indent(4) }}
     }
   );
 {% endmacro %}
 
-{% macro loopOverPatches() %}
-  const int numberOfPatches                 = patchData.numberOfCells;
-  const {{PRECISION}}* const QInFlattened   = patchData.QInFlattened;
-  const {{PRECISION}}* const facesFlattened = patchData.facesFlattened;
-  {{PRECISION}}* const QOutFlattened        = patchData.QOutFlattened;
-
-  {{ loopOverCells() }}
+{% macro loopOverPatches(operation) %}
+  {{ operation.setup_patchdata_variables() }}
+  {{ loopOverCells(operation) }}
 {% endmacro %}

@@ -31,7 +31,7 @@ using namespace benchmarks::exahype2::kernelbenchmarks;
 namespace {
   tarch::logging::Log        _log("");
   tarch::timing::Measurement timeStepMeasurement;
-  double                     printNextTimeStep = 0.0;
+  double                     printNextTimeStep                = 0.0;
   bool                       haveReceivedNonCriticalAssertion = false;
 
   std::vector<peano4::datamanagement::CellMarker> _cells;
@@ -301,22 +301,16 @@ int main(int argc, char** argv) {
 
   DataRepository& grid = DataRepository::getInstance();
 
-  ::exahype2::CellData<double, double> patchData(_cells.size(), tarch::MemoryLocation::Device);
-  int                                  faceCardinality      = grid.getFaceCardinality();
-  double*                              facesFlattened       = new double[_cells.size() * TWO_TIMES_D * faceCardinality];
-  double*                              facesFlattenedDevice = tarch::allocateMemory<double>(
-    _cells.size() * TWO_TIMES_D * faceCardinality,
-    tarch::MemoryLocation::Device
-  );
+  ::exahype2::CellData<double, double, 3> patchData(_cells.size(), tarch::MemoryLocation::Pinned);
 
   double* QInFlattened = tarch::allocateMemory<double>(
     _cells.size() * grid.getCellQReconstructedCardinality(),
-    tarch::MemoryLocation::Device
+    tarch::MemoryLocation::Pinned
   );
 
   double* QOutFlattened = tarch::allocateMemory<double>(
     _cells.size() * grid.getCellQCardinality(),
-    tarch::MemoryLocation::Device
+    tarch::MemoryLocation::Pinned
   );
   double* QOutFlattenedHost = grid.getCellQ(0);
 
@@ -326,23 +320,38 @@ int main(int argc, char** argv) {
   for (int patchIndex = 0; patchIndex < _cells.size(); patchIndex++) {
     cellCentresHost[patchIndex] = _cells[patchIndex].x();
     cellSizeHost[patchIndex]    = _cells[patchIndex].h();
+    for (int type = 0; type < 3; type++) {
+      for (int face = 0; face < TWO_TIMES_D; face++) {
+        patchData.faces[patchIndex][type][face] = grid.getFaceQNewDevice(
+          _cells[patchIndex].x(),
+          _cells[patchIndex].h(),
+          face
+        );
+      }
+    }
   }
   tarch::copyTo<tarch::la::Vector<DIMENSIONS, double>, tarch::la::Vector<DIMENSIONS, double>>(
     patchData.cellCentre,
     cellCentresHost,
     _cells.size(),
-    tarch::MemoryLocation::Device
+    tarch::MemoryLocation::Pinned
   );
   tarch::copyTo<tarch::la::Vector<DIMENSIONS, double>, tarch::la::Vector<DIMENSIONS, double>>(
     patchData.cellSize,
     cellSizeHost,
     _cells.size(),
-    tarch::MemoryLocation::Device
+    tarch::MemoryLocation::Pinned
   );
 
-  patchData.facesFlattened = facesFlattenedDevice;
-  patchData.QOutFlattened  = QOutFlattened;
-  patchData.QInFlattened   = QInFlattened;
+  tarch::copyTo<double, double>(
+    QOutFlattened,
+    QOutFlattenedHost,
+    _cells.size() * grid.getCellQCardinality(),
+    tarch::MemoryLocation::Pinned
+  );
+
+  patchData.QOutFlattened = QOutFlattened;
+  patchData.QInFlattened  = QInFlattened;
 
   tarch::timing::Measurement measurement(1.0);
   tarch::timing::Watch       timeStepWatch("::", "main()", false);
@@ -369,31 +378,7 @@ int main(int argc, char** argv) {
     timeStepWatch.start();
 
     applyBoundaryConditions();
-
-    for (int patchIndex = 0; patchIndex < _cells.size(); patchIndex++) {
-      for (int f = 0; f < TWO_TIMES_D; ++f) {
-        std::copy_n(
-          grid.getFaceQNew(_cells[patchIndex].x(), _cells[patchIndex].h(), f),
-          faceCardinality,
-          &facesFlattened
-            [patchIndex * TWO_TIMES_D * faceCardinality // Skip whole patches
-             + f * faceCardinality                    // Move to the f-th face inside the patch
-        ]
-        );
-      }
-    }
-    tarch::copyTo<double, double>(
-      QOutFlattened,
-      QOutFlattenedHost,
-      _cells.size() * grid.getCellQCardinality(),
-      tarch::MemoryLocation::Device
-    );
-    tarch::copyTo<double, double>(
-      facesFlattenedDevice,
-      facesFlattened,
-      _cells.size() * TWO_TIMES_D * faceCardinality,
-      tarch::MemoryLocation::Device
-    );
+    grid.copyFacesToDevice();
 
     patchData.t  = timeStamp;
     patchData.dt = repositories::instanceOfFVSolver.getAdmissibleTimeStepSize();
@@ -411,22 +396,17 @@ int main(int argc, char** argv) {
       QOutFlattened,
       QOutFlattenedHost,
       _cells.size() * grid.getCellQCardinality(),
-      tarch::MemoryLocation::Device
+      tarch::MemoryLocation::Pinned
     );
 
-    projectPatchOntoFaces();
-
+    grid.copyFacesFromDevice();
     timeStepWatch.stop();
     timeStepMeasurement.setValue(timeStepWatch.getCalendarTime());
 
     if (timeStepMeasurement.getAccumulatedValue() >= printNextTimeStep) {
       repositories::printTimeStep(false);
       if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
-        logInfo(
-          "main()",
-          "Average cell updates per second: "
-          << _cells.size() / measurement.getValue()
-        );
+        logInfo("main()", "Average cell updates per second: " << _cells.size() / measurement.getValue());
       }
       printNextTimeStep += repositories::PrintTimeStepIntervalInSeconds;
     }
@@ -460,12 +440,10 @@ int main(int argc, char** argv) {
 
   reportRuntime(measurement);
 
-  delete[] facesFlattened;
   delete[] cellCentresHost;
   delete[] cellSizeHost;
-  tarch::freeMemory(facesFlattenedDevice, tarch::MemoryLocation::Device);
-  tarch::freeMemory(QOutFlattened, tarch::MemoryLocation::Device);
-  tarch::freeMemory(QInFlattened, tarch::MemoryLocation::Device);
+  tarch::freeMemory(QOutFlattened, tarch::MemoryLocation::Pinned);
+  tarch::freeMemory(QInFlattened, tarch::MemoryLocation::Pinned);
 
   peano4::shutdown();
 
