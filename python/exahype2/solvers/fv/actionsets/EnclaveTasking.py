@@ -17,12 +17,14 @@ class EnclaveTasking(AbstractFVActionSet):
     assertion2(tarch::la::greaterEquals(timeStamp,    0.0), timeStamp, timeStepSize);
     assertion2(tarch::la::greaterEquals(timeStepSize, 0.0), timeStamp, timeStepSize);
 
-    auto* /*const*/ QIn = {{OLD_ACCESSOR}}.value;
-    auto* /*const*/ QOut = {{NEW_ACCESSOR}}.value;
+    auto* /*const*/ QIn = {{RECONSTRUCTED_ACCESSOR}}.value;
+    auto* /*const*/ QOut = {{CELL_ACCESSOR}}.value;
 
-    {{STORAGE_PRECISION}}* faces[1][TWO_TIMES_D];
+    {{STORAGE_PRECISION}}* faces[3][TWO_TIMES_D];
     for (int d = 0; d < TWO_TIMES_D; ++d) {
-      faces[0][d] = {{FACE_ACCESSOR}}(d).value;
+      faces[0][d] = {{FACES_ACCESSOR_OLD}}(d).value;
+      faces[1][d] = {{FACES_ACCESSOR_UPDATE}}(d).value;
+      faces[2][d] = {{FACE_ACCESSOR_NEW}}(d).value;
     }
 
     {% if CAN_FUSE %}
@@ -51,15 +53,19 @@ class EnclaveTasking(AbstractFVActionSet):
     def __init__(self, solver):
         super(EnclaveTasking, self).__init__(solver)
         self.guard = "not marker.willBeRefined() and not marker.hasBeenRefined() and marker.willBeEnclaveCell()"
-        self.new_accessor = "fineGridCell" + solver._patch.name
-        self.old_accessor = "fineGridCell" + solver._patch_reconstructed.name
-        self.face_accessor = "fineGridFaces" + solver._patch_overlap_new.name
+        self.cell_accessor = "fineGridCell" + solver._patch.name
+        self.reconstructed_accessor = "fineGridCell" + solver._patch_reconstructed.name
+        self.face_accessor_new = "fineGridFaces" + solver._patch_overlap_new.name
+        self.face_accessor_update = "fineGridFaces" + solver._patch_overlap_update.name
+        self.face_accessor_old = "fineGridFaces" + solver._patch_overlap_old.name
 
     def _add_action_set_entries_to_dictionary(self, d):
         d["GUARD"] = self.guard
-        d["NEW_ACCESSOR"] = self.new_accessor
-        d["OLD_ACCESSOR"] = self.old_accessor
-        d["FACE_ACCESSOR"] = self.face_accessor
+        d["CELL_ACCESSOR"] = self.cell_accessor
+        d["RECONSTRUCTED_ACCESSOR"] = self.reconstructed_accessor
+        d["FACE_ACCESSOR_NEW"] = self.face_accessor_new
+        d["FACES_ACCESSOR_UPDATE"] = self.face_accessor_update
+        d["FACES_ACCESSOR_OLD"] = self.face_accessor_old
 
     def get_body_of_operation(self, operation_name):
         result = ""

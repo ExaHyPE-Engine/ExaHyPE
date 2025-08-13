@@ -1,28 +1,23 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-{% import 'CopyPatchAndFillHalo.macro.h' as cp with context %}{# get template macros #}
-
-{% macro loopOverCells() %}
+{% macro loopOverCells(operation) %}
   {% if GPU == "omp" %}
-  #pragma omp parallel for collapse(3)
+  #pragma omp parallel for collapse({{DIMENSIONS}})
   {% endif %}
-  for (int z = 0; z < {% if DIMENSIONS==3 %} {{DOFS_PER_AXIS}} {% else %} 1 {% endif %}; z++) {
+  {% if DIMENSIONS==3 %}
+  for (int z = 0; z < {{DOFS_PER_AXIS}}; z++) {
+  {% endif %}
     for (int y = 0; y < {{DOFS_PER_AXIS}}; y++) {
       for (int x = 0; x < {{DOFS_PER_AXIS}}; x++) {
-        {{ cp.copyPatchAndFillHalo() | indent(6) }}
+        {{ operation.inner_loop_macro() | indent(6) }}
       } // x
     } // y
-  } // z
+  {% if DIMENSIONS==3 %} } // z {% endif %}
 {% endmacro %}
 
-{% macro loopOverPatches() %}
-  const int numberOfPatches                 = patchData.numberOfCells;
-  const {{PRECISION}}* const QInFlattened   = patchData.QInFlattened;
-  const {{PRECISION}}* const facesFlattened = patchData.facesFlattened;
-  {{PRECISION}}* const QOutFlattened        = patchData.QOutFlattened;
-
-  using FaceType = const {{PRECISION}}(*)[{{FACES_PER_DOF*UNKNOWNS}}];
+{% macro loopOverPatches(operation) %}
+  {{ operation.setup_patchdata_variables() }}
 
   {% if GPU == "omp" %}
   #pragma omp target teams distribute device(targetDevice)
@@ -30,10 +25,7 @@
   #pragma omp parallel for
   {% endif %}
   for (int patchIndex = 0; patchIndex < numberOfPatches; ++patchIndex) {
-    const auto* const QIn   = &QInFlattened[patchIndex * {{DOFS*UNKNOWNS}}];
-    const auto* const faces = reinterpret_cast<FaceType>(&facesFlattened[patchIndex * TWO_TIMES_D * {{FACES_PER_DOF*UNKNOWNS}}]);
-    auto* const QOut        = &QOutFlattened[patchIndex * {{DOFS_WITH_OVERLAP*UNKNOWNS}}];
-
-    {{ loopOverCells() | indent(2) }}
+    {{ operation.setup_patch_loop() }}
+    {{ loopOverCells(operation) | indent(2) }}
   }
 {% endmacro %}

@@ -127,7 +127,7 @@ project.set_output_path("solutions")
 project = project.generate_Peano4_project(verbose=False)
 
 project.constants.export_constexpr_with_type("GridLength", str(3**depth), "int")
-project.constants.export_constexpr_with_type(
+project.constants.export_const_with_type(
     "PlotDescription",
     f'"{plot_description}"',
     "std::string",

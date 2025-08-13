@@ -5,11 +5,12 @@
 #include "peano4/utils/Loop.h"
 
 {% import 'Loop.macro.h' as patch with context %}{# get template macros #}
+{% import 'CopyPatchAndFillHalo.macro.h' as operation with context %}{# get template macros #}
 
 void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatch(
   const {{PRECISION}}* NOALIAS const  QIn,
   {{PRECISION}}* NOALIAS const        faces[TWO_TIMES_D],
   {{PRECISION}}* NOALIAS const        QOut
 ) {
-  {{ patch.loopOverCells() }}
+  {{ patch.loopOverCells(operation) }}
 }

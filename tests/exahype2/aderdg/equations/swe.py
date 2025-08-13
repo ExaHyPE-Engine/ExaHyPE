@@ -18,7 +18,7 @@ class SWE_W_Bathymetry(Equation):
     const double u = Q[1 + normal] / Q[0];
     const double c = std::sqrt(grav * Q[0]);
 
-    return std::max(std::abs(u + c), std::abs(u - c));
+    return std::fmax(std::abs(u + c), std::abs(u - c));
 """
 
     def flux(self):
@@ -76,6 +76,7 @@ class SWE_W_Bathymetry(Equation):
   }
 """
 
+
 class SWE_WO_Bathymetry(Equation):
     def __init__(self, dimensions=2):
         if dimensions != 2:
@@ -91,7 +92,7 @@ class SWE_WO_Bathymetry(Equation):
     const double u = Q[1 + normal] / Q[0];
     const double c = std::sqrt(grav * Q[0]);
 
-    return std::max(std::abs(u + c), std::abs(u - c));
+    return std::fmax(std::abs(u + c), std::abs(u - c));
 """
 
     def flux(self):

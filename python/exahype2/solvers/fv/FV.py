@@ -275,9 +275,7 @@ class FV(object):
         self._action_set_project_patch_onto_faces = None
         self._action_set_roll_over_update_of_faces = None
         self._action_set_copy_new_faces_onto_old_faces = None
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = (
-            None
-        )
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = None
         self._action_set_postprocess_solution = None
         self._action_set_preprocess_solution = None
 
@@ -765,8 +763,8 @@ The finest mesh width of """
 
         self._patch_overlap_update.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
           self._provide_face_data_to_compute_kernels_default_guard(),
-          "false",
-          "false"
+          self._load_face_data_default_guard(),
+          self._store_face_data_default_guard()
         )
 
         self._patch.generator.includes += """
@@ -1144,9 +1142,7 @@ The finest mesh width of """
             )
 
         step.add_action_set(self._action_set_preprocess_solution)
-        step.add_action_set(
-            self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement
-        )
+        step.add_action_set(self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement)
         step.add_action_set(self._action_set_copy_new_faces_onto_old_faces)
         step.add_action_set(self._action_set_roll_over_update_of_faces)
         step.add_action_set(self._action_set_initial_conditions)
@@ -1190,24 +1186,6 @@ The finest mesh width of """
         self._plotter_option = plotter_option
 
     def add_actions_to_plot_solution(self, step, output_path, restart_from_checkpoint=False):
-        """!
-        Add action sets to plot solution step
-
-        Consult the discussion in add_actions_to_init_grid() around the order
-        of the individual action sets.
-
-        It is important that we have the coupling/dynamic AMR part in here, as
-        there might be pending AMR refinement requests that now are realised.
-        For the same reason, we need the update of the face label and the update
-        of the cell label in here: The AMR might just propagate over into the
-        plotting, i.e. we might create new grid entities throughout the plot.
-        These entities (faces and cells) have to be initialised properly.
-        Otherwise, their un-initialised data will propagate through to the next
-        time step.
-
-        To make the restriction work, we have to project the solutions onto the
-        faces.
-        """
         d = {}
         self._init_dictionary_with_default_parameters(d)
         self.add_entries_to_text_replacement_dictionary(d)
@@ -1277,24 +1255,6 @@ The finest mesh width of """
         pass
 
     def add_actions_to_checkpoint_solution(self, step, output_path, restart_from_checkpoint=False):
-        """!
-        Add action sets to plot solution step
-
-        Consult the discussion in add_actions_to_init_grid() around the order
-        of the individual action sets.
-
-        It is important that we have the coupling/dynamic AMR part in here, as
-        there might be pending AMR refinement requests that now are realised.
-        For the same reason, we need the update of the face label and the update
-        of the cell label in here: The AMR might just propagate over into the
-        plotting, i.e. we might create new grid entities throughout the plot.
-        These entities (faces and cells) have to be initialised properly.
-        Otherwise, their un-initialised data will propagate through to the next
-        time step.
-
-        To make the restriction work, we have to project the solutions onto the
-        faces.
-        """
         d = {}
         self._init_dictionary_with_default_parameters(d)
         self.add_entries_to_text_replacement_dictionary(d)
@@ -1357,10 +1317,10 @@ The finest mesh width of """
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_handle_boundary)
-        step.add_action_set(self._action_set_reconstruct_patch)
-        step.add_action_set(self._action_set_update_patch)
         if self._use_enclave_tasking:
             step.add_action_set(self._action_set_enclave_tasking)
+        step.add_action_set(self._action_set_reconstruct_patch)
+        step.add_action_set(self._action_set_update_patch)
         step.add_action_set(self._action_set_project_patch_onto_faces)
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
@@ -1375,8 +1335,10 @@ The finest mesh width of """
 
         self._generate_kernels(output, subdirectory)
         self._action_set_reconstruct_patch.generate_kernels(namespace, output, dimensions, subdirectory)
+        self._action_set_project_patch_onto_faces.generate_kernels(namespace, output, dimensions, subdirectory)
         if self._use_enclave_tasking and self._can_fuse:
             self._action_set_reconstruct_patch.generate_fused_kernels(namespace, output, dimensions, subdirectory)
+            self._action_set_project_patch_onto_faces.generate_fused_kernels(namespace, output, dimensions, subdirectory)
 
         templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
         if self._solver_template_file_class_name is None:

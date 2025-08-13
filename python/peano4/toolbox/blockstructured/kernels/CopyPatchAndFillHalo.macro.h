@@ -1,11 +1,11 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-{% macro copyPatchAndFillHalo() %}
+{% macro inner_loop_macro() %}
   //
   // Copy inner patch.
   //
-  {% if DIMENSIONS == 3 %}
+  {% if DIMENSIONS==3 %}
   const tarch::la::Vector<DIMENSIONS, int> sourceCell({x, y, z});
   {% else %}
   const tarch::la::Vector<DIMENSIONS, int> sourceCell({x, y});
@@ -45,7 +45,7 @@
   //
   for (int d = 0; d < {{DIMENSIONS}}; d++) {
     for (int i = 0; i < {{OVERLAP}}; i++) {
-      {% if DIMENSIONS == 3 %}
+      {% if DIMENSIONS==3 %}
       tarch::la::Vector<DIMENSIONS, int> sourceCell({x, y, z});
       {% else %}
       tarch::la::Vector<DIMENSIONS, int> sourceCell({x, y});
@@ -87,4 +87,29 @@
       }
     }
   }
+{% endmacro %}
+
+{% macro setup_patchdata_variables() %}
+  const int numberOfPatches                                   = patchData.numberOfCells;
+  const {{PRECISION}}* const QInFlattened                     = patchData.QInFlattened;
+  const {{PRECISION}}* const (*facePointers)[3][TWO_TIMES_D]  = patchData.faces;
+  {{PRECISION}}* const QOutFlattened                          = patchData.QOutFlattened;
+{% endmacro %}
+
+{% macro setup_patch_loop() %}
+  const auto* const QIn   = &QInFlattened[patchIndex * {{DOFS*UNKNOWNS}}];
+  const auto* const faces = facePointers[patchIndex][2];
+  auto* const QOut        = &QOutFlattened[patchIndex * {{DOFS_WITH_OVERLAP*UNKNOWNS}}];
+{% endmacro %}
+
+{% macro cuda_kernel_parameters() %}
+  const {{PRECISION}}* const NOALIAS QInFlattened,
+  const {{PRECISION}}* const         (*facePointers)[3][TWO_TIMES_D],
+  {{PRECISION}}* const NOALIAS       QOutFlattened
+{% endmacro %}
+
+{% macro parameters_passed_to_inner_loop() %}
+  QInFlattened,
+  facePointers,
+  QOutFlattened
 {% endmacro %}

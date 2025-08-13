@@ -4,6 +4,7 @@
 
 #include "repositories/SolverRepository.h"
 
+#include "kernels/{{SOLVER_NAME}}/ProjectPatch.h"
 #include "kernels/{{SOLVER_NAME}}/ReconstructPatch.h"
 #include "kernels/{{SOLVER_NAME}}/RiemannSolver.h"
 
@@ -14,6 +15,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <unordered_map>
 
 tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
 int                 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}"));
@@ -27,11 +29,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
   const double                                    timeStamp,
   const double                                    timeStepSize,
   {{STORAGE_PRECISION}}* NOALIAS                  QIn,
-  {{STORAGE_PRECISION}}* NOALIAS const            faces[1][TWO_TIMES_D],
+  {{STORAGE_PRECISION}}* NOALIAS const            faces[3][TWO_TIMES_D],
   {{STORAGE_PRECISION}}* NOALIAS                  QOut
 ) {
   std::swap(QIn, QOut);
-  kernels::{{SOLVER_NAME}}::reconstructPatch(QIn, faces[0], QOut);
+  kernels::{{SOLVER_NAME}}::reconstructPatch(QIn, faces[2], QOut);
   std::swap(QIn, QOut);
 
 #if PEANO_DEBUG > 0
@@ -64,6 +66,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
   ); // Outcome has to be valid
 #endif
 
+  std::swap(QIn, QOut);
+  kernels::{{SOLVER_NAME}}::projectPatch(QIn, faces[1]);
+  std::swap(QIn, QOut);
+
   {{COMPUTE_NEW_TIME_STEP_SIZE}}
   repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp + timeStepSize, tarch::la::min(marker.h()), tarch::la::max(marker.h()));
 }
@@ -73,10 +79,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
   const double                                    timeStamp,
   const double                                    timeStepSize,
   {{STORAGE_PRECISION}}* NOALIAS                  QIn,
-  {{STORAGE_PRECISION}}* NOALIAS const            faces[1][TWO_TIMES_D],
+  {{STORAGE_PRECISION}}* NOALIAS const            faces[3][TWO_TIMES_D],
   {{STORAGE_PRECISION}}* NOALIAS                  QOut
 ):
-  ::exahype2::EnclaveTask<{{STORAGE_PRECISION}}>(
+  ::exahype2::EnclaveTask<{{STORAGE_PRECISION}}, 3>(
     _enclaveTaskTypeId,
     marker,
     timeStamp,
@@ -101,6 +107,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
 
 {% if CAN_FUSE %}
 
+#include "kernels/{{SOLVER_NAME}}/ProjectPatchFused.h"
 #include "kernels/{{SOLVER_NAME}}/ReconstructPatchFused.h"
 #include "kernels/{{SOLVER_NAME}}/RiemannSolverFused.h"
 
@@ -112,43 +119,123 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     << {{NUMBER_OF_ENCLAVE_TASKS}} << " asynchronous enclave tasks on target device " << TARGET_DEVICE
   );
 
-  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 1> patchData(
+  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3> patchData(
     numberOfPatches,
     tarch::MemoryLocation::Pinned,
     TARGET_DEVICE
   );
 
+  std::vector<double> hostFacesOld;
+  std::vector<double> hostFacesUpdate;
+  std::vector<double> hostFacesNew;
+  hostFacesOld.reserve(numberOfPatches * TWO_TIMES_D * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %});
+  hostFacesUpdate.reserve(numberOfPatches * TWO_TIMES_D * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %});
+  hostFacesNew.reserve(numberOfPatches * TWO_TIMES_D * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %});
+
+  std::unordered_map<{{STORAGE_PRECISION}}*, int>                    facesOldHostToDevice;
+  std::unordered_map<{{STORAGE_PRECISION}}*, {{STORAGE_PRECISION}}*> facesOldDeviceToHost;
+
+  std::unordered_map<{{STORAGE_PRECISION}}*, int>                    facesUpdateHostToDevice;
+  std::unordered_map<{{STORAGE_PRECISION}}*, {{STORAGE_PRECISION}}*> facesUpdateDeviceToHost;
+
+  std::unordered_map<{{STORAGE_PRECISION}}*, int>                    facesNewHostToDevice;
+  std::unordered_map<{{STORAGE_PRECISION}}*, {{STORAGE_PRECISION}}*> facesNewDeviceToHost;
+
+  auto processTaskFaces = [&](Task* task) {
+    auto* typedTask = static_cast<{{ENCLAVE_TASK_TYPE}}*>(task);
+    for (int f = 0; f < TWO_TIMES_D; ++f) {
+      {{STORAGE_PRECISION}}* faceKeyOld = typedTask->_faces[0][f];
+      if (facesOldHostToDevice.find(faceKeyOld) == facesOldHostToDevice.end()) {
+        facesOldHostToDevice[faceKeyOld] = static_cast<int>(facesOldHostToDevice.size());
+        hostFacesOld.insert(hostFacesOld.end(), faceKeyOld, faceKeyOld + {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %});
+      }
+
+      {{STORAGE_PRECISION}}* faceKeyUpdate = typedTask->_faces[1][f];
+      if (facesUpdateHostToDevice.find(faceKeyUpdate) == facesUpdateHostToDevice.end()) {
+        facesUpdateHostToDevice[faceKeyUpdate] = static_cast<int>(facesUpdateHostToDevice.size());
+        hostFacesUpdate.insert(hostFacesUpdate.end(), faceKeyUpdate, faceKeyUpdate + {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %});
+      }
+
+      {{STORAGE_PRECISION}}* faceKeyNew = typedTask->_faces[2][f];
+      if (facesNewHostToDevice.find(faceKeyNew) == facesNewHostToDevice.end()) {
+        facesNewHostToDevice[faceKeyNew] = static_cast<int>(facesNewHostToDevice.size());
+        hostFacesNew.insert(hostFacesNew.end(), faceKeyNew, faceKeyNew + {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %});
+      }
+    }
+  };
+
+  for (auto& otherTask: otherTasks) {
+    processTaskFaces(otherTask);
+  }
+  processTaskFaces(this);
+
+  {{STORAGE_PRECISION}}* deviceFacesOld    = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(hostFacesOld.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  {{STORAGE_PRECISION}}* deviceFacesUpdate = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(hostFacesUpdate.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  {{STORAGE_PRECISION}}* deviceFacesNew    = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(hostFacesNew.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  tarch::copyTo(deviceFacesOld, hostFacesOld.data(), hostFacesOld.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  tarch::copyTo(deviceFacesUpdate, hostFacesUpdate.data(), hostFacesUpdate.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  tarch::copyTo(deviceFacesNew, hostFacesNew.data(), hostFacesNew.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  hostFacesOld.clear();
+  hostFacesUpdate.clear();
+  hostFacesNew.clear();
+
   int patchIndex = 0;
   for (auto& otherTask: otherTasks) {
-    patchData.QIn[patchIndex]               = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_QIn;
+    patchData.QIn[patchIndex]                   = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_QIn;
+    patchData.QOut[patchIndex]                  = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_QOut;
+    patchData.cellSize[patchIndex]              = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_marker.h();
+    patchData.cellCentre[patchIndex]            = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_marker.x();
+    patchData.maxEigenvalue[patchIndex]         = 0.0;
+
     for (int f = 0; f < TWO_TIMES_D; ++f) {
-      patchData.faces[0][patchIndex][f]     = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_faces[0][f];
+      auto* faceKeyOld                          = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_faces[0][f];
+      auto deviceIndexOld                       = facesOldHostToDevice.at(faceKeyOld);
+      auto* deviceFaceOld                       = deviceFacesOld + deviceIndexOld * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
+      patchData.faces[patchIndex][0][f]         = deviceFaceOld;
+      facesOldDeviceToHost[deviceFaceOld]       = faceKeyOld;
+      auto* faceKeyUpdate                       = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_faces[1][f];
+      auto deviceIndexUpdate                    = facesUpdateHostToDevice.at(faceKeyUpdate);
+      auto* deviceFaceUpdate                    = deviceFacesUpdate + deviceIndexUpdate * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
+      patchData.faces[patchIndex][1][f]         = deviceFaceUpdate;
+      facesUpdateDeviceToHost[deviceFaceUpdate] = faceKeyUpdate;
+      auto* faceKeyNew                          = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_faces[2][f];
+      auto deviceIndexNew                       = facesNewHostToDevice.at(faceKeyNew);
+      auto* deviceFaceNew                       = deviceFacesNew + deviceIndexNew * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
+      patchData.faces[patchIndex][2][f]         = deviceFaceNew;
+      facesNewDeviceToHost[deviceFaceNew]       = faceKeyNew;
     }
-    patchData.QOut[patchIndex]              = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_QOut;
-    patchData.cellSize[patchIndex]          = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_marker.h();
-    patchData.cellCentre[patchIndex]        = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_marker.x();
-    patchData.maxEigenvalue[patchIndex]     = 0.0;
+
     delete otherTask;
     patchIndex++;
   }
-  patchData.t                             = _t;
-  patchData.dt                            = _dt;
-  patchData.QIn[patchIndex]               = _QIn;
+  patchData.t                                 = _t;
+  patchData.dt                                = _dt;
+  patchData.QIn[patchIndex]                   = _QIn;
+  patchData.QOut[patchIndex]                  = _QOut;
+  patchData.cellCentre[patchIndex]            = _marker.x();
+  patchData.cellSize[patchIndex]              = _marker.h();
+  patchData.maxEigenvalue[patchIndex]         = 0.0;
+
   for (int f = 0; f < TWO_TIMES_D; ++f) {
-    patchData.faces[0][patchIndex][f]     = _faces[0][f];
+    auto* faceKeyOld                          = _faces[0][f];
+    auto deviceIndexOld                       = facesOldHostToDevice.at(faceKeyOld);
+    auto* deviceFaceOld                       = deviceFacesOld + deviceIndexOld * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
+    patchData.faces[patchIndex][0][f]         = deviceFaceOld;
+    facesOldDeviceToHost[deviceFaceOld]       = faceKeyOld;
+    auto* faceKeyUpdate                       = _faces[1][f];
+    auto deviceIndexUpdate                    = facesUpdateHostToDevice.at(faceKeyUpdate);
+    auto* deviceFaceUpdate                    = deviceFacesUpdate + deviceIndexUpdate * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
+    patchData.faces[patchIndex][1][f]         = deviceFaceUpdate;
+    facesUpdateDeviceToHost[deviceFaceUpdate] = faceKeyUpdate;
+    auto* faceKeyNew                          = _faces[2][f];
+    auto deviceIndexNew                       = facesNewHostToDevice.at(faceKeyNew);
+    auto* deviceFaceNew                       = deviceFacesNew + deviceIndexNew * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
+    patchData.faces[patchIndex][2][f]         = deviceFaceNew;
+    facesNewDeviceToHost[deviceFaceNew]       = faceKeyNew;
   }
-  patchData.QOut[patchIndex]              = _QOut;
-  patchData.cellCentre[patchIndex]        = _marker.x();
-  patchData.cellSize[patchIndex]          = _marker.h();
-  patchData.maxEigenvalue[patchIndex]     = 0.0;
 
   patchData.QInFlattened = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(
     numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %},
-    tarch::MemoryLocation::Pinned,
-    TARGET_DEVICE
-  );
-  patchData.facesFlattened = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(
-    numberOfPatches * TWO_TIMES_D * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %},
     tarch::MemoryLocation::Pinned,
     TARGET_DEVICE
   );
@@ -169,17 +256,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
       {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %},
       &patchData.QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}]
     );
-
-    for (int f = 0; f < TWO_TIMES_D; ++f) {
-      std::copy_n(
-        patchData.faces[0][patchIndex][f],
-        {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %},
-        &patchData.facesFlattened[
-          patchIndex * TWO_TIMES_D * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %} // Skip whole patches
-          + f * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %} // Move to the f-th face inside the patch
-        ]
-      );
-    }
   }
 
   kernels::{{SOLVER_NAME}}::reconstructPatchFused(patchData, TARGET_DEVICE);
@@ -231,15 +307,52 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 #endif
   }
 
+  // QIn is no longer needed
+  // QOut of Riemann solver is now QIn for the patch reconstruction
+  std::swap(patchData.QInFlattened, patchData.QOutFlattened);
+  kernels::{{SOLVER_NAME}}::projectPatchFused(patchData, TARGET_DEVICE);
+  std::swap(patchData.QInFlattened, patchData.QOutFlattened);
+
+  for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
+    for (int f = 0; f < TWO_TIMES_D; f++) {
+      auto* deviceFaceOld     = patchData.faces[patchIndex][0][f];
+      auto* deviceFaceUpdate  = patchData.faces[patchIndex][1][f];
+      auto* deviceFaceNew     = patchData.faces[patchIndex][2][f];
+      auto* hostFaceOld       = facesOldDeviceToHost[deviceFaceOld];
+      auto* hostFaceNew       = facesNewDeviceToHost[deviceFaceNew];
+
+      ::exahype2::fv::copyHalfOfHalo(
+        {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        {{HALO_SIZE}},
+        f % DIMENSIONS,
+        f < DIMENSIONS,
+        deviceFaceNew,
+        hostFaceOld
+      );
+      ::exahype2::fv::copyHalfOfHalo(
+        {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        {{HALO_SIZE}},
+        f % DIMENSIONS,
+        f < DIMENSIONS,
+        deviceFaceUpdate,
+        hostFaceNew
+      );
+    }
+  }
+
   tarch::accelerator::MemoryManager::getInstance().free(patchData.QInFlattened, TARGET_DEVICE);
-  tarch::accelerator::MemoryManager::getInstance().free(patchData.facesFlattened, TARGET_DEVICE);
   tarch::accelerator::MemoryManager::getInstance().free(patchData.QOutFlattened, TARGET_DEVICE);
+  tarch::accelerator::MemoryManager::getInstance().free(deviceFacesOld, TARGET_DEVICE);
+  tarch::accelerator::MemoryManager::getInstance().free(deviceFacesUpdate, TARGET_DEVICE);
+  tarch::accelerator::MemoryManager::getInstance().free(deviceFacesNew, TARGET_DEVICE);
 
   {{COMPUTE_NEW_TIME_STEP_SIZE}}
   repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, _t + _dt, tarch::la::min(_marker.h()), tarch::la::max(_marker.h()));
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}>& patchData) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData) {
   // Before swap: QIn is with halo, QOut is without halo
   // After swap: QIn is without halo, QOut is with halo (that is reconstructed as next step)
   std::swap(patchData.QInFlattened, patchData.QOutFlattened);
@@ -249,6 +362,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(::exahype2::CellData<{{STOR
   std::swap(patchData.QInFlattened, patchData.QOutFlattened);
 
   const auto maxEigenvalue = {{FUSED_COMPUTE_KERNEL_CALL}}
+
+  std::swap(patchData.QInFlattened, patchData.QOutFlattened);
+  kernels::{{SOLVER_NAME}}::projectPatchFused(patchData, TARGET_DEVICE);
+  std::swap(patchData.QInFlattened, patchData.QOutFlattened);
 
   {{COMPUTE_NEW_TIME_STEP_SIZE}}
   repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, patchData.t + patchData.dt, tarch::la::min(patchData.cellSize[0]), tarch::la::max(patchData.cellSize[0]));
