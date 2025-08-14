@@ -20,11 +20,6 @@
 
 {% if GPU == "cuda" %}
 {{ fused.defineGlobalKernel(operation) }}
-{% elif GPU == "cpp" %}
-#include "tarch/accelerator/stdpar/cartesian_product.h"
-#include <ranges>
-#include <execution>
-#include <numeric>
 {% elif GPU == "sycl" %}
 #include "tarch/accelerator/sycl/Device.h"
 #include <sycl/sycl.hpp>

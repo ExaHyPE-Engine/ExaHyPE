@@ -55,8 +55,6 @@ void writeCopyrightMessage() {
     buildInfo += "OpenMP Target";
 #elif defined(WITH_GPU_SYCL)
     buildInfo += "SYCL";
-#elif defined(WITH_GPU_STDPAR)
-    buildInfo += "Standard Parallelism";
 #elif defined(WITH_GPU_CUDA)
     buildInfo += "CUDA";
 #elif defined(WITH_GPU_KOKKOS)

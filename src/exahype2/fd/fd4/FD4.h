@@ -161,10 +161,6 @@ namespace exahype2 {
 #include "exahype2/fd/fd4/omp/FD4.h"
 #endif
 
-//#if defined(WITH_GPU_STDPAR)
-//#include "exahype2/fd/fd4/cpp/FD4.h"
-//#endif
-
 /*
 #if defined(WITH_GPU_SYCL)
 #include "exahype2/fd/fd4/sycl/FD4.h"

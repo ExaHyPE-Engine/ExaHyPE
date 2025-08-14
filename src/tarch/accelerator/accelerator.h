@@ -18,7 +18,7 @@
 namespace tarch {
 // https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#nvcc-identification-macro
 // defined(_NVHPC_CUDA) || defined(__NVCOMPILER_CUDA__) || defined(__CUDACC__) || defined(NVCC) || defined(__NVCC__)
-#if defined(WITH_GPU_CUDA) or (defined(WITH_GPU_STDPAR) and defined(_NVHPC_STDPAR_GPU))
+#if defined(WITH_GPU_CUDA)
 #define GPU_CALLABLE_METHOD __host__ __device__
 GPU_CALLABLE_METHOD void gpuAbort();
 #elif defined(WITH_GPU_SYCL)
