@@ -60,6 +60,16 @@ class DataModel(object):
         return
 
     def add_aspect(self, aspect):
+        """!
+        
+        Add a new aspect
+        
+        This is a pretty simplistic routine: 
+        
+        1. Inform the aspect object about the model by invoking set_model()
+        2. Add the aspect to the list of used aspects
+        
+        """
         aspect.set_model(self)
         self._aspects.append(aspect)
 
