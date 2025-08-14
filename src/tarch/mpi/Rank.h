@@ -527,6 +527,13 @@ class tarch::mpi::Rank {
      * Set after how much time a node waiting for an MPI message shall quit
      * and shutdown the whole application with an error report. If you pass 0,
      * that switches off this feature.
+     *
+     * By default, timeouts are disabled when we instantiate the Rank object,
+     * but if you set up your system through peano4::initParallelEnvironment(),
+     * then you'll have a default timeout.
+     *
+     * @param valueInSeconds Timeout duration in seconds, i.e. how long we wait
+     *   at most for an incoming message.
      */
     void setDeadlockTimeOut( int valueInSeconds );
 

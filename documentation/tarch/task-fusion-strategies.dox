@@ -125,6 +125,13 @@ and there are not enough fusable tasks, let it wait for a few milliseconds
 to see if more fusable tasks drop in.
 
 
+<div style="background-color: #ccc ; padding: 10px; border: 1px solid green;"> 
+This is not about timeouts in an MPI sense. If you search for timeouts in
+MPI, please consult tarch::la::Rank::setDeadlockTimeOut().
+</div>
+
+
+
 ### Reduce fused batch size
 
 If the average number of ready tasks in the queue is higher than the

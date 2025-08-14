@@ -47,16 +47,28 @@ namespace peano4 {
    * arguments directly without calling initParallelEnvironment() they
    * might contain MPI values not important to the program.
    *
-   * <h2> Usage/implementation details </h2>
+   *
+   * ## Default parameters
+   *
+   * The routine calls peano4::parallel::Node::initMPIDatatypes(), but it also
+   * sets a default timeout of 60s. You can alter this default by calling
+   * tarch::mpi::Rank::setDeadlockTimeOut(). All Python projects have a feature
+   * Project.set_mpi_timeout() which you can use to alter the default timeout
+   * from the Python side.
+   *
+   *
+   * ## Usage/implementation details
    *
    * You may not use the trace macros before this operation has invoked the init
    * operation. Otherwise, the getRank() assertion fails, as the node has not
    * been configured correctly.
    *
    * Invoke with an address operator before that.
-   * <pre>
-  peano4::initParallelEnvironment(&argc,&argv);
-     </pre>
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * peano4::initParallelEnvironment(&argc,&argv);
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
    * This has to be done as one of the very first things, i.e. before you init
    * the logging, or run tests, or ...
    */
