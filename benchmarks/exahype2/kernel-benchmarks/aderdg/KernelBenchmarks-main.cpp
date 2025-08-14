@@ -414,9 +414,6 @@ void runBenchmarks(int numberOfCells) {
 
 // #endif // WITH_GPU_SYCL
 
-// #if defined(WITH_GPU_STDPAR)
-
-// #endif // WITH_GPU_STDPAR
 //   }
 
   for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {

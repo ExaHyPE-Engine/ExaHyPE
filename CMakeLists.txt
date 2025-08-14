@@ -171,7 +171,6 @@ list(APPEND AVAILABLE_ACCELERATORS
   "sycl"
   #"hip"
   "cuda"
-  "cpp"
   "kokkos"
 )
 set(WITH_GPU "no" CACHE STRING "${AVAILABLE_ACCELERATORS}")
@@ -213,8 +212,6 @@ elseif(WITH_GPU STREQUAL "cuda")
   include(CUDA)
 elseif(WITH_GPU STREQUAL "hip")
   include(HIP)
-elseif(WITH_GPU STREQUAL "cpp")
-  include(StdPar)
 elseif(WITH_GPU STREQUAL "kokkos")
   include(Kokkos)
 else()
