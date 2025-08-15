@@ -25,6 +25,9 @@ class Project:
   have a second array for solvers which participate, but are
   not asked if their stopping criteria have been reached.
 
+  @todo I think all projects should share certain commonalities 
+  @todo I want to have some feature to set the MPI timeout
+  
   """
 
   """
@@ -364,6 +367,12 @@ This is yet to be written, and we need to have a paper on our work.
   @property
   def subdirectory(self):
     return self._subdirectory
+
+
+# @todo timtout
+  def set_mpi_timeout(self,value):
+      pass
+  
 
   def set_multicore_orchestration(self, value):
       """! Set orchestration

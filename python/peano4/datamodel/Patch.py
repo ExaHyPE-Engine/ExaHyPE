@@ -5,6 +5,17 @@ from .DoF                import DoF
 
 
 class Patch(DoF):
+  """!
+  
+  Patch implementation of a degree of freedom
+  
+  Please study the superclass for details.
+  
+  @image html dof-class-diagram.png
+   
+  """
+  
+    
   readme_package_descriptor = """
 """
 
