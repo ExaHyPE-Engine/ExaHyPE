@@ -30,6 +30,8 @@
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::solvers::Solver {
   public:
     enum class State {
+      GridConstruction,
+      InitSolution,
       Solve,                    // for use in middle DG stage
       ProjectOntoFacesOnly,     // for use in first DG stage
       Suspend,
@@ -143,6 +145,15 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::so
 
     State getState() const;
 
+    void beginInitialisationSweep();
+    void beginGridConstructionSweep();
+
+    /**
+     * If this is called after the initialisation (to dump the original guess),
+     * then we have to switch the solver state to ensure that all data exchange
+     * along domain boundaries is correct.
+     */
+    void beginPlotSweep();
   protected:
     static tarch::logging::Log  _log;
 
