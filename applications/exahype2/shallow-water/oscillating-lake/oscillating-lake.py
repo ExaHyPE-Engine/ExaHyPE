@@ -37,7 +37,7 @@ refinement_criterion = """
 parser = exahype2.ArgumentParser()
 parser.set_defaults(
     min_depth=4,
-    end_time=5.0,
+    end_time=1.0,
 )
 args = parser.parse_args()
 
@@ -50,8 +50,8 @@ size = [4.0, 4.0]
 max_h = (1.1 * min(size) / (3.0**args.min_depth))
 min_h = max_h * 3.0 ** (-args.amr_levels)
 
-riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
-    name="HLLEMSolver",
+fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+    name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"h": 1, "hu": 1, "hv": 1},
     auxiliary_variables={"z": 1},
@@ -60,22 +60,22 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     time_step_relaxation=args.time_step_relaxation,
 )
 
-riemann_solver.set_implementation(
+fv_solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
     riemann_solver=hllem,
 )
 
-riemann_solver.set_plotter(args.plotter)
+fv_solver.set_plotter(args.plotter)
 
 project = exahype2.Project(
     namespace=["applications", "exahype2", "swe"],
     project_name="OscillatingLake",
     directory=".",
-    executable=f"OscillatingLake.{args.build_mode}",
+    executable="ExaHyPE-ShallowWater",
 )
-project.add_solver(riemann_solver)
+project.add_solver(fv_solver)
 
 if args.number_of_snapshots <= 0:
     time_in_between_plots = 0.0

@@ -1,15 +1,15 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "FVRusanovSolver.h"
+#include "FVSolver.h"
 
 #include "Constants.h"
 #include "math/CentralDifferencePartial2D.h"
 #include "projections/EllipsoidProjection.h"
 
-tarch::logging::Log applications::exahype2::swe::FVRusanovSolver::_log("applications::exahype2::swe::FVRusanovSolver");
+tarch::logging::Log applications::exahype2::swe::FVSolver::_log("applications::exahype2::swe::FVSolver");
 
 
-void applications::exahype2::swe::FVRusanovSolver::initialCondition(
+void applications::exahype2::swe::FVSolver::initialCondition(
   [[maybe_unused]] double* const NOALIAS                        Q, // Q[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -22,7 +22,7 @@ void applications::exahype2::swe::FVRusanovSolver::initialCondition(
 }
 
 
-void applications::exahype2::swe::FVRusanovSolver::boundaryConditions(
+void applications::exahype2::swe::FVSolver::boundaryConditions(
   [[maybe_unused]] const double* const NOALIAS                  Qinside,  // Qinside[3+1]
   [[maybe_unused]] double* const NOALIAS                        Qoutside, // Qoutside[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -37,7 +37,7 @@ void applications::exahype2::swe::FVRusanovSolver::boundaryConditions(
 }
 
 
-::exahype2::RefinementCommand applications::exahype2::swe::FVRusanovSolver::refinementCriterion(
+::exahype2::RefinementCommand applications::exahype2::swe::FVSolver::refinementCriterion(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -49,7 +49,7 @@ void applications::exahype2::swe::FVRusanovSolver::boundaryConditions(
 }
 
 
-double applications::exahype2::swe::FVRusanovSolver::maxEigenvalue(
+double applications::exahype2::swe::FVSolver::maxEigenvalue(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -77,7 +77,7 @@ double applications::exahype2::swe::FVRusanovSolver::maxEigenvalue(
 }
 
 
-void applications::exahype2::swe::FVRusanovSolver::flux(
+void applications::exahype2::swe::FVSolver::flux(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -105,7 +105,7 @@ void applications::exahype2::swe::FVRusanovSolver::flux(
 }
 
 
-void applications::exahype2::swe::FVRusanovSolver::nonconservativeProduct(
+void applications::exahype2::swe::FVSolver::nonconservativeProduct(
   [[maybe_unused]] const double* const NOALIAS                  Q,      // Q[3+1]
   [[maybe_unused]] const double* const NOALIAS                  deltaQ, // deltaQ[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -302,7 +302,7 @@ namespace {
   };
 } // namespace
 
-void applications::exahype2::swe::FVRusanovSolver::sourceTerm(
+void applications::exahype2::swe::FVSolver::sourceTerm(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,

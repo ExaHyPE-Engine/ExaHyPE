@@ -194,7 +194,7 @@ project = exahype2.Project(
     namespace=["applications", "exahype2", "swe"],
     project_name="TafjordLandslide",
     directory=".",
-    executable=f"TafjordLandslide.{args.build_mode}",
+    executable="ExaHyPE-ShallowWater",
 )
 
 project.add_solver(regular_solver)

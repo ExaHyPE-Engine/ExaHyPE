@@ -17,8 +17,8 @@ size = [abs(xLeft) + abs(xRight), abs(yLeft) + abs(yRight)]
 max_h = 1.1 * min(size) / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
 
-riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
-    name="FVRusanovSolver",
+fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+    name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"h": 1, "hu": 1, "hv": 1},
     auxiliary_variables={"b": 1},
@@ -28,7 +28,7 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     number_of_enclave_tasks=args.ntasks,
 )
 
-riemann_solver.set_implementation(
+fv_solver.set_implementation(
     initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
     boundary_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
     refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
@@ -38,15 +38,15 @@ riemann_solver.set_implementation(
     source_term=exahype2.solvers.PDETerms.User_Defined_Implementation,
 )
 
-riemann_solver.set_plotter(args.plotter)
+fv_solver.set_plotter(args.plotter)
 
 project = exahype2.Project(
     namespace=["applications", "exahype2", "swe"],
     project_name="ArtificalMeteoTsunami",
     directory=".",
-    executable=f"ArtificialMeteoTsunami.{args.build_mode}",
+    executable="ExaHyPE-ShallowWater",
 )
-project.add_solver(riemann_solver)
+project.add_solver(fv_solver)
 
 if args.number_of_snapshots <= 0:
     time_in_between_plots = 0.0
@@ -99,8 +99,7 @@ project.set_Peano4_installation(
 )
 
 project = project.generate_Peano4_project(verbose=False)
-project.output.makefile.add_h_file("FVRusanovSolver.h")
-project.output.makefile.add_cpp_file("FVRusanovSolver.cpp")
+project.output.makefile.add_cpp_file("FVSolver.cpp")
 for const_name, const_info in constants.items():
     const_val, const_type = const_info
     project.constants.export_constexpr_with_type(const_name, str(const_val), const_type)

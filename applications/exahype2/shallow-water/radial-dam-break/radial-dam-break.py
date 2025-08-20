@@ -99,8 +99,8 @@ aderdg_solver.set_implementation(
 aderdg_solver.set_plotter(args.plotter)
 aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)
 
-riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
-    name="HLLEMSolver",
+fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+    name="FVSolver",
     patch_size=args.degrees_of_freedom * 2 + 1,
     unknowns={"h": 1, "hu": 1, "hv": 1},
     auxiliary_variables={"z": 1},
@@ -109,18 +109,18 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     time_step_relaxation=args.time_step_relaxation,
 )
 
-riemann_solver.set_implementation(
+fv_solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     riemann_solver=hllem,
 )
 
-riemann_solver.set_plotter(args.plotter)
+fv_solver.set_plotter(args.plotter)
 
 limiting_solver = exahype2.solvers.limiting.StaticLimiting(
     name="LimitingSolver",
     regular_solver=aderdg_solver,
-    limiting_solver=riemann_solver,
+    limiting_solver=fv_solver,
     limiting_criterion_implementation=limiting_criterion
 )
 
@@ -128,10 +128,10 @@ project = exahype2.Project(
     namespace=["applications", "exahype2", "swe"],
     project_name="RadialDamBreak",
     directory=".",
-    executable=f"RadialDamBreak.{args.build_mode}",
+    executable="ExaHyPE-ShallowWater",
 )
 project.add_solver(aderdg_solver)
-project.add_solver(riemann_solver)
+project.add_solver(fv_solver)
 project.add_solver(limiting_solver)
 
 if args.number_of_snapshots <= 0:

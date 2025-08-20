@@ -94,7 +94,7 @@ project = exahype2.Project(
     namespace=["applications", "exahype2", "swe"],
     project_name="CircularIsland",
     directory=".",
-    executable=f"CircularIsland.{args.build_mode}",
+    executable="ExaHyPE-ShallowWater",
 )
 project.add_solver(aderdg_solver)
 
