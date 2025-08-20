@@ -1,0 +1,208 @@
+/**
+
+ @page tutorials_peano4_mask_out_data_usage Mask out where and when data are used
+ 
+<!-- Add this one for href links to subitems -->
+ \tableofcontents
+
+  By default, all of the @ref tutorials_peano4_assign_data_to_mesh "mesh entities used" 
+  in Peano are used globally over the domain:
+  You introduce for example a degree of freedom tied to a face, and then each 
+  and every face will hold these data.
+  This default behaviour holds not only spatially.
+  It holds for every single program step, and it holds in a multiscale sense, 
+  i.e. every mesh level will hold the data.
+ 
+ 
+  This is obviously inconvenient:
+ 
+  - Some data are only used within certain program phases. The most popular 
+    example is that most codes first of all construct an initial mesh, and 
+    while they do so, there's no need for the mesh to hold user data.
+  - Some data are only required on certain resolution levels. You might for
+    example have data which you need only on the finest mesh level but not 
+    on coarser ones.
+  - Some data are only required in certain domain areas. Limiting with 
+    localised solvers is a classic example @ref tutorials_exahype2_coupling "as we find it in some  ExaHyPE 2 applications".
+
+
+  ## Realisation in the C++ code
+
+  Peano's degrees of freedom, which are all subclasses of 
+  peano4.datamodel.DoF, therefore all have provide a couple of getters which
+  determine if a data entry is to be read or written.
+  Here is an example for the MGHyPE project:
+ 
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+struct benchmarks::mghype::poisson::facedata::DGPoisson {
+  public:
+    [...]
+
+    #ifdef Parallel
+    [...]
+    bool receiveAndMerge(const peano4::datamanagement::FaceMarker& marker) const;
+    bool send(const peano4::datamanagement::FaceMarker& marker) const;
+    static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const peano4::datamanagement::FaceMarker& marker);
+    [...]
+    #endif
+    
+    [...]
+};  
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+  There are three flags which determine if and how we hold data.
+  
+  
+  ### Storing, loading and using data
+  
+  The key routine to determine if a mesh entity is tied to a DoF at this point
+  in the execution is the routine loadStoreComputeFlag() which returns an 
+  instance of peano4::grid::LoadStoreComputeFlag.
+  This routine has to be static, as the kernel wants to query before it touches
+  a vertex if this vertex will hold a DoF.
+  
+  We can alter this routine, and do things alike
+  
+  
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  if (marker.isRefined()) {
+    return ::peano4::grid::LoadStoreComputeFlag::NoData;
+  }
+  else {  
+    return ::peano4::grid::LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream;
+  }
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  
+  
+  
+  ### Implictions on data exchange
+
+  We discuss the routines helping us to tailor the data exchange 
+  @ref tutorials_peano4_tailor_data_exchange "in a section of its own". 
+  However, it is important that 
+  
+  - A mesh entity which is not stored will automatically not be sent out to 
+    anybody.
+  - A mesh entity which is not to be loaded from a stack will not be merged
+    with an incoming piece of data, i.e. we assume that there is no such 
+    incoming data.
+    
+       
+  ## The Python API
+  
+  Each degree of freedom in Peano is @ref tutorials_peano4_assign_data_to_mesh "represented by a Python object".
+  This Python object is translated into a C++ class subject to some default aspects, i.e. features that add a certain amount of technical code into each and every data object.
+  One of these aspects is peano4.dastgen.MPIAndStorageAspect.
+  By convention, each DoF object has a generator and a flag 
+
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+    my_dof.[...].load_store_compute_flag     = "::peano4::grid::LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream"
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  which holds the C++ string that is inserted into the generated predicate code.
+  
+  
+  <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+  Different data models realise the flag differently: If you model your data 
+  with DaStGen2, i.e. as plain C++ object, then the object has an attribute
+  peano4_mpi_and_storage_aspect which in turn hosts the load_store_compute_flag. 
+  It is not the object itself which holds the attribute.
+  
+  If you work with patch data, the patch data realises it differently: Each 
+  patch data holds a generator which eventually decides how to translate the 
+  patch into C++ code. This generator hosts the load_store_compute_flag. This
+  is not super-consistent overall in the code, but for historic reasons, it
+  is how the code has evolved.
+  </div>
+
+  @todo Consolidate this behaviour.  
+  
+  Creating the logic can become tricky, as there might be many boolean 
+  conditions that you evaluate for each of three things to answer:
+  
+  - Do I have to load this DoF?
+  - Does a calculation need it actually?
+  - Do I have to store this DoF?
+
+  This still yields up to eight different combinations.  
+  Peano provides a routine which takes the outcome of 
+  the answers and combines them into a value of the enumeration
+  peano4::grid::LoadStoreComputeFlag. 
+  This routine is called peano4::grid::constructLoadStoreComputeFlag().
+  
+  All the generators wrap the routine 1:1, i.e. you can make the
+  generated code use it. What you still have to provide is some C++
+  expression (a string) which evaluates to a boolean.
+ 
+~~~~~~~~~~~~~~~~~~~~~~~~
+        my_dof._patch.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            "boolean C++ expression",
+            "boolean C++ expression",
+            "boolean C++ expression",
+        )
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+  ## Example 1: MGHyPE
+ 
+  We study the class mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
+  which represents a simple single-level DG solver. For each solver, we 
+  associate data to cells and to faces. They are held as local attributes
+  by the solver in self._cell_data and self._face_data and are eventually
+  added to the mesh once we take an mghype project and lower it into a
+  Peano project. This happens in the superclass:
+   
+  @snippet mghype/matrixfree/solvers/api/Solver.py mghype_matrixfree_solvers_api_Solver_add_to_mesh
+
+  Each of these two objects in turn holds a peano4_mpi_and_storage_aspect.
+  If we did not do anything special, this would be equivalent to setting
+   
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   self._cell_data.peano4_mpi_and_storage_aspect.load_store_compute_flag     = "::peano4::grid::LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream"
+   self._face_data.peano4_mpi_and_storage_aspect.load_store_compute_flag     = "::peano4::grid::LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream"
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Now we want to alter this behaviour, as we do not need and want any user
+  data while we construct the mesh. Therefore, we introduce a helper function
+   
+  @snippet mghype/matrixfree/solvers/api/DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.py mghype_matrixfree_solvers_api_DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_hold_cell_and_face_data_guard
+   
+  and use this helper to tailor the storage:
+   
+  @snippet mghype/matrixfree/solvers/api/DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.py mghype_matrixfree_solvers_api_DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_storage_guards
+  
+  So what we do here is relatively simple: 
+  We query the solver to find out if we have to load data and hold data
+  at all. For this, we rely on a function that we've previously added to 
+  the solver. This is a decision of MGHyPE. Other solvers might go down a
+  different route. That's a different conversation how to best model such 
+  logic. The point
+  is that we initially disable all data storage until a point where the data is
+  actually required.
+   
+  If the data is used, then we also store it (first and third argument). 
+  However, we only load it if we have previously stored it as well. 
+  Otherwise, we'd get a memory access error - if we translate with assertions.
+  Without assertions, the code will just segfault.
+
+  ## Example 2: ExaHyPE   
+
+  The @ref benchmarks_exahype2_ccz4_single_black_hole description host a pretty
+  extensive discussion of how we couple two solvers, where one solver only 
+  serves a certain subdomain. Consequently, we use the storage guards to
+  ensure that no data is held by this solver outside of this subdomain. We even
+  have to go one step further and ensure that the interface between the local 
+  subdomain where the solver is active and the large area around it is handled
+  properly.   
+ 
+ 
+  ## Realisation 
+ 
+  The realisation of this whole localisation feature is subject of 
+  @ref page_peano_localisation "a discussion of its own".
+
+ */
+ 
+ 

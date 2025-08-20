@@ -135,6 +135,7 @@ class MyDGSolver(exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclave
       ("repositories::DataRepository::_CellDataAlphaPoissonMarkerStack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top()","celldata::AlphaPoissonMarker","alpha")
     ]
     
+    @todo I think this is wrong. It should not be in the generator, but directly on the patch data structure
     self._current_time_step.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
 # @todo This is to be controlled via alpha marker later on
        self._provide_cell_data_to_compute_kernels_default_guard(),
