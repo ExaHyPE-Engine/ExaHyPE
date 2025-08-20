@@ -59,8 +59,8 @@ size = [7e6, 4e6]
 max_h = (1.1 * min(size) / (3.0**args.min_depth))
 min_h = max_h * 3.0 ** (-args.amr_levels)
 
-riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
-    name="FWaveSolver",
+fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+    name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"h": 1, "hu": 1, "hv": 1},
     auxiliary_variables={"z": 1},
@@ -71,15 +71,15 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     number_of_enclave_tasks=args.ntasks,
 )
 
-riemann_solver.set_implementation(
+fv_solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
     riemann_solver=fWave,
 )
 
-riemann_solver.set_plotter(args.plotter)
-riemann_solver.add_user_solver_includes(
+fv_solver.set_plotter(args.plotter)
+fv_solver.add_user_solver_includes(
     """
 #include "tarch/reader/NetCDFFieldParser.h"
 """
@@ -89,9 +89,9 @@ project = exahype2.Project(
     namespace=["applications", "exahype2", "swe"],
     project_name="TohokuTsunami",
     directory=".",
-    executable=f"TohokuTsunami.{args.build_mode}",
+    executable="ExaHyPE-ShallowWater",
 )
-project.add_solver(riemann_solver)
+project.add_solver(fv_solver)
 
 if args.number_of_snapshots <= 0:
     time_in_between_plots = 0.0

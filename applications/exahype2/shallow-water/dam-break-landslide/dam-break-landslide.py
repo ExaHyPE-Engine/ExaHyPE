@@ -80,7 +80,7 @@ adjust_solution = r"""
 parser = exahype2.ArgumentParser()
 parser.set_defaults(
     min_depth=3,
-    end_time=5.0,
+    end_time=1.0,
     time_step_relaxation=0.45,
     degrees_of_freedom=7,
 )
@@ -173,7 +173,7 @@ project = exahype2.Project(
     namespace=["applications", "exahype2", "swe"],
     project_name="DamBreakLandslide",
     directory=".",
-    executable=f"DamBreakLandslide.{args.build_mode}",
+    executable="ExaHyPE-ShallowWater",
 )
 
 project.add_solver(regular_solver)
