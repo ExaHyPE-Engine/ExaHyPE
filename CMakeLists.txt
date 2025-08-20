@@ -169,7 +169,6 @@ list(APPEND AVAILABLE_ACCELERATORS
   "no"
   "omp"
   "sycl"
-  #"hip"
   "cuda"
   "kokkos"
 )

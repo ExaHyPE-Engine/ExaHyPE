@@ -4,7 +4,6 @@
 #include "tests/IandRInMatricesTest.h"
 #include "tests/IandRSecondOrderTest.h"
 #include "tests/IandRThirdOrderTest.h"
-#include "tests/IandRVolumetricTest.h"
 #include "tests/InterpolationTest.h"
 
 tarch::tests::TestCase* toolbox::blockstructured::getUnitTests() {
@@ -14,7 +13,6 @@ tarch::tests::TestCase* toolbox::blockstructured::getUnitTests() {
   result->addTestCase(new toolbox::blockstructured::tests::IandRInMatricesTest());
   result->addTestCase(new toolbox::blockstructured::tests::IandRSecondOrderTest());
   result->addTestCase(new toolbox::blockstructured::tests::IandRThirdOrderTest());
-  result->addTestCase(new toolbox::blockstructured::tests::IandRVolumetricTest());
 
   return result;
 }

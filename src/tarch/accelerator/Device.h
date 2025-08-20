@@ -2,13 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <set>
-#include <map>
-#include <string>
-#include <thread>
-
 #include "tarch/logging/Log.h"
-#include "tarch/multicore/BooleanSemaphore.h"
 
 namespace tarch::accelerator {
   class Device;
@@ -28,13 +22,8 @@ class tarch::accelerator::Device {
 private:
   static tarch::logging::Log _log;
 
-  std::map<void*, std::size_t> _memoryBlockTable;
-  multicore::BooleanSemaphore _memoryBlockSemaphore;
-
   // Is default. We use init() instead.
   Device() = default;
-
-  void checkForMemoryLeaks();
 
 public:
   static constexpr int DefaultDevice = 0;
@@ -46,12 +35,6 @@ public:
    * @return Singleton instance
    */
   static Device& getInstance();
-
-  std::map<void*, std::size_t>& getMemoryBlockTable();
-  const std::map<void*, std::size_t>& getMemoryBlockTable() const;
-
-  multicore::BooleanSemaphore& getMemoryBlockSemaphore();
-  const multicore::BooleanSemaphore& getMemoryBlockSemaphore() const;
 
   bool init();
 

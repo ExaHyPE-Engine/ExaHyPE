@@ -32,7 +32,7 @@ void* tarch::accelerator::MemoryManager::allocate(std::size_t sizeInBytes, Memor
     // TODO: We should also check for the memory location here.
     // Not only the size but also the memory location should
     // be used for a lookup.
-    freeList.emplace_back(accelerator::allocateRawData(sizeInBytes, location, device), location);
+    freeList.emplace_back(allocateRawData(sizeInBytes, location, device), location);
   }
 
   // Take last free block
@@ -80,7 +80,7 @@ void tarch::accelerator::MemoryManager::clearWithoutLock() {
 
     for (auto& p : memoryPage.second.freePages) {
       for (auto& pp : p.second) {
-        accelerator::freeRawData(pp.first, pp.second, device);
+        freeRawData(pp.first, pp.second, device);
       }
     }
 

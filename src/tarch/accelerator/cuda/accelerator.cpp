@@ -5,9 +5,8 @@
 #if defined(WITH_GPU_CUDA)
 
 #include "Device.h"
-
 #include "tarch/Assertions.h"
-#include "tarch/multicore/Lock.h"
+#include "tarch/accelerator/MemoryBlocks.h"
 
 #include <cstring>
 
@@ -15,20 +14,13 @@ namespace {
   tarch::logging::Log _log("tarch::accelerator::cuda");
 } // namespace
 
-void* tarch::accelerator::allocateRawData(
-  std::size_t    sizeInBytes,
-  MemoryLocation location,
-  int            device
-) {
+void* tarch::accelerator::allocateRawData(std::size_t sizeInBytes, MemoryLocation location, int device) {
   void* data = nullptr;
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
 
   switch (location) {
   case MemoryLocation::Heap:
-    data = std::aligned_alloc(
-      ALIGNMENT_ON_HEAP,
-      padSizeToAlignment(sizeInBytes, ALIGNMENT_ON_HEAP)
-    );
+    data = std::aligned_alloc(ALIGNMENT_ON_HEAP, padSizeToAlignment(sizeInBytes, ALIGNMENT_ON_HEAP));
     break;
   case MemoryLocation::Device:
     assertion1(device >= 0, device);
@@ -52,36 +44,17 @@ void* tarch::accelerator::allocateRawData(
 
   assertion(data);
 
-#if PEANO_DEBUG > 0
-  {
-    tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
-    Device::getInstance().getMemoryBlockTable()[data] = sizeInBytes;
-  }
-#endif
+  MemoryBlocks::getInstance().bookmarkMemoryBlock(data, sizeInBytes);
 
   return data;
 }
 
-void tarch::accelerator::freeRawData(
-  void*          data,
-  MemoryLocation location,
-  int            device
-) {
+void tarch::accelerator::freeRawData(void* data, MemoryLocation location, int device) {
   if (!data) {
     return;
   }
 
-#if PEANO_DEBUG > 0
-  {
-    tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
-    auto itr = Device::getInstance().getMemoryBlockTable().find(data);
-    if (itr == Device::getInstance().getMemoryBlockTable().end()) {
-      logDebug("freeRawData()", "Attempt to free invalid pointer")
-      return;
-    }
-    Device::getInstance().getMemoryBlockTable().erase(itr);
-  }
-#endif
+  MemoryBlocks::getInstance().removeMemoryBlock(data);
 
   switch (location) {
   case MemoryLocation::Heap:
@@ -100,13 +73,8 @@ void tarch::accelerator::freeRawData(
   }
 }
 
-void tarch::accelerator::copyTo(
-  void*          target,
-  const void*    source,
-  std::size_t    sizeInBytes,
-  MemoryLocation location,
-  int            device
-) {
+void tarch::accelerator::
+  copyTo(void* target, const void* source, std::size_t sizeInBytes, MemoryLocation location, int device) {
   assertion(source);
   assertion(target);
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
@@ -130,13 +98,8 @@ void tarch::accelerator::copyTo(
   }
 }
 
-void tarch::accelerator::copyFrom(
-  const void*    source,
-  void*          target,
-  std::size_t    sizeInBytes,
-  MemoryLocation location,
-  int            device
-) {
+void tarch::accelerator::
+  copyFrom(const void* source, void* target, std::size_t sizeInBytes, MemoryLocation location, int device) {
   assertion(source);
   assertion(target);
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));

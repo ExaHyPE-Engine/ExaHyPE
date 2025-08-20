@@ -4,6 +4,8 @@
 
 #include "peano4/utils/Loop.h"
 
+#include <set>
+
 peano4::utils::tests::LinearisedTest::LinearisedTest():
   TestCase("peano4::utils::tests::LinearisedTest") {}
 

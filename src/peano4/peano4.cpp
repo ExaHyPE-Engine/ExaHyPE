@@ -6,15 +6,15 @@
 #include "parallel/SpacetreeSet.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/accelerator/Device.h"
+#include "tarch/accelerator/MemoryBlocks.h"
+#include "tarch/accelerator/MemoryManager.h"
 #include "tarch/mpi/BooleanSemaphore.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/tarch.h"
-#include "utils/Globals.h"
 
 #include <fstream>
-#include <list>
 
 /**
  * For the machine name. If it doesn't work, switch it off in the file
@@ -119,7 +119,10 @@ void peano4::shutdown() {
   tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::getInstance().shutdown();
   tarch::services::ServiceRepository::getInstance().shutdown();
   tarch::shutdownNonCriticalAssertionEnvironment();
+  tarch::accelerator::MemoryManager::getInstance().clear();
   tarch::accelerator::Device::getInstance().shutdown();
+  tarch::accelerator::MemoryBlocks::getInstance().checkForMemoryLeaks();
+  tarch::accelerator::MemoryBlocks::getInstance().clear();
   tarch::multicore::Core::getInstance().shutdown();
   tarch::mpi::Rank::getInstance().shutdown();
 }

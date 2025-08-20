@@ -301,149 +301,151 @@ int main(int argc, char** argv) {
 
   DataRepository& grid = DataRepository::getInstance();
 
-  ::exahype2::CellData<double, double, 3> patchData(_cells.size(), tarch::MemoryLocation::Pinned);
+  {
+    ::exahype2::CellData<double, double, 3> patchData(_cells.size(), tarch::MemoryLocation::Pinned);
 
-  double* QInFlattened = tarch::allocateMemory<double>(
-    _cells.size() * grid.getCellQReconstructedCardinality(),
-    tarch::MemoryLocation::Pinned
-  );
+    double* QInFlattened = tarch::allocateMemory<double>(
+      _cells.size() * grid.getCellQReconstructedCardinality(),
+      tarch::MemoryLocation::Pinned
+    );
 
-  double* QOutFlattened = tarch::allocateMemory<double>(
-    _cells.size() * grid.getCellQCardinality(),
-    tarch::MemoryLocation::Pinned
-  );
-  double* QOutFlattenedHost = grid.getCellQ(0);
+    double* QOutFlattened = tarch::allocateMemory<double>(
+      _cells.size() * grid.getCellQCardinality(),
+      tarch::MemoryLocation::Pinned
+    );
+    double* QOutFlattenedHost = grid.getCellQ(0);
 
-  tarch::la::Vector<DIMENSIONS, double>* cellCentresHost = new tarch::la::Vector<DIMENSIONS, double>[_cells.size()];
-  tarch::la::Vector<DIMENSIONS, double>* cellSizeHost    = new tarch::la::Vector<DIMENSIONS, double>[_cells.size()];
+    tarch::la::Vector<DIMENSIONS, double>* cellCentresHost = new tarch::la::Vector<DIMENSIONS, double>[_cells.size()];
+    tarch::la::Vector<DIMENSIONS, double>* cellSizeHost    = new tarch::la::Vector<DIMENSIONS, double>[_cells.size()];
 
-  for (int patchIndex = 0; patchIndex < _cells.size(); patchIndex++) {
-    cellCentresHost[patchIndex] = _cells[patchIndex].x();
-    cellSizeHost[patchIndex]    = _cells[patchIndex].h();
-    for (int type = 0; type < 3; type++) {
-      for (int face = 0; face < TWO_TIMES_D; face++) {
-        patchData.faces[patchIndex][type][face] = grid.getFaceQNewDevice(
-          _cells[patchIndex].x(),
-          _cells[patchIndex].h(),
-          face
-        );
+    for (int patchIndex = 0; patchIndex < _cells.size(); patchIndex++) {
+      cellCentresHost[patchIndex] = _cells[patchIndex].x();
+      cellSizeHost[patchIndex]    = _cells[patchIndex].h();
+      for (int type = 0; type < 3; type++) {
+        for (int face = 0; face < TWO_TIMES_D; face++) {
+          patchData.faces[patchIndex][type][face] = grid.getFaceQNewDevice(
+            _cells[patchIndex].x(),
+            _cells[patchIndex].h(),
+            face
+          );
+        }
       }
     }
-  }
-  tarch::copyTo<tarch::la::Vector<DIMENSIONS, double>, tarch::la::Vector<DIMENSIONS, double>>(
-    patchData.cellCentre,
-    cellCentresHost,
-    _cells.size(),
-    tarch::MemoryLocation::Pinned
-  );
-  tarch::copyTo<tarch::la::Vector<DIMENSIONS, double>, tarch::la::Vector<DIMENSIONS, double>>(
-    patchData.cellSize,
-    cellSizeHost,
-    _cells.size(),
-    tarch::MemoryLocation::Pinned
-  );
+    tarch::copyTo<tarch::la::Vector<DIMENSIONS, double>, tarch::la::Vector<DIMENSIONS, double>>(
+      patchData.cellCentre,
+      cellCentresHost,
+      _cells.size(),
+      tarch::MemoryLocation::Pinned
+    );
+    tarch::copyTo<tarch::la::Vector<DIMENSIONS, double>, tarch::la::Vector<DIMENSIONS, double>>(
+      patchData.cellSize,
+      cellSizeHost,
+      _cells.size(),
+      tarch::MemoryLocation::Pinned
+    );
 
-  tarch::copyTo<double, double>(
-    QOutFlattened,
-    QOutFlattenedHost,
-    _cells.size() * grid.getCellQCardinality(),
-    tarch::MemoryLocation::Pinned
-  );
-
-  patchData.QOutFlattened = QOutFlattened;
-  patchData.QInFlattened  = QInFlattened;
-
-  tarch::timing::Measurement measurement(1.0);
-  tarch::timing::Watch       timeStepWatch("::", "main()", false);
-  double                     timeStamp            = 0.0;
-  double                     nextMinPlotTimeStamp = FirstPlotTimeStamp;
-  double                     nextMaxPlotTimeStamp = FirstPlotTimeStamp;
-  bool                       continueToSolve      = true;
-
-  while (continueToSolve) {
-    if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp
-        or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) {
-      if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
-        nextMinPlotTimeStamp += TimeInBetweenPlots;
-      }
-      if (repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) {
-        nextMaxPlotTimeStamp += TimeInBetweenPlots;
-      }
-
-      if constexpr (ShouldPlot) {
-        plotGrid();
-      }
-    }
-
-    timeStepWatch.start();
-
-    applyBoundaryConditions();
-    grid.copyFacesToDevice();
-
-    patchData.t  = timeStamp;
-    patchData.dt = repositories::instanceOfFVSolver.getAdmissibleTimeStepSize();
-    repositories::startTimeStep();
-
-    tarch::timing::Watch watch("", "", false);
-    benchmarks::exahype2::kernelbenchmarks::tasks::FVSolverEnclaveTask::fuse(patchData);
-    watch.stop();
-    measurement.setValue(watch.getCalendarTime());
-
-    timeStamp += repositories::instanceOfFVSolver.getAdmissibleTimeStepSize();
-    repositories::finishTimeStep();
-
-    tarch::copyFrom<double, double>(
+    tarch::copyTo<double, double>(
       QOutFlattened,
       QOutFlattenedHost,
       _cells.size() * grid.getCellQCardinality(),
       tarch::MemoryLocation::Pinned
     );
 
-    grid.copyFacesFromDevice();
-    timeStepWatch.stop();
-    timeStepMeasurement.setValue(timeStepWatch.getCalendarTime());
+    patchData.QOutFlattened = QOutFlattened;
+    patchData.QInFlattened  = QInFlattened;
 
-    if (timeStepMeasurement.getAccumulatedValue() >= printNextTimeStep) {
-      repositories::printTimeStep(false);
-      if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
-        logInfo("main()", "Average cell updates per second: " << _cells.size() / measurement.getValue());
+    tarch::timing::Measurement measurement(1.0);
+    tarch::timing::Watch       timeStepWatch("::", "main()", false);
+    double                     timeStamp            = 0.0;
+    double                     nextMinPlotTimeStamp = FirstPlotTimeStamp;
+    double                     nextMaxPlotTimeStamp = FirstPlotTimeStamp;
+    bool                       continueToSolve      = true;
+
+    while (continueToSolve) {
+      if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp
+          or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) {
+        if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
+          nextMinPlotTimeStamp += TimeInBetweenPlots;
+        }
+        if (repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) {
+          nextMaxPlotTimeStamp += TimeInBetweenPlots;
+        }
+
+        if constexpr (ShouldPlot) {
+          plotGrid();
+        }
       }
-      printNextTimeStep += repositories::PrintTimeStepIntervalInSeconds;
+
+      timeStepWatch.start();
+
+      applyBoundaryConditions();
+      grid.copyFacesToDevice();
+
+      patchData.t  = timeStamp;
+      patchData.dt = repositories::instanceOfFVSolver.getAdmissibleTimeStepSize();
+      repositories::startTimeStep();
+
+      tarch::timing::Watch watch("", "", false);
+      benchmarks::exahype2::kernelbenchmarks::tasks::FVSolverEnclaveTask::fuse(patchData);
+      watch.stop();
+      measurement.setValue(watch.getCalendarTime());
+
+      timeStamp += repositories::instanceOfFVSolver.getAdmissibleTimeStepSize();
+      repositories::finishTimeStep();
+
+      tarch::copyFrom<double, double>(
+        QOutFlattened,
+        QOutFlattenedHost,
+        _cells.size() * grid.getCellQCardinality(),
+        tarch::MemoryLocation::Pinned
+      );
+
+      grid.copyFacesFromDevice();
+      timeStepWatch.stop();
+      timeStepMeasurement.setValue(timeStepWatch.getCalendarTime());
+
+      if (timeStepMeasurement.getAccumulatedValue() >= printNextTimeStep) {
+        repositories::printTimeStep(false);
+        if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
+          logInfo("main()", "Average cell updates per second: " << _cells.size() / measurement.getValue());
+        }
+        printNextTimeStep += repositories::PrintTimeStepIntervalInSeconds;
+      }
+
+      if (repositories::getMinTimeStamp() >= MinTerminalTime and repositories::getMaxTimeStamp() >= MaxTerminalTime) {
+        continueToSolve = false;
+      }
+
+      if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNonCriticalAssertion) {
+        continueToSolve                  = false;
+        haveReceivedNonCriticalAssertion = true;
+        logError("main()", "Noncritical assertion has been triggered in code. Dump final state and terminate.");
+      }
     }
 
-    if (repositories::getMinTimeStamp() >= MinTerminalTime and repositories::getMaxTimeStamp() >= MaxTerminalTime) {
-      continueToSolve = false;
+    // Plot last timestep
+    if constexpr (ShouldPlot) {
+      plotGrid();
+    }
+    repositories::finishSimulation();
+
+    if (haveReceivedNonCriticalAssertion) {
+      logWarning("main()", "Terminated gracefully after noncritical assertion");
+      returnCode = EXIT_FAILURE;
+    } else {
+      // Print final timestep information
+      repositories::printTimeStep(false);
+      logInfo("main()", "Terminated successfully");
+      returnCode = EXIT_SUCCESS;
     }
 
-    if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNonCriticalAssertion) {
-      continueToSolve                  = false;
-      haveReceivedNonCriticalAssertion = true;
-      logError("main()", "Noncritical assertion has been triggered in code. Dump final state and terminate.");
-    }
+    reportRuntime(measurement);
+
+    delete[] cellCentresHost;
+    delete[] cellSizeHost;
+    tarch::freeMemory(QOutFlattened, tarch::MemoryLocation::Pinned);
+    tarch::freeMemory(QInFlattened, tarch::MemoryLocation::Pinned);
   }
-
-  // Plot last timestep
-  if constexpr (ShouldPlot) {
-    plotGrid();
-  }
-  repositories::finishSimulation();
-
-  if (haveReceivedNonCriticalAssertion) {
-    logWarning("main()", "Terminated gracefully after noncritical assertion");
-    returnCode = EXIT_FAILURE;
-  } else {
-    // Print final timestep information
-    repositories::printTimeStep(false);
-    logInfo("main()", "Terminated successfully");
-    returnCode = EXIT_SUCCESS;
-  }
-
-  reportRuntime(measurement);
-
-  delete[] cellCentresHost;
-  delete[] cellSizeHost;
-  tarch::freeMemory(QOutFlattened, tarch::MemoryLocation::Pinned);
-  tarch::freeMemory(QInFlattened, tarch::MemoryLocation::Pinned);
 
   peano4::shutdown();
 

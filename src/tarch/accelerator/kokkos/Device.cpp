@@ -4,10 +4,6 @@
 
 #if defined(WITH_GPU_KOKKOS)
 
-#include "tarch/Assertions.h"
-#include "tarch/accelerator/accelerator.h"
-#include "tarch/multicore/Lock.h"
-
 #include <Kokkos_Core.hpp>
 
 namespace {
@@ -20,19 +16,10 @@ bool tarch::accelerator::Device::init() {
   return isInitialised();
 }
 
-void tarch::accelerator::Device::shutdown() {
-  checkForMemoryLeaks();
-  tarch::multicore::Lock lock(_memoryBlockSemaphore);
-  _memoryBlockTable.clear();
-  Kokkos::finalize();
-}
+void tarch::accelerator::Device::shutdown() { Kokkos::finalize(); }
 
-bool tarch::accelerator::Device::isInitialised() const {
-  return numberOfDevices > 0;
-}
+bool tarch::accelerator::Device::isInitialised() const { return numberOfDevices > 0; }
 
-int tarch::accelerator::Device::getNumberOfDevices() const {
-  return numberOfDevices;
-}
+int tarch::accelerator::Device::getNumberOfDevices() const { return numberOfDevices; }
 
 #endif // defined(WITH_GPU_KOKKOS)

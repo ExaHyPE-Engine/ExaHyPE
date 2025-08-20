@@ -1211,7 +1211,7 @@ void toolbox::blockstructured::
       tarch::la::DynamicMatrix c   = Q_T * deltas;
 
       tarch::la::DynamicMatrix inverseR = tarch::la::invertUpperTriangular(R);
-      T*                       result   = tarch::allocateMemory(
+      T*                       result   = tarch::allocateMemory<T>(
         inverseR.rows() * c.cols(),
         tarch::MemoryLocation::Heap
       );

@@ -5,15 +5,13 @@
 #if defined(WITH_GPU_CUDA)
 
 #include "DevicePropertiesCache.h"
-
 #include "tarch/Assertions.h"
-#include "tarch/accelerator/accelerator.h"
 #include "tarch/accelerator/Device.h"
-#include "tarch/multicore/Lock.h"
+#include "tarch/accelerator/accelerator.h"
 
 namespace {
-  int numberOfDevices = 0;
-  cudaStream_t activeStream = 0;
+  int          numberOfDevices = 0;
+  cudaStream_t activeStream    = 0;
 } // namespace
 
 bool tarch::accelerator::Device::init() {
@@ -23,12 +21,15 @@ bool tarch::accelerator::Device::init() {
     CHECK_CUDA_ERROR(cudaSetDevice(device));
     CHECK_CUDA_ERROR(cudaFree(0));
     cudaDeviceProp* prop = &cuda::DevicePropertiesCache::get();
-    std::size_t free = 0, total = 0;
+    std::size_t     free = 0, total = 0;
     CHECK_CUDA_ERROR(cudaMemGetInfo(&free, &total));
 
     logInfo("init()", "[" << device << "]: " << prop->name);
     logDebug("init()", "  " << prop->major << "." << prop->minor << " CC");
-    logDebug("init()", "  " << free / (1024 * 1024) << " MB free of " << total / (1024 * 1024) << " MB total global memory");
+    logDebug(
+      "init()",
+      "  " << free / (1024 * 1024) << " MB free of " << total / (1024 * 1024) << " MB total global memory"
+    );
     logDebug("init()", "  " << prop->totalConstMem << " bytes constant memory");
     logDebug("init()", "  " << prop->multiProcessorCount << " SMs");
     logDebug("init()", "  " << prop->maxBlocksPerMultiProcessor << " blocks per SM");
@@ -47,20 +48,13 @@ bool tarch::accelerator::Device::init() {
 }
 
 void tarch::accelerator::Device::shutdown() {
-  checkForMemoryLeaks();
   CHECK_CUDA_ERROR(cudaDeviceSynchronize());
   CHECK_CUDA_ERROR(cudaDeviceReset());
-  tarch::multicore::Lock lock(_memoryBlockSemaphore);
-  _memoryBlockTable.clear();
 }
 
-bool tarch::accelerator::Device::isInitialised() const {
-  return numberOfDevices > 0;
-}
+bool tarch::accelerator::Device::isInitialised() const { return numberOfDevices > 0; }
 
-int tarch::accelerator::Device::getNumberOfDevices() const {
-  return numberOfDevices;
-}
+int tarch::accelerator::Device::getNumberOfDevices() const { return numberOfDevices; }
 
 cudaStream_t tarch::accelerator::deviceStreamCreate() {
   cudaStream_t stream = 0;
@@ -73,16 +67,10 @@ void tarch::accelerator::deviceStreamDestroy(cudaStream_t* stream) {
   *stream = (cudaStream_t)0;
 }
 
-void tarch::accelerator::deviceStreamSync(cudaStream_t stream) {
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
-}
+void tarch::accelerator::deviceStreamSync(cudaStream_t stream) { CHECK_CUDA_ERROR(cudaStreamSynchronize(stream)); }
 
-void tarch::accelerator::deviceStreamSet(cudaStream_t stream) {
-  activeStream = stream;
-}
+void tarch::accelerator::deviceStreamSet(cudaStream_t stream) { activeStream = stream; }
 
-cudaStream_t tarch::accelerator::deviceStreamGet() {
-  return activeStream;
-}
+cudaStream_t tarch::accelerator::deviceStreamGet() { return activeStream; }
 
 #endif // defined(WITH_GPU_CUDA)

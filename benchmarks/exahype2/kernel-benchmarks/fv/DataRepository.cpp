@@ -81,6 +81,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
       );
     }
   }
+
   DataRepository::~DataRepository() {
     for (int axis = 0; axis < DIMENSIONS; ++axis) {
       tarch::freeMemory(_depthLevel.facesDevice[axis], tarch::MemoryLocation::Pinned);
