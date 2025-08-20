@@ -6,7 +6,7 @@ int tarch::la::abs(int value) {
   return value < 0 ? - value : value;
 }
 
-inline GPU_CALLABLE_METHOD
+inline
 double tarch::la::abs(const std::complex<double>& value) {
   return std::sqrt(value.real()*value.real() + value.imag() * value.imag());
 }
@@ -70,7 +70,7 @@ bool tarch::la::equals(
   return std::abs(rhs - lhs) <= tolerance;
 }
 
-inline GPU_CALLABLE_METHOD
+inline
 bool tarch::la::equals(
   const std::complex<double>& lhs,
   const std::complex<double>& rhs,

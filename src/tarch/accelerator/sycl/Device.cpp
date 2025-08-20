@@ -5,9 +5,8 @@
 #if defined(WITH_GPU_SYCL)
 
 #include "tarch/Assertions.h"
-#include "tarch/accelerator/accelerator.h"
 #include "tarch/accelerator/Device.h"
-#include "tarch/multicore/Lock.h"
+#include "tarch/accelerator/accelerator.h"
 
 #include <map>
 #include <sycl/sycl.hpp>
@@ -19,13 +18,12 @@ namespace {
     auto platforms = sycl::platform::get_platforms();
     std::cout << "SYCL system overview:" << std::endl;
     int deviceIndex = 0;
-    for (const auto &platform : platforms) {
+    for (const auto& platform : platforms) {
       std::string platformName = platform.get_info<sycl::info::platform::name>();
-      for (const auto &device : platform.get_devices()) {
+      for (const auto& device : platform.get_devices()) {
         std::string deviceName = device.get_info<sycl::info::device::name>();
-        std::cout << "  Device #" << deviceIndex
-                  << " | Platform: " << platformName
-                  << " | Device: " << deviceName << std::endl;
+        std::cout
+          << "  Device #" << deviceIndex << " | Platform: " << platformName << " | Device: " << deviceName << std::endl;
         ++deviceIndex;
       }
     }
@@ -33,23 +31,23 @@ namespace {
 } // namespace
 
 bool tarch::accelerator::Device::init() {
-  auto platforms                    = sycl::platform::get_platforms();
-  unsigned int physicalDeviceIndex  = 0;
-  unsigned int logicalDeviceIndex   = 0;
+  auto         platforms           = sycl::platform::get_platforms();
+  unsigned int physicalDeviceIndex = 0;
+  unsigned int logicalDeviceIndex  = 0;
 
   syclQueues.clear();
 
   for (const auto& platform : platforms) {
     std::string platformName = platform.get_info<sycl::info::platform::name>();
-    for (const auto &device : platform.get_devices()) {
+    for (const auto& device : platform.get_devices()) {
       std::string deviceName = device.get_info<sycl::info::device::name>();
 
-       // Skip devices that are not GPUs.
-       if (device.get_info<sycl::info::device::device_type>() != sycl::info::device_type::gpu) {
+      // Skip devices that are not GPUs.
+      if (device.get_info<sycl::info::device::device_type>() != sycl::info::device_type::gpu) {
         logInfo(
           "init()",
-          "Skipping physical device #" + std::to_string(physicalDeviceIndex) +
-          " (" + platformName + " / " + deviceName + ") because it is not an accelerator"
+          "Skipping physical device #" + std::to_string(physicalDeviceIndex) + " (" + platformName + " / " + deviceName
+            + ") because it is not an accelerator"
         );
         ++physicalDeviceIndex;
         continue;
@@ -57,8 +55,8 @@ bool tarch::accelerator::Device::init() {
 
       logInfo(
         "init()",
-        "Initialising physical device #" + std::to_string(physicalDeviceIndex) +
-        " (" + platformName + " / " + deviceName + ") as logical device #" + std::to_string(logicalDeviceIndex)
+        "Initialising physical device #" + std::to_string(physicalDeviceIndex) + " (" + platformName + " / "
+          + deviceName + ") as logical device #" + std::to_string(logicalDeviceIndex)
       );
       syclQueues.insert({logicalDeviceIndex, sycl::queue(device)});
       ++logicalDeviceIndex;
@@ -75,20 +73,11 @@ bool tarch::accelerator::Device::init() {
   return isInitialised();
 }
 
-void tarch::accelerator::Device::shutdown() {
-  checkForMemoryLeaks();
-  tarch::multicore::Lock lock(_memoryBlockSemaphore);
-  _memoryBlockTable.clear();
-  syclQueues.clear();
-}
+void tarch::accelerator::Device::shutdown() { syclQueues.clear(); }
 
-bool tarch::accelerator::Device::isInitialised() const {
-  return not syclQueues.empty();
-}
+bool tarch::accelerator::Device::isInitialised() const { return not syclQueues.empty(); }
 
-int tarch::accelerator::Device::getNumberOfDevices() const {
-  return syclQueues.size();
-}
+int tarch::accelerator::Device::getNumberOfDevices() const { return syclQueues.size(); }
 
 void* tarch::accelerator::getSYCLQueue(int number) {
   assertion1(syclQueues.count(number) == 1, number);

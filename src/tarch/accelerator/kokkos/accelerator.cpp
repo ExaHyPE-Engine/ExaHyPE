@@ -5,7 +5,7 @@
 #if defined(WITH_GPU_KOKKOS)
 
 #include "tarch/Assertions.h"
-#include "tarch/multicore/Lock.h"
+#include "tarch/accelerator/MemoryBlocks.h"
 
 #include <Kokkos_Core.hpp>
 
@@ -13,11 +13,7 @@ namespace {
   tarch::logging::Log _log("tarch::accelerator::kokkos");
 } // namespace
 
-void* tarch::accelerator::allocateRawData(
-  std::size_t    sizeInBytes,
-  MemoryLocation location,
-  int            device
-) {
+void* tarch::accelerator::allocateRawData(std::size_t sizeInBytes, MemoryLocation location, int device) {
   void* data = nullptr;
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
 
@@ -39,36 +35,17 @@ void* tarch::accelerator::allocateRawData(
 
   assertion(data);
 
-#if PEANO_DEBUG > 0
-  {
-    tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
-    Device::getInstance().getMemoryBlockTable()[data] = sizeInBytes;
-  }
-#endif
+  MemoryBlocks::getInstance().bookmarkMemoryBlock(data, sizeInBytes);
 
   return data;
 }
 
-void tarch::accelerator::freeRawData(
-  void*          data,
-  MemoryLocation location,
-  int            device
-) {
+void tarch::accelerator::freeRawData(void* data, MemoryLocation location, int device) {
   if (!data) {
     return;
   }
 
-#if PEANO_DEBUG > 0
-  {
-    tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
-    auto itr = Device::getInstance().getMemoryBlockTable().find(data);
-    if (itr == Device::getInstance().getMemoryBlockTable().end()) {
-      logDebug("freeRawData()", "Attempt to free invalid pointer")
-      return;
-    }
-    Device::getInstance().getMemoryBlockTable().erase(itr);
-  }
-#endif
+  MemoryBlocks::getInstance().removeMemoryBlock(data);
 
   switch (location) {
   case MemoryLocation::Heap:
@@ -87,13 +64,8 @@ void tarch::accelerator::freeRawData(
   }
 }
 
-void tarch::accelerator::copyTo(
-  void*          target,
-  const void*    source,
-  std::size_t    sizeInBytes,
-  MemoryLocation location,
-  int            device
-) {
+void tarch::accelerator::
+  copyTo(void* target, const void* source, std::size_t sizeInBytes, MemoryLocation location, int device) {
   assertion(source);
   assertion(target);
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
@@ -111,7 +83,8 @@ void tarch::accelerator::copyTo(
     using SrcViewType = Kokkos::View<const unsigned char*, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
     SrcViewType src_view(static_cast<const unsigned char*>(source), sizeInBytes);
 
-    using DstViewType = Kokkos::View<unsigned char*, Kokkos::DefaultExecutionSpace::memory_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+    using DstViewType = Kokkos::
+      View<unsigned char*, Kokkos::DefaultExecutionSpace::memory_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
     DstViewType dst_view(static_cast<unsigned char*>(target), sizeInBytes);
 
     Kokkos::deep_copy(dst_view, src_view);
@@ -125,13 +98,8 @@ void tarch::accelerator::copyTo(
   }
 }
 
-void tarch::accelerator::copyFrom(
-  const void*    source,
-  void*          target,
-  std::size_t    sizeInBytes,
-  MemoryLocation location,
-  int            device
-) {
+void tarch::accelerator::
+  copyFrom(const void* source, void* target, std::size_t sizeInBytes, MemoryLocation location, int device) {
   assertion(source);
   assertion(target);
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
@@ -146,7 +114,8 @@ void tarch::accelerator::copyFrom(
 #ifdef WITH_USM
     std::memcpy(target, source, sizeInBytes);
 #else
-    using SrcViewType = Kokkos::View<const unsigned char*, Kokkos::DefaultExecutionSpace::memory_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+    using SrcViewType = Kokkos::
+      View<const unsigned char*, Kokkos::DefaultExecutionSpace::memory_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
     SrcViewType src_view(static_cast<const unsigned char*>(source), sizeInBytes);
 
     using DstViewType = Kokkos::View<unsigned char*, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;

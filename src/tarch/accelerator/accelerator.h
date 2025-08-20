@@ -20,14 +20,14 @@ namespace tarch {
 // defined(_NVHPC_CUDA) || defined(__NVCOMPILER_CUDA__) || defined(__CUDACC__) || defined(NVCC) || defined(__NVCC__)
 #if defined(WITH_GPU_CUDA)
 #define GPU_CALLABLE_METHOD __host__ __device__
-GPU_CALLABLE_METHOD void gpuAbort();
+  GPU_CALLABLE_METHOD void           gpuAbort();
 #elif defined(WITH_GPU_SYCL)
 #define GPU_CALLABLE_METHOD
-void gpuAbort();
+  void gpuAbort();
 #elif defined(WITH_GPU_OMP_TARGET)
 #define GPU_CALLABLE_METHOD
 #pragma omp declare target
-void gpuAbort();
+  void gpuAbort();
 #pragma omp end declare target
 #elif defined(WITH_GPU_KOKKOS)
 #define GPU_CALLABLE_METHOD KOKKOS_FUNCTION
@@ -36,40 +36,11 @@ void gpuAbort();
 #endif
 
   namespace accelerator {
-    void* allocateRawData(
-      std::size_t    sizeInBytes,
-      MemoryLocation location,
-      int            device
-    );
-
-    void* reallocateRawData(
-      void*          data,
-      std::size_t    sizeInBytes,
-      MemoryLocation location,
-      int            device
-    );
-
-    void freeRawData(
-      void*          data,
-      MemoryLocation location,
-      int            device
-    );
-
-    void copyTo(
-      void*          target,
-      const void*    source,
-      std::size_t    sizeInBytes,
-      MemoryLocation location,
-      int            device
-    );
-
-    void copyFrom(
-      const void*    source,
-      void*          target,
-      std::size_t    sizeInBytes,
-      MemoryLocation location,
-      int            device
-    );
+    void* allocateRawData(std::size_t sizeInBytes, MemoryLocation location, int device);
+    void* reallocateRawData(void* data, std::size_t sizeInBytes, MemoryLocation location, int device);
+    void  freeRawData(void* data, MemoryLocation location, int device);
+    void  copyTo(void* target, const void* source, std::size_t sizeInBytes, MemoryLocation location, int device);
+    void  copyFrom(const void* source, void* target, std::size_t sizeInBytes, MemoryLocation location, int device);
   } // namespace accelerator
 
   /**
@@ -84,27 +55,19 @@ void gpuAbort();
    * @param location Location on where to allocate the memory.
    * @param device (Optional) device id for memory allocation on accelerators.
    */
-  template <class T = double>
-  T* allocateMemory(
-    std::size_t    count,
-    MemoryLocation location,
-    int            device = accelerator::Device::DefaultDevice
-  ) {
-    return reinterpret_cast<T*>(
-      accelerator::allocateRawData(count * sizeof(T), location, device)
-    );
+  template <class T>
+  T* allocateMemory(std::size_t count, MemoryLocation location, int device = accelerator::Device::DefaultDevice) {
+    return reinterpret_cast<T*>(accelerator::allocateRawData(count * sizeof(T), location, device));
   }
 
-  template <class T = double>
+  template <class T>
   T* reallocateMemory(
     void*          memoryPtr,
     std::size_t    count,
     MemoryLocation location,
     int            device = accelerator::Device::DefaultDevice
   ) {
-    return reinterpret_cast<T*>(
-      accelerator::reallocateRawData(memoryPtr, count * sizeof(T), location, device)
-    );
+    return reinterpret_cast<T*>(accelerator::reallocateRawData(memoryPtr, count * sizeof(T), location, device));
   }
 
   /**
@@ -116,11 +79,7 @@ void gpuAbort();
    * within smart pointers, where we don't want to check manually if data is
    * actually nullptr or not.
    */
-  void freeMemory(
-    void*          memoryPtr,
-    MemoryLocation location,
-    int            device = accelerator::Device::DefaultDevice
-  );
+  void freeMemory(void* memoryPtr, MemoryLocation location, int device = accelerator::Device::DefaultDevice);
 
   template <class To, class From>
   void copyTo(

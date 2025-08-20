@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "accelerator.h"
 
+#include "MemoryBlocks.h"
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
 
@@ -13,26 +14,14 @@ namespace {
 
 #if !defined(WITH_GPU)
 
-void* tarch::accelerator::allocateRawData(
-  std::size_t                     sizeInBytes,
-  [[maybe_unused]] MemoryLocation location,
-  int
-) {
+void* tarch::accelerator::allocateRawData(std::size_t sizeInBytes, [[maybe_unused]] MemoryLocation location, int) {
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
 
   // Aligned alloc requires size to be a multiple of the alignment
-  void* data = std::aligned_alloc(
-    ALIGNMENT_ON_HEAP,
-    padSizeToAlignment(sizeInBytes, ALIGNMENT_ON_HEAP)
-  );
+  void* data = std::aligned_alloc(ALIGNMENT_ON_HEAP, padSizeToAlignment(sizeInBytes, ALIGNMENT_ON_HEAP));
   assertion(data);
 
-#if PEANO_DEBUG > 0
-  {
-    tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
-    Device::getInstance().getMemoryBlockTable()[data] = sizeInBytes;
-  }
-#endif
+  MemoryBlocks::getInstance().bookmarkMemoryBlock(data, sizeInBytes);
 
   return data;
 }
@@ -42,28 +31,13 @@ void tarch::accelerator::freeRawData(void* data, MemoryLocation, int) {
     return;
   }
 
-#if PEANO_DEBUG > 0
-  {
-    tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
-    auto itr = Device::getInstance().getMemoryBlockTable().find(data);
-    if (itr == Device::getInstance().getMemoryBlockTable().end()) {
-      logDebug("freeRawData()", "Attempt to free invalid pointer")
-      return;
-    }
-    Device::getInstance().getMemoryBlockTable().erase(itr);
-  }
-#endif
+  MemoryBlocks::getInstance().removeMemoryBlock(data);
 
   std::free(data);
 }
 
-void tarch::accelerator::copyTo(
-  void*                           target,
-  const void*                     source,
-  std::size_t                     sizeInBytes,
-  [[maybe_unused]] MemoryLocation location,
-  int
-) {
+void tarch::accelerator::
+  copyTo(void* target, const void* source, std::size_t sizeInBytes, [[maybe_unused]] MemoryLocation location, int) {
   assertion2(target, sizeInBytes, toString(location));
   assertion2(source, sizeInBytes, toString(location));
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
@@ -72,13 +46,8 @@ void tarch::accelerator::copyTo(
   std::memcpy(target, source, sizeInBytes);
 }
 
-void tarch::accelerator::copyFrom(
-  const void*                     source,
-  void*                           target,
-  std::size_t                     sizeInBytes,
-  [[maybe_unused]] MemoryLocation location,
-  int
-) {
+void tarch::accelerator::
+  copyFrom(const void* source, void* target, std::size_t sizeInBytes, [[maybe_unused]] MemoryLocation location, int) {
   assertion2(target, sizeInBytes, toString(location));
   assertion2(source, sizeInBytes, toString(location));
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
@@ -89,28 +58,17 @@ void tarch::accelerator::copyFrom(
 
 #endif // WITH_GPU
 
-void* tarch::accelerator::reallocateRawData(
-  void*          data,
-  std::size_t    sizeInBytes,
-  MemoryLocation location,
-  int            device
-) {
+void* tarch::accelerator::reallocateRawData(void* data, std::size_t sizeInBytes, MemoryLocation location, int device) {
   assertion(data);
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
 
-#if PEANO_DEBUG > 0
-  std::size_t currentSizeInBytes = 0;
-  {
-    tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
-    currentSizeInBytes = Device::getInstance().getMemoryBlockTable().at(data);
-  }
+  const std::size_t currentSizeInBytes = MemoryBlocks::getInstance().getSizeOfMemoryBlock(data);
   if (currentSizeInBytes >= sizeInBytes) {
     return data;
   }
-#endif
 
   std::size_t newSizeInBytes = sizeInBytes + sizeInBytes / 2;
-  void* newData = allocateRawData(newSizeInBytes, location, device);
+  void*       newData        = allocateRawData(newSizeInBytes, location, device);
   assertion(newData);
 
   // TODO: Copy host to host

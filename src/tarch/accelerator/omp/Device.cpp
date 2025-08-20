@@ -6,7 +6,6 @@
 
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/accelerator.h"
-#include "tarch/multicore/Lock.h"
 
 #include <omp.h>
 
@@ -19,18 +18,10 @@ bool tarch::accelerator::Device::init() {
   return isInitialised();
 }
 
-void tarch::accelerator::Device::shutdown() {
-  checkForMemoryLeaks();
-  tarch::multicore::Lock lock(_memoryBlockSemaphore);
-  _memoryBlockTable.clear();
-}
+void tarch::accelerator::Device::shutdown() {}
 
-bool tarch::accelerator::Device::isInitialised() const {
-  return numberOfDevices > 0;
-}
+bool tarch::accelerator::Device::isInitialised() const { return numberOfDevices > 0; }
 
-int tarch::accelerator::Device::getNumberOfDevices() const {
-  return numberOfDevices;
-}
+int tarch::accelerator::Device::getNumberOfDevices() const { return numberOfDevices; }
 
 #endif // defined(WITH_GPU_OMP_TARGET)

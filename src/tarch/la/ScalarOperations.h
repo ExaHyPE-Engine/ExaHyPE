@@ -24,7 +24,7 @@ namespace tarch {
     inline GPU_CALLABLE_METHOD
     int abs(int value);
 
-    inline GPU_CALLABLE_METHOD
+    inline
     double abs(const std::complex<double>& value);
 
     /**
@@ -66,7 +66,7 @@ namespace tarch {
     /**
      * @param tolerance Absolute tolerance when we compare two values.
      */
-    inline GPU_CALLABLE_METHOD
+    inline
     bool equals(const std::complex<double>& lhs, const std::complex<double>& rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
     /**

@@ -601,15 +601,15 @@ void exahype2::fd::fd4::timeStep_batched_heap_static_calls(
   TempDataEnumerator differentialSourceEnumerator(patchData.numberOfCells, numberOfGridCellsPerPatchPerAxis, 0, unknowns, 0);
   TempDataEnumerator KODissipationEnumerator     (patchData.numberOfCells, numberOfGridCellsPerPatchPerAxis, 0, unknowns, 0);
 
-  double* tempFluxX =  evaluateFlux                                                ? tarch::allocateMemory( fluxEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempFluxY =  evaluateFlux                                                ? tarch::allocateMemory( fluxEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempFluxZ = (evaluateFlux and DIMENSIONS==3)                             ? tarch::allocateMemory( fluxEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempDifferentialSourceX =  evaluateDifferentialSource                    ? tarch::allocateMemory( differentialSourceEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempDifferentialSourceY =  evaluateDifferentialSource                    ? tarch::allocateMemory( differentialSourceEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempDifferentialSourceZ = (evaluateDifferentialSource and DIMENSIONS==3) ? tarch::allocateMemory( differentialSourceEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempKODissipationX      =  evaluateKODissipation                         ? tarch::allocateMemory( KODissipationEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempKODissipationY      =  evaluateKODissipation                         ? tarch::allocateMemory( KODissipationEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempKODissipationZ      = (evaluateKODissipation      and DIMENSIONS==3) ? tarch::allocateMemory( KODissipationEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxX =  evaluateFlux                                                ? tarch::allocateMemory<double>( fluxEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxY =  evaluateFlux                                                ? tarch::allocateMemory<double>( fluxEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxZ = (evaluateFlux and DIMENSIONS==3)                             ? tarch::allocateMemory<double>( fluxEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempDifferentialSourceX =  evaluateDifferentialSource                    ? tarch::allocateMemory<double>( differentialSourceEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempDifferentialSourceY =  evaluateDifferentialSource                    ? tarch::allocateMemory<double>( differentialSourceEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempDifferentialSourceZ = (evaluateDifferentialSource and DIMENSIONS==3) ? tarch::allocateMemory<double>( differentialSourceEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempKODissipationX      =  evaluateKODissipation                         ? tarch::allocateMemory<double>( KODissipationEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempKODissipationY      =  evaluateKODissipation                         ? tarch::allocateMemory<double>( KODissipationEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempKODissipationZ      = (evaluateKODissipation      and DIMENSIONS==3) ? tarch::allocateMemory<double>( KODissipationEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
 
   internal::timeStep_batched_static_calls<Solver, numberOfGridCellsPerPatchPerAxis, haloSize, unknowns, auxiliaryVariables, TempDataEnumerator>(
     patchData,
