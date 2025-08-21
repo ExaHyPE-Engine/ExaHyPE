@@ -178,6 +178,8 @@ def userIncludes():
 
 #include "../ExaSeis_core/Curvilinear/ContextDynamicRupture.h"
 #include "../ExaSeis_core/Numerics/riemannsolverDynamicRupture.h"
+
+#include "peano4/datamanagement/CellMarker.h"
 """
 
 def abstractUserDefinitions():
@@ -187,13 +189,36 @@ ContextDynamicRupture<{{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME
   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NumberOfUnknowns,
   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NumberOfAuxiliaryVariables,
   {{SOLUTION_STORAGE_PRECISION}}>* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::context;
+
+tarch::la::Vector<DIMENSIONS,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::invertProjection(const tarch::la::Vector<DIMENSIONS,double> coordinates){
+
+  if(peano4::datamanagement::CellMarker::isContained(
+    coordinates, DomainOffset+0.5*DomainSize, DomainSize, 0.
+  )){
+    double fixedCoords[3];
+    fixedCoords[toolbox::curvi::Coordinate::X] = coordinates[0];
+    fixedCoords[toolbox::curvi::Coordinate::Y] = coordinates[1];
+    fixedCoords[toolbox::curvi::Coordinate::Z] = coordinates[2];
+
+    tarch::la::Vector<DIMENSIONS,double> result;
+    toolbox::curvi::Interface* curviInterface = context->getInterface();
+    result[0] = curviInterface->invertProjection(toolbox::curvi::Coordinate::X, fixedCoords);
+    result[1] = curviInterface->invertProjection(toolbox::curvi::Coordinate::Y, fixedCoords);
+    result[2] = curviInterface->invertProjection(toolbox::curvi::Coordinate::Z, fixedCoords);
+
+    return result;
+  }
+  return coordinates;
+}
 """
 
 def abstractDeclarations():
   return """
 public:
   double QuadraturePoints1d[Order+1];
-  
+
+  tarch::la::Vector<DIMENSIONS,double> invertProjection(const tarch::la::Vector<DIMENSIONS,double> coordinates);
+
 protected:
   static ContextDynamicRupture<VariableShortcuts{{SOLVER_NAME}}, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>* context;
 """

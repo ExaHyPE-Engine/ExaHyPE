@@ -60,51 +60,51 @@ theSolver.add_user_solver_includes("""
 project.add_solver(theSolver)
 
 if use_tracers:
-    # tracer_particles = project.add_tracer(name="Tracer", attribute_count=12)
+    tracer_particles = project.add_tracer(name="Tracer", particle_attributes=12)
 
-    # project.add_action_set_to_initialisation(
-    #     exahype2.tracer.InsertParticlesByCoordinates(
-    #         particle_set=tracer_particles,
-    #         coordinates=[
-    #           [0.000, 0., 0.693], [0.000, 0., 5.543], [0.000, 0., 10.392],
-    #           [0.490, 0., 0.490], [3.919, 0., 3.919], [7.348, 0., 7.3480],
-    #           [0.577, 0., 0.384], [4.612, 0., 3.075], [8.647, 0., 5.7640]
-    #         ]
-    #     )
-    # )
-
-    # project.add_action_set_to_timestepping(
-    #     peano4.toolbox.particles.api.UpdateParallelState(particle_set=tracer_particles)
-    # )
-
-    # project.add_action_set_to_timestepping(
-    #     exahype2.tracer.DiscontinuousGalerkinTracing(
-    #         tracer_particles, theSolver,
-    #         project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"
-    #     )
-    # )
-
-    # project.add_action_set_to_timestepping(
-    #     exahype2.tracer.DumpTracerIntoDatabase(
-    #         particle_set=tracer_particles, solver=theSolver,
-    #         filename="tracers/Cartesian_level_"+str(min_level)+"_order_"+str(order)+"_"+polynomials+"_precision_"+str(precision),
-    #         data_delta_between_two_snapsots=1e16, time_delta_between_two_snapsots=0.01,
-    #         output_precision=10, clear_database_after_flush=False
-    #     )
-    # )
+    project.add_action_set_to_initialisation(
+        exahype2.tracer.InsertParticlesByCoordinates(
+            particle_set=tracer_particles,
+            coordinates=[
+              [0.000, 0., 0.693], [0.000, 0., 5.543], [0.000, 0., 10.392],
+              [0.490, 0., 0.490], [3.919, 0., 3.919], [7.348, 0., 7.3480],
+              [0.577, 0., 0.384], [4.612, 0., 3.075], [8.647, 0., 5.7640]
+            ]
+        )
+    )
 
     project.add_action_set_to_timestepping(
-      exahype2.tracer.NewDGTracer(
-        coordinates=[
-          [0.000, 0., 0.693], [0.000, 0., 5.543], [0.000, 0., 10.392],
-          [0.490, 0., 0.490], [3.919, 0., 3.919], [7.348, 0., 7.3480],
-          [0.577, 0., 0.384], [4.612, 0., 3.075], [8.647, 0., 5.7640]
-        ],
-        solver=theSolver,
-        filename="tracers/Cartesian_level_"+str(min_level)+"_order_"+str(order)+"_"+polynomials+"_precision_"+str(precision),
-        data_delta_between_two_snapshots=1e16, time_delta_between_two_snapshots=0.01,
-        output_precision=10, clear_database_after_flush=False
-    ))
+        peano4.toolbox.particles.api.UpdateParallelState(particle_set=tracer_particles)
+    )
+
+    project.add_action_set_to_timestepping(
+        exahype2.tracer.DiscontinuousGalerkinTracing(
+            tracer_particles, theSolver,
+            project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"
+        )
+    )
+
+    project.add_action_set_to_timestepping(
+        exahype2.tracer.DumpTracerIntoDatabase(
+            particle_set=tracer_particles, solver=theSolver,
+            filename="tracers/Cartesian_level_"+str(min_level)+"_order_"+str(order)+"_"+polynomials+"_precision_"+str(precision),
+            data_delta_between_two_snapsots=1e16, time_delta_between_two_snapsots=0.01,
+            output_precision=10, clear_database_after_flush=False
+        )
+    )
+
+    # project.add_action_set_to_timestepping(
+    #   exahype2.tracer.NewDGTracer(
+    #     coordinates=[
+    #       [0.000, 0., 0.693], [0.000, 0., 5.543], [0.000, 0., 10.392],
+    #       [0.490, 0., 0.490], [3.919, 0., 3.919], [7.348, 0., 7.3480],
+    #       [0.577, 0., 0.384], [4.612, 0., 3.075], [8.647, 0., 5.7640]
+    #     ],
+    #     solver=theSolver,
+    #     filename="tracers/Cartesian_level_"+str(min_level)+"_order_"+str(order)+"_"+polynomials+"_precision_"+str(precision),
+    #     data_delta_between_two_snapshots=1e16, time_delta_between_two_snapshots=0.01,
+    #     output_precision=10, clear_database_after_flush=False
+    # ))
 
     if not os.path.exists("tracers"):
         os.makedirs("tracers")

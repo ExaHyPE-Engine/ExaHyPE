@@ -190,10 +190,10 @@ const double& toolbox::curvi::Face::operator()(int coord, Coordinate coord_j, in
   // figure out orientation
   bool orientation_a = coord_j == coords[0] && coord_i == coords[1];
   bool orientation_b = coord_i == coords[0] && coord_j == coords[1];
-  // check if both coordiantes exists
+  // check if both coordinates exists
   if (!(orientation_a || orientation_b)) {
     std::cout
-      << "accessing non existent coordiantes " << coord_i << " " << coord_j << " for face with coordinates" << coords[0]
+      << "accessing non existent coordinates " << coord_i << " " << coord_j << " for face with coordinates" << coords[0]
       << " " << coords[1] << std::endl;
     std::terminate();
   }
@@ -209,10 +209,10 @@ double& toolbox::curvi::Face::operator()(int coord, Coordinate coord_j, int j, C
   // figure out orientation
   bool orientation_a = coord_j == coords[0] && coord_i == coords[1];
   bool orientation_b = coord_i == coords[0] && coord_j == coords[1];
-  // check if both coordiantes exists
+  // check if both coordinates exists
   if (!(orientation_a || orientation_b)) {
     std::cout
-      << "accessing non existent coordiantes " << coord_i << " " << coord_j << " for face with coordinates" << coords[0]
+      << "accessing non existent coordinates " << coord_i << " " << coord_j << " for face with coordinates" << coords[0]
       << " " << coords[1] << std::endl;
     std::terminate();
   }

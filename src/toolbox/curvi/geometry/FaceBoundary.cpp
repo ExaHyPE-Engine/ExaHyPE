@@ -51,14 +51,6 @@ toolbox::curvi::FaceBoundary::
 
   std::copy_n(a_coords, 2, coords);
 
-  // if(a_left.size() != a_right.size()){
-  //   std::domain_error("Initialising Face Boundary with no fittig edges");
-  // }
-
-  // if(a_bottom.size() != a_top.size()){
-  //   std::domain_error("Initialising Face Boundary with no fittig edges");
-  // }
-
   Coordinate mu = getNormal(coords[0], coords[1]);
 
   index_size[coords[0]] = left_edge.numNodes();

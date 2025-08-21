@@ -18,9 +18,14 @@ namespace toolbox {
 
       Root* getRoot();
 
+      //For a given coordinate in the physical space, this returns the coordinate in direction coord of
+      // the point in the reference (cartesian) space which will be projected to that position.
+      // i.e. if you want the x-coordinate of the point which will be mapped to position (x,y,z)
+      // (e.g for a tracer or a point source) then you hand this function the parameters
+      // Coordinate::X and the coordinates in the curvi order [z,y,x].
       double invertProjection(Coordinate coord, double coords[3]);
 
-      Block getElement(double* nodes, int ez, int ey, int ex);
+      Block getElement(double* nodes, int ex, int ey, int ez);
 
     private:
       int order;

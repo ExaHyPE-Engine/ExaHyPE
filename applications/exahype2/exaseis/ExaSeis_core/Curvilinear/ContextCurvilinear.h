@@ -83,12 +83,12 @@ public:
       kernels::idx4 id_xyzf(basisSize, basisSize, basisSize, numberOfData);
       kernels::idx3 id_xyz(basisSize, basisSize, basisSize);
 
-      int ez = std::round((center[2] - domainOffset[2] - dx[2] / 2.0) / dx[2]);
-      int ey = std::round((center[1] - domainOffset[1] - dx[1] / 2.0) / dx[1]);
       int ex = std::round((center[0] - domainOffset[0] - dx[0] / 2.0) / dx[0]);
+      int ey = std::round((center[1] - domainOffset[1] - dx[1] / 2.0) / dx[1]);
+      int ez = std::round((center[2] - domainOffset[2] - dx[2] / 2.0) / dx[2]);
 
 #ifndef QUICK_IDENTITY
-      toolbox::curvi::Block element = interface->getElement(nodes, ez, ey, ex);
+      toolbox::curvi::Block element = interface->getElement(nodes, ex, ey, ez);
       int   index_offset[3];
       element.getIndexOffset(index_offset);
 
@@ -101,23 +101,24 @@ public:
 
             // x,y,z
             luh[id_xyzf(k, j, i, Shortcuts::curve_grid + 0)] = element(
-              2,
+              toolbox::curvi::Coordinate::X,
               toolbox::curvi::Coordinate::Z, e_k,
               toolbox::curvi::Coordinate::Y, e_j,
               toolbox::curvi::Coordinate::X, e_i
             );
             luh[id_xyzf(k, j, i, Shortcuts::curve_grid + 1)] = element(
-              1, 
+              toolbox::curvi::Coordinate::Y, 
               toolbox::curvi::Coordinate::Z, e_k,
               toolbox::curvi::Coordinate::Y, e_j,
               toolbox::curvi::Coordinate::X, e_i
             );
             luh[id_xyzf(k, j, i, Shortcuts::curve_grid + 2)] = element(
-              0,
+              toolbox::curvi::Coordinate::Z,
               toolbox::curvi::Coordinate::Z, e_k,
               toolbox::curvi::Coordinate::Y, e_j,
               toolbox::curvi::Coordinate::X, e_i
             );
+
           }
         }
       }
@@ -196,14 +197,15 @@ public:
   void correctPointSourceLocation(double pointSourceLocation[][3]){
 
     for (int p = 0; p < 1; p++) {
-      toolbox::curvi::Coordinate dir_top = static_cast<toolbox::curvi::Coordinate>(_TOP);
       double     coords[3];
       // invert coordinates as curvi order is zyx
       coords[toolbox::curvi::Coordinate::X] = pointSourceLocation[p][0];
       coords[toolbox::curvi::Coordinate::Y] = pointSourceLocation[p][1];
       coords[toolbox::curvi::Coordinate::Z] = pointSourceLocation[p][2];
 
-      pointSourceLocation[p][_TOP] = this->interface->invertProjection(dir_top, coords);
+      pointSourceLocation[p][0] = this->interface->invertProjection(toolbox::curvi::Coordinate::X, coords);
+      pointSourceLocation[p][1] = this->interface->invertProjection(toolbox::curvi::Coordinate::Y, coords);
+      pointSourceLocation[p][2] = this->interface->invertProjection(toolbox::curvi::Coordinate::Z, coords);
     }
   }
 
@@ -247,6 +249,10 @@ public:
     center[2] = (luh[id_xyzf(center_i1, center_i1, center_i1, Shortcuts::curve_grid + 2)]
                  + luh[id_xyzf(center_i2, center_i2, center_i2, Shortcuts::curve_grid + 2)])
                 / 2.0;
+  }
+
+  toolbox::curvi::Interface* getInterface(){
+    return interface;
   }
 
 

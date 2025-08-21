@@ -86,7 +86,7 @@ project.add_solver(theSolver)
 
 if use_tracers:
     project.add_action_set_to_timestepping(
-    exahype2.tracer.NewDGTracer(
+    exahype2.tracer.CurviTracer(
         coordinates=my_scenario.tracer_coordinates,
         solver=theSolver,
         filename=scenario+"_level_"+str(min_level)+"-order-"+str(order)+"-precision-"+str(precision),
