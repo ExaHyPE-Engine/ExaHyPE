@@ -56,21 +56,21 @@ A configuration file has already been created for you at `tutorials/exahype2/swe
 Try running it, and then look into the generated implementation file `SWESolver.cpp`.
 
 - Exercises
-  - First, let's implement some initial conditions. Let's start simple and set all values to \b 0, except for the initial water height, which should be \b 1.0 on the left half of the domain, and \bb 2.0 on the right half of the domain.
+  - First, let's implement some initial conditions. Let's start simple and set all values to \b 0, except for the initial water height, which should be \b 1.0 on the left half of the domain, and \b 2.0 on the right half of the domain.
     You can access the position of the point you are at via the parameter `x`.
     (Hint: The size and position of your domain can be found in the configuration file.)
 
   - Second, let's do the same thing for the boundary conditions. Here you will need to set the values outside of the domain through the
-    parameter $Qoutside$, set the velocities and the bathymetry to be equal to $0$, and the water height to $1.0$ everywhere.
+    parameter `Qoutside`, set the velocities and the bathymetry to be equal to \b 0, and the water height to \b 1.0 everywhere.
 
-  - Thirdly, fill out the \texttt{maxEigenvalue} function. Take care to use the proper velocity for whatever direction is being computed.\\
-    (Hint: remember that the base unknowns are not $u$, but $hu$)
+  - Thirdly, fill out the <em>maxEigenvalue</em> function. Take care to use the proper velocity for whatever direction is being computed.
+    (Hint: remember that the base unknowns are not \b u, but \b hu)
 
-  - Next, let's implement the flux according to \ref{SWE_wo}, in addition to this, zero out the NCP, that is to say set \texttt{BTimesDeltaQ} to $0$
+  - Next, let's implement the flux according to the definition, in addition to this, zero out the NCP, that is to say set `BTimesDeltaQ` to \b 0
     for all its components, after all we do not need an NCP here, do we?
 
   - Once all of this is done, re-compile the project using by running the Jupyterlab cell again,
-    then run the executable \texttt{DamBreak} and go do some stretches while it runs.
+    then run the executable <em>DamBreak</em> and go do some stretches while it runs.
     Maybe get a glass of water as well. Once you are finished stretching and the code is finished running,
     convert the output and visualize it, does it look like what you'd expect?
 
@@ -129,7 +129,7 @@ Cells can be sub-divided into \b 3^d cells so long as this would not cause the s
     (Hint: You can use the function `tarch::la::norm2()` to compute the norm of a vector)
   - With these parameters, re-compile and re-run the simulation.
   - Finally, let's try some adaptive mesh refinement. There is a function `refinementCriterion` within your implementation file which currently always returns `::exahype2::RefinementCommand::Keep`.
-    Conditionally set it to return `::exahype2::RefinementCommand::Refine` if within a distance of \b 0.4 to \b 0.6 of the center of the domain.
+    Conditionally set it to return `::exahype2::RefinementCommand::Refine` if within a distance of \b 0.3 to \b 0.7 of the center of the domain.
     With this, re-compile the project, and run it one final time.
 
 The initial conditions should look like this:

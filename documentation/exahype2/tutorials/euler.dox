@@ -42,6 +42,24 @@ The eigenvalues of the 2 dimensional euler equation are:
 \end{equation*}
 @f$
 
+We've also made use of two variables, the speed of sound in a medium \b c is defined as:
+@f$
+\begin{equation}
+    c = \sqrt{\frac{\gamma p}{\rho} }
+\end{equation}
+@f$
+
+And the pressure \b p can, for an ideal gas, be computed as:
+@f$
+\begin{equation}
+    p = (\gamma - 1) (E - \frac{\rho}{2} (u_1^2 + u_2^2) )
+\end{equation}
+@f$
+(Hint: this uses velocities \b u, not the momenta in either direction as the equation does)
+
+Finally, @f$ \gamma @f$ is the ratio of specific heats, which here we choose as \b 1.4, corresponding to that
+of dry air at room temperature.
+
 We have not provided you with a configuration file, so you will need to make your own.
 However since the Euler equations and the scenario we will attempt next are somewhat more unstable than the previous two (and also just to show of the features of ExaHyPE 2)
 we will use a different solver. This time, we will use a <em>Finite Volumes</em> solver.
@@ -61,14 +79,14 @@ This configuration is similar to that of the ADER-DG solver, obviously.
 The only parameter that we haven't encountered so far is `patch_size`, this controls the number of finite volumes which should be assembled together as one patch, i.e. which are solved at the same time.
 Here \b 22 means that there are 22 volumes per spatial dimension, so for a 2D problem this is 22x22=484 cells per patch.
 
-- Exercices
+- Exercises
     - First, create and fill a configuration file. Use a Finite Volumes solver for this, then set the domain size to \b 120x120,
       the offset to \b -10x-60 and the end-time to \b 10.0 .
       You can choose the mesh refinement of your choice, but we recommend a depth of 5 over the whole domain.
 
     - Once you are content with your configuration file, implement the flux and the eigenvalues for your solver.
 
-    - Next, we will set the boundary conditions. These should be <b>[1.0, 1.0, 0.0, 2.5, 1.0]^T</b> on the leftmost face of the domain.
+    - Next, we will set the boundary conditions. These should be <b>[1.0, 1.0, 0.0, 2.5]^T</b> on the leftmost face of the domain.
       On all other faces, use absorbing boundary conditions.
       That is to say the values outside of the boundary should be equal to the values inside of the boundary.
 
