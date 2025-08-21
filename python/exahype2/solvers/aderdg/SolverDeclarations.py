@@ -191,7 +191,7 @@ class SolverDeclarations:
     #pragma omp declare target
     #endif
     static inline GPU_CALLABLE_METHOD
-    double multiplyMaterialParameterMatrix(
+    void multiplyMaterialParameterMatrix(
       [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&   x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&   h,
@@ -385,7 +385,7 @@ class SolverDeclarations:
     {% endif %}
 
     {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" and MATERIAL_PARAM_IMPLEMENTATION!="<none>" %}
-    double multiplyMaterialParameterMatrix(
+    void multiplyMaterialParameterMatrix(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q,
       const tarch::la::Vector<DIMENSIONS, double>&   x,
       const tarch::la::Vector<DIMENSIONS, double>&   h,

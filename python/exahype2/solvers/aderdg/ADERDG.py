@@ -1296,7 +1296,7 @@ Material parameters:    """
                 self._can_fuse = False
 
         if material_parameters is not None:
-            self._material_parameters_implementation = material_parameters
+            self._material_param_implementation = material_parameters
             if material_parameters is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_material_parameters = True
             else:
