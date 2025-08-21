@@ -34,9 +34,7 @@ std::string peano4::grid::GridControlEvent::toString() const {
 
 #ifdef WITH_MPI
 
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype peano4::grid::GridControlEvent::Datatype = MPI_DATATYPE_NULL;
-#endif
 
 MPI_Datatype peano4::grid::GridControlEvent::getForkDatatype() { return Datatype; }
 MPI_Datatype peano4::grid::GridControlEvent::getGlobalCommunicationDatatype() { return Datatype; }
@@ -82,7 +80,6 @@ void peano4::grid::GridControlEvent::freeMultiscaleDataExchangeDatatype() {
 int peano4::grid::GridControlEvent::getSenderRank() const { return _senderDestinationRank; }
 
 void peano4::grid::GridControlEvent::initDatatype() {
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   peano4::grid::GridControlEvent instances[2];
 
   int NumberOfAttributes = 0;
@@ -142,28 +139,14 @@ void peano4::grid::GridControlEvent::initDatatype() {
   delete[] subtypes;
   delete[] blocklen;
   delete[] disp;
-
-#else
-  // invoke routine once to trigger lazy initialisation
-  getForkDatatype();
-  getJoinDatatype();
-  getBoundaryExchangeDatatype();
-  getMultiscaleDataExchangeDatatype();
-  getGlobalCommunicationDatatype();
-#endif
 }
 
 void peano4::grid::GridControlEvent::shutdownDatatype() {
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   freeForkDatatype();
   freeJoinDatatype();
   freeBoundaryExchangeDatatype();
   freeMultiscaleDataExchangeDatatype();
   freeGlobalCommunicationDatatype();
-#else
-  MPI_Datatype type = Datatype;
-  MPI_Type_free(&type);
-#endif
 }
 
 void peano4::grid::GridControlEvent::

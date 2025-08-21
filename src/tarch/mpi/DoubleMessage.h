@@ -118,20 +118,9 @@ struct tarch::mpi::DoubleMessage {
   private:
       double   _value;
 
-
-
     #ifdef WITH_MPI
     private:
       int                  _senderDestinationRank;
-
-      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-      /**
-       * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
-       * initialisation of the datatype. However, Peano calls init explicitly
-       * in most cases. Without the LLVM extension which caches the MPI
-       * datatype once constructed, this field stores the type.
-       */
       static MPI_Datatype  Datatype;
-      #endif
     #endif
 };

@@ -10,11 +10,11 @@
 #endif
 
 #include "LoadStoreComputeFlag.h"
+#include "TraversalObserver.h"
 #include "peano4/utils/Globals.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
-#include "TraversalObserver.h"
 
 namespace peano4 {
   namespace grid {
@@ -29,22 +29,22 @@ public:
   GridTraversalEvent(
     const tarch::la::Vector<DIMENSIONS, double>& __x,
     const tarch::la::Vector<DIMENSIONS, double>& __h,
-    const std::bitset<TWO_POWER_D>&                __hasBeenRefined,
-    const std::bitset<TWO_POWER_D>&                __willBeRefined,
-    const std::bitset<TWO_POWER_D>&                __isVertexLocal,
-    const std::bitset<TWO_POWER_D>&                __isParentVertexLocal,
-    const std::bitset<TWO_POWER_D>&                __isVertexParentOfSubtree,
-    const std::bitset<TWO_TIMES_D>&                __isFaceLocal,
+    const std::bitset<TWO_POWER_D>&              __hasBeenRefined,
+    const std::bitset<TWO_POWER_D>&              __willBeRefined,
+    const std::bitset<TWO_POWER_D>&              __isVertexLocal,
+    const std::bitset<TWO_POWER_D>&              __isParentVertexLocal,
+    const std::bitset<TWO_POWER_D>&              __isVertexParentOfSubtree,
+    const std::bitset<TWO_TIMES_D>&              __isFaceLocal,
     const bool                                   __isCellLocal,
     const bool                                   __isParentCellLocal,
-    const std::bitset<TWO_POWER_D>&                __isVertexAdjacentToParallelDomainBoundary,
-    const std::bitset<TWO_TIMES_D>&                __isFaceAdjacentToParallelDomainBoundary,
-    const tarch::la::Vector<TWO_POWER_D, int>&     __numberOfAdjacentTreesPerVertex,
-    const std::bitset<THREE_POWER_D>&              __isAdjacentCellLocal,
-    const tarch::la::Vector<TWO_POWER_D, int>&     __vertexDataFrom,
-    const tarch::la::Vector<TWO_POWER_D, int>&     __vertexDataTo,
-    const tarch::la::Vector<TWO_TIMES_D, int>&     __faceDataFrom,
-    const tarch::la::Vector<TWO_TIMES_D, int>&     __faceDataTo,
+    const std::bitset<TWO_POWER_D>&              __isVertexAdjacentToParallelDomainBoundary,
+    const std::bitset<TWO_TIMES_D>&              __isFaceAdjacentToParallelDomainBoundary,
+    const tarch::la::Vector<TWO_POWER_D, int>&   __numberOfAdjacentTreesPerVertex,
+    const std::bitset<THREE_POWER_D>&            __isAdjacentCellLocal,
+    const tarch::la::Vector<TWO_POWER_D, int>&   __vertexDataFrom,
+    const tarch::la::Vector<TWO_POWER_D, int>&   __vertexDataTo,
+    const tarch::la::Vector<TWO_TIMES_D, int>&   __faceDataFrom,
+    const tarch::la::Vector<TWO_TIMES_D, int>&   __faceDataTo,
     const int                                    __cellData,
     const tarch::la::Vector<DIMENSIONS, int>&    __relativePositionToFather,
     const int                                    __invokingSpacetree,
@@ -63,31 +63,31 @@ public:
   inline void                                  setH(const tarch::la::Vector<DIMENSIONS, double>& value) { _h = value; }
 
   inline std::bitset<TWO_POWER_D> getHasBeenRefined() const { return _hasBeenRefined; }
-  inline bool                   getHasBeenRefined(int index) const { return _hasBeenRefined[index]; }
-  inline void                   setHasBeenRefined(int index, bool value) { _hasBeenRefined[index] = value; }
-  inline void                   setHasBeenRefined(const std::bitset<TWO_POWER_D>& value) { _hasBeenRefined = value; }
-  inline void                   flipHasBeenRefined(int index) { _hasBeenRefined[index] = not _hasBeenRefined[index]; }
+  inline bool                     getHasBeenRefined(int index) const { return _hasBeenRefined[index]; }
+  inline void                     setHasBeenRefined(int index, bool value) { _hasBeenRefined[index] = value; }
+  inline void                     setHasBeenRefined(const std::bitset<TWO_POWER_D>& value) { _hasBeenRefined = value; }
+  inline void                     flipHasBeenRefined(int index) { _hasBeenRefined[index] = not _hasBeenRefined[index]; }
 
   inline std::bitset<TWO_POWER_D> getWillBeRefined() const { return _willBeRefined; }
-  inline bool                   getWillBeRefined(int index) const { return _willBeRefined[index]; }
-  inline void                   setWillBeRefined(int index, bool value) { _willBeRefined[index] = value; }
-  inline void                   setWillBeRefined(const std::bitset<TWO_POWER_D>& value) { _willBeRefined = value; }
-  inline void                   flipWillBeRefined(int index) { _willBeRefined[index] = not _willBeRefined[index]; }
+  inline bool                     getWillBeRefined(int index) const { return _willBeRefined[index]; }
+  inline void                     setWillBeRefined(int index, bool value) { _willBeRefined[index] = value; }
+  inline void                     setWillBeRefined(const std::bitset<TWO_POWER_D>& value) { _willBeRefined = value; }
+  inline void                     flipWillBeRefined(int index) { _willBeRefined[index] = not _willBeRefined[index]; }
 
   inline std::bitset<TWO_POWER_D> getIsVertexLocal() const { return _isVertexLocal; }
-  inline bool                   getIsVertexLocal(int index) const { return _isVertexLocal[index]; }
-  inline void                   setIsVertexLocal(int index, bool value) { _isVertexLocal[index] = value; }
-  inline void                   setIsVertexLocal(const std::bitset<TWO_POWER_D>& value) { _isVertexLocal = value; }
-  inline void                   flipIsVertexLocal(int index) { _isVertexLocal[index] = not _isVertexLocal[index]; }
+  inline bool                     getIsVertexLocal(int index) const { return _isVertexLocal[index]; }
+  inline void                     setIsVertexLocal(int index, bool value) { _isVertexLocal[index] = value; }
+  inline void                     setIsVertexLocal(const std::bitset<TWO_POWER_D>& value) { _isVertexLocal = value; }
+  inline void                     flipIsVertexLocal(int index) { _isVertexLocal[index] = not _isVertexLocal[index]; }
 
   inline std::bitset<TWO_POWER_D> getIsParentVertexLocal() const { return _isParentVertexLocal; }
-  inline bool                   getIsParentVertexLocal(int index) const { return _isParentVertexLocal[index]; }
-  inline void                   setIsParentVertexLocal(int index, bool value) { _isParentVertexLocal[index] = value; }
+  inline bool                     getIsParentVertexLocal(int index) const { return _isParentVertexLocal[index]; }
+  inline void                     setIsParentVertexLocal(int index, bool value) { _isParentVertexLocal[index] = value; }
   inline void setIsParentVertexLocal(const std::bitset<TWO_POWER_D>& value) { _isParentVertexLocal = value; }
   inline void flipIsParentVertexLocal(int index) { _isParentVertexLocal[index] = not _isParentVertexLocal[index]; }
 
   inline std::bitset<TWO_POWER_D> getIsVertexParentOfSubtree() const { return _isVertexParentOfSubtree; }
-  inline bool                   getIsVertexParentOfSubtree(int index) const { return _isVertexParentOfSubtree[index]; }
+  inline bool getIsVertexParentOfSubtree(int index) const { return _isVertexParentOfSubtree[index]; }
   inline void setIsVertexParentOfSubtree(int index, bool value) { _isVertexParentOfSubtree[index] = value; }
   inline void setIsVertexParentOfSubtree(const std::bitset<TWO_POWER_D>& value) { _isVertexParentOfSubtree = value; }
   inline void flipIsVertexParentOfSubtree(int index) {
@@ -95,10 +95,10 @@ public:
   }
 
   inline std::bitset<TWO_TIMES_D> getIsFaceLocal() const { return _isFaceLocal; }
-  inline bool                   getIsFaceLocal(int index) const { return _isFaceLocal[index]; }
-  inline void                   setIsFaceLocal(int index, bool value) { _isFaceLocal[index] = value; }
-  inline void                   setIsFaceLocal(const std::bitset<TWO_TIMES_D>& value) { _isFaceLocal = value; }
-  inline void                   flipIsFaceLocal(int index) { _isFaceLocal[index] = not _isFaceLocal[index]; }
+  inline bool                     getIsFaceLocal(int index) const { return _isFaceLocal[index]; }
+  inline void                     setIsFaceLocal(int index, bool value) { _isFaceLocal[index] = value; }
+  inline void                     setIsFaceLocal(const std::bitset<TWO_TIMES_D>& value) { _isFaceLocal = value; }
+  inline void                     flipIsFaceLocal(int index) { _isFaceLocal[index] = not _isFaceLocal[index]; }
 
   inline bool getIsCellLocal() const { return _isCellLocal; }
   inline void setIsCellLocal(bool value) { _isCellLocal = value; }
@@ -290,22 +290,22 @@ public:
 private:
   tarch::la::Vector<DIMENSIONS, double> _x;
   tarch::la::Vector<DIMENSIONS, double> _h;
-  std::bitset<TWO_POWER_D>                _hasBeenRefined;
-  std::bitset<TWO_POWER_D>                _willBeRefined;
-  std::bitset<TWO_POWER_D>                _isVertexLocal;
-  std::bitset<TWO_POWER_D>                _isParentVertexLocal;
-  std::bitset<TWO_POWER_D>                _isVertexParentOfSubtree;
-  std::bitset<TWO_TIMES_D>                _isFaceLocal;
+  std::bitset<TWO_POWER_D>              _hasBeenRefined;
+  std::bitset<TWO_POWER_D>              _willBeRefined;
+  std::bitset<TWO_POWER_D>              _isVertexLocal;
+  std::bitset<TWO_POWER_D>              _isParentVertexLocal;
+  std::bitset<TWO_POWER_D>              _isVertexParentOfSubtree;
+  std::bitset<TWO_TIMES_D>              _isFaceLocal;
   bool                                  _isCellLocal;
   bool                                  _isParentCellLocal;
-  std::bitset<TWO_POWER_D>                _isVertexAdjacentToParallelDomainBoundary;
-  std::bitset<TWO_TIMES_D>                _isFaceAdjacentToParallelDomainBoundary;
-  tarch::la::Vector<TWO_POWER_D, int>     _numberOfAdjacentTreesPerVertex;
-  std::bitset<THREE_POWER_D>              _isAdjacentCellLocal;
-  tarch::la::Vector<TWO_POWER_D, int>     _vertexDataFrom;
-  tarch::la::Vector<TWO_POWER_D, int>     _vertexDataTo;
-  tarch::la::Vector<TWO_TIMES_D, int>     _faceDataFrom;
-  tarch::la::Vector<TWO_TIMES_D, int>     _faceDataTo;
+  std::bitset<TWO_POWER_D>              _isVertexAdjacentToParallelDomainBoundary;
+  std::bitset<TWO_TIMES_D>              _isFaceAdjacentToParallelDomainBoundary;
+  tarch::la::Vector<TWO_POWER_D, int>   _numberOfAdjacentTreesPerVertex;
+  std::bitset<THREE_POWER_D>            _isAdjacentCellLocal;
+  tarch::la::Vector<TWO_POWER_D, int>   _vertexDataFrom;
+  tarch::la::Vector<TWO_POWER_D, int>   _vertexDataTo;
+  tarch::la::Vector<TWO_TIMES_D, int>   _faceDataFrom;
+  tarch::la::Vector<TWO_TIMES_D, int>   _faceDataTo;
   int                                   _cellData;
   tarch::la::Vector<DIMENSIONS, int>    _relativePositionToFather;
   int                                   _invokingSpacetree;
@@ -313,16 +313,7 @@ private:
 
 #ifdef WITH_MPI
 private:
-  int _senderDestinationRank;
-
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  /**
-   * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
-   * initialisation of the datatype. However, Peano calls init explicitly
-   * in most cases. Without the LLVM extension which caches the MPI
-   * datatype once constructed, this field stores the type.
-   */
+  int                 _senderDestinationRank;
   static MPI_Datatype Datatype;
-#endif
 #endif
 };

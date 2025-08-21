@@ -194,7 +194,7 @@ int peano4::parallel::Node::getInputStackNumberForVerticalDataExchange(int id) {
 }
 
 std::bitset<2 * DIMENSIONS> peano4::parallel::Node::getPeriodicBoundaryNumber(
-  const tarch::la::Vector<TWO_POWER_D, int>& flags
+  const std::array<int, TWO_POWER_D>& flags
 ) {
   std::bitset<2 * DIMENSIONS> result;
 
@@ -203,7 +203,7 @@ std::bitset<2 * DIMENSIONS> peano4::parallel::Node::getPeriodicBoundaryNumber(
     dfor2(k) tarch::la::Vector<DIMENSIONS, int> entry;
     entry                 = k;
     entry(d % DIMENSIONS) = d / DIMENSIONS;
-    allFlagsSet &= flags(utils::dLinearised(entry, 2)) == grid::Spacetree::RankOfPeriodicBoundaryCondition;
+    allFlagsSet &= flags[utils::dLinearised(entry, 2)] == grid::Spacetree::RankOfPeriodicBoundaryCondition;
     enddforx if (allFlagsSet) { result.set(d); }
   }
   return result;
@@ -241,9 +241,8 @@ std::string peano4::parallel::Node::toString(const std::set<PeriodicBoundaryStac
 }
 
 std::set<peano4::parallel::Node::PeriodicBoundaryStackIdentifier> peano4::parallel::Node::
-  getOutputStacksForPeriodicBoundaryExchange(const tarch::la::Vector<TWO_POWER_D, int>& flags) {
+  getOutputStacksForPeriodicBoundaryExchange(const std::array<int, TWO_POWER_D>& flags) {
   std::bitset<2 * DIMENSIONS> boundaryNumbers = getPeriodicBoundaryNumber(flags);
-  logTraceInWith2Arguments("getOutputStacksForPeriodicBoundaryExchange()", flags, boundaryNumbers);
 
   std::unordered_set<std::bitset<2 * DIMENSIONS>> powerSet;
   for (int i = 0; i < 2 * DIMENSIONS; i++) {
@@ -281,11 +280,10 @@ std::set<peano4::parallel::Node::PeriodicBoundaryStackIdentifier> peano4::parall
           - peano4::grid::PeanoCurve::NumberOfPeriodicBoundaryConditionStacks + currentStackNumber,
         direction.to_ulong()
       );
-      assertion5(
+      assertion4(
         isPeriodicBoundaryExchangeOutputStackNumber(newEntry.first),
         newEntry.first,
         newEntry.second,
-        flags,
         peano4::grid::PeanoCurve::MaxNumberOfCoreStacksPerSpacetreeInstance,
         peano4::grid::PeanoCurve::NumberOfPeriodicBoundaryConditionStacks
       );
@@ -312,45 +310,21 @@ std::set<peano4::parallel::Node::PeriodicBoundaryStackIdentifier> peano4::parall
       }
     */
 
-    logTraceOutWith2Arguments(
-      "getOutputStacksForPeriodicBoundaryExchange()",
-      result.size(),
-      (result.size() == 1 ? std::to_string(result.begin()->first) : "")
-    );
   return result;
 }
 
 int peano4::parallel::Node::getPeriodicBoundaryExchangeInputStackNumberForOutputStack(int outputStackNumber) {
-  logTraceInWith4Arguments(
-    "getPeriodicBoundaryExchangeInputStackNumberForOutputStack()",
-    outputStackNumber,
-    peano4::grid::PeanoCurve::MaxNumberOfCoreStacksPerSpacetreeInstance,
-    peano4::grid::PeanoCurve::NumberOfPeriodicBoundaryConditionStacks,
-    peano4::grid::PeanoCurve::NumberOfPeriodicBoundaryConditionStacks
-  );
   assertion(isPeriodicBoundaryExchangeOutputStackNumber(outputStackNumber));
-
   int result = outputStackNumber + peano4::grid::PeanoCurve::NumberOfPeriodicBoundaryConditionStacks / 2;
-  logTraceOutWith1Argument("getPeriodicBoundaryExchangeInputStackNumberForOutputStack()", result);
   return result;
 }
 
 peano4::parallel::Node::PeriodicBoundaryStackIdentifier peano4::parallel::Node::
   getPeriodicBoundaryExchangeInputStackNumberForOutputStack(PeriodicBoundaryStackIdentifier outputStackIdentifier) {
-  logTraceInWith5Arguments(
-    "getPeriodicBoundaryExchangeInputStackNumberForOutputStack()",
-    outputStackIdentifier.first,
-    outputStackIdentifier.second,
-    peano4::grid::PeanoCurve::MaxNumberOfCoreStacksPerSpacetreeInstance,
-    peano4::grid::PeanoCurve::NumberOfPeriodicBoundaryConditionStacks,
-    peano4::grid::PeanoCurve::NumberOfPeriodicBoundaryConditionStacks
-  );
   assertion(isPeriodicBoundaryExchangeOutputStackNumber(outputStackIdentifier.first));
-
   PeriodicBoundaryStackIdentifier result;
   result.first  = outputStackIdentifier.first + peano4::grid::PeanoCurve::NumberOfPeriodicBoundaryConditionStacks / 2;
   result.second = outputStackIdentifier.second;
-  logTraceOutWith2Arguments("getPeriodicBoundaryExchangeInputStackNumberForOutputStack()", result.first, result.second);
   return result;
 }
 

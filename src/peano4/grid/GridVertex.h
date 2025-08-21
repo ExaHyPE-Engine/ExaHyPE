@@ -2,29 +2,16 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <string>
-
-#ifdef WITH_MPI
-#include <functional>
-#include <mpi.h>
-#endif
-
-#include "peano4/grid/LoadStoreComputeFlag.h"
-#include "peano4/grid/TraversalObserver.h"
 #include "peano4/utils/Globals.h"
-#include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
 
-namespace peano4 {
-  namespace grid {
-    struct GridVertex;
-  } // namespace grid
-} // namespace peano4
+namespace peano4::grid {
+  struct GridVertex;
+} // namespace peano4::grid
 
 struct peano4::grid::GridVertex {
-public:
-  enum class State : int {
+  enum class State : std::int8_t {
     HangingVertex       = 0,
     New                 = 1,
     Unrefined           = 2,
@@ -36,84 +23,52 @@ public:
     Delete              = 8
   };
 
-  GridVertex() = default;
-  GridVertex(
-    const State                                  __state,
-    const tarch::la::Vector<TWO_POWER_D, int>&     __adjacentRanks,
-    const tarch::la::Vector<TWO_POWER_D, int>&     __backupOfAdjacentRanks,
-    const bool                                   __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep,
-    const bool                                   __isAntecessorOfRefinedVertexInCurrentTreeSweep,
-    const bool                                   __hasBeenParentOfSubtreeVertexInPreviousTreeSweep,
-    const bool                                   __isParentOfSubtreeVertexInCurrentTreeSweep,
-    const int                                    __numberOfAdjacentRefinedLocalCells,
-    const tarch::la::Vector<DIMENSIONS, double>& __x,
-    const int                                    __level
-  );
-  GridVertex(const GridVertex& copy);
-  GridVertex& operator=(const GridVertex& other);
+  std::uint8_t flags = 0;
+  std::int8_t  state = static_cast<std::int8_t>(State::New);
 
-  inline peano4::grid::GridVertex::State getState() const { return _state; }
-  inline void                            setState(State value) { _state = value; }
+  int level                             = 0;
+  int numberOfAdjacentRefinedLocalCells = 0;
 
-  inline tarch::la::Vector<TWO_POWER_D, int> getAdjacentRanks() const { return _adjacentRanks; }
-  inline void setAdjacentRanks(const tarch::la::Vector<TWO_POWER_D, int>& value) { _adjacentRanks = value; }
-  inline int  getAdjacentRanks(int index) const { return _adjacentRanks[index]; }
-  inline void setAdjacentRanks(int index, int value) { _adjacentRanks[index] = value; }
+  std::array<int, TWO_POWER_D> adjacentRanks{};
+  std::array<int, TWO_POWER_D> backupOfAdjacentRanks{};
 
-  inline tarch::la::Vector<TWO_POWER_D, int> getBackupOfAdjacentRanks() const { return _backupOfAdjacentRanks; }
-  inline void                              setBackupOfAdjacentRanks(const tarch::la::Vector<TWO_POWER_D, int>& value) {
-    _backupOfAdjacentRanks = value;
-  }
-  inline int  getBackupOfAdjacentRanks(int index) const { return _backupOfAdjacentRanks(index); }
-  inline void setBackupOfAdjacentRanks(int index, int value) { _backupOfAdjacentRanks(index) = value; }
+  // Bit positions (right to left = least significant bit first):
+  // [bit3][bit2][bit1][bit0]
+  //   8     4     2     1   <-- decimal value of each bit
+  static constexpr std::uint8_t HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep = 1 << 0; // = 0b00000001
+  static constexpr std::uint8_t IsAntecessorOfRefinedVertexInCurrentTreeSweep       = 1 << 1; // = 0b00000010
+  static constexpr std::uint8_t HasBeenParentOfSubtreeVertexInPreviousTreeSweep     = 1 << 2; // = 0b00000100
+  static constexpr std::uint8_t IsParentOfSubtreeVertexInCurrentTreeSweep           = 1 << 3; // = 0b00001000
 
-  inline bool getHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep() const {
-    return _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep;
-  }
-  inline void setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep(bool value) {
-    _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep = value;
-  }
+  GridVertex() noexcept = default;
+  enum ObjectConstruction { NoData };
+  GridVertex(ObjectConstruction):
+    GridVertex() {}
 
-  inline bool getIsAntecessorOfRefinedVertexInCurrentTreeSweep() const {
-    return _isAntecessorOfRefinedVertexInCurrentTreeSweep;
-  }
-  inline void setIsAntecessorOfRefinedVertexInCurrentTreeSweep(bool value) {
-    _isAntecessorOfRefinedVertexInCurrentTreeSweep = value;
-  }
+  inline State getState() const noexcept { return static_cast<State>(state); }
+  inline void  setState(State s) noexcept { state = static_cast<std::int8_t>(s); }
 
-  inline bool getHasBeenParentOfSubtreeVertexInPreviousTreeSweep() const {
-    return _hasBeenParentOfSubtreeVertexInPreviousTreeSweep;
-  }
-  inline void setHasBeenParentOfSubtreeVertexInPreviousTreeSweep(bool value) {
-    _hasBeenParentOfSubtreeVertexInPreviousTreeSweep = value;
-  }
+  // Checks if a given bit is set (true).
+  // flags & bit → masks out all bits except the one we care about.
+  // If result is non-zero → that bit is set → return true.
+  inline bool getFlag(std::uint8_t bit) const noexcept { return (flags & bit) != 0; }
 
-  inline bool getIsParentOfSubtreeVertexInCurrentTreeSweep() const {
-    return _isParentOfSubtreeVertexInCurrentTreeSweep;
-  }
-  inline void setIsParentOfSubtreeVertexInCurrentTreeSweep(bool value) {
-    _isParentOfSubtreeVertexInCurrentTreeSweep = value;
-  }
+  // Turns on a given bit (sets it to 1).
+  // Bitwise OR (|=) sets the given bit to 1 while leaving all others unchanged.
+  inline void setFlag(std::uint8_t bit) noexcept { flags |= bit; }
+  inline void setFlag(std::uint8_t bit, bool v) noexcept { v ? setFlag(bit) : clearFlag(bit); }
 
-  inline int  getNumberOfAdjacentRefinedLocalCells() const { return _numberOfAdjacentRefinedLocalCells; }
-  inline void setNumberOfAdjacentRefinedLocalCells(int value) { _numberOfAdjacentRefinedLocalCells = value; }
+  // Turns off a given bit (sets it to 0).
+  // ~bit flips all bits (1→0, 0→1), making a mask with all bits = 1 except the one we want to clear.
+  // Bitwise AND (&=) with that mask sets the target bit to 0 without touching the others.
+  inline void clearFlag(std::uint8_t bit) noexcept { flags &= ~bit; }
 
-#if PEANO_DEBUG > 0
-  inline tarch::la::Vector<DIMENSIONS, double> getX() const { return _x; }
-  inline void                                  setX(const tarch::la::Vector<DIMENSIONS, double>& value) { _x = value; }
-  inline double                                getX(int index) const { return _x(index); }
-  inline void                                  setX(int index, double value) { _x(index) = value; }
-#endif
-
-  inline int  getLevel() const { return _level; }
-  inline void setLevel(int value) { _level = value; }
+  std::string toString() const;
 
 #ifdef WITH_MPI
-  /**
-   * Hands out MPI datatype if we work without the LLVM MPI extension.
-   * If we work with this additional feature, this is the routine where
-   * the lazy initialisation is done and the datatype is also cached.
-   */
+  static MPI_Datatype Datatype;
+  int                 senderDestinationRank = -1;
+
   static MPI_Datatype getForkDatatype();
   static MPI_Datatype getJoinDatatype();
   static MPI_Datatype getBoundaryExchangeDatatype();
@@ -126,108 +81,65 @@ public:
   static void freeMultiscaleDataExchangeDatatype();
   static void freeGlobalCommunicationDatatype();
 
-  /**
-   * @return The rank of the sender of an object. It only make ssense to call
-   *         this routine after you've invoked receive with MPI_ANY_SOURCE.
-   */
-  int getSenderRank() const;
-
-  /**
-   * Wrapper around getDatatype() to trigger lazy evaluation if we
-   * use the lazy initialisation.
-   */
   static void initDatatype();
-
-  /**
-   * Free the underlying MPI datatype.
-   */
   static void shutdownDatatype();
 
-  /**
-   * In DaStGen (the first version), I had a non-static version of the send
-   * as well as the receive. However, this did not work with newer C++11
-   * versions, as a member function using this as pointer usually doesn't
-   * see the vtable while the init sees the object from outside, i.e.
-   * including a vtable. So this routine now is basically an alias for a
-   * blocking MPI_Send.
-   */
-  static void send(const peano4::grid::GridVertex& buffer, int destination, int tag, MPI_Comm communicator);
-  static void receive(peano4::grid::GridVertex& buffer, int source, int tag, MPI_Comm communicator);
+  static void send(const GridVertex& buffer, int destination, int tag, MPI_Comm communicator);
+  static void receive(GridVertex& buffer, int source, int tag, MPI_Comm communicator);
 
-  /**
-   * Alternative to the other send() where I trigger a non-blocking send an
-   * then invoke the functor until the corresponding MPI_Test tells me that
-   * the message went through. In systems with heavy MPI usage, this can
-   * help to avoid deadlocks.
-   */
   static void send(
-    const peano4::grid::GridVertex& buffer,
-    int                             destination,
-    int                             tag,
-    std::function<void()>           startCommunicationFunctor,
-    std::function<void()>           waitFunctor,
-    MPI_Comm                        communicator
+    const GridVertex&     buffer,
+    int                   destination,
+    int                   tag,
+    std::function<void()> startCommunicationFunctor,
+    std::function<void()> waitFunctor,
+    MPI_Comm              communicator
   );
   static void receive(
-    peano4::grid::GridVertex& buffer,
-    int                       source,
-    int                       tag,
-    std::function<void()>     startCommunicationFunctor,
-    std::function<void()>     waitFunctor,
-    MPI_Comm                  communicator
+    GridVertex&           buffer,
+    int                   source,
+    int                   tag,
+    std::function<void()> startCommunicationFunctor,
+    std::function<void()> waitFunctor,
+    MPI_Comm              communicator
   );
-#endif
 
-  enum ObjectConstruction { NoData };
-
-  GridVertex(ObjectConstruction):
-    GridVertex() {}
-
-#ifdef WITH_MPI
   static void sendAndPollDanglingMessages(
-    const peano4::grid::GridVertex& message,
-    int                             destination,
-    int                             tag,
-    MPI_Comm                        communicator = tarch::mpi::Rank::getInstance().getCommunicator()
+    const GridVertex& message,
+    int               destination,
+    int               tag,
+    MPI_Comm          communicator = tarch::mpi::Rank::getInstance().getCommunicator()
   );
   static void receiveAndPollDanglingMessages(
-    peano4::grid::GridVertex& message,
-    int                       source,
-    int                       tag,
-    MPI_Comm                  communicator = tarch::mpi::Rank::getInstance().getCommunicator()
+    GridVertex& message,
+    int         source,
+    int         tag,
+    MPI_Comm    communicator = tarch::mpi::Rank::getInstance().getCommunicator()
   );
 #endif
-
-  std::string toString() const;
-
-private:
-  State                             _state;
-  tarch::la::Vector<TWO_POWER_D, int> _adjacentRanks;
-  tarch::la::Vector<TWO_POWER_D, int> _backupOfAdjacentRanks;
-  bool                              _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep;
-  bool                              _isAntecessorOfRefinedVertexInCurrentTreeSweep;
-  bool                              _hasBeenParentOfSubtreeVertexInPreviousTreeSweep;
-  bool                              _isParentOfSubtreeVertexInCurrentTreeSweep;
-  int                               _numberOfAdjacentRefinedLocalCells;
-
-#if PEANO_DEBUG > 0
-  tarch::la::Vector<DIMENSIONS, double> _x;
-#endif
-
-  int _level;
-
-#ifdef WITH_MPI
-private:
-  int _senderDestinationRank;
-
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  /**
-   * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
-   * initialisation of the datatype. However, Peano calls init explicitly
-   * in most cases. Without the LLVM extension which caches the MPI
-   * datatype once constructed, this field stores the type.
-   */
-  static MPI_Datatype Datatype;
-#endif
-#endif
 };
+
+namespace peano4::grid {
+  /**
+   * Factory mechanism
+   *
+   * We expect the calling code to tell us about the adjacent ranks of a
+   * vertex. There is a routine Spacetree::getAdjacentRanksForNewVertex()
+   * which allows you to distill adjacency information while you step down
+   * within the tree and create new vertices. This is information we write
+   * directly into the new data plus the backup of the old data. This means,
+   * by the time we create a new vertex, anybody analysing the adjacency
+   * information thinks that this data has always been there.
+   *
+   * @image html GridVertex.png
+   *
+   * @param adjacentRanks Typically the result from
+   * Spacetree::getAdjacentRanksForNewVertex(coarseGridVertices, vertexPositionWithin3x3Patch).
+   */
+  GridVertex createVertex(
+    int                                 level,
+    GridVertex::State                   state,
+    const std::array<int, TWO_POWER_D>& adjacentRanks,
+    bool                                isNewFineGridVertex
+  );
+} // namespace peano4::grid

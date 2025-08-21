@@ -220,17 +220,6 @@ the data flow:
 - _store_face_data_default_guard(),
 
 
-The implementation then uses these predicates to puzzle the actual storage
-scheme together via calls similar to
-
-~~~~~~~~~~~~~~~~~~~~~~~~
-        self._patch.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_cell_data_to_compute_kernels_default_guard(),
-            self._load_cell_data_default_guard(),
-            self._store_cell_data_default_guard(),
-        )
-~~~~~~~~~~~~~~~~~~~~~~~~
-
 By default, most solvers only store data for unrefined 
 cells. They mask coarser levels with in the tree out.    
 Subclasses such as enclave tasking variations augment the guards

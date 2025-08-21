@@ -7,8 +7,12 @@
 
 tarch::logging::Log exahype2::RefinementControlService::_log("exahype2::RefinementControlService");
 
-int exahype2::RefinementControlService::_reductionTag(tarch::mpi::Rank::reserveFreeTag("exahype2::"
-                                                                                       "RefinementControlService"));
+int exahype2::RefinementControlService::_reductionTag(
+  tarch::mpi::Rank::reserveFreeTag(
+    "exahype2::"
+    "RefinementControlService"
+  )
+);
 
 tarch::multicore::RecursiveSemaphore exahype2::RefinementControlService::_semaphore;
 
@@ -31,7 +35,11 @@ void exahype2::RefinementControlService::receiveDanglingMessages() {
 #ifdef WITH_MPI
   int guardFlag;
   MPI_Iprobe(
-    MPI_ANY_SOURCE, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &guardFlag, MPI_STATUS_IGNORE
+    MPI_ANY_SOURCE,
+    _reductionTag,
+    tarch::mpi::Rank::getInstance().getCommunicator(),
+    &guardFlag,
+    MPI_STATUS_IGNORE
   );
 
   if (guardFlag) {
@@ -42,7 +50,7 @@ void exahype2::RefinementControlService::receiveDanglingMessages() {
     MPI_Status  status;
     MPI_Improbe(MPI_ANY_SOURCE, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &msg, &status);
     if (flag) {
-      int       numberOfMessages;
+      int numberOfMessages;
       MPI_Get_count(&status, peano4::grid::GridControlEvent::getGlobalCommunicationDatatype(), &numberOfMessages);
       logDebug("receiveDanglingMessages()", "Got " << numberOfMessages << " event(s) from rank " << status.MPI_SOURCE);
 
@@ -127,7 +135,7 @@ void exahype2::RefinementControlService::finishStep() {
   }
   _remoteNewEvents.clear();
 
-  _committedEvents = ::peano4::grid::merge(_committedEvents);
+  _committedEvents = peano4::grid::mergeGridControlEvents(_committedEvents);
 }
 
 #ifdef WITH_MPI
@@ -154,7 +162,8 @@ void exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() {
   _sendRequests.clear();
 
   logDebug(
-    "triggerSendOfCopyOfCommittedEvents()", "Share my " << _copyOfCommittedEvents.size() << " event(s) with others"
+    "triggerSendOfCopyOfCommittedEvents()",
+    "Share my " << _copyOfCommittedEvents.size() << " event(s) with others"
   );
   if (_copyOfCommittedEvents.size() > 0) {
     _sendRequests = std::vector<MPI_Request*>(tarch::mpi::Rank::getInstance().getNumberOfRanks(), nullptr);

@@ -41,9 +41,7 @@ void   peano4::parallel::StartTraversalMessage::setStepIdentifier(int value) {
 
 #ifdef WITH_MPI
 
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype peano4::parallel::StartTraversalMessage::Datatype = MPI_DATATYPE_NULL;
-#endif
 
 MPI_Datatype peano4::parallel::StartTraversalMessage::getForkDatatype() {
   return Datatype;
@@ -107,7 +105,6 @@ int peano4::parallel::StartTraversalMessage::getSenderRank() const {
 
 
 void peano4::parallel::StartTraversalMessage::initDatatype() {
-  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   peano4::parallel::StartTraversalMessage  instances[2];
 
   int NumberOfAttributes = 0;
@@ -148,29 +145,15 @@ void peano4::parallel::StartTraversalMessage::initDatatype() {
   delete[] subtypes;
   delete[] blocklen; 
   delete[] disp;
-
-  #else
-  // invoke routine once to trigger lazy initialisation
-  getForkDatatype();
-  getJoinDatatype();
-  getBoundaryExchangeDatatype();
-  getMultiscaleDataExchangeDatatype();
-  getGlobalCommunicationDatatype();
-  #endif
 }
 
 
 void peano4::parallel::StartTraversalMessage::shutdownDatatype() {
-  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   freeForkDatatype();
   freeJoinDatatype();
   freeBoundaryExchangeDatatype();
   freeMultiscaleDataExchangeDatatype();
   freeGlobalCommunicationDatatype();
-  #else
-  MPI_Datatype type = Datatype;
-  MPI_Type_free( &type );
-  #endif
 }
 
 

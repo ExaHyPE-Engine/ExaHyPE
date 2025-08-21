@@ -35,6 +35,9 @@
     return; \
   }
 
+#define validateTrue(booleanExpr) validate(booleanExpr)
+#define validateFalse(booleanExpr) validate(not booleanExpr)
+
 /**
  * parameter message has to be a std::string or char*
  */

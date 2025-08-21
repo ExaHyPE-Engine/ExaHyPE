@@ -2,12 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "GridVertex.h"
+
+#include <bitset>
 #include <list>
 #include <map>
 #include <set>
 #include <vector>
-
-#include "GridVertex.h"
 
 namespace peano4 {
   /**
@@ -175,37 +176,9 @@ namespace peano4 {
      *   tolerance is reasonable to ensure that some events which are slightly
      *   disjoint are actually merged, too.
      */
-    std::vector<GridControlEvent> merge(std::vector<GridControlEvent> events, const double Tolerance = 0.1);
-
-    /**
-     * Factory mechanism
-     *
-     * We expect the calling code to tell us about the adjacent ranks of a
-     * vertex. There is a routine Spacetree::getAdjacentRanksForNewVertex()
-     * which allows you to distill adjacency information while you step down
-     * within the tree and create new vertices. This is information we write
-     * directly into the new data plus the backup of the old data. This means,
-     * by the time we create a new vertex, anybody analysing the adjacency
-     * information things that this data has always been there.
-     *
-     * <h2> Dummy values </h2>
-     *
-     * There are a few attributes which should have dummy values. There are
-     * also a few attributes which are set later on throughout the traversal,
-     * but I should initialise them here properly to ensure that valgrind's
-     * memchecker doesn't complain.
-     *
-     * @image html grid_createVertex.png
-     *
-     * @param adjacentRanks  Typically the result from
-     * Spacetree::getAdjacentRanksForNewVertex(coarseGridVertices,vertexPositionWithin3x3Patch).
-     */
-    GridVertex createVertex(
-      GridVertex::State                            state,
-      const tarch::la::Vector<DIMENSIONS, double>& x,
-      int                                          level,
-      const tarch::la::Vector<TWO_POWER_D, int>&     adjacentRanks,
-      bool                                         isNewFineGridVertex
+    std::vector<GridControlEvent> mergeGridControlEvents(
+      std::vector<GridControlEvent> events,
+      const double                  Tolerance = 0.1
     );
 
     /**
@@ -283,7 +256,7 @@ namespace peano4 {
 
     std::string toString(SpacetreeState state);
 
-    bool overlaps(const tarch::la::Vector<DIMENSIONS, double>& x, const GridControlEvent& event);
+    // bool overlaps(const tarch::la::Vector<DIMENSIONS, double>& x, const GridControlEvent& event);
     bool overlaps(const AutomatonState& x, const GridControlEvent& event);
 
     /**
@@ -354,7 +327,8 @@ namespace peano4 {
        * - The refine event defines a way coarser mesh then the coarse event.
        */
       bool refinementEventOverrulesCoarsening(
-        const peano4::grid::GridControlEvent& refineEvent, const peano4::grid::GridControlEvent& eraseEvent
+        const peano4::grid::GridControlEvent& refineEvent,
+        const peano4::grid::GridControlEvent& eraseEvent
       );
 
       /**
@@ -367,7 +341,9 @@ namespace peano4 {
        * adjacent events of the same size.
        */
       bool twoEventsAreAdjacent(
-        const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs, double Tolerance
+        const peano4::grid::GridControlEvent& lhs,
+        const peano4::grid::GridControlEvent& rhs,
+        double                                Tolerance
       );
 
       /**
@@ -396,16 +372,17 @@ namespace peano4 {
        * the y-axis, and so forth. This way, we ensure that merges (which
        * always merge two events next to each other) are deterministic.
        *
-       * @see merge() for a discussion
+       * @see mergeGridControlEvents() for a discussion
        * @param events Input and output set of grid control events
        */
       void sort(std::list<peano4::grid::GridControlEvent>& events);
 
       peano4::grid::GridControlEvent createBoundingBoxEvent(
-        const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs
+        const peano4::grid::GridControlEvent& lhs,
+        const peano4::grid::GridControlEvent& rhs
       );
     } // namespace internal
-  }   // namespace grid
+  } // namespace grid
 } // namespace peano4
 
 peano4::grid::GridStatistics operator+(peano4::grid::GridStatistics lhs, peano4::grid::GridStatistics rhs);

@@ -2,12 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <set>
-#include <vector>
-
+#include "GridControlEvent.h"
 #include "peano4/parallel/parallel.h"
 #include "peano4/utils/Globals.h"
 #include "tarch/la/Vector.h"
+
+#include <set>
+#include <vector>
 
 namespace peano4 {
   namespace grid {
@@ -141,14 +142,16 @@ return controlEvents;
    * @param h Root cell size
    */
   virtual void beginTraversal(
-    const tarch::la::Vector<DIMENSIONS, double>& x, const tarch::la::Vector<DIMENSIONS, double>& h
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h
   ) = 0;
 
   /**
    * @see beginTraversal()
    */
   virtual void endTraversal(
-    const tarch::la::Vector<DIMENSIONS, double>& x, const tarch::la::Vector<DIMENSIONS, double>& h
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h
   ) = 0;
 
   /**
@@ -236,13 +239,37 @@ return controlEvents;
     PeriodicBoundaryDataSwap
   };
 
-  virtual void sendVertex(int /*position*/, int /*toStack*/, SendReceiveContext /*context*/, const GridTraversalEvent& /*event*/) {};
-  virtual void sendFace(int /*position*/, int /*toStack*/, SendReceiveContext /*context*/, const GridTraversalEvent& /*event*/) {};
+  virtual void sendVertex(
+    int /*position*/,
+    int /*toStack*/,
+    SendReceiveContext /*context*/,
+    const GridTraversalEvent& /*event*/
+  ) {};
+  virtual void sendFace(
+    int /*position*/,
+    int /*toStack*/,
+    SendReceiveContext /*context*/,
+    const GridTraversalEvent& /*event*/
+  ) {};
   virtual void sendCell(int /*toStack*/, SendReceiveContext /*context*/, const GridTraversalEvent& /*event*/) {};
 
-  virtual void receiveAndMergeVertex(int /*position*/, int /*fromStack*/, SendReceiveContext /*context*/, const GridTraversalEvent& /*event*/) {};
-  virtual void receiveAndMergeFace(int /*position*/, int /*fromStack*/, SendReceiveContext /*context*/, const GridTraversalEvent& /*event*/) {};
-  virtual void receiveAndMergeCell(int /*fromStack*/, SendReceiveContext /*context*/, const GridTraversalEvent& /*event*/) {};
+  virtual void receiveAndMergeVertex(
+    int /*position*/,
+    int /*fromStack*/,
+    SendReceiveContext /*context*/,
+    const GridTraversalEvent& /*event*/
+  ) {};
+  virtual void receiveAndMergeFace(
+    int /*position*/,
+    int /*fromStack*/,
+    SendReceiveContext /*context*/,
+    const GridTraversalEvent& /*event*/
+  ) {};
+  virtual void receiveAndMergeCell(
+    int /*fromStack*/,
+    SendReceiveContext /*context*/,
+    const GridTraversalEvent& /*event*/
+  ) {};
 
   virtual void deleteAllStacks() {};
 };

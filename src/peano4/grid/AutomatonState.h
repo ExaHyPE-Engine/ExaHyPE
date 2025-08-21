@@ -26,12 +26,12 @@ struct peano4::grid::AutomatonState {
 public:
   AutomatonState() = default;
   AutomatonState(
-    const int                                         __level,
-    const tarch::la::Vector<DIMENSIONS, double>&      __x,
-    const tarch::la::Vector<DIMENSIONS, double>&      __h,
-    const bool                                        __inverted,
-    const std::bitset<DIMENSIONS>&                    __evenFlags,
-    const tarch::la::Vector<TWO_TIMES_D, int>& __accessNumber
+    const int                                    __level,
+    const tarch::la::Vector<DIMENSIONS, double>& __x,
+    const tarch::la::Vector<DIMENSIONS, double>& __h,
+    const bool                                   __inverted,
+    const std::bitset<DIMENSIONS>&               __evenFlags,
+    const tarch::la::Vector<TWO_TIMES_D, int>&   __accessNumber
   );
 
   AutomatonState(const AutomatonState& copy);
@@ -159,25 +159,16 @@ public:
   std::string toString() const;
 
 private:
-  int                                        _level;
-  tarch::la::Vector<DIMENSIONS, double>      _x;
-  tarch::la::Vector<DIMENSIONS, double>      _h;
-  bool                                       _inverted;
-  std::bitset<DIMENSIONS>                    _evenFlags;
-  tarch::la::Vector<TWO_TIMES_D, int> _accessNumber;
+  int                                   _level;
+  tarch::la::Vector<DIMENSIONS, double> _x;
+  tarch::la::Vector<DIMENSIONS, double> _h;
+  bool                                  _inverted;
+  std::bitset<DIMENSIONS>               _evenFlags;
+  tarch::la::Vector<TWO_TIMES_D, int>   _accessNumber;
 
 #ifdef WITH_MPI
 private:
-  int _senderDestinationRank;
-
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  /**
-   * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
-   * initialisation of the datatype. However, Peano calls init explicitly
-   * in most cases. Without the LLVM extension which caches the MPI
-   * datatype once constructed, this field stores the type.
-   */
+  int                 _senderDestinationRank;
   static MPI_Datatype Datatype;
-#endif
 #endif
 };

@@ -71,9 +71,11 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(Con
   logTraceInWith2Arguments("exchangeAllHorizontalDataExchangeStacks()", spacetreeId, symmetricDataCardinality);
   assertionMsg(symmetricDataCardinality, "Haven't implemented the asymmetric case yet, but would be simple: Just need the integer messages as I do for the vertical data flow" );
 
+  const auto& keys = stackContainer.getKeys();
+
+#ifdef WITH_MPI
   // We exploit all the symmetries
-  std::set<maps::StackKey> keys = stackContainer.getKeys();
-  for (auto& sourceStackKey: keys) {
+  for (const auto& sourceStackKey: keys) {
     if (sourceStackKey.first == spacetreeId and Node::getInstance().isHorizontalDataExchangeOutputStackNumber(sourceStackKey.second) and not stackContainer.getForPop(sourceStackKey)->empty() and Node::getInstance().getRank(Node::getInstance().getTreeNumberTiedToExchangeStackNumber(sourceStackKey.second)) != tarch::mpi::Rank::getInstance().getRank()) {
       const int targetId       = Node::getInstance().getTreeNumberTiedToExchangeStackNumber(sourceStackKey.second);
       const int rank           = Node::getInstance().getRank(targetId);
@@ -92,9 +94,10 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(Con
       stackContainer.getForPush(spacetreeId, inStack)->startReceive(grid::TraversalObserver::SendReceiveContext::BoundaryExchange, rank, receiveMetaInfo.first, receiveMetaInfo.second, count);
     }
   }
+#endif
 
   // All local boundary stacks
-  for (auto sourceStackKey: keys) {
+  for (const auto& sourceStackKey: keys) {
     if (sourceStackKey.first == spacetreeId and Node::getInstance().isHorizontalDataExchangeOutputStackNumber(sourceStackKey.second) and not stackContainer.getForPop(sourceStackKey)->empty() and Node::getInstance().getRank(Node::getInstance().getTreeNumberTiedToExchangeStackNumber(sourceStackKey.second)) == tarch::mpi::Rank::getInstance().getRank()) {
       const int targetId = Node::getInstance().getTreeNumberTiedToExchangeStackNumber(sourceStackKey.second);
       const int targetStack = Node::getInstance().getInputStackNumberForHorizontalDataExchange(spacetreeId);
@@ -125,8 +128,9 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(Con
 
 template <class Container>
 void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(Container& stackContainer, int spacetreeId) {
+#ifdef WITH_MPI
   logTraceInWith1Argument("finishAllOutstandingSendsAndReceives()", spacetreeId);
-  std::set<maps::StackKey> keys = stackContainer.getKeys();
+  const auto& keys = stackContainer.getKeys();
 
   tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
   tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
@@ -135,7 +139,7 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(Contai
 
   while (not allSendReceivesFinished) {
     allSendReceivesFinished = true;
-    for (auto& sourceStackKey: keys) {
+    for (const auto& sourceStackKey: keys) {
       if (sourceStackKey.first == spacetreeId) {
         logDebug("finishAllOutstandingSendsAndReceives()", "Check stack no " << sourceStackKey.first << " x " << sourceStackKey.second);
         allSendReceivesFinished &= stackContainer.getForPush(sourceStackKey)->tryToFinishSendOrReceive();
@@ -151,13 +155,14 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(Contai
 
   stackContainer.garbageCollection(spacetreeId);
   logTraceOutWith1Argument("finishAllOutstandingSendsAndReceives()", spacetreeId);
+#endif
 }
 
 template <class Container>
 void peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks(Container& stackContainer, int spacetreeId) {
-  std::set<maps::StackKey> keys = stackContainer.getKeys();
+  const auto& keys = stackContainer.getKeys();
   logTraceInWith2Arguments("exchangeAllPeriodicBoundaryDataStacks()", keys.size(), spacetreeId);
-  for (auto& sourceStackKey: keys) {
+  for (const auto& sourceStackKey: keys) {
     if (sourceStackKey.first == spacetreeId and Node::getInstance().isPeriodicBoundaryExchangeOutputStackNumber(sourceStackKey.second) and not stackContainer.getForPush(sourceStackKey)->empty()) {
       const int targetStack = Node::mapPeriodicBoundaryExchangeOutputStackOntoInputStack(sourceStackKey.second);
       logDebug("exchangeAllPeriodicBoundaryDataStacks()", "Map output stream " << sourceStackKey.second << " onto input stream " << targetStack << " to realise periodic boundary conditions. Copy " << stackContainer.getForPush(sourceStackKey)->size() << " entries.");

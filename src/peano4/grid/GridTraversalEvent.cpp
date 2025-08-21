@@ -8,22 +8,22 @@
 peano4::grid::GridTraversalEvent::GridTraversalEvent(
   const tarch::la::Vector<DIMENSIONS, double>& __x,
   const tarch::la::Vector<DIMENSIONS, double>& __h,
-  const std::bitset<TWO_POWER_D>&                __hasBeenRefined,
-  const std::bitset<TWO_POWER_D>&                __willBeRefined,
-  const std::bitset<TWO_POWER_D>&                __isVertexLocal,
-  const std::bitset<TWO_POWER_D>&                __isParentVertexLocal,
-  const std::bitset<TWO_POWER_D>&                __isVertexParentOfSubtree,
-  const std::bitset<TWO_TIMES_D>&                __isFaceLocal,
+  const std::bitset<TWO_POWER_D>&              __hasBeenRefined,
+  const std::bitset<TWO_POWER_D>&              __willBeRefined,
+  const std::bitset<TWO_POWER_D>&              __isVertexLocal,
+  const std::bitset<TWO_POWER_D>&              __isParentVertexLocal,
+  const std::bitset<TWO_POWER_D>&              __isVertexParentOfSubtree,
+  const std::bitset<TWO_TIMES_D>&              __isFaceLocal,
   const bool                                   __isCellLocal,
   const bool                                   __isParentCellLocal,
-  const std::bitset<TWO_POWER_D>&                __isVertexAdjacentToParallelDomainBoundary,
-  const std::bitset<TWO_TIMES_D>&                __isFaceAdjacentToParallelDomainBoundary,
-  const tarch::la::Vector<TWO_POWER_D, int>&     __numberOfAdjacentTreesPerVertex,
-  const std::bitset<THREE_POWER_D>&              __isAdjacentCellLocal,
-  const tarch::la::Vector<TWO_POWER_D, int>&     __vertexDataFrom,
-  const tarch::la::Vector<TWO_POWER_D, int>&     __vertexDataTo,
-  const tarch::la::Vector<TWO_TIMES_D, int>&     __faceDataFrom,
-  const tarch::la::Vector<TWO_TIMES_D, int>&     __faceDataTo,
+  const std::bitset<TWO_POWER_D>&              __isVertexAdjacentToParallelDomainBoundary,
+  const std::bitset<TWO_TIMES_D>&              __isFaceAdjacentToParallelDomainBoundary,
+  const tarch::la::Vector<TWO_POWER_D, int>&   __numberOfAdjacentTreesPerVertex,
+  const std::bitset<THREE_POWER_D>&            __isAdjacentCellLocal,
+  const tarch::la::Vector<TWO_POWER_D, int>&   __vertexDataFrom,
+  const tarch::la::Vector<TWO_POWER_D, int>&   __vertexDataTo,
+  const tarch::la::Vector<TWO_TIMES_D, int>&   __faceDataFrom,
+  const tarch::la::Vector<TWO_TIMES_D, int>&   __faceDataTo,
   const int                                    __cellData,
   const tarch::la::Vector<DIMENSIONS, int>&    __relativePositionToFather,
   const int                                    __invokingSpacetree,
@@ -133,9 +133,7 @@ std::string peano4::grid::GridTraversalEvent::toString() const {
 
 #ifdef WITH_MPI
 
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype peano4::grid::GridTraversalEvent::Datatype = MPI_DATATYPE_NULL;
-#endif
 
 MPI_Datatype peano4::grid::GridTraversalEvent::getForkDatatype() { return Datatype; }
 MPI_Datatype peano4::grid::GridTraversalEvent::getGlobalCommunicationDatatype() { return Datatype; }
@@ -181,7 +179,6 @@ void peano4::grid::GridTraversalEvent::freeMultiscaleDataExchangeDatatype() {
 int peano4::grid::GridTraversalEvent::getSenderRank() const { return _senderDestinationRank; }
 
 void peano4::grid::GridTraversalEvent::initDatatype() {
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   peano4::grid::GridTraversalEvent instances[2];
 
   int NumberOfAttributes = 0;
@@ -349,28 +346,14 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
   delete[] subtypes;
   delete[] blocklen;
   delete[] disp;
-
-#else
-  // invoke routine once to trigger lazy initialisation
-  getForkDatatype();
-  getJoinDatatype();
-  getBoundaryExchangeDatatype();
-  getMultiscaleDataExchangeDatatype();
-  getGlobalCommunicationDatatype();
-#endif
 }
 
 void peano4::grid::GridTraversalEvent::shutdownDatatype() {
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   freeForkDatatype();
   freeJoinDatatype();
   freeBoundaryExchangeDatatype();
   freeMultiscaleDataExchangeDatatype();
   freeGlobalCommunicationDatatype();
-#else
-  MPI_Datatype type = Datatype;
-  MPI_Type_free(&type);
-#endif
 }
 
 void peano4::grid::GridTraversalEvent::

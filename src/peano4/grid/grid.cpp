@@ -1,9 +1,9 @@
 #include "grid.h"
 
-#include "GridVertex.h"
 #include "AutomatonState.h"
 #include "GridControlEvent.h"
 #include "GridStatistics.h"
+#include "GridVertex.h"
 #include "Spacetree.h"
 #include "peano4/utils/Loop.h"
 
@@ -38,13 +38,16 @@ std::ostream& operator<<(std::ostream& out, const peano4::SplitInstruction::Mode
 }
 
 bool peano4::grid::isContained(
-  const peano4::grid::AutomatonState& state, const peano4::grid::GridControlEvent& event, double upscaleAutomatonState
+  const peano4::grid::AutomatonState&   state,
+  const peano4::grid::GridControlEvent& event,
+  double                                upscaleAutomatonState
 ) {
   assertion1(upscaleAutomatonState >= 1.0, upscaleAutomatonState);
   return tarch::la::
            allGreaterEquals(state.getX() + (0.5 - 0.5 * upscaleAutomatonState) * state.getH(), event.getOffset())
          and tarch::la::allSmallerEquals(
-           state.getX() + (0.5 + 0.5 * upscaleAutomatonState) * state.getH(), event.getOffset() + event.getWidth()
+           state.getX() + (0.5 + 0.5 * upscaleAutomatonState) * state.getH(),
+           event.getOffset() + event.getWidth()
          );
 }
 
@@ -53,38 +56,10 @@ bool peano4::grid::overlaps(const peano4::grid::AutomatonState& state, const pea
          and tarch::la::allSmallerEquals(state.getX(), event.getOffset() + event.getWidth());
 }
 
-bool peano4::grid::overlaps(const tarch::la::Vector<DIMENSIONS, double>& x, const GridControlEvent& event) {
-  return tarch::la::allGreaterEquals(x, event.getOffset())
-         and tarch::la::allSmallerEquals(x, event.getOffset() + event.getWidth());
-}
-
-peano4::grid::GridVertex peano4::grid::createVertex(
-  [[maybe_unused]] GridVertex::State                            state,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS,double>&  x,
-  [[maybe_unused]] int                                          level,
-  [[maybe_unused]] const tarch::la::Vector<TWO_POWER_D,int>&      adjacentRanks,
-  [[maybe_unused]] bool                                         isNewFineGridVertex
-) {
-  GridVertex result;
-
-  result.setState(state);
-  result.setAdjacentRanks(adjacentRanks);
-  result.setBackupOfAdjacentRanks(adjacentRanks);
-  result.setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep(not isNewFineGridVertex);
-  result.setIsAntecessorOfRefinedVertexInCurrentTreeSweep(not isNewFineGridVertex);
-  result.setHasBeenParentOfSubtreeVertexInPreviousTreeSweep(false);
-  result.setIsParentOfSubtreeVertexInCurrentTreeSweep(false);
-
-#if PEANO_DEBUG > 0
-  result.setX(x);
-#endif
-  result.setLevel(level);
-
-  // not required logically, but makes valgrind's memchecker happy
-  result.setNumberOfAdjacentRefinedLocalCells(0);
-
-  return result;
-}
+// bool peano4::grid::overlaps(const tarch::la::Vector<DIMENSIONS, double>& x, const GridControlEvent& event) {
+//   return tarch::la::allGreaterEquals(x, event.getOffset())
+//          and tarch::la::allSmallerEquals(x, event.getOffset() + event.getWidth());
+// }
 
 std::string peano4::grid::toString(const std::vector<GridControlEvent>& events) {
   std::ostringstream msg;
@@ -109,11 +84,10 @@ std::string peano4::grid::toString(const std::list<GridControlEvent>& events) {
   return msg.str();
 }
 
-std::vector<peano4::grid::GridControlEvent> peano4::grid::merge(
-  std::vector<GridControlEvent> events, [[maybe_unused]] const double Tolerance
+std::vector<peano4::grid::GridControlEvent> peano4::grid::mergeGridControlEvents(
+  std::vector<GridControlEvent> events,
+  [[maybe_unused]] const double Tolerance
 ) {
-  logTraceInWith1Argument("merge(...)", events.size());
-
   std::list<peano4::grid::GridControlEvent> refineEvents;
   std::list<peano4::grid::GridControlEvent> eraseEvents;
   for (auto p : events) {
@@ -124,33 +98,33 @@ std::vector<peano4::grid::GridControlEvent> peano4::grid::merge(
     }
   }
   logDebug(
-    "merge(...)",
-    "have a total of "
+    "mergeGridControlEvents()",
+    "Have a total of "
       << events.size() << " event(s) consisting of " << refineEvents.size() << " refine and " << eraseEvents.size()
       << " erase events"
   );
 
   internal::removeEraseEventsThatAreCancelledByRefineEvents(refineEvents, eraseEvents);
   logDebug(
-    "merge(...)",
-    "reduced to " << eraseEvents.size() << " erase event(s) by eliminating erase events that overlap with refinement"
+    "mergeGridControlEvents()",
+    "Reduced to " << eraseEvents.size() << " erase event(s) by eliminating erase events that overlap with refinement"
   );
 
   internal::mergeAdjacentRefinementEvents(refineEvents, Tolerance);
   internal::mergeAdjacentRefinementEvents(eraseEvents, Tolerance);
-  logDebug("merge(...)", "merged refine events into " << refineEvents.size() << " event(s)");
+  logDebug("mergeGridControlEvents()", "Merged refine events into " << refineEvents.size() << " event(s)");
 
   std::vector<peano4::grid::GridControlEvent> result;
   result.insert(result.begin(), refineEvents.begin(), refineEvents.end());
   result.insert(result.begin(), eraseEvents.begin(), eraseEvents.end());
-  logTraceOutWith1Argument("merge(...)", result.size());
+
   return result;
 }
 
 void peano4::grid::internal::sort(std::list<peano4::grid::GridControlEvent>& events) {
-
   auto compare = [](const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs) -> bool {
-    if ( tarch::la::smaller( tarch::la::volume(lhs.getH()), tarch::la::volume(rhs.getH()) ) ) return true; 
+    if (tarch::la::smaller(tarch::la::volume(lhs.getH()), tarch::la::volume(rhs.getH())))
+      return true;
     for (int d = 0; d < DIMENSIONS; d++) {
       if (tarch::la::smaller(lhs.getOffset(d), rhs.getOffset(d)))
         return true;
@@ -164,7 +138,8 @@ void peano4::grid::internal::sort(std::list<peano4::grid::GridControlEvent>& eve
 }
 
 void peano4::grid::internal::removeEraseEventsThatAreCancelledByRefineEvents(
-  const std::list<peano4::grid::GridControlEvent>& refineEvents, std::list<peano4::grid::GridControlEvent>& eraseEvents
+  const std::list<peano4::grid::GridControlEvent>& refineEvents,
+  std::list<peano4::grid::GridControlEvent>&       eraseEvents
 ) {
   std::list<peano4::grid::GridControlEvent>::iterator pEraseEvent = eraseEvents.begin();
   while (pEraseEvent != eraseEvents.end()) {
@@ -181,7 +156,8 @@ void peano4::grid::internal::removeEraseEventsThatAreCancelledByRefineEvents(
 }
 
 void peano4::grid::internal::mergeAdjacentRefinementEvents(
-  std::list<peano4::grid::GridControlEvent>& inputEvents, int Tolerance
+  std::list<peano4::grid::GridControlEvent>& inputEvents,
+  int                                        Tolerance
 ) {
   bool hasMergedEvents = true;
   while (hasMergedEvents) {
@@ -334,7 +310,8 @@ std::string peano4::grid::toString(SpacetreeState state) {
 }
 
 bool peano4::grid::internal::twoEventsOverlap(
-  const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs
+  const peano4::grid::GridControlEvent& lhs,
+  const peano4::grid::GridControlEvent& rhs
 ) {
   bool twoEventsOverlap = true;
   for (int d = 0; d < DIMENSIONS; d++) {
@@ -345,7 +322,8 @@ bool peano4::grid::internal::twoEventsOverlap(
 };
 
 bool peano4::grid::internal::equals(
-  const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs
+  const peano4::grid::GridControlEvent& lhs,
+  const peano4::grid::GridControlEvent& rhs
 ) {
   bool sameType
     = (lhs.getRefinementControl() == GridControlEvent::RefinementControl::Erase
@@ -357,7 +335,8 @@ bool peano4::grid::internal::equals(
 };
 
 bool peano4::grid::internal::refinementEventOverrulesCoarsening(
-  const peano4::grid::GridControlEvent& refineEvent, const peano4::grid::GridControlEvent& eraseEvent
+  const peano4::grid::GridControlEvent& refineEvent,
+  const peano4::grid::GridControlEvent& eraseEvent
 ) {
   return twoEventsOverlap(refineEvent, eraseEvent)
          and refineEvent.getRefinementControl() == GridControlEvent::RefinementControl::Refine
@@ -366,23 +345,25 @@ bool peano4::grid::internal::refinementEventOverrulesCoarsening(
 };
 
 bool peano4::grid::internal::twoEventsAreAdjacent(
-  const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs, double tolerance
+  const peano4::grid::GridControlEvent& lhs,
+  const peano4::grid::GridControlEvent& rhs,
+  double                                tolerance
 ) {
   tarch::la::Vector<DIMENSIONS, double> boundingEventOffset = tarch::la::min(lhs.getOffset(), rhs.getOffset());
   tarch::la::Vector<DIMENSIONS, double>
     boundingEventSize = tarch::la::max(lhs.getOffset() + lhs.getWidth(), rhs.getOffset() + rhs.getWidth())
                         - boundingEventOffset;
 
-  const double relativeTolerance = tarch::la::relativeEps(
-    tarch::la::volume(lhs.getWidth()), tarch::la::volume(rhs.getWidth()), tolerance
-  );
+  const double relativeTolerance = tarch::la::
+    relativeEps(tarch::la::volume(lhs.getWidth()), tarch::la::volume(rhs.getWidth()), tolerance);
   const double fusedEventsSize = tarch::la::volume(lhs.getWidth()) + tarch::la::volume(rhs.getWidth());
   return tarch::la::equals(lhs.getH(), rhs.getH(), relativeTolerance)
          and tarch::la::smallerEquals(tarch::la::volume(boundingEventSize), fusedEventsSize, relativeTolerance);
 };
 
 peano4::grid::GridControlEvent peano4::grid::internal::createBoundingBoxEvent(
-  const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs
+  const peano4::grid::GridControlEvent& lhs,
+  const peano4::grid::GridControlEvent& rhs
 ) {
   tarch::la::Vector<DIMENSIONS, double> boundingEventOffset = tarch::la::min(lhs.getOffset(), rhs.getOffset());
   tarch::la::Vector<DIMENSIONS, double>

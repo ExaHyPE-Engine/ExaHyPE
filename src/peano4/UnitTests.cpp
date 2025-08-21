@@ -4,11 +4,14 @@
 
 #include "grid/tests/GridControlEventTest.h"
 #include "grid/tests/GridTraversalEventGeneratorTest.h"
+#include "grid/tests/GridVertexTest.h"
 #include "grid/tests/SpacetreeTest.h"
 #include "parallel/tests/NodeTest.h"
 #ifdef WITH_MPI
 #include "parallel/tests/PingPongTest.h"
 #endif
+#include "stacks/tests/StackMapTest.h"
+#include "stacks/tests/StackTest.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 #include "utils/tests/LinearisedTest.h"
 
@@ -18,6 +21,7 @@ tarch::tests::TestCase* peano4::getUnitTests() {
   result->addTestCase(new grid::tests::SpacetreeTest());
   result->addTestCase(new grid::tests::GridControlEventTest());
   result->addTestCase(new grid::tests::GridTraversalEventGeneratorTest());
+  result->addTestCase(new grid::tests::GridVertexTest());
 
   result->addTestCase(new parallel::tests::NodeTest());
 #ifdef WITH_MPI
@@ -25,6 +29,9 @@ tarch::tests::TestCase* peano4::getUnitTests() {
 #endif
 
   result->addTestCase(new utils::tests::LinearisedTest());
+
+  result->addTestCase(new stacks::tests::StackTest());
+  result->addTestCase(new stacks::tests::StackMapTest());
 
   return result;
 }

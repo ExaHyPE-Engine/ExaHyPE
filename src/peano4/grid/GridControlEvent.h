@@ -34,7 +34,7 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& __h
   );
   GridControlEvent(const GridControlEvent& copy) = default;
-  ~GridControlEvent() = default;
+  ~GridControlEvent()                            = default;
 
   inline peano4::grid::GridControlEvent::RefinementControl getRefinementControl() const { return _refinementControl; }
   inline void setRefinementControl(RefinementControl value) { _refinementControl = value; }
@@ -154,16 +154,7 @@ private:
 
 #ifdef WITH_MPI
 private:
-  int _senderDestinationRank;
-
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  /**
-   * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
-   * initialisation of the datatype. However, Peano calls init explicitly
-   * in most cases. Without the LLVM extension which caches the MPI
-   * datatype once constructed, this field stores the type.
-   */
+  int                 _senderDestinationRank;
   static MPI_Datatype Datatype;
-#endif
 #endif
 };
