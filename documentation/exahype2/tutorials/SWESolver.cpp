@@ -36,7 +36,9 @@ void tutorials::exahype2::swe::SWESolver::boundaryConditions(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t
 ) {
-  return tarch::la::norm2(x) < 0.6 ? ::exahype2::RefinementCommand::Refine : ::exahype2::RefinementCommand::Keep;
+  return (std::abs(::tarch::la::norm2(x) - 0.5) < 0.2 ?
+    ::exahype2::RefinementCommand::Refine :
+    ::exahype2::RefinementCommand::Keep);
 }
 
 double tutorials::exahype2::swe::SWESolver::maxEigenvalue(

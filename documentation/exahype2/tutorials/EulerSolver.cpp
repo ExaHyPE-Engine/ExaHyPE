@@ -17,13 +17,12 @@ void tutorials::exahype2::euler::EulerSolver::initialCondition(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const bool                                   gridIsConstructed
 ) {
-  const double y     = airfoilSymmetric(x[0]);
-  const double alpha = (y > x[1] && -y < x[1]) ? 0.0 : 1.0;
+  const double y = airfoilSymmetric(x[0]);
 
   Q[0] = (y > x[1] && -y < x[1]) ? 1000.0 : 1.0;
-  Q[1] = alpha * 1.0;
+  Q[1] = 1.0;
   Q[2] = 0.0;
-  Q[3] = alpha * 2.5;
+  Q[3] = 2.5;
 }
 
 void tutorials::exahype2::euler::EulerSolver::boundaryConditions(
