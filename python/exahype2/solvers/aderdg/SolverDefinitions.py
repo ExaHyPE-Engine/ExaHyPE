@@ -119,7 +119,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::diffusiveAlgebraicSource(
 {% endif %}
 
 {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" and MATERIAL_PARAM_IMPLEMENTATION!="<none>" %}
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(
   [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&   x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&   h,
