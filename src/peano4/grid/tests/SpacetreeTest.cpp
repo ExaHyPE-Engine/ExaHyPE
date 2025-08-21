@@ -66,20 +66,20 @@ void peano4::grid::tests::SpacetreeTest::testGetAdjacentDomainIds() {
   GridVertex fineGridVertices[TWO_POWER_D];
 
   fineGridVertices[0].setState( GridVertex::State::New );
-  fineGridVertices[0].setAdjacentRanks( {1,1,1,1} );
-  fineGridVertices[0].setBackupOfAdjacentRanks( {0,0,0,0} );
+  fineGridVertices[0].adjacentRanks = {1,1,1,1};
+  fineGridVertices[0].backupOfAdjacentRanks = {0,0,0,0};
 
   fineGridVertices[1].setState( GridVertex::State::Unrefined );
-  fineGridVertices[1].setAdjacentRanks( {1,1,1,1} );
-  fineGridVertices[1].setBackupOfAdjacentRanks( {1,1,1,1} );
+  fineGridVertices[1].adjacentRanks = {1,1,1,1};
+  fineGridVertices[1].backupOfAdjacentRanks = {1,1,1,1};
 
   fineGridVertices[2].setState( GridVertex::State::Unrefined );
-  fineGridVertices[2].setAdjacentRanks( {1,1,1,1} );
-  fineGridVertices[2].setBackupOfAdjacentRanks( {1,1,1,1} );
+  fineGridVertices[2].adjacentRanks = {1,1,1,1};
+  fineGridVertices[2].backupOfAdjacentRanks = {1,1,1,1};
 
   fineGridVertices[3].setState( GridVertex::State::Unrefined );
-  fineGridVertices[3].setAdjacentRanks( {1,1,1,1} );
-  fineGridVertices[3].setBackupOfAdjacentRanks( {1,1,1,1} );
+  fineGridVertices[3].adjacentRanks = {1,1,1,1};
+  fineGridVertices[3].backupOfAdjacentRanks = {1,1,1,1};
 
 /*
   vertex.toString():(state=New,      adjacentRanks=[1,1,1,1],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=1684632135,x=[0.777778,0.444444],level=3),splittingIsConsideredLocal:1,joiningIsConsideredLocal:1 (file:peano4/grid/Spacetree.cpp,line:95)

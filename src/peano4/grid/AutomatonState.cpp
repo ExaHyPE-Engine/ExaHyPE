@@ -6,12 +6,12 @@
 #include <sstream>
 
 peano4::grid::AutomatonState::AutomatonState(
-  const int                                         __level,
-  const tarch::la::Vector<DIMENSIONS, double>&      __x,
-  const tarch::la::Vector<DIMENSIONS, double>&      __h,
-  const bool                                        __inverted,
-  const std::bitset<DIMENSIONS>&                    __evenFlags,
-  const tarch::la::Vector<TWO_TIMES_D, int>& __accessNumber
+  const int                                    __level,
+  const tarch::la::Vector<DIMENSIONS, double>& __x,
+  const tarch::la::Vector<DIMENSIONS, double>& __h,
+  const bool                                   __inverted,
+  const std::bitset<DIMENSIONS>&               __evenFlags,
+  const tarch::la::Vector<TWO_TIMES_D, int>&   __accessNumber
 ) {
   setLevel(__level);
   setX(__x);
@@ -65,9 +65,7 @@ std::string peano4::grid::AutomatonState::toString() const {
 
 #ifdef WITH_MPI
 
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype peano4::grid::AutomatonState::Datatype = MPI_DATATYPE_NULL;
-#endif
 
 MPI_Datatype peano4::grid::AutomatonState::getForkDatatype() { return Datatype; }
 MPI_Datatype peano4::grid::AutomatonState::getGlobalCommunicationDatatype() { return Datatype; }
@@ -113,7 +111,6 @@ void peano4::grid::AutomatonState::freeMultiscaleDataExchangeDatatype() {
 int peano4::grid::AutomatonState::getSenderRank() const { return _senderDestinationRank; }
 
 void peano4::grid::AutomatonState::initDatatype() {
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   peano4::grid::AutomatonState instances[2];
 
   int NumberOfAttributes = 0;
@@ -185,28 +182,14 @@ void peano4::grid::AutomatonState::initDatatype() {
   delete[] subtypes;
   delete[] blocklen;
   delete[] disp;
-
-#else
-  // invoke routine once to trigger lazy initialisation
-  getForkDatatype();
-  getJoinDatatype();
-  getBoundaryExchangeDatatype();
-  getMultiscaleDataExchangeDatatype();
-  getGlobalCommunicationDatatype();
-#endif
 }
 
 void peano4::grid::AutomatonState::shutdownDatatype() {
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   freeForkDatatype();
   freeJoinDatatype();
   freeBoundaryExchangeDatatype();
   freeMultiscaleDataExchangeDatatype();
   freeGlobalCommunicationDatatype();
-#else
-  MPI_Datatype type = Datatype;
-  MPI_Type_free(&type);
-#endif
 }
 
 void peano4::grid::AutomatonState::

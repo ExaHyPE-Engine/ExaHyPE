@@ -38,7 +38,7 @@ std::string toString(exahype2::RefinementCommand value);
  * Note: Peano will internally decide to merge many many bounding boxes into
  * fewer, larger ones.
  *
- * @see peano4::grid::merge()
+ * @see peano4::grid::mergeGridControlEvents()
  *
  *
  * ## Refinement process

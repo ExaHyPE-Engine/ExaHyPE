@@ -5,20 +5,12 @@
 
 #include "peano4/grid/Spacetree.h"
 
-
-
 tarch::logging::Log peano4::parallel::tests::NodeTest::_log("peano4::parallel::tests::NodeTest");
-
-
-#ifdef UseTestSpecificCompilerSettings
-#pragma optimize("",off)
-#endif
 
 
 peano4::parallel::tests::NodeTest::NodeTest():
   TestCase( "peano4::parallel::tests::NodeTest" ) {
 }
-
 
 void peano4::parallel::tests::NodeTest::testTagCalculation() {
   logTraceIn( "testTagCalculation()" );
@@ -40,11 +32,12 @@ void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryEx
   //
   // Top right corner
   //
-  tarch::la::Vector<TWO_POWER_D,int>  flagsTopRightVertex(peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition);
-  flagsTopRightVertex(0) = 0;
+  std::array<int, TWO_POWER_D>  flagsTopRightVertex;
+  flagsTopRightVertex.fill(peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition);
+  flagsTopRightVertex[0] = 0;
 
   std::set< peano4::parallel::Node::PeriodicBoundaryStackIdentifier > resultTopRightVertex = peano4::parallel::Node::getOutputStacksForPeriodicBoundaryExchange(flagsTopRightVertex);
-  validateEqualsWithParams1( resultTopRightVertex.size(), 3, flagsTopRightVertex );
+  validateEquals( resultTopRightVertex.size(), 3 );
 
   peano4::parallel::Node::PeriodicBoundaryStackIdentifier key0( 7,3);
   peano4::parallel::Node::PeriodicBoundaryStackIdentifier key1( 8,2);
@@ -65,11 +58,12 @@ void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryEx
   //
   // bottom left vertex
   //
-  tarch::la::Vector<TWO_POWER_D,int>  flagsBottomLeftVertex(peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition);
-  flagsBottomLeftVertex(3) = 0;
+  std::array<int, TWO_POWER_D> flagsBottomLeftVertex;
+  flagsBottomLeftVertex.fill(peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition);
+  flagsBottomLeftVertex[3] = 0;
 
   std::set< peano4::parallel::Node::PeriodicBoundaryStackIdentifier > resultBottomLeftVertex = peano4::parallel::Node::getOutputStacksForPeriodicBoundaryExchange(flagsBottomLeftVertex);
-  validateEqualsWithParams1( resultBottomLeftVertex.size(), 3, flagsBottomLeftVertex );
+  validateEquals( resultBottomLeftVertex.size(), 3 );
 
   peano4::parallel::Node::PeriodicBoundaryStackIdentifier key3(11,1);
   peano4::parallel::Node::PeriodicBoundaryStackIdentifier key4(13,2);
@@ -106,23 +100,25 @@ void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryEx
   validateEquals( peano4::parallel::Node::mapPeriodicBoundaryExchangeOutputStackOntoInputStack(14), 15 );
   #endif
   #if DIMENSIONS==3
-  tarch::la::Vector<TWO_POWER_D,int>  flags(peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition);
-  flags(0) = 0;
+  std::array<int, TWO_POWER_D> flags;
+  flags.fill(peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition);
+  flags[0] = 0;
 
   std::set< peano4::parallel::Node::PeriodicBoundaryStackIdentifier > result = peano4::parallel::Node::getOutputStacksForPeriodicBoundaryExchange(flags);
-  validateEqualsWithParams3( result.size(), 7, flags, peano4::parallel::Node::toString(result), "expected output={(stack=9,bnd=111),(stack=10,bnd=110),(stack=12,bnd=101),(stack=13,bnd=100),(stack=18,bnd=011),(stack=19,bnd=010),(stack=21,bnd=001)}" );
+  validateEqualsWithParams2( result.size(), 7, peano4::parallel::Node::toString(result), "expected output={(stack=9,bnd=111),(stack=10,bnd=110),(stack=12,bnd=101),(stack=13,bnd=100),(stack=18,bnd=011),(stack=19,bnd=010),(stack=21,bnd=001)}" );
   #endif
 }
 
 
 void peano4::parallel::tests::NodeTest::testGetPeriodicBoundaryNumber() {
   #if DIMENSIONS==2
-  tarch::la::Vector<TWO_POWER_D,int>  flags(1);
-  flags(0) = peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition;
-  flags(1) = peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition;
+  std::array<int, TWO_POWER_D> flags;
+  flags.fill(1);
+  flags[0] = peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition;
+  flags[1] = peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition;
 
   std::bitset<2*DIMENSIONS> result = peano4::parallel::Node::getPeriodicBoundaryNumber(flags);
-  validateEqualsWithParams1( result.to_ulong(), 2, flags );
+  validateEquals( result.to_ulong(), 2 );
   #endif
 }
 
@@ -134,8 +130,3 @@ void peano4::parallel::tests::NodeTest::run() {
   testMethod( testGetOutputStacksForPeriodicBoundaryExchange )
   logTraceOut( "run()" );
 }
-
-
-#ifdef UseTestSpecificCompilerSettings
-#pragma optimize("",on)
-#endif

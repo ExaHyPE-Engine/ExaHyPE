@@ -22,9 +22,6 @@ peano4::parallel::SpacetreeSet peano4::parallel::SpacetreeSet::_singleton;
 
 tarch::multicore::BooleanSemaphore peano4::parallel::SpacetreeSet::_semaphore;
 
-peano4::parallel::SpacetreeSet::SpacetreeSet():
-  _state(SpacetreeSetState::Waiting) {}
-
 peano4::parallel::SpacetreeSet& peano4::parallel::SpacetreeSet::getInstance() { return _singleton; }
 
 void peano4::parallel::SpacetreeSet::init(
@@ -63,16 +60,6 @@ int peano4::parallel::SpacetreeSet::getAnswerTag(int targetSpacetreeId) const {
   return _answerMessageTag + Node::getInstance().getLocalTreeId(targetSpacetreeId);
 }
 
-std::string peano4::parallel::SpacetreeSet::toString(SpacetreeSetState state) {
-  switch (state) {
-  case SpacetreeSetState::TraverseTreesAndExchangeData:
-    return "traverse-trees-and-exchange-data";
-  case SpacetreeSetState::Waiting:
-    return "waiting";
-  }
-  return "undef";
-}
-
 void peano4::parallel::SpacetreeSet::answerQuestions() {
 #ifdef WITH_MPI
   std::vector<peano4::parallel::TreeManagementMessage> unansweredMessagesThatIanAnswerNow;
@@ -85,22 +72,16 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
       p = _unansweredMessages.erase(p);
       break;
     case peano4::parallel::TreeManagementMessage::Action::RemoveChildTreeFromBooksAsChildBecameEmpty:
-    case peano4::parallel::TreeManagementMessage::Action::CreateNewRemoteTree: {
-      if (_state == SpacetreeSetState::Waiting) {
-        unansweredMessagesThatIanAnswerNow.push_back(*p);
-        p = _unansweredMessages.erase(p);
-      } else {
-        logDebug("answerMessages()", "can't answer as I'm in the wrong state");
-        p++;
-      }
-    } break;
+    case peano4::parallel::TreeManagementMessage::Action::CreateNewRemoteTree:
+      unansweredMessagesThatIanAnswerNow.push_back(*p);
+      p = _unansweredMessages.erase(p);
+      break;
     case peano4::parallel::TreeManagementMessage::Action::Acknowledgement:
     case peano4::parallel::TreeManagementMessage::Action::JoinWithWorker:
-      assertionMsg(false, "should only be passed synchronously and never run through this tag");
+      assertionMsg(false, "Should only be passed synchronously and never run through this tag");
       break;
     }
   }
-
 
   for (auto p : unansweredMessagesThatIanAnswerNow) {
     switch (p.getAction()) {
@@ -120,11 +101,10 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
         tarch::mpi::Rank::getInstance().getCommunicator()
       );
       logDebug(
-        "receiveDanglingMessages()", "reserved tree id " << newSpacetreeId << " for tree " << p.getMasterSpacetreeId()
+        "receiveDanglingMessages()", "Reserved tree id " << newSpacetreeId << " for tree " << p.getMasterSpacetreeId()
       );
     } break;
     case peano4::parallel::TreeManagementMessage::Action::CreateNewRemoteTree: {
-      assertion(_state == SpacetreeSetState::Waiting);
       peano4::parallel::TreeManagementMessage answerMessage;
       answerMessage.setAction(TreeManagementMessage::Action::Acknowledgement);
       peano4::parallel::TreeManagementMessage::send(
@@ -153,10 +133,9 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
     } break;
     case peano4::parallel::TreeManagementMessage::Action::Acknowledgement:
     case peano4::parallel::TreeManagementMessage::Action::JoinWithWorker:
-      assertionMsg(false, "should only be passed synchronously and never run through this tag");
+      assertionMsg(false, "Should only be passed synchronously and never run through this tag");
       break;
     case peano4::parallel::TreeManagementMessage::Action::RemoveChildTreeFromBooksAsChildBecameEmpty: {
-      assertion(_state == SpacetreeSetState::Waiting);
       logInfo(
         "receiveDanglingMessages()",
         "Learned that remote child tree "
@@ -183,20 +162,14 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
 
 void peano4::parallel::SpacetreeSet::receiveDanglingMessages() {
 #ifdef WITH_MPI
-
   if (tarch::mpi::Rank::getInstance().isMessageInQueue(_requestMessageTag)) {
-    logTraceIn("receiveDanglingMessages()");
-
     peano4::parallel::TreeManagementMessage message;
     peano4::parallel::TreeManagementMessage::receive(
       message, MPI_ANY_SOURCE, _requestMessageTag, tarch::mpi::Rank::getInstance().getCommunicator()
     );
 
     _unansweredMessages.push_back(message);
-
-    logDebug("receiveDanglingMessages()", "received new message " << message.toString());
-
-    logTraceOut("receiveDanglingMessages()");
+    logDebug("receiveDanglingMessages()", "Received new message " << message.toString());
   }
 
   answerQuestions();
@@ -473,8 +446,6 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
 
   Node::getInstance().createPendingCommunicators();
 
-  _state = SpacetreeSetState::TraverseTreesAndExchangeData;
-
   std::vector<tarch::multicore::Task*> primaryTasks;
   std::vector<tarch::multicore::Task*> secondaryTasks;
   std::vector<tarch::multicore::Task*> tertiaryTasks;
@@ -549,8 +520,6 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
 #ifdef WITH_OPENMP
   }
 #endif
-
-  _state = SpacetreeSetState::Waiting;
 
   cleanUpTrees(observer);
   createNewTrees();

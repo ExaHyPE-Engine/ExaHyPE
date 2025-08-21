@@ -10,8 +10,9 @@
 
 #include "tarch/logging/Log.h"
 
+// #include "peano4/stacks/Stack.h"
+// #include "peano4/stacks/StackMap.h"
 #include "peano4/stacks/STDVectorStack.h"
-
 #include "peano4/maps/STDStackMap.h"
 #include "peano4/maps/HierarchicalStackMap.h"
 
@@ -146,10 +147,11 @@ class peano4::grid::Spacetree {
      */
     std::set< int >      _joining;
 
-    //typedef peano4::maps::STDStackMap< peano4::stacks::GridVertexStack >   GridVertexStackMap;
-    typedef peano4::maps::HierarchicalStackMap< peano4::stacks::GridVertexStack >   GridVertexStackMap;
-
+    using GridVertexStackMap = maps::HierarchicalStackMap<stacks::GridVertexStack>;
     static GridVertexStackMap  _vertexStack;
+
+    // using GridVertexStackMap = stacks::StackMap<stacks::Stack<GridVertex>>;
+    // static GridVertexStackMap _vertexStack;
 
     /**
      * We get these control events when we kick off the traversal and then
@@ -737,10 +739,7 @@ class peano4::grid::Spacetree {
 	  int         newId
     );
 
-    /**
-     * @todo
-     */
-    tarch::la::Vector<TWO_POWER_D,int> getAdjacentRanksForNewVertex(
+    std::array<int, TWO_POWER_D> getAdjacentRanksForNewVertex(
       GridVertex                                   coarseGridVertices[TWO_POWER_D],
       const tarch::la::Vector<DIMENSIONS,int>&     vertexPositionWithin3x3Patch
     ) const;

@@ -11,143 +11,164 @@
 #include <string>
 
 #ifdef WITH_MPI
-#include <mpi.h>
 #include <functional>
+#include <mpi.h>
 #endif
 
+#include "peano4/grid/LoadStoreComputeFlag.h"
+#include "peano4/grid/TraversalObserver.h"
+#include "peano4/utils/Globals.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
-#include "peano4/grid/LoadStoreComputeFlag.h"
-#include "peano4/utils/Globals.h"
-#include "peano4/grid/TraversalObserver.h"
 
 
-
-namespace peano4{
-namespace grid{
-  struct GridStatistics;
-}
-}
+namespace peano4 {
+  namespace grid {
+    struct GridStatistics;
+  } // namespace grid
+} // namespace peano4
 
 struct peano4::grid::GridStatistics {
-  public:
-    GridStatistics() {}
-    GridStatistics(int  __numberOfLocalUnrefinedCells, int  __numberOfRemoteUnrefinedCells, int  __numberOfLocalRefinedCells, int  __numberOfRemoteRefinedCells, int  __stationarySweeps, bool  __coarseningHasBeenVetoed, bool  __removedEmptySubtree, tarch::la::Vector<DIMENSIONS,double>  __minH);
+public:
+  GridStatistics() {}
+  GridStatistics(
+    int                                   __numberOfLocalUnrefinedCells,
+    int                                   __numberOfRemoteUnrefinedCells,
+    int                                   __numberOfLocalRefinedCells,
+    int                                   __numberOfRemoteRefinedCells,
+    int                                   __stationarySweeps,
+    bool                                  __coarseningHasBeenVetoed,
+    bool                                  __removedEmptySubtree,
+    tarch::la::Vector<DIMENSIONS, double> __minH
+  );
 
-    int   getNumberOfLocalUnrefinedCells() const;
-    void   setNumberOfLocalUnrefinedCells(int value);
-    int   getNumberOfRemoteUnrefinedCells() const;
-    void   setNumberOfRemoteUnrefinedCells(int value);
-    int   getNumberOfLocalRefinedCells() const;
-    void   setNumberOfLocalRefinedCells(int value);
-    int   getNumberOfRemoteRefinedCells() const;
-    void   setNumberOfRemoteRefinedCells(int value);
-    int   getStationarySweeps() const;
-    void   setStationarySweeps(int value);
-    bool   getCoarseningHasBeenVetoed() const;
-    void   setCoarseningHasBeenVetoed(bool value);
-    bool   getRemovedEmptySubtree() const;
-    void   setRemovedEmptySubtree(bool value);
-    tarch::la::Vector<DIMENSIONS,double>   getMinH() const;
-    void   setMinH(const tarch::la::Vector<DIMENSIONS,double>& value);
-    double   getMinH(int index) const;
-    void   setMinH(int index, double value);
+  int                                   getNumberOfLocalUnrefinedCells() const;
+  void                                  setNumberOfLocalUnrefinedCells(int value);
+  int                                   getNumberOfRemoteUnrefinedCells() const;
+  void                                  setNumberOfRemoteUnrefinedCells(int value);
+  int                                   getNumberOfLocalRefinedCells() const;
+  void                                  setNumberOfLocalRefinedCells(int value);
+  int                                   getNumberOfRemoteRefinedCells() const;
+  void                                  setNumberOfRemoteRefinedCells(int value);
+  int                                   getStationarySweeps() const;
+  void                                  setStationarySweeps(int value);
+  bool                                  getCoarseningHasBeenVetoed() const;
+  void                                  setCoarseningHasBeenVetoed(bool value);
+  bool                                  getRemovedEmptySubtree() const;
+  void                                  setRemovedEmptySubtree(bool value);
+  tarch::la::Vector<DIMENSIONS, double> getMinH() const;
+  void                                  setMinH(const tarch::la::Vector<DIMENSIONS, double>& value);
+  double                                getMinH(int index) const;
+  void                                  setMinH(int index, double value);
 
-    #ifdef WITH_MPI
-    /**
-     * Hands out MPI datatype if we work without the LLVM MPI extension.
-     * If we work with this additional feature, this is the routine where
-     * the lazy initialisation is done and the datatype is also cached.
-     */
-    static MPI_Datatype  getForkDatatype();
-    static MPI_Datatype  getJoinDatatype();
-    static MPI_Datatype  getBoundaryExchangeDatatype();
-    static MPI_Datatype  getMultiscaleDataExchangeDatatype();
-    static MPI_Datatype  getGlobalCommunicationDatatype();
-
-    static void  freeForkDatatype();
-    static void  freeJoinDatatype();
-    static void  freeBoundaryExchangeDatatype();
-    static void  freeMultiscaleDataExchangeDatatype();
-    static void  freeGlobalCommunicationDatatype();
-
-    /**
-     * @return The rank of the sender of an object. It only make ssense to call
-     *         this routine after you've invoked receive with MPI_ANY_SOURCE.
-     */
-    int getSenderRank() const;
-
-    /**
-     * Wrapper around getDatatype() to trigger lazy evaluation if we
-     * use the lazy initialisation.
-     */
-    static void initDatatype();
-
-    /**
-     * Free the underlying MPI datatype.
-     */
-    static void shutdownDatatype();
-
-    /**
-     * In DaStGen (the first version), I had a non-static version of the send
-     * as well as the receive. However, this did not work with newer C++11
-     * versions, as a member function using this as pointer usually doesn't
-     * see the vtable while the init sees the object from outside, i.e.
-     * including a vtable. So this routine now is basically an alias for a
-     * blocking MPI_Send.
-     */
-    static void send(const peano4::grid::GridStatistics& buffer, int destination, int tag, MPI_Comm communicator );
-    static void receive(peano4::grid::GridStatistics& buffer, int source, int tag, MPI_Comm communicator );
-
-    /**
-     * Alternative to the other send() where I trigger a non-blocking send an
-     * then invoke the functor until the corresponding MPI_Test tells me that
-     * the message went through. In systems with heavy MPI usage, this can
-     * help to avoid deadlocks.
-     */
-    static void send(const peano4::grid::GridStatistics& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(   peano4::grid::GridStatistics& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
-    #endif
-
-
-    enum ObjectConstruction {
-      NoData
-    };
-
-    GridStatistics( ObjectConstruction ):
-        GridStatistics() {}
-    
 #ifdef WITH_MPI
-    static void sendAndPollDanglingMessages(const peano4::grid::GridStatistics& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
-    static void receiveAndPollDanglingMessages(peano4::grid::GridStatistics& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
+  /**
+   * Hands out MPI datatype if we work without the LLVM MPI extension.
+   * If we work with this additional feature, this is the routine where
+   * the lazy initialisation is done and the datatype is also cached.
+   */
+  static MPI_Datatype getForkDatatype();
+  static MPI_Datatype getJoinDatatype();
+  static MPI_Datatype getBoundaryExchangeDatatype();
+  static MPI_Datatype getMultiscaleDataExchangeDatatype();
+  static MPI_Datatype getGlobalCommunicationDatatype();
+
+  static void freeForkDatatype();
+  static void freeJoinDatatype();
+  static void freeBoundaryExchangeDatatype();
+  static void freeMultiscaleDataExchangeDatatype();
+  static void freeGlobalCommunicationDatatype();
+
+  /**
+   * @return The rank of the sender of an object. It only make ssense to call
+   *         this routine after you've invoked receive with MPI_ANY_SOURCE.
+   */
+  int getSenderRank() const;
+
+  /**
+   * Wrapper around getDatatype() to trigger lazy evaluation if we
+   * use the lazy initialisation.
+   */
+  static void initDatatype();
+
+  /**
+   * Free the underlying MPI datatype.
+   */
+  static void shutdownDatatype();
+
+  /**
+   * In DaStGen (the first version), I had a non-static version of the send
+   * as well as the receive. However, this did not work with newer C++11
+   * versions, as a member function using this as pointer usually doesn't
+   * see the vtable while the init sees the object from outside, i.e.
+   * including a vtable. So this routine now is basically an alias for a
+   * blocking MPI_Send.
+   */
+  static void send(const peano4::grid::GridStatistics& buffer, int destination, int tag, MPI_Comm communicator);
+  static void receive(peano4::grid::GridStatistics& buffer, int source, int tag, MPI_Comm communicator);
+
+  /**
+   * Alternative to the other send() where I trigger a non-blocking send an
+   * then invoke the functor until the corresponding MPI_Test tells me that
+   * the message went through. In systems with heavy MPI usage, this can
+   * help to avoid deadlocks.
+   */
+  static void send(
+    const peano4::grid::GridStatistics& buffer,
+    int                                 destination,
+    int                                 tag,
+    std::function<void()>               startCommunicationFunctor,
+    std::function<void()>               waitFunctor,
+    MPI_Comm                            communicator
+  );
+  static void receive(
+    peano4::grid::GridStatistics& buffer,
+    int                           source,
+    int                           tag,
+    std::function<void()>         startCommunicationFunctor,
+    std::function<void()>         waitFunctor,
+    MPI_Comm                      communicator
+  );
 #endif
-    
 
-    std::string toString() const;
 
-  private:
-    int   _numberOfLocalUnrefinedCells;
-    int   _numberOfRemoteUnrefinedCells;
-    int   _numberOfLocalRefinedCells;
-    int   _numberOfRemoteRefinedCells;
-    int   _stationarySweeps;
-    bool   _coarseningHasBeenVetoed;
-    bool   _removedEmptySubtree;
-    tarch::la::Vector<DIMENSIONS,double>   _minH;
+  enum ObjectConstruction { NoData };
 
-    #ifdef WITH_MPI
-    private:
-      int _senderDestinationRank;
+  GridStatistics(ObjectConstruction):
+    GridStatistics() {}
 
-      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-      /**
-       * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
-       * initialisation of the datatype. However, Peano calls init explicitly
-       * in most cases. Without the LLVM extension which caches the MPI
-       * datatype once constructed, this field stores the type.
-       */
-      static MPI_Datatype  Datatype;
-      #endif
-    #endif
+#ifdef WITH_MPI
+  static void sendAndPollDanglingMessages(
+    const peano4::grid::GridStatistics& message,
+    int                                 destination,
+    int                                 tag,
+    MPI_Comm                            communicator = tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+  static void receiveAndPollDanglingMessages(
+    peano4::grid::GridStatistics& message,
+    int                           source,
+    int                           tag,
+    MPI_Comm                      communicator = tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+#endif
+
+
+  std::string toString() const;
+
+private:
+  int                                   _numberOfLocalUnrefinedCells;
+  int                                   _numberOfRemoteUnrefinedCells;
+  int                                   _numberOfLocalRefinedCells;
+  int                                   _numberOfRemoteRefinedCells;
+  int                                   _stationarySweeps;
+  bool                                  _coarseningHasBeenVetoed;
+  bool                                  _removedEmptySubtree;
+  tarch::la::Vector<DIMENSIONS, double> _minH;
+
+#ifdef WITH_MPI
+private:
+  int                 _senderDestinationRank;
+  static MPI_Datatype Datatype;
+#endif
 };

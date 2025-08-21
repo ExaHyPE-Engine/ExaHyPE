@@ -299,13 +299,6 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      */
     static tarch::multicore::BooleanSemaphore                      _semaphore;
 
-    enum class SpacetreeSetState {
-      Waiting,
-      TraverseTreesAndExchangeData
-    };
-
-    static std::string toString( SpacetreeSetState state );
-
     /**
      * I use this tag to identify messages send from one tree to another rank.
      * All answers go through an answer tag. To identify the right one, please
@@ -325,14 +318,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
     /**
      * These are the local spacetrees.
      */
-    std::list< peano4::grid::Spacetree >  _spacetrees;
-
-    /**
-     * The state identifies what the set is doing right now. The flag is for example
-     * used by receiveDanglingMessages() as we may not create new trees or change
-     * tree states while we are running through them or realise their data exchange.
-     */
-    SpacetreeSetState                     _state;
+    std::list< peano4::grid::Spacetree > _spacetrees;
 
     /**
      * I create/clone one observer per local tree. This is an
@@ -536,7 +522,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      */
     void createObserverCloneIfRequired(peano4::grid::TraversalObserver& observer, int treeId);
 
-    SpacetreeSet();
+    SpacetreeSet() = default;
     SpacetreeSet(const SpacetreeSet& ) = delete;
     SpacetreeSet& operator=(const SpacetreeSet& ) = delete;
 

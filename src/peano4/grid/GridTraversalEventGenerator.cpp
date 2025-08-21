@@ -53,13 +53,13 @@ std::bitset<TWO_TIMES_D> peano4::grid::GridTraversalEventGenerator::areFacesLoca
       std::bitset<DIMENSIONS> studiedEntry = TWO_POWER_D - vertexIndex - 1;
 
       studiedEntry.set(normal, 0);
-      int currentRank = vertex.getAdjacentRanks(static_cast<int>(studiedEntry.to_ulong()));
+      int currentRank = vertex.adjacentRanks[static_cast<int>(studiedEntry.to_ulong())];
       if (vertex.getState() != GridVertex::State::HangingVertex or upper) {
         isLocal |= currentRank == _id or splitTriggered.count(currentRank) > 0 or splitting.count(currentRank) > 0;
       }
 
       studiedEntry.set(normal, 1);
-      currentRank = vertex.getAdjacentRanks(static_cast<int>(studiedEntry.to_ulong()));
+      currentRank = vertex.adjacentRanks[static_cast<int>(studiedEntry.to_ulong())];
       if (vertex.getState() != GridVertex::State::HangingVertex or not upper) {
         isLocal |= currentRank == _id or splitTriggered.count(currentRank) > 0 or splitting.count(currentRank) > 0;
       }
@@ -83,7 +83,7 @@ bool peano4::grid::GridTraversalEventGenerator::isVertexAdjacentToLocalSpacetree
   bool                      joiningIsConsideredLocal
 ) const {
   for (int i = 0; i < TWO_POWER_D; i++) {
-    const auto adjacentRank = vertex.getAdjacentRanks(i);
+    const int adjacentRank = vertex.adjacentRanks[i];
 
     assertion(splitTriggered.count(adjacentRank) <= 1);
     assertion(splitting.count(adjacentRank) <= 1);
@@ -114,8 +114,8 @@ bool peano4::grid::GridTraversalEventGenerator::isSpacetreeNodeLocal(
   bool                      joiningIsConsideredLocal
 ) const {
   dfor2(k)
-    const int rank = vertices[kScalar].getAdjacentRanks(TWO_POWER_D - kScalar - 1);
-    const auto isHanging = vertices[kScalar].getState() == GridVertex::State::HangingVertex;
+    const int rank = vertices[kScalar].adjacentRanks[TWO_POWER_D - kScalar - 1];
+    const bool isHanging = vertices[kScalar].getState() == GridVertex::State::HangingVertex;
 
     if (
       not isHanging and rank != _id and splitTriggered.find(rank) == splitTriggered.end()
@@ -141,12 +141,12 @@ std::bitset<TWO_POWER_D> peano4::grid::GridTraversalEventGenerator::areVerticesA
 ) const {
   std::bitset<TWO_POWER_D> result;
   for (int j = 0; j < TWO_POWER_D; j++) {
-    tarch::la::Vector<TWO_POWER_D, int> adjacency = vertices[j].getBackupOfAdjacentRanks();
+    const auto& adjacency = vertices[j].backupOfAdjacentRanks;
     bool                              oneLocal  = false;
     bool                              oneRemote = false;
     for (int i = 0; i < TWO_POWER_D; i++) {
-      bool valid = adjacency(i) >= 0 or adjacency(i) == peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition;
-      bool local = adjacency(i) == _id or splitting.count(adjacency(i)) > 0 or splitTriggered.count(adjacency(i)) > 0;
+      bool valid = adjacency[i] >= 0 or adjacency[i] == Spacetree::RankOfPeriodicBoundaryCondition;
+      bool local = adjacency[i] == _id or splitting.count(adjacency[i]) > 0 or splitTriggered.count(adjacency[i]) > 0;
       oneLocal |= (valid and local);
       oneRemote |= (valid and not local);
     }
@@ -235,10 +235,10 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     if (fineGridVertices[kScalar].getState() != GridVertex::State::HangingVertex) {
       dfor2(j) {
         tarch::la::Vector<DIMENSIONS, int> entryIn3x3Patch = k + j;
-        int                                owningTree      = fineGridVertices[kScalar].getAdjacentRanks(jScalar);
+        int                                owningTree      = fineGridVertices[kScalar].adjacentRanks[jScalar];
         event.setIsAdjacentCellLocal(peano4::utils::dLinearised(entryIn3x3Patch, 3), owningTree == _id);
         event.setIsVertexParentOfSubtree(
-          fineGridVertices[kScalar].getHasBeenParentOfSubtreeVertexInPreviousTreeSweep()
+          fineGridVertices[kScalar].getFlag(GridVertex::HasBeenParentOfSubtreeVertexInPreviousTreeSweep)
         );
       }
       enddforx
@@ -250,8 +250,8 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     std::set<int> neighbourIds;
 
     for (int i = 0; i < TWO_POWER_D; i++) {
-      if (fineGridVertices[kScalar].getAdjacentRanks(i) >= 0) {
-        neighbourIds.insert(fineGridVertices[kScalar].getAdjacentRanks(i));
+      if (fineGridVertices[kScalar].adjacentRanks[i] >= 0) {
+        neighbourIds.insert(fineGridVertices[kScalar].adjacentRanks[i]);
       }
     }
 
@@ -534,8 +534,10 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     bool mayResetToNoData = PeanoCurve::isInOutStack(event.getVertexDataFrom(i))
                             and not event.getIsVertexLocal(vertexPosition);
 
-    for (auto p : hasSplit) {
-      mayResetToNoData &= not tarch::la::contains(fineGridVertices[vertexPosition].getAdjacentRanks(), p);
+    for (int p : hasSplit) {
+      const auto& adjacentRanks = fineGridVertices[vertexPosition].adjacentRanks;
+      const bool contains = std::find(std::begin(adjacentRanks), std::end(adjacentRanks), p) != std::end(adjacentRanks);
+      mayResetToNoData &= not contains;
     }
 
     if (mayResetToNoData) {
@@ -799,8 +801,8 @@ int peano4::grid::GridTraversalEventGenerator::getTreeOwningSpacetreeNode(
   dfor2(
     k
   ) if (vertices[kScalar].getState() != GridVertex::State::HangingVertex
-        and vertices[kScalar].getAdjacentRanks(TWO_POWER_D - kScalar - 1) != InvalidRank) {
-    weakId = vertices[kScalar].getAdjacentRanks(TWO_POWER_D - kScalar - 1);
+        and vertices[kScalar].adjacentRanks[TWO_POWER_D - kScalar - 1] != InvalidRank) {
+    weakId = vertices[kScalar].adjacentRanks[TWO_POWER_D - kScalar - 1];
   }
   if (vertices[kScalar].getState() != GridVertex::State::HangingVertex
       and isVertexAdjacentToLocalSpacetree(
@@ -813,7 +815,7 @@ int peano4::grid::GridTraversalEventGenerator::getTreeOwningSpacetreeNode(
         false
       )) {
     assertion8(
-      id == NotSetYet or vertices[kScalar].getAdjacentRanks(TWO_POWER_D - kScalar - 1) == id,
+      id == NotSetYet or vertices[kScalar].adjacentRanks[TWO_POWER_D - kScalar - 1] == id,
       id,
       kScalar,
       vertices[kScalar].toString(),
@@ -823,7 +825,7 @@ int peano4::grid::GridTraversalEventGenerator::getTreeOwningSpacetreeNode(
       vertices[3].toString(),
       _id
     );
-    id = vertices[kScalar].getAdjacentRanks(TWO_POWER_D - kScalar - 1);
+    id = vertices[kScalar].adjacentRanks[TWO_POWER_D - kScalar - 1];
   }
   enddforx assertion1(
     id != NotSetYet
@@ -861,8 +863,8 @@ tarch::la::Vector<TWO_POWER_D, int> peano4::grid::GridTraversalEventGenerator::
 
       const int entryIndex = static_cast<int>(studiedEntry.to_ulong());
       int rank = calledByReceivingProcess
-               ? vertex.getBackupOfAdjacentRanks(entryIndex)
-               : vertex.getAdjacentRanks(entryIndex);
+               ? vertex.backupOfAdjacentRanks[entryIndex]
+               : vertex.adjacentRanks[entryIndex];
 
       adjacentRanksOfFace(counter++) = isInvalid ? InvalidRank : rank;
     }

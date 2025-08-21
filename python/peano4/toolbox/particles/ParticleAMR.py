@@ -180,9 +180,9 @@ class ParticleAMR(ActionSet):
 
   // insert and then merge immediately to reduce the
   // event count
-  _localGridControlEvents = peano4::grid::merge( _localGridControlEvents );
+  _localGridControlEvents = peano4::grid::mergeGridControlEvents( _localGridControlEvents );
   _newGridControlEvents.insert( _newGridControlEvents.end(), _localGridControlEvents.begin(), _localGridControlEvents.end() );
-  _newGridControlEvents = peano4::grid::merge( _newGridControlEvents );
+  _newGridControlEvents = peano4::grid::mergeGridControlEvents( _newGridControlEvents );
 """
     )
 
@@ -244,5 +244,5 @@ std::vector< peano4::grid::GridControlEvent >  """
 _oldGridControlEvents.clear();
 _oldGridControlEvents = _newGridControlEvents;
 _newGridControlEvents.clear();
-_oldGridControlEvents = peano4::grid::merge( _oldGridControlEvents );
+_oldGridControlEvents = peano4::grid::mergeGridControlEvents(_oldGridControlEvents);
 """

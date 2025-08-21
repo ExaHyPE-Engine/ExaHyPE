@@ -27,20 +27,11 @@ class MPI(object):
 
     def get_attributes(self):
         return """
-    #ifdef WITH_MPI
+#ifdef WITH_MPI
     private:
-      int                  _senderDestinationRank;
-
-      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-      /**
-       * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
-       * initialisation of the datatype. However, Peano calls init explicitly
-       * in most cases. Without the LLVM extension which caches the MPI
-       * datatype once constructed, this field stores the type.
-       */
+      int _senderDestinationRank;
       static MPI_Datatype  Datatype;
-      #endif
-    #endif
+#endif
 """
 
     def get_method_declarations(self, full_qualified_name):
@@ -116,12 +107,9 @@ class MPI(object):
         result = (
             """
 #ifdef WITH_MPI
-
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype """
             + full_qualified_name
             + """::Datatype = MPI_DATATYPE_NULL;
-#endif
 
 MPI_Datatype """
             + full_qualified_name
@@ -207,8 +195,7 @@ int """
 void """
             + full_qualified_name
             + """::initDatatype() {
-  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  """
+"""
             + full_qualified_name
             + """  instances[2];
 
@@ -290,33 +277,17 @@ void """
   delete[] subtypes;
   delete[] blocklen;
   delete[] disp;
-
-  #else
-  // invoke routine once to trigger lazy initialisation
-  getForkDatatype();
-  getJoinDatatype();
-  getBoundaryExchangeDatatype();
-  getMultiscaleDataExchangeDatatype();
-  getGlobalCommunicationDatatype();
-  #endif
 }
-
 
 void """
             + full_qualified_name
             + """::shutdownDatatype() {
-  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   freeForkDatatype();
   freeJoinDatatype();
   freeBoundaryExchangeDatatype();
   freeMultiscaleDataExchangeDatatype();
   freeGlobalCommunicationDatatype();
-  #else
-  MPI_Datatype type = Datatype;
-  MPI_Type_free( &type );
-  #endif
 }
-
 
 void """
             + full_qualified_name

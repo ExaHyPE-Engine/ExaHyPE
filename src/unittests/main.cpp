@@ -220,11 +220,11 @@ int main(int argc, char** argv) {
   );
 
 #if DIMENSIONS == 2
-  auto DomainOffset = {0.0, 0.0};
-  auto DomainSize   = {1.0, 1.0};
+  const auto DomainOffset = {0.0, 0.0};
+  const auto DomainSize   = {1.0, 1.0};
 #else
-  auto DomainOffset = {0.0, 0.0, 0.0};
-  auto DomainSize   = {1.0, 1.0, 1.0};
+  const auto DomainOffset = {0.0, 0.0, 0.0};
+  const auto DomainSize   = {1.0, 1.0, 1.0};
 #endif
 
   peano4::init(&argc, &argv, DomainOffset, DomainSize, 0);

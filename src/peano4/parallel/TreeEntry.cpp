@@ -54,9 +54,7 @@ void   peano4::parallel::TreeEntry::setMaster(int value) {
 
 #ifdef WITH_MPI
 
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype peano4::parallel::TreeEntry::Datatype = MPI_DATATYPE_NULL;
-#endif
 
 MPI_Datatype peano4::parallel::TreeEntry::getForkDatatype() {
   return Datatype;
@@ -120,7 +118,6 @@ int peano4::parallel::TreeEntry::getSenderRank() const {
 
 
 void peano4::parallel::TreeEntry::initDatatype() {
-  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   peano4::parallel::TreeEntry  instances[2];
 
   int NumberOfAttributes = 0;
@@ -167,29 +164,15 @@ void peano4::parallel::TreeEntry::initDatatype() {
   delete[] subtypes;
   delete[] blocklen; 
   delete[] disp;
-
-  #else
-  // invoke routine once to trigger lazy initialisation
-  getForkDatatype();
-  getJoinDatatype();
-  getBoundaryExchangeDatatype();
-  getMultiscaleDataExchangeDatatype();
-  getGlobalCommunicationDatatype();
-  #endif
 }
 
 
 void peano4::parallel::TreeEntry::shutdownDatatype() {
-  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   freeForkDatatype();
   freeJoinDatatype();
   freeBoundaryExchangeDatatype();
   freeMultiscaleDataExchangeDatatype();
   freeGlobalCommunicationDatatype();
-  #else
-  MPI_Datatype type = Datatype;
-  MPI_Type_free( &type );
-  #endif
 }
 
 

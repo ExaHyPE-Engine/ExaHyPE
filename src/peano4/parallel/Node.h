@@ -171,7 +171,7 @@ public:
    * it in a set.
    */
   static std::set<PeriodicBoundaryStackIdentifier> getOutputStacksForPeriodicBoundaryExchange(
-    const tarch::la::Vector<TWO_POWER_D, int>& flags
+    const std::array<int, TWO_POWER_D>& flags
   );
 
   static std::string toString(const std::set<PeriodicBoundaryStackIdentifier>& data);
@@ -408,5 +408,5 @@ private:
    * per vertex, and now have to work backwards which periodic faces they
    * do represent.
    */
-  static std::bitset<2 * DIMENSIONS> getPeriodicBoundaryNumber(const tarch::la::Vector<TWO_POWER_D, int>& flags);
+  static std::bitset<2 * DIMENSIONS> getPeriodicBoundaryNumber(const std::array<int, TWO_POWER_D>& flags);
 };

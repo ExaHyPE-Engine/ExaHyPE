@@ -41,10 +41,7 @@ void   tarch::mpi::IntegerMessage::setValue(int value) {
 
 #ifdef WITH_MPI
 
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype tarch::mpi::IntegerMessage::Datatype = MPI_DATATYPE_NULL;
-#endif
-
 
 MPI_Datatype tarch::mpi::IntegerMessage::getForkDatatype() {
   return Datatype;
@@ -117,7 +114,6 @@ int tarch::mpi::IntegerMessage::getSenderRank() const {
 
 
 void tarch::mpi::IntegerMessage::initDatatype() {
-  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   tarch::mpi::IntegerMessage  instances[2];
 
   int NumberOfAttributes = 0;
@@ -158,29 +154,15 @@ void tarch::mpi::IntegerMessage::initDatatype() {
   delete[] subtypes;
   delete[] blocklen;
   delete[] disp;
-
-  #else
-  // invoke routine once to trigger lazy initialisation
-  getForkDatatype();
-  getJoinDatatype();
-  getBoundaryExchangeDatatype();
-  getMultiscaleDataExchangeDatatype();
-  getGlobalCommunicationDatatype();
-  #endif
 }
 
 
 void tarch::mpi::IntegerMessage::shutdownDatatype() {
-  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   freeForkDatatype();
   freeJoinDatatype();
   freeBoundaryExchangeDatatype();
   freeMultiscaleDataExchangeDatatype();
   freeGlobalCommunicationDatatype();
-  #else
-  MPI_Datatype type = Datatype;
-  MPI_Type_free( &type );
-  #endif
 }
 
 
