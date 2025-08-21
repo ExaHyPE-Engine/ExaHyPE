@@ -56,7 +56,6 @@ double toolbox::curvi::Interface::invertProjection(Coordinate coord, double coor
   Face upper = boundary.getFace(mu, true);
   Face lower = boundary.getFace(mu, false);
 
-
   std::vector<int> range_xi;
   lower.getIndexRange(xi, range_xi);
   std::vector<int> range_eta;
@@ -66,7 +65,6 @@ double toolbox::curvi::Interface::invertProjection(Coordinate coord, double coor
   double size_xi    = lower(xi, xi, range_xi.back(), eta, range_eta.front()) - offset_xi;
   double size_eta   = lower(eta, xi, range_xi.front(), eta, range_eta.back()) - offset_eta;
 
-
   double index_xi  = (coords[xi] - offset_xi) / size_xi * (range_xi.back() - range_xi.front()) + range_xi.front();
   double index_eta = (coords[eta] - offset_eta) / size_eta * (range_eta.back() - range_eta.front()) + range_eta.front();
 
@@ -75,12 +73,13 @@ double toolbox::curvi::Interface::invertProjection(Coordinate coord, double coor
   int index_xi_c  = std::ceil(index_xi);
   int index_eta_c = std::ceil(index_eta);
 
-  // interpolate
-  // lagrange coefficients
-  double l_xi_c  = (index_xi - index_xi_l) / double(index_xi_c - index_xi_l);
-  double l_xi_l  = (index_xi - index_xi_c) / double(index_xi_l - index_xi_c);
-  double l_eta_c = (index_eta - index_eta_l) / double(index_eta_c - index_eta_l);
-  double l_eta_l = (index_eta - index_eta_c) / double(index_eta_l - index_eta_c);
+  // interpolate lagrange coefficients, this determines the relative position of the index
+  // between the neighbouring indexes
+  // i.e. if xi = xi_c, then l_xi_c = 1., if xi = xi_l then l_xi_c = 0.
+  double l_xi_c  = (index_xi - index_xi_l);
+  double l_xi_l  = 1 - l_xi_c;
+  double l_eta_c = (index_eta - index_eta_l);
+  double l_eta_l = 1 - l_eta_c;
 
   double mu_u = l_xi_c * l_eta_c * upper(mu, xi, index_xi_c, eta, index_eta_c)
                 + l_xi_c * l_eta_l * upper(mu, xi, index_xi_c, eta, index_eta_l)
@@ -98,7 +97,7 @@ double toolbox::curvi::Interface::invertProjection(Coordinate coord, double coor
   return rel_index * size[mu] + offset[mu];
 }
 
-toolbox::curvi::Block toolbox::curvi::Interface::getElement(double* nodes, int ez, int ey, int ex) {
+toolbox::curvi::Block toolbox::curvi::Interface::getElement(double* nodes, int ex, int ey, int ez) {
   /*Check if element is in boundary*/
   if ((ez >= 0 && ey >= 0 && ex >= 0)
       && (ez < static_cast<int>(elements[Coordinate::Z]) && ey < static_cast<int>(elements[Coordinate::Y]) && ex < static_cast<int>(elements[Coordinate::X]))) {

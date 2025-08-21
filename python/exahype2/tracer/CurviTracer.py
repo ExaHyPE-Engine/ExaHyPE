@@ -5,7 +5,7 @@ from peano4.solversteps.ActionSet import ActionSet
 import jinja2
 
 
-class NewDGTracer(ActionSet):
+class CurviTracer(ActionSet):
     """!
 
     Particle tracing over the DG solver.
@@ -42,7 +42,7 @@ class NewDGTracer(ActionSet):
         @see FiniteVolumesTracing.__init()__.
 
         """
-        super(NewDGTracer, self).__init__(descend_invocation_order=1, parallel=False)
+        super(CurviTracer, self).__init__(descend_invocation_order=1, parallel=False)
 
         self._coordinates = coordinates
 
@@ -99,7 +99,7 @@ class NewDGTracer(ActionSet):
     double IniRecord={{INI_RECORD}};
     double LastRecord={{LAST_RECORD}};
 
-    for(int i=0;i<{{N}};i++){
+    for(int i=0; i<_coordinates.size(); i++){
       // It is important to have this asymmetric comparisons with <= as we
       // need to ensure that particles right in the centre are either associated
       // with the vertex left or right.
@@ -161,8 +161,7 @@ class NewDGTracer(ActionSet):
         multiple times. Rather, I
 
         """
-        result = jinja2.Template(
-            """
+        result = """
 _database.setOutputFileName( "{{FILENAME}}" );
 _database.setOutputPrecision( {{OUTPUT_PRECISION}} );
 _database.setDataDeltaBetweenTwoSnapshots( {{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}} );
@@ -174,40 +173,28 @@ _spacetreeId              = treeNumber;
   
 #pragma clang optimize off
 tarch::multicore::Lock lock (_coordinatesSemaphore);
-if (_coordinates==nullptr) {
-  _coordinates = new tarch::la::Vector<DIMENSIONS,double>["""
-            + str(self.d["N"])
-            + """];
-
+if(_coordinates.empty()){
     """
-        ).render(**self.d)
         dimensions = -1
         for i in range(self.d["N"]):
             if len(self._coordinates[i]) == 3:
                 result += (
-                    " _coordinates["
-                    + str(i)
-                    + "](0)="
+                    " _coordinates.push_back(repositories::{{SOLVER_INSTANCE}}.invertProjection(\n"
+                    + "    {\n      "
                     + str(self._coordinates[i][0])
-                    + ";\n"
-                )
-                result += (
-                    " _coordinates["
-                    + str(i)
-                    + "](1)="
+                    + ", "
                     + str(self._coordinates[i][1])
-                    + ";\n"
+                    + "\n"
                 )
                 result += " #if DIMENSIONS==3\n"
                 result += (
-                    " _coordinates["
-                    + str(i)
-                    + "](2)="
+                    "      ,"
                     + str(self._coordinates[i][2])
-                    + ";\n"
+                    + "\n"
                 )
                 result += " #endif\n"
-                result += "\n"
+                result += "    }\n"
+                result += "  ));\n"
                 assert (
                     dimensions == -1 or dimensions == 3
                 ), "inconsistent data: all coordinates have to have three entries: {}".format(
@@ -216,21 +203,15 @@ if (_coordinates==nullptr) {
                 dimensions = 3
             if len(self._coordinates[i]) == 2:
                 result += (
-                    " _coordinates["
-                    + str(i)
-                    + "](0)="
+                    " _coordinates.push_back(repositories::{{SOLVER_INSTANCE}}.invertProjection(\n"
+                    + "    {\n      "
                     + str(self._coordinates[i][0])
-                    + ";\n"
-                )
-                result += (
-                    " _coordinates["
-                    + str(i)
-                    + "](1)="
+                    + ", "
                     + str(self._coordinates[i][1])
-                    + ";\n"
+                    + "\n"
                 )
-                result += " assertion(DIMENSIONS==2);\n"
-                result += "\n"
+                result += "    }\n"
+                result += "  ));\n"
                 assert (
                     dimensions == -1 or dimensions == 2
                 ), "inconsistent data: all coordinates have to have three entries: {}".format(
@@ -239,9 +220,9 @@ if (_coordinates==nullptr) {
                 dimensions = 2
         result += """
 }
-#pragma clang optimize on
+#pragma clang optimize on\n
 """
-        return result
+        return jinja2.Template(result).render(**self.d)
 
     def get_includes(self):
         return """
@@ -256,9 +237,9 @@ if (_coordinates==nullptr) {
     def get_static_initialisations(self, full_qualified_classname):
         return (
             """
-tarch::la::Vector<DIMENSIONS,double>*  """
+std::vector<tarch::la::Vector<DIMENSIONS,double>>  """
             + full_qualified_classname
-            + """::_coordinates = nullptr;
+            + """::_coordinates;
 tarch::multicore::BooleanSemaphore     """
             + full_qualified_classname
             + """::_coordinatesSemaphore;
@@ -272,11 +253,17 @@ toolbox::particles::TrajectoryDatabase  """
 
     def get_attributes(self):
         return """
-    static tarch::multicore::BooleanSemaphore     _coordinatesSemaphore;
-    static tarch::la::Vector<DIMENSIONS,double>*  _coordinates;
-    
+    static tarch::multicore::BooleanSemaphore                 _coordinatesSemaphore;
+    static std::vector<tarch::la::Vector<DIMENSIONS,double>>  _coordinates;
+
     int                                        _spacetreeId;
     double _timeStepSize;    
 
     static toolbox::particles::TrajectoryDatabase  _database;
+
+  public:
+
+    static std::vector<tarch::la::Vector<DIMENSIONS,double>> getCoordinates(){
+      return _coordinates;
+    }
 """
