@@ -132,7 +132,7 @@ class DaStGen2GeneratorForObjectsWithSmartPointers(object):
                                 
         for aspect in old_aspects:
             if isinstance(aspect,dastgen2.aspects.MPI):
-                self._data.data._aspects.append( dastgen2.aspects.MPIForSmartPointers(aspect) )
+                self._data.data._aspects.append( dastgen2.aspects.MPIForSmartPointers(aspect._data_model) )
             elif isinstance(aspect,peano4.dastgen2.MPIAndStorageAspect):
                 self._data.peano4_mpi_and_storage_aspect = aspect
                 self._data.data._aspects.append( self._data.peano4_mpi_and_storage_aspect )
