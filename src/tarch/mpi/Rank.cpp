@@ -210,6 +210,7 @@ tarch::mpi::Rank::Rank():
   _initIsCalled(false),
   _rank(-1),
   _numberOfProcessors(-1),
+  _providedThreadLevelSupport(-1),
   _communicator( MPI_COMM_WORLD),
   _timeOutWarning(0),
   _deadlockTimeOut(0),
@@ -415,16 +416,21 @@ bool tarch::mpi::Rank::validateMaxTagIsSupported() {
 static void tdTextPointer() {}
 #endif
 
+
+int tarch::mpi::Rank::getProvidedThreadLevelSupport() const {
+  return _providedThreadLevelSupport;
+}
+
+
 bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char*** argv) {
   #ifdef Parallel
   int result = MPI_SUCCESS;
 
   #if defined( SharedMemoryParallelisation )
-  int initThreadProvidedThreadLevelSupport;
-  result = MPI_Init_thread( argc, argv, MPI_THREAD_MULTIPLE, &initThreadProvidedThreadLevelSupport );
-  if (initThreadProvidedThreadLevelSupport!=MPI_THREAD_MULTIPLE ) {
+  result = MPI_Init_thread( argc, argv, MPI_THREAD_MULTIPLE, &_providedThreadLevelSupport );
+  if (_providedThreadLevelSupport!=MPI_THREAD_MULTIPLE ) {
     std::cerr << "warning: MPI implementation does not support MPI_THREAD_MULTIPLE. Support multithreading level is "
-              << initThreadProvidedThreadLevelSupport << " instead of " << MPI_THREAD_MULTIPLE
+              << _providedThreadLevelSupport << " instead of " << MPI_THREAD_MULTIPLE
               << ". Disable MultipleThreadsMayTriggerMPICalls in the compiler-specific settings or via -DnoMultipleThreadsMayTriggerMPICalls."<< std::endl;
   }
   #else
@@ -473,11 +479,6 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
 
 
 int tarch::mpi::Rank::getRank() const {
-/*
-  #ifdef Parallel
-  assertion(_initIsCalled);
-  #endif
-*/
   return _rank;
 }
 

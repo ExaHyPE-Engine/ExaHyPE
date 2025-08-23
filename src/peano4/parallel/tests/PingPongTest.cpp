@@ -401,13 +401,15 @@ void peano4::parallel::tests::PingPongTest::run() {
 
   testMethod(  testDaStGenArrayTreeManagementMessage );
 
-  testMethod(  testMultithreadedPingPongWithBlockingReceives );
-  testMethod(  testMultithreadedPingPongWithBlockingSends );
-  testMethod(  testMultithreadedPingPongWithBlockingSendsAndReceives );
+  if (tarch::mpi::Rank::getInstance().getProvidedThreadLevelSupport()==MPI_THREAD_MULTIPLE) {
+    testMethod(  testMultithreadedPingPongWithBlockingReceives );
+    testMethod(  testMultithreadedPingPongWithBlockingSends );
+    testMethod(  testMultithreadedPingPongWithBlockingSendsAndReceives );
 
-  testMethod(  testMultithreadedPingPongWithNonblockingReceives );
-  testMethod(  testMultithreadedPingPongWithNonblockingSends );
-  testMethod(  testMultithreadedPingPongWithNonblockingSendsAndReceives );
+    testMethod(  testMultithreadedPingPongWithNonblockingReceives );
+    testMethod(  testMultithreadedPingPongWithNonblockingSends );
+    testMethod(  testMultithreadedPingPongWithNonblockingSendsAndReceives );
+  }
 
   logTraceOut( "run()" );
 }

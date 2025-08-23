@@ -295,11 +295,6 @@ int main(int argc, char** argv) {
   runTests();
 
   if (not tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-/*
-    peano4::parallel::Node::getInstance().shutdown();
-  }
-  else {
-*/
     while (peano4::parallel::Node::getInstance().continueToRun()) {
       // Do nothing. This is just to ensure that everything shuts down properly
       // and is properly installed.
@@ -307,12 +302,6 @@ int main(int argc, char** argv) {
   }
 
   peano4::parallel::Node::getInstance().shutdown();
-
-//  tarch::mpi::Rank::getInstance().barrier(
-//    [&]() -> void {}
-//  );
-
-//  peano4::parallel::Node::getInstance().shutdown();
 
   peano4::shutdownParallelEnvironment();
 

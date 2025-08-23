@@ -53,6 +53,20 @@ class peano4::parallel::tests::PingPongTest: public tarch::tests::TestCase {
     void testMultithreadedPingPongWithNonblockingSendsAndReceives();
   public:
     PingPongTest();
+
+    /**
+     * Build up suite of test routines
+     *
+     * We protect the multithreaded calls with a call with a comparison of
+     * tarch::mpi::Rank::getInstance().getProvidedThreadLevelSupport() to
+     * MPI_THREAD_MULTIPLE. In principle, we know that Peano cannot work
+     * properly without MPI's multithreaded support. However, even if the
+     * MPI implementation supports multithreading, tools such as MUST
+     * (http://www.itc.rwth-aachen.de/MUST) will artifically lower the
+     * thread level support for correctness check and then report a
+     * deadlock here (wrongly). To avoid this, we remove the unit tests, as
+     * I really wanna use the thread-checkers with our unit tests.
+     */
     virtual void run() override;
 };
 
