@@ -1,13 +1,14 @@
 # This file is part of the DaStGen2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import dastgen2
+from .Aspect import Aspect
+#import dastgen2
 
 from dastgen2.Utils import construct_ifdef_string
 
 from .MPI import MPI
 
 
-class MPIForSmartPointers(object):
+class MPIForSmartPointers(Aspect):
     """!
 
     Represents the MPI aspect injected into a DaStGen model.
@@ -20,11 +21,27 @@ class MPIForSmartPointers(object):
     The routine replacing the generic MPI aspect with this one is typically
     peano4.datamodel.DaStGen2GeneratorForObjectsWithSmartPointers.
     
-
     """
 
-    def __init__(self, mpi: MPI):
-        self._data_model = mpi._data_model
+    def __init__(self, data_model):
+        """!
+        
+        This constructor has to know the underlying data model. So you have
+        to tell it to which object you attach the aspect to.
+        
+        If we replace an existing MPI aspect with an instance of this object,
+        we can pass in aspect._data_model as argument. For peano4.datamodel.DaStGen2,
+        this reads as 
+        
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        for aspect in old_aspects:
+            if isinstance(aspect,dastgen2.aspects.MPI):
+                self._data.data._aspects.append( dastgen2.aspects.MPIForSmartPointers(aspect._data_model) )
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        
+        
+        """
+        self._data_model = data_model
         pass
 
     def get_include(self):

@@ -6,8 +6,7 @@ import jinja2
 import dastgen2
 
 
-#class MPIAndStorageAspect(dastgen2.aspects.MPI):
-class MPIAndStorageAspect(object):
+class MPIAndStorageAspect(dastgen2.aspects.Aspect):
     """!
 
     Represents Peano's MPI and storage aspect injected into a DaStGen model.
@@ -74,23 +73,6 @@ class MPIAndStorageAspect(object):
         self.implementation_file_includes=""
         pass
 
-    def set_model(self, 
-                  data_model,
-                  ):
-        """!
-        
-        Inform aspect about model
-        
-        This routine is invoked by DataModel.add_aspect() and informs us about
-        the data model in use.
-        
-        @param data_model: dastgen2.DataModel
-          I cannot use the actual data model, as I otherwise get circular 
-          inputs.
-          
-        """
-        self._data_model = data_model
-        
     def __str__(self):
         result = "("
         if self.dof_association == DoFAssociation.Vertex:
