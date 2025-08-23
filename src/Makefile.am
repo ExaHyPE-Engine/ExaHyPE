@@ -196,6 +196,8 @@ Peano4Core_SOURCES = \
 	peano4/parallel/tests/NodeTest.cpp \
 	peano4/stacks/stacks.cpp \
 	peano4/stacks/STDVectorStack.cpp \
+	peano4/stacks/tests/GeneratedTestObject.cpp \
+	peano4/stacks/tests/GeneratedTestObject_Flattened.cpp \
 	peano4/stacks/tests/STDVectorStackOverObjectsWithSmartPointersTest.cpp \
 	peano4/utils/Loop.cpp \
 	peano4/utils/tests/ParallelDForTest.cpp

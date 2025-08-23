@@ -69,8 +69,15 @@ namespace peano4 {
    * peano4::initParallelEnvironment(&argc,&argv);
    * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    *
-   * This has to be done as one of the very first things, i.e. before you init
-   * the logging, or run tests, or ...
+   *
+   * ## Context within Peano
+   *
+   * Calling initParallelEnvironment() has to be done as one of the very first
+   * things, i.e. before you init the logging, or run tests, or ... However,
+   * please note that it is really about the static context of the code. A
+   * central object within any MPI-parallel Peano 4 application is the
+   * singleton peano4::parallel::Node which you have to initialise (and
+   * shutdown) separately.
    */
   int initParallelEnvironment(int* argc, char*** argv);
 
