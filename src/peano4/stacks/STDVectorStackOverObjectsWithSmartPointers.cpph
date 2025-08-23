@@ -67,23 +67,24 @@ void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::startSend(
   for (int i=0; i<size(); i++) {
     _flattenedData[i] = T::flatten( _data[i] );
   }
+  _data.clear();
 
-  logInfo( "startSend()", "send out flattened data" );
+  logInfo( "startSend()", "send out flattened data of size " << _flattenedData.size() << " on tag " << _ioTag );
   _ioMPIRequest = new MPI_Request;
+
   int result = MPI_Isend(
     _flattenedData.data(),
     _flattenedData.size(),
     translateContextIntoDatatype<typename T::FlattenedType>( context ),
     _ioRank, _ioTag, comm, _ioMPIRequest
   );
+
   if  (result!=MPI_SUCCESS) {
     std::ostringstream msg;
     logError( "startSend(int,int)", "was not able to send to node " << rank << " on tag " << tag
       << ": " << tarch::mpi::MPIReturnValueToString(result)
     );
   }
-  assertion(false);
-  logInfo( "startSend()", "send for flattened data successful, but data might not have left the system, i.e. we keep the buffer" );
 #endif
 }
 
@@ -100,23 +101,28 @@ void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::startReceive
   _ioRank = rank;
 
   _data.clear();
-  _data.resize(numberOfElements, T(T::ObjectConstruction::NoData));
-  _flattenedData.resize(size());
+  _flattenedData.resize(numberOfElements, typename T::FlattenedType(T::FlattenedType::ObjectConstruction::NoData));
+
+  assertionEquals( _flattenedData.size(), numberOfElements );
+
+  logInfo( "startReceive()", "trigger receive of " << numberOfElements << " elements on tag " << _ioTag );
 
   assertion3( _ioMPIRequest == nullptr, rank, tag, numberOfElements );
   _ioMPIRequest = new MPI_Request;
-  assertion(_data.size()>0);
+
   int result = MPI_Irecv(
     _flattenedData.data(),
-    _data.size(),
+    numberOfElements,
     translateContextIntoDatatype<typename T::FlattenedType>( context ),
     _ioRank, _ioTag, comm, _ioMPIRequest
   );
+
   if  (result!=MPI_SUCCESS) {
     logError( "startReceive(int,int)", "was not able to receive " << numberOfElements << " values from node " << rank << " on tag " << tag
       << ": " << tarch::mpi::MPIReturnValueToString(result)
     );
   }
+
   logTraceOut( "startReceive(int,int,int)" );
 #endif
 }
@@ -129,22 +135,36 @@ bool peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::tryToFinishS
   if ( _ioMode==IOMode::MPISend or _ioMode==IOMode::MPIReceive ) {
     assertion( _ioMPIRequest!=nullptr );
 
+    assertion1(_flattenedData.size()>0, _flattenedData.size() );
+    assertion1( _data.empty(), _data.size() );
+
     int          flag = 0;
     MPI_Test( _ioMPIRequest, &flag, MPI_STATUS_IGNORE );
+
     if (flag) {
       result = true;
-      logDebug( "tryToFinishSendOrReceive()", "send/receive complete, free MPI request: " << toString() );
+      logInfo( "tryToFinishSendOrReceive()", "send/receive complete, free MPI request: " << toString() );
       delete _ioMPIRequest;
       _ioMPIRequest = nullptr;
-      if (_ioMode==IOMode::MPISend ) {
-        clear();
-      }
+
       _ioMode = IOMode::None;
+
+      if (_ioMode==IOMode::MPISend ) {
+        logInfo( "tryToFinishSendOrReceive()", "free flattened data structure" );
+        _flattenedData.clear();
+      }
+      else {
+        logInfo( "tryToFinishSendOrReceive()", "have received " << _flattenedData.size() << " entries. Copy flattened data over" );
+        _data.resize(_flattenedData.size()>0, T(T::ObjectConstruction::NoData));
+        for (int i=0; i<_flattenedData.size(); i++) {
+          _data[i] = T::unflatten( _flattenedData[i] );
+        }
+        _flattenedData.clear();
+      }
     } else {
       result = false;
     }
   }
-  _flattenedData.clear();
   logTraceOutWith1Argument("tryToFinishSendOrReceive()", result);
   return result;
 #else

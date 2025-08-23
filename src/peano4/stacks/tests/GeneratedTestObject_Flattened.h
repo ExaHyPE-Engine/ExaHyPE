@@ -35,19 +35,19 @@ namespace peano4{
 namespace stacks{
 namespace tests{
 
-  struct GeneratedTestObject;
+  struct GeneratedTestObject_Flattened;
 }
 }
 }
 
 
 
-struct peano4::stacks::tests::GeneratedTestObject {
+struct peano4::stacks::tests::GeneratedTestObject_Flattened {
   public:
 
 
-    GeneratedTestObject() {}
-    GeneratedTestObject(int  __id, tarch::la::Vector<256,double>  __data);
+    GeneratedTestObject_Flattened() {}
+    GeneratedTestObject_Flattened(int  __id, tarch::la::Vector<256,double>  __data);
 
 
     int   getId() const;
@@ -56,8 +56,7 @@ struct peano4::stacks::tests::GeneratedTestObject {
     void   setData(const tarch::la::Vector<256,double>& value);
     double   getData(int index) const;
     void   setData(int index, double value);
-    tarch::la::SmartPointerVector<256,double>   getDataSmartPointer();
-    GeneratedTestObject(const GeneratedTestObject& copy) = default;
+    GeneratedTestObject_Flattened(const GeneratedTestObject_Flattened& copy) = default;
 
 
     #ifdef Parallel
@@ -121,8 +120,8 @@ struct peano4::stacks::tests::GeneratedTestObject {
      * including a vtable. So this routine now is basically an alias for a
      * blocking MPI_Send.
      */
-    static void send(const peano4::stacks::tests::GeneratedTestObject& buffer, int destination, int tag, MPI_Comm communicator );
-    static void receive(peano4::stacks::tests::GeneratedTestObject& buffer, int source, int tag, MPI_Comm communicator );
+    static void send(const peano4::stacks::tests::GeneratedTestObject_Flattened& buffer, int destination, int tag, MPI_Comm communicator );
+    static void receive(peano4::stacks::tests::GeneratedTestObject_Flattened& buffer, int source, int tag, MPI_Comm communicator );
 
     /**
      * Alternative to the other send() where I trigger a non-blocking send an
@@ -130,8 +129,8 @@ struct peano4::stacks::tests::GeneratedTestObject {
      * the message went through. In systems with heavy MPI usage, this can
      * help to avoid deadlocks.
      */
-    static void send(const peano4::stacks::tests::GeneratedTestObject& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(   peano4::stacks::tests::GeneratedTestObject& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void send(const peano4::stacks::tests::GeneratedTestObject_Flattened& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void receive(   peano4::stacks::tests::GeneratedTestObject_Flattened& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
 
@@ -140,12 +139,12 @@ struct peano4::stacks::tests::GeneratedTestObject {
       NoData
     };
 
-    GeneratedTestObject( ObjectConstruction ):
-        GeneratedTestObject() {}
+    GeneratedTestObject_Flattened( ObjectConstruction ):
+        GeneratedTestObject_Flattened() {}
     
 #ifdef Parallel
-    static void sendAndPollDanglingMessages(const peano4::stacks::tests::GeneratedTestObject& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
-    static void receiveAndPollDanglingMessages(peano4::stacks::tests::GeneratedTestObject& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
+    static void sendAndPollDanglingMessages(const peano4::stacks::tests::GeneratedTestObject_Flattened& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
+    static void receiveAndPollDanglingMessages(peano4::stacks::tests::GeneratedTestObject_Flattened& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
 #endif
     
 
@@ -153,7 +152,7 @@ struct peano4::stacks::tests::GeneratedTestObject {
 
   private:
       int   _id;
-    tarch::la::SmartPointerVector<256,double>   _data;
+    tarch::la::Vector<256,double>   _data;
 
 
 

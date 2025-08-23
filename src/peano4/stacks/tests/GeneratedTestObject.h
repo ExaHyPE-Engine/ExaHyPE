@@ -17,6 +17,8 @@
   #include <functional>
 #endif
 
+#include "GeneratedTestObject_Flattened.h"            
+
 
 
 #include "tarch/la/Vector.h"
@@ -47,11 +49,21 @@ struct peano4::stacks::tests::GeneratedTestObject {
 
 
     GeneratedTestObject() {}
-    GeneratedTestObject();
+    GeneratedTestObject(int  __id, tarch::la::Vector<256,double>  __data);
 
 
+    int   getId() const;
+    void   setId(int value);
+    tarch::la::Vector<256,double>   getData() const;
+    void   setData(const tarch::la::Vector<256,double>& value);
+    double   getData(int index) const;
+    void   setData(int index, double value);
+    tarch::la::SmartPointerVector<256,double>   getDataSmartPointer();
     GeneratedTestObject(const GeneratedTestObject& copy) = default;
 
+    
+    using SmartType = peano4::stacks::tests::GeneratedTestObject;
+    using FlattenedType = peano4::stacks::tests::GeneratedTestObject_Flattened;
 
     #ifdef Parallel
     /**
@@ -59,73 +71,41 @@ struct peano4::stacks::tests::GeneratedTestObject {
      * If we work with this additional feature, this is the routine where
      * the lazy initialisation is done and the datatype is also cached.
      */
-    [[clang::map_mpi_datatype]]
     static MPI_Datatype  getForkDatatype();
 
-    [[clang::map_mpi_datatype]]
     static MPI_Datatype  getJoinDatatype();
 
-    [[clang::map_mpi_datatype]]
     static MPI_Datatype  getBoundaryExchangeDatatype();
 
-    [[clang::map_mpi_datatype]]
     static MPI_Datatype  getMultiscaleDataExchangeDatatype();
 
-    [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
 
-    [[clang::map_mpi_datatype]]
     static void  freeForkDatatype();
 
-    [[clang::map_mpi_datatype]]
     static void  freeJoinDatatype();
 
-    [[clang::map_mpi_datatype]]
     static void  freeBoundaryExchangeDatatype();
 
-    [[clang::map_mpi_datatype]]
     static void  freeMultiscaleDataExchangeDatatype();
 
-    [[clang::map_mpi_datatype]]
     static void  freeGlobalCommunciationDatatype();
 
-    /**
-     * @return The rank of the sender of an object. It only make ssense to call
-     *         this routine after you've invoked receive with MPI_ANY_SOURCE.
-     */
     int getSenderRank() const;
 
-    /**
-     * Wrapper around getDatatype() to trigger lazy evaluation if we
-     * use the lazy initialisation.
-     */
     static void initDatatype();
 
-    /**
-     * Free the underlying MPI datatype.
-     */
     static void shutdownDatatype();
 
-    /**
-     * In DaStGen (the first version), I had a non-static version of the send
-     * as well as the receive. However, this did not work with newer C++11
-     * versions, as a member function using this as pointer usually doesn't
-     * see the vtable while the init sees the object from outside, i.e.
-     * including a vtable. So this routine now is basically an alias for a
-     * blocking MPI_Send.
-     */
-    static void send(const peano4::stacks::tests::GeneratedTestObject& buffer, int destination, int tag, MPI_Comm communicator );
-    static void receive(peano4::stacks::tests::GeneratedTestObject& buffer, int source, int tag, MPI_Comm communicator );
+    static void send(const SmartType& buffer, int destination, int tag, MPI_Comm communicator );
+    static void receive(SmartType& buffer, int source, int tag, MPI_Comm communicator );
 
-    /**
-     * Alternative to the other send() where I trigger a non-blocking send an
-     * then invoke the functor until the corresponding MPI_Test tells me that
-     * the message went through. In systems with heavy MPI usage, this can
-     * help to avoid deadlocks.
-     */
-    static void send(const peano4::stacks::tests::GeneratedTestObject& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(   peano4::stacks::tests::GeneratedTestObject& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void send(const SmartType& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void receive(SmartType& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
+    
+    static FlattenedType flatten(const SmartType& copy);
+    static SmartType     unflatten(const FlattenedType& copy);
 
 
 
@@ -145,22 +125,14 @@ struct peano4::stacks::tests::GeneratedTestObject {
     std::string toString() const;
 
   private:
+      int   _id;
+    tarch::la::SmartPointerVector<256,double>   _data;
 
 
 
     #ifdef Parallel
     private:
       int                  _senderDestinationRank;
-
-      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-      /**
-       * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
-       * initialisation of the datatype. However, Peano calls init explicitly
-       * in most cases. Without the LLVM extension which caches the MPI
-       * datatype once constructed, this field stores the type.
-       */
-      static MPI_Datatype  Datatype;
-      #endif
     #endif
 
 

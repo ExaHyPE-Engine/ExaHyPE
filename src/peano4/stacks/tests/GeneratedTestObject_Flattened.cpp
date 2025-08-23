@@ -1,4 +1,4 @@
-#include "GeneratedTestObject.h"
+#include "GeneratedTestObject_Flattened.h"
 
 
 
@@ -7,19 +7,19 @@
 
 
 
-peano4::stacks::tests::GeneratedTestObject::GeneratedTestObject(int  __id, tarch::la::Vector<256,double>  __data){
+peano4::stacks::tests::GeneratedTestObject_Flattened::GeneratedTestObject_Flattened(int  __id, tarch::la::Vector<256,double>  __data){
 setId( __id);
 setData( __data);
 }
 
 
 
-std::string peano4::stacks::tests::GeneratedTestObject::toString() const {
+std::string peano4::stacks::tests::GeneratedTestObject_Flattened::toString() const {
   std::ostringstream out;
   out << "(";
   out << "id=" << _id;
   out << ","; 
-  out << "data=" << _data.toVector();
+  out << "data=" << _data;
   out << ")";
   return out.str();
 }
@@ -28,38 +28,33 @@ std::string peano4::stacks::tests::GeneratedTestObject::toString() const {
 
 
 
-int   peano4::stacks::tests::GeneratedTestObject::getId() const {
+int   peano4::stacks::tests::GeneratedTestObject_Flattened::getId() const {
   return _id;
 }
 
 
-void   peano4::stacks::tests::GeneratedTestObject::setId(int value) {
+void   peano4::stacks::tests::GeneratedTestObject_Flattened::setId(int value) {
   _id = value;
 }
 
 
-tarch::la::Vector<256,double>   peano4::stacks::tests::GeneratedTestObject::getData() const {
-  return   _data.toVector();
+tarch::la::Vector<256,double>   peano4::stacks::tests::GeneratedTestObject_Flattened::getData() const {
+  return   _data;
 }
 
 
-void   peano4::stacks::tests::GeneratedTestObject::setData(const tarch::la::Vector<256,double>& value) {
+void   peano4::stacks::tests::GeneratedTestObject_Flattened::setData(const tarch::la::Vector<256,double>& value) {
   _data = value;
 }
 
 
-double   peano4::stacks::tests::GeneratedTestObject::getData(int index) const {
+double   peano4::stacks::tests::GeneratedTestObject_Flattened::getData(int index) const {
   return   _data(index);
 }
 
 
-void   peano4::stacks::tests::GeneratedTestObject::setData(int index, double value) {
+void   peano4::stacks::tests::GeneratedTestObject_Flattened::setData(int index, double value) {
   _data(index) = value;
-}
-
-
-tarch::la::SmartPointerVector<256,double>   peano4::stacks::tests::GeneratedTestObject::getDataSmartPointer() {
-  return   _data;
 }
 
 
@@ -70,42 +65,42 @@ tarch::la::SmartPointerVector<256,double>   peano4::stacks::tests::GeneratedTest
 #ifdef Parallel
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-MPI_Datatype peano4::stacks::tests::GeneratedTestObject::Datatype = MPI_DATATYPE_NULL;
+MPI_Datatype peano4::stacks::tests::GeneratedTestObject_Flattened::Datatype = MPI_DATATYPE_NULL;
 #endif
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype peano4::stacks::tests::GeneratedTestObject::getForkDatatype() {
+MPI_Datatype peano4::stacks::tests::GeneratedTestObject_Flattened::getForkDatatype() {
   return Datatype;
 }
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype peano4::stacks::tests::GeneratedTestObject::getGlobalCommunciationDatatype() {
+MPI_Datatype peano4::stacks::tests::GeneratedTestObject_Flattened::getGlobalCommunciationDatatype() {
   return Datatype;
 }
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype peano4::stacks::tests::GeneratedTestObject::getJoinDatatype() {
+MPI_Datatype peano4::stacks::tests::GeneratedTestObject_Flattened::getJoinDatatype() {
   return Datatype;
 }
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype peano4::stacks::tests::GeneratedTestObject::getBoundaryExchangeDatatype() {
+MPI_Datatype peano4::stacks::tests::GeneratedTestObject_Flattened::getBoundaryExchangeDatatype() {
   return Datatype;
 }
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype peano4::stacks::tests::GeneratedTestObject::getMultiscaleDataExchangeDatatype() {
+MPI_Datatype peano4::stacks::tests::GeneratedTestObject_Flattened::getMultiscaleDataExchangeDatatype() {
   return Datatype;
 }
 
 
 [[clang::map_mpi_datatype]]
-void peano4::stacks::tests::GeneratedTestObject::freeForkDatatype() {
+void peano4::stacks::tests::GeneratedTestObject_Flattened::freeForkDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
     Datatype = MPI_DATATYPE_NULL;
@@ -114,7 +109,7 @@ void peano4::stacks::tests::GeneratedTestObject::freeForkDatatype() {
 
 
 [[clang::map_mpi_datatype]]
-void peano4::stacks::tests::GeneratedTestObject::freeGlobalCommunciationDatatype() {
+void peano4::stacks::tests::GeneratedTestObject_Flattened::freeGlobalCommunciationDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
     Datatype = MPI_DATATYPE_NULL;
@@ -123,7 +118,7 @@ void peano4::stacks::tests::GeneratedTestObject::freeGlobalCommunciationDatatype
 
 
 [[clang::map_mpi_datatype]]
-void peano4::stacks::tests::GeneratedTestObject::freeJoinDatatype() {
+void peano4::stacks::tests::GeneratedTestObject_Flattened::freeJoinDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
     Datatype = MPI_DATATYPE_NULL;
@@ -132,7 +127,7 @@ void peano4::stacks::tests::GeneratedTestObject::freeJoinDatatype() {
 
 
 [[clang::map_mpi_datatype]]
-void peano4::stacks::tests::GeneratedTestObject::freeBoundaryExchangeDatatype() {
+void peano4::stacks::tests::GeneratedTestObject_Flattened::freeBoundaryExchangeDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
     Datatype = MPI_DATATYPE_NULL;
@@ -141,7 +136,7 @@ void peano4::stacks::tests::GeneratedTestObject::freeBoundaryExchangeDatatype() 
 
 
 [[clang::map_mpi_datatype]]
-void peano4::stacks::tests::GeneratedTestObject::freeMultiscaleDataExchangeDatatype() {
+void peano4::stacks::tests::GeneratedTestObject_Flattened::freeMultiscaleDataExchangeDatatype() {
   if (Datatype != MPI_DATATYPE_NULL){
     MPI_Type_free(&Datatype);
     Datatype = MPI_DATATYPE_NULL;
@@ -149,15 +144,15 @@ void peano4::stacks::tests::GeneratedTestObject::freeMultiscaleDataExchangeDatat
 }
 
 
-int peano4::stacks::tests::GeneratedTestObject::getSenderRank() const {
+int peano4::stacks::tests::GeneratedTestObject_Flattened::getSenderRank() const {
   return _senderDestinationRank;
 }
 
 
 
-void peano4::stacks::tests::GeneratedTestObject::initDatatype() {
+void peano4::stacks::tests::GeneratedTestObject_Flattened::initDatatype() {
   #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  peano4::stacks::tests::GeneratedTestObject  instances[2];
+  peano4::stacks::tests::GeneratedTestObject_Flattened  instances[2];
 
   int NumberOfAttributes = 0;
   NumberOfAttributes++;
@@ -215,7 +210,7 @@ void peano4::stacks::tests::GeneratedTestObject::initDatatype() {
 }
 
 
-void peano4::stacks::tests::GeneratedTestObject::shutdownDatatype() {
+void peano4::stacks::tests::GeneratedTestObject_Flattened::shutdownDatatype() {
   #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   freeForkDatatype();
   freeJoinDatatype();
@@ -229,20 +224,20 @@ void peano4::stacks::tests::GeneratedTestObject::shutdownDatatype() {
 }
 
 
-void peano4::stacks::tests::GeneratedTestObject::send(const peano4::stacks::tests::GeneratedTestObject& buffer, int destination, int tag, MPI_Comm communicator ) {
+void peano4::stacks::tests::GeneratedTestObject_Flattened::send(const peano4::stacks::tests::GeneratedTestObject_Flattened& buffer, int destination, int tag, MPI_Comm communicator ) {
   MPI_Send( &buffer, 1, Datatype, destination, tag, communicator);
 }
 
 
-void peano4::stacks::tests::GeneratedTestObject::receive(peano4::stacks::tests::GeneratedTestObject& buffer, int source, int tag, MPI_Comm communicator ) {
+void peano4::stacks::tests::GeneratedTestObject_Flattened::receive(peano4::stacks::tests::GeneratedTestObject_Flattened& buffer, int source, int tag, MPI_Comm communicator ) {
   MPI_Status status;
   MPI_Recv( &buffer, 1, Datatype, source, tag, communicator, &status);
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
 
 
-void peano4::stacks::tests::GeneratedTestObject::send(
-  const peano4::stacks::tests::GeneratedTestObject& buffer,
+void peano4::stacks::tests::GeneratedTestObject_Flattened::send(
+  const peano4::stacks::tests::GeneratedTestObject_Flattened& buffer,
   int destination,
   int tag,
   std::function<void()> startCommunicationFunctor,
@@ -261,8 +256,8 @@ void peano4::stacks::tests::GeneratedTestObject::send(
 }
 
 
-void peano4::stacks::tests::GeneratedTestObject::receive(
-  peano4::stacks::tests::GeneratedTestObject& buffer,
+void peano4::stacks::tests::GeneratedTestObject_Flattened::receive(
+  peano4::stacks::tests::GeneratedTestObject_Flattened& buffer,
   int source,
   int tag,
   std::function<void()> startCommunicationFunctor,
@@ -284,16 +279,16 @@ void peano4::stacks::tests::GeneratedTestObject::receive(
 #endif
 
 #ifdef Parallel
-void peano4::stacks::tests::GeneratedTestObject::sendAndPollDanglingMessages(const peano4::stacks::tests::GeneratedTestObject& message, int destination, int tag, MPI_Comm communicator ) {
-  peano4::stacks::tests::GeneratedTestObject::send(
+void peano4::stacks::tests::GeneratedTestObject_Flattened::sendAndPollDanglingMessages(const peano4::stacks::tests::GeneratedTestObject_Flattened& message, int destination, int tag, MPI_Comm communicator ) {
+  peano4::stacks::tests::GeneratedTestObject_Flattened::send(
     message, destination, tag,
     [&]() {
       tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
       tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
     },
     [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::stacks::tests::GeneratedTestObject", "sendAndPollDanglingMessages()",destination, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::stacks::tests::GeneratedTestObject", "sendAndPollDanglingMessages()", destination, tag );
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::stacks::tests::GeneratedTestObject_Flattened", "sendAndPollDanglingMessages()",destination, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::stacks::tests::GeneratedTestObject_Flattened", "sendAndPollDanglingMessages()", destination, tag );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
     communicator
@@ -301,16 +296,16 @@ void peano4::stacks::tests::GeneratedTestObject::sendAndPollDanglingMessages(con
 }
 
 
-void peano4::stacks::tests::GeneratedTestObject::receiveAndPollDanglingMessages(peano4::stacks::tests::GeneratedTestObject& message, int source, int tag, MPI_Comm communicator ) {
-  peano4::stacks::tests::GeneratedTestObject::receive(
+void peano4::stacks::tests::GeneratedTestObject_Flattened::receiveAndPollDanglingMessages(peano4::stacks::tests::GeneratedTestObject_Flattened& message, int source, int tag, MPI_Comm communicator ) {
+  peano4::stacks::tests::GeneratedTestObject_Flattened::receive(
     message, source, tag,
     [&]() {
       tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
       tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
     },
     [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::stacks::tests::GeneratedTestObject", "receiveAndPollDanglingMessages()", source, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::stacks::tests::GeneratedTestObject", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::stacks::tests::GeneratedTestObject_Flattened", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::stacks::tests::GeneratedTestObject_Flattened", "receiveAndPollDanglingMessages()", source, tag );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
     communicator

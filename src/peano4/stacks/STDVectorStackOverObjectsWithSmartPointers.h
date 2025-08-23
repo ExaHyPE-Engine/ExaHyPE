@@ -264,40 +264,36 @@ public:
   /**
    * Start the actual send process
    *
-   * Always pairs up with a finish... call.
+   * Always pairs up with a tryToFinishSendOrReceive() call.
    *
    * # Gathering the data
    *
-   * As we have to assume that the data of interest are scattered over the
-   * main memory, we first allocate one big buffer for the data. This is
-   * a buffer over T::DoFType. We then copy the chunks over and send this
-   * block rather than the "original" stack data.
+   * We know that the data are potentially gathered all over the place on the
+   * heap subject to a smart pointer. So we first create a complete copy of all
+   * data in a container called _flattenedData. These copies are flattened
+   * data, i.e. are stored consecutively in memory.
    *
-   * The meta data has to be treated (almost) in the same way: In this case,
-   * we create manually a buffer over 2 * Dimensions * no of elements doubles
-   * and then copy the meta data over one by one. That means: we do not
-   * expect T's datatype to encapsulate the meta data - which also doesn't
-   * make any sense as T's data itself is scattered over the memory since it
-   * works with pointers.
+   * Once we have created this flattened copy, we can delete the original data
+   * structure. We won't need it anymore. This is in line with other stacks
+   * which clear themselves after they have sent out data. See for example
+   * peano4::stacks::STDVectorStackOverSmartPointers<T>::startSend(). This
+   * clear() on the original data might not immediately lead to system frees,
+   * as other stacks might hold references to the same data on the heap.
    *
-   *
-   * # Cleaning up
-   *
-   * All clean ups are realised within tryToFinishSendOrReceive() where I
-   * have to delete the gathered buffer. To save memory overall, I can delete
-   * the pointers to the data scattered over the memory straightaway once all
-   * is copied over. As these pointers are shared smart pointers, this
-   * immediate delete might free memory as the shared pointer counter reduces
-   * to zero.
+   * The flattened data however has to stay there, as we only trigger a
+   * non-blocking send, i.e. the data might not have left the system yet.
+   * This flattened data are cleaned up within tryToFinishSendOrReceive().
    */
   void startSend(peano4::grid::TraversalObserver::SendReceiveContext context, int rank, int tag, MPI_Comm comm);
 
   /**
-   * Counterpart of startSend()
+   * Trigger a receive
    *
-   * We have to prepare the en bloc, raw data buffers for both the data and
-   * the meta data (if required). After that, we can trigger the two
-   * non-blocking receives.
+   * This is the counterpart of startSend() and hence pretty similar.
+   * We clear _data and we resize _flattenedData so that latter can take the
+   * incoming data. We know that we need that incoming data eventually
+   * within _data, but we are not there yet. After that, we issue a
+   * non-blocking receive and return.
    *
    * See clone() for a description why we have to use resize() with the
    * standard constructor here.
@@ -309,27 +305,24 @@ public:
   );
 
   /**
-   * Semantics are alost an exact 1:1 copy of the superclass implementation
+   * Finish a send or receive if it is still pending
    *
-   * ## Clean up
+   * If the stack is not in a sending or receiving state, we return
+   * immediately. Otherwise, we issue an MPI_Test to see if MPI tells us
+   * if it is done. If so, we can trigger the actual clean-up:
    *
-   * If a send or receive had been pending and just completed, we start the
-   * actual clean up process.
+   * - Delete the MPI Request object. We don't need it anymore.
+   * - Reset the IO mode to None. We are finished here.
+   * - If we have sent data: Clear the flattened data. It has gone out now,
+   *   so there's no need for us to hold it anymore.
+   * - If we have received data:
+   *   - Resize the actual _data array. This is where the incoming data has to
+   *     end up eventually.
+   *   - Copy the entries from the flattened collection over into _data one by
+   *     one. For each entry, we have to unflatten the incoming data.
+   *   - Free the flattened data. All is copied over, so we don't need it
+   *     anymore.
    *
-   * As we know that MPI sends in order, we do not have to test for the meta
-   * data. Once the real data has dropped in, we know that the meta data are
-   * in place, too.
-   *
-   *
-   *
-   *
-   * ## Rationale
-   *
-   * I originally wanted to call the superclass and just free the buffer if
-   * its result is true. However, at the time when the result comes back, I
-   * do not know if it has just switched from false to true or had been true
-   * all along. To avoid complicated logic, I decided to replicate the parent
-   * data and to inject the free into the replicated code.
    */
   bool tryToFinishSendOrReceive();
 
