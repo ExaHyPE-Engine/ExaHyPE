@@ -3,8 +3,12 @@
 #include "peano4/grid/tests/SpacetreeTest.h"
 #include "peano4/grid/tests/GridControlEventTest.h"
 #include "peano4/grid/tests/GridTraversalEventGeneratorTest.h"
+
 #include "peano4/parallel/tests/NodeTest.h"
 #include "peano4/parallel/tests/PingPongTest.h"
+
+#include "peano4/stacks/tests/STDVectorStackOverObjectsWithSmartPointersTest.h"
+
 #include "peano4/utils/tests/ParallelDForTest.h"
 
 #include "tarch/tests/TreeTestCaseCollection.h"
@@ -18,6 +22,8 @@ tarch::tests::TestCase* peano4::getUnitTests() {
 
   result->addTestCase( new peano4::parallel::tests::NodeTest() );
   result->addTestCase( new peano4::parallel::tests::PingPongTest() );
+
+  result->addTestCase( new peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest() );
 
   result->addTestCase( new peano4::utils::tests::ParallelDForTest() );
 
