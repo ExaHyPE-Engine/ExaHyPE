@@ -155,7 +155,7 @@ bool peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::tryToFinishS
       }
       else {
         logInfo( "tryToFinishSendOrReceive()", "have received " << _flattenedData.size() << " entries. Copy flattened data over" );
-        _data.resize(_flattenedData.size()>0, T(T::ObjectConstruction::NoData));
+        _data.resize(_flattenedData.size(), T(T::ObjectConstruction::NoData));
         for (int i=0; i<_flattenedData.size(); i++) {
           _data[i] = T::unflatten( _flattenedData[i] );
         }

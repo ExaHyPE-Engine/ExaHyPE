@@ -2,6 +2,9 @@
 #include "GeneratedTestObject.h"
 
 
+#include "peano4/stacks/STDVectorStackOverObjectsWithSmartPointers.h"
+
+
 tarch::logging::Log peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest::_log("peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest");
 
 
@@ -73,6 +76,74 @@ void peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest::test
 }
 
 
+void peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest::testStack() {
+  #if defined(Parallel)
+  const int Tag = 12;
+
+  GeneratedTestObject::initDatatype();
+
+  peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<GeneratedTestObject> stack;
+
+  GeneratedTestObject testObject0;
+  GeneratedTestObject testObject1;
+  GeneratedTestObject testObject2;
+
+  testObject0.setId(230);
+  testObject0.setData(0,  00);
+  testObject0.setData(1, -10);
+  testObject0.setData(2, -20);
+  testObject0.setData(3, -30);
+
+  testObject1.setId(231);
+  testObject1.setData(0,  01);
+  testObject1.setData(1, -11);
+  testObject1.setData(2, -21);
+  testObject1.setData(3, -31);
+
+  testObject2.setId(232);
+  testObject2.setData(0,  02);
+  testObject2.setData(1, -12);
+  testObject2.setData(2, -22);
+  testObject2.setData(3, -32);
+
+  if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
+    stack.push(testObject0);
+    stack.push(testObject1);
+    stack.push(testObject2);
+
+    stack.startSend(peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange, 1, Tag, tarch::mpi::Rank::getInstance().getCommunicator());
+    while ( not stack.tryToFinishSendOrReceive() ) {}
+  }
+  if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==1) {
+    stack.startReceive(peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange, 0, Tag, tarch::mpi::Rank::getInstance().getCommunicator(), 3);
+    while ( not stack.tryToFinishSendOrReceive() ) {}
+
+    GeneratedTestObject receivedObject2 = stack.pop();
+    GeneratedTestObject receivedObject1 = stack.pop();
+    GeneratedTestObject receivedObject0 = stack.pop();
+
+    validateEquals( receivedObject0.getId(),    testObject0.getId() );
+    validateEquals( receivedObject0.getData(0), testObject0.getData(0) );
+    validateEquals( receivedObject0.getData(1), testObject0.getData(1) );
+    validateEquals( receivedObject0.getData(2), testObject0.getData(2) );
+    validateEquals( receivedObject0.getData(3), testObject0.getData(3) );
+
+    validateEquals( receivedObject1.getId(),    testObject1.getId() );
+    validateEquals( receivedObject1.getData(0), testObject1.getData(0) );
+    validateEquals( receivedObject1.getData(1), testObject1.getData(1) );
+    validateEquals( receivedObject1.getData(2), testObject1.getData(2) );
+    validateEquals( receivedObject1.getData(3), testObject1.getData(3) );
+
+    validateEquals( receivedObject2.getId(),    testObject2.getId() );
+    validateEquals( receivedObject2.getData(0), testObject2.getData(0) );
+    validateEquals( receivedObject2.getData(1), testObject2.getData(1) );
+    validateEquals( receivedObject2.getData(2), testObject2.getData(2) );
+    validateEquals( receivedObject2.getData(3), testObject2.getData(3) );
+  }
+  #endif
+}
+
+
 void peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest::testMPIExchangeOfSingleObject() {
   #if defined(Parallel)
   GeneratedTestObject testObject;
@@ -107,9 +178,10 @@ void peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest::test
 void peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest::run() {
   logTraceIn( "run()" );
 
-  testMethod(  testFlattening );
-  testMethod(  testMPIExchangeOfFlattenedObject );
-  testMethod(  testMPIExchangeOfSingleObject );
+  testMethod( testFlattening );
+  testMethod( testMPIExchangeOfFlattenedObject );
+  testMethod( testMPIExchangeOfSingleObject );
+  testMethod( testStack );
 
   logTraceOut( "run()" );
 }

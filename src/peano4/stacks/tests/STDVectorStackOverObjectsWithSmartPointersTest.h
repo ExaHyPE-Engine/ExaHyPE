@@ -53,6 +53,11 @@ class peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest: pub
      * inside the routine.
      */
     void testMPIExchangeOfSingleObject();
+
+    /**
+     * Test if stack implementation works
+     */
+    void testStack();
   public:
     STDVectorStackOverObjectsWithSmartPointersTest();
     virtual void run() override;

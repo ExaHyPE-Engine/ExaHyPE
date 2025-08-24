@@ -323,6 +323,8 @@ public:
    *   - Free the flattened data. All is copied over, so we don't need it
    *     anymore.
    *
+   * @return Send or receive has completed successfully. We only return false
+   *   if it is still pending and we weren't able to finish it up.
    */
   bool tryToFinishSendOrReceive();
 
