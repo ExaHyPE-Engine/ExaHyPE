@@ -337,10 +337,12 @@
  * # Formalisation of load balancing
  *
  * There is a dedicated subpage
- * @subpage toolbox_loadbalancing_strategies_Strategies which describes load
+ * @subpage page_toolbox_loadbalancing_strategies which describes load
  * balancing with graph theoretic glasses on.
  *
- *
+ * For offline decomposition and analysis of adaptive mesh trees, there is
+ * a dedicated subpage:
+ * @subpage page_toolbox_loadbalancing_api
  */
 namespace toolbox {
   /**
