@@ -128,7 +128,7 @@ result.set{}( static_cast<decltype(result.get{}())>( copy.get{}() ) );
 {}
 result.set{}( static_cast<decltype(result.get{}())>( copy.get{}() ) );
 #endif
-""".format(dastgen2.Utils.construct_ifdef_string(attribute.ifdefs),
+""".format(construct_ifdef_string(attribute.ifdefs),
            attribute.get_accessor_name(),
            attribute.get_accessor_name(),
            attribute.get_accessor_name(),
