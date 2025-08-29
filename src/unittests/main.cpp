@@ -279,10 +279,14 @@ int main(int argc, char** argv) {
 
   int cores = tarch::multicore::Core::UseDefaultNumberOfThreads;
   if (argc != 2 and tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logWarning(
+    logInfo(
       "main()",
       "usage: ./" + std::string(argv[0])
-        + " core-count (use default core count=1 now)"
+        + " core-count"
+    );
+    logInfo(
+      "main()",
+      "no core count provided, using default number"
     );
   } else if (argc == 2) {
     cores = std::atoi(argv[1]);
