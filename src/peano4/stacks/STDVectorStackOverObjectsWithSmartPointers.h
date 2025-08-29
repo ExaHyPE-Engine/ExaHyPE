@@ -37,6 +37,12 @@ namespace peano4 {
  *    is known at compile time, i.e. it does not support dynamic size vectors.
  *
  *
+ * ## Realisation
+ *
+ * The class can be seen as a plain wrapper around std::vector. Pop and push
+ * operations actually make the std::vector increase and decrease.
+ *
+ *
  * @param T DaStGen object that hosts a pointer which is backed up by a smart
  *   pointer, i.e. deleted as soon as noone needs it anymore. T has to provide
  *   a clone() operation but it also has to introduce a flattened variant of

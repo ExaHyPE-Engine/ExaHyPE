@@ -57,8 +57,6 @@ void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::startSend(
 ) {
 #ifdef Parallel
   assertion(_ioMode == IOMode::None);
-  assertion(_ioMPIRequest == nullptr);
-
   _ioMode = IOMode::MPISend;
   _ioTag  = tag;
   _ioRank = rank;
@@ -69,7 +67,7 @@ void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::startSend(
   }
   _data.clear();
 
-  logInfo( "startSend()", "send out flattened data of size " << _flattenedData.size() << " on tag " << _ioTag );
+  assertion(_ioMPIRequest == nullptr);
   _ioMPIRequest = new MPI_Request;
 
   int result = MPI_Isend(
@@ -92,20 +90,21 @@ template <class T>
 void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::startReceive(
   peano4::grid::TraversalObserver::SendReceiveContext context, int rank, int tag, MPI_Comm comm, int numberOfElements
 ) {
-#ifdef Parallel
-  assertion3(_ioMode == IOMode::None, rank, tag, numberOfElements);
-  assertion3(numberOfElements > 0, rank, tag, numberOfElements);
+  #ifdef Parallel
+  logTraceInWith3Arguments( "startReceive(int,int,int)", rank, tag, numberOfElements );
+  assertion3(_ioMode==IOMode::None, rank, tag, numberOfElements);
+  assertion3(numberOfElements>0, rank, tag, numberOfElements);
+
+  assertion2( _data.empty(), toString(), numberOfElements );
+  assertion2( _flattenedData.empty(), toString(), numberOfElements );
 
   _ioMode = IOMode::MPIReceive;
   _ioTag  = tag;
   _ioRank = rank;
 
-  _data.clear();
   _flattenedData.resize(numberOfElements, typename T::FlattenedType(T::FlattenedType::ObjectConstruction::NoData));
 
   assertionEquals( _flattenedData.size(), numberOfElements );
-
-  logInfo( "startReceive()", "trigger receive of " << numberOfElements << " elements on tag " << _ioTag );
 
   assertion3( _ioMPIRequest == nullptr, rank, tag, numberOfElements );
   _ioMPIRequest = new MPI_Request;
@@ -124,7 +123,7 @@ void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::startReceive
   }
 
   logTraceOut( "startReceive(int,int,int)" );
-#endif
+  #endif
 }
 
 template <class T>
@@ -143,24 +142,21 @@ bool peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::tryToFinishS
 
     if (flag) {
       result = true;
-      logInfo( "tryToFinishSendOrReceive()", "send/receive complete, free MPI request: " << toString() );
       delete _ioMPIRequest;
       _ioMPIRequest = nullptr;
 
-      _ioMode = IOMode::None;
-
       if (_ioMode==IOMode::MPISend ) {
-        logInfo( "tryToFinishSendOrReceive()", "free flattened data structure" );
         _flattenedData.clear();
       }
       else {
-        logInfo( "tryToFinishSendOrReceive()", "have received " << _flattenedData.size() << " entries. Copy flattened data over" );
         _data.resize(_flattenedData.size(), T(T::ObjectConstruction::NoData));
         for (int i=0; i<_flattenedData.size(); i++) {
           _data[i] = T::unflatten( _flattenedData[i] );
         }
         _flattenedData.clear();
       }
+
+      _ioMode = IOMode::None;
     } else {
       result = false;
     }
@@ -200,7 +196,12 @@ void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::reverse() {
 template <class T>
 std::string peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::toString() const {
   std::ostringstream msg;
-  msg << "(size=" << size() << ",io-mode=" << ::toString(_ioMode) << ",rank=" << _ioRank << ",tag=" << _ioTag << ")";
+  msg << "(size=" << size()
+      << ",flattened-size=" << _flattenedData.size()
+      << ",io-mode=" << ::toString(_ioMode)
+      << ",rank=" << _ioRank
+      << ",tag=" << _ioTag
+      << ")";
   return msg.str();
 }
 

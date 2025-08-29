@@ -57,7 +57,10 @@ class peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest: pub
     /**
      * Test if stack implementation works
      */
-    void testStack();
+    void testStack(int repetitions);
+
+    void testSingleStackExchange();
+    void testMultipleConcurrentStackExchanges();
   public:
     STDVectorStackOverObjectsWithSmartPointersTest();
     virtual void run() override;

@@ -76,13 +76,13 @@ void peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest::test
 }
 
 
-void peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest::testStack() {
+void peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest::testStack(int repetitions) {
   #if defined(Parallel)
   const int Tag = 12;
 
-  GeneratedTestObject::initDatatype();
+  const int StackSize = 256;
 
-  peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<GeneratedTestObject> stack;
+  GeneratedTestObject::initDatatype();
 
   GeneratedTestObject testObject0;
   GeneratedTestObject testObject1;
@@ -107,39 +107,61 @@ void peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest::test
   testObject2.setData(3, -32);
 
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
-    stack.push(testObject0);
-    stack.push(testObject1);
-    stack.push(testObject2);
+    peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<GeneratedTestObject> sendStack;
+    for (int i=0; i<repetitions; i++) {
+      sendStack.push(testObject0);
+      sendStack.push(testObject1);
+      sendStack.push(testObject2);
 
-    stack.startSend(peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange, 1, Tag, tarch::mpi::Rank::getInstance().getCommunicator());
-    while ( not stack.tryToFinishSendOrReceive() ) {}
+      for (int j=3; j<StackSize; j++) {
+        sendStack.push(testObject2);
+      }
+
+      sendStack.startSend(peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange, 1, Tag, tarch::mpi::Rank::getInstance().getCommunicator());
+      while ( not sendStack.tryToFinishSendOrReceive() ) {}
+
+      sendStack.clear();
+    }
   }
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==1) {
-    stack.startReceive(peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange, 0, Tag, tarch::mpi::Rank::getInstance().getCommunicator(), 3);
-    while ( not stack.tryToFinishSendOrReceive() ) {}
+    peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<GeneratedTestObject> receiveStack;
+    for (int i=0; i<repetitions; i++) {
+      receiveStack.startReceive(peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange, 0, Tag, tarch::mpi::Rank::getInstance().getCommunicator(), StackSize);
+      while ( not receiveStack.tryToFinishSendOrReceive() ) {}
 
-    GeneratedTestObject receivedObject2 = stack.pop();
-    GeneratedTestObject receivedObject1 = stack.pop();
-    GeneratedTestObject receivedObject0 = stack.pop();
+      validateEquals( receiveStack.size(), StackSize );
 
-    validateEquals( receivedObject0.getId(),    testObject0.getId() );
-    validateEquals( receivedObject0.getData(0), testObject0.getData(0) );
-    validateEquals( receivedObject0.getData(1), testObject0.getData(1) );
-    validateEquals( receivedObject0.getData(2), testObject0.getData(2) );
-    validateEquals( receivedObject0.getData(3), testObject0.getData(3) );
+      for (int j=3; j<StackSize; j++) {
+        receiveStack.pop();
+      }
 
-    validateEquals( receivedObject1.getId(),    testObject1.getId() );
-    validateEquals( receivedObject1.getData(0), testObject1.getData(0) );
-    validateEquals( receivedObject1.getData(1), testObject1.getData(1) );
-    validateEquals( receivedObject1.getData(2), testObject1.getData(2) );
-    validateEquals( receivedObject1.getData(3), testObject1.getData(3) );
+      GeneratedTestObject receivedObject2 = receiveStack.pop();
+      GeneratedTestObject receivedObject1 = receiveStack.pop();
+      GeneratedTestObject receivedObject0 = receiveStack.pop();
 
-    validateEquals( receivedObject2.getId(),    testObject2.getId() );
-    validateEquals( receivedObject2.getData(0), testObject2.getData(0) );
-    validateEquals( receivedObject2.getData(1), testObject2.getData(1) );
-    validateEquals( receivedObject2.getData(2), testObject2.getData(2) );
-    validateEquals( receivedObject2.getData(3), testObject2.getData(3) );
+      validate( receiveStack.empty() );
+
+      validateEquals( receivedObject0.getId(),    testObject0.getId() );
+      validateEquals( receivedObject0.getData(0), testObject0.getData(0) );
+      validateEquals( receivedObject0.getData(1), testObject0.getData(1) );
+      validateEquals( receivedObject0.getData(2), testObject0.getData(2) );
+      validateEquals( receivedObject0.getData(3), testObject0.getData(3) );
+
+      validateEquals( receivedObject1.getId(),    testObject1.getId() );
+      validateEquals( receivedObject1.getData(0), testObject1.getData(0) );
+      validateEquals( receivedObject1.getData(1), testObject1.getData(1) );
+      validateEquals( receivedObject1.getData(2), testObject1.getData(2) );
+      validateEquals( receivedObject1.getData(3), testObject1.getData(3) );
+
+      validateEquals( receivedObject2.getId(),    testObject2.getId() );
+      validateEquals( receivedObject2.getData(0), testObject2.getData(0) );
+      validateEquals( receivedObject2.getData(1), testObject2.getData(1) );
+      validateEquals( receivedObject2.getData(2), testObject2.getData(2) );
+      validateEquals( receivedObject2.getData(3), testObject2.getData(3) );
+    }
   }
+
+  tarch::mpi::Rank::getInstance().barrier();
   #endif
 }
 
@@ -175,13 +197,24 @@ void peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest::test
 }
 
 
+void peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest::testSingleStackExchange() {
+  testStack(1);
+}
+
+
+void peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest::testMultipleConcurrentStackExchanges() {
+  testStack(32);
+}
+
+
 void peano4::stacks::tests::STDVectorStackOverObjectsWithSmartPointersTest::run() {
   logTraceIn( "run()" );
 
   testMethod( testFlattening );
   testMethod( testMPIExchangeOfFlattenedObject );
   testMethod( testMPIExchangeOfSingleObject );
-  testMethod( testStack );
+  testMethod( testSingleStackExchange );
+  testMethod( testMultipleConcurrentStackExchanges );
 
   logTraceOut( "run()" );
 }

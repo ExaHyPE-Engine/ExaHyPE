@@ -142,9 +142,13 @@ void peano4::stacks::tests::GeneratedTestObject::receive(
 peano4::stacks::tests::GeneratedTestObject::FlattenedType peano4::stacks::tests::GeneratedTestObject::flatten(const SmartType& copy ) {
   FlattenedType result;
   
-result.setId( static_cast<decltype(result.getId())>( copy.getId() ) );
+/*
+  result.setId( static_cast<decltype(result.getId())>( copy.getId() ) );
+  result.setData( static_cast<decltype(result.getData())>( copy.getData() ) );
+*/
 
-result.setData( static_cast<decltype(result.getData())>( copy.getData() ) );
+  result.setId( ( copy.getId() ) );
+  result.setData( ( copy.getData() ) );
 
   return result;
 }
@@ -152,9 +156,11 @@ result.setData( static_cast<decltype(result.getData())>( copy.getData() ) );
 peano4::stacks::tests::GeneratedTestObject::SmartType peano4::stacks::tests::GeneratedTestObject::unflatten(const FlattenedType& copy ) {
   SmartType result;
   
-result.setId( static_cast<decltype(result.getId())>( copy.getId() ) );
+//result.setId( static_cast<decltype(result.getId())>( copy.getId() ) );
+//result.setData( static_cast<decltype(result.getData())>( copy.getData() ) );
 
-result.setData( static_cast<decltype(result.getData())>( copy.getData() ) );
+result.setId( ( copy.getId() ) );
+result.setData( ( copy.getData() ) );
 
   return result;
 }
