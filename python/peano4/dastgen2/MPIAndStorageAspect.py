@@ -6,7 +6,8 @@ import jinja2
 import dastgen2
 
 
-class MPIAndStorageAspect(dastgen2.aspects.MPI):
+#class MPIAndStorageAspect(dastgen2.aspects.MPI):
+class MPIAndStorageAspect(object):
     """!
 
     Represents Peano's MPI and storage aspect injected into a DaStGen model.
@@ -45,6 +46,7 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
       Clarifies which grid entity the underlying datatype is associated
       to.
 
+@todo A nicer implementation would introduce an Aspect interface. See MPI aspect in Peano 4. There's a similar comment in there.
     """
 
     def __init__(self, dof_association_):
@@ -72,6 +74,23 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
         self.implementation_file_includes=""
         pass
 
+    def set_model(self, 
+                  data_model,
+                  ):
+        """!
+        
+        Inform aspect about model
+        
+        This routine is invoked by DataModel.add_aspect() and informs us about
+        the data model in use.
+        
+        @param data_model: dastgen2.DataModel
+          I cannot use the actual data model, as I otherwise get circular 
+          inputs.
+          
+        """
+        self._data_model = data_model
+        
     def __str__(self):
         result = "("
         if self.dof_association == DoFAssociation.Vertex:
@@ -97,10 +116,12 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
         result += ")"
         return result
 
+    def get_attributes(self):
+        return ""
+
     def get_include(self):
         result = (
-            super(MPIAndStorageAspect, self).get_include()
-            + """
+            """
 #include "tarch/la/Vector.h"
 #include "tarch/la/SmartPointerVector.h"
 #include "tarch/mpi/Rank.h"
@@ -126,10 +147,7 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
             "name": full_qualified_name.split("::")[-1],
         }
         result = (
-            super(MPIAndStorageAspect, self).get_method_declarations(
-                full_qualified_name
-            )
-            + """
+"""
 
     enum ObjectConstruction {
       NoData
@@ -190,8 +208,7 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
         }
 
         result = (
-            super(MPIAndStorageAspect, self).get_implementation(full_qualified_name)
-            + """
+            """
 #ifdef Parallel
 void {{full_qualified_name}}::sendAndPollDanglingMessages(const {{full_qualified_name}}& message, int destination, int tag, MPI_Comm communicator ) {
   {{full_qualified_name}}::send(

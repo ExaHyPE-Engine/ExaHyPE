@@ -68,6 +68,7 @@ void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::startSend(
     _flattenedData[i] = T::flatten( _data[i] );
   }
 
+  logInfo( "startSend()", "send out flattened data" );
   _ioMPIRequest = new MPI_Request;
   int result = MPI_Isend(
     _flattenedData.data(),
@@ -81,6 +82,8 @@ void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::startSend(
       << ": " << tarch::mpi::MPIReturnValueToString(result)
     );
   }
+  assertion(false);
+  logInfo( "startSend()", "send for flattened data successful, but data might not have left the system, i.e. we keep the buffer" );
 #endif
 }
 

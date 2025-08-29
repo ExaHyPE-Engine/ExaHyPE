@@ -37,9 +37,10 @@ namespace peano4 {
  *    is known at compile time, i.e. it does not support dynamic size vectors.
  *
  *
- * @param T Hosts usually pointer which is backed up by a smart pointer, i.e.
- *   deleted as soon as noone needs it anymore. T has to provide a clone()
- *   operation.
+ * @param T DaStGen object that hosts a pointer which is backed up by a smart
+ *   pointer, i.e. deleted as soon as noone needs it anymore. T has to provide
+ *   a clone() operation but it also has to introduce a flattened variant of
+ *   its own that we can use for MPI data exchange and copying.
  */
 template <class T>
 class peano4::stacks::STDVectorStackOverObjectsWithSmartPointers {
