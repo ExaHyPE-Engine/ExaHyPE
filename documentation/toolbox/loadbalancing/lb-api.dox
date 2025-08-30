@@ -66,14 +66,23 @@ Currently supports splitting only at the finest level of the tree:
 - **Sequential Assignment**: Assigns nodes to subtrees following spatial ordering
 - **Metadata Updates**: Automatically updates tree statistics and split patterns
 
+### Multi-level Splitting
+The [`split_leaves`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py) function provides comprehensive splitting across all tree levels:
+
+- **All-Level Leaf Distribution**: Identifies and distributes ALL leaf nodes, including those at intermediate levels that weren't refined further
+- **Adaptive Mesh Support**: Handles trees where refinement varies spatially, ensuring leaves at coarser levels are properly balanced
+- **Topology Constraint Maintenance**: Automatically updates non-leaf node assignments to maintain tree topology constraints via [`_update_non_leaf_assignments`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py)
+- **Bottom-up Propagation**: Ensures parent nodes follow subtree assignments of their children when all children belong to the same subtree
+
+This approach provides more accurate load balancing for adaptive meshes compared to finest-level-only splitting, as it distributes computational work based on all actual leaf nodes rather than just those at the maximum refinement level.
+
 ### Tree Reset Operations
 - **Single Subtree Reset**: Returns all nodes to subtree 0, erasing previous splits
 - **Clean State**: Prepares trees for fresh splitting operations
 
 ### Future Extensions
 Planned development includes:
-- **Coarse Level Splitting**: Support for splitting leaves at intermediate levels
-- **Hierarchical Strategies**: Multi-level splitting approaches
+- **Hierarchical Strategies**: Multi-level splitting approaches with cost optimization
 - **Cost-Aware Splitting**: Integration with splitting cost functions from @ref page_toolbox_loadbalancing_strategies
 
 ## Output and Visualization
@@ -163,9 +172,8 @@ This enables analysis of scaling behavior and identification of computational bo
 
 Planned extensions to the API include:
 
-- **Multi-level Splitting**: Support for splitting at intermediate tree levels
 - **Cost Function Integration**: Implementation of splitting cost models from theoretical framework
-- **Advanced Algorithms**: More sophisticated splitting strategies beyond simple finest-level distribution
+- **Advanced Algorithms**: Cost-aware optimization strategies that minimize splitting costs while maintaining load balance, hierarchical splitting with early-stage decisions, and guided refinement approaches
 - **Peano Integration Tools**: Direct export mechanisms for hardcoded load balancer configuration
 - **Parallel Processing**: Support for parallel tree analysis and splitting operations
 
