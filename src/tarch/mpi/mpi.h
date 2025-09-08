@@ -6,6 +6,7 @@
 #include "config.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
+#include <string>
 
 #ifdef Parallel
 #include <mpi.h>
@@ -69,4 +70,30 @@ tarch::mpi::IntegerMessage::receive(
  */
 
 
+namespace tarch {
+  namespace mpi {
+    #ifdef Parallel
+    /**
+     * Returns a string representation of the mpi status. For a detailed
+     * description of the mpi status itself see the file mpi.h.
+     */
+    std::string MPIStatusToString( const MPI_Status& status );
+
+    std::string MPIReturnValueToString( int result );
+
+    /**
+     * Wrapper around MPI_Wait
+     *
+     * This routine wraps around MPI_Wait and implements some deadlock
+     * detection. That's the not the only thing: the routine also invokes
+     * the receiveDanglingMessages() routine.
+     *
+     * @param request Valid MPI request
+     * @param fullQualifiedClassName The fully qualified function name
+     *   invoking the wait(). This one is used to report on deadlocks.
+     */
+    void wait(MPI_Request& request, const std::string& fullQualifiedClassName, const std::string& functionName);
+    #endif
+  }
+}
 

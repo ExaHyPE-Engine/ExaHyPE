@@ -287,6 +287,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     
     Construct the solver
     
+    Please consult @ref tutorials_peano4_mask_out_data_usage "the tutorial on data masking"
+    for a discussion of the load_store_compute_flag settings.
+    
     @param poly_degree: Integer
       The degree of the polynomial that we use. Has to be bigger or equal to one.
 
@@ -443,14 +446,23 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution",      str(self._unknowns_per_face_solution ) ))
         self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "lProjection",   str(self._unknowns_per_face_solution ) ))
         self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rProjection",   str(self._unknowns_per_face_solution ) ))
-    
-    
+
+    #! [mghype_matrixfree_solvers_api_DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_storage_guards]    
+    self._cell_data.peano4_mpi_and_storage_aspect.load_store_compute_flag     = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+      self._hold_cell_and_face_data_guard(),
+      self._load_cell_and_face_data_guard(),
+      self._hold_cell_and_face_data_guard(),
+    )
+    self._face_data.peano4_mpi_and_storage_aspect.load_store_compute_flag     = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+      self._hold_cell_and_face_data_guard(),
+      self._load_cell_and_face_data_guard(),
+      self._hold_cell_and_face_data_guard(),
+    )
+    self._cell_data.peano4_mpi_and_storage_aspect.implementation_file_includes += self._additional_includes()
+    self._face_data.peano4_mpi_and_storage_aspect.implementation_file_includes += self._additional_includes()
+    #! [mghype_matrixfree_solvers_api_DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_storage_guards]        
     
     self._face_data.peano4_mpi_and_storage_aspect.merge_implementation = self.get_face_merge_method()
-    self._face_data.peano4_mpi_and_storage_aspect.implementation_file_includes = """ 
-#include "../{}.h"
-#include "repositories/SolverRepository.h"
-""".format( self.typename() )
 
     self.preprocessing_action_set  = None
     self.postprocessing_action_set = None
@@ -470,7 +482,59 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._action_set_project_onto_faces                          =  ProjectOntoFaces(self, descend_order+3, True) 
     self._action_set_update_residual                             =  UpdateResidual(self, descend_order+3, True) 
 
+
+  #! [mghype_matrixfree_solvers_api_DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_hold_cell_and_face_data_guard]
+  def _hold_cell_and_face_data_guard(self):
+    """!
+
+    Goard when to hold data in mesh
     
+    Compare with the discussion in the @ref tutorials_peano4_mask_out_data_usage "Peano tutorial on when and how to load data".
+    We don't need the data throughout the mesh construction, where it only
+    blows up the memory consumption and makes the load balancing more expensive
+    as we exchange data via MPI which, at this point, doesn't hold anything
+    meaningful.
+    
+    """
+    return """(
+        not marker.hasBeenRefined()
+        and 
+        repositories::{}.getState()!=Abstract{}::State::GridConstruction
+    )""".format( self.instance_name(),
+                 self._name,
+                 )
+    
+  def _load_cell_and_face_data_guard(self):
+    """!
+
+    Goard when to hold data in mesh
+    
+    Compare with the discussion in the @ref tutorials_peano4_mask_out_data_usage "Peano tutorial on when and how to load data".
+    We don't need the data throughout the mesh construction, where it only
+    blows up the memory consumption and makes the load balancing more expensive
+    as we exchange data via MPI which, at this point, doesn't hold anything
+    meaningful.
+    
+    """
+    return """(
+        not marker.hasBeenRefined()
+        and 
+        repositories::{}.getState()!=Abstract{}::State::GridConstruction
+        and
+        repositories::{}.getState()!=Abstract{}::State::InitSolution
+    )""".format( self.instance_name(),
+                 self._name,
+                 self.instance_name(),
+                 self._name,
+                 )
+    
+  def _additional_includes(self):
+      return """
+#include "repositories/SolverRepository.h"
+      """
+  #! [mghype_matrixfree_solvers_api_DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_hold_cell_and_face_data_guard]
+
+
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).add_to_Peano4_datamodel(datamodel,verbose)
 

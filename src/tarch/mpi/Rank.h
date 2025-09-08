@@ -16,16 +16,6 @@
 namespace tarch {
   namespace mpi {
     class Rank;
-
-    #ifdef Parallel
-    /**
-     * Returns a string representation of the mpi status. For a detailed
-     * description of the mpi status itself see the file mpi.h.
-     */
-    std::string MPIStatusToString( const MPI_Status& status );
-
-    std::string MPIReturnValueToString( int result );
-    #endif
   }
 }
 

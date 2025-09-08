@@ -1,0 +1,28 @@
+/**
+
+ @page tutorials_peano4_tailor_data_exchange Tailor the parallel data exchange
+ 
+<!-- Add this one for href links to subitems -->
+ \tableofcontents
+
+
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    self.merge_method_definition     = ""
+    self.send_condition              = "true"
+    self.receive_and_merge_condition = "true"
+    self.load_store_compute_flag     = "::peano4::grid::LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream"
+    self.includes                    = ""
+    self.float_type                  = FloatTypes(float_type)
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+ ## Realisation 
+ 
+ The realisation of this whole communciation tailoring is subject of 
+ @ref page_peano_localisation "a discussion of its own".
+ It obviously has to be discussed in combination with the logic underlying
+ data data storage within the grid.
+
+
+
+ */

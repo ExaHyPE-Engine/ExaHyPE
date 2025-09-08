@@ -71,6 +71,10 @@ class DoF(object):
   which is held in association. There are some further properties tied to 
   each DoF such as a position x and a mesh width h, but we leave it to 
   subclasses to provide those guys.
+  
+  Please consult the tutorials on @ref tutorials_peano4_assign_data_to_mesh "assigning data to a mesh" and
+  @ref tutorials_peano4_mask_out_data_usage "masking out data storage"
+  on some instructions where this class is actually used in code.
 
   """
   
