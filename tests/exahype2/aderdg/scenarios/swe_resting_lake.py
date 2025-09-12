@@ -2,33 +2,11 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .scenario import Scenario
 
-import os
-import sys
+import os, sys
+import jinja2
 
 sys.path.insert(0, os.path.abspath("../equations"))
 from equations import SWE_W_Bathymetry
-
-_initial_conditions = {
-    "bilinear": """
-    Q[1] = 0.0;
-    Q[2] = 0.0;
-    Q[3] = 1.0 - std::abs(x[0]) - std::abs(x[1]);
-    Q[0] = 2.0 - Q[3];
-""",
-    "sinusoidal": """
-    Q[1] = 0.0;
-    Q[2] = 0.0;
-    Q[3] = sin( 2*M_PI * (x[0]+x[1]) );
-    Q[0] = 2.0 - Q[3];
-""",
-    "constant": """
-    Q[1] = 0.0;
-    Q[2] = 0.0;
-    Q[3] = 1.0;
-    Q[0] = 2.0 - Q[3];
-""",
-}
-
 
 class SWERestingLake(Scenario):
     """
@@ -56,23 +34,33 @@ class SWERestingLake(Scenario):
         self,
         initial_conditions="sinusoidal",
     ):
-        self._init = _initial_conditions[initial_conditions]
+        self._scenario = initial_conditions
+
+    def _initial_conditions(self, Q):
+        d = {"VARIABLE": Q}
+        return {
+        "bilinear": jinja2.Template("""
+    {{VARIABLE}}[1] = 0.0;
+    {{VARIABLE}}[2] = 0.0;
+    {{VARIABLE}}[3] = 1.0 - std::abs(x[0]) - std::abs(x[1]);
+    {{VARIABLE}}[0] = 2.0 - {{VARIABLE}}[3];
+""").render(**d),
+    "sinusoidal": jinja2.Template("""
+    {{VARIABLE}}[1] = 0.0;
+    {{VARIABLE}}[2] = 0.0;
+    {{VARIABLE}}[3] = sin( 2*M_PI * (x[0]+x[1]) );
+    {{VARIABLE}}[0] = 2.0 - {{VARIABLE}}[3];
+""").render(**d),
+    "constant": jinja2.Template("""
+    {{VARIABLE}}[1] = 0.0;
+    {{VARIABLE}}[2] = 0.0;
+    {{VARIABLE}}[3] = 1.0;
+    {{VARIABLE}}[0] = 2.0 - {{VARIABLE}}[3];
+""").render(**d)
+    }
 
     def initial_conditions(self):
-        return self._init
+        return self._initial_conditions("Q")[self._scenario]
 
     def analytical_solution(self):
-        return """
-  {{SOLUTION_STORAGE_PRECISION}} _Q[4];
-  initialCondition(
-      _Q,
-      x,
-      tarch::la::Vector<DIMENSIONS, double>(),
-      true
-  );
-
-  solution[0] = _Q[0];
-  solution[1] = _Q[1];
-  solution[2] = _Q[2];
-  solution[3] = _Q[3];
-  """
+        return self._initial_conditions("solution")[self._scenario]

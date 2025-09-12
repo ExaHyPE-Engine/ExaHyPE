@@ -38,7 +38,7 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
     double* dQdt = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
     #endif
 
-    ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{ADD_SOLVER_CONTRIBUTIONS_CALL}}
+    ::exahype2::dg::{{ADD_SOLVER_CONTRIBUTIONS_CALL}}
 
     ::exahype2::CellData<double, double> cellData(
       nullptr,
@@ -49,7 +49,7 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
       dQdt
     );
 
-    ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{MULTIPLY_WITH_INVERTED_MASS_MATRIX_CALL}}
+    ::exahype2::dg::{{MULTIPLY_WITH_INVERTED_MASS_MATRIX_CALL}}
     
     const double* oldQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     

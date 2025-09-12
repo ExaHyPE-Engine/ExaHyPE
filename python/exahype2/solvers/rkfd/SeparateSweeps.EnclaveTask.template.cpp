@@ -381,13 +381,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   }
   #endif
 
-  #if defined(GPUOffloadingHIP)
-  if (targetDevice>=0) {
-    foundOffloadingBranch = true;
-    ::exahype2::fd::{{KERNEL_NAMESPACE}}::hip::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
-  }
-  #endif
-
   #if defined(WITH_GPU_SYCL)
   if (targetDevice>=0 or targetDevice==Host) {
     foundOffloadingBranch = true;

@@ -11,7 +11,7 @@ available_scenarios = {
     "AdvectionLinear": scenarios.AdvectionLinear(),
     "ElasticPlanarWaves": scenarios.ElasticPlanarWaves(dimensions=2),
     "EulerGaussianBell": scenarios.EulerGaussianBell(),
-    "EulerIsotropicVortex": scenarios.EulerIsotropicVortex(),
+    "EulerIsentropicVortex": scenarios.EulerIsentropicVortex(),
     "SWERadialDamBreak": scenarios.SWERadialDamBreak(),
     "SWERestingLake": scenarios.SWERestingLake(),
 }

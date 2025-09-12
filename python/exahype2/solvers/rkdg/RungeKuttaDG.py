@@ -368,8 +368,12 @@ class RungeKuttaDG(object):
 
         self._start_time_step_implementation = ""
         self._finish_time_step_implementation = ""
+        self._print_time_step_implementation = ""
 
         self._constructor_implementation = ""
+
+        self._start_simulation_implementation = ""
+        self._finish_simulation_implementation = ""
 
         self._cell_data_storage = Storage.CallStack
         self._face_data_storage = Storage.CallStack
@@ -1535,6 +1539,9 @@ We use RK("""
         d["FINISH_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
             self._finish_time_step_implementation, undefined=jinja2.DebugUndefined
         ).render(**d)
+        d["PRINT_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
+            self._print_time_step_implementation, undefined=jinja2.DebugUndefined
+        ).render(**d)
         d["CONSTRUCTOR_IMPLEMENTATION"] = jinja2.Template(
             self._constructor_implementation, undefined=jinja2.DebugUndefined
         ).render(**d)
@@ -1543,6 +1550,13 @@ We use RK("""
         ).render(**d)
         d["COMPUTE_NEW_TIME_STEP_SIZE"] = jinja2.Template(
             self._compute_new_time_step_size, undefined=jinja2.DebugUndefined
+        ).render(**d)
+
+        d["START_SIMULATION_IMPLEMENTATION"] = jinja2.Template(
+            self._start_simulation_implementation, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["FINISH_SIMULATION_IMPLEMENTATION"] = jinja2.Template(
+            self._finish_simulation_implementation, undefined=jinja2.DebugUndefined
         ).render(**d)
 
         d["FLUX_IMPLEMENTATION"] = self._flux_implementation

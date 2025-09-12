@@ -34,7 +34,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   double * NOALIAS Q,
   const tarch::la::Vector<DIMENSIONS,double>&  x,
   const tarch::la::Vector<DIMENSIONS,double>&  h,
-  const tarch::la::Vector<DIMENSIONS,int>&     index,
   bool                                         gridIsConstructed
 ) {
   logTraceInWith2Arguments( "initialCondition(...)", x, gridIsConstructed );
@@ -54,7 +53,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   const double * NOALIAS                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   double * NOALIAS                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
   double                                       t,
   int                                          normal
 ) {

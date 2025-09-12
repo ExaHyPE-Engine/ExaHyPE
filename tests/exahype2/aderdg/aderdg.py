@@ -14,7 +14,7 @@ available_scenarios = {
     "AdvectionLinear": scenarios.AdvectionLinear(),
     "ElasticPlanarWaves": scenarios.ElasticPlanarWaves(dimensions=2),
     "EulerGaussianBell": scenarios.EulerGaussianBell(),
-    "EulerIsotropicVortex": scenarios.EulerIsotropicVortex(),
+    "EulerIsentropicVortex": scenarios.EulerIsentropicVortex(),
     "SWERadialDamBreak": scenarios.SWERadialDamBreak(),
     "SWERestingLake": scenarios.SWERestingLake(),
 }
@@ -49,7 +49,7 @@ order = args.degrees_of_freedom - 1
 max_h = 1.1 * scenario._domain_size / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
 
-polynomials = exahype2.solvers.aderdg.Polynomials.Gauss_Lobatto
+polynomials = exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
 
 project = exahype2.Project(
     namespace=["tests", "exahype2", "aderdg"],

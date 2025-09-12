@@ -127,11 +127,11 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       timeStamp,
       timeStepSize
     )) {
-      ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS}}
+      ::exahype2::dg::{{VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS}}
     } else
     {% endif %}
 
-    ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_COMPUTE_KERNEL_CALL}}
+    ::exahype2::dg::{{VOLUMETRIC_COMPUTE_KERNEL_CALL}}
     {% endif %}
   }
   {% endfor %}
