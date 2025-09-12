@@ -26,7 +26,7 @@ class ScalarJacobiWithRediscretisation(ActionSet):
     result.data.add_attribute(dastgen2.attributes.Double("OldAverage") )
     result.data.add_attribute(dastgen2.attributes.Double("NewAverage") )
 
-    @todo I think this is wrong. It should not be in the generator
+    # @todo I think this is wrong. It should not be in the generator
     result.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
         "true", "true", "true" )
 
