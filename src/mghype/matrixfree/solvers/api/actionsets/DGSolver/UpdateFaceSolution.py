@@ -20,7 +20,7 @@ class UpdateFaceSolution(ActionSet):
   ) {
     logTraceInWith2Arguments( "updateFaceSolution::Interior", fineGridFace{{SOLVER_NAME}}.getSolution(), marker.toString() );
 
-    // project the u^\pm into a temporary vector
+    // project the left/right projection into a temporary vector
     tarch::la::Vector< 2*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projections;
     // alias for number of solutions
     const int nSols = repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution;

@@ -316,7 +316,7 @@ class Test5Coupling(Test4Coupling):
     and
     Counter == 0
   ) {
-    // project the u^\pm into a temporary vector
+    // project the left/right projections into a temporary vector
     tarch::la::Vector< repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 
       repositories::{{DG_SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFace{{DG_SOLVER_NAME}}.getProjectionTest();
 
