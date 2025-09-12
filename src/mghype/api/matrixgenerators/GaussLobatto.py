@@ -151,9 +151,9 @@ class GaussLobatto(MatrixGenerator):
     return output
 
   def get_cell_system_matrix_for_laplacian(self):
-    '''
+    r"""!
     Create a cell-cell mass matrix for $\nabla p \cdot \nabla v$
-    '''
+    """
     return self.block_matrix._A_CC[(0,0)][(0,0)]
   
   def get_face_to_cell_matrix(self):
@@ -259,7 +259,7 @@ class GaussLobatto(MatrixGenerator):
 
 
   def get_averaging_riemann_solver(self):
-    """!
+    r"""!
     
     Simple averaging Riemann solver
     
