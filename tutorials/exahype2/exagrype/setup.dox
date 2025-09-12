@@ -19,7 +19,7 @@ then configure and compile the Peano under main directory following
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-./configure CC=icx CXX=icpx --with-mpi=mpiicpc --with-multithreading=omp CXXFLAGS="-Ofast -std=c++20 -fiopenmp -march=native -mtune=native -fma -fomit-frame-pointer -Wno-attributes=clang:: -w" LDFLAGS="-fiopenmp" --enable-loadbalancing --enable-exahype --enable-particles --enable-blockstructured --enable-finiteelements
+./configure CC=icx CXX=icpx --with-mpi=mpiicpx --with-multithreading=omp CXXFLAGS="-Ofast -std=c++20 -qopenmp -march=native -mtune=native -fma -fomit-frame-pointer -Wno-attributes=clang:: -w" LDFLAGS="-qopenmp" --enable-loadbalancing --enable-exahype --enable-particles --enable-blockstructured --enable-finiteelements
 make -j
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -28,7 +28,9 @@ Please notice the missing of certain installed libraries may lead to compiling e
 
 Depending on your system, you might have to load the GSL module separately
 before your next step, it is required by the external library of
-initial condition for black holes (no need for gauge wave scenario).
+initial condition for black holes (no need for gauge wave scenario). In principle the library is already implemented
+in the ExaHyPE and no external including is needed, but I keep the entry below just in case. GSL module is available
+for most of cluster system 
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 module load gsl

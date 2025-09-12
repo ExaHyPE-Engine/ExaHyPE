@@ -1,19 +1,30 @@
 #pragma once
 
-#include "toolbox/particles/MultiscaleTransitions.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
+#include "toolbox/particles/MultiscaleTransitions.h"
 
 namespace swift2 {
   namespace kernels {
     template <typename Particle>
-    using UpdateParticlePairWithinCellPredicate = std::function<bool(const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle)>;
+    using UpdateParticlePairWithinCellPredicate = std::function<bool(
+      const peano4::datamanagement::CellMarker& marker,
+      const Particle&                           localParticle,
+      const Particle&                           activeParticle
+    )>;
 
     template <typename Particle>
-    using UpdateParticleAssignedToCellPredicate = std::function<bool(const peano4::datamanagement::CellMarker& marker, const bool& localParticleIsContainedInCell, const Particle& localParticle)>;
+    using UpdateParticleAssignedToCellPredicate = std::function<bool(
+      const peano4::datamanagement::CellMarker& marker,
+      const bool&                               localParticleIsContainedInCell,
+      const Particle&                           localParticle
+    )>;
 
     template <typename Particle>
-    using UpdateParticleAssignedToVertexPredicate = std::function<bool(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle)>;
+    using UpdateParticleAssignedToVertexPredicate = std::function<bool(
+      const peano4::datamanagement::VertexMarker& marker,
+      const Particle&                             localParticle
+    )>;
 
 
     /**
@@ -26,7 +37,10 @@ namespace swift2 {
      * UpdateParticleAssignedToVertexPredicate().
      */
     template <typename Particle>
-    bool alwaysUpdateInVertexKernel(const peano4::datamanagement::VertexMarker&  marker, const Particle& localParticle) {
+    bool alwaysUpdateInVertexKernel(
+      const peano4::datamanagement::VertexMarker& marker,
+      const Particle&                             localParticle
+    ) {
       return true;
     }
 
@@ -38,7 +52,11 @@ namespace swift2 {
      * predicate.
      */
     template <typename Particle>
-    bool alwaysUpdateInCellKernel(const peano4::datamanagement::CellMarker&  marker, const bool& localParticleIsContainedInCell, const Particle& localParticle) {
+    bool alwaysUpdateInCellKernel(
+      const peano4::datamanagement::CellMarker& marker,
+      const bool&                               localParticleIsContainedInCell,
+      const Particle&                           localParticle
+    ) {
       return true;
     }
 
@@ -50,7 +68,11 @@ namespace swift2 {
      * predicate.
      */
     template <typename Particle>
-    bool alwaysUpdateParticlePairs(const peano4::datamanagement::CellMarker&  marker, const Particle& localParticle, const Particle& activeParticle) {
+    bool alwaysUpdateParticlePairs(
+      const peano4::datamanagement::CellMarker& marker,
+      const Particle&                           localParticle,
+      const Particle&                           activeParticle
+    ) {
       return true;
     }
 
@@ -58,14 +80,18 @@ namespace swift2 {
     /**
      * Is a particle local
      *
-     * @brief is this localParticle a local particle (in the ParallelState sense)?
+     * @brief is this localParticle a local particle (in the ParallelState
+     * sense)?
      *
      * Helper routine which is used by a lot of predicates in their decision
      * making process. Is usually not used directly and hence could be moved
      * into an "internal" namespace as well.
      */
     template <typename Particle>
-    bool particleIsLocal(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle) {
+    bool particleIsLocal(
+      const peano4::datamanagement::VertexMarker& marker,
+      const Particle&                             localParticle
+    ) {
       return localParticle.getParallelState() == Particle::ParallelState::Local;
     }
 
@@ -84,7 +110,10 @@ namespace swift2 {
      * @param marker: Identifier for this vertex
      */
     template <typename Particle>
-    bool localParticleCanBeUpdatedAndMovedInVertexKernel(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle) {
+    bool localParticleCanBeUpdatedAndMovedInVertexKernel(
+      const peano4::datamanagement::VertexMarker& marker,
+      const Particle&                             localParticle
+    ) {
       return (
         (localParticle.getMoveState() == Particle::MoveState::NotMovedYet)
         & particleIsLocal(marker, localParticle)
@@ -116,13 +145,16 @@ namespace swift2 {
         and
         marker.isContained(localParticle->getX())
         and
-        not toolbox::particles::particleWillBeDroppedFurther(*localParticle, marker)
+        not toolbox::particles::particleWillBeDroppedFurther(*localParticle,
+     marker)
       );
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      * However, that's a poor idea, as it does not work along AMR boundaries for
-     * particles which reside in a refined cell yet would be dropped into a hanging
-     * vertex (which we don't). The file peano4.toolbox.particles.api.AbstractParticleGridAssociation
+     * particles which reside in a refined cell yet would be dropped into a
+     hanging
+     * vertex (which we don't). The file
+     peano4.toolbox.particles.api.AbstractParticleGridAssociation
      * provides some examples on this.
      *
      * ## Optimisation
@@ -131,58 +163,99 @@ namespace swift2 {
      * Usually, you would do this check once in an outer loop via the is local
      * flag, and then you can skip it here.
      *
+     * ## Usage
+     *
+     * Usually, it is a poor idea to use this routine. It is brutally slow to
+     * check a local particle whether it is really contained within a cell per
+     * particle-particle interaction. I rather prefer to use
+     *
+     *        ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>,
+     *
+     * once in an outer loop and then to apply
+     *
+     *
+     *        updateFromAnyOtherParticle
+     *
+     * as predicate (or something more restrictive such as densityKernelEvaluatePairInteractionPredicate
+     * but never this one).
+     *
+     *
+     *
      * @param localParticle: particle to check for
      * @param marker: the cell's CellMarker
      */
-    template <typename Particle>
+    template <typename ParticleA, typename ParticleB = ParticleA>
     bool localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(
-      const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleA&                          localParticle,
+      const ParticleB&                          activeParticle
     ) {
-      return &localParticle != &activeParticle
-         and not localParticle.getCellHasUpdatedParticle()
-         and marker.isContained(
-           localParticle.getX(),
-           toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-         )
-         and localParticle.getParallelState() == Particle::ParallelState::Local;
+      return (void*)(&localParticle) != (void*)(&activeParticle)
+             and not localParticle.getCellHasUpdatedParticle()
+             and marker.isContained(
+               localParticle.getX(),
+               toolbox::particles::internal::
+                   relativeGrabOwnershipSpatialSortingTolerance(marker)
+                 * tarch::la::NUMERICAL_ZERO_DIFFERENCE
+             )
+             and localParticle.getParallelState(
+                 ) == ParticleA::ParallelState::Local;
     }
 
-
-    template <typename Particle>
-    bool localParticleCanBeUpdatedInCellKernelFromAnyOtherParticleWithinIterationRange(
-      const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
+    template <typename ParticleA, typename ParticleB = ParticleA>
+    bool updateFromAnyOtherParticle(
+        const peano4::datamanagement::CellMarker& marker, const ParticleA& localParticle, const ParticleB& activeParticle
     ) {
-      return &localParticle != &activeParticle
-         and not localParticle.getCellHasUpdatedParticle()
-         and marker.isContained(
-           localParticle.getX(),
-           toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-         )
-         and localParticle.getParallelState() == Particle::ParallelState::Local;
+        return (void*)(&localParticle) != (void*)(&activeParticle);
+    }
+
+    template <typename ParticleA, typename ParticleB = ParticleA>
+    bool localParticleCanBeUpdatedInCellKernelFromAnyOtherParticleWithinIterationRange(
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleA&                          localParticle,
+      const ParticleB&                          activeParticle
+    ) {
+      return (void*)(&localParticle) != (void*)(&activeParticle)
+             and not localParticle.getCellHasUpdatedParticle()
+             and marker.isContained(
+               localParticle.getX(),
+               toolbox::particles::internal::
+                   relativeGrabOwnershipSpatialSortingTolerance(marker)
+                 * tarch::la::NUMERICAL_ZERO_DIFFERENCE
+             )
+             and localParticle.getParallelState(
+                 ) == ParticleA::ParallelState::Local;
     }
 
 
     template <typename Particle>
     bool localParticleCanBeUpdatedInCellKernel(
-      const peano4::datamanagement::CellMarker& marker, const bool& localParticleIsContainedInCell, const Particle& localParticle
+      const peano4::datamanagement::CellMarker& marker,
+      const bool&                               localParticleIsContainedInCell,
+      const Particle&                           localParticle
     ) {
       assertionEquals2(
         localParticleIsContainedInCell,
         marker.isContained(
           localParticle.getX(),
-          toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
+          toolbox::particles::internal::
+              relativeGrabOwnershipSpatialSortingTolerance(marker)
+            * tarch::la::NUMERICAL_ZERO_DIFFERENCE
         ),
-        marker.toString(), localParticle.toString()
+        marker.toString(),
+        localParticle.toString()
       );
 
       return not localParticle.getCellHasUpdatedParticle()
-         and localParticleIsContainedInCell
-         and localParticle.getParallelState() == Particle::ParallelState::Local;
+             and localParticleIsContainedInCell
+             and localParticle.getParallelState(
+                 ) == Particle::ParallelState::Local;
     }
 
 
     /**
-     * @brief Can we do work on this particle during a vertex kernel sweep stage?
+     * @brief Can we do work on this particle during a vertex kernel sweep
+     * stage?
      *
      * This predicate filters out all halo (virtual) particle. It implicitly
      * assumes that the particle-vertex association is correct. Therefore, we
@@ -194,7 +267,10 @@ namespace swift2 {
      * @param marker: Identifier for this vertex
      */
     template <typename Particle>
-    bool localParticleCanBeUpdatedInVertexKernel(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle) {
+    bool localParticleCanBeUpdatedInVertexKernel(
+      const peano4::datamanagement::VertexMarker& marker,
+      const Particle&                             localParticle
+    ) {
       return particleIsLocal(marker, localParticle);
     }
   } // namespace kernels

@@ -3,12 +3,12 @@
 #pragma once
 
 
-#include "Functors.h"
-#include "LoopBody.h"
+//#include "Functors.h"
+//#include "LoopBody.h"
 
-#include "exahype2/CellData.h"
+//#include "exahype2/CellData.h"
 
-
+/*
 namespace exahype2 {
   namespace fv {
     namespace musclhancock {
@@ -40,3 +40,4 @@ namespace exahype2 {
 #include "MusclHancock_patchwise_functors.cpph"
 
 
+*/

@@ -12,6 +12,8 @@
 #include "tarch/multicore/MultiReadSingleWriteSemaphore.h"
 #include "tarch/multicore/MultiReadSingleWriteLock.h"
 #include "tarch/services/ServiceRepository.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
+
 
 #if defined(SharedOMP)
 
@@ -229,12 +231,16 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
   }
 #endif
 
-  #if defined(OpenMPTaskGroup)
+  #if defined(OpenMPTaskGroup) and defined(OpenMP6Syntax)
   #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) untied transparent
+  #elif defined(OpenMPTaskGroup) and !defined(OpenMP6Syntax)
+  #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) untied
   #endif
   for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
-    #if !defined(OpenMPTaskGroup)
+    #if !defined(OpenMPTaskGroup) and defined(OpenMP6Syntax)
     #pragma omp task priority(tarch::multicore::Task::DefaultPriority) transparent
+    #elif !defined(OpenMPTaskGroup) and !defined(OpenMP6Syntax)
+    #pragma omp task priority(tarch::multicore::Task::DefaultPriority)
     #endif
     {
       #pragma omp atomic
@@ -319,7 +325,11 @@ void tarch::multicore::native::spawnTask(
 
     OTTER_DEFINE_TASK(task, otterGetActiveTask(), otter_no_add_to_pool, __func__);
     // Please consult canServeDependencyEntry() for this critical section
+    #if defined(OpenMP6Syntax)
     #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) depend(inout: dependencyTrackingBaseAddress[taskNumber]) untied transparent
+    #else
+    #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) depend(inout: dependencyTrackingBaseAddress[taskNumber]) untied
+    #endif
     {
       OTTER_TASK_START(task);
       job->run();

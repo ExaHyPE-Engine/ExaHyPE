@@ -126,6 +126,15 @@ parser.add_argument(
     choices=sphtools.sph_kernel_list,
     help="SPH kernel function to use.",
 )
+parser.add_argument(
+    "-t",
+    "--trees",
+    dest="trees",
+    default=0,
+    type=int,
+    help="Number of trees (subdomains) (0 uses all threads)",
+)
+
 args = parser.parse_args()
 
 
@@ -140,7 +149,7 @@ project = swift2.Project(
 )
 
 
-# MULTISCALE SORT, SCATTERED MEMORY
+# MULTISCALE SORT, SCATTERED MEMORY, DOMAIN DECOMPOSITION
 #  project.initialisation_steps_task_graph_compiler = (
 #      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
 #  )
@@ -148,7 +157,7 @@ project = swift2.Project(
 #      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
 #  )
 #
-#  MULTISCALE SORT, COALESCED MEMORY
+#  MULTISCALE SORT, COALESCED MEMORY, DOMAIN DECOMPOSITION
 project.algorithm_steps_task_graph_compiler = (
     swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
 )
@@ -156,7 +165,7 @@ project.initialisation_steps_task_graph_compiler = (
     swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
 )
 
-# BUCKET SORT, SCATTERED MEMORY
+# BUCKET SORT, SCATTERED MEMORY, DOMAIN DECOMPOSITION
 #  project.algorithm_steps_task_graph_compiler = (
 #      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
 #  )
@@ -164,7 +173,7 @@ project.initialisation_steps_task_graph_compiler = (
 #      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
 #  )
 #
-# BUCKET SORT, COALESCED MEMORY
+# BUCKET SORT, COALESCED MEMORY, DOMAIN DECOMPOSITION
 #  project.algorithm_steps_task_graph_compiler = (
 #      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory
 #  )
@@ -237,8 +246,8 @@ KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 # Additional Particle Parameters -----------------------------------------------
 dx = domain_size[0] / args.particle_number
 hydro_H_max = 0.49999 * args.cell_size_min
-if hydro_H_max < 3. * dx:
-    raise ValueError("Too small hydro_H_max", 3. * dx, hydro_H_max)
+if hydro_H_max < 3.0 * dx:
+    raise ValueError("Too small hydro_H_max", 3.0 * dx, hydro_H_max)
 hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
     hydro_H_max, kernel, hydro_dimensions
 )
@@ -262,7 +271,6 @@ particle.h_hydro_max = hydro_h_max
 particle.set_parameters()
 
 
-
 # Add particle to the SWIFT project --------------------------------------------
 # Notice that you any change to the particle will not take effect after adding
 # the particle_set to the project
@@ -282,10 +290,6 @@ particle_set.generator = (
 #          particle_set
 #      )
 #  )
-
-
-
-
 
 
 if args.debug:
@@ -310,10 +314,10 @@ project.set_global_simulation_parameters(
 
 project.set_Peano4_installation(args.peanodir, build_mode)
 
-#  project.set_load_balancing(
-#      "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-#      "new toolbox::loadbalancing::DefaultConfiguration()",
-#  )
+project.set_load_balancing(
+    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
+    f"new toolbox::loadbalancing::DefaultConfiguration({args.trees})",
+)
 
 
 ###############################################################################
@@ -338,6 +342,7 @@ project.algorithm_step_initial_conditions.add_action_set(
         ),
         additional_includes="""
 #include "swift2/kernels/legacy/equation_of_state.h"
+#include "swift2/kernels/legacy/kernel_hydro.h"
 """,
     )
 )

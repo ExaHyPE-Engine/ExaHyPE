@@ -57,7 +57,7 @@ tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::VTKBinaryFileW
     } else if (tarch::la::smaller(
                  timeStamp,
                  tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName),
-                 tarch::la::relativeEpsNormaledAgainstValueGreaterOne(
+                 tarch::la::relativeEpsNormalisedAgainstValueGreaterOne(
                    timeStamp,
                    tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName),
                    DefaultTimeStampPrecision
