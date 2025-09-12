@@ -341,13 +341,30 @@ class peano4::parallel::Node {
 
     int getCurrentProgramStep() const;
 
+    /**
+     * Init the parallel environment
+     *
+     * Every rank has to call this routine. In Peano 4, the routine
+     * peano4::initSingletons() is responsible for this. If you don't use it,
+     * ensure that each and every MPI rank calls this routine relatively early
+     * throughout the execution. An example for the explicit usage can be found
+     * in src/unittest/main.cpp.
+     *
+     * The counterpart is shutdown().
+     */
     void init();
 
     /**
+     * Shutdown the node
+     *
+     * This is the counterpart of
      * The shutdown is invoked by peano4::shutdownSingletons()
      *
      * If we run it on the global master, we set the program state to terminate
-     * and distribute this message. For this, we hijack the routine continueToRun().
+     * and distribute this message. After that, we wait in a barrier. If we are
+     *
+     *
+     * For this, we hijack the routine continueToRun().
      * This is really a hack. We in particular have to be careful and may not
      * call the continue operation on the other ranks. They typically are stuck
      * in a continue while loop in their main routine and just wait for the
@@ -364,6 +381,39 @@ class peano4::parallel::Node {
      * I insert a Peano 4 barrier right after we've issued the shutdown. It makes
      * the rank that goes down handle all incoming data until we can be sure that
      * everybody is in shutdown mode.
+     *
+     * ## Context/usage
+     *
+     * Before you use this routine, you have to ensure that the node is properly
+     * initialised:
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~
+     * peano4::parallel::Node::getInstance().init();
+     * ~~~~~~~~~~~~~~~~~~~~~
+     *
+     * An example for this can be found in src/unittests/main.cpp.
+     * In Peano 4, you usually don't care about the initialisation as the
+     * function peano4::initSingletons() will handle it. Compare to the
+     * documentation of init().
+     *
+     * The shutdown process is slightly more complicated than a simple
+     * function call. The global master (rank 0) has to call shutdown(). At
+     * this point, we assume that the other ranks are in the continue loop:
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * if (not tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+     *   while (peano4::parallel::Node::getInstance().continueToRun()) {
+     *     [...]
+     *   }
+     * }
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * Rank 0 (global master) will send out the terminate message and then
+     * all the other ranks will receive this message and hop out of the
+     * continueToRun() loop. After that, they have to call shutdown() as
+     * well. Eventually, each rank will be in the barrier within
+     * shutdown(), so we'll all leave shutdown() and can continue (to shut
+     * down the system).
      */
     void shutdown();
 

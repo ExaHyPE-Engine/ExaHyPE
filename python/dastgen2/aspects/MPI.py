@@ -1,11 +1,12 @@
-# This file is part of the DaStGen2 project. For conditions of distribution and
+# This file is part of the Peano 4 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import dastgen2
+#import dastgen2.aspects
 
+from .Aspect import Aspect
 from dastgen2.Utils import construct_ifdef_string
 
 
-class MPI(object):
+class MPI(Aspect):
     """!
 
     Represents the MPI aspect injected into a DaStGen model.
@@ -23,23 +24,6 @@ class MPI(object):
 
     def __init__(self):
         pass
-
-    def set_model(self, 
-                  data_model,
-                  ):
-        """!
-        
-        Inform aspect about model
-        
-        This routine is invoked by DataModel.add_aspect() and informs us about
-        the data model in use.
-        
-        @param data_model: dastgen2.DataModel
-          I cannot use the actual data model, as I otherwise get circular 
-          inputs.
-          
-        """
-        self._data_model = data_model
 
     def get_include(self):
         return """

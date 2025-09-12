@@ -72,6 +72,8 @@ class tarch::mpi::Rank {
      */
     int _numberOfProcessors;
 
+    int _providedThreadLevelSupport;
+
     #ifdef Parallel
     /**
      * MPI Communicator this process belongs to.
@@ -543,5 +545,19 @@ class tarch::mpi::Rank {
      * tidy up. I don't want any tidying up. I want termination.
      */
     static void abort(int errorCode);
+
+    /**
+     * Information on supported thread-level support
+     *
+     * Peano will complain bitterly if your MPI version doesn't support
+     * MPI_THREAD_MULTIPLE, but it will not stop executing. Instead, it
+     * will store the thread support-level and continue. You can always
+     * query it if you need to.
+     *
+     * @see peano4::parallel::tests::PingPongTest::run() for an example where
+     *   the thread level is queries explicitly.
+     */
+    int getProvidedThreadLevelSupport() const;
+
 };
 

@@ -24,7 +24,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginPlotSweep() {
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
-  if (state==State::InitSolution) {
+  if (_state==State::InitSolution) {
     _state = State::Solve;
   }
   if (_state==State::Solve) {
