@@ -37,7 +37,7 @@ def create_abstract_solver_declarations(
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
     static double maxEigenvalue(
@@ -48,7 +48,7 @@ def create_abstract_solver_declarations(
       int                                          normal,
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -74,7 +74,7 @@ def create_abstract_solver_declarations(
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
     static void flux(
@@ -86,7 +86,7 @@ def create_abstract_solver_declarations(
       double * NOALIAS                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -108,7 +108,7 @@ def create_abstract_solver_declarations(
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
     static void nonconservativeProduct(
@@ -121,7 +121,7 @@ def create_abstract_solver_declarations(
       double * NOALIAS                        BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -144,7 +144,7 @@ def create_abstract_solver_declarations(
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
     static void sourceTerm(
@@ -155,7 +155,7 @@ def create_abstract_solver_declarations(
       double * NOALIAS S,
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -176,7 +176,7 @@ def create_abstract_solver_declarations(
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
     void pointSource(
@@ -187,7 +187,7 @@ def create_abstract_solver_declarations(
       double * NOALIAS S,
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -298,7 +298,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
 {% endif %}
 
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp declare target
 #endif
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
@@ -311,13 +311,13 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 ) {
   {{EIGENVALUES_IMPLEMENTATION}};
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp declare target
 #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
@@ -335,13 +335,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   {{FLUX_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp declare target
 #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
@@ -360,13 +360,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   {{NCP_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp declare target
 #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
@@ -383,13 +383,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   {{SOURCE_TERM_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 {% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp declare target
 #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
@@ -407,7 +407,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
   {{POINT_SOURCE_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(WITH_GPU_OMP_TARGET)
 #pragma omp end declare target
 #endif
 {% endif %}
@@ -512,7 +512,7 @@ def create_solver_declarations(
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
      static void sourceTerm(
@@ -524,7 +524,7 @@ def create_solver_declarations(
        double * NOALIAS S,
        Offloadable
      );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -545,7 +545,7 @@ def create_solver_declarations(
      * but helps the compiler to distinguish the different function variants.
      */
      #error point sources not implemented yet
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
      static void pointSource(
@@ -557,7 +557,7 @@ def create_solver_declarations(
        double * NOALIAS S,
        Offloadable
      );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -577,7 +577,7 @@ def create_solver_declarations(
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
     static double maxEigenvalue(
@@ -588,7 +588,7 @@ def create_solver_declarations(
       int                                          normal,
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -608,7 +608,7 @@ def create_solver_declarations(
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
     static void flux(
@@ -620,7 +620,7 @@ def create_solver_declarations(
       double * NOALIAS                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -640,7 +640,7 @@ def create_solver_declarations(
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
     static void nonconservativeProduct(
@@ -653,7 +653,7 @@ def create_solver_declarations(
       double * NOALIAS                        BTimesDeltaQ,     // BTimesDeltaQ[5]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -745,7 +745,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 {% endif %}
 
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
@@ -758,13 +758,13 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 )  {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 {% endif %}
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
@@ -778,13 +778,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 )  {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 {% endif %}
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
@@ -799,13 +799,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 )  {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 {% endif %}
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
@@ -818,13 +818,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 ) {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 {% endif %}
 
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp declare target
     #endif
 #error  point sources not implemented yet
@@ -838,7 +838,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 ) {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(WITH_GPU_OMP_TARGET)
     #pragma omp end declare target
     #endif
 {% endif %}

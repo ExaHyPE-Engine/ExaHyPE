@@ -104,10 +104,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      *
      * @param x     Position of point that is to be initialised within computational domain.
      * @param h     Size of cell within which the point is placed.
-     * @param index Index of point within cell. This one can be used to look up which shape
-     *              function is tied to the point. You just have to scale it with h. By
-     *              translating the shape function's centre to x, you can reconstruct where
-     *              the shape function is placed within the computational domain.
      * @param gridIsConstructed Boolean holds if grid is completely constructed.
      *              initialCondition() is invoked both by the grid construction and the
      *              initialisation, and you might want to do different things depending on
@@ -120,7 +116,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       double * NOALIAS                        Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<DIMENSIONS,double>&  x,
       const tarch::la::Vector<DIMENSIONS,double>&  h,
-      const tarch::la::Vector<DIMENSIONS,int>&     index,
       bool                                         gridIsConstructed
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
@@ -135,7 +130,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     virtual void boundaryConditions(
       const double * NOALIAS                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       double * NOALIAS                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
       double                                       t,
       int                                          normal
     ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
@@ -179,6 +174,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * operation is still invoked.
      */
     virtual void finishTimeStep() override;
+
+    virtual void printTimeStep(bool ofCurrentlyRunningGridSweep) override;
 
     /**
      * If you hook into this routine, ensure the abstract base class

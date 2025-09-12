@@ -15,40 +15,8 @@ class FixedTimeSteppingCodeSnippets( exahype2.solvers.FixedTimeSteppingCodeSnipp
 
 
   def create_start_time_step_implementation(self):
-    """
-  
-    The outcome is used before we actually roll over the accumulation variables
-    and other stuff. So we assume that the state is already updated, but the
-    other data is not yet rolled-over.
-    
-    I don't want to plot the very first time stamp, where I don't know the 
-    cell size yet, so I check _maxCellHThisTimeStep. If we don't know the cell
-    size yet, we haven't done a single grid sweep. In this case, I don't plot
-    anything. The other check isFirstGridSweepOfTimeStep() ensures that I only
-    plot once prior to the first Runge-Kutta step. 
-  
-    """
-    predicate = """
-      tarch::mpi::Rank::getInstance().isGlobalMaster() 
-      and
-      _maxCellHThisTimeStep>0.0
-      and
-      isFirstGridSweepOfTimeStep() 
-    """
-  
-    if self._use_enclave_tasking:
-      predicate += """and (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) """
-      
     return """
-  if (""" + predicate + """) {
-    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "startTimeStep()", "t       = " << _minTimeStampThisTimeStep );
-    logInfo( "startTimeStep()", "dt      = " << getTimeStepSize() );
-    logInfo( "startTimeStep()", "h_{min} = " << _minCellHThisTimeStep );
-    logInfo( "startTimeStep()", "h_{max} = " << _maxCellHThisTimeStep );
-  }
 """
-
 
   def create_finish_time_step_implementation(self):
     return """
@@ -64,4 +32,34 @@ class FixedTimeSteppingCodeSnippets( exahype2.solvers.FixedTimeSteppingCodeSnipp
   }
 """
 
-
+  def create_print_time_step_implementation(self):
+    """
+    The outcome is used before we actually roll over the accumulation variables
+    and other stuff. So we assume that the state is already updated, but the
+    other data is not yet rolled-over.
+    
+    I don't want to plot the very first time stamp, where I don't know the 
+    cell size yet, so I check _maxCellHThisTimeStep. If we don't know the cell
+    size yet, we haven't done a single grid sweep. In this case, I don't plot
+    anything. The other check isFirstGridSweepOfTimeStep() ensures that I only
+    plot once prior to the first Runge-Kutta step. 
+  
+    """
+    predicate = """
+      tarch::mpi::Rank::getInstance().isGlobalMaster() 
+      and
+      _maxCellHThisTimeStep>0.0
+    """
+  
+    if self._use_enclave_tasking:
+      predicate += """and (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) """
+      
+    return """
+  if (""" + predicate + """) {
+    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "startTimeStep()", "t       = " << _minTimeStampThisTimeStep );
+    logInfo( "startTimeStep()", "dt      = " << getTimeStepSize() );
+    logInfo( "startTimeStep()", "h_{min} = " << _minCellHThisTimeStep );
+    logInfo( "startTimeStep()", "h_{max} = " << _maxCellHThisTimeStep );
+  }
+"""

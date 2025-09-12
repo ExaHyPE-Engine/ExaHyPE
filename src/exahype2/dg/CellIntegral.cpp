@@ -139,21 +139,21 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
           quadratureNodes
         );
 
-        // Mass matrix.
-        double coeff = 1.0;
-        for (int dd=0; dd<DIMENSIONS; dd++) {
-          coeff *= massMatrixDiagonal[ dof(dd) ] * h(dd);
-        }
+        #if DIMENSIONS==2
+        double coeff = massMatrixDiagonal[ dof(0) ] * massMatrixDiagonal[ dof(1) ] * tarch::la::volume(h);
+        #else
+        double coeff = massMatrixDiagonal[ dof(0) ] * massMatrixDiagonal[ dof(1) ] * massMatrixDiagonal[ dof(2) ] * tarch::la::volume(h);
+        #endif
 
         for(int dim=0; dim<DIMENSIONS; dim++) {
           //computes gradient values in all directions for the given node
-          std::fill(gradientValues, &gradientValues[strideQ-1], 0.0);
+          std::fill_n(gradientValues, strideQ, 0.0);
 
           const int invDx = 1 / h(dim);
 
+          tarch::la::Vector<DIMENSIONS,int> contributingNodeIndex = dof;
           // computing gradients in direction dim
           for(int node=0; node<nodesPerAxis; node++){
-            tarch::la::Vector<DIMENSIONS,int> contributingNodeIndex = dof;
             contributingNodeIndex[dim] = node;
             const double coeffDerivative = invDx * derivativeOperator[node + nodesPerAxis*dof(dim)];
 

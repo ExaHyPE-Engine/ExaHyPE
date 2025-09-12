@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath("../equations"))
 from equations import Euler
 
 
-class EulerIsotropicVortex(Scenario):
+class EulerIsentropicVortex(Scenario):
     """
     Scenario reproduced from Ioratti, Dumbser & Loubère, https://doi.org/10.1007/s10915-020-01209-w (p. 43)
     """

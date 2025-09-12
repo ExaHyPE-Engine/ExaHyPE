@@ -11,23 +11,9 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
 
   def create_start_time_step_implementation(self):
     return """
-  if (
-    tarch::mpi::Rank::getInstance().isGlobalMaster() 
-    and
-    _maxCellHThisTimeStep>0.0
-    and
-    isFirstGridSweepOfTimeStep()
-  ) {
-    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "startTimeStep()", "t            = " << _minTimeStampThisTimeStep );
-    logInfo( "startTimeStep()", "dt           = " << getAdmissibleTimeStepSize() );
-    logInfo( "startTimeStep()", "h_{min}      = " << _minCellHThisTimeStep );
-    logInfo( "startTimeStep()", "h_{max}      = " << _maxCellHThisTimeStep );
-    logInfo( "startTimeStep()", "lambda_{max} = " << _maxEigenvalue );
-  }
-
   if (isFirstGridSweepOfTimeStep()) {
-    _maxEigenvalue = 0.0;
+    _maxEigenvalue = _maxEigenvalueThisTimeStep;
+    _maxEigenvalueThisTimeStep = 0.0;
   }
 """
 
@@ -41,17 +27,34 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
   if ( 
     isLastGridSweepOfTimeStep() 
     and 
-    tarch::la::greater(_maxEigenvalue, 0.0 ) 
+    tarch::la::greater(_maxEigenvalueThisTimeStep, 0.0 ) 
   ) {
-    const     double waveSpeedDamping   = 1.0 / _maxEigenvalue;
+    const     double waveSpeedDamping   = 1.0 / _maxEigenvalueThisTimeStep;
     constexpr double CockburnShuDamping = 1.0 / (2.0*{{RK_ORDER}}-1.0);
     constexpr double meshDamping        = {{DG_ORDER}}==0 ? 1.0 : 1.0 / ({{DG_ORDER}} * {{DG_ORDER}});
-    _admissibleTimeStepSize = """ + str(self._time_step_relaxation) + """ * _minCellHThisTimeStep * waveSpeedDamping * CockburnShuDamping * meshDamping;
+    _admissibleTimeStepSize = _admissibleTimeStepSizeThisTimeStep;
+    _admissibleTimeStepSizeThisTimeStep = """ + str(self._time_step_relaxation) + """ * _minCellHThisTimeStep * waveSpeedDamping * CockburnShuDamping * meshDamping;
     if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
       ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
     }
     if (tarch::la::smallerEquals(_admissibleTimeStepSize,0.0,1e-10) ) {
       logWarning( "finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug in the eigenvalue computation" );
     }
+  }
+"""
+
+  def create_print_time_step_implementation(self):
+    return """
+  if (
+    tarch::mpi::Rank::getInstance().isGlobalMaster() 
+    and
+    _maxCellHThisTimeStep>0.0
+  ) {
+    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "startTimeStep()", "t            = " << _minTimeStampThisTimeStep << " / " << MinTerminalTime);
+    logInfo( "startTimeStep()", "dt           = " << getAdmissibleTimeStepSize() );
+    logInfo( "startTimeStep()", "h_{min}      = " << _minCellHThisTimeStep );
+    logInfo( "startTimeStep()", "h_{max}      = " << _maxCellHThisTimeStep );
+    logInfo( "startTimeStep()", "lambda_{max} = " << _maxEigenvalueThisTimeStep );
   }
 """

@@ -18,7 +18,6 @@ class InitialCondition(AbstractRungeKuttaDGActionSet):
           marker.x(), marker.h(), index, repositories::{{SOLVER_INSTANCE}}.DGOrder, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
         ),
         marker.h(),
-        index,
         {{GRID_IS_CONSTRUCTED}}
       );
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};

@@ -214,11 +214,11 @@ function, keep the original one and add a second one which is
 
 -   is embedded into
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #if defined(OpenMPGPUOffloading) 
+    #if defined(WITH_GPU_OMP_TARGET) 
     #pragma omp declare target
     #endif
     my new static function variants
-    #if defined(OpenMPGPUOffloading) #pragma omp end declare target
+    #if defined(WITH_GPU_OMP_TARGET) #pragma omp end declare target
     #endif
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     Though you can leave the declare annotations away if you use SYCL only.

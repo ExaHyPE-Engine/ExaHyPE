@@ -10,3 +10,5 @@ from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFac
 )
 
 from .RungeKuttaDG import Storage
+
+from .ErrorMeasurement import ErrorMeasurement

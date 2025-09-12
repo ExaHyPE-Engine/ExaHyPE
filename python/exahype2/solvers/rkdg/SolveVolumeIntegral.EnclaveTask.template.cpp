@@ -61,11 +61,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
       timeStamp,
       timeStepSize
   )) {
-    ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS}}
+    ::exahype2::dg::{{VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS}}
   } else
   {% endif %}
 
-  ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_COMPUTE_KERNEL_CALL}}
+  ::exahype2::dg::{{VOLUMETRIC_COMPUTE_KERNEL_CALL}}
 }
 
 
@@ -400,13 +400,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
     ::exahype2::dg::{{KERNEL_NAMESPACE}}::omp::{{FUSED_VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS_GPU}}
-  }
-  #endif
-
-  #if defined(GPUOffloadingHIP)
-  if (targetDevice>=0) {
-    foundOffloadingBranch = true;
-    ::exahype2::dg::{{KERNEL_NAMESPACE}}::hip::{{FUSED_VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS_GPU}}
   }
   #endif
 

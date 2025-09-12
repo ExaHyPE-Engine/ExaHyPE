@@ -172,22 +172,13 @@ class GlobalFixedTimeStep(SeparateSweeps):
             self._pde_terms_without_state,
         )
 
-        self._compute_time_step_size = (
-            solver_code_snippets.create_compute_time_step_size()
-        )
-        self._compute_new_time_step_size = (
-            solver_code_snippets.create_compute_new_time_step_size()
-        )
+        self._compute_time_step_size             = solver_code_snippets.create_compute_time_step_size()
+        self._compute_new_time_step_size         = solver_code_snippets.create_compute_new_time_step_size()
 
-        self._start_time_step_implementation = (
-            solver_code_snippets.create_start_time_step_implementation()
-        )
-        self._finish_time_step_implementation = (
-            solver_code_snippets.create_finish_time_step_implementation()
-        )
-        self._constructor_implementation = (
-            solver_code_snippets.create_abstract_solver_constructor_statements()
-        )
+        self._start_time_step_implementation     = solver_code_snippets.create_start_time_step_implementation()
+        self._finish_time_step_implementation    = solver_code_snippets.create_finish_time_step_implementation()
+        self._print_time_step_implementation     = solver_code_snippets.create_print_time_step_implementation()
+        self._constructor_implementation         = solver_code_snippets.create_abstract_solver_constructor_statements()
 
 
     @property
