@@ -19,7 +19,7 @@ from .actionsets.PlotDGDataInPeanoBlockFormat                  import PlotDGData
 
 
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
-  """!
+  r"""!
 
   Most efficient solver we have for this type of problem class
 
@@ -283,7 +283,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               use_smart_pointer = True,
               track_solution_between_cycles = False,
               ):
-    """!
+    r"""!
     
     Construct the solver
     
@@ -448,16 +448,16 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rProjection",   str(self._unknowns_per_face_solution ) ))
 
     #! [mghype_matrixfree_solvers_api_DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_storage_guards]    
-    self._cell_data.peano4_mpi_and_storage_aspect.load_store_compute_flag     = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-      self._hold_cell_and_face_data_guard(),
-      self._load_cell_and_face_data_guard(),
-      self._hold_cell_and_face_data_guard(),
-    )
-    self._face_data.peano4_mpi_and_storage_aspect.load_store_compute_flag     = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-      self._hold_cell_and_face_data_guard(),
-      self._load_cell_and_face_data_guard(),
-      self._hold_cell_and_face_data_guard(),
-    )
+#    self._cell_data.peano4_mpi_and_storage_aspect.load_store_compute_flag     = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+#      self._hold_cell_and_face_data_guard(),
+#      self._load_cell_and_face_data_guard(),
+#      self._hold_cell_and_face_data_guard(),
+#    )
+#    self._face_data.peano4_mpi_and_storage_aspect.load_store_compute_flag     = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+#      self._hold_cell_and_face_data_guard(),
+#      self._load_cell_and_face_data_guard(),
+#      self._hold_cell_and_face_data_guard(),
+#    )
     self._cell_data.peano4_mpi_and_storage_aspect.implementation_file_includes += self._additional_includes()
     self._face_data.peano4_mpi_and_storage_aspect.implementation_file_includes += self._additional_includes()
     #! [mghype_matrixfree_solvers_api_DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_storage_guards]        
