@@ -52,7 +52,7 @@ def configure_and_build_project(args,project):
 #    max_iterations                   = 10,
   )
   
-#  project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration(0.9, 0, false, 8, 50)" )
+  project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration(0.9, 0, false, 8, 50)" )
   project.set_Peano4_installation( args.peanodir, build_mode )
   
   peano4_project = project.generate_Peano4_project(args.verbose)
