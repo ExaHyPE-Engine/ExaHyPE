@@ -24,9 +24,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginPlotSweep() {
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
-  if (_state==State::InitSolution) {
-    _state = State::Solve;
-  }
   if (_state==State::Solve) {
     clearGlobalResidualAndSolutionUpdate();
   }
@@ -69,6 +66,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
         _state = State::Suspend; 
       }
       break;
+
+    case State::GridConstruction:
+      break;
+
+    case State::InitSolution:
+      {
+        _state = State::Solve;
+        break;
+      }
   }
 }
 
