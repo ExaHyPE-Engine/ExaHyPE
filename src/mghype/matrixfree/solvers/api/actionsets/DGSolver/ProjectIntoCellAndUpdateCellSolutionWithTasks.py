@@ -112,11 +112,12 @@ class ProjectIntoCellAndUpdateCellSolutionWithTasks(ActionSet):
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_BEGIN_TRAVERSAL:
-      result = jinja2.Template("""
-  _solverStatistics.clearGlobalPrecondResidualUpdate();
-  _solverStatistics.clearGlobalResidualAndSolutionUpdate();
-""").render(**self.d)      
+    # This is now done within the abstract solver
+#    if operation_name==peano4.solversteps.ActionSet.OPERATION_BEGIN_TRAVERSAL:
+#      result = jinja2.Template("""
+#  _solverStatistics.clearGlobalPrecondResidualUpdate();
+#  _solverStatistics.clearGlobalResidualAndSolutionUpdate();
+#""").render(**self.d)      
     if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
       result = jinja2.Template("""
   repositories::{{SOLVER_INSTANCE}}.merge( _solverStatistics );

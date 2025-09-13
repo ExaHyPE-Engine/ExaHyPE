@@ -17,6 +17,7 @@ parser = argparse.ArgumentParser(description='Multigrid - Poisson solver')
 parser.add_argument("-j",   "--parallel-builds",      dest="j",              type=int, default=-1, help="Parallel builds" )
 parser.add_argument("-pd",  "--peano-dir",            dest="peanodir",       default="../../..", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",              dest="verbose",        action="store_true", default=False, help="Verbose")
+parser.add_argument("-asserts",   "--asserts",        dest="asserts",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-ib",  "--ill-balance",          dest="ill_balance",    action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, required=True, help="Polynomial Degree")
@@ -103,7 +104,10 @@ project.add_solver(solver)
 #t
 # Configure build
 #
-build_mode = peano4.output.CompileMode.Release
+if args.asserts:
+    build_mode = peano4.output.CompileMode.Asserts
+else:
+    build_mode = peano4.output.CompileMode.Release
 #build_mode = peano4.output.CompileMode.Stats
 #build_mode = peano4.output.CompileMode.Asserts
 
@@ -134,8 +138,6 @@ project.set_multicore_orchestration( """new ::tarch::multicore::orchestration::H
   ::tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks
 )""" )
 
-
-# 12, 531441
 
 if args.ill_balance:
     tree_levels     = toolbox.loadbalancing.api.real_mesh_size_and_level(float(args.meshsize),1.0)[1]

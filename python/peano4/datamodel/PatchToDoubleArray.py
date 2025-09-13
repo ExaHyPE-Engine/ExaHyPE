@@ -65,6 +65,7 @@ class PatchToDoubleArray():
     self.merge_method_definition     = ""
     self.send_condition              = "true"
     self.receive_and_merge_condition = "true"
+    # @todo Das ist voellig falsch. Das sollte direkt im Patch sitzen und nicht im generator
     self.load_store_compute_flag     = "::peano4::grid::LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream"
     self.includes                    = ""
     self.float_type                  = FloatTypes(float_type)

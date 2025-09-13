@@ -1,6 +1,28 @@
 {% include 'DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.Abstract.generic.template.cpp' %}
 
 
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::State {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getState() const {
+  return _state;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginInitialisationSweep() {
+  _state = State::InitSolution;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginGridConstructionSweep() {
+  _state = State::GridConstruction;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginPlotSweep() {
+  if (_state==State::InitSolution) {
+    _state = State::Solve;
+  }
+}
+
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
   if (_state==State::Solve) {
     clearGlobalResidualAndSolutionUpdate();
@@ -44,6 +66,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
         _state = State::Suspend; 
       }
       break;
+
+    case State::GridConstruction:
+      break;
+
+    case State::InitSolution:
+      {
+        _state = State::Solve;
+        break;
+      }
   }
 }
 

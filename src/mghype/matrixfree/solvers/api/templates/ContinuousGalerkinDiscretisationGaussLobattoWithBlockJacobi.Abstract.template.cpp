@@ -27,9 +27,27 @@ tarch::la::Vector< Dimensions, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}
 }
 
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginInitialisationSweep() {
+  _state = State::InitSolution;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginGridConstructionSweep() {
+  _state = State::GridConstruction;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginPlotSweep() {
+  if (_state==State::InitSolution) {
+    _state = State::Solve;
+  }
+}
+
+
+
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   Solver("{{CLASSNAME}}", {{SOLVER_TOLERANCE}} ),
-  _state( State::ProjectOntoFacesOnly )
+  _state( State::GridConstruction )
 {}
 
 
@@ -152,6 +170,9 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
+  if (_state==State::InitSolution) {
+    _state = State::Solve;
+  }
   if (_state==State::Solve
       or
       _state==State::UpdateAndRestrictResidual
@@ -198,6 +219,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
         logInfo( "endMeshSweep()", toString() );
         _state = State::Suspend; 
       }
+      break;
+    case State::InitSolution:
+    case State::GridConstruction:
+      assertion(false);
       break;
   }
 }

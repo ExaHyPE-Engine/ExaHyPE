@@ -1,6 +1,6 @@
 /**
 
-@page tutorials_exahype2_dsl_syntax DSL Syntax
+@page documentation_exahype2_dsl DSL Syntax
 
 Exahype uses a domain specific language (DSL) to define its kernels.
 This page provides details its syntax. It is compiled by making modifications
