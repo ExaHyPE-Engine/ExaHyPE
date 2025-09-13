@@ -32,6 +32,7 @@ and innovation programme under grant agreement No 671698 (ExaHyPE).
   - \subpage exahype2_dg_DG_AMD
   - \subpage documentation_exahype2_solvers_aderdg
   - \subpage documentation_exahype2_solvers_enclave_solvers
+  - \subpage documentation_exahype2_dsl
 - Core functionality, numerics and ingredients
   - \subpage page_exahype_tracer
   - \subpage page_exahype_boundary_conditions

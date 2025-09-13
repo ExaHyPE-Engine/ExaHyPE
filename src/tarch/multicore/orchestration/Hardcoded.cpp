@@ -10,7 +10,7 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     1,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
     NoNestedParallelism,
-    FusionImplementation::LazyEvaluation
+    FusionImplementation::EagerConsumerTasks
   );
 }
 
@@ -21,7 +21,7 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     1,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
     NoNestedParallelism,
-    FusionImplementation::LazyEvaluation
+    FusionImplementation::EagerConsumerTasks
   );
 }
 
@@ -36,7 +36,7 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     numberOfTasksToFuse,               // tasksToFuse
     targetDevice,                      // deviceForFusedTasks
     NoNestedParallelism,
-    FusionImplementation::LazyEvaluation
+    FusionImplementation::EagerConsumerTasks
   );
 }
 

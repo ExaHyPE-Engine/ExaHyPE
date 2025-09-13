@@ -164,46 +164,56 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
         self.d["UNPREPARE_TRAVERSAL_KERNEL"] = unprepare_traversal_kernel
 
     """!
-    
-    The field numberOfCoalescedAssignedParticles is set to -1 to indicate that the 
-    particles are not held in a continuous order. 
-    
-    Introducing this field makes all kernel signatures compatible with 
+
+    The field numberOfCoalescedAssignedParticles is set to -1 to indicate that the
+    particles are not held in a continuous order.
+
+    Introducing this field makes all kernel signatures compatible with
     UpdateParticle_SingleLevelInteraction_ContiguousParticles.
-    
+
     """
     __Template_TouchVertexFirstTime = jinja2.Template(
         """
+  // Start of TouchVertexFirstTime template in python/peano4/toolbox/particles/UpdateParticle_SingleLevelInteraction.py
+
   {% if TOUCH_VERTEX_FIRST_COMPUTE_KERNEL!=None %}
   auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
   constexpr int numberOfCoalescedAssignedParticles = -1;
 
   {{TOUCH_VERTEX_FIRST_COMPUTE_KERNEL}}
   {% endif %}
+
+  // end of template
 """
     )
 
     """!
-    
-    The field numberOfCoalescedAssignedParticles is set to -1 to indicate that the 
-    particles are not held in a continuous order. 
-    
-    Introducing this field makes all kernel signatures compatible with 
+
+    The field numberOfCoalescedAssignedParticles is set to -1 to indicate that the
+    particles are not held in a continuous order.
+
+    Introducing this field makes all kernel signatures compatible with
     UpdateParticle_SingleLevelInteraction_ContiguousParticles.
-    
+
     """
     __Template_TouchVertexLastTime = jinja2.Template(
         """
+  // Start of TouchVertexLastTime template in python/peano4/toolbox/particles/UpdateParticle_SingleLevelInteraction.py
+
   {% if TOUCH_VERTEX_LAST_COMPUTE_KERNEL!=None %}
   auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
   constexpr int numberOfCoalescedAssignedParticles = -1;
   {{TOUCH_VERTEX_LAST_COMPUTE_KERNEL}}
   {% endif %}
+
+  // end of template
 """
     )
 
     __Template_TouchCellFirstTime = jinja2.Template(
         """
+  // Start of TouchCellFirstTime template in python/peano4/toolbox/particles/UpdateParticle_SingleLevelInteraction.py
+
   {% if PARTICLE_CELL_UPDATE_KERNEL!=None %}
   std::list< globaldata::{{LOCAL_PARTICLE}}* >   localParticles;
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >  _activeParticles;
@@ -222,11 +232,11 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
 
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
       std::bitset<TwoPowerD> mask = 0;
-      mask.set(i);
-      bool isLocal = (mask | p->getContainedInAdjacentCell()).any();
+      mask.set(TwoPowerD-i-1);
+      bool isLocal = (mask & p->getContainedInAdjacentCell()).any();
       assertionEquals2( 
         isLocal, 
-        marker.isContained( *p, toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.h() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ),
+        marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.h() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ),
         marker.toString(),
         p->toString()
       );
@@ -237,6 +247,8 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
 
   {{PARTICLE_CELL_UPDATE_KERNEL}}
   {% endif %}
+
+  // end of template
 """
     )
 

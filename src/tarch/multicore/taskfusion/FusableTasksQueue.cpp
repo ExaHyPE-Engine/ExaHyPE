@@ -1,4 +1,5 @@
 #include "FusableTasksQueue.h"
+#include "ProcessOneReadyTask.h"
 
 
 #include "tarch/Assertions.h"
@@ -6,152 +7,68 @@
 #include "tarch/logging/Statistics.h"
 
 
-const std::string tarch::multicore::taskfusion::FusableTasksQueue::ProcessFusedTasksStatisticsIdentifier = "tarch::multicore::taskfusion::process-fused-tasks";
 
 tarch::logging::Log  tarch::multicore::taskfusion::FusableTasksQueue::_log( "tarch::multicore::taskfusion::FusableTasksQueue" );
 
 
 tarch::multicore::taskfusion::FusableTasksQueue::FusableTasksQueue(int type):
   _type(type),
-  numberOfPendingReadyTasksPerProcessTaskExecution(),
-  probabilityThatTaskIsCompleted(256)
+  _numberOfPendingReadyTasksPerProcessTaskExecution(),
+  _probabilityThatTaskIsCompleted(256)
 {}
 
 
 void tarch::multicore::taskfusion::FusableTasksQueue::insertPendingTask( int taskNumber ) {
-  {
-    tarch::multicore::Lock lock(runningTasksSemaphore);
-    runningTasks.erase(taskNumber);
-  }
-  {
-    tarch::multicore::Lock lock(pendingTasksSemaphore);
-    pendingTasks.insert( taskNumber );
-  }
+  assertion1( _pendingTasks.count(taskNumber)==0, taskNumber );
+  assertion1( _readyTasks.count(taskNumber)==0, taskNumber );
+
+  tarch::multicore::Lock lock(_pendingTasksSemaphore);
+  _pendingTasks.insert( taskNumber );
 }
 
 
 void tarch::multicore::taskfusion::FusableTasksQueue::insertReadyTask( Task* task, int taskNumber ) {
-  {
-    tarch::multicore::Lock lock(runningTasksSemaphore);
-    runningTasks.erase(taskNumber);
-  }
-  {
-    tarch::multicore::Lock lock(readyTasksSemaphore);
-    readyTasks[taskNumber] = task;
+  assertion1( _pendingTasks.count(taskNumber)==0, taskNumber );
+  assertion1( _readyTasks.count(taskNumber)==0, taskNumber );
 
-    assertion( pendingTasks.count(taskNumber)==0 );
-  }
+  tarch::multicore::Lock lock(_readyTasksSemaphore);
+  _readyTasks[taskNumber] = task;
 }
 
 
 void tarch::multicore::taskfusion::FusableTasksQueue::movePendingTaskIntoReadyTaskQueue( Task* task, int taskNumber ) {
-  tarch::multicore::Lock readyTasksLock(readyTasksSemaphore);
-  tarch::multicore::Lock pendingTasksLock(pendingTasksSemaphore);
+  tarch::multicore::Lock readyTasksLock(_readyTasksSemaphore);
+  tarch::multicore::Lock pendingTasksLock(_pendingTasksSemaphore);
 
-  assertion( pendingTasks.count(taskNumber)==1 );
+  assertion( _pendingTasks.count(taskNumber)==1 );
 
-  pendingTasks.erase( taskNumber );
-  readyTasks[taskNumber] = task;
+  _pendingTasks.erase( taskNumber );
+  _readyTasks[taskNumber] = task;
 
-  assertion( pendingTasks.count(taskNumber)==0 );
-  assertion( runningTasks.count(taskNumber)==0 );
+  assertion( _pendingTasks.count(taskNumber)==0 );
 }
 
 
 void tarch::multicore::taskfusion::FusableTasksQueue::drainReadyTasks() {
-  tarch::multicore::Lock readyTaskLock(readyTasksSemaphore);
+  int nextTaskNumber = AnyTask+1;
 
-  for (auto& p: readyTasks) {
-    int taskNumber = p.first;
-    tarch::multicore::Lock runningTaskLock(runningTasksSemaphore);
-    runningTasks.insert( taskNumber );
-    runningTaskLock.free();
-
-    p.second->run();
-    delete p.second;
-
-    runningTaskLock.lock();
-    runningTasks.erase( taskNumber );
-  }
-
-  readyTasks.clear();
-}
-
-
-void tarch::multicore::taskfusion::FusableTasksQueue::processOneTask(
-  int                taskNumber
-) {
-  tarch::multicore::Lock readyTaskLock(readyTasksSemaphore);
-
-  if ( taskNumber==AnyTask and not readyTasks.empty() ) {
-    taskNumber = readyTasks.begin()->first;
-  }
-
-  if ( readyTasks.count(taskNumber)>0 ) {
-    tarch::multicore::Lock runningTaskLock(runningTasksSemaphore);
-    runningTasks.insert( taskNumber );
-    runningTaskLock.free();
-
-    Task* task = readyTasks[taskNumber];
-    readyTasks.erase(taskNumber);
+  while (nextTaskNumber!=AnyTask) {
+    tarch::multicore::Lock readyTaskLock(_readyTasksSemaphore);
+    nextTaskNumber = AnyTask;
+    if (not _readyTasks.empty()) {
+      nextTaskNumber = _readyTasks.begin()->first;
+    }
     readyTaskLock.free();
 
-    task->run();
-    delete task;
-
-    runningTaskLock.lock();
-    runningTasks.erase( taskNumber );
-  }
-}
-
-
-void tarch::multicore::taskfusion::FusableTasksQueue::processTasks() {
-  const tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(getType());
-
-  assertion( instruction.minTasks>=1 );
-  assertion( instruction.maxTasks>=1 );
-
-  tarch::multicore::Lock readyTaskLock(readyTasksSemaphore);
-  const int queueSize = static_cast<int>(readyTasks.size());
-
-  if (instruction.minTasks <= queueSize) {
-    assertion( instruction.maxTasks>=1 );
-
-    // extract first task
-    auto [firstTaskNumber, firstTask] = *readyTasks.begin();
-    readyTasks.erase( firstTaskNumber );
-
-    // extract sequence
-    int tasksToExtract = instruction.maxTasks-1;
-    Tasks::iterator iterator = readyTasks.begin();
-
-    std::list< Task* > extractedTaskPointers;
-    std::list< int >   extractedTaskNumbers;
-    while (tasksToExtract>0 and iterator != readyTasks.end()) {
-      tasksToExtract--;
-      extractedTaskNumbers.push_back( iterator->first );
-      extractedTaskPointers.push_back( iterator->second );
-      iterator = readyTasks.erase( iterator );
+    if (nextTaskNumber!=AnyTask) {
+      tarch::multicore::Task* newProcessTask = new tarch::multicore::taskfusion::ProcessOneReadyTask(nextTaskNumber, *this);
+      tarch::multicore::spawnTask(
+        newProcessTask,
+        {nextTaskNumber},
+        nextTaskNumber
+      );
+      tarch::multicore::waitForTask(nextTaskNumber, TaskWaitType::OnlyNativeTasks);
     }
-
-    tarch::multicore::Lock runningTaskLock(runningTasksSemaphore);
-    runningTasks.insert( firstTaskNumber );
-    runningTasks.insert( extractedTaskNumbers.begin(), extractedTaskNumbers.end() );
-    runningTaskLock.free();
-
-    readyTaskLock.free();
-
-    tarch::logging::Statistics::getInstance().log(ProcessFusedTasksStatisticsIdentifier, extractedTaskNumbers.size());
-    processFusedTask(firstTask, extractedTaskPointers, instruction.device);
-
-    logDebug( "processTasks()", "processed " << (extractedTaskPointers.size()+1) << " tasks" );
-
-    runningTaskLock.lock();
-    runningTasks.erase( firstTaskNumber );
-    for (auto& taskNumber: extractedTaskNumbers) {
-      runningTasks.erase( taskNumber );
-    }
-    runningTaskLock.free();
   }
 }
 
@@ -160,7 +77,7 @@ bool tarch::multicore::taskfusion::FusableTasksQueue::isTaskPending(
   int                 taskNumber,
   bool                tryLock
 ) {
-  tarch::multicore::Lock pendingLock(pendingTasksSemaphore, false);
+  tarch::multicore::Lock pendingLock(_pendingTasksSemaphore, false);
 
   if (tryLock) {
     if (
@@ -173,7 +90,7 @@ bool tarch::multicore::taskfusion::FusableTasksQueue::isTaskPending(
     pendingLock.lock();
   }
 
-  return pendingTasks.count(taskNumber) > 0;
+  return _pendingTasks.count(taskNumber) > 0;
 }
 
 
@@ -181,8 +98,8 @@ bool tarch::multicore::taskfusion::FusableTasksQueue::isTaskReadyOrRunning(
   int                 taskNumber,
   bool                tryLock
 ) {
-  tarch::multicore::Lock readyLock(readyTasksSemaphore, false);
-  tarch::multicore::Lock runningLock(runningTasksSemaphore, false);
+  tarch::multicore::Lock readyLock(_readyTasksSemaphore, false);
+  tarch::multicore::Lock runningLock(_runningTasksSemaphore, false);
 
   if (tryLock) {
     if (
@@ -198,8 +115,8 @@ bool tarch::multicore::taskfusion::FusableTasksQueue::isTaskReadyOrRunning(
     runningLock.lock();
   }
 
-  return readyTasks.count(taskNumber) > 0
-      or runningTasks.count(taskNumber) > 0;
+  return _readyTasks.count(taskNumber) > 0
+      or _runningTasks.count(taskNumber) > 0;
 }
 
 
@@ -207,7 +124,7 @@ bool tarch::multicore::taskfusion::FusableTasksQueue::isTaskReady(
   int                 taskNumber,
   bool                tryLock
 ) {
-  tarch::multicore::Lock readyLock(readyTasksSemaphore, false);
+  tarch::multicore::Lock readyLock(_readyTasksSemaphore, false);
 
   if (tryLock) {
     if (
@@ -220,10 +137,15 @@ bool tarch::multicore::taskfusion::FusableTasksQueue::isTaskReady(
     readyLock.lock();
   }
 
-  return readyTasks.count(taskNumber) > 0;
+  return _readyTasks.count(taskNumber) > 0;
 }
 
 
 int tarch::multicore::taskfusion::FusableTasksQueue::getType() const {
   return _type;
+}
+
+
+int tarch::multicore::taskfusion::FusableTasksQueue::getNumberOfReadyTasks() const {
+  return _readyTasks.size();
 }

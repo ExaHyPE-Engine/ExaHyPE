@@ -49,9 +49,9 @@ double toolbox::loadbalancing::CostMetrics::getCostOfLocalRank() const {
 void toolbox::loadbalancing::CostMetrics::waitForGlobalDataExchange() {
   #ifdef Parallel
   if (_globalWeightRequest != nullptr ) {
-    MPI_Wait( _globalWeightRequest, MPI_STATUS_IGNORE );
-    MPI_Wait( _lightestRankRequest, MPI_STATUS_IGNORE );
-    MPI_Wait( _minimumOfMaximumOfRankWeightsRequest, MPI_STATUS_IGNORE );
+    tarch::mpi::wait( *_globalWeightRequest,                  "toolbox::loadbalancing::CostMetrics", "waitForGlobalDataExchange()" );
+    tarch::mpi::wait( *_lightestRankRequest,                  "toolbox::loadbalancing::CostMetrics", "waitForGlobalDataExchange()" );
+    tarch::mpi::wait( *_minimumOfMaximumOfRankWeightsRequest, "toolbox::loadbalancing::CostMetrics", "waitForGlobalDataExchange()" );
 
     delete _globalWeightRequest;
     delete _lightestRankRequest;

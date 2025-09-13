@@ -83,12 +83,12 @@ class UpdateResidualWithTasks(ActionSet):
     static int residualTaskType     = peano4::parallel::getTaskType("{{SOLVER_INSTANCE}}::UpdateResidualTask");
     static int invertMatrixTaskType = peano4::parallel::getTaskType("{{SOLVER_INSTANCE}}::InvertTask");
     tarch::multicore::TaskWithCopyOfFunctor* updateResidualTask = new tarch::multicore::TaskWithCopyOfFunctor(
-      residualTaskType,       // tarch::multicore::Task::DontFuse -> wird net abgefragt bisher
+      residualTaskType,       
       tarch::multicore::Task::DefaultPriority,
       updateResidualFunctor
     );  
     tarch::multicore::TaskWithCopyOfFunctor* invertMatrixTask = new tarch::multicore::TaskWithCopyOfFunctor(
-      invertMatrixTaskType,   // tarch::multicore::Task::DontFuse
+      invertMatrixTaskType,  
       tarch::multicore::Task::DefaultPriority,
       invertMatrixFunctor
     );  

@@ -16,16 +16,6 @@
 namespace tarch {
   namespace mpi {
     class Rank;
-
-    #ifdef Parallel
-    /**
-     * Returns a string representation of the mpi status. For a detailed
-     * description of the mpi status itself see the file mpi.h.
-     */
-    std::string MPIStatusToString( const MPI_Status& status );
-
-    std::string MPIReturnValueToString( int result );
-    #endif
   }
 }
 
@@ -81,6 +71,8 @@ class tarch::mpi::Rank {
      * Number of processors available.
      */
     int _numberOfProcessors;
+
+    int _providedThreadLevelSupport;
 
     #ifdef Parallel
     /**
@@ -527,6 +519,13 @@ class tarch::mpi::Rank {
      * Set after how much time a node waiting for an MPI message shall quit
      * and shutdown the whole application with an error report. If you pass 0,
      * that switches off this feature.
+     *
+     * By default, timeouts are disabled when we instantiate the Rank object,
+     * but if you set up your system through peano4::initParallelEnvironment(),
+     * then you'll have a default timeout.
+     *
+     * @param valueInSeconds Timeout duration in seconds, i.e. how long we wait
+     *   at most for an incoming message.
      */
     void setDeadlockTimeOut( int valueInSeconds );
 
@@ -546,5 +545,19 @@ class tarch::mpi::Rank {
      * tidy up. I don't want any tidying up. I want termination.
      */
     static void abort(int errorCode);
+
+    /**
+     * Information on supported thread-level support
+     *
+     * Peano will complain bitterly if your MPI version doesn't support
+     * MPI_THREAD_MULTIPLE, but it will not stop executing. Instead, it
+     * will store the thread support-level and continue. You can always
+     * query it if you need to.
+     *
+     * @see peano4::parallel::tests::PingPongTest::run() for an example where
+     *   the thread level is queries explicitly.
+     */
+    int getProvidedThreadLevelSupport() const;
+
 };
 

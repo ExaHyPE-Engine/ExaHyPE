@@ -154,9 +154,11 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
       "filename should not end with .peano-patch-file as routine adds extension automatically. Chosen filename prefix="
         << fileName
     );
-  } else {
+  }
+  else {
     _fileName += ".peano-patch-file";
   }
+
   if (indexFileName.rfind(".peano-patch-file") != std::string::npos) {
     logWarning(
       "writeToFile()",
@@ -164,7 +166,8 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
       "prefix="
         << indexFileName
     );
-  } else {
+  }
+  else {
     _indexFile += ".peano-patch-file";
   }
 
@@ -173,43 +176,58 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
   const double DefaultTimeStampPrecision = 1e-5;
 
   switch (appendToIndexFile) {
-  case IndexFileMode::CreateNew:
-    createEmptyIndexFile();
-    addNewFileToCurrentDataSetInIndexFile(_fileName);
-    break;
-  case IndexFileMode::NoIndexFile:
-    break;
-  case IndexFileMode::AppendNewData:
-    if (not std::filesystem::exists(_indexFile)) {
-      logInfo("PeanoTextPatchFileWriter(...)", "no index file " << _indexFile << " found. Create new one");
+    case IndexFileMode::CreateNew:
       createEmptyIndexFile();
-    } else if (tarch::la::smaller(
-                 timeStamp,
-                 getLatestTimeStepInIndexFile(),
-                 tarch::la::relativeEpsNormaledAgainstValueGreaterOne(
-                   timeStamp, getLatestTimeStepInIndexFile(), DefaultTimeStampPrecision
-                 )
-               )) {
-      logWarning(
-        "PeanoTextPatchFileWriter(...)",
-        "there is an index file "
-          << _indexFile << " with data for time stamp " << getLatestTimeStepInIndexFile()
-          << ". Will be overwritten as we dump data for time " << timeStamp
-      );
-      createEmptyIndexFile();
-    }
+      addNewFileToCurrentDataSetInIndexFile(_fileName);
+      break;
+    case IndexFileMode::NoIndexFile:
+      break;
+    case IndexFileMode::AppendNewData:
+      {
+        const bool newDatasetBelongsToSnapshotSmallerThanLatestWrite =
+          tarch::la::smaller(
+            timeStamp,
+            getLatestTimeStepInIndexFile(),
+            tarch::la::relativeEpsNormalisedAgainstValueGreaterOne(
+              timeStamp, getLatestTimeStepInIndexFile(), DefaultTimeStampPrecision
+            )
+          );
+        const bool newDatasetBelongsToSnapshotBiggerThanLatestWrite =
+          tarch::la::greater(
+            timeStamp,
+            getLatestTimeStepInIndexFile(),
+            tarch::la::relativeEpsNormalisedAgainstValueGreaterOne(
+              timeStamp, getLatestTimeStepInIndexFile(), DefaultTimeStampPrecision
+            )
+          );
 
-    createBackupOfMetaFile();
-    if (tarch::la::smaller(getLatestTimeStepInIndexFile(), timeStamp, DefaultTimeStampPrecision)) {
-      logDebug(
-        "PeanoTextPatchFileWriter(...)",
-        "create new dataset for time stamp "
-          << timeStamp << " linking to " << _fileName << " as last time stamp had been " << getLatestTimeStepInIndexFile()
-      );
-      addNewDatasetToIndexFile(timeStamp);
-    }
-    addNewFileToCurrentDataSetInIndexFile(_fileName);
-    break;
+        if (not std::filesystem::exists(_indexFile)) {
+          logInfo("PeanoTextPatchFileWriter(...)", "no index file " << _indexFile << " found. Create new one");
+          createEmptyIndexFile();
+        }
+        else if (newDatasetBelongsToSnapshotSmallerThanLatestWrite) {
+          logWarning(
+            "PeanoTextPatchFileWriter(...)",
+            "there is an index file "
+              << _indexFile << " with data for time stamp " << getLatestTimeStepInIndexFile()
+              << ". Will be overwritten as we dump data for time " << timeStamp
+          );
+          createEmptyIndexFile();
+        }
+
+        createBackupOfMetaFile();
+
+        if (newDatasetBelongsToSnapshotBiggerThanLatestWrite) {
+          logDebug(
+            "PeanoTextPatchFileWriter(...)",
+            "create new dataset for time stamp "
+              << timeStamp << " linking to " << _fileName << " as last time stamp had been " << getLatestTimeStepInIndexFile()
+          );
+          addNewDatasetToIndexFile(timeStamp);
+        }
+      addNewFileToCurrentDataSetInIndexFile(_fileName);
+      }
+      break;
   }
   logDebug("PeanoTextPatchFileWriter(...)", "index file is ready");
 

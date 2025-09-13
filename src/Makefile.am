@@ -84,7 +84,8 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/multicore/taskfusion/taskfusion.cpp \
 	tarch/multicore/taskfusion/FusableTasksQueue.cpp \
 	tarch/multicore/taskfusion/LogReadyTask.cpp \
-	tarch/multicore/taskfusion/ProcessReadyTask.cpp \
+	tarch/multicore/taskfusion/ProcessOneReadyTask.cpp \
+	tarch/multicore/taskfusion/ProcessSetOfReadyTasks.cpp \
 	tarch/multicore/tbb/multicore.cpp \
 	tarch/multicore/tbb/BooleanSemaphore.cpp \
 	tarch/multicore/tbb/Core.cpp \
@@ -198,6 +199,9 @@ Peano4Core_SOURCES = \
 	peano4/parallel/tests/NodeTest.cpp \
 	peano4/stacks/stacks.cpp \
 	peano4/stacks/STDVectorStack.cpp \
+	peano4/stacks/tests/GeneratedTestObject.cpp \
+	peano4/stacks/tests/GeneratedTestObject_Flattened.cpp \
+	peano4/stacks/tests/STDVectorStackOverObjectsWithSmartPointersTest.cpp \
 	peano4/utils/Loop.cpp \
 	peano4/utils/tests/ParallelDForTest.cpp
 	

@@ -4,11 +4,12 @@ import dastgen2
 import os
 
 
-class DataModel(object):
-    """! Represents on DaStGen2 object, i.e. one data model.
 
-    full_qualified_name  Full qualified name. Please pass in in C++ convention i.e. with
-                         :: separating the namespaces.
+class DataModel(object):
+    """! Represents on DaStGen2 object, i.e. one data model
+
+    A data model has attributes and it is tied to aspects which inject some
+    technical behaviour that is cross-cutting.
 
     """
 
@@ -20,12 +21,20 @@ class DataModel(object):
     ):
         """!
 
-        Construct the data modell
+        Construct the data model
+
+
+        ## Attributes
         
         public_fields: C++ string
           This will be used to add public fields to the class, and each 
           attribute can feed into this string. However, you can also 
           modify it yourself.
+
+        ## Arguments
+        
+        @param full_qualified_name  Full qualified name
+          Please pass in in C++ convention i.e. with :: separating the namespaces.
           
         """
         self._full_qualified_name = full_qualified_name
@@ -60,6 +69,16 @@ class DataModel(object):
         return
 
     def add_aspect(self, aspect):
+        """!
+        
+        Add a new aspect
+        
+        This is a pretty simplistic routine: 
+        
+        1. Inform the aspect object about the model by invoking set_model()
+        2. Add the aspect to the list of used aspects
+        
+        """
         aspect.set_model(self)
         self._aspects.append(aspect)
 
@@ -451,3 +470,14 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
     def expose_all_attributes_in_header_file(self):
         for i in self._attributes:
             i.expose_in_header_file = True
+
+
+    @property
+    def full_qualified_name(self):
+        return self._full_qualified_name
+
+
+    @property
+    def name(self):
+        return self._full_qualified_name.split( "::" )[-1]
+        

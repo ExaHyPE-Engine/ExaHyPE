@@ -535,7 +535,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 """
         ).render(**self.d)
 
-    def get_body_of_prepareTraversal(self):
+    def get_body_of_unprepareTraversal(self):
         """!
 
               Create prepareTraversal function

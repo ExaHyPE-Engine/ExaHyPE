@@ -1,0 +1,97 @@
+/**
+
+@page documentation_exahype2_dsl DSL Syntax
+
+Exahype uses a domain specific language (DSL) to define its kernels.
+This page provides details its syntax. It is compiled by making modifications
+to a Python abstract syntax tree (AST), so the majority of its syntax matches
+that of Python. The timeStepWithRusanov function is a good reference to look
+at to give context to the following descriptions.
+
+# General Code Structure
+The DSL kernels start with specifying the name and parameters, given in usual
+Python syntax. Parameters types are given using type annotations, which are strings
+if it is not an existing Python type. The first few lines of the function usually 
+access diferent properties of the CellData parameter. In the general case this 
+looks like
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def kernelName(patchData: "CellData<double, double>&") -> "void":
+    N = Integer("patchData.numberOfCells")
+    t = DataBlock([[0, N]], "patchData.t", "double")
+    dt = DataBlock([[0, N]], "patchData.dt", "double")
+    h = DataBlock([[0, N]], "patchData.cellSize", "tarch::la::Vector<3, double>")
+    x = DataBlock([[0, N]], "patchData.cellCentre", "tarch::la::Vector<3, double>")
+    maxEigenvalues = DataBlock([[0, N]], "patchData.maxEigenvalue", "double")
+
+    input = DataBlock([[0, NumberOfUnknowns + NumberOfAuxiliaryVariables], [-HaloSize, NumberOfVolumesPerAxisInPatch + HaloSize], [-HaloSize, NumberOfVolumesPerAxisInPatch + HaloSize], [-HaloSize, NumberOfVolumesPerAxisInPatch + HaloSize], [0, N]], "patchData.QIn")
+    output = DataBlock([[0, NumberOfUnknowns + NumberOfAuxiliaryVariables], [0, NumberOfVolumesPerAxisInPatch], [0, NumberOfVolumesPerAxisInPatch], [0, NumberOfVolumesPerAxisInPatch], [0, N]], "patchData.QOut")
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The format of the DataBlock constructor is explained in the next section.
+
+
+# Compiling DSL Code
+The parsing and compilation takes place in the Parser class. Create a default parser
+then call its parse() function. It takes the following parameters:
+- function: the Python function that defines the kernel
+- template_arguments: a list of SyntaxTree.Argument defining the template parameters
+- functor_arguments: a list of SyntaxTree.Argument defining the functor arguments that are used
+  in the non-static function version.
+- namespace: a list of strings defining the different namespaces that should contain the generated
+  code
+- stateless: a boolean that defines whether to use static functions or those passed to the kernel
+
+This function returns the root of an ast, which can be used to generate the kernel using root.print_cpp().
+Functions can be organised in files by calling the print_declaration methods, and versions with
+a timer can also be generated. See kernels.py in the rusanov python code for example usage.
+
+# DataBlock
+A DataBlock is used to represent an array of patches in the DSL code. They are
+constructed using a 2D list specifying its dimensions, which for three dimensions
+looks like 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[[0, NumberOfVariables], [-HaloSize, NumberOfVolumes + HaloSize], [-HaloSize, NumberOfVolumes + HaloSize], [-HaloSize, NumberOfVolumes + HaloSize], [0, NumberOfPatches]]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Notice how [-HaloSize, NumberOfVolumes + HaloSize] is repeated for each dimension.
+
+The second parameter specifies where the patch data comes from. It could be a string, indicating that the data already exists, in which case the string should be
+the name of the existing data. Alternatively, it could be a function which is
+performed over the given interval. A string is used mainly to access CellData information.
+Assuming that a CellData object with name patchData is a kernel parameter, the code
+would look like
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+N = Integer("patchData.numberOfCells")
+t = DataBlock([[0, N]], "patchData.t", "double") # Access the time for each patch
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+# If Statements
+Should there be any optional code in the kernel that should only be used in
+certain versions of the kernel, template boolean parameters can be passed to
+the parser. Using if statements on these can be used to control code execution.
+Only use if satements with these template parameters as they evaluate to
+if constexpr() to enable more opportunities for optimisation.
+
+Conditional evaluation can also be used to generate DataBlocks, by assigning them
+the result of a boolean comparison with another DataBlock.
+e.g. test = (input > 0.0) * 2 - 1
+After this test has the same dimensions as input, but with 1 wherever input is positive,
+and -1 wherever it's negative. It is worth noting that test's underlying type is an
+integer if no floating point operation is performed to it.
+
+
+# DataBlock Indexing
+Subsets of a datablock can be specified using indexing, such as input[0, :, :] which 
+selects the first variable of a 2d DataBlock. The order of indices is the same as when
+specifying a DataBlocks dimensions. Each index can either be an individual integer or
+a slice. When a slice is used, if either side isn't specified it is assumed to be the 
+relevant end of the DataBlock's iteration range. For example input[10:] selects variable
+10 onwards, and input[:10] selects up to variable 10.
+
+If any operations are performed between different sizes of datablock indexing should be
+used to select the relevant part of the smaller DataBlock. The only exception is when
+performing an operation with DataBlock with different numbers of variables, and one of 
+them has one variable. In this case the datablock with one variable will act as if it
+contained duplicates of this variable to match the number of variables in the other 
+DataBlock.
+*/
