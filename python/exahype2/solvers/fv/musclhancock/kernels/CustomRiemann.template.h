@@ -29,13 +29,18 @@
   {{ muscl.boundaryExtrapolation() }}
   {{ muscl.boundaryEvolutionHalfStep() }}
 
+  auto faceCentreLeft(volumeCentre);
+  faceCentreLeft(normal) -= 0.5 * volumeSize(normal);
+  auto faceCentreRight(volumeCentre);
+  faceCentreRight(normal) += 0.5 * volumeSize(normal); 
+
   // Retrieve user data
   {% if STATELESS_RIEMANN_SOLVER==True %}
-  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeftInterface  = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(extrapolatedBoundaryLeftNeighborRightBoundary, extrapolatedBoundaryLeft, volumeCentreLeft, volumeSize, timeStamp + 0.5 * timeStepSize, timeStepSize, normal, leftGoingFluxGatheredLeft, rightGoingFluxGatheredLeft);
-  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRightInterface = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(extrapolatedBoundaryRight, extrapolatedBoundaryRightNeighborLeftBoundary, volumeCentre, volumeSize, timeStamp + 0.5 * timeStepSize, timeStepSize, normal, leftGoingFluxGathered, rightGoingFluxGathered);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeftInterface  = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(extrapolatedBoundaryLeftNeighborRightBoundary, extrapolatedBoundaryLeft, faceCentreLeft, volumeSize, timeStamp + 0.5 * timeStepSize, timeStepSize, normal, leftGoingFluxGatheredLeft, rightGoingFluxGatheredLeft);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRightInterface = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(extrapolatedBoundaryRight, extrapolatedBoundaryRightNeighborLeftBoundary, faceCentreRight, volumeSize, timeStamp + 0.5 * timeStepSize, timeStepSize, normal, leftGoingFluxGathered, rightGoingFluxGathered);
   {% else %}
-  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeftInterface  = solver.solveRiemannProblem(extrapolatedBoundaryLeftNeighborRightBoundary, extrapolatedBoundaryLeft, volumeCentreLeft, volumeSize, timeStamp + 0.5 * timeStepSize, timeStepSize, normal, leftGoingFluxGatheredLeft, rightGoingFluxGatheredLeft);
-  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRightInterface = solver.solveRiemannProblem(extrapolatedBoundaryRight, extrapolatedBoundaryRightNeighborLeftBoundary, volumeCentre, volumeSize, timeStamp + 0.5 * timeStepSize, timeStepSize, normal, leftGoingFluxGathered, rightGoingFluxGathered);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeftInterface  = solver.solveRiemannProblem(extrapolatedBoundaryLeftNeighborRightBoundary, extrapolatedBoundaryLeft, faceCentreLeft, volumeSize, timeStamp + 0.5 * timeStepSize, timeStepSize, normal, leftGoingFluxGatheredLeft, rightGoingFluxGatheredLeft);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRightInterface = solver.solveRiemannProblem(extrapolatedBoundaryRight, extrapolatedBoundaryRightNeighborLeftBoundary, faceCentreRight, volumeSize, timeStamp + 0.5 * timeStepSize, timeStepSize, normal, leftGoingFluxGathered, rightGoingFluxGathered);
   {% endif %}
 
   #if !defined(WITH_GPU)

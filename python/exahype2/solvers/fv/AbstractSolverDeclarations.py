@@ -160,8 +160,13 @@ class AbstractSolverDeclarations:
 
     {% if LIMITER_IMPLEMENTATION=="<user-defined>" and LIMITER_IMPLEMENTATION!="<none>" %}
     virtual {{COMPUTE_PRECISION}} limit(
-      const {{COMPUTE_PRECISION}} a,
-      const {{COMPUTE_PRECISION}} b
+      const {{COMPUTE_PRECISION}}* const NOALIAS   QL,
+      const {{COMPUTE_PRECISION}}* const NOALIAS   Q,
+      const {{COMPUTE_PRECISION}}* const NOALIAS   QR,
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      const int                                    normal,
+      const int                                    unknown
     ) = 0;
     {% endif %}
 """,

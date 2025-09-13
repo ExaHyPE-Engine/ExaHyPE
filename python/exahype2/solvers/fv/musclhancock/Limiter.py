@@ -6,6 +6,8 @@ from enum import StrEnum
 class Limiter(StrEnum):
     superbee = """
     // Superbee
+    const {{COMPUTE_PRECISION}} a = QR[unknown] - Q[unknown];
+    const {{COMPUTE_PRECISION}} b = Q[unknown] - QL[unknown];
     if (tarch::la::equals(b, 0.0)) {
       return 0.0;
     } else {
@@ -17,6 +19,8 @@ class Limiter(StrEnum):
 
     minmod = """
     // Minmod
+    const {{COMPUTE_PRECISION}} a = QR[unknown] - Q[unknown];
+    const {{COMPUTE_PRECISION}} b = Q[unknown] - QL[unknown];
     if (a * b <= 0.0) {
       return 0.0;
     } else {
@@ -35,11 +39,15 @@ class Limiter(StrEnum):
 
     average = """
     // Central differences
+    const {{COMPUTE_PRECISION}} a = QR[unknown] - Q[unknown];
+    const {{COMPUTE_PRECISION}} b = Q[unknown] - QL[unknown];
     return (a + b) / 2;
 """
 
     vanalbada = """
     // Van Albada
+    const {{COMPUTE_PRECISION}} a = QR[unknown] - Q[unknown];
+    const {{COMPUTE_PRECISION}} b = Q[unknown] - QL[unknown];
     if (tarch::la::equals(b, 0.0)) {
       return 0.0;
     } else {
@@ -52,6 +60,8 @@ class Limiter(StrEnum):
 
     mclim = """
     // MCLim
+    const {{COMPUTE_PRECISION}} a = QR[unknown] - Q[unknown];
+    const {{COMPUTE_PRECISION}} b = Q[unknown] - QL[unknown];
     if (tarch::la::equals(b, 0.0)) {
       return 0.0;
     } else {

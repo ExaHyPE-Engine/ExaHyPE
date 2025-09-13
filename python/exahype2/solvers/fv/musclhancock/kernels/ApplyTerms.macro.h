@@ -33,14 +33,14 @@
   {% endif -%}
 {% endmacro %}
 
-{% macro applyLimiter(a, b, output) %}
+{% macro applyLimiter(QL, Q, QR, volumeCentre, volumeSize, normal, unknown, output) %}
   {% if LIMITER_IMPLEMENTATION=="<none>" %}
   static_assert(false, "No limiter for MUSCL-Hancock is set");
   {% endif -%}
 
   {%- if STATELESS_LIMITER %}
-  {{output}} = {{FULL_QUALIFIED_SOLVER_NAME}}::limit({{a}}, {{b}}) / volumeSize(normal);
+  {{output}} = {{FULL_QUALIFIED_SOLVER_NAME}}::limit({{QL}}, {{Q}}, {{QR}}, {{volumeCentre}}, {{volumeSize}}, {{normal}}, {{unknown}}) / volumeSize(normal);
   {%- else -%}
-  {{output}} = solver.limit({{a}}, {{b}}) / volumeSize(normal);
+  {{output}} = solver.limit({{QL}}, {{Q}}, {{QR}}, {{volumeCentre}}, {{volumeSize}}, {{normal}}, {{unknown}}) / volumeSize(normal);
   {% endif -%}
 {% endmacro %}

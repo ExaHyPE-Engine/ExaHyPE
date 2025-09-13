@@ -21,6 +21,7 @@ class GlobalAdaptiveTimeStep(SingleSweep):
         use_enclave_tasking=False,
         number_of_enclave_tasks=1,
         plot_grid_properties=False,
+        reconstruction=None,
         overlap=2,
     ):
         super(GlobalAdaptiveTimeStep, self).__init__(
@@ -40,16 +41,19 @@ class GlobalAdaptiveTimeStep(SingleSweep):
         self._time_stepping_code_snippets = AdaptiveTimeSteppingCodeSnippets(
             time_step_relaxation
         )
+        self._reconstruction = reconstruction
 
     def _generate_kernels(self, output, subdirectory):
         generate_kernels(
             solver=self,
             output=output,
             subdirectory=subdirectory,
+            reconstruction = self._reconstruction,
         )
         if self._use_enclave_tasking and self._can_fuse:
             generate_fused_kernels(
                 solver=self,
                 output=output,
                 subdirectory=subdirectory,
+                reconstruction = self._reconstruction,
             )

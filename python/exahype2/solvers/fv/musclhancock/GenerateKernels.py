@@ -10,6 +10,7 @@ def generate_kernels(
     solver,
     output,
     subdirectory,
+    reconstruction,
 ):
     kernels_namespace = solver._namespace + ["kernels", solver._name]
     kernels_output_path = subdirectory + "kernels/" + solver._name
@@ -21,6 +22,7 @@ def generate_kernels(
     d = output.makefile.dictionary()
     solver._init_dictionary_with_default_parameters(d)
     solver.add_entries_to_text_replacement_dictionary(d)
+    d["RECONSTRUCTION"] = reconstruction
 
     riemann_solver_file = "RiemannSolver"
 
@@ -67,6 +69,7 @@ def generate_fused_kernels(
     solver,
     output,
     subdirectory,
+    reconstruction,
 ):
     kernels_namespace = solver._namespace + ["kernels", solver._name]
     kernels_output_path = subdirectory + "kernels/" + solver._name
@@ -78,6 +81,7 @@ def generate_fused_kernels(
     d = output.makefile.dictionary()
     solver._init_dictionary_with_default_parameters(d)
     solver.add_entries_to_text_replacement_dictionary(d)
+    d["RECONSTRUCTION"] = reconstruction
 
     riemann_solver_file = "RiemannSolverFused"
 
