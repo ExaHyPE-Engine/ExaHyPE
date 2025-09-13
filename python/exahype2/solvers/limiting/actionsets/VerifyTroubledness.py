@@ -25,7 +25,7 @@ class VerifyTroubledness(AbstractLimiterActionSet):
         marker.h(),
         timeStamp
       );
-      {% endif %}
+      {% endif %}{# USE_PAC #}
 
       {% if USE_DMP %}
       constexpr int NumberOfObservables = repositories::{{SOLVER_INSTANCE}}.NumberOfDMPObservables;
@@ -34,9 +34,9 @@ class VerifyTroubledness(AbstractLimiterActionSet):
 
       for (int d = 0; d < DIMENSIONS; d++) {
         std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value,                                        NumberOfObservables, &boundaryMinPerVariables[d * NumberOfObservables]);
-        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).value + NumberOfObservables,     NumberOfObservables, &boundaryMinPerVariables[(d + DIMENSIONS) * NumberOfObservables]);
+        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).value + 2 * NumberOfObservables, NumberOfObservables, &boundaryMinPerVariables[(d + DIMENSIONS) * NumberOfObservables]);
 
-        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + 2 * NumberOfObservables,              NumberOfObservables, &boundaryMaxPerVariables[d * NumberOfObservables]);
+        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + NumberOfObservables,                  NumberOfObservables, &boundaryMaxPerVariables[d * NumberOfObservables]);
         std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).value + 3 * NumberOfObservables, NumberOfObservables, &boundaryMaxPerVariables[(d + DIMENSIONS) * NumberOfObservables]);
       }
 
@@ -48,7 +48,7 @@ class VerifyTroubledness(AbstractLimiterActionSet):
         boundaryMinPerVariables,
         boundaryMaxPerVariables
       );
-      {% endif %}
+      {% endif %}{# USE_DMP #}
 
       if (!isUnTroubled) {
         repositories::{{SOLVER_INSTANCE}}.addTroubledCell();

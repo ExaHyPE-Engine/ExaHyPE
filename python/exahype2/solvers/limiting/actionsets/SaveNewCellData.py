@@ -2,9 +2,10 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .AbstractLimiterActionSet import AbstractLimiterActionSet
 
+import jinja2
+
 import peano4.solversteps
 
-import jinja2
 
 class SaveNewCellData(AbstractLimiterActionSet):
   TemplateSaveNewCellData = """
@@ -20,14 +21,17 @@ class SaveNewCellData(AbstractLimiterActionSet):
       localMinPerVariables, localMaxPerVariables
     );
 
+    // Projection of cell local min and max, order in any given face is [min_l, max_l, min_r, max_r]
     for (int d = 0; d < DIMENSIONS; d++) {
-      // Projection of cell local min and max
-      std::copy_n(localMinPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + NumberOfObservables);
-      std::copy_n(localMinPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).value);
+      // Left face
+      std::copy_n(localMinPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + 2 * NumberOfObservables);
       std::copy_n(localMaxPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + 3 * NumberOfObservables);
-      std::copy_n(localMaxPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).value + 2 * NumberOfObservables);
+
+      // Right face
+      std::copy_n(localMinPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).value);
+      std::copy_n(localMaxPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).value + NumberOfObservables);
     }
-    {% endif %}
+    {% endif %}{# USE_DMP #}
 
     {% if RESET_TROUBLED_MARKERS %}
     // Resetting troubled markers
@@ -35,14 +39,14 @@ class SaveNewCellData(AbstractLimiterActionSet):
     for (int d = 0; d < 2 * DIMENSIONS; d++) {
       fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::REGULAR);
     }
-    {% endif %}
+    {% endif %}{# RESET_TROUBLED_MARKERS #}
 
-    {% if TRAMSMIT_CELL_TIMESTAMPS %}
+    {% if TRANSMIT_CELL_TIMESTAMPS %}
     // Set time stamp for both cells to be the max of the two possible time stamps
     const double timeStamp = std::max(fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.getTimeStamp(), fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp());
     fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp);
     fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp);
-    {% endif %}
+    {% endif %}{# TRANSMIT_CELL_TIMESTAMPS #}
   }
 """
 
@@ -62,7 +66,7 @@ class SaveNewCellData(AbstractLimiterActionSet):
       d["PREDICATE"]                = self.guard
       d["USE_DMP"]                  = self._use_DMP
       d["RESET_TROUBLED_MARKERS"]   = self._reset_troubled_markers
-      d["TRAMSMIT_CELL_TIMESTAMPS"] = self._transmit_cell_timestamps
+      d["TRANSMIT_CELL_TIMESTAMPS"] = self._transmit_cell_timestamps
       result = jinja2.Template(self.TemplateSaveNewCellData).render(**d)
     return result
 
