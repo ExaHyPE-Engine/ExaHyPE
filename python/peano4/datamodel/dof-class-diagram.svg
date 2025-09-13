@@ -1,0 +1,428 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   sodipodi:docname="dof-class-diagram.svg"
+   inkscape:export-filename="dof-class-diagram.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="1.1893044"
+     inkscape:cx="344.73933"
+     inkscape:cy="397.71147"
+     inkscape:window-width="1854"
+     inkscape:window-height="1131"
+     inkscape:window-x="66"
+     inkscape:window-y="32"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2">
+    <rect
+       x="557.90761"
+       y="174.26607"
+       width="146.90568"
+       height="96.291289"
+       id="rect12378" />
+    <marker
+       style="overflow:visible"
+       id="TriangleStart"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="TriangleStart"
+       markerWidth="5.3244081"
+       markerHeight="6.155385"
+       viewBox="0 0 5.3244081 6.1553851"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path135" />
+    </marker>
+    <rect
+       x="557.90759"
+       y="174.26607"
+       width="146.90569"
+       height="96.29129"
+       id="rect12378-2" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.499999"
+       id="rect234"
+       width="42.738899"
+       height="6.0593276"
+       x="33.886734"
+       y="38.846588" />
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.499999"
+       id="rect234-3"
+       width="42.738903"
+       height="30.635614"
+       x="33.852665"
+       y="44.935375" />
+    <text
+       xml:space="preserve"
+       style="font-size:5.64444px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="49.176075"
+       y="44.206944"
+       id="text499"><tspan
+         sodipodi:role="line"
+         id="tspan497"
+         style="stroke-width:0.264583"
+         x="49.176075"
+         y="44.206944">DoF</tspan></text>
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.499999"
+       id="rect234-6"
+       width="42.738899"
+       height="6.0593276"
+       x="72.089325"
+       y="93.728485" />
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.499999"
+       id="rect234-3-7"
+       width="42.738903"
+       height="30.635614"
+       x="72.055252"
+       y="99.817276" />
+    <text
+       xml:space="preserve"
+       style="font-size:5.64444px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="81.557823"
+       y="99.088844"
+       id="text499-5"><tspan
+         sodipodi:role="line"
+         id="tspan497-3"
+         style="stroke-width:0.264583"
+         x="81.557823"
+         y="99.088844">DaStGen2</tspan></text>
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.499999"
+       id="rect234-6-2"
+       width="42.738899"
+       height="6.0593276"
+       x="3.8233418"
+       y="94.832619" />
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.499999"
+       id="rect234-3-7-6"
+       width="42.738903"
+       height="30.635614"
+       x="3.789269"
+       y="100.92141" />
+    <text
+       xml:space="preserve"
+       style="font-size:5.64444px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="18.583508"
+       y="100.19298"
+       id="text499-5-1"><tspan
+         sodipodi:role="line"
+         id="tspan497-3-8"
+         style="stroke-width:0.264583"
+         x="18.583508"
+         y="100.19298">Patch</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 14.90225,86.399475 h 79.126313 v 7.194952"
+       id="path659" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#TriangleStart)"
+       d="m 53.560977,86.497199 0,-6.318585"
+       id="path661"
+       sodipodi:nodetypes="cc" />
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.499999"
+       id="rect234-5"
+       width="42.738899"
+       height="6.0593276"
+       x="145.55278"
+       y="37.010681" />
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.499999"
+       id="rect234-3-6"
+       width="42.738903"
+       height="30.635614"
+       x="145.51871"
+       y="43.099468" />
+    <text
+       xml:space="preserve"
+       style="font-size:4.25837px;line-height:1.25;font-family:sans-serif;stroke-width:0.199611"
+       x="146.10188"
+       y="41.317627"
+       id="text499-2"><tspan
+         sodipodi:role="line"
+         id="tspan497-9"
+         style="stroke-width:0.199611"
+         x="146.10188"
+         y="41.317627">dastgen2.DataModel</tspan></text>
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.499999"
+       id="rect234-5-7"
+       width="42.738899"
+       height="6.0593276"
+       x="88.102325"
+       y="163.17249" />
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.499999"
+       id="rect234-3-6-9"
+       width="42.738903"
+       height="30.635614"
+       x="88.068253"
+       y="169.26126" />
+    <text
+       xml:space="preserve"
+       style="font-size:1.81086px;line-height:1.25;font-family:sans-serif;stroke-width:0.0848841"
+       x="88.946854"
+       y="166.67764"
+       id="text499-2-2"><tspan
+         sodipodi:role="line"
+         id="tspan497-9-0"
+         style="stroke-width:0.0848841"
+         x="88.946854"
+         y="166.67764">DaStGen2GeneratorForObjectsWithSmartPointers</tspan></text>
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.499999"
+       id="rect234-5-2"
+       width="42.738899"
+       height="6.0593276"
+       x="17.357191"
+       y="163.55867" />
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.499999"
+       id="rect234-3-6-3"
+       width="42.738903"
+       height="30.635614"
+       x="17.323118"
+       y="169.64746" />
+    <text
+       xml:space="preserve"
+       style="font-size:4.33753px;line-height:1.25;font-family:sans-serif;stroke-width:0.203321"
+       x="17.956615"
+       y="167.87376"
+       id="text499-2-7"><tspan
+         sodipodi:role="line"
+         id="tspan497-9-5"
+         style="stroke-width:0.203321"
+         x="17.956615"
+         y="167.87376">DaStGen2Generator</tspan></text>
+    <g
+       id="g8330">
+      <rect
+         style="fill:#cccccc;stroke:#000000;stroke-width:0.499999"
+         id="rect234-1"
+         width="42.738899"
+         height="6.0593276"
+         x="162.72362"
+         y="89.150543" />
+      <rect
+         style="fill:#cccccc;stroke:#000000;stroke-width:0.499999"
+         id="rect234-3-2"
+         width="42.738903"
+         height="30.635614"
+         x="162.68954"
+         y="95.239326" />
+      <text
+         xml:space="preserve"
+         style="font-size:5.64444px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+         x="178.01295"
+         y="94.510895"
+         id="text499-7"><tspan
+           sodipodi:role="line"
+           id="tspan497-0"
+           style="stroke-width:0.264583"
+           x="178.01295"
+           y="94.510895">MPI</tspan></text>
+    </g>
+    <g
+       id="g8330-9"
+       transform="translate(0.28031766,39.923596)">
+      <rect
+         style="fill:#cccccc;stroke:#000000;stroke-width:0.499999"
+         id="rect234-1-3"
+         width="42.738899"
+         height="6.0593276"
+         x="162.72362"
+         y="89.150543" />
+      <rect
+         style="fill:#cccccc;stroke:#000000;stroke-width:0.499999"
+         id="rect234-3-2-6"
+         width="42.738903"
+         height="30.635614"
+         x="162.68954"
+         y="95.239326" />
+      <text
+         xml:space="preserve"
+         style="font-size:3.6605px;line-height:1.25;font-family:sans-serif;stroke-width:0.171586"
+         x="165.48152"
+         y="93.928703"
+         id="text499-7-0"><tspan
+           sodipodi:role="line"
+           id="tspan497-0-6"
+           style="stroke-width:0.171586"
+           x="165.48152"
+           y="93.928703">MPIAndStorageAspect</tspan></text>
+    </g>
+    <rect
+       style="fill:#000000;stroke:#000000;stroke-width:1.265;stroke-dasharray:none"
+       id="rect8383"
+       width="3.8084333"
+       height="3.8084333"
+       x="159.47807"
+       y="-9.892272"
+       transform="rotate(45.725491)" />
+    <rect
+       style="fill:#000000;stroke:#000000;stroke-width:1.265;stroke-dasharray:none"
+       id="rect8383-8"
+       width="3.8084333"
+       height="3.8084333"
+       x="159.50397"
+       y="-56.629597"
+       transform="rotate(45.725491)" />
+    <rect
+       style="fill:#000000;stroke:#000000;stroke-width:1.265;stroke-dasharray:none"
+       id="rect8383-9"
+       width="3.8084333"
+       height="3.8084333"
+       x="158.95155"
+       y="25.673605"
+       transform="rotate(45.725491)" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 119.76028,110.07682 145.30572,66.929265"
+       id="path8437"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 151.83767,73.714323 v 74.314947 h 11.02345"
+       id="path8439" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 26.449271,86.436344 v 8.08386"
+       id="path8486" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 92.46968,135.23517 v 14.4516 h 18.19737 v 13.55894"
+       id="path10099" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 92.490823,149.70672 H 38.302684 v 13.47722"
+       id="path10101" />
+    <text
+       xml:space="preserve"
+       style="font-size:5.64444px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="86.208725"
+       y="147.97003"
+       id="text10843"><tspan
+         sodipodi:role="line"
+         id="tspan10841"
+         style="stroke-width:0.264583"
+         x="86.208725"
+         y="147.97003">&lt;&lt;or&gt;&gt;</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:5.64444px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="126.10979"
+       y="69.982651"
+       id="text11636"><tspan
+         sodipodi:role="line"
+         id="tspan11634"
+         style="stroke-width:0.264583"
+         x="126.10979"
+         y="69.982651">_data</tspan></text>
+    <text
+       xml:space="preserve"
+       transform="scale(0.26458333)"
+       id="text12376"
+       style="font-size:10.6667px;line-height:1.25;font-family:sans-serif;white-space:pre;shape-inside:url(#rect12378);display:inline"><tspan
+         x="557.9082"
+         y="183.97099"
+         id="tspan15127">actual data model </tspan><tspan
+         x="557.9082"
+         y="197.30436"
+         id="tspan15129">representing a plain C++ </tspan><tspan
+         x="557.9082"
+         y="210.63774"
+         id="tspan15131">class subject to our domain </tspan><tspan
+         x="557.9082"
+         y="223.97111"
+         id="tspan15133">specific annotations. This </tspan><tspan
+         x="557.9082"
+         y="237.30449"
+         id="tspan15135">used to be DaStGen before </tspan><tspan
+         x="557.9082"
+         y="250.63786"
+         id="tspan15137">iwe moved the new features </tspan><tspan
+         x="557.9082"
+         y="263.97124"
+         id="tspan15139">into LLVM.</tspan></text>
+    <text
+       xml:space="preserve"
+       transform="matrix(0.26458333,0,0,0.26458333,-111.73232,1.0134804)"
+       id="text12376-2"
+       style="font-size:10.6667px;line-height:1.25;font-family:sans-serif;white-space:pre;shape-inside:url(#rect12378-2);display:inline"><tspan
+         x="557.9082"
+         y="183.97099"
+         id="tspan15141">Any DoF in Peano is </tspan><tspan
+         x="557.9082"
+         y="197.30436"
+         id="tspan15143">associated with a mesh </tspan><tspan
+         x="557.9082"
+         y="210.63774"
+         id="tspan15145">entity. This is encoded in this </tspan><tspan
+         x="557.9082"
+         y="223.97111"
+         id="tspan15147">class. Any DoF also has to </tspan><tspan
+         x="557.9082"
+         y="237.30449"
+         id="tspan15149">have some h and x debug </tspan><tspan
+         x="557.9082"
+         y="250.63786"
+         id="tspan15151">info, but we leave it to he </tspan><tspan
+         x="557.9082"
+         y="263.97124"
+         id="tspan15153">subclass to provide this.</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 151.76221,108.2245 h 10.67688"
+       id="path14884" />
+    <text
+       xml:space="preserve"
+       style="font-size:5.64444px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="137.85674"
+       y="126.17404"
+       id="text14975"><tspan
+         sodipodi:role="line"
+         id="tspan14973"
+         style="stroke-width:0.264583"
+         x="137.85674"
+         y="126.17404">_aspects</tspan></text>
+  </g>
+</svg>

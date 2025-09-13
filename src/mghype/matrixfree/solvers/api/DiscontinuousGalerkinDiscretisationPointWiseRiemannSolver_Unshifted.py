@@ -23,9 +23,21 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Unshifted(Discon
      
   Simple solver which maps the DG steps onto separate mesh traversals
   
-  Everything inherits from next door, except the add_to_solve method.
+  This Python class is a mere wrapper without any funtionality. The interesting
+  stuff happens in the template file that is used for this variant, i.e.
+  DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Unshifted.Abstract.template.h
+  and
+  DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Unshifted.Abstract.template.cpp.
+  These files introduce a marker toggling mechnanism, where a marker always 
+  runs through the three steps
 
-  See the documentation for solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
+  - ProjectOntoFaces
+  - ComputeNumericalFlux
+  - UpdateCell
+  
+  and hence ensures that we actually traverse the mesh three times before we 
+  actually have a new solution.
+    
   """
   def __init__(self,
               name,

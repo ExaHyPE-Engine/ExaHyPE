@@ -206,7 +206,9 @@ void step() {
         observers::CreateGrid  observer;
         observers::CreateGrid::prepareTraversal();
         watch.start();
+        {{SUBNAMESPACE}}repositories::beginCreateGrid();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        {{SUBNAMESPACE}}repositories::endCreateGrid();
         watch.stop();
         observers::CreateGrid::unprepareTraversal();
         createGridMeasurement.setValue( watch.getCalendarTime() );
@@ -222,7 +224,9 @@ void step() {
         observers::InitSolution  observer;
         observers::InitSolution::prepareTraversal();
         watch.start();
+        {{SUBNAMESPACE}}repositories::beginInitialisation();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        {{SUBNAMESPACE}}repositories::endInitialisation();
         watch.stop();
         observers::InitSolution::unprepareTraversal();
         initMeasurement.setValue( watch.getCalendarTime() );
@@ -250,12 +254,12 @@ void step() {
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "plot" );
 
-        repositories::incrementPlotCounter();
-        
         observers::Plot  observer;
         observers::Plot::prepareTraversal();
         watch.start();
+        {{SUBNAMESPACE}}repositories::beginPlot();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        {{SUBNAMESPACE}}repositories::endPlot();
         watch.stop();
         observers::Plot::unprepareTraversal();
         plotMeasurement.setValue( watch.getCalendarTime() );

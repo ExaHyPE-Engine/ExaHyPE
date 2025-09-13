@@ -88,6 +88,20 @@ void applications::exahype2::ccz4::CCZ4::prepare(TP::TwoPunctures* tp){
     tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
     tp->TP_epsilon=1e-6;}
 
+  if (CCZ4swi==2 and CCZ4BBHType==3){
+    tp->par_b=3.5;
+    tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
+    tp->give_bare_mass=true;//use puncture mass instead of adm mass
+    tp->par_m_plus=0.47992; tp->par_m_minus=0.47992;
+    //tp->target_M_plus=999;//adm mass
+    tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.12287; tp->par_P_plus[2]=0.0;//linear momentum
+    tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=0.0;//spin
+    //tp->target_M_minus=999;//adm mass
+    tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=-0.12287; tp->par_P_minus[2]=0.0;//linear momentum
+    tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin    
+    tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
+    tp->TP_epsilon=1e-6;}
+
 	if (CCZ4swi==3){
 		double D=10.0, q=36.0/29.0, chip=0.31, chim=-0.46, M=1.0;
 		double Pr=-0.00084541526517121, Pphi=0.09530152296974252;
@@ -164,13 +178,6 @@ void applications::exahype2::ccz4::CCZ4::initialCondition(
   for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;
   }
-
-
-/*
-  else {
-    enforceCCZ4constraints(Q);
-  }
-*/
   logTraceOut( "initialCondition(...)" );
 }
 
@@ -189,35 +196,7 @@ void applications::exahype2::ccz4::CCZ4::sourceTerm(
     assertion3( std::isfinite(Q[i]), i, volumeX, t );
   }
 #endif
- // for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
-  //  S[i] = 0.0;
-  //}
   applications::exahype2::ccz4::CCZ4::sourceTerm(Q, volumeX, volumeH, t, dt, S, Offloadable::Yes);
- /*
-  if (CCZ4smoothing>0){// then we apply simple laplacian smoothing
-    constexpr int NumberOfRefinementLayers = 3;
-    double Radius[NumberOfRefinementLayers] = {5.0*1.8, 3.0*1.8, 1.5*1.8};
-    double radius=volumeX(0)*volumeX(0)+volumeX(1)*volumeX(1)+volumeX(2)*volumeX(2); radius=pow(radius,0.5);
-    ::exahype2::CellAccess access(
-      Q,                         // make it initially point to input
-      1,                         // halo size, which you know as user
-      NumberOfUnknowns,          // defined in superclass
-      NumberOfAuxiliaryVariables // defined in superclass
-      NumberOfDoFsPerAxisInCell, // defined in superclass
-    );
-    double laplacian=0.0;
-    for (int unknown=0; unknown<NumberOfUnknowns; unknown++) {
-      laplacian = -6.0 * access.centre(unknown)
-        + 1.0 * access.left(0,unknown)+ 1.0 * access.right(0,unknown)
-        + 1.0 * access.left(1,unknown)+ 1.0 * access.right(1,unknown)
-        + 1.0 * access.left(2,unknown)+ 1.0 * access.right(2,unknown);
-      laplacian /= volumeH(0);
-      laplacian /= volumeH(0);
-      double coef=CCZ4smoothing*(std::exp(-5.0*std::abs(radius-Radius[0])) + std::exp(-5.0*std::abs(radius-Radius[1])) + std::exp(-5.0*std::abs(radius-Radius[2])) )/3.0;
-      coef=CCZ4smoothing;
-      S[unknown]+=coef*laplacian;
-    }
-  }*/
 
 #if !defined(GPUOffloadingOMP)
   for(int i=0; i<NumberOfUnknowns; i++){
@@ -306,9 +285,6 @@ void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
 
     gradQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
-  //for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
-  //  BgradQ[i] = 0.0;
-  //}
   ncp(BgradQ, Q, gradQSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
 }
 #if defined(GPUOffloadingOMP)
@@ -326,6 +302,7 @@ void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
   const double radius = tarch::la::norm2( volumeCentre );
   //
   // see documentation in header file
+  // current options: 1, 2, 3, 6, 7
   //
   if (CCZ4ReSwi==1) { //radius based
     if (radius<0.1) {
@@ -336,7 +313,7 @@ void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
     if (tarch::la::equals(t,0.0)){  //static AMR, for bbh, type==1
       constexpr int NumberOfRefinementLayers = 2;
 //    current "standard" refinement pattern
-      double Radius[NumberOfRefinementLayers] = {8, 6};
+      double Radius[NumberOfRefinementLayers] = {6, 4.5};
       double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
       result = ::exahype2::RefinementCommand::Keep;
       for (int i=0; i<NumberOfRefinementLayers; i++) {
@@ -363,39 +340,11 @@ void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
       else {result = ::exahype2::RefinementCommand::Keep;}
     }
   }
-  if (CCZ4ReSwi==5){
-    if (tarch::la::equals(t,0.0)){  //static AMR, for bbh, type==0, 2
-      constexpr int NumberOfRefinementLayers = 2;
-      double Radius[NumberOfRefinementLayers] = {4, 3};
-      double MaxH[NumberOfRefinementLayers]   = {0.17,0.06};
-
-      result = ::exahype2::RefinementCommand::Keep;
-      for (int i=0; i<NumberOfRefinementLayers; i++) {
-        if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
-          result=::exahype2::RefinementCommand::Refine;
-        }
-      }
-    }
-  }
   if (CCZ4ReSwi==6){
     if (tarch::la::equals(t,0.0)){  //static AMR, for bbh, type==0, 2
       constexpr int NumberOfRefinementLayers = 2;
       double Radius[NumberOfRefinementLayers] = {4, 3};
-      double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
-
-      result = ::exahype2::RefinementCommand::Keep;
-      for (int i=0; i<NumberOfRefinementLayers; i++) {
-        if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
-          result=::exahype2::RefinementCommand::Refine;
-        }
-      }
-    }
-  }
-  if (CCZ4ReSwi==8){
-    if (tarch::la::equals(t,0.0)){  //static AMR, for bbh, type==0, 2
-      constexpr int NumberOfRefinementLayers = 2;
-      double Radius[NumberOfRefinementLayers] = {4, 3};
-      double MaxH[NumberOfRefinementLayers]   = {0.1,0.035};
+      double MaxH[NumberOfRefinementLayers]   = {0.15,0.04}; // {0.17,0.06}; {0.1,0.035};
 
       result = ::exahype2::RefinementCommand::Keep;
       for (int i=0; i<NumberOfRefinementLayers; i++) {

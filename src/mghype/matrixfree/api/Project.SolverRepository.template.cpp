@@ -13,6 +13,8 @@ namespace {{N}} {
   namespace repositories {
     static tarch::logging::Log _log( "{{NAMESPACE | join("::")}}" );
 
+    int plotCounter = 0;
+
     {% for SOLVER in SOLVER_INSTANCES %}
     {{SOLVER[0]}}  {{SOLVER[1]}};
     {% endfor %}
@@ -58,12 +60,39 @@ namespace {{N}} {
       {% endfor %}
     }
 
+    void beginCreateGrid() {
+      {% for SOLVER in SOLVER_INSTANCES %}
+      {{SOLVER[1]}}.beginGridConstructionSweep();
+      {% endfor %}
+    }
+
     void endCreateGrid() {
+      logDebug( "endCreateGrid", "switch due to create grid" );
       loadBalancer.finishStep();
       tarch::multicore::setOrchestration( {{MULTICORE_ORCHESTRATION}} );
     }
     
-    void incrementPlotCounter() {plotCounter++;}
+    void beginInitialisation() {
+      loadBalancer.enable(false);
+      {% for SOLVER in SOLVER_INSTANCES %}
+      {{SOLVER[1]}}.beginInitialisationSweep();
+      {% endfor %}
+    }
+
+    void endInitialisation() {
+      loadBalancer.finishStep();
+    }
+
+    void beginPlot() {
+      {% for SOLVER in SOLVER_INSTANCES %}
+      {{SOLVER[1]}}.beginPlotSweep();
+      {% endfor %}
+    }
+
+    void endPlot() {
+      plotCounter++;
+    }
+
     int getPlotCounter() {
       return plotCounter;
     }

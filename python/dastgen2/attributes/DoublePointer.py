@@ -118,7 +118,7 @@ class DoublePointer(Attribute):
         return ""
 
     def get_native_MPI_type(self):
-        return [("<double pointer should not be used for MPI data exchange>", 1)]
+        return [("MPI_DOUBLE /* <double pointer should not be used for MPI data exchange> */", 1)]
 
     def get_to_string(self):
         """

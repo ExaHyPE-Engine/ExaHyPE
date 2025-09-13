@@ -5,7 +5,6 @@
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
-
 #include "swift2/kernels/ParticleUpdatePredicates.h"
 
 
@@ -19,27 +18,34 @@ namespace swift2 {
      * radius.
      */
     template <typename Particle>
-    void reset_moved_particle_marker(Particle&  particle);
+    void reset_moved_particle_marker(Particle& particle);
 
     template <typename Particle>
     bool resetMovedParticleMarkerUpdateParticlePredicate(
-      const peano4::datamanagement::VertexMarker&  marker,
-      const Particle&                              particle
+      const peano4::datamanagement::VertexMarker& marker,
+      const Particle&                             particle
     ) {
-      return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,particle);
+      return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(
+        marker,
+        particle
+      );
     }
 
     template <typename Particle>
     void resetMovedParticleMarker(
-      const peano4::datamanagement::VertexMarker&  marker,
-      Particle&                                    particle
+      const peano4::datamanagement::VertexMarker& marker,
+      Particle&                                   particle
     ) {
-      assertion2(::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,particle), marker.toString(), particle.toString());
+      assertion2(
+        ::swift2::kernels::
+          localParticleCanBeUpdatedInVertexKernel(marker, particle),
+        marker.toString(),
+        particle.toString()
+      );
+      reset_moved_particle_marker(particle);
     }
-  }
-}
+  } // namespace timestepping
+} // namespace swift2
 
 
 #include "TimeStepping.cpph"
-
-

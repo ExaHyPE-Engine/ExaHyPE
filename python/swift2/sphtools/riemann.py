@@ -40,7 +40,7 @@ class RiemannSolver:
     """
 
     def __init__(self, gamma):
-        """!
+        r"""!
         @brief Constructor.
 
         @param gamma Adiabatic index \f$\gamma{}\f$.

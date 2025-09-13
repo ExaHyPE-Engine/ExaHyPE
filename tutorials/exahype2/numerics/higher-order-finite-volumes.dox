@@ -1,0 +1,34 @@
+/** 
+
+@page page_tutorials_exahype2_numerics_higher_order_finite_volumes Higher Order Finite Volumes
+
+\tableofcontents
+
+With standard finite volume methods we assume that the solution is constant within each volume.
+We can construct higher order schemes in space by relaxing this assumption.
+
+# MUSCL Schemes
+MUSCL (Monotonic Upstream-centred Scheme for Conservation Laws) schemes assume that the solution is a piecewise linear function
+@f$
+    u^n(x) = u_i^n + (x-x_i)\frac{s_i}{\Delta x}, x_{i-\frac{1}{2}} < x < x_{i+\frac{1}{2}}
+@f$
+where @f$ s_i = ave(u^n_{i+1} - u^n_i, u^n_i - u^n_{i-1}) @f$ is the slope at volume @f$ i @f$.
+
+The left and right face values are calculated as
+@f{eqnarray*} 
+    u^n_{i-\frac{1}{2}} = u^i_n - \frac{1}{2}s_i
+    u^n_{i+\frac{1}{2}} = u^i_n + \frac{1}{2}s_i
+@f}
+
+Updating @f$ u_i^n @f$ with the flux contributions uses these face values instead of the surrounding volumes.
+@f$
+    u^{n + 1}_i = u^n_i + \frac{\Delta t}{\Delta x}(F_{i-\frac{1}{2}} - F_{i+\frac{1}{2}})
+@f$
+@f$ F_{i-\frac{1}{2}} and F_{i+\frac{1}{2}} @f$ are the solutions to the Riemann problem at each surrounding face.
+There are many approaches to solve the Riemann problem, but we use the Rusanov flux.
+
+# The MUSCL-Hancock Scheme
+The MUSCL-Hancock Scheme modifies the standard MUSCL approach to calculated the flux for half a timestep later.
+After the face values are calculated they are updated according to the flux and source term.
+
+*/

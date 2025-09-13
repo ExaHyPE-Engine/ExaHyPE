@@ -144,8 +144,6 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
     ) override;
     
     
-   
-    
     /**
      * To obtain the best performance, I recommend to man inline command to 
      * this signature and to copy the implementation into the header. So it would
@@ -179,8 +177,6 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
     #pragma omp end declare target
     #endif
     
-
-
     
     /**
      * To obtain the best performance, I recommend to man inline command to 
@@ -229,8 +225,6 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
-    
-   
     
     /**
      * To obtain the best performance, I recommend to man inline command to 

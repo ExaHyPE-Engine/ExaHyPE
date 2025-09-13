@@ -10,6 +10,7 @@ import numpy as np
 
 # See comments in README.dox
 from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStep
+from CCZ4Solver import CCZ4Solver_FV_MUSCL_GlobalAdaptiveTimeStep
 from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking
@@ -62,7 +63,7 @@ parser.add_argument(
     "--solver",
     dest="solver",
     choices=[
-        "fv",
+        "fv", "fv-muscl",
         "fd4-rk1", "sofd4-rk1",
         "fd4-rk2", "sofd4-rk2",
         "fd4-rk3", "sofd4-rk3",
@@ -152,6 +153,20 @@ if args.solver == "fv" and args.enclave:
 if args.solver == "fv" and not args.enclave:
     my_solver = CCZ4Solver_FV_GlobalAdaptiveTimeStep(
         name="CCZ4FV",
+        patch_size=9,
+        min_volume_h=args.cell_size / 5,
+        max_volume_h=args.cell_size / 5,
+        pde_terms_without_state=True,
+    )
+    my_solver.set_implementation(
+        initial_conditions="""
+    for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
+      ::applications::exahype2::ccz4::gaugeWave(Q, volumeCentre, 0);
+    """
+    )
+if args.solver == "fv-muscl" and not args.enclave:
+    my_solver = CCZ4Solver_FV_MUSCL_GlobalAdaptiveTimeStep(
+        name="CCZ4FVMUSCL",
         patch_size=9,
         min_volume_h=args.cell_size / 5,
         max_volume_h=args.cell_size / 5,

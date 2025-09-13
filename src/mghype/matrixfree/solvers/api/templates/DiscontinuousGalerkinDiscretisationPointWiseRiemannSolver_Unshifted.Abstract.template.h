@@ -1,7 +1,9 @@
 {% include 'DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.Abstract.generic.template.h' %}
 
-  protected:
+  public:
     enum class State {
+      GridConstruction,
+      InitSolution,
       Suspend,
       ProjectOntoFaces,
       ComputeNumericalFlux,
@@ -13,6 +15,19 @@
       ComputeResidualAndSuspend
     };
 
+    State getState() const;
+
+    void beginInitialisationSweep();
+    void beginGridConstructionSweep();
+
+    /**
+     * If this is called after the initialisation (to dump the original guess),
+     * then we have to switch the solver state to ensure that all data exchange
+     * along domain boundaries is correct.
+     */
+    void beginPlotSweep();
+
+  protected:
     State _state;
 };
 

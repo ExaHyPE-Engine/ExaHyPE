@@ -338,7 +338,7 @@ class InitDofsIntermediatePhaseTest1(ActionSet):
   ) {
     logTraceInWith2Arguments( "updateFaceSolution::Interior", fineGridFace{{SOLVER_NAME}}.getSolution(), marker.toString() );
 
-    // project the u^\pm into a temporary vector
+    // project the left/right projection into a temporary vector
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 
       repositories::{{SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFace{{SOLVER_NAME}}.getProjection();
 
@@ -631,7 +631,7 @@ class InitDofsIntermediatePhaseTest6(InitDofsIntermediatePhaseTest1):
     Counter==0
   ) {
 
-    // project the u^\pm into a temporary vector
+    // project the left/right projection into a temporary vector
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 
       repositories::{{SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFace{{SOLVER_NAME}}.getRandProjection();
 
@@ -874,7 +874,7 @@ class InitDofsDGTest7(InitDofsDGTest1):
   if (
     fineGridFace{{DG_SOLVER_NAME}}.getType() == facedata::{{DG_SOLVER_NAME}}::Type::Interior
   ) {
-    // project the u^\pm into a temporary vector
+    // project the left/right projection into a temporary vector
     tarch::la::Vector< repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 
       repositories::{{DG_SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFace{{DG_SOLVER_NAME}}.getRandProjections();
 

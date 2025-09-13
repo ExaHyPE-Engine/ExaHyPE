@@ -123,6 +123,10 @@ struct tarch::la::SmartPointerVector {
 
     /**
      * Conversion assignment operator
+     *
+     * This operator realises an explicit copy, i.e. we assume that this
+     * already holds a valid memory region, so we can take each element of
+     * vector and copy it over.
      */
     inline SmartPointerVector<Size,Scalar>& operator=( const Vector<Size,Scalar>& vector );
 

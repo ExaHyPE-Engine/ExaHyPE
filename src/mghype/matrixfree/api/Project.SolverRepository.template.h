@@ -20,9 +20,6 @@
 namespace {{N}} {
 {% endfor %}
   namespace repositories {
-
-    static int plotCounter = -1;
-
     {% for SOLVER in SOLVER_INSTANCES %}
     extern {{NAMESPACE | join("::")}}::{{SOLVER[0]}}  {{SOLVER[1]}};
     {% endfor %}
@@ -38,17 +35,20 @@ namespace {{N}} {
     {% endif %}
     
     bool terminationCriterionHolds();
+
     void beginMeshSweep();
     void endMeshSweep();
 
-    /**
-    * At the moment, these do nothing but call 
-    * loadBalancer.finishStep()
-    */
+    void beginCreateGrid();
     void endCreateGrid();
 
+    void beginPlot();
+    void endPlot();
+
+    void beginInitialisation();
+    void endInitialisation();
+
     int getPlotCounter();
-    void incrementPlotCounter();
 
 {% for N in NAMESPACE %}
 }

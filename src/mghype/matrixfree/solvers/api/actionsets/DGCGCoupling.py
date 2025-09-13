@@ -405,7 +405,7 @@ class AbstractDGCGCoupling(ActionSet):
                injection_matrix_scaling,
                use_fas
                ):
-    """!
+    r"""!
     
     Construct action set
     
