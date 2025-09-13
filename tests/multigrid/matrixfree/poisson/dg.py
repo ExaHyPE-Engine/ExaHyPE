@@ -87,7 +87,7 @@ def run_and_validate(args,executable):
     if improvement>10.0:
       print( "SUCCESS")
     else:
-      sys.exit( "FAILED: residual {} not within bounds".format(r_max) )
+      sys.exit( "FAILED: residual not within bounds" )
 
 
 
