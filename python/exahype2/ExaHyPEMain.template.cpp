@@ -140,12 +140,9 @@ bool selectNextAlgorithmicStep() {
       and
       {{SUBNAMESPACE}}repositories::mayPlot()
     ) {
-      if ({{SUBNAMESPACE}}repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
-        nextMinPlotTimeStamp += {{SUBNAMESPACE}}TimeInBetweenPlots;
-      }
-      if ({{SUBNAMESPACE}}repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) {
-        nextMaxPlotTimeStamp += {{SUBNAMESPACE}}TimeInBetweenPlots;
-      }
+
+      nextMinPlotTimeStamp += {{SUBNAMESPACE}}TimeInBetweenPlots;
+      nextMaxPlotTimeStamp += {{SUBNAMESPACE}}TimeInBetweenPlots;
 
       if (nextMinPlotTimeStamp < {{SUBNAMESPACE}}repositories::getMinTimeStamp()) {
         logWarning(
