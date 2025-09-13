@@ -447,17 +447,21 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "lProjection",   str(self._unknowns_per_face_solution ) ))
         self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rProjection",   str(self._unknowns_per_face_solution ) ))
 
+# @todo These lines have to be commented in. They are correct. But 
+#       then we realise that the face data structure is not unified.
+#       We do store w elft and right, and not, how we write in the 
+#       paper, only one value
     #! [mghype_matrixfree_solvers_api_DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_storage_guards]    
 #    self._cell_data.peano4_mpi_and_storage_aspect.load_store_compute_flag     = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
 #      self._hold_cell_and_face_data_guard(),
-#      self._load_cell_and_face_data_guard(),
-#      self._hold_cell_and_face_data_guard(),
-#    )
-#    self._face_data.peano4_mpi_and_storage_aspect.load_store_compute_flag     = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-#      self._hold_cell_and_face_data_guard(),
-#      self._load_cell_and_face_data_guard(),
-#      self._hold_cell_and_face_data_guard(),
-#    )
+##      self._load_cell_and_face_data_guard(),
+ #     self._hold_cell_and_face_data_guard(),
+ #   )
+ #   self._face_data.peano4_mpi_and_storage_aspect.load_store_compute_flag     = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+ #     self._hold_cell_and_face_data_guard(),
+ #     self._load_cell_and_face_data_guard(),
+ #     self._hold_cell_and_face_data_guard(),
+ #   )
     self._cell_data.peano4_mpi_and_storage_aspect.implementation_file_includes += self._additional_includes()
     self._face_data.peano4_mpi_and_storage_aspect.implementation_file_includes += self._additional_includes()
     #! [mghype_matrixfree_solvers_api_DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_storage_guards]        
