@@ -162,8 +162,13 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::adjustSolution(
 
 {% if LIMITER_IMPLEMENTATION=="<user-defined>" and LIMITER_IMPLEMENTATION!="<none>" %}
 {{COMPUTE_PRECISION}} {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::limit(
-  [[maybe_unused]] const {{COMPUTE_PRECISION}} a,
-  [[maybe_unused]] const {{COMPUTE_PRECISION}} b
+  [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   QL,
+  [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q,
+  [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   QR,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] const int                                    unknown
 ) {
   // @todo Implement
 }

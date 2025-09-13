@@ -197,6 +197,11 @@
   const auto volumeCentreLeft  = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeLeft);
   const auto volumeCentreRight = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeRight);
 
+  auto faceCentreLeft(volumeCentre);
+  faceCentreLeft(normal) -= 0.5 * volumeSize(normal);
+  auto faceCentreRight(volumeCentre);
+  faceCentreRight(normal) += 0.5 * volumeSize(normal); 
+
   #if defined(WITH_OPENMP)
   #pragma omp simd
   #else
@@ -217,11 +222,11 @@
 
   // Retrieve user data
   {% if STATELESS_RIEMANN_SOLVER==True %}
-  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeft  = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(QInGatheredLeft, QInGathered, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGatheredLeft, rightGoingFluxGatheredLeft);
-  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRight = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(QInGathered, QInGatheredRight, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGathered, rightGoingFluxGathered);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeft  = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(QInGatheredLeft, QInGathered, faceCentreLeft, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGatheredLeft, rightGoingFluxGatheredLeft);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRight = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(QInGathered, QInGatheredRight, faceCentreRight, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGathered, rightGoingFluxGathered);
   {% else %}
-  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeft  = solver.solveRiemannProblem(QInGatheredLeft, QInGathered, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGatheredLeft, rightGoingFluxGatheredLeft);
-  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRight = solver.solveRiemannProblem(QInGathered, QInGatheredRight, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGathered, rightGoingFluxGathered);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeft  = solver.solveRiemannProblem(QInGatheredLeft, QInGathered, faceCentreLeft, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGatheredLeft, rightGoingFluxGatheredLeft);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRight = solver.solveRiemannProblem(QInGathered, QInGatheredRight, faceCentreRight, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGathered, rightGoingFluxGathered);
   {% endif %}
 
   #if !defined(WITH_GPU)

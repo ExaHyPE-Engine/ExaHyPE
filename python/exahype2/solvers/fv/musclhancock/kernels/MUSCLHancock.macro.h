@@ -49,9 +49,9 @@
   #pragma unroll
   #endif
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
-    {{ terms.applyLimiter('QInGatheredRight[unknown] - QInGathered[unknown]', 'QInGathered[unknown] - QInGatheredLeft[unknown]', 'slopeGathered[normal][unknown]') }}
-    {{ terms.applyLimiter('QInGathered[unknown] - QInGatheredLeft[unknown]', 'QInGatheredLeft[unknown] - QInGatheredLeftLeft[unknown]', 'slopeGatheredLeft[normal][unknown]') }}
-    {{ terms.applyLimiter('QInGatheredRightRight[unknown] - QInGatheredRight[unknown]', 'QInGatheredRight[unknown] - QInGathered[unknown]', 'slopeGatheredRight[normal][unknown]') }}
+    {{ terms.applyLimiter('QInGatheredLeft', 'QInGathered', 'QInGatheredRight', 'volumeCentre', 'volumeSize', 'normal', 'unknown', 'slopeGathered[normal][unknown]') }}
+    {{ terms.applyLimiter('QInGatheredLeftLeft', 'QInGatheredLeft', 'QInGathered', 'volumeCentreLeft', 'volumeSize', 'normal', 'unknown', 'slopeGatheredLeft[normal][unknown]') }}
+    {{ terms.applyLimiter('QInGathered', 'QInGatheredRight', 'QInGatheredRightRight', 'volumeCentreRight', 'volumeSize', 'normal', 'unknown', 'slopeGatheredRight[normal][unknown]') }}
 
     #if !defined(WITH_GPU)
     assertion(std::isfinite(slopeGathered[normal][unknown]));
@@ -68,12 +68,16 @@
   #pragma unroll
   #endif
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
+    {% if not RECONSTRUCTION is none %}
+    {{RECONSTRUCTION}}
+    {% else %}
     extrapolatedBoundaryLeft[unknown] = QInGathered[unknown] - 0.5 * volumeSize(normal) * slopeGathered[normal][unknown];
     extrapolatedBoundaryRight[unknown] = QInGathered[unknown] + 0.5 * volumeSize(normal) * slopeGathered[normal][unknown];
     extrapolatedBoundaryLeftNeighborLeftBoundary[unknown] = QInGatheredLeft[unknown] - 0.5 * volumeSize(normal) * slopeGatheredLeft[normal][unknown];
     extrapolatedBoundaryLeftNeighborRightBoundary[unknown] = QInGatheredLeft[unknown] + 0.5 * volumeSize(normal) * slopeGatheredLeft[normal][unknown];
     extrapolatedBoundaryRightNeighborLeftBoundary[unknown] = QInGatheredRight[unknown] - 0.5 * volumeSize(normal) * slopeGatheredRight[normal][unknown];
     extrapolatedBoundaryRightNeighborRightBoundary[unknown] = QInGatheredRight[unknown] + 0.5 * volumeSize(normal) * slopeGatheredRight[normal][unknown];
+    {% endif %}
   } // unknown
 {% endmacro %}
 

@@ -62,7 +62,7 @@
 .ExaHyPE2_Euler:
   parallel:
     matrix:
-    - scenario: [breaking-dam, channel-flow, gaussian-bell, gaussian-explosion, point-explosion, smooth-convergence, taylor-green-vortex]
+    - scenario: [breaking-dam, channel-flow, gaussian-bell, gaussian-explosion, isothermal-stratification, point-explosion, smooth-convergence, taylor-green-vortex]
       dimensions: [2]
       build_type: [Debug, Release]
   script:

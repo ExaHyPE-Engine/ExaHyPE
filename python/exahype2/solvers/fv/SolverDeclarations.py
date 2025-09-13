@@ -262,8 +262,13 @@ class SolverDeclarations:
     #endif
     static inline GPU_CALLABLE_METHOD
     {{COMPUTE_PRECISION}} limit(
-      [[maybe_unused]] const {{COMPUTE_PRECISION}} a,
-      [[maybe_unused]] const {{COMPUTE_PRECISION}} b
+      [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   QL,
+      [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q,
+      [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   QR,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const int                                    unknown
     ) {
       {% if LIMITER_IMPLEMENTATION!="<empty>" %}
       {{LIMITER_IMPLEMENTATION}}
@@ -400,8 +405,13 @@ class SolverDeclarations:
 
     {% if LIMITER_IMPLEMENTATION=="<user-defined>" and LIMITER_IMPLEMENTATION!="<none>" %}
     {{COMPUTE_PRECISION}} limit(
-      const {{COMPUTE_PRECISION}} a,
-      const {{COMPUTE_PRECISION}} b
+      [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   QL,
+      [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q,
+      [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   QR,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const int                                    unknown
     ) override final;
     {% endif %}
 """,
