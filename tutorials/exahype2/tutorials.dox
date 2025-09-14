@@ -22,13 +22,6 @@ instructions!
 </div>
 
 - \subpage tutorials_exahype2_hitchhikers-guide
-- Numerics tour de force (hands-on explanation of core numerical ingredients)
-  - \subpage page_tutorials_exahype2_numerics_finite_volumes
-  - \subpage page_tutorials_exahype2_numerics_higher_order_finite_volumes
-  - \subpage page_tutorials_exahype2_numerics_discontinous-Galerkin
-  - \subpage page_tutorials_exahype2_numerics_finite-differences
-  - \subpage page_tutorials_exahype2_numerics_Runge-Kutta
-  - \subpage page_tutorials_exahype2_numerics_ADER-DG
 - Exercises (interactive step-by-step examples of core ExaHyPE components)
   - \subpage tutorials_exahype2_exercises_acoustic_Acoustic-vanilla
   - \subpage tutorials_exahype2_exercises_acoustic_Acoustic-advanced
