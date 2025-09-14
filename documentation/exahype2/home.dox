@@ -32,7 +32,6 @@ and innovation programme under grant agreement No 671698 (ExaHyPE).
   - \subpage page_tutorials_exahype2_numerics_finite-differences
   - \subpage page_tutorials_exahype2_numerics_Runge-Kutta
   - \subpage page_tutorials_exahype2_numerics_ADER-DG
-  - \subpage documentation_exahype2_solvers_aderdg
 - Core functionality, numerics and ingredients
   - \subpage exahype2_dg
   - \subpage exahype2_dg_DG_AMR

@@ -27,7 +27,7 @@ instructions!
   - \subpage tutorials_exahype2_exercises_acoustic_Acoustic-advanced
   - \subpage tutorials_exahype2_exercises_swe_SWE-sympy
   - \subpage tutorials_exahype2_exercises_swe_SWE-aderdg
-- Toy problems
+- Toy problems (as starting point for your own project)
   - \subpage page_exahype2_tutorials_toyproblems_acoustic
   - \subpage page_exahype2_tutorials_toyproblems_advection
   - \subpage page_exahype2_tutorials_toyproblems_elastic
