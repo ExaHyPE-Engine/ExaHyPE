@@ -181,7 +181,7 @@ SWIFT2_Noh2D:
     - Build
   retry: 0
 
-ExaHyPE2_Tutorials:
+ExaHyPE2_Tutorials_Exercises:
   stage: Tutorials
   allow_failure: false
   extends:
@@ -189,7 +189,24 @@ ExaHyPE2_Tutorials:
     - .Variables
     - .RunOnlyOn
     - .BeforeScriptWithAutomakeSanitiser
-    - .ExaHyPE2_Tutorials
+    - .ExaHyPE2_Tutorials_Exercises
+    - .ExaHyPE2_Tutorials_Exercises
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 0
+
+ExaHyPE2_Tutorials_Toyproblems:
+  stage: Tutorials
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithAutomakeSanitiser
+    - .ExaHyPE2_Tutorials_Toyproblems
+    - .ExaHyPE2_Tutorials_Toyproblems
   needs:
     - job: Build
   dependencies:
