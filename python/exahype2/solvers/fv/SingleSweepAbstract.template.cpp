@@ -333,6 +333,8 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "time-step-after-grid-initialisation";
     case SolverState::PlottingAfterGridInitialisation:
       return "plotting-after-grid-initialisation";
+    case SolverState::Suspended:
+      return "suspended";
   }
   return "<undef>";
 }
