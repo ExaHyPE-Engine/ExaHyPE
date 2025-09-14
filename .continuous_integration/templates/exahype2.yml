@@ -28,7 +28,14 @@
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-limiting; PYTHONPATH=$CI_PROJECT_DIR/python python3 $test.py; OMP_NUM_THREADS=1 ./ADERDG-Limiting > /dev/null"
 
-.ExaHyPE2_Tutorials:
+.ExaHyPE2_Tutorials_Exercises:
+  parallel:
+    matrix:
+    - tutorial: [Acoustic-vanilla, Acoustic-advanced, SWE-sympy]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/exahype2/exercises; PYTHONPATH=$CI_PROJECT_DIR/python ipython3 $tutorial.ipynb;"
+
+.ExaHyPE2_Tutorials_Toyproblems:
   parallel:
     matrix:
     - tutorial: [euler, acoustic, elastic, advection, swe]

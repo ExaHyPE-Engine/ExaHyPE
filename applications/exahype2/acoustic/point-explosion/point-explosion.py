@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(".."))
 
-from acoustic import Acoustic
+from Acoustic import Acoustic
 
 if __name__ == "__main__":
     acoustic = Acoustic()
