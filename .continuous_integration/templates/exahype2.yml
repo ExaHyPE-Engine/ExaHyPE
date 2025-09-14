@@ -31,7 +31,7 @@
 .ExaHyPE2_Tutorials_Exercises:
   parallel:
     matrix:
-    - tutorial: [Acoustic-vanilla, Acoustic-advanced, SWE-simpy]
+    - tutorial: [Acoustic-vanilla, Acoustic-advanced, SWE-sympy]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/exahype2/exercises; PYTHONPATH=$CI_PROJECT_DIR/python ipython3 $tutorial.ipynb;"
 

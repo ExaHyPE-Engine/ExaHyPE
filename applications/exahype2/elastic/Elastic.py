@@ -6,7 +6,12 @@ import peano4
 import exahype2
 
 
-class Acoustic:
+class Elastic:
+    """!
+    
+    Superclass for all elastic solvers
+    
+    """
     _available_solvers = {
         "RusanovGlobalFixedFV": exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
         "RusanovGlobalFixedEnclaveFV": exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking,
@@ -20,7 +25,7 @@ class Acoustic:
 
     def setup_parser(self):
         parser = argparse.ArgumentParser(
-            description="ExaHyPE 2 - Acoustic Application Script"
+            description="ExaHyPE 2 - Elastic Application Script"
         )
 
         parser.add_argument(
@@ -236,10 +241,8 @@ class Acoustic:
 
     def setup_solver(self, args):
         solver_params = {
-            "name": "Acoustic",
-            "unknowns": {"p": 1, "u": 1, "v": 1, "w": 1}
-            if args.dimensions == 3
-            else {"p": 1, "u": 1, "v": 1},
+            "name": "Elastic",
+            "unknowns": {"v": args.dimensions, "sigma": args.dimensions + 1},
             "auxiliary_variables": 0,
         }
 
@@ -278,9 +281,9 @@ class Acoustic:
                 "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
                 "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
                 "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
-                "flux": "applications::exahype2::acoustic::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
-                "eigenvalues": "return applications::exahype2::acoustic::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
-                "source_term": "applications::exahype2::acoustic::sourceTerm(Q, volumeCentre, volumeH, t, dt, S);",
+                "flux": "applications::exahype2::elastic::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
+                "eigenvalues": "applications::exahype2::elastic::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, maxEigenvalue);",
+                "source_term": "applications::exahype2::elastic::sourceTerm(Q, volumeCentre, volumeH, t, dt, S);",
             }
         elif "ADERDG" in args.solver:
             solver_params.update(
@@ -294,9 +297,9 @@ class Acoustic:
                 "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
                 "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
                 "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
-                "flux": "applications::exahype2::acoustic::flux(Q, x, h, t, dt, normal, F);",
-                "eigenvalues": "return applications::exahype2::acoustic::maxEigenvalue(Q, x, h, t, dt, normal);",
-                "source_term": "applications::exahype2::acoustic::sourceTerm(Q, x, 0.0, t, 0.0, S);",
+                "flux": "applications::exahype2::elastic::flux(Q, x, h, t, dt, normal, F);",
+                "eigenvalues": "return applications::exahype2::elastic::maxEigenvalue(Q, x, h, t, dt, normal);",
+                "source_term": "applications::exahype2::elastic::sourceTerm(Q, x, 0.0, t, 0.0, S);",
             }
 
         solver = self._available_solvers[args.solver](**solver_params)
@@ -313,10 +316,10 @@ class Acoustic:
 
     def setup_project(self, args, solver):
         project = exahype2.Project(
-            namespace=["applications", "exahype2", "acoustic"],
-            project_name="Acoustic",
+            namespace=["applications", "exahype2", "elastic"],
+            project_name="Elastic",
             directory=".",
-            executable=f"Acoustic.{args.build_mode}",
+            executable=f"Elastic.{args.build_mode}",
         )
 
         project.add_solver(solver)
