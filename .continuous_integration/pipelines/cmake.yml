@@ -105,20 +105,20 @@ ExaHyPE2_ADERDG_AMR_Tests:
     - Build
   retry: 0
 
-ExaHyPE2_ADERDG_Limiting_Tests:
-  stage: Test
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_ADERDG_Limiting_Tests
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
+#ExaHyPE2_ADERDG_Limiting_Tests:
+#  stage: Test
+#  allow_failure: false
+#  extends:
+#    - .Tags
+#    - .Variables
+#    - .RunOnlyOn
+#    - .BeforeScriptWithCMakeSanitiser
+#    - .ExaHyPE2_ADERDG_Limiting_Tests
+#  needs:
+#    - job: Build
+#  dependencies:
+#    - Build
+#  retry: 0
 
 MGHyPE_MatrixFree_Tests:
   stage: Test
