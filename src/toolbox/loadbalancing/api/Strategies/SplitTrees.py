@@ -113,12 +113,40 @@ def split_leaves(peano_tree: Tree, number_of_splits: int) -> Tree:
     Split a tree into the specified number of splits by distributing ALL leaf nodes.
     This includes leaves at the finest level AND leaves at coarser levels (nodes that weren't refined further).
     
+    ## Algorithm Overview
+    
+    The splitting algorithm operates in two stages:
+    1. **Leaf Distribution**: Identify and redistribute all leaf nodes across subtrees
+    2. **Topology Preservation**: Update non-leaf nodes to maintain tree hierarchy constraints
+    
+    ## Leaf Node Identification
+    
+    A node is considered a leaf if:
+    - It exists at the finest level (always a leaf), OR
+    - It exists at a coarser level AND has no children in the next level
+    
+    ## Distribution Strategy
+    
+    - Uses round-robin assignment to ensure balanced distribution
+    - Handles remainder nodes by assigning extras to first subtrees
+    - Preserves spatial ordering through sequential array traversal
+    
+    ## Technical Constraints
+    
+    - Maintains Peano's tree topology constraint during Stage II
+    - Only redistributes nodes originally in subtree 0
+    - Preserves node weights (existence flags) throughout
+    
     Args:
         peano_tree: Tree object to split
         number_of_splits: Number of subtrees to create (total subtrees = original + number_of_splits)
         
     Returns:
         Modified Tree object with applied splits
+        
+    Note:
+        This function modifies the input tree in-place and calls _update_non_leaf_assignments()
+        to ensure tree topology constraints are satisfied.
     """
     if number_of_splits <= 0:
         print(f"No splitting needed (number_of_splits = {number_of_splits}).")
@@ -241,11 +269,42 @@ def split_leaves(peano_tree: Tree, number_of_splits: int) -> Tree:
 def _update_non_leaf_assignments(peano_tree: Tree) -> None:
     """
     Update non-leaf node assignments to follow tree topology constraints.
-    A non-leaf node should be assigned to the same subtree as its parent and children
-    if they belong to the same subtree.
+
+    ## Algorithm Details
+    
+    This function implements Peano's fundamental tree topology constraint:
+    "If all children of a node belong to the same subtree, the parent should also belong to that subtree."
+    
+    ## Processing Order
+    
+    - Processes levels from finest to coarsest (bottom-up)
+    - Skips the finest level (contains only leaves)
+    - Uses 3:1 refinement ratio for child-parent relationships
+    
+    ## Parent-Child Mapping
+    
+    For a parent node at coordinates (a,b) on level L:
+    - Children are located at (3*a to 3*(a+1)-1, 3*b to 3*(b+1)-1) on level L+1
+    - For 3D: extends to (3*c to 3*(c+1)-1) in third dimension
+    
+    ## Assignment Logic
+    
+    - Collects subtree IDs of all existing children
+    - If all children belong to same subtree → assign parent to that subtree
+    - If children span multiple subtrees → parent assignment unchanged
+    
+    ## Constraints Preserved
+    
+    - Only modifies nodes where ALL children have identical subtree assignments
+    - Respects existing node weights (never creates or destroys nodes)
+    - Maintains spatial relationships within tree hierarchy
     
     Args:
         peano_tree: Tree object to update
+        
+    Note:
+        This function is called automatically by split_leaves() and should generally
+        not be called directly unless implementing custom splitting strategies.
     """
     print("Updating non-leaf node assignments to maintain tree topology...")
     
@@ -303,12 +362,58 @@ def generate_tree_yaml(peano_tree: Tree, output_yaml_file: str) -> None:
     """
     Generate a YAML file describing the complete tree structure with spatial layout.
     
+    ## YAML Structure
+    
+    The output contains:
+    - **Tree Metadata**: Name, dimensions, domain boundaries, leaf counts
+    - **Split Summary**: Distribution statistics across subtrees  
+    - **Level Data**: Complete spatial arrays for each refinement level
+    
+    ## Spatial Array Format
+    
+    Each level contains a spatial representation:
+    - **2D**: Row-indexed arrays with comma-separated (weight,subtree_id) tuples
+    - **3D**: Plane-row indexed arrays with nested structure
+    - **Indexing**: 0-based indexing for both rows and planes
+    
+    ## Data Format Example
+    
+    ```yaml
+    tree_structure:
+      - level: 1
+        size: 3
+        data:
+          0: "(1,0), (1,0), (1,1)"
+          1: "(1,1), (1,1), (1,2)"
+          2: "(1,2), (1,2), (1,2)"
+    ```
+    
+    ## Integration with Peano
+    
+    The YAML format is designed for:
+    - Direct import into Peano's hardcoded load balancer
+    - Visualization tools and analysis scripts
+    - Checkpoint/restart mechanisms for offline decomposition
+    
+    ## Technical Details
+    
+    - Preserves exact spatial relationships from tree arrays
+    - Maintains type consistency (all values converted to int)
+    - Uses safe YAML dumping to prevent formatting issues
+    
     Args:
         peano_tree: Tree object to generate YAML from
         output_yaml_file: Path to the output YAML file
         
     Returns:
         None
+
+    Raises:
+        IOError: If file cannot be written due to permissions or disk space
+        
+    Note:
+        Large trees may generate substantial YAML files. Consider file system
+        constraints when processing high-resolution adaptive meshes.
     """
     # Convert tree arrays to readable format
     tree_levels = []
@@ -376,13 +481,28 @@ def generate_tree_yaml(peano_tree: Tree, output_yaml_file: str) -> None:
 def reset_tree_to_single_subtree(peano_tree: Tree) -> Tree:
     """
     Reset all tree nodes to belong to subtree 0, effectively erasing all splitting.
-    This returns the tree to its initial state where all nodes belong to a single subtree.
+    
+    ## Use Cases
+    
+    - **Algorithm Testing**: Reset to known state between experiments
+    - **Re-splitting**: Clear previous decomposition before applying new strategy
+    - **Debugging**: Return to simple single-subtree configuration
+    
+    ## Implementation Details
+    
+    - Preserves all node weights (existence flags)
+    - Only modifies subtree assignments (sets all to 0)
+    - Updates tree metadata (subtree_count, split_pattern) consistently
     
     Args:
         peano_tree: Tree object to reset
         
     Returns:
         Modified Tree object with all nodes assigned to subtree 0
+        
+    Note:
+        This operation is irreversible - previous subtree assignments are lost.
+        Consider generating YAML backup before reset if preservation is needed.
     """
     print(f"Resetting tree '{peano_tree._name}' - moving all nodes to subtree 0")
     

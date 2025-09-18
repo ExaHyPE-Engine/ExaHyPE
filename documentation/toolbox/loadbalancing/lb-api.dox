@@ -71,18 +71,22 @@ Planned development includes:
 ## Output and Visualization
 
 ### YAML Generation
-The `generate_tree_yaml` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py` creates comprehensive YAML files containing:
+The `generate_tree_yaml` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py` creates comprehensive YAML files for Peano integration, containing:
 
-- Complete tree structure with spatial layout
-- Tree metadata (dimensions, levels, leaf counts)
-- Split pattern summaries
-- Subtree distribution statistics
+- **Tree Structure**: Complete spatial layout with (weight, subtree_id) tuples
+- **Tree Metadata**: Dimensions, refinement levels, domain boundaries, and leaf counts  
+- **Split Analysis**: Subtree distribution statistics and load balancing results
+- **Integration Data**: All information required for Peano's hardcoded load balancer
 
-### Tree Visualization
-Integration with visualization tools to generate graphical representations of:
-- Original tree structures
-- Split tree configurations  
-- Load distribution patterns
+These YAML files serve as the output format for integrating optimised decompositions back into Peano simulations.
+
+### Tree Visualization  
+The API integrates with visualisation tools to generate graphical representations of:
+- **Original Structures**: Tree layout before optimisation
+- **Split Configurations**: Optimised tree after load balancing
+- **Load Distribution**: Visual analysis of workload distribution patterns
+
+For detailed YAML format specifications and generation parameters, see the `generate_tree_yaml` function documentation in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`.
 
 # Main Script: OfflineDecomposition.py
 
