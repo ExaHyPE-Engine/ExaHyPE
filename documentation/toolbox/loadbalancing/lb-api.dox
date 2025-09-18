@@ -21,7 +21,7 @@ This approach allows us to make informed splitting decisions that minimize both 
 
 ## Tree Data Structure
 
-The [`Tree`](src/toolbox/loadbalancing/api/Tree.py) class represents adaptive mesh trees as sequences of grid levels. Each level is stored as a 2D or 3D array with size 3^(level+1), where each cell contains:
+The `Tree` class in `src/toolbox/loadbalancing/api/Tree.py` represents adaptive mesh trees as sequences of grid levels. Each level is stored as a 2D or 3D array with size 3^(level+1), where each cell contains:
 
 - **Weight**: 1 if the cell exists, 0 if it doesn't (enables representation of adaptive meshes)
 - **Subtree ID**: Integer indicating which compute resource owns the cell
@@ -40,7 +40,7 @@ tree_arrays[0] = [[(1,0), (1,0), (1,1)],
 ## Input Generators
 
 ### Grid Patch File Reader
-[`GridPatchFileReader`](src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py) reads existing Peano grid patch files and converts them into the tree data structure. It:
+The `GridPatchFileReader` module (`src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py`) reads existing Peano grid patch files and converts them into the tree data structure. It:
 
 - Parses multiple grid files with the `grid-` prefix
 - Extracts spatial information (offsets, sizes) for each patch
@@ -48,7 +48,7 @@ tree_arrays[0] = [[(1,0), (1,0), (1,1)],
 - Constructs the tree representation with proper spatial mapping
 
 ### Regular Grid Generator  
-[`RegularGridGenerator`](src/toolbox/loadbalancing/api/Input/RegularGridGenerator.py) creates artificial regular grids for testing and benchmarking:
+The `RegularGridGenerator` module (`src/toolbox/loadbalancing/api/Input/RegularGridGenerator.py`) creates artificial regular grids for testing and benchmarking:
 
 - Generates uniform refinement up to a specified maximum level
 - Supports both 2D and 3D grid generation
@@ -57,7 +57,7 @@ tree_arrays[0] = [[(1,0), (1,0), (1,1)],
 
 ## Splitting Strategies
 
-The [`SplitTrees`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py) module implements tree splitting algorithms:
+The `SplitTrees` module (`src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`) implements tree splitting algorithms:
 
 ### Finest Level Splitting
 Currently supports splitting only at the finest level of the tree:
@@ -67,18 +67,31 @@ Currently supports splitting only at the finest level of the tree:
 - **Metadata Updates**: Automatically updates tree statistics and split patterns
 
 ### Multi-level Splitting
-The [`split_leaves`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py) function provides comprehensive splitting across all tree levels:
+The `split_leaves` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py` provides comprehensive splitting across all tree levels:
 
 - **All-Level Leaf Distribution**: Identifies and distributes ALL leaf nodes, including those at intermediate levels that weren't refined further
 - **Adaptive Mesh Support**: Handles trees where refinement varies spatially, ensuring leaves at coarser levels are properly balanced
-- **Topology Constraint Maintenance**: Automatically updates non-leaf node assignments to maintain tree topology constraints via [`_update_non_leaf_assignments`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py)
-- **Bottom-up Propagation**: Ensures parent nodes follow subtree assignments of their children when all children belong to the same subtree
+- **Topology Constraint Maintenance** by bottom-up propagation: Automatically updates non-leaf node assignments to maintain tree topology constraints via the `_update_non_leaf_assignments` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py` (ensuring parent nodes follow subtree assignments of their children when all children belong to the same subtree).
 
 This approach provides more accurate load balancing for adaptive meshes compared to finest-level-only splitting, as it distributes computational work based on all actual leaf nodes rather than just those at the maximum refinement level.
 
 ### Tree Reset Operations
 - **Single Subtree Reset**: Returns all nodes to subtree 0, erasing previous splits
 - **Clean State**: Prepares trees for fresh splitting operations
+
+### Illustrative Cases of Multi‑level Tree Splitting
+
+Let's look at examples of splitting 4-level trees. The following diagrams illustrate two scenarios showing how multi-level splitting of leaves supports adaptive mesh refinement. Green nodes indicate leaves assigned to Subtree 1, while yellow nodes denote leaves assigned to Subtree 0. In each scenario, the splitting algorithm identifies all leaves (including those at intermediate levels) and distributes them across subtrees (stage I, see the `split_leaves()` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`) while preserving the constraints of the tree topology (stage II, see the `_update_non_leaf_assignments()` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`). Stage II ensures that parent nodes whose children all belong to the same subtree are themselves assigned to that subtree, provided that no other nodes at the parent's level also have all their children in that subtree.
+
+@image html tree_examples_combined_a.png
+
+(1) A simple case in which only one node at Level 2 has children belonging to Subtree 1. In this instance, the propagation of subtree assignments extends upwards by only a single level.
+
+@image html tree_examples_combined_b.png
+
+(2) A more complex case in which multiple nodes at Level 2 have children. Here, the propagation of subtree assignments extends upwards across several levels.
+
+This refined splitting method ensures effective load balancing throughout the entire tree structure.
 
 ### Future Extensions
 Planned development includes:
@@ -88,7 +101,7 @@ Planned development includes:
 ## Output and Visualization
 
 ### YAML Generation
-[`generate_tree_yaml`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py) creates comprehensive YAML files containing:
+The `generate_tree_yaml` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py` creates comprehensive YAML files containing:
 
 - Complete tree structure with spatial layout
 - Tree metadata (dimensions, levels, leaf counts)
@@ -103,7 +116,7 @@ Integration with visualization tools to generate graphical representations of:
 
 # Main Script: OfflineDecomposition.py
 
-The [`OfflineDecomposition.py`](src/toolbox/loadbalancing/api/OfflineDecomposition.py) script serves as the main interface for offline decomposition operations.
+The `src/toolbox/loadbalancing/api/OfflineDecomposition.py` script serves as the main interface for offline decomposition operations.
 
 ## Command Line Interface
 

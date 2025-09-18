@@ -4,6 +4,7 @@ from Tree import Tree
 # to a separate file
 def split_finest_level(peano_tree: Tree, number_of_splits: int) -> Tree: # might be goot for pipeline, peano tree in/out
     """
+    [Deprecated]
     Split a tree into the specified number of splits on the finest level only.
     It distributes leaf nodes as evenly as possible across subtrees.
     
