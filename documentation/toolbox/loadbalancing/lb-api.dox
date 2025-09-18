@@ -21,21 +21,15 @@ This approach allows us to make informed splitting decisions that minimize both 
 
 ## Tree Data Structure
 
-The `Tree` class in `src/toolbox/loadbalancing/api/Tree.py` represents adaptive mesh trees as sequences of grid levels. Each level is stored as a 2D or 3D array with size 3^(level+1), where each cell contains:
+The `Tree` class in `src/toolbox/loadbalancing/api/Tree.py` represents adaptive mesh trees as sequences of grid levels, where each level is stored as a 2D or 3D array with size 3^(level+1). Each array entry contains a tuple of (weight, subtree_id) enabling representation of both adaptive meshes and domain decomposition assignments.
 
-- **Weight**: 1 if the cell exists, 0 if it doesn't (enables representation of adaptive meshes)
-- **Subtree ID**: Integer indicating which compute resource owns the cell
+Key features:
+- **Adaptive Mesh Support**: Zero weights represent non-existent cells
+- **Hierarchical Structure**: Factor-of-3 refinement in each dimension  
+- **Peano SFC Compatible**: Arrays structured for space-filling curve processing
+- **Load Balancing Ready**: Subtree IDs enable domain decomposition analysis
 
-The tree structure follows Peano's space-filling curve ordering and supports both 2D and 3D spatial dimensions.
-
-```python
-# Example: 2D tree with 2 levels
-# Level 1: 3x3 array, Level 2: 9x9 array
-# Each entry: (weight, subtree_id)
-tree_arrays[0] = [[(1,0), (1,0), (1,1)],
-                  [(1,1), (1,1), (1,3)], 
-                  [(1,2), (1,2), (1,3)]]
-```
+For detailed documentation including data representation examples, coordinate systems, and usage patterns, see the `Tree` class documentation in `src/toolbox/loadbalancing/api/Tree.py`.
 
 ## Input Generators
 
@@ -71,7 +65,7 @@ The `split_leaves` function in `src/toolbox/loadbalancing/api/Strategies/SplitTr
 
 - **All-Level Leaf Distribution**: Identifies and distributes ALL leaf nodes, including those at intermediate levels that weren't refined further
 - **Adaptive Mesh Support**: Handles trees where refinement varies spatially, ensuring leaves at coarser levels are properly balanced
-- **Topology Constraint Maintenance** by bottom-up propagation: Automatically updates non-leaf node assignments to maintain tree topology constraints via the `_update_non_leaf_assignments` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py` (ensuring parent nodes follow subtree assignments of their children when all children belong to the same subtree).
+- **Topology Constraint Maintenance** by bottom-up propagation: Automatically updates non-leaf node assignments to maintain tree topology constraints via the `_update_non_leaf_assignments()` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py` (ensuring parent nodes follow subtree assignments of their children when all children belong to the same subtree).
 
 This approach provides more accurate load balancing for adaptive meshes compared to finest-level-only splitting, as it distributes computational work based on all actual leaf nodes rather than just those at the maximum refinement level.
 
@@ -81,7 +75,11 @@ This approach provides more accurate load balancing for adaptive meshes compared
 
 ### Illustrative Cases of Multi‑level Tree Splitting
 
-Let's look at examples of splitting 4-level trees. The following diagrams illustrate two scenarios showing how multi-level splitting of leaves supports adaptive mesh refinement. Green nodes indicate leaves assigned to Subtree 1, while yellow nodes denote leaves assigned to Subtree 0. In each scenario, the splitting algorithm identifies all leaves (including those at intermediate levels) and distributes them across subtrees (stage I, see the `split_leaves()` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`) while preserving the constraints of the tree topology (stage II, see the `_update_non_leaf_assignments()` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`). Stage II ensures that parent nodes whose children all belong to the same subtree are themselves assigned to that subtree, provided that no other nodes at the parent's level also have all their children in that subtree.
+Let's look at examples of splitting 4-level trees.
+The following diagrams illustrate two scenarios showing how multi-level splitting of leaves supports adaptive mesh refinement.
+Green nodes indicate leaves assigned to Subtree 1, while yellow nodes denote leaves assigned to Subtree 0.
+In each scenario, the splitting algorithm identifies all leaves (including those at intermediate levels) and distributes them across subtrees (stage I, see the `split_leaves()` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`) while preserving the constraints of the tree topology (stage II, see the `_update_non_leaf_assignments()` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`).
+Stage II ensures that parent nodes whose children all belong to the same subtree are themselves assigned to that subtree, provided that no other nodes at the parent's level also have all their children in that subtree.
 
 @image html tree_examples_combined_a.png
 

@@ -4,20 +4,34 @@ import numpy as np
 
 class Tree(object):
 	"""
-	data structure for tree in Peano. The main content of this class 
-	is a series of 2D or 3D arrays with one dimension size of 3^{1,2,3,...l},
-	l is the maximum depth of the tree level. Each entry of the array would be 
-	a tuple of 2 numbers, the first one is the weight of the current node (and 0 if 
-	there is no node at this postion), and the second number stands for the subtree
-	it belongs to.
-
-	For a 2D example, the following arrays would be created for a uniform, 2 level and 
-	4-split tree:
-
+	Data structure for adaptive mesh trees in Peano load balancing.
+	
+	This class represents adaptive mesh trees as sequences of grid levels, where each level
+	is stored as a 2D or 3D array following Peano's space-filling curve ordering. The tree
+	structure is designed to support offline decomposition and load balancing analysis.
+	
+	## Tree Structure Overview
+	
+	The main content of this class is a series of 2D or 3D arrays with dimension sizes
+	of 3^(level+1), where level ranges from 1 to the maximum depth of the tree. Each entry
+	in the arrays is a tuple of 2 numbers:
+	
+	- **Weight**: 1 if the cell exists, 0 if it doesn't (enables representation of adaptive meshes)
+	- **Subtree ID**: Integer indicating which compute resource/subtree owns the cell
+	
+	## Data Representation Examples
+	
+	### 2D Example: Uniform 2-level tree with 4 subtrees
+	
+	Level 1 (3x3 array):
+	```
 	{(1,0), (1,0), (1,1)
 	 (1,1), (1,1), (1,3)
 	 (1,2), (1,2), (1,3)}
-
+	```
+	
+	Level 2 (9x9 array):
+	```
 	{(1,0), (1,0), (1,0), (1,0), (1,0), (1,0), (1,1), (1,1), (1,1),
 	 (1,0), (1,0), (1,0), (1,0), (1,0), (1,0), (1,1), (1,1), (1,1),
 	 (1,0), (1,0), (1,0), (1,0), (1,0), (1,0), (1,1), (1,1), (1,1),
@@ -27,13 +41,84 @@ class Tree(object):
 	 (1,2), (1,2), (1,2), (1,2), (1,2), (1,2), (1,3), (1,3), (1,3),
 	 (1,2), (1,2), (1,2), (1,2), (1,2), (1,2), (1,3), (1,3), (1,3),
 	 (1,2), (1,2), (1,2), (1,2), (1,2), (1,2), (1,3), (1,3), (1,3)}
-
+	```
 	
-	Notice the lowest level is 1 with a size of 3x3 or 3x3x3
+	### Adaptive Mesh Representation
+	
+	For adaptive meshes where some regions are not refined, entries have weight 0:
+	```
+	Level 1: {(1,0), (0,0), (1,0)    # Middle cell not refined
+			  (1,0), (1,0), (1,0)
+			  (1,0), (1,0), (1,0)}
+			  
+	Level 2: Corresponding 9x9 array with zeros in the middle 3x3 block
+	```
+	
+	## Key Properties
+	
+	- **Peano SFC Compatible**: Arrays are structured to be compatible with Peano's space-filling curve traversal
+	- **Hierarchical Structure**: Each level refines the previous by factor of 3 in each dimension
+	- **Adaptive Support**: Zero weights represent non-existent cells in adaptive meshes
+	- **Load Balancing Ready**: Subtree IDs enable domain decomposition analysis
+	
+	## Usage in Load Balancing
+	
+	This data structure supports various load balancing operations:
+	
+	1. **Tree Analysis**: Count leaf nodes, analyze refinement patterns
+	2. **Splitting Strategies**: Redistribute subtree assignments for load balancing
+	3. **Visualization**: Generate spatial representations of tree structure
+	4. **Export**: Create YAML outputs for integration with Peano's hardcoded load balancer
+	
+	## Coordinate System
+	
+	- **2D**: Arrays use (a,b) indexing where a,b ∈ [0, 3^(level+1)-1]
+	- **3D**: Arrays use (a,b,c) indexing where a,b,c ∈ [0, 3^(level+1)-1]
+	- **Level Numbering**: Levels start from 0 (coarsest) to max_level-1 (finest)
+	- **Array Sizes**: Level k has size 3^(k+1) in each dimension
+	
+	## Important Notes
+	
+	- The lowest level is 1 with size 3x3 (2D) or 3x3x3 (3D)
+	- All arrays are stored as numpy arrays with dtype=object for tuple storage
+	- Tree metadata (leaf count, split patterns) is automatically updated after modifications
+	- Domain offset and size define the physical coordinate mapping
+	
+	## Related Components
+	
+	This class works with:
+	- `GridPatchFileReader`: Reads Peano grid files into Tree format
+	- `RegularGridGenerator`: Creates artificial uniform trees for testing
+	- `SplitTrees`: Implements splitting algorithms for load balancing
+	- `TreeVisualizer`: Generates visual representations of tree structures
+	
+	## Example Usage
+	
+	```python
+	# Create a tree from artificial regular grid
+	tree = RegularGridGenerator("test", max_level=3, dimension=2)
+	
+	# Apply load balancing splitting
+	split_tree = split_leaves(tree, number_of_splits=3)
+	
+	# Generate visualization
+	TreeVisualizer(split_tree, dimension=2, filename="balanced_tree")
+	
+	# Export to YAML
+	generate_tree_yaml(split_tree, "output.yaml")
+	```
 	"""
 
 	def __init__(self, name, dimension, domain_offset, domain_size):
-
+		"""
+		Initialize a new Tree object.
+		
+		Args:
+			name (str): Descriptive name for the tree (e.g., "RegularGrid" or filename)
+			dimension (int): Spatial dimension (2 for 2D, 3 for 3D)
+			domain_offset (tuple): Physical coordinates of domain origin
+			domain_size (tuple): Physical size of domain in each dimension
+		"""
 		self._name			=	name
 		self._dimension		=	dimension
 		self._domain_offset =	domain_offset
