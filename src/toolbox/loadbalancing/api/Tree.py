@@ -6,9 +6,9 @@ class Tree(object):
 	"""
 	Data structure for adaptive mesh trees in Peano load balancing.
 	
-	This class represents adaptive mesh trees as sequences of grid levels, where each level
-	is stored as a 2D or 3D array following Peano's space-filling curve ordering. The tree
-	structure is designed to support offline decomposition and load balancing analysis.
+	This class represents adaptive mesh trees as sequences of grid levels,
+	where each level is stored as a 2D or 3D array. The tree structure is
+	designed to support offline decomposition and load balancing analysis.
 	
 	## Tree Structure Overview
 	
