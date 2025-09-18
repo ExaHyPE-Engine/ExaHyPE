@@ -12,17 +12,87 @@ import Strategies.SplitTrees as split_strategy
 
 
 """
-    The script for doing the offline decomposition (tree splitting)
+Offline Tree Decomposition for Load Balancing
 
-    example for file input tree:
-    python3 OfflineDecomposition.py -f Input/example2 -d 3 -p
+This script provides the main command-line interface for the Peano offline load balancing API.
+It processes adaptive mesh trees and applies optimisation strategies to achieve better load
+distribution across compute resources.
 
-    example for artificial generated tree (regular grid):
-    python3 OfflineDecomposition.py -d 2 -l 4
-    python3 OfflineDecomposition.py -d 3 -l 3 -p
+## Command-Line Arguments
 
-    example for artificial generated tree with finest level splitting:
-    python3 OfflineDecomposition.py -d 3 -l 3 -p -s 3
+### Input Options
+-f, --file PATH         Path to input grid patch file directory
+                        Example: -f /path/to/checkpoint/grid/files
+                        Requires: Grid files with 'grid-' prefix from Peano checkpoints
+
+-d, --dimension DIM     Spatial dimension (REQUIRED)
+                        Values: 2 (for 2D grids) or 3 (for 3D grids)
+                        
+-l, --max-level LEVEL   Maximum refinement level for artificial grid generation
+                        Used with: Regular grid generation (when no -f specified)
+                        Range: 1-10 (higher values require significant memory)
+
+### Processing Options  
+-s, --splits COUNT      Number of additional subtrees to create
+                        Example: -s 4 creates 5 total subtrees (original + 4 new)
+                        Default: No splitting (analysis only)
+
+-p, --plot              Generate visualisation plots
+                        Outputs: PDF and PNG files showing tree structure
+                        Default: No visualisation
+
+-o, --output FILE       Output YAML file path
+                        Default: Automatic naming based on input type
+                        Example: "TreeStructure_l4_s3_split.yaml"
+
+## Usage Examples
+
+### Analyse Existing Simulation Data
+```bash
+# Process 3D checkpoint files with visualisation
+python3 OfflineDecomposition.py -f /path/to/grid/files -d 3 -p
+
+# Process and split into 4 subtrees
+python3 OfflineDecomposition.py -f /path/to/grid/files -d 3 -s 4 -p
+```
+
+### Generate Test Cases
+```bash
+# Create 2D regular grid with 4 levels
+python3 OfflineDecomposition.py -d 2 -l 4 -p
+
+# Create and split 3D grid for performance testing
+python3 OfflineDecomposition.py -d 3 -l 3 -s 8 -p
+```
+
+## File Requirements
+
+### Input Files (when using -f)
+- Directory containing Peano grid patch files
+- Files must have 'grid-' prefix
+- Generated with plot_grid_properties=True in Peano solver
+- Multiple files indicate existing domain decomposition
+
+### Output Files
+- **Original YAML**: Complete tree structure before optimisation
+- **Split YAML**: Optimised tree structure (if splitting applied)
+- **Visualisation**: PDF/PNG plots (if -p flag used)
+
+## Performance Considerations
+
+- **Memory Usage**: Grows as 3^(dimension × max_level) for regular grids
+- **Processing Time**: Splitting algorithms scale with tree size
+- **File I/O**: Large checkpoint directories may require significant read time
+
+## Error Handling
+
+The script validates:
+- Required dimension parameter
+- Valid input source (either -f or -l must be specified)
+- File accessibility and format
+- Memory constraints for large grids
+
+For integration with Peano workflows and theoretical background, see the load balancing API documentation.
 """
 
 
