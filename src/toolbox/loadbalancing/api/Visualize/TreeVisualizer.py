@@ -16,6 +16,76 @@ try:
 except ImportError:
     PLOTLY_AVAILABLE = False
 
+"""
+Tree Visualisation Module for Peano Load Balancing API
+
+This module provides comprehensive visualisation capabilities for adaptive mesh trees,
+generating both static and interactive representations of tree structures and load
+balancing results.
+
+## Visualisation Formats
+
+### Static Formats (Matplotlib)
+- **PDF**: Vector format for publications, presentations, and high-quality prints
+- **PNG**: Raster format for web display, documentation, and quick previews
+- **Resolution**: 300 DPI for publication-quality output
+- **Layout**: Automatic subplot arrangement for multi-level display
+
+### Interactive Format (Plotly)
+- **HTML**: Self-contained interactive visualisation with JavaScript controls
+- **3D Rotation**: Full 3D manipulation for spatial understanding
+- **Zoom/Pan**: Detailed inspection of specific tree regions
+- **Hover Information**: Real-time display of node coordinates and subtree assignments
+- **Responsive Design**: Adapts to browser window size for optimal viewing
+
+## Technical Implementation
+
+### Colour Management
+- **Subtree Colors**: 20 distinctive colors for subtree differentiation
+- **Colour Cycling**: Automatic colour assignment for large numbers of subtrees
+- **Accessibility**: High contrast ratios for clear distinction
+
+### Marker Sizing
+- **Level-based Scaling**: Larger markers for coarser levels, smaller for finer levels
+- **Mathematical Formula**: size = max(base_size, scale_factor/(level+1)^exponent)
+- **Dimension Adaptation**: Different scaling for 2D vs 3D visualisations
+
+## Usage Patterns
+
+### Basic Visualisation
+```python
+from Visualize.TreeVisualizer import TreeVisualizer
+
+# Generate all formats with automatic naming
+TreeVisualizer(tree, dimension=3, filename="analysis_results")
+# Outputs: analysis_results.pdf, analysis_results.png, analysis_results.html
+```
+
+### Format-specific Generation
+```python
+# Only static formats (when Plotly not available)
+TreeVisualizer(tree, dimension=2, filename="static_only")
+
+# Interactive-only (custom implementation)
+from Visualize.TreeVisualizer import save_interactive_html
+save_interactive_html(tree, dimension=3, filename="interactive_analysis")
+```
+
+## Integration with Load Balancing Workflow
+
+The visualization system integrates seamlessly with the offline decomposition process:
+
+1. **Original Tree Visualisation**: Shows initial mesh structure before optimisation
+2. **Split Tree Visualisation**: Displays optimised load distribution after splitting
+3. **Comparison Analysis**: Side-by-side comparison of before/after states
+
+## Error Handling and Dependencies
+
+### Dependency Management
+- **Plotly Availability**: Graceful degradation when Plotly not installed
+- **Matplotlib Requirements**: Robust handling of display backend issues
+- **File System**: Proper error handling for permission and disk space issues
+"""
 
 def save_interactive_html(input_tree, dimension, filename):
     """
