@@ -10,7 +10,8 @@ This page dives into some design principles behind the task fusion and provides
 a high-level overview.
 Details on how the fusion is implemented are provided in the documentation
 of the namespace tarch::multicore::taskfusion.
-
+This page is for programmers who want to use/adopt the task fusion within their
+own code. 
 
 
 
@@ -74,6 +75,8 @@ capability to introduce bespoke compute kernels that handle a whole set of
 tasks instead of a single one. They might even take them and ship them to a 
 GPU. For this, you have to overwrite tarch::multicore::Tasks::fuse(). The 
 default is just a while loop over tasks.
+
+In our latest write-up, we call these fusion kernels ***executor***.
 
 
 ## Tailor the task orchestration
@@ -199,6 +202,8 @@ tarch::multicore::orchestration::Strategy::FuseInstruction mghype::MultigridDefa
   }
 [...]
 ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
 
 
 ## Task fusion variants
