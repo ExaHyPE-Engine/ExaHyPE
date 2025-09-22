@@ -520,7 +520,7 @@ types that do not stick exactly to all default naming conventions).
 Vectorisation requires very aggressive inlining. To facilitate such inlining,
 all the setters and getters of particle attributes have to be available in the
 header. Study the
-@ref page_dastgen_home "DaStGen documentation" for remarks how to move getters and
+@ref page_third-party_dastgen "DaStGen documentation" for remarks how to move getters and
 settings into the header. Notably study the semantics of the function
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

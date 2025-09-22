@@ -1,0 +1,39 @@
+/**
+
+\page page_third-party_xDSL xDSL
+
+\tableofcontents
+
+
+
+ExaHyPE uses xDSL to construct its compute kernel, i.e. to construct a code-specific stencil language.
+This particularly branch can be found on GitHub at https://github.com/xdslproject/ExaHyPE.
+Even though ExaHyPE uses xDSL ideas, you don't need the whole software stack. 
+If you are satifsfied with default (slow) compute kernels, you can work with a minimalist kernel generator which mimicks xDSL's API but lacks its functionality.
+ExaHyPE remains stand-alone.
+
+We maintain this minimalist API within the xDSL project and copy the key files over into ExaHYPE:
+What we ship is a copy of a few files that are absolutely mandatory and have been developed within xDSL to faciliate the connection to xDSL.
+All the further optimisations that arose due to using xDSL are contributions directly into xDSL, i.e. exclusively maintained there.
+To update the present version 
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cd python/exahype2/kerneldsl/api
+git clone https://github.com/xdslproject/ExaHyPE.git ExaHyPE-xDSL
+cp ExaHyPE-xDSL/exahype/KernelBuilder.py .
+cp ExaHyPE-xDSL/exahype/TypedFunction.py .
+cp ExaHyPE-xDSL/exahype/printers/CPPPrinter.py printers
+cp ExaHyPE-xDSL/exahype/printers/CodePrinter.py printers
+rm -rf ExaHyPE-xDSL
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Please note that xDSL requires Python 3.10 or newer.
+Due to xDSL, you also have to install the typing-extensions:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pip3 install PyPI typing-extensions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+*/
