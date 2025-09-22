@@ -3,7 +3,7 @@
 \page page_tarch_multicore Multicore programming
 
 \tableofcontents
-\subpage documentation_tarch_task_fusion_strategies
+
 
  To compile with multicore support, you have to invoke the configure script with
  the option 
@@ -160,6 +160,9 @@ task types or task graph types, respectively:
   wait for each other, i.e. we define a tree (sub)task graph. With fork-join
   calls, we mirror the principles behind bulk-synchronous programming (BSP).
 - ***Fusable tasks***. A subtype of the normal tasks.
+  Task fusion has its @ref documentation_tarch_task_fusion_strategies "own dedicated page"
+  as it is an absolutely essential technique in the technical architecture to
+  obtain high performance and to offload to GPUs.
 
 
    ### Tasks with dependencies
@@ -197,7 +200,8 @@ task types or task graph types, respectively:
    
    Tasks that can be fused have to implement the canFuse() predicate, and they 
    have to provide a function which can handle a set of tasks of the same type.
-   Details on how the fusion is implemented are provided by tarch::multicore::taskfusion.
+   Details on how the fusion is implemented are provided in the documentation
+   of the namespace tarch::multicore::taskfusion.
    
    There is a separate @ref documentation_tarch_task_fusion_strategies "page on task fusion strategies"
    and things to consider if you want to tune and tailor how tasks are bundled

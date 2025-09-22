@@ -48,13 +48,17 @@ and innovation programme under grant agreement No 671698 (ExaHyPE).
 - Advanced features
   - \subpage page_exahype2_coupling
 - HPC  
-  - \subpage page_exahype_runtime_analysis
-  - \subpage page_exahype_performance_optimisation
-  - \subpage page_exahype_parallelisation
+  - \subpage page_exahype_domain-decomposition
   - \subpage page_exahype_multicore
   - \subpage page_exahype_gpu
+  - \subpage page_exahype_runtime_analysis
+  - \subpage page_exahype_performance_optimisation
 - Utilities
   - \subpage exahype2_enumerator
+- Related pages
+  - @ref page_peano4_home
+  - @ref page_tarch_home
+
 
 
 # Building the ExaHyPE 2 extension

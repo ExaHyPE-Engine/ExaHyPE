@@ -36,28 +36,6 @@ namespace tarch {
      * To ensure that fusion is only applied to tasks of the same type, we store
      * the fusable tasks in a map indexed by the task type. The most important
      * type in the context of fusion therefore is FusableTaskQueue.
-     *
-     *
-     * ## Some implementation lessons learned
-     *
-     * Originally, I thought we'd need a couple of these
-     *
-     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     * while (queue.second->isTaskReadyOrRunning(taskNumber, false)) {
-     *   queue.second->processTasks();
-     * }
-     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *
-     * whenever we have to ensure that a task is done. After all, someone else
-     * might just have used this one as part of task fusion. However, such a
-     * while is toxic. It can always lead to deadlocks. Instead, every task has
-     * to be mapped onto a task dependency, and we have to ensure that we can
-     * properly wait for tasks. It is fine if a task is already done, and in
-     * this case we can prune the DAG and omit a wait, but otherwise, we have
-     * to ensure that we work with task dependencies.
-     *
-     * @see Consult the page @ref documentation_tarch_task_fusion_strategies
-     *   for recommendations and hints on task fusion strategies.
      */
     namespace taskfusion {
       struct FusableTasksQueue;

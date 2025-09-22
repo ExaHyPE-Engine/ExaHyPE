@@ -23,24 +23,29 @@ instructions!
 
 - \subpage tutorials_exahype2_hitchhikers-guide
 - Exercises (interactive step-by-step examples of core ExaHyPE components)
-  - \subpage tutorials_exahype2_exercises_acoustic_Acoustic-vanilla
-  - \subpage tutorials_exahype2_exercises_acoustic_Acoustic-advanced
-  - \subpage tutorials_exahype2_exercises_swe_SWE-sympy
-  - \subpage tutorials_exahype2_exercises_swe_SWE-aderdg
+  - \subpage tutorials_exahype2_exercises_Acoustic-vanilla
+  - \subpage tutorials_exahype2_exercises_Acoustic-advanced
+  - \subpage tutorials_exahype2_exercises_SWE-sympy
+  - \subpage tutorials_exahype2_exercises_SWE-aderdg
 - Toy problems (as starting point for your own project)
   - \subpage page_exahype2_tutorials_toyproblems_acoustic
   - \subpage page_exahype2_tutorials_toyproblems_advection
   - \subpage page_exahype2_tutorials_toyproblems_elastic
   - \subpage page_exahype2_tutorials_toyproblems_euler
   - \subpage page_exahype2_tutorials_toyproblems_swe
+- HPC  
+  - \subpage tutorials_exahype2_hpc_domain-decomposition
+  - \subpage tutorials_exahype2_hpc_tasking
+  - \subpage tutorials_exahype2_hpc_gpus
+  - \ref page_exahype_runtime_analysis "Read the comments on ExaHyPE's bespoke runtime analysis features" besides generic profiling
+  - \ref page_exahype_performance_optimisation "Consult ExaHyPE's performance optimisation recommendations"
 - \subpage tutorials_exahype2_applications_exagrype (numerical relativity extension built on top of ExaHyPE) 
 - \subpage tutorials_exahype2_applications_exaseis (seismology extension built on top of ExaHyPE)
-- \subpage tutorials_exahype2_design-patterns
 - Adding features
-  - \subpage tutorials_exahype_gpu
   - Adding your own compute kernels <!-- (Harrison's work) -->
   - \subpage tutorials_exahype2_coupling
   - \subpage tutorials_exahype2_additional_mesh_sweeps
+- \subpage tutorials_exahype2_design-patterns
 
 
 ## How to add your own tutorial

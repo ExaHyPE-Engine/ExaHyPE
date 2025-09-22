@@ -1,0 +1,50 @@
+/**
+
+ @page page_exahype_multicore Tasking (multicore parallelisation)
+ 
+  
+ ExaHyPE starts from @ref page_exahype_domain-decomposition "plain domain decomposition".
+ Its domain decomposition splits up the domain over multiple MPI ranks, but it also
+ can make one rank hold multiple subpartitions, and these subpartitions are then 
+ processed by different threads.
+ On top of this domain decomposition, you can add tasking which only works per rank.
+ That is, if you give each rank only one subdomain and if you add tasking on top, 
+ then you can genuine task parallelsim.
+ Typically, this is a poor idea, i.e. you are better off with a mixture of domain 
+ decomposition and tasking to exploit many threads.
+ Further to that, only some ExaHyPE solvers (typically those with an Enclave in
+ their name) support tasking and therefore benefit from the discussion below.
+ 
+
+ If you have a solver with tasking and want to activate this tasking, you have 
+ to do the following steps: 
+
+ 1. @ref page_installation_home "Configure" Peano with multithreading support.
+ 2. Pick a proper @ref page_exahype_domain-decomposition "load balancing scheme" no matter if you want subpartitions per 
+    rank or not.
+ 3. Tweak the task orchestration as discussed below.
+ 4. Run some @ref page_exahype_runtime_analysis "performance analysis".
+ 5. Study the @ref page_exahype_performance_optimisation "optimisation recommendations".
+ 
+ 
+ 
+ ## Using ExaHyPE 2 with tasks 
+
+ All instructions how to enable tasking support is collected in a @ref tutorials_exahype2_hpc_tasking "multicore/tasking tutorial".
+ Of particular relevance for tasking which yields high throughput is the discussion of the
+ @ref documentation_tarch_task_fusion_strategies "concept of task fusion".
+ 
+  
+  ## How the tasking works
+  
+  The solvers in ExaHyPE that support tasking work directly with the 
+  abstractions of the multithreading as it is provided by the 
+  @ref page_tarch_multicore "technical architecture". All the documentation
+  how tasking works in Peano can be found there.
+   
+
+  ## Adding tasks to your ExaHyPE solver (programmer view)
+
+ */
+ 
+ 
