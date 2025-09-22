@@ -196,6 +196,7 @@ class Parser:
 
         if use_accelerator:
             parsed_function.add_argument(SyntaxTree.Argument("targetDevice", SyntaxTree.TInteger()))
+            SyntaxTree.Node.use_accelerator = True
         for argument in function.args.args:
             parsed_function.add_argument(SyntaxTree.Argument(argument.arg, SyntaxTree.TCustom(argument.annotation.value) if argument.annotation is not None else SyntaxTree.TCustom(argument.annotation)))
             
@@ -218,6 +219,8 @@ class Parser:
     def parse(self, function, template_arguments, functor_arguments, namespace = [], stateless = False, use_accelerator = False):
         SyntaxTree.Name.variables.clear()
         SyntaxTree.For._inuse_iteration_variables.clear()
+        SyntaxTree.Node.use_accelerator = False
+        SyntaxTree.FunctionDefinition._syclDataToCopy.clear()
 
         module = ast.parse(inspect.getsource(function))
         function_definition = module.body[0]

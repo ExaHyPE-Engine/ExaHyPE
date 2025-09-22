@@ -200,10 +200,12 @@ void wrapHostKernel(int device, exahype2::CellData<double, double>& patchData) {
   Kernel(patchData, timingComputeKernel, loopPlacement);
 }
 
-template <void (*Kernel)(int, exahype2::CellData<double, double>&, tarch::timing::Measurement&)>
-void wrapDeviceKernel(int device, exahype2::CellData<double, double>& patchData) {
+template <void (*Kernel)(int, exahype2::CopyCellDataGPU<double, double>&, tarch::timing::Measurement&)>
+void wrapDeviceKernel(int device, ::exahype2::CellData<double, double>& patchData) {
   assertion(device != tarch::accelerator::Device::HostDevice);
-  Kernel(device, patchData, timingComputeKernel);
+  ::exahype2::CopyCellDataGPU<double, double> gpuCellData(patchData, NumberOfInputEntriesPerPatch, NumberOfOutputEntriesPerPatch);
+  Kernel(device, gpuCellData, timingComputeKernel);
+  gpuCellData.copyBackAndDestroy();
 }
 
 /**
@@ -242,7 +244,8 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
 
     // TODO: Does the number of samples change the outcome of the solution?
     for (int j = 0; j < NumberOfSamples; j++) {
-      parallelFor(launchingThread, launchingThreads) {
+      //parallelFor(launchingThread, launchingThreads) {
+      //for (int launchingThread=0; launchingThread < launchingThreads; launchingThread++){
         ::exahype2::CellData<double, double> patchData(patches);
         for (int i = 0; i < patches; i++) {
           patchData.QIn[i] = ::tarch::allocateMemory<double>(
@@ -312,8 +315,8 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
             ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
           );
         }
-      }
-      endParallelFor
+      //}
+      //endParallelFor
     }
 
     if (::tarch::mpi::Rank::getInstance().getRank() == ::tarch::mpi::Rank::getGlobalMasterRank()) {
@@ -398,6 +401,46 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       "host, AoS, omp",
       launchingThreads,
       ::tarch::accelerator::Device::HostDevice,
+      localPatches
+    );
+    #endif
+
+    #if defined (GPUOffloadingOMP)
+    assessKernel(wrapDeviceKernel<
+      exahype2::fv::rusanov::omp::timeStepWithRusanovStateless<
+        FVRusanov,
+        FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch,
+        HaloSize,
+        FVRusanov::NumberOfUnknowns,
+        FVRusanov::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep>
+      >,
+      "device, AoS, omp",
+      launchingThreads,
+      0,
+      localPatches
+    );
+    #endif
+
+    #if defined (GPUOffloadingSYCL)
+    assessKernel(wrapDeviceKernel<
+      exahype2::fv::rusanov::sycl::timeStepWithRusanovStateless<
+        FVRusanov,
+        FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch,
+        HaloSize,
+        FVRusanov::NumberOfUnknowns,
+        FVRusanov::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep>
+      >,
+      "device, AoS, sycl",
+      launchingThreads,
+      0,
       localPatches
     );
     #endif

@@ -11,7 +11,13 @@
 #pragma once
 
 
+#pragma push_macro("Dimensions")
+#pragma push_macro("assertion")
+#undef Dimensions
+#undef assertion
 #include <complex>
+#pragma pop_macro("Dimensions")
+#pragma pop_macro("assertion")
 
 
 namespace tarch {

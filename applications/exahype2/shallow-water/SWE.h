@@ -14,7 +14,7 @@ namespace applications::exahype2::swe {
   #pragma omp declare target
   #endif
 
-  static inline GPUCallableMethod
+  static GPUCallableInlineMethod
   void eigenvalues(
     const double* const __restrict__             Q,
     const tarch::la::Vector<Dimensions, double>& x,
@@ -25,7 +25,7 @@ namespace applications::exahype2::swe {
     double* const __restrict__                   L
   ) InlineMethod;
 
-  static inline GPUCallableMethod
+  static GPUCallableInlineMethod
   double maxEigenvalue(
     const double* const __restrict__             Q,
     const tarch::la::Vector<Dimensions, double>& x,
@@ -35,7 +35,7 @@ namespace applications::exahype2::swe {
     const int                                    normal
   ) InlineMethod;
 
-  static inline GPUCallableMethod
+  static GPUCallableInlineMethod
   void maxEigenvalue(
     const double* const __restrict__             Q,
     const tarch::la::Vector<Dimensions, double>& x,
@@ -52,7 +52,7 @@ namespace applications::exahype2::swe {
   #if defined(GPUOffloadingOMP)
   #pragma omp declare target
   #endif
-  static inline GPUCallableMethod
+  static GPUCallableInlineMethod
   void flux(
     const double* const __restrict__             Q,
     const tarch::la::Vector<Dimensions, double>& x,
@@ -63,7 +63,7 @@ namespace applications::exahype2::swe {
     double* const __restrict__                   F
   ) InlineMethod;
 
-  static inline GPUCallableMethod
+  static GPUCallableInlineMethod
   void nonconservativeProduct(
     const double* const __restrict__             Q,
     const double* const __restrict__             deltaQ,

@@ -1,103 +1,44 @@
 /**
 
-@page page_exahype_parallelisation Parallelisation
+@page page_exahype_domain-decomposition Domain decomposition (parallelisation with MPI or multithreading)
 
 <!-- Add this one for href links to subitems -->
 \tableofcontents
 
-ExaHyPE employs @ref page_peano_domain_decomposition "Peano's domain decomposition" and adds
-tasking on top.
-Peano's domain decomposition is used for both MPI and multithreading, while the tasking
-only affects the shared memory parallelisation.
-Both parallelisation paradigms are controlled via the Python API.
+Peano's domain decomposition is used for both MPI and multithreading, and the only thing ExaHyPE adds on top is some bespoke/abstracted load-balancing.
+The fact that we use domain decomposition for both realisation variants implies that it only matters if you have configured your build with MPI and/or a multithreading back-end.
+As soon as these things are in place and you have picked a load balancing, both threads and ranks (if MPI is there) will be used.
+Without activating any load balancing, your code will run serial no matter how you compiled it.
 
 
-## Domain decomposition
-
-In ExaHyPE, you enable load balancing by adding
-
-~~~~~~~~~~~~~~~~~~~~~~~
-project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.9))" )
-~~~~~~~~~~~~~~~~~~~~~~~
-
-There are multiple different load balancing schemes available 
-through @ref toolbox_loadbalancing "Peano's generic load balancing toolbox".
+ExaHyPE's multicore parallelism requires user to follow three steps:
+ 
+ 1. @ref page_installation_home "Configure" Peano with multithreading support.
+ 2. @ref page_installation_home "Configure" Peano with MPI support (optional - you can also run on only one node).
+ 3. Ensure that you have picked a proper load balancing scheme.
+ 4. Run some @ref page_exahype_runtime_analysis "performance analysis".
+ 5. Study the @ref page_exahype_performance_optimisation "optimisation recommendations".
 
 
-It is important to study the constructor parameter list of 
-exahype2::LoadBalancingConfiguration. These arguments allow you
-to constrain the properties of the domain.
-for example, you can instruct the load balancing that you want it to be well-balanced 
-accross ranks up to 80% and you also to constrain the tree (subpartition) size 
-by 200 cells.
-This means that no domain on a rank will be split if this rank's load is around 20% off, and a partition
-will never split up if it has less than 200 cells.
+## Usings domain decomposition
+
+All instructions how to enable the domain decomposition is collected in a @ref tutorials_exahype2_hpc_domain-decomposition "parallelisation tutorial".
 
 
-There is a always a trade-off between the different settings: 
-If you increase the quality of the domain decomposition, then the time per time step will go down.
-However, the load balancing will need way longer. 
-If you pick a minimum cell size, then the grid will build up first until it can accommodate the constraint, and then it will decompose.
-Grid decomposition however is both time consuming and requires (temporarily) quite a lot of memory.
+## How the domain decomposition works
+
+ExaHyPE employs @ref page_peano_domain_decomposition "Peano's domain decomposition" almost directly.
+All the relevant information about the domain decomposition hence is part of Peano.
+ExaHyPE simply uses it 1:1. 
 
 
-### Load balancing settings (best practices)
+## Adding your own parallel features to an ExaHyPE solver (programmer view)
 
 
-While ExaHyPE makes it relatively straightforward to parallelise a code, 
-the tuning of a particular experiment is often tricky.
-As ExaHyPE is an engine supporting multiple application (domains) and as the
-``perfect'' load balancing strategy depends strongly on the application type
-plus the chosen experiments plus the machine used, it can only provide vague
-heuristics of settings that work in most of the cases. 
-To get really good performance, you will have to play around with the load
-balancing settings.
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+Requires some work from hereon
+</div>
 
-
-Here are some recommendations if you use the recursive load balancing.
-The recommendations describe how to tweak the three parameters that the
-ExaHyPE configuration offers:
-
-- Start with the strategy toolbox::loadbalancing::SpreadOut. This should give 
-  you first feeling if your code is MPI-/threading-ready.
-- Do not set the load balancing quality too high. I am usually fine if the
-  balancing between the ranks is about 80%-90% accurate. 
-  First get something up and running and test it. After that, you might want to
-  increase the quality closer to 100%. However, the higher this quality
-  threshold the longer your grid setup and balancing time.
-- If your code tends to hang in MPI, try to kick the simulation off with
-  only one partition per rank, i.e. set the maximum number of trees for a 
-  partition to 1.
-  Once this passes through, increase the last counter to at most the number of
-  cores per rank. 
-- If you work without periodic boundary conditions, the initial load
-  balancing will likely be poor if the mesh is too shallow: The code cannot
-  deploy cells along the periodic boundary to other ranks. These always have to
-  be handled by rank 0. So it makes sense to set the minimal mesh size (second
-  argument) to at least @f$ 3^d+1 @f$. This prolongs the load distribution
-  sufficiently long until enough cells are available. The knock-on problem then
-  is that we have a lot of cells and the load balancing tries to split them up
-  evenly - unaware that all the boundary cells can't be distributed. So you will
-  have to restrict the number of cells per inter-rank balancing. I recommend to
-  to add $3^d$ as fourth argument to ExaHyPE's load balancing configuration.
-- Once MPI+X is up and running, study the @ref exahype_runtime_analysis "ExaHyPE/Peano performance analysis remarks" so
-  you obtain an understanding of your code's behaviour.
-- Once you are reasonably satisfied with the MPI behaviour, try out other 
-  parallelisation schemes. toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition
-  for example seems to give reasonable result.
-
-
-
-## Task parallelism
-
-Some ExaHyPE solvers add further task parallelism to this decomposition. 
-In general, the enclave solvers tend to perform better on massively parallel
-systems.
-
-
-
-
-## Writing your own parallel extensions
 
 Most users that write extensions to ExaHyPE which need some global data
 exchange are users which add new fields to their solver. Examples are global

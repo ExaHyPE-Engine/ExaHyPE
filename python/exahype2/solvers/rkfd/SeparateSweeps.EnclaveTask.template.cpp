@@ -64,7 +64,21 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
       t,
       dt
   )) {
+    /*#if defined(GPUOffloadingSYCL)
+    int targetDevice = 0;
+    #if Dimensions==2
+    int numberOfInputValues = ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    int numberOfResultValues = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_UNKNOWNS}};
+    #else
+    int numberOfInputValues = ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    int numberOfResultValues = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_UNKNOWNS}};
+    #endif
+    auto gpuPatchData = ::exahype2::CopyCellDataGPU(patchData, numberOfInputValues, numberOfResultValues);
+    ::exahype2::fd::{{KERNEL_NAMESPACE}}::sycl::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    gpuPatchData.copyBackAndDestroy();
+    #else*/
     ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
+    //#endif
   }
   else
   {% endif %}
@@ -376,6 +390,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   //
   bool foundOffloadingBranch = false;
 
+  auto gpuPatchData = ::exahype2::CopyCellDataGPU(patchData, _numberOfInputValues, _numberOfResultValues);
 
   #if defined(GPUOffloadingOMP)
   if (targetDevice>=0) {
@@ -398,6 +413,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     ::exahype2::fd::{{KERNEL_NAMESPACE}}::sycl::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
   }
   #endif
+
+  gpuPatchData.copyBackAndDestroy();
 
   if (not foundOffloadingBranch) {
     ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
