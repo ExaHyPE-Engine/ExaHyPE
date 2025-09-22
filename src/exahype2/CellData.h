@@ -158,6 +158,39 @@ namespace exahype2 {
   };
 
 //  using CellData = CellData<double, double>;
+
+  template<typename inType=double, typename outType=double>
+  struct CopyCellDataGPU{
+    /* 
+    See CellData for meaning of member variables. 
+    The only change is changing QIn and QOut from 2D arrays to 1D.
+    */
+
+    inType*                                 QIn;
+    tarch::la::Vector<Dimensions,double>*   cellCentre;
+    tarch::la::Vector<Dimensions,double>*   cellSize;
+    double*    t;
+    double*    dt;
+    int*       id;
+    const int  numberOfCells;
+    const tarch::MemoryLocation memoryLocation;
+    const int  targetDevice;
+    outType*  QOut;
+    double*    maxEigenvalue;
+
+    inType** QInHost;
+    outType** QOutHost;
+    double* maxEigenvalueHost;
+
+    CopyCellDataGPU(const CellData<inType, outType>& cellData, int inputPatchSize, int outputPatchSize);
+    void copyBackAndDestroy();
+    
+    std::string toString() const;
+
+    int QInStride;
+    int QOutStride;
+  };
+
 }
 
 #include "CellData.cpph"

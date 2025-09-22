@@ -359,7 +359,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::vector<Task*>& o
   // =========================
   //
   bool foundOffloadingBranch = false;
-
+  
+  auto gpuPatchData = ::exahype2::CopyCellDataGPU(patchData, _numberOfInputValues, _numberOfResultValues);
+  
 #if defined(GPUOffloadingOMP)
   if (targetDevice >= 0) {
     foundOffloadingBranch = true;
@@ -387,6 +389,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::vector<Task*>& o
     ::exahype2::fv::{{KERNEL_NAMESPACE}}::cpp::{{FUSED_COMPUTE_KERNEL_CALL_STATELESS_GPU}}
   }
 #endif
+  
+  gpuPatchData.copyBackAndDestroy();
 
   if (not foundOffloadingBranch) {
     logDebug("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
