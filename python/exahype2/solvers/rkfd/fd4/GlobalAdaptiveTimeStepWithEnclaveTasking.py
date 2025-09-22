@@ -5,7 +5,8 @@ from exahype2.solvers.rkfd.SeparateSweepsWithEnclaveTasking import SeparateSweep
 
 import jinja2
 
-from .kernels import create_compute_kernel_for_FD4
+from .kernels import create_compute_kernel_for_FD4_DSL
+from .kernels import create_FD4_kernel_definitions_3d
 
 from exahype2.solvers.rkfd.kernels import create_abstract_solver_declarations
 from exahype2.solvers.rkfd.kernels import create_abstract_solver_definitions
@@ -106,7 +107,9 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
 
     if not                  KOSigma==None:  self._KO_Sigma                                  = KOSigma
 
-    self._compute_kernel_call = create_compute_kernel_for_FD4(
+    create_FD4_kernel_definitions_3d()
+
+    self._compute_kernel_call = create_compute_kernel_for_FD4_DSL(
       self._flux_implementation, 
       self._ncp_implementation, 
       self._source_term_implementation, 
@@ -115,7 +118,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
       kernel_variant                           = KernelVariant.PatchWiseAoSHeap,
       KOSigma                                  = self._KO_Sigma
     )
-    self._fused_compute_kernel_call_cpu = create_compute_kernel_for_FD4(
+    self._fused_compute_kernel_call_cpu = create_compute_kernel_for_FD4_DSL(
       self._flux_implementation, 
       self._ncp_implementation, 
       self._source_term_implementation, 
@@ -126,7 +129,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
       #kernel_variant                           = KernelVariant.BatchedAoSHeap,
       KOSigma                                  = self._KO_Sigma
     )
-    self._fused_compute_kernel_call_gpu = create_compute_kernel_for_FD4(
+    self._fused_compute_kernel_call_gpu = create_compute_kernel_for_FD4_DSL(
       self._flux_implementation, 
       self._ncp_implementation, 
       self._source_term_implementation, 
@@ -159,7 +162,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
   @property
   def user_action_set_includes(self):
     return super(GlobalAdaptiveTimeStepWithEnclaveTasking, self).user_action_set_includes + """
-#include "exahype2/fd/fd4/FD4.h"
+#include "kernels/FD4.h"
 """
 
   def add_entries_to_text_replacement_dictionary(self, d):
