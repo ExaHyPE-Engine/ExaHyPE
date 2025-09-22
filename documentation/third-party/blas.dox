@@ -28,8 +28,11 @@ When configuring, be sure to add:
 
 The call to configure should look something like this (for example, on COSMA):
 
-```./configure --with-openblas --with-lapack [other configure options] CXXFLAGS="... -I/cosma/local/openblas/intel_2020-update2/0.3.12cosma7/include/"
+~~~~~~~~~~~~~~~~~~~~~~~
+./configure --with-openblas --with-lapack [other configure options] CXXFLAGS="... -I/cosma/local/openblas/intel_2020-update2/0.3.12cosma7/include/"
   LDFLAGS="-L/cosma/local/openblas/intel_2020-update2/0.3.12cosma7/lib/ -lopenblas" ...
+~~~~~~~~~~~~~~~~~~~~~~~
+  
 
 Make sure to export your LD_LIBRARY_PATH first.
 

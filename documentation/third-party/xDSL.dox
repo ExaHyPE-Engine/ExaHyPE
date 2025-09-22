@@ -18,7 +18,7 @@ All the further optimisations that arose due to using xDSL are contributions dir
 To update the present version 
 
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 cd python/exahype2/kerneldsl/api
 git clone https://github.com/xdslproject/ExaHyPE.git ExaHyPE-xDSL
 cp ExaHyPE-xDSL/exahype/KernelBuilder.py .
@@ -26,14 +26,14 @@ cp ExaHyPE-xDSL/exahype/TypedFunction.py .
 cp ExaHyPE-xDSL/exahype/printers/CPPPrinter.py printers
 cp ExaHyPE-xDSL/exahype/printers/CodePrinter.py printers
 rm -rf ExaHyPE-xDSL
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Please note that xDSL requires Python 3.10 or newer.
 Due to xDSL, you also have to install the typing-extensions:
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 pip3 install PyPI typing-extensions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 */
