@@ -62,6 +62,7 @@ All components are integrated into one repository, one code base, and documented
   - @subpage page_third-party_OpenBLAS
   - @subpage page_third-party_hdf5
   - @subpage page_third-party_xDSL
+  - @subpage tbb_extension
   
 This is the documentation of Peano which is generated automatically through Doxygen.
 Peano comprises the core Peano 4 modules, the Python API, and a set of Peano extensions as well as benchmarks.
