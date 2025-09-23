@@ -312,7 +312,11 @@ class Euler:
                 "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
                 "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
                 "flux": "applications::exahype2::euler::flux(Q, x, h, t, dt, normal, F);",
-                "eigenvalues": "return applications::exahype2::euler::maxEigenvalue(Q, x, h, t, dt, normal);",
+                "eigenvalues": """
+                double lambda[NumberOfUnknowns] = {0.};
+                applications::exahype2::euler::maxEigenvalue(Q, x, h, t, dt, normal, lambda);
+                return *std::max_element(lambda, lambda+NumberOfUnknowns);
+                """,
             }
 
         solver = self._available_solvers[args.solver](**solver_params)

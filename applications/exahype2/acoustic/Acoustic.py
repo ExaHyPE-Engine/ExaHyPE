@@ -300,7 +300,10 @@ class Acoustic:
                 "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
                 "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
                 "flux": "applications::exahype2::acoustic::flux(Q, x, h, t, dt, normal, F);",
-                "eigenvalues": "return applications::exahype2::acoustic::maxEigenvalue(Q, x, h, t, dt, normal);",
+                "eigenvalues": """
+                double lambda[NumberOfUnknowns] = {0.};
+                applications::exahype2::acoustic::maxEigenvalue(Q, x, h, t, dt, normal, lambda);
+                return *std::max_element(lambda, lambda+NumberOfUnknowns);""",
                 "source_term": "applications::exahype2::acoustic::sourceTerm(Q, x, 0.0, t, 0.0, S);",
             }
 
