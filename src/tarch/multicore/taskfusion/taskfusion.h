@@ -28,10 +28,15 @@ namespace tarch {
      * technique to keep GPUs busy.
      *
      * There are many ways how task fusion can be implemented. In Peano, the
-     * different strategies are controlled through FusionImplementation which
-     * in turn is set by the multicore orchestration. More information is
+     * different strategies are controlled through the multicore orchestration.
+     * There's the enum tarch::multicore::orchestration::FusionImplementation
+     * in there, which also contains all the high-level overviews of how the
+     * different strategies work and when they are appropriate.
+     * More information on how to use the task fusion and how to tailor it is
      * provided in the context of @ref documentation_tarch_task_fusion_strategies.
-     * Here, we summarise more low-level implementation details.
+     * On this page, we do a deep-dive into the implementation of the various
+     * strategies.
+     *
      *
      * To ensure that fusion is only applied to tasks of the same type, we store
      * the fusable tasks in a map indexed by the task type. The most important

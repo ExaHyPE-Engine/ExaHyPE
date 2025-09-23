@@ -23,7 +23,22 @@ namespace tarch {
        * we can construct a wide variety of different task execution schemes.
        *
        *
-       * ## Some implementation lessons learned
+       * ## Remark on file/namespace organisation
+       *
+       * The fusion implementation is stores within the tarch::multicore::orchestration
+       * namespace and therefore directory. This makes sense as it is up to the
+       * orchestration strategy to pick the fusion of choice. At the same time,
+       * it is inconsistent, as all the other fusion stuff is in a dedicated
+       * namespace tarch::multicore::taskfusion. You hence might have to switch
+       * forth and back between different namespaces and directories.
+       *
+       *
+       * ## How and where this enum is used for decision making
+       *
+       *
+       *
+       *
+       * ## Deprecated variants (lessons learned)
        *
        * Originally, I thought we'd need a couple of these
        *
@@ -43,15 +58,24 @@ namespace tarch {
        *
        * So the punchline is: Polling does not work. Therefore, I don't offer
        * a strategy using polling.
+       *
+       *
+       *
+       * ## Offered variants
+       *
+       * Please see the list/comments below for variants that we do support
+       * for Peano's tarch:
+       *
        */
       enum class FusionImplementation {
         /**
          * This option effectively disables fusion as well and all fusable tasks are eagerly executed.
          *
          * Completely disable any fusion and map each task that can be fused on
-         * a normal task due to a call to native::spawnTask() in
-         * translateFusableTaskIntoTaskSequence().
-         * ensureHeldBackTasksAreMappedOntoNativeTasks() deteriorates to
+         * a normal task due to a call to tarch::multicore::native::spawnTask() in
+         * tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence().
+         * The operation
+         * tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks() deteriorates to
          * nop.
          *
          * <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
