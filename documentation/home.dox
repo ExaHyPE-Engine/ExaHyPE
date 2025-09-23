@@ -69,9 +69,10 @@ Peano comprises the core Peano 4 modules, the Python API, and a set of Peano ext
 The most important extensions at the moment are ExaHyPE 2, our PETSc toolkit and a prototype version of Swift 2.
 
 
-# Build status
+# Recent updates
 
-<iframe src="https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines" title="Test pipelines"></iframe> 
+- <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines">Build status (pipelines)</a> 
+- <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/network/p4?ref_type=heads">Latest commits (repository graph)</a> 
 
 
 # History
