@@ -40,7 +40,6 @@ All components are integrated into one repository, one code base, and documented
 - Getting started
   - @subpage page_installation_home
   - @subpage page_compiler_specific_settings_home
-  - @subpage page_third_party_home
   - @subpage page_architecture_home
   - @subpage page_faq_home
 - Contributing
@@ -57,12 +56,24 @@ All components are integrated into one repository, one code base, and documented
   - @subpage page_peano4_home
   - @subpage page_toolbox_home
   - @subpage page_tarch_home
-- The Python core
-  - @subpage page_dastgen_home
-
+- Third-party extensions
+  - @subpage page_third-party_dastgen
+  - @subpage tarch_multicore_otter
+  - @subpage page_third-party_OpenBLAS
+  - @subpage page_third-party_hdf5
+  - @subpage page_third-party_xDSL
+  - @subpage tbb_extension
+  
 This is the documentation of Peano which is generated automatically through Doxygen.
 Peano comprises the core Peano 4 modules, the Python API, and a set of Peano extensions as well as benchmarks.
 The most important extensions at the moment are ExaHyPE 2, our PETSc toolkit and a prototype version of Swift 2.
+
+
+# Recent updates
+
+- <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines">Build status (pipelines)</a> 
+- <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/network/p4?ref_type=heads">Latest commits (repository graph)</a> 
+
 
 # History
 
