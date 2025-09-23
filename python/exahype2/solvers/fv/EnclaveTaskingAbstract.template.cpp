@@ -361,6 +361,8 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "primary-after-grid-initialisation";
     case SolverState::Plotting:
       return "plotting";
+    case SolverState::Suspended:
+      return "suspended";
   }
   return "<undef>";
 }

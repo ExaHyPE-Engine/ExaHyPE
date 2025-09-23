@@ -87,7 +87,7 @@ riemann_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     refinement_criterion=re.sub(r'\bx\b', 'volumeCentre', refinement_criterion),
     flux="applications::exahype2::swe::frictionlaws::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
     ncp="applications::exahype2::swe::frictionlaws::nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, dt, normal, BTimesDeltaQ);",
-    eigenvalues="return applications::exahype2::swe::frictionlaws::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
+    eigenvalues="applications::exahype2::swe::frictionlaws::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, maxEigenvalue);",
     source_term="applications::exahype2::swe::frictionlaws::materialDependentBasalFriction(Q, volumeCentre, volumeH, t, dt, S);",
 )
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "

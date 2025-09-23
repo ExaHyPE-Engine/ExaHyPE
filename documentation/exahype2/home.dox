@@ -25,15 +25,18 @@ and innovation programme under grant agreement No 671698 (ExaHyPE).
   - \subpage page_exahype2_tutorials
   - \subpage page_exahype_applications
   - \subpage page_exahype_benchmarks
-- Realisation of numerics
-  - \subpage documentation_exahype2_solvers_finite_volumes
-  - \subpage exahype2_fv_rusanov
+- Numerics tour de force (hands-on explanation of core numerical ingredients)
+  - \subpage page_tutorials_exahype2_numerics_finite_volumes
+  - \subpage page_tutorials_exahype2_numerics_higher_order_finite_volumes
+  - \subpage page_tutorials_exahype2_numerics_discontinous-Galerkin
+  - \subpage page_tutorials_exahype2_numerics_finite-differences
+  - \subpage page_tutorials_exahype2_numerics_Runge-Kutta
+  - \subpage page_tutorials_exahype2_numerics_ADER-DG
+- Core functionality, numerics and ingredients
   - \subpage exahype2_dg
-  - \subpage exahype2_dg_DG_AMD
-  - \subpage documentation_exahype2_solvers_aderdg
+  - \subpage exahype2_dg_DG_AMR
   - \subpage documentation_exahype2_solvers_enclave_solvers
   - \subpage documentation_exahype2_dsl
-- Core functionality, numerics and ingredients
   - \subpage page_exahype_tracer
   - \subpage page_exahype_boundary_conditions
   - \subpage page_exahype_amr
@@ -45,13 +48,17 @@ and innovation programme under grant agreement No 671698 (ExaHyPE).
 - Advanced features
   - \subpage page_exahype2_coupling
 - HPC  
-  - \subpage page_exahype_runtime_analysis
-  - \subpage page_exahype_performance_optimisation
-  - \subpage page_exahype_parallelisation
+  - \subpage page_exahype_domain-decomposition
   - \subpage page_exahype_multicore
   - \subpage page_exahype_gpu
+  - \subpage page_exahype_runtime_analysis
+  - \subpage page_exahype_performance_optimisation
 - Utilities
   - \subpage exahype2_enumerator
+- Related pages
+  - @ref page_peano4_home
+  - @ref page_tarch_home
+
 
 
 # Building the ExaHyPE 2 extension

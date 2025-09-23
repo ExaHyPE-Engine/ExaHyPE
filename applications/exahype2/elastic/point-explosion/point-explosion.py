@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(".."))
 
-from elastic import Elastic
+from Elastic import Elastic
 
 if __name__ == "__main__":
     elastic = Elastic()

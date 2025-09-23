@@ -5,7 +5,6 @@ from exahype2.solvers.rkfd.SeparateSweeps import SeparateSweeps
 
 import jinja2
 
-from .kernels import create_compute_kernel_for_FD4
 from .kernels import create_FD4InExaGRyPE_kernel_definitions_3d
 from .kernels import create_DeriCalInExaGRyPE_kernel_definitions_3d
 from .kernels import create_compute_kernel_for_FD4InExaGRyPE_DSL
@@ -157,7 +156,7 @@ class GlobalAdaptiveTimeStepInExaGRyPE( SeparateSweeps ):
 """
     if self._reconstruction_stages > 0:
       tem = tem + """
-#include "kernels/DeriCalInExaGRyPE.h"
+#include "kernels/DeriCallInExaGRyPE.h"
 """
 
     return tem

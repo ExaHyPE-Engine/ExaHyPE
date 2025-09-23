@@ -31,10 +31,24 @@ export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
 generate the executable and run
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-python3 performance_testbed.py -et 0.01
-export OMP_NUM_THREADS=4
-./peano_test
+python3 performance_testbed.py
+export OMP_NUM_THREADS=32
+mpirun -n 1 ./peano4_test
 ~~~~~~~~~~~~~~~~~~~~~~~
+
+The default setup would give you a (relatively) small simulation, which should take minutes running on one node of cluster.  
+
+~~~~~~~~~~~~~~~~~~~~~~~
+python3 performance_testbed.py -maxh 0.4 -minh 0.04 -ps 6 -et 0.01 --domain_r 9.0 --ReSwi 2 
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The setup above is for a larger setup with 3-level AMR, alter the -et (end time) for longer/shorter tests.
+
+~~~~~~~~~~~~~~~~~~~~~~~
+python3 performance_testbed.py -maxh 0.005 -minh 0.005 -et 0.01
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The setup above (untested) would provide a simulation based on regular grid with decent count of patches (81^3, half million). Tune the -maxh and -minh would give you different count of patches as in a usual ExaHyPE application. 
 
 As always, the parameter --help makes the Python script yield further info,
 while the sections below enlist characteristic choices of the parameters.

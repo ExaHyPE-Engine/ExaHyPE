@@ -14,7 +14,7 @@ namespace applications::exahype2::euler {
   #if defined(GPUOffloadingOMP)
   #pragma omp declare target
   #endif
-  static inline GPUCallableMethod
+  static GPUCallableInlineMethod
   void maxEigenvalue(
     const double* const __restrict__             Q,
     const tarch::la::Vector<Dimensions, double>& x,
@@ -31,7 +31,7 @@ namespace applications::exahype2::euler {
   #if defined(GPUOffloadingOMP)
   #pragma omp declare target
   #endif
-  static inline GPUCallableMethod
+  static GPUCallableInlineMethod
   void flux(
     const double* const __restrict__             Q,
     const tarch::la::Vector<Dimensions, double>& x,

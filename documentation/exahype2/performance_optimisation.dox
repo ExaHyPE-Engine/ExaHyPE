@@ -274,5 +274,54 @@ discusses step by step how to introduce a tailored load balancing.
 ## MPI optimisation
 
 
+### Load balancing settings (best practices)
+
+
+
+While ExaHyPE makes it relatively straightforward to parallelise a code, 
+the tuning of a particular experiment is often tricky.
+As ExaHyPE is an engine supporting multiple application (domains) and as the
+``perfect'' load balancing strategy depends strongly on the application type
+plus the chosen experiments plus the machine used, it can only provide vague
+heuristics of settings that work in most of the cases. 
+To get really good performance, you will have to play around with the load
+balancing settings.
+
+
+Here are some recommendations if you use the recursive load balancing.
+The recommendations describe how to tweak the three parameters that the
+ExaHyPE configuration offers:
+
+- Start with the strategy toolbox::loadbalancing::SpreadOut. This should give 
+  you first feeling if your code is MPI-/threading-ready.
+- Do not set the load balancing quality too high. I am usually fine if the
+  balancing between the ranks is about 80%-90% accurate. 
+  First get something up and running and test it. After that, you might want to
+  increase the quality closer to 100%. However, the higher this quality
+  threshold the longer your grid setup and balancing time.
+- If your code tends to hang in MPI, try to kick the simulation off with
+  only one partition per rank, i.e. set the maximum number of trees for a 
+  partition to 1.
+  Once this passes through, increase the last counter to at most the number of
+  cores per rank. 
+- If you work without periodic boundary conditions, the initial load
+  balancing will likely be poor if the mesh is too shallow: The code cannot
+  deploy cells along the periodic boundary to other ranks. These always have to
+  be handled by rank 0. So it makes sense to set the minimal mesh size (second
+  argument) to at least @f$ 3^d+1 @f$. This prolongs the load distribution
+  sufficiently long until enough cells are available. The knock-on problem then
+  is that we have a lot of cells and the load balancing tries to split them up
+  evenly - unaware that all the boundary cells can't be distributed. So you will
+  have to restrict the number of cells per inter-rank balancing. I recommend to
+  to add $3^d$ as fourth argument to ExaHyPE's load balancing configuration.
+- Once MPI+X is up and running, study the @ref exahype_runtime_analysis "ExaHyPE/Peano performance analysis remarks" so
+  you obtain an understanding of your code's behaviour.
+- Once you are reasonably satisfied with the MPI behaviour, try out other 
+  parallelisation schemes. toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition
+  for example seems to give reasonable result.
+
+
+
+
  */
  

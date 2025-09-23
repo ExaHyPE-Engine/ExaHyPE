@@ -44,7 +44,7 @@ if __name__ == "__main__":
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",            help="|".join(modes.keys()) )
     parser.add_argument(         "--gpu",             dest="GPU",             default=False, action="store_true",  help="Run with accelerator support" )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "adm", "Psi4"],   default="none",  help="Pick extension, i.e. what should be plotted on top of the evolving solution. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-adaptive", "fd4-rk1-adaptive", "fd4-rk1-adaptive-enclave", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk2-adaptive", "RKDG", "fd4-rk1-dsl", "fd4-rk2-dsl", "fd4-rk4-dsl"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-adaptive", "fd4-rk1-adaptive", "fd4-rk1-adaptive-enclave", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk2-adaptive", "RKDG", "fd4-rk1-dsl", "fd4-rk2-dsl", "fd4-rk4-dsl", "fd4-rk1-dsl-enclave", "fd4-rk2-dsl-enclave", "fd4-rk4-dsl-enclave"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default=True,  help="switch on or off the periodic BC" )
     parser.add_argument("-sommerfeld",  "--sommerfeld-boundary-conditions",   dest="sommerfeld_bc", action="store_true", default=False,  help="switch on or off the Sommerfeld radiative BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
@@ -79,6 +79,8 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
     if args.implementation=="fd4-rk1-dsl" or args.implementation=="fd4-rk4-dsl" or args.implementation=="fd4-rk2-dsl":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepInExaGRyPE
+    if args.implementation=="fd4-rk1-dsl-enclave" or args.implementation=="fd4-rk4-dsl-enclave" or args.implementation=="fd4-rk2-dsl-enclave":
+       SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepInExaGRyPEWithEnclaveTasking
     if args.implementation=="fd4-rk1-adaptive-enclave":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
 
@@ -124,6 +126,23 @@ if __name__ == "__main__":
           if args.implementation=="fd4-rk1-dsl":
             rk_order = 1
           elif args.implementation=="fd4-rk2-dsl":
+            rk_order = 2
+          else:
+            rk_order = 4
+          SuperClass.__init__(
+            self,
+            name=name, patch_size=patch_size, rk_order=rk_order,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_meshcell_h=min_mesh_unit_h, max_meshcell_h=max_mesh_unit_h,
+            time_step_relaxation=cfl,
+            KOSigma=KOSig,
+            reconstruction_with_rk=args.SO_flag
+          )
+        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepInExaGRyPEWithEnclaveTasking:
+          if args.implementation=="fd4-rk1-dsl-enclave":
+            rk_order = 1
+          elif args.implementation=="fd4-rk2-dsl-enclave":
             rk_order = 2
           else:
             rk_order = 4
