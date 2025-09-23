@@ -330,3 +330,4 @@ compile_commands.json
 # Profiling
 scorep*/
 
+/documentation/

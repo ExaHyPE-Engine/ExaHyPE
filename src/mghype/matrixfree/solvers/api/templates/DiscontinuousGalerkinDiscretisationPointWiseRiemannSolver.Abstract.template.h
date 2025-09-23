@@ -1,7 +1,6 @@
 {% include 'DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.Abstract.generic.template.h' %}
 
-
-  protected:
+  public:
     /**
      * Abstract template class for Discontinuous Galerkin solver.
      *
@@ -49,6 +48,8 @@
      *
      */
     enum class State {
+      GridConstruction,
+      InitSolution,
       Solve,                    // for use in middle DG stage
       Suspend,
       /**
@@ -63,6 +64,13 @@
       ComputeResidualAndSuspend
     };
 
+    State getState() const;
+
+    void beginInitialisationSweep();
+    void beginGridConstructionSweep();
+    void beginPlotSweep();
+
+  protected:
     State _state;
 };
 

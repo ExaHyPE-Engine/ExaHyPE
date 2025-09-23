@@ -76,6 +76,7 @@ class InitHigherOrderDofs(ActionSet):
             for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.UnknownsPerCellNode; i++) {
               fineGridCell{{SOLVER_NAME}}.setSolution(counter,value(i));
               fineGridCell{{SOLVER_NAME}}.setRhs(counter,rhs(i));
+              fineGridCell{{SOLVER_NAME}}.setResidual(counter,rhs(i));
               counter++;
             }
           }

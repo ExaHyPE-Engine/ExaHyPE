@@ -6,7 +6,8 @@ tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPA
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   Solver("{{CLASSNAME}}", {{SOLVER_TOLERANCE}} ),
-  _state(State::Solve), _updateSolution(false)
+  _state(State::GridConstruction),
+  _updateSolution(false)
 {}
 
 

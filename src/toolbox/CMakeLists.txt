@@ -15,3 +15,7 @@ endif()
 if(ENABLE_PARTICLES)
   add_subdirectory(particles)
 endif()
+
+if(ENABLE_CURVI)
+  add_subdirectory(curvi)
+endif()

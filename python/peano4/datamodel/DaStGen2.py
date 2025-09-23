@@ -5,7 +5,12 @@ from .DoF                 import DoF
 
 import dastgen2
 
-import peano4.dastgen2.MPIAndStorageAspect
+import peano4.dastgen2.Peano4DoubleArray
+import peano4.dastgen2.Peano4SmartPointerDoubleArray
+
+#import peano4
+import dastgen2.aspects.MPI
+import dastgen2.aspects.MPIForSmartPointers
 
 import copy
 
@@ -98,6 +103,8 @@ class DaStGen2GeneratorForObjectsWithSmartPointers(object):
         - Declare this one as an embedded type via using.
         - Add a new copy constructor/conversion routine which really just maps 
           the two data types onto each other by using the setters and getters.
+        - Replace the MPI aspect in the original object with an with the 
+          variant for smart pointers
         
         """
         full_qualified_name = ""
@@ -105,12 +112,15 @@ class DaStGen2GeneratorForObjectsWithSmartPointers(object):
           full_qualified_name += i
           full_qualified_name += "::"
         full_qualified_name += self._data.name
+        
+        print( "No of aspects for {}: {}".format( full_qualified_name, len(self._data.data._aspects) ))
 
-
+        # flattened_data_object is of type dastgen2.DataModel
         flattened_data_object = copy.copy(self._data.data)
-        old_attributes        = flattened_data_object._attributes
+        old_attributes        = self._data.data._attributes
+        old_aspects           = flattened_data_object._aspects
         flattened_data_object._attributes = []
-        copy_statements               = ""
+        self._data.data._aspects          = []
         for attribute in old_attributes:
             if isinstance(attribute,peano4.dastgen2.Peano4SmartPointerDoubleArray):
                 flattened_data_object._attributes.append( peano4.dastgen2.Peano4DoubleArray( name        = attribute._name,
@@ -119,70 +129,20 @@ class DaStGen2GeneratorForObjectsWithSmartPointers(object):
                                                                                              ))
             else:
                 flattened_data_object._attributes.append( attribute )
-            if attribute.ifdefs==[]:
-               copy_statements += """
-result.set{}( static_cast<decltype(result.get{}())>( copy.get{}() ) );
-""".format(attribute.get_accessor_name(),
-           attribute.get_accessor_name(),
-           attribute.get_accessor_name()
-           )
+                                
+        for aspect in old_aspects:
+            if isinstance(aspect,dastgen2.aspects.MPI):
+                self._data.data._aspects.append( dastgen2.aspects.MPIForSmartPointers(aspect._data_model) )
+            elif isinstance(aspect,peano4.dastgen2.MPIAndStorageAspect):
+                self._data.peano4_mpi_and_storage_aspect = aspect
+                self._data.data._aspects.append( self._data.peano4_mpi_and_storage_aspect )
             else:
-                copy_statements += """
-{}
-result.set{}( static_cast<decltype(result.get{}())>( copy.get{}() ) );
-#endif
-""".format(dastgen2.Utils.construct_ifdef_string(attribute.ifdefs),
-           attribute.get_accessor_name(),
-           attribute.get_accessor_name(),
-           attribute.get_accessor_name(),
-           )
-    
-
+                self._data.data._aspects.append( aspect )
+ 
         extension             = "_Flattened"
         full_qualified_name_flattened   = full_qualified_name + extension
         full_qualified_file_without_extension_flattened = self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + extension
         
-        
-        self._data.data.additional_includes += """
-#include "{}_Flattened.h"            
-""".format(self._data.name)
-
-
-#        flattened_data_object.additional_includes += """
-##include "{}.h"            
-#""".format(self._data.name)
-
-            
-        self._data.data.public_fields = """
-  using FlattenedType = {}_Flattened;
-
-  static {} flatten(const {}& copy) {{
-    {} result;
-    
-    {}
-    
-    return result;
-  }}
-  static {} unflatten(const {}& copy) {{
-    {} result;
-    
-    {}
-    
-    return result;
-  }}
-""".format(self._data.name,
-#flatten
-           self._data.name + extension,
-           self._data.name,
-           self._data.name + extension,
-           copy_statements,
-# unflatten
-           self._data.name,
-           self._data.name + extension,
-           self._data.name,
-           copy_statements,
-           )
-
         self._data.data.set_full_qualified_name(full_qualified_name)
         self._data.data.write_header_file( self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + ".h" )
         self._data.data.write_implementation_file(  self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + ".cpp" )
@@ -202,6 +162,21 @@ class DaStGen2(DoF):
     A DaStGen2 data type generator. To add fields to this object, just
     use the DaStGen2 instance data of this field, i.e. data.add_attribute().
 
+    @image html dof-class-diagram.png
+    
+    By default, we add x and h to the attributes. The DataModel object also can
+    host aspects, i.e. classes which inject technical code snippets into each 
+    and every instance. By default, we add peano4.dastgen2.MPIAndStorageAspect
+    and dastgen2.aspect.MPI, but yuo might want to add further ones. 
+    
+    The actual dump into a C++ file is not done by the DaStGen2 object. 
+    Instead, we hold a generator object which does this translation. In that 
+    sense, the DaStGen2 object is almost an empty wrapper which tailors the 
+    underlying data model, but adds no further specific behaviour.
+    
+    There are two code generations: The default one, and then one that we have
+    to employ if the underlying data object hosts a smart pointer.
+    
     
     ## Attributes
     
@@ -289,6 +264,18 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
     object has an MPI aspect, i.e. can, in principle, be sent and received 
     through MPI.
     
+    By default, each Peano dat model also realises the MPIAndStorageAspect 
+    which requires special treatment:
+    
+    ## MPI and storage aspect
+    
+    Normally, we just hold all the aspects in a long list and generate them one
+    by one. The MPI and storage aspect is a little bit different: If we add the 
+    Peano-specific one, we still want later to modify parts of it. That is, we 
+    would have to run through all the aspects one by one, pick out the MPI and 
+    storage one, and then alter this one. So what we do instead is that we hold
+    it as a dedicated attribute and also add it to the list. 
+    
     """  
     super(DaStGen2, self).__init__(name)
 
@@ -303,6 +290,7 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
     self.peano4_mpi_and_storage_aspect = peano4.dastgen2.MPIAndStorageAspect(peano4.datamodel.DoFAssociation.Undef)
 
     self.data.add_aspect( self.peano4_mpi_and_storage_aspect )
+    self.data.add_aspect( dastgen2.aspects.MPI() )
 
 
   def configure(self, namespace, association, subdirectory=""):

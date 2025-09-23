@@ -37,3 +37,5 @@
 * So we write one manually, if the following macro is defined
 */
 #define OpenMPManuallyOffloadMemset
+
+#define OpenMP6Syntax

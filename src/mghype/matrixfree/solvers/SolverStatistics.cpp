@@ -86,6 +86,9 @@ void mghype::matrixfree::solvers::SolverStatistics::updateGlobalResidual(
   double residual,
   const tarch::la::Vector<Dimensions,double>&  h
 ) {
+  assertion2( residual==residual, residual, h );
+  assertion2( residual<1e10, residual, h );
+
   _globalResidualMaxNorm               = std::max( _globalResidualMaxNorm, std::abs(residual) );
   _globalResidualEukledianNormSquared += residual * residual;
   _globalResidualHNormSquared         += residual * residual * tarch::la::volume(h);
@@ -94,6 +97,8 @@ void mghype::matrixfree::solvers::SolverStatistics::updateGlobalResidual(
 void mghype::matrixfree::solvers::SolverStatistics::updateGlobalPrecondResidual(
   double residual
 ) {
+  assertion1( residual==residual, residual );
+
   _globalPrecondResidualMaxNorm               = std::max( _globalPrecondResidualMaxNorm, std::abs(residual) );
   _globalPrecondResidualEukledianNormSquared += residual * residual;
 }
@@ -103,6 +108,8 @@ void mghype::matrixfree::solvers::SolverStatistics::updateGlobalSolutionUpdates(
   double du,
   const tarch::la::Vector<Dimensions,double>&  h
 ) {
+  assertion2( du==du, du, h );
+
   _globalDeltaUMaxNorm               = std::max( _globalDeltaUMaxNorm, std::abs(du) );
   _globalDeltaUEukledianNormSquared += du * du;
   _globalDeltaUHNormSquared         += du * du * tarch::la::volume(h);

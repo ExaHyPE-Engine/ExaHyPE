@@ -2,7 +2,7 @@
 
 @page tutorials_exahype2_dsl_implementing_kernels Implementing New Kernels
 
-See page \ref tutorials_exahype2_dsl_syntax for details on writing the timestep function for a new
+See page \ref documentation_exahype2_dsl for details on writing the timestep function for a new
 kernel. This page details how to use this function in a solver. The implementation of the Rusanov
 kernel is used as an example throughout.
 

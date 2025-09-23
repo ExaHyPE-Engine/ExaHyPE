@@ -70,7 +70,7 @@ ReconstructLinearCombination = """
 
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
-  """
+  r"""!
   
   Update one cell, i.e. compute Runge-Kutta step on it
   

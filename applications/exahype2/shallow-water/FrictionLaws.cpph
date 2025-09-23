@@ -49,6 +49,17 @@ double applications::exahype2::swe::frictionlaws::maxEigenvalue(
   return result;
 }
 
+void applications::exahype2::swe::frictionlaws::maxEigenvalue(
+    const double* const __restrict__             Q,
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions, double>& h,
+    const double                                 t,
+    const double                                 dt,
+    const int                                    normal,
+    double* const __restrict__                   maxEigenvalue
+  ){
+    maxEigenvalue[0] = ::applications::exahype2::swe::frictionlaws::maxEigenvalue(Q, x, h, t, dt, normal);
+  }
 
 void applications::exahype2::swe::frictionlaws::flux(
   const double* const __restrict__             Q,

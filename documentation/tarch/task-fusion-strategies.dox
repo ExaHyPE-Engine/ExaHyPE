@@ -5,9 +5,15 @@
 @tableofcontents
 
 Task fusion is one of the many magic knobs that can make a huge difference in 
-your application performance: If you use it too aggressively, it will hamper
-the speed of your code. If you don't use it properly, you'll suffer from high
-overhead - notably if you employ GPUs.
+your application performance.
+This page dives into some design principles behind the task fusion and provides
+a high-level overview.
+Details on how the fusion is implemented are provided in the documentation
+of the namespace tarch::multicore::taskfusion.
+This page is for programmers who want to use/adopt the task fusion within their
+own code. 
+
+
 
 ## Prepare  
 
@@ -70,6 +76,8 @@ tasks instead of a single one. They might even take them and ship them to a
 GPU. For this, you have to overwrite tarch::multicore::Tasks::fuse(). The 
 default is just a while loop over tasks.
 
+In our latest write-up, we call these fusion kernels ***executor***.
+
 
 ## Tailor the task orchestration
 
@@ -123,6 +131,13 @@ some of the ProcessReadyTask instances. If this is not possible, you can
 alternatively equip the processing with a timeout: When it becomes active
 and there are not enough fusable tasks, let it wait for a few milliseconds
 to see if more fusable tasks drop in.
+
+
+<div style="background-color: #ccc ; padding: 10px; border: 1px solid green;"> 
+This is not about timeouts in an MPI sense. If you search for timeouts in
+MPI, please consult tarch::la::Rank::setDeadlockTimeOut().
+</div>
+
 
 
 ### Reduce fused batch size
@@ -187,6 +202,8 @@ tarch::multicore::orchestration::Strategy::FuseInstruction mghype::MultigridDefa
   }
 [...]
 ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
 
 
 ## Task fusion variants

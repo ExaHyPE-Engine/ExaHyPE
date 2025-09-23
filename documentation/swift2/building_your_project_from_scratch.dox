@@ -62,7 +62,7 @@ working example, see ``SPHLeapfrogFixedSearchRadius.py``.
 
 The definition of a particle is straightforward. We employ a tool called
 DaStGen 2 which really just is a set of Python classes which represent the
-attributes of a C++ class. See \ref page_dastgen_home for more details on DaStGen.
+attributes of a C++ class. See \ref page_third-party_dastgen for more details on DaStGen.
 
 We build up a set of Python objects sketching a C++ struct and Swift 2 and
 DaStGen eventually dump them into proper C++ code from which it is embedded into the
@@ -92,7 +92,7 @@ It may be useful to introduce parameters which are valid for your entire particl
 species. For example, you want need a particle independent CFL factor, or maximal
 smoothing length, or resolution, etc. This can easily be achieved through use of
 `static` (or even `const static`) class variables, which you can also generate using
-DaStGen2. See the corresponding documentation on \ref page_dastgen_home.
+DaStGen2. See the corresponding documentation on \ref page_third-party_dastgen.
 
 
 

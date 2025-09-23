@@ -16,6 +16,33 @@ namespace tarch {
 
       /**
        * Control how the fusion is implemented
+       *
+       * We provide various fusion variants from which you can pick through the
+       * tasking orchestration. Together with the executor chosen through the
+       * task's fuse() operation (see discussion at @ref documentation_tarch_task_fusion_strategies),
+       * we can construct a wide variety of different task execution schemes.
+       *
+       *
+       * ## Some implementation lessons learned
+       *
+       * Originally, I thought we'd need a couple of these
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * while (queue.second->isTaskReadyOrRunning(taskNumber, false)) {
+       *   queue.second->processTasks();
+       * }
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       * whenever we have to ensure that a task is done. After all, someone else
+       * might just have used this one as part of task fusion. However, such a
+       * while is toxic. It can always lead to deadlocks. Instead, every task has
+       * to be mapped onto a task dependency, and we have to ensure that we can
+       * properly wait for tasks. It is fine if a task is already done, and in
+       * this case we can prune the DAG and omit a wait, but otherwise, we have
+       * to ensure that we work with task dependencies.
+       *
+       * So the punchline is: Polling does not work. Therefore, I don't offer
+       * a strategy using polling.
        */
       enum class FusionImplementation {
         /**

@@ -35,7 +35,7 @@ class FirstOrderConservativePDEFormulation(PDE):
 
         self.F = sympy.symarray("F", (unknowns, dimensions))
         self.ncp = sympy.symarray("ncp", (unknowns, dimensions))
-        self.eigenvalues = sympy.symarray("alpha", (unknowns, dimensions))
+        self.eigenvalues = sympy.symarray("lambda", (unknowns, dimensions))
         self.sources = sympy.symarray("S", (unknowns))
 
     def __str__(self):
@@ -258,7 +258,7 @@ class FirstOrderConservativePDEFormulation(PDE):
                 )
             else:
                 result += "result = std::max( result, lambda[" + str(i) + "] );\n"
-        result += "return result;\n"
+        result += "maxEigenvalue[0] = result;\n"
         return result
 
     def implementation_of_sources(self, invoke_evalf_before_output=False):

@@ -1,0 +1,160 @@
+/**
+
+@page page_exahype_domain-decomposition Domain decomposition (parallelisation with MPI or multithreading)
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+Peano's domain decomposition is used for both MPI and multithreading, and the only thing ExaHyPE adds on top is some bespoke/abstracted load-balancing.
+The fact that we use domain decomposition for both realisation variants implies that it only matters if you have configured your build with MPI and/or a multithreading back-end.
+As soon as these things are in place and you have picked a load balancing, both threads and ranks (if MPI is there) will be used.
+Without activating any load balancing, your code will run serial no matter how you compiled it.
+
+
+ExaHyPE's multicore parallelism requires user to follow three steps:
+ 
+ 1. @ref page_installation_home "Configure" Peano with multithreading support.
+ 2. @ref page_installation_home "Configure" Peano with MPI support (optional - you can also run on only one node).
+ 3. Ensure that you have picked a proper load balancing scheme.
+ 4. Run some @ref page_exahype_runtime_analysis "performance analysis".
+ 5. Study the @ref page_exahype_performance_optimisation "optimisation recommendations".
+
+
+## Usings domain decomposition
+
+All instructions how to enable the domain decomposition is collected in a @ref tutorials_exahype2_hpc_domain-decomposition "parallelisation tutorial".
+
+
+## How the domain decomposition works
+
+ExaHyPE employs @ref page_peano_domain_decomposition "Peano's domain decomposition" almost directly.
+All the relevant information about the domain decomposition hence is part of Peano.
+ExaHyPE simply uses it 1:1. 
+
+
+## Adding your own parallel features to an ExaHyPE solver (programmer view)
+
+
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+Requires some work from hereon
+</div>
+
+
+Most users that write extensions to ExaHyPE which need some global data
+exchange are users which add new fields to their solver. Examples are global
+statistics that they want to track over the solution or global variables that
+they control.
+
+Each MPI rank holds one instance of the solver. 
+All threads per MPI rank share the same instance of the solver.
+Peano splits up the domain into chunks along the space-filling curve. 
+If you use an enclave solver, it then splits up these chunks further into tasks.
+That is, operations per cell such as the Riemann solves and the patch
+postprocessing can run in parallel on each thread.
+
+If you add new attributes to your solver, this attribute exists on each solver
+on each rank. 
+You therefore have to 
+
+- ensure that no two threads access the attribute at the same time;
+- ensure that the attributes of the individual solver instances per rank
+  remain consistent.
+
+The first item is relatively simple: You might, for example, decide to protect
+all accesses to your own variables via a semaphore. 
+There is no specific place to take care of the protection: 
+Just protect the actual data access.
+
+
+The second item requires slightly more work, as you have to globally reduce the
+attribute: After each time step, you have to ensure that all ranks exchange
+their attributes with each other, and you then have to merge these data.
+I recommend not to use MPI's data exchange routine directly, but to use Peano's 
+wrappers around these routines. 
+
+
+The actual data exchange should be done at the end of a each time step. 
+For this, you add
+
+~~~~~~~~~~~~~~~~~~~
+  void finishTimeStep() override;
+~~~~~~~~~~~~~~~~~~~
+
+
+
+to your solver. The implementation should first invoke the superclass
+and then add the additional data exchange.
+
+
+~~~~~~~~~~~~~~~~~~~
+void mynamespace::MyFancySolver::finishTimeStep() {
+  MyFancyAbstractSolver::finishTimeStep();
+  #ifdef Parallel
+  // additional data exchange
+  #endif
+}
+~~~~~~~~~~~~~~~~~~~
+
+
+ExaHyPE internally realises these two steps for all of its solver attributes
+such as the maximum mesh size or the admissible time step sizes.
+This is the reason why you have to call the superclass implementation, too.
+
+
+##### Writing your own parallel extensions
+
+Most users that write extensions to  which need some global data
+exchange are users which add new fields to their solver. Examples are
+global statistics that they want to track over the solution or global
+variables that they control.
+
+Each MPI rank holds one instance of the solver. All threads per MPI rank
+share the same instance of the solver.
+
+ splits up the domain into chunks along the space-filling curve. If you
+use an enclave solver, it then splits up these chunks further into
+tasks. That is, operations per cell such as the Riemann solves and the
+patch postprocessing can run in parallel on each thread.
+
+If you add new attributes to your solver, this attribute exists on each
+solver on each rank. You therefore have to
+
+-   ensure that no two threads access the attribute at the same time;
+
+-   ensure that the attributes of the individual solver instances per
+    rank remain consistent.
+
+The first item is relatively simple: You might, for example, decide to
+protect all accesses to your own variables via a semaphore. These
+techniques are discussed in Section
+[\[section:parallel-programming:shared-mem:protect\]](#section:parallel-programming:shared-mem:protect){reference-type="ref"
+reference="section:parallel-programming:shared-mem:protect"}. There is
+no specific place to take care of the protection: Just protect the
+actual data access.
+
+The second item requires slightly more work, as you have to globally
+reduce the attribute: After each time step, you have to ensure that all
+ranks exchange their attributes with each other, and you then have to
+merge these data. I recommend not to use MPI's data exchange routine
+directly, but to use 's wrappers around these routines. These wrappers
+are discussed in Section
+[\[section:parallel-programming:shared-mem:reductions\]](#section:parallel-programming:shared-mem:reductions){reference-type="ref"
+reference="section:parallel-programming:shared-mem:reductions"}. The
+actual data exchange should be done at the end of a each time step. For
+this, you add
+
+void finishTimeStep() override;
+
+to your solver. The implementation should first invoke the superclass
+and then add the additional data exchange.
+
+void mynamespace::MyFancySolver::finishTimeStep()
+MyFancyAbstractSolver::finishTimeStep(); \#ifdef Parallel // additional
+data exchange \#endif
+
+ internally realises these two steps for all of its solver attributes
+such as the maximum mesh size or the admissible time step sizes.
+
+
+ */
+ 

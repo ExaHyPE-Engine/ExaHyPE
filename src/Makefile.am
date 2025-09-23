@@ -13,6 +13,7 @@ SUBDIRS = . \
 	toolbox/loadbalancing \
 	toolbox/multiprecision \
 	toolbox/particles \
+	toolbox/curvi \
 	convert \
 	exahype2 \
 	mghype \
@@ -127,6 +128,8 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/plotter/griddata/blockstructured/PeanoHDF5PatchFileWriter_VertexDataWriter.cpp \
 	tarch/plotter/griddata/blockstructured/PeanoTextPatchFileWriter_CellDataWriter.cpp \
 	tarch/plotter/pointdata/vtk/VTKWriter.cpp \
+	tarch/reader/NetCDFFileReader.cpp \
+	tarch/reader/NetCDFFieldParser.cpp \
 	tarch/reader/PeanoTextPatchFileReader.cpp \
 	tarch/mpi/BooleanSemaphore.cpp \
 	tarch/mpi/Lock.cpp \
@@ -196,6 +199,9 @@ Peano4Core_SOURCES = \
 	peano4/parallel/tests/NodeTest.cpp \
 	peano4/stacks/stacks.cpp \
 	peano4/stacks/STDVectorStack.cpp \
+	peano4/stacks/tests/GeneratedTestObject.cpp \
+	peano4/stacks/tests/GeneratedTestObject_Flattened.cpp \
+	peano4/stacks/tests/STDVectorStackOverObjectsWithSmartPointersTest.cpp \
 	peano4/utils/Loop.cpp \
 	peano4/utils/tests/ParallelDForTest.cpp
 	

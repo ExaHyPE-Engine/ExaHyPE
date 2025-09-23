@@ -28,8 +28,7 @@ void toolbox::particles::assignmentchecks::internal::Database::
 void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(
   const std::string& meshSweepName
 ) {
-
-  logInfo(
+  logDebug(
     "startMeshSweep()",
     "finish old mesh sweep with and start new one for " << meshSweepName
   );

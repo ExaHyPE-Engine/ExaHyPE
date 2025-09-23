@@ -76,13 +76,21 @@ parser.add_argument(
     action="store_true",
     help="Enable a floating-point exception handler.",
 )
+parser.add_argument(
+    "-d",
+    "--dimensions",
+    default=2,
+    choices = [2, 3],
+    type=int,
+    help="Number of dimensions to use: 2 or 3",
+)
 
 args = parser.parse_args()
 
 fv_rusanov_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
     name="FVRusanov",
     patch_size=args.patch_size,
-    unknowns={"rho": 1,  "u": 1, "v": 1, "e": 1},
+    unknowns={"rho": 1,  "u": 1, "v": 1, "e": 1} if args.dimensions == 2 else {"rho": 1,  "u": 1, "v": 1, "w": 1, "e": 1},
     auxiliary_variables = {},
     min_volume_h=0.001,  # max_cell_size -> arbitrary value
     max_volume_h=0.001,  # min_cell_size -> arbitrary value
@@ -114,14 +122,14 @@ project = exahype2.Project(
 project.add_solver(fv_rusanov_solver)
 
 project.set_global_simulation_parameters(
-    dimensions=2,
-    size=[1.0, 1.0],
-    offset=[0.0, 0.0],
+    dimensions=args.dimensions,
+    size=[1.0] * args.dimensions,
+    offset=[0.0] * args.dimensions,
     min_end_time=0.1,
     max_end_time=0.1,
     first_plot_time_stamp=0.0,
     time_in_between_plots=0.0,
-    periodic_BC=[False, False]
+    periodic_BC=[False] * args.dimensions
 )
 
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
@@ -153,7 +161,7 @@ else:
     project.constants.export_boolean("AssessDeviceKernels", True if args.gpu else False)
 
 project.constants.export_boolean("EvaluateFlux", True)
-project.constants.export_boolean("EvaluateNonconservativeProduct", True)
+project.constants.export_boolean("EvaluateNonconservativeProduct", False)
 project.constants.export_boolean("EvaluateSource", False)
 project.constants.export_boolean("EvaluateMaximumEigenvalueAfterTimeStep", True if args.eval_eig else False)  # Reduction
 
