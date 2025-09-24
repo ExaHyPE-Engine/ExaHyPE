@@ -455,7 +455,6 @@ class VTUUnstructuredGrid(Visualiser):
                     print(
                         f"Progress: {completed_snapshots}/{total_snapshots} snapshots processed ({progress:.2f}%)"
                     )
-
         except Exception as e:
             print("Got an exception: " + str(e))
             traceback.print_exc()
