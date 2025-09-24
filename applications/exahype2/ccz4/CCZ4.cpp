@@ -183,12 +183,10 @@ void applications::exahype2::ccz4::CCZ4::sourceTerm(
   double                                       dt,
   double * NOALIAS                        S  // S[59
 ) {
-#if !defined(WITH_GPU_OMP_TARGET)
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
   for(int i=0; i<NumberOfUnknowns; i++){
     assertion3( std::isfinite(Q[i]), i, volumeX, t );
   }
-#endif
  // for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
   //  S[i] = 0.0;
   //}
@@ -219,12 +217,10 @@ void applications::exahype2::ccz4::CCZ4::sourceTerm(
     }
   }*/
 
-#if !defined(WITH_GPU_OMP_TARGET)
   for(int i=0; i<NumberOfUnknowns; i++){
     nonCriticalAssertion3( std::isfinite(S[i]), i, volumeX, t );
   }
   logTraceOut( "sourceTerm(...)" );
-#endif
 }
 
 
@@ -268,24 +264,17 @@ void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
   int                                          normal,
   double * NOALIAS BgradQ // BgradQ[59]
 )  {
-#if !defined(WITH_GPU_OMP_TARGET)
   logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, volumeH, t, normal );
   assertion( normal>=0 );
   assertion( normal<DIMENSIONS );
-#endif
   nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, dt, normal, BgradQ, Offloadable::Yes);
 
-#if !defined(WITH_GPU_OMP_TARGET)
   for (int i=0; i<NumberOfUnknowns; i++) {
     nonCriticalAssertion4( std::isfinite(BgradQ[i]), i, faceCentre, t, normal );
   }
   logTraceOut( "nonconservativeProduct(...)" );
-#endif
 }
 
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
   const double * NOALIAS Q, // Q[59+0],
   const double * NOALIAS             deltaQ, // [59+0]
@@ -311,9 +300,6 @@ void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
   //}
   ncp(BgradQ, Q, gradQSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
 }
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif
 
 ::exahype2::RefinementCommand applications::exahype2::ccz4::CCZ4::refinementCriterion(
   const double * NOALIAS Q,

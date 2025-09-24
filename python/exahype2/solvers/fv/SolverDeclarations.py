@@ -25,9 +25,6 @@ class SolverDeclarations:
     {% endif %}
 
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" and BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void boundaryConditions(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -41,15 +38,9 @@ class SolverDeclarations:
       {{BOUNDARY_CONDITIONS_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" and REFINEMENT_CRITERION_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     ::exahype2::RefinementCommand refinementCriterion(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -64,38 +55,9 @@ class SolverDeclarations:
       return result;
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
-    {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
-    static inline GPU_CALLABLE_METHOD
-    void eigenvalues(
-      [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-      [[maybe_unused]] const double                                 t,
-      [[maybe_unused]] const double                                 dt,
-      [[maybe_unused]] const int                                    normal,
-      [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         L
-    ) {
-      {% if EIGENVALUES_IMPLEMENTATION!="<empty>" %}
-      {{EIGENVALUES_IMPLEMENTATION}}
-      {% endif %}
-    }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
-    {% endif %}
-
-    {% if MAX_EIGENVALUE_IMPLEMENTATION!="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" and EIGENVALUES_IMPLEMENTATION=="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
+    {% if MAX_EIGENVALUE_IMPLEMENTATION!="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
     static inline GPU_CALLABLE_METHOD
     double maxEigenvalue(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -111,15 +73,9 @@ class SolverDeclarations:
       return 0.0;
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if FLUX_IMPLEMENTATION!="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void flux(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -134,15 +90,9 @@ class SolverDeclarations:
       {{FLUX_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if NCP_IMPLEMENTATION!="<user-defined>" and NCP_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void nonconservativeProduct(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -158,15 +108,9 @@ class SolverDeclarations:
       {{NCP_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void sourceTerm(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -180,15 +124,9 @@ class SolverDeclarations:
       {{SOURCE_TERM_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void diffusiveSourceTerm(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -203,15 +141,9 @@ class SolverDeclarations:
       {{DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if RIEMANN_SOLVER_IMPLEMENTATION!="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     double solveRiemannProblem(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -230,15 +162,9 @@ class SolverDeclarations:
       return 0.0;
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if ADJUST_SOLUTION_IMPLEMENTATION!="<user-defined>" and ADJUST_SOLUTION_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void adjustSolution(
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -251,15 +177,9 @@ class SolverDeclarations:
       {{ADJUST_SOLUTION_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if LIMITER_IMPLEMENTATION!="<user-defined>" and LIMITER_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     {{COMPUTE_PRECISION}} limit(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   QL,
@@ -274,9 +194,6 @@ class SolverDeclarations:
       {{LIMITER_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
@@ -308,19 +225,7 @@ class SolverDeclarations:
     ) override final;
     {% endif %}
 
-    {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
-    void eigenvalues(
-      const {{COMPUTE_PRECISION}}* const NOALIAS                    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS, double>&                  x,
-      const tarch::la::Vector<DIMENSIONS, double>&                  h,
-      const double                                                  t,
-      const double                                                  dt,
-      const int                                                     normal,
-      {{COMPUTE_PRECISION}}* const NOALIAS                          L
-    ) override final;
-    {% endif %}
-
-    {% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" and EIGENVALUES_IMPLEMENTATION=="<none>" %}
+    {% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
     double maxEigenvalue(
       const {{COMPUTE_PRECISION}}* const NOALIAS                    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<DIMENSIONS, double>&                  x,

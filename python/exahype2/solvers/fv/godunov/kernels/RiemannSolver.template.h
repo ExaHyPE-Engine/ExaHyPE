@@ -10,7 +10,7 @@
 namespace {{ item }} {
 {%- endfor %}
 
-double updateSolutionWithRiemann(
+double riemannSolver(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                 solver,
   const {{STORAGE_PRECISION}}* NOALIAS const      QIn,
   {{STORAGE_PRECISION}}* NOALIAS const            QOut,

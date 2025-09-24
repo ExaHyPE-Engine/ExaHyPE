@@ -6,24 +6,18 @@
 tarch::logging::Log   exahype::limiting::swe::fvSWE::_log( "exahype::limiting::swe::fvSWE" );
 
 
-void exahype::limiting::swe::fvSWE::eigenvalues(
+double exahype::limiting::swe::fvSWE::maxEigenvalue(
   [[maybe_unused]] const double* const NOALIAS             Q, // Q[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
-  [[maybe_unused]] const int                                    normal,
-  [[maybe_unused]] double* const NOALIAS                   L
+  [[maybe_unused]] const int                                    normal
 ) {
-
   static constexpr double g = 9.81;
-
   const double u = Q[0] > 1e-5 ? Q[1 + normal] / Q[0] : 0.0;
   const double c = Q[0] > 1e-5 ? sqrt(g * Q[0]) : 0.0;
-  L[0]           = u;
-  L[1]           = u + c;
-  L[2]           = u - c;
-
+  return std::max(std::abs(u - c), std::abs(u + c));
 }
 
 void exahype::limiting::swe::fvSWE::flux(
@@ -35,7 +29,6 @@ void exahype::limiting::swe::fvSWE::flux(
   [[maybe_unused]] const int                                    normal,
   [[maybe_unused]] double* const NOALIAS                   F  // F[3]
 ) {
-
   static constexpr double g = 9.81;
 
   const double ih = Q[0] > 1e-5 ? 1.0 / Q[0] : 0.0;
@@ -102,5 +95,5 @@ double exahype::limiting::swe::fvSWE::solveRiemannProblem(
   FR[normal+1] -= 0.5*9.81*0.5*(QL[0]+QR[0])*(QR[3]-QL[3]);
 #endif
 
-  return smax;
+ return smax;
 }

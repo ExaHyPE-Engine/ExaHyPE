@@ -19,9 +19,6 @@ namespace {{ item }} {
  *
  * You might want to use a typedef to shorten the notation.
  */
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 class {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}} {
 public:
   static constexpr int NumberOfDistinctVariables = {{VARIABLE_NAMES|length}};
@@ -38,6 +35,3 @@ public:
   constexpr int operator [] (const int index) const noexcept { return Q[index]; }
   constexpr int operator () (const int index) const noexcept { return Q[index]; }
 };
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif

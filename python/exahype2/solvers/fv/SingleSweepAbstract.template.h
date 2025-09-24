@@ -54,9 +54,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     static std::string toString(SolverState);
 
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static constexpr int NumberOfFiniteVolumesPerAxisPerPatch = {{NUMBER_OF_VOLUMES_PER_AXIS}};
     static constexpr int NumberOfUnknowns                     = {{NUMBER_OF_UNKNOWNS}};
     static constexpr int NumberOfAuxiliaryVariables           = {{NUMBER_OF_AUXILIARY_VARIABLES}};
@@ -83,9 +80,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     static constexpr double MinAdmissibleCellH   = MinAdmissiblePatchH;
 
     {{SOLVER_CONSTANTS}}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
 
     {{CLASSNAME}}();
     ~{{CLASSNAME}}() = default;

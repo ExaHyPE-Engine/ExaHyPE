@@ -51,9 +51,7 @@ void writeCopyrightMessage() {
 
 #if defined(WITH_GPU)
     buildInfo += ", GPU Backend ";
-#if defined(WITH_GPU_OMP_TARGET)
-    buildInfo += "OpenMP Target";
-#elif defined(WITH_GPU_SYCL)
+#if defined(WITH_GPU_SYCL)
     buildInfo += "SYCL";
 #elif defined(WITH_GPU_CUDA)
     buildInfo += "CUDA";

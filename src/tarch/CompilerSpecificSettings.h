@@ -5,17 +5,21 @@
 #define COMPILER_HAS_UTS_NAME
 #define COMPILER_HAS_TIMESPEC
 
-#if !defined(__APPLE__)
+#if not defined(__APPLE__)
 #define COMPILER_HAS_SYSINFO
 #define COMPILER_HAS_PROC_STAT
 #endif
 
-#if !defined(LITTLE_ENDIAN)
+#if not defined(LITTLE_ENDIAN)
 #define LITTLE_ENDIAN
 #endif
 
-#if !defined(ALIGNMENT_ON_HEAP)
-#define ALIGNMENT_ON_HEAP 16
+#if not defined(ALIGNMENT)
+#define ALIGNMENT 16
+#endif
+
+#if not defined(SIMDLEN)
+#define SIMDLEN 2
 #endif
 
 #if defined(__NVCOMPILER)
@@ -26,8 +30,39 @@
 #define NOALIAS __restrict__
 #endif
 
-#if defined(__GNUC__) || defined(__clang__)
+#if defined(__GNUC__) or defined(__clang__)
 #define INLINE_METHOD inline __attribute__((always_inline))
 #else
 #define INLINE_METHOD inline
+#endif
+
+#define STR1(x) #x
+#define STR(x) STR1(x)
+#define _PRAGMA(x) _Pragma(STR(x))
+
+#if defined(WITH_OPENMP)
+#define SIMD(...) _Pragma(STR(omp simd __VA_ARGS__ simdlen(SIMDLEN)))
+#else
+// No OpenMP SIMD: tell compilers the loop is independent (ivdep)
+#if defined(__INTEL_COMPILER) or defined(__INTEL_LLVM_COMPILER)
+#define SIMD(...) _PRAGMA(ivdep)
+#elif defined(__clang__)
+#define SIMD(...) _PRAGMA(clang loop vectorize(enable))
+#elif defined(__GNUC__)
+#define SIMD(...) _PRAGMA(GCC ivdep)
+#elif defined(_MSC_VER)
+#define SIMD(...) __pragma(loop(ivdep))
+#else
+#define SIMD(...) /* no-op */
+#endif
+#endif
+
+#if defined(__clang__) or defined(__INTEL_COMPILER) or defined(__INTEL_LLVM_COMPILER)
+#define UNROLL(n) _PRAGMA(unroll n)
+#elif defined(__GNUC__) and (__GNUC__ >= 8)
+#define UNROLL(n) _PRAGMA(GCC unroll n)
+#elif defined(_MSC_VER)
+#define UNROLL(n) __pragma(loop(unroll(n)))
+#else
+#define UNROLL(n) /* no-op */
 #endif

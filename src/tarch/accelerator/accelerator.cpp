@@ -18,7 +18,7 @@ void* tarch::accelerator::allocateRawData(std::size_t sizeInBytes, [[maybe_unuse
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
 
   // Aligned alloc requires size to be a multiple of the alignment
-  void* data = std::aligned_alloc(ALIGNMENT_ON_HEAP, padSizeToAlignment(sizeInBytes, ALIGNMENT_ON_HEAP));
+  void* data = std::aligned_alloc(ALIGNMENT, padSizeToAlignment(sizeInBytes, ALIGNMENT));
   assertion(data);
 
   MemoryBlocks::getInstance().bookmarkMemoryBlock(data, sizeInBytes);

@@ -4,9 +4,6 @@
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Assertions.h"
 
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::internal::copySolution_LoopBody(
   const double* NOALIAS                QIn,
@@ -19,13 +16,7 @@ void exahype2::fd::internal::copySolution_LoopBody(
 ) {
   QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
 }
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif
 
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 template <class QOutEnumeratorType>
 void exahype2::fd::internal::clearSolution_LoopBody(
   int                                       patchIndex,
@@ -36,9 +27,6 @@ void exahype2::fd::internal::clearSolution_LoopBody(
 ) {
   QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = 0.0;
 }
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif
 
 template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(

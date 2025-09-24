@@ -20,11 +20,6 @@
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/utils/Globals.h"
 
-#if defined(WITH_GPU_OMP_TARGET)
-#include "exahype2/dg/rusanov/omp/Rusanov.h"
-#endif
-
-
 namespace exahype2 {
   namespace dg {
     namespace fluxaverage {

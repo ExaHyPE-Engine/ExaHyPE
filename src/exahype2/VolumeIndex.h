@@ -7,10 +7,6 @@
 #include "tarch/CompilerSpecificSettings.h"
 
 namespace exahype2 {
-  #if defined(WITH_GPU_OMP_TARGET)
-  #pragma omp declare target
-  #endif
-
   // Constructs a tarch::la::Vector<N, int> from variadic args
   template <int N, typename... Args>
   struct VolumeIndex {
@@ -64,8 +60,4 @@ namespace exahype2 {
     static_assert(N > 0, "volumeIndex() must be called with at least one argument");
     return VolumeIndex<N, Args...>::generate(args...);
   }
-
-  #if defined(WITH_GPU_OMP_TARGET)
-  #pragma omp end declare target
-  #endif
 } // namespace exahype2

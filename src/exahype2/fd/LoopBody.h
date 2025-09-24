@@ -29,12 +29,6 @@ namespace exahype2 {
       );
 
       namespace internal {
-        #if defined(WITH_OPENMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(WITH_GPU_OMP_TARGET))
-        #pragma omp declare simd
-        #endif
-        #if defined(WITH_GPU_OMP_TARGET)
-        #pragma omp declare target
-        #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void copySolution_LoopBody(
           const double* NOALIAS                QIn,
@@ -45,19 +39,10 @@ namespace exahype2 {
           double* NOALIAS                      QOut,
           const QOutEnumeratorType&                 QOutEnumerator
         );
-        #if defined(WITH_GPU_OMP_TARGET)
-        #pragma omp end declare target
-        #endif
 
         /**
          * The complicated way to write =0.
          */
-        #if defined(WITH_OPENMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(WITH_GPU_OMP_TARGET))
-        #pragma omp declare simd
-        #endif
-        #if defined(WITH_GPU_OMP_TARGET)
-        #pragma omp declare target
-        #endif
         template <class QOutEnumeratorType>
         static void clearSolution_LoopBody(
           int                                       patchIndex,
@@ -66,9 +51,6 @@ namespace exahype2 {
           double* NOALIAS                      QOut,
           const QOutEnumeratorType&                 QOutEnumerator
         );
-        #if defined(WITH_GPU_OMP_TARGET)
-        #pragma omp end declare target
-        #endif
 
         /**
          * Copy previous solution over into new time step and add source term

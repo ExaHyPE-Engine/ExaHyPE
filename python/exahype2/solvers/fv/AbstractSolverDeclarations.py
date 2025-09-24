@@ -63,19 +63,7 @@ class AbstractSolverDeclarations:
     ) = 0;
     {% endif %}
 
-    {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
-    virtual void eigenvalues(
-      const {{COMPUTE_PRECISION}}* const NOALIAS    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS, double>&  x,
-      const tarch::la::Vector<DIMENSIONS, double>&  h,
-      const double                                  t,
-      const double                                  dt,
-      const int                                     normal,
-      {{COMPUTE_PRECISION}}* const NOALIAS          L
-    ) = 0;
-    {% endif %}
-
-    {% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" and EIGENVALUES_IMPLEMENTATION=="<none>" %}
+    {% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
     virtual double maxEigenvalue(
       const {{COMPUTE_PRECISION}}* const NOALIAS    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<DIMENSIONS, double>&  x,

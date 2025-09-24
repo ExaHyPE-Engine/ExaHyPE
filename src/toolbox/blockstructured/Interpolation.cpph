@@ -1038,7 +1038,7 @@ void toolbox::blockstructured::
 
       tarch::la::Vector<DIMENSIONS, int> amendedSourceVolume = sourceVolume;
       if (isFromUnitialisedDiagonal) {
-        #pragma unroll
+        UNROLL(DIMENSIONS)
         for (int d = 0; d < DIMENSIONS; d++) {
           amendedSourceVolume(d) = std::max(amendedSourceVolume(d), haloSourcePatch);
           amendedSourceVolume(d) = std::min(amendedSourceVolume(d), haloSourcePatch + numberOfDoFsPerAxisInSourcePatch - 1);

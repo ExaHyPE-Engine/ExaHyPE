@@ -27,6 +27,7 @@ my_solver.set_implementation(
     initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
     boundary_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
     flux=exahype2.solvers.PDETerms.User_Defined_Implementation,
+    max_eigenvalue=exahype2.solvers.PDETerms.User_Defined_Implementation,
 )
 
 exahype2_project = exahype2.Project(

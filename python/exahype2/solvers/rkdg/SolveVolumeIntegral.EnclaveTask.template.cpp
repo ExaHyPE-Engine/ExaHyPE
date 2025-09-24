@@ -396,13 +396,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   //
   bool foundOffloadingBranch = false;
 
-  #if defined(WITH_GPU_OMP_TARGET)
-  if (targetDevice>=0) {
-    foundOffloadingBranch = true;
-    ::exahype2::dg::{{KERNEL_NAMESPACE}}::omp::{{FUSED_VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS_GPU}}
-  }
-  #endif
-
   #if defined(WITH_GPU_SYCL)
   if (targetDevice>=0 or targetDevice==Host) {
     foundOffloadingBranch = true;

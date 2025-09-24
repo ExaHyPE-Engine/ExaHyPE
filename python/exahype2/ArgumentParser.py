@@ -19,28 +19,12 @@ class ArgumentParser(argparse.ArgumentParser):
             help="Number of space dimensions.",
         )
         self.add_argument(
-            "-dt",
-            "--time-step-size",
-            type=float,
-            default=0.01,
-            help="Time step size for fixed time-stepping.",
-        )
-        self.add_argument(
-            "-cfl",
-            "--time-step-relaxation",
-            type=float,
-            default=0.5,
-            help="Time step relaxation safety factor for adaptive time-stepping.",
-        )
-
-        self.add_argument(
             "-o",
             "--output",
             type=str,
             default="solutions",
             help="Output path for project solutions output. The project will create a new folder at the given path. Default is 'solutions'.",
         )
-
         self.add_argument(
             "-pbc-x",
             "--periodic-boundary-conditions-x",
@@ -59,7 +43,6 @@ class ArgumentParser(argparse.ArgumentParser):
             action="store_true",
             help="Use periodic boundary conditions in the z-axis.",
         )
-
         self.add_argument(
             "-m",
             "--build-mode",
@@ -67,7 +50,6 @@ class ArgumentParser(argparse.ArgumentParser):
             default=peano4.output.CompileModes[0],  # Release
             help="|".join(peano4.output.CompileModes),
         )
-
         self.add_argument(
             "-et",
             "--end-time",
@@ -82,7 +64,6 @@ class ArgumentParser(argparse.ArgumentParser):
             default=20,
             help="Number of snapshots (plots).",
         )
-
         self.add_argument(
             "-dofs",
             "--degrees-of-freedom",
@@ -93,7 +74,7 @@ class ArgumentParser(argparse.ArgumentParser):
         self.add_argument(
             "-md",
             "--min-depth",
-            type=float,
+            type=int,
             default=6,
             help="Determines maximum size of a single cell on each axis.",
         )
@@ -104,7 +85,6 @@ class ArgumentParser(argparse.ArgumentParser):
             default=0,
             help="Number of AMR grid levels on top of max. size of a cell.",
         )
-
         self.add_argument(
             "-lbq",
             "--load-balancing-quality",
@@ -125,14 +105,12 @@ class ArgumentParser(argparse.ArgumentParser):
             default=10,
             help="Time interval to print time step information.",
         )
-
         self.add_argument(
             "-td",
             "--target-device",
             default="tarch::accelerator::Device::DefaultDevice",
             help="Target device for GPU offloading.",
         )
-
         self.add_argument(
             "-enclave",
             "--enclave-tasking",
@@ -146,14 +124,12 @@ class ArgumentParser(argparse.ArgumentParser):
             default=1,
             help="Number of fused enclave tasks to offload asynchronously.",
         )
-
         self.add_argument(
             "-fpe",
             "--fpe",
             action="store_true",
             help="Enable a floating-point exception handler.",
         )
-
         self.add_argument(
             "-pl",
             "--plotter",

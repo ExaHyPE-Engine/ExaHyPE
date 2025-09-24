@@ -14,6 +14,9 @@
 {% macro loopOverPatches(operation) %}
   {{ operation.setup_patchdata_variables() }}
 
+  {% if MULTITHREADING == "ON" %}
+  #pragma omp parallel for schedule(static)
+  {% endif %}
   for (int patchIndex = 0; patchIndex < numberOfPatches; ++patchIndex) {
     {{ operation.setup_patch_loop() }}
     {{ loopOverCells(operation) | indent(2) }}

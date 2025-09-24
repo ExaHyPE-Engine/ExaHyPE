@@ -22,9 +22,6 @@ namespace exahype2 {
          * 2 neighbouring cells on each side of the central one. The computation requires    
    * us to have access to 2 halo layers on each side of a given patch.
          */
-        #if defined(WITH_OPENMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(WITH_GPU_OMP_TARGET))
-        #pragma omp declare simd
-        #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void computeAuxiliaryVariables_LoopBody(
           double* NOALIAS                           QIn,
@@ -44,9 +41,6 @@ namespace exahype2 {
          * scheme with a five-point stancil. This requires one to have access to at 
          * least two halo layers on each side of a given patch.
          */
-        #if defined(WITH_OPENMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(WITH_GPU_OMP_TARGET))
-        #pragma omp declare simd
-        #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void computeDifferentialSourceTerm_LoopBody(
           const double* NOALIAS                     QIn,
@@ -116,12 +110,6 @@ namespace exahype2 {
 	 * QDiffSrcEnumerator, which is identical to QOutEnumerator, is aware that we
          * work with volume centres.
          */
-        #if defined(WITH_OPENMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(WITH_GPU_OMP_TARGET))
-        #pragma omp declare simd
-        #endif
-        #if defined(WITH_GPU_OMP_TARGET)
-        #pragma omp declare target
-        #endif
         template <typename QOutEnumeratorType>
         static void updateSolutionWithDifferentialSourceTerm_LoopBody(
           const double* NOALIAS                   QDiffSrcX,
@@ -137,9 +125,6 @@ namespace exahype2 {
           double* NOALIAS                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         )
-        #if defined(WITH_GPU_OMP_TARGET)
-        #pragma omp end declare target
-        #endif
 
         /**
          * This function calculates the Kreiss Oliger dissipation term that is needed
@@ -148,9 +133,6 @@ namespace exahype2 {
          * finite difference scheme used in other parts of the equations. It requires
 	 * us to have access to at least 3 halo layers on each side of a given patch.
          */
-        #if defined(WITH_OPENMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(WITH_GPU_OMP_TARGET))
-        #pragma omp declare simd
-        #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void computeKreissOligerDissipationTerm_LoopBody(
           const double* NOALIAS                     QIn,
@@ -174,12 +156,6 @@ namespace exahype2 {
 	 * QKODspEnumerator, which is identical to QOutEnumerator, is aware that we
          * work with volume centres.
          */
-        #if defined(WITH_OPENMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(WITH_GPU_OMP_TARGET))
-        #pragma omp declare simd
-        #endif
-        #if defined(WITH_GPU_OMP_TARGET)
-        #pragma omp declare target
-        #endif
         template <typename QOutEnumeratorType>
         static void updateSolutionWithKODissipationTerm_LoopBody(
           const double                                 KOSigma,
@@ -196,10 +172,6 @@ namespace exahype2 {
           double* NOALIAS                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         )
-        #if defined(WITH_GPU_OMP_TARGET)
-        #pragma omp end declare target
-        #endif
-
 
         /**
          * This routine computes @f$ \partial_i F_i @f$ where i is the
@@ -213,9 +185,6 @@ namespace exahype2 {
          * this temporary array, before we scatter it into the image.
          *
          */
-        #if defined(WITH_OPENMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(WITH_GPU_OMP_TARGET))
-        #pragma omp declare simd
-        #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void computeFlux_LoopBody(
           const double* NOALIAS                   QIn,
@@ -260,12 +229,6 @@ namespace exahype2 {
          * We therefore simply can take these flux components, scale them
          * with dt, and add them to the solution.
          */
-        #if defined(WITH_OPENMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(WITH_GPU_OMP_TARGET))
-        #pragma omp declare simd
-        #endif
-        #if defined(WITH_GPU_OMP_TARGET)
-        #pragma omp declare target
-        #endif
         template <typename QOutEnumeratorType>
         static void updateSolutionWithFlux_LoopBody(
           const double* NOALIAS                   tempFluxX,
@@ -281,9 +244,6 @@ namespace exahype2 {
           double* NOALIAS                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         )
-        #if defined(WITH_GPU_OMP_TARGET)
-        #pragma omp end declare target
-        #endif
       }
     }
   }

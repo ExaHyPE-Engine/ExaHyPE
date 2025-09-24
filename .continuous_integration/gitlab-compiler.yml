@@ -15,7 +15,7 @@ GCC:
     CXX: "g++"
     IMAGE_TAG: "${IMAGE_GCC}"
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
-                            -DWITH_MULTITHREADING=no \
+                            -DWITH_MULTITHREADING=OFF \
                             -DWITH_MPI=OFF"
   trigger:
     include:
@@ -30,7 +30,7 @@ GCC_SharedOMP_MPI:
     CXX: "g++"
     IMAGE_TAG: "${IMAGE_GCC}"
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
-                            -DWITH_MULTITHREADING=omp \
+                            -DWITH_MULTITHREADING=ON \
                             -DWITH_MPI=ON"
   trigger:
     include:
@@ -45,7 +45,7 @@ Intel:
     CXX: "icpx"
     IMAGE_TAG: "${IMAGE_INTEL}"
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
-                            -DWITH_MULTITHREADING=no \
+                            -DWITH_MULTITHREADING=OFF \
                             -DWITH_MPI=OFF"
   trigger:
     include:
@@ -60,7 +60,7 @@ Intel_SharedOMP_MPI:
     CXX: "icpx"
     IMAGE_TAG: "${IMAGE_INTEL}"
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
-                            -DWITH_MULTITHREADING=omp \
+                            -DWITH_MULTITHREADING=ON \
                             -DWITH_MPI=ON"
   trigger:
     include:
@@ -75,7 +75,7 @@ LLVM:
     CXX: "clang++"
     IMAGE_TAG: "${IMAGE_LLVM}"
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
-                            -DWITH_MULTITHREADING=no \
+                            -DWITH_MULTITHREADING=OFF \
                             -DWITH_MPI=OFF"
   trigger:
     include:
@@ -90,7 +90,7 @@ LLVM_SharedOMP_MPI:
     CXX: "clang++"
     IMAGE_TAG: "${IMAGE_LLVM}"
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
-                            -DWITH_MULTITHREADING=omp \
+                            -DWITH_MULTITHREADING=ON \
                             -DWITH_MPI=ON"
   trigger:
     include:
@@ -105,7 +105,7 @@ NVIDIA:
     CXX: "nvc++"
     IMAGE_TAG: "${IMAGE_NVIDIA}"
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
-                            -DWITH_MULTITHREADING=no \
+                            -DWITH_MULTITHREADING=OFF \
                             -DWITH_MPI=OFF"
   trigger:
     include:
@@ -120,7 +120,7 @@ NVIDIA_SharedOMP_MPI:
     CXX: "nvc++"
     IMAGE_TAG: "${IMAGE_NVIDIA}"
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
-                            -DWITH_MULTITHREADING=omp \
+                            -DWITH_MULTITHREADING=ON \
                             -DWITH_MPI=ON"
   trigger:
     include:
@@ -135,7 +135,7 @@ AMD:
     CXX: "amdclang++"
     IMAGE_TAG: "${IMAGE_AMD}"
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
-                            -DWITH_MULTITHREADING=no \
+                            -DWITH_MULTITHREADING=OFF \
                             -DWITH_MPI=OFF"
   trigger:
     include:

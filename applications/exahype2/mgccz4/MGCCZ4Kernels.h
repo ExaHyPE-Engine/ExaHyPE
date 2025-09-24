@@ -8,9 +8,6 @@
 namespace examples {
   namespace exahype2 {
     namespace mgccz4 {
-      #if defined(WITH_GPU_OMP_TARGET)
-      #pragma omp declare target
-      #endif
       void ncp(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal,
         const int MGCCZ4LapseType,
         const double MGCCZ4ds,
@@ -21,13 +18,7 @@ namespace examples {
         const double MGCCZ4sk,
         const double MGCCZ4xi,
         const double MGCCZ4mu);
-      #if defined(WITH_GPU_OMP_TARGET)
-      #pragma omp end declare target
-      #endif
 
-      #if defined(WITH_GPU_OMP_TARGET)
-      #pragma omp declare target
-      #endif
       void source(double* S, const double* const Q,
         const int MGCCZ4LapseType,
         const double MGCCZ4ds,
@@ -42,33 +33,12 @@ namespace examples {
         const double MGCCZ4k1,
         const double MGCCZ4k2,
         const double MGCCZ4k3);
-      #if defined(WITH_GPU_OMP_TARGET)
-      #pragma omp end declare target
-      #endif
 
-      #if defined(WITH_GPU_OMP_TARGET)
-      #pragma omp declare target
-      #endif
       void admconstraints(double* constraints, const double* const Q, const double* const gradQSerialised);
-      #if defined(WITH_GPU_OMP_TARGET)
-      #pragma omp end declare target
-      #endif
 
-      //#if defined(WITH_GPU_OMP_TARGET)
-      //#pragma omp declare target
-      //#endif
       //void eigenvalues(double* lambda, const double* const Q, const int normal);
-      //#if defined(WITH_GPU_OMP_TARGET)
-      //#pragma omp end declare target
-      //#endif
-	
-      #if defined(WITH_GPU_OMP_TARGET)
-      #pragma omp declare target
-      #endif
+
       void enforceMGCCZ4constraints(double * luh);
-      #if defined(WITH_GPU_OMP_TARGET)
-      #pragma omp end declare target
-      #endif
     }
   }
 }

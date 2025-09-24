@@ -24,11 +24,6 @@ namespace tarch {
 #elif defined(WITH_GPU_SYCL)
 #define GPU_CALLABLE_METHOD
   void gpuAbort();
-#elif defined(WITH_GPU_OMP_TARGET)
-#define GPU_CALLABLE_METHOD
-#pragma omp declare target
-  void gpuAbort();
-#pragma omp end declare target
 #elif defined(WITH_GPU_KOKKOS)
 #define GPU_CALLABLE_METHOD KOKKOS_FUNCTION
 #else

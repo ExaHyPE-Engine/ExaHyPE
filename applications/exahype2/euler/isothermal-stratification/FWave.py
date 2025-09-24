@@ -111,7 +111,7 @@ fWave = r"""
 
   /***********************************************
    * Delta values from Bale et al. Equation 1.17 *
-   **********************************************/ 
+   **********************************************/
 
   tarch::la::Vector<NumberOfUnknowns, double> delta(0.0);
 
@@ -123,8 +123,8 @@ fWave = r"""
   /****************************************************************
    * Right Eigenvectors from LeVeque Chapter 18.8, Equation 18.48 *
    ***************************************************************/
-  
-  // @todo figure out for 3D 
+
+  // @todo figure out for 3D
   // => github.com/clawpack/riemann/blob/master/src/rpn3_euler.f90
 
   const int transverse = normal == 0 ? 1 : 0;
@@ -149,7 +149,6 @@ fWave = r"""
   r3(1) = roeAveragedVelocities(0);
   r3(2) = roeAveragedVelocities(1);
   r3(3) = qSquared;
-  
 
   // fourth right Eigenvector
   tarch::la::Vector<NumberOfUnknowns, double> r4(0.0);
@@ -172,11 +171,11 @@ fWave = r"""
               + roeAveragedVelocities(transverse) * delta(1 + transverse)
               - delta(3)
               ) / (HRoe - qSquared);
-    
+
   beta(1) = delta(1 + transverse) - roeAveragedVelocities(transverse) * delta(0);
 
   beta(3) = (
-              delta(1 + normal) 
+              delta(1 + normal)
               + (speedOfSoundRoe - roeAveragedVelocities(normal)) * delta(0)
               - speedOfSoundRoe * beta(2)
               ) / (2 * speedOfSoundRoe);
@@ -188,8 +187,8 @@ fWave = r"""
    ***************/
 
   const tarch::la::Vector<NumberOfUnknowns, double> fWaves[NumberOfUnknowns] = {
-                                                                                  beta(0) * r1, 
-                                                                                  beta(1) * r2, 
+                                                                                  beta(0) * r1,
+                                                                                  beta(1) * r2,
                                                                                   beta(2) * r3,
                                                                                   beta(3) * r4
                                                                                 };
@@ -206,9 +205,8 @@ fWave = r"""
       for (int unknown = 0; unknown < NumberOfUnknowns; ++unknown) {
         FR[unknown] -= fWaves[wave](unknown);
       }
-    } 
-  } 
+    }
+  }
 
-  // return largest absolute Eigenvalue
   return tarch::la::maxAbs(roeEigenvalues);
 """

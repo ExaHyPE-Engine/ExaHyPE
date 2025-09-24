@@ -212,17 +212,6 @@ function, keep the original one and add a second one which is
     automatically defined in the abstract base class which 's Python API
     generates.
 
--   is embedded into
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #if defined(WITH_GPU_OMP_TARGET) 
-    #pragma omp declare target
-    #endif
-    my new static function variants
-    #if defined(WITH_GPU_OMP_TARGET) #pragma omp end declare target
-    #endif
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Though you can leave the declare annotations away if you use SYCL only.
-
 Very often, the standard flux and eigenvalue routines can invoke the
 static variants and you can thus eliminate code redundancies. For
 example, you might have the normal flux function and a static flux

@@ -26,7 +26,9 @@ define_radial_dam = """
   const bool isDryRing = distanceFromOrigin >= 2 * DAM_RADIUS and distanceFromOrigin <= 3 * DAM_RADIUS;
 """
 
-initial_conditions = define_radial_dam + """
+initial_conditions = (
+    define_radial_dam
+    + """
   constexpr double INITIAL_WATER_HEIGHT_INSIDE_DAM = 1.1;
   constexpr double INITIAL_WATER_HEIGHT_OUTSIDE_DAM = 1.0;
   constexpr double BATHYMETRY_DRY_RING = 1.2;
@@ -43,6 +45,7 @@ initial_conditions = define_radial_dam + """
 
   Q[Shortcuts::z] = isDryRing ? BATHYMETRY_DRY_RING : 0.0;
 """
+)
 
 boundary_conditions = """
   Qoutside[Shortcuts::h]  = Qinside[Shortcuts::h];
@@ -51,13 +54,19 @@ boundary_conditions = """
   Qoutside[Shortcuts::z]  = Qinside[Shortcuts::z];
 """
 
-refinement_criterion = define_radial_dam + """
+refinement_criterion = (
+    define_radial_dam
+    + """
   return isInsideDam ? ::exahype2::RefinementCommand::Refine : ::exahype2::RefinementCommand::Keep;
 """
+)
 
-limiting_criterion = define_radial_dam + """
+limiting_criterion = (
+    define_radial_dam
+    + """
   return distanceFromOrigin < DAM_RADIUS * 2; // Everything outside the dam (includes the dry ring) shall be limited
 """
+)
 
 parser = exahype2.ArgumentParser()
 parser.set_defaults(
@@ -72,7 +81,7 @@ constants = {
 }
 
 size = [10.0, 10.0]
-max_h = (1.1 * min(size) / (3.0**args.min_depth))
+max_h = 1.1 * min(size) / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
 
 aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
@@ -82,7 +91,7 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     auxiliary_variables=0,
     min_cell_h=min_h,
     max_cell_h=max_h,
-    time_step_relaxation=args.time_step_relaxation,
+    time_step_relaxation=0.5,
 )
 
 aderdg_solver.set_implementation(
@@ -91,13 +100,16 @@ aderdg_solver.set_implementation(
     refinement_criterion=refinement_criterion,
     flux=flux,
     ncp=nonconservative_product,
-    max_eigenvalue=eigenvalue + """
+    max_eigenvalue=eigenvalue
+    + """
   return sFlux;
 """,
 )
 
 aderdg_solver.set_plotter(args.plotter)
-aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)
+aderdg_solver.add_kernel_optimisations(
+    is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
+)
 
 fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="FVSolver",
@@ -106,7 +118,7 @@ fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     auxiliary_variables={"z": 1},
     min_volume_h=min_h,
     max_volume_h=max_h,
-    time_step_relaxation=args.time_step_relaxation,
+    time_step_relaxation=0.5,
 )
 
 fv_solver.set_implementation(
@@ -121,7 +133,7 @@ limiting_solver = exahype2.solvers.limiting.StaticLimiting(
     name="LimitingSolver",
     regular_solver=aderdg_solver,
     limiting_solver=fv_solver,
-    limiting_criterion_implementation=limiting_criterion
+    limiting_criterion_implementation=limiting_criterion,
 )
 
 project = exahype2.Project(
@@ -154,13 +166,15 @@ project.set_global_simulation_parameters(
     ],
 )
 
-project.set_load_balancer(f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees}, {args.trees})")
-project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
+project.set_load_balancer(
+    f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees}, {args.trees})"
+)
+project.set_Peano4_installation(
+    "../../../../", mode=peano4.output.string_to_mode(args.build_mode)
+)
 project = project.generate_Peano4_project(verbose=False)
 for const_name, const_info in constants.items():
     const_val, const_type = const_info
-    project.constants.export_constexpr_with_type(
-        const_name, str(const_val), const_type
-    )
+    project.constants.export_constexpr_with_type(const_name, str(const_val), const_type)
 project.set_fenv_handler(args.fpe)
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

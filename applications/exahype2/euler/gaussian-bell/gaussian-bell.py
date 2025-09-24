@@ -52,12 +52,10 @@ analytical_solution = """
   solution[Shortcuts::rhoE] = PRESSURE / (GAMMA - 1.0) + 0.5 * (momenta * momenta) / solution[Shortcuts::rho];
 """
 
-parser = exahype2.ArgumentParser(
-    "ExaHyPE 2 Euler Gaussian Bell Argument Parser"
-)
+parser = exahype2.ArgumentParser("ExaHyPE 2 - Euler Gaussian Bell Argument Parser")
 parser.set_defaults(
     min_depth=6,
-    #end_time=2.0,
+    # end_time=2.0,
     degrees_of_freedom=16,
     periodic_boundary_conditions_x=True,
     periodic_boundary_conditions_y=True,
@@ -76,7 +74,7 @@ riemann_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
     auxiliary_variables=0,
     min_volume_h=min_h,
     max_volume_h=max_h,
-    time_step_relaxation=args.time_step_relaxation,
+    time_step_relaxation=0.5,
 )
 
 riemann_solver.set_implementation(

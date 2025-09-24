@@ -24,7 +24,7 @@ fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     auxiliary_variables={"b": 1},
     min_volume_h=min_h,
     max_volume_h=max_h,
-    time_step_relaxation=args.time_step_relaxation,
+    time_step_relaxation=0.5,
     number_of_enclave_tasks=args.ntasks,
 )
 

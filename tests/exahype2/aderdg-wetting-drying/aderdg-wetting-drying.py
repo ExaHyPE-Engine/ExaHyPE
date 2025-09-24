@@ -118,7 +118,7 @@ fvSolver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
 fvSolver.set_implementation(
   initial_conditions    = "", #get set by ader solver
   boundary_conditions   = boundary_conditions,
-  eigenvalues           = exahype2.solvers.PDETerms.User_Defined_Implementation,
+  max_eigenvalue        = exahype2.solvers.PDETerms.User_Defined_Implementation,
   flux                  = exahype2.solvers.PDETerms.User_Defined_Implementation,
   riemann_solver        = exahype2.solvers.PDETerms.User_Defined_Implementation
 )

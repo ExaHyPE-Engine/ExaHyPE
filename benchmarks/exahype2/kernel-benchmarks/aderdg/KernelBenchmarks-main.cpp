@@ -405,17 +405,6 @@ void runBenchmarks(int numberOfCells) {
     );
   } // AssessHostKernels
 
-//   if constexpr (AssessDeviceKernels) {
-// #if defined(WITH_GPU_OMP_TARGET)
-
-// #endif // WITH_GPU_OMP_TARGET
-
-// #if defined(WITH_GPU_SYCL)
-
-// #endif // WITH_GPU_SYCL
-
-//   }
-
   for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
     tarch::freeMemory(cellData.QIn[cellIndex], tarch::MemoryLocation::Heap);
     tarch::freeMemory(cellData.QOut[cellIndex], tarch::MemoryLocation::Heap);

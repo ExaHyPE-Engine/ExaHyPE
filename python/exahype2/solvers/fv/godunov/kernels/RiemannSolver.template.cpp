@@ -5,9 +5,9 @@
 #include "exahype2/VolumeIndex.h"
 #include "exahype2/fv/PatchUtils.h"
 
-{% import 'Loop.template.h' as patch with context %}{# get template macros #}
+{% from 'ComputeFluxesAndPerformTimeStep.macro.h' import ComputeFluxesAndPerformTimeStep with context %}
 
-double {{FULL_QUALIFIED_NAMESPACE}}::updateSolutionWithRiemann(
+double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&  solver,
   const {{STORAGE_PRECISION}}* NOALIAS const        QIn,
   {{STORAGE_PRECISION}}* NOALIAS const              QOut,
@@ -16,15 +16,23 @@ double {{FULL_QUALIFIED_NAMESPACE}}::updateSolutionWithRiemann(
   const tarch::la::Vector<DIMENSIONS, double>&      patchCentre,
   const tarch::la::Vector<DIMENSIONS, double>&      patchSize
 ) {
-  {% if COMPUTE_MAX_EIGENVALUE==True %}
+{% if COMPUTE_MAX_EIGENVALUE %}
   double maxEigenvalueAfterTimeStep = 0.0;
-  {% endif %}
+{% endif %}
 
-  {{ patch.loopOverVolumes() }}
+{% if DIMENSIONS==3 %}
+  for (int z = 0; z < {{NUMBER_OF_VOLUMES_PER_AXIS}}; ++z) {
+{% endif %}
+    for (int y = 0; y < {{NUMBER_OF_VOLUMES_PER_AXIS}}; ++y) {
+      for (int x = 0; x < {{NUMBER_OF_VOLUMES_PER_AXIS}}; ++x) {
+        {{ ComputeFluxesAndPerformTimeStep() | indent(6)}}
+      } // x
+    } // y
+{% if DIMENSIONS==3 %}  } // z {% endif %}
 
-  {% if COMPUTE_MAX_EIGENVALUE==True %}
+{% if COMPUTE_MAX_EIGENVALUE %}
   return maxEigenvalueAfterTimeStep;
-  {% else %}
+{% else %}
   return 0.0;
-  {% endif %}
+{% endif %}
 }

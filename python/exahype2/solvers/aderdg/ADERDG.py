@@ -194,7 +194,7 @@ class ADERDG(object):
         self._diffusive_source_term_implementation= PDETerms.None_Implementation
         self._point_sources_implementation        = PDETerms.None_Implementation
         self._init_point_sources_implementation   = PDETerms.None_Implementation
-        self._max_eigenvalue_implementation       = PDETerms.User_Defined_Implementation
+        self._max_eigenvalue_implementation       = PDETerms.None_Implementation
         self._adjust_solution_implementation      = PDETerms.None_Implementation
         self._material_param_implementation       = PDETerms.None_Implementation
         self._precision_criterion_implementation  = PDETerms.None_Implementation
@@ -911,8 +911,20 @@ Material parameters:    """
             self._material_param_implementation != PDETerms.None_Implementation
             or self._point_sources_implementation != PDETerms.None_Implementation
         ):
-            raise Exception(
+            raise AssertionError(
                 "Material parameters and point sources are currently only available for linear generated kernels."
+            )
+
+        if (
+            (
+                self._riemann_solver_implementation == PDETerms.None_Implementation
+                or self.__class__.__name__ == "GlobalAdaptiveTimeStep"
+            )
+            and self._max_eigenvalue_implementation == PDETerms.None_Implementation
+        ):
+            raise AssertionError(
+                f"[{self._name}] max_eigenvalue implementation is required when no Riemann solver is used "
+                f"or when global adaptive time stepping is enabled."
             )
 
         generate_kernels(solver=self, output=output, subdirectory=subdirectory)

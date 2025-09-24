@@ -171,11 +171,9 @@ void examples::exahype2::mgccz4::FiniteVolumeMGCCZ4::nonconservativeProduct(
   int                                          normal,
   double * NOALIAS BgradQ // BgradQ[64]
 )  {
-#if !defined(WITH_GPU_OMP_TARGET)
   logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, volumeH, t, normal );
   assertion( normal>=0 );
   assertion( normal<DIMENSIONS );
-#endif
   double gradQSerialised[NumberOfUnknowns*3];
   for (int i=0; i<NumberOfUnknowns; i++) {
     gradQSerialised[i+0*NumberOfUnknowns] = 0.0;
@@ -186,10 +184,8 @@ void examples::exahype2::mgccz4::FiniteVolumeMGCCZ4::nonconservativeProduct(
   }
   //ncp(BgradQ, Q, gradQSerialised, normal, MGCCZ4LapseType, MGCCZ4ds, MGCCZ4c, MGCCZ4e, MGCCZ4f, MGCCZ4bs, MGCCZ4sk, MGCCZ4xi, MGCCZ4mu);
   pdencp_(BgradQ, Q, gradQSerialised);
-#if !defined(WITH_GPU_OMP_TARGET)
   for (int i=0; i<NumberOfUnknowns; i++) {
     nonCriticalAssertion4( std::isfinite(BgradQ[i]), i, faceCentre, t, normal );
   }
   logTraceOut( "nonconservativeProduct(...)" );
-#endif
 }

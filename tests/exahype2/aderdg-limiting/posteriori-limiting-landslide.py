@@ -276,8 +276,8 @@ riemann_solver_aderdg = f"""
     double ncp[{len(unknowns)}];
     nonconservativeProduct(AveragedQ, DeltaQ, x, h, t, dt, direction, ncp);
     for (int varId = 0; varId < {len(unknowns)}; ++varId) {{
-        FL[xy*{len(unknowns)}+varId] += 0.5 * ncp[varId];
-        FR[xy*{len(unknowns)}+varId] -= 0.5 * ncp[varId];
+      FL[xy*{len(unknowns)}+varId] += 0.5 * ncp[varId];
+      FR[xy*{len(unknowns)}+varId] -= 0.5 * ncp[varId];
     }}
     FL[xy*{len(unknowns)}+{len(unknowns) - 1}] = 0.0;
     FR[xy*{len(unknowns)}+{len(unknowns) - 1}] = 0.0;
@@ -303,6 +303,7 @@ riemann_solver_fv = f"""
     FR[varId] = FL[varId];
   }}
 
+/*
   //Contribution from NCP
   double AveragedQ[{len(unknowns)}];
   double DeltaQ[{len(unknowns)}];
@@ -313,13 +314,15 @@ riemann_solver_fv = f"""
   double ncp[{len(unknowns)}];
   nonconservativeProduct(AveragedQ, DeltaQ, x, h, t, dt, normal, ncp);
   for (int varId = 0; varId < {len(unknowns)}; ++varId) {{
-      FL[varId] += 0.5 * ncp[varId];
-      FR[varId] -= 0.5 * ncp[varId];
+    FL[varId] += 0.5 * ncp[varId];
+    FR[varId] -= 0.5 * ncp[varId];
   }}
+*/
 
   // the elevation should be constant
   FL[{len(unknowns) - 1}] = 0.0;
   FR[{len(unknowns) - 1}] = 0.0;
+
   return smax;
 """
 
