@@ -49,7 +49,7 @@ def generate_kernels(
 
     solver._compute_kernel_call = jinja2.Template(
         """
-    kernels::{{SOLVER_NAME}}::updateSolutionWithRiemann(
+    kernels::{{SOLVER_NAME}}::riemannSolver(
       repositories::{{SOLVER_INSTANCE}},
       QIn,
       QOut,
@@ -83,9 +83,11 @@ def generate_fused_kernels(
 
     generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
         headfile_template=kernels_templates_prefix
-        + f"{riemann_solver_file}.template.h",
+            + f"{riemann_solver_file}.template.h",
         cppfile_template=kernels_templates_prefix
-        + f"{riemann_solver_file}.template.cpp",
+            + f"{riemann_solver_file}.template"
+            + (f".{d['GPU']}" if d["GPU"] != "no" else "")
+            + ".cpp",
         classname=kernels_output_path + f"/{riemann_solver_file}",
         namespace=kernels_namespace,
         subdirectory=subdirectory + ".",
@@ -106,7 +108,7 @@ def generate_fused_kernels(
 
     solver._fused_compute_kernel_call = jinja2.Template(
         """
-    kernels::{{SOLVER_NAME}}::updateSolutionWithRiemannFused(
+    kernels::{{SOLVER_NAME}}::riemannSolverFused(
       repositories::{{SOLVER_INSTANCE}},
       patchData,
       TARGET_DEVICE

@@ -87,21 +87,6 @@ function, keep the original one and add a second one which is
     overload w.r.t. static vs. not static. `Offloadable` is
     automatically defined in the abstract base class which 's Python API
     generates.
--   is embedded into
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#if defined(WITH_GPU_OMP_TARGET) 
-#pragma omp declare target
-#endif
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    my new static function variants
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#if defined(WITH_GPU_OMP_TARGET) 
-#pragma omp end declare target
-#endif
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Though you can leave these annotations away if you use SYCL only.
-
-
 
 Most ExaHyPE solvers allow you to insert the realisation of a routine directly
 from the Python code. In this case, the call ends up the AbstractMySolver
@@ -139,20 +124,6 @@ strings, on the Python level.
 - `self._fused_compute_kernel_call_gpu` is the equivalent to 
   `_fused_compute_kernel_call_cpu` which the code uses when it decides to 
   offload a bunch of cells to an accelerator.
-
-
-By default, these variants should point to reasonable variants once you 
-switch on stateless operators and the variants are typically constructed
-in a way that they distinguish the various backends we support. That is,
-they yield a string of the form 
-
-~~~~~~~~~~~~~~~~~~~~~~
-#if defined(WITH_GPU_SYCL)
-exahype::fv::rusanov::sycl::timeStepWithRusanovPatchwiseStateless(...)
-#else if defined(WITH_GPU_OMP_TARGET)
-...
-#endif
-~~~~~~~~~~~~~~~~~~~~~~
 
 which automatically picks a working default backend depending on your 
 configuration.
@@ -249,15 +220,6 @@ very simple to digest:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 bool benchmarks::exahype2::ccz4::tasks::CCZ4FVEnclaveTask::fuse(const std::list<Task*>& otherTasks, int targetDevice) {
   ...
-  #if defined(WITH_GPU_OMP_TARGET)
-    if (targetDevice >= 0) {
-      foundOffloadingBranch = true;
-      ::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseHeapStateless<
-      ...
-      >(targetDevice, patchData);
-    }
-  #endif
-
   #if defined(WITH_GPU_SYCL)
     if (targetDevice >= 0 or targetDevice == Host) {
       foundOffloadingBranch = true;

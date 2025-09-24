@@ -10,9 +10,6 @@
 #include <string.h>
 
 
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 void examples::exahype2::mgccz4::enforceMGCCZ4constraints(double * luh)
 {
     double g_cov[3][3] = { {luh[0], luh[1], luh[2]}, {luh[1], luh[3], luh[4]}, {luh[2], luh[4], luh[5]} };
@@ -102,13 +99,7 @@ void examples::exahype2::mgccz4::enforceMGCCZ4constraints(double * luh)
     luh[51] = DD[2][1][2];
     luh[52] = DD[2][2][2];
 }
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif
 
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 void examples::exahype2::mgccz4::source(double* S, const double* const Q,
       const int MGCCZ4LapseType,
       const double MGCCZ4ds,
@@ -493,14 +484,7 @@ void examples::exahype2::mgccz4::source(double* S, const double* const Q,
     for (int i = 0; i < 3; i++) S[55+i] = dtP[i];
     S[58] = 0;
 }
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif
 
-
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 void examples::exahype2::mgccz4::ncp(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal,
       const int MGCCZ4LapseType,
       const double MGCCZ4ds,
@@ -962,13 +946,7 @@ void examples::exahype2::mgccz4::ncp(double* BgradQ, const double* const Q, cons
     BgradQ[58] = 0;
     //if (dtP[1]!=0) printf("dtP[1] = %g, dtP[2] = %g \n\n",dtP[1],dtP[2]);
 }
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif
 
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 void examples::exahype2::mgccz4::admconstraints(double* constraints, const double* const Q, const double* const gradQSerialised)
 {
     constexpr int nVar(64);
@@ -1151,6 +1129,3 @@ void examples::exahype2::mgccz4::admconstraints(double* constraints, const doubl
     constraints[4]  =   1.0/invdet-1.0;
     constraints[5]  =   traceA;
 }
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif

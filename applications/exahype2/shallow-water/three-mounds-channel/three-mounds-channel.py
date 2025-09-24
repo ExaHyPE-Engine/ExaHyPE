@@ -7,6 +7,7 @@ import peano4
 import exahype2
 
 sys.path.insert(0, os.path.abspath(".."))
+from PDE import *
 from HLLEM import hllem
 
 initial_conditions = """
@@ -52,7 +53,7 @@ constants = {
 }
 
 size = [75.0, 30.0]
-max_h = (1.1 * min(size) / (3.0**args.min_depth))
+max_h = 1.1 * min(size) / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
 
 fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
@@ -62,7 +63,7 @@ fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     auxiliary_variables={"z": 1},
     min_volume_h=min_h,
     max_volume_h=max_h,
-    time_step_relaxation=args.time_step_relaxation,
+    time_step_relaxation=0.5,
 )
 
 fv_solver.set_implementation(
@@ -102,13 +103,15 @@ project.set_global_simulation_parameters(
     ],
 )
 
-project.set_load_balancer(f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees}, {args.trees})")
-project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
+project.set_load_balancer(
+    f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees}, {args.trees})"
+)
+project.set_Peano4_installation(
+    "../../../../", mode=peano4.output.string_to_mode(args.build_mode)
+)
 project = project.generate_Peano4_project(verbose=False)
 for const_name, const_info in constants.items():
     const_val, const_type = const_info
-    project.constants.export_constexpr_with_type(
-        const_name, str(const_val), const_type
-    )
+    project.constants.export_constexpr_with_type(const_name, str(const_val), const_type)
 project.set_fenv_handler(args.fpe)
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

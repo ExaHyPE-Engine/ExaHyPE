@@ -31,10 +31,6 @@ class examples::exahype2::mgccz4::FiniteVolumeMGCCZ4: public AbstractFiniteVolum
   public:
     FiniteVolumeMGCCZ4();   
 
-    
-    //#if defined(WITH_GPU_OMP_TARGET)
-    //#pragma omp declare target
-    //#endif
     void adjustSolution(
       double * NOALIAS Q,
       const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
@@ -42,14 +38,7 @@ class examples::exahype2::mgccz4::FiniteVolumeMGCCZ4: public AbstractFiniteVolum
       double                                       t,
       double                                       dt
     )  override;
-    //#if defined(WITH_GPU_OMP_TARGET)
-    //#pragma omp end declare target
-    //#endif
-    
-    
-    //#if defined(WITH_GPU_OMP_TARGET)
-    //#pragma omp declare target
-    //#endif
+
     void sourceTerm(
       const double * NOALIAS Q,
       const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
@@ -58,11 +47,7 @@ class examples::exahype2::mgccz4::FiniteVolumeMGCCZ4: public AbstractFiniteVolum
       double                                       dt,
       double * NOALIAS S
     );
-    //#if defined(WITH_GPU_OMP_TARGET)
-    //#pragma omp end declare target
-    //#endif
-    
-    
+
     virtual void boundaryConditions(
       const double * NOALIAS Qinside, // Qinside[59+0]
       double * NOALIAS Qoutside, // Qoutside[59+0]
@@ -72,8 +57,6 @@ class examples::exahype2::mgccz4::FiniteVolumeMGCCZ4: public AbstractFiniteVolum
       int                                          normal
     )  override;
 
-
-    
     double maxEigenvalue(
       const double * NOALIAS Q, // Q[59+0],
       const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,

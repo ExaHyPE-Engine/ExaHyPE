@@ -40,12 +40,8 @@ refinement_criterion = """
   return result;
 """
 
-parser = exahype2.ArgumentParser("ExaHyPE 2 Euler Channel Flow Argument Parser")
-parser.set_defaults(
-    min_depth=6,
-    degrees_of_freedom=16,
-    end_time=2.0
-)
+parser = exahype2.ArgumentParser("ExaHyPE 2 - Euler Channel Flow Argument Parser")
+parser.set_defaults(min_depth=6, degrees_of_freedom=16, end_time=2.0)
 args = parser.parse_args()
 
 size = [1.0, 1.0, 1.0]
@@ -59,7 +55,7 @@ riemann_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
     auxiliary_variables=0,
     min_volume_h=min_h,
     max_volume_h=max_h,
-    time_step_relaxation=args.time_step_relaxation,
+    time_step_relaxation=0.5,
     use_enclave_tasking=args.enclave_tasking,
     number_of_enclave_tasks=args.ntasks,
 )
@@ -70,7 +66,7 @@ riemann_solver.set_implementation(
     refinement_criterion=refinement_criterion,
     max_eigenvalue=max_eigenvalue,
     flux=flux,
-    limiter=exahype2.solvers.fv.musclhancock.Limiter.minmod
+    limiter=exahype2.solvers.fv.musclhancock.Limiter.minmod,
 )
 
 riemann_solver.set_plotter(args.plotter)

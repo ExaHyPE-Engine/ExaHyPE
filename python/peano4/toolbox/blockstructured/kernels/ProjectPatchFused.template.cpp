@@ -9,8 +9,6 @@
 
 {% if GPU != "no" %}
 {% set fused_loop_path = GPU ~ "/Loop.macro.h" %}
-{% elif MULTITHREADING != "no" %}
-{% set fused_loop_path = MULTITHREADING ~ "/Loop.macro.h" %}
 {% else %}
 {% set fused_loop_path = "Loop.macro.h" %}
 {% endif %}

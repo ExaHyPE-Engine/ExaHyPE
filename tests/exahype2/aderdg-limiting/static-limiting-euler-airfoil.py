@@ -121,7 +121,7 @@ aderdg_solver.set_implementation(
     flux=flux,
     max_eigenvalue=eigenvalues
     + """
-    return std::max(std::abs(u-c), std::abs(u+c));""",
+    return std::fmax(std::fabs(u - c), std::fabs(u + c));""",
 )
 aderdg_solver.add_kernel_optimisations(
     polynomials=exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Lobatto
@@ -141,18 +141,33 @@ fv_solver.set_implementation(
     flux=flux,
     boundary_conditions=boundaryCondition,
     initial_conditions=init,
-    eigenvalues=eigenvalues
-    + """
-    L[0] = u-c;
-    L[1] = -u+c;
-    L[2] = u+c;
-    L[3] = -u+c;""",
     riemann_solver="""
     double LL[4];
     double LR[4];
+    auto eigenvalues = [](
+      const double* const                           Q,
+      const tarch::la::Vector<DIMENSIONS, double>&  x,
+      const tarch::la::Vector<DIMENSIONS, double>&  h,
+      double                                        t,
+      double                                        dt,
+      int                                           normal,
+      double* const                                 L
+    ) -> void {
+      const double irho = 1.0 / Q[0];
+      constexpr double Gamma = 1.4;
+      const double p = (Gamma - 1) * (Q[3] - 0.5 * irho * (Q[1]*Q[1]+Q[2]*Q[2]));
+
+      const double c = std::sqrt(Gamma * p * irho);
+      const double u = Q[normal + 1] * irho;
+
+      L[0] =  u - c;
+      L[1] = -u + c;
+      L[2] =  u + c;
+      L[3] = -u + c;
+    };
     eigenvalues(QL, x, h, t, dt, normal, LL);
     eigenvalues(QR, x, h, t, dt, normal, LR);
-    const double sMax = std::max(*std::max_element(LL, LL+4), *std::max_element(LR, LR+4));
+    const double sMax = std::max(*std::max_element(LL, LL + 4), *std::max_element(LR, LR + 4));
 
     double fluxLeft[4];
     double fluxRight[4];

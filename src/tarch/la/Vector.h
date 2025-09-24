@@ -77,9 +77,6 @@ std::string toString(const tarch::la::Vector<Size,Scalar>& vector);
  * only if it has to hand over raw pointers to MPI, e.g.
  *
  */
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 template <int Size, typename Scalar>
 struct tarch::la::Vector {
   private:
@@ -218,9 +215,6 @@ struct tarch::la::Vector {
       return _values;
     }
 };
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif
 
 #include "tarch/la/Vector.cpph"
 #include "tarch/la/VectorOperations.h"

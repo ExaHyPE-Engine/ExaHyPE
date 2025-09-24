@@ -10,7 +10,7 @@
 namespace {{ item }} {
 {%- endfor %}
 
-double updateSolutionWithRiemannFused(
+double riemannSolverFused(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                                        solver,
   ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData,
   const int                                                              targetDevice

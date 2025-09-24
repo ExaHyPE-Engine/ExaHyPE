@@ -297,8 +297,8 @@ class FV(object):
         self._refinement_criterion_implementation = PDETerms.Empty_Implementation
         self._flux_implementation = PDETerms.None_Implementation
         self._ncp_implementation = PDETerms.None_Implementation
-        self._eigenvalues_implementation = PDETerms.None_Implementation
-        self._max_eigenvalue_implementation = PDETerms.User_Defined_Implementation
+         # Can be none with fixed time stepping, but has to be defined for adaptive time stepping.
+        self._max_eigenvalue_implementation = PDETerms.None_Implementation
         self._riemann_solver_implementation = PDETerms.None_Implementation
         self._source_term_implementation = PDETerms.None_Implementation
         self._diffusive_source_term_implementation = PDETerms.None_Implementation
@@ -311,7 +311,6 @@ class FV(object):
         self._use_stateless_flux = False
         self._use_stateless_ncp = False
         self._use_stateless_max_eigenvalue = False
-        self._use_stateless_eigenvalues = False
         self._use_stateless_riemann_solver = False
         self._use_stateless_source_term = False
         self._use_stateless_diffusive_source_term = False
@@ -391,9 +390,6 @@ Boundary conditions:    """
             + """
 Refinement criterion:   """
             + str(self._refinement_criterion_implementation)
-            + """
-Eigenvalues:            """
-            + str(self._eigenvalues_implementation)
             + """
 Max eigenvalue:         """
             + str(self._max_eigenvalue_implementation)
@@ -1333,6 +1329,14 @@ The finest mesh width of """
         self._dimensions = dimensions
         self._namespace = namespace
 
+        if (
+                self._riemann_solver_implementation == PDETerms.None_Implementation
+            and self._max_eigenvalue_implementation == PDETerms.None_Implementation
+        ):
+            raise AssertionError(
+                f"[{self._name}] max_eigenvalue implementation is required when no Riemann solver is used."
+            )
+
         self._generate_kernels(output, subdirectory)
         self._action_set_reconstruct_patch.generate_kernels(namespace, output, dimensions, subdirectory)
         self._action_set_project_patch_onto_faces.generate_kernels(namespace, output, dimensions, subdirectory)
@@ -1439,14 +1443,6 @@ The finest mesh width of """
       self.create_data_structures()
 
     def _init_dictionary_with_default_parameters(self, d):
-        """
-        This one is called by all algorithmic steps before I invoke
-        add_entries_to_text_replacement_dictionary().
-
-        See the remarks on set_postprocess_updated_patch_kernel to understand why
-        we have to apply the (partially befilled) dictionary to create a new entry
-        for this very dictionary.
-        """
         d["DIMENSIONS"] = self._dimensions
         d["NUMBER_OF_VOLUMES_PER_AXIS"] = self._patch.dim[0]
         d["OVERLAP"] = self._overlap
@@ -1458,42 +1454,18 @@ The finest mesh width of """
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
         d["NUMBER_OF_UNKNOWNS"] = self._unknowns
         d["NUMBER_OF_AUXILIARY_VARIABLES"] = self._auxiliary_variables
-        d["NUMBER_OF_VARIABLES_IN_VOLUME"] = self._unknowns + self._auxiliary_variables
+        d["NUMBER_OF_DATA"] = self._unknowns + self._auxiliary_variables
 
         d["COMPUTE_PRECISION"] = self._compute_precision
         d["STORAGE_PRECISION"] = self._storage_precision
 
-        d["NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PER_AXIS"] = (
-            d["NUMBER_OF_VOLUMES_PER_AXIS"] *
-            d["NUMBER_OF_VARIABLES_IN_VOLUME"]
-        )
-        d["NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D"] = (
-            d["NUMBER_OF_VOLUMES_PER_AXIS"] *
-            d["NUMBER_OF_VOLUMES_PER_AXIS"] *
-            d["NUMBER_OF_VARIABLES_IN_VOLUME"]
-        )
-        d["NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D"] = (
-            d["NUMBER_OF_VOLUMES_PER_AXIS"] *
-            d["NUMBER_OF_VOLUMES_PER_AXIS"] *
-            d["NUMBER_OF_VOLUMES_PER_AXIS"] *
-            d["NUMBER_OF_VARIABLES_IN_VOLUME"]
-        )
+        d["PATCH_CARDINALITY_1D"] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_DATA"]
+        d["PATCH_CARDINALITY_2D"] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["PATCH_CARDINALITY_1D"]
+        d["PATCH_CARDINALITY_3D"] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["PATCH_CARDINALITY_2D"]
 
-        d["NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_PER_AXIS"] = (
-            (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) *
-            d["NUMBER_OF_VARIABLES_IN_VOLUME"]
-        )
-        d["NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D"] = (
-            (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) *
-            (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) *
-            d["NUMBER_OF_VARIABLES_IN_VOLUME"]
-        )
-        d["NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D"] = (
-            (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) *
-            (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) *
-            (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) *
-            d["NUMBER_OF_VARIABLES_IN_VOLUME"]
-        )
+        d["PATCH_CARDINALITY_WITH_HALO_1D"] = (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) * d["NUMBER_OF_DATA"]
+        d["PATCH_CARDINALITY_WITH_HALO_2D"] = (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) * d["PATCH_CARDINALITY_WITH_HALO_1D"]
+        d["PATCH_CARDINALITY_WITH_HALO_3D"] = (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) * d["PATCH_CARDINALITY_WITH_HALO_2D"]
 
         d["FACE_CARDINALITY_2D"] = (
             int(self._patch_overlap_new.no_of_unknowns * self._patch_overlap_new.dim[0] * self._patch_overlap_new.dim[1])
@@ -1502,11 +1474,9 @@ The finest mesh width of """
             int(self._patch_overlap_new.no_of_unknowns * self._patch_overlap_new.dim[0] * self._patch_overlap_new.dim[1] * self._patch_overlap_new.dim[2])
         )
 
-        if self._min_volume_h > self._max_volume_h:
-            raise Exception("min/max h are inconsistent")
-
         d["MAX_VOLUME_H"] = self._max_volume_h
         d["MIN_VOLUME_H"] = self._min_volume_h
+
         d["SOLVER_CONSTANTS"] = self._solver_constants
         d["SOLVER_INCLUDES"] = self.user_solver_includes
 
@@ -1561,7 +1531,6 @@ The finest mesh width of """
         d["REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
         d["FLUX_IMPLEMENTATION"] = self._flux_implementation
         d["NCP_IMPLEMENTATION"] = self._ncp_implementation
-        d["EIGENVALUES_IMPLEMENTATION"] = self._eigenvalues_implementation
         d["MAX_EIGENVALUE_IMPLEMENTATION"] = self._max_eigenvalue_implementation
         d["RIEMANN_SOLVER_IMPLEMENTATION"] = self._riemann_solver_implementation
         d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
@@ -1569,12 +1538,19 @@ The finest mesh width of """
         d["ADJUST_SOLUTION_IMPLEMENTATION"] = self._adjust_solution_implementation
         d["LIMITER_IMPLEMENTATION"] = self._limiter_implementation
 
+        d["USE_FLUX"]                 = self._flux_implementation != PDETerms.None_Implementation
+        d["USE_NCP"]                  = self._ncp_implementation != PDETerms.None_Implementation
+        d["USE_MAX_EIGENVALUE"]       = self._max_eigenvalue_implementation != PDETerms.None_Implementation
+        d["USE_RIEMANN_SOLVER"]       = self._riemann_solver_implementation != PDETerms.None_Implementation
+        d["USE_SOURCE"]               = self._source_term_implementation != PDETerms.None_Implementation
+        d["USE_DIFFUSIVE_SOURCE"]     = self._diffusive_source_term_implementation != PDETerms.None_Implementation
+        d["USE_ADJUST_SOLUTION"]      = self._adjust_solution_implementation != PDETerms.None_Implementation
+
         d["STATELESS_INITIAL_CONDITIONS"] = self._use_stateless_initial_conditions
         d["STATELESS_BOUNDARY_CONDITIONS"] = self._use_stateless_boundary_conditions
         d["STATELESS_REFINEMENT_CRITERION"] = self._use_stateless_refinement_criterion
         d["STATELESS_FLUX"] = self._use_stateless_flux
         d["STATELESS_NCP"] = self._use_stateless_ncp
-        d["STATELESS_EIGENVALUES"] = self._use_stateless_eigenvalues
         d["STATELESS_MAX_EIGENVALUE"] = self._use_stateless_max_eigenvalue
         d["STATELESS_RIEMANN_SOLVER"] = self._use_stateless_riemann_solver
         d["STATELESS_SOURCE_TERM"] = self._use_stateless_source_term

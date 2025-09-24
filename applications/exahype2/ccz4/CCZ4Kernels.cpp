@@ -25,10 +25,6 @@ void applications::exahype2::ccz4::enforceCCZ4constraints(
   }
 }
 
-
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 void applications::exahype2::ccz4::enforceCCZ4constraints(double * luh)
 {
     double g_cov[3][3] = { {luh[0], luh[1], luh[2]}, {luh[1], luh[3], luh[4]}, {luh[2], luh[4], luh[5]} };
@@ -123,13 +119,7 @@ void applications::exahype2::ccz4::enforceCCZ4constraints(double * luh)
     luh[51] = DD[2][1][2];
     luh[52] = DD[2][2][2];
 }
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif
 
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 void applications::exahype2::ccz4::admconstraints(double* constraints, const double* const Q, const double* const gradQSerialised)
 {
     constexpr int nVar(59);
@@ -367,13 +357,7 @@ void applications::exahype2::ccz4::admconstraints(double* constraints, const dou
     //constraints[4]  =   1.0/invdet-1.0;
     //constraints[5]  =   traceA;
 }
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif
 
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q, const double* const gradQSerialised, double* coor)
 {
     constexpr int nVar(59);
@@ -669,13 +653,7 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
 	}
 	
 }
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif
 
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 void applications::exahype2::ccz4::TestingOutput(double* terms, const double* const Q, const double* const gradQSerialised)
 {
     constexpr int nVar(59);
@@ -946,13 +924,7 @@ void applications::exahype2::ccz4::TestingOutput(double* terms, const double* co
     //constraints[4]  =   1.0/invdet-1.0;
     //constraints[5]  =   traceA;
 }
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif
 
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 void applications::exahype2::ccz4::ThetaOutputNCP(double* NCPterm, const double* const Q, const double* const gradQSerialised, int normal)
 {
     const double alpha = std::exp(std::fmax(-20., std::fmin(20.,Q[16])));
@@ -1155,6 +1127,3 @@ void applications::exahype2::ccz4::ThetaOutputNCP(double* NCPterm, const double*
     NCPterm[0]  =   RPlusTwoNablaZNCP;
     //if (NCPterm>0.0) std::cout<< NCPterm << std::endl; 
 }
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif

@@ -87,20 +87,23 @@ parser.set_defaults(
 args = parser.parse_args()
 
 problem_constants = {
-    "g"             : [9.81, "double"],
-    "phi"           : [25.0, "double"],
-    "invXi"         : [1.0 / 200.0, "double"],
-    "slopeAngleTan" : [math.tan(math.pi / 180.0 * 35.0), "double"],
-    "initCenterX"   : [0.15, "double"],
-    "initCenterY"   : [0.79, "double"],
-    "squareSide"    : [0.1, "double"],
-    "initHeight"    : [0.1, "double"],
+    "g": [9.81, "double"],
+    "phi": [25.0, "double"],
+    "invXi": [1.0 / 200.0, "double"],
+    "slopeAngleTan": [math.tan(math.pi / 180.0 * 35.0), "double"],
+    "initCenterX": [0.15, "double"],
+    "initCenterY": [0.79, "double"],
+    "squareSide": [0.1, "double"],
+    "initHeight": [0.1, "double"],
 }
 problem_constants["hThreshold"] = [problem_constants["initHeight"][0] * 1e-3, "double"]
-problem_constants["mu"]         = [math.tan(math.pi / 180.0 * problem_constants["phi"][0]), "double"]
+problem_constants["mu"] = [
+    math.tan(math.pi / 180.0 * problem_constants["phi"][0]),
+    "double",
+]
 
 size = [1.58, 1.58]
-max_h = (1.1 * min(size) / (3.0**args.min_depth))
+max_h = 1.1 * min(size) / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
 dg_order = args.degrees_of_freedom - 1
 
@@ -111,7 +114,7 @@ regular_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     auxiliary_variables=0,
     min_cell_h=min_h,
     max_cell_h=max_h,
-    time_step_relaxation=args.time_step_relaxation,
+    time_step_relaxation=0.5,
 )
 
 regular_solver.set_implementation(
@@ -120,7 +123,9 @@ regular_solver.set_implementation(
     refinement_criterion=refinement_criterion,
     flux=flux,
     ncp=nonconservative_product,
-    max_eigenvalue=eigenvalue + stiff_eigenvalue + """
+    max_eigenvalue=eigenvalue
+    + stiff_eigenvalue
+    + """
   return std::fmax(sFlux, h[normal] * sSource);
 """,
     diffusive_source_term=stiff_source_term_aderdg,
@@ -129,8 +134,8 @@ regular_solver.set_implementation(
 
 regular_solver.set_plotter(args.plotter)
 regular_solver.add_kernel_optimisations(
-     is_linear=False,
-     polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
+    is_linear=False,
+    polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
 )
 
 limiting_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
@@ -140,7 +145,7 @@ limiting_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     auxiliary_variables={"z": 1},
     min_volume_h=min_h,
     max_volume_h=max_h,
-    time_step_relaxation=args.time_step_relaxation,
+    time_step_relaxation=0.5,
 )
 
 limiting_solver.set_implementation(
@@ -148,7 +153,8 @@ limiting_solver.set_implementation(
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
     flux=flux,
-    max_eigenvalue=eigenvalue + """
+    max_eigenvalue=eigenvalue
+    + """
   return sFlux;
 """,
     ncp=nonconservative_product + stiff_nonconservative_product,
@@ -200,14 +206,16 @@ project.set_global_simulation_parameters(
     ],
 )
 
-project.set_load_balancer(f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees}, {args.trees})")
-project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
+project.set_load_balancer(
+    f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees}, {args.trees})"
+)
+project.set_Peano4_installation(
+    "../../../../", mode=peano4.output.string_to_mode(args.build_mode)
+)
 project = project.generate_Peano4_project(verbose=False)
 for const_name, const_info in problem_constants.items():
     const_val, const_type = const_info
-    project.constants.export_constexpr_with_type(
-        const_name, str(const_val), const_type
-    )
+    project.constants.export_constexpr_with_type(const_name, str(const_val), const_type)
 project.output.makefile.set_target_device(args.target_device)
 project.set_fenv_handler(args.fpe)
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

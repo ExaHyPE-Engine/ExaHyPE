@@ -81,6 +81,8 @@ endif()
 add_library(PeanoOptions INTERFACE)
 target_compile_features(PeanoOptions INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 install(TARGETS PeanoOptions EXPORT PeanoTargets)
+
+include(SIMD)
 include(Filesystem)
 
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
@@ -102,13 +104,13 @@ else()
   )
 endif()
 
+option(WITH_MULTITHREADING "Build with multithreading (OpenMP) support" ON)
 option(WITH_MPI "Build with Message Passing Interface (MPI) support" ON)
 option(WITH_HDF5 "Build with HDF5 support" ON)
 option(WITH_NETCDF "Build with NetCDF support" ON)
 option(WITH_EASI "Build with easi support" OFF)
 option(WITH_VTK "Build with VTK support" OFF)
 option(WITH_LIBXSMM "Build with LIBXSMM support" OFF)
-option(WITH_TARGETDART "Build with targetDART support" OFF)
 option(WITH_SCOREP_USER "Build with Score-P user regions instrumentation" OFF)
 
 option(ENABLE_TOOLBOX_PARTICLES "Enable the particles toolbox" ON)
@@ -148,26 +150,8 @@ elseif(WITH_TOOLCHAIN STREQUAL "nvidia")
   target_compile_definitions(PeanoOptions INTERFACE UseNVTX UseLogService=NVTXLogger)
 endif()
 
-list(APPEND AVAILABLE_MULTITHREADING
-  "no"
-  "omp"
-)
-set(WITH_MULTITHREADING "omp" CACHE STRING "${AVAILABLE_MULTITHREADING}")
-set_property(CACHE WITH_MULTITHREADING PROPERTY STRINGS ${AVAILABLE_MULTITHREADING})
-
-if(WITH_MULTITHREADING STREQUAL "omp")
-  find_package(OpenMP REQUIRED)
-  check_include_files(omp.h HAVE_OMP_H)
-  target_link_libraries(PeanoOptions INTERFACE OpenMP::OpenMP_CXX)
-  target_compile_definitions(PeanoOptions INTERFACE WITH_OPENMP WITH_MULTITHREADING)
-  set(ONLY_IF_MULTITHREADING_FIND_DEPENDENCY "find_dependency(OpenMP)")
-else()
-  set(ONLY_IF_MULTITHREADING_FIND_DEPENDENCY "# Multithreading not used")
-endif()
-
 list(APPEND AVAILABLE_ACCELERATORS
   "no"
-  "omp"
   "sycl"
   "cuda"
   "kokkos"
@@ -202,9 +186,7 @@ elseif(WITH_GPU_ARCH MATCHES "^spir")
   set(PEANO_INTEL_GPU TRUE)
 endif()
 
-if(WITH_GPU STREQUAL "omp")
-  include(OpenMPTarget)
-elseif(WITH_GPU STREQUAL "sycl")
+if(WITH_GPU STREQUAL "sycl")
   #check_include_file_cxx(sycl/sycl.hpp HAVE_CL_SYCL_HPP) # Needs -fsycl to find the header. TODO: Add globally
   include(SYCL)
 elseif(WITH_GPU STREQUAL "cuda")
@@ -246,6 +228,16 @@ set(PEANO_ASSERTS_DEFINITIONS -DPEANO_DEBUG=2 CACHE INTERNAL "")
 set(PEANO_CXX_FLAGS_TRACE -g -O2 CACHE INTERNAL "")
 set(PEANO_TRACE_DEFINITIONS -DPEANO_DEBUG=1 -DNDEBUG CACHE INTERNAL "")
 
+if(WITH_MULTITHREADING)
+  find_package(OpenMP REQUIRED)
+  check_include_files(omp.h HAVE_OMP_H)
+  target_link_libraries(PeanoOptions INTERFACE OpenMP::OpenMP_CXX)
+  target_compile_definitions(PeanoOptions INTERFACE WITH_OPENMP WITH_MULTITHREADING)
+  set(ONLY_IF_MULTITHREADING_FIND_DEPENDENCY "find_dependency(OpenMP)")
+else()
+  set(ONLY_IF_MULTITHREADING_FIND_DEPENDENCY "# Multithreading not used")
+endif()
+
 if(WITH_MPI)
   find_package(MPI REQUIRED)
   target_link_libraries(PeanoOptions INTERFACE MPI::MPI_CXX)
@@ -253,10 +245,6 @@ if(WITH_MPI)
   set(ONLY_IF_MPI_FIND_DEPENDENCY "find_dependency(MPI)")
 else()
   set(ONLY_IF_MPI_FIND_DEPENDENCY "# MPI not used")
-endif()
-
-if(WITH_TARGETDART)
-  target_compile_definitions(PeanoOptions INTERFACE WITH_TARGETDART)
 endif()
 
 if(WITH_LIBXSMM)

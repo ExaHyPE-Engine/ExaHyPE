@@ -65,12 +65,14 @@ rusanov_fv = r"""
     DeltaQ[i] = QR[i] - QL[i];
   }
 
+  /*
   double ncp[NumberOfUnknowns] = {};
   nonconservativeProduct(Qavg, DeltaQ, x, h, t, dt, normal, ncp);
   for (int i = 0; i < NumberOfUnknowns; ++i) {
     FL[i] += 0.5 * ncp[i];
     FR[i] -= 0.5 * ncp[i];
   }
+  */
 
   auto sL{0.0};
   if (QL[Shortcuts::h] > hThreshold) {

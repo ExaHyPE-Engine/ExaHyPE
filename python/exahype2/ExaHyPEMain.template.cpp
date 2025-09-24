@@ -493,16 +493,12 @@ int main(int argc, char** argv) {
   int returnCode = EXIT_SUCCESS;
   peano4::init(&argc, &argv, {{SUBNAMESPACE}}DomainOffset, {{SUBNAMESPACE}}DomainSize, {{SUBNAMESPACE}}PeriodicBC);
 
-#ifdef WITH_TARGETDART
-  td_init((void *) &main);
-#endif
-
-  {% if FENV == True -%}
+{% if FENV == True -%}
 #if defined(__linux)
   //feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
   feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 #endif
-  {% endif -%}
+{% endif -%}
 
   {{SUBNAMESPACE}}repositories::initLogFilters();
   {{SUBNAMESPACE}}repositories::DataRepository::initDatatypes();

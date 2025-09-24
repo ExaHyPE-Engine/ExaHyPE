@@ -51,9 +51,7 @@ tarch::la::SmartPointerVector<Size,Scalar>::SmartPointerVector (
 ):
   _dataSmartPointer( toCopy._dataSmartPointer ),
   _values( nullptr ) {
-  #if !defined(WITH_GPU_OMP_TARGET) and !defined(WITH_GPU_SYCL)
   assertion(this != &toCopy);
-  #endif
 
   _values = _dataSmartPointer.get();
 }
@@ -85,10 +83,7 @@ template<int Size, typename Scalar>
 tarch::la::SmartPointerVector<Size,Scalar>&  tarch::la::SmartPointerVector<Size,Scalar>::operator= (
   const SmartPointerVector<Size,Scalar>&  toAssign
 ) {
-  #if !defined(WITH_GPU_OMP_TARGET) and !defined(WITH_GPU_SYCL)
   assertion(this != &toAssign);
-  #endif
-
   _dataSmartPointer = toAssign._dataSmartPointer;
   _values = _dataSmartPointer.get();
 

@@ -284,7 +284,7 @@ reconstruction = (
 )
 
 parser = exahype2.ArgumentParser(
-    "ExaHyPE 2 Euler Isothermal Stratification Argument Parser"
+    "ExaHyPE 2 - Euler Isothermal Stratification Argument Parser"
 )
 parser.set_defaults(
     min_depth=6,
@@ -303,7 +303,7 @@ riemann_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
     auxiliary_variables=0,
     min_volume_h=min_h,
     max_volume_h=max_h,
-    time_step_relaxation=args.time_step_relaxation,
+    time_step_relaxation=0.5,
     use_enclave_tasking=args.enclave_tasking,
     number_of_enclave_tasks=args.ntasks,
     reconstruction=reconstruction,  # Specific to MUSCL-Hancock

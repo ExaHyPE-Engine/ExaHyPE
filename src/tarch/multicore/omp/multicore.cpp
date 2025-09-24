@@ -19,7 +19,7 @@ void tarch::multicore::native::spawnTasks(const std::vector<Task*>& tasks) {
 #if not defined(TASKLOOP_NOT_SUPPORTED)
 #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(Task::DefaultPriority) untied
 #endif
-  for (auto& p : tasks) {
+  for (Task* p : tasks) {
 #if defined(TASKLOOP_NOT_SUPPORTED)
 #pragma omp task priority(Task::DefaultPriority) untied
 #endif
@@ -48,10 +48,8 @@ void tarch::multicore::native::spawnTask(Task* task, const void* const inDepende
       << "incoming data dependency " << inDependency
   );
 
-#pragma omp task priority(task->getPriority()) \
-  depend(in : static_cast<const char*>(inDependency)[0]) \
-  depend(out : static_cast<const char*>(outDependency)[0]) \
-  untied
+#pragma omp task priority(task->getPriority()) depend(in : static_cast<const char*>(inDependency)[0]) \
+  depend(out : static_cast<const char*>(outDependency)[0]) untied
 #endif
   {
     while (task->run()) {
@@ -68,9 +66,7 @@ void tarch::multicore::native::spawnTask(Task* task, const void* const outDepend
   assertion(outDependency);
   logDebug("spawnTask()", "Fire task with with outgoing data dependency " << outDependency);
 
-#pragma omp task priority(task->getPriority()) \
-  depend(out : static_cast<const char*>(outDependency)[0]) \
-  untied
+#pragma omp task priority(task->getPriority()) depend(out : static_cast<const char*>(outDependency)[0]) untied
 #endif
   {
     while (task->run()) {

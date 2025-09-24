@@ -63,7 +63,7 @@ constants = {
 }
 
 size = [30.0, 30.0]
-max_h = (1.1 * min(size) / (3.0**args.min_depth))
+max_h = 1.1 * min(size) / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
 
 aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
@@ -73,7 +73,7 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     auxiliary_variables=0,
     min_cell_h=min_h,
     max_cell_h=max_h,
-    time_step_relaxation=args.time_step_relaxation,
+    time_step_relaxation=0.5,
 )
 
 aderdg_solver.set_implementation(
@@ -82,13 +82,16 @@ aderdg_solver.set_implementation(
     refinement_criterion=refinement_criterion,
     flux=flux,
     ncp=nonconservative_product,
-    max_eigenvalue=eigenvalue + """
+    max_eigenvalue=eigenvalue
+    + """
   return sFlux;
 """,
 )
 
 aderdg_solver.set_plotter(args.plotter)
-aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)
+aderdg_solver.add_kernel_optimisations(
+    is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
+)
 
 project = exahype2.Project(
     namespace=["applications", "exahype2", "swe"],
@@ -118,13 +121,15 @@ project.set_global_simulation_parameters(
     ],
 )
 
-project.set_load_balancer(f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees}, {args.trees})")
-project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
+project.set_load_balancer(
+    f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees}, {args.trees})"
+)
+project.set_Peano4_installation(
+    "../../../../", mode=peano4.output.string_to_mode(args.build_mode)
+)
 project = project.generate_Peano4_project(verbose=False)
 for const_name, const_info in constants.items():
     const_val, const_type = const_info
-    project.constants.export_constexpr_with_type(
-        const_name, str(const_val), const_type
-    )
+    project.constants.export_constexpr_with_type(const_name, str(const_val), const_type)
 project.set_fenv_handler(args.fpe)
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

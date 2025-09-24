@@ -68,7 +68,7 @@ parser.set_defaults(
 )
 args = parser.parse_args()
 
-size = [2*3.14159265359, 2*3.14159265359, 2*3.14159265359]
+size = [2 * 3.14159265359, 2 * 3.14159265359, 2 * 3.14159265359]
 max_h = 1.1 * min(size) / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
 
@@ -79,7 +79,7 @@ riemann_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
     auxiliary_variables=0,
     min_volume_h=min_h,
     max_volume_h=max_h,
-    time_step_relaxation=args.time_step_relaxation,
+    time_step_relaxation=0.5,
     use_enclave_tasking=args.enclave_tasking,
     number_of_enclave_tasks=args.ntasks,
 )
@@ -90,7 +90,7 @@ riemann_solver.set_implementation(
     refinement_criterion=refinement_criterion,
     max_eigenvalue=max_eigenvalue,
     flux=flux,
-    limiter=exahype2.solvers.fv.musclhancock.Limiter.vanalbada
+    limiter=exahype2.solvers.fv.musclhancock.Limiter.vanalbada,
 )
 
 riemann_solver.set_plotter(args.plotter)

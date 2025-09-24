@@ -512,7 +512,6 @@ void exahype2::fd::fd4::internal::updateSolutionWithDifferentialSourceTerm_LoopB
     //take care we have an extra minus sign because we moved the diffsrc terms to the RIGHT!
     QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * QDiffSrcTerm;
 
-    #if !defined(WITH_GPU_OMP_TARGET) and  !defined(WITH_GPU_SYCL)
     assertion8(
       QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
       QDiffSrcTerm, QDiffSrcTerm,
@@ -520,7 +519,6 @@ void exahype2::fd::fd4::internal::updateSolutionWithDifferentialSourceTerm_LoopB
       volumeIndex,
       QOutEnumerator(patchIndex, volumeIndex, unknown)
     );
-    #endif
   };
 
                      updateAlongOneCoordinateDirection( QDiffSrcX, 0 );
@@ -562,7 +560,6 @@ void exahype2::fd::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
       }
     }
 
-    #if !defined(WITH_GPU_OMP_TARGET) and  !defined(WITH_GPU_SYCL)
     assertion8(
       QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
       QKODspTerm, QKODspTerm,
@@ -570,7 +567,6 @@ void exahype2::fd::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
       volumeIndex,
       QOutEnumerator(patchIndex, volumeIndex, unknown)
     );
-    #endif
   };
 
                      updateAlongOneCoordinateDirection( QKODspX, 0 );

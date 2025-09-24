@@ -62,9 +62,9 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   #endif
 
   #if DIMENSIONS==2
-  alignas(ALIGNMENT_ON_HEAP) {{FLOAT_TYPE}}                                 value[{{CARDINALITY_2D}}];
+  alignas(ALIGNMENT) {{FLOAT_TYPE}}                                 value[{{CARDINALITY_2D}}];
   #else
-  alignas(ALIGNMENT_ON_HEAP) {{FLOAT_TYPE}}                                 value[{{CARDINALITY_3D}}];
+  alignas(ALIGNMENT) {{FLOAT_TYPE}}                                 value[{{CARDINALITY_3D}}];
   #endif
 
   #if DIMENSIONS==2

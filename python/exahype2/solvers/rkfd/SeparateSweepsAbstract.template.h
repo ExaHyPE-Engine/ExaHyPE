@@ -225,15 +225,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     SolverState  getSolverState() const;
 
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
     static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
     {{SOLVER_CONSTANTS}}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
 
     /**
      * Holds after each time step but not while we are doing Runge Kutta

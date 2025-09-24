@@ -155,9 +155,7 @@ namespace exahype2 {
   }
 }
 
-
-
-#if defined(WITH_GPU_OMP_TARGET) or defined(WITH_OPENMP)
+#if defined(WITH_OPENMP)
 #include "exahype2/fd/fd4/omp/FD4.h"
 #endif
 

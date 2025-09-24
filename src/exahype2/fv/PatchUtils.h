@@ -23,9 +23,6 @@ namespace exahype2 {
      * for many compilers). To avoid the implied multiple symbol errors, I
      * declare the function as static.
      */
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     tarch::la::Vector<2, double> getVolumeSize(
       const tarch::la::Vector<2, double>& h,
@@ -40,13 +37,7 @@ namespace exahype2 {
       }
       return volumeSize;
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
 
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     tarch::la::Vector<3, double> getVolumeSize(
       const tarch::la::Vector<3, double>& h,
@@ -61,13 +52,7 @@ namespace exahype2 {
       }
       return volumeSize;
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
 
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     tarch::la::Vector<2, double> getFaceSize(
       const tarch::la::Vector<2, double>& h,
@@ -75,13 +60,7 @@ namespace exahype2 {
     ) {
       return getVolumeSize(h, numberOfVolumesPerAxisInPatch);
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
 
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     tarch::la::Vector<3, double> getFaceSize(
       const tarch::la::Vector<3, double>& h,
@@ -89,9 +68,6 @@ namespace exahype2 {
     ) {
       return getVolumeSize(h,numberOfVolumesPerAxisInPatch);
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
 
     /**
      * In ExaHyPE's Finite Volume setup, a cell hosts a patch of Finite Volumes.
@@ -108,9 +84,6 @@ namespace exahype2 {
      * @param h      Size of the cell
      * @param index  Index of Finite Volume (in lexicographic ordering)
      */
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     tarch::la::Vector<2, double> getVolumeCentre(
       const tarch::la::Vector<2, double>& x,
@@ -125,13 +98,7 @@ namespace exahype2 {
       }
       return result;
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
 
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     tarch::la::Vector<3, double> getVolumeCentre(
       const tarch::la::Vector<3, double>& x,
@@ -146,13 +113,7 @@ namespace exahype2 {
       }
       return result;
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
 
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     tarch::la::Vector<2, double> getFaceCentre(
       const tarch::la::Vector<2, double>& x,
@@ -174,13 +135,7 @@ namespace exahype2 {
       }
       return result;
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
 
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     tarch::la::Vector<3, double> getFaceCentre(
       const tarch::la::Vector<3, double>& x,
@@ -202,9 +157,6 @@ namespace exahype2 {
       }
       return result;
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
 
     /**
      * With GCC 10, it was impossible to return/copy the vector class. We

@@ -25,9 +25,6 @@ class SolverDeclarations:
     {% endif %}
 
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" and BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void boundaryConditions(
       [[maybe_unused]] const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -41,15 +38,9 @@ class SolverDeclarations:
       {{BOUNDARY_CONDITIONS_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" and REFINEMENT_CRITERION_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     ::exahype2::RefinementCommand refinementCriterion(
       [[maybe_unused]] const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -64,16 +55,10 @@ class SolverDeclarations:
       return result;
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
     {% if MAX_EIGENVALUE_IMPLEMENTATION!="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     double maxEigenvalue(
       [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -89,15 +74,9 @@ class SolverDeclarations:
       return 0.0;
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if FLUX_IMPLEMENTATION!="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void flux(
       [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -112,15 +91,9 @@ class SolverDeclarations:
       {{FLUX_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if NCP_IMPLEMENTATION!="<user-defined>" and NCP_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void nonconservativeProduct(
       [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -136,15 +109,9 @@ class SolverDeclarations:
       {{NCP_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void algebraicSource(
       [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -158,15 +125,9 @@ class SolverDeclarations:
       {{SOURCE_TERM_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void diffusiveAlgebraicSource(
       [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -181,15 +142,9 @@ class SolverDeclarations:
       {{DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if MATERIAL_PARAM_IMPLEMENTATION!="<user-defined>" and MATERIAL_PARAM_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void multiplyMaterialParameterMatrix(
       [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q,
@@ -204,15 +159,9 @@ class SolverDeclarations:
       {{MATERIAL_PARAM_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if POINT_SOURCES_IMPLEMENTATION!="<user-defined>" and POINT_SOURCES_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void pointSource(
       [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q,
@@ -226,15 +175,9 @@ class SolverDeclarations:
       {{POINT_SOURCES_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if RIEMANN_SOLVER_IMPLEMENTATION!="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void riemannSolver(
       [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS       FL, // FL[{{NUMBER_OF_UNKNOWNS}}
@@ -253,15 +196,9 @@ class SolverDeclarations:
       {{RIEMANN_SOLVER_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if ADJUST_SOLUTION_IMPLEMENTATION!="<user-defined>" and ADJUST_SOLUTION_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void adjustSolution(
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&  x,
@@ -274,25 +211,16 @@ class SolverDeclarations:
       {{ADJUST_SOLUTION_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
     {% endfor %}
 
     {% if INIT_POINT_SOURCES_IMPLEMENTATION!="<user-defined>" and INIT_POINT_SOURCES_IMPLEMENTATION!="<none>" %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void initPointSourceLocations([[maybe_unused]] double location[NumberOfPointSources][DIMENSIONS]) {
       {% if INIT_POINT_SOURCES_IMPLEMENTATION!="<empty>" %}
       {{INIT_POINT_SOURCES_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}

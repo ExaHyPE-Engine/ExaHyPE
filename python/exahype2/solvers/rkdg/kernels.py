@@ -37,9 +37,6 @@ def create_abstract_solver_declarations(
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static double maxEigenvalue(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
@@ -48,9 +45,6 @@ def create_abstract_solver_declarations(
       int                                          normal,
       Offloadable
     );
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     /**
@@ -74,9 +68,6 @@ def create_abstract_solver_declarations(
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static void flux(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
@@ -86,9 +77,6 @@ def create_abstract_solver_declarations(
       double * NOALIAS                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if FLUX_IMPLEMENTATION!="<none>" %}
@@ -108,9 +96,6 @@ def create_abstract_solver_declarations(
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static void nonconservativeProduct(
       const double * NOALIAS                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -121,9 +106,6 @@ def create_abstract_solver_declarations(
       double * NOALIAS                        BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if NCP_IMPLEMENTATION!="<none>" %}
@@ -144,9 +126,6 @@ def create_abstract_solver_declarations(
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static void sourceTerm(
       const double * NOALIAS Q,
       const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
@@ -155,9 +134,6 @@ def create_abstract_solver_declarations(
       double * NOALIAS S,
       Offloadable
     );
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
@@ -176,9 +152,6 @@ def create_abstract_solver_declarations(
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     void pointSource(
       const double * NOALIAS Q,
       const tarch::la::Vector<DIMENSIONS,double>&  x,
@@ -187,9 +160,6 @@ def create_abstract_solver_declarations(
       double * NOALIAS S,
       Offloadable
     );
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
@@ -298,9 +268,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
 {% endif %}
 
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
@@ -311,15 +278,9 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 ) {
   {{EIGENVALUES_IMPLEMENTATION}};
 }
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif
 {% endif %}
 
 {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
@@ -335,15 +296,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   {{FLUX_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif
 {% endif %}
 
 {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
       const double * NOALIAS                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -360,15 +315,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   {{NCP_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif
 {% endif %}
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
       const double * NOALIAS Q,
       const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
@@ -383,15 +332,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   {{SOURCE_TERM_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif
 {% endif %}
 
 {% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp declare target
-#endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
       const double * NOALIAS Q,
       const tarch::la::Vector<DIMENSIONS,double>&  x,
@@ -407,9 +350,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
   {{POINT_SOURCE_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(WITH_GPU_OMP_TARGET)
-#pragma omp end declare target
-#endif
 {% endif %}
 """,
         undefined=jinja2.DebugUndefined,
@@ -512,9 +452,6 @@ def create_solver_declarations(
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
      static void sourceTerm(
        const double * NOALIAS Q,
        const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
@@ -524,9 +461,6 @@ def create_solver_declarations(
        double * NOALIAS S,
        Offloadable
      );
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if STATELESS_PDE_TERMS  and POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
@@ -545,9 +479,6 @@ def create_solver_declarations(
      * but helps the compiler to distinguish the different function variants.
      */
      #error point sources not implemented yet
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
      static void pointSource(
        const double * NOALIAS Q,
        const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
@@ -557,9 +488,6 @@ def create_solver_declarations(
        double * NOALIAS S,
        Offloadable
      );
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
@@ -577,9 +505,6 @@ def create_solver_declarations(
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static double maxEigenvalue(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
@@ -588,9 +513,6 @@ def create_solver_declarations(
       int                                          normal,
       Offloadable
     );
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if STATELESS_PDE_TERMS  and FLUX_IMPLEMENTATION=="<user-defined>" %}
@@ -608,9 +530,6 @@ def create_solver_declarations(
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static void flux(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
@@ -620,9 +539,6 @@ def create_solver_declarations(
       double * NOALIAS                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if STATELESS_PDE_TERMS  and NCP_IMPLEMENTATION=="<user-defined>" %}
@@ -640,9 +556,6 @@ def create_solver_declarations(
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static void nonconservativeProduct(
       const double * NOALIAS                  Q,       // Q[5+0],
       const double * NOALIAS                  deltaQ,    // deltaQ[5+0]
@@ -653,9 +566,6 @@ def create_solver_declarations(
       double * NOALIAS                        BTimesDeltaQ,     // BTimesDeltaQ[5]
       Offloadable
     );
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 """,
         undefined=jinja2.DebugUndefined,
@@ -745,9 +655,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 {% endif %}
 
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
@@ -758,15 +665,9 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 )  {
   // @todo implement
 }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
 {% endif %}
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
@@ -778,15 +679,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 )  {
   // @todo implement
 }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
 {% endif %}
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * NOALIAS                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -799,15 +694,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 )  {
   // @todo implement
 }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
 {% endif %}
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * NOALIAS Q,
   const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
@@ -818,15 +707,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 ) {
   // @todo implement
 }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
 {% endif %}
 
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
 #error  point sources not implemented yet
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * NOALIAS Q,
@@ -838,9 +721,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 ) {
   // @todo implement
 }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
 {% endif %}
 """,
         undefined=jinja2.DebugUndefined,

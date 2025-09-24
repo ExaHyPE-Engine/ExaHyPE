@@ -160,9 +160,6 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static GPU_CALLABLE_METHOD void sourceTerm(
        const double * NOALIAS Q,
        const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
@@ -175,10 +172,6 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
       std::memset(S, 0, NumberOfUnknowns*sizeof(double));
       source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3, CCZ4SO);
     }
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
-    
 
 
     
@@ -196,9 +189,6 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static GPU_CALLABLE_METHOD double maxEigenvalue(
       const double * NOALIAS Q, // Q[59+0],
       const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
@@ -225,15 +215,6 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
       return tem;
     }
 
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
-    
-
-
-    
-   
-    
     /**
      * To obtain the best performance, I recommend to man inline command to 
      * this signature and to copy the implementation into the header. So it would
@@ -248,9 +229,6 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp declare target
-    #endif
     static GPU_CALLABLE_METHOD void nonconservativeProduct(
       const double * NOALIAS                  Q,         // Q[5+0],
       const double * NOALIAS                  deltaQ,    // [5+0]
@@ -262,10 +240,6 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
       double * NOALIAS                        BgradQ,     // BgradQ[5]
       ::exahype2::Solver::Offloadable
     );
-    #if defined(WITH_GPU_OMP_TARGET)
-    #pragma omp end declare target
-    #endif
-        
 };
 
 
