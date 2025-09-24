@@ -6,6 +6,6 @@ scipy
 sympy
 h5py
 vtk
+pyvista
 VTUinterface
 jupyter
-ast-comments
