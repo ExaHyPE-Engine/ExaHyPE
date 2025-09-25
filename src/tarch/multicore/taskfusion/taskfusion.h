@@ -38,18 +38,68 @@ namespace tarch {
      * strategies.
      *
      *
+     * ## Task queues
+     *
      * To ensure that fusion is only applied to tasks of the same type, we store
-     * the fusable tasks in a map indexed by the task type. The most important
-     * type in the context of fusion therefore is FusableTaskQueue.
+     * the fusable tasks in a map indexed by the task type. The map maps each
+     * task type onto an instance of tarch::multicore::taskfusion::FusableTaskQueue.
+     * When you spawn a task through handleFusableTask(),
+     * the first thing this routine has to do is to check if there's a task
+     * queue in place already. Consult the routine's description for more
+     * details.
+     *
+     * The two variables that are used are therefore
+     *
+     * - fusableTaskQueue a map of task types onto queue instances on the heap, and
+     * - pendingTasksSemaphore which is a sempahore to protect access to the heap.
+     *
+     * The two variables are only found in the implementation file, as they are
+     * not visible from outside. As our map works with pointers to the actual
+     * queues, it is sufficient to have one semaphore that protects access: Once
+     * we have got the pointer from the map, we can always release the semaphore
+     * and work against the queue object on the heap. Meanwhile, other routines
+     * might add new queues to the map. We don't really care anymore.
+     *
+     *
+     * ## The important routines
+     *
+     * There are only two important routines from a user's point of view:
+     *
+     * - handleFusableTask() is the spawn mechanism which is used by
+     *   spawnTask() to hand over a task that  can, in theory, be fused.
+     * - ensureHeldBackTasksAreMappedOntoNativeTasks() takes a couple of
+     *   tasks and ensures they are mapped onto proper native tasks.
+     * - processAllReadyTasks() is a drain mechanism over all queues.
+     *
+     * Consult the documentation of these routines for details when they
+     * are used. The documentation also provides information how the
+     * underlying implementations work.
      */
     namespace taskfusion {
       struct FusableTasksQueue;
 
       /**
-       * Delegates to implementation-specific variants, i.e. to the one
-       * selected by the orchestration.
+       * Handle one fusable task
+       *
+       * This operation handles one fusable task in the sense that it first
+       * ensures that all infrastructure for the fusion is in place. After
+       * that, it delegates to implementation selected by the orchestration:
+       *
+       * 1. Find out if task fusion is active. If not, ensure that the task
+       *    is either executed directly or spawned into a native task. Which
+       *    variant to pick depends on the orchestration's getFusionImplementation()
+       *    result, which returns an instance of tarch::multicore::orchestration::FusionImplementation.
+       * 2. Lock the map over all queues through pendingTasksSemaphore.
+       * 3. Ensure that a queue does exist for the particular task type.
+       * 4. Invoke the task handling that's specified through getFusionImplementation().
+       *
+       * The routine is invoked by tarch::multicore::spawnTask() if this
+       * routine is given a task that can, in theory, be fused.
+       *
+       * @see Page @ref documentation_tarch_task_fusion_strategies provides a high-level overview
+       * @see tarch::multicore::orchestration::FusionImplementation enlists the different implementation variants
        */
-      void translateFusableTaskIntoTaskSequence(
+      void handleFusableTask(
         Task*                  task,
         std::set<TaskNumber>   inDependencies,
         const TaskNumber&      taskNumber
@@ -57,11 +107,22 @@ namespace tarch {
 
       /**
        * Run over all known queues and invoke drainReadyTasks() on each one.
+       *
+       * Once we know that all fusion queues are drained, we know that they
+       * are either complete or mapped successfully onto native tasks. That
+       * is, we can invoke a task barrier.
+       *
+       * This routine is used by the global synchronisation, i.e. by
+       * tarch::multicore::waitForAllTasks(), but we also have to invoke it
+       * before we yield: The whole idea behind a yield() is that we give
+       * the runtime the opportunity to bring in some other tasks, i.e. to
+       * disrupt the calculation. However, the runtime cannot bring in other
+       * tasks if the tasks are hidden away in a queue.
        */
       void processAllReadyTasks();
 
       /**
-       * Realisation for translateFusableTaskIntoTaskSequence() for ProducerConsumerTaskPairs
+       * Realisation for handleFusableTask() for ProducerConsumerTaskPairs
        *
        * Translate a single task into a sequence of (fusable tasks)
        *
@@ -114,7 +175,7 @@ namespace tarch {
        * tasks. So it makes sense to serialise the ProcessReadyTask instances
        * if there are less than two times the max tasks in the queue.
        */
-      void translateFusableTaskIntoTaskSequence_ProducerConsumerTaskPairs(
+      void handleFusableTask_ProducerConsumerTaskPairs(
         Task*                  task,
         FusableTasksQueue&     taskQueue,
         std::set<TaskNumber>   inDependencies,
@@ -123,11 +184,11 @@ namespace tarch {
       );
 
       /**
-       * Implementation of translateFusableTaskIntoTaskSequence() if we use LazyEvaluation.
+       * Implementation of handleFusableTask() if we use LazyEvaluation.
        *
        * @see @ref documentation_tarch_task_fusion_strategies for some context for this routine.
        */
-      void translateFusableTaskIntoTaskSequence_LazyEvaluation(
+      void handleFusableTask_LazyEvaluation(
         Task*                  task,
         FusableTasksQueue&     taskQueue,
         std::set<TaskNumber>   inDependencies,
@@ -138,7 +199,7 @@ namespace tarch {
       /**
        *
        */
-      void translateFusableTaskIntoTaskSequence_EagerConsumerTasks(
+      void handleFusableTask_EagerConsumerTasks(
         Task*                  task,
         FusableTasksQueue&     taskQueue,
         std::set<TaskNumber>   inDependencies,
@@ -147,9 +208,30 @@ namespace tarch {
       );
 
       /**
-       * If we run into a task wait, we have to be sure that fusable tasks are mapped onto proper tasks
+       * Ensure that a certain set of tasks is mapped onto native tasks already
        *
-       * Delegates to implementation-specific variants.
+       * Our task fusion holds back tasks in bespoke queues such that they can
+       * be bundled together into a larger meta task. However, this implies
+       * that we cannot do two things:
+       *
+       * 1. We cannot wait for them with built-in waits(). If a task, for
+       *    example, is not yet passed on to OpenMP, OpenMP's wait cannot
+       *    wait for this task by definition.
+       * 2. If we have in-dependencies of a new task, these in-dependencies
+       *    cannot be modelled with on-board features if the predecessor is
+       *    not yet mapped onto a task. We would create an antidependency.
+       *
+       * In both cases, we therefore have to invoke this routine first, so we
+       * ensure that the tasks that we wait for or depend on, respectively, is
+       * indeed already a native task and not still parked in a queue
+       * somewhere.
+       *
+       * The routine delegates to implementation-specific variants depending
+       * on which task fusion strategy the orchestration picks.
+       *
+       * The function is used by tarch::multicore::waitForTasks() and
+       * tarch::multicore::spawnTask(). The latter calls it over all incoming
+       * dependencies.
        *
        * @return The routine might have created new native tasks, i.e. the
        *         calling routine has to wait for these native tasks.
@@ -197,7 +279,7 @@ namespace tarch {
        *
        * Despite this observation, it remains clear that the eager invocation
        * yields a higher concurrency level. See
-       * translateFusableTaskIntoTaskSequence_EagerConsumerTasks() and
+       * handleFusableTask_EagerConsumerTasks() and
        * ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks()
        * for details.
        *

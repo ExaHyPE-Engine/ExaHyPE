@@ -22,10 +22,20 @@
 
 namespace {
   /**
-   * We map task types onto lists of tasks
+   * Map of task types onto queues
+   *
+   * See discussion in namespace documentation tarch::multicore::taskfusion
+   * about this map and its thread access protection.
    */
   std::map<int, tarch::multicore::taskfusion::FusableTasksQueue*>     fusableTaskQueue;
-  tarch::multicore::BooleanSemaphore                                  pendingTasksSemaphore;
+
+  /**
+   * Semaphore around fusableTaskQueue
+   *
+   * See discussion in namespace documentation tarch::multicore::taskfusion
+   * about this map and its thread access protection.
+   */
+  tarch::multicore::BooleanSemaphore                                  fusableTaskQueueSemaphore;
 
   tarch::logging::Log _log("tarch::multicore::taskfusion");
 
@@ -34,7 +44,7 @@ namespace {
 
 
 
-void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
+void tarch::multicore::taskfusion::handleFusableTask(
   Task*                  task,
   std::set<TaskNumber>   inDependencies,
   const TaskNumber&      taskNumber
@@ -61,7 +71,7 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
   }
   else {
     // ensure the entry exists
-    tarch::multicore::Lock lock(pendingTasksSemaphore);
+    tarch::multicore::Lock lock(fusableTaskQueueSemaphore);
     if (fusableTaskQueue.count(task->getTaskType())==0) {
       fusableTaskQueue.insert(
         std::pair<int, tarch::multicore::taskfusion::FusableTasksQueue*>(
@@ -79,21 +89,21 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
         assertion(false);
         break;
       case tarch::multicore::orchestration::FusionImplementation::LazyEvaluation:
-        translateFusableTaskIntoTaskSequence_LazyEvaluation(task, *taskQueue, inDependencies, taskNumber, instruction);
+        handleFusableTask_LazyEvaluation(task, *taskQueue, inDependencies, taskNumber, instruction);
         break;
       case tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks:
-        translateFusableTaskIntoTaskSequence_LazyEvaluation(task, *taskQueue, inDependencies, taskNumber, instruction);
-        translateFusableTaskIntoTaskSequence_EagerConsumerTasks(task, *taskQueue, inDependencies, taskNumber, instruction);
+        handleFusableTask_LazyEvaluation(task, *taskQueue, inDependencies, taskNumber, instruction);
+        handleFusableTask_EagerConsumerTasks(task, *taskQueue, inDependencies, taskNumber, instruction);
         break;
       case tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskPairs:
-        translateFusableTaskIntoTaskSequence_ProducerConsumerTaskPairs(task, *taskQueue, inDependencies, taskNumber, instruction);
+        handleFusableTask_ProducerConsumerTaskPairs(task, *taskQueue, inDependencies, taskNumber, instruction);
         break;
     }
   }
 }
 
 
-void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_LazyEvaluation(
+void tarch::multicore::taskfusion::handleFusableTask_LazyEvaluation(
   Task*                  task,
   FusableTasksQueue&     taskQueue,
   std::set<TaskNumber>   inDependencies,
@@ -114,7 +124,7 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_LazyEval
 }
 
 
-void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_EagerConsumerTasks(
+void tarch::multicore::taskfusion::handleFusableTask_EagerConsumerTasks(
   Task*                  task,
   FusableTasksQueue&     taskQueue,
   std::set<TaskNumber>   inDependencies,
@@ -132,7 +142,7 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_EagerCon
 }
 
 
-void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_ProducerConsumerTaskPairs(
+void tarch::multicore::taskfusion::handleFusableTask_ProducerConsumerTaskPairs(
   Task*                  task,
   FusableTasksQueue&     taskQueue,
   std::set<TaskNumber>   inDependencies,
@@ -140,7 +150,7 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_Producer
   const tarch::multicore::orchestration::Strategy::FuseInstruction&  instruction
 ) {
   logDebug(
-    "translateFusableTaskIntoTaskSequence(...)",
+    "handleFusableTask(...)",
     "spawn three tasks around " << taskNumber <<
     " (min-tasks=" << instruction.minTasks <<
     ", max-tasks=" << instruction.maxTasks <<
@@ -179,7 +189,7 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_Producer
 
 
 void tarch::multicore::taskfusion::processAllReadyTasks() {
-  tarch::multicore::Lock lock(pendingTasksSemaphore);
+  tarch::multicore::Lock lock(fusableTaskQueueSemaphore);
   for (auto& p: fusableTaskQueue) {
     p.second->drainReadyTasks();
   }

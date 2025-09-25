@@ -164,7 +164,7 @@ void tarch::multicore::spawnTask(
 
   if (task->canFuse()) {
     taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
-    taskfusion::translateFusableTaskIntoTaskSequence(task, inDependencies, taskNumber);
+    taskfusion::handleFusableTask(task, inDependencies, taskNumber);
   }
   else {
     native::spawnTask(task, inDependencies, taskNumber);

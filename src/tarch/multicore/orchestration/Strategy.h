@@ -73,7 +73,7 @@ namespace tarch {
          *
          * Completely disable any fusion and map each task that can be fused on
          * a normal task due to a call to tarch::multicore::native::spawnTask() in
-         * tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence().
+         * tarch::multicore::taskfusion::handleFusableTask().
          * The operation
          * tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks() deteriorates to
          * nop.

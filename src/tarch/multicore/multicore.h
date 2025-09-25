@@ -177,7 +177,7 @@ namespace tarch {
      *      overview of the multithreading.
      * @see The documentation of tarch::multicore::taskfusion for details
      *      how we handle task fusion.
-     * @see tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence()
+     * @see tarch::multicore::taskfusion::handleFusableTask()
      *      for details how we react if task->canFuse() holds.
      * @see tarch::native::spawnTask() for implementation details if a task
      *      cannot be fused.
