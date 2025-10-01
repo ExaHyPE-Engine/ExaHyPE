@@ -37,6 +37,10 @@ kernel(
     {% if DIMENSIONS==3 %} , patchSizes[patchIndex * {{DIMENSIONS}} + 2] {% endif %}
   };
 
+{% if COMPUTE_MAX_EIGENVALUE==True %}
+    double maxEigenvalueAfterTimeStep = 0.0;
+{% endif %}
+
 {% if DIMENSIONS==3 %}
   for (int z = threadIdx.z; z < {{NUMBER_OF_VOLUMES_PER_AXIS}}; z += {% if DIMENSIONS==3 %} 8 {% else %} 16 {% endif %}) {
 {% endif %}

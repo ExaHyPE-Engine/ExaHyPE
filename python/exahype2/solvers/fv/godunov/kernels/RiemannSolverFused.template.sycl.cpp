@@ -49,8 +49,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
 {% if COMPUTE_MAX_EIGENVALUE==True %}
     auto maxRed = sycl::reduction(
       maxEigenvalue,
-      sycl::maximum<double>{},
-      sycl::property::reduction::initialize_to_identity{}
+      sycl::maximum<double>{}
+      //, sycl::property::reduction::initialize_to_identity{}
     );
     handle.parallel_for(ndRange, maxRed, [=](sycl::nd_item<{{DIMENSIONS}}> item, auto& red) {
 {% else %}
