@@ -307,7 +307,7 @@ class FV(object):
 
         self._use_stateless_initial_conditions = False
         self._use_stateless_boundary_conditions = False
-        self._use_stateless_refinement_criterion = False
+        self._use_stateless_refinement_criterion = False  # TODO: Should not be stateless, as we might want to call helper functions such as getMinMeshSize()
         self._use_stateless_flux = False
         self._use_stateless_ncp = False
         self._use_stateless_max_eigenvalue = False

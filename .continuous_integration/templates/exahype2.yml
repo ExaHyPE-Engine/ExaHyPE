@@ -7,6 +7,15 @@
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv; PYTHONPATH=$CI_PROJECT_DIR/python python3 fv.py -d $dimensions -m $build_type -md 2"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv; OMP_NUM_THREADS=1 ./FVTest;"
 
+.ExaHyPE2_FV_Dynamic_AMR_Tests:
+  parallel:
+    matrix:
+    - dimensions: [2]
+      build_type: [Debug, Release]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv-dynamic-amr; PYTHONPATH=$CI_PROJECT_DIR/python python3 fv-dynamic-amr.py -d $dimensions -m $build_type -md 2"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv-dynamic-amr; OMP_NUM_THREADS=1 ./ExaHyPE;"
+
 .ExaHyPE2_FD_Tests:
   parallel:
     matrix:

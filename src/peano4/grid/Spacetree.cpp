@@ -1100,79 +1100,120 @@ void peano4::grid::Spacetree::updateVertexRanksWithinCell(GridVertex fineGridVer
   enddforx
 }
 
-void peano4::grid::Spacetree::evaluateGridControlEvents(const AutomatonState& state, GridVertex coarseGridVertices[TWO_POWER_D], GridVertex fineGridVertices[TWO_POWER_D]) {
-  if (not _gridControlEvents.empty()) {
-    logTraceInWith2Arguments("evaluateGridControlEvents()", state.toString(), _gridControlEvents.size());
+void peano4::grid::Spacetree::evaluateGridControlEvents(const AutomatonState& fineGridState, GridVertex coarseGridVertices[TWO_POWER_D], GridVertex fineGridVertices[TWO_POWER_D]) {
+  if (_gridControlEvents.empty()) {
+    return;
+  }
+  assertion1(_spacetreeState != SpacetreeState::EmptyRun and _spacetreeState != SpacetreeState::NewFromSplit and _spacetreeState != SpacetreeState::Joining, toString());
 
-    assertion1(_spacetreeState != SpacetreeState::EmptyRun and _spacetreeState != SpacetreeState::NewFromSplit and _spacetreeState != SpacetreeState::Joining, toString());
-
-    // 1) Precompute which fine-grid vertices are local:
-    bool vertexIsLocal[TWO_POWER_D];
-    for (int i = 0; i < TWO_POWER_D; ++i) {
-      vertexIsLocal[i] = isVertexAdjacentToLocalSpacetree(fineGridVertices[i], true, true);
+  // Avoid changing topology while adjacency lists are unstable
+  bool mayChangeGrid = true;
+  UNROLL(DIMENSIONS)
+  for (int i = 0; i < TWO_POWER_D; i++) {
+    auto thisCellState = coarseGridVertices[i].getState();
+    mayChangeGrid &= (thisCellState == GridVertex::State::HangingVertex or
+                      thisCellState == GridVertex::State::Unrefined or
+                      thisCellState == GridVertex::State::Refined or
+                      thisCellState == GridVertex::State::EraseTriggered);
+    if (not mayChangeGrid) {
+      break;
     }
+  }
 
-    // 2) Check that we can change the grid at all:
-    bool mayChangeGrid = true;
-    for (int i = 0; i < TWO_POWER_D; i++) {
-      // Excluding refinement triggered and refining ensures that we have no immediate
-      // refine anymore. This is important for the adjacency lists. We have to allow
-      // erase triggered, as the grid control events are evaluated top-down, i.e. data
-      // might be set.
-      auto s = coarseGridVertices[i].getState();
-      mayChangeGrid &= (s == GridVertex::State::HangingVertex or s == GridVertex::State::Unrefined or s == GridVertex::State::Refined or s == GridVertex::State::EraseTriggered);
-      if (not mayChangeGrid) {
-        break;
+  if (not mayChangeGrid) {
+    return;
+  }
+
+  bool stateWantsToRefine = false;
+  bool stateWantsToErase = false;
+  for (const auto& event : _gridControlEvents) {
+    if (event.getRefinementControl() == GridControlEvent::RefinementControl::Refine) {
+      const auto hEvent = event.getH()[0];
+      const auto hState = fineGridState.getH()[0];
+      bool eventOverlapsState = true;
+      for (int d = 0; d < DIMENSIONS; ++d) {
+        const auto stateMin = fineGridState.getX()[d];
+        const auto stateMax = stateMin + hState;
+        const auto eventMin = event.getOffset()[d];
+        const auto eventMax = eventMin + event.getWidth()[d];
+
+        // Determine if the event overlaps the state
+        //
+        // event:  [eventMin --------------------- eventMax]
+        // state:       [stateMin ---- stateMax]
+        //               ^ overlap because:
+        //                 stateMax ≥ eventMin    and    stateMin ≤ eventMax
+        //
+        // event:  [eventMin ---- eventMax]
+        // state:                        [stateMin----stateMax]
+        //                               ^ touches at eventMax == stateMin
+        //
+        if (not (tarch::la::greaterEquals(stateMax, eventMin) and tarch::la::smallerEquals(stateMin, eventMax))) {
+          eventOverlapsState = false;
+        }
       }
-    }
 
-    bool refine = false;
-    bool erase  = false;
-    if (mayChangeGrid) {
-      const auto& hState = state.getH();
-      for (auto event : _gridControlEvents) {
-        const auto& hEvent = event.getH();
-        if (overlaps(state, event) and event.getRefinementControl() == GridControlEvent::RefinementControl::Refine and tarch::la::allGreaterEquals(hState, hEvent)) {
-          refine = true;
-        }
-
-        if (isContained(state, event, 3.0) and event.getRefinementControl() == GridControlEvent::RefinementControl::Erase and tarch::la::allSmaller(hState, hEvent)) {
-          erase = true;
-        }
-
-        if (refine and erase) {
+      bool refineToTargetResolution = tarch::la::greaterEquals(hState, hEvent); // If the event's target resolution is smaller, we refine.
+      if (refineToTargetResolution and eventOverlapsState) {
+        stateWantsToRefine = true;
+      }
+    } else if (event.getRefinementControl() == GridControlEvent::RefinementControl::Erase) {
+      // The check for children here is not really needed, but it makes it easier to debug.
+      bool hasChildren = false;
+      UNROLL(DIMENSIONS)
+      for (int i = 0; i < TWO_POWER_D; ++i) {
+        if (fineGridVertices[i].getState() == GridVertex::State::Refined) {
+          hasChildren = true;
           break;
         }
       }
-    }
+      // Only parents (cells that already have children) can be coarsened
+      if (not hasChildren) {
+        continue;
+      }
 
-    logDebug(
-      "evaluateGridControlEvents()",
-      _gridControlEvents.size() << " Event(s) in state " << state.toString() << " trigger change=" << mayChangeGrid << ", refine=" << refine << ", erase=" << erase
-    );
+      const auto hEvent = event.getH()[0];
+      const auto hState = fineGridState.getH()[0];
+      bool eventContainsState = true;
+      for (int d = 0; d < DIMENSIONS; ++d) {
+        const auto stateMin = fineGridState.getX()[d];
+        const auto stateMax = stateMin + hState;
+        const auto eventMin = event.getOffset()[d];
+        const auto eventMax = eventMin + event.getWidth()[d];
 
-     // 3) Apply refinement or erasure
-    if (refine) {
-      bool anyTriggered = false;
-      for (int i = 0; i < TWO_POWER_D; ++i) {
-        if (vertexIsLocal[i] and fineGridVertices[i].getState() == GridVertex::State::Unrefined) {
-          fineGridVertices[i].setState(GridVertex::State::RefinementTriggered);
-          anyTriggered = true;
+        // Determine if the event contains the state
+        //
+        // event:  [eventMin --------------------- eventMax]
+        // state:       [stateMin ---- stateMax]
+        //               ^ contains because:
+        //                 stateMin ≥ eventMin    and    stateMax ≤ eventMax
+        //
+        if (not (tarch::la::greaterEquals(stateMin, eventMin) and tarch::la::smallerEquals(stateMax, eventMax))) {
+          eventContainsState = false;
         }
       }
-
-      if (not anyTriggered) {
-        logDebug("evaluateGridControlEvents()", "Wanted to refine cell " << state.toString() << " but no vertex is refineable");
-      }
-    } else if (erase) {
-      for (int i = 0; i < TWO_POWER_D; i++) {
-        if (vertexIsLocal[i] and fineGridVertices[i].getState() == GridVertex::State::Refined) {
-          fineGridVertices[i].setState(GridVertex::State::EraseTriggered);
-        }
+      bool coarsenToTargetResolution = tarch::la::smallerEquals(hState, hEvent); // If the event's target resolution is greater, we coarsen.
+      if (coarsenToTargetResolution and eventContainsState) {
+        //std::cout << event.toString() << ", " << fineGridState.toString() << std::endl;
+        stateWantsToErase = true;
       }
     }
+  }
 
-    logTraceOutWith3Arguments("evaluateGridControlEvents()", state.toString(), refine, erase);
+  if (stateWantsToRefine) {
+    UNROLL(DIMENSIONS)
+    for (int i = 0; i < TWO_POWER_D; ++i) {
+      if (fineGridVertices[i].getState() == GridVertex::State::Unrefined and isVertexAdjacentToLocalSpacetree(fineGridVertices[i], true, true)) {
+        fineGridVertices[i].setState(GridVertex::State::RefinementTriggered);
+      }
+    }
+  } else if (stateWantsToErase) {
+    UNROLL(DIMENSIONS)
+    for (int i = 0; i < TWO_POWER_D; ++i) {
+      if (fineGridVertices[i].getState() == GridVertex::State::Refined and isVertexAdjacentToLocalSpacetree(fineGridVertices[i], true, true)) {
+        fineGridVertices[i].setState(GridVertex::State::EraseTriggered);
+      }
+    }
   }
 }
 
@@ -1198,6 +1239,7 @@ void peano4::grid::Spacetree::descend(const AutomatonState& state, GridVertex ve
 //   enddforx
 // #endif
 
+  const bool isCoarseLocal = isSpacetreeNodeLocal(vertices, false, false);
   //
   // Loop over children
   //
@@ -1212,7 +1254,6 @@ void peano4::grid::Spacetree::descend(const AutomatonState& state, GridVertex ve
 
     // Flag areas which fork off further
     const bool isFineLocal = isSpacetreeNodeLocal(fineGridVertices, false, false);
-    const bool isCoarseLocal = isSpacetreeNodeLocal(vertices, false, false);
     if (isFineLocal and not isCoarseLocal) {
       markVerticesAroundForkedCell(vertices, fineGridVertices);
     } else if (not isFineLocal and isCoarseLocal) {

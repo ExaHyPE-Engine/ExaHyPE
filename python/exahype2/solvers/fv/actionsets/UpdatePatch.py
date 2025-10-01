@@ -53,6 +53,7 @@ class UpdatePatch(AbstractFVActionSet):
 #endif
 
       {{COMPUTE_NEW_TIME_STEP_SIZE}}
+      fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
       fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
       repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp + timeStepSize, tarch::la::min(marker.h()), tarch::la::max(marker.h()));
     }
