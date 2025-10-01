@@ -52,14 +52,14 @@ void exahype2::RefinementControl::addCommand(
 
   switch (command) {
   case exahype2::RefinementCommand::Refine: {
+    tarch::la::Vector<DIMENSIONS, double> targetH         = (1.0 + _tolerance) * 1.0 / 3.0 * h;
     tarch::la::Vector<DIMENSIONS, double> expandedWidth   = (1.0 + _tolerance) * h;
-    tarch::la::Vector<DIMENSIONS, double> refinedMeshSize = (1.0 + _tolerance) * 1.0 / 3.0 * h;
 
     peano4::grid::GridControlEvent newEvent(
       peano4::grid::GridControlEvent::RefinementControl::Refine,
       x - 0.5 * expandedWidth,
       expandedWidth,
-      refinedMeshSize
+      targetH
     );
 
     assertion1(newEvent.getH(0) > 0.0, newEvent.toString());
@@ -74,15 +74,14 @@ void exahype2::RefinementControl::addCommand(
   case exahype2::RefinementCommand::Keep:
     break;
   case exahype2::RefinementCommand::Erase: {
-    tarch::la::Vector<DIMENSIONS, double> expandedWidth   = (1.0 + _tolerance) * h;
-    tarch::la::Vector<DIMENSIONS, double> shift           = 0.5 * (expandedWidth - h);
-    tarch::la::Vector<DIMENSIONS, double> refinedMeshSize = 3.1 * h;
+    tarch::la::Vector<DIMENSIONS, double> targetH         = 3.0 * h;
+    tarch::la::Vector<DIMENSIONS, double> expandedWidth   = (1.0 + _tolerance) * targetH;
 
     peano4::grid::GridControlEvent newEvent(
       peano4::grid::GridControlEvent::RefinementControl::Erase,
-      x - 0.5 * h - shift,
+      x - 0.5 * expandedWidth,
       expandedWidth,
-      refinedMeshSize
+      targetH
     );
 
     assertion1(newEvent.getH(0) > 0.0, newEvent.toString());
@@ -102,6 +101,6 @@ void exahype2::RefinementControl::addCommand(
 std::string exahype2::RefinementControl::toString() const {
   std::ostringstream msg;
   msg << "("
-      << "#events=" << _newEvents.size() << ")";
+      << "#Events=" << _newEvents.size() << ")";
   return msg.str();
 }

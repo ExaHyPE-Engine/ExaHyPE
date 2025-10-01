@@ -130,7 +130,7 @@ void exahype2::RefinementControlService::finishStep() {
   triggerSendOfCopyOfCommittedEvents();
 #endif
 
-  for (auto p : _remoteNewEvents) {
+  for (const auto& p : _remoteNewEvents) {
     _committedEvents.push_back(p);
   }
   _remoteNewEvents.clear();

@@ -64,8 +64,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * which is coarser than its MaxH value.
      */
     static constexpr double MaxAdmissiblePatchH  = {{MAX_VOLUME_H}} * NumberOfFiniteVolumesPerAxisPerPatch;
-    static constexpr double MaxAdmissibleVolumeH = {{MAX_VOLUME_H}};
-    static constexpr double MaxAdmissibleCellH   = MaxAdmissiblePatchH;
+    static constexpr double MaxAdmissibleVolumeH = {{MAX_VOLUME_H}}; // TODO: This should become MaxAdmissibleCellH
+    static constexpr double MaxAdmissibleCellH   = MaxAdmissiblePatchH; // TODO: Should not be the patch, but the "cell" (here: "volume")
 
     /**
      * Minimum mesh size that this solver wants to support. Peano 4 tries

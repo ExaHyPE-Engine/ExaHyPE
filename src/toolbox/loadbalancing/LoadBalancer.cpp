@@ -40,10 +40,6 @@ bool toolbox::loadbalancing::LoadBalancer::isEnabled(bool globally) const {
 }
 
 void toolbox::loadbalancing::LoadBalancer::update() {
-  if (_state == State::SwitchedOff) {
-    return;
-  }
-
   _statistics.updateGlobalView();
   _blacklist.update();
 
