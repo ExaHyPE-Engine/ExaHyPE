@@ -86,6 +86,9 @@ parser.set_defaults(
 )
 args = parser.parse_args()
 
+if args.build_mode == "Debug":
+    args.end_time = 0.1
+
 problem_constants = {
     "g": [9.81, "double"],
     "phi": [25.0, "double"],

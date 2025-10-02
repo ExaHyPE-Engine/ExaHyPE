@@ -71,7 +71,7 @@ limiting_criterion = (
 parser = exahype2.ArgumentParser()
 parser.set_defaults(
     min_depth=4,
-    end_time=1.0,
+    end_time=0.1,
 )
 args = parser.parse_args()
 
@@ -133,7 +133,7 @@ limiting_solver = exahype2.solvers.limiting.StaticLimiting(
     name="LimitingSolver",
     regular_solver=aderdg_solver,
     limiting_solver=fv_solver,
-    limiting_criterion_implementation=limiting_criterion,
+    physical_admissibility_criterion=limiting_criterion
 )
 
 project = exahype2.Project(

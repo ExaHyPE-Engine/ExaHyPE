@@ -30,10 +30,10 @@ initial_conditions = """
 """
 
 boundary_conditions = """
-  Qoutside[Shortcuts::h]  = Qinside[Shortcuts::h];
-  Qoutside[Shortcuts::hu] = -Qinside[Shortcuts::hu];
-  Qoutside[Shortcuts::hv] = -Qinside[Shortcuts::hv];
-  Qoutside[Shortcuts::z]  = Qinside[Shortcuts::z];
+  Qoutside[0] = Qinside[0];
+  Qoutside[1] = 0.0;
+  Qoutside[2] = 0.0;
+  Qoutside[3] = Qinside[3];
 """
 
 refinement_criterion = """

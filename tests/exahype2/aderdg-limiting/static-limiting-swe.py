@@ -127,7 +127,7 @@ limiter = exahype2.solvers.limiting.StaticLimiting(
     name="LimitingSolver",
     regular_solver=aderdg_solver,
     limiting_solver=fv_solver,
-    limiting_criterion_implementation=limiting_criterion,
+    physical_admissibility_criterion=limiting_criterion,
 )
 project.add_solver(limiter)
 
