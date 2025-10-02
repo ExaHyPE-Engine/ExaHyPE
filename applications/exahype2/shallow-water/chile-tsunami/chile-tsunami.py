@@ -8,15 +8,16 @@ import exahype2
 
 sys.path.insert(0, os.path.abspath(".."))
 from FWave import fWave
+from PDE import nonconservative_product, eigenvalue
 
 initial_conditions = """
   static tarch::reader::NetCDFFieldParser fieldParser(
     \"chile_gebco_usgs_2000m_bath.nc\",
     \"chile_gebco_usgs_2000m_displ.nc\",
-    DomainSize(0),
-    DomainSize(1),
-    DomainOffset(0),
-    DomainOffset(1)
+    7000000.0,
+    4000000.0,
+    0.0,
+    0.0
   );
 
   const double bathymetryBeforeEarthquake = fieldParser.sampleTopology(x(0), x(1));
@@ -30,24 +31,42 @@ initial_conditions = """
 """
 
 boundary_conditions = """
-  Qoutside[Shortcuts::h]  = Qinside[Shortcuts::h];
-  Qoutside[Shortcuts::hu] = -Qinside[Shortcuts::hu];
-  Qoutside[Shortcuts::hv] = -Qinside[Shortcuts::hv];
-  Qoutside[Shortcuts::z]  = Qinside[Shortcuts::z];
+  Qoutside[0] = Qinside[0];
+  Qoutside[1] = 0.0;
+  Qoutside[2] = 0.0;
+  Qoutside[3] = Qinside[3];
 """
 
-refinement_criterion = """
-  auto result = ::exahype2::RefinementCommand::Keep;
-  if (x(0) >= 3e6 and x(1) <= 2e6) {
-    result = ::exahype2::RefinementCommand::Refine;
-  }
-  return result;
+is_physically_admissible = """
+  bool isAdmissible = Q[0] > 100.0;
+
+  tarch::la::Vector<DIMENSIONS, double> bblPos = {3050000., 400000.};
+  isAdmissible &= tarch::la::norm2(x-bblPos) > 5000.;
+
+  tarch::la::Vector<DIMENSIONS, double> blPos = {3050000., 940000.};
+  isAdmissible &= tarch::la::norm2(x-blPos) > 5000.;
+
+  tarch::la::Vector<DIMENSIONS, double> mPos = {5350000., 2320000.};
+  isAdmissible &= tarch::la::norm2(x-mPos) > 25000.;
+
+  tarch::la::Vector<DIMENSIONS, double> tlPos = {3790000., 3360000.};
+  isAdmissible &= tarch::la::norm2(x-tlPos) > 5000.;
+
+  tarch::la::Vector<DIMENSIONS, double> ttlPos = {3665000., 3410000.};
+  isAdmissible &= tarch::la::norm2(x-ttlPos) > 50000.;
+
+  // Juan Fernández Islands
+  tarch::la::Vector<DIMENSIONS, double> jfiPos = {5960000., 1040000.};
+  isAdmissible &= tarch::la::norm2(x-jfiPos) > 10000.;
+
+  return isAdmissible;
 """
 
 parser = exahype2.ArgumentParser()
 parser.set_defaults(
     min_depth=4,
     end_time=5000.0,
+    degrees_of_freedom=7,
 )
 args = parser.parse_args()
 
@@ -56,24 +75,83 @@ constants = {
     "hThreshold": [1e-5, "double"],
 }
 
-size = [7e6, 4e6]
+size = [4e6, 4e6]
+offset = [3e6, 0.0]
 max_h = 1.1 * min(size) / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
+dg_order = args.degrees_of_freedom - 1
+
+aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+    name="ADERDGSolver",
+    order=dg_order,
+    unknowns={"h": 1, "hu": 1, "hv": 1, "z": 1},
+    auxiliary_variables=0,
+    min_cell_h=min_h,
+    max_cell_h=max_h,
+    time_step_relaxation=0.9,
+)
+
+aderdg_solver.set_implementation(
+    initial_conditions=initial_conditions,
+    boundary_conditions=boundary_conditions,
+    flux="""
+  double ih = 1.0 / Q[0];
+  F[0] = Q[1 + normal];
+  F[1] = Q[1 + normal] * Q[1] * ih;
+  F[2] = Q[1 + normal] * Q[2] * ih;
+  F[3] = 0.0;
+""",
+    ncp=nonconservative_product,
+    max_eigenvalue=eigenvalue+"""
+  return sFlux;
+""",
+    riemann_solver="""
+  // Compute max eigenvalue over face
+  double smax = 0.0;
+  for(int xy=0; xy<Order+1; xy++){
+    smax = std::max(smax, maxEigenvalue(&QL[xy*4], x, h, t, dt, direction));
+    smax = std::max(smax, maxEigenvalue(&QR[xy*4], x, h, t, dt, direction));
+  }
+
+  for(int xy=0; xy<Order+1; xy++){
+    // h gets added term from bathymetry, u and v are regular Rusanov, b does not change
+    FL[xy*4+0] = 0.5*(FL[xy*4+0]+FR[xy*4+0] + smax*(QL[xy*4+0]+QL[xy*4+3]-QR[xy*4+0]-QR[xy*4+3]) );
+    FL[xy*4+1] = 0.5*(FL[xy*4+1]+FR[xy*4+1] + smax*(QL[xy*4+1]-QR[xy*4+1]) );
+    FL[xy*4+2] = 0.5*(FL[xy*4+2]+FR[xy*4+2] + smax*(QL[xy*4+2]-QR[xy*4+2]) );
+    FL[xy*4+3] = 0.0;
+
+    FR[xy*4+0] = FL[xy*4+0];
+    FR[xy*4+1] = FL[xy*4+1];
+    FR[xy*4+2] = FL[xy*4+2];
+    FR[xy*4+3] = 0.0;
+
+    // Contribution from NCP
+    FL[xy*4+direction+1] += 0.5*g*0.5*(QL[xy*4+0]+QR[xy*4+0])*(QR[xy*4+3]+QR[xy*4+0]-QL[xy*4+3]-QL[xy*4+0]);
+    FR[xy*4+direction+1] -= 0.5*g*0.5*(QL[xy*4+0]+QR[xy*4+0])*(QR[xy*4+3]+QR[xy*4+0]-QL[xy*4+3]-QL[xy*4+0]);
+  }
+"""
+)
+
+aderdg_solver.set_plotter(args.plotter)
+aderdg_solver.add_user_solver_includes(
+    """
+#include "tarch/reader/NetCDFFieldParser.h"
+"""
+)
 
 fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="FVSolver",
-    patch_size=args.degrees_of_freedom,
+    patch_size=dg_order * 2 + 1,
     unknowns={"h": 1, "hu": 1, "hv": 1},
     auxiliary_variables={"z": 1},
     min_volume_h=min_h,
     max_volume_h=max_h,
-    time_step_relaxation=0.5,
+    time_step_relaxation=0.9,
 )
 
 fv_solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
-    refinement_criterion=refinement_criterion,
     riemann_solver=fWave,
 )
 
@@ -84,13 +162,23 @@ fv_solver.add_user_solver_includes(
 """
 )
 
+limiter_solver = exahype2.solvers.limiting.StaticLimiting(
+    name="LimiterSolver",
+    regular_solver=aderdg_solver,
+    limiting_solver=fv_solver,
+    physical_admissibility_criterion=is_physically_admissible,
+)
+
 project = exahype2.Project(
     namespace=["applications", "exahype2", "swe"],
     project_name="ChileTsunami",
     directory=".",
     executable="ExaHyPE-ShallowWater",
 )
+
+project.add_solver(aderdg_solver)
 project.add_solver(fv_solver)
+project.add_solver(limiter_solver)
 
 if args.number_of_snapshots <= 0:
     time_in_between_plots = 0.0
@@ -101,7 +189,7 @@ else:
 project.set_global_simulation_parameters(
     dimensions=2,
     size=size,
-    offset=[0.0, 0.0],
+    offset=offset,
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     first_plot_time_stamp=0.0,

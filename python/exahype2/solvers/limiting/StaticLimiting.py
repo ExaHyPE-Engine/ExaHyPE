@@ -24,7 +24,7 @@ class StaticLimiting(object):
         name,
         regular_solver,
         limiting_solver,
-        limiting_criterion_implementation = PDETerms.User_Defined_Implementation
+        physical_admissibility_criterion = PDETerms.User_Defined_Implementation
     ):
         self._name = name
 
@@ -55,7 +55,7 @@ class StaticLimiting(object):
 
         self._constructor_implementation = ""
 
-        self._physical_admissibility_criterion = limiting_criterion_implementation
+        self._physical_admissibility_criterion = physical_admissibility_criterion
         if (   self._physical_admissibility_criterion==PDETerms.None_Implementation
             or self._physical_admissibility_criterion==PDETerms.Empty_Implementation):
             raise Exception("Limiting criterion cannot be none")
