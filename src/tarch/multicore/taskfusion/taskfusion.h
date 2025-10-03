@@ -74,6 +74,17 @@ namespace tarch {
      * Consult the documentation of these routines for details when they
      * are used. The documentation also provides information how the
      * underlying implementations work.
+     *
+     *
+     * ## Realisation of different task fusion strategies
+     *
+     * The different task fusion strategies are sketched out in
+     * tarch::multicore::strategies::FusionImplementation. The text
+     * there discusses how the task fusion acts and reacts. At their core,
+     * all realisations however build upon the FusableTaskQueue, i.e. the
+     * task queue offers a certain set up operations. The different fusion
+     * strategies call/use these operations in different ways.
+     *
      */
     namespace taskfusion {
       struct FusableTasksQueue;
@@ -82,19 +93,36 @@ namespace tarch {
        * Handle one fusable task
        *
        * This operation handles one fusable task in the sense that it first
-       * ensures that all infrastructure for the fusion is in place. After
+       * ensures that all infrastructure for the fusion is in place and that
+       * we can, in principle, fuse. After
        * that, it delegates to implementation selected by the orchestration:
        *
-       * 1. Find out if task fusion is active. If not, ensure that the task
+       * 1. Ensure that all incoming tasks (predecessors) are mapped onto
+       *    native tasks. Our implementation leaves all dependency tracking
+       *    to the native runtime, and therefore, we invoke
+       *    taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks()
+       *    first.
+       * 2. Find out if task fusion is active. If not, ensure that the task
        *    is either executed directly or spawned into a native task. Which
        *    variant to pick depends on the orchestration's getFusionImplementation()
        *    result, which returns an instance of tarch::multicore::orchestration::FusionImplementation.
-       * 2. Lock the map over all queues through pendingTasksSemaphore.
-       * 3. Ensure that a queue does exist for the particular task type.
-       * 4. Invoke the task handling that's specified through getFusionImplementation().
+       * 3. Lock the map over all queues through pendingTasksSemaphore.
+       * 4. Ensure that a queue does exist for the particular task type.
+       * 5. Invoke the task handling that's specified through getFusionImplementation().
        *
        * The routine is invoked by tarch::multicore::spawnTask() if this
-       * routine is given a task that can, in theory, be fused.
+       * routine is given a task that can, in theory, be fused. Below are some
+       * remarks on particular strategies:
+       *
+       * ## DisableFusionAndProcessImmediately
+       *
+       * This variant from tarch::multicore::orchestration::FusionImplementation
+       * implies that we directly call the task's run() operation. However, we
+       * first have to ensure that we wait for all incoming tasks. We do so
+       * through a call to waitForTasks(). This wait in return is valid as we
+       * have previously called taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks().
+       *
+       *
        *
        * @see Page @ref documentation_tarch_task_fusion_strategies provides a high-level overview
        * @see tarch::multicore::orchestration::FusionImplementation enlists the different implementation variants
@@ -118,6 +146,9 @@ namespace tarch {
        * the runtime the opportunity to bring in some other tasks, i.e. to
        * disrupt the calculation. However, the runtime cannot bring in other
        * tasks if the tasks are hidden away in a queue.
+       *
+       * This routine invokes tarch::multicore::taskfusion::FusableTasksQueue::drainReadyTasks().
+       * That is, this routine does not(!) issue any task fusion.
        */
       void processAllReadyTasks();
 

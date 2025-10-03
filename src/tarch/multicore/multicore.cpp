@@ -163,7 +163,6 @@ void tarch::multicore::spawnTask(
   tarch::logging::Statistics::getInstance().inc(SpawnedTasksStatisticsIdentifier, 1, false, true);
 
   if (task->canFuse()) {
-    taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
     taskfusion::handleFusableTask(task, inDependencies, taskNumber);
   }
   else {

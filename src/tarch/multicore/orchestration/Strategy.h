@@ -35,7 +35,25 @@ namespace tarch {
        *
        * ## How and where this enum is used for decision making
        *
+       * The enumeration is mainly used within the outward-facing routines
+       * in tarch::multicore::taskfusion to decide which particular strategy to
+       * invoke. That is, each strategy is implemented by providing different
+       * flavours of three core routines. The user calls a blanco (interface)
+       * variant of these routines, the routines query the active strategy,
+       * and then delegate the function call to a particular implementation of
+       * the routine.
        *
+       * In C++, one might want to use an interface for this, but we decided to
+       * stick to an applicative interface here.
+       *
+       *
+       * ## Realisation of different task fusion strategies
+       *
+       * All task fusion realisations rely on the tarch::multicore::taskfusion::FusableTaskQueue:
+       * the task queue offers a certain set up operations. The different
+       * fusion strategies call/use these operations in different ways. It  is
+       * a very small set of operations on the queue, which allow us to
+       * construct various task process patterns for fusion.
        *
        *
        * ## Deprecated variants (lessons learned)
@@ -89,7 +107,7 @@ namespace tarch {
         /**
          * Disable the fusion and process each fusable task immediately
          *
-         * Supported for all backends. Created for debugging only, as it disables the fusion.
+         * Created for debugging only, as it disables the fusion.
          *
          * <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
          * This variant might require OpenMP 6, as the tasks might have transparent incoming or outgoing dependencies.
@@ -119,6 +137,19 @@ namespace tarch {
          * To understand this routine, it makes sense to study ProducerConsumerTaskPairs
          * and EagerConsumerTasks, too. Notably ProducerConsumerTaskPairs
          * provides context about important implementational considerations.
+         *
+         *
+         * ### Timed execution
+         *
+         * You can use this strategy to collect fusable tasks and to fire then
+         * at one particular point in time, i.e. to issue the fusion manually.
+         * To do so, you simply insert a tarch::multicore::Core::yield() into your code when you want
+         * the fusion to happen. The yield invokes in turn
+         * tarch::multicore::taskfusion::processAllReadyTasks() which ensure
+         * that all the task queues are drained.
+         *
+         * @todo das ist falsch, da muss ich noch dran arbeiten. Idee stimmt aber
+         * natuerlich im Prinzip.
          */
         LazyEvaluation,
 

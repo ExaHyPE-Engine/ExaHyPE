@@ -53,6 +53,8 @@ void tarch::multicore::taskfusion::handleFusableTask(
 
   assertion1(task->getTaskType()>=0, task->getTaskType());
 
+  taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
+
   const tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(task->getTaskType());
 
   assertion1(instruction.device==tarch::multicore::Task::Host or instruction.device>=0, instruction.toString());
@@ -63,6 +65,7 @@ void tarch::multicore::taskfusion::handleFusableTask(
     native::spawnTask(task, inDependencies, taskNumber);
   }
   else if (tarch::multicore::getOrchestration().getFusionImplementation()==tarch::multicore::orchestration::FusionImplementation::DisableFusionAndProcessImmediately) {
+    waitForTasks(inDependencies);
     task->run();
     delete task;
   }
