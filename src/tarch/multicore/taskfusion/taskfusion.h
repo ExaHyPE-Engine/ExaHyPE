@@ -122,6 +122,12 @@ namespace tarch {
        * through a call to waitForTasks(). This wait in return is valid as we
        * have previously called taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks().
        *
+       * ## LazyEvaluation
+       *
+       * Almost trival realisation of the core functionality through
+       * handleFusableTask_LazyEvaluation(). The interesting stuff, i.e. the
+       * fusion and task processing, all happens in ensureHeldBackTasksAreMappedOntoNativeTasks()
+       * which in turn calls ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation().
        *
        *
        * @see Page @ref documentation_tarch_task_fusion_strategies provides a high-level overview
@@ -217,6 +223,19 @@ namespace tarch {
       /**
        * Implementation of handleFusableTask() if we use LazyEvaluation.
        *
+       * Lazy evaluation means that we take a task, but we wrap it out for a
+       * proxy task. This is an instance of LogReadyTask. The run() of the
+       * LogReadyTask instance dumps the actual task into the respective
+       * task queue. If there are no incoming dependencies, we can directly
+       * dump the actual task.
+       *
+       * @image html taskfusion-LazyEvaluation.png
+       *
+       * After that, we can return. If someone waits for our task (which we
+       * replaced with the LogReadyTask), we have to ensure that the task
+       * has been removed from the queue and processed. This is realised
+       * through ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation().
+       *
        * @see @ref documentation_tarch_task_fusion_strategies for some context for this routine.
        */
       void handleFusableTask_LazyEvaluation(
@@ -270,23 +289,58 @@ namespace tarch {
       bool ensureHeldBackTasksAreMappedOntoNativeTasks(const std::set<TaskNumber>& taskNumbers);
 
       /**
-       * Preamble of waitForTasks() if we use LazyEvaluation.
+       * Preamble of waitForTasks() and task spawns if we use LazyEvaluation.
+       *
+       * The routine ensureHeldBackTasksAreMappedOntoNativeTasks() delegates to
+       * this one if we have chosen lazy evaluation. The job here is that we
+       * ensure that any pending work is mapped properly onto native tasks or
+       * that all tasks have finished. In the latter case, any follow-up wait
+       * degenerates to an anti-dependency.
+       *
+       * @image html taskfusion-LazyEvaluation.png
+       *
+       * The spawning of our task of interest has either created a LogReadyTask
+       * instance, or it has directly dropped the task that we wait for into
+       * the task queue. We don't know if this LogReadyTask is still out
+       * there, so first we have to wait for it. We know it had the same number
+       * as the original task, as we had swapped it out for this one.
+       *
+       * Next, we check if our task of interest is still in this queue, i.e. is
+       * ready or running. We can do so through
+       * anyTasksOfInDendenciesMightBeStillReadyOrRunning(). If they are not
+       * there, we can return with a false, as we know that the calling routine
+       * does not have to wait for us. We are ready to go.
+       *
+       * If one of our tasks that we wait for is still in the queue, we loop
+       * over each individual in-dependency:
+       *
+       * - If the in-dependency is not found, skip and go to the next one.
+       * - If the in-dependecy's task is in the queue, first issue a task which
+       *   does all the task fusion (task A).
+       * - Next, trigger another task B which picks only this one task we are
+       *   actually interested in (task B).
+       *
+       * We ensure that A and B have exactly the same number of one of the
+       * in-dependencies. This way, A will execute before B and the user will
+       * wait for B. Please read the text below to understand why the split-up
+       * into A and B is not just for fun. It is required to ensure that we
+       * do not run into deadlocks.
+       *
+       *
+       * ## Realisation
        *
        * We don't know, at this point, what the type of each in dependency is.
        * Therefore, we loop over all queues, i.e. all task types that we
        * are aware of, and look if any of the tasks we are interested in is
-       * still in there labelled as ready or running. This works, as we expect
-       * the user to have called ensureHeldBackTasksAreMappedOntoNativeTasks_EnsureAllTasksAreRunningReadyOrHaveCompleted()
-       * before, i.e. all in-dependencies are in that state.
-       * We use a try-lock here to avoid blocking. If this try fails,
-       * we have to assume that the task is still in the queue. If we assume
-       * that at least one task is running or is ready, we have to continue to
-       * do some work:
+       * still in there labelled as ready or running.
        *
        * First, we look in each queue if it hosts the a task that is ready or
        * running. If this is the case, we invoke the task fusion and afterwards
        * ensure that the task is really completed by spawning
        * ProcessOneReadyTask.
+       *
+       *
+       * ## Potential deadlocks
        *
        * It is important that ProcessOneReadyTask and ProcessSetOfReadyTasks
        * are modelled independently to avoid deadlocks:
@@ -314,11 +368,19 @@ namespace tarch {
        * ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks()
        * for details.
        *
+       * A flaw of the present implementation is that additional
        *
-       * @see ProcessReadyTask::processTasks() to trigger the actual lazy
-       *      fusion of tasks.
-       * @see ProcessReadyTask::hasTaskBeenProcessed() which is used to check
-       *      if a particular task has completed already.
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * native::waitForTasks(inDependencies);
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       * We need this one, as we don't know if there are still instances of
+       * LogReadyTask out there pending. If we knew that this is not the case,
+       * we could skip this step and eliminate one synchronisation point.
+       *
+       *
+       * @see ProcessSetOfReadyTasks which triggers the actual lazy fusion of tasks.
+       * @see ProcessOneReadyTask which is used to check if a particular task has completed already.
        */
       bool ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(const std::set<TaskNumber>& inDependencies);
 
@@ -332,18 +394,6 @@ namespace tarch {
        * the time we wait for a task.
        */
       bool ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks(const std::set<TaskNumber>& inDependencies);
-
-      /**
-       * Ensure tasks are not pending anymore
-       *
-       * If we want to ensure that a fusable task is mapped onto a proper task
-       * (set) already, then we first of all have to check if a fusable task
-       * is still pending, i.e. parked in the queue of tasks that are not
-       * ready yet. So we have to ensure that they are not blocked. If they are
-       * not yet among the ready tasks (or already running or have completed),
-       * then we add a wait here.
-       */
-      void ensureHeldBackTasksAreMappedOntoNativeTasks_EnsureAllTasksAreRunningReadyOrHaveCompleted(const std::set<TaskNumber>& inDependencies);
     } // namespace taskfusion
   }
 }

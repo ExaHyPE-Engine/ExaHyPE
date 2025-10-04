@@ -22,8 +22,6 @@ tarch::multicore::taskfusion::ProcessOneReadyTask::ProcessOneReadyTask(
 
 
 void tarch::multicore::taskfusion::ProcessOneReadyTask::run() {
-  assertion( not _taskQueue.isTaskPending(_taskNumber, false) );
-
   if ( _taskQueue.isTaskReadyOrRunning(_taskNumber, FusableTasksQueue::LockQueueAndReturnReliableResult) ) {
     tarch::multicore::Lock readyTaskLock(_taskQueue._readyTasksSemaphore);
     if ( _taskQueue._readyTasks.count(_taskNumber)>0 ) {

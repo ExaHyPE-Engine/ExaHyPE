@@ -121,13 +121,24 @@ namespace tarch {
          *
          * All fusable tasks are enqueued into a separate queue. When a new
          * task with in-dependencies is launched, we doublecheck if the
-         * predecessing tasks is still pending in a fusable queue. This is done
-         * in the parent namespace and leads to a call of
-         * ensureHeldBackTasksAreMappedOntoNativeTasks_EnsureAllTasksAreRunningReadyOrHaveCompleted().
+         * predecessing tasks is still pending in a fusable queue. If so, we
+         * process it, but we also might combine it with multiple other
+         * tasks.
+         *
+         * @image html taskfusion-LazyEvaluation.png
          *
          * After we know that they are either running or ready, we trigger the
-         * fusion. The core routines to study how this is all implemented is
-         * tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation().
+         * fusion. The core routines to study how this is all implemented are
+         *
+         * - tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation() which
+         *   we use before we trigger a wait or handle a new task with incoming
+         *   dependencies;
+         * - tarch::multicore::taskfusion::handleFusableTask_LazyEvaluation() which
+         *   does all the enqueuing.
+         *
+         *
+         *
+         * #### Implementation support
          *
          * This variant should work no matter what backend people use. It
          * reliably leads to large batches of tasks, as it is lazy and hence
@@ -139,7 +150,7 @@ namespace tarch {
          * provides context about important implementational considerations.
          *
          *
-         * ### Timed execution
+         * #### Timed execution
          *
          * You can use this strategy to collect fusable tasks and to fire then
          * at one particular point in time, i.e. to issue the fusion manually.
@@ -328,7 +339,7 @@ public:
    *
    * @param taskType Number of the task that we are studying
    * @param queueSize Size of the queue at this observation point
-   * @param averageNumberOfPendingReadyTasksPerProcessTaskExecution average
+   * @param averageNumberOfReadyTasksPerProcessTaskExecution average
    *   over number of tasks in the queue whenever a process task has kicked
    *   off and the underlying real task has not completed yet.
    * @param probabilityThatTaskIsCompleted Probability that task result has
@@ -340,7 +351,7 @@ public:
   virtual void updateFuseStatistics(
     int    taskType,
     int    queueSize,
-    double averageNumberOfPendingReadyTasksPerProcessTaskExecution,
+    double averageNumberOfReadyTasksPerProcessTaskExecution,
     double probabilityThatTaskIsCompleted
   ) = 0;
 
