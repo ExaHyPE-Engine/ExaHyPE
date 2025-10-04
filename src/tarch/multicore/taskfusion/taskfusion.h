@@ -114,13 +114,15 @@ namespace tarch {
        * routine is given a task that can, in theory, be fused. Below are some
        * remarks on particular strategies:
        *
-       * ## DisableFusionAndProcessImmediately
+       *
+       * ## DisableFusionAndProcessImmediately and other degenerated strategies
        *
        * This variant from tarch::multicore::orchestration::FusionImplementation
        * implies that we directly call the task's run() operation. However, we
        * first have to ensure that we wait for all incoming tasks. We do so
        * through a call to waitForTasks(). This wait in return is valid as we
        * have previously called taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks().
+       *
        *
        * ## LazyEvaluation
        *
@@ -282,6 +284,9 @@ namespace tarch {
        * The function is used by tarch::multicore::waitForTasks() and
        * tarch::multicore::spawnTask(). The latter calls it over all incoming
        * dependencies.
+       *
+       * @param taskNumbers: Set of task numbers we depend on. May not be
+       *         empty.
        *
        * @return The routine might have created new native tasks, i.e. the
        *         calling routine has to wait for these native tasks.
