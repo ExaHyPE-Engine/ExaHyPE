@@ -13,8 +13,8 @@ tarch::logging::Log  tarch::multicore::taskfusion::FusableTasksQueue::_log( "tar
 
 tarch::multicore::taskfusion::FusableTasksQueue::FusableTasksQueue(int type):
   _type(type),
-  _probabilityThatTaskIsCompleted(256)
-{}
+  _numberOfReadyTasksPerProcessTaskExecution(tarch::timing::GlidingAverageMeasurement::DefaultWeight, 256),
+  _probabilityThatTaskIsCompleted(tarch::timing::GlidingAverageMeasurement::DefaultWeight, 256) {}
 
 
 void tarch::multicore::taskfusion::FusableTasksQueue::insertReadyTask( Task* task, int taskNumber ) {
