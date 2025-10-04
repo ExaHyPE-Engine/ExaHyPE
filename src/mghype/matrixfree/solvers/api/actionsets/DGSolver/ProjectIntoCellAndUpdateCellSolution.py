@@ -20,7 +20,7 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double > faceSol;
     for (int f=0; f<TwoTimesD; f++)
     for (int s=0; s<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; s++) {
-      assertion2( fineGridFacesDGPoisson(f).getSolution(s)<1e10, fineGridFacesDGPoisson(f).getSolution(s), fineGridFacesDGPoisson(f).getSolution() );
+      assertion2( fineGridFaces{{SOLVER_NAME}}(f).getSolution(s)<1e10, fineGridFaces{{SOLVER_NAME}}(f).getSolution(s), fineGridFaces{{SOLVER_NAME}}(f).getSolution() );
       faceSol( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getSolution(s);
     }
 
@@ -30,7 +30,7 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
     // loop over each face, finish updating residual as we go
     for (int f=0; f<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; f++)
     {
-      assertion2( fineGridCellDGPoisson.getResidual(f)<1e10, fineGridCellDGPoisson.getResidual(f), projection(f) );
+      assertion2( fineGridCell{{SOLVER_NAME}}.getResidual(f)<1e10, fineGridCell{{SOLVER_NAME}}.getResidual(f), projection(f) );
       // project the face solution onto the cell; add to r
       fineGridCell{{SOLVER_NAME}}.setResidual(f,
         fineGridCell{{SOLVER_NAME}}.getResidual(f)- projection(f));
