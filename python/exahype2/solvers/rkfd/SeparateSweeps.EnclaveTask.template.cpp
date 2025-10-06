@@ -359,7 +359,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
 /**
  * Also merge the current task
  */
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks, int targetDevice ) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::vector<Task*>& otherTasks, int targetDevice ) {
   logDebug( "fuse(...)", "asked to fuse " << (otherTasks.size()+1) << " tasks into one large GPU task" );
 
   ::exahype2::CellData patchData(otherTasks.size() + 1, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
