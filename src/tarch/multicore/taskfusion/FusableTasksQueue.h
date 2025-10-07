@@ -105,6 +105,17 @@ class tarch::multicore::taskfusion::FusableTasksQueue {
     void drainReadyTasks();
 
     /**
+     * Return number of first ready task
+     *
+     * This routine gives you the number of the first ready task in the queue,
+     * or it returns tarch::multicore::NoOutDependencies if there's no task left.
+     * Even if you get a valid entry, there's no guarantee that this task still
+     * remains in the queue. Some ProcessSetOfReadyTasks instance might have
+     * grabbed it straight after this routine returned.
+     */
+    TaskNumber getFirstReadyTaskNumber();
+
+    /**
      * Can be used with the queries below if you prefer those names over
      * the boolean values. Makes it clearer what a function does.
      */

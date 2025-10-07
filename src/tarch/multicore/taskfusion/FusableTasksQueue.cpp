@@ -25,6 +25,17 @@ void tarch::multicore::taskfusion::FusableTasksQueue::insertReadyTask( Task* tas
 }
 
 
+tarch::multicore::TaskNumber tarch::multicore::taskfusion::FusableTasksQueue::getFirstReadyTaskNumber() {
+  tarch::multicore::Lock readyTaskLock(_readyTasksSemaphore);
+  if ( _readyTasks.empty() ) {
+    return tarch::multicore::NoOutDependencies;
+  }
+  else {
+    return _readyTasks.begin()->first;
+  }
+}
+
+
 void tarch::multicore::taskfusion::FusableTasksQueue::drainReadyTasks() {
   int nextTaskNumber = AnyTask+1;
 

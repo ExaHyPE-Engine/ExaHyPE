@@ -111,7 +111,7 @@ class UpdateResidualWithTasks(ActionSet):
       tarch::multicore::NoInDependencies,
       taskNumber+1
     ); 
-    logInfo( "touchCellFirstTime(...)", "issue tasks " << (taskNumber+0) << " and " << (taskNumber+1) << " for " << marker.toString() );
+    logDebug( "touchCellFirstTime(...)", "issue tasks " << (taskNumber+0) << " and " << (taskNumber+1) << " for " << marker.toString() );
 
     logTraceOut("touchCellFirstTime(...)");
   }

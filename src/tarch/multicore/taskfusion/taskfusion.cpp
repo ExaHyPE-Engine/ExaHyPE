@@ -204,6 +204,26 @@ void tarch::multicore::taskfusion::processAllReadyTasks() {
 }
 
 
+void tarch::multicore::taskfusion::processAndFuseAllReadyTasks() {
+  tarch::multicore::TaskNumber pendingReadyTask = tarch::multicore::NoOutDependencies + 1;
+  while (pendingReadyTask != tarch::multicore::NoOutDependencies) {
+    pendingReadyTask = tarch::multicore::NoOutDependencies;
+
+    tarch::multicore::Lock lock(fusableTaskQueueSemaphore);
+    for (auto& p: fusableTaskQueue) {
+      if (pendingReadyTask!=tarch::multicore::NoOutDependencies) {
+        pendingReadyTask = p.second->getFirstReadyTaskNumber();
+      }
+    }
+    lock.free();
+
+    if (pendingReadyTask!=tarch::multicore::NoOutDependencies) {
+      waitForTask(pendingReadyTask);
+    }
+  }
+}
+
+
 bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(const std::set<TaskNumber>& taskNumbers) {
   assertion1( not taskNumbers.empty(), taskNumbers.size() );
   switch (tarch::multicore::getOrchestration().getFusionImplementation()) {
@@ -294,7 +314,7 @@ bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_L
             taskNumber
           );
 
-          logInfo( "ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(...)", "issued two process tasks " << taskNumber << "->" << taskNumber );
+          logDebug( "ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(...)", "issued two process tasks " << taskNumber << "->" << taskNumber );
 
           result = true;
         }

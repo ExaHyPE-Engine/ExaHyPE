@@ -161,6 +161,22 @@ namespace tarch {
       void processAllReadyTasks();
 
       /**
+       * Drain the queues but use task fusion where possible
+       *
+       * This is the cousin to processAllReadyTasks(). It ensures that the task
+       * queues are drained eventually, but it relies on task fusion rather
+       * than a manual drain. Different to processAllReadyTasks(), you do not
+       * have to issue a manual barrier afterward this routine has returned.
+       * You may assume that all tasks are literally complete.
+       *
+       * This blocking behaviour implies that you stop your program execution.
+       * However, nothing stops you, subject to the correct dependency
+       * management, to deploy the call to processAndFuseAllReadyTasks() to yet
+       * another task of its own.
+       */
+      void processAndFuseAllReadyTasks();
+
+      /**
        * Realisation for handleFusableTask() for ProducerConsumerTaskPairs
        *
        * Translate a single task into a sequence of (fusable tasks)
