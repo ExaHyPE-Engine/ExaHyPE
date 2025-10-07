@@ -303,7 +303,7 @@ ExaHyPE2_SBH:
     - Build
   retry: 0
 
-ExaHyPE2_SBH_Coupled:
+ExaHyPE2_SBH_Enclave:
   stage: Benchmarks
   allow_failure: false
   extends:
@@ -311,7 +311,7 @@ ExaHyPE2_SBH_Coupled:
     - .Variables
     - .RunOnlyOn
     - .BeforeScriptWithAutomakeSanitiser
-    - .ExaHyPE2_SBH_Coupled
+    - .ExaHyPE2_SBH_Enclave
   needs:
     - job: Build
   dependencies:
