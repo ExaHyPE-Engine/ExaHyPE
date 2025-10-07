@@ -102,6 +102,29 @@ namespace tarch {
 
      const std::set<TaskNumber> NoInDependencies = std::set<TaskNumber>();
 
+     /**
+      * Construct string representation
+      *
+      * Returns a string representation of the task set which either is
+      *
+      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      * {<empty>}
+      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      *
+      * or it resembles
+      *
+      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      * {1,2,3,4}
+      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      *
+      * We use this routine in logging statements internally mainly. The
+      * routine has to be within the namespace, as we overload a general
+      * C++ std lib, and I want to keep this definition of toString()
+      * specific to task numbers. It is also fine to have it in the
+      * namespace, as it is only used internally anyway.
+      */
+     std::string toString( const std::set<TaskNumber>& taskNumbers );
+
     /**
      * Switch on SmartMPI
      *
