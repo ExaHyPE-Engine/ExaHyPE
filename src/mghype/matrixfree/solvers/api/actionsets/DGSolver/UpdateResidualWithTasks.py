@@ -56,12 +56,17 @@ class UpdateResidualWithTasks(ActionSet):
      * directly into this smart pointer.
      */
     auto updateResidualFunctor = [rhsPointer, solutionPointer, residualPointer, marker]() mutable -> void {
+      logTraceInWith1Argument( "UpdateResidualWithTasks - updateResidualFunctor", marker.toString() );
+      
       tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > r =
         repositories::{{SOLVER_INSTANCE}}.applyRhsMatrix( marker.x(), marker.h(), rhsPointer.toVector() );
       
       r = r - repositories::{{SOLVER_INSTANCE}}.applyLocalAssemblyMatrix(marker.x(), marker.h(), solutionPointer.toVector() );
       
       residualPointer = r;
+      
+      logInfo( "UpdateResidualWithTasks - updateResidualFunctor", marker.toString() );
+      logTraceOutWith1Argument( "UpdateResidualWithTasks - updateResidualFunctor", marker.toString() );
     };
 
 
@@ -69,6 +74,7 @@ class UpdateResidualWithTasks(ActionSet):
      * Issue the calculation of the inverse of the system matrix
      */
     auto invertMatrixFunctor = [inverseOperator, marker, OperatorSize]() mutable -> void {
+      logTraceInWith1Argument( "UpdateResidualWithTasks - invertMatrixFunctor", marker.toString() );
       std::memcpy(
         inverseOperator,
         repositories::{{SOLVER_INSTANCE}}.getInvertedApproxSystemMatrix(
@@ -77,6 +83,8 @@ class UpdateResidualWithTasks(ActionSet):
         ).data(),
         sizeof(double)*OperatorSize
       );
+      logInfo( "UpdateResidualWithTasks - invertMatrixFunctor", marker.toString() );
+      logTraceOutWith1Argument( "UpdateResidualWithTasks - invertMatrixFunctor", marker.toString() );
     };
 
 
@@ -105,6 +113,7 @@ class UpdateResidualWithTasks(ActionSet):
       tarch::multicore::NoInDependencies,
       taskNumber+1
     ); 
+    logInfo( "touchCellFirstTime(...)", "issue tasks " << (taskNumber+0) << " and " << (taskNumber+1) << " for " << marker.toString() );
 
     logTraceOut("touchCellFirstTime(...)");
   }
