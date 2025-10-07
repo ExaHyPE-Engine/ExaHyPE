@@ -53,7 +53,9 @@ void tarch::multicore::taskfusion::handleFusableTask(
 
   assertion1(task->getTaskType()>=0, task->getTaskType());
 
-  taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
+  if ( not inDependencies.empty() ) {
+    taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
+  }
 
   const tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(task->getTaskType());
 
@@ -73,7 +75,6 @@ void tarch::multicore::taskfusion::handleFusableTask(
     native::spawnTask(task, inDependencies, taskNumber);
   }
   else {
-    // ensure the entry exists
     tarch::multicore::Lock lock(fusableTaskQueueSemaphore);
     if (fusableTaskQueue.count(task->getTaskType())==0) {
       fusableTaskQueue.insert(
@@ -113,17 +114,21 @@ void tarch::multicore::taskfusion::handleFusableTask_LazyEvaluation(
   const TaskNumber&      taskNumber,
   const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction
 ) {
+  logTraceInWith1Argument( "handleFusableTask_LazyEvaluation(...)", taskNumber );
   if ( taskNumber==tarch::multicore::NoOutDependencies or inDependencies.empty() ) {
+    logDebug( "handleFusableTask_LazyEvaluation(...)", "insert task " << taskNumber << " directly into fusion queue" );
     taskQueue.insertReadyTask(
       task,
       taskNumber
     );
   }
   else {
+    logDebug( "handleFusableTask_LazyEvaluation(...)", "insert a ready task wrapping actual task " << taskNumber );
     Task* readyTask   = new LogReadyTask(task, taskNumber, taskQueue);
     readyTask->setPriority(task->getPriority());
     tarch::multicore::native::spawnTask( readyTask, inDependencies, taskNumber);
   }
+  logTraceOutWith1Argument( "handleFusableTask_LazyEvaluation(...)", taskNumber );
 }
 
 
@@ -222,6 +227,7 @@ bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(c
 
 
 bool anyTasksOfInDendenciesMightBeStillReadyOrRunning(const std::set<tarch::multicore::TaskNumber>& inDependencies) {
+  logTraceInWith1Argument( "anyTasksOfInDendenciesMightBeStillReadyOrRunning(std::set)", inDependencies.size() );
   bool tasksAreReadyOrRunning  = false;
 
   for (auto taskNumber: inDependencies) {
@@ -230,6 +236,7 @@ bool anyTasksOfInDendenciesMightBeStillReadyOrRunning(const std::set<tarch::mult
     }
   }
 
+  logTraceOutWith1Argument( "anyTasksOfInDendenciesMightBeStillReadyOrRunning(std::set)", tasksAreReadyOrRunning );
   return tasksAreReadyOrRunning;
 }
 
@@ -261,6 +268,8 @@ bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_E
 
 
 bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(const std::set<TaskNumber>& inDependencies) {
+  logTraceInWith1Argument( "ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(std::set)", inDependencies.size() );
+
   assertion1( not inDependencies.empty(), inDependencies.size() );
 
   native::waitForTasks(inDependencies);
@@ -285,12 +294,15 @@ bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_L
             taskNumber
           );
 
+          logInfo( "ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(...)", "issued two process tasks " << taskNumber << "->" << taskNumber );
+
           result = true;
         }
       }
     }
   }
 
+  logTraceOutWith1Argument( "ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(std::set)", result );
   return result;
 }
 
