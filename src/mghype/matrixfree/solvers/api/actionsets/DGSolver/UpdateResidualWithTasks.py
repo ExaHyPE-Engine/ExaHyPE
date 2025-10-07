@@ -65,7 +65,6 @@ class UpdateResidualWithTasks(ActionSet):
       
       residualPointer = r;
       
-      logInfo( "UpdateResidualWithTasks - updateResidualFunctor", marker.toString() );
       logTraceOutWith1Argument( "UpdateResidualWithTasks - updateResidualFunctor", marker.toString() );
     };
 
@@ -83,7 +82,6 @@ class UpdateResidualWithTasks(ActionSet):
         ).data(),
         sizeof(double)*OperatorSize
       );
-      logInfo( "UpdateResidualWithTasks - invertMatrixFunctor", marker.toString() );
       logTraceOutWith1Argument( "UpdateResidualWithTasks - invertMatrixFunctor", marker.toString() );
     };
 
