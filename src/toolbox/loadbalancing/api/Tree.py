@@ -56,7 +56,6 @@ class Tree(object):
 	
 	## Key Properties
 	
-	- **Peano SFC Compatible**: Arrays are structured to be compatible with Peano's space-filling curve traversal
 	- **Hierarchical Structure**: Each level refines the previous by factor of 3 in each dimension
 	- **Adaptive Support**: Zero weights represent non-existent cells in adaptive meshes
 	- **Load Balancing Ready**: Subtree IDs enable domain decomposition analysis
