@@ -43,8 +43,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       GridConstruction,
       GridInitialisation,
 
-      TimeStep,
-      TimeStepAfterGridInitialisation,
+      // Switch solver state for coupling
+      StillNeedsToSolveAfterGridInitialisation,
+      StillNeedsToSolve,
+      IsSolvingAfterGridInitialisation,
+      IsSolving,
+      HasSolved,
 
       Plotting,
       PlottingAfterGridInitialisation,

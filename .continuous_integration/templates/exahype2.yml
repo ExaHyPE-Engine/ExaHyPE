@@ -7,6 +7,24 @@
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv; PYTHONPATH=$CI_PROJECT_DIR/python python3 fv.py -d $dimensions -m $build_type -md 2"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv; OMP_NUM_THREADS=1 ./FVTest;"
 
+.ExaHyPE2_FV_Coupling_Tests:
+  parallel:
+    matrix:
+    - dimensions: [2, 3]
+      build_type: [Debug, Release]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv-coupling; PYTHONPATH=$CI_PROJECT_DIR/python python3 fv-coupling.py -d $dimensions -m $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv-coupling; OMP_NUM_THREADS=1 ./ExaHyPE;"
+
+.ExaHyPE2_FV_Static_AMR_Tests:
+  parallel:
+    matrix:
+    - dimensions: [2]
+      build_type: [Debug, Release]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv-static-amr; PYTHONPATH=$CI_PROJECT_DIR/python python3 fv-static-amr.py -d $dimensions -m $build_type -enclave"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv-static-amr; OMP_NUM_THREADS=1 ./ExaHyPE;"
+
 .ExaHyPE2_FV_Dynamic_AMR_Tests:
   parallel:
     matrix:
@@ -23,7 +41,16 @@
       build_type: [Debug, Release]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fd; PYTHONPATH=$CI_PROJECT_DIR/python python3 fd.py -d $dimensions -m $build_type"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fd; OMP_NUM_THREADS=1 ./FDTest;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fd; OMP_NUM_THREADS=1 ./ExaHyPE;"
+
+.ExaHyPE2_FV_FD_Coupling_Tests:
+  parallel:
+    matrix:
+    - dimensions: [2, 3]
+      build_type: [Debug, Release]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv-fd-coupling; PYTHONPATH=$CI_PROJECT_DIR/python python3 fv-fd-coupling.py -d $dimensions -m $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv-fd-coupling; OMP_NUM_THREADS=1 ./ExaHyPE;"
 
 .ExaHyPE2_ADERDG_Tests:
   parallel:

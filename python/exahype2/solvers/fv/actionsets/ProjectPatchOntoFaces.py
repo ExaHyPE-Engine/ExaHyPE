@@ -36,7 +36,7 @@ class ProjectPatchOntoFaces(peano4.toolbox.blockstructured.ProjectPatchOntoFaces
             guard="not marker.hasBeenRefined() and "
             + guard
             + (
-                f" and (repositories::{solver.get_name_of_global_instance()}.getSolverState() != {solver._name}::SolverState::TimeStep or marker.willBeSkeletonCell())"
+                f" and (repositories::{solver.get_name_of_global_instance()}.getSolverState() != {solver._name}::SolverState::IsSolving or marker.willBeSkeletonCell())"
                 if solver._use_enclave_tasking
                 else ""
             ),

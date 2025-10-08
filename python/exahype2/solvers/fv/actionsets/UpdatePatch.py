@@ -72,7 +72,15 @@ class UpdatePatch(AbstractFVActionSet):
 
     def __init__(self, solver):
         super(UpdatePatch, self).__init__(solver)
-        self.guard = "not marker.willBeRefined() and not marker.hasBeenRefined()"
+        self.guard = (
+            "not marker.willBeRefined() and not marker.hasBeenRefined()"
+            + " and "
+            + "("
+            + f"repositories::{solver.get_name_of_global_instance()}.getSolverState() == Abstract{solver.name}::SolverState::IsSolving"
+            + " or "
+            + f"repositories::{solver.get_name_of_global_instance()}.getSolverState() == Abstract{solver.name}::SolverState::IsSolvingAfterGridInitialisation"
+            + ")"
+        )
         self.old_accessor = "fineGridCell" + solver._patch_reconstructed.name
         self.new_accessor = "fineGridCell" + solver._patch.name
 

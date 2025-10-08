@@ -22,6 +22,7 @@ class GlobalFixedTimeStep(SingleSweep):
         number_of_enclave_tasks=1,
         plot_grid_properties=False,
         overlap=1,
+        solvers_before_in_coupling=[],
     ):
         super(GlobalFixedTimeStep, self).__init__(
             name=name,
@@ -34,10 +35,13 @@ class GlobalFixedTimeStep(SingleSweep):
             use_enclave_tasking=use_enclave_tasking,
             number_of_enclave_tasks=number_of_enclave_tasks,
             plot_grid_properties=plot_grid_properties,
+            solvers_before_in_coupling=solvers_before_in_coupling,
         )
 
         self._compute_eigenvalue = False
-        self._time_stepping_code_snippets = FixedTimeSteppingCodeSnippets(normalised_time_step_size)
+        self._time_stepping_code_snippets = FixedTimeSteppingCodeSnippets(
+            normalised_time_step_size
+        )
 
     def _generate_kernels(self, output, subdirectory):
         generate_kernels(

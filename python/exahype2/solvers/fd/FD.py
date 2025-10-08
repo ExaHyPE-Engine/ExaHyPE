@@ -41,7 +41,7 @@ class FD(object):
 
         order: int
            That's the order of the (highest) derivative this solver should be able
-           to compute. A value of n will give the user n right and n left neightbors.
+           to compute. A value of n will give the user n right and n left neighbours.
            The order has to be bigger or equal to one. It has to be smaller or equal
            to patch_size.
 
@@ -165,7 +165,6 @@ class FD(object):
         self._initial_conditions_implementation = PDETerms.User_Defined_Implementation
         self._boundary_conditions_implementation = PDETerms.User_Defined_Implementation
         self._refinement_criterion_implementation = PDETerms.Empty_Implementation
-        self._eigenvalues_implementation = PDETerms.None_Implementation
         self._max_eigenvalue_implementation = PDETerms.None_Implementation
         self._flux_implementation = PDETerms.None_Implementation
         self._source_term_implementation = PDETerms.None_Implementation
@@ -174,7 +173,6 @@ class FD(object):
         self._use_stateless_initial_conditions = False
         self._use_stateless_boundary_conditions = False
         self._use_stateless_refinement_criterion = False
-        self._use_stateless_eigenvalues = False
         self._use_stateless_max_eigenvalue = False
         self._use_stateless_flux = False
         self._use_stateless_source_term = False
@@ -254,9 +252,6 @@ Boundary conditions:    """
             + """
 Refinement criterion:   """
             + str(self._refinement_criterion_implementation)
-            + """
-Eigenvalues:            """
-            + str(self._eigenvalues_implementation)
             + """
 Max eigenvalue:         """
             + str(self._max_eigenvalue_implementation)
@@ -1340,7 +1335,6 @@ The finest mesh width of """
         d[
             "REFINEMENT_CRITERION_IMPLEMENTATION"
         ] = self._refinement_criterion_implementation
-        d["EIGENVALUES_IMPLEMENTATION"] = self._eigenvalues_implementation
         d["MAX_EIGENVALUE_IMPLEMENTATION"] = self._max_eigenvalue_implementation
         d["FLUX_IMPLEMENTATION"] = self._flux_implementation
         d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
@@ -1349,7 +1343,6 @@ The finest mesh width of """
         d["STATELESS_INITIAL_CONDITIONS"] = self._use_stateless_initial_conditions
         d["STATELESS_BOUNDARY_CONDITIONS"] = self._use_stateless_boundary_conditions
         d["STATELESS_REFINEMENT_CRITERION"] = self._use_stateless_refinement_criterion
-        d["STATELESS_EIGENVALUES"] = self._use_stateless_eigenvalues
         d["STATELESS_MAX_EIGENVALUE"] = self._use_stateless_max_eigenvalue
         d["STATELESS_FLUX"] = self._use_stateless_flux
         d["STATELESS_SOURCE_TERM"] = self._use_stateless_source_term

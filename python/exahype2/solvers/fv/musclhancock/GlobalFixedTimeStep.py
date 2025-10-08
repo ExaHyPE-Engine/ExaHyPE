@@ -23,6 +23,7 @@ class GlobalFixedTimeStep(SingleSweep):
         plot_grid_properties=False,
         reconstruction=None,
         overlap=2,
+        solvers_before_in_coupling=[],
     ):
         super(GlobalFixedTimeStep, self).__init__(
             name=name,
@@ -35,6 +36,7 @@ class GlobalFixedTimeStep(SingleSweep):
             use_enclave_tasking=use_enclave_tasking,
             number_of_enclave_tasks=number_of_enclave_tasks,
             plot_grid_properties=plot_grid_properties,
+            solvers_before_in_coupling=solvers_before_in_coupling,
         )
 
         self._compute_eigenvalue = False
@@ -48,12 +50,12 @@ class GlobalFixedTimeStep(SingleSweep):
             solver=self,
             output=output,
             subdirectory=subdirectory,
-            reconstruction = self._reconstruction,
+            reconstruction=self._reconstruction,
         )
         if self._use_enclave_tasking and self._can_fuse:
             generate_fused_kernels(
                 solver=self,
                 output=output,
                 subdirectory=subdirectory,
-                reconstruction = self._reconstruction,
+                reconstruction=self._reconstruction,
             )

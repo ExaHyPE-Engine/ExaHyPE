@@ -7,7 +7,6 @@ compute_primitive_variables = r"""
   const auto u1 = Q[Shortcuts::rhoU + 1] * irho;
 #if DIMENSIONS == 3
   const auto u2 = Q[Shortcuts::rhoU + 2] * irho;
-#else
 #endif
 
 #if DIMENSIONS == 3
