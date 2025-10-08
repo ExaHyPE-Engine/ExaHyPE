@@ -53,7 +53,6 @@ void toolbox::blockstructured::copyUnknown(
     int sourceIndexLinearised = (x + sourceHalo + (y+sourceHalo)*(numberOfDoFsPerAxisInPatch+2*sourceHalo) ) * sourceUnknowns + sourceIndex;
     int destIndexLinearised   = (x + destHalo + (y+destHalo)*(numberOfDoFsPerAxisInPatch+2*destHalo) ) * destUnknowns + destIndex;
     dest[destIndexLinearised] = source[sourceIndexLinearised];
-    assertion5( source[sourceIndexLinearised]>0.0, sourceIndexLinearised, x, y, sourceIndex, sourceUnknowns ); // @todo raus
   }
   #elif DIMENSIONS==3
   for (int x=0; x<numberOfDoFsPerAxisInPatch; x++)

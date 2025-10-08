@@ -1,7 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import jinja2
-from exahype2.solvers.SolverCommons import *
+from exahype2.solvers.SolverSignatures import *
 
 
 class SolverDeclarations:
@@ -39,9 +38,6 @@ class SolverDeclarations:
     {% endif %}
 
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" and BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
-    #if defined(GPUOffloadingOMP)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void boundaryConditions(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -62,9 +58,6 @@ class SolverDeclarations:
       {{BOUNDARY_CONDITIONS_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(GPUOffloadingOMP)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" and BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
@@ -86,9 +79,6 @@ class SolverDeclarations:
     {% endif %}
 
     {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" and REFINEMENT_CRITERION_IMPLEMENTATION!="<none>" %}
-    #if defined(GPUOffloadingOMP)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     ::exahype2::RefinementCommand refinementCriterion(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -103,9 +93,6 @@ class SolverDeclarations:
       return result;
       {% endif %}
     }
-    #if defined(GPUOffloadingOMP)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" and REFINEMENT_CRITERION_IMPLEMENTATION!="<none>" %}
@@ -117,37 +104,7 @@ class SolverDeclarations:
     ) override final;
     {% endif %}
 
-    {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
-    #if defined(GPUOffloadingOMP)
-    #pragma omp declare target
-    #endif
-    static inline GPU_CALLABLE_METHOD
-    void eigenvalues(
-      """
-            + eigenvalues_signature
-            + """
-    )  {
-      {% if EIGENVALUES_IMPLEMENTATION!="<empty>" %}
-      {{EIGENVALUES_IMPLEMENTATION}}
-      {% endif %}
-    }
-    #if defined(GPUOffloadingOMP)
-    #pragma omp end declare target
-    #endif
-    {% endif %}
-
-    {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
-    void eigenvalues(
-      """
-            + eigenvalues_signature
-            + """
-    ) override final;
-    {% endif %}
-
     {% if MAX_EIGENVALUE_IMPLEMENTATION!="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
-    #if defined(GPUOffloadingOMP)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     double maxEigenvalue(
       """
@@ -160,9 +117,6 @@ class SolverDeclarations:
       return 0.0;
       {% endif %}
     }
-    #if defined(GPUOffloadingOMP)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
@@ -174,9 +128,6 @@ class SolverDeclarations:
     {% endif %}
 
     {% if FLUX_IMPLEMENTATION!="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" %}
-    #if defined(GPUOffloadingOMP)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void flux(
       """
@@ -187,9 +138,6 @@ class SolverDeclarations:
       {{FLUX_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(GPUOffloadingOMP)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if FLUX_IMPLEMENTATION=="<user-defined>" and FLUX_IMPLEMENTATION!= "<none>" %}
@@ -201,9 +149,6 @@ class SolverDeclarations:
     {% endif %}
 
     {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-    #if defined(GPUOffloadingOMP)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void sourceTerm(
       """
@@ -214,9 +159,6 @@ class SolverDeclarations:
       {{SOURCE_TERM_IMPLEMENTATION}}
       {% endif %}
     }
-    #if defined(GPUOffloadingOMP)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
@@ -228,9 +170,6 @@ class SolverDeclarations:
     {% endif %}
 
     {% if SOLVER_IMPLEMENTATION!="<user-defined>" and SOLVER_IMPLEMENTATION!="<none>" %}
-    #if defined(GPUOffloadingOMP)
-    #pragma omp declare target
-    #endif
     static inline GPU_CALLABLE_METHOD
     void solve(
       const {{COMPUTE_PRECISION}}* const NOALIAS                    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -259,9 +198,6 @@ class SolverDeclarations:
       return 0.0;
       {% endif %}
     }
-    #if defined(GPUOffloadingOMP)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
     {% if SOLVER_IMPLEMENTATION=="<user-defined>" and SOLVER_IMPLEMENTATION!="<none>" %}

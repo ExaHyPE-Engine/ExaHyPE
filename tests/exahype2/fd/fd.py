@@ -26,12 +26,14 @@ args = parser.parse_args()
  ****************************************************************************************************************************************/
 """
 
-MOLAR_HEAT_CAPACITY = 25.78 # in J / (mol * K)
-MOLAR_WEIGHT = 0.0269815386 # in kg / mol
-THERMAL_CONDUCTIVITY = 237 # in W / (m * K)
-DENSITY = 2700 # in kg / m^3
-SPECIFIC_HEAT_CAPACITY = MOLAR_HEAT_CAPACITY / MOLAR_WEIGHT # in J / (kg * K)
-THERMAL_DIFFUSIVITY = THERMAL_CONDUCTIVITY / (SPECIFIC_HEAT_CAPACITY * DENSITY) # in m^2 / s
+MOLAR_HEAT_CAPACITY = 25.78  # in J / (mol * K)
+MOLAR_WEIGHT = 0.0269815386  # in kg / mol
+THERMAL_CONDUCTIVITY = 237  # in W / (m * K)
+DENSITY = 2700  # in kg / m^3
+SPECIFIC_HEAT_CAPACITY = MOLAR_HEAT_CAPACITY / MOLAR_WEIGHT  # in J / (kg * K)
+THERMAL_DIFFUSIVITY = THERMAL_CONDUCTIVITY / (
+    SPECIFIC_HEAT_CAPACITY * DENSITY
+)  # in m^2 / s
 
 initial_conditions = """
   Q[Shortcuts::T]     = 400; // in K
@@ -44,11 +46,11 @@ boundary_conditions = """
   // normal == 2 => right
   // normal == 3 => top
   if (normal == 0) {
-    // heat sink
+    // Heat sink
     Qoutside0[Shortcuts::T]     = 300; // in K
     Qoutside0[Shortcuts::kappa] = Qinside[Shortcuts::kappa];
   } else {
-    // insulation everywhere else
+    // Insulation everywhere else
     Qoutside0[Shortcuts::T]     = Qinside[Shortcuts::T];
     Qoutside0[Shortcuts::kappa] = Qinside[Shortcuts::kappa];
   }
@@ -64,7 +66,9 @@ fd_solver = exahype2.solvers.fd.GlobalFixedTimeStep(
     auxiliary_variables={"kappa": 1},
     min_h=min_h,
     max_h=max_h,
-    normalised_time_step_size=(args.time_step_relaxation * (min_h)**2 / THERMAL_DIFFUSIVITY),
+    normalised_time_step_size=(
+        args.time_step_relaxation * (min_h) ** 2 / THERMAL_DIFFUSIVITY
+    ),
     order=1,
 )
 
@@ -88,9 +92,9 @@ fd_solver.set_implementation(
 
 project = exahype2.Project(
     namespace=["tests", "exahype2", "fd"],
-    project_name="FDTest",
+    project_name=".",
     directory=".",
-    executable="FDTest",
+    executable="ExaHyPE",
 )
 project.add_solver(fd_solver)
 

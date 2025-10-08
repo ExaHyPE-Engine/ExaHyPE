@@ -462,6 +462,9 @@ void step() {
 
     SCOREP_USER_REGION_END(TimeStep)
     watch.stop();
+    // TODO: We need to be careful here. If we couple solvers the TimeStep observer does not reflect one complete time step.
+    // Therefore, this measurement does not give us the information we want!
+    // The same applies for any solver that needs multiple sweeps.
     timeStepMeasurement.setValue(watch.getCalendarTime());
 
     if (

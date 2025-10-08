@@ -1,15 +1,10 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import jinja2
 
 
 class AbstractSolverDeclarations:
-    def __init__(self, dictionary):
-        self.d = dictionary
-
     def create_abstract_solver_user_declarations(self):
-        Template = jinja2.Template(
-            """
+        template = """
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     virtual void initialCondition(
       {{COMPUTE_PRECISION}}* const NOALIAS          Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -157,8 +152,6 @@ class AbstractSolverDeclarations:
       const int                                    unknown
     ) = 0;
     {% endif %}
-""",
-            undefined=jinja2.DebugUndefined,
-        )
+"""
 
-        return Template.render(**self.d)
+        return template

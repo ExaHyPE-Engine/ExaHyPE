@@ -146,6 +146,7 @@ class FV(object):
         use_enclave_tasking: bool,
         number_of_enclave_tasks: int,
         plot_grid_properties: bool,
+        solvers_before_in_coupling: list,
         baseline_action_set_descend_invocation_order=0,
     ):
         """!
@@ -183,6 +184,9 @@ class FV(object):
         plot_grid_properties: Boolean
            Clarifies whether a dump of the data should be enriched with grid info
            (such as enclave status flags), too.
+
+        solvers_before_in_coupling: list[exahype2.solvers]
+            List of solvers that come before this solver in a coupled simulation.
         """
         self._name = name
 
@@ -198,6 +202,15 @@ class FV(object):
 
         self._patch_size = patch_size
         self._overlap = overlap
+
+        self._solvers_before_in_coupling = solvers_before_in_coupling
+
+        """!
+        Adapted so that this solver class has an attribute of type exahype2.solver,
+        which is supposed to be the last solver that is solving. Therefore, after it, all solvers
+        reset themselves. This attribute should thus be the same for all instances of this class.
+        """
+        self._last_solver = None  # TODO: This can be done better. With Python we can easily index the last solver in the array above
 
         self._dimensions = 2
         self._namespace = ""
@@ -223,7 +236,7 @@ class FV(object):
         self._variable_names = []
         self._variable_pos = [0]
 
-        if type(unknowns) is dict:
+        if isinstance(unknowns, dict):
             self._unknowns = sum(unknowns.values())
             self._variable_names += list(unknowns.keys())
             for var in list(unknowns.values()):
@@ -236,7 +249,7 @@ class FV(object):
                 "Not a valid type for parameter unknowns, needs to be int or dictionary."
             )
 
-        if type(auxiliary_variables) is dict:
+        if isinstance(auxiliary_variables, dict):
             self._auxiliary_variables = sum(auxiliary_variables.values())
             self._variable_names += list(auxiliary_variables.keys())
             for var in list(auxiliary_variables.values()):
@@ -265,6 +278,7 @@ class FV(object):
             )
 
         self._solver_template_file_class_name = None
+        self._templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
 
         self._action_set_initial_conditions = None
         self._action_set_initial_conditions_for_grid_construction = None
@@ -1344,11 +1358,10 @@ The finest mesh width of """
             self._action_set_reconstruct_patch.generate_fused_kernels(namespace, output, dimensions, subdirectory)
             self._action_set_project_patch_onto_faces.generate_fused_kernels(namespace, output, dimensions, subdirectory)
 
-        templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
         if self._solver_template_file_class_name is None:
-            templatefile_prefix += self.__class__.__name__
+            self._templatefile_prefix += self.__class__.__name__
         else:
-            templatefile_prefix += self._solver_template_file_class_name
+            self._templatefile_prefix += self._solver_template_file_class_name
 
         if subdirectory:
             subdirectory += "/"
@@ -1357,10 +1370,10 @@ The finest mesh width of """
         self._init_dictionary_with_default_parameters(d)
         self.add_entries_to_text_replacement_dictionary(d)
 
-        header_file_abstr_template = templatefile_prefix + "Abstract.template.h"
-        cpp_file_abstr_template = templatefile_prefix + "Abstract.template.cpp"
-        header_file_template = templatefile_prefix + ".template.h"
-        cpp_file_template = templatefile_prefix + ".template.cpp"
+        header_file_abstr_template = self._templatefile_prefix + "Abstract.template.h"
+        cpp_file_abstr_template = self._templatefile_prefix + "Abstract.template.cpp"
+        header_file_template = self._templatefile_prefix + ".template.h"
+        cpp_file_template = self._templatefile_prefix + ".template.cpp"
 
         generated_abstract_header_file = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -1480,51 +1493,10 @@ The finest mesh width of """
         d["SOLVER_CONSTANTS"] = self._solver_constants
         d["SOLVER_INCLUDES"] = self.user_solver_includes
 
-        d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = jinja2.Template(
-            self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["ABSTRACT_SOLVER_USER_DEFINITIONS"] = jinja2.Template(
-            self._abstract_solver_user_definitions, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["SOLVER_USER_DECLARATIONS"] = jinja2.Template(
-            self._solver_user_declarations, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["SOLVER_USER_DEFINITIONS"] = jinja2.Template(
-            self._solver_user_definitions, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["START_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
-            self._start_time_step_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["FINISH_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
-            self._finish_time_step_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["PRINT_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
-            self._print_time_step_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["CONSTRUCTOR_IMPLEMENTATION"] = jinja2.Template(
-            self._constructor_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["START_SIMULATION_IMPLEMENTATION"] = jinja2.Template(
-            self._start_simulation_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["FINISH_SIMULATION_IMPLEMENTATION"] = jinja2.Template(
-            self._finish_simulation_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-
-        d["PREPROCESS_RECONSTRUCTED_PATCH"] = jinja2.Template(
-            self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["POSTPROCESS_UPDATED_PATCH"] = jinja2.Template(
-            self._postprocess_updated_patch, undefined=jinja2.DebugUndefined
-        ).render(**d)
-
-        d["COMPUTE_TIME_STEP_SIZE"] = jinja2.Template(
-            self._compute_time_step_size, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["COMPUTE_NEW_TIME_STEP_SIZE"] = jinja2.Template(
-            self._compute_new_time_step_size, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["COMPUTE_MAX_EIGENVALUE"] = self._compute_eigenvalue
+        d["SOLVERS_BEFORE_IN_COUPLING"] = [(solver.get_name_of_global_instance(), solver.name) for solver in self._solvers_before_in_coupling]
+        if self._last_solver is None:
+            self._last_solver = self
+        d["LAST_SOLVER"] = (self._last_solver.get_name_of_global_instance(), self._last_solver.name)
 
         d["INITIAL_CONDITIONS_IMPLEMENTATION"] = self._initial_conditions_implementation
         d["BOUNDARY_CONDITIONS_IMPLEMENTATION"] = self._boundary_conditions_implementation
@@ -1571,21 +1543,71 @@ The finest mesh width of """
         d["VARIABLE_NAMES"] = self._variable_names
         d["VARIABLE_POSITIONS"] = self._variable_pos
 
+        d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = jinja2.Template(
+            self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["ABSTRACT_SOLVER_USER_DEFINITIONS"] = jinja2.Template(
+            self._abstract_solver_user_definitions, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["SOLVER_USER_DECLARATIONS"] = jinja2.Template(
+            self._solver_user_declarations, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["SOLVER_USER_DEFINITIONS"] = jinja2.Template(
+            self._solver_user_definitions, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["START_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
+            self._start_time_step_implementation, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["FINISH_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
+            self._finish_time_step_implementation, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["PRINT_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
+            self._print_time_step_implementation, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["CONSTRUCTOR_IMPLEMENTATION"] = jinja2.Template(
+            self._constructor_implementation, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["START_SIMULATION_IMPLEMENTATION"] = jinja2.Template(
+            self._start_simulation_implementation, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["FINISH_SIMULATION_IMPLEMENTATION"] = jinja2.Template(
+            self._finish_simulation_implementation, undefined=jinja2.DebugUndefined
+        ).render(**d)
+
+        d["PREPROCESS_RECONSTRUCTED_PATCH"] = jinja2.Template(
+            self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["POSTPROCESS_UPDATED_PATCH"] = jinja2.Template(
+            self._postprocess_updated_patch, undefined=jinja2.DebugUndefined
+        ).render(**d)
+
+        d["COMPUTE_MAX_EIGENVALUE"] = self._compute_eigenvalue
+        d["COMPUTE_TIME_STEP_SIZE"] = jinja2.Template(
+            self._compute_time_step_size, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["COMPUTE_NEW_TIME_STEP_SIZE"] = jinja2.Template(
+            self._compute_new_time_step_size, undefined=jinja2.DebugUndefined
+        ).render(**d)
 
     @property
     def unknowns(self):
         return self._unknowns
 
-
     @property
     def patch_size(self):
         return self._patch_size
 
+    @property
+    def last_solver(self):
+        return self._last_solver
+
+    @last_solver.setter
+    def last_solver(self, solver):
+        self._last_solver = solver
 
     @property
     def auxiliary_variables(self):
         return self._auxiliary_variables
-
 
     @patch_size.setter
     def patch_size(self, value):

@@ -1,7 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import jinja2
-from exahype2.solvers.SolverCommons import *
+from exahype2.solvers.SolverSignatures import *
 
 
 class SolverDefinitions:
@@ -52,26 +51,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::boundaryConditions(
 }
 {% endif %}
 
-{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
-  """
-            + eigenvalues_signature
-            + """
-) {
-  // @todo Implement
-}
-{% endif %}
-
 {% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   """
             + max_eigenvalue_signature
             + """
 ) {
-  logTraceInWith4Arguments("maxEigenvalue(...)", x, h, t, normal);
-  // @todo Compute max eigenvalue
-  logTraceOut("maxEigenvalue(...)");
-  // @todo Return max eigenvalue (make sure to call logTraceOut before the return)
+  // @todo Implement
   return 0.0;
 }
 {% endif %}

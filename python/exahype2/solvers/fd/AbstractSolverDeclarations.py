@@ -1,7 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import jinja2
-from exahype2.solvers.SolverCommons import *
+from exahype2.solvers.SolverSignatures import *
 
 
 class AbstractSolverDeclarations:
@@ -65,14 +64,6 @@ class AbstractSolverDeclarations:
       const tarch::la::Vector<DIMENSIONS, double>&  x,
       const tarch::la::Vector<DIMENSIONS, double>&  h,
       const double                                  t
-    ) = 0;
-    {% endif %}
-
-    {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
-    virtual void eigenvalues(
-      """
-            + eigenvalues_signature
-            + """
     ) = 0;
     {% endif %}
 

@@ -1,15 +1,10 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import jinja2
 
 
 class SolverDefinitions:
-    def __init__(self, dictionary):
-        self.d = dictionary
-
     def create_solver_user_definitions(self):
-        Template = jinja2.Template(
-            """
+        template = """
 {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::initialCondition(
   [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -159,8 +154,6 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::adjustSolution(
   // @todo Implement
 }
 {% endif %}
-""",
-            undefined=jinja2.DebugUndefined,
-        )
+"""
 
-        return Template.render(**self.d)
+        return template

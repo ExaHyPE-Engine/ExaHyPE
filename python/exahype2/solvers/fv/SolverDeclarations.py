@@ -1,15 +1,10 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import jinja2
 
 
 class SolverDeclarations:
-    def __init__(self, dictionary):
-        self.d = dictionary
-
     def create_solver_user_declarations(self):
-        Template = jinja2.Template(
-            """
+        template = """
     {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
     static inline
     void initialCondition(
@@ -319,8 +314,6 @@ class SolverDeclarations:
       [[maybe_unused]] const int                                    unknown
     ) override final;
     {% endif %}
-""",
-            undefined=jinja2.DebugUndefined,
-        )
+"""
 
-        return Template.render(**self.d)
+        return template

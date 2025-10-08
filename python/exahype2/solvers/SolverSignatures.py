@@ -1,8 +1,10 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-indent = "\t\t\t"
 
-default_signature = """
+# TODO: Maybe used these in the feature for all solvers that have these signatures in common
+# TODO: Also, do not make them Python code snippets anymore, but just use real XXX.template.cpp files
+
+max_eigenvalue_signature = """
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -11,23 +13,15 @@ default_signature = """
       [[maybe_unused]] const int                                    normal
 """
 
-max_eigenvalue_signature = default_signature
-
-eigenvalues_signature = (
-    default_signature
-    + indent
-    + """,
-      [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS                        L // L[{{NUMBER_OF_UNKNOWNS}}]
+flux_signature = """
+      [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const double                                 dt,
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         F // F[{{NUMBER_OF_UNKNOWNS}}]
 """
-)
-
-flux_signature = (
-    default_signature
-    + indent
-    + """,
-      [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS                        F // F[{{NUMBER_OF_UNKNOWNS}}]
-"""
-)
 
 ncp_signature = """
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q,           // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]

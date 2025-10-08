@@ -130,7 +130,6 @@ class SingleSweep(FD):
         initial_conditions=None,
         boundary_conditions=None,
         refinement_criterion=None,
-        eigenvalues=None,
         max_eigenvalue=None,
         flux=None,
         source_term=None,
@@ -161,13 +160,6 @@ class SingleSweep(FD):
             self._max_eigenvalue_implementation = max_eigenvalue
             if max_eigenvalue is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_max_eigenvalue = True
-            else:
-                self._can_fuse = False
-
-        if eigenvalues is not None:
-            self._eigenvalues_implementation = eigenvalues
-            if eigenvalues is not PDETerms.User_Defined_Implementation:
-                self._use_stateless_eigenvalues = True
             else:
                 self._can_fuse = False
 
