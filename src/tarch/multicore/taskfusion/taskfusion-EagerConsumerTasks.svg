@@ -1615,7 +1615,7 @@
      inkscape:cx="475.71429"
      inkscape:cy="315.71429"
      inkscape:document-units="mm"
-     inkscape:current-layer="g2266-2-8-3-4-3"
+     inkscape:current-layer="layer1"
      showgrid="false"
      inkscape:window-width="1854"
      inkscape:window-height="1131"
@@ -1928,7 +1928,7 @@
        sodipodi:nodetypes="cc" />
     <path
        style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:1.05833, 0.264583;stroke-dashoffset:0;stroke-opacity:1;marker-end:url(#Arrow1Lend-0-7-9)"
-       d="m 115.36867,33.428444 c 5.29297,-9.479969 -2.91616,-17.302169 19.24454,-11.342627"
+       d="m 63.30245,19.821301 c 12.002047,12.064674 47.44917,9.723129 71.31076,2.264516"
        id="path16982-8-9"
        sodipodi:nodetypes="cc" />
     <g
@@ -2222,14 +2222,14 @@
     <text
        xml:space="preserve"
        style="font-size:3.91571px;line-height:1.25;font-family:sans-serif;stroke-width:0.183549"
-       x="86.410286"
-       y="17.554543"
+       x="75.921448"
+       y="24.830584"
        id="text15369-3-9"><tspan
          sodipodi:role="line"
          id="tspan15367-7-6"
          style="stroke-width:0.183549"
-         x="86.410286"
-         y="17.554543">&lt;&lt;spawn if appropriate&gt;&gt;</tspan></text>
+         x="75.921448"
+         y="24.830584">&lt;&lt;spawn if appropriate&gt;&gt;</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:3.91571px;line-height:1.25;font-family:sans-serif;stroke-width:0.183549"

@@ -145,8 +145,8 @@ namespace tarch {
          * waits for enough tasks to be collected. The disadvantage is that it
          * might trigger the fusion rather late.
          *
-         * To understand this routine, it makes sense to study ProducerConsumerTaskPairs
-         * and EagerConsumerTasks, too. Notably ProducerConsumerTaskPairs
+         * To understand this routine, it makes sense to study ProducerConsumerTaskSequence
+         * and EagerConsumerTasks, too. Notably ProducerConsumerTaskSequence
          * provides context about important implementational considerations.
          *
          *
@@ -171,7 +171,7 @@ namespace tarch {
          * tasks) with dependencies that can be fused, we split this task up
          * into three logical tasks:
          *
-         * @image html taskfusion-ProducerConsumerTaskPairs.png
+         * @image html taskfusion-ProducerConsumerTaskSequence.png
          *
          * One task is a preparation task (red), and the other one is the
          * actual processing (yellow). In-between there's a fusion task (blue).
@@ -212,7 +212,7 @@ namespace tarch {
          * @see tarch::multicore::taskfusion::LogReadyTask
          * @see tarch::multicore::taskfusion::ProcessSetOfReadyTasks
          */
-        ProducerConsumerTaskPairs,
+        ProducerConsumerTaskSequence,
 
         /**
          * Issue consumer task that fuses upon spawning a task if the queue is big enough
@@ -238,7 +238,7 @@ namespace tarch {
          * This is the same strategy we followed for the lazy schemes.
          * However, we also check how many tasks are already in there and if
          * this number if big enough, we spawn one of our fusion tasks.
-         * Different to the ProducerConsumerTaskPairs the fusion is not built
+         * Different to the ProducerConsumerTaskSequence the fusion is not built
          * into the DAG right from the start, but the corresopnding task is
          * issued upon demand.
          *

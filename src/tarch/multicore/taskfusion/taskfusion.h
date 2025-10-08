@@ -177,7 +177,7 @@ namespace tarch {
       void processAndFuseAllReadyTasks();
 
       /**
-       * Realisation for handleFusableTask() for ProducerConsumerTaskPairs
+       * Realisation for handleFusableTask() for ProducerConsumerTaskSequence
        *
        * Translate a single task into a sequence of (fusable tasks)
        *
@@ -230,7 +230,7 @@ namespace tarch {
        * tasks. So it makes sense to serialise the ProcessReadyTask instances
        * if there are less than two times the max tasks in the queue.
        */
-      void handleFusableTask_ProducerConsumerTaskPairs(
+      void handleFusableTask_ProducerConsumerTaskSequence(
         Task*                  task,
         FusableTasksQueue&     taskQueue,
         std::set<TaskNumber>   inDependencies,
@@ -265,7 +265,11 @@ namespace tarch {
       );
 
       /**
+       * Handle a task in the eager consumer pattern
        *
+       * This routine has to be used in combination with handleFusableTask_LazyEvaluation().
+       * It does, different as the name suggests, not enqueue any task. Instead, it simply
+       * evaluates if the task queue is ready for a fusion task. If so, it spawns one.
        */
       void handleFusableTask_EagerConsumerTasks(
         Task*                  task,
@@ -408,11 +412,12 @@ namespace tarch {
       /**
        * Preamble of waitForTasks() if we use EagerEvaluation.
        *
-       * This routine is very similar to ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation()
+       * This routine is very similar to ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(),
        * besides the fact that it never ever spawns a fusion task. If the eager
        * scheme results in fusion tasks, then these fusion tasks have already
        * been created by the time we spawned the tasks. We don't create them by
-       * the time we wait for a task.
+       * the time we wait for a task. So we should say: "it is a degenerated
+       * version of ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation()".
        */
       bool ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks(const std::set<TaskNumber>& inDependencies);
     } // namespace taskfusion

@@ -99,8 +99,8 @@ void tarch::multicore::taskfusion::handleFusableTask(
         handleFusableTask_LazyEvaluation(task, *taskQueue, inDependencies, taskNumber, instruction);
         handleFusableTask_EagerConsumerTasks(task, *taskQueue, inDependencies, taskNumber, instruction);
         break;
-      case tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskPairs:
-        handleFusableTask_ProducerConsumerTaskPairs(task, *taskQueue, inDependencies, taskNumber, instruction);
+      case tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskSequence:
+        handleFusableTask_ProducerConsumerTaskSequence(task, *taskQueue, inDependencies, taskNumber, instruction);
         break;
     }
   }
@@ -150,7 +150,7 @@ void tarch::multicore::taskfusion::handleFusableTask_EagerConsumerTasks(
 }
 
 
-void tarch::multicore::taskfusion::handleFusableTask_ProducerConsumerTaskPairs(
+void tarch::multicore::taskfusion::handleFusableTask_ProducerConsumerTaskSequence(
   Task*                  task,
   FusableTasksQueue&     taskQueue,
   std::set<TaskNumber>   inDependencies,
@@ -227,7 +227,7 @@ void tarch::multicore::taskfusion::processAndFuseAllReadyTasks() {
 bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(const std::set<TaskNumber>& taskNumbers) {
   assertion1( not taskNumbers.empty(), taskNumbers.size() );
   switch (tarch::multicore::getOrchestration().getFusionImplementation()) {
-    case tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskPairs:
+    case tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskSequence:
       return true;
     case tarch::multicore::orchestration::FusionImplementation::DisableFusionAndProcessImmediately:
       return false;
@@ -236,9 +236,6 @@ bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(c
     case tarch::multicore::orchestration::FusionImplementation::LazyEvaluation:
       return ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation( taskNumbers );
     case tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks:
-      // @todo da ist ein Denkfehler
-      //ensureHeldBackTasksAreMappedOntoNativeTasks_EnsureAllTasksAreRunningReadyOrHaveCompleted( taskNumbers );
-      native::waitForTasks(taskNumbers);
       return ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks( taskNumbers );
   }
 
@@ -262,7 +259,11 @@ bool anyTasksOfInDendenciesMightBeStillReadyOrRunning(const std::set<tarch::mult
 
 
 bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks(const std::set<TaskNumber>& inDependencies) {
+  logTraceInWith1Argument( "ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(std::set)", inDependencies.size() );
+
   assertion1( not inDependencies.empty(), inDependencies.size() );
+
+  native::waitForTasks(inDependencies);
 
   bool result = false;
 
@@ -282,6 +283,8 @@ bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_E
       }
     }
   }
+
+  logTraceOutWith1Argument( "ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(std::set)", result );
 
   return result;
 }
