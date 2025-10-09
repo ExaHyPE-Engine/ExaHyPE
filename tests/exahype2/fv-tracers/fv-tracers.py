@@ -3,20 +3,25 @@
 import peano4
 import exahype2
 
+parser = exahype2.ArgumentParser(
+    "ExaHyPE 2 - Finite Volumes Particle Tracing Testing Script"
+)
 available_precisions = ["float", "double"]
-
-parser = exahype2.ArgumentParser("ExaHyPE 2 - Finite Volumes Testing Script")
 parser.add_argument(
     "-pr", "--precision", default="double", help="|".join(available_precisions)
 )
 parser.set_defaults(
     min_depth=6,
     degrees_of_freedom=16,
+    number_of_snapshots=0,
     periodic_boundary_conditions_x=False,  # Throws assertion in the TracersSet when set to True
     periodic_boundary_conditions_y=False,
     periodic_boundary_conditions_z=False,
 )
 args = parser.parse_args()
+
+max_h = 1.1 / 3.0**args.min_depth
+min_h = max_h * 3.0 ** (-args.amr_levels)
 
 initial_conditions = """
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
@@ -45,9 +50,6 @@ refinement_criterion = """
 
   return result;
 """
-
-max_h = 1.1 / 3.0**args.min_depth
-min_h = max_h * 3.0 ** (-args.amr_levels)
 
 fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="FVSolver",
@@ -78,57 +80,68 @@ fv_solver.set_solver_precisions(
 
 project = exahype2.Project(
     namespace=["tests", "exahype2", "fv"],
-    project_name="FVTest",
+    project_name=".",
     directory=".",
-    executable="FVTest",
+    executable="ExaHyPE",
 )
 project.add_solver(fv_solver)
 
-particle_attributes = {
-    "unknowns": {
-        "rho": 1,
-        "fluid_u": 1,
-        "fluid_v": 1,
-        "fluid_w": 1,  # Interpolated fluid velocity
-        "u": 1,
-        "v": 1,
-        "w": 1,  # Particle's own velocity
-        "a_x": 1,
-        "a_y": 1,
-        "a_z": 1,
-        "d": 1,
-    }
-    if args.dimensions == 3
-    else {
-        "rho": 1,
-        "fluid_u": 1,
-        "fluid_v": 1,  # Interpolated fluid velocity
-        "u": 1,
-        "v": 1,  # Particle's own velocity
-        "a_x": 1,
-        "a_y": 1,
-        "d": 1,
-    }
-}
+if args.number_of_snapshots <= 0:
+    time_in_between_plots = 0.0
+else:
+    time_in_between_plots = args.end_time / args.number_of_snapshots
+    project.set_output_path(
+        args.output
+    )  # Needs to be set BEFORE we add the particle tracers to the project -> not nice!
 
-tracer_particles = project.add_tracer(
-    name="Tracers", particle_attributes=particle_attributes
+tracers = project.add_tracer(
+    name="Tracers",
+    particle_attributes={
+        "unknowns": {
+            "rho": 1,
+            "fluid_u": 1,
+            "fluid_v": 1,
+            "fluid_w": 1,  # Interpolated fluid velocity
+            "u": 1,
+            "v": 1,
+            "w": 1,  # Particle's own velocity
+            "a_x": 1,
+            "a_y": 1,
+            "a_z": 1,
+            "d": 1,
+        }
+        if args.dimensions == 3
+        else {
+            "rho": 1,
+            "fluid_u": 1,
+            "fluid_v": 1,  # Interpolated fluid velocity
+            "u": 1,
+            "v": 1,  # Particle's own velocity
+            "a_x": 1,
+            "a_y": 1,
+            "d": 1,
+        }
+    },
 )
 
-init_action_set = exahype2.tracer.InsertParticlesFromFile(
-    particle_set=tracer_particles,
-    filename="ICParticles.dat",
+init_tracers = exahype2.tracer.InsertParticlesFromFile(
+    particle_set=tracers,
+    filename="InitTracers.dat",
     scale_factor=1.0,
 )
 
-init_action_set.descend_invocation_order = 0
-project.add_action_set_to_initialisation(init_action_set)
+init_tracers.descend_invocation_order = 0  # TODO: Why?
+project.add_action_set_to_initialisation(
+    init_tracers
+)  # TODO: Is there not an easier way to expose the API to the user?
 
+# TODO: Why do we need this? Why not just fv_solver.addTracers(...)
+# TODO: Don't make the API too hard to understand for the user!
 tracing_action_set = exahype2.tracer.FiniteVolumesTracing(
-    tracer_particles,
+    tracers,
     fv_solver,
     project_on_tracer_properties_kernel="::exahype2::fv::updateParticleState<0, 1, 2>",
-    projection_kernel_arguments="""
+    projection_kernel_arguments=""" // TODO: Also way too complicated!
   *p,
   fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
   marker,
@@ -140,18 +153,13 @@ tracing_action_set = exahype2.tracer.FiniteVolumesTracing(
   {1,0,0}
 """,
 )
-
 tracing_action_set.descend_invocation_order = (
-    fv_solver._action_set_update_patch.descend_invocation_order + 1
+    fv_solver._action_set_update_patch.descend_invocation_order
+    + 1  # TODO: Why does the user need to do this advanced setting?
 )
+# TODO: This is all too complicated!
 project.add_action_set_to_initialisation(tracing_action_set)
-#project.add_action_set_to_timestepping(tracing_action_set)
-
-if args.number_of_snapshots <= 0:
-    time_in_between_plots = 0.0
-else:
-    time_in_between_plots = args.end_time / args.number_of_snapshots
-    project.set_output_path(args.output)
+project.add_action_set_to_timestepping(tracing_action_set)
 
 project.set_global_simulation_parameters(
     dimensions=args.dimensions,

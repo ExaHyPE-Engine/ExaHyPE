@@ -3,6 +3,7 @@
 
 #include <iomanip>
 
+// TODO: Put in dedicated "ascii" namespace
 
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter::CellDataWriter(
   const std::string& identifier,

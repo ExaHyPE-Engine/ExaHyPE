@@ -86,20 +86,15 @@ class PlotParticlesInVTKFormat(ActionSet):
         """
   _writer             = nullptr;
   _positionWriter     = nullptr;
-  _searchRadiusWriter       = nullptr;
+  _searchRadiusWriter = nullptr;
   _associationWriter  = nullptr;
   {{ATTRIBUTE_WRITER_NULL_INITIALISERS}}
   _treeNumber         = treeNumber;
-
-  // An MPI lock (critical section) would be important!
-
-  logDebug( "PlotGrid2PlotGridInPeanoBlockFormat1()", "created tree instance for " << treeNumber );
 """
     )
 
     def add_attribute_to_plot(self, attribute, cardinality=1, accessor=None):
         """
-
         Add an attribute to the plotter
 
         You have to ensure that each attribute is added at most once.
@@ -196,6 +191,7 @@ class PlotParticlesInVTKFormat(ActionSet):
     def user_should_modify_template(self):
         return False
 
+    # TODO: Cleanup the templates
     __Template_TouchVertexFirstTime = jinja2.Template(
         """
   assertion( _positionWriter!=nullptr );
@@ -215,45 +211,56 @@ class PlotParticlesInVTKFormat(ActionSet):
 
     __Template_BeginTraversal = jinja2.Template(
         """
-  tarch::mpi::Lock lock( _semaphore );
+  tarch::mpi::Lock lock(_semaphore);
 
   static int counter = -1;
   counter++;
 
-  std::ostringstream snapshotFileName;
-  snapshotFileName << "{{OUTPUT_DIRECTORY}}{{FILENAME}}-" << counter;
+  const std::string indexFileName = "{{FILENAME}}";
 
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 ) {
+  std::ostringstream snapshotFileName;
+  snapshotFileName << "{{FILENAME}}-" << counter;
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
   }
 
-  {% if TIMESTAMP==\""""
+  // TODO: Im not convinced that it makes sense to recreate the writer in every traversal
+{% if TIMESTAMP==\""""
         + NoMetaFile
         + """\" %}
   _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
-    false, snapshotFileName.str(), "{{FILENAME}}",
+    false,
+    indexFileName,
+    snapshotFileName.str(),
+    "{{OUTPUT_DIRECTORY}}",
     tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile,
     0.0
   );
-  {% elif TIMESTAMP==\""""
+{% elif TIMESTAMP==\""""
         + CountTimeSteps
         + """\" %}
   _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
-    false, snapshotFileName.str(), "{{FILENAME}}",
+    false,
+    indexFileName,
+    snapshotFileName.str(),
+    "{{OUTPUT_DIRECTORY}}",
     tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData,
     counter / peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()
   );
-  {% else %}
+{% else %}
   _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
-    false, snapshotFileName.str(), "{{FILENAME}}",
+    false,
+    indexFileName,
+    snapshotFileName.str(),
+    "{{OUTPUT_DIRECTORY}}",
     tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData,
     {{TIMESTAMP}}
   );
-  {% endif %}
+{% endif %}
 
-  _positionWriter    = _writer->createPointDataWriter( "x", 3 );
-  _searchRadiusWriter      = _writer->createPointDataWriter( "search-radius", 1 );
-  _associationWriter = _writer->createPointDataWriter( "association", 3 );
+  _positionWriter     = _writer->createPointDataWriter("x", 3);
+  _searchRadiusWriter = _writer->createPointDataWriter("search-radius", 1); // TODO: That should be rather an attribute than a fixed thing?
+  _associationWriter  = _writer->createPointDataWriter("association", 3);
   {{ATTRIBUTE_WRITER_INITIALISERS}}
 """
     )

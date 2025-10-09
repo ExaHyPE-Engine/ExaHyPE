@@ -19,8 +19,7 @@ class FiniteVolumesTracing(
 
     ## Update plug-in points
 
-    We only update cells which are marked with getHasUpdated(). For enclave solvers,
-    we assume that this flag is only set after a cell has updated. Further to that,
+    We only update cells which are marked with getHasUpdated(). Further to that,
     we also trace in the grid initialisation. If we did not trace there, the first
     dump prior to the first time step always would yield garbage. It would not even
     help to add tracing to the plot, as the tracing typically is cell-based, whereas
@@ -29,7 +28,7 @@ class FiniteVolumesTracing(
 
     The class supports different ways how the data is projected onto tracer
     attributes (both which data entries and how they are interpolated), as
-    well as various time integratiors. The only important detail here is
+    well as various time integrators. The only important detail here is
     that the integration happens patch-wisely, i.e. you cannot access any
     neighbouring patches or intermediate data from the time stepping calculations.
 
@@ -83,12 +82,10 @@ class FiniteVolumesTracing(
          properties to be projected on the tracer. This makes sense if the
          velocity/trajectory of a tracer already encodes all information.
          Some popular arguments for this routine are enlisted above.
-
-
         """
 
         self.tracerDict = {}
-        # Don't overwrite hte dictionary of hte superclass. We'll need it
+        # Don't overwrite the dictionary of the superclass. We'll need it
         self.tracerDict["PARTICLE"] = particle_set.particle_model.name
         self.tracerDict["PARTICLES_CONTAINER"] = particle_set.name
         self.tracerDict["SOLVER_NAME"] = solver._name
@@ -102,21 +99,21 @@ class FiniteVolumesTracing(
         ).render(**self.tracerDict)
 
         cell_compute_kernel = """
-if ( 
-  fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() 
-  and 
+if (
+  fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated()
+  and
   (
     repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
     or
-    repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::GridInitialisation
+    repositories::{{SOLVER_INSTANCE}}.getSolverState() == {{SOLVER_NAME}}::SolverState::GridInitialisation
   )
 ) {
   for (auto* p: localParticles) {
-    if ( 
+    if (
       p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::NotMovedYet and marker.isContained(p->getX())
     ) {
-      p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::Moved;
-
+      // Before it was: p->getMoveState() == globaldata::{{PARTICLE}}::MoveState::Moved;
+      p->setMoveState(globaldata::{{PARTICLE}}::MoveState::Moved);
 
       {{PROJECTION_KERNEL}}(
         {{PROJECTION_KERNEL_ARGUMENTS}}

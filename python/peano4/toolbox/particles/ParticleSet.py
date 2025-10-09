@@ -272,9 +272,7 @@ class ParticleSet(DoF):
     def __init__(self, particle):
         DoF.__init__(self, particle.name + "Set")
 
-        if particle.association != peano4.datamodel.DoFAssociation.Global:
-            log.warning("Particle " + particle.name + " is not (yet) added to project via add_global_object() and thus has invalid DoF association")
-
+        assert(particle.association == peano4.datamodel.DoFAssociation.Global)
         self.particle_model = particle
         # self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
         self.generator = ParticleSetGenerator_ScatteredOnHeap_IndexByVector(self)

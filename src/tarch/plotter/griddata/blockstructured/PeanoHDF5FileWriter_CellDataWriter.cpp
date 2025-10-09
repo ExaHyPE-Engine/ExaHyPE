@@ -6,6 +6,7 @@
 
 #include "tarch/la/ScalarOperations.h"
 
+// TODO: Cleanup and revise and put into hdf5 namespace
 using namespace H5;
 
 tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::CellDataWriter::CellDataWriter(

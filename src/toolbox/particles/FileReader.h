@@ -19,6 +19,7 @@ namespace toolbox {
 
 /**
  * A file reader
+ * TODO: Move class to tarch/readers as a proper general ".dat" reader.
  *
  * The file reader realises one big table
  */

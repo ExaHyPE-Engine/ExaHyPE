@@ -27,6 +27,8 @@ double tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile( std::s
 void tarch::plotter::PVDTimeSeriesWriter::createEmptyIndexFile( const std::string& snapshotFileName ) {
   const std::string filename = snapshotFileName + ".pvd";
 
+  logInfo("createEmptyIndexFile()", "Create empty index file " << filename);
+
   std::vector<std::string> lines;
 
   lines.push_back( "<?xml version=\"1.0\"?>" );
