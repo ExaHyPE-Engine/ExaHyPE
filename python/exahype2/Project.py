@@ -69,6 +69,7 @@ class Project(object):
         self._particle_variable_names = []
         self._particle_variable_pos = [0]
         self._use_particle_var_shortcut = False
+
         self.create_grid_with_refinement = peano4.solversteps.Step("CreateGridWithRefinement", False)
         self.create_grid_without_refinement = peano4.solversteps.Step("CreateGridWithoutRefinement", False)
         self.init_grid = peano4.solversteps.Step("InitGrid", False)
@@ -452,14 +453,14 @@ thus appreciate any citation of the original release paper
         self,
         name,
         particle_attributes,
-        plot=True,
+        plot=True, # TODO: Why do we need this?
         sort_descend_invocation_order_within_action_sets=-1,
         plot_descend_invocation_order_within_action_sets=65536,
     ):
         """!
-
         Add a tracer to the project
 
+        TODO: Outdated and untrue
         Tracers have to be the very last thing you add to your project.
         At this point, all solvers have to be added to the project.
         However, you have to add the tracers prior to any user-defined
@@ -491,7 +492,7 @@ thus appreciate any citation of the original release paper
         variants for examples.
 
 
-        ## Moving particles
+        ## Moving particles TODO: Outdated!
 
         Tracers in ExaHyPE can move, though they do not have to move. Even if
         they move, they never have a native velocity, i.e. their velocity will
@@ -519,6 +520,7 @@ thus appreciate any citation of the original release paper
         the data, as this is a tuple of integers, and Peano's VTK plotter
         supports only double vectors.
 
+        # TODO: Is this still needed? Each particle already knows its own set of attributes!
         @see peano4.toolbox.particles.PlotParticlesInVTKFormat.add_attribute_to_plot()
 
 
@@ -594,9 +596,8 @@ thus appreciate any citation of the original release paper
         particle_number = peano4.dastgen2.Peano4IntegerArray("number", "2")
         particle.data.add_attribute(particle_number)
 
-        particles = peano4.toolbox.particles.ParticleSet(particle)
-
         self._project.datamodel.add_global_object(particle)
+        particles = peano4.toolbox.particles.ParticleSet(particle)
         self._project.datamodel.add_vertex(particles)
 
         self.plot_solution.use_vertex(particles)
@@ -639,6 +640,7 @@ thus appreciate any citation of the original release paper
         # not tied to one solver, so I have to find a quantity that makes sense. If the
         # user requires the time stamp, they have to add this one as data field to the
         # particle
+        # TODO: Move this all to the particular solver's (abstract base function and then FV and ADER-DG get their own implementation)
         #
         if plot:
             particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat(

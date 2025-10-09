@@ -58,7 +58,7 @@ Unit_Tests:
     - Build
   retry: 0
 
-ExaHyPE2_FV_Tests:
+ExaHyPE2_FV_Tracers_Tests:
   stage: Test
   allow_failure: false
   extends:
@@ -66,7 +66,7 @@ ExaHyPE2_FV_Tests:
     - .Variables
     - .RunOnlyOn
     - .BeforeScriptSanitiser
-    - .ExaHyPE2_FV_Tests
+    - .ExaHyPE2_FV_Tracers_Tests
   needs:
     - job: Build
   dependencies:

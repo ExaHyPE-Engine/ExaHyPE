@@ -16,8 +16,7 @@ tarch::logging::Log tarch::plotter::griddata::blockstructured::PeanoTextPatchFil
 
 const std::string tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::HEADER
   = "# \n"
-    "# Peano patch file \n"
-    "# Version 0.2 \n"
+    "# Peano 4 patch file \n"
     "# \n";
 
 namespace {
@@ -114,6 +113,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::addNew
 
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createEmptyIndexFile() {
+  // TODO: Seems a bit odd to have an "createEmptyIndexFile()" here and then we have the same function in PVDTimeSeriesWriter
   logInfo("createEmptyIndexFile()", "Create empty index file " << _indexFile);
 
   std::ofstream indexFileOut;
@@ -126,7 +126,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::create
   }
 
   if (!indexFileOut.is_open()) {
-    logError("PeanoTextPatchFileWriter()", "Have not been able to open file " << _indexFile);
+    logError("createEmptyIndexFile()", "Have not been able to open file " << _indexFile);
   } else {
     indexFileOut.close();
   }

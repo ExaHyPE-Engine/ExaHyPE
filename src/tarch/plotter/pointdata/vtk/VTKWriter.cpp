@@ -3,24 +3,26 @@
 #include "tarch/plotter/griddata/unstructured/vtk/VTKTextFileWriter.h"
 #include "tarch/plotter/griddata/unstructured/vtk/VTUTextFileWriter.h"
 
-
 tarch::mpi::BooleanSemaphore  tarch::plotter::pointdata::vtk::VTKWriter::_sempahore;
 
-
-tarch::plotter::pointdata::vtk::VTKWriter::VTKWriter(bool binaryFile, const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode mode, double timeStamp) {
-  if (binaryFile) {
-    _vtkWriter = new tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter(fileName, indexFileName, mode, timeStamp);
+tarch::plotter::pointdata::vtk::VTKWriter::VTKWriter(
+  bool binaryFile,
+  const std::string& indexFileName,
+  const std::string& snapshotFileName,
+  const std::string& outputDirectory,
+  tarch::plotter::PVDTimeSeriesWriter::IndexFileMode mode,
+  double timeStamp
+) {
+  if (binaryFile) { // TODO: We can also write VTU binary files or VTK ASCII files
+    _vtkWriter = new tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter(snapshotFileName, indexFileName, mode, timeStamp);
     //assertionMsg(mode==tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile, "time series files are not supported with legacy vtk formats");
-  }
-  else {
-    _vtkWriter = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(fileName, indexFileName, mode, timeStamp);
+  } else {
+    _vtkWriter = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(snapshotFileName, indexFileName, outputDirectory, mode, timeStamp);
   }
 
   _vertexWriter = _vtkWriter->createVertexWriter();
   _cellWriter   = _vtkWriter->createCellWriter();
 }
-
-
 
 tarch::plotter::pointdata::vtk::VTKWriter::~VTKWriter() {
   assertionMsg( _vertexWriter==nullptr, "no close() on point data writer called" );

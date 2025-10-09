@@ -64,13 +64,14 @@ class tarch::plotter::pointdata::vtk::VTKWriter: public tarch::plotter::pointdat
     VTKWriter& operator=(const VTKWriter& writer) = delete;
 
   public:
-    /**
-     * @param fileName      Name of the file to write. Has to be unique per
-     *                      dump.
-     * @param indexFileName Name of the index file. Can we empty if you select
-     *                      NoIndexFile.
-     */
-    VTKWriter(bool binaryFile, const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode modeFile, double timeStamp);
+    VTKWriter(
+      bool binaryFile,
+      const std::string& indexFileName,
+      const std::string& snapshotFileName,
+      const std::string& outputDirectory,
+      tarch::plotter::PVDTimeSeriesWriter::IndexFileMode mode,
+      double timeStamp
+    );
 
     virtual ~VTKWriter();
 
@@ -112,7 +113,9 @@ class tarch::plotter::pointdata::vtk::VTKWriter: public tarch::plotter::pointdat
          */
         VTKWriter& _myWriter;
 
+        // TODO: Particles are not known here! Rename to _vertexDataWriter! Bad code design!
         tarch::plotter::griddata::unstructured::UnstructuredGridWriter::VertexDataWriter*  _particleDataWriter;
+
       public:
         PointDataWriter(VTKWriter& myWriter, const std::string& identifier, int recordsPerPoint);
         virtual ~PointDataWriter();
