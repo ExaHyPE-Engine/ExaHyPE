@@ -121,30 +121,6 @@ On the other hand, task queue stats (size of queues, average size of queues,
 process statistics) won't be updated anymore.
 
 
-### Timeouts
-
-If the average number of ready tasks in the queue is always smaller than
-the minimum number of tasks we'd need to fuse properly every time we
-hit the scheduling point, the host code does handle the fused tasks
-too quickly or they are too cheap. That likely means that cores on the host are
-underutilised, i.e. every time we enqueue a task, its ProcessReadyTask
-almost immediately kicks in. 
-
-One strategy to mitigate this is to spawn some fusable tasks as real tasks.
-You leave some of the tasks you could fuse to the CPU, hence delaying
-some of the ProcessReadyTask instances. If this is not possible, you can
-alternatively equip the processing with a timeout: When it becomes active
-and there are not enough fusable tasks, let it wait for a few milliseconds
-to see if more fusable tasks drop in.
-
-
-<div style="background-color: #ccc ; padding: 10px; border: 1px solid green;"> 
-This is not about timeouts in an MPI sense. If you search for timeouts in
-MPI, please consult tarch::la::Rank::setDeadlockTimeOut().
-</div>
-
-
-
 ### Reduce fused batch size
 
 If the average number of ready tasks in the queue is higher than the
