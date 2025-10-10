@@ -19,9 +19,11 @@ class ProjectIntoCellAndUpdateCellSolutionWithTasks(ActionSet):
      */
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double > faceSol;
     for (int f=0; f<TwoTimesD; f++)
-    for (int s=0; s<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
+    for (int s=0; s<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; s++) {
+      assertion2( fineGridFaces{{SOLVER_NAME}}(f).getSolution(s)<1e10, fineGridFaces{{SOLVER_NAME}}(f).getSolution(s), fineGridFaces{{SOLVER_NAME}}(f).getSolution() );
       faceSol( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getSolution(s);
-
+    }
+    
     auto projection = repositories::{{SOLVER_INSTANCE}}.applyCellFromFaceMatrix(marker.x(), marker.h(), faceSol);
 
     
@@ -31,6 +33,7 @@ class ProjectIntoCellAndUpdateCellSolutionWithTasks(ActionSet):
      */
     int taskNumber = fineGridCell{{TASK_MARKER}}.getNumber() * 2;
     tarch::multicore::waitForTasks({taskNumber+0,taskNumber+1}, tarch::multicore::TaskWaitType::ExclusivelyFusedTasks);
+    logDebug( "touchCellFirstTime(...)", "tasks " << (taskNumber+0) << " and " << (taskNumber+1) << " completed" );
     
 
     /**
@@ -39,8 +42,11 @@ class ProjectIntoCellAndUpdateCellSolutionWithTasks(ActionSet):
      * and compute the residual norm.
      */  
     for (int f=0; f<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; f++) {
+      assertion1( fineGridCell{{SOLVER_NAME}}.getResidual(f)<1e10, marker.toString() );
+      assertion1( projection(f)<1e10, marker.toString() );
       fineGridCell{{SOLVER_NAME}}.setResidual(f,
-        fineGridCell{{SOLVER_NAME}}.getResidual(f)- projection(f));
+        fineGridCell{{SOLVER_NAME}}.getResidual(f)- projection(f)
+      );
     }
 
     // update global residual before multiplying by the preconditioner
@@ -62,7 +68,6 @@ class ProjectIntoCellAndUpdateCellSolutionWithTasks(ActionSet):
       tarch::la::multiply( invertedApproxSystemMatrix, residual )
     );
     
-    
 
     /**
      * Free memory. If we immediately run the next iteration sweep, it is
@@ -81,8 +86,10 @@ class ProjectIntoCellAndUpdateCellSolutionWithTasks(ActionSet):
      * Finally update the solution
      */
     for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++) {
-      double res = fineGridCell{{SOLVER_NAME}}.getResidual( i );
-      double du  = repositories::{{SOLVER_INSTANCE}}.OmegaCell * res;
+      const double res = fineGridCell{{SOLVER_NAME}}.getResidual( i );
+      const double du  = repositories::{{SOLVER_INSTANCE}}.OmegaCell * res;
+      assertion6( res<1e10, du, res, marker.toString(), fineGridCell{{SOLVER_NAME}}.getResidual(), repositories::{{SOLVER_INSTANCE}}.OmegaCell, i );
+      assertion7( du<1e10,  du, res, marker.toString(), fineGridCell{{SOLVER_NAME}}.getResidual(), repositories::{{SOLVER_INSTANCE}}.OmegaCell, i, fineGridCell{{SOLVER_NAME}}.getResidual( i ) );
       fineGridCell{{SOLVER_NAME}}.setSolution( i,
         fineGridCell{{SOLVER_NAME}}.getSolution( i ) + du
       );

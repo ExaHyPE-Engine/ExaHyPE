@@ -71,7 +71,6 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
      *   not intend to use GPUs
      * @param maxNestedConcurrency Pass in NoNestedParallelism if you don't
      *   want nested parallelism.
-     * @param timeout Pass in NoTimeout if you don't want timeouts.
      */
     Hardcoded(
       int  minTasksToFuse,

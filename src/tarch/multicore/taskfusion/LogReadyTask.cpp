@@ -14,7 +14,6 @@ tarch::multicore::taskfusion::LogReadyTask::LogReadyTask( Task* task, int taskNu
   _task(task),
   _taskNumber(taskNumber),
   _taskQueue(taskQueue) {
-  _taskQueue.insertPendingTask( _taskNumber );
 }
 
 
@@ -23,7 +22,7 @@ void tarch::multicore::taskfusion::LogReadyTask::run() {
 
   logDebug( "run(...)", "task of type " << _task->getTaskType() << " is now ready to run. Put into ready queue" );
 
-  _taskQueue.movePendingTaskIntoReadyTaskQueue( _task, _taskNumber );
+  _taskQueue.insertReadyTask(_task, _taskNumber );
 }
 
 

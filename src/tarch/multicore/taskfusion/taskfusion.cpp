@@ -22,10 +22,20 @@
 
 namespace {
   /**
-   * We map task types onto lists of tasks
+   * Map of task types onto queues
+   *
+   * See discussion in namespace documentation tarch::multicore::taskfusion
+   * about this map and its thread access protection.
    */
   std::map<int, tarch::multicore::taskfusion::FusableTasksQueue*>     fusableTaskQueue;
-  tarch::multicore::BooleanSemaphore                                  pendingTasksSemaphore;
+
+  /**
+   * Semaphore around fusableTaskQueue
+   *
+   * See discussion in namespace documentation tarch::multicore::taskfusion
+   * about this map and its thread access protection.
+   */
+  tarch::multicore::BooleanSemaphore                                  fusableTaskQueueSemaphore;
 
   tarch::logging::Log _log("tarch::multicore::taskfusion");
 
@@ -34,7 +44,7 @@ namespace {
 
 
 
-void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
+void tarch::multicore::taskfusion::handleFusableTask(
   Task*                  task,
   std::set<TaskNumber>   inDependencies,
   const TaskNumber&      taskNumber
@@ -42,6 +52,10 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
   ::tarch::logging::Statistics::getInstance().inc(SubmitFusedTaskStatisticsIdentifier, 1, false, true);
 
   assertion1(task->getTaskType()>=0, task->getTaskType());
+
+  if ( not inDependencies.empty() ) {
+    taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
+  }
 
   const tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(task->getTaskType());
 
@@ -53,6 +67,7 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
     native::spawnTask(task, inDependencies, taskNumber);
   }
   else if (tarch::multicore::getOrchestration().getFusionImplementation()==tarch::multicore::orchestration::FusionImplementation::DisableFusionAndProcessImmediately) {
+    waitForTasks(inDependencies);
     task->run();
     delete task;
   }
@@ -60,8 +75,7 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
     native::spawnTask(task, inDependencies, taskNumber);
   }
   else {
-    // ensure the entry exists
-    tarch::multicore::Lock lock(pendingTasksSemaphore);
+    tarch::multicore::Lock lock(fusableTaskQueueSemaphore);
     if (fusableTaskQueue.count(task->getTaskType())==0) {
       fusableTaskQueue.insert(
         std::pair<int, tarch::multicore::taskfusion::FusableTasksQueue*>(
@@ -79,42 +93,46 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
         assertion(false);
         break;
       case tarch::multicore::orchestration::FusionImplementation::LazyEvaluation:
-        translateFusableTaskIntoTaskSequence_LazyEvaluation(task, *taskQueue, inDependencies, taskNumber, instruction);
+        handleFusableTask_LazyEvaluation(task, *taskQueue, inDependencies, taskNumber, instruction);
         break;
       case tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks:
-        translateFusableTaskIntoTaskSequence_LazyEvaluation(task, *taskQueue, inDependencies, taskNumber, instruction);
-        translateFusableTaskIntoTaskSequence_EagerConsumerTasks(task, *taskQueue, inDependencies, taskNumber, instruction);
+        handleFusableTask_LazyEvaluation(task, *taskQueue, inDependencies, taskNumber, instruction);
+        handleFusableTask_EagerConsumerTasks(task, *taskQueue, inDependencies, taskNumber, instruction);
         break;
-      case tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskPairs:
-        translateFusableTaskIntoTaskSequence_ProducerConsumerTaskPairs(task, *taskQueue, inDependencies, taskNumber, instruction);
+      case tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskSequence:
+        handleFusableTask_ProducerConsumerTaskSequence(task, *taskQueue, inDependencies, taskNumber, instruction);
         break;
     }
   }
 }
 
 
-void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_LazyEvaluation(
+void tarch::multicore::taskfusion::handleFusableTask_LazyEvaluation(
   Task*                  task,
   FusableTasksQueue&     taskQueue,
   std::set<TaskNumber>   inDependencies,
   const TaskNumber&      taskNumber,
   const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction
 ) {
+  logTraceInWith1Argument( "handleFusableTask_LazyEvaluation(...)", taskNumber );
   if ( taskNumber==tarch::multicore::NoOutDependencies or inDependencies.empty() ) {
+    logDebug( "handleFusableTask_LazyEvaluation(...)", "insert task " << taskNumber << " directly into fusion queue" );
     taskQueue.insertReadyTask(
       task,
       taskNumber
     );
   }
   else {
+    logDebug( "handleFusableTask_LazyEvaluation(...)", "insert a ready task wrapping actual task " << taskNumber );
     Task* readyTask   = new LogReadyTask(task, taskNumber, taskQueue);
     readyTask->setPriority(task->getPriority());
     tarch::multicore::native::spawnTask( readyTask, inDependencies, taskNumber);
   }
+  logTraceOutWith1Argument( "handleFusableTask_LazyEvaluation(...)", taskNumber );
 }
 
 
-void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_EagerConsumerTasks(
+void tarch::multicore::taskfusion::handleFusableTask_EagerConsumerTasks(
   Task*                  task,
   FusableTasksQueue&     taskQueue,
   std::set<TaskNumber>   inDependencies,
@@ -132,7 +150,7 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_EagerCon
 }
 
 
-void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_ProducerConsumerTaskPairs(
+void tarch::multicore::taskfusion::handleFusableTask_ProducerConsumerTaskSequence(
   Task*                  task,
   FusableTasksQueue&     taskQueue,
   std::set<TaskNumber>   inDependencies,
@@ -140,7 +158,7 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_Producer
   const tarch::multicore::orchestration::Strategy::FuseInstruction&  instruction
 ) {
   logDebug(
-    "translateFusableTaskIntoTaskSequence(...)",
+    "handleFusableTask(...)",
     "spawn three tasks around " << taskNumber <<
     " (min-tasks=" << instruction.minTasks <<
     ", max-tasks=" << instruction.maxTasks <<
@@ -179,9 +197,29 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_Producer
 
 
 void tarch::multicore::taskfusion::processAllReadyTasks() {
-  tarch::multicore::Lock lock(pendingTasksSemaphore);
+  tarch::multicore::Lock lock(fusableTaskQueueSemaphore);
   for (auto& p: fusableTaskQueue) {
     p.second->drainReadyTasks();
+  }
+}
+
+
+void tarch::multicore::taskfusion::processAndFuseAllReadyTasks() {
+  tarch::multicore::TaskNumber pendingReadyTask = tarch::multicore::NoOutDependencies + 1;
+  while (pendingReadyTask != tarch::multicore::NoOutDependencies) {
+    pendingReadyTask = tarch::multicore::NoOutDependencies;
+
+    tarch::multicore::Lock lock(fusableTaskQueueSemaphore);
+    for (auto& p: fusableTaskQueue) {
+      if (pendingReadyTask!=tarch::multicore::NoOutDependencies) {
+        pendingReadyTask = p.second->getFirstReadyTaskNumber();
+      }
+    }
+    lock.free();
+
+    if (pendingReadyTask!=tarch::multicore::NoOutDependencies) {
+      waitForTask(pendingReadyTask);
+    }
   }
 }
 
@@ -189,17 +227,15 @@ void tarch::multicore::taskfusion::processAllReadyTasks() {
 bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(const std::set<TaskNumber>& taskNumbers) {
   assertion1( not taskNumbers.empty(), taskNumbers.size() );
   switch (tarch::multicore::getOrchestration().getFusionImplementation()) {
-    case tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskPairs:
+    case tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskSequence:
       return true;
     case tarch::multicore::orchestration::FusionImplementation::DisableFusionAndProcessImmediately:
       return false;
     case tarch::multicore::orchestration::FusionImplementation::DisableFusionAndMapOntoNativeTask:
       return true;
     case tarch::multicore::orchestration::FusionImplementation::LazyEvaluation:
-      ensureHeldBackTasksAreMappedOntoNativeTasks_EnsureAllTasksAreRunningReadyOrHaveCompleted( taskNumbers );
       return ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation( taskNumbers );
     case tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks:
-      ensureHeldBackTasksAreMappedOntoNativeTasks_EnsureAllTasksAreRunningReadyOrHaveCompleted( taskNumbers );
       return ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks( taskNumbers );
   }
 
@@ -207,21 +243,8 @@ bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(c
 }
 
 
-void tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_EnsureAllTasksAreRunningReadyOrHaveCompleted(const std::set<TaskNumber>& inDependencies) {
-  bool tasksArePending         = false;
-  for (auto taskNumber: inDependencies) {
-    for (auto queue: fusableTaskQueue) {
-      tasksArePending        |= queue.second->isTaskPending(taskNumber, false);
-    }
-  }
-
-  if (tasksArePending) {
-    native::waitForTasks(inDependencies);
-  }
-}
-
-
 bool anyTasksOfInDendenciesMightBeStillReadyOrRunning(const std::set<tarch::multicore::TaskNumber>& inDependencies) {
+  logTraceInWith1Argument( "anyTasksOfInDendenciesMightBeStillReadyOrRunning(std::set)", inDependencies.size() );
   bool tasksAreReadyOrRunning  = false;
 
   for (auto taskNumber: inDependencies) {
@@ -230,12 +253,17 @@ bool anyTasksOfInDendenciesMightBeStillReadyOrRunning(const std::set<tarch::mult
     }
   }
 
+  logTraceOutWith1Argument( "anyTasksOfInDendenciesMightBeStillReadyOrRunning(std::set)", tasksAreReadyOrRunning );
   return tasksAreReadyOrRunning;
 }
 
 
 bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks(const std::set<TaskNumber>& inDependencies) {
+  logTraceInWith1Argument( "ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(std::set)", inDependencies.size() );
+
   assertion1( not inDependencies.empty(), inDependencies.size() );
+
+  native::waitForTasks(inDependencies);
 
   bool result = false;
 
@@ -256,12 +284,18 @@ bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_E
     }
   }
 
+  logTraceOutWith1Argument( "ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(std::set)", result );
+
   return result;
 }
 
 
 bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(const std::set<TaskNumber>& inDependencies) {
+  logTraceInWith1Argument( "ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(std::set)", inDependencies.size() );
+
   assertion1( not inDependencies.empty(), inDependencies.size() );
+
+  native::waitForTasks(inDependencies);
 
   bool result = false;
 
@@ -283,12 +317,15 @@ bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_L
             taskNumber
           );
 
+          logDebug( "ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(...)", "issued two process tasks " << taskNumber << "->" << taskNumber );
+
           result = true;
         }
       }
     }
   }
 
+  logTraceOutWith1Argument( "ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(std::set)", result );
   return result;
 }
 
