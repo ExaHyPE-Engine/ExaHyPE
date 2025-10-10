@@ -13,22 +13,11 @@ tarch::logging::Log  tarch::multicore::taskfusion::FusableTasksQueue::_log( "tar
 
 tarch::multicore::taskfusion::FusableTasksQueue::FusableTasksQueue(int type):
   _type(type),
-  _numberOfPendingReadyTasksPerProcessTaskExecution(),
-  _probabilityThatTaskIsCompleted(256)
-{}
-
-
-void tarch::multicore::taskfusion::FusableTasksQueue::insertPendingTask( int taskNumber ) {
-  assertion1( _pendingTasks.count(taskNumber)==0, taskNumber );
-  assertion1( _readyTasks.count(taskNumber)==0, taskNumber );
-
-  tarch::multicore::Lock lock(_pendingTasksSemaphore);
-  _pendingTasks.insert( taskNumber );
-}
+  _numberOfReadyTasksPerProcessTaskExecution(tarch::timing::GlidingAverageMeasurement::DefaultWeight, 256),
+  _probabilityThatTaskIsCompleted(tarch::timing::GlidingAverageMeasurement::DefaultWeight, 256) {}
 
 
 void tarch::multicore::taskfusion::FusableTasksQueue::insertReadyTask( Task* task, int taskNumber ) {
-  assertion1( _pendingTasks.count(taskNumber)==0, taskNumber );
   assertion1( _readyTasks.count(taskNumber)==0, taskNumber );
 
   tarch::multicore::Lock lock(_readyTasksSemaphore);
@@ -36,16 +25,14 @@ void tarch::multicore::taskfusion::FusableTasksQueue::insertReadyTask( Task* tas
 }
 
 
-void tarch::multicore::taskfusion::FusableTasksQueue::movePendingTaskIntoReadyTaskQueue( Task* task, int taskNumber ) {
-  tarch::multicore::Lock readyTasksLock(_readyTasksSemaphore);
-  tarch::multicore::Lock pendingTasksLock(_pendingTasksSemaphore);
-
-  assertion( _pendingTasks.count(taskNumber)==1 );
-
-  _pendingTasks.erase( taskNumber );
-  _readyTasks[taskNumber] = task;
-
-  assertion( _pendingTasks.count(taskNumber)==0 );
+tarch::multicore::TaskNumber tarch::multicore::taskfusion::FusableTasksQueue::getFirstReadyTaskNumber() {
+  tarch::multicore::Lock readyTaskLock(_readyTasksSemaphore);
+  if ( _readyTasks.empty() ) {
+    return tarch::multicore::NoOutDependencies;
+  }
+  else {
+    return _readyTasks.begin()->first;
+  }
 }
 
 
@@ -70,27 +57,6 @@ void tarch::multicore::taskfusion::FusableTasksQueue::drainReadyTasks() {
       tarch::multicore::waitForTask(nextTaskNumber, TaskWaitType::OnlyNativeTasks);
     }
   }
-}
-
-
-bool tarch::multicore::taskfusion::FusableTasksQueue::isTaskPending(
-  int                 taskNumber,
-  bool                tryLock
-) {
-  tarch::multicore::Lock pendingLock(_pendingTasksSemaphore, false);
-
-  if (tryLock) {
-    if (
-      not pendingLock.tryLock()
-    ) {
-      return true;
-    }
-  }
-  else {
-    pendingLock.lock();
-  }
-
-  return _pendingTasks.count(taskNumber) > 0;
 }
 
 

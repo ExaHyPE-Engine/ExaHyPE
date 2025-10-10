@@ -47,7 +47,7 @@
  * determines the load balancing strategy, while the configuration object
  * tailors this strategy to your experimental setup and machine.
  *
- * - See more on how to @ref page_exahype_multicore "configure load balancing within ExaHyPE 2".
+ * - See more on how to @ref page_exahype_domain-decomposition "configure load balancing within ExaHyPE 2".
  * - There's a dedicated page on @ref swift_parallelisation "the parallelisation aspects within Swift 2".
  *
  *

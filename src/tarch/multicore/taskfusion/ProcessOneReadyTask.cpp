@@ -22,11 +22,11 @@ tarch::multicore::taskfusion::ProcessOneReadyTask::ProcessOneReadyTask(
 
 
 void tarch::multicore::taskfusion::ProcessOneReadyTask::run() {
-  assertion( not _taskQueue.isTaskPending(_taskNumber, false) );
-
   if ( _taskQueue.isTaskReadyOrRunning(_taskNumber, FusableTasksQueue::LockQueueAndReturnReliableResult) ) {
+    logDebug( "run()", "task " << _taskNumber << " might be ready or running. Check again" );
     tarch::multicore::Lock readyTaskLock(_taskQueue._readyTasksSemaphore);
     if ( _taskQueue._readyTasks.count(_taskNumber)>0 ) {
+      logDebug( "run()", "task " << _taskNumber << " is ready, i.e. not running yet. Execute it manually" );
       tarch::multicore::Lock runningTaskLock(_taskQueue._runningTasksSemaphore);
 
       _taskQueue._runningTasks[ _taskNumber ] = _taskNumber; // register myself as the owner of this task. Should not be required, as I'd never wait for myself, but anyway
@@ -45,6 +45,7 @@ void tarch::multicore::taskfusion::ProcessOneReadyTask::run() {
       delete task;
     }
     else {
+      logDebug( "run()", "task " << _taskNumber << " seems to be running atm (grabbed by another consumer task)" );
       readyTaskLock.free();
 
       TaskNumber taskNumberOfCurrentlyRunningFusion = NoOutDependencies;
