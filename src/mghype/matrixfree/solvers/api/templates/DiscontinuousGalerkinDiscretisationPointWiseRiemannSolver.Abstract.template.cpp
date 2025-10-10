@@ -1,6 +1,25 @@
 {% include 'DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.Abstract.generic.template.cpp' %}
 
 
+std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString( State state ) {
+  switch (state) {
+    case State::GridConstruction:
+      return "grid-construction";
+    case State::InitSolution:
+      return "init-solution";
+    case State::Solve:
+      return "solve";
+    case State::Suspend:
+      return "suspend";
+    case State::ProjectOntoFaces:
+      return "project-onto-faces";
+    case State::ComputeResidualAndSuspend:
+      return "compute-residual-and-suspend";
+  }
+  return "<undef>";
+}
+
+
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::State {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getState() const {
   return _state;
 }
@@ -17,23 +36,30 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginGridConstructionSweep() {
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginPlotSweep() {
-  if (_state==State::InitSolution) {
-    _state = State::Solve;
-  }
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
-  if (_state==State::Solve) {
+  if (_state==State::InitSolution) {
+    _state = State::ProjectOntoFaces;
+  }
+
+  if (
+    _state==State::Solve
+    or
+    _state==State::ProjectOntoFaces
+  ) {
     clearGlobalResidualAndSolutionUpdate();
   }
+
+  logInfo( "beginMeshSweep()", toString(_state) );
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
   switch (_state) {
     case State::Solve:
       {
-        logInfo( "endMeshSweep()", toString() );
+        logInfo( "endMeshSweep()", Solver::toString() );
       }
       break;
     
@@ -67,14 +93,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
       }
       break;
 
-    case State::GridConstruction:
+    case State::InitSolution:
+      assertionMsg(false, "should never be called for State::InitSolution");
       break;
 
-    case State::InitSolution:
-      {
-        _state = State::Solve;
-        break;
-      }
+    case State::GridConstruction:
+      assertionMsg(false, "should never be called for State::GridConstruction");
+      break;
   }
 }
 

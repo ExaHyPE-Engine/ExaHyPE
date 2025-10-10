@@ -10,8 +10,11 @@ This page dives into some design principles behind the task fusion and provides
 a high-level overview.
 Details on how the fusion is implemented are provided in the documentation
 of the namespace tarch::multicore::taskfusion.
-This page is for programmers who want to use/adopt the task fusion within their
-own code. 
+A high-level overview of what task fusion strategies we have on the table is
+available from the enum tarch::multicore::orchestration::FusionImplementation
+which is used to pick one of the implementation variants.
+This page is written for programmers who want to use/adopt the task fusion 
+within their own code. 
 
 
 
@@ -52,7 +55,8 @@ will embed the spawned tasks into a queue and try to fuse the tasks from there.
 The task orchestration is controlled through tarch::multicore::setOrchestration().
 The code uses the orchestrations' getFusionImplementation() to find out which 
 implementation for the task fusion to pick. More details on the variants can be 
-found below. Besides the implementation variant, the orchestration is also the 
+found in the documentation of 
+the enum tarch::multicore::orchestration::FusionImplementation. Besides the implementation variant, the orchestration is also the 
 global instance that decides how many tasks to pack into one fusable task, onto
 which device to deploy the new meta task, and so forth.
 
@@ -93,6 +97,7 @@ An example of such a bespoke, tailored orchestration is
 mghype::MultigridDefaultMulticoreOrchestration.
 
 
+
 ### Status
 
 Whenever tarch::multicore::taskfusion::ProcessReadyTask::run() kicks off, it 
@@ -114,30 +119,6 @@ This reduces overhead, but has to be used carefully:
 On the one hand, tasks will not enter their fuse() operation anymore.
 On the other hand, task queue stats (size of queues, average size of queues, 
 process statistics) won't be updated anymore.
-
-
-### Timeouts
-
-If the average number of ready tasks in the queue is always smaller than
-the minimum number of tasks we'd need to fuse properly every time we
-hit the scheduling point, the host code does handle the fused tasks
-too quickly or they are too cheap. That likely means that cores on the host are
-underutilised, i.e. every time we enqueue a task, its ProcessReadyTask
-almost immediately kicks in. 
-
-One strategy to mitigate this is to spawn some fusable tasks as real tasks.
-You leave some of the tasks you could fuse to the CPU, hence delaying
-some of the ProcessReadyTask instances. If this is not possible, you can
-alternatively equip the processing with a timeout: When it becomes active
-and there are not enough fusable tasks, let it wait for a few milliseconds
-to see if more fusable tasks drop in.
-
-
-<div style="background-color: #ccc ; padding: 10px; border: 1px solid green;"> 
-This is not about timeouts in an MPI sense. If you search for timeouts in
-MPI, please consult tarch::la::Rank::setDeadlockTimeOut().
-</div>
-
 
 
 ### Reduce fused batch size
@@ -206,7 +187,7 @@ tarch::multicore::orchestration::Strategy::FuseInstruction mghype::MultigridDefa
 
 
 
-## Task fusion variants
+## Task fusion variants and mapping onto runtimes
 
 Peano comes along with several variants how to implement the fusion.
 These versions can be controlled through the fusion orchestration object.

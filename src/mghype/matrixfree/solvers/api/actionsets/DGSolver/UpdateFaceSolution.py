@@ -27,8 +27,8 @@ class UpdateFaceSolution(ActionSet):
     for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; i++) {
       projections[i]       = fineGridFace{{SOLVER_NAME}}.getLProjection(i);
       projections[i+nSols] = fineGridFace{{SOLVER_NAME}}.getRProjection(i);
-      assertion2(projections[i]<1e10,       fineGridFace{{SOLVER_NAME}}.getLProjection(), fineGridFace{{SOLVER_NAME}}.getRProjection());
-      assertion2(projections[i+nSols]<1e10, fineGridFace{{SOLVER_NAME}}.getLProjection(), fineGridFace{{SOLVER_NAME}}.getRProjection());
+      assertion3(projections[i]<1e10,       fineGridFace{{SOLVER_NAME}}.getLProjection(), fineGridFace{{SOLVER_NAME}}.getRProjection(), marker.toString());
+      assertion3(projections[i+nSols]<1e10, fineGridFace{{SOLVER_NAME}}.getLProjection(), fineGridFace{{SOLVER_NAME}}.getRProjection(), marker.toString());
     }
 
     // multiply by Riemann matrix

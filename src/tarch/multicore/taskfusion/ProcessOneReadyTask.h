@@ -24,7 +24,7 @@ namespace tarch {
  * Process one ready tasks
  *
  * @see ProcessSetOfReadyTasks for further implementation remarks
- * @see FusionImplementation::ProducerConsumerTaskPairs for context
+ * @see FusionImplementation::ProducerConsumerTaskSequence for context
  */
 class tarch::multicore::taskfusion::ProcessOneReadyTask: public tarch::multicore::Task {
   private:
