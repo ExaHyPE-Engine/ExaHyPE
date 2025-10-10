@@ -23,22 +23,20 @@ tarch::multicore::taskfusion::ProcessSetOfReadyTasks::ProcessSetOfReadyTasks(
 
 
 void tarch::multicore::taskfusion::ProcessSetOfReadyTasks::run() {
-  assertion( not _taskQueue.isTaskPending(_taskNumber, false) );
-
   if ( _taskQueue.isTaskReadyOrRunning(_taskNumber, FusableTasksQueue::LockQueueAndReturnReliableResult) ) {
     tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(_taskQueue.getType());
     assertion( instruction.minTasks>=1 );
     assertion( instruction.maxTasks>=1 );
 
     tarch::multicore::Lock lock(_taskQueue._statisticsSemaphore);
-    _taskQueue._numberOfPendingReadyTasksPerProcessTaskExecution.setValue(_taskQueue._readyTasks.size());
+    _taskQueue._numberOfReadyTasksPerProcessTaskExecution.setValue(_taskQueue._readyTasks.size());
     _taskQueue._probabilityThatTaskIsCompleted.setValue(0.0);
 
-    if (_taskQueue._numberOfPendingReadyTasksPerProcessTaskExecution.hasFullSetOfMeasurements()) {
+    if (_taskQueue._probabilityThatTaskIsCompleted.hasFullSetOfMeasurements()) {
       tarch::multicore::getOrchestration().updateFuseStatistics(
         _taskQueue.getType(),
         _taskQueue._readyTasks.size(),
-        _taskQueue._numberOfPendingReadyTasksPerProcessTaskExecution.getValue(),
+        _taskQueue._numberOfReadyTasksPerProcessTaskExecution.getValue(),
         _taskQueue._probabilityThatTaskIsCompleted.getValue()
       );
     }
