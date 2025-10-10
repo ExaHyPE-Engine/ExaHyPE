@@ -30,6 +30,28 @@ namespace {
 }
 
 
+std::string tarch::multicore::toString( const std::set<TaskNumber>& taskNumbers ) {
+  if ( taskNumbers.empty() ) {
+    return "{<empty>}";
+  }
+  else if ( taskNumbers.size()==1 ) {
+    return "{" + std::to_string( *taskNumbers.begin() ) + "}";
+  }
+  else {
+    std::ostringstream msg;
+    msg << "{";
+    for (auto p: taskNumbers) {
+      if (p!=*taskNumbers.begin()) {
+        msg << ",";
+      }
+      msg << p;
+    }
+    msg << "}";
+    return msg.str();
+  }
+}
+
+
 void tarch::multicore::initSmartMPI() {
   #ifdef UseSmartMPI
   using namespace smartmpi::topology;
@@ -88,6 +110,7 @@ void tarch::multicore::waitForTasks(const std::set<TaskNumber>& inDependencies, 
         {
           bool checkNative = tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
           if (checkNative) {
+            logDebug( "waitForTasks(...)", "have to tell runtime to wait for tasks " << toString(inDependencies) );
             tarch::multicore::native::waitForTasks(inDependencies);
           }
           else {
@@ -163,8 +186,7 @@ void tarch::multicore::spawnTask(
   tarch::logging::Statistics::getInstance().inc(SpawnedTasksStatisticsIdentifier, 1, false, true);
 
   if (task->canFuse()) {
-    taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
-    taskfusion::translateFusableTaskIntoTaskSequence(task, inDependencies, taskNumber);
+    taskfusion::handleFusableTask(task, inDependencies, taskNumber);
   }
   else {
     native::spawnTask(task, inDependencies, taskNumber);

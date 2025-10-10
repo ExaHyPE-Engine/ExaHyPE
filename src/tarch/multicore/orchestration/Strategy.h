@@ -23,7 +23,40 @@ namespace tarch {
        * we can construct a wide variety of different task execution schemes.
        *
        *
-       * ## Some implementation lessons learned
+       * ## Remark on file/namespace organisation
+       *
+       * The fusion implementation is stores within the tarch::multicore::orchestration
+       * namespace and therefore directory. This makes sense as it is up to the
+       * orchestration strategy to pick the fusion of choice. At the same time,
+       * it is inconsistent, as all the other fusion stuff is in a dedicated
+       * namespace tarch::multicore::taskfusion. You hence might have to switch
+       * forth and back between different namespaces and directories.
+       *
+       *
+       * ## How and where this enum is used for decision making
+       *
+       * The enumeration is mainly used within the outward-facing routines
+       * in tarch::multicore::taskfusion to decide which particular strategy to
+       * invoke. That is, each strategy is implemented by providing different
+       * flavours of three core routines. The user calls a blanco (interface)
+       * variant of these routines, the routines query the active strategy,
+       * and then delegate the function call to a particular implementation of
+       * the routine.
+       *
+       * In C++, one might want to use an interface for this, but we decided to
+       * stick to an applicative interface here.
+       *
+       *
+       * ## Realisation of different task fusion strategies
+       *
+       * All task fusion realisations rely on the tarch::multicore::taskfusion::FusableTaskQueue:
+       * the task queue offers a certain set up operations. The different
+       * fusion strategies call/use these operations in different ways. It  is
+       * a very small set of operations on the queue, which allow us to
+       * construct various task process patterns for fusion.
+       *
+       *
+       * ## Deprecated variants (lessons learned)
        *
        * Originally, I thought we'd need a couple of these
        *
@@ -43,15 +76,24 @@ namespace tarch {
        *
        * So the punchline is: Polling does not work. Therefore, I don't offer
        * a strategy using polling.
+       *
+       *
+       *
+       * ## Offered variants
+       *
+       * Please see the list/comments below for variants that we do support
+       * for Peano's tarch:
+       *
        */
       enum class FusionImplementation {
         /**
          * This option effectively disables fusion as well and all fusable tasks are eagerly executed.
          *
          * Completely disable any fusion and map each task that can be fused on
-         * a normal task due to a call to native::spawnTask() in
-         * translateFusableTaskIntoTaskSequence().
-         * ensureHeldBackTasksAreMappedOntoNativeTasks() deteriorates to
+         * a normal task due to a call to tarch::multicore::native::spawnTask() in
+         * tarch::multicore::taskfusion::handleFusableTask().
+         * The operation
+         * tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks() deteriorates to
          * nop.
          *
          * <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
@@ -65,7 +107,7 @@ namespace tarch {
         /**
          * Disable the fusion and process each fusable task immediately
          *
-         * Supported for all backends. Created for debugging only, as it disables the fusion.
+         * Created for debugging only, as it disables the fusion.
          *
          * <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
          * This variant might require OpenMP 6, as the tasks might have transparent incoming or outgoing dependencies.
@@ -79,22 +121,46 @@ namespace tarch {
          *
          * All fusable tasks are enqueued into a separate queue. When a new
          * task with in-dependencies is launched, we doublecheck if the
-         * predecessing tasks is still pending in a fusable queue. This is done
-         * in the parent namespace and leads to a call of
-         * ensureHeldBackTasksAreMappedOntoNativeTasks_EnsureAllTasksAreRunningReadyOrHaveCompleted().
+         * predecessing tasks is still pending in a fusable queue. If so, we
+         * process it, but we also might combine it with multiple other
+         * tasks.
+         *
+         * @image html taskfusion-LazyEvaluation.png
          *
          * After we know that they are either running or ready, we trigger the
-         * fusion. The core routines to study how this is all implemented is
-         * tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation().
+         * fusion. The core routines to study how this is all implemented are
+         *
+         * - tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation() which
+         *   we use before we trigger a wait or handle a new task with incoming
+         *   dependencies;
+         * - tarch::multicore::taskfusion::handleFusableTask_LazyEvaluation() which
+         *   does all the enqueuing.
+         *
+         *
+         *
+         * #### Implementation support
          *
          * This variant should work no matter what backend people use. It
          * reliably leads to large batches of tasks, as it is lazy and hence
          * waits for enough tasks to be collected. The disadvantage is that it
          * might trigger the fusion rather late.
          *
-         * To understand this routine, it makes sense to study ProducerConsumerTaskPairs
-         * and EagerConsumerTasks, too. Notably ProducerConsumerTaskPairs
+         * To understand this routine, it makes sense to study ProducerConsumerTaskSequence
+         * and EagerConsumerTasks, too. Notably ProducerConsumerTaskSequence
          * provides context about important implementational considerations.
+         *
+         *
+         * #### Timed execution
+         *
+         * You can use the lazy task fusion strategy to collect fusable tasks
+         * and to handle then at one particular point in time, i.e. to issue
+         * the fusion manually. To do so, you have to invoke
+         * tarch::multicore::taskfusion::processAndFuseAllReadyTasks()
+         * manually. There is no built-in version for the timed execution, as
+         * the technical architecture cannot and should not know about the
+         * right point to issue the fusion.
+         *
+         * The routine provides some further guidance.
          */
         LazyEvaluation,
 
@@ -102,18 +168,18 @@ namespace tarch {
          * Map each fusable task onto a producer-consumer task pair
          *
          * Whenever we get a task (in the example below we get three yellow
-         * tasks) with dependencies that can be fused, we split each task up
-         * into three tasks each:
+         * tasks) with dependencies that can be fused, we split this task up
+         * into three logical tasks:
          *
-         * @image html multicore_task_flow-01.png
+         * @image html taskfusion-ProducerConsumerTaskSequence.png
          *
          * One task is a preparation task (red), and the other one is the
-         * actual processing (green). In-between there's a fusion task (blue).
+         * actual processing (yellow). In-between there's a fusion task (blue).
          *
          * If we spawn a task without in-dependencies, i.e. a ready task, we
          * deposit this task in a separate queue (an instance of FusableTaskQueue).
          * If there in in-dependencies, we create a LogReadyTask instance with
-         * those independencies, which takes the actual task and desposits it
+         * those in-dependencies, which takes the actual task and deposits it
          * in the queue once it becomes ready.
          *
          * The fusion task comes next and grabs an arbitrary number of tasks
@@ -122,9 +188,7 @@ namespace tarch {
          *
          * The process task finally takes the particular task from the queue
          * and handles it (unless it is done already).
-         *
-         * @image html multicore_task_flow-03.png
-         *
+          *
          * <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
          * This variant might require OpenMP 6.
          * </div>
@@ -135,7 +199,7 @@ namespace tarch {
          * has the potential to lead to out-of-memory situations.
          * </div>
          *
-         * ## Related strategies
+         * #### Related strategies
          *
          * EagerConsumerTasks is similar but does not spawn the final process
          * task yet. This is only spawned once we need it. Further to that, it
@@ -145,10 +209,10 @@ namespace tarch {
          * LazyEvaluation moves this whole task sequence (besides the log ready
          * task part) into a lazy evaluation.
          *
-         * @see ProcessSetOfReadyTasks
-         * @see FusableTaskQueue
+         * @see tarch::multicore::taskfusion::LogReadyTask
+         * @see tarch::multicore::taskfusion::ProcessSetOfReadyTasks
          */
-        ProducerConsumerTaskPairs,
+        ProducerConsumerTaskSequence,
 
         /**
          * Issue consumer task that fuses upon spawning a task if the queue is big enough
@@ -158,18 +222,25 @@ namespace tarch {
          * this queue. If the queue is big enough, i.e. holds more tasks than
          * the lower threshold of the strategy, then we issue a consumer task.
          *
-         * The arising task pattern can be similar to LazyEvaluation, but it
-         * turns out to be significantly different: Lazy invocation of consumer
-         * tasks means that the consumer tasks drops in later. That can be bad
-         * for schemes which offload to GPUs, e.g., and hence need a large
-         * overlap.
+         * @image html taskfusion-EagerConsumerTasks.png
          *
-         * From an implementation point of view, this variant can be seen as a
+         *
+         * The arising task pattern can be similar to LazyEvaluation, but it
+         * turns out to be significantly different: Lazy spawning of fusion
+         * tasks means that the fusion drops in later. That can be bad
+         * for schemes which offload to GPUs, e.g., and hence need a large
+         * overlap. This scheme avoids this penalty, as we issue fusion tasks
+         * if and only they are ready to fly.
+         *
+         * From an implementation point of view, the variant can be seen as a
          * hybrid between lazy evaluation and producer-consumer tasks.
          * By default, we enqueue all tasks into the respective task queues.
          * This is the same strategy we followed for the lazy schemes.
          * However, we also check how many tasks are already in there and if
-         * this number if big enough, we spawn one of our consumer tasks.
+         * this number if big enough, we spawn one of our fusion tasks.
+         * Different to the ProducerConsumerTaskSequence the fusion is not built
+         * into the DAG right from the start, but the corresopnding task is
+         * issued upon demand.
          *
          * <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
          * This variant might require OpenMP 6.
@@ -273,7 +344,7 @@ public:
    *
    * @param taskType Number of the task that we are studying
    * @param queueSize Size of the queue at this observation point
-   * @param averageNumberOfPendingReadyTasksPerProcessTaskExecution average
+   * @param averageNumberOfReadyTasksPerProcessTaskExecution average
    *   over number of tasks in the queue whenever a process task has kicked
    *   off and the underlying real task has not completed yet.
    * @param probabilityThatTaskIsCompleted Probability that task result has
@@ -285,7 +356,7 @@ public:
   virtual void updateFuseStatistics(
     int    taskType,
     int    queueSize,
-    double averageNumberOfPendingReadyTasksPerProcessTaskExecution,
+    double averageNumberOfReadyTasksPerProcessTaskExecution,
     double probabilityThatTaskIsCompleted
   ) = 0;
 

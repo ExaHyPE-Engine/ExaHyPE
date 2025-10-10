@@ -36,7 +36,7 @@ namespace tarch {
  * ## Performance
  *
  * If we benchmark
- * FusionImplementation::ProducerConsumerTaskPairs, then our performance will
+ * FusionImplementation::ProducerConsumerTaskSequence, then our performance will
  * likely suffer quite a lot. We should, in practice avoid to have to many of
  * these ProcessSetOfReadyTasks instances.
  *
