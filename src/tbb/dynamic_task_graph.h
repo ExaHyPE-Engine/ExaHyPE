@@ -49,7 +49,7 @@ namespace tbb {
  * ## Compatibility
  *
  * You can also enable certain features individually. To do so, you have to
- * compile with tbb_exension, but then you can manually (via -D flags) define
+ * compile with tbb_extension, but then you can manually (via -D flags) define
  *
  * - TBB_USE_TASK_GROUP_PREVIEW to try out TBB's dynamic task group handling
  * - TBB_PREVIEW_BLOCKED_RANGE_ND to try out TBB's n-dimensional ranges.
