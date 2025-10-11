@@ -1,13 +1,20 @@
 # Define the stages we have overall.
 # Compiler is where we build and test the actual code against different compilers.
-# Pages is where we generate the doxygen pages and publish them on the website.
 stages:
   - Compiler
-#  - Pages
 
-# We define a job within the Compiler or Pages stage.
+workflow:
+  rules:
+    # Normal push pipelines
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+    # Pipelines for merge requests
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    # Trigger for child pipelines
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+    # Else do not create a pipeline
+    - when: never
+
+# We define a job within the Compiler stage.
 # We use the include statement so that this job does everything in the .yml file linked below.
-# This one contains everything to publish the online documentation.
 include:
   - .continuous_integration/gitlab-compiler.yml
-#  - .continuous_integration/github-pages.yml

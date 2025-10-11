@@ -1,0 +1,17 @@
+.RunOnDev:
+  rules:
+    # Push pipelines on any muc/* branch
+    - if: '$CI_COMMIT_BRANCH =~ /^muc\//'
+    # MR pipelines where the SOURCE branch is muc/*
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^muc\//'
+    # Child pipeline triggered from an MR where the SOURCE is muc/*
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline" && $UPSTREAM_MR_SOURCE_BRANCH =~ /^muc\//'
+
+.RunOnlyOnMain:
+  rules:
+    # Push pipelines only on the exact main branch
+    - if: '$CI_COMMIT_BRANCH == "muc/exahype"'
+    # MR pipelines when the TARGET branch is exactly the main branch
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "muc/exahype"'
+    # Child pipeline triggered from an MR TARGETING the main branch
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline" && $UPSTREAM_MR_TARGET_BRANCH == "muc/exahype"'

@@ -1,3 +1,0 @@
-.RunOnlyOn:
-  rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^muc\//'
