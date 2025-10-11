@@ -19,10 +19,13 @@ GCC:
                             -DWITH_MPI=OFF"
   trigger:
     include:
-      - .continuous_integration/gitlab-jobs.yml
+      - .continuous_integration/gitlab-exahype2.yml
     strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
 
-GCC_SharedOMP_MPI:
+GCC OpenMP MPI:
   extends: .Variables
   stage: Compiler
   variables:
@@ -34,8 +37,11 @@ GCC_SharedOMP_MPI:
                             -DWITH_MPI=ON"
   trigger:
     include:
-      - .continuous_integration/gitlab-jobs.yml
+      - .continuous_integration/gitlab-exahype2.yml
     strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
 
 Intel:
   extends: .Variables
@@ -49,10 +55,13 @@ Intel:
                             -DWITH_MPI=OFF"
   trigger:
     include:
-      - .continuous_integration/gitlab-jobs.yml
+      - .continuous_integration/gitlab-exahype2.yml
     strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
 
-Intel_SharedOMP_MPI:
+Intel OpenMP MPI:
   extends: .Variables
   stage: Compiler
   variables:
@@ -64,8 +73,11 @@ Intel_SharedOMP_MPI:
                             -DWITH_MPI=ON"
   trigger:
     include:
-      - .continuous_integration/gitlab-jobs.yml
+      - .continuous_integration/gitlab-exahype2.yml
     strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
 
 LLVM:
   extends: .Variables
@@ -79,10 +91,13 @@ LLVM:
                             -DWITH_MPI=OFF"
   trigger:
     include:
-      - .continuous_integration/gitlab-jobs.yml
+      - .continuous_integration/gitlab-exahype2.yml
     strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
 
-LLVM_SharedOMP_MPI:
+LLVM OpenMP MPI:
   extends: .Variables
   stage: Compiler
   variables:
@@ -94,8 +109,11 @@ LLVM_SharedOMP_MPI:
                             -DWITH_MPI=ON"
   trigger:
     include:
-      - .continuous_integration/gitlab-jobs.yml
+      - .continuous_integration/gitlab-exahype2.yml
     strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
 
 NVIDIA:
   extends: .Variables
@@ -109,10 +127,13 @@ NVIDIA:
                             -DWITH_MPI=OFF"
   trigger:
     include:
-      - .continuous_integration/gitlab-jobs.yml
+      - .continuous_integration/gitlab-exahype2.yml
     strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
 
-NVIDIA_SharedOMP_MPI:
+NVIDIA OpenMP MPI:
   extends: .Variables
   stage: Compiler
   variables:
@@ -124,8 +145,11 @@ NVIDIA_SharedOMP_MPI:
                             -DWITH_MPI=ON"
   trigger:
     include:
-      - .continuous_integration/gitlab-jobs.yml
+      - .continuous_integration/gitlab-exahype2.yml
     strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
 
 AMD:
   extends: .Variables
@@ -139,5 +163,8 @@ AMD:
                             -DWITH_MPI=OFF"
   trigger:
     include:
-      - .continuous_integration/gitlab-jobs.yml
+      - .continuous_integration/gitlab-exahype2.yml
     strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
