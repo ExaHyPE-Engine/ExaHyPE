@@ -33,7 +33,7 @@ default:
       - ./build/UnitTests*
       - ./build/CTestTestfile.cmake
       - ./install/*
-    expire_in: 2 hours
+    expire_in: 24 hours
 
 .Unit_Tests:
   script:
