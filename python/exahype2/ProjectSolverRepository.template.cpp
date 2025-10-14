@@ -13,6 +13,7 @@
 #include "exahype2/UserInterface.h"
 
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/taskfusion/taskfusion.h"
 #include "tarch/accelerator/Device.h"
 
 #include "Constants.h"
@@ -248,6 +249,12 @@ void finishTimeStep() {
   #ifdef UseSmartMPI
   smartmpi::tick();
   #endif
+
+  #if defined(SharedOMP) and !defined(OpenMP6Syntax)
+  tarch::multicore::taskfusion::processAndFuseAllReadyTasks();
+  #pragma omp barrier
+  #endif
+
   logTraceOut( "TimeStep()" );
 }
 
