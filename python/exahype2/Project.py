@@ -455,6 +455,25 @@ thus appreciate any citation of the original release paper
             self._output_path += "/"
 
     def add_mainfile_include(self,value):
+        """!
+        Add a new include file to the main file (but also to the solver repository)
+                    
+        The name is slightly misleading. As ExaHyPE's code generation never 
+        overwrites a mainfile by a user, the includes actually go into the
+        solver repository rather than the main file.
+        
+        @param value String 
+          The value is the actual content within the include, i.e. if you pass in 
+          "abc.h", then the code will insert
+          
+          ~~~~~~~~~~~~~~~~~~~~~~~~~~
+#include "abc.h"
+          ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+          into the repository file. There is no need to add the include 
+          statement.
+                    
+        """
         self._additional_includes.append( value )
 
     def __set_solver_repository_dict(self):
