@@ -147,6 +147,12 @@ class ParticleVTUReader(object):
         Read in and return all .vtu file names from the .pvd file
         provided by pvdfilename at initialisation.
 
+    get_snapshot_time(self):
+        Returns the simulation time of the read-in snapshot
+
+    get_snapshot_times(pvdfile):
+        Returns all simulation times stored in pvd file
+
     load(self):
         actually read in the data, and return the particle data as a
         VTUParticleSet object.
@@ -447,3 +453,36 @@ the ParticleVTUReader() object.
                 )
 
         return data
+
+    def get_snapshot_times(pvdfilename: str):
+        """!
+        Read in available snapshot times from the .pvd file provided by
+        pvdfilename.
+
+        Parameters
+        ----------
+
+        pvdfilename: str
+            filename to read in from
+
+        Returns
+        -------
+
+        times: np.array
+            np.array of available snapshot times
+        """
+
+        if not os.path.exists(pvdfilename):
+            raise FileNotFoundError(
+                errno.ENOENT, os.strerror(errno.ENOENT), pvdfilename
+            )
+
+        # 'interpolation_backend' is used to generate plots with seemingly
+        # continuous data. That's not what we're using this module for. We
+        # only want to read in particle data. So I use here the default
+        # 'interpolation_backend', which gets set anyway if it weren't
+        # specified, with the bonus that this way, no annoying warnings are
+        # printed.
+        pvdfile = vtuIO.PVDIO(pvdfilename, interpolation_backend="vtk")
+        timesteps = pvdfile.timesteps
+        return timesteps

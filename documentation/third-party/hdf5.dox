@@ -1,0 +1,55 @@
+/**
+
+\page page_third-party_hdf5 HDF5 and NetCDF
+
+\tableofcontents
+
+
+## HDF5 
+
+Peano does not need hdf5. There's no generic input file format, and it can write
+its own mesh files without hdf5. Things are different if you want to dump hdf5,
+or if you use an extension/toolbox which requires hdf5. In this case, you have
+to enable hdf5 in the configuration (pass in --with-hdf5) and ensure that your
+CXXFLAGS and LDFLAGS include all libraries.
+
+For the latter, different systems have other paths. On local Ubuntu
+workstations, we typically use something similar to
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-L/usr/lib/x86_64-linux-gnu/hdf5/serial -lhdf5 -lhdf5_cpp
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Please note that two hdf5 libraries are required: the hdf5 library which is
+written in C and the C++ counterpart.
+
+
+## NetCDF
+
+NetCDF might be required by some applications.
+
+If you are unsure where the NetCDF headers and libraries are located on your system,
+you can use pkg-config:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export NETCDF_INCLUDE_DIR=$(pkg-config --cflags-only-I netcdf)
+export NETCDF_LIBRARY_DIR=$(pkg-config --libs-only-L --libs-only-l netcdf)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Then use these variables to configure Peano:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+CC=gcc CXX=g++ ./configure --with-netcdf CXXFLAGS="-std=c++20 -O3 $NETCDF_INCLUDE_DIR" LDFLAGS="$NETCDF_LIBRARY_DIR"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If all works, then in the configuration output log you should see
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+checking for netcdf... yes
+...
+checking for netcdf.h... yes
+checking for nc_open in -lnetcdf... yes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+*/

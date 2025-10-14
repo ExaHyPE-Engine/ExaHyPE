@@ -58,7 +58,7 @@ tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter::VTUTextFileWrite
       logDebug("VTUTextFileWriter()", "No index file " << _indexFile << " found. Create new one.");
       tarch::plotter::PVDTimeSeriesWriter::createEmptyIndexFile(_indexFile);
     } else if (tarch::la::smaller(timeStamp, tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(_indexFile),
-               tarch::la::relativeEpsNormaledAgainstValueGreaterOne(timeStamp, tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(_indexFile), DefaultTimeStampPrecision))) {
+               tarch::la::relativeEpsNormalisedAgainstValueGreaterOne(timeStamp, tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(_indexFile), DefaultTimeStampPrecision))) {
       logWarning(
         "VTUTextFileWriter()",
         "There is an index file "

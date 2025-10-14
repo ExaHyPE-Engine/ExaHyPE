@@ -361,7 +361,8 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
         marker.getSelectedFaceNumber(),
         {0.0, 0.0, 0.0},
         fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
-        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value,
+        -1 //not use checkpoint yet
       );
       """
         )

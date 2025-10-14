@@ -24,19 +24,17 @@ and innovation programme under grant agreement No 671698 (ExaHyPE).
   - \subpage page_symhype_tutorials
   - \subpage page_exahype_applications
   - \subpage page_exahype_benchmarks
-- Solvers
-  - \subpage documentation_exahype2_solvers_finite_volumes
-  - \subpage exahype2_dg
-  - \subpage exahype2_dg_DG_AMD
-  - \subpage documentation_exahype2_solvers_aderdg
-  - \subpage documentation_exahype2_solvers_enclave_solvers
-- Numerics (Explanation of core numerical ingredients)
+- Numerics tour de force (hands-on explanation of core numerical ingredients)
   - \subpage page_tutorials_exahype2_numerics_finite_volumes
+  - \subpage page_tutorials_exahype2_numerics_higher_order_finite_volumes
   - \subpage page_tutorials_exahype2_numerics_discontinous-Galerkin
   - \subpage page_tutorials_exahype2_numerics_finite-differences
   - \subpage page_tutorials_exahype2_numerics_Runge-Kutta
   - \subpage page_tutorials_exahype2_numerics_ADER-DG
-- Core functionality
+- Core functionality, numerics and ingredients
+  - \subpage exahype2_dg
+  - \subpage exahype2_dg_DG_AMR
+  - \subpage documentation_exahype2_solvers_enclave_solvers
   - \subpage page_exahype_tracer
   - \subpage page_exahype_boundary_conditions
   - \subpage page_exahype_amr
@@ -44,28 +42,24 @@ and innovation programme under grant agreement No 671698 (ExaHyPE).
   - \subpage page_exahype_visualisation
   - \subpage page_exahype_checkpointing
   - \subpage page_exahype_extend-visualisation
-- HPC  
-  - \subpage page_exahype_runtime_analysis
-  - \subpage page_exahype_performance_optimisation
-  - \subpage page_exahype_parallelisation
+- HPC
+  - \subpage page_exahype_domain-decomposition
   - \subpage page_exahype_multicore
   - \subpage page_exahype_gpu
-- Miscellaneous
+  - \subpage page_exahype_runtime_analysis
+  - \subpage page_exahype_performance_optimisation
+- Utilities
   - \subpage exahype2_enumerator
-  - \subpage tutorials_exahype2_design-patterns
-  - \subpage tutorials_exahype_gpu
-  - \subpage page_exahype2_coupling
-  - \subpage tutorials_exahype2_coupling
-  - \subpage tutorials_exahype2_additional_mesh_sweeps
+- Related pages
+  - @ref page_peano4_home
+  - @ref page_tarch_home
+
 
 # Building the ExaHyPE 2 extension
 
 As ExaHyPE 2 is a Peano 4 extension, you first have to
 @ref page_installation_home "configure and build" the core
 Peano code base, i.e. its libraries, before you start any work.
-Hereby, it is important that you add the ExaHyPE-specific toolboxes:
-
-     ./configure ... --enable-exahype --enable-loadbalancing --enable-blockstructured
 
 We recommend that you run a few of the @ref page_exahype_benchmarks benchmarks
 to ensure that all is properly set up before you start developing your own

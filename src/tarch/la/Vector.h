@@ -8,15 +8,14 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/CompilerSpecificSettings.h"
 
-#include <string>
 #include <bitset>
-#include <sstream>
 #include <initializer_list>
+#include <sstream>
+#include <string>
 
 namespace tarch {
   namespace la {
-    template <int Size, typename Scalar>
-    struct Vector;
+    template <int Size, typename Scalar> struct Vector;
 
     /**
      * Convert the scalar type underlying a vector
@@ -77,10 +76,9 @@ std::string toString(const tarch::la::Vector<Size,Scalar>& vector);
  * only if it has to hand over raw pointers to MPI, e.g.
  *
  */
-template <int Size, typename Scalar>
-struct tarch::la::Vector {
-  private:
-    Scalar _values[Size];
+template <int Size, typename Scalar> struct tarch::la::Vector {
+private:
+  Scalar _values[Size];
 
   public:
     /**
@@ -216,8 +214,8 @@ struct tarch::la::Vector {
     }
 };
 
-#include "tarch/la/Vector.cpph"
-#include "tarch/la/VectorOperations.h"
-#include "tarch/la/VectorScalarOperations.h"
-#include "tarch/la/VectorVectorOperations.h"
-#include "tarch/la/VectorSlice.h"
+#include "Vector.cpph"
+#include "VectorOperations.h"
+#include "VectorScalarOperations.h"
+#include "VectorVectorOperations.h"
+#include "VectorSlice.h"

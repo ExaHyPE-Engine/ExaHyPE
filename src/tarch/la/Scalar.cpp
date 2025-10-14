@@ -9,8 +9,11 @@ double tarch::la::max(double a, double b, double c) { return std::max(a, std::ma
 
 double tarch::la::min(double a, double b, double c) { return std::min(a, std::min(b, c)); }
 
-double tarch::la::relativeEpsNormaledAgainstValueGreaterOne(double valueA, double valueB, double eps) {
-  return std::max(std::abs(valueA), std::abs(valueB)) <= 1.0 ? eps : eps * std::max(std::abs(valueA), std::abs(valueB));
+double tarch::la::relativeEpsNormalisedAgainstValueGreaterOne(double valueA, double valueB, double eps) {
+  return eps * std::max(
+    std::max( std::abs(valueA), 1.0 ),
+    std::max( std::abs(valueB), 1.0 )
+  );
 }
 
 double tarch::la::relativeEps(double valueA, double valueB, double eps) {

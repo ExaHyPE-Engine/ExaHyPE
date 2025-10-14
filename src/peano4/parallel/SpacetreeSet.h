@@ -281,6 +281,14 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * not relevant for inter-rank communication as we know that the buffer won't
      * be deleted before the data has not been sent out - which is only once for the
      * whole cycle.
+     *
+     * @param master: Integer >=0
+     *   This is the master tree involved in this split, i.e. the tree that wants to
+     *   deploy a subgrid to a worker. The number is a tree number and not a rank
+     *   number.
+     *
+     * @param worker: Integer >=0
+     *   This is the target tree number.
      */
     template <class Container>
     static void streamDataFromSplittingTreeToNewTree( Container& stackContainer, int master, int worker );

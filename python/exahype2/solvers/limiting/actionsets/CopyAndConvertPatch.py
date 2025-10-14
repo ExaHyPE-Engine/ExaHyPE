@@ -93,5 +93,6 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
           super(CopyAndConvertPatch, self).get_includes()
           + """
 #include "kernels/"""  + self._solver._name + """/Limiter.h"
+#include "toolbox/blockstructured/Enumeration.h"
     """
       )

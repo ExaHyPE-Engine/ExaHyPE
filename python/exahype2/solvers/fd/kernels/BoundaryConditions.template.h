@@ -24,9 +24,9 @@ namespace {{ item }} {
     template<typename T>
     void applyBoundaryConditions(
       std::function< void(
-        const T* __restrict__                        Qinside,
+        const T* NOALIAS                        Qinside,
         {%- for i in range(ORDER) %}
-        T* __restrict__                              Qoutside{{i}},
+        T* NOALIAS                              Qoutside{{i}},
         {%- endfor %}
         const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
         const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
@@ -42,7 +42,7 @@ namespace {{ item }} {
       int                                          overlap,
       int                                          unknowns,
       int                                          faceNumber,
-      T* __restrict__                              Q
+      T* NOALIAS                              Q
     );
 {% for item in NAMESPACE -%}
 }

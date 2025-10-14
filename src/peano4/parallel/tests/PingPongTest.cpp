@@ -75,7 +75,7 @@ namespace {
     bool run() {
       int                        in = -12;
       static tarch::logging::Log _log("peano4::parallel::tests::PingPongSendTask");
-      logInfo("PingPongReceiveTask()", "receive message from rank 1 with tag " << _data);
+      logDebug("PingPongReceiveTask()", "receive message from rank 1 with tag " << _data);
       if (_blockingMPI) {
         MPI_Recv(&in, 1, MPI_INT, 0, _data, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       } else {
@@ -83,7 +83,7 @@ namespace {
         MPI_Irecv(&in, 1, MPI_INT, 0, _data, MPI_COMM_WORLD, &request);
         MPI_Wait(&request, MPI_STATUS_IGNORE);
       }
-      logInfo("PingPongReceiveTask()", "got content " << in);
+      logDebug("PingPongReceiveTask()", "got content " << in);
       if (in != 23 + _data) {
         logError(
           "testMultithreadedPingPong()",
@@ -351,13 +351,15 @@ void peano4::parallel::tests::PingPongTest::run() {
 
   testMethod(testDaStGenArrayTreeManagementMessage);
 
-  testMethod(testMultithreadedPingPongWithBlockingReceives);
-  testMethod(testMultithreadedPingPongWithBlockingSends);
-  testMethod(testMultithreadedPingPongWithBlockingSendsAndReceives);
+  if (tarch::mpi::Rank::getInstance().getProvidedThreadLevelSupport()==MPI_THREAD_MULTIPLE) {
+    testMethod(  testMultithreadedPingPongWithBlockingReceives );
+    testMethod(  testMultithreadedPingPongWithBlockingSends );
+    testMethod(  testMultithreadedPingPongWithBlockingSendsAndReceives );
 
-  testMethod(testMultithreadedPingPongWithNonblockingReceives);
-  testMethod(testMultithreadedPingPongWithNonblockingSends);
-  testMethod(testMultithreadedPingPongWithNonblockingSendsAndReceives);
+    testMethod(  testMultithreadedPingPongWithNonblockingReceives );
+    testMethod(  testMultithreadedPingPongWithNonblockingSends );
+    testMethod(  testMultithreadedPingPongWithNonblockingSendsAndReceives );
+  }
 }
 
 #endif
