@@ -104,8 +104,6 @@ class UpdateFaceLabel(ActionSet):
 
 
   _Template_CreateFace = """
-  logTraceInWith1Argument( "createPersistentFace()", marker.toString() );
-
   tarch::la::Vector<DIMENSIONS, double> offset(DomainOffset);
   tarch::la::Vector<DIMENSIONS, double> size(DomainSize);
   bool isBoundary = false;
@@ -120,24 +118,21 @@ class UpdateFaceLabel(ActionSet):
   fineGridFace{{FACE_LABEL_NAME}}.setUpdatedTimeStamp( 0.0 );
   fineGridFace{{FACE_LABEL_NAME}}.setNewTimeStamp( 0.0 );
   fineGridFace{{FACE_LABEL_NAME}}.setOldTimeStamp( 0.0 );
-
-  logTraceOutWith1Argument( "createPersistentFace()", fineGridFace{{FACE_LABEL_NAME}}.toString() );
 """
 
   _Template_CreateHangingFace = """
-  logTraceInWith1Argument( "createHangingFace()", marker.toString() );
+  fineGridFace{{FACE_LABEL_NAME}}.setUpdatedTimeStamp( 0.0 );
+  fineGridFace{{FACE_LABEL_NAME}}.setNewTimeStamp( 0.0 );
+  fineGridFace{{FACE_LABEL_NAME}}.setOldTimeStamp( 0.0 );
   fineGridFace{{FACE_LABEL_NAME}}.setIsHanging( true );
   coarseGridFaces{{FACE_LABEL_NAME}}(marker.getSelectedFaceNumber()).setNewAboveHanging( true );
-  logTraceOutWith1Argument( "createHangingFace()", fineGridFace{{FACE_LABEL_NAME}}.toString() );
 """
 
   _Template_DestroyHangingFace = """
 """
 
   _Template_TouchFaceLastTime = """
-  logTraceInWith1Argument( "touchFaceLastTime()", marker.toString() );
   fineGridFace{{FACE_LABEL_NAME}}.setAboveHanging( fineGridFace{{FACE_LABEL_NAME}}.getNewAboveHanging() );
-  logTraceOutWith1Argument( "touchFaceLastTime()", fineGridFace{{FACE_LABEL_NAME}}.toString() );
 """
 
   def get_action_set_name(self):
