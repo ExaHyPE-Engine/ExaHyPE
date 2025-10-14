@@ -31,7 +31,7 @@ Build:
       - ./build/UnitTests*
       - ./build/CTestTestfile.cmake
       - ./install/*
-    expire_in: 2 hours
+    expire_in: 24 hours
   allow_failure: false
   extends:
     - .Tags
