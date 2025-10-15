@@ -72,7 +72,7 @@ def get_venv_path(root):
 
 def git_is_available():
     """
-    Check whether git is available. Returns True is that is the case.
+    Check whether git is available. Returns True if that is the case.
     """
     # Does it run?
     cmd = "git --version"

@@ -54,8 +54,35 @@ def get_subnamespace_for_association(association):
 
   
 class DoF(object):
+  """!
+  
+  Base class for any degree of freedom object
+  
+  Any degree of freedom object in Peano is derived from DoF. There are 
+  different subclasses of this type which are actually used in most 
+  implementations. The most popular one is peano4.datamodel.DaStGen2 which
+  encodes a DoF implementation which is based upon plain C++ objects created
+  through DaStGen2. However, there are also other data models such as bespoke
+  patch data represented through peano4.datamodel.Patch.
+  
+  @image html dof-class-diagram.png
+
+  Every DoF in Peano has a name and a unique association with a mesh entity
+  which is held in association. There are some further properties tied to 
+  each DoF such as a position x and a mesh width h, but we leave it to 
+  subclasses to provide those guys.
+  
+  Please consult the tutorials on @ref tutorials_peano4_assign_data_to_mesh "assigning data to a mesh" and
+  @ref tutorials_peano4_mask_out_data_usage "masking out data storage"
+  on some instructions where this class is actually used in code.
+
+  """
+  
+  
   def __init__(self, name):
-    """
+    """!
+    
+    Create a degree of freedom object
     
     Both the association and the namespace are not to be set directly,
     but through the operation configure().

@@ -6,7 +6,11 @@
 
 namespace peano4 {
   /**
-   * Please destroy after usage
+   * Construct suite of unit tests for Peano 4
+   *
+   * Please destroy after usage. If you want to add a new unit test (set) for
+   * Peano, you have to add it here. In principle, the order in this routine
+   * should not make a difference: Eventually, all tests should pass anyway.
    */
   tarch::tests::TestCase* getUnitTests();
 }

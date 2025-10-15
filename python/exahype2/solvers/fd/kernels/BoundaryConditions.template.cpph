@@ -3,9 +3,9 @@
 template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::applyBoundaryConditions(
   std::function< void(
-    const T* __restrict__                        Qinside,
+    const T* NOALIAS                        Qinside,
     {%- for i in range(ORDER) %}
-    T* __restrict__                              Qoutside{{i}},
+    T* NOALIAS                              Qoutside{{i}},
     {%- endfor %}
     const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
     const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
@@ -21,7 +21,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::applyBoundaryConditions(
   int                                          overlap,
   int                                          unknowns,
   int                                          faceNumber,
-  T* __restrict__                              Q
+  T* NOALIAS                              Q
 ) {
   static tarch::logging::Log _log( "exahype2::fd" );
 

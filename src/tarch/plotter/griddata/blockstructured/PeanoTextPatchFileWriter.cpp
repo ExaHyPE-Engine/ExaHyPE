@@ -185,7 +185,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
     } else if (tarch::la::smaller(
                  timeStamp,
                  getLatestTimeStepInIndexFile(),
-                 tarch::la::relativeEpsNormaledAgainstValueGreaterOne(
+                 tarch::la::relativeEpsNormalisedAgainstValueGreaterOne(
                    timeStamp, getLatestTimeStepInIndexFile(), DefaultTimeStampPrecision
                  )
                )) {

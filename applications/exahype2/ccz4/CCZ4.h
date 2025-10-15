@@ -144,8 +144,6 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
     ) override;
     
     
-   
-    
     /**
      * To obtain the best performance, I recommend to man inline command to 
      * this signature and to copy the implementation into the header. So it would
@@ -169,11 +167,8 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
        double * NOALIAS S,
        ::exahype2::Solver::Offloadable
      ) {
-      std::memset(S, 0, NumberOfUnknowns*sizeof(double));
       source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3, CCZ4SO);
     }
-
-
     
     /**
      * To obtain the best performance, I recommend to man inline command to 

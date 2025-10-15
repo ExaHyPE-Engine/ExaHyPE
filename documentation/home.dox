@@ -20,7 +20,7 @@ balancing, sophisticated geometry representations, and other features.
 
 # Content
 
-- Getting Started
+- Getting started
   - @subpage page_installation_home
   - @subpage page_compiler_specific_settings_home
   - @subpage page_architecture_home
@@ -28,20 +28,29 @@ balancing, sophisticated geometry representations, and other features.
 - Contributing
   - @subpage page_conventions_home
   - @subpage page_version_control_home
-  - @subpage page_continuous_integration
   - @subpage page_documentation_home
+  - @subpage page_continuous_integration
 - @subpage page_tutorials_overview
-- The Core
-  - @subpage page_tarch_home
+- The core
   - @subpage page_peano4_home
   - @subpage page_toolbox_home
-  - @subpage page_dastgen_home
+  - @subpage page_tarch_home
 - Extensions
   - @subpage page_exahype2_home
+- Third-party extensions
+  - @subpage page_third-party_dastgen
+  - @subpage page_third-party_OpenBLAS
+  - @subpage page_third-party_hdf5
 
 This is the documentation of Peano which is generated automatically through Doxygen.
 Peano comprises the core Peano 4 modules, the Python API, and a set of Peano extensions as well as benchmarks.
 The most prominent extension at the moment is ExaHyPE 2.
+
+
+# Recent Updates
+
+- <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines">Build status (pipelines)</a>
+- <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/network/p4?ref_type=heads">Latest commits (repository graph)</a>
 
 
 # History

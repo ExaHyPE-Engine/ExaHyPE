@@ -19,7 +19,14 @@ namespace tarch::timing {
  * GlidingAverageMeasurement
  *
  * This is an alternative implementation to Measurement which uses a gliding
- * average rather than the real average over all data.
+ * average rather than the real average over all data. The gliding average is
+ * computed as follows:
+ *
+ * @f$ m = \frac{ \sum _i w^i \cdot m_i }{ \sum _i w^i } @f$
+ *
+ * This w is the weight from the constructor. The @f$ m_i @f$ are the
+ * recorded measurements.
+ *
  *
  * @author Tobias Weinzierl
  */
@@ -38,14 +45,32 @@ private:
    */
   std::vector<double> _values;
 
-public:
-  GlidingAverageMeasurement(double weight = 0.7, int maxEntries = 16);
-  ~GlidingAverageMeasurement() = default;
+  public:
+    static constexpr double DefaultWeight = 0.7;
 
-  /**
-   * @return Averaged value (mean value) of all measurements.
-   */
-  double getValue() const;
+    /**
+     * Construct a measurement with a gliding measurement
+     *
+     * @param weight Has to be 0<weight<=1.0. See class description for details
+     *   how this value is used.
+     * @param maxEntries How many entries have to be taken into account. Has to
+     *   bigger than one. You can pass in 1, but then it is not a gliding
+     *   average, but just a value.
+     */
+    GlidingAverageMeasurement(double weight = DefaultWeight, int maxEntries = 16);
+    ~GlidingAverageMeasurement() = default;
+
+    /**
+     * Return the value of the gliding value
+     *
+     * The formula is described in the class documentation. Note that the
+     * entries _values are ordered historically, i.e. _values[0] is the
+     * oldest value. That means we have to do some index magic compared
+     * to the sums in the class docu.
+     *
+     * @return Value repreented by this gliding average.
+     */
+    double getValue() const;
 
   /**
    * To compute the standard deviation, we rely on the formula

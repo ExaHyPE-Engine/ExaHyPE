@@ -30,10 +30,10 @@ toolbox::loadbalancing::Statistics::Statistics():
 void toolbox::loadbalancing::Statistics::waitForGlobalDataExchange() {
 #ifdef WITH_MPI
   if (_globalNumberOfInnerUnrefinedCellsRequest != nullptr) {
-    MPI_Wait(_globalNumberOfInnerUnrefinedCellsRequest, MPI_STATUS_IGNORE);
-    MPI_Wait(_globalNumberOfSplitsRequest, MPI_STATUS_IGNORE);
-    MPI_Wait(_globalNumberOfTreesRequest, MPI_STATUS_IGNORE);
-    MPI_Wait(_globalNumberOfRanksWithEnabledLoadBalancingRequest, MPI_STATUS_IGNORE);
+    tarch::mpi::wait(*_globalNumberOfInnerUnrefinedCellsRequest, "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange");
+    tarch::mpi::wait(*_globalNumberOfSplitsRequest, "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange");
+    tarch::mpi::wait(*_globalNumberOfTreesRequest, "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange");
+    tarch::mpi::wait(*_globalNumberOfRanksWithEnabledLoadBalancingRequest, "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange");
 
     delete _globalNumberOfInnerUnrefinedCellsRequest;
     delete _globalNumberOfSplitsRequest;

@@ -92,6 +92,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
     Your main code has to call finishedTraversal() on the tracer set after each
     sweep on each rank. This important to roll those particles over that have
     been sieved or have been lifted.
+    #todo this might be wrong
 
     You will always needs to instances of this action set in a row, as the first
     one might lift particles and put them into a sieve list. After that, the
