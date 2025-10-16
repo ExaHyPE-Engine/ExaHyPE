@@ -96,6 +96,42 @@ The script validates:
 For integration with Peano workflows and theoretical background, see the load balancing API documentation.
 """
 
+# This function will display split parameters to the console
+def display_hardcoded_split_parameters(peano_tree: Tree, title: str) -> None:
+    """
+    Extract and display hardcoded split parameters from a tree for Peano's Hardcoded load balancer.
+    
+    Args:
+        peano_tree: Tree object with applied splits
+        title: Title to display before the parameters
+    """
+    if peano_tree._subtree_count <= 1:
+        print("No splits to extract - tree has only one subtree")
+        return
+    
+    # Get the split parameters
+    grid_sweeps, splitting_trees, cell_counts, subtrees = split_strategy.extract_hardcoded_split_parameters(peano_tree)
+    
+    print("\n" + title)
+    print("-" * len(title))
+    print(f"Total subtrees: {peano_tree._subtree_count}")
+    print(f"Total leaf nodes: {int(peano_tree._leaf_count)}")
+    print()
+    
+    # Display parameters as C++ initializer lists for direct copy-paste into code
+    print("Hardcoded Constructor Parameters:")
+    print(f"  gridSweeps = {{{', '.join(map(str, grid_sweeps))}}}")
+    print(f"  splittingTrees = {{{', '.join(map(str, splitting_trees))}}}")
+    print(f"  numberOfCells = {{{', '.join(map(str, cell_counts))}}}")
+    print(f"  subTrees = {{{', '.join(map(str, subtrees))}}}")
+    print()
+    
+    # Display as individual tuples for better readability
+    print("Individual Split Operations:")
+    for i in range(len(grid_sweeps)):
+        print(f"  {{{grid_sweeps[i]}; {splitting_trees[i]} → {subtrees[i]}; {cell_counts[i]}}}")
+    print()
+
 
 def main():
     parser = argparse.ArgumentParser(description='Offline Tree Decomposition for Load Balancing')
@@ -156,22 +192,18 @@ def main():
 
     split_strategy.generate_tree_yaml(tree, original_yaml_filename)
 
-    # Generate hardcoded split instructions for original tree
-    if tree._subtree_count > 1:  # Only generate if there are multiple subtrees
+    # Display hardcoded split parameters for original tree
+    if tree._subtree_count > 1:  # Only display if there are multiple subtrees
         print("\n" + "="*50)
-        print("GENERATING ORIGINAL TREE HARDCODED SPLIT INSTRUCTIONS")
+        print("HARDCODED SPLIT PARAMETERS FOR ORIGINAL TREE")
         print("="*50)
         
-        # Create the .out filename based on the YAML filename
-        original_out_filename = original_yaml_filename.replace('_original.yaml', '_original_splits.out')
-        
-        split_strategy.generate_hardcoded_splits_out(tree, original_out_filename)
-        print(f"Original tree hardcoded split instructions saved as {original_out_filename}")
+        display_hardcoded_split_parameters(tree, "Original Tree Split Parameters")
     else:
         print("\n" + "="*50)
-        print("SKIPPING ORIGINAL TREE HARDCODED SPLIT INSTRUCTIONS")
+        print("SKIPPING ORIGINAL TREE HARDCODED SPLIT PARAMETERS")
         print("="*50)
-        print("Original tree has only one subtree - no split instructions to generate")
+        print("Original tree has only one subtree - no split parameters to extract")
 
     # Save original tree visualization if plotting is enabled
     viz_start_time = time.time()
@@ -246,16 +278,12 @@ def main():
         split_strategy.generate_tree_yaml(tree, split_yaml_filename)
         print(f"Split tree YAML saved as {split_yaml_filename}")
 
-        # Generate hardcoded split instructions
+        # Display hardcoded split parameters
         print("\n" + "="*50)
-        print("GENERATING HARDCODED SPLIT INSTRUCTIONS")
+        print("HARDCODED SPLIT PARAMETERS FOR SPLIT TREE")
         print("="*50)
-        
-        # Create the .out filename based on the YAML filename
-        out_filename = split_yaml_filename.replace('_split.yaml', '_splits.out')
-        
-        split_strategy.generate_hardcoded_splits_out(tree, out_filename)
-        print(f"Hardcoded split instructions saved as {out_filename}")
+
+        display_hardcoded_split_parameters(tree, "Split Tree Split Parameters")
 
         # Save split tree visualization if plotting is enabled
         if args.plot_flag:

@@ -536,53 +536,34 @@ def reset_tree_to_single_subtree(peano_tree: Tree) -> Tree:
     
     return peano_tree
 
-def generate_hardcoded_splits_out(peano_tree: Tree, output_out_file: str, base_timestamp: int = 2) -> None:
+def extract_hardcoded_split_parameters(peano_tree: Tree, base_sweep: int = 2) -> tuple:
     """
-    Generate an output file with hardcoded split tuples for Peano's Hardcoded load balancer.
+    Extract hardcoded split parameters from a tree for Peano's Hardcoded load balancer.
     
-    This function analyzes the split pattern in a tree and generates tuples in the format:
-    {timeStamp; sourceSubtree → targetSubtree; numberOfCells}
-    
-    The output tuples contain subtree creation information that must be mapped to actual 
-    destination ranks for the Hardcoded constructor. The constructor parameters are:
-    - timeStamps: When to perform the split
-    - splittingTrees: Which subtree to split from  
-    - numberOfCells: How many cells to move to the new subtree
-    - destinationRanks: MPI ranks where new subtrees will be deployed
-    
-    Note: The tuples show logical subtree creation (subTrees), while the constructor 
-    requires physical rank assignment (destinationRanks). A separate mapping step 
-    will be needed to assign multiple subtrees to destination ranks.
+    This function analyzes the split pattern in a tree and returns tuple parameters
+    required for the Hardcoded load balancer constructor:
+    - gridSweeps: Grid sweep numbers when to perform each split (even numbers)
+    - splittingTrees: Source subtree IDs for each split
+    - numberOfCells: How many cells to move in each split
+    - subTrees: Target subtree IDs for each split (needs mapping to destinationRanks)
     
     Args:
         peano_tree: Tree object with applied splits
-        output_out_file: Path to output .out file
-        base_timestamp: Base timestamp for split timing (default: 2)
+        base_sweep: Base grid sweep number for split timing (default: 2)
         
-    Example Output:
-        ```
-        # Hardcoded Split Instructions for Tree: MyTree
-        # Format: {timeStamp; sourceSubtree → targetSubtree; numberOfCells}
-        # 
-        # Constructor Parameters (require subTree → destinationRank mapping):
-        # timeStamps = {4, 6}
-        # splittingTrees = {0, 1} 
-        # numberOfCells = {125, 67}
-        # destinationRanks = {?, ?}  # To be determined by rank assignment strategy
-        #
-        # Tuple Output (logical subtree creation):
-        {4; 0 → 1; 125}
-        {6; 1 → 2; 67}
-        ```
+    Returns:
+        tuple: (gridSweeps, splittingTrees, numberOfCells, subTrees)
+            - gridSweeps (list): Grid sweep numbers when splits should occur
+            - splittingTrees (list): Source subtree IDs for splits
+            - numberOfCells (list): Number of cells to move in each split
+            - subTrees (list): Target subtree IDs (logical subtrees)
     """
-    
     if peano_tree._subtree_count <= 1:
-        print("No splits to generate - tree has only one subtree")
-        return
+        print("No splits to extract - tree has only one subtree")
+        return ([], [], [], [])
     
     # Analyze the split pattern to determine split operations
     split_operations = []
-    total_leaves = int(peano_tree._leaf_count)
     
     # Calculate splits based on the split pattern
     source_subtree = 0
@@ -591,51 +572,20 @@ def generate_hardcoded_splits_out(peano_tree: Tree, output_out_file: str, base_t
         cells_in_target = int(peano_tree._split_pattern[target_subtree])
         
         if cells_in_target > 0:
-            # Calculate timestamp based on subtree creation order
-            timestamp = base_timestamp * target_subtree
+            # Calculate grid sweep number based on subtree creation order
+            grid_sweep = base_sweep * target_subtree
             
             split_operations.append({
-                'timestamp': timestamp,
+                'grid_sweep': grid_sweep,
                 'source_subtree': source_subtree,
                 'target_subtree': target_subtree, 
                 'num_cells': cells_in_target
             })
     
-    # Generate the output file
-    try:
-        with open(output_out_file, 'w') as file:
-            # Header
-            file.write(f"# Hardcoded Split Instructions for Tree: {peano_tree._name}\n")
-            file.write("# Format: {timeStamp; sourceSubtree → targetSubtree; numberOfCells}\n")
-            file.write("#\n")
-            file.write("# Note: Output tuples show logical subtree creation. Constructor requires\n")
-            file.write("# mapping of subtrees to actual MPI destination ranks.\n")
-            file.write("#\n")
-            
-            # Constructor parameters
-            if split_operations:
-                timestamps = [op['timestamp'] for op in split_operations]
-                splitting_trees = [op['source_subtree'] for op in split_operations]
-                num_cells = [op['num_cells'] for op in split_operations]
-                subtrees = list(range(1, len(split_operations) + 1))
-                
-                file.write("# Output tuple parameters (require subTree → destinationRank mapping for Hardcoded constructor parameters):\n")
-                file.write(f"# timeStamps = {{{', '.join(map(str, timestamps))}}}\n")
-                file.write(f"# splittingTrees = {{{', '.join(map(str, splitting_trees))}}}\n")
-                file.write(f"# numberOfCells = {{{', '.join(map(str, num_cells))}}}\n")
-                file.write(f"# subTrees = {{{', '.join(map(str, subtrees))}}}\n")
-                file.write("#\n")
-                file.write("# Tuple Output (logical subtree creation):\n")
-            
-            # Split operations in tuple notation
-            for op in split_operations:
-                file.write(f"{{{op['timestamp']}; {op['source_subtree']} → {op['target_subtree']}; {op['num_cells']}}}\n")
-                
-            file.write(f"\n# Total subtrees: {peano_tree._subtree_count}\n")
-            file.write(f"# Total leaf nodes: {total_leaves}\n")
-            file.write(f"# Next step: Map subtrees to destination ranks for Hardcoded constructor\n")
-            
-        print(f"Hardcoded split instructions written to {output_out_file}")
-        
-    except IOError as e:
-        print(f"Error writing to output file: {e}")
+    # Extract parameter lists from split operations
+    grid_sweeps = [op['grid_sweep'] for op in split_operations]
+    splitting_trees = [op['source_subtree'] for op in split_operations]
+    cell_counts = [op['num_cells'] for op in split_operations]
+    subtrees = list(range(1, len(split_operations) + 1))
+    
+    return (grid_sweeps, splitting_trees, cell_counts, subtrees)
