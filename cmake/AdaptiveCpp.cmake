@@ -1,6 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-set(ADAPTIVE_CPP_VERSION 24.10.0)
+set(ACPP_VERSION 25.02.0)
 set(ACPP_TARGETS generic)
 
 # if(PEANO_NVIDIA_GPU)
@@ -14,13 +14,13 @@ set(ACPP_TARGETS generic)
 find_package(AdaptiveCpp CONFIG)
 
 if(NOT ${AdaptiveCpp_FOUND})
-  message(STATUS "Installing AdaptiveCpp from GitHub Release ${ADAPTIVE_CPP_VERSION} using ${AVAILABLE_PROCESSOR_COUNT} processors")
+  message(STATUS "Installing AdaptiveCpp from GitHub Release ${ACPP_VERSION} using ${AVAILABLE_PROCESSOR_COUNT} processors")
 
   include(FetchContent)
   set(FETCHCONTENT_QUIET ON)
   FetchContent_Declare(
     AdaptiveCpp
-    URL https://github.com/AdaptiveCpp/AdaptiveCpp/archive/refs/tags/v${ADAPTIVE_CPP_VERSION}.tar.gz
+    URL https://github.com/AdaptiveCpp/AdaptiveCpp/archive/refs/tags/v${ACPP_VERSION}.tar.gz
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
   )
   if(NOT AdaptiveCpp_POPULATED)

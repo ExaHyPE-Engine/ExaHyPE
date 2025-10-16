@@ -62,7 +62,6 @@ docker build -t peanoframework/intel -f docker/Dockerfile.intel .
 docker build -t peanoframework/nvidia -f docker/Dockerfile.nvidia .
 docker build -t peanoframework/amd -f docker/Dockerfile.amd .
 docker build -t peanoframework/llvm -f docker/Dockerfile.llvm .
-docker build -t peanoframework/targetdart -f docker/Dockerfile.targetdart .
 ```
 
 ### Building Extension Images
