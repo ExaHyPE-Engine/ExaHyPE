@@ -63,7 +63,7 @@ class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalanci
      * {4,5,8}, {2,2,2}, {11,12,13}, {22,23,24}
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
-     * then tree 2 will split in the grid sweeps 4, 5 and eight. It will try to
+     * then tree 2 will split in the grid sweeps 4, 5 and 8. It will try to
      * deploy 11, 12 or 13 cells to the ranks 22, 23 or 24, respectively.
      *
      * ## Implementation
@@ -82,7 +82,7 @@ class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalanci
      *
      */
     Hardcoded(
-      std::initializer_list<int> timeStamps,
+      std::initializer_list<int> gridSweeps,
       std::initializer_list<int> splittingTrees,
       std::initializer_list<int> numberOfCells,
       std::initializer_list<int> destinationRanks,
@@ -96,7 +96,7 @@ class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalanci
      * default.
      */
     Hardcoded(
-      std::initializer_list<int> timeStamps,
+      std::initializer_list<int> gridSweeps,
       std::initializer_list<int> splittingTrees,
       std::initializer_list<int> numberOfCells,
       std::initializer_list<int> destinationRanks,
@@ -110,22 +110,23 @@ class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalanci
     static tarch::logging::Log  _log;
 
     struct Split {
-      int  timeStamp;
+      int  gridSweep;      // Changed from timeStamp
       int  splittingTree;
       int  numberOfCells;
       int  destinationRank;
       peano4::SplitInstruction::Mode mode;
       Split( const Split& split );
-      Split( int  timeStamp_, int  splittingTree_, int  numberOfCells_, int  destinationRank_, peano4::SplitInstruction::Mode mode_ );
+      Split( int gridSweep_, int splittingTree_, int numberOfCells_, int destinationRank_, peano4::SplitInstruction::Mode mode_ );
     };
 
     std::queue< Split >   _splits;
 
     /**
-     * Time stamp might be the slightly wrong wording. It is actually grid
-     * iteration or finishStep() calls.
+     * Grid sweep represents the iteration number or finishStep() call count.
+     * This better reflects that splits occur during specific grid traversals
+     * rather than at specific points in time.
      */
-    int    _currentTimeStamp;
+    int    _currentGridSweep;
 };
 
 
