@@ -3,7 +3,7 @@
 include(KokkosArch)
 kokkos_configure_cache()
 
-set(KOKKOS_VERSION 4.5.01)
+set(KOKKOS_VERSION 4.7.01)
 
 find_package(Kokkos CONFIG)
 

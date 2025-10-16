@@ -1,11 +1,9 @@
-# Copyright 2013-2023 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 import os
 
-import spack.variant
 from spack.package import *
 
 
@@ -29,39 +27,26 @@ class Exahype2(CMakePackage, CudaPackage):
 
     version("muc", branch="muc/exahype")
 
-    variant("mpi", default=True, description="Build with MPI support")
-    variant("tracer", default=True, description="Build with particle tracer support")
+    variant("multithreading", default=True, description="Build with multithreading (OpenMP) support")
+    variant("mpi", default=True, description="Build with Message Passing Interface (MPI) support")
     variant("hdf5", default=True, description="Build with HDF5 support")
     variant("netcdf", default=True, description="Build with NetCDF support")
 
-    depends_on("cmake@3.31.2")
+    depends_on("python")
+    depends_on("py-pip")
+
+    depends_on('gsl@2.8')
+    depends_on('libxsmm@1.17 +generator')
+    depends_on('easi@1.6.1 jit=lua')
 
     depends_on("mpi", when="+mpi")
 
-    depends_on("python@3.13.0")
-    depends_on("py-pip@24.3.1")
-
-    depends_on("hdf5@1.14.5 -fortran -java +threadsafe ~mpi +shared +cxx +hl", when="~mpi +hdf5")
-    depends_on("hdf5@1.14.5 -fortran -java +threadsafe +mpi +shared +cxx +hl", when="+mpi +hdf5")
+    depends_on("hdf5@1.14.6 -fortran -java +threadsafe ~mpi +shared +cxx +hl", when="~mpi +hdf5")
+    depends_on("hdf5@1.14.6 -fortran -java +threadsafe +mpi +shared +cxx +hl", when="+mpi +hdf5")
 
     depends_on("netcdf-c@4.9.2 +shared ~mpi", when="~mpi +netcdf")
     depends_on("netcdf-c@4.9.2 +shared +mpi", when="+mpi +netcdf")
     depends_on("netcdf-cxx4@4.3.1 +shared +pic", when="+netcdf")
-
-    depends_on('gsl@2.8')
-    depends_on('libxsmm@1.17 +generator')
-
-    variant("omp", default=True, description="Build with OpenMP multithreading support")
-    variant("sycl", default=False, description="Build with SYCL multithreading support")
-    variant("cpp", default=False, description="Build with std::par multithreading support")
-    variant("tbb", default=False, description="Build with TBB multithreading support")
-
-    conflicts("+omp", when="+sycl", msg="OpenMP and SYCL support are exclusive")
-    conflicts("+omp", when="+cpp", msg="OpenMP and std::par support are exclusive")
-    conflicts("+sycl", when="+cpp", msg="SYCL and std::par support are exclusive")
-    conflicts("+tbb", when="+cpp", msg="TBB and std::par support are exclusive")
-    conflicts("+tbb", when="+sycl", msg="TBB and SYCL support are exclusive")
-    conflicts("+tbb", when="+omp", msg="TBB and OpenMP support are exclusive")
 
     depends_on("cuda@11:", when="+cuda")
 
@@ -73,9 +58,9 @@ class Exahype2(CMakePackage, CudaPackage):
 
     variant(
         "gpu_backend",
-        default="omp",
+        default="cuda",
         description="GPU accelerator backend",
-        values=("omp", "cpp", "sycl", "cuda"),
+        values=("sycl", "cuda", "kokkos"),
         when="+cuda",
     )
 
@@ -84,22 +69,16 @@ class Exahype2(CMakePackage, CudaPackage):
         args = [
             "-DENABLE_TOOLBOX_LOADBALANCING=ON",
             "-DENABLE_TOOLBOX_BLOCKSTRUCTURED=ON",
-            "-DENABLE_EXTENSIONEXAHYPE=ON",
+            "-DENABLE_TOOLBOX_PARTICLES=ON",
+            "-DENABLE_TOOLBOX_CURVI=ON",
+            "-DENABLE_EXTENSION_EXAHYPE=ON",
+            "-DWITH_EASI=ON",
             "-DWITH_LIBXSMM=OFF",
+            self.define_from_variant("WITH_MULTITHREADING", "multithreading"),
             self.define_from_variant("WITH_MPI", "mpi"),
             self.define_from_variant("WITH_HDF5", "hdf5"),
             self.define_from_variant("WITH_NETCDF", "netcdf"),
-            self.define_from_variant("ENABLE_TOOLBOX_PARTICLES", "tracer"),
         ]
-
-        if self.spec.satisfies("+omp"):
-            args.append("-DWITH_MULTITHREADING=omp")
-        if self.spec.satisfies("+cpp"):
-            args.append("-DWITH_MULTITHREADING=cpp")
-        if self.spec.satisfies("+sycl"):
-            args.append("-DWITH_MULTITHREADING=sycl")
-        if self.spec.satisfies("+tbb"):
-            args.append("-DWITH_MULTITHREADING=tbb")
 
         if self.spec.satisfies("+cuda"):
             cuda_arch = self.spec.variants["cuda_arch"].value[0]
