@@ -2,8 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/datamanagement/CellMarker.h"
+#include "PatchUtils.h"
+#include "peano4/utils/Loop.h"
 #include "peano4/utils/Globals.h"
+#include "peano4/datamanagement/CellMarker.h"
+
 
 namespace exahype2 {
   namespace fv {
@@ -38,12 +41,12 @@ namespace exahype2 {
      * @param particleX     Position of particle.
      * @param unknown       Which unknown from data field to pick.
      */
-    template <int SourceIndex, int DestIndex, typename Particle>
+    template <int SourceIndex, int DestIndex, typename Particle, typename DataType>
     void projectValueOntoParticle_piecewiseConstant(
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const double* NOALIAS Q,
+      const DataType* NOALIAS Q,
       Particle& particle
     );
 
@@ -82,21 +85,21 @@ namespace exahype2 {
      * template type will be induced by C++ automatically through the
      * function parameters.
      */
-    template <typename Particle>
+    template <typename Particle, typename DataType>
     void projectAllValuesOntoParticle_piecewiseConstant(
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const double* NOALIAS Q,
+      const DataType* NOALIAS Q,
       Particle& particle
     );
 
-    template <int SourceIndex, int DestIndex, typename Particle>
+    template <int SourceIndex, int DestIndex, typename Particle, typename DataType>
     void projectValueOntoParticle_piecewiseLinear(
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const double* NOALIAS Q,
+      const DataType* NOALIAS Q,
       Particle& particle
     );
 
@@ -105,12 +108,12 @@ namespace exahype2 {
      *
      * @see projectAllValuesOntoParticle_piecewiseConstant()
      */
-    template <typename Particle>
+    template <typename Particle, typename DataType>
     void projectAllValuesOntoParticle_piecewiseLinear(
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const double* NOALIAS Q,
+      const DataType* NOALIAS Q,
       Particle& particle
     );
 
@@ -152,12 +155,12 @@ namespace exahype2 {
      * projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler. This kernel
      * now accepts a few additional parameters besides
      */
-    template <typename Particle>
+    template <typename Particle, typename DataType>
     void projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const double* NOALIAS Q,
+      const DataType* NOALIAS Q,
       double                                timeStepSize,
       tarch::la::Vector<DIMENSIONS, int>    indices,
       tarch::la::Vector<DIMENSIONS, double> factors,
@@ -179,21 +182,21 @@ namespace exahype2 {
      * Hence, the function implicitly assumes that the particle has (at least)
      * three unkowns.
      */
-    template <int SourceIndex, int... SourceIndices, typename Particle>
+    template <typename DataType, int SourceIndex, int... SourceIndices, typename Particle>
     void projectValuesOntoParticle_piecewiseConstant(
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const double* NOALIAS Q,
+      const DataType* NOALIAS Q,
       Particle& particle
     );
 
-    template <int SourceIndex, int... SourceIndices, typename Particle>
+    template <typename DataType, int SourceIndex, int... SourceIndices, typename Particle>
     void projectValuesOntoParticle_piecewiseLinear(
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const double* NOALIAS Q,
+      const DataType* NOALIAS Q,
       Particle& particle
     );
     /**
@@ -210,14 +213,14 @@ namespace exahype2 {
      * @param timeStepSize   The time step size used in integration.
      * @param method         The numerical integration method to use (Explicit Euler, Midpoint, etc.).
      */
-    template <int SourceIndex, int... SourceIndices, typename Particle>
+    template <int SourceIndex, int... SourceIndices, typename Particle, typename DataType=double>
     void updateParticleState(
       Particle&                                 particle,
       double                                    timeStepSize,
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const double* NOALIAS Q,
+      const DataType* NOALIAS Q,
       tarch::la::Vector<DIMENSIONS, double> DomainSize,
       tarch::la::Vector<DIMENSIONS, double> DomainOffset,
       tarch::la::Vector<DIMENSIONS, double> PeriodicBC
@@ -310,11 +313,12 @@ namespace exahype2 {
        * @param particleX     Position of particle.
        * @param unknown       Which unknown from data field to pick.
        */
-      double projectValueOntoParticle_piecewiseConstant(
+      template<typename DataType>
+      DataType projectValueOntoParticle_piecewiseConstant(
         const peano4::datamanagement::CellMarker& marker,
         int                                       voxelsPerAxis,
         int                                       unknownsPerVoxel,
-        const double* NOALIAS Q,
+        const DataType* NOALIAS Q,
         const tarch::la::Vector<DIMENSIONS, double>& particleX,
         int                                          unknown
       );
@@ -324,11 +328,12 @@ namespace exahype2 {
        *   calculations, i.e. the code to identify the voxels which
        *   affect the particle of interest.
        */
-      double projectValueOntoParticle_piecewiseLinear(
+      template<typename DataType>
+      DataType projectValueOntoParticle_piecewiseLinear(
         const peano4::datamanagement::CellMarker& marker,
         int                                       voxelsPerAxis,
         int                                       unknownsPerVoxel,
-        const double* NOALIAS Q,
+        const DataType* NOALIAS Q,
         const tarch::la::Vector<DIMENSIONS, double>& particleX,
         int                                          unknown
       );
@@ -339,51 +344,26 @@ namespace exahype2 {
        * that the variadic arguments come last. Otherwise, C++ cannot match
        * them.
        */
-      template <typename Particle, int SourceIndex, int... SourceIndices>
+      template <typename DataType, typename Particle, int SourceIndex, int... SourceIndices>
       void projectValuesOntoParticle_piecewiseConstant(
         const peano4::datamanagement::CellMarker& marker,
         int                                       voxelsPerAxis,
         int                                       unknownsPerVoxel,
-        const double* NOALIAS Q,
+        const DataType* NOALIAS Q,
         Particle& particle,
         int       destinationIndex
       );
 
-      template <typename Particle, int SourceIndex, int... SourceIndices>
+      template <typename DataType, typename Particle, int SourceIndex, int... SourceIndices>
       void projectValuesOntoParticle_piecewiseLinear(
         const peano4::datamanagement::CellMarker& marker,
         int                                       voxelsPerAxis,
         int                                       unknownsPerVoxel,
-        const double* NOALIAS Q,
+        const DataType* NOALIAS Q,
         Particle& particle,
         int       destinationIndex
       );
 
-      /**
-       * End-point of variadic templates and therefore nop.
-       */
-      template <typename Particle>
-      void projectValuesOntoParticle_piecewiseConstant(
-        const peano4::datamanagement::CellMarker& marker,
-        int                                       voxelsPerAxis,
-        int                                       unknownsPerVoxel,
-        const double* NOALIAS Q,
-        Particle& particle,
-        int       destinationIndex
-      );
-
-      /**
-       * End-point of variadic templates and therefore nop.
-       */
-      template <typename Particle>
-      void projectValuesOntoParticle_piecewiseLinear(
-        const peano4::datamanagement::CellMarker& marker,
-        int                                       voxelsPerAxis,
-        int                                       unknownsPerVoxel,
-        const double* NOALIAS Q,
-        Particle& particle,
-        int       destinationIndex
-      );
     } // namespace internal
   }   // namespace fv
 } // namespace exahype2

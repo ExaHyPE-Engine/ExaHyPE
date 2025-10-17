@@ -135,9 +135,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     virtual void finishSimulation() override;
 
     public:
-        static constexpr int NumberOfDMPObservables    = {{NUMBER_OF_DMP_OBSERVABLES}};
-        static constexpr double RelaxationParameter    = {{DMP_RELAXATION_PARAMETER}};
-        static constexpr double DifferencesScaling     = {{DMP_DIFFERENCES_SCALING}};
+        static constexpr int NumberOfDMPObservables                 = {{NUMBER_OF_DMP_OBSERVABLES}};
+        static constexpr {{COMPUTE_PRECISION}} RelaxationParameter  = {{DMP_RELAXATION_PARAMETER}};
+        static constexpr {{COMPUTE_PRECISION}} DifferencesScaling   = {{DMP_DIFFERENCES_SCALING}};
 
         /**
         * Inform the solver about a cell being troubled, meaning its value
@@ -154,7 +154,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
         * See superclass for function's semantics.
         */
         template<typename T>
-        void mapDiscreteMaximumPrincipleObservables(double* const observables, const T* const Q) const {
+        void mapDiscreteMaximumPrincipleObservables({{COMPUTE_PRECISION}}* const observables, const T* const Q) const {
           if (NumberOfDMPObservables>0) {
             for(int i=0; i<NumberOfDMPObservables; i++){
               observables[i] = Q[i];
@@ -167,13 +167,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
         *
         * See superclass for function's semantics.
         */
-        double getDiscreteMaximumPrincipleRelaxationParameter(
-            const double& specifiedRelaxationParameter,
-            const int&    observable,
-            const double& localMin,
-            const double& localMax,
-            const double& boundaryMinPerObservable,
-            const double& previousMax) const {
+       {{COMPUTE_PRECISION}} getDiscreteMaximumPrincipleRelaxationParameter(
+            const {{COMPUTE_PRECISION}}&  specifiedRelaxationParameter,
+            const int&                    observable,
+            const {{COMPUTE_PRECISION}}&  localMin,
+            const {{COMPUTE_PRECISION}}&  localMax,
+            const {{COMPUTE_PRECISION}}&  boundaryMinPerObservable,
+            const {{COMPUTE_PRECISION}}&  previousMax) const {
           return specifiedRelaxationParameter;
         }
 

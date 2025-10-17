@@ -137,7 +137,7 @@ class AbstractSolverDeclarations:
       const tarch::la::Vector<DIMENSIONS, double>&  h,
       const double                                  t,
       const double                                  dt,
-      {{COMPUTE_PRECISION}}* const NOALIAS          Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      {{STORAGE_PRECISION}}* const NOALIAS          Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
     ) = 0;
     {% endif %}
 

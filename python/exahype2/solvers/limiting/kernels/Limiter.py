@@ -39,8 +39,6 @@ class Limiter:
         nDofLim = self.d["NUMBER_OF_DOF_LIMITER"]
         nDofLim2 = nDofLim * nDofLim
         nDofLimPad = self.d["NUMBER_OF_DOF_LIMITER_PADDED"]
-        nUnknowns = self.d["NUMBER_OF_UNKNOWNS"]
-        nUnknownsPad = self.d["NUMBER_OF_UNKNOWNS_PADDED"]
         nData = self.d["NUMBER_OF_DATA"]
         nDataPad = self.d["NUMBER_OF_DATA_PADDED"]
 
@@ -58,6 +56,7 @@ class Limiter:
             "dg2fv_x",
             "nopf",
             "gemm",
+            self.d["COMPUTE_PRECISION"],
         )  # input slice not aligned
         if nDim == 3:
             self.d["GEMMS"]["dg2fv_y"] = Gemms(
@@ -74,6 +73,7 @@ class Limiter:
                 "dg2fv_y",
                 "nopf",
                 "gemm",
+                self.d["COMPUTE_PRECISION"],
             )  # M is padded in both input and output
             self.d["GEMMS"]["dg2fv_z"] = Gemms(
                 nData,
@@ -89,6 +89,7 @@ class Limiter:
                 "dg2fv_z",
                 "nopf",
                 "gemm",
+                self.d["COMPUTE_PRECISION"],
             )  # output slice not aligned
         else:
             self.d["GEMMS"]["dg2fv_y"] = Gemms(
@@ -105,6 +106,7 @@ class Limiter:
                 "dg2fv_y",
                 "nopf",
                 "gemm",
+                self.d["COMPUTE_PRECISION"],
             )  # output slice not aligned
 
         # Project to DG
@@ -122,6 +124,7 @@ class Limiter:
             "fv2dg_x",
             "nopf",
             "gemm",
+            self.d["COMPUTE_PRECISION"],
         )  # input slice not aligned
         if nDim == 3:
             self.d["GEMMS"]["fv2dg_y"] = Gemms(
@@ -138,6 +141,7 @@ class Limiter:
                 "fv2dg_y",
                 "nopf",
                 "gemm",
+                self.d["COMPUTE_PRECISION"],
             )  # M is padded in both input and output
             self.d["GEMMS"]["fv2dg_z"] = Gemms(
                 nData,
@@ -153,6 +157,7 @@ class Limiter:
                 "fv2dg_z",
                 "nopf",
                 "gemm",
+                self.d["COMPUTE_PRECISION"],
             )  # output slice not aligned
         else:
             self.d["GEMMS"]["fv2dg_y"] = Gemms(
@@ -169,6 +174,7 @@ class Limiter:
                 "fv2dg_y",
                 "nopf",
                 "gemm",
+                self.d["COMPUTE_PRECISION"],
             )  # output slice not aligned
 
         # Project to Lobatto for Min/Max
@@ -186,6 +192,7 @@ class Limiter:
             "uh2lob_x",
             "nopf",
             "gemm",
+            self.d["COMPUTE_PRECISION"],
         )  # input slice not aligned
         if nDim == 3:
             self.d["GEMMS"]["uh2lob_y"] = Gemms(
@@ -202,6 +209,7 @@ class Limiter:
                 "uh2lob_y",
                 "nopf",
                 "gemm",
+                self.d["COMPUTE_PRECISION"],
             )  # M is padded in both input and output
             self.d["GEMMS"]["uh2lob_z_slice"] = Gemms(
                 nDataPad,
@@ -217,6 +225,7 @@ class Limiter:
                 "uh2lob_z_slice",
                 "nopf",
                 "gemm",
+                self.d["COMPUTE_PRECISION"],
             )  # will only write a slice, overwrite
         else:
             self.d["GEMMS"]["uh2lob_y_slice"] = Gemms(
@@ -233,6 +242,7 @@ class Limiter:
                 "uh2lob_y_slice",
                 "nopf",
                 "gemm",
+                self.d["COMPUTE_PRECISION"],
             )  # will only write a slice, overwrite
 
         # Project to FV for Min/Max, reuse previous GEMM except last one for slice.
@@ -251,6 +261,7 @@ class Limiter:
                 "dg2fv_z_slice",
                 "nopf",
                 "gemm",
+                self.d["COMPUTE_PRECISION"],
             )  # will only write a slice, overwrite
         else:
             self.d["GEMMS"]["dg2fv_y_slice"] = Gemms(
@@ -267,6 +278,7 @@ class Limiter:
                 "dg2fv_y_slice",
                 "nopf",
                 "gemm",
+                self.d["COMPUTE_PRECISION"],
             )  # will only write a slice, overwrite
 
         if self.d["USE_LIBXSMM"]:
