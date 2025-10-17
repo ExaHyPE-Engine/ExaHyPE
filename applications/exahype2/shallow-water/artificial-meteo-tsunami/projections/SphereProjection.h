@@ -8,7 +8,7 @@
 namespace projection {
   namespace albers_equal_area {
     namespace sphere {
-      namespace constants = ::applications::exahype2::swe;
+      namespace constants = ::applications::exahype2::ShallowWater;
 
       /**
        * @brief

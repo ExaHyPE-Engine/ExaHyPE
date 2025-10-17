@@ -303,7 +303,6 @@ riemann_solver_fv = f"""
     FR[varId] = FL[varId];
   }}
 
-/*
   //Contribution from NCP
   double AveragedQ[{len(unknowns)}];
   double DeltaQ[{len(unknowns)}];
@@ -317,7 +316,6 @@ riemann_solver_fv = f"""
     FL[varId] += 0.5 * ncp[varId];
     FR[varId] -= 0.5 * ncp[varId];
   }}
-*/
 
   // the elevation should be constant
   FL[{len(unknowns) - 1}] = 0.0;
@@ -381,7 +379,7 @@ if use_aderdg:
         boundary_conditions=boundary_conditions,
         ncp=ncp,
         source_term=source_term,
-        riemann_solver=riemann_solver_aderdg
+        riemann_solver=riemann_solver_aderdg,
     )
     project.add_solver(aderdg_solver)
 
@@ -432,7 +430,9 @@ project.set_global_simulation_parameters(
 )
 
 project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
-project.set_Peano4_installation("../../../", mode=peano4.output.string_to_mode(args.build_mode))
+project.set_Peano4_installation(
+    "../../../", mode=peano4.output.string_to_mode(args.build_mode)
+)
 project = project.generate_Peano4_project(verbose=False)
 project.set_fenv_handler(False)
 project.build()

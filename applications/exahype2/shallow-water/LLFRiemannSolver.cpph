@@ -1,0 +1,137 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <class T, class Shortcuts>
+static inline GPU_CALLABLE_METHOD double applications::exahype2::ShallowWater::llfRiemannSolver(
+  const T* const NOALIAS                       QL,
+  const T* const NOALIAS                       QR,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  T* const NOALIAS                             FL,
+  T* const NOALIAS                             FR
+) {
+  const T hLeft   = QL[Shortcuts::h];
+  const T hRight  = QR[Shortcuts::h];
+  const T huLeft  = QL[Shortcuts::hu];
+  const T huRight = QR[Shortcuts::hu];
+  const T hvLeft  = QL[Shortcuts::hu + 1];
+  const T hvRight = QR[Shortcuts::hu + 1];
+  const T bLeft   = QL[Shortcuts::z];
+  const T bRight  = QR[Shortcuts::z];
+
+  const T dryTol = std::pow(h[0], 4);
+
+  // Correction of particle velocities according to Kurganov (modified version):
+  const T uCorrectedLeft = huLeft * hLeft * std::sqrt(2)
+                           / std::sqrt(std::pow(hLeft, 4) + std::pow(std::fmax(hLeft, dryTol), 4));
+  const T uCorrectedRight = huRight * hRight * std::sqrt(2)
+                            / std::sqrt(std::pow(hRight, 4) + std::pow(std::fmax(hRight, dryTol), 4));
+  const T vCorrectedLeft = hvLeft * hLeft * std::sqrt(2)
+                           / std::sqrt(std::pow(hLeft, 4) + std::pow(std::fmax(hLeft, dryTol), 4));
+  const T vCorrectedRight = hvRight * hRight * std::sqrt(2)
+                            / std::sqrt(std::pow(hRight, 4) + std::pow(std::fmax(hRight, dryTol), 4));
+
+  // Determine the maximal bathymetry, and reconstruct the left and right height based on it
+  const T bathymetryMax            = std::fmax(QR[Shortcuts::z], QL[Shortcuts::z]);
+  const T reconstructedHeightLeft  = std::fmax(0.0, QL[Shortcuts::h] + QL[Shortcuts::z] - bathymetryMax);
+  const T reconstructedHeightRight = std::fmax(0.0, QR[Shortcuts::h] + QR[Shortcuts::z] - bathymetryMax);
+
+  // Also reconstruct the momentum based on the reconstructed height
+  const T reconstructedHuLeft  = reconstructedHeightLeft * uCorrectedLeft;
+  const T reconstructedHvLeft  = reconstructedHeightLeft * vCorrectedLeft;
+  const T reconstructedHuRight = reconstructedHeightRight * uCorrectedRight;
+  const T reconstructedHvRight = reconstructedHeightRight * vCorrectedRight;
+
+  const T cLeft  = std::sqrt(g * reconstructedHeightLeft);
+  const T cRight = std::sqrt(g * reconstructedHeightRight);
+
+  const T LL[3]{
+    normal == 0 ? uCorrectedLeft + cLeft : vCorrectedLeft + cLeft,
+    normal == 0 ? uCorrectedLeft - cLeft : vCorrectedLeft - cLeft,
+    normal == 0 ? uCorrectedLeft : vCorrectedLeft
+  };
+
+  const T LR[3]{
+    normal == 0 ? uCorrectedRight + cRight : vCorrectedRight + cRight,
+    normal == 0 ? uCorrectedRight - cRight : vCorrectedRight - cRight,
+    normal == 0 ? uCorrectedRight : vCorrectedRight
+  };
+
+  T maxWaveSpeed = 0.0;
+
+  for (int i = 0; i < 3; i++) {
+    const T absEigenvalueLeft = std::fabs(LL[i]);
+    maxWaveSpeed              = std::fmax(absEigenvalueLeft, maxWaveSpeed);
+  }
+
+  for (int i = 0; i < 3; i++) {
+    const T absEigenvalueRight = std::fabs(LR[i]);
+    maxWaveSpeed               = std::fmax(absEigenvalueRight, maxWaveSpeed);
+  }
+
+  const T fluxLeft[3]{
+    normal == 0 ? reconstructedHuLeft : reconstructedHvLeft,
+    normal == 0
+      ? reconstructedHeightLeft * uCorrectedLeft * uCorrectedLeft
+          + 0.5 * g * (reconstructedHeightLeft * reconstructedHeightLeft)
+      : reconstructedHeightLeft * vCorrectedLeft * uCorrectedLeft,
+    normal == 0
+      ? reconstructedHeightLeft * uCorrectedLeft * vCorrectedLeft
+      : reconstructedHeightLeft * vCorrectedLeft * vCorrectedLeft
+          + 0.5 * g * (reconstructedHeightLeft * reconstructedHeightLeft)
+  };
+
+  const T fluxRight[3]{
+    normal == 0 ? reconstructedHuRight : reconstructedHvRight,
+    normal == 0
+      ? reconstructedHeightRight * uCorrectedRight * uCorrectedRight
+          + 0.5 * g * (reconstructedHeightRight * reconstructedHeightRight)
+      : reconstructedHeightRight * vCorrectedRight * uCorrectedRight,
+    normal == 0
+      ? reconstructedHeightRight * uCorrectedRight * vCorrectedRight
+      : reconstructedHeightRight * vCorrectedRight * vCorrectedRight
+          + 0.5 * g * (reconstructedHeightRight * reconstructedHeightRight)
+  };
+
+  const T deltaEta = reconstructedHeightRight - reconstructedHeightLeft;
+
+  // Modified Rusanov Flux
+  T netUpdates[3]{
+    0.5 * (fluxLeft[Shortcuts::h] + fluxRight[Shortcuts::h]) - 0.5 * maxWaveSpeed * deltaEta,
+    0.5 * (fluxLeft[Shortcuts::hu] + fluxRight[Shortcuts::hu])
+      - 0.5 * maxWaveSpeed * (reconstructedHuRight - reconstructedHuLeft),
+    0.5 * (fluxLeft[Shortcuts::hu + 1] + fluxRight[Shortcuts::hu + 1])
+      - 0.5 * maxWaveSpeed * (reconstructedHvRight - reconstructedHvLeft)
+  };
+
+  // Now include the source term already in the fluctuation computation
+  // Source term is based on the reconstructed water heights (for well-balancedness)
+  T sourceLeft[3] = {
+    0,
+    normal == 0
+      ? g * 0.5 * ((QL[Shortcuts::h] * QL[Shortcuts::h]) - (reconstructedHeightLeft * reconstructedHeightLeft))
+      : 0.0,
+    normal == 0
+      ? 0.0
+      : g * 0.5 * ((QL[Shortcuts::h] * QL[Shortcuts::h]) - (reconstructedHeightLeft * reconstructedHeightLeft))
+  };
+  T sourceRight[3] = {
+    0,
+    normal == 0
+      ? g * 0.5 * ((QR[Shortcuts::h] * QR[Shortcuts::h]) - (reconstructedHeightRight * reconstructedHeightRight))
+      : 0.0,
+    normal == 0
+      ? 0.0
+      : g * 0.5 * ((QR[Shortcuts::h] * QR[Shortcuts::h]) - (reconstructedHeightRight * reconstructedHeightRight))
+  };
+
+  for (int i = 0; i < 3; i++) {
+    FL[i] = netUpdates[i] + sourceLeft[i];
+    FR[i] = netUpdates[i] + sourceRight[i];
+  }
+
+  return maxWaveSpeed;
+}

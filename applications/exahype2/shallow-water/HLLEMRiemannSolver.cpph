@@ -1,0 +1,111 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <class T, class Shortcuts>
+static inline GPU_CALLABLE_METHOD double applications::exahype2::ShallowWater::hllemRiemannSolver(
+  const T* const NOALIAS                       QL,
+  const T* const NOALIAS                       QR,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  T* const NOALIAS                             FL,
+  T* const NOALIAS                             FR
+) {
+  const T hLeft   = QL[Shortcuts::h];
+  const T hRight  = QR[Shortcuts::h];
+  const T huLeft  = QL[Shortcuts::hu];
+  const T huRight = QR[Shortcuts::hu];
+  const T hvLeft  = QL[Shortcuts::hv];
+  const T hvRight = QR[Shortcuts::hv];
+  const T zLeft   = QL[Shortcuts::z];
+  const T zRight  = QR[Shortcuts::z];
+
+  // Compute dry tolerance according to Kurganov. Does not work!
+  // const T dryTol = std::pow(h[0], 4);
+  const T dryTol = hThreshold;
+
+  const T cLeft  = std::sqrt(g * hLeft);
+  const T cRight = std::sqrt(g * hRight);
+
+  // Correction of particle velocities according to Kurganov (modified version):
+  const T uCorrectedLeft = huLeft * hLeft * std::sqrt(2)
+                           / std::sqrt(std::pow(hLeft, 4) + std::pow(std::fmax(hLeft, dryTol), 4));
+  const T uCorrectedRight = huRight * hRight * std::sqrt(2)
+                            / std::sqrt(std::pow(hRight, 4) + std::pow(std::fmax(hRight, dryTol), 4));
+
+  const T vCorrectedLeft = hvLeft * hLeft * std::sqrt(2)
+                           / std::sqrt(std::pow(hLeft, 4) + std::pow(std::fmax(hLeft, dryTol), 4));
+  const T vCorrectedRight = hvRight * hRight * std::sqrt(2)
+                            / std::sqrt(std::pow(hRight, 4) + std::pow(std::fmax(hRight, dryTol), 4));
+
+  // Implementation following Eq. (2.17) in Kurganov does not work:
+  // const T uCorrectedLeft  = huLeft  * hLeft  * std::sqrt(2) / std::sqrt(std::pow(hLeft,  4) +
+  // std::fmax(std::pow(hLeft,  4), dryTol)); const T uCorrectedRight = huRight * hRight * std::sqrt(2) /
+  // std::sqrt(std::pow(hRight, 4) + std::fmax(std::pow(hRight, 4), dryTol));
+
+  // const T vCorrectedLeft  = hvLeft  * hLeft  * std::sqrt(2) / std::sqrt(std::pow(hLeft,  4) +
+  // std::fmax(std::pow(hLeft,  4), dryTol)); const T vCorrectedRight = hvRight * hRight * std::sqrt(2) /
+  // std::sqrt(std::pow(hRight, 4) + std::fmax(std::pow(hRight, 4), dryTol));
+
+  const T eigenvaluesLeft[3]{
+    normal == 0 ? uCorrectedLeft + cLeft : vCorrectedLeft + cLeft,
+    normal == 0 ? uCorrectedLeft - cLeft : vCorrectedLeft - cLeft,
+    normal == 0 ? uCorrectedLeft : vCorrectedLeft
+  };
+  const T eigenvaluesRight[3]{
+    normal == 0 ? uCorrectedRight + cRight : vCorrectedRight + cRight,
+    normal == 0 ? uCorrectedRight - cRight : vCorrectedRight - cRight,
+    normal == 0 ? uCorrectedRight : vCorrectedRight
+  };
+
+  T maxWaveSpeed = 0.0;
+  for (int i = 0; i < 3; i++) {
+    const T absEigenvalueLeft = std::fabs(eigenvaluesLeft[i]);
+    maxWaveSpeed              = std::fmax(absEigenvalueLeft, maxWaveSpeed);
+  }
+  for (int i = 0; i < 3; i++) {
+    const T absEigenvalueRight = std::fabs(eigenvaluesRight[i]);
+    maxWaveSpeed               = std::fmax(absEigenvalueRight, maxWaveSpeed);
+  }
+
+  const T fluxLeft[3]{
+    normal == 0 ? hLeft * uCorrectedLeft : hLeft * vCorrectedLeft,
+    normal == 0 ? hLeft * uCorrectedLeft * uCorrectedLeft : hLeft * vCorrectedLeft * uCorrectedLeft,
+    normal == 0 ? hLeft * uCorrectedLeft * vCorrectedLeft : hLeft * vCorrectedLeft * vCorrectedLeft
+  };
+
+  const T fluxRight[3]{
+    normal == 0 ? hRight * uCorrectedRight : hRight * vCorrectedRight,
+    normal == 0 ? hRight * uCorrectedRight * uCorrectedRight : hRight * vCorrectedRight * uCorrectedRight,
+    normal == 0 ? hRight * uCorrectedRight * vCorrectedRight : hRight * vCorrectedRight * vCorrectedRight
+  };
+
+  const T bMax     = std::fmax(zLeft, zRight);
+  const T deltaEta = std::fmax(hRight + zRight - bMax, 0.0) - std::fmax(hLeft + zLeft - bMax, 0.0);
+  const T hRoe     = 0.5 * (hLeft + hRight);
+
+  T dJump[3]                    = {0.0};
+  dJump[Shortcuts::hu + normal] = 0.5 * g * hRoe * deltaEta;
+
+  const T netUpdates[3]{
+    0.5 * (fluxLeft[Shortcuts::h] + fluxRight[Shortcuts::h]) - 0.5 * maxWaveSpeed * deltaEta,
+    0.5 * (fluxLeft[Shortcuts::hu] + fluxRight[Shortcuts::hu]) - 0.5 * maxWaveSpeed * (huRight - huLeft),
+    0.5 * (fluxLeft[Shortcuts::hv] + fluxRight[Shortcuts::hv]) - 0.5 * maxWaveSpeed * (hvRight - hvLeft)
+  };
+
+  for (int i = 0; i < 3; i++) {
+    FL[i] = netUpdates[i] + dJump[i];
+    FR[i] = netUpdates[i] - dJump[i];
+  }
+
+  if (QL[Shortcuts::h] < dryTol) {
+    FL[Shortcuts::hu] = FL[Shortcuts::hv] = 0.0;
+  }
+  if (QR[Shortcuts::h] < dryTol) {
+    FR[Shortcuts::hu] = FR[Shortcuts::hv] = 0.0;
+  }
+
+  return maxWaveSpeed;
+}

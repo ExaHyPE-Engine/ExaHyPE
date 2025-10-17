@@ -5,9 +5,9 @@
 #include "repositories/SolverRepository.h"
 #include "tarch/multicore/Lock.h"
 
-tarch::logging::Log     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}");
+tarch::logging::Log     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
 
-std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
+std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _solverState(SolverState::GridConstruction),

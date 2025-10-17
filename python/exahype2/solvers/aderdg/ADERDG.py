@@ -1017,6 +1017,10 @@ Material parameters:    """
         self._solver_constants += datastring
 
     @property
+    def name(self):
+        return self._name
+
+    @property
     def order(self):
         return self._order
 

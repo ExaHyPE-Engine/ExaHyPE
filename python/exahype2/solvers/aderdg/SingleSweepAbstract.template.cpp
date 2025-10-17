@@ -9,12 +9,12 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/NonCriticalAssertions.h"
 
-tarch::logging::Log     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}");
+tarch::logging::Log     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
 
-std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
+std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
 {% if USE_POINT_SOURCE %}
-double                  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::pointSourceLocation[NumberOfPointSources][DIMENSIONS]{};
+double                  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::pointSourceLocation[NumberOfPointSources][DIMENSIONS]{};
 {% endif %}
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():

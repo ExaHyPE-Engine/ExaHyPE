@@ -1,6 +1,6 @@
 /**
 
-@page applications_exahype2_shallow_water Shallow Water
+@page applications_exahype2_shallow_water Shallow Water Application
 
 \tableofcontents
 
@@ -76,25 +76,6 @@ The bed slope term
 
 is implemented as a non-conservative product.
 
-# How to Build and Run
-
-For a general overview and all options on how to retrieve and configure the project, refer to @ref page_installation_home.
-We require the NetCDF library and Git LFS.
-
-    cd myPeanoDirectory
-    pip3 install -e .
-    mkdir build && cd build
-    CC=gcc CXX=g++ cmake .. -DENABLE_EXTENSION_EXAHYPE=ON -DENABLE_TOOLBOX_LOADBALANCING=ON -DENABLE_TOOLBOX_BLOCKSTRUCTURED=ON -DWITH_NETCDF=ON
-    make -j && make test
-    cd ../applications/exahype2/shallow-water/scenario/
-    python3 scenario.py
-
-Where `CC=gcc CXX=g++` can be any set of compilers.
-
-# Visualise the Simulation Output
-
-    python3 myPeanoDirectory/python/peano4/visualisation/render.py solutions/solution-.peano-patch-file
-
 # Scenarios
 
 ## Validation Cases
@@ -103,6 +84,7 @@ Where `CC=gcc CXX=g++` can be any set of compilers.
 \li \subpage applications_exahype2_shallow_water_circular_island
 \li \subpage applications_exahype2_shallow_water_oscillating_lake
 \li \subpage applications_exahype2_shallow_water_three_mounds_channel
+\li \subpage applications_exahype2_shallow_water_solitary_wave
 
 ## Tsunamis
 

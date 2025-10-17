@@ -41,10 +41,10 @@ fv_solver.set_implementation(
 fv_solver.set_plotter(args.plotter)
 
 project = exahype2.Project(
-    namespace=["applications", "exahype2", "swe"],
+    namespace=["applications", "exahype2", "ShallowWater"],
     project_name="ArtificalMeteoTsunami",
     directory=".",
-    executable="ExaHyPE-ShallowWater",
+    executable="ExaHyPE",
 )
 project.add_solver(fv_solver)
 

@@ -1,25 +1,19 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import os
-import sys
-
 import peano4
 import exahype2
-
-sys.path.insert(0, os.path.abspath(".."))
-from PDE import *
 
 initial_conditions = """
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;
   }
 
-  static constexpr double h0    = 0.32;
-  static constexpr double A     = 0.064;
-  static constexpr double xc    = 12.5;
-  static constexpr double yc    = 15.0;
-  static constexpr double rc    = 3.6;
-  const double gamma            = std::sqrt((3.0 * A) / (4.0 * h0));
+  constexpr double h0 = 0.32;
+  constexpr double A  = 0.064;
+  constexpr double xc = 12.5;
+  constexpr double yc = 15.0;
+  constexpr double rc = 3.6;
+  const double gamma  = std::sqrt((3.0 * A) / (4.0 * h0));
 
   auto r = [](double x, double y) {
     return std::sqrt(std::pow(x - xc, 2) + std::pow(y - yc, 2));
@@ -80,24 +74,26 @@ aderdg_solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
-    flux=flux,
-    ncp=nonconservative_product,
-    max_eigenvalue=eigenvalue
-    + """
-  return sFlux;
-""",
+    flux=f"ShallowWater::flux<double, Shortcuts, {aderdg_solver.unknowns}>(Q, x, h, t, dt, normal, F);",
+    max_eigenvalue="return ShallowWater::maxEigenvalue<double, Shortcuts>(Q, x, h, t, dt, normal);",
+    ncp=f"ShallowWater::nonconservativeProduct<double, Shortcuts, {aderdg_solver.unknowns}>(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);",
 )
 
 aderdg_solver.set_plotter(args.plotter)
 aderdg_solver.add_kernel_optimisations(
     is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
 )
+aderdg_solver.add_user_solver_includes(
+    """
+#include "../PDE.h"
+"""
+)
 
 project = exahype2.Project(
-    namespace=["applications", "exahype2", "swe"],
+    namespace=["applications", "exahype2", "ShallowWater"],
     project_name="CircularIsland",
     directory=".",
-    executable="ExaHyPE-ShallowWater",
+    executable="ExaHyPE",
 )
 project.add_solver(aderdg_solver)
 
@@ -128,8 +124,8 @@ project.set_Peano4_installation(
     "../../../../", mode=peano4.output.string_to_mode(args.build_mode)
 )
 project = project.generate_Peano4_project(verbose=False)
+project.set_fenv_handler(args.fpe)
 for const_name, const_info in constants.items():
     const_val, const_type = const_info
     project.constants.export_constexpr_with_type(const_name, str(const_val), const_type)
-project.set_fenv_handler(args.fpe)
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
