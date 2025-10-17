@@ -1,15 +1,9 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import os
-import sys
 import math
 
 import peano4
 import exahype2
-
-sys.path.insert(0, os.path.abspath(".."))
-from PDE import *
-from Rusanov import *
 
 initial_conditions = """
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
@@ -36,10 +30,9 @@ initial_conditions = """
 """
 
 boundary_conditions = """
-  Qoutside[Shortcuts::h]  = Qinside[Shortcuts::h];
-  Qoutside[Shortcuts::hu] = -Qinside[Shortcuts::hu];
-  Qoutside[Shortcuts::hv] = -Qinside[Shortcuts::hv];
-  Qoutside[Shortcuts::z]  = Qinside[Shortcuts::z];
+  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
+    Qoutside[i] = Qinside[i];
+  }
 """
 
 refinement_criterion = """
@@ -93,7 +86,6 @@ parser.add_argument(
 parser.set_defaults(
     min_depth=3,
     end_time=40.0,
-    time_step_relaxation=0.45,
     degrees_of_freedom=7,
     friction=200.0,
 )
@@ -118,78 +110,73 @@ max_h = 1.1 * min(size) / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
 dg_order = args.degrees_of_freedom - 1
 
-regular_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     name="ADERDGSolver",
     order=dg_order,
     unknowns={"h": 1, "hu": 1, "hv": 1, "z": 1},
     auxiliary_variables=0,
     min_cell_h=min_h,
     max_cell_h=max_h,
-    time_step_relaxation=0.5,
+    time_step_relaxation=0.45,
 )
 
-regular_solver.set_implementation(
+aderdg_solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
-    flux=flux,
-    ncp=nonconservative_product,
-    max_eigenvalue=eigenvalue
-    + stiff_eigenvalue
-    + """
-  return std::fmax(sFlux, h[normal] * sSource);
-""",
-    diffusive_source_term=stiff_source_term_aderdg,
-    riemann_solver=rusanov_aderdg,
+    flux=f"ShallowWater::flux<double, Shortcuts, {aderdg_solver.unknowns}>(Q, x, h, t, dt, normal, F);",
+    max_eigenvalue="return FrictionLaws::maxEigenvalue<double, Shortcuts>(Q, x, h, t, dt, normal);",
+    ncp=f"ShallowWater::nonconservativeProduct<double, Shortcuts, {aderdg_solver.unknowns}>(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);",
+    diffusive_source_term=f"FrictionLaws::sourceTermADERDG<double, Shortcuts, {aderdg_solver.unknowns},  {aderdg_solver.auxiliary_variables}>(Q, deltaQ, x, h, t, dt, S);",
+    riemann_solver=f"rusanovRiemannSolverADERDG<double, Shortcuts, kernels::{aderdg_solver.name}::Quadrature<double>, {aderdg_solver.unknowns}, {aderdg_solver.auxiliary_variables}, {aderdg_solver.order}>(QL, QR, x, h, t, dt, direction, FL, FR);",
 )
 
-regular_solver.set_plotter(args.plotter)
-regular_solver.add_user_solver_includes(
+aderdg_solver.set_plotter(args.plotter)
+aderdg_solver.add_kernel_optimisations(
+    is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
+)
+aderdg_solver.add_user_solver_includes(
     """
+#include "../PDE.h"
+#include "../FrictionLaws.h"
+#include "../RusanovRiemannSolver.h"
 #include "tarch/reader/NetCDFFieldParser.h"
 """
 )
-regular_solver.add_kernel_optimisations(
-    is_linear=False,
-    polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
-)
 
-limiting_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="FVSolver",
     patch_size=dg_order * 2 + 1,
     unknowns={"h": 1, "hu": 1, "hv": 1},
     auxiliary_variables={"z": 1},
     min_volume_h=min_h,
     max_volume_h=max_h,
-    time_step_relaxation=0.5,
+    time_step_relaxation=0.45,
 )
 
-limiting_solver.set_implementation(
+fv_solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
-    flux=flux,
-    max_eigenvalue=eigenvalue
-    + """
-  return sFlux;
-""",
-    ncp=nonconservative_product + stiff_nonconservative_product,
-    riemann_solver=rusanov_fv,
-    diffusive_source_term=stiff_source_term_fv,
     adjust_solution=adjust_solution,
+    diffusive_source_term=f"FrictionLaws::sourceTermFV<double, Shortcuts, {fv_solver.unknowns}, {fv_solver.auxiliary_variables}>(Q, deltaQ, x, h, t, dt, S);",
+    riemann_solver=f"return rusanovRiemannSolverFV<double, Shortcuts, {fv_solver.unknowns}, {fv_solver.auxiliary_variables}>(QL, QR, x, h, t, dt, normal, FL, FR);",
 )
 
-limiting_solver.set_plotter(args.plotter)
-limiting_solver.add_user_solver_includes(
+fv_solver.set_plotter(args.plotter)
+fv_solver.add_user_solver_includes(
     """
+#include "../PDE.h"
+#include "../FrictionLaws.h"
+#include "../RusanovRiemannSolver.h"
 #include "tarch/reader/NetCDFFieldParser.h"
 """
 )
 
 limiter_solver = exahype2.solvers.limiting.PosterioriLimiting(
     name="LimiterSolver",
-    regular_solver=regular_solver,
-    limiting_solver=limiting_solver,
+    regular_solver=aderdg_solver,
+    limiting_solver=fv_solver,
     number_of_dmp_observables=3,
     dmp_relaxation_parameter=1.0,  # MD 3: BOTH FRICTIONS: 1.0, ONLY ONE FRICTION TERM OR ZERO: 0.5,
     dmp_differences_scaling=0.01,  # MD 3: BOTH FRICTIONS: 0.01, ONLY ONE FRICTION TERM OR ZERO: 0.005,
@@ -197,14 +184,14 @@ limiter_solver = exahype2.solvers.limiting.PosterioriLimiting(
 )
 
 project = exahype2.Project(
-    namespace=["applications", "exahype2", "swe"],
+    namespace=["applications", "exahype2", "ShallowWater"],
     project_name="TafjordLandslide",
     directory=".",
-    executable="ExaHyPE-ShallowWater",
+    executable="ExaHyPE",
 )
 
-project.add_solver(regular_solver)
-project.add_solver(limiting_solver)
+project.add_solver(aderdg_solver)
+project.add_solver(fv_solver)
 project.add_solver(limiter_solver)
 
 if args.number_of_snapshots <= 0:
@@ -234,9 +221,9 @@ project.set_Peano4_installation(
     "../../../../", mode=peano4.output.string_to_mode(args.build_mode)
 )
 project = project.generate_Peano4_project(verbose=False)
+project.set_fenv_handler(args.fpe)
 for const_name, const_info in constants.items():
     const_val, const_type = const_info
     project.constants.export_constexpr_with_type(const_name, str(const_val), const_type)
 project.output.makefile.set_target_device(args.target_device)
-project.set_fenv_handler(args.fpe)
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

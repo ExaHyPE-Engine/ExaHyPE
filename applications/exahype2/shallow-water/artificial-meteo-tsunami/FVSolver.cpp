@@ -2,14 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "FVSolver.h"
 
-#include "Constants.h"
 #include "math/CentralDifferencePartial2D.h"
 #include "projections/EllipsoidProjection.h"
 
-tarch::logging::Log applications::exahype2::swe::FVSolver::_log("applications::exahype2::swe::FVSolver");
+tarch::logging::Log applications::exahype2::ShallowWater::FVSolver::_log(
+  "applications::exahype2::ShallowWater::FVSolver"
+);
 
-
-void applications::exahype2::swe::FVSolver::initialCondition(
+void applications::exahype2::ShallowWater::FVSolver::initialCondition(
   [[maybe_unused]] double* const NOALIAS                        Q, // Q[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -21,8 +21,7 @@ void applications::exahype2::swe::FVSolver::initialCondition(
   Q[Shortcuts::b]  = -100;
 }
 
-
-void applications::exahype2::swe::FVSolver::boundaryConditions(
+void applications::exahype2::ShallowWater::FVSolver::boundaryConditions(
   [[maybe_unused]] const double* const NOALIAS                  Qinside,  // Qinside[3+1]
   [[maybe_unused]] double* const NOALIAS                        Qoutside, // Qoutside[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -36,20 +35,17 @@ void applications::exahype2::swe::FVSolver::boundaryConditions(
   Qoutside[Shortcuts::b]  = Qinside[Shortcuts::b];
 }
 
-
-::exahype2::RefinementCommand applications::exahype2::swe::FVSolver::refinementCriterion(
+::exahype2::RefinementCommand applications::exahype2::ShallowWater::FVSolver::refinementCriterion(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t
 ) {
   auto result = ::exahype2::RefinementCommand::Keep;
-  // @todo Implement
   return result;
 }
 
-
-double applications::exahype2::swe::FVSolver::maxEigenvalue(
+double applications::exahype2::ShallowWater::FVSolver::maxEigenvalue(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -67,17 +63,16 @@ double applications::exahype2::swe::FVSolver::maxEigenvalue(
     return 0.0;
   }
 
-  const double u = Q[Shortcuts::hu + normal] / Q[Shortcuts::h];
-  const double c = std::sqrt(GRAV * Q[Shortcuts::h]);
-  L[Shortcuts::h]        = u;
-  L[Shortcuts::hu]       = u + c;
-  L[Shortcuts::hv]       = u - c;
+  const double u   = Q[Shortcuts::hu + normal] / Q[Shortcuts::h];
+  const double c   = std::sqrt(GRAV * Q[Shortcuts::h]);
+  L[Shortcuts::h]  = u;
+  L[Shortcuts::hu] = u + c;
+  L[Shortcuts::hv] = u - c;
 
   return std::fmax(std::fabs(L[0]), std::fmax(std::fabs(L[1]), std::fabs(L[2])));
 }
 
-
-void applications::exahype2::swe::FVSolver::flux(
+void applications::exahype2::ShallowWater::FVSolver::flux(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -104,8 +99,7 @@ void applications::exahype2::swe::FVSolver::flux(
   F[Shortcuts::hu + normal] += 0.5 * GRAV * Q[Shortcuts::h] * Q[Shortcuts::h];
 }
 
-
-void applications::exahype2::swe::FVSolver::nonconservativeProduct(
+void applications::exahype2::ShallowWater::FVSolver::nonconservativeProduct(
   [[maybe_unused]] const double* const NOALIAS                  Q,      // Q[3+1]
   [[maybe_unused]] const double* const NOALIAS                  deltaQ, // deltaQ[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -127,7 +121,6 @@ void applications::exahype2::swe::FVSolver::nonconservativeProduct(
 
   BTimesDeltaQ[Shortcuts::hu + normal] = GRAV * Q[Shortcuts::h] * (deltaQ[Shortcuts::h] + deltaQ[Shortcuts::b]);
 }
-
 namespace corriolis_force {
   namespace {
     /**
@@ -227,20 +220,20 @@ namespace {
    * @return Bottom friction force contribution to the momentum equations
    */
   auto manningFriction(const auto h, const auto hu, const auto hv) {
-    namespace constants            = ::applications::exahype2::swe;
+    namespace constants            = ::applications::exahype2::ShallowWater;
     constexpr auto manningFriction = 0.025; // sm^(1/3)
     constexpr auto hMin            = 0.2;   // threshold to ensure stable bottom friction computation when h → 0
 
     const auto hSafe = (h > hMin ? h : hMin);    // minimal water depth to avoid division by zero or instability near
                                                  // dry cells
-    const auto h43 = (hSafe * std::cbrt(hSafe)); // h^(4/3) is not stable for small h -> 0, TODO may need some more
+    const auto h43 = (hSafe * std::cbrt(hSafe)); // h^(4/3) is not stable for small h -> 0, TODO: may need some more
                                                  // work
 
     return -constants::GRAV * manningFriction * manningFriction * std::sqrt((hu * hu) + (hv * hv)) / h43;
   }
 
   auto atmosphericPressure(const auto x, const auto y, const auto t) {
-    namespace constants = ::applications::exahype2::swe;
+    namespace constants = ::applications::exahype2::ShallowWater;
     constexpr auto aLon = constants::pointLonA;
     constexpr auto aLat = constants::pointLatA;
 
@@ -302,7 +295,7 @@ namespace {
   };
 } // namespace
 
-void applications::exahype2::swe::FVSolver::sourceTerm(
+void applications::exahype2::ShallowWater::FVSolver::sourceTerm(
   [[maybe_unused]] const double* const NOALIAS                  Q, // Q[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -310,7 +303,7 @@ void applications::exahype2::swe::FVSolver::sourceTerm(
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] double* const NOALIAS                        S // S[3]
 ) {
-  namespace constants = ::applications::exahype2::swe;
+  namespace constants = ::applications::exahype2::ShallowWater;
 
   /**
    * @brief Field case : A meteotsunami in the Gulf of Mexico (2010)
@@ -356,9 +349,9 @@ void applications::exahype2::swe::FVSolver::sourceTerm(
   };
 
   S[Shortcuts::hu] += -math::differentiation::numeric_3D::central_difference::
-                partialX(wrapperAtmosphericPressure, xCoord, yCoord, t)
-              / waterDensity;
+                        partialX(wrapperAtmosphericPressure, xCoord, yCoord, t)
+                      / waterDensity;
   S[Shortcuts::hv] += -math::differentiation::numeric_3D::central_difference::
-                partialY(wrapperAtmosphericPressure, xCoord, yCoord, t)
-              / waterDensity;
+                        partialY(wrapperAtmosphericPressure, xCoord, yCoord, t)
+                      / waterDensity;
 }

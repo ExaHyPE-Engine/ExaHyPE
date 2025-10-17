@@ -1,15 +1,9 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import os
-import sys
-
 import peano4
 import exahype2
 
-sys.path.insert(0, os.path.abspath(".."))
-from PDE import *
-
-initial_conditions = """
+initial_conditions_with_input_file = """
   static tarch::reader::NetCDFFieldParser fieldParser(
     \"artificial_bath_1000.nc\",
     \"artificial_displ_1000.nc\",
@@ -29,6 +23,30 @@ initial_conditions = """
   Q[Shortcuts::z]  = bathymetryAfterEarthquake;
 """
 
+initial_conditions_without_input_file = """
+  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
+    Q[i] = 0.0;
+  }
+
+  constexpr double InitialWaterHeight = 100.0;
+  constexpr double InitialBathymetryBeforeEarthquake = -100.0;
+
+  Q[Shortcuts::h] = InitialWaterHeight;
+
+  auto displacementX = [](double x) { return std::sin((x / 500.0 + 1.0) * tarch::la::PI); };
+  auto displacementY = [](double y) { return -std::pow(y / 500.0, 2) + 1.0; };
+  auto displacement = [&](double x, double y) { return 5.0 * displacementX(x) * displacementY(y); };
+
+  const double bathymetryAfterEarthquake = InitialBathymetryBeforeEarthquake + displacement(x(0), x(1));
+
+  // Assumes offset to be [-5000, -5000]
+  if (std::abs(x(0)) <= 500 and std::abs(x(1)) <= 500) { // Center of domain is [0, 0]
+    Q[Shortcuts::z] = bathymetryAfterEarthquake;
+  } else {
+    Q[Shortcuts::z] = InitialBathymetryBeforeEarthquake;
+  }
+"""
+
 boundary_conditions = """
   Qoutside[0] = Qinside[0];
   Qoutside[1] = 0.0;
@@ -38,6 +56,7 @@ boundary_conditions = """
 
 refinement_criterion = """
   auto result = ::exahype2::RefinementCommand::Keep;
+  //if (std::abs(x(0)) <= 500 and std::abs(x(1)) <= 500) { // Center of domain is [0, 0]
   if (x[0] >= 4500.0 && x[1] >= 4500.0 && x[0] <= 5500.0 && x[1] <= 5500.0) {
     result = ::exahype2::RefinementCommand::Refine;
   }
@@ -56,6 +75,8 @@ constants = {
     "hThreshold": [1e-5, "double"],
 }
 
+offset = [0.0, 0.0]
+# offset=[-5000, -5000],  # [m]
 size = [10000.0, 10000.0]  # [m]
 max_h = 1.1 * min(size) / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
@@ -71,15 +92,12 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
 )
 
 aderdg_solver.set_implementation(
-    initial_conditions=initial_conditions,
+    initial_conditions=initial_conditions_with_input_file,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
-    flux=flux,
-    ncp=nonconservative_product,
-    max_eigenvalue=eigenvalue
-    + """
-  return sFlux;
-""",
+    flux=f"ShallowWater::flux<double, Shortcuts, {aderdg_solver.unknowns}>(Q, x, h, t, dt, normal, F);",
+    max_eigenvalue="return ShallowWater::maxEigenvalue<double, Shortcuts>(Q, x, h, t, dt, normal);",
+    ncp=f"ShallowWater::nonconservativeProduct<double, Shortcuts, {aderdg_solver.unknowns}>(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);",
 )
 
 aderdg_solver.set_plotter(args.plotter)
@@ -88,15 +106,16 @@ aderdg_solver.add_kernel_optimisations(
 )
 aderdg_solver.add_user_solver_includes(
     """
+#include "../PDE.h"
 #include "tarch/reader/NetCDFFieldParser.h"
 """
 )
 
 project = exahype2.Project(
-    namespace=["applications", "exahype2", "swe"],
+    namespace=["applications", "exahype2", "ShallowWater"],
     project_name="ArtificialTsunami",
     directory=".",
-    executable="ExaHyPE-ShallowWater",
+    executable="ExaHyPE",
 )
 project.add_solver(aderdg_solver)
 
@@ -109,7 +128,7 @@ else:
 project.set_global_simulation_parameters(
     dimensions=2,
     size=size,
-    offset=[0.0, 0.0],
+    offset=offset,
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     first_plot_time_stamp=0.0,
@@ -127,8 +146,8 @@ project.set_Peano4_installation(
     "../../../../", mode=peano4.output.string_to_mode(args.build_mode)
 )
 project = project.generate_Peano4_project(verbose=False)
+project.set_fenv_handler(args.fpe)
 for const_name, const_info in constants.items():
     const_val, const_type = const_info
     project.constants.export_constexpr_with_type(const_name, str(const_val), const_type)
-project.set_fenv_handler(args.fpe)
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

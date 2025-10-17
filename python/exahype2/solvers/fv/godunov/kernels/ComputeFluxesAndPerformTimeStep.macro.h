@@ -106,6 +106,72 @@
       QR[unknown] = QInRight[unknown];
     }
 
+{% if USE_RIEMANN_SOLVER %}
+    // ===================== Riemann Solver =====================
+    auto faceCentreLeft(volumeCentre);
+    faceCentreLeft(normal)  -= static_cast<{{COMPUTE_PRECISION}}>(0.5) * volumeSize(normal);
+    auto faceCentreRight(volumeCentre);
+    faceCentreRight(normal) += static_cast<{{COMPUTE_PRECISION}}>(0.5) * volumeSize(normal);
+
+    // Flux buffers for the two faces: (Left,Center) and (Center,Right)
+    {{COMPUTE_PRECISION}} leftGoingFluxLeftFace[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
+    {{COMPUTE_PRECISION}} rightGoingFluxLeftFace[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
+    {{COMPUTE_PRECISION}} leftGoingFluxRightFace[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
+    {{COMPUTE_PRECISION}} rightGoingFluxRightFace[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
+
+{% if STATELESS_RIEMANN_SOLVER==True %}
+    const {{COMPUTE_PRECISION}} maxWaveSpeedLeft = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(QL, QC, faceCentreLeft, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxLeftFace, rightGoingFluxLeftFace);
+    const {{COMPUTE_PRECISION}} maxWaveSpeedRight = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(QC, QR, faceCentreRight, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxRightFace, rightGoingFluxRightFace);
+{% else %}
+    const {{COMPUTE_PRECISION}} maxWaveSpeedLeft = solver.solveRiemannProblem(QL, QC, faceCentreLeft, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxLeftFace, rightGoingFluxLeftFace);
+    const {{COMPUTE_PRECISION}} maxWaveSpeedRight = solver.solveRiemannProblem(QC, QR, faceCentreRight, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxRightFace, rightGoingFluxRightFace);
+{% endif %}
+    #if !defined(WITH_GPU)
+    assertion(std::isfinite(maxWaveSpeedLeft));
+    assertion(std::isfinite(maxWaveSpeedRight));
+    #endif
+{% if COMPUTE_MAX_EIGENVALUE %}
+    maxEigenvalueAfterTimeStep = std::fmax(maxEigenvalueAfterTimeStep, std::fmax(maxWaveSpeedLeft, maxWaveSpeedRight));
+{% endif %}
+
+    const {{COMPUTE_PRECISION}} scale = (timeStepSize * {{NUMBER_OF_VOLUMES_PER_AXIS}}) / patchSize(normal);
+    SIMD(aligned(leftGoingFluxLeftFace,rightGoingFluxLeftFace,leftGoingFluxRightFace,rightGoingFluxRightFace,QC,QL,QR,QO:ALIGNMENT))
+    for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; ++unknown) {
+      #if !defined(WITH_GPU)
+      assertion(std::isfinite(QL[unknown]));
+      assertion(std::isfinite(QC[unknown]));
+      assertion(std::isfinite(QR[unknown]));
+      #endif
+
+      // Flux INTO the center from the left face is the right-going flux of (Left,Center)
+      const {{COMPUTE_PRECISION}} FL = rightGoingFluxLeftFace[unknown];
+      // Flux LEAVING the center to the right face is the left-going flux of (Center,Right)
+      const {{COMPUTE_PRECISION}} FR = leftGoingFluxRightFace[unknown];
+
+      QO[unknown] += scale * (FL - FR);
+
+      #if !defined(WITH_GPU)
+      assertion(std::isfinite(QO[unknown]));
+      nonCriticalAssertion(QO[unknown] == QO[unknown]);
+      #endif
+    } // unknown
+{% else %}
+    // ===================== Generic Rusanov =====================
+{% if USE_FLUX %}
+    // ===================== Flux =====================
+    {{COMPUTE_PRECISION}} fluxesLeft[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
+    {{COMPUTE_PRECISION}} fluxesRight[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
+    {
+{% if STATELESS_FLUX %}
+      {{FULL_QUALIFIED_SOLVER_NAME}}::flux(QL, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, fluxesLeft);
+      {{FULL_QUALIFIED_SOLVER_NAME}}::flux(QR, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal, fluxesRight);
+{% else %}
+      solver.flux(QL, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, fluxesLeft);
+      solver.flux(QR, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal, fluxesRight);
+{% endif %}
+    }
+{% endif %}
+
 {% if USE_NCP %}
     // ===================== Nonconservative Product =====================
     {{COMPUTE_PRECISION}} ncpCenter[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
@@ -136,80 +202,6 @@
 {% else %}
       solver.nonconservativeProduct(averageQCenter, deltaQCenter, volumeCentre,     volumeSize, timeStamp, timeStepSize, normal, ncpCenter);
       solver.nonconservativeProduct(averageQLeft,   deltaQLeft,   volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, ncpLeft);
-{% endif %}
-    }
-{% endif %}
-
-{% if USE_RIEMANN_SOLVER %}
-    // ===================== Riemann Solver =====================
-    auto faceCentreLeft(volumeCentre);
-    faceCentreLeft(normal)  -= static_cast<{{COMPUTE_PRECISION}}>(0.5) * volumeSize(normal);
-    auto faceCentreRight(volumeCentre);
-    faceCentreRight(normal) += static_cast<{{COMPUTE_PRECISION}}>(0.5) * volumeSize(normal);
-
-    // Flux buffers for the two faces: (Left,Center) and (Center,Right)
-    {{COMPUTE_PRECISION}} leftGoingFluxLeftFace [{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
-    {{COMPUTE_PRECISION}} rightGoingFluxLeftFace[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
-    {{COMPUTE_PRECISION}} leftGoingFluxRightFace[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
-    {{COMPUTE_PRECISION}} rightGoingFluxRightFace[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
-
-{% if STATELESS_RIEMANN_SOLVER==True %}
-    const {{COMPUTE_PRECISION}} maxWaveSpeedLeft = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(QL, QC, faceCentreLeft, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxLeftFace, rightGoingFluxLeftFace);
-    const {{COMPUTE_PRECISION}} maxWaveSpeedRight = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(QC, QR, faceCentreRight, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxRightFace, rightGoingFluxRightFace);
-{% else %}
-    const {{COMPUTE_PRECISION}} maxWaveSpeedLeft = solver.solveRiemannProblem(QL, QC, faceCentreLeft, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxLeftFace, rightGoingFluxLeftFace);
-    const {{COMPUTE_PRECISION}} maxWaveSpeedRight = solver.solveRiemannProblem(QC, QR, faceCentreRight, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxRightFace, rightGoingFluxRightFace);
-{% endif %}
-    #if !defined(WITH_GPU)
-    assertion(std::isfinite(maxWaveSpeedLeft));
-    assertion(std::isfinite(maxWaveSpeedRight));
-    #endif
-{% if COMPUTE_MAX_EIGENVALUE %}
-    maxEigenvalueAfterTimeStep = std::fmax(maxEigenvalueAfterTimeStep, std::fmax(maxWaveSpeedLeft, maxWaveSpeedRight));
-{% endif %}
-
-    const {{COMPUTE_PRECISION}} scale = (timeStepSize * {{NUMBER_OF_VOLUMES_PER_AXIS}}) / patchSize(normal);
-    SIMD(aligned(leftGoingFluxLeftFace,rightGoingFluxLeftFace,leftGoingFluxRightFace,rightGoingFluxRightFace,QC,QL,QR,QO:ALIGNMENT))
-    for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; ++unknown) {
-      #if !defined(WITH_GPU)
-      assertion(std::isfinite(QL[unknown]));
-      assertion(std::isfinite(QC[unknown]));
-      assertion(std::isfinite(QR[unknown]));
-      #endif
-
-      // Flux INTO the center from the left face is the right-going flux of (Left,Center)
-      {{COMPUTE_PRECISION}} FL = rightGoingFluxLeftFace[unknown];
-      // Flux LEAVING the center to the right face is the left-going flux of (Center,Right)
-      {{COMPUTE_PRECISION}} FR = leftGoingFluxRightFace[unknown];
-
-{% if USE_NCP %}
-      #if !defined(WITH_GPU)
-      assertion(std::isfinite(ncpLeft[unknown]));
-      assertion(std::isfinite(ncpCenter[unknown]));
-      #endif
-      FL -= ncpLeft[unknown];
-      FR += ncpCenter[unknown];
-{% endif %}
-
-      QO[unknown] += scale * (FL - FR);
-
-      #if !defined(WITH_GPU)
-      assertion(std::isfinite(QO[unknown]));
-      nonCriticalAssertion(QO[unknown] == QO[unknown]);
-      #endif
-    } // unknown
-{% else %}
-    // ===================== Generic Rusanov =====================
-{% if USE_FLUX %}
-    {{COMPUTE_PRECISION}} fluxesLeft[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
-    {{COMPUTE_PRECISION}} fluxesRight[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
-    {
-{% if STATELESS_FLUX %}
-      {{FULL_QUALIFIED_SOLVER_NAME}}::flux(QL, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, fluxesLeft);
-      {{FULL_QUALIFIED_SOLVER_NAME}}::flux(QR, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal, fluxesRight);
-{% else %}
-      solver.flux(QL, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, fluxesLeft);
-      solver.flux(QR, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal, fluxesRight);
 {% endif %}
     }
 {% endif %}

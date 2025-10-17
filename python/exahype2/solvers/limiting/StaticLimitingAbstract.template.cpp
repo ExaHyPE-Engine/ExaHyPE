@@ -9,7 +9,7 @@
 
 #include <algorithm>
 
-tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}");
+tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _solverState(SolverState::GridConstruction),

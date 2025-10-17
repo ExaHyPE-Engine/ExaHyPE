@@ -1,0 +1,115 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <class T, class Shortcuts, class Quadrature, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, int Order>
+static inline GPU_CALLABLE_METHOD void applications::exahype2::ShallowWater::rusanovRiemannSolverADERDG(
+  const T* const NOALIAS                       QL,
+  const T* const NOALIAS                       QR,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  T* const NOALIAS                             FL,
+  T* const NOALIAS                             FR
+) {
+  // Compute average left and right states
+  constexpr auto N{NumberOfUnknowns + NumberOfAuxiliaryVariables};
+  T              QavgL[N] = {};
+  T              QavgR[N] = {};
+  for (auto xy = 0; xy < Order + 1; ++xy) {
+    for (auto i = 0; i < N; ++i) {
+      QavgL[i] += Quadrature::weights2[xy] * QL[xy * N + i];
+      QavgR[i] += Quadrature::weights2[xy] * QR[xy * N + i];
+    }
+  }
+
+  // Wave speed estimation based on the flux Jacobian
+  auto sL{0.0};
+  if (QavgL[Shortcuts::h] > hThreshold) {
+    const auto VnL{QavgL[Shortcuts::hu + normal] / QavgL[Shortcuts::h]};
+    const auto cL{std::sqrt(g * QavgL[Shortcuts::h])};
+    sL = std::fmax(std::fabs(VnL - cL), std::fabs(VnL + cL));
+  }
+  auto sR{0.0};
+  if (QavgR[Shortcuts::h] > hThreshold) {
+    const auto VnR{QavgR[Shortcuts::hu + normal] / QavgR[Shortcuts::h]};
+    const auto cR{std::sqrt(g * QavgR[Shortcuts::h])};
+    sR = std::fmax(std::fabs(VnR - cR), std::fabs(VnR + cR));
+  }
+  const auto smax{std::fmax(sR, sL)};
+
+  auto j{0};
+  auto rusanovFlux{0.0};
+  for (auto xy = 0; xy < Order + 1; ++xy) {
+    for (auto i = 0; i < N; ++i) {
+      j           = xy * N + i;
+      rusanovFlux = 0.5 * (FL[j] + FR[j] + smax * (QL[j] - QR[j]));
+      FL[j]       = rusanovFlux;
+      FR[j]       = rusanovFlux;
+    }
+    // Ignore flux for flow topography
+    j     = xy * N + Shortcuts::z;
+    FL[j] = 0.0;
+    FR[j] = 0.0;
+  }
+}
+
+template <class T, class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
+static inline GPU_CALLABLE_METHOD double applications::exahype2::ShallowWater::rusanovRiemannSolverFV(
+  const T* const NOALIAS                       QL,
+  const T* const NOALIAS                       QR,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  T* const NOALIAS                             FL,
+  T* const NOALIAS                             FR
+) {
+  flux<T, Shortcuts, NumberOfUnknowns>(QL, x, h, t, dt, normal, FL);
+  flux<T, Shortcuts, NumberOfUnknowns>(QR, x, h, t, dt, normal, FR);
+
+  const auto     smax{std::fmax(
+    maxEigenvalue<T, Shortcuts>(QL, x, h, t, dt, normal),
+    maxEigenvalue<T, Shortcuts>(QR, x, h, t, dt, normal)
+  )};
+  constexpr auto N{NumberOfAuxiliaryVariables + NumberOfUnknowns};
+
+  T Qavg[N]   = {};
+  T DeltaQ[N] = {};
+  for (int i = 0; i < NumberOfUnknowns; ++i) {
+    Qavg[i]   = 0.5 * (QL[i] + QR[i]);
+    DeltaQ[i] = QR[i] - QL[i];
+    FL[i]     = 0.5 * (FL[i] + FR[i] - smax * DeltaQ[i]);
+    FR[i]     = FL[i];
+  }
+
+  for (int i = NumberOfUnknowns; i < N; ++i) {
+    Qavg[i]   = 0.5 * (QL[i] + QR[i]);
+    DeltaQ[i] = QR[i] - QL[i];
+  }
+
+  T ncp[NumberOfUnknowns] = {};
+  FrictionLaws::nonconservativeProduct<T, Shortcuts, NumberOfUnknowns>(Qavg, DeltaQ, x, h, t, dt, normal, ncp);
+  for (int i = 0; i < NumberOfUnknowns; ++i) {
+    FL[i] += 0.5 * ncp[i];
+    FR[i] -= 0.5 * ncp[i];
+  }
+
+  auto sL{0.0};
+  if (QL[Shortcuts::h] > hThreshold) {
+    const auto hL{QL[Shortcuts::h] > hThreshold ? QL[Shortcuts::h] : hThreshold};
+    const auto momentumL{std::sqrt(QL[Shortcuts::hu] * QL[Shortcuts::hu] + QL[Shortcuts::hv] * QL[Shortcuts::hv])};
+    sL = 2.0 * g * momentumL * invXi / (hL * hL);
+  }
+
+  auto sR{0.0};
+  if (QL[Shortcuts::h] > hThreshold) {
+    const auto hR{QR[Shortcuts::h] > hThreshold ? QR[Shortcuts::h] : hThreshold};
+    const auto momentumR{std::sqrt(QR[Shortcuts::hu] * QR[Shortcuts::hu] + QR[Shortcuts::hv] * QR[Shortcuts::hv])};
+    sR = 2.0 * g * momentumR * invXi / (hR * hR);
+  }
+
+  return std::fmax(smax, h[normal] * std::fmax(sL, sR));
+}

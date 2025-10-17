@@ -6,7 +6,7 @@
 
 namespace applications {
   namespace exahype2 {
-    namespace swe {
+    namespace ShallowWater {
       constexpr double aeaEllipsoidA   = 6378137.0;
       constexpr double aeaEllipsoidE   = 0.08181919084262157;
       constexpr double aeaStdParallel1 = 18.3333333;
@@ -14,6 +14,6 @@ namespace applications {
       constexpr double aeaLon0         = -84.0;
       constexpr double aeaLat0         = 25.0;
       constexpr double aeaEarthRadius  = 6371000.0;
-    } // namespace swe
+    } // namespace ShallowWater
   } // namespace exahype2
 } // namespace applications

@@ -1,7 +1,15 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and
-# use, please see the copyright notice at www.peano-framework.org
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 
-eigenvalue = r"""
+template <class T, class Shortcuts>
+static inline GPU_CALLABLE_METHOD double applications::exahype2::ShallowWater::FrictionLaws::maxEigenvalue(
+  const T* const NOALIAS                       Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal
+) {
   if (Q[Shortcuts::h] <= hThreshold) {
     return 0.0;
   }
@@ -10,31 +18,25 @@ eigenvalue = r"""
   const auto Vn{Q[Shortcuts::hu + normal] / Q[Shortcuts::h]};
   const auto c{std::sqrt(g * Q[Shortcuts::h])};
   const auto sFlux{std::fmax(std::fabs(Vn + c), std::fabs(Vn - c))};
-"""
 
-stiff_eigenvalue = r"""
   // Wave speed estimation based on the stiff source
   const auto momentum{std::sqrt(Q[Shortcuts::hu] * Q[Shortcuts::hu] + Q[Shortcuts::hv] * Q[Shortcuts::hv])};
   const auto sSource{2.0 * g * momentum * invXi / (Q[Shortcuts::h] * Q[Shortcuts::h])};
-"""
 
-flux = r"""
-  for (int n = 0; n < NumberOfUnknowns; n++) {
-    F[n] = 0.0;
-  }
+  return std::fmax(sFlux, h[normal] * sSource);
+}
 
-  if (Q[Shortcuts::h] <= hThreshold) {
-    return;
-  }
-
-  const auto Vn{Q[Shortcuts::hu + normal] / Q[Shortcuts::h]};
-  F[Shortcuts::h]  = Q[Shortcuts::hu + normal]; // Mass flux
-  F[Shortcuts::hu] = Vn * Q[Shortcuts::hu]; // Momentum-x flux
-  F[Shortcuts::hv] = Vn * Q[Shortcuts::hv]; // Momentum-y flux
-  F[Shortcuts::hu + normal] += 0.5 * g * Q[Shortcuts::h] * Q[Shortcuts::h]; // Hydrostatic pressure
-"""
-
-nonconservative_product = r"""
+template <class T, class Shortcuts, int NumberOfUnknowns>
+static inline GPU_CALLABLE_METHOD void applications::exahype2::ShallowWater::FrictionLaws::nonconservativeProduct(
+  const T* const NOALIAS                       Q,
+  const T* const NOALIAS                       deltaQ,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  T* const NOALIAS                             BTimesDeltaQ
+) {
   for (int n = 0; n < NumberOfUnknowns; n++) {
     BTimesDeltaQ[n] = 0.0;
   }
@@ -45,9 +47,7 @@ nonconservative_product = r"""
 
   // Bathymetry/topography-related effects
   BTimesDeltaQ[Shortcuts::hu + normal] = g * Q[Shortcuts::h] * (deltaQ[Shortcuts::h] + deltaQ[Shortcuts::z]);
-"""
 
-stiff_nonconservative_product = r"""
   // Compute stiff turbulent drag on the interface
   const auto momentumSQR{Q[Shortcuts::hu] * Q[Shortcuts::hu] + Q[Shortcuts::hv] * Q[Shortcuts::hv]};
   const auto momentum{std::sqrt(momentumSQR)};
@@ -56,9 +56,18 @@ stiff_nonconservative_product = r"""
     const auto directionVect{Q[Shortcuts::hu + normal] / momentum};
     BTimesDeltaQ[Shortcuts::hu + normal] += h[normal] * turbulentDrag * directionVect;
   }
-"""
+}
 
-stiff_source_term_aderdg = r"""
+template <class T, class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
+static inline GPU_CALLABLE_METHOD void applications::exahype2::ShallowWater::FrictionLaws::sourceTermADERDG(
+  const T* const NOALIAS                       Q,
+  const T* const NOALIAS                       deltaQ,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  T* const NOALIAS                             S
+) {
   for (int n = 0; n < NumberOfUnknowns; n++) {
     S[n] = 0.0;
   }
@@ -82,9 +91,18 @@ stiff_source_term_aderdg = r"""
     S[Shortcuts::hu] = Q[Shortcuts::hu] * frictionTerm;
     S[Shortcuts::hv] = Q[Shortcuts::hv] * frictionTerm;
   }
-"""
+}
 
-stiff_source_term_fv = r"""
+template <class T, class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
+static inline GPU_CALLABLE_METHOD void applications::exahype2::ShallowWater::FrictionLaws::sourceTermFV(
+  const T* const NOALIAS                       Q,
+  const T* const NOALIAS                       deltaQ,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  T* const NOALIAS                             S
+) {
   for (int n = 0; n < NumberOfUnknowns; n++) {
     S[n] = 0.0;
   }
@@ -107,4 +125,4 @@ stiff_source_term_fv = r"""
     S[Shortcuts::hu] = Q[Shortcuts::hu] * frictionTerm;
     S[Shortcuts::hv] = Q[Shortcuts::hv] * frictionTerm;
   }
-"""
+}

@@ -1,14 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import os
-import sys
-
 import peano4
 import exahype2
-
-sys.path.insert(0, os.path.abspath(".."))
-from FWave import fWave
-from PDE import nonconservative_product, eigenvalue
 
 initial_conditions = """
   static tarch::reader::NetCDFFieldParser fieldParser(
@@ -101,10 +94,8 @@ aderdg_solver.set_implementation(
   F[2] = Q[1 + normal] * Q[2] * ih;
   F[3] = 0.0;
 """,
-    ncp=nonconservative_product,
-    max_eigenvalue=eigenvalue+"""
-  return sFlux;
-""",
+    max_eigenvalue="return ShallowWater::maxEigenvalue<double, Shortcuts>(Q, x, h, t, dt, normal);",
+    ncp=f"ShallowWater::nonconservativeProduct<double, Shortcuts, {aderdg_solver.unknowns}>(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);",
     riemann_solver="""
   // Compute max eigenvalue over face
   double smax = 0.0;
@@ -129,12 +120,13 @@ aderdg_solver.set_implementation(
     FL[xy*4+direction+1] += 0.5*g*0.5*(QL[xy*4+0]+QR[xy*4+0])*(QR[xy*4+3]+QR[xy*4+0]-QL[xy*4+3]-QL[xy*4+0]);
     FR[xy*4+direction+1] -= 0.5*g*0.5*(QL[xy*4+0]+QR[xy*4+0])*(QR[xy*4+3]+QR[xy*4+0]-QL[xy*4+3]-QL[xy*4+0]);
   }
-"""
+""",
 )
 
 aderdg_solver.set_plotter(args.plotter)
 aderdg_solver.add_user_solver_includes(
     """
+#include "../PDE.h"
 #include "tarch/reader/NetCDFFieldParser.h"
 """
 )
@@ -152,12 +144,13 @@ fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
 fv_solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
-    riemann_solver=fWave,
+    riemann_solver="return fWaveRiemannSolver<double, Shortcuts>(QL, QR, x, h, t, dt, normal, FL, FR);",
 )
 
 fv_solver.set_plotter(args.plotter)
 fv_solver.add_user_solver_includes(
     """
+#include "../FWaveRiemannSolver.h"
 #include "tarch/reader/NetCDFFieldParser.h"
 """
 )
@@ -170,10 +163,10 @@ limiter_solver = exahype2.solvers.limiting.StaticLimiting(
 )
 
 project = exahype2.Project(
-    namespace=["applications", "exahype2", "swe"],
+    namespace=["applications", "exahype2", "ShallowWater"],
     project_name="ChileTsunami",
     directory=".",
-    executable="ExaHyPE-ShallowWater",
+    executable="ExaHyPE",
 )
 
 project.add_solver(aderdg_solver)
@@ -207,8 +200,8 @@ project.set_Peano4_installation(
     "../../../../", mode=peano4.output.string_to_mode(args.build_mode)
 )
 project = project.generate_Peano4_project(verbose=False)
+project.set_fenv_handler(args.fpe)
 for const_name, const_info in constants.items():
     const_val, const_type = const_info
     project.constants.export_constexpr_with_type(const_name, str(const_val), const_type)
-project.set_fenv_handler(args.fpe)
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
