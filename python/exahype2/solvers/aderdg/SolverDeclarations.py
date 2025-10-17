@@ -197,22 +197,22 @@ class SolverDeclarations:
       {% endif %}
     }
     {% endif %}
-
+    {% endfor %}
+    
     {% if ADJUST_SOLUTION_IMPLEMENTATION!="<user-defined>" and ADJUST_SOLUTION_IMPLEMENTATION!="<none>" %}
     static inline GPU_CALLABLE_METHOD
     void adjustSolution(
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&  x,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&  h,
-      [[maybe_unused]] const double                                  t,
-      [[maybe_unused]] const double                                  dt,
-      [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&   x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&   h,
+      [[maybe_unused]] const double                                   t,
+      [[maybe_unused]] const double                                   dt,
+      [[maybe_unused]] {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS  Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
     ) {
       {% if ADJUST_SOLUTION_IMPLEMENTATION!="<empty>" %}
       {{ADJUST_SOLUTION_IMPLEMENTATION}}
       {% endif %}
     }
     {% endif %}
-    {% endfor %}
 
     {% if INIT_POINT_SOURCES_IMPLEMENTATION!="<user-defined>" and INIT_POINT_SOURCES_IMPLEMENTATION!="<none>" %}
     static inline GPU_CALLABLE_METHOD
@@ -350,6 +350,7 @@ class SolverDeclarations:
       const int                                          faceIndex
     ) override final;
     {% endif %}
+    {% endfor %}
 
     {% if ADJUST_SOLUTION_IMPLEMENTATION=="<user-defined>" and ADJUST_SOLUTION_IMPLEMENTATION!="<none>" %}
     void adjustSolution(
@@ -357,10 +358,9 @@ class SolverDeclarations:
       const tarch::la::Vector<DIMENSIONS, double>&  h,
       const double                                  t,
       const double                                  dt,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS  Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
     ) override final;
     {% endif %}
-    {% endfor %}
 
     {% if INIT_POINT_SOURCES_IMPLEMENTATION=="<user-defined>" and INIT_POINT_SOURCES_IMPLEMENTATION!="<none>" %}
     void initPointSourceLocations(double location[NumberOfPointSources][DIMENSIONS]) override final;

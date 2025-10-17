@@ -162,19 +162,19 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::riemannSolver(
   // @todo Implement
 }
 {% endif %}
+{% endfor %}
 
 {% if ADJUST_SOLUTION_IMPLEMENTATION=="<user-defined>" and ADJUST_SOLUTION_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::adjustSolution(
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const double                                 t,
-  [[maybe_unused]] const double                                 dt,
-  [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&   x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&   h,
+  [[maybe_unused]] const double                                   t,
+  [[maybe_unused]] const double                                   dt,
+  [[maybe_unused]] {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS  Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
 ) {
   // @todo Implement
 }
 {% endif %}
-{% endfor %}
 
 {% if INIT_POINT_SOURCES_IMPLEMENTATION=="<user-defined>" and INIT_POINT_SOURCES_IMPLEMENTATION!="<none>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::initPointSourceLocations([[maybe_unused]] double location[NumberOfPointSources][DIMENSIONS]) {

@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Tracer.h"
 
-#include "PatchUtils.h"
-#include "peano4/utils/Loop.h"
 #include "tarch/logging/Log.h"
 
 tarch::la::Vector<DIMENSIONS, int> exahype2::fv::internal::mapParticleOntoVoxel(
@@ -42,71 +40,6 @@ tarch::la::Vector<DIMENSIONS, int> exahype2::fv::internal::mapBiasedParticleOnto
     result(d)                        = std::max(0, result(d));
     result(d)                        = std::min(voxelsPerAxis - 2, result(d));
   }
-
-  return result;
-}
-
-double exahype2::fv::internal::projectValueOntoParticle_piecewiseConstant(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const double* NOALIAS Q,
-  const tarch::la::Vector<DIMENSIONS, double>& particleX,
-  int                                          unknown
-) {
-  tarch::la::Vector<DIMENSIONS, int> voxel = exahype2::fv::internal::mapParticleOntoVoxel(
-    marker, voxelsPerAxis, particleX
-  );
-
-  int voxelIndex = peano4::utils::dLinearised(voxel, voxelsPerAxis);
-
-  return Q[voxelIndex * unknownsPerVoxel + unknown];
-}
-
-double exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
-  const peano4::datamanagement::CellMarker&     marker,
-  int                                           voxelsPerAxis,
-  int                                           unknownsPerVoxel,
-  const double* NOALIAS                    Q,
-  const tarch::la::Vector<DIMENSIONS, double>&  particleX,
-  int                                           unknown
-) {
-  static tarch::logging::Log _log( "exahype2::fv::internal" );
-  tarch::la::Vector<DIMENSIONS, int> biasedVoxel = mapBiasedParticleOntoVoxel(marker, voxelsPerAxis, particleX);
-
-  double h = getVolumeLength(marker.h(), voxelsPerAxis);
-
-  double                                      result        = 0.0;
-  dfor2(k)
-    tarch::la::Vector<DIMENSIONS, int> currentVoxel  = biasedVoxel + k;
-    tarch::la::Vector<DIMENSIONS, double>       currentVoxelX = getVolumeCentre(
-      marker.x(), marker.h(), voxelsPerAxis, currentVoxel
-    );
-    int    currentVoxelIndex = peano4::utils::dLinearised(currentVoxel, voxelsPerAxis);
-    double weight            = 1.0;
-    for (int d = 0; d < DIMENSIONS; d++) {
-      double relativeDistance = std::abs(currentVoxelX(d) - particleX(d)) / h;
-      if (particleX(d) < currentVoxelX(d) and currentVoxel(d) == 0) {
-        weight = 1.0;
-      }
-      else if (particleX(d) > currentVoxelX(d) and currentVoxel(d) == voxelsPerAxis - 1) {
-        weight = 1.0;
-      } else if (relativeDistance < 1.0) {
-        weight *= (1.0 - relativeDistance);
-      } else {
-        weight = 0.0;
-      }
-      assertion3( tarch::la::smallerEquals(weight, 1.0), weight, k, relativeDistance );
-    }
-    if (weight > 0.0) {
-      result += weight * Q[currentVoxelIndex * unknownsPerVoxel + unknown];
-    }
-  enddforx
-  //if (unknown==0){
-  //  //std::cout << "exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(): Q_0(should close to 1.0 always)=" << result <<std::endl;
-  //  logInfo( "projectValueOntoParticle_piecewiseLinear(...)", "particle x=" << ::toString(particleX) << ", marker=" << marker.toString() 
-  //    << ", biasedVoxel=" << ::toString(biasedVoxel)<<", result=" << result );
-  //}
 
   return result;
 }

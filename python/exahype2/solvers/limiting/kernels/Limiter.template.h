@@ -12,32 +12,32 @@ namespace {{ item }} {
 
 void projectOnFVLimiterSpaceWithHalo(
   const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const   luh,
-  double* const                                       lim
+  {{LIMITER_SOLVER_STORAGE_PRECISION}}* const         lim
 );
 
 void projectOnFVLimiterSpaceWithoutHalo(
   const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const   luh,
-  double* const                                       lim
+  {{LIMITER_SOLVER_STORAGE_PRECISION}}* const         lim
 );
 
 void projectOnDGSpaceFromFVWithHalo(
-  const double* const                                 lim,
+  const {{LIMITER_SOLVER_STORAGE_PRECISION}}*         lim,
   {{REGULAR_SOLVER_STORAGE_PRECISION}}* const         luh
 );
 
 void projectOnDGSpaceFromFVWithoutHalo(
-  const double* const                                 lim,
+  const {{LIMITER_SOLVER_STORAGE_PRECISION}}*         lim,
   {{REGULAR_SOLVER_STORAGE_PRECISION}}* const         luh
 );
 
 void projectOnFVSpaceWithHaloFromFVWithoutHalo(
-  const double* const                                 fvWithoutHalo,
-  double* const                                       fvWithHalo
+  const {{LIMITER_SOLVER_STORAGE_PRECISION}}*         fvWithoutHalo,
+  {{LIMITER_SOLVER_STORAGE_PRECISION}}* const         fvWithHalo
 );
 
 void projectOnFVSpaceWithoutHaloFromFVWithHalo(
-  double* const                                       fvWithoutHalo,
-  const double* const                                 fvWithHalo
+  {{LIMITER_SOLVER_STORAGE_PRECISION}}* const         fvWithoutHalo,
+  const {{LIMITER_SOLVER_STORAGE_PRECISION}}*         fvWithHalo
 );
 
 bool isPhysicallyAdmissible(
@@ -51,24 +51,38 @@ bool isPhysicallyAdmissible(
 bool discreteMaximumPrincipleAndMinAndMaxSearch(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                     solver,
   const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const   luh,
-  const double                                        relaxationParameter,
-  const double                                        differenceScaling,
-  double*                                             boundaryMinPerObservable,
-  double*                                             boundaryMaxPerObservable
+  const {{COMPUTE_PRECISION}}                         relaxationParameter,
+  const {{COMPUTE_PRECISION}}                         differenceScaling,
+  {{COMPUTE_PRECISION}}*                              boundaryMinPerObservable,
+  {{COMPUTE_PRECISION}}*                              boundaryMaxPerObservable
 );
 
 void findCellLocalLimiterMinAndMax(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                     solver,
-  const double* const                                 lim,
-  double* const                                       localMinPerObservable,
-  double* const                                       localMaxPerObservable
+  const {{LIMITER_SOLVER_STORAGE_PRECISION}}*         lim,
+  {{COMPUTE_PRECISION}}* const                        localMinPerObservable,
+  {{COMPUTE_PRECISION}}* const                        localMaxPerObservable
 );
 
 void findCellLocalMinAndMax(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                     solver,
   const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const   luh,
-  double* const                                       localMinPerObservable,
-  double* const                                       localMaxPerObservable
+  {{COMPUTE_PRECISION}}* const                        localMinPerObservable,
+  {{COMPUTE_PRECISION}}* const                        localMaxPerObservable
+);
+
+void compareWithADERDGSolutionAtGaussLobattoNodes(
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                   solver,
+  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const luh,
+  {{COMPUTE_PRECISION}}*                            min,
+  {{COMPUTE_PRECISION}}*                            max
+);
+
+void compareWithADERDGSolutionAtFVSubcellCenters(
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                   solver,
+  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const luh,
+  {{COMPUTE_PRECISION}}*                            min,
+  {{COMPUTE_PRECISION}}*                            max
 );
 
 {% for item in NAMESPACE -%}

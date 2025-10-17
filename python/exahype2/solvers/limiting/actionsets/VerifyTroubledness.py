@@ -6,10 +6,9 @@ import peano4.solversteps
 
 import jinja2
 
-from .kernels import check_troubledness
 
 class VerifyTroubledness(AbstractLimiterActionSet):
-  TemplateVerifyTroubledness = """
+    TemplateVerifyTroubledness = """
     if ({{PREDICATE}}) {
       const double timeStamp = fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp();
 
@@ -29,8 +28,8 @@ class VerifyTroubledness(AbstractLimiterActionSet):
 
       {% if USE_DMP %}
       constexpr int NumberOfObservables = repositories::{{SOLVER_INSTANCE}}.NumberOfDMPObservables;
-      double boundaryMinPerVariables[2 * DIMENSIONS * NumberOfObservables];
-      double boundaryMaxPerVariables[2 * DIMENSIONS * NumberOfObservables];
+      {{COMPUTE_PRECISION}} boundaryMinPerVariables[2 * DIMENSIONS * NumberOfObservables];
+      {{COMPUTE_PRECISION}} boundaryMaxPerVariables[2 * DIMENSIONS * NumberOfObservables];
 
       for (int d = 0; d < DIMENSIONS; d++) {
         std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value,                                        NumberOfObservables, &boundaryMinPerVariables[d * NumberOfObservables]);
@@ -60,34 +59,37 @@ class VerifyTroubledness(AbstractLimiterActionSet):
     }
 """
 
-  def __init__(self, solver, guard, use_PAC=False, use_DMP=False):
-    super(VerifyTroubledness, self).__init__(solver)
-    self.guard                      = guard
-    self.use_PAC                    = use_PAC
-    self.use_DMP                    = use_DMP
+    def __init__(self, solver, guard, use_PAC=False, use_DMP=False):
+        super(VerifyTroubledness, self).__init__(solver)
+        self.guard = guard
+        self.use_PAC = use_PAC
+        self.use_DMP = use_DMP
 
-  def get_body_of_operation(self,operation_name):
-    result = ""
-    if operation_name == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
-      d = {}
-      self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)
-      d["PREDICATE"] = self.guard
-      d["USE_PAC"] = self.use_PAC
-      d["USE_DMP"] = self.use_DMP
-      result = jinja2.Template(self.TemplateVerifyTroubledness).render(**d)
-      pass
-    return result
+    def get_body_of_operation(self, operation_name):
+        result = ""
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME
+        ):
+            d = {}
+            self._solver._init_dictionary_with_default_parameters(d)
+            self._solver.add_entries_to_text_replacement_dictionary(d)
+            d["PREDICATE"] = self.guard
+            d["USE_PAC"] = self.use_PAC
+            d["USE_DMP"] = self.use_DMP
+            result = jinja2.Template(self.TemplateVerifyTroubledness).render(**d)
+            pass
+        return result
 
-  def get_action_set_name(self):
-    return __name__.replace(".py", "").replace(".", "_")
+    def get_action_set_name(self):
+        return __name__.replace(".py", "").replace(".", "_")
 
-  def get_includes(self):
-      return (
-          super(VerifyTroubledness, self).get_includes()
-          + """
+    def get_includes(self):
+        return (
+            super(VerifyTroubledness, self).get_includes()
+            + """
 #include "kernels/"""
             + self._solver._name
             + """/Limiter.h"
     """
-      )
+        )

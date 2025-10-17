@@ -7,17 +7,17 @@
   const auto volumeCentre = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeIndex);
 
 {% if DIMENSIONS==2 %}
-  const {{COMPUTE_PRECISION}}* const QInCenter = &QIn[(volumeIndex(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndex(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
-  {{COMPUTE_PRECISION}}* const QOutCenter = &QOut[(volumeIndex(1)) * {{PATCH_CARDINALITY_1D}} + (volumeIndex(0)) * {{NUMBER_OF_DATA}}];
+  const {{STORAGE_PRECISION}}* const QInCenter = &QIn[(volumeIndex(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndex(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
+  {{STORAGE_PRECISION}}* const QOutCenter = &QOut[(volumeIndex(1)) * {{PATCH_CARDINALITY_1D}} + (volumeIndex(0)) * {{NUMBER_OF_DATA}}];
 {% else %}
-  const {{COMPUTE_PRECISION}}* const QInCenter = &QIn[(volumeIndex(2) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_2D}} + (volumeIndex(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndex(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
-  {{COMPUTE_PRECISION}}* const QOutCenter = &QOut[(volumeIndex(2)) * {{PATCH_CARDINALITY_2D}} + (volumeIndex(1)) * {{PATCH_CARDINALITY_1D}} + (volumeIndex(0)) * {{NUMBER_OF_DATA}}];
+  const {{STORAGE_PRECISION}}* const QInCenter = &QIn[(volumeIndex(2) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_2D}} + (volumeIndex(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndex(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
+  {{STORAGE_PRECISION}}* const QOutCenter = &QOut[(volumeIndex(2)) * {{PATCH_CARDINALITY_2D}} + (volumeIndex(1)) * {{PATCH_CARDINALITY_1D}} + (volumeIndex(0)) * {{NUMBER_OF_DATA}}];
 {% endif %}
 
-  {{COMPUTE_PRECISION}} QC[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
-  {{COMPUTE_PRECISION}} QL[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
-  {{COMPUTE_PRECISION}} QR[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
-  {{COMPUTE_PRECISION}} QO[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{STORAGE_PRECISION}} QC[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{STORAGE_PRECISION}} QL[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{STORAGE_PRECISION}} QR[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{STORAGE_PRECISION}} QO[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
 
   SIMD(aligned(QC:ALIGNMENT))
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
@@ -90,11 +90,11 @@
     const auto volumeCentreRight = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeIndexRight);
 
 {% if DIMENSIONS==2 %}
-    const {{COMPUTE_PRECISION}}* const QInLeft = &QIn[(volumeIndexLeft(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexLeft(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
-    const {{COMPUTE_PRECISION}}* const QInRight = &QIn[(volumeIndexRight(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexRight(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
+    const {{STORAGE_PRECISION}}* const QInLeft = &QIn[(volumeIndexLeft(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexLeft(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
+    const {{STORAGE_PRECISION}}* const QInRight = &QIn[(volumeIndexRight(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexRight(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
 {% else %}
-    const {{COMPUTE_PRECISION}}* const QInLeft = &QIn[(volumeIndexLeft(2) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_2D}} + (volumeIndexLeft(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexLeft(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
-    const {{COMPUTE_PRECISION}}* const QInRight = &QIn[(volumeIndexRight(2) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_2D}} + (volumeIndexRight(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexRight(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
+    const {{STORAGE_PRECISION}}* const QInLeft = &QIn[(volumeIndexLeft(2) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_2D}} + (volumeIndexLeft(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexLeft(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
+    const {{STORAGE_PRECISION}}* const QInRight = &QIn[(volumeIndexRight(2) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_2D}} + (volumeIndexRight(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexRight(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
 {% endif %}
 
     SIMD(aligned(QL:ALIGNMENT))

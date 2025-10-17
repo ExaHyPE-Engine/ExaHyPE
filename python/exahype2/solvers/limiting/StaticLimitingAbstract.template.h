@@ -147,20 +147,20 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
         * Only exists for the generated kernels, should never be called
         */
        template<typename T>
-        void mapDiscreteMaximumPrincipleObservables(double* const observables, const T* const Q) const {
+        void mapDiscreteMaximumPrincipleObservables({{COMPUTE_PRECISION}}* const observables, const T* const Q) const {
           ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "map discrete maximum principle observables was called, it should never be.", "" );
         }
 
         /**
         * Only exists for the generated kernels, should never be called
         */
-        double getDiscreteMaximumPrincipleRelaxationParameter(
-          const double& specifiedRelaxationParameter,
-          const int&    observable,
-          const double& localMin,
-          const double& localMax,
-          const double& boundaryMinPerObservable,
-          const double& previousMax) const {
+        {{COMPUTE_PRECISION}} getDiscreteMaximumPrincipleRelaxationParameter(
+          const {{COMPUTE_PRECISION}}&  specifiedRelaxationParameter,
+          const int&                    observable,
+          const {{COMPUTE_PRECISION}}&  localMin,
+          const {{COMPUTE_PRECISION}}&  localMax,
+          const {{COMPUTE_PRECISION}}&  boundaryMinPerObservable,
+          const {{COMPUTE_PRECISION}}&  previousMax) const {
             ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "get discrete maximum principle relaxation parameter was called, it should never be.", "" );
             return 0.0;
         }

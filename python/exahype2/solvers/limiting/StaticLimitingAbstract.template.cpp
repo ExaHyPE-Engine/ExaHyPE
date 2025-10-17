@@ -15,13 +15,13 @@ tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_l
   _solverState(SolverState::GridConstruction),
   _numberOfTroubledCells(0) {
 
-  kernels::{{SOLVER_NAME}}::Quadrature<double>::initQuadratureNodesAndWeights();
+  kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTE_PRECISION}}>::initQuadratureNodesAndWeights();
 
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}(){
-  kernels::{{SOLVER_NAME}}::Quadrature<double>::freeQuadratureNodesAndWeights();
+  kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTE_PRECISION}}>::freeQuadratureNodesAndWeights();
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp(bool ofCurrentlyRunningGridSweep) const {
