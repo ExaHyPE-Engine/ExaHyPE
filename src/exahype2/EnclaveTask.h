@@ -2,9 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/multicore/Task.h"
-
 #include "peano4/datamanagement/CellMarker.h"
+#include "tarch/multicore/Task.h"
 
 #include <functional>
 
@@ -54,6 +53,7 @@ protected:
   const double                             _dt;
   T* NOALIAS const                         _QIn;
   T* NOALIAS                               _faces[NumFaceTypes][TWO_TIMES_D];
+  bool                                     _isBoundary[TWO_TIMES_D];
   T* NOALIAS const                         _QOut;
   Functor                                  _functor;
 
@@ -81,6 +81,7 @@ public:
     double                                    dt,
     T* NOALIAS const                          QIn,
     T* NOALIAS const                          faces[NumFaceTypes][TWO_TIMES_D],
+    bool                                      isBoundary[TWO_TIMES_D],
     T* NOALIAS const                          QOut,
     Functor                                   functor
   );

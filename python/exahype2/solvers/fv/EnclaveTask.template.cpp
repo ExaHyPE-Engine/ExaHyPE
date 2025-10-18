@@ -80,6 +80,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
   const double                                    timeStepSize,
   {{STORAGE_PRECISION}}* NOALIAS                  QIn,
   {{STORAGE_PRECISION}}* NOALIAS const            faces[3][TWO_TIMES_D],
+  bool                                            isBoundary[TWO_TIMES_D],
   {{STORAGE_PRECISION}}* NOALIAS                  QOut
 ):
   ::exahype2::EnclaveTask<{{STORAGE_PRECISION}}, 3>(
@@ -89,6 +90,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
     timeStepSize,
     QIn,
     faces,
+    isBoundary,
     QOut,
     [&]() -> void {
       applyKernelToPatch(
@@ -106,7 +108,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
 }
 
 {% if CAN_FUSE %}
-
+#include "kernels/{{SOLVER_NAME}}/HandleBoundaryFused.h"
 #include "kernels/{{SOLVER_NAME}}/ProjectPatchFused.h"
 #include "kernels/{{SOLVER_NAME}}/ReconstructPatchFused.h"
 #include "kernels/{{SOLVER_NAME}}/RiemannSolverFused.h"
@@ -179,6 +181,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   hostFacesUpdate.clear();
   hostFacesNew.clear();
 
+  std::vector<uint64_t> boundaryFaceIndices;
+  std::vector<uint8_t>  boundaryFaceNumbers;
+
   int patchIndex = 0;
   for (auto& otherTask: otherTasks) {
     patchData.QIn[patchIndex]                   = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_QIn;
@@ -203,6 +208,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
       auto* deviceFaceNew                       = deviceFacesNew + deviceIndexNew * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
       patchData.faces[patchIndex][2][f]         = deviceFaceNew;
       facesNewDeviceToHost[deviceFaceNew]       = faceKeyNew;
+
+      if (static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_isBoundary[f]) {
+        boundaryFaceIndices.push_back(deviceIndexNew);
+        boundaryFaceNumbers.push_back(f);
+      }
     }
 
     delete otherTask;
@@ -232,7 +242,29 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     auto* deviceFaceNew                       = deviceFacesNew + deviceIndexNew * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
     patchData.faces[patchIndex][2][f]         = deviceFaceNew;
     facesNewDeviceToHost[deviceFaceNew]       = faceKeyNew;
+
+    if (_isBoundary[f]) {
+        boundaryFaceIndices.push_back(deviceIndexNew);
+        boundaryFaceNumbers.push_back(f);
+      }
   }
+
+  patchData.boundaryFaceIndices   = tarch::accelerator::MemoryManager::getInstance().allocate<uint64_t>(boundaryFaceIndices.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  patchData.boundaryFaceNumbers   = tarch::accelerator::MemoryManager::getInstance().allocate<uint8_t>(boundaryFaceNumbers.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  patchData.facesFlattened        = deviceFacesNew;
+  patchData.numberOfBoundaryFaces = boundaryFaceNumbers.size();
+  std::copy_n(
+    boundaryFaceIndices.data(),
+    boundaryFaceIndices.size(),
+    patchData.boundaryFaceIndices
+  );
+  std::copy_n(
+    boundaryFaceNumbers.data(),
+    boundaryFaceNumbers.size(),
+    patchData.boundaryFaceNumbers
+  );
+  boundaryFaceIndices.clear();
+  boundaryFaceNumbers.clear();
 
   patchData.QInFlattened = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(
     numberOfPatches * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %},
@@ -244,6 +276,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     tarch::MemoryLocation::Pinned,
     TARGET_DEVICE
   );
+
+  kernels::{{SOLVER_NAME}}::handleBoundaryFused(repositories::{{SOLVER_INSTANCE}}, patchData, TARGET_DEVICE);
 
   // Before swap: QIn is with halo, QOut is without halo
   // After swap: QIn is without halo, QOut is with halo (that is reconstructed as next step)
@@ -344,6 +378,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 
   tarch::accelerator::MemoryManager::getInstance().free(patchData.QInFlattened, TARGET_DEVICE);
   tarch::accelerator::MemoryManager::getInstance().free(patchData.QOutFlattened, TARGET_DEVICE);
+  tarch::accelerator::MemoryManager::getInstance().free(patchData.boundaryFaceIndices, TARGET_DEVICE);
+  tarch::accelerator::MemoryManager::getInstance().free(patchData.boundaryFaceNumbers, TARGET_DEVICE);
   tarch::accelerator::MemoryManager::getInstance().free(deviceFacesOld, TARGET_DEVICE);
   tarch::accelerator::MemoryManager::getInstance().free(deviceFacesUpdate, TARGET_DEVICE);
   tarch::accelerator::MemoryManager::getInstance().free(deviceFacesNew, TARGET_DEVICE);

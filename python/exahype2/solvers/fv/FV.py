@@ -868,7 +868,14 @@ The finest mesh width of """
         )
         self._action_set_handle_boundary = (
             exahype2.solvers.fv.actionsets.HandleBoundary(
-                self, self._store_face_data_default_guard()
+                # Use cell data here as the enclave boundary faces
+                # are identified from the enclave cell.
+                # Boundary conditions are still applied to the faces.
+                self, self._store_cell_data_default_guard() + (
+                    f" and marker.willBeSkeletonCell()"
+                    if self._use_enclave_tasking
+                    else ""
+                )
             )
         )
         self._action_set_project_patch_onto_faces = (
@@ -1352,9 +1359,11 @@ The finest mesh width of """
             )
 
         self._generate_kernels(output, subdirectory)
+        self._action_set_handle_boundary.generate_kernels(namespace, output, dimensions, subdirectory)
         self._action_set_reconstruct_patch.generate_kernels(namespace, output, dimensions, subdirectory)
         self._action_set_project_patch_onto_faces.generate_kernels(namespace, output, dimensions, subdirectory)
         if self._use_enclave_tasking and self._can_fuse:
+            self._action_set_handle_boundary.generate_fused_kernels(namespace, output, dimensions, subdirectory)
             self._action_set_reconstruct_patch.generate_fused_kernels(namespace, output, dimensions, subdirectory)
             self._action_set_project_patch_onto_faces.generate_fused_kernels(namespace, output, dimensions, subdirectory)
 

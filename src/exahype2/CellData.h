@@ -3,8 +3,8 @@
 #pragma once
 
 #include "peano4/utils/Globals.h"
-#include "tarch/accelerator/accelerator.h"
 #include "tarch/accelerator/MemoryManager.h"
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 
 #include <functional>
@@ -22,25 +22,28 @@ namespace exahype2 {
    */
   template <typename inType, typename outType, int NumFaceTypes = 1>
   struct CellData {
-    inType**                                QIn;
-    inType*                                 QInFlattened;
+    inType** QIn;
+    inType*  QInFlattened;
 
-    inType*                                 (*faces)[NumFaceTypes][TWO_TIMES_D];
-    inType*                                 facesFlattened;
+    inType* (*faces)[NumFaceTypes][TWO_TIMES_D];
+    inType*   facesFlattened;
+    uint64_t* boundaryFaceIndices;
+    uint8_t*  boundaryFaceNumbers;
 
-    tarch::la::Vector<DIMENSIONS, double>*  cellCentre;
-    tarch::la::Vector<DIMENSIONS, double>*  cellSize;
+    tarch::la::Vector<DIMENSIONS, double>* cellCentre;
+    tarch::la::Vector<DIMENSIONS, double>* cellSize;
 
-    outType**                               QOut;
-    outType*                                QOutFlattened;
-    outType*                                maxEigenvalue;
+    outType** QOut;
+    outType*  QOutFlattened;
+    outType*  maxEigenvalue;
 
-    double                                  t;
-    double                                  dt;
+    double t;
+    double dt;
 
-    const int                               numberOfCells;
-    const tarch::MemoryLocation             memoryLocation;
-    const int                               targetDevice;
+    int                         numberOfBoundaryFaces;
+    const int                   numberOfCells;
+    const tarch::MemoryLocation memoryLocation;
+    const int                   targetDevice;
 
     CellData(
       inType* const                                QIn_,
