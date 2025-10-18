@@ -34,6 +34,7 @@ namespace tarch {
      * the hood.
      */
     template <typename NewScalarType, int Size, typename Scalar>
+    inline GPU_CALLABLE_METHOD
     tarch::la::Vector<Size,NewScalarType> convertScalar(const tarch::la::Vector<Size,Scalar>& vector);
   }
 }

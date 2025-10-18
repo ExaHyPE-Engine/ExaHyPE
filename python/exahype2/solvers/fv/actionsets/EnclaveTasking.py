@@ -21,10 +21,12 @@ class EnclaveTasking(AbstractFVActionSet):
     auto* /*const*/ QOut = {{CELL_ACCESSOR}}.value;
 
     {{STORAGE_PRECISION}}* faces[3][TWO_TIMES_D];
+    bool                   isBoundary[TWO_TIMES_D];
     for (int d = 0; d < TWO_TIMES_D; ++d) {
-      faces[0][d] = {{FACES_ACCESSOR_OLD}}(d).value;
-      faces[1][d] = {{FACES_ACCESSOR_UPDATE}}(d).value;
-      faces[2][d] = {{FACE_ACCESSOR_NEW}}(d).value;
+      faces[0][d]   = {{FACES_ACCESSOR_OLD}}(d).value;
+      faces[1][d]   = {{FACES_ACCESSOR_UPDATE}}(d).value;
+      faces[2][d]   = {{FACE_ACCESSOR_NEW}}(d).value;
+      isBoundary[d] = fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getBoundary() and (not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[d%DIMENSIONS]);
     }
 
     {% if CAN_FUSE %}
@@ -34,6 +36,7 @@ class EnclaveTasking(AbstractFVActionSet):
       timeStepSize,
       QIn,
       faces,
+      isBoundary,
       QOut
     ));
     {% else %}
@@ -43,6 +46,7 @@ class EnclaveTasking(AbstractFVActionSet):
       timeStepSize,
       QIn,
       faces,
+      isBoundary,
       QOut
     ));
     {% endif %}

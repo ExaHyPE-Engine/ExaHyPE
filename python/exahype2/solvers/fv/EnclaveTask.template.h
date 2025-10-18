@@ -54,6 +54,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::Encla
       const double                                    timeStepSize,
       {{STORAGE_PRECISION}}* NOALIAS                  QIn,
       {{STORAGE_PRECISION}}* NOALIAS const            faces[3][TWO_TIMES_D],
+      bool                                            isBoundary[TWO_TIMES_D],
       {{STORAGE_PRECISION}}* NOALIAS                  QOut
     );
 
