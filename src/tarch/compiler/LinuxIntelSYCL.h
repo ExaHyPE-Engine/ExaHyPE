@@ -42,5 +42,3 @@
  * OpenMP.
  */
 #define OpenMPTaskGroup
-
-#define OpenMP6Syntax
