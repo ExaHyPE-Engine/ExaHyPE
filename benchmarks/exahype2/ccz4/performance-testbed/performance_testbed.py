@@ -152,7 +152,7 @@ if __name__ == "__main__":
         "--exe-name",
         dest="exe_name",
         type=str,
-        default="test",
+        default="peano4_sbh",
         help="name of output executable file",
     )
     parser.add_argument(
@@ -445,13 +445,8 @@ if __name__ == "__main__":
     # main starts here
     ########################################################################################
     userinfo = []
-    exe = "peano4"
-
-    if args.exe_name != "":
-        exe += "_"
-        exe += args.exe_name
     project = exahype2.Project(
-        ["benchmarks", "exahype2", "ccz4"], "ccz4", executable=exe
+        ["benchmarks", "exahype2", "ccz4"], "ccz4", executable=args.exe_name
     )
 
     ########################################################################################
@@ -686,7 +681,7 @@ if __name__ == "__main__":
     peano4_project.build(make_clean_first=True)
 
     # Report the application information
-    userinfo.append(("the executable file name: " + exe, None))
+    userinfo.append(("the executable file name: " + args.exe_name, None))
     userinfo.append(("output directory: " + path, None))
     print("=========================================================")
     if len(userinfo) > 0:
