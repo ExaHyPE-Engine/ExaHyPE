@@ -37,25 +37,11 @@ void exahype2::EnclaveBookkeeping::dumpStatistics() {
 }
 
 
-void exahype2::EnclaveBookkeeping::cancelTask(int number) {
-  tarch::multicore::Lock finishedTasksLock(_finishedTasksSemaphore);
-
-  if (_finishedTasks.count(number) > 0) {
-    Entry storedData = _finishedTasks.at(number);
-    _finishedTasks.erase(number);
-    tarch::freeMemory(storedData.data, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-    exahype2::EnclaveTask::releaseTaskNumber(number);
-  } else {
-    _tasksThatHaveToBeCancelled.insert(number);
-  }
-}
-
-
 exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndReturnResult(int number) {
   tarch::multicore::waitForTask(number);
 
   tarch::multicore::Lock finishedTasksLock(_finishedTasksSemaphore);
-  assertionEquals(_finishedTasks.count(number), 1);
+  assertionEquals1( _finishedTasks.count(number), 1, number );
   Entry storedData = _finishedTasks.at(number);
   _finishedTasks.erase(number);
   finishedTasksLock.free();
