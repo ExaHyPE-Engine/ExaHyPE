@@ -49,6 +49,8 @@ void tarch::multicore::taskfusion::handleFusableTask(
   std::set<TaskNumber>   inDependencies,
   const TaskNumber&      taskNumber
 ) {
+  logDebug( "handleFusableTask(...)", "handle fusable task " << taskNumber << " with " << inDependencies.size() << " in-dependencies" );
+
   ::tarch::logging::Statistics::getInstance().inc(SubmitFusedTaskStatisticsIdentifier, 1, false, true);
 
   assertion1(task->getTaskType()>=0, task->getTaskType());
@@ -64,14 +66,17 @@ void tarch::multicore::taskfusion::handleFusableTask(
   assertion1(instruction.maxTasks>instruction.minTasks, instruction.toString());
 
   if (tarch::multicore::getOrchestration().getFusionImplementation()==tarch::multicore::orchestration::FusionImplementation::DisableFusionAndMapOntoNativeTask) {
+    logDebug( "handleFusableTask(...)", "map fusable task " << taskNumber << " onto native task" );
     native::spawnTask(task, inDependencies, taskNumber);
   }
   else if (tarch::multicore::getOrchestration().getFusionImplementation()==tarch::multicore::orchestration::FusionImplementation::DisableFusionAndProcessImmediately) {
+    logDebug( "handleFusableTask(...)", "execute fusable task " << taskNumber << " directly" );
     waitForTasks(inDependencies);
     task->run();
     delete task;
   }
   else if (instruction.maxTasks<=1) {
+    logDebug( "handleFusableTask(...)", "map fusable task " << taskNumber << " onto native task" );
     native::spawnTask(task, inDependencies, taskNumber);
   }
   else {
@@ -93,13 +98,16 @@ void tarch::multicore::taskfusion::handleFusableTask(
         assertion(false);
         break;
       case tarch::multicore::orchestration::FusionImplementation::LazyEvaluation:
+        logDebug( "handleFusableTask(...)", "handle fusable task " << taskNumber << " over to fusion with lazy evaluation" );
         handleFusableTask_LazyEvaluation(task, *taskQueue, inDependencies, taskNumber, instruction);
         break;
       case tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks:
+        logDebug( "handleFusableTask(...)", "handle fusable task " << taskNumber << " over to fusion with eager consumer tasks" );
         handleFusableTask_LazyEvaluation(task, *taskQueue, inDependencies, taskNumber, instruction);
         handleFusableTask_EagerConsumerTasks(task, *taskQueue, inDependencies, taskNumber, instruction);
         break;
       case tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskSequence:
+        logDebug( "handleFusableTask(...)", "handle fusable task " << taskNumber << " over to fusion with producer-consumer task sequence" );
         handleFusableTask_ProducerConsumerTaskSequence(task, *taskQueue, inDependencies, taskNumber, instruction);
         break;
     }
@@ -226,6 +234,7 @@ void tarch::multicore::taskfusion::processAndFuseAllReadyTasks() {
 
 bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(const std::set<TaskNumber>& taskNumbers) {
   assertion1( not taskNumbers.empty(), taskNumbers.size() );
+  logDebug( "ensureHeldBackTasksAreMappedOntoNativeTasks(...)", "wait for tasks " << toString(taskNumbers) );
   switch (tarch::multicore::getOrchestration().getFusionImplementation()) {
     case tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskSequence:
       return true;
@@ -291,7 +300,7 @@ bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_E
 
 
 bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(const std::set<TaskNumber>& inDependencies) {
-  logTraceInWith1Argument( "ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(std::set)", inDependencies.size() );
+  logTraceInWith1Argument( "ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(std::set)", toString(inDependencies) );
 
   assertion1( not inDependencies.empty(), inDependencies.size() );
 
@@ -303,6 +312,7 @@ bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_L
     for (auto taskNumber: inDependencies) {
       for (auto queue: fusableTaskQueue) {
         if (queue.second->isTaskReadyOrRunning(taskNumber, FusableTasksQueue::LockQueueAndReturnReliableResult)) {
+          logDebug( "ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(std::set)", "fusable task " << taskNumber << " sits in queue and is ready or already running" );
           tarch::multicore::Task* newFusionTask = new tarch::multicore::taskfusion::ProcessSetOfReadyTasks(taskNumber, *(queue.second));
           tarch::multicore::spawnTask(
             newFusionTask,
