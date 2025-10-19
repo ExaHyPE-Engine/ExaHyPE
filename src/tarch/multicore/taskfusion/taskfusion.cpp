@@ -1,4 +1,4 @@
-#include <tarch/multicore/taskfusion/ProcessSetOfReadyTasks.h>
+#include "ProcessSetOfReadyTasks.h"
 #include "taskfusion.h"
 
 #include <list>
@@ -63,7 +63,7 @@ void tarch::multicore::taskfusion::handleFusableTask(
 
   assertion1(instruction.device==tarch::multicore::Task::Host or instruction.device>=0, instruction.toString());
   assertion1(instruction.minTasks>=0, instruction.toString());
-  assertion1(instruction.maxTasks>instruction.minTasks, instruction.toString());
+  assertion1(instruction.maxTasks>=instruction.minTasks, instruction.toString());
 
   if (tarch::multicore::getOrchestration().getFusionImplementation()==tarch::multicore::orchestration::FusionImplementation::DisableFusionAndMapOntoNativeTask) {
     logDebug( "handleFusableTask(...)", "map fusable task " << taskNumber << " onto native task" );
@@ -98,6 +98,7 @@ void tarch::multicore::taskfusion::handleFusableTask(
         assertion(false);
         break;
       case tarch::multicore::orchestration::FusionImplementation::LazyEvaluation:
+      case tarch::multicore::orchestration::FusionImplementation::TimedExecution:
         logDebug( "handleFusableTask(...)", "handle fusable task " << taskNumber << " over to fusion with lazy evaluation" );
         handleFusableTask_LazyEvaluation(task, *taskQueue, inDependencies, taskNumber, instruction);
         break;
@@ -243,6 +244,7 @@ bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(c
     case tarch::multicore::orchestration::FusionImplementation::DisableFusionAndMapOntoNativeTask:
       return true;
     case tarch::multicore::orchestration::FusionImplementation::LazyEvaluation:
+    case tarch::multicore::orchestration::FusionImplementation::TimedExecution:
       return ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation( taskNumbers );
     case tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks:
       return ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks( taskNumbers );
