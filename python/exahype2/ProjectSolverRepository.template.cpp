@@ -19,6 +19,11 @@
 #include "Constants.h"
 
 
+#if defined(SharedOMP)
+#include "tarch/multicore/omp/multicore.h"
+#endif
+
+
 {% for item in TRACERS -%}
 #include "vertexdata/{{ item }}Set.h"
 #include "globaldata/{{ item }}.h"
@@ -250,10 +255,9 @@ void finishTimeStep() {
   smartmpi::tick();
   #endif
 
-  #if defined(SharedOMP) and !defined(OpenMP6Syntax)
-  tarch::multicore::taskfusion::processAndFuseAllReadyTasks();
-  #pragma omp barrier
-  #endif
+  if (tarch::multicore::getOrchestration().getFusionImplementation()==tarch::multicore::orchestration::FusionImplementation::LazyEvaluation) {
+    tarch::multicore::taskfusion::processAndFuseAllReadyTasks();
+  }
 
   logTraceOut( "TimeStep()" );
 }
