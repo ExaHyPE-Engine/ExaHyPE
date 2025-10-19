@@ -226,7 +226,8 @@ diffusion_stencil = """
   // y-direction
   temperatureLaplacian += (temperature(QTop0) - doubleTemperatureQ + temperature(QDown0)) / (h(1) * h(1));
 #if DIMENSIONS == 3
-  // z-direction temperatureLaplacian += (temperature(QFront0) - doubleTemperatureQ + temperature(QBack0)) / (h(2) * h(2));
+  // z-direction
+  temperatureLaplacian += (temperature(QFront0) - doubleTemperatureQ + temperature(QBack0)) / (h(2) * h(2));
 #endif
 
   const auto newPressure = Q[Shortcuts::rho] * UNIVERSAL_GAS_CONSTANT * (temperatureQ + dt * THERMAL_DIFFUSIVITY * temperatureLaplacian);

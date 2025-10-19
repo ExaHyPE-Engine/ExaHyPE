@@ -14,6 +14,7 @@
   {{STORAGE_PRECISION}}* const QOutCenter = &QOut[(volumeIndex(2)) * {{PATCH_CARDINALITY_2D}} + (volumeIndex(1)) * {{PATCH_CARDINALITY_1D}} + (volumeIndex(0)) * {{NUMBER_OF_DATA}}];
 {% endif %}
 
+  #if defined(WITH_GPU)
   {{STORAGE_PRECISION}} QC[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
   {{STORAGE_PRECISION}} QL[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
   {{STORAGE_PRECISION}} QR[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
@@ -23,7 +24,14 @@
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
     QC[unknown] = QInCenter[unknown];
   }
-  SIMD(aligned(QO,QC:ALIGNMENT))
+  #else
+  const {{STORAGE_PRECISION}}* const QC = QInCenter;
+  {{STORAGE_PRECISION}}* const QO = QOutCenter;
+  assertion(QC);
+  assertion(QO);
+  #endif
+
+  SIMD(/*aligned(QO,QC:ALIGNMENT)*/)
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
     QO[unknown] = QC[unknown];
   }
@@ -38,7 +46,7 @@
     solver.sourceTerm(QC, volumeCentre, volumeSize, timeStamp, timeStepSize, sources);
 {% endif %}
 
-    SIMD(aligned(QO,sources:ALIGNMENT))
+    SIMD(aligned(/*QO,*/sources:ALIGNMENT))
     for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; ++unknown) {
       QO[unknown] += timeStepSize * sources[unknown];
     }
@@ -59,6 +67,10 @@
       const {{COMPUTE_PRECISION}}* const QInRight = &QIn[(volumeIndexRight(2) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_2D}} + (volumeIndexRight(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexRight(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
 {% endif %}
 
+      #if !defined(WITH_GPU)
+      assertion(QInRight);
+      #endif
+
       const {{COMPUTE_PRECISION}} invDx = static_cast<{{COMPUTE_PRECISION}}>(0.5) * ({{NUMBER_OF_VOLUMES_PER_AXIS}} / patchSize(normal));
       SIMD(aligned(gradQ:ALIGNMENT))
       for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; ++unknown) {
@@ -73,7 +85,7 @@
     solver.diffusiveSourceTerm(QC, gradQ, volumeCentre, volumeSize, timeStamp, timeStepSize, diffSource);
 {% endif %}
 
-    SIMD(aligned(QO,diffSource:ALIGNMENT))
+    SIMD(aligned(/*QO,*/diffSource:ALIGNMENT))
     for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; ++unknown) {
       QO[unknown] += timeStepSize * diffSource[unknown];
     }
@@ -90,13 +102,16 @@
     const auto volumeCentreRight = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeIndexRight);
 
 {% if DIMENSIONS==2 %}
-    const {{STORAGE_PRECISION}}* const QInLeft = &QIn[(volumeIndexLeft(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexLeft(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
-    const {{STORAGE_PRECISION}}* const QInRight = &QIn[(volumeIndexRight(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexRight(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
+    const auto indexLeft = (volumeIndexLeft(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexLeft(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}};
+    const auto indexRight = (volumeIndexRight(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexRight(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}};
 {% else %}
-    const {{STORAGE_PRECISION}}* const QInLeft = &QIn[(volumeIndexLeft(2) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_2D}} + (volumeIndexLeft(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexLeft(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
-    const {{STORAGE_PRECISION}}* const QInRight = &QIn[(volumeIndexRight(2) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_2D}} + (volumeIndexRight(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexRight(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
+    const auto indexLeft = (volumeIndexLeft(2) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_2D}} + (volumeIndexLeft(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexLeft(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}};
+    const auto indexRight = (volumeIndexRight(2) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_2D}} + (volumeIndexRight(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexRight(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}};
 {% endif %}
 
+    #if defined(WITH_GPU)
+    const {{STORAGE_PRECISION}}* const QInLeft = &QIn[indexLeft];
+    const {{STORAGE_PRECISION}}* const QInRight = &QIn[indexRight];
     SIMD(aligned(QL:ALIGNMENT))
     for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
       QL[unknown] = QInLeft[unknown];
@@ -105,6 +120,12 @@
     for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
       QR[unknown] = QInRight[unknown];
     }
+    #else
+    const {{STORAGE_PRECISION}}* const QL = &QIn[indexLeft];
+    const {{STORAGE_PRECISION}}* const QR = &QIn[indexRight];
+    assertion(QL);
+    assertion(QR);
+    #endif
 
 {% if USE_RIEMANN_SOLVER %}
     // ===================== Riemann Solver =====================
@@ -135,7 +156,7 @@
 {% endif %}
 
     const {{COMPUTE_PRECISION}} scale = (timeStepSize * {{NUMBER_OF_VOLUMES_PER_AXIS}}) / patchSize(normal);
-    SIMD(aligned(leftGoingFluxLeftFace,rightGoingFluxLeftFace,leftGoingFluxRightFace,rightGoingFluxRightFace,QC,QL,QR,QO:ALIGNMENT))
+    SIMD(aligned(leftGoingFluxLeftFace,rightGoingFluxLeftFace,leftGoingFluxRightFace,rightGoingFluxRightFace/*,QC,QL,QR,QO*/:ALIGNMENT))
     for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; ++unknown) {
       #if !defined(WITH_GPU)
       assertion(std::isfinite(QL[unknown]));
@@ -143,9 +164,9 @@
       assertion(std::isfinite(QR[unknown]));
       #endif
 
-      // Flux INTO the center from the left face is the right-going flux of (Left,Center)
+      // Flux into the center from the left face is the right-going flux of (Left,Center)
       const {{COMPUTE_PRECISION}} FL = rightGoingFluxLeftFace[unknown];
-      // Flux LEAVING the center to the right face is the left-going flux of (Center,Right)
+      // Flux leaving the center to the right face is the left-going flux of (Center,Right)
       const {{COMPUTE_PRECISION}} FR = leftGoingFluxRightFace[unknown];
 
       QO[unknown] += scale * (FL - FR);
@@ -182,7 +203,7 @@
       {{COMPUTE_PRECISION}} deltaQCenter  [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
       {{COMPUTE_PRECISION}} deltaQLeft    [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
 
-      SIMD(aligned(averageQCenter,averageQLeft,deltaQCenter,deltaQLeft,QC,QL,QR:ALIGNMENT))
+      SIMD(aligned(averageQCenter,averageQLeft,deltaQCenter,deltaQLeft/*,QC,QL,QR*/:ALIGNMENT))
       for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; ++unknown) {
         averageQCenter[unknown] = 0.5 * QC[unknown] + 0.5 * QR[unknown];
         averageQLeft  [unknown] = 0.5 * QL[unknown] + 0.5 * QC[unknown];
@@ -227,7 +248,7 @@
     }
 
     const {{COMPUTE_PRECISION}} scale = (timeStepSize * {{NUMBER_OF_VOLUMES_PER_AXIS}} * static_cast<{{COMPUTE_PRECISION}}>(0.5)) / patchSize(normal);
-    SIMD(aligned(QC,QL,QR,QO:ALIGNMENT))
+    //SIMD(aligned(QC,QL,QR,QO:ALIGNMENT))
     for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; ++unknown) {
       #if !defined(WITH_GPU)
       assertion(std::isfinite(QL[unknown]));
@@ -280,8 +301,10 @@
   }
 {% endif %}
 
+  #if defined(WITH_GPU)
   SIMD(aligned(QO:ALIGNMENT))
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
     QOutCenter[unknown] = QO[unknown];
   }
+  #endif
 {% endmacro %}
