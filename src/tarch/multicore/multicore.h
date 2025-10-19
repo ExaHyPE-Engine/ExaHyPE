@@ -556,7 +556,37 @@ namespace tarch {
        *    remove the entry. We kind of run an on-the-fly immediate garbage
        *    collection to slim down our map of spawned tasks.
        *
+       *
        * ## OpenMP
+       *
+       * As we model task dependencies over pointers on a huge memory region,
+       * we first of all issue a read lock over this memory region. After all,
+       * we don't want to code to free this memory region while we work on it.
+       *
+       * After that, we move those task dependencies that we can map onto
+       * OpenMP dependencies (there might be some numbers which are so high
+       * that they have never been used so far and hence cannot be served by
+       * our memory region) into an std::vector. It has to be a vector, as
+       * OpenMP's iterators want to access the iterator with a [...] accessor.
+       *
+       * If this set (list) of task dependencies is not empty, we issue an
+       * OpenMP taskwait. See remarks below on flaws with some OpenMP versions
+       * (which we currently do not accommodate). I think this part would not
+       * require an if, as it degenerates if the set of dependencies is empty,
+       * but then I am afraid that it might degenerate into a taskwait, which
+       * is not what we want.
+       *
+       * Finally, we check which OpenMP version we support. If the version is
+       * OpenMP 5 or lower, then task dependencies cannot be transparent.
+       * That is, task dependencies in OpenMP work only between siblings. We
+       * however have task dependencies between tasks that are not spawned by
+       * the same parent task. Therefore, we have to manually ensure that all
+       * tasks have terminated. We do so by polling hasTaskFinishedInOpenMP5().
+       * This routine's documentation provides further information on the
+       * underlying mechanisms.
+       *
+       *
+       * ## OpenMP flaws
        *
        * Joachim Jenke has flagged that there are some OpenMP versions that
        *
