@@ -393,6 +393,33 @@ namespace tarch {
        * The responsibility for the pointers in tasks is handed over to the
        * runtime of choice, i.e. you don't have to delete them.
        *
+       *
+       * ## OpenMP mapping of a task loop onto a task loop
+       *
+       * In OpenMP 6 and newer, we should use transparent tasks, as we want to
+       * expose task dependencies which do not stem from siblings. If OpenMP 6
+       * is not supported, then we should disable the corresponding syntax.
+       *
+       *
+       * ### NVIDIA
+       *
+       * NVIDIA's nvc++ does not support taskloops. We have contacted their R&D and they
+       * confirmed that they only implement a subset of OpenMP, and the taskloop is not
+       * on the list of features that they want to support.
+       *
+       *
+       * ## Implementation and bugs
+       *
+       * See discussion in the context of the other taskloop: It is important to
+       * label tasks as shared even though I think copying should be fine as a copy
+       * degenerates to a shallow copy.
+       *
+       * You are not allowed to call this routine for an empty task
+       * set. The empty task set means that the taskloop construct becomes nop. The
+       * subsequent taskwait hence synchronises on one logical level above within the
+       * task hierarchy, which is not what we want.
+       *
+       *
        * @param tasks Set of tasks. Is guaranteed to be non-empty.
        */
       void spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks);
@@ -437,20 +464,19 @@ namespace tarch {
        *
        * ## OpenMP
        *
-       * In OpenMP, we have less explicit control over the number of alive
-       * tasks compared to C++ for example. However, nothing stops us from
-       * checking if an in-dependency has been fulfilled. If this in-dependency
-       * does not exist, then we have an anti-dependency. But this one does not
-       * matter. It will just be executed sequentially.
-       *
        * OpenMP models dependencies through addresses. While it does not use
        * the data to which these addresses point to, it is important that the
        * addresses are valid, i.e. the system owns these memory locations.
        * I use an internal array to administer the byte array which I
-       * use for dependencies. See the description of the internal variable
-       * memoryRegionToTrackTaskDependencies and notably
-       * canServeDependencyEntry() for a discussion of the required
-       * dynamic growth.
+       * use for dependencies. So the first thing is that we try to expand the
+       * memory region so we can accommodate the dependencies. Therefore, we
+       * call
+       * tarch::multicore::omp::internal::reserveDependencyTrackingMemory()
+       * first.
+       *
+       * Next we increment numberOfPendingTasks, so noone else assumes that no
+       * tasks are pending. While we continue, we further block the memory
+       * region with a read semaphore, so noone reallocates it.
        *
        * OpenMP now has iterators in taskwait and dependency statements. Yet,
        * the set of in-dependencies is not iterable. So we create a vector into
@@ -458,6 +484,15 @@ namespace tarch {
        * number, i.e. if there had been a task with that number before, we
        * basically impose an inout dependency and ensure this one terminates
        * first.
+       *
+       * We also use iterators to administer the out dependencies. This "set"
+       * is either empty or has exactly one entry.
+       *
+       * Finally, we distinguish OpenMP 5 and OpenMP 6 realisations. Please
+       * consult the documentations of
+       * tarch::multicore::omp::internal::spawnTaskWithOpenMP6() and
+       * tarch::multicore::omp::internal::spawnTaskWithOpenMP5() for details.
+       *
        *
        * ### Realisation pitfalls
        *

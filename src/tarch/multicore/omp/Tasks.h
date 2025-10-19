@@ -162,9 +162,40 @@ namespace tarch {
           const std::vector<tarch::multicore::TaskNumber>&  outDependency
         );
 
+        /**
+         * Variant of spawn for all OpenMP versions under 6
+         *
+         * The name is slightly misleading, as we support any OpenMP version
+         * between 3.x and 5 here. The routine is very similar to the version
+         * 6, but this time we keep track of the tasks manually.
+         *
+         * We manually keep track in a map what the status of a task is. This
+         * has a couple of serious implications:
+         *
+         * 1. A task might start even though it is not ready yet. That means,
+         *    we have to manually check once we are fired up if we are really
+         *    ready. The reason why a task is starting "prematurely" is that
+         *    we cannot use transparent tasks, i.e. a neighbour non-sibling
+         *    task might have spawned the task and we might fire up even though
+         *    we are not ready yet.
+         * 2. We cannot handle self-dependencies, i.e. in-out ones. If we spot
+         *    an in-out dependency, we remove it from inDependencies (therefore
+         *    it is not const), wait manually for it to terminate by polling
+         *    the status, and then we carry on. The manual wait is important,
+         *    as we will overwrite the status with pending immediately after.
+         *
+         *
+         * ## Assumptions
+         *
+         * This routine makes a couple of assumptions:
+         *
+         * - The caller has already incremented numberOfPendingTasks by one;
+         * - The dependencyTrackingBaseAddress array hosts all indices specified
+         *   within inDependencies and outDependency;
+         * - The semaphore dependencyTrackingSemaphore is locked with a read lock.
+         */
         void spawnTaskWithOpenMP5(
           tarch::multicore::Task*                           job,
-          // @todo Muss ich aendern duerfen
           std::vector<tarch::multicore::TaskNumber>         inDependencies,
           const std::vector<tarch::multicore::TaskNumber>&  outDependency
         );
@@ -182,6 +213,33 @@ namespace tarch {
          * the semaphores employed, this routine is thread-safe.
          */
         void reserveDependencyTrackingMemory( int taskNumber );
+
+        /**
+         * Can I serve a certain dependency
+         *
+         * This routine exclusively checks if an in-dependency could exist.
+         * This does not mean anything re if depending upon taskNumber might be
+         * an anti-dependency. It just means that the underlying memory region
+         * that we use to administer task dependencies could host the task
+         * number.
+         *
+         * As we know that sizeOfMemoryRegionUsedForDependencyTracking is
+         * monotonously growing, we can work with a simple read atomic.
+         */
+        bool canServeDependencyEntry(int taskNumber);
+
+        /**
+         * This is the counterpart to hasTaskFinishedInOpenMP6
+         *
+         * The same assumption as for hasTaskFinishedInOpenMP6() holds, but
+         * this one takes into account that we manually keep track of which
+         * tasks are still running and which not.
+         *
+         * Therefore, we loop over all tasks identified by inDependencies and
+         * check if all entries are either TaskNumberNotUsedYet or
+         * TaskNumberTerminated.
+         */
+        bool hasTaskFinishedInOpenMP5( const std::vector<tarch::multicore::TaskNumber>&  inDependencies );
       }
     }
   }
