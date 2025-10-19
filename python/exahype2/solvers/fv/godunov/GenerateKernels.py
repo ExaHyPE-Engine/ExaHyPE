@@ -83,11 +83,11 @@ def generate_fused_kernels(
 
     generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
         headfile_template=kernels_templates_prefix
-            + f"{riemann_solver_file}.template.h",
+        + f"{riemann_solver_file}.template.h",
         cppfile_template=kernels_templates_prefix
-            + f"{riemann_solver_file}.template"
-            + (f".{d['GPU']}" if d["GPU"] != "no" else "")
-            + ".cpp",
+        + f"{riemann_solver_file}"
+        + (f".{d['GPU']}" if d["GPU"] != "no" else "")
+        + ".template.cpp",
         classname=kernels_output_path + f"/{riemann_solver_file}",
         namespace=kernels_namespace,
         subdirectory=subdirectory + ".",

@@ -120,7 +120,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   switch(_solverState) {
   case SolverState::Suspended:
     // Checks if _solverState is in the Suspended state and return.
-    // Prevents nullification of eigenvalues if the solver is suspended
+    // Prevents nullification of eigenvalues if the solver is suspended.
 
 {% if SOLVERS_BEFORE_IN_COUPLING | length == 0 -%}
     // This solver can solve in the very first grid sweep of the TimeStep observer
@@ -128,11 +128,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
     // In this case, this just means that the eigenvalue is not set to 0
     // as the solver was suspended before or is already done with solving.
     _solverState = SolverState::IsSolving;
-    break;
 {% else -%}
     _solverState = SolverState::StillNeedsToSolve;
-    return;
 {%- endif %}
+    return;
   case SolverState::GridInitialisation:
 {% if SOLVERS_BEFORE_IN_COUPLING | length == 0 -%}
     // This solver can solve in the very first grid sweep of the TimeStep observer
@@ -177,8 +176,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
     return;
   case SolverState::HasSolved:
     // Nothing to do anymore
-      _solverState = SolverState::HasSolved;
-      return;
+    _solverState = SolverState::HasSolved;
+    return;
   default:
     // All other solver states such as plotting should lead to this
     {
@@ -213,8 +212,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   _minVolumeH = _minVolumeHThisTimeStep;
   _maxVolumeH = _maxVolumeHThisTimeStep;
 
-  _maxVolumeHThisTimeStep      = 0.0;
-  _minVolumeHThisTimeStep      = std::numeric_limits<double>::max() / NumberOfFiniteVolumesPerAxisPerPatch / 2.0;
+  _maxVolumeHThisTimeStep = 0.0;
+  _minVolumeHThisTimeStep = std::numeric_limits<double>::max() / NumberOfFiniteVolumesPerAxisPerPatch / 2.0;
 
   _localMinTimeStampThisTimeStep = std::numeric_limits<double>::max();
   _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
@@ -358,8 +357,11 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
-  // After the last solver, all solvers revert back to StillNeedsToSolve so Peano may plot then
-  return _solverState == SolverState::StillNeedsToSolve or _solverState == SolverState::StillNeedsToSolveAfterGridInitialisation;
+  return
+    _solverState == SolverState::GridInitialisation
+    or
+    // After the last solver, all solvers revert back to StillNeedsToSolve so we may plot then
+    _solverState == SolverState::StillNeedsToSolve or _solverState == SolverState::StillNeedsToSolveAfterGridInitialisation;
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
@@ -368,7 +370,10 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
   // Last GridSweepOfTimeStep for this solver is during it's solving run
-  return _solverState == SolverState::IsSolving or _solverState == SolverState::IsSolvingAfterGridInitialisation;
+  return
+    (_solverState != SolverState::Suspended)
+    and
+    (_solverState == SolverState::IsSolving or _solverState == SolverState::IsSolvingAfterGridInitialisation);
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {

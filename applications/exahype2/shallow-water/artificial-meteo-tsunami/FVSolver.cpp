@@ -84,7 +84,6 @@ void applications::exahype2::ShallowWater::FVSolver::flux(
   F[Shortcuts::h]  = 0.0;
   F[Shortcuts::hu] = 0.0;
   F[Shortcuts::hv] = 0.0;
-  F[Shortcuts::b]  = 0.0;
 
   constexpr double DRY_TOL = std::numeric_limits<double>::epsilon();
   if (Q[Shortcuts::h] <= DRY_TOL) {
@@ -112,7 +111,6 @@ void applications::exahype2::ShallowWater::FVSolver::nonconservativeProduct(
   BTimesDeltaQ[Shortcuts::h]  = 0.0;
   BTimesDeltaQ[Shortcuts::hu] = 0.0;
   BTimesDeltaQ[Shortcuts::hv] = 0.0;
-  BTimesDeltaQ[Shortcuts::b]  = 0.0;
 
   constexpr double DRY_TOL = std::numeric_limits<double>::epsilon();
   if (Q[Shortcuts::h] <= DRY_TOL) {
@@ -121,6 +119,7 @@ void applications::exahype2::ShallowWater::FVSolver::nonconservativeProduct(
 
   BTimesDeltaQ[Shortcuts::hu + normal] = GRAV * Q[Shortcuts::h] * (deltaQ[Shortcuts::h] + deltaQ[Shortcuts::b]);
 }
+
 namespace corriolis_force {
   namespace {
     /**

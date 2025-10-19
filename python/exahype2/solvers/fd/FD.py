@@ -566,8 +566,8 @@ The finest mesh width of """
         self._patch_overlap_update.generator.load_store_compute_flag = (
             "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
                 self._provide_face_data_to_compute_kernels_default_guard(),
-                "false",
-                "false",
+                self._load_face_data_default_guard(),
+                self._store_face_data_default_guard(),
             )
         )
 
