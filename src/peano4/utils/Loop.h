@@ -21,8 +21,15 @@
   #include <oneapi/tbb/blocked_range2d.h>
   #include <oneapi/tbb/blocked_range3d.h>
   #include <oneapi/tbb/parallel_for.h>
-#endif
 
+  #ifdef TBB_OLD_BLOCKED_RANGE_ND
+  namespace tbb {
+  namespace detail {
+  namespace d1 {
+    using blocked_nd_range = blocked_rangeNd;
+  }}}
+  #endif
+#endif
 
 #if defined(SharedSYCL)
 #include "tarch/multicore/sycl/Core.h"
