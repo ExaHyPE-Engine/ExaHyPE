@@ -25,7 +25,7 @@ namespace {
   static tarch::logging::Log _log( "tarch::multicore::native(omp)" );
 
   #ifndef DefaultSizeOfMemoryRegionUsedForDependencyTracking
-  constexpr int DefaultSizeOfMemoryRegionUsedForDependencyTracking = 1600;
+  constexpr int DefaultSizeOfMemoryRegionUsedForDependencyTracking = 16000;
   #endif
 
   /**
@@ -136,7 +136,6 @@ void tarch::multicore::omp::internal::spawnTaskWithOpenMP6(
 
 void tarch::multicore::omp::internal::spawnTaskWithOpenMP5(
   tarch::multicore::Task*                           job,
-  // @todo Muss ich aendern duerfen
   std::vector<tarch::multicore::TaskNumber>         inDependencies,
   const std::vector<tarch::multicore::TaskNumber>&  outDependency
 ) {
@@ -170,7 +169,8 @@ void tarch::multicore::omp::internal::spawnTaskWithOpenMP5(
     logDebug( "spawnTaskWithOpenMP5(...)", "set task status " << outDependency[0] << " to spawned" );
   }
 
-  #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), out: dependencyTrackingMemory[outDependency[j]]) untied
+  // @todo Not sure if we need the shared/firstprivate statements
+  #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), out: dependencyTrackingMemory[outDependency[j]]) firstprivate(inDependencies,outDependency,job) shared(numberOfPendingTasks,dependencyTrackingMemory) untied
   {
     // Polling thread
     bool isReady;
@@ -197,6 +197,8 @@ void tarch::multicore::omp::internal::spawnTaskWithOpenMP5(
       #pragma omp atomic write
       dest = TaskNumberTerminated;
     }
+
+    #pragma omp atomic
     numberOfPendingTasks--;
   }
 }
