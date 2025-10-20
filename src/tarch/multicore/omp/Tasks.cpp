@@ -124,14 +124,6 @@ void tarch::multicore::omp::internal::spawnTaskWithOpenMP6(
   assertion1( tarch::multicore::omp::majorOpenMPVersion()>=6, tarch::multicore::omp::majorOpenMPVersion() );
 
   if (tarch::multicore::omp::majorOpenMPVersion()>=6) {
-/*
-    #define OpenMP6Syntax
-  }
-  else {
-    #undef OpenMP6Syntax
-  }
-*/
-
     #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), inout: dependencyTrackingMemory[outDependency[j]]) untied transparent
     {
       OTTER_TASK_START(task);
