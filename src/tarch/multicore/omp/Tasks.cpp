@@ -122,14 +122,25 @@ void tarch::multicore::omp::internal::spawnTaskWithOpenMP6(
   const std::vector<tarch::multicore::TaskNumber>&  outDependency
 ) {
   assertion1( tarch::multicore::omp::majorOpenMPVersion()>=6, tarch::multicore::omp::majorOpenMPVersion() );
-  #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), inout: dependencyTrackingMemory[outDependency[j]]) untied transparent
-  {
-    OTTER_TASK_START(task);
-    job->run();
-    delete job;
-    OTTER_TASK_END();
-    #pragma omp atomic
-    numberOfPendingTasks--;
+
+  if (tarch::multicore::omp::majorOpenMPVersion()>=6) {
+/*
+    #define OpenMP6Syntax
+  }
+  else {
+    #undef OpenMP6Syntax
+  }
+*/
+
+    #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), inout: dependencyTrackingMemory[outDependency[j]]) untied transparent
+    {
+      OTTER_TASK_START(task);
+      job->run();
+      delete job;
+      OTTER_TASK_END();
+      #pragma omp atomic
+      numberOfPendingTasks--;
+    }
   }
 }
 
@@ -169,8 +180,8 @@ void tarch::multicore::omp::internal::spawnTaskWithOpenMP5(
     logDebug( "spawnTaskWithOpenMP5(...)", "set task status " << outDependency[0] << " to spawned" );
   }
 
-  // @todo Not sure if we need the shared/firstprivate statements
-  #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), out: dependencyTrackingMemory[outDependency[j]]) firstprivate(inDependencies,outDependency,job) shared(numberOfPendingTasks,dependencyTrackingMemory) untied
+  // #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), out: dependencyTrackingMemory[outDependency[j]]) firstprivate(inDependencies,outDependency,job) shared(numberOfPendingTasks,dependencyTrackingMemory) untied
+  #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), out: dependencyTrackingMemory[outDependency[j]]) untied
   {
     // Polling thread
     bool isReady;
