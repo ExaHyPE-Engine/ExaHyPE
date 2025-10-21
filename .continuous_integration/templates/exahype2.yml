@@ -86,13 +86,13 @@
 
 .ExaHyPE2_SBH:
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/performance-testbed; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 python3 performance_testbed.py -et 0.01 -minh 0.05"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/performance-testbed; ./peano4_test"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/performance-testbed; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 python3 performance_testbed.py -maxh 0.5 -minh 0.3 -ps 6 -et 0.01 --domain_r 9.0 --ReSwi 2 -impl fd4-rk1-dsl -exn sbh-no-enclave"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/performance-testbed; ./sbh-no-enclave"
 
 .ExaHyPE2_SBH_Enclave:
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/performance-testbed; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 python3 performance_testbed.py -maxh 0.5 -minh 0.3 -ps 6 -et 0.01 --domain_r 9.0 --ReSwi 2 -impl fd4-rk1-dsl-enclave"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/performance-testbed; ./peano4_test"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/performance-testbed; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 python3 performance_testbed.py -maxh 0.5 -minh 0.3 -ps 6 -et 0.01 --domain_r 9.0 --ReSwi 2 -impl fd4-rk1-dsl-enclave -exn sbh-enclave"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/performance-testbed; ./sbh-enclave"
 
 #.ExaHyPE2_SBH_Coupled:
 #  script:

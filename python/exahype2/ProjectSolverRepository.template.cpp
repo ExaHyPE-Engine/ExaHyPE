@@ -13,9 +13,15 @@
 #include "exahype2/UserInterface.h"
 
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/taskfusion/taskfusion.h"
 #include "tarch/accelerator/Device.h"
 
 #include "Constants.h"
+
+
+#if defined(SharedOMP)
+#include "tarch/multicore/omp/multicore.h"
+#endif
 
 
 {% for item in TRACERS -%}
@@ -248,6 +254,11 @@ void finishTimeStep() {
   #ifdef UseSmartMPI
   smartmpi::tick();
   #endif
+
+  if (tarch::multicore::getOrchestration().getFusionImplementation()==tarch::multicore::orchestration::FusionImplementation::LazyEvaluation) {
+    tarch::multicore::taskfusion::processAndFuseAllReadyTasks();
+  }
+
   logTraceOut( "TimeStep()" );
 }
 

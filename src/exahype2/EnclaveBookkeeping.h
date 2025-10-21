@@ -67,7 +67,13 @@ class exahype2::EnclaveBookkeeping {
      * Wait for a task result to become available
      *
      * We wait for the task to terminate, and then return the meta object
-     * which describes the task properties.
+     * which describes the task properties. It is up to the calling routine to
+     * decide what to do with the result. We might either return the data or
+     * throw it away.
+     *
+     * The routine assumes that a task has dropped its results due to
+     * finishedTask() already. To ensure this really happens, we call
+     * tarch::multicore::waitForTask() at the start of the routine's body.
      *
      * @return Entry with all meta data plus a pointer to the actual
      *   task result.
@@ -112,8 +118,6 @@ class exahype2::EnclaveBookkeeping {
      * Wait for a task and copy outcome into destination
      */
     void waitForTaskAndDiscardResult(int number);
-
-    void cancelTask(int number);
 
     /**
      * Usually called directly by EnclaveTask.
