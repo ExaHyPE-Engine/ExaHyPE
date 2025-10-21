@@ -34,7 +34,7 @@ default:
     exclude:
       - ".git*"
       - ".git/**/*"
-    expire_in: 2 hours
+    expire_in: 24 hours
 
 .Unit_Tests:
   script:
