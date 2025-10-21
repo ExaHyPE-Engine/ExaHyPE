@@ -124,6 +124,14 @@ void tarch::multicore::omp::internal::spawnTaskWithOpenMP6(
   assertion1( tarch::multicore::omp::majorOpenMPVersion()>=6, tarch::multicore::omp::majorOpenMPVersion() );
 
   if (tarch::multicore::omp::majorOpenMPVersion()>=6) {
+    #define OpenMP6Syntax
+  }
+  else {
+    #undef OpenMP6Syntax
+  }
+
+  // @todo docu simple if doesn't work
+  #if defined(OpenMP6Syntax)
     #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), inout: dependencyTrackingMemory[outDependency[j]]) untied transparent
     {
       OTTER_TASK_START(task);
@@ -133,7 +141,7 @@ void tarch::multicore::omp::internal::spawnTaskWithOpenMP6(
       #pragma omp atomic
       numberOfPendingTasks--;
     }
-  }
+  #endif
 }
 
 
@@ -343,12 +351,14 @@ void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDepend
     }
   }
 
-  if (not iterableExistingInDepencencies.empty()) {
+  if (not iterableExistingInDepencencies.empty() and tarch::multicore::omp::majorOpenMPVersion()>=6) {
     logDebug( "waitForTasks(...)", "wait for "<< iterableExistingInDepencencies.size() << " tasks to terminate. Original in-set=" << toString(inDependencies) );
 
     OTTER_TASK_WAIT_START(children); //! (AT) Note - otter doesn't currently support taskwait with dependencies
 
     #pragma omp taskwait depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingMemory[iterableExistingInDepencencies[j]])
+    //#pragma omp task depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingMemory[iterableExistingInDepencencies[j]]) if (0)
+    //{}
 
     OTTER_TASK_WAIT_END();
   }
@@ -366,7 +376,7 @@ void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDepend
 void tarch::multicore::native::waitForAllTasks() {
   #pragma omp taskwait
 }
-
+\
 
 bool tarch::multicore::omp::internal::canServeDependencyEntry(int taskNumber) {
   return taskNumber < dependencyTrackingMemorySize;
