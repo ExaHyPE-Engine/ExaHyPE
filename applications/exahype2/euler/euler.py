@@ -382,7 +382,7 @@ class Euler:
         project.set_number_of_threads(args.threads)
 
         project.set_multicore_orchestration(
-            "tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, 0)"
+            "tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, 0)"
             % str(args.fuse_tasks)
         )
         project.additional_includes.append("tarch/multicore/orchestration/Hardcoded.h")
