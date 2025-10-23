@@ -32,6 +32,19 @@ class mghype::matrixfree::solvers::SolverStatistics {
 
     bool terminationCriterionHolds();
 
+    /**
+     * Update the global residual
+     *
+     * Is typically to be called after we have assembled the complete residual.
+     * For DG, this means the cell and face contributions from the residual.
+     *
+     * @param residual: Double
+     *   Residual contribution from one cell. Has to be proper number, i.e. not
+     *   nan or inf. We have a check in here that says that the residual should
+     *   not be higher than 1e10. This is a totally arbitrary number, but
+     *   sometimes helps for debugging - we have never seen such big residuals
+     *   in proper runs.
+     */
     void updateGlobalResidual(
       double residual,
       const tarch::la::Vector<Dimensions,double>&  h

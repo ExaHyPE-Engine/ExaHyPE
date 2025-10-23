@@ -20,16 +20,18 @@ class UpdateFaceSolution(ActionSet):
   ) {
     logTraceInWith2Arguments( "updateFaceSolution::Interior", fineGridFace{{SOLVER_NAME}}.getSolution(), marker.toString() );
 
-    // project the u^\pm into a temporary vector
+    // project the left/right projection into a temporary vector
     tarch::la::Vector< 2*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projections;
     // alias for number of solutions
     const int nSols = repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution;
     for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; i++) {
       projections[i]       = fineGridFace{{SOLVER_NAME}}.getLProjection(i);
       projections[i+nSols] = fineGridFace{{SOLVER_NAME}}.getRProjection(i);
+      assertion3(projections[i]<1e10,       fineGridFace{{SOLVER_NAME}}.getLProjection(), fineGridFace{{SOLVER_NAME}}.getRProjection(), marker.toString());
+      assertion3(projections[i+nSols]<1e10, fineGridFace{{SOLVER_NAME}}.getLProjection(), fineGridFace{{SOLVER_NAME}}.getRProjection(), marker.toString());
     }
 
-    // multiply by riemann matrix
+    // multiply by Riemann matrix
     auto faceSolutionUpdate = repositories::{{SOLVER_INSTANCE}}.applyRiemannMatrix( projections );
 
     for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; i++)

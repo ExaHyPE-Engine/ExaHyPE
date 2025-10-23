@@ -49,7 +49,7 @@ namespace tbb {
  * ## Compatibility
  *
  * You can also enable certain features individually. To do so, you have to
- * compile with tbb_exension, but then you can manually (via -D flags) define
+ * compile with tbb_extension, but then you can manually (via -D flags) define
  *
  * - TBB_USE_TASK_GROUP_PREVIEW to try out TBB's dynamic task group handling
  * - TBB_PREVIEW_BLOCKED_RANGE_ND to try out TBB's n-dimensional ranges.
@@ -64,7 +64,7 @@ namespace tbb {
  * feed into it and have to be completed before it starts to run.
  *
  * Once we submit a node to the task graph through put(), it becomes itself invariant,
- * i.e. you cannot add further dependencies anymore. When
+ * i.e. you cannot add further in-dependencies anymore. When
  * it is invariant, you can still copy the task node around or make it
  * feed into other tasks. You can also
  * forget about it. The underlying task is submitted and therefore will
@@ -219,6 +219,20 @@ namespace tbb {
          * still be in there yet have the state complete. So we run into a
          * while loop over the repo. As long as the task is still bookmarked
          * there, we yield.
+         *
+         * I originally had a wait in there on the underlying task graph:
+         *
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         * if (isTaskStillInQueue()) {
+         *   _task_group.wait();
+         *   clean_up_completed_tasks();
+         * }
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         *
+         * This cannot work if we study the TBB documentation (https://oneapi-spec.uxlfoundation.org/specifications/oneapi/v1.3-rev-1/elements/onetbb/source/task_scheduler/task_group/task_group_cls):
+         * wait() returns if and only if all tasks in the group have completed
+         * (or we cancelled them). So we should use a taskyield() indeed.
+         *
          *
          * @param node Task to wait for. This task has to be submitted.
          *   Otherwise, we trigger an assertion.

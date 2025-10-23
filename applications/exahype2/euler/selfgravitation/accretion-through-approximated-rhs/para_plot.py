@@ -30,7 +30,7 @@ parser.add_argument("-pq",   "--plot-quantity",  dest="pq", default="rho", type=
 parser.add_argument("-rescale",   "--rescale",  dest="IfRescale", action="store_true", default=False, help="if you need the rescaling using turnaround quantites" )
 parser.add_argument("-ylog",   "--yscale-log",  dest="Ifylog", action="store_true", default=False, help="if you need the plot with y axis in log scale" )
 parser.add_argument("-XUcode",   "--x-code-unit",  dest="IfXunitInCode", action="store_true", default=False, help="enable this option, if you want the plot in code unit for distance (the default one is in physical unit)" )
-parser.add_argument("-Xrescale",   "--x-rescale",  dest="IfXRescale", action="store_true", default=False, help="enable this option, if you want the x axis also get rescaled to \lambda in Bertschinger, 1985. conflict with XUcode" )
+parser.add_argument("-Xrescale",   "--x-rescale",  dest="IfXRescale", action="store_true", default=False, help="enable this option, if you want the x axis also get rescaled to lambda in Bertschinger, 1985. conflict with XUcode" )
 parser.add_argument("-RawD",   "--raw-data",  dest="IfRawData", action="store_true", default=False, help="enable this option, if you want the plot of the raw data (in code unit)" )
 args = parser.parse_args()
 
@@ -186,7 +186,7 @@ plt.legend()
 if IfXunitInCode:
 	plt.xlabel("$x/(Code Unit)$")
 elif args.IfXRescale:
-	plt.xlabel("$Log_{10}\lambda$")
+	plt.xlabel(r"$Log_{10}\lambda$")
 else:
 	plt.xlabel("$x/(h^{-1}Mpc)$")
 plt.ylabel(q_id_show)

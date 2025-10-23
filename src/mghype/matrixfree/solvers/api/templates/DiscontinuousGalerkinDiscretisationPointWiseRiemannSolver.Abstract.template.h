@@ -1,7 +1,6 @@
 {% include 'DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.Abstract.generic.template.h' %}
 
-
-  protected:
+  public:
     /**
      * Abstract template class for Discontinuous Galerkin solver.
      *
@@ -49,11 +48,14 @@
      *
      */
     enum class State {
+      GridConstruction,
+      InitSolution,
       Solve,                    // for use in middle DG stage
       Suspend,
       /**
-       * Used in very first DG stage after interpolation. Not used
-       * without multigrid.
+       * Used in very first DG stage after interpolation. Also used after
+       * the initialisation, i.e. for the very first smoothing step on the
+       * finest mesh.
        */
       ProjectOntoFaces,
       /**
@@ -63,6 +65,15 @@
       ComputeResidualAndSuspend
     };
 
+    State getState() const;
+
+    static std::string toString( State state );
+
+    void beginInitialisationSweep();
+    void beginGridConstructionSweep();
+    void beginPlotSweep();
+
+  protected:
     State _state;
 };
 

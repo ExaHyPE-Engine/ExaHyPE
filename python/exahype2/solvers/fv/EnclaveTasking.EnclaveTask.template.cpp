@@ -329,7 +329,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
 /**
  * Also merge the current task
  */
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& otherTasks, int targetDevice) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::vector<Task*>& otherTasks, int targetDevice) {
   logDebug("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
     << " asked to fuse " << (otherTasks.size() + 1) << " tasks into one large GPU task on device " << targetDevice);
 
@@ -359,7 +359,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   // =========================
   //
   bool foundOffloadingBranch = false;
-
+  
+  auto gpuPatchData = ::exahype2::CopyCellDataGPU(patchData, _numberOfInputValues, _numberOfResultValues);
+  
 #if defined(GPUOffloadingOMP)
   if (targetDevice >= 0) {
     foundOffloadingBranch = true;
@@ -387,6 +389,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     ::exahype2::fv::{{KERNEL_NAMESPACE}}::cpp::{{FUSED_COMPUTE_KERNEL_CALL_STATELESS_GPU}}
   }
 #endif
+  
+  gpuPatchData.copyBackAndDestroy();
 
   if (not foundOffloadingBranch) {
     logDebug("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()

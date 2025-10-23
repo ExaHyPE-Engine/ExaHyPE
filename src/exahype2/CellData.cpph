@@ -1,4 +1,5 @@
 #include "tarch/accelerator/accelerator.h"
+#include <cstring>
 
 template<typename inType, typename outType>
 exahype2::CellData<inType, outType>::CellData(
@@ -54,6 +55,129 @@ exahype2::CellData<inType, outType>::~CellData() {
 
 template<typename inType, typename outType>
 std::string exahype2::CellData<inType, outType>::toString() const {
+  std::ostringstream msg;
+  msg << "[";
+  for (int i = 0; i < numberOfCells; i++) {
+    msg << "(x=" << cellCentre[i] << ",h=" << cellSize[i] << ",t=" << t[i] << ",dt=" << dt[i] << ",id=" << id[i]
+        << ",lambda=" << maxEigenvalue[i] << ")";
+  }
+  msg << "]";
+  return msg.str();
+}
+
+#if defined(GPUOffloadingSYCL)
+template<typename inType, typename outType>
+exahype2::CopyCellDataGPU<inType, outType>::CopyCellDataGPU(
+  const CellData<inType, outType>& cellData,
+  int inputPatchSize,
+  int outputPatchSize
+):
+  numberOfCells(cellData.numberOfCells),
+  memoryLocation(cellData.memoryLocation),
+  targetDevice(cellData.targetDevice),
+  QInStride(inputPatchSize),
+  QOutStride(outputPatchSize) {
+  auto queue = tarch::accelerator::getSYCLQueue(targetDevice);
+  QIn = ::sycl::malloc_device<inType>(cellData.numberOfCells * inputPatchSize, queue);
+  QOut = ::sycl::malloc_device<inType>(cellData.numberOfCells * outputPatchSize, queue);
+  cellCentre    = ::sycl::malloc_device<tarch::la::Vector<Dimensions, double>>(cellData.numberOfCells, queue);
+  cellSize      = ::sycl::malloc_device<tarch::la::Vector<Dimensions, double>>(cellData.numberOfCells, queue);
+  t             = ::sycl::malloc_device<double>(cellData.numberOfCells, queue);
+  dt            = ::sycl::malloc_device<double>(cellData.numberOfCells, queue);
+  id            = ::sycl::malloc_device<int>(cellData.numberOfCells, queue);
+  maxEigenvalue = ::sycl::malloc_device<double>(cellData.numberOfCells, queue);
+  QInHost = cellData.QIn;
+  QOutHost = cellData.QOut;
+  maxEigenvalueHost = cellData.maxEigenvalue;
+
+  std::vector<::sycl::event> copyEvent(numberOfCells + 6);
+  for (int i = 0; i < numberOfCells; i++){
+    copyEvent[i] = queue.memcpy(&QIn[i * QInStride], cellData.QIn[i], QInStride * sizeof(inType));
+  }
+  copyEvent[numberOfCells + 0] = queue.memcpy(cellCentre, cellData.cellCentre, numberOfCells * sizeof(tarch::la::Vector<Dimensions, double>));
+  copyEvent[numberOfCells + 1] = queue.memcpy(cellSize, cellData.cellSize, numberOfCells * sizeof(tarch::la::Vector<Dimensions, double>));
+  copyEvent[numberOfCells + 2] = queue.memcpy(t, cellData.t, numberOfCells * sizeof(double));
+  copyEvent[numberOfCells + 3] = queue.memcpy(dt, cellData.dt, numberOfCells * sizeof(double));
+  copyEvent[numberOfCells + 4] = queue.memcpy(id, cellData.id, numberOfCells * sizeof(int));
+  copyEvent[numberOfCells + 5] = queue.memcpy(maxEigenvalue, cellData.maxEigenvalue, numberOfCells * sizeof(double));
+  
+  ::sycl::event::wait(copyEvent);
+}
+
+template<typename inType, typename outType>
+void exahype2::CopyCellDataGPU<inType, outType>::copyBackAndDestroy() {
+  auto queue = tarch::accelerator::getSYCLQueue(targetDevice);
+
+  std::vector<::sycl::event> copyEvent(numberOfCells + 1);
+  for (int i = 0; i < numberOfCells; i++){
+    copyEvent[i] = queue.memcpy(QOutHost[i], &QOut[i * QOutStride], QOutStride * sizeof(outType));
+  }
+  copyEvent[numberOfCells] = queue.memcpy(maxEigenvalueHost, maxEigenvalue, numberOfCells * sizeof(double));
+  ::sycl::event::wait(copyEvent);
+
+  ::sycl::free(QIn, queue);
+  ::sycl::free(QOut, queue);
+  ::sycl::free(cellCentre, queue);
+  ::sycl::free(cellSize, queue);
+  ::sycl::free(t, queue);
+  ::sycl::free(dt, queue);
+  ::sycl::free(id, queue);
+  ::sycl::free(maxEigenvalue, queue);
+}
+#else
+template<typename inType, typename outType>
+exahype2::CopyCellDataGPU<inType, outType>::CopyCellDataGPU(
+  const CellData<inType, outType>& cellData,
+  int inputPatchSize,
+  int outputPatchSize
+):
+  numberOfCells(cellData.numberOfCells),
+  memoryLocation(cellData.memoryLocation),
+  targetDevice(cellData.targetDevice),
+  QInStride(inputPatchSize),
+  QOutStride(outputPatchSize) {
+  QIn           = tarch::allocateMemory<inType>(cellData.numberOfCells * inputPatchSize, memoryLocation, targetDevice);
+  cellCentre    = tarch::allocateMemory<tarch::la::Vector<Dimensions, double>>(cellData.numberOfCells, memoryLocation, targetDevice);
+  cellSize      = tarch::allocateMemory<tarch::la::Vector<Dimensions, double>>(cellData.numberOfCells, memoryLocation, targetDevice);
+  t             = tarch::allocateMemory<double>(cellData.numberOfCells, memoryLocation, targetDevice);
+  dt            = tarch::allocateMemory<double>(cellData.numberOfCells, memoryLocation, targetDevice);
+  id            = tarch::allocateMemory<int>(cellData.numberOfCells, memoryLocation, targetDevice);
+  QOut          = tarch::allocateMemory<outType>(cellData.numberOfCells * outputPatchSize, memoryLocation, targetDevice);
+  maxEigenvalue = tarch::allocateMemory<double>(cellData.numberOfCells, memoryLocation, targetDevice);
+  QInHost = cellData.QIn;
+  QOutHost = cellData.QOut;
+  maxEigenvalueHost = cellData.maxEigenvalue;
+  
+  for (int i = 0; i < numberOfCells; i++){
+    std::memcpy(&QOut[i * QOutStride], cellData.QOut[i], QOutStride * sizeof(outType));
+  }
+  std::memcpy(cellCentre, cellData.cellCentre, numberOfCells * sizeof(tarch::la::Vector<Dimensions, double>));
+  std::memcpy(cellSize, cellData.cellSize, numberOfCells * sizeof(tarch::la::Vector<Dimensions, double>));
+  std::memcpy(t, cellData.t, numberOfCells * sizeof(double));
+  std::memcpy(dt, cellData.dt, numberOfCells * sizeof(double));
+  std::memcpy(id, cellData.id, numberOfCells * sizeof(int));
+  std::memcpy(maxEigenvalue, cellData.maxEigenvalue, numberOfCells * sizeof(double));
+}
+
+template<typename inType, typename outType>
+void exahype2::CopyCellDataGPU<inType, outType>::copyBackAndDestroy() {
+  for (int i = 0; i < numberOfCells; i++){
+    std::memcpy(QOutHost[i], &QOut[i * QOutStride], QOutStride * sizeof(outType));
+  }
+
+  tarch::freeMemory(QIn, memoryLocation, targetDevice);
+  tarch::freeMemory(cellCentre, memoryLocation, targetDevice);
+  tarch::freeMemory(cellSize, memoryLocation, targetDevice);
+  tarch::freeMemory(t, memoryLocation, targetDevice);
+  tarch::freeMemory(dt, memoryLocation, targetDevice);
+  tarch::freeMemory(QOut, memoryLocation, targetDevice);
+  tarch::freeMemory(id, memoryLocation, targetDevice);
+  tarch::freeMemory(maxEigenvalue, memoryLocation, targetDevice);
+}
+#endif
+
+template<typename inType, typename outType>
+std::string exahype2::CopyCellDataGPU<inType, outType>::toString() const {
   std::ostringstream msg;
   msg << "[";
   for (int i = 0; i < numberOfCells; i++) {

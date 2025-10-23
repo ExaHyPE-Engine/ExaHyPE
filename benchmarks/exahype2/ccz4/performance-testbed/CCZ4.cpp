@@ -1,8 +1,5 @@
 #include "CCZ4.h"
 #include "exahype2/RefinementControl.h"
-#include "tarch/NonCriticalAssertions.h"
-//#include "exahype2/CellAccess.h"
-
 #include <algorithm>
 
 #include "Constants.h"
@@ -11,6 +8,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "tarch/NonCriticalAssertions.h"
 
 #ifdef IncludeTwoPunctures
 TP::TwoPunctures* _tp = new TP::TwoPunctures();
@@ -63,15 +61,15 @@ void benchmarks::exahype2::ccz4::CCZ4::prepare(TP::TwoPunctures* tp){
 	
   //following data reference: https://journals.aps.org/prd/pdf/10.1103/PhysRevD.69.024006
 	if (CCZ4swi==2 and CCZ4BBHType==1){
-		tp->par_b=3.0;
+		tp->par_b=5.0;
 		tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
 		tp->give_bare_mass=true;//use puncture mass instead of adm mass
-		tp->par_m_plus=0.47656; tp->par_m_minus=0.47656;
+		tp->par_m_plus=0.48595; tp->par_m_minus=0.48595;
 		//tp->target_M_plus=999;//adm mass
-		tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.13808; tp->par_P_plus[2]=0.0;//linear momentum
+		tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.095433; tp->par_P_plus[2]=0.0;//linear momentum
 		tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=0.0;//spin
 		//tp->target_M_minus=999;//adm mass
-		tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=-0.13808; tp->par_P_minus[2]=0.0;//linear momentum
+		tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=-0.095433; tp->par_P_minus[2]=0.0;//linear momentum
 		tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin		
 		tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
 		tp->TP_epsilon=1e-6;}
@@ -167,12 +165,6 @@ void benchmarks::exahype2::ccz4::CCZ4::initialCondition(
     Q[i] = 0.0;
   }
 
-
-/*
-  else {
-    enforceCCZ4constraints(Q);
-  }
-*/
   logTraceOut( "initialCondition(...)" );
 }
 
@@ -191,35 +183,7 @@ void benchmarks::exahype2::ccz4::CCZ4::sourceTerm(
     assertion3( std::isfinite(Q[i]), i, volumeX, t );
   }
 #endif
- // for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
-  //  S[i] = 0.0;
-  //}
   benchmarks::exahype2::ccz4::CCZ4::sourceTerm(Q, volumeX, volumeH, t, dt, S, Offloadable::Yes);
- /*
-  if (CCZ4smoothing>0){// then we apply simple laplacian smoothing
-    constexpr int NumberOfRefinementLayers = 3;
-    double Radius[NumberOfRefinementLayers] = {5.0*1.8, 3.0*1.8, 1.5*1.8};
-    double radius=volumeX(0)*volumeX(0)+volumeX(1)*volumeX(1)+volumeX(2)*volumeX(2); radius=pow(radius,0.5);
-    ::exahype2::CellAccess access(
-      Q,                         // make it initially point to input
-      1,                         // halo size, which you know as user
-      NumberOfUnknowns,          // defined in superclass
-      NumberOfAuxiliaryVariables // defined in superclass
-      NumberOfDoFsPerAxisInCell, // defined in superclass
-    );
-    double laplacian=0.0;
-    for (int unknown=0; unknown<NumberOfUnknowns; unknown++) {
-      laplacian = -6.0 * access.centre(unknown)
-        + 1.0 * access.left(0,unknown)+ 1.0 * access.right(0,unknown)
-        + 1.0 * access.left(1,unknown)+ 1.0 * access.right(1,unknown)
-        + 1.0 * access.left(2,unknown)+ 1.0 * access.right(2,unknown);
-      laplacian /= volumeH(0);
-      laplacian /= volumeH(0);
-      double coef=CCZ4smoothing*(std::exp(-5.0*std::abs(radius-Radius[0])) + std::exp(-5.0*std::abs(radius-Radius[1])) + std::exp(-5.0*std::abs(radius-Radius[2])) )/3.0;
-      coef=CCZ4smoothing;
-      S[unknown]+=coef*laplacian;
-    }
-  }*/
 
 #if !defined(GPUOffloadingOMP)
   for(int i=0; i<NumberOfUnknowns; i++){
@@ -247,18 +211,18 @@ void benchmarks::exahype2::ccz4::CCZ4::boundaryConditions(
 }
 
 
-double benchmarks::exahype2::ccz4::CCZ4::maxEigenvalue(
+void benchmarks::exahype2::ccz4::CCZ4::maxEigenvalue(
   const double * __restrict__ Q, // Q[59+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   double                                       dt,
-  int                                          normal
+  int                                          normal,
+  double* __restrict__                         maxEigenvalue
 )
 {
-   return maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, Offloadable::Yes);
+   benchmarks::exahype2::ccz4::CCZ4::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, maxEigenvalue, Offloadable::Yes);
 }
-
 
 void benchmarks::exahype2::ccz4::CCZ4::nonconservativeProduct(
   const double * __restrict__ Q, // Q[59+0],
@@ -335,10 +299,10 @@ void benchmarks::exahype2::ccz4::CCZ4::nonconservativeProduct(
     }
   }
   if (CCZ4ReSwi==2) { //
-    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+    if (tarch::la::equals(t,0.0)){  //static AMR, for bbh, type==1
       constexpr int NumberOfRefinementLayers = 2;
 //    current "standard" refinement pattern
-      double Radius[NumberOfRefinementLayers] = {4, 2.5};
+      double Radius[NumberOfRefinementLayers] = {3.0, 1.5};
       double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
       result = ::exahype2::RefinementCommand::Keep;
       for (int i=0; i<NumberOfRefinementLayers; i++) {
@@ -350,6 +314,4 @@ void benchmarks::exahype2::ccz4::CCZ4::nonconservativeProduct(
   }
   return result;
 }
-
-
 

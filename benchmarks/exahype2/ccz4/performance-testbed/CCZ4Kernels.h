@@ -73,13 +73,14 @@ namespace applications {
       #if defined(SharedOMP)
       #pragma omp declare simd
       #endif
-      KeywordToAvoidDuplicateSymbolsForInlinedFunctions double maxEigenvalue(
+      KeywordToAvoidDuplicateSymbolsForInlinedFunctions void maxEigenvalue(
         const double* const Q,
         int                 normal,
         const double        CCZ4e,
         const double        CCZ4ds,
         const double        CCZ4GLMc,
-        const double        CCZ4GLMd
+        const double        CCZ4GLMd,
+        double*             maxEigenvalue
       ) InlineMethod;
 
 
@@ -89,7 +90,7 @@ namespace applications {
       #if defined(SharedOMP)
       #pragma omp declare simd
       #endif
-      KeywordToAvoidDuplicateSymbolsForInlinedFunctions double maxEigenvalue(
+      KeywordToAvoidDuplicateSymbolsForInlinedFunctions void maxEigenvalue(
         const double* const Q,
         int                 normal,
         const double        CCZ4e,

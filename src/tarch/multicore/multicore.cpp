@@ -30,6 +30,28 @@ namespace {
 }
 
 
+std::string tarch::multicore::toString( const std::set<TaskNumber>& taskNumbers ) {
+  if ( taskNumbers.empty() ) {
+    return "{<empty>}";
+  }
+  else if ( taskNumbers.size()==1 ) {
+    return "{" + std::to_string( *taskNumbers.begin() ) + "}";
+  }
+  else {
+    std::ostringstream msg;
+    msg << "{";
+    for (auto p: taskNumbers) {
+      if (p!=*taskNumbers.begin()) {
+        msg << ",";
+      }
+      msg << p;
+    }
+    msg << "}";
+    return msg.str();
+  }
+}
+
+
 void tarch::multicore::initSmartMPI() {
   #ifdef UseSmartMPI
   using namespace smartmpi::topology;
@@ -77,15 +99,36 @@ tarch::multicore::orchestration::Strategy& tarch::multicore::getOrchestration() 
 }
 
 
-void tarch::multicore::waitForTasks(const std::set<TaskNumber>& inDependencies) {
-  tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
-  tarch::multicore::native::waitForTasks(inDependencies);
+void tarch::multicore::waitForTasks(const std::set<TaskNumber>& inDependencies, TaskWaitType taskWaitType) {
+  if (not inDependencies.empty()) {
+    switch (taskWaitType) {
+      case TaskWaitType::Mixed:
+        tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
+        tarch::multicore::native::waitForTasks(inDependencies);
+        break;
+      case TaskWaitType::ExclusivelyFusedTasks:
+        {
+          bool checkNative = tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
+          if (checkNative) {
+            logDebug( "waitForTasks(...)", "have to tell runtime to wait for tasks " << toString(inDependencies) );
+            tarch::multicore::native::waitForTasks(inDependencies);
+          }
+          else {
+            logDebug( "waitForTasks(...)", "checked all fused tasks and will skip native ones" );
+          }
+        }
+        break;
+      case TaskWaitType::OnlyNativeTasks:
+        tarch::multicore::native::waitForTasks(inDependencies);
+        break;
+    }
+  }
 }
 
 
-void tarch::multicore::waitForTask(const int taskNumber) {
+void tarch::multicore::waitForTask(const int taskNumber, TaskWaitType taskWaitType) {
   std::set<int> tmp{taskNumber};
-  waitForTasks(tmp);
+  waitForTasks(tmp, taskWaitType);
 }
 
 
@@ -143,8 +186,7 @@ void tarch::multicore::spawnTask(
   tarch::logging::Statistics::getInstance().inc(SpawnedTasksStatisticsIdentifier, 1, false, true);
 
   if (task->canFuse()) {
-    taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(inDependencies);
-    taskfusion::translateFusableTaskIntoTaskSequence(task, inDependencies, taskNumber);
+    taskfusion::handleFusableTask(task, inDependencies, taskNumber);
   }
   else {
     native::spawnTask(task, inDependencies, taskNumber);
@@ -152,7 +194,7 @@ void tarch::multicore::spawnTask(
 }
 
 
-void tarch::multicore::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
+void tarch::multicore::processFusedTask(Task* myTask, const std::vector<tarch::multicore::Task*>& tasksOfSameType, int device) {
   myTask->fuse(tasksOfSameType, device);
   for (auto& p: tasksOfSameType) {
     delete p;

@@ -14,7 +14,7 @@ compiler correctly:
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 export I_MPI_CXX=icpx
-./configure CC=icx CXX=icpx --with-mpi=mpiicpc --with-multithreading=omp CXXFLAGS="......
+./configure CC=icx CXX=icpx --with-mpi=mpiicpx --with-multithreading=omp CXXFLAGS="......
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 For more information on dependencies and prerequisites, please check the page \ref page_installation_home.

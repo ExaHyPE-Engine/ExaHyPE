@@ -5,10 +5,12 @@ from exahype2.solvers.PDETerms import PDETerms
 from .GlobalFixedTimeStep import GlobalFixedTimeStep
 from .GlobalAdaptiveTimeStep import GlobalAdaptiveTimeStep
 from .GlobalAdaptiveTimeStepInExaGRyPE import GlobalAdaptiveTimeStepInExaGRyPE
+from .GlobalAdaptiveTimeStepInExaGRyPEWithEnclaveTasking import GlobalAdaptiveTimeStepInExaGRyPEWithEnclaveTasking
 from .GlobalAdaptiveTimeStepWithEnclaveTasking import (
     GlobalAdaptiveTimeStepWithEnclaveTasking,
 )
 
+from .FD4Kernel3D import timeStepWithFD4
 from .FD4DSLKernelExaGRyPE import timeStepWithFD4InExaGRyPE
 from .DerivativesCalDSLKernelExaGRyPE import DerivativesCalInExaGRyPE
 

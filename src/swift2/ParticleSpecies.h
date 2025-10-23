@@ -105,9 +105,17 @@ public:
    * Set both min and max time stamp.
    */
   void setTimeStamp(double t, bool reduceInsteadOfOverwrite = true);
-  void setTimeStamp(double tMin, double tMax, bool reduceInsteadOfOverwrite = true);
+  void setTimeStamp(
+    double tMin,
+    double tMax,
+    bool   reduceInsteadOfOverwrite = true
+  );
   void setTimeStepSize(double dt, bool reduceInsteadOfOverwrite = true);
-  void setTimeStepSize(double dtMin, double dtMax, bool reduceInsteadOfOverwrite = true);
+  void setTimeStepSize(
+    double dtMin,
+    double dtMax,
+    bool   reduceInsteadOfOverwrite = true
+  );
 
   /**
    * Set the maximum velocity that has been observed in a cell. This routine
@@ -133,6 +141,18 @@ public:
 
   void clearSearchRadius();
   void clearVelocity();
+
+  /**
+   * Clear all the time step sizes and time stamps
+   *
+   * These values then can be reduced again through
+   *
+   * - setTimeStepSize()
+   * - setTimeStamp()
+   *
+   * before they are actually queried through getMinTimeStepSize() and related
+   * routines.
+   */
   void clearTimeStampAndTimeStepSize();
 
   void allReduce();

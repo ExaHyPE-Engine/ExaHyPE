@@ -25,6 +25,9 @@ class Project:
   have a second array for solvers which participate, but are
   not asked if their stopping criteria have been reached.
 
+  @todo I think all projects should share certain commonalities 
+  @todo I want to have some feature to set the MPI timeout
+  
   """
 
   """
@@ -365,6 +368,12 @@ This is yet to be written, and we need to have a paper on our work.
   def subdirectory(self):
     return self._subdirectory
 
+
+# @todo timtout
+  def set_mpi_timeout(self,value):
+      pass
+  
+
   def set_multicore_orchestration(self, value):
       """! Set orchestration
       
@@ -377,7 +386,7 @@ This is yet to be written, and we need to have a paper on our work.
       A typical usage looks similar to 
       
       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-project.set_multicore_orchestration( "new ::tarch::multicore::orchestration::Hardcoded(8,256,tarch::multicore::Task::Host,::tarch::multicore::orchestration::Hardcoded::NoNestedParallelism,::tarch::multicore::orchestration::Hardcoded::NoTimeout,::tarch::multicore::orchestration::FusionImplementation::LazyEvaluation)" )
+project.set_multicore_orchestration( "new ::tarch::multicore::orchestration::Hardcoded(8,256,tarch::multicore::Task::Host,::tarch::multicore::orchestration::Hardcoded::NoNestedParallelism,::tarch::multicore::orchestration::FusionImplementation::LazyEvaluation)" )
       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       """
       self._multicore_orchestration = value

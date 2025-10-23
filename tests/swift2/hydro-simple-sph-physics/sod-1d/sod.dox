@@ -34,6 +34,7 @@ terminal. Alternately, look into the contents of `run.sh`. (Or just run `run.sh`
 ## Postprocessing
 
 use the script
+
         python3 plotSolution.py
 
 to generate the output plot. It should look something like this:

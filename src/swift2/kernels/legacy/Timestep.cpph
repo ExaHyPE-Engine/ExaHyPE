@@ -1,8 +1,8 @@
 #pragma once
 
-#include <limits>
-
 #include "kernel_hydro.h"
+
+#include <limits>
 
 
 template <typename Particle>
@@ -24,9 +24,11 @@ double swift2::kernels::legacy::hydro_compute_timestep(Particle* particle) {
   // const bool   adjustTimeStepSize  = Particle::getAdjustTimeStepSize();
   // For now, compute the admissible time step size and throw an error
   // if we exceed it.
-  assertion1(
+  assertion3(
     dt_cfl >= initialTimeStepSize,
-    "particle requires time step smaller than set time step size."
+    "particle requires time step smaller than set time step size.",
+    dt_cfl,
+    initialTimeStepSize
   );
 
   assertion3(

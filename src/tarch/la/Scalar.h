@@ -23,19 +23,13 @@ namespace tarch {
     /**
      * Determine a relative tolerance from one or two values
      *
-     * This routine takes NUMERICAL_ZERO_DIFFERENCE or any other quantity and
-     * scales it with value if  value is bigger than one. If it falls below
-     * one, then it returns the original eps.
-     *
-     * The version with two arguments can be seen as
-     * wrapper around a 'scalar' relativeEps() variant which forwards the
-     * bigger value. This is very often used in combination with the greater
-     * and smaller macros, where you wanna compare prescribing a comparison
-     * tolerance.
-     *
-     * If you have only one argument, set valueB=valueA.
+     * This routine equals relativeEps, but if the normalisation quantities
+     * become smaller than 1.0, then we pick eps instead of eps times this
+     * value smaller than 1.0. So basically the normalisation with valueA
+     * (and valueB) kicks in iff the bigger value of the two is bigger than
+     * 1.0.
      */
-    double relativeEpsNormaledAgainstValueGreaterOne(
+    double relativeEpsNormalisedAgainstValueGreaterOne(
       double valueA, double valueB = std::numeric_limits<double>::min(), double eps = NUMERICAL_ZERO_DIFFERENCE
     );
 

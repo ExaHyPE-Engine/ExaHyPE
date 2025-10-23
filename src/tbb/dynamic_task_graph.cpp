@@ -76,8 +76,9 @@ void tbb::dynamic_task_graph::wait( dynamic_task_graph_node node ) {
        and not node._spawned_task->has_terminated();
   };
 
-  if (isTaskStillInQueue()) {
-    _task_group.wait();
+  while( isTaskStillInQueue() ) {
+    //_task_group.wait();
+    std::this_thread::yield();
     clean_up_completed_tasks();
   }
 

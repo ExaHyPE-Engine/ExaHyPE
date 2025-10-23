@@ -8,8 +8,12 @@ static_assert( {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CoarsestLevel >= 0, "C
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   Solver("{{CLASSNAME}}", {{SOLVER_TOLERANCE}} ),
-  _state(State::Solve), _activeLevel(-1), _smoothingState(SmoothingState::PreSmoothing),
-  _preSmoothingStepsCounter(0), _postSmoothingStepsCounter(0), _vCycleCounter(0)
+  _state(State::GridConstruction),
+  _activeLevel(-1),
+  _smoothingState(SmoothingState::PreSmoothing),
+  _preSmoothingStepsCounter(0),
+  _postSmoothingStepsCounter(0),
+  _vCycleCounter(0)
 {}
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() {}

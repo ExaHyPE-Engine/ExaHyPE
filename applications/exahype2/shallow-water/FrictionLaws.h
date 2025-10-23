@@ -42,6 +42,17 @@ namespace applications::exahype2::swe::frictionlaws {
   ) InlineMethod;
 
   static inline GPUCallableMethod
+  void maxEigenvalue(
+    const double* const __restrict__             Q,
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions, double>& h,
+    const double                                 t,
+    const double                                 dt,
+    const int                                    normal,
+    double* const __restrict__                   maxEigenvalue
+  ) InlineMethod;
+
+  static inline GPUCallableMethod
   void flux(
     const double* const __restrict__             Q,
     const tarch::la::Vector<Dimensions, double>& x,

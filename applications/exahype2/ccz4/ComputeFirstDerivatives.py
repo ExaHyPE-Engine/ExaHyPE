@@ -53,7 +53,7 @@ class ComputeFirstDerivativesFV(peano4.toolbox.blockstructured.ReconstructPatchA
         
 
 class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor):
-    """!
+    r"""!
     
     Explicit reconstruction of first derivatives for FD4 discretisation
     

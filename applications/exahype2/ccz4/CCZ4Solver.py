@@ -361,6 +361,79 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStep(
         )
 
 
+class CCZ4Solver_FV_MUSCL_GlobalAdaptiveTimeStep(
+    AbstractCCZ4Solver, exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep
+):
+    """!
+
+    CCZ4 solver using finite volumes and global adaptive time stepping incl enclave tasking
+
+    Please consult CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking.
+
+    """
+
+    def __init__(
+        self, name, patch_size, min_volume_h, max_volume_h, pde_terms_without_state
+    ):
+        AbstractCCZ4Solver.__init__(self)
+        exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep.__init__(
+            self,
+            name=name,
+            patch_size=patch_size,
+            unknowns=sum(self._FO_formulation_unknowns.values()),
+            auxiliary_variables=0,
+            min_volume_h=min_volume_h,
+            max_volume_h=max_volume_h,
+            time_step_relaxation=AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation,
+        )
+        self._add_standard_includes()
+
+        self.set_implementation(
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
+            ncp=construct_FV_ncp(),
+            flux=exahype2.solvers.PDETerms.None_Implementation,
+            source_term=construct_FV_source_term(),
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
+            eigenvalues=construct_FV_eigenvalues(),
+        )
+
+        self.postprocess_updated_patch += construct_FV_postprocessing_kernel()
+
+    def add_tracer(
+        self,
+        name,
+        coordinates,
+        project,
+        number_of_entries_between_two_db_flushes,
+        data_delta_between_two_snapsots,
+        time_delta_between_two_snapsots,
+        clear_database_after_flush,
+        tracer_unknowns,
+    ):
+        """!
+
+        Add tracer to project
+
+        Consult exahype2.tracer.DumpTracerIntoDatabase for an explanation of
+        some of the arguments. Most of them are simply piped through to this
+        class.
+
+        project: exahype2.Project
+
+        """
+        add_tracer_to_FV_solver(
+            name,
+            coordinates,
+            project,
+            self,
+            number_of_entries_between_two_db_flushes,
+            data_delta_between_two_snapsots,
+            time_delta_between_two_snapsots,
+            clear_database_after_flush,
+            tracer_unknowns,
+        )
+
+
 class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(
     AbstractCCZ4Solver,
     exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
@@ -491,21 +564,19 @@ def construct_FV_ncp():
 
 def construct_FD4_source_term():
     return """
-  tarch::memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
   ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3, CCZ4SO);
 """
 
 
 def construct_FV_source_term():
     return """
-  tarch::memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
   ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3, CCZ4SO);
 """
 
 
 def construct_FD4_eigenvalues():
     return """
-  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+  ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd, maxEigenvalue );
 """
 
 
