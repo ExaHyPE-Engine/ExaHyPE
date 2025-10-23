@@ -123,15 +123,7 @@ void tarch::multicore::omp::internal::spawnTaskWithOpenMP6(
 ) {
   assertion1( tarch::multicore::omp::majorOpenMPVersion()>=6, tarch::multicore::omp::majorOpenMPVersion() );
 
-  if (tarch::multicore::omp::majorOpenMPVersion()>=6) {
-    #define OpenMP6Syntax
-  }
-  else {
-    #undef OpenMP6Syntax
-  }
-
-  // @todo docu simple if doesn't work
-  #if defined(OpenMP6Syntax)
+  #if _OPENMP>=202411
     #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), inout: dependencyTrackingMemory[outDependency[j]]) untied transparent
     {
       OTTER_TASK_START(task);
@@ -141,6 +133,8 @@ void tarch::multicore::omp::internal::spawnTaskWithOpenMP6(
       #pragma omp atomic
       numberOfPendingTasks--;
     }
+  #else
+    assertionMsg(false, "should not be called")
   #endif
 }
 
@@ -255,22 +249,15 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
   }
 #endif
 
-  if (tarch::multicore::omp::majorOpenMPVersion()>=6) {
-    #define OpenMP6Syntax
-  }
-  else {
-    #undef OpenMP6Syntax
-  }
-
-  #if defined(OpenMPTaskGroup) and defined(OpenMP6Syntax)
+  #if defined(OpenMPTaskGroup) and _OPENMP>=202411
   #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) untied transparent
-  #elif defined(OpenMPTaskGroup) and !defined(OpenMP6Syntax)
+  #elif defined(OpenMPTaskGroup)
   #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) untied
   #endif
   for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
-    #if !defined(OpenMPTaskGroup) and defined(OpenMP6Syntax)
+    #if !defined(OpenMPTaskGroup) and _OPENMP>=202411
     #pragma omp task priority(tarch::multicore::Task::DefaultPriority) transparent
-    #elif !defined(OpenMPTaskGroup) and !defined(OpenMP6Syntax)
+    #elif !defined(OpenMPTaskGroup)
     #pragma omp task priority(tarch::multicore::Task::DefaultPriority)
     #endif
     {

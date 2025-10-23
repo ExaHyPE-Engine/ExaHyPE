@@ -128,7 +128,7 @@ namespace tarch {
          * - The semaphore dependencyTrackingSemaphore is locked with a read lock.
          *
          *
-         * ## OpenMP < 6
+         * ## OpenMP < 6 and the GNU compiler
          *
          * If we use an "older" version of OpenMP, then the transparent keyword is
          * not supported. That means, the pragma with a transparent will create a
@@ -143,9 +143,13 @@ namespace tarch {
          *
          * section. Unfortunately, this does not help. C++ might ignore the if
          * branch, but the standard also says that the loop body has to be
-         * syntactically correct, which is kind of violated. So you'll still get a
-         * translation error/warning for this code if you use older OpenMP versions.
-         * I therefore decided to remove the if.
+         * syntactically correct, which is kind of violated. So you'll still
+         * get a translation error/warning for this code if you use older
+         * OpenMP versions.
+         *
+         * I therefore decided to remove the if and work with the direct
+         * OpenMP version pragma. Please note that this is only required for
+         * GCC. With LLVM, it would just ignore the unknown transparent.
          *
          *
          * @param inDependencies Sequence of task numbers which can be empty. We need
