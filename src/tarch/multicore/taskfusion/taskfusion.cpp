@@ -6,7 +6,8 @@
 #include "tarch/Assertions.h"
 
 #include "tarch/multicore/multicore.h"
-#include "tarch/multicore/Lock.h"
+#include "tarch/multicore/MultiReadSingleWriteLock.h"
+#include "tarch/multicore/MultiReadSingleWriteSemaphore.h"
 
 #include "tarch/logging/Statistics.h"
 #include "tarch/logging/Log.h"
@@ -35,7 +36,7 @@ namespace {
    * See discussion in namespace documentation tarch::multicore::taskfusion
    * about this map and its thread access protection.
    */
-  tarch::multicore::BooleanSemaphore                                  fusableTaskQueueSemaphore;
+  tarch::multicore::MultiReadSingleWriteSemaphore  fusableTaskQueueMapSemaphore;
 
   tarch::logging::Log _log("tarch::multicore::taskfusion");
 
@@ -80,7 +81,7 @@ void tarch::multicore::taskfusion::handleFusableTask(
     native::spawnTask(task, inDependencies, taskNumber);
   }
   else {
-    tarch::multicore::Lock lock(fusableTaskQueueSemaphore);
+    tarch::multicore::MultiReadSingleWriteSemaphore::Lock lock(fusableTaskQueueMapSemaphore, ::tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Write);
     if (fusableTaskQueue.count(task->getTaskType())==0) {
       fusableTaskQueue.insert(
         std::pair<int, tarch::multicore::taskfusion::FusableTasksQueue*>(
@@ -206,7 +207,7 @@ void tarch::multicore::taskfusion::handleFusableTask_ProducerConsumerTaskSequenc
 
 
 void tarch::multicore::taskfusion::processAllReadyTasks() {
-  tarch::multicore::Lock lock(fusableTaskQueueSemaphore);
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lock(fusableTaskQueueMapSemaphore, ::tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read);
   for (auto& p: fusableTaskQueue) {
     p.second->drainReadyTasks();
   }
@@ -218,7 +219,7 @@ void tarch::multicore::taskfusion::processAndFuseAllReadyTasks() {
   while (pendingReadyTask != tarch::multicore::NoOutDependencies) {
     pendingReadyTask = tarch::multicore::NoOutDependencies;
 
-    tarch::multicore::Lock lock(fusableTaskQueueSemaphore);
+    tarch::multicore::MultiReadSingleWriteSemaphore::Lock lock(fusableTaskQueueMapSemaphore, ::tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read);
     for (auto& p: fusableTaskQueue) {
       if (pendingReadyTask!=tarch::multicore::NoOutDependencies) {
         pendingReadyTask = p.second->getFirstReadyTaskNumber();
