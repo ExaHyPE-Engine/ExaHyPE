@@ -63,6 +63,9 @@ void tarch::Enumerator::releaseNumber( int number ) {
   tarch::multicore::Lock lock( _semaphore );
   assertionEquals(_activeNumbers.count(number), 1);
   _activeNumbers.erase(number);
+  if (number>=_lastNumberHandedOut) {
+    _lastNumberHandedOut /= 2;
+  }
 }
 
 

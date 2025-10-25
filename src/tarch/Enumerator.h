@@ -45,8 +45,16 @@ class tarch::Enumerator {
     int getNumber();
 
     /**
-     * Free a number again. number has to be the result of a previous
-     * getNumber() call.
+     * Free a number.
+     *
+     * number has to be the result of a previous getNumber() call. We had the
+     * situation where enclave task numbers became really big as we just
+     * increment _lastNumberHandedOut in getNumber(). So what I do is that I
+     * reduce _lastNumberHandedOut by half if value is too big. This way, we
+     * at least scan only half of the overall number range that we might have
+     * at our disposal.
+     *
+     * @param value The number that we want to release.
      */
     void releaseNumber( int value );
 
