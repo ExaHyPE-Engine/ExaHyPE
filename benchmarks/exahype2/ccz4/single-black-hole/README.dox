@@ -77,8 +77,8 @@ command, you can use the standard Peano scripts to convert
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 export PYTHONPATH=../../../../python
-/opt/paraview/bin/pvpython ~/git/Peano/python/peano4/visualisation/render.py --filter-fine-grid solution-CCZ4SBH_FV.peano-patch-file
-/opt/paraview/bin/pvpython ~/git/Peano/python/peano4/visualisation/render.py --filter-fine-grid solution-CCZ4SBH_FD4.peano-patch-file
+/opt/paraview/bin/pvpython ~/git/Peano/python/visualisation/convert-to-vtu.py --filter-fine-grid solution-CCZ4SBH_FV.peano-patch-file
+/opt/paraview/bin/pvpython ~/git/Peano/python/visualisation/convert-to-vtu.py --filter-fine-grid solution-CCZ4SBH_FD4.peano-patch-file
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 The picture below is taken from @ref tutorials_exahype2_coupling "ExaHyPE's coupling discussion" and

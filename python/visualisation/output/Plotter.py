@@ -1,8 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import matplotlib as mpl
-
-# This Matplotlib setup remains global as it configures the backend
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Polygon
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
@@ -19,35 +17,49 @@ def plot_data(
     fig_size_inches=(10, 8),
     output_format="png",
     verbose=False,
+    flip_view=None,
 ):
     """
     Plots cell geometries. Handles 2D data with Matplotlib and 3D data with PyVista.
     """
-    # Value here acts as a placeholder for plotting and labeling in case unknown_name is not found.
+    combine_unknowns = processed_data.get("combine_unknowns")
+
     raw_unknown_name = processed_data.get("unknown_name", "Value")
 
+    # Generate the title for the color bar based on whether we are plotting
+    # a sum of unknowns or a single component.
+    if raw_unknown_name == "Combined_Value" and combine_unknowns:
+        indices_str = ", ".join(map(str, combine_unknowns))
+        scalar_bar_title = f"Sum of unknowns ({indices_str})"
+    elif "Component" in raw_unknown_name:
+        # Assumes name is "Component_X"
+        parts = raw_unknown_name.split("_", 1)
+        scalar_bar_title = f"${parts[0]}_{{{parts[1]}}}$"
+    else:
+        # Fallback for any other case
+        scalar_bar_title = raw_unknown_name
+
+    label_text = f"Value of {scalar_bar_title}"
     # --- 3D PLOTTING PATH WITH PYVISTA ---
     if dimensions == 3:
-        import pyvista as pv
-        import vtk  # Needed for cell type constants
-
+        try:
+            import pyvista as pv
+            import vtk  # Needed for cell type constants
+        except ImportError as e:
+            print(f"ERROR: Failed to import PyVista or VTK in plotter: {e}")
+            return
+        # renderer = vtk.OSPRAY
         grid = processed_data.get("pyvista_grid")
         if grid is None or grid.n_points == 0:
             print(
                 f"WARNING: Plotter: No 3D geometry data provided for '{title_suffix}'. Skipping plot generation."
             )
             return
-        # Format the label for the scalar bar using LaTeX if needed
-        if "_" in raw_unknown_name:
-            parts = raw_unknown_name.split("_", 1)
-            scalar_bar_title = f"${parts[0]}_{{{parts[1]}}}$"
-        else:
-            scalar_bar_title = f"${raw_unknown_name}$"
 
         # This block decides which rendering engine to use for 3D plots.
         # For raster formats (PNG, JPG), it uses PyVista's fast screenshotter.
         # For vector formats (PDF, SVG), it uses the new hybrid Matplotlib method.
-
+        slice_axis = processed_data.get("slice_axis")  # Get from processed_data
         # --- PATH 1: RASTER OUTPUT (PNG, JPG) VIA PYVISTA ---
         if output_format in ["png", "jpg", "jpeg", "bmp", "tif", "tiff"]:
             if verbose:
@@ -67,24 +79,76 @@ def plot_data(
                 show_scalar_bar=False,
                 show_edges=True,
                 edge_color="gray",
+                edge_opacity=0.4,
                 line_width=0.5,
             )
-            # Add a single, explicitly defined scalar bar
+            # Add a single, explicitly defined scalar bar on the left side
             plotter.add_scalar_bar(
                 title=scalar_bar_title,
                 n_labels=5,
-                fmt="%.3f",
-                title_font_size=23,
-                label_font_size=18,
+                fmt="%g",
+                title_font_size=20,
+                label_font_size=20,
+                vertical=True,
+                height=0.8,
+                position_x=0.85,
             )
 
             # Add the main title as a text actor
-            plotter.add_title(title_suffix, font_size=25)
+            plotter.add_title(title_suffix, font_size=40)
             # sets the camera's position to show a standard isometric view of the 3D object
             plotter.view_isometric()
             # changes the camera's projection from the default "perspective" to "parallel."
             plotter.enable_parallel_projection()
-            plotter.show_axes()
+
+            # Default: show all labels
+            show_x_labels = True
+            show_y_labels = True
+            show_z_labels = True
+
+            # Hide labels for the axis being sliced (since it's thin)
+            if slice_axis == "x":
+                show_x_labels = False
+            elif slice_axis == "y":
+                show_y_labels = False
+            elif slice_axis == "z":
+                show_z_labels = False
+            plotter.show_bounds(
+                grid="back",
+                location="all",
+                all_edges=True,
+                show_xaxis=True,
+                show_yaxis=True,
+                show_zaxis=True,
+                show_xlabels=show_x_labels,
+                show_ylabels=show_y_labels,
+                show_zlabels=show_z_labels,
+                n_xlabels=5,
+                n_ylabels=5,
+                n_zlabels=5,
+                xtitle="X Axis",
+                ytitle="Y Axis",
+                ztitle="Z Axis",
+                font_size=20,
+                padding=0.01
+                # use_3d_text=True
+            )
+
+            # Apply camera flip by inverting position and up-vector along specified axis
+            if flip_view in {"x", "y", "z"}:
+                axis_index = {"x": 0, "y": 1, "z": 2}[flip_view]
+                camera = plotter.camera
+                focal = list(camera.focal_point)
+                offset = [camera.position[i] - focal[i] for i in range(3)]
+
+                # Invert camera offset and up-vector component along flip axis
+                offset[axis_index] *= -1.0
+                camera.position = [focal[i] + offset[i] for i in range(3)]
+
+                up = list(camera.up)
+                up[axis_index] *= -1.0
+                camera.up = up
+
             if verbose:
                 print(
                     f"INFO: Plotter: Attempting to save PyVista figure to {output_filepath}..."
@@ -102,7 +166,6 @@ def plot_data(
                 plotter.close()
             return
         # PATH 2: Vector graphics via MATPLOTLIB
-        # add pgf
         elif output_format in ["pdf", "svg", "pgf"]:
             import matplotlib.pyplot as plt
 
@@ -114,8 +177,11 @@ def plot_data(
                 )
             # the clipped grid contains 3D cells (like VTK_HEXAHEDRON, type 12), not 2D polygons. To render this in Matplotlib,
             # we must first extract its external surface. This converts the faces of the 3D cells into 2D polygons (triangles and quads) that can be plotted.
-            # This method "peels" the outer surface off the 3D model so Matplotlib can draw it.
-            surface_grid = grid.extract_surface()
+
+            if not isinstance(grid, pv.PolyData):
+                surface_grid = grid.extract_surface()
+            else:
+                surface_grid = grid
 
             if surface_grid.n_cells == 0:
                 print(
@@ -123,12 +189,17 @@ def plot_data(
                 )
                 return
 
-            fig = plt.figure(figsize=fig_size_inches)
+            # Increase figure size slightly for vector formats to accommodate labels
+            vector_fig_size = (fig_size_inches[0] * 1.15, fig_size_inches[1] * 1.15)
+            fig = plt.figure(figsize=vector_fig_size)
             ax = fig.add_subplot(111, projection="3d")
-            ax.set_title(title_suffix)
-            ax.set_xlabel("X")
-            ax.set_ylabel("Y")
-            ax.set_zlabel("Z")
+            ax.set_title(title_suffix, fontsize=16, pad=20)
+            ax.set_xlabel("X Axis", fontsize=11, labelpad=15)
+            ax.set_ylabel("Y Axis", fontsize=11, labelpad=15)
+            ax.set_zlabel("Z Axis", fontsize=11, labelpad=15)
+
+            # Enable orthographic projection to match PyVista's parallel projection
+            ax.set_proj_type("ortho")
 
             # Extract geometry and data from the PyVista grid in other words
             # it translates the geometry from PyVista's format to Matplotlib's format
@@ -148,6 +219,18 @@ def plot_data(
 
             # Use a list comprehension to build the final list of polygons for Matplotlib.
             polygons = [points[p] for p in polygons_indices]
+
+            # Apply geometric flip transformation if requested
+            # Mirrors all polygon vertices along the specified axis to achieve camera flip effect
+            if flip_view in {"x", "y", "z"}:
+                axis_map = {"x": 0, "y": 1, "z": 2}
+                flip_axis = axis_map[flip_view]
+                flipped_polygons = []
+                for poly in polygons:
+                    poly_array = np.array(poly, copy=True)
+                    poly_array[:, flip_axis] *= -1  # Mirror coordinates along flip axis
+                    flipped_polygons.append(poly_array)
+                polygons = flipped_polygons
 
             if len(values) != len(polygons):
                 print(
@@ -170,35 +253,85 @@ def plot_data(
                 polygons,
                 facecolors=colors,
                 edgecolor="none",
-                rasterized=False,  # Disable rasterization for better quality
+                linewidth=0,
             )
             ax.add_collection3d(poly_collection)
 
             # Set plot limits
 
-            # Matplotlib's 3D axes were not respecting the exact slice width.
-            # This new logic takes complete control by not only
-            # setting the axis limits but also explicitly defining the tick locations.
-            # This forces the plot to be scientifically precise.
+            # Set axis limits with explicit tick locations for scientific precision
             xmin, xmax, ymin, ymax, zmin, zmax = surface_grid.bounds
+
+            # Transform axis limits to match the flipped coordinate space
+            if flip_view == "x":
+                xmin, xmax = -xmax, -xmin
+            elif flip_view == "y":
+                ymin, ymax = -ymax, -ymin
+            elif flip_view == "z":
+                zmin, zmax = -zmax, -zmin
+
             ax.set_xlim(xmin, xmax)
             ax.set_ylim(ymin, ymax)
             ax.set_zlim(zmin, zmax)
 
-            # Explicitly set 5 tick marks for each axis to enforce the limits
+            # Reduce to 4 ticks per axis to prevent crowding in corners
             ax.set_xticks(np.linspace(xmin, xmax, 5))
             ax.set_yticks(np.linspace(ymin, ymax, 5))
             ax.set_zticks(np.linspace(zmin, zmax, 5))
+            # Adjust tick label size and padding to prevent overlapping
+            ax.tick_params(axis="x", which="major", labelsize=9, pad=4)
+            ax.tick_params(axis="y", which="major", labelsize=9, pad=4)
+            ax.tick_params(axis="z", which="major", labelsize=9, pad=4)
 
+            # Format tick labels to use fewer decimal places to reduce width
+            ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"{x:.2f}"))
+            ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"{x:.2f}"))
+            ax.zaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"{x:.2f}"))
+
+            # Increase axis label padding for the sliced axis
+            if slice_axis == "x":
+                ax.set_xticklabels([])
+            elif slice_axis == "y":
+                ax.set_yticklabels([])
+            elif slice_axis == "z":
+                ax.set_zticklabels([])
+
+            # Add grid lines to match PyVista's bounds display
+            ax.grid(True, linestyle="--", linewidth=0.5, alpha=0.7)
+
+            # Make the panes transparent to match PyVista's clean look
+            ax.xaxis.pane.fill = False
+            ax.yaxis.pane.fill = False
+            ax.zaxis.pane.fill = False
+            ax.xaxis.pane.set_edgecolor("gray")
+            ax.yaxis.pane.set_edgecolor("gray")
+            ax.zaxis.pane.set_edgecolor("gray")
+            ax.xaxis.pane.set_alpha(0.3)
+            ax.yaxis.pane.set_alpha(0.3)
+            ax.zaxis.pane.set_alpha(0.3)
+            ax.set_box_aspect([xmax - xmin, ymax - ymin, zmax - zmin])
             # Add color bar
             sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
             sm.set_array([])
-            cbar = fig.colorbar(
-                sm, ax=ax, shrink=0.8, pad=0.1, orientation="horizontal"
-            )
+            cbar = fig.colorbar(sm, ax=ax, shrink=0.8, pad=0.15, orientation="vertical")
             cbar.set_label(scalar_bar_title, fontsize=14)
+            cbar.ax.tick_params(labelsize=12)
+
+            # Set isometric view angles (elev=35.264°, azim=45° matches PyVista default)
+            # When geometry is flipped, adjust view angles to maintain equivalent perspective
+            elev = 35.264
+            azim = 45
+            if flip_view == "x":
+                azim = 225  # View from opposite X side
+            elif flip_view == "y":
+                azim = 315  # View from opposite Y side
+            elif flip_view == "z":
+                elev = -35.264  # View from below
+
+            ax.view_init(elev=elev, azim=azim)
 
             try:
+                plt.subplots_adjust(left=0.05, right=0.85, top=0.95, bottom=0.10)
                 plt.savefig(output_filepath, dpi=dpi, bbox_inches="tight")
                 print(
                     f"INFO: -------- Plotter: Successfully saved Matplotlib plot to {output_filepath} ---------"
@@ -270,9 +403,7 @@ def plot_data(
         plot_type = processed_data.get("type")
 
         # --- Use the fastest rendering method based on the data type ---
-        # We have two rendering paths. The `imshow` path is
-        # orders of magnitude faster for `cell-values` data, which was the source
-        # of the major performance bottleneck identified by the profiler.
+        # We have two rendering paths. The `imshow` path is faster for cell-values data
         patch_boundaries = processed_data.get("patch_boundaries", [])
         if plot_type == "cell-values":
             # --- PATH 1: Ultra-fast imshow for cell-values data ---
@@ -282,12 +413,9 @@ def plot_data(
             solver_meta = processed_data.get("solver_meta", {})
             num_unknowns = solver_meta.get("unknowns_count", 1)
             dofs = solver_meta.get("dofs_per_axis", 1)
-            if processed_data.get(
-                "is_combined", False
-            ):  # failsafe for the --combine-unknowns filter
-                unknown_idx = 0
-            else:
-                unknown_idx = processed_data.get("unknown_idx", 0)
+            # The index of the unknown to plot is passed from the visualiser.
+            # This is 0 for combined unknowns, or the user-specified index otherwise.
+            unknown_idx = processed_data.get("unknown_idx", 0)
             if not patches_data:
                 print(f"WARNING: Plotter: No 2D patches to plot for '{title_suffix}'.")
                 plt.close(fig)
@@ -413,11 +541,6 @@ def plot_data(
             ys = [v[1] for v in boundary_verts]
             # Using a thin, gray, solid line for the grid
             ax.plot(xs, ys, linewidth=0.1, color="white", linestyle="-")
-        if "_" in raw_unknown_name:
-            parts = raw_unknown_name.split("_", 1)
-            label_text = f"Value of ${parts[0]}_{{{parts[1]}}}$"
-        else:
-            label_text = f"Value of ${raw_unknown_name}$"
         cbar.set_label(label_text)
 
         output_dir = os.path.dirname(output_filepath)

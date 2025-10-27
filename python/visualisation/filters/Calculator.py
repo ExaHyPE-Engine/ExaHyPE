@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .Filter import Filter
 
-from peano4.visualisation.input.Patch import Patch
+from visualisation.input.Patch import Patch
 
 
 def absolute(values):

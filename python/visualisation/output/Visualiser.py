@@ -1,6 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from peano4.visualisation.input.PatchFileParser import PatchFileParser
+from visualisation.input.PatchFileParser import PatchFileParser
 
 
 def validate(
@@ -114,7 +114,7 @@ class SnapShot:
         self.timestamp = timestamp
 
     def __repr__(self):
-        return f"Timestamp: {self.timestamp}, {self.include_file_counter} subdomains"
+        return f"Timestamp={self.timestamp}, {self.include_file_counter} subdomains"
 
 
 class PatchFileData:
@@ -215,8 +215,6 @@ class Visualiser:
           PatchFileData class in this file.
         - Return this data to child class, so that it can be rendered
           by display()
-
-    Currently, the only working child class is the VTU renderer.
     """
 
     def __init__(self, file_name, start, end, verbose=False):
@@ -227,7 +225,7 @@ class Visualiser:
            Name of a Peano patch file. This does not
            need to be a meta file.
 
-           If we run render.py with the argument -s (to denote we are using single
+           If we run convert-to-*.py with the argument -s (to denote we are using single
            file), then we will use the file_name to create a member of the
            snapshot class (which captures the patch file to read, with default
            timestamp of 0). This is then parsed by parse_and_render, and handed
@@ -381,7 +379,7 @@ class Visualiser:
           - Get filename for each patch file in this timestamp
           - Produce a PatchFileParser object for each
           - Parse each file in parallel
-          - Apply all the filters specified in render.py
+          - Apply all the filters specified in convert-to-*.py
           - Amalgamate data as in original reload() method
           - Returns a dict, where the keys are unknown names, and the values are patches that can be placed into individual patch files
         """

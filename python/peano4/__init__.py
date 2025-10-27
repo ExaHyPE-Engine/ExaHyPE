@@ -7,7 +7,6 @@ import peano4.datamodel
 import peano4.solversteps
 import peano4.output
 import peano4.toolbox
-import peano4.visualisation
 
 from .Logger import log
 from .Project import Project

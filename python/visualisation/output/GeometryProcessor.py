@@ -13,6 +13,7 @@ def generate_geometries_and_colors(
     slice_width,
     verbose=False,
     unknown=None,
+    combine_unknowns=None,
 ):
     """
     Generates cell geometries for plotting.
@@ -25,13 +26,8 @@ def generate_geometries_and_colors(
     patches = parsed_data.get("patches", [])
     solvers = parsed_data.get("solvers", {})
     dimensions = parsed_data.get("dimensions", -1)
-    # ADD THESE DEBUG LINES:
     patches = parsed_data.get("patches", [])
     solvers = parsed_data.get("solvers", {})
-
-    # ADD DEBUG BEFORE THE ACTUAL PROCESSING STARTS:
-    if verbose:
-        print("DEBUG: About to start processing patches...")
 
     if not patches or not solvers:
         return {}
@@ -43,45 +39,39 @@ def generate_geometries_and_colors(
 
     solver_meta = solvers[solver_name]
     num_unknowns = solver_meta.get("unknowns_count", 0)
-    descriptions = solver_meta.get("descriptions", [])
     dofs_per_axis = solver_meta.get("dofs_per_axis", 0)
     # logger.info(f"DEBUG: solver_meta = {solver_meta}")
     # If descriptions are empty, create default names like "Unknown0", "Unknown1", etc.
-    if descriptions:
-        available_unknowns = descriptions
-    else:
-        available_unknowns = [f"Unknown{i}" for i in range(num_unknowns)]
 
-    unknown_to_visualise = unknown
-    unknown_idx = 0
+    unknown_idx = unknown  # This comes from user input, which is now an integer.
 
-    if unknown_to_visualise is None:
-        # Default to the first available unknown if none is specified
-        unknown_to_visualise = (
-            available_unknowns[0] if available_unknowns else "unknown"
-        )
+    # Generate a descriptive name for the data being plotted.
+    if combine_unknowns:
+        unknown_to_visualise = "Combined_Value"
+        # When combining, we are creating a new single dataset, so its index is 0.
         unknown_idx = 0
-    elif unknown_to_visualise in available_unknowns:
-        # Find the index of the user-specified unknown
-        unknown_idx = available_unknowns.index(unknown_to_visualise)
     else:
-        # If the specified unknown is not found, default to the first one and warn the user
-        default_unknown = available_unknowns[0] if available_unknowns else "unknown"
-        print(
-            f"Unknown '{unknown_to_visualise}' not found in {available_unknowns}. Defaulting to: '{default_unknown}'."
-        )
-        unknown_to_visualise = default_unknown
-        unknown_idx = 0
+        # Validate the user-provided index for single unknowns
+        if not (0 <= unknown_idx < num_unknowns):
+            print(
+                f"ERROR: Unknown index {unknown_idx} is out of bounds. Valid indices are 0 to {num_unknowns - 1}. Defaulting to 0."
+            )
+            unknown_idx = 0
+        unknown_to_visualise = f"Component_{unknown_idx}"
 
     plot_type = first_patch.get("data_type", "none")
 
     # --- 3D LOGIC ---
     if dimensions == 3:
-        import pyvista as pv
-        import vtk
+        try:
+            import pyvista as pv
+            import vtk
+        except ImportError as e:
+            print(f"Failed to import PyVista or VTK: {e}")
+            return {}
 
-        # We first identify the region containing the most refined patches.
-        # This logic finds those "leaf" patches to calculate a center point,
+        # we first identify the region containing the most refined patches.
+        # This logic finds the leaf patches to calculate a center point,
         # which is then used for slicing if the user doesn't provide a specific position.
 
         # Step 1: Calculate volume for each patch.
@@ -141,7 +131,6 @@ def generate_geometries_and_colors(
                 patch_points = patch_points * cell_size_vec + offset
 
                 patch_cell_values = patch_vals[unknown_idx::num_unknowns].tolist()
-                # print(f"DEBUG:Value of unknown_idx = {unknown_idx} , value of num_unknowns = {num_unknowns} ")
                 # Vectorized cell connectivity generation
                 cell_indices = np.mgrid[0:num_cells, 0:num_cells, 0:num_cells]
                 p0 = (
@@ -224,10 +213,10 @@ def generate_geometries_and_colors(
                 point_offset += len(patch_points)
 
         if not all_points:
+            print("No valid points found.")
             return {}
 
         cell_types = np.full(len(all_cell_data), vtk.VTK_HEXAHEDRON, dtype=np.uint8)
-        # print("Unique cell types in the input data:", np.unique(cell_types))
         grid = pv.UnstructuredGrid(all_cells_conn, cell_types, np.array(all_points))
         grid.cell_data[unknown_to_visualise] = np.array(all_cell_data)
 
@@ -245,20 +234,37 @@ def generate_geometries_and_colors(
                         f"Clipping 3D grid at automatically determined center of refined region: {center:.4f}..."
                     )
 
-            bounds = list(grid.bounds)
+            # Get the original bounds of the full grid
+            original_bounds = list(grid.bounds)
+
+            # Create a new bounds list that preserves all dimensions
+            bounds = original_bounds.copy()
+
             axis_map_bounds = {"x": 0, "y": 2, "z": 4}
             axis_index = axis_map_bounds[slice_axis]
             width = slice_width
+
+            # Only modify the bounds for the slice axis, preserve other dimensions fully
             bounds[axis_index] = center - (width / 2.0)
             bounds[axis_index + 1] = center + (width / 2.0)
+
+            # Ensure the bounds don't exceed the original grid bounds
+            bounds[axis_index] = max(bounds[axis_index], original_bounds[axis_index])
+            bounds[axis_index + 1] = min(
+                bounds[axis_index + 1], original_bounds[axis_index + 1]
+            )
+
             final_grid = grid.clip_box(bounds, invert=False)
         else:
+            # This method "peels" the outer surface off the 3D model so Matplotlib can draw it.
             final_grid = grid.extract_surface()
 
         return {
             "type": plot_type,
             "pyvista_grid": final_grid,
             "unknown_name": unknown_to_visualise,
+            "combine_unknowns": combine_unknowns,
+            "slice_axis": slice_axis,
         }
 
     # --- 2D LOGIC ---
@@ -281,10 +287,11 @@ def generate_geometries_and_colors(
             ]
             patch_boundaries.append(boundary_verts)
         if plot_type == "cell-values":
-            # print("Preparing data for 2D cell-values plot...")
+            if verbose:
+                print("Preparing data for 2D cell-values plot...")
 
-            # For the fast imshow path, just pass the raw data through.
-            # The plotter will handle the rest.
+                # For the fast imshow path, just pass the raw data through.
+                # The plotter will handle the rest.
             return {
                 "type": plot_type,
                 "patches": patches,
@@ -292,6 +299,7 @@ def generate_geometries_and_colors(
                 "unknown_name": unknown_to_visualise,
                 "unknown_idx": unknown_idx,
                 "patch_boundaries": patch_boundaries,
+                "combine_unknowns": combine_unknowns,
             }
 
         elif plot_type == "vertex-values":
@@ -307,7 +315,6 @@ def generate_geometries_and_colors(
                 )
                 if patch_vals.size == 0:
                     continue
-                # print(f"Processing patch at offset {offset} with size {size} and values {patch_vals}")
                 # DEBUG: Check if we're processing patches
                 patches_processed += 1
                 if patches_processed <= 3:  # Only log first few patches
@@ -320,7 +327,6 @@ def generate_geometries_and_colors(
                         )
 
                 mapping_grid = solver_meta.get("mapping_grid")
-                # print(f"DEBUG: mapping_grid = {mapping_grid}")
                 if mapping_grid is None:
                     if patches_processed <= 3:
                         print(
@@ -329,15 +335,6 @@ def generate_geometries_and_colors(
                     continue
 
                 num_cells_per_dim = dofs_per_axis - 1
-                # DEBUG: Log cell processing for first patch
-                if patches_processed == 1:
-                    if verbose:
-                        print(
-                            f"DEBUG: Processing {num_cells_per_dim}x{num_cells_per_dim} = {num_cells_per_dim**2} cells for patch 1"
-                        )
-                        print(
-                            f"DEBUG: unknown_idx = {unknown_idx}, num_unknowns = {num_unknowns}"
-                        )
 
                 for r in range(num_cells_per_dim):
                     for c in range(num_cells_per_dim):
@@ -367,7 +364,6 @@ def generate_geometries_and_colors(
                     print(
                         f"DEBUG: Value range: {min(all_cell_values):.6f} to {max(all_cell_values):.6f}"
                     )
-                    print(f"DEBUG: First few cell values: {all_cell_values[:5]}")
 
             if not all_cell_values:
                 return {}
@@ -386,6 +382,7 @@ def generate_geometries_and_colors(
                 "patch_boundaries": patch_boundaries,
                 "data_range": (data_min, data_max),
                 "unknown_name": unknown_to_visualise,
+                "combine_unknowns": combine_unknowns,
             }
 
     return {}

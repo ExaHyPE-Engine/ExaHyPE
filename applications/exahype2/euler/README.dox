@@ -18,7 +18,7 @@ Where `CC=gcc CXX=g++` can be any set of compilers.
 
 # Visualise the Simulation Output
 
-    python3 myPeanoDirectory/python/peano4/visualisation/render.py solutions/solution-.peano-patch-file
+    python3 myPeanoDirectory/python/visualisation/convert-to-vtu.py solutions/solution-.peano-patch-file
 
 # Scenarios
 
