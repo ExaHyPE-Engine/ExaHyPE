@@ -80,7 +80,7 @@ as Peano patch files. You can convert them into vtk for example and visualise
 them via Paraview. 
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-     pvpython ../../../../python/peano4/visualisation/render.py --filter-fine-grid solution-CCZ4DG2RK2.peano-patch-file
+     pvpython ../../../../python/visualisation/convert-to-vtu.py --filter-fine-grid solution-CCZ4DG2RK2.peano-patch-file
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 Besides these snapshots, the code also injects three tracers

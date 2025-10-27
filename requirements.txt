@@ -9,3 +9,5 @@ vtk
 pyvista
 VTUinterface
 jupyter
+imageio
+imageio-ffmpeg

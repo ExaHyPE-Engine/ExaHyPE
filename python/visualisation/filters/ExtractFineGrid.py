@@ -37,9 +37,9 @@ class ExtractFineGrid(Filter):
         patches if they overlap. So to be more pessimistic, the
         expansion has to be set negative.
 
-        a: peano4.visualisation.Patch
+        a: visualisation.Patch
 
-        b: peano4.visualisation.Patch
+        b: visualisation.Patch
         """
         result = False
 
