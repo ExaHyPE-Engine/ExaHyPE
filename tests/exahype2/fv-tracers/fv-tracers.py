@@ -13,7 +13,7 @@ parser.add_argument(
 parser.set_defaults(
     min_depth=6,
     degrees_of_freedom=16,
-    number_of_snapshots=0,
+    number_of_snapshots=20,
     periodic_boundary_conditions_x=False,  # Throws assertion in the TracersSet when set to True
     periodic_boundary_conditions_y=False,
     periodic_boundary_conditions_z=False,
@@ -159,7 +159,7 @@ tracing_action_set.descend_invocation_order = (
 )
 # TODO: This is all too complicated!
 project.add_action_set_to_initialisation(tracing_action_set)
-project.add_action_set_to_timestepping(tracing_action_set)
+#project.add_action_set_to_timestepping(tracing_action_set)
 
 project.set_global_simulation_parameters(
     dimensions=args.dimensions,

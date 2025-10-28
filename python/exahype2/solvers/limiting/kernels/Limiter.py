@@ -14,7 +14,7 @@ class Limiter:
     def generate_kernels(
         self, namespace, output, subdirectory, template_prefix, output_path
     ):
-        self._build_gemms()
+        Limiter.build_gemms(self.d)
 
         generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
             headfile_template=template_prefix + "Limiter.template.h",
@@ -30,19 +30,20 @@ class Limiter:
         output.makefile.add_h_file(output_path + "/Limiter.h", generated=True)
         output.makefile.add_cpp_file(output_path + "/Limiter.cpp", generated=True)
 
-    def _build_gemms(self):
-        self.d["GEMMS"] = {}
-        nDim = self.d["DIMENSIONS"]
-        nDof = self.d["NUMBER_OF_DOF"]
+    @staticmethod
+    def build_gemms(d):
+        d["GEMMS"] = {}
+        nDim = d["DIMENSIONS"]
+        nDof = d["NUMBER_OF_DOF"]
         nDof2 = nDof * nDof
-        nDofPad = self.d["NUMBER_OF_DOF_PADDED"]
-        nDofLim = self.d["NUMBER_OF_DOF_LIMITER"]
+        nDofPad = d["NUMBER_OF_DOF_PADDED"]
+        nDofLim = d["NUMBER_OF_DOF_LIMITER"]
         nDofLim2 = nDofLim * nDofLim
-        nDofLimPad = self.d["NUMBER_OF_DOF_LIMITER_PADDED"]
-        nData = self.d["NUMBER_OF_DATA"]
-        nDataPad = self.d["NUMBER_OF_DATA_PADDED"]
+        nDofLimPad = d["NUMBER_OF_DOF_LIMITER_PADDED"]
+        nData = d["NUMBER_OF_DATA"]
+        nDataPad = d["NUMBER_OF_DATA_PADDED"]
 
-        self.d["GEMMS"]["dg2fv_x"] = Gemms(
+        d["GEMMS"]["dg2fv_x"] = Gemms(
             nData,
             nDofLim,
             nDof,
@@ -56,10 +57,10 @@ class Limiter:
             "dg2fv_x",
             "nopf",
             "gemm",
-            self.d["COMPUTE_PRECISION"],
+            d["COMPUTE_PRECISION"],
         )  # input slice not aligned
         if nDim == 3:
-            self.d["GEMMS"]["dg2fv_y"] = Gemms(
+            d["GEMMS"]["dg2fv_y"] = Gemms(
                 nDataPad,
                 nDofLim,
                 nDof,
@@ -75,7 +76,7 @@ class Limiter:
                 "gemm",
                 self.d["COMPUTE_PRECISION"],
             )  # M is padded in both input and output
-            self.d["GEMMS"]["dg2fv_z"] = Gemms(
+            d["GEMMS"]["dg2fv_z"] = Gemms(
                 nData,
                 nDofLim,
                 nDof,
@@ -92,7 +93,7 @@ class Limiter:
                 self.d["COMPUTE_PRECISION"],
             )  # output slice not aligned
         else:
-            self.d["GEMMS"]["dg2fv_y"] = Gemms(
+            d["GEMMS"]["dg2fv_y"] = Gemms(
                 nData,
                 nDofLim,
                 nDof,
@@ -106,11 +107,11 @@ class Limiter:
                 "dg2fv_y",
                 "nopf",
                 "gemm",
-                self.d["COMPUTE_PRECISION"],
+                d["COMPUTE_PRECISION"],
             )  # output slice not aligned
 
         # Project to DG
-        self.d["GEMMS"]["fv2dg_x"] = Gemms(
+        d["GEMMS"]["fv2dg_x"] = Gemms(
             nData,
             nDof,
             nDofLim,
@@ -124,10 +125,10 @@ class Limiter:
             "fv2dg_x",
             "nopf",
             "gemm",
-            self.d["COMPUTE_PRECISION"],
+            d["COMPUTE_PRECISION"],
         )  # input slice not aligned
         if nDim == 3:
-            self.d["GEMMS"]["fv2dg_y"] = Gemms(
+            d["GEMMS"]["fv2dg_y"] = Gemms(
                 nDataPad,
                 nDof,
                 nDofLim,
@@ -141,9 +142,9 @@ class Limiter:
                 "fv2dg_y",
                 "nopf",
                 "gemm",
-                self.d["COMPUTE_PRECISION"],
+                d["COMPUTE_PRECISION"],
             )  # M is padded in both input and output
-            self.d["GEMMS"]["fv2dg_z"] = Gemms(
+            d["GEMMS"]["fv2dg_z"] = Gemms(
                 nData,
                 nDof,
                 nDofLim,
@@ -157,10 +158,10 @@ class Limiter:
                 "fv2dg_z",
                 "nopf",
                 "gemm",
-                self.d["COMPUTE_PRECISION"],
+                d["COMPUTE_PRECISION"],
             )  # output slice not aligned
         else:
-            self.d["GEMMS"]["fv2dg_y"] = Gemms(
+            d["GEMMS"]["fv2dg_y"] = Gemms(
                 nData,
                 nDof,
                 nDofLim,
@@ -174,11 +175,11 @@ class Limiter:
                 "fv2dg_y",
                 "nopf",
                 "gemm",
-                self.d["COMPUTE_PRECISION"],
+                d["COMPUTE_PRECISION"],
             )  # output slice not aligned
 
         # Project to Lobatto for Min/Max
-        self.d["GEMMS"]["uh2lob_x"] = Gemms(
+        d["GEMMS"]["uh2lob_x"] = Gemms(
             nData,
             nDof,
             nDof,
@@ -192,10 +193,10 @@ class Limiter:
             "uh2lob_x",
             "nopf",
             "gemm",
-            self.d["COMPUTE_PRECISION"],
+            d["COMPUTE_PRECISION"],
         )  # input slice not aligned
         if nDim == 3:
-            self.d["GEMMS"]["uh2lob_y"] = Gemms(
+            d["GEMMS"]["uh2lob_y"] = Gemms(
                 nDataPad,
                 nDof,
                 nDof,
@@ -209,9 +210,9 @@ class Limiter:
                 "uh2lob_y",
                 "nopf",
                 "gemm",
-                self.d["COMPUTE_PRECISION"],
+                d["COMPUTE_PRECISION"],
             )  # M is padded in both input and output
-            self.d["GEMMS"]["uh2lob_z_slice"] = Gemms(
+            d["GEMMS"]["uh2lob_z_slice"] = Gemms(
                 nDataPad,
                 nDof,
                 nDof,
@@ -225,10 +226,10 @@ class Limiter:
                 "uh2lob_z_slice",
                 "nopf",
                 "gemm",
-                self.d["COMPUTE_PRECISION"],
+                d["COMPUTE_PRECISION"],
             )  # will only write a slice, overwrite
         else:
-            self.d["GEMMS"]["uh2lob_y_slice"] = Gemms(
+            d["GEMMS"]["uh2lob_y_slice"] = Gemms(
                 nDataPad,
                 nDof,
                 nDof,
@@ -242,12 +243,12 @@ class Limiter:
                 "uh2lob_y_slice",
                 "nopf",
                 "gemm",
-                self.d["COMPUTE_PRECISION"],
+                d["COMPUTE_PRECISION"],
             )  # will only write a slice, overwrite
 
         # Project to FV for Min/Max, reuse previous GEMM except last one for slice.
         if nDim == 3:
-            self.d["GEMMS"]["dg2fv_z_slice"] = Gemms(
+            d["GEMMS"]["dg2fv_z_slice"] = Gemms(
                 nDataPad,
                 nDofLim,
                 nDof,
@@ -261,10 +262,10 @@ class Limiter:
                 "dg2fv_z_slice",
                 "nopf",
                 "gemm",
-                self.d["COMPUTE_PRECISION"],
+                d["COMPUTE_PRECISION"],
             )  # will only write a slice, overwrite
         else:
-            self.d["GEMMS"]["dg2fv_y_slice"] = Gemms(
+            d["GEMMS"]["dg2fv_y_slice"] = Gemms(
                 nDataPad,
                 nDofLim,
                 nDof,
@@ -278,8 +279,9 @@ class Limiter:
                 "dg2fv_y_slice",
                 "nopf",
                 "gemm",
-                self.d["COMPUTE_PRECISION"],
+                d["COMPUTE_PRECISION"],
             )  # will only write a slice, overwrite
 
-        if self.d["USE_LIBXSMM"]:
-            self.controller.generateGemms("asm_limiter.c", self.d["GEMMS"].values())
+            # Limiter does not seem to have a controller attribute anymore, so this code seems deprecated
+            # if d["USE_LIBXSMM"]:
+            #     self.controller.generateGemms("asm_limiter.c", d["GEMMS"].values())

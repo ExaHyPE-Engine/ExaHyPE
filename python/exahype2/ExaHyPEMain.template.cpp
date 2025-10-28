@@ -140,7 +140,6 @@ bool selectNextAlgorithmicStep() {
       and
       {{SUBNAMESPACE}}repositories::mayPlot()
     ) {
-
       nextMinPlotTimeStamp += {{SUBNAMESPACE}}TimeInBetweenPlots;
       nextMaxPlotTimeStamp += {{SUBNAMESPACE}}TimeInBetweenPlots;
 
@@ -511,8 +510,12 @@ int main(int argc, char** argv) {
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     while (selectNextAlgorithmicStep()) {
+      peano4::parallel::Node::getInstance().continueToRun();
       step();
     }
+
+    peano4::parallel::Node::getInstance().setNextProgramStep(peano4::parallel::Node::Terminate);
+    peano4::parallel::Node::getInstance().continueToRun(); // Send terminate instruction to other ranks
 
     if (haveReceivedNonCriticalAssertion) {
       logWarning("main()", "Terminated gracefully after noncritical assertion");

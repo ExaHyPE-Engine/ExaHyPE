@@ -57,7 +57,8 @@
 #endif
 #endif
 
-#if defined(__clang__) or defined(__INTEL_COMPILER) or defined(__INTEL_LLVM_COMPILER)
+#if defined(__clang__) or defined(__INTEL_COMPILER) or defined(__INTEL_LLVM_COMPILER) or \
+  defined(__NVCOMPILER) or defined(__PGI) or defined(__CUDACC__)
 #define UNROLL(n) _PRAGMA(unroll n)
 #elif defined(__GNUC__) and (__GNUC__ >= 8)
 #define UNROLL(n) _PRAGMA(GCC unroll n)

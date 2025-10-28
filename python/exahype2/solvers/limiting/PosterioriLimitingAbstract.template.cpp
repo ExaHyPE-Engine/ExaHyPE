@@ -123,14 +123,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if (isLastGridSweepOfTimeStep()) {
 #ifdef WITH_MPI
-    int newNumberOfTroubleCells = _numberOfTroubledCellsThisTimeStep;
+    int local = _numberOfTroubledCellsThisTimeStep;
+    int global = 0;
     tarch::mpi::Rank::getInstance().allReduce(
-      &newNumberOfTroubleCells,
-      &_numberOfTroubledCellsThisTimeStep,
-      1, MPI_INT,
-      MPI_SUM,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      &local, &global, 1, MPI_INT, MPI_SUM,
+      [&]{ tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
     );
+    _numberOfTroubledCellsThisTimeStep = global;
 #endif
 
     {{FINISH_TIME_STEP_IMPLEMENTATION}}
@@ -176,21 +175,13 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
-  return
-    (
-        (
-          _solverState==SolverState::GridInitialisation
-        or
-          _solverState==SolverState::RegularSolver
-          and repositories::{{REGULAR_SOLVER_INSTANCE}}.mayPlot()
-          and _numberOfTroubledCellsThisTimeStep == 0
-        )
-      or
-        (
-          _solverState==SolverState::LimiterSolver and
-          repositories::{{LIMITER_SOLVER_INSTANCE}}.mayPlot()
-        )
-    );
+  return (
+    (_solverState == SolverState::GridInitialisation)
+    or
+    (_solverState == SolverState::RegularSolver and _numberOfTroubledCellsThisTimeStep == 0)
+    or
+    (_solverState == SolverState::LimiterSolver)
+  );
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {

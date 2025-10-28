@@ -1,7 +1,7 @@
 import os, sys
 import peano4, exahype2
 
-project = exahype2.Project(["exahype", "limiting", "swe"], ".", executable="SWE")
+project = exahype2.Project(["tests", "exahype2", "fortran"], ".", executable="ExaHyPE")
 
 min_level           = 3
 max_depth           = 0

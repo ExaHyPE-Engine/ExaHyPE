@@ -15,7 +15,7 @@ class AdvectionLinear(Scenario):
     in each spatial dimension.
     """
 
-    _plot_dt = 0.1
+    _plot_dt = 0.0
     _periodic_bc = False
 
     def __init__(self, dimensions=2):

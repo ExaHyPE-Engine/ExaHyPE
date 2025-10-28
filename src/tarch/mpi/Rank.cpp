@@ -418,7 +418,7 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
   #ifdef WITH_MPI
   int result = MPI_SUCCESS;
 
-  #if defined( SharedMemoryParallelisation )
+  #if defined( WITH_MULTITHREADING )
   result = MPI_Init_thread( argc, argv, MPI_THREAD_MULTIPLE, &_providedThreadLevelSupport );
   if (_providedThreadLevelSupport!=MPI_THREAD_MULTIPLE ) {
     std::cerr << "warning: MPI implementation does not support MPI_THREAD_MULTIPLE. Support multithreading level is "
@@ -430,7 +430,7 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
   #endif
 
   if (result!=MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)" << std::endl;
+    std::cerr << "init(int*,char***)\t Initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)" << std::endl;
     return false;
   }
 
@@ -456,6 +456,8 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
     std::cerr << "init(int*,char***)\t was not able to query what the maximum tag value is" << std::endl;
     return false;
   }
+
+  MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
 
   DoubleMessage::initDatatype();
   IntegerMessage::initDatatype();

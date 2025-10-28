@@ -15,7 +15,7 @@ class SWERadialDamBreak(Scenario):
     a bump in the bathymetry in the centre.
     """
 
-    _plot_dt = 0.05
+    _plot_dt = 0.0
     _offset = -0.5
     _domain_size = 1.0
     _periodic_bc = False

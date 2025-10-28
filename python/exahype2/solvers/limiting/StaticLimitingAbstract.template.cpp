@@ -92,20 +92,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
-  if (isLastGridSweepOfTimeStep()) {
 #ifdef WITH_MPI
-    if (_solverState == SolverState::LimiterStatusSpreadingToNeighbours) {
-      int newNumberOfTroubleCells = _numberOfTroubledCells;
-      tarch::mpi::Rank::getInstance().allReduce(
-        &newNumberOfTroubleCells,
-        &_numberOfTroubledCells,
-        1, MPI_INT,
-        MPI_SUM,
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-    }
+  if (_solverState == SolverState::LimiterStatusSpreadingToNeighbours) {
+    int local = _numberOfTroubledCells;
+    int global = 0;
+    tarch::mpi::Rank::getInstance().allReduce(
+      &local, &global, 1, MPI_INT, MPI_SUM,
+      [&]{ tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+    _numberOfTroubledCells = global;
+  }
 #endif
 
+  if (isLastGridSweepOfTimeStep()) {
     {{FINISH_TIME_STEP_IMPLEMENTATION}}
   }
 }
@@ -120,7 +119,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::printTimeStep(bool ofCurrentlyRu
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep() {
-  if ( _solverState==SolverState::GridInitialisation) {
+  if ( _solverState == SolverState::GridInitialisation) {
     _solverState = SolverState::PlottingAfterGridInitialisation;
   } else {
     _solverState = SolverState::Plotting;
@@ -155,7 +154,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
   return (
-    _solverState!=SolverState::LimiterStatusSpreadingToNeighbours
+    _solverState != SolverState::LimiterStatusSpreadingToNeighbours
     and
     repositories::{{REGULAR_SOLVER_INSTANCE}}.isFirstGridSweepOfTimeStep()
     and
@@ -165,7 +164,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
   return (
-    _solverState!=SolverState::LimiterStatusSpreadingToNeighbours
+    _solverState != SolverState::LimiterStatusSpreadingToNeighbours
     and
     repositories::{{REGULAR_SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
     and

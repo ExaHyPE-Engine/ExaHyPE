@@ -55,7 +55,7 @@ project = exahype2.Project(
     namespace=["tests", "exahype2", "aderdg"],
     project_name=scenario.__class__.__name__,
     directory=".",
-    executable="ADERDG",
+    executable="ExaHyPE",
 )
 
 solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(

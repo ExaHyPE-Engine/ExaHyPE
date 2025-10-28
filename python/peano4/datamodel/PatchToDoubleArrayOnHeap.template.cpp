@@ -2,11 +2,18 @@
 
 #include "tarch/accelerator/accelerator.h"
 
+#include <cstring>
 #include <algorithm>
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   value( tarch::allocateMemory< {{FLOAT_TYPE}} >( Cardinality, tarch::MemoryLocation::Heap ) ) {
+
+#if DIMENSIONS == 2
+  memset(value, 0, {{CARDINALITY_2D}} * sizeof({{FLOAT_TYPE}}));
+#elif DIMENSIONS == 3
+  memset(value, 0, {{CARDINALITY_3D}} * sizeof({{FLOAT_TYPE}}));
+#endif
 }
 
 

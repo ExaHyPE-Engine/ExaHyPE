@@ -433,9 +433,9 @@ void peano4::parallel::SpacetreeSet::deleteClonedObservers() {
 void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& observer) {
   logTraceIn("traverse()");
 
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    peano4::parallel::Node::getInstance().continueToRun();
-  }
+  // if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+  //   peano4::parallel::Node::getInstance().continueToRun();
+  // }
   logDebug("traverse()", "Start new grid sweep");
 
   tarch::mpi::Rank::getInstance().barrier([&]() -> void {

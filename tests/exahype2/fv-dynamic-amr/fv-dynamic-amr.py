@@ -13,7 +13,7 @@ parser.set_defaults(
     amr_levels=2,
     degrees_of_freedom=4,
     end_time=0.2,
-    number_of_snapshots=0,
+    number_of_snapshots=20,
 )
 args = parser.parse_args()
 
