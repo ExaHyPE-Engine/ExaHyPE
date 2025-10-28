@@ -14,6 +14,7 @@ GCC:
     CC: "gcc"
     CXX: "g++"
     IMAGE_TAG: "${IMAGE_GCC}"
+    PARALLEL_LAUNCH: ""
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
                             -DWITH_MULTITHREADING=OFF \
                             -DWITH_MPI=OFF"
@@ -32,6 +33,7 @@ GCC OpenMP MPI:
     CC: "gcc"
     CXX: "g++"
     IMAGE_TAG: "${IMAGE_GCC}"
+    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun -np ${MPI_RANKS}"
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
                             -DWITH_MULTITHREADING=ON \
                             -DWITH_MPI=ON"
@@ -50,6 +52,7 @@ Intel:
     CC: "icx"
     CXX: "icpx"
     IMAGE_TAG: "${IMAGE_INTEL}"
+    PARALLEL_LAUNCH: ""
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
                             -DWITH_MULTITHREADING=OFF \
                             -DWITH_MPI=OFF"
@@ -68,6 +71,7 @@ Intel OpenMP MPI:
     CC: "icx"
     CXX: "icpx"
     IMAGE_TAG: "${IMAGE_INTEL}"
+    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun -np ${MPI_RANKS}"
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
                             -DWITH_MULTITHREADING=ON \
                             -DWITH_MPI=ON"
@@ -86,6 +90,7 @@ LLVM:
     CC: "clang"
     CXX: "clang++"
     IMAGE_TAG: "${IMAGE_LLVM}"
+    PARALLEL_LAUNCH: ""
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
                             -DWITH_MULTITHREADING=OFF \
                             -DWITH_MPI=OFF"
@@ -104,6 +109,7 @@ LLVM OpenMP MPI:
     CC: "clang"
     CXX: "clang++"
     IMAGE_TAG: "${IMAGE_LLVM}"
+    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun -np ${MPI_RANKS}"
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
                             -DWITH_MULTITHREADING=ON \
                             -DWITH_MPI=ON"
@@ -122,6 +128,7 @@ NVIDIA:
     CC: "nvc"
     CXX: "nvc++"
     IMAGE_TAG: "${IMAGE_NVIDIA}"
+    PARALLEL_LAUNCH: ""
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
                             -DWITH_MULTITHREADING=OFF \
                             -DWITH_MPI=OFF"
@@ -140,6 +147,7 @@ NVIDIA OpenMP MPI:
     CC: "nvc"
     CXX: "nvc++"
     IMAGE_TAG: "${IMAGE_NVIDIA}"
+    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun -np ${MPI_RANKS}"
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
                             -DWITH_MULTITHREADING=ON \
                             -DWITH_MPI=ON"
@@ -158,9 +166,29 @@ AMD:
     CC: "amdclang"
     CXX: "amdclang++"
     IMAGE_TAG: "${IMAGE_AMD}"
+    PARALLEL_LAUNCH: ""
     CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
                             -DWITH_MULTITHREADING=OFF \
                             -DWITH_MPI=OFF"
+  trigger:
+    include:
+      - .continuous_integration/gitlab-exahype2.yml
+    strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
+
+AMD OpenMP MPI:
+  extends: .Variables
+  stage: Compiler
+  variables:
+    CC: "amdclang"
+    CXX: "amdclang++"
+    IMAGE_TAG: "${IMAGE_AMD}"
+    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun -np ${MPI_RANKS}"
+    CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
+                            -DWITH_MULTITHREADING=ON \
+                            -DWITH_MPI=ON"
   trigger:
     include:
       - .continuous_integration/gitlab-exahype2.yml

@@ -18,7 +18,7 @@
       int overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, {{DOFS_PER_AXIS}}, {{OVERLAP}}, d);
       for (int j = 0; j < {{UNKNOWNS}}; j++) {
         #if !defined(WITH_GPU)
-        assertion6({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i, sourceCell, d, patchCell, overlapCell);
+        assertion7({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i, sourceCell, d, patchCell, overlapCell);
         #endif
         faces[d][overlapCellSerialised * {{UNKNOWNS}} + j] = QIn[patchCellSerialised * {{UNKNOWNS}} + j];
       }
@@ -30,7 +30,7 @@
       overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, {{DOFS_PER_AXIS}}, {{OVERLAP}}, d);
       for (int j = 0; j < {{UNKNOWNS}}; j++) {
         #if !defined(WITH_GPU)
-        assertion6({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i, sourceCell, d, patchCell, overlapCell);
+        assertion7({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i, sourceCell, d, patchCell, overlapCell);
         #endif
         faces[d + DIMENSIONS][overlapCellSerialised * {{UNKNOWNS}} + j] = QIn[patchCellSerialised * {{UNKNOWNS}} + j];
       }

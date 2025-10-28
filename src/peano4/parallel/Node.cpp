@@ -378,11 +378,12 @@ bool peano4::parallel::Node::continueToRun() {
     StartTraversalMessage message;
     StartTraversalMessage::
       receiveAndPollDanglingMessages(message, tarch::mpi::Rank::getGlobalMasterRank(), _rankOrchestrationTag);
-    logDebug("continueToRun()", "received message " << message.toString());
+    logDebug("continueToRun()", "Received message " << message.toString());
     _currentProgramStep = message.getStepIdentifier();
   }
   logTraceOutWith1Argument("continueToRun()", _currentProgramStep);
 #endif
+
   return _currentProgramStep != Terminate;
 }
 
@@ -395,10 +396,6 @@ int peano4::parallel::Node::getCurrentProgramStep() const { return _currentProgr
 
 void peano4::parallel::Node::shutdown() {
   logTraceIn("shutdown()");
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    setNextProgramStep(peano4::parallel::Node::Terminate);
-    continueToRun();
-  }
 
   tarch::mpi::Rank::getInstance().barrier([&]() -> void {
     tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
@@ -412,6 +409,10 @@ void peano4::parallel::Node::shutdown() {
       _needCommunicator[i]          = false;
     }
   }
+#endif
+
+#ifdef WITH_MPI
+  MPI_Barrier(tarch::mpi::Rank::getInstance().getCommunicator());
 #endif
 
   logTraceOut("shutdown()");

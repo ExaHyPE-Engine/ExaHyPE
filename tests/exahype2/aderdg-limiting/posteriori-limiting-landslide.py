@@ -4,7 +4,7 @@ import peano4
 import exahype2
 
 project = exahype2.Project(
-    ["tests", "exahype2", "aderdg"], ".", executable="ADERDG-Limiting"
+    ["tests", "exahype2", "aderdg"], ".", executable="ExaHyPE"
 )
 
 parser = exahype2.ArgumentParser("ExaHyPE 2 - ADER-DG Limiting Testing Script")
@@ -22,7 +22,7 @@ with_limiting = 1  # 0 - all ADER, 1 - limit, 2 - all FV
 dimensions = 2
 order = args.degrees_of_freedom - 1
 end_time = 2.0
-plot_interval = 0.00  # 0.05
+plot_interval = 0.05
 CFL = 0.5
 unknowns = {"h": 1, "hu": 1, "hv": 1, "z": 1}
 auxiliary = {}

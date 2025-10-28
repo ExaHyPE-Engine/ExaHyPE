@@ -3,10 +3,10 @@
 #include "fvSWE.h"
 #include "exahype2/RefinementControl.h"
 
-tarch::logging::Log   exahype::limiting::swe::fvSWE::_log( "exahype::limiting::swe::fvSWE" );
+tarch::logging::Log   tests::exahype2::fortran::fvSWE::_log( "tests::exahype2::fortran::fvSWE" );
 
 
-double exahype::limiting::swe::fvSWE::maxEigenvalue(
+double tests::exahype2::fortran::fvSWE::maxEigenvalue(
   [[maybe_unused]] const double* const NOALIAS             Q, // Q[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -20,7 +20,7 @@ double exahype::limiting::swe::fvSWE::maxEigenvalue(
   return std::max(std::abs(u - c), std::abs(u + c));
 }
 
-void exahype::limiting::swe::fvSWE::flux(
+void tests::exahype2::fortran::fvSWE::flux(
   [[maybe_unused]] const double* const NOALIAS             Q, // Q[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h_,
@@ -47,7 +47,7 @@ extern "C" {
     double* NOALIAS apdq, const int* normal);
 }
 
-double exahype::limiting::swe::fvSWE::solveRiemannProblem(
+double tests::exahype2::fortran::fvSWE::solveRiemannProblem(
   [[maybe_unused]] const double* const NOALIAS             QL, // QL[3+1]
   [[maybe_unused]] const double* const NOALIAS             QR, // QR[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,

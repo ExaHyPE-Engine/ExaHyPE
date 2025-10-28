@@ -80,7 +80,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
     assertion1(timeStepSize >= 0.0, timeStepSize);
     _minTimeStepSizeThisTimeStep = std::min(timeStepSize, _minTimeStepSizeThisTimeStep);
     _maxTimeStepSizeThisTimeStep = std::max(timeStepSize, _maxTimeStepSizeThisTimeStep);
-    assertion2(_minTimeStepSizeThisTimeStep <= _maxTimeStepSizeThisTimeStep, _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep);
+    assertion2(tarch::la::smallerEquals(_minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep), _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep);
 
     _localMinTimeStampThisTimeStep = std::min(_localMinTimeStampThisTimeStep, timeStamp);
     _localMaxTimeStampThisTimeStep = std::max(_localMaxTimeStampThisTimeStep, timeStamp);
@@ -90,7 +90,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   assertion1(timeStamp >= 0.0, timeStamp);
   _minTimeStampThisTimeStep = std::min(timeStamp, _minTimeStampThisTimeStep);
   _maxTimeStampThisTimeStep = std::max(timeStamp, _maxTimeStampThisTimeStep);
-  assertion2(_minTimeStampThisTimeStep <= _maxTimeStampThisTimeStep, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep);
+  assertion8(tarch::la::smallerEquals(_minTimeStampThisTimeStep, _maxTimeStampThisTimeStep), _minTimeStamp, _maxTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, minVolumeSize, maxVolumeSize);
 
   assertion1(maxVolumeSize < std::numeric_limits<double>::max() / NumberOfFiniteVolumesPerAxisPerPatch, maxVolumeSize);
   assertion1(minVolumeSize > 0.0, minVolumeSize);
@@ -333,25 +333,25 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {}
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState state) {
   switch (state) {
     case SolverState::GridConstruction:
-      return "grid-construction";
+      return "GridConstruction";
     case SolverState::GridInitialisation:
-      return "grid-initialisation";
+      return "GridInitialisation";
     case SolverState::StillNeedsToSolveAfterGridInitialisation:
-      return "{{SOLVER_NAME}}-still-needs-to-solve-after-grid-initialisation";
+      return "{{SOLVER_NAME}}StillNeedsToSolveAfterGridInitialisation";
     case SolverState::StillNeedsToSolve:
-      return "{{SOLVER_NAME}}-still-needs-to-solve";
+      return "{{SOLVER_NAME}}StillNeedsToSolve";
     case SolverState::IsSolvingAfterGridInitialisation:
-      return "{{SOLVER_NAME}}-is-solving-after-grid-initialisation";
+      return "{{SOLVER_NAME}}IsSolvingAfterGridInitialisation";
     case SolverState::IsSolving:
-      return "{{SOLVER_NAME}}-is-solving";
+      return "{{SOLVER_NAME}}IsSolving";
     case SolverState::HasSolved:
-      return "{{SOLVER_NAME}}-has-solved";
+      return "{{SOLVER_NAME}}HasSolved";
     case SolverState::Plotting:
-      return "plotting";
+      return "Plotting";
     case SolverState::PlottingAfterGridInitialisation:
-      return "plotting-after-grid-initialisation";
+      return "PlottingAfterGridInitialisation";
     case SolverState::Suspended:
-      return "suspended";
+      return "Suspended";
   }
   return "<undef>";
 }

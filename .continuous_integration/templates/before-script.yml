@@ -18,3 +18,4 @@
     - echo $CXXFLAGS
     - echo $LDFLAGS
     - echo $CONFIGURATION_OPTIONS
+    - echo $PARALLEL_LAUNCH

@@ -3,10 +3,10 @@
 #include "aderSWE.h"
 #include "exahype2/RefinementControl.h"
 
-tarch::logging::Log   exahype::limiting::swe::aderSWE::_log( "exahype::limiting::swe::aderSWE" );
+tarch::logging::Log   tests::exahype2::fortran::aderSWE::_log( "tests::exahype2::fortran::aderSWE" );
 
 
-double exahype::limiting::swe::aderSWE::maxEigenvalue(
+double tests::exahype2::fortran::aderSWE::maxEigenvalue(
   [[maybe_unused]] const double* NOALIAS Q, // Q[4+0]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&      x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&      h,
@@ -30,7 +30,7 @@ double exahype::limiting::swe::aderSWE::maxEigenvalue(
 
 }
 
-void exahype::limiting::swe::aderSWE::flux(
+void tests::exahype2::fortran::aderSWE::flux(
   [[maybe_unused]] const double* NOALIAS Q, // Q[4+0]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&      x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&      h_,
@@ -73,7 +73,7 @@ void exahype::limiting::swe::aderSWE::flux(
 
 }
 
-void exahype::limiting::swe::aderSWE::nonconservativeProduct(
+void tests::exahype2::fortran::aderSWE::nonconservativeProduct(
   [[maybe_unused]] const double* NOALIAS Q, // Q[4+0]
   [[maybe_unused]] const double* NOALIAS deltaQ, // deltaQ[4+0]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&      x,
@@ -113,7 +113,7 @@ void exahype::limiting::swe::aderSWE::nonconservativeProduct(
 
 }
 
-void exahype::limiting::swe::aderSWE::riemannSolver(
+void tests::exahype2::fortran::aderSWE::riemannSolver(
   double* const FL, // FL[4
   double* const FR, // FR[4
   const double* const QL, // QL[4+0]

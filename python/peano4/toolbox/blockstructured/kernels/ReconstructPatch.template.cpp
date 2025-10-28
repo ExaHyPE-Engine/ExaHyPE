@@ -4,6 +4,8 @@
 
 #include "peano4/utils/Loop.h"
 
+#include "toolbox/blockstructured/Enumeration.h"
+
 {% import 'Loop.macro.h' as patch with context %}{# get template macros #}
 {% import 'CopyPatchAndFillHalo.macro.h' as operation with context %}{# get template macros #}
 

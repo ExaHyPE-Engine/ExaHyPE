@@ -58,7 +58,7 @@ my_project = exahype2.Project(
     namespace=["tutorials", "symhype", "elastic"],
     project_name="Elastic",
     directory=".",
-    executable="Elastic",
+    executable="ExaHyPE",
 )
 
 """

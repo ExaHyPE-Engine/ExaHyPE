@@ -4,6 +4,8 @@
 
 #include "peano4/utils/Loop.h"
 
+#include "toolbox/blockstructured/Enumeration.h"
+
 {% if GPU != "no" %}
 {% set fused_loop_path = GPU ~ "/Loop.macro.h" %}
 {% else %}

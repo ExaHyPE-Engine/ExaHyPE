@@ -249,7 +249,13 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::acquireLock( int num
 void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::releaseLock( int number ) {
   assertion( number>0 );
   if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-    unlockSemaphoreOnGlobalMaster(number, tarch::mpi::Rank::getGlobalMasterRank());
+    int releasingRank = -1;
+    {
+      tarch::multicore::Lock lock(_mapAccessSemaphore);
+      releasingRank = _map[number].rankThatLastLocked;
+    }
+    unlockSemaphoreOnGlobalMaster(number, releasingRank);
+    //unlockSemaphoreOnGlobalMaster(number, tarch::mpi::Rank::getGlobalMasterRank());
     serveLockRequests();
   }
   else {

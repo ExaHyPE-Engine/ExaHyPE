@@ -39,8 +39,7 @@ def get_face_merge_implementation(patch_overlap):
     }}
     return result;
   }};
-  
-  
+
   switch (context) {{
     case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
     case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
@@ -50,30 +49,29 @@ def get_face_merge_implementation(patch_overlap):
           for (int j=0; j<{OVERLAP}; j++) {{
             tarch::la::Vector<DIMENSIONS,int> volume = i;
             volume(faceNormal) += marker.outerNormal()(faceNormal)>0 ? j + {OVERLAP} : j;
-            
-            int volumeSerialised = serialisePatchIndex(volume, faceNormal);
+
+            const int volumeSerialised = serialisePatchIndex(volume, faceNormal);
             for (int k=0; k<{UNKNOWNS}; k++) {{
-              assertion5( 
-                neighbour.value[volumeSerialised*{UNKNOWNS}+k]==neighbour.value[volumeSerialised*{UNKNOWNS}+k],
-                value[volumeSerialised*{UNKNOWNS}+k],
-                k, {UNKNOWNS},
+              assertion6(
+                neighbour.value[volumeSerialised * {UNKNOWNS} + k] == neighbour.value[volumeSerialised * {UNKNOWNS} + k],
+                neighbour.value[volumeSerialised * {UNKNOWNS} + k],
+                value[volumeSerialised * {UNKNOWNS} + k],
+                k,
+                {UNKNOWNS},
                 volume,
                 marker.toString()
               );
-              
-              value[volumeSerialised*{UNKNOWNS}+k] = neighbour.value[volumeSerialised*{UNKNOWNS}+k];
-             
+
+              value[volumeSerialised * {UNKNOWNS} + k] = neighbour.value[volumeSerialised * {UNKNOWNS} + k];
             }}
-              
-            // This should be non-critical assertion, but this assertion is only
-            // generically available in ExaHyPE 2, so I comment the assertion out
-            // here.
-            // assertion(value[volumeSerialised]==value[volumeSerialised]);
+
+            // TODO: This should be non-critical assertion.
+            assertion(value[volumeSerialised] == value[volumeSerialised]);
           }}
         }}
       }}
       break;
-      
+
     case ::peano4::grid::TraversalObserver::SendReceiveContext::MultiscaleExchange:
       assertionMsg( false, "not implemented yet" );
       break;

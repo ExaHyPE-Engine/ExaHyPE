@@ -3,7 +3,7 @@
 import peano4
 import exahype2
 
-parser = exahype2.ArgumentParser("ExaHyPE 2 - ADER-DG AMR Testing Script")
+parser = exahype2.ArgumentParser("ExaHyPE 2 - ADER-DG Static AMR Testing Script")
 parser.set_defaults(
     min_depth=3,
     amr_levels=1,
@@ -15,16 +15,16 @@ size = [1.0, 1.0]
 order = args.degrees_of_freedom - 1
 max_h = 1.1 * min(size) / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
-plot_interval = 0.00  # 0.01
+plot_interval = 0.01
 end_time = 0.1
 
 polynomials = exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
 
 project = exahype2.Project(
     namespace=["tests", "exahype2", "aderdg"],
-    project_name="SWE",
+    project_name=".",
     directory=".",
-    executable="ADERDG-AMR"
+    executable="ExaHyPE",
 )
 
 solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
@@ -100,7 +100,9 @@ project.set_global_simulation_parameters(
 )
 
 project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
-project.set_Peano4_installation("../../../", mode=peano4.output.string_to_mode(args.build_mode))
+project.set_Peano4_installation(
+    "../../../", mode=peano4.output.string_to_mode(args.build_mode)
+)
 project = project.generate_Peano4_project(verbose=False)
 project.set_fenv_handler(True)
 project.build(make_clean_first=True)
