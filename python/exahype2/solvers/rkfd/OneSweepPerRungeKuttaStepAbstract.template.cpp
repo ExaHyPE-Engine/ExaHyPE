@@ -48,33 +48,33 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize(bool ofCurrentlyRunningGridSweep) const {
-  return getMinGridCellSize(ofCurrentlyRunningGridSweep) * NumberOfGridCellsPerPatchPerAxis;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize() const {
+  return getMinGridCellSize() * NumberOfGridCellsPerPatchPerAxis;
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxPatchSize(bool ofCurrentlyRunningGridSweep) const {
-  return getMaxGridCellSize(ofCurrentlyRunningGridSweep) * NumberOfGridCellsPerPatchPerAxis;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxPatchSize() const {
+  return getMaxGridCellSize() * NumberOfGridCellsPerPatchPerAxis;
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinGridCellSize(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _minGridCellHThisTimeStep : _minGridCellH;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinGridCellSize() const {
+  return _minGridCellH;
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxGridCellSize(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _maxGridCellHThisTimeStep : _maxGridCellH;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxGridCellSize() const {
+  return _maxGridCellH;
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _minTimeStampThisTimeStep : _minTimeStamp;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp() const {
+  return _minTimeStamp;
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _maxTimeStampThisTimeStep : _maxTimeStamp;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
+  return _maxTimeStamp;
 }
 
 
