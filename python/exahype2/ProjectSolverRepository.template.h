@@ -53,7 +53,7 @@
    * whereas the big cells still span a large time span. Hence, no the other
    * hand, there's also a (time-)local time stamp.
    */
-  double getMinTimeStamp(bool ofCurrentlyRunningGridSweep = false);
+  double getMinTimeStamp();
 
   /**
    * Return max time stamp of all solvers.
@@ -63,7 +63,7 @@
    * to know how far in the future all the solvers are, but we still want to
    * know what a valid time stamp is. So we have to take the minimum here.
    */
-  double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep = false);
+  double getMaxTimeStamp();
   double getMinTimeStepSize();
   double getMaxTimeStepSize();
   double getMinMeshSize();
