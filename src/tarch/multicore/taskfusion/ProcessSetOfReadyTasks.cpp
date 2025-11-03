@@ -28,69 +28,46 @@ void tarch::multicore::taskfusion::ProcessSetOfReadyTasks::run() {
     assertion( instruction.minTasks>=1 );
     assertion( instruction.maxTasks>=1 );
 
-    tarch::multicore::Lock lock(_taskQueue._statisticsSemaphore);
-    _taskQueue._numberOfReadyTasksPerProcessTaskExecution.setValue(_taskQueue._readyTasks.size());
-    _taskQueue._probabilityThatTaskIsCompleted.setValue(0.0);
+    const bool triggerFusion = instruction.minTasks<=_taskQueue.getNumberOfReadyTasks();
 
-    if (_taskQueue._probabilityThatTaskIsCompleted.hasFullSetOfMeasurements()) {
-      tarch::multicore::getOrchestration().updateFuseStatistics(
-        _taskQueue.getType(),
-        _taskQueue._readyTasks.size(),
-        _taskQueue._numberOfReadyTasksPerProcessTaskExecution.getValue(),
-        _taskQueue._probabilityThatTaskIsCompleted.getValue()
-      );
-    }
-    lock.free();
+    _taskQueue.updateTaskFusionProbabilities(triggerFusion);
 
-    tarch::multicore::Lock readyTaskLock(_taskQueue._readyTasksSemaphore);
-    if (
-      instruction.minTasks<=_taskQueue._readyTasks.size()
-    ) {
-      // extract first task
-      auto [firstTaskNumber, firstTask] = *_taskQueue._readyTasks.begin();
-      _taskQueue._readyTasks.erase( firstTaskNumber );
+    if ( triggerFusion ) {
+      auto [firstTaskNumber, firstTask] = _taskQueue.extractFirstReadyTask(_taskNumber);
 
-      // extract sequence
-      int tasksToExtract = std::min( instruction.maxTasks-1, static_cast<int>(_taskQueue._readyTasks.size()) );
-      FusableTasksQueue::ReadyTasks::iterator iterator = _taskQueue._readyTasks.begin();
+      if (firstTask!=nullptr) {
+        int tasksToExtract = std::min( instruction.maxTasks-1, static_cast<int>(_taskQueue.getNumberOfReadyTasks()) );
 
-      std::vector< Task* > extractedTaskPointers;
-      std::vector< int >   extractedTaskNumbers;
+        std::vector< Task* > extractedTaskPointers;
+        std::vector< int >   extractedTaskNumbers;
 
-      extractedTaskPointers.reserve(tasksToExtract);
-      extractedTaskNumbers.reserve(tasksToExtract);
+        extractedTaskPointers.reserve(tasksToExtract);
+        extractedTaskNumbers.reserve(tasksToExtract);
 
-      tarch::multicore::Lock runningTaskLock(_taskQueue._runningTasksSemaphore);
-      _taskQueue._runningTasks[ firstTaskNumber ] = _taskNumber;
-      while (tasksToExtract>0) {
-        tasksToExtract--;
-        extractedTaskNumbers.push_back( iterator->first );
-        extractedTaskPointers.push_back( iterator->second );
-        _taskQueue._runningTasks[ iterator->first ] = _taskNumber;
-        iterator = _taskQueue._readyTasks.erase( iterator );
-        assertion( iterator != _taskQueue._readyTasks.end() or tasksToExtract==0 );
+        while (tasksToExtract>0) {
+          auto [taskNumber, task] = _taskQueue.extractFirstReadyTask(_taskNumber);
+
+          if (task!=nullptr) {
+            extractedTaskNumbers.push_back( taskNumber );
+            extractedTaskPointers.push_back( task );
+            tasksToExtract--;
+          }
+          else {
+            tasksToExtract = 0;
+          }
+        }
+
+        tarch::logging::Statistics::getInstance().log(ProcessFusedTasksStatisticsIdentifier, extractedTaskNumbers.size());
+        processFusedTask(firstTask, extractedTaskPointers, instruction.device);
+
+        _taskQueue.runningTaskFinished( firstTaskNumber );
+        for (auto& taskNumber: extractedTaskNumbers) {
+          _taskQueue.runningTaskFinished( taskNumber );
+        }
       }
-      runningTaskLock.free();
-      readyTaskLock.free();
-
-      logDebug( "run(...)", "fuse " << (extractedTaskPointers.size()+1) << " fusable tasks as we have " << _taskQueue._readyTasks.size() << " tasks (embedded into native task " << _taskNumber << ")" );
-
-      tarch::logging::Statistics::getInstance().log(ProcessFusedTasksStatisticsIdentifier, extractedTaskNumbers.size());
-      processFusedTask(firstTask, extractedTaskPointers, instruction.device);
-
-      runningTaskLock.lock();
-      _taskQueue._runningTasks.erase( firstTaskNumber );
-      for (auto& taskNumber: extractedTaskNumbers) {
-        _taskQueue._runningTasks.erase( taskNumber );
-      }
-      runningTaskLock.free();
 
       logDebug( "run(...)", "fused task " << _taskNumber << " finished" );
     }
-  }
-  else {
-    tarch::multicore::Lock lock(_taskQueue._statisticsSemaphore);
-    _taskQueue._probabilityThatTaskIsCompleted.setValue(1.0);
   }
 }
 
