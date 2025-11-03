@@ -39,8 +39,10 @@ class tarch::Enumerator {
     void setMax( int max );
 
     /**
+     * Return unique number
+     *
      * Returns a unique non-zero number which is not yet used anywhere else on
-     * this rank.
+     * this rank. The number is positive or zero.
      */
     int getNumber();
 

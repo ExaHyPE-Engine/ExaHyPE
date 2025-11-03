@@ -32,18 +32,21 @@ int tarch::Enumerator::size() const {
 int tarch::Enumerator::getNumber() {
   tarch::multicore::Lock lock( _semaphore );
 
-  if ( size()>=_max ) {
-    return NoNumber;
-  }
-  else {
+  int result = NoNumber;
+
+  if ( size()<_max ) {
+    _lastNumberHandedOut++;
+
     while (_activeNumbers.count(_lastNumberHandedOut) > 0) {
       _lastNumberHandedOut++;
       _lastNumberHandedOut = _lastNumberHandedOut % _max;
     }
 
     _activeNumbers.insert(_lastNumberHandedOut);
-    return _lastNumberHandedOut;
+    result = _lastNumberHandedOut;
   }
+
+  return result;
 }
 
 
