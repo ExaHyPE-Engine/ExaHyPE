@@ -12,7 +12,9 @@ while its solvers themselves obviously are made domain decomposition-aware.
 
 
 
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+\htmlonly
+<div style="background-color: #ccf; padding: 10px; border: 1px solid green;">
+\endhtmlonly
 This page is all about how the domain decomposition is realised within ExaHyPE, i.e. what specific aspects an
 ExaHyPE solver has to take into account. There is other domain decomposition material available on the pages:
 
@@ -20,18 +22,15 @@ ExaHyPE solver has to take into account. There is other domain decomposition mat
 - The page @ref toolbox_loadbalancing discusses various load balancing variants as offered through the load balancing toolbox.
 - The page @ref page_peano_domain_decomposition in Peano's documentation demonstrates how the domain decomposition is technically realised on the mesh level.
 - The page @ref page_exahype_runtime_analysis touches upon domain decomposition from a performance point of view. 
+
+\htmlonly
 </div>
+\endhtmlonly
 
 
 
 ## Adding your own parallel features to an ExaHyPE solver (programmer view)
 
-
-<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
-Requires some work from hereon. There's commented text in the documentation source files, but it all needs a revision.
-</div>
-
-<!--
 Most users that write extensions to ExaHyPE which need some global data
 exchange are users which add new fields to their solver. Examples are global
 statistics that they want to track over the solution or global variables that
@@ -57,97 +56,39 @@ all accesses to your own variables via a semaphore.
 There is no specific place to take care of the protection: 
 Just protect the actual data access.
 
-
 The second item requires slightly more work, as you have to globally reduce the
 attribute: After each time step, you have to ensure that all ranks exchange
 their attributes with each other, and you then have to merge these data.
 I recommend not to use MPI's data exchange routine directly, but to use Peano's 
-wrappers around these routines. 
+wrappers around these routines. See also @ref page_peano_domain_decomposition "Peano's domain decomposition (data exchange events)".
 
-
-The actual data exchange should be done at the end of a each time step. 
+The actual data exchange should be done at the end of each time step. 
 For this, you add
 
-~~~~~~~~~~~~~~~~~~~
-  void finishTimeStep() override;
-~~~~~~~~~~~~~~~~~~~
-
-
+@code{.cpp}
+void finishTimeStep() override;
+@endcode
 
 to your solver. The implementation should first invoke the superclass
 and then add the additional data exchange.
 
-
-~~~~~~~~~~~~~~~~~~~
+@code{.cpp}
 void mynamespace::MyFancySolver::finishTimeStep() {
   MyFancyAbstractSolver::finishTimeStep();
   #ifdef Parallel
   // additional data exchange
   #endif
 }
-~~~~~~~~~~~~~~~~~~~
-
+@endcode
 
 ExaHyPE internally realises these two steps for all of its solver attributes
 such as the maximum mesh size or the admissible time step sizes.
 This is the reason why you have to call the superclass implementation, too.
 
-
-##### Writing your own parallel extensions
-
-Most users that write extensions to  which need some global data
-exchange are users which add new fields to their solver. Examples are
-global statistics that they want to track over the solution or global
-variables that they control.
-
-Each MPI rank holds one instance of the solver. All threads per MPI rank
-share the same instance of the solver.
-
- splits up the domain into chunks along the space-filling curve. If you
-use an enclave solver, it then splits up these chunks further into
-tasks. That is, operations per cell such as the Riemann solves and the
-patch postprocessing can run in parallel on each thread.
-
-If you add new attributes to your solver, this attribute exists on each
-solver on each rank. You therefore have to
-
--   ensure that no two threads access the attribute at the same time;
-
--   ensure that the attributes of the individual solver instances per
-    rank remain consistent.
-
-The first item is relatively simple: You might, for example, decide to
-protect all accesses to your own variables via a semaphore. These
-techniques are discussed in Section
-[\[section:parallel-programming:shared-mem:protect\]](#section:parallel-programming:shared-mem:protect){reference-type="ref"
-reference="section:parallel-programming:shared-mem:protect"}. There is
-no specific place to take care of the protection: Just protect the
-actual data access.
-
-The second item requires slightly more work, as you have to globally
-reduce the attribute: After each time step, you have to ensure that all
-ranks exchange their attributes with each other, and you then have to
-merge these data. I recommend not to use MPI's data exchange routine
-directly, but to use 's wrappers around these routines. These wrappers
-are discussed in Section
-[\[section:parallel-programming:shared-mem:reductions\]](#section:parallel-programming:shared-mem:reductions){reference-type="ref"
-reference="section:parallel-programming:shared-mem:reductions"}. The
-actual data exchange should be done at the end of a each time step. For
-this, you add
-
-void finishTimeStep() override;
-
-to your solver. The implementation should first invoke the superclass
-and then add the additional data exchange.
-
-void mynamespace::MyFancySolver::finishTimeStep()
-MyFancyAbstractSolver::finishTimeStep(); \#ifdef Parallel // additional
-data exchange \#endif
-
- internally realises these two steps for all of its solver attributes
-such as the maximum mesh size or the admissible time step sizes.
-
--->
+\par See also
+- @ref tutorials_exahype2_hpc_domain-decomposition "Domain decomposition in ExaHyPE 2"
+- @ref page_toolbox_loadbalancing_api "Load balancing API"
+- @ref toolbox_loadbalancing "Load Balancing (Domain Decomposition)"
+- @ref page_exahype_runtime_analysis "Runtime analysis"
 
  */
- 
