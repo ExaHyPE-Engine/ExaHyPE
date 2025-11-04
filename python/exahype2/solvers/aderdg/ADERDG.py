@@ -153,6 +153,9 @@ class ADERDG(object):
 
         self._dimensions    = 2
         self._namespace     = ""
+        self._solver_template_file_class_name = None
+        self._templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
+
         self._is_linear     = False
         self._polynomials   = Polynomials.Gauss_Legendre
         self._basis         = GaussLegendreBasis(order + 1)
@@ -929,11 +932,10 @@ Material parameters:    """
 
         generate_kernels(solver=self, output=output, subdirectory=subdirectory)
 
-        templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
         if self._solver_template_file_class_name is None:
-            templatefile_prefix += self.__class__.__name__
+            self._templatefile_prefix += self.__class__.__name__
         else:
-            templatefile_prefix += self._solver_template_file_class_name
+            self._templatefile_prefix += self._solver_template_file_class_name
 
         if subdirectory:
             subdirectory += "/"
@@ -944,8 +946,8 @@ Material parameters:    """
 
         generated_abstract_header_file = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                templatefile_prefix + "Abstract.template.h",
-                templatefile_prefix + "Abstract.template.cpp",
+                self._templatefile_prefix + "Abstract.template.h",
+                self._templatefile_prefix + "Abstract.template.cpp",
                 "Abstract" + self._name,
                 namespace,
                 subdirectory + ".",
@@ -956,8 +958,8 @@ Material parameters:    """
         )
         generated_solver_files = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                templatefile_prefix + ".template.h",
-                templatefile_prefix + ".template.cpp",
+                self._templatefile_prefix + ".template.h",
+                self._templatefile_prefix + ".template.cpp",
                 self._name,
                 namespace,
                 subdirectory + ".",

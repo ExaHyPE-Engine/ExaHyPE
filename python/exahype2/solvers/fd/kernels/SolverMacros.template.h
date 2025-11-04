@@ -55,7 +55,7 @@
     const auto indexWithHaloDown{{i}}   = {{ id.indexWithHalo('nodeDown'~i, 'unknown') | indent(4) }}{##}
     const auto indexWithHaloTop{{i}}    = {{ id.indexWithHalo('nodeTop'~i, 'unknown') | indent(4) }}{##}
 
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(QIn[indexWithHaloLeft{{i}}]));
     assertion(std::isfinite(QIn[indexWithHaloRight{{i}}]));
     assertion(std::isfinite(QIn[indexWithHaloDown{{i}}]));
@@ -70,7 +70,7 @@
     const auto indexWithHaloBack{{i}}   = {{ id.indexWithHalo('nodeBack'~i, 'unknown') | indent(4) }}{##}
     const auto indexWithHaloFront{{i}}  = {{ id.indexWithHalo('nodeFront'~i, 'unknown') | indent(4) }}{##}
 
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(QIn[indexWithHaloBack{{i}}]));
     assertion(std::isfinite(QIn[indexWithHaloFront{{i}}]));
     #endif
@@ -81,7 +81,7 @@
     {% endfor %} {# order range #}
     
     const int indexWithHalo = {{ id.indexWithHalo('node', 'unknown') | indent(4) }}{##}
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(QIn[indexWithHalo]));
     #endif
     QInGathered[unknown] = QIn[indexWithHalo];
@@ -96,7 +96,7 @@
   #pragma unroll
   #endif
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) { // Scatter data into QOut
-    #ifdef GPUOffloadingOff
+    #if !defined(WITH_GPU)
     assertion(std::isfinite(QOutGathered[unknown]));
     #endif
     const int index = {{ id.index('node', 'unknown') | indent(4) }}{##}
