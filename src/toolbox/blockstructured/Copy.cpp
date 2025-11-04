@@ -88,7 +88,6 @@ double toolbox::blockstructured::copyUnknownAndComputeMaxDifference(
     int destIndexLinearised   = (x + destHalo + (y+destHalo)*(numberOfDoFsPerAxisInPatch+2*destHalo) ) * destUnknowns + destIndex;
     double delta = std::abs( dest[destIndexLinearised] - source[sourceIndexLinearised] );
     dest[destIndexLinearised] = source[sourceIndexLinearised];
-    assertion5( source[sourceIndexLinearised]>0.0, sourceIndexLinearised, x, y, sourceIndex, sourceUnknowns ); // @todo raus
     result = std::max( result, delta );
   }
   #elif DIMENSIONS==3

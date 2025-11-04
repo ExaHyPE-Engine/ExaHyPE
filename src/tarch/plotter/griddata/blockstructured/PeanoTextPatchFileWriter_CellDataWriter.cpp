@@ -52,11 +52,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDa
       _out << " nan";
     } else {
       if ( std::abs(value) < std::numeric_limits<double>::min() ) value = 0.0;
-      if (tarch::la::equals(value,0.0)) {
-        _out << " 0";
-      } else {
-        _out << " " << value;
-      }
+      _out << " " << value;
     }
     _entryCounter++;
   }
@@ -69,10 +65,10 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDa
     if (std::isnan(values[i])) {
       _out << " nan";
     } else {
-      if ( std::abs(values[i]) < std::numeric_limits<double>::min() ) values[i] = 0.0;
-      if (tarch::la::equals(values[i],0.0)) {
+      if ( std::abs(values[i]) < std::numeric_limits<double>::min() ) {
         _out << " 0";
-      } else {
+      } 
+      else {
         _out << " " << values[i];
       }
     }

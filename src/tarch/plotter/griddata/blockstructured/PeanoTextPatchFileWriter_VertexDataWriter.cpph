@@ -6,10 +6,9 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::Vertex
       _out << " nan";
     }
     else {
-      if ( std::abs(values[i]) < std::numeric_limits<T>::min() ) values[i] = 0.0;
-      if (tarch::la::equals(values[i],0.0)) {
+      if ( std::abs(values[i]) < std::numeric_limits<T>::min() ) {
         _out << " 0";
-      }
+      } 
       else {
         _out << " " << values[i];
       }

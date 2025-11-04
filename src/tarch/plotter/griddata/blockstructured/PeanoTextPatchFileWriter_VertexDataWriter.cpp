@@ -48,12 +48,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::Vertex
     }
     else {
       if ( std::abs(value) < std::numeric_limits<double>::min() ) value = 0.0;
-      if (tarch::la::equals(value,0.0)) {
-        _out << " 0";
-      }
-      else {
-        _out << " " << value;
-      }
+      _out << " " << value;
     }
     _entryCounter++;
   }

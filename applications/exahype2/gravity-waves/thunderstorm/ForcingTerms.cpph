@@ -1,0 +1,51 @@
+#pragma once
+
+namespace applications::exahype2::GravityWaves::Thunderstorm::ForcingTerms {
+
+  /**
+   * The following scenario definition is taken from:
+   * "Breaking of thunderstorm-generated gravity waves as a source of short-period ducted waves at mesopause altitudes",
+   * Snively and Pasko, 2003, doi:10.1029/2003GL018436
+   */
+
+  // frequency
+  static constexpr double omega = 0.011;   // in rad/s
+  static constexpr double xZero = 450'000; // in m
+  static constexpr double zZero = 12'000;  // in m
+  static constexpr double tZero = 2'000;   // in s
+
+  static constexpr double kX = 0.00011; // in rad/m
+
+  static constexpr double sigmaXSq = 30'000 * 30'000; // in m
+  static constexpr double sigmaZSq = 4'000 * 4'000;   // in m
+  static constexpr double sigmaTSq = 600 * 600;       // in s
+
+  // forcing velocity
+  static constexpr double FZero = 0.33; // 0.33m/s
+
+  void scenario(
+    [[maybe_unused]] const double* const __restrict__ Q,
+    [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+    [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+    [[maybe_unused]] const double                                 t,
+    [[maybe_unused]] double* const __restrict__ S
+  ) {
+    const double exponentialXTerm = tarch::la::pow((x(0) - xZero), 2) / (2 * sigmaXSq);
+    const double exponentialYTerm = tarch::la::pow((x(1) - zZero), 2) / (2 * sigmaZSq);
+    const double exponentialTTerm = tarch::la::pow((t - tZero), 2) / (2 * sigmaTSq);
+    const double cosTerm          = std::cos(kX * x(0)) * std::cos(omega * t);
+
+#if !defined(WITH_GPU)
+    assertion1(!std::isnan(exponentialXTerm), exponentialXTerm);
+    assertion1(!std::isnan(exponentialYTerm), exponentialYTerm);
+    assertion1(!std::isnan(exponentialTTerm), exponentialTTerm);
+    assertion1(!std::isnan(FZero), FZero);
+    assertion1(!std::isnan(cosTerm), cosTerm);
+#endif
+
+    // 0: rho, 2: rhov
+    S[2] += Q[0] * FZero * tarch::la::pow(tarch::la::E, -exponentialXTerm - exponentialYTerm - exponentialTTerm)
+            * cosTerm;
+    ;
+  }
+} // namespace applications::exahype2::GravityWaves::Thunderstorm::ForcingTerms

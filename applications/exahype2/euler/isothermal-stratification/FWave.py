@@ -43,7 +43,7 @@ fWave = r"""
   const auto EL                     = QL[Shortcuts::rhoE];
   const auto pL                     = (GAMMA - 1.0) * (EL - 0.5 * rhoL * uSqL);
 
-  #if defined(GPUOffloadingOff)
+  #if !defined(WITH_GPU)
   assertion1(rhoL > 0, rhoL);
   assertion1(EL > 0, EL);
   assertion1(pL > 0, pL);
@@ -63,7 +63,7 @@ fWave = r"""
   const auto ER                     = QR[Shortcuts::rhoE];
   const auto pR                     = (GAMMA - 1.0) * (ER - 0.5 * rhoR * uSqR);
 
-  #if defined(GPUOffloadingOff)
+  #if !defined(WITH_GPU)
   assertion1(rhoR > 0, rhoR);
   assertion1(ER > 0, ER);
   assertion1(pR > 0, pR);
