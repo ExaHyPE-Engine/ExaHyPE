@@ -6,5 +6,8 @@ from .InsertParticlesAlongCartesianMesh import InsertParticlesAlongCartesianMesh
 from .InsertParticlesByCoordinates import InsertParticlesByCoordinates
 from .InsertParticlesFromFile import InsertParticlesFromFile
 from .FiniteVolumesTracing import FiniteVolumesTracing
+from .FiniteVolumesTracingWithForce import FiniteVolumesTracingWithForce
 from .TracerInteraction import perserveCartesianTracerLayout
 from .CurviTracer import CurviTracer
+from .NBodyInteraction import NBodyInteraction
+from .InsertParticlesByCoordinatesAndData import InsertParticlesByCoordinatesAndData

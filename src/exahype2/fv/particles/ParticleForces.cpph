@@ -1,0 +1,131 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#pragma once
+
+#include <cmath>
+
+template <typename Particle>
+tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::forces::computeCentralGravitationalForce(
+  const tarch::la::Vector<DIMENSIONS, double>& particlePosition,
+  const Particle&                              particle
+) {
+  tarch::la::Vector<DIMENSIONS, double> force;
+  tarch::la::Vector<DIMENSIONS, double> distanceVector;
+
+  const tarch::la::Vector<DIMENSIONS, double>& domainSize = exahype2::fv::particles::utils::domainSize;
+
+  // Compute vector from particle to domain center
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    distanceVector(d) = particlePosition(d) - domainSize(d) / 2.0;
+  }
+
+  double distance       = tarch::la::norm2(distanceVector);
+  double mass           = utils::getMass(particle);
+  double forceMagnitude = mass * _mu / (distance * distance);
+
+  // Compute force = -m * G * M / r² * (r̂)
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    force(d) = -forceMagnitude * distanceVector(d) / distance;
+  }
+
+  return force;
+}
+
+template <typename Particle>
+tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::forces::computeStokesDragForce(
+  const Particle& particle
+) {
+  // Get particle properties
+  double radius = utils::getRadius(particle);
+  double mass   = utils::getMass(particle);
+  // Get fluid properties
+  tarch::la::Vector<DIMENSIONS, double> fluidVelocity;
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    fluidVelocity(d) = particle.getData(1 + d); // Fluid velocity at indices 1,2,...
+  }
+  // Get particle velocity
+  tarch::la::Vector<DIMENSIONS, double> particleVelocity = exahype2::fv::particles::utils::getVelocity(particle);
+  // Compute relaxation time τ using configured viscosity
+  double tau = mass / (6.0 * M_PI * _dynamicViscosity * radius + 1e-12);
+
+  // Compute relative velocity
+  tarch::la::Vector<DIMENSIONS, double> relativeVelocity = particleVelocity - fluidVelocity;
+  // Stokes drag force: F_drag = -m/τ * (v_p - v_f)
+  tarch::la::Vector<DIMENSIONS, double> dragForce = -(mass / tau) * relativeVelocity;
+
+  return dragForce;
+}
+
+template <typename Particle>
+tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::forces::computeBuoyancyForce(const Particle& particle) {
+  // Get fluid properties from particle data
+  double localFluidDensity = utils::getInterpolatedRho(particle); // Fluid density at index 0
+  // Get particle radius (assuming stored at index 8)
+  double radius = utils::getRadius(particle);
+
+  // Calculate particle volume (sphere)
+  double volume = (4.0 / 3.0) * M_PI * radius * radius * radius;
+
+  // Calculate buoyancy force magnitude (Archimedes' principle)
+  // F_buoyancy = ρ_fluid * V * g
+  double buoyancyMagnitude = localFluidDensity * volume * _gravityMagnitude;
+
+  // Create force vector (pointing upward in y-direction)
+  tarch::la::Vector<DIMENSIONS, double> buoyancyForce(0.0);
+  buoyancyForce(1) = buoyancyMagnitude; // Positive y-direction (upward)
+
+  return buoyancyForce;
+}
+
+template <typename Particle>
+tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::forces::computeGravityForce(const Particle& particle) {
+  double mass = utils::getMass(particle);
+
+  // Create force vector (pointing downward in y-direction)
+  // F_gravity = m * g
+  tarch::la::Vector<DIMENSIONS, double> gravityForce(0.0);
+  gravityForce(1) = -mass * _gravityMagnitude; // Negative y-direction (downward)
+
+  return gravityForce;
+}
+
+template <typename Particle>
+void exahype2::fv::particles::forces::applyForces(Particle& particle, tarch::la::Vector<DIMENSIONS, double> pos) {
+  // Particle mass
+  double mass = exahype2::fv::particles::utils::getMass(particle);
+
+  // If massless: treat as tracer → no forces
+  if (tarch::la::smallerEquals(mass, 0.0)) {
+    exahype2::fv::particles::utils::setAcceleration(particle, tarch::la::Vector<DIMENSIONS, double>(0.0));
+    return;
+  }
+
+  // Initialise total force to zero
+  tarch::la::Vector<DIMENSIONS, double> totalForce(0.0);
+
+  // Interpolated fluid velocity (may be used in drag, etc.)
+  tarch::la::Vector<DIMENSIONS, double> fluidVelocity;
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    fluidVelocity(d) = particle.getData(1 + d);
+  }
+
+  // --- Apply forces ---
+  if (isForceEnabledInternal(ForceType::CentralGravity)) {
+    totalForce += computeCentralGravitationalForce(pos, particle);
+  }
+  if (isForceEnabledInternal(ForceType::Buoyancy)) {
+    totalForce += computeBuoyancyForce(particle);
+  }
+  if (isForceEnabledInternal(ForceType::Drag)) {
+    totalForce += computeStokesDragForce(particle);
+  }
+  if (isForceEnabledInternal(ForceType::ConstantGravity)) {
+    totalForce += computeGravityForce(particle);
+  }
+
+  // Acceleration = Force / Mass
+  tarch::la::Vector<DIMENSIONS, double> totalAcceleration = totalForce / mass;
+
+  exahype2::fv::particles::utils::setAcceleration(particle, totalAcceleration);
+}

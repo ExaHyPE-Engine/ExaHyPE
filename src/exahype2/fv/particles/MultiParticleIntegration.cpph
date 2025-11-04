@@ -1,0 +1,393 @@
+#pragma once
+
+#include <iomanip>
+#include <iostream>
+
+namespace exahype2 {
+  namespace fv {
+    namespace particles {
+      namespace ppintegration {
+        // Compute and store gravitational accelerations for two particles at arbitrary positions
+        template <typename Particle>
+        void exahype2::fv::particles::ppintegration::centralGravityInteraction(
+          Particle&                                    p1,
+          const tarch::la::Vector<DIMENSIONS, double>& pos1,
+          Particle&                                    p2,
+          const tarch::la::Vector<DIMENSIONS, double>& pos2
+        ) {
+          resetAcceleration(p1);
+          resetAcceleration(p2);
+          // Extract masses from your particle data array
+          double m1 = p1.getData(7);
+          double m2 = p2.getData(7);
+          // Separation vector and distance
+          auto   r_vec = pos2 - pos1;
+          double r     = tarch::la::norm2(r_vec);
+          if (tarch::la::greater(r, 0.0)) {
+            // Unit direction from 1→2
+            auto dir = r_vec / r;
+            // Magnitude of gravitational force
+            double F = _G * m1 * m2 / (r * r);
+            // Store accelerations into data slots 5/6 (x/y) of each particle
+            for (int d = 0; d < DIMENSIONS; ++d) {
+              p1.setData(5 + d, p1.getData(5 + d) + dir(d) * (F / m1)); // a₁ = +F/m₁
+              p2.setData(5 + d, p2.getData(5 + d) - dir(d) * (F / m2)); // a₂ = –F/m₂
+            }
+          }
+        }
+        template <typename Particle>
+        tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::ppintegration::explicitEulerIntegration(
+          std::vector<Particle*>& particles,
+          double                  timeStepSize
+        ) {
+          tarch::la::Vector<DIMENSIONS, double> dummyPosition(0.0); // Default return value
+          // Assume two particles: p1 and p2
+          assertion(particles.size() == 2);
+          Particle* p1 = particles[0];
+          Particle* p2 = particles[1];
+
+          // // Compute gravitational interaction
+          exahype2::fv::particles::ppintegration::centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
+
+          // Integrate positions and velocities
+          for (auto* p : particles) {
+            auto state = exahype2::fv::particles::utils::getParticleState(*p);
+
+            for (int d = 0; d < DIMENSIONS; ++d) {
+              state.position(d) += state.velocity(d) * timeStepSize;
+              state.velocity(d) += state.acceleration(d) * timeStepSize;
+            }
+
+            exahype2::fv::particles::utils::setVelocity(*p, state.velocity);
+            p->setX(state.position);
+          }
+
+          if (!particles.empty()) {
+            auto lastState = exahype2::fv::particles::utils::getParticleState(*particles.back());
+            dummyPosition  = lastState.position;
+          }
+
+          return dummyPosition;
+        }
+
+
+        template <typename Particle>
+        tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::ppintegration::semiImplicitEulerIntegration(
+          std::vector<Particle*>& particles,
+          double                  timeStepSize
+        ) {
+          tarch::la::Vector<DIMENSIONS, double> dummyPosition(0.0); // Default return value
+
+          // // Assume two particles: p1 and p2
+          // assertion(particles.size() == 2);
+          Particle* p1 = particles[0];
+          Particle* p2 = particles[1];
+
+          // // Compute gravitational interaction
+          exahype2::fv::particles::ppintegration::centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
+          // Integrate positions and velocities
+          for (auto* p : particles) {
+            auto state = exahype2::fv::particles::utils::getParticleState(*p);
+
+            for (int d = 0; d < DIMENSIONS; ++d) {
+
+              state.velocity(d) += state.acceleration(d) * timeStepSize;
+              state.position(d) += state.velocity(d) * timeStepSize;
+            }
+
+            exahype2::fv::particles::utils::setVelocity(*p, state.velocity);
+            p->setX(state.position);
+          }
+          if (!particles.empty()) {
+            auto lastState = exahype2::fv::particles::utils::getParticleState(*particles.back());
+            dummyPosition  = lastState.position;
+          }
+
+          return dummyPosition;
+        }
+
+
+        template <typename Particle>
+        void exahype2::fv::particles::ppintegration::velocityVerletIntegration(std::vector<Particle*>& particles) {
+          assertion(particles.size() == 2);
+          Particle* p1 = particles[0];
+          Particle* p2 = particles[1];
+          exahype2::fv::particles::ppintegration::centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
+          const double dt = exahype2::fv::particles::integration::_timeStepSize;
+
+          // Step 1: Get current states
+          auto state1 = exahype2::fv::particles::utils::getParticleState(*p1);
+          auto state2 = exahype2::fv::particles::utils::getParticleState(*p2);
+
+          // Step 2: Compute velocity half-step
+          for (int d = 0; d < DIMENSIONS; ++d) {
+            state1.velocity(d) += 0.5 * dt * state1.acceleration(d);
+            state2.velocity(d) += 0.5 * dt * state2.acceleration(d);
+          }
+
+          // Step 3: Update position full-step
+          for (int d = 0; d < DIMENSIONS; ++d) {
+            state1.position(d) += dt * state1.velocity(d);
+            state2.position(d) += dt * state2.velocity(d);
+          }
+
+          // Step 4: Set updated positions
+          p1->setX(state1.position);
+          p2->setX(state2.position);
+
+
+          // Step 6: Recalculate acceleration at new positions
+          exahype2::fv::particles::ppintegration::centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
+
+          // Step 7: Get updated accelerations
+          auto new_a1 = exahype2::fv::particles::utils::getAcceleration(*p1);
+          auto new_a2 = exahype2::fv::particles::utils::getAcceleration(*p2);
+
+          // Step 8: Finalize velocity update with second half-step
+          for (int d = 0; d < DIMENSIONS; ++d) {
+            state1.velocity(d) += 0.5 * dt * new_a1(d);
+            state2.velocity(d) += 0.5 * dt * new_a2(d);
+          }
+
+          // Step 9: Write back final states
+          exahype2::fv::particles::utils::setVelocity(*p1, state1.velocity);
+          exahype2::fv::particles::utils::setVelocity(*p2, state2.velocity);
+        }
+
+
+        template <typename Particle>
+        void exahype2::fv::particles::ppintegration::midpointIntegration(std::vector<Particle*>& particles) {
+          assertion(particles.size() == 2);
+          Particle* p1 = particles[0];
+          Particle* p2 = particles[1];
+
+          const double dt = exahype2::fv::particles::integration::_timeStepSize;
+          // Step 0: Compute initial acceleration at current positions
+          exahype2::fv::particles::ppintegration::centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
+
+          auto state1 = exahype2::fv::particles::utils::getParticleState(*p1);
+          auto state2 = exahype2::fv::particles::utils::getParticleState(*p2);
+
+          // Step 2: Compute midpoint state
+          exahype2::fv::particles::utils::ParticleState mid1, mid2;
+          for (int d = 0; d < DIMENSIONS; ++d) {
+            mid1.velocity(d) = state1.velocity(d) + 0.5 * dt * state1.acceleration(d);
+            mid1.position(d) = state1.position(d) + 0.5 * dt * state1.velocity(d);
+
+            mid2.velocity(d) = state2.velocity(d) + 0.5 * dt * state2.acceleration(d);
+            mid2.position(d) = state2.position(d) + 0.5 * dt * state2.velocity(d);
+          }
+
+          // Step 3: Move particles to midpoint positions temporarily
+          p1->setX(mid1.position);
+          p2->setX(mid2.position);
+
+          // Step 5: Recompute interaction at midpoint
+          exahype2::fv::particles::ppintegration::centralGravityInteraction(*p1, mid1.position, *p2, mid2.position);
+
+          // Step 6: Retrieve accelerations at midpoint
+          mid1.acceleration = exahype2::fv::particles::utils::getAcceleration(*p1);
+          mid2.acceleration = exahype2::fv::particles::utils::getAcceleration(*p2);
+
+          // Step 7: Final update using midpoint derivatives
+          exahype2::fv::particles::utils::ParticleState final1, final2;
+          for (int d = 0; d < DIMENSIONS; ++d) {
+            final1.velocity(d) = state1.velocity(d) + dt * mid1.acceleration(d);
+            final1.position(d) = state1.position(d) + dt * mid1.velocity(d);
+
+            final2.velocity(d) = state2.velocity(d) + dt * mid2.acceleration(d);
+            final2.position(d) = state2.position(d) + dt * mid2.velocity(d);
+          }
+
+          // Step 8: Write back final state
+          exahype2::fv::particles::utils::setVelocity(*p1, final1.velocity);
+          p1->setX(final1.position);
+
+          exahype2::fv::particles::utils::setVelocity(*p2, final2.velocity);
+          p2->setX(final2.position);
+        }
+        template <typename Particle>
+        void exahype2::fv::particles::ppintegration::RK3Integration(std::vector<Particle*>& particles) {
+          assertion(particles.size() == 2);
+          double h = exahype2::fv::particles::integration::_timeStepSize;
+
+          Particle* p1 = particles[0];
+          Particle* p2 = particles[1];
+
+          using State = exahype2::fv::particles::utils::ParticleState;
+
+          // Step 0: compute initial accelerations at current positions
+          centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
+          ParticleState current1 = exahype2::fv::particles::utils::getParticleState(*p1);
+          ParticleState current2 = exahype2::fv::particles::utils::getParticleState(*p2);
+
+          // === k1 ===
+          State k1_1 = current1;
+          State k1_2 = current2;
+
+          // === k2 ===
+          State temp1, temp2;
+
+          ParticleState k2_2, k2_1;
+          k2_1 = exahype2::fv::particles::integration::updatePartialStep(k1_1, h, 0.5);
+          k2_2 = exahype2::fv::particles::integration::updatePartialStep(k1_2, h, 0.5);
+          centralGravityInteraction(*p1, k2_1.position, *p2, k2_2.position);
+          k2_1.acceleration = getAcceleration(*p1);
+          k2_2.acceleration = getAcceleration(*p2);
+          // === k3 ===
+          State k3_1 = exahype2::fv::particles::integration::updatePartialStepWithBase(current1, k1_1, h, -1);
+          State k3_2 = exahype2::fv::particles::integration::updatePartialStepWithBase(current2, k1_2, h, -1);
+          k3_1       = exahype2::fv::particles::integration::updatePartialStepWithBase(k3_1, k2_1, h, 2.0);
+          k3_2       = exahype2::fv::particles::integration::updatePartialStepWithBase(k3_2, k2_2, h, 2.0);
+          centralGravityInteraction(*p1, k3_1.position, *p2, k3_2.position);
+          k3_1.acceleration = getAcceleration(*p1);
+          k3_2.acceleration = getAcceleration(*p2);
+
+          // === Final update ===
+          State y1_1, y1_2;
+          for (int d = 0; d < DIMENSIONS; ++d) {
+            y1_1.position(
+              d
+            ) = current1.position(d) + h * (k1_1.velocity(d) + 4.0 * k2_1.velocity(d) + k3_1.velocity(d)) / 6.0;
+            y1_1.velocity(
+              d
+            ) = current1.velocity(d)
+                + h * (k1_1.acceleration(d) + 4.0 * k2_1.acceleration(d) + k3_1.acceleration(d)) / 6.0;
+            y1_1.acceleration(d) = k3_1.acceleration(d); // Update acceleration for consistency
+            y1_2.position(
+              d
+            ) = current2.position(d) + h * (k1_2.velocity(d) + 4.0 * k2_2.velocity(d) + k3_2.velocity(d)) / 6.0;
+            y1_2.velocity(
+              d
+            ) = current2.velocity(d)
+                + h * (k1_2.acceleration(d) + 4.0 * k2_2.acceleration(d) + k3_2.acceleration(d)) / 6.0;
+            y1_2.acceleration(d) = k3_2.acceleration(d); // Update acceleration for consistency
+          }
+
+          // Apply new states
+          exahype2::fv::particles::utils::setParticleState(*p1, y1_1);
+          exahype2::fv::particles::utils::setParticleState(*p2, y1_2);
+
+          p1->setX(y1_1.position);
+          p2->setX(y1_2.position);
+        }
+
+        template <typename Particle>
+        void exahype2::fv::particles::ppintegration::RK4Integration(std::vector<Particle*>& particles) {
+          double timeStepSize = exahype2::fv::particles::integration::_timeStepSize;
+          assertion(particles.size() == 2);
+          Particle* p1 = particles[0];
+          Particle* p2 = particles[1];
+          exahype2::fv::particles::ppintegration::centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
+          using State = exahype2::fv::particles::utils::ParticleState;
+
+          State current1 = exahype2::fv::particles::utils::getParticleState(*p1);
+          State current2 = exahype2::fv::particles::utils::getParticleState(*p2);
+
+          State k1_1, k1_2, k2_1, k2_2, k3_1, k3_2, k4_1, k4_2;
+          State temp1, temp2;
+          // === k1 ===
+          k1_1 = current1;
+          k1_2 = current2;
+
+          // === k2 ===
+          k2_1 = exahype2::fv::particles::integration::updatePartialStep(k1_1, timeStepSize, 0.5);
+          k2_2 = exahype2::fv::particles::integration::updatePartialStep(k1_2, timeStepSize, 0.5);
+
+          centralGravityInteraction(*p1, k2_1.position, *p2, k2_2.position);
+          k2_1.acceleration = exahype2::fv::particles::utils::getAcceleration(*p1);
+          k2_2.acceleration = exahype2::fv::particles::utils::getAcceleration(*p2);
+
+          // === k3 ===
+          k3_1 = exahype2::fv::particles::integration::updatePartialStepWithBase(current1, k2_1, timeStepSize, 0.5);
+          k3_2 = exahype2::fv::particles::integration::updatePartialStepWithBase(current2, k2_2, timeStepSize, 0.5);
+
+          centralGravityInteraction(*p1, k3_1.position, *p2, k3_2.position);
+          k3_1.acceleration = exahype2::fv::particles::utils::getAcceleration(*p1);
+          k3_2.acceleration = exahype2::fv::particles::utils::getAcceleration(*p2);
+
+          // === k4 ===
+          k4_1 = exahype2::fv::particles::integration::updatePartialStepWithBase(current1, k3_1, timeStepSize, 1.0);
+          k4_2 = exahype2::fv::particles::integration::updatePartialStepWithBase(current2, k3_2, timeStepSize, 1.0);
+
+
+          centralGravityInteraction(*p1, k4_1.position, *p2, k4_2.position);
+          k4_1.acceleration = exahype2::fv::particles::utils::getAcceleration(*p1);
+          k4_2.acceleration = exahype2::fv::particles::utils::getAcceleration(*p2);
+
+          // === Final state update ===
+          State y1_1, y1_2;
+          for (int d = 0; d < DIMENSIONS; ++d) {
+            y1_1.position(
+              d
+            ) = current1.position(d)
+                + timeStepSize * (k1_1.velocity(d) + 2 * k2_1.velocity(d) + 2 * k3_1.velocity(d) + k4_1.velocity(d))
+                    / 6.0;
+            y1_1.velocity(
+              d
+            ) = current1.velocity(d)
+                + timeStepSize
+                    * (k1_1.acceleration(d) + 2 * k2_1.acceleration(d) + 2 * k3_1.acceleration(d) + k4_1.acceleration(d))
+                    / 6.0;
+
+            y1_2.position(
+              d
+            ) = current2.position(d)
+                + timeStepSize * (k1_2.velocity(d) + 2 * k2_2.velocity(d) + 2 * k3_2.velocity(d) + k4_2.velocity(d))
+                    / 6.0;
+            y1_2.velocity(
+              d
+            ) = current2.velocity(d)
+                + timeStepSize
+                    * (k1_2.acceleration(d) + 2 * k2_2.acceleration(d) + 2 * k3_2.acceleration(d) + k4_2.acceleration(d))
+                    / 6.0;
+          }
+
+          exahype2::fv::particles::utils::setParticleState(*p1, y1_1);
+          exahype2::fv::particles::utils::setParticleState(*p2, y1_2);
+          p1->setX(y1_1.position);
+          p2->setX(y1_2.position);
+        }
+
+        // Update the applyIntegration function to handle vectors
+        template <typename Particle>
+        void applyIntegration(std::vector<Particle*>& particles) {
+          double timestepsize      = exahype2::fv::particles::integration::_timeStepSize;
+          int    integrationMethod = exahype2::fv::particles::integration::_integrationMethod;
+          switch (integrationMethod) {
+          case 1:
+            exahype2::fv::particles::ppintegration::explicitEulerIntegration(particles, timestepsize);
+            break;
+          case 2:
+            exahype2::fv::particles::ppintegration::semiImplicitEulerIntegration(particles, timestepsize);
+            break;
+          case 3:
+            exahype2::fv::particles::ppintegration::midpointIntegration(particles);
+            break;
+          case 4:
+            exahype2::fv::particles::ppintegration::velocityVerletIntegration(particles);
+            break;
+          case 5:
+            exahype2::fv::particles::ppintegration::RK3Integration(particles);
+            break;
+          case 6:
+            exahype2::fv::particles::ppintegration::RK4Integration(particles);
+            break;
+          }
+        }
+
+        // Zero out acceleration data in all particles
+        template <typename Particle>
+        void exahype2::fv::particles::ppintegration::clearAccelerations(const std::vector<Particle*>& particles) {
+          for (auto* p : particles) {
+            for (int d = 0; d < DIMENSIONS; ++d) {
+              p->setData(5 + d, 0.0);
+            }
+          }
+        }
+
+
+      } // namespace ppintegration
+    } // namespace particles
+  } // namespace fv
+} // namespace exahype2

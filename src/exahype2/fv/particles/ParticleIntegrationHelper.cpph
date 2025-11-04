@@ -1,0 +1,46 @@
+#pragma once
+
+inline ParticleState exahype2::fv::particles::integration::
+  updatePartialStep(const ParticleState& current, double timeStepSize, double stepFraction) {
+  ParticleState state;
+  double        factorDt = stepFraction * timeStepSize;
+
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    state.velocity(d) = current.velocity(d) + factorDt * current.acceleration(d);
+    state.position(d) = current.position(d) + factorDt * current.velocity(d);
+  }
+
+  return state;
+}
+
+inline ParticleState exahype2::fv::particles::integration::updatePartialStepWithBase(
+  const ParticleState& base,
+  const ParticleState& update,
+  double               timeStepSize,
+  double               factor
+) {
+  ParticleState result;
+  double        factorDt = factor * timeStepSize;
+
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    result.velocity(d)     = base.velocity(d) + factorDt * update.acceleration(d);
+    result.position(d)     = base.position(d) + factorDt * update.velocity(d);
+    result.acceleration(d) = update.acceleration(d);
+  }
+
+  return result;
+}
+
+inline ParticleState exahype2::fv::particles::integration::
+  updateMidpointStep(const ParticleState& current, double timeStepSize, double stepFraction) {
+  ParticleState state;
+  double        factorDt = stepFraction * timeStepSize;
+
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    state.velocity(d) = current.velocity(d) + factorDt * current.acceleration(d);
+    state.position(d) = current.position(d) + factorDt * state.velocity(d);
+  }
+
+  state.acceleration = current.acceleration; // Will be overwritten later
+  return state;
+}

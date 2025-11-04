@@ -23,8 +23,8 @@ tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter::VTUTextFileWrite
   double timeStamp,
   const int precision
 ):
-  //_dataType(precision < 7 ? "Float32" : "Float64"), // TODO: Can we remove this choice?
-  _dataType("Float64"),
+  _dataType(precision < 7 ? "Float32" : "Float64"),
+  //_dataType("Float64"),
   _writtenToFile(false),
   _numberOfVertices(0),
   _numberOfCells(0),
@@ -46,7 +46,7 @@ tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter::VTUTextFileWrite
   }
 
   // VTK does not support more precise values
-  const double DefaultTimeStampPrecision = 1e-5;
+  constexpr double DefaultTimeStampPrecision = 1e-5;
 
   switch (mode) {
   case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::CreateNew:

@@ -4,6 +4,7 @@ import os
 from abc import abstractmethod
 
 import jinja2
+import dastgen2
 
 import peano4.output
 import peano4.datamodel
@@ -236,6 +237,22 @@ class FV(object):
         self._variable_names = []
         self._variable_pos = [0]
 
+        self._particle_unknowns = []
+        self._particle_variable_names = []
+        self._particle_variable_pos = []
+        self._use_var_shortcut_tracer = False
+        self._tracer_names = []
+        self._tracer_particles = []
+        self._tracer_particle_sets = []
+        self._sort_descend_invocation_order_within_action_sets = -1
+        self._plot_descend_invocation_order_within_action_sets = 65536
+        self._update_particle_association_action_sets = []
+        self._update_particle_parallel_state_action_sets = []
+        self._particle_plot = False
+        self._particle_attributes = []
+        self._particle_number = []
+        self._particle_plotters = []
+
         if isinstance(unknowns, dict):
             self._unknowns = sum(unknowns.values())
             self._variable_names += list(unknowns.keys())
@@ -369,7 +386,7 @@ Name:                   """
 Type:                   """
             + self.__class__.__module__
             + """
-DIMENSIONS:             """
+Dimensions:             """
             + str(self._dimensions)
             + """
 Use enclave tasking:    """
@@ -395,7 +412,7 @@ h_volume_min:           """
             + """
 h_volume_max:           """
             + str(self._max_volume_h)
-           + """
+            + """
 Initial conditions:     """
             + str(self._initial_conditions_implementation)
             + """
@@ -1077,6 +1094,12 @@ The finest mesh width of """
         datamodel.add_face(self._patch_overlap_update)
         datamodel.add_face(self._face_label)
 
+        if self._tracer_names:
+            for particle in self._tracer_particles:
+                datamodel.add_global_object(particle)
+            for tracer_set in self._tracer_particle_sets:
+                datamodel.add_vertex(tracer_set)
+
     def add_use_data_statements_to_Peano4_solver_step(self, step):
         """
         Tell Peano what data to move around
@@ -1169,6 +1192,14 @@ The finest mesh width of """
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
 
+        if self._tracer_names:
+            for tracer_set in self._tracer_particle_sets:
+                step.use_vertex(tracer_set)
+            for action_set in self._update_particle_association_action_sets:
+                step.add_action_set(action_set)
+            for action_set in self._update_particle_parallel_state_action_sets:
+                step.add_action_set(action_set)
+
     def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
         """
         The boundary information is set only once. It is therefore important that
@@ -1182,6 +1213,9 @@ The finest mesh width of """
         else:
             step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
+        if self._tracer_particle_sets:
+            for tracer_set in self._tracer_particle_sets:
+                step.use_vertex(tracer_set)
     @property
     def plot_description(
         self,
@@ -1271,6 +1305,38 @@ The finest mesh width of """
             step.add_action_set(plot_grid_properties_action_set)
         pass
 
+        for tracer_set, particle, particle_attr, particle_number,particle_unknown in zip(
+            self._tracer_particle_sets,
+            self._tracer_particles,
+            self._particle_attributes,
+            self._particle_number,
+            self._particle_unknowns
+        ):
+            step.use_vertex(tracer_set)
+            assoc_idx = self._tracer_particle_sets.index(tracer_set)
+            if self._particle_plot:
+                plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat(
+                    filename=particle.name,
+                    output_directory=output_path,
+                    particle_set=tracer_set,
+                    time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+                    additional_includes="""
+#include "repositories/SolverRepository.h"
+""",
+                )
+                if particle_attr:
+                    plotter.add_attribute_to_plot(particle_attr, particle_unknown)
+                plotter.add_attribute_to_plot(
+                    particle_number, 2, "tarch::la::convertScalar<double>(p->getNumber())"
+                )
+                plotter.descend_invocation_order = self._plot_descend_invocation_order_within_action_sets
+                step.add_action_set(plotter)
+
+            # These should correspond 1-to-1 with tracer sets
+
+            step.add_action_set(self._update_particle_association_action_sets[assoc_idx])
+            step.add_action_set(self._update_particle_parallel_state_action_sets[assoc_idx])
+
     def add_actions_to_checkpoint_solution(self, step, output_path, restart_from_checkpoint=False):
         d = {}
         self._init_dictionary_with_default_parameters(d)
@@ -1315,6 +1381,15 @@ The finest mesh width of """
             )
             step.add_action_set(plot_grid_properties_action_set)
         pass
+        if self._tracer_particle_sets:
+                for tracer_set, assoc_action, parallel_action in zip(
+                    self._tracer_particle_sets,
+                    self._update_particle_association_action_sets,
+                    self._update_particle_parallel_state_action_sets
+                ):
+                    step.use_vertex(tracer_set)
+                    step.add_action_set(assoc_action)
+                    step.add_action_set(parallel_action)
 
     def add_actions_to_perform_time_step(self, step):
         """!
@@ -1341,6 +1416,14 @@ The finest mesh width of """
         step.add_action_set(self._action_set_project_patch_onto_faces)
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
+
+        if self._tracer_names:
+            for tracer_set in self._tracer_particle_sets:
+                step.use_vertex(tracer_set)
+            for action_set in self._update_particle_association_action_sets:
+                step.add_action_set(action_set)
+            for action_set in self._update_particle_parallel_state_action_sets:
+                step.add_action_set(action_set)
 
     @abstractmethod
     def add_entries_to_text_replacement_dictionary(self, d):
@@ -1597,6 +1680,179 @@ The finest mesh width of """
         d["COMPUTE_NEW_TIME_STEP_SIZE"] = jinja2.Template(
             self._compute_new_time_step_size, undefined=jinja2.DebugUndefined
         ).render(**d)
+
+        d["NUMBER_OF_UNKNOWNS_PARTICLE"] = self._particle_unknowns
+        if self._tracer_particle_sets:
+            d["PARTICLES_CONTAINER"] = self._tracer_particle_sets[0].name
+            d["PARTICLE"] = self._tracer_particles[0].name
+
+    def add_tracer(
+        self,
+        name,
+        particle_attributes,
+        plot=True,
+        sort_descend_invocation_order_within_action_sets=-1,
+        plot_descend_invocation_order_within_action_sets=65536,
+    ):
+        """!
+        Add a tracer to the project
+
+        Tracers have to be the very last thing you add to your project.
+        At this point, all solvers have to be added to the project.
+        However, you have to add the tracers prior to any user-defined
+        routines. See docu of init_new_user_defined_algorithmic_step().
+
+        We rely on the particle toolbox. Therefore, our particles have
+        already a position x, a search radius (which we don't usually
+        use here), and a (parallel) state. The search radius determines
+        how Peano sorts particles within the tree, and we can set it to
+        zero here. This ensures that the particle has no real volume and
+        thus is always sieved through to the finest grid level.
+
+        @see peano4.toolbox.particles.Particle
+
+
+        ## Projection of data onto particles and database dumping
+
+        The projection onto the particle has to be realised separately, as
+        it depends on the solver variant chosen. The same holds for the
+        dump of particle data into a database if this shall happen
+        on-the-fly.
+
+        Most bigger applications add their solvers an add_tracer() operation,
+        which takes all of this domain knowledge into account. This
+        add_tracer() then forwards to this routine, adding further
+        behaviour.
+
+        See the class application.exahype2.ccz.CCZ4Solver and its derived
+        variants for examples.
+
+
+        ## Moving particles
+
+        Tracers in ExaHyPE can move, though they do not have to move. Even if
+        they move, they never have a native velocity, i.e. their velocity will
+        always be a projection of an ExaHyPE solution. We are talking about
+        tracers after all and not about a proper PIC approach. Due to this
+        constraint, we do not need a velocity vector. However, we need an
+        additional enumeration which clarifies if a
+        particle has moved already or not. This enumeration is needed by the
+        particle update routines. Obviously, nothing stops you from adding
+        a separate velocity field to the tracer object and thus to redefine
+        this behaviour.
+
+
+        ## ExaHyPE-specific particle attributes
+
+        We add each
+        particle a number which is a tuple consisting of the tree number
+        (on which tree has a particle been generated plus what was the
+        tree-local number of this particle at the time). Through this
+        tuple, we can track tracers later on even if they move across
+        domains.
+
+        We can plot the data - if there is data to be tracked - directly,
+        as it is a large double array. For the index, we have to type cast
+        the data, as this is a tuple of integers, and Peano's VTK plotter
+        supports only double vectors.
+
+        @see peano4.toolbox.particles.PlotParticlesInVTKFormat.add_attribute_to_plot()
+
+
+        ## Action set order
+
+        We add the particle ordering with descend order -1. This should do the job
+        for most setups, but we might be wrong. The following action sets are
+        automatically added:
+
+        - UpdateParallelState is added to each and every time step and plotting
+          sweep. As we also add
+        - peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop to each and every time step,
+          particles can move at any point. We always resort them immediately.
+
+        Both action sets are assigned the standard priority of sort_descend_invocation_order_within_action_sets.
+
+
+        ## Arguments
+
+        name: String
+          Has to be a unique name for this tracer
+
+        attribute_count: integer
+          Number of attributes that we track per particle (scalar values added
+          pre particle). Can be 0 if you don't want any attributes.
+
+        h and noise:
+          See tracer.InsertParticles
+
+        plot: Boolean
+          If this flag is set, ExaHyPE dumps the particles as vtu files whenever
+          it writes patch files. You can switch this behaviour off. A lot of codes
+          do so if they dump the tracer data independently into another database
+          anyway.
+
+        sort_descend_invocation_order_within_action_sets: Integer
+          You have to clarify what the priority of the tracer is within the
+          action sets. By default, all ExaHyPE solvers start with priority
+          0 and then up to n. So you are fine with using the default of -1
+          which means that the tracer precedes any solver. However, there
+          might be cases where you wanna move the priorities manually.
+
+        Returns the particle set that you can use to modify further
+        """
+        self._tracer_names.append(name)
+        particle = peano4.toolbox.particles.Particle(name)
+        particle.association = peano4.datamodel.DoFAssociation.Global
+        self._particle_plot = plot
+        self._plot_descend_invocation_order_within_action_sets = plot_descend_invocation_order_within_action_sets
+        self._sort_descend_invocation_order_within_action_sets = sort_descend_invocation_order_within_action_sets
+
+        particle_variable_names = []
+        particle_variable_pos = [0]
+        if isinstance(particle_attributes, dict):
+            unknown_count = sum(particle_attributes["unknowns"].values())
+            particle_variable_names += list(particle_attributes["unknowns"].keys())
+            for var in particle_attributes["unknowns"].values():
+                particle_variable_pos.append(var + particle_variable_pos[-1])
+            self._use_var_shortcut_tracer = True
+        elif isinstance(particle_attributes, int):
+            unknown_count = particle_attributes
+        else:
+            raise Exception("Invalid format for 'unknowns'. Must be an integer or a dictionary.")
+
+        self._particle_unknowns.append(unknown_count)
+        self._particle_variable_names.append(particle_variable_names)
+        self._particle_variable_pos.append(particle_variable_pos)
+
+        particle_attr = peano4.dastgen2.Peano4DoubleArray("data", str(unknown_count))
+        particle.data.add_attribute(particle_attr)
+        self._particle_attributes.append(particle_attr)
+
+        particle.data.add_attribute(
+            dastgen2.attributes.Enumeration("MoveState", ["NotMovedYet", "Moved"])
+        )
+
+        particle_number = peano4.dastgen2.Peano4IntegerArray("number", "2")
+        particle.data.add_attribute(particle_number)
+        self._particle_number.append(particle_number)
+
+        particles = peano4.toolbox.particles.ParticleSet(particle)
+        particles.subdirectory = ""
+        particles.association = peano4.datamodel.DoFAssociation.Vertex
+
+        updateParticleGridAssociation_LiftDrop = peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(particles)
+        updateParticleGridAssociation_LiftDrop.descend_invocation_order = self._sort_descend_invocation_order_within_action_sets
+        updateParticleGridAssociation_LiftDrop.parallel = True
+        self._update_particle_association_action_sets.append(updateParticleGridAssociation_LiftDrop)
+        parallel_state_action_set = peano4.toolbox.particles.api.UpdateParallelState(particles)
+        parallel_state_action_set.descend_invocation_order = self._sort_descend_invocation_order_within_action_sets
+        parallel_state_action_set.parallel = True
+        self._update_particle_parallel_state_action_sets.append(parallel_state_action_set)
+
+        self._tracer_particles.append(particle)
+        self._tracer_particle_sets.append(particles)
+
+        return particles
 
     @property
     def unknowns(self):

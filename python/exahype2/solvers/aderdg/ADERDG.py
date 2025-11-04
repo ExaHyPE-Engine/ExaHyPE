@@ -301,7 +301,7 @@ Name:                   """
 Type:                   """
             + self.__class__.__module__
             + """
-DIMENSIONS:             """
+Dimensions:             """
             + str(self._dimensions)
             + """
 Use enclave tasking:    """

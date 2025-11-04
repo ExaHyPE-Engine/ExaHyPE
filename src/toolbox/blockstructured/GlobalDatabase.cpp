@@ -101,7 +101,7 @@ void toolbox::blockstructured::GlobalDatabase::dumpCSVFile() {
     logInfo( "dumpCSVFile()", "Dump particle trajectory database " << snapshotFileName.str() );
     std::ofstream file( snapshotFileName.str() );
     file << std::scientific;
-    file << "t," << _dataName << std::endl;
+    file << "t, " << _dataName << std::endl;
 
     for (auto& snapshot: _data) {
       file << snapshot.timestamp;
