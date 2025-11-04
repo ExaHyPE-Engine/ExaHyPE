@@ -2,11 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <vector>
-
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/utils/Globals.h"
+
+#include <vector>
 
 
 namespace toolbox {
@@ -29,7 +29,22 @@ namespace toolbox {
      */
     template <class T>
     void init(T& particle, const tarch::la::Vector<DIMENSIONS, double>& x, double searchRadius);
-
+    /**
+     * Initialize a particle with specific initial data values.
+     *
+     * @param particle The particle to initialize
+     * @param x The position vector of the particle
+     * @param searchRadius The search radius for the particle
+     * @param initialData Vector containing initial values for particle data.
+     *                   The size should match the number of data elements in the particle.
+     */
+    template <class T>
+    void initWithData(
+      T&                                           particle,
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      double                                       searchRadius,
+      const std::vector<double>&                   initialData
+    );
     /**
      * Create equally spaced particles for one cell
      *

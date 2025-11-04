@@ -18,25 +18,28 @@ tarch::la::Vector<DIMENSIONS, double> toolbox::particles::mirrorParticleAlongPer
   const tarch::la::Vector<DIMENSIONS, double>  domainSize,
   const std::bitset<DIMENSIONS>                periodicBC
 ) {
-  tarch::la::Vector<DIMENSIONS, double> result = x;
+  // Create a copy of the input position vector
+  tarch::la::Vector<DIMENSIONS, double> mirroredPosition = x;
 
-  // TODO:  Implement a generalised periodic boundary condition system that supports 3D, domain offsets, and full
-  // periodicity control.
-  double lowerBound = 0.0;
-  double upperBound = domainSize[1];
-
+  // Check each dimension for periodic boundary conditions
   for (int d = 0; d < DIMENSIONS; d++) {
-    if (periodicBC[d] and not marker.isContainedInAdjacentCellsByDimension(x, d)) {
-      if (tarch::la::smallerEquals(x(d), lowerBound)) {
-        result(d) += domainSize(d);
-      }
-      if (tarch::la::greaterEquals(x(d), upperBound)) {
-        result(d) -= domainSize(d);
-      }
+    // Skip non-periodic dimensions
+    if (!periodicBC[d])
+      continue;
+
+    // Calculate domain boundaries for this dimension
+    const double lowerBoundary = domainOffset[d];
+    const double upperBoundary = domainOffset[d] + domainSize[d];
+
+    // Apply mirroring for particles outside the domain boundaries
+    if (tarch::la::smallerEquals(x(d), lowerBoundary)) {
+      mirroredPosition(d) += domainSize(d);
+    } else if (tarch::la::greaterEquals(x(d), upperBoundary)) {
+      mirroredPosition(d) -= domainSize(d);
     }
   }
 
-  return result;
+  return mirroredPosition;
 }
 
 tarch::la::Vector<DIMENSIONS, double> toolbox::particles::applyPeriodicBoundaryConditions(

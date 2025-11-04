@@ -3,10 +3,10 @@
 #pragma once
 
 
-#include <list>
-
 #include "SieveParticles.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+
+#include <list>
 
 namespace toolbox {
   namespace particles {
@@ -108,10 +108,13 @@ public:
   /**
    * Reduces and prints the global statistics
    */
-  static void reduceParticleStateStatistics();
+  static void        reduceParticleStateStatistics();
   static std::string printParticleStateStatistics();
 
-  static void reduceReassignmentStatistics();
+  static void        reduceNumberOfParticles();
+  static std::string printTotalNumberOfParticles();
+
+  static void        reduceReassignmentStatistics();
   static std::string printReassignmentStatistics();
 
   static void updateLiftDropStatistics(
@@ -158,9 +161,9 @@ public:
    * after particles have been started to be resorted.
    */
   static void finishedTraversal(
-      const tarch::la::Vector<DIMENSIONS,double>   domainOffset,
-      const tarch::la::Vector<DIMENSIONS,double>   domainSize,
-      const std::bitset<DIMENSIONS>                periodicBC
+    const tarch::la::Vector<DIMENSIONS, double> domainOffset,
+    const tarch::la::Vector<DIMENSIONS, double> domainSize,
+    const std::bitset<DIMENSIONS>               periodicBC
   );
 
   /**
@@ -174,8 +177,8 @@ public:
    * Delegate through. This way, we don't have to expose the actual
    * sieve object. Usually combined with hasParticlesToBeSievedIntoVertices()
    * as guard, which makes the querying faster.
-   * 
-   * This operation always removes particles from the sieve set, and it 
+   *
+   * This operation always removes particles from the sieve set, and it
    * sort exclusively local particles into the domain. We use it within
    * the lift-drop sorting approach, where it is used by the dummy mesh
    * sweeps following each sweep that moves around particles. Details on
@@ -196,10 +199,7 @@ public:
    *
    * @see SieveParticles::getParticlesToBeSievedIntoVertex()
    */
-  static ParticleList getParticlesToBeSievedIntoVertex(
-    const peano4::datamanagement::VertexMarker& marker
- );
-
+  static ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker);
   /**
    * Make routine from SieveParticles public
    *
@@ -293,6 +293,15 @@ protected:
    * See documentation of action set peano4.toolbox.particles.api.UpdateParallelState.
    */
   static int _numberOfRemainingLocalParticles;
+
+  /**
+   * Set by MPI reduction in reduceNumberOfParticles()
+   *
+   * Holds the global number of remaining particles summed over all ranks.
+   * This value is updated during the reduction and can be used for
+   * statistics or global consistency checks.
+   */
+  static int _numberOfRemainingGlobalParticles;
 
   /**
    * Set by parallel state analysis

@@ -321,6 +321,7 @@ src/unittests/UnitTests*
 *.trs
 *.sh
 *.yaml
+*.dat
 
 # Misc
 .DS_Store

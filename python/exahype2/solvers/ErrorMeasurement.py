@@ -11,13 +11,12 @@ class ErrorMeasurement:
     be specialised for different solvers.
 
     Used by calling the corresponding specialisation by calling it using the solver
-    instance as an argument. For an example, see /applications/exahype/aderdg
-    i.e. ErrorMeasurement(solver=theSolver)
+    instance as an argument.
 
     When called, it adds an additional function analyticalSolution() to the user-defined
     code snippets, through which the user can define what the solution should be.
 
-    The errormeasurement also adds a postprocessing step to the corresponding solver,
+    The error measurement also adds a postprocessing step to the corresponding solver,
     which computes the L0, L2 and L_inf error between the computed solution and the
     analytical solution at each data point over the domain. These are then summed up
     over the entire volume to get the integrated errors over the entire domain.
@@ -46,15 +45,14 @@ class ErrorMeasurement:
       is replaced.
 
     time_delta_between_snapshots: how often a new measurement should be added
-      to the database. By default the database is updated every timestep, but
+      to the database. By default the database is updated every time step, but
       using this parameter it can be set to only happen at regular intervals,
-      analogously to plotting in ExaHyPE2.
+      analogously to plotting in ExaHyPE 2.
 
     clear_database_after_flush: If the parameter "delta_between_database_flushes"
-      has been set and several database flushes are going to occur, this 
+      has been set and several database flushes are going to occur, this
       parameter can be used to flush the database between each flush in order
       to avoid printing redundant information.
-
     """
 
     def __init__(
@@ -99,12 +97,18 @@ void {{"{{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}"}}::setError(double* error) 
 }
 """
 
-        solver._abstract_solver_user_declarations += create_solver_user_abstract_declarations()
+        solver._abstract_solver_user_declarations += (
+            create_solver_user_abstract_declarations()
+        )
         solver._solver_user_declarations += create_solver_user_declarations()
         if error_measurement_implementation == PDETerms.User_Defined_Implementation:
-            solver._solver_user_definitions += create_solver_user_definitions(True, error_measurement_implementation)
+            solver._solver_user_definitions += create_solver_user_definitions(
+                True, error_measurement_implementation
+            )
         else:
-            solver._solver_user_definitions += create_solver_user_definitions(False, error_measurement_implementation)
+            solver._solver_user_definitions += create_solver_user_definitions(
+                False, error_measurement_implementation
+            )
 
 
 def create_start_simulation_implementation_for_error_measurement(
@@ -119,11 +123,11 @@ def create_start_simulation_implementation_for_error_measurement(
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     _errorDatabase.setDeltaBetweenTwoDatabaseFlushes({{FLUSH_DELTA}});
     _errorDatabase.setOutputFileName("{{FILENAME}}");
-    _errorDatabase.setDataName("l1-error,l2-error,l_inf-error");
+    _errorDatabase.setDataName("l1-error, l2-error, l_inf-error");
     // _errorDatabase.setOutputPrecision({{OUTPUT_PRECISION}});
     _errorDatabase.setDataDeltaBetweenTwoSnapshots({{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}});
     _errorDatabase.setTimeDeltaBetweenTwoSnapshots({{TIME_DELTA}});
-    _errorDatabase.clearDatabaseAfterFlush( {{CLEAR_DATABASE_AFTER_FLUSH}});
+    _errorDatabase.clearDatabaseAfterFlush({{CLEAR_DATABASE_AFTER_FLUSH}});
     std::fill_n(_errors, 3, 0.0);
   }
 """,
@@ -187,9 +191,9 @@ def create_finish_time_step_implementation_for_error_measurement(guard):
 """
     )
 
+
 def create_solver_user_abstract_declarations():
-    return (
-        """
+    return """
     /**
      * Exact solution of the equation at a given point and time
      *
@@ -206,7 +210,7 @@ def create_solver_user_abstract_declarations():
       double*                                       solution // solution[{{NUMBER_OF_UNKNOWNS}}]
     ) = 0;
 """
-    )
+
 
 def create_solver_user_declarations():
     return """
@@ -222,8 +226,8 @@ def create_solver_user_declarations():
 
 def create_solver_user_definitions(user_defined, error_measurement_implementation):
     if not user_defined:
-        return(
-        """
+        return (
+            """
     void {{"{{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}"}}::analyticalSolution(
       const tarch::la::Vector<DIMENSIONS, double>&  x,
       const double                                  t,
@@ -232,8 +236,8 @@ def create_solver_user_definitions(user_defined, error_measurement_implementatio
       double*                                       solution // solution[{{NUMBER_OF_UNKNOWNS}}]
     ) {
 """
-        + error_measurement_implementation
-        + """
+            + error_measurement_implementation
+            + """
 }
 """
         )

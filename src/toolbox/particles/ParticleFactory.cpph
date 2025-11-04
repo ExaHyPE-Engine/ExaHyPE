@@ -1,7 +1,7 @@
-#include <random>
-
 #include "peano4/utils/Loop.h"
 
+#include <random>
+#include <typeinfo>
 
 namespace {
   std::random_device               rd;
@@ -9,20 +9,53 @@ namespace {
   std::uniform_real_distribution<> randomDist(0, 1);
 } // namespace
 
-
 template <class T>
-void toolbox::particles::init(T& particle, const tarch::la::Vector<DIMENSIONS, double>& x, double searchRadius) {
+void toolbox::particles::initWithData(
+  T&                                           particle,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  double                                       searchRadius,
+  const std::vector<double>&                   initialData
+) {
+
 #if PEANO_DEBUG > 0
   particle.setDebugX(x);
   particle.setDebugH(0.0);
 #endif
-
   particle.setX(x);
   particle.setSearchRadius(searchRadius);
+
+  const int dataSize = particle.getData().size();
+
+  // Copy provided initial values directly
+  for (int i = 0; i < dataSize; i++) {
+    // Make sure we don't exceed the bounds of initialData
+    if (i < static_cast<int>(initialData.size())) {
+      particle.setData(i, initialData[i]);
+    } else {
+      // For safety, initialize remaining elements to zero if initialData is smaller
+      particle.setData(i, 0.0);
+    }
+  }
 
   particle.setParallelState(T::ParallelState::Virtual);
 }
 
+// Original init function remains unchanged
+template <class T>
+void toolbox::particles::init(T& particle, const tarch::la::Vector<DIMENSIONS, double>& x, double searchRadius) {
+
+#if PEANO_DEBUG > 0
+  particle.setDebugX(x);
+  particle.setDebugH(0.0);
+#endif
+  particle.setX(x);
+  particle.setSearchRadius(searchRadius);
+  const int dataSize = particle.getData().size();
+  for (int i = 0; i < dataSize; i++) {
+    particle.setData(i, 0.0);
+  }
+  particle.setParallelState(T::ParallelState::Virtual);
+}
 
 template <class T>
 std::vector<T*> toolbox::particles::createEquallySpacedParticles(
@@ -78,7 +111,11 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
 ) {
   static tarch::logging::Log _log("toolbox::particles");
   logTraceInWith4Arguments(
-    "createParticlesAlignedWithGlobalCartesianMesh(...)", spacing, voxelX, domainOffset, addNoise
+    "createParticlesAlignedWithGlobalCartesianMesh(...)",
+    spacing,
+    voxelX,
+    domainOffset,
+    addNoise
   );
   std::vector<T*> result;
 
@@ -100,7 +137,8 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
     // One of them has to be biased
     if (tarch::la::smaller(leftX, voxelX(d) - 0.5 * voxelH(d)))
       leftParticleNumberAlongAxis++;
-    if (tarch::la::greaterEquals(rightX, voxelX(d) + 0.5 * voxelH(d)) or tarch::la::greaterEquals(rightX, domainOffset(d) + domainSize(d)))
+    if (tarch::la::greaterEquals(rightX, voxelX(d) + 0.5 * voxelH(d))
+        or tarch::la::greaterEquals(rightX, domainOffset(d) + domainSize(d)))
       rightParticleNumberAlongAxis--;
 
     particlesPerAxis(d) = std::max(0, rightParticleNumberAlongAxis - leftParticleNumberAlongAxis + 1);

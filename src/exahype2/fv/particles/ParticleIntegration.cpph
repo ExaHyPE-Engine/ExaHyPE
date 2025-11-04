@@ -1,0 +1,192 @@
+#pragma once
+
+// ================================================================================================
+// Particle Movement / Integration Methods
+// ================================================================================================
+
+template <typename Particle>
+tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::integration::explicitEulerIntegration(
+  Particle& particle
+) {
+  ParticleState state = getParticleState(particle);
+
+  ParticleState newState = updatePartialStep(state, _timeStepSize, 1.0);
+
+  setParticleState(particle, newState);
+  return newState.position;
+}
+
+template <typename Particle>
+tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::integration::semiImplicitEulerIntegration(
+  Particle& particle
+) {
+  ParticleState state = getParticleState(particle);
+
+  ParticleState newState = updateMidpointStep(state, _timeStepSize, 1.0);
+
+  setParticleState(particle, newState);
+  return newState.position;
+}
+
+template <int... Indices, typename Particle>
+tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::integration::midpointIntegration(
+  Particle&                                 particle,
+  const peano4::datamanagement::CellMarker& marker,
+  const double* __restrict__ Q
+) {
+  ParticleState currentState = getParticleState(particle);
+
+  ParticleState midpointState = updateMidpointStep(currentState, _timeStepSize, 0.5);
+
+  exahype2::fv::particles::interpolation::handleMidpoints<Indices...>(marker, Q, particle, midpointState.position);
+  exahype2::fv::particles::forces::applyForces(particle, midpointState.position);
+  midpointState.acceleration = getAcceleration(particle);
+
+  ParticleState finalState = updatePartialStepWithBase(currentState, midpointState, _timeStepSize, 1.0);
+
+  setParticleState(particle, finalState);
+  return finalState.position;
+}
+template <int... Indices, typename Particle>
+tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::integration::
+  RK3Integration(Particle& particle, const peano4::datamanagement::CellMarker& marker, const double* __restrict__ Q) {
+  ParticleState currentState = getParticleState(particle);
+
+  // Stage 1: k1
+  ParticleState k1 = currentState;
+
+  // Stage 2: midpoint with k1
+  ParticleState k2 = updatePartialStep(k1, _timeStepSize, 0.5);
+  exahype2::fv::particles::interpolation::handleMidpoints<Indices...>(marker, Q, particle, k2.position);
+  exahype2::fv::particles::forces::applyForces(particle, k2.position);
+  k2.acceleration = getAcceleration(particle);
+
+  // Stage 3: endpoint with k2
+  ParticleState k3 = updatePartialStepWithBase(currentState, k1, _timeStepSize, -1.0);
+  k3               = updatePartialStepWithBase(k3, k2, _timeStepSize, 2.0);
+  exahype2::fv::particles::interpolation::handleMidpoints<Indices...>(marker, Q, particle, k3.position);
+  exahype2::fv::particles::forces::applyForces(particle, k3.position);
+  k3.acceleration = getAcceleration(particle);
+
+  // Combine stages (RK3 weights: 1/6 * (k1 + 4*k2 + k3))
+  ParticleState finalState;
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    finalState.position(
+      d
+    ) = currentState.position(d) + (_timeStepSize / 6.0) * (k1.velocity(d) + 4.0 * k2.velocity(d) + k3.velocity(d));
+    finalState.velocity(
+      d
+    ) = currentState.velocity(d)
+        + (_timeStepSize / 6.0) * (k1.acceleration(d) + 4.0 * k2.acceleration(d) + k3.acceleration(d));
+    finalState.acceleration(d) = k3.acceleration(d); // take final one from last stage
+  }
+
+  setParticleState(particle, finalState);
+  return finalState.position;
+}
+
+template <int... Indices, typename Particle>
+tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::integration::
+  RK4Integration(Particle& particle, const peano4::datamanagement::CellMarker& marker, const double* __restrict__ Q) {
+  ParticleState currentState = getParticleState(particle);
+
+  ParticleState k1 = currentState, k2, k3, k4;
+
+  // --- Stage 2: midpoint with k1 ---
+  k2 = updatePartialStep(k1, _timeStepSize, 0.5);
+  exahype2::fv::particles::interpolation::handleMidpoints<Indices...>(marker, Q, particle, k2.position);
+  exahype2::fv::particles::forces::applyForces(particle, k2.position);
+  k2.acceleration = getAcceleration(particle);
+
+  // --- Stage 3: midpoint with k2 ---
+  k3 = updatePartialStepWithBase(currentState, k2, _timeStepSize, 0.5);
+  exahype2::fv::particles::interpolation::handleMidpoints<Indices...>(marker, Q, particle, k3.position);
+  exahype2::fv::particles::forces::applyForces(particle, k3.position);
+  k3.acceleration = getAcceleration(particle);
+
+  // --- Stage 4: endpoint with k3 ---
+  k4 = updatePartialStepWithBase(currentState, k3, _timeStepSize, 1.0);
+  exahype2::fv::particles::interpolation::handleMidpoints<Indices...>(marker, Q, particle, k4.position);
+  exahype2::fv::particles::forces::applyForces(particle, k4.position);
+  k4.acceleration = getAcceleration(particle);
+
+  ParticleState finalState;
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    finalState.position(
+      d
+    ) = currentState.position(d)
+        + (_timeStepSize / 6.0) * (k1.velocity(d) + 2.0 * k2.velocity(d) + 2.0 * k3.velocity(d) + k4.velocity(d));
+    finalState.velocity(
+      d
+    ) = currentState.velocity(d)
+        + (_timeStepSize / 6.0
+          ) * (k1.acceleration(d) + 2.0 * k2.acceleration(d) + 2.0 * k3.acceleration(d) + k4.acceleration(d));
+    finalState.acceleration(d) = k4.acceleration(d);
+  }
+
+  setParticleState(particle, finalState);
+  return finalState.position;
+}
+
+template <int... Indices, typename Particle>
+tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::integration::velocityVerletIntegration(
+  Particle&                                 particle,
+  const peano4::datamanagement::CellMarker& marker,
+  const double* __restrict__ Q
+) {
+  ParticleState currentState = getParticleState(particle);
+  ParticleState midpointState;
+
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    midpointState.velocity(d) = currentState.velocity(d) + 0.5 * _timeStepSize * currentState.acceleration(d);
+    midpointState.position(d) = currentState.position(d) + _timeStepSize * midpointState.velocity(d);
+  }
+
+  exahype2::fv::particles::interpolation::handleMidpoints<Indices...>(marker, Q, particle, midpointState.position);
+  exahype2::fv::particles::forces::applyForces(particle, midpointState.position);
+  midpointState.acceleration = getAcceleration(particle);
+
+  ParticleState finalState;
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    finalState.acceleration(d) = midpointState.acceleration(d);
+    finalState.velocity(d)     = midpointState.velocity(d) + 0.5 * _timeStepSize * finalState.acceleration(d);
+    finalState.position(d)     = midpointState.position(d);
+  }
+
+  setParticleState(particle, finalState);
+  return finalState.position;
+}
+
+template <int... Indices, typename Particle>
+tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::integration::
+  applyIntegration(Particle& particle, const peano4::datamanagement::CellMarker& marker, const double* __restrict__ Q) {
+  tarch::la::Vector<DIMENSIONS, double> newPosition = particle.getX();
+
+  switch (_integrationMethod) {
+  case 0:
+    break;
+  case 1:
+    newPosition = explicitEulerIntegration(particle);
+    break;
+  case 2:
+    newPosition = semiImplicitEulerIntegration(particle);
+    break;
+  case 3:
+    newPosition = velocityVerletIntegration<Indices...>(particle, marker, Q);
+    break;
+  case 4:
+    newPosition = midpointIntegration<Indices...>(particle, marker, Q);
+    break;
+  case 5:
+    newPosition = RK3Integration<Indices...>(particle, marker, Q);
+    break;
+  case 6:
+    newPosition = RK4Integration<Indices...>(particle, marker, Q);
+    break;
+  default:
+    newPosition = explicitEulerIntegration(particle);
+    break;
+  }
+
+  return newPosition;
+}

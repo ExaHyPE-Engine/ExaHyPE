@@ -1,59 +1,81 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import jinja2
 
 from peano4.solversteps.ActionSet import ActionSet
+import jinja2
+import peano4.datamodel.DaStGen2
+import dastgen2.attributes.Integer
+import numpy as np
 
 
 class InsertParticlesFromFile(ActionSet):
-    def __init__(self, particle_set, filename, scale_factor=1.0):
+    def __init__(
+        self,
+        particle_set,
+        filename,
+        scale_factor=1.0,
+        save_initialpos=False,
+        initial_position_index=(1, 2),
+    ):
         """
         particle_set: ParticleSet
 
         filename: String
-          Name of the sample point table, currently we have: t-design (948 points), Gauss_Legendre_quadrature (800 points)
+            Name of the sample point file
 
-        scale_factor
-          scale factor for all coordinates, used for scale up/down the sample table from unit sphere to certain radius.
-          set to 1 if your table is exact.
+        scale_factor: float
+            Scaling factor for all coordinates from the sample file
+
+        save_initialpos: bool
+            Whether to store initial positions into particle->setData
+
+        initial_position_index: tuple
+            Indices for particle->setData corresponding to x,y[,z]
         """
-
-        self.d = {}
-        self.d["PARTICLE"] = particle_set.particle_model.name
-        self.d["PARTICLES_CONTAINER"] = particle_set.name
+        self.d = {
+            "PARTICLE": particle_set.particle_model.name,
+            "PARTICLES_CONTAINER": particle_set.name,
+            "SAVE_INITIALPOS": save_initialpos,
+            "INITIAL_POSITION_INDEX": initial_position_index,
+        }
         self._filename = filename
         self._scale = scale_factor
 
     __Template_TouchCellFirstTime = jinja2.Template(
         """
-  if (not marker.willBeRefined()) {
-    tarch::multicore::Lock lock( _semaphore );
+if (not marker.willBeRefined()) {
+    tarch::multicore::Lock lock(_semaphore);
 
     std::list< tarch::la::Vector<DIMENSIONS,double> > coords = _fileReader.getParticlesWithinVoxel(marker.x(), marker.h(), true);
     std::list< tarch::la::Vector<DIMENSIONS,double> >::iterator p = coords.begin();
-    //for (auto* p: coords) {
-    while ( p!=coords.end() ) {
-      globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
 
-      newParticle->setNumber(0, _spacetreeId);
-      newParticle->setNumber(1, _particleNumberOnThisTree);
-      _particleNumberOnThisTree++;
+    while (p != coords.end()) {
+        globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
 
-      logDebug("touchVertexFirstTime(...)", "insert particle " << newParticle->toString() << " into " << marker.toString());
+        newParticle->setNumber(0, _spacetreeId);
+        newParticle->setNumber(1, _particleNumberOnThisTree);
+        _particleNumberOnThisTree++;
 
-      toolbox::particles::init(*newParticle, *p, 0.0);
+        toolbox::particles::init(*newParticle, *p, 0.0);
 
-      toolbox::particles::insertParticleIntoCell(
-        marker,
-        newParticle,
-        fineGridVertices{{PARTICLES_CONTAINER}},
-        _spacetreeId
-      );
-      p++;
+{% if SAVE_INITIALPOS %}
+        // Save initial position into particle data
+        newParticle->setData({{ INITIAL_POSITION_INDEX[0] }}, (*p)(0));
+        newParticle->setData({{ INITIAL_POSITION_INDEX[1] }}, (*p)(1));
+#if DIMENSIONS==3
+        newParticle->setData({{ INITIAL_POSITION_INDEX[2] }}, (*p)(2));
+#endif
+{% endif %}
+
+        toolbox::particles::insertParticleIntoCell(
+            marker,
+            newParticle,
+            fineGridVertices{{PARTICLES_CONTAINER}},
+            _spacetreeId
+        );
+        p++;
     }
-
-    logDebug("touchVertexFirstTime(...)", "assigned " << coords.size() << " particle(s) to vertex " << marker.toString() << " on tree " << _spacetreeId);
-  }
+}
 """
     )
 
@@ -67,15 +89,14 @@ class InsertParticlesFromFile(ActionSet):
     )
 
     def get_body_of_operation(self, operation_name):
-        result = "\n"
         if operation_name == ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-            result = self.__Template_TouchCellFirstTime.render(**self.d)
+            return self.__Template_TouchCellFirstTime.render(**self.d)
         if operation_name == ActionSet.OPERATION_END_TRAVERSAL:
-            result = self.__Template_EndTraversal.render(**self.d)
-        return result
+            return self.__Template_EndTraversal.render(**self.d)
+        return "\n"
 
     def get_body_of_getGridControlEvents(self):
-        return "  return std::vector< peano4::grid::GridControlEvent >();\n"
+        return "return std::vector< peano4::grid::GridControlEvent >();\n"
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
@@ -84,7 +105,7 @@ class InsertParticlesFromFile(ActionSet):
         return False
 
     def get_includes(self):
-        result = jinja2.Template(
+        return jinja2.Template(
             """
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/multicore.h"
@@ -93,53 +114,33 @@ class InsertParticlesFromFile(ActionSet):
 #include "toolbox/particles/FileReader.h"
 #include "toolbox/particles/particles.h"
 #include "toolbox/particles/ParticleFactory.h"
+#include "exahype2/fv/particles/ParticleHelper.h"
 #include <fstream>
 #include <string>
 #include <vector>
 """
-        )
-        return result.render(**self.d)
+        ).render(**self.d)
 
     def get_static_initialisations(self, full_qualified_classname):
-        return (
-            """
-tarch::multicore::BooleanSemaphore """
-            + full_qualified_classname
-            + """::_semaphore;
-toolbox::particles::FileReader     """
-            + full_qualified_classname
-            + """::_fileReader;
+        return f"""
+tarch::multicore::BooleanSemaphore {full_qualified_classname}::_semaphore;
+toolbox::particles::FileReader {full_qualified_classname}::_fileReader;
 """
-        )
 
     def get_constructor_body(self):
-        # return super( InsertParticlesFromFile ).get_constructor_body() + """
-        return (
-            f"""
-  _particleNumberOnThisTree = 0;
-  _spacetreeId              = treeNumber;
+        return f"""
+_particleNumberOnThisTree = 0;
+_spacetreeId = treeNumber;
 
-  tarch::multicore::Lock lock( _semaphore );
-
-  if (_fileReader.empty())
-    _fileReader.readDatFile( \""""
-            + self._filename
-            + """\", """
-            + str(self._scale)
-            + """);
+tarch::multicore::Lock lock(_semaphore);
+if (_fileReader.empty())
+    _fileReader.readDatFile("{self._filename}", {self._scale});
 """
-        )
-
-    # def get_destructor_body(self):
-    #  return """
-    # """
 
     def get_attributes(self):
-        # return super( InsertParticlesFromFile ).get_attributes() + """
         return """
-  static tarch::multicore::BooleanSemaphore _semaphore;
-
-  int                                    _particleNumberOnThisTree;
-  int                                    _spacetreeId;
-  static toolbox::particles::FileReader  _fileReader;
+static tarch::multicore::BooleanSemaphore _semaphore;
+int _particleNumberOnThisTree;
+int _spacetreeId;
+static toolbox::particles::FileReader _fileReader;
 """

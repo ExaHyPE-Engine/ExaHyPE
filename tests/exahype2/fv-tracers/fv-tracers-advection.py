@@ -124,10 +124,9 @@ tracers = project.add_tracer(
     },
 )
 
-init_tracers = exahype2.tracer.InsertParticlesFromFile(
+init_tracers = exahype2.tracer.InsertParticlesByCoordinates(
     particle_set=tracers,
-    filename="InitTracers.dat",
-    scale_factor=1.0,
+    coordinates=[[0.25, 0.5, 0.5], [0.5, 0.5, 0.5], [0.75, 0.5, 0.5]],
 )
 
 init_tracers.descend_invocation_order = 0  # TODO: Why?
@@ -159,7 +158,7 @@ tracing_action_set.descend_invocation_order = (
 )
 # TODO: This is all too complicated!
 project.add_action_set_to_initialisation(tracing_action_set)
-#project.add_action_set_to_timestepping(tracing_action_set)
+# project.add_action_set_to_timestepping(tracing_action_set)
 
 project.set_global_simulation_parameters(
     dimensions=args.dimensions,

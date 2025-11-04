@@ -35,7 +35,7 @@ class CurviTracer(ActionSet):
         use_relative_deltas=False,
         initial_record_time=-1,
         last_record_time=1e8,
-        unknowns_to_store=0
+        unknowns_to_store=0,
     ):
         """
 
@@ -54,7 +54,9 @@ class CurviTracer(ActionSet):
         self.d["NUMBER_OF_UNKNOWNS"] = solver._unknowns
         self.d["NUMBER_OF_AUXILIARY_VARIABLES"] = solver._auxiliary_variables
 
-        self.d["UNKNOWNS_TO_STORE"] = (unknowns_to_store if unknowns_to_store>0 else solver._unknowns)
+        self.d["UNKNOWNS_TO_STORE"] = (
+            unknowns_to_store if unknowns_to_store > 0 else solver._unknowns
+        )
 
         self.d["DATA_DELTA"] = data_delta_between_two_snapshots
         self.d["POSITION_DELTA"] = position_delta_between_two_snapshots
@@ -81,9 +83,8 @@ class CurviTracer(ActionSet):
             number_of_entries_between_two_db_flushes
         )
 
-
-
-    __Template_TouchCellLastTime = jinja2.Template( """
+    __Template_TouchCellLastTime = jinja2.Template(
+        """
   if ( 
     not marker.willBeRefined() 
     and 
@@ -136,7 +137,8 @@ class CurviTracer(ActionSet):
       }
     }
   }
-""")
+"""
+    )
 
     def get_body_of_operation(self, operation_name):
         result = ""
@@ -187,11 +189,7 @@ if(_coordinates.empty()){
                     + "\n"
                 )
                 result += " #if DIMENSIONS==3\n"
-                result += (
-                    "      ,"
-                    + str(self._coordinates[i][2])
-                    + "\n"
-                )
+                result += "      ," + str(self._coordinates[i][2]) + "\n"
                 result += " #endif\n"
                 result += "    }\n"
                 result += "  ));\n"
@@ -257,7 +255,7 @@ toolbox::particles::TrajectoryDatabase  """
     static std::vector<tarch::la::Vector<DIMENSIONS,double>>  _coordinates;
 
     int                                        _spacetreeId;
-    double _timeStepSize;    
+    double _timeStepSize;
 
     static toolbox::particles::TrajectoryDatabase  _database;
 

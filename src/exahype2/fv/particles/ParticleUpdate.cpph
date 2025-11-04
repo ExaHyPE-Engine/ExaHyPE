@@ -1,0 +1,29 @@
+#pragma once
+
+#include "tarch/la/VectorOperations.h"
+
+template <int... Indices, typename Particle>
+void exahype2::fv::particles::updateParticleState(
+  Particle&                                 particle,
+  const peano4::datamanagement::CellMarker& marker,
+  const double* __restrict__ Q
+) {
+  // Reset acceleration components to zero
+  exahype2::fv::particles::utils::resetAcceleration(particle);
+
+  // Interpolate fields from the grid into the particle attributes
+  exahype2::fv::particles::interpolation::applyInterpolation<Indices...>(particle, particle.getX(), marker, Q);
+
+  // Apply external or user-defined forces (e.g. gravity)
+  exahype2::fv::particles::forces::applyForces(particle, particle.getX());
+  // Compute new position based on integration scheme
+  tarch::la::Vector<DIMENSIONS, double>
+    newPosition = exahype2::fv::particles::integration::applyIntegration<Indices...>(particle, marker, Q);
+  // Apply boundary handling (e.g. reflective domain)
+  if (tarch::la::min(exahype2::fv::particles::utils::isPeriodic) == 0) {
+    exahype2::fv::particles::boundary::reflectIfOutOfDomain(particle, newPosition, 0.8);
+  }
+
+  // Update particle position
+  particle.setX(newPosition);
+}

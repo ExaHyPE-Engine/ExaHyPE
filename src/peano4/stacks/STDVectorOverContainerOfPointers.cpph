@@ -46,7 +46,7 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::workInReceivedData() {
       entryInFlattenedDeepCopyBuffer++;
     }
   }
-  logWarning( "workInReceivedData()", "worked in " << entryInFlattenedDeepCopyBuffer << " entries in total" );
+  logDebug( "workInReceivedData()", "worked in " << entryInFlattenedDeepCopyBuffer << " entries in total" );
 }
 
 
@@ -336,6 +336,15 @@ bool peano4::stacks::STDVectorOverContainerOfPointers<T>::tryToFinishSendOrRecei
 
       workInReceivedMetaData();
 
+      if (Base::_ioMPIRequest != nullptr) {
+        workInReceivedData();
+
+        delete Base::_ioMPIRequest;
+        delete[] _deepCopyDataBuffer;
+        Base::_ioMPIRequest = nullptr;
+        _deepCopyDataBuffer = nullptr;
+      }
+      
       if (_metaDataSizeMPIRequest != nullptr) {
         delete _metaDataSizeMPIRequest;
         delete[] _metaDataSizeBuffer;
@@ -348,14 +357,7 @@ bool peano4::stacks::STDVectorOverContainerOfPointers<T>::tryToFinishSendOrRecei
         _metaDataDebugMPIRequest = nullptr;
         _metaDataDebugBuffer     = nullptr;
       }
-      if (Base::_ioMPIRequest != nullptr) {
-        workInReceivedData();
-
-        delete Base::_ioMPIRequest;
-        delete[] _deepCopyDataBuffer;
-        Base::_ioMPIRequest = nullptr;
-        _deepCopyDataBuffer = nullptr;
-      }
+      
 
       Base::_ioMode = IOMode::None;
     } else {
