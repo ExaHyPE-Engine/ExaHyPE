@@ -81,8 +81,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     static std::bitset<Dimensions> PeriodicBC;
 
-    double getMinTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
-    double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
+    double getMinTimeStamp() const final;
+    double getMaxTimeStamp() const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
@@ -192,20 +192,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishPlottingStep() override;
 
-
-    /**
-     * @param currentTimeStep If you set this to false, you'll get the
-     *   quantity from the preceding time step. This is important for
-     *   local time stepping with fixed subcycling, as they have to
-     *   know the sizes from the last time step throughout the traversal,
-     *   where the current patch size might just be re-evaluated.
-     *
-     * @return Actually observed sizes, not the admissible quantities
-     */
-    double getMaxPatchSize(bool currentTimeStep = true) const;
-    double getMinPatchSize(bool currentTimeStep = true) const;
-    double getMaxGridCellSize(bool currentTimeStep = true) const;
-    double getMinGridCellSize(bool currentTimeStep = true) const;
+    double getMaxPatchSize() const;
+    double getMinPatchSize() const;
+    double getMaxGridCellSize() const;
+    double getMinGridCellSize() const;
 
     /**
      * Within the FD context, mesh is an alias for patch if it is not

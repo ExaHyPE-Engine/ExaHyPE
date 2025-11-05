@@ -158,9 +158,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocally() {
   computeTask();
   if (_remoteTaskId != -1) {
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(_remoteTaskId,_numberOfResultValues,_outputValues,_maxEigenvalue);
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(_remoteTaskId,_numberOfResultValues,_outputValues,_maxEigenvalue, _marker);
   } else {
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue);
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue, _marker);
   }
 }
 
@@ -339,7 +339,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
     "receiveOutcome(...)",
     "bookmark outcome of task " << taskIdMessage.getValue()
   );
-  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskIdMessage.getValue(),NumberOfResultValues,outputValues,eValueMessage.getValue());
+  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskIdMessage.getValue(),NumberOfResultValues,outputValues,eValueMessage.getValue(), _marker);
   return nullptr;
 }
 #endif
@@ -421,6 +421,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::vector<Task*>& 
   }
 
 
+  // @todo Ist das alles effizient?
+
+
   //
   // ==================
   // Bring back results
@@ -428,7 +431,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::vector<Task*>& 
   //
   for (int i=0; i<patchData.numberOfCells; i++) {
     tarch::freeMemory(patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(
+      patchData.id[i],
+      _numberOfResultValues,
+      patchData.QOut[i],
+      patchData.maxEigenvalue[i],
+      patchData.cellCentre[i],
+      patchData.cellSize[i]
+    );
   }
 }
 {% endif %}

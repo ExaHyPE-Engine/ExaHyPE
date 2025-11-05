@@ -167,6 +167,14 @@ namespace tarch {
      * ever waiting for it later on (at least not via task dependencies).
      *
      *
+     * ## Data ownership
+     *
+     * The very moment you hand over a task to spawnTask(), Peano's tasking
+     * backhand has ownership of the pointer. That is, you are not allowed to
+     * use the task object anymore. It might have been destroyed right after
+     * the spawnTask() call.
+     *
+     *
      * ## Usage with functors
      *
      * If you have a task object, you can directly call it. If you have only a
