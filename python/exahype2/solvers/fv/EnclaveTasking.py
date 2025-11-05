@@ -225,7 +225,13 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
     if (marker.hasBeenEnclaveCell() and taskNumber >= 0) {
       double maxEigenvalue;
-      ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value, maxEigenvalue );
+      ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( 
+        taskNumber, 
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.value, 
+        maxEigenvalue,
+        marker.x(),
+        marker.h()
+      );
 
       ::exahype2::fv::validatePatch(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
