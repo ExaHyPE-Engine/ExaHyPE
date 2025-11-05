@@ -1,29 +1,16 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-if(${CMAKE_CXX_COMPILER_ID} MATCHES "Intel|IntelLLVM")
-  if(WITH_GPU_ARCH STREQUAL "none")
-    message(FATAL_ERROR "No GPU architecture chosen. Make sure to also set WITH_GPU_ARCH")
-  endif()
+include_guard(GLOBAL)
 
-  if(PEANO_NVIDIA_GPU)
-    set(OFFLOADING_FLAGS -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --offload-arch=${WITH_GPU_ARCH})
-  elseif(PEANO_AMD_GPU)
-    set(OFFLOADING_FLAGS -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend=amdgcn-amd-amdhsa --offload-arch=${WITH_GPU_ARCH})
-  elseif(PEANO_INTEL_GPU)
-    find_package(IntelSYCL REQUIRED)
-    target_link_libraries(PeanoOptions INTERFACE IntelSYCL::SYCL_CXX)
-    set(OFFLOADING_FLAGS -fsycl -fsycl-targets=spir64)
-    set(ONLY_IF_GPU_FIND_DEPENDENCY "find_dependency(IntelSYCL)")
-  endif()
-else()
-  include(AdaptiveCpp)
-endif()
+find_package(IntelSYCL REQUIRED)
+target_link_libraries(PeanoOptions INTERFACE IntelSYCL::SYCL_CXX)
 
-if(OFFLOADING_FLAGS)
-  target_compile_options(PeanoOptions INTERFACE $<$<COMPILE_LANGUAGE:CXX>:${OFFLOADING_FLAGS}>)
-  target_link_options(PeanoOptions INTERFACE ${OFFLOADING_FLAGS})
-  message(STATUS "Using SYCL offloading flags: ${OFFLOADING_FLAGS}")
-endif()
+set(OFFLOADING_FLAGS -fsycl -fsycl-targets=spir64)
+set(ONLY_IF_GPU_FIND_DEPENDENCY "find_dependency(IntelSYCL)" CACHE INTERNAL "")
+
+target_compile_options(PeanoOptions INTERFACE $<$<COMPILE_LANGUAGE:CXX>:${OFFLOADING_FLAGS}>)
+target_link_options(PeanoOptions INTERFACE ${OFFLOADING_FLAGS})
+message(STATUS "Using SYCL offloading flags: ${OFFLOADING_FLAGS}")
 
 target_compile_definitions(PeanoOptions INTERFACE WITH_GPU_SYCL WITH_GPU)

@@ -7,11 +7,11 @@ list(FILTER HEADERS EXCLUDE REGEX "\\.template\\.")
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS})
 
-foreach(mode IN LISTS PEANO_BUILD_TYPES)
+foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
   string(TOLOWER ${mode} mode_lower)
   string(TOUPPER ${mode} mode_upper)
 
-  foreach(dimensions IN LISTS PEANO_DIMENSIONS)
+  foreach(dimensions IN LISTS SUPPORTED_DIMENSIONS)
     add_library(ToolboxBlockStructured${mode}${dimensions}d STATIC)
     target_sources(ToolboxBlockStructured${mode}${dimensions}d PRIVATE ${SOURCES} ${HEADERS})
     target_link_libraries(ToolboxBlockStructured${mode}${dimensions}d PRIVATE PeanoOptions Peano4${mode}${dimensions}d)

@@ -1,5 +1,8 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+
+include_guard(GLOBAL)
+
 include(CheckCXXSourceCompiles)
 
 # Helper: check if a macro is defined after current flags (so we detect *effective* ISA)

@@ -1,6 +1,8 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
+include_guard(GLOBAL)
+
 find_path(NETCDF_INCLUDES
   NAMES netcdf.h
   PATH_SUFFIXES include
