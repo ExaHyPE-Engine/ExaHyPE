@@ -1,5 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+
 cmake_minimum_required(VERSION 3.27)
 
 {% if CXX is defined and CXX != "" -%}
@@ -67,8 +68,6 @@ string(TOLOWER "{{MODE}}" mode_lower)
 
 {% if GPU == "cuda" %}
 string(REGEX MATCH "[0-9]+$" CUDA_ARCH "{{GPU_ARCH}}")
-message(STATUS "Extracted CUDA_ARCH: ${CUDA_ARCH}")
-
 set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
 set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCH})
 
@@ -89,15 +88,15 @@ target_include_directories({{EXECUTABLENAME}} PRIVATE ${CMAKE_SOURCE_DIR} ${GENE
 target_compile_definitions({{EXECUTABLENAME}} PRIVATE ${GENERATED_CXXFLAGS} TARGET_DEVICE={{TARGET_DEVICE}})
 
 {% if ACPP_TARGETS is defined and ACPP_TARGETS != "" %}
-  set(ACPP_TARGETS {{ACPP_TARGETS}} CACHE STRING "")
-  set(ACPP_DEBUG_LEVEL {{ACPP_DEBUG_LEVEL}} CACHE STRING "")
-  set(CMAKE_PREFIX_PATH {{ACPP_DIR}})
-  find_package(AdaptiveCpp CONFIG REQUIRED)
-  add_sycl_to_target(TARGET {{EXECUTABLENAME}} SOURCES ${SOURCES})
+set(ACPP_TARGETS {{ACPP_TARGETS}} CACHE STRING "")
+set(ACPP_DEBUG_LEVEL {{ACPP_DEBUG_LEVEL}} CACHE STRING "")
+set(CMAKE_PREFIX_PATH {{ACPP_DIR}})
+find_package(AdaptiveCpp CONFIG REQUIRED)
+add_sycl_to_target(TARGET {{EXECUTABLENAME}} SOURCES ${SOURCES})
 {% endif %}
 
 {% for lib in LIBS.split() if lib.startswith('-L') %}
-  target_link_libraries({{EXECUTABLENAME}} PRIVATE {{ lib[2:] }})
+target_link_libraries({{EXECUTABLENAME}} PRIVATE {{ lib[2:] }})
 {% endfor %}
 
 target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::Peano4{{MODE}}{{DIMENSIONS}}d)

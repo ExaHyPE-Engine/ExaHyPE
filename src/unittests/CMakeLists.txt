@@ -1,10 +1,10 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-foreach(mode IN LISTS PEANO_BUILD_TYPES)
+foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
   string(TOLOWER ${mode} mode_lower)
   string(TOUPPER ${mode} mode_upper)
 
-  foreach(dimensions IN LISTS PEANO_DIMENSIONS)
+  foreach(dimensions IN LISTS SUPPORTED_DIMENSIONS)
     add_executable(UnitTests${mode}${dimensions}d)
     add_test(NAME UnitTests${mode}${dimensions}d COMMAND UnitTests${mode}${dimensions}d)
     if(WITH_MPI)

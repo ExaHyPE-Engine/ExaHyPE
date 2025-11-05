@@ -7,18 +7,18 @@ list(FILTER HEADERS EXCLUDE REGEX "\\.template\\.")
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS})
 
-foreach(mode IN LISTS PEANO_BUILD_TYPES)
+foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
   string(TOLOWER ${mode} mode_lower)
   string(TOUPPER ${mode} mode_upper)
 
-  foreach(dimensions IN LISTS PEANO_DIMENSIONS)
+  foreach(dimensions IN LISTS SUPPORTED_DIMENSIONS)
     add_library(Peano4${mode}${dimensions}d STATIC)
     target_sources(Peano4${mode}${dimensions}d PRIVATE ${SOURCES} ${HEADERS})
     target_link_libraries(Peano4${mode}${dimensions}d PRIVATE PeanoOptions Tarch${mode})
     target_compile_definitions(Peano4${mode}${dimensions}d PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} DIMENSIONS=${dimensions})
     target_compile_options(Peano4${mode}${dimensions}d PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
-    if(${AdaptiveCpp_FOUND})
+    if(AdaptiveCpp_FOUND)
       add_sycl_to_target(TARGET Peano4${mode}${dimensions}d SOURCES ${SOURCES})
     endif()
 

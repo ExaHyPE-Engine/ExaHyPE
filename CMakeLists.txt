@@ -1,5 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+
 cmake_minimum_required(VERSION 3.27)
 
 set(PEANO_PROJECT_NAME "Peano")
@@ -112,24 +113,31 @@ option(WITH_EASI "Build with easi support" OFF)
 option(WITH_VTK "Build with VTK support" OFF)
 option(WITH_LIBXSMM "Build with LIBXSMM support" OFF)
 option(WITH_SCOREP_USER "Build with Score-P user regions instrumentation" OFF)
+option(WITH_ACPP "Build with AdaptiveCpp (SYCL) backend" OFF)
+option(WITH_KOKKOS "Build with Kokkos backend" OFF)
+option(WITH_USM "Build with unified shared memory support" OFF)
 
-option(ENABLE_TOOLBOX_PARTICLES "Enable the particles toolbox" ON)
-option(ENABLE_TOOLBOX_BLOCKSTRUCTURED "Enable the blockstructured toolbox" ON)
-option(ENABLE_TOOLBOX_LOADBALANCING "Enable the loadbalancing toolbox" ON)
-option(ENABLE_TOOLBOX_CURVI "Enable the Curvi toolbox" OFF)
-
-option(ENABLE_EXAHYPE "Enable the ExaHyPE 2 extension" ON)
-
-list(APPEND AVAILABLE_TOOLCHAINS
-  "no"
-  "intel"
-  "nvidia"
-  "scorep"
-  "chrome"
-  "gnu"
+set(SUPPORTED_ACCELERATOR_ARCHITECTURES
+  none
+  sm_70 sm_72 sm_75 sm_80 sm_86 sm_87 sm_89 sm_90 sm_100 sm_103 sm_120 sm_121
+  gfx906 gfx908 gfx90a gfx942 gfx950
+  spir64
+  CACHE STRING "Editable list of supported accelerator architectures"
 )
-set(WITH_TOOLCHAIN "no" CACHE STRING "${AVAILABLE_TOOLCHAINS}")
-set_property(CACHE WITH_TOOLCHAIN PROPERTY STRINGS ${AVAILABLE_TOOLCHAINS})
+mark_as_advanced(SUPPORTED_ACCELERATOR_ARCHITECTURES)
+
+set(WITH_GPU_ARCH "none" CACHE STRING "${SUPPORTED_ACCELERATOR_ARCHITECTURES}")
+set_property(CACHE WITH_GPU_ARCH PROPERTY STRINGS ${SUPPORTED_ACCELERATOR_ARCHITECTURES})
+
+set(SUPPORTED_TOOLCHAINS
+  no
+  intel nvidia scorep chrome gnu
+  CACHE STRING "Editable list of supported toolchains"
+)
+mark_as_advanced(SUPPORTED_TOOLCHAINS)
+
+set(WITH_TOOLCHAIN "no" CACHE STRING "${SUPPORTED_TOOLCHAINS}")
+set_property(CACHE WITH_TOOLCHAIN PROPERTY STRINGS ${SUPPORTED_TOOLCHAINS})
 
 if(WITH_TOOLCHAIN STREQUAL "scorep")
   find_library(PAPI libpapi.a papi)
@@ -150,68 +158,25 @@ elseif(WITH_TOOLCHAIN STREQUAL "nvidia")
   target_compile_definitions(PeanoOptions INTERFACE UseNVTX UseLogService=NVTXLogger)
 endif()
 
-list(APPEND AVAILABLE_ACCELERATORS
-  "no"
-  "sycl"
-  "cuda"
-  "kokkos"
+option(ENABLE_TOOLBOX_PARTICLES "Enable the particles toolbox" ON)
+option(ENABLE_TOOLBOX_BLOCKSTRUCTURED "Enable the blockstructured toolbox" ON)
+option(ENABLE_TOOLBOX_LOADBALANCING "Enable the loadbalancing toolbox" ON)
+option(ENABLE_TOOLBOX_CURVI "Enable the Curvi toolbox" OFF)
+
+option(ENABLE_EXAHYPE "Enable the ExaHyPE 2 extension" ON)
+
+set(SUPPORTED_DIMENSIONS
+  2 3
+  CACHE STRING "Editable list of supported dimensions"
 )
-set(WITH_GPU "no" CACHE STRING "${AVAILABLE_ACCELERATORS}")
-option(WITH_USM "Build with unified shared memory support" OFF)
-set_property(CACHE WITH_GPU PROPERTY STRINGS ${AVAILABLE_ACCELERATORS})
-
-list(APPEND AVAILABLE_ACCELERATOR_ARCHITECTURES
-  "none"
-  "sm_70"
-  "sm_72"
-  "sm_75"
-  "sm_80"
-  "sm_86"
-  "sm_89"
-  "sm_90"
-  "gfx906"
-  "gfx908"
-  "gfx90a"
-  "gfx942"
-  "spir64"
-)
-set(WITH_GPU_ARCH "none" CACHE STRING "${AVAILABLE_ACCELERATOR_ARCHITECTURES}")
-set_property(CACHE WITH_GPU_ARCH PROPERTY STRINGS ${AVAILABLE_ACCELERATOR_ARCHITECTURES})
-
-if(WITH_GPU_ARCH MATCHES "^sm_")
-  set(PEANO_NVIDIA_GPU TRUE)
-elseif(WITH_GPU_ARCH MATCHES "^gfx")
-  set(PEANO_AMD_GPU TRUE)
-elseif(WITH_GPU_ARCH MATCHES "^spir")
-  set(PEANO_INTEL_GPU TRUE)
-endif()
-
-if(WITH_GPU STREQUAL "sycl")
-  #check_include_file_cxx(sycl/sycl.hpp HAVE_CL_SYCL_HPP) # Needs -fsycl to find the header. TODO: Add globally
-  include(SYCL)
-elseif(WITH_GPU STREQUAL "cuda")
-  include(CUDA)
-elseif(WITH_GPU STREQUAL "hip")
-  include(HIP)
-elseif(WITH_GPU STREQUAL "kokkos")
-  include(Kokkos)
-else()
-  set(ONLY_IF_GPU_FIND_DEPENDENCY "# GPU not used")
-endif()
-
-list(APPEND PEANO_DIMENSIONS
-  "2"
-  "3"
-)
+mark_as_advanced(SUPPORTED_DIMENSIONS)
 
 set(CMAKE_BUILD_TYPE "" CACHE INTERNAL "")
-list(APPEND PEANO_BUILD_TYPES
-  "Release"
-  "Debug"
-  "Trace"
-  "Asserts"
-  "Stats"
+set(SUPPORTED_BUILD_TYPES
+  Release Debug Trace Asserts Stats
+  CACHE STRING "Editable list of supported build types"
 )
+mark_as_advanced(SUPPORTED_BUILD_TYPES)
 
 set(PEANO_CXX_FLAGS_RELEASE -O3 CACHE INTERNAL "")
 set(PEANO_RELEASE_DEFINITIONS -DPEANO_DEBUG=0 -DNDEBUG CACHE INTERNAL "")
@@ -228,23 +193,29 @@ set(PEANO_ASSERTS_DEFINITIONS -DPEANO_DEBUG=2 CACHE INTERNAL "")
 set(PEANO_CXX_FLAGS_TRACE -g -O2 CACHE INTERNAL "")
 set(PEANO_TRACE_DEFINITIONS -DPEANO_DEBUG=1 -DNDEBUG CACHE INTERNAL "")
 
+set(EXTRA_CXX_FLAGS   "" CACHE STRING "Extra C++ flags (semicolon-separated)")
+set(EXTRA_DEFINITIONS "" CACHE STRING "Extra preprocessor definitions (semicolon-separated)")
+set(EXTRA_LINK_FLAGS  "" CACHE STRING "Extra linker flags (semicolon-separated)")
+
+target_compile_options(PeanoOptions INTERFACE
+  $<$<COMPILE_LANGUAGE:CXX>:${EXTRA_CXX_FLAGS}>
+)
+target_compile_definitions(PeanoOptions INTERFACE ${EXTRA_DEFINITIONS})
+target_link_options(PeanoOptions INTERFACE ${EXTRA_LINK_FLAGS})
+
 if(WITH_MULTITHREADING)
   find_package(OpenMP REQUIRED)
   check_include_files(omp.h HAVE_OMP_H)
   target_link_libraries(PeanoOptions INTERFACE OpenMP::OpenMP_CXX)
   target_compile_definitions(PeanoOptions INTERFACE WITH_OPENMP WITH_MULTITHREADING)
-  set(ONLY_IF_MULTITHREADING_FIND_DEPENDENCY "find_dependency(OpenMP)")
-else()
-  set(ONLY_IF_MULTITHREADING_FIND_DEPENDENCY "# Multithreading not used")
+  set(ONLY_IF_MULTITHREADING_FIND_DEPENDENCY "find_dependency(OpenMP)" CACHE INTERNAL "")
 endif()
 
 if(WITH_MPI)
   find_package(MPI REQUIRED)
   target_link_libraries(PeanoOptions INTERFACE MPI::MPI_CXX)
   target_compile_definitions(PeanoOptions INTERFACE WITH_MPI)
-  set(ONLY_IF_MPI_FIND_DEPENDENCY "find_dependency(MPI)")
-else()
-  set(ONLY_IF_MPI_FIND_DEPENDENCY "# MPI not used")
+  set(ONLY_IF_MPI_FIND_DEPENDENCY "find_dependency(MPI)" CACHE INTERNAL "")
 endif()
 
 if(WITH_LIBXSMM)
@@ -257,18 +228,14 @@ if(WITH_VTK)
   find_package(VTK REQUIRED)
   target_link_libraries(PeanoOptions INTERFACE VTK::CommonCore)
   target_compile_definitions(PeanoOptions INTERFACE WITH_VTK)
-  set(ONLY_IF_VTK_FIND_DEPENDENCY "find_dependency(VTK)")
-else()
-  set(ONLY_IF_VTK_FIND_DEPENDENCY "# VTK not used")
+  set(ONLY_IF_VTK_FIND_DEPENDENCY "find_dependency(VTK)" CACHE INTERNAL "")
 endif()
 
 if(WITH_HDF5)
   find_package(HDF5 REQUIRED COMPONENTS C CXX)
   target_link_libraries(PeanoOptions INTERFACE HDF5::HDF5)
   target_compile_definitions(PeanoOptions INTERFACE WITH_HDF5)
-  set(ONLY_IF_HDF5_FIND_DEPENDENCY "find_dependency(HDF5 COMPONENTS C CXX)")
-else()
-  set(ONLY_IF_HDF5_FIND_DEPENDENCY "# HDF5 not used")
+  set(ONLY_IF_HDF5_FIND_DEPENDENCY "find_dependency(HDF5 COMPONENTS C CXX)" CACHE INTERNAL "")
 endif()
 
 if(WITH_NETCDF)
@@ -282,13 +249,36 @@ if(WITH_EASI)
   find_package(easi REQUIRED)
   target_link_libraries(PeanoOptions INTERFACE easi::easi)
   target_compile_definitions(PeanoOptions INTERFACE WITH_EASI WITH_ASAGI)
-  set(ONLY_IF_EASI_FIND_DEPENDENCY "find_dependency(easi)")
-else()
-  set(ONLY_IF_EASI_FIND_DEPENDENCY "# easi not used")
+  set(ONLY_IF_EASI_FIND_DEPENDENCY "find_dependency(easi)" CACHE INTERNAL "")
 endif()
 
 if(WITH_USM)
   target_compile_definitions(PeanoOptions INTERFACE WITH_USM)
+endif()
+
+set(WITH_GPU "no" CACHE INTERNAL "Selected GPU backend" FORCE)
+
+if(WITH_GPU_ARCH MATCHES "^spir")
+  set(WITH_GPU "sycl" CACHE INTERNAL "" FORCE)
+elseif(WITH_GPU_ARCH MATCHES "^sm_")
+  set(WITH_GPU "cuda" CACHE INTERNAL "" FORCE)
+elseif(WITH_GPU_ARCH MATCHES "^gfx")
+  set(WITH_GPU "hip" CACHE INTERNAL "" FORCE)
+endif()
+
+if(WITH_ACPP)
+  include(AdaptiveCpp)
+  set(WITH_GPU "sycl" CACHE INTERNAL "" FORCE)
+  set(USE_CCACHE OFF CACHE BOOL "Use Ccache" FORCE)
+elseif(WITH_KOKKOS)
+  include(Kokkos)
+  set(WITH_GPU "kokkos" CACHE INTERNAL "" FORCE)
+elseif(WITH_GPU STREQUAL "sycl")
+  include(SYCL)
+elseif(WITH_GPU STREQUAL "cuda")
+  include(CUDA)
+elseif(WITH_GPU STREQUAL "hip")
+  include(HIP)
 endif()
 
 if(WITH_SCOREP_USER)

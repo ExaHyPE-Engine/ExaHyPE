@@ -13,8 +13,8 @@ RUN apt-get update -y && apt-get upgrade -y && apt-get install -y --no-install-r
     software-properties-common \
     apt-utils \
     build-essential \
-    g++ \
     gcc \
+    g++ \
     gfortran \
     bash \
     wget \

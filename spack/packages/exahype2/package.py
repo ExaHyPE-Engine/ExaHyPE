@@ -67,11 +67,11 @@ class Exahype2(CMakePackage, CudaPackage):
 
     def cmake_args(self):
         args = [
+            "-DENABLE_EXAHYPE=ON",
             "-DENABLE_TOOLBOX_LOADBALANCING=ON",
             "-DENABLE_TOOLBOX_BLOCKSTRUCTURED=ON",
             "-DENABLE_TOOLBOX_PARTICLES=ON",
             "-DENABLE_TOOLBOX_CURVI=ON",
-            "-DENABLE_EXTENSION_EXAHYPE=ON",
             "-DWITH_EASI=ON",
             "-DWITH_LIBXSMM=OFF",
             self.define_from_variant("WITH_MULTITHREADING", "multithreading"),

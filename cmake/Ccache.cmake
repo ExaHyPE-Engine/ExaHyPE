@@ -1,5 +1,8 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+
+include_guard(GLOBAL)
+
 option(USE_CCACHE "Use Ccache" ON)
 
 if(USE_CCACHE)
