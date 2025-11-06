@@ -14,6 +14,9 @@ stages:
   - Applications
   - Benchmarks
 
+default:
+  interruptible: true
+
 .BeforeScriptWithAutomakeSanitiser:
   before_script:
     - !reference [".BeforeScript", "before_script"]
@@ -31,7 +34,7 @@ stages:
     exclude:
       - ".git*"
       - ".git/**/*"
-    expire_in: 2 hours
+    expire_in: 24 hours
 
 .Unit_Tests:
   script:

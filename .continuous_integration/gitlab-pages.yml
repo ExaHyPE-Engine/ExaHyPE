@@ -10,6 +10,7 @@ pages:
     - .BeforeScript
   stage: Pages
   allow_failure: false
+  needs: []
   dependencies: []
   script:
     - apptainer exec -e --bind "$PWD" $APPTAINER_IMAGEDIR/${IMAGE_GCC} python3 documentation/convert-jupyter-notebooks.py
@@ -23,4 +24,5 @@ pages:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "p4"'
   when: always
+  interruptible: false
   retry: 0
