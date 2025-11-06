@@ -181,10 +181,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      *
      * @return Actually observed sizes, not the admissible quantities
      */
-    double getMaxPatchSize(bool currentTimeStep = true) const;
-    double getMinPatchSize(bool currentTimeStep = true) const;
-    double getMaxVolumeSize(bool currentTimeStep = true) const;
-    double getMinVolumeSize(bool currentTimeStep = true) const;
+    double getMaxPatchSize() const;
+    double getMinPatchSize() const;
+    double getMaxVolumeSize() const;
+    double getMinVolumeSize() const;
 
     /**
      * Within the FV context, mesh is an alias for patch.
