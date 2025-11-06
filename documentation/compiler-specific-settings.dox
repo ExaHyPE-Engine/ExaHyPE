@@ -150,6 +150,9 @@ should provide all the includes. It is not clear what flags are set (might
 be more than only a few include paths), so we found this route more
 reliable rather than adding TBB paths and libraries manually.
 
+If the version of TBB being used used blocked_rangeNd instead of blocked_nd_range
+then the compile definition TBB_USE_OLD_BLOCKED_RANGE_ND is required.
+
 
 ### OpenMP and OpenMP offloading
 
