@@ -18,10 +18,87 @@ tarch::multicore::taskfusion::FusableTasksQueue::FusableTasksQueue(int type):
 
 
 void tarch::multicore::taskfusion::FusableTasksQueue::insertReadyTask( Task* task, int taskNumber ) {
-  assertion1( _readyTasks.count(taskNumber)==0, taskNumber );
-
   tarch::multicore::Lock lock(_readyTasksSemaphore);
+  assertion1( _readyTasks.count(taskNumber)==0, taskNumber );
   _readyTasks[taskNumber] = task;
+}
+
+
+std::pair< tarch::multicore::TaskNumber, tarch::multicore::Task* > tarch::multicore::taskfusion::FusableTasksQueue::extractFirstReadyTask( TaskNumber handlingTask ) {
+  tarch::multicore::Lock readyTaskLock(_readyTasksSemaphore);
+  if ( _readyTasks.empty() ) {
+    return {-1, nullptr};
+  }
+  else {
+    tarch::multicore::Lock runningTaskLock(_runningTasksSemaphore);
+    auto [firstTaskNumber, firstTask] = *_readyTasks.begin();
+    _readyTasks.erase( _readyTasks.begin() );
+    _runningTasks[ firstTaskNumber ] = handlingTask;
+    return {firstTaskNumber, firstTask};
+  }
+}
+
+
+tarch::multicore::Task*  tarch::multicore::taskfusion::FusableTasksQueue::extractReadyTask( TaskNumber taskNumber, TaskNumber handlingTask ) {
+  tarch::multicore::Lock readyTaskLock(_readyTasksSemaphore);
+  if ( _readyTasks.count(taskNumber)>0 ) {
+    logDebug( "extractReadyTask()", "task " << taskNumber << " is ready, i.e. not running yet. Execute it manually" );
+    tarch::multicore::Lock runningTaskLock(_runningTasksSemaphore);
+
+    _runningTasks[ taskNumber ] = handlingTask;
+    Task* task = _readyTasks[taskNumber];
+    _readyTasks.erase(taskNumber);
+
+    return task;
+  }
+  else {
+    return nullptr;
+  }
+}
+
+
+tarch::multicore::TaskNumber tarch::multicore::taskfusion::FusableTasksQueue::getTaskHandlingRunningTask( TaskNumber taskNumber ) {
+  tarch::multicore::Lock runningTaskLock(_readyTasksSemaphore);
+  if (_runningTasks.count(taskNumber)) {
+    return _runningTasks[taskNumber];
+  }
+  else {
+    return NoOutDependencies;
+  }
+}
+
+
+
+void tarch::multicore::taskfusion::FusableTasksQueue::runningTaskFinished( TaskNumber taskNumber ) {
+  tarch::multicore::Lock runningTaskLock(_runningTasksSemaphore);
+  assertion( _runningTasks.count( taskNumber )==1 );
+  _runningTasks.erase( taskNumber );
+}
+
+
+void tarch::multicore::taskfusion::FusableTasksQueue::updateTaskFusionProbabilities( bool triggerFusion ) {
+  tarch::multicore::Lock lock(_statisticsSemaphore);
+
+  if (triggerFusion) {
+    tarch::multicore::Lock readyQueueLock(_readyTasksSemaphore);
+    const int readyQueueSize = _readyTasks.size();
+    readyQueueLock.free();
+
+    _numberOfReadyTasksPerProcessTaskExecution.setValue( readyQueueSize );
+    _probabilityThatTaskIsCompleted.setValue(0.0);
+
+    if (_probabilityThatTaskIsCompleted.hasFullSetOfMeasurements()) {
+      tarch::multicore::getOrchestration().updateFuseStatistics(
+        getType(),
+        readyQueueSize,
+        _numberOfReadyTasksPerProcessTaskExecution.getValue(),
+        _probabilityThatTaskIsCompleted.getValue()
+      );
+    }
+  }
+  else {
+    _probabilityThatTaskIsCompleted.setValue(1.0);
+  }
 }
 
 
@@ -112,6 +189,11 @@ int tarch::multicore::taskfusion::FusableTasksQueue::getType() const {
 }
 
 
-int tarch::multicore::taskfusion::FusableTasksQueue::getNumberOfReadyTasks() const {
-  return _readyTasks.size();
+int tarch::multicore::taskfusion::FusableTasksQueue::getNumberOfReadyTasks() {
+  int result;
+
+  tarch::multicore::Lock readyLock(_readyTasksSemaphore);
+  result = _readyTasks.size();
+
+  return result;
 }

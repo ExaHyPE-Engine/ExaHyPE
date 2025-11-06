@@ -53,7 +53,7 @@
    * whereas the big cells still span a large time span. Hence, no the other
    * hand, there's also a (time-)local time stamp.
    */
-  double getMinTimeStamp(bool ofCurrentlyRunningGridSweep = false);
+  double getMinTimeStamp();
 
   /**
    * Return max time stamp of all solvers.
@@ -63,7 +63,7 @@
    * to know how far in the future all the solvers are, but we still want to
    * know what a valid time stamp is. So we have to take the minimum here.
    */
-  double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep = false);
+  double getMaxTimeStamp();
   double getMinTimeStepSize();
   double getMaxTimeStepSize();
   double getMinMeshSize();
@@ -108,6 +108,25 @@
   void finishGridInitialisationStep();
 
   /**
+   * Finish time step
+   *
+   * This routine is called after each time step. We forward this call to each
+   * instantiated solver, such that all solvers are notified of the end of the
+   * solver. After that, we clean up the particles, the load balancing and the
+   * AMR decisions.
+   *
+   * The code contains a logTraceOut without the corresponding logTraceIn
+   * statement. This works, as the logTraceIn is moved into startTimeStep(),
+   * i.e. all the log statements are properly distributed.
+   *
+   * ## OpenMP
+   *
+   * If you have OpenMP without support for transparent tasks (OpenMP6), then
+   * the code might crash due to unresolved task dependencies. To avoid this,
+   * we can rely on timed task fusion in combination with a barrier. More
+   * information on this can be found in the tarch::multicore documentation
+   * as well as in the docu of task fusion.
+   *
    * @see startTimeStep()
    */
   void finishTimeStep();
