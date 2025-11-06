@@ -27,8 +27,6 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
 
 tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createFuseAll(
   [[maybe_unused]] int   numberOfTasksToFuse,
-  [[maybe_unused]] bool  fuseImmediately,
-  [[maybe_unused]] bool  processTasksWhileWaitingInBSPArea,
   [[maybe_unused]] int   targetDevice
 ) {
   return new Hardcoded(

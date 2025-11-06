@@ -1,0 +1,157 @@
+/**
+
+@page page_toolbox_loadbalancing_api Load balancing API
+
+@tableofcontents
+
+The load balancing API provides tools for offline decomposition of adaptive mesh trees in Peano. This API enables analysis and optimization of tree structures to achieve better load distribution across compute resources through strategic tree splitting operations.
+
+# Overview
+
+The offline load balancing approach transforms the traditional online load balancing problem into an offline optimization problem. Instead of making splitting decisions during mesh construction without knowledge of the final structure, we:
+
+1. **Construct the complete mesh** without any load balancing
+2. **Checkpoint the initial solution** and analyze the full tree structure  
+3. **Derive optimal load balancing** using complete tree knowledge
+4. **Restart with hardcoded load balancing** based on the optimal strategy
+
+This approach allows us to make informed splitting decisions that minimize both computational cost and load imbalance, as described in @ref page_toolbox_loadbalancing_strategies.
+
+# Core Components
+
+## Tree Data Structure
+
+The `Tree` class in `src/toolbox/loadbalancing/api/Tree.py` provides the central data structure for representing and analysing adaptive mesh trees in the offline load balancing framework. This class enables users to analyse mesh structures, support adaptive meshes, enable load balancing operations, integrate with Peano workflows.
+
+The `Tree` class serves as the bridge between Peano's mesh representation and the offline optimisation algorithms, allowing users to analyse existing mesh structures and develop optimised load balancing strategies.
+
+For complete implementation details, data representation examples, and coordinate systems, see the `Tree` class documentation in `src/toolbox/loadbalancing/api/Tree.py`.
+
+## Input Generators
+
+### Grid Patch File Reader
+The `GridPatchFileReader` module in `src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py` enables users to analyse existing simulation data by converting Peano grid checkpoint files into the Tree format. This module allows you to analyse real simulation data, handle complex adaptive patterns, support multi-domain decompositions, enable offline optimisation.
+
+This input method is ideal for optimising load balancing strategies based on real application behaviour and mesh patterns.
+
+### Regular Grid Generator  
+The `RegularGridGenerator` module (`src/toolbox/loadbalancing/api/Input/RegularGridGenerator.py`) creates controlled test environments for algorithm development and benchmarking. This module enables you to develop splitting algorithms, benchmark performance, validate implementations, compare strategies.
+
+This input method is essential for algorithm development and provides a baseline for comparing optimisation strategies.
+
+## Splitting Strategies
+
+The `SplitTrees` module (`src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`) implements the core optimisation algorithms for redistributing computational work across multiple compute resources. These strategies enable you to achieve balanced workload distribution, handle adaptive mesh challenges, maintain mesh topology.
+
+The `split_leaves` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py` provides comprehensive load balancing that addresses the unique challenges of adaptive mesh refinement by distributing all computational work (leaf nodes) regardless of their refinement level, ensuring optimal load balance for spatially varying mesh structures.
+
+### Illustrative Cases of Multi‑level Tree Splitting
+
+Let's look at examples of splitting 4-level trees.
+The following diagrams illustrate two scenarios showing how multi-level splitting of leaves supports adaptive mesh refinement.
+Green nodes indicate leaves assigned to Subtree 1, while yellow nodes denote leaves assigned to Subtree 0.
+In each scenario, the splitting algorithm identifies all leaves (including those at intermediate levels) and distributes them across subtrees (stage I, see the `split_leaves()` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`) while preserving the constraints of the tree topology (stage II, see the `_update_non_leaf_assignments()` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`).
+Stage II ensures that parent nodes whose children all belong to the same subtree are themselves assigned to that subtree, provided that no other nodes at the parent's level also have all their children in that subtree.
+
+@image html tree_examples_combined_a.png
+
+(1) A simple case in which only one node at Level 2 has children belonging to Subtree 1. In this instance, the propagation of subtree assignments extends upwards by only a single level.
+
+@image html tree_examples_combined_b.png
+
+(2) A more complex case in which multiple nodes at Level 2 have children. Here, the propagation of subtree assignments extends upwards across several levels.
+
+This refined splitting method ensures effective load balancing throughout the entire tree structure.
+
+### Future Extensions
+Planned development includes:
+- **Hierarchical Strategies**: Multi-level splitting approaches with cost optimization
+- **Cost-Aware Splitting**: Integration with splitting cost functions from @ref page_toolbox_loadbalancing_strategies
+
+## Output and Visualization
+
+### YAML Generation
+The `generate_tree_yaml` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py` creates comprehensive YAML files for Peano integration, containing:
+
+- **Tree Structure**: Complete spatial layout with (weight, subtree_id) tuples
+- **Tree Metadata**: Dimensions, refinement levels, domain boundaries, and leaf counts  
+- **Split Analysis**: Subtree distribution statistics and load balancing results
+- **Integration Data**: All information required for Peano's hardcoded load balancer
+
+These YAML files serve as the output format for integrating optimised decompositions back into Peano simulations.
+
+For detailed YAML format specifications and generation parameters, see the `generate_tree_yaml` function documentation in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`.
+
+### Tree Visualization  
+The API integrates with visualisation tools to generate graphical representations of tree structures in multiple formats:
+
+- **Static Formats**: High-resolution PDF and PNG files for publications and reports
+- **Interactive Format**: HTML files with zoom, pan, and hover capabilities using Plotly
+- **Multi-level Display**: Separate subplots showing each refinement level
+- **Subtree Distinction**: Colour-coded visualisation of different subtree assignments
+
+The visualisation system automatically:
+- **Adapts to Dimensions**: Supports both 2D scatter plots and 3D visualisations
+- **Scales Marker Sizes**: Adjusts visual elements based on refinement level
+- **Provides Hover Information**: Shows detailed node information in interactive mode
+- **Generates Responsive Layout**: Creates full-width browser displays for analysis
+
+For detailed implementation, customisation options, and technical specifications, see the `TreeVisualizer` module documentation in `src/toolbox/loadbalancing/api/Visualize/TreeVisualizer.py`.
+
+# Main Script: OfflineDecomposition.py
+
+The [`OfflineDecomposition.py`](src/toolbox/loadbalancing/api/OfflineDecomposition.py) script serves as the main interface for offline decomposition operations, providing command-line access to all API functionality.
+
+## Key Usage Patterns
+
+```bash
+# Analyze existing simulation data
+python3 OfflineDecomposition.py -f /path/to/grid/files -d 3 -p
+
+# Generate test cases for algorithm development
+python3 OfflineDecomposition.py -d 2 -l 4 -p
+
+# Apply load balancing optimization
+python3 OfflineDecomposition.py -d 3 -l 3 -s 4 -p
+```
+
+## Workflow Integration
+
+The script integrates all API components into a complete workflow:
+1. **Input processing** via [`GridPatchFileReader`](src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py) or [`RegularGridGenerator`](src/toolbox/loadbalancing/api/Input/RegularGridGenerator.py)
+2. **Tree analysis** using the [`Tree`](src/toolbox/loadbalancing/api/Tree.py) data structure
+3. **Load balancing** through [`SplitTrees`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py) strategies
+4. **Results export** in YAML format for Peano integration
+
+For complete command-line options, parameter details, and usage examples, see the [`OfflineDecomposition.py`](src/toolbox/loadbalancing/api/OfflineDecomposition.py) script documentation.
+
+## Output Files
+
+The script generates several output files for analysis and integration:
+
+- **Original YAML**: Complete structure of the input tree before optimization
+- **Split YAML**: Optimised tree structure after applying splitting strategies  
+- **Visualization Files**: PDF and PNG plots of tree structures (when visualization is enabled)
+- **Performance Metrics**: Timing information for each processing stage
+
+# Performance Considerations
+
+The API tracks and reports performance metrics for:
+
+- **Input Processing Time**: Time to read/generate tree structures
+- **Visualisation Time**: Time to create graphical representations
+- **Splitting Time**: Time to apply splitting algorithms  
+- **Total Processing Time**: End-to-end processing duration
+
+This enables analysis of scaling behaviour and identification of computational bottlenecks in the offline optimisation process.
+
+# Future Development
+
+Planned extensions to the API include:
+
+- **Cost Function Integration**: Implementation of splitting cost models from theoretical framework
+- **Advanced Algorithms**: Cost-aware optimization strategies that minimize splitting costs while maintaining load balance, hierarchical splitting with early-stage decisions, and guided refinement approaches
+- **Peano Integration Tools**: Direct export mechanisms for hardcoded load balancer configuration
+- **Parallel Processing**: Support for parallel tree analysis and splitting operations
+
+*/

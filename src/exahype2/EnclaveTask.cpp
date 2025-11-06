@@ -17,6 +17,7 @@ int exahype2::EnclaveTask::getNumberOfActiveTasks() { return _enumerator.size();
 
 
 void exahype2::EnclaveTask::releaseTaskNumber(int number) {
+  logDebug( "releaseTaskNumber(int)", "enclave task number " << number << " has been released and should be recycled later" );
   _enumerator.releaseNumber(number);
 }
 
@@ -49,6 +50,10 @@ exahype2::EnclaveTask::EnclaveTask(
   _functor(functor),
   _maxEigenvalue(-1.0) {
   logTraceIn("EnclaveTask(...)");
+  
+  assertion1(_taskNumber>=0, toString());  
+  exahype2::EnclaveBookkeeping::getInstance().registerTask( _taskNumber, marker );
+
   logTraceOut("EnclaveTask(...)");
 }
 
@@ -56,7 +61,7 @@ exahype2::EnclaveTask::EnclaveTask(
 void exahype2::EnclaveTask::run() {
   logTraceInWith1Argument("run()", getTaskId());
   computeTask();
-  EnclaveBookkeeping::getInstance().finishedTask(getTaskId(), _numberOfResultValues, _outputValues, _maxEigenvalue);
+  EnclaveBookkeeping::getInstance().finishedTask(getTaskId(), _numberOfResultValues, _outputValues, _maxEigenvalue, _marker.x(), _marker.h());
   logTraceOut("run()");
 }
 

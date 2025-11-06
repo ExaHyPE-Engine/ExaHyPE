@@ -79,10 +79,6 @@ class tarch::multicore::taskfusion::FusableTasksQueue {
   public:
     static constexpr int AnyTask = -1;
 
-    friend class ProcessOneReadyTask;
-    friend class ProcessSetOfReadyTasks;
-
-
     FusableTasksQueue(int type_);
     ~FusableTasksQueue()                        = default;
     FusableTasksQueue(const FusableTasksQueue&) = delete;
@@ -116,6 +112,48 @@ class tarch::multicore::taskfusion::FusableTasksQueue {
     TaskNumber getFirstReadyTaskNumber();
 
     /**
+     * Get first ready task
+     *
+     * Takes the ready task out of the queue and also leaves an entry that
+     * handlingTask will handle this task.
+     *
+     * @return Task* will be nullptr if there are no tasks left
+     */
+    std::pair< TaskNumber, Task* > extractFirstReadyTask( TaskNumber handlingTask );
+
+    /**
+     * Extract specific ready task
+     */
+    Task*  extractReadyTask( TaskNumber taskNumber, TaskNumber handlingTask );
+
+    void runningTaskFinished( TaskNumber taskNumber );
+
+    TaskNumber getTaskHandlingRunningTask( TaskNumber taskNumber );
+
+    /**
+     * Update the internal stats
+     *
+     * This routine updates the internal statistics tied to the queue, and if
+     * there's a complete data set, it also dumps the stats into whoever will
+     * listen.
+     *
+     *
+     * ## Semaphores
+     *
+     * We obviously need to lock _statisticsSemaphore as we write into the
+     * statistics. But we also need to lock _readyTasksSemaphore as we read
+     * out the queue size.
+     *
+     *
+     * @param triggerFusion If this is true, we have just triggered the fusion.
+     *   If it is false however, then it means that we skip any fusion, as our
+     *   task of interest has finished already.
+     */
+    void updateTaskFusionProbabilities( bool triggerFusion );
+
+    std::pair< TaskNumber, Task* > extractReadyTask( TaskNumber handlingTask );
+
+    /**
      * Can be used with the queries below if you prefer those names over
      * the boolean values. Makes it clearer what a function does.
      */
@@ -135,9 +173,17 @@ class tarch::multicore::taskfusion::FusableTasksQueue {
     int getType() const;
 
     /**
-     * Not thread-safe, i.e. might return outdated information
+     * Query the number of ready tasks
+     *
+     * In principle, we would be fine with making this routine not thread-safe,
+     * i.e. we could accept if it returned a value smaller than the actual
+     * size. However, such an unsafe version confuses the thread sanitizer, and
+     * I'm also not sure if there could be further knock-on effects, so I
+     * eventually decided to make the routine thread-safe.
+     *
+     * As we employ a sempahore internally, the routine cannot be const.
      */
-    int getNumberOfReadyTasks() const;
+    int getNumberOfReadyTasks();
   private:
     static tarch::logging::Log                 _log;
 

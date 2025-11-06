@@ -10,7 +10,9 @@ namespace tarch {
       /**
        * Default strategy
        *
-       * The default strategy is AllOnGPU at the moment.
+       * The default strategy is AllOnGPU at the moment if you have GPU
+       * support. Without GPU support, we use a Hardcoded variant that
+       *
        */
       Strategy* createDefaultStrategy();
 
@@ -150,19 +152,32 @@ namespace tarch {
          * provides context about important implementational considerations.
          *
          *
-         * #### Timed execution
+         */
+        LazyEvaluation,
+
+        /**
+         * Timed execution
          *
+         * Timed execution really means lazy evaluation where all tasks are
+         * fused "manually" at a point which is determined by the user.
+         *
+         * There's no need for a dedicated timed execution variant:
          * You can use the lazy task fusion strategy to collect fusable tasks
          * and to handle then at one particular point in time, i.e. to issue
          * the fusion manually. To do so, you have to invoke
          * tarch::multicore::taskfusion::processAndFuseAllReadyTasks()
-         * manually. There is no built-in version for the timed execution, as
-         * the technical architecture cannot and should not know about the
-         * right point to issue the fusion.
+         * manually.
          *
-         * The routine provides some further guidance.
+         * However, there is no built-in version for the timed execution, as
+         * the technical architecture cannot and should not know about the
+         * right point to issue the fusion. Therefore, we provide this option
+         * which is internally exactly the same as LazyEvaluation. However,
+         * using this flag, your main can determine if it wants to manually
+         * trigger
+         * tarch::multicore::taskfusion::processAndFuseAllReadyTasks()
+         * at a certain point. ExaHyPE for example does so.
          */
-        LazyEvaluation,
+        TimedExecution,
 
         /**
          * Map each fusable task onto a producer-consumer task pair
@@ -297,7 +312,7 @@ public:
    *   means we always have to fuse (unless maxTask equals 1), but should not
    *   be negative.
    * @param maxTasks How many tasks are to be fused at most. Has to be bigger
-   *   than minTasks. If you set it to one however, you disable fusion and
+   *   equal minTasks. If you set it to one, you disable fusion and
    *   tasks go straight into the runtime system as proper tasks.
    *
    * @see Consult the page @ref documentation_tarch_task_fusion_strategies

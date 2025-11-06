@@ -48,8 +48,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     /**
      * Infinity, as we do not restrict anything.
      */
-    double getMinTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
-    double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
+    double getMinTimeStamp() const final;
+    double getMaxTimeStamp() const final;
 
 
     double getMinTimeStepSize() const final;
