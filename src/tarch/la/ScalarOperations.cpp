@@ -22,14 +22,6 @@ int tarch::la::aPowI(int i,int a) {
   return result;
 }
 
-bool tarch::la::greater (
-  double lhs,
-  double rhs,
-  double tolerance
-) {
-  return lhs - rhs >  tolerance;
-}
-
 bool tarch::la::greaterEquals (
   double lhs,
   double rhs,

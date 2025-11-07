@@ -273,11 +273,9 @@ namespace swift2 {
           dw_dx = std::min(dw_dx, 0.0);
 
           /* Return everything */
-          W     = w * kernel_constant * kernel_gamma_inv_dim;
-          dW_dx = dw_dx * kernel_constant * kernel_gamma_inv_dim_plus_one;
+          W     = u == 0 ? 0: w * kernel_constant * kernel_gamma_inv_dim;
+          dW_dx = u == 0 ? 0: dw_dx * kernel_constant * kernel_gamma_inv_dim_plus_one;
         }
-
-
       } // namespace kernelHydro
     }   // namespace legacy
   }     // namespace kernels
