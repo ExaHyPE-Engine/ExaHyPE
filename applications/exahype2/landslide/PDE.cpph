@@ -1,0 +1,107 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <class T, class Shortcuts>
+static inline GPU_CALLABLE_METHOD void applications::exahype2::landslide::flux(
+  const T* const NOALIAS                       Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  T* const NOALIAS                             F
+) {
+  if (Q[Shortcuts::lsh] <= hThreshold) {
+    return;
+  }
+
+  const auto Vn{Q[Shortcuts::lshu + normal] / Q[Shortcuts::lsh]};
+  F[Shortcuts::lsh]  = Q[Shortcuts::lshu + normal]; // Mass flux
+  F[Shortcuts::lshu] = Vn * Q[Shortcuts::lshu];     // Momentum-x flux
+  F[Shortcuts::lshv] = Vn * Q[Shortcuts::lshv];     // Momentum-y flux
+  // F[Shortcuts::lshu + normal] += 0.5 * g * Q[Shortcuts::lsh] * Q[Shortcuts::lsh]; // Hydrostatic pressure
+}
+
+template <class T, class Shortcuts>
+static inline GPU_CALLABLE_METHOD double applications::exahype2::landslide::maxEigenvalue(
+  const T* const NOALIAS                       Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal
+) {
+  // Landslide eigenvalue
+  T sFlux = 0.00;
+  if (Q[Shortcuts::lsh] > hThreshold) { // only if enough granular material present
+    const auto Vn{Q[Shortcuts::lshu + normal] / Q[Shortcuts::lsh]};
+    const auto c{std::sqrt(g * Q[Shortcuts::lsh])};
+    sFlux = std::fmax(std::fabs(Vn + c), std::fabs(Vn - c));
+  }
+  return sFlux;
+}
+
+template <class T, class Shortcuts>
+static inline GPU_CALLABLE_METHOD void applications::exahype2::landslide::nonconservativeProduct(
+  const T* const NOALIAS                       Q,
+  const T* const NOALIAS                       deltaQ,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  T* const NOALIAS                             BTimesDeltaQ
+) {
+  if (Q[Shortcuts::lsh] <= hThreshold) {
+    return;
+  }
+
+  // Bathymetry/topography-related effects
+  BTimesDeltaQ[Shortcuts::lshu + normal] = g * Q[Shortcuts::lsh] * (deltaQ[Shortcuts::lsh] + deltaQ[Shortcuts::z]);
+
+  // Compute stiff turbulent drag on the interface
+  const auto momentumSQR{Q[Shortcuts::lshu] * Q[Shortcuts::lshu] + Q[Shortcuts::lshv] * Q[Shortcuts::lshv]};
+  const auto momentum{std::sqrt(momentumSQR)};
+  if (tarch::la::greater(momentum / Q[Shortcuts::lsh], 0.0)) {
+    const auto turbulentDrag{g * momentumSQR * invXi / (Q[Shortcuts::lsh] * Q[Shortcuts::lsh])};
+    const auto directionVect{Q[Shortcuts::lshu + normal] / momentum};
+    BTimesDeltaQ[Shortcuts::lshu + normal] += h[normal] * turbulentDrag * directionVect;
+  }
+
+  BTimesDeltaQ[Shortcuts::hu + normal] += g * Q[Shortcuts::h] * deltaQ[Shortcuts::lsh];
+}
+
+template <class T, class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
+static inline GPU_CALLABLE_METHOD void applications::exahype2::landslide::diffusiveSourceTerm(
+  [[maybe_unused]] const T* const NOALIAS                       Q,      // Q[4+0]
+  [[maybe_unused]] const T* const NOALIAS                       deltaQ, // deltaQ[2 * (4+0)]
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  [[maybe_unused]] T* const NOALIAS                             S // S[4]
+) {
+
+  for (int n = 0; n < NumberOfUnknowns; n++) {
+    S[n] = 0.0;
+  }
+
+  if (Q[Shortcuts::lsh] <= hThreshold) {
+    return;
+  }
+
+  // Compute local slope cF
+  const auto dzx{deltaQ[Shortcuts::z]};
+  const auto dzy{deltaQ[Shortcuts::z + NumberOfUnknowns + NumberOfAuxiliaryVariables]};
+  const auto cF{1.0 / std::sqrt(1.0 + dzx * dzx + dzy * dzy)};
+
+  // Apply friction only if there is some movement
+  const auto momentumSQR{Q[Shortcuts::lshu] * Q[Shortcuts::lshu] + Q[Shortcuts::lshv] * Q[Shortcuts::lshv]};
+  const auto momentum{std::sqrt(momentumSQR)};
+  if (tarch::la::greater(momentum / Q[Shortcuts::lsh], 0.0)) {
+    const auto coulombFriction{mu * cF * Q[Shortcuts::lsh]};
+    const auto frictionTerm{-g * coulombFriction / momentum};
+    S[Shortcuts::lshu] = Q[Shortcuts::lshu] * frictionTerm;
+    S[Shortcuts::lshv] = Q[Shortcuts::lshv] * frictionTerm;
+  }
+}

@@ -426,6 +426,25 @@ ExaSeis Application:
     - Build
   retry: 0
 
+Landslide Application:
+  stage: Applications
+  parallel:
+    matrix:
+    - scenario: [fv, limited]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/landslide/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario-landslide-tsunami.py;"
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOnMain
+    - .BeforeScriptSanitiser
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 0
+
 Kernel Benchmark:
   stage: Benchmarks
   parallel:
