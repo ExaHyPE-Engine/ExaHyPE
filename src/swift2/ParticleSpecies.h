@@ -5,6 +5,13 @@
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/Lock.h"
 
+#ifdef Parallel
+#include "tarch/mpi/mpi.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/services/Service.h"
+#include "tarch/services/ServiceRepository.h"
+#endif
+
 namespace swift2 {
   class ParticleSpecies;
 } // namespace swift2
