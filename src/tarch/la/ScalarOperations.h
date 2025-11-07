@@ -37,7 +37,9 @@ namespace tarch {
     /**
      * @param tolerance Absolute tolerance when we compare two values.
      */
-    bool greater( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
+    inline bool greater( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) {
+      return lhs - rhs >  tolerance;
+    }
 
     /**
      * @param tolerance Absolute tolerance when we compare two values.

@@ -6,7 +6,7 @@
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
 #include "swift2/kernels/ParticleUpdatePredicates.h"
-
+#include "swift2/kernels/ParticleParticleInteraction.h"
 
 namespace swift2 {
   namespace kernels {
@@ -204,7 +204,7 @@ namespace swift2 {
        * @see forceKernelVectorised()
        */
       template <typename ParticleA, typename ParticleB = ParticleA>
-      void force_kernel(
+      inline void __attribute__((always_inline)) force_kernel(
         ParticleA&       localParticle,
         const ParticleB& activeParticle
       );
@@ -217,11 +217,11 @@ namespace swift2 {
         const Particle& localParticle
       );
 
-      template <typename Particle>
+      template <typename ParticleA, typename ParticleB = ParticleA>
       bool forceKernelEvaluatePairInteractionPredicate(
         const peano4::datamanagement::CellMarker& marker,
-        const Particle&                           localParticle,
-        const Particle&                           activeParticle
+        const ParticleA&                           localParticle,
+        const ParticleB&                           activeParticle
       );
 
       /**
@@ -233,7 +233,7 @@ namespace swift2 {
        * - forceKernelEvaluatePairInteractionPredicate()
        */
       template <typename ParticleA, typename ParticleB = ParticleA>
-      void forceKernel(
+      inline void __attribute__((always_inline)) forceKernel(
         const peano4::datamanagement::CellMarker& marker,
         ParticleA&                                localParticle,
         const ParticleB&                          activeParticle

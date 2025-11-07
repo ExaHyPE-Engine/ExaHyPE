@@ -202,7 +202,11 @@ namespace swift2 {
       class EvaluatePredicateInPrologueRealisation {};
       class EvaluatePredicateInPrologueLocalActiveRealisation {};
       class EvaluatePredicateInPrologueActiveLocalRealisation {};
+
       class GenericOffloadRealisation {};
+      class CoalescedMemoryOffloadRealisation {};
+      class CoalescedMemoryLocalActiveOffloadRealisation {};
+      class CoalescedMemoryActiveLocalOffloadRealisation {};
 
       extern GenericRealisation                     Generic;
       extern CoalescedMemoryRealisation             CoalescedMemory;
@@ -213,7 +217,11 @@ namespace swift2 {
         EvaluatePredicateInPrologueLocalActive;
       extern EvaluatePredicateInPrologueActiveLocalRealisation
                                        EvaluatePredicateInPrologueActiveLocal;
+
       extern GenericOffloadRealisation GenericOffload;
+      extern CoalescedMemoryOffloadRealisation CoalescedMemoryOffload;
+      extern CoalescedMemoryLocalActiveOffloadRealisation CoalescedMemoryLocalActiveOffload;
+      extern CoalescedMemoryActiveLocalOffloadRealisation CoalescedMemoryActiveLocalOffload;
     } // namespace kernelrealisation
 
     /**
@@ -275,7 +283,7 @@ namespace swift2 {
       const peano4::datamanagement::VertexMarker& marker,
       auto&                                       assignedParticles,
       int  numberOfCoalescedAssignedParticles,
-      auto realisation
+      ::swift2::kernels::kernelrealisation::GenericRealisation realisation
     );
 
 
@@ -290,45 +298,6 @@ namespace swift2 {
       int numberOfCoalescedAssignedParticles,
       ::swift2::kernels::kernelrealisation::GenericOffloadRealisation
     );
-
-    /**
-     * Loop over all particles within a cell
-     *
-     * ## Predicates
-     *
-     * The most popular predicates in use are
-     *
-     * ~~~~~~~~~~~~~~~~~~~~~~~~
-     * ::swift2::kernels::alwaysUpdateInCellKernel<typename
-     * ParticleContainer::DoFType>
-     * ~~~~~~~~~~~~~~~~~~~~~~~~
-     *
-     * and
-     *
-     * ~~~~~~~~~~~~~~~~~~~~~~~~
-     * ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<PCParticle<ParticleContainer>>
-     * ~~~~~~~~~~~~~~~~~~~~~~~~
-     */
-    template <auto ParticleOp, auto PredicateOp>
-    void forAllParticles(
-      const peano4::datamanagement::CellMarker& marker,
-      auto&                                     localParticles,
-      const std::vector<int>&                   numberOfCoalescedLocalParticles,
-      auto                                      realisation
-    );
-
-
-    /**
-     * Generic version but annotated with offloading attributes.
-     */
-    template <auto ParticleOp, auto PredicateOp>
-    void forAllParticles(
-      const peano4::datamanagement::CellMarker& marker,
-      auto&                                     localParticles,
-      const std::vector<int>&                   numberOfCoalescedLocalParticles,
-      ::swift2::kernels::kernelrealisation::GenericOffloadRealisation
-    );
-
 
     /**
      * Run over all local particle-active particle combinations
@@ -439,7 +408,7 @@ namespace swift2 {
       const swift2::CellMetaData& cellMetaData,
       auto&                       localParticles,
       auto&                       activeParticles,
-      auto                        realisation
+      ::swift2::kernels::kernelrealisation::GenericRealisation                        realisation
     );
 
     /**
@@ -454,6 +423,42 @@ namespace swift2 {
       ::swift2::kernels::kernelrealisation::GenericOffloadRealisation
     );
 
+    template <auto ParticleOp, auto PredicateOp>
+    void forAllParticles(
+      const peano4::datamanagement::VertexMarker& marker,
+      auto&                                       assignedParticles,
+      int                                         numberOfAssignedParticles,
+      ::swift2::kernels::kernelrealisation::CoalescedMemoryRealisation
+        realisation
+    );
+
+    template <auto ParticleOp, auto PredicateOp>
+    void forAllParticles(
+      const peano4::datamanagement::CellMarker& marker,
+      auto&                                     localParticles,
+      const std::vector<int>&                   numberOfLocalParticles,
+      ::swift2::kernels::kernelrealisation::CoalescedMemoryRealisation
+        realisation
+    );
+
+    template <auto ParticleOp, auto PredicateOp>
+    void forAllParticles(
+      const peano4::datamanagement::VertexMarker& marker,
+      auto&                                       assignedParticles,
+      int                                         numberOfAssignedParticles,
+      ::swift2::kernels::kernelrealisation::CoalescedMemoryOffloadRealisation
+        realisation
+    );
+
+    template <auto ParticleOp, auto PredicateOp>
+    void forAllParticles(
+      const peano4::datamanagement::CellMarker& marker,
+      auto&                                     localParticles,
+      const std::vector<int>&                   numberOfLocalParticles,
+      ::swift2::kernels::kernelrealisation::CoalescedMemoryOffloadRealisation
+        realisation
+    );
+
     template <auto PairOperator, auto LocalPredicate, auto PairPredicate>
     void forAllParticlePairs(
       const swift2::CellMetaData& cellMetaData,
@@ -461,6 +466,15 @@ namespace swift2 {
       auto&                       activeParticles,
       ::swift2::kernels::kernelrealisation::
         CoalescedMemoryActiveLocalRealisation realisation
+    );
+
+    template <auto PairOperator, auto LocalPredicate, auto PairPredicate>
+    void forAllParticlePairs(
+      const swift2::CellMetaData& cellMetaData,
+      auto&                       localParticles,
+      auto&                       activeParticles,
+      ::swift2::kernels::kernelrealisation::
+        CoalescedMemoryActiveLocalOffloadRealisation realisation
     );
 
     template <auto PairOperator, auto LocalPredicate, auto PairPredicate>
@@ -571,23 +585,7 @@ namespace swift2 {
      *
      *
      */
-    template <auto ParticleOp, auto PredicateOp>
-    void forAllParticles(
-      const peano4::datamanagement::VertexMarker& marker,
-      auto&                                       assignedParticles,
-      int                                         numberOfAssignedParticles,
-      ::swift2::kernels::kernelrealisation::CoalescedMemoryRealisation
-        realisation
-    );
 
-    template <auto ParticleOp, auto PredicateOp>
-    void forAllParticles(
-      const peano4::datamanagement::CellMarker& marker,
-      auto&                                     localParticles,
-      const std::vector<int>&                   numberOfLocalParticles,
-      ::swift2::kernels::kernelrealisation::CoalescedMemoryRealisation
-        realisation
-    );
 
     /**
      * Alternative implementation of CoalescedMemoryActiveLocalRealisation
@@ -618,6 +616,18 @@ namespace swift2 {
       auto&                       activeParticles,
       ::swift2::kernels::kernelrealisation::
         CoalescedMemoryLocalActiveRealisation realisation
+    );
+
+    template <
+      auto ParticlePairOp,
+      auto LocalPredicateOp,
+      auto ParticlePairPredicateOp>
+    void forAllParticlePairs(
+      const swift2::CellMetaData& cellMetaData,
+      auto&                       localParticles,
+      auto&                       activeParticles,
+      ::swift2::kernels::kernelrealisation::
+        CoalescedMemoryLocalActiveOffloadRealisation realisation
     );
 
     /**

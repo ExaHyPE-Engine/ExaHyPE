@@ -67,11 +67,11 @@ namespace swift2 {
      * See comment on alwaysUpdateInVertexKernel(), which also holds for this
      * predicate.
      */
-    template <typename Particle>
+    template <typename ParticleA, typename ParticleB = ParticleA>
     bool alwaysUpdateParticlePairs(
       const peano4::datamanagement::CellMarker& marker,
-      const Particle&                           localParticle,
-      const Particle&                           activeParticle
+      const ParticleA&                           localParticle,
+      const ParticleB&                           activeParticle
     ) {
       return true;
     }

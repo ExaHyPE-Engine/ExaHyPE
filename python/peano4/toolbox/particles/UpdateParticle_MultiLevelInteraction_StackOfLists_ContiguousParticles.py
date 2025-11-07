@@ -406,7 +406,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
         """
   std::list< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
   std::vector< int >                            numberOfCoalescedLocalParticlesPerVertex( TwoPowerD );
-  std::vector< bool >                           localParticleIsContainedInCell;
+  std::vector< char >                           localParticleIsContainedInCell;
   
   _numberOfActiveParticlesAdded.push_back(0);
   for (int i=0; i<TwoPowerD; i++) {
