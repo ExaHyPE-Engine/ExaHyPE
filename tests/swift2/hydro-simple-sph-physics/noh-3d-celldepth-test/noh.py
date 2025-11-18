@@ -148,41 +148,6 @@ project = swift2.Project(
     namespace=project_namespace, project_name="Noh3D", executable="noh3D"
 )
 
-
-# MULTISCALE SORT, SCATTERED MEMORY, DOMAIN DECOMPOSITION
-#  project.initialisation_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
-#  )
-#  project.algorithm_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
-#  )
-#
-#  MULTISCALE SORT, COALESCED MEMORY, DOMAIN DECOMPOSITION
-project.algorithm_steps_task_graph_compiler = (
-    swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
-)
-project.initialisation_steps_task_graph_compiler = (
-    swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
-)
-
-# BUCKET SORT, SCATTERED MEMORY, DOMAIN DECOMPOSITION
-#  project.algorithm_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
-#  )
-#  project.initialisation_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
-#  )
-#
-# BUCKET SORT, COALESCED MEMORY, DOMAIN DECOMPOSITION
-#  project.algorithm_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory
-#  )
-#  project.initialisation_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory
-#  )
-#
-
-
 # Initialise the SPH particle --------------------------------------------------
 # If multiple particle species are present, we can specify the parameters
 # independently for each case.
@@ -244,8 +209,16 @@ KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 
 
 # Additional Particle Parameters -----------------------------------------------
+depth = 0
+cellsize = domain_size[0]
+while cellsize > args.cell_size_min:
+    cellsize /= 3.0
+    depth += 1
+    if depth == 100:
+        raise ValueError("Suspicious depth")
+
 dx = domain_size[0] / args.particle_number
-hydro_H_max = 0.49999 * args.cell_size_min
+hydro_H_max = 0.499 * cellsize
 if hydro_H_max < 3.0 * dx:
     raise ValueError("Too small hydro_H_max", 3.0 * dx, hydro_H_max)
 hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_interaction_radius(
@@ -276,7 +249,6 @@ particle.set_parameters()
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
 
-
 if args.debug:
     build_mode = peano4.output.CompileMode.Debug
 elif args.asserts:
@@ -297,6 +269,7 @@ project.set_global_simulation_parameters(
     plotter_precision=8,
 )
 
+# Choose realisation
 parallelisation = "domain-decomposition"
 #  parallelisation = "task-graph"
 #  parallelisation = "multisweep-task-graph"
