@@ -820,10 +820,10 @@ levels.
             if storage == Storage_Scattered:
                 if sorting == Sorting_MultiscaleSort:
                     self.algorithm_steps_task_graph_compiler = (
-                        swift2.api.graphcompiler.particle_steps_onto_task_tree_multiscale_sort_scattered_memory
+                        swift2.api.graphcompiler.particle_steps_onto_multisweep_task_graph_multiscale_sort_scattered_memory
                     )
                     self.initialisation_steps_task_graph_compiler = (
-                        swift2.api.graphcompiler.initialisation_steps_onto_task_tree_multiscale_sort_scattered_memory
+                        swift2.api.graphcompiler.initialisation_steps_onto_multisweep_task_graph_multiscale_sort_scattered_memory
                     )
                 elif sorting == Sorting_BucketSort:
                     self.algorithm_steps_task_graph_compiler = (
@@ -848,10 +848,10 @@ levels.
                     )
                 elif sorting == Sorting_BucketSort:
                     self.algorithm_steps_task_graph_compiler = (
-                        swift2.api.graphcompiler.particle_steps_onto_task_tree_bucket_sort_coalesced_memory
+                        swift2.api.graphcompiler.particle_steps_onto_multisweep_task_graph_bucket_sort_coalesced_memory
                     )
                     self.initialisation_steps_task_graph_compiler = (
-                        swift2.api.graphcompiler.initialisation_steps_onto_task_tree_bucket_sort_coalesced_memory
+                        swift2.api.graphcompiler.initialisation_steps_onto_multisweep_task_graph_bucket_sort_coalesced_memory
                     )
                 else:
                     raise NotImplementedError()
