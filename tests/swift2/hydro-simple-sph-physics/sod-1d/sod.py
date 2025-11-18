@@ -273,11 +273,11 @@ project.set_global_simulation_parameters(
 parallelisation = "domain-decomposition"
 #  parallelisation = "task-graph"
 #  parallelisation = "multisweep-task-graph"
-#  storage = "scattered"
-storage = "continuous-per-vertex"
+storage = "scattered"
+#  storage = "continuous-per-vertex"
 #  storage = "global-continuous"
-#  sorting = "multiscale-sort"
-sorting = "bucket-sort"
+sorting = "multiscale-sort"
+#  sorting = "bucket-sort"
 kernel_optimisation = "no-optimisation"
 project.set_realisation(
     parallelisation=parallelisation,
@@ -290,7 +290,7 @@ project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(
     "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-    "new toolbox::loadbalancing::DefaultConfiguration(1)",
+    f"new toolbox::loadbalancing::DefaultConfiguration({args.trees})",
 )
 
 
