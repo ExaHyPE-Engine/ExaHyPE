@@ -233,7 +233,6 @@ class DynamicMeshRefinementAnalysis(ActionSet):
     and
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() > {{MAX_PARTICLES_PER_CELL}}
   ) {
-  // MLADEN1 GREP FOR THIS
     const double ScaleMarker = {{SCALE_MARKER}};
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Refine );

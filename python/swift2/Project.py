@@ -74,12 +74,12 @@ class Project(object):
 
         self.additional_action_sets_per_solver_step = []
 
-        #  self.algorithm_steps_task_graph_compiler = (
-        #      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
-        #  )
-        #  self.initialisation_steps_task_graph_compiler = (
-        #      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
-        #  )
+        # Default values will be set by self.set_realisation().
+        self.algorithm_steps_task_graph_compiler = None
+        self.initialisation_steps_task_graph_compiler = None
+        # Default values used to be:
+        # swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
+        # swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
 
     def set_load_balancing(self, load_balancer_name, load_balancer_arguments):
         """
@@ -149,6 +149,16 @@ class Project(object):
             )
 
     def __compute_global_min_h(self):
+        """!
+
+        Run over all species specified and find out what their minimum
+        (finest) h is. This value is then used to constrain the mesh
+        adaptivity: The mesh should never be coarser than this, but also
+        the initial mesh should meet this global maximum h.
+
+        The outcome is stored in self._global_min_h.
+
+        """
         self._global_min_h = sys.float_info.max
         for current_species_set in self._particle_species_set:
             self._global_min_h = min(
@@ -200,9 +210,6 @@ class Project(object):
         )
         self._project.constants.export("PlotterPrecision", str(self._plotter_precision))
         self._project.constants.export_boolean_sequence("PeriodicBC", self._periodic_BC)
-        #
-        # todo global main
-        #
         self._project.constants.export("GlobalMaxH", str(self._global_max_h))
         self._project.constants.export("GlobalMinH", str(self._global_min_h))
 
@@ -292,7 +299,7 @@ As Peano realises three-partitioning, the actual minimal mesh size will be h_min
 This corresponds to at least """
             + str(self.__real_min_mesh_size()[1])
             + """ spacetree levels.
-The coarsest regular mesh hence will host """
+The finest regular mesh hence will host up to """
             + str((3**self._dimensions) ** (self.__real_min_mesh_size()[1]))
             + """ octants.
 
@@ -708,7 +715,7 @@ levels.
         self,
         parallelisation=Parallelisation_DomainDecomposition,
         storage=Storage_Scattered,
-        sorting=Sorting_BucketSort,
+        sorting=Sorting_MultiscaleSort,
         kernel_optimisation=KernelOptimisation_NoOptimisation,
     ):
         """!
