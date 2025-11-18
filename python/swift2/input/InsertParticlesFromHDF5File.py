@@ -135,13 +135,16 @@ class InsertParticlesFromHDF5File(ActionSet):
       const double GridSize_x = GridSize(0);
       const double searchRadiusGlobal = SmlMax * kernel_gamma;
 
-      if (tarch::la::greater(searchRadiusGlobal, 0.5 * GridSize_x)) {
+      if (searchRadiusGlobal > 0.5 * GridSize_x) {
+          // Don't use assertion macro, check this in non-debug modes too
           std::ostringstream out;
-          out << " Global upper limit for search radius is > mesh size. You need to increase your cell size" <<
+          out << " Global upper limit for search radius is > 2. * mesh size." <<
+              " You need to increase your cell size" <<
               " or reduce hydro_h_max in your project python file." <<
               " GridSize:" << GridSize_x <<
               " max global search radius: " << searchRadiusGlobal;
           logError("InsertParticlesFromHDF5File.py:", out.str());
+          std::abort();
       }
 
       newParticle->setSearchRadius( searchRadiusGlobal );
