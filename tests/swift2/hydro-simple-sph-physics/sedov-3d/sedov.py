@@ -130,7 +130,7 @@ parser.add_argument(
     "-t",
     "--trees",
     dest="trees",
-    default=1,
+    default=0,
     type=int,
     help="Number of trees (subdomains) (0 uses all threads)",
 )
@@ -147,41 +147,6 @@ project_namespace = ["tests", "swift2", "sedov3D"]
 project = swift2.Project(
     namespace=project_namespace, project_name="Sedov3D", executable="sedov3D"
 )
-
-
-# MULTISCALE SORT, SCATTERED MEMORY, DOMAIN DECOMPOSITION
-#  project.initialisation_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
-#  )
-#  project.algorithm_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
-#  )
-#
-#  MULTISCALE SORT, COALESCED MEMORY, DOMAIN DECOMPOSITION
-project.algorithm_steps_task_graph_compiler = (
-    swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
-)
-project.initialisation_steps_task_graph_compiler = (
-    swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
-)
-
-# BUCKET SORT, SCATTERED MEMORY, DOMAIN DECOMPOSITION
-#  project.algorithm_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
-#  )
-#  project.initialisation_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
-#  )
-#
-# BUCKET SORT, COALESCED MEMORY, DOMAIN DECOMPOSITION
-#  project.algorithm_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory
-#  )
-#  project.initialisation_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory
-#  )
-#
-
 
 # Initialise the SPH particle --------------------------------------------------
 # If multiple particle species are present, we can specify the parameters
@@ -284,22 +249,6 @@ particle.set_parameters()
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
 
-#  if args.realisation.split(".")[1] == Storage_ContinuousPerVertex:
-particle_set.generator = (
-    peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
-)
-#  elif args.realisation.split(".")[1] == Storage_GlobalContinuous:
-#  particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(
-#      particle_set
-#  )
-#  else:
-#  particle_set.generator = (
-#      peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
-#          particle_set
-#      )
-#  )
-
-
 if args.debug:
     build_mode = peano4.output.CompileMode.Debug
 elif args.asserts:
@@ -320,8 +269,9 @@ project.set_global_simulation_parameters(
     plotter_precision=8,
 )
 
-#  parallelisation = "domain-decomposition"
-parallelisation = "task-graph"
+# Choose realisation
+parallelisation = "domain-decomposition"
+#  parallelisation = "task-graph"
 #  parallelisation = "multisweep-task-graph"
 storage = "scattered"
 #  storage = "continuous-per-vertex"

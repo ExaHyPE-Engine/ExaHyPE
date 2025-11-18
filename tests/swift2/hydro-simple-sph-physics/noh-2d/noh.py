@@ -148,41 +148,6 @@ project = swift2.Project(
     namespace=project_namespace, project_name="Noh2D", executable="noh2D"
 )
 
-
-# MULTISCALE SORT, SCATTERED MEMORY, DOMAIN DECOMPOSITION
-#  project.initialisation_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
-#  )
-#  project.algorithm_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
-#  )
-#
-#  MULTISCALE SORT, COALESCED MEMORY, DOMAIN DECOMPOSITION
-project.algorithm_steps_task_graph_compiler = (
-    swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
-)
-project.initialisation_steps_task_graph_compiler = (
-    swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
-)
-
-# BUCKET SORT, SCATTERED MEMORY, DOMAIN DECOMPOSITION
-#  project.algorithm_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
-#  )
-#  project.initialisation_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
-#  )
-#
-# BUCKET SORT, COALESCED MEMORY, DOMAIN DECOMPOSITION
-#  project.algorithm_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory
-#  )
-#  project.initialisation_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory
-#  )
-#
-
-
 # Initialise the SPH particle --------------------------------------------------
 # If multiple particle species are present, we can specify the parameters
 # independently for each case.
@@ -213,7 +178,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
 
 offset = [0, 0, 0]
 domain_size = [2, 2, 2]
-periodic_boundary_conditions = [True, True, True]
+periodic_boundary_conditions = [True, True, False]
 
 # HYDRO_DIMENSION can be smaller than the Peano4 dimensions
 HYDRO_DIMENSIONS = hydro_dimensions
@@ -283,7 +248,6 @@ particle.set_parameters()
 # Notice that you any change to the particle will not take effect after adding
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
-
 
 if args.debug:
     build_mode = peano4.output.CompileMode.Debug

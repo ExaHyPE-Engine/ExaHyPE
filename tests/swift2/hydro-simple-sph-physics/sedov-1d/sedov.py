@@ -126,6 +126,15 @@ parser.add_argument(
     choices=sphtools.sph_kernel_list,
     help="SPH kernel function to use.",
 )
+parser.add_argument(
+    "-t",
+    "--trees",
+    dest="trees",
+    default=0,
+    type=int,
+    help="Number of trees (subdomains) (0 uses all threads)",
+)
+
 args = parser.parse_args()
 
 
@@ -209,7 +218,7 @@ while cellsize > args.cell_size_min:
         raise ValueError("Suspicious depth")
 
 dx = domain_size[0] / args.particle_number
-hydro_H_max = 0.499 * args.cell_size_min
+hydro_H_max = 0.499 * cellsize
 if hydro_H_max < 5.0 * dx:
     raise ValueError("Too small hydro_H_max", 5.0 * dx, hydro_H_max)
 hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_interaction_radius(
@@ -260,9 +269,10 @@ project.set_global_simulation_parameters(
     plotter_precision=8,
 )
 
-#  parallelisation = "domain-decomposition"
+# Choose realisation
+parallelisation = "domain-decomposition"
 #  parallelisation = "task-graph"
-parallelisation = "multisweep-task-graph"
+#  parallelisation = "multisweep-task-graph"
 storage = "scattered"
 #  storage = "continuous-per-vertex"
 #  storage = "global-continuous"
