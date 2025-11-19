@@ -8,18 +8,12 @@ from peano4.solversteps import Steps
 from swift2.actionsets.DynamicMeshRefinementAnalysis import (
     DynamicMeshRefinementAnalysis,
 )
-from swift2.actionsets.ScatterGlobalMemory import (
-    ScatterGlobalMemory
-)
+from swift2.actionsets.ScatterGlobalMemory import ScatterGlobalMemory
 from swift2.actionsets.DynamicMeshRefinementTrigger import DynamicMeshRefinementTrigger
 
 
 def add_dynamic_mesh_refinement_and_particle_resorting(
-    steps, 
-    alter_position, 
-    species_sets, 
-    sort_with_lifts_and_drops,
-    verbose
+    steps, alter_position, species_sets, sort_with_lifts_and_drops, verbose
 ):
     """!
 
@@ -185,7 +179,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting(
 
     """
     if len(steps) != len(alter_position):
-        raise Exception(
+        raise ValueError(
             "number of steps does not equal number of alter_position flags: {} vs {}".format(
                 steps, alter_position
             )
@@ -244,8 +238,8 @@ def add_dynamic_mesh_refinement_and_particle_resorting(
                 #   State
                 # =========
                 #
-                # Action set peano4.toolbox.UpdateParallelState also eliminates 
-                # halo values and therefore has to be invoked within each drift, 
+                # Action set peano4.toolbox.UpdateParallelState also eliminates
+                # halo values and therefore has to be invoked within each drift,
                 # too
                 #
                 steps_to_update_parallel_state = {
@@ -265,7 +259,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting(
                 #   Realise AMR
                 # ===============
                 #
-                #steps_to_realise_amr = {(i + 2) % len(steps)}
+                # steps_to_realise_amr = {(i + 2) % len(steps)}
                 steps_to_realise_amr = {(i - 1) % len(steps)}
                 if verbose:
                     print(
@@ -316,12 +310,11 @@ def add_dynamic_mesh_refinement_and_particle_resorting(
                             current_species_set.name, i
                         )
                     )
-#                assert (
-#                    not current_species_set.generator.gather_particles
-#                ), "the aggressive AMR is not compatible with particles that gather data in memory pools"
- # @todo Scattering is not in yet
-                
-                
+            #                assert (
+            #                    not current_species_set.generator.gather_particles
+            #                ), "the aggressive AMR is not compatible with particles that gather data in memory pools"
+            # @todo Scattering is not in yet
+
             if global_steps_to_realise_amr[i]:
                 action_set_dynamic_AMR = DynamicMeshRefinementTrigger()
                 action_set_dynamic_AMR.descend_invocation_order = (
@@ -356,7 +349,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting(
                             current_species_set.name, i
                         )
                     )
-                    
+
                 if current_species_set.generator.gather_particles:
                     action_set_gather = (
                         peano4.toolbox.particles.GatherParticlesInMemoryPool(
@@ -367,18 +360,18 @@ def add_dynamic_mesh_refinement_and_particle_resorting(
                         steps[i].lowest_descend_invocation_order() - 1
                     )
                     action_set_gather.parallel = True
-                    
+
                     action_set_scatter = ScatterGlobalMemory(
-                            particle_set=current_species_set,
+                        particle_set=current_species_set,
                     )
                     action_set_scatter.descend_invocation_order = (
                         steps[i].lowest_descend_invocation_order() - 1
                     )
                     action_set_scatter.parallel = True
-                    
+
                     #
-                    # We have to add it once more, as a sieve or drop might trigger a "new" 
-                    # neighbour exchange which then has to be taken into account on the 
+                    # We have to add it once more, as a sieve or drop might trigger a "new"
+                    # neighbour exchange which then has to be taken into account on the
                     # receiving side
                     #
                     steps[i].add_action_set(action_set_gather)
@@ -390,5 +383,3 @@ def add_dynamic_mesh_refinement_and_particle_resorting(
                                 current_species_set.name, i, (i + 1) % (len(steps))
                             )
                         )
-
-

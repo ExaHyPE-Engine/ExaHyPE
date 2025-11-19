@@ -148,41 +148,6 @@ project = swift2.Project(
     namespace=project_namespace, project_name="Sedov3D", executable="sedov3D"
 )
 
-
-# MULTISCALE SORT, SCATTERED MEMORY, DOMAIN DECOMPOSITION
-#  project.initialisation_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
-#  )
-#  project.algorithm_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
-#  )
-#
-#  MULTISCALE SORT, COALESCED MEMORY, DOMAIN DECOMPOSITION
-project.algorithm_steps_task_graph_compiler = (
-    swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
-)
-project.initialisation_steps_task_graph_compiler = (
-    swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
-)
-
-# BUCKET SORT, SCATTERED MEMORY, DOMAIN DECOMPOSITION
-#  project.algorithm_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
-#  )
-#  project.initialisation_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
-#  )
-#
-# BUCKET SORT, COALESCED MEMORY, DOMAIN DECOMPOSITION
-#  project.algorithm_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory
-#  )
-#  project.initialisation_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory
-#  )
-#
-
-
 # Initialise the SPH particle --------------------------------------------------
 # If multiple particle species are present, we can specify the parameters
 # independently for each case.
@@ -244,11 +209,19 @@ KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 
 
 # Additional Particle Parameters -----------------------------------------------
+depth = 0
+cellsize = domain_size[0]
+while cellsize > args.cell_size_min:
+    cellsize /= 3.0
+    depth += 1
+    if depth == 100:
+        raise ValueError("Suspicious depth")
+
 dx = domain_size[0] / args.particle_number
-hydro_H_max = 0.49999 * args.cell_size_min
+hydro_H_max = 0.499 * cellsize
 if hydro_H_max < 3.0 * dx:
     raise ValueError("Too small hydro_H_max", 3.0 * dx, hydro_H_max)
-hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
+hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_interaction_radius(
     hydro_H_max, kernel, hydro_dimensions
 )
 
@@ -276,22 +249,6 @@ particle.set_parameters()
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
 
-#  if args.realisation.split(".")[1] == Storage_ContinuousPerVertex:
-particle_set.generator = (
-    peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
-)
-#  elif args.realisation.split(".")[1] == Storage_GlobalContinuous:
-#  particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(
-#      particle_set
-#  )
-#  else:
-#  particle_set.generator = (
-#      peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
-#          particle_set
-#      )
-#  )
-
-
 if args.debug:
     build_mode = peano4.output.CompileMode.Debug
 elif args.asserts:
@@ -310,6 +267,23 @@ project.set_global_simulation_parameters(
     time_in_between_plots=args.plot_delta,
     periodic_BC=periodic_boundary_conditions,
     plotter_precision=8,
+)
+
+# Choose realisation
+parallelisation = "domain-decomposition"
+#  parallelisation = "task-graph"
+#  parallelisation = "multisweep-task-graph"
+storage = "scattered"
+#  storage = "continuous-per-vertex"
+#  storage = "global-continuous"
+sorting = "multiscale-sort"
+#  sorting = "bucket-sort"
+kernel_optimisation = "no-optimisation"
+project.set_realisation(
+    parallelisation=parallelisation,
+    storage=storage,
+    sorting=sorting,
+    kernel_optimisation=kernel_optimisation,
 )
 
 project.set_Peano4_installation(args.peanodir, build_mode)
