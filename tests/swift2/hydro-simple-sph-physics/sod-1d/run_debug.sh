@@ -5,7 +5,7 @@ set -e
 set -o pipefail
 
 # set threads number
-export OMP_NUM_THREADS=1
+export OMP_NUM_THREADS=4
 
 IC_FILENAME="sodShock.hdf5"
 

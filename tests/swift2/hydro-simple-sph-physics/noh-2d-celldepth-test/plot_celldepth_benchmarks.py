@@ -208,10 +208,8 @@ for n in npartlist:
             templist.append(d)
 
     # Sort the individual list by CELL_MAX/CELL_MIN
-    #  print("templist:", [(t.cellmax, t.cellmin) for t in templist])
     sort_val_list = [t.cellmax * 1e3 + t.cellmin for t in templist]
 
-    #  templist, sort_val_list = (list(t) for t in zip(*sorted(zip(templist, sort_val_list))))
     sort_val_list, templist = (
         list(t) for t in zip(*sorted(zip(sort_val_list, templist)))
     )
@@ -219,7 +217,6 @@ for n in npartlist:
 
     data_by_npart.append(templist)
 
-    #  print("templist sorted:", [(t.cellmax, t.cellmin) for t in templist])
 
 
 if both:
