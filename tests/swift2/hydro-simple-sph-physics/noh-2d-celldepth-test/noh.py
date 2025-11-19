@@ -269,6 +269,7 @@ project.set_global_simulation_parameters(
     plotter_precision=8,
 )
 
+# Choose realisation
 parallelisation = "domain-decomposition"
 #  parallelisation = "task-graph"
 #  parallelisation = "multisweep-task-graph"
