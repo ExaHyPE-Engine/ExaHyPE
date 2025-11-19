@@ -171,7 +171,7 @@ hydro_dimensions = 3  # dimensions for the hydro
 particles_per_cell = args.particles_per_cell
 total_number_of_particles = args.particle_number**hydro_dimensions
 total_number_of_cells = total_number_of_particles / particles_per_cell
-cells_per_dimension = total_number_of_cells ** (2.0 / hydro_dimensions)
+cells_per_dimension = total_number_of_cells ** (1.0 / hydro_dimensions)
 max_cell_size = 2.0 / cells_per_dimension * 3.0
 
 print(
@@ -202,6 +202,10 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
 # using the set/get methods.
 ########################################################################################
 
+offset = [0, 0, 0]
+domain_size = [2, 2, 2]
+periodic_boundary_conditions = [False, False, False]
+
 # HYDRO_DIMENSION can be smaller than the Peano4 dimensions
 HYDRO_DIMENSIONS = hydro_dimensions
 
@@ -230,10 +234,14 @@ KERNEL_SYMBOL = sphtools.sph_kernel_macro_name[kernel]
 KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 
 hydro_H_max = max_cell_size / 2
-hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
+
+dx = domain_size[0] / args.particle_number
+if hydro_H_max < 3.0 * dx:
+    raise ValueError("Too small hydro_H_max", 3.0 * dx, hydro_H_max)
+hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_interaction_radius(
     hydro_H_max, kernel, hydro_dimensions
 )
-#  particle.h_hydro_max = hydro_h_max
+particle.h_hydro_max = hydro_h_max
 
 # particle.h_hydro_min = 1e-6
 # particle.h_max_iterations = 10
@@ -242,7 +250,7 @@ hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius
 # particle.beta_av = 3.0
 # particle.alpha_av = 0.8
 
-# Optional: Reduce the mantissa size for particle attributes -------------------
+# IMPORTANT: Reduce the mantissa size for particle attributes -------------------
 # Native size is 53 (double precision)
 if args.mantissa_size > 0:
     particle.mass.valid_mantissa_bits = args.mantissa_size
@@ -282,19 +290,6 @@ particle.set_parameters()
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
 
-realisation = args.realisation.split(".")
-parallelisation = realisation[0]
-storage = realisation[1]
-sorting = realisation[2]
-kernel_optimisation = realisation[3]
-
-project.set_realisation(
-    parallelisation=parallelisation,
-    storage=storage,
-    sorting=sorting,
-    kernel_optimisation=kernel_optimisation,
-)
-
 if args.mode == "release":
     build_mode = peano4.output.CompileMode.Release
 if args.mode == "stats":
@@ -305,12 +300,6 @@ if args.mode == "trace":
     build_mode = peano4.output.CompileMode.Trace
 if args.mode == "debug":
     build_mode = peano4.output.CompileMode.Debug
-
-# Set Peano4 simulation parameters ---------------------------------------------
-offset = [0, 0, 0]
-domain_size = [2, 2, 2]
-periodic_boundary_conditions = [False, False, False]
-
 
 # Set Peano4 simulation parameters ---------------------------------------------
 project.set_global_simulation_parameters(
@@ -325,12 +314,27 @@ project.set_global_simulation_parameters(
     plotter_precision=8,
 )
 
+# Set realisation
+realisation = args.realisation.split(".")
+parallelisation = realisation[0]
+storage = realisation[1]
+sorting = realisation[2]
+kernel_optimisation = realisation[3]
+
+project.set_realisation(
+    parallelisation=parallelisation,
+    storage=storage,
+    sorting=sorting,
+    kernel_optimisation=kernel_optimisation,
+)
+
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(
     "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-    "new toolbox::loadbalancing::DefaultConfiguration({})".format(args.trees),
+    f"new toolbox::loadbalancing::DefaultConfiguration({args.trees})",
 )
+
 
 ###############################################################################
 # Initialisation snippet for the particle
@@ -349,7 +353,9 @@ project.algorithm_step_initial_conditions.add_action_set(
     swift2.input.InsertParticlesAlongCartesianGrid(
         particle_set=particle_set,
         initialisation_call=initialisation_snippet,
-        distance_between_particles_along_one_axis=1.0 / args.particle_number,
+        distance_between_particles_along_one_axis=(
+            domain_size[0] / (args.particle_number)
+        ),
         additional_includes="""
 #include "swift2/kernels/legacy/equation_of_state.h"
 #include "swift2/kernels/legacy/kernel_hydro.h"
@@ -398,6 +404,7 @@ if args.mode == "asserts" or args.mode == "debug":
     particle_plotter.add_attribute_to_plot(particle.force_neighbourcount, 1)
 project.algorithm_step_plot.add_action_set(particle_plotter)
 
+
 ###############################################################################
 # Generate plain Peano 4 project
 ###############################################################################
@@ -424,6 +431,7 @@ print(f"Number of particles (1D): {HYDRO_PART_NUMBER}")
 print(f"Adiabatic index: {GAMMA}")
 print(f"Smoothing length free factor: {particle.eta_factor}")
 print("-----------------------------------------------------------------------")
+
 
 # Export Constants.h file ------------------------------------------------------
 peano4_project.constants.export_const_with_type(
@@ -459,7 +467,6 @@ if args.clean_temporary_files:
 peano4_project.generate(
     overwrite=peano4.output.Overwrite.Always, throw_away_data_after_generation=True
 )
-
 peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
 
 if args.clean_temporary_files:
