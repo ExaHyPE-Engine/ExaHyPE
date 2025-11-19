@@ -288,10 +288,10 @@ project.set_realisation(
 
 project.set_Peano4_installation(args.peanodir, build_mode)
 
-#  project.set_load_balancing(
-#      "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-#      "new toolbox::loadbalancing::DefaultConfiguration(0)",
-#  )
+project.set_load_balancing(
+    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
+    f"new toolbox::loadbalancing::DefaultConfiguration({args.trees})",
+)
 
 
 ###############################################################################
