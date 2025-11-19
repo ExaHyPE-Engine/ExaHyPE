@@ -238,7 +238,6 @@ for n in npartlist:
     data_by_npart.append(templist)
 
 
-
 if both:
     fig = plt.figure(figsize=(24, 6), dpi=300)
     ax1 = fig.add_subplot(1, 2, 1)
