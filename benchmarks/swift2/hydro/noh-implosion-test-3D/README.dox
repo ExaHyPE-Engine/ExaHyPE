@@ -1,6 +1,6 @@
 /**
 
- @page benchmarks_swift2_hydro_noh_imposion_test_3D 3D Noh implosion test
+ @page benchmarks_swift2_hydro_noh_implosion_test_3D 3D Noh implosion test
 
  Simple Noh implosion test benchmark in 3D with @f$ N ^d @f$ particles. The setup
  yields snapshots similar to the ones below.

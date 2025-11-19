@@ -2,7 +2,27 @@
 
 # --------------------------------------------------------------------------
 # Plot results of cell depth benchmarks.
-# Expects outputs of the form output_N$N_PART-$CELL_MAX-$CELL_MIN.log
+# Expects outputs with the file name format
+#
+#   output_N$N_PART-$CELL_MAX-$CELL_MIN.log
+#
+# as written by `run_celldepth_test.sh`.
+# The content of that output shall be the peano swift2 stdout, with the
+# addition of an external timer run as such (using bash):
+#
+#  timing() {
+#
+#      timeformat="----------------------------------------------------------------\n"
+#      timeformat="$timeformat""stats for %C\n"
+#      timeformat="$timeformat""AverageMem(kb),MaxMem(kb),WallTime(s),CPUTime(s),UserTime(s),CPUPercentage\n"
+#      timeformat="$timeformat""%K,%M,%e,%S,%U,%P"
+#
+#      /usr/bin/time -f "$timeformat" "$@"
+#  }
+#
+#  OUTFILE=output_N$N_PART-$CELL_MAX-$CELL_MIN.log
+#  timing -o "$OUTFILE" -a ./noh2D-$SUFFIX 2>&1 > "$OUTFILE"
+#
 # --------------------------------------------------------------------------
 
 
