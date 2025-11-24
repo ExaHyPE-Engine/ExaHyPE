@@ -90,5 +90,8 @@ This is the reason why you have to call the superclass implementation, too.
 - @ref page_toolbox_loadbalancing_api "Load balancing API"
 - @ref toolbox_loadbalancing "Load Balancing (Domain Decomposition)"
 - @ref page_exahype_runtime_analysis "Runtime analysis"
+- Offline extraction of hardcoded parameters (see @ref page_toolbox_loadbalancing_api) derives split sizes from the
+  earliest level where a new subtree id appears (non-leaf-centric). Counts shown as numberOfCells therefore
+  exclude deeper descendants discovered in later sweeps.
 
  */
