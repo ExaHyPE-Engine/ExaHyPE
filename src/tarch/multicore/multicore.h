@@ -648,6 +648,10 @@ namespace tarch {
        * Here, we model a task which is actually never spawned as task due to
        * if statement that evaluates to false. However, the in-dependencies
        * will be resolved nevertheless.
+       * 
+       * There is an issue that can arise if every thread is waiting on a different task,
+       * similar to in spawnTaskWithOpenMP5(...). See this function for more 
+       * details.
        */
       void waitForTasks(const std::set<TaskNumber>& inDependencies);
 
