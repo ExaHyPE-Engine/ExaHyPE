@@ -5,4 +5,5 @@ from .Visualiser import Visualiser
 try:
     from .VTUUnstructuredGrid import VTUUnstructuredGrid
 except ImportError as error:
-    print("vtk is not available. Cannot process VTU/VTK files: {}".render(error) )
+    print( "vtk is not available. Cannot process VTU/VTK files" )
+    print( str(error) )

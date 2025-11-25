@@ -17,6 +17,16 @@ This page is written for programmers who want to use/adopt the task fusion
 within their own code. 
 
 
+<div style="background-color: #ccf; padding: 10px; border: 1px solid green;"> 
+ This page and references therein describe how the task fusion is realised
+ and how we control its behaviour. 
+ It is very C++-centric. 
+ Individual Peano extensions such as ExaHyPE expose the freedom to pick and 
+ configure task fusion strategies through their Python interface. For this,
+ you have to study their respective documentation - in particular their tutorials.
+</div>
+
+
 
 ## Prepare  
 

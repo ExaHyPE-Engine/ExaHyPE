@@ -25,8 +25,8 @@ class AdaptiveTimeSteppingCodeSnippets(
     // This is a value set for stats reasons. We'll ignore it later as we
     // ask for a new valid time step size from getAdmissibleTimeStepSize().
     //const double newTimeStepSize = 0.0;
-    const double newTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false) > 0.0 ?
-      repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false) :
+    const double newTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinCellSize() > 0.0 ?
+      repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinCellSize() :
       0.0;
 """
 

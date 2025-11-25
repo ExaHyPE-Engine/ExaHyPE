@@ -298,7 +298,10 @@ class Elastic:
                 "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
                 "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
                 "flux": "applications::exahype2::elastic::flux(Q, x, h, t, dt, normal, F);",
-                "eigenvalues": "return applications::exahype2::elastic::maxEigenvalue(Q, x, h, t, dt, normal);",
+                "eigenvalues": """
+                double lambda[NumberOfUnknowns] = {0.};
+                applications::exahype2::elastic::maxEigenvalue(Q, x, h, t, dt, normal, lambda);
+                return *std::max_element(lambda, lambda+NumberOfUnknowns);""",
                 "source_term": "applications::exahype2::elastic::sourceTerm(Q, x, 0.0, t, 0.0, S);",
             }
 
@@ -365,7 +368,7 @@ class Elastic:
         project.set_number_of_threads(args.threads)
 
         project.set_multicore_orchestration(
-            "tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, 0)"
+            "tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, 0)"
             % str(args.fuse_tasks)
         )
         project.additional_includes.append("tarch/multicore/orchestration/Hardcoded.h")

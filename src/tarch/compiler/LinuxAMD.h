@@ -38,4 +38,3 @@
 */
 #define OpenMPManuallyOffloadMemset
 
-#define OpenMP6Syntax

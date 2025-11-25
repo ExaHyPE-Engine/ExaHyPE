@@ -17,9 +17,7 @@ int peano4::parallel::getTaskType(const std::string&  className) {
   classNamesForTaskType.push_back( className );
 
   #if PeanoDebug>0
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-    std::cout << "assign task " << className << " id " << taskTypeCounter  << std::endl;
-  }
+  std::cout << "assign task " << className << " id " << taskTypeCounter  << std::endl;
   #endif
 
   return taskTypeCounter;

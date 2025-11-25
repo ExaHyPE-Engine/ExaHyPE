@@ -95,8 +95,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     static std::bitset<Dimensions> PeriodicBC;
 
-    double getMinTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
-    double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
+    double getMinTimeStamp() const final;
+    double getMaxTimeStamp() const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
@@ -272,16 +272,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     virtual void finishPlottingStep() override;
 
     /**
-     * @param currentTimeStep If you set this to false, you'll get the
-     *   quantity from the preceding time step. This is important for
-     *   local time stepping with fixed subcycling, as they have to
-     *   know the sizes from the last time step throughout the traversal,
-     *   where the current patch size might just be re-evaluated.
-     *
      * @return Actually observed sizes, not the admissible quantities
      */
-    double getMaxCellSize(bool currentTimeStep = true) const;
-    double getMinCellSize(bool currentTimeStep = true) const;
+    double getMaxCellSize() const;
+    double getMinCellSize() const;
 
     /**
      * Within the DG context, mesh is an alias for cell.
