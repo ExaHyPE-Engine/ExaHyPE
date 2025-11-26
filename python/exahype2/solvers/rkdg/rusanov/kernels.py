@@ -51,8 +51,8 @@ def create_Riemann_solver_call(polynomial_basis,
         ) -> double {
           return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(Q, x, t, dt, normal);
       }, // maxEigenvalue
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       timeStamp,
       timeStepSize,
       {{ORDER}},
@@ -62,8 +62,8 @@ def create_Riemann_solver_call(polynomial_basis,
       repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
       {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }},   //useNCP
-      fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value,
-      fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.value
+      fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data(),
+      fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.data()
     );
 """
   elif isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and number_of_face_projections==2:
@@ -102,8 +102,8 @@ def create_Riemann_solver_call(polynomial_basis,
         ) -> double {
           return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(Q, x, t, dt, normal);
       }, // maxEigenvalue
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       timeStamp,
       timeStepSize,
       {{ORDER}},
@@ -113,8 +113,8 @@ def create_Riemann_solver_call(polynomial_basis,
       repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
       {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }},   //useNCP
-      fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value,
-      fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.value
+      fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data(),
+      fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.data()
     );
 """
   else:

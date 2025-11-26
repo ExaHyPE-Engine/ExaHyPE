@@ -16,10 +16,10 @@ from exahype2.solvers.ButcherTableau                import ButcherTableau
 ComputeNewQPointer = """
     #if DIMENSIONS==2
     constexpr int NumberOfDoFsPerCell = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
-    newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * NumberOfDoFsPerCell * {{NUMBER_OF_UNKNOWNS}};
+    newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data() + {{PREDICATE_NO}} * NumberOfDoFsPerCell * {{NUMBER_OF_UNKNOWNS}};
     #elif DIMENSIONS==3
     constexpr int NumberOfDoFsPerCell = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
-    newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * NumberOfDoFsPerCell * {{NUMBER_OF_UNKNOWNS}};
+    newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data() + {{PREDICATE_NO}} * NumberOfDoFsPerCell * {{NUMBER_OF_UNKNOWNS}};
     #endif
 """
 
@@ -43,7 +43,7 @@ ReconstructLinearCombination = """
             {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
             oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] += 
               timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
-              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
             {% endif %}
             {% endfor %}
           }      
@@ -115,7 +115,7 @@ class UpdateCell(ReconstructPatch):
       }
       {% endfor %} 
 
-      ::exahype2::CellData  patchData( oldQWithHalo, marker.x(), marker.h(), subTimeStamp, timeStepSize, newQ );
+      ::exahype2::CellData  patchData( oldQWithHalo, marker.getX(), marker.getH(), subTimeStamp, timeStepSize, newQ );
            
       ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}} 
 

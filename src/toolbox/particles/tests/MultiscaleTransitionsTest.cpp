@@ -84,7 +84,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   marker._willBeRefined  = 1+2+4+8;
   marker._isParentVertexLocal = 1+2+4+8;
   marker._isParentCellLocal   = true;
-  marker._relativePositionOfCellWithinFatherCell = {0,0};
+  marker.relativePositionWithinFatherCell = {0,0};
   marker._isAdjacentCellLocal.set();
 
   tarch::la::Vector<DIMENSIONS,double> x = {0.554725,0.166678};
@@ -112,7 +112,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
     marker.toString(),
     x,
     liftInstruction, drop,
-    (x-marker.x()),
+    (x-marker.getX()),
     searchRadius,
     tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
@@ -122,7 +122,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
     marker.toString(),
     x,
     liftInstruction, drop,
-    (x-marker.x()),
+    (x-marker.getX()),
     searchRadius
   );
 
@@ -145,7 +145,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
     marker.toString(),
     x,
     liftInstruction, drop,
-    (x-marker.x()),
+    (x-marker.getX()),
     searchRadius
   );
   validateWithParams6(
@@ -153,7 +153,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
     marker.toString(),
     x,
     liftInstruction, drop,
-    (x-marker.x()),
+    (x-marker.getX()),
     searchRadius
   );
   #endif
@@ -181,7 +181,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   marker._willBeRefined  = 0;
   marker._isParentVertexLocal = 1+2+4+8;
   marker._isParentCellLocal   = true;
-  marker._relativePositionOfCellWithinFatherCell = {2,0};
+  marker.relativePositionWithinFatherCell = {2,0};
   marker._select     = 2;
   marker._isAdjacentCellLocal.set();
 
@@ -208,9 +208,9 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
     liftInstruction==3, // that means we lift if we don't reassociate within a vertex
     marker.toString(),
     x,
-    marker.x(),
+    marker.getX(),
     liftInstruction, drop,
-    (x-marker.x()),
+    (x-marker.getX()),
     searchRadius
   );
   validateWithParams6(
@@ -218,7 +218,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
     marker.toString(),
     x,
     liftInstruction, drop,
-    (x-marker.x()),
+    (x-marker.getX()),
     searchRadius
   );
   #endif
@@ -239,7 +239,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   marker._willBeRefined  = 0b0000;
   marker._isParentVertexLocal = 0b1111;
   marker._isParentCellLocal   = true;
-  marker._relativePositionOfCellWithinFatherCell = {0,0};
+  marker.relativePositionWithinFatherCell = {0,0};
   marker._isAdjacentCellLocal  = 0b110110000;
 
   double searchRadius = 0.00555556;
@@ -354,7 +354,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   marker._willBeRefined  = 0;
   marker._isParentVertexLocal = 0b1011;
   marker._isParentCellLocal   = true;
-  marker._relativePositionOfCellWithinFatherCell = {2,0};
+  marker.relativePositionWithinFatherCell = {2,0};
   marker._select     = 2;
   marker._isAdjacentCellLocal = 0b000100110;
 

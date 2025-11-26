@@ -5,11 +5,11 @@
 #include "StartTraversalMessage.h"
 #include "TreeManagementMessage.h"
 
-#include "peano4/datamanagement/CellMarker.h"
 #include "peano4/grid/AutomatonState.h"
 #include "peano4/grid/GridControlEvent.h"
+#include "peano4/grid/GridStatistics.h"
 #include "peano4/grid/PeanoCurve.h"
-#include "peano4/grid/Spacetree.h"
+#include "peano4/grid/SpacetreeHelper.h"
 #include "tarch/Assertions.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Lock.h"
@@ -27,8 +27,6 @@ void peano4::parallel::Node::initMPIDatatypes() {
   StartTraversalMessage::initDatatype();
   TreeManagementMessage::initDatatype();
 
-  peano4::datamanagement::CellMarker::initDatatype();
-
   peano4::grid::AutomatonState::initDatatype();
   peano4::grid::GridVertex::initDatatype();
   peano4::grid::GridStatistics::initDatatype();
@@ -40,8 +38,6 @@ void peano4::parallel::Node::shutdownMPIDatatypes() {
 #ifdef WITH_MPI
   StartTraversalMessage::shutdownDatatype();
   TreeManagementMessage::shutdownDatatype();
-
-  peano4::datamanagement::CellMarker::shutdownDatatype();
 
   peano4::grid::AutomatonState::shutdownDatatype();
   peano4::grid::GridVertex::shutdownDatatype();
@@ -203,7 +199,7 @@ std::bitset<2 * DIMENSIONS> peano4::parallel::Node::getPeriodicBoundaryNumber(
     dfor2(k) tarch::la::Vector<DIMENSIONS, int> entry;
     entry                 = k;
     entry(d % DIMENSIONS) = d / DIMENSIONS;
-    allFlagsSet &= flags[utils::dLinearised(entry, 2)] == grid::Spacetree::RankOfPeriodicBoundaryCondition;
+    allFlagsSet &= flags[utils::dLinearised(entry, 2)] == grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition;
     enddforx if (allFlagsSet) { result.set(d); }
   }
   return result;

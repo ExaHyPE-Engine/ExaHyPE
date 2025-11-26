@@ -79,9 +79,9 @@ if (not marker.willBeRefined()) {
         if (
             marker.isContained(pos)
             &&
-            pos(0) > marker.x()(0) - marker.h()(0) / 2.0
+            pos(0) > marker.getX()(0) - marker.getH()(0) / 2.0
             &&
-            pos(1) > marker.x()(1) - marker.h()(1) / 2.0
+            pos(1) > marker.getX()(1) - marker.getH()(1) / 2.0
         ) {
             std::vector<double> dataPerParticle;
             for (int j = DIMENSIONS; j < {{UNKNOWNS_PER_PARTICLE}} + DIMENSIONS; j++) {

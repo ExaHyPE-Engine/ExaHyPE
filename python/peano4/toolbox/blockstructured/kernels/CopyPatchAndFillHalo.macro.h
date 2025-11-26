@@ -11,8 +11,8 @@
   const tarch::la::Vector<DIMENSIONS, int> sourceCell({x, y});
   {% endif %}
   const tarch::la::Vector<DIMENSIONS, int> destinationCell = sourceCell + tarch::la::Vector<DIMENSIONS, int>({{OVERLAP}});
-  const int sourceCellSerialised      = peano4::utils::dLinearised(sourceCell, {{DOFS_PER_AXIS}});
-  const int destinationCellSerialised = peano4::utils::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
+  const int sourceCellSerialised      = ::peano4::utils::dLinearised(sourceCell, {{DOFS_PER_AXIS}});
+  const int destinationCellSerialised = ::peano4::utils::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
 
   #if defined(WITH_OPENMP)
   #pragma omp simd
@@ -41,7 +41,7 @@
       sourceCell(d)                 = i;
       destinationCell(d)            = i;
       int sourceCellSerialised      = toolbox::blockstructured::serialiseVoxelIndexInOverlap(sourceCell, {{DOFS_PER_AXIS}}, {{OVERLAP}}, d);
-      int destinationCellSerialised = peano4::utils::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
+      int destinationCellSerialised = ::peano4::utils::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
 
       #if defined(WITH_OPENMP)
       #pragma omp simd
@@ -58,7 +58,7 @@
       sourceCell(d)             = i + {{OVERLAP}};
       destinationCell(d)        = i + {{DOFS_PER_AXIS}} + {{OVERLAP}};
       sourceCellSerialised      = toolbox::blockstructured::serialiseVoxelIndexInOverlap(sourceCell, {{DOFS_PER_AXIS}}, {{OVERLAP}}, d);
-      destinationCellSerialised = peano4::utils::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
+      destinationCellSerialised = ::peano4::utils::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
 
       #if defined(WITH_OPENMP)
       #pragma omp simd

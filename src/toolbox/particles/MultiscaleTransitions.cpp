@@ -29,7 +29,7 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftPar
   else if (
     marker.isParentCellLocal()
     and
-    peano4::datamanagement::CellMarker::isContained(x, marker.getInvokingParentCellsCentre(), marker.h() * 3.0, tolerance)
+    peano4::datamanagement::CellMarker::isContained(x, marker.getInvokingParentCellsCentre(), marker.getH() * 3.0, tolerance)
   ) {
     std::bitset<DIMENSIONS> target = internal::getParticleAssociationWithinCell(x, marker.getInvokingParentCellsCentre());
     if (
@@ -55,12 +55,12 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::getPart
     return ParticleReassociationInstruction_Keep;
   } else {
     const std::bitset<DIMENSIONS> currentAssociation = numberOfVertexWithinCell;
-    const std::bitset<DIMENSIONS> destAssociation    = internal::getParticleAssociationWithinCell(x, marker.x());
+    const std::bitset<DIMENSIONS> destAssociation    = internal::getParticleAssociationWithinCell(x, marker.getX());
 
-    // marker.x() gives me the centre of the cell
+    // marker.getX() gives me the centre of the cell
     bool remainsOnSameLevel = internal::fitsIntoLevel(searchRadius, marker);
     for (int d = 0; d < DIMENSIONS; d++) {
-      remainsOnSameLevel &= tarch::la::smallerEquals(std::abs(x(d) - marker.x()(d)), marker.h()(d) * ReleaseOwnershipSpatialSortingTolerance);
+      remainsOnSameLevel &= tarch::la::smallerEquals(std::abs(x(d) - marker.getX()(d)), marker.getH()(d) * ReleaseOwnershipSpatialSortingTolerance);
     }
 
     if (remainsOnSameLevel and currentAssociation == destAssociation) {
@@ -77,7 +77,7 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::getPart
     } else {
       logDebug(
         "getParticleReassociationInstructionWithinCellWithIntraCellReassignment(...)",
-        "lift particle at " << x << " from cell " << marker.toString() << " as difference is " << (x - marker.x())
+        "lift particle at " << x << " from cell " << marker.toString() << " as difference is " << (x - marker.getX())
       );
 
       const std::bitset<DIMENSIONS> coarseDestAssociation = internal::getParticleAssociationWithinCell(x, marker.getInvokingParentCellsCentre());
@@ -132,9 +132,9 @@ std::bitset<TWO_POWER_D> toolbox::particles::getAdjacentCellsOwningParticle(cons
   dfor2(k) {
     tarch::la::Vector<DIMENSIONS, int> adjacentCell(k);
     tarch::la::Vector<DIMENSIONS, double>
-      adjacentCellCentre = marker.x() + tarch::la::multiplyComponents(tarch::la::convertScalar<double>(adjacentCell) + tarch::la::Vector<DIMENSIONS, double>(-0.5), marker.h());
+      adjacentCellCentre = marker.getX() + tarch::la::multiplyComponents(tarch::la::convertScalar<double>(adjacentCell) + tarch::la::Vector<DIMENSIONS, double>(-0.5), marker.getH());
     result[kScalar]      = peano4::datamanagement::CellMarker::isContained(
-      x, adjacentCellCentre, marker.h(), internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
+      x, adjacentCellCentre, marker.getH(), internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
     );
   }
   enddforx

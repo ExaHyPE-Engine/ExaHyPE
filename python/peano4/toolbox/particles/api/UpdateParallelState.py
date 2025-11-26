@@ -177,8 +177,8 @@ for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
       p->getX(),
       partID,
       true, // particle is (currently) local
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       _treeNumber,
       "UpdateParallelState::__Template_TouchVertexFirstTime"
     );
@@ -187,12 +187,12 @@ for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
       p->getX(),
       partID,
       false, // particle is (now) virtual
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       _treeNumber,
       "UpdateParallelState::__Template_TouchVertexFirstTime",
-      marker.x(),
-      marker.h()
+      marker.getX(),
+      marker.getH()
     );
   }
 }
@@ -228,8 +228,8 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
       (*p)->getX(),
       partID,
       false, // particle is virtual
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       _treeNumber,
       "UpdateParallelState::__Template_TouchVertexLastTime"
     );
@@ -238,8 +238,8 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
       (*p)->getX(),
       partID,
       false, // particle is virtual
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       _treeNumber,
       "UpdateParallelState::__Template_TouchVertexLastTime"
     );
@@ -280,7 +280,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
         return result
 
     def get_body_of_getGridControlEvents(self):
-        return "  return std::vector< peano4::grid::GridControlEvent >();\n"
+        return "  return std::vector< ::peano4::grid::GridControlEvent >();\n"
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")

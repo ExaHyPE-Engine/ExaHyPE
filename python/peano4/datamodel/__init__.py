@@ -3,10 +3,7 @@
 
 from .DaStGen2 import DaStGen2
 from .DoF import DoFAssociation
-from .DynamicArrayOverPrimitives import DynamicArrayOverPrimitives
-from .DynamicArrayOverPrimitivesToStdVector import DynamicArrayOverPrimitivesToStdVector
 from .Model import Model
+from .ModelToDataRepository import ModelToDataRepository
 from .Patch import Patch
-from .PatchToDoubleArray import PatchToDoubleArray
-from .PatchToDoubleArrayOnHeap import PatchToDoubleArrayOnHeap
-from .PatchToDoubleArrayWithSmartPointer import PatchToDoubleArrayWithSmartPointer
+from .PatchToData import PatchToData

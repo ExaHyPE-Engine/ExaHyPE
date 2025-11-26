@@ -2,10 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "IandRInMatricesTest.h"
 
-#include <cmath>
-
 #include "../Interpolation.h"
 #include "../Restriction.h"
+
+#include "peano4/grid/GridTraversalEvent.h"
+
+#include <cmath>
 
 toolbox::blockstructured::tests::IandRInMatricesTest::IandRInMatricesTest():
   TestCase("toolbox::blockstructured::tests::IandRInMatricesTest") {}
@@ -937,13 +939,14 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
       for (int k = 0; k < 3; k++) {
-        peano4::grid::GridTraversalEvent dummyEvent;
-        dummyEvent.setRelativePositionToFather(
+        peano4::grid::GridTraversalEvent event;
+        event.setRelativePositionToFather(
           tarch::la::Vector<DIMENSIONS, int>{i, j, k}
         );
 
         for (int axis = 0; axis < 3; axis++) {
-          peano4::datamanagement::FaceMarker marker1(dummyEvent, axis);
+          peano4::datamanagement::FaceMarker marker1 = event.getFaceMarker();
+          marker1.select(axis);
           int                                patchIndexLinear = -1;
           if constexpr (DIMENSIONS == 2)
             patchIndexLinear = marker1.getRelativePositionWithinFatherCell()(
@@ -1015,8 +1018,8 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
           for (int n = 0; n < faceSize; n++)
             fineDataMatrix[n] = 0;
 
-          peano4::datamanagement::FaceMarker
-            marker2(dummyEvent, axis + DIMENSIONS);
+          peano4::datamanagement::FaceMarker marker2 = event.getFaceMarker();
+          marker2.select(axis + DIMENSIONS);
           interpolateHaloLayer_AoS_tensor_product(
             marker2,
             patchSize,
@@ -1389,22 +1392,23 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
       for (int k = 0; k < 3; k++) {
-        peano4::grid::GridTraversalEvent dummyEvent;
+        peano4::grid::GridTraversalEvent event;
         if constexpr (DIMENSIONS == 2){
-          dummyEvent.setRelativePositionToFather(
+          event.setRelativePositionToFather(
             tarch::la::Vector<DIMENSIONS, int>{i, j}
           );
         }
         if constexpr (DIMENSIONS == 3){
-          dummyEvent.setRelativePositionToFather(
+          event.setRelativePositionToFather(
             tarch::la::Vector<DIMENSIONS, int>{i, j, k}
           );
         }
 
         for (int axis = 0; axis < DIMENSIONS; axis++) {
-          peano4::datamanagement::FaceMarker marker1(dummyEvent, axis);
-          peano4::datamanagement::FaceMarker
-            marker2(dummyEvent, axis + DIMENSIONS);
+          peano4::datamanagement::FaceMarker marker1 = event.getFaceMarker();
+          marker1.select(axis);
+          peano4::datamanagement::FaceMarker marker2 = event.getFaceMarker();
+          marker2.select(axis + DIMENSIONS);
 
           int patchIndexLinear = -1;
           if constexpr (DIMENSIONS == 2)

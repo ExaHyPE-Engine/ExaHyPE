@@ -177,7 +177,7 @@ if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementati
 project.add_solver(solver2)
 
 # from fuseADERSolvers import fuseADERSolvers 
-# fuseADERSolvers(solver, solver2, "marker.x()[0]<=0.0")
+# fuseADERSolvers(solver, solver2, "marker.getX()[0]<=0.0")
 
 sys.path.insert(0, os.path.abspath("./coupling"))
 from coupling import StaticCoupling

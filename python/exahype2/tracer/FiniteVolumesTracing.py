@@ -43,7 +43,7 @@ class FiniteVolumesTracing(
         marker,
         {{PATCH_SIZE}},
         {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-        fineGridCell{{SOLVER_NAME}}Q.value,
+        fineGridCell{{SOLVER_NAME}}Q.data(),
         *p
 """,
     ):

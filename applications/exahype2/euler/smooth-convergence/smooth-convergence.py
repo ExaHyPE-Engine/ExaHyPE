@@ -30,9 +30,7 @@ boundary_conditions = """
   Qoutside[Shortcuts::rhoE]     = Qinside[Shortcuts::rhoE];
 """
 
-parser = exahype2.ArgumentParser(
-    "ExaHyPE 2 Euler Smooth Convergence Argument Parser"
-)
+parser = exahype2.ArgumentParser("ExaHyPE 2 Euler Smooth Convergence Argument Parser")
 parser.set_defaults(
     min_depth=6,
     end_time=0.01,
@@ -86,7 +84,7 @@ project.set_global_simulation_parameters(
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     first_plot_time_stamp=0.0,
-    time_in_between_plots=0.01,
+    time_in_between_plots=time_in_between_plots,
     periodic_BC=[
         args.periodic_boundary_conditions_x,
         args.periodic_boundary_conditions_y,
@@ -95,7 +93,7 @@ project.set_global_simulation_parameters(
 )
 
 project.set_load_balancer(
-    f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees}, {args.trees})"
+    f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees})"
 )
 project.set_Peano4_installation(
     "../../../../", mode=peano4.output.string_to_mode(args.build_mode)

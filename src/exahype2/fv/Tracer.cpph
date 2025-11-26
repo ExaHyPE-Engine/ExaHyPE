@@ -31,13 +31,13 @@ DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
   static tarch::logging::Log _log( "exahype2::fv::internal" );
   tarch::la::Vector<DIMENSIONS, int> biasedVoxel = mapBiasedParticleOntoVoxel(marker, voxelsPerAxis, particleX);
 
-  double h = getVolumeLength(marker.h(), voxelsPerAxis);
+  double h = getVolumeLength(marker.getH(), voxelsPerAxis);
 
   double                                      result        = 0.0;
   dfor2(k)
     tarch::la::Vector<DIMENSIONS, int> currentVoxel  = biasedVoxel + k;
     tarch::la::Vector<DIMENSIONS, double>       currentVoxelX = getVolumeCentre(
-      marker.x(), marker.h(), voxelsPerAxis, currentVoxel
+      marker.getX(), marker.getH(), voxelsPerAxis, currentVoxel
     );
     int    currentVoxelIndex = peano4::utils::dLinearised(currentVoxel, voxelsPerAxis);
     double weight            = 1.0;

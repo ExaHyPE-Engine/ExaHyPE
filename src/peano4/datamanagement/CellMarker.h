@@ -2,22 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/grid/GridTraversalEvent.h"
 #include "peano4/utils/Globals.h"
 #include "tarch/la/Vector.h"
+#include "tarch/mpi/Rank.h"
 
-#ifdef WITH_MPI
-#include <functional>
-#include <mpi.h>
-#endif
-
-namespace peano4 {
-  namespace datamanagement {
-    struct CellMarker;
-  } // namespace datamanagement
-} // namespace peano4
-
-std::ostream& operator<<(std::ostream& out, const peano4::datamanagement::CellMarker& marker);
+namespace peano4::datamanagement {
+  struct CellMarker;
+} // namespace peano4::datamanagement
 
 /**
  * Cell marker
@@ -37,282 +28,97 @@ std::ostream& operator<<(std::ostream& out, const peano4::datamanagement::CellMa
  * to do things within the spacetree octant.
  */
 struct peano4::datamanagement::CellMarker {
-private:
-  tarch::la::Vector<DIMENSIONS, double> _centre;
-
-  tarch::la::Vector<DIMENSIONS, double> _h;
-
-  bool _hasBeenRefined;
-  bool _willBeRefined;
-  bool _isLocal;
-  bool _isParentLocal;
-  bool _areAllVerticesRefined;
-  bool _isOneVertexHanging;
-  bool _isOneVertexCreatedOrDestroyed;
-
-  bool _areAllVerticesInsideDomain;
-  bool _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
-
-  bool _willBeEnclave;
-  bool _hasBeenEnclave;
+  tarch::la::Vector<DIMENSIONS, double> h{};
+  tarch::la::Vector<DIMENSIONS, double> centre{};
 
   /**
    * Entries from (0,1,2). (0,0) or (0,0,0) is the left, bottom cell.
    */
-  tarch::la::Vector<DIMENSIONS, int> _relativePositionOfCellWithinFatherCell;
+  tarch::la::Vector<DIMENSIONS, int> relativePositionWithinFatherCell{};
 
-public:
-  CellMarker(const peano4::grid::GridTraversalEvent& event);
+  enum : std::uint16_t {
+    HasBeenRefined               = 1u << 0,
+    WillBeRefined                = 1u << 1,
+    IsLocal                      = 1u << 2,
+    IsParentLocal                = 1u << 3,
+    AllVerticesRefined           = 1u << 4,
+    OneVertexHanging             = 1u << 5,
+    OneVertexCreatedOrDestroyed  = 1u << 6,
+    AllVerticesInsideDomain      = 1u << 7,
+    InvokingTreeNotInvolvedInDLB = 1u << 8,
+    WillBeEnclave                = 1u << 9,
+    HasBeenEnclave               = 1u << 10
+  };
 
-  /**
-   * Has the cell been refined when we kicked off this mesh traversal
-   *
-   * If the attribute holds, this implies that the cell is refined in this
-   * sweep, as cells do not change their state throughout the traversal. It
-   * does not mean that the cell will be refined in the next mesh traversal
-   * however. To find this out, you have to study willBeRefined().
-   *
-   * @see willBeRefined()
-   */
-  inline bool hasBeenRefined() const { return _hasBeenRefined; }
+  std::uint16_t flags{0};
 
-  /**
-   * Will the cell be refined in the subsequent iteration
-   *
-   *
-   * If hasBeenRefined()
-   * returns false but willBeRefined() holds, we have a cell which Peano 4
-   * will refine in the current mesh sweep. It might however
-   * not yet be refined. This analysis makes sense once we take into account that
-   * refinement in Peano first have to be triggered. In the subsequent mesh
-   * traversal, the affected vertices then switch to refining and the new
-   * mesh elements are actually added.
-   *
-   * The function which ultimately defines if this flag is set or not is
-   * peano4::grid::willVerticesBeRefined().
-   *
-   * If willBeRefined() is false but hasBeenRefined() is true, the current
-   * cell is refined, but it will be coarsened in the very mesh traversal in
-   * which we run through the mesh.
-   */
-  inline bool willBeRefined() const { return _willBeRefined; }
+  INLINE_METHOD bool hasBeenRefined() const { return flags & HasBeenRefined; }
+  INLINE_METHOD bool willBeRefined() const { return flags & WillBeRefined; }
+  INLINE_METHOD bool isLocal() const { return flags & IsLocal; }
+  INLINE_METHOD bool isParentLocal() const { return flags & IsParentLocal; }
+  INLINE_METHOD bool hasBeenEnclaveCell() const { return flags & HasBeenEnclave; }
+  INLINE_METHOD bool willBeEnclaveCell() const { return flags & WillBeEnclave; }
+  INLINE_METHOD bool hasBeenSkeletonCell() const { return not(flags & HasBeenEnclave); }
+  INLINE_METHOD bool willBeSkeletonCell() const { return not(flags & WillBeEnclave); }
 
-  /**
-   * Centre of a cell
-   *
-   * If you want to know the position of one of the cell's vertices, you have
-   * to reconstruct this one manually. It is particularly simple if you already
-   * know the number of the vertex as a bitset:
-   *
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~
-   * marker.x() - 0.5 * marker.h() +
-   * tarch::la::multiplyComponents(tarch::la::Vector<DIMENSIONS,double>(targetVertex),marker.h())
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~
-   *
-   *
-   * @return Centre of cell.
-   */
-  inline tarch::la::Vector<DIMENSIONS, double> x() const { return _centre; }
+  INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getH() const { return h; }
+  INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getX() const { return centre; }
+  INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double> getOffset() const { return centre - 0.5 * h; }
+  INLINE_METHOD const tarch::la::Vector<DIMENSIONS, int>& getRelativePositionWithinFatherCell() const {
+    return relativePositionWithinFatherCell;
+  }
 
-  /**
-   * See getInvokingCellCentre(). This routine gives you the centre of its
-   * parent cell.
-   */
-  tarch::la::Vector<DIMENSIONS, double> getInvokingParentCellsCentre() const;
+  INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> getInvokingParentCellsCentre() const {
+    tarch::la::Vector<DIMENSIONS, double> result = centre;
+    for (int d = 0; d < DIMENSIONS; d++) {
+      assertion1(relativePositionWithinFatherCell[d] >= 0, toString());
+      assertion1(relativePositionWithinFatherCell[d] <= 2, toString());
+      if (relativePositionWithinFatherCell[d] == 0) {
+        result[d] += h[d];
+      }
+      if (relativePositionWithinFatherCell[d] == 2) {
+        result[d] -= h[d];
+      }
+    }
+    return result;
+  }
 
-  /**
-   * Is x contained within cell identified by marker object
-   *
-   * Check whether the point x is contained within the marker. This is an
-   * operation which works with smaller equals and greater equals and
-   * numerical tolerances. Therefore, the routine includes any x that is
-   * exactly on a cell boundary. The other way round: a particle for
-   * example that resides exactly on the cell boundary, subject to the
-   * chosen floating point precision in the tarch::la library, will be
-   * considered to belong both to its left and its right neighbour.
-   *
-   * On top of the fact that we work with closed intervals, it is
-   * important to realise that we work with floating point comparisons
-   * from the tarch::la library. Therefore, we employ some built-in
-   * floating point precision. You might want to switch to another precision.
-   * Most popular is a relative size that takes the dimensions of the marker
-   * into account:
-   *
-   *        marker.isContained(
-   *          p->getX(), tarch::la::relativeEps( marker.h()(0) )
-   *        )
-   *
-   * This variant uses relativeEps() as defined in tarch/la/Scalar.h.
-   *
-   *
-   * @see   The routine calls the static isContained() routine and passes the
-   *        local attributes in.
-   *
-   * @param tolerance Absolute tolerance when we compare two values.
-   *
-   */
-  bool isContained(
+  INLINE_METHOD bool isContained(
     const tarch::la::Vector<DIMENSIONS, double>& x,
     double                                       tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
-  ) const;
+  ) const {
+    return isContained(x, centre, h, tolerance);
+  }
 
-  /**
-   * Is point contained in cell
-   *
-   * Evaluate if x is in a h/2 environment around cellCentre. We use
-   * tarch::la comparison functions as we operate with floating point
-   * values. tolerance is the tolerance we pass into these functions.
-   *
-   * See the other isContained() routine for a description, but keep in
-   * mind that this other routine refers to this place, i.e. this routine
-   * provides the actual behaviour.
-   *
-   * @param x          Point to query
-   * @param cellCentre Centre of cell of interest
-   * @param h          Mesh size on this level
-   * @param tolerance  Search tolerance
-   *
-   */
-  static bool isContained(
+  static INLINE_METHOD bool isContained(
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& h,
     double                                       tolerance
-  );
+  ) {
+    bool result = true;
+    for (int d = 0; d < DIMENSIONS; d++) {
+      result &= tarch::la::greaterEquals(x(d), cellCentre(d) - h(d) / 2.0, tolerance);
+      result &= tarch::la::smallerEquals(x(d), cellCentre(d) + h(d) / 2.0, tolerance);
+    }
+    return result;
+  }
 
-  bool overlaps(
+  INLINE_METHOD bool overlaps(
     const tarch::la::Vector<DIMENSIONS, double>& offset,
     const tarch::la::Vector<DIMENSIONS, double>& size
-  ) const;
+  ) const {
+    bool overlaps = true;
 
-  /**
-   * @return Size of cell
-   */
-  inline tarch::la::Vector<DIMENSIONS, double> h() const { return _h; }
+    for (int d = 0; d < DIMENSIONS; d++) {
+      overlaps &= tarch::la::smallerEquals(centre(d) - h(d) / 2.0, offset(d) + size(d));
+      overlaps &= tarch::la::greaterEquals(centre(d) + h(d) / 2.0, offset(d));
+    }
 
-  /**
-   * @return Offset of cell, i.e. the bottom left vertex's coordinate
-   */
-  inline tarch::la::Vector<DIMENSIONS, double> getOffset() const { return _centre - 0.5 * _h; }
+    return overlaps;
+  }
 
   std::string toString() const;
-
-  /**
-   * Usually if you have an event of a cell, then the cell is alo local.
-   * Otherwise, an event not be called.
-   */
-  inline bool isLocal() const { return _isLocal; }
-
-  /**
-   * A cell can be local and its parent still might not be local. This happens
-   * if we have a horizontal tree cut. It also happens on the very top of the
-   * spacetree: Level 0 is by definition not persistent and thus is not
-   * considered to be local.
-   *
-   * @see isLocal()
-   */
-  inline bool isParentLocal() const { return _isParentLocal; }
-
-  /**
-   * Define enclave cell
-   *
-   * A enclave cell in the definition of Charrier, Hazelwood, Weinzierl is a
-   * cell that is not a skeleton cell. A skeleton cell is cell which either
-   *
-   * - is adjacent to a resolution transitions; or
-   * - is adjacent to a domain boundary.
-   *
-   * Enclave cells are cells that you can potentially (if your algorithm
-   * allows) deploy to a task running in the background. The only thing you
-   * have to do is to ensure that it is passed all data via firstprivate copy
-   * and that you never refine an enclave cell.
-   *
-   * ## Dynamic load balancing
-   *
-   * In line with the above definition, we may label a cell as enclave cell
-   * if some dynamic load balancing is triggered or actually running. In
-   * this case, any enclave cell might be subject of a domain transfer. If
-   * we deployed its computation to the background, we could move around a
-   * cell whose computations is done by a thread currently.
-   *
-   * @see page_exahype_solvers_enclave_solvers for a high-level description
-   */
-  inline bool hasBeenEnclaveCell() const { return _hasBeenEnclave; }
-
-  /**
-   * @see hasBeenEnclaveCell()
-   */
-  inline bool willBeEnclaveCell() const { return _willBeEnclave; }
-
-  /**
-   * A skeleton cell is a not-enclave cell
-   *
-   * @see hasBeenEnclaveCell()
-   */
-  inline bool hasBeenSkeletonCell() const { return not _hasBeenEnclave; }
-
-  /**
-   * @see hasBeenEnclaveCell()
-   */
-  inline bool willBeSkeletonCell() const { return not _willBeEnclave; }
-
-  inline tarch::la::Vector<DIMENSIONS, int> getRelativePositionWithinFatherCell() const {
-    return _relativePositionOfCellWithinFatherCell;
-  }
-
-#if PEANO_DEBUG > 0
-  /**
-   * Used for debugging
-   */
-  inline void setRelativePositionWithinFatherCell(int axis, int value) {
-    _relativePositionOfCellWithinFatherCell(axis) = value;
-  }
-#endif
-
-#ifdef WITH_MPI
-  /**
-   * To be called prior to any MPI usage of this class.
-   */
-  static void initDatatype();
-  static void shutdownDatatype();
-
-  /**
-   * In DaStGen (the first version), I had a non-static version of the send
-   * as well as the receive. However, this did not work with newer C++11
-   * versions, as a member function using this as pointer usually doesn't
-   * see the vtable while the init sees the object from outside, i.e.
-   * including a vtable. So this routine now is basically an alias for a
-   * blocking MPI_Send.
-   */
-  static void send(const CellMarker& buffer, int destination, int tag, MPI_Comm communicator);
-  static void receive(CellMarker& buffer, int source, int tag, MPI_Comm communicator);
-
-  /**
-   * Alternative to the other send() where I trigger a non-blocking send an
-   * then invoke the functor until the corresponding MPI_Test tells me that
-   * the message went through. In systems with heavy MPI usage, this can
-   * help to avoid deadlocks.
-   */
-  static void send(
-    const CellMarker&     buffer,
-    int                   destination,
-    int                   tag,
-    std::function<void()> startCommunicationFunctor,
-    std::function<void()> waitFunctor,
-    MPI_Comm              communicator
-  );
-  static void receive(
-    CellMarker&           buffer,
-    int                   source,
-    int                   tag,
-    std::function<void()> startCommunicationFunctor,
-    std::function<void()> waitFunctor,
-    MPI_Comm              communicator
-  );
-
-  static void sendAndPollDanglingMessages(const CellMarker& message, int destination, int tag, MPI_Comm communicator);
-  static void receiveAndPollDanglingMessages(CellMarker& message, int source, int tag, MPI_Comm communicator);
-
-  static MPI_Datatype Datatype;
-#endif
 };
+
+std::ostream& operator<<(std::ostream& out, const peano4::datamanagement::CellMarker& marker);

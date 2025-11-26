@@ -14,15 +14,15 @@ class AdaptiveTimeSteppingCodeSnippets(
     const double maxEigenvalue = kernels::{{SOLVER_NAME}}::maxScaledEigenvalue(
       repositories::{{SOLVER_INSTANCE}},
       QNew,
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       timeStamp,
       timeStepSize
     );
 
     repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue(maxEigenvalue);
     const double newTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false) > 0.0 ?
-      repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * tarch::la::min(marker.h()) / repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false) :
+      repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * tarch::la::min(marker.getH()) / repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false) :
       0.0;
 """
 
@@ -33,8 +33,8 @@ class AdaptiveTimeSteppingCodeSnippets(
     logDebug("printTimeStep()", "Phase       = " << toString(_solverState));
     logInfo("printTimeStep()", "t            = " << getMinTimeStamp(ofCurrentlyRunningGridSweep) << " / " << MinTerminalTime);
     logInfo("printTimeStep()", "dt           = " << getAdmissibleTimeStepSize(ofCurrentlyRunningGridSweep));
-    logInfo("printTimeStep()", "h_{min}      = " << getMinCellSize(ofCurrentlyRunningGridSweep));
-    logInfo("printTimeStep()", "h_{max}      = " << getMaxCellSize(ofCurrentlyRunningGridSweep));
+    logInfo("printTimeStep()", "h_{min}      = " << getMinCellSize(ofCurrentlyRunningGridSweep) << " (patch size)");
+    logInfo("printTimeStep()", "h_{max}      = " << getMaxCellSize(ofCurrentlyRunningGridSweep) << " (patch size)");
     logInfo("printTimeStep()", "lambda_{max} = " << getMaxEigenvalue(ofCurrentlyRunningGridSweep));
   }
 """

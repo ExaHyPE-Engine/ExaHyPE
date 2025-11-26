@@ -49,18 +49,17 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
 
     def __init__(self, dof_association_):
         """!
-    
+
         Create the aspect
-        
+
         @param includes: C++ expression
-          Typically a full-blown set of include statements, but it can also 
+          Typically a full-blown set of include statements, but it can also
           hold preprocessor macros or similar.
-        
+
         @param implementation_file_includes: C++ expression
           If you add includes to the includes attribute, they are embedded into
-          the header. This can lead to cyclic dependencies. If you want the 
+          the header. This can lead to cyclic dependencies. If you want the
           includes only in the implementation file, use this attribute instead.
-    
         """
         super(MPIAndStorageAspect, self).__init__()
         self.dof_association = dof_association_
@@ -69,7 +68,7 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
         self.send_predicate = "true"
         self.load_store_compute_flag = "::peano4::grid::LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream"
         self.includes = ""
-        self.implementation_file_includes=""
+        self.implementation_file_includes = ""
         pass
 
     def __str__(self):
@@ -89,7 +88,6 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
         else:
             result += ",empty-merge-impl"
 
-        result += ",load/store/compute flag=" + self.load_store_compute_flag
         result += ",compute=" + self.compute
         result += ",send=" + self.send_predicate
         result += ",receive=" + self.receive_predicate
@@ -107,7 +105,7 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
 #include "tarch/services/ServiceRepository.h"
 #include "peano4/grid/LoadStoreComputeFlag.h"
 #include "peano4/utils/Globals.h"
-#include "peano4/grid/TraversalObserver.h"
+#include "peano4/stacks/SendReceiveContext.h"
 """
         )
         if self.dof_association != DoFAssociation.Generic:
@@ -147,27 +145,27 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
 
         if self.dof_association == DoFAssociation.Vertex:
             result += """
-    void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const peano4::datamanagement::VertexMarker& marker, int spacetreeId);
+    void merge(::peano4::stacks::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const ::peano4::datamanagement::VertexMarker& marker, int spacetreeId);
     
-    bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker) const;
-    bool send(const peano4::datamanagement::VertexMarker& marker) const;
-    static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const peano4::datamanagement::VertexMarker& marker);
+    bool receiveAndMerge(const ::peano4::datamanagement::VertexMarker& marker) const;
+    bool send(const ::peano4::datamanagement::VertexMarker& marker) const;
+    static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const ::peano4::datamanagement::VertexMarker& marker);
 """
         elif self.dof_association == DoFAssociation.Face:
             result += """
-    void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const peano4::datamanagement::FaceMarker& marker, int spacetreeId);
+    void merge(::peano4::stacks::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const ::peano4::datamanagement::FaceMarker& marker, int spacetreeId);
 
-    bool receiveAndMerge(const peano4::datamanagement::FaceMarker& marker) const;
-    bool send(const peano4::datamanagement::FaceMarker& marker) const;
-    static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const peano4::datamanagement::FaceMarker& marker);
+    bool receiveAndMerge(const ::peano4::datamanagement::FaceMarker& marker) const;
+    bool send(const ::peano4::datamanagement::FaceMarker& marker) const;
+    static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const ::peano4::datamanagement::FaceMarker& marker);
 """
         elif self.dof_association == DoFAssociation.Cell:
             result += """
-    void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const peano4::datamanagement::CellMarker& marker, int spacetreeId);
+    void merge(::peano4::stacks::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const ::peano4::datamanagement::CellMarker& marker, int spacetreeId);
 
-    bool receiveAndMerge(const peano4::datamanagement::CellMarker& marker) const;
-    bool send(const peano4::datamanagement::CellMarker& marker) const;
-    static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const peano4::datamanagement::CellMarker& marker);
+    bool receiveAndMerge(const ::peano4::datamanagement::CellMarker& marker) const;
+    bool send(const ::peano4::datamanagement::CellMarker& marker) const;
+    static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const ::peano4::datamanagement::CellMarker& marker);
 """
             pass
         elif (
@@ -231,91 +229,60 @@ void {{full_qualified_name}}::receiveAndPollDanglingMessages({{full_qualified_na
 
         if self.dof_association == DoFAssociation.Vertex:
             result += """
-void {{full_qualified_name}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const peano4::datamanagement::VertexMarker& marker, int spacetreeId) {
+void {{full_qualified_name}}::merge(::peano4::stacks::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const ::peano4::datamanagement::VertexMarker& marker, int spacetreeId) {
   {{merge_implementation}}
 }
 
 
-bool {{full_qualified_name}}::receiveAndMerge(
-  const peano4::datamanagement::VertexMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) const {
+bool {{full_qualified_name}}::receiveAndMerge(const ::peano4::datamanagement::VertexMarker& marker) const {
   return {{receive_predicate}};
 }
 
 
-bool {{full_qualified_name}}::send(
-  const peano4::datamanagement::VertexMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) const {
+bool {{full_qualified_name}}::send(const ::peano4::datamanagement::VertexMarker& marker) const {
   return {{send_predicate}};
 }
 
-
-::peano4::grid::LoadStoreComputeFlag {{full_qualified_name}}::loadStoreComputeFlag( 
-  const peano4::datamanagement::VertexMarker& marker 
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) {
+::peano4::grid::LoadStoreComputeFlag {{full_qualified_name}}::loadStoreComputeFlag(const ::peano4::datamanagement::VertexMarker& marker) {
   return {{load_store_compute_flag}};
 }
 """
         elif self.dof_association == DoFAssociation.Face:
             result += """
-void {{full_qualified_name}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const peano4::datamanagement::FaceMarker& marker, int spacetreeId) {
+void {{full_qualified_name}}::merge(::peano4::stacks::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const ::peano4::datamanagement::FaceMarker& marker, int spacetreeId) {
   {{merge_implementation}}
 }
 
 
-bool {{full_qualified_name}}::receiveAndMerge(
-  const peano4::datamanagement::FaceMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) const {
+bool {{full_qualified_name}}::receiveAndMerge(const ::peano4::datamanagement::FaceMarker& marker) const {
   return {{receive_predicate}};
 }
 
 
-bool {{full_qualified_name}}::send(
-  const peano4::datamanagement::FaceMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) const {
+bool {{full_qualified_name}}::send(const ::peano4::datamanagement::FaceMarker& marker) const {
   return {{send_predicate}};
 }
 
-
-::peano4::grid::LoadStoreComputeFlag {{full_qualified_name}}::loadStoreComputeFlag( 
-  const peano4::datamanagement::FaceMarker& marker 
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) {
+::peano4::grid::LoadStoreComputeFlag {{full_qualified_name}}::loadStoreComputeFlag(const ::peano4::datamanagement::FaceMarker& marker) {
   return {{load_store_compute_flag}};
 }
 """
         elif self.dof_association == DoFAssociation.Cell:
             result += """
-void {{full_qualified_name}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const peano4::datamanagement::CellMarker& marker, int spacetreeId) {
+void {{full_qualified_name}}::merge(::peano4::stacks::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const ::peano4::datamanagement::CellMarker& marker, int spacetreeId) {
   {{merge_implementation}}
 }
 
 
-bool {{full_qualified_name}}::receiveAndMerge(
-  const peano4::datamanagement::CellMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) const {
+bool {{full_qualified_name}}::receiveAndMerge(const ::peano4::datamanagement::CellMarker& marker) const {
   return {{receive_predicate}};
 }
 
-
-bool {{full_qualified_name}}::send(
-  const peano4::datamanagement::CellMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) const {
+bool {{full_qualified_name}}::send(const ::peano4::datamanagement::CellMarker& marker) const {
   return {{send_predicate}};
 }
 
-
-::peano4::grid::LoadStoreComputeFlag {{full_qualified_name}}::loadStoreComputeFlag( 
-  const peano4::datamanagement::CellMarker& marker 
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) {
+::peano4::grid::LoadStoreComputeFlag {{full_qualified_name}}::loadStoreComputeFlag(const ::peano4::datamanagement::CellMarker& marker) {
   return {{load_store_compute_flag}};
 }
 """

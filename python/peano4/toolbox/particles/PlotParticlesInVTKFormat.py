@@ -183,7 +183,7 @@ class PlotParticlesInVTKFormat(ActionSet):
         return ""
 
     def get_body_of_getGridControlEvents(self):
-        return "  return std::vector< peano4::grid::GridControlEvent >();\n"
+        return "  return std::vector< ::peano4::grid::GridControlEvent >();\n"
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
@@ -202,7 +202,7 @@ class PlotParticlesInVTKFormat(ActionSet):
       int particleNumber = _writer->plotPoint(p->getX());
       _positionWriter->plot(particleNumber,p->getX());
       _searchRadiusWriter->plot(particleNumber,p->getSearchRadius());
-      _associationWriter->plot(particleNumber,marker.x()-p->getX());
+      _associationWriter->plot(particleNumber,marker.getX()-p->getX());
       {{ATTRIBUTE_WRITER_PLOT_CALLS}}
     }
   }
@@ -245,7 +245,7 @@ class PlotParticlesInVTKFormat(ActionSet):
     snapshotFileName.str(),
     "{{OUTPUT_DIRECTORY}}",
     tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData,
-    counter / peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()
+    counter / ::peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()
   );
 {% else %}
   _writer = new tarch::plotter::pointdata::vtk::VTKWriter(

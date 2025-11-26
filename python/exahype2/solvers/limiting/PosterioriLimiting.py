@@ -130,11 +130,6 @@ class PosterioriLimiting(object):
             self._number_of_dmp_observables,
             self._unknown_identifier() + "MinAndMax",
         )
-        # TODO: Using smart pointer here might lead to NaNs during the initial time step
-        # self._min_and_max_projection.generator  = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-        #     self._min_and_max_projection,
-        #     "double"
-        # )
 
         self._min_and_max_projection.generator.merge_method_definition = (
             get_face_overlap_merge_implementation(self._min_and_max_projection)

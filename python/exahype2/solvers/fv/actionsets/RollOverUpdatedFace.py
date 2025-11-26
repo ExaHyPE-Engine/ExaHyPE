@@ -32,8 +32,8 @@ class RollOverUpdatedFace(AbstractFVActionSet):
           {{OVERLAP}},
           normal,
           false, // it is the left layer, i.e. not right
-          {{NEW_ACCESSOR}}.value,
-          {{OLD_ACCESSOR}}.value
+          {{NEW_ACCESSOR}}.data(),
+          {{OLD_ACCESSOR}}.data()
         );
         ::exahype2::fv::copyHalfOfHalo(
           {{UNKNOWNS}},
@@ -41,8 +41,8 @@ class RollOverUpdatedFace(AbstractFVActionSet):
           {{OVERLAP}},
           normal,
           false, // it is the left layer, i.e. not right
-          {{UPDATE_ACCESSOR}}.value,
-          {{NEW_ACCESSOR}}.value
+          {{UPDATE_ACCESSOR}}.data(),
+          {{NEW_ACCESSOR}}.data()
         );
         {{FACE_METADATA_ACCESSOR}}.setUpdated(0, false);
         {{FACE_METADATA_ACCESSOR}}.setOldTimeStamp(0, {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(0));
@@ -60,8 +60,8 @@ class RollOverUpdatedFace(AbstractFVActionSet):
           {{OVERLAP}},
           normal,
           true, // it is the right layer
-          {{NEW_ACCESSOR}}.value,
-          {{OLD_ACCESSOR}}.value
+          {{NEW_ACCESSOR}}.data(),
+          {{OLD_ACCESSOR}}.data()
         );
         ::exahype2::fv::copyHalfOfHalo(
           {{UNKNOWNS}},
@@ -69,8 +69,8 @@ class RollOverUpdatedFace(AbstractFVActionSet):
           {{OVERLAP}},
           normal,
           true, // it is the right layer
-          {{UPDATE_ACCESSOR}}.value,
-          {{NEW_ACCESSOR}}.value
+          {{UPDATE_ACCESSOR}}.data(),
+          {{NEW_ACCESSOR}}.data()
         );
 
         {{FACE_METADATA_ACCESSOR}}.setUpdated(1, false);

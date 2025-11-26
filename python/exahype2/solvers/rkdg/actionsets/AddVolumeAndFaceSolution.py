@@ -33,17 +33,17 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
     assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
 
     #if DIMENSIONS==2
-    double* dQdt = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
+    double* dQdt = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data() + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
     #elif DIMENSIONS==3
-    double* dQdt = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
+    double* dQdt = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data() + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
     #endif
 
     ::exahype2::dg::{{ADD_SOLVER_CONTRIBUTIONS_CALL}}
 
     ::exahype2::CellData<double, double> cellData(
       nullptr,
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       timeStamp,
       timeStepSize,
       dQdt
@@ -51,7 +51,7 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
 
     ::exahype2::dg::{{MULTIPLY_WITH_INVERTED_MASS_MATRIX_CALL}}
     
-    const double* oldQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+    const double* oldQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
     
     {{POSTPROCESS_UPDATED_CELL_AFTER_RUNGE_KUTTA_STEP}}
   }

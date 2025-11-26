@@ -7,15 +7,15 @@
 #include "tarch/NonCriticalAssertions.h"
 
 #include <algorithm>
-#include <limits>
 #include <cstring>
+#include <limits>
 #include <stdio.h>
 #include <string.h>
 
 tarch::logging::Log benchmarks::exahype2::ccz4::CCZ4::_log("benchmarks::exahype2::ccz4::CCZ4");
 
 void benchmarks::exahype2::ccz4::CCZ4::initialCondition(
-  double* NOALIAS Q,
+  double* NOALIAS                              Q,
   const tarch::la::Vector<DIMENSIONS, double>& volumeX,
   const tarch::la::Vector<DIMENSIONS, double>& volumeH,
   bool                                         gridIsConstructed
@@ -54,8 +54,8 @@ void benchmarks::exahype2::ccz4::CCZ4::initialCondition(
 }
 
 void benchmarks::exahype2::ccz4::CCZ4::boundaryConditions(
-  const double* NOALIAS Qinside, // Qinside[59+0]
-  double* NOALIAS Qoutside,      // Qoutside[59+0]
+  const double* NOALIAS                        Qinside,  // Qinside[59+0]
+  double* NOALIAS                              Qoutside, // Qoutside[59+0]
   const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   const tarch::la::Vector<DIMENSIONS, double>& volumeH,
   double                                       t,
@@ -68,10 +68,25 @@ void benchmarks::exahype2::ccz4::CCZ4::boundaryConditions(
 }
 
 ::exahype2::RefinementCommand benchmarks::exahype2::ccz4::CCZ4::refinementCriterion(
-  const double* NOALIAS Q,
+  const double* NOALIAS                        Q,
   const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
   const tarch::la::Vector<DIMENSIONS, double>& volumeH,
   double                                       t
 ) {
-  return ::exahype2::RefinementCommand::Keep;
+  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+
+  const double  radius                   = tarch::la::norm2(volumeCentre);
+  constexpr int NumberOfRefinementLayers = 3;
+
+  const double radii[NumberOfRefinementLayers] = {40, 15, 6};
+  const double maxH[NumberOfRefinementLayers]  = {0.32, 0.12, 0.04};
+
+  result = ::exahype2::RefinementCommand::Keep;
+  for (int i = 0; i < NumberOfRefinementLayers; i++) {
+    if (radius < radii[i] and tarch::la::max(volumeH) > maxH[i]) {
+      result = ::exahype2::RefinementCommand::Refine;
+    }
+  }
+
+  return result;
 }

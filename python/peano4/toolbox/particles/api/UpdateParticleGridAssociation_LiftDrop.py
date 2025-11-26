@@ -183,8 +183,8 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
           (*p)->getX(),
           partID,
           (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-          marker.x(),
-          marker.h(),
+          marker.getX(),
+          marker.getH(),
           _spacetreeId,
           "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles"
         );
@@ -193,8 +193,8 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
           (*p)->getX(),
           partID,
           (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-          marker.x(),
-          marker.h(),
+          marker.getX(),
+          marker.getH(),
           _spacetreeId,
           "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles"
         );
@@ -214,10 +214,10 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
       #endif
         _numberOfLifts ++;
         logDebug( "touchVertexLastTime(...)", "have to lift particle " << (*p)->toString() << " to next coarser vertex " << instruction << ". Previously assigned to " << marker.toString() << ". Now lifted to " << coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).toString() );
-        (*p)->setCellH(3.0 * marker.h());
+        (*p)->setCellH(3.0 * marker.getH());
         toolbox::particles::updateContainedInAdjacentCellProperty(
-          peano4::datamanagement::reconstructXOfParentVertex(marker, instruction),
-          marker.h()*3.0,
+          ::peano4::datamanagement::reconstructXOfParentVertex(marker, instruction),
+          marker.getH()*3.0,
           **p
         );
         toolbox::particles::assignmentchecks::detachParticleFromVertex(
@@ -225,8 +225,8 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
           (*p)->getX(),
           partID,
           (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-          marker.x(),
-          marker.h(),
+          marker.getX(),
+          marker.getH(),
           _spacetreeId,
           "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles"
         );
@@ -235,12 +235,12 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
           (*p)->getX(),
           partID,
           (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-          peano4::datamanagement::reconstructXOfParentVertex(marker, instruction),
-          3.0*marker.h(),
+          ::peano4::datamanagement::reconstructXOfParentVertex(marker, instruction),
+          3.0*marker.getH(),
           _spacetreeId,
           "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles",
-          marker.x(),
-          marker.h()
+          marker.getX(),
+          marker.getH()
         );
         p = coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).grabParticle( p, fineGridVertex{{PARTICLES_CONTAINER}} );
         assertion2( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),                    fineGridVertex{{PARTICLES_CONTAINER}}.toString(), coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).toString() );

@@ -66,7 +66,7 @@ class FiniteVolumesTracingWithForce(
         update_kernel_arguments="""
 *p,
 marker,
-fineGridCell{{SOLVER_NAME}}Q.value
+fineGridCell{{SOLVER_NAME}}Q.data()
 """,
         interpolation_scheme=0,
         integration_scheme=0,
@@ -110,9 +110,7 @@ fineGridCell{{SOLVER_NAME}}Q.value
             update_kernel_arguments
         ).render(**self.tracerDict)
         solver._finish_time_step_implementation += """
-#ifdef WITH_MPI
     vertexdata::{}::reduceNumberOfParticles();
-#endif
     """.format(
             self.tracerDict["PARTICLES_CONTAINER"]
         )
@@ -245,16 +243,9 @@ static double _timeStepSize;
         )
 
         # Particle statistics code
-        particle_statistics_code = jinja2.Template(
-            """
-    // Print particle statistics (no collectives here)
-#ifdef WITH_MPI
-    if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      logInfo("printTimeStep()", vertexdata::{{PARTICLES_CONTAINER}}::printTotalNumberOfParticles());
-    }
-#else
+        particle_statistics_code = jinja2.Template("""
+    // TODO: Only print if number of particles > 0
     logInfo("printTimeStep()", vertexdata::{{PARTICLES_CONTAINER}}::printTotalNumberOfParticles());
-#endif
 """
         ).render(**self.tracerDict)
 

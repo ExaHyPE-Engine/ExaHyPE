@@ -41,8 +41,8 @@ class RollOverUpdatedFace(AbstractRKFDActionSet):
             for (int j=0; j<{{UNKNOWNS}}; j++) {
               // The initialisation mapping has an epilogue which then copies this
               // updated new solution over into the old one
-              {{OLD_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
-              {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
+              {{OLD_ACCESSOR}}.data()[index*{{UNKNOWNS}}+j] = {{NEW_ACCESSOR}}.data()[index*{{UNKNOWNS}}+j]; 
+              {{NEW_ACCESSOR}}.data()[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.data()[index*{{UNKNOWNS}}+j]; 
             }
           }
         }
@@ -70,8 +70,8 @@ class RollOverUpdatedFace(AbstractRKFDActionSet):
             for (int j=0; j<{{UNKNOWNS}}; j++) {
               // The initialisation mapping has an epilogue which then copies this
               // updated new solution over into the old one
-              {{OLD_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
-              {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
+              {{OLD_ACCESSOR}}.data()[index*{{UNKNOWNS}}+j] = {{NEW_ACCESSOR}}.data()[index*{{UNKNOWNS}}+j]; 
+              {{NEW_ACCESSOR}}.data()[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.data()[index*{{UNKNOWNS}}+j]; 
             }
           }
         }

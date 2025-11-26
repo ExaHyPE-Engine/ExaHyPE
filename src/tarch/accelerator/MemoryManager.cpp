@@ -192,19 +192,19 @@ std::string tarch::accelerator::MemoryManager::getStatistics() {
     msg << " (used/free)";
 
     msg
-      << ", Managed: " << MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::MByte) << "/"
-      << MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::MByte) << "/"
-      << MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::MByte)
-           + MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::MByte);
+      << ", Managed: " << MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::MiB) << "/"
+      << MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::MiB) << "/"
+      << MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::MiB)
+           + MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::MiB);
 
-    msg << " MB (used/free/total), ";
+    msg << " MiB (used/free/total), ";
 
     // TODO: Use memory locations to report device and host memory.
   }
 
-  msg << "System: " << getMemoryUsage(MemoryUsageFormat::MByte) << "/" << getFreeMemory(MemoryUsageFormat::MByte) << "/"
-      << getTotalMemory(MemoryUsageFormat::MByte);
-  msg << " MB (used/free/total)";
+  msg << "System: " << getMemoryUsage(MemoryUsageFormat::MiB) << "/" << getFreeMemory(MemoryUsageFormat::MiB) << "/"
+      << getTotalMemory(MemoryUsageFormat::MiB);
+  msg << " MiB (used/free/total)";
 
   return msg.str();
 }

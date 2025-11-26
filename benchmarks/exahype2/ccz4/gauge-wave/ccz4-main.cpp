@@ -10,7 +10,7 @@
 #include "ccz4-main.h"
 
 #include "exahype2/UnitTests.h"
-#include "exahype2/UserInterface.h"
+#include "exahype2/exahype2.h"
 #include "peano4/peano4.h"
 #include "peano4/UnitTests.h"
 #include "peano4/grid/Spacetree.h"

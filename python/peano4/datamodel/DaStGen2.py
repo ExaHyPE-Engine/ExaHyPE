@@ -11,33 +11,27 @@ import copy
 
 
 class DaStGen2Generator(object):
-  """! 
-  
+  """!
   Simple generator mapping a DaStGen2 object onto a plain C++ class
-  
-  """  
+  """
   def __init__(self,data):
     self._data = data
-    
 
   def get_stack_container(self):
-    return "peano4::stacks::STDVectorStack< " + self._data.get_full_qualified_type() + " >";
+    return "::peano4::stacks::Stack<" + self._data.get_full_qualified_type() + ">";
 
-    
   def get_header_file_include(self):
-    return "#include \"peano4/stacks/STDVectorStack.h\" \n \
+    return "#include \"peano4/stacks/Stack.h\" \n \
             #include \"" + self._data.namespace[-1] + "/" + self._data.name + ".h\""
 
 
   def construct_output(self,output):
     """!
-  
     Finally construct the output
-  
-    Pass in an instance of the output object. We use this output 
+
+    Pass in an instance of the output object. We use this output
     object only to register the generated C++ file with the build
     environment.
-    
     """
     full_qualified_name = ""
     for i in self._data.namespace:
@@ -53,22 +47,21 @@ class DaStGen2Generator(object):
 
 
 class DaStGen2GeneratorForObjectsWithSmartPointers(object):
-    """! 
-      
+    """!
+
     Simple generator mapping a DaStGen2 object onto a plain C++ class
-    
+
     The generator is very similar to DaStGen2Generator, but it has to take
     extra care as we assume that some objects host smart pointers. Therefore,
-    we do two things: We dump the smart pointer version, and we create a 
+    we do two things: We dump the smart pointer version, and we create a
     flattene version, too.
-      
-    """  
+
+    """
     def __init__(self,data):
         self._data = data
-        
 
     def get_stack_container(self):
-        return "peano4::stacks::STDVectorStackOverObjectsWithSmartPointers< " + self._data.get_full_qualified_type() + " >";
+        return "::peano4::stacks::STDVectorStackOverObjectsWithSmartPointers< " + self._data.get_full_qualified_type() + " >";
 
         
     def get_header_file_include(self):
@@ -111,13 +104,7 @@ class DaStGen2GeneratorForObjectsWithSmartPointers(object):
         flattened_data_object._attributes = []
         copy_statements               = ""
         for attribute in old_attributes:
-            if isinstance(attribute,peano4.dastgen2.Peano4SmartPointerDoubleArray):
-                flattened_data_object._attributes.append( peano4.dastgen2.Peano4DoubleArray( name        = attribute._name,
-                                                                                             cardinality = attribute._cardinality,  
-                                                                                             ifdefs      = attribute.ifdefs
-                                                                                             ))
-            else:
-                flattened_data_object._attributes.append( attribute )
+            flattened_data_object._attributes.append( attribute )
             if attribute.ifdefs==[]:
                copy_statements += """
 result.set{}( static_cast<decltype(result.get{}())>( copy.get{}() ) );
@@ -322,39 +309,4 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
     """
     super(DaStGen2, self).configure(namespace,association,subdirectory)
     self.peano4_mpi_and_storage_aspect.dof_association = association
-    
-    if self.hosts_smart_pointer_attribute():
-        self.generator = DaStGen2GeneratorForObjectsWithSmartPointers(self)
-    else:
-        self.generator = DaStGen2Generator(self)
-    
-        
-  @property
-  def additional_load_and_store_arguments(self):
-    return self._additional_load_and_store_arguments
-    
-
-  @additional_load_and_store_arguments.setter
-  def additional_load_and_store_arguments(self,new_arguments):
-    self.peano4_mpi_and_storage_aspect.additional_load_and_store_arguments = [ (x[1],x[2]) for x in new_arguments]
-    for new_argument in new_arguments:
-      self.peano4_mpi_and_storage_aspect.includes.append( """
-#include \"""" + new_argument[1].replace("::","/") + """.h"
-""")
-    self._additional_load_and_store_arguments = new_arguments
-
-
-  def hosts_smart_pointer_attribute(self):
-      """!
-  
-      Does class host a smart pointer attribute
-      
-      The context is important when we pick the data generator, as objects with 
-      a smart poiner have to be handled differently compared to plain objects.
-  
-      """
-      for attribute in self.data._attributes:
-          if isinstance(attribute,peano4.dastgen2.Peano4SmartPointerDoubleArray):
-              return True
-      return False
-          
+    self.generator = DaStGen2Generator(self)

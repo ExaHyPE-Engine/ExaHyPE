@@ -6,12 +6,12 @@
 
 
 double toolbox::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker) {
-  return relativeReleaseOwnershipSpatialSortingTolerance(marker.h());
+  return relativeReleaseOwnershipSpatialSortingTolerance(marker.getH());
 }
 
 
 double toolbox::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker) {
-  return relativeReleaseOwnershipSpatialSortingTolerance(marker.h());
+  return relativeReleaseOwnershipSpatialSortingTolerance(marker.getH());
 }
 
 
@@ -21,12 +21,12 @@ double toolbox::particles::internal::relativeReleaseOwnershipSpatialSortingToler
 
 
 double toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker) {
-  return relativeGrabOwnershipSpatialSortingTolerance(marker.h());
+  return relativeGrabOwnershipSpatialSortingTolerance(marker.getH());
 }
 
 
 double toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker) {
-  return relativeGrabOwnershipSpatialSortingTolerance(marker.h());
+  return relativeGrabOwnershipSpatialSortingTolerance(marker.getH());
 }
 
 
@@ -36,12 +36,12 @@ double toolbox::particles::internal::relativeGrabOwnershipSpatialSortingToleranc
 
 
 bool toolbox::particles::internal::fitsIntoLevel(double searchRadius, const ::peano4::datamanagement::CellMarker& marker) {
-  return tarch::la::greaterEquals(tarch::la::min(marker.h()), 2.0 * searchRadius);
+  return tarch::la::greaterEquals(tarch::la::min(marker.getH()), 2.0 * searchRadius);
 }
 
 
 bool toolbox::particles::internal::fitsIntoLevel(double searchRadius, const ::peano4::datamanagement::VertexMarker& marker) {
-  return tarch::la::greaterEquals(tarch::la::min(marker.h()), 2.0 * searchRadius);
+  return tarch::la::greaterEquals(tarch::la::min(marker.getH()), 2.0 * searchRadius);
 }
 
 
@@ -50,7 +50,7 @@ std::bitset<DIMENSIONS> toolbox::particles::internal::getParticleAssociationWith
 ) {
   std::bitset<DIMENSIONS> destAssociation;
 
-  // marker.x() gives me the centre of the cell
+  // marker.getX() gives me the centre of the cell
   for (int d = 0; d < DIMENSIONS; d++) {
     destAssociation[d] = tarch::la::greaterEquals(x(d), cellCentre(d));
   }

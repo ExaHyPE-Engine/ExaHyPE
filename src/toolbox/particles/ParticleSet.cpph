@@ -127,11 +127,11 @@ template <typename T>
 void toolbox::particles::ParticleSet<T>::reduceNumberOfParticles() {
 #ifdef WITH_MPI
   const int local = _numberOfRemainingLocalParticles;
-
   tarch::mpi::Rank::getInstance().allReduce(&local, &_numberOfRemainingGlobalParticles, 1, MPI_INT, MPI_SUM, []() {
     tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
   });
-
+#else
+  _numberOfRemainingGlobalParticles = _numberOfRemainingLocalParticles;
 #endif
 }
 

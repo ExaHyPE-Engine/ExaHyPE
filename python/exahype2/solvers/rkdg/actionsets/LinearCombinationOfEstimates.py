@@ -38,20 +38,20 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
     
     dfor( dof, {{ORDER}}+1 ) {
       for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
-        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] = 
-          fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ];      
+        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data()[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] = 
+          fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ];      
 
         {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO]|length) %}
         {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
-        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] += 
+        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data()[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] += 
           timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
-          fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+          fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
         {% endif %}
         {% endfor %}
       }      
       for (int unknown={{NUMBER_OF_UNKNOWNS}}; unknown<{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
-        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] = 
-          fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ];      
+        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data()[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] = 
+          fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ];      
       }
     }
       

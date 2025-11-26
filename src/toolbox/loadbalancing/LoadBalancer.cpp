@@ -11,8 +11,8 @@ tarch::logging::Log toolbox::loadbalancing::LoadBalancer::_log("toolbox::loadbal
 
 toolbox::loadbalancing::LoadBalancer::LoadBalancer(Configuration* configuration):
   _configuration(configuration),
-  _blacklist(),
-  _statistics(),
+  _blacklist{},
+  _statistics{},
   _state(State::InterRankDistribution) {
 
   _statistics.notifyOfStateChange(_state);
@@ -60,6 +60,18 @@ int toolbox::loadbalancing::LoadBalancer::getGlobalNumberOfTrees() const {
 
 int toolbox::loadbalancing::LoadBalancer::getGlobalNumberOfInnerUnrefinedCells() const {
   return _statistics.getGlobalNumberOfInnerUnrefinedCells();
+}
+
+int toolbox::loadbalancing::LoadBalancer::getGlobalMinTreeLoad() const { return _statistics.getGlobalMinTreeLoad(); }
+
+int toolbox::loadbalancing::LoadBalancer::getGlobalMaxTreeLoad() const { return _statistics.getGlobalMaxTreeLoad(); }
+
+double toolbox::loadbalancing::LoadBalancer::getGlobalTreeLoadRatioInPercentage() const {
+  return _statistics.getGlobalTreeLoadRatioInPercentage();
+}
+
+std::size_t toolbox::loadbalancing::LoadBalancer::getGlobalMemoryUsageInBytes() const {
+  return _statistics.getGlobalMemoryUsageInBytes();
 }
 
 bool toolbox::loadbalancing::LoadBalancer::hasStagnated() const {
@@ -119,12 +131,12 @@ void toolbox::loadbalancing::LoadBalancer::updateIntraRankLoadBalancing() {
   const int minTreeSize                           = _configuration->getMinTreeSize(_state);
   const int numberOfCells                         = _statistics.getLocalNumberOfInnerUnrefinedCells();
   const int numberOfTreesToAccommodateMinTreeSize = std::max(numberOfCells / minTreeSize, 1);
-  const int numberOfAllowedTrees                  = std::min({numberOfTreesToAccommodateMinTreeSize, maxPermittedTreesPerRank, numberOfThreads});
-  if (numberOfTreesToAccommodateMinTreeSize < numberOfThreads or not _statistics.hasConsistentViewOfWorld()) {
+  if (numberOfTreesToAccommodateMinTreeSize < maxPermittedTreesPerRank or not _statistics.hasConsistentViewOfWorld()) {
     return; // Nothing to do (yet)
   }
 
-  unsigned int numberOfSplits = numberOfAllowedTrees - 1;
+  const int    numberOfAllowedTrees = std::min({numberOfTreesToAccommodateMinTreeSize, maxPermittedTreesPerRank});
+  unsigned int numberOfSplits       = numberOfAllowedTrees - 1;
   if (numberOfSplits > 0) {
     const int numberOfCellsPerTree = std::max(static_cast<int>(std::round(numberOfCells / numberOfAllowedTrees)), 1);
     logDebug(
@@ -153,7 +165,7 @@ void toolbox::loadbalancing::LoadBalancer::triggerSplit(int numberOfCells, int t
   const int  sourceTree = *(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().begin());
   const bool success    = peano4::parallel::SpacetreeSet::getInstance().split(
     sourceTree,
-    peano4::SplitInstruction{numberOfCells, _configuration->getMode(_state)},
+    peano4::grid::SplitInstruction{numberOfCells, _configuration->getMode(_state)},
     targetRank
   );
 
@@ -168,26 +180,26 @@ void toolbox::loadbalancing::LoadBalancer::triggerSplit(int numberOfCells, int t
 std::string toolbox::loadbalancing::LoadBalancer::toString() const {
   std::ostringstream msg;
   msg
-    << "(State=" << _state << ",Statistics=" << _statistics.toString() << ",Blacklist=" << _blacklist.toString() << ")";
+    << "{State=" << _state << ",Statistics=" << _statistics.toString() << ",Blacklist=" << _blacklist.toString() << "}";
   return msg.str();
 }
 
 std::string toolbox::loadbalancing::LoadBalancer::getStatistics() {
   std::ostringstream msg;
 
-  int           sumLocal             = 0;
-  int           sumRemote            = 0;
-  std::set<int> idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
+  int         sumLocal             = 0;
+  int         sumRemote            = 0;
+  const auto& idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
 
   msg << idsOfLocalSpacetrees.size() << " tree(s): ";
 
   for (auto p : idsOfLocalSpacetrees) {
     msg
       << "(#" << p << ":"
-      << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() << "/"
-      << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfRemoteUnrefinedCells() << ")";
-    sumLocal += peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells();
-    sumRemote += peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfRemoteUnrefinedCells();
+      << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).numberOfLocalUnrefinedCells << "/"
+      << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).numberOfRemoteUnrefinedCells << ")";
+    sumLocal += peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).numberOfLocalUnrefinedCells;
+    sumRemote += peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).numberOfRemoteUnrefinedCells;
   }
   if (idsOfLocalSpacetrees.empty()) {
     msg << "no trees hosted on this node - therefore no load";

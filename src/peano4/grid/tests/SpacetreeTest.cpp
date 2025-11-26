@@ -1,7 +1,7 @@
 #include "SpacetreeTest.h"
 #include "../Spacetree.h"
 #include "../GridTraversalEvent.h"
-#include "../TraversalObserver.h"
+#include "../GridTraversalObserver.h"
 
 #include "peano4/utils/Globals.h"
 #include "peano4/utils/Loop.h"

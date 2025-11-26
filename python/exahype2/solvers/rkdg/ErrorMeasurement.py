@@ -81,11 +81,11 @@ def create_postprocessing_kernel_for_error_measurement_for_fixed_timestepping(gu
           std::copy_n(Q_, {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}, Q);
           repositories::{{SOLVER_INSTANCE}}.analyticalSolution(x, t, dt, Q, solution);
         },
-        marker.x(),
-        marker.h(),
+        marker.getX(),
+        marker.getH(),
         fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
         repositories::{{SOLVER_INSTANCE}}.getTimeStepSize(),
-        fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value,
+        fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data(),
         errors
       );
 
@@ -105,9 +105,9 @@ def create_postprocessing_kernel_for_error_measurement_for_adaptive_timestepping
       double errors[3]{0.};
 
 #if DIMENSIONS==2
-      const double cellVolume = marker.h()[0] * marker.h()[1];
+      const double cellVolume = marker.getH()[0] * marker.getH()[1];
 #else
-      const double cellVolume = marker.h()[0] * marker.h()[1] * marker.h()[2];
+      const double cellVolume = marker.getH()[0] * marker.getH()[1] * marker.getH()[2];
 #endif
 
       double solution[{{NUMBER_OF_UNKNOWNS}}];
@@ -124,21 +124,21 @@ def create_postprocessing_kernel_for_error_measurement_for_adaptive_timestepping
         // Compute the exact solution
         repositories::{{SOLVER_INSTANCE}}.analyticalSolution(
           ::exahype2::dg::getQuadraturePoint(
-            marker.x(),
-            marker.h(),
+            marker.getX(),
+            marker.getH(),
             index,
             {{DG_ORDER}}+1,
             repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
           ),
           fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
           repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize(),
-          &fineGridCell{{UNKNOWN_IDENTIFIER}}.value[linearisedIndex],
+          &fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[linearisedIndex],
           solution
         );
 
         // Increment the respective errors
         for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; unknown++) {
-          double error = std::abs(fineGridCell{{UNKNOWN_IDENTIFIER}}.value[linearisedIndex + unknown] - solution[unknown]);
+          double error = std::abs(fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[linearisedIndex + unknown] - solution[unknown]);
           errors[0] += weight * error; // L1 norm
           errors[1] += weight * error * error; // L2 norm
           errors[2] = std::max(errors[2], error); // L_{inf} norm

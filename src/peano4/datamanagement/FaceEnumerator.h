@@ -7,7 +7,8 @@
 
 namespace peano4 {
   namespace datamanagement {
-    template <class Face> class FaceEnumerator;
+    template <class Face>
+    class FaceEnumerator;
   } // namespace datamanagement
 } // namespace peano4
 
@@ -30,7 +31,8 @@ namespace peano4 {
  *
  * @see peano4::datamanagement::VertexEnumerator for the same discussion for vertices.
  */
-template <class Face> class peano4::datamanagement::FaceEnumerator {
+template <class Face>
+class peano4::datamanagement::FaceEnumerator {
 private:
   Face* _faces[TWO_TIMES_D];
 
@@ -56,17 +58,6 @@ public:
     for (int i = 0; i < TWO_TIMES_D; i++) {
       _faces[i] = firstFace + i;
     }
-  }
-
-  /**
-   * Usually is only used by the observers, i.e. users should not interact
-   * with this routine.
-   */
-  void setPointer(int i, Face* value) {
-    assertion(i >= 0);
-    assertion(i < TWO_TIMES_D);
-    assertion(value != nullptr);
-    _faces[i] = value;
   }
 
   /**

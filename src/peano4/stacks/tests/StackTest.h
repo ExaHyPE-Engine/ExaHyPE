@@ -16,7 +16,10 @@ private:
   void testEmplaceData();
   void testPopData();
   void testClone();
-  void testMPI();
+  void testPushBlockView();
+  void testPopBlockView();
+  void testMPIDatatype();
+  void testMPIDatatype2();
 
 public:
   StackTest();

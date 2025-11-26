@@ -1,99 +1,108 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "GridStatistics.h"
 
+#include "AutomatonState.h"
+#include "GridVertex.h"
+#include "tarch/services/ServiceRepository.h"
+
 #include <algorithm>
+#include <iomanip>
 #include <sstream>
 
-peano4::grid::GridStatistics::GridStatistics(
-  int                                   __numberOfLocalUnrefinedCells,
-  int                                   __numberOfRemoteUnrefinedCells,
-  int                                   __numberOfLocalRefinedCells,
-  int                                   __numberOfRemoteRefinedCells,
-  int                                   __stationarySweeps,
-  bool                                  __coarseningHasBeenVetoed,
-  bool                                  __removedEmptySubtree,
-  tarch::la::Vector<DIMENSIONS, double> __minH
+static_assert(std::is_standard_layout_v<peano4::grid::GridStatistics>);
+static_assert(std::is_trivially_copyable_v<peano4::grid::GridStatistics>);
+
+std::ostream& operator<<(std::ostream& out, const peano4::grid::GridStatistics& statistics) {
+  return (out << statistics.toString());
+}
+
+peano4::grid::GridStatistics operator+(
+  const peano4::grid::GridStatistics& lhs,
+  const peano4::grid::GridStatistics& rhs
 ) {
-  setNumberOfLocalUnrefinedCells(__numberOfLocalUnrefinedCells);
-  setNumberOfRemoteUnrefinedCells(__numberOfRemoteUnrefinedCells);
-  setNumberOfLocalRefinedCells(__numberOfLocalRefinedCells);
-  setNumberOfRemoteRefinedCells(__numberOfRemoteRefinedCells);
-  setStationarySweeps(__stationarySweeps);
-  setCoarseningHasBeenVetoed(__coarseningHasBeenVetoed);
-  setRemovedEmptySubtree(__removedEmptySubtree);
-  setMinH(__minH);
+  peano4::grid::GridStatistics result;
+
+  result.numberOfLocalUnrefinedCells  = lhs.numberOfLocalUnrefinedCells + rhs.numberOfLocalUnrefinedCells;
+  result.numberOfRemoteUnrefinedCells = lhs.numberOfRemoteUnrefinedCells + rhs.numberOfRemoteUnrefinedCells;
+  result.numberOfLocalRefinedCells    = lhs.numberOfLocalRefinedCells + rhs.numberOfLocalRefinedCells;
+  result.numberOfRemoteRefinedCells   = lhs.numberOfRemoteRefinedCells + rhs.numberOfRemoteRefinedCells;
+  result.numberOfStationarySweeps     = std::min(lhs.numberOfStationarySweeps, rhs.numberOfStationarySweeps);
+  result.minH                         = tarch::la::min(lhs.minH, rhs.minH);
+  result.flags                        = static_cast<std::uint8_t>(lhs.flags | rhs.flags);
+
+  return result;
+}
+
+peano4::grid::GridStatistics operator+=(peano4::grid::GridStatistics& lhs, const peano4::grid::GridStatistics& rhs) {
+  lhs = lhs + rhs;
+  return lhs;
+}
+
+void peano4::grid::GridStatistics::clear(bool isGlobalMasterTree) {
+  maxDepth                     = 0;
+  minDepth                     = 0;
+  numberOfLocalUnrefinedCells  = 0;
+  numberOfRemoteUnrefinedCells = 0;
+  numberOfLocalRefinedCells    = isGlobalMasterTree ? 1 : 0;
+  numberOfRemoteRefinedCells   = isGlobalMasterTree ? 0 : 1;
+  numberOfStationarySweeps     = numberOfStationarySweeps + 1;
+  minH                         = tarch::la::Vector<DIMENSIONS, double>(std::numeric_limits<double>::max());
+  setRemovedEmptySubtree(false);
+  setCoarseningHasBeenVetoed(false);
+}
+
+std::size_t peano4::grid::GridStatistics::getMemoryUsageInBytes() const {
+  // Count local and remote cells -> overestimate.
+  const std::size_t numberOfCells = static_cast<std::size_t>(numberOfLocalRefinedCells)
+                                    + static_cast<std::size_t>(numberOfLocalUnrefinedCells)
+                                    + static_cast<std::size_t>(numberOfRemoteRefinedCells)
+                                    + static_cast<std::size_t>(numberOfRemoteUnrefinedCells);
+
+  // No cells -> no memory consumed by cells/vertices.
+  if (numberOfCells == 0) {
+    return 0;
+  }
+
+  // Rough estimate.
+  const std::size_t numberOfVertices = 2 * (numberOfCells + 1);
+
+  // Memory: one AutomatonState per cell, one GridVertex per vertex.
+  const std::size_t numberOfBytes = numberOfCells * sizeof(AutomatonState) + numberOfVertices * sizeof(GridVertex);
+
+  return numberOfBytes;
 }
 
 std::string peano4::grid::GridStatistics::toString() const {
   std::ostringstream out;
-  out << "(";
-  out << "NumberOfLocalUnrefinedCells=" << _numberOfLocalUnrefinedCells;
-  out << ",";
-  out << "NumberOfRemoteUnrefinedCells=" << _numberOfRemoteUnrefinedCells;
-  out << ",";
-  out << "NumberOfLocalRefinedCells=" << _numberOfLocalRefinedCells;
-  out << ",";
-  out << "NumberOfRemoteRefinedCells=" << _numberOfRemoteRefinedCells;
-  out << ",";
-  out << "StationarySweeps=" << _stationarySweeps;
-  out << ",";
-  out << "CoarseningHasBeenVetoed=" << _coarseningHasBeenVetoed;
-  out << ",";
-  out << "RemovedEmptySubtree=" << _removedEmptySubtree;
-  out << ",";
-  out << "MinH=" << _minH;
-  out << ")";
+  out << "GridStatistics{";
+  out << "Max Depth=" << maxDepth;
+  out << ", Min Depth=" << minDepth;
+  out << ", Leaves=" << numberOfLocalUnrefinedCells;
+  out << ", Remote Leaves=" << numberOfRemoteUnrefinedCells;
+  out << ", MinH=[";
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    if (d) {
+      out << ",";
+    }
+    out << std::setprecision(6) << minH[d];
+  }
+  out << "]";
+  const auto memoryUsageInBytes = getMemoryUsageInBytes();
+  const auto memoryUsageFormat  = tarch::chooseMemoryUsageFormat(memoryUsageInBytes);
+  out << ", Memory=" << std::fixed << std::setprecision(2)
+      << tarch::convertMemorySize(memoryUsageInBytes, memoryUsageFormat) << " " << tarch::toString(memoryUsageFormat);
+  out << "}";
   return out.str();
 }
 
-int peano4::grid::GridStatistics::getNumberOfLocalUnrefinedCells() const { return _numberOfLocalUnrefinedCells; }
-
-void peano4::grid::GridStatistics::setNumberOfLocalUnrefinedCells(int value) { _numberOfLocalUnrefinedCells = value; }
-
-int peano4::grid::GridStatistics::getNumberOfRemoteUnrefinedCells() const { return _numberOfRemoteUnrefinedCells; }
-
-void peano4::grid::GridStatistics::setNumberOfRemoteUnrefinedCells(int value) { _numberOfRemoteUnrefinedCells = value; }
-
-int peano4::grid::GridStatistics::getNumberOfLocalRefinedCells() const { return _numberOfLocalRefinedCells; }
-
-void peano4::grid::GridStatistics::setNumberOfLocalRefinedCells(int value) { _numberOfLocalRefinedCells = value; }
-
-int peano4::grid::GridStatistics::getNumberOfRemoteRefinedCells() const { return _numberOfRemoteRefinedCells; }
-
-void peano4::grid::GridStatistics::setNumberOfRemoteRefinedCells(int value) { _numberOfRemoteRefinedCells = value; }
-
-int peano4::grid::GridStatistics::getStationarySweeps() const { return _stationarySweeps; }
-
-void peano4::grid::GridStatistics::setStationarySweeps(int value) { _stationarySweeps = value; }
-
-bool peano4::grid::GridStatistics::getCoarseningHasBeenVetoed() const { return _coarseningHasBeenVetoed; }
-
-void peano4::grid::GridStatistics::setCoarseningHasBeenVetoed(bool value) { _coarseningHasBeenVetoed = value; }
-
-bool peano4::grid::GridStatistics::getRemovedEmptySubtree() const { return _removedEmptySubtree; }
-
-void peano4::grid::GridStatistics::setRemovedEmptySubtree(bool value) { _removedEmptySubtree = value; }
-
-tarch::la::Vector<DIMENSIONS, double> peano4::grid::GridStatistics::getMinH() const { return _minH; }
-
-void peano4::grid::GridStatistics::setMinH(const tarch::la::Vector<DIMENSIONS, double>& value) { _minH = value; }
-
-double peano4::grid::GridStatistics::getMinH(int index) const { return _minH(index); }
-
-void peano4::grid::GridStatistics::setMinH(int index, double value) { _minH(index) = value; }
-
-
 #ifdef WITH_MPI
-
 MPI_Datatype peano4::grid::GridStatistics::Datatype = MPI_DATATYPE_NULL;
 
 MPI_Datatype peano4::grid::GridStatistics::getForkDatatype() { return Datatype; }
-
 MPI_Datatype peano4::grid::GridStatistics::getGlobalCommunicationDatatype() { return Datatype; }
-
 MPI_Datatype peano4::grid::GridStatistics::getJoinDatatype() { return Datatype; }
-
 MPI_Datatype peano4::grid::GridStatistics::getBoundaryExchangeDatatype() { return Datatype; }
-
 MPI_Datatype peano4::grid::GridStatistics::getMultiscaleDataExchangeDatatype() { return Datatype; }
 
 void peano4::grid::GridStatistics::freeForkDatatype() {
@@ -131,75 +140,65 @@ void peano4::grid::GridStatistics::freeMultiscaleDataExchangeDatatype() {
   }
 }
 
-
-int peano4::grid::GridStatistics::getSenderRank() const { return _senderDestinationRank; }
-
 void peano4::grid::GridStatistics::initDatatype() {
-  peano4::grid::GridStatistics instances[2];
+  GridStatistics instances[2];
 
-  int NumberOfAttributes = 0;
-  NumberOfAttributes++;
-  NumberOfAttributes++;
-  NumberOfAttributes++;
-  NumberOfAttributes++;
-  NumberOfAttributes++;
-  NumberOfAttributes++;
-  NumberOfAttributes++;
-  NumberOfAttributes++;
+  constexpr int NumberOfAttributes = 9;
+  MPI_Datatype  subtypes[NumberOfAttributes];
+  int           blocklen[NumberOfAttributes];
+  MPI_Aint      disp[NumberOfAttributes];
 
-  MPI_Datatype* subtypes = new MPI_Datatype[NumberOfAttributes];
-  int*          blocklen = new int[NumberOfAttributes];
-  MPI_Aint*     disp     = new MPI_Aint[NumberOfAttributes];
+  int counter = 0;
 
-  int counter       = 0;
   subtypes[counter] = MPI_INT;
   blocklen[counter] = 1;
+  MPI_Get_address(&instances[0].maxDepth, &disp[counter]);
   counter++;
+
   subtypes[counter] = MPI_INT;
   blocklen[counter] = 1;
+  MPI_Get_address(&instances[0].minDepth, &disp[counter]);
   counter++;
+
   subtypes[counter] = MPI_INT;
   blocklen[counter] = 1;
+  MPI_Get_address(&instances[0].numberOfLocalUnrefinedCells, &disp[counter]);
   counter++;
+
   subtypes[counter] = MPI_INT;
   blocklen[counter] = 1;
+  MPI_Get_address(&instances[0].numberOfRemoteUnrefinedCells, &disp[counter]);
   counter++;
+
   subtypes[counter] = MPI_INT;
   blocklen[counter] = 1;
+  MPI_Get_address(&instances[0].numberOfLocalRefinedCells, &disp[counter]);
   counter++;
-  subtypes[counter] = MPI_BYTE;
+
+  subtypes[counter] = MPI_INT;
   blocklen[counter] = 1;
+  MPI_Get_address(&instances[0].numberOfRemoteRefinedCells, &disp[counter]);
   counter++;
-  subtypes[counter] = MPI_BYTE;
+
+  subtypes[counter] = MPI_INT;
   blocklen[counter] = 1;
+  MPI_Get_address(&instances[0].numberOfStationarySweeps, &disp[counter]);
   counter++;
+
+  subtypes[counter] = MPI_UINT8_T;
+  blocklen[counter] = 1;
+  MPI_Get_address(&instances[0].flags, &disp[counter]);
+  counter++;
+
   subtypes[counter] = MPI_DOUBLE;
   blocklen[counter] = DIMENSIONS;
+  MPI_Get_address(&(instances[0].minH.data()[0]), &disp[counter]);
   counter++;
 
   MPI_Aint baseFirstInstance;
   MPI_Aint baseSecondInstance;
   MPI_Get_address(&instances[0], &baseFirstInstance);
   MPI_Get_address(&instances[1], &baseSecondInstance);
-
-  counter = 0;
-  MPI_Get_address(&(instances[0]._numberOfLocalUnrefinedCells), &disp[counter]);
-  counter++;
-  MPI_Get_address(&(instances[0]._numberOfRemoteUnrefinedCells), &disp[counter]);
-  counter++;
-  MPI_Get_address(&(instances[0]._numberOfLocalRefinedCells), &disp[counter]);
-  counter++;
-  MPI_Get_address(&(instances[0]._numberOfRemoteRefinedCells), &disp[counter]);
-  counter++;
-  MPI_Get_address(&(instances[0]._stationarySweeps), &disp[counter]);
-  counter++;
-  MPI_Get_address(&(instances[0]._coarseningHasBeenVetoed), &disp[counter]);
-  counter++;
-  MPI_Get_address(&(instances[0]._removedEmptySubtree), &disp[counter]);
-  counter++;
-  MPI_Get_address(&(instances[0]._minH.data()[0]), &disp[counter]);
-  counter++;
-
   MPI_Aint offset = disp[0] - baseFirstInstance;
   MPI_Aint extent = baseSecondInstance - baseFirstInstance - offset;
   for (int i = NumberOfAttributes - 1; i >= 0; i--) {
@@ -212,14 +211,13 @@ void peano4::grid::GridStatistics::initDatatype() {
   errorCode += MPI_Type_create_resized(tmpType, offset, extent, &Datatype);
   errorCode += MPI_Type_commit(&Datatype);
   errorCode += MPI_Type_free(&tmpType);
-  if (errorCode)
-    std::cerr << "error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
 
-  delete[] subtypes;
-  delete[] blocklen;
-  delete[] disp;
+  if (errorCode) {
+    std::stringstream ss;
+    ss << "Error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
+    throw std::runtime_error(ss.str());
+  }
 }
-
 
 void peano4::grid::GridStatistics::shutdownDatatype() {
   freeForkDatatype();
@@ -229,25 +227,22 @@ void peano4::grid::GridStatistics::shutdownDatatype() {
   freeGlobalCommunicationDatatype();
 }
 
-void peano4::grid::GridStatistics::
-  send(const peano4::grid::GridStatistics& buffer, int destination, int tag, MPI_Comm communicator) {
+void peano4::grid::GridStatistics::send(const GridStatistics& buffer, int destination, int tag, MPI_Comm communicator) {
   MPI_Send(&buffer, 1, Datatype, destination, tag, communicator);
 }
 
-void peano4::grid::GridStatistics::
-  receive(peano4::grid::GridStatistics& buffer, int source, int tag, MPI_Comm communicator) {
+void peano4::grid::GridStatistics::receive(GridStatistics& buffer, int source, int tag, MPI_Comm communicator) {
   MPI_Status status;
   MPI_Recv(&buffer, 1, Datatype, source, tag, communicator, &status);
-  buffer._senderDestinationRank = status.MPI_SOURCE;
 }
 
 void peano4::grid::GridStatistics::send(
-  const peano4::grid::GridStatistics& buffer,
-  int                                 destination,
-  int                                 tag,
-  std::function<void()>               startCommunicationFunctor,
-  std::function<void()>               waitFunctor,
-  MPI_Comm                            communicator
+  const GridStatistics& buffer,
+  int                   destination,
+  int                   tag,
+  std::function<void()> startCommunicationFunctor,
+  std::function<void()> waitFunctor,
+  MPI_Comm              communicator
 ) {
   MPI_Request sendRequestHandle;
   int         flag = 0;
@@ -261,12 +256,12 @@ void peano4::grid::GridStatistics::send(
 }
 
 void peano4::grid::GridStatistics::receive(
-  peano4::grid::GridStatistics& buffer,
-  int                           source,
-  int                           tag,
-  std::function<void()>         startCommunicationFunctor,
-  std::function<void()>         waitFunctor,
-  MPI_Comm                      communicator
+  GridStatistics&       buffer,
+  int                   source,
+  int                   tag,
+  std::function<void()> startCommunicationFunctor,
+  std::function<void()> waitFunctor,
+  MPI_Comm              communicator
 ) {
   MPI_Status  status;
   MPI_Request receiveRequestHandle;
@@ -278,18 +273,11 @@ void peano4::grid::GridStatistics::receive(
     waitFunctor();
     MPI_Test(&receiveRequestHandle, &flag, &status);
   }
-  buffer._senderDestinationRank = status.MPI_SOURCE;
 }
-#endif
 
-#ifdef WITH_MPI
-void peano4::grid::GridStatistics::sendAndPollDanglingMessages(
-  const peano4::grid::GridStatistics& message,
-  int                                 destination,
-  int                                 tag,
-  MPI_Comm                            communicator
-) {
-  peano4::grid::GridStatistics::send(
+void peano4::grid::GridStatistics::
+  sendAndPollDanglingMessages(const GridStatistics& message, int destination, int tag, MPI_Comm communicator) {
+  GridStatistics::send(
     message,
     destination,
     tag,
@@ -308,10 +296,9 @@ void peano4::grid::GridStatistics::sendAndPollDanglingMessages(
   );
 }
 
-
 void peano4::grid::GridStatistics::
-  receiveAndPollDanglingMessages(peano4::grid::GridStatistics& message, int source, int tag, MPI_Comm communicator) {
-  peano4::grid::GridStatistics::receive(
+  receiveAndPollDanglingMessages(GridStatistics& message, int source, int tag, MPI_Comm communicator) {
+  GridStatistics::receive(
     message,
     source,
     tag,

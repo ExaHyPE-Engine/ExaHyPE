@@ -24,10 +24,10 @@ void toolbox::blockstructured::internal::projectCells_AoS(
     numberOfDoFsPerAxisInPatch
   );
 
-  const double volumeHCoarse = marker.h()(0)
+  const double volumeHCoarse = marker.getH()(0)
                                / static_cast<double>(numberOfDoFsPerAxisInPatch)
                                * 3.0;
-  const double volumeHFine = marker.h()(0)
+  const double volumeHFine = marker.getH()(0)
                              / static_cast<double>(numberOfDoFsPerAxisInPatch);
 
   tarch::la::Vector<DIMENSIONS, double> leftBottomOfFineCell = marker.getOffset(
@@ -35,7 +35,7 @@ void toolbox::blockstructured::internal::projectCells_AoS(
   tarch::la::Vector<DIMENSIONS, double> leftBottomOfCoarseCell
     = marker.getOffset()
       - tarch::la::multiplyComponents(
-        marker.h(),
+        marker.getH(),
         tarch::la::convertScalar<
           double>(marker.getRelativePositionWithinFatherCell())
       );

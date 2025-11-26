@@ -8,10 +8,8 @@
 
 #include "tarch/multicore/Task.h"
 #include "tarch/multicore/BooleanSemaphore.h"
-#include "tarch/multicore/BooleanSemaphore.h"
 
-#include "peano4/maps/maps.h"
-#include "peano4/grid/grid.h"
+#include "peano4/grid/SplitInstruction.h"
 
 #include "TreeManagementMessage.h"
 
@@ -22,7 +20,7 @@
 namespace peano4 {
   namespace grid {
     class Spacetree;
-    class TraversalObserver;
+    class GridTraversalObserver;
     struct GridStatistics;
     struct AutomatonState;
   }
@@ -56,11 +54,11 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
       private:
         peano4::grid::Spacetree&          _spacetree;
         SpacetreeSet&                     _spacetreeSet;
-        peano4::grid::TraversalObserver&  _observer;
+        peano4::grid::GridTraversalObserver&  _observer;
         const bool                        _invertTreeTraversalDirectionBeforeWeStart;
 
       public:
-        TraverseTask( peano4::grid::Spacetree&  tree, SpacetreeSet& set, peano4::grid::TraversalObserver&  observer, bool invertTreeTraversalDirectionBeforeWeStart );
+        TraverseTask( peano4::grid::Spacetree&  tree, SpacetreeSet& set, peano4::grid::GridTraversalObserver&  observer, bool invertTreeTraversalDirectionBeforeWeStart );
 
   	    /**
          * I create the copy of the observer, run the traversal on my local
@@ -338,7 +336,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      *
      * @see deleteClonedObservers
      */
-    std::map< int, peano4::grid::TraversalObserver* >    _clonedObserver;
+    std::map< int, peano4::grid::GridTraversalObserver* >    _clonedObserver;
 
     peano4::grid::Spacetree& getSpacetree(int id);
 
@@ -363,15 +361,15 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * local data exchange. The second one waits for all MPI operations to
      * terminate.
      */
-    void exchangeHorizontalDataBetweenTrees(peano4::grid::TraversalObserver&  observer);
-    void exchangeVerticalDataBetweenTrees(peano4::grid::TraversalObserver&  observer);
+    void exchangeHorizontalDataBetweenTrees(peano4::grid::GridTraversalObserver&  observer);
+    void exchangeVerticalDataBetweenTrees(peano4::grid::GridTraversalObserver&  observer);
 
     /**
      * I do this after a join/after I've removed an empty tree. Have to call it
      * explicitly, as a join does not delete/throw away the data. It simply hands
      * on data ownership.
      */
-    void deleteAllStacks( peano4::grid::TraversalObserver&  observer, int spacetreeId );
+    void deleteAllStacks( peano4::grid::GridTraversalObserver&  observer, int spacetreeId );
 
     /**
      * Copy the data from a splitting tree onto its new workers
@@ -422,7 +420,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * @see streamDataFromSplittingTreeToNewTree()
      * @see peano4::grid::Spacetree::sendUserData()
      */
-    void streamDataFromSplittingTreesToNewTrees(peano4::grid::TraversalObserver&  observer);
+    void streamDataFromSplittingTreesToNewTrees(peano4::grid::GridTraversalObserver&  observer);
 
     /**
      * This operation should be called pretty close towards the end of a traversal.
@@ -489,7 +487,6 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * All of this painful stuff is done for the vertex data only. For the user
      * data, we can rely on our traditional vertical data exchange mechanisms.
      *
-     * @see peano4::stacks::STDVectorStack::revert()
      */
     void streamLocalVertexInformationToMasterThroughVerticalStacks(
       int spacetreeId, int parentId,
@@ -507,7 +504,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * workers at the same time. If we did so, we'd not be able to run all
      * the merging trees in parallel.
      */
-    void cleanUpTrees(peano4::grid::TraversalObserver&  observer);
+    void cleanUpTrees(peano4::grid::GridTraversalObserver&  observer);
 
     /**
      * I need this routine for technical reasons: Prior to the sweep of trees,
@@ -528,7 +525,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * This operation uses a lock on the semaphore to ensure that no two threads
      * insert an observer into the global table at the same time.
      */
-    void createObserverCloneIfRequired(peano4::grid::TraversalObserver& observer, int treeId);
+    void createObserverCloneIfRequired(peano4::grid::GridTraversalObserver& observer, int treeId);
 
     SpacetreeSet() = default;
     SpacetreeSet(const SpacetreeSet& ) = delete;
@@ -671,14 +668,14 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * a barrier right at the begin of a traversal, then we are fine, as the typical
      * split (asking for further ranks) arises in-between traversals.
      */
-    void traverse(peano4::grid::TraversalObserver& observer);
+    void traverse(peano4::grid::GridTraversalObserver& observer);
 
     /**
      * Return statistics object for primary spacetree.
      */
     peano4::grid::GridStatistics  getGridStatistics() const;
 
-    peano4::grid::GridStatistics  getGridStatistics(int treeId) const;
+    const peano4::grid::GridStatistics&  getGridStatistics(int treeId) const;
 
     /**
      * Split a local tree.
@@ -715,7 +712,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      *
      * @return Split had been successful
      */
-    bool split(int treeId, const peano4::SplitInstruction& instruction, int targetRank);
+    bool split(int treeId, const grid::SplitInstruction& instruction, int targetRank);
 
     /**
      * Codes hold one spacetree set per rank. With this routine, you can find

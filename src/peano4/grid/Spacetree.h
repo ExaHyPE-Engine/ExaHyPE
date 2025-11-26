@@ -7,14 +7,14 @@
 #include "GridStatistics.h"
 #include "GridControlEvent.h"
 #include "GridTraversalEventGenerator.h"
+#include "SpacetreeState.h"
+#include "SplitInstruction.h"
+#include "VertexLookupTable.h"
 
 #include "tarch/logging/Log.h"
 
-// #include "peano4/stacks/Stack.h"
-// #include "peano4/stacks/StackMap.h"
-#include "peano4/stacks/STDVectorStack.h"
-#include "peano4/maps/STDStackMap.h"
-#include "peano4/maps/HierarchicalStackMap.h"
+#include "peano4/stacks/Stack.h"
+#include "peano4/stacks/TreeToStacks.h"
 
 #include <set>
 #include <bitset>
@@ -22,7 +22,7 @@
 namespace peano4 {
   namespace grid {
     class Spacetree;
-    class TraversalObserver;
+    class GridTraversalObserver;
     struct GridTraversalEvent;
 
     namespace tests {
@@ -34,57 +34,12 @@ namespace peano4 {
     class SpacetreeSet;
   }
 }
-
-/**
- * Represents one tree
- */
 class peano4::grid::Spacetree {
-  public:
-    /**
-     * Periodic boundary conditions are technically realised as domain
-     * decomposition, i.e. the vertices along the periodic boundaries carry
-     * rank numbers which host RankOfPeriodicBoundaryCondition. So this is
-     * the rank number dedicated to periodic BCs. As we treat the BCs as
-     * particular neighbour ranks, all data along the periodic BCs is
-     * automatically piped onto specialised streams. This holds for both
-     * user and grid data.
-     *
-     * @see receiveAndMergeUserData()
-     * @see sendUserData()
-     */
-    static constexpr int RankOfPeriodicBoundaryCondition = -2;
-    static constexpr int NumberOfStationarySweepsToWaitAtLeastTillJoin = 2;
-
   private:
     static tarch::logging::Log  _log;
 
     friend class peano4::parallel::SpacetreeSet;
     friend class peano4::grid::tests::SpacetreeTest;
-
-    /**
-     * Can a cell be split (deployed to another rank)
-     *
-     * Not all cells are a fit and can be deployed to another rank even
-     * though the spacetree set wants to split a tree. Please read through
-     * @ref peano_domain_decomposition "Peano's domain decomposition" discussion
-     * and the two splitting constraints therein to understand why this
-     * routine may or may not label a cell as splittable.
-     *
-     * Cells that disqualify for splitting are
-     *
-     * - Cells which a adjacent to a periodic boundary conditions. Such cells
-     *   (including their adjacent vertices) all are kept on tree 0 so all
-     *   periodic boundary data exchange happens on tree 0 only.
-     * - Non-local cells (obviously)
-     * - Local cells whose master is not local. If we'd move such cells to
-     *   another rank, we'd destroy the logical tree topology.
-     * - Cells that are adjacent of hanging nodes, while the parent cell is
-     *   not splitable.
-     */
-    bool isCellSplitCandidate(
-      GridVertex                         coarseGridVertices[TWO_POWER_D],
-      GridVertex                         fineGridVertices[TWO_POWER_D]
-    ) const;
 
     int              _id;
 
@@ -147,17 +102,10 @@ class peano4::grid::Spacetree {
      */
     std::set< int >      _joining;
 
-    using GridVertexStackMap = maps::HierarchicalStackMap<stacks::GridVertexStack>;
-    static GridVertexStackMap  _vertexStack;
+    static stacks::TreeToStacks<stacks::Stack<GridVertex>> _vertexStack;
+    std::vector<VertexLookupTable> _vertexLookupTables;
 
-    // using GridVertexStackMap = stacks::StackMap<stacks::Stack<GridVertex>>;
-    // static GridVertexStackMap _vertexStack;
-
-    /**
-     * We get these control events when we kick off the traversal and then
-     * realise/interpret them.
-     */
-    std::vector< peano4::grid::GridControlEvent >       _gridControlEvents;
+    std::vector<GridControlEvent>       _gridControlEvents;
 
     void evaluateGridControlEvents(
       const AutomatonState& fineGridState,
@@ -190,24 +138,6 @@ class peano4::grid::Spacetree {
       GridVertex            fineGridVertices[TWO_POWER_D]
     ) const;
 
-
-    /**
-     * Returns if a vertex is local to adjacent tree.
-     *
-     * In the definition here, hanging vertices are never adjacent to the local
-     * tree. This is different to the definition in the event generator, where
-     * hanging nodes are taken into account.
-     *
-     * @see GridTraversalEventGenerator::isVertexAdjacentToLocalSpacetree() for a
-     *   slightly different notion of locality.
-     */
-    bool isVertexAdjacentToLocalSpacetree(
-      GridVertex  vertex,
-      bool        splittingIsConsideredLocal,
-      bool        joiningIsConsideredLocal
-    ) const;
-
-
     /**
      * You may exchange data horizontally with rank if and only if
      *
@@ -236,7 +166,7 @@ class peano4::grid::Spacetree {
     void descend(
       const AutomatonState& state,
       GridVertex            vertices[TWO_POWER_D],
-      TraversalObserver&    observer
+      GridTraversalObserver&    observer
     );
 
     /**
@@ -245,56 +175,6 @@ class peano4::grid::Spacetree {
      * equals 2^d. This way we avoid hanging vertices within the domain.
      */
     static void incrementNumberOfAdjacentRefinedLocalCells(GridVertex  vertices[TWO_POWER_D]);
-
-    /**
-     * Takes a state (describing a node in the tree) and returns the
-     * @f$ 3^d @f$ states on the next finer level along the Peano SFC. This
-     * routine is basically the grammar generation of Bader et al. It relies
-     * internally on a recursive call of the other refineState() routine
-     * along the spatial dimensions.
-     *
-     * The array fineGrid is filled along the Peano SFC. So you don't have to
-     * traverse the array with a zfor - a simple for is sufficient.
-     */
-    static void refineState(
-      const AutomatonState&              coarseGrid,
-      AutomatonState                     fineGrid[THREE_POWER_D],
-      tarch::la::Vector<DIMENSIONS,int>  fineGridPosition = tarch::la::Vector<DIMENSIONS,int>(0),
-      int                                axis = DIMENSIONS-1
-    );
-
-    /**
-     * Wrapper around GridTraversalEventGenerator::isSpacetreeNodeLocal()
-     *
-     * This is a boolean which solely studies the vertices passed in. The
-     * generator is the more powerful routine. It offers, for example, an
-     * operation GridTraversalEventGenerator::getTreeOwningSpacetreeNode()
-     * to find out who actually owns a cell.
-     */
-    bool isSpacetreeNodeLocal(
-      GridVertex    vertices[TWO_POWER_D],
-      bool          splittingIsConsideredLocal,
-      bool          joiningIsConsideredLocal
-    ) const;
-
-
-
-    bool areAllVerticesRefined(
-      GridVertex            vertices[TWO_POWER_D]
-    ) const;
-
-    bool areAllVerticesUnrefined(
-      GridVertex            vertices[TWO_POWER_D]
-    ) const;
-
-    /**
-     * Could also be called areAllVerticesPersistent() in the Peano
-     * terminology.
-     */
-    bool areAllVerticesNonHanging(
-      GridVertex            vertices[TWO_POWER_D]
-    ) const;
-
 
     /**
      * Load the vertices of one cell
@@ -315,22 +195,19 @@ class peano4::grid::Spacetree {
       const AutomatonState&                        fineGridState,
       GridVertex                                   coarseGridVertices[TWO_POWER_D],
       GridVertex                                   fineGridVertices[TWO_POWER_D],
+      const VertexType vertexTypes[TWO_POWER_D],
       const tarch::la::Vector<DIMENSIONS,int>&     cellPositionWithin3x3Patch,
-      TraversalObserver&                           observer
+      GridTraversalObserver&                           observer
     );
 
     void storeVertices(
       const AutomatonState&                        fineGridState,
       GridVertex                                   coarseGridVertices[TWO_POWER_D],
       GridVertex                                   fineGridVertices[TWO_POWER_D],
+      const VertexType vertexTypes[TWO_POWER_D],
       const tarch::la::Vector<DIMENSIONS,int>&     cellPositionWithin3x3Patch,
-      TraversalObserver&                           observer
+      GridTraversalObserver&                           observer
     );
-
-    /**
-     * Little helper. Should likely go into la or utils.
-     */
-    static tarch::la::Vector<DIMENSIONS,int> convertToIntegerVector( const std::bitset<DIMENSIONS>& in );
 
     /**
      * This operation has multiple purposes
@@ -360,7 +237,7 @@ class peano4::grid::Spacetree {
       GridVertex&                               vertex,
       GridVertex                                fineGridVertices[TWO_POWER_D],
       const tarch::la::Vector<DIMENSIONS,int>&  fineVertexPositionWithinPatch,
-      TraversalObserver&                        observer
+      GridTraversalObserver&                        observer
     );
 
     /**
@@ -377,27 +254,14 @@ class peano4::grid::Spacetree {
       GridTraversalEvent&  event
     ) const;
 
-
-
-
-    /**
-     *
-     *
-     * <h2> Implementation </h2>
-     *
-     * Run through the vertices in the Peano vertex order (modified z depending on
-     * curve orientation). This information is already implicitly encoded in the order
-     * of the indices within the event. So no fancy arithmetics is required here
-     * anymore.
-     */
-    void receiveAndMergeUserData(const AutomatonState& state, TraversalObserver&  observer, const GridTraversalEvent&  enterCellTraversalEvent, GridVertex  fineGridVertices[TWO_POWER_D]);
+    void receiveAndMergeUserData(const AutomatonState& state, GridTraversalObserver&  observer, const GridTraversalEvent& enterCellTraversalEvent, GridVertex fineGridVertices[TWO_POWER_D]);
 
     /**
      * Send user data
      *
      * Send out data along the MPI boundary (horizontal) and stream data to the
      * splitting, new workers (vertical). This routine is called within
-     * descend() as epilogue, i.e. after all data have been stored savely away
+     * descend() as epilogue, i.e. after all data have been stored safely away
      * on the output streams.
      *
      *
@@ -415,8 +279,8 @@ class peano4::grid::Spacetree {
      * ## Masking and selecting transfer data
      *
      * The routine here does not realise the actual data transfer. It delegates
-     * the actual streaming to the observer's sendFace(), sendVertex() and
-     * sendCell(). As observers are provided by the user - most frequently
+     * the actual streaming to the observer's sendFaceData(), sendVertexData() and
+     * sendCellData(). As observers are provided by the user - most frequently
      * generated through the Python API - we know which user data we have
      * tied to the mesh and hence can champion the data transfer.
      *
@@ -428,14 +292,12 @@ class peano4::grid::Spacetree {
      * splits or joins.
      *
      *
-     *
      * @todo Was passiert bei dynamic AMR?
      *
      * @see peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree()
      *   for a discussion of the splitting process and the required data flows.
      */
-    void sendUserData(const AutomatonState& state, TraversalObserver&  observer, const GridTraversalEvent&  enterCellTraversalEvent, GridVertex  fineGridVertices[TWO_POWER_D]);
-
+    void sendUserData(const AutomatonState& state, GridTraversalObserver&  observer, const GridTraversalEvent&  enterCellTraversalEvent, GridVertex  fineGridVertices[TWO_POWER_D]);
 
     /**
      * @see splitOrJoinCellBottomUp() For both the usage and a description how we
@@ -792,7 +654,7 @@ class peano4::grid::Spacetree {
      * After all, new vertices cannot yet have triggered incoming data. The counterpart
      * is deleted vertices which should not contribute towards a send command.
      *
-     * @return -1  (TraversalObserver::NoData) if there's no neighbour or face is not local.
+     * @return -1  (GridTraversalObserver::NoData) if there's no neighbour or face is not local.
      */
     int  getNeighbourTrees( GridVertex vertex[TWO_POWER_D], int faceNumber, bool calledByReceivingProcess ) const;
 
@@ -1016,9 +878,9 @@ class peano4::grid::Spacetree {
      * @param calledFromSpacetreeSet If you use traverse directly, please do
      *     not alter this value
      */
-    void traverse(TraversalObserver& observer, bool calledFromSpacetreeSet = false);
+    void traverse(GridTraversalObserver& observer, bool calledFromSpacetreeSet = false);
 
-    GridStatistics getGridStatistics() const;
+    const GridStatistics& getGridStatistics() const;
 
     std::string toString() const;
 

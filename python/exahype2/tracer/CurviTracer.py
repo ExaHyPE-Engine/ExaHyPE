@@ -120,7 +120,7 @@ class CurviTracer(ActionSet):
               {{ORDER}},
               repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
               unknownsPerDoF,
-              fineGridCell{{SOLVER_NAME}}Q.value,
+              fineGridCell{{SOLVER_NAME}}Q.data(),
               _coordinates[i],
               unknown
             );

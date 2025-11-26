@@ -15,30 +15,26 @@ private:
   static tarch::logging::Log _log;
 
   static_assert(T::Cardinality > 0);
-  static_assert(std::is_trivial_v<typename T::DoFType> == true);
-  static_assert(std::is_standard_layout_v<typename T::DoFType> == true);
+  static_assert(std::is_trivial_v<typename T::DoFType>);
+  static_assert(std::is_standard_layout_v<typename T::DoFType>);
 
   std::vector<typename T::DoFType> _sendBuffer;
   std::vector<typename T::DoFType> _receiveBuffer;
 
 public:
-  StackWithSerialisation()                                          = default;
-  ~StackWithSerialisation() override                                = default;
-  StackWithSerialisation(const StackWithSerialisation&)             = delete;
-  StackWithSerialisation& operator=(const StackWithSerialisation&)  = delete;
-  StackWithSerialisation(StackWithSerialisation&&)                  = delete;
-  StackWithSerialisation& operator=(StackWithSerialisation&&)       = delete;
+  StackWithSerialisation()                                         = default;
+  virtual ~StackWithSerialisation() override                       = default;
+  StackWithSerialisation(const StackWithSerialisation&)            = delete;
+  StackWithSerialisation& operator=(const StackWithSerialisation&) = delete;
+  StackWithSerialisation(StackWithSerialisation&&)                 = delete;
+  StackWithSerialisation& operator=(StackWithSerialisation&&)      = delete;
 
 #ifdef WITH_MPI
-  void startSend(
-    const grid::TraversalObserver::SendReceiveContext context,
-    const int                                         rank,
-    const int                                         tag,
-    const MPI_Comm                                    comm
-  ) {
+  void startSend(const SendReceiveContext context, const int rank, const int tag, const MPI_Comm comm) {
     assertion(this->_ioMode == IOMode::None);
     assertion(this->_ioMPIRequest == MPI_REQUEST_NULL);
-    assertion(this->_data.size() > 0);
+    assertion(this->size() > 0);
+    assertion(not this->_ioMPIActive);
 
     this->_ioMode = IOMode::MPISend;
     this->_ioTag  = tag;
@@ -46,8 +42,9 @@ public:
 
     logDebug("startSend()", this->toString());
 
-    _sendBuffer.resize(this->_data.size() * T::Cardinality);
+    _sendBuffer.resize(this->size() * T::Cardinality);
     serialise();
+
     const MPI_Datatype dtype  = translateContextIntoDatatype<T>(context);
     const int          result = MPI_Isend(
       _sendBuffer.data(),
@@ -66,18 +63,21 @@ public:
       );
       assertion(false);
     }
+
     this->_ioMPIActive = true;
   }
 
   void startReceive(
-    const grid::TraversalObserver::SendReceiveContext context,
-    const int                                         rank,
-    const int                                         tag,
-    const MPI_Comm                                    comm,
-    const int                                         numberOfElements
+    const SendReceiveContext context,
+    const int                rank,
+    const int                tag,
+    const MPI_Comm           comm,
+    const int                numberOfElements
   ) {
     assertion3(this->_ioMode == IOMode::None, rank, tag, numberOfElements);
     assertion3(numberOfElements > 0, rank, tag, numberOfElements);
+    assertion(this->_ioMPIRequest == MPI_REQUEST_NULL);
+    assertion(not this->_ioMPIActive);
 
     this->_ioMode = IOMode::MPIReceive;
     this->_ioTag  = tag;
@@ -87,6 +87,7 @@ public:
 
     this->resize(numberOfElements);
     _receiveBuffer.resize(numberOfElements * T::Cardinality);
+
     const MPI_Datatype dtype  = translateContextIntoDatatype<T>(context);
     const int          result = MPI_Irecv(
       _receiveBuffer.data(),
@@ -106,6 +107,7 @@ public:
       );
       assertion(false);
     }
+
     this->_ioMPIActive = true;
   }
 
@@ -124,8 +126,9 @@ public:
         deserialise();
         logDebug("tryToFinishSendOrReceive()", "Receive complete: " << this->toString());
       }
-      this->_ioMode      = IOMode::None;
-      this->_ioMPIActive = false;
+      this->_ioMode       = IOMode::None;
+      this->_ioMPIActive  = false;
+      this->_ioMPIRequest = MPI_REQUEST_NULL;
 
       return true;
     }
@@ -135,14 +138,17 @@ public:
 
 private:
   void serialise() {
-    for (std::size_t i = 0; i < this->_data.size(); ++i) {
-      std::copy_n(this->_data[i].value, T::Cardinality, _sendBuffer.data() + i * T::Cardinality);
+    for (std::size_t i = 0; i < this->size(); ++i) {
+      std::copy_n(this->_data[i].data(), T::Cardinality, _sendBuffer.data() + i * T::Cardinality);
     }
   }
 
   void deserialise() {
-    for (std::size_t i = 0; i < this->_data.size(); ++i) {
-      std::copy_n(_receiveBuffer.data() + i * T::Cardinality, T::Cardinality, this->_data[i].value);
+    for (std::size_t i = 0; i < this->size(); ++i) {
+      // if (this->_data[i].data() == nullptr) {
+      //   this->_data[i] = T(); // Default-construct allocates
+      // }
+      std::copy_n(_receiveBuffer.data() + i * T::Cardinality, T::Cardinality, this->_data[i].data());
     }
   }
 #endif // WITH_MPI

@@ -9,16 +9,25 @@ namespace peano4::grid::tests {
   class GridControlEventTest;
 } // namespace peano4::grid::tests
 
-class peano4::grid::tests::GridControlEventTest: public tarch::tests::TestCase {
+class peano4::grid::tests::GridControlEventTest final: public tarch::tests::TestCase {
 private:
-  static tarch::logging::Log _log;
-
+  void testOperatorLess();
+  void testSort();
+  void testSortDeterministicGrid();
+  void testMergeEraseRefineCancellation();
+  void testMergeTolerance();
+  void testMergeAdjacency();
   void testMerge1();
   void testMerge2();
   void testMerge3();
-  void testSortWithinMerge();
+  void testMPIDatatype();
 
 public:
   GridControlEventTest();
-  virtual void run() override;
+  ~GridControlEventTest() override final = default;
+
+  /**
+   * This routine is triggered by the TestCaseCollection
+   */
+  void run() override final;
 };

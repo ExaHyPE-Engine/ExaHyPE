@@ -82,8 +82,8 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
         ) -> void {
           repositories::{{SOLVER_INSTANCE}}.initialCondition( Q, faceCentre, gridCellH, true );
         },
-        marker.x(),
-        marker.h(),
+        marker.getX(),
+        marker.getH(),
         {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<DIMENSIONS ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
@@ -92,8 +92,8 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         marker.getSelectedFaceNumber(),
         {0.0, 0.0, 0.0},
-        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
-        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value,
+        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.data(),
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.data(),
         {...} //approximate background solution at infinity 
       );
       </pre>

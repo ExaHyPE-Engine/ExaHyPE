@@ -180,7 +180,7 @@ it for the first/last time and these things can run in parallel.
     
 
 An algorithmic step (Observer) within Python corresonds 1:1 to a class of the
-type peano4::grid::TraversalObserver, and it holds a set of actions. Actions 
+type peano4::grid::GridTraversalObserver, and it holds a set of actions. Actions 
 are represented by the Python class peano4.solversteps.ActionSet. Each action set within an observer (algorithmic step) has two relevant 
 properties:
 

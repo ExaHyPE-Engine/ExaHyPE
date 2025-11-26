@@ -12,7 +12,7 @@ void exahype2::fv::particles::projection::depositMass_PiecewiseConstant(
   std::cout << "[depositMass_PiecewiseConstant] Called with:\n";
   std::cout << "  particleX = " << particleX << "\n";
   std::cout << "  mass = " << mass << ", unknownIndex = " << unknownIndex << "\n";
-  std::cout << "  marker offset = " << marker.getOffset() << ", h = " << marker.h() << "\n";
+  std::cout << "  marker offset = " << marker.getOffset() << ", h = " << marker.getH() << "\n";
 
   // Map particle to its voxel
   tarch::la::Vector<DIMENSIONS, int>
@@ -28,7 +28,7 @@ void exahype2::fv::particles::projection::depositMass_PiecewiseConstant(
     << ")\n";
 
   // Compute voxel volume
-  double h = marker.h()(0) / voxelsPerAxis;
+  double h = marker.getH()(0) / voxelsPerAxis;
   std::cout << "  h (voxel length) = " << h << "\n";
 
   double volume = 1.0;

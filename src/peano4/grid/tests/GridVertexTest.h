@@ -6,11 +6,13 @@
 
 namespace peano4::grid::tests {
   class GridVertexTest;
-}
+} // namespace peano4::grid::tests
 
 class peano4::grid::tests::GridVertexTest final: public tarch::tests::TestCase {
 private:
+  void testFlagsAndState();
   void testCreateGridVertex();
+  void testMPIDatatype();
 
 public:
   GridVertexTest();

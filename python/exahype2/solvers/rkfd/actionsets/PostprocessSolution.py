@@ -107,9 +107,9 @@ class CellWisePostprocessSolution(AbstractRKFDActionSet):
     logTraceIn( "touchCellFirstTime(...)" );
     int index = 0;
     dfor( volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
-      double* value   = fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index;
-      auto    volumeX = ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, volume);
-      auto    volumeH = ::exahype2::fv::getVolumeSize( marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}});
+      double* value   = fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + index;
+      auto    volumeX = ::exahype2::fv::getVolumeCentre( marker.getX(), marker.getH(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, volume);
+      auto    volumeH = ::exahype2::fv::getVolumeSize( marker.getH(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}});
       
       """ + operation_per_point + """
       

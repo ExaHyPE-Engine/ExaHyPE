@@ -13,8 +13,6 @@ import os
 
 from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
 
-from exahype2.solvers.Storage import Storage
-
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     Template = """
@@ -27,9 +25,9 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     {{PREDICATES[PREDICATE_NO]}}
   ) {
 #if DIMENSIONS==2
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data() + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
 #elif DIMENSIONS==3
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data() + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
 #endif
 
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
@@ -253,19 +251,3 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         )
         d["ENCLAVE_TASK_PRIORITY"] = self.enclave_task_priority
         d["MAKE_COPY_OF_ENCLAVE_TASK_DATA"] = self.make_copy_of_enclave_task_data
-
-
-    def switch_storage_scheme(
-        self,
-        cell_data_storage: Storage,
-        face_data_storage: Storage,
-    ):
-        if cell_data_storage == Storage.SmartPointers:
-            self.make_copy_of_enclave_task_data = False
-        else:
-            self.make_copy_of_enclave_task_data = True
-            
-        super(SeparateSweepsWithEnclaveTasking, self).switch_storage_scheme(
-            cell_data_storage,
-            face_data_storage
-        )

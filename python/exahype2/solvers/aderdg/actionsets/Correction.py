@@ -29,14 +29,14 @@ class Correction(AbstractADERDGActionSet):
      * 2d: 0,1,2,3 -> 0,2,1,3
      * 3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
      */
-    {{CORRECTOR_COMPUTATION_PRECISION}}* FL = fineGridFace{{SOLVER_NAME}}QFluxEstimates.value;
-    {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFace{{SOLVER_NAME}}QFluxEstimates.value + FluxElementsPerFace;
-    {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFace{{SOLVER_NAME}}QEstimates.value;
-    {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFace{{SOLVER_NAME}}QEstimates.value + BasisElementsPerFace;
+    {{CORRECTOR_COMPUTATION_PRECISION}}* FL = fineGridFace{{SOLVER_NAME}}QFluxEstimates.data();
+    {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFace{{SOLVER_NAME}}QFluxEstimates.data() + FluxElementsPerFace;
+    {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFace{{SOLVER_NAME}}QEstimates.data();
+    {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFace{{SOLVER_NAME}}QEstimates.data() + BasisElementsPerFace;
     const int direction = marker.getSelectedFaceNumber() % DIMENSIONS;
     const int faceNumber  = marker.getSelectedFaceNumber();
     const bool isBoundary = fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary();
-    const auto& faceCentre = marker.x();
+    const auto& faceCentre = marker.getX();
     {{RIEMANN_SOLVER_CALL}}
   }
 """
@@ -47,7 +47,7 @@ class Correction(AbstractADERDGActionSet):
     // Reuse the same timeStepSize from the predictor
     const double timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
 
-    {{SOLUTION_STORAGE_PRECISION}}* QNew = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+    {{SOLUTION_STORAGE_PRECISION}}* QNew = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
     constexpr int FluxElementsPerFace = kernels::{{SOLVER_NAME}}::getBndFluxSize();
 
     for (int d = 0; d < DIMENSIONS; d++) {
@@ -56,7 +56,7 @@ class Correction(AbstractADERDGActionSet):
       // Negative face
       if (!fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()) {
         // If above hanging face, the Riemann fluxes have been received from the other side and are therefore on that side.
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value + (fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getAboveHanging() ? 0 : FluxElementsPerFace);
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).data() + (fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getAboveHanging() ? 0 : FluxElementsPerFace);
         const int orientation = 0;
         {{FACE_INTEGRAL_CALL}}
       }
@@ -64,7 +64,7 @@ class Correction(AbstractADERDGActionSet):
       // Positive face
       if (!fineGridFaces{{SOLVER_NAME}}FaceLabel(d + DIMENSIONS).getIsHanging()) {
         // If above hanging face, the Riemann fluxes have been received from the other side and are therefore on that side.
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).value + (fineGridFaces{{SOLVER_NAME}}FaceLabel(d + DIMENSIONS).getAboveHanging() ? FluxElementsPerFace : 0);
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).data() + (fineGridFaces{{SOLVER_NAME}}FaceLabel(d + DIMENSIONS).getAboveHanging() ? FluxElementsPerFace : 0);
         const int orientation = 1;
         {{FACE_INTEGRAL_CALL}}
       }
@@ -77,7 +77,7 @@ class Correction(AbstractADERDGActionSet):
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
 
-    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp + timeStepSize, tarch::la::min(marker.h()), tarch::la::max(marker.h()));
+    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp + timeStepSize, tarch::la::min(marker.getH()), tarch::la::max(marker.getH()));
   }
 """
 
@@ -96,9 +96,15 @@ class Correction(AbstractADERDGActionSet):
         self._solver._init_dictionary_with_default_parameters(d)
         self._solver.add_entries_to_text_replacement_dictionary(d)
         self._add_action_set_entries_to_dictionary(d)
-        if operation_name == peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME
+        ):
             result = jinja2.Template(self._Template_TouchFaceFirstTime).render(**d)
-        if operation_name == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME
+        ):
             result = jinja2.Template(self._Template_TouchCellFirstTime).render(**d)
         return result
 

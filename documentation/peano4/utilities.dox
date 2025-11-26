@@ -20,11 +20,11 @@ Details can be found in the source code documentatation within the file
 or online, but the collection of macros allows you to write code alike
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-dfor(k,20) { // d-dimensional loop over 20x20x20x... patch
+dfor(k, 20) { // d-dimensional loop over 20x20x20x... patch
   // There is now a d-dimensional vector k over integers which holds the
   // loop index. So we can write for example
   const tarch::la::Vector<DIMENSIONS,double> somePosition =
-    offset + k.convertScalar<double>() * h;
+    offset + tarch::la::convertScalar<double>(k) * h;
   [...]
 }
 ~~~~~~~~~~~~~~~~~~~~~~~

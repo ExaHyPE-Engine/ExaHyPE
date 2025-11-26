@@ -94,8 +94,9 @@ class ArgumentParser(argparse.ArgumentParser):
         )
         self.add_argument(
             "--trees",
-            default="::exahype2::LoadBalancingConfiguration::UseNumberOfThreads",
-            help="Number of trees (partitions) per rank after initial decomposition.",
+            type=int,
+            default="-1",
+            help="Number of trees (partitions) per rank.",
         )
 
         self.add_argument(

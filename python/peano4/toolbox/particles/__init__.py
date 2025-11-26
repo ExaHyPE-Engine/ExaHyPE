@@ -7,12 +7,7 @@ from .Particle import Particle
 from .PlotParticlesInVTKFormat import PlotParticlesInVTKFormat
 from .ParticleAMR import ParticleAMR
 
-
 from .ParticleSet import ParticleSet
-from .ParticleSet import ParticleSetGenerator_ScatteredOnHeap_IndexByList
-from .ParticleSet import ParticleSetGenerator_ScatteredOnHeap_IndexByVector
-from .ParticleSet import ParticleSetGenerator_ContinuousPerVertex
-from .ParticleSet import ParticleSetGenerator_GlobalContinuous
 
 
 from .UpdateParticle_MultiLevelInteraction_Sets import (

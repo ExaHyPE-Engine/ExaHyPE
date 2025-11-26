@@ -51,12 +51,12 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   double* NOALIAS                        reconstructedPatch,
   double* NOALIAS                        targetPatch
 ) {
-  ::exahype2::CellData  patchData( reconstructedPatch, marker.x(), marker.h(), t, dt, targetPatch );
+  ::exahype2::CellData  patchData( reconstructedPatch, marker.getX(), marker.getH(), t, dt, targetPatch );
 
   {% if STATELESS_PDE_TERMS %}
   if ( repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       t,
       dt
   )) {
@@ -330,8 +330,8 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
 {% if STATELESS_PDE_TERMS %}
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
   return repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(
-    _marker.x(),
-    _marker.h(),
+    _marker.getX(),
+    _marker.getH(),
     _t,
     _dt
   );
@@ -348,8 +348,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   int currentTask = 0;
   for (auto& p: otherTasks) {
     patchData.QIn[currentTask]         = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
-    patchData.cellCentre[currentTask]  = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.x();
-    patchData.cellSize[currentTask]    = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
+    patchData.cellCentre[currentTask]  = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.getX();
+    patchData.cellSize[currentTask]    = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.getH();
     patchData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
     patchData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
     patchData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_taskNumber;
@@ -358,8 +358,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     currentTask++;
   }
   patchData.QIn[currentTask]         = _inputValues;
-  patchData.cellCentre[currentTask]  = _marker.x();
-  patchData.cellSize[currentTask]    = _marker.h();
+  patchData.cellCentre[currentTask]  = _marker.getX();
+  patchData.cellSize[currentTask]    = _marker.getH();
   patchData.t[currentTask]           = _t;
   patchData.dt[currentTask]          = _dt;
   patchData.id[currentTask]          = _taskNumber;

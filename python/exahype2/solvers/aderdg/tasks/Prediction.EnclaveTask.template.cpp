@@ -92,8 +92,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
       cellData.faces[1][cellIndex][f]     = static_cast<Prediction{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_faces[1][f];
     }
     cellData.QOut[cellIndex]              = static_cast<Prediction{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_QOut;
-    cellData.cellSize[cellIndex]          = static_cast<Prediction{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_marker.h();
-    cellData.cellCentre[cellIndex]        = static_cast<Prediction{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_marker.x();
+    cellData.cellSize[cellIndex]          = static_cast<Prediction{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_marker.getH();
+    cellData.cellCentre[cellIndex]        = static_cast<Prediction{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_marker.getX();
     cellData.maxEigenvalue[cellIndex]     = 0.0;
     delete otherTask;
     cellIndex++;
@@ -106,8 +106,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     cellData.faces[1][cellIndex][f]       = _faces[1][f];
   }
   cellData.QOut[cellIndex]                = _QOut;
-  cellData.cellCentre[cellIndex]          = _marker.x();
-  cellData.cellSize[cellIndex]            = _marker.h();
+  cellData.cellCentre[cellIndex]          = _marker.getX();
+  cellData.cellSize[cellIndex]            = _marker.getH();
   cellData.maxEigenvalue[cellIndex]       = 0.0;
 
   for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {

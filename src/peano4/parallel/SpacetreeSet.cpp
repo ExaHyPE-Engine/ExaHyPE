@@ -4,10 +4,10 @@
 
 #include "Node.h"
 #include "tarch/tarch.h"
-#include "peano4/grid/grid.h"
+#include "peano4/grid/GridStatistics.h"
 #include "peano4/grid/PeanoCurve.h"
 #include "peano4/grid/Spacetree.h"
-#include "peano4/grid/TraversalObserver.h"
+#include "peano4/grid/GridTraversalObserver.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/mpi/Rank.h"
@@ -119,7 +119,7 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
         state, p.getSenderRank(), _requestMessageTag, tarch::mpi::Rank::getInstance().getCommunicator()
       );
       peano4::grid::Spacetree newTree(
-        p.getWorkerSpacetreeId(), p.getMasterSpacetreeId(), state.getX(), state.getH(), state.getInverted()
+        p.getWorkerSpacetreeId(), p.getMasterSpacetreeId(), state.x, state.h, state.getInverted()
       );
 
       _spacetrees.push_back(std::move(newTree));
@@ -192,7 +192,7 @@ void peano4::parallel::SpacetreeSet::addSpacetree(int masterId, int newTreeId) {
     TreeManagementMessage::receive(message, targetRank, getAnswerTag(masterId), tarch::mpi::Rank::getInstance().getCommunicator());
     assertion1(message.getAction() == TreeManagementMessage::Action::Acknowledgement, message.toString());
 
-    peano4::grid::AutomatonState state = _spacetrees.begin()->_root;
+    const peano4::grid::AutomatonState& state = _spacetrees.begin()->_root;
     logDebug("addSpacetree()", "Send state " << state.toString() << " to rank " << targetRank);
     peano4::grid::AutomatonState::send(state, targetRank, _requestMessageTag, tarch::mpi::Rank::getInstance().getCommunicator());
 
@@ -205,8 +205,8 @@ void peano4::parallel::SpacetreeSet::addSpacetree(int masterId, int newTreeId) {
     peano4::grid::Spacetree newTree(
       newTreeId,
       masterId,
-      _spacetrees.begin()->_root.getX(),
-      _spacetrees.begin()->_root.getH(),
+      _spacetrees.begin()->_root.x,
+      _spacetrees.begin()->_root.h,
       _spacetrees.begin()->_root.getInverted()
     );
     tarch::multicore::Lock lock(_semaphore);
@@ -218,7 +218,7 @@ void peano4::parallel::SpacetreeSet::addSpacetree(int masterId, int newTreeId) {
 peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
   peano4::grid::Spacetree&         tree,
   SpacetreeSet&                    set,
-  peano4::grid::TraversalObserver& observer,
+  peano4::grid::GridTraversalObserver& observer,
   bool                             invertTreeTraversalDirectionBeforeWeStart
 ):
   Task(Task::NoTaskType, Task::DefaultPriority),
@@ -236,10 +236,10 @@ bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
   return false;
 }
 
-void peano4::parallel::SpacetreeSet::createObserverCloneIfRequired(peano4::grid::TraversalObserver& observer, int treeId) {
+void peano4::parallel::SpacetreeSet::createObserverCloneIfRequired(peano4::grid::GridTraversalObserver& observer, int treeId) {
   tarch::multicore::Lock lock(_semaphore);
   if (_clonedObserver.count(treeId) == 0) {
-    _clonedObserver.insert(std::pair<int, peano4::grid::TraversalObserver*>(treeId, observer.clone(treeId)));
+    _clonedObserver.insert(std::pair<int, peano4::grid::GridTraversalObserver*>(treeId, observer.clone(treeId)));
   }
   if (_clonedObserver[treeId] == nullptr) {
     _clonedObserver[treeId] = observer.clone(treeId);
@@ -298,7 +298,7 @@ void peano4::parallel::SpacetreeSet::streamLocalVertexInformationToMasterThrough
 }
 
 
-void peano4::parallel::SpacetreeSet::deleteAllStacks(peano4::grid::TraversalObserver& observer, int spacetreeId) {
+void peano4::parallel::SpacetreeSet::deleteAllStacks(peano4::grid::GridTraversalObserver& observer, int spacetreeId) {
   logTraceInWith1Argument("deleteAllStacks(int)", spacetreeId);
   deleteAllStacks(peano4::grid::Spacetree::_vertexStack, spacetreeId);
   createObserverCloneIfRequired(observer, spacetreeId);
@@ -307,12 +307,12 @@ void peano4::parallel::SpacetreeSet::deleteAllStacks(peano4::grid::TraversalObse
 }
 
 
-void peano4::parallel::SpacetreeSet::exchangeVerticalDataBetweenTrees(peano4::grid::TraversalObserver& observer) {
+void peano4::parallel::SpacetreeSet::exchangeVerticalDataBetweenTrees(peano4::grid::GridTraversalObserver& observer) {
   logTraceIn("exchangeVerticalDataBetweenTrees()");
 
   for (auto& p : _spacetrees) {
     logDebug(
-      "exchangeVerticalDataBetweenTrees(TraversalObserver&)",
+      "exchangeVerticalDataBetweenTrees(GridTraversalObserver&)",
       "Manage data transfer of tree " << p._id << " in state " << peano4::grid::toString(p._spacetreeState)
     );
 
@@ -323,7 +323,7 @@ void peano4::parallel::SpacetreeSet::exchangeVerticalDataBetweenTrees(peano4::gr
   }
 
   logDebug(
-    "exchangeVerticalDataBetweenTrees(TraversalObserver&)",
+    "exchangeVerticalDataBetweenTrees(GridTraversalObserver&)",
     "All local data exchange realised, all MPI message exchange triggered. Wait for MPI communication."
   );
 
@@ -336,7 +336,7 @@ void peano4::parallel::SpacetreeSet::exchangeVerticalDataBetweenTrees(peano4::gr
 }
 
 
-void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees(peano4::grid::TraversalObserver& observer) {
+void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees(peano4::grid::GridTraversalObserver& observer) {
   logTraceInWith1Argument("streamDataFromSplittingTreesToNewTrees()", _spacetrees.size());
 
   for (auto& parent : _spacetrees) {
@@ -369,12 +369,12 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees(pean
 }
 
 
-void peano4::parallel::SpacetreeSet::exchangeHorizontalDataBetweenTrees(peano4::grid::TraversalObserver& observer) {
+void peano4::parallel::SpacetreeSet::exchangeHorizontalDataBetweenTrees(peano4::grid::GridTraversalObserver& observer) {
   logTraceIn("exchangeHorizontalDataBetweenTrees()");
 
   for (auto& p : _spacetrees) {
     logDebug(
-      "exchangeHorizontalDataBetweenTrees(TraversalObserver&)",
+      "exchangeHorizontalDataBetweenTrees(GridTraversalObserver&)",
       "manage data transfer of tree " << p._id << " in state " << peano4::grid::toString(p._spacetreeState)
     );
     exchangeAllHorizontalDataExchangeStacks(peano4::grid::Spacetree::_vertexStack, p._id, true);
@@ -387,7 +387,7 @@ void peano4::parallel::SpacetreeSet::exchangeHorizontalDataBetweenTrees(peano4::
   }
 
   logDebug(
-    "exchangeHorizontalDataBetweenTrees(TraversalObserver&)",
+    "exchangeHorizontalDataBetweenTrees(GridTraversalObserver&)",
     "all local data exchange realised, all MPI message exchange triggered. Wait for MPI to terminate"
   );
 
@@ -430,7 +430,7 @@ void peano4::parallel::SpacetreeSet::deleteClonedObservers() {
 }
 
 
-void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& observer) {
+void peano4::parallel::SpacetreeSet::traverse(peano4::grid::GridTraversalObserver& observer) {
   logTraceIn("traverse()");
 
   // if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
@@ -529,7 +529,7 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
 }
 
 
-void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserver& observer) {
+void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::GridTraversalObserver& observer) {
   logTraceIn("cleanUpTrees()");
   for (auto p = _spacetrees.begin(); p != _spacetrees.end();) {
     /*
@@ -552,7 +552,7 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserve
       deleteAllStacks(observer, p->_id);
       Node::getInstance().deregisterId(p->_id);
       p = _spacetrees.erase(p);
-    } else if (p->mayJoinWithMaster() and p->getGridStatistics().getNumberOfLocalUnrefinedCells() == 0) {
+    } else if (p->mayJoinWithMaster() and p->getGridStatistics().numberOfLocalUnrefinedCells == 0) {
       logInfo("traverse(Observer)", "Remove empty tree " << p->_id << " with master " << p->_masterId);
       deleteAllStacks(observer, p->_id);
       Node::getInstance().deregisterId(p->_id);
@@ -624,39 +624,27 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserve
 }
 
 
-peano4::grid::GridStatistics peano4::parallel::SpacetreeSet::getGridStatistics(int treeId) const {
+const peano4::grid::GridStatistics& peano4::parallel::SpacetreeSet::getGridStatistics(int treeId) const {
   assertion2(isLocalSpacetree(treeId), treeId, tarch::mpi::Rank::getInstance().getRank());
   return getSpacetree(treeId).getGridStatistics();
 }
 
-
 peano4::grid::GridStatistics peano4::parallel::SpacetreeSet::getGridStatistics() const {
-  logTraceIn("getGridStatistics()");
-  if (_spacetrees.empty()) {
-    peano4::grid::GridStatistics result(
-      0, // __numberOfLocalUnrefinedCells,
-      0, // __numberOfRemoteUnrefinedCells,
-      0, // __numberOfLocalRefinedCells
-      0, // __numberOfRemoteRefinedCells,
-      0, // __stationarySweeps,
-      false,
-      false,
-      tarch::la::Vector<DIMENSIONS, double>(std::numeric_limits<double>::max()) // minH
-    );
-    logTraceOutWith1Argument("getGridStatistics()", result.toString());
-    return result;
-  } else {
-    peano4::grid::GridStatistics result(_spacetrees.begin()->_statistics);
-    for (auto& from : _spacetrees) {
-      if (from._id != _spacetrees.begin()->_id and from._spacetreeState != peano4::grid::SpacetreeState::NewFromSplit) {
-        result = result + from._statistics;
-      }
-    }
-    logTraceOutWith1Argument("getGridStatistics()", result.toString());
-    return result;
-  }
-}
+  grid::GridStatistics result;
+  bool any = false;
 
+  for (const auto& tree : _spacetrees) {
+    if (tree._spacetreeState == grid::SpacetreeState::NewFromSplit) continue;
+    if (!any) {
+      result = tree._statistics;
+      any = true;
+    } else {
+      result += tree._statistics;
+    }
+  }
+
+  return any ? result : grid::GridStatistics{};
+}
 
 bool peano4::parallel::SpacetreeSet::isLocalSpacetree(int treeId) const {
   for (auto& p : _spacetrees) {
@@ -678,7 +666,7 @@ std::set<int> peano4::parallel::SpacetreeSet::getLocalSpacetrees() const {
 }
 
 
-bool peano4::parallel::SpacetreeSet::split(int treeId, const peano4::SplitInstruction& instruction, int targetRank) {
+bool peano4::parallel::SpacetreeSet::split(int treeId, const grid::SplitInstruction& instruction, int targetRank) {
   logTraceInWith3Arguments("split()", treeId, instruction, targetRank);
   peano4::grid::Spacetree& tree = getSpacetree(treeId);
 

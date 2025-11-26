@@ -40,21 +40,21 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
   if ( 
     not marker.willBeRefined() 
     and
-    tarch::la::greater( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH) 
+    tarch::la::greater( tarch::la::max( marker.getH() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH) 
   ) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
   } 
   else if ( 
     not marker.willBeRefined() 
     and
-    tarch::la::greaterEquals( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH )
+    tarch::la::greaterEquals( tarch::la::max( marker.getH() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH )
     and
     not fineGridCell{{CELL_LABEL_NAME}}.getAMDCriterionEvaluatedThroughoutGridConstruction()
  ) { 
     refinementCriterion = repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
       nullptr,
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       0.0
     );
     fineGridCell{{CELL_LABEL_NAME}}.setAMDCriterionEvaluatedThroughoutGridConstruction(true);
@@ -68,7 +68,7 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
     and
     not marker.willBeRefined() 
     and
-    tarch::la::greater( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH) 
+    tarch::la::greater( tarch::la::max( marker.getH() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH) 
   ) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
   } 
@@ -78,21 +78,21 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
     fineGridCell{{CELL_LABEL_NAME}}.getHasUpdated()
   ) { 
     refinementCriterion = repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
-      fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
-      marker.x(),
-      marker.h(),
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
+      marker.getX(),
+      marker.getH(),
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
     );
      
     if (
       refinementCriterion==::exahype2::RefinementCommand::Refine 
       and 
-      tarch::la::smaller( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH )
+      tarch::la::smaller( tarch::la::max( marker.getH() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH )
     ) {
       logDebug( "touchCellFirstTime(...)", "drop refine instructions, as mesh would be too small" );
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
-    else if (refinementCriterion==::exahype2::RefinementCommand::Erase and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH ) {
+    else if (refinementCriterion==::exahype2::RefinementCommand::Erase and 3.0* tarch::la::max( marker.getH() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
   }
@@ -101,7 +101,7 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
   }
 
   {% endif %}    
-  _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion, {{EVENT_LIFETIME}} );
+  _localRefinementControl.addCommand( marker.getX(), marker.getH(), refinementCriterion, {{EVENT_LIFETIME}} );
   logTraceOutWith1Argument( "touchCellFirstTime(...)", toString(refinementCriterion) );
   """
   

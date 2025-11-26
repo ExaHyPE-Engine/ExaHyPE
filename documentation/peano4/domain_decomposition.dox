@@ -173,11 +173,11 @@ users can define domain-specific logic:
 
 Event  | Semantics | Dependencies
 ------------- | ------------- | -------------
-receiveAndMergeVertex | If a vertex exists on N different trees, this routine is called N-1 times per tree, i.e. in total N(N-1) times: Each local vertex is presented its N-1 counterparts per traversal. | This routine precedes touchVertexFirstTime().
-receiveAndMergeFace | If a face exists on two trees, this routine is called once per tree, i.e. twice in total: Each local face is presented its counterpart per traversal. | This routine precedes touchVertexFaceTime().
+receiveAndMergeVertexData | If a vertex exists on N different trees, this routine is called N-1 times per tree, i.e. in total N(N-1) times: Each local vertex is presented its N-1 counterparts per traversal. | This routine precedes touchVertexFirstTime().
+receiveAndMergeFaceData | If a face exists on two trees, this routine is called once per tree, i.e. twice in total: Each local face is presented its counterpart per traversal. | This routine precedes touchVertexFaceTime().
 ------------- | ------------- | -------------
-touchVertexLastTime | Afer this routine has terminated, each tree takes (for all vertices along a boundary) the latest version and shares it with all other replicas. It sends it out. The sent data will be presented to the merge routine on the counterpart at an arbitrary time in the next mesh sweep. | This routine precedes receiveAndMergeVertex of the next mesh sweep. 
-touchFaceLastTime | Afer this routine has terminated, each tree takes (for all faces along a boundary) the latest version and shares it with the other tree holding a copy of this face. It sends it out. The sent data will be presented to the merge routine on the counterpart at an arbitrary time in the next mesh sweep. | This routine precedes receiveAndMergeFace of the next mesh sweep. 
+touchVertexLastTime | Afer this routine has terminated, each tree takes (for all vertices along a boundary) the latest version and shares it with all other replicas. It sends it out. The sent data will be presented to the merge routine on the counterpart at an arbitrary time in the next mesh sweep. | This routine precedes receiveAndMergeVertexData of the next mesh sweep. 
+touchFaceLastTime | Afer this routine has terminated, each tree takes (for all faces along a boundary) the latest version and shares it with the other tree holding a copy of this face. It sends it out. The sent data will be presented to the merge routine on the counterpart at an arbitrary time in the next mesh sweep. | This routine precedes receiveAndMergeFaceData of the next mesh sweep. 
 ------------- | ------------- | -------------
 prepareTraversal | Is called once per rank before we create the actual action sets. | Precedes the beginTraversal() calls which are called once per subtree.
 unprepareTraversal | Is called ocne per rank after the rank-local traversals have all terminated. | Follows the last endTraversal() call.
@@ -637,10 +637,6 @@ at domain boundaries multiple times.
 For faces, you can simply check if a face is at the parallel boundary. For this,
 peano4::datamanagement::FaceMarker provides you the routine
 peano4::datamanagement::FaceMarker::isAdjacentToParallelBoundary().
-For vertices, the equivalent is peano4::datamanagement::VertexMarker::getNumberOfAdjacentTrees().
-
-
-
 
 
 ## Distributed memory (MPI) realisation

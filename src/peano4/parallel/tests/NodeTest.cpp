@@ -3,7 +3,7 @@
 
 #include "tarch/la/Vector.h"
 
-#include "peano4/grid/Spacetree.h"
+#include "peano4/grid/SpacetreeHelper.h"
 
 tarch::logging::Log peano4::parallel::tests::NodeTest::_log("peano4::parallel::tests::NodeTest");
 
@@ -33,7 +33,7 @@ void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryEx
   // Top right corner
   //
   std::array<int, TWO_POWER_D>  flagsTopRightVertex;
-  flagsTopRightVertex.fill(peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition);
+  flagsTopRightVertex.fill(peano4::grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition);
   flagsTopRightVertex[0] = 0;
 
   std::set< peano4::parallel::Node::PeriodicBoundaryStackIdentifier > resultTopRightVertex = peano4::parallel::Node::getOutputStacksForPeriodicBoundaryExchange(flagsTopRightVertex);
@@ -59,7 +59,7 @@ void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryEx
   // bottom left vertex
   //
   std::array<int, TWO_POWER_D> flagsBottomLeftVertex;
-  flagsBottomLeftVertex.fill(peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition);
+  flagsBottomLeftVertex.fill(peano4::grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition);
   flagsBottomLeftVertex[3] = 0;
 
   std::set< peano4::parallel::Node::PeriodicBoundaryStackIdentifier > resultBottomLeftVertex = peano4::parallel::Node::getOutputStacksForPeriodicBoundaryExchange(flagsBottomLeftVertex);
@@ -101,7 +101,7 @@ void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryEx
   #endif
   #if DIMENSIONS==3
   std::array<int, TWO_POWER_D> flags;
-  flags.fill(peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition);
+  flags.fill(peano4::grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition);
   flags[0] = 0;
 
   std::set< peano4::parallel::Node::PeriodicBoundaryStackIdentifier > result = peano4::parallel::Node::getOutputStacksForPeriodicBoundaryExchange(flags);
@@ -114,8 +114,8 @@ void peano4::parallel::tests::NodeTest::testGetPeriodicBoundaryNumber() {
   #if DIMENSIONS==2
   std::array<int, TWO_POWER_D> flags;
   flags.fill(1);
-  flags[0] = peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition;
-  flags[1] = peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition;
+  flags[0] = peano4::grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition;
+  flags[1] = peano4::grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition;
 
   std::bitset<2*DIMENSIONS> result = peano4::parallel::Node::getPeriodicBoundaryNumber(flags);
   validateEquals( result.to_ulong(), 2 );

@@ -518,7 +518,7 @@ if __name__ == "__main__":
                                                                projection_kernel_arguments="""marker,
                                                                 {{PATCH_SIZE}},
                                                                 {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-                                                                fineGridCell{{SOLVER_NAME}}Q.value,
+                                                                fineGridCell{{SOLVER_NAME}}Q.data(),
                                                                 fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
                                                                 {17,18,19},
                                                                 {-1,-1,-1},

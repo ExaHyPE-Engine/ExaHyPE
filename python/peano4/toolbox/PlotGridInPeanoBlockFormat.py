@@ -76,7 +76,7 @@ class PlotGridInPeanoBlockFormat(ActionSet):
 
 
   def get_body_of_getGridControlEvents(self):
-    return "  return std::vector< peano4::grid::GridControlEvent >();\n" 
+    return "  return std::vector< ::peano4::grid::GridControlEvent >();\n" 
 
 
   def get_action_set_name(self):
@@ -92,8 +92,8 @@ class PlotGridInPeanoBlockFormat(ActionSet):
   int vertexIndices[TWO_POWER_D];
 
   int indices = _writer->plotPatch(
-    marker.x() - marker.h() * 0.5,
-    marker.h()
+    marker.getX() - marker.getH() * 0.5,
+    marker.getH()
   );
 
   assertion( _dataWriter!=nullptr );

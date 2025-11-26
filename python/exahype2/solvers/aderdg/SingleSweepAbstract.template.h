@@ -72,10 +72,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     // User-defined solver constants
     {{SOLVER_CONSTANTS}}
 
-    {% if USE_POINT_SOURCE %}
+{% if USE_POINT_SOURCE %}
     static constexpr int NumberOfPointSources = {{NUMBER_OF_POINT_SOURCES}};
     static double pointSourceLocation[NumberOfPointSources][DIMENSIONS];
-    {% endif %}
+{% endif %}
 
     /**
      * Maximum mesh size that this solver wants/is allowed to support. Peano 4
@@ -193,9 +193,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     /**
      * Within the DG context, mesh is an alias for cell.
+     * TODO: Patch is probably the better name than mesh.
      */
     virtual double getMaxMeshSize() const override final;
     virtual double getMinMeshSize() const override final;
+
+    virtual int getNumberOfDoFs() const override final;
 
     /**
      * Update the global solver state, i.e. inform the solver about some

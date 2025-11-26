@@ -7,7 +7,7 @@
 #include "peano4/utils/Globals.h"
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/grid/GridTraversalEvent.h"
-#include "peano4/grid/TraversalObserver.h"
+#include "peano4/grid/GridTraversalObserver.h"
 
 #include "tarch/la/Vector.h"
 
@@ -21,7 +21,7 @@ namespace {{ item }} {
 }
 {%- endfor %}
 
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public peano4::grid::TraversalObserver {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::peano4::grid::GridTraversalObserver {
 private:
   static tarch::logging::Log _log;
 
@@ -44,61 +44,39 @@ public:
    */
   {{CLASSNAME}}(int spacetreeId = SpacetreePrototype);
 
-  virtual void loadCell(const peano4::grid::GridTraversalEvent& event) override;
-  virtual void enterCell(const peano4::grid::GridTraversalEvent& event) override;
-  virtual void leaveCell(const peano4::grid::GridTraversalEvent& event) override;
-  virtual void storeCell(const peano4::grid::GridTraversalEvent& event) override;
+  virtual GridTraversalObserver* clone(int spacetreeId) override;
 
-  virtual TraversalObserver* clone(int spacetreeId) override;
+  virtual std::vector<::peano4::grid::GridControlEvent> getGridControlEvents() const override;
 
-  virtual std::vector<peano4::grid::GridControlEvent> getGridControlEvents() const override;
-
-  /**
-   * Prepare traversal
-   *
-   * This routine is not called by the spacetree set or the spacetree. It is
-   * up to the user to invoke it. Typically, this is done in the main: You
-   * create the reference instance of the observer (the one that then serves
-   * as blueprint for all trees) and you call the prepare operation on it. It
-   * is static, so this kind of makes sense (and you could actually call it
-   * before you create the reference instance):
-   *
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   * observers::TimeStep observer;
-   * observers::TimeStep::prepareTraversal();
-   * watch.start();
-   * peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-   * watch.stop();
-   * observers::TimeStep::unprepareTraversal();
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   *
-   * The code snippet above is just an example. Codes like SWIFT or ExaHyPE
-   * typically add the prepare/unprepare calls automatically to their main.
-   */
   static void prepareTraversal();
-
-  /**
-   * @see prepareTraversal()
-   */
   static void unprepareTraversal();
 
   virtual void beginTraversal(const tarch::la::Vector<DIMENSIONS,double>& x, const tarch::la::Vector<DIMENSIONS,double>& h) override;
   virtual void endTraversal(const tarch::la::Vector<DIMENSIONS,double>& x, const tarch::la::Vector<DIMENSIONS,double>& h) override;
 
-  {%- if VERTICES %}
-  virtual void sendVertex(int position, int toStack, peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) override;
-  virtual void receiveAndMergeVertex(int position, int fromStack, SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) override;
-  {%- endif %}
+  virtual void enterNode(const ::peano4::grid::GridTraversalEvent& event) override;
+  virtual void leaveNode(const ::peano4::grid::GridTraversalEvent& event) override;
 
-  {%- if FACES %}
-  virtual void sendFace(int position, int toStack, peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) override;
-  virtual void receiveAndMergeFace(int position, int fromStack, SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) override;
-  {%- endif %}
+{%- if VERTICES %}
+  virtual void loadVertexData(const ::peano4::grid::GridTraversalEvent& event) override;
+  virtual void storeVertexData(const ::peano4::grid::GridTraversalEvent& event) override;
+  virtual void sendVertexData(int position, int toStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) override;
+  virtual void receiveAndMergeVertexData(int position, int fromStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) override;
+{%- endif %}
 
-  {%- if CELLS %}
-  virtual void sendCell(int toStack, peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) override;
-  virtual void receiveAndMergeCell(int fromStack, SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) override;
-  {%- endif %}
+{%- if FACES %}
+  virtual void loadFaceData(const ::peano4::grid::GridTraversalEvent& event) override;
+  virtual void storeFaceData(const ::peano4::grid::GridTraversalEvent& event) override;
+  virtual void sendFaceData(int position, int toStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) override;
+  virtual void receiveAndMergeFaceData(int position, int fromStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) override;
+{%- endif %}
+
+{%- if CELLS %}
+  virtual void loadCellData(const ::peano4::grid::GridTraversalEvent& event) override;
+  virtual void storeCellData(const ::peano4::grid::GridTraversalEvent& event) override;
+  virtual void sendCellData(int toStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) override;
+  virtual void receiveAndMergeCellData(int fromStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) override;
+{%- endif %}
 
   virtual void exchangeAllVerticalDataExchangeStacks(int masterId) override;
   virtual void exchangeAllHorizontalDataExchangeStacks(bool symmetricDataCardinality) override;

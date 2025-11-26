@@ -29,7 +29,7 @@ def get_body_of_adm_constraints(patch_size, number_of_output_variable, so_flag):
         dfor( dof, 3 ) {
           for (int unknown : auxiliaryVarsIndices) {
             oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] = //abuse of RHS, auxiliary variables are stored there.
-              fineGridCellCCZ4QRhsEstimates.value[ enumeratorWithoutAuxiliaryVariables(0,dof,unknown) ];
+              fineGridCellCCZ4QRhsEstimates.data()[ enumeratorWithoutAuxiliaryVariables(0,dof,unknown) ];
           }   
         } 
     """
@@ -37,7 +37,7 @@ def get_body_of_adm_constraints(patch_size, number_of_output_variable, so_flag):
     extra_derivative_assign=""
   return """ 
         const int patchSize = """ + str( patch_size ) + """;
-        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
+        double volumeH = ::exahype2::fv::getVolumeLength(marker.getH(),patchSize);
 
     const int n_a_v="""+str(number_of_output_variable)+""";
     const int overlap=3; //make sure you are using fd4 solver!
@@ -71,7 +71,7 @@ def get_body_of_adm_constraints(patch_size, number_of_output_variable, so_flag):
         admconstraints(constraints, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ);
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables ( 1, patchSize, 0, 59, n_a_v);
         for (int i=0;i<n_a_v;i++){
-          fineGridCellCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+i) ] = constraints[i]; 
+          fineGridCellCCZ4Q.data()[ enumeratorWithAuxiliaryVariables(0,cell,59+i) ] = constraints[i]; 
         }
       }  
     } 
@@ -88,7 +88,7 @@ def get_body_of_Psi_Calc(patch_size, number_of_output_variable, so_flag):
         dfor( dof, 3 ) {
           for (int unknown : auxiliaryVarsIndices) {
             oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] = //abuse of RHS, auxiliary variables are stored there.
-              fineGridCellCCZ4QRhsEstimates.value[ enumeratorWithoutAuxiliaryVariables(0,dof,unknown) ];
+              fineGridCellCCZ4QRhsEstimates.data()[ enumeratorWithoutAuxiliaryVariables(0,dof,unknown) ];
           }   
         } 
     """
@@ -96,7 +96,7 @@ def get_body_of_Psi_Calc(patch_size, number_of_output_variable, so_flag):
     extra_derivative_assign=""
   return """ 
         const int patchSize = """ + str( patch_size ) + """;
-        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
+        double volumeH = ::exahype2::fv::getVolumeLength(marker.getH(),patchSize);
 
     const int n_a_v="""+str(number_of_output_variable)+""";
     const int overlap=3; //make sure you are using fd4 solver!
@@ -143,8 +143,8 @@ def get_body_of_Psi_Calc(patch_size, number_of_output_variable, so_flag):
         for (int d=0; d<3; d++) currentPosition[d]=marker.getOffset()(d)+(cell(d)+0.5)*volumeH;
         Psi4Calc(Psi4, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ, currentPosition);
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1, patchSize, 0, 59, n_a_v);
-        fineGridCellCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+0) ] = Psi4[0]; 
-        fineGridCellCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+1) ] = Psi4[1];
+        fineGridCellCCZ4Q.data()[ enumeratorWithAuxiliaryVariables(0,cell,59+0) ] = Psi4[0]; 
+        fineGridCellCCZ4Q.data()[ enumeratorWithAuxiliaryVariables(0,cell,59+1) ] = Psi4[1];
       }  
     } 
 """
@@ -182,8 +182,8 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables, res
           //Q[54] = 1/(1+1.0/2/r)/(1+1.0/2/r);
           Q[16] = 1.0; Q[54] = 1.0;
         },
-        marker.x(),
-        marker.h(),
+        marker.getX(),
+        marker.getH(),
         {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<DIMENSIONS ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
@@ -192,8 +192,8 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables, res
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         marker.getSelectedFaceNumber(),
         {0.0, 0.0, 0.0},
-        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
-        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value,
+        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.data(),
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.data(),
         """+timeStamp+"""
       );
 """
@@ -221,8 +221,8 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables, res
           Q[0] = 1.0; Q[3] = 1.0; Q[5] = 1.0;
           Q[16] = 1.0; Q[54] = 1.0;
         },
-        marker.x(),
-        marker.h(),
+        marker.getX(),
+        marker.getH(),
         {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<DIMENSIONS ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
@@ -231,8 +231,8 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables, res
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         marker.getSelectedFaceNumber(),
         {0.0, 0.0, 0.0},
-        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
-        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value,
+        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.data(),
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.data(),
         """+timeStamp+"""
       );
 """

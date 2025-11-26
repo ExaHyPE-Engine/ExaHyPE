@@ -138,7 +138,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
       bool isLocal = (mask & p->getContainedInAdjacentCell()).any();
       assertionEquals4( 
         isLocal, 
-        marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.h() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ),
+        marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.getH() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ),
         marker.toString(), p->toString(), i, mask
       );
       localParticleIsContainedInCell.push_back( isLocal );
@@ -179,7 +179,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
         return result
 
     def get_body_of_getGridControlEvents(self):
-        return "  return std::vector< peano4::grid::GridControlEvent >();\n"
+        return "  return std::vector< ::peano4::grid::GridControlEvent >();\n"
 
     def get_body_of_prepareTraversal(self):
         return self.d["PREPARE_TRAVERSAL_KERNEL"]

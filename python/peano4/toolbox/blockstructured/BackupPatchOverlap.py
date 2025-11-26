@@ -53,7 +53,7 @@ class BackupPatchOverlap(ActionSet):
 
 
   def get_body_of_getGridControlEvents(self):
-    return "  return std::vector< peano4::grid::GridControlEvent >();\n" 
+    return "  return std::vector< ::peano4::grid::GridControlEvent >();\n" 
 
 
   def get_action_set_name(self):
@@ -66,18 +66,18 @@ class BackupPatchOverlap(ActionSet):
 
   __Template = """
     if ({GUARD_PREDICATE}) {{
-      logTraceInWith3Arguments( "--backup patch overlap from {FACES_ACCESSOR_IN} into {FACES_ACCESSOR_OUT}--(...)", marker.toString(), {FACES_ACCESSOR_OUT}.value, {FACES_ACCESSOR_IN}.value );
+      logTraceInWith3Arguments( "--backup patch overlap from {FACES_ACCESSOR_IN} into {FACES_ACCESSOR_OUT}--(...)", marker.toString(), {FACES_ACCESSOR_OUT}.data(), {FACES_ACCESSOR_IN}.data() );
       int counter = 0;
       dfore(k,{DOFS_PER_AXIS},0,0) {{
         for (int i=0; i<{OVERLAP}*2; i++) {{
           for (int j=0; j<{UNKNOWNS}; j++) {{
-            // assertion4( {FACES_ACCESSOR_IN}.value[counter]=={FACES_ACCESSOR_IN}.value[counter], k,i,j, marker.toString() );
-            {FACES_ACCESSOR_OUT}.value[counter] = {FACES_ACCESSOR_IN}.value[counter];
+            // assertion4( {FACES_ACCESSOR_IN}.data()[counter]=={FACES_ACCESSOR_IN}.data()[counter], k,i,j, marker.toString() );
+            {FACES_ACCESSOR_OUT}.data()[counter] = {FACES_ACCESSOR_IN}.data()[counter];
             counter++;
           }}
         }}
       }}
-      logTraceOutWith1Argument( "--backup patch overlap from {FACES_ACCESSOR_IN} into {FACES_ACCESSOR_OUT}--(...)", {FACES_ACCESSOR_IN}.value[0] );
+      logTraceOutWith1Argument( "--backup patch overlap from {FACES_ACCESSOR_IN} into {FACES_ACCESSOR_OUT}--(...)", {FACES_ACCESSOR_IN}.data()[0] );
     }}
 """
 

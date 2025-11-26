@@ -130,7 +130,7 @@ class ActionSet(object):
      *
      * <h2> Thread safety </h2>
      *
-     * The creation of individual trees usually happens through peano4::parallel::SpacetreeSet::createObserverCloneIfRequired().
+     * The creation of individual trees usually happens through ::peano4::parallel::SpacetreeSet::createObserverCloneIfRequired().
      * This routine is called lazily when we start to traverse a subtree.
      * Therefore, the creation of actions is not thread-safe.
      *
@@ -143,7 +143,7 @@ class ActionSet(object):
           outputfile.write( "    " + self.classname + "(int treeNumber);\n\n" )
           outputfile.write( "    ~" + self.classname + "();\n\n" )
           outputfile.write( """
-    std::vector< peano4::grid::GridControlEvent > getGridControlEvents() const;
+    std::vector< ::peano4::grid::GridControlEvent > getGridControlEvents() const;
     static void prepareTraversal();
     static void unprepareTraversal();
 """ )
@@ -181,7 +181,7 @@ class ActionSet(object):
       outputfile.write( self.implementation.get_destructor_body() )
       outputfile.write( "}\n\n\n" )
 
-      outputfile.write( "std::vector< peano4::grid::GridControlEvent > " + self.__get_full_qualified_class_name() + "::getGridControlEvents() const {\n" )
+      outputfile.write( "std::vector< ::peano4::grid::GridControlEvent > " + self.__get_full_qualified_class_name() + "::getGridControlEvents() const {\n" )
       outputfile.write( self.implementation.get_body_of_getGridControlEvents() )
       outputfile.write( "}\n\n\n" )
 

@@ -13,23 +13,23 @@ class InitialCondition(AbstractADERDGActionSet):
 
 {% if INITIALISE_PATCHES is sameas True %}
     repositories::{{SOLVER_INSTANCE}}.initialCondition(
-      fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
-      marker.x(),
-      marker.h(),
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
+      marker.getX(),
+      marker.getH(),
       {{GRID_IS_CONSTRUCTED}}
     );
 {% else %}
     dfor(index, {{ORDER}} + 1) {
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.value + linearisedIndex,
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + linearisedIndex,
         ::exahype2::dg::getQuadraturePoint(
-          marker.x(),
-          marker.h(),
+          marker.getX(),
+          marker.getH(),
           index,
           repositories::{{SOLVER_INSTANCE}}.Order + 1,
           kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes
         ),
-        marker.h(),
+        marker.getH(),
         {{GRID_IS_CONSTRUCTED}}
       );
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
@@ -42,7 +42,7 @@ class InitialCondition(AbstractADERDGActionSet):
     constexpr int SpaceBasisSize     = {{ORDER+1}} * {{ORDER+1}} * {{ORDER+1}} * {{NUMBER_OF_UNKNOWNS+NUMBER_OF_AUXILIARY_VARIABLES}};
 #endif
 
-    std::copy_n(fineGridCell{{UNKNOWN_IDENTIFIER}}.value, SpaceBasisSize, fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value);
+    std::copy_n(fineGridCell{{UNKNOWN_IDENTIFIER}}.data(), SpaceBasisSize, fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data());
 
 {% if USE_POINT_SOURCE %}
     repositories::{{SOLVER_INSTANCE}}.initPointSourceLocations(repositories::{{SOLVER_INSTANCE}}.pointSourceLocation);
@@ -50,7 +50,7 @@ class InitialCondition(AbstractADERDGActionSet):
 
     const double timeStamp = 0.0;
     const double timeStepSize = 0.0;
-    {{SOLUTION_STORAGE_PRECISION}}* QNew = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+    {{SOLUTION_STORAGE_PRECISION}}* QNew = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
 
     // Relevant for tracing et al which kicks in if and only if cell has been updated

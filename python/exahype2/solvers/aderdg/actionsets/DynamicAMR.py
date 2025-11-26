@@ -43,10 +43,10 @@ class DynamicAMR(AbstractADERDGActionSet):
     if (!marker.isInteriorFaceWithinPatch()) {
       // Interpolate both estimates and fluxes
       kernels::{{SOLVER_NAME}}::faceUnknownsProlongation(
-        fineGridFace{{SOLVER_NAME}}QEstimates.value + facePosition * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}),
-        fineGridFace{{SOLVER_NAME}}QFluxEstimates.value + facePosition * {{NUMBER_OF_UNKNOWNS}},
-        coarseGridFaces{{SOLVER_NAME}}QEstimates(marker.getSelectedFaceNumber()).value + facePosition * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}),
-        coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value + facePosition * {{NUMBER_OF_UNKNOWNS}},
+        fineGridFace{{SOLVER_NAME}}QEstimates.data() + facePosition * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}),
+        fineGridFace{{SOLVER_NAME}}QFluxEstimates.data() + facePosition * {{NUMBER_OF_UNKNOWNS}},
+        coarseGridFaces{{SOLVER_NAME}}QEstimates(marker.getSelectedFaceNumber()).data() + facePosition * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}),
+        coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).data() + facePosition * {{NUMBER_OF_UNKNOWNS}},
         marker.getRelativePositionWithinFatherFace()
       );
     }
@@ -68,9 +68,8 @@ class DynamicAMR(AbstractADERDGActionSet):
   constexpr int FluxElementsPerFace   = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
 
   if ({{DELETE_GUARD}}) {
-
     int facePosition = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : 1;
-    auto* FOut = coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value + (1-facePosition) * FluxElementsPerFace;
+    auto* FOut = coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).data() + (1 - facePosition) * FluxElementsPerFace;
 
     //Delete the elements on the side of the face that the Riemann fluxes will be merged onto. Because of the
     //  merge operations this must be on the side on which the fine cells are.
@@ -83,42 +82,62 @@ class DynamicAMR(AbstractADERDGActionSet):
 
     // Fluxes
     kernels::{{SOLVER_NAME}}::faceFluxRestriction(
-      coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value + (1-facePosition) * FluxElementsPerFace, // const double* lQhbndCoarse
-      fineGridFace{{SOLVER_NAME}}QFluxEstimates.value + facePosition * FluxElementsPerFace, // double* lQhbndFine
+      coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).data() + (1-facePosition) * FluxElementsPerFace, // const double* lQhbndCoarse
+      fineGridFace{{SOLVER_NAME}}QFluxEstimates.data() + facePosition * FluxElementsPerFace, // double* lQhbndFine
       marker.getRelativePositionWithinFatherFace() // const tarch::la::Vector<DIMENSIONS - 1, int>& subfaceIndex
     );
   }
 """
 
-        self._Template_CreateCell = """    
+        self._Template_CreateCell = (
+            """
   logTraceIn( "createCell(...)" );
 
   kernels::{{SOLVER_NAME}}::cellUnknownsProlongation(
-    fineGridCell{{SOLVER_NAME}}Q.value,
-    coarseGridCell{{SOLVER_NAME}}Q.value,
+    fineGridCell{{SOLVER_NAME}}Q.data(),
+    coarseGridCell{{SOLVER_NAME}}Q.data(),
     marker.getRelativePositionWithinFatherCell()
   );
 
-  fineGridCell""" + solver._cell_label.name + """.setTimeStamp( coarseGridCell""" + solver._cell_label.name + """.getTimeStamp() );
-  fineGridCell""" + solver._cell_label.name + """.setTimeStepSize( coarseGridCell""" + solver._cell_label.name + """.getTimeStepSize() );
+  fineGridCell"""
+            + solver._cell_label.name
+            + """.setTimeStamp( coarseGridCell"""
+            + solver._cell_label.name
+            + """.getTimeStamp() );
+  fineGridCell"""
+            + solver._cell_label.name
+            + """.setTimeStepSize( coarseGridCell"""
+            + solver._cell_label.name
+            + """.getTimeStepSize() );
 
   logTraceOut( "createCell(...)" );
 """
+        )
 
-        self._Template_DestroyCell = """
+        self._Template_DestroyCell = (
+            """
   logTraceInWith1Argument( "destroyCell(...)", marker.toString() );
 
   kernels::{{SOLVER_NAME}}::cellUnknownsRestriction(
-    fineGridCell{{SOLVER_NAME}}Q.value,
-    coarseGridCell{{SOLVER_NAME}}Q.value,
+    fineGridCell{{SOLVER_NAME}}Q.data(),
+    coarseGridCell{{SOLVER_NAME}}Q.data(),
     marker.getRelativePositionWithinFatherCell()
   );
 
-  coarseGridCell""" + solver._cell_label.name + """.setTimeStamp( fineGridCell""" + solver._cell_label.name + """.getTimeStamp() );
-  coarseGridCell""" + solver._cell_label.name + """.setTimeStepSize( fineGridCell""" + solver._cell_label.name + """.getTimeStepSize() );
+  coarseGridCell"""
+            + solver._cell_label.name
+            + """.setTimeStamp( fineGridCell"""
+            + solver._cell_label.name
+            + """.getTimeStamp() );
+  coarseGridCell"""
+            + solver._cell_label.name
+            + """.setTimeStepSize( fineGridCell"""
+            + solver._cell_label.name
+            + """.getTimeStepSize() );
   
   logTraceOut( "destroyCell(...)" );
 """
+        )
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
@@ -141,12 +160,12 @@ class DynamicAMR(AbstractADERDGActionSet):
             d["RESTRICT_GUARD"] = self._restrict_guard
             result = jinja2.Template(self._Template_DestroyHangingFace).render(**d)
             pass
-        if operation_name==peano4.solversteps.ActionSet.OPERATION_CREATE_CELL:
-          result  = jinja2.Template(self._Template_CreateCell).render(**d)
-          pass
-        if operation_name==peano4.solversteps.ActionSet.OPERATION_DESTROY_CELL:
-          result  = jinja2.Template(self._Template_DestroyCell).render(**d)
-          pass
+        if operation_name == peano4.solversteps.ActionSet.OPERATION_CREATE_CELL:
+            result = jinja2.Template(self._Template_CreateCell).render(**d)
+            pass
+        if operation_name == peano4.solversteps.ActionSet.OPERATION_DESTROY_CELL:
+            result = jinja2.Template(self._Template_DestroyCell).render(**d)
+            pass
         return result
 
     def get_includes(self):

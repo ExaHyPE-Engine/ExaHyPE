@@ -2,81 +2,72 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <string>
-
-#ifdef WITH_MPI
-#include <functional>
-#include <mpi.h>
-#endif
-
-#include "peano4/grid/LoadStoreComputeFlag.h"
-#include "peano4/grid/TraversalObserver.h"
 #include "peano4/utils/Globals.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/services/ServiceRepository.h"
 
-namespace peano4 {
-  namespace grid {
-    struct AutomatonState;
-  } // namespace grid
-} // namespace peano4
+#include <type_traits>
+
+namespace peano4::grid {
+  struct AutomatonState;
+} // namespace peano4::grid
 
 struct peano4::grid::AutomatonState {
-public:
-  AutomatonState() = default;
-  AutomatonState(
-    const int                                    __level,
-    const tarch::la::Vector<DIMENSIONS, double>& __x,
-    const tarch::la::Vector<DIMENSIONS, double>& __h,
-    const bool                                   __inverted,
-    const std::bitset<DIMENSIONS>&               __evenFlags,
-    const tarch::la::Vector<TWO_TIMES_D, int>&   __accessNumber
-  );
+  int level = 0;
 
-  AutomatonState(const AutomatonState& copy);
-  AutomatonState& operator=(const AutomatonState& other);
+  tarch::la::Vector<DIMENSIONS, double> x{};
+  tarch::la::Vector<DIMENSIONS, double> h{};
 
-  ~AutomatonState() = default;
+  // Does not have to be tarch::la::Vector as we don't do linear algebra on this
+  std::array<std::int8_t, TWO_TIMES_D> accessNumber{};
 
-  enum ObjectConstruction { NoData };
+  using flag_t = std::conditional_t<(DIMENSIONS <= 31), std::uint32_t, std::uint64_t>;
+  flag_t flags = 0; // [0..DIMENSIONS-1] = even flags, [DIMENSIONS] = inverted
 
-  AutomatonState(ObjectConstruction):
+  AutomatonState() noexcept = default;
+  enum class ObjectConstruction { NoData };
+  AutomatonState(ObjectConstruction) noexcept:
     AutomatonState() {}
 
-  inline int  getLevel() const { return _level; }
-  inline void setLevel(int value) { _level = value; }
+  static constexpr flag_t evenMaskAll() { return (flag_t(1) << DIMENSIONS) - flag_t(1); }
+  static constexpr flag_t evenMask(int i) { return flag_t(1) << i; }
+  static constexpr flag_t invertedMask() { return flag_t(1) << DIMENSIONS; }
 
-  inline tarch::la::Vector<DIMENSIONS, double> getX() const { return _x; }
-  inline void                                  setX(const tarch::la::Vector<DIMENSIONS, double>& value) { _x = value; }
-  inline double                                getX(int index) const { return _x(index); }
-  inline void                                  setX(int index, double value) { _x(index) = value; }
+  INLINE_METHOD bool getInverted() const noexcept { return (flags & invertedMask()) != 0; }
+  INLINE_METHOD void setInverted(bool v) noexcept { setFlag(invertedMask(), v); }
 
-  inline tarch::la::Vector<DIMENSIONS, double> getH() const { return _h; }
-  inline void                                  setH(const tarch::la::Vector<DIMENSIONS, double>& value) { _h = value; }
-  inline double                                getH(int index) const { return _h(index); }
-  inline void                                  setH(int index, double value) { _h(index) = value; }
+  INLINE_METHOD bool getEvenFlag(int d) const noexcept { return (flags & evenMask(d)) != 0; }
+  INLINE_METHOD void setEvenFlag(int d, bool v) noexcept { setFlag(evenMask(d), v); }
+  INLINE_METHOD void flipEvenFlag(int d) noexcept { flags ^= evenMask(d); }
 
-  inline bool getInverted() const { return _inverted; }
-  inline void setInverted(bool value) { _inverted = value; }
+  INLINE_METHOD bool getFlag(flag_t bit) const noexcept { return (flags & bit) != 0; }
+  INLINE_METHOD void setFlag(flag_t bit) noexcept { flags |= bit; }
+  INLINE_METHOD void clearFlag(flag_t bit) noexcept { flags &= ~bit; }
+  INLINE_METHOD void setFlag(flag_t bit, bool v) noexcept { v ? setFlag(bit) : clearFlag(bit); }
 
-  inline std::bitset<DIMENSIONS> getEvenFlags() const { return _evenFlags; }
-  inline void                    setEvenFlags(const std::bitset<DIMENSIONS>& value) { _evenFlags = value; }
-  inline bool                    getEvenFlags(int index) const { return _evenFlags[index]; }
-  inline void                    setEvenFlags(int index, bool value) { _evenFlags[index] = value; }
-  inline void                    flipEvenFlags(int index) { _evenFlags[index] = not _evenFlags[index]; }
+  std::string toString() const;
 
-  inline tarch::la::Vector<TWO_TIMES_D, int> getAccessNumber() const { return _accessNumber; }
-  inline void setAccessNumber(const tarch::la::Vector<TWO_TIMES_D, int>& value) { _accessNumber = value; }
-  inline int  getAccessNumber(int index) const { return _accessNumber(index); }
-  inline void setAccessNumber(int index, int value) { _accessNumber(index) = value; }
+  /**
+   * Takes a state (describing a node in the tree) and returns the
+   * @f$ 3^d @f$ states on the next finer level along the Peano SFC. This
+   * routine is basically the grammar generation of Bader et al. It relies
+   * internally on a recursive call of the other refineState() routine
+   * along the spatial dimensions.
+   *
+   * The array fineGrid is filled along the Peano SFC. So you don't have to
+   * traverse the array with a zfor - a simple for is sufficient.
+   */
+  static void refineState(
+    const AutomatonState&              coarseGrid,
+    AutomatonState                     fineGrid[THREE_POWER_D],
+    tarch::la::Vector<DIMENSIONS, int> fineGridPosition = tarch::la::Vector<DIMENSIONS, int>(0),
+    int                                axis             = DIMENSIONS - 1
+  );
 
 #ifdef WITH_MPI
-  /**
-   * Hands out MPI datatype if we work without the LLVM MPI extension.
-   * If we work with this additional feature, this is the routine where
-   * the lazy initialisation is done and the datatype is also cached.
-   */
+  static MPI_Datatype Datatype;
+  int                 senderDestinationRank = -1;
+
   static MPI_Datatype getForkDatatype();
   static MPI_Datatype getJoinDatatype();
   static MPI_Datatype getBoundaryExchangeDatatype();
@@ -89,86 +80,42 @@ public:
   static void freeMultiscaleDataExchangeDatatype();
   static void freeGlobalCommunicationDatatype();
 
-  /**
-   * @return The rank of the sender of an object. It only make ssense to call
-   *         this routine after you've invoked receive with MPI_ANY_SOURCE.
-   */
-  int getSenderRank() const;
-
-  /**
-   * Wrapper around getDatatype() to trigger lazy evaluation if we
-   * use the lazy initialisation.
-   */
   static void initDatatype();
-
-  /**
-   * Free the underlying MPI datatype.
-   */
   static void shutdownDatatype();
 
-  /**
-   * In DaStGen (the first version), I had a non-static version of the send
-   * as well as the receive. However, this did not work with newer C++11
-   * versions, as a member function using this as pointer usually doesn't
-   * see the vtable while the init sees the object from outside, i.e.
-   * including a vtable. So this routine now is basically an alias for a
-   * blocking MPI_Send.
-   */
-  static void send(const peano4::grid::AutomatonState& buffer, int destination, int tag, MPI_Comm communicator);
-  static void receive(peano4::grid::AutomatonState& buffer, int source, int tag, MPI_Comm communicator);
+  static void send(const AutomatonState& buffer, int destination, int tag, MPI_Comm communicator);
+  static void receive(AutomatonState& buffer, int source, int tag, MPI_Comm communicator);
 
-  /**
-   * Alternative to the other send() where I trigger a non-blocking send an
-   * then invoke the functor until the corresponding MPI_Test tells me that
-   * the message went through. In systems with heavy MPI usage, this can
-   * help to avoid deadlocks.
-   */
   static void send(
-    const peano4::grid::AutomatonState& buffer,
-    int                                 destination,
-    int                                 tag,
-    std::function<void()>               startCommunicationFunctor,
-    std::function<void()>               waitFunctor,
-    MPI_Comm                            communicator
+    const AutomatonState& buffer,
+    int                   destination,
+    int                   tag,
+    std::function<void()> startCommunicationFunctor,
+    std::function<void()> waitFunctor,
+    MPI_Comm              communicator
   );
   static void receive(
-    peano4::grid::AutomatonState& buffer,
-    int                           source,
-    int                           tag,
-    std::function<void()>         startCommunicationFunctor,
-    std::function<void()>         waitFunctor,
-    MPI_Comm                      communicator
+    AutomatonState&       buffer,
+    int                   source,
+    int                   tag,
+    std::function<void()> startCommunicationFunctor,
+    std::function<void()> waitFunctor,
+    MPI_Comm              communicator
   );
-#endif
 
-#ifdef WITH_MPI
   static void sendAndPollDanglingMessages(
-    const peano4::grid::AutomatonState& message,
-    int                                 destination,
-    int                                 tag,
-    MPI_Comm                            communicator = tarch::mpi::Rank::getInstance().getCommunicator()
+    const AutomatonState& message,
+    int                   destination,
+    int                   tag,
+    MPI_Comm              communicator = tarch::mpi::Rank::getInstance().getCommunicator()
   );
   static void receiveAndPollDanglingMessages(
-    peano4::grid::AutomatonState& message,
-    int                           source,
-    int                           tag,
-    MPI_Comm                      communicator = tarch::mpi::Rank::getInstance().getCommunicator()
+    AutomatonState& message,
+    int             source,
+    int             tag,
+    MPI_Comm        communicator = tarch::mpi::Rank::getInstance().getCommunicator()
   );
 #endif
-
-  std::string toString() const;
-
-private:
-  int                                   _level;
-  tarch::la::Vector<DIMENSIONS, double> _x;
-  tarch::la::Vector<DIMENSIONS, double> _h;
-  bool                                  _inverted;
-  std::bitset<DIMENSIONS>               _evenFlags;
-  tarch::la::Vector<TWO_TIMES_D, int>   _accessNumber;
-
-#ifdef WITH_MPI
-private:
-  int                 _senderDestinationRank;
-  static MPI_Datatype Datatype;
-#endif
 };
+
+std::ostream& operator<<(std::ostream& out, const peano4::grid::AutomatonState& state);

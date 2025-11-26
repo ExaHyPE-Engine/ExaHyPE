@@ -166,8 +166,8 @@ from fuseADERSolvers import fuseADERSolvers
 
 fuseADERSolvers(
   solver, solver2, 
-  "\nmarker.x()[0]<=(DomainOffset[0]+0.5*DomainSize[0]+0.51*marker.h()[0])\n", 
-  "\nmarker.x()[0]>=(DomainOffset[0]+0.5*DomainSize[0]+0.49*marker.h()[0])\n"
+  "\nmarker.getX()[0]<=(DomainOffset[0]+0.5*DomainSize[0]+0.51*marker.getH()[0])\n", 
+  "\nmarker.getX()[0]>=(DomainOffset[0]+0.5*DomainSize[0]+0.49*marker.getH()[0])\n"
 )
 
 if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementation:

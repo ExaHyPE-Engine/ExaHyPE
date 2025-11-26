@@ -157,7 +157,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
 
   def get_body_of_getGridControlEvents(self):
-    return "  return std::vector< peano4::grid::GridControlEvent >();\n" 
+    return "  return std::vector< ::peano4::grid::GridControlEvent >();\n" 
 
 
   def get_action_set_name(self):
@@ -178,8 +178,8 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     assertion( _dataWriter!=nullptr );
   
     const int patchIndex = _writer->plotPatch(
-      marker.x() - marker.h() * PatchScaling * 0.5,
-      marker.h() * PatchScaling
+      marker.getX() - marker.getH() * PatchScaling * 0.5,
+      marker.getH() * PatchScaling
     );
  
     int cellIndex  = _dataWriter->getFirstCellWithinPatch(patchIndex);
@@ -187,12 +187,12 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   
     dfor(k,{{DOFS_PER_AXIS}}) {
       {% if SELECT_DOFS==None %}
-      {{DATATYPE}}* data = fineGridCell{{NAME}}.value + currentDoF;
+      {{DATATYPE}}* data = fineGridCell{{NAME}}.data() + currentDoF;
       {% else %}
       {{DATATYPE}} data[] = { 
-          fineGridCell{{NAME}}.value[ currentDoF + {{SELECT_DOFS[0]}} ]
+          fineGridCell{{NAME}}.data()[ currentDoF + {{SELECT_DOFS[0]}} ]
         {% for i in SELECT_DOFS[1:] %}
-        , fineGridCell{{NAME}}.value[ currentDoF + {{i}} ]
+        , fineGridCell{{NAME}}.data()[ currentDoF + {{i}} ]
         {% endfor %}
       };
       {% endif %}
@@ -216,8 +216,8 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     assertion( _dataWriter!=nullptr );
   
     const int patchIndex = _writer->plotPatch(
-      marker.x() - marker.h() * PatchScaling * 0.5,
-      marker.h() * PatchScaling
+      marker.getX() - marker.getH() * PatchScaling * 0.5,
+      marker.getH() * PatchScaling
     );
  
     int vertexIndex  = _dataWriter->getFirstVertexWithinPatch(patchIndex);
@@ -225,12 +225,12 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   
     dfor(k,{{DOFS_PER_AXIS}}) {
       {% if SELECT_DOFS==None %}
-      {{DATATYPE}}* data = fineGridCell{{NAME}}.value + currentDoF;
+      {{DATATYPE}}* data = fineGridCell{{NAME}}.data() + currentDoF;
       {% else %}
       {{DATATYPE}} data[] = { 
-          fineGridCell{{NAME}}.value[ currentDoF + {{SELECT_DOFS[0]}} ]
+          fineGridCell{{NAME}}.data()[ currentDoF + {{SELECT_DOFS[0]}} ]
         {% for i in SELECT_DOFS[1:] %}
-        , fineGridCell{{NAME}}.value[ currentDoF + {{i}} ]
+        , fineGridCell{{NAME}}.data()[ currentDoF + {{i}} ]
         {% endfor %}
       };
       {% endif %}

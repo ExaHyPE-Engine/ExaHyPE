@@ -252,7 +252,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   for (auto p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
     assertion3(
       marker.isContainedInAdjacentCells( p->getX(), 0.5*(1.0+SortingTolerance) ),
-      marker.x(),
+      marker.getX(),
       marker.toString(),
       p->toString()
     );
@@ -314,7 +314,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         else if ( ::toolbox::particles::dropParticle(**p,marker) ) {
           _numberOfDrops++;
 
-          (*p)->setCellH(marker.h());
+          (*p)->setCellH(marker.getH());
           toolbox::particles::updateContainedInAdjacentCellProperty(marker,**p);
           
           toolbox::particles::assignmentchecks::detachParticleFromVertex(
@@ -322,8 +322,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
             (*p)->getX(),
             partID,
             (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-            peano4::datamanagement::reconstructXOfParentVertex(marker, i),
-            marker.h()*3.0,
+            ::peano4::datamanagement::reconstructXOfParentVertex(marker, i),
+            marker.getH()*3.0,
             _spacetreeId,
             "AbstractUpdateParticleGridAssociation::_Template_Drop"
           );
@@ -332,12 +332,12 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
             (*p)->getX(),
             partID,
             (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-            marker.x(),
-            marker.h(),
+            marker.getX(),
+            marker.getH(),
             _spacetreeId,
             "AbstractUpdateParticleGridAssociation::_Template_Drop",
-            peano4::datamanagement::reconstructXOfParentVertex(marker, i),
-            marker.h()*3.0
+            ::peano4::datamanagement::reconstructXOfParentVertex(marker, i),
+            marker.getH()*3.0
           );
           assertion3(
             fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),
@@ -404,28 +404,28 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       #endif
       
       tarch::la::Vector< DIMENSIONS, double > coarseGridVertexX = 
-              marker.x()
+              marker.getX()
               -
               tarch::la::multiplyComponents(
                 tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
-                marker.h()
+                marker.getH()
               )
               +
               tarch::la::multiplyComponents(
                 tarch::la::Vector<DIMENSIONS,double>(target),
-                3.0*marker.h()
+                3.0*marker.getH()
               );
               
-      p->setCellH(3.0 * marker.h());
-      toolbox::particles::updateContainedInAdjacentCellProperty(coarseGridVertexX,marker.h()*3.0,*p);
+      p->setCellH(3.0 * marker.getH());
+      toolbox::particles::updateContainedInAdjacentCellProperty(coarseGridVertexX,marker.getH()*3.0,*p);
 
       toolbox::particles::assignmentchecks::detachParticleFromVertex(
         "{{PARTICLE}}",
         p->getX(),
         partID,
         p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-        marker.x(),
-        marker.h(),
+        marker.getX(),
+        marker.getH(),
         _spacetreeId,
         "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles (parent vertex is local)"
       );
@@ -435,11 +435,11 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         partID,
         p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
         coarseGridVertexX,
-        3.0*marker.h(),
+        3.0*marker.getH(),
         _spacetreeId,
         "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles (parent vertex is local)",
-        marker.x(),
-        marker.h()
+        marker.getX(),
+        marker.getH()
       );
     }
     coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).grabParticles( fineGridVertex{{PARTICLES_CONTAINER}} );
@@ -459,8 +459,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         p->getX(),
         partID,
         p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-        marker.x(),
-        marker.h(),
+        marker.getX(),
+        marker.getH(),
         _spacetreeId,
         "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles"
       );
@@ -469,8 +469,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         p->getX(),
         partID,
         p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-        marker.x(),
-        marker.h(),
+        marker.getX(),
+        marker.getH(),
         _spacetreeId,
         "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles"
       );
@@ -484,7 +484,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     )
 
     def get_body_of_getGridControlEvents(self):
-        return "  return std::vector< peano4::grid::GridControlEvent >();\n"
+        return "  return std::vector< ::peano4::grid::GridControlEvent >();\n"
 
     def user_should_modify_template(self):
         return False

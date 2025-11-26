@@ -33,12 +33,12 @@ class HandleBoundary(AbstractFVActionSet):
         if (not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[f%DIMENSIONS] and fineGridFaces{{SOLVER_NAME}}FaceLabel(f).getBoundary()) {
           kernels::{{SOLVER_NAME}}::handleBoundary(
             repositories::{{SOLVER_INSTANCE}},
-            marker.x(),
-            marker.h(),
+            marker.getX(),
+            marker.getH(),
             {{FACE_METADATA_ACCESSOR}}(f).getNewTimeStamp(f<DIMENSIONS ? 1 : 0),
             repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
             f,
-            fineGridFaces{{UNKNOWN_IDENTIFIER}}New(f).value
+            fineGridFaces{{UNKNOWN_IDENTIFIER}}New(f).data()
           );
 """
 

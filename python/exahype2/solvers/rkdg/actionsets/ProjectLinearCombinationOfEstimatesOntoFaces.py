@@ -79,7 +79,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
 
-    double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value;
+    double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data();
     
     #if DIMENSIONS==2
     ::exahype2::dg::projectVolumetricDataOntoFaces(
@@ -88,10 +88,10 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).value, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).value, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).value  //up
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).data(), //left
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).data(), //right
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).data(), //down
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).data()  //up
     );
     #elif DIMENSIONS==3
     ::exahype2::dg::projectVolumetricDataOntoFaces(
@@ -100,12 +100,12 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).value, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).value, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(4).value, //up
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).value, //front
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(5).value  //back
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).data(), //left
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).data(), //right
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).data(), //down
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(4).data(), //up
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).data(), //front
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(5).data()  //back
     );
     #endif
 

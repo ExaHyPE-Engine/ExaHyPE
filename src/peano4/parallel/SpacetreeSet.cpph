@@ -41,7 +41,7 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(Contai
     tarch::mpi::IntegerMessage message(messageSize);
     tarch::mpi::IntegerMessage::send(message, destinationRank, metaInfo.first, metaInfo.second);
     if (messageSize > 0) {
-      stackContainer.getForPush(master, sourceStack)->startSend(grid::TraversalObserver::SendReceiveContext::ForkDomain, destinationRank, metaInfo.first, metaInfo.second);
+      stackContainer.getForPush(master, sourceStack)->startSend(stacks::SendReceiveContext::ForkDomain, destinationRank, metaInfo.first, metaInfo.second);
     }
 #else
     assertionMsg(false, "MPI build disabled");
@@ -54,7 +54,7 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(Contai
     tarch::mpi::IntegerMessage::receiveAndPollDanglingMessages(message, sourceRank, metaInfo.first, metaInfo.second);
     logDebug("streamDataFromSplittingTreeToNewTree()", "Receive " << message.getValue() << " entries from tree " << master << " on rank " << sourceRank << " (used tag " << metaInfo.first << ")");
     if (message.getValue() > 0) {
-      stackContainer.getForPush(worker, destinationStack)->startReceive(grid::TraversalObserver::SendReceiveContext::ForkDomain, sourceRank, metaInfo.first, metaInfo.second, message.getValue());
+      stackContainer.getForPush(worker, destinationStack)->startReceive(stacks::SendReceiveContext::ForkDomain, sourceRank, metaInfo.first, metaInfo.second, message.getValue());
     }
 #else
     assertionMsg(false, "MPI build disabled");
@@ -71,7 +71,7 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(Con
   logTraceInWith2Arguments("exchangeAllHorizontalDataExchangeStacks()", spacetreeId, symmetricDataCardinality);
   assertionMsg(symmetricDataCardinality, "Haven't implemented the asymmetric case yet, but would be simple: Just need the integer messages as I do for the vertical data flow" );
 
-  const auto& keys = stackContainer.getKeys();
+  const auto keys = stackContainer.getKeys();
 
 #ifdef WITH_MPI
   // We exploit all the symmetries
@@ -84,14 +84,14 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(Con
 
       const auto sendMetaInfo = Node::getInstance().getGridDataExchangeMetaInformation(spacetreeId, targetId, Node::ExchangeMode::HorizontalData);
       logDebug("exchangeAllHorizontalDataExchangeStacks()", "Send stack " << sourceStackKey.second << " of tree " << sourceStackKey.first << " to rank " << rank << " with tag " << sendMetaInfo.first << ": " << count << " element(s)");
-      stackContainer.getForPush(sourceStackKey)->startSend(grid::TraversalObserver::SendReceiveContext::BoundaryExchange, rank, sendMetaInfo.first, sendMetaInfo.second);
+      stackContainer.getForPush(sourceStackKey)->startSend(stacks::SendReceiveContext::BoundaryExchange, rank, sendMetaInfo.first, sendMetaInfo.second);
       const auto receiveMetaInfo = Node::getInstance().getGridDataExchangeMetaInformation(targetId, spacetreeId, Node::ExchangeMode::HorizontalData);
       logDebug("exchangeAllHorizontalDataExchangeStacks()", "In return, receive " << count << " element(s) from rank " << rank << " with tag " << receiveMetaInfo.first << " into stack " << inStack);
       assertion(not Node::getInstance().isHorizontalDataExchangeOutputStackNumber(inStack));
       // This one likely creates new entries in the stackContainer. At this
       // point, we have already copied the set of keys, i.e. we are fine as
       // we have a valid overview.
-      stackContainer.getForPush(spacetreeId, inStack)->startReceive(grid::TraversalObserver::SendReceiveContext::BoundaryExchange, rank, receiveMetaInfo.first, receiveMetaInfo.second, count);
+      stackContainer.getForPush(spacetreeId, inStack)->startReceive(stacks::SendReceiveContext::BoundaryExchange, rank, receiveMetaInfo.first, receiveMetaInfo.second, count);
     }
   }
 #endif
@@ -130,7 +130,7 @@ template <class Container>
 void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(Container& stackContainer, int spacetreeId) {
 #ifdef WITH_MPI
   logTraceInWith1Argument("finishAllOutstandingSendsAndReceives()", spacetreeId);
-  const auto& keys = stackContainer.getKeys();
+  const auto keys = stackContainer.getKeys();
 
   tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
   tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
@@ -160,7 +160,7 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(Contai
 
 template <class Container>
 void peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks(Container& stackContainer, int spacetreeId) {
-  const auto& keys = stackContainer.getKeys();
+  const auto keys = stackContainer.getKeys();
   logTraceInWith2Arguments("exchangeAllPeriodicBoundaryDataStacks()", keys.size(), spacetreeId);
   for (const auto& sourceStackKey: keys) {
     if (sourceStackKey.first == spacetreeId and Node::getInstance().isPeriodicBoundaryExchangeOutputStackNumber(sourceStackKey.second) and not stackContainer.getForPush(sourceStackKey)->empty()) {

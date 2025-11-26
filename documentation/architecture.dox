@@ -78,7 +78,7 @@ Roughly, any Peano 4 application realises the following control flow:
    control over the traversal anymore. It is Peano that ensures that all spacetrees
    are traversed, but it retains control in which order, where to parallelise, what
    the precise order is (subject to some constraints) and so forth.
-3. Throughout the traversal, the Peano core informs a peano4::grid::TraversalObserver
+3. Throughout the traversal, the Peano core informs a peano4::grid::GridTraversalObserver
    about observations. The notifications (callbacks) are basically messages that the
    traversal has entered a cell or left it. They however are supplemented with a lot
    of contextual information.

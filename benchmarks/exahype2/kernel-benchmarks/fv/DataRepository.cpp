@@ -82,15 +82,15 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     }
   }
 
-  DataRepository::~DataRepository() {
-    for (int axis = 0; axis < DIMENSIONS; ++axis) {
-      tarch::freeMemory(_depthLevel.facesDevice[axis], tarch::MemoryLocation::Pinned);
-    }
-  }
-
   DataRepository& DataRepository::getInstance() {
     static DataRepository instance;
     return instance;
+  }
+
+  void DataRepository::clear() {
+    for (int axis = 0; axis < DIMENSIONS; ++axis) {
+      tarch::freeMemory(_depthLevel.facesDevice[axis], tarch::MemoryLocation::Pinned);
+    }
   }
 
   int DataRepository::getFaceCardinality() { return facedata::FVSolverQNew::Cardinality; }

@@ -2,7 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "InterpolationRestrictionTest.h"
 
-#include "peano4/datamanagement/CellMarker.h"
+#include "peano4/grid/GridTraversalEvent.h"
+
 #include "toolbox/blockstructured/Interpolation.h"
 #include "toolbox/blockstructured/Restriction.h"
 
@@ -53,10 +54,10 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInt
     0.0,0.0,0.0,0.0,1.0
   };
 
-  peano4::grid::GridTraversalEvent    dummEvent;
-  dummEvent.setRelativePositionToFather( {0,0} );
+  peano4::grid::GridTraversalEvent    event;
+  event.setRelativePositionToFather( {0,0} );
 
-  peano4::datamanagement::FaceMarker  marker(dummEvent);
+  peano4::datamanagement::FaceMarker  marker = event.getFaceMarker();
 
   {
     double  coarseGridFaceValues[] = {
@@ -169,13 +170,13 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestrictionWi
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0/3.0, 1.0/3.0, 1.0/3.0 
   };
 
-  peano4::grid::GridTraversalEvent    dummEvent;
+  peano4::grid::GridTraversalEvent    event;
   //int face=3;
 
 #if DIMENSIONS==2
-  dummEvent.setRelativePositionToFather( {0,0} );
+  event.setRelativePositionToFather( {0,0} );
 
-  //peano4::datamanagement::FaceMarker  marker(dummEvent);
+  //peano4::datamanagement::FaceMarker  marker = event.getFaceMarker();
   //marker.select(face);
 
   constexpr int NumberOfFaceValues = 3*5 * 2 * 2; // three width, five dofs per axis, two unknowns, two sides
@@ -188,7 +189,7 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestrictionWi
     0.1,-0.1, 0.1,-0.1, 0.1,-0.1,    0.0,0.0, 0.0,0.0, 0.0,0.0
   };
   #else
-  dummEvent.setRelativePositionToFather( {0,0,0} );
+  event.setRelativePositionToFather( {0,0,0} );
 
   constexpr int NumberOfFaceValues = 3*5*5 * 2 * 2; // three width, five dofs per axis, two unknowns, two sides
 
@@ -226,7 +227,7 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestrictionWi
   #endif
 
   double  coarseGridFaceValues[ NumberOfFaceValues ];
-  peano4::datamanagement::FaceMarker  marker1(dummEvent);
+  peano4::datamanagement::FaceMarker  marker1 = event.getFaceMarker();
   marker1.select(DIMENSIONS);
 
   std::fill_n(coarseGridFaceValues, NumberOfFaceValues, 0.0 );
@@ -279,10 +280,10 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInt
     0.0,0.0,0.0,0.0,1.0
   };
 
-  peano4::grid::GridTraversalEvent    dummEvent;
-  dummEvent.setRelativePositionToFather( {0,2} );
+  peano4::grid::GridTraversalEvent    event;
+  event.setRelativePositionToFather( {0,2} );
 
-  peano4::datamanagement::FaceMarker  marker(dummEvent);
+  peano4::datamanagement::FaceMarker  marker = event.getFaceMarker();
 
   {
     double  coarseGridFaceValues[] = {
@@ -368,9 +369,9 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testInjectionExtrapolati
     0.0, 0.0, 0.0, 0.0, -2.0, 3.0,
     0.0, 0.0, 0.0, 0.0, -5.0, 6.0};
 
-  peano4::grid::GridTraversalEvent    dummEvent;
+  peano4::grid::GridTraversalEvent    event;
   #if DIMENSIONS==2
-  dummEvent.setRelativePositionToFather( {0,0} );
+  event.setRelativePositionToFather( {0,0} );
 
   constexpr int NumberOfFaceValues = 3*5 * 5 * 2; // three width, five dofs per axis, five unknowns, two sides
 
@@ -388,7 +389,7 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testInjectionExtrapolati
     0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0,
   };
   #else
-  dummEvent.setRelativePositionToFather( {0,0,2} );
+  event.setRelativePositionToFather( {0,0,2} );
 
   constexpr int NumberOfFaceValues = 3*5*5 * 5 * 2; // three width, five dofs per axis, five unknowns, two sides
 
@@ -432,7 +433,7 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testInjectionExtrapolati
   #endif
 
   double  coarseGridFaceValues[ NumberOfFaceValues ];
-  peano4::datamanagement::FaceMarker  marker1(dummEvent);
+  peano4::datamanagement::FaceMarker  marker1 = event.getFaceMarker();
   marker1.select(2*DIMENSIONS-1);
 
   std::fill_n(coarseGridFaceValues, NumberOfFaceValues, 0.0 );
@@ -460,8 +461,8 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testInjectionExtrapolati
   validateNumericalEquals( coarseGridFaceValues[5*5+0],  0.1 );
   validateNumericalEquals( coarseGridFaceValues[6*5+0],  0.1 );
 
-  dummEvent.setRelativePositionToFather( {1,0,2} );
-  peano4::datamanagement::FaceMarker  marker102(dummEvent);
+  event.setRelativePositionToFather( {1,0,2} );
+  peano4::datamanagement::FaceMarker  marker102 = event.getFaceMarker();
   marker102.select(2*DIMENSIONS-1);
   ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       marker102,
@@ -474,8 +475,8 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testInjectionExtrapolati
       coarseGridFaceValues
   );
 
-  dummEvent.setRelativePositionToFather( {2,0,2} );
-  peano4::datamanagement::FaceMarker  marker202(dummEvent);
+  event.setRelativePositionToFather( {2,0,2} );
+  peano4::datamanagement::FaceMarker  marker202 = event.getFaceMarker();
   marker202.select(2*DIMENSIONS-1);
   ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       marker202,
@@ -488,8 +489,8 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testInjectionExtrapolati
       coarseGridFaceValues
   );
 
-  dummEvent.setRelativePositionToFather( {0,1,2} );
-  peano4::datamanagement::FaceMarker  marker012(dummEvent);
+  event.setRelativePositionToFather( {0,1,2} );
+  peano4::datamanagement::FaceMarker  marker012 = event.getFaceMarker();
   marker012.select(2*DIMENSIONS-1);
   ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       marker012,
@@ -502,8 +503,8 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testInjectionExtrapolati
       coarseGridFaceValues
   );
 
-  dummEvent.setRelativePositionToFather( {1,1,2} );
-  peano4::datamanagement::FaceMarker  marker112(dummEvent);
+  event.setRelativePositionToFather( {1,1,2} );
+  peano4::datamanagement::FaceMarker  marker112 = event.getFaceMarker();
   marker112.select(2*DIMENSIONS-1);
   ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       marker112,
@@ -516,8 +517,8 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testInjectionExtrapolati
       coarseGridFaceValues
   );
 
-  dummEvent.setRelativePositionToFather( {2,1,2} );
-  peano4::datamanagement::FaceMarker  marker212(dummEvent);
+  event.setRelativePositionToFather( {2,1,2} );
+  peano4::datamanagement::FaceMarker  marker212 = event.getFaceMarker();
   marker212.select(2*DIMENSIONS-1);
   ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       marker212,
@@ -530,8 +531,8 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testInjectionExtrapolati
       coarseGridFaceValues
   );
 
-  dummEvent.setRelativePositionToFather( {0,2,2} );
-  peano4::datamanagement::FaceMarker  marker022(dummEvent);
+  event.setRelativePositionToFather( {0,2,2} );
+  peano4::datamanagement::FaceMarker  marker022 = event.getFaceMarker();
   marker022.select(2*DIMENSIONS-1);
   ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       marker022,
@@ -544,8 +545,8 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testInjectionExtrapolati
       coarseGridFaceValues
   );
 
-  dummEvent.setRelativePositionToFather( {1,2,2} );
-  peano4::datamanagement::FaceMarker  marker122(dummEvent);
+  event.setRelativePositionToFather( {1,2,2} );
+  peano4::datamanagement::FaceMarker  marker122 = event.getFaceMarker();
   marker122.select(2*DIMENSIONS-1);
   ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       marker122,
@@ -558,8 +559,8 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testInjectionExtrapolati
       coarseGridFaceValues
   );
 
-  dummEvent.setRelativePositionToFather( {2,2,2} );
-  peano4::datamanagement::FaceMarker  marker222(dummEvent);
+  event.setRelativePositionToFather( {2,2,2} );
+  peano4::datamanagement::FaceMarker  marker222 = event.getFaceMarker();
   marker222.select(2*DIMENSIONS-1);
   ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       marker222,

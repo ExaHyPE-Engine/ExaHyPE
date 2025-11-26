@@ -17,12 +17,12 @@ class EnclaveTasking(AbstractFDActionSet):
     assertion2(tarch::la::greaterEquals(timeStamp,    0.0), timeStamp, timeStepSize);
     assertion2(tarch::la::greaterEquals(timeStepSize, 0.0), timeStamp, timeStepSize);
 
-    auto* /*const*/ QIn = {{OLD_ACCESSOR}}.value;
-    auto* /*const*/ QOut = {{NEW_ACCESSOR}}.value;
+    auto* /*const*/ QIn = {{OLD_ACCESSOR}}.data();
+    auto* /*const*/ QOut = {{NEW_ACCESSOR}}.data();
 
-    {{STORAGE_PRECISION}}* faces[1][TwoTimesD];
-    for (int d = 0; d < TwoTimesD; ++d) {
-      faces[0][d] = {{FACE_ACCESSOR}}(d).value;
+    {{STORAGE_PRECISION}}* faces[1][TWO_TIMES_D];
+    for (int d = 0; d < TWO_TIMES_D; ++d) {
+      faces[0][d] = {{FACE_ACCESSOR}}(d).data();
     }
 
     {% if CAN_FUSE %}

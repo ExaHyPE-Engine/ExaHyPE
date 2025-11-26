@@ -47,8 +47,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 ) {
   ::exahype2::CellData cellData(
     QIn,
-    marker.x(),
-    marker.h(),
+    marker.getX(),
+    marker.getH(),
     timeStamp,
     timeStepSize,
     QOut
@@ -56,8 +56,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 
   {% if STATELESS_PDE_TERMS %}
   if (repositories::{{SOLVER_INSTANCE}}.cellCanUseStatelessPDETerms(
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       timeStamp,
       timeStepSize
   )) {
@@ -353,8 +353,8 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
   return repositories::{{SOLVER_INSTANCE}}.cellCanUseStatelessPDETerms(
-    _marker.x(),
-    _marker.h(),
+    _marker.getX(),
+    _marker.getH(),
     _t,
     _dt
   );
@@ -372,8 +372,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   int currentTask = 0;
   for (auto& p: otherTasks) {
     cellData.QIn[currentTask]         = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
-    cellData.cellCentre[currentTask]  = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.x();
-    cellData.cellSize[currentTask]    = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
+    cellData.cellCentre[currentTask]  = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.getX();
+    cellData.cellSize[currentTask]    = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.getH();
     cellData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
     cellData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
     cellData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_taskNumber;
@@ -382,8 +382,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     currentTask++;
   }
   cellData.QIn[currentTask]         = _inputValues;
-  cellData.cellCentre[currentTask]  = _marker.x();
-  cellData.cellSize[currentTask]    = _marker.h();
+  cellData.cellCentre[currentTask]  = _marker.getX();
+  cellData.cellSize[currentTask]    = _marker.getH();
   cellData.t[currentTask]           = _t;
   cellData.dt[currentTask]          = _dt;
   cellData.id[currentTask]          = _taskNumber;

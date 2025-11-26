@@ -26,8 +26,6 @@ namespace {{ item }} {
 
   extern toolbox::loadbalancing::LoadBalancer loadBalancer;
 
-  extern peano4::grid::GridStatistics gridStatisticsAfterGridConstruction;
-
   static constexpr int PrintTimeStepIntervalInSeconds = {{PRINT_TIME_STEP_INTERVAL_IN_SECONDS}};
 
   /**
@@ -127,6 +125,8 @@ namespace {{ item }} {
   bool isLastGridSweepOfTimeStep();
 
   void suspendSolversForOneGridSweep();
+
+  int getNumberOfDoFs();
 
   void initLogFilters();
 

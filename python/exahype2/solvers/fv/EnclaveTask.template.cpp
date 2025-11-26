@@ -71,7 +71,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
   std::swap(QIn, QOut);
 
   {{COMPUTE_NEW_TIME_STEP_SIZE}}
-  repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp + timeStepSize, tarch::la::min(marker.h()), tarch::la::max(marker.h()));
+  repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp + timeStepSize, tarch::la::min(marker.getH()), tarch::la::max(marker.getH()));
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
@@ -188,8 +188,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   for (auto& otherTask: otherTasks) {
     patchData.QIn[patchIndex]                   = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_QIn;
     patchData.QOut[patchIndex]                  = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_QOut;
-    patchData.cellSize[patchIndex]              = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_marker.h();
-    patchData.cellCentre[patchIndex]            = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_marker.x();
+    patchData.cellSize[patchIndex]              = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_marker.getH();
+    patchData.cellCentre[patchIndex]            = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_marker.getX();
     patchData.maxEigenvalue[patchIndex]         = 0.0;
 
     for (int f = 0; f < TWO_TIMES_D; ++f) {
@@ -222,8 +222,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   patchData.dt                                = _dt;
   patchData.QIn[patchIndex]                   = _QIn;
   patchData.QOut[patchIndex]                  = _QOut;
-  patchData.cellCentre[patchIndex]            = _marker.x();
-  patchData.cellSize[patchIndex]              = _marker.h();
+  patchData.cellCentre[patchIndex]            = _marker.getX();
+  patchData.cellSize[patchIndex]              = _marker.getH();
   patchData.maxEigenvalue[patchIndex]         = 0.0;
 
   for (int f = 0; f < TWO_TIMES_D; ++f) {
@@ -385,7 +385,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   tarch::accelerator::MemoryManager::getInstance().free(deviceFacesNew, TARGET_DEVICE);
 
   {{COMPUTE_NEW_TIME_STEP_SIZE}}
-  repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, _t + _dt, tarch::la::min(_marker.h()), tarch::la::max(_marker.h()));
+  repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, _t + _dt, tarch::la::min(_marker.getH()), tarch::la::max(_marker.getH()));
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData) {

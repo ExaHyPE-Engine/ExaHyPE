@@ -46,13 +46,15 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     SolverState getSolverState() const;
 
-    double getMinTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
-    double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
+    double getMinTimeStamp(bool ofCurrentlyRunningGridSweep = false) const final;
+    double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep = false) const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
     virtual double getMaxMeshSize() const override final;
     virtual double getMinMeshSize() const override final;
+
+    virtual int getNumberOfDoFs() const override final;
 
     //TODO: link these to the max and min of the other solvers
     static constexpr double MaxAdmissibleCellH  = 1000.;

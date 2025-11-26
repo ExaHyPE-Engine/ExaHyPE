@@ -40,8 +40,9 @@ namespace peano4 {
 }
 
 #define dfor(counter, max) \
-  for (tarch::la::Vector<DIMENSIONS, int> counter = peano4::utils::dStartVector(); peano4::utils::dCmp(counter, max); \
-       peano4::utils::dInc(counter, max))
+  for (tarch::la::Vector<DIMENSIONS, int> counter = ::peano4::utils::dStartVector(); \
+       ::peano4::utils::dCmp(counter, max); \
+       ::peano4::utils::dInc(counter, max))
 
 #define d2for(counter, max) \
   for (int counter##Scalar = 0; counter##Scalar < tarch::la::aPowI(2, max); counter##Scalar++) { \

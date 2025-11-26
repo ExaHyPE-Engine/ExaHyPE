@@ -6,6 +6,5 @@ from .FixedTimeSteppingCodeSnippets import FixedTimeSteppingCodeSnippets
 from .AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 from .SolverMatrixInterpolator import SolverMatrixInterpolator
 from .LagrangeBasisWithDiagonalMassMatrix import GaussLegendreBasis
-from .Storage                                    import Storage
-from .MathUtils                                  import MathUtils
-from .ErrorMeasurement                           import ErrorMeasurement
+from .MathUtils import MathUtils
+from .ErrorMeasurement import ErrorMeasurement

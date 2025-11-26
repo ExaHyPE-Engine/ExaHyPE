@@ -8,11 +8,10 @@ import jinja2
 
 
 class UpdateFaceLabel(ActionSet):
-  def get_attribute_name(solver_name):
-    return solver_name + "FaceLabel"
+    def get_attribute_name(solver_name):
+        return solver_name + "FaceLabel"
 
-  
-  """
+    """
   
    SetLabels is an action set which is automatically merged into all ExaHyPE2
    steps by the project. There's nothing for the user solvers to be done here.
@@ -83,33 +82,32 @@ class UpdateFaceLabel(ActionSet):
    context, too.
   
   """
-  def __init__(self, solver_name):
-    super(UpdateFaceLabel,self).__init__(descend_invocation_order=1,parallel=False)
-    self._solver_name = solver_name
-    pass
 
+    def __init__(self, solver_name):
+        super(UpdateFaceLabel, self).__init__(
+            descend_invocation_order=1, parallel=False
+        )
+        self._solver_name = solver_name
+        pass
 
-  def get_constructor_body(self):
-    return ""
+    def get_constructor_body(self):
+        return ""
 
-    
-  def get_destructor_body(self):
-    return ""
+    def get_destructor_body(self):
+        return ""
 
-
-  _Template_TouchFaceFirstTime = """
+    _Template_TouchFaceFirstTime = """
   fineGridFace{{FACE_LABEL_NAME}}.setUpdated( false );
   fineGridFace{{FACE_LABEL_NAME}}.setNewAboveHanging( false );
 """
 
-
-  _Template_CreateFace = """
+    _Template_CreateFace = """
   tarch::la::Vector<DIMENSIONS, double> offset(DomainOffset);
   tarch::la::Vector<DIMENSIONS, double> size(DomainSize);
   bool isBoundary = false;
   for (int d=0; d<DIMENSIONS; d++) {
-    isBoundary |= tarch::la::equals( marker.x()(d), offset(d) );
-    isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
+    isBoundary |= tarch::la::equals( marker.getX()(d), offset(d) );
+    isBoundary |= tarch::la::equals( marker.getX()(d), offset(d) + size(d) );
   }
   fineGridFace{{FACE_LABEL_NAME}}.setBoundary( isBoundary );
   fineGridFace{{FACE_LABEL_NAME}}.setIsHanging( false );
@@ -120,7 +118,7 @@ class UpdateFaceLabel(ActionSet):
   fineGridFace{{FACE_LABEL_NAME}}.setOldTimeStamp( 0.0 );
 """
 
-  _Template_CreateHangingFace = """
+    _Template_CreateHangingFace = """
   fineGridFace{{FACE_LABEL_NAME}}.setUpdatedTimeStamp( 0.0 );
   fineGridFace{{FACE_LABEL_NAME}}.setNewTimeStamp( 0.0 );
   fineGridFace{{FACE_LABEL_NAME}}.setOldTimeStamp( 0.0 );
@@ -128,76 +126,79 @@ class UpdateFaceLabel(ActionSet):
   coarseGridFaces{{FACE_LABEL_NAME}}(marker.getSelectedFaceNumber()).setNewAboveHanging( true );
 """
 
-  _Template_DestroyHangingFace = """
+    _Template_DestroyHangingFace = """
 """
 
-  _Template_TouchFaceLastTime = """
+    _Template_TouchFaceLastTime = """
   fineGridFace{{FACE_LABEL_NAME}}.setAboveHanging( fineGridFace{{FACE_LABEL_NAME}}.getNewAboveHanging() );
 """
 
-  def get_action_set_name(self):
-    return __name__.replace(".py", "").replace(".", "_")
+    def get_action_set_name(self):
+        return __name__.replace(".py", "").replace(".", "_")
 
+    def user_should_modify_template(self):
+        return False
 
-  def user_should_modify_template(self):
-    return False
+    def get_body_of_operation(self, operation_name):
+        result = "\n"
 
+        d = {}
+        d["FACE_LABEL_NAME"] = UpdateFaceLabel.get_attribute_name(self._solver_name)
 
-  def get_body_of_operation(self,operation_name):
-    result = "\n"
-    
-    d = {}
-    d[ "FACE_LABEL_NAME" ] = UpdateFaceLabel.get_attribute_name(self._solver_name)
-    
-    if operation_name==ActionSet.OPERATION_CREATE_PERSISTENT_FACE or operation_name==ActionSet.OPERATION_CREATE_HANGING_FACE:
-      result = jinja2.Template( self._Template_CreateFace ).render( **d )
-    if operation_name==ActionSet.OPERATION_CREATE_HANGING_FACE:
-      result = jinja2.Template( self._Template_CreateHangingFace ).render( **d )
-    if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      result = jinja2.Template( self._Template_TouchFaceFirstTime ).render( **d )
-    if operation_name==ActionSet.OPERATION_TOUCH_FACE_LAST_TIME:
-      result = jinja2.Template( self._Template_TouchFaceLastTime ).render( **d )
-    if operation_name==ActionSet.OPERATION_DESTROY_HANGING_FACE:
-      result = jinja2.Template( self._Template_DestroyHangingFace ).render( **d )
-      
-    return result
+        if (
+            operation_name == ActionSet.OPERATION_CREATE_PERSISTENT_FACE
+            or operation_name == ActionSet.OPERATION_CREATE_HANGING_FACE
+        ):
+            result = jinja2.Template(self._Template_CreateFace).render(**d)
+        if operation_name == ActionSet.OPERATION_CREATE_HANGING_FACE:
+            result = jinja2.Template(self._Template_CreateHangingFace).render(**d)
+        if operation_name == ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+            result = jinja2.Template(self._Template_TouchFaceFirstTime).render(**d)
+        if operation_name == ActionSet.OPERATION_TOUCH_FACE_LAST_TIME:
+            result = jinja2.Template(self._Template_TouchFaceLastTime).render(**d)
+        if operation_name == ActionSet.OPERATION_DESTROY_HANGING_FACE:
+            result = jinja2.Template(self._Template_DestroyHangingFace).render(**d)
 
+        return result
 
-  def get_attributes(self):
-    return ""
+    def get_attributes(self):
+        return ""
 
-
-  def get_includes(self):
-    return """
+    def get_includes(self):
+        return """
 #include "Constants.h"
-"""    
+"""
 
 
 def create_face_label(solver_name):
-  """
+    """
 
-   Build up the DaStGen2 data structure that we need per face to maintain
-   per-face data per solver.
-     
-   solver_name: string
-     Name of the solver
-     
-  """
-  result = peano4.datamodel.DaStGen2( UpdateFaceLabel.get_attribute_name( solver_name ) )
+    Build up the DaStGen2 data structure that we need per face to maintain
+    per-face data per solver.
 
-  result.data.add_attribute( dastgen2.attributes.Boolean("Boundary") )
-  result.data.add_attribute( dastgen2.attributes.Boolean("IsHanging") )
-  result.data.add_attribute( dastgen2.attributes.Boolean("AboveHanging") )
-  result.data.add_attribute( dastgen2.attributes.Boolean("NewAboveHanging") )
-  result.data.add_attribute( dastgen2.attributes.BooleanArray("Updated","2",compress=True) )
-  result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("UpdatedTimeStamp","2") )
-  result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("NewTimeStamp","2") )
-  result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("OldTimeStamp","2") )
-  
-  result.peano4_mpi_and_storage_aspect.merge_implementation = """
+    solver_name: string
+      Name of the solver
+
+    """
+    result = peano4.datamodel.DaStGen2(UpdateFaceLabel.get_attribute_name(solver_name))
+
+    result.data.add_attribute(dastgen2.attributes.Boolean("Boundary"))
+    result.data.add_attribute(dastgen2.attributes.Boolean("IsHanging"))
+    result.data.add_attribute(dastgen2.attributes.Boolean("AboveHanging"))
+    result.data.add_attribute(dastgen2.attributes.Boolean("NewAboveHanging"))
+    result.data.add_attribute(
+        dastgen2.attributes.BooleanArray("Updated", "2", compress=True)
+    )
+    result.data.add_attribute(
+        peano4.dastgen2.Peano4DoubleArray("UpdatedTimeStamp", "2")
+    )
+    result.data.add_attribute(peano4.dastgen2.Peano4DoubleArray("NewTimeStamp", "2"))
+    result.data.add_attribute(peano4.dastgen2.Peano4DoubleArray("OldTimeStamp", "2"))
+
+    result.peano4_mpi_and_storage_aspect.merge_implementation = """
   switch (context) {
-    case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
-    case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
+    case ::peano4::stacks::SendReceiveContext::BoundaryExchange:
+    case ::peano4::stacks::SendReceiveContext::PeriodicBoundaryDataSwap:
       {
 
         _Boundary     = _Boundary or neighbour._Boundary;
@@ -217,5 +218,4 @@ def create_face_label(solver_name):
   }
 """
 
-  return result
-
+    return result

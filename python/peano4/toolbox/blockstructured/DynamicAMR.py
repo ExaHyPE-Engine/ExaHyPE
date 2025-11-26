@@ -81,7 +81,7 @@ class DynamicAMR(ActionSet):
 
 
   def get_body_of_getGridControlEvents(self):
-    return "  return std::vector< peano4::grid::GridControlEvent >();\n" 
+    return "  return std::vector< ::peano4::grid::GridControlEvent >();\n" 
 
 
   def get_action_set_name(self):
@@ -95,15 +95,13 @@ class DynamicAMR(ActionSet):
   _Template_TouchFaceFirstTime = """
   if ( {{CLEAR_GUARD}} ) {
     logTraceInWith2Arguments( "touchFaceFirstTime(...)", marker.toString(), "clear halo layer {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}" );
-    
     ::toolbox::blockstructured::clearHaloLayerAoS(
       marker,
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}.value
+      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}.data()
     );
-
     logTraceOut( "touchFaceFirstTime(...)" );
   }
 """
@@ -112,14 +110,12 @@ class DynamicAMR(ActionSet):
   _Template_TouchCellFirstTime = """
   if ( marker.hasBeenRefined() and not marker.willBeRefined() ) {
     logTraceInWith2Arguments( "touchCellFirstTime(...)", marker.toString(), "clear cell {{FINE_GRID_CELL}}" );
-    
     ::toolbox::blockstructured::clearCell(
       marker,
       {{DOFS_PER_AXIS}},
       {{UNKNOWNS}},
-      {{FINE_GRID_CELL}}.value
+      {{FINE_GRID_CELL}}.data()
     );
-
     logTraceOut( "touchCellFirstTime(...)" );
   }
 """
@@ -128,16 +124,14 @@ class DynamicAMR(ActionSet):
   _Template_CreateHangingFace = """
   if ( {{INTERPOLATE_GUARD}} ) {
     logTraceInWith1Argument( "createHangingFace(...)", marker.toString() );
-
     ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).value,
-      {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.value
+      {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).data(),
+      {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.data()
     );
-
     logTraceOut( "createHangingFace(...)" );
   }
   else {
@@ -155,8 +149,8 @@ class DynamicAMR(ActionSet):
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}.value,
-      {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}(marker.getSelectedFaceNumber()).value
+      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}.data(),
+      {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}(marker.getSelectedFaceNumber()).data()
     );
 
     logTraceOut( "destroyHangingFace(...)" );
@@ -175,9 +169,9 @@ class DynamicAMR(ActionSet):
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      {{COARSE_GRID_CELL}}.value,
-      {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).value,
-      {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.value
+      {{COARSE_GRID_CELL}}.data(),
+      {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).data(),
+      {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.data()
   );
 
   logTraceOutWith1Argument( "createPersistentFace(...)", marker.toString() );
@@ -193,8 +187,8 @@ class DynamicAMR(ActionSet):
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}.value,
-      {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}(marker.getSelectedFaceNumber()).value
+      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}.data(),
+      {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}(marker.getSelectedFaceNumber()).data()
     );
     
     logTraceOut( "destroyPersistentFace(...)" );
@@ -209,8 +203,8 @@ class DynamicAMR(ActionSet):
       marker,
       {{DOFS_PER_AXIS}},
       {{UNKNOWNS}},
-      {{COARSE_GRID_CELL}}.value,
-      {{FINE_GRID_CELL}}.value
+      {{COARSE_GRID_CELL}}.data(),
+      {{FINE_GRID_CELL}}.data()
   );
 
   logTraceOut( "createCell(...)" );
@@ -224,8 +218,8 @@ class DynamicAMR(ActionSet):
       marker,
       {{DOFS_PER_AXIS}},
       {{UNKNOWNS}},
-      {{FINE_GRID_CELL}}.value,
-      {{COARSE_GRID_CELL}}.value
+      {{FINE_GRID_CELL}}.data(),
+      {{COARSE_GRID_CELL}}.data()
   );
 
   logTraceOut( "destroyCell(...)" );

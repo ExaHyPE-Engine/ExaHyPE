@@ -41,22 +41,22 @@ class AdaptivityCriterion(AbstractRKFDActionSet):
   if ( 
     not marker.willBeRefined() 
     and
-    tarch::la::greater( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH) 
+    tarch::la::greater( tarch::la::max( marker.getH() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH) 
   ) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
   } 
   else if ( 
     not marker.willBeRefined() 
     and
-    tarch::la::greaterEquals( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH )
+    tarch::la::greaterEquals( tarch::la::max( marker.getH() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH )
     and
     not fineGridCell{{CELL_LABEL_NAME}}.getAMDCriterionEvaluatedThroughoutGridConstruction()
   ) { 
     dfor( volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
         refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
           nullptr,
-          ::exahype2::fd::getGridCellCentre( marker.x(), marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, volume), 
-          ::exahype2::fd::getGridCellSize( marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ),
+          ::exahype2::fd::getGridCellCentre( marker.getX(), marker.getH(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, volume), 
+          ::exahype2::fd::getGridCellSize( marker.getH(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ),
           0.0
         );
     }
@@ -71,7 +71,7 @@ class AdaptivityCriterion(AbstractRKFDActionSet):
     and
     not marker.willBeRefined() 
     and
-    tarch::la::greater( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH) 
+    tarch::la::greater( tarch::la::max( marker.getH() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH) 
   ) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
   } 
@@ -83,9 +83,9 @@ class AdaptivityCriterion(AbstractRKFDActionSet):
     int index = 0;
     dfor( volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
         refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
-          fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-          ::exahype2::fd::getGridCellCentre( marker.x(), marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, volume), 
-          ::exahype2::fd::getGridCellSize( marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ),
+          fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + index,
+          ::exahype2::fd::getGridCellCentre( marker.getX(), marker.getH(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, volume), 
+          ::exahype2::fd::getGridCellSize( marker.getH(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ),
           repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
         );
         index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
@@ -94,12 +94,12 @@ class AdaptivityCriterion(AbstractRKFDActionSet):
     if (
       refinementCriterion==::exahype2::RefinementCommand::Refine 
       and 
-      tarch::la::smallerEquals( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH )
+      tarch::la::smallerEquals( tarch::la::max( marker.getH() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH )
     ) {
       logDebug( "touchCellFirstTime(...)", "drop refine instructions, as mesh would be too small" );
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
-    else if (refinementCriterion==::exahype2::RefinementCommand::Erase and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH ) {
+    else if (refinementCriterion==::exahype2::RefinementCommand::Erase and 3.0* tarch::la::max( marker.getH() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
   }
@@ -108,7 +108,7 @@ class AdaptivityCriterion(AbstractRKFDActionSet):
   }
   {% endif %}
     
-  _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion, {{EVENT_LIFETIME}} );
+  _localRefinementControl.addCommand( marker.getX(), marker.getH(), refinementCriterion, {{EVENT_LIFETIME}} );
   logTraceOutWith1Argument( "touchCellFirstTime(...)", toString(refinementCriterion) );
   """
   

@@ -5,6 +5,8 @@
 #include "../Interpolation.h"
 #include "../Restriction.h"
 
+#include "peano4/grid/GridTraversalEvent.h"
+
 toolbox::blockstructured::tests::IandRSecondOrderTest::IandRSecondOrderTest():
   TestCase("toolbox::blockstructured::tests::IandRSecondOrderTest") {}
 
@@ -50,15 +52,16 @@ void toolbox::blockstructured::tests::IandRSecondOrderTest::compareInterpolateLi
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
       for (int k = 0; k < 3; k++) {
-        peano4::grid::GridTraversalEvent dummyEvent;
-        dummyEvent.setRelativePositionToFather(
+        peano4::grid::GridTraversalEvent event;
+        event.setRelativePositionToFather(
           tarch::la::Vector<DIMENSIONS, int>{i, j, k}
         );
 
         for (int axis = 0; axis < 3; axis++) {
-          peano4::datamanagement::FaceMarker faceMarker1(dummyEvent, axis);
-          peano4::datamanagement::FaceMarker
-            faceMarker2(dummyEvent, axis + DIMENSIONS);
+          peano4::datamanagement::FaceMarker faceMarker1 = event.getFaceMarker();
+          faceMarker1.select(axis);
+          peano4::datamanagement::FaceMarker faceMarker2 = event.getFaceMarker();
+          faceMarker2.select(axis + DIMENSIONS);
 
           for (int n = 0; n < faceSize; n++)
             coarseData[n] = static_cast<double>(n + 1) / 16.0;
@@ -160,15 +163,16 @@ void toolbox::blockstructured::tests::IandRSecondOrderTest::compareRestrictLinea
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
       for (int k = 0; k < 3; k++) {
-        peano4::grid::GridTraversalEvent dummyEvent;
-        dummyEvent.setRelativePositionToFather(
+        peano4::grid::GridTraversalEvent event;
+        event.setRelativePositionToFather(
           tarch::la::Vector<DIMENSIONS, int>{i, j, k}
         );
 
         for (int axis = 0; axis < 3; axis++) {
-          peano4::datamanagement::FaceMarker faceMarker1(dummyEvent, axis);
-          peano4::datamanagement::FaceMarker
-            faceMarker2(dummyEvent, axis + DIMENSIONS);
+          peano4::datamanagement::FaceMarker faceMarker1 = event.getFaceMarker();
+          faceMarker1.select(axis);
+          peano4::datamanagement::FaceMarker faceMarker2 = event.getFaceMarker();
+          faceMarker2.select(axis + DIMENSIONS);
 
           for (int n = 0; n < faceSize; n++)
             fineData[n] = static_cast<double>(n + 1) / 16.0;

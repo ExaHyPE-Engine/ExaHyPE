@@ -96,16 +96,16 @@ int """ + full_qualified_classname + """::domainPatchCount=0;
       int index = peano4::utils::dLinearised(volume,{{NUMBER_OF_VOLUMES_PER_AXIS}}) * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
       {% if STATELESS_INITIAL_CONDITIONS==True %}
       {{FULL_QUALIFIED_SOLVER_NAME}}::initialCondition(
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-        ::exahype2::fv::getVolumeCentre(marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
-        ::exahype2::fv::getVolumeSize(marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}),
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + index,
+        ::exahype2::fv::getVolumeCentre(marker.getX(), marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
+        ::exahype2::fv::getVolumeSize(marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}}),
         {{GRID_IS_CONSTRUCTED}}
       );
       {% else %}
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-        ::exahype2::fv::getVolumeCentre(marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
-        ::exahype2::fv::getVolumeSize(marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}),
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + index,
+        ::exahype2::fv::getVolumeCentre(marker.getX(), marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
+        ::exahype2::fv::getVolumeSize(marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}}),
         {{GRID_IS_CONSTRUCTED}}
       );
       {% endif %}
@@ -142,13 +142,13 @@ if ({{PREDICATE}}) {
       offset[2]=offsetIndex[i*3+2];
       #endif
 
-      if ( tarch::la::equals( marker.x() - 0.5*marker.h(), offset, 1e-5) ) { FoundCell=true; }
+      if ( tarch::la::equals( marker.getX() - 0.5*marker.getH(), offset, 1e-5) ) { FoundCell=true; }
 
       if (FoundCell){
             dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
                   int index = peano4::utils::dLinearised(volume,{{NUMBER_OF_VOLUMES_PER_AXIS}}) * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
                   for (int k=0; k<=({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}); k++){
-                        fineGridCell{{UNKNOWN_IDENTIFIER}}.value[index+k]=domainDataFromFiles[i*({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}})*totalVolumeCount+index+k];
+                        fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[index+k]=domainDataFromFiles[i*({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}})*totalVolumeCount+index+k];
                   }
             }
             break;
@@ -176,7 +176,7 @@ if ({{PREDICATE}}) {
   #endif
   double patchDataFromFile[totalCellCount*({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}})];
 
-  std::string targetCheckpointFileName=OffsetIndexMap[{(marker.x() - 0.5*marker.h())[0], (marker.x() - 0.5*marker.h())[1], (marker.x() - 0.5*marker.h())[2]}];
+  std::string targetCheckpointFileName=OffsetIndexMap[{(marker.getX() - 0.5*marker.getH())[0], (marker.getX() - 0.5*marker.getH())[1], (marker.getX() - 0.5*marker.getH())[2]}];
 
   const auto& lines = subFilesManager.getCheckpointFileData(targetCheckpointFileName);
   bool PatchFound=false;
@@ -187,7 +187,7 @@ if ({{PREDICATE}}) {
       std::string token; int index=0;
 
       while (iss >> token) { try {offset[index]=std::stod(token); index++; } catch (...){ } }
-      if ( tarch::la::equals( marker.x() - 0.5*marker.h(), offset, 1e-6) ){ PatchFound=true; }
+      if ( tarch::la::equals( marker.getX() - 0.5*marker.getH(), offset, 1e-6) ){ PatchFound=true; }
     }
     if ( PatchFound and (line.find("     ") == 0) ){
       std::istringstream iss(line);
@@ -201,7 +201,7 @@ if ({{PREDICATE}}) {
   dfor(volume, {{NUMBER_OF_VOLUMES_PER_AXIS}}) {
       int index = peano4::utils::dLinearised(volume,{{NUMBER_OF_VOLUMES_PER_AXIS}}) * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}) ;
       for (int i=0; i<=({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}); i++){
-            fineGridCell{{UNKNOWN_IDENTIFIER}}.value[index+i]=patchDataFromFile[index+i];
+            fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[index+i]=patchDataFromFile[index+i];
       }
   }
 

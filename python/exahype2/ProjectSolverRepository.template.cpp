@@ -7,12 +7,11 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/accelerator/Device.h"
 
-#include "peano4/grid/grid.h"
 #include "peano4/parallel/SpacetreeSet.h"
 
+#include "exahype2/exahype2.h"
 #include "exahype2/LoadBalancingConfiguration.h"
 #include "exahype2/RefinementControlService.h"
-#include "exahype2/UserInterface.h"
 
 {% for item in TRACERS -%}
 #include "vertexdata/{{ item }}Set.h"
@@ -34,7 +33,6 @@ int statisticsExchangeTag = tarch::mpi::Rank::reserveFreeTag("SolverRepository -
 tarch::logging::Log _log("{{NAMESPACE | join("::")}}::SolverRepository");
 
 ::exahype2::PlotFilter         plotFilter;
-peano4::grid::GridStatistics   gridStatisticsAfterGridConstruction;
 
 {% if LOAD_BALANCER_CONFIGURATION!="" %}
 toolbox::loadbalancing::LoadBalancer loadBalancer({{LOAD_BALANCER_CONFIGURATION}});
@@ -163,6 +161,15 @@ void suspendSolversForOneGridSweep() {
   {%- endfor %}
 }
 
+int getNumberOfDoFs() {
+  int numberOfDoFs = 0;
+  {% for item in SOLVERS -%}
+  numberOfDoFs += {{ item[1] }}.getNumberOfDoFs();
+  {# Comment to ensure that jinja2 adds a new line#}
+  {%- endfor %}
+  return numberOfDoFs;
+}
+
 void startGridConstructionStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.startGridConstructionStep();
@@ -214,51 +221,6 @@ void finishGridConstructionStep() {
 
   ::exahype2::RefinementControlService::getInstance().finishStep();
   loadBalancer.update();
-
-  gridStatisticsAfterGridConstruction = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics();
-  #ifdef WITH_MPI
-  if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-    for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++ ) {
-      if (rank!=tarch::mpi::Rank::getGlobalMasterRank()) {
-        peano4::grid::GridStatistics rankLocalStats;
-        logDebug("finishGridConstructionStep()", "Receive grid statistics from rank " << rank << " via tag " << statisticsExchangeTag);
-        peano4::grid::GridStatistics::receive(
-          rankLocalStats,
-          rank,
-          statisticsExchangeTag,
-          [&]() {
-            tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-            tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-          },
-          [&]() {
-            tarch::mpi::Rank::getInstance().writeTimeOutWarning("{{NAMESPACE | join("::")}}", "finishGridConstructionStep()", rank, statisticsExchangeTag);
-            tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut("{{NAMESPACE | join("::")}}", "finishGridConstructionStep()", rank, statisticsExchangeTag);
-            tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-          },
-          tarch::mpi::Rank::getInstance().getCommunicator()
-        );
-        gridStatisticsAfterGridConstruction = gridStatisticsAfterGridConstruction + rankLocalStats;
-      }
-    }
-  } else {
-    logDebug("finishGridConstructionStep()", "Send out local statistics " << gridStatisticsAfterGridConstruction.toString() << " to global master via tag " << statisticsExchangeTag);
-    peano4::grid::GridStatistics::send(
-      gridStatisticsAfterGridConstruction,
-      tarch::mpi::Rank::getInstance().getGlobalMasterRank(),
-      statisticsExchangeTag,
-      [&]() {
-        tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-        tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-      },
-      [&]() {
-        tarch::mpi::Rank::getInstance().writeTimeOutWarning( "", "receive()", tarch::mpi::Rank::getInstance().getGlobalMasterRank(), statisticsExchangeTag );
-        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "", "receive()", tarch::mpi::Rank::getInstance().getGlobalMasterRank(), statisticsExchangeTag );
-        tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-      },
-      tarch::mpi::Rank::getInstance().getCommunicator()
-    );
-  }
-  #endif
 }
 
 void finishGridInitialisationStep() {

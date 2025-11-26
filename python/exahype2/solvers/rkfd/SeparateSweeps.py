@@ -54,8 +54,8 @@ class UpdateCell(AbstractRKFDActionSet):
         """
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(false);
     if ({{GUARD}}) {
-      auto* /*const*/ newQ = {{NEW_ACCESSOR}}.value;
-      auto* /*const*/ oldQWithHalo = {{OLD_ACCESSOR}}.value;
+      auto* /*const*/ newQ = {{NEW_ACCESSOR}}.data();
+      auto* /*const*/ oldQWithHalo = {{OLD_ACCESSOR}}.data();
       double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
       // Set the variable
@@ -78,7 +78,7 @@ class UpdateCell(AbstractRKFDActionSet):
             {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
             oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] += 
               timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
-              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
             {% endif %}
             {% endfor %}
           }
@@ -88,18 +88,18 @@ class UpdateCell(AbstractRKFDActionSet):
             {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
             oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] += 
               timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
-              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
             {% endif %}
             {% endfor %}
           }
           for (int unknown : auxiliaryVarsIndices) {
             oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] = //abuse of RHS, auxiliary variables are stored there.
-              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},dof,unknown) ];
+              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},dof,unknown) ];
           }
         {% endif %}
         }
 
-        newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
+        newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data() + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
       }
       {% endfor %} 
 
@@ -118,7 +118,7 @@ class UpdateCell(AbstractRKFDActionSet):
             {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
             oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] += 
               timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
-              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
             {% endif %}
             {% endfor %}
           }
@@ -129,7 +129,7 @@ class UpdateCell(AbstractRKFDActionSet):
               
         }
 
-        newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
+        newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data() + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
       }
       {% endfor %} 
 
@@ -155,7 +155,7 @@ class UpdateCell(AbstractRKFDActionSet):
       }
       {% endfor %} 
 
-      ::exahype2::CellData  patchData( oldQWithHalo, marker.x(), marker.h(), subTimeStamp, timeStepSize, newQ );
+      ::exahype2::CellData  patchData( oldQWithHalo, marker.getX(), marker.getH(), subTimeStamp, timeStepSize, newQ );
 
       {% if RECONSTRUCTION_STAGES==0 %}
         ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}} 

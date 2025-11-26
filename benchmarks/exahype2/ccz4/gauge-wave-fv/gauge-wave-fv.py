@@ -5,11 +5,11 @@ import argparse
 import peano4
 import exahype2
 
-size=[1.0, 1.0, 1.0]
-offset=[-0.5, -0.5, -0.5]
+size = [200.0, 200.0, 200.0]
+offset = [-100, -100, -100]
 end_time = 1.0
 plot_interval = 0.0
-#periodic_BC = [True, True, True]
+# periodic_BC = [True, True, True]
 periodic_BC = [False, False, False]
 
 floatparams = {
@@ -69,7 +69,7 @@ if __name__ == "__main__":
         "-ps",
         "--patch-size",
         type=int,
-        default=9,
+        default=8,
         help="Number of finite volumes per axis (dimension) per patch.",
     )
 
@@ -219,7 +219,7 @@ if __name__ == "__main__":
         executable="GaugeWaveFV",
     )
 
-    max_h = (1.1 * min(size) / (3.0**args.min_depth))
+    max_h = 1.1 * min(size) / (3.0**args.min_depth)
     min_h = max_h * 3.0 ** (-args.amr_levels)
     my_solver = CCZ4Solver(
         "CCZ4",
@@ -263,7 +263,7 @@ if __name__ == "__main__":
         first_plot_time_stamp=0.0,
         time_in_between_plots=plot_interval,
         periodic_BC=periodic_BC,
-        plotter_precision=8
+        plotter_precision=8,
     )
 
     if plot_interval > 0.0:

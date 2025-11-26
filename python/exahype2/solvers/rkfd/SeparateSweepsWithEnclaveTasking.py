@@ -16,7 +16,6 @@ from peano4.toolbox.blockstructured.ReconstructPatch import (
 )
 
 from exahype2.solvers.ButcherTableau import ButcherTableau
-from exahype2.solvers.Storage import Storage
 
 
 class UpdateCell(ReconstructPatch):
@@ -50,13 +49,13 @@ class UpdateCell(ReconstructPatch):
             {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
             oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] += 
               timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
-              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
             {% endif %}
             {% endfor %}
           }      
         }
         
-        newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
+        newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data() + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
       }
       {% endfor %} 
    
@@ -213,10 +212,10 @@ class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
   ) {
     #if DIMENSIONS==2
     constexpr int NumberOfDoFsPerCell = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * NumberOfDoFsPerCell * {{NUMBER_OF_UNKNOWNS}};
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data() + {{PREDICATE_NO}} * NumberOfDoFsPerCell * {{NUMBER_OF_UNKNOWNS}};
     #elif DIMENSIONS==3
     constexpr int NumberOfDoFsPerCell = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * NumberOfDoFsPerCell * {{NUMBER_OF_UNKNOWNS}};
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data() + {{PREDICATE_NO}} * NumberOfDoFsPerCell * {{NUMBER_OF_UNKNOWNS}};
     #endif
     
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
@@ -733,18 +732,3 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
 
     def _enclave_task_name(self):
         return "{}EnclaveTask".format(self._name)
-
-    def switch_storage_scheme(
-        self,
-        cell_data_storage: Storage,
-        face_data_storage: Storage,
-    ):
-        if cell_data_storage == Storage.SmartPointers:
-            self.make_copy_of_enclave_task_data = False
-        else:
-            self.make_copy_of_enclave_task_data = True
-            
-        super(SeparateSweepsWithEnclaveTasking, self).switch_storage_scheme(
-            cell_data_storage,
-            face_data_storage
-        )

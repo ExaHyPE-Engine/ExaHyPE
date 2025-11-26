@@ -4,7 +4,6 @@ import dastgen2
 import os
 
 
-
 class DataModel(object):
     """! Represents on DaStGen2 object, i.e. one data model
 
@@ -25,17 +24,17 @@ class DataModel(object):
 
 
         ## Attributes
-        
+
         public_fields: C++ string
-          This will be used to add public fields to the class, and each 
-          attribute can feed into this string. However, you can also 
+          This will be used to add public fields to the class, and each
+          attribute can feed into this string. However, you can also
           modify it yourself.
 
         ## Arguments
-        
+
         @param full_qualified_name  Full qualified name
           Please pass in in C++ convention i.e. with :: separating the namespaces.
-          
+
         """
         self._full_qualified_name = full_qualified_name
         self._attributes = []
@@ -70,14 +69,14 @@ class DataModel(object):
 
     def add_aspect(self, aspect):
         """!
-        
+
         Add a new aspect
-        
-        This is a pretty simplistic routine: 
-        
+
+        This is a pretty simplistic routine:
+
         1. Inform the aspect object about the model by invoking set_model()
         2. Add the aspect to the list of used aspects
-        
+
         """
         aspect.set_model(self)
         self._aspects.append(aspect)
@@ -96,7 +95,7 @@ class DataModel(object):
 
 {ATTRIBUTE_INCLUDES}
 {ASPECT_INCLUDES}
-{ADDITIONAL_INCLUDES}       
+{ADDITIONAL_INCLUDES}
 
 {OPEN_NAMESPACES}
   struct {UNQUALIFIED_CLASS_NAME};
@@ -104,7 +103,10 @@ class DataModel(object):
 
 
 struct {FULL_QUALIFIED_CLASS_NAME} {{
-  public:
+public:
+  using DoFType = int;
+  static constexpr int Cardinality = 1;
+
 {PUBLIC_FIELDS}
 
     {UNQUALIFIED_CLASS_NAME}() {{}}
@@ -145,7 +147,10 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
 
 
 struct {FULL_QUALIFIED_CLASS_NAME} {{
-  public:
+public:
+  using DoFType = int;
+  static constexpr int Cardinality = 1;
+
 {PUBLIC_FIELDS}
 
     {UNQUALIFIED_CLASS_NAME}() {{}}
@@ -214,7 +219,7 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
         d["FULL_QUALIFIED_CLASS_NAME"] = self._full_qualified_name
         d["OPEN_NAMESPACES"] = ""
         d["CLOSE_NAMESPACES"] = ""
-        d["ADDITIONAL_INCLUDES"] = self.additional_includes    
+        d["ADDITIONAL_INCLUDES"] = self.additional_includes
         d["SETTER_GETTER_DECLARATIONS"] = ""
         for i in dastgen2.get_namespaces(self._full_qualified_name):
             d["OPEN_NAMESPACES"] += "namespace " + i + "{\n"
@@ -250,7 +255,6 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
         # As tarch do not uses the definition DIMENSIONS, but peano4 needs it (2 or 3 for example)
         d["ASPECT_INCLUDES"] = ""
         for i in self._aspects:
-            
             d["ASPECT_ATTRIBUTES"] += i.get_attributes() + "\n"
             d["ASPECT_METHOD_DECLARATIONS"] += (
                 i.get_method_declarations(self._full_qualified_name) + "\n"
@@ -259,10 +263,13 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
             # Do not include peano4 aspects in tarch files, due to the dimensions definitions
             filtered_includes = ""
             for line in include.split("\n"):
-                if not("tarch" in d["FULL_QUALIFIED_CLASS_NAME"] and line.startswith('#include "peano4')):
+                if not (
+                    "tarch" in d["FULL_QUALIFIED_CLASS_NAME"]
+                    and line.startswith('#include "peano4')
+                ):
                     filtered_includes += line + "\n"
 
-            d["ASPECT_INCLUDES"] += filtered_includes+ "\n"
+            d["ASPECT_INCLUDES"] += filtered_includes + "\n"
         d["CONSTRUCTOR_ARGUMENTS"] = self._get_constructor_arguments()
         if self.__use_default_copy_constructor():
             pass
@@ -274,13 +281,14 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
             #     + "& copy) = default;"
             # )
         else:
-            d["METHOD_DECLARATIONS"] += (
-                "    "
-                + dastgen2.get_unqualified_class_name(self._full_qualified_name)
-                + "(const "
-                + dastgen2.get_unqualified_class_name(self._full_qualified_name)
-                + "& copy);"
-            )
+            pass
+            # d["METHOD_DECLARATIONS"] += (
+            #     "    "
+            #     + dastgen2.get_unqualified_class_name(self._full_qualified_name)
+            #     + "(const "
+            #     + dastgen2.get_unqualified_class_name(self._full_qualified_name)
+            #     + "& copy);"
+            # )
 
         if full_qualified_filename.find("/") != -1:
             path = full_qualified_filename[0 : full_qualified_filename.rfind("/")]
@@ -362,32 +370,33 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
         output.write("}\n\n\n")
 
     def __generate_explicit_copy_constructor(self, output):
-        output.write(
-            self._full_qualified_name
-            + "::"
-            + dastgen2.get_unqualified_class_name(self._full_qualified_name)
-            + "( const "
-            + dastgen2.get_unqualified_class_name(self._full_qualified_name)
-            + "& copy ) {\n"
-        )
-        for attribute in self._attributes:
-            if (
-                attribute._is_static
-                or attribute._is_const_static
-                or attribute._is_constexpr
-                or attribute._is_const
-            ):
-                # no need to copy static class fields.
-                continue
-            if attribute.ifdefs != []:
-                output.write(dastgen2.construct_ifdef_string(attribute.ifdefs))
-            uppercase_name = attribute.name[0].upper() + attribute.name[1:]
-            output.write(
-                "  set" + uppercase_name + "( copy.get" + uppercase_name + "() );\n"
-            )
-            if attribute.ifdefs != []:
-                output.write("#endif \n")
-        output.write("}\n\n\n")
+        # output.write(
+        #     self._full_qualified_name
+        #     + "::"
+        #     + dastgen2.get_unqualified_class_name(self._full_qualified_name)
+        #     + "( const "
+        #     + dastgen2.get_unqualified_class_name(self._full_qualified_name)
+        #     + "& copy ) {\n"
+        # )
+        # for attribute in self._attributes:
+        #     if (
+        #         attribute._is_static
+        #         or attribute._is_const_static
+        #         or attribute._is_constexpr
+        #         or attribute._is_const
+        #     ):
+        #         # no need to copy static class fields.
+        #         continue
+        #     if attribute.ifdefs != []:
+        #         output.write(dastgen2.construct_ifdef_string(attribute.ifdefs))
+        #     uppercase_name = attribute.name[0].upper() + attribute.name[1:]
+        #     output.write(
+        #         "  set" + uppercase_name + "( copy.get" + uppercase_name + "() );\n"
+        #     )
+        #     if attribute.ifdefs != []:
+        #         output.write("#endif \n")
+        # output.write("}\n\n\n")
+        pass
 
     def __generate_accessors(self, output, is_cpp_file):
         """!
@@ -449,7 +458,7 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
             # inserting include statements that the compiler will not accept in the header file
             for aspect in self._aspects:
                 if hasattr(aspect, "implementation_file_includes"):
-                    output.write( aspect.implementation_file_includes )
+                    output.write(aspect.implementation_file_includes)
 
             if self.has_nondefault_constructor:
                 self.__generate_constructor_definition(output)
@@ -472,13 +481,10 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
         for i in self._attributes:
             i.expose_in_header_file = True
 
-
     @property
     def full_qualified_name(self):
         return self._full_qualified_name
 
-
     @property
     def name(self):
-        return self._full_qualified_name.split( "::" )[-1]
-        
+        return self._full_qualified_name.split("::")[-1]

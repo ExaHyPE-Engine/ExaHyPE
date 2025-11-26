@@ -10,3 +10,4 @@ import peano4.toolbox
 
 from .Logger import log
 from .Project import Project
+from .PeanoMain import PeanoMain

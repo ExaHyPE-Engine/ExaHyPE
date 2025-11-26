@@ -3,6 +3,8 @@
 #include "../Interpolation.h"
 #include "../Restriction.h"
 
+#include "peano4/grid/GridTraversalEvent.h"
+
 toolbox::blockstructured::tests::IandRThirdOrderTest::IandRThirdOrderTest():
   TestCase("toolbox::blockstructured::tests::IandRThirdOrderTest") {}
 
@@ -61,14 +63,16 @@ void toolbox::blockstructured::tests::IandRThirdOrderTest::
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
       for (int k = 0; k < 3; k++) {
-        peano4::grid::GridTraversalEvent dummyEvent;
-        dummyEvent.setRelativePositionToFather(
+        peano4::grid::GridTraversalEvent event;
+        event.setRelativePositionToFather(
           tarch::la::Vector<DIMENSIONS, int>{i, j, k}
         );
 
         for (int axis = 0; axis < 3; axis++) {
-          peano4::datamanagement::FaceMarker faceMarker1(dummyEvent, axis);
-          peano4::datamanagement::FaceMarker faceMarker2(dummyEvent, axis + 3);
+          peano4::datamanagement::FaceMarker faceMarker1 = event.getFaceMarker();
+          faceMarker1.select(axis);
+          peano4::datamanagement::FaceMarker faceMarker2 = event.getFaceMarker();
+          faceMarker2.select(axis + 3);
 
           for (int n = 0; n < unknowns * patchSize * patchSize * overlap * 2;
                n++)
@@ -198,14 +202,16 @@ void toolbox::blockstructured::tests::IandRThirdOrderTest::
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
       for (int k = 0; k < 3; k++) {
-        peano4::grid::GridTraversalEvent dummyEvent;
-        dummyEvent.setRelativePositionToFather(
+        peano4::grid::GridTraversalEvent event;
+        event.setRelativePositionToFather(
           tarch::la::Vector<DIMENSIONS, int>{i, j, k}
         );
 
         for (int axis = 0; axis < 3; axis++) {
-          peano4::datamanagement::FaceMarker faceMarker1(dummyEvent, axis);
-          peano4::datamanagement::FaceMarker faceMarker2(dummyEvent, axis + 3);
+          peano4::datamanagement::FaceMarker faceMarker1 = event.getFaceMarker();
+          faceMarker1.select(axis);
+          peano4::datamanagement::FaceMarker faceMarker2 = event.getFaceMarker();
+          faceMarker2.select(axis + 3);
 
           for (int n = 0; n < unknowns * patchSize * patchSize * overlap * 2;
                n++)

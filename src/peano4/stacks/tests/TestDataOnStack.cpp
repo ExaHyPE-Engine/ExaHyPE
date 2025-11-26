@@ -4,30 +4,32 @@
 
 #include "tarch/accelerator/accelerator.h"
 
-peano4::stacks::tests::TestDataOnStack::TestDataOnStack() { value.fill(0); }
+peano4::stacks::tests::TestDataOnStack::TestDataOnStack() { data.fill(0); }
 
-peano4::stacks::tests::TestDataOnStack::TestDataOnStack(int v) { value.fill(v); }
+peano4::stacks::tests::TestDataOnStack::TestDataOnStack(int v) { data.fill(v); }
+
+peano4::stacks::tests::TestDataOnStack::TestDataOnStack(ObjectConstruction) noexcept {}
 
 peano4::stacks::tests::TestDataOnStack::TestDataOnStack(const TestDataOnStack& other) { clone(other); }
 
 peano4::stacks::tests::TestDataOnStack::TestDataOnStack(TestDataOnStack&& other) noexcept {
-  value = std::move(other.value);
+  data = std::move(other.data);
 }
 
 peano4::stacks::tests::TestDataOnStack& peano4::stacks::tests::TestDataOnStack::operator=(TestDataOnStack&& other
 ) noexcept {
   if (this != &other) {
-    value = std::move(other.value);
+    data = std::move(other.data);
   }
   return *this;
 }
 
 void peano4::stacks::tests::TestDataOnStack::clone(const TestDataOnStack& other) {
-  std::copy(std::begin(other.value), std::end(other.value), std::begin(value));
+  std::copy(std::begin(other.data), std::end(other.data), std::begin(data));
 }
 
 #ifdef WITH_MPI
-MPI_Datatype peano4::stacks::tests::TestDataOnStack::Datatype;
+MPI_Datatype peano4::stacks::tests::TestDataOnStack::Datatype = MPI_DATATYPE_NULL;
 
 void peano4::stacks::tests::TestDataOnStack::initDatatype() {
   int errorCode = MPI_Type_contiguous(Cardinality, MPI_INT, &Datatype);
@@ -38,6 +40,24 @@ void peano4::stacks::tests::TestDataOnStack::initDatatype() {
     ss << "Error constructing MPI datatype in " << __FILE__ << ":" << __LINE__;
     throw std::runtime_error(ss.str());
   }
+
+  // MPI_Datatype tmp;
+  // const int blocklength = Cardinality;
+  // MPI_Datatype basetype = MPI_INT;
+
+  // TestDataOnStack probe;
+  // MPI_Aint base, addr, disp;
+
+  // MPI_Get_address(&probe, &base);
+  // MPI_Get_address(probe.data.data(), &addr);
+  // disp = addr - base;
+
+  // MPI_Type_create_struct(1, &blocklength, &disp, &basetype, &tmp);
+
+  // MPI_Aint lb = 0, extent = static_cast<MPI_Aint>(sizeof(TestDataOnStack));
+  // MPI_Type_create_resized(tmp, lb, extent, &Datatype);
+  // MPI_Type_commit(&Datatype);
+  // MPI_Type_free(&tmp);
 }
 
 void peano4::stacks::tests::TestDataOnStack::shutdownDatatype() { MPI_Type_free(&Datatype); }

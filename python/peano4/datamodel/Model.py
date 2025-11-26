@@ -22,13 +22,13 @@ class Model(object):
 
     def __str__(self):
         return (
-            "(#cells="
+            "(#Cells="
             + str(len(self.cell_data))
-            + ",#faces="
+            + ",#Faces="
             + str(len(self.face_data))
-            + ",#vertices="
+            + ",#Vertices="
             + str(len(self.vertex_data))
-            + ",#global-objects="
+            + ",#GlobalData="
             + str(len(self.global_data))
             + ")"
         )
@@ -68,7 +68,7 @@ class Model(object):
             output.readme.add_package_description(i.readme_package_descriptor)
 
         self.generator.construct_output(output)
-    
+
     def clear(self):
         self.cell_data = []
         self.face_data = []

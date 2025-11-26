@@ -32,13 +32,13 @@ class HandleBoundary(AbstractADERDGActionSet):
     const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
     const bool isLeftFace = marker.getSelectedFaceNumber() < DIMENSIONS;
 
-    {{CORRECTOR_COMPUTATION_PRECISION}}* FIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (!isLeftFace ? 0 : FluxElementsByFace);
-    {{CORRECTOR_COMPUTATION_PRECISION}}* FOut = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (!isLeftFace ? FluxElementsByFace : 0);
-    {{CORRECTOR_COMPUTATION_PRECISION}}* QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (!isLeftFace ? 0 : BasisElementsByFace);
-    {{CORRECTOR_COMPUTATION_PRECISION}}* QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (!isLeftFace ? BasisElementsByFace : 0);
+    {{CORRECTOR_COMPUTATION_PRECISION}}* FIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.data() + (!isLeftFace ? 0 : FluxElementsByFace);
+    {{CORRECTOR_COMPUTATION_PRECISION}}* FOut = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.data() + (!isLeftFace ? FluxElementsByFace : 0);
+    {{CORRECTOR_COMPUTATION_PRECISION}}* QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.data() + (!isLeftFace ? 0 : BasisElementsByFace);
+    {{CORRECTOR_COMPUTATION_PRECISION}}* QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.data() + (!isLeftFace ? BasisElementsByFace : 0);
 
-    tarch::la::Vector<DIMENSIONS, double> faceOffset = marker.x() - 0.5 * marker.h();
-    faceOffset(normal) += 0.5 * marker.h()(normal);
+    tarch::la::Vector<DIMENSIONS, double> faceOffset = marker.getX() - 0.5 * marker.getH();
+    faceOffset(normal) += 0.5 * marker.getH()(normal);
 
     dfore(dof, {{ORDER}} + 1, normal, 0) {
         tarch::la::Vector<DIMENSIONS, double> nodePosition;
@@ -46,7 +46,7 @@ class HandleBoundary(AbstractADERDGActionSet):
         int basis         = 1;
         for (int d = 0; d < DIMENSIONS; d++) {
           nodePosition(d)  = faceOffset(d);
-          nodePosition(d) += (d == normal) ? 0.0 : kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes[dof(d)] * marker.h()(d);
+          nodePosition(d) += (d == normal) ? 0.0 : kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes[dof(d)] * marker.getH()(d);
           dofSerialised += (d == normal) ? 0 : dof(d) * basis;
           basis *= (d == normal) ? 1 : ({{ORDER}} + 1);
         }
@@ -55,7 +55,7 @@ class HandleBoundary(AbstractADERDGActionSet):
           QIn  + dofSerialised * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}),
           QOut + dofSerialised * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}),
           nodePosition,
-          marker.h(),
+          marker.getH(),
           timeStamp,
           normal
         );
@@ -64,7 +64,7 @@ class HandleBoundary(AbstractADERDGActionSet):
         repositories::{{SOLVER_INSTANCE}}.flux(
           QOut + dofSerialised * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}),
           nodePosition,
-          marker.h(),
+          marker.getH(),
           timeStamp,
           timeStepSize,
           normal,

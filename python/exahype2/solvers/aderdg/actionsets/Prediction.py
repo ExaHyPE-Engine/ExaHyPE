@@ -5,6 +5,7 @@ from .AbstractADERDGActionSet import AbstractADERDGActionSet
 import jinja2
 import peano4.solversteps
 
+
 class Prediction(AbstractADERDGActionSet):
     """
     The extrapolated solution from the space-time predictor has to be projected onto
@@ -37,34 +38,34 @@ class Prediction(AbstractADERDGActionSet):
     constexpr int BasisElementsPerFace  = kernels::{{SOLVER_NAME}}::getBndFaceSize();
     constexpr int FluxElementsPerFace   = kernels::{{SOLVER_NAME}}::getBndFluxSize();
 
-    auto* QNew = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
-    auto* QOld = fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value;
+    auto* QNew = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
+    auto* QOld = fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data();
 
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
     {{CORRECTOR_COMPUTATION_PRECISION}}* lQhbnd[TWO_TIMES_D] = {
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).value + BasisElementsPerFace,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).value + BasisElementsPerFace,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).data() + BasisElementsPerFace,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).data() + BasisElementsPerFace,
 #if DIMENSIONS==3
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + BasisElementsPerFace,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).data() + BasisElementsPerFace,
 #endif
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0 + DIMENSIONS).value,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1 + DIMENSIONS).value,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0 + DIMENSIONS).data(),
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1 + DIMENSIONS).data(),
 #if DIMENSIONS==3
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2 + DIMENSIONS).value
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2 + DIMENSIONS).data()
 #endif
     };
 
     {{CORRECTOR_COMPUTATION_PRECISION}}* lFhbnd[TWO_TIMES_D] = {
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0).value + FluxElementsPerFace,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1).value + FluxElementsPerFace,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0).data() + FluxElementsPerFace,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1).data() + FluxElementsPerFace,
 #if DIMENSIONS==3
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(2).value + FluxElementsPerFace,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(2).data() + FluxElementsPerFace,
 #endif
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0 + DIMENSIONS).value,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1 + DIMENSIONS).value,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0 + DIMENSIONS).data(),
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1 + DIMENSIONS).data(),
 #if DIMENSIONS==3
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(2 + DIMENSIONS).value
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(2 + DIMENSIONS).data()
 #endif
     };
 
@@ -109,7 +110,7 @@ class Prediction(AbstractADERDGActionSet):
     }
 
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
-    repositories::{{SOLVER_INSTANCE}}.update(timeStepSize, timeStamp, tarch::la::min(marker.h()), tarch::la::max(marker.h()));
+    repositories::{{SOLVER_INSTANCE}}.update(timeStepSize, timeStamp, tarch::la::min(marker.getH()), tarch::la::max(marker.getH()));
   }
 """
 
@@ -120,11 +121,18 @@ class Prediction(AbstractADERDGActionSet):
 
     def _add_action_set_entries_to_dictionary(self, d):
         d["GUARD"] = self.guard
-        d["ENCLAVE_GUARD"] = "marker.willBeSkeletonCell()" if self._solver._use_enclave_tasking else "true"
+        d["ENCLAVE_GUARD"] = (
+            "marker.willBeSkeletonCell()"
+            if self._solver._use_enclave_tasking
+            else "true"
+        )
 
     def get_body_of_operation(self, operation_name):
         result = ""
-        if operation_name == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME
+        ):
             d = {}
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
@@ -135,7 +143,9 @@ class Prediction(AbstractADERDGActionSet):
     def get_body_of_unprepareTraversal(self):
         result = ""
         if self._solver._use_enclave_tasking and self._solver._can_fuse:
-            result += "::exahype2::EnclaveBookkeeping::getInstance().fusePendingTasks();"
+            result += (
+                "::exahype2::EnclaveBookkeeping::getInstance().fusePendingTasks();"
+            )
         return result
 
     def get_action_set_name(self):
@@ -144,8 +154,12 @@ class Prediction(AbstractADERDGActionSet):
     def get_includes(self):
         result = super(Prediction, self).get_includes()
         if self._solver._use_enclave_tasking:
-            result += """
-#include "tasks/Prediction""" + self._solver._name + """EnclaveTask.h"
+            result += (
+                """
+#include "tasks/Prediction"""
+                + self._solver._name
+                + """EnclaveTask.h"
 #include "exahype2/EnclaveBookkeeping.h"
 """
+            )
         return result

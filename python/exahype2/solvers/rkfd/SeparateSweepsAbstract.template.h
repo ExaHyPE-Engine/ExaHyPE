@@ -215,6 +215,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     virtual double getMaxMeshSize() const override final;
     virtual double getMinMeshSize() const override final;
 
+    virtual int getNumberOfDoFs() const override final;
+
     /**
      * Update the global solver state, i.e. inform the solver about some
      * updated global quantities.
