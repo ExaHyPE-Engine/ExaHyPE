@@ -46,7 +46,9 @@ namespace swift2 {
 #pragma error "Hydro dimension undefined"
 #endif
 
+#if defined(GPUOffloadingOMP)
 #pragma omp begin declare target
+#endif
         static const double
           kernel_coeffs[(kernel_degree + 1) * (kernel_ivals + 1)]
           __attribute__((aligned(AlignmentOnHeap)))
@@ -57,8 +59,9 @@ namespace swift2 {
             1.0,  -4.0, 6.0,  -4.0, 1.0,   /* 0.6 < u < 0.8 */
             1.0,  -4.0, 6.0,  -4.0, 1.0,   /* 0.8 < u < 1 */
             0.0,  0.0,  0.0,  0.0,  0.0};  /* 1 < u */
-
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
+#endif
 
 /* ------------------------------------------------------------------------- */
 
