@@ -60,8 +60,8 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
       ) -> void {
         repositories::{{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, x, t, normal );
       },  
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       timeStamp,
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
       {{ORDER}},                                                   
@@ -69,7 +69,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       marker.getSelectedFaceNumber(),
       repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-      fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value
+      fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data()
     );
 """
 

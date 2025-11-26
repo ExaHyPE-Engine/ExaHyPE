@@ -5,6 +5,7 @@ from .AbstractADERDGActionSet import AbstractADERDGActionSet
 import jinja2
 import peano4.solversteps
 
+
 class PredictionOnHangingCells(AbstractADERDGActionSet):
     _Template_TouchCellFirstTime = """
   bool isHangingCell = false;
@@ -31,34 +32,34 @@ class PredictionOnHangingCells(AbstractADERDGActionSet):
     constexpr int BasisElementsPerFace  = kernels::{{SOLVER_NAME}}::getBndFaceSize();
     constexpr int FluxElementsPerFace   = kernels::{{SOLVER_NAME}}::getBndFluxSize();
 
-    auto* QNew = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
-    auto* QOld = fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value;
+    auto* QNew = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
+    auto* QOld = fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data();
 
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
     {{CORRECTOR_COMPUTATION_PRECISION}}* lQhbnd[TWO_TIMES_D] = {
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).value + BasisElementsPerFace,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).value + BasisElementsPerFace,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).data() + BasisElementsPerFace,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).data() + BasisElementsPerFace,
 #if DIMENSIONS==3
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + BasisElementsPerFace,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).data() + BasisElementsPerFace,
 #endif
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0 + DIMENSIONS).value,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1 + DIMENSIONS).value,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0 + DIMENSIONS).data(),
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1 + DIMENSIONS).data(),
 #if DIMENSIONS==3
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2 + DIMENSIONS).value
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2 + DIMENSIONS).data()
 #endif
     };
 
     {{CORRECTOR_COMPUTATION_PRECISION}}* lFhbnd[TWO_TIMES_D] = {
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0).value + FluxElementsPerFace,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1).value + FluxElementsPerFace,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0).data() + FluxElementsPerFace,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1).data() + FluxElementsPerFace,
 #if DIMENSIONS==3
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(2).value + FluxElementsPerFace,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(2).data() + FluxElementsPerFace,
 #endif
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0 + DIMENSIONS).value,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1 + DIMENSIONS).value,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0 + DIMENSIONS).data(),
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1 + DIMENSIONS).data(),
 #if DIMENSIONS==3
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(2 + DIMENSIONS).value
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(2 + DIMENSIONS).data()
 #endif
     };
 
@@ -87,15 +88,15 @@ class PredictionOnHangingCells(AbstractADERDGActionSet):
 
       // Left values
       if (fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()) {
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FL = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value;
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value + FluxElementsPerFace;
-        {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value;
-        {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value + BasisElementsPerFace;
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FL = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).data();
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).data() + FluxElementsPerFace;
+        {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).data();
+        {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).data() + BasisElementsPerFace;
         const int orientation = 0;
         const int faceNumber  = d;
         const bool isBoundary = false;
-        auto faceCentre = marker.x();
-        faceCentre[d] -= 0.5 * marker.h()[d];
+        auto faceCentre = marker.getX();
+        faceCentre[d] -= 0.5 * marker.getH()[d];
         {{RIEMANN_SOLVER_CALL}}
         {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = FR;
         {{FACE_INTEGRAL_CALL}}
@@ -103,15 +104,15 @@ class PredictionOnHangingCells(AbstractADERDGActionSet):
 
       // Right values
       if (fineGridFaces{{SOLVER_NAME}}FaceLabel(d+DIMENSIONS).getIsHanging()) {
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FL = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).value;
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).value + FluxElementsPerFace;
-        {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + DIMENSIONS).value;
-        {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + DIMENSIONS).value + BasisElementsPerFace;
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FL = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).data();
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).data() + FluxElementsPerFace;
+        {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + DIMENSIONS).data();
+        {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + DIMENSIONS).data() + BasisElementsPerFace;
         const int orientation = 1;
         const int faceNumber  = d + DIMENSIONS;
         const bool isBoundary = false;
-        auto faceCentre = marker.x();
-        faceCentre[d] += 0.5 * marker.h()[d];
+        auto faceCentre = marker.getX();
+        faceCentre[d] += 0.5 * marker.getH()[d];
         {{RIEMANN_SOLVER_CALL}}
         {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = FL;
         {{FACE_INTEGRAL_CALL}}
@@ -119,7 +120,7 @@ class PredictionOnHangingCells(AbstractADERDGActionSet):
     }
 
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
-    repositories::{{SOLVER_INSTANCE}}.update(timeStepSize, timeStamp, tarch::la::min(marker.h()), tarch::la::max(marker.h()));
+    repositories::{{SOLVER_INSTANCE}}.update(timeStepSize, timeStamp, tarch::la::min(marker.getH()), tarch::la::max(marker.getH()));
   }
 """
 
@@ -133,7 +134,10 @@ class PredictionOnHangingCells(AbstractADERDGActionSet):
 
     def get_body_of_operation(self, operation_name):
         result = ""
-        if operation_name == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME
+        ):
             d = {}
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)

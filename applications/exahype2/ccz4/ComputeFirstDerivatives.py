@@ -59,7 +59,7 @@ class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPat
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ::exahype2::CellData  patchData( 
         oldQWithHalo, 
-        marker.x(), marker.h(), 
+        marker.getX(), marker.getH(), 
         0.0, // timeStamp => not used here 
         0.0, // timeStepSize => not used here
         newQ 
@@ -130,13 +130,13 @@ class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPat
             {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
             oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] += 
               {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
-              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO-1}},dof,unknown) ];
+              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO-1}},dof,unknown) ];
             {% endif %}
             {% endfor %}
           }      
         }
         
-        newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
+        newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data() + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
       }
       {% endfor %} 
 
@@ -155,12 +155,12 @@ class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPat
       // take into account that linear combination has already been computed,
       // and rhs even might not be held persistently
       if ( repositories::isLastGridSweepOfTimeStep() ) {
-        newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+        newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
       }
             
       ::exahype2::CellData  patchData( 
         oldQWithHalo, 
-        marker.x(), marker.h(), 
+        marker.getX(), marker.getH(), 
         0.0, // timeStamp => not used here 
         0.0, // timeStepSize => not used here
         newQ 

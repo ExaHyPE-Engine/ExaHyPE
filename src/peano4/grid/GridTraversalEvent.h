@@ -2,318 +2,170 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <string>
-
-#ifdef WITH_MPI
-#include <functional>
-#include <mpi.h>
-#endif
-
-#include "LoadStoreComputeFlag.h"
-#include "TraversalObserver.h"
+#include "peano4/datamanagement/CellMarker.h"
+#include "peano4/datamanagement/FaceMarker.h"
 #include "peano4/utils/Globals.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/services/ServiceRepository.h"
 
-namespace peano4 {
-  namespace grid {
-    struct GridTraversalEvent;
-  } // namespace grid
-} // namespace peano4
+#include <array>
+#include <cstdint>
+#include <type_traits>
 
+namespace peano4::grid {
+  struct GridTraversalEvent;
+} // namespace peano4::grid
 
-struct peano4::grid::GridTraversalEvent {
-public:
-  GridTraversalEvent() = default;
-  GridTraversalEvent(
-    const tarch::la::Vector<DIMENSIONS, double>& __x,
-    const tarch::la::Vector<DIMENSIONS, double>& __h,
-    const std::bitset<TWO_POWER_D>&              __hasBeenRefined,
-    const std::bitset<TWO_POWER_D>&              __willBeRefined,
-    const std::bitset<TWO_POWER_D>&              __isVertexLocal,
-    const std::bitset<TWO_POWER_D>&              __isParentVertexLocal,
-    const std::bitset<TWO_POWER_D>&              __isVertexParentOfSubtree,
-    const std::bitset<TWO_TIMES_D>&              __isFaceLocal,
-    const bool                                   __isCellLocal,
-    const bool                                   __isParentCellLocal,
-    const std::bitset<TWO_POWER_D>&              __isVertexAdjacentToParallelDomainBoundary,
-    const std::bitset<TWO_TIMES_D>&              __isFaceAdjacentToParallelDomainBoundary,
-    const tarch::la::Vector<TWO_POWER_D, int>&   __numberOfAdjacentTreesPerVertex,
-    const std::bitset<THREE_POWER_D>&            __isAdjacentCellLocal,
-    const tarch::la::Vector<TWO_POWER_D, int>&   __vertexDataFrom,
-    const tarch::la::Vector<TWO_POWER_D, int>&   __vertexDataTo,
-    const tarch::la::Vector<TWO_TIMES_D, int>&   __faceDataFrom,
-    const tarch::la::Vector<TWO_TIMES_D, int>&   __faceDataTo,
-    const int                                    __cellData,
-    const tarch::la::Vector<DIMENSIONS, int>&    __relativePositionToFather,
-    const int                                    __invokingSpacetree,
-    const bool                                   __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing
-  );
-  GridTraversalEvent(const GridTraversalEvent& copy);
+struct peano4::grid::GridTraversalEvent final {
+  tarch::la::Vector<DIMENSIONS, double> x{};
+  tarch::la::Vector<DIMENSIONS, double> h{};
 
-  inline tarch::la::Vector<DIMENSIONS, double> getX() const { return _x; }
-  inline double                                getX(int index) const { return _x[index]; }
-  inline void                                  setX(int index, double value) { _x[index] = value; }
-  inline void                                  setX(const tarch::la::Vector<DIMENSIONS, double>& value) { _x = value; }
+  tarch::la::Vector<DIMENSIONS, int> relativePositionToFather{};
 
-  inline tarch::la::Vector<DIMENSIONS, double> getH() const { return _h; }
-  inline double                                getH(int index) const { return _h[index]; }
-  inline void                                  setH(int index, double value) { _h[index] = value; }
-  inline void                                  setH(const tarch::la::Vector<DIMENSIONS, double>& value) { _h = value; }
+  std::uint8_t hasBeenRefined{0};
+  std::uint8_t willBeRefined{0};
 
-  inline std::bitset<TWO_POWER_D> getHasBeenRefined() const { return _hasBeenRefined; }
-  inline bool                     getHasBeenRefined(int index) const { return _hasBeenRefined[index]; }
-  inline void                     setHasBeenRefined(int index, bool value) { _hasBeenRefined[index] = value; }
-  inline void                     setHasBeenRefined(const std::bitset<TWO_POWER_D>& value) { _hasBeenRefined = value; }
-  inline void                     flipHasBeenRefined(int index) { _hasBeenRefined[index] = not _hasBeenRefined[index]; }
+  std::uint8_t isVertexLocal{0};
+  std::uint8_t isParentVertexLocal{0};
+  std::uint8_t isVertexParentOfSubtree{0};
+  std::uint8_t isVertexAdjacentToParallelDomainBoundary{0};
 
-  inline std::bitset<TWO_POWER_D> getWillBeRefined() const { return _willBeRefined; }
-  inline bool                     getWillBeRefined(int index) const { return _willBeRefined[index]; }
-  inline void                     setWillBeRefined(int index, bool value) { _willBeRefined[index] = value; }
-  inline void                     setWillBeRefined(const std::bitset<TWO_POWER_D>& value) { _willBeRefined = value; }
-  inline void                     flipWillBeRefined(int index) { _willBeRefined[index] = not _willBeRefined[index]; }
+  std::uint8_t isFaceLocal{0};
+  std::uint8_t isFaceAdjacentToParallelDomainBoundary{0};
 
-  inline std::bitset<TWO_POWER_D> getIsVertexLocal() const { return _isVertexLocal; }
-  inline bool                     getIsVertexLocal(int index) const { return _isVertexLocal[index]; }
-  inline void                     setIsVertexLocal(int index, bool value) { _isVertexLocal[index] = value; }
-  inline void                     setIsVertexLocal(const std::bitset<TWO_POWER_D>& value) { _isVertexLocal = value; }
-  inline void                     flipIsVertexLocal(int index) { _isVertexLocal[index] = not _isVertexLocal[index]; }
+  std::uint8_t  isCellLocal{0};
+  std::uint8_t  isParentCellLocal{0};
+  std::uint32_t isAdjacentCellLocal{0};
 
-  inline std::bitset<TWO_POWER_D> getIsParentVertexLocal() const { return _isParentVertexLocal; }
-  inline bool                     getIsParentVertexLocal(int index) const { return _isParentVertexLocal[index]; }
-  inline void                     setIsParentVertexLocal(int index, bool value) { _isParentVertexLocal[index] = value; }
-  inline void setIsParentVertexLocal(const std::bitset<TWO_POWER_D>& value) { _isParentVertexLocal = value; }
-  inline void flipIsParentVertexLocal(int index) { _isParentVertexLocal[index] = not _isParentVertexLocal[index]; }
+  int                          cellData{-1};
+  std::array<int, TWO_POWER_D> vertexDataFrom{};
+  std::array<int, TWO_POWER_D> vertexDataTo{};
+  std::array<int, TWO_TIMES_D> faceDataFrom{};
+  std::array<int, TWO_TIMES_D> faceDataTo{};
 
-  inline std::bitset<TWO_POWER_D> getIsVertexParentOfSubtree() const { return _isVertexParentOfSubtree; }
-  inline bool getIsVertexParentOfSubtree(int index) const { return _isVertexParentOfSubtree[index]; }
-  inline void setIsVertexParentOfSubtree(int index, bool value) { _isVertexParentOfSubtree[index] = value; }
-  inline void setIsVertexParentOfSubtree(const std::bitset<TWO_POWER_D>& value) { _isVertexParentOfSubtree = value; }
-  inline void flipIsVertexParentOfSubtree(int index) {
-    _isVertexParentOfSubtree[index] = not _isVertexParentOfSubtree[index];
+  static INLINE_METHOD bool bitTest8(std::uint8_t m, int i) noexcept { return (m >> i) & 1u; }
+  static INLINE_METHOD void bitSet8(std::uint8_t& m, int i, bool v) noexcept {
+    const std::uint8_t b = std::uint8_t(1u << i);
+    m                    = v ? (m | b) : (m & ~b);
+  }
+  static INLINE_METHOD bool bitTest32(std::uint32_t m, int i) noexcept { return (m >> i) & 1u; }
+  static INLINE_METHOD void bitSet32(std::uint32_t& m, int i, bool v) noexcept {
+    const std::uint32_t b = (std::uint32_t(1u) << i);
+    m                     = v ? (m | b) : (m & ~b);
   }
 
-  inline std::bitset<TWO_TIMES_D> getIsFaceLocal() const { return _isFaceLocal; }
-  inline bool                     getIsFaceLocal(int index) const { return _isFaceLocal[index]; }
-  inline void                     setIsFaceLocal(int index, bool value) { _isFaceLocal[index] = value; }
-  inline void                     setIsFaceLocal(const std::bitset<TWO_TIMES_D>& value) { _isFaceLocal = value; }
-  inline void                     flipIsFaceLocal(int index) { _isFaceLocal[index] = not _isFaceLocal[index]; }
+  INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getX() const noexcept { return x; }
+  INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getH() const noexcept { return h; }
+  INLINE_METHOD void   setX(const tarch::la::Vector<DIMENSIONS, double>& v) noexcept { x = v; }
+  INLINE_METHOD void   setH(const tarch::la::Vector<DIMENSIONS, double>& v) noexcept { h = v; }
+  INLINE_METHOD double getX(int d) const noexcept { return x[d]; }
+  INLINE_METHOD double getH(int d) const noexcept { return h[d]; }
+  INLINE_METHOD void   setX(int d, double v) noexcept { x[d] = v; }
+  INLINE_METHOD void   setH(int d, double v) noexcept { h[d] = v; }
 
-  inline bool getIsCellLocal() const { return _isCellLocal; }
-  inline void setIsCellLocal(bool value) { _isCellLocal = value; }
+  INLINE_METHOD std::uint8_t getHasBeenRefined() const noexcept { return hasBeenRefined; }
+  INLINE_METHOD bool         getHasBeenRefined(int v) const noexcept { return bitTest8(hasBeenRefined, v); }
+  INLINE_METHOD void         setHasBeenRefined(std::uint8_t m) noexcept { hasBeenRefined = m; }
+  INLINE_METHOD void         setHasBeenRefined(int v, bool on) noexcept { bitSet8(hasBeenRefined, v, on); }
 
-  inline bool getIsParentCellLocal() const { return _isParentCellLocal; }
-  inline void setIsParentCellLocal(bool value) { _isParentCellLocal = value; }
+  INLINE_METHOD std::uint8_t getWillBeRefined() const noexcept { return willBeRefined; }
+  INLINE_METHOD bool         getWillBeRefined(int v) const noexcept { return bitTest8(willBeRefined, v); }
+  INLINE_METHOD void         setWillBeRefined(std::uint8_t m) noexcept { willBeRefined = m; }
+  INLINE_METHOD void         setWillBeRefined(int v, bool on) noexcept { bitSet8(willBeRefined, v, on); }
 
-  inline std::bitset<TWO_POWER_D> getIsVertexAdjacentToParallelDomainBoundary() const {
-    return _isVertexAdjacentToParallelDomainBoundary;
-  }
-  inline bool getIsVertexAdjacentToParallelDomainBoundary(int index) const {
-    return _isVertexAdjacentToParallelDomainBoundary[index];
-  }
-  inline void setIsVertexAdjacentToParallelDomainBoundary(int index, bool value) {
-    _isVertexAdjacentToParallelDomainBoundary[index] = value;
-  }
-  inline void setIsVertexAdjacentToParallelDomainBoundary(const std::bitset<TWO_POWER_D>& value) {
-    _isVertexAdjacentToParallelDomainBoundary = value;
-  }
-  inline void flipIsVertexAdjacentToParallelDomainBoundary(int index) {
-    _isVertexAdjacentToParallelDomainBoundary[index] = not _isVertexAdjacentToParallelDomainBoundary[index];
-  }
+  INLINE_METHOD std::uint8_t getIsVertexLocal() const noexcept { return isVertexLocal; }
+  INLINE_METHOD bool         getIsVertexLocal(int v) const noexcept { return bitTest8(isVertexLocal, v); }
+  INLINE_METHOD void         setIsVertexLocal(std::uint8_t m) noexcept { isVertexLocal = m; }
+  INLINE_METHOD void         setIsVertexLocal(int v, bool on) noexcept { bitSet8(isVertexLocal, v, on); }
 
-  inline std::bitset<TWO_TIMES_D> getIsFaceAdjacentToParallelDomainBoundary() const {
-    return _isFaceAdjacentToParallelDomainBoundary;
-  }
-  inline void setIsFaceAdjacentToParallelDomainBoundary(const std::bitset<TWO_TIMES_D>& value) {
-    _isFaceAdjacentToParallelDomainBoundary = value;
-  }
-  inline bool getIsFaceAdjacentToParallelDomainBoundary(int index) const {
-    return _isFaceAdjacentToParallelDomainBoundary[index];
-  }
-  inline void setIsFaceAdjacentToParallelDomainBoundary(int index, bool value) {
-    _isFaceAdjacentToParallelDomainBoundary[index] = value;
-  }
-  inline void flipIsFaceAdjacentToParallelDomainBoundary(int index) {
-    _isFaceAdjacentToParallelDomainBoundary[index] = not _isFaceAdjacentToParallelDomainBoundary[index];
-  }
+  INLINE_METHOD std::uint8_t getIsParentVertexLocal() const noexcept { return isParentVertexLocal; }
+  INLINE_METHOD bool         getIsParentVertexLocal(int v) const noexcept { return bitTest8(isParentVertexLocal, v); }
+  INLINE_METHOD void         setIsParentVertexLocal(std::uint8_t m) noexcept { isParentVertexLocal = m; }
+  INLINE_METHOD void         setIsParentVertexLocal(int v, bool on) noexcept { bitSet8(isParentVertexLocal, v, on); }
 
-  inline tarch::la::Vector<TWO_POWER_D, int> getNumberOfAdjacentTreesPerVertex() const {
-    return _numberOfAdjacentTreesPerVertex;
+  INLINE_METHOD std::uint8_t getIsVertexParentOfSubtree() const noexcept { return isVertexParentOfSubtree; }
+  INLINE_METHOD bool getIsVertexParentOfSubtree(int v) const noexcept { return bitTest8(isVertexParentOfSubtree, v); }
+  INLINE_METHOD void setIsVertexParentOfSubtree(std::uint8_t m) noexcept { isVertexParentOfSubtree = m; }
+  INLINE_METHOD void setIsVertexParentOfSubtree(int v, bool on) noexcept { bitSet8(isVertexParentOfSubtree, v, on); }
+
+  INLINE_METHOD std::uint8_t getIsVertexAdjacentToParallelDomainBoundary() const noexcept {
+    return isVertexAdjacentToParallelDomainBoundary;
   }
-  inline void setNumberOfAdjacentTreesPerVertex(const tarch::la::Vector<TWO_POWER_D, int>& value) {
-    _numberOfAdjacentTreesPerVertex = value;
+  INLINE_METHOD bool getIsVertexAdjacentToParallelDomainBoundary(int v) const noexcept {
+    return bitTest8(isVertexAdjacentToParallelDomainBoundary, v);
   }
-  inline int  getNumberOfAdjacentTreesPerVertex(int index) const { return _numberOfAdjacentTreesPerVertex[index]; }
-  inline void setNumberOfAdjacentTreesPerVertex(int index, int value) {
-    _numberOfAdjacentTreesPerVertex[index] = value;
+  INLINE_METHOD void setIsVertexAdjacentToParallelDomainBoundary(std::uint8_t m) noexcept {
+    isVertexAdjacentToParallelDomainBoundary = m;
+  }
+  INLINE_METHOD void setIsVertexAdjacentToParallelDomainBoundary(int v, bool on) noexcept {
+    bitSet8(isVertexAdjacentToParallelDomainBoundary, v, on);
   }
 
-  inline std::bitset<THREE_POWER_D> getIsAdjacentCellLocal() const { return _isAdjacentCellLocal; }
-  inline void setIsAdjacentCellLocal(const std::bitset<THREE_POWER_D>& value) { _isAdjacentCellLocal = value; }
-  inline bool getIsAdjacentCellLocal(int index) const { return _isAdjacentCellLocal[index]; }
-  inline void setIsAdjacentCellLocal(int index, bool value) { _isAdjacentCellLocal[index] = value; }
-  inline void flipIsAdjacentCellLocal(int index) { _isAdjacentCellLocal[index] = not _isAdjacentCellLocal[index]; }
+  INLINE_METHOD std::uint8_t getIsFaceLocal() const noexcept { return isFaceLocal; }
+  INLINE_METHOD bool         getIsFaceLocal(int f) const noexcept { return bitTest8(isFaceLocal, f); }
+  INLINE_METHOD void         setIsFaceLocal(std::uint8_t m) noexcept { isFaceLocal = m; }
+  INLINE_METHOD void         setIsFaceLocal(int f, bool on) noexcept { bitSet8(isFaceLocal, f, on); }
 
-  inline tarch::la::Vector<TWO_POWER_D, int> getVertexDataFrom() const { return _vertexDataFrom; }
-  inline void setVertexDataFrom(const tarch::la::Vector<TWO_POWER_D, int>& value) { _vertexDataFrom = value; }
-  inline int  getVertexDataFrom(int index) const { return _vertexDataFrom[index]; }
-  inline void setVertexDataFrom(int index, int value) { _vertexDataFrom[index] = value; }
-
-  inline tarch::la::Vector<TWO_POWER_D, int> getVertexDataTo() const { return _vertexDataTo; }
-  inline void setVertexDataTo(const tarch::la::Vector<TWO_POWER_D, int>& value) { _vertexDataTo = value; }
-  inline int  getVertexDataTo(int index) const { return _vertexDataTo[index]; }
-  inline void setVertexDataTo(int index, int value) { _vertexDataTo[index] = value; }
-
-  inline tarch::la::Vector<TWO_TIMES_D, int> getFaceDataFrom() const { return _faceDataFrom; }
-  inline void setFaceDataFrom(const tarch::la::Vector<TWO_TIMES_D, int>& value) { _faceDataFrom = value; }
-  inline int  getFaceDataFrom(int index) const { return _faceDataFrom[index]; }
-  inline void setFaceDataFrom(int index, int value) { _faceDataFrom[index] = value; }
-
-  inline tarch::la::Vector<TWO_TIMES_D, int> getFaceDataTo() const { return _faceDataTo; }
-  inline void setFaceDataTo(const tarch::la::Vector<TWO_TIMES_D, int>& value) { _faceDataTo = value; }
-  inline int  getFaceDataTo(int index) const { return _faceDataTo[index]; }
-  inline void setFaceDataTo(int index, int value) { _faceDataTo[index] = value; }
-
-  inline int  getCellData() const { return _cellData; }
-  inline void setCellData(int value) { _cellData = value; }
-
-  inline tarch::la::Vector<DIMENSIONS, int> getRelativePositionToFather() const { return _relativePositionToFather; }
-  inline void setRelativePositionToFather(const tarch::la::Vector<DIMENSIONS, int>& value) {
-    _relativePositionToFather = value;
+  INLINE_METHOD std::uint8_t getIsFaceAdjacentToParallelDomainBoundary() const noexcept {
+    return isFaceAdjacentToParallelDomainBoundary;
   }
-  inline int  getRelativePositionToFather(int index) const { return _relativePositionToFather[index]; }
-  inline void setRelativePositionToFather(int index, int value) { _relativePositionToFather[index] = value; }
-
-  inline int  getInvokingSpacetree() const { return _invokingSpacetree; }
-  inline void setInvokingSpacetree(int value) { _invokingSpacetree = value; }
-  inline bool getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() const {
-    return _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
+  INLINE_METHOD bool getIsFaceAdjacentToParallelDomainBoundary(int f) const noexcept {
+    return bitTest8(isFaceAdjacentToParallelDomainBoundary, f);
   }
-  inline void setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(bool value) {
-    _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing = value;
+  INLINE_METHOD void setIsFaceAdjacentToParallelDomainBoundary(int f, bool on) noexcept {
+    bitSet8(isFaceAdjacentToParallelDomainBoundary, f, on);
+  }
+  INLINE_METHOD void setIsFaceAdjacentToParallelDomainBoundary(std::uint8_t m) noexcept {
+    isFaceAdjacentToParallelDomainBoundary = m;
   }
 
-#ifdef WITH_MPI
-  /**
-   * Hands out MPI datatype if we work without the LLVM MPI extension.
-   * If we work with this additional feature, this is the routine where
-   * the lazy initialisation is done and the datatype is also cached.
-   */
-  static MPI_Datatype getForkDatatype();
-  static MPI_Datatype getJoinDatatype();
-  static MPI_Datatype getBoundaryExchangeDatatype();
-  static MPI_Datatype getMultiscaleDataExchangeDatatype();
-  static MPI_Datatype getGlobalCommunicationDatatype();
+  INLINE_METHOD bool getIsCellLocal() const noexcept { return isCellLocal != 0; }
+  INLINE_METHOD void setIsCellLocal(bool on) noexcept { isCellLocal = on ? 1u : 0u; }
 
-  static void freeForkDatatype();
-  static void freeJoinDatatype();
-  static void freeBoundaryExchangeDatatype();
-  static void freeMultiscaleDataExchangeDatatype();
-  static void freeGlobalCommunicationDatatype();
+  INLINE_METHOD bool getIsParentCellLocal() const noexcept { return isParentCellLocal != 0; }
+  INLINE_METHOD void setIsParentCellLocal(bool on) noexcept { isParentCellLocal = on ? 1u : 0u; }
 
-  /**
-   * @return The rank of the sender of an object. It only make ssense to call
-   *         this routine after you've invoked receive with MPI_ANY_SOURCE.
-   */
-  int getSenderRank() const;
+  INLINE_METHOD std::uint32_t getIsAdjacentCellLocal() const noexcept { return isAdjacentCellLocal; }
+  INLINE_METHOD bool          getIsAdjacentCellLocal(int a) const noexcept { return bitTest32(isAdjacentCellLocal, a); }
+  INLINE_METHOD void          setIsAdjacentCellLocal(std::uint32_t m) noexcept { isAdjacentCellLocal = m; }
+  INLINE_METHOD void          setIsAdjacentCellLocal(int a, bool on) noexcept { bitSet32(isAdjacentCellLocal, a, on); }
 
-  /**
-   * Wrapper around getDatatype() to trigger lazy evaluation if we
-   * use the lazy initialisation.
-   */
-  static void initDatatype();
+  INLINE_METHOD const std::array<int, TWO_POWER_D>& getVertexDataFrom() const noexcept { return vertexDataFrom; }
+  INLINE_METHOD int  getVertexDataFrom(int v) const noexcept { return vertexDataFrom[v]; }
+  INLINE_METHOD void setVertexDataFrom(const std::array<int, TWO_POWER_D>& v) noexcept { vertexDataFrom = v; }
+  INLINE_METHOD void setVertexDataFrom(int v, int id) noexcept { vertexDataFrom[v] = id; }
 
-  /**
-   * Free the underlying MPI datatype.
-   */
-  static void shutdownDatatype();
+  INLINE_METHOD const std::array<int, TWO_POWER_D>& getVertexDataTo() const noexcept { return vertexDataTo; }
+  INLINE_METHOD int                                 getVertexDataTo(int v) const { return vertexDataTo[v]; }
+  INLINE_METHOD void setVertexDataTo(const std::array<int, TWO_POWER_D>& v) noexcept { vertexDataTo = v; }
+  INLINE_METHOD void setVertexDataTo(int v, int id) noexcept { vertexDataTo[v] = id; }
 
-  /**
-   * In DaStGen (the first version), I had a non-static version of the send
-   * as well as the receive. However, this did not work with newer C++11
-   * versions, as a member function using this as pointer usually doesn't
-   * see the vtable while the init sees the object from outside, i.e.
-   * including a vtable. So this routine now is basically an alias for a
-   * blocking MPI_Send.
-   */
-  static void send(const peano4::grid::GridTraversalEvent& buffer, int destination, int tag, MPI_Comm communicator);
-  static void receive(peano4::grid::GridTraversalEvent& buffer, int source, int tag, MPI_Comm communicator);
+  INLINE_METHOD const std::array<int, TWO_TIMES_D>& getFaceDataFrom() const noexcept { return faceDataFrom; }
+  INLINE_METHOD int                                 getFaceDataFrom(int f) const { return faceDataFrom[f]; }
+  INLINE_METHOD void setFaceDataFrom(const std::array<int, TWO_TIMES_D>& f) noexcept { faceDataFrom = f; }
+  INLINE_METHOD void setFaceDataFrom(int f, int id) noexcept { faceDataFrom[f] = id; }
 
-  /**
-   * Alternative to the other send() where I trigger a non-blocking send an
-   * then invoke the functor until the corresponding MPI_Test tells me that
-   * the message went through. In systems with heavy MPI usage, this can
-   * help to avoid deadlocks.
-   */
-  static void send(
-    const peano4::grid::GridTraversalEvent& buffer,
-    int                                     destination,
-    int                                     tag,
-    std::function<void()>                   startCommunicationFunctor,
-    std::function<void()>                   waitFunctor,
-    MPI_Comm                                communicator
-  );
-  static void receive(
-    peano4::grid::GridTraversalEvent& buffer,
-    int                               source,
-    int                               tag,
-    std::function<void()>             startCommunicationFunctor,
-    std::function<void()>             waitFunctor,
-    MPI_Comm                          communicator
-  );
-#endif
+  INLINE_METHOD const std::array<int, TWO_TIMES_D>& getFaceDataTo() const noexcept { return faceDataTo; }
+  INLINE_METHOD int                                 getFaceDataTo(int f) const { return faceDataTo[f]; }
+  INLINE_METHOD void setFaceDataTo(const std::array<int, TWO_TIMES_D>& f) noexcept { faceDataTo = f; }
+  INLINE_METHOD void setFaceDataTo(int f, int id) noexcept { faceDataTo[f] = id; }
 
+  INLINE_METHOD int  getCellData() const noexcept { return cellData; }
+  INLINE_METHOD void setCellData(int c) noexcept { cellData = c; }
 
-  enum ObjectConstruction { NoData };
+  INLINE_METHOD const tarch::la::Vector<DIMENSIONS, int>& getRelativePositionToFather() const noexcept {
+    return relativePositionToFather;
+  }
+  INLINE_METHOD int  getRelativePositionToFather(int d) const noexcept { return relativePositionToFather[d]; }
+  INLINE_METHOD void setRelativePositionToFather(const tarch::la::Vector<DIMENSIONS, int>& v) noexcept {
+    relativePositionToFather = v;
+  }
+  INLINE_METHOD void setRelativePositionToFather(int d, int v) noexcept { relativePositionToFather[d] = v; }
 
-  GridTraversalEvent(ObjectConstruction):
-    GridTraversalEvent() {}
-
-#ifdef WITH_MPI
-  static void sendAndPollDanglingMessages(
-    const peano4::grid::GridTraversalEvent& message,
-    int                                     destination,
-    int                                     tag,
-    MPI_Comm                                communicator = tarch::mpi::Rank::getInstance().getCommunicator()
-  );
-  static void receiveAndPollDanglingMessages(
-    peano4::grid::GridTraversalEvent& message,
-    int                               source,
-    int                               tag,
-    MPI_Comm                          communicator = tarch::mpi::Rank::getInstance().getCommunicator()
-  );
-#endif
+  datamanagement::CellMarker getCellMarker() const;
+  datamanagement::FaceMarker getFaceMarker() const;
 
   std::string toString() const;
-
-private:
-  tarch::la::Vector<DIMENSIONS, double> _x;
-  tarch::la::Vector<DIMENSIONS, double> _h;
-  std::bitset<TWO_POWER_D>              _hasBeenRefined;
-  std::bitset<TWO_POWER_D>              _willBeRefined;
-  std::bitset<TWO_POWER_D>              _isVertexLocal;
-  std::bitset<TWO_POWER_D>              _isParentVertexLocal;
-  std::bitset<TWO_POWER_D>              _isVertexParentOfSubtree;
-  std::bitset<TWO_TIMES_D>              _isFaceLocal;
-  bool                                  _isCellLocal;
-  bool                                  _isParentCellLocal;
-  std::bitset<TWO_POWER_D>              _isVertexAdjacentToParallelDomainBoundary;
-  std::bitset<TWO_TIMES_D>              _isFaceAdjacentToParallelDomainBoundary;
-  tarch::la::Vector<TWO_POWER_D, int>   _numberOfAdjacentTreesPerVertex;
-  std::bitset<THREE_POWER_D>            _isAdjacentCellLocal;
-  tarch::la::Vector<TWO_POWER_D, int>   _vertexDataFrom;
-  tarch::la::Vector<TWO_POWER_D, int>   _vertexDataTo;
-  tarch::la::Vector<TWO_TIMES_D, int>   _faceDataFrom;
-  tarch::la::Vector<TWO_TIMES_D, int>   _faceDataTo;
-  int                                   _cellData;
-  tarch::la::Vector<DIMENSIONS, int>    _relativePositionToFather;
-  int                                   _invokingSpacetree;
-  bool                                  _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
-
-#ifdef WITH_MPI
-private:
-  int                 _senderDestinationRank;
-  static MPI_Datatype Datatype;
-#endif
 };
+
+std::ostream& operator<<(std::ostream& out, const peano4::grid::GridTraversalEvent& event);

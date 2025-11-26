@@ -171,7 +171,7 @@ private:
    * keep this routine clear of any optimisation. It is the grid which has
    * to clean up the refinement events appropriately.
    *
-   * ## MPI data excange
+   * ## MPI data exchange
    *
    * I originally wanted to use an MPI reduction to have a consistent view of
    * all refinement controls. However, this seems not to work, as some ranks

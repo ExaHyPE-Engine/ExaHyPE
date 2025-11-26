@@ -165,7 +165,7 @@ class ParticleTreeAnalysis(ActionSet):
 
 
   def get_body_of_getGridControlEvents(self):
-    return "  return std::vector< peano4::grid::GridControlEvent >();\n" 
+    return "  return std::vector< ::peano4::grid::GridControlEvent >();\n" 
 
 
   def get_action_set_name(self):

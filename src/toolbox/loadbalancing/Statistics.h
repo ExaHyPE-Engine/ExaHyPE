@@ -3,7 +3,6 @@
 #pragma once
 
 #include "State.h"
-
 #include "tarch/logging/Log.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
@@ -18,7 +17,6 @@ namespace toolbox::loadbalancing {
  * Please note that we assume a SPMD paradigm, i.e. if one rank uses
  * statistics, the other ranks all have to use such an object, too. The
  * individual objects communicate with each other.
- *
  */
 class toolbox::loadbalancing::Statistics {
 public:
@@ -40,6 +38,13 @@ public:
   int  getNumberOfStateUpdatesWithoutAnySplit() const;
 
   int getGlobalNumberOfRanksWithEnabledLoadBalancing() const;
+
+  int    getGlobalMinTreeLoad() const;
+  int    getGlobalMaxTreeLoad() const;
+  double getGlobalTreeLoadRatioInPercentage() const;
+
+  std::size_t getLocalMemoryUsageInBytes() const;
+  std::size_t getGlobalMemoryUsageInBytes() const;
 
   /**
    * If the stats spot some inconsistencies (local number of cells is bigger
@@ -78,6 +83,14 @@ private:
 
   int _numberOfStateUpdatesWithoutAnySplit;
 
+  int _localMinTreeLoad;
+  int _localMaxTreeLoad;
+  int _globalMinTreeLoad;
+  int _globalMaxTreeLoad;
+
+  std::uint64_t _localMemoryUsageInBytes;
+  std::uint64_t _globalMemoryUsageInBytes;
+
   bool _isViewConsistent;
 
 #ifdef WITH_MPI
@@ -88,16 +101,25 @@ private:
   MPI_Request* _globalNumberOfSplitsRequest;
   MPI_Request* _globalNumberOfTreesRequest;
   MPI_Request* _globalNumberOfRanksWithEnabledLoadBalancingRequest;
+  MPI_Request* _globalMinTreeLoadRequest;
+  MPI_Request* _globalMaxTreeLoadRequest;
+  MPI_Request* _globalMemoryUsageInBytesRequest;
 #endif
 
-  int _globalNumberOfInnerUnrefinedCellsBufferIn;
-  int _globalNumberOfInnerUnrefinedCellsBufferOut;
-  int _globalNumberOfSplitsIn;
-  int _globalNumberOfSplitsOut;
-  int _globalNumberOfTreesIn;
-  int _globalNumberOfTreesOut;
-  int _globalNumberOfRanksWithEnabledLoadBalancingIn;
-  int _globalNumberOfRanksWithEnabledLoadBalancingOut;
+  int           _globalNumberOfInnerUnrefinedCellsBufferIn;
+  int           _globalNumberOfInnerUnrefinedCellsBufferOut;
+  int           _globalNumberOfSplitsIn;
+  int           _globalNumberOfSplitsOut;
+  int           _globalNumberOfTreesIn;
+  int           _globalNumberOfTreesOut;
+  int           _globalNumberOfRanksWithEnabledLoadBalancingIn;
+  int           _globalNumberOfRanksWithEnabledLoadBalancingOut;
+  int           _globalMinTreeLoadIn;
+  int           _globalMinTreeLoadOut;
+  int           _globalMaxTreeLoadIn;
+  int           _globalMaxTreeLoadOut;
+  std::uint64_t _globalMemoryUsageInBytesIn;
+  std::uint64_t _globalMemoryUsageInBytesOut;
 
   void waitForGlobalDataExchange();
 };

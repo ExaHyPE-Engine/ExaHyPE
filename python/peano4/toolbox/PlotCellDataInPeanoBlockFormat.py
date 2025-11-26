@@ -111,7 +111,7 @@ class PlotCellDataInPeanoBlockFormat(ActionSet):
 
 
   def get_body_of_getGridControlEvents(self):
-    return "  return std::vector< peano4::grid::GridControlEvent >();\n" 
+    return "  return std::vector< ::peano4::grid::GridControlEvent >();\n" 
 
 
   def get_action_set_name(self):
@@ -125,8 +125,8 @@ class PlotCellDataInPeanoBlockFormat(ActionSet):
   Template_TouchCellFirstTime = """ 
 if ( {{GUARD_PREDICATE}} ) {
   int cellIndex = _writer->plotPatch(
-    marker.x()-0.5 * marker.h(),
-    marker.h()
+    marker.getX()-0.5 * marker.getH(),
+    marker.getH()
   );
 
   {% if NUMBER_OF_UNKNOWNS_PER_CELL<0 %}

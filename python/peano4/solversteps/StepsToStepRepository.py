@@ -40,7 +40,7 @@ class StepsToStepRepository(object):
           self.d["INT_RETURN_CASE"]      += "    case Steps::" + step.name + ": return " + str(self.steps._steps.index(step)+1) + ";\n"
           self.d["STEP_RETURN_CASE"]     += "    case " + str(self.steps._steps.index(step)+1) + ": return Steps::" + step.name + ";\n"
 
-    #     + " = peano4::parallel::Node::UndefProgramStep + " + 
+    #     + " = ::peano4::parallel::Node::UndefProgramStep + " + 
       # print("steps.subdirectory = ", subdirectory, ", steps.namespace = ", namespace)
 
       class_name = self.__get_class_name()

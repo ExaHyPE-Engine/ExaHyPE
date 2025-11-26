@@ -9,6 +9,4 @@ from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFac
     compute_number_of_face_projection_quantities,
 )
 
-from .RungeKuttaDG import Storage
-
 from .ErrorMeasurement import ErrorMeasurement

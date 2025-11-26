@@ -172,8 +172,8 @@ def generate_kernels(solver, output, subdirectory):
 {% if USE_POINT_SOURCE %}
     const auto pointSources = kernels::{{SOLVER_NAME}}::pointSources(
       repositories::{{SOLVER_INSTANCE}},
-      marker.x(),
-      marker.h()
+      marker.getX(),
+      marker.getH()
     );
     if (!pointSources.empty()) {
       // Linear, with point sources
@@ -182,8 +182,8 @@ def generate_kernels(solver, output, subdirectory):
         lQhbnd,
         lFhbnd,
         QNew,
-        marker.x(),
-        marker.h(),
+        marker.getX(),
+        marker.getH(),
         timeStamp,
         timeStepSize,
         pointSources
@@ -195,8 +195,8 @@ def generate_kernels(solver, output, subdirectory):
         lQhbnd,
         lFhbnd,
         QNew,
-        marker.x(),
-        marker.h(),
+        marker.getX(),
+        marker.getH(),
         timeStamp,
         timeStepSize
       );
@@ -208,8 +208,8 @@ def generate_kernels(solver, output, subdirectory):
       lQhbnd,
       lFhbnd,
       QNew,
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       timeStamp,
       timeStepSize
     );
@@ -221,8 +221,8 @@ def generate_kernels(solver, output, subdirectory):
       lQhbnd,
       lFhbnd,
       QNew,
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       timeStamp,
       timeStepSize
     );
@@ -242,7 +242,7 @@ def generate_kernels(solver, output, subdirectory):
       timeStamp,
       timeStepSize,
       faceCentre,
-      marker.h(),
+      marker.getH(),
       direction,
       isBoundary,
       faceNumber
@@ -253,7 +253,7 @@ def generate_kernels(solver, output, subdirectory):
 
     solver._face_integral_call = jinja2.Template(
         """
-    const double inverseDxDirection = 1.0 / marker.h()[d];
+    const double inverseDxDirection = 1.0 / marker.getH()[d];
     kernels::{{SOLVER_NAME}}::faceIntegral(
       QNew,
       FIn,

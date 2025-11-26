@@ -1,14 +1,9 @@
 #include "InterpolationTest.h"
-#include "toolbox/blockstructured/Interpolation.h"
 
 #include "../Interpolation.h"
 #include "../Restriction.h"
 
-
-#ifdef UseTestSpecificCompilerSettings
-#pragma optimize("",off)
-#endif
-
+#include "peano4/grid/GridTraversalEvent.h"
 
 toolbox::blockstructured::tests::InterpolationTest::InterpolationTest():
   TestCase("toolbox::blockstructured::tests::InterpolationTest") {
@@ -58,11 +53,9 @@ void toolbox::blockstructured::tests::InterpolationTest::testInterpolateCellData
 
 
 void toolbox::blockstructured::tests::InterpolationTest::testRestrictCellForBreakingDam() {
-  #if DIMENSIONS==2 and PEANO_DEBUG>0
-  peano4::grid::GridTraversalEvent    dummyEvent;
-  peano4::datamanagement::CellMarker  cellMarker(dummyEvent);
-  cellMarker.setRelativePositionWithinFatherCell( 0,0 );
-  cellMarker.setRelativePositionWithinFatherCell( 1,0 );
+#if DIMENSIONS==2
+  peano4::datamanagement::CellMarker cellMarker;
+
   double fineGridValues[] =
       {
         0.1, 0.2, 0.3, 0.4, 0.5,
@@ -121,19 +114,17 @@ void toolbox::blockstructured::tests::InterpolationTest::testRestrictCellForBrea
   validateNumericalEquals( coarseGridValues[4*5+2], 0.3/3.0 );
   validateNumericalEquals( coarseGridValues[4*5+3], 0.4/3.0 );
   validateNumericalEquals( coarseGridValues[4*5+4], 0.5/3.0 );
-
-
   #endif
 }
 
 
 void toolbox::blockstructured::tests::InterpolationTest::testRestrictHaloLayer_AoS_averaging() {
   #if DIMENSIONS==2
-  peano4::grid::GridTraversalEvent    dummyEvent;
-  dummyEvent.setRelativePositionToFather(0,0);
-  dummyEvent.setRelativePositionToFather(1,0);
+  peano4::grid::GridTraversalEvent    event;
+  event.setRelativePositionToFather(0,0);
+  event.setRelativePositionToFather(1,0);
+  peano4::datamanagement::FaceMarker  faceMarker = event.getFaceMarker();
 
-  peano4::datamanagement::FaceMarker  faceMarker(dummyEvent);
   double fineGridValues[] =
       {
        0.100047, 0.000933957, 0,0,0.00493399,
@@ -184,7 +175,3 @@ void toolbox::blockstructured::tests::InterpolationTest::testRestrictHaloLayer_A
 
   #endif
 }
-
-#ifdef UseTestSpecificCompilerSettings
-#pragma optimize("",on)
-#endif

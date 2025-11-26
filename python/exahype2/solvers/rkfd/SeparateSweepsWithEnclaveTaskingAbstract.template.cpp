@@ -16,6 +16,7 @@
 
 #include "tarch/multicore/Lock.h"
 #include "tarch/NonCriticalAssertions.h"
+#include "tarch/services/ServiceRepository.h"
 
 
 tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
@@ -50,6 +51,11 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxMeshSize() const {
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
   return getMinPatchSize();
+}
+
+
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
+  return NumberOfGridCellsPerPatchPerAxis * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }
 
 

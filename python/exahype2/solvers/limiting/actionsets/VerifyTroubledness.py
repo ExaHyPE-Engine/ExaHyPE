@@ -14,14 +14,14 @@ class VerifyTroubledness(AbstractLimiterActionSet):
 
       bool isUnTroubled = true;
 
-      auto* Q = fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.value;
+      auto* Q = fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.data();
 
       {% if USE_PAC %}
       isUnTroubled &= kernels::{{SOLVER_NAME}}::isPhysicallyAdmissible(
         repositories::{{SOLVER_INSTANCE}},
         Q,
-        marker.x(),
-        marker.h(),
+        marker.getX(),
+        marker.getH(),
         timeStamp
       );
       {% endif %}{# USE_PAC #}
@@ -32,11 +32,11 @@ class VerifyTroubledness(AbstractLimiterActionSet):
       {{COMPUTE_PRECISION}} boundaryMaxPerVariables[2 * DIMENSIONS * NumberOfObservables];
 
       for (int d = 0; d < DIMENSIONS; d++) {
-        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value,                                        NumberOfObservables, &boundaryMinPerVariables[d * NumberOfObservables]);
-        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).value + 2 * NumberOfObservables, NumberOfObservables, &boundaryMinPerVariables[(d + DIMENSIONS) * NumberOfObservables]);
+        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).data(),                                        NumberOfObservables, &boundaryMinPerVariables[d * NumberOfObservables]);
+        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).data() + 2 * NumberOfObservables, NumberOfObservables, &boundaryMinPerVariables[(d + DIMENSIONS) * NumberOfObservables]);
 
-        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + NumberOfObservables,                  NumberOfObservables, &boundaryMaxPerVariables[d * NumberOfObservables]);
-        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).value + 3 * NumberOfObservables, NumberOfObservables, &boundaryMaxPerVariables[(d + DIMENSIONS) * NumberOfObservables]);
+        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).data() + NumberOfObservables,                  NumberOfObservables, &boundaryMaxPerVariables[d * NumberOfObservables]);
+        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).data() + 3 * NumberOfObservables, NumberOfObservables, &boundaryMaxPerVariables[(d + DIMENSIONS) * NumberOfObservables]);
       }
 
       isUnTroubled &= kernels::{{SOLVER_NAME}}::discreteMaximumPrincipleAndMinAndMaxSearch(

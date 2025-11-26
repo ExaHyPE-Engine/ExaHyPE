@@ -81,11 +81,11 @@ def create_postprocessing_kernel_for_error_measurement_for_fixed_timestepping(gu
           std::copy_n(Q_, {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}, Q);
           repositories::{{SOLVER_INSTANCE}}.analyticalSolution(x, t, dt, Q, solution);
         },
-        marker.x(),
-        marker.h(),
+        marker.getX(),
+        marker.getH(),
         fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
         repositories::{{SOLVER_INSTANCE}}.getTimeStepSize(),
-        fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value,
+        fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data(),
         errors
       );
 
@@ -116,11 +116,11 @@ def create_postprocessing_kernel_for_error_measurement_for_adaptive_timestepping
           std::copy_n(Q_, {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}, Q);
           repositories::{{SOLVER_INSTANCE}}.analyticalSolution(x, t, dt, Q, solution);
         },
-        marker.x(),
-        marker.h(),
+        marker.getX(),
+        marker.getH(),
         fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
         repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize(),
-        fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value,
+        fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data(),
         errors
       );
 

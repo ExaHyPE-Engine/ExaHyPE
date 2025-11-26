@@ -13,4 +13,4 @@ namespace peano4 {
    * should not make a difference: Eventually, all tests should pass anyway.
    */
   tarch::tests::TestCase* getUnitTests();
-}
+} // namespace peano4

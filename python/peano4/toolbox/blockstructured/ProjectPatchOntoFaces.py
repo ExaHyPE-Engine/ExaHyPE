@@ -88,11 +88,11 @@ class ProjectPatchOntoFaces(ActionSet):
 
     _Template_TouchCellLastTime = r"""
   if ({GUARD}) {{
-    auto* /*const*/ QIn = {CELL_ACCESSOR}.value;
+    auto* /*const*/ QIn = {CELL_ACCESSOR}.data();
 
     {PRECISION}* facesOut[TWO_TIMES_D];
     for (int d = 0; d < TWO_TIMES_D; ++d) {{
-      facesOut[d] = {FACE_ACCESSOR}(d).value;
+      facesOut[d] = {FACE_ACCESSOR}(d).data();
     }}
 
     kernels::{SOLVER_NAME}::projectPatch(QIn, facesOut);

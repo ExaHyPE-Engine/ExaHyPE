@@ -6,6 +6,7 @@
 #include "repositories/SolverRepository.h"
 
 #include "tarch/multicore/Lock.h"
+#include "tarch/services/ServiceRepository.h"
 
 #include <algorithm>
 
@@ -27,6 +28,10 @@ tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp(bool ofCurrentlyRunningGridSweep) const {
   return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMinTimeStamp();
+}
+
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
+  return 0;
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp(bool ofCurrentlyRunningGridSweep) const {

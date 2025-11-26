@@ -220,7 +220,7 @@ typename toolbox::particles::SieveParticles<T>::ParticleList toolbox::particles:
     ) {
       logDebug("getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString());
 
-      (*p)->setCellH(marker.h());
+      (*p)->setCellH(marker.getH());
 
       result.push_back(*p);
       if (removeReturnedParticlesFromSet) {

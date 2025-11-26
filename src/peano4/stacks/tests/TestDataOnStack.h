@@ -16,11 +16,13 @@ class peano4::stacks::tests::TestDataOnStack {
 public:
   static constexpr int Cardinality = 1024;
 
-  std::array<int, Cardinality> value;
+  std::array<int, Cardinality> data;
 
-  TestDataOnStack();
+  explicit TestDataOnStack();
   explicit TestDataOnStack(int v);
-  ~TestDataOnStack() = default;
+  enum class ObjectConstruction { NoData };
+  explicit TestDataOnStack(ObjectConstruction) noexcept;
+  ~TestDataOnStack() noexcept = default;
 
   TestDataOnStack(const TestDataOnStack& other);
   TestDataOnStack(TestDataOnStack&& other) noexcept;

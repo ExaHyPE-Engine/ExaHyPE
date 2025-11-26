@@ -19,17 +19,17 @@ def compute_local_min_and_max_and_project():
     constexpr int numberOfObservables = repositories::{{SOLVER_INSTANCE}}.NumberOfDMPObservables;
     double localMinPerVariables[numberOfObservables], localMaxPerVariables[numberOfObservables];
     generated::kernels::limiter::findCellLocalMinAndMax(
-      fineGridCell{{SOLVER_NAME}}Q_old.value,
+      fineGridCell{{SOLVER_NAME}}Q_old.data(),
       repositories::{{SOLVER_INSTANCE}},
       localMinPerVariables, localMaxPerVariables
     );
 
     for(int d=0; d<DIMENSIONS; d++){
         //Projection of cell local min and max
-        std::copy_n(localMinPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).value+numberOfObservables);
-        std::copy_n(localMinPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+DIMENSIONS).value);
-        std::copy_n(localMaxPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).value+3*numberOfObservables);
-        std::copy_n(localMaxPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+DIMENSIONS).value+2*numberOfObservables);
+        std::copy_n(localMinPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).data()+numberOfObservables);
+        std::copy_n(localMinPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+DIMENSIONS).data());
+        std::copy_n(localMaxPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).data()+3*numberOfObservables);
+        std::copy_n(localMaxPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+DIMENSIONS).data()+2*numberOfObservables);
     }
 """
 
@@ -38,8 +38,8 @@ def check_troubledness(usePAC, useDMP, useTroubledMarkers):
     isUnTroubled &= generated::kernels::limiter::isPhysicallyAdmissible(
       luh,
       repositories::{{SOLVER_INSTANCE}},
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       timeStamp+timeStepSize
     );
     """
@@ -49,11 +49,11 @@ def check_troubledness(usePAC, useDMP, useTroubledMarkers):
     double boundaryMaxPerVariables[2*DIMENSIONS*numberOfObservables];
 
     for(int d=0; d<DIMENSIONS; d++){
-        std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).value,                                 numberOfObservables, &boundaryMinPerVariables[d*numberOfObservables]);
-        std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+DIMENSIONS).value+numberOfObservables,  numberOfObservables, &boundaryMinPerVariables[(d+DIMENSIONS)*numberOfObservables]);
+        std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).data(),                                 numberOfObservables, &boundaryMinPerVariables[d*numberOfObservables]);
+        std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+DIMENSIONS).data()+numberOfObservables,  numberOfObservables, &boundaryMinPerVariables[(d+DIMENSIONS)*numberOfObservables]);
 
-        std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).value+2*numberOfObservables,            numberOfObservables, &boundaryMaxPerVariables[d*numberOfObservables]);
-        std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+DIMENSIONS).value+3*numberOfObservables, numberOfObservables, &boundaryMaxPerVariables[(d+DIMENSIONS)*numberOfObservables]);
+        std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).data()+2*numberOfObservables,            numberOfObservables, &boundaryMaxPerVariables[d*numberOfObservables]);
+        std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+DIMENSIONS).data()+3*numberOfObservables, numberOfObservables, &boundaryMaxPerVariables[(d+DIMENSIONS)*numberOfObservables]);
     }
 
     isUnTroubled &= generated::kernels::limiter::discreteMaximumPrincipleAndMinAndMaxSearch(

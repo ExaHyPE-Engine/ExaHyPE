@@ -760,7 +760,7 @@ def get_face_merge_implementation(patch_overlap):
 
   for(int i=0; i<nodesPerFace; i++){{
     for(int j=0; j<strideQ ; j++){{
-      value[(2*i+faceLR)*strideQ+j] = neighbour.value[(2*i+faceLR)*strideQ+j];
+      value[(2*i+faceLR)*strideQ+j] = neighbour.data()[(2*i+faceLR)*strideQ+j];
     }}
   }}
 
@@ -920,22 +920,22 @@ def create_add_solver_contributions_call(polynomial_basis):
     if isinstance(polynomial_basis, GaussLegendreBasis):
         return """integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
     #if DIMENSIONS==2
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(0).value, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(2).value, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(1).value, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(3).value, //up
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(0).data(), //left
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(2).data(), //right
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(1).data(), //down
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(3).data(), //up
     #else
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(0).value, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(3).value, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(1).value, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(4).value, //up
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(2).value, //front
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(5).value, //back
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(0).data(), //left
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(3).data(), //right
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(1).data(), //down
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(4).data(), //up
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(2).data(), //front
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(5).data(), //back
     #endif
       {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      marker.h(),
+      marker.getH(),
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
       repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d,
       dQdt

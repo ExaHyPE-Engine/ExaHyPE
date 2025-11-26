@@ -34,7 +34,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     - ***localParticles*** This is a list of local particles, i.e. particles which
       are tied to the cell's adjacent vertices. While they reside on the cell's
       level, we have no guarantee that they reside within the current cell. They
-      might also be contained within its halo of marker.h()/2.
+      might also be contained within its halo of marker.getH()/2.
 
     The additional field _activeParticles is an alias for activeParticles.
 
@@ -232,7 +232,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
     void computeHydroForceInnerLoop(
-        const peano4::datamanagement::CellMarker&  marker,
+        const ::peano4::datamanagement::CellMarker&  marker,
         Particle*                                  particlesAssociatedWithLocalVertex, // das ist falsch
         int                                        numberOfLocalParticles,
         Particle*                                  activeParticles,
@@ -427,7 +427,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
       bool isLocal = (mask & p->getContainedInAdjacentCell()).any();
       assertionEquals4( 
         isLocal, 
-        marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.h() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ),
+        marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.getH() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ),
         marker.toString(), p->toString(), i, mask
       );
       localParticleIsContainedInCell.push_back( isLocal );
@@ -500,7 +500,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
         return result
 
     def get_body_of_getGridControlEvents(self):
-        return "  return std::vector< peano4::grid::GridControlEvent >();\n"
+        return "  return std::vector< ::peano4::grid::GridControlEvent >();\n"
 
     def get_body_of_prepareTraversal(self):
         return self.d["PREPARE_TRAVERSAL_KERNEL"]

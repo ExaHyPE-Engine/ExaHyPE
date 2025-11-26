@@ -68,7 +68,7 @@ class DoFWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
     
     - value: Is a pointer to the current finite volume's data
     - x: A tarch::la::Vector over doubles
-    - marker.h(): A tarch::la::Vector over doubles
+    - marker.getH(): A tarch::la::Vector over doubles
     
     
     operation_per_point: String
@@ -95,9 +95,9 @@ class DoFWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
       {{NUMBER_OF_AUXILIARY_VARIABLES}}
     );
     dfor( index, {{DG_ORDER}}+1 ) {
-      double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.value + enumerator(0,index,0);
+      double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + enumerator(0,index,0);
       auto    x        = ::exahype2::dg::getQuadraturePoint(
-        marker.x(), marker.h(), index, repositories::{{SOLVER_INSTANCE}}.DGOrder, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
+        marker.getX(), marker.getH(), index, repositories::{{SOLVER_INSTANCE}}.DGOrder, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
       );
       """ + operation_per_point + """
     }
@@ -150,7 +150,7 @@ class CellWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
     
     - value: Is a pointer to the current finite volume's data
     - x: A tarch::la::Vector over doubles
-    - marker.h(): A tarch::la::Vector over doubles
+    - marker.getH(): A tarch::la::Vector over doubles
     
     
     operation_per_point: String

@@ -14,7 +14,6 @@ import exahype2.solvers.aderdg.actionsets
 
 from .GenerateKernels import generate_kernels
 
-from exahype2.solvers.Storage import Storage
 from exahype2.solvers.PDETerms import PDETerms
 
 from exahype2.solvers.aderdg.Architectures import Architectures
@@ -288,9 +287,6 @@ class ADERDG(object):
         self._preprocess_reconstructed_patch = ""
         self._postprocess_updated_patch = ""
 
-        self.switch_storage_scheme(Storage.SmartPointers, Storage.SmartPointers)
-
-        # Create initial structures and action_sets, these are re-generated essentially anytime something about the solver is modified.
         self.create_data_structures()
         self.create_action_sets()
 
@@ -421,69 +417,22 @@ Material parameters:    """
             self._corrector_computation_precision,
         )
 
-        if self._cell_data_storage == Storage.CallStack:
-          self._current_time_step.generator = peano4.datamodel.PatchToDoubleArray(
-              self._current_time_step,
-              self._solution_persistent_storage_precision
-          )
-          self._previous_time_step.generator = peano4.datamodel.PatchToDoubleArray(
-              self._previous_time_step,
-              self._solution_persistent_storage_precision
-          )
-        elif self._cell_data_storage == Storage.Heap:
-          self._current_time_step.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
-              self._current_time_step,
-              self._solution_persistent_storage_precision
-          )
-          self._previous_time_step.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
-              self._previous_time_step,
-              self._solution_persistent_storage_precision
-          )
-        elif self._cell_data_storage == Storage.SmartPointers:
-          self._current_time_step.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-              self._current_time_step,
-              self._solution_persistent_storage_precision
-          )
-          self._previous_time_step.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-              self._previous_time_step,
-              self._solution_persistent_storage_precision
-          )
-        else:
-            assert False, "Storage variant {} not supported".format(
-                self._cell_data_storage
-            )
-
-        if self._face_data_storage == Storage.CallStack:
-          self._rhs_estimates_projection.generator = peano4.datamodel.PatchToDoubleArray(
-              self._rhs_estimates_projection,
-              self._corrector_computation_precision
-          )
-          self._flux_estimates_projection.generator = peano4.datamodel.PatchToDoubleArray(
-              self._flux_estimates_projection,
-              self._corrector_computation_precision
-          )
-        elif self._face_data_storage == Storage.Heap:
-          self._rhs_estimates_projection.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
-              self._rhs_estimates_projection,
-              self._corrector_computation_precision
-          )
-          self._flux_estimates_projection.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
-              self._flux_estimates_projection,
-              self._corrector_computation_precision
-          )
-        elif self._face_data_storage == Storage.SmartPointers:
-          self._rhs_estimates_projection.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-              self._rhs_estimates_projection,
-              self._corrector_computation_precision
-          )
-          self._flux_estimates_projection.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-              self._flux_estimates_projection,
-              self._corrector_computation_precision
-          )
-        else:
-            assert False, "Storage variant {} not supported".format(
-                self._face_data_storage
-            )
+        self._current_time_step.generator = peano4.datamodel.PatchToData(
+            self._current_time_step,
+            self._solution_persistent_storage_precision
+        )
+        self._previous_time_step.generator = peano4.datamodel.PatchToData(
+            self._previous_time_step,
+            self._solution_persistent_storage_precision
+        )
+        self._rhs_estimates_projection.generator = peano4.datamodel.PatchToData(
+            self._rhs_estimates_projection,
+            self._corrector_computation_precision
+        )
+        self._flux_estimates_projection.generator = peano4.datamodel.PatchToData(
+            self._flux_estimates_projection,
+            self._corrector_computation_precision
+        )
 
         # Custom merge implementation takes into account that the faces project such that
         # the left cell projects to the left half of the face and the right cell projects to the right half.
@@ -1428,26 +1377,6 @@ Material parameters:    """
         self.create_data_structures()
         self.create_action_sets()
 
-    def switch_storage_scheme(
-        self,
-        cell_data_storage: Storage,
-        face_data_storage: Storage,
-    ):
-        """
-        By default, we hold all data on the heap using smart pointers. You can explicitly switch
-        to storage on the call stack or heap using raw pointers.
-
-        @see create_data_structures()
-        """
-        assert isinstance(cell_data_storage, Storage)
-        assert isinstance(face_data_storage, Storage)
-
-        self._cell_data_storage = cell_data_storage
-        self._face_data_storage = face_data_storage
-
-        self.create_data_structures()
-        self.create_action_sets()
-
 def get_face_overlap_merge_implementation(patch_overlap):
     d = {
         "OVERLAP": patch_overlap.dim[0]
@@ -1462,15 +1391,20 @@ def get_face_overlap_merge_implementation(patch_overlap):
   constexpr int SpaceFaceSize = {DOFS_PER_AXIS} * {DOFS_PER_AXIS} * {UNKNOWNS}; // (Order + 1)^2
 #endif
 
+  auto* dst = this->data();
+  const auto* const src = neighbour.data();
+  assertion(dst);
+  assertion(src);
+
   const int faceDimension = marker.getSelectedFaceNumber() % DIMENSIONS;
   // If the outer normal is positive, the normal points to the right so the face is on the right.
   const int faceLR = (marker.outerNormal()[faceDimension] > 0.0 ? 0 : 1);
 
   // std::copy_n(from, how_many, to);
   std::copy_n(
-    &neighbour.value[(1 - faceLR) * SpaceFaceSize],
+    &src[(1 - faceLR) * SpaceFaceSize],
     SpaceFaceSize,
-    &value[(1 - faceLR) * SpaceFaceSize]
+    &dst[(1 - faceLR) * SpaceFaceSize]
   );
 """
     return Template.format(**d)

@@ -25,7 +25,7 @@ class toolbox::blockstructured::tests::InterpolationTest: public tarch::tests::T
      *
 <pre>
 
-parameter tarch::la::DynamicMatrix::vectorToString(fineGridFaceEulerQUpdate.value,4*2*5): (entries=40,
+parameter tarch::la::DynamicMatrix::vectorToString(fineGridFaceEulerQUpdate.data(),4*2*5): (entries=40,
 {
  0.100047, 0.000933957, 0,0,0.00493399,
  0.100045, 0.000870917, 0,0,0.0045799,

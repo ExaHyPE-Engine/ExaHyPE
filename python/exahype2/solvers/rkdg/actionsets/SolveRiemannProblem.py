@@ -42,8 +42,8 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     assertion5( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution, {{FACE_METADATA_ACCESSOR}}.toString(), marker.toString() );
     assertion5( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution, {{FACE_METADATA_ACCESSOR}}.toString(), marker.toString() );
 
-    const double* NOALIAS QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value;
-    double* NOALIAS       QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.value;
+    const double* NOALIAS QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data();
+    double* NOALIAS       QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.data();
 
     ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{RIEMANN_COMPUTE_KERNEL_CALL}}
   }

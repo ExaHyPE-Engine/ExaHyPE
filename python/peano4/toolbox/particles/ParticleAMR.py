@@ -138,14 +138,14 @@ class ParticleAMR(ActionSet):
     and
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() > {{MAX_PARTICLES_PER_CELL}}
     and
-    marker.h()(0)/3.0>{{MIN_H}}
+    marker.getH()(0)/3.0>{{MIN_H}}
   ) {
     const double ScaleMarker = 0.8;
-    peano4::grid::GridControlEvent newEntry;
-    newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Refine );
-    newEntry.setOffset( marker.getOffset() + marker.h() * (1.0-ScaleMarker) / 2.0 );
-    newEntry.setWidth( marker.h() * ScaleMarker );
-    newEntry.setH( marker.h()/3.0 * 1.1 );
+    ::peano4::grid::GridControlEvent newEntry;
+    newEntry.setRefinementControl( ::peano4::grid::GridControlEvent::RefinementControl::Refine );
+    newEntry.setOffset( marker.getOffset() + marker.getH() * (1.0-ScaleMarker) / 2.0 );
+    newEntry.setWidth( marker.getH() * ScaleMarker );
+    newEntry.setH( marker.getH()/3.0 * 1.1 );
     _localGridControlEvents.push_back(newEntry);
     logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );
   }
@@ -159,14 +159,14 @@ class ParticleAMR(ActionSet):
     and
     not fineGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
     and
-    marker.h()(0)<{{MAX_H}} // we will remove the suboctants
+    marker.getH()(0)<{{MAX_H}} // we will remove the suboctants
   ) {
     const double ScaleMarker = 1.4;
-    peano4::grid::GridControlEvent newEntry;
-    newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Erase );
-    newEntry.setOffset( marker.getOffset() + marker.h() * (1.0-ScaleMarker) / 2.0 );
-    newEntry.setWidth( marker.h() * ScaleMarker );
-    newEntry.setH( marker.h() * ScaleMarker );
+    ::peano4::grid::GridControlEvent newEntry;
+    newEntry.setRefinementControl( ::peano4::grid::GridControlEvent::RefinementControl::Erase );
+    newEntry.setOffset( marker.getOffset() + marker.getH() * (1.0-ScaleMarker) / 2.0 );
+    newEntry.setWidth( marker.getH() * ScaleMarker );
+    newEntry.setH( marker.getH() * ScaleMarker );
     _localGridControlEvents.push_back(newEntry);
     logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );
   }
@@ -180,9 +180,9 @@ class ParticleAMR(ActionSet):
 
   // insert and then merge immediately to reduce the
   // event count
-  _localGridControlEvents = peano4::grid::mergeGridControlEvents( _localGridControlEvents );
+  ::peano4::grid::GridControlEvent::merge( _localGridControlEvents );
   _newGridControlEvents.insert( _newGridControlEvents.end(), _localGridControlEvents.begin(), _localGridControlEvents.end() );
-  _newGridControlEvents = peano4::grid::mergeGridControlEvents( _newGridControlEvents );
+  ::peano4::grid::GridControlEvent::merge( _newGridControlEvents );
 """
     )
 
@@ -205,9 +205,9 @@ class ParticleAMR(ActionSet):
 
     def get_attributes(self):
         return """
-  std::vector< peano4::grid::GridControlEvent >          _localGridControlEvents;
-  static std::vector< peano4::grid::GridControlEvent >   _oldGridControlEvents;
-  static std::vector< peano4::grid::GridControlEvent >   _newGridControlEvents;
+  std::vector< ::peano4::grid::GridControlEvent >          _localGridControlEvents;
+  static std::vector< ::peano4::grid::GridControlEvent >   _oldGridControlEvents;
+  static std::vector< ::peano4::grid::GridControlEvent >   _newGridControlEvents;
 """
 
     def get_action_set_name(self):
@@ -216,10 +216,10 @@ class ParticleAMR(ActionSet):
     def get_static_initialisations(self, full_qualified_classname):
         return (
             """
-std::vector< peano4::grid::GridControlEvent >  """
+std::vector< ::peano4::grid::GridControlEvent >  """
             + full_qualified_classname
             + """::_oldGridControlEvents;
-std::vector< peano4::grid::GridControlEvent >  """
+std::vector< ::peano4::grid::GridControlEvent >  """
             + full_qualified_classname
             + """::_newGridControlEvents;
 """
@@ -231,7 +231,6 @@ std::vector< peano4::grid::GridControlEvent >  """
 #include "tarch/multicore/Lock.h"
 #include "vertexdata/{{PARTICLE_SET}}.h"
 #include "globaldata/{{PARTICLE}}.h"
-#include "peano4/grid/grid.h"
 """
         )
         return result.render(**self.d)
@@ -244,5 +243,5 @@ std::vector< peano4::grid::GridControlEvent >  """
 _oldGridControlEvents.clear();
 _oldGridControlEvents = _newGridControlEvents;
 _newGridControlEvents.clear();
-_oldGridControlEvents = peano4::grid::mergeGridControlEvents(_oldGridControlEvents);
+::peano4::grid::GridControlEvent::merge(_oldGridControlEvents);
 """

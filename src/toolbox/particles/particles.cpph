@@ -58,8 +58,8 @@ void toolbox::particles::updateContainedInAdjacentCellProperty(
 ) {
   const tarch::la::Vector<DIMENSIONS, double> vertexPositionOfAssignedVertex
     = marker.getOffset()
-      + tarch::la::multiplyComponents(tarch::la::Vector<DIMENSIONS, double>(assignedVertex), marker.h());
-  updateContainedInAdjacentCellProperty(vertexPositionOfAssignedVertex, marker.h(), particle);
+      + tarch::la::multiplyComponents(tarch::la::Vector<DIMENSIONS, double>(assignedVertex), marker.getH());
+  updateContainedInAdjacentCellProperty(vertexPositionOfAssignedVertex, marker.getH(), particle);
 }
 
 template <typename Particle>
@@ -67,7 +67,7 @@ void toolbox::particles::updateContainedInAdjacentCellProperty(
   const peano4::datamanagement::VertexMarker& marker,
   Particle&                                   particle
 ) {
-  updateContainedInAdjacentCellProperty(marker.x(), marker.h(), particle);
+  updateContainedInAdjacentCellProperty(marker.getX(), marker.getH(), particle);
 }
 
 template <typename Particle>
@@ -103,31 +103,31 @@ void toolbox::particles::insertParticleIntoCell(
   std::bitset<DIMENSIONS>    targetVertex;
   for (int d = 0; d < DIMENSIONS; d++) {
     assertion4(
-      tarch::la::greaterEquals(newParticle->getX()(d), marker.x()(d) - marker.h()(d) / 2.0),
+      tarch::la::greaterEquals(newParticle->getX()(d), marker.getX()(d) - marker.getH()(d) / 2.0),
       marker.toString(),
       newParticle->toString(),
-      marker.x()(d) - marker.h()(d) / 2.0,
+      marker.getX()(d) - marker.getH()(d) / 2.0,
       d
     );
     assertion4(
-      tarch::la::smallerEquals(newParticle->getX()(d), marker.x()(d) + marker.h()(d) / 2.0),
+      tarch::la::smallerEquals(newParticle->getX()(d), marker.getX()(d) + marker.getH()(d) / 2.0),
       marker.toString(),
       newParticle->toString(),
-      marker.x()(d) + marker.h()(d) / 2.0,
+      marker.getX()(d) + marker.getH()(d) / 2.0,
       d
     );
-    targetVertex[d] = newParticle->getX()(d) > marker.x()(d);
+    targetVertex[d] = newParticle->getX()(d) > marker.getX()(d);
   }
 
   assertion3(
-    tarch::la::smaller(2.0 * newParticle->getSearchRadius(), tarch::la::min(marker.h())),
+    tarch::la::smaller(2.0 * newParticle->getSearchRadius(), tarch::la::min(marker.getH())),
     marker.toString(),
     newParticle->toString(),
     spacetreeId
   );
 
   newParticle->setParallelState(Particle::ParallelState::Local);
-  newParticle->setCellH(marker.h());
+  newParticle->setCellH(marker.getH());
   updateContainedInAdjacentCellProperty(marker, targetVertex, *newParticle);
 
   const int linearisedTargetVertex = targetVertex.to_ulong();
@@ -144,8 +144,8 @@ void toolbox::particles::insertParticleIntoCell(
   // count.
 
   tarch::la::Vector<DIMENSIONS, double>
-    vertexX = marker.x() - 0.5 * marker.h()
-              + tarch::la::multiplyComponents(tarch::la::Vector<DIMENSIONS, double>(targetVertex), marker.h());
+    vertexX = marker.getX() - 0.5 * marker.getH()
+              + tarch::la::multiplyComponents(tarch::la::Vector<DIMENSIONS, double>(targetVertex), marker.getH());
 
   toolbox::particles::assignmentchecks::assignParticleToVertex(
     toolbox::particles::assignmentchecks::pruneTypeName<Particle>(),
@@ -153,11 +153,11 @@ void toolbox::particles::insertParticleIntoCell(
     partID,
     true, // is always local, we set that a few lines above
     vertexX,
-    marker.h(), // vertexH
+    marker.getH(), // vertexH
     spacetreeId,
     "toolbox::particles::insertParticleIntoCell()",
     vertexX,
-    marker.h(),
+    marker.getH(),
     true // particle is new
   );
 }

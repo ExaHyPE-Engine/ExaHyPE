@@ -101,9 +101,9 @@ int """ + full_qualified_classname + """::domainPatchCount=0;
     dfor(volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}) {
       int index = peano4::utils::dLinearised(volume,{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}) * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-        ::exahype2::fd::getGridCellCentre( marker.x(), marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, volume),
-        ::exahype2::fd::getGridCellSize( marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ),
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + index,
+        ::exahype2::fd::getGridCellCentre( marker.getX(), marker.getH(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, volume),
+        ::exahype2::fd::getGridCellSize( marker.getH(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ),
         {{GRID_IS_CONSTRUCTED}}
       );
       //index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
@@ -142,13 +142,13 @@ if ({{PREDICATE}}) {
     offset[2]=offsetIndex[i*3+2];
     #endif
 
-    if ( tarch::la::equals( marker.x() - 0.5*marker.h(), offset, 1e-5) ) { FoundCell=true; }
+    if ( tarch::la::equals( marker.getX() - 0.5*marker.getH(), offset, 1e-5) ) { FoundCell=true; }
 
     if (FoundCell){
       dfor(volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}) {
         int index = peano4::utils::dLinearised(volume,{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}) * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
         for (int k=0; k<=({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}); k++){
-          fineGridCell{{UNKNOWN_IDENTIFIER}}.value[index+k]=domainDataFromFiles[i*({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}})*totalCellCount+index+k];
+          fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[index+k]=domainDataFromFiles[i*({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}})*totalCellCount+index+k];
         }
       }
       break;
@@ -176,9 +176,9 @@ if ({{PREDICATE}}) {
   #endif
   double patchDataFromFile[totalCellCount*({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}})];
 
-  std::string targetCheckpointFileName=OffsetIndexMap[( marker.x() - 0.5*marker.h() )];
-  if (targetCheckpointFileName.empty()) {std::cout<<"Patch "<< marker.x() - 0.5*marker.h() << " do not see a correct file " << targetCheckpointFileName <<std::endl;}
-  //else {std::cout<<"Patch "<< marker.x() - 0.5*marker.h() << " should be in " << targetCheckpointFileName <<std::endl;}
+  std::string targetCheckpointFileName=OffsetIndexMap[( marker.getX() - 0.5*marker.getH() )];
+  if (targetCheckpointFileName.empty()) {std::cout<<"Patch "<< marker.getX() - 0.5*marker.getH() << " do not see a correct file " << targetCheckpointFileName <<std::endl;}
+  //else {std::cout<<"Patch "<< marker.getX() - 0.5*marker.getH() << " should be in " << targetCheckpointFileName <<std::endl;}
 
   const auto& lines = subFilesManager.getCheckpointFileData(targetCheckpointFileName);
   bool PatchFound=false;
@@ -189,14 +189,14 @@ if ({{PREDICATE}}) {
       std::string token; int index=0;
 
       while (iss >> token) { try {offset[index]=std::stod(token); index++; } catch (...){ } }
-      if ( tarch::la::equals( marker.x() - 0.5*marker.h(), offset, 1e-6) ){ PatchFound=true; }
+      if ( tarch::la::equals( marker.getX() - 0.5*marker.getH(), offset, 1e-6) ){ PatchFound=true; }
     }
     if ( PatchFound and (line.find("     ") == 0) ){
       std::istringstream iss(line);
       std::string token; int index=0;
 
       while (iss >> token) { patchDataFromFile[index]=std::stod(token); index++; }
-      //std::cout<<"Found patch with "<< marker.x() - 0.5*marker.h() << " in " << targetCheckpointFileName <<std::endl;
+      //std::cout<<"Found patch with "<< marker.getX() - 0.5*marker.getH() << " in " << targetCheckpointFileName <<std::endl;
       break;
     }
   }
@@ -204,7 +204,7 @@ if ({{PREDICATE}}) {
   dfor(volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}) {
       int index = peano4::utils::dLinearised(volume,{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}) * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}) ;
       for (int i=0; i<=({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}); i++){
-            fineGridCell{{UNKNOWN_IDENTIFIER}}.value[index+i]=patchDataFromFile[index+i];
+            fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[index+i]=patchDataFromFile[index+i];
       }
   }
 

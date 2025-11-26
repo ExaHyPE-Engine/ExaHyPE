@@ -11,7 +11,7 @@ tarch::logging::Log toolbox::loadbalancing::Blacklist::_log("toolbox::loadbalanc
 toolbox::loadbalancing::Blacklist::BlacklistData::BlacklistData(int treeNumber):
   lifetime(3),
   numberOfUnrefinedCells(
-    peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(treeNumber).getNumberOfLocalUnrefinedCells()
+    peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(treeNumber).numberOfLocalUnrefinedCells
   ),
   numberOfSplits(1),
   numberOfDegeneratedChildren(0) {}
@@ -53,7 +53,7 @@ void toolbox::loadbalancing::Blacklist::update() {
     } else if (p.second.lifetime > 0) {
       const int currentNumberOfCells = peano4::parallel::SpacetreeSet::getInstance()
                                          .getGridStatistics(p.first)
-                                         .getNumberOfLocalUnrefinedCells();
+                                         .numberOfLocalUnrefinedCells;
       if (currentNumberOfCells == p.second.numberOfUnrefinedCells) {
         logDebug(
           "updateBlacklist()",

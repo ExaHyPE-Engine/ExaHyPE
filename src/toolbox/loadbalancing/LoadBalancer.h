@@ -24,8 +24,12 @@ public:
 
   void update();
 
-  int getGlobalNumberOfTrees() const;
-  int getGlobalNumberOfInnerUnrefinedCells() const;
+  int         getGlobalNumberOfTrees() const;
+  int         getGlobalNumberOfInnerUnrefinedCells() const;
+  int         getGlobalMinTreeLoad() const;
+  int         getGlobalMaxTreeLoad() const;
+  double      getGlobalTreeLoadRatioInPercentage() const;
+  std::size_t getGlobalMemoryUsageInBytes() const;
 
   bool hasStagnated() const;
   bool hasSplitRecently() const;

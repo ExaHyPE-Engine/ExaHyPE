@@ -8,7 +8,7 @@ class ActionSet(object):
 
     Action set (reactions to events)
 
-    Peano runs through the mesh tied to an observer. The observer 
+    Peano runs through the mesh tied to an observer. The observer
     "sees" events and issues actions tied to these events. That is
     the observer listens to the tree traversal for events alike "this
     is the first time I see (touch) a vertex". A list of events
@@ -96,20 +96,20 @@ class ActionSet(object):
     To be able to do so, it makes sense to let get_action_set_name() return
     a unique name, so it is easier for you to find what C++ file corresponds
     to which action set.
-    
+
     A discussion some event functions and their semantics as well as further
     info on the arguments can be found in the documentation of
     @ref peano_action_sets.
 
 
     ## Order of invocation and concurrency level
-    
+
     A discussion of the order of events can be found in the documentation of
     @ref peano_action_sets.
-    
 
 
-    
+
+
     @param parallel: Boolean
       See section on "Order of invocation and concurrency level" in class
       documentation.
@@ -137,7 +137,7 @@ class ActionSet(object):
         return "// @todo Should be overwritten\n"
 
     def get_body_of_getGridControlEvents(self):
-        return "return std::vector< peano4::grid::GridControlEvent >();\n"
+        return "return std::vector< ::peano4::grid::GridControlEvent >();\n"
 
     @abstractmethod
     def get_body_of_prepareTraversal(self):

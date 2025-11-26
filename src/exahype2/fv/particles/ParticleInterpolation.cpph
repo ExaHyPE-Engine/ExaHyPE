@@ -84,8 +84,8 @@ void exahype2::fv::particles::interpolation::handleMidpoints(
     // Determine direction to neighbor
     tarch::la::Vector<DIMENSIONS, int> neighborDirection(0);
     for (int d = 0; d < DIMENSIONS; d++) {
-      double cellMin = marker.x()(d) - 0.5 * marker.h()(d);
-      double cellMax = marker.x()(d) + 0.5 * marker.h()(d);
+      double cellMin = marker.getX()(d) - 0.5 * marker.getH()(d);
+      double cellMax = marker.getX()(d) + 0.5 * marker.getH()(d);
       if (midpointPosition(d) < cellMin)
         neighborDirection(d) = -1;
       else if (midpointPosition(d) >= cellMax)
@@ -98,7 +98,7 @@ void exahype2::fv::particles::interpolation::handleMidpoints(
     // Adjust midpoint position to neighbor cell's coordinates
     tarch::la::Vector<DIMENSIONS, double> adjustedMidpointPosition;
     for (int d = 0; d < DIMENSIONS; d++) {
-      double offset               = neighborDirection(d) * marker.h()(d);
+      double offset               = neighborDirection(d) * marker.getH()(d);
       adjustedMidpointPosition(d) = midpointPosition(d) - offset;
     }
 

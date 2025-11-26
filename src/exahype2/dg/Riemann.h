@@ -10,6 +10,7 @@
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"
 
+#include "peano4/datamanagement/FaceMarker.h"
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/utils/Loop.h"
 #include "peano4/utils/Globals.h"

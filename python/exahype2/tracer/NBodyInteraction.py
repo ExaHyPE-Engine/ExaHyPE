@@ -16,7 +16,7 @@ class NBodyInteraction(ActionSet):
         update_kernel_arguments="""
 *p,
 marker,
-fineGridCell{{SOLVER_NAME}}Q.value
+fineGridCell{{SOLVER_NAME}}Q.data()
 """,
         interpolation_scheme=0,
         integration_scheme=0,
@@ -112,7 +112,7 @@ fineGridCell{{SOLVER_NAME}}Q.value
   assertion1(
     not numberOfCoalescedActiveParticlesPerVertex.empty()
     and
-    (numberOfCoalescedActiveParticlesPerVertex.size() % TwoPowerD == 0),
+    (numberOfCoalescedActiveParticlesPerVertex.size() % TWO_POWER_D == 0),
     numberOfCoalescedActiveParticlesPerVertex.size()
   );
   {{PARTICLE_INTERACTION_KERNEL}}

@@ -88,8 +88,8 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
   if ( not marker.hasBeenRefined() and not marker.willBeRefined() ) {
     std::vector< globaldata::{{PARTICLE}}* > newParticles = toolbox::particles::createEquallySpacedParticles<globaldata::{{PARTICLE}}>(
       {{H}},
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       {{ROUND_DOWN}},
       {{NOISE}}
     );
@@ -113,7 +113,7 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
         return result
 
     def get_body_of_getGridControlEvents(self):
-        return "  return std::vector< peano4::grid::GridControlEvent >();\n"
+        return "  return std::vector< ::peano4::grid::GridControlEvent >();\n"
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")

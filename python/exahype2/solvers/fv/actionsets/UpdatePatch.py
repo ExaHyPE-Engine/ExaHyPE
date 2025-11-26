@@ -11,8 +11,8 @@ class UpdatePatch(AbstractFVActionSet):
     _Template_TouchCellFirstTime = jinja2.Template(
         """
   if ({{GUARD}}) {
-    auto* /*const*/ QIn = {{OLD_ACCESSOR}}.value;
-    auto* /*const*/ QOut = {{NEW_ACCESSOR}}.value;
+    auto* /*const*/ QIn = {{OLD_ACCESSOR}}.data();
+    auto* /*const*/ QOut = {{NEW_ACCESSOR}}.data();
 
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(false);
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
@@ -55,7 +55,7 @@ class UpdatePatch(AbstractFVActionSet):
       {{COMPUTE_NEW_TIME_STEP_SIZE}}
       fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
       fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
-      repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp + timeStepSize, tarch::la::min(marker.h()), tarch::la::max(marker.h()));
+      repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp + timeStepSize, tarch::la::min(marker.getH()), tarch::la::max(marker.getH()));
     }
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
   } else if (not marker.willBeRefined() and not marker.hasBeenRefined()) { // Required in cases where the if-guard above is extended by a solver
@@ -65,7 +65,7 @@ class UpdatePatch(AbstractFVActionSet):
     assertion2(tarch::la::greaterEquals(timeStepSize, 0.0), timeStepSize, timeStamp);
     assertion2(tarch::la::greaterEquals(timeStamp,    0.0), timeStepSize, timeStamp);
 
-    repositories::{{SOLVER_INSTANCE}}.update(0.0, timeStamp, tarch::la::min(marker.h()), tarch::la::max(marker.h()));
+    repositories::{{SOLVER_INSTANCE}}.update(0.0, timeStamp, tarch::la::min(marker.getH()), tarch::la::max(marker.getH()));
   }
 """
     )

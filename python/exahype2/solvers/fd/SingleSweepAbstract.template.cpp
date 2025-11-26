@@ -3,7 +3,9 @@
 #include "{{CLASSNAME}}.h"
 
 #include "repositories/SolverRepository.h"
+
 #include "tarch/multicore/Lock.h"
+#include "tarch/services/ServiceRepository.h"
 
 tarch::logging::Log     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
 
@@ -40,6 +42,10 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxMeshSize() const {
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
   return getMinPatchSize();
+}
+
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
+  return NumberOfNodesPerAxisPerPatch * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize(bool ofCurrentlyRunningGridSweep) const {

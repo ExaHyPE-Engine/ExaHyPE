@@ -8,6 +8,7 @@
 
 #include "tarch/multicore/Lock.h"
 #include "tarch/NonCriticalAssertions.h"
+#include "tarch/services/ServiceRepository.h"
 
 tarch::logging::Log     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
 
@@ -57,6 +58,10 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxMeshSize() const {
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
   return getMinCellSize();
+}
+
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
+  return (Order + 1) * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCellSize(bool ofCurrentlyRunningGridSweep) const {

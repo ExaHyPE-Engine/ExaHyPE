@@ -572,8 +572,8 @@ double benchmarks::exahype2::ccz4::tasks::CCZ4FVEnclaveTask::applyKernelToCell(.
   ...
   
   if (repositories::instanceOfCCZ4FV.patchCanUseStatelessPDETerms(
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       t,
       dt
   )) {

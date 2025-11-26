@@ -37,7 +37,7 @@ refinement_criterion = """
     if (x(0) < 0.5) {
       result = ::exahype2::RefinementCommand::Refine;
     } else {
-      result = ::exahype2::RefinementCommand::Erase;
+      result = ::exahype2::RefinementCommand::Keep;
     }
   }
 
@@ -107,7 +107,7 @@ project.set_global_simulation_parameters(
 )
 
 project.set_load_balancer(
-    f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees}, {args.trees})"
+    f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees})"
 )
 project.set_Peano4_installation(
     "../../../../", mode=peano4.output.string_to_mode(args.build_mode)

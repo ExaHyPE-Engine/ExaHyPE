@@ -20,6 +20,7 @@ void* tarch::accelerator::allocateRawData(std::size_t sizeInBytes, MemoryLocatio
   switch (location) {
   case MemoryLocation::Heap:
     data = Kokkos::kokkos_malloc<Kokkos::HostSpace>(sizeInBytes);
+    // data = allocateRawDataOnHeap(sizeInBytes);
     break;
   case MemoryLocation::Device:
 #ifdef WITH_USM
@@ -50,6 +51,7 @@ void tarch::accelerator::freeRawData(void* data, MemoryLocation location, int de
   switch (location) {
   case MemoryLocation::Heap:
     Kokkos::kokkos_free<Kokkos::HostSpace>(data);
+    // freeRawDataOnHeap(data);
     break;
   case MemoryLocation::Device:
 #ifdef WITH_USM
@@ -81,13 +83,13 @@ void tarch::accelerator::
     std::memcpy(target, source, sizeInBytes);
 #else
     using SrcViewType = Kokkos::View<const unsigned char*, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-    SrcViewType src_view(static_cast<const unsigned char*>(source), sizeInBytes);
+    SrcViewType srcView(static_cast<const unsigned char*>(source), sizeInBytes);
 
     using DstViewType = Kokkos::
       View<unsigned char*, Kokkos::DefaultExecutionSpace::memory_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-    DstViewType dst_view(static_cast<unsigned char*>(target), sizeInBytes);
+    DstViewType dstView(static_cast<unsigned char*>(target), sizeInBytes);
 
-    Kokkos::deep_copy(dst_view, src_view);
+    Kokkos::deep_copy(dstView, srcView);
 #endif
     break;
   }
@@ -116,12 +118,12 @@ void tarch::accelerator::
 #else
     using SrcViewType = Kokkos::
       View<const unsigned char*, Kokkos::DefaultExecutionSpace::memory_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-    SrcViewType src_view(static_cast<const unsigned char*>(source), sizeInBytes);
+    SrcViewType srcView(static_cast<const unsigned char*>(source), sizeInBytes);
 
     using DstViewType = Kokkos::View<unsigned char*, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-    DstViewType dst_view(static_cast<unsigned char*>(target), sizeInBytes);
+    DstViewType dstView(static_cast<unsigned char*>(target), sizeInBytes);
 
-    Kokkos::deep_copy(dst_view, src_view);
+    Kokkos::deep_copy(dstView, srcView);
 #endif
     break;
   }

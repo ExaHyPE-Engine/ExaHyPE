@@ -25,7 +25,7 @@ class {FULL_QUALIFIED_CLASSNAME} {{
     
     /**
      * Convert step into program step, so you can use it in 
-     * peano4::parallel::Node::getInstance().setNextProgramStep()
+     * ::peano4::parallel::Node::getInstance().setNextProgramStep()
      */
     static int   toProgramStep( Steps value ); 
     static Steps toStepEnum( int value ); 

@@ -17,19 +17,19 @@ class SaveNewCellData(AbstractLimiterActionSet):
 
     kernels::{{SOLVER_NAME}}::findCellLocalMinAndMax(
       repositories::{{SOLVER_INSTANCE}},
-      fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}_old.value,
+      fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}_old.data(),
       localMinPerVariables, localMaxPerVariables
     );
 
     // Projection of cell local min and max, order in any given face is [min_l, max_l, min_r, max_r]
     for (int d = 0; d < DIMENSIONS; d++) {
       // Left face
-      std::copy_n(localMinPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + 2 * NumberOfObservables);
-      std::copy_n(localMaxPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + 3 * NumberOfObservables);
+      std::copy_n(localMinPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).data() + 2 * NumberOfObservables);
+      std::copy_n(localMaxPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).data() + 3 * NumberOfObservables);
 
       // Right face
-      std::copy_n(localMinPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).value);
-      std::copy_n(localMaxPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).value + NumberOfObservables);
+      std::copy_n(localMinPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).data());
+      std::copy_n(localMaxPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + DIMENSIONS).data() + NumberOfObservables);
     }
     {% endif %}{# USE_DMP #}
 

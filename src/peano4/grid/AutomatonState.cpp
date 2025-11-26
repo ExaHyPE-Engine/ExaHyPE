@@ -2,69 +2,143 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "AutomatonState.h"
 
+#include "PeanoCurve.h"
+#include "tarch/services/ServiceRepository.h"
+
 #include <algorithm>
+#include <iomanip>
 #include <sstream>
 
-peano4::grid::AutomatonState::AutomatonState(
-  const int                                    __level,
-  const tarch::la::Vector<DIMENSIONS, double>& __x,
-  const tarch::la::Vector<DIMENSIONS, double>& __h,
-  const bool                                   __inverted,
-  const std::bitset<DIMENSIONS>&               __evenFlags,
-  const tarch::la::Vector<TWO_TIMES_D, int>&   __accessNumber
-) {
-  setLevel(__level);
-  setX(__x);
-  setH(__h);
-  setInverted(__inverted);
-  setEvenFlags(__evenFlags);
-  setAccessNumber(__accessNumber);
-}
+static_assert(std::is_standard_layout_v<peano4::grid::AutomatonState>);
+static_assert(std::is_trivially_copyable_v<peano4::grid::AutomatonState>);
 
-peano4::grid::AutomatonState::AutomatonState(const AutomatonState& copy) {
-  setLevel(copy.getLevel());
-  setX(copy.getX());
-  setH(copy.getH());
-  setInverted(copy.getInverted());
-  setEvenFlags(copy.getEvenFlags());
-  setAccessNumber(copy.getAccessNumber());
-}
-
-peano4::grid::AutomatonState& peano4::grid::AutomatonState::operator=(const AutomatonState& other) {
-  if (this == &other) {
-    return *this; // Self-assignment check
-  }
-
-  setLevel(other.getLevel());
-  setX(other.getX());
-  setH(other.getH());
-  setInverted(other.getInverted());
-  setEvenFlags(other.getEvenFlags());
-  setAccessNumber(other.getAccessNumber());
-
-  return *this;
+std::ostream& operator<<(std::ostream& out, const peano4::grid::AutomatonState& state) {
+  return (out << state.toString());
 }
 
 std::string peano4::grid::AutomatonState::toString() const {
   std::ostringstream out;
-  out << "(";
-  out << "level=" << _level;
-  out << ",";
-  out << "x=" << getX();
-  out << ",";
-  out << "h=" << getH();
-  out << ",";
-  out << "inverted=" << _inverted;
-  out << ",";
-  out << "evenFlags=" << getEvenFlags();
-  out << ",";
-  out << "accessNumber=" << getAccessNumber();
-  out << ")";
+  out << "AutomatonState{";
+
+  out << "Level=" << level;
+
+  out << ", x=[";
+  for (auto i = 0; i < x.size(); i++) {
+    if (i > 0) {
+      out << ",";
+    }
+    out << std::setprecision(6) << x[i];
+  }
+  out << "]";
+
+  out << ", h=[";
+  for (auto i = 0; i < h.size(); i++) {
+    if (i > 0) {
+      out << ",";
+    }
+    out << std::setprecision(6) << h[i];
+  }
+  out << "]";
+
+  out << ", Inverted=" << (getInverted() ? "true" : "false");
+
+  out << ", EvenFlags=[";
+  for (int d = 0; d < DIMENSIONS; d++) {
+    if (d > 0) {
+      out << ",";
+    }
+    out << (getEvenFlag(d) ? "1" : "0");
+  }
+  out << "]";
+
+  out << ", AccessNumber=[";
+  for (std::size_t i = 0; i < accessNumber.size(); i++) {
+    if (i > 0) {
+      out << ",";
+    }
+    out << static_cast<int>(accessNumber[i]);
+  }
+  out << "]";
+
+  out << "}";
+
   return out.str();
 }
 
-#ifdef WITH_MPI
+void peano4::grid::AutomatonState::refineState(
+  const AutomatonState&              coarseGrid,
+  AutomatonState                     fineGridStates[THREE_POWER_D],
+  tarch::la::Vector<DIMENSIONS, int> fineGridStatesPosition,
+  int                                axis
+) {
+  if (axis == -1) {
+    int arrayIndex                   = peano4::utils::dLinearised(fineGridStatesPosition, 3);
+    fineGridStates[arrayIndex]       = coarseGrid;
+    fineGridStates[arrayIndex].level = coarseGrid.level + 1;
+  } else {
+    assertion(axis >= 0);
+    assertion(axis < DIMENSIONS);
 
+    AutomatonState firstCell  = coarseGrid;
+    AutomatonState secondCell = coarseGrid;
+    AutomatonState thirdCell  = coarseGrid;
+
+    if (PeanoCurve::isTraversePositiveAlongAxis(coarseGrid, axis)) {
+      PeanoCurve::setExitFace(firstCell, axis);
+    } else {
+      PeanoCurve::setEntryFace(firstCell, axis);
+    }
+    firstCell.h[axis]            = coarseGrid.h[axis] / 3.0;
+    fineGridStatesPosition(axis) = 0;
+    firstCell.x[axis]            = coarseGrid.x[axis];
+    refineState(firstCell, fineGridStates, fineGridStatesPosition, axis - 1);
+
+    PeanoCurve::invertEvenFlag(secondCell, axis);
+    PeanoCurve::setEntryFace(secondCell, axis);
+    PeanoCurve::setExitFace(secondCell, axis);
+    secondCell.h[axis]           = coarseGrid.h[axis] / 3.0;
+    fineGridStatesPosition(axis) = 1;
+    secondCell.x[axis]           = coarseGrid.x[axis] + coarseGrid.h[axis] / 3.0;
+    refineState(secondCell, fineGridStates, fineGridStatesPosition, axis - 1);
+
+    if (PeanoCurve::isTraversePositiveAlongAxis(coarseGrid, axis)) {
+      PeanoCurve::setEntryFace(thirdCell, axis);
+    } else {
+      PeanoCurve::setExitFace(thirdCell, axis);
+    }
+    thirdCell.h[axis]            = coarseGrid.h[axis] / 3.0;
+    fineGridStatesPosition(axis) = 2;
+    thirdCell.x[axis]            = coarseGrid.x[axis] + 2.0 * coarseGrid.h[axis] / 3.0;
+    refineState(thirdCell, fineGridStates, fineGridStatesPosition, axis - 1);
+  }
+
+  if (axis == DIMENSIONS - 1) {
+    for (int i = 0; i < THREE_POWER_D; i++) {
+      for (int d = 0; d < TWO_TIMES_D; d++) {
+        assertion6(
+          fineGridStates[i].accessNumber[d] > -2 * DIMENSIONS,
+          i,
+          d,
+          fineGridStates[i].toString(),
+          coarseGrid.toString(),
+          THREE_POWER_D,
+          TWO_TIMES_D
+        );
+        assertion6(
+          fineGridStates[i].accessNumber[d] < 2 * DIMENSIONS,
+          i,
+          d,
+          fineGridStates[i].toString(),
+          coarseGrid.toString(),
+          THREE_POWER_D,
+          TWO_TIMES_D
+        );
+      }
+    }
+  }
+}
+
+#ifdef WITH_MPI
 MPI_Datatype peano4::grid::AutomatonState::Datatype = MPI_DATATYPE_NULL;
 
 MPI_Datatype peano4::grid::AutomatonState::getForkDatatype() { return Datatype; }
@@ -108,62 +182,45 @@ void peano4::grid::AutomatonState::freeMultiscaleDataExchangeDatatype() {
   }
 }
 
-int peano4::grid::AutomatonState::getSenderRank() const { return _senderDestinationRank; }
-
 void peano4::grid::AutomatonState::initDatatype() {
-  peano4::grid::AutomatonState instances[2];
+  AutomatonState instances[2];
 
-  int NumberOfAttributes = 0;
-  NumberOfAttributes++;
-  NumberOfAttributes++;
-  NumberOfAttributes++;
-  NumberOfAttributes++;
-  NumberOfAttributes++;
-  NumberOfAttributes++;
+  constexpr int NumberOfAttributes = 5;
+  MPI_Datatype  subtypes[NumberOfAttributes];
+  int           blocklen[NumberOfAttributes];
+  MPI_Aint      disp[NumberOfAttributes];
 
-  MPI_Datatype* subtypes = new MPI_Datatype[NumberOfAttributes];
-  int*          blocklen = new int[NumberOfAttributes];
-  MPI_Aint*     disp     = new MPI_Aint[NumberOfAttributes];
+  int counter = 0;
 
-  int counter       = 0;
   subtypes[counter] = MPI_INT;
   blocklen[counter] = 1;
+  MPI_Get_address(&instances[0].level, &disp[counter]);
   counter++;
+
   subtypes[counter] = MPI_DOUBLE;
   blocklen[counter] = DIMENSIONS;
+  MPI_Get_address(&(instances[0].x.data()[0]), &disp[counter]);
   counter++;
+
   subtypes[counter] = MPI_DOUBLE;
   blocklen[counter] = DIMENSIONS;
+  MPI_Get_address(&(instances[0].h.data()[0]), &disp[counter]);
   counter++;
-  subtypes[counter] = MPI_BYTE;
-  blocklen[counter] = 1;
-  counter++;
+
   subtypes[counter] = MPI_UNSIGNED_LONG;
   blocklen[counter] = 1;
+  MPI_Get_address(&instances[0].flags, &disp[counter]);
   counter++;
-  subtypes[counter] = MPI_INT;
+
+  subtypes[counter] = MPI_INT8_T;
   blocklen[counter] = TWO_TIMES_D;
+  MPI_Get_address(&(instances[0].accessNumber[0]), &disp[counter]);
   counter++;
 
   MPI_Aint baseFirstInstance;
   MPI_Aint baseSecondInstance;
   MPI_Get_address(&instances[0], &baseFirstInstance);
   MPI_Get_address(&instances[1], &baseSecondInstance);
-
-  counter = 0;
-  MPI_Get_address(&(instances[0]._level), &disp[counter]);
-  counter++;
-  MPI_Get_address(&(instances[0]._x.data()[0]), &disp[counter]);
-  counter++;
-  MPI_Get_address(&(instances[0]._h.data()[0]), &disp[counter]);
-  counter++;
-  MPI_Get_address(&(instances[0]._inverted), &disp[counter]);
-  counter++;
-  MPI_Get_address(&(instances[0]._evenFlags), &disp[counter]);
-  counter++;
-  MPI_Get_address(&(instances[0]._accessNumber.data()[0]), &disp[counter]);
-  counter++;
-
   MPI_Aint offset = disp[0] - baseFirstInstance;
   MPI_Aint extent = baseSecondInstance - baseFirstInstance - offset;
   for (int i = NumberOfAttributes - 1; i >= 0; i--) {
@@ -176,12 +233,12 @@ void peano4::grid::AutomatonState::initDatatype() {
   errorCode += MPI_Type_create_resized(tmpType, offset, extent, &Datatype);
   errorCode += MPI_Type_commit(&Datatype);
   errorCode += MPI_Type_free(&tmpType);
-  if (errorCode)
-    std::cerr << "error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
 
-  delete[] subtypes;
-  delete[] blocklen;
-  delete[] disp;
+  if (errorCode) {
+    std::stringstream ss;
+    ss << "Error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
+    throw std::runtime_error(ss.str());
+  }
 }
 
 void peano4::grid::AutomatonState::shutdownDatatype() {
@@ -192,25 +249,22 @@ void peano4::grid::AutomatonState::shutdownDatatype() {
   freeGlobalCommunicationDatatype();
 }
 
-void peano4::grid::AutomatonState::
-  send(const peano4::grid::AutomatonState& buffer, int destination, int tag, MPI_Comm communicator) {
+void peano4::grid::AutomatonState::send(const AutomatonState& buffer, int destination, int tag, MPI_Comm communicator) {
   MPI_Send(&buffer, 1, Datatype, destination, tag, communicator);
 }
 
-void peano4::grid::AutomatonState::
-  receive(peano4::grid::AutomatonState& buffer, int source, int tag, MPI_Comm communicator) {
+void peano4::grid::AutomatonState::receive(AutomatonState& buffer, int source, int tag, MPI_Comm communicator) {
   MPI_Status status;
   MPI_Recv(&buffer, 1, Datatype, source, tag, communicator, &status);
-  buffer._senderDestinationRank = status.MPI_SOURCE;
 }
 
 void peano4::grid::AutomatonState::send(
-  const peano4::grid::AutomatonState& buffer,
-  int                                 destination,
-  int                                 tag,
-  std::function<void()>               startCommunicationFunctor,
-  std::function<void()>               waitFunctor,
-  MPI_Comm                            communicator
+  const AutomatonState& buffer,
+  int                   destination,
+  int                   tag,
+  std::function<void()> startCommunicationFunctor,
+  std::function<void()> waitFunctor,
+  MPI_Comm              communicator
 ) {
   MPI_Request sendRequestHandle;
   int         flag = 0;
@@ -224,12 +278,12 @@ void peano4::grid::AutomatonState::send(
 }
 
 void peano4::grid::AutomatonState::receive(
-  peano4::grid::AutomatonState& buffer,
-  int                           source,
-  int                           tag,
-  std::function<void()>         startCommunicationFunctor,
-  std::function<void()>         waitFunctor,
-  MPI_Comm                      communicator
+  AutomatonState&       buffer,
+  int                   source,
+  int                   tag,
+  std::function<void()> startCommunicationFunctor,
+  std::function<void()> waitFunctor,
+  MPI_Comm              communicator
 ) {
   MPI_Status  status;
   MPI_Request receiveRequestHandle;
@@ -241,18 +295,11 @@ void peano4::grid::AutomatonState::receive(
     waitFunctor();
     MPI_Test(&receiveRequestHandle, &flag, &status);
   }
-  buffer._senderDestinationRank = status.MPI_SOURCE;
 }
-#endif
 
-#ifdef WITH_MPI
-void peano4::grid::AutomatonState::sendAndPollDanglingMessages(
-  const peano4::grid::AutomatonState& message,
-  int                                 destination,
-  int                                 tag,
-  MPI_Comm                            communicator
-) {
-  peano4::grid::AutomatonState::send(
+void peano4::grid::AutomatonState::
+  sendAndPollDanglingMessages(const AutomatonState& message, int destination, int tag, MPI_Comm communicator) {
+  AutomatonState::send(
     message,
     destination,
     tag,
@@ -272,8 +319,8 @@ void peano4::grid::AutomatonState::sendAndPollDanglingMessages(
 }
 
 void peano4::grid::AutomatonState::
-  receiveAndPollDanglingMessages(peano4::grid::AutomatonState& message, int source, int tag, MPI_Comm communicator) {
-  peano4::grid::AutomatonState::receive(
+  receiveAndPollDanglingMessages(AutomatonState& message, int source, int tag, MPI_Comm communicator) {
+  AutomatonState::receive(
     message,
     source,
     tag,

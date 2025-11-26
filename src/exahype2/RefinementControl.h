@@ -38,7 +38,7 @@ std::string toString(exahype2::RefinementCommand value);
  * Note: Peano will internally decide to merge many many bounding boxes into
  * fewer, larger ones.
  *
- * @see peano4::grid::mergeGridControlEvents()
+ * @see peano4::grid::GridControlEvent::merge()
  *
  *
  * ## Refinement process
@@ -129,8 +129,8 @@ public:
    * so.
    *
    * @param x Centre of the cell for which this command is triggered. This is
-   *   typically marker.x().
-   * @param h Size of this cell. Typically marker.h().
+   *   typically marker.getX().
+   * @param h Size of this cell. Typically marker.getH().
    * @param lifetime Has to be greater equal 1.
    */
   void addCommand(

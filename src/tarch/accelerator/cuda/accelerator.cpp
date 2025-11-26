@@ -20,7 +20,7 @@ void* tarch::accelerator::allocateRawData(std::size_t sizeInBytes, MemoryLocatio
 
   switch (location) {
   case MemoryLocation::Heap:
-    data = std::aligned_alloc(ALIGNMENT, padSizeToAlignment(sizeInBytes, ALIGNMENT));
+    data = allocateRawDataOnHeap(sizeInBytes);
     break;
   case MemoryLocation::Device:
     assertion1(device >= 0, device);
@@ -58,7 +58,7 @@ void tarch::accelerator::freeRawData(void* data, MemoryLocation location, int de
 
   switch (location) {
   case MemoryLocation::Heap:
-    std::free(data);
+    freeRawDataOnHeap(data);
     break;
   case MemoryLocation::Device:
     assertion1(device >= 0, device);

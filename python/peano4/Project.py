@@ -10,8 +10,8 @@ import multiprocessing
 import peano4.output
 import peano4.datamodel
 import peano4.solversteps
-import peano4.runner
 
+from .PeanoMain import PeanoMain
 from .Logger import log, setup_logging
 
 class Project (object):
@@ -34,8 +34,7 @@ class Project (object):
     setup_logging()
 
     if sys.version_info < (3, 11):
-        log.error("Python 3.11 or higher is required. Current version: %s", sys.version)
-        sys.exit(1)
+        log.warning("Python 3.11 or higher is recommended to support all features. Current version: %s", sys.version)
 
     if subdirectory and not os.path.exists(subdirectory):
       os.mkdir(subdirectory)
@@ -68,7 +67,7 @@ class Project (object):
 
     self.solversteps  = peano4.solversteps.Steps(self)
 
-    self.main         = peano4.runner.DefaultSequence(self)
+    self.main         = PeanoMain(self)
 
     self.is_generated         = False
     self.is_built             = False
@@ -97,7 +96,7 @@ class Project (object):
     self.datamodel.clear()
     self.solversteps.clear()
 
-    self.main         = peano4.runner.DefaultSequence(self)
+    self.main         = PeanoMain(self)
 
     self.is_generated = False
     self.is_built     = False

@@ -5,48 +5,37 @@
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Core.h"
 
+#include <cmath>
+
 exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration(
-  double                         loadBalancingQuality,
-  int                            minSizeOfTree,
-  int                            maxNumberOfTreesThroughoutInitialDistribution,
-  int                            maxNumberOfTrees,
-  peano4::SplitInstruction::Mode mode
+  double                               loadBalancingQuality,
+  int                                  minSizeOfTree,
+  int                                  maxNumberOfTrees,
+  peano4::grid::SplitInstruction::Mode mode
 ):
   _loadBalancingQuality(loadBalancingQuality),
   _minSizeOfTree(minSizeOfTree),
-  _maxNumberOfTreesThroughoutInitialDistribution(maxNumberOfTreesThroughoutInitialDistribution),
   _maxNumberOfTrees(maxNumberOfTrees),
-  _mode(mode) {
-  assertion2(
-    (_maxNumberOfTrees >= _maxNumberOfTreesThroughoutInitialDistribution) or _maxNumberOfTrees < 0
-      or _maxNumberOfTreesThroughoutInitialDistribution < 0,
-    _maxNumberOfTrees,
-    _maxNumberOfTreesThroughoutInitialDistribution
-  );
-}
+  _mode(mode) {}
 
 int exahype2::LoadBalancingConfiguration::translateSetMaxNumberOfTreesIntoRealNumberOfTrees(int value) const {
   int result = -1;
-  if (value == UseNumberOfThreads) {
-    result = tarch::multicore::Core::getInstance().getNumberOfThreads();
-  } else if (value == UseTwiceTheNumberOfThreads) {
-    result = tarch::multicore::Core::getInstance().getNumberOfThreads() * 2;
+  if (value <= 0) {
+    const int threads = tarch::multicore::Core::getInstance().getNumberOfThreads();
+    // const double exp      = std::ceil(std::log(threads) / std::log(3.0));
+    // const int    nextPow3 = static_cast<int>(std::pow(3.0, exp));
+    // assertion(nextPow3 > 0);
+    // result = nextPow3;
+    result = threads;
   } else {
     assertion(value > 0);
     result = value;
   }
-
-  assertion(result >= 0);
   return result;
 }
 
 int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::State state) {
-  if (state == toolbox::loadbalancing::State::InterRankDistribution
-      or state == toolbox::loadbalancing::State::IntraRankDistribution) {
-    return translateSetMaxNumberOfTreesIntoRealNumberOfTrees(_maxNumberOfTreesThroughoutInitialDistribution);
-  } else {
-    return translateSetMaxNumberOfTreesIntoRealNumberOfTrees(_maxNumberOfTrees);
-  }
+  return translateSetMaxNumberOfTreesIntoRealNumberOfTrees(_maxNumberOfTrees);
 }
 
 double exahype2::LoadBalancingConfiguration::getWorstCaseBalancingRatio(toolbox::loadbalancing::State) {
@@ -55,6 +44,6 @@ double exahype2::LoadBalancingConfiguration::getWorstCaseBalancingRatio(toolbox:
 
 int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing::State) { return _minSizeOfTree; }
 
-peano4::SplitInstruction::Mode exahype2::LoadBalancingConfiguration::getMode(toolbox::loadbalancing::State) {
+peano4::grid::SplitInstruction::Mode exahype2::LoadBalancingConfiguration::getMode(toolbox::loadbalancing::State) {
   return _mode;
 }

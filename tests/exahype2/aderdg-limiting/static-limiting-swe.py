@@ -147,5 +147,5 @@ project.set_global_simulation_parameters(
 project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
 project.set_Peano4_installation("../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
-project.set_fenv_handler(False)
+project.set_fenv_handler(args.fpe)
 project.build()

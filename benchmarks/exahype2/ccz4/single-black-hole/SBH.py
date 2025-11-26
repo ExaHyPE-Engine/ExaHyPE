@@ -350,8 +350,8 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
           Q[0] = 1.0; Q[3] = 1.0; Q[5] = 1.0;
           Q[16] = 0.95; Q[54] = 0.95;
         },
-        marker.x(),
-        marker.h(),
+        marker.getX(),
+        marker.getH(),
         {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<DIMENSIONS ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
@@ -360,8 +360,8 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         marker.getSelectedFaceNumber(),
         {0.0, 0.0, 0.0},
-        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
-        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value,
+        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.data(),
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.data(),
         -1 //not use checkpoint yet
       );
       """
@@ -423,22 +423,22 @@ bool faceIsReal5 = repositories::instanceOf"""
             
 double* realFace0 = faceIsReal0 ? fineGridFaces"""
             + self._name_without_FD4_extension
-            + """_FVQNew(0).value : nullptr;
+            + """_FVQNew(0).data() : nullptr;
 double* realFace1 = faceIsReal1 ? fineGridFaces"""
             + self._name_without_FD4_extension
-            + """_FVQNew(1).value : nullptr;
+            + """_FVQNew(1).data() : nullptr;
 double* realFace2 = faceIsReal2 ? fineGridFaces"""
             + self._name_without_FD4_extension
-            + """_FVQNew(2).value : nullptr;
+            + """_FVQNew(2).data() : nullptr;
 double* realFace3 = faceIsReal3 ? fineGridFaces"""
             + self._name_without_FD4_extension
-            + """_FVQNew(3).value : nullptr;
+            + """_FVQNew(3).data() : nullptr;
 double* realFace4 = faceIsReal4 ? fineGridFaces"""
             + self._name_without_FD4_extension
-            + """_FVQNew(4).value : nullptr;
+            + """_FVQNew(4).data() : nullptr;
 double* realFace5 = faceIsReal5 ? fineGridFaces"""
             + self._name_without_FD4_extension
-            + """_FVQNew(5).value : nullptr;
+            + """_FVQNew(5).data() : nullptr;
 
 double* dummyFace0 = faceIsReal0 ? nullptr : ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
 double* dummyFace1 = faceIsReal1 ? nullptr : ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
@@ -543,8 +543,8 @@ if (
       repositories::instanceOf{0}_FV.NumberOfFiniteVolumesPerAxisPerPatch,
       repositories::instanceOf{0}_FD4.NumberOfGridCellsPerPatchPerAxis,
       repositories::instanceOf{0}_FV.NumberOfUnknowns + repositories::instanceOf{0}_FV.NumberOfAuxiliaryVariables,
-      fineGridCell{0}_FVQ.value,
-      fineGridCell{0}_FD4Q.value
+      fineGridCell{0}_FVQ.data(),
+      fineGridCell{0}_FD4Q.data()
     );
   /*}}
   else {{
@@ -552,8 +552,8 @@ if (
       repositories::instanceOf{0}_FV.NumberOfFiniteVolumesPerAxisPerPatch,
       repositories::instanceOf{0}_FD4.NumberOfGridCellsPerPatchPerAxis,
       repositories::instanceOf{0}_FV.NumberOfUnknowns + repositories::instanceOf{0}_FV.NumberOfAuxiliaryVariables,
-      fineGridCell{0}_FVQ.value,
-      fineGridCell{0}_FD4Q.value
+      fineGridCell{0}_FVQ.data(),
+      fineGridCell{0}_FD4Q.data()
     );
   }}*/
 
@@ -672,8 +672,8 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
           Q[0] = 1.0; Q[3] = 1.0; Q[5] = 1.0;
           Q[16] = 0.95; Q[54] = 0.95;
         },
-        marker.x(),
-        marker.h(),
+        marker.getX(),
+        marker.getH(),
         {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<DIMENSIONS ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
@@ -682,8 +682,8 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         marker.getSelectedFaceNumber(),
         {0.0, 0.0, 0.0},
-        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
-        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
+        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.data(),
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.data()
       );
       """
         )

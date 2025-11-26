@@ -119,13 +119,7 @@ private:
   /**
    * Entries from (0,1,2). (0,0) or (0,0,0) is the left, bottom cell.
    */
-  tarch::la::Vector<DIMENSIONS, int> _relativePositionOfCellWithinFatherCell;
-
-  /**
-   * Number of adjacent trees per vertex. Obviously only relevant/valid
-   * if the vertex is local.
-   */
-  tarch::la::Vector<TWO_POWER_D, int> _numberOfAdjacentTrees;
+  tarch::la::Vector<DIMENSIONS, int> relativePositionWithinFatherCell;
 
   /**
    * Some unit tests prefer to construct a marker manually, so I offer a
@@ -135,7 +129,7 @@ private:
   VertexMarker() = default;
 
 public:
-  VertexMarker(const ::peano4::grid::GridTraversalEvent& event, int select = 0);
+  VertexMarker(const peano4::grid::GridTraversalEvent& event, int select = 0);
 
   /**
    * Picks a vertex within a cell. After that, the routine returns.
@@ -174,17 +168,17 @@ public:
    *
    * @return Position of ith vertex
    */
-  tarch::la::Vector<DIMENSIONS, double> x(int i) const;
+  tarch::la::Vector<DIMENSIONS, double> getX(int i) const;
 
   /**
    * @return Position in space of currently selected vertex.
    */
-  tarch::la::Vector<DIMENSIONS, double> x() const;
+  tarch::la::Vector<DIMENSIONS, double> getX() const;
 
   inline bool isParentOfSubtree(int i) const { return _isParentOfSubtree[i]; }
   inline bool isParentOfSubtree() const { return isParentOfSubtree(_select); }
 
-  inline tarch::la::Vector<DIMENSIONS, double> h() const { return _h; }
+  inline tarch::la::Vector<DIMENSIONS, double> getH() const { return _h; }
 
   std::string toString() const;
 
@@ -199,16 +193,6 @@ public:
   inline bool willBeRefined(int i) const { return _willBeRefined[i]; }
 
   /**
-   * Number of adjacent trees of current vertex
-   *
-   * This routine is valid if and only if you call it for a local,
-   * non-hanging vertex. Otherwise, its behaviour is undefined (and
-   * will actually trigger an assertion).
-   */
-  int getNumberOfAdjacentTrees() const;
-  int getNumberOfAdjacentTrees(int i) const;
-
-  /**
    * @see isLocal(int) for currently selected/represented vertex
    */
   inline bool isLocal() const { return isLocal(_select); }
@@ -217,7 +201,7 @@ public:
    * Is a vertex local, i.e. not adjacent to any boundary or remote
    */
   inline bool isLocal(int i) const {
-    // assertion1( not _isLocal[i] or _numberOfAdjacentTrees[i]>0, toString() );
+    // assertion1(not _isLocal[i], toString()); // TODO: Is this needed?
     return _isLocal[i];
   }
 
@@ -287,25 +271,25 @@ public:
    *
    * You can reconstruct the left bottom vertex of the coarser cell through
    * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   * marker.x() - tarch::la::multiplyComponents(
+   * marker.getX() - tarch::la::multiplyComponents(
    *   tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
-   *   marker.h()
+   *   marker.getH()
    * )
    * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    *
    * If you want to know a particular position of a coarse grid vertex
    * identified through the bitset target, you can do through
    * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   * marker.x()
+   * marker.getX()
    * -
    * tarch::la::multiplyComponents(
    *   tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
-   *   marker.h()
+   *   marker.getH()
    * )
    * +
    * tarch::la::multiplyComponents(
    *   tarch::la::Vector<DIMENSIONS,double>(target),
-   *   3.0*marker.h()
+   *   3.0*marker.getH()
    * )
    * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    *

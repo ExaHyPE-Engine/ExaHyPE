@@ -12,7 +12,6 @@ import peano4.datamodel
 import exahype2.solvers.fv.actionsets
 
 from exahype2.solvers import PDETerms
-from exahype2.solvers.Storage import Storage
 
 from peano4.Logger import log
 
@@ -370,9 +369,6 @@ class FV(object):
 
         self._baseline_action_set_descend_invocation_order = baseline_action_set_descend_invocation_order
 
-        self._cell_data_storage = Storage.SmartPointers
-        self._face_data_storage = Storage.SmartPointers
-
         self.create_data_structures()
         self.create_action_sets()
 
@@ -665,78 +661,21 @@ The finest mesh width of """
             self._unknown_identifier() + "Update", self._storage_precision
         )
 
-        if self._cell_data_storage == Storage.CallStack:
-            self._patch.generator = peano4.datamodel.PatchToDoubleArray(
-                self._patch, self._storage_precision
-            )
-            self._patch_reconstructed.generator = peano4.datamodel.PatchToDoubleArray(
-                self._patch_reconstructed, self._storage_precision
-            )
-        elif self._cell_data_storage == Storage.Heap:
-            self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
-                self._patch, self._storage_precision
-            )
-            self._patch_reconstructed.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
-                self._patch_reconstructed, self._storage_precision
-            )
-        elif self._cell_data_storage == Storage.SmartPointers:
-            self._patch.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                self._patch, self._storage_precision
-            )
-            self._patch_reconstructed.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                self._patch_reconstructed, self._storage_precision
-            )
-        else:
-            assert False, "Storage variant {} not supported".format(
-                self._cell_data_storage
-            )
-
-        if self._face_data_storage == Storage.CallStack:
-            self._patch_overlap_old.generator = peano4.datamodel.PatchToDoubleArray(
-                self._patch_overlap_old, self._storage_precision
-            )
-            self._patch_overlap_new.generator = peano4.datamodel.PatchToDoubleArray(
-                self._patch_overlap_new, self._storage_precision
-            )
-            self._patch_overlap_update.generator = peano4.datamodel.PatchToDoubleArray(
-                self._patch_overlap_update, self._storage_precision
-            )
-        elif self._face_data_storage == Storage.Heap:
-            self._patch_overlap_old.generator = (
-                peano4.datamodel.PatchToDoubleArrayOnHeap(
-                    self._patch_overlap_old, self._storage_precision
-                )
-            )
-            self._patch_overlap_new.generator = (
-                peano4.datamodel.PatchToDoubleArrayOnHeap(
-                    self._patch_overlap_new, self._storage_precision
-                )
-            )
-            self._patch_overlap_update.generator = (
-                peano4.datamodel.PatchToDoubleArrayOnHeap(
-                    self._patch_overlap_update, self._storage_precision
-                )
-            )
-        elif self._face_data_storage == Storage.SmartPointers:
-            self._patch_overlap_old.generator = (
-                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                    self._patch_overlap_old, self._storage_precision
-                )
-            )
-            self._patch_overlap_new.generator = (
-                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                    self._patch_overlap_new, self._storage_precision
-                )
-            )
-            self._patch_overlap_update.generator = (
-                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                    self._patch_overlap_update, self._storage_precision
-                )
-            )
-        else:
-            assert False, "Storage variant {} not supported".format(
-                self._face_data_storage
-            )
+        self._patch.generator = peano4.datamodel.PatchToData(
+            self._patch, self._storage_precision
+        )
+        self._patch_reconstructed.generator = peano4.datamodel.PatchToData(
+            self._patch_reconstructed, self._storage_precision
+        )
+        self._patch_overlap_old.generator = peano4.datamodel.PatchToData(
+            self._patch_overlap_old, self._storage_precision
+        )
+        self._patch_overlap_new.generator = peano4.datamodel.PatchToData(
+            self._patch_overlap_new, self._storage_precision
+        )
+        self._patch_overlap_update.generator = peano4.datamodel.PatchToData(
+            self._patch_overlap_update, self._storage_precision
+        )
 
         self._patch_overlap_old.generator.merge_method_definition = (
             peano4.toolbox.blockstructured.get_face_merge_implementation(
@@ -762,6 +701,12 @@ The finest mesh width of """
 """
 
         self._patch.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
+            self._load_cell_data_default_guard(),
+            self._store_cell_data_default_guard(),
+        )
+
+        self._patch_reconstructed.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
             self._provide_cell_data_to_compute_kernels_default_guard(),
             self._load_cell_data_default_guard(),
             self._store_cell_data_default_guard(),
@@ -795,6 +740,9 @@ The finest mesh width of """
         )
 
         self._patch.generator.includes += """
+#include "../repositories/SolverRepository.h"
+"""
+        self._patch_reconstructed.generator.includes += """
 #include "../repositories/SolverRepository.h"
 """
         self._patch_overlap_old.generator.includes += """

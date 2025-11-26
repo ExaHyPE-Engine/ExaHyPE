@@ -72,7 +72,7 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}QUpdate.value
+      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}QUpdate.data()
     );
 
     logTraceOut( "touchFaceFirstTime(...)" );
@@ -96,8 +96,8 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}QUpdate.value,
-      {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}QUpdate(marker.getSelectedFaceNumber()).value
+      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}QUpdate.data(),
+      {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}QUpdate(marker.getSelectedFaceNumber()).data()
     );
 
     bool isLeftEntryOnCoarseFaceLabel = marker.getSelectedFaceNumber() >= DIMENSIONS;
@@ -118,8 +118,8 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}QUpdate.value,
-      {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}QUpdate(marker.getSelectedFaceNumber()).value
+      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}QUpdate.data(),
+      {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}QUpdate(marker.getSelectedFaceNumber()).data()
     );
 
     ::toolbox::blockstructured::restrictHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
@@ -127,8 +127,8 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}QNew.value,
-      {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}QNew(marker.getSelectedFaceNumber()).value
+      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}QNew.data(),
+      {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}QNew(marker.getSelectedFaceNumber()).data()
     );
 
     ::toolbox::blockstructured::restrictHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
@@ -136,8 +136,8 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}QOld.value,
-      {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}QOld(marker.getSelectedFaceNumber()).value
+      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}QOld.data(),
+      {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}QOld(marker.getSelectedFaceNumber()).data()
     );
     
     // A coarse face might have been non-persistent before. So it might
@@ -147,8 +147,8 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
     tarch::la::Vector<DIMENSIONS, double> size(DomainSize);
     bool isBoundary = false;
     for (int d=0; d<DIMENSIONS; d++) {
-      isBoundary |= tarch::la::equals( marker.x()(d), offset(d) );
-      isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
+      isBoundary |= tarch::la::equals( marker.getX()(d), offset(d) );
+      isBoundary |= tarch::la::equals( marker.getX()(d), offset(d) + size(d) );
     }
     coarseGridFaces""" + exahype2.grid.UpdateFaceLabel.get_attribute_name(solver._name) + """(marker.getSelectedFaceNumber()).setBoundary( isBoundary );
 
@@ -184,24 +184,24 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}QNew(marker.getSelectedFaceNumber()).value,
-      {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}QNew.value
+      {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}QNew(marker.getSelectedFaceNumber()).data(),
+      {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}QNew.data()
     );
     ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value,
-      fineGridFace""" + solver._name + """QOld.value
+      coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).data(),
+      fineGridFace""" + solver._name + """QOld.data()
     );
     ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value,
-      fineGridFace""" + solver._name + """QNew.value
+      coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).data(),
+      fineGridFace""" + solver._name + """QNew.data()
     );
 
     // It is important that we clear the halo layer. If we have two layers of 
@@ -212,7 +212,7 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      fineGridFace""" + solver._name + """QUpdate.value
+      fineGridFace""" + solver._name + """QUpdate.data()
     );
     const int leftRightEntry = marker.getSelectedFaceNumber()<DIMENSIONS ? 0 : 1;
     fineGridFace""" + solver._face_label.name + """.setNewTimeStamp(leftRightEntry,coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getNewTimeStamp(leftRightEntry));
@@ -240,21 +240,21 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
         );
 
         repositories::{{SOLVER_INSTANCE}}.initialCondition(
-          fineGridFace""" + solver._name + """QNew.value + serialisedDoF * {{UNKNOWNS}},
-          ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal, dof), 
-          ::exahype2::fv::getVolumeSize( marker.h(), {{DOFS_PER_AXIS}} ),
+          fineGridFace""" + solver._name + """QNew.data() + serialisedDoF * {{UNKNOWNS}},
+          ::exahype2::fv::getVolumeCentre( marker.getX(), marker.getH(), {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal, dof), 
+          ::exahype2::fv::getVolumeSize( marker.getH(), {{DOFS_PER_AXIS}} ),
           true // grid grid is constructed
         );
         repositories::{{SOLVER_INSTANCE}}.initialCondition(
-          fineGridFace""" + solver._name + """QOld.value + serialisedDoF * {{UNKNOWNS}},
-          ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal, dof), 
-          ::exahype2::fv::getVolumeSize( marker.h(), {{DOFS_PER_AXIS}} ),
+          fineGridFace""" + solver._name + """QOld.data() + serialisedDoF * {{UNKNOWNS}},
+          ::exahype2::fv::getVolumeCentre( marker.getX(), marker.getH(), {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal, dof), 
+          ::exahype2::fv::getVolumeSize( marker.getH(), {{DOFS_PER_AXIS}} ),
           true // grid grid is constructed
         );
         repositories::{{SOLVER_INSTANCE}}.initialCondition(
-          fineGridFace""" + solver._name + """QUpdate.value + serialisedDoF * {{UNKNOWNS}},
-          ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal, dof), 
-          ::exahype2::fv::getVolumeSize( marker.h(), {{DOFS_PER_AXIS}} ),
+          fineGridFace""" + solver._name + """QUpdate.data() + serialisedDoF * {{UNKNOWNS}},
+          ::exahype2::fv::getVolumeCentre( marker.getX(), marker.getH(), {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal, dof), 
+          ::exahype2::fv::getVolumeSize( marker.getH(), {{DOFS_PER_AXIS}} ),
           true // grid grid is constructed
         );
       }
@@ -281,18 +281,18 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      coarseGridCell""" + solver._name + """Q.value,
-      coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value,
-      fineGridFace""" + solver._name + """QOld.value
+      coarseGridCell""" + solver._name + """Q.data(),
+      coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).data(),
+      fineGridFace""" + solver._name + """QOld.data()
   );
   ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      coarseGridCell""" + solver._name + """Q.value,
-      coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value,
-      fineGridFace""" + solver._name + """QNew.value
+      coarseGridCell""" + solver._name + """Q.data(),
+      coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).data(),
+      fineGridFace""" + solver._name + """QNew.data()
   );
   
   // It is important that we clear the halo layer. If we have two layers of 
@@ -303,7 +303,7 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      fineGridFace""" + solver._name + """QUpdate.value
+      fineGridFace""" + solver._name + """QUpdate.data()
   );
   fineGridFace""" + solver._face_label.name + """.setNewTimeStamp(coarseGridCell""" + solver._cell_label.name + """.getTimeStamp());
   fineGridFace""" + solver._face_label.name + """.setOldTimeStamp(coarseGridCell""" + solver._cell_label.name + """.getTimeStamp());
@@ -318,13 +318,13 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       marker,
       {{DOFS_PER_AXIS}},
       {{UNKNOWNS}},
-      {{COARSE_GRID_CELL}}.value,
-      {{FINE_GRID_CELL}}.value
+      {{COARSE_GRID_CELL}}.data(),
+      {{FINE_GRID_CELL}}.data()
   );
 
   #if PEANO_DEBUG > 0
   ::exahype2::fv::validatePatch(
-    {{FINE_GRID_CELL}}.value,
+    {{FINE_GRID_CELL}}.data(),
     {{UNKNOWNS}},
     0, // Auxiliary values. Not known here.
     {{DOFS_PER_AXIS}},
@@ -346,14 +346,14 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       marker,
       {{DOFS_PER_AXIS}},
       {{UNKNOWNS}},
-      {{FINE_GRID_CELL}}.value,
-      {{COARSE_GRID_CELL}}.value
+      {{FINE_GRID_CELL}}.data(),
+      {{COARSE_GRID_CELL}}.data()
   );
 
   #if PEANO_DEBUG > 0
   // Exploit the fact that we can "reuse" some FV utils here
   ::exahype2::fv::validatePatch(
-    {{FINE_GRID_CELL}}.value,
+    {{FINE_GRID_CELL}}.data(),
     {{UNKNOWNS}},
     0, // Auxiliary values. Not known here.
     {{DOFS_PER_AXIS}},

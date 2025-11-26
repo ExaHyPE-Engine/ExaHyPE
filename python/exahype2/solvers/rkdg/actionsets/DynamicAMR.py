@@ -53,7 +53,7 @@ class DynamicAMR( AbstractRungeKuttaDGActionSet ):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {{NUMBER_OF_PROJECTED_QUANTITIES}},
-      fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value
+      fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data()
     );
   }
   {% endfor %}
@@ -66,8 +66,8 @@ class DynamicAMR( AbstractRungeKuttaDGActionSet ):
     {{ORDER}},
     {{NUMBER_OF_UNKNOWNS}},
     repositories::{{SOLVER_INSTANCE}}.InterpolationMatrix1d,
-    coarseGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(marker.getSelectedFaceNumber()).value,
-    fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.value
+    coarseGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(marker.getSelectedFaceNumber()).data(),
+    fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.data()
   );
     
   fineGridFace{{FACE_LABEL}}.setNewTimeStamp(0, std::max( coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).getNewTimeStamp(0), fineGridFace{{FACE_LABEL}}.getNewTimeStamp(0)) );
@@ -87,8 +87,8 @@ class DynamicAMR( AbstractRungeKuttaDGActionSet ):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1d,
-      fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value,
-      coarseGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(marker.getSelectedFaceNumber()).value
+      fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data(),
+      coarseGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(marker.getSelectedFaceNumber()).data()
     );
   
     bool isLeftEntryOnCoarseFaceLabel = marker.getSelectedFaceNumber() >= DIMENSIONS;

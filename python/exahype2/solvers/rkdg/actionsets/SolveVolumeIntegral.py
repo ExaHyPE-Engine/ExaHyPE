@@ -56,19 +56,19 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     assertion3( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution );
     assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
 
-    double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value;
+    double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data();
     #if DIMENSIONS==2
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data() + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
     #elif DIMENSIONS==3
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data() + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
     #endif
 
     {% if SPAWN_VOLUME_KERNEL_AS_TASK %}
     if (marker.willBeSkeletonCell()) {
       ::exahype2::CellData cellData(
         QIn,
-        marker.x(),
-        marker.h(),
+        marker.getX(),
+        marker.getH(),
         timeStamp,
         timeStepSize,
         QOut
@@ -113,8 +113,8 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     {% else %}
     ::exahype2::CellData cellData(
       QIn,
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       timeStamp,
       timeStepSize,
       QOut
@@ -122,8 +122,8 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
 
     {% if STATELESS_PDE_TERMS %}
     if (repositories::{{SOLVER_INSTANCE}}.cellCanUseStatelessPDETerms(
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       timeStamp,
       timeStepSize
     )) {

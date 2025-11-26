@@ -142,7 +142,7 @@ namespace exahype2 {
      *     marker,
      *     {{PATCH_SIZE}},
      *     {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-     *     fineGridCell{{SOLVER_NAME}}Q.value,
+     *     fineGridCell{{SOLVER_NAME}}Q.data(),
      *     fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
      *     {16,17,18},
      *     {1,1,1},

@@ -64,22 +64,22 @@ def different_basis_postprocessing_kernel(condition, order, proj, solver_name):
       for (int d = 0; d < DIMENSIONS; d++) {
         // Projected solution estimations
         dg2dgFace(
-          fineGridFaces""" + solver_name + """Estimates(d).value + BasisElementsPerFace2, 
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value + BasisElementsPerFace,
+          fineGridFaces""" + solver_name + """Estimates(d).data() + BasisElementsPerFace2, 
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).data() + BasisElementsPerFace,
           proj, toPoints, fromPoints, ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}));
         dg2dgFace(
-          fineGridFaces""" + solver_name + """Estimates(d+DIMENSIONS).value, 
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + DIMENSIONS).value,
+          fineGridFaces""" + solver_name + """Estimates(d+DIMENSIONS).data(), 
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + DIMENSIONS).data(),
           proj, toPoints, fromPoints, ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}));
 
         // Projected flux estimations
         dg2dgFace(
-          fineGridFaces""" + solver_name + """FluxEstimates(d).value + FluxElementsPerFace2, 
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value + FluxElementsPerFace,
+          fineGridFaces""" + solver_name + """FluxEstimates(d).data() + FluxElementsPerFace2, 
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).data() + FluxElementsPerFace,
           proj, toPoints, fromPoints, {{NUMBER_OF_UNKNOWNS}});
         dg2dgFace(
-          fineGridFaces""" + solver_name + """FluxEstimates(d+DIMENSIONS).value, 
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).value, 
+          fineGridFaces""" + solver_name + """FluxEstimates(d+DIMENSIONS).data(), 
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).data(), 
           proj, toPoints, fromPoints, {{NUMBER_OF_UNKNOWNS}});
       }
 
@@ -108,26 +108,26 @@ def same_basis_postprocessing_kernel(condition, order, solver_name):
       for (int d = 0; d < DIMENSIONS; d++) {
         // Projected solution estimations
         std::copy_n(
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value + BasisElementsPerFace,
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).data() + BasisElementsPerFace,
           BasisElementsPerFace,
-          fineGridFaces""" + solver_name + """Estimates(d).value + BasisElementsPerFace
+          fineGridFaces""" + solver_name + """Estimates(d).data() + BasisElementsPerFace
         );
         std::copy_n(
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+DIMENSIONS).value,
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+DIMENSIONS).data(),
           BasisElementsPerFace,
-          fineGridFaces""" + solver_name + """Estimates(d+DIMENSIONS).value
+          fineGridFaces""" + solver_name + """Estimates(d+DIMENSIONS).data()
         );
 
         // Projected flux estimations
         std::copy_n(
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value + FluxElementsPerFace,
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).data() + FluxElementsPerFace,
           FluxElementsPerFace,
-          fineGridFaces""" + solver_name + """FluxEstimates(d).value + FluxElementsPerFace
+          fineGridFaces""" + solver_name + """FluxEstimates(d).data() + FluxElementsPerFace
         );
         std::copy_n(
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).value,
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).data(),
           FluxElementsPerFace,
-          fineGridFaces""" + solver_name + """FluxEstimates(d+DIMENSIONS).value
+          fineGridFaces""" + solver_name + """FluxEstimates(d+DIMENSIONS).data()
         );
       }
     }

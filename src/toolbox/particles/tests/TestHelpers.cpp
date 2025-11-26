@@ -80,47 +80,47 @@ void toolbox::particles::tests::TestHelpers::testParticleAssignedToVertexWillBeL
   tarch::la::Vector<DIMENSIONS, double> x1 = {0.545015,0.5};
   tarch::la::Vector<DIMENSIONS, double> x2 = {0.554996,0.5};
 
-  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerAFromYellowRank ), x1, markerAFromYellowRank.toString(), markerAFromYellowRank.x() );
-  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerAFromYellowRank ), x2, markerAFromYellowRank.toString(), markerAFromYellowRank.x() );
+  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerAFromYellowRank ), x1, markerAFromYellowRank.toString(), markerAFromYellowRank.getX() );
+  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerAFromYellowRank ), x2, markerAFromYellowRank.toString(), markerAFromYellowRank.getX() );
 
-  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerBFromYellowRank ), x1, markerBFromYellowRank.toString(), markerBFromYellowRank.x() );
-  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerBFromYellowRank ), x2, markerBFromYellowRank.toString(), markerBFromYellowRank.x() );
+  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerBFromYellowRank ), x1, markerBFromYellowRank.toString(), markerBFromYellowRank.getX() );
+  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerBFromYellowRank ), x2, markerBFromYellowRank.toString(), markerBFromYellowRank.getX() );
 
-  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerCFromYellowRank ), x1, markerCFromYellowRank.toString(), markerCFromYellowRank.x() );
-  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerCFromYellowRank ), x2, markerCFromYellowRank.toString(), markerCFromYellowRank.x() );
+  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerCFromYellowRank ), x1, markerCFromYellowRank.toString(), markerCFromYellowRank.getX() );
+  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerCFromYellowRank ), x2, markerCFromYellowRank.toString(), markerCFromYellowRank.getX() );
 
-  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerDFromYellowRank ), x1, markerDFromYellowRank.toString(), markerDFromYellowRank.x() );
-  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerDFromYellowRank ), x2, markerDFromYellowRank.toString(), markerDFromYellowRank.x() );
+  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerDFromYellowRank ), x1, markerDFromYellowRank.toString(), markerDFromYellowRank.getX() );
+  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerDFromYellowRank ), x2, markerDFromYellowRank.toString(), markerDFromYellowRank.getX() );
 
 
-  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerAFromGreyRank ), x1, markerAFromGreyRank.toString(), markerAFromGreyRank.x() );
-  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerAFromGreyRank ), x2, markerAFromGreyRank.toString(), markerAFromGreyRank.x() );
+  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerAFromGreyRank ), x1, markerAFromGreyRank.toString(), markerAFromGreyRank.getX() );
+  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerAFromGreyRank ), x2, markerAFromGreyRank.toString(), markerAFromGreyRank.getX() );
 
-  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerBFromGreyRank ), x1, markerBFromGreyRank.toString(), markerBFromGreyRank.x() );
-  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerBFromGreyRank ), x2, markerBFromGreyRank.toString(), markerBFromGreyRank.x() );
+  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerBFromGreyRank ), x1, markerBFromGreyRank.toString(), markerBFromGreyRank.getX() );
+  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerBFromGreyRank ), x2, markerBFromGreyRank.toString(), markerBFromGreyRank.getX() );
 
-  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerCFromGreyRank ), x1, markerCFromGreyRank.toString(), markerCFromGreyRank.x() );
-  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerCFromGreyRank ), x2, markerCFromGreyRank.toString(), markerCFromGreyRank.x() );
+  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerCFromGreyRank ), x1, markerCFromGreyRank.toString(), markerCFromGreyRank.getX() );
+  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerCFromGreyRank ), x2, markerCFromGreyRank.toString(), markerCFromGreyRank.getX() );
 
-  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerDFromGreyRank ), x1, markerDFromGreyRank.toString(), markerDFromGreyRank.x() );
-  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerDFromGreyRank ), x2, markerDFromGreyRank.toString(), markerDFromGreyRank.x() );
+  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerDFromGreyRank ), x1, markerDFromGreyRank.toString(), markerDFromGreyRank.getX() );
+  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerDFromGreyRank ), x2, markerDFromGreyRank.toString(), markerDFromGreyRank.getX() );
 
   markerCFromYellowRank._select = 1;
   markerCFromGreyRank._select   = 1;
   markerDFromYellowRank._select = 0;
   markerDFromGreyRank._select   = 0;
 
-  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerCFromYellowRank ), x1, markerCFromYellowRank.toString(), markerCFromYellowRank.x() );
-  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerCFromYellowRank ), x2, markerCFromYellowRank.toString(), markerCFromYellowRank.x() );
+  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerCFromYellowRank ), x1, markerCFromYellowRank.toString(), markerCFromYellowRank.getX() );
+  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerCFromYellowRank ), x2, markerCFromYellowRank.toString(), markerCFromYellowRank.getX() );
 
-  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerDFromYellowRank ), x1, markerDFromYellowRank.toString(), markerDFromYellowRank.x() );
-  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerDFromYellowRank ), x2, markerDFromYellowRank.toString(), markerDFromYellowRank.x() );
+  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerDFromYellowRank ), x1, markerDFromYellowRank.toString(), markerDFromYellowRank.getX() );
+  validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerDFromYellowRank ), x2, markerDFromYellowRank.toString(), markerDFromYellowRank.getX() );
 
-  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerCFromGreyRank ), x1, markerCFromGreyRank.toString(), markerCFromGreyRank.x() );
-  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerCFromGreyRank ), x2, markerCFromGreyRank.toString(), markerCFromGreyRank.x() );
+  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerCFromGreyRank ), x1, markerCFromGreyRank.toString(), markerCFromGreyRank.getX() );
+  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerCFromGreyRank ), x2, markerCFromGreyRank.toString(), markerCFromGreyRank.getX() );
 
-  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerDFromGreyRank ), x1, markerDFromGreyRank.toString(), markerDFromGreyRank.x() );
-  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerDFromGreyRank ), x2, markerDFromGreyRank.toString(), markerDFromGreyRank.x() );
+  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerDFromGreyRank ), x1, markerDFromGreyRank.toString(), markerDFromGreyRank.getX() );
+  validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerDFromGreyRank ), x2, markerDFromGreyRank.toString(), markerDFromGreyRank.getX() );
   #endif
 }
 

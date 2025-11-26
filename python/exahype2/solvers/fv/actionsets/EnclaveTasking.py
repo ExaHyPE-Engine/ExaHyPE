@@ -17,15 +17,15 @@ class EnclaveTasking(AbstractFVActionSet):
     assertion2(tarch::la::greaterEquals(timeStamp,    0.0), timeStamp, timeStepSize);
     assertion2(tarch::la::greaterEquals(timeStepSize, 0.0), timeStamp, timeStepSize);
 
-    auto* /*const*/ QIn = {{RECONSTRUCTED_ACCESSOR}}.value;
-    auto* /*const*/ QOut = {{CELL_ACCESSOR}}.value;
+    auto* /*const*/ QIn = {{RECONSTRUCTED_ACCESSOR}}.data();
+    auto* /*const*/ QOut = {{CELL_ACCESSOR}}.data();
 
     {{STORAGE_PRECISION}}* faces[3][TWO_TIMES_D];
     bool                   isBoundary[TWO_TIMES_D];
     for (int d = 0; d < TWO_TIMES_D; ++d) {
-      faces[0][d]   = {{FACES_ACCESSOR_OLD}}(d).value;
-      faces[1][d]   = {{FACES_ACCESSOR_UPDATE}}(d).value;
-      faces[2][d]   = {{FACE_ACCESSOR_NEW}}(d).value;
+      faces[0][d]   = {{FACES_ACCESSOR_OLD}}(d).data();
+      faces[1][d]   = {{FACES_ACCESSOR_UPDATE}}(d).data();
+      faces[2][d]   = {{FACE_ACCESSOR_NEW}}(d).data();
       isBoundary[d] = fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getBoundary() and (not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[d%DIMENSIONS]);
     }
 

@@ -72,7 +72,9 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     DataRepository(DataRepository&&)                 = delete;
     DataRepository& operator=(DataRepository&&)      = delete;
 
-    ~DataRepository();
+    ~DataRepository() = default;
+
+    void clear();
 
     double* getCellQ(int index);
     double* getCellQ(

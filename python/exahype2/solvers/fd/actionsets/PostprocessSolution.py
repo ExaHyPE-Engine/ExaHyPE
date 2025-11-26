@@ -87,9 +87,9 @@ class NodeWisePostprocessSolution(AbstractFDActionSet):
 
     int index = 0;
     dfor(volume, {{NUMBER_OF_NODES_PER_AXIS}}) {
-      {{STORAGE_PRECISION}}* value = fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index;
-      auto x = ::exahype2::fv::getVolumeCentre(marker.x(), marker.h(), {{NUMBER_OF_NODES_PER_AXIS}}, volume);
-      auto h = ::exahype2::fv::getVolumeSize(marker.h(), {{NUMBER_OF_NODES_PER_AXIS}});
+      {{STORAGE_PRECISION}}* value = fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + index;
+      auto x = ::exahype2::fv::getVolumeCentre(marker.getX(), marker.getH(), {{NUMBER_OF_NODES_PER_AXIS}}, volume);
+      auto h = ::exahype2::fv::getVolumeSize(marker.getH(), {{NUMBER_OF_NODES_PER_AXIS}});
       """
             + operation_per_point
             + """

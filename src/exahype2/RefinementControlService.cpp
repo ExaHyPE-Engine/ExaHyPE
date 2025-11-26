@@ -1,7 +1,6 @@
 #include "RefinementControlService.h"
 
 #include "RefinementControl.h"
-#include "peano4/grid/grid.h"
 #include "tarch/multicore/RecursiveLock.h"
 #include "tarch/services/ServiceRepository.h"
 
@@ -135,7 +134,7 @@ void exahype2::RefinementControlService::finishStep() {
   }
   _remoteNewEvents.clear();
 
-  _committedEvents = peano4::grid::mergeGridControlEvents(_committedEvents);
+  peano4::grid::GridControlEvent::merge(_committedEvents);
 }
 
 #ifdef WITH_MPI

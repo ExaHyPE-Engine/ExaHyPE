@@ -3,6 +3,7 @@
 #pragma once
 
 #include "peano4/datamanagement/CellMarker.h"
+#include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/datamanagement/VertexEnumerator.h"
 #include "tarch/la/Vector.h"
 

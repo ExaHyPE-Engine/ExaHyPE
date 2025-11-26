@@ -8,8 +8,8 @@
 #endif
 
 #include "exahype2/RefinementControl.h"
-#include "repositories/SolverRepository.h"
 #include "peano4/datamanagement/FaceMarker.h"
+#include "repositories/SolverRepository.h"
 #include "tarch/multicore/Lock.h"
 
 tarch::multicore::BooleanSemaphore benchmarks::exahype2::ccz4::CCZ4SBH_FV::_semaphore;
@@ -57,7 +57,7 @@ void benchmarks::exahype2::ccz4::prepareTwoPunctures() {
 benchmarks::exahype2::ccz4::CCZ4SBH_FV::CCZ4SBH_FV() { prepareTwoPunctures(); }
 
 void benchmarks::exahype2::ccz4::CCZ4SBH_FV::initialCondition(
-  double* NOALIAS Q,
+  double* NOALIAS                              Q,
   const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
   const tarch::la::Vector<DIMENSIONS, double>& volumeH,
   bool                                         gridIsConstructed
@@ -77,7 +77,7 @@ void benchmarks::exahype2::ccz4::CCZ4SBH_FV::reduceAdmissibleTimeStepSize(double
 bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::isCellOverlappingWithBHImpactArea(
   const peano4::datamanagement::CellMarker& marker
 ) {
-  return isCellOverlappingWithBHImpactArea(marker.x(), marker.h());
+  return isCellOverlappingWithBHImpactArea(marker.getX(), marker.getH());
 }
 
 bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::areAllFaceConnectedCellsOverlappingWithBHImpactArea(
@@ -86,13 +86,13 @@ bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::areAllFaceConnectedCellsOverlapping
   if (isCellOverlappingWithBHImpactArea(marker)) {
     bool result = true;
     for (int d = 0; d < DIMENSIONS; d++) {
-      tarch::la::Vector<DIMENSIONS, double> neighbourCellCentre = marker.x();
+      tarch::la::Vector<DIMENSIONS, double> neighbourCellCentre = marker.getX();
 
-      neighbourCellCentre(d) = marker.x()(d) - marker.h()(d);
-      result &= isCellOverlappingWithBHImpactArea(neighbourCellCentre, marker.h());
+      neighbourCellCentre(d) = marker.getX()(d) - marker.getH()(d);
+      result &= isCellOverlappingWithBHImpactArea(neighbourCellCentre, marker.getH());
 
-      neighbourCellCentre(d) = marker.x()(d) + marker.h()(d);
-      result &= isCellOverlappingWithBHImpactArea(neighbourCellCentre, marker.h());
+      neighbourCellCentre(d) = marker.getX()(d) + marker.getH()(d);
+      result &= isCellOverlappingWithBHImpactArea(neighbourCellCentre, marker.getH());
     }
     return result;
   } else {
@@ -101,13 +101,14 @@ bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::areAllFaceConnectedCellsOverlapping
 }
 
 bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::areBothAdjacentCellsOverlappingWithBHImpactArea(
-  const peano4::datamanagement::CellMarker& marker, int faceNumber
+  const peano4::datamanagement::CellMarker& marker,
+  int                                       faceNumber
 ) {
   if (isCellOverlappingWithBHImpactArea(marker)) {
     const int                             normal             = faceNumber % DIMENSIONS;
-    tarch::la::Vector<DIMENSIONS, double> adjacentCellCentre = marker.x();
-    adjacentCellCentre(normal) += faceNumber >= DIMENSIONS ? marker.h()(normal) : -marker.h()(normal);
-    return isCellOverlappingWithBHImpactArea(adjacentCellCentre, marker.h());
+    tarch::la::Vector<DIMENSIONS, double> adjacentCellCentre = marker.getX();
+    adjacentCellCentre(normal) += faceNumber >= DIMENSIONS ? marker.getH()(normal) : -marker.getH()(normal);
+    return isCellOverlappingWithBHImpactArea(adjacentCellCentre, marker.getH());
   } else {
     return false;
   }
@@ -118,14 +119,14 @@ bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::areBothAdjacentCellsOverlappingWith
 ) {
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
-  tarch::la::Vector<DIMENSIONS, double> leftCellCentre  = marker.x();
-  tarch::la::Vector<DIMENSIONS, double> rightCellCentre = marker.x();
+  tarch::la::Vector<DIMENSIONS, double> leftCellCentre  = marker.getX();
+  tarch::la::Vector<DIMENSIONS, double> rightCellCentre = marker.getX();
 
-  leftCellCentre(normal)  -= 0.5 * marker.h()(normal);
-  rightCellCentre(normal) += 0.5 * marker.h()(normal);
+  leftCellCentre(normal) -= 0.5 * marker.getH()(normal);
+  rightCellCentre(normal) += 0.5 * marker.getH()(normal);
 
-  return isCellOverlappingWithBHImpactArea(leftCellCentre, marker.h())
-     and isCellOverlappingWithBHImpactArea(rightCellCentre, marker.h());
+  return isCellOverlappingWithBHImpactArea(leftCellCentre, marker.getH())
+         and isCellOverlappingWithBHImpactArea(rightCellCentre, marker.getH());
 }
 
 bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::isOneAdjacentCellOverlappingWithBHImpactArea(
@@ -133,28 +134,31 @@ bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::isOneAdjacentCellOverlappingWithBHI
 ) {
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
-  tarch::la::Vector<DIMENSIONS, double> leftCellCentre  = marker.x();
-  tarch::la::Vector<DIMENSIONS, double> rightCellCentre = marker.x();
+  tarch::la::Vector<DIMENSIONS, double> leftCellCentre  = marker.getX();
+  tarch::la::Vector<DIMENSIONS, double> rightCellCentre = marker.getX();
 
-  leftCellCentre(normal)  -= 0.5 * marker.h()(normal);
-  rightCellCentre(normal) += 0.5 * marker.h()(normal);
+  leftCellCentre(normal) -= 0.5 * marker.getH()(normal);
+  rightCellCentre(normal) += 0.5 * marker.getH()(normal);
 
-  return isCellOverlappingWithBHImpactArea(leftCellCentre, marker.h())
-      or isCellOverlappingWithBHImpactArea(rightCellCentre, marker.h());
+  return isCellOverlappingWithBHImpactArea(leftCellCentre, marker.getH())
+         or isCellOverlappingWithBHImpactArea(rightCellCentre, marker.getH());
 }
 
 bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::isCellOverlappingWithBHImpactArea(
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre, const tarch::la::Vector<DIMENSIONS, double>& cellH
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellH
 ) {
   return tarch::la::norm2(cellCentre) - tarch::la::norm2(0.5 * cellH) < BlackHoleFVRegion;
 }
 
 void benchmarks::exahype2::ccz4::CCZ4SBH_FV::startTimeStep(
-  double globalMinTimeStamp, double globalMaxTimeStamp, double globalMinTimeStepSize, double globalMaxTimeStepSize
+  double globalMinTimeStamp,
+  double globalMaxTimeStamp,
+  double globalMinTimeStepSize,
+  double globalMaxTimeStepSize
 ) {
-  AbstractCCZ4SBH_FV::startTimeStep(
-    globalMinTimeStamp, globalMaxTimeStamp, globalMinTimeStepSize, globalMaxTimeStepSize
-  );
+  AbstractCCZ4SBH_FV::
+    startTimeStep(globalMinTimeStamp, globalMaxTimeStamp, globalMinTimeStepSize, globalMaxTimeStepSize);
 
   _numberOfPatches = 0;
 }

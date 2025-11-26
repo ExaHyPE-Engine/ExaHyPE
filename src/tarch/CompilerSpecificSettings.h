@@ -30,7 +30,10 @@
 #define NOALIAS __restrict__
 #endif
 
-#if defined(__GNUC__) or defined(__clang__)
+#if defined(_MSC_VER)
+#define INLINE_METHOD __forceinline
+#elif defined(__GNUC__) or defined(__clang__) or defined(__INTEL_COMPILER) or defined(__INTEL_LLVM_COMPILER) \
+  or defined(__NVCOMPILER)
 #define INLINE_METHOD inline __attribute__((always_inline))
 #else
 #define INLINE_METHOD inline

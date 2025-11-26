@@ -39,7 +39,7 @@ def copyPatchAndApplyFunction(
           const int destIndexLinearised   = (x + y * {patch_size} ) * {numberOfVariablesDestination} + {indexArrayDestination}[unknown];
           // apply any function to source value
           const auto sourceValue          = {function};
-          fineGridCell{solverDestination.name}Q.value[destIndexLinearised] = sourceValue;
+          fineGridCell{solverDestination.name}Q.data()[destIndexLinearised] = sourceValue;
         }}
         #elif DIMENSIONS==3
         for (int x=0; x<{solverSource.patch_size}; x++)
@@ -50,7 +50,7 @@ def copyPatchAndApplyFunction(
           const int destIndexLinearised   = (x + y * {patch_size} + z * {patch_size} * {patch_size}) * {numberOfVariablesDestination} + {indexArrayDestination}[unknown];
           // apply any function to source value
           const auto sourceValue          = {function}
-          fineGridCell{solverDestination.name}Q.value[destIndexLinearised] = sourceValue;
+          fineGridCell{solverDestination.name}Q.data()[destIndexLinearised] = sourceValue;
         }}
         #else
           #error DIMENSIONS not supported
@@ -213,7 +213,7 @@ def atmosphereToChemistry(
         solverSource=atmospheric_solver,
         solverDestination=chemical_solver,
         indexArrayDestination="chemicalIndices",
-        function=f"fineGridCell{atmospheric_solver.name}Q.value[sourceIndexLinearised + atmosphericIndices[unknown]] / fineGridCell{atmospheric_solver.name}Q.value[sourceIndexLinearised + densityIndex]",
+        function=f"fineGridCell{atmospheric_solver.name}Q.data()[sourceIndexLinearised + atmosphericIndices[unknown]] / fineGridCell{atmospheric_solver.name}Q.data()[sourceIndexLinearised + densityIndex]",
         numberOfUnknownsToCopy=dimensions,
     )
 
@@ -237,11 +237,11 @@ def atmosphereToChemistry(
     atmospheric_solver.postprocess_updated_patch += f"""// copy temperature
     ::toolbox::blockstructured::copyUnknown(
       {atmospheric_solver.patch_size}, // no of unknowns per dimension
-      fineGridCell{atmospheric_solver.name}Q.value, // source
+      fineGridCell{atmospheric_solver.name}Q.data(), // source
       {atmospheric_solver._variable_names.index("T")}, // temperature in source
       {numberOfVariablesAtmospheric}, // unknowns in source (incl material parameters)
       0, // no overlap/halo here
-      fineGridCell{chemical_solver.name}Q.value, // dest
+      fineGridCell{chemical_solver.name}Q.data(), // dest
       {chemical_solver._variable_names.index("T")} , // temperature in dest
       {numberOfVariablesChemical}, // unknowns in dest (incl material parameters)
       0 // no overlap/halo here
@@ -255,7 +255,7 @@ def atmosphereToDiffusion(atmospheric_solver, diffusion_solver, dimensions):
         solverSource=atmospheric_solver,
         solverDestination=diffusion_solver,
         indexArrayDestination="diffusionIndices",
-        function=f"fineGridCell{atmospheric_solver.name}Q.value[sourceIndexLinearised + atmosphericIndices[unknown]] / fineGridCell{atmospheric_solver.name}Q.value[sourceIndexLinearised + densityIndex]",
+        function=f"fineGridCell{atmospheric_solver.name}Q.data()[sourceIndexLinearised + atmosphericIndices[unknown]] / fineGridCell{atmospheric_solver.name}Q.data()[sourceIndexLinearised + densityIndex]",
         numberOfUnknownsToCopy=dimensions,
     )
 
@@ -282,7 +282,7 @@ def atmosphereToDiffusion(atmospheric_solver, diffusion_solver, dimensions):
         solverSource=atmospheric_solver,
         solverDestination=diffusion_solver,
         indexArrayDestination="diffusionIndices",
-        function=f"fineGridCell{atmospheric_solver.name}Q.value[sourceIndexLinearised + atmosphericIndices[unknown]]",
+        function=f"fineGridCell{atmospheric_solver.name}Q.data()[sourceIndexLinearised + atmosphericIndices[unknown]]",
         numberOfUnknownsToCopy=dimensions,
     )
 
@@ -323,7 +323,7 @@ def diffusionToAtmosphere(
         solverSource=diffusion_solver,
         solverDestination=atmospheric_solver,
         indexArrayDestination="atmosphericIndices",
-        function=f"fineGridCell{diffusion_solver.name}Q.value[sourceIndexLinearised + diffusionIndices[unknown]] * fineGridCell{atmospheric_solver.name}Q.value[destIndexLinearised - atmosphericIndices[unknown] + densityIndex]",
+        function=f"fineGridCell{diffusion_solver.name}Q.data()[sourceIndexLinearised + diffusionIndices[unknown]] * fineGridCell{atmospheric_solver.name}Q.data()[destIndexLinearised - atmosphericIndices[unknown] + densityIndex]",
         numberOfUnknownsToCopy=dimensions,
     )
 
@@ -349,11 +349,11 @@ def diffusionToAtmosphere(
     diffusion_solver.postprocess_updated_patch += f"""// copy temperature
     ::toolbox::blockstructured::copyUnknown(
       {atmospheric_solver.patch_size}, // no of unknowns per dimension
-      fineGridCell{diffusion_solver.name}Q.value, // source
+      fineGridCell{diffusion_solver.name}Q.data(), // source
       {diffusion_solver._variable_names.index("T")}, // temperature in source
       {numberOfVariablesDiffusion}, // unknowns in source (incl material parameters)
       0, // no overlap/halo here
-      fineGridCell{atmospheric_solver.name}Q.value, // dest
+      fineGridCell{atmospheric_solver.name}Q.data(), // dest
       {atmospheric_solver._variable_names.index("T")} , // temperature in dest
       {numberOfVariablesAtmospheric}, // unknowns in dest (incl material parameters)
       0 // no overlap/halo here
@@ -364,11 +364,11 @@ def diffusionToAtmosphere(
     diffusion_solver.postprocess_updated_patch += f""" // copy new energy for atmosphere
     ::toolbox::blockstructured::copyUnknown(
       {atmospheric_solver.patch_size}, // no of unknowns per dimension
-      fineGridCell{diffusion_solver.name}Q.value, // source
+      fineGridCell{diffusion_solver.name}Q.data(), // source
       {diffusion_solver._variable_names.index("E")}, // temperature in source
       {numberOfVariablesDiffusion}, // unknowns in source (incl material parameters)
       0, // no overlap/halo here
-      fineGridCell{atmospheric_solver.name}Q.value, // dest
+      fineGridCell{atmospheric_solver.name}Q.data(), // dest
       {atmospheric_solver._variable_names.index("E")} , // temperature in dest
       {numberOfVariablesAtmospheric}, // unknowns in dest (incl material parameters)
       0 // no overlap/halo here
@@ -388,7 +388,7 @@ def diffusionToChemistry(
         solverSource=diffusion_solver,
         solverDestination=chemical_solver,
         indexArrayDestination="chemicalIndicies",
-        function=f"fineGridCell{chemical_solver.name}Q.value[sourceIndexLinearised + diffusionIndicies[unknown]]",
+        function=f"fineGridCell{chemical_solver.name}Q.data()[sourceIndexLinearised + diffusionIndicies[unknown]]",
         numberOfUnknownsToCopy=dimensions,
     )
 
@@ -412,11 +412,11 @@ def diffusionToChemistry(
     diffusion_solver.postprocess_updated_patch += f"""// copy temperature
     ::toolbox::blockstructured::copyUnknown(
       {chemical_solver.patch_size}, // no of unknowns per dimension
-      fineGridCell{diffusion_solver.name}Q.value, // source
+      fineGridCell{diffusion_solver.name}Q.data(), // source
       {diffusion_solver._variable_names.index("T")}, // temperature in source
       {numberOfVariablesDiffusion}, // unknowns in source (incl material parameters)
       0, // no overlap/halo here
-      fineGridCell{chemical_solver.name}Q.value, // dest
+      fineGridCell{chemical_solver.name}Q.data(), // dest
       {chemical_solver._variable_names.index("T")} , // temperature in dest
       {numberOfVariablesChemical}, // unknowns in dest (incl material parameters)
       0 // no overlap/halo here
@@ -430,7 +430,7 @@ def chemistryToAtmosphere(atmospheric_solver, chemical_solver):
         solverSource=chemical_solver,
         solverDestination=atmospheric_solver,
         indexArrayDestination="atmosphericIndices",
-        function=f"fineGridCell{chemical_solver.name}Q.value[sourceIndexLinearised + chemicalIndices[unknown]]",
+        function=f"fineGridCell{chemical_solver.name}Q.data()[sourceIndexLinearised + chemicalIndices[unknown]]",
         numberOfUnknownsToCopy=3,
     )
 

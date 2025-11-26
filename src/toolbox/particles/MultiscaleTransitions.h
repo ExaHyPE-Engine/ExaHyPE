@@ -197,7 +197,7 @@ namespace toolbox {
      *
      * Lifting will always be subject to a comparison similar to
      *
-     *       marker.h() < 2.0 * particle.getSearchRadius()
+     *       marker.getH() < 2.0 * particle.getSearchRadius()
      *
      * This threshold is hard. However, we can sieve into a coarser
      * level obviously to ensure that we don't violate it.
@@ -207,9 +207,9 @@ namespace toolbox {
      * I started off with this nice simple code
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *  const bool   fitsIntoThisGridResolution      = tarch::la::min( marker.h() )     * MultilevelSortingTolerance *
+     *  const bool   fitsIntoThisGridResolution      = tarch::la::min( marker.getH() )     * MultilevelSortingTolerance *
      * AsymmetricSortingDamping >= 2.0 * particle.getSearchRadius(); const bool   fitsIntoNextFinerGridResolution =
-     * tarch::la::min( marker.h() )/3.0 >  2.0 * particle.getSearchRadius();
+     * tarch::la::min( marker.getH() )/3.0 >  2.0 * particle.getSearchRadius();
      *
      *  return marker.isContainedInAdjacentCells( particle.getX(), 0.5, relativeReleaseOwnershipSpatialSortingTolerance(marker) *
      * AsymmetricSortingDamping * tarch::la::NUMERICAL_ZERO_DIFFERENCE) and fitsIntoThisGridResolution and ( not

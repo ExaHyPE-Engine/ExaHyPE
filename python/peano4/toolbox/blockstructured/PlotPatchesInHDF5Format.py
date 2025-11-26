@@ -152,7 +152,7 @@ class PlotPatchesInHDF5Format(ActionSet):
         return ""
 
     def get_body_of_getGridControlEvents(self):
-        return "  return std::vector< peano4::grid::GridControlEvent >();\n"
+        return "  return std::vector< ::peano4::grid::GridControlEvent >();\n"
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
@@ -170,20 +170,20 @@ class PlotPatchesInHDF5Format(ActionSet):
     assertion( _dataWriter!=nullptr );
 
     const int patchIndex = _writer->plotPatch(
-      marker.x() - marker.h() * PatchScaling * 0.5,
-      marker.h() * PatchScaling
+      marker.getX() - marker.getH() * PatchScaling * 0.5,
+      marker.getH() * PatchScaling
     );
 
     int cellIndex  = _dataWriter->getFirstCellWithinPatch(patchIndex); //cellIndex itself is unused. But getFirstCellWithinPatch needs to be initally called to set a boolean variable, and plotCell expects an integer so it is passed 
 
       {% if SELECT_DOFS==None %}
-      {{DATATYPE}}* data = fineGridCell{{NAME}}.value;
+      {{DATATYPE}}* data = fineGridCell{{NAME}}.data();
       _dataWriter->plotCell(cellIndex, data);
       {% else %}
       {{DATATYPE}} data[] = {
-          fineGridCell{{NAME}}.value[ {{SELECT_DOFS[0]}} ]
+          fineGridCell{{NAME}}.data()[ {{SELECT_DOFS[0]}} ]
         {% for i in SELECT_DOFS[1:] %}
-        , fineGridCell{{NAME}}.value[ {{i}} ]
+        , fineGridCell{{NAME}}.data()[ {{i}} ]
         {% endfor %}
       };
       _dataWriter->plotCell( cellIndex, data );
@@ -203,8 +203,8 @@ if ( {{GUARD_PREDICATE}} ) {
     assertion( _dataWriter!=nullptr );
 
     const int patchIndex = _writer->plotPatch(
-      marker.x() - marker.h() * PatchScaling * 0.5,
-      marker.h() * PatchScaling
+      marker.getX() - marker.getH() * PatchScaling * 0.5,
+      marker.getH() * PatchScaling
     );
 
     //vertex writer is unimplemented so use the cell writer
@@ -212,13 +212,13 @@ if ( {{GUARD_PREDICATE}} ) {
     int cellIndex  = _dataWriter->getFirstCellWithinPatch(patchIndex); //cellIndex itself is unused. But getFirstCellWithinPatch needs to be initally called to set a boolean variable, and plotCell expects an integer so it is passed 
 
       {% if SELECT_DOFS==None %}
-      {{DATATYPE}}* data = fineGridCell{{NAME}}.value;
+      {{DATATYPE}}* data = fineGridCell{{NAME}}.data();
       _dataWriter->plotCell(cellIndex, data);
       {% else %}
       {{DATATYPE}} data[] = {
-          fineGridCell{{NAME}}.value[ {{SELECT_DOFS[0]}} ]
+          fineGridCell{{NAME}}.data()[ {{SELECT_DOFS[0]}} ]
         {% for i in SELECT_DOFS[1:] %}
-        , fineGridCell{{NAME}}.value[ {{i}} ]
+        , fineGridCell{{NAME}}.data()[ {{i}} ]
         {% endfor %}
       };
       _dataWriter->plotCell( cellIndex, data );

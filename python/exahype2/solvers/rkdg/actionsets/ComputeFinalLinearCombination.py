@@ -30,8 +30,8 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
 
     We observe the following simple facts:
 
-    - The data in fineGridCell{{UNKNOWN_IDENTIFIER}}.value holds @f$ Q^{old} @f$
-    - The data in fineGridCell{{UNKNOWN_IDENTIFIER}}.value shall hold @f$ Q^{new} @f$ eventually.
+    - The data in fineGridCell{{UNKNOWN_IDENTIFIER}}.data() holds @f$ Q^{old} @f$
+    - The data in fineGridCell{{UNKNOWN_IDENTIFIER}}.data() shall hold @f$ Q^{new} @f$ eventually.
       We thus can simply add the scaled estimated to it.
     - The estimates do not alter the auxiliary variables.
     - We can thus just keep the previous auxiliary variables implicitly.
@@ -62,8 +62,8 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
     dfor( dof, {{ORDER}}+1 ) {
       for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
         {% for WEIGHT_NO in range(0,WEIGHTS|length) %}
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] += 
-          timeStepSize * {{WEIGHTS[WEIGHT_NO]}} * fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] += 
+          timeStepSize * {{WEIGHTS[WEIGHT_NO]}} * fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
         {% endfor %}
       }
     }
@@ -71,12 +71,12 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
 
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
-    double* newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+    double* newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
     
     {{POSTPROCESS_UPDATED_CELL_AFTER_FINAL_LINEAR_COMBINATION}}
 
     {% if COMPUTE_MAX_EIGENVALUE %}
-    ::exahype2::CellData<double, double>  cellData( nullptr, marker.x(), marker.h(), timeStamp, timeStepSize, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
+    ::exahype2::CellData<double, double>  cellData( nullptr, marker.getX(), marker.getH(), timeStamp, timeStepSize, fineGridCell{{UNKNOWN_IDENTIFIER}}.data() );
 
     ::exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
       cellData,
@@ -105,7 +105,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp+timeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
+    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.getH()(0) );
     
     {% if NUMBER_OF_FACE_PROJECTIONS!=1 %}
     #error Have to tweak compute final projection
@@ -118,10 +118,10 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).value, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).value, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).value  //up
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).data(), //left
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).data(), //right
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).data(), //down
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).data()  //up
     );
     #elif DIMENSIONS==3
     ::exahype2::dg::projectVolumetricDataOntoFaces(
@@ -130,12 +130,12 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).value, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).value, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(4).value, //up
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).value, //front
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(5).value  //back
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).data(), //left
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).data(), //right
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).data(), //down
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(4).data(), //up
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).data(), //front
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(5).data()  //back
     );
     #endif
   }
@@ -154,8 +154,8 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
           {{NUMBER_OF_FACE_PROJECTIONS}},
           marker.getSelectedFaceNumber() % DIMENSIONS,
           leftRight==1,
-          fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value,
-          fineGridFace{{UNKNOWN_IDENTIFIER}}OldSolutionProjection.value
+          fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data(),
+          fineGridFace{{UNKNOWN_IDENTIFIER}}OldSolutionProjection.data()
         ); 
       }
     }

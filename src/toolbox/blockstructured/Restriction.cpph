@@ -1103,11 +1103,11 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
   T scaleFineGridVolume = std::pow(3.0, -static_cast<double>(DIMENSIONS - 1)) / std::min(3.0, static_cast<double>(overlap));
   const bool pickLeftHalfOfHalo = (marker.getSelectedFaceNumber() < DIMENSIONS) xor mapFromInnerHalfOfHalo;
 
-  const double volumeHCoarse = marker.h()(0) / static_cast<double>(numberOfDoFsPerAxisInPatch) * 3.0;
-  const double volumeHFine = marker.h()(0) / static_cast<double>(numberOfDoFsPerAxisInPatch);
+  const double volumeHCoarse = marker.getH()(0) / static_cast<double>(numberOfDoFsPerAxisInPatch) * 3.0;
+  const double volumeHFine = marker.getH()(0) / static_cast<double>(numberOfDoFsPerAxisInPatch);
 
-  tarch::la::Vector<DIMENSIONS, double> leftBottomCornerOfHaloFine = marker.x();
-  tarch::la::Vector<DIMENSIONS, double> leftBottomCornerOfHaloCoarse = marker.x(
+  tarch::la::Vector<DIMENSIONS, double> leftBottomCornerOfHaloFine = marker.getX();
+  tarch::la::Vector<DIMENSIONS, double> leftBottomCornerOfHaloCoarse = marker.getX(
   );
   for (int d = 0; d < DIMENSIONS; d++) {
     if (d == normal) {
@@ -1116,10 +1116,10 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
       leftBottomCornerOfHaloCoarse(d
       ) -= static_cast<double>(overlap) * volumeHCoarse;
     } else {
-      leftBottomCornerOfHaloFine(d) = marker.x()(d) - marker.h()(d) / 2.0;
+      leftBottomCornerOfHaloFine(d) = marker.getX()(d) - marker.getH()(d) / 2.0;
       leftBottomCornerOfHaloCoarse(d
       )                             = leftBottomCornerOfHaloFine(d)
-          - marker.getRelativePositionWithinFatherCell()(d) * marker.h()(d);
+          - marker.getRelativePositionWithinFatherCell()(d) * marker.getH()(d);
     }
   }
 

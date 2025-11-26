@@ -38,20 +38,20 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
   if (
     not marker.willBeRefined()
     and
-    tarch::la::greater(tarch::la::max(marker.h()), repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH)
+    tarch::la::greater(tarch::la::max(marker.getH()), repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH)
   ) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
   } else if (
     not marker.willBeRefined()
     and
-    tarch::la::greaterEquals(tarch::la::max(marker.h()), repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH)
+    tarch::la::greaterEquals(tarch::la::max(marker.getH()), repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH)
     and
     not fineGridCell{{CELL_LABEL_NAME}}.getAMDCriterionEvaluatedThroughoutGridConstruction()
   ) {
     refinementCriterion = repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
       nullptr,
-      marker.x(),
-      marker.h(),
+      marker.getX(),
+      marker.getH(),
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
     );
     fineGridCell{{CELL_LABEL_NAME}}.setAMDCriterionEvaluatedThroughoutGridConstruction(true);
@@ -64,7 +64,7 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
     and
     not marker.willBeRefined()
     and
-    tarch::la::greater(tarch::la::max(marker.h()), repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH)
+    tarch::la::greater(tarch::la::max(marker.getH()), repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH)
   ) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
   } else if (
@@ -73,23 +73,23 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
     fineGridCell{{CELL_LABEL_NAME}}.getHasUpdated()
   ) {
     refinementCriterion = repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
-      fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
-      marker.x(),
-      marker.h(),
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
+      marker.getX(),
+      marker.getH(),
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
     );
 
     if (
       refinementCriterion == ::exahype2::RefinementCommand::Refine
       and
-      tarch::la::smallerEquals(tarch::la::max(marker.h()), 3.0 * repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH)
+      tarch::la::smallerEquals(tarch::la::max(marker.getH()), 3.0 * repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH)
     ) {
       logDebug("touchCellFirstTime(...)", "drop refine instructions, as mesh would be too small");
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } else if (
       refinementCriterion == ::exahype2::RefinementCommand::Erase
       and
-      3.0 * tarch::la::max(marker.h()) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH
+      3.0 * tarch::la::max(marker.getH()) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH
     ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     }
@@ -98,7 +98,7 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
   }
   {% endif %}
 
-  _localRefinementControl.addCommand(marker.x(), marker.h(), refinementCriterion, {{EVENT_LIFETIME}});
+  _localRefinementControl.addCommand(marker.getX(), marker.getH(), refinementCriterion, {{EVENT_LIFETIME}});
   logTraceOutWith1Argument("touchCellFirstTime(...)", toString(refinementCriterion));
 """
 
@@ -194,7 +194,7 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
             )
             # TODO: Falsch: Auch nur im letzten Schritt oder so evaluieren bei RK
             d["EVENT_LIFETIME"] = self._event_lifetime
-            d["GRID_CONSTRUCTION"]  = self._called_by_grid_construction
+            d["GRID_CONSTRUCTION"] = self._called_by_grid_construction
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
             result = jinja2.Template(self._Template_AMR).render(**d)

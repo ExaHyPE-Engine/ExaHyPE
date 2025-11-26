@@ -3,7 +3,7 @@
 
 cmake_minimum_required(VERSION 3.27)
 
-set(PEANO_PROJECT_NAME "Peano")
+set(PEANO_PROJECT_NAME "Peano") # TODO: Remove
 set(PEANO_PROJECT_DESCRIPTION "Peano is an open source framework for solvers on dynamically adaptive Cartesian meshes")
 set(PEANO_AUTHOR_ORGANIZATION "Durham University and Technische Universitaet Muenchen")
 set(PEANO_AUTHOR_DOMAIN "www.peano-framework.org")
@@ -84,6 +84,7 @@ target_compile_features(PeanoOptions INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 install(TARGETS PeanoOptions EXPORT PeanoTargets)
 
 include(SIMD)
+include(Mimalloc)
 include(Filesystem)
 
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")

@@ -20,7 +20,7 @@ class VerifyTroubledness(AbstractLimiterActionSet):
 
         bool isUnTroubled = true;
 
-        auto* luh = fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.value;
+        auto* luh = fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.data();
 
 
         {% if USE_PAC %}
@@ -31,10 +31,10 @@ class VerifyTroubledness(AbstractLimiterActionSet):
           isUnTroubled &= repositories::{{SOLVER_INSTANCE}}.isPhysicallyAdmissible(
             luh + linearisedIndex,
             ::exahype2::dg::getQuadraturePoint(
-              marker.x(), marker.h(), index, repositories::{{REGULAR_SOLVER_INSTANCE}}.Order+1,
+              marker.getX(), marker.getH(), index, repositories::{{REGULAR_SOLVER_INSTANCE}}.Order+1,
               kernels::{{REGULAR_SOLVER_NAME}}::Quadrature<{{REGULAR_SOLVER_STORAGE_PRECISION}}>::nodes
             ),
-            marker.h(),
+            marker.getH(),
             timeStamp+timeStepSize
           );
 

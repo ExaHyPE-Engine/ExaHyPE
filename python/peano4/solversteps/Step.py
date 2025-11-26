@@ -159,7 +159,7 @@ class Step:
         return self.action_sets[0].descend_invocation_order
 
     def get_vertex_operations_signature(self):
-        result = ["marker", "[[maybe_unused]] const peano4::datamanagement::VertexMarker&"]
+        result = ["marker", "[[maybe_unused]] const ::peano4::datamanagement::VertexMarker&"]
         for i in self.vertex_data:
             result += ["fineGridVertex" + i.name, "[[maybe_unused]] " + i.get_full_qualified_type() + "&"]
         for i in self.vertex_data:
@@ -171,7 +171,7 @@ class Step:
         return result
 
     def get_face_operations_signature(self):
-        result = ["marker", "[[maybe_unused]] const peano4::datamanagement::FaceMarker&"]
+        result = ["marker", "[[maybe_unused]] const ::peano4::datamanagement::FaceMarker&"]
         for i in self.vertex_data:
             result += ["fineGridVertices" + i.name, "[[maybe_unused]] " + i.get_enumeration_type() + ""]
         for i in self.face_data:
@@ -185,7 +185,7 @@ class Step:
         return result
 
     def get_cell_operations_signature(self):
-        result = ["marker", "[[maybe_unused]] const peano4::datamanagement::CellMarker&"]
+        result = ["marker", "[[maybe_unused]] const ::peano4::datamanagement::CellMarker&"]
         for i in self.vertex_data:
             result += ["fineGridVertices" + i.name, "[[maybe_unused]] " + i.get_enumeration_type() + ""]
         for i in self.face_data:
@@ -201,7 +201,7 @@ class Step:
         return result
 
     def get_touch_cell_signature(self):
-        result = ["marker", "[[maybe_unused]] const peano4::datamanagement::CellMarker&"]
+        result = ["marker", "[[maybe_unused]] const ::peano4::datamanagement::CellMarker&"]
         for i in self.vertex_data:
             result += ["fineGridVertices" + i.name, "[[maybe_unused]] " + i.get_enumeration_type() + ""]
         for i in self.face_data:

@@ -23,9 +23,9 @@ class CreateRegularGrid(ActionSet):
 
 
   __Template_GridControlEvents = """
-  std::vector< peano4::grid::GridControlEvent > result;
-  peano4::grid::GridControlEvent newEntry;
-  newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Refine );
+  std::vector< ::peano4::grid::GridControlEvent > result;
+  ::peano4::grid::GridControlEvent newEntry;
+  newEntry.setRefinementControl( ::peano4::grid::GridControlEvent::RefinementControl::Refine );
   newEntry.setOffset(tarch::la::Vector<DIMENSIONS,double>( -std::numeric_limits<double>::max()/2.0/3.0 ));
   newEntry.setWidth(tarch::la::Vector<DIMENSIONS,double>(  std::numeric_limits<double>::max()/2.0 ));
   newEntry.setH(tarch::la::Vector<DIMENSIONS,double>( {H_MAX} ));

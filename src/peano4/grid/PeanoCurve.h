@@ -16,13 +16,11 @@ namespace peano4 {
 
 /**
  * Utility functions specific to the Peano SFC
- *
- * @see Namespace description in grid.h
  */
 class peano4::grid::PeanoCurve {
   public:
     /**
-     *
+     * This is the stack we compute data with. The "main" stack.
      */
     static constexpr int CallStack = 0;
 
@@ -68,19 +66,19 @@ class peano4::grid::PeanoCurve {
      *
      * ## Example 2d
      *
-     * | stack number | semantics             | usage
-     * | ------------ | --------------------- | -----
-     * | 0            | call stack            | every tree
-     * | 1,2          | input/output stack    | every tree
-     * | 3-6          | temporary stacks to   | every tree
-     * |              | exchange data with    |
-     * |              | adjacent cells        |
-     * | 7-14         | output stacks for     | tree 0
-     * |              | periodic BC data      |
-     * | 15-22        | input stack for       | tree 0
-     * |              | periodic BC data      |
-     * | >=23         | parallel data xchange | all trees
-     * |              | stacks                |
+     * | stack number | semantics               | usage
+     * | ------------ | ---------------------   | -----
+     * | 0            | call stack              | every tree
+     * | 1,2          | input/output stack      | every tree
+     * | 3-6          | temporary stacks to     | every tree
+     * |              | exchange data with      |
+     * |              | adjacent cells          |
+     * | 7-14         | output stacks for       | tree 0
+     * |              | periodic BC data        |
+     * | 15-22        | input stack for         | tree 0
+     * |              | periodic BC data        |
+     * | >=23         | parallel data exchange  | every tree
+     * |              | stacks                  |
      *
      */
     static constexpr int MaxNumberOfCoreStacksPerSpacetreeInstance = NumberOfBaseStacks + DIMENSIONS*2 + NumberOfPeriodicBoundaryConditionStacks;

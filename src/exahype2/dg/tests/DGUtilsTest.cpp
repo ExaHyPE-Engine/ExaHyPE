@@ -25,23 +25,21 @@ void exahype2::dg::tests::DGUtilsTest::run(){
 void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder1() {
   const int order = 1;
 
-  peano4::grid::GridTraversalEvent    dummyEvent;
+  peano4::datamanagement::CellMarker cellMarker;
 
-  #if DIMENSIONS==2
-  dummyEvent.setX( {0.4,0.6} );
-  dummyEvent.setH( {0.2,0.2} );
+#if DIMENSIONS==2
+  cellMarker.h = {0.2,0.2};
+  cellMarker.centre = {0.4,0.6};
   double Q0[] = {1.2,1.2,1.2,1.2};
   tarch::la::Vector<DIMENSIONS,double>  xCentre     = {0.5,0.7};
   tarch::la::Vector<DIMENSIONS,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP1[0],0.6+0.2*QuadratureNodes1dP1[0]};
-  #else
-  dummyEvent.setX( {0.4,0.6,0.8} );
-  dummyEvent.setH( {0.2,0.2,0.2} );
+#else
+  cellMarker.h = {0.2,0.2,0.2};
+  cellMarker.centre = {0.4,0.6,0.8};
   double Q0[] = {1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2};
   tarch::la::Vector<DIMENSIONS,double>  xCentre = {0.5,0.7,0.9};
   tarch::la::Vector<DIMENSIONS,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP1[0],0.6+0.2*QuadratureNodes1dP1[0],0.8+0.2*QuadratureNodes1dP1[0]};
-  #endif
-
-  peano4::datamanagement::CellMarker  cellMarker(dummyEvent);
+#endif
 
   double result;
   result = exahype2::dg::evaluatePolynomial(
@@ -71,19 +69,19 @@ void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder1() {
 void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder2() {
   const int order = 2;
 
-  peano4::grid::GridTraversalEvent    dummyEvent;
+  peano4::datamanagement::CellMarker  cellMarker;
 
   #if DIMENSIONS==2
-  dummyEvent.setX( {0.4,0.6} );
-  dummyEvent.setH( {0.2,0.2} );
+  cellMarker.h = {0.2,0.2};
+  cellMarker.centre = {0.4,0.6};
   double Q0[] = { 1.2, 1.2, 1.2,
                   1.2, 1.2, 1.2,
                   1.2, 1.2, 1.2 };
   tarch::la::Vector<DIMENSIONS,double>  xCentre     = {0.5,0.7};
   tarch::la::Vector<DIMENSIONS,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP2[0],0.6+0.2*QuadratureNodes1dP2[0]};
   #else
-  dummyEvent.setX( {0.4,0.6,0.8} );
-  dummyEvent.setH( {0.2,0.2,0.2} );
+  cellMarker.h = {0.2,0.2,0.2};
+  cellMarker.centre = {0.4,0.6,0.8};
   double Q0[] = { 1.2, 1.2, 1.2,
                   1.2, 1.2, 1.2,
                   1.2, 1.2, 1.2,
@@ -96,8 +94,6 @@ void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder2() {
   tarch::la::Vector<DIMENSIONS,double>  xCentre = {0.5,0.7,0.9};
   tarch::la::Vector<DIMENSIONS,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP1[0],0.6+0.2*QuadratureNodes1dP1[0],0.8+0.2*QuadratureNodes1dP1[0]};
   #endif
-
-  peano4::datamanagement::CellMarker  cellMarker(dummyEvent);
 
   double result;
   result = exahype2::dg::evaluatePolynomial(

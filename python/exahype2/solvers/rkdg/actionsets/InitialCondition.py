@@ -13,11 +13,11 @@ class InitialCondition(AbstractRungeKuttaDGActionSet):
     int linearisedIndex = 0;
     dfor( index, {{DG_ORDER}}+1 ) {
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.value + linearisedIndex,
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + linearisedIndex,
         ::exahype2::dg::getQuadraturePoint(
-          marker.x(), marker.h(), index, repositories::{{SOLVER_INSTANCE}}.DGOrder, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
+          marker.getX(), marker.getH(), index, repositories::{{SOLVER_INSTANCE}}.DGOrder, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
         ),
-        marker.h(),
+        marker.getH(),
         {{GRID_IS_CONSTRUCTED}}
       );
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};

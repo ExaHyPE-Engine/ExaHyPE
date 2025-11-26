@@ -14,8 +14,8 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
     logDebug("printTimeStep()", "Phase  = " << toString(_solverState));
     logInfo("printTimeStep()", "t       = " << getMinTimeStamp(ofCurrentlyRunningGridSweep) << " / " << MinTerminalTime);
     logInfo("printTimeStep()", "dt      = " << getTimeStepSize());
-    logInfo("printTimeStep()", "h_{min} = " << getMinCellSize(ofCurrentlyRunningGridSweep));
-    logInfo("printTimeStep()", "h_{max} = " << getMaxCellSize(ofCurrentlyRunningGridSweep));
+    logInfo("printTimeStep()", "h_{min} = " << getMinCellSize(ofCurrentlyRunningGridSweep) << " (patch size)");
+    logInfo("printTimeStep()", "h_{max} = " << getMaxCellSize(ofCurrentlyRunningGridSweep) << " (patch size)");
   }
 """
 

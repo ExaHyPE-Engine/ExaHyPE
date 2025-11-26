@@ -10,7 +10,7 @@
 #include "Constants.h"
 #include "ccz4-main.h"
 #include "exahype2/UnitTests.h"
-#include "exahype2/UserInterface.h"
+#include "exahype2/exahype2.h"
 #include "observers/CreateGrid.h"
 #include "observers/CreateGridAndConvergeLoadBalancing.h"
 #include "observers/CreateGridButPostponeRefinement.h"

@@ -35,7 +35,7 @@ This happens in three steps:
 1.  Each subpartition asks the action set (clone) for the refinement and
     coarsening decisions at the startup of the mesh traversal. For this,
     they query `getGridControlEvents()`. Before we use the events, they
-    are merged/consolidated by peano4::grid::mergeGridControlEvents().
+    are merged/consolidated by peano4::grid::GridControlEvent::merge().
 
 2.  The mesh traversal uses this information to trigger erases or
     refinements.
@@ -174,10 +174,10 @@ Due to the or-based refinement criterion, refine instructions tend to spread
 through the mesh quite quickly. I therefore recommend that you scale the 
 refine command down, i.e. make it only cover fragments of a cell. At the same
 time, it makes sense to ensure that two cells which trigger a refinement also
-trigger two refinement events which are adjacent, as this allows peano4::grid::mergeGridControlEvents()
+trigger two refinement events which are adjacent, as this allows peano4::grid::GridControlEvent::merge()
 to merge them into one larger refinement instructions. So, as a rule of thumb, 
 I usually recommend to make refinement events span a mesh size which is around
-95% of a cell. The peano4::grid::mergeGridControlEvents() operation, by default, works with 10%
+95% of a cell. The peano4::grid::GridControlEvent::merge() operation, by default, works with 10%
 inaccuracy and then is still able to merge refinement events triggered by 
 adjacent mesh cells.
 

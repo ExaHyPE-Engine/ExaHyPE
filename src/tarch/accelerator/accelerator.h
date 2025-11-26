@@ -32,8 +32,10 @@ namespace tarch {
 
   namespace accelerator {
     void* allocateRawData(std::size_t sizeInBytes, MemoryLocation location, int device);
+    void* allocateRawDataOnHeap(std::size_t sizeInBytes);
     void* reallocateRawData(void* data, std::size_t sizeInBytes, MemoryLocation location, int device);
     void  freeRawData(void* data, MemoryLocation location, int device);
+    void  freeRawDataOnHeap(void* data);
     void  copyTo(void* target, const void* source, std::size_t sizeInBytes, MemoryLocation location, int device);
     void  copyFrom(const void* source, void* target, std::size_t sizeInBytes, MemoryLocation location, int device);
   } // namespace accelerator
@@ -99,6 +101,4 @@ namespace tarch {
     static_assert(sizeof(From) == sizeof(To), "Data type mismatch");
     accelerator::copyFrom(from, to, count * sizeof(From), location, device);
   }
-
-  std::size_t padSizeToAlignment(std::size_t size, std::size_t alignment);
 } // namespace tarch

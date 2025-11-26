@@ -108,6 +108,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
+    virtual int getNumberOfDoFs() const override final;
+
 
     /**
      * @param Q Vector of unknowns

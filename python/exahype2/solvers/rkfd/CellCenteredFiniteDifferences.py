@@ -18,7 +18,6 @@ import exahype2.solvers.rkfd.actionsets
 from exahype2.solvers.PDETerms import PDETerms
 
 from exahype2.solvers.ButcherTableau import RungeKutta_steps
-from exahype2.solvers.Storage import Storage
 
 from peano4.Logger import log
 
@@ -237,8 +236,8 @@ class CellCenteredFiniteDifferences(object):
 
         self._baseline_action_set_descend_invocation_order = baseline_action_set_descend_invocation_order
 
-        self.switch_storage_scheme(Storage.SmartPointers, Storage.SmartPointers)
-        
+        self.create_data_structures()
+        self.create_action_sets()
 
     def __str__(self):
         result = (
@@ -515,85 +514,24 @@ The finest mesh width of """
             self._unknown_identifier() + "Update",
         )
 
-        if self._cell_data_storage == Storage.CallStack:
-            self._patch.generator = peano4.datamodel.PatchToDoubleArray(
-                self._patch, "double"
-            )
-            self._patch_reconstructed.generator = peano4.datamodel.PatchToDoubleArray(
-                self._patch_reconstructed, "double"
-            )
-            self._patch_estimates.generator = peano4.datamodel.PatchToDoubleArray(
-                self._patch_estimates, "double"
-            )
-        elif self._cell_data_storage == Storage.Heap:
-            self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
-                self._patch, "double"
-            )
-            self._patch_reconstructed.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
-                self._patch_reconstructed, "double"
-            )
-            self._patch_estimates.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
-                self._patch_estimates, "double"
-            )
-        elif self._cell_data_storage == Storage.SmartPointers:
-            self._patch.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                self._patch, "double"
-            )
-            self._patch_reconstructed.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                self._patch_reconstructed, "double"
-            )
-            self._patch_estimates.generator = (
-                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                    self._patch_estimates, "double"
-                )
-            )
-
-        if self._face_data_storage == Storage.CallStack:
-            self._patch_overlap_old.generator = peano4.datamodel.PatchToDoubleArray(
-                self._patch_overlap_old, "double"
-            )
-            self._patch_overlap_new.generator = peano4.datamodel.PatchToDoubleArray(
-                self._patch_overlap_new, "double"
-            )
-            self._patch_overlap_update.generator = peano4.datamodel.PatchToDoubleArray(
-                self._patch_overlap_update, "double"
-            )
-        elif self._face_data_storage == Storage.Heap:
-            self._patch_overlap_old.generator = (
-                peano4.datamodel.PatchToDoubleArrayOnHeap(
-                    self._patch_overlap_old, "double"
-                )
-            )
-            self._patch_overlap_new.generator = (
-                peano4.datamodel.PatchToDoubleArrayOnHeap(
-                    self._patch_overlap_new, "double"
-                )
-            )
-            self._patch_overlap_update.generator = (
-                peano4.datamodel.PatchToDoubleArrayOnHeap(
-                    self._patch_overlap_update, "double"
-                )
-            )
-        elif self._face_data_storage == Storage.SmartPointers:
-            self._patch_overlap_old.generator = (
-                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                    self._patch_overlap_old, "double"
-                )
-            )
-            self._patch_overlap_new.generator = (
-                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                    self._patch_overlap_new, "double"
-                )
-            )
-            self._patch_overlap_update.generator = (
-                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                    self._patch_overlap_update, "double"
-                )
-            )
-        else:
-            assert False, "storage variant {} not supported".format(
-                self._face_data_storage
-            )
+        self._patch.generator = peano4.datamodel.PatchToData(
+            self._patch, "double"
+        )
+        self._patch_reconstructed.generator = peano4.datamodel.PatchToData(
+            self._patch_reconstructed, "double"
+        )
+        self._patch_estimates.generator = peano4.datamodel.PatchToData(
+            self._patch_estimates, "double"
+        )
+        self._patch_overlap_old.generator = peano4.datamodel.PatchToData(
+            self._patch_overlap_old, "double"
+        )
+        self._patch_overlap_new.generator = peano4.datamodel.PatchToData(
+            self._patch_overlap_new, "double"
+        )
+        self._patch_overlap_update.generator = peano4.datamodel.PatchToData(
+            self._patch_overlap_update, "double"
+        )
 
         self._patch_overlap_old.generator.merge_method_definition = (
             peano4.toolbox.blockstructured.get_face_merge_implementation(
@@ -1631,28 +1569,6 @@ The finest mesh width of """
     @restriction.setter
     def restriction(self, value):
         self._restriction = value
-
-        self.create_data_structures()
-        self.create_action_sets()
-
-    def switch_storage_scheme(
-        self,
-        cell_data_storage: Storage,
-        face_data_storage: Storage,
-    ):
-        """
-
-        By default, we hold all data on the call stacks. You can explicitly switch
-        to storage on the heap via smart pointers.
-
-        @see create_data_structures()
-
-        """
-        assert isinstance(cell_data_storage, Storage)
-        assert isinstance(face_data_storage, Storage)
-        
-        self._cell_data_storage = cell_data_storage
-        self._face_data_storage = face_data_storage
 
         self.create_data_structures()
         self.create_action_sets()

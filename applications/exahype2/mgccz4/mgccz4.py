@@ -142,7 +142,7 @@ if __name__ == "__main__":
 
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
-        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        double volumeH = ::exahype2::getVolumeLength(marker.getH(),patchSize);
         const int n_a_v=6;
         dfor(cell,patchSize) {
           tarch::la::Vector<DIMENSIONS,int> currentCell = cell + tarch::la::Vector<DIMENSIONS,int>(1);
@@ -207,7 +207,7 @@ if __name__ == "__main__":
 
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
-        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        double volumeH = ::exahype2::getVolumeLength(marker.getH(),patchSize);
         dfor(cell,patchSize) {
           tarch::la::Vector<DIMENSIONS,int> currentCell = cell + tarch::la::Vector<DIMENSIONS,int>(1);
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);

@@ -100,12 +100,12 @@ class ReconstructPatch(ActionSet):
 
     _Template_TouchCellFirstTime = r"""
   if ({GUARD}) {{
-    auto* /*const*/ QIn = {CELL_ACCESSOR}.value;
-    auto* /*const*/ QOut = {RECONSTRUCTED_ACCESSOR}.value;
+    auto* /*const*/ QIn = {CELL_ACCESSOR}.data();
+    auto* /*const*/ QOut = {RECONSTRUCTED_ACCESSOR}.data();
 
     {PRECISION}* faces[TWO_TIMES_D];
     for (int d = 0; d < TWO_TIMES_D; ++d) {{
-      faces[d] = {FACE_ACCESSOR}(d).value;
+      faces[d] = {FACE_ACCESSOR}(d).data();
     }}
 
     kernels::{SOLVER_NAME}::reconstructPatch(QIn, faces, QOut);

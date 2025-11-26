@@ -4,6 +4,7 @@ import os
 
 import peano4.output
 
+
 class Observer(object):
     default_overwrite = True
 
@@ -56,46 +57,48 @@ class Observer(object):
 
         self.d["ACTIVE_ACTION_SETS"] = []
         for index, action in enumerate(self.included_action_sets):
-            self.d["ACTIVE_ACTION_SETS"].append({
-                "name": f"_actionSet{index}",
-                "full_qualified_name": action
-            })
+            self.d["ACTIVE_ACTION_SETS"].append(
+                {"name": f"_actionSet{index}", "full_qualified_name": action}
+            )
 
         self.d["CELLS"] = []
         for cell in self.cells:
-            self.d["CELLS"].append({
-                "name": cell.name,
-                "logical_type_name": cell.get_logical_type_name(),
-                "full_qualified_type": cell.get_full_qualified_type(),
-                "additional_load_store_arguments": cell.additional_load_and_store_arguments,
-                "subnamespace": cell.subnamespace,
-            })
+            self.d["CELLS"].append(
+                {
+                    "name": cell.name,
+                    "logical_type_name": cell.get_logical_type_name(),
+                    "full_qualified_type": cell.get_full_qualified_type(),
+                    "subnamespace": cell.subnamespace,
+                }
+            )
             if cell.subdirectory:
                 subdirectories.add(cell.subdirectory)
 
         self.d["FACES"] = []
         for face in self.faces:
-            self.d["FACES"].append({
-                "name": face.name,
-                "enumeration_type": face.get_enumeration_type(),
-                "logical_type_name": face.get_logical_type_name(),
-                "full_qualified_type": face.get_full_qualified_type(),
-                "additional_load_store_arguments": face.additional_load_and_store_arguments,
-                "subnamespace": face.subnamespace,
-            })
+            self.d["FACES"].append(
+                {
+                    "name": face.name,
+                    "enumeration_type": face.get_enumeration_type(),
+                    "logical_type_name": face.get_logical_type_name(),
+                    "full_qualified_type": face.get_full_qualified_type(),
+                    "subnamespace": face.subnamespace,
+                }
+            )
             if face.subdirectory:
                 subdirectories.add(face.subdirectory)
 
         self.d["VERTICES"] = []
         for vertex in self.vertices:
-            self.d["VERTICES"].append({
-                "name": vertex.name,
-                "enumeration_type": vertex.get_enumeration_type(),
-                "logical_type_name": vertex.get_logical_type_name(),
-                "full_qualified_type": vertex.get_full_qualified_type(),
-                "additional_load_store_arguments": vertex.additional_load_and_store_arguments,
-                "subnamespace": vertex.subnamespace,
-            })
+            self.d["VERTICES"].append(
+                {
+                    "name": vertex.name,
+                    "enumeration_type": vertex.get_enumeration_type(),
+                    "logical_type_name": vertex.get_logical_type_name(),
+                    "full_qualified_type": vertex.get_full_qualified_type(),
+                    "subnamespace": vertex.subnamespace,
+                }
+            )
             if vertex.subdirectory:
                 subdirectories.add(vertex.subdirectory)
 
@@ -120,17 +123,23 @@ class Observer(object):
         if not os.path.exists(directory + "/" + self.subdirectory):
             os.mkdir(directory + "/" + self.subdirectory)
 
-        headerfile_template = os.path.dirname(os.path.realpath(__file__)) + "/Observer.template.h"
-        cppfile_template = os.path.dirname(os.path.realpath(__file__)) + "/Observer.template.cpp"
+        headerfile_template = (
+            os.path.dirname(os.path.realpath(__file__)) + "/Observer.template.h"
+        )
+        cppfile_template = (
+            os.path.dirname(os.path.realpath(__file__)) + "/Observer.template.cpp"
+        )
 
-        generated_implementation_file_pair = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-            headfile_template=headerfile_template,
-            cppfile_template=cppfile_template,
-            classname=self.classname,
-            namespace=self.namespace,
-            subdirectory=self.subdirectory,
-            dictionary=self.d,
-            default_overwrite=self.default_overwrite,
-            apply_iteratively=True,
+        generated_implementation_file_pair = (
+            peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+                headfile_template=headerfile_template,
+                cppfile_template=cppfile_template,
+                classname=self.classname,
+                namespace=self.namespace,
+                subdirectory=self.subdirectory,
+                dictionary=self.d,
+                default_overwrite=self.default_overwrite,
+                apply_iteratively=True,
+            )
         )
         generated_implementation_file_pair.generate(overwrite, directory)

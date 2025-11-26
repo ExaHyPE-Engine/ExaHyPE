@@ -30,7 +30,6 @@ from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFac
     compute_number_of_face_projection_quantities,
 )
 
-from exahype2.solvers.Storage import Storage
 import peano4.toolbox.blockstructured.PlotPatchesInHDF5Format
 
 from peano4.Logger import log
@@ -375,12 +374,10 @@ class RungeKuttaDG(object):
         self._start_simulation_implementation = ""
         self._finish_simulation_implementation = ""
 
-        self._cell_data_storage = Storage.CallStack
-        self._face_data_storage = Storage.CallStack
-
         self._baseline_action_set_descend_invocation_order = baseline_action_set_descend_invocation_order
-        self.switch_storage_scheme(Storage.SmartPointers, Storage.SmartPointers)
 
+        self.create_data_structures()
+        self.create_action_sets()
 
     def __str__(self):
         result = (
@@ -666,102 +663,28 @@ We use RK("""
             self._unknown_identifier() + "RiemannSolution",
         )
 
-        if self._cell_data_storage == Storage.CallStack:
-            self._current_time_step.generator = peano4.datamodel.PatchToDoubleArray(
-                self._current_time_step, "double"
-            )
-            self._rhs_estimates.generator = peano4.datamodel.PatchToDoubleArray(
-                self._rhs_estimates, "double"
-            )
-            self._linear_combination_of_estimates.generator = (
-                peano4.datamodel.PatchToDoubleArray(
-                    self._linear_combination_of_estimates, "double"
-                )
-            )
-        elif self._cell_data_storage == Storage.Heap:
-            self._current_time_step.generator = (
-                peano4.datamodel.PatchToDoubleArrayOnHeap(
-                    self._current_time_step, "double"
-                )
-            )
-            self._rhs_estimates.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
-                self._rhs_estimates, "double"
-            )
-            self._linear_combination_of_estimates.generator = (
-                peano4.datamodel.PatchToDoubleArrayOnHeap(
-                    self._linear_combination_of_estimates, "double"
-                )
-            )
-        elif self._cell_data_storage == Storage.SmartPointers:
-            self._current_time_step.generator = (
-                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                    self._current_time_step, "double"
-                )
-            )
-            self._rhs_estimates.generator = (
-                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                    self._rhs_estimates, "double"
-                )
-            )
-            self._linear_combination_of_estimates.generator = (
-                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                    self._linear_combination_of_estimates, "double"
-                )
-            )
-
-        if self._face_data_storage == Storage.CallStack:
-            self._estimate_projection.generator = peano4.datamodel.PatchToDoubleArray(
-                self._estimate_projection, "double"
-            )
-            self._old_solution_projection.generator = (
-                peano4.datamodel.PatchToDoubleArray(
-                    self._old_solution_projection, "double"
-                )
-            )
-            self._Riemann_solution.generator = peano4.datamodel.PatchToDoubleArray(
-                self._Riemann_solution, "double"
-            )
-        elif self._face_data_storage == Storage.Heap:
-            self._estimate_projection.generator = (
-                peano4.datamodel.PatchToDoubleArrayOnHeap(
-                    self._estimate_projection, "double"
-                )
-            )
-            self._old_solution_projection.generator = (
-                peano4.datamodel.PatchToDoubleArrayOnHeap(
-                    self._old_solution_projection, "double"
-                )
-            )
-            self._Riemann_solution.generator = (
-                peano4.datamodel.PatchToDoubleArrayOnHeap(
-                    self._Riemann_solution, "double"
-                )
-            )
-        elif self._face_data_storage == Storage.SmartPointers:
-            self._estimate_projection.generator = (
-                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                    self._estimate_projection, "double"
-                )
-            )
-            self._old_solution_projection.generator = (
-                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                    self._old_solution_projection, "double"
-                )
-            )
-            self._Riemann_solution.generator = (
-                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                    self._Riemann_solution, "double"
-                )
-            )
-        else:
-            assert False, "Storage variant {} not supported".format(
-                self._face_data_storage
-            )
-
         self._estimate_projection.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
             self._provide_face_data_to_compute_kernels_default_guard(),
             self._load_face_data_default_guard(),
             self._store_face_data_default_guard(),
+        )
+        self._current_time_step.generator = peano4.datamodel.PatchToData(
+            self._current_time_step, "double"
+        )
+        self._rhs_estimates.generator = peano4.datamodel.PatchToData(
+            self._rhs_estimates, "double"
+        )
+        self._linear_combination_of_estimates.generator = peano4.datamodel.PatchToData(
+            self._linear_combination_of_estimates, "double"
+        )
+        self._estimate_projection.generator = peano4.datamodel.PatchToData(
+            self._estimate_projection, "double"
+        )
+        self._old_solution_projection.generator = peano4.datamodel.PatchToData(
+            self._old_solution_projection, "double"
+        )
+        self._Riemann_solution.generator = peano4.datamodel.PatchToData(
+            self._Riemann_solution, "double"
         )
 
         self._estimate_projection.generator.includes += """
@@ -1779,26 +1702,5 @@ We use RK("""
         This postprocessing is called after each and every Runge-Kutta step.
         """
         self._postprocess_updated_cell_after_final_linear_combination = kernel
-        self.create_data_structures()
-        self.create_action_sets()
-
-
-    def switch_storage_scheme(
-        self,
-        cell_data_storage: Storage,
-        face_data_storage: Storage,
-    ):
-        """
-        By default, we hold all data on the call stacks. You can explicitly switch
-        to storage on the heap via smart pointers.
-
-        @see create_data_structures()
-        """
-        assert isinstance(cell_data_storage, Storage)
-        assert isinstance(face_data_storage, Storage)
-
-        self._cell_data_storage = cell_data_storage
-        self._face_data_storage = face_data_storage
-
         self.create_data_structures()
         self.create_action_sets()

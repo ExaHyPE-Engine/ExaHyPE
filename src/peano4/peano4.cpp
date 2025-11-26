@@ -26,49 +26,50 @@
 
 namespace {
   tarch::logging::Log _log("peano4");
-} // namespace
 
-void writeCopyrightMessage() {
-  static bool wrote = false;
-
-  if (not wrote and tarch::mpi::Rank::getInstance().getRank() == tarch::mpi::Rank::getGlobalMasterRank()) {
-    logInfo("writeCopyrightMessage()", "Peano 4 (C) www.peano-framework.org");
-    std::string buildInfo = "Build: ";
-    buildInfo += std::to_string(DIMENSIONS);
-    buildInfo += "d";
+  void writeBuildInfo() {
+    if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+      std::string buildInfo = "Build: ";
+      buildInfo += std::to_string(DIMENSIONS);
+      buildInfo += "d";
 
 #if defined(WITH_MPI)
-    buildInfo += ", MPI: ";
-    buildInfo += std::to_string(tarch::mpi::Rank::getInstance().getNumberOfRanks());
-    buildInfo += " Rank(s)";
+      buildInfo += ", MPI: ";
+      buildInfo += std::to_string(tarch::mpi::Rank::getInstance().getNumberOfRanks());
+      buildInfo += " Rank(s)";
 #endif
 
 #if defined(WITH_OPENMP)
-    buildInfo += ", OpenMP: ";
-    buildInfo += std::to_string(tarch::multicore::Core::getInstance().getNumberOfThreads());
-    buildInfo += " Thread(s)";
+      buildInfo += ", OpenMP: ";
+      buildInfo += std::to_string(tarch::multicore::Core::getInstance().getNumberOfThreads());
+      buildInfo += " Thread(s)";
 #endif
 
 #if defined(WITH_GPU)
-    buildInfo += ", GPU Backend ";
+      buildInfo += ", GPU Backend ";
 #if defined(WITH_GPU_SYCL)
-    buildInfo += "SYCL";
+      buildInfo += "SYCL";
 #elif defined(WITH_GPU_CUDA)
-    buildInfo += "CUDA";
+      buildInfo += "CUDA";
 #elif defined(WITH_GPU_KOKKOS)
-    buildInfo += "Kokkos";
+      buildInfo += "Kokkos";
 #endif
-    buildInfo += ": ";
-    buildInfo += std::to_string(tarch::accelerator::Device::getInstance().getNumberOfDevices());
-    buildInfo += " Device(s)";
+      buildInfo += ": ";
+      buildInfo += std::to_string(tarch::accelerator::Device::getInstance().getNumberOfDevices());
+      buildInfo += " Device(s)";
 #endif
 
-    buildInfo += ", Debug Level: " + std::to_string(PEANO_DEBUG);
+      buildInfo += ", Debug Level: " + std::to_string(PEANO_DEBUG);
 
-    logInfo("writeCopyrightMessage()", buildInfo);
+      logInfo("writeBuildInfo()", buildInfo);
+    }
   }
+} // namespace
 
-  wrote = true;
+void peano4::writeCopyrightMessage() {
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logInfo("writeCopyrightMessage()", "Peano 4 (C) www.peano-framework.org");
+  }
 }
 
 void peano4::init(
@@ -107,7 +108,7 @@ void peano4::init(
   peano4::parallel::Node::getInstance().init();
   peano4::parallel::SpacetreeSet::getInstance().init(offset, width, periodicBC);
 
-  writeCopyrightMessage();
+  writeBuildInfo();
 }
 
 void peano4::shutdown() {

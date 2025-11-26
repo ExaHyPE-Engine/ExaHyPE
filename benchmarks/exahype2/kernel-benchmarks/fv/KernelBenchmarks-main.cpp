@@ -131,10 +131,10 @@ void plotGrid() {
   dataWriter->setPrecision(PlotterPrecision);
 
   for (auto& marker : _cells) {
-    const int patchIndex = writer.plotPatch(marker.x() - marker.h() * 0.5, marker.h());
+    const int patchIndex = writer.plotPatch(marker.getX() - marker.getH() * 0.5, marker.getH());
     int       cellIndex  = dataWriter->getFirstCellWithinPatch(patchIndex);
     int       currentDoF = 0;
-    double*   QOut       = DataRepository::getInstance().getCellQ(marker.x(), marker.h());
+    double*   QOut       = DataRepository::getInstance().getCellQ(marker.getX(), marker.getH());
     dfor(k, AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch) {
       double* data = QOut + currentDoF;
 
@@ -222,10 +222,10 @@ void applyBoundaryConditions() {
 
 void projectPatchOntoFaces() {
   for (auto& marker : _cells) {
-    double* QOut = DataRepository::getInstance().getCellQ(marker.x(), marker.h());
+    double* QOut = DataRepository::getInstance().getCellQ(marker.getX(), marker.getH());
     double* faces[TWO_TIMES_D];
     for (int i = 0; i < TWO_TIMES_D; i++) {
-      faces[i] = DataRepository::getInstance().getFaceQNew(marker.x(), marker.h(), i);
+      faces[i] = DataRepository::getInstance().getFaceQNew(marker.getX(), marker.getH(), i);
     }
     toolbox::blockstructured::projectPatchSolutionOntoFaces(
       AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
@@ -240,7 +240,7 @@ void projectPatchOntoFaces() {
 
 void applyInitialConditions() {
   for (auto& marker : _cells) {
-    double* QOut = DataRepository::getInstance().getCellQ(marker.x(), marker.h());
+    double* QOut = DataRepository::getInstance().getCellQ(marker.getX(), marker.getH());
     // Initialise cell data with initial conditions.
     dfor(volume, AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch) {
       int linearIndex = peano4::utils::dLinearised(volume, AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch)
@@ -248,8 +248,8 @@ void applyInitialConditions() {
       FVSolver::initialCondition(
         QOut + linearIndex,
         ::exahype2::fv::
-          getVolumeCentre(marker.x(), marker.h(), AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, volume),
-        ::exahype2::fv::getVolumeSize(marker.h(), AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch),
+          getVolumeCentre(marker.getX(), marker.getH(), AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, volume),
+        ::exahype2::fv::getVolumeSize(marker.getH(), AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch),
         true
       );
     }
@@ -259,12 +259,14 @@ void applyInitialConditions() {
 peano4::datamanagement::CellMarker createMarkerFromIndex(const tarch ::la ::Vector<DIMENSIONS, int>& index) {
   tarch::la::Vector<DIMENSIONS, double> cellIndex        = tarch::la::convertScalar<double>(index);
   tarch::la::Vector<DIMENSIONS, double> cellPositionBase = DomainOffset + CellSize / 2.0;
-  tarch::la::Vector<DIMENSIONS, double>
-                                   cellPosition = cellPositionBase + tarch::la::multiplyComponents(cellIndex, CellSize);
+  tarch::la::Vector<DIMENSIONS, double> cellPosition = cellPositionBase + tarch::la::multiplyComponents(cellIndex, CellSize);
   peano4::grid::GridTraversalEvent event;
   event.setX(cellPosition);
   event.setH(CellSize);
-  return peano4::datamanagement::CellMarker(event);
+  peano4::datamanagement::CellMarker marker;
+  marker.h = CellSize;
+  marker.centre = cellPosition;
+  return marker;
 }
 
 void createGrid() {
@@ -287,8 +289,8 @@ int main(int argc, char** argv) {
   peano4::init(
     &argc,
     &argv,
-    benchmarks::exahype2::kernelbenchmarks::DomainOffset,
-    benchmarks::exahype2::kernelbenchmarks::DomainSize
+    DomainOffset,
+    DomainSize
   );
 
   repositories::initLogFilters();
@@ -318,14 +320,14 @@ int main(int argc, char** argv) {
     tarch::la::Vector<DIMENSIONS, double>* cellCentresHost = new tarch::la::Vector<DIMENSIONS, double>[_cells.size()];
     tarch::la::Vector<DIMENSIONS, double>* cellSizeHost    = new tarch::la::Vector<DIMENSIONS, double>[_cells.size()];
 
-    for (int patchIndex = 0; patchIndex < _cells.size(); patchIndex++) {
-      cellCentresHost[patchIndex] = _cells[patchIndex].x();
-      cellSizeHost[patchIndex]    = _cells[patchIndex].h();
+    for (int patchIndex = 0; patchIndex < static_cast<int>(_cells.size()); patchIndex++) {
+      cellCentresHost[patchIndex] = _cells[patchIndex].getX();
+      cellSizeHost[patchIndex]    = _cells[patchIndex].getH();
       for (int type = 0; type < 3; type++) {
         for (int face = 0; face < TWO_TIMES_D; face++) {
           patchData.faces[patchIndex][type][face] = grid.getFaceQNewDevice(
-            _cells[patchIndex].x(),
-            _cells[patchIndex].h(),
+            _cells[patchIndex].getX(),
+            _cells[patchIndex].getH(),
             face
           );
         }
@@ -446,6 +448,8 @@ int main(int argc, char** argv) {
     tarch::freeMemory(QOutFlattened, tarch::MemoryLocation::Pinned);
     tarch::freeMemory(QInFlattened, tarch::MemoryLocation::Pinned);
   }
+
+  grid.clear();
 
   peano4::shutdown();
 

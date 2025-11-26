@@ -23,8 +23,8 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
   
   We observe the following simple facts:
   
-  - The data in fineGridCell{{UNKNOWN_IDENTIFIER}}.value holds @f$ Q^{old} @f$
-  - The data in fineGridCell{{UNKNOWN_IDENTIFIER}}.value shall hold @f$ Q^{new} @f$ eventually.
+  - The data in fineGridCell{{UNKNOWN_IDENTIFIER}}.data() holds @f$ Q^{old} @f$
+  - The data in fineGridCell{{UNKNOWN_IDENTIFIER}}.data() shall hold @f$ Q^{new} @f$ eventually.
     We thus can simply add the scaled estimated to it.
   - The estimates do not alter the auxiliary variables.
   - We can thus just keep the previous auxiliary variables implicitly.  
@@ -53,15 +53,15 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
     dfor( dof, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
       for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
         {% for WEIGHT_NO in range(0,WEIGHTS|length) %}
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] += 
-          timeStepSize * {{WEIGHTS[WEIGHT_NO]}} * fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] += 
+          timeStepSize * {{WEIGHTS[WEIGHT_NO]}} * fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
         {% endfor %}
        }
     }
 
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
-    double* newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+    double* newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
     
     {{POSTPROCESS_UPDATED_PATCH}}
 
@@ -77,11 +77,11 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
     {% if COMPUTE_MAX_EIGENVALUE %}
     ::exahype2::CellData<double, double>  patchData( 
       nullptr,      // QIn
-      marker.x(), 
-      marker.h(), 
+      marker.getX(), 
+      marker.getH(), 
       timeStamp, 
       timeStepSize, 
-      fineGridCell{{UNKNOWN_IDENTIFIER}}.value 
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.data() 
     );
 
     ::exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
@@ -112,7 +112,7 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp+timeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
+    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.getH()(0) );
     
   }
 """

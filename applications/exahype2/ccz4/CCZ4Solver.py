@@ -1145,8 +1145,8 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
             """
 ::exahype2::CellData  reconstructedPatchData( 
   oldQWithHalo, 
-  marker.x(), 
-  marker.h(), 
+  marker.getX(), 
+  marker.getH(), 
   timeStamp, 
   timeStepSize,
   nullptr // targetPatch 

@@ -48,15 +48,15 @@ class HandleBoundary(AbstractFDActionSet):
         ) -> void {
           repositories::{{SOLVER_INSTANCE}}.boundaryConditions( Qinside, {%- for i in range(ORDER) -%}Qoutside{{i}},{%- endfor -%} x, h, t, normal );
         },
-        marker.x(),
-        marker.h(),
+        marker.getX(),
+        marker.getH(),
         {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(marker.getSelectedFaceNumber()<DIMENSIONS ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_NODES_PER_AXIS}},
         {{ORDER}},
         {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
         marker.getSelectedFaceNumber(),
-        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.data()
       );
       kernels::{{SOLVER_NAME}}::applyBoundaryConditions<{{STORAGE_PRECISION}}>(
         [&](
@@ -72,15 +72,15 @@ class HandleBoundary(AbstractFDActionSet):
         ) -> void {
           repositories::{{SOLVER_INSTANCE}}.boundaryConditions( Qinside, {%- for i in range(ORDER) -%}Qoutside{{i}}, {%- endfor -%} x, h, t, normal );
         },
-        marker.x(),
-        marker.h(),
+        marker.getX(),
+        marker.getH(),
         {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<DIMENSIONS ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_NODES_PER_AXIS}},
         {{ORDER}},
         {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
         marker.getSelectedFaceNumber(),
-        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value
+        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.data()
       );
 """
 

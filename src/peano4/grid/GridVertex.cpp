@@ -2,18 +2,16 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "GridVertex.h"
 
-#include <algorithm>
-#include <bitset>
-#include <sstream>
+#include "peano4/utils/Loop.h"
+#include "tarch/services/ServiceRepository.h"
 
-#ifdef WITH_MPI
-#include <mpi.h>
-#endif
+#include <algorithm>
+#include <sstream>
 
 static_assert(std::is_standard_layout_v<peano4::grid::GridVertex>);
 static_assert(std::is_trivially_copyable_v<peano4::grid::GridVertex>);
 
-peano4::grid::GridVertex peano4::grid::createVertex(
+peano4::grid::GridVertex peano4::grid::GridVertex::create(
   int                                 level,
   GridVertex::State                   state,
   const std::array<int, TWO_POWER_D>& adjacentRanks,
@@ -31,9 +29,53 @@ peano4::grid::GridVertex peano4::grid::createVertex(
   return newVertex;
 }
 
+bool peano4::grid::GridVertex::areAllVerticesRefined(GridVertex vertices[TWO_POWER_D]) {
+  bool result = true;
+  dfor2(k) result &= (vertices[kScalar].getState() == GridVertex::State::Refined);
+  enddforx return result;
+}
+
+bool peano4::grid::GridVertex::areAllVerticesUnrefined(GridVertex vertices[TWO_POWER_D]) {
+  bool result = true;
+  dfor2(k) result &= (vertices[kScalar].getState() == GridVertex::State::Unrefined);
+  enddforx return result;
+}
+
+bool peano4::grid::GridVertex::willVertexBeRefined(const GridVertex& vertex) {
+  return vertex.getState() == GridVertex::State::Refining or vertex.getState() == GridVertex::State::Refined
+         or vertex.getState() == GridVertex::State::EraseTriggered;
+}
+
+bool peano4::grid::GridVertex::hasVertexBeenRefined(const GridVertex& vertex) {
+  return vertex.getState() == GridVertex::State::Refined or vertex.getState() == GridVertex::State::EraseTriggered
+         or vertex.getState() == GridVertex::State::Erasing;
+}
+
+std::bitset<TWO_POWER_D> peano4::grid::GridVertex::willVerticesBeRefined(GridVertex vertices[TWO_POWER_D]) {
+  std::bitset<TWO_POWER_D> bitset;
+  for (int i = 0; i < TWO_POWER_D; i++) {
+    assertion(not willVertexBeRefined(vertices[i]) or vertices[i].getState() != GridVertex::State::HangingVertex);
+    bitset.set(i, willVertexBeRefined(vertices[i]));
+  }
+  return bitset;
+}
+
+std::bitset<TWO_POWER_D> peano4::grid::GridVertex::haveVerticesBeenRefined(GridVertex vertices[TWO_POWER_D]) {
+  std::bitset<TWO_POWER_D> bitset;
+  for (int i = 0; i < TWO_POWER_D; i++) {
+    assertion(not hasVertexBeenRefined(vertices[i]) or vertices[i].getState() != GridVertex::State::HangingVertex);
+    bitset.set(i, hasVertexBeenRefined(vertices[i]));
+  }
+  return bitset;
+}
+
+std::ostream& operator<<(std::ostream& out, const peano4::grid::GridVertex& vertex) {
+  return (out << vertex.toString());
+}
+
 std::string peano4::grid::GridVertex::toString() const {
   std::ostringstream out;
-  out << "GridVertex{state=" << static_cast<int>(state) << " (";
+  out << "GridVertex{State=" << static_cast<int>(state) << " (";
 
   switch (getState()) {
   case State::HangingVertex:
@@ -66,7 +108,7 @@ std::string peano4::grid::GridVertex::toString() const {
   }
   out << ")";
 
-  out << ", flags=0b" << std::bitset<8>(flags) << " [";
+  out << ", Flags=0b" << std::bitset<8>(flags) << " [";
   bool first   = true;
   auto addFlag = [&](const char* name, uint8_t mask) {
     if (getFlag(mask)) {
@@ -82,14 +124,14 @@ std::string peano4::grid::GridVertex::toString() const {
   addFlag("HasBeenParentOfSubtreeVertexInPreviousTreeSweep", HasBeenParentOfSubtreeVertexInPreviousTreeSweep);
   addFlag("IsParentOfSubtreeVertexInCurrentTreeSweep", IsParentOfSubtreeVertexInCurrentTreeSweep);
   if (first) {
-    out << "None"; // no flags set
+    out << "None"; // No flags set
   }
   out << "]";
 
   out << ", NumberOfAdjacentRefinedLocalCells=" << numberOfAdjacentRefinedLocalCells;
   out << ", Level=" << level;
   out << ", AdjacentRanks=(";
-  for (size_t i = 0; i < adjacentRanks.size(); ++i) {
+  for (std::size_t i = 0; i < adjacentRanks.size(); ++i) {
     if (i > 0) {
       out << ",";
     }
@@ -147,12 +189,12 @@ void peano4::grid::GridVertex::freeMultiscaleDataExchangeDatatype() {
 }
 
 void peano4::grid::GridVertex::initDatatype() {
-  peano4::grid::GridVertex instances[2];
+  GridVertex instances[2];
 
-  constexpr int                                NumberOfAttributes = 6;
-  std::array<MPI_Datatype, NumberOfAttributes> subtypes{};
-  std::array<int, NumberOfAttributes>          blocklen{};
-  std::array<MPI_Aint, NumberOfAttributes>     disp{};
+  constexpr int NumberOfAttributes = 6;
+  MPI_Datatype  subtypes[NumberOfAttributes];
+  int           blocklen[NumberOfAttributes];
+  MPI_Aint      disp[NumberOfAttributes];
 
   int counter = 0;
 
@@ -198,7 +240,7 @@ void peano4::grid::GridVertex::initDatatype() {
 
   int          errorCode = 0;
   MPI_Datatype tmpType;
-  errorCode += MPI_Type_create_struct(NumberOfAttributes, blocklen.data(), disp.data(), subtypes.data(), &tmpType);
+  errorCode += MPI_Type_create_struct(NumberOfAttributes, blocklen, disp, subtypes, &tmpType);
   errorCode += MPI_Type_create_resized(tmpType, offset, extent, &Datatype);
   errorCode += MPI_Type_commit(&Datatype);
   errorCode += MPI_Type_free(&tmpType);
@@ -225,7 +267,6 @@ void peano4::grid::GridVertex::send(const GridVertex& buffer, int destination, i
 void peano4::grid::GridVertex::receive(GridVertex& buffer, int source, int tag, MPI_Comm communicator) {
   MPI_Status status;
   MPI_Recv(&buffer, 1, Datatype, source, tag, communicator, &status);
-  buffer.senderDestinationRank = status.MPI_SOURCE;
 }
 
 void peano4::grid::GridVertex::send(
@@ -265,7 +306,6 @@ void peano4::grid::GridVertex::receive(
     waitFunctor();
     MPI_Test(&receiveRequestHandle, &flag, &status);
   }
-  buffer.senderDestinationRank = status.MPI_SOURCE;
 }
 
 void peano4::grid::GridVertex::

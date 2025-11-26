@@ -931,10 +931,8 @@ void toolbox::blockstructured::
       tarch::MemoryLocation::Heap
     );
 
-    tarch::la::Vector<DIMENSIONS, int>
-      leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
-    tarch::la::Vector<DIMENSIONS, int>
-      rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
+    auto leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
+    auto rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
     leftAdjacentPatchIndex(marker.getSelectedFaceNumber() % DIMENSIONS)--;
 
     internal::interpolateCell_AoS_linear(

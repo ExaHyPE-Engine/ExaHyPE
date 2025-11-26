@@ -4,8 +4,8 @@
 
 #include "logging/Log.h"
 
-#include <limits.h>
 #include <iostream>
+#include <limits.h>
 
 #if defined(COMPILER_HAS_PROC_STAT)
 #include <unistd.h>
@@ -16,8 +16,8 @@
 #if defined(COMPILER_HAS_SYSINFO) // for Linux OS
 #include <sys/sysinfo.h>
 #else // for Mac OS support
-#include <sys/sysctl.h>
 #include <sys/resource.h>
+#include <sys/sysctl.h>
 #endif
 
 static_assert(sizeof(void*) == 8, "Assuming 64-bit build; i.e., 8-byte pointers");
@@ -34,55 +34,50 @@ namespace {
   tarch::logging::Log _log("tarch");
 } // namespace
 
-int tarch::convertMemorySize(long long value, MemoryUsageFormat format) {
-  constexpr long long MegaByte = 1024 * 1024;
-  constexpr long long GigaByte = MegaByte * 1024;
-  int           result   = 0;
+std::string tarch::toString(MemoryUsageFormat format) {
   switch (format) {
-    case tarch::MemoryUsageFormat::MByte:
-    {
-      long long usageMB ((value + (MegaByte / 2)) / MegaByte);
-      if (usageMB > std::numeric_limits<int>::max()) {
-        logError("convertMemorySize()", "Cannot cast result to return value: " << usageMB);
-      }
-      result = static_cast<int>(usageMB);
-      break;
-    }
-    case tarch::MemoryUsageFormat::GByte:
-    {
-      long long usageGB ((value + (GigaByte / 2)) / GigaByte);
-      if (usageGB > std::numeric_limits<int>::max()) {
-        logError("convertMemorySize()", "Cannot cast result to return value: " << usageGB);
-      }
-      result = static_cast<int>(usageGB);
-      break;
-    }
+  case MemoryUsageFormat::KiB:
+    return "KiB";
+  case MemoryUsageFormat::MiB:
+    return "MiB";
+  case MemoryUsageFormat::GiB:
+    return "GiB";
   }
-  return result;
+  return "<undef>";
+}
+
+double tarch::convertMemorySize(unsigned long long bytes, MemoryUsageFormat format) {
+  switch (format) {
+  case MemoryUsageFormat::KiB:
+    return static_cast<double>(bytes) / KiB;
+  case MemoryUsageFormat::MiB:
+    return static_cast<double>(bytes) / MiB;
+  case MemoryUsageFormat::GiB:
+    return static_cast<double>(bytes) / GiB;
+  }
+  return 0.0;
 }
 
 #if defined(COMPILER_HAS_SYSINFO)
 
-int tarch::getTotalMemory(MemoryUsageFormat format) {
+double tarch::getTotalMemory(MemoryUsageFormat format) {
   struct sysinfo info;
   sysinfo(&info);
-
   return convertMemorySize(info.totalram, format);
 }
 
-int tarch::getFreeMemory(MemoryUsageFormat format) {
+double tarch::getFreeMemory(MemoryUsageFormat format) {
   struct sysinfo info;
   sysinfo(&info);
-
   return convertMemorySize(info.freeram, format);
 }
 
 #else // defined(COMPILER_HAS_SYSINFO)
 
-int tarch::getTotalMemory(MemoryUsageFormat format) {
-  int mib[] = { CTL_HW, HW_MEMSIZE };
+double tarch::getTotalMemory(MemoryUsageFormat format) {
+  int     mib[] = {CTL_HW, HW_MEMSIZE};
   int64_t physical_memory;
-  size_t length;
+  size_t  length;
 
   // Get the physical memory size
   length = sizeof(int64_t);
@@ -90,7 +85,7 @@ int tarch::getTotalMemory(MemoryUsageFormat format) {
   return convertMemorySize(physical_memory, format);
 }
 
-int tarch::getFreeMemory(MemoryUsageFormat format) {
+double tarch::getFreeMemory(MemoryUsageFormat format) {
   struct rusage usage{};
   if (0 == getrusage(RUSAGE_SELF, &usage)) {
     auto freeMem = tarch::getTotalMemory(tarch::MemoryUsageFormat::MByte) - usage.ru_maxrss;
@@ -102,13 +97,13 @@ int tarch::getFreeMemory(MemoryUsageFormat format) {
 
 #endif // defined(COMPILER_HAS_SYSINFO)
 
-int tarch::getMemoryUsage(MemoryUsageFormat format) {
+double tarch::getMemoryUsage(MemoryUsageFormat format) {
   static tarch::logging::Log _log("tarch");
 
 #if defined(COMPILER_HAS_PROC_STAT)
-  char   work[4096];
-  FILE*  f    = NULL;
-  char*  pCh  = NULL;
+  char  work[4096];
+  FILE* f   = NULL;
+  char* pCh = NULL;
 
   pid_t pid = getpid();
 
@@ -117,10 +112,10 @@ int tarch::getMemoryUsage(MemoryUsageFormat format) {
 
   if (f == NULL) {
     logError("getMemoryUsage()", "Can't open file " << work);
-    return(0);
+    return (0);
   }
   if (fgets(work, sizeof(work), f) == NULL) {
-    logError("getMemoryUsage","Error while reading from file");
+    logError("getMemoryUsage", "Error while reading from file");
   }
   fclose(f);
   strtok(work, " ");

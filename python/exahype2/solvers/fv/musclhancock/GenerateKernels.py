@@ -57,8 +57,8 @@ def generate_kernels(
       QOut,
       timeStamp,
       timeStepSize,
-      marker.x(),
-      marker.h()
+      marker.getX(),
+      marker.getH()
     );
 """,
         undefined=jinja2.DebugUndefined,

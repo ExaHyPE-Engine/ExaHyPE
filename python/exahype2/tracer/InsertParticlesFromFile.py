@@ -46,7 +46,7 @@ class InsertParticlesFromFile(ActionSet):
 if (not marker.willBeRefined()) {
     tarch::multicore::Lock lock(_semaphore);
 
-    std::list< tarch::la::Vector<DIMENSIONS,double> > coords = _fileReader.getParticlesWithinVoxel(marker.x(), marker.h(), true);
+    std::list< tarch::la::Vector<DIMENSIONS,double> > coords = _fileReader.getParticlesWithinVoxel(marker.getX(), marker.getH(), true);
     std::list< tarch::la::Vector<DIMENSIONS,double> >::iterator p = coords.begin();
 
     while (p != coords.end()) {
