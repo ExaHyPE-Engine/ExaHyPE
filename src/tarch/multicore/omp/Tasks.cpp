@@ -157,9 +157,12 @@ void tarch::multicore::omp::internal::spawnTaskWithOpenMP5(
         selfDependency[0] = outDependency[0];
 
         // Polling thread
-        bool isReady;
+        volatile bool isReady;
         do {
           isReady = hasTaskFinishedInOpenMP5(selfDependency);
+          if (not isReady){
+            #pragma omp taskyield
+          }
         } while (not isReady);
 
         p = inDependencies.erase(p);
@@ -352,9 +355,12 @@ void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDepend
 
   if (tarch::multicore::omp::majorOpenMPVersion()<6 and not iterableExistingInDepencencies.empty()) {
     logDebug( "waitForTasks(...)", "tasks " << toString(inDependencies) << " might have been spawned by non-sibling. Better check manually if they have terminated" );
-    bool isReady;
+    volatile bool isReady;
     do {
       isReady = tarch::multicore::omp::internal::hasTaskFinishedInOpenMP5(iterableExistingInDepencencies);
+      if (not isReady){
+        #pragma omp taskyield
+      }
     } while (not isReady);
   }
 }
