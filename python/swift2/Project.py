@@ -7,6 +7,7 @@ import dastgen2
 
 import os
 import sys
+import copy
 
 from swift2.particle.Particle import Particle
 from swift2.actionsets.DynamicMeshRefinementAnalysis import (
@@ -16,6 +17,8 @@ from swift2.output.SWIFTMain import SWIFTMain
 from swift2.actionsets.Cleanup import Cleanup
 
 import swift2.api.graphcompiler
+
+from .ProjectRealisation import *
 
 
 from abc import abstractmethod
@@ -48,6 +51,7 @@ class Project(object):
         self._dimensions = 2
         self._min_terminal_time = 1.0
         self._max_terminal_time = 0.0
+        self._make_initial_grid_coarse = False
         self._first_plot_time_stamp = 0.0
         self._time_in_between_plots = 0.1
         self._load_balancer_name = ""
@@ -70,12 +74,12 @@ class Project(object):
 
         self.additional_action_sets_per_solver_step = []
 
-        self.algorithm_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
-        )
-        self.initialisation_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
-        )
+        # Default values will be set by self.set_realisation().
+        self.algorithm_steps_task_graph_compiler = None
+        self.initialisation_steps_task_graph_compiler = None
+        # Default values used to be:
+        # swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
+        # swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
 
     def set_load_balancing(self, load_balancer_name, load_balancer_arguments):
         """
@@ -128,10 +132,37 @@ class Project(object):
         self._build_mode = mode
 
     def __compute_global_max_h(self):
+        """!
+
+        Run over all species specified and find out what their maximum
+        (coarsest) h is. This value is then used to constrain the mesh
+        adaptivity: The mesh should never be coarser than this, but also
+        the initial mesh should meet this global maximum h.
+
+        The outcome is stored in self._global_max_h.
+
+        """
         self._global_max_h = 0.0
         for current_species_set in self._particle_species_set:
             self._global_max_h = max(
                 self._global_max_h, current_species_set.particle_model.max_h
+            )
+
+    def __compute_global_min_h(self):
+        """!
+
+        Run over all species specified and find out what their minimum
+        (finest) h is. This value is then used to constrain the mesh
+        adaptivity: The mesh should never be coarser than this, but also
+        the initial mesh should meet this global maximum h.
+
+        The outcome is stored in self._global_min_h.
+
+        """
+        self._global_min_h = sys.float_info.max
+        for current_species_set in self._particle_species_set:
+            self._global_min_h = min(
+                self._global_min_h, current_species_set.particle_model.min_h
             )
 
     def __export_constants(self):
@@ -180,6 +211,7 @@ class Project(object):
         self._project.constants.export("PlotterPrecision", str(self._plotter_precision))
         self._project.constants.export_boolean_sequence("PeriodicBC", self._periodic_BC)
         self._project.constants.export("GlobalMaxH", str(self._global_max_h))
+        self._project.constants.export("GlobalMinH", str(self._global_min_h))
 
         build_string = "python3 "
         for i in sys.argv:
@@ -258,6 +290,20 @@ The coarsest regular mesh hence will host """
             + str((3**self._dimensions) ** (self.__real_max_mesh_size()[1]))
             + """ octants.
 
+The finest mesh chosen has a mesh width of h_min="""
+            + str(self._global_min_h)
+            + """.
+As Peano realises three-partitioning, the actual minimal mesh size will be h_min="""
+            + str(self.__real_min_mesh_size()[0])
+            + """.
+This corresponds to at least """
+            + str(self.__real_min_mesh_size()[1])
+            + """ spacetree levels.
+The finest regular mesh hence will host up to """
+            + str((3**self._dimensions) ** (self.__real_min_mesh_size()[1]))
+            + """ octants.
+
+
 Once this resultion is reached, the mesh will stop the initial load balancing, insert the
 particles and then kick off the simulation. The mesh might be refined and erased subsequently,
 but it will never become coarser than these constraints.
@@ -296,9 +342,9 @@ levels.
 
         Peano uses three-partitioning. That is, it will neve be able to match
         given refinement instructions exactly. All it can do is to approximate
-        them. See @ref
+        them.
 
-        Return a tuple of mesh size and mesh levels
+        @return Tuple of mesh size and mesh levels
 
         """
         h = self._domain_size[0]
@@ -309,7 +355,28 @@ levels.
         return (h, level)
 
     def __real_max_mesh_size(self):
+        """!
+
+        Return the max mesh size that the code really will use.
+
+        See the explanation in the generated Readme.md file or in
+        real_mesh_size why this value is smaller than the real mesh
+        size.
+
+        """
         return self.real_mesh_size(self._global_max_h)
+
+    def __real_min_mesh_size(self):
+        """!
+
+        Return the min mesh size that the code really will use.
+
+        See the explanation in the generated Readme.md file or in
+        real_mesh_size why this value is smaller than the real mesh
+        size.
+
+        """
+        return self.real_mesh_size(self._global_min_h)
 
     def __configure_makefile(self):
         self._project.output.makefile.set_dimension(self._dimensions)
@@ -326,6 +393,7 @@ levels.
         time_in_between_plots,
         periodic_BC=[False, False, False],
         plotter_precision=5,
+        initial_grid_coarse=False,
     ):
         """
 
@@ -343,12 +411,18 @@ levels.
           If you specify a valid max time however, you can stop the sim as soon as the
           most advanced cell exceeds this threshold.
 
+        initial_grid_coarse: Bool
+          If true, make the initial grid coarse, i.e. according to max cell size, which
+          is specified via max_h in the added particle species. Otherwise, make initial
+          grid fine, i.e. according to the particle species' min_h.
+
         """
         self._domain_offset = offset
         self._domain_size = domain_size
         self._dimensions = dimensions
         self._max_terminal_time = max_end_time
         self._min_terminal_time = min_end_time
+        self._make_initial_grid_coarse = initial_grid_coarse
         self._first_plot_time_stamp = first_plot_time_stamp
         self._time_in_between_plots = time_in_between_plots
         self._periodic_BC = []
@@ -479,6 +553,7 @@ levels.
         """
         self.__generate_global_state_files()
         self.__compute_global_max_h()
+        self.__compute_global_min_h()
 
         #
         # Make plotting resort and filter the particles. For this, they need
@@ -540,13 +615,17 @@ levels.
                     current_species_set.name
                 )
             )
-            cell_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVertices.create_cell_marker(
-                current_species_set.name
+            cell_marker_for_tasks = (
+                peano4.toolbox.api.EnumerateCellsAndVertices.create_cell_marker(
+                    current_species_set.name
+                )
             )
-            vertex_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVertices.create_vertex_marker(
-                task_name=current_species_set.name,
-                full_qualified_enumerator_type="::swift2::TaskEnumerator",
-                enumerator_include=""" #include "swift2/TaskEnumerator.h" """,
+            vertex_marker_for_tasks = (
+                peano4.toolbox.api.EnumerateCellsAndVertices.create_vertex_marker(
+                    task_name=current_species_set.name,
+                    full_qualified_enumerator_type="::swift2::TaskEnumerator",
+                    enumerator_include=""" #include "swift2/TaskEnumerator.h" """,
+                )
             )
 
             # Enable cell statistics for this species
@@ -595,9 +674,10 @@ levels.
         action_set_plot_grid.parallel = True
         self.algorithm_step_plot.add_action_set(action_set_plot_grid)
 
-        action_set_create_regular_grid = peano4.toolbox.CreateRegularGrid(
-            self._global_max_h
-        )
+        init_gridsize = self._global_min_h
+        if self._make_initial_grid_coarse:
+            init_gridsize = self._global_max_h
+        action_set_create_regular_grid = peano4.toolbox.CreateRegularGrid(init_gridsize)
         action_set_create_regular_grid.descend_invocation_order = (
             self.algorithm_step_create_grid.lowest_descend_invocation_order() - 1
         )
@@ -630,6 +710,266 @@ levels.
         self._project.output.makefile.set_mode(self._build_mode)
 
         return self._project
+
+    def set_realisation(
+        self,
+        parallelisation=Parallelisation_DomainDecomposition,
+        storage=Storage_Scattered,
+        sorting=Sorting_MultiscaleSort,
+        kernel_optimisation=KernelOptimisation_NoOptimisation,
+    ):
+        """!
+        Specify the realisation of the project: Select
+        - which parallelisation method to use
+            (domain-decomposition, task-graph, multisweep-task-graph)
+        - which storage strategy to use
+            (scattered, continuous-per-vertex, global-continuous)
+        - which particle sorting strategy to use
+            (multiscale-sort, bucket-sort)
+        - which kernel optimisation to use
+            (no-optimisation, vectorise-all, vectorise-distance-checks-preamble)
+
+        Available options for all these are kept in ./ProjectRealisation.py.
+
+        Only call this function after adding particle species to the project via self.add_particle_species().
+        """
+
+        # have we added particle sets already?
+        if (
+            self._particle_species is None
+            or len(self._particle_species) == 0
+            or self._particle_species_set is None
+            or len(self._particle_species_set) == 0
+        ):
+            raise ValueError(
+                "No particle species recorded. Call this function only after adding particle sets to project."
+            )
+
+        # make sure selections are valid.
+        if parallelisation not in ParallelisationVariants:
+            raise ValueError(
+                f"parallelisation variant '{parallelisation}' unknown; available options are",
+                ParallelisationVariants,
+            )
+        if storage not in StorageVariants:
+            raise ValueError(
+                f"storage variant '{storage}' unknown; available options are",
+                StorageVariants,
+            )
+        if sorting not in SortingVariants:
+            raise ValueError(
+                f"sorting variant '{sorting}' unknown; available options are",
+                SortingVariants,
+            )
+        if kernel_optimisation not in AllKernelOptimisationVariants:
+            raise ValueError(
+                f"sorting variant '{kernel_optimisation}' unknown; available options are",
+                AllKernelOptimisationVariants,
+            )
+
+        # check that selection makes sense.
+        if (
+            storage == Storage_Scattered
+            and kernel_optimisation not in BasicKernelOptimisationVariants
+        ):
+            raise ValueError(
+                "Can't use kernel optimisation '{kernel_optimisation}' with scattered storage."
+            )
+
+        self.algorithm_steps_task_graph_compiler = None
+        self.initialisation_steps_task_graph_compiler = None
+
+        # pick correct task graph compiler given the selection
+        if parallelisation == Parallelisation_DomainDecomposition:
+            if storage == Storage_Scattered:
+                if sorting == Sorting_MultiscaleSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
+                    )
+                elif sorting == Sorting_BucketSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
+                    )
+                else:
+                    raise NotImplementedError()
+
+            elif (
+                storage == Storage_ContinuousPerVertex
+                or storage == Storage_GlobalContinuous
+            ):
+                if sorting == Sorting_MultiscaleSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
+                    )
+                elif sorting == Sorting_BucketSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory
+                    )
+                else:
+                    raise NotImplementedError()
+
+            else:
+                raise NotImplementedError()
+
+        elif parallelisation == Parallelisation_MultisweepTaskGraph:
+            if storage == Storage_Scattered:
+                if sorting == Sorting_MultiscaleSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_multisweep_task_graph_multiscale_sort_scattered_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_multisweep_task_graph_multiscale_sort_scattered_memory
+                    )
+                elif sorting == Sorting_BucketSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_multisweep_task_graph_bucket_sort_scattered_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_multisweep_task_graph_bucket_sort_scattered_memory
+                    )
+                else:
+                    raise NotImplementedError()
+
+            elif (
+                storage == Storage_ContinuousPerVertex
+                or storage == Storage_GlobalContinuous
+            ):
+                if sorting == Sorting_MultiscaleSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_multisweep_task_graph_multiscale_sort_coalesced_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_multisweep_task_graph_multiscale_sort_coalesced_memory
+                    )
+                elif sorting == Sorting_BucketSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_multisweep_task_graph_bucket_sort_coalesced_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_multisweep_task_graph_bucket_sort_coalesced_memory
+                    )
+                else:
+                    raise NotImplementedError()
+            else:
+                raise NotImplementedError()
+
+        elif parallelisation == Parallelisation_TaskGraph:
+            if storage == Storage_Scattered:
+                if sorting == Sorting_MultiscaleSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_task_graph_multiscale_sort_scattered_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_task_graph_multiscale_sort_scattered_memory
+                    )
+                elif sorting == Sorting_BucketSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_task_graph_bucket_sort_scattered_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_task_graph_bucket_sort_scattered_memory
+                    )
+                else:
+                    raise NotImplementedError()
+
+            elif (
+                storage == Storage_ContinuousPerVertex
+                or storage == Storage_GlobalContinuous
+            ):
+                if sorting == Sorting_MultiscaleSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_task_graph_multiscale_sort_coalesced_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_task_graph_multiscale_sort_coalesced_memory
+                    )
+                elif sorting == Sorting_BucketSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_task_graph_bucket_sort_coalesced_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_task_graph_bucket_sort_coalesced_memory
+                    )
+                else:
+                    raise NotImplementedError()
+            else:
+                raise NotImplementedError()
+        else:
+            raise NotImplementedError()
+
+        # Make sure we didn't miss anything
+        if self.algorithm_steps_task_graph_compiler is None:
+            raise ValueError("No task graph compiler selected?")
+        if self.initialisation_steps_task_graph_compiler is None:
+            raise ValueError("No initialisation stpe task graph compiler selected?")
+
+        # Update particle sets and particles now
+        new_particlelist = []
+
+        for p in self._particle_species:
+            # lists are traversed as copies, not by reference, so we need to
+            # make a new list.
+            newp = copy.deepcopy(p)
+
+            if kernel_optimisation == KernelOptimisation_NoOptimisation:
+                pass
+            elif kernel_optimisation == KernelOptimisation_VectoriseAll:
+                newp.switch_namespace_of_all_particle_iterators(
+                    "::swift2::kernels::coalesced::"
+                )
+            elif kernel_optimisation == KernelOptimisation_VectoriseDistanceChecks:
+                newp.switch_namespace_of_all_particle_iterators(
+                    "::swift2::kernels::coalesced::prefixcheck::"
+                )
+            else:
+                raise NotImplementedError()
+
+            new_particlelist.append(newp)
+
+        self._particle_species = new_particlelist
+
+        new_particlesetlist = []
+
+        for ps in self._particle_species_set:
+            # lists are traversed as copies, not by reference, so we need to make a new list.
+            newps = copy.deepcopy(ps)
+
+            if storage == Storage_ContinuousPerVertex:
+                newps.generator = (
+                    peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(
+                        newps
+                    )
+                )
+            elif storage == Storage_GlobalContinuous:
+                newps.generator = (
+                    peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(
+                        newps
+                    )
+                )
+            elif storage == Storage_Scattered:
+                newps.generator = peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
+                    newps
+                )
+            else:
+                raise NotImplementedError()
+
+            new_particlesetlist.append(newps)
+
+        self._particle_species_set = new_particlesetlist
+
+        return
 
     @abstractmethod
     def main_file_template(self):

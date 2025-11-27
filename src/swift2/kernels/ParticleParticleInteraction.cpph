@@ -1,31 +1,25 @@
-#include "legacy/hydro_dimensions.h"
-#include "legacy/kernel_hydro.h"
-#include "swift2/kernels/ParticleUpdatePredicates.h"
-#include "swift2/kernels/SmoothingLengthComputation.h"
-#include "tarch/accelerator/accelerator.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
-#include "toolbox/particles/MultiscaleTransitions.h"
 
-
-
-
-
-
-template <typename Particle>
+template <typename ParticleA, typename ParticleB>
 bool swift2::kernels::forceKernelDistanceCheck(
-  Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle
+  ParticleA& __restrict__ localParticle, const ParticleB& __restrict__ activeParticle
 ) {
+  /*
+   * Unlike the density distance check, here the interaction happens if:
+   *   - the active particle is within the search radius of the local particle OR
+   *   - the local particle is within the search radius of the active particle!
+   */
 
-  const double h_a = localParticle->getSmoothingLength();
-
-  tarch::la::Vector<Dimensions, double> dx = localParticle->getX() - activeParticle->getX();
+  tarch::la::Vector<Dimensions, double> dx = localParticle.getX() - activeParticle.getX();
   const double                          rSquared  = tarch::la::norm2Squared(dx);
 
-  // Get actual interaction radius
-  const double iactRSquared = kernel_gamma * kernel_gamma * h_a * h_a;
+  const double h_a = localParticle.getSmoothingLength();
+  const double iactR_aSquared = (kernel_gamma * h_a) * (kernel_gamma * h_a);
 
-  const bool result = tarch::la::smaller(rSquared, iactRSquared);
+  const double h_b = activeParticle.getSmoothingLength();
+  const double iactR_bSquared = (kernel_gamma * h_b) * (kernel_gamma * h_b);
+
+  const bool result = tarch::la::greater(rSquared, 0)
+                        & (tarch::la::smaller(rSquared, iactR_aSquared) | tarch::la::smaller(rSquared, iactR_bSquared));
 
   return result;
 }
-

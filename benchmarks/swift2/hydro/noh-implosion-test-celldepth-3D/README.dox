@@ -1,0 +1,8 @@
+/**
+
+ @page benchmarks_swift2_hydro_noh_celldepth_test_3D 3D Noh implosion celldepth test
+
+ Does the same as @ref benchmarks_swift2_hydro_noh_celldepth_test_2D, but in 3D instead of 2D.
+ See @ref benchmarks_swift2_hydro_noh_celldepth_test_2D for more details.
+
+ */

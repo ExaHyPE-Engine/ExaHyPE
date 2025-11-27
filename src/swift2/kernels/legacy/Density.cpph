@@ -62,8 +62,8 @@ bool swift2::kernels::legacy::densityKernelEvaluatePairInteractionPredicate(
   const double iactRSquared = kernel_gamma * kernel_gamma * hi * hi;
 
   return tarch::la::smaller(rSquared, iactRSquared)
-         and tarch::la::greater(rSquared, 0.0) // Self-contribution is
-                                               // calculated elsewhere
+         & tarch::la::greater(rSquared, 0.0) // Self-contribution is
+                                             // calculated elsewhere
     ;
 }
 
