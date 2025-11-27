@@ -173,6 +173,10 @@ namespace tarch {
        * However, nothing stops you, subject to the correct dependency
        * management, to deploy the call to processAndFuseAllReadyTasks() to yet
        * another task of its own.
+       *
+       * The routine can be used to set off timed execution as discussed in
+       * tarch::multicore::orchestration::FusionImplementation.
+       *
        */
       void processAndFuseAllReadyTasks();
 

@@ -129,7 +129,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     #endif
 
     {% if STATELESS_PDE_TERMS %}
-    virtual void fuse( const std::list<Task*>& otherTasks, int targetDevice=Host ) override;
+    virtual void fuse( const std::vector<Task*>& otherTasks, int targetDevice=Host ) override;
     virtual bool canFuse() const override;
     {% endif %}
 };

@@ -1,6 +1,8 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/multicore/Task.h"
+
+#include "multicore.h"
 #include "Tasks.h"
 #include "config.h"
 #include "tarch/Assertions.h"
@@ -18,55 +20,50 @@
 #if defined(SharedOMP)
 
 
+
 namespace {
   static tarch::logging::Log _log( "tarch::multicore::native(omp)" );
 
-  using DependencyTrackingDataType = unsigned short int;
-
   #ifndef DefaultSizeOfMemoryRegionUsedForDependencyTracking
-  constexpr int DefaultSizeOfMemoryRegionUsedForDependencyTracking = 16;
+  constexpr int DefaultSizeOfMemoryRegionUsedForDependencyTracking = 16000;
   #endif
 
   /**
-   * In OpenMP, dependencies of tasks can, by default, only be used to specify
-   * dependencies between children and descendants of the same task. That is,
-   * if we have to siblings A and B and both spawn complex DAGs, these DAGs
-   * cannot have dependencies. It seems to work sometimes, but notably not if
-   * B kicks off way after A terminates (e.g. as they sit in different
-   * traversals).
+   * Initialisation value for entries in dependencyTrackingBaseAddress
    *
-   * In OpenMP 6, this will change as it introduces transparent task
-   * dependencies. Lacking transparency in most runtimes, we have to track
-   * if things are messed up manually.
+   * Consult docu of tarch::multicore::omp::internal for details.
    */
-  #if _OPENMP<202411
-  constexpr bool TransparentTaskDependenciesAreSupported = false;
-  #else
-  constexpr bool TransparentTaskDependenciesAreSupported = true;
-  #endif
+  constexpr tarch::multicore::omp::internal::DependencyTrackingDataType TaskNumberNotUsedYet = 0;
+
+  /**
+   * Initialisation value for entries in dependencyTrackingBaseAddress
+   *
+   * Consult docu of tarch::multicore::omp::internal for details.
+   */
+  constexpr tarch::multicore::omp::internal::DependencyTrackingDataType TaskNumberSpawned    = 1;
+
+  /**
+   * Initialisation value for entries in dependencyTrackingBaseAddress
+   *
+   * Consult docu of tarch::multicore::omp::internal for details.
+   */
+  constexpr tarch::multicore::omp::internal::DependencyTrackingDataType TaskNumberRunning    = 2;
+
+  /**
+   * Initialisation value for entries in dependencyTrackingBaseAddress
+   *
+   * Consult docu of tarch::multicore::omp::internal for details.
+   */
+  constexpr tarch::multicore::omp::internal::DependencyTrackingDataType TaskNumberTerminated = 3;
 
   /**
    * Memory region to administer dependencies
    *
-   *
-   * Dependency tracking in OpenMP is organised via addresses. These addresses
-   * are sole helpers, i.e. the underlying memory region doesn't hold any data
-   * with semantics. However, it has to be owned by the application code. To
-   * ensure this is the case, we allocate some chunk only for the dependency
-   * tracking and hold its baseline address in this variable.
+   * Consult docu of tarch::multicore::omp::internal for details.
    */
-  DependencyTrackingDataType* dependencyTrackingBaseAddress = new DependencyTrackingDataType[DefaultSizeOfMemoryRegionUsedForDependencyTracking](0);
+  tarch::multicore::omp::internal::DependencyTrackingDataType*  dependencyTrackingMemory = new tarch::multicore::omp::internal::DependencyTrackingDataType[DefaultSizeOfMemoryRegionUsedForDependencyTracking](TaskNumberNotUsedYet);
 
-  /**
-   * Memorize size of dependency tracking.
-   */
-  int sizeOfMemoryRegionUsedForDependencyTracking{DefaultSizeOfMemoryRegionUsedForDependencyTracking};
-
-  /**
-   * Maximal size that we'd like to have for the memory region. Is updated
-   * on-the-fly and guides decisions how to grow dependencyTrackingBaseAddress.
-   */
-  int maxSizeOfMemoryRegionUsedForDependencyTracking = DefaultSizeOfMemoryRegionUsedForDependencyTracking;
+  int dependencyTrackingMemorySize{DefaultSizeOfMemoryRegionUsedForDependencyTracking};
 
   /**
    * We need a multi-read, single-write semaphores around the dependency
@@ -81,184 +78,193 @@ namespace {
    * points where we can grow the dependency memory region.
    */
   int numberOfPendingTasks{0};
-
-  /**
-   * Update the internal stats how big the whole thing should be and then
-   * return a flag that indicates if we should grow the memory region.
-   *
-   * If the routine returns a yes, it does not mean that we can actually
-   * grow the memory. We are only allowed to do this if there are no further
-   * tasks pending. We check this here once provisionally, but it might
-   * change until we come to the point where we actually wanna grow.
-   *
-   * The last or catches the initial case.
-   */
-  void updateMemoryStatistics(int taskNumber) {
-    int requiredDependencyMemorySize = taskNumber + 1;
-
-    #pragma omp atomic compare
-    maxSizeOfMemoryRegionUsedForDependencyTracking = maxSizeOfMemoryRegionUsedForDependencyTracking<requiredDependencyMemorySize
-                                                   ? requiredDependencyMemorySize
-                                                   : maxSizeOfMemoryRegionUsedForDependencyTracking;
-  }
-
-
-  /**
-   * Can I serve a certain dependency
-   *
-   * This routine exclusively checks if an in-dependency could exist. This does
-   * not mean anything re if depending upon taskNumber might be an
-   * anti-dependency.
-   *
-   * As we know that sizeOfMemoryRegionUsedForDependencyTracking is
-   * monotonously growing, we can work with a simple read atomic.
-   *
-   */
-  bool canServeDependencyEntry(int taskNumber) {
-    return taskNumber < sizeOfMemoryRegionUsedForDependencyTracking;
-  }
-
-
-  void reserveDependencyTrackingMemory() {
-    if (maxSizeOfMemoryRegionUsedForDependencyTracking>sizeOfMemoryRegionUsedForDependencyTracking) {
-      if (dependencyTrackingBaseAddress!=nullptr) {
-        delete[] dependencyTrackingBaseAddress;
-        dependencyTrackingBaseAddress = nullptr;
-        logInfo( "canServeDependencyEntry(int)", "free preallocated memory for task dependency management" );
-      }
-
-      dependencyTrackingBaseAddress = new DependencyTrackingDataType[maxSizeOfMemoryRegionUsedForDependencyTracking](0);
-      logInfo( "canServeDependencyEntry(int)", "allocated memory for task dependency management for up to " << maxSizeOfMemoryRegionUsedForDependencyTracking << " tasks" );
-
-      sizeOfMemoryRegionUsedForDependencyTracking = maxSizeOfMemoryRegionUsedForDependencyTracking;
-    }
-  }
-
-
-  /**
-   * Grow memory for dependency tracking if required
-   *
-   */
-  void tryToReserveDependencyTrackingMemory() {
-    tarch::multicore::MultiReadSingleWriteSemaphore::Lock optimisticLock(dependencyTrackingSemaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read);
-
-    bool currentNumberOfPendingTasks;
-
-    #pragma omp atomic read
-    currentNumberOfPendingTasks = numberOfPendingTasks;
-
-    const bool tryToIncreaseMemory = currentNumberOfPendingTasks==0
-                                 and maxSizeOfMemoryRegionUsedForDependencyTracking>sizeOfMemoryRegionUsedForDependencyTracking;
-
-    optimisticLock.free();
-
-    if (tryToIncreaseMemory) {
-      tarch::multicore::MultiReadSingleWriteSemaphore::Lock conservativeLock(dependencyTrackingSemaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Write,false);
-
-      bool currentNumberOfPendingTasks;
-
-      #pragma omp atomic read
-      currentNumberOfPendingTasks = numberOfPendingTasks;
-
-      if (currentNumberOfPendingTasks==0) {
-        reserveDependencyTrackingMemory();
-      }
-    }
-  }
 } // empty (internal) namespace
 
 
+std::string tarch::multicore::omp::internal::OpenMP5TaskStatus(DependencyTrackingDataType taskMarker) {
+  switch (taskMarker) {
+    case TaskNumberNotUsedYet:
+      return "task-number-not-used-yet";
+    case TaskNumberSpawned:
+      return "task-spawned";
+    case TaskNumberRunning:
+      return "task-running";
+    case TaskNumberTerminated:
+      return "task-terminated";
+
+  }
+  return "<undef>";
+}
 
 
-/**
- * Native mapping of a task loop onto a task loop
- *
- *
- * ## Observations
- *
- * I found that quite a lot of OpenMP implementations realise the taskwait at the
- * end as busy wait. This is totally annoying as it might lead to deadlocks whenever
- * a task has a taskyield internally and/or there are more tasks than threads.
- *
- *
- * ## NVIDIA
- *
- * NVIDIA's nvc++ does not support taskloops. We have contacted their R&D and they
- * confirmed that they only implement a subset of OpenMP, and the taskloop is not
- * on the list of features that they want to support.
- *
- *
- * ## Implementation and bugs
- *
- * See discussion in the context of the other taskloop: It is important to
- * label tasks as shared even though I think copying should be fine as a copy
- * degenerates to a shallow copy.
- *
- * You are not allowed to call this routine for an empty task
- * set. The empty task set means that the taskloop construct becomes nop. The
- * subsequent taskwait hence synchronises on one logical level above within the
- * task hierarchy, which is not what we want.
- *
- *
- * ## SmartMPI (legacy)
- *
- * I used to insert the fragment
- *
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * #ifdef UseSmartMPI
- * tarch::timing::Watch taskWaitTime("spawnAndWaitAsTaskLoop", "taskwait", false);
- * #endif
- *
- * #pragma omp taskwait
- *
- * #ifdef UseSmartMPI
- * taskWaitTime.stop();
- * smartmpi::reportWaitTime(taskWaitTime.getCPUTime(), tarch::mpi::Rank::getInstance().getRank());
- * #endif
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- *
- * but as we don't use SmartMPI anymore atm, I'm not sure anymore if this is a
- * good solution, so I removed it for the time being to make the code more
- * readable.
- */
+bool tarch::multicore::omp::internal::hasTaskFinishedInOpenMP5( const std::vector<tarch::multicore::TaskNumber>&  inDependencies ) {
+  bool result = true;
+
+  for (auto i: inDependencies) {
+    if (i<dependencyTrackingMemorySize) {
+      auto& dest = dependencyTrackingMemory[ i ];
+      tarch::multicore::TaskNumber taskStatus;
+
+      #pragma omp atomic read
+      taskStatus = dest;
+
+      result &= (taskStatus == TaskNumberNotUsedYet or taskStatus == TaskNumberTerminated);
+    }
+  }
+
+  return result;
+}
+
+
+void tarch::multicore::omp::internal::spawnTaskWithOpenMP6(
+  tarch::multicore::Task*                           job,
+  const std::vector<tarch::multicore::TaskNumber>&  inDependencies,
+  const std::vector<tarch::multicore::TaskNumber>&  outDependency
+) {
+  assertion1( tarch::multicore::omp::majorOpenMPVersion()>=6, tarch::multicore::omp::majorOpenMPVersion() );
+
+  #if _OPENMP>=202411
+    #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), inout: dependencyTrackingMemory[outDependency[j]]) untied transparent
+    {
+      OTTER_TASK_START(task);
+      job->run();
+      delete job;
+      OTTER_TASK_END();
+      #pragma omp atomic
+      numberOfPendingTasks--;
+    }
+  #else
+    assertionMsg(false, "should not be called")
+  #endif
+}
+
+
+void tarch::multicore::omp::internal::spawnTaskWithOpenMP5(
+  tarch::multicore::Task*                           job,
+  std::vector<tarch::multicore::TaskNumber>         inDependencies,
+  const std::vector<tarch::multicore::TaskNumber>&  outDependency
+) {
+  assertion1( tarch::multicore::omp::majorOpenMPVersion()<6, tarch::multicore::omp::majorOpenMPVersion() );
+  assertion1( outDependency.size()<2, outDependency.size() );
+
+  if (not outDependency.empty()) {
+    auto p = inDependencies.begin();
+    while (p!=inDependencies.end()) {
+      if (*p==outDependency[0]) {
+        logDebug( "spawnTaskWithOpenMP5(...)", "manually wait for predecessor to terminate, as we cannot handle inout dependencies in task runtime" );
+
+        std::vector<tarch::multicore::TaskNumber> selfDependency(1);
+        selfDependency[0] = outDependency[0];
+
+        // Polling thread
+        bool isReady;
+        do {
+          isReady = hasTaskFinishedInOpenMP5(selfDependency);
+        } while (not isReady);
+
+        p = inDependencies.erase(p);
+      }
+      else p++;
+    }
+
+    auto& dest = dependencyTrackingMemory[ outDependency[0] ];
+    #pragma omp atomic write
+    dest = TaskNumberSpawned;
+
+    logDebug( "spawnTaskWithOpenMP5(...)", "set task status " << outDependency[0] << " to spawned" );
+  }
+
+  // #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), out: dependencyTrackingMemory[outDependency[j]]) firstprivate(inDependencies,outDependency,job) shared(numberOfPendingTasks,dependencyTrackingMemory) untied
+  #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), out: dependencyTrackingMemory[outDependency[j]]) untied
+  {
+    // Polling thread
+    bool isReady;
+    do {
+      isReady = hasTaskFinishedInOpenMP5(inDependencies);
+    } while (not isReady);
+
+    auto& dest = dependencyTrackingMemory[ outDependency[0] ];
+
+    assertion1( dest==TaskNumberSpawned, OpenMP5TaskStatus(dest) );
+
+    if (not outDependency.empty()) {
+      #pragma omp atomic write
+      dest = TaskNumberRunning;
+    }
+
+    OTTER_TASK_START(task);
+    job->run();
+    delete job;
+    OTTER_TASK_END();
+
+    logDebug( "spawnTaskWithOpenMP5(...)", "mark task " << outDependency[0] << " as complete" );
+    if (not outDependency.empty()) {
+      #pragma omp atomic write
+      dest = TaskNumberTerminated;
+    }
+
+    #pragma omp atomic
+    numberOfPendingTasks--;
+  }
+}
+
+
+void tarch::multicore::omp::internal::reserveDependencyTrackingMemory( int taskNumber ) {
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock optimisticLock(dependencyTrackingSemaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read);
+  bool mightHaveToGrow = taskNumber>=dependencyTrackingMemorySize;
+  optimisticLock.free();
+
+  if (mightHaveToGrow) {
+    tarch::multicore::MultiReadSingleWriteSemaphore::Lock conservativeLock(dependencyTrackingSemaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Write);
+    if (taskNumber>=dependencyTrackingMemorySize) {
+      int volatile currentNumberOfPendingTasks = 1;
+
+      while (currentNumberOfPendingTasks>0) {
+        #pragma omp taskyield
+
+        #pragma omp atomic read
+        currentNumberOfPendingTasks = numberOfPendingTasks;
+      }
+
+      int oldSize = dependencyTrackingMemorySize;
+
+      #pragma omp atomic write
+      dependencyTrackingMemorySize = (taskNumber+1)*2;
+
+      logInfo( "reserveDependencyTrackingMemory(int)", "allocated memory for task dependency management for up to " << (dependencyTrackingMemorySize+1) << " tasks (previously max " << oldSize << ")" );
+
+      dependencyTrackingMemory = new tarch::multicore::omp::internal::DependencyTrackingDataType[dependencyTrackingMemorySize](TaskNumberNotUsedYet);
+    }
+  }
+}
+
+
 void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
   assertion(not tasks.empty());
 
 #if defined(UseOtter)
-  auto otter_tasks = std::vector<otter_task_context*>();
+  aacuto otter_tasks = std::vector<otter_task_context*>();
   for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
     otter_tasks.push_back(otterTaskInitialise(OTTER_NULL_TASK, -1, otter_no_add_to_pool, true, OTTER_SOURCE_LOCATION(), __func__));
   }
 #endif
 
-  #if defined(OpenMPTaskGroup) and defined(OpenMP6Syntax)
+  #if defined(OpenMPTaskGroup) and _OPENMP>=202411
   #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) untied transparent
-  #elif defined(OpenMPTaskGroup) and !defined(OpenMP6Syntax)
+  #elif defined(OpenMPTaskGroup)
   #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) untied
   #endif
   for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
-    #if !defined(OpenMPTaskGroup) and defined(OpenMP6Syntax)
+    #if !defined(OpenMPTaskGroup) and _OPENMP>=202411
     #pragma omp task priority(tarch::multicore::Task::DefaultPriority) transparent
-    #elif !defined(OpenMPTaskGroup) and !defined(OpenMP6Syntax)
+    #elif !defined(OpenMPTaskGroup)
     #pragma omp task priority(tarch::multicore::Task::DefaultPriority)
     #endif
     {
-      #pragma omp atomic
-      numberOfPendingTasks++;
-
       OTTER_TASK_START(otter_tasks[i]);
       tasks[i]->run();
       delete tasks[i];
-
-      // @todo This does not work if there are no children tasks
-      if (TransparentTaskDependenciesAreSupported) {
-        #pragma omp taskwait
-      }
-
       OTTER_TASK_END();
-
-      #pragma omp atomic
-      numberOfPendingTasks--;
     }
   }
 
@@ -266,8 +272,6 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
   #pragma omp taskwait // Wait for all elements from tasks to complete
                        // do not wait for the children of tasks
   OTTER_TASK_WAIT_END();
-
-  tryToReserveDependencyTrackingMemory();
 }
 
 
@@ -276,83 +280,47 @@ void tarch::multicore::native::spawnTask(
   const std::set<TaskNumber>&  inDependencies,
   const TaskNumber&            taskNumber
 ) {
-  updateMemoryStatistics(taskNumber);
+  tarch::multicore::omp::internal::reserveDependencyTrackingMemory(taskNumber);
 
-  // ensure we do not alter dependency memory while we spawn
+  #pragma omp atomic
+  numberOfPendingTasks++;
+
   tarch::multicore::MultiReadSingleWriteSemaphore::Lock optimisticLock(dependencyTrackingSemaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read);
 
   // Administer in-dependencies
   std::vector<TaskNumber>  iterableExistingInDepencencies;
   iterableExistingInDepencencies.reserve( inDependencies.size()+1 );
   for (auto inTask: inDependencies) {
-    if ( canServeDependencyEntry(inTask) ) {
+    if ( tarch::multicore::omp::internal::canServeDependencyEntry(inTask) ) {
       iterableExistingInDepencencies.push_back(inTask);
     }
   }
 
-  if (taskNumber == NoOutDependencies) {
-    logDebug( "spawnTask(...)", "fire totally independent task with " << iterableExistingInDepencencies.size() << " in dependencies" );
+  std::vector<TaskNumber>  iterableOutDepencencies( taskNumber == NoOutDependencies ? 0 : 1 );
+  if (taskNumber != NoOutDependencies) iterableOutDepencencies[0] = taskNumber;
 
-    #pragma omp atomic
-    numberOfPendingTasks++;
+  logDebug(
+    "spawnTask(...)",
+    "fire task " << taskNumber <<
+    " with " << iterableOutDepencencies.size() << " outgoing task dependencies and incoming dependencies " << toString(inDependencies) <<
+    " out of which " << iterableExistingInDepencencies.size() << " can be served"
+  );
 
-    if (not TransparentTaskDependenciesAreSupported) {
-      #pragma omp taskwait
-    }
+  OTTER_DEFINE_TASK(task, otterGetActiveTask(), otter_no_add_to_pool, __func__);
 
-    OTTER_DEFINE_TASK(task, otterGetActiveTask(), otter_no_add_to_pool, __func__);
-    #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) untied
-    {
-      OTTER_TASK_START(task);
-      job->run();
-      delete job;
-      OTTER_TASK_END();
-      #pragma omp atomic
-      numberOfPendingTasks--;
-    }
-  }
-  else if ( canServeDependencyEntry(taskNumber)) {
-    logDebug(
-      "spawnTask(...)",
-      "fire task " << taskNumber <<
-      " with outgoing task dependency and " << iterableExistingInDepencencies.size() <<
-      " incoming dependencies (max no=" << maxSizeOfMemoryRegionUsedForDependencyTracking <<
-      ")"
+  if (tarch::multicore::omp::majorOpenMPVersion()>=6) {
+    tarch::multicore::omp::internal::spawnTaskWithOpenMP6(
+      job,
+      iterableExistingInDepencencies,
+      iterableOutDepencencies
     );
-
-    #pragma omp atomic
-    numberOfPendingTasks++;
-
-    OTTER_DEFINE_TASK(task, otterGetActiveTask(), otter_no_add_to_pool, __func__);
-    // Please consult canServeDependencyEntry() for this critical section
-    #if defined(OpenMP6Syntax)
-    #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) depend(inout: dependencyTrackingBaseAddress[taskNumber]) untied transparent
-    #else
-    #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) depend(inout: dependencyTrackingBaseAddress[taskNumber]) untied
-    #endif
-    {
-      OTTER_TASK_START(task);
-      job->run();
-      delete job;
-      OTTER_TASK_END();
-      #pragma omp atomic
-      numberOfPendingTasks--;
-    } // end of critical section, i.e. now memory region might change again
   }
   else {
-    logDebug(
-      "spawnTask(...)",
-      "cannot administer outgoing task number " << taskNumber <<
-      " and hence execute immediately after blocking wait for " << iterableExistingInDepencencies.size() <<
-      " incoming dependencies (max no=" << maxSizeOfMemoryRegionUsedForDependencyTracking << ")"
+    tarch::multicore::omp::internal::spawnTaskWithOpenMP5(
+      job,
+      iterableExistingInDepencencies,
+      iterableOutDepencencies
     );
-    OTTER_TASK_WAIT_START(children); //! (AT) Note - otter doesn't currently support taskwait with dependencies
-
-    #pragma omp taskwait depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]])
-
-    OTTER_TASK_WAIT_END();
-    job->run();
-    delete job;
   }
 }
 
@@ -365,23 +333,40 @@ void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDepend
   std::vector<TaskNumber>  iterableExistingInDepencencies;
   iterableExistingInDepencencies.reserve( inDependencies.size() );
   for (auto inTask: inDependencies) {
-    if ( canServeDependencyEntry(inTask) ) {
+    if ( tarch::multicore::omp::internal::canServeDependencyEntry(inTask) ) {
       iterableExistingInDepencencies.push_back(inTask);
     }
   }
 
-  if (not iterableExistingInDepencencies.empty()) {
-    logDebug( "waitForTasks(...)", "wait for "<< iterableExistingInDepencencies.size() << " tasks to terminate: " << iterableExistingInDepencencies[0] );
+  if (not iterableExistingInDepencencies.empty() and tarch::multicore::omp::majorOpenMPVersion()>=6) {
+    logDebug( "waitForTasks(...)", "wait for "<< iterableExistingInDepencencies.size() << " tasks to terminate. Original in-set=" << toString(inDependencies) );
+
     OTTER_TASK_WAIT_START(children); //! (AT) Note - otter doesn't currently support taskwait with dependencies
-    #pragma omp taskwait depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]])
+
+    #pragma omp taskwait depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingMemory[iterableExistingInDepencencies[j]])
+    //#pragma omp task depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingMemory[iterableExistingInDepencencies[j]]) if (0)
+    //{}
+
     OTTER_TASK_WAIT_END();
+  }
+
+  if (tarch::multicore::omp::majorOpenMPVersion()<6 and not iterableExistingInDepencencies.empty()) {
+    logDebug( "waitForTasks(...)", "tasks " << toString(inDependencies) << " might have been spawned by non-sibling. Better check manually if they have terminated" );
+    bool isReady;
+    do {
+      isReady = tarch::multicore::omp::internal::hasTaskFinishedInOpenMP5(iterableExistingInDepencencies);
+    } while (not isReady);
   }
 }
 
 
 void tarch::multicore::native::waitForAllTasks() {
   #pragma omp taskwait
-
-  reserveDependencyTrackingMemory();
 }
+\
+
+bool tarch::multicore::omp::internal::canServeDependencyEntry(int taskNumber) {
+  return taskNumber < dependencyTrackingMemorySize;
+}
+
 #endif

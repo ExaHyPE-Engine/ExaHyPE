@@ -406,7 +406,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::vector<Task*>& o
   for (int i = 0; i < patchData.numberOfCells; i++) {
     // Delete reconstructed data which has been allocated before spawning the tasks.
     tarch::freeMemory(patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(
+      patchData.id[i],
+      _numberOfResultValues,
+      patchData.QOut[i],
+      patchData.maxEigenvalue[i],
+      patchData.cellCentre[i],
+      patchData.cellSize[i]
+    );
   }
 }
 

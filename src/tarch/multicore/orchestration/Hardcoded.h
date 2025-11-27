@@ -43,8 +43,12 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
     static Hardcoded* createNative();
 
     /**
+     * Always fuse all tasks possible
+     *
      * Create a strategy where tasks are always fused if possible given the
-     * configuration constraints.
+     * configuration constraints. This variant is very similar to
+     * AllOnGPU, but it ties the fusion to one device rather than trying to
+     * keep all devices busy in a round-robin fashion.
      *
      * @param numberOfTasksToFuse The remaining tasks(<numberOfTasksToFuse) will
      *   remain stuck in the background queue and will stay there until processed
@@ -56,7 +60,7 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
      * @param targetDevice Non-negative number or tarch::multicore::Task::Host.
      */
     static Hardcoded* createFuseAll(
-      int numberOfTasksToFuse, bool fuseImmediately, bool processTasksWhileWaitingInBSPArea, int targetDevice
+      int numberOfTasksToFuse, int targetDevice
     );
 
     static constexpr int                       NoNestedParallelism = 1;
