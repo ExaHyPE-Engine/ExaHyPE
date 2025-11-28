@@ -58,6 +58,15 @@
  *   partitioning instructions following a rulebook. This version allows you
  *   to create a reproducible load balancing scheme or to manually determine
  *   the splitting.
+ *   \n
+ *   Offline helpers (see @ref page_toolbox_loadbalancing_api) yield four lists:
+ *   gridSweeps, splittingTrees, numberOfCells, subTrees (subtree ids).
+ *   Interpretation:
+ *   - gridSweeps = base_sweep * target_subtree_id (even numbers if base_sweep=2).
+ *   - splittingTrees = unique parent subtree at earliest appearance level, or 0 if ambiguous.
+ *   - numberOfCells = count of cells of that subtree on its earliest appearance level only.
+ *   - subTrees = subtree identifiers; you must map them to destinationRanks for the constructor.
+ *   Later descendants are assumed to “appear” automatically after the split and are not counted again.
  * - toolbox::loadbalancing::strategies::SpreadOut Ensure that, if the problem is large
  *   enough, each thread on each rank gets one partition.
  * - toolbox::loadbalancing::strategies::SpreadOutHierarchically This strategy is very

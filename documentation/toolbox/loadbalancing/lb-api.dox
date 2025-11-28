@@ -63,6 +63,28 @@ Stage II ensures that parent nodes whose children all belong to the same subtree
 
 This refined splitting method ensures effective load balancing throughout the entire tree structure.
 
+### Hardcoded parameter extraction (offline replay)
+
+The helper [`SplitTrees.extract_hardcoded_split_parameters`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py) returns four lists:
+`(gridSweeps, splittingTrees, numberOfCells, subTrees)` to feed into [`toolbox::loadbalancing::strategies::Hardcoded`](src/toolbox/loadbalancing/strategies/Hardcoded.h).
+
+Semantics (non-leaf-centric):
+- `gridSweeps`: `base_sweep * target_subtree_id` (even numbers if base_sweep=2).
+- `splittingTrees`: unique parent subtree id at earliest appearance level
+- `numberOfCells`: count of cells with the target subtree id on the earliest level where it first appears (ignores deeper descendants created later).
+- `subTrees`: actual subtree ids introduced; must be mapped to destination MPI ranks when constructing the hardcoded strategy (they are not ranks).
+
+Example constructor usage (C++):
+```
+toolbox::loadbalancing::strategies::Hardcoded(
+  {2,4},        // gridSweeps
+  {0,0},        // splittingTrees
+  {44,45},      // numberOfCells
+  {1,2},        // destinationRanks (mapped from subTrees)
+  peano4::SplitInstruction::Mode::BottomUp
+);
+```
+
 ### Future Extensions
 Planned development includes:
 - **Hierarchical Strategies**: Multi-level splitting approaches with cost optimization
