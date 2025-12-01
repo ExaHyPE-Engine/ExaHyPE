@@ -16,7 +16,12 @@ import shutil
 
 parser = argparse.ArgumentParser(description="SPH test script")
 parser.add_argument(
-    "-j", "--parallel-builds", dest="j", type=int, default=-1, help="Parallel builds"
+    "-j",
+    "--parallel-builds",
+    dest="j",
+    type=int,
+    default=-1,
+    help="Parallel builds",
 )
 parser.add_argument(
     "-v",
@@ -74,9 +79,17 @@ parser.add_argument(
     help="Value of the CFL constant",
 )
 parser.add_argument(
-    "-cs",
-    "--cell-size",
-    dest="cell_size",
+    "-csmax",
+    "--cell-size-max",
+    dest="cell_size_max",
+    type=float,
+    default=0.3,
+    help="Cell size (default 0.3)",
+)
+parser.add_argument(
+    "-csmin",
+    "--cell-size-min",
+    dest="cell_size_min",
     type=float,
     default=0.3,
     help="Cell size (default 0.3)",
@@ -113,6 +126,15 @@ parser.add_argument(
     choices=sphtools.sph_kernel_list,
     help="SPH kernel function to use.",
 )
+parser.add_argument(
+    "-t",
+    "--trees",
+    dest="trees",
+    default=0,
+    type=int,
+    help="Number of trees (subdomains) (0 uses all threads)",
+)
+
 args = parser.parse_args()
 
 
@@ -142,9 +164,8 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     initial_time_step_size=args.timestep_size,
     constant_time_step_size=True,
     swift_project_namespace=project_namespace,
-    particles_per_cell=20,
-    min_h=args.cell_size,
-    max_h=args.cell_size,
+    min_h=args.cell_size_min,
+    max_h=args.cell_size_max,
 )
 
 
@@ -188,9 +209,19 @@ KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 
 
 # Additional Particle Parameters -----------------------------------------------
+depth = 0
+cellsize = domain_size[0]
+while cellsize > args.cell_size_min:
+    cellsize /= 3.0
+    depth += 1
+    if depth == 100:
+        raise ValueError("Suspicious depth")
+
 dx = domain_size[0] / args.particle_number
-hydro_H_max = 20.0 * dx
-hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
+hydro_H_max = 0.499 * cellsize
+if hydro_H_max < 5.0 * dx:
+    raise ValueError("Too small hydro_H_max", 5.0 * dx, hydro_H_max)
+hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_interaction_radius(
     hydro_H_max, kernel, hydro_dimensions
 )
 
@@ -238,11 +269,28 @@ project.set_global_simulation_parameters(
     plotter_precision=8,
 )
 
+# Choose realisation
+parallelisation = "domain-decomposition"
+#  parallelisation = "task-graph"
+#  parallelisation = "multisweep-task-graph"
+storage = "scattered"
+#  storage = "continuous-per-vertex"
+#  storage = "global-continuous"
+sorting = "multiscale-sort"
+#  sorting = "bucket-sort"
+kernel_optimisation = "no-optimisation"
+project.set_realisation(
+    parallelisation=parallelisation,
+    storage=storage,
+    sorting=sorting,
+    kernel_optimisation=kernel_optimisation,
+)
+
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(
     "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-    "new toolbox::loadbalancing::DefaultConfiguration()",
+    f"new toolbox::loadbalancing::DefaultConfiguration({args.trees})",
 )
 
 
@@ -255,7 +303,6 @@ project.algorithm_step_initial_conditions.add_action_set(
         particle_set=particle_set, filename="sodShock.hdf5"
     )
 )
-
 
 ###############################################################################
 # Set up the plotter

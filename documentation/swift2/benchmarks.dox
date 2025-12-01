@@ -13,9 +13,11 @@ configuration for Peano. See @ref section_compile_swift2_with_hdf5.
 
 
 - Hydro benchmarks
-  - \subpage benchmarks_swift2_hydro_noh_imposion_test_2D
-  - \subpage benchmarks_swift2_hydro_noh_imposion_test_3D
+  - \subpage benchmarks_swift2_hydro_noh_implosion_test_2D
+  - \subpage benchmarks_swift2_hydro_noh_implosion_test_3D
   - \subpage benchmarks_swift2_hydro_kernel_throughput
+  - \subpage benchmarks_swift2_hydro_noh_celldepth_test_2D
+  - \subpage benchmarks_swift2_hydro_noh_celldepth_test_3D
 - Other benchmarks
 
  */

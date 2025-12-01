@@ -111,7 +111,7 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
         "selectNextAlgorithmicStep()",
         "h_min=" << tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <<
         ", which his smaller than global h_max=" << GlobalMaxH <<
-        ". Continue with load balancing "
+        ". Continue with load balancing even though mesh would, in principle, already be sufficient to host all particles"
       );
     }
     if (

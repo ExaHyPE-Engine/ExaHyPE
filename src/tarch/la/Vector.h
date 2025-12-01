@@ -192,10 +192,18 @@ public:
    *
    * We do not allow assignment of a vector this itself. Consequently, we can
    * insert an ivdep statement and thus allow the compiler to optimise.
+   *
+   * This method can't just be default because it breaks vectorisation of code that uses Vector:
+   *    - Clang 20: remark: loop not vectorized: call instruction cannot be vectorized [-Rpass-analysis]
+   *    - GCC 15: missed: not vectorized: more than one data ref in stmt
    */
-  inline Vector<Size, Scalar>& operator=(const Vector<Size, Scalar>& toAssign
-  ) InlineMethod
-    = default;
+  inline Vector<Size, Scalar>& operator=(const Vector<Size, Scalar>& toAssign) {
+    #pragma unroll
+    for (int i = 0; i < Size; i++) {
+        _values[i] = toAssign._values[i];
+    }
+    return *this;
+  };
 
   /**
    * Copy constructor to copy from any vector type.
@@ -204,8 +212,15 @@ public:
    * dummy argument with default value, which is (hopefully) optimized away.
    *
    * @see operator= for a discussion of SSE optimisation.
+   *
+   * remark: loop not vectorized: call instruction cannot be vectorized [-Rpass-analysis]
    */
-  Vector(const Vector<Size, Scalar>& toCopy) = default;
+  Vector(const Vector<Size, Scalar>& toCopy) InlineMethod
+  = default;
+
+//#pragma unroll
+//    for (int i = 0; i < Size; i++) _values[i] = toCopy._values[i];
+//  }
 
   /**
    * Returns the number of components of the vector.

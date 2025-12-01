@@ -197,6 +197,18 @@ namespace tarch {
          * - The dependencyTrackingBaseAddress array hosts all indices specified
          *   within inDependencies and outDependency;
          * - The semaphore dependencyTrackingSemaphore is locked with a read lock.
+         * 
+         * ## Issues we found
+
+         * It is possible that many threads spawn tasks at the same time that have
+         * to wait for other tasks that are currently stored in the ready queue.
+         * As we poll the ready queue state, this can lead to starvation.
+         *
+         * To avoid this we add a taskyield if an
+         * in-dependency isn't ready. This moves the thread onto a different task,
+         * so it will eventually end up with one that is ready to process. This
+         * can also occur in waitForTasks(...), and the problem is dealt with in the
+         * same way. 
          */
         void spawnTaskWithOpenMP5(
           tarch::multicore::Task*                           job,

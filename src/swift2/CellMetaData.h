@@ -25,25 +25,36 @@ namespace swift2 {
  * each individual piece of source code.
  */
 struct swift2::CellMetaData {
+
   private:
     static std::vector<int> _dummyNumberOfCoalescedActiveParticlesPerVertex;
   public:
     const peano4::datamanagement::CellMarker&  marker;
     const std::vector<int>&                    numberOfCoalescedLocalParticlesPerVertex;
     const std::vector<int>&                    numberOfCoalescedActiveParticlesPerVertex;
-    const std::vector<bool>&                   localParticleIsContainedInCell;
+    const std::vector<char>&                   localParticleIsContainedInCell;
 
     CellMetaData() = delete;
 
-    CellMetaData(
-      const peano4::datamanagement::CellMarker&  marker,
-      const std::vector<int>&                    numberOfCoalescedLocalParticlesPerVertex,
-      const std::vector<int>&                    numberOfCoalescedActiveParticlesPerVertex,
-      const std::vector<bool>&                   localParticleIsContainedInCell
-    );
+    inline CellMetaData(
+      const peano4::datamanagement::CellMarker&  marker_,
+      const std::vector<int>&                    numberOfCoalescedLocalParticlesPerVertex_,
+      const std::vector<int>&                    numberOfCoalescedActiveParticlesPerVertex_,
+      const std::vector<char>&                   localParticleIsContainedInCell_
+    ):
+      marker(marker_),
+      numberOfCoalescedLocalParticlesPerVertex(numberOfCoalescedLocalParticlesPerVertex_),
+      numberOfCoalescedActiveParticlesPerVertex(numberOfCoalescedActiveParticlesPerVertex_),
+      localParticleIsContainedInCell(localParticleIsContainedInCell_) {
+    }
 
-    CellMetaData(
-      const peano4::datamanagement::CellMarker&  marker,
-      const std::vector<bool>&                   localParticleIsContainedInCell
-    );
+    inline CellMetaData(
+      const peano4::datamanagement::CellMarker&  marker_,
+      const std::vector<char>&                   localParticleIsContainedInCell_
+    ):
+      marker(marker_),
+      numberOfCoalescedLocalParticlesPerVertex(_dummyNumberOfCoalescedActiveParticlesPerVertex),
+      numberOfCoalescedActiveParticlesPerVertex(_dummyNumberOfCoalescedActiveParticlesPerVertex),
+      localParticleIsContainedInCell(localParticleIsContainedInCell_) {
+    }
 };

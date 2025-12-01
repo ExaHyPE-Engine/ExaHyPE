@@ -14,9 +14,8 @@ import shutil
 # Parse user input
 ########################################################################################
 
-
-Kernels = [ "drift", "kick1", "kick2", "density", "force" ]
-
+Kernels_GPU = ["drift_gpu", "kick1_gpu", "kick2_gpu", "density_gpu", "force_gpu"]
+Kernels = [ "drift", "kick1", "kick2", "density", "force" ] + Kernels_GPU
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SPH kernel benchmarking script")
@@ -115,18 +114,25 @@ if __name__ == "__main__":
         help="Pick kernels that have to be tested",
     )
     parser.add_argument(
+        "--cpu-only",
+        dest="cpu_only",
+        action="store_true",
+        default=False,
+        help="Run only CPU benchmarks",
+    )
+    parser.add_argument(
+        "--gpu-only",
+        dest="gpu_only",
+        action="store_true",
+        default=False,
+        help="Run only GPU benchmarks",
+    )
+    parser.add_argument(
         "--enable-soa-conversion",
         dest="soa_conversion",
         choices=['true', 'false', 'ignore'],
         default='ignore',
         help="Enable compiler-driver AoS to SoA conversions. Triggers adding flags to the compiler call, while ignore adds nothing and can therefore be used with unpatched compilers, too"
-    )
-    parser.add_argument(
-        "--enable-soa-offload",
-        dest='soa_offload',
-        choices=['true', 'false'],
-        default='false',
-        help="Enable OpenMP offload for converted kernels - you still must ensure OpenMP flags are set up correctly!",
     )
     parser.add_argument(
         "--validate",
@@ -293,8 +299,6 @@ if __name__ == "__main__":
         peano4_project.output.makefile.add_CXX_flag("-fno-soa-conversion-attributes")
     else:
         pass # do not add any flags that an unsuspecting compiler might be unaware of
-    if args.soa_offload == 'true':
-        peano4_project.output.makefile.add_CXX_flag("-DSOA_OFFLOAD")
 
     peano4_project.output.makefile.add_cpp_file( "NohProblem.cpp" )
 
@@ -304,8 +308,16 @@ if __name__ == "__main__":
     peano4_project.constants.export_const_with_type("Benchmark_WorkItemSize", str(args.work_item_size), "int")
     peano4_project.constants.export_const_with_type("Benchmark_WorkItemRepeats", str(args.work_item_repeats), "int")
 
+    cpu_only = args.cpu_only
+    gpu_only = args.gpu_only
+
+    if cpu_only and gpu_only:
+        print("Can't have both 'cpu only' and 'gpu only'. Pick one!")
+        exit(1)
+
     for kernel in Kernels:
-      peano4_project.constants.export_boolean("Benchmark_Test" + kernel, kernel in args.kernels )
+      enabled = (cpu_only and 'gpu' not in kernel) or (gpu_only and 'gpu' in kernel) or (not cpu_only and not gpu_only)
+      peano4_project.constants.export_boolean("Benchmark_Test" + kernel, enabled and kernel in args.kernels )
 
 
 
