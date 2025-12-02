@@ -27,7 +27,7 @@ namespace exahype2 {
 
     inType* (*faces)[NumFaceTypes][TWO_TIMES_D];
     inType*   facesFlattened;
-    uint64_t* boundaryFaceIndices;
+    uint64_t* patchIndicesOfBoundaryFaces;
     uint8_t*  boundaryFaceNumbers;
 
     tarch::la::Vector<DIMENSIONS, double>* cellCentre;

@@ -181,7 +181,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   hostFacesUpdate.clear();
   hostFacesNew.clear();
 
-  std::vector<uint64_t> boundaryFaceIndices;
+  std::vector<uint64_t> patchIndicesOfBoundaryFaces;
   std::vector<uint8_t>  boundaryFaceNumbers;
 
   int patchIndex = 0;
@@ -210,7 +210,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
       facesNewDeviceToHost[deviceFaceNew]       = faceKeyNew;
 
       if (static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_isBoundary[f]) {
-        boundaryFaceIndices.push_back(deviceIndexNew);
+        patchIndicesOfBoundaryFaces.push_back(patchIndex);
         boundaryFaceNumbers.push_back(f);
       }
     }
@@ -244,28 +244,28 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     facesNewDeviceToHost[deviceFaceNew]       = faceKeyNew;
 
     if (_isBoundary[f]) {
-        boundaryFaceIndices.push_back(deviceIndexNew);
+        patchIndicesOfBoundaryFaces.push_back(patchIndex);
         boundaryFaceNumbers.push_back(f);
       }
   }
-
-  patchData.boundaryFaceIndices   = tarch::accelerator::MemoryManager::getInstance().allocate<uint64_t>(boundaryFaceIndices.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-  patchData.boundaryFaceNumbers   = tarch::accelerator::MemoryManager::getInstance().allocate<uint8_t>(boundaryFaceNumbers.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-  patchData.facesFlattened        = deviceFacesNew;
   patchData.numberOfBoundaryFaces = boundaryFaceNumbers.size();
-  std::copy_n(
-    boundaryFaceIndices.data(),
-    boundaryFaceIndices.size(),
-    patchData.boundaryFaceIndices
-  );
-  std::copy_n(
-    boundaryFaceNumbers.data(),
-    boundaryFaceNumbers.size(),
-    patchData.boundaryFaceNumbers
-  );
-  boundaryFaceIndices.clear();
-  boundaryFaceNumbers.clear();
+  if (patchData.numberOfBoundaryFaces > 0) {
+    patchData.patchIndicesOfBoundaryFaces   = tarch::accelerator::MemoryManager::getInstance().allocate<uint64_t>(patchIndicesOfBoundaryFaces.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+    patchData.boundaryFaceNumbers   = tarch::accelerator::MemoryManager::getInstance().allocate<uint8_t>(boundaryFaceNumbers.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
 
+    std::copy_n(
+      patchIndicesOfBoundaryFaces.data(),
+      patchIndicesOfBoundaryFaces.size(),
+      patchData.patchIndicesOfBoundaryFaces
+    );
+    std::copy_n(
+      boundaryFaceNumbers.data(),
+      boundaryFaceNumbers.size(),
+      patchData.boundaryFaceNumbers
+    );
+    patchIndicesOfBoundaryFaces.clear();
+    boundaryFaceNumbers.clear();
+  }
   patchData.QInFlattened = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(
     numberOfPatches * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %},
     tarch::MemoryLocation::Pinned,
@@ -277,7 +277,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     TARGET_DEVICE
   );
 
-  kernels::{{SOLVER_NAME}}::handleBoundaryFused(repositories::{{SOLVER_INSTANCE}}, patchData, TARGET_DEVICE);
+  if (patchData.numberOfBoundaryFaces > 0) {
+    kernels::{{SOLVER_NAME}}::handleBoundaryFused(repositories::{{SOLVER_INSTANCE}}, patchData, TARGET_DEVICE);
+  }
 
   // Before swap: QIn is with halo, QOut is without halo
   // After swap: QIn is without halo, QOut is with halo (that is reconstructed as next step)
@@ -378,8 +380,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 
   tarch::accelerator::MemoryManager::getInstance().free(patchData.QInFlattened, TARGET_DEVICE);
   tarch::accelerator::MemoryManager::getInstance().free(patchData.QOutFlattened, TARGET_DEVICE);
-  tarch::accelerator::MemoryManager::getInstance().free(patchData.boundaryFaceIndices, TARGET_DEVICE);
-  tarch::accelerator::MemoryManager::getInstance().free(patchData.boundaryFaceNumbers, TARGET_DEVICE);
+  if (patchData.numberOfBoundaryFaces > 0) {
+    tarch::accelerator::MemoryManager::getInstance().free(patchData.patchIndicesOfBoundaryFaces, TARGET_DEVICE);
+    tarch::accelerator::MemoryManager::getInstance().free(patchData.boundaryFaceNumbers, TARGET_DEVICE);
+  }
   tarch::accelerator::MemoryManager::getInstance().free(deviceFacesOld, TARGET_DEVICE);
   tarch::accelerator::MemoryManager::getInstance().free(deviceFacesUpdate, TARGET_DEVICE);
   tarch::accelerator::MemoryManager::getInstance().free(deviceFacesNew, TARGET_DEVICE);
