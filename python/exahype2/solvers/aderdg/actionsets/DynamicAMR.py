@@ -27,11 +27,6 @@ class DynamicAMR(AbstractADERDGActionSet):
 
         self._Template_CreateHangingFace = """
   if ({{INTERPOLATE_GUARD}}) {
-    const double timeStamp = fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(marker.getSelectedFaceNumber() < DIMENSIONS ? 1 : 0);
-
-    // Needs to declare and define timeStepSize
-    {{COMPUTE_TIME_STEP_SIZE}}
-
     #if DIMENSIONS == 2
     constexpr int SpaceFaceSize      = {{ORDER}} + 1;
     #else

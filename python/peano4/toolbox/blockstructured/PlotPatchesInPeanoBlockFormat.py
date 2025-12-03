@@ -169,9 +169,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
 
   __Template_TouchCellFirstTime_CellPlot = """ 
-  if ( {{GUARD_PREDICATE}} ) {
-    int vertexIndices[TWO_POWER_D];
-  
+  if ( {{GUARD_PREDICATE}} ) { 
     const double PatchScaling = 1.0;
 
     assertion( _writer!=nullptr );
@@ -207,9 +205,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
 
   __Template_TouchCellFirstTime_VertexPlot = """ 
-  if ( {{GUARD_PREDICATE}} ) {
-    int vertexIndices[TWO_POWER_D];
-  
+  if ( {{GUARD_PREDICATE}} ) {  
     const double PatchScaling = 1.0;
 
     assertion( _writer!=nullptr );

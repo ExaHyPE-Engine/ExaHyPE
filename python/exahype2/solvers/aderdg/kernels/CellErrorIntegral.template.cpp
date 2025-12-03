@@ -39,9 +39,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellErrorIntegral(
   // Iterate over all quadrature points in the cell
   dfor(index, {{NUMBER_OF_DOF}}) {
 {% if DIMENSIONS==2 %}
-    double weight = cellVolume * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[0]] * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[1]];
+    const double weight = cellVolume * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[0]] * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[1]];
 {% else %}
-    double weight = cellVolume * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[0]] * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[1]] * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[2]];
+    const double weight = cellVolume * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[0]] * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[1]] * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[2]];
 {% endif %}
 
     // Compute the exact solution

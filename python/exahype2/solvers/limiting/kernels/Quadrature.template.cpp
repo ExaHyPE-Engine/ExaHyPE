@@ -4,21 +4,16 @@
 
 #include <mm_malloc.h>
 
-// Use {{POLYNOMIAL_TYPE}} quadrature
-
-template <typename T> T* {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<T>::nodes;
-template <typename T> T* {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<T>::uh2lob;
-template <typename T> T* {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<T>::dg2fv;
-template <typename T> T* {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<T>::fv2dg;
+// Using {{POLYNOMIAL_TYPE}} quadrature
 
 template class {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>;
 
 template <>
 void {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>::initQuadratureNodesAndWeights() {
   nodes     = ({{COMPUTE_PRECISION}} *) _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF_PADDED}}, {{ALIGNMENT}});
-  uh2lob    = ({{COMPUTE_PRECISION}} *) _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{uh2lobSize}}, {{ALIGNMENT}}); //nDof*nDofPad
-  dg2fv     = ({{COMPUTE_PRECISION}} *) _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{dg2fvSize}}, {{ALIGNMENT}}); //nDof*nDofLimPad
-  fv2dg     = ({{COMPUTE_PRECISION}} *) _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{fv2dgSize}}, {{ALIGNMENT}}); //nDofLim*nDofPad
+  uh2lob    = ({{COMPUTE_PRECISION}} *) _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{uh2lobSize}}, {{ALIGNMENT}}); // nDof*nDofPad
+  dg2fv     = ({{COMPUTE_PRECISION}} *) _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{dg2fvSize}}, {{ALIGNMENT}}); // nDof*nDofLimPad
+  fv2dg     = ({{COMPUTE_PRECISION}} *) _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{fv2dgSize}}, {{ALIGNMENT}}); // nDofLim*nDofPad
 
 {% for i in quadrature_seq %}
   nodes[{{i}}]     = ({{COMPUTE_PRECISION}}) {{"{:.15e}".format(QuadratureNodes[i])}};

@@ -13,15 +13,15 @@ public:
   static void initDGMatrices();
   static void freeDGMatrices();
 
-  static T* Kxi;
-  static T* Kxi_T;
-  static T* iK1_T; // Note: The generic version of iK1 is actually transposed
-  static T* dudx;
-  static T* dudx_T;
-  static T* FLCoeff;
-  static T* FRCoeff;
-  static T** fineGridProjector1d;
-  static T** fineGridProjector1d_T_weighted; // [k][i*nDof+j] = fineGridProjector1d[k][j*nDof+i] * weight[j] / weight[i] / 3.0
+  inline static T* Kxi = nullptr;
+  inline static T* Kxi_T = nullptr;
+  inline static T* iK1_T = nullptr; // Note: The generic version of iK1 is actually transposed
+  inline static T* dudx = nullptr;
+  inline static T* dudx_T = nullptr;
+  inline static T* FLCoeff = nullptr;
+  inline static T* FRCoeff = nullptr;
+  inline static T** fineGridProjector1d = nullptr;
+  inline static T** fineGridProjector1d_T_weighted = nullptr; // [k][i*nDof+j] = fineGridProjector1d[k][j*nDof+i] * weight[j] / weight[i] / 3.0
 };
 
 {% for item in NAMESPACE -%}

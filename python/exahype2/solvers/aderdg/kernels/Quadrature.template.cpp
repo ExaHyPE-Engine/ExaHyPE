@@ -4,30 +4,17 @@
 
 #include <mm_malloc.h>
 
-// Use {{POLYNOMIAL_TYPE}} quadrature
-
-template <typename T> T* {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<T>::nodes;
-template <typename T> T* {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<T>::weights1;
-template <typename T> T* {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<T>::weights2;
-template <typename T> T* {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<T>::weights3;
-template <typename T> T* {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<T>::weights4;
-template <typename T> T* {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<T>::iweights1;
-template <typename T> T* {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<T>::iweights3;
-
-{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-template class {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>;
-{% endfor %}
+// Using {{POLYNOMIAL_TYPE}} quadrature
 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 template <>
 void {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights() {
   nodes     = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) * {{NUMBER_OF_DOF_PADDED}}, {{ALIGNMENT}});
-  weights1  = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) * {{w1Size}}, {{ALIGNMENT}}); //nDofPad
-  weights2  = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) * {{w2Size}}, {{ALIGNMENT}}); //2D: nDofPad (==weight1), 3D: (nDof*nDof)Pad (== w1[i]*w1[j])
-  weights3  = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) * {{w3Size}}, {{ALIGNMENT}}); //2D: (nDof*nDof)Pad (== w1[i]*w1[j]), 3D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k])
-  weights4  = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) * {{w4Size}}, {{ALIGNMENT}}); //2D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k]), 3D: (nDof*nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k]*w1[l])
-  iweights1 = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) * {{w1Size}}, {{ALIGNMENT}}); //nDofPad
-  iweights3 = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) * {{w3Size}}, {{ALIGNMENT}}); //2D: (nDof*nDof)Pad (== w1[i]*w1[j]), 3D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k])
+  weights1  = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) * {{w1Size}}, {{ALIGNMENT}}); // nDofPad
+  weights2  = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) * {{w2Size}}, {{ALIGNMENT}}); // 2D: nDofPad (==weight1), 3D: (nDof*nDof)Pad (== w1[i]*w1[j])
+  weights3  = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) * {{w3Size}}, {{ALIGNMENT}}); // 2D: (nDof*nDof)Pad (== w1[i]*w1[j]), 3D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k])
+  iweights1 = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) * {{w1Size}}, {{ALIGNMENT}}); // nDofPad
+  iweights3 = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) * {{w3Size}}, {{ALIGNMENT}}); // 2D: (nDof*nDof)Pad (== w1[i]*w1[j]), 3D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k])
 
 {% for i in quadrature_seq %}
   nodes[{{i}}]     = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) {{"{:.15e}".format(QuadratureNodes[i])}};
@@ -45,10 +32,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION
   weights3[{{i}}]  = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) {{"{:.15e}".format(weights3[i])}};
 {% endfor %}
 
-{% for i in w4_seq %}
-  weights4[{{i}}]  = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) {{"{:.15e}".format(weights4[i])}};
-{% endfor %}
-
 {% for i in w1_seq %}
   iweights1[{{i}}] = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) {{"{:.15e}".format(iweights1[i])}};
 {% endfor %}
@@ -64,7 +47,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION
   _mm_free(weights1);
   _mm_free(weights2);
   _mm_free(weights3);
-  _mm_free(weights4);
   _mm_free(iweights1);
   _mm_free(iweights3);
 }

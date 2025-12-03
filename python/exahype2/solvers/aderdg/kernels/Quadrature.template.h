@@ -12,13 +12,12 @@ public:
   static void initQuadratureNodesAndWeights();
   static void freeQuadratureNodesAndWeights();
 
-  static T *nodes;
-  static T *weights1;
-  static T *weights2;
-  static T *weights3;
-  static T *weights4;
-  static T *iweights1;
-  static T *iweights3;
+  inline static T *nodes = nullptr;
+  inline static T *weights1 = nullptr;
+  inline static T *weights2 = nullptr;
+  inline static T *weights3 = nullptr;
+  inline static T *iweights1 = nullptr;
+  inline static T *iweights3 = nullptr;
 };
 
 {% for item in NAMESPACE -%}
