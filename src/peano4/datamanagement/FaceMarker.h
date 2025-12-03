@@ -171,17 +171,26 @@ struct peano4::datamanagement::FaceMarker {
   /**
    * Return relative position of a subface within its father face. The
    * result is from (0,1,2)^(DIMENSIONS-1)
+   *
+   * Should return the position in all directions but the normal direction
+   * of the face. I.e. if I am at the left, front, bottom position, then
+   * relative to the right face I am at the front and bottom.
+   * Therefore in 2D, if the normal is 0 it should return pos[1], and if
+   * the normal is 1 it should return pos[0].
+   * In 3D, if the normal is 0 it should return (pos[1], pos[2]), if the
+   * normal is 1 it should return (pos[0], pos[2]), it the normal is 2 it
+   * should return (pos[0], pos[1]).
    */
   INLINE_METHOD tarch::la::Vector<DIMENSIONS - 1, int> getRelativePositionWithinFatherFace() const {
-    tarch::la::Vector<DIMENSIONS - 1, int> result;
     const int                              normal = getSelectedFaceNumber() % DIMENSIONS;
-    int                                    pos    = 0;
-    for (int d = 0; d < DIMENSIONS; d++) {
-      if (d != normal) {
-        result[pos] = relativePositionWithinFatherCell[d];
-        pos++;
-      }
-    }
+    tarch::la::Vector<DIMENSIONS - 1, int> result = {
+      normal == 0 ? relativePositionWithinFatherCell[1] : relativePositionWithinFatherCell[0]
+#if DIMENSIONS == 3
+      ,
+      normal == 2 ? relativePositionWithinFatherCell[1] : relativePositionWithinFatherCell[2]
+#endif
+    };
+
     return result;
   }
 

@@ -74,20 +74,6 @@ class Quadrature(object):
             self.d["w3Size"] = len(self.d["weights3"])
             self.d["w3_seq"] = range(self.d["w3Size"])
 
-            # all combinations of three weights, written as an 1D array
-            weightsVector = [
-                QuadratureWeights[i] * QuadratureWeights[j] * QuadratureWeights[k]
-                for i in range(self.d["NUMBER_OF_DOF"])
-                for j in range(self.d["NUMBER_OF_DOF"])
-                for k in range(self.d["NUMBER_OF_DOF"])
-            ]
-            weightsVector = MathUtils.vectorPad(
-                weightsVector,
-                Architectures.get_pad_size(self.d["ARCHITECTURE"], len(weightsVector)),
-            )
-            self.d["weights4"] = weightsVector
-            self.d["w4Size"] = len(self.d["weights4"])
-            self.d["w4_seq"] = range(self.d["w4Size"])
         else:
             # all combinations of two weights, written as an 1D array
             weightsVector = [
@@ -117,25 +103,6 @@ class Quadrature(object):
             self.d["weights3"] = weightsVector
             self.d["w3Size"] = len(self.d["weights3"])
             self.d["w3_seq"] = range(self.d["w3Size"])
-
-            # all combination of four weights, written as an 1D array
-            weightsVector = [
-                QuadratureWeights[i]
-                * QuadratureWeights[j]
-                * QuadratureWeights[k]
-                * QuadratureWeights[l]
-                for i in range(self.d["NUMBER_OF_DOF"])
-                for j in range(self.d["NUMBER_OF_DOF"])
-                for k in range(self.d["NUMBER_OF_DOF"])
-                for l in range(self.d["NUMBER_OF_DOF"])
-            ]
-            weightsVector = MathUtils.vectorPad(
-                weightsVector,
-                Architectures.get_pad_size(self.d["ARCHITECTURE"], len(weightsVector)),
-            )
-            self.d["weights4"] = weightsVector
-            self.d["w4Size"] = len(self.d["weights4"])
-            self.d["w4_seq"] = range(self.d["w4Size"])
 
         # inverse of weight3
         self.d["iweights3"] = [

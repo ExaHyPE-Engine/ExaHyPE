@@ -48,11 +48,6 @@ class InitialCondition(AbstractADERDGActionSet):
     repositories::{{SOLVER_INSTANCE}}.initPointSourceLocations(repositories::{{SOLVER_INSTANCE}}.pointSourceLocation);
 {% endif %}
 
-    const double timeStamp = 0.0;
-    const double timeStepSize = 0.0;
-    {{SOLUTION_STORAGE_PRECISION}}* QNew = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
-    {{COMPUTE_NEW_TIME_STEP_SIZE}}
-
     // Relevant for tracing et al which kicks in if and only if cell has been updated
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
   }

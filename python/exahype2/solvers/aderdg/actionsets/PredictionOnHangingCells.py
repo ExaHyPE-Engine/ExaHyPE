@@ -21,14 +21,11 @@ class PredictionOnHangingCells(AbstractADERDGActionSet):
     {{COMPUTE_TIME_STEP_SIZE}}
 
 #if DIMENSIONS == 2
-    constexpr int SpaceFaceSize         = {{ORDER}} + 1;
     constexpr int SpaceBasisSize        = ({{ORDER}} + 1) * ({{ORDER}} + 1);
 #else
-    constexpr int SpaceFaceSize         = ({{ORDER}} + 1) * ({{ORDER}} + 1);
     constexpr int SpaceBasisSize        = ({{ORDER}} + 1) * ({{ORDER}} + 1) * ({{ORDER}} + 1);
 #endif
 
-    constexpr int SpaceTimeBasisSize    = SpaceBasisSize * ({{ORDER}} + 1);
     constexpr int BasisElementsPerFace  = kernels::{{SOLVER_NAME}}::getBndFaceSize();
     constexpr int FluxElementsPerFace   = kernels::{{SOLVER_NAME}}::getBndFluxSize();
 

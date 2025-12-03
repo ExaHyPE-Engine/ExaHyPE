@@ -80,10 +80,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   pCompType* gradQ = nullptr;
 {% endif %}
 
-  const pCompType* Kxi    = DGMatrices<pCompType>::Kxi;
-  const pCompType* Kxi_T  = DGMatrices<pCompType>::Kxi_T;
-  const pCompType* iK1_T  = DGMatrices<pCompType>::iK1_T;
-
   //********************
   //****** Picard ******
   //********************
@@ -291,7 +287,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   pCompType coeffVolume[{{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}] __attribute__((aligned({{ALIGNMENT}})));
   for (int i = 0; i < {{NUMBER_OF_DOF}}; i++) {
     for (int j = 0; j < {{NUMBER_OF_DOF}}; j++) {
-      coeffVolume[i * {{NUMBER_OF_DOF_PADDED}} + j] = Kxi_T[i * {{NUMBER_OF_DOF_PADDED}} + j] * timeStepSize * Quadrature<pCompType>::iweights1[i];
+      coeffVolume[i * {{NUMBER_OF_DOF_PADDED}} + j] = DGMatrices<pCompType>::Kxi_T[i * {{NUMBER_OF_DOF_PADDED}} + j] * timeStepSize * Quadrature<pCompType>::iweights1[i];
     }
   }
 
@@ -367,8 +363,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
   const double                                      timeStepSize
 ) {
   const pCompType* Kxi    = DGMatrices<pCompType>::Kxi;
-  const pCompType* iK1_T  = DGMatrices<pCompType>::iK1_T;
-
+ 
   const double invDx[DIMENSIONS] = {1.0 / cellSize[0], 1.0 / cellSize[1]
     {% if DIMENSIONS == 3 %}
       , 1.0 / cellSize[2]
@@ -634,6 +629,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
   } // t
 
   // 3: Multiply with (K1)^(-1) to get the discrete time integral of the discrete Picard iteration
+  const pCompType* iK1_T  = DGMatrices<pCompType>::iK1_T;
   pCompType sqRes = 0.0;
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     {{ m.gemm('lqi', 'rhs', 's_m_QSlice', 'new_lQi_slice',

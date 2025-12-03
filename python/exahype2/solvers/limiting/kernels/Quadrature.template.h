@@ -12,11 +12,11 @@ public:
   static void initQuadratureNodesAndWeights();
   static void freeQuadratureNodesAndWeights();
 
-  static T *nodes;
+  inline static T *nodes = nullptr;
   // Limiter projection matrices
-  static T* uh2lob;
-  static T* dg2fv;
-  static T* fv2dg;
+  inline static T* uh2lob = nullptr;
+  inline static T* dg2fv = nullptr;
+  inline static T* fv2dg = nullptr;
 };
 
 {% for item in NAMESPACE -%}

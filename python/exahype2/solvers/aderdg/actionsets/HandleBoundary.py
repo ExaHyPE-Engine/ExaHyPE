@@ -32,7 +32,6 @@ class HandleBoundary(AbstractADERDGActionSet):
     const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
     const bool isLeftFace = marker.getSelectedFaceNumber() < DIMENSIONS;
 
-    {{CORRECTOR_COMPUTATION_PRECISION}}* FIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.data() + (!isLeftFace ? 0 : FluxElementsByFace);
     {{CORRECTOR_COMPUTATION_PRECISION}}* FOut = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.data() + (!isLeftFace ? FluxElementsByFace : 0);
     {{CORRECTOR_COMPUTATION_PRECISION}}* QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.data() + (!isLeftFace ? 0 : BasisElementsByFace);
     {{CORRECTOR_COMPUTATION_PRECISION}}* QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.data() + (!isLeftFace ? BasisElementsByFace : 0);
