@@ -4,6 +4,8 @@
 
 #include "peano4/parallel/Node.h"
 
+#include <mutex>
+#include <shared_mutex>
 #include <sstream>
 #include <typeinfo>
 #include <unordered_map>
@@ -35,18 +37,19 @@ private:
   /**
    * Data of one tree
    */
-  struct TreeData {
+  struct /*alignas(64)*/ TreeData {
     std::unordered_map<int, std::unique_ptr<T>> stacks;
+    // mutable std::shared_mutex _mutex;
   };
 
   // Each element represents the data of one tree.
   // However, we do not assume that the index of each entry is a local tree id.
   // We use global ids instead to avoid the overhead in the computation to the local id.
   // Has to be a std::vector to allow lock-free concurrent access.
-  // Requires resize() to be called before usage.
+  // Requires resize() to be called before usage of trees.
   std::vector<TreeData> _trees;
 
-  INLINE_METHOD void createStack(int treeId, int stackId) {
+  INLINE_METHOD T* createStack(int treeId, int stackId) {
     assertion3(treeId >= 0, treeId, stackId, typeid(T).name());
     assertion3(stackId >= 0, treeId, stackId, typeid(T).name());
     assertion3(treeId < static_cast<int>(_trees.size()), treeId, stackId, typeid(T).name());
@@ -57,13 +60,11 @@ private:
       it->second = std::make_unique<T>();
       logDebug("createStack()", " Created stack " << stackId << " in tree " << treeId << " for " << typeid(T).name());
     }
+    return it->second.get();
   }
 
 public:
   INLINE_METHOD explicit TreeToStacks() noexcept:
-    // TODO: This is wrong now with the new global approach and should be something like:
-    // _data(tarch::mpi::Rank::getInstance().getNumberOfRanks() *
-    // tarch::multicore::Core::getInstance().getNumberOfThreads())
     _trees(parallel::Node::MaxSpacetreesPerRank) {}
 
   ~TreeToStacks() noexcept = default;
@@ -73,14 +74,19 @@ public:
     assertion3(treeId >= 0, treeId, stackId, typeid(T).name());
     assertion3(stackId >= 0, treeId, stackId, typeid(T).name());
     assertion4(treeId < static_cast<int>(_trees.size()), _trees.size(), treeId, stackId, typeid(T).name());
+
+    // std::shared_lock<std::shared_mutex> readLock(_trees[treeId]._mutex);
     auto it = _trees[treeId].stacks.find(stackId);
     return (it == _trees[treeId].stacks.end() or it->second->empty());
   }
+
+  INLINE_METHOD void resize(std::size_t size) { _trees.resize(size); }
 
   // Returns the total number of elements stored across all existing stacks.
   INLINE_METHOD std::size_t size() const {
     std::size_t total = 0;
     for (const auto& tree : _trees) {
+      // std::shared_lock<std::shared_mutex> readLock(tree._mutex);
       for (const auto& treeData : tree.stacks) {
         if (treeData.second) {
           total += treeData.second->size();
@@ -93,6 +99,7 @@ public:
   // Clears all stacks for all spacetrees.
   INLINE_METHOD void clear() {
     for (auto& tree : _trees) {
+      // std::unique_lock<std::shared_mutex> writeLock(tree._mutex);
       for (auto& treeData : tree.stacks) {
         treeData.second->clear();
         // Don't do the reset, it is dangerous!
@@ -106,6 +113,7 @@ public:
   INLINE_METHOD void clear(int treeId) {
     assertion2(treeId >= 0, treeId, typeid(T).name());
     if (treeId < static_cast<int>(_trees.size())) {
+      // std::unique_lock<std::shared_mutex> writeLock(_trees[treeId]._mutex);
       for (auto& treeData : _trees[treeId].stacks) {
         treeData.second->clear();
         // Don't do the reset, it is dangerous!
@@ -121,8 +129,25 @@ public:
     assertion3(treeId >= 0, treeId, stackId, typeid(T).name());
     assertion3(stackId >= 0, treeId, stackId, typeid(T).name());
     assertion4(treeId < static_cast<int>(_trees.size()), _trees.size(), treeId, stackId, typeid(T).name());
-    createStack(treeId, stackId);
-    return _trees[treeId].stacks[stackId].get();
+    return createStack(treeId, stackId);
+
+    // {
+    //   std::shared_lock<std::shared_mutex> readLock(_trees[treeId]._mutex);
+    //   auto it = _trees[treeId].stacks.find(stackId);
+    //   if (it != _trees[treeId].stacks.end()) {
+    //     return it->second.get();
+    //   }
+    // }
+
+    // {
+    //   std::unique_lock<std::shared_mutex> writeLock(_trees[treeId]._mutex);
+    //   auto it = _trees[treeId].stacks.find(stackId); // Check again
+    //   if (it != _trees[treeId].stacks.end()) {
+    //     return it->second.get();
+    //   }
+    //   createStack(treeId, stackId);
+    //   return _trees[treeId].stacks[stackId].get();
+    // }
   }
   INLINE_METHOD T* getForPush(int treeId, int stackId) { return getForPush(StackKey(treeId, stackId)); }
 
@@ -133,6 +158,8 @@ public:
     assertion3(treeId >= 0, treeId, stackId, typeid(T).name());
     assertion3(stackId >= 0, treeId, stackId, typeid(T).name());
     assertion4(treeId < static_cast<int>(_trees.size()), _trees.size(), treeId, stackId, typeid(T).name());
+
+    // std::shared_lock<std::shared_mutex> readLock(_trees[treeId]._mutex);
     auto it = _trees[treeId].stacks.find(stackId);
     assertion3(it != _trees[treeId].stacks.end(), treeId, stackId, typeid(T).name());
     return it->second.get();
@@ -158,9 +185,29 @@ public:
     std::vector<StackKey> keys;
     keys.reserve(total);
     for (int i = 0; i < static_cast<int>(_trees.size()); i++) {
+      // std::shared_lock<std::shared_mutex> readLock(_trees[i]._mutex);
       for (const auto& treeData : _trees[i].stacks) {
         keys.emplace_back(StackKey(i, treeData.first));
       }
+    }
+    return keys;
+  }
+
+  // Returns keys only for the specified tree id.
+  // Thread-safe relative to other trees if creation/deletion is restricted to local scope.
+  INLINE_METHOD std::vector<StackKey> getKeys(int treeId) const {
+    assertion2(treeId >= 0, treeId, typeid(T).name());
+    if (treeId >= static_cast<int>(_trees.size())) {
+      return {};
+    }
+
+    // std::shared_lock<std::shared_mutex> lock(_trees[treeId]._mutex);
+    std::vector<StackKey> keys;
+    const auto&           treeData = _trees[treeId].stacks;
+    keys.reserve(treeData.size());
+
+    for (const auto& pair : treeData) {
+      keys.emplace_back(StackKey(treeId, pair.first));
     }
     return keys;
   }
@@ -171,7 +218,10 @@ public:
     if (treeId >= static_cast<int>(_trees.size())) {
       return;
     }
+
+    // std::unique_lock<std::shared_mutex> writeLock(_trees[treeId]._mutex);
     auto& treeData = _trees[treeId].stacks;
+
     for (auto it = treeData.begin(); it != treeData.end(); /* no ++ here */) {
       const int  stackId   = it->first;
       const bool isStorage = parallel::Node::isStorageStackNumber(stackId); // TODO: Should not be in Node?
@@ -191,6 +241,7 @@ public:
     assertion3(treeId >= 0, treeId, stackId, typeid(T).name());
     assertion3(stackId >= 0, treeId, stackId, typeid(T).name());
     assertion4(treeId < static_cast<int>(_trees.size()), _trees.size(), treeId, stackId, typeid(T).name());
+    // std::shared_lock<std::shared_mutex> readLock(_trees[treeId]._mutex);
     return _trees[treeId].stacks.count(stackId) == 1;
   }
   INLINE_METHOD bool holdsStack(int treeId, int stackId) const { return holdsStack(StackKey(treeId, stackId)); }

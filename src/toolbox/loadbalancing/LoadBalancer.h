@@ -24,15 +24,20 @@ public:
 
   void update();
 
+  int         getMaxPermittedTreesPerRank() const;
   int         getGlobalNumberOfTrees() const;
   int         getGlobalNumberOfInnerUnrefinedCells() const;
   int         getGlobalMinTreeLoad() const;
   int         getGlobalMaxTreeLoad() const;
   double      getGlobalTreeLoadRatioInPercentage() const;
   std::size_t getGlobalMemoryUsageInBytes() const;
+  double      getGlobalMinH() const;
+  int         getGlobalNumberOfStationarySweeps() const;
 
   bool hasStagnated() const;
   bool hasSplitRecently() const;
+
+  int getNumberOfSettlingIterations() const;
 
   std::string toString() const;
 
@@ -49,5 +54,12 @@ private:
   void updateInterRankLoadBalancing();
   void updateIntraRankLoadBalancing();
 
-  void triggerSplit(int numberOfCells, int targetRank);
+  /**
+   * Finds the local spacetree with the highest number of local unrefined cells
+   * that is currently not on the blacklist.
+   * @return Tree ID, or -1 if no suitable tree is found.
+   */
+  int getHeaviestNonBlacklistedLocalSpacetreeID() const;
+
+  void triggerSplit(int numberOfCells, int targetRank, int sourceTree);
 };

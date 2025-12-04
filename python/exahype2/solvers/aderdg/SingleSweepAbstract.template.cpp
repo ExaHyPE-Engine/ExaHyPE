@@ -2,13 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "{{CLASSNAME}}.h"
 
-#include <algorithm>
-
 #include "Constants.h"
 
 #include "tarch/multicore/Lock.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/services/ServiceRepository.h"
+
+#include <algorithm>
 
 tarch::logging::Log     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
 
@@ -60,8 +60,16 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
   return getMinCellSize();
 }
 
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxAdmissibleMeshSize() const {
+  return MaxAdmissibleCellH;
+}
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinAdmissibleMeshSize() const {
+  return MinAdmissibleCellH;
+}
+
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
-  return (Order + 1) * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
+  return BasePowerExponent<Order + 1, DIMENSIONS>::value * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCellSize(bool ofCurrentlyRunningGridSweep) const {

@@ -78,7 +78,6 @@ public:
   virtual void receiveAndMergeCellData(int fromStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) override;
 {%- endif %}
 
-  virtual void exchangeAllVerticalDataExchangeStacks(int masterId) override;
   virtual void exchangeAllHorizontalDataExchangeStacks(bool symmetricDataCardinality) override;
   virtual void exchangeAllPeriodicBoundaryDataStacks() override;
 

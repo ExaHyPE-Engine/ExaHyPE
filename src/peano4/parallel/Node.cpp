@@ -4,7 +4,6 @@
 
 #include "StartTraversalMessage.h"
 #include "TreeManagementMessage.h"
-
 #include "peano4/grid/AutomatonState.h"
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/grid/GridStatistics.h"
@@ -247,7 +246,7 @@ std::set<peano4::parallel::Node::PeriodicBoundaryStackIdentifier> peano4::parall
       newEntry.set(i);
       powerSet.insert(newEntry);
 
-      for (auto p : powerSet) {
+      for (const auto& p : powerSet) {
         newEntry = p;
         newEntry.set(i);
         powerSet.insert(newEntry);
@@ -306,7 +305,7 @@ std::set<peano4::parallel::Node::PeriodicBoundaryStackIdentifier> peano4::parall
       }
     */
 
-  return result;
+    return result;
 }
 
 int peano4::parallel::Node::getPeriodicBoundaryExchangeInputStackNumberForOutputStack(int outputStackNumber) {

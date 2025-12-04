@@ -46,6 +46,12 @@ public:
   std::size_t getLocalMemoryUsageInBytes() const;
   std::size_t getGlobalMemoryUsageInBytes() const;
 
+  double getLocalMinH() const;
+  double getGlobalMinH() const;
+
+  int getLocalNumberOfStationarySweeps() const;
+  int getGlobalNumberOfStationarySweeps() const;
+
   /**
    * If the stats spot some inconsistencies (local number of cells is bigger
    * than global number, e.g.) this means that the non-blocking data exchange
@@ -91,12 +97,15 @@ private:
   std::uint64_t _localMemoryUsageInBytes;
   std::uint64_t _globalMemoryUsageInBytes;
 
+  double _localMinH;
+  double _globalMinH;
+
+  int _localNumberOfStationarySweeps;
+  int _globalNumberOfStationarySweeps;
+
   bool _isViewConsistent;
 
 #ifdef WITH_MPI
-  /**
-   * Required for local stats, but also replicated in cell count metrics
-   */
   MPI_Request* _globalNumberOfInnerUnrefinedCellsRequest;
   MPI_Request* _globalNumberOfSplitsRequest;
   MPI_Request* _globalNumberOfTreesRequest;
@@ -104,6 +113,8 @@ private:
   MPI_Request* _globalMinTreeLoadRequest;
   MPI_Request* _globalMaxTreeLoadRequest;
   MPI_Request* _globalMemoryUsageInBytesRequest;
+  MPI_Request* _globalMinHRequest;
+  MPI_Request* _globalNumberOfStationarySweepsRequest;
 #endif
 
   int           _globalNumberOfInnerUnrefinedCellsBufferIn;
@@ -120,6 +131,10 @@ private:
   int           _globalMaxTreeLoadOut;
   std::uint64_t _globalMemoryUsageInBytesIn;
   std::uint64_t _globalMemoryUsageInBytesOut;
+  double        _globalMinHIn;
+  double        _globalMinHOut;
+  int           _globalNumberOfStationarySweepsIn;
+  int           _globalNumberOfStationarySweepsOut;
 
   void waitForGlobalDataExchange();
 };

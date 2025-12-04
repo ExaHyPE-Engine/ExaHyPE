@@ -26,6 +26,9 @@ private:
     std::uint8_t adjIdx1[DIMENSIONS][TWO_POWER_D];        // idx1 for (normal, vertex)
   };
 
+  static const Patch3x3IndexTable _patch3x3Table;
+  static const FaceAdjTables      _faceAdjTable;
+
 public:
   /**
    * Periodic boundary conditions are technically realised as domain
@@ -49,7 +52,7 @@ public:
     int        out[TWO_POWER_D]
   );
 
-  static bool isVertexAdjacentToLocalSpacetree(
+  INLINE_METHOD static bool isVertexAdjacentToLocalSpacetree(
     const GridVertex&         vertex,
     const int                 treeNumber,
     const SplitSpecification& splitTriggered,
@@ -59,25 +62,103 @@ public:
     bool                      splittingIsConsideredLocal,
     bool                      joiningIsConsideredLocal,
     bool                      isHangingVertexAdjacentToLocalTree
-  );
+  ) {
+    bool result = false;
 
-  static std::bitset<TWO_POWER_D> areVerticesLocal(
+    for (auto i = 0; i < TWO_POWER_D; i++) {
+      const auto adjacentRank = vertex.adjacentRanks[i];
+
+      assertion(splitTriggered.count(adjacentRank) <= 1);
+      assertion(splitting.count(adjacentRank) <= 1);
+
+      const bool inSplit     = not splitTriggered.empty() and splitTriggered.count(adjacentRank);
+      const bool inSplitting = not splitting.empty() and splitting.count(adjacentRank);
+      const bool inJoining   = not joining.empty() and joining.count(adjacentRank);
+      if (adjacentRank == treeNumber or inSplit or (splittingIsConsideredLocal and inSplitting)
+          or (joiningIsConsideredLocal and inJoining)) {
+        result = true;
+      }
+    }
+
+    return result
+           and (not isHangingVertexAdjacentToLocalTree ? vertex.getState() != GridVertex::State::HangingVertex : true);
+  }
+
+  INLINE_METHOD static std::bitset<TWO_POWER_D> areVerticesLocal(
     GridVertex                vertices[TWO_POWER_D],
     const int                 treeNumber,
     const SplitSpecification& splitTriggered,
     const std::set<int>&      splitting,
     const std::set<int>&      joinTriggered,
     const std::set<int>&      joining
-  );
+  ) {
+    std::bitset<TWO_POWER_D> bitset;
+    for (auto i = 0; i < TWO_POWER_D; i++) {
+      bitset.set(
+        i,
+        isVertexAdjacentToLocalSpacetree(
+          vertices[i],
+          treeNumber,
+          splitTriggered,
+          splitting,
+          joinTriggered,
+          joining,
+          true,
+          true,
+          true
+        )
+      );
+    }
+    return bitset;
+  }
 
-  static std::bitset<TWO_TIMES_D> areFacesLocal(
+  INLINE_METHOD static std::bitset<TWO_TIMES_D> areFacesLocal(
     GridVertex                vertices[TWO_POWER_D],
     const int                 treeNumber,
     const SplitSpecification& splitTriggered,
     const std::set<int>&      splitting,
     const std::set<int>&      joinTriggered,
     const std::set<int>&      joining
-  );
+  ) {
+    std::bitset<TWO_TIMES_D> result;
+
+    const auto& T = SpacetreeHelper::getFaceAdjTables();
+
+    auto isLocalRank = [&](int r) { return r == treeNumber or splitTriggered.count(r) > 0 or splitting.count(r) > 0; };
+
+    for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+      const int  normal = faceNumber % DIMENSIONS;
+      const bool upper  = faceNumber >= DIMENSIONS;
+
+      bool isLocal = false;
+
+      for (int i = 0; i < TWO_POWER_D / 2; i++) {
+        const int         vIdx = T.faceVerts[faceNumber][i];
+        const GridVertex& v    = vertices[vIdx];
+
+        const int i0 = T.adjIdx0[normal][vIdx]; // Entry with normal-bit = 0
+        const int i1 = T.adjIdx1[normal][vIdx]; // Entry with normal-bit = 1
+
+        if (v.getState() != GridVertex::State::HangingVertex or upper) {
+          if (isLocalRank(v.adjacentRanks[i0])) {
+            isLocal = true;
+            break;
+          }
+        }
+
+        if (v.getState() != GridVertex::State::HangingVertex or not upper) {
+          if (isLocalRank(v.adjacentRanks[i1])) {
+            isLocal = true;
+            break;
+          }
+        }
+      }
+
+      result.set(faceNumber, isLocal);
+    }
+
+    return result;
+  }
 
   static std::bitset<TWO_POWER_D> areVerticesAdjacentToParallelDomainBoundary(
     GridVertex                vertices[TWO_POWER_D],

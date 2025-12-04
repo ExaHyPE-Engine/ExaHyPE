@@ -102,7 +102,6 @@ class peano4::grid::Spacetree {
      */
     std::set< int >      _joining;
 
-    static stacks::TreeToStacks<stacks::Stack<GridVertex>> _vertexStack;
     std::vector<VertexLookupTable> _vertexLookupTables;
 
     std::vector<GridControlEvent>       _gridControlEvents;
@@ -623,8 +622,8 @@ class peano4::grid::Spacetree {
      * triggered to split. But I do ignore the current spacetree's
      * state.
      *
-     * The operation returns the empty set if a vertex is not local.
-     * It also returns the empty set if a vertex is hanging.
+     * The operation returns the empty vector if a vertex is not local.
+     * It also returns the empty vector if a vertex is hanging.
      *
      * @param calledByReceivingProcess The operation relies on
      *   GridTraversalEventGenerator::getAdjacentRanksOfFace() to find the
@@ -633,7 +632,7 @@ class peano4::grid::Spacetree {
      *   otherwise.
      *
      */
-    std::set<int>  getNeighbourTrees( const GridVertex& vertex, bool calledByReceivingProcess ) const;
+    std::vector<int> getNeighbourTrees( const GridVertex& vertex, bool calledByReceivingProcess ) const;
 
     /**
      * Get the ids of the surround ids of a face.
@@ -885,4 +884,6 @@ class peano4::grid::Spacetree {
     std::string toString() const;
 
     bool isInvolvedInJoinOrFork() const;
+
+    static stacks::TreeToStacks<stacks::Stack<GridVertex>> _vertexStack;
 };

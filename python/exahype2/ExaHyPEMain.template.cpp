@@ -55,6 +55,7 @@ namespace {
   tarch::logging::Log _log("");
 
   tarch::timing::Measurement gridConstructionMeasurement;
+  tarch::timing::Measurement gridInitialisationMeasurement;
   tarch::timing::Measurement timeStepMeasurement;
   tarch::timing::Measurement plotMeasurement;
 
@@ -63,10 +64,81 @@ namespace {
 } // namespace
 
 /**
+ * Evaluates the state of the mesh and decides if construction/refinement loops should continue.
+ *
+ * @return true if construction should continue (sets next step implicitly), false if construction is done.
+ */
+bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumberOfTrees) {
+  assertion(repositories::loadBalancer.getGlobalNumberOfTrees() > 0);
+
+  // If the mesh size has decreased, we pause refinement to let the grid settle.
+  if (tarch::la::smaller(repositories::loadBalancer.getGlobalMinH(), currentMinH)) {
+    [[maybe_unused]] const double oldH = currentMinH; // Only for logging
+    currentMinH = repositories::loadBalancer.getGlobalMinH();
+
+    logDebug(
+      "shouldContinueGridConstruction()",
+      "Mesh refinement detected (h_{min} decreased: " << oldH << " -> " << currentMinH << "). " <<
+      "Switching to 'CreateGridWithoutRefinement' to allow grid to settle."
+    );
+
+    peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithoutRefinement));
+    return true;
+  }
+
+  // If new trees (subdomains) have appeared, we pause refinement to let the load balancer settle.
+  if (repositories::loadBalancer.getGlobalNumberOfTrees() > currentGlobalNumberOfTrees) {
+    const int newTreeCount = repositories::loadBalancer.getGlobalNumberOfTrees();
+
+    logDebug(
+      "shouldContinueGridConstruction()",
+      "Rebalancing detected (Tree count increased: " << currentGlobalNumberOfTrees << " -> " << newTreeCount << "). " <<
+      "Switching to 'CreateGridWithoutRefinement' to postpone further refinement."
+    );
+
+    currentGlobalNumberOfTrees = newTreeCount;
+    peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithoutRefinement));
+    return true;
+  }
+
+  // If the grid is stable (small enough and converged), terminate.
+  if (
+    tarch::la::smallerEquals(currentMinH, repositories::getMinAdmissibleMeshSize())
+    and
+    repositories::loadBalancer.hasStagnated()
+    and
+    // Ensure that a proper creation has been ran before, so the mesh had the opportunity to refine further if it has not done yet.
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep()) == repositories::StepRepository::Steps::CreateGridWithRefinement
+  ) {
+    // If we get in an infinite loop because Peano is not able to get all ranks stationary, then we break the loop after reaching the number of settling iterations given by the load balancer.
+    // Happens if we have small meshes, and too many ranks to satisfy the mesh splitting.
+    static int numberOfStationarySweeps = 0;
+    if (repositories::loadBalancer.getGlobalNumberOfStationarySweeps() == 0 and numberOfStationarySweeps < repositories::loadBalancer.getNumberOfSettlingIterations()) {
+      logDebug(
+        "shouldContinueGridConstruction()",
+        "Admissible mesh size reached, but at least one rank still has pending refinement events."
+      );
+      peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithRefinement));
+      ++numberOfStationarySweeps;
+      return true;
+    }
+
+    logDebug(
+      "shouldContinueGridConstruction()",
+      "Grid construction complete. Admissible mesh size reached (h_{min}=" << currentMinH << ", admissible h_{min}=" << repositories::getMinAdmissibleMeshSize() << ") and load balancing has converged."
+    );
+    return false;
+  }
+
+  // If we are here, the mesh is stationary but not yet fine enough.
+  peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithRefinement));
+  return true;
+}
+
+/**
  * Decide which step to run next
  *
  * ## Control of the parallel grid construction
- *
  *
  * @return continues to run
  */
@@ -78,10 +150,9 @@ bool selectNextAlgorithmicStep() {
   static double                                 nextMaxCheckpointTimeStamp            = FirstCheckpointTimeStamp;
   static double                                 nextMinCheckpointTimeStamp            = FirstCheckpointTimeStamp;
   static bool                                   haveJustWrittenSnapshot               = false;
-  static tarch::la::Vector<DIMENSIONS, double>  minH                                  = tarch::la::Vector<DIMENSIONS, double>(std::numeric_limits<double>::max());
+  static double                                 minH                                  = std::numeric_limits<double>::max();
   static int                                    globalNumberOfTrees                   = 0;
   bool                                          continueToSolve                       = true;
-  const auto                                    statistics                            = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics();
 
   if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNonCriticalAssertion) {
     peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution));
@@ -93,26 +164,8 @@ bool selectNextAlgorithmicStep() {
     peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::InitGrid));
     gridInitialised = true;
   } else if (not gridConstructed) {
-    if (tarch::la::max(statistics.minH) < tarch::la::max(minH)) {
-      minH = statistics.minH;
-      logDebug("selectNextAlgorithmicStep()", "Mesh has refined, so reset minH to " << minH << " and postpone further refinement.");
-      peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithoutRefinement));
-    } else if (repositories::loadBalancer.getGlobalNumberOfTrees() > globalNumberOfTrees) {
-      logDebug("selectNextAlgorithmicStep()", "Mesh has rebalanced recently, so postpone further refinement.");
-      peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithoutRefinement));
-      globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
-    } else if (
-      statistics.numberOfStationarySweeps > 5
-      and
-      // Ensure that a proper creation has been ran before, so the mesh had the opportunity to refine further if it has not done yet.
-      repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep()) == repositories::StepRepository::Steps::CreateGridWithRefinement
-    ) {
-      logDebug("selectNextAlgorithmicStep()", "Grid has been stationary for quite some time. Terminate grid construction.");
+    if (not shouldContinueGridConstruction(minH, globalNumberOfTrees)) {
       gridConstructed = true;
-    } else {
-      logDebug("selectNextAlgorithmicStep()", "Mesh rebalancing seems to be stationary, so study whether to refine mesh further in next sweep.");
-      peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithRefinement));
-      globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
     }
   } else {
     if (
@@ -208,8 +261,7 @@ bool selectNextAlgorithmicStep() {
   return continueToSolve;
 }
 
-
-void printNextAlgorithmicStep(const repositories::StepRepository::Steps& stepName, bool printStatistics = false) {
+void printNextAlgorithmicStep(const repositories::StepRepository::Steps& stepName, bool printStatistics) {
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     logInfo("printNextAlgorithmicStep()", "Starting AlgorithmicStep " << "[" << repositories::StepRepository::toString(stepName) << "]");
 
@@ -243,257 +295,118 @@ void printNextAlgorithmicStep(const repositories::StepRepository::Steps& stepNam
   }
 }
 
+/**
+ * Perform one algorithmic step
+ */
+template <class Observer>
+void performAlgorithmicStep(
+  repositories::StepRepository::Steps stepName,
+  std::function<void()>               startStepHook,
+  std::function<void()>               finishStepHook,
+  tarch::timing::Measurement&         measurement
+) {
+  tarch::logging::LogFilter::getInstance().switchProgramPhase(repositories::StepRepository::toString(stepName));
 
-void step() {
-  static tarch::timing::Watch watch("::", "step()", false);
+  static tarch::timing::Watch watch("::", "performAlgorithmicStep()", false);
+  watch.start();
 
+  SCOREP_USER_REGION_BEGIN(AlgorithmicStep, repositories::StepRepository::toString(stepName).c_str(), SCOREP_USER_REGION_TYPE_COMMON)
+
+  startStepHook();
+  Observer::prepareTraversal();
+
+  Observer observer;
+  peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+
+  Observer::unprepareTraversal();
+  finishStepHook();
+
+  SCOREP_USER_REGION_END(AlgorithmicStep)
+
+  watch.stop();
+  measurement.setValue(watch.getCalendarTime());
+
+  repositories::DataRepository::updateMemoryUsage();
+}
+
+void runNextAlgorithmicStep() {
   int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
   auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
 
-  tarch::logging::Statistics::getInstance().log(
-    "load-balancing", toolbox::loadbalancing::LoadBalancer::getStatistics()
-  );
+  tarch::logging::Statistics::getInstance().log("memory-usage", tarch::accelerator::MemoryManager::getStatistics());
+  tarch::logging::Statistics::getInstance().log("load-balancing", toolbox::loadbalancing::LoadBalancer::getStatistics());
 
-  tarch::logging::Statistics::getInstance().log(
-    "memory", tarch::accelerator::MemoryManager::getStatistics()
-  );
-
-  SCOREP_USER_REGION_DEFINE(CreateGrid)
-  SCOREP_USER_REGION_DEFINE(CreateGrid_startGridConstructionStep)
-  SCOREP_USER_REGION_DEFINE(CreateGrid_traverse)
-  SCOREP_USER_REGION_DEFINE(CreateGrid_finishGridConstructionStep)
-  SCOREP_USER_REGION_DEFINE(InitGrid)
-  SCOREP_USER_REGION_DEFINE(InitGrid_startGridInitialisationStep)
-  SCOREP_USER_REGION_DEFINE(InitGrid_prepareTraversal)
-  SCOREP_USER_REGION_DEFINE(InitGrid_traverse)
-  SCOREP_USER_REGION_DEFINE(InitGrid_unprepareTraversal)
-  SCOREP_USER_REGION_DEFINE(InitGrid_finishGridInitialisationStep)
-  SCOREP_USER_REGION_DEFINE(PlotSolution)
-  SCOREP_USER_REGION_DEFINE(PlotSolution_startPlottingStep)
-  SCOREP_USER_REGION_DEFINE(PlotSolution_prepareTraversal)
-  SCOREP_USER_REGION_DEFINE(PlotSolution_traverse)
-  SCOREP_USER_REGION_DEFINE(PlotSolution_unprepareTraversal)
-  SCOREP_USER_REGION_DEFINE(PlotSolution_finishPlottingStep)
-  SCOREP_USER_REGION_DEFINE(TimeStep)
-  SCOREP_USER_REGION_DEFINE(TimeStep_startTimeStep)
-  SCOREP_USER_REGION_DEFINE(TimeStep_prepareTraversal)
-  SCOREP_USER_REGION_DEFINE(TimeStep_traverse)
-  SCOREP_USER_REGION_DEFINE(TimeStep_unprepareTraversal)
-  SCOREP_USER_REGION_DEFINE(TimeStep_finishTimeStep)
+  SCOREP_USER_REGION_DEFINE(AlgorithmicStep)
 
   switch (stepName) {
-  case repositories::StepRepository::Steps::CreateGridWithoutRefinement: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("CreateGridWithoutRefinement");
-    printNextAlgorithmicStep(stepName);
-
-    watch.start();
-    SCOREP_USER_REGION_BEGIN(CreateGrid, "CreateGrid", SCOREP_USER_REGION_TYPE_COMMON)
-
-    SCOREP_USER_REGION_BEGIN(CreateGrid_startGridConstructionStep, "startGridConstructionStep", SCOREP_USER_REGION_TYPE_COMMON)
-    repositories::startGridConstructionStep();
-    SCOREP_USER_REGION_END(CreateGrid_startGridConstructionStep)
-
-    SCOREP_USER_REGION_BEGIN(CreateGrid_traverse, "traverse", SCOREP_USER_REGION_TYPE_COMMON)
-    observers::CreateGridWithoutRefinement observer;
-    peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    SCOREP_USER_REGION_END(CreateGrid_traverse)
-
-    SCOREP_USER_REGION_BEGIN(CreateGrid_finishGridConstructionStep, "finishGridConstructionStep", SCOREP_USER_REGION_TYPE_COMMON)
-    repositories::finishGridConstructionStep();
-    SCOREP_USER_REGION_END(CreateGrid_finishGridConstructionStep)
-
-    SCOREP_USER_REGION_END(CreateGrid)
-    watch.stop();
-    gridConstructionMeasurement.setValue(watch.getCalendarTime());
-
-    repositories::DataRepository::updateMemoryUsage();
-  } break;
-  case repositories::StepRepository::Steps::CreateGridWithRefinement: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("CreateGridWithRefinement");
+  case repositories::StepRepository::Steps::CreateGridWithoutRefinement:
     printNextAlgorithmicStep(stepName, true);
-
-    watch.start();
-    SCOREP_USER_REGION_BEGIN(CreateGrid, "CreateGrid", SCOREP_USER_REGION_TYPE_COMMON)
-
-    SCOREP_USER_REGION_BEGIN(CreateGrid_startGridConstructionStep, "startGridConstructionStep", SCOREP_USER_REGION_TYPE_COMMON)
-    repositories::startGridConstructionStep();
-    SCOREP_USER_REGION_END(CreateGrid_startGridConstructionStep)
-
-    SCOREP_USER_REGION_BEGIN(CreateGrid_traverse, "traverse", SCOREP_USER_REGION_TYPE_COMMON)
-    observers::CreateGridWithRefinement observer;
-    peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    SCOREP_USER_REGION_END(CreateGrid_traverse)
-
-    SCOREP_USER_REGION_BEGIN(CreateGrid_finishGridConstructionStep, "finishGridConstructionStep", SCOREP_USER_REGION_TYPE_COMMON)
-    repositories::finishGridConstructionStep();
-    SCOREP_USER_REGION_END(CreateGrid_finishGridConstructionStep)
-
-    SCOREP_USER_REGION_END(CreateGrid)
-    watch.stop();
-    gridConstructionMeasurement.setValue(watch.getCalendarTime());
-
-    repositories::DataRepository::updateMemoryUsage();
-  } break;
-  case repositories::StepRepository::Steps::InitGrid: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("InitGrid");
+    performAlgorithmicStep<observers::CreateGridWithoutRefinement>(
+      stepName,
+      [](){ repositories::startGridConstructionStep(); },
+      [](){ repositories::finishGridConstructionStep(); },
+      gridConstructionMeasurement
+    );
+    break;
+  case repositories::StepRepository::Steps::CreateGridWithRefinement:
+    printNextAlgorithmicStep(stepName, false);
+    performAlgorithmicStep<observers::CreateGridWithRefinement>(
+      stepName,
+      [](){ repositories::startGridConstructionStep(); },
+      [](){ repositories::finishGridConstructionStep(); },
+      gridConstructionMeasurement
+    );
+    break;
+  case repositories::StepRepository::Steps::InitGrid:
     printNextAlgorithmicStep(stepName, true);
-    repositories::loadBalancer.enable(false);
-
-    watch.start();
-    SCOREP_USER_REGION_BEGIN(InitGrid, "InitGrid", SCOREP_USER_REGION_TYPE_COMMON)
-
-    SCOREP_USER_REGION_BEGIN(InitGrid_startGridInitialisationStep, "startGridInitialisationStep", SCOREP_USER_REGION_TYPE_COMMON)
-    repositories::startGridInitialisationStep();
-    SCOREP_USER_REGION_END(InitGrid_startGridInitialisationStep)
-
-    SCOREP_USER_REGION_BEGIN(InitGrid_prepareTraversal, "prepareTraversal", SCOREP_USER_REGION_TYPE_COMMON)
-    observers::InitGrid::prepareTraversal();
-    SCOREP_USER_REGION_END(InitGrid_prepareTraversal)
-
-    SCOREP_USER_REGION_BEGIN(InitGrid_traverse, "traverse", SCOREP_USER_REGION_TYPE_COMMON)
-    observers::InitGrid observer;
-    peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    SCOREP_USER_REGION_END(InitGrid_traverse)
-
-    SCOREP_USER_REGION_BEGIN(InitGrid_unprepareTraversal, "unprepareTraversal", SCOREP_USER_REGION_TYPE_COMMON)
-    observers::InitGrid::unprepareTraversal();
-    SCOREP_USER_REGION_END(InitGrid_unprepareTraversal)
-
-    SCOREP_USER_REGION_BEGIN(InitGrid_finishGridInitialisationStep, "finishGridInitialisationStep", SCOREP_USER_REGION_TYPE_COMMON)
-    repositories::finishGridInitialisationStep();
-    SCOREP_USER_REGION_END(InitGrid_finishGridInitialisationStep)
-
-    SCOREP_USER_REGION_END(InitGrid)
-    watch.stop();
-    gridConstructionMeasurement.setValue(watch.getCalendarTime());
-
-    repositories::DataRepository::updateMemoryUsage();
-  } break;
-  case repositories::StepRepository::Steps::PlotSolution: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("PlotSolution");
-    printNextAlgorithmicStep(stepName);
-
-    watch.start();
-    SCOREP_USER_REGION_BEGIN(PlotSolution, "PlotSolution", SCOREP_USER_REGION_TYPE_COMMON)
-
-    SCOREP_USER_REGION_BEGIN(PlotSolution_startPlottingStep, "startPlottingStep", SCOREP_USER_REGION_TYPE_COMMON)
-    repositories::startPlottingStep();
-    SCOREP_USER_REGION_END(PlotSolution_startPlottingStep)
-
-    SCOREP_USER_REGION_BEGIN(PlotSolution_prepareTraversal, "prepareTraversal", SCOREP_USER_REGION_TYPE_COMMON)
-    observers::PlotSolution::prepareTraversal();
-    SCOREP_USER_REGION_END(PlotSolution_prepareTraversal)
-
-     SCOREP_USER_REGION_BEGIN(PlotSolution_traverse, "traverse", SCOREP_USER_REGION_TYPE_COMMON)
-    observers::PlotSolution observer;
-    peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    SCOREP_USER_REGION_END(PlotSolution_traverse)
-
-    SCOREP_USER_REGION_BEGIN(PlotSolution_unprepareTraversal, "unprepareTraversal", SCOREP_USER_REGION_TYPE_COMMON)
-    observers::PlotSolution::unprepareTraversal();
-    SCOREP_USER_REGION_END(PlotSolution_unprepareTraversal)
-
-    SCOREP_USER_REGION_BEGIN(PlotSolution_finishPlottingStep, "finishPlottingStep", SCOREP_USER_REGION_TYPE_COMMON)
-    repositories::finishPlottingStep();
-    SCOREP_USER_REGION_END(PlotSolution_finishPlottingStep)
-
-    SCOREP_USER_REGION_END(PlotSolution)
-    watch.stop();
-    plotMeasurement.setValue(watch.getCalendarTime());
-
-    repositories::DataRepository::updateMemoryUsage();
-  } break;
-  case repositories::StepRepository::Steps::CheckpointSolution: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("CheckpointSolution");
-    printNextAlgorithmicStep(stepName);
-
-    watch.start();
-    SCOREP_USER_REGION_BEGIN(PlotSolution, "PlotSolution", SCOREP_USER_REGION_TYPE_COMMON)
-
-    SCOREP_USER_REGION_BEGIN(PlotSolution_startPlottingStep, "startPlottingStep", SCOREP_USER_REGION_TYPE_COMMON)
-    repositories::startPlottingStep();
-    SCOREP_USER_REGION_END(PlotSolution_startPlottingStep)
-
-    SCOREP_USER_REGION_BEGIN(PlotSolution_prepareTraversal, "prepareTraversal", SCOREP_USER_REGION_TYPE_COMMON)
-    observers::CheckpointSolution::prepareTraversal();
-    SCOREP_USER_REGION_END(PlotSolution_prepareTraversal)
-
-    SCOREP_USER_REGION_BEGIN(PlotSolution_traverse, "traverse", SCOREP_USER_REGION_TYPE_COMMON)
-    observers::CheckpointSolution observer;
-    peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    SCOREP_USER_REGION_END(PlotSolution_traverse)
-
-    SCOREP_USER_REGION_BEGIN(PlotSolution_unprepareTraversal, "unprepareTraversal", SCOREP_USER_REGION_TYPE_COMMON)
-    observers::CheckpointSolution::unprepareTraversal();
-    SCOREP_USER_REGION_END(PlotSolution_unprepareTraversal)
-
-    SCOREP_USER_REGION_BEGIN(PlotSolution_finishPlottingStep, "finishPlottingStep", SCOREP_USER_REGION_TYPE_COMMON)
-    repositories::finishPlottingStep();
-    SCOREP_USER_REGION_END(PlotSolution_finishPlottingStep)
-
-    SCOREP_USER_REGION_END(PlotSolution)
-    watch.stop();
-    plotMeasurement.setValue(watch.getCalendarTime());
-
-    repositories::DataRepository::updateMemoryUsage();
-  } break;
-  case repositories::StepRepository::Steps::TimeStep: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("TimeStep");
-
-    watch.start();
-    SCOREP_USER_REGION_BEGIN(TimeStep, "TimeStep", SCOREP_USER_REGION_TYPE_COMMON)
-
-    SCOREP_USER_REGION_BEGIN(TimeStep_startTimeStep, "startTimeStep", SCOREP_USER_REGION_TYPE_COMMON)
-    repositories::startTimeStep();
-    SCOREP_USER_REGION_END(TimeStep_startTimeStep)
-
-    SCOREP_USER_REGION_BEGIN(TimeStep_prepareTraversal, "prepareTraversal", SCOREP_USER_REGION_TYPE_COMMON)
-    observers::TimeStep::prepareTraversal();
-    SCOREP_USER_REGION_END(TimeStep_prepareTraversal)
-
-    SCOREP_USER_REGION_BEGIN(TimeStep_traverse, "traverse", SCOREP_USER_REGION_TYPE_COMMON)
-    observers::TimeStep observer;
-    peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    SCOREP_USER_REGION_END(TimeStep_traverse)
-
-    SCOREP_USER_REGION_BEGIN(TimeStep_unprepareTraversal, "unprepareTraversal", SCOREP_USER_REGION_TYPE_COMMON)
-    observers::TimeStep::unprepareTraversal();
-    SCOREP_USER_REGION_END(TimeStep_unprepareTraversal)
-
-    SCOREP_USER_REGION_BEGIN(TimeStep_finishTimeStep, "finishTimeStep", SCOREP_USER_REGION_TYPE_COMMON)
-    repositories::finishTimeStep();
-    SCOREP_USER_REGION_END(TimeStep_finishTimeStep)
-
-    SCOREP_USER_REGION_END(TimeStep)
-    watch.stop();
-    // TODO: We need to be careful here. If we couple solvers the TimeStep observer does not reflect one complete time step.
-    // Therefore, this measurement does not give us the information we want!
-    // The same applies for any solver that needs multiple sweeps.
-    timeStepMeasurement.setValue(watch.getCalendarTime());
-
-    repositories::DataRepository::updateMemoryUsage();
-
-    if (
-      tarch::mpi::Rank::getInstance().isGlobalMaster()
-      and
-      timeStepMeasurement.getAccumulatedValue() >= printNextTimeStep
-      and
-      repositories::mayPlot()
-    ) {
+    repositories::loadBalancer.enable(false); // TODO: Remove (dynamic AMR)
+    performAlgorithmicStep<observers::InitGrid>(
+      stepName,
+      [](){ repositories::startGridInitialisationStep(); },
+      [](){ repositories::finishGridInitialisationStep(); },
+      gridInitialisationMeasurement
+    );
+    break;
+  case repositories::StepRepository::Steps::PlotSolution:
+    printNextAlgorithmicStep(stepName, false);
+    performAlgorithmicStep<observers::PlotSolution>(
+      stepName,
+      [](){ repositories::startPlottingStep(); },
+      [](){ repositories::finishPlottingStep(); },
+      plotMeasurement
+    );
+    break;
+  case repositories::StepRepository::Steps::CheckpointSolution:
+    printNextAlgorithmicStep(stepName, false);
+    performAlgorithmicStep<observers::CheckpointSolution>(
+      stepName,
+      [](){ repositories::startPlottingStep(); },
+      [](){ repositories::finishPlottingStep(); },
+      plotMeasurement
+    );
+    break;
+  case repositories::StepRepository::Steps::TimeStep:
+    performAlgorithmicStep<observers::TimeStep>(
+      stepName,
+      [](){ repositories::startTimeStep(); },
+      [](){ repositories::finishTimeStep(); },
+      timeStepMeasurement
+    );
+    if (timeStepMeasurement.getAccumulatedValue() >= printNextTimeStep and repositories::mayPlot()) {
       printNextAlgorithmicStep(stepName, true);
-      repositories::printTimeStep(false);
+      if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+        repositories::printTimeStep(false);
+      }
       printNextTimeStep += repositories::PrintTimeStepIntervalInSeconds;
     }
-  } break;
+    break;
   case repositories::StepRepository::Steps::Undef:
     assertion(false);
     break;
   }
 }
 
-int main(int argc, char** argv) {
-  int returnCode = EXIT_SUCCESS;
-
+void setupEnvironment(int argc, char** argv) {
   peano4::init(&argc, &argv, DomainOffset, DomainSize, PeriodicBC);
 
   peano4::writeCopyrightMessage();
@@ -511,49 +424,70 @@ int main(int argc, char** argv) {
   repositories::startSimulation();
 
   tarch::logging::Statistics::getInstance().clear();
+}
 
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    while (selectNextAlgorithmicStep()) {
-      peano4::parallel::Node::getInstance().continueToRun();
-      step();
-    }
-
-    peano4::parallel::Node::getInstance().setNextProgramStep(peano4::parallel::Node::Terminate);
-    peano4::parallel::Node::getInstance().continueToRun(); // Send terminate instruction to other ranks
-
-    if (haveReceivedNonCriticalAssertion) {
-      logWarning("main()", "Terminated gracefully after noncritical assertion");
-      returnCode = EXIT_FAILURE;
-    } else {
-      // Print final timestep information
-      repositories::printTimeStep(false);
-      logInfo("main()", "Terminated successfully");
-      returnCode = EXIT_SUCCESS;
-    }
-
-    if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
-      logInfo("main()", "Average patch updates per second:  " << repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells() / timeStepMeasurement.getValue());
-      logInfo("main()", "Average DoF updates per second:    " << (repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells() *  repositories::getNumberOfDoFs()) / timeStepMeasurement.getValue());
-      logInfo("main()", "Time stepping:                     " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString());
-    }
-    if (gridConstructionMeasurement.getNumberOfMeasurements() > 0) {
-      logInfo("main()", "Initial grid construction:         " << gridConstructionMeasurement.getAccumulatedValue() << "s\t" << gridConstructionMeasurement.toString());
-    }
-    if (plotMeasurement.getNumberOfMeasurements() > 0) {
-      logInfo("main()", "Plotting:                          " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString());
-    }
-  } else {
-    while (peano4::parallel::Node::getInstance().continueToRun()) {
-      step();
-    }
-  }
-
+void shutdownEnvironment() {
   tarch::logging::Statistics::getInstance().writeToCSV();
 
   repositories::finishSimulation();
   repositories::DataRepository::shutdown();
 
   peano4::shutdown();
+}
 
+void printFinalStatistics() {
+  if (gridConstructionMeasurement.getNumberOfMeasurements() > 0) {
+    logInfo("printFinalStatistics()", "Grid construction:                 " << gridConstructionMeasurement.getAccumulatedValue() << "s\t" << gridConstructionMeasurement.toString());
+  }
+  if (gridInitialisationMeasurement.getNumberOfMeasurements() > 0) {
+    logInfo("printFinalStatistics()", "Grid initialisation:               " << gridInitialisationMeasurement.getAccumulatedValue() << "s\t" << gridInitialisationMeasurement.toString());
+  }
+  if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
+    logInfo("printFinalStatistics()", "Time stepping:                     " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString());
+    logInfo("printFinalStatistics()", "Average patch updates per second:  " << repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells() / timeStepMeasurement.getValue());
+    logInfo("printFinalStatistics()", "Average DoF updates per second:    " << (repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells() * repositories::getNumberOfDoFs()) / timeStepMeasurement.getValue());
+  }
+  if (plotMeasurement.getNumberOfMeasurements() > 0) {
+    logInfo("printFinalStatistics()", "Plotting:                          " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString());
+  }
+}
+
+int runGlobalMaster() {
+  while (selectNextAlgorithmicStep()) {
+    peano4::parallel::Node::getInstance().continueToRun();
+    runNextAlgorithmicStep();
+  }
+
+  peano4::parallel::Node::getInstance().setNextProgramStep(peano4::parallel::Node::Terminate);
+  peano4::parallel::Node::getInstance().continueToRun(); // Send terminate instruction to other ranks
+
+  if (haveReceivedNonCriticalAssertion) {
+    logWarning("runGlobalMaster()", "Terminated gracefully after noncritical assertion");
+    return EXIT_FAILURE;
+  } else {
+    repositories::printTimeStep(false);
+    logInfo("runGlobalMaster()", "Terminated successfully");
+    printFinalStatistics();
+    return EXIT_SUCCESS;
+  }
+}
+
+void runWorker() {
+  while (peano4::parallel::Node::getInstance().continueToRun()) {
+    runNextAlgorithmicStep();
+  }
+}
+
+int main(int argc, char** argv) {
+  setupEnvironment(argc, argv);
+
+  int returnCode = EXIT_SUCCESS;
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    returnCode = runGlobalMaster();
+  } else {
+    runWorker();
+  }
+
+  shutdownEnvironment();
   return returnCode;
 }

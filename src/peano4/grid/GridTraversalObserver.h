@@ -134,18 +134,6 @@ if (peano4::parallel::Node::isGlobalMaster(spacetreeId)) {
   ) = 0;
 
   /**
-   * Send local data from top level of local mesh to master and receive its
-   * top-down information in return.
-   *
-   * The SpacetreeSet class provides some generic routines for this that you
-   * can use. Simply invoke them for every data container that you use. If
-   * you trigger non-blocking MPI, you don't have to wait until they are
-   * finished. You can expect the calling routine that it calls
-   * finishAllOutstandingSendsAndReceives() later on.
-   */
-  virtual void exchangeAllVerticalDataExchangeStacks(int masterId) {};
-
-  /**
    * Exchange all the data along the domain boundaries. If the bool is set,
    * we do send out exactly as many elements per face or vertex as we
    * expect to receive. Therefore, the boundary exchange can optimise the

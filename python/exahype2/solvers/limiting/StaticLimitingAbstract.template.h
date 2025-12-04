@@ -19,11 +19,11 @@
 {{SOLVER_INCLUDES}}
 
 {% for item in NAMESPACE -%}
-  namespace {{ item }} {
+namespace {{ item }} {
 {%- endfor %}
   class {{CLASSNAME}};
 {% for item in NAMESPACE -%}
-  }
+}
 {%- endfor %}
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
@@ -52,6 +52,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     virtual double getMaxMeshSize() const override final;
     virtual double getMinMeshSize() const override final;
+
+    virtual double getMinAdmissibleMeshSize() const override final;
+    virtual double getMaxAdmissibleMeshSize() const override final;
 
     virtual int getNumberOfDoFs() const override final;
 
