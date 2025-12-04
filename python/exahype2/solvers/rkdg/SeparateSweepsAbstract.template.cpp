@@ -49,8 +49,18 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
 }
 
 
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxAdmissibleMeshSize() const {
+  return MaxAdmissibleCellH;
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinAdmissibleMeshSize() const {
+  return MinAdmissibleCellH;
+}
+
+
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
-  return (DGOrder + 1) * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
+  return BasePowerExponent<DGOrder + 1, DIMENSIONS>::value * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }
 
 

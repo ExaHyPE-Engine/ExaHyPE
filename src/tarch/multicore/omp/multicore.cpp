@@ -19,7 +19,9 @@ void tarch::multicore::native::spawnTasks(const std::vector<Task*>& tasks) {
 #if not defined(TASKLOOP_NOT_SUPPORTED)
 #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(Task::DefaultPriority) untied
 #endif
-  for (Task* p : tasks) {
+  for (std::size_t i = 0; i < tasks.size(); ++i) {
+    auto* p = tasks[i];
+
 #if defined(TASKLOOP_NOT_SUPPORTED)
 #pragma omp task priority(Task::DefaultPriority) untied
 #endif

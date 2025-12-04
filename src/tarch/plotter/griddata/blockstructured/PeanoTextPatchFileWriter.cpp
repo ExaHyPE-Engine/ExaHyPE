@@ -114,7 +114,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::addNew
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createEmptyIndexFile() {
   // TODO: Seems a bit odd to have an "createEmptyIndexFile()" here and then we have the same function in PVDTimeSeriesWriter
-  logInfo("createEmptyIndexFile()", "Create empty index file " << _indexFile);
+  logDebug("createEmptyIndexFile()", "Create empty index file " << _indexFile);
 
   std::ofstream indexFileOut;
   indexFileOut.open(_indexFile.c_str(), std::ios::out);

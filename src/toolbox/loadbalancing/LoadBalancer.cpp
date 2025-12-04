@@ -45,6 +45,8 @@ void toolbox::loadbalancing::LoadBalancer::update() {
 
   logDebug("update()", toString());
 
+  // TODO: Get rid of the states, combine inter-rank and intra-rank into one function? Does that make sense?
+  // TODO: Introduce new mechanism to detect different kind of meshes: Regular, static AMR, dynamic AMR
   if (_state == State::InterRankDistribution) {
     updateInterRankLoadBalancing();
   } else if (_state == State::IntraRankDistribution) {
@@ -52,6 +54,10 @@ void toolbox::loadbalancing::LoadBalancer::update() {
   }
 
   _statistics.notifyOfStateChange(_state);
+}
+
+int toolbox::loadbalancing::LoadBalancer::getMaxPermittedTreesPerRank() const {
+  return _configuration->getMaxLocalTreesPerRank(_state);
 }
 
 int toolbox::loadbalancing::LoadBalancer::getGlobalNumberOfTrees() const {
@@ -74,64 +80,154 @@ std::size_t toolbox::loadbalancing::LoadBalancer::getGlobalMemoryUsageInBytes() 
   return _statistics.getGlobalMemoryUsageInBytes();
 }
 
+double toolbox::loadbalancing::LoadBalancer::getGlobalMinH() const { return _statistics.getGlobalMinH(); }
+
+int toolbox::loadbalancing::LoadBalancer::getGlobalNumberOfStationarySweeps() const {
+  return _statistics.getGlobalNumberOfStationarySweeps();
+}
+
 bool toolbox::loadbalancing::LoadBalancer::hasStagnated() const {
   return _state == State::Stagnation or _state == State::SwitchedOff;
 }
 
 bool toolbox::loadbalancing::LoadBalancer::hasSplitRecently() const {
-  return _statistics.getNumberOfStateUpdatesWithoutAnySplit() < 3;
+  return _statistics.getNumberOfStateUpdatesWithoutAnySplit() < 3; // TODO: Don't use hardcoded magic numbers
+}
+
+int toolbox::loadbalancing::LoadBalancer::getNumberOfSettlingIterations() const {
+  // Define the necessary settling time
+  // - 3 iterations: Required for a tree to physically split and clear the Blacklist.
+  // - 1 iteration:  Required for local statistics to update after the physical change.
+  // - 1 iteration:  Required for global MPI reduction to reflect the new local stats.
+  constexpr int RequiredSettlingIterations = 5;
+  int           result                     = RequiredSettlingIterations;
+  return result;
 }
 
 void toolbox::loadbalancing::LoadBalancer::updateInterRankLoadBalancing() {
   const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-  if (numberOfRanks <= 1 or _statistics.getGlobalNumberOfTrees() > 1) {
+
+  if (numberOfRanks <= 1 or _statistics.getGlobalNumberOfTrees() >= numberOfRanks) {
     _state = State::IntraRankDistribution;
     return;
   }
 
-  if (hasSplitRecently() or not _statistics.hasConsistentViewOfWorld()
-      or not tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+  // Break if we cannot further split the mesh although we still have ranks that are not satisfied
+  if (_statistics.getNumberOfStateUpdatesWithoutAnySplit() > getNumberOfSettlingIterations()) {
+    logWarning(
+      "updateInterRankLoadBalancing",
+      "Current global mesh is too small or poorly balanced to split further to ranks. Please consider increasing the mesh size or reduce the number of ranks."
+    );
+    _state = State::IntraRankDistribution;
+    return;
+  }
+
+  if (hasSplitRecently() or not _statistics.hasConsistentViewOfWorld()) {
     return; // Nothing to do yet
   }
 
-  const int numberOfCells                         = _statistics.getGlobalNumberOfInnerUnrefinedCells();
-  const int minTreeSize                           = _configuration->getMinTreeSize(_state);
-  const int numberOfTreesToAccommodateMinTreeSize = std::max(numberOfCells / minTreeSize, 1);
-  if (numberOfTreesToAccommodateMinTreeSize < numberOfRanks) {
-    return; // Nothing to do (yet)
+  const int localHeaviestTreeId = getHeaviestNonBlacklistedLocalSpacetreeID();
+  if (localHeaviestTreeId == -1) {
+    logDebug("updateInterRankLoadBalancing()", "No valid local tree found to split");
+    return;
   }
 
-  const int numberOfCellsPerTree = std::max(static_cast<int>(std::round(numberOfCells / numberOfRanks)), 1);
+  const int localHeaviestTreeLoad = peano4::parallel::SpacetreeSet::getInstance()
+                                      .getGridStatistics(localHeaviestTreeId)
+                                      .numberOfLocalUnrefinedCells;
+
+  // We compare against the global max load. If I'm not close to the heaviest global tree,
+  // I should yield to let the heavier tree split first.
+  const int globalMaxLoad = _statistics.getGlobalMaxTreeLoad();
+  if (localHeaviestTreeLoad < globalMaxLoad * 0.9) {
+    // Someone else is significantly heavier, let them balance first.
+    logDebug(
+      "updateInterRankLoadBalancing()",
+      "Yielding: Load "
+        << localHeaviestTreeLoad << " of local tree " << localHeaviestTreeId << " is smaller than global max "
+        << globalMaxLoad
+    );
+    return;
+  }
+
+  const int numberOfCells     = _statistics.getGlobalNumberOfInnerUnrefinedCells();
+  const int minTreeSize       = _configuration->getMinTreeSize(_state);
+  const int idealCellsPerTree = std::max(static_cast<int>(std::round(numberOfCells / numberOfRanks)), 1);
+
   logDebug(
     "updateInterRankLoadBalancing()",
-    "Mesh has "
-      << numberOfCells << " cells, so split " << numberOfRanks - 1 << " times "
-      << "("
-      << "MinTreeSize=" << minTreeSize << ", NumberOfTreesToAccommodateMinTreeSize="
-      << numberOfTreesToAccommodateMinTreeSize << ", NumberOfCellsPerTree=" << numberOfCellsPerTree << ")"
+    "Evaluating Split. Ranks: "
+      << numberOfRanks << ", Global Trees: " << _statistics.getGlobalNumberOfTrees()
+      << ", Total Cells: " << numberOfCells << ", Ideal/Tree: " << idealCellsPerTree << ", MinTreeSize: " << minTreeSize
   );
 
-  for (int targetRank = 1; targetRank < numberOfRanks; targetRank++) {
-    int numberOfCellsPerTreeWithRemainder = numberOfCellsPerTree;
-    if (numberOfCells % numberOfRanks >= targetRank) {
-      numberOfCellsPerTreeWithRemainder++;
+  int nextTargetRank = _statistics.getGlobalNumberOfTrees() + tarch::mpi::Rank::getInstance().getRank();
+  if (nextTargetRank >= numberOfRanks) {
+    logDebug("updateInterRankLoadBalancing()", "Next target rank " << nextTargetRank << " is out of bounds");
+    return;
+  }
+
+  int splitsTriggered = 0;
+  while (nextTargetRank < numberOfRanks) {
+    const int currentProjectedLoad = localHeaviestTreeLoad - (splitsTriggered * idealCellsPerTree);
+
+    // Stop if the tree would become too small
+    if (currentProjectedLoad - idealCellsPerTree < minTreeSize) {
+      logDebug(
+        "updateInterRankLoadBalancing()",
+        "Stopping split sequence: Remaining load ("
+          << currentProjectedLoad << ") minus split (" << idealCellsPerTree << ") would be less than MinTreeSize ("
+          << minTreeSize << ")"
+      );
+      break;
     }
-    triggerSplit(numberOfCellsPerTreeWithRemainder, targetRank);
+
+    // TODO: Adjust for remainder cells on the very last rank
+    const int cellsToSplit = idealCellsPerTree;
+
+    logDebug(
+      "updateInterRankLoadBalancing()",
+      "Local heaviest tree "
+        << localHeaviestTreeId << " has " << localHeaviestTreeLoad << " cells. " << "Splitting " << cellsToSplit
+        << " cells to rank " << nextTargetRank << " (hierarchical split #" << splitsTriggered + 1 << ")"
+    );
+
+    triggerSplit(cellsToSplit, nextTargetRank, localHeaviestTreeId);
+    splitsTriggered++;
+
+    // If we split multiple times, we must jump over all other ranks to find our next unique slot.
+    // E.g. if there are 9 existing trees, I target 9 + myRank, then 9 + myRank + 9, etc.
+    // This ensures hierarchy.
+    nextTargetRank += _statistics.getGlobalNumberOfTrees();
   }
 }
 
 void toolbox::loadbalancing::LoadBalancer::updateIntraRankLoadBalancing() {
   const int numberOfThreads          = tarch::multicore::Core::getInstance().getNumberOfThreads();
-  const int maxPermittedTreesPerRank = _configuration->getMaxLocalTreesPerRank(_state);
+  const int maxPermittedTreesPerRank = getMaxPermittedTreesPerRank();
+
   if (numberOfThreads <= 1 or _statistics.getLocalNumberOfTrees() >= maxPermittedTreesPerRank) {
     _state = State::Stagnation;
     return;
   }
 
+  if (_statistics.getNumberOfStateUpdatesWithoutAnySplit() > getNumberOfSettlingIterations()) {
+    logWarning(
+      "updateIntraRankLoadBalancing",
+      "Current local mesh is too small or poorly balanced to split further into tasks. Please consider increasing the mesh size or reduce the number of local trees."
+    );
+    _state = State::Stagnation;
+  }
+
+  if (hasSplitRecently() or not _statistics.hasConsistentViewOfWorld()) {
+    return; // Nothing to do yet
+  }
+
   const int minTreeSize                           = _configuration->getMinTreeSize(_state);
   const int numberOfCells                         = _statistics.getLocalNumberOfInnerUnrefinedCells();
   const int numberOfTreesToAccommodateMinTreeSize = std::max(numberOfCells / minTreeSize, 1);
-  if (numberOfTreesToAccommodateMinTreeSize < maxPermittedTreesPerRank or not _statistics.hasConsistentViewOfWorld()) {
+
+  if (numberOfTreesToAccommodateMinTreeSize < maxPermittedTreesPerRank) {
     return; // Nothing to do (yet)
   }
 
@@ -139,6 +235,7 @@ void toolbox::loadbalancing::LoadBalancer::updateIntraRankLoadBalancing() {
   unsigned int numberOfSplits       = numberOfAllowedTrees - 1;
   if (numberOfSplits > 0) {
     const int numberOfCellsPerTree = std::max(static_cast<int>(std::round(numberOfCells / numberOfAllowedTrees)), 1);
+
     logDebug(
       "updateIntraRankLoadBalancing()",
       "Mesh has "
@@ -148,22 +245,30 @@ void toolbox::loadbalancing::LoadBalancer::updateIntraRankLoadBalancing() {
         << ", NumberOfTreesToAccommodateMinTreeSize=" << numberOfTreesToAccommodateMinTreeSize
         << ", NumberOfCellsPerTree=" << numberOfCellsPerTree << ")"
     );
+
     unsigned int remainder = numberOfCells - (numberOfCellsPerTree * numberOfAllowedTrees);
     while (numberOfSplits) {
       if (remainder > 0) {
-        triggerSplit(numberOfCellsPerTree + 1, tarch::mpi::Rank::getInstance().getRank());
+        triggerSplit(
+          numberOfCellsPerTree + 1,
+          tarch::mpi::Rank::getInstance().getRank(),
+          *(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().begin())
+        );
         remainder--;
       } else {
-        triggerSplit(numberOfCellsPerTree, tarch::mpi::Rank::getInstance().getRank());
+        triggerSplit(
+          numberOfCellsPerTree,
+          tarch::mpi::Rank::getInstance().getRank(),
+          *(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().begin())
+        );
       }
       numberOfSplits--;
     }
   }
 }
 
-void toolbox::loadbalancing::LoadBalancer::triggerSplit(int numberOfCells, int targetRank) {
-  const int  sourceTree = *(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().begin());
-  const bool success    = peano4::parallel::SpacetreeSet::getInstance().split(
+void toolbox::loadbalancing::LoadBalancer::triggerSplit(int numberOfCells, int targetRank, int sourceTree) {
+  const bool success = peano4::parallel::SpacetreeSet::getInstance().split(
     sourceTree,
     peano4::grid::SplitInstruction{numberOfCells, _configuration->getMode(_state)},
     targetRank
@@ -171,6 +276,7 @@ void toolbox::loadbalancing::LoadBalancer::triggerSplit(int numberOfCells, int t
 
   if (not success) {
     logError("triggerSplit()", "Wanted to split tree " << sourceTree << " but failed");
+    assertion(false);
   }
 
   _blacklist.triggeredSplit(sourceTree);
@@ -208,4 +314,27 @@ std::string toolbox::loadbalancing::LoadBalancer::getStatistics() {
   }
 
   return msg.str();
+}
+
+int toolbox::loadbalancing::LoadBalancer::getHeaviestNonBlacklistedLocalSpacetreeID() const {
+  int heaviestTreeId = -1;
+  int maxCells       = -1;
+
+  const auto& localTrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
+
+  for (int treeId : localTrees) {
+    if (_blacklist.isBlacklisted(treeId)) {
+      continue;
+    }
+
+    const int currentCells = peano4::parallel::SpacetreeSet::getInstance()
+                               .getGridStatistics(treeId)
+                               .numberOfLocalUnrefinedCells;
+    if (currentCells > maxCells) {
+      maxCells       = currentCells;
+      heaviestTreeId = treeId;
+    }
+  }
+
+  return heaviestTreeId;
 }

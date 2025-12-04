@@ -870,25 +870,6 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeCellData(int fromStack, ::pean
 {% endif %}
 
 
-void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllVerticalDataExchangeStacks(int masterId) {
-  logTraceInWith2Arguments("exchangeAllVerticalDataExchangeStacks()", masterId, _spacetreeId);
-
-{%- for cell in CELLS %}
-  ::peano4::parallel::SpacetreeSet::exchangeAllVerticalDataExchangeStacks(repositories::DataRepository::_{{cell.logical_type_name}}Stack, _spacetreeId, masterId);
-{%- endfor %}
-
-{%- for face in FACES %}
-  ::peano4::parallel::SpacetreeSet::exchangeAllVerticalDataExchangeStacks(repositories::DataRepository::_{{face.logical_type_name}}Stack, _spacetreeId, masterId);
-{%- endfor %}
-
-{%- for vertex in VERTICES %}
-  ::peano4::parallel::SpacetreeSet::exchangeAllVerticalDataExchangeStacks(repositories::DataRepository::_{{vertex.logical_type_name}}Stack, _spacetreeId, masterId);
-{%- endfor %}
-
-  logTraceOut("exchangeAllVerticalDataExchangeStacks()");
-}
-
-
 void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllHorizontalDataExchangeStacks(bool symmetricDataCardinality) {
   logTraceInWith2Arguments("exchangeAllHorizontalDataExchangeStacks()", symmetricDataCardinality, _spacetreeId);
 

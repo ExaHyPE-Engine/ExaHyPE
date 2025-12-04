@@ -4,160 +4,56 @@
 
 #include "peano4/utils/Loop.h"
 
-const peano4::grid::SpacetreeHelper::Patch3x3IndexTable& peano4::grid::SpacetreeHelper::getPatch3x3IndexTable() {
-  static const Patch3x3IndexTable T = [] {
-    Patch3x3IndexTable t{};
-    for (int k = 0; k < TWO_POWER_D; ++k) {
-      for (int j = 0; j < TWO_POWER_D; ++j) {
-        int linear = 0;
-        int stride = 1;
-        for (int d = 0; d < DIMENSIONS; ++d) {
-          const int kd = (k >> d) & 1; // bit of k in dim d
-          const int jd = (j >> d) & 1; // bit of j in dim d
-          const int v  = kd + jd;      // 0..2
-          linear += v * stride;
-          stride *= 3;
-        }
-        t.idx[k][j] = linear;
+const peano4::grid::SpacetreeHelper::Patch3x3IndexTable peano4::grid::SpacetreeHelper::_patch3x3Table = [] {
+  Patch3x3IndexTable t{};
+  for (int k = 0; k < TWO_POWER_D; ++k) {
+    for (int j = 0; j < TWO_POWER_D; ++j) {
+      int linear = 0;
+      int stride = 1;
+      for (int d = 0; d < DIMENSIONS; ++d) {
+        const int kd = (k >> d) & 1; // bit of k in dim d
+        const int jd = (j >> d) & 1; // bit of j in dim d
+        const int v  = kd + jd;      // 0..2
+        linear += v * stride;
+        stride *= 3;
+      }
+      t.idx[k][j] = linear;
+    }
+  }
+  return t;
+}();
+
+const peano4::grid::SpacetreeHelper::FaceAdjTables peano4::grid::SpacetreeHelper::_faceAdjTable = [] {
+  FaceAdjTables t{};
+  // Fill faceVerts
+  for (int face = 0; face < TWO_TIMES_D; ++face) {
+    const int  normal = face % DIMENSIONS;
+    const bool upper  = face >= DIMENSIONS;
+    int        c      = 0;
+    for (int v = 0; v < TWO_POWER_D; ++v) {
+      const bool onFace = ((v >> normal) & 1) == (upper ? 1 : 0);
+      if (onFace) {
+        t.faceVerts[face][c++] = v;
       }
     }
-    return t;
-  }();
-  return T;
+  }
+  // Fill adjIdx0/adjIdx1
+  for (int n = 0; n < DIMENSIONS; ++n) {
+    for (int v = 0; v < TWO_POWER_D; ++v) {
+      const int base  = (TWO_POWER_D - 1) - v;
+      t.adjIdx0[n][v] = static_cast<std::uint8_t>(base & ~(1 << n));
+      t.adjIdx1[n][v] = static_cast<std::uint8_t>(base | (1 << n));
+    }
+  }
+  return t;
+}();
+
+const peano4::grid::SpacetreeHelper::Patch3x3IndexTable& peano4::grid::SpacetreeHelper::getPatch3x3IndexTable() {
+  return _patch3x3Table;
 }
 
 const peano4::grid::SpacetreeHelper::FaceAdjTables& peano4::grid::SpacetreeHelper::getFaceAdjTables() {
-  static const FaceAdjTables T = [] {
-    FaceAdjTables t{};
-    // Fill faceVerts
-    for (int face = 0; face < TWO_TIMES_D; ++face) {
-      const int  normal = face % DIMENSIONS;
-      const bool upper  = face >= DIMENSIONS;
-      int        c      = 0;
-      for (int v = 0; v < TWO_POWER_D; ++v) {
-        const bool onFace = ((v >> normal) & 1) == (upper ? 1 : 0);
-        if (onFace) {
-          t.faceVerts[face][c++] = v;
-        }
-      }
-    }
-    // Fill adjIdx0/adjIdx1
-    for (int n = 0; n < DIMENSIONS; ++n) {
-      for (int v = 0; v < TWO_POWER_D; ++v) {
-        const int base  = (TWO_POWER_D - 1) - v;
-        t.adjIdx0[n][v] = static_cast<uint8_t>(base & ~(1 << n));
-        t.adjIdx1[n][v] = static_cast<uint8_t>(base | (1 << n));
-      }
-    }
-    return t;
-  }();
-  return T;
-}
-
-bool peano4::grid::SpacetreeHelper::isVertexAdjacentToLocalSpacetree(
-  const GridVertex&         vertex,
-  const int                 treeNumber,
-  const SplitSpecification& splitTriggered,
-  const std::set<int>&      splitting,
-  const std::set<int>&      joinTriggered,
-  const std::set<int>&      joining,
-  bool                      splittingIsConsideredLocal,
-  bool                      joiningIsConsideredLocal,
-  bool                      isHangingVertexAdjacentToLocalTree
-) {
-  bool result = false;
-
-  for (int i = 0; i < TWO_POWER_D; i++) {
-    const int adjacentRank = vertex.adjacentRanks[i];
-
-    assertion(splitTriggered.count(adjacentRank) <= 1);
-    assertion(splitting.count(adjacentRank) <= 1);
-
-    if (adjacentRank == treeNumber or splitTriggered.count(adjacentRank) == 1
-        or (splittingIsConsideredLocal and splitting.count(adjacentRank) == 1)
-        or (joiningIsConsideredLocal and joining.count(adjacentRank) == 1)) {
-      result = true;
-    }
-  }
-
-  return result
-         and (not isHangingVertexAdjacentToLocalTree ? vertex.getState() != GridVertex::State::HangingVertex : true);
-}
-
-std::bitset<TWO_POWER_D> peano4::grid::SpacetreeHelper::areVerticesLocal(
-  GridVertex                vertices[TWO_POWER_D],
-  const int                 treeNumber,
-  const SplitSpecification& splitTriggered,
-  const std::set<int>&      splitting,
-  const std::set<int>&      joinTriggered,
-  const std::set<int>&      joining
-) {
-  std::bitset<TWO_POWER_D> bitset;
-  for (int i = 0; i < TWO_POWER_D; i++) {
-    bitset.set(
-      i,
-      isVertexAdjacentToLocalSpacetree(
-        vertices[i],
-        treeNumber,
-        splitTriggered,
-        splitting,
-        joinTriggered,
-        joining,
-        true,
-        true,
-        true
-      )
-    );
-  }
-  return bitset;
-}
-
-std::bitset<TWO_TIMES_D> peano4::grid::SpacetreeHelper::areFacesLocal(
-  GridVertex                vertices[TWO_POWER_D],
-  const int                 treeNumber,
-  const SplitSpecification& splitTriggered,
-  const std::set<int>&      splitting,
-  const std::set<int>&      joinTriggered,
-  const std::set<int>&      joining
-) {
-  std::bitset<TWO_TIMES_D> result;
-
-  const auto& T = SpacetreeHelper::getFaceAdjTables();
-
-  auto isLocalRank = [&](int r) { return r == treeNumber or splitTriggered.count(r) > 0 or splitting.count(r) > 0; };
-
-  for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
-    const int  normal = faceNumber % DIMENSIONS;
-    const bool upper  = faceNumber >= DIMENSIONS;
-
-    bool isLocal = false;
-
-    for (int i = 0; i < TWO_POWER_D / 2; i++) {
-      const int         vIdx = T.faceVerts[faceNumber][i];
-      const GridVertex& v    = vertices[vIdx];
-
-      const int i0 = T.adjIdx0[normal][vIdx]; // Entry with normal-bit = 0
-      const int i1 = T.adjIdx1[normal][vIdx]; // Entry with normal-bit = 1
-
-      if (v.getState() != GridVertex::State::HangingVertex or upper) {
-        if (isLocalRank(v.adjacentRanks[i0])) {
-          isLocal = true;
-          break;
-        }
-      }
-
-      if (v.getState() != GridVertex::State::HangingVertex or not upper) {
-        if (isLocalRank(v.adjacentRanks[i1])) {
-          isLocal = true;
-          break;
-        }
-      }
-    }
-
-    result.set(faceNumber, isLocal);
-  }
-
-  return result;
+  return _faceAdjTable;
 }
 
 void peano4::grid::SpacetreeHelper::getAdjacentRanksOfFace(
@@ -179,32 +75,27 @@ void peano4::grid::SpacetreeHelper::getAdjacentRanksOfFace(
       const int         vIdx  = verts[k];
       const GridVertex& v     = fineGridVertices[vIdx];
       const auto        state = v.getState();
-      const bool invalid = (state == GridVertex::State::HangingVertex) or (state == GridVertex::State::New); // receiving
-                                                                                                             // side
-                                                                                                             // ignores
-                                                                                                             // New
-      const auto& adj = v.backupOfAdjacentRanks;
-      const int   i0  = T.adjIdx0[normal][vIdx];
-      const int   i1  = T.adjIdx1[normal][vIdx];
-      out[counter++]  = invalid ? -1 : adj[i0];
-      out[counter++]  = invalid ? -1 : adj[i1];
+      // Receiving side ignores New
+      const bool  invalid = (state == GridVertex::State::HangingVertex) or (state == GridVertex::State::New);
+      const auto& adj     = v.backupOfAdjacentRanks;
+      const int   i0      = T.adjIdx0[normal][vIdx];
+      const int   i1      = T.adjIdx1[normal][vIdx];
+      out[counter++]      = invalid ? -1 : adj[i0];
+      out[counter++]      = invalid ? -1 : adj[i1];
     }
   } else {
     // Use (current) adjacentRanks for all contributing vertices
     for (int k = 0; k < TWO_POWER_D / 2; ++k) {
-      const int         vIdx    = verts[k];
-      const GridVertex& v       = fineGridVertices[vIdx];
-      const auto        state   = v.getState();
-      const bool        invalid = (state == GridVertex::State::HangingVertex)
-                           or (state == GridVertex::State::Delete); // sending
-                                                                    // side
-                                                                    // ignores
-                                                                    // Delete
-      const auto& adj = v.adjacentRanks;
-      const int   i0  = T.adjIdx0[normal][vIdx];
-      const int   i1  = T.adjIdx1[normal][vIdx];
-      out[counter++]  = invalid ? -1 : adj[i0];
-      out[counter++]  = invalid ? -1 : adj[i1];
+      const int         vIdx  = verts[k];
+      const GridVertex& v     = fineGridVertices[vIdx];
+      const auto        state = v.getState();
+      // Sending side ignores Delete
+      const bool  invalid = (state == GridVertex::State::HangingVertex) or (state == GridVertex::State::Delete);
+      const auto& adj     = v.adjacentRanks;
+      const int   i0      = T.adjIdx0[normal][vIdx];
+      const int   i1      = T.adjIdx1[normal][vIdx];
+      out[counter++]      = invalid ? -1 : adj[i0];
+      out[counter++]      = invalid ? -1 : adj[i1];
     }
   }
 }

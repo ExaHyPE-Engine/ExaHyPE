@@ -31,7 +31,11 @@ void tarch::multicore::spawnTask(Task* task, const void* const inDependency, con
   }
 }
 
-void tarch::multicore::spawnTasks(const std::vector<Task*>& tasks) { native::spawnTasks(tasks); }
+void tarch::multicore::spawnTasks(const std::vector<Task*>& tasks) {
+  if (not tasks.empty()) {
+    native::spawnTasks(tasks);
+  }
+}
 
 void tarch::multicore::waitForTask(const void* const inDependency) { native::waitForTask(inDependency); }
 
@@ -40,23 +44,27 @@ void tarch::multicore::waitForAllTasks() { native::waitForAllTasks(); }
 #ifndef WITH_MULTITHREADING
 
 void tarch::multicore::native::spawnTask(Task* task, const void* const, const void* const) {
-  while (task->run()) {};
+  while (task->run()) {
+  };
   delete task;
 }
 
 void tarch::multicore::native::spawnTask(Task* task, const void* const) {
-  while (task->run()) {};
+  while (task->run()) {
+  };
   delete task;
 }
 
 void tarch::multicore::native::spawnTask(Task* task) {
-  while (task->run()) {};
+  while (task->run()) {
+  };
   delete task;
 }
 
 void tarch::multicore::native::spawnTasks(const std::vector<Task*>& tasks) {
   for (auto& p : tasks) {
-    while (p->run()) {};
+    while (p->run()) {
+    };
     delete p;
   }
 }

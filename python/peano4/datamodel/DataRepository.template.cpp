@@ -2,6 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "DataRepository.h"
 
+#include "peano4/grid/Spacetree.h"
+
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
 
@@ -12,32 +14,37 @@ std::uint64_t {{FULL_QUALIFIED_CLASSNAME}}::_globalMemoryUsageInBytes = 0;
 
 void {{FULL_QUALIFIED_CLASSNAME}}::init() {
 #ifdef WITH_MPI
-  {%- for container in DATA_CONTAINERS %}
-    {{ container.fq }}::initDatatype();
-  {%- endfor %}
+{%- for container in DATA_CONTAINERS %}
+  {{ container.fq }}::initDatatype();
+{%- endfor %}
 #endif
 
-  // TODO: Call init here for the maps
+  const int numberOfMaxGlobalSpacetrees = loadBalancer.getMaxPermittedTreesPerRank() * tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  ::peano4::grid::Spacetree::_vertexStack.resize(numberOfMaxGlobalSpacetrees); // TODO: Resize it somewhere else or add static resize function to the spacetree class
+
+{%- for container in DATA_CONTAINERS %}
+  _{{ container.name }}Stack.resize(numberOfMaxGlobalSpacetrees);
+{%- endfor %}
 }
 
 void {{FULL_QUALIFIED_CLASSNAME}}::shutdown() {
-  {%- for container in DATA_CONTAINERS %}
-    _{{ container.name }}Stack.clear();
-  {%- endfor %}
+{%- for container in DATA_CONTAINERS %}
+  _{{ container.name }}Stack.clear();
+{%- endfor %}
 
 #ifdef WITH_MPI
-  {%- for container in DATA_CONTAINERS %}
-    {{ container.fq }}::shutdownDatatype();
-  {%- endfor %}
+{%- for container in DATA_CONTAINERS %}
+  {{ container.fq }}::shutdownDatatype();
+{%- endfor %}
 #endif
 }
 
 void {{FULL_QUALIFIED_CLASSNAME}}::updateMemoryUsage() {
   std::size_t localMemoryUsageInBytes = 0;
 
-  {%- for container in DATA_CONTAINERS %}
-    localMemoryUsageInBytes += _{{container.name}}Stack.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
-  {%- endfor %}
+{%- for container in DATA_CONTAINERS %}
+  localMemoryUsageInBytes += _{{container.name}}Stack.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
+{%- endfor %}
 
   _localMemoryUsageInBytes = localMemoryUsageInBytes;
 

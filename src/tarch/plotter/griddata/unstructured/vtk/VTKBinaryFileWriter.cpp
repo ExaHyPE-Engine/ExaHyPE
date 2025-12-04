@@ -31,14 +31,14 @@ tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::VTKBinaryFileW
   _fileName(fileName) {
   if (fileName.rfind(".vtk") != std::string::npos) {
     logWarning(
-      "writeToFile()",
-      "filename should not end with .vtk as routine adds extension automatically. Chosen filename prefix=" << fileName
+      "VTKBinaryFileWriter()",
+      "Filename should not end with .vtk as routine adds extension automatically. Chosen filename prefix=" << fileName
     );
   }
   if (mode != tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile and indexFileName.rfind(".pvd") != std::string::npos) {
     logWarning(
-      "writeToFile()",
-      "index filename should not end with .pvd as routine adds extension automatically. Chosen filename prefix="
+      "VTKBinaryFileWriter()",
+      "Index filename should not end with .pvd as routine adds extension automatically. Chosen filename prefix="
         << indexFileName
     );
   }
@@ -53,7 +53,7 @@ tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::VTKBinaryFileW
     break;
   case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData:
     if (not fs::exists(indexFileName + ".pvd")) {
-      logInfo("PeanoTextPatchFileWriter(...)", "no index file " << indexFileName << " found. Create new one");
+      logDebug("VTKBinaryFileWriter()", "No index file " << indexFileName << " found. Create new one");
       tarch::plotter::PVDTimeSeriesWriter::createEmptyIndexFile(indexFileName);
     } else if (tarch::la::smaller(
                  timeStamp,
@@ -65,8 +65,8 @@ tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::VTKBinaryFileW
                  )
                )) {
       logWarning(
-        "PeanoTextPatchFileWriter(...)",
-        "there is an index file "
+        "VTKBinaryFileWriter()",
+        "There is an index file "
           << indexFileName << " with data for time stamp "
           << tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName)
           << ". Will be overwritten as we dump data for time " << timeStamp

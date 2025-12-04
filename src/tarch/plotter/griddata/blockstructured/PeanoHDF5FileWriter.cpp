@@ -95,7 +95,7 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::removeClosi
 }
 
 void tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::createEmptyXMFFile(double initialTimeStamp) {
-  logInfo("createEmptyXMFFile()", "Create empty XMF file " << _xmfFile);
+  logDebug("createEmptyXMFFile()", "Create empty XMF file " << _xmfFile);
 
   std::ofstream xmfFileOut;
 
@@ -216,7 +216,7 @@ tarch::plotter::griddata::blockstructured::PeanoHDF5FileWriter::PeanoHDF5FileWri
 
   case IndexFileMode::AppendNewData:
     if (not fs::exists(_xmfFile)) {
-      logInfo("PeanoHDF5FileWriter()", "No XMF file " << _xmfFile << " found. Create new one");
+      logDebug("PeanoHDF5FileWriter()", "No XMF file " << _xmfFile << " found. Create new one");
       createEmptyXMFFile(0.0);
     } else {
       double currentTimeVal = getLatestTimeStepInXMFFile();

@@ -10,8 +10,8 @@ tarch::logging::Log toolbox::loadbalancing::Statistics::_log("toolbox::loadbalan
 toolbox::loadbalancing::Statistics::Statistics():
   _localNumberOfInnerUnrefinedCells(0),
   _globalNumberOfInnerUnrefinedCells(0),
-  _localNumberOfTrees(1),
-  _globalNumberOfTrees(1),
+  _localNumberOfTrees(0),
+  _globalNumberOfTrees(1), // Globally we always have at least the root/master tree on rank 0
   _isLocalLoadBalancingEnabled(true),
   _globalNumberOfRanksWithEnabledLoadBalancing(0),
   _localNumberOfSplits(0),
@@ -23,7 +23,29 @@ toolbox::loadbalancing::Statistics::Statistics():
   _globalMaxTreeLoad(0),
   _localMemoryUsageInBytes(0),
   _globalMemoryUsageInBytes(0),
-  _isViewConsistent(false) {
+  _localMinH(std::numeric_limits<double>::max()),
+  _globalMinH(std::numeric_limits<double>::max()),
+  _localNumberOfStationarySweeps(0),
+  _globalNumberOfStationarySweeps(0),
+  _isViewConsistent(false),
+  _globalNumberOfInnerUnrefinedCellsBufferIn(0),
+  _globalNumberOfInnerUnrefinedCellsBufferOut(0),
+  _globalNumberOfSplitsIn(0),
+  _globalNumberOfSplitsOut(0),
+  _globalNumberOfTreesIn(0),
+  _globalNumberOfTreesOut(0),
+  _globalNumberOfRanksWithEnabledLoadBalancingIn(0),
+  _globalNumberOfRanksWithEnabledLoadBalancingOut(0),
+  _globalMinTreeLoadIn(std::numeric_limits<int>::max()),
+  _globalMinTreeLoadOut(std::numeric_limits<int>::max()),
+  _globalMaxTreeLoadIn(0),
+  _globalMaxTreeLoadOut(0),
+  _globalMemoryUsageInBytesIn(0),
+  _globalMemoryUsageInBytesOut(0),
+  _globalMinHIn(std::numeric_limits<double>::max()),
+  _globalMinHOut(std::numeric_limits<double>::max()),
+  _globalNumberOfStationarySweepsIn(0),
+  _globalNumberOfStationarySweepsOut(0) {
 
 #ifdef WITH_MPI
   _globalNumberOfInnerUnrefinedCellsRequest           = nullptr;
@@ -33,19 +55,33 @@ toolbox::loadbalancing::Statistics::Statistics():
   _globalMinTreeLoadRequest                           = nullptr;
   _globalMaxTreeLoadRequest                           = nullptr;
   _globalMemoryUsageInBytesRequest                    = nullptr;
+  _globalMinHRequest                                  = nullptr;
+  _globalNumberOfStationarySweepsRequest              = nullptr;
 #endif
 }
 
 void toolbox::loadbalancing::Statistics::waitForGlobalDataExchange() {
 #ifdef WITH_MPI
   if (_globalNumberOfInnerUnrefinedCellsRequest != nullptr) {
-    tarch::mpi::wait(*_globalNumberOfInnerUnrefinedCellsRequest, "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange");
+    tarch::mpi::wait(
+      *_globalNumberOfInnerUnrefinedCellsRequest,
+      "toolbox::loadbalancing::Statistics",
+      "waitForGlobalDataExchange"
+    );
     tarch::mpi::wait(*_globalNumberOfSplitsRequest, "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange");
     tarch::mpi::wait(*_globalNumberOfTreesRequest, "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange");
-    tarch::mpi::wait(*_globalNumberOfRanksWithEnabledLoadBalancingRequest, "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange");
+    tarch::mpi::wait(
+      *_globalNumberOfRanksWithEnabledLoadBalancingRequest,
+      "toolbox::loadbalancing::Statistics",
+      "waitForGlobalDataExchange"
+    );
     tarch::mpi::wait(*_globalMinTreeLoadRequest, "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange");
     tarch::mpi::wait(*_globalMaxTreeLoadRequest, "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange");
-    tarch::mpi::wait(*_globalMemoryUsageInBytesRequest, "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange");
+    tarch::mpi::
+      wait(*_globalMemoryUsageInBytesRequest, "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange");
+    tarch::mpi::wait(*_globalMinHRequest, "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange");
+    tarch::mpi::
+      wait(*_globalNumberOfStationarySweepsRequest, "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange");
 
     delete _globalNumberOfInnerUnrefinedCellsRequest;
     delete _globalNumberOfSplitsRequest;
@@ -54,6 +90,8 @@ void toolbox::loadbalancing::Statistics::waitForGlobalDataExchange() {
     delete _globalMinTreeLoadRequest;
     delete _globalMaxTreeLoadRequest;
     delete _globalMemoryUsageInBytesRequest;
+    delete _globalMinHRequest;
+    delete _globalNumberOfStationarySweepsRequest;
 
     _globalNumberOfInnerUnrefinedCellsRequest           = nullptr;
     _globalNumberOfSplitsRequest                        = nullptr;
@@ -62,28 +100,32 @@ void toolbox::loadbalancing::Statistics::waitForGlobalDataExchange() {
     _globalMinTreeLoadRequest                           = nullptr;
     _globalMaxTreeLoadRequest                           = nullptr;
     _globalMemoryUsageInBytesRequest                    = nullptr;
+    _globalMinHRequest                                  = nullptr;
+    _globalNumberOfStationarySweepsRequest              = nullptr;
   }
 #endif
 }
 
 void toolbox::loadbalancing::Statistics::updateGlobalView() {
-  _localNumberOfInnerUnrefinedCells = peano4::parallel::SpacetreeSet::getInstance()
-                                        .getGridStatistics()
-                                        .numberOfLocalUnrefinedCells;
-  _localNumberOfTrees      = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size();
-  _localMemoryUsageInBytes = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMemoryUsageInBytes();
+  const auto& statistics = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics();
+  const auto& spacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
+
+  _localNumberOfTrees               = spacetrees.size();
+  _localNumberOfInnerUnrefinedCells = statistics.numberOfLocalUnrefinedCells;
+  _localMemoryUsageInBytes          = statistics.getMemoryUsageInBytes();
+  _localMinH                        = tarch::la::max(statistics.minH);
+  _localNumberOfStationarySweeps    = statistics.numberOfStationarySweeps;
 
   {
-    const auto& trees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
-    if (trees.empty()) {
-      _localMinTreeLoad = 0;
+    if (spacetrees.empty()) {
+      _localMinTreeLoad = std::numeric_limits<int>::max();
       _localMaxTreeLoad = 0;
     } else {
       int localMin = std::numeric_limits<int>::max();
       int localMax = 0;
-      for (int treeId : trees) {
-        const auto& stats = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(treeId);
-        const int   load  = stats.numberOfLocalUnrefinedCells;
+      for (auto tree : spacetrees) {
+        const auto& stats = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(tree);
+        const auto  load  = stats.numberOfLocalUnrefinedCells;
         if (load < localMin) {
           localMin = load;
         }
@@ -91,43 +133,50 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
           localMax = load;
         }
       }
-      _localMinTreeLoad = (localMin == std::numeric_limits<int>::max() ? 0 : localMin);
+      _localMinTreeLoad = localMin;
       _localMaxTreeLoad = localMax;
     }
   }
 
   _isViewConsistent = true;
 
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() <= 1) {
-    _globalNumberOfInnerUnrefinedCells           = _localNumberOfInnerUnrefinedCells;
-    _globalNumberOfSplits                        = _localNumberOfSplits;
-    _globalNumberOfTrees                         = _localNumberOfTrees;
-    _globalNumberOfRanksWithEnabledLoadBalancing = _isLocalLoadBalancingEnabled ? 1 : 0;
-    _globalMinTreeLoad                           = _localMinTreeLoad;
-    _globalMaxTreeLoad                           = _localMaxTreeLoad;
-    _globalMemoryUsageInBytes                    = _localMemoryUsageInBytes;
-  } else {
+  _globalNumberOfInnerUnrefinedCells           = _localNumberOfInnerUnrefinedCells;
+  _globalNumberOfSplits                        = _localNumberOfSplits;
+  _globalNumberOfTrees                         = _localNumberOfTrees;
+  _globalNumberOfRanksWithEnabledLoadBalancing = _isLocalLoadBalancingEnabled ? 1 : 0;
+  _globalMinTreeLoad                           = _localMinTreeLoad;
+  _globalMaxTreeLoad                           = _localMaxTreeLoad;
+  _globalMemoryUsageInBytes                    = _localMemoryUsageInBytes;
+  _globalMinH                                  = _localMinH;
+  _globalNumberOfStationarySweeps              = _localNumberOfStationarySweeps;
+
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
 #ifdef WITH_MPI
-    waitForGlobalDataExchange();
+    if (_globalNumberOfInnerUnrefinedCellsRequest != nullptr) {
 
-    _globalNumberOfInnerUnrefinedCells           = _globalNumberOfInnerUnrefinedCellsBufferIn;
-    _globalNumberOfSplits                        = _globalNumberOfSplitsIn;
-    _globalNumberOfTrees                         = _globalNumberOfTreesIn;
-    _globalNumberOfRanksWithEnabledLoadBalancing = _globalNumberOfRanksWithEnabledLoadBalancingIn;
-    _globalMinTreeLoad                           = _globalMinTreeLoadIn;
-    _globalMaxTreeLoad                           = _globalMaxTreeLoadIn;
-    _globalMemoryUsageInBytes                    = _globalMemoryUsageInBytesIn;
+      waitForGlobalDataExchange();
 
-    if (_globalNumberOfInnerUnrefinedCells < _localNumberOfInnerUnrefinedCells) {
-      logDebug(
-        "updateGlobalView()",
-        "Local number of cells ("
-          << _localNumberOfInnerUnrefinedCells << ") is bigger than global cell count ("
-          << _globalNumberOfInnerUnrefinedCells
-          << "). This usually happens if a forking tree has some pending refinement events and cannot refine anymore, as it has already spawned cells. Statistics might have inconsistent view of world"
-      );
-      _isViewConsistent                  = false;
-      _globalNumberOfInnerUnrefinedCells = _localNumberOfInnerUnrefinedCells;
+      _globalNumberOfInnerUnrefinedCells           = _globalNumberOfInnerUnrefinedCellsBufferIn;
+      _globalNumberOfSplits                        = _globalNumberOfSplitsIn;
+      _globalNumberOfTrees                         = _globalNumberOfTreesIn;
+      _globalNumberOfRanksWithEnabledLoadBalancing = _globalNumberOfRanksWithEnabledLoadBalancingIn;
+      _globalMinTreeLoad                           = _globalMinTreeLoadIn;
+      _globalMaxTreeLoad                           = _globalMaxTreeLoadIn;
+      _globalMemoryUsageInBytes                    = _globalMemoryUsageInBytesIn;
+      _globalMinH                                  = _globalMinHIn;
+      _globalNumberOfStationarySweeps              = _globalNumberOfStationarySweepsIn;
+
+      if (_globalNumberOfInnerUnrefinedCells < _localNumberOfInnerUnrefinedCells) {
+        logDebug(
+          "updateGlobalView()",
+          "Local number of cells ("
+            << _localNumberOfInnerUnrefinedCells << ") is bigger than global cell count ("
+            << _globalNumberOfInnerUnrefinedCells
+            << "). This usually happens if a forking tree has some pending refinement events and cannot refine anymore, as it has already spawned cells. Statistics might have inconsistent view of world."
+        );
+        _isViewConsistent                  = false;
+        _globalNumberOfInnerUnrefinedCells = _localNumberOfInnerUnrefinedCells;
+      }
     }
 
     _globalNumberOfInnerUnrefinedCellsRequest           = new MPI_Request();
@@ -137,6 +186,8 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
     _globalMinTreeLoadRequest                           = new MPI_Request();
     _globalMaxTreeLoadRequest                           = new MPI_Request();
     _globalMemoryUsageInBytesRequest                    = new MPI_Request();
+    _globalMinHRequest                                  = new MPI_Request();
+    _globalNumberOfStationarySweepsRequest              = new MPI_Request();
 
     _globalNumberOfInnerUnrefinedCellsBufferOut     = _localNumberOfInnerUnrefinedCells;
     _globalNumberOfSplitsOut                        = _localNumberOfSplits;
@@ -145,6 +196,8 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
     _globalMinTreeLoadOut                           = _localMinTreeLoad;
     _globalMaxTreeLoadOut                           = _localMaxTreeLoad;
     _globalMemoryUsageInBytesOut                    = _localMemoryUsageInBytes;
+    _globalMinHOut                                  = _localMinH;
+    _globalNumberOfStationarySweepsOut              = _localNumberOfStationarySweeps;
 
     MPI_Iallreduce(
       &_globalNumberOfRanksWithEnabledLoadBalancingOut, // send
@@ -209,6 +262,24 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
       tarch::mpi::Rank::getInstance().getCommunicator(),
       _globalMemoryUsageInBytesRequest
     );
+    MPI_Iallreduce(
+      &_globalMinHOut, // send
+      &_globalMinHIn,  // receive
+      1,               // count
+      MPI_DOUBLE,
+      MPI_MIN,
+      tarch::mpi::Rank::getInstance().getCommunicator(),
+      _globalMinHRequest
+    );
+    MPI_Iallreduce(
+      &_globalNumberOfStationarySweepsOut,
+      &_globalNumberOfStationarySweepsIn,
+      1,
+      MPI_INT,
+      MPI_MIN,
+      tarch::mpi::Rank::getInstance().getCommunicator(),
+      _globalNumberOfStationarySweepsRequest
+    );
 #endif
   }
 
@@ -269,6 +340,18 @@ std::size_t toolbox::loadbalancing::Statistics::getLocalMemoryUsageInBytes() con
 
 std::size_t toolbox::loadbalancing::Statistics::getGlobalMemoryUsageInBytes() const {
   return _globalMemoryUsageInBytes;
+}
+
+double toolbox::loadbalancing::Statistics::getLocalMinH() const { return _localMinH; }
+
+double toolbox::loadbalancing::Statistics::getGlobalMinH() const { return _globalMinH; }
+
+int toolbox::loadbalancing::Statistics::getLocalNumberOfStationarySweeps() const {
+  return _localNumberOfStationarySweeps;
+}
+
+int toolbox::loadbalancing::Statistics::getGlobalNumberOfStationarySweeps() const {
+  return _globalNumberOfStationarySweeps;
 }
 
 bool toolbox::loadbalancing::Statistics::hasConsistentViewOfWorld() const { return _isViewConsistent; }

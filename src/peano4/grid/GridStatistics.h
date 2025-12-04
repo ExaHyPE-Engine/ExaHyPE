@@ -26,7 +26,7 @@ struct peano4::grid::GridStatistics {
   static constexpr std::uint8_t CoarseningHasBeenVetoed = 1 << 0;
   static constexpr std::uint8_t RemovedEmptySubtree     = 1 << 1;
 
-  tarch::la::Vector<DIMENSIONS, double> minH{};
+  tarch::la::Vector<DIMENSIONS, double> minH = tarch::la::Vector<DIMENSIONS, double>(std::numeric_limits<double>::max());
 
   GridStatistics() noexcept = default;
   enum class ObjectConstruction { NoData };

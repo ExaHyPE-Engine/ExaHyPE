@@ -49,8 +49,18 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
 }
 
 
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxAdmissibleMeshSize() const {
+  return MaxAdmissibleCellH;
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinAdmissibleMeshSize() const {
+  return MinAdmissibleCellH;
+}
+
+
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
-  return NumberOfGridCellsPerPatchPerAxis * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
+  return BasePowerExponent<NumberOfGridCellsPerPatchPerAxis, DIMENSIONS>::value * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }
 
 

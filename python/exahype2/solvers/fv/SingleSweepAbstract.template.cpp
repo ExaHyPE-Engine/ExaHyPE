@@ -3,6 +3,7 @@
 #include "{{CLASSNAME}}.h"
 
 #include "repositories/SolverRepository.h"
+
 #include "tarch/multicore/Lock.h"
 #include "tarch/services/ServiceRepository.h"
 
@@ -41,8 +42,16 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
   return getMinPatchSize();
 }
 
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxAdmissibleMeshSize() const {
+  return MaxAdmissibleCellH;
+}
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinAdmissibleMeshSize() const {
+  return MinAdmissibleCellH;
+}
+
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
-  return NumberOfFiniteVolumesPerAxisPerPatch * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
+  return BasePowerExponent<NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS>::value * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize(bool ofCurrentlyRunningGridSweep) const {

@@ -28,7 +28,7 @@ void peano4::grid::tests::GridStatisticsTest::testStatistics() {
   validateEquals(statistics.getCoarseningHasBeenVetoed(), false);
   validateEquals(statistics.getRemovedEmptySubtree(), false);
   for (int d = 0; d < DIMENSIONS; ++d) {
-    validateEquals(statistics.minH[d], 0.0);
+    validateEquals(statistics.minH[d], std::numeric_limits<double>::max());
   }
 
   statistics.numberOfLocalUnrefinedCells  = 3;
@@ -53,7 +53,7 @@ void peano4::grid::tests::GridStatisticsTest::testStatistics() {
     validateTrue(std::fabs(statistics.minH[d] - 0.1 * (d + 1)) < 1e-12);
   }
 
-  //std::cout << statistics << std::endl;
+  // std::cout << statistics << std::endl;
 }
 
 void peano4::grid::tests::GridStatisticsTest::testClear() {
