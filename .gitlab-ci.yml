@@ -5,10 +5,10 @@ stages:
 
 workflow:
   rules:
-    # Normal push pipelines
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-    # Pipelines for merge requests
+    # Always create pipelines for merge requests
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    # Create pipelines for branch pushes only if there is no open MR for this branch
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_OPEN_MERGE_REQUESTS == null'
     # Trigger for child pipelines
     - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
     # Else do not create a pipeline

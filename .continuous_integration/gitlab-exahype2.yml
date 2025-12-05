@@ -2,7 +2,7 @@ include:
   - .continuous_integration/templates/tags.yml
   - .continuous_integration/templates/variables.yml
   - .continuous_integration/templates/before-script.yml
-  - .continuous_integration/templates/run-on.yml
+  - .continuous_integration/templates/run-rules.yml
 
 stages:
   - Build
@@ -70,7 +70,7 @@ FV Tracers Tests:
   extends:
     - .Tags
     - .Variables
-    - .RunOnDev
+    - .RunOnlyOnMain
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -91,7 +91,7 @@ FV Coupling Tests:
   extends:
     - .Tags
     - .Variables
-    - .RunOnDev
+    - .RunOnlyOnMain
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -112,7 +112,7 @@ FV Static AMR Tests:
   extends:
     - .Tags
     - .Variables
-    - .RunOnDev
+    - .RunOnlyOnMain
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -133,7 +133,7 @@ FV Dynamic AMR Tests:
   extends:
     - .Tags
     - .Variables
-    - .RunOnDev
+    - .RunOnlyOnMain
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -175,7 +175,7 @@ FV-FD Coupling Tests:
   extends:
     - .Tags
     - .Variables
-    - .RunOnDev
+    - .RunOnlyOnMain
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -217,7 +217,7 @@ ADERDG Static AMR Tests:
   extends:
     - .Tags
     - .Variables
-    - .RunOnDev
+    - .RunOnlyOnMain
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -238,7 +238,7 @@ ADERDG Limiting Tests:
   extends:
     - .Tags
     - .Variables
-    - .RunOnDev
+    - .RunOnlyOnMain
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -259,7 +259,7 @@ ADERDG GRMHD Tests:
   extends:
     - .Tags
     - .Variables
-    - .RunOnDev
+    - .RunOnlyOnMain
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -296,7 +296,7 @@ Fortran Coupling Tests:
   extends:
     - .Tags
     - .Variables
-    - .RunOnDev
+    - .RunOnlyOnMain
     - .BeforeScriptSanitiser
   needs:
     - job: Build
