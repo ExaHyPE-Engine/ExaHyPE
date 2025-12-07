@@ -91,7 +91,7 @@ class ElasticPlanarWaves(Scenario):
   constexpr double w = -2*M_PI;
 
   const double val_x = cos( w*t -std::numbers::pi*x[0]);
-  const double val_y = 0.0;//cos( w*t -std::numbers::pi*x[1]);
+  const double val_y = cos( w*t -std::numbers::pi*x[1]);
 """ + (
             """
   const double val_z = cos( -std::numbers::pi*x[2]);

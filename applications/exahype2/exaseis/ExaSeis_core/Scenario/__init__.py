@@ -7,4 +7,5 @@ from .TPV28 import TPV28
 from .TPV29 import TPV29
 from .LOH1 import LOH1
 from .HHS1 import HHS1
+from .Husavik import Husavik
 from .Zugspitze import Zugspitze

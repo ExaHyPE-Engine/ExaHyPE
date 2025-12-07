@@ -3,22 +3,21 @@ import os, sys, peano4, exahype2
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
 sys.path.insert(0, os.path.abspath("../pml"))
+sys.path.insert(0, os.path.abspath("../dynamic-rupture"))
 
 import PMLElastic
+import DynamicRuptureElastic
 import PMLDynamicRuptureElastic
-
-#sys.path.insert(0, os.path.abspath("../ExaSeis_core/Scenario"))
-#import TPV5, TPV26, TPV28, TPV29
 
 sys.path.insert(0, os.path.abspath("../ExaSeis_core"))
 import Scenario
-
 
 available_scenarios = {
     "TPV5": Scenario.TPV5(),
     "TPV26": Scenario.TPV26(), 
     "TPV28": Scenario.TPV28(),
-    "TPV29": Scenario.TPV29()
+    "TPV29": Scenario.TPV29(),
+    "Husavik": Scenario.Husavik()
 }
 
 scenario = "TPV28"
@@ -71,15 +70,14 @@ theSolver.set_implementation(
     flux                  = PMLElastic.flux(),
     ncp                   = PMLElastic.ncp(),
     material_parameters   = PMLElastic.multiplyMaterialParameterMatrix(),
-    riemann_solver        = PMLDynamicRuptureElastic.riemann_solver(),
+    riemann_solver        = DynamicRuptureElastic.riemann_solver(),
     source_term           = PMLElastic.algebraic_source()+PMLDynamicRuptureElastic.algebraic_source()
 )
 
-theSolver._finish_time_step_implementation += PMLDynamicRuptureElastic.finish_time_step_implementation(scenario_string)
-theSolver._abstract_solver_user_definitions  += PMLDynamicRuptureElastic.abstractUserDefinitions()
+theSolver._abstract_solver_user_definitions  += DynamicRuptureElastic.abstractUserDefinitions()
 theSolver._abstract_solver_user_declarations += PMLDynamicRuptureElastic.abstractDeclarations()
-theSolver._start_grid_initialisation_implementation += PMLDynamicRuptureElastic.init_grid_step_implementation(scenario_string)
-theSolver._destructor_implementation +=  PMLElastic.abstractDestructor()
+theSolver._start_grid_initialisation_implementation += DynamicRuptureElastic.init_grid_step_implementation(scenario_string)
+theSolver._destructor_implementation += PMLElastic.abstractDestructor()
 theSolver.add_user_solver_includes(PMLDynamicRuptureElastic.userIncludes())
 
 project = exahype2.Project(["exahype2", "elastic"], "pml", executable=scenario)

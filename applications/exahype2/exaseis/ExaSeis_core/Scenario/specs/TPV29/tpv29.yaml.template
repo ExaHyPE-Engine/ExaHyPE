@@ -1,6 +1,6 @@
 domain:
-  offset: [ -2.275, 0.0 ,  -2.275]
-  size:   [ 44.55, 44.55,  44.55]
+  offset: [-4.3,  0.0, -4.3]
+  size:   [48.6, 48.6, 48.6]
   mode:   [ {{MODE}}, {{MODE}}, {{MODE}}  ]
 topography: !Analytic
   coordinates: ["Z","X"]
@@ -14,10 +14,10 @@ topography: !Analytic
     perturbation: !AffineMap
       matrix:
         z: [1000.0,    0.0]
-        y: [0.0   , 1250.0]
+        y: [0.0   , 1000.0]
       translation:
-        z:  -5000.0
-        y: -25000.0
+        z:  0.0
+        y: -20000.0
       components:
         - !AxisAlignedCuboidalDomainFilter
           limits:

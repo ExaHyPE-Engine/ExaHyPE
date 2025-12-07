@@ -100,8 +100,37 @@ void toolbox::curvi::InnerNode::init(BlockBoundary& boundary, uint modes[3]) {
     double     box_offset[3];
     double     box_size[3];
     boundary.getBoundingBox(box_offset, box_size);
-    index = int(std::round((position - box_offset[n]) / box_size[n] * boundary.getIndexSize(n)));
-    index = int(std::round(index / (modes[n] - 1)) * (modes[n] - 1));
+
+    /**
+     * If we don't have a specified index for an inner node, we have to somehow figure out some approximation for a reasonable index.
+     * We want this index to lie at the interface between two cells, and considering that each cell has modes[n] points and shares one 
+     * of these with their neighbour, that means the index has to be a multiple of (modes[n] - 1).
+     * As such we look for the multiple of (modes[n] -1) which has the minimal distance to the position we want to place the interface
+     * at in order to minimize how much we are distorting our domain.
+     * The fraction of the domain that the position is at is computed via: (boundary.getIndexSize(n) * (position - box_offset[n]) / box_size[n])
+     * So we want the indexe nearest to that (which we get by rounding), and then we look for the multiple of (modes[n] - 1) nearest to this,
+     * which we get with integer arithmetic.
+     * 
+     * !!!
+     * This makes two assumptions, the first one is that the cell interfaces are multiples of (modes[n]-1). This is only given for Lobatto
+     * nodes, but should be safe.
+     * The second assumption is equidistant nodes. This is never correct but is alright for an equidistant grid since the rounding to cell interfaces
+     * cleans this up somewhat. (You only care about which cell interface you want to end up on, so if the nodes within that cell aren't equidistant
+     * this doesn't matter as you get repoed to the edge anyway.)
+     * However if the cells aren't equidistant this is flat out wrong, as e.g. indexes 0 through modes[n-1] might be a third of the domain but
+     * we assume that they are the same proportion of the domain as any other indexes.
+     * Currently there is no good way to check for this here as we don't have access to any information about the relative size of cells in curvi,
+     * this would require knowing the exact position of all nodes which is not available.
+     * As such if there is any sort of AMR, the index should be specified manually.
+     * !!!
+     * 
+     * Finally it should be noted that this is built without the expectation of Dynamic AMR. These indexes expect to last forever and in case of AMR
+     * the entire grid would need to be rebuilt.
+    */
+
+    index = int(std::round( ((position - box_offset[n]) / box_size[n] * boundary.getIndexSize(n)) / (modes[n] - 1)) 
+      * (modes[n] - 1)
+    );
   }
 
   FaceBoundary fault_boundary = boundary.setupSplittingFace(coords, index, position, indexOffset_fault);

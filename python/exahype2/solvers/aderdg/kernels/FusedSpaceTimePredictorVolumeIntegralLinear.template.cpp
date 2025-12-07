@@ -65,11 +65,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   pCompType* gradQ = memory + getGradQShift();
 {% endif %}
 
-  const double invDx[DIMENSIONS] = {1.0 / cellSize[0], 1.0 / cellSize[1]
-    {% if DIMENSIONS == 3 %}
-      , 1.0 / cellSize[2]
-    {% endif %}
-  };
+  const tarch::la::Vector<DIMENSIONS, pCompType> invDx = convertScalar<pCompType>(invertEntries(cellSize));
 
   pCompType tmpArray[{{TMP_ARRAY_SIZE}}] __attribute__((aligned({{ALIGNMENT}})));
 
@@ -213,7 +209,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
         for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
           #ifdef WITH_OPENMP
-          #pragma omp simd aligned(tmpArray,lFi)
+          #pragma omp simd aligned(tmpArray,lFi:{{ALIGNMENT}})
           #endif
           for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
             tmpArray[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3] += lFi[yz * {{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} + it_2 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
@@ -230,7 +226,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
         for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
           for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
             #ifdef WITH_OPENMP
-            #pragma omp simd aligned(tmpArray,lFi)
+            #pragma omp simd aligned(tmpArray,lFi:{{ALIGNMENT}})
             #endif
             for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
               tmpArray[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
@@ -256,7 +252,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
         for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
           #ifdef WITH_OPENMP
-          #pragma omp simd aligned(tmpArray,lFi)
+          #pragma omp simd aligned(tmpArray,lFi:{{ALIGNMENT}})
           #endif
           for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
             tmpArray[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
@@ -279,69 +275,129 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% endif %}{# USE_FLUX #}
 
 {% if USE_NCP %}
-    std::memset(gradQ, 0, {{DIMENSIONS*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
-    // Compute the derivatives in x-direction (independent from the y- and z-derivatives)
-    for (int yz = 0; yz < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; yz++) {
-      {{ m.gemm('gradQ_x', 'lQi', 'invDx[0] * DGMatrices<pCompType>::dudx_T', 'gradQ',
-        'yz*'~NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED,
-        '0',
-        'yz*'~NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED) | indent(6) }}{##}
-    }
+    // x-loop
+    for (int yz = 0; yz < {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF}}; yz++) {
+      std::memset(gradQ, 0, {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
+      for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
+        for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
+          #ifdef WITH_OPENMP
+          #pragma omp simd aligned(lQi,gradQ:{{ALIGNMENT}})
+          #endif
+          for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
+            gradQ[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3] += lQi[yz*{{NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED}} + it_2 * {{NUMBER_OF_DATA_PADDED}} + it_3]
+              * invDx[0] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF}} + it_2];
+          }
+        }
+      } // it_2
 
-    // y-direction (independent from the x- and z-derivatives)
+      for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
+        pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
+{% if STATELESS_NCP %}
+        {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(
+{% else %}
+        solver.nonconservativeProduct(
+{% endif %}
+          lQi + yz*{{NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED}} + x * {{NUMBER_OF_DATA_PADDED}},
+          gradQ + x*{{NUMBER_OF_UNKNOWNS_PADDED}},
+          cellCentre,
+          cellSize,
+          timeStamp,
+          timeStepSize,
+          0,
+          tmpNcp
+        );
+        #ifdef WITH_OPENMP
+        #pragma omp simd aligned(lFi,tmpNcp:{{ALIGNMENT}})
+        #endif
+        for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
+          lFi[yz*{{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} + x * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += tmpNcp[n];
+        }
+      } // x
+    } // yz
+
+    // y-loop
     for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-        {{ m.gemm('gradQ_y', 'lQi', 'invDx[1] * DGMatrices<pCompType>::dudx_T', 'gradQ',
-        '(z*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_DATA_PADDED,
-        '0',
-        '(z*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED~'+'~(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED) | indent(8) }}{##}
-      }
-    }
-{% if DIMENSIONS==3 %}
-    // z-direction (independent from the x- and y-derivatives)
-    for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; xy++) {
-      {{ m.gemm('gradQ_z',
-        'lQi', 'invDx[2] * DGMatrices<pCompType>::dudx_T', 'gradQ', 'xy*'~NUMBER_OF_DATA_PADDED,
-        '0',
-        'xy*'~NUMBER_OF_UNKNOWNS_PADDED~'+'~2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED) | indent(6) }}{##}
-    }
-{% endif %}
-    {
-      pCompType* G[{{DIMENSIONS}}];
-      for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
-        G[0] = gradQ + xyz * {{NUMBER_OF_UNKNOWNS_PADDED}};
-        G[1] = gradQ + xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}};
-{% if DIMENSIONS==3 %}
-        G[2] = gradQ + xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}};
-{% endif %}
+        std::memset(gradQ, 0, {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
 
-        std::memset(tmpArray, 0, {{DIMENSIONS*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType)); // Zero out ncpResult (stored in tmpArray)
+        for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
+          for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
+            #ifdef WITH_OPENMP
+            #pragma omp simd aligned(lQi,gradQ:{{ALIGNMENT}})
+            #endif
+            for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
+              gradQ[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3] += lQi[z * {{NUMBER_OF_DOF*NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED}} + x * {{NUMBER_OF_DATA_PADDED}} + it_2 * {{NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED}} + it_3]
+                * invDx[1] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF}} + it_2];
+            }
+          }
+        } // it_2
 
-        for (int d = 0; d < {{DIMENSIONS}}; d++) {
+        for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
+
+          pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
 {% if STATELESS_NCP %}
           {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(
 {% else %}
           solver.nonconservativeProduct(
 {% endif %}
-            lQi + xyz * {{NUMBER_OF_DATA_PADDED}},
-            G[d],
+            lQi + z * {{NUMBER_OF_DOF*NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED}} + x * {{NUMBER_OF_DATA_PADDED}} + y * {{NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED}},
+            gradQ + y*{{NUMBER_OF_UNKNOWNS_PADDED}},
             cellCentre,
             cellSize,
             timeStamp,
             timeStepSize,
-            d,
-            &tmpArray[d * {{NUMBER_OF_UNKNOWNS_PADDED}}]
+            1,
+            tmpNcp
           );
 
-          #ifdef WITH_OPENMP
-          #pragma omp simd aligned(lFi,tmpArray:{{ALIGNMENT}})
-          #endif
           for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
-            lFi[(d * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += tmpArray[d * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+            lFi[((z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}]
+              += tmpNcp[n];
           }
         }
       }
-    }
+    } // z
+
+{% if DIMENSIONS==3 %}
+    // z-loop
+    for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; xy++) {
+      std::memset(gradQ, 0, {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
+      for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
+        for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
+          #ifdef WITH_OPENMP
+          #pragma omp simd aligned(lQi,gradQ:{{ALIGNMENT}})
+          #endif
+          for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
+            gradQ[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3] += lQi[xy * {{NUMBER_OF_DATA_PADDED}} + it_2 * {{NUMBER_OF_DOF*NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED}} + it_3]
+              * invDx[2] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF}} + it_2];
+          }
+        }
+      } // it_2
+
+      for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
+        pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
+{% if STATELESS_NCP %}
+        {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(
+{% else %}
+        solver.nonconservativeProduct(
+{% endif %}
+          lQi + xy * {{NUMBER_OF_DATA_PADDED}} + z * {{NUMBER_OF_DOF*NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED}},
+          gradQ + z*{{NUMBER_OF_UNKNOWNS_PADDED}},
+          cellCentre,
+          cellSize,
+          timeStamp,
+          timeStepSize,
+          2,
+          tmpNcp
+        );
+
+        for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
+          lFi[{{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} + (z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n]
+            += tmpNcp[n];
+        }
+      }
+    } // xy
+{% endif %}{# DIMENSIONS 3 #}
 {% endif %}{# USE_NCP #}
 
 {% if USE_MATERIAL_PARAMETERS %}

@@ -1,0 +1,45 @@
+!AffineMap
+  matrix:       
+    x: [       500.0 ,    0.0 , -866.02540378]
+    y: [866.02540378 ,    0.0 , 500.0]
+    z: [         0.0 ,-1000.0 , 0.0]
+  translation:
+    x: 634870.90025815
+    y: 7327057.0394108
+    z:        0.0
+  components: !Switch
+    [f_cy,f_cz,f_wy,f_wz,t_0,n_yz]: !ConstantMap
+      map:
+        t_0  : 0.5
+        f_cy :  0.0
+        f_wy : 13.5
+        f_cz : 0.1619223838720245
+        f_wz : 42.20463397793492
+        n_yz : 0.0
+    [mu_d, mu_s, d_c]: !ConstantMap
+      map:
+        mu_d: 0.1
+        mu_s: 0.55
+        d_c: 0.5 
+    [cohesion, forced_rupture_time]: !FunctionMap
+      map:
+        cohesion: |
+          cohesion = -400000.0;
+          zIncreasingCohesion = 10000.0;
+          if (z >= -zIncreasingCohesion) {
+            return -(cohesion - 2000000.0 * (z+zIncreasingCohesion)/zIncreasingCohesion)/1000/1000;
+          }
+          return -cohesion/1000/1000;
+        forced_rupture_time: |
+          r = sqrt(pow(x-639613.9, 2.0) + pow(y-7340258.5, 2.0) + pow(z+5000.0, 2.0));
+          r_crit = 3000.0;
+          Vs = 3800.0;
+          if (r <= r_crit) {
+            return r/(0.7*Vs)+(0.081*r_crit/(0.7*Vs))*(1.0/(1.0-pow(r/r_crit, 2.0))-1.0);
+          }
+          return 1000000000.0;
+    [s_xx, s_yy, s_zz, s_xy, s_yz, s_xz]: !Include initial_stress.yaml
+    # the following is not actually defined on the fault, it contains the 
+    # material parameters over the domain, it is simply added here for 
+    # practical purposes (e.g. it allows us to reuse the same easi::Component)
+    [rho, mu, lambda]: !Include material.yaml

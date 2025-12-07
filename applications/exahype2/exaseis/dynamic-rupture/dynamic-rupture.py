@@ -77,7 +77,6 @@ theSolver.set_implementation(
     riemann_solver=DynamicRuptureElastic.riemann_solver()
 )
 
-theSolver._finish_time_step_implementation   += DynamicRuptureElastic.finish_time_step_implementation(scenario_string)
 theSolver._abstract_solver_user_declarations += DynamicRuptureElastic.abstractDeclarations()
 theSolver._abstract_solver_user_definitions  += DynamicRuptureElastic.abstractUserDefinitions()
 theSolver._start_grid_initialisation_implementation += DynamicRuptureElastic.init_grid_step_implementation(scenario_string)
@@ -94,7 +93,8 @@ project.add_action_set_to_timestepping(
     solver=theSolver,
     filename=filename,
     data_delta_between_two_snapshots=1e16, time_delta_between_two_snapshots=0.01,
-    output_precision=10, clear_database_after_flush=False
+    output_precision=10, clear_database_after_flush=False,
+    number_of_entries_between_two_db_flushes=100
 ))
 
 if plot_dt > 0.0:

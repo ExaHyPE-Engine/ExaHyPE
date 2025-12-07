@@ -192,9 +192,7 @@ ContextDynamicRupture<{{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME
 
 tarch::la::Vector<DIMENSIONS,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::invertProjection(const tarch::la::Vector<DIMENSIONS,double> coordinates){
 
-  if(peano4::datamanagement::CellMarker::isContained(
-    coordinates, DomainOffset+0.5*DomainSize, DomainSize, 0.
-  )){
+  try {
     double fixedCoords[3];
     fixedCoords[toolbox::curvi::Coordinate::X] = coordinates[0];
     fixedCoords[toolbox::curvi::Coordinate::Y] = coordinates[1];
@@ -207,8 +205,11 @@ tarch::la::Vector<DIMENSIONS,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
     result[2] = curviInterface->invertProjection(toolbox::curvi::Coordinate::Z, fixedCoords);
 
     return result;
+  } 
+  catch (std::domain_error e) {
+    logInfo("invertProjection()", "Caught an error with tracer at " << coordinates << ", and therefore not shifting its position");
+    return coordinates;
   }
-  return coordinates;
 }
 """
 
@@ -264,8 +265,6 @@ def init_grid_step_implementation(scenario_string):
     minDSize /= 3.0;
   }
 
-  logTraceOutWith1Argument("Freesurface set at ", std::to_string(_TOP * 2));
-
   context = new ContextDynamicRupture<VariableShortcuts{{SOLVER_NAME}}, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>(
     topography_string,
     // filename_rupture_model,
@@ -277,18 +276,13 @@ def init_grid_step_implementation(scenario_string):
     kernels::{{SOLVER_NAME}}::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::dudx
   );
 
-  std::cout << "Freesurface set at " << _TOP * 2 << std::endl;
+  std::string filename_rupture_model  = \"""" + scenario_string + """_fault.yaml";
+  context->initRuptureModel(filename_rupture_model);
+
+  logInfo("startGridInitialisationStep()", "Freesurface set at " << std::to_string(_TOP * 2));
 """
 
 def abstractDestructor():
   return """
   delete context;
-"""
-
-def finish_time_step_implementation(scenario_string):
-  return """
-  if (_solverState==SolverState::GridInitialisation) {
-    std::string filename_rupture_model  = \"""" + scenario_string + """_fault.yaml";
-    context->initRuptureModel(filename_rupture_model);
-  }
 """
