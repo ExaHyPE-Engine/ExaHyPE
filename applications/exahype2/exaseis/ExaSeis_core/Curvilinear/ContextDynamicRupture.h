@@ -2,8 +2,6 @@
 
 #include "ContextCurvilinear.h"
 
-#include "asagi_reader.h"
-
 #include "toolbox/curvi/kdTree/InnerNode.h"
 #include "toolbox/curvi/kdTree/Root.h"
 
@@ -37,8 +35,8 @@ public:
   void initRuptureModel(
     std::string& filename_rupture_model
   ){
-    asagiReader = new AsagiReader("");
-    easi::YAMLParser parser(3,asagiReader);
+
+    easi::YAMLParser parser(3);
 
     model = parser.parse(filename_rupture_model);
 
@@ -60,10 +58,6 @@ public:
     query.x(0,2) = 0;
 
     model->evaluate(query,adapter);
-  }
-
-  ~ContextDynamicRupture() {
-    delete asagiReader;
   }
 
 public:
@@ -116,7 +110,6 @@ public:
 public:
   double domainSize[DIMENSIONS];
 
-  AsagiReader* asagiReader;
   easi::Component* model;
 
   //rupture parameters

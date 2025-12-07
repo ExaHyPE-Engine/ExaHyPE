@@ -42,8 +42,10 @@ namespace {{ item }} {
 {% set shift = shift+lQiNextSize %}
 {% endif %}
 
+{% if lQhiSize > 0 %}
   constexpr int getlQhiShift()  {return {{shift}};}
 {% set shift = shift+lQhiSize %}
+{% endif %}
 
 {% if not IS_LINEAR %}
   constexpr int getRhsShift()   {return {{shift}};} // Same size as lQi

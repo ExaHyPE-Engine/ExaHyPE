@@ -13,8 +13,11 @@ class TPV29(Scenario):
     The description of the scenario can be found at: https://strike.scec.org/cvws/tpv29_30docs.html
     """
 
-    domain_offset   = [-2.275,  0.0 ,  -2.275] #centers the fault which is at 20.
-    domain_size     = [44.55, 44.55,  44.55] #leads to cs of 0.55 for 81 cells
+#    domain_offset   = [-2.275,  0.0 ,  -2.275] #centers the fault which is at 20.
+#    domain_size     = [44.55, 44.55,  44.55] #leads to cs of 0.55 for 81 cells
+
+    domain_offset   = [-4.3,  0.0, -4.3] #centers the fault which is at 20.
+    domain_size     = [48.6, 48.6, 48.6] #leads to cs of 0.6 for 81 cells
 
     end_time = 20.0
 
@@ -66,7 +69,7 @@ class TPV29(Scenario):
       Q[Shortcuts::cp ] = 6.0;
       Q[Shortcuts::cs ] = 3.464;
 """
-    
+
     def generate_required_files(self, order):
 
         dictionary = { "MODE": order+1 }
@@ -76,12 +79,12 @@ class TPV29(Scenario):
         )
 
         self.copy_file_to_current_folder(
-            os.path.dirname(os.path.realpath(__file__))+"/specs/TPV29/tpv29_fault.yaml", 
+            os.path.dirname(os.path.realpath(__file__))+"/specs/TPV29/tpv29_fault.yaml",
             "tpv29_fault.yaml"
         )
 
         self.copy_file_to_current_folder(
-            os.path.dirname(os.path.realpath(__file__))+"/specs/TPV29/tpv29_buffer_n.nc", 
+            os.path.dirname(os.path.realpath(__file__))+"/specs/TPV29/tpv29_buffer_n.nc",
             "tpv29_buffer_n.nc"
         )
 

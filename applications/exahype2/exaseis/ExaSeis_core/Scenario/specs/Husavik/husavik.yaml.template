@@ -1,0 +1,49 @@
+domain:
+  offset: [-48.2,  0.0, -48.1]
+  size:   [ 96.4, 96.4,  96.4]
+  mode:   [ {{MODE}}, {{MODE}}, {{MODE}} ]
+topography: 
+  coordinates: ["Z","X"]
+  top: false
+  perturbation: !ASAGI
+    file: "north_iceland_topography_96_4.nc"
+    parameters: [z]
+    var: z
+    components: !AffineMap
+      matrix:
+        y: [1.0]
+      translation:
+        y: 0.0
+  split:
+    coordinates: ["Y","Z"]
+    position: 14.7
+    perturbation: !AffineMap
+      matrix:
+        z: [0.0, 1.0]
+        y: [1.0, 0.0]
+      translation:
+        y: 0.0
+        z: 0.0
+      components:
+        - !AxisAlignedCuboidalDomainFilter
+          limits:
+            z: [-1.106, 110.60]
+            y: [-56.406, 56.41706]
+          components: !ASAGI
+            file: "north_iceland_fault.nc"
+            parameters: [z]
+            var: z
+            components: !AffineMap
+              matrix:
+                x: [1.0]
+              translation:
+                x: 0.0
+        - !FunctionMap 
+        # make sure that the function outside the fault fits with that 
+        # outside the fault as otherwise easi oscillates near the boundary
+          map:
+            x: |
+              if (y<=0.) {
+                return 3.40824;
+              }
+              return -2.84732;

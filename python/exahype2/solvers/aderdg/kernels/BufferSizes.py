@@ -45,7 +45,7 @@ class BufferSizes(object):
                 self.d["lSiSize"] = nUnknownsPad * (nDof**nDim)
                 self.d["lShiSize"] = nUnknownsPad * (nDof**nDim)
             if self.d["USE_NCP"]:
-                self.d["gradQSize"] = nUnknownsPad * (nDof**nDim) * nDim
+                self.d["gradQSize"] = nUnknownsPad * (nDof * nDof3D)
             if self.d["USE_POINT_SOURCE"]:
                 self.d["PSiSize"] = (nDof + 1) * (nDof**nDim) * nUnknownsPad
         else:  # nonlinear

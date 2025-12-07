@@ -142,9 +142,6 @@ def flux():
 
   auto jacobian = Q[Shortcuts::jacobian];
 
-  auto rho     = Q[Shortcuts::rho];
-  auto rho_inv = 1.0 / rho;
-
   std::fill_n(F, NumberOfUnknowns, 0.0);
 
   toolbox::curvi::idx2 idx_pml(DIMENSIONS, 9);
@@ -198,7 +195,6 @@ def ncp():
   auto        dmp_pml_z = Q[Shortcuts::dmp_pml + 2];
   auto        mu        = rho * cs * cs;
   auto        lambda    = rho * cp * cp - 2 * mu;
-  auto        rho_inv   = 1.0 / (rho * jacobian);
 
   std::fill_n(BTimesDeltaQ, NumberOfUnknowns, 0.0);
 
@@ -322,18 +318,13 @@ def algebraic_source():
 def multiplyMaterialParameterMatrix():
   return """
   auto rho = Q[Shortcuts::rho];
-  auto cp  = Q[Shortcuts::cp];
-  auto cs  = Q[Shortcuts::cs];
-
   auto jacobian = Q[Shortcuts::jacobian];
+
+  auto rho_inv = 1.0 / (rho * jacobian);
 
   auto dmp_pml_x = Q[Shortcuts::dmp_pml + 0];
   auto dmp_pml_y = Q[Shortcuts::dmp_pml + 1];
   auto dmp_pml_z = Q[Shortcuts::dmp_pml + 2];
-
-  auto mu      = rho * cs * cs;
-  auto lambda  = rho * cp * cp - 2 * mu;
-  auto rho_inv = 1.0 / (rho * jacobian);
 
   toolbox::curvi::idx2 idx_pml(DIMENSIONS, 9);
 
@@ -472,8 +463,8 @@ def init_grid_step_implementation(scenario_string):
     kernels::{{SOLVER_NAME}}::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::dudx
   );
 
-  std::cout << "PML is using " << pml_cell_width << " elements" << std::endl;
-  std::cout << "Freesurface set at " << _TOP * 2 << std::endl;
+  logInfo("startGridInitialisationStep()", "Freesurface set at " << std::to_string(_TOP * 2));
+  logInfo("startGridInitialisationStep()", "PML is using " << pml_cell_width << " elements");
 """
 
 def abstractDestructor():
