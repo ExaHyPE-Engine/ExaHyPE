@@ -3,9 +3,7 @@
 @page page_compiler_specific_settings_home Vendor Software Stacks and System- and Compiler-specific Settings
 
 \li @subpage tarch_accelerator_SYCL
-\li @subpage page_machines
 
-<!-- Add this one for href links to subitems -->
 \tableofcontents
 
 Peano has three different approaches how to handle system- and compiler-specific
@@ -25,10 +23,8 @@ settings and properties:
 - Peano offers special toolchains for special vendors.
 
 The page below discusses these particular toolchains and provides some
-information on settings for some vendors. There is a dedicated
-@ref page_machines "subpage for some machines" that we use quite a lot for
-Peano. Before we dive into particular toolchains, some general remark on how
-the compiler-dependencies are managed:
+information on settings for some vendors.
+Before we dive into particular toolchains, some general remark on how the compiler-dependencies are managed:
 
 
 # Realisation of Peano's internal compiler-specific switches

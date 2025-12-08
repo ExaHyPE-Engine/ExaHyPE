@@ -1,0 +1,11 @@
+/**
+
+@page page_machines_home Reference Configurations for Some Machines
+
+- \subpage page_machines_dine
+- \subpage page_machines_hamilton
+- \subpage page_machines_leonardo
+- \subpage page_machines_lumi
+- \subpage page_machines_ncc
+
+*/

@@ -8,7 +8,6 @@
 #include "tarch/accelerator/accelerator.h"
 
 #include <cmath>
-#include <complex>
 
 namespace tarch {
   namespace la {
@@ -23,9 +22,6 @@ namespace tarch {
      */
     inline GPU_CALLABLE_METHOD
     int abs(int value);
-
-    inline
-    double abs(const std::complex<double>& value);
 
     /**
      * Computes the i-th power of a in integer arithmetic.
@@ -62,12 +58,6 @@ namespace tarch {
      */
     inline GPU_CALLABLE_METHOD
     bool smallerEquals(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
-
-    /**
-     * @param tolerance Absolute tolerance when we compare two values.
-     */
-    inline
-    bool equals(const std::complex<double>& lhs, const std::complex<double>& rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
     /**
      * @return -10, or 1 depending on the sign of value

@@ -23,6 +23,7 @@ balancing, sophisticated geometry representations, and other features.
 - Getting started
   - @subpage page_installation_home
   - @subpage page_compiler_specific_settings_home
+  - @subpage page_machines_home
   - @subpage page_architecture_home
   - @subpage page_faq_home
 - Contributing
@@ -32,9 +33,9 @@ balancing, sophisticated geometry representations, and other features.
   - @subpage page_continuous_integration
 - @subpage page_tutorials_overview
 - The core
+  - @subpage page_tarch_home
   - @subpage page_peano4_home
   - @subpage page_toolbox_home
-  - @subpage page_tarch_home
 - Extensions
   - @subpage page_exahype2_home
 - Third-party extensions

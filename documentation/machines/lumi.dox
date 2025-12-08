@@ -1,0 +1,33 @@
+/**
+
+@page page_machines_lumi LUMI
+
+LUMI is a EuroHPC pre-exascale system hosted in Kajaani, Finland.
+
+# LUMI-G GPU Partition
+
+LUMI-G provides AMD Instinct MI250X GPUs and is intended for large-scale,
+GPU-accelerated simulation and scientific computing. Software environments
+are built around the Cray Programming Environment and ROCm.
+
+## Software Environment and Modules
+
+@code{.bash}
+module load LUMI/24.03 partition/G
+module load buildtools
+module load PrgEnv-amd
+module load craype-x86-trento
+module load craype-accel-amd-gfx90a
+module load rocm
+module load cray-python
+module load cray-hdf5-parallel
+module load cray-netcdf-hdf5parallel
+@endcode
+
+## Building and Running
+
+Find below a contained shell script that builds and runs ExaHyPE on LUMI-G:
+
+\include lumi-g-exahype.sh
+
+*/

@@ -9,7 +9,7 @@ foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
     add_test(NAME UnitTests${mode}${dimensions}d COMMAND UnitTests${mode}${dimensions}d)
     if(WITH_MPI)
       add_test(NAME UnitTests${mode}${dimensions}dParallel
-        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 ${CMAKE_BINARY_DIR}/UnitTests${mode}${dimensions}d
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${CMAKE_BINARY_DIR}/UnitTests${mode}${dimensions}d
       )
     endif()
 
