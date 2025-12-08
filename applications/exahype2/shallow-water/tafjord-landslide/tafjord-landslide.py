@@ -105,7 +105,7 @@ constants["mu"] = [
     "double",
 ]
 
-size = [1900, 1950]
+size = [1900, 1900]
 max_h = 1.1 * min(size) / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
 dg_order = args.degrees_of_freedom - 1
@@ -117,7 +117,7 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     auxiliary_variables=0,
     min_cell_h=min_h,
     max_cell_h=max_h,
-    time_step_relaxation=0.45,
+    time_step_relaxation=0.20,
 )
 
 aderdg_solver.set_implementation(
@@ -151,7 +151,7 @@ fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     auxiliary_variables={"z": 1},
     min_volume_h=min_h,
     max_volume_h=max_h,
-    time_step_relaxation=0.45,
+    time_step_relaxation=0.20,
 )
 
 fv_solver.set_implementation(
@@ -178,8 +178,8 @@ limiter_solver = exahype2.solvers.limiting.PosterioriLimiting(
     regular_solver=aderdg_solver,
     limiting_solver=fv_solver,
     number_of_dmp_observables=3,
-    dmp_relaxation_parameter=1.0,  # MD 3: BOTH FRICTIONS: 1.0, ONLY ONE FRICTION TERM OR ZERO: 0.5,
-    dmp_differences_scaling=0.01,  # MD 3: BOTH FRICTIONS: 0.01, ONLY ONE FRICTION TERM OR ZERO: 0.005,
+    dmp_relaxation_parameter=0.001,
+    dmp_differences_scaling=0.0001,
     physical_admissibility_criterion=limiting_criterion,
 )
 

@@ -33,6 +33,6 @@ if(USE_CCACHE)
 
     message(STATUS "Found Ccache: ${CCACHE}")
   else()
-    message(WARNING "Ccache requested but executable not found")
+    message(STATUS "Ccache requested but executable not found")
   endif()
 endif()

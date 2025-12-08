@@ -24,14 +24,6 @@ namespace tarch {
      */
     template <int Rows, int Cols, typename Scalar>
     Matrix<Rows, Cols, Scalar> operator*(const Scalar& scalar, const Matrix<Rows, Cols, Scalar>& matrix);
-
-
-    template <int Rows, int Cols>
-    Matrix<Rows, Cols, std::complex<double>> operator*(
-      const double&                                   scalar,
-      const Matrix<Rows, Cols, std::complex<double>>& matrix
-    );
-
   } // namespace la
 } // namespace tarch
 

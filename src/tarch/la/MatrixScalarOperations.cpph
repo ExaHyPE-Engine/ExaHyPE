@@ -41,12 +41,3 @@ tarch::la::Matrix<Rows,Cols,Scalar> tarch::la::operator* (
 ) {
   return matrix * scalar;
 }
-
-
-template<int Rows, int Cols>
-tarch::la::Matrix<Rows,Cols,std::complex<double> > tarch::la::operator* (
-  const double&                                              scalar,
-  const tarch::la::Matrix<Rows,Cols,std::complex<double> >&  matrix
-) {
-  return std::complex<double>( scalar ) * matrix;
-}

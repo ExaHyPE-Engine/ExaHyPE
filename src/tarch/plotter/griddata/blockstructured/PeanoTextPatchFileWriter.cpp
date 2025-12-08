@@ -169,7 +169,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
 
   clear();
 
-  const double DefaultTimeStampPrecision = 1e-5;
+  constexpr double DefaultTimeStampPrecision = 1e-5;
 
   switch (appendToIndexFile) {
   case IndexFileMode::CreateNew:
@@ -179,16 +179,17 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
   case IndexFileMode::NoIndexFile:
     break;
   case IndexFileMode::AppendNewData:
+    const bool newDatasetBelongsToSnapshotSmallerThanLatestWrite =
+    tarch::la::smaller(timeStamp, getLatestTimeStepInIndexFile(),
+                       tarch::la::relativeEpsNormalisedAgainstValueGreaterOne(timeStamp, getLatestTimeStepInIndexFile(), DefaultTimeStampPrecision));
+    const bool newDatasetBelongsToSnapshotBiggerThanLatestWrite =
+    tarch::la::greater(timeStamp, getLatestTimeStepInIndexFile(),
+                      tarch::la::relativeEpsNormalisedAgainstValueGreaterOne(timeStamp, getLatestTimeStepInIndexFile(), DefaultTimeStampPrecision));
+
     if (not fs::exists(_indexFile)) {
       logDebug("PeanoTextPatchFileWriter()", "No index file " << _indexFile << " found. Create new one.");
       createEmptyIndexFile();
-    } else if (tarch::la::smaller(
-                 timeStamp,
-                 getLatestTimeStepInIndexFile(),
-                 tarch::la::relativeEpsNormalisedAgainstValueGreaterOne(
-                   timeStamp, getLatestTimeStepInIndexFile(), DefaultTimeStampPrecision
-                 )
-               )) {
+    } else if (newDatasetBelongsToSnapshotSmallerThanLatestWrite) {
       logWarning(
         "PeanoTextPatchFileWriter()",
         "There is an index file "
@@ -199,7 +200,8 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
     }
 
     createBackupOfMetaFile();
-    if (tarch::la::smaller(getLatestTimeStepInIndexFile(), timeStamp, DefaultTimeStampPrecision)) {
+
+    if (newDatasetBelongsToSnapshotBiggerThanLatestWrite) {
       logDebug(
         "PeanoTextPatchFileWriter()",
         "Create new dataset for time stamp "
