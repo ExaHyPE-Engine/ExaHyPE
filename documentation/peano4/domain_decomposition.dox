@@ -354,7 +354,9 @@ threads on the local node or remotely via MPI). Each new tree receives a
 whole copy of the original tree. This includes both the core tree data
 and the user data. Once the tree is replicated, the individual trees
 start to coarsen. If they are not responsible for tree parts, they
-successively remove this part. After one or two iterations, each rank
+will drop cells. Offline reconstruction tools (see @ref page_toolbox_loadbalancing_api) interpret a split’s
+moved cell count as the number of cells on the earliest level where a subtree id first appears; they do not
+re-count deeper descendants created later. After one or two iterations, each rank
 thus really works only on local tree.
 Due to this approach, splits require significant memory temporarily. It thus might be
 convenient not to split a tree too often in one rush.

@@ -551,41 +551,122 @@ def extract_hardcoded_split_parameters(peano_tree: Tree, base_sweep: int = 2) ->
         peano_tree: Tree object with applied splits
         base_sweep: Base grid sweep number for split timing (default: 2)
         
+    Interpretation (non-leaf-centric):
+    - We do NOT count leaf cells.
+    - For each subtree > 0 we infer the split level as the earliest level where
+      any cell with this subtree id first appears.
+    - The numberOfCells for that split equals the number of cells with this
+      subtree id on that earliest level (we treat them as newly moved cells in
+      that grid sweep, ignoring any deeper descendants that may be discovered
+      in later sweeps).
+    - Children discovered in subsequent traversals inherit the same subtree id
+      until a further split introduces a new subtree.
+    
+    Source subtree inference:
+    - For all cells of the target subtree at its earliest appearance level,
+      we collect the parent subtree ids (previous level, indices // 3).
+    - If exactly one unique parent subtree id exists, that id is used as
+      splittingTrees entry.
+    - Otherwise we fall back to 0.
+    - If the earliest level is 0 (root level) we set source subtree to 0.
+    
+    Grid sweep numbering:
+    - Uses base_sweep * target_subtree (even numbers if base_sweep=2).
+
     Returns:
-        tuple: (gridSweeps, splittingTrees, numberOfCells, subTrees)
-            - gridSweeps (list): Grid sweep numbers when splits should occur
-            - splittingTrees (list): Source subtree IDs for splits
-            - numberOfCells (list): Number of cells to move in each split
-            - subTrees (list): Target subtree IDs (logical subtrees)
+        (gridSweeps, splittingTrees, numberOfCells, subTrees) with subTrees
+        holding the actual target subtree ids (not renumbered 1..N).
     """
     if peano_tree._subtree_count <= 1:
         print("No splits to extract - tree has only one subtree")
         return ([], [], [], [])
     
-    # Analyze the split pattern to determine split operations
+    def earliest_level(subtree_id: int) -> int | None:
+        for level in range(peano_tree._max_level):
+            size = 3**(level + 1)
+            if peano_tree._dimension == 2:
+                for a in range(size):
+                    for b in range(size):
+                        w, s = peano_tree._tree_arrays[level][a][b]
+                        if w == 1 and s == subtree_id:
+                            return level
+            else:
+                for a in range(size):
+                    for b in range(size):
+                        for c in range(size):
+                            w, s = peano_tree._tree_arrays[level][a][b][c]
+                            if w == 1 and s == subtree_id:
+                                return level
+        return None
+    
+    def count_cells_on_level(subtree_id: int, level: int) -> int:
+        size = 3**(level + 1)
+        count = 0
+        if peano_tree._dimension == 2:
+            for a in range(size):
+                for b in range(size):
+                    w, s = peano_tree._tree_arrays[level][a][b]
+                    if w == 1 and s == subtree_id:
+                        count += 1
+        else:
+            for a in range(size):
+                for b in range(size):
+                    for c in range(size):
+                        w, s = peano_tree._tree_arrays[level][a][b][c]
+                        if w == 1 and s == subtree_id:
+                            count += 1
+        return count
+    
+    def infer_source_subtree(subtree_id: int, level: int) -> int:
+        if level == 0:
+            return 0
+        parent_ids = set()
+        size = 3**(level + 1)
+        if peano_tree._dimension == 2:
+            for a in range(size):
+                for b in range(size):
+                    w, s = peano_tree._tree_arrays[level][a][b]
+                    if w == 1 and s == subtree_id:
+                        pa, pb = a // 3, b // 3
+                        pw, ps = peano_tree._tree_arrays[level - 1][pa][pb]
+                        if pw == 1:
+                            parent_ids.add(ps)
+        else:
+            for a in range(size):
+                for b in range(size):
+                    for c in range(size):
+                        w, s = peano_tree._tree_arrays[level][a][b][c]
+                        if w == 1 and s == subtree_id:
+                            pa, pb, pc = a // 3, b // 3, c // 3
+                            pw, ps = peano_tree._tree_arrays[level - 1][pa][pb][pc]
+                            if pw == 1:
+                                parent_ids.add(ps)
+        return parent_ids.pop() if len(parent_ids) == 1 else 0
+    
     split_operations = []
     
-    # Calculate splits based on the split pattern
-    source_subtree = 0
-    
     for target_subtree in range(1, peano_tree._subtree_count):
-        cells_in_target = int(peano_tree._split_pattern[target_subtree])
-        
-        if cells_in_target > 0:
-            # Calculate grid sweep number based on subtree creation order
-            grid_sweep = base_sweep * target_subtree
-            
-            split_operations.append({
-                'grid_sweep': grid_sweep,
-                'source_subtree': source_subtree,
-                'target_subtree': target_subtree, 
-                'num_cells': cells_in_target
-            })
+        level = earliest_level(target_subtree)
+        if level is None:
+            continue
+        moved_cells = count_cells_on_level(target_subtree, level)
+        if moved_cells == 0:
+            continue
+        source_subtree = infer_source_subtree(target_subtree, level)
+        grid_sweep = base_sweep * target_subtree
+        split_operations.append(
+            {
+                "grid_sweep": grid_sweep,
+                "source_subtree": source_subtree,
+                "target_subtree": target_subtree,
+                "num_cells": moved_cells,
+                "level": level,
+            }
+        )
     
-    # Extract parameter lists from split operations
-    grid_sweeps = [op['grid_sweep'] for op in split_operations]
-    splitting_trees = [op['source_subtree'] for op in split_operations]
-    cell_counts = [op['num_cells'] for op in split_operations]
-    subtrees = list(range(1, len(split_operations) + 1))
+    gridSweeps      = [op["grid_sweep"] for op in split_operations]
+    splittingTrees  = [op["source_subtree"] for op in split_operations]
+    numberOfCells   = [op["num_cells"] for op in split_operations]
+    subTrees        = [op["target_subtree"] for op in split_operations]
     
-    return (grid_sweeps, splitting_trees, cell_counts, subtrees)
+    return (gridSweeps, splittingTrees, numberOfCells, subTrees)

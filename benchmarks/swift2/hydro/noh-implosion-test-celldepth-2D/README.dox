@@ -1,0 +1,55 @@
+/**
+
+ @page benchmarks_swift2_hydro_noh_celldepth_test_2D 2D Noh implosion celldepth test
+
+ Simple Noh implosion test benchmark in 2D with @f$ N ^d @f$ particles.
+ This benchmark uses the same initial conditions setup for the physics as
+ @ref benchmarks_swift2_hydro_noh_implosion_test_2D. However, here we benchmark
+ how the code performs depending on minimal and maximal cell sizes (and hence
+ also tree depths) for a range of @f$ N @f$ particles per dimension.
+
+
+ As with all Swift 2 experiments, you have to ensure that you translate with
+ ```--enable-particles --enable-swift``` before you start working with the
+ scripts. Furthermore, either install the peano4 python package locally:
+
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ pip3 install -e /path/to/Peano
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ or manually set the Python path (discouraged):
+
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ export PYTHONPATH=~/../../../../python
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ The provided scripts in this directory will set up the experiments for you.
+ Use
+
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ./build_celldepth_test_execs.sh
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ to compile a range of executables for varying cell min/max sizes and particle
+ numbers. Then use
+
+
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ./run_celldepth_test.sh
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ to run them sequentially, or help yourself to the job scripts in the
+ ``jobscripts`` subdirectory.
+
+
+ Finally, you can plot the outcomes using
+
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ python3 ./plot_celldepth_benchmarks.py
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ use the ``--help`` flag to see available plotting options.
+ By default, the script will read in all available logfiles and plot them.
+ See the header of the script for more details on the output format and usage.
+
+ */
