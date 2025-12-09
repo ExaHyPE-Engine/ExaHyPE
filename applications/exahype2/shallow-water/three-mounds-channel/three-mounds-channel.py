@@ -35,7 +35,7 @@ refinement_criterion = """
 
 parser = exahype2.ArgumentParser()
 parser.set_defaults(
-    min_depth=6,
+    min_depth=5,
     degrees_of_freedom=16,
     end_time=20.0,
 )

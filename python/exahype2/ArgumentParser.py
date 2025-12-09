@@ -61,7 +61,7 @@ class ArgumentParser(argparse.ArgumentParser):
             "-ns",
             "--number-of-snapshots",
             type=int,
-            default=20,
+            default=10,
             help="Number of snapshots (plots).",
         )
         self.add_argument(

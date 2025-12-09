@@ -9,7 +9,6 @@ parser.set_defaults(
     min_depth=3,
     degrees_of_freedom=16,
     end_time=1.0,
-    number_of_snapshots=20,
     periodic_boundary_conditions_x=False,
     periodic_boundary_conditions_y=False,
     periodic_boundary_conditions_z=False,
