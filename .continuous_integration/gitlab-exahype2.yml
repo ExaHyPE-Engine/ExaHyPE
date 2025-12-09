@@ -83,7 +83,7 @@ FV Coupling Tests:
   parallel:
     matrix:
     - dimensions: [2, 3]
-      build_type: [Debug, Release]
+      build_type: [Release, Debug]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv-coupling; PYTHONPATH=$CI_PROJECT_DIR/python python3 fv-coupling.py -d $dimensions -m $build_type"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv-coupling; $PARALLEL_LAUNCH ./ExaHyPE;"
@@ -104,7 +104,7 @@ FV Static AMR Tests:
   parallel:
     matrix:
     - dimensions: [2]
-      build_type: [Debug, Release]
+      build_type: [Release, Debug]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv-static-amr; PYTHONPATH=$CI_PROJECT_DIR/python python3 fv-static-amr.py -d $dimensions -m $build_type -enclave"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv-static-amr; $PARALLEL_LAUNCH ./ExaHyPE;"
@@ -125,9 +125,9 @@ FV Dynamic AMR Tests:
   parallel:
     matrix:
     - dimensions: [2]
-      build_type: [Debug, Release]
+      build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv-dynamic-amr; PYTHONPATH=$CI_PROJECT_DIR/python python3 fv-dynamic-amr.py -d $dimensions -m $build_type -md 2"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv-dynamic-amr; PYTHONPATH=$CI_PROJECT_DIR/python python3 fv-dynamic-amr.py -d $dimensions -m $build_type -md ${MIN_GRID_LEVELS}"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv-dynamic-amr; $PARALLEL_LAUNCH ./ExaHyPE;"
   allow_failure: false
   extends:
@@ -146,7 +146,7 @@ FD Tests:
   parallel:
     matrix:
     - dimensions: [2, 3]
-      build_type: [Debug, Release]
+      build_type: [Release, Debug]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fd; PYTHONPATH=$CI_PROJECT_DIR/python python3 fd.py -d $dimensions -m $build_type"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fd; $PARALLEL_LAUNCH ./ExaHyPE;"
@@ -167,7 +167,7 @@ FV-FD Coupling Tests:
   parallel:
     matrix:
     - dimensions: [2, 3]
-      build_type: [Debug, Release]
+      build_type: [Release, Debug]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv-fd-coupling; PYTHONPATH=$CI_PROJECT_DIR/python python3 fv-fd-coupling.py -d $dimensions -m $build_type"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv-fd-coupling; $PARALLEL_LAUNCH ./ExaHyPE;"
@@ -188,10 +188,10 @@ ADERDG Tests:
   parallel:
     matrix:
     - scenario: [AcousticPlanarWaves, AdvectionLinear, ElasticPlanarWaves, EulerGaussianBell, EulerIsentropicVortex, SWERadialDamBreak, SWERestingLake]
-      build_type: [Debug, Release]
+      build_type: [Release, Debug]
       precision:  [float, double]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg; PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg.py -s $scenario -m $build_type -pr $precision -md 2;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg; PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg.py -s $scenario -m $build_type -pr $precision -md ${MIN_GRID_LEVELS};"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg; $PARALLEL_LAUNCH ./ExaHyPE;"
   allow_failure: false
   extends:
@@ -209,9 +209,9 @@ ADERDG Static AMR Tests:
   stage: Test
   parallel:
     matrix:
-    - build_type: [Debug, Release]
+    - build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-static-amr; PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg-static-amr.py -m $build_type -md 2;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-static-amr; PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg-static-amr.py -m $build_type -md ${MIN_GRID_LEVELS};"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-static-amr; $PARALLEL_LAUNCH ./ExaHyPE;"
   allow_failure: false
   extends:
@@ -230,9 +230,9 @@ ADERDG Limiting Tests:
   parallel:
     matrix:
     - test: [static-limiting-swe, static-limiting-euler-airfoil, posteriori-limiting-euler-shock, posteriori-limiting-landslide]
-      build_type: [Debug, Release]
+      build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-limiting; PYTHONPATH=$CI_PROJECT_DIR/python python3 $test.py -m $build_type -md 2;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-limiting; PYTHONPATH=$CI_PROJECT_DIR/python python3 $test.py -m $build_type -md ${MIN_GRID_LEVELS};"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-limiting; $PARALLEL_LAUNCH ./ExaHyPE;"
   allow_failure: false
   extends:
@@ -251,7 +251,7 @@ ADERDG GRMHD Tests:
   parallel:
     matrix:
     - scenario: [AlfvenWave, MichelSphericalAccretion]
-      build_type: [Debug, Release]
+      build_type: [Release, Debug]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-grmhd; PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg-grmhd.py -s $scenario -m $build_type;"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-grmhd; $PARALLEL_LAUNCH ./ExaHyPE;"
@@ -272,9 +272,9 @@ RKDG Tests:
   parallel:
     matrix:
     - scenario: [AcousticPlanarWaves, AdvectionLinear, ElasticPlanarWaves, EulerIsentropicVortex, SWERestingLake]
-      build_type: [Debug, Release]
+      build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/rkdg; PYTHONPATH=$CI_PROJECT_DIR/python python3 rkdg.py -s $scenario -m $build_type -md 2;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/rkdg; PYTHONPATH=$CI_PROJECT_DIR/python python3 rkdg.py -s $scenario -m $build_type -md ${MIN_GRID_LEVELS};"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/rkdg; $PARALLEL_LAUNCH ./ExaHyPE;"
   allow_failure: false
   extends:
@@ -348,9 +348,9 @@ Euler Application:
     matrix:
     - scenario: [breaking-dam, channel-flow, gaussian-bell, gaussian-explosion, isothermal-stratification, point-explosion, smooth-convergence, taylor-green-vortex]
       dimensions: [2]
-      build_type: [Debug, Release]
+      build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/euler/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -d $dimensions -m $build_type -md 4;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/euler/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -d $dimensions -m $build_type -md ${MIN_GRID_LEVELS};"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/euler/$scenario; $PARALLEL_LAUNCH ./Euler;"
   allow_failure: false
   extends:
@@ -370,7 +370,7 @@ Gravity Waves Application:
     matrix:
     - scenario: [airglow-chemistry, thunderstorm]
       dimensions: [2]
-      build_type: [Debug, Release]
+      build_type: [Release, Debug]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/gravity-waves/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -d $dimensions -m $build_type;"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/gravity-waves/$scenario; $PARALLEL_LAUNCH ./ExaHyPE;"
@@ -393,7 +393,7 @@ Shallow Water Application:
     - scenario: [artificial-tsunami, artificial-meteo-tsunami, chile-tsunami, circular-island, dam-break-landslide, oscillating-lake, radial-dam-break, solitary-wave, tafjord-landslide, three-mounds-channel, tohoku-tsunami]
       build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/shallow-water/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -m $build_type -md 3;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/shallow-water/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -m $build_type -md ${MIN_GRID_LEVELS};"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/shallow-water/$scenario; $PARALLEL_LAUNCH ./ExaHyPE;"
   allow_failure: false
   extends:
@@ -450,7 +450,7 @@ Kernel Benchmark:
   parallel:
     matrix:
     - kernel: [fv, aderdg, aderdg-fused]
-      build_type: [Debug, Release]
+      build_type: [Release, Debug]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/kernel-benchmarks/$kernel; PYTHONPATH=$CI_PROJECT_DIR/python python3 $kernel.py -m $build_type;"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/kernel-benchmarks/$kernel; ./KernelBenchmarks"

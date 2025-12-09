@@ -141,7 +141,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 {% endif %}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridConstructionStep() {
-  assertion( _solverState == SolverState::GridConstruction );
+  assertion(_solverState == SolverState::GridConstruction);
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {}
@@ -153,7 +153,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
   if (_solverState == SolverState::GridInitialisation) {
-    {{FINISH_TIME_STEP_IMPLEMENTATION}}
+    {{FINISH_TIME_STEP_IMPLEMENTATION}} // TODO: Improve MPI reductions
   }
 }
 
@@ -227,7 +227,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
-  if (isLastGridSweepOfTimeStep()) {
+  if (isLastGridSweepOfTimeStep() or _solverState == SolverState::InitialPrediction) {
 #ifdef WITH_MPI
     double newMinTimeStamp    = _minTimeStampThisTimeStep;
     double newMaxTimeStamp    = _maxTimeStampThisTimeStep;

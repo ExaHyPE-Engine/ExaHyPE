@@ -90,7 +90,6 @@ parser.set_defaults(
     min_depth=3,
     degrees_of_freedom=64,
     end_time=0.8,
-    number_of_snapshots=20,
 )
 
 args = parser.parse_args()

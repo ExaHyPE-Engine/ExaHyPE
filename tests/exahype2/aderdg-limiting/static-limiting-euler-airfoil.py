@@ -17,7 +17,7 @@ args = parser.parse_args()
 dimensions = 2
 order = args.degrees_of_freedom - 1
 end_time = 10
-plot_interval = 0.5
+plot_interval = 1.0
 
 size = [120, 120]
 offset = [-10, -60]

@@ -63,7 +63,7 @@ limiting_criterion = (
 
 parser = exahype2.ArgumentParser()
 parser.set_defaults(
-    min_depth=4,
+    min_depth=3,
     end_time=0.1,
 )
 args = parser.parse_args()

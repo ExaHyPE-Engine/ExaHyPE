@@ -22,8 +22,8 @@ with_limiting = 1  # 0 - all ADER, 1 - limit, 2 - all FV
 dimensions = 2
 order = args.degrees_of_freedom - 1
 end_time = 2.0
-plot_interval = 0.05
-CFL = 0.5
+plot_interval = 0.2
+CFL = 0.2
 unknowns = {"h": 1, "hu": 1, "hv": 1, "z": 1}
 auxiliary = {}
 

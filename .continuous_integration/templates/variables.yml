@@ -14,8 +14,9 @@
     IMAGE_AMD: "amd.sif"
     APPTAINER_BINDDIR: "/dine/data/do009/peano"
     APPTAINER_IMAGEDIR: "/dine/data/do009/peano/images"
-    OMP_THREADS: "2"
-    MPI_RANKS: "2"
+    MPI_RANKS: "4"
+    OMP_THREADS: "4"
+    MIN_GRID_LEVELS: "2"
     CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
                             -DENABLE_EXAHYPE=ON \
                             -DENABLE_TOOLBOX_LOADBALANCING=ON \

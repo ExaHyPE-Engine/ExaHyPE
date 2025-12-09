@@ -13,7 +13,6 @@ parser.add_argument(
 parser.set_defaults(
     min_depth=6,
     degrees_of_freedom=16,
-    number_of_snapshots=20,
     periodic_boundary_conditions_x=False,  # Throws assertion in the TracersSet when set to True
     periodic_boundary_conditions_y=False,
     periodic_boundary_conditions_z=False,
