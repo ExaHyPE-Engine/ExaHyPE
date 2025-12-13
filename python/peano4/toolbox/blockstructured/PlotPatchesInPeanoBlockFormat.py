@@ -149,6 +149,9 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
   _dataWriter = nullptr;
   _writer     = nullptr;
+
+  delete _globalIndexLock;
+  _globalIndexLock = nullptr;
 """
 
     
@@ -259,7 +262,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 """
 
   __Template_BeginTraversal_Generic_Restart = """
-  tarch::mpi::Lock lock( _semaphore );
+  _globalIndexLock = new tarch::mpi::Lock( _globalIndexSemaphore );
   
   static int counter = -1;
   counter++;
@@ -276,7 +279,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 """+__Template_BeginTraversal_Generic
 
   __Template_BeginTraversal_Generic = """
-  tarch::mpi::Lock lock( _semaphore );
+  _globalIndexLock = new tarch::mpi::Lock( _globalIndexSemaphore );
   
   static int counter = -1;
   counter++;
@@ -329,8 +332,9 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   def get_attributes(self):
     if self._plot_cell_data:
       return """
-    static tarch::mpi::BooleanSemaphore                                              _semaphore;
-      
+    static tarch::mpi::BooleanSemaphore                                              _globalIndexSemaphore;
+    tarch::mpi::Lock*                                                                _globalIndexLock;
+
     int                _treeNumber;
 
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter*                  _writer;
@@ -338,7 +342,8 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 """
     else:
       return """
-    static tarch::mpi::BooleanSemaphore                                              _semaphore;
+    static tarch::mpi::BooleanSemaphore                                              _globalIndexSemaphore;
+    tarch::mpi::Lock*                                                                _globalIndexLock;
     
     int                _treeNumber;
 
@@ -361,6 +366,6 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
   def get_static_initialisations(self,full_qualified_classname):
     return """
-tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + """::_semaphore;
+tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + """::_globalIndexSemaphore;
 """
     
