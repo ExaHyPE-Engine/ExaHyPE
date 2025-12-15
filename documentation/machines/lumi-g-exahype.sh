@@ -21,7 +21,7 @@ EXAHYPE_SOLUTION_FOLDER="solutions"
 EXAHYPE_SOLUTION_PATCH_FILE=""
 
 SLURM_ACCOUNT=""
-SLURM_PARTITION=""
+SLURM_PARTITION="standard-g"
 
 # Build Configuration
 BUILD_TIME="00:20:00"
@@ -71,6 +71,7 @@ load_modules
 echo ">>> Setting up temporary local Git LFS..."
 LFS_VERSION="v3.4.0"
 LFS_TEMP_DIR="tmp_git_lfs"
+rm -rf "$LFS_TEMP_DIR"
 mkdir -p "$LFS_TEMP_DIR"
 echo "    Downloading Git LFS $LFS_VERSION..."
 wget -q --show-progress "https://github.com/git-lfs/git-lfs/releases/download/${LFS_VERSION}/git-lfs-linux-amd64-${LFS_VERSION}.tar.gz" -O "$LFS_TEMP_DIR/lfs.tar.gz"
@@ -268,6 +269,7 @@ source "$PEANO_ROOT/venv/bin/activate"
 
 export OMP_PLACES=cores
 export OMP_PROC_BIND=close
+export OMP_NUM_THREADS=$RUN_NUM_THREADS
 
 cd "$PEANO_ROOT/build"
 # ctest --verbose
