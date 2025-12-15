@@ -8,6 +8,7 @@
 #include "tarch/logging/Log.h"
 #include "tarch/mpi/Rank.h"
 
+#include <memory>
 #include <sstream>
 #include <utility>
 #include <vector>
