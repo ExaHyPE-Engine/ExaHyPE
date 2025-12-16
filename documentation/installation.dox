@@ -72,18 +72,18 @@ such as ExaHyPE or our PETSc multigrid environment.
   `libtool`.
 - Set up the configure environment:
 
-~~~~~~~~~~~~~~~~~~~~~~~~~
-libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .
-automake --add-missing
-~~~~~~~~~~~~~~~~~~~~~~~~~
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .
+  automake --add-missing
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   These steps should only be required once, unless you push major
   revisions to the development branch.
 - Next, type in
 
-~~~~~~~~~~~~~~~~~~~~~~~~~
-./configure --help
-~~~~~~~~~~~~~~~~~~~~~~~~~
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ./configure --help
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   The `--help` option should give you some information about the available
   variants of Peano, its extensions and toolboxes.
