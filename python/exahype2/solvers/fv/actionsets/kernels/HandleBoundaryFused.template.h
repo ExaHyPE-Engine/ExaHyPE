@@ -16,11 +16,25 @@
 namespace {{ item }} {
 {%- endfor %}
 
-  void handleBoundaryFused(
-    {{FULL_QUALIFIED_SOLVER_NAME}}&                                        solver,
-    ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData,
-    const int                                                              targetDevice
-  );
+void handleBoundaryFused(
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                                        solver,
+  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData,
+  const int                                                              targetDevice
+);
+
+void handleBoundaryFused(
+  {{FULL_QUALIFIED_SOLVER_NAME}}&             solver,
+  {{STORAGE_PRECISION}}*                      facesFlattened,
+  const uint64_t*                             faceIndices,
+  const uint8_t*                              faceNumbers,
+  const uint64_t*                             cellIndices,
+  const tarch::la::Vector<DIMENSIONS,double>* cellCentres,
+  const tarch::la::Vector<DIMENSIONS,double>* cellSizes,
+  const double                                t,
+  const double                                dt,
+  const int                                   numberOfFaces,
+  const int                                   targetDevice
+);
 
 {% for item in NAMESPACE -%}
 }

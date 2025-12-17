@@ -22,3 +22,10 @@
     {{ loopOverCells(operation) | indent(2) }}
   }
 {% endmacro %}
+
+{% macro loopOverPatchesNoPatchData(operation) %}
+  for (int patchIndex = 0; patchIndex < numberOfPatches; ++patchIndex) {
+    {{ operation.setup_patch_loop() }}
+    {{ loopOverCells(operation) | indent(2) }}
+  }
+{% endmacro %}

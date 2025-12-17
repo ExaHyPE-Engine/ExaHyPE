@@ -16,6 +16,18 @@ double riemannSolverFused(
   const int                                                              targetDevice
 );
 
+double riemannSolverFused(
+  {{FULL_QUALIFIED_SOLVER_NAME}}&    solver,
+  const {{COMPUTE_PRECISION}}* const QInFlattened,
+  {{COMPUTE_PRECISION}}* const       QOutFlattened,
+  const double                       timeStamp,
+  const double                       timeStepSize,
+  const double* const                patchCentres,
+  const double* const                patchSizes,
+  const int                          numberOfPatches,
+  const int                          targetDevice
+);
+
 {% for item in NAMESPACE -%}
 }
 {%- endfor %}

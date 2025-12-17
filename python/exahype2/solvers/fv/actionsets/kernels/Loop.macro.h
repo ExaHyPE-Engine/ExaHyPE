@@ -92,12 +92,29 @@
   #pragma omp parallel for schedule(static)
   {% endif %}
   for (int boundaryFaceIndex = 0; boundaryFaceIndex < numberOfFaces; ++boundaryFaceIndex) {
-    const uint64_t patchIndex  = patchIndices[boundaryFaceIndex];
+    const uint64_t patchIndex = patchIndices[boundaryFaceIndex];
     const int      faceNumber = faceNumbers[boundaryFaceIndex];
 
-    tarch::la::Vector<DIMENSIONS,double> patchSize = cellSizes[patchIndex];
-    tarch::la::Vector<DIMENSIONS,double> patchCentre = cellCentres[patchIndex];
+    tarch::la::Vector<DIMENSIONS, double> patchSize   = cellSizes[patchIndex];
+    tarch::la::Vector<DIMENSIONS, double> patchCentre = cellCentres[patchIndex];
     double* Q = faces[patchIndex][2][faceNumber];
+
+    {{ inner_loop_macro() | indent(2) }}
+  }
+{% endmacro %}
+
+{% macro loopOverPatchesNoPatchData() %}
+  {% if MULTITHREADING == "ON" %}
+  #pragma omp parallel for schedule(static)
+  {% endif %}
+  for (int boundaryFaceIndex = 0; boundaryFaceIndex < numberOfFaces; ++boundaryFaceIndex) {
+    const uint64_t faceIndex  = faceIndices[boundaryFaceIndex];
+    const int      faceNumber = faceNumbers[boundaryFaceIndex];
+    const uint64_t cellIndex  = cellIndices[boundaryFaceIndex];
+
+    tarch::la::Vector<DIMENSIONS, double> patchSize   = cellSizes[cellIndex];
+    tarch::la::Vector<DIMENSIONS, double> patchCentre = cellCentres[cellIndex];
+    double* Q = &facesFlattened[faceIndex * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %}];
 
     {{ inner_loop_macro() | indent(2) }}
   }

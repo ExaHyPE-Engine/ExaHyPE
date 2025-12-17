@@ -23,7 +23,7 @@ namespace exahype2 {
      * for many compilers). To avoid the implied multiple symbol errors, I
      * declare the function as static.
      */
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     tarch::la::Vector<2, double> getVolumeSize(
       const tarch::la::Vector<2, double>& h,
       const int numberOfVolumesPerAxisInPatch
@@ -38,7 +38,7 @@ namespace exahype2 {
       return volumeSize;
     }
 
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     tarch::la::Vector<3, double> getVolumeSize(
       const tarch::la::Vector<3, double>& h,
       const int numberOfVolumesPerAxisInPatch
@@ -53,7 +53,7 @@ namespace exahype2 {
       return volumeSize;
     }
 
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     tarch::la::Vector<2, double> getFaceSize(
       const tarch::la::Vector<2, double>& h,
       const int numberOfVolumesPerAxisInPatch
@@ -61,7 +61,7 @@ namespace exahype2 {
       return getVolumeSize(h, numberOfVolumesPerAxisInPatch);
     }
 
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     tarch::la::Vector<3, double> getFaceSize(
       const tarch::la::Vector<3, double>& h,
       const int numberOfVolumesPerAxisInPatch
@@ -84,7 +84,7 @@ namespace exahype2 {
      * @param h      Size of the cell
      * @param index  Index of Finite Volume (in lexicographic ordering)
      */
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     tarch::la::Vector<2, double> getVolumeCentre(
       const tarch::la::Vector<2, double>& x,
       const tarch::la::Vector<2, double>& h,
@@ -99,7 +99,7 @@ namespace exahype2 {
       return result;
     }
 
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     tarch::la::Vector<3, double> getVolumeCentre(
       const tarch::la::Vector<3, double>& x,
       const tarch::la::Vector<3, double>& h,
@@ -114,7 +114,7 @@ namespace exahype2 {
       return result;
     }
 
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     tarch::la::Vector<2, double> getFaceCentre(
       const tarch::la::Vector<2, double>& x,
       const tarch::la::Vector<2, double>& h,
@@ -136,7 +136,7 @@ namespace exahype2 {
       return result;
     }
 
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     tarch::la::Vector<3, double> getFaceCentre(
       const tarch::la::Vector<3, double>& x,
       const tarch::la::Vector<3, double>& h,

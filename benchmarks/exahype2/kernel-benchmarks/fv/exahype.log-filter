@@ -1,14 +1,17 @@
-debug     tarch                                 -1      black     always-on
-debug     peano4                                -1      black     always-on
-debug     exahype2                              -1      black     always-on
-debug     toolbox                               -1      black     always-on
+debug     tarch                                   -1      black     always-on
+debug     peano4                                  -1      black     always-on
+debug     exahype2                                -1      black     always-on
+debug     toolbox                                 -1      black     always-on
+debug     benchmarks::exahype2::kernelbenchmarks  -1      black     always-on
 
-trace     tarch                                 -1      black     always-on
-trace     peano4                                -1      black     always-on
-trace     exahype2                              -1      black     always-on
-trace     toolbox                               -1      black     always-on
+trace     tarch                                   -1      black     always-on
+trace     peano4                                  -1      black     always-on
+trace     exahype2                                -1      black     always-on
+trace     toolbox                                 -1      black     always-on
+trace     benchmarks::exahype2::kernelbenchmarks  -1      black     always-on
 
-info      tarch                                 -1      white     always-on
-info      peano4                                -1      white     always-on
-info      exahype2                              -1      white     always-on
-info      toolbox                               -1      white     always-on
+info      tarch                                   -1      white     always-on
+info      peano4                                  -1      white     always-on
+info      exahype2                                -1      white     always-on
+info      toolbox                                 -1      white     always-on
+info      benchmarks::exahype2::kernelbenchmarks  -1      white     always-on

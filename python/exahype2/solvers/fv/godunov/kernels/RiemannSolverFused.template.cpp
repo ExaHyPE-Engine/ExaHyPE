@@ -12,22 +12,55 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData,
   [[maybe_unused]] const int                                             targetDevice
 ) {
+  return riemannSolverFused(
+    solver,
+    patchData.QInFlattened,
+    patchData.QOutFlattened,
+    patchData.t,
+    patchData.dt,
+    patchData.cellCentre[0].data(),
+    patchData.cellSize[0].data(),
+    patchData.numberOfCells,
+    targetDevice
+  );
+}
+
+double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
+  [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&    solver,
+  const {{COMPUTE_PRECISION}}* const                  QInFlattened,
+  {{COMPUTE_PRECISION}}* const                        QOutFlattened,
+  const double                                        timeStamp,
+  const double                                        timeStepSize,
+  const double* const                                 patchCentres,
+  const double* const                                 patchSizes,
+  const int                                           numberOfPatches,
+  [[maybe_unused]] const int                          targetDevice
+) {
 {% if COMPUTE_MAX_EIGENVALUE %}
   double maxEigenvalueAfterTimeStep = 0.0;
 {% endif %}
 
-  const int numberOfPatches                       = patchData.numberOfCells;
-  const {{COMPUTE_PRECISION}}* const QInFlattened = patchData.QInFlattened;
-  {{COMPUTE_PRECISION}}* const QOutFlattened      = patchData.QOutFlattened;
-  const double* const patchCentres                = patchData.cellCentre[0].data();
-  const double* const patchSizes                  = patchData.cellSize[0].data();
-  const double timeStamp                          = patchData.t;
-  const double timeStepSize                       = patchData.dt;
+  const int volumesPerAxis = {{NUMBER_OF_VOLUMES_PER_AXIS}};
+  const int volumesPerPatch = volumesPerAxis * volumesPerAxis {% if DIMENSIONS==3 %} * volumesPerAxis {% endif %};
+  const int totalCells = numberOfPatches * volumesPerPatch;
 
 {% if MULTITHREADING == "ON" %}
 #pragma omp parallel for schedule(static) {% if COMPUTE_MAX_EIGENVALUE==True %} reduction(max : maxEigenvalueAfterTimeStep) {% endif %}
 {% endif %}
-  for (int patchIndex = 0; patchIndex < numberOfPatches; ++patchIndex) {
+  for (int globalIdx = 0; globalIdx < totalCells; ++globalIdx) {
+    const int patchIndex = globalIdx / volumesPerPatch;
+    const int cellIdx    = globalIdx % volumesPerPatch;
+
+{% if DIMENSIONS == 3 %}
+    const int z = cellIdx / (volumesPerAxis * volumesPerAxis);
+    const int r = cellIdx % (volumesPerAxis * volumesPerAxis);
+    const int y = r / volumesPerAxis;
+    const int x = r % volumesPerAxis;
+{% else %}
+    const int y = cellIdx / volumesPerAxis;
+    const int x = cellIdx % volumesPerAxis;
+{% endif %}
+
     const {{COMPUTE_PRECISION}}* const QIn = &QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %}];
     {{COMPUTE_PRECISION}}* const QOut      = &QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
 
@@ -42,16 +75,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
       {% if DIMENSIONS==3 %} , patchSizes[patchIndex * {{DIMENSIONS}} + 2] {% endif %}
     };
 
-{% if DIMENSIONS==3 %}
-    for (int z = 0; z < {{NUMBER_OF_VOLUMES_PER_AXIS}}; ++z) {
-{% endif %}
-      for (int y = 0; y < {{NUMBER_OF_VOLUMES_PER_AXIS}}; ++y) {
-        for (int x = 0; x < {{NUMBER_OF_VOLUMES_PER_AXIS}}; ++x) {
-          {{ ComputeFluxesAndPerformTimeStep() | indent(8)}}
-        } // x
-      } // y
-{% if DIMENSIONS==3 %}  } // z {% endif %}
-  } // patchIndex
+    {{ ComputeFluxesAndPerformTimeStep() | indent(2)}}
+  } // globalIdx
 
 {% if COMPUTE_MAX_EIGENVALUE %}
   return maxEigenvalueAfterTimeStep;

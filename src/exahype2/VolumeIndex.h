@@ -14,7 +14,7 @@ namespace exahype2 {
 
     using VectorType = tarch::la::Vector<N, int>;
 
-    static inline GPU_CALLABLE_METHOD VectorType generate(Args... args) {
+    static INLINE_METHOD GPU_CALLABLE_METHOD VectorType generate(Args... args) {
       VectorType result;
       fillVector<0>(result, args...); // Start recursion at index 0
       return result;
@@ -23,14 +23,14 @@ namespace exahype2 {
   private:
     // Recursive fill function
     template <int I, class FirstArg, class... RestArgs>
-    static inline GPU_CALLABLE_METHOD void fillVector(VectorType& vector, FirstArg arg, RestArgs... rest) {
+    static INLINE_METHOD GPU_CALLABLE_METHOD void fillVector(VectorType& vector, FirstArg arg, RestArgs... rest) {
       vector(I) = arg;
       fillVector<I + 1>(vector, rest...);
     }
 
     // Termination case
     template <int I>
-    static inline GPU_CALLABLE_METHOD void fillVector(VectorType&) {}
+    static INLINE_METHOD GPU_CALLABLE_METHOD void fillVector(VectorType&) {}
   };
 
   /**
@@ -51,7 +51,7 @@ namespace exahype2 {
    */
   // Factory function: Deduces N from argument count
   template <class... Args>
-  static inline GPU_CALLABLE_METHOD auto volumeIndex(Args... args) {
+  static INLINE_METHOD GPU_CALLABLE_METHOD auto volumeIndex(Args... args) {
     constexpr int N = sizeof...(args);
     static_assert(N > 0, "volumeIndex() must be called with at least one argument");
     return VolumeIndex<N, Args...>::generate(args...);

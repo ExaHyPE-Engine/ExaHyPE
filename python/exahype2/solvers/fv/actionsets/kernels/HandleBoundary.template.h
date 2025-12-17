@@ -15,15 +15,15 @@
 namespace {{ item }} {
 {%- endfor %}
 
-  void handleBoundary(
-    {{FULL_QUALIFIED_SOLVER_NAME}}&             solver,
-    const tarch::la::Vector<DIMENSIONS,double>  patchCentre,
-    const tarch::la::Vector<DIMENSIONS,double>  patchSize,
-    double                                      t,
-    double                                      dt,
-    int                                         faceNumber,
-    {{STORAGE_PRECISION}}*                      Q
-  );
+void handleBoundary(
+  {{FULL_QUALIFIED_SOLVER_NAME}}&             solver,
+  const tarch::la::Vector<DIMENSIONS,double>  patchCentre,
+  const tarch::la::Vector<DIMENSIONS,double>  patchSize,
+  double                                      t,
+  double                                      dt,
+  int                                         faceNumber,
+  {{STORAGE_PRECISION}}*                      Q
+);
 
 {% for item in NAMESPACE -%}
 }

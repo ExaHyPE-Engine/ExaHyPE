@@ -46,7 +46,16 @@ parser.add_argument(
     "--num-cells",
     type=int,
     nargs="+",
-    default=[64, 81, 128, 256, 512, 729, 1024, 2048],#, 4096, 6561, 16384, 32768, 59049, 65536],
+    default=[
+        64,
+        81,
+        128,
+        256,
+        512,
+        729,
+        1024,
+        2048,
+    ],  # , 4096, 6561, 16384, 32768, 59049, 65536],
     help="Number of patches to study",
 )
 parser.add_argument(
@@ -94,6 +103,13 @@ parser.add_argument(
     choices=available_scenarios.keys(),
     default="ElasticPlanarWaves",
     help="Scenario which should be used as a base for the benchmarking",
+)
+parser.add_argument(
+    "-md",
+    "--min-depth",
+    type=int,
+    default=6,
+    help="Determines maximum size of a single cell on each axis.",
 )
 
 args = parser.parse_args()
@@ -169,7 +185,8 @@ project.constants.export_const_with_type(
 
 formatted_num_threads = "{{{}}}".format(", ".join(str(val) for val in args.num_threads))
 project.constants.export_const_with_type(
-    "NumberOfLaunchingThreads", str(formatted_num_threads),
+    "NumberOfLaunchingThreads",
+    str(formatted_num_threads),
     "tarch::la::Vector<%s, int>" % len(args.num_threads),
 )
 
@@ -187,7 +204,7 @@ else:
 
 makefile = project.output.makefile
 
-makefile.add_CXX_flag("-DSolverPrecision="+args.precision)
+makefile.add_CXX_flag("-DSolverPrecision=" + args.precision)
 
 for i in range(1, 7):
     makefile.add_cpp_file("Variant" + str(i) + ".cpp")

@@ -26,3 +26,19 @@ void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
 ) {
   {{ fused.loopOverPatches() }}
 }
+
+void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
+  {{FULL_QUALIFIED_SOLVER_NAME}}&             solver,
+  {{STORAGE_PRECISION}}*                      facesFlattened,
+  const uint64_t*                             faceIndices,
+  const uint8_t*                              faceNumbers,
+  const uint64_t*                             cellIndices,
+  const tarch::la::Vector<DIMENSIONS,double>* cellCentres,
+  const tarch::la::Vector<DIMENSIONS,double>* cellSizes,
+  const double                                t,
+  const double                                dt,
+  const int                                   numberOfFaces,
+  const int                                   targetDevice
+) {
+  {{ fused.loopOverPatchesNoPatchData() }}
+}
