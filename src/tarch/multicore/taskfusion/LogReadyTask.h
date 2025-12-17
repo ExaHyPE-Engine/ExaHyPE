@@ -36,10 +36,7 @@ namespace tarch {
  * then has to wait before the lazy evaluation is due, so we know that the right
  * tasks are inserted.
  *
- * @see
- *
- *
- * ## @todo
+ * ## Orchestration
  *
  * This task is always paired up with an instance of ProcessReadyTask. This
  * task takes the task _task and puts it into the _taskQueue. After that, it

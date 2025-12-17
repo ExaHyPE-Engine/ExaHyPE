@@ -24,15 +24,17 @@ too.
 Users should be familiar with the standard configure process for Peano. That being said,
 to build Multigrid applications, the minimal configure options needed are:
 
-- ``` --enable-loadbalancing ```
-- ``` --enable-exahype ```
-- ``` --enable-blockstructured ```
-- ``` --enable-finiteelements ```
-- ``` --enable-mghype ```
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--enable-loadbalancing --enable-exahype --enable-blockstructured --enable-finiteelements  --enable-mghype
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The pythonpath needed is:
 
-``` export PYTHONPATH=/path/to/Peano/python:/path/to/Peano/src ```
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PYTHONPATH=/path/to/Peano/python:/path/to/Peano/src 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Please refer to \ref documentation_multigrid_petsc for info on PETSC-specific build settings.
+
 */

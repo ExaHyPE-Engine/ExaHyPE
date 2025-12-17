@@ -74,7 +74,7 @@ namespace {
  * internally mapped onto lightweight tasks) can spawn additional tasks. As part of
  * the enclave concept, we don't have to wait for these children tasks at the end
  * of the BSP section. Therefore, the BSP tasks enqueue their new children into a
- * separate task group/arena (see spawnTask()) and ``forget'' them.
+ * separate task group/arena (see spawnTask()) and "forget" them.
  *
  *
  * ## Task arenas and task priorities

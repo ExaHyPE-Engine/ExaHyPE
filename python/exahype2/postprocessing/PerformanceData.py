@@ -367,7 +367,7 @@ class PerformanceData(object):
     """
     
     Remove the first count entries from the dataset. Usually, count is one and 
-    anticipates that the solver requires one ``warm up'' sweep to determine h 
+    anticipates that the solver requires one warm up sweep to determine h 
     and the eigenvalue, e.g.
     
     """

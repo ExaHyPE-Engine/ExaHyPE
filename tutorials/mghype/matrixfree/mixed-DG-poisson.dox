@@ -14,7 +14,7 @@ class to construct a working solver.
 
 
 
-@include{doc} tutorials/multigrid/generic-mixed-DG.dox
+@include{doc} tutorials/mghype/numerics/generic-mixed-DG.dox
 
 
 # Project setup
