@@ -23,3 +23,17 @@
     {{ operation.inner_loop_macro() | indent(2) }}
   });
 {% endmacro %}
+
+{% macro loopOverPatchesNoPatchData() %}
+  Kokkos::parallel_for("boundary-face-loop", numberOfFaces, KOKKOS_LAMBDA(const int boundaryFaceIndex) {
+    const uint64_t faceIndex = faceIndices[boundaryFaceIndex];
+    const int faceNumber     = faceNumbers[boundaryFaceIndex];
+    const uint64_t cellIndex = cellIndices[boundaryFaceIndex];
+
+    tarch::la::Vector<DIMENSIONS,double> patchSize   = cellSizes[cellIndex];
+    tarch::la::Vector<DIMENSIONS,double> patchCentre = cellCentres[cellIndex];
+    double* Q = &facesFlattened[faceIndex * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %}];
+
+    {{ operation.inner_loop_macro() | indent(2) }}
+  });
+{% endmacro %}

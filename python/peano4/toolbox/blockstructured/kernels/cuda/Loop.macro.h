@@ -17,9 +17,8 @@
   kernel(
     {{ operation.cuda_kernel_parameters() | indent(2) }}
   ) {
-    const int patchIndex    = blockIdx.x;
+    const int patchIndex = blockIdx.x;
     {{ operation.setup_patch_loop() | indent(2) }}
-
     {{ loopOverCells(operation) | indent(2) }}
   }
 {% endmacro %}
@@ -27,6 +26,18 @@
 {% macro loopOverPatches(operation) %}
   {{ operation.setup_patchdata_variables() }}
 
+  {% if DIMENSIONS==3 %} const dim3 dimBlock(8, 8, 8); {% else %} const dim3 dimBlock(16, 16, 1); {% endif %}
+  const dim3 dimGrid(numberOfPatches, 1, 1);
+  CHECK_CUDA_ERROR(cudaSetDevice(targetDevice));
+
+  kernel<<<dimGrid, dimBlock, 0, tarch::accelerator::deviceStreamGet()>>>(
+    {{ operation.parameters_passed_to_inner_loop() | indent(2) }}
+  );
+
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(tarch::accelerator::deviceStreamGet()));
+{% endmacro %}
+
+{% macro loopOverPatchesNoPatchData(operation) %}
   {% if DIMENSIONS==3 %} const dim3 dimBlock(8, 8, 8); {% else %} const dim3 dimBlock(16, 16, 1); {% endif %}
   const dim3 dimGrid(numberOfPatches, 1, 1);
   CHECK_CUDA_ERROR(cudaSetDevice(targetDevice));

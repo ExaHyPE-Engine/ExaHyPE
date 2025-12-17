@@ -7,11 +7,11 @@
   const auto volumeCentre = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeIndex);
 
 {% if DIMENSIONS==2 %}
-  const {{STORAGE_PRECISION}}* const QInCenter = &QIn[(volumeIndex(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndex(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
-  {{STORAGE_PRECISION}}* const QOutCenter = &QOut[(volumeIndex(1)) * {{PATCH_CARDINALITY_1D}} + (volumeIndex(0)) * {{NUMBER_OF_DATA}}];
+  const {{STORAGE_PRECISION}}* const NOALIAS QInCenter = &QIn[(volumeIndex(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndex(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
+  {{STORAGE_PRECISION}}* const NOALIAS QOutCenter = &QOut[(volumeIndex(1)) * {{PATCH_CARDINALITY_1D}} + (volumeIndex(0)) * {{NUMBER_OF_DATA}}];
 {% else %}
-  const {{STORAGE_PRECISION}}* const QInCenter = &QIn[(volumeIndex(2) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_2D}} + (volumeIndex(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndex(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
-  {{STORAGE_PRECISION}}* const QOutCenter = &QOut[(volumeIndex(2)) * {{PATCH_CARDINALITY_2D}} + (volumeIndex(1)) * {{PATCH_CARDINALITY_1D}} + (volumeIndex(0)) * {{NUMBER_OF_DATA}}];
+  const {{STORAGE_PRECISION}}* const NOALIAS QInCenter = &QIn[(volumeIndex(2) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_2D}} + (volumeIndex(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndex(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
+  {{STORAGE_PRECISION}}* const NOALIAS QOutCenter = &QOut[(volumeIndex(2)) * {{PATCH_CARDINALITY_2D}} + (volumeIndex(1)) * {{PATCH_CARDINALITY_1D}} + (volumeIndex(0)) * {{NUMBER_OF_DATA}}];
 {% endif %}
 
   #if defined(WITH_GPU)
@@ -25,8 +25,8 @@
     QC[unknown] = QInCenter[unknown];
   }
   #else
-  const {{STORAGE_PRECISION}}* const QC = QInCenter;
-  {{STORAGE_PRECISION}}* const QO = QOutCenter;
+  const {{STORAGE_PRECISION}}* const NOALIAS QC = QInCenter;
+  {{STORAGE_PRECISION}}* const NOALIAS QO = QOutCenter;
   assertion(QC);
   assertion(QO);
   #endif
@@ -62,9 +62,9 @@
       volumeIndexRight(normal) += {{HALO_SIZE}};
 
 {% if DIMENSIONS==2 %}
-      const {{COMPUTE_PRECISION}}* const QInRight = &QIn[(volumeIndexRight(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexRight(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
+      const {{COMPUTE_PRECISION}}* const NOALIAS QInRight = &QIn[(volumeIndexRight(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexRight(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
 {% else %}
-      const {{COMPUTE_PRECISION}}* const QInRight = &QIn[(volumeIndexRight(2) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_2D}} + (volumeIndexRight(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexRight(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
+      const {{COMPUTE_PRECISION}}* const NOALIAS QInRight = &QIn[(volumeIndexRight(2) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_2D}} + (volumeIndexRight(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexRight(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
 {% endif %}
 
       #if !defined(WITH_GPU)
@@ -110,8 +110,8 @@
 {% endif %}
 
     #if defined(WITH_GPU)
-    const {{STORAGE_PRECISION}}* const QInLeft = &QIn[indexLeft];
-    const {{STORAGE_PRECISION}}* const QInRight = &QIn[indexRight];
+    const {{STORAGE_PRECISION}}* const NOALIAS QInLeft = &QIn[indexLeft];
+    const {{STORAGE_PRECISION}}* const NOALIAS QInRight = &QIn[indexRight];
     SIMD(aligned(QL:ALIGNMENT))
     for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
       QL[unknown] = QInLeft[unknown];
@@ -121,8 +121,8 @@
       QR[unknown] = QInRight[unknown];
     }
     #else
-    const {{STORAGE_PRECISION}}* const QL = &QIn[indexLeft];
-    const {{STORAGE_PRECISION}}* const QR = &QIn[indexRight];
+    const {{STORAGE_PRECISION}}* const NOALIAS QL = &QIn[indexLeft];
+    const {{STORAGE_PRECISION}}* const NOALIAS QR = &QIn[indexRight];
     assertion(QL);
     assertion(QR);
     #endif
@@ -248,7 +248,8 @@
     }
 
     const {{COMPUTE_PRECISION}} scale = (timeStepSize * {{NUMBER_OF_VOLUMES_PER_AXIS}} * static_cast<{{COMPUTE_PRECISION}}>(0.5)) / patchSize(normal);
-    //SIMD(aligned(QC,QL,QR,QO:ALIGNMENT))
+    //SIMD(aligned(QC,QL,QR,QO:ALIGNMENT)) // TODO: Missing alignment for fluxesLeft and fluxesRight
+    UNROLL({{DIMENSIONS}})
     for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; ++unknown) {
       #if !defined(WITH_GPU)
       assertion(std::isfinite(QL[unknown]));

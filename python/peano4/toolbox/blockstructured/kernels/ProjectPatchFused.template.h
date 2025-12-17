@@ -13,6 +13,14 @@ void projectPatchFused(
   const int                                              targetDevice
 );
 
+void projectPatchFused(
+  const {{PRECISION}}* const NOALIAS QInFlattened,
+  {{PRECISION}}*       const NOALIAS facePool,
+  const std::uint64_t*               faceIndices,
+  const int                          numberOfPatches,
+  const int                          targetDevice
+);
+
 {% for item in NAMESPACE -%}
 }
 {%- endfor %}

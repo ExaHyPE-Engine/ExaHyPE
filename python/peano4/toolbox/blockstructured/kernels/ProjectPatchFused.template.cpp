@@ -15,9 +15,11 @@
 
 {% import fused_loop_path as fused with context %}
 {% import 'CopyPatchOntoFaces.macro.h' as operation with context %}{# get template macros #}
+{% import 'CopyPatchOntoFacesNoPointers.macro.h' as operation_without_facepointer with context %}{# get template macros #}
 
 {% if GPU == "cuda" %}
 {{ fused.defineGlobalKernel(operation) }}
+{{ fused.defineGlobalKernel(operation_without_facepointer) }}
 {% elif GPU == "sycl" %}
 #include "tarch/accelerator/sycl/Device.h"
 #include <sycl/sycl.hpp>
@@ -30,4 +32,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectPatchFused(
   const int                                              targetDevice
 ) {
   {{ fused.loopOverPatches(operation) }}
+}
+
+void {{FULL_QUALIFIED_NAMESPACE}}::projectPatchFused(
+  const {{PRECISION}}* const NOALIAS QInFlattened,
+  {{PRECISION}}*       const NOALIAS facePool,
+  const std::uint64_t*               faceIndices,
+  const int                          numberOfPatches,
+  const int                          targetDevice
+) {
+  {{ fused.loopOverPatchesNoPatchData(operation_without_facepointer) }}
 }

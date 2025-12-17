@@ -61,7 +61,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     tarch::la::Vector<DIMENSIONS, int>    cellIndex        = tarch::la::convertScalar<int>(
       tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize))
     );
-    // permute as described in getFaceIndices()
+    // Permute as described in getFaceIndices()
     for (int i = 1; i <= axis % DIMENSIONS; ++i) {
       std::swap(cellIndex[0], cellIndex[i]);
     }
@@ -70,15 +70,24 @@ namespace benchmarks::exahype2::kernelbenchmarks {
   }
 
   DataRepository::DataRepository() {
-    int cellCount = std::pow(GridLength, DIMENSIONS);
-    int faceCount = std::pow(GridLength, DIMENSIONS - 1) * (GridLength + 1);
-    _depthLevel.Q.resize(cellCount);
+    const auto cellCount = std::pow(GridLength, DIMENSIONS);
+    const auto faceCount = std::pow(GridLength, DIMENSIONS - 1) * (GridLength + 1);
+    const int  depth     = static_cast<int>(std::round(std::log(GridLength) / std::log(3.0)));
+    _depthLevels.resize(depth + 1); // For 1 AMR level
+    _depthLevels[depth - 1].Q.resize(cellCount);
+    _depthLevels[depth - 1].QReconstructed.resize(cellCount);
     for (int axis = 0; axis < DIMENSIONS; ++axis) {
-      _depthLevel.faces[axis].resize(faceCount);
-      _depthLevel.facesDevice[axis] = tarch::allocateMemory<double>(
-        faceCount * getFaceCardinality(),
-        tarch::MemoryLocation::Pinned
-      );
+      _depthLevels[depth - 1].faces[axis].resize(faceCount);
+    }
+
+    if (UseAMR) {
+      const auto cellCountAMR = std::pow(GridLength * 3, DIMENSIONS);
+      const auto faceCountAMR = std::pow(GridLength * 3, DIMENSIONS - 1) * (GridLength * 3 + 1);
+      _depthLevels[depth].Q.resize(cellCountAMR);
+      _depthLevels[depth].QReconstructed.resize(cellCountAMR);
+      for (int axis = 0; axis < DIMENSIONS; ++axis) {
+        _depthLevels[depth].faces[axis].resize(faceCountAMR);
+      }
     }
   }
 
@@ -87,39 +96,62 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     return instance;
   }
 
-  void DataRepository::clear() {
-    for (int axis = 0; axis < DIMENSIONS; ++axis) {
-      tarch::freeMemory(_depthLevel.facesDevice[axis], tarch::MemoryLocation::Pinned);
-    }
+  int DataRepository::getFaceCardinality() const { return facedata::FVSolverQNew::Cardinality; }
+
+  int DataRepository::getCellQCardinality() const { return celldata::FVSolverQ::Cardinality; }
+
+  int DataRepository::getCellQReconstructedCardinality() const { return celldata::FVSolverQReconstructed::Cardinality; }
+
+  std::size_t DataRepository::getMemoryUsageInBytes() const {
+    const auto cellCount   = std::pow(GridLength, DIMENSIONS);
+    const auto faceCount   = std::pow(GridLength, DIMENSIONS - 1) * (GridLength + 1);
+    const auto volumeCount = cellCount * std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS);
+    const auto volumeReconstructedCount = cellCount
+                                          * std::
+                                            pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch + 2, DIMENSIONS);
+    const auto facesVolumesCount = faceCount
+                                   * std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS - 1) * 2;
+    std::size_t totalStorageSize = (volumeCount + volumeReconstructedCount + facesVolumesCount)
+                                   * (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables)
+                                   * sizeof(double);
+    return totalStorageSize;
   }
-
-  int DataRepository::getFaceCardinality() { return facedata::FVSolverQNew::Cardinality; }
-
-  int DataRepository::getCellQCardinality() { return celldata::FVSolverQ::Cardinality; }
-
-  int DataRepository::getCellQReconstructedCardinality() { return celldata::FVSolverQReconstructed::Cardinality; }
-
-  double* DataRepository::getCellQ(int index) { return _depthLevel.Q[index].data(); }
 
   double* DataRepository::getCellQ(
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize
   ) {
+    const double                          ratio = DomainSize[0] / cellSize[0];
+    const int                             depth = static_cast<int>(std::round(std::log(ratio) / std::log(3.0)));
     tarch::la::Vector<DIMENSIONS, double> cellCentreOffset = cellCentre - DomainOffset; // remove Offset
     tarch::la::Vector<DIMENSIONS, int>    cellIndex        = tarch::la::convertScalar<int>(
       tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize))
     );
-    int index = peano4::utils::dLinearised(cellIndex, GridLength);
-    return getCellQ(index);
+    int index = peano4::utils::dLinearised(cellIndex, std::pow(3, depth));
+    return _depthLevels[depth - 1].Q[index].data();
   }
 
-  double* DataRepository::getFaceQNew(int index, int axis) {
-    auto& faceData = _depthLevel.faces[axis % DIMENSIONS];
+  double* DataRepository::getCellQReconstructed(
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  ) {
+    const double                          ratio = DomainSize[0] / cellSize[0];
+    const int                             depth = static_cast<int>(std::round(std::log(ratio) / std::log(3.0)));
+    tarch::la::Vector<DIMENSIONS, double> cellCentreOffset = cellCentre - DomainOffset; // remove Offset
+    tarch::la::Vector<DIMENSIONS, int>    cellIndex        = tarch::la::convertScalar<int>(
+      tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize))
+    );
+    int index = peano4::utils::dLinearised(cellIndex, std::pow(3, depth));
+    return _depthLevels[depth - 1].QReconstructed[index].data();
+  }
+
+  double* DataRepository::getFaceQNew(int index, int depth, int axis) {
+    auto& faceData = _depthLevels[depth - 1].faces[axis % DIMENSIONS];
     if (axis >= DIMENSIONS) {
-      // high face
+      // High face
       return faceData[index + 1].data();
     } else {
-      // low face
+      // Low face
       return faceData[index].data();
     }
   }
@@ -129,40 +161,9 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     int                                          axis
   ) {
-    int index = Indexing::getFaceIndex(cellCentre, cellSize, axis);
-    return _depthLevel.faces[axis % DIMENSIONS][index].data();
-  }
-
-  double* DataRepository::getFaceQNewDevice(
-    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    int                                          axis
-  ) {
-    int index = Indexing::getFaceIndex(cellCentre, cellSize, axis);
-    return _depthLevel.facesDevice[axis % DIMENSIONS] + index * getFaceCardinality();
-  }
-
-  void DataRepository::copyFacesToDevice() {
-    int faceCount = std::pow(GridLength, DIMENSIONS - 1) * (GridLength + 1);
-    for (int axis = 0; axis < DIMENSIONS; ++axis) {
-      tarch::copyTo<double, double>(
-        _depthLevel.facesDevice[axis],
-        _depthLevel.faces[axis][0].data(),
-        faceCount * getFaceCardinality(),
-        tarch::MemoryLocation::Pinned
-      );
-    }
-  }
-
-  void DataRepository::copyFacesFromDevice() {
-    int faceCount = std::pow(GridLength, DIMENSIONS - 1) * (GridLength + 1);
-    for (int axis = 0; axis < DIMENSIONS; ++axis) {
-      tarch::copyFrom<double, double>(
-        _depthLevel.facesDevice[axis],
-        _depthLevel.faces[axis][0].data(),
-        faceCount * getFaceCardinality(),
-        tarch::MemoryLocation::Pinned
-      );
-    }
+    const double ratio = DomainSize[0] / cellSize[0];
+    const int    depth = static_cast<int>(std::round(std::log(ratio) / std::log(3.0)));
+    int          index = Indexing::getFaceIndex(cellCentre, cellSize, axis);
+    return _depthLevels[depth - 1].faces[axis % DIMENSIONS][index].data();
   }
 } // namespace benchmarks::exahype2::kernelbenchmarks

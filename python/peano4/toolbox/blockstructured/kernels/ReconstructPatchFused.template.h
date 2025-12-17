@@ -13,6 +13,15 @@ void reconstructPatchFused(
   const int                                              targetDevice
 );
 
+void reconstructPatchFused(
+  const {{PRECISION}}* NOALIAS const  QInFlattened,
+  const {{PRECISION}}* NOALIAS const  facePool,
+  const std::uint64_t*                faceIndices,
+  {{PRECISION}}* NOALIAS const        QOutFlattened,
+  const int                           numberOfPatches,
+  const int                           targetDevice
+);
+
 {% for item in NAMESPACE -%}
 }
 {%- endfor %}

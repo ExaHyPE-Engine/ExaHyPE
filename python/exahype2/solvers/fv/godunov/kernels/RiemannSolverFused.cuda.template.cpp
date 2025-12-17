@@ -142,3 +142,78 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   return 0.0;
 {% endif %}
 }
+
+double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
+  [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&    solver,
+  const {{COMPUTE_PRECISION}}* const                  QInFlattened,
+  {{COMPUTE_PRECISION}}* const                        QOutFlattened,
+  const double                                        timeStamp,
+  const double                                        timeStepSize,
+  const double* const                                 patchCentres,
+  const double* const                                 patchSizes,
+  const int                                           numberOfPatches,
+  [[maybe_unused]] const int                          targetDevice
+) {
+{% if COMPUTE_MAX_EIGENVALUE==True %}
+  {{COMPUTE_PRECISION}}* maxEigenvalues = tarch::accelerator::MemoryManager::getInstance().allocate<{{COMPUTE_PRECISION}}>(
+    numberOfPatches,
+    tarch::MemoryLocation::Device,
+    targetDevice
+  );
+{% endif %}
+
+  {% if DIMENSIONS==3 %} const dim3 dimBlock(8, 8, 8); {% else %} const dim3 dimBlock(16, 16, 1); {% endif %}
+  const dim3 dimGrid(numberOfPatches, 1, 1);
+  CHECK_CUDA_ERROR(cudaSetDevice(targetDevice));
+
+  kernel<<<dimGrid, dimBlock, 0, tarch::accelerator::deviceStreamGet()>>>(
+    QInFlattened,
+    QOutFlattened,
+    patchCentres,
+    patchSizes,
+    timeStamp,
+    timeStepSize
+    {% if COMPUTE_MAX_EIGENVALUE==True %} , maxEigenvalues {% endif %}
+  );
+
+{% if COMPUTE_MAX_EIGENVALUE==True %}
+  {{COMPUTE_PRECISION}}* cubMaxEigenvalue = nullptr;
+  CHECK_CUDA_ERROR(cudaMalloc(&cubMaxEigenvalue, sizeof(double)));
+  void* cubTempStorage = nullptr;
+  std::size_t cubTempStorageBytes = 0;
+  cub::DeviceReduce::Max(
+    cubTempStorage,
+    cubTempStorageBytes,
+    maxEigenvalues,
+    cubMaxEigenvalue,
+    numberOfPatches
+  );
+  CHECK_CUDA_ERROR(cudaMalloc(&cubTempStorage, cubTempStorageBytes));
+  cub::DeviceReduce::Max(
+    cubTempStorage,
+    cubTempStorageBytes,
+    maxEigenvalues,
+    cubMaxEigenvalue,
+    numberOfPatches
+  );
+  double maxEigenvalueAfterTimeStep = 0.0;
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    &maxEigenvalueAfterTimeStep,
+    cubMaxEigenvalue,
+    sizeof({{COMPUTE_PRECISION}}),
+    cudaMemcpyDeviceToHost,
+    tarch::accelerator::deviceStreamGet()
+  ));
+  CHECK_CUDA_ERROR(cudaFree(cubTempStorage));
+  CHECK_CUDA_ERROR(cudaFree(cubMaxEigenvalue));
+  tarch::accelerator::MemoryManager::getInstance().free(maxEigenvalues, targetDevice);
+{% endif %}
+
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(tarch::accelerator::deviceStreamGet()));
+
+{% if COMPUTE_MAX_EIGENVALUE==True %}
+  return maxEigenvalueAfterTimeStep;
+{% else %}
+  return 0.0;
+{% endif %}
+}

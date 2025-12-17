@@ -8,6 +8,7 @@
 #include "facedata/FVSolverQNew.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "tarch/la/Vector.h"
+#include "tarch/logging/Log.h"
 
 #include <array>
 #include <string>
@@ -74,53 +75,45 @@ namespace benchmarks::exahype2::kernelbenchmarks {
 
     ~DataRepository() = default;
 
-    void clear();
-
-    double* getCellQ(int index);
     double* getCellQ(
       const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
       const tarch::la::Vector<DIMENSIONS, double>& cellSize
     );
 
-    double* getFaceQNew(int index, int axis);
+    double* getCellQReconstructed(
+      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+      const tarch::la::Vector<DIMENSIONS, double>& cellSize
+    );
+
+    double* getFaceQNew(int index, int depth, int axis);
     double* getFaceQNew(
       const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
       const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       int                                          axis
     );
-    double* getFaceQNewDevice(
-      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-      int                                          axis
-    );
 
-    void copyFacesToDevice();
-    void copyFacesFromDevice();
-
-    int getFaceCardinality();
+    int getFaceCardinality() const;
     // QReconstructed is not stored explicitly anymore, as it is just used to store the patch+halo temporarily before
     // the Riemann step but we still need its size, therefore the getter.
-    int getCellQReconstructedCardinality();
-    int getCellQCardinality();
+    int getCellQCardinality() const;
+    int getCellQReconstructedCardinality() const;
+
+    std::size_t getMemoryUsageInBytes() const;
 
   private:
-    friend struct celldata::FVSolverQ;
-    friend struct celldata::FVSolverQReconstructed;
-
-    using CellQ    = std::array<double, celldata::FVSolverQ::Cardinality>;
-    using FaceQNew = std::array<double, facedata::FVSolverQNew::Cardinality>;
+    using CellQ              = std::array<double, celldata::FVSolverQ::Cardinality>;
+    using CellQReconstructed = std::array<double, celldata::FVSolverQReconstructed::Cardinality>;
+    using FaceQNew           = std::array<double, facedata::FVSolverQNew::Cardinality>;
 
     struct DepthLevel {
-      // cellData
-      std::vector<CellQ> Q;
-      // Other cellData would go here also as a std::vector<CellQ...>
+      std::vector<CellQ>              Q;
+      std::vector<CellQReconstructed> QReconstructed;
 
-      // Stores faces based on linearised order (face GridSize = 3^Depth * (3^Depth)+1) (not based on cellKeys)
+      // Stores faces based on linearised order (face GridSize = 3^Depth * (3^Depth) + 1)
       std::array<std::vector<FaceQNew>, DIMENSIONS> faces;
-      std::array<double*, DIMENSIONS>               facesDevice;
     };
 
-    DepthLevel _depthLevel;
+    std::vector<DepthLevel> _depthLevels;
 
     DataRepository();
   };

@@ -636,13 +636,6 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
   T*    coarseGridValues,
   bool  swapInsideOutside
 ) {
-  logTraceInWith3Arguments(
-    "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    overlap
-  );
-
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
   dfore(kCoarse, numberOfDoFsPerAxisInPatch, normal, 0) {
@@ -791,8 +784,6 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       );
     }
   }
-
-  logTraceOut("restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)");
 }
 
 template<typename T>
@@ -1087,14 +1078,6 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
   T*                                        coarseGridValues,
   bool                                      swapInsideOutside
 ) {
-  logTraceInWith4Arguments(
-    "restrictInnerHalfOfHaloLayer_AoS_averaging(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    overlap,
-    unknowns
-  );
-
   assertion1(overlap == 1 or overlap % 3 == 0, overlap);
 
   bool mapFromInnerHalfOfHalo
@@ -1185,8 +1168,6 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
       }
     }
   }
-
-  logTraceOut("restrictInnerHalfOfHaloLayer_AoS_averaging(...)");
 }
 
 template<typename T>
@@ -1199,16 +1180,6 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_inject(
   T*                                        coarseGridValues,
   bool                                      swapInsideOutside
 ) {
-  logTraceInWith6Arguments(
-    "restrictInnerHalfOfHaloLayer_AoS_inject(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    overlap,
-    unknowns,
-    fineGridValues,
-    coarseGridValues
-  );
-
   assertion1(overlap == 1 or overlap % 3 == 1, overlap);
 
   const int  normal = marker.getSelectedFaceNumber() % DIMENSIONS;
@@ -1276,8 +1247,6 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_inject(
       } // end of restrictThisVolume
     }   // for iFine loop, i.e. loop over halo layer depth
   }     // dfore loop, i.e. loop over submanifold
-
-  logTraceOut("restrictInnerHalfOfHaloLayer_AoS_restrict(...)");
 }
 
 template<typename T>
