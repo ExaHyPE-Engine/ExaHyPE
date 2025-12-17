@@ -1,8 +1,20 @@
+//
+//
+// @todo It is very likely that this class is not required anymore and is a
+//       legacy file from the LLVM papers that should be removed from the
+//       repository.
 #pragma once
 
 #include <cstdint>
 #include <concepts>
 
+
+/**
+ * @cond false
+ *
+ * We don't want this file to be parsed by Doxygen, as its syntax is not yet
+ * compatible with the tool.
+ */
 // https://stackoverflow.com/a/3221914/5769882
 #define STRCAT_INNER(a, b) a##b
 #define STRCAT(a, b) STRCAT_INNER(a, b)
@@ -194,3 +206,9 @@ namespace la {
 
 #undef STRCAT_INNER
 #undef STRCAT
+
+
+/**
+ * @endcond
+ */
+

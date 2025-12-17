@@ -233,7 +233,7 @@ namespace swift2 {
        * - forceKernelEvaluatePairInteractionPredicate()
        */
       template <typename ParticleA, typename ParticleB = ParticleA>
-      inline void __attribute__((always_inline)) forceKernel(
+      InlineMethod void forceKernel(
         const peano4::datamanagement::CellMarker& marker,
         ParticleA&                                localParticle,
         const ParticleB&                          activeParticle

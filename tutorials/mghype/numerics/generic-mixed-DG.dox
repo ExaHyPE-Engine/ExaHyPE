@@ -133,4 +133,4 @@ So @f$ \widehat{u} @f$ depends on @f$ u^+ + u^- @f$ subject to some weights plus
   \widehat{(n,p)} & = & \frac{ 1 }{\tau^+ + \tau^-} \left( \tau^+ u^+ - \tau^- u^- + (n,p^+) + (n,p^-) \right) 
 \f}
 
-&/
+*/

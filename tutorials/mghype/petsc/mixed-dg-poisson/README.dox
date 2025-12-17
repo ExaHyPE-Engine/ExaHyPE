@@ -19,7 +19,7 @@ widespread due to multiple numerical issues.
 The script code resulting from this tutorial can be found in benchmarks/multigrid/petsc/mixed.py.
 
 
-@include{doc} tutorials/multigrid/generic-mixed-DG.dox
+@include{doc} tutorials/mghype/numerics/generic-mixed-DG.dox
 
 
 

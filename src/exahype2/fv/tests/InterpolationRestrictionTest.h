@@ -42,13 +42,14 @@ static constexpr double NormalRestrictionMatrix1d[] = {
      * negative densities in the Euler SSInfall setup with a patch size of 5:
      *
      *
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 assertion in file observers/TimeStep2exahype2_solvers_rkfd_actionsets_DynamicAMR0.cpp, line 265 failed: coarseGridFacesSelfSimilarInfallFD4QUpdate(marker.getSelectedFaceNumber()).value[i*5+0] > 0.0
 parameter coarseGridFacesSelfSimilarInfallFD4QUpdate(marker.getSelectedFaceNumber()).value[i*5+0]: 0.00000000000000000000e+00
 parameter i: 2
 parameter marker.toString(): (x=[0.185185,0.185185,0.37037],h=[0.037037,0.037037,0.037037],select=5,is-cell-local=1,is-face-local=1,has-face-been-refined=0,will-face-be-refined=0,rel-pos=[0,0,2])
 benchmark-plot-3-no-opt-asserts-FD4-5: observers/TimeStep2exahype2_solvers_rkfd_actionsets_DynamicAMR0.cpp:265: void benchmarks::exahype2::euler::sphericalaccretionupscaling::observers::TimeStep2exahype2_solvers_rkfd_actionsets_DynamicAMR0::destroyHangingFace(const peano4::datamanagement::FaceMarker &, benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4QOld &, benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4QNew &, benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4QUpdate &, benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel &, peano4::datamanagement::FaceEnumerator<benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4QOld>, peano4::datamanagement::FaceEnumerator<benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4QNew>, peano4::datamanagement::FaceEnumerator<benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4QUpdate>, peano4::datamanagement::FaceEnumerator<benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel>, benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::SelfSimilarInfallFD4Q &, benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::SelfSimilarInfallFD4QRhsEstimates &, benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::SelfSimilarInfallFD4CellLabel &): Assertion `false' failed.
 Aborted (core dumped)
-     *
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
     void testInjectionExtrapolationRestrictionWithTensorProduct();
 

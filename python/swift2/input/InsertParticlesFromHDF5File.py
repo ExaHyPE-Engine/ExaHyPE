@@ -11,6 +11,13 @@ import dastgen2.attributes.Integer
 import numpy as np
 
 
+#
+# Doxygen has some issues parsing this file. As I did not manage to find out
+# where these issues come from, I manually exclude this file from the 
+# documentation in documentation/Doxyfile. 
+#
+
+
 class InsertParticlesFromHDF5File(ActionSet):
     def __init__(self, particle_set, filename):
         """!
