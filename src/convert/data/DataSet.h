@@ -1,5 +1,9 @@
 #pragma once
 
+/// @cond false
+/// Somehow the Doxygen parser doesn't like this file
+
+
 #include <string>
 #include <vector>
 #include <map>
@@ -70,3 +74,4 @@ class convert::data::DataSet {
     std::map< Variable, std::vector<PatchData> >  data;
 };
 
+/// @endcond
