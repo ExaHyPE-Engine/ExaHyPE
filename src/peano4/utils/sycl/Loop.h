@@ -132,7 +132,7 @@
    *   function call. So it followed by a semicolon.
    * - The fourth combination of a curly plus round bracket close the submit().
    *   This one is followed by a wait().
-   * - We have another curly bracket here as we also embed the counter##Max
+   * - We have another curly bracket here as we also embed the counter\#\#Max
    *   thing into a scope. If we have two loops with the same counter name,
    *   we don't want to run into a duplicate variable error.
    */

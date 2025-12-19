@@ -248,7 +248,7 @@
  * discuss generic details which are not tied to this toolbox. However, they
  * are very useful to get the most out of this toolbox:
  *
- * - Peano has a @ref page_peano_runtime_analysis "dedicated runtime analysis discussion" which
+ * - Peano has a @ref page_peano_domain_decomposition "dedicated runtime analysis discussion" which
  *   can help to understand the runtime behaviour shaped by the domain
  *   decomposition.
  * - Peano has a dedicated page on @ref page_peano_performance_optimisation "performance optimisation".

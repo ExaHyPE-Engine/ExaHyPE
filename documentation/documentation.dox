@@ -30,8 +30,7 @@ lag behind the latest developments. You might be better off with creating your
 own docu on your branch locally.
 
 
-Rationale
-============
+# Rationale
 
 We aim for documentation which is always up-to-date.
 The documentation shall be searchable.
@@ -46,8 +45,7 @@ Therefore, the file structure of the documentation reflects the logical
 structure of the menus.
 
 
-How to add new files
-======================
+# How to add new files
 
 Header files and Python scripts are automatically picked up by the script as
 long as they are stored within directories which are subject to search.
@@ -59,23 +57,19 @@ descriptions), the corresponding dox files should go into
 
 Doxygen supports the addition of pages anywhere in the directories that it searches.
 These can be written in markdown or html.
-Additionally, files must start with 
+Additionally, files must start with appropriate C++ code block markers: 
 
-~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  /** 
-~~~~~~~~~~~~~~~~~~~~~~~
-
-and end with
-
-~~~~~~~~~~~~~~~~~~~~~~~
+  *
+  *
   */ 
-~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 so that Doxygen is alerted to process them.
 
 
-New (top-level) documentation page
--------------------------------------
+## New (top-level) documentation page
 
 With top-level, we mean something like Peano or ExaHyPE or Swift.
 Top-level menu entries are reserved for such rubrics and therefore are infrequently introduced.
@@ -108,8 +102,8 @@ Next, enumerate all the subpages to be nested within this page below.
 This prevents these subpages from appearing at the top level menu.
 
 
-New (high-level) subpages
--------------------------------------
+## New (high-level) subpages
+
 
 Subpages are the Doxygen term for something that we would call a section
 in LaTeX. To create such a section, please follow the following steps:
@@ -144,19 +138,15 @@ The child page itself does not specify its parent.
 Through this, you can duplicate entries in the navigation menu:
 you simply add the subpage to multiple parents.
 
-Don't forget to conclude every dox file with:
-
-\verbatim
-*/
-\endverbatim
+Don't forget to conclude every dox file with closing the comment.
+Otherwise, Doxygen will fail.
 
 
-Adding (low-level) documentation inside the code
-----------------------------------------------------
+# Adding (low-level) documentation inside the code
 
 Doxygen recognises comments written following certain rules in C++ and Python source codes.
 As comments are written differently in these languages, these rules are also different.
-In C++, a comment section must be wrapped by the first line \htmlonly /** \endhtmlonly and the last line \htmlonly */ \endhtmlonly
+In C++, a comment section must be wrapped by in comments starting with two stars
 and will contain a (multiline) text between them (describing, for example, a function and its arguments before the function body):
 
 \verbatim
@@ -211,7 +201,7 @@ petsc.Project.add_solver()
 in the .dox file.
 
 Within the individual comments, you can substructure the comments further via the hashtag.
-Markdown headlines should work, too.
+Markdown headlines should work, too, but I realised that Doxygen sometimes gets confused with second level headlines (with dashes) and verbatim code blocks. Better to use hashtags only to mark section and subsection captions.
 
 
 What is a little bit annoying is that Doxygen reads comments within the source code and
@@ -265,8 +255,7 @@ This snippet stems from tests/swift2/planet-orbit/planet-orbit.py.
 
 
 
-Doxygen cheat sheet
-======================
+# Doxygen cheat sheet
 
 New chapters are created with the ''' # ''' symbol. This will make "Brief doxygen cheat sheet"
 in the sidebar, as a drop-down menu within the current page.

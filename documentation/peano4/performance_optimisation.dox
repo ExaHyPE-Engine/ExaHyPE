@@ -181,7 +181,7 @@ Possible ways to do so can be:
 Most of Peano's solvers (such as ExaHyPE) support tasking to facilitate 
 light-weight load balancing. However, even the best load balancing will not
 be able to compensate for a poor initial geometric distribution. To assess
-the quality of your partition, Peano's loadbalancing toolbox \ref page_peano_runtime_analysis "provides a script"
+the quality of your partition, Peano's loadbalancing toolbox \ref page_peano_domain_decomposition "provides a script"
 that visualises the distribution of cells. 
 
  @image html runtime_analysis_loadbalancing_example00.png 
@@ -294,7 +294,7 @@ __kmpc_taskloop                                                    libiomp5.so  
 [Others]                                                           N/A              3333.068s             19.0%
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Once you dump the output into a file and you visualise it with \ref page_peano_runtime_analysis "the script enabling a display of remote trees",
+Once you dump the output into a file and you visualise it with \ref page_peano_domain_decomposition "the script enabling a display of remote trees",
 too small trees also usually manifest in very high remote cell counts, i.e.
 large numbers of outer and coarse cells, compared to actual fine grid cells.
 Use the flag --remote-cells.

@@ -65,7 +65,7 @@ namespace swift2 {
 
 /* ------------------------------------------------------------------------- */
 
-// @TODO implement additional kernels (M4)
+// @todo implement additional kernels (M4)
 #else
 
 #error "An SPH projection kernel function must be chosen !"

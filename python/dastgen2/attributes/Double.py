@@ -20,9 +20,8 @@ class Double(Attribute):
         qualifier=Attribute.Qualifier.NONE,
         initval=None,
     ):
-        """
+        """!
 
-        @Pawel Can you add some docu?
 
         """
 

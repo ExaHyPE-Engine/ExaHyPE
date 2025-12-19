@@ -17,7 +17,7 @@ namespace swift2 {
   namespace legacy {
     namespace eos {
 
-      // @TODO we need to make this modular. This is only valid for ideal gases. It needs to be exchangeable.
+      // @todo we need to make this modular. This is only valid for ideal gases. It needs to be exchangeable.
 
       /**
        * @brief Returns the internal energy given density and entropy

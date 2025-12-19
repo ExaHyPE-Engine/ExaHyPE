@@ -14,6 +14,15 @@ import subprocess
 from enum import Enum
 
 
+#
+# This script is by definition not compatible with Doxygen, as it takes
+# bespoke Doxygen syntax and inserts it step by step. This means: the script
+# itself contains snippets of Doxygen which make sense once inserted into the
+# Jupyter notebooks, but are in themselves not valid Doxygen markup. Therefore,
+# I manually exclude this file from the documentation generation.
+#
+
+
 class Mode(Enum):
     Text = 1,
     RawData = 2 ,

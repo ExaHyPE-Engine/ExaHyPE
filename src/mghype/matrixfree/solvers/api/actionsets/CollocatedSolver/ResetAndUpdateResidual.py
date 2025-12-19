@@ -17,7 +17,7 @@ class ResetAndUpdateResidual(ActionSet):
   - In touchVertexFirstTime(), we can update the unknown.
   - Eventually, we dump the total residual and the updates.
 
-  @TODO The boundary conditions are manually pinned to 0 during touchVertexLastTime.
+  @todo The boundary conditions are manually pinned to 0 during touchVertexLastTime.
     This isn't good, and should be moved to implementation files.
 
   """

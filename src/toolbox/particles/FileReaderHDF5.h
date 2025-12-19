@@ -30,7 +30,7 @@ namespace toolbox {
  * getParticlesWithinVoxel method to retrieve particles from each cell (and then
  * remove them if desired).
  * Other HDF5 groups are stored in vector containers so we can use subscripts to access them.
- * @TODO use templates to unify the readers for the different return types.
+ * @todo use templates to unify the readers for the different return types.
  */
 class toolbox::particles::FileReaderHDF5 {
   private:
@@ -76,7 +76,7 @@ class toolbox::particles::FileReaderHDF5 {
     /**
      * Read a set of integers from an HDF5 file
      * We read the full dataset.
-     * @TODO in future large-scale sims we might want to use hyperslabs to
+     * @todo in future large-scale sims we might want to use hyperslabs to
      * optimize performance.
      *
      * @param file              H5File which has been opened.
@@ -92,7 +92,7 @@ class toolbox::particles::FileReaderHDF5 {
     /**
      * Read a set of doubles from an HDF5 file
      * We read the full dataset.
-     * @TODO in future large-scale sims we might want to use hyperslabs to
+     * @todo in future large-scale sims we might want to use hyperslabs to
      * optimize performance.
      *
      * @param file              H5File which has been opened.
@@ -109,7 +109,7 @@ class toolbox::particles::FileReaderHDF5 {
      * Read a Dimensions array of doubles from an HDF5 file
      * This is used for Coordinates, which are stored as a list.
      * We read the full dataset.
-     * @TODO in future large-scale sims we might want to use hyperslabs to
+     * @todo in future large-scale sims we might want to use hyperslabs to
      * optimize performance.
      *
      * @param file              H5File which has been opened.
@@ -125,7 +125,7 @@ class toolbox::particles::FileReaderHDF5 {
      * Read a Dimensions array of floats from an HDF5 file
      * This is used to read velocities, which are stored in a vector container.
      * We read the full dataset.
-     * @TODO in future large-scale sims we might want to use hyperslabs to
+     * @todo in future large-scale sims we might want to use hyperslabs to
      * optimize performance.
      *
      * @param file              H5File which has been opened.

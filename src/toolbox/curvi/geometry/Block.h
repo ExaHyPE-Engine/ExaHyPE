@@ -54,6 +54,11 @@ namespace toolbox {
       void getIndexRange(Coordinate coord, int start, int end, std::vector<int>& a_range) const;
       void getIndexRange(Coordinate coord, std::vector<int>& a_range) const;
 
+      /**
+       * @todo I think this is not nice. Should link to tarch.
+       *       The whole class also seems to use exceptions which is not good style
+       *       either.
+       */
       friend Block operator+(Block lhs, const Block& rhs) /*merge blocks*/;
 
       double&       operator()(int coord, int k, int j, int i);

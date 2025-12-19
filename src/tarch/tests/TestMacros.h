@@ -558,7 +558,6 @@
  *
  * @param actual             Vector under test.
  * @param valid              Valid reference vector.
- * @param testCaseMethodName String containing the name of the test case method.
  */
 #define validateNumericalVectorEquals(actual, valid) \
   if (!tarch::la::equals(actual, valid)) { \

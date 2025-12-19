@@ -167,7 +167,7 @@ cannot be smaller), you have to switch to a solver with enclave tasking.
 
 The nicest task-based programming approach does not pay off if you don't 
 produce enough tasks to keep every core busy. To find out how many 
-tasks Peano produces, recompile the code with the @ref page_peano_runtime_analysis "statistics tracking enabled".
+tasks Peano produces, recompile the code with the @ref page_peano_domain_decomposition "statistics tracking enabled".
 
 
 

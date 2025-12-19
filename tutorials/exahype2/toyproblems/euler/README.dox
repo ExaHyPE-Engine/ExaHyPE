@@ -197,7 +197,7 @@ And you can use the same approximation for the pressure and wave velocity:
 
 | t=0.0 s                    | t=1.0 s                    |
 | :-------------------------:|:-------------------------: |
-| ![](Euler_3D_start.png)    | ![](Euler_3D_end.png)      |
+| ![](tutorials/exahype2/toyproblems/euler/Euler_3D_start.png)    | ![](tutorials/exahype2/toyproblems/euler/Euler_3D_end.png)      |
 
 The computed energy of the 3D Euler equation at times t=0.0 s and t=1.0 s.
 

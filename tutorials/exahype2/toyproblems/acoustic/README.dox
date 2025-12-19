@@ -88,7 +88,7 @@ These equations are telling us that the change in time of the velocity is propor
 
 | t=0.5 s                    |  t=1.0 s                   |
 | :-------------------------:|:-------------------------: |
-| ![](Acoustic_2D_start.png) | ![](Acoustic_2D_end.png)   |
+| ![](tutorials/exahype2/toyproblems/acoustic/Acoustic_2D_start.png) | ![](tutorials/exahype2/toyproblems/acoustic/Acoustic_2D_end.png)   |
 
 The computed pressure of the 2D acoustic wave equation at times t=0.5 s and t=1.0 s.
 

@@ -11,7 +11,7 @@
  *
  * This page provides a programmer's view on SYCL. If you search for details
  * for a particular software stack/compiler settings, these are can either be
- * found @ref page_compiler_specific_settings "on the generic vendor pages" or
+ * found @ref page_compiler_specific_settings_home "on the generic vendor pages" or
  * you might find SYCL details on the pages for
  * @ref page_machines "particular machines".
  *

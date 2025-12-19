@@ -33,7 +33,7 @@ class InsertParticlesFromHDF5File(ActionSet):
             filename: String
               Name of the HDF5 file that we want to read.
 
-            @TODO implement some bool checks, e.g. is this a cosmological simulation?
+            @todo implement some bool checks, e.g. is this a cosmological simulation?
             hydro scheme?
 
         """
@@ -131,7 +131,7 @@ class InsertParticlesFromHDF5File(ActionSet):
 
       /*
        * Initialize remaining fields
-       * @TODO some of these should be initialised elsewhere to keep this
+       * @todo some of these should be initialised elsewhere to keep this
        * initialisation script general for any hydro scheme, etc.
        * See swift2::kernels::legacy::first_init_particle()
        */
