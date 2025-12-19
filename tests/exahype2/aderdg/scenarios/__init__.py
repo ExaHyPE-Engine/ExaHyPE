@@ -7,3 +7,6 @@ from .euler_gaussian_bell import EulerGaussianBell
 from .euler_isentropic_vortex import EulerIsentropicVortex
 from .swe_radial_dam_break import SWERadialDamBreak
 from .swe_resting_lake import SWERestingLake
+from .navier_stokes_bubbles import NavierStokesCosineBubble, NavierStokesTwoBubbles
+from .navier_stokes_taylor_green_vortex import NavierStokesTaylorGreenVortex
+from .navier_stokes_abc_flow import NavierStokesABCFlow

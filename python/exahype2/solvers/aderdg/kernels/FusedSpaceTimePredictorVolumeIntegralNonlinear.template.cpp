@@ -74,7 +74,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   pCompType* lSi   = nullptr;
 {% endif %}
 
-{% if USE_NCP %}
+{% if USE_NCP or USE_DIFFUSIVE_FLUX %}
   pCompType* gradQ = memory + getGradQShift();
 {% else %}
   pCompType* gradQ = nullptr;
@@ -377,7 +377,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
   };
 
   for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) { // Time DOFs
-{% if USE_NCP %}
+{% if USE_NCP or USE_DIFFUSIVE_FLUX %}
     std::memset(gradQ, 0, {{(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED*DIMENSIONS}} * sizeof(pCompType));
 
     // Compute the "derivatives" (contributions of the stiffness matrix)
@@ -412,7 +412,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
       }
     }
 {% endif %}
-{% endif %}{# USE_NCP #}
+{% endif %}{# USE_NCP or USE_DIFFUSIVE_FLUX #}
 
 {% if USE_FLUX %}
     pCompType* F[{{DIMENSIONS}}];
@@ -452,6 +452,16 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
       //    - rc = 0.5         : Cell center coordinates in the reference cell.
       tarch::la::Vector<DIMENSIONS, double> nodePosition = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, {{NUMBER_OF_DOF - 1}}, Quadrature<pCompType>::nodes);
 
+{% if USE_DIFFUSIVE_FLUX %}
+      const pCompType* gradQFlux[DIMENSIONS] = {
+        gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz, 
+        gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz + {{1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}
+{% if DIMENSIONS==3 %}
+        ,gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz + {{2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}
+{% endif %}
+      };
+{% endif %}
+
       // Measure the flux contribution to the local cell time evaluation.
       // Note: No connections with neighboring cells are considered during this step (e.g., no Riemann solver is used).
       //       The numerical fluxes from neighbors (penalty) are considered during the correction stage.
@@ -462,6 +472,9 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
         solver.flux(
 {% endif %}
           lQi + (t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_DATA_PADDED}},
+{% if USE_DIFFUSIVE_FLUX %}
+          gradQFlux,
+{% endif %}
           nodePosition,
           cellSize,
           timePosition,

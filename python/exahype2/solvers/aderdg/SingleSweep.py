@@ -6,6 +6,7 @@ from .AbstractSolverDeclarations import AbstractSolverDeclarations
 from .SolverDeclarations import SolverDeclarations
 from .SolverDefinitions import SolverDefinitions
 
+
 class SingleSweep(ADERDG):
     def __init__(
         self,
@@ -190,9 +191,7 @@ class SingleSweep(ADERDG):
         )
 
     def _init_dictionary_with_default_parameters(self, d):
-        super(
-            SingleSweep, self
-        )._init_dictionary_with_default_parameters(d)
+        super(SingleSweep, self)._init_dictionary_with_default_parameters(d)
         d["USE_SEPARATE_SWEEPS"] = self._split_sweeps
 
     def set_implementation(
@@ -210,7 +209,8 @@ class SingleSweep(ADERDG):
         material_parameters=None,
         number_of_point_sources=0,
         point_source=None,
-        init_point_source_location=None
+        init_point_source_location=None,
+        use_diffusive_flux=None,
     ):
         super(SingleSweep, self).set_implementation(
             initial_conditions=initial_conditions,
@@ -226,7 +226,8 @@ class SingleSweep(ADERDG):
             material_parameters=material_parameters,
             number_of_point_sources=number_of_point_sources,
             point_source=point_source,
-            init_point_source_location=init_point_source_location
+            init_point_source_location=init_point_source_location,
+            use_diffusive_flux=use_diffusive_flux,
         )
 
         d = {}
@@ -244,7 +245,7 @@ class SingleSweep(ADERDG):
             self._time_stepping_code_snippets.create_abstract_solver_user_declarations()
         )
         self._abstract_solver_user_definitions = (
-             self._time_stepping_code_snippets.create_abstract_solver_user_definitions()
+            self._time_stepping_code_snippets.create_abstract_solver_user_definitions()
         )
         self._solver_user_declarations = (
             solver_declarations.create_solver_user_declarations()

@@ -5,18 +5,20 @@ import exahype2
 
 import scenarios
 
-available_precisions = {
-    "bf16", "fp16", "fp32", "fp64"
-}
+available_precisions = {"bf16", "fp16", "fp32", "fp64"}
 
 available_scenarios = {
-    "AcousticPlanarWaves": scenarios.AcousticPlanarWaves(dimensions=2),
     "AdvectionLinear": scenarios.AdvectionLinear(),
+    "AcousticPlanarWaves": scenarios.AcousticPlanarWaves(dimensions=2),
     "ElasticPlanarWaves": scenarios.ElasticPlanarWaves(dimensions=2),
     "EulerGaussianBell": scenarios.EulerGaussianBell(),
     "EulerIsentropicVortex": scenarios.EulerIsentropicVortex(),
     "SWERadialDamBreak": scenarios.SWERadialDamBreak(),
     "SWERestingLake": scenarios.SWERestingLake(),
+    "NavierStokesCosineBubble": scenarios.NavierStokesCosineBubble(),
+    "NavierStokesTwoBubbles": scenarios.NavierStokesTwoBubbles(),
+    "NavierStokesTaylorGreen": scenarios.NavierStokesTaylorGreenVortex(),
+    "NavierStokesABCFlow": scenarios.NavierStokesABCFlow(),
 }
 
 parser = exahype2.ArgumentParser("ExaHyPE 2 - ADER-DG Testing Script")
@@ -79,7 +81,9 @@ solver.set_implementation(
     boundary_conditions=scenario.boundary_conditions(),
     max_eigenvalue=scenario._equation.eigenvalues(),
     flux=scenario._equation.flux(),
+    use_diffusive_flux=scenario._equation.use_diffusive_flux,
     ncp=scenario._equation.ncp(),
+    source_term=scenario._equation.source(),
     riemann_solver=scenario._equation.riemann_solver(),
 )
 

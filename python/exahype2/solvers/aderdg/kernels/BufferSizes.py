@@ -57,7 +57,7 @@ class BufferSizes(object):
             if self.d["USE_SOURCE"] or self.d["USE_NCP"]:
                 self.d["lSiSize"] = nUnknownsPad * (nDof ** (nDim + 1))
                 self.d["lShiSize"] = nUnknownsPad * (nDof**nDim)
-            if self.d["USE_NCP"]:
+            if self.d["USE_NCP"] or self.d["USE_DIFFUSIVE_FLUX"]:
                 self.d["gradQSize"] = nUnknownsPad * (nDof**nDim) * nDim
 
         # Face buffer size (Riemann)
@@ -77,4 +77,4 @@ class BufferSizes(object):
         )
         output.add(generated_kernels)
         output.makefile.add_h_file(output_path + "/BufferSizes.h", generated=True)
-        solver._user_action_set_includes += (f'#include "{output_path}/BufferSizes.h"\n')
+        solver._user_action_set_includes += f'#include "{output_path}/BufferSizes.h"\n'
