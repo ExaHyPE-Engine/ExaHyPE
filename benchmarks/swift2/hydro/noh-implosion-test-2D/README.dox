@@ -105,8 +105,6 @@
 python3 plot-comparison-of-implementation-variants.py -o MyMachine MyMachine-8-threads.tar.gz MyMachine-16-threads.tar.gz ...
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
- @image html Hamilton8-2400.png
-
  On SuperMUC, we see some irregularities for the biggest setups. Therefore, it
  makes sense to exclude them from some visualisation:
 
