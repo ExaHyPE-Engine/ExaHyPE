@@ -34,7 +34,7 @@ every Peano application, at the end of the day, follows a similar architecture b
   C++ and its purpose is to hide away third-party dependencies such as OpenMP
   or MPI. I originally designed it as a stand-alone thing which is not tied to
   Peano though I'm not aware of any other project that currently uses it. The
-  layer is pronounced ``T Arch'' and is encapsulated in a namespace
+  layer is pronounced ```T Arch``` and is encapsulated in a namespace
   tarch, as I didn't want to write the full name technical
   architecture every time.
 - **Peano** The namespace peano4 hosts the @ref peano_home "Peano 4 core". It is
@@ -154,15 +154,15 @@ By default, the code builds various versions of each library:
 The version terminology is as follows:
 
 - **debug** The debug versions of the archives all have the postfix
-  `_debug`. If you link against these versions, the full set of
+  ```_debug```. If you link against these versions, the full set of
   assertions, of all tracing and all debug messages is available;
   though you can always filter on the application-level which
   information you want to see.
 - **asserts** Thsee versions of the archives all have the postfix
-  `_asserts`. If you link against these versions, all assertions are
+  ```_asserts```. If you link against these versions, all assertions are
   on. The code also contains tracing macros (see below).
 -  **tracing** The release versions of the archives all have the
-   postfix `_trace`. If you link against these versions, all assertions
+   postfix ```_trace```. If you link against these versions, all assertions
    and debug messages are removed, but some tracing is active. You can
    switch on/off the tracing per class, and different tracing backends allow
    you to connect to different (profiling) tools.
@@ -186,7 +186,7 @@ libraries.  This glue code is generated through the Python API.
   large-scale Peano applications.
 - **src** Holds the C++ Peano sources of the Peano core and all the
   toolboxes.
-- **src/api** Holds the Python API scripts. Within the `api`
+- **src/api** Holds the Python API scripts. Within the ```api```
   subdirectory, you find scripts for both the Peano core API, toolboxes and
   large-scale Peano applications.
 - **tests** Collection of small test cases that can be automised.

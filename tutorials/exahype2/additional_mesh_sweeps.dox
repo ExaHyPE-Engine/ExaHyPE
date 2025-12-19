@@ -379,13 +379,8 @@ main twice. Therefore, we either add
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 or we don't. This will yield a define pragma in Constants.h (generated).
-We query this pragma in the code when we decide which step we pick
-
-@snippet benchmarks/exahype2/ccz4/gauge-wave/ccz4-main.cpp Additional mesh sweep case distinction
-
-and also within the switch statement which runs the additional step:
-
-@snippet benchmarks/exahype2/ccz4/gauge-wave/ccz4-main.cpp Additional mesh sweep case step
+We query this pragma in the code when we decide which step we pick.
+Look at an arbitrary (generated) main file.
 
 
 ### Logic behind the additional mesh traversal selection
