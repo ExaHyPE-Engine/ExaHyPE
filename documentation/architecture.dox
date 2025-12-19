@@ -18,16 +18,16 @@ All their C/C++ code is holds within the directory src.
 Peano's layer architecture applies to all simulations built on top of Peano, too, i.e.
 every Peano application, at the end of the day, follows a similar architecture blueprint.
 
-@image html architecture-static.png
+@image html documentation/architecture-static.png
 
-- **Technical Architecture (tarch)** The @ref tarch_home "technical architecture" provides unified interfaces for tasking,
+- **Technical Architecture (tarch)** The @ref page_tarch_home "technical architecture" provides unified interfaces for tasking,
   the logging, GPU offloading, basic linear algebra, and so forth.
   It is a set of loosly coupled building
   blocks that hide away technical details.
   It is used
   by Peano's core, all the toolboxes, extensions, and we also recommend the user
   codes to use the features from the tarch. Details on the tarch are given
-  in the @ref peano_home "core Peano documentation".
+  in the @ref page_peano4_home "core Peano documentation".
   There's for example a namespace to
   handle multicore parallelism, a logging component, or a collection of
   primitive linear algebra routines for small problems. It is written solely in
@@ -37,7 +37,7 @@ every Peano application, at the end of the day, follows a similar architecture b
   layer is pronounced ```T Arch``` and is encapsulated in a namespace
   tarch, as I didn't want to write the full name technical
   architecture every time.
-- **Peano** The namespace peano4 hosts the @ref peano_home "Peano 4 core". It is
+- **Peano** The namespace peano4 hosts the @ref page_peano4_home "Peano 4 core". It is
   entirely written in C++ (using the tarch) and holds the heart and brain of the
   code, i.e. all the data management, the mesh management, the tree traversals and the domain
   decomposition.
@@ -67,7 +67,7 @@ This is, to a certain degree, a usp of Peano and discussed in the original Peano
 where we use the term Hollywood Principle to explain this design decision.
 Roughly, any Peano 4 application realises the following control flow:
 
-@image html architecture-dynamic.png
+@image html documentation/architecture-dynamic.png
 
 1. The user codes hosts the main file. It creates a spacetree. If you have a run a
    parallel code, each rank hosts a sets of spacetrees, as spacetrees can decide to

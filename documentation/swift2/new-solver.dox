@@ -76,7 +76,7 @@ to your species with instruction similar to
 The second essential ingredient to build a particle life cycle is to specify the
 sequence of algorithmic steps. Each particle has to have a routine algorithm_steps()
 which returns the sequence of algorithmic steps to be run per time step. The individual
-algorithm steps are instances of @ref AlgorithmStep (python/swift2/particle/AlgorithmStep.py)
+algorithm steps are instances of python/swift2/particle/AlgorithmStep.py
 As an example, we discuss the SPH density loop:
 
 ~~~~~~~~~~~~~~~~~~~~~

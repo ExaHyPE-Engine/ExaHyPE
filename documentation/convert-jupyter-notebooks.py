@@ -49,22 +49,17 @@ def postprocess_markdown_line(line):
         current_mode = Mode.Text
         line = """ @f}
         """
-#    elif line.startswith( "    " ) and current_mode==Mode.Text:
-#        current_mode = Mode.RawData
-#        line = """
-#        
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#""" + line        
-#    elif not line.startswith( "    " ) and current_mode==Mode.RawData:
-#        current_mode = Mode.Text
-#        line = """
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#
-#""" + line        
     elif current_mode == Mode.Text:
         line = line.replace( "$$", "\n @f$ ")
-        # This replacement messes up any dollar sign in raw data cells (which I cannot detect atm)
-        # line = line.replace( "$", "@f$ ")
+        # This replacement messes up any dollar sign in raw data cells (which 
+        # I cannot detect atm). I would have to work on the Jupyter syntax
+        # side. Then, things would be easier.
+        if (
+            "\\rho" in line
+            or "_0" in line
+            or "_1" in line
+        ):
+            line = line.replace( "$", "@f$ ")
     return line
 
 

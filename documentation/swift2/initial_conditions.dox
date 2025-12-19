@@ -21,7 +21,7 @@ the start what the biggest and smallest radius might be, but the radius
 can change freely in-between those thresholds. Actually the radius might
 even become smaller, but the mesh width you pass in initially is used to
 constrain the AMR throughout the simulation. See
-@ref initial_smoothing_lengths_and_search_radii for details on how to tweak the
+initial_smoothing_lengths_and_search_radii for details on how to tweak the
 initial search radii.
 
 The dynamic mesh refinement might decide to introduce an extremely fine

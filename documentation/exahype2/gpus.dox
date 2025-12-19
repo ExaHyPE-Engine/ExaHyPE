@@ -166,7 +166,7 @@ If we get pictures similar to
 
 we face issues: Apparently the code does spawn a lot of tasks which could, in 
 theory, be fused, but the fusion only ever takes one task at a time and deploys
-it. Consult the @tarch_logging "statistics page" for some more information on 
+it. Consult the @ref tarch_logging "statistics page" for some more information on 
 the plots.
 
 In this example, we clearly don't produce tasks quickly enough. There are 
@@ -423,7 +423,7 @@ effects does not mean that all cells have to be side effect-free.
 
 Before you dive into this technical description of how GPU offloading (and 
 very aggressive vectorisation) work, it makes sense to read through the 
-@ref tutorials_exahype_gpu "tutorial on GPU offloading".  
+@ref tutorials_exahype2_hpc_gpus "tutorial on GPU offloading".  
 
 
 # Compile with GPU support

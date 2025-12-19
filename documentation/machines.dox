@@ -70,7 +70,7 @@ module load vtune
 ~~~~~~~~~~~~~~~~~~~~~~
 
 
-Further to these flags, I @ref faq "pause and resume the data collection" manually in
+Further to these flags, I @ref page_faq_home "pause and resume the data collection" manually in
 ExaHyPE and Swift. This is however something I do in the main() routine of
 the respective applications.
 

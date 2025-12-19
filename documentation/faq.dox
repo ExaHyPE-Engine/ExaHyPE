@@ -139,7 +139,7 @@ If only one of the build systems has been configured, the code generator will ch
   We have seen this issue notably on macOS
   with CLANG replacing GCC. Unfortunately, CLANG seems to pretend to be GNU on
   some systems and then the wrong header is included. Consult the remarks on
-  @ref compiler_specific_settings "compiler-specific settings". Ensure that
+  @ref page_compiler_specific_settings_home "compiler-specific settings". Ensure that
   the flag ```CompilerCLANG``` is enabled and used.
 
 - ***My compiler terminates with errors when I enable OpenMP multithreading***
@@ -287,14 +287,14 @@ If only one of the build systems has been configured, the code generator will ch
 # Performance analysis
 
 - ***The Intel/NVIDIA tools do not provide meaningful insight*** Read through
-  the vendor-specific @ref compiler_specific_settings "supercomputer/tool remarks"
+  the vendor-specific @ref page_compiler_specific_settings_home "supercomputer/tool remarks"
   and pick the vendor-specific built toolchain. After that, ensure that you
   profile the code in the profile version and not only in the release version.
   The release builds of the libraries do not yield much additional information
   that can be used to spot runtime flaws, e.g.
 
 - ***The Intel/NVIDIA tools yield too much data*** First, pick the
-  \ref compiler_specific_settings "vendor-specific toolchain" fitting to your system/compiler. After that,
+  \ref page_compiler_specific_settings_home "vendor-specific toolchain" fitting to your system/compiler. After that,
   amend your log filter. See \ref tarch_logging for more info. Peano's log filters
   both apply to terminal output and performance data output.
 
@@ -311,7 +311,7 @@ If only one of the build systems has been configured, the code generator will ch
   
                      -DTBB_USE_ASSERT -DTBB_USE_THREADING_TOOLS.
                      
-  Please consult the vendor-specific \ref compiler_specific_settings "supercomputer/tool remarks"
+  Please consult the vendor-specific \ref page_compiler_specific_settings_home	 "supercomputer/tool remarks"
 
 - ***I struggle to configure Peano 4 with Otter*** First, ensure you
   add --with-otter to your configure call. If the configure fails,

@@ -18,6 +18,8 @@ with some hands-on examples and then to return to this description once you have
 up and running and want to deep dive into the methodology.
 </div>
 
+<!--
+
 ADER-DG conceptually consists only of three steps: prediction, Riemann solve 
 and correction. While this is conceptually simple, challenges arise once we 
 consider dynamic AMR or local time stepping. This section discusses different
@@ -201,6 +203,6 @@ Given that the predictor is by far the most expensive operation in Ader-DG, this
 optimization should be quite a priority. Nevertheless, it makes sense to maintain
 both ADER-DG realisation variants: One working with two sweeps and one 
 working with three sweeps.
-
+-->
     
 */
