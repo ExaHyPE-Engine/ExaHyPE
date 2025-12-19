@@ -13,7 +13,7 @@ origin.
 Peano should be built with the following options: --enable-exahype, --enable-loadbalancing,
  --enable-blockstructured
 The relevant mesh size and timestep size should be set in the python script directly. For 
-the mesh size, $p$ should be modified in the expression $\frac{0.2}{p}$ where $p$ is the
+the mesh size, @f$p@f$ should be modified in the expression @f$\frac{0.2}{p}@f$ where @f$p@f$ is the
 number of cells that are desired in each coordinate direction.
 
 
