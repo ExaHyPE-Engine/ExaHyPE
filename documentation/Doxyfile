@@ -1025,7 +1025,11 @@ RECURSIVE              = YES
 EXCLUDE                = python/peano4/toolbox/PlotCellDataInPeanoBlockFormat.py \
                          python/peano4/toolbox/PlotGridInPeanoBlockFormat.py \
                          python/peano4/toolbox/PlotVertexDataInPeanoBlockFormat.py \
-                         python/swift2/input/InsertParticlesFromHDF5File.py
+                         python/swift2/input/InsertParticlesFromHDF5File.py \
+                         documentation/convert-jupyter-notebooks.py \
+                         benchmarks/other \
+                         src/mghype/matrixfree/solvers/api/templates
+                         
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded
