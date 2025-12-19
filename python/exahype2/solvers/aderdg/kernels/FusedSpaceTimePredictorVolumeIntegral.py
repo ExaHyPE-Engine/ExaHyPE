@@ -39,17 +39,19 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
             if self.d["USE_POINT_SOURCE"]:
                 # Assembling the basis function for the point source
                 if self.d["POLYNOMIAL_TYPE"] == "legendre":
-                  QuadratureWeights, QuadratureNodes = MathUtils.getGaussLegendre(
-                      self.d["NUMBER_OF_DOF"]
-                  )
+                    QuadratureWeights, QuadratureNodes = MathUtils.getGaussLegendre(
+                        self.d["NUMBER_OF_DOF"]
+                    )
                 elif self.d["POLYNOMIAL_TYPE"] == "lobatto":
-                  QuadratureWeights, QuadratureNodes = MathUtils.getGaussLobatto(
-                    self.d["NUMBER_OF_DOF"]
-                  )
+                    QuadratureWeights, QuadratureNodes = MathUtils.getGaussLobatto(
+                        self.d["NUMBER_OF_DOF"]
+                    )
                 else:
-                  raise ValueError(
-                      "Quadrature type " + self.d["POLYNOMIAL_TYPE"] + " not supported."
-                  )
+                    raise ValueError(
+                        "Quadrature type "
+                        + self.d["POLYNOMIAL_TYPE"]
+                        + " not supported."
+                    )
 
                 self.d["BASIS_FUNCTIONS"] = MathUtils.assembleBasisFunction(
                     QuadratureNodes
@@ -90,7 +92,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     + ".cpp",
                     generated=True,
                 )
-                solver._user_action_set_includes += (f'#include "{output_path}/FusedSpaceTimePredictorVolumeIntegral{d["NAME_SUFFIX"]}.h"\n')
+                solver._user_action_set_includes += f'#include "{output_path}/FusedSpaceTimePredictorVolumeIntegral{d["NAME_SUFFIX"]}.h"\n'
 
         generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
             headfile_template=template_prefix
@@ -114,9 +116,13 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
         output.makefile.add_cpp_file(
             output_path + "/FusedSpaceTimePredictorVolumeIntegral.cpp", generated=True
         )
-        solver._user_action_set_includes += (f'#include "{output_path}/FusedSpaceTimePredictorVolumeIntegral.h"\n')
+        solver._user_action_set_includes += (
+            f'#include "{output_path}/FusedSpaceTimePredictorVolumeIntegral.h"\n'
+        )
 
-    def _build_gemms(self, namespace, output, subdirectory, template_prefix, output_path):
+    def _build_gemms(
+        self, namespace, output, subdirectory, template_prefix, output_path
+    ):
         # GEMMS: M, N, K, LDA, LDB, LDC, alpha, beta, Align A, Align C, name, prefetching, type
         self.d["GEMMS"] = {}
         nDim = self.d["DIMENSIONS"]
@@ -125,7 +131,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
         nDofPad = self.d["NUMBER_OF_DOF_PADDED"]
         nUnknowns = self.d["NUMBER_OF_UNKNOWNS"]
         nUnknownsPad = self.d["NUMBER_OF_UNKNOWNS_PADDED"]
-        nData    = self.d["NUMBER_OF_DATA"]
+        nData = self.d["NUMBER_OF_DATA"]
         nDataPad = self.d["NUMBER_OF_DATA_PADDED"]
 
         if self.d["IS_LINEAR"]:
@@ -329,7 +335,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                         "gemm",
                         self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
                     )
-            if self.d["USE_NCP"]:
+            if self.d["USE_NCP"] or self.d["USE_DIFFUSIVE_FLUX"]:
                 self.d["GEMMS"]["gradQ_x"] = Gemms(
                     nUnknowns,
                     nDof,

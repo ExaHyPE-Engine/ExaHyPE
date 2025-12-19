@@ -187,7 +187,7 @@ ADERDG Tests:
   stage: Test
   parallel:
     matrix:
-    - scenario: [AcousticPlanarWaves, AdvectionLinear, ElasticPlanarWaves, EulerGaussianBell, EulerIsentropicVortex, SWERadialDamBreak, SWERestingLake]
+    - scenario: [AdvectionLinear, AcousticPlanarWaves, ElasticPlanarWaves, EulerGaussianBell, EulerIsentropicVortex, SWERadialDamBreak, SWERestingLake, NavierStokesCosineBubble, NavierStokesTwoBubbles]
       build_type: [Release, Debug]
       precision:  [float, double]
   script:

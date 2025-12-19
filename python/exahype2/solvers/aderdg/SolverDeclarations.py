@@ -80,6 +80,9 @@ class SolverDeclarations:
     static inline GPU_CALLABLE_METHOD
     void flux(
       [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+{% if USE_DIFFUSIVE_FLUX %}
+      [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  deltaQ[DIMENSIONS], // deltaQ[{{NUMBER_OF_UNKNOWNS}}]
+{% endif %}
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&   x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&   h,
       [[maybe_unused]] const double                                   t,
@@ -267,6 +270,9 @@ class SolverDeclarations:
     {% if FLUX_IMPLEMENTATION=="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" %}
     void flux(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+{% if USE_DIFFUSIVE_FLUX %}
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  deltaQ[DIMENSIONS], // deltaQ[{{NUMBER_OF_UNKNOWNS}}]
+{% endif %}
       const tarch::la::Vector<DIMENSIONS, double>&   x,
       const tarch::la::Vector<DIMENSIONS, double>&   h,
       const double                                   t,

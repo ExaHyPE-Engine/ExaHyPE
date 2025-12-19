@@ -39,6 +39,19 @@ class HandleBoundary(AbstractADERDGActionSet):
     tarch::la::Vector<DIMENSIONS, double> faceOffset = marker.getX() - 0.5 * marker.getH();
     faceOffset(normal) += 0.5 * marker.getH()(normal);
 
+{% if USE_DIFFUSIVE_FLUX %}
+    {{CORRECTOR_COMPUTATION_PRECISION}} gradQN[{{NUMBER_OF_UNKNOWNS}}];
+    {{CORRECTOR_COMPUTATION_PRECISION}} gradQ0[{{NUMBER_OF_UNKNOWNS}}] = {0.};
+    {{CORRECTOR_COMPUTATION_PRECISION}}* gradQ[DIMENSIONS] = {
+      gradQ0, gradQ0
+{% if DIMENSIONS==3 %}
+      ,gradQ0
+{% endif %}
+    };
+    gradQ[normal] = gradQN;
+{% endif %}
+
+
     dfore(dof, {{ORDER}} + 1, normal, 0) {
         tarch::la::Vector<DIMENSIONS, double> nodePosition;
         int dofSerialised = 0;
@@ -60,8 +73,19 @@ class HandleBoundary(AbstractADERDGActionSet):
         );
 
         {% if USE_FLUX %}
+
+        {% if USE_DIFFUSIVE_FLUX %}
+        for(int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++){
+          gradQN[i] = fineGridFaceADERDGSolverQEstimates.data()[dofSerialised*{{NUMBER_OF_UNKNOWNS}} + i + BasisElementsByFace] -
+            fineGridFaceADERDGSolverQEstimates.data()[dofSerialised*{{NUMBER_OF_UNKNOWNS}} + i];
+        }
+        {% endif %}
+
         repositories::{{SOLVER_INSTANCE}}.flux(
           QOut + dofSerialised * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}),
+          {% if USE_DIFFUSIVE_FLUX %}
+          gradQ,
+          {% endif %}
           nodePosition,
           marker.getH(),
           timeStamp,

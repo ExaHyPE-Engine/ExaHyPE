@@ -216,6 +216,7 @@ class ADERDG(object):
         self._use_stateless_init_point_sources = False
         self._use_stateless_adjust_solution = False
         self._use_stateless_material_parameters = False
+        self._use_diffusive_flux = False
 
         self._can_fuse = False
         self._use_enclave_tasking = use_enclave_tasking
@@ -1139,6 +1140,7 @@ Material parameters:    """
         d["USE_MATERIAL_PARAMETERS"]  = self._material_param_implementation != PDETerms.None_Implementation
         d["USE_POINT_SOURCE"]         = self._point_sources_implementation != PDETerms.None_Implementation
         d["USE_ADJUST_SOLUTION"]      = self._adjust_solution_implementation != PDETerms.None_Implementation
+        d["USE_DIFFUSIVE_FLUX"]         = self._use_diffusive_flux
 
         d["STATELESS_INITIAL_CONDITIONS"] = self._use_stateless_initial_conditions
         d["STATELESS_BOUNDARY_CONDITIONS"] = self._use_stateless_boundary_conditions
@@ -1190,7 +1192,8 @@ Material parameters:    """
         material_parameters=None,
         number_of_point_sources=0,
         point_source=None,
-        init_point_source_location=None
+        init_point_source_location=None,
+        use_diffusive_flux=None,
     ):
         if initial_conditions is not None:
             self._initial_conditions_implementation = initial_conditions
@@ -1287,6 +1290,9 @@ Material parameters:    """
                     self._use_stateless_init_point_sources = True
                 else:
                     self._can_fuse = False
+        
+        if use_diffusive_flux is not None:
+          self._use_diffusive_flux = use_diffusive_flux
 
         self.create_data_structures()
         self.create_action_sets()
