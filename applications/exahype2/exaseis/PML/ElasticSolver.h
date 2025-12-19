@@ -8,6 +8,10 @@
 //
 #pragma once
 
+/// @cond false
+///
+/// This template pattern leads to confused Doxygen
+
 
 #include "AbstractElasticSolver.h"
 #include "VariableShortcuts.h"
@@ -168,3 +172,6 @@ public:
 
   void initPointSourceLocations(double sourceLocation[NumberOfPointSources][Dimensions]) override;
 };
+
+/// @endcond
+

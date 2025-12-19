@@ -1,6 +1,11 @@
-#ifndef EXASEIS_SCENARIOTPVFIVE_HEADER
-#define EXASEIS_SCENARIOTPVFIVE_HEADER
+#pragma once
 #include "Scenario.h"
+
+
+/// @cond false
+///
+/// This template pattern leads to confused Doxygen
+
 
 template <class Shortcuts, int basisSize>
 class TPV5 : public Scenario<Shortcuts, basisSize>{
@@ -45,4 +50,7 @@ class TPV5 : public Scenario<Shortcuts, basisSize>{
 
   }
 };
-#endif
+
+
+/// @endcond
+
