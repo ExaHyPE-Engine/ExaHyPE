@@ -368,7 +368,7 @@ If this switch is set, we add an additional mesh traversal to the arising
 Peano project, which we call after each and every Runge-Kutta step, as 
 well as after the very last step.
 
-### Alter the main function
+## Alter the main function
 
 We now need a main file that can both handle the additional mesh sweep as
 well as the version without an additional sweep. We don't want to write a
@@ -383,7 +383,7 @@ We query this pragma in the code when we decide which step we pick.
 Look at an arbitrary (generated) main file.
 
 
-### Logic behind the additional mesh traversal selection
+## Logic behind the additional mesh traversal selection
 
 A naive way to implement the activation of the additional mesh sweep is the
 following code snippet:
@@ -407,7 +407,7 @@ it is not enough for higher-order convergence, where we would need a preprocessi
 step prior to each intermediate step. We ignore this fact here.
 
 
-### Hijack the projection
+## Hijack the projection
 
 Once we have computed the second derivatives into auxiliary variables, we have to 
 project those guys onto the boundary. For this, we hijack the projection of the 
