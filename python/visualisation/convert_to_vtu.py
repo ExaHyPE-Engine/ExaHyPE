@@ -1,11 +1,17 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from ArgumentParser import ArgumentParser
-from MatplotlibConversion import MatplotlibConversion
 
-if __name__ == "__main__":
+from .ArgumentParser import ArgumentParser
+from .VTKConversion import VTKConversion
+
+
+def main():
     parser = ArgumentParser()
     args = parser.parse_args()
 
-    conversion = MatplotlibConversion(args, fmt="pgf")
+    conversion = VTKConversion(args)
     conversion.run()
+
+
+if __name__ == "__main__":
+    main()

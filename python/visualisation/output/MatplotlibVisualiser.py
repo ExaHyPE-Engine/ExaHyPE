@@ -1,6 +1,5 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from unittest import result
 from .Visualiser import Visualiser
 from .Plotter import plot_data
 from .GeometryProcessor import generate_geometries_and_colors
@@ -9,7 +8,7 @@ import os
 
 def patch_file_data_to_dict(patch_file_data):
     """
-    Convert PatchFileData object to plotting dictionary for visualization.
+    Convert PatchFileData object to plotting dictionary for visualisation.
     Extracts patch data, metadata, and solver information into a format suitable for geometric processing.
     """
     patches_list = []
@@ -48,7 +47,7 @@ def patch_file_data_to_dict(patch_file_data):
         descriptions = (
             [desc.strip() for desc in patch_file_data._description.split(",")]
             if patch_file_data._description
-            else []
+            else []  # then the description becomes essentially empty
         )
     solver_meta = {
         "name": patch_file_data._unknown_name,
@@ -90,6 +89,7 @@ def process_snapshot_worker(snapshot, i, config, filters):
     dpi = config["dpi"]
     file_name = config["file_name"]
     flip_view = config.get("flip_view", None)
+    enable_raytracing = config.get("enable_raytracing", False)
     combine_unknowns = config.get("combine_unknowns", None)
 
     # Create minimal Visualiser instance for parsing (safe for multiprocessing)
@@ -115,21 +115,40 @@ def process_snapshot_worker(snapshot, i, config, filters):
 
         # Generate output filename with slice information
         clean_file_name = file_name.replace(".peano-patch-file", "")
-        slice_info = ""
+
+        # Build filename components based on visualisation parameters
+        filename_parts = [clean_file_name, unknown_name]
         if slice_axis:
-            slice_info = f"-slice-{slice_axis}-w{slice_width}"
-        output_filepath = f"{output_directory}/{clean_file_name}.{unknown_name}{slice_info}-{i}.{output_format}"
+            filename_parts.append(f"slice-{slice_axis}-w{slice_width}")
+            if enable_raytracing:
+                filename_parts.append("raytraced")
+        if combine_unknowns:
+            indices_str = "_".join(map(str, combine_unknowns))
+            filename_parts.append(f"sum_{indices_str}")
+        elif unknown is not None:
+            filename_parts.append(f"u{unknown}")
+        filename_parts.append(str(i))
+
+        output_filepath = (
+            f"{output_directory}/{'-'.join(filename_parts)}.{output_format}"
+        )
+
+        # Build a simple, clean title using just the solver name and timestep index
+        # Remove common suffixes like "_old" for cleaner display
+        clean_solver_name = unknown_name.replace("_old", "").replace("_new", "")
+        title_text = f"{clean_solver_name}-{i}"
 
         # Render and save the plot
         plot_data(
             processed_data=processed_geometries,
             dimensions=unknown_data._dimensions,
             output_filepath=output_filepath,
-            title_suffix=f"{clean_file_name}.{unknown_name}-{i}",
+            title_suffix=title_text,
             dpi=dpi,
             output_format=output_format,
             verbose=verbose,
             flip_view=flip_view,
+            enable_raytracing=enable_raytracing,
         )
 
     # Clean up memory to prevent accumulation in worker processes
@@ -139,7 +158,7 @@ def process_snapshot_worker(snapshot, i, config, filters):
 
 class MatplotlibVisualiser(Visualiser):
     """
-    Visualization class for rendering Peano simulation data using Matplotlib and PyVista.
+    Visualisation class for rendering Peano simulation data using Matplotlib and PyVista.
     Supports 2D/3D plotting, slicing, camera flipping, and parallel processing of snapshots.
     """
 
@@ -157,6 +176,7 @@ class MatplotlibVisualiser(Visualiser):
         slice_position=None,
         slice_width=0.01,
         flip_view=None,
+        enable_raytracing=False,
         combine_unknowns=None,
     ):
         super().__init__(file_name, start, end, verbose)
@@ -168,7 +188,9 @@ class MatplotlibVisualiser(Visualiser):
         self.slice_position = slice_position
         self.slice_width = slice_width
         self.flip_view = flip_view
+        self.enable_raytracing = enable_raytracing
         self.combine_unknowns = combine_unknowns
+        print(f"Initialised MatplotlibVisualiser with format: {self.format}")
 
     def display(self, max_workers=None):
         """
@@ -190,20 +212,36 @@ class MatplotlibVisualiser(Visualiser):
             "dpi": self.dpi,
             "file_name": self._file_name,
             "flip_view": self.flip_view,
+            "enable_raytracing": self.enable_raytracing,
             "combine_unknowns": self.combine_unknowns,
         }
 
         # Submit all snapshots to worker pool and wait for completion
+        # Note: If raytracing is enabled, force serial processing to avoid
+        # GPU context issues with multiprocessing
+        if self.enable_raytracing:
+            if self.verbose:
+                print(
+                    "INFO: Raytracing enabled - processing snapshots serially to avoid GPU context conflicts"
+                )
+            max_workers = 1
+
         try:
-            with ProcessPoolExecutor(max_workers=max_workers) as executor:
-                futures = [
-                    executor.submit(
-                        process_snapshot_worker, snapshot, i, config, self._filter
-                    )
-                    for i, snapshot in enumerate(self.snapshots)
-                ]
-                for future in futures:
-                    future.result()  # Wait for all to finish
+            if max_workers == 1:
+                # Serial processing - no multiprocessing overhead
+                for i, snapshot in enumerate(self.snapshots):
+                    process_snapshot_worker(snapshot, i, config, self._filter)
+            else:
+                # Parallel processing
+                with ProcessPoolExecutor(max_workers=max_workers) as executor:
+                    futures = [
+                        executor.submit(
+                            process_snapshot_worker, snapshot, i, config, self._filter
+                        )
+                        for i, snapshot in enumerate(self.snapshots)
+                    ]
+                    for future in futures:
+                        future.result()  # Wait for all to finish
         except KeyboardInterrupt:
             print("\n\nWARNING: Ctrl+C detected! Cancelling tasks...")
             # Cancel pending futures to allow graceful shutdown
@@ -251,14 +289,23 @@ class MatplotlibVisualiser(Visualiser):
             slice_info = ""
             if self.slice_axis:
                 slice_info = f"-slice-{self.slice_axis}-w{self.slice_width}"
-            output_filepath = f"{self.output_directory}/{clean_file_name}.{unknown_name}{slice_info}-{i}.{self.format}"
+            raytracing_suffix = "-raytraced" if self.enable_raytracing else ""
+            output_filepath = f"{self.output_directory}/{clean_file_name}_{unknown_name}{slice_info}{raytracing_suffix}-{i}.{self.format}"
+
+            # Build a simple, clean title using just the solver name and timestep index
+            # The Plotter.py already has logic to append the physical variable description
+            # Remove common suffixes like "_old" for cleaner display
+            clean_solver_name = unknown_name.replace("_old", "").replace("_new", "")
+            title_text = f"{clean_solver_name}-{i}"
+
             plot_data(
                 processed_data=processed_geometries,
                 dimensions=unknown_data._dimensions,
                 output_filepath=output_filepath,
-                title_suffix=f"{clean_file_name}.{unknown_name}-{i}",
+                title_suffix=title_text,
                 dpi=self.dpi,
                 output_format=self.format,
                 verbose=self.verbose,
                 flip_view=self.flip_view,
+                enable_raytracing=self.enable_raytracing,
             )

@@ -1,5 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+
 import argparse
 
 
@@ -23,7 +24,7 @@ class ArgumentParser(argparse.ArgumentParser):
             "--norm-calculator",
             action="store_true",
             default=False,
-            help="Compute norm over each point",
+            help="Compute L2 (Euclidean) norm of the data vector at each point (magnitude of multi-component fields)",
         )
         self.add_argument(
             "--shrink-cells",
@@ -103,7 +104,7 @@ class ArgumentParser(argparse.ArgumentParser):
         self.add_argument(
             "--slice-width",
             type=float,
-            default=0.01,
+            default=0.02,
             help="The thickness of the slice.",
         )
         self.add_argument(
@@ -111,4 +112,11 @@ class ArgumentParser(argparse.ArgumentParser):
             type=str,
             default=None,
             help='A string of indices to sum, separated by "+" (starts at 0). Example: "1+2+3"',
+        )
+        self.add_argument(
+            "--raytracing",
+            "-rt",
+            action="store_true",
+            dest="enable_raytracing",
+            help="Enable GPU raytracing for 3D PyVista plots (raster formats only, may not work with large datasets)",
         )

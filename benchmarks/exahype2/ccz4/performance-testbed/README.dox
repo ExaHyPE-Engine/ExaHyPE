@@ -149,7 +149,7 @@ convert them into normal vtu files, and inspect them in other tools like paravie
 module unload python/2.7.15
 module load python/3.6.5 paraview/5.8.1
 export PYTHONPATH=/path/to/Peano/python/
-pvpython /path/to/Peano/python/visualisation/convert-to-vtu.py path/to/solution.peano-patch-file 
+python3 -m visualisation.convert_to_vtu path/to/solution.peano-patch-file 
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 */

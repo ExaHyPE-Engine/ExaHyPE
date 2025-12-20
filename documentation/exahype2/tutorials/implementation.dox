@@ -112,7 +112,7 @@ These should be within the folder `solutions` and are stored in a custom format 
 which is essentially plain-text but allows for efficient parallel writing.
 In order to visualize this, we will first need to convert these files using following command:
 
-    python $PEANO_ROOT/python/visualisation/convert-to-vtu.py solutions/solution-PlanarAcousticSolver.peano-patch-file
+    python3 -m visualisation.convert_to_vtu solutions/solution-PlanarAcousticSolver.peano-patch-file
 
 This converts the patch files to `.vtu` files, which we can read and visualise using e.g., ParaView:
 

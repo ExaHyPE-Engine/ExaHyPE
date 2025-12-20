@@ -31,7 +31,7 @@ def generate_geometries_and_colors(
 
     if not patches or not solvers:
         return {}
-
+    # Use the first patch to extract metadata (e.g., solver name, data type) for the whole dataset. Since all patches share the same solver and type.
     first_patch = patches[0]
     solver_name = first_patch.get("data_name")
     if not solver_name or solver_name not in solvers:
@@ -41,8 +41,6 @@ def generate_geometries_and_colors(
     num_unknowns = solver_meta.get("unknowns_count", 0)
     dofs_per_axis = solver_meta.get("dofs_per_axis", 0)
     # logger.info(f"DEBUG: solver_meta = {solver_meta}")
-    # If descriptions are empty, create default names like "Unknown0", "Unknown1", etc.
-
     unknown_idx = unknown  # This comes from user input, which is now an integer.
 
     # Generate a descriptive name for the data being plotted.
@@ -173,7 +171,6 @@ def generate_geometries_and_colors(
                 patch_points = [offset + np.array(p) * size for p in mapping_grid]
                 num_cells = dofs - 1
                 dofs_sq = dofs**2
-
                 patch_cells_list = []
                 for k in range(num_cells):
                     for j in range(num_cells):
@@ -256,8 +253,8 @@ def generate_geometries_and_colors(
 
             final_grid = grid.clip_box(bounds, invert=False)
         else:
-            # This method "peels" the outer surface off the 3D model so Matplotlib can draw it.
-            final_grid = grid.extract_surface()
+            # No slicing; use the full grid as is.
+            final_grid = grid
 
         return {
             "type": plot_type,
@@ -265,6 +262,8 @@ def generate_geometries_and_colors(
             "unknown_name": unknown_to_visualise,
             "combine_unknowns": combine_unknowns,
             "slice_axis": slice_axis,
+            "solver_meta": solver_meta,
+            "unknown_idx": unknown_idx,
         }
 
     # --- 2D LOGIC ---
@@ -383,6 +382,8 @@ def generate_geometries_and_colors(
                 "data_range": (data_min, data_max),
                 "unknown_name": unknown_to_visualise,
                 "combine_unknowns": combine_unknowns,
+                "solver_meta": solver_meta,
+                "unknown_idx": unknown_idx,
             }
 
     return {}
