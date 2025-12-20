@@ -225,7 +225,7 @@ class Visualiser:
            Name of a Peano patch file. This does not
            need to be a meta file.
 
-           If we run convert-to-*.py with the argument -s (to denote we are using single
+           If we run convert_to_*.py with the argument -s (to denote we are using single
            file), then we will use the file_name to create a member of the
            snapshot class (which captures the patch file to read, with default
            timestamp of 0). This is then parsed by parse_and_render, and handed
@@ -379,7 +379,7 @@ class Visualiser:
           - Get filename for each patch file in this timestamp
           - Produce a PatchFileParser object for each
           - Parse each file in parallel
-          - Apply all the filters specified in convert-to-*.py
+          - Apply all the filters specified in convert_to_*.py
           - Amalgamate data as in original reload() method
           - Returns a dict, where the keys are unknown names, and the values are patches that can be placed into individual patch files
         """

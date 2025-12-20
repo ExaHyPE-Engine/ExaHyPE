@@ -1,6 +1,7 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from Conversion import Conversion
+
+from .Conversion import Conversion
 
 import visualisation.output
 
@@ -13,16 +14,12 @@ class MatplotlibConversion(Conversion):
         self.format = fmt
 
     def build_visualiser(self, start: int, end: int):
-        combine_unknowns_list = None
-        if getattr(self.args, "combine_unknowns", None):
-            try:
-                combine_unknowns_list = [
-                    int(i) for i in self.args.combine_unknowns.split("+")
-                ]
-            except (ValueError, AttributeError):
-                # The base class will already terminate for invalid input,
-                # so we silently leave this None here.
-                combine_unknowns_list = None
+        # Reuse the parsed combine_unknowns indices stored by the base
+        # class during Conversion.run. If none were provided this will be
+        # an empty list, so convert it to None for the visualiser API.
+        combine_unknowns_list = (
+            self._indices_to_sum if getattr(self, "_indices_to_sum", None) else None
+        )
 
         return visualisation.output.MatplotlibVisualiser(
             file_name=self.args.filename,
@@ -39,4 +36,5 @@ class MatplotlibConversion(Conversion):
             slice_width=self.args.slice_width,
             flip_view=self.args.flip_view,
             combine_unknowns=combine_unknowns_list,
+            enable_raytracing=self.args.enable_raytracing,
         )

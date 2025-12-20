@@ -7,11 +7,11 @@ This module converts Peano patch outputs (single files or meta files containing 
 If you use Peano's native patch file output, choose one the following functions to convert to your desired output format:
 
 ```bash
-python convert-to-vtu DATA.peano-patch-file
-python convert-to-png DATA.peano-patch-file
-python convert-to-pdf DATA.peano-patch-file
-python convert-to-svg DATA.peano-patch-file
-python convert-to-pgf DATA.peano-patch-file
+python3 -m convert_to_vtu DATA.peano-patch-file
+python3 -m convert_to_png DATA.peano-patch-file
+python3 -m convert_to_pdf DATA.peano-patch-file
+python3 -m convert_to_svg DATA.peano-patch-file
+python3 -m convert_to_pgf DATA.peano-patch-file
 ```
 
 ## Overview
@@ -71,15 +71,15 @@ This list may not be complete. Use `--help` to see all flags.
 ### PNG (2D or 3D, raster)
 
 ```bash
-python convert-to-png.py DATA.peano-patch-file --dir out --dpi 200 -u 0
+python3 -m convert_to_png DATA.peano-patch-file --dir out --dpi 200 -u 0
 # 3D with slicing (example: Z-slice of width 0.05)
-python convert-to-png.py DATA.peano-patch-file --slice-axis z --slice-width 0.05 --dir out
+python3 -m convert_to_png DATA.peano-patch-file --slice-axis z --slice-width 0.05 --dir out
 ```
 
 ### PDF (vector)
 
 ```bash
-python convert-to-pdf.py DATA.peano-patch-file --dir figs -u 1
+python3 -m convert_to_pdf DATA.peano-patch-file --dir figs -u 1
 ```
 
 For 2D, Matplotlib’s **PGF backend** is used (LaTeX typesetting). For 3D, the grid surface is converted to Matplotlib polygons for a vector PDF.
@@ -87,7 +87,7 @@ For 2D, Matplotlib’s **PGF backend** is used (LaTeX typesetting). For 3D, the 
 ### PGF (for LaTeX inclusion)
 
 ```bash
-python convert-to-pgf.py DATA.peano-patch-file --dir figs --dpi 300
+python3 -m convert_to_pgf DATA.peano-patch-file --dir figs --dpi 300
 ```
 
 The file `*.pgf` can be included in LaTeX with `\input{...}`. The backend sets `text.usetex=True` and `pgf.texsystem=pdflatex`.
@@ -95,7 +95,7 @@ The file `*.pgf` can be included in LaTeX with `\input{...}`. The backend sets `
 ### SVG (vector)
 
 ```bash
-python convert-to-svg.py DATA.peano-patch-file --dir figs
+python3 -m convert_to_svg DATA.peano-patch-file --dir figs
 ```
 
 Uses the same PGF/LaTeX path for 2D to keep fonts/labels consistent.
@@ -103,7 +103,7 @@ Uses the same PGF/LaTeX path for 2D to keep fonts/labels consistent.
 ### VTU/PVD (ParaView)
 
 ```bash
-python convert-to-vtu.py DATA.peano-patch-file --dir paraview
+python3 -m convert_to_vtu DATA.peano-patch-file --dir paraview
 ```
 
 Writes one `.vtu` per snapshot and one `.pvd` per unknown aggregating the time series. Be aware of relative paths when the input lives in a different directory; the writer warns about this scenario.
@@ -124,7 +124,7 @@ pip install numpy matplotlib pyvista vtk
 
 ### LaTeX (for PGF/PDF)
 
-For `--format pgf` and for 2D **PDF/SVG** paths the code switches Matplotlib to the **PGF backend** and asks LaTeX to typeset labels (`text.usetex=True`, `pgf.texsystem=pdflatex`). Your TeX installation must provide at least:
+For `pgf` and for 2D **PDF/SVG** paths the code switches Matplotlib to the **PGF backend** and asks LaTeX to typeset labels (`text.usetex=True`, `pgf.texsystem=pdflatex`). Your TeX installation must provide at least:
 
 - `pdflatex` executable
 - Packages: `fontenc`, `inputenc`, `amsmath`, and for PGF output also `siunitx` and `xcolor`

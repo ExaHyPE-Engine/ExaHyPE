@@ -1,5 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+
 import os
 import sys
 from functools import partial
@@ -37,6 +38,11 @@ class Conversion:
         """Execute the full conversion pipeline."""
         self._sanity_checks()
         self._determine_snapshot_range()
+
+        # Parse and store combine_unknowns once so subclasses and filters
+        # can reuse the parsed list of indices without duplicating logic.
+        self._indices_to_sum = self._parse_combine_unknowns() or []
+
         self.visualiser = self.build_visualiser(
             start=self.start_snapshot, end=self.end_snapshot
         )
@@ -124,10 +130,10 @@ class Conversion:
 
     def _configure_filters(self) -> None:
         args = self.args
-
-        indices = self._parse_combine_unknowns()
+        # Use the indices parsed earlier in run (if any). _indices_to_sum
+        # will be an empty list when not provided.
+        indices = self._indices_to_sum
         if indices:
-            self._indices_to_sum = indices
             functor = self._selective_sum_functor(indices)
             combine_filter = visualisation.filters.Calculator(
                 functor=functor, output_cardinality=1, verbose=args.verbose
@@ -146,8 +152,11 @@ class Conversion:
             )
 
         if getattr(args, "norm_calculator", False):
+            # Use L2 (Euclidean) norm by default for proper vector magnitude calculation
+            from peano4.visualisation.filters.Calculator import l2_norm
+
             self.visualiser.append_filter(
-                visualisation.filters.Calculator(verbose=args.verbose)
+                visualisation.filters.Calculator(functor=l2_norm, verbose=args.verbose)
             )
 
         if getattr(args, "shrink_cells", 1.0) != 1.0:

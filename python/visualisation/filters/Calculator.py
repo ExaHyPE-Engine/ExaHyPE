@@ -3,10 +3,27 @@
 from .Filter import Filter
 
 from visualisation.input.Patch import Patch
+import math
 
 
 def absolute(values):
+    """Compute absolute value of the first component"""
     return [abs(values[0])]
+
+
+def l2_norm(values):
+    """Compute L2 (Euclidean) norm: sqrt(sum of squares)"""
+    return [math.sqrt(sum(v**2 for v in values))]
+
+
+def l1_norm(values):
+    """Compute L1 (Manhattan) norm: sum of absolute values"""
+    return [sum(abs(v) for v in values)]
+
+
+def linf_norm(values):
+    """Compute L∞ (max) norm: maximum absolute value"""
+    return [max(abs(v) for v in values)]
 
 
 class Calculator(Filter):

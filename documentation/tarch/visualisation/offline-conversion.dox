@@ -22,10 +22,9 @@ troubleshooting if there are further issues.
 
 
 After that, use the conversion script there to translate your
-`peano-patch-file`. It is important that you interpret this script
-through `pvpython`:
+`peano-patch-file`.
 
-         pvpython Peano-dir/python/visualisation/convert-to-vtu.py --help
+         python3 -m visualisation.convert_to_vtu --help
 
 You should see a usage message now. The API comes along with all kind of
 filters and stuff (you can for example filter out coarse grid data, which 

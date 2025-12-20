@@ -1,11 +1,12 @@
-#!/usr/bin/env python3
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 
 import os
 import sys
 import argparse
 import subprocess
 
-# Some repository setup.
+# Some repository setup
 repo_rootdir = "."
 python_venv_dir = ".formatting_python_env"
 
@@ -117,7 +118,6 @@ def check_black(black_cmd):
             run = subprocess.run(
                 cmd,
                 shell=True,
-                stdout=None,
                 check=True,
                 capture_output=True,
             )
@@ -161,7 +161,6 @@ def check_clang(clang_cmd):
         run = subprocess.run(
             clang_cmd + " --version",
             shell=True,
-            stdout=None,
             check=True,
             capture_output=True,
         )
@@ -188,7 +187,7 @@ def check_clang(clang_cmd):
     return
 
 
-def install_black_formatting_tool():
+def install_black_formatting_tool(root):
     """
     Installs a specific version of `black`
     """
@@ -202,7 +201,7 @@ def install_black_formatting_tool():
         )
 
     # The actual install
-    cmd = (bfepython + " -m pip install click==8.1.3 black==" + black_version,)
+    cmd = bfepython + " -m pip install click==8.1.3 black==" + black_version
     if verbose:
         print("Installing black formatter.")
         print("Running '{}'.".format(cmd))
@@ -220,7 +219,7 @@ def install_black_formatting_tool():
     return
 
 
-def install_clang_formatting_tool():
+def install_clang_formatting_tool(root):
     """
     Installs a specific version of `clang-format`
     """
@@ -273,8 +272,8 @@ def setup_venv(root):
             raise FileNotFoundError("Something went horribly wrong when creating venv.")
 
         # If the venv didn't exist, neither do the formatting tools. Install them.
-        install_black_formatting_tool()
-        install_clang_formatting_tool()
+        install_black_formatting_tool(root)
+        install_clang_formatting_tool(root)
 
 
 def get_black_command(root):
@@ -294,7 +293,7 @@ def get_black_command(root):
     black_path = os.path.join(venv_path, "bin", "black")
 
     if not os.path.exists(black_path):
-        install_black_formatting_tool()
+        install_black_formatting_tool(root)
 
     check_black(black_path)
 
@@ -304,7 +303,7 @@ def get_black_command(root):
     return black_cmd
 
 
-def get_clang_command(clang_format_file):
+def get_clang_command(root, clang_format_file):
     """
     Get the full command used to invoke the clang-format tool.
     First get the path to the 'clang-format' executable. It should be in the
@@ -322,7 +321,7 @@ def get_clang_command(clang_format_file):
     clang_path = os.path.join(venv_path, "bin", "clang-format")
 
     if not os.path.exists(clang_path):
-        install_clang_formatting_tool()
+        install_clang_formatting_tool(root)
 
     check_clang(clang_path)
 
@@ -472,7 +471,7 @@ def run_python_formatter(filename, dry_run, root):
     return returncode
 
 
-def run_clang_formatter(filename, dry_run, clang_format_file):
+def run_clang_formatter(filename, dry_run, clang_format_file, root):
     """
     Run the clang formatter on the provided file.
     If dry_run is True, don't modify the file, just report
@@ -482,7 +481,7 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
     and the dry_run flag was provided, or 0 otherwise
     """
 
-    clang_cmd = get_clang_command(clang_format_file)
+    clang_cmd = get_clang_command(root, clang_format_file)
 
     # First run in dry-run mode to accurately count whether we
     # need to/do format through the return code.
@@ -519,7 +518,10 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
     return returncode
 
 
-if __name__ == "__main__":
+def main():
+    global target_branch
+    global verbose
+
     if git_is_available():
         root = get_root()
     else:
@@ -673,7 +675,7 @@ if __name__ == "__main__":
             if return_code != 0:
                 formatted_files.append(f)
         elif is_cppfile(f):
-            return_code = run_clang_formatter(f, dry_run, clang_format_file)
+            return_code = run_clang_formatter(f, dry_run, clang_format_file, root)
             nmodified += return_code
             if return_code != 0:
                 formatted_files.append(f)
@@ -700,3 +702,7 @@ if __name__ == "__main__":
     # "fail" if we can/did format any files, so CI can pick this
     # up as an "error".
     sys.exit(nmodified)
+
+
+if __name__ == "__main__":
+    main()
