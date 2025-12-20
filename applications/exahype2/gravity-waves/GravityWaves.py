@@ -217,9 +217,7 @@ def create_peano_project(
         chemical_solver=chemical_solver,
     )
 
-    project.set_Peano4_installation(
-        "../../../../", mode=peano4.output.string_to_mode(arguments.build_mode)
-    )
+    project.set_build_mode(mode=peano4.output.string_to_mode(arguments.build_mode))
     project = project.generate_Peano4_project(verbose=True)
 
     project.output.makefile.add_CXX_flag(f"""-DGRAVITY={GRAVITY}""")

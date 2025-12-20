@@ -22,12 +22,6 @@
 #include "repositories/StepRepository.h"
 {%- endif %}
 
-{% if FENV == True -%}
-#include <fenv.h>
-#pragma float_control(precise, on)
-#pragma STDC FENV_ACCESS ON
-{% endif -%}
-
 using namespace {{NAMESPACE | join("::")}};
 
 namespace {
@@ -113,10 +107,6 @@ int main(int argc, char** argv) {
   ::peano4::writeCopyrightMessage();
 
   repositories::DataRepository::init();
-
-{% if FENV == True -%}
-  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-{% endif -%}
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
   } else {

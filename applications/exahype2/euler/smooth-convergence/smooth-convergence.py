@@ -95,11 +95,8 @@ project.set_global_simulation_parameters(
 project.set_load_balancer(
     f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees})"
 )
-project.set_Peano4_installation(
-    "../../../../", mode=peano4.output.string_to_mode(args.build_mode)
-)
+project.set_build_mode(mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
-project.set_fenv_handler(args.fpe)
 project.output.makefile.set_target_device(args.target_device)
 project.output.makefile.add_CXX_flag("-DGAMMA=1.4")
 project.output.makefile.add_CXX_flag("-DPRESSURE=1.0")

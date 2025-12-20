@@ -268,7 +268,7 @@ if __name__ == "__main__":
 
     if plot_interval > 0.0:
         project.set_output_path("solutions")
-    project.set_Peano4_installation("../../../..", peano4.output.CompileMode.Release)
+    project.set_build_mode(peano4.output.CompileMode.Release)
     project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
     peano4_project = project.generate_Peano4_project(verbose=False)
     peano4_project.output.makefile.add_header_search_path(

@@ -52,7 +52,7 @@ exahype2_project.set_global_simulation_parameters(
 )
 
 exahype2_project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
-exahype2_project.set_Peano4_installation("../../../", peano4.output.CompileMode.Release)
+exahype2_project.set_build_mode(peano4.output.CompileMode.Release)
 peano4_project = exahype2_project.generate_Peano4_project()
 peano4_project.output.makefile.add_cpp_file("EulerSolver.cpp")
 peano4_project.generate()

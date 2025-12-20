@@ -35,10 +35,6 @@
 
 #include <cstring>
 
-#include <fenv.h>
-#pragma float_control(precise, on)
-#pragma STDC FENV_ACCESS ON
-
 using namespace benchmarks::exahype2::kernelbenchmarks;
 
 tarch::logging::Log _log("::");
@@ -415,10 +411,6 @@ int main(int argc, char** argv) {
   peano4::init(&argc, &argv, benchmarks::exahype2::kernelbenchmarks::DomainOffset, benchmarks::exahype2::kernelbenchmarks::DomainSize);
   repositories::initLogFilters();
 
-  if constexpr (EnableFPE) {
-    feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-  }
-
   logInfo(
     "main()",
     "number of compute threads: "
@@ -448,11 +440,6 @@ int main(int argc, char** argv) {
     "main()",
     "number of samples per measurement: "
     << NumberOfSamples
-  );
-  logInfo(
-    "main()",
-    "floating-point exception handler enabled: "
-    << std::boolalpha << EnableFPE
   );
   logInfo(
     "main()",

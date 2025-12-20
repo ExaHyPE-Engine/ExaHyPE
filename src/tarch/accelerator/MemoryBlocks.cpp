@@ -40,13 +40,6 @@ void tarch::accelerator::MemoryBlocks::checkForMemoryLeaks() {
   for (; itr != end; ++itr) {
     logDebug("checkForMemoryLeaks()", "Memory block @" << itr->first << " with size: " << itr->second);
   }
-#else
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo(
-      "checkForMemoryLeaks()",
-      "Have not bookmarked any memory blocks. Recompile in DEBUG mode to check for memory leaks."
-    );
-  }
 #endif
 }
 

@@ -85,9 +85,6 @@ class Project (object):
   def __str__(self):
     return "(#steps=" + str(self.solversteps) + ",model=" + str(self.datamodel) + ")"
 
-  def set_fenv_handler(self, value):
-    self.main.d["FENV"] = bool(value)
-
   def cleanup(self):
     """!
       This routine has to be called after you've generated your code.

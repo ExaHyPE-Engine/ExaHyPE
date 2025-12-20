@@ -7,7 +7,7 @@ find_package(IntelSYCL REQUIRED)
 target_link_libraries(PeanoOptions INTERFACE IntelSYCL::SYCL_CXX)
 
 set(OFFLOADING_FLAGS -fsycl -fsycl-targets=spir64)
-set(ONLY_IF_GPU_FIND_DEPENDENCY "find_dependency(IntelSYCL)" CACHE INTERNAL "")
+set(GPU_FIND_DEPENDENCY "find_dependency(IntelSYCL)" CACHE INTERNAL "")
 
 target_compile_options(PeanoOptions INTERFACE $<$<COMPILE_LANGUAGE:CXX>:${OFFLOADING_FLAGS}>)
 target_link_options(PeanoOptions INTERFACE ${OFFLOADING_FLAGS})

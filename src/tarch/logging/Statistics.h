@@ -19,12 +19,6 @@ namespace tarch {
 
 /** Global statistics interface
  *
- * This interface only logs data if you have translated with
- *
- * ~~~~~~~~~~~~~~~~~~~~~
- * CXXFLAGS="... -DTRACK_STATISTICS"
- * ~~~~~~~~~~~~~~~~~~~~~
- *
  * To get the stats right, you might want to invoke the clear() operation 
  * explicitly when you start up your code. This way, you ensure that the 
  * internal timer (_globalWatch) is properly initialised.
@@ -77,7 +71,6 @@ class tarch::logging::Statistics {
      */
     static Statistics& getInstance();
 
-    #ifdef TRACK_STATISTICS
       /**
        * Log one particular value
        *
@@ -101,11 +94,6 @@ class tarch::logging::Statistics {
        * There is no decrement, as you can always pass in a negative value as well.
        */
       void inc( const std::string& identifier, double value = 1.0, bool disableSampling = false, bool clearAfterDatabaseDump = false );
-    #else
-      inline void log( [[maybe_unused]] const std::string& identifier, [[maybe_unused]] double value, [[maybe_unused]] bool disableSampling = false ) {}
-      inline void log( [[maybe_unused]] const std::string& identifier, [[maybe_unused]] const std::string& value ) {}
-      inline void inc( [[maybe_unused]] const std::string& identifier, [[maybe_unused]] double value = 1.0, [[maybe_unused]] bool disableSampling = false, [[maybe_unused]] bool clearAfterDatabaseDump = false ) {}
-    #endif
 
     /**
      * Write data to csv file

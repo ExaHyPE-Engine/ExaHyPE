@@ -14,12 +14,12 @@
 #define LITTLE_ENDIAN
 #endif
 
-#if not defined(ALIGNMENT)
-#define ALIGNMENT 16
+#ifndef ALIGNMENT
+#error "ALIGNMENT must be provided by the build system (CMake)"
 #endif
 
-#if not defined(SIMDLEN)
-#define SIMDLEN 2
+#ifndef SIMDLEN
+#error "SIMDLEN must be provided by the build system (CMake)"
 #endif
 
 #if defined(__NVCOMPILER)
@@ -45,12 +45,14 @@
 
 #if defined(WITH_OPENMP)
 #define SIMD(...) _Pragma(STR(omp simd __VA_ARGS__ simdlen(SIMDLEN)))
+
 #else
-// No OpenMP SIMD: tell compilers the loop is independent (ivdep)
+
+// No OpenMP SIMD: Tell compilers the loop is independent (ivdep)
 #if defined(__INTEL_COMPILER) or defined(__INTEL_LLVM_COMPILER)
 #define SIMD(...) _PRAGMA(ivdep)
 #elif defined(__clang__)
-#define SIMD(...) _PRAGMA(clang loop vectorize(enable))
+#define SIMD(...) _PRAGMA(clang loop vectorize(enable) vectorize_width(SIMDLEN))
 #elif defined(__GNUC__)
 #define SIMD(...) _PRAGMA(GCC ivdep)
 #elif defined(_MSC_VER)
@@ -58,10 +60,11 @@
 #else
 #define SIMD(...) /* no-op */
 #endif
+
 #endif
 
-#if defined(__clang__) or defined(__INTEL_COMPILER) or defined(__INTEL_LLVM_COMPILER) or \
-  defined(__NVCOMPILER) or defined(__PGI) or defined(__CUDACC__)
+#if defined(__clang__) or defined(__INTEL_COMPILER) or defined(__INTEL_LLVM_COMPILER) or defined(__NVCOMPILER) \
+  or defined(__PGI) or defined(__CUDACC__)
 #define UNROLL(n) _PRAGMA(unroll n)
 #elif defined(__GNUC__) and (__GNUC__ >= 8)
 #define UNROLL(n) _PRAGMA(GCC unroll n)

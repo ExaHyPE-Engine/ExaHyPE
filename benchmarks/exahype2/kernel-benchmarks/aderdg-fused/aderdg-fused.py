@@ -85,12 +85,6 @@ parser.add_argument(
     help="Assess device kernels",
 )
 parser.add_argument(
-    "-fpe",
-    "--fpe",
-    action="store_true",
-    help="Enable a floating-point exception handler.",
-)
-parser.add_argument(
     "-pr",
     "--precision",
     choices=["double", "float", "fp16", "bf16"],
@@ -160,9 +154,7 @@ project.set_global_simulation_parameters(
     periodic_BC=[False, False],
 )
 
-project.set_Peano4_installation(
-    "../../../../", mode=peano4.output.string_to_mode(args.build_mode)
-)
+project.set_build_mode(mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
 
 accuracy = args.accuracy
@@ -189,11 +181,6 @@ project.constants.export_const_with_type(
     str(formatted_num_threads),
     "tarch::la::Vector<%s, int>" % len(args.num_threads),
 )
-
-if args.fpe:
-    project.constants.export_boolean("EnableFPE", True)
-else:
-    project.constants.export_boolean("EnableFPE", False)
 
 if args.cpu == False and args.gpu == False:
     project.constants.export_boolean("AssessHostKernels", True)

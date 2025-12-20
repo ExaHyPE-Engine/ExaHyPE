@@ -46,7 +46,7 @@ time_in_between_two_snapshots = end_time / 10
 # time_in_between_two_snapshots = 0 # Set to 0 to disable I/O
 
 """
-Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
+Switch between 'Release', 'Debug', 'Asserts', 'Trace'.
 """
 compile_mode = "Release"
 
@@ -199,13 +199,9 @@ Configure load balancer for parallel execution.
 my_project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
 
 """
-We need to set the location of our core libraries ('Peano4').
-This helps us to resolve any dependencies.
-Additionally, we specify the build mode which you can also change to a different mode.
+We specify the build mode which you can also change to a different mode.
 """
-my_project.set_Peano4_installation(
-    "../../../", mode=peano4.output.string_to_mode(compile_mode)
-)
+my_project.set_build_mode(mode=peano4.output.string_to_mode(compile_mode))
 
 """
 We generate and grab the underlying core project of 'Peano4'.

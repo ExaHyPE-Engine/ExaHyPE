@@ -1,47 +1,79 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-file(GLOB_RECURSE SOURCES ${SOURCE_EXTENSIONS_TO_GLOB})
-file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
-list(FILTER SOURCES EXCLUDE REGEX "\\.template\\.")
-list(FILTER HEADERS EXCLUDE REGEX "\\.template\\.")
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS})
+
+file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS ${HEADER_EXTENSIONS_TO_GLOB})
+
+set(SOURCES
+  peano4.cpp
+  UnitTests.cpp
+
+  datamanagement/CellMarker.cpp
+  datamanagement/FaceMarker.cpp
+  datamanagement/VertexMarker.cpp
+
+  grid/AutomatonState.cpp
+  grid/CellType.cpp
+  grid/FaceType.cpp
+  grid/GridControlEvent.cpp
+  grid/GridStatistics.cpp
+  grid/GridTraversalEvent.cpp
+  grid/GridTraversalEventGenerator.cpp
+  grid/GridTraversalObserver.cpp
+  grid/GridVertex.cpp
+  grid/LoadStoreComputeFlag.cpp
+  grid/PeanoCurve.cpp
+  grid/Spacetree.cpp
+  grid/SpacetreeHelper.cpp
+  grid/SpacetreeState.cpp
+  grid/SplitInstruction.cpp
+  grid/VertexLookupTable.cpp
+  grid/VertexType.cpp
+  grid/tests/AutomatonStateTest.cpp
+  grid/tests/GridControlEventTest.cpp
+  grid/tests/GridStatisticsTest.cpp
+  grid/tests/GridTraversalEventGeneratorTest.cpp
+  grid/tests/GridVertexTest.cpp
+  grid/tests/SpacetreeTest.cpp
+
+  parallel/parallel.cpp
+  parallel/Node.cpp
+  parallel/SpacetreeSet.cpp
+  parallel/StartTraversalMessage.cpp
+  parallel/TreeEntry.cpp
+  parallel/TreeManagementMessage.cpp
+  parallel/tests/NodeTest.cpp
+  parallel/tests/PingPongTest.cpp
+
+  stacks/IOMode.cpp
+  stacks/SendReceiveContext.cpp
+  stacks/Stack.cpp
+  stacks/StackWithCustomSerialisation.cpp
+  stacks/StackWithSerialisation.cpp
+  stacks/TreeToStacks.cpp
+  stacks/tests/StackTest.cpp
+  stacks/tests/TestDataOnHeap.cpp
+  stacks/tests/TestDataOnHeapWithContainer.cpp
+  stacks/tests/TestDataOnStack.cpp
+  stacks/tests/TreeToStacksTest.cpp
+
+  utils/Linearised.cpp
+  utils/Loop.cpp
+  utils/tests/LinearisedTest.cpp
+)
+
+install_peano_headers(
+  PATTERNS ${HEADER_EXTENSIONS_TO_GLOB}
+)
 
 foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
-  string(TOLOWER ${mode} mode_lower)
-  string(TOUPPER ${mode} mode_upper)
-
-  foreach(dimensions IN LISTS SUPPORTED_DIMENSIONS)
-    add_library(Peano4${mode}${dimensions}d STATIC)
-    target_sources(Peano4${mode}${dimensions}d PRIVATE ${SOURCES} ${HEADERS})
-    target_link_libraries(Peano4${mode}${dimensions}d PRIVATE PeanoOptions Tarch${mode})
-    target_compile_definitions(Peano4${mode}${dimensions}d PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} DIMENSIONS=${dimensions})
-    target_compile_options(Peano4${mode}${dimensions}d PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
-
-    if(AdaptiveCpp_FOUND)
-      add_sycl_to_target(TARGET Peano4${mode}${dimensions}d SOURCES ${SOURCES})
-    endif()
-
-    install(TARGETS Peano4${mode}${dimensions}d
-      EXPORT                      ${PROJECT_NAME}Targets
-      RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
-              COMPONENT           ${PROJECT_NAME}_Runtime
-      LIBRARY DESTINATION         ${CMAKE_INSTALL_LIBDIR}
-              COMPONENT           ${PROJECT_NAME}_Runtime
-              NAMELINK_COMPONENT  ${PROJECT_NAME}_Devel
-      ARCHIVE DESTINATION         ${CMAKE_INSTALL_LIBDIR}
-              COMPONENT           ${PROJECT_NAME}_Devel
-      PUBLIC_HEADER DESTINATION   ${CMAKE_INSTALL_INCLUDEDIR}
-      PRIVATE_HEADER DESTINATION  ${CMAKE_INSTALL_INCLUDEDIR}
+  foreach(dim IN LISTS SUPPORTED_DIMENSIONS)
+    add_peano_library(
+      NAME Peano4${mode}${dim}d
+      MODE ${mode}
+      DIMENSION ${dim}
+      SOURCES ${SOURCES}
+      HEADERS ${HEADERS}
+      LINK_LIBRARIES Tarch${mode}
     )
   endforeach()
-endforeach()
-
-foreach(pattern IN LISTS HEADER_EXTENSIONS_TO_GLOB)
-  install(
-    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    FILES_MATCHING
-    PATTERN ${pattern}
-  )
 endforeach()

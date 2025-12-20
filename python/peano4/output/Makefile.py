@@ -36,10 +36,14 @@ LDFLAGS                 = {{LDFLAGS}}
 LIBS                    = {{LIBS}}
 DIMENSIONS              = {{DIMENSIONS}}
 CONFIGUREPATH           = {{CONFIGUREPATH}}
+CMAKE_BUILD_DIR         = {{CMAKE_BUILD_DIR}}
 EXECUTABLENAME          = {{EXECUTABLENAME}}
 MULTITHREADING          = {{MULTITHREADING}}
 GPU                     = {{GPU}}
 GPU_ARCH                = {{GPU_ARCH}}
+ACPP_DEBUG_LEVEL        = {{ACPP_DEBUG_LEVEL}}
+ACPP_TARGETS            = {{ACPP_TARGETS}}
+ACPP_DIR                = {{ACPP_DIR}}
 FORTRAN_MODULES         = {{FORTRAN_MODULES}}
 MODE                    = {{MODE}}
 
@@ -58,7 +62,7 @@ MODE                    = {{MODE}}
                 ["echo", "Unknown"], shell=True, stdout=subprocess.PIPE
             )
         self.d["VERSION"] = version_string.stdout.decode("utf-8")
-        return result_template.render(**self.d) + self.configure_call
+        return result_template.render(**self.d)
 
     @property
     def readme_package_descriptor(self):
@@ -127,7 +131,6 @@ the SISC paper
         return deepcopy(self.d)
 
     def clear(self):
-        self.configure_call = ""
         self.d = {}
         self.d["CXX"] = ""
         self.d["CXXFLAGS"] = ""
@@ -141,6 +144,9 @@ the SISC paper
         self.d["MULTITHREADING"] = ""
         self.d["GPU"] = ""
         self.d["GPU_ARCH"] = ""
+        self.d["ACPP_DEBUG_LEVEL"] = ""
+        self.d["ACPP_TARGETS"] = ""
+        self.d["ACPP_DIR"] = ""
         self.d["TARGET_DEVICE"] = "tarch::accelerator::Device::DefaultDevice"
         self.d["CMAKE_BUILD_DIR"] = ""
         self.d["FORTRAN_MODULES"] = []
@@ -164,13 +170,13 @@ the SISC paper
 
     def get_configure_path(self):
         """
-        Returns the directory where the ./configure script is located
+        Returns the directory where the project is configured.
         """
         return self.d["CONFIGUREPATH"]
 
     def get_source_path(self):
         """
-        Returns the directory where the ./configure script is located
+        Returns the directory where the source files are located.
         """
         return self.get_configure_path() + "/src"
 
@@ -210,8 +216,6 @@ the SISC paper
             self.d["MODE"] = "Debug"
         elif mode == CompileMode.Asserts:
             self.d["MODE"] = "Asserts"
-        elif mode == CompileMode.Stats:
-            self.d["MODE"] = "Stats"
         elif mode == CompileMode.Trace:
             self.d["MODE"] = "Trace"
         elif mode == CompileMode.Release:
@@ -260,52 +264,98 @@ the SISC paper
     def set_target_device(self, value):
         self.d["TARGET_DEVICE"] = value
 
-    def parse_configure_script_outcome(self, directory):
+    def parse_configuration_outcome(self):
         """
-        directory should point to the directory which holds the generated CMake build.
+        Tries to automatically locate the generated CMake build.
         """
-        if 'PEANO_SRC_ROOT_DIR' in os.environ:
-          directory = os.environ['PEANO_SRC_ROOT_DIR']
+        if "PEANO_SRC_ROOT_DIR" in os.environ:
+            search_start = os.environ["PEANO_SRC_ROOT_DIR"]
+        else:
+            search_start = os.getcwd()
 
-        self.d["CONFIGUREPATH"] = directory
+        self.d["CMAKE_BUILD_DIR"] = ""
 
-        if 'PEANO_CMAKE_BUILD_DIR' in os.environ: # If this environment flag has been set, use this CMake build directory
-            self.d["CMAKE_BUILD_DIR"] = os.environ['PEANO_CMAKE_BUILD_DIR']
-        else: # If not, search for the next available build directory
-            self.d["CMAKE_BUILD_DIR"] = next((path for path in (os.path.join(directory, subdir) for subdir in os.listdir(directory)) if os.path.isfile(os.path.join(path, "PeanoTargets.cmake"))), "")
+        if "PEANO_CMAKE_BUILD_DIR" in os.environ:
+            self.d["CMAKE_BUILD_DIR"] = os.environ["PEANO_CMAKE_BUILD_DIR"]
+
+        if self.d["CMAKE_BUILD_DIR"] == "":
+            curr = os.path.abspath(search_start)
+            while True:
+                if os.path.isfile(os.path.join(curr, "PeanoTargets.cmake")):
+                    self.d["CMAKE_BUILD_DIR"] = curr
+                    break
+                try:
+                    for candidate in os.listdir(curr):
+                        path = os.path.join(curr, candidate)
+                        if os.path.isdir(path) and os.path.isfile(
+                            os.path.join(path, "PeanoTargets.cmake")
+                        ):
+                            self.d["CMAKE_BUILD_DIR"] = path
+                            break
+                except OSError:
+                    pass  # Skip unreadable directories
+                if self.d["CMAKE_BUILD_DIR"] != "":
+                    break
+                # Move up one level
+                parent = os.path.dirname(curr)
+                if parent == curr:
+                    break  # Reached filesystem root
+                curr = parent
 
         if self.d["CMAKE_BUILD_DIR"] != "":
+            # Default fallback for CONFIGUREPATH is parent of build dir if CMAKE_HOME_DIRECTORY missing
+            self.d["CONFIGUREPATH"] = os.path.dirname(self.d["CMAKE_BUILD_DIR"])
+
             cmake_cache_file = self.d["CMAKE_BUILD_DIR"] + "/CMakeCache.txt"
             if os.path.isfile(cmake_cache_file):
-                with open(cmake_cache_file, 'r') as input:
-                     for line in input:
-                          key_value = line.split("=", 1)
-                          if len(key_value) == 2:
-                              key, value = key_value
-                              key = key.split(":")[0].strip()
-                              if key == "CMAKE_CXX_COMPILER":
-                                  self.d["CXX"] = os.path.basename(value.strip())
-                              if key == "CMAKE_Fortran_COMPILER":
-                                  self.d["FC"] = os.path.basename(value.strip())
-                              if key == "WITH_MULTITHREADING":
-                                  self.d["MULTITHREADING"] = value.strip()
-                              if key == "WITH_GPU":
-                                  self.d["GPU"] = value.strip()
-                              if key == "WITH_GPU_ARCH":
-                                  self.d["GPU_ARCH"] = value.strip()
-                              if key == "ACPP_DEBUG_LEVEL":
-                                  self.d["ACPP_DEBUG_LEVEL"] = value.strip()
-                              if key == "ACPP_TARGETS":
-                                  self.d["ACPP_TARGETS"] = value.strip()
-                              if key == "AdaptiveCpp_DIR":
-                                  self.d["ACPP_DIR"] = value.strip()
+                with open(cmake_cache_file, "r") as input:
+                    for line in input:
+                        if line.strip().startswith("//") or line.strip().startswith(
+                            "#"
+                        ):
+                            continue
+
+                        key_value = line.split("=", 1)
+                        if len(key_value) == 2:
+                            key, value = key_value
+                            key = key.split(":")[0].strip()
+                            value = value.strip()
+
+                            if key == "CMAKE_CXX_COMPILER":
+                                self.d["CXX"] = os.path.basename(value)
+                            elif key == "CMAKE_Fortran_COMPILER":
+                                self.d["FC"] = os.path.basename(value)
+                            elif key == "WITH_MULTITHREADING":
+                                self.d["MULTITHREADING"] = value
+                            elif key == "WITH_GPU":
+                                self.d["GPU"] = value
+                            elif key == "WITH_GPU_ARCH":
+                                self.d["GPU_ARCH"] = value
+                            elif key == "ACPP_DEBUG_LEVEL":
+                                self.d["ACPP_DEBUG_LEVEL"] = value
+                            elif key == "ACPP_TARGETS":
+                                self.d["ACPP_TARGETS"] = value
+                            elif key == "AdaptiveCpp_DIR":
+                                self.d["ACPP_DIR"] = value
+                            elif key == "CMAKE_HOME_DIRECTORY":
+                                self.d["CONFIGUREPATH"] = value
             else:
-                raise Exception("Cannot parse the CMakeCache.txt file: " + cmake_cache_file)
-        else: # Nothing has been configured so far
-              raise Exception("""
-  Error: if you call parse_configure_script_outcome(), please hand over directory where
-  the CMake build had been generated. You passed """ + directory
-                              )
+                raise Exception(
+                    "Cannot parse the CMakeCache.txt file: " + cmake_cache_file
+                )
+        else:
+            raise Exception(
+                """
+  Error: parse_configuration_outcome() could not locate a valid CMake build directory
+  (containing PeanoTargets.cmake) starting from:
+  """
+                + search_start
+                + """
+  and searching upwards through its parents.
+
+  Please ensure CMake has run, or set PEANO_CMAKE_BUILD_DIR explicitly.
+  """
+            )
 
     def add_h_file(self, filename, generated=False):
         """
@@ -361,7 +411,7 @@ the SISC paper
             if (
                 self.generated_cppfiles.count(filename) == 0
                 and self.cppfiles.count(filename) == 0
-              ):
+            ):
                 self.generated_cppfiles.append(filename)
         else:
             # If a file is a non-generated file we definitely want to add it.
@@ -486,7 +536,9 @@ then this message can typically be ignored.
         def generate_output_file(input_file_path, output_file_path):
             if write_file(overwrite, self.default_overwrite, output_file_path):
                 log.debug("Write " + output_file_path)
-                template_loader = jinja2.FileSystemLoader(searchpath=os.path.split(input_file_path)[0])
+                template_loader = jinja2.FileSystemLoader(
+                    searchpath=os.path.split(input_file_path)[0]
+                )
                 templateEnv = jinja2.Environment(loader=template_loader)
                 template = templateEnv.get_template(os.path.split(input_file_path)[1])
                 with open(output_file_path, "w") as output:
@@ -494,6 +546,15 @@ then this message can typically be ignored.
 
         file_dir = os.path.dirname(os.path.realpath(__file__))
 
-        generate_output_file(os.path.join(file_dir, "Gitignore.template"), os.path.join(directory, ".gitignore"))
-        generate_output_file(os.path.join(file_dir, "CMakeLists.txt.template"), os.path.join(directory, "CMakeLists.txt"))
-        generate_output_file(os.path.join(file_dir, "Makefile.cmake.template"), os.path.join(directory, "Makefile"))
+        generate_output_file(
+            os.path.join(file_dir, "Gitignore.jinja2"),
+            os.path.join(directory, ".gitignore"),
+        )
+        generate_output_file(
+            os.path.join(file_dir, "CMakeLists.jinja2"),
+            os.path.join(directory, "CMakeLists.txt"),
+        )
+        generate_output_file(
+            os.path.join(file_dir, "Makefile.jinja2"),
+            os.path.join(directory, "Makefile"),
+        )

@@ -289,7 +289,7 @@ if __name__ == "__main__":
     # project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
     # my_solver.select_dofs_to_print = [0,12,16,17,18,54,59,60]
 
-    project.set_Peano4_installation(args.peanodir, peano4.output.string_to_mode(args.mode))
+    project.set_build_mode(peano4.output.string_to_mode(args.mode))
 
     peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 

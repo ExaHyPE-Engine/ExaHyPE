@@ -77,10 +77,12 @@ int tarch::la::sign(double number, double tolerance) {
 
 inline GPU_CALLABLE_METHOD
 int tarch::la::round(double value) {
-  return static_cast<int>(std::floor(value+0.5));
+  // return static_cast<int>(std::round(value));
+  return static_cast<int>(std::floor(value + 0.5));
 }
 
 inline GPU_CALLABLE_METHOD
 int tarch::la::round(float value) {
-  return static_cast<int>(std::floor(value+0.5));
+  // return static_cast<int>(std::round(value));
+  return static_cast<int>(std::floor(value + static_cast<float>(0.5)));
 }

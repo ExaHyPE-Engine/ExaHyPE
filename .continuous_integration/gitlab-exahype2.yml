@@ -43,7 +43,7 @@ Build:
 Unit Tests:
   stage: Test
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build; ctest --no-compress-output --output-on-failure"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build; ctest -VV"
   allow_failure: false
   extends:
     - .Tags

@@ -1,45 +1,140 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-file(GLOB_RECURSE SOURCES ${SOURCE_EXTENSIONS_TO_GLOB})
-file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
-list(FILTER SOURCES EXCLUDE REGEX "\\.template\\.")
-list(FILTER HEADERS EXCLUDE REGEX "\\.template\\.")
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS})
+
+file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS ${HEADER_EXTENSIONS_TO_GLOB})
+
+set(SOURCES
+  tarch.cpp
+  CPUFeatures.cpp
+  Enumerator.cpp
+  NonCriticalAssertions.cpp
+  UnitTests.cpp
+  tests/TestCase.cpp
+  tests/TreeTestCaseCollection.cpp
+
+  accelerator/accelerator.cpp
+  accelerator/Device.cpp
+  accelerator/MemoryBlocks.cpp
+  accelerator/MemoryLocation.cpp
+  accelerator/MemoryManager.cpp
+  accelerator/tests/MemoryManagerTest.cpp
+  accelerator/cuda/accelerator.cpp
+  accelerator/cuda/Device.cpp
+  accelerator/cuda/DevicePropertiesCache.cpp
+  accelerator/cuda/ErrorCheck.cpp
+  accelerator/cuda/ExecutionPolicy.cpp
+  accelerator/kokkos/accelerator.cpp
+  accelerator/kokkos/Device.cpp
+  accelerator/sycl/accelerator.cpp
+  accelerator/sycl/Device.cpp
+
+  la/DynamicMatrix.cpp
+  la/DynamicMatrixOperations.cpp
+  la/GramSchmidt.cpp
+  la/LUDecomposition.cpp
+  la/LUDecompositionDynamic.cpp
+  la/Matrix.cpp
+  la/MatrixMatrixOperations.cpp
+  la/MatrixOperations.cpp
+  la/MatrixScalarOperations.cpp
+  la/MatrixVectorOperations.cpp
+  la/Scalar.cpp
+  la/ScalarOperations.cpp
+  la/Vector.cpp
+  la/VectorOperations.cpp
+  la/VectorScalarOperations.cpp
+  la/VectorSlice.cpp
+  la/VectorVectorOperations.cpp
+  la/tests/DynamicMatrixTest.cpp
+  la/tests/GramSchmidtTest.cpp
+  la/tests/LUDecompositionTest.cpp
+  la/tests/MatrixTest.cpp
+  la/tests/MatrixVectorTest.cpp
+  la/tests/ScalarTest.cpp
+  la/tests/VectorTest.cpp
+
+  logging/ChromeTraceFileLogger.cpp
+  logging/CommandLineLogger.cpp
+  logging/ITACLogger.cpp
+  logging/ITTLogger.cpp
+  logging/Log.cpp
+  logging/LogFilter.cpp
+  logging/LogFilterFileReader.cpp
+  logging/NVTXLogger.cpp
+  logging/ScorePLogger.cpp
+  logging/Statistics.cpp
+
+  mpi/mpi.cpp
+  mpi/BooleanSemaphore.cpp
+  mpi/DoubleMessage.cpp
+  mpi/IntegerMessage.cpp
+  mpi/Lock.cpp
+  mpi/Rank.cpp
+  mpi/StringMessage.cpp
+  mpi/tests/StringTest.cpp
+
+  multicore/multicore.cpp
+  multicore/BooleanSemaphore.cpp
+  multicore/Core.cpp
+  multicore/Lock.cpp
+  multicore/MultiReadSingleWriteLock.cpp
+  multicore/MultiReadSingleWriteSemaphore.cpp
+  multicore/RecursiveLock.cpp
+  multicore/RecursiveSemaphore.cpp
+  multicore/Task.cpp
+  multicore/tests/SpawnTaskTest.cpp
+  multicore/omp/multicore.cpp
+  multicore/omp/BooleanSemaphore.cpp
+  multicore/omp/Core.cpp
+  multicore/omp/RecursiveSemaphore.cpp
+
+  plotter/PVDTimeSeriesWriter.cpp
+  plotter/griddata/blockstructured/PeanoHDF5FileWriter_CellDataWriter.cpp
+  plotter/griddata/blockstructured/PeanoHDF5FileWriter_VertexDataWriter.cpp
+  plotter/griddata/blockstructured/PeanoHDF5FileWriter.cpp
+  plotter/griddata/blockstructured/PeanoTextPatchFileWriter_CellDataWriter.cpp
+  plotter/griddata/blockstructured/PeanoTextPatchFileWriter_VertexDataWriter.cpp
+  plotter/griddata/blockstructured/PeanoTextPatchFileWriter.cpp
+  plotter/griddata/unstructured/vtk/VTKBinaryFileWriter_CellDataWriter.cpp
+  plotter/griddata/unstructured/vtk/VTKBinaryFileWriter_CellWriter.cpp
+  plotter/griddata/unstructured/vtk/VTKBinaryFileWriter_VertexDataWriter.cpp
+  plotter/griddata/unstructured/vtk/VTKBinaryFileWriter_VertexWriter.cpp
+  plotter/griddata/unstructured/vtk/VTKBinaryFileWriter.cpp
+  plotter/griddata/unstructured/vtk/VTKTextFileWriter_CellDataWriter.cpp
+  plotter/griddata/unstructured/vtk/VTKTextFileWriter_CellWriter.cpp
+  plotter/griddata/unstructured/vtk/VTKTextFileWriter_VertexDataWriter.cpp
+  plotter/griddata/unstructured/vtk/VTKTextFileWriter_VertexWriter.cpp
+  plotter/griddata/unstructured/vtk/VTKTextFileWriter.cpp
+  plotter/griddata/unstructured/vtk/VTUTextFileWriter_CellDataWriter.cpp
+  plotter/griddata/unstructured/vtk/VTUTextFileWriter_CellWriter.cpp
+  plotter/griddata/unstructured/vtk/VTUTextFileWriter_VertexDataWriter.cpp
+  plotter/griddata/unstructured/vtk/VTUTextFileWriter_VertexWriter.cpp
+  plotter/griddata/unstructured/vtk/VTUTextFileWriter.cpp
+  plotter/griddata/unstructured/vtk/tests/VTKBinaryFileTestCase.cpp
+  plotter/pointdata/vtk/VTKWriter.cpp
+
+  reader/CSVReader.cpp
+  reader/NetCDFFieldParser.cpp
+  reader/NetCDFFileReader.cpp
+  reader/PeanoTextPatchFileReader.cpp
+
+  services/Service.cpp
+  services/ServiceRepository.cpp
+
+  timing/GlidingAverageMeasurement.cpp
+  timing/Measurement.cpp
+  timing/Watch.cpp
+)
+
+install_peano_headers(
+  PATTERNS ${HEADER_EXTENSIONS_TO_GLOB}
+)
 
 foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
-  string(TOLOWER ${mode} mode_lower)
-  string(TOUPPER ${mode} mode_upper)
-
-  add_library(Tarch${mode} STATIC)
-  target_sources(Tarch${mode} PRIVATE ${SOURCES} ${HEADERS})
-  target_link_libraries(Tarch${mode} PRIVATE PeanoOptions)
-  target_compile_definitions(Tarch${mode} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS})
-  target_compile_options(Tarch${mode} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
-
-  if(${AdaptiveCpp_FOUND})
-    add_sycl_to_target(TARGET Tarch${mode} SOURCES ${SOURCES})
-  endif()
-
-  install(TARGETS Tarch${mode}
-    EXPORT                      ${PROJECT_NAME}Targets
-    RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
-            COMPONENT           ${PROJECT_NAME}_Runtime
-    LIBRARY DESTINATION         ${CMAKE_INSTALL_LIBDIR}
-            COMPONENT           ${PROJECT_NAME}_Runtime
-            NAMELINK_COMPONENT  ${PROJECT_NAME}_Devel
-    ARCHIVE DESTINATION         ${CMAKE_INSTALL_LIBDIR}
-            COMPONENT           ${PROJECT_NAME}_Devel
-    PUBLIC_HEADER DESTINATION   ${CMAKE_INSTALL_INCLUDEDIR}
-    PRIVATE_HEADER DESTINATION  ${CMAKE_INSTALL_INCLUDEDIR}
-  )
-endforeach()
-
-foreach(pattern IN LISTS HEADER_EXTENSIONS_TO_GLOB)
-  install(
-    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    FILES_MATCHING
-    PATTERN ${pattern}
+  add_peano_library(
+    NAME Tarch${mode}
+    MODE ${mode}
+    SOURCES ${SOURCES}
+    HEADERS ${HEADERS}
   )
 endforeach()

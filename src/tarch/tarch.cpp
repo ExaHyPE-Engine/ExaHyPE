@@ -4,15 +4,13 @@
 
 #include "logging/Log.h"
 
+#include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <limits.h>
-
 #if defined(COMPILER_HAS_PROC_STAT)
 #include <unistd.h>
 #endif
-
-#include <cstdlib>
-#include <cstring>
 #if defined(COMPILER_HAS_SYSINFO) // for Linux OS
 #include <sys/sysinfo.h>
 #else // for Mac OS support
@@ -98,8 +96,6 @@ double tarch::getFreeMemory(MemoryUsageFormat format) {
 #endif // defined(COMPILER_HAS_SYSINFO)
 
 double tarch::getMemoryUsage(MemoryUsageFormat format) {
-  static tarch::logging::Log _log("tarch");
-
 #if defined(COMPILER_HAS_PROC_STAT)
   char  work[4096];
   FILE* f   = NULL;

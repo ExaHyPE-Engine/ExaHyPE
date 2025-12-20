@@ -1,43 +1,45 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-file(GLOB_RECURSE SOURCES ${SOURCE_EXTENSIONS_TO_GLOB})
-file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
-list(FILTER SOURCES EXCLUDE REGEX "\\.template\\.")
-list(FILTER HEADERS EXCLUDE REGEX "\\.template\\.")
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS})
+
+file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS ${HEADER_EXTENSIONS_TO_GLOB})
+
+set(SOURCES
+  particles.cpp
+  internal.cpp
+  FileReader.cpp
+  MultiscaleTransitions.cpp
+  ParticleSet.cpp
+  TrajectoryDatabase.cpp
+  UnitTests.cpp
+  tests/MultiscaleTransitionsTest.cpp
+  tests/TestHelpers.cpp
+  tests/TestParticle.cpp
+
+  assignmentchecks/Database.cpp
+  assignmentchecks/Event.cpp
+  assignmentchecks/MeshSweepData.cpp
+  assignmentchecks/ParticleIdentifier.cpp
+  assignmentchecks/TracingAPI.cpp
+  assignmentchecks/tests/TestHelpers.cpp
+  assignmentchecks/tests/TestParticle.cpp
+
+  potentials/Springs.cpp
+)
+
+install_peano_headers(
+  PATTERNS ${HEADER_EXTENSIONS_TO_GLOB}
+  INSTALL_SUBDIR "toolbox"
+)
 
 foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
-  string(TOLOWER ${mode} mode_lower)
-  string(TOUPPER ${mode} mode_upper)
-
-  foreach(dimensions IN LISTS SUPPORTED_DIMENSIONS)
-    add_library(ToolboxParticles${mode}${dimensions}d STATIC)
-    target_sources(ToolboxParticles${mode}${dimensions}d PRIVATE ${SOURCES} ${HEADERS})
-    target_link_libraries(ToolboxParticles${mode}${dimensions}d PRIVATE PeanoOptions Peano4${mode}${dimensions}d)
-    target_compile_definitions(ToolboxParticles${mode}${dimensions}d PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} DIMENSIONS=${dimensions})
-    target_compile_options(ToolboxParticles${mode}${dimensions}d PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
-
-    install(TARGETS ToolboxParticles${mode}${dimensions}d
-      EXPORT                      ${PROJECT_NAME}Targets
-      RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
-              COMPONENT           ${PROJECT_NAME}_Runtime
-      LIBRARY DESTINATION         ${CMAKE_INSTALL_LIBDIR}
-              COMPONENT           ${PROJECT_NAME}_Runtime
-              NAMELINK_COMPONENT  ${PROJECT_NAME}_Devel
-      ARCHIVE DESTINATION         ${CMAKE_INSTALL_LIBDIR}
-              COMPONENT           ${PROJECT_NAME}_Devel
-      PUBLIC_HEADER DESTINATION   ${CMAKE_INSTALL_INCLUDEDIR}
-      PRIVATE_HEADER DESTINATION  ${CMAKE_INSTALL_INCLUDEDIR}
+  foreach(dim IN LISTS SUPPORTED_DIMENSIONS)
+    add_peano_library(
+      NAME ToolboxParticles${mode}${dim}d
+      MODE ${mode}
+      DIMENSION ${dim}
+      SOURCES ${SOURCES}
+      HEADERS ${HEADERS}
+      LINK_LIBRARIES Peano4${mode}${dim}d
     )
   endforeach()
-endforeach()
-
-foreach(pattern IN LISTS HEADER_EXTENSIONS_TO_GLOB)
-  install(
-    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/toolbox
-    FILES_MATCHING
-    PATTERN ${pattern}
-  )
 endforeach()
