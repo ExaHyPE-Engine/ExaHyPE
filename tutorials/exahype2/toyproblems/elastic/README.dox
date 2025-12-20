@@ -102,7 +102,7 @@ These speeds also define the eigenvalues of the flux:
 
 | t=0.0 s                    | t=1.0 s                    |
 | :-------------------------:|:-------------------------: |
-| ![](Elastic_2D_start.png)  | ![](Elastic_2D_end.png)    |
+| ![](tutorials/exahype2/toyproblems/elastic/Elastic_2D_start.png)  | ![](tutorials/exahype2/toyproblems/elastic/Elastic_2D_end.png)    |
 
 The computed stress of the 2D elastic wave equation at times t=0.0 s and t=1.0 s.
 

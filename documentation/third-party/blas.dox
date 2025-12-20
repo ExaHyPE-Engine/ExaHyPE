@@ -12,9 +12,18 @@ used for matrix inversion etc) depend on this.
 
 We provide a few configure options to make sure all the headers and libraries are available.
 When running configure script (see \ref page_installation_home) you should include
-```with-openblas``` to enable OpenBLAS. Further, you should use ```with-lapack``` to enable
-lapack and similarly ```with-libxsmmjit```. Configuration for these two options will fail
-without OpenBLAS enabled.
+
+           --with-openblas
+
+to enable OpenBLAS. Further, you should use 
+
+           --with-lapack
+
+to enable lapack and similarly 
+  
+           --with-libxsmmjit
+           
+Configuration for these two options will fail without OpenBLAS enabled.
 
 We leave it up to the user to modify the CXXFLAGS, LDFLAGS and LD_LIBRARY_PATH correctly.
 These options were tested on COSMA (see \ref page_machines), where installations of openblas
@@ -24,7 +33,7 @@ When configuring, be sure to add:
   - A link to the include directory for the version of openblas for your compiler to CXXFLAGS
   - A link to the lib directory for the version of openblas for your compiler to LDFLAGS
   - A link to the lib directory for the version of openblas for your compiler to LD_LIBRARY_PATH
-  - ```-lopenblas``` to LDFLAGS
+  - -lopenblas to LDFLAGS
 
 The call to configure should look something like this (for example, on COSMA):
 

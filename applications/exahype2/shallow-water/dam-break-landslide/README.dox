@@ -4,17 +4,17 @@
 
 In one spatial dimension, the equations takes the form
 
-$$
+@f$
 h_t + (hu)_x = 0,
 \quad (hu)_t + (hu^2 + \frac{1}{2}gh^2)_x = ghb_x - \frac{1}{\rho}(f_C + f_V),
-$$
+@f$
 
 where @f$ h, v @f$ is the depth and velocity of the flow and @f$ b @f$ is the topography and @f$ g @f$ is gravity.
 The friction forces are represented by the Coulomb friction @f$ f_C @f$ and the Voellmy friction @f$ f_V @f$ defined according to
 
-$$
+@f$
 f_C = \mu \rho gh\cos(\theta)\frac{u}{|u|}, \quad f_V = \rho \frac{g}{\xi}|u|u,
-$$
+@f$
 
 where @f$ \theta @f$ is the slope angle of the topography, @f$ \mu = \tan(\phi) @f$, where @f$ \phi @f$ is the (basal) friction angle and @f$ \xi @f$ is the Voellmy friction parameter.
 

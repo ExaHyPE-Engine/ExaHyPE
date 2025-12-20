@@ -8,6 +8,11 @@ from exahype2.solvers.ButcherTableau import ButcherTableau
 from exahype2.solvers.rkfd.OneSweepPerRungeKuttaStep import ReconstructLinearCombination
 
 
+#
+# Doxygen struggles to parse Python files with C++ code snippets. Therefore, 
+# this file is explicitly excluded from documentation in the Doxyfile.
+#
+
 class ComputeFirstDerivativesFV(peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor):
     """!
     

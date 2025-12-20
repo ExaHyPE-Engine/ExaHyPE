@@ -19,8 +19,9 @@ widespread due to multiple numerical issues.
 The script code resulting from this tutorial can be found in benchmarks/multigrid/petsc/mixed.py.
 
 
+<!--
 @include{doc} tutorials/mghype/numerics/generic-mixed-DG.dox
-
+-->
 
 
 ### Remarks on DG vs CG
@@ -42,6 +43,7 @@ helper PDEs anyway, it is reasonably to start with DG from the first place.
 It makes no sense to change your working horse. 
 
 
+<!--
 With DG in place, we note that we will need a Rusanov solver for the arising
 terms along the faces, which are, once again, not analytically defined.
 Different to the @ref page_multigrid_numerics_Disontinuous_Galerkin "introductory DG discussion",
@@ -54,7 +56,7 @@ For the Poisson equation, e.g.,
 These terms that make no sense require special attention, and this is the 
 fundamental "plug-in" point for @ref page_multigrid_numerics_Hybrid_DG "hybrid DG".
 We however stick to details on mixed Galerkin on this page.
-
+-->
 
 # Mapping onto Peano's PETSc multigrid extension
 

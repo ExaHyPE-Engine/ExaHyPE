@@ -53,7 +53,7 @@ Unless you work exclusively with the Peano core in C++, you will have to ensure 
 We test and maintain Peano for Linux only.
 If you prefer Windows or MacOS, it should work as long as you provide the
 mandatory tools from above, but we won't be able to help.
-Peano is well-integrated with a number of @ref page_third_party_home "third party tools",
+Peano is well-integrated with a number of third party tools,
 but these are all optional.
 
 # Configure Peano
@@ -303,7 +303,7 @@ dependencies, as noted below.
 
 Peano currently relies on the following Python packages/projects:
 
-@include ../requirements.txt
+<!-- @include ../requirements.txt -->
 
 
 # Fortran

@@ -80,7 +80,9 @@ can take as examples to implement their own ones.
 
 # Particles as Probes and Tracers
 
-@image html probes.png
+@todo There used to be a picture probes.png which somehow disappeared. Should be reintroduced.
+
+<!-- @image html probes.png -->
 
 ExaGRyPE can have particles inserted in the domain for multiple features. Those particles
 do not have physics interaction and act as data probes or object tracers. To add particles 

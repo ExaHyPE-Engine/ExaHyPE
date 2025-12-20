@@ -39,7 +39,7 @@
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
  to run them sequentially, or help yourself to the job scripts in the
- ``jobscripts`` subdirectory.
+ ```jobscripts``` subdirectory.
 
 
  Finally, you can plot the outcomes using
@@ -48,7 +48,7 @@
  python3 ./plot_celldepth_benchmarks.py
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
- use the ``--help`` flag to see available plotting options.
+ use the ```--help``` flag to see available plotting options.
  By default, the script will read in all available logfiles and plot them.
  See the header of the script for more details on the output format and usage.
 

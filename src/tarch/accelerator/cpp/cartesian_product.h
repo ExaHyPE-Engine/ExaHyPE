@@ -1,4 +1,12 @@
 #pragma once
+
+
+/// @cond false
+///
+/// This template pattern leads to confused Doxygen
+
+
+
 //#define DISABLE_CART_PROD_IOTA_SPEC
 /* 
 Adapted from TartanLlama/ranges: https://github.com/TartanLlama/ranges
@@ -2025,3 +2033,6 @@ namespace std {
     } // namespace views
   } // namespace ranges
 } // namespace std
+
+/// @endcond
+

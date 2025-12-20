@@ -20,7 +20,6 @@ yet, you have to make both python and src part of your PYTHONPATH:
 
 # Create the solver
 
-@snippet tests/multigrid/matrixfree/poisson/dg.py Construct matrices
 
 
 

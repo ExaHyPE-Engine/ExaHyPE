@@ -49,7 +49,7 @@
  ## Peano data
  
  As ExaHyPE 2 is built on top of Peano 4, all the generic Peano scripts and
- @ref page_peano_runtime_analysis "Peano's statistics" work for ExaHyPE, too. 
+ @ref page_peano_domain_decomposition "Peano's statistics" work for ExaHyPE, too. 
 
  
 */

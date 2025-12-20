@@ -6,6 +6,8 @@
 
 @todo This docu should move closer to the source code
 
+<!--
+
 Peano's block-structured output format {#chapter:blockstructured-output-format}
 ======================================
 
@@ -91,4 +93,7 @@ More sophiciated dumps
     Per snapshot (typically time step), the plotter adds on `dataset`
     entry. Each data set holds one data file per active rank. Each rank
     writes its actual data into a separate file.
+    
+    -->
+    
 */

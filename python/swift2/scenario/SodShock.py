@@ -1,5 +1,5 @@
-# @TODO: add dependence on SPH scheme (only minimal SPH ATM)
-# @TODO: add dependence on input parameters, e.g. grid size, HYDRO_DIMENSIONS...
+# @todo: add dependence on SPH scheme (only minimal SPH ATM)
+# @todo: add dependence on input parameters, e.g. grid size, HYDRO_DIMENSIONS...
 
 
 class SodShockIC:

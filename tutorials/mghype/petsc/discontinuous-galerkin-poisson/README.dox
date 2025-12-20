@@ -13,7 +13,7 @@
  
  - Peano's @ref page_multigrid_terminology "multigrid terminology";
  - DG basics (from a math point of view, though no in-depth knowledge is required);
- - How to @ref page_installation "install and build Peano" and notably how to enable its @ref documentation_multigrid_petsc "PETSc backend".
+ - How to @ref page_installation_home "install and build Peano" and notably how to enable its @ref documentation_multigrid_petsc "PETSc backend".
  
  
  This simple example discusses the steps and code snippets from the file benchmarks/multigrid/petsc/poisson/dg.py.
@@ -31,7 +31,7 @@
  
  First, we have to create a multigrid project.
 
- @snippet benchmarks/multigrid/petsc/poisson/dg.py Create project
+ <!-- @snippet benchmarks/multigrid/petsc/poisson/dg.py Create project -->
  
  This is kind of an empty hull until we fill it with some global information 
  (such as the domain size) and also tell the API to scan the global Makefile.
@@ -39,7 +39,7 @@
  We will insert the solvers into this project in a minute. Once this is done,
  we need to configure the project
  
- @snippet benchmarks/multigrid/petsc/poisson/dg.py Configure build 
+ <!-- @snippet benchmarks/multigrid/petsc/poisson/dg.py Configure build --> 
 
  ## Introduce the solver
 
@@ -47,7 +47,7 @@
   
  A DG solver is created through 
 
- @snippet benchmarks/multigrid/petsc/poisson/dg.py Create solver
+ <!-- @snippet benchmarks/multigrid/petsc/poisson/dg.py Create solver -->
 
  We discuss the details of the parameters below, as they depend - to some 
  degree - upon the chosen Riemann solver. For the time being, it is sufficient
@@ -66,10 +66,10 @@
  code to end up with a genuine C++ application.
  You can then either compile the code via a plain Makefile through the Python API
  or you switch to the command line. 
- All of these steps follow @ref page_architecture "the generic architecture of any Peano project".
+ All of these steps follow @ref page_architecture_home "the generic architecture of any Peano project".
  
- @snippet benchmarks/multigrid/petsc/poisson/dg.py Create Peano project
- 
+ <!-- @snippet benchmarks/multigrid/petsc/poisson/dg.py Create Peano project -->
+  
  
  # Created C++ code
  
@@ -97,7 +97,7 @@
  Here we demonstrate how a simple weak formulation resulting from the classical Poisson equation can be implemented within the solver interface.
  
  <div style="background-color: #ffc0cb; padding: 10px; border: 1px solid black;"> 
- We emphasize that this straightforward discretization cannot be used to build a working solver since it leads to a singular matrix! However, it is instructive to discuss it as a first simple example to illustrate the general structure and design philosophy of the solver. The naïve discretisation is then extended to the correct \ref Interior penalty formulation at the end of this tutorial.
+ We emphasize that this straightforward discretization cannot be used to build a working solver since it leads to a singular matrix! However, it is instructive to discuss it as a first simple example to illustrate the general structure and design philosophy of the solver. The naïve discretisation is then extended to the correct Interior penalty formulation at the end of this tutorial.
  </div>
  
  Throughout the tutorial, we follow the notation as used for
@@ -636,7 +636,7 @@ are taken into account:
 
 The image below illustrates this:
 
-  @image html average_gradient.png
+<!--  @image html average_gradient.png -->
 
 Neither the solution nor the gradient exist at the cell boundaries.
 We have to average both of them.
