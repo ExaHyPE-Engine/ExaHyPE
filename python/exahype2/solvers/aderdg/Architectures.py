@@ -3,6 +3,8 @@
 from enum import IntEnum
 
 
+# TODO: Remove. We use true hardware aware alignment and simd detection via CMake.
+# So we can get rid of this hardcoded ExaHyPE 1 artefact.
 class Architectures:
     class Alignment(IntEnum):
         noarch = 16

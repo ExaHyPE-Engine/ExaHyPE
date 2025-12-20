@@ -3,33 +3,31 @@
 
 cmake_minimum_required(VERSION 3.27)
 
-set(PEANO_PROJECT_NAME "Peano") # TODO: Remove
-set(PEANO_PROJECT_DESCRIPTION "Peano is an open source framework for solvers on dynamically adaptive Cartesian meshes")
-set(PEANO_AUTHOR_ORGANIZATION "Durham University and Technische Universitaet Muenchen")
-set(PEANO_AUTHOR_DOMAIN "www.peano-framework.org")
-
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(GetGitRevisionDescription)
 get_git_head_revision(GIT_BRANCH GIT_COMMIT_HASH)
 get_git_commit_message(GIT_COMMIT_MESSAGE)
 get_git_commit_timestamp(GIT_COMMIT_TIMESTAMP)
-
-set(PEANO_VERSION_REVISION "${GIT_COMMIT_HASH}")
-set(PEANO_GIT_BRANCH "${GIT_BRANCH}")
-set(PEANO_GIT_HASH "${GIT_COMMIT_HASH}")
-set(PEANO_GIT_COMMIT_MESSAGE "${GIT_COMMIT_MESSAGE}")
-set(PEANO_GIT_URL "https://gitlab.lrz.de/hpcsoftware/Peano")
 message(STATUS "Revision: ${GIT_BRANCH} -m \"${GIT_COMMIT_MESSAGE}\" (${GIT_COMMIT_HASH}) ${GIT_COMMIT_TIMESTAMP}")
 
-project(${PEANO_PROJECT_NAME}
-  DESCRIPTION ${PEANO_PROJECT_DESCRIPTION}
-  HOMEPAGE_URL ${PEANO_AUTHOR_DOMAIN}
+project(Peano
+  DESCRIPTION "Peano is an open source framework for solvers on dynamically adaptive Cartesian meshes"
   LANGUAGES
     C
     CXX
     #Fortran
 )
+
+include(Ccache)
+include(CheckIncludeFiles)
+include(CheckIncludeFileCXX)
+
+include(TestBigEndian)
+test_big_endian(BIG_ENDIAN)
+
+include(ProcessorCount)
+ProcessorCount(AVAILABLE_PROCESSOR_COUNT)
 
 set(CMAKE_C_STANDARD 17 CACHE STRING "")
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
@@ -55,37 +53,24 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-include(Ccache)
-include(CheckIncludeFiles)
-include(CheckIncludeFileCXX)
-
-include(TestBigEndian)
-test_big_endian(BIG_ENDIAN)
-
-include(ProcessorCount)
-ProcessorCount(AVAILABLE_PROCESSOR_COUNT)
-
 include(CTest)
 enable_testing()
 
-# https://stackoverflow.com/questions/31355692/how-do-i-enable-link-time-optimization-lto-with-cmake
+add_library(PeanoOptions INTERFACE)
+target_compile_features(PeanoOptions INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
+install(TARGETS PeanoOptions EXPORT ${PROJECT_NAME}Targets)
+
+include(CPUArch)
+include(Mimalloc)
+include(Filesystem)
+include(PeanoLibrary)
+include(PeanoExecutable)
+
 include(CheckIPOSupported)
 check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
 if(IPO_SUPPORTED)
   message(STATUS "IPO/LTO enabled")
-  set_property(GLOBAL PROPERTY INTERPROCEDURAL_OPTIMIZATION 1)
-else()
-  #message(WARNING "IPO/LTO not supported: ${IPO_ERROR}")
-  message(STATUS "IPO/LTO not supported")
 endif()
-
-add_library(PeanoOptions INTERFACE)
-target_compile_features(PeanoOptions INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
-install(TARGETS PeanoOptions EXPORT PeanoTargets)
-
-include(SIMD)
-include(Mimalloc)
-include(Filesystem)
 
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
   target_compile_options(PeanoOptions INTERFACE
@@ -93,14 +78,23 @@ if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
     -Wall
     -Wextra
     -Kieee
+    -Munroll
+    #-Minfo=all
   )
 else()
   target_compile_options(PeanoOptions INTERFACE
-    -W
     -Wall
     -Wextra
     -Wpedantic
+    -Wformat=2
+    # -Wshadow
+    # -Wconversion
+    -Wcast-align
+    -Wcast-qual
     -Wreturn-type
+    -Wdouble-promotion
+    -Wnull-dereference
+    -Woverloaded-virtual
     -Wnon-virtual-dtor
     -Wno-unused-parameter
   )
@@ -130,6 +124,7 @@ mark_as_advanced(SUPPORTED_ACCELERATOR_ARCHITECTURES)
 set(WITH_GPU_ARCH "none" CACHE STRING "${SUPPORTED_ACCELERATOR_ARCHITECTURES}")
 set_property(CACHE WITH_GPU_ARCH PROPERTY STRINGS ${SUPPORTED_ACCELERATOR_ARCHITECTURES})
 
+# TODO: Change to supported loggers
 set(SUPPORTED_TOOLCHAINS
   no
   intel nvidia scorep chrome gnu
@@ -174,19 +169,16 @@ mark_as_advanced(SUPPORTED_DIMENSIONS)
 
 set(CMAKE_BUILD_TYPE "" CACHE INTERNAL "")
 set(SUPPORTED_BUILD_TYPES
-  Release Debug Trace Asserts Stats
+  Release Debug Trace Asserts
   CACHE STRING "Editable list of supported build types"
 )
 mark_as_advanced(SUPPORTED_BUILD_TYPES)
 
-set(PEANO_CXX_FLAGS_RELEASE -O3 CACHE INTERNAL "")
+set(PEANO_CXX_FLAGS_RELEASE -O3  -fomit-frame-pointer CACHE INTERNAL "")
 set(PEANO_RELEASE_DEFINITIONS -DPEANO_DEBUG=0 -DNDEBUG CACHE INTERNAL "")
 
 set(PEANO_CXX_FLAGS_DEBUG -g -O0 CACHE INTERNAL "")
 set(PEANO_DEBUG_DEFINITIONS -DPEANO_DEBUG=4 CACHE INTERNAL "")
-
-set(PEANO_CXX_FLAGS_STATS -O3 CACHE INTERNAL "")
-set(PEANO_STATS_DEFINITIONS -DPEANO_DEBUG=0 -DNDEBUG -DTRACK_STATISTICS CACHE INTERNAL "")
 
 set(PEANO_CXX_FLAGS_ASSERTS -g -O3 CACHE INTERNAL "")
 set(PEANO_ASSERTS_DEFINITIONS -DPEANO_DEBUG=2 CACHE INTERNAL "")
@@ -209,14 +201,12 @@ if(WITH_MULTITHREADING)
   check_include_files(omp.h HAVE_OMP_H)
   target_link_libraries(PeanoOptions INTERFACE OpenMP::OpenMP_CXX)
   target_compile_definitions(PeanoOptions INTERFACE WITH_OPENMP WITH_MULTITHREADING)
-  set(ONLY_IF_MULTITHREADING_FIND_DEPENDENCY "find_dependency(OpenMP)" CACHE INTERNAL "")
 endif()
 
 if(WITH_MPI)
   find_package(MPI REQUIRED)
   target_link_libraries(PeanoOptions INTERFACE MPI::MPI_CXX)
   target_compile_definitions(PeanoOptions INTERFACE WITH_MPI)
-  set(ONLY_IF_MPI_FIND_DEPENDENCY "find_dependency(MPI)" CACHE INTERNAL "")
 endif()
 
 if(WITH_LIBXSMM)
@@ -229,7 +219,6 @@ if(WITH_VTK)
   find_package(VTK REQUIRED)
   target_link_libraries(PeanoOptions INTERFACE VTK::CommonCore)
   target_compile_definitions(PeanoOptions INTERFACE WITH_VTK)
-  set(ONLY_IF_VTK_FIND_DEPENDENCY "find_dependency(VTK)" CACHE INTERNAL "")
 endif()
 
 if(WITH_HDF5)
@@ -239,7 +228,6 @@ if(WITH_HDF5)
   find_package(HDF5 REQUIRED COMPONENTS C CXX)
   target_link_libraries(PeanoOptions INTERFACE HDF5::HDF5)
   target_compile_definitions(PeanoOptions INTERFACE WITH_HDF5)
-  set(ONLY_IF_HDF5_FIND_DEPENDENCY "find_dependency(HDF5 COMPONENTS C CXX)" CACHE INTERNAL "")
   if(NOT HDF5_IS_PARALLEL)
     message(WARNING "Found HDF5 installation is not parallel")
   endif()
@@ -256,7 +244,6 @@ if(WITH_EASI)
   find_package(easi REQUIRED)
   target_link_libraries(PeanoOptions INTERFACE easi::easi)
   target_compile_definitions(PeanoOptions INTERFACE WITH_EASI WITH_ASAGI)
-  set(ONLY_IF_EASI_FIND_DEPENDENCY "find_dependency(easi)" CACHE INTERNAL "")
 endif()
 
 if(WITH_USM)
@@ -326,15 +313,21 @@ add_subdirectory(src)
 include(CMakePackageConfigHelpers)
 
 write_basic_package_version_file(
-  ${PEANO_PROJECT_NAME}ConfigVersion.cmake
-  VERSION ${PEANO_VERSION_REVISION}
+  PeanoConfigVersion.cmake
+  VERSION ${GIT_COMMIT_HASH}
   COMPATIBILITY SameMajorVersion
 )
 
 configure_package_config_file(
   ${CMAKE_SOURCE_DIR}/cmake/Config.cmake.in
-  ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}Config.cmake
+  ${CMAKE_BINARY_DIR}/${PROJECT_NAME}Config.cmake
   INSTALL_DESTINATION ${CMAKE_INSTALL_PREFIX}
+)
+
+install(DIRECTORY
+  ${CMAKE_SOURCE_DIR}/cmake
+  DESTINATION ${CMAKE_INSTALL_PREFIX}
+  FILES_MATCHING PATTERN "*.cmake"
 )
 
 install(DIRECTORY
@@ -342,14 +335,14 @@ install(DIRECTORY
   DESTINATION ${CMAKE_INSTALL_PREFIX}
 )
 
-export(EXPORT ${PEANO_PROJECT_NAME}Targets
-  FILE ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}Targets.cmake
-  NAMESPACE ${PEANO_PROJECT_NAME}::
+export(EXPORT ${PROJECT_NAME}Targets
+  FILE ${CMAKE_BINARY_DIR}/${PROJECT_NAME}Targets.cmake
+  NAMESPACE ${PROJECT_NAME}::
 )
 
-install(EXPORT ${PEANO_PROJECT_NAME}Targets
+install(EXPORT ${PROJECT_NAME}Targets
   DESTINATION ${CMAKE_INSTALL_PREFIX}
-  NAMESPACE ${PEANO_PROJECT_NAME}::
+  NAMESPACE ${PROJECT_NAME}::
 )
 
 install(FILES
@@ -359,7 +352,7 @@ install(FILES
   ${CMAKE_SOURCE_DIR}/CODE_OF_CONDUCT.md
   ${CMAKE_SOURCE_DIR}/CITATION.cff
   ${CMAKE_BINARY_DIR}/CMakeCache.txt
-  ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}Config.cmake
-  ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}ConfigVersion.cmake
+  ${CMAKE_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+  ${CMAKE_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
   DESTINATION ${CMAKE_INSTALL_PREFIX}
 )

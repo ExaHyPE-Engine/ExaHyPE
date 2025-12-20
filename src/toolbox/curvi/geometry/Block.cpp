@@ -17,7 +17,6 @@ toolbox::curvi::Block::Block():
   index_size{0, 0, 0},
   index_offset{0, 0, 0} {};
 
-
 toolbox::curvi::Block::
   Block(Coordinate a_coords[3], int a_index_offset[3], int a_index_size[3], std::vector<double> a_nodes) {
   std::copy_n(a_coords, 3, coords);

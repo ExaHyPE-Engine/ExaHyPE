@@ -1,47 +1,84 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-file(GLOB_RECURSE SOURCES ${SOURCE_EXTENSIONS_TO_GLOB})
-file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
-list(FILTER SOURCES EXCLUDE REGEX "\\.template\\.")
-list(FILTER HEADERS EXCLUDE REGEX "\\.template\\.")
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS})
+
+file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS ${HEADER_EXTENSIONS_TO_GLOB})
+
+set(SOURCES
+  exahype2.cpp
+  CellAccess.cpp
+  CellData.cpp
+  EnclaveBookkeeping.cpp
+  EnclaveTask.cpp
+  LoadBalancingConfiguration.cpp
+  PlotFilter.cpp
+  PrecisionControl.cpp
+  RefinementControl.cpp
+  RefinementControlService.cpp
+  TimeStepping.cpp
+  UnitTests.cpp
+  tests/EnclaveBookkeepingTest.cpp
+
+  enumerator/AoSLexicographicEnumerator.cpp
+  enumerator/AoSoALexicographicEnumerator.cpp
+  enumerator/FaceAoSLexicographicEnumerator.cpp
+  enumerator/SingleDoFEnumerator.cpp
+  enumerator/SoALexicographicEnumerator.cpp
+
+  dg/BoundaryConditions.cpp
+  dg/CellIntegral.cpp
+  dg/DGUtils.cpp
+  dg/Riemann.cpp
+  dg/Tracer.cpp
+  dg/tests/CellIntegralTest.cpp
+  dg/tests/DGUtilsTest.cpp
+  dg/tests/RiemannTest.cpp
+  dg/tests/TestUtils.cpp
+  dg/average/Average.cpp
+  dg/fluxaverage/FluxAverage.cpp
+  dg/laxfriedrichs/LaxFriedrichs.cpp
+  dg/rusanov/Rusanov.cpp
+  dg/rusanov/tests/RiemannTest.cpp
+
+  fd/BoundaryConditions.cpp
+  fd/LoopBody.cpp
+  fd/PatchUtils.cpp
+  fd/tests/SommerfeldBCTest.cpp
+  fd/fd4/FD4_patchwise_functors.cpp
+  fd/fd4/LoopBody.cpp
+  fd/fd4/SOCCZ4_ver/FD4_patchwise_functors.cpp
+
+  fv/BoundaryConditions.cpp
+  fv/InterpolationRestriction.cpp
+  fv/PatchUtils.cpp
+  fv/PostprocessingKernels.cpp
+  fv/Tracer.cpp
+  fv/tests/ApplySplit1DRiemannToPatchTest.cpp
+  fv/tests/CopyPatchTest.cpp
+  fv/tests/InterpolationRestrictionTest.cpp
+  fv/particles/MultiParticleIntegration.cpp
+  fv/particles/ParticleDomainBoundary.cpp
+  fv/particles/ParticleForces.cpp
+  fv/particles/ParticleHelper.cpp
+  fv/particles/ParticleIntegration.cpp
+  fv/particles/ParticleIntegrationHelper.cpp
+  fv/particles/ParticleInterpolation.cpp
+  fv/particles/ParticleProjection.cpp
+  fv/particles/ParticleUpdate.cpp
+)
+
+install_peano_headers(
+  PATTERNS ${HEADER_EXTENSIONS_TO_GLOB}
+)
 
 foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
-  string(TOLOWER ${mode} mode_lower)
-  string(TOUPPER ${mode} mode_upper)
-
-  foreach(dimensions IN LISTS SUPPORTED_DIMENSIONS)
-    add_library(ExaHyPE2${mode}${dimensions}d STATIC)
-    target_sources(ExaHyPE2${mode}${dimensions}d PRIVATE ${SOURCES} ${HEADERS})
-    target_link_libraries(ExaHyPE2${mode}${dimensions}d PRIVATE PeanoOptions ToolboxBlockStructured${mode}${dimensions}d ToolboxLoadBalancing${mode}${dimensions}d)
-    target_compile_definitions(ExaHyPE2${mode}${dimensions}d PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} DIMENSIONS=${dimensions})
-    target_compile_options(ExaHyPE2${mode}${dimensions}d PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
-
-    if(AdaptiveCpp_FOUND)
-      add_sycl_to_target(TARGET ExaHyPE2${mode}${dimensions}d SOURCES ${SOURCES})
-    endif()
-
-    install(TARGETS ExaHyPE2${mode}${dimensions}d
-      EXPORT                      ${PROJECT_NAME}Targets
-      RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
-              COMPONENT           ${PROJECT_NAME}_Runtime
-      LIBRARY DESTINATION         ${CMAKE_INSTALL_LIBDIR}
-              COMPONENT           ${PROJECT_NAME}_Runtime
-              NAMELINK_COMPONENT  ${PROJECT_NAME}_Devel
-      ARCHIVE DESTINATION         ${CMAKE_INSTALL_LIBDIR}
-              COMPONENT           ${PROJECT_NAME}_Devel
-      PUBLIC_HEADER DESTINATION   ${CMAKE_INSTALL_INCLUDEDIR}
-      PRIVATE_HEADER DESTINATION  ${CMAKE_INSTALL_INCLUDEDIR}
+  foreach(dim IN LISTS SUPPORTED_DIMENSIONS)
+    add_peano_library(
+      NAME ExaHyPE2${mode}${dim}d
+      MODE ${mode}
+      DIMENSION ${dim}
+      SOURCES ${SOURCES}
+      HEADERS ${HEADERS}
+      LINK_LIBRARIES ToolboxBlockStructured${mode}${dim}d ToolboxLoadBalancing${mode}${dim}d ToolboxParticles${mode}${dim}d
     )
   endforeach()
-endforeach()
-
-foreach(pattern IN LISTS HEADER_EXTENSIONS_TO_GLOB)
-  install(
-    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    FILES_MATCHING
-    PATTERN ${pattern}
-  )
 endforeach()

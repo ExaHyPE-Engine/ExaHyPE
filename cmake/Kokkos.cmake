@@ -127,6 +127,6 @@ endif()
 
 message(STATUS "Found Kokkos: ${Kokkos_DIR}")
 
-set(ONLY_IF_GPU_FIND_DEPENDENCY "find_dependency(Kokkos)" CACHE INTERNAL "")
+set(GPU_FIND_DEPENDENCY "find_dependency(Kokkos)" CACHE INTERNAL "")
 target_link_libraries(PeanoOptions INTERFACE Kokkos::kokkos)
 target_compile_definitions(PeanoOptions INTERFACE WITH_GPU_KOKKOS WITH_GPU)

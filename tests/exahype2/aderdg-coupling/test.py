@@ -12,7 +12,6 @@ modes = {
     "release": peano4.output.CompileMode.Release,
     "trace": peano4.output.CompileMode.Trace,
     "assert": peano4.output.CompileMode.Asserts,
-    "stats": peano4.output.CompileMode.Stats,
     "debug": peano4.output.CompileMode.Debug,
 }
 
@@ -187,8 +186,6 @@ if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementati
 project.set_output_path("solutions")
 scenario.set_global_simulation_parameters(project)
 
-project.set_Peano4_installation("../../../", modes[args.mode])
+project.set_build_mode(modes[args.mode])
 project = project.generate_Peano4_project(verbose=False)
-project.set_fenv_handler(True)
-
 project.build(make_clean_first=True)

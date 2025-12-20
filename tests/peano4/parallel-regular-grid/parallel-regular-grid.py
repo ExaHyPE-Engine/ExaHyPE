@@ -11,7 +11,7 @@ project = peano4.Project(["tests", "peano4", "grid"], "ParallelRegularGrid", exe
 min_h = 1.1 / (3.0**max_depth)
 project.constants.export_constexpr_with_type("MinH", str(min_h), "double")
 
-project.output.makefile.parse_configure_script_outcome("../../../")
+project.output.makefile.parse_configuration_outcome()
 project.output.makefile.set_dimension(dimension)
 project.output.makefile.set_mode(build_mode)
 project.output.makefile.add_cpp_file("ParallelRegularGrid-main.cpp")

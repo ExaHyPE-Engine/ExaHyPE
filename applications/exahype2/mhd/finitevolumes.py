@@ -81,7 +81,7 @@ else:
 
 peano4_project = project.generate_Peano4_project()
 
-peano4_project.output.makefile.parse_configure_script_outcome( "../../.." )
+project.output.makefile.parse_configuration_outcome()
 peano4_project.output.makefile.set_mode(build_mode)
 
 peano4_project.output.makefile.add_Fortran_file( "Parameters.f90" )

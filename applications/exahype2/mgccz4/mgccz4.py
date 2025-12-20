@@ -8,7 +8,7 @@ import exahype2
 modes = { 
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
-  "assert":  peano4.output.CompileMode.Asserts, "stats":  peano4.output.CompileMode.Stats,
+  "assert":  peano4.output.CompileMode.Asserts,
   "debug":   peano4.output.CompileMode.Debug,
 }
 
@@ -310,7 +310,7 @@ if __name__ == "__main__":
       periodic_boundary_conditions
     )
 
-    project.set_Peano4_installation("../../..", build_mode)
+    project.set_build_mode(build_mode)
 
     #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/tem" )
     #probe_point = [0,0,0]

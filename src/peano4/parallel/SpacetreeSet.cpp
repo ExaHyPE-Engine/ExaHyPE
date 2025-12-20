@@ -71,17 +71,17 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
 
   std::vector<peano4::parallel::TreeManagementMessage> unansweredMessagesThatIanAnswerNow;
 
-  std::vector<peano4::parallel::TreeManagementMessage>::iterator p = _unansweredMessages.begin();
-  while (p != _unansweredMessages.end()) {
-    switch (p->getAction()) {
+  std::vector<peano4::parallel::TreeManagementMessage>::iterator it = _unansweredMessages.begin();
+  while (it != _unansweredMessages.end()) {
+    switch (it->getAction()) {
     case peano4::parallel::TreeManagementMessage::Action::RequestNewRemoteTree:
-      unansweredMessagesThatIanAnswerNow.push_back(*p);
-      p = _unansweredMessages.erase(p);
+      unansweredMessagesThatIanAnswerNow.push_back(*it);
+      it = _unansweredMessages.erase(it);
       break;
     case peano4::parallel::TreeManagementMessage::Action::RemoveChildTreeFromBooksAsChildBecameEmpty:
     case peano4::parallel::TreeManagementMessage::Action::CreateNewRemoteTree:
-      unansweredMessagesThatIanAnswerNow.push_back(*p);
-      p = _unansweredMessages.erase(p);
+      unansweredMessagesThatIanAnswerNow.push_back(*it);
+      it = _unansweredMessages.erase(it);
       break;
     case peano4::parallel::TreeManagementMessage::Action::Acknowledgement:
     case peano4::parallel::TreeManagementMessage::Action::JoinWithWorker:
@@ -129,8 +129,8 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
         newTree(p.getWorkerSpacetreeId(), p.getMasterSpacetreeId(), state.x, state.h, state.getInverted());
 
       _spacetrees.push_back(std::move(newTree));
-      auto it                = std::prev(_spacetrees.end());
-      _spacetreeIds[it->_id] = it;
+      auto itPrev                = std::prev(_spacetrees.end());
+      _spacetreeIds[itPrev->_id] = itPrev;
 
       peano4::parallel::TreeManagementMessage::send(
         answerMessage,
@@ -220,8 +220,8 @@ void peano4::parallel::SpacetreeSet::addSpacetree(int masterId, int newTreeId) {
     );
     tarch::multicore::Lock lock(_semaphore);
     _spacetrees.push_back(std::move(newTree));
-    auto it                = std::prev(_spacetrees.end());
-    _spacetreeIds[it->_id] = it;
+    auto itPrev                = std::prev(_spacetrees.end());
+    _spacetreeIds[itPrev->_id] = itPrev;
   }
 }
 

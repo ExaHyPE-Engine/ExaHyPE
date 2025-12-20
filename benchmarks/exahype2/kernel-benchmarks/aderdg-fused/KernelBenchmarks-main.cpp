@@ -33,10 +33,6 @@
 #include "Variants.h"
 
 #include <cstring>
-#include <fenv.h>
-#pragma float_control(precise, on)
-#pragma STDC FENV_ACCESS ON
-
 #include <fstream>
 
 using namespace benchmarks::exahype2::kernelbenchmarks;
@@ -57,17 +53,12 @@ int main(int argc, char** argv) {
   peano4::init(&argc, &argv, benchmarks::exahype2::kernelbenchmarks::DomainOffset, benchmarks::exahype2::kernelbenchmarks::DomainSize);
   repositories::initLogFilters();
 
-  if constexpr (EnableFPE) {
-    feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-  }
-
   logInfo("main()", "number of compute threads: " << tarch::multicore::Core::getInstance().getNumberOfThreads());
   logInfo("main()", "number of threads launching compute kernels: " << NumberOfLaunchingThreads);
   logInfo("main()", "number of unknowns: " << AderSolver::NumberOfUnknowns);
   logInfo("main()", "number of auxiliary variables: " << AderSolver::NumberOfAuxiliaryVariables);
   logInfo("main()", "number of finite volumes per axis per cell: " << AderSolver::Order);
   logInfo("main()", "number of samples per measurement: " << NumberOfSamples);
-  logInfo("main()", "floating-point exception handler enabled: " << std::boolalpha << EnableFPE);
   logInfo("main()", "performing accuracy checks with precision: " << Accuracy);
 #if defined(WITH_GPU_SYCL)
   logInfo("main()", "set SYCL_DEVICE_FILTER=gpu or ONEAPI_DEVICE_SELECTOR=cuda:0 when using SYCL on the device");

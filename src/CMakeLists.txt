@@ -1,12 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-set(SOURCE_EXTENSIONS_TO_GLOB
-  "*.c"
-  "*.cxx"
-  "*.c++"
-  "*.cpp"
-  "*.cu"
-)
+
 set(HEADER_EXTENSIONS_TO_GLOB
   "*.h"
   "*.hxx"

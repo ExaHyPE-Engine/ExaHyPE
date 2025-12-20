@@ -14,7 +14,6 @@ class CompileMode(Enum):
     Trace = 1
     Asserts = 2
     Release = 3
-    Stats = 4
 
 
 """!
@@ -25,7 +24,7 @@ Is often used within the argument parser:
 parser.add_argument("-m", "--mode", dest="mode", choices=peano4.output.CompileModes, default=peano4.output.CompileModes[0], help="|".join(peano4.output.CompileModes))
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-CompileModes = ["Release", "Stats", "Trace", "Asserts", "Debug"]
+CompileModes = ["Release", "Trace", "Asserts", "Debug"]
 
 """!
 Convert a string into a compile mode
@@ -36,11 +35,9 @@ def string_to_mode(mode: CompileMode):
     if mode == CompileModes[0]:
         return CompileMode.Release
     if mode == CompileModes[1]:
-        return CompileMode.Stats
-    if mode == CompileModes[2]:
         return CompileMode.Trace
-    if mode == CompileModes[3]:
+    if mode == CompileModes[2]:
         return CompileMode.Asserts
-    if mode == CompileModes[4]:
+    if mode == CompileModes[3]:
         return CompileMode.Debug
     raise Exception("Compile mode {} not supported".format(mode))

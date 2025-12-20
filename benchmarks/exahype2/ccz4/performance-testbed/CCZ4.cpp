@@ -11,7 +11,10 @@
 #include "tarch/NonCriticalAssertions.h"
 
 #ifdef IncludeTwoPunctures
-TP::TwoPunctures* _tp = new TP::TwoPunctures();
+TP::TwoPunctures& getTP() {
+  static TP::TwoPunctures tp;
+  return tp;
+}
 #endif
 
 tarch::logging::Log   benchmarks::exahype2::ccz4::CCZ4::_log( "benchmarks::exahype2::ccz4::CCZ4" );
@@ -23,7 +26,7 @@ void benchmarks::exahype2::ccz4::CCZ4::prepare(TP::TwoPunctures* tp){
     //int swi=0;//0--single black hole,  2--BBH hoc, 2--BBH rotation, 3--GW150914
     //bbhtype=0 head on, 1-b=3, 2-b=2
     
-	if (CCZ4swi==0){
+	if constexpr (CCZ4swi==0){
 		tp->par_b=1.0;
 		tp->center_offset[0]=-1.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
 		tp->target_M_plus=1.0;//adm mass
@@ -35,7 +38,7 @@ void benchmarks::exahype2::ccz4::CCZ4::prepare(TP::TwoPunctures* tp){
 		tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
 		tp->TP_epsilon=1e-6;}
 
-  if (CCZ4swi==4){
+  if constexpr (CCZ4swi==4){
     tp->par_b=1.0;
     tp->center_offset[0]=-3.0; tp->center_offset[1]=-2.0; tp->center_offset[2]=0.0;
     tp->target_M_plus=1.0;//adm mass
@@ -47,7 +50,7 @@ void benchmarks::exahype2::ccz4::CCZ4::prepare(TP::TwoPunctures* tp){
     tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
     tp->TP_epsilon=1e-6;}
 		
-	if (CCZ4swi==2 and CCZ4BBHType==0){
+	if constexpr (CCZ4swi==2 and CCZ4BBHType==0){
 		tp->par_b=2.0;
 		tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
 		tp->target_M_plus=0.5;//adm mass
@@ -60,7 +63,7 @@ void benchmarks::exahype2::ccz4::CCZ4::prepare(TP::TwoPunctures* tp){
 		tp->TP_epsilon=1e-6;}
 	
   //following data reference: https://journals.aps.org/prd/pdf/10.1103/PhysRevD.69.024006
-	if (CCZ4swi==2 and CCZ4BBHType==1){
+	if constexpr (CCZ4swi==2 and CCZ4BBHType==1){
 		tp->par_b=5.0;
 		tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
 		tp->give_bare_mass=true;//use puncture mass instead of adm mass
@@ -74,7 +77,7 @@ void benchmarks::exahype2::ccz4::CCZ4::prepare(TP::TwoPunctures* tp){
 		tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
 		tp->TP_epsilon=1e-6;}
 
-  if (CCZ4swi==2 and CCZ4BBHType==2){
+  if constexpr (CCZ4swi==2 and CCZ4BBHType==2){
     tp->par_b=2.0;
     tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
     tp->give_bare_mass=true;//use puncture mass instead of adm mass
@@ -88,7 +91,7 @@ void benchmarks::exahype2::ccz4::CCZ4::prepare(TP::TwoPunctures* tp){
     tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
     tp->TP_epsilon=1e-6;}
 
-	if (CCZ4swi==3){
+	if constexpr (CCZ4swi==3){
 		double D=10.0, q=36.0/29.0, chip=0.31, chim=-0.46, M=1.0;
 		double Pr=-0.00084541526517121, Pphi=0.09530152296974252;
 		double mp=M*q/(1+q), mm=M*1/(1+q);
@@ -110,14 +113,14 @@ void benchmarks::exahype2::ccz4::CCZ4::prepare(TP::TwoPunctures* tp){
 #endif
 
 benchmarks::exahype2::ccz4::CCZ4::CCZ4() {
-  if ( Scenario==0 || Scenario==1 ) {
+  if constexpr ( Scenario==0 || Scenario==1 ) {
     const char* name = "GaugeWave";//nothing to do here for now
     int length = strlen(name);
     //initparameters_(&length, name);
   }
   #ifdef IncludeTwoPunctures
-  if ( Scenario==2 ) {
-    prepare(_tp);//we solve the puncture equation here.
+  if constexpr ( Scenario==2 ) {
+    prepare(&getTP());//we solve the puncture equation here.
     //exit(0);
   }
   #endif
@@ -150,7 +153,7 @@ void benchmarks::exahype2::ccz4::CCZ4::initialCondition(
   else if ( Scenario==2 ) {
 
    // We use the bool to trigger the hgh res interpolation once the grid is constructed
-    applications::exahype2::ccz4::ApplyTwoPunctures(Q, volumeX, 0, _tp, not gridIsConstructed); //we interpolate for real IC here.
+    applications::exahype2::ccz4::ApplyTwoPunctures(Q, volumeX, 0, &getTP(), not gridIsConstructed); //we interpolate for real IC here.
   }
   #endif
   else {

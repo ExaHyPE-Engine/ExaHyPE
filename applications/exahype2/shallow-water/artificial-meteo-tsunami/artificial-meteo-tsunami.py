@@ -94,14 +94,11 @@ constants = {
 project.set_load_balancer(
     f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees})"
 )
-project.set_Peano4_installation(
-    "../../../../", mode=peano4.output.string_to_mode(args.build_mode)
-)
+project.set_build_mode(mode=peano4.output.string_to_mode(args.build_mode))
 
 project = project.generate_Peano4_project(verbose=False)
 project.output.makefile.add_cpp_file("FVSolver.cpp")
 for const_name, const_info in constants.items():
     const_val, const_type = const_info
     project.constants.export_constexpr_with_type(const_name, str(const_val), const_type)
-project.set_fenv_handler(args.fpe)
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

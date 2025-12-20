@@ -65,11 +65,11 @@ We can also specify here whether we want to use periodic boundary conditions:
       periodic_BC           = [True, True],
     )
 
-Finally, we configure the load balancer for the project,
-we inform the project of where to look for the Peano libraries, and then we can generate all the glue code we need and compile it:
+Finally, we configure the load balancer and the build mode for the project,
+and then we can generate all the glue code we need and compile it:
 
     exahype2_project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
-    exahype2_project.set_Peano4_installation("../../../", peano4.output.CompileMode.Release)
+    exahype2_project.set_build_mode(peano4.output.CompileMode.Release)
     peano4_project = exahype2_project.generate_Peano4_project()
     peano4_project.build()
 

@@ -12,7 +12,6 @@ modes = {
     "release": peano4.output.CompileMode.Release,
     "trace": peano4.output.CompileMode.Trace,
     "assert": peano4.output.CompileMode.Asserts,
-    "stats": peano4.output.CompileMode.Stats,
     "debug": peano4.output.CompileMode.Debug,
 }
 
@@ -202,12 +201,6 @@ project.set_load_balancing(
     "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
     "new ::exahype2::LoadBalancingConfiguration(0.98)",
 )
-project.set_Peano4_installation("../../../", modes[args.mode])
+project.set_build_mode(modes[args.mode])
 project = project.generate_Peano4_project("False")
-project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
-
 project.build(make_clean_first=True)
-
-print(args)
-print(solver)
-print(project)

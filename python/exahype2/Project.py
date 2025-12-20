@@ -50,7 +50,6 @@ class Project(object):
         self._additional_includes     = [ "tarch/logging/LogFilterFileReader.h",
                                           "tarch/accelerator/Device.h"
                                         ]
-        self._Peano_src_directory     = "."
         self._build_mode = peano4.output.CompileMode.Asserts
         self._executable_name = executable
         self._periodic_BC = [False, False, False]
@@ -94,25 +93,7 @@ class Project(object):
     def set_print_time_step_interval_in_seconds(self, value):
         self._print_time_step_interval_in_seconds = value
 
-    """
-    The standard extensions that I use for both Peano and ExaHyPE.
-    """
-    LibraryDebug = "_debug"
-    LibraryRelease = ""
-    LibraryTrace = "_trace"
-    LibraryAsserts = "_asserts"
-    LibraryStats = "_stats"
-
-    def set_Peano4_installation(self, src_path, mode=peano4.output.CompileMode.Release):
-        """
-        src_path: string
-          Path (relative or absolute) to the src directory of Peano. This path
-          should hold both the headers (in subdirectories) and all the static
-          libraries.
-
-        mode: peano4.output.CompileMode
-        """
-        self._Peano_src_directory = src_path
+    def set_build_mode(self, mode=peano4.output.CompileMode.Release):
         self._build_mode = mode
 
     def add_solver(self, solver):
@@ -237,9 +218,6 @@ class Project(object):
             build_string += " "
             build_string += i
         self._project.constants.export_string("BuildInformation", build_string)
-        self._project.constants.export_string(
-            "ConfigureInformation", self._project.output.makefile.configure_call
-        )
 
         self._project.output.readme.add_package_description(
             """
@@ -760,7 +738,7 @@ thus appreciate any citation of the original release paper
         # self._project.cleanup()
 
         self.__configure_makefile()
-        self._project.output.makefile.parse_configure_script_outcome(self._Peano_src_directory)
+        self._project.output.makefile.parse_configuration_outcome()
         self._project.output.makefile.set_mode(self._build_mode)
         self.__export_constants()
 

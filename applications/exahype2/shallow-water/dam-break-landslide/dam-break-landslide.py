@@ -208,11 +208,8 @@ project.set_global_simulation_parameters(
 project.set_load_balancer(
     f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees})"
 )
-project.set_Peano4_installation(
-    "../../../../", mode=peano4.output.string_to_mode(args.build_mode)
-)
+project.set_build_mode(mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
-project.set_fenv_handler(args.fpe)
 for const_name, const_info in problem_constants.items():
     const_val, const_type = const_info
     project.constants.export_constexpr_with_type(const_name, str(const_val), const_type)

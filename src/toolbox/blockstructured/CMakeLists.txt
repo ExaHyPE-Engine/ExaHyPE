@@ -1,43 +1,37 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-file(GLOB_RECURSE SOURCES ${SOURCE_EXTENSIONS_TO_GLOB})
-file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
-list(FILTER SOURCES EXCLUDE REGEX "\\.template\\.")
-list(FILTER HEADERS EXCLUDE REGEX "\\.template\\.")
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS})
+
+file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS ${HEADER_EXTENSIONS_TO_GLOB})
+
+set(SOURCES
+  Copy.cpp
+  Derivative.cpp
+  Enumeration.cpp
+  GlobalDatabase.cpp
+  Interpolation.cpp
+  Projection.cpp
+  Restriction.cpp
+  UnitTests.cpp
+  tests/IandRInMatricesTest.cpp
+  tests/IandRSecondOrderTest.cpp
+  tests/IandRThirdOrderTest.cpp
+  tests/InterpolationTest.cpp
+)
+
+install_peano_headers(
+  PATTERNS ${HEADER_EXTENSIONS_TO_GLOB}
+  INSTALL_SUBDIR "toolbox"
+)
 
 foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
-  string(TOLOWER ${mode} mode_lower)
-  string(TOUPPER ${mode} mode_upper)
-
-  foreach(dimensions IN LISTS SUPPORTED_DIMENSIONS)
-    add_library(ToolboxBlockStructured${mode}${dimensions}d STATIC)
-    target_sources(ToolboxBlockStructured${mode}${dimensions}d PRIVATE ${SOURCES} ${HEADERS})
-    target_link_libraries(ToolboxBlockStructured${mode}${dimensions}d PRIVATE PeanoOptions Peano4${mode}${dimensions}d)
-    target_compile_definitions(ToolboxBlockStructured${mode}${dimensions}d PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} DIMENSIONS=${dimensions})
-    target_compile_options(ToolboxBlockStructured${mode}${dimensions}d PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
-
-    install(TARGETS ToolboxBlockStructured${mode}${dimensions}d
-      EXPORT                      ${PROJECT_NAME}Targets
-      RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
-              COMPONENT           ${PROJECT_NAME}_Runtime
-      LIBRARY DESTINATION         ${CMAKE_INSTALL_LIBDIR}
-              COMPONENT           ${PROJECT_NAME}_Runtime
-              NAMELINK_COMPONENT  ${PROJECT_NAME}_Devel
-      ARCHIVE DESTINATION         ${CMAKE_INSTALL_LIBDIR}
-              COMPONENT           ${PROJECT_NAME}_Devel
-      PUBLIC_HEADER DESTINATION   ${CMAKE_INSTALL_INCLUDEDIR}
-      PRIVATE_HEADER DESTINATION  ${CMAKE_INSTALL_INCLUDEDIR}
+  foreach(dim IN LISTS SUPPORTED_DIMENSIONS)
+    add_peano_library(
+      NAME ToolboxBlockStructured${mode}${dim}d
+      MODE ${mode}
+      DIMENSION ${dim}
+      SOURCES ${SOURCES}
+      HEADERS ${HEADERS}
+      LINK_LIBRARIES Peano4${mode}${dim}d
     )
   endforeach()
-endforeach()
-
-foreach(pattern IN LISTS HEADER_EXTENSIONS_TO_GLOB)
-  install(
-    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/toolbox
-    FILES_MATCHING
-    PATTERN ${pattern}
-  )
 endforeach()

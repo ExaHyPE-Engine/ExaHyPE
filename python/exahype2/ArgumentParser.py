@@ -126,12 +126,6 @@ class ArgumentParser(argparse.ArgumentParser):
             help="Number of fused enclave tasks to offload asynchronously.",
         )
         self.add_argument(
-            "-fpe",
-            "--fpe",
-            action="store_true",
-            help="Enable a floating-point exception handler.",
-        )
-        self.add_argument(
             "-pl",
             "--plotter",
             type=str,

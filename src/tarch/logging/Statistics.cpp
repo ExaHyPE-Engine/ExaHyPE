@@ -124,7 +124,6 @@ void tarch::logging::Statistics::updateDataSnapshot(const std::string& identifie
 }
 
 
-#ifdef TRACK_STATISTICS
 void tarch::logging::Statistics::log( const std::string& identifier, const std::string& value ) {
   tarch::multicore::Lock lock(_semaphore);
   if ( _logMessageMap.count( identifier )==0 ) {
@@ -164,12 +163,10 @@ void tarch::logging::Statistics::inc( const std::string& identifier, double valu
     _dataSetMap[identifier].createNewSnapshot(t, clearAfterDatabaseDump);
   }
 }
-#endif
 
 void tarch::logging::Statistics::writeToCSV([[maybe_unused]] std::string filename) {
-#ifdef TRACK_STATISTICS
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo("writeToCSV()", "Write statistics to file(s) " << filename << "-rank-<rank>.csv");
+    logDebug("writeToCSV()", "Write statistics to file(s) " << filename << "-rank-<rank>.csv");
   }
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {
@@ -201,7 +198,7 @@ void tarch::logging::Statistics::writeToCSV([[maybe_unused]] std::string filenam
       if (not p.second._data.empty()) {
         computeT( std::get<0>(p.second._data.front()) );
       }
-    } 
+    }
     for (auto& p: _logMessageMap) {
       if (not p.second._data.empty()) {
         computeT( std::get<0>(p.second._data.front()) );
@@ -210,7 +207,7 @@ void tarch::logging::Statistics::writeToCSV([[maybe_unused]] std::string filenam
 
     // plot data. If an entry is a fit, remove it from sequence
     if (t<std::numeric_limits<double>::max()) {
-      file << t; 
+      file << t;
       for (auto& p: _dataSetMap) {
         if (
           not p.second._data.empty()
@@ -252,9 +249,4 @@ void tarch::logging::Statistics::writeToCSV([[maybe_unused]] std::string filenam
 
   // close output file
   file.close();
-  #else
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo("writeToCSV()", "No statistics available. Recompile with -DTRACK_STATISTICS for runtime sampling.");
-  }
-  #endif
 }

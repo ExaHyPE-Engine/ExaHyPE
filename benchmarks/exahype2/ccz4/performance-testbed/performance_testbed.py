@@ -15,7 +15,6 @@ modes = {
     "release": peano4.output.CompileMode.Release,
     "trace": peano4.output.CompileMode.Trace,
     "assert": peano4.output.CompileMode.Asserts,
-    "stats": peano4.output.CompileMode.Stats,
     "debug": peano4.output.CompileMode.Debug,
 }
 
@@ -577,7 +576,7 @@ if __name__ == "__main__":
     )
     userinfo.append(("Terminal time: " + str(args.end_time), None))
 
-    project.set_Peano4_installation("../../../..", build_mode)
+    project.set_build_mode(build_mode)
 
     ########################################################################################
     # output dir and proble

@@ -111,6 +111,6 @@ project.set_global_simulation_parameters(
 )
 
 project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration()")
-project.set_Peano4_installation( "../../../../", peano4.output.CompileMode.Release )
+project.set_build_mode(peano4.output.CompileMode.Release)
 peano4_project = project.generate_Peano4_project(verbose=False)
 peano4_project.build(make_clean_first=True)

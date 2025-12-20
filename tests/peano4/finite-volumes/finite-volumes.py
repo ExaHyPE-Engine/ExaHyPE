@@ -230,7 +230,7 @@ project.solversteps.add_step(create_grid)
 # perform_time_step.add_action_set( plotter )
 # project.solversteps.add_step(perform_time_step)
 
-project.output.makefile.parse_configure_script_outcome("../../..")
+project.output.makefile.parse_configuration_outcome()
 project.output.makefile.add_cpp_file("actions/CreateGrid.cpp")
 project.constants.export("PatchSize", patch_size)
 project.constants.export("NumberOfUnknownsPerCell", unknowns)

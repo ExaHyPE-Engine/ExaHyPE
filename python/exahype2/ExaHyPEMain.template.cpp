@@ -32,15 +32,6 @@
 #include <iomanip>
 #include <sstream>
 
-{% if FENV == True -%}
-#if defined(__linux)
-#include <cfenv>
-#include <fenv.h>
-#pragma float_control(precise, on)
-#pragma STDC FENV_ACCESS ON
-#endif
-{% endif -%}
-
 #ifdef WITH_SCOREP_USER
 #include <scorep/SCOREP_User.h>
 #else
@@ -61,6 +52,27 @@ namespace {
 
   static double printNextTimeStep = 0.0;
   static bool haveReceivedNonCriticalAssertion = false;
+
+  template <typename T>
+  std::string toScientificNotationString(T value, int precision = 4, bool considerSign = false, double threshold = 1e6) {
+    std::ostringstream out;
+    double v = static_cast<double>(value);
+
+    if (std::abs(v) < threshold) {
+      if (considerSign) {
+        out << std::showpos;
+      }
+      out << value;
+      return out.str();
+    }
+
+    out << std::scientific << std::setprecision(precision);
+    if (considerSign) {
+      out << std::showpos;
+    }
+    out << v;
+    return out.str();
+  }
 } // namespace
 
 /**
@@ -266,30 +278,41 @@ void printNextAlgorithmicStep(const repositories::StepRepository::Steps& stepNam
     logInfo("printNextAlgorithmicStep()", "Starting AlgorithmicStep " << "[" << repositories::StepRepository::toString(stepName) << "]");
 
     if (printStatistics) {
-      const auto minLoad = repositories::loadBalancer.getGlobalMinTreeLoad();
-      const auto maxLoad = repositories::loadBalancer.getGlobalMaxTreeLoad();
-      const auto loadPct = repositories::loadBalancer.getGlobalTreeLoadRatioInPercentage();
+      const auto minLoad                = repositories::loadBalancer.getGlobalMinTreeLoad();
+      const auto maxLoad                = repositories::loadBalancer.getGlobalMaxTreeLoad();
+      const auto loadPct                = repositories::loadBalancer.getGlobalTreeLoadRatioInPercentage();
 
       const auto memoryUsedByGrid       = repositories::loadBalancer.getGlobalMemoryUsageInBytes();
       const auto memoryUsedByHeap       = repositories::DataRepository::getGlobalMemoryUsageInBytes();
       const auto totalPersistentMemory  = memoryUsedByGrid + memoryUsedByHeap;
 
+      const auto dofs                   = repositories::getNumberOfDoFs();
+      const auto globalNumberOfPatches  = repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells();
+      const auto totalNumberOfDoFs      = dofs * globalNumberOfPatches;
+
       std::ostringstream msg;
-      msg << "#Patches="  << repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells()
-          << ", #DoFs="   << repositories::getNumberOfDoFs()
-          << ", #Trees="  << repositories::loadBalancer.getGlobalNumberOfTrees()
-          << ", #Load="   << std::fixed << std::setprecision(1) << loadPct << "% (min=" << minLoad << ", max=" << maxLoad << ")"
+      // TODO: Write everything in a log file as well
+      msg << "#Patches="  << toScientificNotationString(globalNumberOfPatches)
+          << ", #DoFs="   << toScientificNotationString(totalNumberOfDoFs)
+          << ", #Trees="  << toScientificNotationString(repositories::loadBalancer.getGlobalNumberOfTrees())
+          << ", #Load="   << std::fixed << std::setprecision(2) << loadPct << "% (min=" << minLoad << ", max=" << maxLoad << ")"
           << ", #Memory=" << std::fixed << std::setprecision(2) << tarch::convertMemorySize(totalPersistentMemory, tarch::chooseMemoryUsageFormat(totalPersistentMemory)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(totalPersistentMemory))
           << " (Grid="    << std::fixed << std::setprecision(2) << tarch::convertMemorySize(memoryUsedByGrid, tarch::chooseMemoryUsageFormat(memoryUsedByGrid)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(memoryUsedByGrid))
           << ", Heap="    << std::fixed << std::setprecision(2) << tarch::convertMemorySize(memoryUsedByHeap, tarch::chooseMemoryUsageFormat(memoryUsedByHeap)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(memoryUsedByHeap))
           << ")";
       logInfo("printNextAlgorithmicStep()", msg.str());
 
+      tarch::logging::Statistics::getInstance().log("MemoryUsage", tarch::accelerator::MemoryManager::getStatistics());
+      tarch::logging::Statistics::getInstance().log("LoadBalancing", toolbox::loadbalancing::LoadBalancer::getStatistics());
+
       if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
-        const auto dofs = repositories::getNumberOfDoFs();
-        const auto globalNumberOfPatches = repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells();
-        const auto totalNumberOfDoFs = dofs * globalNumberOfPatches;
-        logInfo("printNextAlgorithmicStep()", "Patch updates per second: " << globalNumberOfPatches / timeStepMeasurement.getMostRecentValue() << ", DoF updates per second: " << totalNumberOfDoFs / timeStepMeasurement.getMostRecentValue());
+        const auto dt               = timeStepMeasurement.getMostRecentValue();
+        const auto patchesPerSecond = globalNumberOfPatches / dt;
+        const auto dofsPerSecond    = totalNumberOfDoFs     / dt;
+        logInfo("printNextAlgorithmicStep()",
+          "Patch updates per second: " << toScientificNotationString(patchesPerSecond) <<
+          ", DoF updates per second: " << toScientificNotationString(dofsPerSecond)
+        );
       }
     }
   }
@@ -332,9 +355,6 @@ void performAlgorithmicStep(
 void runNextAlgorithmicStep() {
   int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
   auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
-
-  tarch::logging::Statistics::getInstance().log("memory-usage", tarch::accelerator::MemoryManager::getStatistics());
-  tarch::logging::Statistics::getInstance().log("load-balancing", toolbox::loadbalancing::LoadBalancer::getStatistics());
 
   SCOREP_USER_REGION_DEFINE(AlgorithmicStep)
 
@@ -411,13 +431,6 @@ void setupEnvironment(int argc, char** argv) {
 
   peano4::writeCopyrightMessage();
   ::exahype2::writeCopyrightMessage();
-
-{% if FENV == True -%}
-#if defined(__linux)
-  //feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
-  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-#endif
-{% endif -%}
 
   repositories::initLogFilters();
   repositories::DataRepository::init();

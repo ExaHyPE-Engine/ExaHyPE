@@ -4,6 +4,7 @@
 
 #include "parallel/Node.h"
 #include "parallel/SpacetreeSet.h"
+#include "tarch/CPUFeatures.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/accelerator/MemoryBlocks.h"
@@ -44,6 +45,8 @@ namespace {
       buildInfo += std::to_string(tarch::multicore::Core::getInstance().getNumberOfThreads());
       buildInfo += " Thread(s)";
 #endif
+
+      buildInfo += ", CPU: " + tarch::getCPUFeatures();
 
 #if defined(WITH_GPU)
       buildInfo += ", GPU Backend ";
