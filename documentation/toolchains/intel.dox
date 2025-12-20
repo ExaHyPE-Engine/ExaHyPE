@@ -1,0 +1,160 @@
+/**
+
+ @page documentation_toolchains_intel Intel's OneAPI ecosystem
+
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+You will find examples how this toolchain is used on particular machines on the page @ref page_machines.
+</div>
+
+
+### Intel toolchain
+
+<img width="10%" src="https://upload.wikimedia.org/wikipedia/en/f/fa/OneAPI-rgb-3000.png" />
+
+Peano provides support for Intel's (oneAPI) toolchain through two routes:
+The ITAC interface and the Instrumentation and Tracing Technology (ITT).
+To activate either of these toolchains, you have to reconfigure with one of
+the two options below:
+
+~~~~~~~~~~~~~~~~~~~~~~~
+./configure ... --with-toolchain=itac
+./configure ... --with-toolchain=itt
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Broadly speaking, the toolchains alters the code in two ways:
+
+- It enables ITAC or ITT.
+- It switches the line logger to the ITAC or ITT logger. That is, trace data are not
+  pipes onto the terminal anymore, but are passed into the ITAC or ITT API.
+- It adds some Intel-specific compile flags.
+
+The enumeration shows that the name Intel toolchain is misleading.
+We are actually not tailoring the build to the Intel toolchain, but we tailor
+the setup to the Intel analysis tools.
+Most production runs will not use the Intel toolchain, but rather set all
+Intel-specific flags for compiler and linker manually.
+
+
+### Intel-specific compiler flags
+
+At the moment, we add the following flags to the compile when the Intel toolchain is
+activated:
+
+- We add
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  CXXFLAGS="... -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  to all compiles.
+- We add
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  CXXFLAGS="... -DTBB_USE_ASSERT"
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  to all debug and assert builds.
+
+
+### The loggers
+
+Even though you have switched to the Intel loggers, you will not get
+any trace information if you build in release mode. You have to switch
+to the trace mode (or assertions or debug) - compare general remarks on
+@ref page_architecture_home "Peano's build modi" - to get traces or annotation
+info.
+
+Once you try to trace your code with the Intel tool, the size of the traces
+quickly becomes unmanageable or the performance might go down.
+Therefore, we disable the trace by default.
+The first trace command will then enable it.
+
+For further discussion on logging, please see the \ref tarch_logging "generic logging description for Peano".
+
+
+### Threading Building Blocks (TBB)
+
+We found that the newer Intel compilers provide a flag
+
+~~~~~~~~~~~~~~~~~~~~~~~
+CXXFLAGS="... -tbb" LDFLAGS="... -tbb"
+~~~~~~~~~~~~~~~~~~~~~~~
+
+which means you don't have to manually link against TBB anymore. It also
+should provide all the includes. It is not clear what flags are set (might
+be more than only a few include paths), so we found this route more
+reliable rather than adding TBB paths and libraries manually.
+
+If the version of TBB being used used blocked_rangeNd instead of blocked_nd_range
+then the compile definition TBB_USE_OLD_BLOCKED_RANGE_ND is required.
+
+
+### OpenMP and OpenMP offloading
+
+~~~~~~~~~~~~~~~~~~~~~~~
+CC=icx CXX=icpx ./configure --with-multithreading=omp --with-gpu=omp CFLAGS="-O3 -W -Wall -Wno-attributes -fiopenmp -fopenmp-targets=spir64" CXXFLAGS="-std=c++20 -O3 -W -Wall -Wno-attributes -fiopenmp -fopenmp-targets=spir64" LDFLAGS="-march=native -mtune=native -fiopenmp -fopenmp-targets=spir64"
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Intel suggests to use -fiopenmp for performance and features: https://www.intel.com/content/www/us/en/developer/articles/guide/porting-guide-for-icc-users-to-dpcpp-or-icx.html
+
+
+### SYCL and SYCL offloading
+
+SYCL is directly supported via icpx. There are only a few things to do:
+
+- Translate your code with --with-multithreading=sycl and/or --with-gpu=sycl.
+- Add CXXFLAGS="... -fsycl" to your compiler flags. This way, all the headers
+  of SYCL are known to icpx.
+- Add LDFLAGS="... -fsycl" to your linker flags. This way,
+  the linker will automatically add all SYCL libraries. Furthermore, it will
+  know when it builds the final applications that it should embed both the
+  device kernels and the CPU kernels into the executable. If you use
+  LIBS="... -lsycl", the linking will succeed, but the very first time you
+  invoke a SYCL kernel, you'll get a message similar to
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+terminate called after throwing an instance of 'sycl::_V1::runtime_error'
+  what():  No kernel named _ZTSZZN7toolbox15blockstructured64interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linearEiiiiiPKdPdN6peano45utils15LoopParallelismEENKUlRT_E_clIN4sycl3_V17handlerEEEDaS8_EUlNSC_2idILi3EEEE_ was found -46 (PI_ERROR_INVALID_KERNEL_NAME)
+Aborted (core dumped)
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Ensure CXX=icpx points to the icpx compiler.
+- Ensure CC=icx points to the icpx compiler if you work with the autotools.
+  This is not intuitive and actually quite a hack, but you need it to work:
+  `configure` will test if you C compiler is compatible with your linker
+  flags. However, the `-fsycl` command is unknown to the default C compiler
+  (usually gcc) and your configure will fail miserably. By letting the C
+  compiler variable point to the Intel oneAPI C compiler, you ensure that the
+  sanity check within the configuration phase passes.
+- Reset the MPI compiler (see below; if you want to use MPI).
+
+For Intel GPUs:
+
+~~~~~~~~~~~~~~~~~~~~~~~
+CC=icx CXX=icpx ./configure --with-multithreading=sycl --with-gpu=sycl CFLAGS="-O3 -W -Wall -Wno-attributes -fsycl -fsycl-targets=spir64 -fsycl-device-code-split -fp-model=consistent" CXXFLAGS="-std=c++20 -O3 -W -Wall -Wno-attributes -fsycl -fsycl-targets=spir64 -fsycl-device-code-split -fp-model=consistent" LDFLAGS="-march=native -mtune=native -fsycl -fsycl-targets=spir64 -fsycl-device-code-split -fp-model=consistent"
+~~~~~~~~~~~~~~~~~~~~~~~
+
+For NVIDIA GPUs (Intel LLVM, Codeplay):
+
+~~~~~~~~~~~~~~~~~~~~~~~
+CC=icx CXX=icpx ./configure --with-multithreading=sycl --with-gpu=sycl CFLAGS="-O3 -W -Wall -Wno-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_XX" CXXFLAGS="-std=c++20 -O3 -W -Wall -Wno-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_XX" LDFLAGS="-march=native -mtune=native -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_XX"
+~~~~~~~~~~~~~~~~~~~~~~~
+
+where XX has to be replaced by the actual compute capability of the device.
+
+For AMD GPUs (Intel LLVM, Codeplay):
+
+~~~~~~~~~~~~~~~~~~~~~~~
+CC=icx CXX=icpx ./configure --with-multithreading=sycl --with-gpu=sycl CFLAGS="-O3 -W -Wall -Wno-attributes -fsycl -fsycl-targets=amdgcn-amd-amdsha -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=amdgcn-amd-amdsha --offload-arch=gfxXXX" CXXFLAGS="-std=c++20 -O3 -W -Wall -Wno-attributes -fsycl -fsycl-targets=amdgcn-amd-amdsha -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=amdgcn-amd-amdsha --offload-arch=gfxXXX" LDFLAGS="-march=native -mtune=native -fsycl -fsycl-targets=amdgcn-amd-amdsha -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=amdgcn-amd-amdsha --offload-arch=gfxXXX"
+~~~~~~~~~~~~~~~~~~~~~~~
+
+where XXX has to be replaced by the actual compute capability of the device.
+
+### MPI
+
+Intel's MPI wrapper is mpiicpc even though they now want you to use icpx
+instead of icc/icpc. To tell the MPI wrapper that you want to use icpx,
+you have to set some environment variables:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+export I_MPI_CXX=icpx
+./configure --with-mpi=mpiicpc
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+ */
+ 

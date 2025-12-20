@@ -134,13 +134,12 @@ If only one of the build systems has been configured, the code generator will ch
   We have seen this error with GCC if the supported C++ generation is too old.
   See remarks above.
 
-- ***My compiler terminates with***
- 
+- ***My compiler terminates with complaints about optimize*** We have seen this
+  issue notably on macOS with CLANG replacing GCC:
  
                      error: unknown attribute 'optimize' ignored*
                      
-  We have seen this issue notably on macOS
-  with CLANG replacing GCC. Unfortunately, CLANG seems to pretend to be GNU on
+  Unfortunately, CLANG seems to pretend to be GNU on
   some systems and then the wrong header is included. Consult the remarks on
   @ref page_compiler_specific_settings_home "compiler-specific settings". Ensure that
   the flag ```CompilerCLANG``` is enabled and used.

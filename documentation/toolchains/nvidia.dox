@@ -1,0 +1,83 @@
+/**
+
+ @page documentation_toolchains_nvidia NVIDIA's software stack
+
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+You will find examples how this toolchain is used on particular machines on the page @ref page_machines.
+</div>
+
+
+<img width="20%" src="https://www.nvidia.com/content/dam/en-zz/Solutions/about-nvidia/logo-and-brand/01-nvidia-logo-vert-500x200-2c50-p@2x.png" />
+
+The NVIDIA toolchain requires us to make `CXX` and `CC` point to the C++
+compiler, as both are passed the same arguments by configure, which are
+actually only understood by the C++ version.
+
+
+# NVIDIA analysis tools 
+
+Peano offers a dedicated @ref tarch_logging "NVIDIA logger".
+It pipes tracing information into a format that NSight et al can process, i.e. it provides you with domain-specific information on top of your profile.
+To enable NVIDIA's NVPTX logging, you have to configure with the
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--with-toolchain=nvptx
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+toolchain.
+
+
+# OpenMP
+
+NVIDIA's compiler does not support all of OpenMP. Therefore, its OpenMP
+implementation is rather picky when it comes to taskloops and
+other C++ features. Peano has internal workarounds for all of these items,
+i.e. the build should in principle succeed yet the code might be
+slightly slower than the Intel or native Clang counterpart.
+
+
+To be compatible with NVIDIA, the respective tricky code parts all are 
+embedded into proper ifdefs. The idea is that every file includes the 
+compiler-specific settings:
+
+
+\include tarch/compiler/CompilerSpecificSettings.h
+
+The header file reads out preprocessors and delegates to the right header
+file. Within the header file, we have a lot of defines. Below is a copy of
+the header file which should be used for NVIDIA on Linux systems.
+
+\include tarch/compiler/LinuxNVIDIA.h
+
+You see for example that we explicitly undefine OpenMPTaskGroup, as task 
+groups is one of the things NVIDIA does not support at the moment. So the 
+corresponding code parts employing task groups can read out this ifdef and
+then provide fitting alternatives.
+
+## OpenMP offloading to GPUs
+
+The OpenMP offloading requires us to specify both the GPU OpenMP target
+and a corresponding compute capability:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+CC=nvc++ CXX=nvc++ ./configure --with-multithreading=omp --with-gpu=omp CFLAGS="-O3 -W -Wall --diag_suppress=unrecognized_attribute -fopenmp -Munroll=c:100 -mp=gpu -gpu=ccXX" CXX="nvc++" CXXFLAGS="-std=c++20 -O3 -W -Wall --diag_suppress=unrecognized_attribute -fopenmp -Munroll=c:100 -mp=gpu -gpu=ccXX" LDFLAGS="-march=native -mtune=native -fopenmp -Munroll=c:100 -mp=gpu -gpu=ccXX"
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+where XX has to be replaced by the actual compute capability of the device.
+
+
+# C++
+
+We have experimental support for std::par offloading. To enable it with NVIDIA, you have to specify
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+CC=nvc++ CXX=nvc++ CFLAGS="-O3 -W -Wall --diag_suppress=unrecognized_attribute -fopenmp -Munroll=c:100 -mp=gpu -gpu=ccXX" CC="nvc" CXXFLAGS="-std=c++20 -O3 -W -Wall --diag_suppress=unrecognized_attribute -fopenmp -Munroll=c:100 -mp=gpu -stdpar=gpu -gpu=ccXX" LDFLAGS="-march=native -mtune=native -fopenmp -Munroll=c:100 -mp=gpu -gpu=ccXX"
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+where XX has to be replaced by the actual compute capability of the device. 
+Note that the above setup still uses OpenMP on the host for the multithreading. 
+
+
+
+ */
+ 

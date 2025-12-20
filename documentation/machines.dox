@@ -5,6 +5,13 @@
 <!-- Add this one for href links to subitems -->
 \tableofcontents
 
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+This page contains information on particular machines that we use heavily.
+The page is not supposed to provide general information about certain software stacks.
+For such information, please consult the toolchain discussions on the parent page @ref page_compiler_specific_settings_home. 
+</div>
+
+
 # Hamilton
 
 <img width="20%" src="https://nccadmin.webspace.durham.ac.uk/wp-content/themes/core/assets/img/theme/branding-assets/durham-university-logo.svg" />
