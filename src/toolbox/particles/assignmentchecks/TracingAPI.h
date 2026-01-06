@@ -169,7 +169,7 @@ namespace toolbox {
        * partition (on the right rank). They have kind of a halo layer of
        * width one, which is a logical construct, i.e. not maintained manually.
        *
-       * @image html scenario00_particle-through-domain-wall.png
+       * @image html src/toolbox/particles/assignmentchecks/scenario00_particle-through-domain-wall.png
        *
        * Study the central setup: In step N, yellow moves, while red will be
        * deleted after the traversal, as each step moving particles has to
