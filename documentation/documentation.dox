@@ -253,6 +253,19 @@ This snippet stems from tests/swift2/planet-orbit/planet-orbit.py.
 \endverbatim
 
 
+# Jupyter notebooks
+
+Lots of tutorials are realised as Jupyter notebooks. 
+These are converted into Doxygen-compatible files prior to the generation of the HTML pages through a call to
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 documentation/convert-jupyter-notebooks.py
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+However, Jupyter's onboard conversion tool used internally struggled with some special TeX characters.
+Therefore, we replace manually some expressions such as ```\rho``` and embed them into the Doxygen math environment.
+If you encounter issues with your math symbols, please extend the Python script.
+
 
 
 # Doxygen cheat sheet
@@ -275,6 +288,12 @@ of "Headings" in the drop-down menu on the left.
 
 You can even keep this going. Create a third nested level with three hash symbols ( ''' ### '''' )
 and so on.
+
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+Doxygen also supports Markdown-style headlines where the caption is underlined by equals signs.
+This breaks Doxygen's parser in some places, so please favour headlines via the hashtag.
+</div>
+
 
 ## Comments 
 
@@ -416,6 +435,11 @@ Simply write:
 
 \endverbatim
 
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+Always use a full qualified image path relative to the git repository's root when you include images.
+Otherwise, Doxygen will complain about an ambiguous path late on.
+</div>
+
 
 ## Misc
 
@@ -468,6 +492,21 @@ Once the source code annotation is in, you can refer to this code snippet in the
 
 This reference will display the code snippet in the generated html code.
 The outcome resembles what we know from Jupyter notebooks.
+
+## Broken code snippets and invalid links
+
+If your code snippets are incomplete (nice tool for tutorials) or reference functions that are not within Peano or now known 
+(as they will be generated later on for example), Doxygen will yield errors. To avoid this, please embed the code parts into
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// @cond false
+..
+// @endcond
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+to manually remove it from Doxygen. We use this trick as well to mask out very complicated
+template code which makes the parser struggle.
+
 
 
 # Install doxygen
