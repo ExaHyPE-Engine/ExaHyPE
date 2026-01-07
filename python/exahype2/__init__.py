@@ -5,7 +5,6 @@ print("ExaHyPE 2 (C) www.peano-framework.org")
 
 import exahype2.tracer
 import exahype2.grid
-import exahype2.postprocessing
 
 import exahype2.solvers.fv
 import exahype2.solvers.fd

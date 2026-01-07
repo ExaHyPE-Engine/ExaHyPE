@@ -1,54 +1,63 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import os
-import sys
-
 import peano4
 import exahype2
 
-sys.path.insert(0, os.path.abspath(".."))
 from PDE import max_eigenvalue, flux
 
 initial_conditions = """
-  Q[Shortcuts::rho]      = 1.0;
-  Q[Shortcuts::rhoU + 0] = 0.0; // Flow in x-direction
-  Q[Shortcuts::rhoU + 1] = 0.0; // No vertical velocity
-#if DIMENSIONS == 3
-  Q[Shortcuts::rhoU + 2] = 0.0;
+  Q[Shortcuts::rho]       = 1.0;
+  Q[Shortcuts::rhoU + 0]  = 0.0;
+  Q[Shortcuts::rhoU + 1]  = 0.0;
+#if DIMENSIONS == 2
+  Q[Shortcuts::rhoE]      = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2)) < 0.2) ? (1.0) : (1.01));
+#else
+  Q[Shortcuts::rhoU + 2]  = 0.0;
+  Q[Shortcuts::rhoE]      = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2) + std::pow(0.5 - x(2), 2)) < 0.2) ? (1.0) : (1.01));
 #endif
-  Q[Shortcuts::rhoE] = 1.0 / (GAMMA - 1.0) + 0.5 * (Q[Shortcuts::rhoU + 0] * Q[Shortcuts::rhoU + 0] + Q[Shortcuts::rhoU + 1] * Q[Shortcuts::rhoU + 1]) / Q[Shortcuts::rho];
 """
 
 boundary_conditions = """
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Qoutside[i] = Qinside[i];
-  }
-
-  // Inlet boundary condition (x[0] = 0.0)
-  if (tarch::la::smallerEquals(x[0], MaxAdmissibleCellH)) {
-    Qoutside[Shortcuts::rhoU + 0] = 1.0;
-  }
-
-  // Outlet boundary condition
-  if (tarch::la::greaterEquals(x[0], DomainSize[0] - MaxAdmissibleCellH)) {
-    Qoutside[Shortcuts::rhoU + 0] = Qinside[Shortcuts::rhoU + 0];
-  }
+  // Reflective boundary conditions
+  Qoutside[Shortcuts::rho]      = Qinside[Shortcuts::rho];
+  Qoutside[Shortcuts::rhoU + 0] = -Qinside[Shortcuts::rhoU + 0];
+  Qoutside[Shortcuts::rhoU + 1] = -Qinside[Shortcuts::rhoU + 1];
+#if DIMENSIONS == 3
+  Qoutside[Shortcuts::rhoU + 2] = -Qinside[Shortcuts::rhoU + 2];
+#endif
+  Qoutside[Shortcuts::rhoE]     = Qinside[Shortcuts::rhoE];
 """
 
 refinement_criterion = """
   auto result = ::exahype2::RefinementCommand::Keep;
+
+#if DIMENSIONS == 3
+  tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.5, 0.5};
+#else
+  tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.5};
+#endif
+
+  if (tarch::la::equals(t, 0.0)) {
+    if (tarch::la::norm2(x - circleCentre) < 0.1) {
+      result = ::exahype2::RefinementCommand::Refine;
+    }
+  }
+
   return result;
 """
 
-parser = exahype2.ArgumentParser("ExaHyPE 2 - Euler Channel Flow Argument Parser")
-parser.set_defaults(min_depth=6, degrees_of_freedom=16, end_time=2.0)
+parser = exahype2.ArgumentParser("ExaHyPE 2 - Finite Volumes Testing Script")
+parser.set_defaults(
+    min_depth=6,
+    degrees_of_freedom=16,
+)
 args = parser.parse_args()
 
 size = [1.0, 1.0, 1.0]
 max_h = 1.1 * min(size) / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
 
-riemann_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": args.dimensions, "rhoE": 1},
@@ -60,24 +69,23 @@ riemann_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
     number_of_enclave_tasks=args.ntasks,
 )
 
-riemann_solver.set_implementation(
+fv_solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
     max_eigenvalue=max_eigenvalue,
     flux=flux,
-    limiter=exahype2.solvers.fv.musclhancock.Limiter.minmod,
 )
 
-riemann_solver.set_plotter(args.plotter)
+fv_solver.set_plotter(args.plotter)
 
 project = exahype2.Project(
-    namespace=["applications", "exahype2", "euler"],
-    project_name="ChannelFlow",
+    namespace=["tests", "exahype2", "fv"],
+    project_name="PointExplosion",
     directory=".",
-    executable="Euler",
+    executable="ExaHyPE",
 )
-project.add_solver(riemann_solver)
+project.add_solver(fv_solver)
 
 if args.number_of_snapshots <= 0:
     time_in_between_plots = 0.0

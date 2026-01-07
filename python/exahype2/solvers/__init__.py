@@ -4,7 +4,6 @@
 from .PDETerms import PDETerms
 from .FixedTimeSteppingCodeSnippets import FixedTimeSteppingCodeSnippets
 from .AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
-from .SolverMatrixInterpolator import SolverMatrixInterpolator
 from .LagrangeBasisWithDiagonalMassMatrix import GaussLegendreBasis
 from .MathUtils import MathUtils
 from .ErrorMeasurement import ErrorMeasurement

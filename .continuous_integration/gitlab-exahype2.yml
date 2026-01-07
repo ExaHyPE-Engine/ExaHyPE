@@ -56,6 +56,28 @@ Unit Tests:
     - Build
   retry: 0
 
+FV Tests:
+  stage: Test
+  parallel:
+    matrix:
+    - scenario: [breaking-dam, channel-flow, gaussian-bell, gaussian-explosion, isothermal-stratification, point-explosion, smooth-convergence, taylor-green-vortex]
+      dimensions: [2]
+      build_type: [Release, Debug]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -d $dimensions -m $build_type -md ${MIN_GRID_LEVELS};"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv; $PARALLEL_LAUNCH ./ExaHyPE;"
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnDev
+    - .BeforeScriptSanitiser
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 0
+
 FV Tracers Tests:
   stage: Test
   parallel:
@@ -304,54 +326,12 @@ Fortran Coupling Tests:
     - Build
   retry: 0
 
-SymHyPE Tutorials:
-  stage: Tutorials
-  parallel:
-    matrix:
-    - tutorial: [euler, acoustic, elastic, advection, swe]
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/symhype/$tutorial; PYTHONPATH=$CI_PROJECT_DIR/python python3 $tutorial.py;"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/symhype/$tutorial; $PARALLEL_LAUNCH ./ExaHyPE;"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOnMain
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
-
 ExaHyPE Tutorials:
   stage: Tutorials
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/exahype2/acoustic; PYTHONPATH=$CI_PROJECT_DIR/python ipython Acoustic.ipynb;"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd documentation/exahype2/tutorials; PYTHONPATH=$CI_PROJECT_DIR/python ipython SWE.ipynb;"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd documentation/exahype2/tutorials; PYTHONPATH=$CI_PROJECT_DIR/python python3 euler.py;"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOnMain
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
-
-Euler Application:
-  stage: Applications
-  parallel:
-    matrix:
-    - scenario: [breaking-dam, channel-flow, gaussian-bell, gaussian-explosion, isothermal-stratification, point-explosion, smooth-convergence, taylor-green-vortex]
-      dimensions: [2]
-      build_type: [Release, Debug]
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/euler/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -d $dimensions -m $build_type -md ${MIN_GRID_LEVELS};"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/euler/$scenario; $PARALLEL_LAUNCH ./Euler;"
   allow_failure: false
   extends:
     - .Tags

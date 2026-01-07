@@ -1,12 +1,8 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import os
-import sys
-
 import peano4
 import exahype2
 
-sys.path.insert(0, os.path.abspath(".."))
 from PDE import max_eigenvalue, flux
 
 initial_conditions = """
@@ -52,7 +48,7 @@ analytical_solution = """
   solution[Shortcuts::rhoE] = PRESSURE / (GAMMA - 1.0) + 0.5 * (momenta * momenta) / solution[Shortcuts::rho];
 """
 
-parser = exahype2.ArgumentParser("ExaHyPE 2 - Euler Gaussian Bell Argument Parser")
+parser = exahype2.ArgumentParser("ExaHyPE 2 - Finite Volumes Testing Script")
 parser.set_defaults(
     min_depth=6,
     # end_time=2.0,
@@ -67,7 +63,7 @@ size = [1.0, 1.0, 1.0]
 max_h = 1.1 * min(size) / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
 
-riemann_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
     name="MUSCLHancockSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": args.dimensions, "rhoE": 1},
@@ -77,29 +73,29 @@ riemann_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
     time_step_relaxation=0.5,
 )
 
-riemann_solver.set_implementation(
+fv_solver.set_implementation(
     initial_conditions=initial_conditions,
     flux=flux,
     max_eigenvalue=max_eigenvalue,
     limiter=exahype2.solvers.fv.musclhancock.Limiter.minmod,
 )
 
-riemann_solver.set_plotter(args.plotter)
+fv_solver.set_plotter(args.plotter)
 
 exahype2.solvers.fv.ErrorMeasurement(
-    riemann_solver,
+    fv_solver,
     error_measurement_implementation=analytical_solution,
     output_file_name="Error",
 )
 
 project = exahype2.Project(
-    namespace=["applications", "exahype2", "euler"],
+    namespace=["tests", "exahype2", "fv"],
     project_name="GaussianBell",
     directory=".",
-    executable="Euler",
+    executable="ExaHyPE",
 )
 
-project.add_solver(riemann_solver)
+project.add_solver(fv_solver)
 
 if args.number_of_snapshots <= 0:
     time_in_between_plots = 0.0
