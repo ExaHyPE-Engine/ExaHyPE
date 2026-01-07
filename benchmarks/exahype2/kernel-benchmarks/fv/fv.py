@@ -6,8 +6,7 @@ import sys
 import peano4
 import exahype2
 
-# Use only the Euler application for now. TODO: This should be generalised later!
-sys.path.insert(0, os.path.abspath("../../../../applications/exahype2/euler"))
+sys.path.insert(0, os.path.abspath("../../../../tests/exahype2/fv"))
 from PDE import max_eigenvalue, flux
 
 initial_conditions = """

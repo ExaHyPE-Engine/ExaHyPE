@@ -9,5 +9,4 @@ from .FiniteVolumesTracing import FiniteVolumesTracing
 from .FiniteVolumesTracingWithForce import FiniteVolumesTracingWithForce
 from .TracerInteraction import perserveCartesianTracerLayout
 from .CurviTracer import CurviTracer
-from .NBodyInteraction import NBodyInteraction
 from .InsertParticlesByCoordinatesAndData import InsertParticlesByCoordinatesAndData

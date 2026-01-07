@@ -1,16 +1,11 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import os
-import sys
-
 import peano4
 import exahype2
 
-sys.path.insert(0, os.path.abspath(".."))
 from PDE import max_eigenvalue, flux, source_term
 from FWave import fWave
 
-# TODO: Should be moved into tests!
 """
 @article{WellBalancedness,
 	author = {{Käppeli, R.} and {Mishra, S.}},
@@ -48,9 +43,9 @@ initial_conditions = """
   Q[Shortcuts::rho]       = GROUND_DENSITY * exponentialDistribution;
   Q[Shortcuts::rhoU + 0]  = 0.0;
   Q[Shortcuts::rhoU + 1]  = 0.0;
-  #if DIMENSIONS == 3
+#if DIMENSIONS == 3
   Q[Shortcuts::rhoU + 2]  = 0.0;
-  #endif
+#endif
 
   const auto pressure = Q[Shortcuts::rho] * GAS_CONSTANT * TEMPERATURE / MEAN_MOLECULAR_MASS;
   Q[Shortcuts::rhoE] = pressure / (GAMMA - 1.0);
@@ -75,19 +70,19 @@ boundary_conditions = """
     Qoutside[Shortcuts::rho] = densityOutside;
     const auto u = Qinside[Shortcuts::rhoU + 0] / Qinside[Shortcuts::rho];
     const auto v = Qinside[Shortcuts::rhoU + 1] / Qinside[Shortcuts::rho];
-    #if DIMENSIONS == 3
+#if DIMENSIONS == 3
     const auto w = Qinside[Shortcuts::rhoU + 2] / Qinside[Shortcuts::rho];
     const auto uSq = u * u + v * v + w * w;
-    #else
+#else
     const auto uSq = u * u + v * v;
-    #endif
+#endif
 
     Qoutside[Shortcuts::rhoE] = pressureOutside / (GAMMA - 1) + 0.5 * densityOutside * uSq;
 
     Qoutside[Shortcuts::rhoU + 0] = u * densityOutside;
-    #if DIMENSIONS == 3
+#if DIMENSIONS == 3
     Qoutside[Shortcuts::rhoU + 2] = w * densityOutside;
-    #endif
+#endif
 
     if (normal == 1) {
       // Reflective at bottom to keep atmosphere
@@ -283,9 +278,7 @@ reconstruction = (
 """
 )
 
-parser = exahype2.ArgumentParser(
-    "ExaHyPE 2 - Euler Isothermal Stratification Argument Parser"
-)
+parser = exahype2.ArgumentParser("ExaHyPE 2 - Finite Volumes Testing Script")
 parser.set_defaults(
     min_depth=6,
     degrees_of_freedom=16,
@@ -296,7 +289,7 @@ size = [40_000, 40_000, 40_000]
 max_h = 1.1 * min(size) / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
 
-riemann_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": args.dimensions, "rhoE": 1},
@@ -309,7 +302,7 @@ riemann_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
     reconstruction=reconstruction,  # Specific to MUSCL-Hancock
 )
 
-riemann_solver.set_implementation(
+fv_solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     max_eigenvalue=max_eigenvalue,
@@ -324,19 +317,19 @@ riemann_solver.set_implementation(
 # taken into account twice (f-wave and cell centered). #
 # MUSCL-Hancock needs the source term in both places.  #
 ########################################################
-riemann_solver.set_implementation(
+fv_solver.set_implementation(
     source_term=source_term,
 )
 
-riemann_solver.set_plotter(args.plotter)
+fv_solver.set_plotter(args.plotter)
 
 project = exahype2.Project(
-    namespace=["applications", "exahype2", "euler"],
+    namespace=["tests", "exahype2", "fv"],
     project_name="IsothermalStratification",
     directory=".",
-    executable="Euler",
+    executable="ExaHyPE",
 )
-project.add_solver(riemann_solver)
+project.add_solver(fv_solver)
 
 if args.number_of_snapshots <= 0:
     time_in_between_plots = 0.0
