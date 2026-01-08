@@ -147,7 +147,7 @@ python3 OfflineDecomposition.py -d 3 -l 3 -s 4 -p
 The script integrates all API components into a complete workflow:
 1. **Input processing** via [`GridPatchFileReader`](src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py) or [`RegularGridGenerator`](src/toolbox/loadbalancing/api/Input/RegularGridGenerator.py)
 2. **Tree analysis** using the [`Tree`](src/toolbox/loadbalancing/api/Tree.py) data structure
-3. **Load balancing** through [`SplitTrees`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py` strategies
+3. **Load balancing** through [`SplitTrees`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py) strategies
 4. **Results export** in YAML format for Peano integration
 
 For complete command-line options, parameter details, and usage examples, see the [`OfflineDecomposition.py`](src/toolbox/loadbalancing/api/OfflineDecomposition.py) script documentation.
