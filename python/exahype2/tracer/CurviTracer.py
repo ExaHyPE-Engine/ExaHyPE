@@ -51,11 +51,11 @@ class CurviTracer(ActionSet):
         self.d["SOLVER_NAME"] = solver._name
         self.d["SOLVER_INSTANCE"] = solver.get_name_of_global_instance()
         self.d["ORDER"] = solver._basis.order
-        self.d["NUMBER_OF_UNKNOWNS"] = solver._unknowns
-        self.d["NUMBER_OF_AUXILIARY_VARIABLES"] = solver._auxiliary_variables
+        self.d["NUMBER_OF_UNKNOWNS"] = solver.unknowns
+        self.d["NUMBER_OF_AUXILIARY_VARIABLES"] = solver.auxiliary_variables
 
         self.d["UNKNOWNS_TO_STORE"] = (
-            unknowns_to_store if unknowns_to_store > 0 else solver._unknowns
+            unknowns_to_store if unknowns_to_store > 0 else solver.unknowns
         )
 
         self.d["DATA_DELTA"] = data_delta_between_two_snapshots

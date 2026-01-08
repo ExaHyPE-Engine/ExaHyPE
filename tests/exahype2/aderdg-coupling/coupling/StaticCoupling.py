@@ -345,9 +345,6 @@ Type:                   """ + self.__class__.__name__
         # step.add_action_set(self._action_set_spread_limiter_status)
         step.add_action_set(self._action_set_copy_face_data)
 
-    def set_plot_description(self, description):
-        self.plot_description = description
-
     def _generate_kernels(self, namespace, output, subdirectory, dimensions):
         d = {}
         self._init_dictionary_with_default_parameters(d)

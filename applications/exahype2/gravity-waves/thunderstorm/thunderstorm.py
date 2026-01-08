@@ -180,11 +180,6 @@ if __name__ == "__main__":
         max_eigenvalue=get_max_eigenvalue(),
     )
 
-    atmosphere_solver.plot_description = ", ".join(atmosphere_unknowns.keys()) + ", "
-    atmosphere_solver.plot_description += ", ".join(
-        atmosphere_auxiliary_variables.keys()
-    )
-
     atmosphere_solver.add_user_solver_includes('#include "tarch/reader/CSVReader.h"\n')
 
     atmosphere_solver.set_implementation(
@@ -308,9 +303,6 @@ if __name__ == "__main__":
         max_eigenvalue="return 1.0;",
         solver=stencil,
     )
-
-    diffusion_solver.plot_description = ", ".join(diffusion_unknowns.keys()) + ", "
-    diffusion_solver.plot_description += ", ".join(diffusion_auxiliary_variables.keys())
 
     diffusion_solver.add_user_solver_includes('#include "tarch/reader/CSVReader.h"\n')
     diffusion_solver.add_solver_constants(GravityWaves.CSV_CONSTANTS)

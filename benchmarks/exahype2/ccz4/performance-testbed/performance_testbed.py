@@ -585,8 +585,6 @@ if __name__ == "__main__":
     if not args.path == "./":
         path = args.path
     project.set_output_path(path)
-    probe_point = [-12, -12, 0.0]
-    project.add_plot_filter(probe_point, [24.0, 24.0, 0.01], 1)
 
     project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
 

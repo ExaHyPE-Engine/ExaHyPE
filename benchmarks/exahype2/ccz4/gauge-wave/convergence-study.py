@@ -279,9 +279,6 @@ project.set_global_simulation_parameters(
     8,  # plotter precision
 )
 
-probe_point = [-12,-12,0.0]
-project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
-
 project.set_build_mode(peano4.output.string_to_mode(args.mode))
 
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)

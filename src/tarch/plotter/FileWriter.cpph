@@ -1,0 +1,32 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <class T>
+void tarch::plotter::FileWriter::DataPlotter::writeTuple(int index, const T* const v, int n) {
+  // We look up the field every time to be safe against vector reallocation
+  // of _targetFields (if new fields are added by other plotters).
+  DataField& field = _targetFields[_fieldIndex];
+
+  const std::size_t base = static_cast<std::size_t>(index) * _components;
+
+  // Fast path for sequential writes
+  // This avoids zero-initialising memory that we are about to overwrite.
+  if (base == field.values.size()) {
+    field.values.insert(field.values.end(), v, v + n);
+    return;
+  }
+
+  // Fallback: Random access or filling gaps
+  const std::size_t need = base + n;
+  if (field.values.size() < need) {
+    // If we need to resize, reserve more to amortise cost if we are filling gaps sequentially
+    if (field.values.capacity() < need) {
+      field.values.reserve(std::max(need, field.values.capacity() * 2));
+    }
+    field.values.resize(need, 0.0);
+  }
+
+  for (int i = 0; i < n; ++i) {
+    field.values[base + i] = v[i];
+  }
+}

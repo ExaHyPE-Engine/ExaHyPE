@@ -19,17 +19,9 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     don't hold the particles scattered all over the place, then it is also
     relevant to read through the @ref toolbox_particles_memorypool "implications for any particle sorting".
 
-
-    If you add the action set
-    peano4.toolbox.particles.PlotParticlesInVTKFormat to your algorithm
-    step, the resulting file will contain all associativity information.
-    You can plot to which vertex a particle belongs to.
-
-
     Here's a hand-written cartoon to explain the particle storage:
 
     @image html dual-tree.png
-
 
     A tree with three levels.
     Particles with a large search radius (red) are held on rather coarse levels.

@@ -300,7 +300,6 @@ class SeparateSweeps(CellCenteredFiniteDifferences):
         auxiliary_variables,
         min_meshcell_h,
         max_meshcell_h,
-        plot_grid_properties,
         kernel_namespace,
     ):
         self._rk_order = rk_order
@@ -314,7 +313,6 @@ class SeparateSweeps(CellCenteredFiniteDifferences):
             auxiliary_variables,
             min_meshcell_h,
             max_meshcell_h,
-            plot_grid_properties,
             kernel_namespace,
         )
 

@@ -83,11 +83,11 @@ fineGridCell{{SOLVER_NAME}}Q.data()
             "SOLVER_NAME": solver._name,
             "SOLVER_INSTANCE": solver.get_name_of_global_instance(),
             "PATCH_SIZE": solver._patch_size,
-            "NUMBER_OF_UNKNOWNS": solver._unknowns,
-            "NUMBER_OF_AUXILIARY_VARIABLES": solver._auxiliary_variables,
+            "NUMBER_OF_UNKNOWNS": solver.unknowns,
+            "NUMBER_OF_AUXILIARY_VARIABLES": solver.auxiliary_variables,
             "INTERPOLATION_SCHEME": interpolation_scheme,
             "INTEGRATION_SCHEME": integration_scheme,
-            "FORCE_METHOD": force_method,  # Updated name
+            "FORCE_METHOD": force_method,
             "UPDATE_PARTICLE_KERNEL": "::exahype2::fv::particles::updateParticleState",
             "DOMAIN_SIZE": "{"
             + ",".join(map(str, project._domain_size[: project._dimensions]))

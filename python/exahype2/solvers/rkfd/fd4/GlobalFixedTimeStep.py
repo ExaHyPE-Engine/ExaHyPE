@@ -31,7 +31,7 @@ class GlobalFixedTimeStep( SeparateSweeps ):
     boundary_conditions=PDETerms.User_Defined_Implementation,
     refinement_criterion=PDETerms.Empty_Implementation,
     initial_conditions=PDETerms.User_Defined_Implementation,
-    plot_grid_properties=False, KOSigma=8.0
+    KOSigma=8.0
   ):
     """!
     
@@ -57,7 +57,7 @@ class GlobalFixedTimeStep( SeparateSweeps ):
     super(GlobalFixedTimeStep,self).__init__(name, 
                                              patch_size, 
                                              3, #overlap, 
-                                             rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace="fd4") 
+                                             rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, kernel_namespace="fd4") 
     
     self._normalised_time_step_size = normalised_time_step_size
 

@@ -45,6 +45,7 @@ std::string peano4::grid::GridTraversalEvent::toString() const {
 peano4::datamanagement::CellMarker peano4::grid::GridTraversalEvent::getCellMarker() const {
   datamanagement::CellMarker marker;
 
+  marker.level                            = level;
   marker.h                                = h;
   marker.centre                           = x;
   marker.relativePositionWithinFatherCell = relativePositionToFather;

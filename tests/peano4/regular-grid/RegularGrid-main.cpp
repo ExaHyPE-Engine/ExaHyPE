@@ -5,7 +5,7 @@
 #include "Constants.h"
 #include "CreateGridObserver.h"
 #include "EmptyTraversalObserver.h"
-#include "VTKPlotterObserver.h"
+#include "VTUPlotterObserver.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/peano4.h"
 #include "tarch/logging/Log.h"
@@ -54,11 +54,13 @@ int main(int argc, char** argv) {
       << spacetree.getGridStatistics().numberOfLocalUnrefinedCells / watch.getCalendarTime()
   );
 
-  // VTKPlotterObserver plotterObserver("RegularGrid");
-  // watch.start();
-  // spacetree.traverse(plotterObserver);
-  // watch.stop();
-  // logInfo("main()", "Grid plotting took " << watch.getCalendarTime() << "s: " << spacetree.getGridStatistics());
+  VTUPlotterObserver plotterObserver(0);
+  watch.start();
+  VTUPlotterObserver::prepareTraversal();
+  spacetree.traverse(plotterObserver);
+  VTUPlotterObserver::unprepareTraversal();
+  watch.stop();
+  logInfo("main()", "Grid plotting took " << watch.getCalendarTime() << "s: " << spacetree.getGridStatistics());
 
   ::peano4::shutdown();
 

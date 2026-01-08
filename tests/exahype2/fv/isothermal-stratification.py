@@ -321,8 +321,6 @@ fv_solver.set_implementation(
     source_term=source_term,
 )
 
-fv_solver.set_plotter(args.plotter)
-
 project = exahype2.Project(
     namespace=["tests", "exahype2", "fv"],
     project_name="IsothermalStratification",

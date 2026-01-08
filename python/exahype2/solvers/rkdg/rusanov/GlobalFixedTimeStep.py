@@ -51,7 +51,6 @@ class GlobalFixedTimeStep(SeparateSweeps):
         initial_conditions=PDETerms.User_Defined_Implementation,
         source_term=PDETerms.None_Implementation,
         pde_terms_without_state=False,
-        plot_grid_properties=False,
     ):
         """!
         
@@ -70,7 +69,6 @@ class GlobalFixedTimeStep(SeparateSweeps):
             auxiliary_variables,
             min_cell_h,
             max_cell_h,
-            plot_grid_properties,
             pde_terms_without_state
         )
 

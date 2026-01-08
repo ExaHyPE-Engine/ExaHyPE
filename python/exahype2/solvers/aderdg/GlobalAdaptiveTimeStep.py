@@ -16,7 +16,6 @@ class GlobalAdaptiveTimeStep(SingleSweep):
         time_step_relaxation,
         use_enclave_tasking=False,
         number_of_enclave_tasks=1,
-        plot_grid_properties=False,
     ):
         super(GlobalAdaptiveTimeStep, self).__init__(
             name=name,
@@ -27,7 +26,6 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             max_cell_h=max_cell_h,
             use_enclave_tasking=use_enclave_tasking,
             number_of_enclave_tasks=number_of_enclave_tasks,
-            plot_grid_properties=plot_grid_properties,
         )
 
         self._cflSafetyFactor = time_step_relaxation

@@ -28,6 +28,8 @@ namespace peano4::datamanagement {
  * to do things within the spacetree octant.
  */
 struct peano4::datamanagement::CellMarker {
+  int level{0};
+
   tarch::la::Vector<DIMENSIONS, double> h{};
   tarch::la::Vector<DIMENSIONS, double> centre{};
 

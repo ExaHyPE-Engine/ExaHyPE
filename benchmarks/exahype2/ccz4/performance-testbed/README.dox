@@ -140,16 +140,4 @@ To get rid of the output files, type in
 rm *patch-file *vtu *.pvd *.bak *.csv
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-# Visualisation
-
-The output of ExaHyPE is given in peano patch file and one can use the following commands to 
-convert them into normal vtu files, and inspect them in other tools like paraview.
-
-~~~~~~~~~~~~~~~~~~~~~~~
-module unload python/2.7.15
-module load python/3.6.5 paraview/5.8.1
-export PYTHONPATH=/path/to/Peano/python/
-python3 -m visualisation.convert_to_vtu path/to/solution.peano-patch-file 
-~~~~~~~~~~~~~~~~~~~~~~~
-
 */

@@ -70,17 +70,6 @@ rm *patch-file *vtu *.pvd *.bak *.csv
 
 # Visualise outcome
 
-If you have set up your experiment via the Python script with the -plot 
-command, you can use the standard Peano scripts to convert 
-@ref documentation_tarch_visualisation "Peano's patch files":
-
-
-~~~~~~~~~~~~~~~~~~~~~~~
-export PYTHONPATH=../../../../python
-python3 -m visualisation.convert_to_vtu --filter-fine-grid solution-CCZ4SBH_FV.peano-patch-file
-python3 -m visualisation.convert_to_vtu --filter-fine-grid solution-CCZ4SBH_FD4.peano-patch-file
-~~~~~~~~~~~~~~~~~~~~~~~
-
 The picture below is taken from @ref tutorials_exahype2_coupling "ExaHyPE's coupling discussion" and
 illustrates that the higher order solver covers the whole domain, while the FV 
 is only active in a tiny cross-shaped region within.

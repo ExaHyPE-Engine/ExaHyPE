@@ -104,7 +104,6 @@ aderdg_solver.set_implementation(
 """,
 )
 
-aderdg_solver.set_plotter(args.plotter)
 aderdg_solver.add_user_solver_includes(
     """
 #include "../PDE.h"
@@ -128,7 +127,6 @@ fv_solver.set_implementation(
     riemann_solver="return fWaveRiemannSolver<double, Shortcuts>(QL, QR, x, h, t, dt, normal, FL, FR);",
 )
 
-fv_solver.set_plotter(args.plotter)
 fv_solver.add_user_solver_includes(
     """
 #include "../FWaveRiemannSolver.h"

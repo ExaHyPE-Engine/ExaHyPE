@@ -30,7 +30,6 @@ class SeparateSweeps(RungeKuttaDG):
                auxiliary_variables,
                min_cell_h,
                max_cell_h,
-               plot_grid_properties,
                pde_terms_without_state):
     """
     The super call invokes the creation of the data sets, where the guards have
@@ -76,7 +75,6 @@ class SeparateSweeps(RungeKuttaDG):
                                          auxiliary_variables,
                                          min_cell_h,
                                          max_cell_h,
-                                         plot_grid_properties,
                                          pde_terms_without_state)
 
     self._solver_template_file_class_name = "SeparateSweeps"

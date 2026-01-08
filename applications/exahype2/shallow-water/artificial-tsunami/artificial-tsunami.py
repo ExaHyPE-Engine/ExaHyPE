@@ -100,7 +100,6 @@ aderdg_solver.set_implementation(
     ncp=f"ShallowWater::nonconservativeProduct<double, Shortcuts, {aderdg_solver.unknowns}>(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);",
 )
 
-aderdg_solver.set_plotter(args.plotter)
 aderdg_solver.add_kernel_optimisations(
     is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
 )

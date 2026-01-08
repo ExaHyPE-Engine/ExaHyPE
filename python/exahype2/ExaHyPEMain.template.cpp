@@ -7,7 +7,6 @@
 #include "observers/CreateGridWithoutRefinement.h"
 #include "observers/InitGrid.h"
 #include "observers/PlotSolution.h"
-#include "observers/CheckpointSolution.h"
 #include "observers/TimeStep.h"
 #include "repositories/DataRepository.h"
 #include "repositories/SolverRepository.h"
@@ -159,8 +158,6 @@ bool selectNextAlgorithmicStep() {
   static bool                                   gridInitialised                       = false;
   static double                                 nextMaxPlotTimeStamp                  = FirstPlotTimeStamp;
   static double                                 nextMinPlotTimeStamp                  = FirstPlotTimeStamp;
-  static double                                 nextMaxCheckpointTimeStamp            = FirstCheckpointTimeStamp;
-  static double                                 nextMinCheckpointTimeStamp            = FirstCheckpointTimeStamp;
   static bool                                   haveJustWrittenSnapshot               = false;
   static double                                 minH                                  = std::numeric_limits<double>::max();
   static int                                    globalNumberOfTrees                   = 0;
@@ -215,42 +212,6 @@ bool selectNextAlgorithmicStep() {
       nextMaxPlotTimeStamp = std::max(nextMaxPlotTimeStamp, nextMinPlotTimeStamp);
 
       peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution));
-      haveJustWrittenSnapshot = true;
-    } else if (
-      TimeInBetweenCheckpoints > 0.0
-      and
-      repositories::getMinTimeStamp() < MinTerminalTime
-      and
-      repositories::getMaxTimeStamp() < MaxTerminalTime
-      and
-      (repositories::getMinTimeStamp() >= nextMinCheckpointTimeStamp or repositories::getMaxTimeStamp() >= nextMaxCheckpointTimeStamp)
-      and
-      repositories::mayPlot()
-    ) {
-      nextMinCheckpointTimeStamp += TimeInBetweenCheckpoints;
-      nextMaxCheckpointTimeStamp += TimeInBetweenCheckpoints;
-
-      if (nextMinCheckpointTimeStamp < repositories::getMinTimeStamp()) {
-        logWarning(
-          "selectNextAlgorithmicStep()",
-          "Code is asked to checkpoint every dt="
-            << TimeInBetweenCheckpoints << ", but this seems to be less than the time step size of the solvers. "
-            << "So postpone next checkpoint to t=" << (repositories::getMinTimeStamp() + TimeInBetweenCheckpoints)
-        );
-        nextMinCheckpointTimeStamp = repositories::getMinTimeStamp() + TimeInBetweenCheckpoints;
-      } else if (nextMaxCheckpointTimeStamp < repositories::getMaxTimeStamp()) {
-        logWarning(
-          "selectNextAlgorithmicStep()",
-          "Code is asked to checkpoint every dt="
-            << TimeInBetweenCheckpoints << ", but this seems to be less than the time step size of the solvers. "
-            << "So postpone next checkpoint to t=" << (repositories::getMaxTimeStamp() + TimeInBetweenCheckpoints)
-        );
-        nextMaxCheckpointTimeStamp = repositories::getMaxTimeStamp() + TimeInBetweenCheckpoints;
-      }
-
-      nextMaxCheckpointTimeStamp = std::max(nextMaxCheckpointTimeStamp, nextMinCheckpointTimeStamp);
-
-      peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CheckpointSolution));
       haveJustWrittenSnapshot = true;
     } else if (repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime) {
       peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::TimeStep));
@@ -396,15 +357,6 @@ void runNextAlgorithmicStep() {
       plotMeasurement
     );
     break;
-  case repositories::StepRepository::Steps::CheckpointSolution:
-    printNextAlgorithmicStep(stepName, false);
-    performAlgorithmicStep<observers::CheckpointSolution>(
-      stepName,
-      [](){ repositories::startPlottingStep(); },
-      [](){ repositories::finishPlottingStep(); },
-      plotMeasurement
-    );
-    break;
   case repositories::StepRepository::Steps::TimeStep:
     performAlgorithmicStep<observers::TimeStep>(
       stepName,
@@ -455,13 +407,13 @@ void printFinalStatistics() {
   if (gridInitialisationMeasurement.getNumberOfMeasurements() > 0) {
     logInfo("printFinalStatistics()", "Grid initialisation:               " << gridInitialisationMeasurement.getAccumulatedValue() << "s\t" << gridInitialisationMeasurement.toString());
   }
+  if (plotMeasurement.getNumberOfMeasurements() > 0) {
+    logInfo("printFinalStatistics()", "Plotting:                          " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString());
+  }
   if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
     logInfo("printFinalStatistics()", "Time stepping:                     " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString());
     logInfo("printFinalStatistics()", "Average patch updates per second:  " << repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells() / timeStepMeasurement.getValue());
     logInfo("printFinalStatistics()", "Average DoF updates per second:    " << (repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells() * repositories::getNumberOfDoFs()) / timeStepMeasurement.getValue());
-  }
-  if (plotMeasurement.getNumberOfMeasurements() > 0) {
-    logInfo("printFinalStatistics()", "Plotting:                          " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString());
   }
 }
 

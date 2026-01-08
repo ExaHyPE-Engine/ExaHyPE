@@ -13,7 +13,7 @@ You may try out to add following flag to the `docker run` command: `--platform L
 </div>
 
 For users, it is recommended to pull the available Docker images from [Dockerhub](https://hub.docker.com/u/peanoframework).
-All Docker images that have the extension `gcc`, `intel`, `nvidia`, `llvm`, `targetdart` (a modified version of `llvm`), or `amd`
+All Docker images that have the extension `gcc`, `intel`, `nvidia`, `llvm`, or `amd`
 provide all commonly the same dependencies that are needed to build, run and visualise Peano applications.
 All dependencies within the images are installed via Spack.
 Each image additional provides one of the compilers with MPI that are also configured for GPU offloading.
@@ -38,6 +38,12 @@ docker run -it -v ${PWD}:/work --rm --gpus=all --privileged peanoframework/<comp
 
 ```shell
 docker run -it -v ${PWD}:/work -p 53155:53155 --rm --privileged peanoframework/<compiler> /bin/bash
+```
+
+and then you can run
+
+```shell
+jupyter lab --allow-root --port=53155 --no-browser --ip=0.0.0.0
 ```
 
 ## Build (for Developers)

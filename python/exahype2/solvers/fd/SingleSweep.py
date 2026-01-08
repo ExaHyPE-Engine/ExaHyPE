@@ -39,7 +39,6 @@ class SingleSweep(FD):
         max_h,
         use_enclave_tasking: bool,
         number_of_enclave_tasks: int,
-        plot_grid_properties: bool,
         solvers_before_in_coupling: list,
     ):
         super(SingleSweep, self).__init__(
@@ -52,7 +51,6 @@ class SingleSweep(FD):
             max_h=max_h,
             use_enclave_tasking=use_enclave_tasking,
             number_of_enclave_tasks=number_of_enclave_tasks,
-            plot_grid_properties=plot_grid_properties,
             solvers_before_in_coupling=solvers_before_in_coupling,
         )
 

@@ -88,35 +88,26 @@ set(SOURCES
   multicore/omp/Core.cpp
   multicore/omp/RecursiveSemaphore.cpp
 
+  plotter/AMRPlotter.cpp
+  plotter/CellDataPlotter.cpp
+  plotter/CellPlotter.cpp
+  plotter/FileWriter.cpp
+  plotter/HDF5FileWriter.cpp
+  plotter/JSONTimeSeriesWriter.cpp
+  plotter/NetCDFFileWriter.cpp
   plotter/PVDTimeSeriesWriter.cpp
-  plotter/griddata/blockstructured/PeanoHDF5FileWriter_CellDataWriter.cpp
-  plotter/griddata/blockstructured/PeanoHDF5FileWriter_VertexDataWriter.cpp
-  plotter/griddata/blockstructured/PeanoHDF5FileWriter.cpp
-  plotter/griddata/blockstructured/PeanoTextPatchFileWriter_CellDataWriter.cpp
-  plotter/griddata/blockstructured/PeanoTextPatchFileWriter_VertexDataWriter.cpp
-  plotter/griddata/blockstructured/PeanoTextPatchFileWriter.cpp
-  plotter/griddata/unstructured/vtk/VTKBinaryFileWriter_CellDataWriter.cpp
-  plotter/griddata/unstructured/vtk/VTKBinaryFileWriter_CellWriter.cpp
-  plotter/griddata/unstructured/vtk/VTKBinaryFileWriter_VertexDataWriter.cpp
-  plotter/griddata/unstructured/vtk/VTKBinaryFileWriter_VertexWriter.cpp
-  plotter/griddata/unstructured/vtk/VTKBinaryFileWriter.cpp
-  plotter/griddata/unstructured/vtk/VTKTextFileWriter_CellDataWriter.cpp
-  plotter/griddata/unstructured/vtk/VTKTextFileWriter_CellWriter.cpp
-  plotter/griddata/unstructured/vtk/VTKTextFileWriter_VertexDataWriter.cpp
-  plotter/griddata/unstructured/vtk/VTKTextFileWriter_VertexWriter.cpp
-  plotter/griddata/unstructured/vtk/VTKTextFileWriter.cpp
-  plotter/griddata/unstructured/vtk/VTUTextFileWriter_CellDataWriter.cpp
-  plotter/griddata/unstructured/vtk/VTUTextFileWriter_CellWriter.cpp
-  plotter/griddata/unstructured/vtk/VTUTextFileWriter_VertexDataWriter.cpp
-  plotter/griddata/unstructured/vtk/VTUTextFileWriter_VertexWriter.cpp
-  plotter/griddata/unstructured/vtk/VTUTextFileWriter.cpp
-  plotter/griddata/unstructured/vtk/tests/VTKBinaryFileTestCase.cpp
-  plotter/pointdata/vtk/VTKWriter.cpp
+  plotter/TimeSeriesWriter.cpp
+  plotter/VertexDataPlotter.cpp
+  plotter/VertexPlotter.cpp
+  plotter/VTUFileWriter.cpp
+  plotter/XDMFTimeSeriesWriter.cpp
+  plotter/tests/HDF5FileWriterTest.cpp
+  plotter/tests/NetCDFFileWriterTest.cpp
+  plotter/tests/VTUFileWriterTest.cpp
 
   reader/CSVReader.cpp
   reader/NetCDFFieldParser.cpp
   reader/NetCDFFileReader.cpp
-  reader/PeanoTextPatchFileReader.cpp
 
   services/Service.cpp
   services/ServiceRepository.cpp

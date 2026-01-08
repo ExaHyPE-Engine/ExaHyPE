@@ -99,8 +99,6 @@ fv_solver.set_implementation(
     flux=flux,
 )
 
-fv_solver.set_plotter(args.plotter)
-
 project = exahype2.Project(
     namespace=["tests", "exahype2", "fv"],
     project_name="GaussianExplosion",

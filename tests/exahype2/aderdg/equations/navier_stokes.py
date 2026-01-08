@@ -23,15 +23,22 @@ class NavierStokes(Equation):
         q0=0.0,
     ):
         self.dimensions = dimensions
+
         self.num_unknowns = {
             "rho": 1,
             "j": dimensions,
             "E": 1,
-            "Z": 1 if use_advection else 0,
         }
+        if use_advection:
+            self.num_unknowns["Z"] = 1
+
         self.num_auxiliary_variables = {
-            "height": 1 if use_gravity else 0,
-            "backgroundstate": 2 if use_background_state else 0,
+            key: value
+            for key, value in {
+                "height": 1 if use_gravity else 0,
+                "backgroundstate": 2 if use_background_state else 0,
+            }.items()
+            if value > 0
         }
 
         self._use_advection = use_advection

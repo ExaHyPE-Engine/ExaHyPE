@@ -32,8 +32,6 @@ int statisticsExchangeTag = tarch::mpi::Rank::reserveFreeTag("SolverRepository -
 
 tarch::logging::Log _log("{{NAMESPACE | join("::")}}::SolverRepository");
 
-::exahype2::PlotFilter         plotFilter;
-
 {% if LOAD_BALANCER_CONFIGURATION!="" %}
 toolbox::loadbalancing::LoadBalancer loadBalancer({{LOAD_BALANCER_CONFIGURATION}});
 {% else %}
@@ -237,8 +235,6 @@ void finishPlottingStep() {
   {{ item[1] }}.finishPlottingStep();
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
-
-  plotFilter.finishPlottingStep();
 }
 
 void printTimeStep(bool ofCurrentlyRunningGridSweep) {
@@ -249,11 +245,6 @@ void printTimeStep(bool ofCurrentlyRunningGridSweep) {
 }
 
 void startSimulation() {
-  {% for item in PLOT_FILTER -%}
-  plotFilter.addFilter(
-    {{item}}
-  );
-  {% endfor %}
   {% for item in SOLVERS -%}
   {{ item[1] }}.startSimulation();
   {# Comment to ensure that jinja2 adds a new line#}

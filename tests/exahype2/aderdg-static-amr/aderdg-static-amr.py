@@ -6,7 +6,7 @@ import exahype2
 parser = exahype2.ArgumentParser("ExaHyPE 2 - ADER-DG Static AMR Testing Script")
 parser.set_defaults(
     min_depth=3,
-    amr_levels=1,
+    amr_levels=2,
     degrees_of_freedom=4,
 )
 args = parser.parse_args()

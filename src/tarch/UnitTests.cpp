@@ -12,10 +12,13 @@
 #include "la/tests/VectorTest.h"
 #include "mpi/tests/StringTest.h"
 #include "multicore/tests/SpawnTaskTest.h"
+#include "plotter/tests/HDF5FileWriterTest.h"
+#include "plotter/tests/NetCDFFileWriterTest.h"
+#include "plotter/tests/VTUFileWriterTest.h"
 #include "tests/TreeTestCaseCollection.h"
 
 tarch::tests::TestCase* tarch::getUnitTests() {
-  tarch::tests::TreeTestCaseCollection* result = new tests::TreeTestCaseCollection();
+  tests::TreeTestCaseCollection* result = new tests::TreeTestCaseCollection();
 
   result->addTestCase(new la::tests::GramSchmidtTest());
   result->addTestCase(new la::tests::LUDecompositionTest());
@@ -30,6 +33,10 @@ tarch::tests::TestCase* tarch::getUnitTests() {
   result->addTestCase(new accelerator::tests::MemoryManagerTest());
 
   result->addTestCase(new multicore::tests::SpawnTaskTest());
+
+  result->addTestCase(new plotter::tests::HDF5FileWriterTest());
+  result->addTestCase(new plotter::tests::NetCDFFileWriterTest());
+  result->addTestCase(new plotter::tests::VTUFileWriterTest());
 
   return result;
 }

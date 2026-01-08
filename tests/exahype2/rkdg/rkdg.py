@@ -10,8 +10,8 @@ sys.path.insert(0, os.path.abspath("../aderdg"))
 import scenarios
 
 available_scenarios = {
-    "AcousticPlanarWaves": scenarios.AcousticPlanarWaves(dimensions=2),
     "AdvectionLinear": scenarios.AdvectionLinear(),
+    "AcousticPlanarWaves": scenarios.AcousticPlanarWaves(dimensions=2),
     "ElasticPlanarWaves": scenarios.ElasticPlanarWaves(dimensions=2),
     "EulerGaussianBell": scenarios.EulerGaussianBell(),
     "EulerIsentropicVortex": scenarios.EulerIsentropicVortex(),
@@ -73,8 +73,6 @@ solver.set_implementation(
     flux=scenario._equation.flux(),
     ncp=scenario._equation.ncp()
 )
-
-solver.set_plotter(args.plotter)
 
 if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementation:
     exahype2.solvers.rkdg.ErrorMeasurement(

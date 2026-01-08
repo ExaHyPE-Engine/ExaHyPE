@@ -49,11 +49,6 @@ dynamic = ["readme", "dependencies"]
 
 [project.scripts]
 format = "format:main"
-convert-pdf = "visualisation.convert_to_pdf:main"
-convert-pgf = "visualisation.convert_to_pgf:main"
-convert-png = "visualisation.convert_to_png:main"
-convert-svg = "visualisation.convert_to_svg:main"
-convert-vtu = "visualisation.convert_to_vtu:main"
 create-animation = "visualisation.create_animation_from_png:main"
 
 [build-system]

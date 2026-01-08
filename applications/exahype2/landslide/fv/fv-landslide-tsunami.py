@@ -134,9 +134,6 @@ my_solver.add_user_solver_includes(
 """
 )
 
-my_solver.set_plotter(args.plotter)
-
-my_solver.plot_description = ", ".join(unknowns.keys())
 project.add_solver(my_solver)
 
 if args.number_of_snapshots <= 0:

@@ -30,6 +30,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   bool                                      spacetreeStateIsRunning
 ) const {
   GridTraversalEvent event;
+  event.level = state.level;
   event.setX(state.x + state.h * 0.5);
   event.setH(state.h);
 

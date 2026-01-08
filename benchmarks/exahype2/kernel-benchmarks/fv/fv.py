@@ -101,11 +101,7 @@ project = project.generate_Peano4_project(verbose=False)
 project.constants.export_constexpr_with_type(
     "GridLength", str(3**args.min_depth), "int"
 )
-project.constants.export_const_with_type(
-    "PlotDescription",
-    f'"{fv_solver.plot_description}"',
-    "std::string",
-)
+
 project.constants.export_constexpr_with_type(
     "ShouldPlot", "true" if args.number_of_snapshots > 0 else "false", "bool"
 )

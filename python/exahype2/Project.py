@@ -42,8 +42,6 @@ class Project(object):
         self._max_terminal_time = 0.0
         self._first_plot_time_stamp = 0.0
         self._time_in_between_plots = 0.1
-        self._first_checkpoint_time_stamp = 0.0
-        self._time_in_between_checkpoints = 0.0
         self._load_balancer_configuration = ""
         self._log_filter_file         = "exahype.log-filter"
         self._print_time_step_interval_in_seconds = 10
@@ -53,16 +51,9 @@ class Project(object):
         self._build_mode = peano4.output.CompileMode.Asserts
         self._executable_name = executable
         self._periodic_BC = [False, False, False]
-        self._plot_filters = []
         self._output_path = "./"
-        self._plotter_precision = 5
         self._tracer_particles = []
         self._tracer_particle_sets = []
-
-        self._restart_from_checkpoint = False
-        self._restart_timestamp = 0
-        self._checkpoint_path="./"
-        self._solvers_file_collection=[]
 
         self._particle_unknowns = 0
         self._particle_variable_names = []
@@ -73,7 +64,6 @@ class Project(object):
         self.create_grid_without_refinement = peano4.solversteps.Step("CreateGridWithoutRefinement", False)
         self.init_grid = peano4.solversteps.Step("InitGrid", False)
         self.plot_solution = peano4.solversteps.Step("PlotSolution", False)
-        self.checkpoint_solution = peano4.solversteps.Step("CheckpointSolution", False)
         self.perform_time_step = peano4.solversteps.Step("TimeStep", False)
 
     def set_load_balancer(self, load_balancer_configuration=""):
@@ -98,35 +88,6 @@ class Project(object):
 
     def add_solver(self, solver):
         self._solvers.append(solver)
-
-    def add_plot_filter(self, offset, size, frequency=1):
-        """
-        Add a new filter to Peano/ExaHyPE
-
-        offset: (float,float,float)
-
-        size: (float,float,float)
-
-        frequency: int
-          A positive value. Peano makes snapshots every dt simulation
-          units. This is something you specify once per simulation. But
-          you might decide only to splot every k of these snapshots.
-        """
-        new_entry = "{{"
-        new_entry += str(offset[0])
-        for i in offset[1:]:
-            new_entry += ","
-            new_entry += str(i)
-        new_entry += "},{"
-        new_entry += str(size[0])
-        for i in size[1:]:
-            new_entry += ","
-            new_entry += str(i)
-        new_entry += "},"
-        new_entry += str(frequency)
-        new_entry += "}"
-
-        self._plot_filters.append(new_entry)
 
     def remove_all_solvers(self):
         self._solvers = []
@@ -168,49 +129,14 @@ class Project(object):
                 "MaxTerminalTime", "std::numeric_limits<double>::max()"
             )
 
-        if self._restart_from_checkpoint:
-            self._project.constants.export(
-                "FirstPlotTimeStamp", f"{self._restart_timestamp:.{5}g}"
-            )
-            self._project.constants.export(
-                "FirstCheckpointTimeStamp", f"{self._restart_timestamp:.{5}g}"
-            )
-        else:
-            self._project.constants.export(
-                "FirstPlotTimeStamp", str(self._first_plot_time_stamp)
-            )
-            self._project.constants.export(
-                "FirstCheckpointTimeStamp", str(self._first_checkpoint_time_stamp)
-            )
+        self._project.constants.export(
+            "FirstPlotTimeStamp", str(self._first_plot_time_stamp)
+        )
 
         self._project.constants.export(
             "TimeInBetweenPlots", str(self._time_in_between_plots)
         )
 
-        self._project.constants.export(
-            "TimeInBetweenCheckpoints", str(self._time_in_between_checkpoints)
-        )
-
-        if self._restart_from_checkpoint:
-            if self._solvers_file_collection==[] or len(self._solvers_file_collection)<len(self._solvers):
-                error_message = "No checkpoint found for all/part of solvers, please check your path and checkpoint files."
-                sys.stderr.write(error_message + "\n")
-                sys.exit(1)
-            else:
-                for i in range(len(self._solvers)):
-                    file_string = "{" + self._solvers_file_collection[i][0]
-                    for j in range(1, len(self._solvers_file_collection[i])):
-                        file_string += ","
-                        file_string += self._solvers_file_collection[i][j]
-                    file_string += "}"
-                    self._project.constants.export_const_with_type(
-                        "CheckpointFilesOf"+self._solvers[i]._name, file_string, "std::vector<std::string>"
-                    )
-        self._project.constants.export(
-            "CheckpointTimeStamp", str(self._restart_timestamp)
-        )
-
-        self._project.constants.export("PlotterPrecision", str(self._plotter_precision))
         self._project.constants.export_boolean_sequence("PeriodicBC", self._periodic_BC)
 
         build_string = "python3 "
@@ -270,10 +196,7 @@ thus appreciate any citation of the original release paper
         first_plot_time_stamp,
         time_in_between_plots,
         periodic_BC=[False, False, False],
-        plotter_precision=5,
         max_end_time=0.0,
-        first_checkpoint_time_stamp=0.0,
-        time_in_between_checkpoints=0.0
     ):
         """
         ! Set the global simulation parameters
@@ -317,66 +240,16 @@ thus appreciate any citation of the original release paper
         self._min_terminal_time = min_end_time
         self._first_plot_time_stamp = first_plot_time_stamp
         self._time_in_between_plots = time_in_between_plots
-        self._first_checkpoint_time_stamp = first_checkpoint_time_stamp
-        self._time_in_between_checkpoints = time_in_between_checkpoints
         self._project.constants.export(
             "TimeInBetweenPlots", str(self._time_in_between_plots)
         )
-        self._project.constants.export(
-            "TimeInBetweenCheckpoints", str(self._time_in_between_checkpoints)
-        )
 
         self._periodic_BC = []
-        self._plotter_precision = plotter_precision
         for d in range(0, dimensions):
             self._periodic_BC.append(periodic_BC[d])
-        if plotter_precision <= 0:
-            raise Exception("Plotter precision has to be bigger than 0")
-
-    def set_restart_from_checkpoint(self, expected_restart_timestamp=0, checkpoint_path="./"):
-        '''
-        set checkpointing. The function accept the corresponding peano
-        patch file and create corresponding arrays recording the checkpoint
-        file names.
-
-        @param restart_timestamp float
-          targeting restart timestamp, the function will find the first 
-          checkpointed timestamp right after this input time. Thus the final 
-          restarting timestamp may not be equal to this specified time.
-
-        @param checkpoint_file string
-          the location of the checkpoint meta-file
-        '''
-
-        self._restart_from_checkpoint = True
-        self._restart_timestamp = expected_restart_timestamp
-        self._checkpoint_path = checkpoint_path
-
-        for solver in self._solvers:
-            checkpoint_meta_file=checkpoint_path+"checkpoint-"+solver._name+".peano-patch-file"
-            recording_current_snapshot=False
-            solver_file_collection=[]
-            with open(checkpoint_meta_file,'r') as file:
-                for line in file:
-                    if line.strip().split()==[]: continue
-                    if line.strip().split()[0] == "timestamp" and float(line.strip().split()[1])>=self._restart_timestamp:
-                        self._restart_timestamp = float(line.strip().split()[1])
-                        recording_current_snapshot=True
-                    if line.strip().split()[0] == "include" and recording_current_snapshot==True:
-                        solver_file_collection.append( line.strip().split()[1] )
-                    if line.strip().split()[0] == "end" and recording_current_snapshot==True:
-                        break
-            if recording_current_snapshot:
-                self._solvers_file_collection.append(solver_file_collection)
-
 
     def set_output_path(self, path):
         self._output_path = path
-        if not os.path.exists(self._output_path):
-            try:
-                os.makedirs(self._output_path)
-            except:
-                print("Couldn't create the defined output path, please ensure that this path exists")
         if not self._output_path.endswith("/"):
             self._output_path += "/"
 
@@ -387,7 +260,6 @@ thus appreciate any citation of the original release paper
         self.solverRepositoryDictionary = {
             "SOLVERS":                  [],
             "LOAD_BALANCER_CONFIGURATION": self._load_balancer_configuration,
-            "PLOT_FILTER":              self._plot_filters,
             "TRACERS":                  [x.name for x in self._tracer_particles],
             "LOG_FILTER_FILE":          self._log_filter_file,
             "PRINT_TIME_STEP_INTERVAL_IN_SECONDS": self._print_time_step_interval_in_seconds,
@@ -427,122 +299,14 @@ thus appreciate any citation of the original release paper
             self._project.subdirectory + "repositories/SolverRepository.cpp", generated=True
         )
 
+    # TODO: Move to solvers
     def add_tracer(
         self,
         name,
         particle_attributes,
-        plot=True, # TODO: Why do we need this?
         sort_descend_invocation_order_within_action_sets=-1,
         plot_descend_invocation_order_within_action_sets=65536,
     ):
-        """!
-        Add a tracer to the project
-
-        TODO: Outdated and untrue
-        Tracers have to be the very last thing you add to your project.
-        At this point, all solvers have to be added to the project.
-        However, you have to add the tracers prior to any user-defined
-        routines. See docu of init_new_user_defined_algorithmic_step().
-
-        We rely on the particle toolbox. Therefore, our particles have
-        already a position x, a search radius (which we don't usually
-        use here), and a (parallel) state. The search radius determines
-        how Peano sorts particles within the tree, and we can set it to
-        zero here. This ensures that the particle has no real volume and
-        thus is always sieved through to the finest grid level.
-
-        @see peano4.toolbox.particles.Particle
-
-
-        ## Projection of data onto particles and database dumping
-
-        The projection onto the particle has to be realised separately, as
-        it depends on the solver variant chosen. The same holds for the
-        dump of particle data into a database if this shall happen
-        on-the-fly.
-
-        Most bigger applications add their solvers an add_tracer() operation,
-        which takes all of this domain knowledge into account. This
-        add_tracer() then forwards to this routine, adding further
-        behaviour.
-
-        See the class application.exahype2.ccz.CCZ4Solver and its derived
-        variants for examples.
-
-
-        ## Moving particles TODO: Outdated!
-
-        Tracers in ExaHyPE can move, though they do not have to move. Even if
-        they move, they never have a native velocity, i.e. their velocity will
-        always be a projection of an ExaHyPE solution. We are talking about
-        tracers after all and not about a proper PIC approach. Due to this
-        constraint, we do not need a velocity vector. However, we need an
-        additional enumeration which clarifies if a
-        particle has moved already or not. This enumeration is needed by the
-        particle update routines. Obviously, nothing stops you from adding
-        a separate velocity field to the tracer object and thus to redefine
-        this behaviour.
-
-
-        ## ExaHyPE-specific particle attributes
-
-        We add each
-        particle a number which is a tuple consisting of the tree number
-        (on which tree has a particle been generated plus what was the
-        tree-local number of this particle at the time). Through this
-        tuple, we can track tracers later on even if they move across
-        domains.
-
-        We can plot the data - if there is data to be tracked - directly,
-        as it is a large double array. For the index, we have to type cast
-        the data, as this is a tuple of integers, and Peano's VTK plotter
-        supports only double vectors.
-
-        # TODO: Is this still needed? Each particle already knows its own set of attributes!
-        @see peano4.toolbox.particles.PlotParticlesInVTKFormat.add_attribute_to_plot()
-
-
-        ## Action set order
-
-        We add the particle ordering with descend order -1. This should do the job
-        for most setups, but we might be wrong. The following action sets are
-        automatically added:
-
-        - UpdateParallelState is added to each and every time step and plotting
-          sweep. As we also add
-        - peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop to each and every time step,
-          particles can move at any point. We always resort them immediately.
-
-        Both action sets are assigned the standard priority of sort_descend_invocation_order_within_action_sets.
-
-
-        ## Arguments
-
-        name: String
-          Has to be a unique name for this tracer
-
-        attribute_count: integer
-          Number of attributes that we track per particle (scalar values added
-          pre particle). Can be 0 if you don't want any attributes.
-
-        h and noise:
-          See tracer.InsertParticles
-
-        plot: Boolean
-          If this flag is set, ExaHyPE dumps the particles as vtu files whenever
-          it writes patch files. You can switch this behaviour off. A lot of codes
-          do so if they dump the tracer data independently into another database
-          anyway.
-
-        sort_descend_invocation_order_within_action_sets: Integer
-          You have to clarify what the priority of the tracer is within the
-          action sets. By default, all ExaHyPE solvers start with priority
-          0 and then up to n. So you are fine with using the default of -1
-          which means that the tracer precedes any solver. However, there
-          might be cases where you wanna move the priorities manually.
-
-        Returns the particle set that you can use to modify further
-        """
         particle = peano4.toolbox.particles.Particle(name)
         if isinstance(particle_attributes, dict):
             self._particle_unknowns = sum(particle_attributes["unknowns"].values())
@@ -579,7 +343,6 @@ thus appreciate any citation of the original release paper
         self._project.datamodel.add_vertex(particles)
 
         self.plot_solution.use_vertex(particles)
-        self.checkpoint_solution.use_vertex(particles)
         self.init_grid.use_vertex(particles)
         self.perform_time_step.use_vertex(particles)
         self.create_grid_with_refinement.use_vertex(particles)
@@ -611,39 +374,6 @@ thus appreciate any citation of the original release paper
         #
         self.perform_time_step.add_action_set(update_particle_association_action_set)
         self.perform_time_step.add_action_set(update_particle_parallel_state_action_set)
-
-        #
-        # Plotter: The timestamp here is slightly wrong, as I use the min time stamp. It
-        # really should be the time stamp of the underlying solver. However, tracers are
-        # not tied to one solver, so I have to find a quantity that makes sense. If the
-        # user requires the time stamp, they have to add this one as data field to the
-        # particle
-        # TODO: Move this all to the particular solver's (abstract base function and then FV and ADER-DG get their own implementation)
-        #
-        if plot:
-            particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat(
-                filename=name,
-                output_directory=self._output_path,
-                particle_set=particles,
-                time_stamp_evaluation="repositories::getMinTimeStamp()",
-                additional_includes="""
-#include "repositories/SolverRepository.h"
-""",
-            )
-            if self._particle_unknowns > 0:
-                particle_plotter.add_attribute_to_plot(particle_attr, self._particle_unknowns)
-            particle_plotter.add_attribute_to_plot(
-                particle_number, 2, "tarch::la::convertScalar<double>(p->getNumber())"
-            )
-            particle_plotter.descend_invocation_order = plot_descend_invocation_order_within_action_sets
-            self.plot_solution.add_action_set(particle_plotter)
-            self.checkpoint_solution.add_action_set(particle_plotter)
-
-        self.plot_solution.add_action_set(update_particle_association_action_set)
-        self.plot_solution.add_action_set(update_particle_parallel_state_action_set)
-
-        self.checkpoint_solution.add_action_set(update_particle_association_action_set)
-        self.checkpoint_solution.add_action_set(update_particle_parallel_state_action_set)
 
         self._tracer_particles.append(particle)
         self._tracer_particle_sets.append(particles)
@@ -688,14 +418,6 @@ thus appreciate any citation of the original release paper
 
         """
         self.plot_solution.add_action_set(action_set)
-
-    def add_action_set_to_checkpoint_solution(self, action_set):
-        """!
-
-        Add a new action set to the checkpointing
-
-        """
-        self.checkpoint_solution.add_action_set(action_set)
 
     def add_action_set_to_initialisation(self, action_set):
         self.init_grid.add_action_set(action_set)
@@ -746,7 +468,6 @@ thus appreciate any citation of the original release paper
         self._project.solversteps.add_step(self.create_grid_without_refinement)
         self._project.solversteps.add_step(self.init_grid)
         self._project.solversteps.add_step(self.plot_solution)
-        self._project.solversteps.add_step(self.checkpoint_solution)
         self._project.solversteps.add_step(self.perform_time_step)
 
         for solver in self._solvers:
@@ -760,22 +481,14 @@ thus appreciate any citation of the original release paper
             solver.add_use_data_statements_to_Peano4_solver_step(self.create_grid_with_refinement)
             solver.add_use_data_statements_to_Peano4_solver_step(self.create_grid_without_refinement)
             solver.add_use_data_statements_to_Peano4_solver_step(self.plot_solution)
-            solver.add_use_data_statements_to_Peano4_solver_step(self.checkpoint_solution)
             solver.add_use_data_statements_to_Peano4_solver_step(self.perform_time_step)
             solver.add_use_data_statements_to_Peano4_solver_step(self.init_grid)
 
             solver.add_actions_to_create_grid(self.create_grid_with_refinement, evaluate_refinement_criterion=True)
             solver.add_actions_to_create_grid(self.create_grid_without_refinement, evaluate_refinement_criterion=False)
 
-            if self._restart_from_checkpoint: #avoid error when use solver without checkpoint feature
-                solver.add_actions_to_init_grid(self.init_grid, self._restart_from_checkpoint)
-                solver.add_actions_to_plot_solution(self.plot_solution, self._output_path, self._restart_from_checkpoint)
-                solver.add_actions_to_checkpoint_solution(self.checkpoint_solution, self._output_path, self._restart_from_checkpoint)
-            else:
-                solver.add_actions_to_init_grid(self.init_grid)
-                solver.add_actions_to_plot_solution(self.plot_solution, self._output_path)
-                if ( (self._time_in_between_checkpoints != 0) or (self._first_checkpoint_time_stamp != 0) ):
-                    solver.add_actions_to_checkpoint_solution(self.checkpoint_solution, self._output_path)
+            solver.add_actions_to_init_grid(self.init_grid)
+            solver.add_actions_to_plot_solution(self.plot_solution, self._output_path)
 
             solver.add_actions_to_perform_time_step(self.perform_time_step)
 

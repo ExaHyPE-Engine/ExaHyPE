@@ -12,7 +12,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::initialCondition(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const bool                                   gridIsConstructed
 ) {
-  // @todo Implement
+  throw std::runtime_error("Not implemented");
 }
 {% endif %}
 
@@ -25,7 +25,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::boundaryConditions(
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const int                                    normal
 ) {
-  // @todo Implement
+  throw std::runtime_error("Not implemented");
 }
 {% endif %}
 
@@ -37,7 +37,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::boundaryConditions(
   [[maybe_unused]] const double                                 t
 ) {
   auto result = ::exahype2::RefinementCommand::Keep;
-  // @todo Implement
+  throw std::runtime_error("Not implemented");
   return result;
 }
 {% endif %}
@@ -51,7 +51,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal
 ) {
-  // @todo Implement
+  throw std::runtime_error("Not implemented");
   return 0.0;
 }
 {% endif %}
@@ -66,7 +66,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   [[maybe_unused]] const int                                    normal,
   [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         F // F[{{NUMBER_OF_UNKNOWNS}}]
 ) {
-  // @todo Implement
+  throw std::runtime_error("Not implemented");
 }
 {% endif %}
 
@@ -81,7 +81,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   [[maybe_unused]] const int                                    normal,
   [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
-  // @todo Implement
+  throw std::runtime_error("Not implemented");
 }
 {% endif %}
 
@@ -94,7 +94,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         S // S[{{NUMBER_OF_UNKNOWNS}}]
 ) {
-  // @todo Implement
+  throw std::runtime_error("Not implemented");
 }
 {% endif %}
 
@@ -108,7 +108,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         S // S[{{NUMBER_OF_UNKNOWNS}}]
 ) {
-  // @todo Implement
+  throw std::runtime_error("Not implemented");
 }
 {% endif %}
 
@@ -124,7 +124,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::solveRiemannProblem(
   [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
   [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         FR  // FR[{{NUMBER_OF_UNKNOWNS}}]
 ) {
-  // @todo Implement
+  throw std::runtime_error("Not implemented");
   return 0.0;
 }
 {% endif %}
@@ -137,7 +137,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::adjustSolution(
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] {{STORAGE_PRECISION}}* const NOALIAS         Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
 ) {
-  // @todo Implement
+  throw std::runtime_error("Not implemented");
 }
 {% endif %}
 
@@ -151,7 +151,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::adjustSolution(
   [[maybe_unused]] const int                                    normal,
   [[maybe_unused]] const int                                    unknown
 ) {
-  // @todo Implement
+  throw std::runtime_error("Not implemented");
 }
 {% endif %}
 """

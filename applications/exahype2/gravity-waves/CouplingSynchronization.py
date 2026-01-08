@@ -220,16 +220,16 @@ def atmosphereToChemistry(
     atmospheric_solver.postprocess_updated_patch += f"""// copy velocities to chemical solver
   {{
     const int atmosphericIndices[DIMENSIONS] = {{
-      {atmospheric_solver._variable_names.index("rhou")},
-      {atmospheric_solver._variable_names.index("rhov")}{"," + str(atmospheric_solver._variable_names.index("rhow")) if dimensions == 3 else ""}
+      {atmospheric_solver.variable_names.index("rhou")},
+      {atmospheric_solver.variable_names.index("rhov")}{"," + str(atmospheric_solver.variable_names.index("rhow")) if dimensions == 3 else ""}
     }};
 
     const int chemicalIndices[DIMENSIONS] = {{
-      {chemical_solver._variable_names.index("u")},
-      {chemical_solver._variable_names.index("v")}{"," + str(chemical_solver._variable_names.index("w")) if dimensions == 3 else ""}
+      {chemical_solver.variable_names.index("u")},
+      {chemical_solver.variable_names.index("v")}{"," + str(chemical_solver.variable_names.index("w")) if dimensions == 3 else ""}
     }};
 
-    const int densityIndex = {atmospheric_solver._variable_names.index("rho")};
+    const int densityIndex = {atmospheric_solver.variable_names.index("rho")};
 
     {copy_function}
   }}"""
@@ -238,11 +238,11 @@ def atmosphereToChemistry(
     ::toolbox::blockstructured::copyUnknown(
       {atmospheric_solver.patch_size}, // no of unknowns per dimension
       fineGridCell{atmospheric_solver.name}Q.data(), // source
-      {atmospheric_solver._variable_names.index("T")}, // temperature in source
+      {atmospheric_solver.variable_names.index("T")}, // temperature in source
       {numberOfVariablesAtmospheric}, // unknowns in source (incl material parameters)
       0, // no overlap/halo here
       fineGridCell{chemical_solver.name}Q.data(), // dest
-      {chemical_solver._variable_names.index("T")} , // temperature in dest
+      {chemical_solver.variable_names.index("T")} , // temperature in dest
       {numberOfVariablesChemical}, // unknowns in dest (incl material parameters)
       0 // no overlap/halo here
     );
@@ -262,16 +262,16 @@ def atmosphereToDiffusion(atmospheric_solver, diffusion_solver, dimensions):
     atmospheric_solver.postprocess_updated_patch += f"""// copy velocities to diffusion solver
     {{
       const int atmosphericIndices[DIMENSIONS] = {{
-        {atmospheric_solver._variable_names.index("rhou")},
-        {atmospheric_solver._variable_names.index("rhov")}{"," + str(atmospheric_solver._variable_names.index("rhow")) if dimensions == 3 else ""}
+        {atmospheric_solver.variable_names.index("rhou")},
+        {atmospheric_solver.variable_names.index("rhov")}{"," + str(atmospheric_solver.variable_names.index("rhow")) if dimensions == 3 else ""}
       }};
 
       const int diffusionIndices[DIMENSIONS] = {{
-        {diffusion_solver._variable_names.index("u")},
-        {diffusion_solver._variable_names.index("v")}{"," + str(diffusion_solver._variable_names.index("w")) if dimensions == 3 else ""}
+        {diffusion_solver.variable_names.index("u")},
+        {diffusion_solver.variable_names.index("v")}{"," + str(diffusion_solver.variable_names.index("w")) if dimensions == 3 else ""}
       }};
 
-      const int densityIndex = {atmospheric_solver._variable_names.index("rho")};
+      const int densityIndex = {atmospheric_solver.variable_names.index("rho")};
 
       {copy_function}
     }}
@@ -289,21 +289,21 @@ def atmosphereToDiffusion(atmospheric_solver, diffusion_solver, dimensions):
     atmospheric_solver.postprocess_updated_patch += f"""// copy other unknowns to diffusion solver
   {{
     const int atmosphericIndices[] = {{
-      {atmospheric_solver._variable_names.index("rho")},
-      {atmospheric_solver._variable_names.index("E")},
-      {atmospheric_solver._variable_names.index("O")},
-      {atmospheric_solver._variable_names.index("O2")},
-      {atmospheric_solver._variable_names.index("N2")},
-      {atmospheric_solver._variable_names.index("T")}
+      {atmospheric_solver.variable_names.index("rho")},
+      {atmospheric_solver.variable_names.index("E")},
+      {atmospheric_solver.variable_names.index("O")},
+      {atmospheric_solver.variable_names.index("O2")},
+      {atmospheric_solver.variable_names.index("N2")},
+      {atmospheric_solver.variable_names.index("T")}
     }};
 
     const int diffusionIndices[] = {{
-      {diffusion_solver._variable_names.index("rho")},
-      {diffusion_solver._variable_names.index("E")},
-      {diffusion_solver._variable_names.index("O")},
-      {diffusion_solver._variable_names.index("O2")},
-      {diffusion_solver._variable_names.index("N2")},
-      {diffusion_solver._variable_names.index("T")}
+      {diffusion_solver.variable_names.index("rho")},
+      {diffusion_solver.variable_names.index("E")},
+      {diffusion_solver.variable_names.index("O")},
+      {diffusion_solver.variable_names.index("O2")},
+      {diffusion_solver.variable_names.index("N2")},
+      {diffusion_solver.variable_names.index("T")}
     }};
 
     {copy_function}
@@ -330,16 +330,16 @@ def diffusionToAtmosphere(
     diffusion_solver.postprocess_updated_patch += f"""// copy velocities to atmospheric solver
     {{
       const int atmosphericIndices[DIMENSIONS] = {{
-        {atmospheric_solver._variable_names.index("rhou")},
-        {atmospheric_solver._variable_names.index("rhov")}{"," + str(atmospheric_solver._variable_names.index("rhow")) if dimensions == 3 else ""}
+        {atmospheric_solver.variable_names.index("rhou")},
+        {atmospheric_solver.variable_names.index("rhov")}{"," + str(atmospheric_solver.variable_names.index("rhow")) if dimensions == 3 else ""}
       }};
 
       const int diffusionIndices[DIMENSIONS] = {{
-        {diffusion_solver._variable_names.index("u")},
-        {diffusion_solver._variable_names.index("v")}{"," + str(diffusion_solver._variable_names.index("w")) if dimensions == 3 else ""}
+        {diffusion_solver.variable_names.index("u")},
+        {diffusion_solver.variable_names.index("v")}{"," + str(diffusion_solver.variable_names.index("w")) if dimensions == 3 else ""}
       }};
 
-      const int densityIndex = {atmospheric_solver._variable_names.index("rho")};
+      const int densityIndex = {atmospheric_solver.variable_names.index("rho")};
 
       {copy_function}
     }}
@@ -350,11 +350,11 @@ def diffusionToAtmosphere(
     ::toolbox::blockstructured::copyUnknown(
       {atmospheric_solver.patch_size}, // no of unknowns per dimension
       fineGridCell{diffusion_solver.name}Q.data(), // source
-      {diffusion_solver._variable_names.index("T")}, // temperature in source
+      {diffusion_solver.variable_names.index("T")}, // temperature in source
       {numberOfVariablesDiffusion}, // unknowns in source (incl material parameters)
       0, // no overlap/halo here
       fineGridCell{atmospheric_solver.name}Q.data(), // dest
-      {atmospheric_solver._variable_names.index("T")} , // temperature in dest
+      {atmospheric_solver.variable_names.index("T")} , // temperature in dest
       {numberOfVariablesAtmospheric}, // unknowns in dest (incl material parameters)
       0 // no overlap/halo here
     );
@@ -365,11 +365,11 @@ def diffusionToAtmosphere(
     ::toolbox::blockstructured::copyUnknown(
       {atmospheric_solver.patch_size}, // no of unknowns per dimension
       fineGridCell{diffusion_solver.name}Q.data(), // source
-      {diffusion_solver._variable_names.index("E")}, // temperature in source
+      {diffusion_solver.variable_names.index("E")}, // temperature in source
       {numberOfVariablesDiffusion}, // unknowns in source (incl material parameters)
       0, // no overlap/halo here
       fineGridCell{atmospheric_solver.name}Q.data(), // dest
-      {atmospheric_solver._variable_names.index("E")} , // temperature in dest
+      {atmospheric_solver.variable_names.index("E")} , // temperature in dest
       {numberOfVariablesAtmospheric}, // unknowns in dest (incl material parameters)
       0 // no overlap/halo here
     );
@@ -395,13 +395,13 @@ def diffusionToChemistry(
     diffusion_solver.postprocess_updated_patch += f"""// copy velocities to chemical solver
     {{
       const int chemicalIndices[DIMENSIONS] = {{
-        {chemical_solver._variable_names.index("u")},
-        {chemical_solver._variable_names.index("v")}{"," + str(chemical_solver._variable_names.index("w")) if dimensions == 3 else ""}
+        {chemical_solver.variable_names.index("u")},
+        {chemical_solver.variable_names.index("v")}{"," + str(chemical_solver.variable_names.index("w")) if dimensions == 3 else ""}
       }};
 
       const int diffusionIndices[DIMENSIONS] = {{
-        {diffusion_solver._variable_names.index("u")},
-        {diffusion_solver._variable_names.index("v")}{"," + str(diffusion_solver._variable_names.index("w")) if dimensions == 3 else ""}
+        {diffusion_solver.variable_names.index("u")},
+        {diffusion_solver.variable_names.index("v")}{"," + str(diffusion_solver.variable_names.index("w")) if dimensions == 3 else ""}
       }};
 
       {copy_function}
@@ -413,11 +413,11 @@ def diffusionToChemistry(
     ::toolbox::blockstructured::copyUnknown(
       {chemical_solver.patch_size}, // no of unknowns per dimension
       fineGridCell{diffusion_solver.name}Q.data(), // source
-      {diffusion_solver._variable_names.index("T")}, // temperature in source
+      {diffusion_solver.variable_names.index("T")}, // temperature in source
       {numberOfVariablesDiffusion}, // unknowns in source (incl material parameters)
       0, // no overlap/halo here
       fineGridCell{chemical_solver.name}Q.data(), // dest
-      {chemical_solver._variable_names.index("T")} , // temperature in dest
+      {chemical_solver.variable_names.index("T")} , // temperature in dest
       {numberOfVariablesChemical}, // unknowns in dest (incl material parameters)
       0 // no overlap/halo here
     );
@@ -438,15 +438,15 @@ def chemistryToAtmosphere(atmospheric_solver, chemical_solver):
     // copy major species densities
     {{
       const int chemicalIndices[3] = {{
-        {chemical_solver._variable_names.index("O")},
-        {chemical_solver._variable_names.index("O2")},
-        {chemical_solver._variable_names.index("N2")}
+        {chemical_solver.variable_names.index("O")},
+        {chemical_solver.variable_names.index("O2")},
+        {chemical_solver.variable_names.index("N2")}
       }};
 
       const int atmosphericIndices[3] = {{
-        {atmospheric_solver._variable_names.index("O")},
-        {atmospheric_solver._variable_names.index("O2")},
-        {atmospheric_solver._variable_names.index("N2")}
+        {atmospheric_solver.variable_names.index("O")},
+        {atmospheric_solver.variable_names.index("O2")},
+        {atmospheric_solver.variable_names.index("N2")}
       }};
 
       {copy_function}

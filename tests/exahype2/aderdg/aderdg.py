@@ -87,8 +87,6 @@ solver.set_implementation(
     riemann_solver=scenario._equation.riemann_solver(),
 )
 
-solver.set_plotter(args.plotter)
-
 if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementation:
     exahype2.solvers.aderdg.ErrorMeasurement(
         solver,

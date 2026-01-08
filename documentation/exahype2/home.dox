@@ -40,7 +40,6 @@ and innovation programme under grant agreement No 671698 (ExaHyPE).
   - \subpage page_exahype_amr
 - Postprocessing and data analysis
   - \subpage page_exahype_visualisation
-  - \subpage page_exahype_checkpointing
   - \subpage page_exahype_extend-visualisation
 - HPC
   - \subpage page_exahype_domain-decomposition

@@ -53,6 +53,7 @@ parser.set_defaults(
     min_depth=6,
     # end_time=2.0,
     degrees_of_freedom=16,
+    number_of_snapshots=0,
     periodic_boundary_conditions_x=True,
     periodic_boundary_conditions_y=True,
     periodic_boundary_conditions_z=True,
@@ -80,7 +81,7 @@ fv_solver.set_implementation(
     limiter=exahype2.solvers.fv.musclhancock.Limiter.minmod,
 )
 
-fv_solver.set_plotter(args.plotter)
+fv_solver.set_plotter(peano4.plotter.VTUPatchAMRPlotter)
 
 exahype2.solvers.fv.ErrorMeasurement(
     fv_solver,

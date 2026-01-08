@@ -55,17 +55,17 @@ class DiscontinuousGalerkinTracing(
         self.tracerDict["SOLVER_NAME"] = solver._name
         self.tracerDict["SOLVER_INSTANCE"] = solver.get_name_of_global_instance()
         self.tracerDict["ORDER"] = solver._basis.order
-        self.tracerDict["NUMBER_OF_UNKNOWNS"] = solver._unknowns
-        self.tracerDict["NUMBER_OF_AUXILIARY_VARIABLES"] = solver._auxiliary_variables
+        self.tracerDict["NUMBER_OF_UNKNOWNS"] = solver.unknowns
+        self.tracerDict["NUMBER_OF_AUXILIARY_VARIABLES"] = solver.auxiliary_variables
         self.tracerDict["PROJECTION_KERNEL"] = project_on_tracer_properties_kernel
         self.tracerDict["PROJECTION_KERNEL_ARGUMENTS"] = jinja2.Template(
             projection_kernel_arguments
         ).render(**self.tracerDict)
 
         cell_compute_kernel = """
-if ( 
-  fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() 
-  and 
+if (
+  fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated()
+  and
   (
     repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
     or
