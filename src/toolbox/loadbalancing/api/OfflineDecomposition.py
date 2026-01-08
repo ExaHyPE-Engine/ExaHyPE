@@ -142,6 +142,15 @@ def main():
     parser.add_argument("-l",   "--max-level",  dest="max_level",  	    type=int, default=0,                help="Maximum refinement level for artificial regular grid generation" )
     parser.add_argument("-s",   "--splits", 	dest="num_splits",      type=int,                           help="Number of additional subtrees to create via splitting")
     parser.add_argument("-o",   "--output",     dest="output_yaml",     type=str, default="output.yaml",    help="Output YAML file path for storing split results and tree structure")
+
+    parser.add_argument(
+        "--no-topology-update",
+        dest="topology_update",
+        action="store_false",
+        default=True,
+        help="Disable topology preservation (skip non-leaf subtree propagation) during split_leaves()."
+    )
+
     args = parser.parse_args()
 
     time1 = time.time()
@@ -249,7 +258,19 @@ def main():
         print("="*50)
         
         split_start_time = time.time()
-        tree = split_strategy.split_leaves(tree, args.num_splits)
+
+        # a runtime switch for whether split_leaves() performs its Stage II topology propagation
+        if args.topology_update:
+            tree = split_strategy.split_leaves(tree, args.num_splits)
+        else:
+            # Temporarily disable SplitTrees._update_non_leaf_assignments without editing SplitTrees.py
+            original_update = split_strategy._update_non_leaf_assignments
+            try:
+                split_strategy._update_non_leaf_assignments = lambda _tree: None
+                tree = split_strategy.split_leaves(tree, args.num_splits)
+            finally:
+                split_strategy._update_non_leaf_assignments = original_update
+
         split_end_time = time.time()
 
         print(f"Splitting Time Cost: {(split_end_time - split_start_time):.4f} seconds")
