@@ -62,7 +62,8 @@
  *   Offline helpers (see @ref page_toolbox_loadbalancing_api) yield four lists:
  *   gridSweeps, splittingTrees, numberOfCells, subTrees (subtree ids).
  *   Interpretation:
- *   - gridSweeps = base_sweep * target_subtree_id (even numbers if base_sweep=2).
+ *   - gridSweeps = base_sweep * (earliest_appearance_level + 1).
+ *     Here earliest_appearance_level is 0-based w.r.t. the API tree arrays.
  *   - splittingTrees = unique parent subtree at earliest appearance level, or 0 if ambiguous.
  *   - numberOfCells = count of cells of that subtree on its earliest appearance level only.
  *   - subTrees = subtree identifiers; you must map them to destinationRanks for the constructor.

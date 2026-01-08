@@ -69,7 +69,7 @@ The helper [`SplitTrees.extract_hardcoded_split_parameters`](src/toolbox/loadbal
 `(gridSweeps, splittingTrees, numberOfCells, subTrees)` to feed into [`toolbox::loadbalancing::strategies::Hardcoded`](src/toolbox/loadbalancing/strategies/Hardcoded.h).
 
 Semantics (non-leaf-centric):
-- `gridSweeps`: `base_sweep * target_subtree_id` (even numbers if base_sweep=2).
+- `gridSweeps`: `base_sweep * (earliest_appearance_level + 1)` (even numbers if base_sweep=2 and you use only odd-numbered levels, etc.).
 - `splittingTrees`: unique parent subtree id at earliest appearance level
 - `numberOfCells`: count of cells with the target subtree id on the earliest level where it first appears (ignores deeper descendants created later).
 - `subTrees`: actual subtree ids introduced; must be mapped to destination MPI ranks when constructing the hardcoded strategy (they are not ranks).
@@ -142,7 +142,7 @@ python3 OfflineDecomposition.py -d 3 -l 3 -s 4 -p
 The script integrates all API components into a complete workflow:
 1. **Input processing** via [`GridPatchFileReader`](src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py) or [`RegularGridGenerator`](src/toolbox/loadbalancing/api/Input/RegularGridGenerator.py)
 2. **Tree analysis** using the [`Tree`](src/toolbox/loadbalancing/api/Tree.py) data structure
-3. **Load balancing** through [`SplitTrees`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py) strategies
+3. **Load balancing** through [`SplitTrees`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py` strategies
 4. **Results export** in YAML format for Peano integration
 
 For complete command-line options, parameter details, and usage examples, see the [`OfflineDecomposition.py`](src/toolbox/loadbalancing/api/OfflineDecomposition.py) script documentation.

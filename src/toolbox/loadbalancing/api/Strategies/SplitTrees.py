@@ -571,7 +571,8 @@ def extract_hardcoded_split_parameters(peano_tree: Tree, base_sweep: int = 2) ->
     - If the earliest level is 0 (root level) we set source subtree to 0.
     
     Grid sweep numbering:
-    - Uses base_sweep * target_subtree (even numbers if base_sweep=2).
+    - Uses base_sweep * (earliest_appearance_level + 1).
+      (So, for max_level=3, the finest level has index 2, and thus grid sweep = base_sweep * 3.)
 
     Returns:
         (gridSweeps, splittingTrees, numberOfCells, subTrees) with subTrees
@@ -653,7 +654,12 @@ def extract_hardcoded_split_parameters(peano_tree: Tree, base_sweep: int = 2) ->
         if moved_cells == 0:
             continue
         source_subtree = infer_source_subtree(target_subtree, level)
-        grid_sweep = base_sweep * target_subtree
+
+        # Convention: schedule the split in the sweep corresponding to the level
+        # where the target subtree first appears.
+        # level is 0-based (0..max_level-1), while the "level number" is (level+1).
+        grid_sweep = base_sweep * (level + 1)
+
         split_operations.append(
             {
                 "grid_sweep": grid_sweep,
