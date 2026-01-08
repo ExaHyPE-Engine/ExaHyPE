@@ -21,7 +21,9 @@
 #include "peano4/utils/Globals.h"
 #include "peano4/utils/Loop.h"
 #include "tarch/logging/Log.h"
-#include "tarch/plotter/griddata/blockstructured/PeanoTextPatchFileWriter.h"
+#include "tarch/plotter/AMRPlotter.h"
+#include "tarch/plotter/PVDTimeSeriesWriter.h"
+#include "tarch/plotter/VTUFileWriter.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
 #include "toolbox/blockstructured/Interpolation.h"
@@ -122,48 +124,52 @@ void printFinalStatistics(
 
 void plotGrid() {
   repositories::startPlottingStep();
-  static int counter = -1;
-  counter++;
 
-  std::ostringstream snapshotFileName;
-  snapshotFileName << "solutions/solution-FVSolver-" << counter;
+  const std::string outputDirectory  = "solutions";
+  const std::string solutionFileName = "FVSolver";
 
-  auto writer = tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-    DIMENSIONS,
-    snapshotFileName.str(),
-    "solutions/solution-FVSolver",
-    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
-    0.5 * (repositories::getMinTimeStamp() + repositories::getMaxTimeStamp())
-  );
+  const double t = 0.5 * (repositories::getMinTimeStamp() + repositories::getMaxTimeStamp());
 
-  auto dataWriter = writer.createCellDataWriter(
-    "FVSolverQ",
-    AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-    AbstractFVSolver::NumberOfUnknowns,
-    PlotDescription,
-    "",
-    nullptr
-  );
-  dataWriter->setPrecision(PlotterPrecision);
+  static tarch::plotter::PVDTimeSeriesWriter timeSeriesWriter;
+  tarch::plotter::VTUFileWriter              fileWriter(outputDirectory, 1);
+  tarch::plotter::AMRPlotter                 amrPlotter(fileWriter, 0, 0.5, 0.0);
+
+  auto cellDataPlotter = fileWriter.createCellDataPlotter(0, "FVSolverQ", AbstractFVSolver::NumberOfUnknowns);
 
   for (auto& marker : _cells) {
     if (not marker.hasBeenRefined()) {
-      const int patchIndex = writer.plotPatch(marker.getX() - marker.getH() * 0.5, marker.getH());
-      int       cellIndex  = dataWriter->getFirstCellWithinPatch(patchIndex);
-      int       currentDoF = 0;
-      double*   QOut       = DataRepository::getInstance().getCellQ(marker.getX(), marker.getH());
-      dfor(k, AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch) {
-        double* data = QOut + currentDoF;
+      const auto& patchSize   = marker.getH();
+      const auto& patchOffset = marker.getX() - patchSize * 0.5;
 
-        dataWriter->plotCell(cellIndex, data);
-        cellIndex++;
+      const auto  cellSize = patchSize / static_cast<double>(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch);
+      const auto* QOut     = DataRepository::getInstance().getCellQ(marker.getX(), marker.getH());
+
+      int currentDoF = 0;
+      dfor(k, AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch) {
+#if DIMENSIONS == 2
+        tarch::la::Vector<2, double> cellOffset;
+        cellOffset(0)       = patchOffset(0) + static_cast<double>(k(0)) * cellSize(0);
+        cellOffset(1)       = patchOffset(1) + static_cast<double>(k(1)) * cellSize(1);
+        const int cellIndex = amrPlotter.plotCell2D(cellOffset, cellSize, 0);
+#else
+        tarch::la::Vector<3, double> cellOffset;
+        cellOffset(0)       = patchOffset(0) + static_cast<double>(k(0)) * cellSize(0);
+        cellOffset(1)       = patchOffset(1) + static_cast<double>(k(1)) * cellSize(1);
+        cellOffset(2)       = patchOffset(2) + static_cast<double>(k(2)) * cellSize(2);
+        const int cellIndex = amrPlotter.plotCell3D(cellOffset, cellSize, 0);
+#endif
+
+        const auto* values = QOut + currentDoF;
+        cellDataPlotter->plotCellData(cellIndex, values, AbstractFVSolver::NumberOfUnknowns);
+
         currentDoF += AbstractFVSolver::NumberOfUnknowns;
       }
     }
   }
-  dataWriter->close();
-  writer.writeToFile();
-  delete dataWriter;
+
+  timeSeriesWriter.writeSnapshotFile(solutionFileName, t, fileWriter);
+  timeSeriesWriter.writeTimeSeriesMetaFile(outputDirectory, solutionFileName);
+
   repositories::finishPlottingStep();
 }
 

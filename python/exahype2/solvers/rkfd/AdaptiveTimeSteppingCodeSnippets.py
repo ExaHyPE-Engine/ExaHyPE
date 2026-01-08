@@ -49,9 +49,6 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
     if (tarch::la::equals(_minTimeStampThisTimeStep, 0, 1e-8)) {
       _admissibleTimeStepSizeThisTimeStep *= 1e-3;
     }
-    if (CheckpointTimeStamp != 0 and tarch::la::equals(_minTimeStampThisTimeStep, CheckpointTimeStamp, 1e-8)) {
-      _admissibleTimeStepSizeThisTimeStep *= 1e-3;
-    }
 """
       if self._adaptive_starting_timeStep_size == "soft":
         temp_implementation +="""

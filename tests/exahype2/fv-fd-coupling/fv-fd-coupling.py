@@ -277,11 +277,11 @@ euler_solver.postprocess_updated_patch += f"""// Copy density, energy, and momen
   ::toolbox::blockstructured::copyUnknown(
     {euler_solver.patch_size}, // no of unknowns per dimension
     fineGridCell{euler_solver.name}Q.data(), // source
-    {euler_solver._variable_names.index("rho")}, // density in source
+    {euler_solver.variable_names.index("rho")}, // density in source
     {number_of_variables_euler}, // unknowns in source (incl material parameters)
     0, // no overlap/halo here
     fineGridCell{diffusion_solver.name}Q.data(), // dest
-    {diffusion_solver._variable_names.index("rho")}, // density in dest
+    {diffusion_solver.variable_names.index("rho")}, // density in dest
     {number_of_variables_diffusion}, // unknowns in dest (incl material parameters)
     0 // no overlap/halo here
   );
@@ -289,11 +289,11 @@ euler_solver.postprocess_updated_patch += f"""// Copy density, energy, and momen
   ::toolbox::blockstructured::copyUnknown(
     {euler_solver.patch_size}, // no of unknowns per dimension
     fineGridCell{euler_solver.name}Q.data(), // source
-    {euler_solver._variable_names.index("rhoU")}, // x-momentum in source
+    {euler_solver.variable_names.index("rhoU")}, // x-momentum in source
     {number_of_variables_euler}, // unknowns in source (incl material parameters)
     0, // no overlap/halo here
     fineGridCell{diffusion_solver.name}Q.data(), // dest
-    {diffusion_solver._variable_names.index("rhoU")}, // x-momentum in dest
+    {diffusion_solver.variable_names.index("rhoU")}, // x-momentum in dest
     {number_of_variables_diffusion}, // unknowns in dest (incl material parameters)
     0 // no overlap/halo here
   );
@@ -301,11 +301,11 @@ euler_solver.postprocess_updated_patch += f"""// Copy density, energy, and momen
   ::toolbox::blockstructured::copyUnknown(
     {euler_solver.patch_size}, // no of unknowns per dimension
     fineGridCell{euler_solver.name}Q.data(), // source
-    {euler_solver._variable_names.index("rhoV")}, // y-momentum in source
+    {euler_solver.variable_names.index("rhoV")}, // y-momentum in source
     {number_of_variables_euler}, // unknowns in source (incl material parameters)
     0, // no overlap/halo here
     fineGridCell{diffusion_solver.name}Q.data(), // dest
-    {diffusion_solver._variable_names.index("rhoV")}, // y-momentum in dest
+    {diffusion_solver.variable_names.index("rhoV")}, // y-momentum in dest
     {number_of_variables_diffusion}, // unknowns in dest (incl material parameters)
     0 // no overlap/halo here
   );
@@ -313,11 +313,11 @@ euler_solver.postprocess_updated_patch += f"""// Copy density, energy, and momen
   ::toolbox::blockstructured::copyUnknown(
     {euler_solver.patch_size}, // no of unknowns per dimension
     fineGridCell{euler_solver.name}Q.data(), // source
-    {euler_solver._variable_names.index("rhoE")}, // energy in source
+    {euler_solver.variable_names.index("rhoE")}, // energy in source
     {number_of_variables_euler}, // unknowns in source (incl material parameters)
     0, // no overlap/halo here
     fineGridCell{diffusion_solver.name}Q.data(), // dest
-    {diffusion_solver._variable_names.index("rhoE")}, // energy in dest
+    {diffusion_solver.variable_names.index("rhoE")}, // energy in dest
     {number_of_variables_diffusion}, // unknowns in dest (incl material parameters)
     0 // no overlap/halo here
   );
@@ -329,11 +329,11 @@ if args.dimensions == 3:
   ::toolbox::blockstructured::copyUnknown(
     {euler_solver.patch_size}, // no of unknowns per dimension
     fineGridCell{euler_solver.name}Q.data(), // source
-    {euler_solver._variable_names.index("rhoW")}, // z-momentum in source
+    {euler_solver.variable_names.index("rhoW")}, // z-momentum in source
     {number_of_variables_euler}, // unknowns in source (incl material parameters)
     0, // no overlap/halo here
     fineGridCell{diffusion_solver.name}Q.data(), // dest
-    {diffusion_solver._variable_names.index("rhoW")}, // z-momentum in dest
+    {diffusion_solver.variable_names.index("rhoW")}, // z-momentum in dest
     {number_of_variables_diffusion}, // unknowns in dest (incl material parameters)
     0 // no overlap/halo here
   );
@@ -348,11 +348,11 @@ diffusion_solver.postprocess_updated_patch += f"""// Copy energy and momenta
   ::toolbox::blockstructured::copyUnknown(
     {diffusion_solver.patch_size}, // no of unknowns per dimension
     fineGridCell{diffusion_solver.name}Q.data(), // source
-    {diffusion_solver._variable_names.index("rhoU")}, // x-momentum in source
+    {diffusion_solver.variable_names.index("rhoU")}, // x-momentum in source
     {number_of_variables_diffusion}, // unknowns in source (incl material parameters)
     0, // no overlap/halo here
     fineGridCell{euler_solver.name}Q.data(), // dest
-    {euler_solver._variable_names.index("rhoU")}, // x-momentum in dest
+    {euler_solver.variable_names.index("rhoU")}, // x-momentum in dest
     {number_of_variables_euler}, // unknowns in dest (incl material parameters)
     0 // no overlap/halo here
   );
@@ -360,11 +360,11 @@ diffusion_solver.postprocess_updated_patch += f"""// Copy energy and momenta
   ::toolbox::blockstructured::copyUnknown(
     {diffusion_solver.patch_size}, // no of unknowns per dimension
     fineGridCell{diffusion_solver.name}Q.data(), // source
-    {diffusion_solver._variable_names.index("rhoV")}, // y-momentum in source
+    {diffusion_solver.variable_names.index("rhoV")}, // y-momentum in source
     {number_of_variables_diffusion}, // unknowns in source (incl material parameters)
     0, // no overlap/halo here
     fineGridCell{euler_solver.name}Q.data(), // dest
-    {euler_solver._variable_names.index("rhoV")}, // y-momentum in dest
+    {euler_solver.variable_names.index("rhoV")}, // y-momentum in dest
     {number_of_variables_euler}, // unknowns in dest (incl material parameters)
     0 // no overlap/halo here
   );
@@ -372,11 +372,11 @@ diffusion_solver.postprocess_updated_patch += f"""// Copy energy and momenta
   ::toolbox::blockstructured::copyUnknown(
     {diffusion_solver.patch_size}, // no of unknowns per dimension
     fineGridCell{diffusion_solver.name}Q.data(), // source
-    {diffusion_solver._variable_names.index("rhoE")}, // energy in source
+    {diffusion_solver.variable_names.index("rhoE")}, // energy in source
     {number_of_variables_diffusion}, // unknowns in source (incl material parameters)
     0, // no overlap/halo here
     fineGridCell{euler_solver.name}Q.data(), // dest
-    {euler_solver._variable_names.index("rhoE")}, // energy in dest
+    {euler_solver.variable_names.index("rhoE")}, // energy in dest
     {number_of_variables_euler}, // unknowns in dest (incl material parameters)
     0 // no overlap/halo here
   );
@@ -388,11 +388,11 @@ if args.dimensions == 3:
   ::toolbox::blockstructured::copyUnknown(
     {diffusion_solver.patch_size}, // no of unknowns per dimension
     fineGridCell{diffusion_solver.name}Q.data(), // source
-    {diffusion_solver._variable_names.index("rhoW")}, // z-momentum in source
+    {diffusion_solver.variable_names.index("rhoW")}, // z-momentum in source
     {number_of_variables_diffusion}, // unknowns in source (incl material parameters)
     0, // no overlap/halo here
     fineGridCell{euler_solver.name}Q.data(), // dest
-    {euler_solver._variable_names.index("rhoW")}, // z-momentum in dest
+    {euler_solver.variable_names.index("rhoW")}, // z-momentum in dest
     {number_of_variables_euler}, // unknowns in dest (incl material parameters)
     0 // no overlap/halo here
   );

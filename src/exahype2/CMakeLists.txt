@@ -10,7 +10,6 @@ set(SOURCES
   EnclaveBookkeeping.cpp
   EnclaveTask.cpp
   LoadBalancingConfiguration.cpp
-  PlotFilter.cpp
   PrecisionControl.cpp
   RefinementControl.cpp
   RefinementControlService.cpp

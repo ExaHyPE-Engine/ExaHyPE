@@ -14,11 +14,15 @@ if(@WITH_VTK@)
 endif()
 
 if(@WITH_HDF5@)
-  find_dependency(HDF5 COMPONENTS C CXX)
+  find_dependency(HDF5 COMPONENTS C)
 endif()
 
 if(@WITH_EASI@)
   find_dependency(easi)
+endif()
+
+if(@WITH_ZLIB@)
+  find_dependency(ZLIB)
 endif()
 
 if(@WITH_MULTITHREADING@)

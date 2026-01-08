@@ -16,7 +16,7 @@
 
 #include <algorithm>
 
-{% if USE_VARIABLE_SHORTCUT is sameas True %}
+{% if USE_VARIABLE_SHORTCUTS is sameas True %}
 #include "VariableShortcuts{{SOLVER_NAME}}.h"
 {% endif %}
 
@@ -32,7 +32,7 @@ namespace {{ item }} {
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
-    {% if USE_VARIABLE_SHORTCUT is sameas True %}
+    {% if USE_VARIABLE_SHORTCUTS is sameas True %}
     /*
      * Enables the usage of shortcuts to access variables, e.g. use Q[Shortcuts::{{VARIABLE_NAMES[0]}}] instead of Q[0]
      */

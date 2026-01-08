@@ -21,7 +21,6 @@ class GlobalFixedTimeStep(SingleSweep):
         normalised_time_step_size,
         use_enclave_tasking=False,
         number_of_enclave_tasks=1,
-        plot_grid_properties=False,
         solvers_before_in_coupling=[],
     ):
         super(GlobalFixedTimeStep, self).__init__(
@@ -34,7 +33,6 @@ class GlobalFixedTimeStep(SingleSweep):
             max_h=max_h,
             use_enclave_tasking=use_enclave_tasking,
             number_of_enclave_tasks=number_of_enclave_tasks,
-            plot_grid_properties=plot_grid_properties,
             solvers_before_in_coupling=solvers_before_in_coupling,
         )
 

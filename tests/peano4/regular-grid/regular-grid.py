@@ -2,8 +2,8 @@
 # use, please see the copyright notice at www.peano-framework.org
 import peano4
 
-max_depth = 5
-dimension = 3
+max_depth = 6
+dimension = 2
 build_mode = peano4.output.CompileMode.Release
 
 project = peano4.Project(["tests", "peano4", "grid"], "RegularGrid", executable="Peano")
@@ -17,6 +17,6 @@ project.output.makefile.set_mode(build_mode)
 project.output.makefile.add_cpp_file("RegularGrid-main.cpp")
 project.output.makefile.add_cpp_file("CreateGridObserver.cpp")
 project.output.makefile.add_cpp_file("EmptyTraversalObserver.cpp")
-project.output.makefile.add_cpp_file("VTKPlotterObserver.cpp")
+project.output.makefile.add_cpp_file("VTUPlotterObserver.cpp")
 
 project.build()

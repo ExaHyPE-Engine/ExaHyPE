@@ -20,6 +20,7 @@ parser.add_argument(
 parser.set_defaults(
     min_depth=1,
     degrees_of_freedom=6,
+    number_of_snapshots=0,
 )
 args = parser.parse_args()
 
@@ -126,8 +127,6 @@ solver.add_user_solver_includes(
 #include "PDE.h"
 """
 )
-
-solver.set_plotter(args.plotter)
 
 exahype2.solvers.aderdg.ErrorMeasurement(
     solver,

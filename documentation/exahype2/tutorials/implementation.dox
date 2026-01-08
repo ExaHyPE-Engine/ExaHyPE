@@ -108,15 +108,10 @@ Finally, we would normally need to define boundary conditions to make our proble
 but as we have specified periodic boundary conditions, this is not necessary here.
 
 So, now that we've gone through all of this, let's go take a look at our results.
-These should be within the folder `solutions` and are stored in a custom format named `peano-patch-file`,
-which is essentially plain-text but allows for efficient parallel writing.
-In order to visualize this, we will first need to convert these files using following command:
+These should be within the folder `solutions` and are stored as HDF5/XMF or VTU/PVD files,
+which we can read and visualise using e.g., ParaView:
 
-    python3 -m visualisation.convert_to_vtu solutions/solution-PlanarAcousticSolver.peano-patch-file
-
-This converts the patch files to `.vtu` files, which we can read and visualise using e.g., ParaView:
-
-    paraview solutions/solution-PlanarAcousticSolver.pvd
+    paraview solutions/PlanarAcousticSolver.pvd
 
 If you've followed all of the steps until now, you should have following initial conditions for the pressure:
 

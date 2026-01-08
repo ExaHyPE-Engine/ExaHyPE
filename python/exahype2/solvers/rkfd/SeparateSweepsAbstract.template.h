@@ -20,7 +20,7 @@
 
 #include "Constants.h"
 
-{% if USE_VARIABLE_SHORTCUT is sameas True %}
+{% if USE_VARIABLE_SHORTCUTS is sameas True %}
 #include "VariableShortcuts.h"
 {% endif %}
 

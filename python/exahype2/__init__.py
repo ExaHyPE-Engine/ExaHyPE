@@ -16,3 +16,4 @@ import exahype2.solvers.limiting
 from .ArgumentParser import ArgumentParser
 from .Project import Project
 from .ExaHyPEMain import ExaHyPEMain
+from .VariableShortcuts import VariableShortcuts

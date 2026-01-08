@@ -48,7 +48,6 @@ class GlobalAdaptiveTimeStep(SeparateSweeps):
     refinement_criterion=PDETerms.Empty_Implementation,
     initial_conditions=PDETerms.User_Defined_Implementation,
     source_term=PDETerms.None_Implementation,
-    plot_grid_properties=False,
     pde_terms_without_state=False,
     ):
     """!
@@ -64,7 +63,6 @@ class GlobalAdaptiveTimeStep(SeparateSweeps):
                                                 auxiliary_variables, 
                                                 min_cell_h, 
                                                 max_cell_h, 
-                                                plot_grid_properties, 
                                                 pde_terms_without_state,
                                                 )
 

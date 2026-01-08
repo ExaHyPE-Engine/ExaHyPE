@@ -91,8 +91,8 @@ class FiniteVolumesTracing(
         self.tracerDict["SOLVER_NAME"] = solver._name
         self.tracerDict["SOLVER_INSTANCE"] = solver.get_name_of_global_instance()
         self.tracerDict["PATCH_SIZE"] = solver._patch_size
-        self.tracerDict["NUMBER_OF_UNKNOWNS"] = solver._unknowns
-        self.tracerDict["NUMBER_OF_AUXILIARY_VARIABLES"] = solver._auxiliary_variables
+        self.tracerDict["NUMBER_OF_UNKNOWNS"] = solver.unknowns
+        self.tracerDict["NUMBER_OF_AUXILIARY_VARIABLES"] = solver.auxiliary_variables
         self.tracerDict["PROJECTION_KERNEL"] = project_on_tracer_properties_kernel
         self.tracerDict["PROJECTION_KERNEL_ARGUMENTS"] = jinja2.Template(
             projection_kernel_arguments

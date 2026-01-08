@@ -34,26 +34,37 @@ find_library(NetCDF_LIBRARY
 )
 
 set(NetCDF_VERSION "")
+set(NetCDF_HAS_NC4 FALSE)
+set(NetCDF_IS_PARALLEL FALSE)
 
 if(NetCDF_INCLUDE_DIR AND EXISTS "${NetCDF_INCLUDE_DIR}/netcdf_meta.h")
-  file(STRINGS "${NetCDF_INCLUDE_DIR}/netcdf_meta.h" _netcdf_version_lines
-    REGEX "#define[ \t]+NC_VERSION_(MAJOR|MINOR|PATCH|NOTE)")
+  file(READ "${NetCDF_INCLUDE_DIR}/netcdf_meta.h" _netcdf_meta_content)
 
-  string(REGEX REPLACE ".*NC_VERSION_MAJOR *\([0-9]*\).*" "\\1" _netcdf_version_major "${_netcdf_version_lines}")
-  string(REGEX REPLACE ".*NC_VERSION_MINOR *\([0-9]*\).*" "\\1" _netcdf_version_minor "${_netcdf_version_lines}")
-  string(REGEX REPLACE ".*NC_VERSION_PATCH *\([0-9]*\).*" "\\1" _netcdf_version_patch "${_netcdf_version_lines}")
-  string(REGEX REPLACE ".*NC_VERSION_NOTE *\"\([^\"]*\)\".*" "\\1" _netcdf_version_note "${_netcdf_version_lines}")
+  # Parse Version
+  # Try macro parsing first
+  string(REGEX REPLACE ".*#define[ \t]+NC_VERSION_MAJOR[ \t]+([0-9]+).*" "\\1" _ver_major "${_netcdf_meta_content}")
+  string(REGEX REPLACE ".*#define[ \t]+NC_VERSION_MINOR[ \t]+([0-9]+).*" "\\1" _ver_minor "${_netcdf_meta_content}")
+  string(REGEX REPLACE ".*#define[ \t]+NC_VERSION_PATCH[ \t]+([0-9]+).*" "\\1" _ver_patch "${_netcdf_meta_content}")
+  string(REGEX REPLACE ".*#define[ \t]+NC_VERSION_NOTE[ \t]+\"([^\"]*)\".*" "\\1" _ver_note "${_netcdf_meta_content}")
 
-  if(_netcdf_version_major MATCHES "[0-9]+")
-    set(NetCDF_VERSION "${_netcdf_version_major}.${_netcdf_version_minor}.${_netcdf_version_patch}${_netcdf_version_note}")
-  endif()
-
-  if(NOT NetCDF_VERSION)
-    file(READ "${NetCDF_INCLUDE_DIR}/netcdf_meta.h" _netcdf_meta_header)
-    string(REGEX MATCH "#define[ \t]+NC_VERSION[ \t]+\"([^\"]+)\"" _ver_match "${_netcdf_meta_header}")
+  if("${_ver_major}" MATCHES "^[0-9]+$")
+    set(NetCDF_VERSION "${_ver_major}.${_ver_minor}.${_ver_patch}${_ver_note}")
+  else()
+    # Fallback to string parsing
+    string(REGEX MATCH "#define[ \t]+NC_VERSION[ \t]+\"([^\"]+)\"" _ver_match "${_netcdf_meta_content}")
     if(_ver_match)
       string(REGEX REPLACE ".*\"([^\"]+)\".*" "\\1" NetCDF_VERSION "${_ver_match}")
     endif()
+  endif()
+
+  # Check for NetCDF-4 support (HDF5 backend)
+  if("${_netcdf_meta_content}" MATCHES "#define[ \t]+NC_HAS_NC4[ \t]+1")
+    set(NetCDF_HAS_NC4 TRUE)
+  endif()
+
+  # Check for parallel support
+  if("${_netcdf_meta_content}" MATCHES "#define[ \t]+NC_HAS_PARALLEL4?[ \t]+1")
+    set(NetCDF_IS_PARALLEL TRUE)
   endif()
 endif()
 
@@ -73,10 +84,9 @@ if(NetCDF_FOUND)
       IMPORTED_LOCATION "${NetCDF_LIBRARY}"
       INTERFACE_INCLUDE_DIRECTORIES "${NetCDF_INCLUDE_DIR}")
   endif()
-
-  set(NETCDF_INCLUDES "${NetCDF_INCLUDE_DIR}")
-  set(NETCDF_LIBRARIES "${NetCDF_LIBRARY}")
-  set(NETCDF_VERSION "${NetCDF_VERSION}")
 endif()
 
-mark_as_advanced(NETCDF_INCLUDES NETCDF_LIBRARIES NETCDF_VERSION)
+mark_as_advanced(
+  NetCDF_INCLUDE_DIR
+  NetCDF_LIBRARY
+)

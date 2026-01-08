@@ -5,7 +5,6 @@
 #include "peano4/grid/GridStatistics.h"
 
 #include "exahype2/RefinementControl.h"
-#include "exahype2/PlotFilter.h"
 
 #include "toolbox/loadbalancing/LoadBalancer.h"
 
@@ -22,7 +21,6 @@ namespace {{ item }} {
   {% endfor %}
 
   extern ::exahype2::RefinementControl  refinementControl;
-  extern ::exahype2::PlotFilter         plotFilter;
 
   extern toolbox::loadbalancing::LoadBalancer loadBalancer;
 

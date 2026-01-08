@@ -20,7 +20,6 @@ class GlobalAdaptiveTimeStep(SingleSweep):
         time_step_relaxation,
         use_enclave_tasking=False,
         number_of_enclave_tasks=1,
-        plot_grid_properties=False,
         reconstruction=None,
         overlap=2,
         solvers_before_in_coupling=[],
@@ -35,7 +34,6 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             max_volume_h=max_volume_h,
             use_enclave_tasking=use_enclave_tasking,
             number_of_enclave_tasks=number_of_enclave_tasks,
-            plot_grid_properties=plot_grid_properties,
             solvers_before_in_coupling=solvers_before_in_coupling,
         )
 

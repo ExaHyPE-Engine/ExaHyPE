@@ -38,8 +38,6 @@ fv_solver.set_implementation(
     source_term=exahype2.solvers.PDETerms.User_Defined_Implementation,
 )
 
-fv_solver.set_plotter(args.plotter)
-
 project = exahype2.Project(
     namespace=["applications", "exahype2", "ShallowWater"],
     project_name="ArtificalMeteoTsunami",

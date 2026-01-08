@@ -8,10 +8,10 @@ namespace tests::peano4::grid {
   class CreateGridObserver;
 } // namespace tests::peano4::grid
 
-class tests::peano4::grid::CreateGridObserver: public ::peano4::grid::GridTraversalObserver {
+class tests::peano4::grid::CreateGridObserver final: public ::peano4::grid::GridTraversalObserver {
 public:
-  CreateGridObserver()                   = default;
-  virtual ~CreateGridObserver() override = default;
+  CreateGridObserver()           = default;
+  ~CreateGridObserver() override = default;
 
   void beginTraversal(
     const tarch::la::Vector<DIMENSIONS, double>& x,

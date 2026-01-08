@@ -432,17 +432,6 @@ class PosterioriLimiting(object):
 #include "repositories/SolverRepository.h"
 """
 
-    def __str__(self):
-        result = (
-            """
-Name:                   """
-            + self._name
-            + """
-Type:                   """
-            + self.__class__.__name__
-        )
-        return result
-
     def add_to_Peano4_datamodel(self, datamodel):
         datamodel.add_cell(self._cell_label)
         datamodel.add_face(self._face_label)
@@ -469,9 +458,6 @@ Type:                   """
         step.add_action_set(self._action_set_check_troubledness)
         step.add_action_set(self._action_set_spread_limiter_status)
         step.add_action_set(self._action_set_copy_convert_and_project_data)
-
-    def set_plot_description(self, description):
-        self.plot_description = description
 
     def _generate_kernels(self, namespace, output, subdirectory, dimensions):
         d = {}
@@ -620,21 +606,21 @@ Type:                   """
         d["NUMBER_OF_DOF_LIMITER_PADDED"] = Architectures.get_size_with_padding(
             self._regular_solver._architecture, d["NUMBER_OF_DOF_LIMITER"]
         )
-        d["NUMBER_OF_UNKNOWNS"] = self._regular_solver._unknowns
+        d["NUMBER_OF_UNKNOWNS"] = self._regular_solver.unknowns
         d["NUMBER_OF_UNKNOWNS_PADDED"] = Architectures.get_size_with_padding(
-            self._regular_solver._architecture, self._regular_solver._unknowns
+            self._regular_solver._architecture, self._regular_solver.unknowns
         )
-        d["NUMBER_OF_AUXILIARY_VARIABLES"] = self._regular_solver._auxiliary_variables
+        d["NUMBER_OF_AUXILIARY_VARIABLES"] = self._regular_solver.auxiliary_variables
         d["NUMBER_OF_AUXILIARY_VARIABLES_PADDED"] = Architectures.get_size_with_padding(
             self._regular_solver._architecture,
-            self._regular_solver._auxiliary_variables,
+            self._regular_solver.auxiliary_variables,
         )
         d["NUMBER_OF_DATA"] = (
-            self._regular_solver._unknowns + self._regular_solver._auxiliary_variables
+            self._regular_solver.unknowns + self._regular_solver.auxiliary_variables
         )
         d["NUMBER_OF_DATA_PADDED"] = Architectures.get_size_with_padding(
             self._regular_solver._architecture,
-            self._regular_solver._unknowns + self._regular_solver._auxiliary_variables,
+            self._regular_solver.unknowns + self._regular_solver.auxiliary_variables,
         )
         d["NUMBER_OF_OBSERVABLES"] = self._number_of_dmp_observables
         d["GHOST_LAYER_WIDTH"] = self._halo_size

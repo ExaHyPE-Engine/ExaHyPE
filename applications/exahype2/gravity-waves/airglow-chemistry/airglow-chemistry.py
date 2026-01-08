@@ -155,8 +155,6 @@ if __name__ == "__main__":
         max_eigenvalue=get_max_eigenvalue(),
     )
 
-    riemann_solver.plot_description = ", ".join(chemical_unknowns.keys()) + ", "
-    riemann_solver.plot_description += ", ".join(chemical_auxiliary_variables.keys())
     riemann_solver.add_user_solver_includes(f"""#include \"../ProductionRates.h\"\n""")
     riemann_solver.add_user_solver_includes('#include "tarch/reader/CSVReader.h"\n')
 

@@ -131,7 +131,6 @@ aderdg_solver.set_implementation(
     riemann_solver=f"rusanovRiemannSolverADERDG<double, Shortcuts, kernels::{aderdg_solver.name}::Quadrature<double>, {aderdg_solver.unknowns}, {aderdg_solver.auxiliary_variables}, {aderdg_solver.order}>(QL, QR, x, h, t, dt, direction, FL, FR);",
 )
 
-aderdg_solver.set_plotter(args.plotter)
 aderdg_solver.add_kernel_optimisations(
     is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
 )
@@ -163,7 +162,6 @@ fv_solver.set_implementation(
     riemann_solver=f"return rusanovRiemannSolverFV<double, Shortcuts, {fv_solver.unknowns}, {fv_solver.auxiliary_variables}>(QL, QR, x, h, t, dt, normal, FL, FR);",
 )
 
-fv_solver.set_plotter(args.plotter)
 fv_solver.add_user_solver_includes(
     """
 #include "../PDE.h"
@@ -189,6 +187,9 @@ project = exahype2.Project(
     directory=".",
     executable="ExaHyPE",
 )
+
+fv_solver.set_plotter(peano4.plotter.NetCDFPatchAMRPlotter)
+aderdg_solver.set_plotter(peano4.plotter.NetCDFPatchNodalPlotter)
 
 project.add_solver(aderdg_solver)
 project.add_solver(fv_solver)

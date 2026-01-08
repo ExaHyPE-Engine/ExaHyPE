@@ -263,7 +263,6 @@ if __name__ == "__main__":
         first_plot_time_stamp=0.0,
         time_in_between_plots=plot_interval,
         periodic_BC=periodic_BC,
-        plotter_precision=8,
     )
 
     if plot_interval > 0.0:

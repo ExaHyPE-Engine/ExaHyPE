@@ -125,10 +125,3 @@ class ArgumentParser(argparse.ArgumentParser):
             default=1,
             help="Number of fused enclave tasks to offload asynchronously.",
         )
-        self.add_argument(
-            "-pl",
-            "--plotter",
-            type=str,
-            default="PeanoPatch",
-            help="Choose which plotter to use: 'HDF5' or 'PeanoPatch'.",
-        )

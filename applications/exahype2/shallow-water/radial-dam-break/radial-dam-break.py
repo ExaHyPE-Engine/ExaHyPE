@@ -96,7 +96,6 @@ aderdg_solver.set_implementation(
     ncp=f"ShallowWater::nonconservativeProduct<double, Shortcuts, {aderdg_solver.unknowns}>(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);",
 )
 
-aderdg_solver.set_plotter(args.plotter)
 aderdg_solver.add_kernel_optimisations(
     is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
 )
@@ -123,7 +122,6 @@ fv_solver.set_implementation(
     riemann_solver="return hllemRiemannSolver<double, Shortcuts>(QL, QR, x, h, t, dt, normal, FL, FR);",
 )
 
-fv_solver.set_plotter(args.plotter)
 fv_solver.add_user_solver_includes(
     """
 #include "../HLLEMRiemannSolver.h"

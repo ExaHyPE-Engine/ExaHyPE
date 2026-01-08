@@ -32,7 +32,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
     source_term=PDETerms.None_Implementation,
     eigenvalues=PDETerms.User_Defined_Implementation, 
     pde_terms_without_state: bool = False,
-    plot_grid_properties=False, KOSigma=8.0
+    KOSigma=8.0
   ):
     """!
     
@@ -62,7 +62,6 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
                                              auxiliary_variables, 
                                              min_meshcell_h, 
                                              max_meshcell_h, 
-                                             plot_grid_properties, 
                                              kernel_namespace="fd4",
                                              pde_terms_without_state=pde_terms_without_state,
                                              ) 

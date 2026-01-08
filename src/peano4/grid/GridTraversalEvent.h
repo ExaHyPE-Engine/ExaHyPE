@@ -17,6 +17,8 @@ namespace peano4::grid {
 } // namespace peano4::grid
 
 struct peano4::grid::GridTraversalEvent final {
+  int level{0};
+
   tarch::la::Vector<DIMENSIONS, double> x{};
   tarch::la::Vector<DIMENSIONS, double> h{};
 

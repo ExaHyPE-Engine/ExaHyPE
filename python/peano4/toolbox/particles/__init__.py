@@ -4,7 +4,6 @@
 import peano4.toolbox.particles.api
 
 from .Particle import Particle
-from .PlotParticlesInVTKFormat import PlotParticlesInVTKFormat
 from .ParticleAMR import ParticleAMR
 
 from .ParticleSet import ParticleSet

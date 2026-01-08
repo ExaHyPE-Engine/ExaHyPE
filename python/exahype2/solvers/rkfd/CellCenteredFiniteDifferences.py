@@ -19,6 +19,8 @@ from exahype2.solvers.PDETerms import PDETerms
 
 from exahype2.solvers.ButcherTableau import RungeKutta_steps
 
+from exahype2.VariableShortcuts import VariableShortcuts
+
 from peano4.Logger import log
 
 class CellCenteredFiniteDifferences(object):
@@ -72,7 +74,6 @@ class CellCenteredFiniteDifferences(object):
         auxiliary_variables,
         min_meshcell_h,
         max_meshcell_h,
-        plot_grid_properties,
         kernel_namespace,
         baseline_action_set_descend_invocation_order=0,
     ):
@@ -106,75 +107,24 @@ class CellCenteredFiniteDifferences(object):
         max_meshcell_h: double
            This size refers to the individual Finite Volume.
 
-        plot_grid_properties: Boolean
-           Clarifies whether a dump of the data should be enriched with grid info
-           (such as enclave status flags), too.
         """
         self._name = name
 
-        "Set from the project script to choose between PlotPatchesInPeanoBlockFormat and PlotPatchesInHDF5Format"
-        self._plotter_option = "PeanoPatch"
-
         self._min_meshcell_h = min_meshcell_h
         self._max_meshcell_h = max_meshcell_h
-        self._plot_grid_properties = plot_grid_properties
 
         self._patch_size = patch_size
         self._overlap = overlap
         self._rk_order = rk_order
-
-        """
-        self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and
-        auxiliary variables in the equation to be computed. Unknowns are variables that change over
-        time whereas auxiliary variables can be space-dependent but don't vary over time.
-        These can be specified either as simple ints or by a dictionary
-        (e.g.) unknowns = {'a': 1, 'b': 1, 'c': 3}
-        in which the user specifies the multiplicity of the variable (the velocity has one component
-        per dimension for example.)
-        If they are specified by a dictionary then the code generates a "VariableShortcuts" file which
-        allows the user to specifiy a variable by name and automatically maps this to the right position
-        in an array for better legibility. Otherwise they must manually remember the position of each
-        variable manually.
-
-        use_var_shortcut is used to know whether or not the user passed their variables via a dict
-        variable_names and variable_pos are used internally to remember the names and respective
-        positions of variables if set by a dictionary.
-        """
-        self._use_var_shortcut = False
-        self._variable_names = []
-        self._variable_pos = [0]
-
-        if type(unknowns) is dict:
-            self._unknowns = sum(unknowns.values())
-            self._variable_names += list(unknowns.keys())
-            for var in list(unknowns.values()):
-                self._variable_pos.append(var + self._variable_pos[-1])
-            self._use_var_shortcut = True
-        elif type(unknowns) is int:
-            self._unknowns = unknowns
-        else:
-            raise Exception(
-                "not a valid type for parameter unknowns, needs to be int or dictionary"
-            )
-
-        if type(auxiliary_variables) is dict:
-            self._auxiliary_variables = sum(auxiliary_variables.values())
-            self._variable_names += list(auxiliary_variables.keys())
-            for var in list(auxiliary_variables.values()):
-                self._variable_pos.append(var + self._variable_pos[-1])
-            self._use_var_shortcut = True
-        elif type(auxiliary_variables) is int:
-            self._auxiliary_variables = auxiliary_variables
-        else:
-            raise Exception(
-                "not a valid type for parameter auxiliary_variables, needs to be int or dictionary"
-            )
 
         self._solver_constants = ""
         self._user_action_set_includes = ""
         self._user_solver_includes = ""
 
         self._kernel_namespace = kernel_namespace
+
+        self._plotter = peano4.plotter.HDF5PatchAMRPlotter
+        self._variable_shortcuts = VariableShortcuts(name, unknowns, auxiliary_variables)
 
         if min_meshcell_h > max_meshcell_h:
             print(
@@ -186,10 +136,6 @@ class CellCenteredFiniteDifferences(object):
             )
 
         self._solver_template_file_class_name = None
-
-        self._plot_description = ""
-
-        self.select_dofs_to_print = None
 
         self._action_set_initial_conditions = None
         self._action_set_initial_conditions_for_grid_construction = None
@@ -258,10 +204,10 @@ Overlap:                """
             + str(self._overlap)
             + """  
 Unknowns:               """
-            + str(self._unknowns)
+            + str(self._variable_shortcuts.unknowns)
             + """
 Auxiliary variables:    """
-            + str(self._auxiliary_variables)
+            + str(self._variable_shortcuts.auxiliary_variables)
             + """
 h_meshcell_min:           """
             + str(self._min_meshcell_h)
@@ -294,8 +240,8 @@ h_meshcell_max:           """
         return finest_tree_level
 
     #    self._overlap              = overlap
-    #    self._unknowns             = unknowns
-    #    self._auxiliary_variables  = auxiliary_variables
+    #    self._variable_shortcuts.unknowns             = unknowns
+    #    self._variable_shortcuts.auxiliary_variables  = auxiliary_variables
 
     def get_coarsest_number_of_patches(self, domain_size):
         return 3 ** self.get_min_number_of_spacetree_levels(domain_size)
@@ -481,12 +427,12 @@ The finest mesh width of """
         """
         self._patch = peano4.datamodel.Patch(
             (self._patch_size, self._patch_size, self._patch_size),
-            self._unknowns + self._auxiliary_variables,
+            self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
             self._unknown_identifier(),
         )
         self._patch_reconstructed = peano4.datamodel.Patch(
             (self._patch_size + 2 * self._overlap, self._patch_size + 2 * self._overlap, self._patch_size + 2 * self._overlap),
-            self._unknowns + self._auxiliary_variables,
+            self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
             self._unknown_identifier() + "Reconstructed",
         )
         self._patch_estimates = peano4.datamodel.Patch(
@@ -495,22 +441,22 @@ The finest mesh width of """
                 self._patch_size,
                 self._patch_size,
             ),
-            self._unknowns,
+            self._variable_shortcuts.unknowns,
             self._unknown_identifier() + "RhsEstimates",
         )
         self._patch_overlap_old = peano4.datamodel.Patch(
             (2 * self._overlap, self._patch_size, self._patch_size),
-            self._unknowns + self._auxiliary_variables,
+            self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
             self._unknown_identifier() + "Old",
         )
         self._patch_overlap_new = peano4.datamodel.Patch(
             (2 * self._overlap, self._patch_size, self._patch_size),
-            self._unknowns + self._auxiliary_variables,
+            self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
             self._unknown_identifier() + "New",
         )
         self._patch_overlap_update = peano4.datamodel.Patch(
             (2 * self._overlap, self._patch_size, self._patch_size),
-            self._unknowns + self._auxiliary_variables,
+            self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
             self._unknown_identifier() + "Update",
         )
 
@@ -950,7 +896,7 @@ The finest mesh width of """
 #include "repositories/SolverRepository.h"
 """
 
-    def add_actions_to_init_grid(self, step, restart_from_checkpoint=False):
+    def add_actions_to_init_grid(self, step):
         """!
 
         Add your actions to init grid
@@ -997,13 +943,6 @@ The finest mesh width of """
             < self._action_set_roll_over_update_of_faces.descend_invocation_order
         )
 
-        if restart_from_checkpoint:
-            self._action_set_initial_conditions = (
-                exahype2.solvers.rkfd.actionsets.InitialCondition(
-                    self, self._store_cell_data_default_guard(), "true", restart_from_checkpoint=True
-                )
-            )
-
         step.add_action_set(self._action_set_preprocess_solution)
         step.add_action_set(
             self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement
@@ -1032,27 +971,10 @@ The finest mesh width of """
         else:
             step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
-    @property
-    def plot_description(
-        self,
-    ):
-        return self._plot_description
-
-    @plot_description.setter
-    def plot_description(self, description):
-        """
-
-        Use this one to set a description within the output patch file that tells
-        the vis solver what the semantics of the entries are. Typicallly, I use
-        a comma-separated list here.
-
-        """
-        self._plot_description = description
-
     def set_plotter(self, plotter_option):
         self._plotter_option = plotter_option
 
-    def add_actions_to_plot_solution(self, step, output_path, restart_from_checkpoint=False):
+    def add_actions_to_plot_solution(self, step, output_path):
         """!
 
         Add action sets to plotting grid sweep
@@ -1094,131 +1016,17 @@ The finest mesh width of """
         step.add_action_set(self._action_set_update_cell_label)
         #    step.add_action_set( self._action_set_project_patch_onto_faces )
 
-        if self._plotter_option == "HDF5":
-            plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInHDF5Format(
-            filename=output_path + "solution-" + self._name,
+        plotter = self._plotter(
+            output_path=output_path,
+            filename=self._name,
             patch=self._patch,
             dataset_name=self._unknown_identifier(),
-            description=self._plot_description,
-            guard="repositories::plotFilter.plotPatch(marker) and "
-            + self._load_cell_data_default_guard(),
-            additional_includes="""
-#include "exahype2/PlotFilter.h"
-#include "../repositories/SolverRepository.h"
-""",
-            precision="PlotterPrecision",
+            description=self._variable_shortcuts.plot_description,
             time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
-            select_dofs=self.select_dofs_to_print,
-            restart_preprocess=restart_from_checkpoint
-        )
-        elif self._plotter_option == "PeanoPatch":
-            plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
-            filename=output_path + "solution-" + self._name,
-            patch=self._patch,
-            dataset_name=self._unknown_identifier(),
-            description=self._plot_description,
-            guard="repositories::plotFilter.plotPatch(marker) and "
-            + self._load_cell_data_default_guard(),
-            additional_includes="""
-#include "exahype2/PlotFilter.h"
-#include "../repositories/SolverRepository.h"
-""",
-            precision="PlotterPrecision",
-            time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
-            select_dofs=self.select_dofs_to_print,
-        )
-
-        plot_patches_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
-        step.add_action_set(plot_patches_action_set)
-
-        if self._plot_grid_properties:
-            plot_grid_action_set = peano4.toolbox.PlotGridInPeanoBlockFormat(
-                filename=output_path + "grid-" + self._name,
-                cell_unknown=None,
-                guard="repositories::plotFilter.plotPatch(marker) and "
-                + self._load_cell_data_default_guard(),
-                additional_includes="""
-#include "exahype2/PlotFilter.h"
-#include "../repositories/SolverRepository.h"
-""",
-            )
-            plot_grid_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
-            step.add_action_set(plot_grid_action_set)
-
-        pass
-
-    def add_actions_to_checkpoint_solution(self, step, output_path, restart_from_checkpoint=False):
-        """!
-
-        Add action sets to checkpoint grid sweep
-
-        Consult the discussion in add_actions_to_init_grid() around the order
-        of the individual action sets.
-
-
-        ## Adaptive mesh refinement
-
-        It is important that we have the coupling/dynamic AMR part in here, as
-        there might be pending AMR refinement requests that now are realised.
-        For the same reason, we need the update of the face label and the update
-        of the cell label in here: The AMR might just propagate over into the
-        plotting, i.e. we might create new grid entities throughout the plot.
-        These entities (faces and cells) have to be initialised properly.
-        Otherwise, their un-initialised data will propagate through to the next
-        time step.
-
-        To make the restriction work, we have to project the solutions onto the
-        faces.
-
-
-        ## Roll over face data
-
-        Das ist ein Kaese, weil das nur einspringt, wenn project wahr ist
-
-
-        """
-        d = {}
-        self._init_dictionary_with_default_parameters(d)
-        self.add_entries_to_text_replacement_dictionary(d)
-
-        step.add_action_set(
-            self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement
-        )
-        #    step.add_action_set( self._action_set_roll_over_update_of_faces )
-        step.add_action_set(self._action_set_update_face_label)
-        step.add_action_set(self._action_set_update_cell_label)
-        #    step.add_action_set( self._action_set_project_patch_onto_faces )
-
-        checkpoint_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
-            filename=output_path + "checkpoint-" + self._name,
-            patch=self._patch,
-            dataset_name=self._unknown_identifier(),
-            description=self._plot_description,
             guard=self._load_cell_data_default_guard(),
-            additional_includes="""
-#include "../repositories/SolverRepository.h"
-""",
-            precision="PlotterPrecision",
-            time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
-            select_dofs=None,
-            restart_preprocess=restart_from_checkpoint
         )
-        checkpoint_patches_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
-        step.add_action_set(checkpoint_patches_action_set)
-
-        if self._plot_grid_properties:
-            checkpoint_grid_action_set = peano4.toolbox.PlotGridInPeanoBlockFormat(
-                filename=output_path + "grid-" + self._name,
-                cell_unknown=None,
-                guard=self._load_cell_data_default_guard(),
-                additional_includes="""
-#include "../repositories/SolverRepository.h"
-""",
-            )
-            checkpoint_grid_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
-            step.add_action_set(checkpoint_grid_action_set)
-
-        pass
+        plotter.descend_invocation_order = self._baseline_action_set_descend_invocation_order
+        step.add_action_set(plotter)
 
     def add_actions_to_perform_time_step(self, step):
         """
@@ -1304,21 +1112,6 @@ The finest mesh width of """
         output.makefile.add_cpp_file(subdirectory + "Abstract" + self._name + ".cpp", generated=True)
         output.makefile.add_cpp_file(subdirectory + self._name + ".cpp", generated=True)
 
-        if self._use_var_shortcut:
-            generated_shortcut_file = peano4.output.Jinja2TemplatedHeaderFile(
-                os.path.dirname(os.path.realpath(__file__))
-                + "/"
-                + "../VariableShortcuts.template.h",
-                "VariableShortcuts",
-                namespace,
-                subdirectory + ".",
-                implementationDictionary,
-                True,
-                True,
-            )
-            output.add(generated_shortcut_file)
-            output.makefile.add_h_file(subdirectory + "VariableShortcuts.h", generated=True)
-
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring
 
@@ -1342,8 +1135,8 @@ The finest mesh width of """
         d["SOLVER_INSTANCE"] = self.get_name_of_global_instance()
         d["SOLVER_NAME"] = self._name
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
-        d["NUMBER_OF_UNKNOWNS"] = self._unknowns
-        d["NUMBER_OF_AUXILIARY_VARIABLES"] = self._auxiliary_variables
+        d["NUMBER_OF_UNKNOWNS"] = self._variable_shortcuts.unknowns
+        d["NUMBER_OF_AUXILIARY_VARIABLES"] = self._variable_shortcuts.auxiliary_variables
         d["SOLVER_NUMBER"] = 22
 
         d["ASSERTION_WITH_1_ARGUMENTS"] = "nonCriticalAssertion1"
@@ -1420,13 +1213,9 @@ The finest mesh width of """
 
         d["KERNEL_NAMESPACE"] = self._kernel_namespace
 
-        d["USE_VARIABLE_SHORTCUT"] = self._use_var_shortcut
-        d["VARIABLE_NAMES"] = self._variable_names
-        d["VARIABLE_POSITIONS"] = self._variable_pos
-
     @property
     def unknowns(self):
-        return self._unknowns
+        return self._variable_shortcuts.unknowns
 
     @property
     def patch_size(self):
@@ -1434,25 +1223,7 @@ The finest mesh width of """
 
     @property
     def auxiliary_variables(self):
-        return self._auxiliary_variables
-
-    @patch_size.setter
-    def patch_size(self, value):
-        self._patch_size = value
-        self.create_data_structures()
-        self.create_action_sets()
-
-    @unknowns.setter
-    def unknowns(self, value):
-        self._unknowns = value
-        self.create_data_structures()
-        self.create_action_sets()
-
-    @auxiliary_variables.setter
-    def auxiliary_variables(self, value):
-        self._auxiliary_variables = value
-        self.create_data_structures()
-        self.create_action_sets()
+        return self._variable_shortcuts.auxiliary_variables
 
     @property
     def preprocess_reconstructed_patch(self):
@@ -1572,3 +1343,6 @@ The finest mesh width of """
 
         self.create_data_structures()
         self.create_action_sets()
+
+    def set_plotter(self, plotter):
+        self._plotter = plotter

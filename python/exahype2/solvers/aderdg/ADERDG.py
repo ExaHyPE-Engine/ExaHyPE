@@ -8,6 +8,7 @@ import jinja2
 
 import peano4.output
 import peano4.datamodel
+import peano4.plotter
 
 import exahype2.grid
 import exahype2.solvers.aderdg.actionsets
@@ -18,6 +19,8 @@ from exahype2.solvers.PDETerms import PDETerms
 
 from exahype2.solvers.aderdg.Architectures import Architectures
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
+
+from exahype2.VariableShortcuts import VariableShortcuts
 
 from peano4.Logger import log
 
@@ -68,7 +71,6 @@ class ADERDG(object):
         max_cell_h,
         use_enclave_tasking: bool,
         number_of_enclave_tasks: int,
-        plot_grid_properties=False,
     ):
         self._name = name
 
@@ -78,62 +80,8 @@ class ADERDG(object):
         """
         self._order = order
 
-        "Set from the project script to choose between PlotPatchesInPeanoBlockFormat and PlotPatchesInHDF5Format"
-        self._plotter_option = "PeanoPatch"
-
-        # Whether or not to plot information about the grid as well as information about the content of the patches
-        self._plot_grid_properties = plot_grid_properties
-        self._plot_description = ""
-        self._select_dofs_to_print = None
-
-        """
-        self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and
-        auxiliary variables in the equation to be computed. Unknowns are variables that change over
-        time whereas auxiliary variables can be space-dependent but don't vary over time.
-        These can be specified either as simple ints or by a dictionary
-        (e.g.) unknowns = {'a': 1, 'b': 1, 'c': 3}
-        in which the user specifies the multiplicity of the variable (the velocity has one component
-        per dimension for example.)
-        If they are specified by a dictionary then the code generates a "VariableShortcuts" file which
-        allows the user to specify a variable by name and automatically maps this to the right position
-        in an array for better legibility. Otherwise they must manually remember the position of each
-        variable manually.
-
-        use_var_shortcut is used to know whether or not the user passed their variables via a dict
-        variable_names and variable_pos are used internally to remember the names and respective
-        positions of variables if set by a dictionary.
-        """
-        self._use_var_shortcut = False
-        self._variable_names = []
-        self._variable_pos = [0]
-
-        if type(unknowns) is dict:
-            self._unknowns = sum(unknowns.values())
-            self._variable_names += list(unknowns.keys())
-            for var in list(unknowns.values()):
-                self._variable_pos.append(var + self._variable_pos[-1])
-            self._use_var_shortcut = True
-        elif type(unknowns) is int:
-            self._unknowns = unknowns
-        else:
-            raise Exception(
-                "Not a valid type for parameter unknowns, needs to be int or dictionary."
-            )
-
-        if type(auxiliary_variables) is dict:
-            self._auxiliary_variables = sum(auxiliary_variables.values())
-            self._variable_names += list(auxiliary_variables.keys())
-            for var in list(auxiliary_variables.values()):
-                self._variable_pos.append(var + self._variable_pos[-1])
-            self._use_var_shortcut = True
-        elif type(auxiliary_variables) is int:
-            self._auxiliary_variables = auxiliary_variables
-        else:
-            raise Exception(
-                "Not a valid type for parameter auxiliary_variables, needs to be int or dictionary."
-            )
-
-        self._plot_description = ", ".join(self._variable_names)
+        self._plotter = peano4.plotter.HDF5PatchNodalPlotter
+        self._variable_shortcuts = VariableShortcuts(name, unknowns, auxiliary_variables)
 
         """
         Minimal and maximal accepted sizes for the cell, domain will be subdivided until the cell size is smaller
@@ -291,97 +239,6 @@ class ADERDG(object):
         self.create_data_structures()
         self.create_action_sets()
 
-
-    def __str__(self):
-        result = (
-            """
-Name:                   """
-            + self._name
-            + """
-Type:                   """
-            + self.__class__.__module__
-            + """
-Dimensions:             """
-            + str(self._dimensions)
-            + """
-Use enclave tasking:    """
-            + str(self._use_enclave_tasking)
-            + """
-Can fuse:               """
-            + str(self._can_fuse)
-            + """
-DG order:               """
-            + str(self._order)
-            + """
-Polynomials:            """
-            + str(self._polynomials.name)
-            + """
-Basis:                  """
-            + str(self._basis)
-            + """
-Basis size:             """
-            + str(self._order + 1)
-            + """
-Linear:                 """
-            + str(self._is_linear)
-            + """
-Unknowns:               """
-            + str(self._unknowns)
-            + """
-Auxiliary variables:    """
-            + str(self._auxiliary_variables)
-            + """
-h_cell_min:             """
-            + str(self._min_cell_h)
-            + """
-h_cell_max:             """
-            + str(self._max_cell_h)
-            + """
-Initial conditions:     """
-            + str(self._initial_conditions_implementation)
-            + """
-Boundary conditions:    """
-            + str(self._boundary_conditions_implementation)
-            + """
-Refinement criterion:   """
-            + str(self._refinement_criterion_implementation)
-            + """
-Max eigenvalue:         """
-            + str(self._max_eigenvalue_implementation)
-            + """
-Flux:                   """
-            + str(self._flux_implementation)
-            + """
-NCP:                    """
-            + str(self._ncp_implementation)
-            + """
-Source term:            """
-            + str(self._source_term_implementation)
-            + """
-Diffusive source term:  """
-            + str(self._diffusive_source_term_implementation)
-            + """
-Point sources:          """
-            + str(self._point_sources_implementation)
-            + """
-Number of point sources:"""
-            + str(self._number_of_point_sources)
-            + """
-Adjust solution:        """
-            + str(self._adjust_solution_implementation)
-            + """
-Riemann solver:         """
-            + str(self._riemann_solver_implementation)
-            + """
-Material parameters:    """
-            + str(self._material_param_implementation)
-            + """
-"""
-        )
-        return result
-
-    __repr__ = __str__
-
     """
     Creates all the structures that are attached on the Peano grid either in a cell or on the faces.
     These are defined as Peano patches which have given sizes to contain persistent data as well as
@@ -395,25 +252,25 @@ Material parameters:    """
         # of the solution and of the fluxes on the faces as predicted by the space-time predictor.
         self._current_time_step = peano4.datamodel.Patch(
             (self._order + 1, self._order + 1, self._order + 1),
-            self._unknowns + self._auxiliary_variables,
+            self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
             self._unknown_identifier(),
             self._solution_persistent_storage_precision,
         )
         self._previous_time_step = peano4.datamodel.Patch(
             (self._order + 1, self._order + 1, self._order + 1),
-            self._unknowns + self._auxiliary_variables,
+            self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
             self._unknown_identifier() + "_old",
             self._solution_persistent_storage_precision,
         )
         self._rhs_estimates_projection = peano4.datamodel.Patch(
             (2, self._order+1, self._order+1),
-            self._unknowns + self._auxiliary_variables,
+            self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
             self._unknown_identifier() + "Estimates",
             self._corrector_computation_precision,
         )
         self._flux_estimates_projection = peano4.datamodel.Patch(
             (2, self._order+1, self._order+1),
-            self._unknowns,
+            self._variable_shortcuts.unknowns,
             self._unknown_identifier() + "FluxEstimates",
             self._corrector_computation_precision,
         )
@@ -779,66 +636,19 @@ Material parameters:    """
                 for x in self._basis.quadrature_points():
                     mapping.append((x, y, z))
 
-        if self._plotter_option == "HDF5":
-            step.add_action_set(
-              peano4.toolbox.blockstructured.PlotPatchesInHDF5Format(
-                  filename=output_path + "solution-" + self._name,
-                  patch=self._previous_time_step,
-                  dataset_name=self._unknown_identifier()+"_old",
-                  description=self._plot_description,
-                  mapping=mapping,
-                  select_dofs=self._select_dofs_to_print,
-                  guard="repositories::plotFilter.plotPatch(marker) and "
-                  + self._load_cell_data_default_guard(),
-                  additional_includes="""
-#include "exahype2/PlotFilter.h"
-#include "../repositories/SolverRepository.h"
-""",
-                  precision="PlotterPrecision",
-                  time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
-                  plot_cell_data=False,
-                  dataType=self._solution_persistent_storage_precision,
-              )
-          )
-        elif self._plotter_option == "PeanoPatch":
-            step.add_action_set(
-              peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
-                  filename=output_path + "solution-" + self._name,
-                  patch=self._previous_time_step,
-                  dataset_name=self._unknown_identifier()+"_old",
-                  description=self._plot_description,
-                  mapping=mapping,
-                  select_dofs=self._select_dofs_to_print,
-                  guard="repositories::plotFilter.plotPatch(marker) and "
-                  + self._load_cell_data_default_guard(),
-                  additional_includes="""
-#include "exahype2/PlotFilter.h"
-#include "../repositories/SolverRepository.h"
-""",
-                  precision="PlotterPrecision",
-                  time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
-                  plot_cell_data=False,
-                  dataType=self._solution_persistent_storage_precision,
-              )
-          )
+        plotter = self._plotter(
+            output_path=output_path,
+            filename=self._name,
+            patch=self._previous_time_step,
+            dataset_name=self._unknown_identifier(),
+            description=self._variable_shortcuts.plot_description,
+            mapping=mapping,
+            time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+            guard=self._load_cell_data_default_guard(),
+        )
+        step.add_action_set(plotter)
 
         step.add_action_set(self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement)
-
-        if self._plot_grid_properties:
-            step.add_action_set(
-                peano4.toolbox.PlotGridInPeanoBlockFormat(
-                    filename=output_path + "grid-" + self._name,
-                    cell_unknown=None,
-                    guard_guard="repositories::plotFilter.plotPatch(marker) and "
-                    + self._load_cell_data_default_guard(),
-                    additional_includes="""
-#include "exahype2/PlotFilter.h"
-#include "../repositories/SolverRepository.h"
-""",
-                    plot_cell_data=False,
-                )
-            )
-        pass
 
     def add_actions_to_perform_time_step(self, step):
         step.add_action_set(self._action_set_update_face_label)
@@ -852,9 +662,6 @@ Material parameters:    """
 
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
-
-    def set_plot_description(self, description):
-        self._plot_description = description
 
     def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory="", abstract_overwrite=True):
         self._dimensions = dimensions
@@ -894,6 +701,8 @@ Material parameters:    """
         self._init_dictionary_with_default_parameters(d)
         self.add_entries_to_text_replacement_dictionary(d)
 
+        self._variable_shortcuts.generate_shortcut_file(d, namespace, output, subdirectory)
+
         generated_abstract_header_file = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
                 self._templatefile_prefix + "Abstract.template.h",
@@ -925,21 +734,6 @@ Material parameters:    """
         output.makefile.add_h_file(subdirectory + self._name + ".h", generated=True)
         output.makefile.add_cpp_file(subdirectory + "Abstract" + self._name + ".cpp", generated=True)
         output.makefile.add_cpp_file(subdirectory + self._name + ".cpp", generated=True)
-
-        if self._use_var_shortcut:
-            generated_shortcut_file = peano4.output.Jinja2TemplatedHeaderFile(
-                os.path.dirname(os.path.realpath(__file__))
-                + "/"
-                + "../../VariableShortcuts.template.h",
-                "VariableShortcuts" + self._name,
-                namespace,
-                subdirectory + ".",
-                d,
-                True,
-                True,
-            )
-            output.add(generated_shortcut_file)
-            output.makefile.add_h_file(subdirectory + "VariableShortcuts" + self._name + ".h", generated=True)
 
         if self._use_enclave_tasking:
             generated_prediction_enclave_task = (
@@ -978,11 +772,11 @@ Material parameters:    """
 
     @property
     def unknowns(self):
-        return self._unknowns
+        return self._variable_shortcuts.unknowns
 
     @property
     def auxiliary_variables(self):
-        return self._auxiliary_variables
+        return self._variable_shortcuts.auxiliary_variables
 
     @property
     def preprocess_reconstructed_patch(self):
@@ -1022,12 +816,12 @@ Material parameters:    """
         d["NUMBER_OF_DOF"]      = self._order + 1
         d["NUMBER_OF_DOF_3D"] = 1 if self._dimensions == 2 else d["NUMBER_OF_DOF"]
         d["NUMBER_OF_DOF_PADDED"] = Architectures.get_size_with_padding(self._architecture, self._order + 1)
-        d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
-        d["NUMBER_OF_UNKNOWNS_PADDED"]      = Architectures.get_size_with_padding(self._architecture, self._unknowns)
-        d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
-        d["NUMBER_OF_AUXILIARY_VARIABLES_PADDED"] = Architectures.get_size_with_padding(self._architecture, self._auxiliary_variables)
-        d["NUMBER_OF_DATA"]                     = self._unknowns + self._auxiliary_variables
-        d["NUMBER_OF_DATA_PADDED"]              = Architectures.get_size_with_padding(self._architecture, self._unknowns + self._auxiliary_variables)
+        d["NUMBER_OF_UNKNOWNS"]             = self._variable_shortcuts.unknowns
+        d["NUMBER_OF_UNKNOWNS_PADDED"]      = Architectures.get_size_with_padding(self._architecture, self._variable_shortcuts.unknowns)
+        d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._variable_shortcuts.auxiliary_variables
+        d["NUMBER_OF_AUXILIARY_VARIABLES_PADDED"] = Architectures.get_size_with_padding(self._architecture, self._variable_shortcuts.auxiliary_variables)
+        d["NUMBER_OF_DATA"]                     = self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables
+        d["NUMBER_OF_DATA_PADDED"]              = Architectures.get_size_with_padding(self._architecture, self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables)
 
         d["CFL_SAFETY_FACTOR"]  = self._cflSafetyFactor
         d["CFL_ADER"]           = self._cflAder[self._order]  # /(2*(self._order+1)+1)
@@ -1046,7 +840,7 @@ Material parameters:    """
 
         d["COMPUTATION_PRECISIONS"] = self._predictor_computation_precisions[:]
         if self._additional_precisions!=None and self._additional_precisions not in d["COMPUTATION_PRECISIONS"]:
-            d["COMPUTATION_PRECISIONS"].append(self._additional_precisions)            
+            d["COMPUTATION_PRECISIONS"].append(self._additional_precisions)
         if self._corrector_computation_precision not in d["COMPUTATION_PRECISIONS"]:
             d["COMPUTATION_PRECISIONS"].append(self._corrector_computation_precision)
         if self._precompute_picard_precision!=False and self._precompute_picard_precision not in d["COMPUTATION_PRECISIONS"]:
@@ -1165,10 +959,6 @@ Material parameters:    """
         d["SPACE_TIME_PREDICTOR_CALL"] = jinja2.Template(self._space_time_predictor_call, undefined=jinja2.DebugUndefined).render(**d)
         d["RIEMANN_SOLVER_CALL"] = jinja2.Template(self._riemann_solver_call, undefined=jinja2.DebugUndefined).render(**d)
         d["FACE_INTEGRAL_CALL"] = jinja2.Template(self._face_integral_call, undefined=jinja2.DebugUndefined).render(**d)
-
-        d["USE_VARIABLE_SHORTCUT"]  = self._use_var_shortcut
-        d["VARIABLE_NAMES"]         = self._variable_names
-        d["VARIABLE_POSITIONS"]     = self._variable_pos
 
         d["QUADRATURE_POINTS"]      = ", ".join(self._basis.quadrature_points())
 
@@ -1290,7 +1080,7 @@ Material parameters:    """
                     self._use_stateless_init_point_sources = True
                 else:
                     self._can_fuse = False
-        
+
         if use_diffusive_flux is not None:
           self._use_diffusive_flux = use_diffusive_flux
 
@@ -1382,6 +1172,9 @@ Material parameters:    """
 
         self.create_data_structures()
         self.create_action_sets()
+
+    def set_plotter(self, plotter):
+        self._plotter = plotter
 
 def get_face_overlap_merge_implementation(patch_overlap):
     d = {

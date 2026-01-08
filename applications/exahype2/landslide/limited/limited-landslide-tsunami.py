@@ -129,11 +129,8 @@ aderdg_solver.add_user_solver_includes(
 #include "../RusanovRiemannSolver.h"
 """
 )
-aderdg_solver.set_plotter(args.plotter)
-aderdg_solver.plot_description = ", ".join(unknowns.keys())
 
 project.add_solver(aderdg_solver)
-
 
 fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="FVSolver",
@@ -186,9 +183,6 @@ fv_solver.add_user_solver_includes(
 #include "../RusanovRiemannSolver.h"
 """
 )
-
-fv_solver.set_plotter(args.plotter)
-fv_solver.plot_description = ", ".join(unknowns.keys())
 
 project.add_solver(fv_solver)
 

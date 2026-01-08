@@ -30,7 +30,7 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     initial_conditions=PDETerms.User_Defined_Implementation,
     source_term=PDETerms.None_Implementation,
     eigenvalues=PDETerms.User_Defined_Implementation, 
-    plot_grid_properties=False, KOSigma=8.0
+    KOSigma=8.0
   ):
     """!
     
@@ -58,7 +58,6 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
                                              auxiliary_variables, 
                                              min_meshcell_h, 
                                              max_meshcell_h, 
-                                             plot_grid_properties,
                                              kernel_namespace="fd4"
                                              ) 
 

@@ -105,7 +105,6 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         auxiliary_variables,
         min_cell_h,
         max_cell_h,
-        plot_grid_properties,
         pde_terms_without_state,
     ):
         """
@@ -123,7 +122,6 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
             auxiliary_variables,
             min_cell_h,
             max_cell_h,
-            plot_grid_properties,
             pde_terms_without_state,
         )
 

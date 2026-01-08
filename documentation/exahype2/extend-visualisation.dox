@@ -15,14 +15,4 @@ default, this observer calls the plotting action sets for each solver, and it
 invokes a tracer dump per tracer species. To add a further plotter, use the 
 solvers' add_actions_to_plot_solution() routine. 
 
-
-# Plot the facet data
-
-Peano's patch toolbox offers an action set for patches over faces called
-peano4.toolbox.blockstructured.PlotPatchesOverFacesInPeanoBlockFormat. 
-
-@todo More docu here please.
-
-
 */
-

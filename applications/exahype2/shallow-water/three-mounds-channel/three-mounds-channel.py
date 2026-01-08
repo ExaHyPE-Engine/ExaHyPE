@@ -27,9 +27,15 @@ boundary_conditions = """
 
 refinement_criterion = """
   auto result = ::exahype2::RefinementCommand::Keep;
-  if (x(0) >= 20.0 && x(0) <= 28.0) {
+
+  const double m1 = 1.0 - 0.10 * std::sqrt((x(0) - 15.0) * (x(0) - 15.0) + (x(1) - 22.5) * (x(1) - 22.5));
+  const double m2 = 1.0 - 0.10 * std::sqrt((x(0) - 15.0) * (x(0) - 15.0) + (x(1) - 7.50) * (x(1) - 7.50));
+  const double m3 = 1.0 - 0.28 * std::sqrt((x(0) - 28.0) * (x(0) - 28.0) + (x(1) - 15.0) * (x(1) - 15.0));
+
+  if (m1 > 0.0 or m2 > 0.0 or m3 > 0.0) {
     result = ::exahype2::RefinementCommand::Refine;
   }
+
   return result;
 """
 
@@ -67,7 +73,6 @@ fv_solver.set_implementation(
     riemann_solver="return augmentedStateRiemannSolver<double, Shortcuts>(QL, QR, x, h, t, dt, normal, FL, FR);",
 )
 
-fv_solver.set_plotter(args.plotter)
 fv_solver.add_user_solver_includes(
     """
 #include "../AugmentedStateRiemannSolver.h"

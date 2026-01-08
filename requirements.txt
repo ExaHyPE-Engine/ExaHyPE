@@ -1,13 +1,13 @@
 Jinja2
 mpmath
 numpy
+sympy
+jupyter
 matplotlib
 scipy
-sympy
 h5py
-vtk
 pyvista
-VTUinterface
-jupyter
+meshio
+netCDF4
 imageio
 imageio-ffmpeg

@@ -58,6 +58,7 @@ parser = exahype2.ArgumentParser("ExaHyPE 2 - Finite Volumes Testing Script")
 parser.set_defaults(
     min_depth=6,
     degrees_of_freedom=16,
+    number_of_snapshots=0,
     periodic_boundary_conditions_x=True,
     periodic_boundary_conditions_y=True,
     periodic_boundary_conditions_z=True,
@@ -89,7 +90,7 @@ fv_solver.set_implementation(
     limiter=exahype2.solvers.fv.musclhancock.Limiter.vanalbada,
 )
 
-fv_solver.set_plotter(args.plotter)
+fv_solver.set_plotter(peano4.plotter.VTUPatchAMRPlotter)
 
 exahype2.solvers.fv.ErrorMeasurement(
     fv_solver,

@@ -18,7 +18,6 @@ class SingleSweep(ADERDG):
         max_cell_h,
         use_enclave_tasking: bool,
         number_of_enclave_tasks: int,
-        plot_grid_properties=False,
         split_sweeps=False,
     ):
         super(SingleSweep, self).__init__(
@@ -30,7 +29,6 @@ class SingleSweep(ADERDG):
             max_cell_h=max_cell_h,
             use_enclave_tasking=use_enclave_tasking,
             number_of_enclave_tasks=number_of_enclave_tasks,
-            plot_grid_properties=plot_grid_properties,
         )
 
         self._solver_template_file_class_name = "SingleSweep"
