@@ -73,7 +73,7 @@ For further discussion on logging, please see the \ref tarch_logging "generic lo
 We found that the newer Intel compilers provide a flag
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-CXXFLAGS="... -tbb" LDFLAGS="... -tbb"
+LIBS = "-ltbb"
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 which means you don't have to manually link against TBB anymore. It also
