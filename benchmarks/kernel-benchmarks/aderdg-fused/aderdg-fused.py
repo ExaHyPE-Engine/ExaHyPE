@@ -3,7 +3,7 @@
 import sys, os, argparse
 import peano4, exahype2
 
-sys.path.insert(0, os.path.abspath("../../../../tests/exahype2/aderdg"))
+sys.path.insert(0, os.path.abspath("../../../tests/aderdg"))
 import scenarios
 
 available_scenarios = {

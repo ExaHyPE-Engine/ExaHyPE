@@ -29,7 +29,6 @@ class EnclaveTasking(AbstractFVActionSet):
       isBoundary[d] = fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getBoundary() and (not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[d%DIMENSIONS]);
     }
 
-    {% if CAN_FUSE %}
     ::exahype2::EnclaveBookkeeping::getInstance().bookmarkTask(new tasks::{{ENCLAVE_TASK_TYPE}}(
       marker,
       timeStamp,
@@ -39,17 +38,6 @@ class EnclaveTasking(AbstractFVActionSet):
       isBoundary,
       QOut
     ));
-    {% else %}
-    tarch::multicore::spawnTask(new tasks::{{ENCLAVE_TASK_TYPE}}(
-      marker,
-      timeStamp,
-      timeStepSize,
-      QIn,
-      faces,
-      isBoundary,
-      QOut
-    ));
-    {% endif %}
   }
 """
     )
@@ -86,10 +74,9 @@ class EnclaveTasking(AbstractFVActionSet):
 
     def get_body_of_unprepareTraversal(self):
         result = ""
-        if self._solver._can_fuse:
-            result += (
-                "::exahype2::EnclaveBookkeeping::getInstance().fusePendingTasks();"
-            )
+        result += (
+          "::exahype2::EnclaveBookkeeping::getInstance().fusePendingTasks();"
+        )
         return result
 
     def get_action_set_name(self):

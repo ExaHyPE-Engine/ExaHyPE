@@ -23,15 +23,6 @@ private:
 
   static int _enclaveTaskTypeId;
 
-  static void applyKernelToCell(
-    const peano4::datamanagement::CellMarker&       marker,
-    const double                                    timeStamp,
-    const double                                    timeStepSize,
-    {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         QIn,
-    {{SOLUTION_STORAGE_PRECISION}}* NOALIAS const   faces[2][TWO_TIMES_D],
-    {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         QOut
-  );
-
 public:
   static int getEnclaveTaskTypeId();
 
@@ -41,14 +32,13 @@ public:
     const double                                    timeStepSize,
     {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         QIn,
     {{SOLUTION_STORAGE_PRECISION}}* NOALIAS const   faces[2][TWO_TIMES_D],
+    bool                                            isBoundary[TWO_TIMES_D],
     {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         QOut
   );
 
   ~{{CLASSNAME}}() override final = default;
 
-  {% if CAN_FUSE %}
   virtual void fuse(const std::list<Task*>& otherTasks) override;
-  {% endif %}
 };
 
 {# Empty line here #}

@@ -110,7 +110,7 @@ namespace exahype2 {
           const tarch::la::Vector<DIMENSIONS, double>& pos2
         );
         template <typename Particle>
-        void exahype2::fv::particles::ppintegration::centralGravityInteraction(
+        void centralGravityInteraction(
           Particle&                                    p1,
           const tarch::la::Vector<DIMENSIONS, double>& pos1,
           Particle&                                    p2,

@@ -138,6 +138,7 @@ void tarch::logging::Statistics::log( const std::string& identifier, const std::
 
 
 void tarch::logging::Statistics::log( const std::string& identifier, double value, bool disableSampling ) {
+#if 0
   tarch::multicore::Lock lock(_semaphore);
   initData(identifier);
   updateDataSnapshot(identifier,value);
@@ -147,6 +148,7 @@ void tarch::logging::Statistics::log( const std::string& identifier, double valu
     logDebug( "log(string,double)", identifier << "=" << value );
     _dataSetMap[identifier].createNewSnapshot(t, false);
   }
+#endif
 }
 
 
@@ -165,6 +167,7 @@ void tarch::logging::Statistics::inc( const std::string& identifier, double valu
 }
 
 void tarch::logging::Statistics::writeToCSV([[maybe_unused]] std::string filename) {
+#if 0
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     logDebug("writeToCSV()", "Write statistics to file(s) " << filename << "-rank-<rank>.csv");
   }
@@ -249,4 +252,5 @@ void tarch::logging::Statistics::writeToCSV([[maybe_unused]] std::string filenam
 
   // close output file
   file.close();
+#endif
 }

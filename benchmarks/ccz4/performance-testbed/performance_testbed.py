@@ -6,7 +6,7 @@ import peano4
 import exahype2
 import peano4.toolbox.particles
 
-sys.path.insert(0, os.path.abspath("../../../../applications/exahype2/ccz4"))
+sys.path.insert(0, os.path.abspath("../../../applications/ccz4"))
 
 from Probe_file_gene import tracer_seeds_generate
 from ComputeFirstDerivatives import ComputeFirstDerivativesFD4RK
@@ -387,7 +387,7 @@ if __name__ == "__main__":
 
         def create_action_sets(self):
             SuperClass.create_action_sets(self)
-            self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
+            self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """
 #include "../CCZ4Kernels.h"
             """
 
@@ -593,34 +593,34 @@ if __name__ == "__main__":
     ########################################################################################
     peano4_project = project.generate_Peano4_project(verbose=True)
     peano4_project.output.makefile.add_header_search_path(
-        "../../../../applications/exahype2/ccz4/"
+        "../../../applications/ccz4/"
     )
 
     if args.scenario == "two-punctures" or args.scenario == "single-puncture":
         peano4_project.output.makefile.add_linker_flag("-lm -lgsl -lgslcblas")
         peano4_project.output.makefile.add_cpp_file(
-            "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Utilities.cpp"
+            "../../../applications/ccz4/libtwopunctures/TP_Utilities.cpp"
         )
         peano4_project.output.makefile.add_cpp_file(
-            "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Parameters.cpp"
+            "../../../applications/ccz4/libtwopunctures/TP_Parameters.cpp"
         )
         peano4_project.output.makefile.add_cpp_file(
-            "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Logging.cpp"
+            "../../../applications/ccz4/libtwopunctures/TP_Logging.cpp"
         )
         peano4_project.output.makefile.add_cpp_file(
-            "../../../../applications/exahype2/ccz4/libtwopunctures/TwoPunctures.cpp"
+            "../../../applications/ccz4/libtwopunctures/TwoPunctures.cpp"
         )
         peano4_project.output.makefile.add_cpp_file(
-            "../../../../applications/exahype2/ccz4/libtwopunctures/CoordTransf.cpp"
+            "../../../applications/ccz4/libtwopunctures/CoordTransf.cpp"
         )
         peano4_project.output.makefile.add_cpp_file(
-            "../../../../applications/exahype2/ccz4/libtwopunctures/Equations.cpp"
+            "../../../applications/ccz4/libtwopunctures/Equations.cpp"
         )
         peano4_project.output.makefile.add_cpp_file(
-            "../../../../applications/exahype2/ccz4/libtwopunctures/FuncAndJacobian.cpp"
+            "../../../applications/ccz4/libtwopunctures/FuncAndJacobian.cpp"
         )
         peano4_project.output.makefile.add_cpp_file(
-            "../../../../applications/exahype2/ccz4/libtwopunctures/Newton.cpp"
+            "../../../applications/ccz4/libtwopunctures/Newton.cpp"
         )
         peano4_project.output.makefile.add_CXX_flag("-DIncludeTwoPunctures")
     else:
@@ -631,10 +631,10 @@ if __name__ == "__main__":
     peano4_project.output.makefile.add_h_file("CCZ4.h")
     peano4_project.output.makefile.add_cpp_file("CCZ4.cpp")
     peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/InitialValues.cpp"
+        "../../../applications/ccz4/InitialValues.cpp"
     )
     peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp"
+        "../../../applications/ccz4/CCZ4Kernels.cpp"
     )
 
     peano4_project.generate(throw_away_data_after_generation=False)

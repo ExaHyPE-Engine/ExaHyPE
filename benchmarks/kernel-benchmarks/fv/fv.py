@@ -6,7 +6,7 @@ import sys
 import peano4
 import exahype2
 
-sys.path.insert(0, os.path.abspath("../../../../tests/exahype2/fv"))
+sys.path.insert(0, os.path.abspath("../../../tests/fv"))
 from PDE import max_eigenvalue, flux
 
 initial_conditions = """

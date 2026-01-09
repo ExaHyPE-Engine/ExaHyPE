@@ -50,7 +50,7 @@ class GlobalFixedTimeStep(SingleSweep):
             subdirectory=subdirectory,
             reconstruction=self._reconstruction,
         )
-        if self._use_enclave_tasking and self._can_fuse:
+        if self._use_enclave_tasking:
             generate_fused_kernels(
                 solver=self,
                 output=output,

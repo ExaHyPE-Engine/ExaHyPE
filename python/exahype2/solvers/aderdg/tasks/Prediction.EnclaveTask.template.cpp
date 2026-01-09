@@ -24,25 +24,13 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getEnclaveTaskTypeId() {
   return _enclaveTaskTypeId;
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
-  const peano4::datamanagement::CellMarker&       marker,
-  const double                                    timeStamp,
-  const double                                    timeStepSize,
-  {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         QOld,
-  {{SOLUTION_STORAGE_PRECISION}}* NOALIAS const   faces[2][TWO_TIMES_D],
-  {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         QNew
-) {
-  auto lQhbnd = faces[0];
-  auto lFhbnd = faces[1];
-  {{SPACE_TIME_PREDICTOR_CALL}}
-}
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
   const peano4::datamanagement::CellMarker&       marker,
   const double                                    timeStamp,
   const double                                    timeStepSize,
   {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         QOld,
   {{SOLUTION_STORAGE_PRECISION}}* NOALIAS const   faces[2][TWO_TIMES_D],
+  bool                                            isBoundary[TWO_TIMES_D],
   {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         QNew
 ):
   ::exahype2::EnclaveTask<{{SOLUTION_STORAGE_PRECISION}}, 2>(
@@ -52,28 +40,20 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     timeStepSize,
     QOld,
     faces,
+    isBoundary,
     QNew,
     [&]() -> void {
-      applyKernelToCell(
-        _marker,
-        _t,
-        _dt,
-        _QIn,
-        _faces,
-        _QOut
-      );
+      throw std::runtime_error("Launching individual enclave tasks is not supported anymore");
     }
   )
 {
   setPriority({{ENCLAVE_TASK_PRIORITY}});
 }
 
-{% if CAN_FUSE %}
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& otherTasks) {
   const int numberOfCells = otherTasks.size() + 1;
 
-  logInfo("fuse()", "Rank " << tarch::mpi::Rank::getInstance().getRank()
+  logDebug("fuse()", "Rank " << tarch::mpi::Rank::getInstance().getRank()
     << " asked to fuse " << numberOfCells << " cells of type " << getTaskType() << " into "
     << {{NUMBER_OF_ENCLAVE_TASKS}} << " asynchronous enclave tasks on target device " << TARGET_DEVICE
   );
@@ -110,6 +90,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   cellData.cellSize[cellIndex]            = _marker.getH();
   cellData.maxEigenvalue[cellIndex]       = 0.0;
 
+#if defined(WITH_OPENMP)
+#pragma omp parallel for schedule(static, 1)
+#endif
   for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
     auto* QOld = cellData.QIn[cellIndex];
     auto* QNew = cellData.QOut[cellIndex];
@@ -177,5 +160,3 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 {% endif %}
   }
 }
-
-{% endif %}

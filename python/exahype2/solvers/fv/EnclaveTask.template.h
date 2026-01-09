@@ -33,18 +33,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::Encla
      */
     static int _enclaveTaskTypeId;
 
-    /**
-     * Simple call to compute kernels.
-     */
-     static void applyKernelToPatch(
-      const peano4::datamanagement::CellMarker&       marker,
-      const double                                    timeStamp,
-      const double                                    timeStepSize,
-      {{STORAGE_PRECISION}}* NOALIAS                  QIn,
-      {{STORAGE_PRECISION}}* NOALIAS const            faces[3][TWO_TIMES_D],
-      {{STORAGE_PRECISION}}* NOALIAS                  QOut
-    );
-
   public:
     static int getEnclaveTaskTypeId();
 
@@ -60,10 +48,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::Encla
 
     ~{{CLASSNAME}}() override final = default;
 
-    {% if CAN_FUSE %}
     virtual void fuse(const std::list<Task*>& otherTasks) override;
     static void fuse(::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData);
-    {% endif %}
 };
 
 {# Empty line here #}

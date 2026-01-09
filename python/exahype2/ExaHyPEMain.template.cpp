@@ -247,8 +247,8 @@ void printNextAlgorithmicStep(const repositories::StepRepository::Steps& stepNam
       const auto memoryUsedByHeap       = repositories::DataRepository::getGlobalMemoryUsageInBytes();
       const auto totalPersistentMemory  = memoryUsedByGrid + memoryUsedByHeap;
 
-      const auto dofs                   = repositories::getNumberOfDoFs();
-      const auto globalNumberOfPatches  = repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells();
+      const auto dofs                   = static_cast<double>(repositories::getNumberOfDoFs());
+      const auto globalNumberOfPatches  = static_cast<double>(repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells());
       const auto totalNumberOfDoFs      = dofs * globalNumberOfPatches;
 
       std::ostringstream msg;
@@ -411,9 +411,15 @@ void printFinalStatistics() {
     logInfo("printFinalStatistics()", "Plotting:                          " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString());
   }
   if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
+    const auto dofs                   = static_cast<double>(repositories::getNumberOfDoFs());
+    const auto globalNumberOfPatches  = static_cast<double>(repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells());
+    const auto totalNumberOfDoFs      = dofs * globalNumberOfPatches;
+    const auto dt                     = timeStepMeasurement.getValue();
+    const auto patchesPerSecond       = globalNumberOfPatches / dt;
+    const auto dofsPerSecond          = totalNumberOfDoFs     / dt;
     logInfo("printFinalStatistics()", "Time stepping:                     " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString());
-    logInfo("printFinalStatistics()", "Average patch updates per second:  " << repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells() / timeStepMeasurement.getValue());
-    logInfo("printFinalStatistics()", "Average DoF updates per second:    " << (repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells() * repositories::getNumberOfDoFs()) / timeStepMeasurement.getValue());
+    logInfo("printFinalStatistics()", "Average patch updates per second:  " << toScientificNotationString(patchesPerSecond));
+    logInfo("printFinalStatistics()", "Average DoF updates per second:    " << toScientificNotationString(dofsPerSecond));
   }
 }
 
