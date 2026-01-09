@@ -4,36 +4,36 @@
 {% import 'Index.template.h' as id with context %}{# get template macros #}
 
 {% macro createMemoryOnStack() %}
-  {{COMPUTE_PRECISION}} QInGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  {{COMPUTE_PRECISION}} QInGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
   {% if DIMENSIONS==2 %}
   {% for i in range(ORDER) -%}
   {%- if loop.first -%}
-  // closest to node
+  // Closest to node
   {%- elif loop.last %}
-  // furthest from node
+  // Furthest from node
   {%- endif -%} {# comments #}
-  {{COMPUTE_PRECISION}} QInGatheredLeft{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
-  {{COMPUTE_PRECISION}} QInGatheredRight{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
-  {{COMPUTE_PRECISION}} QInGatheredDown{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
-  {{COMPUTE_PRECISION}} QInGatheredTop{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  {{COMPUTE_PRECISION}} QInGatheredLeft{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredRight{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredDown{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredTop{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
   {% endfor %} {# order range #}
   {% else %}
   {% for i in range(ORDER) -%}
   {%- if loop.first -%}
-  // closest to node
+  // Closest to node
   {%- elif loop.last %}
-  // furthest from node
+  // Furthest from node
   {%- endif -%} {# comments #}
-  {{COMPUTE_PRECISION}} QInGatheredLeft{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
-  {{COMPUTE_PRECISION}} QInGatheredRight{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
-  {{COMPUTE_PRECISION}} QInGatheredDown{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
-  {{COMPUTE_PRECISION}} QInGatheredTop{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
-  {{COMPUTE_PRECISION}} QInGatheredBack{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
-  {{COMPUTE_PRECISION}} QInGatheredFront{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  {{COMPUTE_PRECISION}} QInGatheredLeft{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredRight{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredDown{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredTop{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredBack{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredFront{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
   {% endfor %} {# order range #}
   {% endif %}
 
-  {{COMPUTE_PRECISION}} QOutGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  {{COMPUTE_PRECISION}} QOutGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
 {% endmacro %}
 
 {% macro gatherQ() %}
@@ -46,9 +46,9 @@
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
     {% for i in range(ORDER) -%}
     {%- if loop.first -%}
-    // closest to node
+    // Closest to node
     {%- elif loop.last %}
-    // furthest from node
+    // Furthest from node
     {%- endif -%} {# comments #}
     const auto indexWithHaloLeft{{i}}   = {{ id.indexWithHalo('nodeLeft'~i, 'unknown') | indent(4) }}{##}
     const auto indexWithHaloRight{{i}}  = {{ id.indexWithHalo('nodeRight'~i, 'unknown') | indent(4) }}{##}
@@ -79,7 +79,7 @@
     QInGatheredFront{{i}}[unknown]  = QIn[indexWithHaloFront{{i}}];
     {% endif %} {# dimensions #}
     {% endfor %} {# order range #}
-    
+
     const int indexWithHalo = {{ id.indexWithHalo('node', 'unknown') | indent(4) }}{##}
     #if !defined(WITH_GPU)
     assertion(std::isfinite(QIn[indexWithHalo]));
@@ -121,7 +121,7 @@
     );
     {% for D in DIMENSION_DESCRIPTOR -%}
     {% for i in range(ORDER) -%}
-    maxEigenvalueGathered = std::fmax(maxEigenvalueGathered, 
+    maxEigenvalueGathered = std::fmax(maxEigenvalueGathered,
       {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QInGathered{{D}}{{i}}, ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_NODES_PER_AXIS}}, node{{D}}{{i}}), h, timeStamp, timeStepSize, normal)
     );
     {%- endfor -%} {# order range #}
@@ -133,7 +133,7 @@
     );
     {% for D in DIMENSION_DESCRIPTOR -%}
     {% for i in range(ORDER) -%}
-    maxEigenvalueGathered = std::fmax(maxEigenvalueGathered, 
+    maxEigenvalueGathered = std::fmax(maxEigenvalueGathered,
       solver.maxEigenvalue(QInGathered{{D}}{{i}}, ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_NODES_PER_AXIS}}, node{{D}}{{i}}), h, timeStamp, timeStepSize, normal)
     );
     {%- endfor -%} {# order range #}
@@ -145,42 +145,42 @@
 
   {% if STATELESS_SOLVER==True %}
   {{FULL_QUALIFIED_SOLVER_NAME}}::solve(
-    QInGathered,  
+    QInGathered,
     {# Comment for new line #}
     {% for D in DIMENSION_DESCRIPTOR -%}
     {% for i in range(ORDER) -%}
     {%- if loop.first -%}
-    // closest to node
+    // Closest to node
     {%- elif loop.last -%}
     {# Comment for new line #}
-    // furthest from node
+    // Furthest from node
     {%- endif -%} {# comments #}
-    QInGathered{{D}}{{i}}, 
+    QInGathered{{D}}{{i}},
     {%- endfor -%} {# order range #}
     {# Comment for new line #}
     {% endfor %} {# for D #}
-    nodeCentre, h, 
-    timeStamp, timeStepSize, 
+    nodeCentre, h,
+    timeStamp, timeStepSize,
     QOutGathered
   );
   {% else %}
   solver.solve(
-    QInGathered, 
+    QInGathered,
     {# Comment for new line #}
     {% for D in DIMENSION_DESCRIPTOR -%}
     {% for i in range(ORDER) -%}
     {%- if loop.first -%}
-    // closest to node
+    // Closest to node
     {%- elif loop.last -%}
     {# Comment for new line #}
-    // furthest from node
+    // Furthest from node
     {%- endif -%} {# comments #}
-    QInGathered{{D}}{{i}}, 
+    QInGathered{{D}}{{i}},
     {%- endfor -%} {# order range #}
     {# Comment for new line #}
     {% endfor %} {# for D #}
-    nodeCentre, h, 
-    timeStamp, timeStepSize, 
+    nodeCentre, h,
+    timeStamp, timeStepSize,
     QOutGathered
   );
   {% endif %}

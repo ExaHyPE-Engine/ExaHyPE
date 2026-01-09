@@ -77,7 +77,6 @@ if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
     -Wall
     -Wextra
     -Kieee
-    -Munroll
     #-Minfo=all
   )
 else()

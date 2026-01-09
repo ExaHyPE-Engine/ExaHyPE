@@ -8,10 +8,10 @@
 #include "Gemms.h"
 {% endif %}
 
+#include "tarch/accelerator/accelerator.h"
+
 #include <cstring>
 #include <algorithm>
-
-#include <mm_malloc.h>
 
 {% import 'Gemms.template.h' as m with context %}{# get template macros #}
 
@@ -21,10 +21,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVLimiterSpaceWithHalo(
 ) {
   // Compact projection without ghost layer
   // x
-  {{COMPUTE_PRECISION}}* tmpX = static_cast<{{COMPUTE_PRECISION}} *>(
-    _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}})
-  );
-
+  {{COMPUTE_PRECISION}}* tmpX = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int zy = 0; zy < {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF}}; zy++) {
     {{ m.gemm('dg2fv_x', 'luh', 'Quadrature<{{COMPUTE_PRECISION}}>::dg2fv', 'tmpX',
       'zy*'~NUMBER_OF_DOF*NUMBER_OF_DATA,
@@ -32,7 +29,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVLimiterSpaceWithHalo(
       'zy*'~NUMBER_OF_DOF_LIMITER*NUMBER_OF_DATA_PADDED) | indent(4) }}{##}
   }
 
-{%if DIMENSIONS==2%}
+{%if DIMENSIONS==2 %}
   // y
   for (int x = 0; x < {{NUMBER_OF_DOF_LIMITER}}; x++) {
     {{ m.gemm('dg2fv_y', 'tmpX', 'Quadrature<{{COMPUTE_PRECISION}}>::dg2fv', 'lim',
@@ -40,12 +37,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVLimiterSpaceWithHalo(
       '0',
       'x*'~NUMBER_OF_DATA) | indent(4) }}{##}
   }
-  _mm_free(tmpX);
+  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
 {% else %}
   // y
-  {{COMPUTE_PRECISION}}* tmpY = static_cast<{{COMPUTE_PRECISION}} *>(
-    _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}})
-  );
+  {{COMPUTE_PRECISION}}* tmpY = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
     for (int x = 0; x < {{NUMBER_OF_DOF_LIMITER}}; x++) {
       {{ m.gemm('dg2fv_y', 'tmpX', 'Quadrature<{{COMPUTE_PRECISION}}>::dg2fv', 'tmpY',
@@ -54,7 +49,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVLimiterSpaceWithHalo(
         '(z*'~NUMBER_OF_DOF_LIMITER*NUMBER_OF_DOF_LIMITER~'+x)*'~NUMBER_OF_DATA_PADDED) | indent(6) }}{##}
     }
   }
-  _mm_free(tmpX);
+  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
 
   // z
   for (int yx = 0; yx < {{NUMBER_OF_DOF_LIMITER*NUMBER_OF_DOF_LIMITER}}; yx++) {
@@ -63,7 +58,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVLimiterSpaceWithHalo(
       '0',
       'yx*'~NUMBER_OF_DATA) | indent(4) }}{##}
   }
-  _mm_free(tmpY);
+  tarch::freeMemory(tmpY, tarch::MemoryLocation::Heap);
 {% endif %}{# DIMENSIONS==2 #}
 
   // Space out for ghost layer (in place)
@@ -91,10 +86,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVLimiterSpaceWithoutHalo(
 ) {
   // Compact projection without ghost layer
   // x
-  {{COMPUTE_PRECISION}}* tmpX = static_cast<{{COMPUTE_PRECISION}} *>(
-    _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}})
-  );
-
+  {{COMPUTE_PRECISION}}* tmpX = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int zy = 0; zy < {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF}}; zy++) {
     {{ m.gemm('dg2fv_x', 'luh', 'Quadrature<{{COMPUTE_PRECISION}}>::dg2fv', 'tmpX',
       'zy*'~NUMBER_OF_DOF*NUMBER_OF_DATA,
@@ -102,7 +94,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVLimiterSpaceWithoutHalo(
       'zy*'~NUMBER_OF_DOF_LIMITER*NUMBER_OF_DATA_PADDED) | indent(4) }}{##}
   }
 
-{%if DIMENSIONS==2%}
+{%if DIMENSIONS==2 %}
   // y
   for (int x = 0; x < {{NUMBER_OF_DOF_LIMITER}}; x++) {
     {{ m.gemm('dg2fv_y', 'tmpX', 'Quadrature<{{COMPUTE_PRECISION}}>::dg2fv', 'lim',
@@ -110,12 +102,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVLimiterSpaceWithoutHalo(
       '0',
       'x*'~NUMBER_OF_DATA) | indent(4) }}{##}
   }
-  _mm_free(tmpX);
+  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
 {% else %}
   // y
-  {{COMPUTE_PRECISION}}* tmpY = static_cast<{{COMPUTE_PRECISION}} *>(
-    _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}})
-  );
+  {{COMPUTE_PRECISION}}* tmpY = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
     for (int x = 0; x < {{NUMBER_OF_DOF_LIMITER}}; x++) {
       {{ m.gemm('dg2fv_y', 'tmpX', 'Quadrature<{{COMPUTE_PRECISION}}>::dg2fv', 'tmpY',
@@ -124,7 +114,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVLimiterSpaceWithoutHalo(
         '(z*'~NUMBER_OF_DOF_LIMITER*NUMBER_OF_DOF_LIMITER~'+x)*'~NUMBER_OF_DATA_PADDED) | indent(6) }}{##}
     }
   }
-  _mm_free(tmpX);
+  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
 
   // z
   for (int yx = 0; yx < {{NUMBER_OF_DOF_LIMITER*NUMBER_OF_DOF_LIMITER}}; yx++) {
@@ -133,7 +123,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVLimiterSpaceWithoutHalo(
       '0',
       'yx*'~NUMBER_OF_DATA) | indent(4) }}{##}
   }
-  _mm_free(tmpY);
+  tarch::freeMemory(tmpY, tarch::MemoryLocation::Heap);
 {% endif %}{# DIMENSIONS==2 #}
 }
 
@@ -143,10 +133,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithHalo(
 ) {
   // Ignore and remove ghost layers
   // x
-  {{COMPUTE_PRECISION}}* tmpX = static_cast<{{COMPUTE_PRECISION}} *>(
-    _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DOF_LIMITER_3D}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}})
-  );
-
+  {{COMPUTE_PRECISION}}* tmpX = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DOF_LIMITER_3D}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int z = 0; z < {{NUMBER_OF_DOF_LIMITER_3D}}; z++) {
     for (int y = 0; y < {{NUMBER_OF_DOF_LIMITER}}; y++) {
       // Version with ghost layers
@@ -157,7 +144,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithHalo(
     }
   }
 
-{%if DIMENSIONS==2%}
+{%if DIMENSIONS==2 %}
   // y
   for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
     {{ m.gemm('fv2dg_y', 'tmpX', 'Quadrature<{{COMPUTE_PRECISION}}>::fv2dg', 'luh',
@@ -165,12 +152,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithHalo(
       '0',
       'x*'~NUMBER_OF_DATA) | indent(4) }}{##}
   }
-  _mm_free(tmpX);
+  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
 {% else %}
   // y
-  {{COMPUTE_PRECISION}}* tmpY = static_cast<{{COMPUTE_PRECISION}} *>(
-    _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}})
-  );
+  {{COMPUTE_PRECISION}}* tmpY = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int z = 0; z < {{NUMBER_OF_DOF_LIMITER}}; z++) {
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
       {{ m.gemm('fv2dg_y', 'tmpX', 'Quadrature<{{COMPUTE_PRECISION}}>::fv2dg', 'tmpY',
@@ -179,7 +164,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithHalo(
         '(z*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_DATA_PADDED) | indent(6) }}{##}
     }
   }
-  _mm_free(tmpX);
+  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
 
   // z
   for (int yx = 0; yx < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; yx++) {
@@ -188,7 +173,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithHalo(
     '0',
     'yx*'~NUMBER_OF_DATA) | indent(4) }}{##}
   }
-  _mm_free(tmpY);
+  tarch::freeMemory(tmpY, tarch::MemoryLocation::Heap);
 {% endif %}{# DIMENSIONS ==2 #}
 }
 
@@ -198,10 +183,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithoutHalo(
 ) {
   // Ignore and remove ghost layers
   // x
-  {{COMPUTE_PRECISION}}* tmpX = static_cast<{{COMPUTE_PRECISION}} *>(
-    _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DOF_LIMITER_3D}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}})
-  );
-
+  {{COMPUTE_PRECISION}}* tmpX = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DOF_LIMITER_3D}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int z = 0; z < {{NUMBER_OF_DOF_LIMITER_3D}}; z++) {
     for (int y = 0; y < {{NUMBER_OF_DOF_LIMITER}}; y++) {
       // Version without ghost layers
@@ -212,7 +194,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithoutHalo(
     }
   }
 
-{%if DIMENSIONS==2%}
+{%if DIMENSIONS==2 %}
   // y
   for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
     {{ m.gemm('fv2dg_y', 'tmpX', 'Quadrature<{{COMPUTE_PRECISION}}>::fv2dg', 'luh',
@@ -220,12 +202,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithoutHalo(
       '0',
       'x*'~NUMBER_OF_DATA) | indent(4) }}{##}
   }
-  _mm_free(tmpX);
+  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
 {% else %}
   // y
-  {{COMPUTE_PRECISION}}* tmpY = static_cast<{{COMPUTE_PRECISION}} *>(
-    _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}})
-  );
+  {{COMPUTE_PRECISION}}* tmpY = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int z = 0; z < {{NUMBER_OF_DOF_LIMITER}}; z++) {
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
       // will overwrite tmpY, no need to set to 0
@@ -235,7 +215,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithoutHalo(
         '(z*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_DATA_PADDED) | indent(6) }}{##}
     }
   }
-  _mm_free(tmpX);
+  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
 
   // z
   for (int yx = 0; yx < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; yx++) {
@@ -244,7 +224,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithoutHalo(
       '0',
       'yx*'~NUMBER_OF_DATA) | indent(4) }}{##}
   }
-  _mm_free(tmpY);
+  tarch::freeMemory(tmpY, tarch::MemoryLocation::Heap);
 {% endif %}{# DIMENSIONS==2 #}
 }
 
@@ -326,8 +306,8 @@ bool {{FULL_QUALIFIED_NAMESPACE}}::discreteMaximumPrincipleAndMinAndMaxSearch(
   {{COMPUTE_PRECISION}}*                            boundaryMinPerObservable,
   {{COMPUTE_PRECISION}}*                            boundaryMaxPerObservable
 ) {
-  {{COMPUTE_PRECISION}} localMinPerObservable[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned({{ALIGNMENT}})));
-  {{COMPUTE_PRECISION}} localMaxPerObservable[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned({{ALIGNMENT}})));
+  {{COMPUTE_PRECISION}} localMinPerObservable[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} localMaxPerObservable[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(ALIGNMENT)));
 
   // 1: Determine the new cell-local minimum and maximum
   findCellLocalMinAndMax(solver, luh, localMinPerObservable, localMaxPerObservable);
@@ -387,7 +367,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::findCellLocalLimiterMinAndMax(
   std::fill_n(localMinPerObservable, {{NUMBER_OF_OBSERVABLES}}, +std::numeric_limits<{{COMPUTE_PRECISION}}>::infinity());
   std::fill_n(localMaxPerObservable, {{NUMBER_OF_OBSERVABLES}}, -std::numeric_limits<{{COMPUTE_PRECISION}}>::infinity());
 
-  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned({{ALIGNMENT}})));
+  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(ALIGNMENT)));
 
   for (int z = {{GHOST_LAYER_WIDTH_3D}}; z < {{NUMBER_OF_DOF_LIMITER_3D+GHOST_LAYER_WIDTH_3D}}; z++) { // Skip the last element
     for (int y = {{GHOST_LAYER_WIDTH}}; y < {{NUMBER_OF_DOF_LIMITER+GHOST_LAYER_WIDTH}}; y++) {
@@ -415,7 +395,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::findCellLocalMinAndMax(
   std::fill_n(localMinPerObservable, {{NUMBER_OF_OBSERVABLES}}, +std::numeric_limits<{{COMPUTE_PRECISION}}>::infinity());
   std::fill_n(localMaxPerObservable, {{NUMBER_OF_OBSERVABLES}}, -std::numeric_limits<{{COMPUTE_PRECISION}}>::infinity());
 
-  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned({{ALIGNMENT}})));
+  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(ALIGNMENT)));
 
   for (int zyx = 0; zyx < {{NUMBER_OF_DOF**DIMENSIONS}}; zyx++) {
     solver.mapDiscreteMaximumPrincipleObservables(
@@ -441,9 +421,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtGaussLobattoNodes(
   {{COMPUTE_PRECISION}}*                            max
 ) {
   // x
-  {{COMPUTE_PRECISION}}* tmpX = static_cast<{{COMPUTE_PRECISION}} *>(
-    _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}})
-  );
+  {{COMPUTE_PRECISION}}* tmpX = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int zy = 0; zy < {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF}}; zy++) {
     {{ m.gemm('uh2lob_x', 'luh', '{{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>::uh2lob', 'tmpX',
       'zy*'~NUMBER_OF_DOF*NUMBER_OF_DATA,
@@ -451,12 +429,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtGaussLobattoNodes(
       'zy*'~NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED) | indent(4) }}{##}
   }
 
-{%if DIMENSIONS==2%}
+{%if DIMENSIONS==2 %}
   // y
-  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned({{ALIGNMENT}})));
-  {{COMPUTE_PRECISION}}* lob = static_cast<{{COMPUTE_PRECISION}} *>(
-    _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}}) // Constant x slice of projected solution
-  );
+  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(ALIGNMENT)));
+  // Constant x slice of projected solution
+  {{COMPUTE_PRECISION}}* lob = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DATA_PADDED}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
     {{ m.gemm('uh2lob_y_slice', 'tmpX', '{{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>::uh2lob', 'lob',
       'x*'~NUMBER_OF_DATA_PADDED,
@@ -471,13 +448,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtGaussLobattoNodes(
       }
     }
   }
-  _mm_free(tmpX);
-  _mm_free(lob);
+  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(lob, tarch::MemoryLocation::Heap);
 {% else %}
   // y
-  {{COMPUTE_PRECISION}}* tmpY = static_cast<{{COMPUTE_PRECISION}} *>(
-    _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}})
-  );
+  {COMPUTE_PRECISION}}* tmpY = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
       {{ m.gemm('uh2lob_y', 'tmpX', '{{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>::uh2lob', 'tmpY',
@@ -486,13 +461,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtGaussLobattoNodes(
         '(z*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_DATA_PADDED) | indent(6) }}{##}
     }
   }
-  _mm_free(tmpX);
+  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
 
   // z
-  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned({{ALIGNMENT}})));
-  {{COMPUTE_PRECISION}}* lob = static_cast<{{COMPUTE_PRECISION}} *>(
-    _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}}) // Constant x,y slice of projected solution
-  );
+  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(ALIGNMENT)));
+  // // Constant x,y slice of projected solution
+  {{COMPUTE_PRECISION}}* lob = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int yx = 0; yx < {{NUMBER_OF_DOF}}; yx++) {
     {{ m.matmul('uh2lob_z_slice', 'tmpY', '{{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>::uh2lob', 'lob',
       'yx*'~NUMBER_OF_DATA_PADDED,
@@ -506,8 +480,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtGaussLobattoNodes(
       }
     }
   }
-  _mm_free(tmpY);
-  _mm_free(lob);
+  tarch::freeMemory(tmpY, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(lob, tarch::MemoryLocation::Heap);
 {% endif %}{# DIMENSIONS==2 #}
 }
 
@@ -519,9 +493,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtFVSubcellCenters(
   {{COMPUTE_PRECISION}}*                            max
 ) {
   // x
-  {{COMPUTE_PRECISION}}* tmpX = static_cast<{{COMPUTE_PRECISION}} *>(
-    _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}})
-  );
+  {{COMPUTE_PRECISION}}* tmpX = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int zy = 0; zy < {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF}}; zy++) {
     {{ m.gemm('dg2fv_x', 'luh', '{{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>::dg2fv', 'tmpX',
       'zy*'~NUMBER_OF_DOF*NUMBER_OF_DATA,
@@ -529,12 +501,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtFVSubcellCenters(
       'zy*'~NUMBER_OF_DOF_LIMITER*NUMBER_OF_DATA_PADDED) | indent(4) }}{##}
   }
 
-{%if DIMENSIONS==2%}
+{%if DIMENSIONS==2 %}
   // y
-  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned({{ALIGNMENT}})));
-  {{COMPUTE_PRECISION}}* lim = static_cast<{{COMPUTE_PRECISION}} *>(
-    _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}}) // Constant x slice of projected solution
-  );
+  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}}* lim = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int x = 0; x < {{NUMBER_OF_DOF_LIMITER}}; x++) {
     {{ m.gemm('dg2fv_y_slice', 'tmpX', '{{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>::dg2fv', 'lim',
       'x*'~NUMBER_OF_DATA_PADDED,
@@ -548,13 +518,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtFVSubcellCenters(
       }
     }
   }
-  _mm_free(tmpX);
-  _mm_free(lim);
+  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(lim, tarch::MemoryLocation::Heap);
 {% else %}
   // y
-  {{COMPUTE_PRECISION}}* tmpY = static_cast<{{COMPUTE_PRECISION}} *>(
-    _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}})
-  );
+  {{COMPUTE_PRECISION}}* tmpY = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
     for (int x = 0; x < {{NUMBER_OF_DOF_LIMITER}}; x++) {
       {{ m.gemm('dg2fv_y', 'tmpX', '{{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>::dg2fv', 'tmpY',
@@ -563,13 +531,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtFVSubcellCenters(
         '(z*'~NUMBER_OF_DOF_LIMITER*NUMBER_OF_DOF_LIMITER~'+x)*'~NUMBER_OF_DATA_PADDED) | indent(6) }}{##}
     }
   }
-  _mm_free(tmpX);
+  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
 
   // z
-  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned({{ALIGNMENT}})));
-  {{COMPUTE_PRECISION}}* lim = static_cast<{{COMPUTE_PRECISION}} *>(
-    _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}}) // Constant x,y slice of projected solution
-  );
+  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(ALIGNMENT)));
+  // Constant x,y slice of projected solution
+  {{COMPUTE_PRECISION}}* lim = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int yx = 0; yx < {{NUMBER_OF_DOF_LIMITER*NUMBER_OF_DOF_LIMITER}}; yx++) {
     {{ m.gemm('dg2fv_z_slice', 'tmpY', '{{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>::dg2fv', 'lim',
       'yx*'~NUMBER_OF_DATA_PADDED,
@@ -583,7 +550,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtFVSubcellCenters(
       }
     }
   }
-  _mm_free(tmpY);
-  _mm_free(lim);
+  tarch::freeMemory(tmpY, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(lim, tarch::MemoryLocation::Heap);
 {% endif %}{# DIMENSIONS==2 #}
 }

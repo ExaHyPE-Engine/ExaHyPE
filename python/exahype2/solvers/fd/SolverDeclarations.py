@@ -43,9 +43,9 @@ class SolverDeclarations:
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       {% for i in range(ORDER) -%}
       {% if loop.first -%}
-      // closest node outside
+      // Closest node outside
       {%- elif loop.last %}
-      // furthest node outside
+      // Furthest node outside
       {%- endif %}
       [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         Qoutside{{i}}, // Qoutside{{i}}[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       {%- endfor %}
@@ -65,9 +65,9 @@ class SolverDeclarations:
       const {{COMPUTE_PRECISION}}* const NOALIAS                    Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       {% for i in range(ORDER) -%}
       {% if loop.first -%}
-      // closest node outside
+      // Closest node outside
       {%- elif loop.last %}
-      // furthest node outside
+      // Furthest node outside
       {%- endif %}
       [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         Qoutside{{i}}, // Qoutside{{i}}[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       {%- endfor %}
@@ -177,10 +177,10 @@ class SolverDeclarations:
       {% for D in DIMENSION_DESCRIPTOR -%}
       {% for i in range(ORDER) -%}
       {%- if loop.first -%}
-      // closest to node
+      // Closest to node
       {%- elif loop.last -%}
       {# Comment for new line #}
-      // furthest from node
+      // Furthest from node
       {%- endif -%} {# comments #}
       const {{COMPUTE_PRECISION}}* const NOALIAS                    Q{{D}}{{i}}, // Q{{D}}{{i}}[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       {%- endfor -%} {# order range #}
@@ -207,10 +207,10 @@ class SolverDeclarations:
       {% for D in DIMENSION_DESCRIPTOR -%}
       {% for i in range(ORDER) -%}
       {%- if loop.first -%}
-      // closest to node
+      // Closest to node
       {%- elif loop.last -%}
       {# Comment for new line #}
-      // furthest from node
+      // Furthest from node
       {%- endif -%} {# comments #}
       const {{COMPUTE_PRECISION}}* const NOALIAS                    Q{{D}}{{i}}, // Q{{D}}{{i}}[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       {%- endfor -%} {# order range #}

@@ -39,6 +39,8 @@ CONFIGUREPATH           = {{CONFIGUREPATH}}
 CMAKE_BUILD_DIR         = {{CMAKE_BUILD_DIR}}
 EXECUTABLENAME          = {{EXECUTABLENAME}}
 MULTITHREADING          = {{MULTITHREADING}}
+ALIGNMENT               = {{ALIGNMENT}}
+SIMDLEN                 = {{SIMDLEN}}
 GPU                     = {{GPU}}
 GPU_ARCH                = {{GPU_ARCH}}
 ACPP_DEBUG_LEVEL        = {{ACPP_DEBUG_LEVEL}}
@@ -142,6 +144,8 @@ the SISC paper
         self.d["CONFIGUREPATH"] = "."
         self.d["EXECUTABLENAME"] = ""
         self.d["MULTITHREADING"] = ""
+        self.d["ALIGNMENT"] = ""
+        self.d["SIMDLEN"] = ""
         self.d["GPU"] = ""
         self.d["GPU_ARCH"] = ""
         self.d["ACPP_DEBUG_LEVEL"] = ""
@@ -327,6 +331,10 @@ the SISC paper
                                 self.d["FC"] = os.path.basename(value)
                             elif key == "WITH_MULTITHREADING":
                                 self.d["MULTITHREADING"] = value
+                            elif key == "WITH_ALIGNMENT":
+                                self.d["ALIGNMENT"] = value
+                            elif key == "WITH_SIMDLEN":
+                                self.d["SIMDLEN"] = value
                             elif key == "WITH_GPU":
                                 self.d["GPU"] = value
                             elif key == "WITH_GPU_ARCH":

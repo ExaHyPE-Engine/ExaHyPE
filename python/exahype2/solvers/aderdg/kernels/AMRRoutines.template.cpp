@@ -9,7 +9,7 @@
 #include "Gemms.h"
 {% endif %}
 
-#include <mm_malloc.h>
+#include "tarch/accelerator/accelerator.h"
 
 {% import 'Gemms.template.h' as m with context %}{# get template macros #}
 
@@ -20,8 +20,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceUnknownsProlongation(
   const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS lFhbndCoarse,
   const tarch::la::Vector<DIMENSIONS - 1, int>&            subfaceIndex
 ) {
-{% if DIMENSIONS==3%}
-  double* tmpX = static_cast<double *>(_mm_malloc(sizeof(double) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}}));
+{% if DIMENSIONS==3 %}
+  double* tmpX = tarch::allocateMemory<double>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
 {% endif %}
 
   {{CORRECTOR_COMPUTATION_PRECISION}}** projector = DGMatrices<{{CORRECTOR_COMPUTATION_PRECISION}}>::fineGridProjector1d;
@@ -46,8 +46,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceUnknownsProlongation(
   }
 {% endif %}
 
-{% if DIMENSIONS==3%}
-  _mm_free(tmpX);
+{% if DIMENSIONS==3 %}
+  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
 {% endif %}
 }
 
@@ -56,8 +56,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceFluxRestriction(
   const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS lFhbndFine,
   const tarch::la::Vector<DIMENSIONS - 1, int>&            subfaceIndex
 ) {
-{% if DIMENSIONS==3%}
-  double* tmpX = static_cast<double *>(_mm_malloc(sizeof(double) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}}));
+{% if DIMENSIONS==3 %}
+  double* tmpX = tarch::allocateMemory<double>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
 {% endif %}
 
   {{CORRECTOR_COMPUTATION_PRECISION}}** restrictor = DGMatrices<{{CORRECTOR_COMPUTATION_PRECISION}}>::fineGridProjector1d_T_weighted;
@@ -75,8 +75,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceFluxRestriction(
   }
 {% endif %}
 
-{% if DIMENSIONS==3%}
-  _mm_free(tmpX);
+{% if DIMENSIONS==3 %}
+  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
 {% endif %}
 }
 
@@ -87,9 +87,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellUnknownsProlongation(
 ) {
   {{SOLUTION_STORAGE_PRECISION}}** projector = DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::fineGridProjector1d;
 
-  double* tmpX = static_cast<double *>(_mm_malloc(sizeof(double) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}}));
+  double* tmpX = tarch::allocateMemory<double>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
 {% if DIMENSIONS==3 %}
-  double* tmpY = static_cast<double *>(_mm_malloc(sizeof(double) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}}));
+  double* tmpY = tarch::allocateMemory<double>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
 {% endif %}
 
   // Will overwrite tmpX, no need to set to 0.
@@ -114,9 +114,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellUnknownsProlongation(
   }
 {% endif %}
 
-  _mm_free(tmpX);
+  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
 {% if DIMENSIONS==3 %}
-  _mm_free(tmpY);
+  tarch::freeMemory(tmpY, tarch::MemoryLocation::Heap);
 {% endif %}
 }
 
@@ -125,9 +125,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellUnknownsRestriction(
   {{SOLUTION_STORAGE_PRECISION}}* NOALIAS             luhCoarse,
   const tarch::la::Vector<DIMENSIONS, int>&           subcellIndex
 ) {
-  double* tmpX = static_cast<double *>(_mm_malloc(sizeof(double) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}}));
+  double* tmpX = tarch::allocateMemory<double>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
 {% if DIMENSIONS==3 %}
-  double* tmpY = static_cast<double *>(_mm_malloc(sizeof(double) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}}));
+  double* tmpY = tarch::allocateMemory<double>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
 {% endif %}
 
   {{SOLUTION_STORAGE_PRECISION}}** restrictor = DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::fineGridProjector1d_T_weighted;
@@ -156,8 +156,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellUnknownsRestriction(
   }
 {% endif %}
 
-  _mm_free(tmpX);
-{% if DIMENSIONS==3%}
-  _mm_free(tmpY);
+  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
+{% if DIMENSIONS==3 %}
+  tarch::freeMemory(tmpY, tarch::MemoryLocation::Heap);
 {% endif %}
 }

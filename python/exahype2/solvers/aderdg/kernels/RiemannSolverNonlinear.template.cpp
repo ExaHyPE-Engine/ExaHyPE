@@ -5,11 +5,12 @@
 #include "DGMatrices.h"
 #include "Quadrature.h"
 
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/accelerator.h"
+
 #include <algorithm>
 #include <cstring>
 #include <cmath>
-
-#include <mm_malloc.h>
 
 template <typename cCompType>
 void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
@@ -45,14 +46,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     faceNumber
   );
 {% else %}
-  cCompType* tmp_bnd = static_cast<cCompType *>(_mm_malloc({{NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(cCompType), {{ALIGNMENT}}));
-  cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
-  cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
+  cCompType* tmp_bnd = tarch::allocateMemory<cCompType>({{NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}, tarch::MemoryLocation::Heap);
+  cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
+  cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
 
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
-    #ifdef WITH_OPENMP
-    #pragma omp simd aligned(QavL,QavR,QL,QR:{{ALIGNMENT}})
-    #endif
+    SIMD(aligned(QavL,QavR,QL:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_DATA_PADDED}}; n++) {
       QavL[n] += Quadrature<cCompType>::weights2[xy] * QL[xy * {{NUMBER_OF_DATA_PADDED}} + n];
       QavR[n] += Quadrature<cCompType>::weights2[xy] * QR[xy * {{NUMBER_OF_DATA_PADDED}} + n];
@@ -87,32 +86,26 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   cCompType smax = std::fmax(smaxL, smaxR);
 
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
-    #ifdef WITH_OPENMP
-    #pragma omp simd aligned(tmp_bnd,QL,QR:{{ALIGNMENT}})
-    #endif
+    SIMD(aligned(tmp_bnd,QL,QR:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
       tmp_bnd[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] = smax * (QL[xy * {{NUMBER_OF_DATA_PADDED}} + n] - QR[xy * {{NUMBER_OF_DATA_PADDED}} + n]);
     }
   }
 
-  #ifdef WITH_OPENMP
-  #pragma omp simd aligned(tmp_bnd:{{ALIGNMENT}})
-  #endif
+  SIMD(aligned(FL,FR,tmp_bnd:ALIGNMENT))
   for (int xyn = 0; xyn < {{NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xyn++) {
     FL[xyn] = 0.5 * (FL[xyn] + FR[xyn] + tmp_bnd[xyn]);
   }
   std::copy_n(FL, {{NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}, FR);
-  _mm_free(tmp_bnd);
+  tarch::freeMemory(tmp_bnd, tarch::MemoryLocation::Heap);
 
 {% if USE_NCP %}
-  cCompType Qavg[{{NUMBER_OF_DATA}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
-  cCompType gradQ[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
-  cCompType ncp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
+  cCompType Qavg[{{NUMBER_OF_DATA}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
+  cCompType gradQ[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
+  cCompType ncp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
 
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
-    #ifdef WITH_OPENMP
-    #pragma omp simd aligned(Qavg,QL,QR,gradQ:{{ALIGNMENT}})
-    #endif
+    SIMD(aligned(Qavg,QL,QR,gradQ:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
        Qavg[n] = 0.5 * (QL[xy * {{NUMBER_OF_DATA_PADDED}} + n] + QR[xy * {{NUMBER_OF_DATA_PADDED}} + n]);
        gradQ[n] = QR[xy * {{NUMBER_OF_DATA_PADDED}} + n] - QL[xy * {{NUMBER_OF_DATA_PADDED}} + n];
@@ -137,9 +130,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
       ncp
     );
 
-    #ifdef WITH_OPENMP
-    #pragma omp simd aligned(FL,FR,ncp:{{ALIGNMENT}})
-    #endif
+    SIMD(aligned(FL,FR,ncp:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
       FR[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] -= 0.5 * ncp[n];
       FL[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += 0.5 * ncp[n];

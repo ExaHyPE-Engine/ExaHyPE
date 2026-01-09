@@ -16,14 +16,10 @@ tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE
   _solverState(SolverState::GridConstruction),
   _numberOfTroubledCells(0) {
 
-  kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTE_PRECISION}}>::initQuadratureNodesAndWeights();
-
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}(){
-  kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTE_PRECISION}}>::freeQuadratureNodesAndWeights();
-}
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() {}
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp(bool ofCurrentlyRunningGridSweep) const {
   return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMinTimeStamp();
@@ -185,11 +181,15 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() cons
   );
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
+  kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTE_PRECISION}}>::initQuadratureNodesAndWeights();
+}
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
+  kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTE_PRECISION}}>::freeQuadratureNodesAndWeights();
+}
 
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::addTroubledCell(){
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::addTroubledCell() {
   tarch::multicore::Lock lock(_semaphore);
   ++_numberOfTroubledCells;
 }

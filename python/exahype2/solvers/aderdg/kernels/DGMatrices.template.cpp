@@ -2,26 +2,26 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "DGMatrices.h"
 
-#include <mm_malloc.h>
+#include "tarch/accelerator/accelerator.h"
 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 template <>
 void {{FULL_QUALIFIED_NAMESPACE}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices() {
-  FLCoeff = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}})*{{NUMBER_OF_DOF_PADDED}}, {{ALIGNMENT}});
-  FRCoeff = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}})*{{NUMBER_OF_DOF_PADDED}}, {{ALIGNMENT}});
+  FLCoeff = tarch::allocateMemory<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>({{NUMBER_OF_DOF_PADDED}}, tarch::MemoryLocation::Heap);
+  FRCoeff = tarch::allocateMemory<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>({{NUMBER_OF_DOF_PADDED}}, tarch::MemoryLocation::Heap);
   // Note: FLCoeff is also F0
 
-  dudx    = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}})*{{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, {{ALIGNMENT}});
-  dudx_T  = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}})*{{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, {{ALIGNMENT}});
-  iK1_T   = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}})*{{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, {{ALIGNMENT}});
-  Kxi     = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}})*{{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, {{ALIGNMENT}});
-  Kxi_T   = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}})*{{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, {{ALIGNMENT}});
+  dudx   = tarch::allocateMemory<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>({{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, tarch::MemoryLocation::Heap);
+  dudx_T = tarch::allocateMemory<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>({{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, tarch::MemoryLocation::Heap);
+  iK1_T  = tarch::allocateMemory<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>({{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, tarch::MemoryLocation::Heap);
+  Kxi    = tarch::allocateMemory<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>({{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, tarch::MemoryLocation::Heap);
+  Kxi_T  = tarch::allocateMemory<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>({{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, tarch::MemoryLocation::Heap);
 
   fineGridProjector1d            = new {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* [3];
   fineGridProjector1d_T_weighted = new {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* [3];
   for (int i = 0; i < 3; i++) {
-    fineGridProjector1d[i]            = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}})*{{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, {{ALIGNMENT}});
-    fineGridProjector1d_T_weighted[i] = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *) _mm_malloc(sizeof({{COMPUTATION_PRECISIONS[PRECISION_NUM]}})*{{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, {{ALIGNMENT}});
+    fineGridProjector1d[i]            = tarch::allocateMemory<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>({{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, tarch::MemoryLocation::Heap);
+    fineGridProjector1d_T_weighted[i] = tarch::allocateMemory<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>({{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, tarch::MemoryLocation::Heap);
   }
 
 {% for i in nDofPad_seq %}
@@ -75,22 +75,22 @@ void {{FULL_QUALIFIED_NAMESPACE}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION
 
 template <>
 void {{FULL_QUALIFIED_NAMESPACE}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeDGMatrices() {
-  _mm_free(FLCoeff);
-  _mm_free(FRCoeff);
-  _mm_free(dudx);
-  _mm_free(dudx_T);
-  _mm_free(iK1_T);
-  _mm_free(Kxi);
-  _mm_free(Kxi_T);
+  tarch::freeMemory(FLCoeff, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(FRCoeff, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(dudx, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(dudx_T, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(iK1_T, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(Kxi, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(Kxi_T, tarch::MemoryLocation::Heap);
 
-  _mm_free(fineGridProjector1d[0]);
-  _mm_free(fineGridProjector1d[1]);
-  _mm_free(fineGridProjector1d[2]);
+  tarch::freeMemory(fineGridProjector1d[0], tarch::MemoryLocation::Heap);
+  tarch::freeMemory(fineGridProjector1d[1], tarch::MemoryLocation::Heap);
+  tarch::freeMemory(fineGridProjector1d[2], tarch::MemoryLocation::Heap);
   delete[] fineGridProjector1d;
 
-  _mm_free(fineGridProjector1d_T_weighted[0]);
-  _mm_free(fineGridProjector1d_T_weighted[1]);
-  _mm_free(fineGridProjector1d_T_weighted[2]);
+  tarch::freeMemory(fineGridProjector1d_T_weighted[0], tarch::MemoryLocation::Heap);
+  tarch::freeMemory(fineGridProjector1d_T_weighted[1], tarch::MemoryLocation::Heap);
+  tarch::freeMemory(fineGridProjector1d_T_weighted[2], tarch::MemoryLocation::Heap);
   delete[] fineGridProjector1d_T_weighted;
 }
 {% endfor %}

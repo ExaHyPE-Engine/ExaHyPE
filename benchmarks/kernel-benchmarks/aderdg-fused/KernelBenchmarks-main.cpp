@@ -52,6 +52,7 @@ static_assert(Accuracy >= std::numeric_limits<double>::epsilon() || Accuracy == 
 int main(int argc, char** argv) {
   peano4::init(&argc, &argv, benchmarks::exahype2::kernelbenchmarks::DomainOffset, benchmarks::exahype2::kernelbenchmarks::DomainSize);
   repositories::initLogFilters();
+  repositories::startSimulation();
 
   logInfo("main()", "number of compute threads: " << tarch::multicore::Core::getInstance().getNumberOfThreads());
   logInfo("main()", "number of threads launching compute kernels: " << NumberOfLaunchingThreads);
@@ -74,14 +75,16 @@ int main(int argc, char** argv) {
 
   for (int i = 0; i < NumberOfCellsToStudy.size(); i++) {
     logInfo("main()", "number of cells: " << NumberOfCellsToStudy[i]);
-    variant1::runBenchmarks(NumberOfCellsToStudy[i], timeStamp, timeStepSize, cellCenter, cellSize);
-    variant2::runBenchmarks(NumberOfCellsToStudy[i], timeStamp, timeStepSize, cellCenter, cellSize);
-    variant3::runBenchmarks(NumberOfCellsToStudy[i], timeStamp, timeStepSize, cellCenter, cellSize);
-    variant4::runBenchmarks(NumberOfCellsToStudy[i], timeStamp, timeStepSize, cellCenter, cellSize);
-    variant5::runBenchmarks(NumberOfCellsToStudy[i], timeStamp, timeStepSize, cellCenter, cellSize);
-    variant6::runBenchmarks(NumberOfCellsToStudy[i], timeStamp, timeStepSize, cellCenter, cellSize);
+    // TODO: All the variants below do not adhere to any alignment/padding. Therefore, the Riemann solver will potentially crash.
+    // variant1::runBenchmarks(NumberOfCellsToStudy[i], timeStamp, timeStepSize, cellCenter, cellSize);
+    // variant2::runBenchmarks(NumberOfCellsToStudy[i], timeStamp, timeStepSize, cellCenter, cellSize);
+    // variant3::runBenchmarks(NumberOfCellsToStudy[i], timeStamp, timeStepSize, cellCenter, cellSize);
+    // variant4::runBenchmarks(NumberOfCellsToStudy[i], timeStamp, timeStepSize, cellCenter, cellSize);
+    // variant5::runBenchmarks(NumberOfCellsToStudy[i], timeStamp, timeStepSize, cellCenter, cellSize);
+    // variant6::runBenchmarks(NumberOfCellsToStudy[i], timeStamp, timeStepSize, cellCenter, cellSize);
   }
 
+  repositories::finishSimulation();
   peano4::shutdown();
 
   // if (outcomeIsInvalid) {

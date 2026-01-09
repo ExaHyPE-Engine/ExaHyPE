@@ -7,9 +7,9 @@
   {% if DIMENSIONS==2 %}
   {% for i in range(ORDER) -%}
   {%- if loop.first -%}
-  // closest to node
+  // Closest to node
   {%- elif loop.last %}
-  // furthest from node
+  // Furthest from node
   {%- endif -%} {# comments #}
   const auto nodeLeft{{i}}  = ::exahype2::volumeIndex(node(0) - {{i + 1}}, node(1));
   const auto nodeRight{{i}} = ::exahype2::volumeIndex(node(0) + {{i + 1}}, node(1));
@@ -19,9 +19,9 @@
   {% else %} {# dimensions #}
   {% for i in range(ORDER) -%}
   {%- if loop.first -%}
-  // closest to node
+  // Closest to node
   {%- elif loop.last %}
-  // furthest from node
+  // Furthest from node
   {%- endif -%} {# comments #}
   const auto nodeLeft{{i}}  = ::exahype2::volumeIndex(node(0) - {{i + 1}}, node(1),             node(2));
   const auto nodeRight{{i}} = ::exahype2::volumeIndex(node(0) + {{i + 1}}, node(1),             node(2));
@@ -33,7 +33,6 @@
   {% endif %} {# dimensions #}
 
   {{ solverMacros.gatherQ() | indent(2) }}
-
   {{ solverMacros.performTimeStep() | indent(2) }}
 {% endmacro %}
 
@@ -46,11 +45,8 @@
         const auto node       = ::exahype2::volumeIndex(x, y, z);
         const auto h          = ::exahype2::fv::getVolumeSize(patchSize, {{NUMBER_OF_NODES_PER_AXIS}});
         const auto nodeCentre = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_NODES_PER_AXIS}}, node);
-        
         {{ solverMacros.createMemoryOnStack() | indent(4) }}
-
         {{ loopOverDIMENSIONS() | indent(4) }}
-
         {{ solverMacros.scatterQ() | indent(4) }}
       } // x
     } // y
@@ -61,11 +57,8 @@
       const auto node       = ::exahype2::volumeIndex(x, y);
       const auto h          = ::exahype2::fv::getVolumeSize(patchSize, {{NUMBER_OF_NODES_PER_AXIS}});
       const auto nodeCentre = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_NODES_PER_AXIS}}, node);
-
       {{ solverMacros.createMemoryOnStack() | indent(4) }}
-
       {{ loopOverDIMENSIONS() | indent(4) }}
-
       {{ solverMacros.scatterQ() | indent(4) }}
     } // x
   } // y

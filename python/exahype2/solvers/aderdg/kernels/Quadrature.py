@@ -4,8 +4,9 @@ from copy import deepcopy
 
 import peano4.output
 
+from exahype2.AlignmentHelper import AlignmentHelper
+
 from exahype2.solvers.MathUtils import MathUtils
-from exahype2.solvers.aderdg.Architectures import Architectures
 
 
 class Quadrature(object):
@@ -15,6 +16,9 @@ class Quadrature(object):
     def generate_kernels(
         self, solver, namespace, output, subdirectory, template_prefix, output_path
     ):
+        simd_width = int(output.makefile.d["SIMDLEN"])
+        alignment_helper = AlignmentHelper(simd_width)
+
         if self.d["POLYNOMIAL_TYPE"] == "legendre":
             QuadratureWeights, QuadratureNodes = MathUtils.getGaussLegendre(
                 self.d["NUMBER_OF_DOF"]
@@ -52,9 +56,7 @@ class Quadrature(object):
             # weightsVector is QuadratureWeights itself
             weightsVector = MathUtils.vectorPad(
                 QuadratureWeights,
-                Architectures.get_pad_size(
-                    self.d["ARCHITECTURE"], len(QuadratureWeights)
-                ),
+                alignment_helper.get_pad_size(len(QuadratureWeights)),
             )
             self.d["weights2"] = weightsVector
             self.d["w2Size"] = len(self.d["weights2"])
@@ -68,12 +70,11 @@ class Quadrature(object):
             ]
             weightsVector = MathUtils.vectorPad(
                 weightsVector,
-                Architectures.get_pad_size(self.d["ARCHITECTURE"], len(weightsVector)),
+                alignment_helper.get_pad_size(len(weightsVector))
             )
             self.d["weights3"] = weightsVector
             self.d["w3Size"] = len(self.d["weights3"])
             self.d["w3_seq"] = range(self.d["w3Size"])
-
         else:
             # all combinations of two weights, written as an 1D array
             weightsVector = [
@@ -83,7 +84,7 @@ class Quadrature(object):
             ]
             weightsVector = MathUtils.vectorPad(
                 weightsVector,
-                Architectures.get_pad_size(self.d["ARCHITECTURE"], len(weightsVector)),
+                alignment_helper.get_pad_size(len(weightsVector))
             )
             self.d["weights2"] = weightsVector
             self.d["w2Size"] = len(self.d["weights2"])
@@ -98,7 +99,7 @@ class Quadrature(object):
             ]
             weightsVector = MathUtils.vectorPad(
                 weightsVector,
-                Architectures.get_pad_size(self.d["ARCHITECTURE"], len(weightsVector)),
+                alignment_helper.get_pad_size(len(weightsVector))
             )
             self.d["weights3"] = weightsVector
             self.d["w3Size"] = len(self.d["weights3"])

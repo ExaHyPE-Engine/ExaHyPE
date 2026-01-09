@@ -10,9 +10,10 @@ import peano4.output
 import exahype2.grid
 import exahype2.solvers.limiting.kernels
 
+from exahype2.AlignmentHelper import AlignmentHelper
+
 from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.aderdg import Polynomials
-from exahype2.solvers.aderdg.Architectures import Architectures
 
 from .actionsets import (
     SaveNewCellData,
@@ -423,9 +424,7 @@ class StaticLimiting(object):
         step.add_action_set(self._action_set_spread_limiter_status)
         step.add_action_set(self._action_set_copy_convert_and_project_data)
 
-    def _generate_kernels(self, namespace, output, subdirectory, dimensions):
-        d = {}
-        self._init_dictionary_with_default_parameters(d)
+    def _generate_kernels(self, namespace, d, output, subdirectory, dimensions):
         self.add_entries_to_text_replacement_dictionary(d)
         d["DIMENSIONS"] = dimensions
         d["NUMBER_OF_DOF_3D"] = 1 if dimensions == 2 else d["NUMBER_OF_DOF"]
@@ -460,29 +459,14 @@ class StaticLimiting(object):
             kernels_output_path,
         )
 
-    """
-    This tells peano to add the solver files to the project. It generates any files that are not
-    specifically cell or face data or grid actions such as the actionsets.
-    Currently it generates solver implementation and header files.
-    """
-
     def add_implementation_files_to_project(
         self, namespace, output, dimensions, subdirectory=""
     ):
-        """
-        The ExaHyPE2 project will call this operation when it sets
-        up the overall environment.
-
-        This routine is typically not invoked by a user.
-
-        output: peano4.output.Output
-        """
-
         if subdirectory:
             subdirectory += "/"
 
-        HeaderDictionary = {}
-        self._init_dictionary_with_default_parameters(HeaderDictionary)
+        d = {}
+        self._init_dictionary_with_default_parameters(d)
 
         generated_abstract_files = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -493,7 +477,7 @@ class StaticLimiting(object):
                 "Abstract" + self._name,
                 namespace,
                 subdirectory + ".",
-                HeaderDictionary,
+                d,
                 True,
                 True,
             )
@@ -508,7 +492,7 @@ class StaticLimiting(object):
                 self._name,
                 namespace,
                 subdirectory + ".",
-                HeaderDictionary,
+                d,
                 False,
                 True,
             )
@@ -526,16 +510,11 @@ class StaticLimiting(object):
         output.makefile.add_cpp_file(subdirectory + self._name + ".cpp", generated=True)
         output.makefile.add_h_file(subdirectory + self._name + ".h", generated=True)
 
-        self._generate_kernels(namespace, output, subdirectory, dimensions)
+        self._generate_kernels(namespace, d, output, subdirectory, dimensions)
 
     @abstractmethod
     def add_entries_to_text_replacement_dictionary(self, d):
         pass
-
-    """
-    Generates a dictionary of "words" that will later be used in various templates to fill these out by adding
-    information from the solver or which was specified by the user.
-    """
 
     def _init_dictionary_with_default_parameters(self, d):
         d["SOLVER_INSTANCE"] = self.get_name_of_global_instance()
@@ -573,38 +552,17 @@ class StaticLimiting(object):
             else self._regular_solver._solution_persistent_storage_precision
         )
 
-        d["ALIGNMENT"] = Architectures.get_alignment(self._regular_solver._architecture)
-        d["SIMD_WIDTH"] = Architectures.get_simd_width(
-            self._regular_solver._architecture
-        )
         d["ORDER"] = self._regular_solver._order
         d["NUMBER_OF_DOF"] = self._regular_solver._order + 1
-        d["NUMBER_OF_DOF_PADDED"] = Architectures.get_size_with_padding(
-            self._regular_solver._architecture, self._regular_solver._order + 1
-        )
         d["NUMBER_OF_DOF_LIMITER"] = (
             self._limiter_solver.patch_size
             if self._limiter_solver.patch_size >= 0
             else 2 * self._regular_solver._order + 1
         )
-        d["NUMBER_OF_DOF_LIMITER_PADDED"] = Architectures.get_size_with_padding(
-            self._regular_solver._architecture, d["NUMBER_OF_DOF_LIMITER"]
-        )
         d["NUMBER_OF_UNKNOWNS"] = self._regular_solver.unknowns
-        d["NUMBER_OF_UNKNOWNS_PADDED"] = Architectures.get_size_with_padding(
-            self._regular_solver._architecture, self._regular_solver.unknowns
-        )
         d["NUMBER_OF_AUXILIARY_VARIABLES"] = self._regular_solver.auxiliary_variables
-        d["NUMBER_OF_AUXILIARY_VARIABLES_PADDED"] = Architectures.get_size_with_padding(
-            self._regular_solver._architecture,
-            self._regular_solver.auxiliary_variables,
-        )
         d["NUMBER_OF_DATA"] = (
             self._regular_solver.unknowns + self._regular_solver.auxiliary_variables
-        )
-        d["NUMBER_OF_DATA_PADDED"] = Architectures.get_size_with_padding(
-            self._regular_solver._architecture,
-            self._regular_solver.unknowns + self._regular_solver.auxiliary_variables,
         )
         d["NUMBER_OF_OBSERVABLES"] = 0
         d["GHOST_LAYER_WIDTH"] = self._halo_size
@@ -619,6 +577,23 @@ class StaticLimiting(object):
             * (self._regular_solver.order + 1)
             * (self._regular_solver.order + 1)
             * (self._regular_solver.order + 1)
+        )
+
+        alignment_helper = AlignmentHelper(self._regular_solver._simd_width)
+        d["NUMBER_OF_DOF_PADDED"] = alignment_helper.get_size_with_padding(
+            self._regular_solver._order + 1
+        )
+        d["NUMBER_OF_DOF_LIMITER_PADDED"] = alignment_helper.get_size_with_padding(
+            d["NUMBER_OF_DOF_LIMITER"]
+        )
+        d["NUMBER_OF_UNKNOWNS_PADDED"] = alignment_helper.get_size_with_padding(
+            self._regular_solver.unknowns
+        )
+        d["NUMBER_OF_AUXILIARY_VARIABLES_PADDED"] = alignment_helper.get_size_with_padding(
+            self._regular_solver.auxiliary_variables
+        )
+        d["NUMBER_OF_DATA_PADDED"] = alignment_helper.get_size_with_padding(
+            self._regular_solver.unknowns + self._regular_solver.auxiliary_variables
         )
 
         d["USE_GAUSS_LOBATTO"] = (
@@ -662,4 +637,3 @@ class StaticLimiting(object):
         )
 
         d["USE_LIBXSMM"] = self._regular_solver._use_libxsmm
-        d["ARCHITECTURE"] = self._regular_solver._architecture

@@ -21,19 +21,16 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "NVHPC|PGI")
   set(IS_NVHPC TRUE)
 endif()
 
-set(WITH_CPU_ARCH "" CACHE STRING "Instruction set architecture (e.g. native, skylake, zen3, armv8-a)")
-set(WITH_CPU_TUNE "generic" CACHE STRING "Tuning architecture (e.g. native, skylake, znver3)")
+set(WITH_CPU_ARCH "native" CACHE STRING "Instruction set architecture (e.g. native, skylake, zen3, armv8-a)")
+set(WITH_CPU_TUNE "native" CACHE STRING "Tuning architecture (e.g. native, skylake, znver3)")
 
 set(_DETECTED_FLAGS "")
 
 if(IS_GCC OR IS_CLANG OR IS_INTEL)
   if(WITH_CPU_ARCH)
-    # Verify if the compiler supports the requested arch flag
     check_cxx_compiler_flag("-march=${WITH_CPU_ARCH}" HAS_MARCH)
     if(HAS_MARCH)
       list(APPEND _DETECTED_FLAGS "-march=${WITH_CPU_ARCH}")
-    else()
-      message(WARNING "Compiler does not support -march=${WITH_CPU_ARCH}. Ignoring.")
     endif()
   endif()
 
@@ -45,9 +42,10 @@ if(IS_GCC OR IS_CLANG OR IS_INTEL)
   endif()
 elseif(IS_NVHPC)
   if(WITH_CPU_ARCH)
-    list(APPEND _DETECTED_FLAGS "-tp=${WITH_CPU_ARCH}")
-  else()
-    list(APPEND _DETECTED_FLAGS "-tp=native")
+    check_cxx_compiler_flag("-tp=${WITH_CPU_ARCH}" HAS_TP_FLAG)
+    if(HAS_TP_FLAG)
+      list(APPEND _DETECTED_FLAGS "-tp=${WITH_CPU_ARCH}")
+    endif()
   endif()
 endif()
 
@@ -56,9 +54,10 @@ function(_check_macro_defined macro flags out_var)
     "#ifndef ${macro}
      #error ${macro} not defined
      #endif
-     int main(){return 0;}")
+     int main(){return 0;}"
+  )
   set(_OLD_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_CXX_FLAGS} ${flags}")
+  set(CMAKE_REQUIRED_FLAGS "${flags}")
   check_cxx_source_compiles("${code}" ${out_var})
   set(CMAKE_REQUIRED_FLAGS "${_OLD_REQUIRED_FLAGS}")
 endfunction()
@@ -93,8 +92,8 @@ elseif(HAS_SSE2)
   set(WITH_ALIGNMENT 16)
 endif()
 
-set(WITH_SIMDLEN   ${WITH_SIMDLEN} CACHE STRING "Number of double-precision elements per SIMD vector (e.g., 4 for AVX2)")
-set(WITH_ALIGNMENT ${WITH_ALIGNMENT} CACHE STRING "Memory alignment in bytes required for vectorized loads/stores (e.g., 32 for AVX2)")
+set(WITH_SIMDLEN   ${WITH_SIMDLEN} CACHE INTERNAL "Number of double-precision elements per SIMD vector (e.g., 4 for AVX2)")
+set(WITH_ALIGNMENT ${WITH_ALIGNMENT} CACHE INTERNAL "Memory alignment in bytes required for vectorized loads/stores (e.g., 32 for AVX2)")
 set(CPU_ARCH_FLAGS ${_DETECTED_FLAGS} CACHE INTERNAL "Detected CPU architecture compiler flags")
 
 message(STATUS "Using CPU architecture flags: ${CPU_ARCH_FLAGS}")
