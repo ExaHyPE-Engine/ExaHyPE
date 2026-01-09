@@ -140,78 +140,56 @@ class SingleSweep(FV):
             self._initial_conditions_implementation = initial_conditions
             if initial_conditions is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_initial_conditions = True
-            else:
-                self._can_fuse = False  # We can only fuse if all terms are stateless
 
         if refinement_criterion is not None:
             self._refinement_criterion_implementation = refinement_criterion
             if refinement_criterion is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_refinement_criterion = True
-            else:
-                self._can_fuse = False
 
         if boundary_conditions is not None:
             self._boundary_conditions_implementation = boundary_conditions
             if boundary_conditions is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_boundary_conditions = True
-            else:
-                self._can_fuse = False
 
         if flux is not None:
             self._flux_implementation = flux
             if flux is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_flux = True
-            else:
-                self._can_fuse = False
 
         if ncp is not None:
             self._ncp_implementation = ncp
             if ncp is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_ncp = True
-            else:
-                self._can_fuse = False
 
         if max_eigenvalue is not None:
             self._max_eigenvalue_implementation = max_eigenvalue
             if max_eigenvalue is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_max_eigenvalue = True
-            else:
-                self._can_fuse = False
 
         if riemann_solver is not None:
             self._riemann_solver_implementation = riemann_solver
             if riemann_solver is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_riemann_solver = True
-            else:
-                self._can_fuse = False
 
         if source_term is not None:
             self._source_term_implementation = source_term
             if source_term is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_source_term = True
-            else:
-                self._can_fuse = False
 
         if diffusive_source_term is not None:
             self._diffusive_source_term_implementation = diffusive_source_term
             if diffusive_source_term is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_diffusive_source_term = True
-            else:
-                self._can_fuse = False
 
         if adjust_solution is not None:
             self._adjust_solution_implementation = adjust_solution
             if adjust_solution is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_adjust_solution = True
-            else:
-                self._can_fuse = False
 
         if limiter is not None:
             self._limiter_implementation = limiter
             if limiter is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_limiter = True
-            else:
-                self._can_fuse = False
 
         abstract_solver_declarations = AbstractSolverDeclarations()
         solver_declarations = SolverDeclarations()

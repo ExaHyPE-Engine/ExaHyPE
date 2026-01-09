@@ -24,56 +24,6 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getEnclaveTaskTypeId() {
   return _enclaveTaskTypeId;
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
-  const peano4::datamanagement::CellMarker&       marker,
-  const double                                    timeStamp,
-  const double                                    timeStepSize,
-  {{STORAGE_PRECISION}}* NOALIAS                  QIn,
-  {{STORAGE_PRECISION}}* NOALIAS const            faces[3][TWO_TIMES_D],
-  {{STORAGE_PRECISION}}* NOALIAS                  QOut
-) {
-  std::swap(QIn, QOut);
-  kernels::{{SOLVER_NAME}}::reconstructPatch(QIn, faces[2], QOut);
-  std::swap(QIn, QOut);
-
-#if PEANO_DEBUG > 0
-  ::exahype2::fv::validatePatch(
-    QIn,
-    {{NUMBER_OF_UNKNOWNS}},
-    {{NUMBER_OF_AUXILIARY_VARIABLES}},
-    {{NUMBER_OF_VOLUMES_PER_AXIS}},
-    {{HALO_SIZE}}, // Halo size
-    std::string(__FILE__) + "(" + std::to_string(__LINE__) + ")"
-  ); // Previous time step has to be valid
-#endif
-
-  {{PREPROCESS_RECONSTRUCTED_PATCH}}
-  {% if COMPUTE_MAX_EIGENVALUE %}
-  const auto maxEigenvalue = {{COMPUTE_KERNEL_CALL}}
-  {% else %}
-  const auto _ = {{COMPUTE_KERNEL_CALL}}
-  {% endif %}
-  {{POSTPROCESS_UPDATED_PATCH}}
-
-#if PEANO_DEBUG > 0
-  ::exahype2::fv::validatePatch(
-    QOut,
-    {{NUMBER_OF_UNKNOWNS}},
-    {{NUMBER_OF_AUXILIARY_VARIABLES}},
-    {{NUMBER_OF_VOLUMES_PER_AXIS}},
-    0, // Halo size
-    std::string(__FILE__) + "(" + std::to_string(__LINE__) + ")"
-  ); // Outcome has to be valid
-#endif
-
-  std::swap(QIn, QOut);
-  kernels::{{SOLVER_NAME}}::projectPatch(QIn, faces[1]);
-  std::swap(QIn, QOut);
-
-  {{COMPUTE_NEW_TIME_STEP_SIZE}}
-  repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp + timeStepSize, tarch::la::min(marker.getH()), tarch::la::max(marker.getH()));
-}
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
   const peano4::datamanagement::CellMarker&       marker,
   const double                                    timeStamp,
@@ -93,21 +43,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
     isBoundary,
     QOut,
     [&]() -> void {
-      applyKernelToPatch(
-        _marker,
-        _t,
-        _dt,
-        _QIn,
-        _faces,
-        _QOut
-      );
+      throw std::runtime_error("Launching individual enclave tasks is not supported anymore");
     }
   )
 {
   setPriority({{ENCLAVE_TASK_PRIORITY}});
 }
 
-{% if CAN_FUSE %}
 #include "kernels/{{SOLVER_NAME}}/HandleBoundaryFused.h"
 #include "kernels/{{SOLVER_NAME}}/ProjectPatchFused.h"
 #include "kernels/{{SOLVER_NAME}}/ReconstructPatchFused.h"
@@ -410,4 +352,3 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(::exahype2::CellData<{{STOR
   {{COMPUTE_NEW_TIME_STEP_SIZE}}
   repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, patchData.t + patchData.dt, tarch::la::min(patchData.cellSize[0]), tarch::la::max(patchData.cellSize[0]));
 }
-{% endif %}

@@ -261,7 +261,6 @@ class FV(object):
         self._compute_kernel_call = "#error Not yet defined"
         self._fused_compute_kernel_call = "#error Not yet defined"
 
-        self._can_fuse = True
         self._use_enclave_tasking = use_enclave_tasking
         self._number_of_enclave_tasks = number_of_enclave_tasks
         self._enclave_task_priority = "tarch::multicore::Task::DefaultPriority - 1"
@@ -1132,7 +1131,7 @@ The finest mesh width of """
         self._action_set_handle_boundary.generate_kernels(namespace, output, dimensions, subdirectory)
         self._action_set_reconstruct_patch.generate_kernels(namespace, output, dimensions, subdirectory)
         self._action_set_project_patch_onto_faces.generate_kernels(namespace, output, dimensions, subdirectory)
-        if self._use_enclave_tasking and self._can_fuse:
+        if self._use_enclave_tasking:
             self._action_set_handle_boundary.generate_fused_kernels(namespace, output, dimensions, subdirectory)
             self._action_set_reconstruct_patch.generate_fused_kernels(namespace, output, dimensions, subdirectory)
             self._action_set_project_patch_onto_faces.generate_fused_kernels(namespace, output, dimensions, subdirectory)
@@ -1296,7 +1295,6 @@ The finest mesh width of """
         d["STATELESS_ADJUST_SOLUTION"] = self._use_stateless_adjust_solution
         d["STATELESS_LIMITER"] = self._use_stateless_limiter
 
-        d["CAN_FUSE"] = self._can_fuse
         d["USE_ENCLAVE_TASKING"] = self._use_enclave_tasking
         d["NUMBER_OF_ENCLAVE_TASKS"] = self._number_of_enclave_tasks
         d["ENCLAVE_TASK_PRIORITY"] = self._enclave_task_priority

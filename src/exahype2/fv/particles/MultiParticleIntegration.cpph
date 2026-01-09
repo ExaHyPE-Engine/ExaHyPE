@@ -9,7 +9,7 @@ namespace exahype2 {
       namespace ppintegration {
         // Compute and store gravitational accelerations for two particles at arbitrary positions
         template <typename Particle>
-        void exahype2::fv::particles::ppintegration::centralGravityInteraction(
+        void centralGravityInteraction(
           Particle&                                    p1,
           const tarch::la::Vector<DIMENSIONS, double>& pos1,
           Particle&                                    p2,
@@ -35,8 +35,9 @@ namespace exahype2 {
             }
           }
         }
+
         template <typename Particle>
-        tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::ppintegration::explicitEulerIntegration(
+        tarch::la::Vector<DIMENSIONS, double> explicitEulerIntegration(
           std::vector<Particle*>& particles,
           double                  timeStepSize
         ) {
@@ -47,7 +48,7 @@ namespace exahype2 {
           Particle* p2 = particles[1];
 
           // // Compute gravitational interaction
-          exahype2::fv::particles::ppintegration::centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
+          centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
 
           // Integrate positions and velocities
           for (auto* p : particles) {
@@ -70,9 +71,8 @@ namespace exahype2 {
           return dummyPosition;
         }
 
-
         template <typename Particle>
-        tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::ppintegration::semiImplicitEulerIntegration(
+        tarch::la::Vector<DIMENSIONS, double> semiImplicitEulerIntegration(
           std::vector<Particle*>& particles,
           double                  timeStepSize
         ) {
@@ -84,13 +84,12 @@ namespace exahype2 {
           Particle* p2 = particles[1];
 
           // // Compute gravitational interaction
-          exahype2::fv::particles::ppintegration::centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
+          centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
           // Integrate positions and velocities
           for (auto* p : particles) {
             auto state = exahype2::fv::particles::utils::getParticleState(*p);
 
             for (int d = 0; d < DIMENSIONS; ++d) {
-
               state.velocity(d) += state.acceleration(d) * timeStepSize;
               state.position(d) += state.velocity(d) * timeStepSize;
             }
@@ -106,13 +105,12 @@ namespace exahype2 {
           return dummyPosition;
         }
 
-
         template <typename Particle>
-        void exahype2::fv::particles::ppintegration::velocityVerletIntegration(std::vector<Particle*>& particles) {
+        void velocityVerletIntegration(std::vector<Particle*>& particles) {
           assertion(particles.size() == 2);
           Particle* p1 = particles[0];
           Particle* p2 = particles[1];
-          exahype2::fv::particles::ppintegration::centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
+          centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
           const double dt = exahype2::fv::particles::integration::_timeStepSize;
 
           // Step 1: Get current states
@@ -135,9 +133,8 @@ namespace exahype2 {
           p1->setX(state1.position);
           p2->setX(state2.position);
 
-
           // Step 6: Recalculate acceleration at new positions
-          exahype2::fv::particles::ppintegration::centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
+          centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
 
           // Step 7: Get updated accelerations
           auto new_a1 = exahype2::fv::particles::utils::getAcceleration(*p1);
@@ -156,14 +153,14 @@ namespace exahype2 {
 
 
         template <typename Particle>
-        void exahype2::fv::particles::ppintegration::midpointIntegration(std::vector<Particle*>& particles) {
+        void midpointIntegration(std::vector<Particle*>& particles) {
           assertion(particles.size() == 2);
           Particle* p1 = particles[0];
           Particle* p2 = particles[1];
 
           const double dt = exahype2::fv::particles::integration::_timeStepSize;
           // Step 0: Compute initial acceleration at current positions
-          exahype2::fv::particles::ppintegration::centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
+          centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
 
           auto state1 = exahype2::fv::particles::utils::getParticleState(*p1);
           auto state2 = exahype2::fv::particles::utils::getParticleState(*p2);
@@ -207,7 +204,7 @@ namespace exahype2 {
           p2->setX(final2.position);
         }
         template <typename Particle>
-        void exahype2::fv::particles::ppintegration::RK3Integration(std::vector<Particle*>& particles) {
+        void RK3Integration(std::vector<Particle*>& particles) {
           assertion(particles.size() == 2);
           double h = exahype2::fv::particles::integration::_timeStepSize;
 
@@ -226,7 +223,7 @@ namespace exahype2 {
           State k1_2 = current2;
 
           // === k2 ===
-          State temp1, temp2;
+          //State temp1, temp2;
 
           ParticleState k2_2, k2_1;
           k2_1 = exahype2::fv::particles::integration::updatePartialStep(k1_1, h, 0.5);
@@ -273,19 +270,19 @@ namespace exahype2 {
         }
 
         template <typename Particle>
-        void exahype2::fv::particles::ppintegration::RK4Integration(std::vector<Particle*>& particles) {
+        void RK4Integration(std::vector<Particle*>& particles) {
           double timeStepSize = exahype2::fv::particles::integration::_timeStepSize;
           assertion(particles.size() == 2);
           Particle* p1 = particles[0];
           Particle* p2 = particles[1];
-          exahype2::fv::particles::ppintegration::centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
+          centralGravityInteraction(*p1, p1->getX(), *p2, p2->getX());
           using State = exahype2::fv::particles::utils::ParticleState;
 
           State current1 = exahype2::fv::particles::utils::getParticleState(*p1);
           State current2 = exahype2::fv::particles::utils::getParticleState(*p2);
 
           State k1_1, k1_2, k2_1, k2_2, k3_1, k3_2, k4_1, k4_2;
-          State temp1, temp2;
+          // State temp1, temp2;
           // === k1 ===
           k1_1 = current1;
           k1_2 = current2;
@@ -378,15 +375,13 @@ namespace exahype2 {
 
         // Zero out acceleration data in all particles
         template <typename Particle>
-        void exahype2::fv::particles::ppintegration::clearAccelerations(const std::vector<Particle*>& particles) {
+        void clearAccelerations(const std::vector<Particle*>& particles) {
           for (auto* p : particles) {
             for (int d = 0; d < DIMENSIONS; ++d) {
               p->setData(5 + d, 0.0);
             }
           }
         }
-
-
       } // namespace ppintegration
     } // namespace particles
   } // namespace fv

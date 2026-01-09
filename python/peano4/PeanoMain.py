@@ -59,11 +59,3 @@ class PeanoMain(object):
             self.overwrite,
         )
         output.add(generated_files)
-
-    def merge(self, main):
-        """
-        Make subproject's data a part of the project
-        (will be extended)
-        """
-
-        self.is_extended = True

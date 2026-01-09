@@ -166,25 +166,15 @@ class ADERDG(object):
         self._use_stateless_material_parameters = False
         self._use_diffusive_flux = False
 
-        self._can_fuse = False
         self._use_enclave_tasking = use_enclave_tasking
         self._number_of_enclave_tasks = number_of_enclave_tasks
         self._enclave_task_priority = "tarch::multicore::Task::DefaultPriority - 1"
 
-        """
-        These will be used by children of this class to fill them with the declaration and definition of the
-        above mandatory and optional functions.
-        """
         self._abstract_solver_user_declarations = ""
         self._abstract_solver_user_definitions = ""
         self._solver_user_declarations = ""
         self._solver_user_definitions = ""
 
-        """
-        Used by child classes; will contain code to be executed at the start and end respectively of the
-        time step. Typically specifies some timestep variable and advances the overall timestamp of the
-        entire solver.
-        """
         self._start_time_step_implementation  = ""
         self._finish_time_step_implementation = ""
         self._print_time_step_implementation = ""
@@ -950,7 +940,6 @@ class ADERDG(object):
         d["STATELESS_INIT_POINT_SOURCES"] = self._use_stateless_init_point_sources
         d["STATELESS_MATERIAL_PARAMETERS"] = self._use_stateless_material_parameters
 
-        d["CAN_FUSE"] = self._can_fuse
         d["USE_ENCLAVE_TASKING"] = self._use_enclave_tasking
         d["NUMBER_OF_ENCLAVE_TASKS"] = self._number_of_enclave_tasks
         d["ENCLAVE_TASK_PRIORITY"] = self._enclave_task_priority
@@ -989,78 +978,56 @@ class ADERDG(object):
             self._initial_conditions_implementation = initial_conditions
             if initial_conditions is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_initial_conditions = True
-            else:
-                self._can_fuse = False  # We can only fuse if all terms are stateless
 
         if refinement_criterion is not None:
             self._refinement_criterion_implementation = refinement_criterion
             if refinement_criterion is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_refinement_criterion = True
-            else:
-                self._can_fuse = False
 
         if boundary_conditions is not None:
             self._boundary_conditions_implementation = boundary_conditions
             if boundary_conditions is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_boundary_conditions = True
-            else:
-                self._can_fuse = False
 
         if flux is not None:
             self._flux_implementation = flux
             if flux is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_flux = True
-            else:
-                self._can_fuse = False
 
         if ncp is not None:
             self._ncp_implementation = ncp
             if ncp is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_ncp = True
-            else:
-                self._can_fuse = False
 
         if max_eigenvalue is not None:
             self._max_eigenvalue_implementation = max_eigenvalue
             if max_eigenvalue is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_max_eigenvalue = True
-            else:
-                self._can_fuse = False
 
         if riemann_solver is not None:
             self._riemann_solver_implementation = riemann_solver
             if riemann_solver is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_riemann_solver = True
-            else:
-                self._can_fuse = False
 
         if source_term is not None:
             self._source_term_implementation = source_term
             if source_term is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_source_term = True
-            else:
-                self._can_fuse = False
 
         if diffusive_source_term is not None:
             self._diffusive_source_term_implementation = diffusive_source_term
             if diffusive_source_term is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_diffusive_source_term = True
-            else:
-                self._can_fuse = False
 
         if adjust_solution is not None:
             self._adjust_solution_implementation = adjust_solution
             if adjust_solution is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_adjust_solution = True
-            else:
-                self._can_fuse = False
 
         if material_parameters is not None:
             self._material_param_implementation = material_parameters
             if material_parameters is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_material_parameters = True
-            else:
-                self._can_fuse = False
 
         assert(type(number_of_point_sources) == int)
         assert(number_of_point_sources >= 0)
@@ -1071,15 +1038,11 @@ class ADERDG(object):
                 self._point_sources_implementation = point_source
                 if point_source is not PDETerms.User_Defined_Implementation:
                     self._use_stateless_point_source = True
-                else:
-                    self._can_fuse = False
 
             if init_point_source_location is not None:
                 self._init_point_sources_implementation = init_point_source_location
                 if init_point_source_location is not PDETerms.User_Defined_Implementation:
                     self._use_stateless_init_point_sources = True
-                else:
-                    self._can_fuse = False
 
         if use_diffusive_flux is not None:
           self._use_diffusive_flux = use_diffusive_flux

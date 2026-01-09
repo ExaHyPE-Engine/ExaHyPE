@@ -120,7 +120,7 @@ if __name__ == "__main__":
             number_of_unknowns = sum(unknowns.values())
 
             self._my_user_includes = """
-#include "../../../../applications/exahype2/ccz4/CCZ4Kernels.h"
+#include "../../../applications/ccz4/CCZ4Kernels.h"
 """
             super(CCZ4Solver, self).__init__(
                 name=name,
@@ -271,14 +271,14 @@ if __name__ == "__main__":
     project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
     peano4_project = project.generate_Peano4_project(verbose=False)
     peano4_project.output.makefile.add_header_search_path(
-        "../../../../applications/exahype2/ccz4/"
+        "../../../applications/ccz4/"
     )
 
     peano4_project.output.makefile.add_CXX_flag("-DCCZ4EINSTEIN")
 
     peano4_project.output.makefile.add_cpp_file("CCZ4.cpp")
     peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp"
+        "../../../applications/ccz4/CCZ4Kernels.cpp"
     )
 
     peano4_project.generate(throw_away_data_after_generation=True)

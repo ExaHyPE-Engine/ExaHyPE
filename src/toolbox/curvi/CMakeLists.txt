@@ -37,5 +37,6 @@ foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
     MODE ${mode}
     SOURCES ${SOURCES}
     HEADERS ${HEADERS}
+    LINK_LIBRARIES Tarch${mode}
   )
 endforeach()

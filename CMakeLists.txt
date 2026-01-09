@@ -332,7 +332,7 @@ add_subdirectory(src)
 include(CMakePackageConfigHelpers)
 
 write_basic_package_version_file(
-  PeanoConfigVersion.cmake
+  ${PROJECT_NAME}ConfigVersion.cmake
   VERSION ${GIT_COMMIT_HASH}
   COMPATIBILITY SameMajorVersion
 )

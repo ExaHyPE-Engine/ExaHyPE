@@ -73,30 +73,22 @@ class Prediction(AbstractADERDGActionSet):
 {% if USE_ENCLAVE_TASKING %}
     else { // is enclave cell
       {{CORRECTOR_COMPUTATION_PRECISION}}* faces[2][TWO_TIMES_D];
+      bool                                 isBoundary[TWO_TIMES_D];
       for (int d = 0; d < TWO_TIMES_D; ++d) {
         faces[0][d] = lQhbnd[d];
         faces[1][d] = lFhbnd[d];
+        isBoundary[d] = false;
       }
 
-{% if CAN_FUSE %}
       ::exahype2::EnclaveBookkeeping::getInstance().bookmarkTask(new tasks::Prediction{{ENCLAVE_TASK_TYPE}}(
         marker,
         timeStamp,
         timeStepSize,
         QOld,
         faces,
+        isBoundary,
         QNew
       ));
-{% else %}
-      tarch::multicore::spawnTask(new tasks::Prediction{{ENCLAVE_TASK_TYPE}}(
-        marker,
-        timeStamp,
-        timeStepSize,
-        QOld,
-        faces,
-        QNew
-      ));
-{% endif %}
     }
 {% endif %}
 
@@ -139,7 +131,7 @@ class Prediction(AbstractADERDGActionSet):
 
     def get_body_of_unprepareTraversal(self):
         result = ""
-        if self._solver._use_enclave_tasking and self._solver._can_fuse:
+        if self._solver._use_enclave_tasking:
             result += (
                 "::exahype2::EnclaveBookkeeping::getInstance().fusePendingTasks();"
             )
