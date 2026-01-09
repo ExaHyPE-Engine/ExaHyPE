@@ -62,11 +62,16 @@
  *   Offline helpers (see @ref page_toolbox_loadbalancing_api) yield four lists:
  *   gridSweeps, splittingTrees, numberOfCells, subTrees (subtree ids).
  *   Interpretation:
- *   - gridSweeps = base_sweep * target_subtree_id (even numbers if base_sweep=2).
- *   - splittingTrees = unique parent subtree at earliest appearance level, or 0 if ambiguous.
- *   - numberOfCells = count of cells of that subtree on its earliest appearance level only.
- *   - subTrees = subtree identifiers; you must map them to destinationRanks for the constructor.
- *   Later descendants are assumed to “appear” automatically after the split and are not counted again.
+ *   - gridSweeps = base_sweep * (level + 1), where level is 0-based w.r.t. the API tree arrays.
+ *     The helper may emit multiple entries per subtree, one per level where the subtree is
+ *     introduced.
+ *   - splittingTrees = unique parent subtree id for all introduced cells on that level,
+ *     or 0 if ambiguous.
+ *   - numberOfCells = number of cells on that level that switch ownership across a parent–child
+ *     edge (child is target subtree, parent exists and has a different subtree id). For level 0,
+ *     it is the number of cells on level 0 that already belong to the target subtree.
+ *   - subTrees = subtree identifiers (not MPI ranks); you must map them to destinationRanks for
+ *     the Hardcoded constructor.
  * - toolbox::loadbalancing::strategies::SpreadOut Ensure that, if the problem is large
  *   enough, each thread on each rank gets one partition.
  * - toolbox::loadbalancing::strategies::SpreadOutHierarchically This strategy is very
