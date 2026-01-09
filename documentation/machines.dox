@@ -159,6 +159,23 @@ before the terminal command to explicitly tell SYCL to run the code on GPU.
 In the case of a runtime error, it is also useful to add `SYCL_PI_TRACE=2`
 to check where the error was raised.
 
+# COSMA
+Cosma's login nodes can be accessed at login8.dur.ac.uk. Further nodes can be
+accessed via these nodes. More information is available at https://cosma.readthedocs.io/en/latest/cosma.html.
+The following modules should be used:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+module purge
+module load cosma
+module load intel_comp/2025.2.1 compiler-rt tbb umf compiler mpi
+module load intel_mpi
+export FLAVOUR_NOCONFLICT=1
+module load gnu_comp/13.1.0
+module load gsl
+export I_MPI_CXX=icpx
+module load python
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
 # DINE
 
 <img width="20%" src="https://www.dur.ac.uk/images/cosma/cosma_white.png" />

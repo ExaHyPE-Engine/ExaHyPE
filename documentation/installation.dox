@@ -257,11 +257,14 @@ Python 2 is not supported.
 
 ## Package Installation
 
-Our code base relies on several Python packages. There's a requirements
-specification file which you can use to ensure that all requirements are
-met:
+Our code base relies on several Python packages. Best practice it to install
+these into a virtual environment. There's a requirements specification file which 
+you can use to ensure that all requirements are met:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
+python -m venv python-env
+source python-env/bin/activate
+pip install --upgrade pip
 pip install -r requirements.txt
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
