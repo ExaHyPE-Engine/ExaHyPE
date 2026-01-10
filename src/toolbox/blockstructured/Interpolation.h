@@ -27,7 +27,7 @@
  * all. It is sufficient to take the faces of a cell and to use the data
  * from there to reconstruct the actual patch plus its halo layer:
  *
- * @image html Interpolation00.png
+ * @image html src/toolbox/blockstructured/Interpolation00.png
  *
  * In the image above, we see a schematic illustration of the data layout:
  * In this example, a 2d cell hosts a 5x5 grid of finite volumes and we work
@@ -49,7 +49,7 @@
  * When we now look at hanging faces, we recognise that we need interpolated
  * data from the coarser level:
  *
- * @image html Interpolation01.png
+ * @image html src/toolbox/blockstructured/Interpolation01.png
  *
  * Hanging faces do not carry any information, i.e. there is no red data in
  * the plots on the right. Only the face on the coarser level holds data.
@@ -105,7 +105,7 @@
  *
  * The image below shows the enumeration:
  *
- * @image html Interpolation02.png
+ * @image html src/toolbox/blockstructured/Interpolation02.png
  *
  *
  * ## Interpolation as matrix-vector product
@@ -201,7 +201,7 @@ namespace toolbox {
      *
      * ## Interpolation along the normal direction
      *
-     * @image html Interpolation_tensor_1d.png
+     * @image html src/toolbox/blockstructured/Interpolation_tensor_1d.png
      *
      * The interpolation along the normal is a matrix of the dimensions
      * @f$ 2k \times k @f$. It is always defined along the left-to-right,
@@ -257,7 +257,7 @@ namespace toolbox {
      *
      * The data flow is illustrated below:
      *
-     * @image html Interpolation_tensor_1d_constant_interpolation.png
+     * @image html src/toolbox/blockstructured/Interpolation_tensor_1d_constant_interpolation.png
      *
      * Most constant interplation schemes would obviously not take the middle
      * green value but the one right of it. In the matrix, this means that third
@@ -762,7 +762,7 @@ namespace toolbox {
        * example, will immediately give you negative (tiny) energies or negative
        * pressure.
        *
-       * @image html Interpolation_createLinearInterpolationMatrix.png
+       * @image html src/toolbox/blockstructured/Interpolation_createLinearInterpolationMatrix.png
        *
        * The picture above illustrates the problem: We have by default no access
       to
@@ -819,8 +819,7 @@ namespace toolbox {
        * which coarser face voxel is overlaps. In this context, we exploit the
        * fact that all voxels are enumerated lexicographically:
        *
-       * @image html
-      Interpolation_createPiecewiseConstantInterpolationMatrix.png
+       * @image html src/toolbox/blockstructured/Interpolation_createPiecewiseConstantInterpolationMatrix.png
        *
        * The resulting matrix for the example above (where the normal equals 0)
        * is 24x8 matrix which equals
@@ -846,7 +845,7 @@ namespace toolbox {
        * we enumerate the volumes within a surface first, and then move to the
       next surface lexicographically.
        *
-       * @image html Interpolation_ydirection_example.png
+       * @image html src/toolbox/blockstructured/Interpolation_ydirection_example.png
        *
        * ## Construction algorithm
        *
@@ -928,7 +927,7 @@ namespace toolbox {
        * createInterpolationMatrixFrom1dTemplateByInsertingZeroColsAndRows(). In
        * the setup as sketched below
        *
-       * @image html Interpolation_createLinearInterpolationMatrix.png
+       * @image html src/toolbox/blockstructured/Interpolation_createLinearInterpolationMatrix.png
        *
        * we have two options to initialise bright green values: We can either
        * use the bright red volumes only, or we can interpolate between the

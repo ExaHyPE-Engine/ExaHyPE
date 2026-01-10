@@ -2,11 +2,6 @@
 
 @page page_compiler_specific_settings_home Vendor Software Stacks and System- and Compiler-specific Settings
 
-# Quick links:
-
-\li @subpage tarch_accelerator_SYCL
-\li @subpage page_machines
-
 <!-- Add this one for href links to subitems -->
 \tableofcontents
 
@@ -64,6 +59,16 @@ covered within CompilerSpecificSettings (it has nothing to do with a particlar
 compiler choice), but is found directly within the headers of the respective
 namespace in the technical architecture.
 
+
+# Particular machines
+
+- @subpage page_machines_hamilton
+- @subpage page_machines
+
+
+# Further information on some backends
+
+- @subpage tarch_accelerator_SYCL
 
 # Vendor toolchains and compiler settings
 
