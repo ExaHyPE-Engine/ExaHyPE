@@ -5,6 +5,8 @@
 #include "DGMatrices.h"
 #include "Quadrature.h"
 
+#include "tarch/CompilerSpecificSettings.h"
+
 #include <algorithm>
 #include <cstring>
 #include <cmath>
@@ -53,13 +55,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   std::memset(FR, 0, {{NUMBER_OF_UNKNOWNS_PADDED * NUMBER_OF_DOF * NUMBER_OF_DOF_3D}} * sizeof(cCompType));
 
   // Compute the average unkown and auxiliary variables from the left and the right
-  cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
-  cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
+  cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
+  cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
 
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
-    #ifdef WITH_OPENMP
-    #pragma omp simd aligned(QavL,QavR,QL,QR:{{ALIGNMENT}})
-    #endif
+    SIMD(aligned(QavL,QavR,QL,QR:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_DATA_PADDED}}; n++) {
       QavL[n] += Quadrature<cCompType>::weights2[xy] * QL[xy * {{NUMBER_OF_DATA_PADDED}} + n];
       QavR[n] += Quadrature<cCompType>::weights2[xy] * QR[xy * {{NUMBER_OF_DATA_PADDED}} + n];
@@ -93,16 +93,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 
   cCompType smax = std::fmax(smaxL, smaxR);
 
-  cCompType Qavg[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned({{ALIGNMENT}})));
+  cCompType Qavg[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT)));
 
-  #ifdef WITH_OPENMP
-  #pragma omp simd aligned(Qavg,QavR,QavL:{{ALIGNMENT}})
-  #endif
+  SIMD(aligned(Qavg,QavR,QavL:ALIGNMENT))
   for (int n = 0; n < {{NUMBER_OF_DATA_PADDED}}; n++) {
-    Qavg[n] = 0.5 *  (QavR[n] + QavL[n]);
+    Qavg[n] = 0.5 * (QavR[n] + QavL[n]);
   }
 
-  cCompType Qdiff[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned({{ALIGNMENT}})));
+  cCompType Qdiff[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT)));
 
 {% if NUMBER_OF_AUXILIARY_VARIABLES > 0 %}
   // We copy the averaged material parameters to Qdiff as they are used in the flux term
@@ -110,17 +108,15 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 {% endif %}
 
 {% if USE_NCP %}
-  cCompType ncp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
+  cCompType ncp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
 {% endif %}
 
 {% if USE_FLUX %}
-  cCompType fluxValues[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
+  cCompType fluxValues[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
 {% endif %}
 
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
-    #ifdef WITH_OPENMP
-    #pragma omp simd aligned(Qdiff,QR,QL:{{ALIGNMENT}})
-    #endif
+    SIMD(aligned(Qdiff,QR,QL:ALIGNMENT))
     for (int n = 0 ; n < {{NUMBER_OF_UNKNOWNS}} ; n++) {
       Qdiff[n] = 0.5 * (QR[xy * {{NUMBER_OF_DATA_PADDED}} + n] - QL[xy * {{NUMBER_OF_DATA_PADDED}} + n]);
     }
@@ -157,9 +153,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     );
 {% endif %}{# USE_MATERIAL_PARAMETERS #}
 
-    #ifdef WITH_OPENMP
-    #pragma omp simd aligned(FL,ncp:{{ALIGNMENT}})
-    #endif
+    SIMD(aligned(FL,ncp:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
       FL[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += ncp[n];
     }
@@ -196,17 +190,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     );
 {% endif %}{# USE_MATERIAL_PARAMETERS #}
 
-    #ifdef WITH_OPENMP
-    #pragma omp simd aligned(FL,fluxValues:{{ALIGNMENT}})
-    #endif
+    SIMD(aligned(FL,fluxValues:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
       FL[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += fluxValues[n];
     }
 {% endif %}{# USE_FLUX #}
 
-    #ifdef WITH_OPENMP
-    #pragma omp simd aligned(FR,FL,Qdiff:{{ALIGNMENT}})
-    #endif
+    SIMD(aligned(FR,FL,Qdiff:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
       FR[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] = FL[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] + smax * Qdiff[n];
       FL[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] -= smax * Qdiff[n];

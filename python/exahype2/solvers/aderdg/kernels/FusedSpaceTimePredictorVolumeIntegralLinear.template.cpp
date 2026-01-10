@@ -9,7 +9,7 @@
 #include "Gemms.h"
 {% endif %}
 
-#include "tarch/accelerator/MemoryManager.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 #include <cstring>
 #include <algorithm>
@@ -46,9 +46,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   , const std::vector<int>&                         pointSources
 {% endif %}
 ) {
-  pCompType memory[getFusedSTPVISize()] __attribute__((aligned({{ALIGNMENT}})));
-  // TODO: Use the memory manager for very high ADER-DG orders where the stack is not enough or when offloading to the GPU
-  //pCompType* memory = tarch::accelerator::MemoryManager::getInstance().allocate<pCompType>(getFusedSTPVISize(), tarch::MemoryLocation::Heap, tarch::accelerator::Device::DefaultDevice);
+  pCompType memory[getFusedSTPVISize()] __attribute__((aligned(ALIGNMENT)));
 
   pCompType* lQi   = memory + getlQiShift();
   pCompType* lQhi  = memory + getlQhiShift();
@@ -67,7 +65,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 
   const tarch::la::Vector<DIMENSIONS, pCompType> invDx = convertScalar<pCompType>(invertEntries(cellSize));
 
-  pCompType tmpArray[{{TMP_ARRAY_SIZE}}] __attribute__((aligned({{ALIGNMENT}})));
+  pCompType tmpArray[{{TMP_ARRAY_SIZE}}] __attribute__((aligned(ALIGNMENT)));
 
   //***************************
   //**** Cauchy-Kovalewski ****
@@ -90,7 +88,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   pCompType dtavFac = 1.0;
 
 {% if USE_POINT_SOURCE %}
-  pCompType PSi[getPSiSize()] __attribute__((aligned({{ALIGNMENT}})));
+  pCompType PSi[getPSiSize()] __attribute__((aligned(ALIGNMENT)));
 
   { // 1.5: Compute point source contribution
     std::memset(PSi, 0, {{(NUMBER_OF_DOF+1)*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
@@ -99,7 +97,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     double x1[{{DIMENSIONS}}]; // Position
     const pCompType ivolume = 1.0 / (cellSize[0] * cellSize[1]{{' * cellSize[2]' if DIMENSIONS==3}});
 
-    pCompType forceVectorSource[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned({{ALIGNMENT}})));
+    pCompType forceVectorSource[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(ALIGNMENT)));
     std::memset(forceVectorSource, 0, {{NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
 
     // Loop over all quadrature points
@@ -142,9 +140,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
                                      * basisFunction[z]((pointSourceLocation[2] - cellCentre[2]) * invDx[2] + 0.5)
 {% endif %}
                                      * Quadrature<pCompType>::iweights3[(z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x] * ivolume; // Division by weights product and volume
-              #ifdef WITH_OPENMP
-              #pragma omp simd aligned(PSi,forceVectorSource:{{ALIGNMENT}})
-              #endif
+
+              SIMD(aligned(PSi,forceVectorSource:ALIGNMENT))
               for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) { // Evaluate
                 PSi[(((t * {{NUMBER_OF_DOF_3D}} + z) * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += update * forceVectorSource[n];
               }
@@ -158,9 +155,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   // Add point source to the zeroth time derivative
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) {
-      #ifdef WITH_OPENMP
-      #pragma omp simd aligned(lQi,PSi:{{ALIGNMENT}})
-      #endif
+      SIMD(aligned(lQi,PSi:ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
         lQi[xyz * {{NUMBER_OF_DATA_PADDED}} + n]
           += timeStepSize * Quadrature<pCompType>::weights1[t] * PSi[((t + 1) * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
@@ -169,7 +164,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   }
 
   // Initialise point source (PS) derivation operator
-  pCompType derPS[{{NUMBER_OF_DOF_PADDED}}] __attribute__((aligned({{ALIGNMENT}})));
+  pCompType derPS[{{NUMBER_OF_DOF_PADDED}}] __attribute__((aligned(ALIGNMENT)));
   std::copy_n(DGMatrices<pCompType>::FLCoeff, {{NUMBER_OF_DOF}}, derPS);
 {% endif %}
 
@@ -206,11 +201,12 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 
     for (int yz = 0; yz < {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF}}; yz++) {
       std::memset(tmpArray, 0, {{TMP_ARRAY_SIZE}} * sizeof(pCompType));
+
+      UNROLL({{NUMBER_OF_DOF}})
       for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
+        UNROLL({{NUMBER_OF_DOF}})
         for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
-          #ifdef WITH_OPENMP
-          #pragma omp simd aligned(tmpArray,lFi:{{ALIGNMENT}})
-          #endif
+          SIMD(aligned(tmpArray,lFi:ALIGNMENT))
           for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
             tmpArray[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3] += lFi[yz * {{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} + it_2 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
               * invDx[0] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF}} + it_2];
@@ -223,11 +219,12 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
         std::memset(tmpArray, 0, {{TMP_ARRAY_SIZE}} * sizeof(pCompType));
+
+        UNROLL({{NUMBER_OF_DOF}})
         for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
+          UNROLL({{NUMBER_OF_DOF}})
           for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
-            #ifdef WITH_OPENMP
-            #pragma omp simd aligned(tmpArray,lFi:{{ALIGNMENT}})
-            #endif
+            SIMD(aligned(tmpArray,lFi:ALIGNMENT))
             for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
               tmpArray[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
                 += lFi[{{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} + z * {{NUMBER_OF_DOF*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} + x * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_2 * {{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
@@ -235,10 +232,10 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
             }
           }
         }
+
+        UNROLL({{NUMBER_OF_DOF}})
         for (int l = 0; l < {{NUMBER_OF_DOF}}; l++) {
-          #ifdef WITH_OPENMP
-          #pragma omp simd aligned(lFi,tmpArray:{{ALIGNMENT}})
-          #endif
+          SIMD(aligned(lFi,tmpArray:ALIGNMENT))
           for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
             lFi[((z * {{NUMBER_OF_DOF}} + l) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}]
               = tmpArray[l * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
@@ -249,11 +246,12 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% if DIMENSIONS==3 %}
     for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; xy++) {
       std::memset(tmpArray, 0, {{TMP_ARRAY_SIZE}} * sizeof(pCompType));
+
+      UNROLL({{NUMBER_OF_DOF}})
       for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
+        UNROLL({{NUMBER_OF_DOF}})
         for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
-          #ifdef WITH_OPENMP
-          #pragma omp simd aligned(tmpArray,lFi:{{ALIGNMENT}})
-          #endif
+          SIMD(aligned(tmpArray,lFi:ALIGNMENT))
           for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
             tmpArray[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
               += lFi[{{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} + xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_2 * {{NUMBER_OF_DOF*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
@@ -261,10 +259,10 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
           }
         }
       }
+
+      UNROLL({{NUMBER_OF_DOF}})
       for (int l = 0; l < {{NUMBER_OF_DOF}}; l++) {
-        #ifdef WITH_OPENMP
-        #pragma omp simd aligned(lFi,tmpArray:{{ALIGNMENT}})
-        #endif
+        SIMD(aligned(lFi,tmpArray:ALIGNMENT))
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
           lFi[{{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} + (l * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n]
             = tmpArray[l * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
@@ -278,11 +276,12 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     // x-loop
     for (int yz = 0; yz < {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF}}; yz++) {
       std::memset(gradQ, 0, {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
+
+      UNROLL({{NUMBER_OF_DOF}})
       for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
+        UNROLL({{NUMBER_OF_DOF}})
         for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
-          #ifdef WITH_OPENMP
-          #pragma omp simd aligned(lQi,gradQ:{{ALIGNMENT}})
-          #endif
+          SIMD(aligned(lQi,gradQ:ALIGNMENT))
           for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
             gradQ[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3] += lQi[yz*{{NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED}} + it_2 * {{NUMBER_OF_DATA_PADDED}} + it_3]
               * invDx[0] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF}} + it_2];
@@ -291,7 +290,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       } // it_2
 
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-        pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
+        pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
 {% if STATELESS_NCP %}
         {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(
 {% else %}
@@ -306,9 +305,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
           0,
           tmpNcp
         );
-        #ifdef WITH_OPENMP
-        #pragma omp simd aligned(lFi,tmpNcp:{{ALIGNMENT}})
-        #endif
+
+        SIMD(aligned(lFi,tmpNcp:ALIGNMENT))
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
           lFi[yz*{{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} + x * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += tmpNcp[n];
         }
@@ -320,11 +318,11 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
         std::memset(gradQ, 0, {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
 
+        UNROLL({{NUMBER_OF_DOF}})
         for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
+          UNROLL({{NUMBER_OF_DOF}})
           for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
-            #ifdef WITH_OPENMP
-            #pragma omp simd aligned(lQi,gradQ:{{ALIGNMENT}})
-            #endif
+            SIMD(aligned(lQi,gradQ:ALIGNMENT))
             for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
               gradQ[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3] += lQi[z * {{NUMBER_OF_DOF*NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED}} + x * {{NUMBER_OF_DATA_PADDED}} + it_2 * {{NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED}} + it_3]
                 * invDx[1] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF}} + it_2];
@@ -333,8 +331,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
         } // it_2
 
         for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
-
-          pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
+          pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
 {% if STATELESS_NCP %}
           {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(
 {% else %}
@@ -350,6 +347,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
             tmpNcp
           );
 
+          SIMD(aligned(lFi,tmpNcp:ALIGNMENT))
           for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
             lFi[((z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}]
               += tmpNcp[n];
@@ -362,11 +360,12 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     // z-loop
     for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; xy++) {
       std::memset(gradQ, 0, {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
+
+      UNROLL({{NUMBER_OF_DOF}})
       for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
+        UNROLL({{NUMBER_OF_DOF}})
         for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
-          #ifdef WITH_OPENMP
-          #pragma omp simd aligned(lQi,gradQ:{{ALIGNMENT}})
-          #endif
+          SIMD(aligned(lQi,gradQ:ALIGNMENT))
           for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
             gradQ[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3] += lQi[xy * {{NUMBER_OF_DATA_PADDED}} + it_2 * {{NUMBER_OF_DOF*NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED}} + it_3]
               * invDx[2] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF}} + it_2];
@@ -375,7 +374,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       } // it_2
 
       for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
-        pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
+        pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
 {% if STATELESS_NCP %}
         {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(
 {% else %}
@@ -391,6 +390,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
           tmpNcp
         );
 
+        SIMD(aligned(lFi,tmpNcp:ALIGNMENT))
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
           lFi[{{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} + (z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n]
             += tmpNcp[n];
@@ -448,9 +448,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 
     // Averaging lFhi (and if necessary lShi over time directly in the CK-loop)
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
-      #ifdef WITH_OPENMP
-      #pragma omp simd aligned(lFhi,lFi{{',lShi,lSi' if USE_SOURCE else ''}}:{{ALIGNMENT}})
-      #endif
+      SIMD(aligned(lFhi,lFi{{',lShi,lSi' if USE_SOURCE else ''}}:ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
         lFhi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += dtavFac * lFi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
         lFhi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] += dtavFac * lFi[{{1 * (NUMBER_OF_DOF**DIMENSIONS) * NUMBER_OF_UNKNOWNS_PADDED}} + xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
@@ -470,9 +468,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     }
 
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
-      #ifdef WITH_OPENMP
-      #pragma omp simd aligned(lQi,lFi{{',lSi' if USE_SOURCE else ''}}:{{ALIGNMENT}})
-      #endif
+      SIMD(aligned(lQi,lFi{{',lSi' if USE_SOURCE else ''}}:ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
         lQi[xyz*{{NUMBER_OF_DATA_PADDED}} + n] = -(
             lFi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n]
@@ -491,21 +487,17 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     // Add point source contribution to the time derivatives
     for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) {
       for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
-        #ifdef WITH_OPENMP
-        #pragma omp simd aligned(lQi,PSi,derPS:{{ALIGNMENT}})
-        #endif
+        SIMD(aligned(lQi,PSi,derPS:ALIGNMENT))
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
           lQi[xyz * {{NUMBER_OF_DATA_PADDED}} + n] += derPS[t] * PSi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
         }
       }
     }
 
-    pCompType derPS_buffer[{{NUMBER_OF_DOF_PADDED}}] __attribute__((aligned({{ALIGNMENT}})));
+    pCompType derPS_buffer[{{NUMBER_OF_DOF_PADDED}}] __attribute__((aligned(ALIGNMENT)));
     std::memset(derPS_buffer, 0.0, {{NUMBER_OF_DOF_PADDED}} * sizeof(pCompType));
     for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
-      #ifdef WITH_OPENMP
-      #pragma omp simd aligned(derPS_buffer,derPS:{{ALIGNMENT}})
-      #endif
+      SIMD(aligned(derPS_buffer,derPS:ALIGNMENT))
       for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
         derPS_buffer[it_2] += derPS[it_1] * DGMatrices<pCompType>::dudx[it_1 * {{NUMBER_OF_DOF}} + it_2];
       }
@@ -515,9 +507,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     dtavFac *= timeStepSize / (i + 2);
 
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
-      #ifdef WITH_OPENMP
-      #pragma omp simd aligned(lQhi,lQi:{{ALIGNMENT}})
-      #endif
+      SIMD(aligned(lQhi,lQi:ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
         lQhi[xyz * {{NUMBER_OF_DATA_PADDED}} + n] += dtavFac * lQi[xyz * {{NUMBER_OF_DATA_PADDED}} + n];
       }
@@ -526,21 +516,17 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 
 {% if USE_POINT_SOURCE %}
   // Add point source to the right hand side
-  pCompType sumArray[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned({{ALIGNMENT}})));
+  pCompType sumArray[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(ALIGNMENT)));
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     std::memset(sumArray, 0, {{NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
     for (int n0 = 1; n0 < {{NUMBER_OF_DOF+1}}; n0++) {
       const pCompType coeff = Quadrature<pCompType>::weights1[n0 - 1] / {{DIMENSIONS}};
-      #ifdef WITH_OPENMP
-      #pragma omp simd aligned(sumArray,PSi:{{ALIGNMENT}})
-      #endif
+      SIMD(aligned(sumArray,PSi:ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
         sumArray[n] += coeff * PSi[(n0 * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
       }
     }
-    #ifdef WITH_OPENMP
-    #pragma omp simd aligned(lFhi,sumArray:{{ALIGNMENT}})
-    #endif
+    SIMD(aligned(lFhi,sumArray:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
       lFhi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += sumArray[n];
       lFhi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*(NUMBER_OF_DOF**DIMENSIONS) * NUMBER_OF_UNKNOWNS_PADDED}}] += sumArray[n];
@@ -562,18 +548,14 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   // x-direction: face 0 (left) and face 2(2D) / 3(3D) (right)
   for (int yz = 0; yz < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; yz++) {
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-      #ifdef WITH_OPENMP
-      #pragma omp simd aligned(lQhbnd,lQhi:{{ALIGNMENT}})
-      #endif
+      SIMD(aligned(lQhbnd,lQhi:ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
         // Left
         lQhbnd[0][yz * {{NUMBER_OF_DATA}} + n] += lQhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[x];
         // Right
         lQhbnd[DIMENSIONS][yz * {{NUMBER_OF_DATA}} + n] += lQhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[x];
       }
-      #ifdef WITH_OPENMP
-      #pragma omp simd aligned(lFhbnd,lFhi:{{ALIGNMENT}})
-      #endif
+      SIMD(aligned(lFhbnd,lFhi:ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
         // Left
         lFhbnd[0][yz * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[x];
@@ -587,18 +569,14 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
       for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
-        #ifdef WITH_OPENMP
-        #pragma omp simd aligned(lQhbnd,lQhi:{{ALIGNMENT}})
-        #endif
+        SIMD(aligned(lQhbnd,lQhi:ALIGNMENT))
         for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
           // Left
           lQhbnd[1][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_DATA}} + n] += lQhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[y];
           // Right
           lQhbnd[1+DIMENSIONS][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_DATA}} + n] += lQhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[y];
         }
-        #ifdef WITH_OPENMP
-        #pragma omp simd aligned(lFhbnd,lFhi:{{ALIGNMENT}})
-        #endif
+        SIMD(aligned(lFhbnd,lFhi:ALIGNMENT))
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
           // Left
           lFhbnd[1][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] * DGMatrices<pCompType>::FLCoeff[y];
@@ -613,18 +591,14 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   // z-direction: face 2 (left) and face 5 (right)
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
-      #ifdef WITH_OPENMP
-      #pragma omp simd aligned(lQhbnd,lQhi:{{ALIGNMENT}})
-      #endif
+      SIMD(aligned(lQhbnd,lQhi:ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
         // Left
         lQhbnd[2][xy * {{NUMBER_OF_DATA}} + n] += lQhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[z];
         // Right
         lQhbnd[2+DIMENSIONS][xy * {{NUMBER_OF_DATA}} + n] += lQhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[z];
       }
-      #ifdef WITH_OPENMP
-      #pragma omp simd aligned(lFhbnd,lFhi:{{ALIGNMENT}})
-      #endif
+      SIMD(aligned(lFhbnd,lFhi:ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
         // Left
         lFhbnd[2][xy * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] * DGMatrices<pCompType>::FLCoeff[z];
@@ -643,9 +617,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   // only involves the element mass matrix, which cancels out.
 
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
-    #ifdef WITH_OPENMP
-    #pragma omp simd aligned(luh,lFhi{{',lShi' if USE_SOURCE else ''}}:{{ALIGNMENT}})
-    #endif
+    SIMD(aligned(luh,lFhi{{',lShi' if USE_SOURCE else ''}}:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
         luh[xyz*{{NUMBER_OF_DATA}} + n] -= timeStepSize * //Quadrature<pCompType>::weights3[xyz] *
             (
@@ -662,8 +634,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
             );
     }
   }
-
-  //tarch::accelerator::MemoryManager::getInstance().free(memory, tarch::accelerator::Device::DefaultDevice);
 
   return -1; // No picard iteration in linear case
 }

@@ -81,62 +81,64 @@ template <int Rows, typename Scalar>
 tarch::la::Matrix<Rows, Rows, Scalar> tarch::la::invert(
   const tarch::la::Matrix<Rows, Rows, Scalar>& M
 ) {
+  // Work on a copy of M
+  tarch::la::Matrix<Rows, Rows, Scalar> A = M;
   tarch::la::Matrix<Rows, Rows, Scalar> result(static_cast<Scalar>(0));
-  tarch::la::Matrix<Rows, Rows, Scalar> LU = M;
 
-  //lu(LU);
+  // Initialise result as Identity matrix
+  for (int i = 0; i < Rows; i++) {
+    result(i, i) = static_cast<Scalar>(1);
+  }
 
-  for (int j = 0; j < Rows; j++) {
-    for (int i = 0; i < Rows; i++) {
-      result(i, j) = ((i == j) ? static_cast<Scalar>(1) : static_cast<Scalar>(0));
-      for (int k = 0; k < i; k++) {
-        result(i, j) -= LU(i, k) * result(k, j);
+  // Gauss-Jordan Elimination
+  for (int k = 0; k < Rows; k++) {
+    // Find pivot (max absolute value in column k)
+    int maxIndex = k;
+    Scalar maxVal = std::abs(A(k, k));
+    for (int i = k + 1; i < Rows; i++) {
+      Scalar current = std::abs(A(i, k));
+      if (current > maxVal) {
+        maxVal = current;
+        maxIndex = i;
       }
     }
 
-    for (int i = Rows - 1; i >= 0; i--) {
-      for (int k = i + 1; k < Rows; k++) {
-        result(i, j) -= LU(i, k) * result(k, j);
+    // Swap rows in both A and result to bring pivot to diagonal
+    if (maxIndex != k) {
+      for (int j = 0; j < Rows; j++) {
+        Scalar tempA = A(k, j);
+        A(k, j) = A(maxIndex, j);
+        A(maxIndex, j) = tempA;
+
+        Scalar tempRes = result(k, j);
+        result(k, j) = result(maxIndex, j);
+        result(maxIndex, j) = tempRes;
       }
-      result(i, j) /= LU(i, i);
+    }
+
+    // Scale the pivot row so that A(k, k) becomes 1
+    Scalar diag = A(k, k);
+    // If diag is 0, the matrix is singular.
+    // This will cause a divide-by-zero signal, which is expected for singular matrices.
+    for (int j = 0; j < Rows; j++) {
+      A(k, j) /= diag;
+      result(k, j) /= diag;
+    }
+
+    // Eliminate elements in column k for all other rows (make them 0)
+    for (int i = 0; i < Rows; i++) {
+      if (i != k) {
+        Scalar factor = A(i, k);
+        for (int j = 0; j < Rows; j++) {
+          A(i, j) -= factor * A(k, j);
+          result(i, j) -= factor * result(k, j);
+        }
+      }
     }
   }
+
   return result;
 }
-
-#ifdef UseLapack
-template <int Rows>
-tarch::la::Matrix<Rows, Rows, double> tarch::la::invert(
-  const tarch::la::Matrix<Rows, Rows, double>& R
-) {
-  // make a copy
-  [[maybe_unused]] tarch::la::Matrix<Rows, Rows, double> M = R;
-
-  // aux variables
-  int returnCode;
-  int ipiv[Rows];
-
-  // step 1 - compute LU factorisation. Modify M in-place.
-  returnCode = LAPACKE_dgetrf(
-    LAPACK_ROW_MAJOR,
-    Rows,
-    Rows,
-    M.data(),
-    Rows,
-    ipiv
-  );
-  // check return code.
-  assertion(returnCode == 0);
-
-  // step 2 - use the result of the above to compute the inverse. Modify M
-  // in-place.
-  returnCode = LAPACKE_dgetri(LAPACK_ROW_MAJOR, Rows, M.data(), Rows, ipiv);
-  // check return code
-  assertion(returnCode == 0);
-
-  return M;
-}
-#endif
 
 template <typename Scalar>
 tarch::la::Matrix<2, 2, Scalar> tarch::la::invert(const Matrix<2, 2, Scalar>& R

@@ -15,9 +15,9 @@ import exahype2.solvers.aderdg.actionsets
 
 from .GenerateKernels import generate_kernels
 
-from exahype2.solvers.PDETerms import PDETerms
+from exahype2.AlignmentHelper import AlignmentHelper
 
-from exahype2.solvers.aderdg.Architectures import Architectures
+from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 
 from exahype2.VariableShortcuts import VariableShortcuts
@@ -100,13 +100,13 @@ class ADERDG(object):
 
         self._dimensions    = 2
         self._namespace     = ""
+        self._simd_width    = 1
         self._solver_template_file_class_name = None
         self._templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
 
         self._is_linear     = False
         self._polynomials   = Polynomials.Gauss_Legendre
         self._basis         = GaussLegendreBasis(order + 1)
-        self._architecture  = "noarch"
         self._use_libxsmm   = False
 
         self._initialise_patches = False
@@ -656,6 +656,7 @@ class ADERDG(object):
     def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory="", abstract_overwrite=True):
         self._dimensions = dimensions
         self._namespace = namespace
+        self._simd_width = int(output.makefile.d["SIMDLEN"])
 
         if (not self._is_linear) and (
             self._material_param_implementation != PDETerms.None_Implementation
@@ -676,8 +677,6 @@ class ADERDG(object):
                 f"[{self._name}] max_eigenvalue implementation is required when no Riemann solver is used "
                 f"or when global adaptive time stepping is enabled."
             )
-
-        generate_kernels(solver=self, output=output, subdirectory=subdirectory)
 
         if self._solver_template_file_class_name is None:
             self._templatefile_prefix += self.__class__.__name__
@@ -746,6 +745,8 @@ class ADERDG(object):
             output.makefile.add_h_file(subdirectory + "tasks/" + "Prediction{}EnclaveTask".format(self._name) + ".h", generated=True)
             output.makefile.add_cpp_file(subdirectory + "tasks/" + "Prediction{}EnclaveTask".format(self._name) + ".cpp", generated=True)
 
+        generate_kernels(solver=self, d=d, output=output, subdirectory=subdirectory)
+
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring
 
@@ -800,18 +801,18 @@ class ADERDG(object):
         d["SOLVER_INSTANCE"]    = self.get_name_of_global_instance()
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
 
-        d["ALIGNMENT"]          = Architectures.get_alignment(self._architecture)
-        d["SIMD_WIDTH"]         = Architectures.get_simd_width(self._architecture)
         d["ORDER"]              = self._order
         d["NUMBER_OF_DOF"]      = self._order + 1
         d["NUMBER_OF_DOF_3D"] = 1 if self._dimensions == 2 else d["NUMBER_OF_DOF"]
-        d["NUMBER_OF_DOF_PADDED"] = Architectures.get_size_with_padding(self._architecture, self._order + 1)
         d["NUMBER_OF_UNKNOWNS"]             = self._variable_shortcuts.unknowns
-        d["NUMBER_OF_UNKNOWNS_PADDED"]      = Architectures.get_size_with_padding(self._architecture, self._variable_shortcuts.unknowns)
         d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._variable_shortcuts.auxiliary_variables
-        d["NUMBER_OF_AUXILIARY_VARIABLES_PADDED"] = Architectures.get_size_with_padding(self._architecture, self._variable_shortcuts.auxiliary_variables)
-        d["NUMBER_OF_DATA"]                     = self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables
-        d["NUMBER_OF_DATA_PADDED"]              = Architectures.get_size_with_padding(self._architecture, self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables)
+        d["NUMBER_OF_DATA"]                 = self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables
+
+        alignment_helper                          = AlignmentHelper(self._simd_width)
+        d["NUMBER_OF_DOF_PADDED"]                 = alignment_helper.get_size_with_padding(self._order + 1)
+        d["NUMBER_OF_UNKNOWNS_PADDED"]            = alignment_helper.get_size_with_padding(self._variable_shortcuts.unknowns)
+        d["NUMBER_OF_AUXILIARY_VARIABLES_PADDED"] = alignment_helper.get_size_with_padding(self._variable_shortcuts.auxiliary_variables)
+        d["NUMBER_OF_DATA_PADDED"]                = alignment_helper.get_size_with_padding(self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables)
 
         d["CFL_SAFETY_FACTOR"]  = self._cflSafetyFactor
         d["CFL_ADER"]           = self._cflAder[self._order]  # /(2*(self._order+1)+1)
@@ -924,7 +925,7 @@ class ADERDG(object):
         d["USE_MATERIAL_PARAMETERS"]  = self._material_param_implementation != PDETerms.None_Implementation
         d["USE_POINT_SOURCE"]         = self._point_sources_implementation != PDETerms.None_Implementation
         d["USE_ADJUST_SOLUTION"]      = self._adjust_solution_implementation != PDETerms.None_Implementation
-        d["USE_DIFFUSIVE_FLUX"]         = self._use_diffusive_flux
+        d["USE_DIFFUSIVE_FLUX"]       = self._use_diffusive_flux
 
         d["STATELESS_INITIAL_CONDITIONS"] = self._use_stateless_initial_conditions
         d["STATELESS_BOUNDARY_CONDITIONS"] = self._use_stateless_boundary_conditions
@@ -952,7 +953,6 @@ class ADERDG(object):
         d["QUADRATURE_POINTS"]      = ", ".join(self._basis.quadrature_points())
 
         d["USE_LIBXSMM"] = self._use_libxsmm
-        d["ARCHITECTURE"] = self._architecture
 
         # self._basis.init_dictionary_with_default_parameters(d)
 
@@ -1061,7 +1061,6 @@ class ADERDG(object):
         solution_persistent_storage_precision = False,
         precompute_picard_precision           = False,
         precision_criterion_implementation    = PDETerms.User_Defined_Implementation,
-        architecture                          = "noarch",
         initialise_patches                    = False
     ):
         if polynomials is Polynomials.Gauss_Legendre:
@@ -1128,8 +1127,6 @@ class ADERDG(object):
 
         if len(self._predictor_computation_precisions) > 1:
             self._precision_criterion_implementation = precision_criterion_implementation
-
-        self._architecture = architecture
 
         self._initialise_patches = initialise_patches
 

@@ -33,23 +33,11 @@ double                  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::pointSourceLo
   _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::max()),
   _maxTimeStepSizeThisTimeStep(0.0) {
 
-  // Initialise nodes, weights and matrices for use of the kernels.
-{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-  kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
-  kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
-{% endfor %}
-
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}(){
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() {
   {{DESTRUCTOR_IMPLEMENTATION}}
-
-  // Free the generated nodes, weights and matrices.
-  {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-  kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeQuadratureNodesAndWeights();
-  kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeDGMatrices();
-  {% endfor %}
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxMeshSize() const {
@@ -369,11 +357,23 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() cons
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
+  // Initialise nodes, weights and matrices for use of the kernels.
+{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+  kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
+  kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
+{% endfor %}
+
   {{START_SIMULATION_IMPLEMENTATION}}
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
   {{FINISH_SIMULATION_IMPLEMENTATION}}
+
+  // Free the generated nodes, weights and matrices.
+{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+  kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeQuadratureNodesAndWeights();
+  kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeDGMatrices();
+{% endfor %}
 }
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}

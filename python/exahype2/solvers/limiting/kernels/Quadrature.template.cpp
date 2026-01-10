@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Quadrature.h"
 
-#include <mm_malloc.h>
+#include "tarch/accelerator/accelerator.h"
 
 // Using {{POLYNOMIAL_TYPE}} quadrature
 
@@ -10,10 +10,10 @@ template class {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>;
 
 template <>
 void {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>::initQuadratureNodesAndWeights() {
-  nodes     = ({{COMPUTE_PRECISION}} *) _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{NUMBER_OF_DOF_PADDED}}, {{ALIGNMENT}});
-  uh2lob    = ({{COMPUTE_PRECISION}} *) _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{uh2lobSize}}, {{ALIGNMENT}}); // nDof*nDofPad
-  dg2fv     = ({{COMPUTE_PRECISION}} *) _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{dg2fvSize}}, {{ALIGNMENT}}); // nDof*nDofLimPad
-  fv2dg     = ({{COMPUTE_PRECISION}} *) _mm_malloc(sizeof({{COMPUTE_PRECISION}}) * {{fv2dgSize}}, {{ALIGNMENT}}); // nDofLim*nDofPad
+  nodes   = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF_PADDED}}, tarch::MemoryLocation::Heap);
+  uh2lob  = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{uh2lobSize}}, tarch::MemoryLocation::Heap); // nDof*nDofPad
+  dg2fv   = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{dg2fvSize}}, tarch::MemoryLocation::Heap); // nDof*nDofLimPad
+  fv2dg   = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{fv2dgSize}}, tarch::MemoryLocation::Heap); // nDofLim*nDofPad
 
 {% for i in quadrature_seq %}
   nodes[{{i}}]     = ({{COMPUTE_PRECISION}}) {{"{:.15e}".format(QuadratureNodes[i])}};
@@ -34,7 +34,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>::initQuadra
 
 template <>
 void {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>::freeQuadratureNodesAndWeights() {
-  _mm_free(uh2lob);
-  _mm_free(dg2fv);
-  _mm_free(fv2dg);
+  tarch::freeMemory(nodes, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(uh2lob, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(dg2fv, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(fv2dg, tarch::MemoryLocation::Heap);
 }

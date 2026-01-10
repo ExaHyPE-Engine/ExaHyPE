@@ -107,7 +107,8 @@ if use_tracers:
     # ))
 
     theSolver._abstract_solver_user_declarations += "double QuadraturePoints1d[Order+1];"
-    theSolver._constructor_implementation += """
+    # TODO: This is not good in many ways. A private variable member of the solver should not be hijacked like this!
+    theSolver._start_simulation_implementation += """
     std::copy_n(
       kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
       (Order+1),

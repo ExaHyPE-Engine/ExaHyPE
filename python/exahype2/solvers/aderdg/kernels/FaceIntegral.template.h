@@ -6,9 +6,9 @@
 namespace {{ item }} {
 {%- endfor %}
 
-template <typename solutionType, typename cCompType>
+template <typename SolutionType, typename cCompType>
 void faceIntegral(
-  solutionType*           lduh,
+  SolutionType*           lduh,
   const cCompType* const  lFhbnd,
   const int               direction,
   const int               orientation,

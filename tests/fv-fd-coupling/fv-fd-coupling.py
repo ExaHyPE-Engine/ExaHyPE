@@ -163,6 +163,8 @@ diffusion_stencil = """
   {{COMPUTE_PRECISION}} velocityLaplacianW = 0.0;
 #endif
 
+  assertion(Q[Shortcuts::rho] > 0.0);
+  assertion(Q[Shortcuts::rho] == Q[Shortcuts::rho]);
   const auto irho                 = 1.0 / Q[Shortcuts::rho];
   const auto uSquared             = (Q[Shortcuts::rhoU] * irho) * (Q[Shortcuts::rhoU] * irho);
   const auto vSquared             = (Q[Shortcuts::rhoV] * irho) * (Q[Shortcuts::rhoV] * irho);
@@ -181,17 +183,17 @@ diffusion_stencil = """
 #endif
 
   // y-direction
-  velocityLaplacianU += ((QTop0[Shortcuts::rhoU] / QTop0[Shortcuts::rho]) - 2 * (Q[Shortcuts::rhoU] * irho) + (QDown0[Shortcuts::rhoU] / QDown0[Shortcuts::rho])) / (h(0) * h(0));
-  velocityLaplacianV += ((QTop0[Shortcuts::rhoV] / QTop0[Shortcuts::rho]) - 2 * (Q[Shortcuts::rhoV] * irho) + (QDown0[Shortcuts::rhoV] / QDown0[Shortcuts::rho])) / (h(0) * h(0));
+  velocityLaplacianU += ((QTop0[Shortcuts::rhoU] / QTop0[Shortcuts::rho]) - 2 * (Q[Shortcuts::rhoU] * irho) + (QDown0[Shortcuts::rhoU] / QDown0[Shortcuts::rho])) / (h(1) * h(1));
+  velocityLaplacianV += ((QTop0[Shortcuts::rhoV] / QTop0[Shortcuts::rho]) - 2 * (Q[Shortcuts::rhoV] * irho) + (QDown0[Shortcuts::rhoV] / QDown0[Shortcuts::rho])) / (h(1) * h(1));
 #if DIMENSIONS == 3
-  velocityLaplacianW += ((QTop0[Shortcuts::rhoW] / QTop0[Shortcuts::rho]) - 2 * (Q[Shortcuts::rhoW] * irho) + (QDown0[Shortcuts::rhoW] / QDown0[Shortcuts::rho])) / (h(0) * h(0));
+  velocityLaplacianW += ((QTop0[Shortcuts::rhoW] / QTop0[Shortcuts::rho]) - 2 * (Q[Shortcuts::rhoW] * irho) + (QDown0[Shortcuts::rhoW] / QDown0[Shortcuts::rho])) / (h(1) * h(1));
 #endif
 
 #if DIMENSIONS == 3
   // z-direction
-  velocityLaplacianU += ((QFront0[Shortcuts::rhoU] / QFront0[Shortcuts::rho]) - 2 * (Q[Shortcuts::rhoU] * irho) + (QBack0[Shortcuts::rhoU] / QBack0[Shortcuts::rho])) / (h(0) * h(0));
-  velocityLaplacianV += ((QFront0[Shortcuts::rhoV] / QFront0[Shortcuts::rho]) - 2 * (Q[Shortcuts::rhoV] * irho) + (QBack0[Shortcuts::rhoV] / QBack0[Shortcuts::rho])) / (h(0) * h(0));
-  velocityLaplacianW += ((QFront0[Shortcuts::rhoW] / QFront0[Shortcuts::rho]) - 2 * (Q[Shortcuts::rhoW] * irho) + (QBack0[Shortcuts::rhoW] / QBack0[Shortcuts::rho])) / (h(0) * h(0));
+  velocityLaplacianU += ((QFront0[Shortcuts::rhoU] / QFront0[Shortcuts::rho]) - 2 * (Q[Shortcuts::rhoU] * irho) + (QBack0[Shortcuts::rhoU] / QBack0[Shortcuts::rho])) / (h(2) * h(2));
+  velocityLaplacianV += ((QFront0[Shortcuts::rhoV] / QFront0[Shortcuts::rho]) - 2 * (Q[Shortcuts::rhoV] * irho) + (QBack0[Shortcuts::rhoV] / QBack0[Shortcuts::rho])) / (h(2) * h(2));
+  velocityLaplacianW += ((QFront0[Shortcuts::rhoW] / QFront0[Shortcuts::rho]) - 2 * (Q[Shortcuts::rhoW] * irho) + (QBack0[Shortcuts::rhoW] / QBack0[Shortcuts::rho])) / (h(2) * h(2));
 #endif
 
   QNew[Shortcuts::rhoU] = Q[Shortcuts::rhoU] + dt * Q[Shortcuts::rho] * KINEMATIC_VISCOSITY * velocityLaplacianU;
@@ -230,7 +232,8 @@ diffusion_stencil = """
 #endif
 
   const auto newPressure = Q[Shortcuts::rho] * UNIVERSAL_GAS_CONSTANT * (temperatureQ + dt * THERMAL_DIFFUSIVITY * temperatureLaplacian);
-  QNew[Shortcuts::rhoE] = newPressure / (GAMMA - 1.0) + 0.5 * Q[Shortcuts::rho] * vSquared;
+  QNew[Shortcuts::rhoE] = newPressure / (GAMMA - 1.0) + 0.5 * Q[Shortcuts::rho] * squaredVelocities;
+  QNew[Shortcuts::rho] = Q[Shortcuts::rho];
 """
 
 diffusion_solver = exahype2.solvers.fd.GlobalAdaptiveTimeStep(

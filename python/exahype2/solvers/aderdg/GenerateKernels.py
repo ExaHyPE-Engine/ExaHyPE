@@ -9,17 +9,13 @@ import exahype2.solvers.aderdg.kernels
 
 from exahype2.solvers.PDETerms import PDETerms
 
-def generate_kernels(solver, output, subdirectory):
+def generate_kernels(solver, d, output, subdirectory):
     kernels_namespace = solver._namespace + ["kernels", solver._name]
     kernels_output_path = subdirectory + "kernels/" + solver._name
     kernels_templates_prefix = os.path.dirname(os.path.realpath(__file__)) + "/kernels/"
 
     if not os.path.exists(kernels_output_path):
         os.makedirs(kernels_output_path)
-
-    d = output.makefile.dictionary()
-    solver._init_dictionary_with_default_parameters(d)
-    solver.add_entries_to_text_replacement_dictionary(d)
 
     generated_kernels = (
         peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -141,30 +137,6 @@ def generate_kernels(solver, output, subdirectory):
     exahype2.solvers.aderdg.kernels.FusedSpaceTimePredictorVolumeIntegral(d).generate_kernels(
         solver, kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
     )
-
-    """"
-    This is a very ugly fix that should be replaced asap.
-    Essentially, the libxsmm kernel generator generates faulty code if
-    'noarch' is specified. This code works fine except that it contains a
-    #ifdef which is missing its corresponding #endif.
-    This code just inserts that missing #endif.
-    """
-    if solver._use_libxsmm and solver._architecture == "noarch":
-        file = open("kernels/" + solver._name + "/FusedSpaceTimePredictorVolumeIntegral_libxsmm.c", "r")
-        content = file.read()
-        file.close()
-        file = open("kernels/" + solver._name + "/FusedSpaceTimePredictorVolumeIntegral_libxsmm.c", "w")
-        content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
-        file.write(content)
-        file.close()
-
-        file = open("kernels/" + solver._name + "/AMRRoutines_libxsmm.c", "r")
-        content = file.read()
-        file.close()
-        file = open("kernels/" + solver._name + "/AMRRoutines_libxsmm.c", "w")
-        content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
-        file.write(content)
-        file.close()
 
     solver._space_time_predictor_call = jinja2.Template(
         """

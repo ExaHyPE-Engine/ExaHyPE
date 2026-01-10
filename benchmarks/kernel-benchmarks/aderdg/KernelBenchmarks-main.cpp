@@ -241,27 +241,35 @@ void reportRuntime(
  * Executes one full run of all of the kernels
 */
 double runKernels(int device, exahype2::CellData<double, double>& cellData, int cellIndex, tarch::timing::Measurement& measurement){
-  double boundaryData[kernels::AderSolver::getBndFaceTotalSize()];
-  double* lQhbnd[2*DIMENSIONS] = {
+  // We must ensure that the jump from one face to the next is a multiple of
+  // the ALIGNMENT.
+  // Example: If ALIGNMENT is 64 bytes (AVX512) and double is 8 bytes,
+  // we need the stride to be a multiple of 8 doubles.
+  constexpr int AlignmentDoubles  = ALIGNMENT / sizeof(double);
+  constexpr int PaddedBndFaceSize = ((kernels::AderSolver::getBndFaceSize() + AlignmentDoubles - 1) / AlignmentDoubles) * AlignmentDoubles;
+  constexpr int PaddedBndFluxSize = ((kernels::AderSolver::getBndFluxSize() + AlignmentDoubles - 1) / AlignmentDoubles) * AlignmentDoubles;
+
+  double boundaryData[2 * DIMENSIONS * PaddedBndFaceSize] __attribute__((aligned(ALIGNMENT)));
+  double* lQhbnd[2 * DIMENSIONS] = {
     boundaryData,
-    boundaryData  +   kernels::AderSolver::getBndFaceSize(),
-    boundaryData  + 2*kernels::AderSolver::getBndFaceSize(),
-    boundaryData  + 3*kernels::AderSolver::getBndFaceSize()
+    boundaryData  +     PaddedBndFaceSize,
+    boundaryData  + 2 * PaddedBndFaceSize,
+    boundaryData  + 3 * PaddedBndFaceSize
 #if DIMENSIONS==3
-    ,boundaryData + 4*kernels::AderSolver::getBndFaceSize(),
-     boundaryData + 5*kernels::AderSolver::getBndFaceSize()
+    ,boundaryData + 4 * PaddedBndFaceSize,
+    boundaryData  + 5 * PaddedBndFaceSize
 #endif
   };
 
-  double boundaryFlux[kernels::AderSolver::getBndFluxTotalSize()];
-  double* lFhbnd[2*DIMENSIONS] = {
-      boundaryFlux,
-      boundaryFlux  +   kernels::AderSolver::getBndFluxSize(),
-      boundaryFlux  + 2*kernels::AderSolver::getBndFluxSize(),
-      boundaryFlux  + 3*kernels::AderSolver::getBndFluxSize()
+  double boundaryFlux[2 * DIMENSIONS * PaddedBndFluxSize] __attribute__((aligned(ALIGNMENT)));
+  double* lFhbnd[2 * DIMENSIONS] = {
+    boundaryFlux,
+    boundaryFlux  +     PaddedBndFluxSize,
+    boundaryFlux  + 2 * PaddedBndFluxSize,
+    boundaryFlux  + 3 * PaddedBndFluxSize
 #if DIMENSIONS==3
-      ,boundaryFlux + 4*kernels::AderSolver::getBndFluxSize(),
-       boundaryFlux + 5*kernels::AderSolver::getBndFluxSize()
+    ,boundaryFlux + 4 * PaddedBndFluxSize,
+    boundaryFlux  + 5 * PaddedBndFluxSize
 #endif
   };
 
@@ -410,6 +418,7 @@ void runBenchmarks(int numberOfCells) {
 int main(int argc, char** argv) {
   peano4::init(&argc, &argv, benchmarks::exahype2::kernelbenchmarks::DomainOffset, benchmarks::exahype2::kernelbenchmarks::DomainSize);
   repositories::initLogFilters();
+  repositories::startSimulation();
 
   logInfo(
     "main()",
@@ -473,6 +482,7 @@ int main(int argc, char** argv) {
 //   }
 // #endif
 
+  repositories::finishSimulation();
   peano4::shutdown();
 
   if (outcomeIsInvalid) {

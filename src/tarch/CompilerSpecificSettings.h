@@ -5,12 +5,12 @@
 #define COMPILER_HAS_UTS_NAME
 #define COMPILER_HAS_TIMESPEC
 
-#if not defined(__APPLE__)
+#if !defined(__APPLE__)
 #define COMPILER_HAS_SYSINFO
 #define COMPILER_HAS_PROC_STAT
 #endif
 
-#if not defined(LITTLE_ENDIAN)
+#if !defined(LITTLE_ENDIAN)
 #define LITTLE_ENDIAN
 #endif
 
@@ -23,33 +23,32 @@
 #endif
 
 #if defined(__NVCOMPILER)
-#define NOALIAS // nvc++ does seem to give incorrect results with the NOALIAS keyword in inlined functions
 #define TASKLOOP_NOT_SUPPORTED
 #define TASK_DEPENDENCIES_NOT_SUPPORTED
-#else
-#define NOALIAS __restrict__
 #endif
+
+#define NOALIAS __restrict__
 
 #if defined(_MSC_VER)
 #define INLINE_METHOD __forceinline
-#elif defined(__GNUC__) or defined(__clang__) or defined(__INTEL_COMPILER) or defined(__INTEL_LLVM_COMPILER) \
+#elif defined(__GNUC__) || defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) \
   or defined(__NVCOMPILER)
 #define INLINE_METHOD inline __attribute__((always_inline))
 #else
 #define INLINE_METHOD inline
 #endif
 
-#define STR1(x) #x
-#define STR(x) STR1(x)
-#define _PRAGMA(x) _Pragma(STR(x))
+#define STR1(...) #__VA_ARGS__
+#define STR(...) STR1(__VA_ARGS__)
+#define _PRAGMA(...) _Pragma(STR(__VA_ARGS__))
 
 #if defined(WITH_OPENMP)
-#define SIMD(...) _Pragma(STR(omp simd __VA_ARGS__ simdlen(SIMDLEN)))
+#define SIMD(...) _PRAGMA(omp simd __VA_ARGS__ simdlen(SIMDLEN))
 
 #else
+// No OpenMP: Compiler-specific hints
 
-// No OpenMP SIMD: Tell compilers the loop is independent (ivdep)
-#if defined(__INTEL_COMPILER) or defined(__INTEL_LLVM_COMPILER)
+#if defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
 #define SIMD(...) _PRAGMA(ivdep)
 #elif defined(__clang__)
 #define SIMD(...) _PRAGMA(clang loop vectorize(enable) vectorize_width(SIMDLEN))
@@ -66,7 +65,7 @@
 #if defined(__clang__) or defined(__INTEL_COMPILER) or defined(__INTEL_LLVM_COMPILER) or defined(__NVCOMPILER) \
   or defined(__PGI) or defined(__CUDACC__)
 #define UNROLL(n) _PRAGMA(unroll n)
-#elif defined(__GNUC__) and (__GNUC__ >= 8)
+#elif defined(__GNUC__) && (__GNUC__ >= 8)
 #define UNROLL(n) _PRAGMA(GCC unroll n)
 #elif defined(_MSC_VER)
 #define UNROLL(n) __pragma(loop(unroll(n)))

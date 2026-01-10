@@ -5,9 +5,11 @@
 #include "DGMatrices.h"
 #include "Quadrature.h"
 
-template <typename solutionType, typename cCompType>
+#include "tarch/CompilerSpecificSettings.h"
+
+template <typename SolutionType, typename cCompType>
 void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
-  solutionType*           lduh,
+  SolutionType*           lduh,
   const cCompType* const  lFhbnd,
   const int               direction,
   const int               orientation,
@@ -27,9 +29,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
     for (int zy = 0; zy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; zy++) {
       const cCompType scaledWeight = scaling * timeStepSize * Quadrature<cCompType>::weights2[zy];
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-        #ifdef WITH_OPENMP
-        #pragma omp simd aligned(lduh,FCoeff,lFhbnd:{{ALIGNMENT}})
-        #endif
+        SIMD(aligned(lduh,FCoeff,lFhbnd:ALIGNMENT))
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
           lduh[(zy * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA}} + n] -= Quadrature<cCompType>::iweights3[zy * {{NUMBER_OF_DOF}} + x]
             * scaledWeight * FCoeff[x] * lFhbnd[zy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
@@ -42,9 +42,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
         const cCompType scaledWeight = scaling * timeStepSize * Quadrature<cCompType>::weights2[z * {{NUMBER_OF_DOF}} + x];
         for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
-          #ifdef WITH_OPENMP
-          #pragma omp simd aligned(lduh,FCoeff,lFhbnd:{{ALIGNMENT}})
-          #endif
+          SIMD(aligned(lduh,FCoeff,lFhbnd:ALIGNMENT))
           for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
             lduh[((z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA}} + n] -= Quadrature<cCompType>::iweights3[(z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x]
               * scaledWeight * FCoeff[y] * lFhbnd[(z * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
@@ -57,9 +55,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
     for (int yx = 0; yx < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; yx++) {
       const cCompType scaledWeight = scaling * timeStepSize * Quadrature<cCompType>::weights2[yx];
       for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
-        #ifdef WITH_OPENMP
-        #pragma omp simd aligned(lduh,FCoeff,lFhbnd:{{ALIGNMENT}})
-        #endif
+        SIMD(aligned(lduh,FCoeff,lFhbnd:ALIGNMENT))
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
           lduh[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + yx) * {{NUMBER_OF_DATA}} + n] -= Quadrature<cCompType>::iweights3[z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + yx]
             * scaledWeight * FCoeff[z] * lFhbnd[yx * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
