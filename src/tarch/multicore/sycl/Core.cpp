@@ -29,7 +29,8 @@ tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 namespace {
   /**
-   * See the documentation in tarch/accelerator/sycl/Device.h.
+   * See the documentation in tarch/accelerator/sycl/Device.h on
+   * @ref tarch_accelerator_SYCL.
    */
   sycl::queue  hostSyclQueue( sycl::cpu_selector_v );
 }
