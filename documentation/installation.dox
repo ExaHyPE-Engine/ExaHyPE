@@ -53,7 +53,7 @@ Unless you work exclusively with the Peano core in C++, you will have to ensure 
 We test and maintain Peano for Linux only.
 If you prefer Windows or MacOS, it should work as long as you provide the
 mandatory tools from above, but we won't be able to help.
-Peano is well-integrated with a number of @ref page_third_party_home "third party tools",
+Peano is well-integrated with a number of third party tools,
 but these are all optional.
 
 # Configure Peano
@@ -72,18 +72,18 @@ such as ExaHyPE or our PETSc multigrid environment.
   `libtool`.
 - Set up the configure environment:
 
-~~~~~~~~~~~~~~~~~~~~~~~~~
-libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .
-automake --add-missing
-~~~~~~~~~~~~~~~~~~~~~~~~~
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .
+  automake --add-missing
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   These steps should only be required once, unless you push major
   revisions to the development branch.
 - Next, type in
 
-~~~~~~~~~~~~~~~~~~~~~~~~~
-./configure --help
-~~~~~~~~~~~~~~~~~~~~~~~~~
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ./configure --help
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   The `--help` option should give you some information about the available
   variants of Peano, its extensions and toolboxes.
@@ -257,11 +257,14 @@ Python 2 is not supported.
 
 ## Package Installation
 
-Our code base relies on several Python packages. There's a requirements
-specification file which you can use to ensure that all requirements are
-met:
+Our code base relies on several Python packages. Best practice it to install
+these into a virtual environment. There's a requirements specification file which 
+you can use to ensure that all requirements are met:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
+python -m venv python-env
+source python-env/bin/activate
+pip install --upgrade pip
 pip install -r requirements.txt
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -303,7 +306,7 @@ dependencies, as noted below.
 
 Peano currently relies on the following Python packages/projects:
 
-@include ../requirements.txt
+<!-- @include ../requirements.txt -->
 
 
 # Fortran

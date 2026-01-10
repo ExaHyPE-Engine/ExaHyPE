@@ -9,7 +9,7 @@ class PlotPatchesOverFacesInPeanoBlockFormat(ActionSet):
   """!
   
   Plotter of face structure
-  @TODO have not been implemented yet
+  @todo have not been implemented yet
 
   """
   

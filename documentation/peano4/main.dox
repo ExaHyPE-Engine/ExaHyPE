@@ -63,7 +63,7 @@ traversals have to use the same observer, too.
 A simple way to ensure this is to let 
 the global master set a counter/id which uniquely
 identifies which step to run next.
-It then says ``go ahead'' and runs this step itself.
+It then says ```go ahead``` and runs this step itself.
 All the other ranks are noticed (via an internal broadcast in the core) which
 step to run, do the same thing, and then wait for the next wake-up call.
 At the end, the global master sets the id of a terminate.

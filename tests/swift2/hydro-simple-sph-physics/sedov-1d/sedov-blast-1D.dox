@@ -17,7 +17,7 @@ To create the setup and executable, use the
 
 	python3 sedov.py
 
-script. Consult the ```run.sh`` script for a possible configuration.
+script. Consult the ```run.sh``` script for a possible configuration.
 
 
 ## Postprocessing

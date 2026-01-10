@@ -3,6 +3,7 @@
  @page page_exahype_boundary_conditions Boundary conditions
  
  
+ <!--
 
 Boundary conditions often are tricky to implement and solely up to the
 user. In , Dirichlet and Neumann boundary conditions on Cartesian meshes
@@ -14,7 +15,7 @@ boundary condition callback. Therefore, it is possible to use different
 boundary conditions in different domain areas.
 
 ![ 's Finite Volume scheme organises its mesh into patches. Here, we use
-a 5$\times$5 patch (orange/red). Prior to the update of a patch,  calls
+a 5@f$\times@f$5 patch (orange/red). Prior to the update of a patch,  calls
 `boundaryConditions` for each of the volumes adjacent to the boundary
 (darker red). The routine allows you to alter the value of the halo
 surrounding the patch (blue). The outer (blue) cells are subsequentially
@@ -36,7 +37,7 @@ freedom in the Discontinuous Galerkin schemes.
 
 ##### Dirichlet boundary conditions
 
-Dirichlet boundary conditions $$Q(x) | _{\partial \Omega } = f(x,t)$$
+Dirichlet boundary conditions @f$Q(x) | _{\partial \Omega } = f(x,t)@f$
 are close to trivial to implement. You set outer values of the halo
 layer due to
 
@@ -49,18 +50,18 @@ conditions:
 
 1.  You simple set the outer volumes (blue in Figure
     [1.1](#figure:exahype:boundary-conditions){reference-type="ref"
-    reference="figure:exahype:boundary-conditions"}) to $f(x,t)$.
+    reference="figure:exahype:boundary-conditions"}) to @f$f(x,t)@f$.
 
 2.  You compute the average between the blue value and the interior
     value as
-    $Q | _{\partial \Omega } = \frac{1}{2} (Q_{\text{outside}} +
-      Q_{\text{inside}}) = f(x,t)$ which yields $Q_{\text{outside}} =
-      2f(x,t)-Q_{\text{inside}}$.
+    @f$Q | _{\partial \Omega } = \frac{1}{2} (Q_{\text{outside}} +
+      Q_{\text{inside}}) = f(x,t)@f$ which yields @f$Q_{\text{outside}} =
+      2f(x,t)-Q_{\text{inside}}@f$.
 
 The latter formula is inspired by Finite Differences and might give a
 slightly more accurate values. With a sole averaging Riemann solver, it
 directly sets the flux. If you use something like Rusanov, you might
-tweak $Q_{\text{outside}}$ further such that the eigenvalue term along
+tweak @f$Q_{\text{outside}}@f$ further such that the eigenvalue term along
 the boundary face has the correct (imposed) value too.
 
 ##### Neumann boundary conditions
@@ -70,7 +71,7 @@ and modify those outside of the domain, it is straightforward to
 implement homogeneous Neumann conditions. The snippet below implements
 homogeneous Neumann conditions
 
-$$\left( \nabla Q(x), n \right)  | _{\partial \Omega } = 0$$
+@f$\left( \nabla Q(x), n \right)  | _{\partial \Omega } = 0@f$
 
 void \...::MySolver::boundaryConditions( \... ) Qoutside\[0\] =
 Qinside\[0\]; Qoutside\[1\] = Qinside\[1\]; \...
@@ -100,11 +101,11 @@ case.
 
 It is more complicated to realise boundary conditions that extrapolate
 data into the outside. Such boundary conditions read as
-$$Q(x) | _{\partial \Omega } = \lim _{x \mapsto \partial \Omega}
+@f$Q(x) | _{\partial \Omega } = \lim _{x \mapsto \partial \Omega}
   Bnd(Q(x,t),\nabla f(Q(x,t))
   \ \text{or} \
   \left( \nabla Q(x), n \right) | _{\partial \Omega } = \lim _{x \mapsto
-  \partial \Omega} Bnd(Q(x,t),\nabla f(Q(x,t)).$$ It is obviously
+  \partial \Omega} Bnd(Q(x,t),\nabla f(Q(x,t)).@f$ It is obviously
 trivial to extrapolate the solution value within the domain to the
 boundary volumes (dark red to blue value in Figure
 [1.1](#figure:exahype:boundary-conditions){reference-type="ref"
@@ -202,5 +203,6 @@ What is available in which content depends strongly on the solver type
 used. Consult the documentation of the `HandleBoundary.h` file of your
 solver type.
 
+-->
 
 */

@@ -69,8 +69,8 @@
 
 # Q&As
 
- Obviously, most all of @ref faq "Peano's (generic) frequently asked questions"
- and \ref developer_faq "developer troubleshooting remarks" hold for Swift 2, too.
+ Obviously, most all of @ref page_faq_home "Peano's (generic) frequently asked questions"
+ and \ref page_faq_home "developer troubleshooting remarks" hold for Swift 2, too.
 
  - The load balancing is active if and only if you pick a load balancer within
    your Python script. So if you remove the load balancing call or if you pick

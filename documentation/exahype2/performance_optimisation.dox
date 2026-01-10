@@ -167,7 +167,7 @@ cannot be smaller), you have to switch to a solver with enclave tasking.
 
 The nicest task-based programming approach does not pay off if you don't 
 produce enough tasks to keep every core busy. To find out how many 
-tasks Peano produces, recompile the code with the @ref page_peano_runtime_analysis "statistics tracking enabled".
+tasks Peano produces, recompile the code with the @ref page_peano_domain_decomposition "statistics tracking enabled".
 
 
 
@@ -314,7 +314,7 @@ ExaHyPE configuration offers:
   evenly - unaware that all the boundary cells can't be distributed. So you will
   have to restrict the number of cells per inter-rank balancing. I recommend to
   to add $3^d$ as fourth argument to ExaHyPE's load balancing configuration.
-- Once MPI+X is up and running, study the @ref exahype_runtime_analysis "ExaHyPE/Peano performance analysis remarks" so
+- Once MPI+X is up and running, study the @ref page_exahype_runtime_analysis "ExaHyPE/Peano performance analysis remarks" so
   you obtain an understanding of your code's behaviour.
 - Once you are reasonably satisfied with the MPI behaviour, try out other 
   parallelisation schemes. toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition

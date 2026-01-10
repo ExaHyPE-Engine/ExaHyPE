@@ -69,7 +69,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 
     If you change the search radius or the position of a particle, the particle
     will stay within its current cell/vertex within the tree.
-    In the next grid sweep, it will however we held by the ``correct'' vertex,
+    In the next grid sweep, it will however we held by the correct vertex,
     i.e. its grid-vertex association will be updated:
     The action set UpdateParticleGridAssociation updates the
     particle-tree association, i.e.~sorts the particles, on-the-fly between two mesh

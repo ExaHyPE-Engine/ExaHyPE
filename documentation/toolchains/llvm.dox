@@ -1,0 +1,25 @@
+/**
+
+ @page documentation_toolchains_llvm Native LLVM
+
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+You will find examples how this toolchain is used on particular machines on the page @ref page_machines.
+</div>
+
+
+### OpenMP
+
+For NVIDIA GPUs:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+export MARCH=sm_XX
+CC=clang CXX=clang++ ./configure --with-multithreading=omp --with-gpu=omp CXXFLAGS="-std=c++17 -O3 -W -Wall -Wno-attributes -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=$MARCH" LDFLAGS="-march=native -mtune=native -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=$MARCH"
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+where XX has to be replaced by the actual compute capability of the device.
+
+Note: We set the C++ compiler standard to 17. This is due to an issue with LLVM Clang itself. See https://github.com/llvm/llvm-project/issues/61327.
+
+
+ */
+ 

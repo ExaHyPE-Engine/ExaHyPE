@@ -505,8 +505,8 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      double* __restrict__ fineGridCellValues
+      const double* __restrict__                coarseGridCellValues,
+      double* __restrict__                      fineGridCellValues
     );
 
 
@@ -965,20 +965,20 @@ namespace toolbox {
       void interpolateCell_AoS_piecewise_constant(
         const tarch::la::Vector<Dimensions, int>&
             relativePositionWithinFatherCell,
-        int numberOfDoFsPerAxisInPatch,
-        int unknowns,
-        const double* __restrict__ fineGridValues,
-        double* coarseGridValues
+        int                          numberOfDoFsPerAxisInPatch,
+        int                          unknowns,
+        const double* __restrict__   fineGridValues,
+        double* __restrict__         coarseGridValues
       );
 
       void interpolateCell_AoS_linear(
         const tarch::la::Vector<Dimensions, int>&
             relativePositionWithinFatherCell,
-        int numberOfDoFsPerAxisInPatch,
-        int unknowns,
-        const double* __restrict__ fineGridValues,
-        double* coarseGridValues,
-        bool    extrapolateLinearly
+        int                          numberOfDoFsPerAxisInPatch,
+        int                          unknowns,
+        const double* __restrict__   fineGridValues,
+        double* __restrict__         coarseGridValues,
+        bool                         extrapolateLinearly
       );
 
       /**

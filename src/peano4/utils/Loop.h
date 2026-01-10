@@ -367,7 +367,7 @@ std::string toString(peano4::utils::LoopPlacement);
  *
  * ## Generic realisation remarks
  *
- * - I convert the max argument always into counter##Max and then work against
+ * - I convert the max argument always into counter\#\#Max and then work against
  *   the vector. This way, I can support both vectors and scalars. In the
  *   former case, the copy constructor is used. In the latter case the
  *   constructor accepting a scalar.
@@ -393,7 +393,7 @@ std::string toString(peano4::utils::LoopPlacement);
  *
  * which is, to the best of my knowledge, a C99 instruction and not C++17. So I
  * simply assume and hope that this works. Note that the _Pragma statement
- * yields a #pragma, i.e. you are not allowed to write
+ * yields a pragma, i.e. you are not allowed to write
  *
  *              _Pragma( "#pragma my embedded pragma" )
  *

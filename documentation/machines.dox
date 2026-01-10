@@ -5,6 +5,13 @@
 <!-- Add this one for href links to subitems -->
 \tableofcontents
 
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+This page contains information on particular machines that we use heavily.
+The page is not supposed to provide general information about certain software stacks.
+For such information, please consult the toolchain discussions on the parent page @ref page_compiler_specific_settings_home. 
+</div>
+
+
 # Hamilton
 
 <img width="20%" src="https://nccadmin.webspace.durham.ac.uk/wp-content/themes/core/assets/img/theme/branding-assets/durham-university-logo.svg" />
@@ -70,7 +77,7 @@ module load vtune
 ~~~~~~~~~~~~~~~~~~~~~~
 
 
-Further to these flags, I @ref faq "pause and resume the data collection" manually in
+Further to these flags, I @ref page_faq_home "pause and resume the data collection" manually in
 ExaHyPE and Swift. This is however something I do in the main() routine of
 the respective applications.
 
@@ -151,6 +158,23 @@ When running the executable on the GPU, include `SYCL_DEVICE_FILTER=gpu`
 before the terminal command to explicitly tell SYCL to run the code on GPU.
 In the case of a runtime error, it is also useful to add `SYCL_PI_TRACE=2`
 to check where the error was raised.
+
+# COSMA
+Cosma's login nodes can be accessed at login8.dur.ac.uk. Further nodes can be
+accessed via these nodes. More information is available at https://cosma.readthedocs.io/en/latest/cosma.html.
+The following modules should be used:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+module purge
+module load cosma
+module load intel_comp/2025.2.1 compiler-rt tbb umf compiler mpi
+module load intel_mpi
+export FLAVOUR_NOCONFLICT=1
+module load gnu_comp/13.1.0
+module load gsl
+export I_MPI_CXX=icpx
+module load python
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # DINE
 

@@ -103,7 +103,7 @@ assert abs(E_min) < E_tolerance, f"Energy not conserved. E_min: {E_min}"
 assert abs(E_mean)< E_tolerance, f"Energy not conserved. E_mean: {E_min}"
 assert abs(E_max) < E_tolerance, f"Energy not conserved. E_max: {E_max}"
 
-# @TODO test if there is any long-term drift, e.g. of the mean.
+# @todo test if there is any long-term drift, e.g. of the mean.
 
 print('Test passed!')
 

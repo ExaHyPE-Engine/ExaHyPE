@@ -41,7 +41,7 @@ generating strings containing the C++ code, and writing to files.
 The template parameters and function parameters are passed as individual lists to the parsing function.
 Each element of the list is of type SyntaxTree.Argument. The parameters used for the Rusanov kernels are
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 template_parameters = [DSL.SyntaxTree.Argument("NumberOfVolumesPerAxisInPatch", DSL.SyntaxTree.TInteger()),
                          DSL.SyntaxTree.Argument("HaloSize", DSL.SyntaxTree.TInteger()),
                          DSL.SyntaxTree.Argument("NumberOfUnknowns", DSL.SyntaxTree.TInteger()),
@@ -55,9 +55,10 @@ template_parameters = [DSL.SyntaxTree.Argument("NumberOfVolumesPerAxisInPatch", 
                        DSL.SyntaxTree.Argument("nonconservativeProduct", DSL.SyntaxTree.TCustom("const NonconservativeProductFunctor&")),
                        DSL.SyntaxTree.Argument("sourceTerm", DSL.SyntaxTree.TCustom("const SourceFunctor&")),
                        DSL.SyntaxTree.Argument("maxEigenvalue", DSL.SyntaxTree.TCustom("const MaxEigenvalueFunctor&"))]
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ## Generating Function Strings
+
 A Python string is generated using Parser().parse(timestepFunction, template_parameters, functor_arguments, namespaces, is_stateless, use_accelerator)
 Its parameters are:
 - timestepFunction: the function that defines the kernel
@@ -81,7 +82,7 @@ From here the process is standard Python. For consistency the generated files sh
 also recommended to use separate header files for declarations, and separate files for different dimensions. Certain
 include files are also required as seen in the following example.
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if not os.path.exists("kernels"):
       os.makedirs("kernels")
   
@@ -110,7 +111,7 @@ if not os.path.exists("kernels"):
 #include "rusanov3d.cpph"
 """)
   file.close()
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Generating C++ Function Calls
 The solver also needs to know how to call the new kernels, which should also be defined

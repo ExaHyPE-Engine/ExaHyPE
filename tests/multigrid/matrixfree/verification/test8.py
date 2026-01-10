@@ -10,7 +10,7 @@ from time import sleep
 from actionsets.test8 import InitDofsTest8
 
 print( """
-  WARNING: implementation file (eg CollocatedPoisson.cpp) must be removed before`
+  WARNING: implementation file (eg CollocatedPoisson.cpp) must be removed before
     running this script if you want custom behaviour.
 
 """)

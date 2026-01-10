@@ -9,15 +9,13 @@ from abc import ABC
 
 
 class ExplicitEulerDynamicSearchRadius(Particle):
-    """
+    """!
 
-    Extension of the explicit Euler to support dynamic search radius
-    adoption. We try to keep a constant number of particles.
-
+    Extension of the explicit Euler to support dynamic search radius adoption. 
 
     ## Attributes
 
-    name: String
+    @param name: String
       To be in line with other conventions, I recommend you start with an
       uppercase letter. This has to be a valid C++ identifier, i.e. don't
       use any special symbols besides an underscore.
@@ -69,7 +67,7 @@ class ExplicitEulerDynamicSearchRadius(Particle):
         pass
 
     def algorithm_steps(self):
-        """
+        """!
 
         The explicit Euler basically consists of two steps per particle. We first
         determine the force. For this, we need access to the neighbours. The step
@@ -165,7 +163,3 @@ class ExplicitEulerDynamicSearchRadius(Particle):
         """
         return []
 
-    # @property
-    # def readme_descriptor(self):
-    #  assert False, "not yet written"
-    #  return """ I will au aufgerufen werden"""

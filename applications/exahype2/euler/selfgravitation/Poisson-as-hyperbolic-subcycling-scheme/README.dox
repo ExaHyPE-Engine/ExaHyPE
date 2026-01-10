@@ -64,7 +64,7 @@ We rephrase the latter elliptic equation into a hyperbolic variant with
 @image html time_stepping.png
 
 We will model both equations as completely separate PDEs and hence 
-follow @tutorials_exahype2_coupling "ExaHyPE's generic coupling description". The Poisson  
+follow @ref tutorials_exahype2_coupling "ExaHyPE's generic coupling description". The Poisson  
 equation @f$ - \Delta \phi = -\pi G/\rho @f$
 advances on tiny time scales which we indicate by switching from 
 @f$ Q(t) @f$

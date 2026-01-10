@@ -1,6 +1,6 @@
 /**
 
-@page tutorials_mghype_numerics_mixed_dg_poisson Mixed DG for the Poisson equation
+@page tutorials_mghype_numerics_generic_mixed_dg Mixed DG for the Poisson equation
 
 \tableofcontents
 
@@ -133,4 +133,4 @@ So @f$ \widehat{u} @f$ depends on @f$ u^+ + u^- @f$ subject to some weights plus
   \widehat{(n,p)} & = & \frac{ 1 }{\tau^+ + \tau^-} \left( \tau^+ u^+ - \tau^- u^- + (n,p^+) + (n,p^-) \right) 
 \f}
 
-&/
+*/

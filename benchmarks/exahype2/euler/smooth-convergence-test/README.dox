@@ -13,7 +13,7 @@ origin.
 Peano should be built with the following options: --enable-exahype, --enable-loadbalancing,
  --enable-blockstructured
 The relevant mesh size and timestep size should be set in the python script directly. For 
-the mesh size, $p$ should be modified in the expression $\frac{0.2}{p}$ where $p$ is the
+the mesh size, @f$p@f$ should be modified in the expression @f$\frac{0.2}{p}@f$ where @f$p@f$ is the
 number of cells that are desired in each coordinate direction.
 
 
@@ -31,3 +31,5 @@ In order to directly ocmpare results, my preferred method is to apply a plot ove
 in Paraview, with fixed spacing between plot points such that they are always at the centre of
 a cell for every resolution. This is converted to a csv file and read in Python using the csv
 library. Plots can then be generated using this data.
+
+*/

@@ -1,6 +1,6 @@
-# @TODO: add dependence on SPH scheme (only minimal SPH ATM)
-# @TODO: add dependence on input parameters, e.g. grid size, HYDRO_DIMENSIONS...
-# @TODO: add dependence for the background pressure degree of freedom (Mach)
+# @todo: add dependence on SPH scheme (only minimal SPH ATM)
+# @todo: add dependence on input parameters, e.g. grid size, HYDRO_DIMENSIONS...
+# @todo: add dependence for the background pressure degree of freedom (Mach)
 
 
 class GreshoChanVortexIC:

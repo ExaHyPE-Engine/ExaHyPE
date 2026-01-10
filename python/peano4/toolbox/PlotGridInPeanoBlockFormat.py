@@ -6,6 +6,13 @@ from peano4.solversteps.ActionSet import ActionSet
 import jinja2
 
 
+#
+# Doxygen has some issues parsing this file. As I did not manage to find out
+# where these issues come from, I manually exclude this file from the 
+# documentation in documentation/Doxyfile. 
+#
+
+
 class PlotGridInPeanoBlockFormat(ActionSet):
   NoMetaFile     = "no-meta-file"
   CountTimeSteps = "count-time-steps"

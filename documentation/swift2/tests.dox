@@ -29,11 +29,13 @@ well-suited to use as first examples to get familiar with Swift2.
 - \subpage tests_swift2_hydro_simple_sph_sedov_blast_1D
 - \subpage tests_swift2_hydro_simple_sph_sedov_blast_2D
 - \subpage tests_swift2_hydro_simple_sph_sedov_blast_3D
-- \subpage tests_swift2_hydro_simple_sph_physics_sod1d
+- \subpage tests_swift2_hydro_simple_sph_sod_1d
 
 ## Tests from the Jupyter notebooks
+<!--
 - \subpage tests_swift2_hydro-simple-sph-physics_sedov-blast_plot-sedov-1d
 - \subpage tests_swift2_hydro-simple-sph-physics_sedov-blast_plot-sedov-1d
+-->
 
  */
 
