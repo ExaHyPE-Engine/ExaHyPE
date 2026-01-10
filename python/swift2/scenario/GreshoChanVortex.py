@@ -1,6 +1,6 @@
-# @TODO: add dependence on SPH scheme (only minimal SPH ATM)
-# @TODO: add dependence on input parameters, e.g. grid size, HYDRO_DIMENSIONS...
-# @TODO: add dependence for the background pressure degree of freedom (Mach)
+# @todo: add dependence on SPH scheme (only minimal SPH ATM)
+# @todo: add dependence on input parameters, e.g. grid size, HYDRO_DIMENSIONS...
+# @todo: add dependence for the background pressure degree of freedom (Mach)
 
 
 class GreshoChanVortexIC:
@@ -26,9 +26,13 @@ class GreshoChanVortexIC:
 
       // Internal search radius used by Peano and with max value R = grid_size/2
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
-      const double GridSize_x = GridSize(0);
+      const double GridSizeHalf_x = 0.5 * GridSize(0);
 
-      particle->setSearchRadius( 0.9 * GridSize_x / 2.0);
+      const double h_max = particle->getSmlMax();
+      const double H_max = h_max * kernel_gamma;
+      double search_radius = 0.999 * std::min(H_max, GridSizeHalf_x);
+
+      particle->setSearchRadius( search_radius );
 
       /* Constant density field */
       particle->setDensity ( 1.0 );

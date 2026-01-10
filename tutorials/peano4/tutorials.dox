@@ -1,14 +1,36 @@
 /**
 
-@page tutorials_peano4_tutorials Tutorials
+@page tutorials_peano4_tutorials Peano 4 Tutorials through the Python API
 
 @image html documentation/icons/peano4.png
 
+Peano is a large set of C++ classes and components. 
+You can assemble them manually, but most people use the Python API to do exactly this.
+That is, the Peano core Python API consists of classes which represent, more or less, directly C++ abstractions.
+Consequently, they work a lot also with strings which encode C++ (glue) code.
+The idea with the Python API is that you can assemble a complete Peano code here, and then you type in generate and the Python classes yield a stand-along C++ code base.
+
+
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+At the moment, Peano's Python abstraction resides within a python subdirectory. 
+On the long term, we plan to move it into the src directory, such that each C++ component has an api subdirectory in which you find the Python abstractions belonging to the underlying C++ code.
+</div>
+
+
+## Content
+
+
+- Code structure
+  - Lowering process
+  - Makefile parsing and tailoring
 - Data manipulation
   - \subpage tutorials_peano4_assign_data_to_mesh
+  - \subpage tutorials_peano4_mask_out_data_usage
+  - \subpage tutorials_peano4_tailor_data_exchange
+- Bigger applications
+  - \subpage page_peano4_tutorials_finite_volumes
 
 
-- \subpage page_peano4_tutorials_finite_volumes
 
 ## How to add your own tutorial
 

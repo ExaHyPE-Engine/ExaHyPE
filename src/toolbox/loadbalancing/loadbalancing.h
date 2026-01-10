@@ -47,16 +47,26 @@
  * determines the load balancing strategy, while the configuration object
  * tailors this strategy to your experimental setup and machine.
  *
- * - See more on how to @ref page_exahype_multicore "configure load balancing within ExaHyPE 2".
+ * - See more on how to @ref page_exahype_domain-decomposition "configure load balancing within ExaHyPE 2".
  * - There's a dedicated page on @ref swift_parallelisation "the parallelisation aspects within Swift 2".
  *
  *
  * ## Overview over some pre-manufactured load balancing strategies
  *
+ *
  * - toolbox::loadbalancing::strategies::Hardcoded Don't do any analysis but hand out the
  *   partitioning instructions following a rulebook. This version allows you
  *   to create a reproducible load balancing scheme or to manually determine
  *   the splitting.
+ *   \n
+ *   Offline helpers (see @ref page_toolbox_loadbalancing_api) yield four lists:
+ *   gridSweeps, splittingTrees, numberOfCells, subTrees (subtree ids).
+ *   Interpretation:
+ *   - gridSweeps = base_sweep * target_subtree_id (even numbers if base_sweep=2).
+ *   - splittingTrees = unique parent subtree at earliest appearance level, or 0 if ambiguous.
+ *   - numberOfCells = count of cells of that subtree on its earliest appearance level only.
+ *   - subTrees = subtree identifiers; you must map them to destinationRanks for the constructor.
+ *   Later descendants are assumed to “appear” automatically after the split and are not counted again.
  * - toolbox::loadbalancing::strategies::SpreadOut Ensure that, if the problem is large
  *   enough, each thread on each rank gets one partition.
  * - toolbox::loadbalancing::strategies::SpreadOutHierarchically This strategy is very
@@ -167,6 +177,7 @@
  *
  * though you might want to study the help dumped if you pass --help.
  *
+ *
  * The script works for shared and distributed memory and gives you a scatter plot
  * over the load distribution and tells you also how many trees aka subpartitions
  * you employ per rank.
@@ -202,6 +213,34 @@
  * @image html visualise_domain_decomposition2.png
  *
  *
+ * ## Visualising Tree structure with spliting
+ * 
+ * For information of the whole structure, you need to first enable the grid plot property of
+ * your solver:
+ * 
+ * ~~~~~~~~~~~~~~~~~~~~~~~
+ * MySolver.__init__(
+ *   ...,
+ *   plot_grid_properties=True
+ * )
+ * ~~~~~~~~~~~~~~~~~~~~~~~
+ * 
+ * And launch a new simulation with only one snapshot output for your interested timestamp (to aviod
+ * duplicate domain info from multiple snapshot, you can use parameter of ploting start time and simulation
+ * ending time to achieve this. Obviously for static AMR the initial timesnapshot will do the work)
+ * 
+ * Then use the python script for postprocessing
+ * 
+ * ~~~~~~~~~~~~~~~~~~~~~~~
+ * pvpython ~/git/Peano/python/exahype2/postprocessing/treeReaderWithSplit.py -file-path your-grid-file-folder
+ * ~~~~~~~~~~~~~~~~~~~~~~~
+ * 
+ * it will then provide the visuilasation of the whole trees structure, with different color squres representing 
+ * nodes from different subtrees. The whole tree will be illustrated so the first matrix will always be 3^d, then 
+ * 9^d, 27^d,...etc.
+ * 
+ * @image html visualise_tree_split.png
+ * 
  * ## Performance flaws
  *
  * Inappropriate or problematic domain decomposition decisions will always
@@ -209,7 +248,7 @@
  * discuss generic details which are not tied to this toolbox. However, they
  * are very useful to get the most out of this toolbox:
  *
- * - Peano has a @ref page_peano_runtime_analysis "dedicated runtime analysis discussion" which
+ * - Peano has a @ref page_peano_domain_decomposition "dedicated runtime analysis discussion" which
  *   can help to understand the runtime behaviour shaped by the domain
  *   decomposition.
  * - Peano has a dedicated page on @ref page_peano_performance_optimisation "performance optimisation".
@@ -235,7 +274,7 @@
  * lessons learned. Particular flaws and their fixes are discussed on the
  * @ref page_peano_performance_optimisation "Peano optimisation page".
  * So we get an explanation of things here, why things work the way they
- * do. The recipes how to spot flaws and how to fix them are discussed on the
+ * do. The recipies how to spot flaws and how to fix them are discussed on the
  * generic page.
  *
  *
@@ -255,12 +294,12 @@
  *   there are, we can balance these cells better, and we can subdivide cells
  *   more accurately: If we deploy a 3x3 grid to two cores, one core will get
  *   5 and one 4 cells. If all cells refine once more, this will induce a
- *   45 vs 36 mesh. If we cut a 9x9 mesh in a balanced way, we get a 41 vs
+ *   45 vs 36 mesh. If we cute a 9x9 mesh in a balanced way, we get a 41 vs
  *   40 mesh. So the more we know, i.e. the closer the constructed mesh to
  *   the real final mesh, the better our domain.
  *
  * The first argument is a strict one. If we run out of memory, the
- * simulation will crash. The second argument is a desirable one.
+ * simulation will crash. The second argument is a desireable one.
  *
  * We derive generic guidelines for any load balancing:
  *
@@ -279,7 +318,7 @@
  * - Maybe try not to use all cores immediately. Most Peano schemes (and the
  *   default configurations) try to have a most two logical subdomains per
  *   thread. If we go beyond this, they stop further decomposition. It
- *   therefore makes sense to have a few subpartitions per rank early on,
+ *   therefore makes sense to have a few subpartitions pre rank early on,
  *   so the mesh construction runs in parallel, but to spare some threads,
  *   i.e. to have fewer subdomains than threads, until the mesh is reasonably
  *   fine and accurate.
@@ -307,10 +346,12 @@
  * # Formalisation of load balancing
  *
  * There is a dedicated subpage
- * \subpage page_toolbox_loadbalancing_strategies which describes load
+ * @subpage page_toolbox_loadbalancing_strategies which describes load
  * balancing with graph theoretic glasses on.
  *
- *
+ * For offline decomposition and analysis of adaptive mesh trees, there is
+ * a dedicated subpage:
+ * @subpage page_toolbox_loadbalancing_api
  */
 namespace toolbox {
   /**

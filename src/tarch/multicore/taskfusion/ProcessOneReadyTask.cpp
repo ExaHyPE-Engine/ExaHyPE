@@ -22,37 +22,25 @@ tarch::multicore::taskfusion::ProcessOneReadyTask::ProcessOneReadyTask(
 
 
 void tarch::multicore::taskfusion::ProcessOneReadyTask::run() {
-  assertion( not _taskQueue.isTaskPending(_taskNumber, false) );
-
   if ( _taskQueue.isTaskReadyOrRunning(_taskNumber, FusableTasksQueue::LockQueueAndReturnReliableResult) ) {
-    tarch::multicore::Lock readyTaskLock(_taskQueue._readyTasksSemaphore);
-    if ( _taskQueue._readyTasks.count(_taskNumber)>0 ) {
-      tarch::multicore::Lock runningTaskLock(_taskQueue._runningTasksSemaphore);
+    logInfo( "run()", "task " << _taskNumber << " might be ready or running. Check again" );
 
-      _taskQueue._runningTasks[ _taskNumber ] = _taskNumber; // register myself as the owner of this task. Should not be required, as I'd never wait for myself, but anyway
-      Task* task = _taskQueue._readyTasks[_taskNumber];
-      _taskQueue._readyTasks.erase(_taskNumber);
+    // register myself as the owner of this task. Should not be required, as I'd never wait for myself, but anyway
+    Task* task =  _taskQueue.extractReadyTask( _taskNumber, _taskNumber );
 
-      readyTaskLock.free();
-      runningTaskLock.free();
+    if ( task!=nullptr ) {
+      logDebug( "run()", "task " << _taskNumber << " is ready, i.e. not running yet. Execute it manually" );
 
       task->run();
 
-      runningTaskLock.lock();
-      _taskQueue._runningTasks.erase( _taskNumber );
-      runningTaskLock.free();
-
       delete task;
+
+      _taskQueue.runningTaskFinished(_taskNumber);
     }
     else {
-      readyTaskLock.free();
+      logDebug( "run()", "task " << _taskNumber << " seems to be running atm (grabbed by another consumer task)" );
 
-      TaskNumber taskNumberOfCurrentlyRunningFusion = NoOutDependencies;
-      tarch::multicore::Lock runningTaskLock(_taskQueue._readyTasksSemaphore);
-      if (_taskQueue._runningTasks.count(_taskNumber)) {
-        taskNumberOfCurrentlyRunningFusion = _taskQueue._runningTasks[_taskNumber];
-      }
-      runningTaskLock.free();
+      TaskNumber taskNumberOfCurrentlyRunningFusion = _taskQueue.getTaskHandlingRunningTask( _taskNumber );
 
       if (taskNumberOfCurrentlyRunningFusion!=NoOutDependencies) {
         logDebug( "run(...)", "task " << _taskNumber << " has to wait for task " << taskNumberOfCurrentlyRunningFusion << " which seems to have grabbed its fusable task" );
@@ -61,8 +49,7 @@ void tarch::multicore::taskfusion::ProcessOneReadyTask::run() {
     }
   }
   else {
-    tarch::multicore::Lock lock(_taskQueue._statisticsSemaphore);
-    _taskQueue._probabilityThatTaskIsCompleted.setValue(1.0);
+    _taskQueue.updateTaskFusionProbabilities(false);
   }
 }
 

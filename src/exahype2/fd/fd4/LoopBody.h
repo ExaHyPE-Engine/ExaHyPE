@@ -38,10 +38,10 @@ namespace exahype2 {
         ) InlineMethod;
 
         /**
-         * This function calculates the source term that involves B_i\nabla_iQ where
-         * i is the spatial dimension. These involve first gradients of quantitiets 
+         * This function calculates the source term that involves @f$ B_i \nabla_i Q @f$where
+         * i is the spatial dimension. These involve first gradients of quantities
          * which are now calculated using a standard fourth-order finite difference  
-         * scheme with a five-point stancil. This requires one to have access to at 
+         * scheme with a five-point stencil. This requires one to have access to at
          * least two halo layers on each side of a given patch.
          */
         #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))

@@ -28,45 +28,114 @@ namespace tarch {
      * technique to keep GPUs busy.
      *
      * There are many ways how task fusion can be implemented. In Peano, the
-     * different strategies are controlled through FusionImplementation which
-     * in turn is set by the multicore orchestration. More information is
+     * different strategies are controlled through the multicore orchestration.
+     * There's the enum tarch::multicore::orchestration::FusionImplementation
+     * in there, which also contains all the high-level overviews of how the
+     * different strategies work and when they are appropriate.
+     * More information on how to use the task fusion and how to tailor it is
      * provided in the context of @ref documentation_tarch_task_fusion_strategies.
-     * Here, we summarise more low-level implementation details.
+     * On this page, we do a deep-dive into the implementation of the various
+     * strategies.
+     *
+     *
+     * ## Task queues
      *
      * To ensure that fusion is only applied to tasks of the same type, we store
-     * the fusable tasks in a map indexed by the task type. The most important
-     * type in the context of fusion therefore is FusableTaskQueue.
+     * the fusable tasks in a map indexed by the task type. The map maps each
+     * task type onto an instance of tarch::multicore::taskfusion::FusableTaskQueue.
+     * When you spawn a task through handleFusableTask(),
+     * the first thing this routine has to do is to check if there's a task
+     * queue in place already. Consult the routine's description for more
+     * details.
+     *
+     * The two variables that are used are therefore
+     *
+     * - fusableTaskQueue a map of task types onto queue instances on the heap, and
+     * - pendingTasksSemaphore which is a sempahore to protect access to the heap.
+     *
+     * The two variables are only found in the implementation file, as they are
+     * not visible from outside. As our map works with pointers to the actual
+     * queues, it is sufficient to have one semaphore that protects access: Once
+     * we have got the pointer from the map, we can always release the semaphore
+     * and work against the queue object on the heap. Meanwhile, other routines
+     * might add new queues to the map. We don't really care anymore.
      *
      *
-     * ## Some implementation lessons learned
+     * ## The important routines
      *
-     * Originally, I thought we'd need a couple of these
+     * There are only two important routines from a user's point of view:
      *
-     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     * while (queue.second->isTaskReadyOrRunning(taskNumber, false)) {
-     *   queue.second->processTasks();
-     * }
-     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * - handleFusableTask() is the spawn mechanism which is used by
+     *   spawnTask() to hand over a task that  can, in theory, be fused.
+     * - ensureHeldBackTasksAreMappedOntoNativeTasks() takes a couple of
+     *   tasks and ensures they are mapped onto proper native tasks.
+     * - processAllReadyTasks() is a drain mechanism over all queues.
      *
-     * whenever we have to ensure that a task is done. After all, someone else
-     * might just have used this one as part of task fusion. However, such a
-     * while is toxic. It can always lead to deadlocks. Instead, every task has
-     * to be mapped onto a task dependency, and we have to ensure that we can
-     * properly wait for tasks. It is fine if a task is already done, and in
-     * this case we can prune the DAG and omit a wait, but otherwise, we have
-     * to ensure that we work with task dependencies.
+     * Consult the documentation of these routines for details when they
+     * are used. The documentation also provides information how the
+     * underlying implementations work.
      *
-     * @see Consult the page @ref documentation_tarch_task_fusion_strategies
-     *   for recommendations and hints on task fusion strategies.
+     *
+     * ## Realisation of different task fusion strategies
+     *
+     * The different task fusion strategies are sketched out in
+     * tarch::multicore::strategies::FusionImplementation. The text
+     * there discusses how the task fusion acts and reacts. At their core,
+     * all realisations however build upon the FusableTaskQueue, i.e. the
+     * task queue offers a certain set up operations. The different fusion
+     * strategies call/use these operations in different ways.
+     *
      */
     namespace taskfusion {
       struct FusableTasksQueue;
 
       /**
-       * Delegates to implementation-specific variants, i.e. to the one
-       * selected by the orchestration.
+       * Handle one fusable task
+       *
+       * This operation handles one fusable task in the sense that it first
+       * ensures that all infrastructure for the fusion is in place and that
+       * we can, in principle, fuse. After
+       * that, it delegates to implementation selected by the orchestration:
+       *
+       * 1. Ensure that all incoming tasks (predecessors) are mapped onto
+       *    native tasks. Our implementation leaves all dependency tracking
+       *    to the native runtime, and therefore, we invoke
+       *    taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks()
+       *    first.
+       * 2. Find out if task fusion is active. If not, ensure that the task
+       *    is either executed directly or spawned into a native task. Which
+       *    variant to pick depends on the orchestration's getFusionImplementation()
+       *    result, which returns an instance of tarch::multicore::orchestration::FusionImplementation.
+       * 3. Lock the map over all queues through pendingTasksSemaphore.
+       * 4. Ensure that a queue does exist for the particular task type.
+       * 5. Invoke the task handling that's specified through getFusionImplementation().
+       *
+       * The routine is invoked by tarch::multicore::spawnTask() if this
+       * routine is given a task that can, in theory, be fused. Below are some
+       * remarks on particular strategies:
+       *
+       *
+       * ## DisableFusionAndProcessImmediately and other degenerated strategies
+       *
+       * This variant from tarch::multicore::orchestration::FusionImplementation
+       * implies that we directly call the task's run() operation. However, we
+       * first have to ensure that we wait for all incoming tasks. We do so
+       * through a call to waitForTasks(). This wait in return is valid as we
+       * have previously called taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks().
+       *
+       *
+       * ## LazyEvaluation
+       *
+       * Almost trival realisation of the core functionality through
+       * handleFusableTask_LazyEvaluation(). The interesting stuff, i.e. the
+       * fusion and task processing, all happens in ensureHeldBackTasksAreMappedOntoNativeTasks()
+       * which in turn calls ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation().
+       *
+       *
+       * @see Page @ref documentation_tarch_task_fusion_strategies provides a high-level overview
+       * @see tarch::multicore::orchestration::FusionImplementation enlists the different implementation variants
        */
-      void translateFusableTaskIntoTaskSequence(
+      void handleFusableTask(
         Task*                  task,
         std::set<TaskNumber>   inDependencies,
         const TaskNumber&      taskNumber
@@ -74,11 +143,45 @@ namespace tarch {
 
       /**
        * Run over all known queues and invoke drainReadyTasks() on each one.
+       *
+       * Once we know that all fusion queues are drained, we know that they
+       * are either complete or mapped successfully onto native tasks. That
+       * is, we can invoke a task barrier.
+       *
+       * This routine is used by the global synchronisation, i.e. by
+       * tarch::multicore::waitForAllTasks(), but we also have to invoke it
+       * before we yield: The whole idea behind a yield() is that we give
+       * the runtime the opportunity to bring in some other tasks, i.e. to
+       * disrupt the calculation. However, the runtime cannot bring in other
+       * tasks if the tasks are hidden away in a queue.
+       *
+       * This routine invokes tarch::multicore::taskfusion::FusableTasksQueue::drainReadyTasks().
+       * That is, this routine does not(!) issue any task fusion.
        */
       void processAllReadyTasks();
 
       /**
-       * Realisation for translateFusableTaskIntoTaskSequence() for ProducerConsumerTaskPairs
+       * Drain the queues but use task fusion where possible
+       *
+       * This is the cousin to processAllReadyTasks(). It ensures that the task
+       * queues are drained eventually, but it relies on task fusion rather
+       * than a manual drain. Different to processAllReadyTasks(), you do not
+       * have to issue a manual barrier afterward this routine has returned.
+       * You may assume that all tasks are literally complete.
+       *
+       * This blocking behaviour implies that you stop your program execution.
+       * However, nothing stops you, subject to the correct dependency
+       * management, to deploy the call to processAndFuseAllReadyTasks() to yet
+       * another task of its own.
+       *
+       * The routine can be used to set off timed execution as discussed in
+       * tarch::multicore::orchestration::FusionImplementation.
+       *
+       */
+      void processAndFuseAllReadyTasks();
+
+      /**
+       * Realisation for handleFusableTask() for ProducerConsumerTaskSequence
        *
        * Translate a single task into a sequence of (fusable tasks)
        *
@@ -131,7 +234,7 @@ namespace tarch {
        * tasks. So it makes sense to serialise the ProcessReadyTask instances
        * if there are less than two times the max tasks in the queue.
        */
-      void translateFusableTaskIntoTaskSequence_ProducerConsumerTaskPairs(
+      void handleFusableTask_ProducerConsumerTaskSequence(
         Task*                  task,
         FusableTasksQueue&     taskQueue,
         std::set<TaskNumber>   inDependencies,
@@ -140,11 +243,24 @@ namespace tarch {
       );
 
       /**
-       * Implementation of translateFusableTaskIntoTaskSequence() if we use LazyEvaluation.
+       * Implementation of handleFusableTask() if we use LazyEvaluation.
+       *
+       * Lazy evaluation means that we take a task, but we wrap it out for a
+       * proxy task. This is an instance of LogReadyTask. The run() of the
+       * LogReadyTask instance dumps the actual task into the respective
+       * task queue. If there are no incoming dependencies, we can directly
+       * dump the actual task.
+       *
+       * @image html taskfusion-LazyEvaluation.png
+       *
+       * After that, we can return. If someone waits for our task (which we
+       * replaced with the LogReadyTask), we have to ensure that the task
+       * has been removed from the queue and processed. This is realised
+       * through ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation().
        *
        * @see @ref documentation_tarch_task_fusion_strategies for some context for this routine.
        */
-      void translateFusableTaskIntoTaskSequence_LazyEvaluation(
+      void handleFusableTask_LazyEvaluation(
         Task*                  task,
         FusableTasksQueue&     taskQueue,
         std::set<TaskNumber>   inDependencies,
@@ -153,9 +269,13 @@ namespace tarch {
       );
 
       /**
+       * Handle a task in the eager consumer pattern
        *
+       * This routine has to be used in combination with handleFusableTask_LazyEvaluation().
+       * It does, different as the name suggests, not enqueue any task. Instead, it simply
+       * evaluates if the task queue is ready for a fusion task. If so, it spawns one.
        */
-      void translateFusableTaskIntoTaskSequence_EagerConsumerTasks(
+      void handleFusableTask_EagerConsumerTasks(
         Task*                  task,
         FusableTasksQueue&     taskQueue,
         std::set<TaskNumber>   inDependencies,
@@ -164,9 +284,33 @@ namespace tarch {
       );
 
       /**
-       * If we run into a task wait, we have to be sure that fusable tasks are mapped onto proper tasks
+       * Ensure that a certain set of tasks is mapped onto native tasks already
        *
-       * Delegates to implementation-specific variants.
+       * Our task fusion holds back tasks in bespoke queues such that they can
+       * be bundled together into a larger meta task. However, this implies
+       * that we cannot do two things:
+       *
+       * 1. We cannot wait for them with built-in waits(). If a task, for
+       *    example, is not yet passed on to OpenMP, OpenMP's wait cannot
+       *    wait for this task by definition.
+       * 2. If we have in-dependencies of a new task, these in-dependencies
+       *    cannot be modelled with on-board features if the predecessor is
+       *    not yet mapped onto a task. We would create an antidependency.
+       *
+       * In both cases, we therefore have to invoke this routine first, so we
+       * ensure that the tasks that we wait for or depend on, respectively, is
+       * indeed already a native task and not still parked in a queue
+       * somewhere.
+       *
+       * The routine delegates to implementation-specific variants depending
+       * on which task fusion strategy the orchestration picks.
+       *
+       * The function is used by tarch::multicore::waitForTasks() and
+       * tarch::multicore::spawnTask(). The latter calls it over all incoming
+       * dependencies.
+       *
+       * @param taskNumbers: Set of task numbers we depend on. May not be
+       *         empty.
        *
        * @return The routine might have created new native tasks, i.e. the
        *         calling routine has to wait for these native tasks.
@@ -174,23 +318,58 @@ namespace tarch {
       bool ensureHeldBackTasksAreMappedOntoNativeTasks(const std::set<TaskNumber>& taskNumbers);
 
       /**
-       * Preamble of waitForTasks() if we use LazyEvaluation.
+       * Preamble of waitForTasks() and task spawns if we use LazyEvaluation.
+       *
+       * The routine ensureHeldBackTasksAreMappedOntoNativeTasks() delegates to
+       * this one if we have chosen lazy evaluation. The job here is that we
+       * ensure that any pending work is mapped properly onto native tasks or
+       * that all tasks have finished. In the latter case, any follow-up wait
+       * degenerates to an anti-dependency.
+       *
+       * @image html taskfusion-LazyEvaluation.png
+       *
+       * The spawning of our task of interest has either created a LogReadyTask
+       * instance, or it has directly dropped the task that we wait for into
+       * the task queue. We don't know if this LogReadyTask is still out
+       * there, so first we have to wait for it. We know it had the same number
+       * as the original task, as we had swapped it out for this one.
+       *
+       * Next, we check if our task of interest is still in this queue, i.e. is
+       * ready or running. We can do so through
+       * anyTasksOfInDendenciesMightBeStillReadyOrRunning(). If they are not
+       * there, we can return with a false, as we know that the calling routine
+       * does not have to wait for us. We are ready to go.
+       *
+       * If one of our tasks that we wait for is still in the queue, we loop
+       * over each individual in-dependency:
+       *
+       * - If the in-dependency is not found, skip and go to the next one.
+       * - If the in-dependecy's task is in the queue, first issue a task which
+       *   does all the task fusion (task A).
+       * - Next, trigger another task B which picks only this one task we are
+       *   actually interested in (task B).
+       *
+       * We ensure that A and B have exactly the same number of one of the
+       * in-dependencies. This way, A will execute before B and the user will
+       * wait for B. Please read the text below to understand why the split-up
+       * into A and B is not just for fun. It is required to ensure that we
+       * do not run into deadlocks.
+       *
+       *
+       * ## Realisation
        *
        * We don't know, at this point, what the type of each in dependency is.
        * Therefore, we loop over all queues, i.e. all task types that we
        * are aware of, and look if any of the tasks we are interested in is
-       * still in there labelled as ready or running. This works, as we expect
-       * the user to have called ensureHeldBackTasksAreMappedOntoNativeTasks_EnsureAllTasksAreRunningReadyOrHaveCompleted()
-       * before, i.e. all in-dependencies are in that state.
-       * We use a try-lock here to avoid blocking. If this try fails,
-       * we have to assume that the task is still in the queue. If we assume
-       * that at least one task is running or is ready, we have to continue to
-       * do some work:
+       * still in there labelled as ready or running.
        *
        * First, we look in each queue if it hosts the a task that is ready or
        * running. If this is the case, we invoke the task fusion and afterwards
        * ensure that the task is really completed by spawning
        * ProcessOneReadyTask.
+       *
+       *
+       * ## Potential deadlocks
        *
        * It is important that ProcessOneReadyTask and ProcessSetOfReadyTasks
        * are modelled independently to avoid deadlocks:
@@ -214,40 +393,37 @@ namespace tarch {
        *
        * Despite this observation, it remains clear that the eager invocation
        * yields a higher concurrency level. See
-       * translateFusableTaskIntoTaskSequence_EagerConsumerTasks() and
+       * handleFusableTask_EagerConsumerTasks() and
        * ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks()
        * for details.
        *
+       * A flaw of the present implementation is that additional
        *
-       * @see ProcessReadyTask::processTasks() to trigger the actual lazy
-       *      fusion of tasks.
-       * @see ProcessReadyTask::hasTaskBeenProcessed() which is used to check
-       *      if a particular task has completed already.
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * native::waitForTasks(inDependencies);
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       * We need this one, as we don't know if there are still instances of
+       * LogReadyTask out there pending. If we knew that this is not the case,
+       * we could skip this step and eliminate one synchronisation point.
+       *
+       *
+       * @see ProcessSetOfReadyTasks which triggers the actual lazy fusion of tasks.
+       * @see ProcessOneReadyTask which is used to check if a particular task has completed already.
        */
       bool ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(const std::set<TaskNumber>& inDependencies);
 
       /**
        * Preamble of waitForTasks() if we use EagerEvaluation.
        *
-       * This routine is very similar to ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation()
+       * This routine is very similar to ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(),
        * besides the fact that it never ever spawns a fusion task. If the eager
        * scheme results in fusion tasks, then these fusion tasks have already
        * been created by the time we spawned the tasks. We don't create them by
-       * the time we wait for a task.
+       * the time we wait for a task. So we should say: "it is a degenerated
+       * version of ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation()".
        */
       bool ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks(const std::set<TaskNumber>& inDependencies);
-
-      /**
-       * Ensure tasks are not pending anymore
-       *
-       * If we want to ensure that a fusable task is mapped onto a proper task
-       * (set) already, then we first of all have to check if a fusable task
-       * is still pending, i.e. parked in the queue of tasks that are not
-       * ready yet. So we have to ensure that they are not blocked. If they are
-       * not yet among the ready tasks (or already running or have completed),
-       * then we add a wait here.
-       */
-      void ensureHeldBackTasksAreMappedOntoNativeTasks_EnsureAllTasksAreRunningReadyOrHaveCompleted(const std::set<TaskNumber>& inDependencies);
     } // namespace taskfusion
   }
 }

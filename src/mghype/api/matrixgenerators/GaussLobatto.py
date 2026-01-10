@@ -12,7 +12,7 @@ from .MatrixGenerator import MatrixGenerator
 
 
 class GaussLobatto(MatrixGenerator):
-  '''
+  '''!
   
   Simple matrix generator assuming that we use a Gauss Lobatto unknown layout
   
@@ -151,9 +151,9 @@ class GaussLobatto(MatrixGenerator):
     return output
 
   def get_cell_system_matrix_for_laplacian(self):
-    '''
-    Create a cell-cell mass matrix for $\nabla p \cdot \nabla v$
-    '''
+    r"""!
+    Create a cell-cell mass matrix for @f$ \nabla p \cdot \nabla v @f$
+    """
     return self.block_matrix._A_CC[(0,0)][(0,0)]
   
   def get_face_to_cell_matrix(self):
@@ -259,7 +259,7 @@ class GaussLobatto(MatrixGenerator):
 
 
   def get_averaging_riemann_solver(self):
-    """!
+    r"""!
     
     Simple averaging Riemann solver
     
@@ -630,14 +630,14 @@ class GaussLobattoMatrixFree(GaussLobatto):
 
   def get_boundary_matrix(self):
     '''
-    @Alex shape of this should be 
+    @todo For Alex: shape of this should be 
     solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.dimensions-1)   rows (= 4)
     projections_per_face_node * ( self.poly_degree + 1 ) ** (self.dimensions-1) cols (= 4)
 
     we are fixing the value of the solution vector on the boundary with the value of 
     the projections here. you can assume everything was set to 0 initially
 
-    @Sean: check the shape
+    @todo For Sean: check the shape
     '''
     return np.eye( 
       # ( 

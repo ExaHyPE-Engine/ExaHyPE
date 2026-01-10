@@ -19,8 +19,10 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
     // This vector faceSol will contain: soln on face 0 | soln on face 1 | soln on face 2 | .....
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double > faceSol;
     for (int f=0; f<TwoTimesD; f++)
-    for (int s=0; s<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
+    for (int s=0; s<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; s++) {
+      assertion2( fineGridFaces{{SOLVER_NAME}}(f).getSolution(s)<1e10, fineGridFaces{{SOLVER_NAME}}(f).getSolution(s), fineGridFaces{{SOLVER_NAME}}(f).getSolution() );
       faceSol( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getSolution(s);
+    }
 
     // next, we need to project solution on face onto the cell...
     auto projection = repositories::{{SOLVER_INSTANCE}}.applyCellFromFaceMatrix(marker.x(), marker.h(), faceSol);
@@ -28,6 +30,7 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
     // loop over each face, finish updating residual as we go
     for (int f=0; f<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; f++)
     {
+      assertion2( fineGridCell{{SOLVER_NAME}}.getResidual(f)<1e10, fineGridCell{{SOLVER_NAME}}.getResidual(f), projection(f) );
       // project the face solution onto the cell; add to r
       fineGridCell{{SOLVER_NAME}}.setResidual(f,
         fineGridCell{{SOLVER_NAME}}.getResidual(f)- projection(f));
@@ -77,11 +80,12 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_BEGIN_TRAVERSAL:
-      result = jinja2.Template("""
-  _solverStatistics.clearGlobalPrecondResidualUpdate();
-  _solverStatistics.clearGlobalResidualAndSolutionUpdate();
-""").render(**self.d)      
+    # This is now done within the abstract solver
+#    if operation_name==peano4.solversteps.ActionSet.OPERATION_BEGIN_TRAVERSAL:
+#      result = jinja2.Template("""
+#  _solverStatistics.clearGlobalPrecondResidualUpdate();
+#  _solverStatistics.clearGlobalResidualAndSolutionUpdate();
+#""").render(**self.d)      
     if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
       result = jinja2.Template("""
   repositories::{{SOLVER_INSTANCE}}.merge( _solverStatistics );

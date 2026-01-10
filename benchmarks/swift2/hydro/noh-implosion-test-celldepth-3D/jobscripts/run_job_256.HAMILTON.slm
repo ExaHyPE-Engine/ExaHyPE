@@ -1,0 +1,76 @@
+#!/bin/bash
+#SBATCH --job-name=n3d256
+#SBATCH -p shared
+# #SBATCH --nodes=1
+#SBATCH -c 16
+#SBATCH --time=72:00:00
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=mladen.ivkovic@durham.ac.uk
+#SBATCH --mem=64gb
+
+
+# Function to time the process.
+# Usage: timing `executable` `args`
+timing() {
+
+    timeformat="----------------------------------------------------------------\n"
+    timeformat="$timeformat""stats for %C\n"
+    timeformat="$timeformat""AverageMem(kb),MaxMem(kb),WallTime(s),CPUTime(s),UserTime(s),CPUPercentage\n"
+    timeformat="$timeformat""%K,%M,%e,%S,%U,%P"
+
+    /usr/bin/time -f "$timeformat" "$@"
+}
+
+
+
+
+source /etc/profile.d/modules.sh
+
+module purge
+module load oneapi/2024.2
+export FLAVOUR_NOCONFLICT=1
+module load gcc/13.2
+module load intelmpi
+
+export I_MPI_CXX=icpx
+
+# module load hdf5/1.12.3
+module load fftw/3.3.10
+module load paraview/5.10.0
+module load python/3.10.8
+
+REDO="false"
+
+for N_PART in 256; do
+  for CELL_SIZE_MAX in 2 0.67 0.23; do
+    for CELL_SIZE_MIN in 2 0.67 0.23 0.075 0.025 0.0083 0.003; do
+
+      if (( $(echo "$CELL_SIZE_MIN > $CELL_SIZE_MAX" |bc -l) )); then
+        continue;
+      fi
+
+      SUFFIX="N$N_PART-$CELL_SIZE_MAX-$CELL_SIZE_MIN"
+      OUTFILE=output_$SUFFIX.log
+      EXEC=noh3D-$SUFFIX
+
+      if [ -f $EXEC ]; then
+        if [[ "$REDO" != "false" ]] || [[ ! -f "$OUTFILE" ]]; then
+          echo RUNNING N_PART=$N_PART CELL_MAX=$CELL_SIZE_MAX CELL_MIN=$CELL_SIZE_MIN
+          echo $OMP_NUM_THREADS
+
+          timing -o "$OUTFILE" -a ./$EXEC 2>&1 > "$OUTFILE"
+          echo FINISHED N_PART=$N_PART CELL_MAX=$CELL_SIZE_MAX CELL_MIN=$CELL_SIZE_MIN
+          tail -n 4 "$OUTFILE"
+
+        else
+          echo SKIPPING EXISTING RUN N_PART=$N_PART CELL_MAX=$CELL_SIZE_MAX CELL_MIN=$CELL_SIZE_MIN
+        fi
+      else
+        echo SKIPPING RUN N_PART=$N_PART CELL_MAX=$CELL_SIZE_MAX CELL_MIN=$CELL_SIZE_MIN "; EXEC DOESN'T EXIST"
+      fi
+
+    done
+  done
+done
+
+

@@ -86,7 +86,7 @@ peano4::grid::LoadStoreComputeFlag peano4::grid::constructLoadStoreComputeFlag(
   if (not predicateToUseData and not predicateForLoad and predicateForStore)
     return peano4::grid::LoadStoreComputeFlag::CreateDummy_ProvideToCalculations_StoreToOutputStream;
   if (not predicateToUseData and predicateForLoad and predicateForStore)
-    assertion(false);
+    assertion3(false, predicateToUseData, predicateForLoad, predicateForStore);
   if (predicateToUseData and not predicateForLoad and not predicateForStore)
     return peano4::grid::LoadStoreComputeFlag::CreateDummy_ProvideToCalculations_Discard;
   if (predicateToUseData and predicateForLoad and not predicateForStore)

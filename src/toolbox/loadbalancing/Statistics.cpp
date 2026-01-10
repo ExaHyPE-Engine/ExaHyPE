@@ -53,11 +53,11 @@ std::string  toolbox::loadbalancing::Statistics::toString() const {
 void toolbox::loadbalancing::Statistics::waitForGlobalDataExchange() {
   #ifdef Parallel
   if (_globalSumRequest != nullptr ) {
-    MPI_Wait( _globalSumRequest, MPI_STATUS_IGNORE );
-    MPI_Wait( _globalNumberOfSplitsRequest, MPI_STATUS_IGNORE );
-    MPI_Wait( _globalNumberOfTreesRequest, MPI_STATUS_IGNORE );
-    MPI_Wait( _globalNumberOfRanksWithEnabledLoadBalancingRequest, MPI_STATUS_IGNORE );
-    MPI_Wait( _globalMaximumTreesPerRankRequest, MPI_STATUS_IGNORE );
+    tarch::mpi::wait( *_globalSumRequest,                                   "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange()" );
+    tarch::mpi::wait( *_globalNumberOfSplitsRequest,                        "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange()" );
+    tarch::mpi::wait( *_globalNumberOfTreesRequest,                         "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange()" );
+    tarch::mpi::wait( *_globalNumberOfRanksWithEnabledLoadBalancingRequest, "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange()" );
+    tarch::mpi::wait( *_globalMaximumTreesPerRankRequest,                   "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange()" );
 
     delete _globalSumRequest;
     delete _globalNumberOfSplitsRequest;
@@ -65,11 +65,11 @@ void toolbox::loadbalancing::Statistics::waitForGlobalDataExchange() {
     delete _globalNumberOfRanksWithEnabledLoadBalancingRequest;
     delete _globalMaximumTreesPerRankRequest;
 
-    _globalSumRequest            = nullptr;
-    _globalNumberOfSplitsRequest = nullptr;
-    _globalNumberOfTreesRequest  = nullptr;
+    _globalSumRequest                                   = nullptr;
+    _globalNumberOfSplitsRequest                        = nullptr;
+    _globalNumberOfTreesRequest                         = nullptr;
     _globalNumberOfRanksWithEnabledLoadBalancingRequest = nullptr;
-    _globalMaximumTreesPerRankRequest          = nullptr;
+    _globalMaximumTreesPerRankRequest                   = nullptr;
   }
   #endif
 }
@@ -107,9 +107,9 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
       _globalNumberOfInnerUnrefinedCells       = _localNumberOfInnerUnrefinedCells;
     }
 
-    _globalSumRequest            = new MPI_Request();
-    _globalNumberOfSplitsRequest = new MPI_Request();
-    _globalNumberOfTreesRequest  = new MPI_Request();
+    _globalSumRequest                                   = new MPI_Request();
+    _globalNumberOfSplitsRequest                        = new MPI_Request();
+    _globalNumberOfTreesRequest                         = new MPI_Request();
     _globalNumberOfRanksWithEnabledLoadBalancingRequest = new MPI_Request();
     _globalMaximumTreesPerRankRequest                   = new MPI_Request();
 
@@ -120,13 +120,22 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
     _numberOfMaximumTreesOut                        = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size();
 
     MPI_Iallreduce(
-      &_numberOfRanksWithEnabledLoadBalancingOut,  // send
-      &_numberOfRanksWithEnabledLoadBalancingIn,   // receive
+      &_globalNumberOfInnerUnrefinedCellsBufferOut,  // send
+      &_globalNumberOfInnerUnrefinedCellsBufferIn,   // receive
       1,             // count
       MPI_INT,
       MPI_SUM,
       tarch::mpi::Rank::getInstance().getCommunicator(),
-      _globalNumberOfRanksWithEnabledLoadBalancingRequest
+      _globalSumRequest
+    );
+    MPI_Iallreduce(
+      &_numberOfSplitsOut,     // send
+      &_numberOfSplitsIn,      // receive
+      1,             // count
+      MPI_INT,
+      MPI_SUM,
+      tarch::mpi::Rank::getInstance().getCommunicator(),
+      _globalNumberOfSplitsRequest
     );
     MPI_Iallreduce(
       &_numberOfTreesOut,             // send
@@ -138,23 +147,13 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
       _globalNumberOfTreesRequest
     );
     MPI_Iallreduce(
-      &_globalNumberOfInnerUnrefinedCellsBufferOut,  // send
-      &_globalNumberOfInnerUnrefinedCellsBufferIn,   // receive
+      &_numberOfRanksWithEnabledLoadBalancingOut,  // send
+      &_numberOfRanksWithEnabledLoadBalancingIn,   // receive
       1,             // count
       MPI_INT,
       MPI_SUM,
       tarch::mpi::Rank::getInstance().getCommunicator(),
-      _globalSumRequest
-    );
-    // has to be global number, as local is already erased
-    MPI_Iallreduce(
-      &_numberOfSplitsOut,     // send
-      &_numberOfSplitsIn,      // receive
-      1,             // count
-      MPI_INT,
-      MPI_SUM,
-      tarch::mpi::Rank::getInstance().getCommunicator(),
-      _globalNumberOfSplitsRequest
+      _globalNumberOfRanksWithEnabledLoadBalancingRequest
     );
     MPI_Iallreduce(
       &_numberOfMaximumTreesOut,     // send

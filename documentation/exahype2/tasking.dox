@@ -1,0 +1,93 @@
+/**
+
+ @page page_exahype_multicore Tasking (multicore parallelisation)
+ 
+  
+ ExaHyPE starts from @ref page_exahype_domain-decomposition "plain domain decomposition".
+ Its domain decomposition splits up the domain over multiple MPI ranks, but it also
+ can make one rank hold multiple subpartitions, and these subpartitions are then 
+ processed by different threads.
+ On top of this domain decomposition, you can add tasking which only works per rank.
+ That is, if you give each rank only one subdomain and if you add tasking on top, 
+ then you can genuine task parallelsim.
+ Typically, this is a poor idea, i.e. you are better off with a mixture of domain 
+ decomposition and tasking to exploit many threads.
+ Further to that, only some ExaHyPE solvers (typically those with an Enclave in
+ their name) support tasking and therefore benefit from the discussion below.
+ 
+
+ If you have a solver with tasking and want to activate this tasking, you have 
+ to do the following steps: 
+
+ 1. @ref page_installation_home "Configure" Peano with multithreading support.
+ 2. Pick a proper @ref page_exahype_domain-decomposition "load balancing scheme" no matter if you want subpartitions per 
+    rank or not.
+ 3. Peak a solver that supports tasking.
+ 4. Tweak the task orchestration as discussed below.
+ 5. Run some @ref page_exahype_runtime_analysis "performance analysis".
+ 6. Study the @ref page_exahype_performance_optimisation "optimisation recommendations".
+ 
+ 
+ ## Using ExaHyPE 2 with tasks 
+
+ All instructions how to enable tasking support is collected in a @ref tutorials_exahype2_hpc_tasking "multicore/tasking tutorial".
+ While the tutorial provides a deep-dive, the key ingredients can be summarised by two simple headlines:
+ 
+ ### Pick a solver that supports tasking
+
+ Most ExaHyPE solvers supporting tasking have something alike Enclave in their solver name.
+ These solvers spawn tasks.
+ In principle, no further work should be required for these solvers and they behave exactly the same way as their non-tasking counterparts.
+ 
+ ### Tweak the orchestration strategy
+ 
+ The orchestration strategy determines how the task fusion is realised under the hood.
+ In which way this yields a high throughput is subject of discussion on the 
+ @ref documentation_tarch_task_fusion_strategies "page on task fusion".
+ 
+ Switching the strategy is possible in ExaHyPE has to happen within the C++ code.
+ However, ExaHyPE provides a routine through exahype2.Project.set_multicore_orchestration()
+ into which we can inject a C++ call instantiating a different orchestration scheme:
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ project.set_multicore_orchestration( """new ::tarch::multicore::orchestration::Hardcoded(
+  32,256,
+  tarch::multicore::Task::Host,
+  ::tarch::multicore::orchestration::Hardcoded::NoNestedParallelism,
+  ::tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks
+)""" )
+ project.add_mainfile_include("tarch/multicore/orchestration/Hardcoded.h")
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ While the Python routine is trivial - it simply accepts a string which 
+ instantiates an orchestration objecton the heap - you have to study the 
+ orchestration objects provided, or you have to write your own one. All
+ orchestration classes have to inherit from tarch::multicore::orchestration::Strategy. 
+  
+ If you do nothing like this, then the orchestration will be determined by
+ whatever tarch::multicore::orchestration::createDefaultStrategy() returns.
+ Plesae note that it is your responsibility to add the corresponding includes
+ here as well, so the solver repository knows about the orchestration object
+ that you want to use.
+ 
+ ### OpenMP
+ 
+ Peano's tasking requires OpenMP 6 upwards. 
+ If you don't have that and want to use task fusion nevertheless, you have to employ timed execution.
+ The rationale are presented at @ref documentation_tarch_task_fusion_strategies.
+ ExaHyPE by default makes all task fusion "deteriorate" to timed fusion by default if you enable OpenMP but haven't got OpenMP6 yet.
+ 
+  
+ ## How the tasking works
+
+ The solvers in ExaHyPE that support tasking work directly with the 
+ abstractions of the multithreading as it is provided by the 
+ @ref page_tarch_multicore "technical architecture". All the documentation
+ how tasking works in Peano can be found there.
+   
+
+ ## Adding tasks to your ExaHyPE solver (programmer view)
+
+ */
+ 
+ 

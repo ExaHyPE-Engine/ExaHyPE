@@ -5,6 +5,14 @@ from peano4.solversteps.ActionSet import ActionSet
 import jinja2
 
 
+
+#
+# Doxygen has some issues parsing this file. As I did not manage to find out
+# where these issues come from, I manually exclude this file from the 
+# documentation in documentation/Doxyfile. 
+#
+
+
 class PlotCellDataInPeanoBlockFormat(ActionSet):
   """!
   
@@ -34,7 +42,7 @@ class PlotCellDataInPeanoBlockFormat(ActionSet):
                guard_predicate="true", 
                additional_includes=""
                ):
-    """
+    """!
       Plot only the grid structure
       
       filename: String
@@ -226,4 +234,3 @@ if ( {{GUARD_PREDICATE}} ) {
     return """
 tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + """::_semaphore;
 """
-    

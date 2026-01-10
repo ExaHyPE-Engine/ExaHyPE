@@ -6,14 +6,24 @@
 \tableofcontents
 
 
+Peano's domain decomposition is used for both MPI and multithreading.
+The fact that we use domain decomposition for both realisation variants implies that it only matters if you have configured your build with MPI and/or a multithreading back-end.
+As soon as these things are in place and you have picked a load balancing, both threads and ranks (if MPI is there) will be used.
+Without activating any load balancing, your code will run serial no matter how you compiled it.
 
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
-This page will frequently refer to action sets and their order. It therefore
-is reasonable to study @ref peano_action_sets "the description of action sets"
-first. 
-</div>
+
+Peano's domain decomposition requires user to follow steps:
+ 
+ 1. @ref page_installation_home "Configure" Peano with multithreading support.
+ 2. @ref page_installation_home "Configure" Peano with MPI support (optional - you can also run on only one node).
+ 3. Ensure that you have picked a proper load balancing scheme.
+ 4. Run some @ref page_exahype_runtime_analysis "performance analysis".
+ 5. Study the @ref page_exahype_performance_optimisation "optimisation recommendations".
     
-    
+   
+# Introduction
+
+   
 @image html domain-decomposition/domain-decomposition.png
 
 Peano starts from spacetrees and thinks in whole trees and only supports two
@@ -38,8 +48,40 @@ We work with a multiscale, non-overlapping domain decomposition.
 </div>
 
 
+## Controlling the domain decomposition (C++ view)
+
+From a C++ few, the domain decomposition is triggered through the SpacetreeSet.
+The set is a singleton per MPI rank.
+You can instruct it on each rank at any time to try to split up a tree further by calling the split() 
+routine.
+
+
+Joins are automatically tiggered by the spacetree set as soon as a tree degenerates.
+However, you can veto the join mechanisms.
+
+
+
+## Controlling the domain decomposition (Python view/higher level)
+
+Most codes do not issue the split calls themselves, but encapsulate all of the load balancing decisions in some classes.
+So all the decisions, when and where to trigger a split, are in one place.
+This is possible, as the splitting is realised through the SpacetreeSet which is a singleton,
+i.e. you can literally call split() from anywhere in the code at any point throughout the simulation.
+
+Obviously, you can design you own load balancing logic.
+However, there's also a toolbox which provides utility classes to do exactly this.
+Most extensions of Peano (e.g., ExaHyPE or MGHyPE) offer routines through their Python API to add strategies from this loadbalancign toolbox to the code.
+In this case, you don't have to care about the load balancing realisation itself at all.
+
+
 
 # Domain decomposition within a (typical) Peano application
+
+<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+This page will frequently refer to action sets and their order. It therefore
+is reasonable to study @ref peano_action_sets "the description of action sets"
+first. 
+</div>
 
 A tree in Peano is split along the Peano space-filling curve. This
 implies that the decomposition on each mesh level is a non-overlapping
@@ -312,7 +354,9 @@ threads on the local node or remotely via MPI). Each new tree receives a
 whole copy of the original tree. This includes both the core tree data
 and the user data. Once the tree is replicated, the individual trees
 start to coarsen. If they are not responsible for tree parts, they
-successively remove this part. After one or two iterations, each rank
+will drop cells. Offline reconstruction tools (see @ref page_toolbox_loadbalancing_api) interpret a split’s
+moved cell count as the number of cells on the earliest level where a subtree id first appears; they do not
+re-count deeper descendants created later. After one or two iterations, each rank
 thus really works only on local tree.
 Due to this approach, splits require significant memory temporarily. It thus might be
 convenient not to split a tree too often in one rush.

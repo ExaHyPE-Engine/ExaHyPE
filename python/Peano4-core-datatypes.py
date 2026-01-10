@@ -12,6 +12,9 @@ integer_message = dastgen2.DataModel("tarch::mpi::IntegerMessage")
 integer_message.add_attribute(dastgen2.attributes.Integer("value"))
 
 integer_message.add_aspect(
+    dastgen2.aspects.MPI()
+)
+integer_message.add_aspect(
     peano4.dastgen2.MPIAndStorageAspect(peano4.datamodel.DoFAssociation.Generic)
 )
 
@@ -24,6 +27,9 @@ integer_message.write_implementation_file("../src/tarch/mpi/IntegerMessage.cpp")
 double_message = dastgen2.DataModel("tarch::mpi::DoubleMessage")
 double_message.add_attribute(dastgen2.attributes.Double("value"))
 
+double_message.add_aspect(
+    dastgen2.aspects.MPI()
+)
 double_message.add_aspect(
     peano4.dastgen2.MPIAndStorageAspect(peano4.datamodel.DoFAssociation.Generic)
 )
@@ -61,6 +67,9 @@ tree_management_message.add_attribute(
 )
 
 tree_management_message.add_aspect(
+    dastgen2.aspects.MPI()
+)
+tree_management_message.add_aspect(
     peano4.dastgen2.MPIAndStorageAspect(peano4.datamodel.DoFAssociation.Generic)
 )
 
@@ -89,6 +98,9 @@ tree_management_message.add_attribute(
 )
 
 tree_management_message.add_aspect(
+    dastgen2.aspects.MPI()
+)
+tree_management_message.add_aspect(
     peano4.dastgen2.MPIAndStorageAspect(peano4.datamodel.DoFAssociation.Generic)
 )
 
@@ -108,6 +120,9 @@ start_traversal_message.add_attribute(
     )
 )
 
+start_traversal_message.add_aspect(
+    dastgen2.aspects.MPI()
+)
 start_traversal_message.add_aspect(
     peano4.dastgen2.MPIAndStorageAspect(peano4.datamodel.DoFAssociation.Generic)
 )
@@ -136,6 +151,9 @@ grid_control_event.add_attribute(
 )
 grid_control_event.add_attribute(peano4.dastgen2.Peano4DoubleArray("h", "Dimensions"))
 
+grid_control_event.add_aspect(
+    dastgen2.aspects.MPI()
+)
 grid_control_event.add_aspect(
     peano4.dastgen2.MPIAndStorageAspect(peano4.datamodel.DoFAssociation.Generic)
 )
@@ -190,6 +208,9 @@ grid_statistics.add_attribute(dastgen2.attributes.Boolean("removedEmptySubtree")
 grid_statistics.add_attribute(peano4.dastgen2.Peano4DoubleArray("minH", "Dimensions"))
 
 grid_statistics.add_aspect(
+    dastgen2.aspects.MPI()
+)
+grid_statistics.add_aspect(
     peano4.dastgen2.MPIAndStorageAspect(peano4.datamodel.DoFAssociation.Generic)
 )
 
@@ -225,6 +246,9 @@ automaton_state.add_attribute(
     )
 )
 
+automaton_state.add_aspect(
+    dastgen2.aspects.MPI()
+)
 automaton_state.add_aspect(
     peano4.dastgen2.MPIAndStorageAspect(peano4.datamodel.DoFAssociation.Generic)
 )
@@ -323,6 +347,9 @@ grid_traversal_event.add_attribute(
 )
 
 grid_traversal_event.add_aspect(
+    dastgen2.aspects.MPI()
+)
+grid_traversal_event.add_aspect(
     peano4.dastgen2.MPIAndStorageAspect(peano4.datamodel.DoFAssociation.Generic)
 )
 
@@ -395,6 +422,9 @@ grid_vertex.add_attribute(
 )
 grid_vertex.add_attribute(dastgen2.attributes.Integer("level"))
 
+grid_vertex.add_aspect(
+    dastgen2.aspects.MPI()
+)
 grid_vertex.add_aspect(
     peano4.dastgen2.MPIAndStorageAspect(peano4.datamodel.DoFAssociation.Generic)
 )

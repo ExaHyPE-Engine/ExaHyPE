@@ -218,8 +218,6 @@ Define body of constructor
 
 class CollocatedLowOrderDiscretisation(Solver):
   """!
-   
-  \page petsc_collocated_solver Collocated Solver with PETSc
     
   This is one of the simplest solvers that you can think of. It places
   one degree of freedom (can be scalar or a vector) on each vertex. As

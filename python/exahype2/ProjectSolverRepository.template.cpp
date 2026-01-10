@@ -13,9 +13,15 @@
 #include "exahype2/UserInterface.h"
 
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/taskfusion/taskfusion.h"
 #include "tarch/accelerator/Device.h"
 
 #include "Constants.h"
+
+
+#if defined(SharedOMP)
+#include "tarch/multicore/omp/multicore.h"
+#endif
 
 
 {% for item in TRACERS -%}
@@ -99,20 +105,20 @@ bool isLastGridSweepOfTimeStep() {
 }
 
 
-double getMinTimeStamp(bool ofCurrentlyRunningGridSweep) {
+double getMinTimeStamp() {
   double result = std::numeric_limits<double>::max();
   {% for item in SOLVERS -%}
-  result = std::min( result, {{ item[1] }}.getMinTimeStamp(ofCurrentlyRunningGridSweep) );
+  result = std::min( result, {{ item[1] }}.getMinTimeStamp() );
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
 }
 
 
-double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep) {
+double getMaxTimeStamp() {
   double result = 0.0;
   {% for item in SOLVERS -%}
-  result = std::max( result, {{ item[1] }}.getMaxTimeStamp(ofCurrentlyRunningGridSweep) );
+  result = std::max( result, {{ item[1] }}.getMaxTimeStamp() );
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
@@ -248,6 +254,11 @@ void finishTimeStep() {
   #ifdef UseSmartMPI
   smartmpi::tick();
   #endif
+
+  if (tarch::multicore::getOrchestration().getFusionImplementation()==tarch::multicore::orchestration::FusionImplementation::LazyEvaluation) {
+    tarch::multicore::taskfusion::processAndFuseAllReadyTasks();
+  }
+
   logTraceOut( "TimeStep()" );
 }
 

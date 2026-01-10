@@ -359,7 +359,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::vector<Task*>& o
   // =========================
   //
   bool foundOffloadingBranch = false;
-
+  
+  auto gpuPatchData = ::exahype2::CopyCellDataGPU(patchData, _numberOfInputValues, _numberOfResultValues);
+  
 #if defined(GPUOffloadingOMP)
   if (targetDevice >= 0) {
     foundOffloadingBranch = true;
@@ -387,6 +389,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::vector<Task*>& o
     ::exahype2::fv::{{KERNEL_NAMESPACE}}::cpp::{{FUSED_COMPUTE_KERNEL_CALL_STATELESS_GPU}}
   }
 #endif
+  
+  gpuPatchData.copyBackAndDestroy();
 
   if (not foundOffloadingBranch) {
     logDebug("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
@@ -402,7 +406,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::vector<Task*>& o
   for (int i = 0; i < patchData.numberOfCells; i++) {
     // Delete reconstructed data which has been allocated before spawning the tasks.
     tarch::freeMemory(patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(
+      patchData.id[i],
+      _numberOfResultValues,
+      patchData.QOut[i],
+      patchData.maxEigenvalue[i],
+      patchData.cellCentre[i],
+      patchData.cellSize[i]
+    );
   }
 }
 

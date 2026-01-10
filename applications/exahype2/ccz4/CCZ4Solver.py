@@ -564,21 +564,19 @@ def construct_FV_ncp():
 
 def construct_FD4_source_term():
     return """
-  tarch::memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
   ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3, CCZ4SO);
 """
 
 
 def construct_FV_source_term():
     return """
-  tarch::memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
   ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3, CCZ4SO);
 """
 
 
 def construct_FD4_eigenvalues():
     return """
-  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+  ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd, maxEigenvalue );
 """
 
 
@@ -1101,7 +1099,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
     We have now a smaller number of real unknowns, i.e. only those guys who
     belong to the "original" second-order formulation. The remaining quantities
     compared to a first-order formulation are technically material or auxiliary
-    quantities. We model them as such, which allows ExaHyPE`s data management
+    quantities. We model them as such, which allows ExaHyPE's data management
     to deal more efficiently with them.
 
 

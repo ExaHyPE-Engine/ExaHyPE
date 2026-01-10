@@ -5,8 +5,8 @@ from exahype2.solvers.rkfd.SeparateSweeps import SeparateSweeps
 
 import jinja2
 
-from .kernels import create_compute_kernel_for_FD4
-
+from .kernels import create_compute_kernel_for_FD4_DSL
+from .kernels import create_FD4_kernel_definitions_3d
 from exahype2.solvers.rkfd.kernels import create_abstract_solver_declarations
 from exahype2.solvers.rkfd.kernels import create_abstract_solver_definitions
 from exahype2.solvers.rkfd.kernels import create_solver_declarations
@@ -103,7 +103,9 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
 
     if not                  KOSigma==None:  self._KO_Sigma                                  = KOSigma
 
-    self._compute_kernel_call = create_compute_kernel_for_FD4(
+    create_FD4_kernel_definitions_3d()
+
+    self._compute_kernel_call = create_compute_kernel_for_FD4_DSL(
       self._flux_implementation, 
       self._ncp_implementation, 
       self._source_term_implementation, 
@@ -148,7 +150,7 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
   @property
   def user_action_set_includes(self):
     return super(GlobalAdaptiveTimeStep, self).user_action_set_includes + """
-#include "exahype2/fd/fd4/FD4.h"
+#include "kernels/FD4.h"
 """
 
 

@@ -213,12 +213,17 @@ class AlgorithmStep(object):
             """
 #include "Constants.h"
 #include "swift2/kernels/ParticleUpdatePredicates.h"
-#include "swift2/kernels/ParticleSetIterators.h"
 
 #include "swift2/dependencychecks/DependencyChecks.h"
 #include "toolbox/particles/assignmentchecks/TracingAPI.h"
         """
-            + includes
+            + includes +
+"""
+#include "swift2/kernels/ParticleSetIterators.h"
+"""
+            # Since the extended LLVM compiler inlines particle iterator callbacks,
+            # callback definitions must appear before the iterators.
+            # Moving the include as far down as possible tries to guarantee this.
         )
 
         self.cell_kernel_dependency_policy = cell_kernel_dependency_policy

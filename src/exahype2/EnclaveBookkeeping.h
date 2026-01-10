@@ -7,7 +7,10 @@
 #include "tarch/multicore/BooleanSemaphore.h"
 
 
+#include "peano4/datamanagement/CellMarker.h"
+
 #include <set>
+#include <map>
 #include <unordered_map>
 #include <string>
 
@@ -44,35 +47,70 @@ class exahype2::EnclaveBookkeeping {
       double   maxEigenvalue;
 
       Entry( int  numberOfResultValues_, double*  data_, double   maxEigenvalue_ );
+      Entry( const Entry& copy ) = default;
+
+      /**
+       * We do not delete data. This is done externally.
+       */
+      ~Entry() = default;
       std::string toString() const;
     };
   private:
     static tarch::logging::Log          _log;
 
-    const static std::string MemoryAllocationsInLookupTableIdentifier;
+    static const std::string MemoryAllocationsInLookupTableIdentifier;
+
+    using FinishedTaskMap = std::unordered_map<int, Entry >;
 
     /**
      * Plain map onto ouput array. See lifecycle discussion of EnclaveTask
      * for details.
      */
-    std::unordered_map<int, Entry >       _finishedTasks;
-    
+    FinishedTaskMap   _finishedTasks;
+
+    #if PeanoDebug>0
+    /**
+     * Only used for debugging
+     */
+    std::map<int, ::peano4::datamanagement::CellMarker >       _taskToMarkerMapping;
+    #endif
+
     std::set<int>  _tasksThatHaveToBeCancelled;
 
     tarch::multicore::BooleanSemaphore  _finishedTasksSemaphore;
 
     EnclaveBookkeeping() = default;
+    EnclaveBookkeeping(const EnclaveBookkeeping&) = delete;
 
     /**
      * Wait for a task result to become available
      *
      * We wait for the task to terminate, and then return the meta object
-     * which describes the task properties.
+     * which describes the task properties. It is up to the calling routine to
+     * decide what to do with the result. We might either return the data or
+     * throw it away.
+     *
+     * The routine assumes that a task has dropped its results due to
+     * finishedTask() already. To ensure this really happens, we call
+     * tarch::multicore::waitForTask() at the start of the routine's body.
+     *
+     * ## Validation
+     *
+     * All the validation steps are realised through non-critical
      *
      * @return Entry with all meta data plus a pointer to the actual
      *   task result.
+     * @param x This marker is only there for debug reasons. In release
+     *   mode, we ignore it.
+     * @param h This marker is only there for debug reasons. In release
+     *   mode, we ignore it.
+     *
      */
-    Entry waitForTaskToTerminateAndReturnResult(int number);
+    Entry waitForTaskToTerminateAndReturnResult(
+      int number,
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h
+    );
   public:
     static constexpr int NoEnclaveTaskNumber = -1;
     /**
@@ -105,15 +143,33 @@ class exahype2::EnclaveBookkeeping {
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      * tarch::freeMemory( result, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * @param x This marker is only there for debug reasons. In release
+     *   mode, we ignore it.
+     * @param h This marker is only there for debug reasons. In release
+     *   mode, we ignore it.
      */
-    void waitForTaskToTerminateAndCopyResultOver(int number, double* destination, double& maxEigenvalue);
+    void waitForTaskToTerminateAndCopyResultOver(
+      int number,
+      double* destination,
+      double& maxEigenvalue,
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h
+    );
 
     /**
      * Wait for a task and copy outcome into destination
+     *
+     * @param x This marker is only there for debug reasons. In release
+     *   mode, we ignore it.
+     * @param h This marker is only there for debug reasons. In release
+     *   mode, we ignore it.
      */
-    void waitForTaskAndDiscardResult(int number);
-
-    void cancelTask(int number);
+    void waitForTaskAndDiscardResult(
+      int number,
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h
+    );
 
     /**
      * Usually called directly by EnclaveTask.
@@ -128,7 +184,29 @@ class exahype2::EnclaveBookkeeping {
      * data is first released, before we store the new pointer.
      *
      * @param data Has to be device memory allocated through tarch::multicore::allocateMemory()
+     *
+     * @param x This marker is only there for debug reasons. In release
+     *   mode, we ignore it.
+     * @param h This marker is only there for debug reasons. In release
+     *   mode, we ignore it.
      */
-    void finishedTask(int taskNumber, int numberOfResultValues, double* data, double maxEigenvalue);
+    void finishedTask(
+      int taskNumber,
+      int numberOfResultValues,
+      double* data,
+      double maxEigenvalue,
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h
+    );
+
+    /**
+     * This one is only there for debugging purposes
+     *
+     * The routine is called by the constructor of EnclaveTask to notify the
+     * bookkeepting that a new task has been created with a certain task number
+     * for a particular cell.
+     */
+    void registerTask( int taskNumber, const ::peano4::datamanagement::CellMarker& marker );
+
 };
 

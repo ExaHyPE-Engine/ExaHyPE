@@ -11,7 +11,13 @@
 #pragma once
 
 
+#pragma push_macro("Dimensions")
+#pragma push_macro("assertion")
+#undef Dimensions
+#undef assertion
 #include <complex>
+#pragma pop_macro("Dimensions")
+#pragma pop_macro("assertion")
 
 
 namespace tarch {
@@ -37,7 +43,9 @@ namespace tarch {
     /**
      * @param tolerance Absolute tolerance when we compare two values.
      */
-    bool greater( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
+    inline bool greater( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) {
+      return lhs - rhs >  tolerance;
+    }
 
     /**
      * @param tolerance Absolute tolerance when we compare two values.

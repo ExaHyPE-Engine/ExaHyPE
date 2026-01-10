@@ -64,7 +64,21 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
       t,
       dt
   )) {
+    /*#if defined(GPUOffloadingSYCL)
+    int targetDevice = 0;
+    #if Dimensions==2
+    int numberOfInputValues = ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    int numberOfResultValues = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_UNKNOWNS}};
+    #else
+    int numberOfInputValues = ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    int numberOfResultValues = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_UNKNOWNS}};
+    #endif
+    auto gpuPatchData = ::exahype2::CopyCellDataGPU(patchData, numberOfInputValues, numberOfResultValues);
+    ::exahype2::fd::{{KERNEL_NAMESPACE}}::sycl::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    gpuPatchData.copyBackAndDestroy();
+    #else*/
     ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
+    //#endif
   }
   else
   {% endif %}
@@ -144,9 +158,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocally() {
   computeTask();
   if (_remoteTaskId != -1) {
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(_remoteTaskId,_numberOfResultValues,_outputValues,_maxEigenvalue);
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(_remoteTaskId,_numberOfResultValues,_outputValues,_maxEigenvalue, _marker);
   } else {
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue);
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue, _marker);
   }
 }
 
@@ -325,7 +339,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
     "receiveOutcome(...)",
     "bookmark outcome of task " << taskIdMessage.getValue()
   );
-  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskIdMessage.getValue(),NumberOfResultValues,outputValues,eValueMessage.getValue());
+  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskIdMessage.getValue(),NumberOfResultValues,outputValues,eValueMessage.getValue(), _marker);
   return nullptr;
 }
 #endif
@@ -345,7 +359,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
 /**
  * Also merge the current task
  */
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks, int targetDevice ) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::vector<Task*>& otherTasks, int targetDevice ) {
   logDebug( "fuse(...)", "asked to fuse " << (otherTasks.size()+1) << " tasks into one large GPU task" );
 
   ::exahype2::CellData patchData(otherTasks.size() + 1, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
@@ -376,6 +390,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   //
   bool foundOffloadingBranch = false;
 
+  auto gpuPatchData = ::exahype2::CopyCellDataGPU(patchData, _numberOfInputValues, _numberOfResultValues);
 
   #if defined(GPUOffloadingOMP)
   if (targetDevice>=0) {
@@ -399,9 +414,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   }
   #endif
 
+  gpuPatchData.copyBackAndDestroy();
+
   if (not foundOffloadingBranch) {
     ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
   }
+
+
+  // @todo Ist das alles effizient?
 
 
   //
@@ -411,7 +431,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   //
   for (int i=0; i<patchData.numberOfCells; i++) {
     tarch::freeMemory(patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(
+      patchData.id[i],
+      _numberOfResultValues,
+      patchData.QOut[i],
+      patchData.maxEigenvalue[i],
+      patchData.cellCentre[i],
+      patchData.cellSize[i]
+    );
   }
 }
 {% endif %}

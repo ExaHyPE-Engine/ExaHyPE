@@ -1136,17 +1136,17 @@ fi
 if test "$toolbox_curvi" != false; then
   AC_DEFINE([UseToolboxCurvi], [1], [UseToolboxCurvi])
 
-  LDADD_PEANO_2D_RELEASE=" -lToolboxCurvi2d         $LDADD_PEANO_2D_RELEASE "
-  LDADD_PEANO_2D_STATS="   -lToolboxCurvi2d_stats   $LDADD_PEANO_2D_STATS "
-  LDADD_PEANO_2D_ASSERTS=" -lToolboxCurvi2d_asserts $LDADD_PEANO_2D_ASSERTS "
-  LDADD_PEANO_2D_TRACE="   -lToolboxCurvi2d_trace   $LDADD_PEANO_2D_TRACE "
-  LDADD_PEANO_2D_DEBUG="   -lToolboxCurvi2d_debug   $LDADD_PEANO_2D_DEBUG "
+  LDADD_PEANO_2D_RELEASE=" -lToolboxCurvi         $LDADD_PEANO_2D_RELEASE "
+  LDADD_PEANO_2D_STATS="   -lToolboxCurvi_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lToolboxCurvi_asserts $LDADD_PEANO_2D_ASSERTS "
+  LDADD_PEANO_2D_TRACE="   -lToolboxCurvi_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lToolboxCurvi_debug   $LDADD_PEANO_2D_DEBUG "
 
-  LDADD_PEANO_3D_RELEASE=" -lToolboxCurvi3d         $LDADD_PEANO_3D_RELEASE "
-  LDADD_PEANO_3D_STATS="   -lToolboxCurvi3d_stats   $LDADD_PEANO_3D_STATS "
-  LDADD_PEANO_3D_ASSERTS=" -lToolboxCurvi3d_asserts $LDADD_PEANO_3D_ASSERTS "
-  LDADD_PEANO_3D_TRACE="   -lToolboxCurvi3d_trace   $LDADD_PEANO_3D_TRACE "
-  LDADD_PEANO_3D_DEBUG="   -lToolboxCurvi3d_debug   $LDADD_PEANO_3D_DEBUG "
+  LDADD_PEANO_3D_RELEASE=" -lToolboxCurvi         $LDADD_PEANO_3D_RELEASE "
+  LDADD_PEANO_3D_STATS="   -lToolboxCurvi_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lToolboxCurvi_asserts $LDADD_PEANO_3D_ASSERTS "
+  LDADD_PEANO_3D_TRACE="   -lToolboxCurvi_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lToolboxCurvi_debug   $LDADD_PEANO_3D_DEBUG "
 
   LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/toolbox/curvi "
   LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/toolbox/curvi "

@@ -13,28 +13,28 @@ tarch::logging::Log  toolbox::loadbalancing::strategies::Hardcoded::_log( "toolb
 
 
 toolbox::loadbalancing::strategies::Hardcoded::Hardcoded(
-  std::initializer_list<int> timeStamps,
+  std::initializer_list<int> gridSweeps,
   std::initializer_list<int> splittingTrees,
   std::initializer_list<int> numberOfCells,
   std::initializer_list<int> destinationRanks,
   std::initializer_list<peano4::SplitInstruction::Mode> modes
 ):
   AbstractLoadBalancing( nullptr, nullptr ),
-  _currentTimeStamp(0) {
-  assertionEquals4( timeStamps.size(),       numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
-  assertionEquals4( splittingTrees.size(),   numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
-  assertionEquals4( destinationRanks.size(), numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
-  assertionEquals4( modes.size(),            numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
+  _currentGridSweep(0) {
+  assertionEquals4( gridSweeps.size(),       numberOfCells.size(), gridSweeps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
+  assertionEquals4( splittingTrees.size(),   numberOfCells.size(), gridSweeps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
+  assertionEquals4( destinationRanks.size(), numberOfCells.size(), gridSweeps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
+  assertionEquals4( modes.size(),            numberOfCells.size(), gridSweeps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
 
-  auto timeStamp       = timeStamps.begin();
+  auto gridSweep       = gridSweeps.begin();
   auto splittingTree   = splittingTrees.begin();
   auto cells           = numberOfCells.begin();
   auto destinationRank = destinationRanks.begin();
   auto mode            = modes.begin();
 
-  while (timeStamp!=timeStamps.end()) {
-    _splits.push( Split( *timeStamp, *splittingTree, *cells, *destinationRank, *mode ) );
-    timeStamp++;
+  while (gridSweep != gridSweeps.end()) {
+    _splits.push( Split( *gridSweep, *splittingTree, *cells, *destinationRank, *mode ) );
+    gridSweep++;
     splittingTree++;
     cells++;
     destinationRank++;
@@ -44,26 +44,26 @@ toolbox::loadbalancing::strategies::Hardcoded::Hardcoded(
 
 
 toolbox::loadbalancing::strategies::Hardcoded::Hardcoded(
-  std::initializer_list<int> timeStamps,
+  std::initializer_list<int> gridSweeps,
   std::initializer_list<int> splittingTrees,
   std::initializer_list<int> numberOfCells,
   std::initializer_list<int> destinationRanks,
-  peano4::SplitInstruction::Mode  mode
+  peano4::SplitInstruction::Mode mode
 ):
   AbstractLoadBalancing( nullptr, nullptr ),
-  _currentTimeStamp(0) {
-  assertionEquals4( timeStamps.size(),       numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
-  assertionEquals4( splittingTrees.size(),   numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
-  assertionEquals4( destinationRanks.size(), numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
+  _currentGridSweep(0) {
+  assertionEquals4( gridSweeps.size(),       numberOfCells.size(), gridSweeps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
+  assertionEquals4( splittingTrees.size(),   numberOfCells.size(), gridSweeps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
+  assertionEquals4( destinationRanks.size(), numberOfCells.size(), gridSweeps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
 
-  auto timeStamp       = timeStamps.begin();
+  auto gridSweep       = gridSweeps.begin();
   auto splittingTree   = splittingTrees.begin();
   auto cells           = numberOfCells.begin();
   auto destinationRank = destinationRanks.begin();
 
-  while (timeStamp!=timeStamps.end()) {
-    _splits.push( Split( *timeStamp, *splittingTree, *cells, *destinationRank, mode ) );
-    timeStamp++;
+  while (gridSweep != gridSweeps.end()) {
+    _splits.push( Split( *gridSweep, *splittingTree, *cells, *destinationRank, mode ) );
+    gridSweep++;
     splittingTree++;
     cells++;
     destinationRank++;
@@ -72,29 +72,39 @@ toolbox::loadbalancing::strategies::Hardcoded::Hardcoded(
 
 
 toolbox::loadbalancing::strategies::Hardcoded::Split::Split( const Split& split ):
-  timeStamp( split.timeStamp ),
-  splittingTree( split.splittingTree ),
-  numberOfCells( split.numberOfCells ),
-  destinationRank( split.destinationRank ),
-  mode( split.mode ) {
+  gridSweep(split.gridSweep),
+  splittingTree(split.splittingTree),
+  numberOfCells(split.numberOfCells),
+  destinationRank(split.destinationRank),
+  mode(split.mode) {
 }
 
 
-toolbox::loadbalancing::strategies::Hardcoded::Split::Split( int  timeStamp_, int  splittingTree_, int  numberOfCells_, int  destinationRank_, peano4::SplitInstruction::Mode mode_ ):
-  timeStamp( timeStamp_),
-  splittingTree( splittingTree_),
-  numberOfCells( numberOfCells_ ),
-  destinationRank( destinationRank_ ),
+toolbox::loadbalancing::strategies::Hardcoded::Split::Split( int gridSweep_,
+  int splittingTree_,
+  int numberOfCells_,
+  int destinationRank_,
+  peano4::SplitInstruction::Mode mode_
+):
+  gridSweep(gridSweep_),
+  splittingTree(splittingTree_),
+  numberOfCells(numberOfCells_),
+  destinationRank(destinationRank_),
   mode(mode_) {
 }
 
 
 void toolbox::loadbalancing::strategies::Hardcoded::finishStep() {
-  _currentTimeStamp++;
+  _currentGridSweep++;
 
-  while (not _splits.empty() and _currentTimeStamp>=_splits.front().timeStamp) {
-    if (_currentTimeStamp>_splits.front().timeStamp) {
-      logError( "finishStep()", "splitting instructions lag behind actual simulation evolution (current traversal " << _currentTimeStamp << " while split should have happened in step " << _splits.front().timeStamp << "). Try to catch up");
+  while (not _splits.empty() and _currentGridSweep >= _splits.front().gridSweep) {
+    if (_currentGridSweep > _splits.front().gridSweep) {
+      logError(
+        "finishStep()",
+        "splitting instructions lag behind actual simulation evolution (current grid sweep " 
+        << _currentGridSweep << " while split should have happened in sweep " 
+        << _splits.front().gridSweep << "). Try to catch up"
+      );
     }
 
     Split split( _splits.front() );

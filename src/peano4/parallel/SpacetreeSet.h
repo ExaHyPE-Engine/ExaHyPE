@@ -281,6 +281,14 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * not relevant for inter-rank communication as we know that the buffer won't
      * be deleted before the data has not been sent out - which is only once for the
      * whole cycle.
+     *
+     * @param master: Integer >=0
+     *   This is the master tree involved in this split, i.e. the tree that wants to
+     *   deploy a subgrid to a worker. The number is a tree number and not a rank
+     *   number.
+     *
+     * @param worker: Integer >=0
+     *   This is the target tree number.
      */
     template <class Container>
     static void streamDataFromSplittingTreeToNewTree( Container& stackContainer, int master, int worker );
@@ -479,8 +487,8 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
 
     /**
      * Whenever we join two partitions, we have to stream data from the worker
-     * to the master. In principle, I could omit this, as I realise a ``only
-     * degenerated trees may join'' policy. However, it can happen that a tree
+     * to the master. In principle, I could omit this, as I realise a "only
+     * degenerated trees may join" policy. However, it can happen that a tree
      * joins while other trees split or have split or join as well. While we
      * run through the joining phase, these other ranks have sent their updated
      * info to the worker that is about to join. The master that will hold the
@@ -503,7 +511,10 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
     );
 
     /**
-     * <h2> Merge process </h2>
+     * Clean up empty trees
+     *
+     *
+     * ## Merge process
      *
      * We make the worker first of all decide whether to merge or not. A
      * worker has the control/knowledge whether to join or not. When a rank

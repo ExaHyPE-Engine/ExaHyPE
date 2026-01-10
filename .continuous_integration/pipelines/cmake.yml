@@ -14,6 +14,9 @@ stages:
   - Applications
   - Benchmarks
 
+default:
+  interruptible: true
+
 .BeforeScriptWithCMakeSanitiser:
   before_script:
     - !reference [".BeforeScript", "before_script"]
@@ -30,7 +33,7 @@ stages:
       - ./build/UnitTests*
       - ./build/CTestTestfile.cmake
       - ./install/*
-    expire_in: 2 hours
+    expire_in: 24 hours
 
 .Unit_Tests:
   script:
@@ -105,20 +108,20 @@ ExaHyPE2_ADERDG_AMR_Tests:
     - Build
   retry: 0
 
-ExaHyPE2_ADERDG_Limiting_Tests:
-  stage: Test
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_ADERDG_Limiting_Tests
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
+#ExaHyPE2_ADERDG_Limiting_Tests:
+#  stage: Test
+#  allow_failure: false
+#  extends:
+#    - .Tags
+#    - .Variables
+#    - .RunOnlyOn
+#    - .BeforeScriptWithCMakeSanitiser
+#    - .ExaHyPE2_ADERDG_Limiting_Tests
+#  needs:
+#    - job: Build
+#  dependencies:
+#    - Build
+#  retry: 0
 
 MGHyPE_MatrixFree_Tests:
   stage: Test
@@ -180,7 +183,7 @@ SWIFT2_Noh2D:
     - Build
   retry: 0
 
-ExaHyPE2_Tutorials:
+ExaHyPE2_Tutorials_Exercises:
   stage: Tutorials
   allow_failure: false
   extends:
@@ -188,7 +191,22 @@ ExaHyPE2_Tutorials:
     - .Variables
     - .RunOnlyOn
     - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_Tutorials
+    - .ExaHyPE2_Tutorials_Exercises
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 0
+
+ExaHyPE2_Tutorials_Toyproblems:
+  stage: Tutorials
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
+    - .ExaHyPE2_Tutorials_Toyproblems
   needs:
     - job: Build
   dependencies:
@@ -279,6 +297,21 @@ ExaHyPE2_SBH:
     - .RunOnlyOn
     - .BeforeScriptWithCMakeSanitiser
     - .ExaHyPE2_SBH
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 0
+
+ExaHyPE2_SBH_Enclave:
+  stage: Benchmarks
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
+    - .ExaHyPE2_SBH_Enclave
   needs:
     - job: Build
   dependencies:

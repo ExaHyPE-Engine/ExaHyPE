@@ -11,6 +11,13 @@ import dastgen2.attributes.Integer
 import numpy as np
 
 
+#
+# Doxygen has some issues parsing this file. As I did not manage to find out
+# where these issues come from, I manually exclude this file from the 
+# documentation in documentation/Doxyfile. 
+#
+
+
 class InsertParticlesFromHDF5File(ActionSet):
     def __init__(self, particle_set, filename):
         """!
@@ -26,7 +33,7 @@ class InsertParticlesFromHDF5File(ActionSet):
             filename: String
               Name of the HDF5 file that we want to read.
 
-            @TODO implement some bool checks, e.g. is this a cosmological simulation?
+            @todo implement some bool checks, e.g. is this a cosmological simulation?
             hydro scheme?
 
         """
@@ -124,7 +131,7 @@ class InsertParticlesFromHDF5File(ActionSet):
 
       /*
        * Initialize remaining fields
-       * @TODO some of these should be initialised elsewhere to keep this
+       * @todo some of these should be initialised elsewhere to keep this
        * initialisation script general for any hydro scheme, etc.
        * See swift2::kernels::legacy::first_init_particle()
        */
@@ -135,13 +142,16 @@ class InsertParticlesFromHDF5File(ActionSet):
       const double GridSize_x = GridSize(0);
       const double searchRadiusGlobal = SmlMax * kernel_gamma;
 
-      if (tarch::la::greater(searchRadiusGlobal, 0.5 * GridSize_x)) {
+      if (searchRadiusGlobal > 0.5 * GridSize_x) {
+          // Don't use assertion macro, check this in non-debug modes too
           std::ostringstream out;
-          out << " Global upper limit for search radius is > mesh size. You need to increase your cell size" <<
+          out << " Global upper limit for search radius is > 2. * mesh size." <<
+              " You need to increase your cell size" <<
               " or reduce hydro_h_max in your project python file." <<
               " GridSize:" << GridSize_x <<
               " max global search radius: " << searchRadiusGlobal;
           logError("InsertParticlesFromHDF5File.py:", out.str());
+          std::abort();
       }
 
       newParticle->setSearchRadius( searchRadiusGlobal );

@@ -54,6 +54,9 @@ namespace exahype2 {
  * tarch::multicore::spawnTask(newEnclaveTask, tarch::multicore::NoInDependencies, newEnclaveTask->getTaskId() );
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
+ * You should try to release the enclave task numbers eventually. Otherwise,
+ * you will get huge enclave task maps and an overflow if you are unlucky.
+ *
  *
  * ## Data ownership
  *

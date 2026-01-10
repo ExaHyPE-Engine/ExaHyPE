@@ -69,7 +69,7 @@ the kernels. Just re-invoke make.
 
  As Swift 2 is built on top of Peano 4, all the generic Peano scripts work for Swift, too.
 
- @see \ref page_peano_runtime_analysis
+ @see \ref page_peano_domain_decomposition
  @see `python/exahype2/postprocessing/plot-scaling.py`
  @see `python/exahype2/postprocessing/TimeseriesPlots.py`
 

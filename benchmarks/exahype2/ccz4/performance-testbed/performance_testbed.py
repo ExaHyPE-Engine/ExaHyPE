@@ -45,15 +45,6 @@ floatparams = {
     "domain_r": 1.5,
     "smoothing": 0.0,
     "KOSigma": 8.0  # , \
-    # "itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
-    # "f":1.0, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
-    # "sk":1.0, "bs":1.0#, \
-    # "par_b":666.0, "center_offset_x":-1.0, "center_offset_y":0.0, "center_offset_z":0.0, \
-    # "target_m_plus":1.0, "par_p_plus_x":0.0, "par_p_plus_y":0.0, "par_p_plus_z":0.0, \
-    # "par_s_plus_x":0.0, "par_s_plus_y":0.0, "par_s_plus_z":0.0, \
-    # "target_m_minus":1.0, "par_p_minus_x":0.0, "par_p_minus_y":0.0, "par_p_minus_z":0.0, \
-    # "par_s_minus_x":0.0, "par_s_minus_y":0.0, "par_s_minus_z":0.0, \
-    # "tp_epsilon":1e-6
 }
 
 intparams = {
@@ -103,18 +94,11 @@ if __name__ == "__main__":
         "-m", "--mode", dest="mode", default="release", help="|".join(modes.keys())
     )
     parser.add_argument(
-        "--gpu",
-        dest="GPU",
-        default=False,
-        action="store_true",
-        help="Run with accelerator support",
-    )
-    parser.add_argument(
         "-impl",
         "--implementation",
         dest="implementation",
-        default="fd4-rk1-adaptive",
-        choices=["fd4-rk1-adaptive", "fd4-rk1-adaptive-enclave"],
+        default="fd4-rk1-dsl",
+        choices=["fd4-rk1-adaptive", "fd4-rk1-adaptive-enclave", "fd4-rk1-dsl", "fd4-rk1-dsl-enclave"],
         help="Pick solver type",
     )
     parser.add_argument(
@@ -132,14 +116,6 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="switch on or off the Sommerfeld radiative BC",
-    )
-    parser.add_argument(
-        "-AMRMarker",
-        "--AMR-marker",
-        dest="marker",
-        choices=["none", "poisson"],
-        default="none",
-        help="switch on or off the AMR boundary marker",
     )
     parser.add_argument(
         "-et",
@@ -163,12 +139,8 @@ if __name__ == "__main__":
         dest="scenario",
         default="single-puncture",
         choices=[
-            "gauge",
-            "dia_gauge",
-            "linear",
             "single-puncture",
             "two-punctures",
-            "flat",
         ],
         help="Scenario",
     )
@@ -176,27 +148,11 @@ if __name__ == "__main__":
         "-cfl", "--CFL-ratio", dest="cfl", type=float, default=0.1, help="Set CFL ratio"
     )
     parser.add_argument(
-        "-tracer",
-        "--add-tracer",
-        dest="add_tracer",
-        type=int,
-        default=0,
-        help="Add tracers and specify the seeds. 0-switch off, 1-static point tracer, 2-moving point tracer",
-    )
-    parser.add_argument(
-        "-tn",
-        "--tracer-name",
-        dest="tra_name",
-        type=str,
-        default="de",
-        help="name of output tracer file (temporary)",
-    )
-    parser.add_argument(
         "-exn",
         "--exe-name",
         dest="exe_name",
         type=str,
-        default="test",
+        default="peano4_sbh",
         help="name of output executable file",
     )
     parser.add_argument(
@@ -213,7 +169,6 @@ if __name__ == "__main__":
         dest="interpolation",
         choices=[
             "constant",
-            "order-2",
             "linear-constant-extrap",
             "linear-linear-extrap",
             "linear-con-extrap-lin-normal-interp",
@@ -222,7 +177,7 @@ if __name__ == "__main__":
             "second_order",
             "third_order",
         ],
-        default="linear-lin-extrap-lin-normal-interp",
+        default="second_order",
         help="interpolation scheme for AMR",
     )
     parser.add_argument(
@@ -230,7 +185,7 @@ if __name__ == "__main__":
         "--restriction",
         dest="restriction",
         choices=["average", "inject", "matrix", "second_order"],
-        default="average",
+        default="second_order",
         help="restriction scheme for AMR",
     )
     parser.add_argument(
@@ -273,16 +228,16 @@ if __name__ == "__main__":
     SuperClass = None
 
     print(args.implementation)
-    if (
-        args.implementation == "fd4-rk1-adaptive"
-        or args.implementation == "fd4-rk4-adaptive"
-    ):
+    if args.implementation == "fd4-rk1-adaptive":
         SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
+    if args.implementation=="fd4-rk1-dsl":
+       SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepInExaGRyPE
+    if args.implementation=="fd4-rk1-dsl-enclave":
+       SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepInExaGRyPEWithEnclaveTasking
+       args.SO_flag = False
     if args.implementation == "fd4-rk1-adaptive-enclave":
         SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
         args.SO_flag = False
-    if args.implementation == "fd4-rk1-fixed" or args.implementation == "fd4-rk4-fixed":
-        SuperClass = exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
 
     class CCZ4Solver(SuperClass):
         def __init__(
@@ -315,18 +270,11 @@ if __name__ == "__main__":
 #include "../CCZ4Kernels.h"
 """
             if SuperClass == exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep:
-                if (
-                    args.implementation == "fd4-rk1-adaptive"
-                    or args.implementation == "fd4-rk1-adaptive-enclave"
-                ):
-                    rk_order = 1
-                else:
-                    rk_order = 4
                 SuperClass.__init__(
                     self,
                     name=name,
                     patch_size=patch_size,
-                    rk_order=rk_order,
+                    rk_order=1,
                     unknowns=number_of_unknowns,
                     auxiliary_variables=0,
                     min_meshcell_h=min_volume_h,
@@ -339,18 +287,11 @@ if __name__ == "__main__":
                 SuperClass
                 == exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
             ):
-                if (
-                    args.implementation == "fd4-rk1-adaptive"
-                    or args.implementation == "fd4-rk1-adaptive-enclave"
-                ):
-                    rk_order = 1
-                else:
-                    rk_order = 4
                 SuperClass.__init__(
                     self,
                     name=name,
                     patch_size=patch_size,
-                    rk_order=rk_order,
+                    rk_order=1,
                     unknowns=number_of_unknowns,
                     auxiliary_variables=0,
                     min_meshcell_h=min_volume_h,
@@ -359,39 +300,30 @@ if __name__ == "__main__":
                     KOSigma=KOSig,
                     pde_terms_without_state=True,
                 )
-            elif (
-                SuperClass == exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
-                or SuperClass
-                == exahype2.solvers.rkfd.fd4.GlobalFixedTimeStepWithEnclaveTasking
-            ):
-                if args.implementation == "fd4-rk1-fixed":
-                    rk_order = 1
-                else:
-                    rk_order = 4
+            elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepInExaGRyPE:
                 SuperClass.__init__(
                     self,
                     name=name,
-                    patch_size=patch_size,
-                    rk_order=rk_order,
+                    patch_size=patch_size, 
+                    rk_order=1,
                     unknowns=number_of_unknowns,
                     auxiliary_variables=0,
-                    min_meshcell_h=min_volume_h,
+                    min_meshcell_h=min_volume_h, 
                     max_meshcell_h=max_volume_h,
-                    normalised_time_step_size=0.01,
+                    time_step_relaxation=cfl,
                     KOSigma=KOSig,
+                    reconstruction_with_rk=args.SO_flag
                 )
-            else:
+            elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepInExaGRyPEWithEnclaveTasking:
                 SuperClass.__init__(
                     self,
-                    name=name,
-                    patch_size=patch_size,
+                    name=name, patch_size=patch_size, rk_order=1,
                     unknowns=number_of_unknowns,
                     auxiliary_variables=0,
-                    min_volume_h=min_volume_h,
-                    max_volume_h=max_volume_h,
-                    time_step_relaxation=cfl
-                    # use_gpu =args.GPU #=="fv-fixed-gpu" else False
-                    #                        use_gpu = True if args.implementation=="fv-adaptive-gpu" else False
+                    min_meshcell_h=min_volume_h, max_meshcell_h=max_volume_h,
+                    time_step_relaxation=cfl,
+                    KOSigma=KOSig,
+                    reconstruction_with_rk=args.SO_flag
                 )
 
             self._patch_size = patch_size
@@ -410,16 +342,45 @@ if __name__ == "__main__":
                 SuperClass
                 == exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
             ):
-                self._fused_compute_kernel_call_cpu = exahype2.solvers.rkfd.fd4.kernels.create_compute_kernel_for_FD4(
+                self._fused_compute_kernel_call_cpu = exahype2.solvers.rkfd.fd4.kernels.create_compute_kernel_for_FD4_DSL(
                     self._flux_implementation,
                     self._ncp_implementation,
                     self._source_term_implementation,
                     compute_max_eigenvalue_of_next_time_step=True,
-                    solver_variant=exahype2.solvers.rkfd.kernels.SolverVariant.Multicore,
+                    solver_variant=exahype2.solvers.rkfd.kernels.SolverVariant.Stateless,
                     kernel_variant=exahype2.solvers.rkfd.kernels.KernelVariant.BatchedAoSHeap,
                     KOSigma=self._KO_Sigma,
                 )
-
+                self._fused_compute_kernel_call_gpu = exahype2.solvers.rkfd.fd4.kernels.create_compute_kernel_for_FD4_DSL(
+                    self._flux_implementation,
+                    self._ncp_implementation,
+                    self._source_term_implementation,
+                    compute_max_eigenvalue_of_next_time_step=True,
+                    solver_variant=exahype2.solvers.rkfd.kernels.SolverVariant.AcceleratorWithExplicitCopy,
+                    kernel_variant=exahype2.solvers.rkfd.kernels.KernelVariant.BatchedAoSHeap,
+                    KOSigma=self._KO_Sigma,
+                )
+            elif SuperClass == exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepInExaGRyPEWithEnclaveTasking:
+                self._fused_compute_kernel_call_cpu = exahype2.solvers.rkfd.fd4.kernels.create_compute_kernel_for_FD4InExaGRyPE_DSL(
+                    self._flux_implementation,
+                    self._ncp_implementation,
+                    self._source_term_implementation,
+                    compute_max_eigenvalue_of_next_time_step=True,
+                    solver_variant=exahype2.solvers.rkfd.kernels.SolverVariant.Stateless,
+                    kernel_variant=exahype2.solvers.rkfd.kernels.KernelVariant.BatchedAoSHeap,
+                    KOSigma=self._KO_Sigma,
+                    SecondOrder=args.SO_flag
+                )
+                self._fused_compute_kernel_call_gpu = exahype2.solvers.rkfd.fd4.kernels.create_compute_kernel_for_FD4InExaGRyPE_DSL(
+                    self._flux_implementation,
+                    self._ncp_implementation,
+                    self._source_term_implementation,
+                    compute_max_eigenvalue_of_next_time_step=True,
+                    solver_variant=exahype2.solvers.rkfd.kernels.SolverVariant.AcceleratorWithExplicitCopy,
+                    kernel_variant=exahype2.solvers.rkfd.kernels.KernelVariant.BatchedAoSHeap,
+                    KOSigma=self._KO_Sigma,
+                    SecondOrder=args.SO_flag
+                )
             self.postprocess_updated_patch = """
 {
 """
@@ -429,7 +390,8 @@ if __name__ == "__main__":
                 or SuperClass == exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
                 or SuperClass
                 == exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
-                # or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStepWithEnclaveTasking no fixed enclave version yet
+                or SuperClass == exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepInExaGRyPE
+                or SuperClass == exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepInExaGRyPEWithEnclaveTasking
             ):
                 self.postprocess_updated_patch += """
     #if Dimensions==2
@@ -483,87 +445,29 @@ if __name__ == "__main__":
     # main starts here
     ########################################################################################
     userinfo = []
-    exe = "peano4"
-
-    if args.exe_name != "":
-        exe += "_"
-        exe += args.exe_name
-    if not args.tra_name == "de":
-        exe += "_" + args.tra_name
     project = exahype2.Project(
-        ["benchmarks", "exahype2", "ccz4"], "ccz4", executable=exe
+        ["benchmarks", "exahype2", "ccz4"], "ccz4", executable=args.exe_name
     )
 
     ########################################################################################
     # Pick solver
     ########################################################################################
-    is_aderdg = False
-    is_rkdg = False
     solver_name = "CCZ4"
-    try:
-        if (
-            SuperClass
-            == exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
-        ):
-            is_aderdg = True
-            order = 3
-            unknowns = 59
-            time_step_size = 0.001
-    except Exception as e:
-        pass
-        # msg = "Warning: ADER-DG no supported on this machine"
-        # print(msg)
-        # userinfo.append((msg,e))
-
-    try:
-        if SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
-            is_rkdg = True
-    except Exception as e:
-        pass
-        msg = "Warning: RKDG not supported on this machine"
-        print(msg)
-        userinfo.append((msg, e))
-
-    if is_aderdg:
-        solver_name = "ADERDG" + solver_name
-    elif is_rkdg:
-        solver_name = "RKDG" + solver_name
-    else:
-        solver_name = solver_name
-
-    # if args.SO_flag==True:
-    #  args.cfl=args.cfl/2
-
     min_h = args.min_h
     if min_h <= 0.0:
         print("No minimal mesh size chosen. Set it to max mesh size (regular grid)")
         min_h = args.max_h
 
-    if is_aderdg:
-        my_solver = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize(
-            solver_name,
-            order,
-            unknowns,
-            0,  # auxiliary_variables
-            exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
-            min_h,
-            args.max_h,
-            time_step_size,
-            flux=None,
-            ncp=exahype2.solvers.PDETerms.User_Defined_Implementation,
-            sources=exahype2.solvers.PDETerms.User_Defined_Implementation,
-        )
-    else:
-        my_solver = CCZ4Solver(
-            solver_name,
-            args.patch_size,
-            min_h,
-            args.max_h,
-            args.cfl,
-            args.CCZ4domain_r,
-            args.CCZ4KOSigma,
-        )
-        userinfo.append(("CFL ratio set as " + str(args.cfl), None))
+    my_solver = CCZ4Solver(
+        solver_name,
+        args.patch_size,
+        min_h,
+        args.max_h,
+        args.cfl,
+        args.CCZ4domain_r,
+        args.CCZ4KOSigma,
+    )
+    userinfo.append(("CFL ratio set as " + str(args.cfl), None))
 
     userinfo.append(("The solver is " + args.implementation, None))
 
@@ -571,8 +475,6 @@ if __name__ == "__main__":
     # Pick interpolation scheme
     ########################################################################################
 
-    if args.interpolation == "order-2":
-        my_solver.overlap = 2
 
     if args.interpolation == "constant":
         my_solver.interpolation = "piecewise_constant"
@@ -590,9 +492,6 @@ if __name__ == "__main__":
         print(
             "Interpolation rule: linear+constant extrapolation and linear normal interpolation"
         )
-
-    if args.interpolation == "order-2":
-        my_solver.interpolation = "linear"
 
     tem_interp = ["TP_constant", "TP_linear_with_linear_extrap_normal_interp"]
     tem_restrict = ["TP_inject_normal_extrap", "TP_average_normal_extrap"]
@@ -615,15 +514,11 @@ if __name__ == "__main__":
             exahype2.solvers.rkfd.fd4.switch_to_FD4_matrix_restriction(my_solver)
         elif args.restriction == "second_order":
             exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_restriction(my_solver)
-        #      elif args.restriction == "third_order":
-        #        exahype2.solvers.rkfd.fd4.switch_to_FD4_third_order_restriction( my_solver )
         else:
             exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(
                 my_solver, tem_restrict[1]
             )
             userinfo.append(("FD4 Restriction: " + tem_restrict[1], None))
-
-        # userinfo.append(("FD4 Interpolation: " + tem_interp[1] + " & Restriction: " + tem_restrict[1], None))
 
     ########################################################################################
     # parameter setting according to scenarios
@@ -664,13 +559,7 @@ if __name__ == "__main__":
 
     solverconstants = ""
 
-    if args.scenario == "gauge":
-        solverconstants += "static constexpr int Scenario=0; /* Gauge wave */ \n "
-        userinfo.append(("picking gauge wave scenario", None))
-        floatparams.update({"sk": 0.0})
-        floatparams.update({"bs": 0.0})
-        intparams.update({"LapseType": 0})
-    elif (args.scenario == "two-punctures") or (args.scenario == "single-puncture"):
+    if (args.scenario == "two-punctures") or (args.scenario == "single-puncture"):
         solverconstants += "static constexpr int Scenario=2; /* Two-puncture */ \n"
         userinfo.append(("picking black hole scenario", None))
     else:
@@ -732,25 +621,14 @@ if __name__ == "__main__":
     path = "./"
     if not args.path == "./":
         path = args.path
-    # path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
-    # path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
     probe_point = [-12, -12, 0.0]
     project.add_plot_filter(probe_point, [24.0, 24.0, 0.01], 1)
 
-    # project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
-    # project.set_load_balancing("toolbox::loadbalancing::strategies::SplitOversizedTree","(new ::exahype2::LoadBalancingConfiguration(0.95,500,16))" )
-    # project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOut","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
     project.set_load_balancing(
         "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
         "(new ::exahype2::LoadBalancingConfiguration(0.95,1000,16))",
     )
-    # project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates","(new ::exahype2::LoadBalancingConfiguration(0.98,1000,16))" )
-    # project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
-    # project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
-    # project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOutOnceGridStagnates_SplitOversizedTree","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
-    # project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
-    #    "new ::exahype2::LoadBalancingConfiguration(0.98, 1, 8,::exahype2::LoadBalancingConfiguration::UseNumberOfThreads), new toolbox::loadbalancing::metrics::CellCount()",)
 
     ########################################################################################
     # linking stuff
@@ -760,14 +638,7 @@ if __name__ == "__main__":
         "../../../../applications/exahype2/ccz4/"
     )
 
-    if (
-        args.scenario == "gauge"
-        or args.scenario == "linear"
-        or args.scenario == "dia_gauge"
-        or args.scenario == "flat"
-    ):
-        pass
-    elif args.scenario == "two-punctures" or args.scenario == "single-puncture":
+    if args.scenario == "two-punctures" or args.scenario == "single-puncture":
         peano4_project.output.makefile.add_linker_flag("-lm -lgsl -lgslcblas")
         peano4_project.output.makefile.add_cpp_file(
             "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Utilities.cpp"
@@ -810,11 +681,9 @@ if __name__ == "__main__":
     peano4_project.build(make_clean_first=True)
 
     # Report the application information
-    userinfo.append(("the executable file name: " + exe, None))
+    userinfo.append(("the executable file name: " + args.exe_name, None))
     userinfo.append(("output directory: " + path, None))
     print("=========================================================")
-    if not args.add_tracer == 0:
-        userinfo.append(("tracer output file: " + args.path + "Tracer-test", None))
     if len(userinfo) > 0:
         print("The building information:")
         for msg, exception in userinfo:

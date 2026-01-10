@@ -5,6 +5,17 @@ from .DoF                import DoF
 
 
 class Patch(DoF):
+  """!
+  
+  Patch implementation of a degree of freedom
+  
+  Please study the superclass for details.
+  
+  @image html dof-class-diagram.png
+   
+  """
+  
+    
   readme_package_descriptor = """
 """
 
@@ -47,3 +58,6 @@ Generator: """ + str(self.generator) + """
     self._additional_load_and_store_arguments = new_arguments
 
 
+  # @todo Does this routine hold an MPIAndStorageAspect instance? Would be reasonable. So why do then generators have a load_store_compute_flag
+  # Dann auch @ref tutorials_peano4_mask_out_data_usage Referenzieren!
+  

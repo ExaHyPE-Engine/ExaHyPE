@@ -25,6 +25,8 @@
 
 
 namespace {
+  tarch::logging::Log _log( "tarch::multicore::native" );
+
   /**
    * Helper class for dealing with a global task_group
    * 
@@ -72,7 +74,7 @@ namespace {
  * internally mapped onto lightweight tasks) can spawn additional tasks. As part of
  * the enclave concept, we don't have to wait for these children tasks at the end
  * of the BSP section. Therefore, the BSP tasks enqueue their new children into a
- * separate task group/arena (see spawnTask()) and ``forget'' them.
+ * separate task group/arena (see spawnTask()) and "forget" them.
  *
  *
  * ## Task arenas and task priorities
@@ -138,8 +140,10 @@ void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDepend
    );
   #endif
 
+  logDebug( "waitForTasks(std::set)", "create new empty TBB task with in-dependencies for the tasks to wait " << ::tarch::multicore::toString(inDependencies) );
   taskHandleRepository.addDependencies( handle, inDependencies );
 
+  logDebug( "waitForTasks(std::set)", "run new TBB helper task and wait immediately" );
   #if !defined(SharedTBBExtension) and !defined(TBB_USE_TASK_GROUP_PREVIEW)
   //globalTaskGroup.run( std::move(*handle) );
   globalTaskGroup.run_and_wait( handle );
@@ -148,6 +152,7 @@ void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDepend
   taskGraph.wait( *handle );
   #endif
 
+  logDebug( "waitForTasks(std::set)", "TBB helper task complete, so free handle" );
   delete handle;
 }
 

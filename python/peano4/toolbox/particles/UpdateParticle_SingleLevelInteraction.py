@@ -219,7 +219,7 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >  _activeParticles;
   std::vector< int >                             numberOfCoalescedLocalParticlesPerVertex( TwoPowerD );
   std::vector< int >                            _numberOfActiveParticlesPerVertex( TwoPowerD ); // stay compatible with coalesced version
-  std::vector< bool >                           localParticleIsContainedInCell;
+  std::vector< char >                           localParticleIsContainedInCell;
   auto& numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex;
   auto& activeParticles                           = _activeParticles;
 

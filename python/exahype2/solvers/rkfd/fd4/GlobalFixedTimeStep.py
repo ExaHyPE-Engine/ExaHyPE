@@ -6,7 +6,7 @@ from exahype2.solvers.rkfd.SeparateSweeps import SeparateSweeps
 
 import jinja2
 
-from .kernels import create_compute_kernel_for_FD4
+from .kernels import create_compute_kernel_for_FD4_DSL
 
 from exahype2.solvers.rkfd.kernels import create_abstract_solver_declarations
 from exahype2.solvers.rkfd.kernels import create_abstract_solver_definitions
@@ -104,7 +104,7 @@ class GlobalFixedTimeStep( SeparateSweeps ):
 
     if not                  KOSigma==None:  self._KO_Sigma                                  = KOSigma
 
-    self._compute_kernel_call = create_compute_kernel_for_FD4(
+    self._compute_kernel_call = create_compute_kernel_for_FD4_DSL(
       self._flux_implementation, 
       self._ncp_implementation, 
       self._source_term_implementation, 

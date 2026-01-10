@@ -287,7 +287,7 @@ Define body of constructor
 class DiscontinuousGalerkinDiscretisation(Solver):
   """!
    
-  \page petsc_dg_solver Discontinuous Galerkin Solver with PETSc
+  Discontinuous Galerkin Solver with PETSc
 
   ## The weak formulation
 
@@ -673,7 +673,8 @@ the matrix is applied to
     self.gaussian_integration_points        = gaussian_integration_points
     self.gaussian_integration_weights       = gaussian_integration_weights
 
-    assert( len( quadrature_points_in_unit_interval ) == len( gaussian_integration_points ) == len( gaussian_integration_weights ), "Something has gone wrong. These should all be same length for fixed polynomial degree" )
+    assert len( quadrature_points_in_unit_interval ) == len( gaussian_integration_points,  "Something has gone wrong. These should all be same length for fixed polynomial degree" )
+    assert len( quadrature_points_in_unit_interval ) == len( gaussian_integration_weights, "Something has gone wrong. These should all be same length for fixed polynomial degree" )
     
     self._cell_pde_data   = peano4.datamodel.DaStGen2( name )
     self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",    str(self.number_of_matrix_entries_per_cell) ) )

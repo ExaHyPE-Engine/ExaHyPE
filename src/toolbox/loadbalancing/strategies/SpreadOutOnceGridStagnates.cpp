@@ -58,7 +58,7 @@ int toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::getNumberOfT
       "(maxPermittedTreesPerRank=" << maxPermittedTreesPerRank <<
       ",treesPerRankToExploitAllThreads=" << treesPerRankToExploitAllThreads <<
       ",minTreeSize=" << minTreeSize <<
-      ",treesPerRankAccommodatingMinTreeSize" << treesPerRankAccommodatingMinTreeSize <<
+      ",treesPerRankAccommodatingMinTreeSize=" << treesPerRankAccommodatingMinTreeSize <<
       ")"
     );
   }

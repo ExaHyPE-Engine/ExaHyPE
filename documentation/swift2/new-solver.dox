@@ -57,8 +57,6 @@ Any new particle type should be a subtype of swift2.particle.Particle.
 
 
 
-
-
 ## Declaring particle attributes
 
 You can instantiate your particle of interest and add further attributes to
@@ -76,9 +74,9 @@ to your species with instruction similar to
 ## The algorithmic steps for the particle life cycle
 
 The second essential ingredient to build a particle life cycle is to specify the
-sequence of algorithmic steps. Each particle has to have a routine `algorithm_steps()`
+sequence of algorithmic steps. Each particle has to have a routine algorithm_steps()
 which returns the sequence of algorithmic steps to be run per time step. The individual
-algorithm steps are instances of @ref AlgorithmStep (`python/swift2/particle/AlgorithmStep.py`)
+algorithm steps are instances of python/swift2/particle/AlgorithmStep.py
 As an example, we discuss the SPH density loop:
 
 ~~~~~~~~~~~~~~~~~~~~~
@@ -121,27 +119,29 @@ As an example, we discuss the SPH density loop:
 
 
 - The algorithmic step has a unique name.
-- `dependencies` can distinguish between two options: `NEIGHBOURS` and `SELF`.
+- dependencies can distinguish between two options: NEIGHBOURS and SELF.
   These refer to the two type of operations that are done in the SPH context:
   either the computation depends on the particle itself or it requires
   contributions from neighbours.
-- `effect` has different options depending on the output type of the
-  calculation, e.g. `ALTER_LOCAL_STATE` means that only the current particle is
+- effect has different options depending on the output type of the
+  calculation, e.g. ALTER_LOCAL_STATE means that only the current particle is
   updated. Other options notably include changes of the position or cut-off
   radius or also the possibility that the code asks Peano to rerun this step.
-- `cell_kernel` invokes a compute kernel which depends on the `localParticles`
-  and `activeParticles` sets of the PIDT scheme.
-- `touch_vertex_first_time_kernel` invokes a compute kernel which depends
-  exclusively on the `localParticles` set of the PIDT scheme when the particle
-  is first `touched' during the mesh traversal.
-- `touch_vertex_last_time_kernel` analogous to the previous one.
-- `includes` allows us to ensure that the kernels that we invoke are
+- cell_kernel invokes a compute kernel which depends on the localParticles
+  and activeParticles sets of the PIDT scheme.
+- touch_vertex_first_time_kernel invokes a compute kernel which depends
+  exclusively on the localParticles set of the PIDT scheme when the particle
+  is first touched during the mesh traversal.
+- touch_vertex_last_time_kernel analogous to the previous one.
+- includes allows us to ensure that the kernels that we invoke are
   well-known.
 - You can inform Swift about dependency invariants such as
+
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
   cell_kernel_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
   In non-release builds, these will be checked at runtime.
 
 
@@ -155,7 +155,7 @@ lets algorithm_steps() and initialisation_steps() then "assemble" the particle
 flow from this dictionary.
 
 
-@subsubsection Section_SwiftAlgorithmStepsInitialization The algorithmic steps for the particle initialisation
+## The algorithmic steps for the particle initialisation
 
 This is very similar to the algorithmic steps. Each particle offers a routine
 initialisation_steps() which returns a sequence of steps that have to be called
@@ -167,6 +167,7 @@ of the particles is correct.
 ### Remarks on particular particle update steps
 
 #### Drifts (movements)
+
 
 Movements and changes to the paticle cut-offs should, in line with the
 @ref page_toolbox_particles_mesh_consistency "discussion in Peano's toolbox",
@@ -212,7 +213,6 @@ is configured with
 - swift2.particle.AlgorithmStep.Effect is set to
   CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN.
 
-
 #### Multiscale interactions
 
 If particles interact with particles, we have to keep in mind that these
@@ -242,8 +242,8 @@ set of neighbouring particles available! Rerunning a step is triggered through
 the particle's species: The code has to invoke its setRerunPreviousGridSweep().
 
 
-@todo Conflict of concurrent data access is here, but it is not really a
-conflict. It is a simple critical section.
+@todo Conflict of concurrent data access is here, but it is not really a conflict. It is a simple critical section.
+
 
 
 #### Reruns of steps
@@ -260,7 +260,7 @@ rerun through the species. The idea is as follows:
 The clss swift2::ParticleSpecies provides further details. However, the user is
 usually only handling those to core operations. All global reductions, i.e.
 synchronisation of ranks, and the actual reruns are then championed by the
-Swift/Peano framework.
+Swift 2/Peano 4 framework.
 
 
 #### Iterators
@@ -328,6 +328,12 @@ within the algorithm steps (see remark above on invariants) and performance
 engineers (see remarks below).
 
 
+
+
+
+
+
+
 # Cut-off radius realisation (e.g. in the force calculation)
 
 Swift 2 builds up its interaction lists (who has to be checked against whom)
@@ -351,6 +357,7 @@ numerical value is @f$\sim 2@f$.
 
 Naturally, we must ensure that the search radius is always equal or greater than
 the interaction radius.
+
 
 Our code runs through the mesh and looks at all particles around a particle
 within the search radius. **It is important to note that we have different types
@@ -411,6 +418,7 @@ into account as it is stored within a vertex that is not adjacent to the current
 cell. We miss out on this iteration.
 
 
+
 # Tune a kernel realisation
 
 Swift 2 codes can be tuned in many ways. First, users can tune
@@ -421,6 +429,7 @@ themselves.
 Before you continue to read, please
 consult @ref swift_runtime_analysis "Swift's page on runtime analysis", too,
 so all follow-up steps can be supported with appropriate measurements.
+
 
 
 ## Move checks out of the kernels
@@ -451,6 +460,7 @@ This again can be done by passing another guard into the iterator. Replace
 
 with
 
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ::swift2::kernels::forAllParticlePairs( cellMarker, ..., ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>, ::swift2::kernels::legacy::densityKernelPairEvaluationPredicate<globaldata::HydroPart>);
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -464,6 +474,7 @@ the compute kernel without these internal checks:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
+
 <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;">
 If often start with kernels similar to densityKernelWithoutChecks() and add in
 their documentation with which predicate they have to be combined. So I write
@@ -472,6 +483,7 @@ After that, I write a second routine  densityKernel() which really just
 evaluates this predicate as recommended and then forwards the call to
 densityKernelWithoutChecks().
 </div>
+
 
 
 If you have a rather complicated logic, such as
@@ -520,7 +532,7 @@ types that do not stick exactly to all default naming conventions).
 Vectorisation requires very aggressive inlining. To facilitate such inlining,
 all the setters and getters of particle attributes have to be available in the
 header. Study the
-@ref page_dastgen_home "DaStGen documentation" for remarks how to move getters and
+@ref page_third-party_dastgen "DaStGen documentation" for remarks how to move getters and
 settings into the header. Notably study the semantics of the function
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -529,6 +541,7 @@ particle.data.expose_all_attributes_in_header_file()
 
 which moves all attribute setters and getters into the header and hence
 facilitiates very aggressive inlining via copy n paste.
+
 
 ### Validate impact of your work
 
@@ -579,7 +592,6 @@ which is not what we wanted. It is important to study the actual compiler
 feedback.
 </div>
 
-
 ### Tweak your C++ code
 
 We've started to collect a list of todos and no-goes for the vectorisation
@@ -618,15 +630,14 @@ incomplete. But it is a reasonable starting point:
   Along the same lines, we sometimes encouter issues with the max and
   min function. While replacing it with a manual case distinction
 
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  auto value = newValue > value : newValue : value;
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+               auto value = newValue > value : newValue : value;
 
-  might
-  help for some compilers, it is usually a bad idea and leads to error
+  might help for some compilers, it is usually a bad idea and leads to error
   reports due to dependencies. We found it more convenient to work with
   the actual C++ max function. In this case, the vectorisation however
   works if and only if we translate with -Ofast or -ffast-math!
+  
+
 - Complex statements such as
 
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -647,9 +658,5 @@ incomplete. But it is a reasonable starting point:
   vectorisation seems to work.
 
 
-
-
-
+  
  */
-
-

@@ -6,6 +6,7 @@ from enum import Enum
 class Node(ABC):
     output_format = None
     spaces_per_tab = 4
+    use_accelerator = False
     
     @abstractmethod
     def print_cpp(self, indent_level = 0):
@@ -45,9 +46,13 @@ class Type(Node):
 
 
 class Argument(Node):
-    def __init__(self, id, type: Type):
+    def __init__(self, id, argument_type: Type):
         self.id = id
-        self._type = type
+        self._type = argument_type
+        if Node.use_accelerator == True:
+            if type(self._type) is TCustom and self._type._type.find("CellData") != -1:
+                index = self._type._type.find("CellData")
+                self._type._type = self._type._type[0:index] + "CopyCellDataGPU" + self._type._type[index + 8:]
     
     def print_cpp(self, indent_level = 0):
         return self._type.print_cpp() + " " + self.id
@@ -67,6 +72,7 @@ class Argument(Node):
 
 class FunctionDefinition(Node):
     _stateless = False
+    _syclDataToCopy = []
 
     def __init__(self, id, return_type: Type, template = None, namespaces = [], stateless = False):
         self.id = id
@@ -76,6 +82,7 @@ class FunctionDefinition(Node):
         self._body = []
         self._namespaces = namespaces
         FunctionDefinition._stateless = stateless
+
 
     def add_statement(self, statement: Statement):
         self._body.append(statement)
@@ -94,7 +101,7 @@ class FunctionDefinition(Node):
         current_indent = indent_level + 1  # Indentation increases inside namespace
         argument_prints = [argument.print_cpp() for argument in self._arguments]
 
-        return f"""#include <fstream>\n{namespace_header}
+        return f"""{namespace_header}
 {template_string}{' ' * current_indent * Node.spaces_per_tab}{self._return_type.print_cpp()} {self.id}({', '.join(argument_prints)});
 {namespace_footer}
 """
@@ -113,7 +120,6 @@ class FunctionDefinition(Node):
 
         return f"""{namespace_header}
 {template_string}{' ' * current_indent * Node.spaces_per_tab}{self._return_type.print_cpp()} {self.id}({', '.join(argument_prints)}) {{
-std::ofstream log;
 {os.linesep.join(statement_prints)}
 {' ' * current_indent * Node.spaces_per_tab}}}
 {namespace_footer}
@@ -149,11 +155,21 @@ std::ofstream log;
         current_indent = indent_level + 1  # Indentation increases inside namespace
         statement_prints = [statement.print_sycl(current_indent + 1) for statement in self._body]
         argument_prints = [argument.print_sycl() for argument in self._arguments]
-        #statement_prints.append("::sycl::queue Queue;")
+        statement_prints.insert(0, "::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);")
+        statement_prints.insert(1, "size_t range0, range1, range2;")
+
+        data_copy_prints = []
+        for dataBlockCreation in FunctionDefinition._syclDataToCopy:
+            if len(dataBlockCreation._dataBlock._iteration_range) > 1:
+                step_size = Integer(1)
+                for d in dataBlockCreation._dataBlock._iteration_range[0:-1]:
+                    step_size = step_size * (d[1] - d[0])
+                size = step_size * (dataBlockCreation._dataBlock._iteration_range[-1][1] - dataBlockCreation._dataBlock._iteration_range[-1][0])
 
         return f"""{namespace_header}
 {template_string}{' ' * current_indent * Node.spaces_per_tab}{self._return_type.print_sycl()} {self.id}({', '.join(argument_prints)}) {{
 {os.linesep.join(statement_prints)}
+{os.linesep.join(data_copy_prints)}
 {' ' * current_indent * Node.spaces_per_tab}}}
 {namespace_footer}
 """
@@ -528,9 +544,13 @@ class DataBlock(Expression):
 
     def linearise_index(self, indices, dimensions, offset_start_index = 0):
         factors = [Integer(1)]
-        index_list = indices[0:-1]
         for i in range(0, len(dimensions) - 1):
             factors.append(factors[-1] * (self._memory_range[i][1]))
+        if Node.use_accelerator == False:
+            index_list = indices[0:-1]
+        else:
+            index_list = indices
+            
         if type(dimensions[-len(index_list)][1] - dimensions[-len(index_list)][0]) is Integer and (dimensions[-len(index_list)][1] - dimensions[-len(index_list)][0])._value == 1:
             index = self._offset[offset_start_index]
         else:
@@ -552,7 +572,10 @@ class DataBlock(Expression):
         if len(self._iteration_range) == 1:
             return Subscript(self, index_list[-1])
         else:
-            return Subscript(Subscript(self, index_list[-1]), self.linearise_index(index_list, self._iteration_range[0:-1], start_index))
+            if Node.use_accelerator == False:
+                return Subscript(Subscript(self, index_list[-1]), self.linearise_index(index_list, self._iteration_range[0:-1], start_index))
+            else:
+                return Subscript(self, self.linearise_index(index_list, self._iteration_range, start_index))
 
     def get_type(self):
         return TDataBlock(len(self._iteration_range), self._underlying_type)
@@ -1151,16 +1174,16 @@ class DataBlockUnaryMax:
     def set_output_variable(self, outputVariable):
         self._outputVariable = Name.variables[outputVariable.id]
         self._loop = For(self._dataBlock._iteration_range[-1])
-        loops = [self._loop]
+        self._loops = [self._loop]
         self._loop.add_statement(Assignment(self._outputVariable.multidimensional_index([self._loop.get_iteration_variable()]), Float(0.0)))
         for i in range(len(self._dataBlock._iteration_range) - 2, -1, -1):
-            loops.append(For(self._dataBlock._iteration_range[i]))
-            loops[-2].add_statement(loops[-1])
+            self._loops.append(For(self._dataBlock._iteration_range[i]))
+            self._loops[-2].add_statement(self._loops[-1])
         index = []
-        for loop in loops[::-1]:
+        for loop in self._loops[::-1]:
             index.append(loop.get_iteration_variable())
-        loops[-1].add_statement(Assignment(self._outputVariable.multidimensional_index(index), Max(self._outputVariable.multidimensional_index(index), self._dataBlock.multidimensional_index(index))))
-        for loop in loops:
+        self._loops[-1].add_statement(Assignment(self._outputVariable.multidimensional_index(index), Max(self._outputVariable.multidimensional_index(index), self._dataBlock.multidimensional_index(index))))
+        for loop in self._loops:
             loop.close_scope()
     
     def get_type(self):
@@ -1170,10 +1193,22 @@ class DataBlockUnaryMax:
         return self._loop.print_cpp(indent_level)
     
     def print_omp(self, indent_level = 0):
-        return self._loop.print_cpp(indent_level)
+        return self._loop.print_omp(indent_level)
+    
+    def print_sycl(self, indent_level = 0):
+        ranges = [f"range{i} = {loop.get_interval_size().print_sycl()};" for i, loop in enumerate(self._loops[0:3])]
+        indexing = [f"int {loop.get_iteration_variable().print_sycl()} = index[{i}];" for i, loop in enumerate(self._loops[0:3])]
+        statement_prints = [statement.print_sycl(indent_level + 1) for statement in self._loops[2]._statements]
+        return os.linesep.join(ranges) + "\n" + ' ' * indent_level * Node.spaces_per_tab + f"""queue.submit([&](::sycl::handler& handler) {{handler.memset({self._outputVariable.print_sycl()}, 0, sizeof(double) * {self._loop.get_interval_size().print_sycl()}); }}).wait();
+{' ' * indent_level * Node.spaces_per_tab}queue.submit([&](::sycl::handler& handler) {{
+{' ' * indent_level * Node.spaces_per_tab}handler.parallel_for(::sycl::range<3>{{range0, range1, range2}}, [=](::sycl::item<3> index) {{
+{os.linesep.join(indexing)}
+{self._loops[3].print_sycl(indent_level + 1)}
+{' ' * (indent_level + 1) * Node.spaces_per_tab}}});
+{' ' * indent_level * Node.spaces_per_tab}}}).wait();"""
     
     def print_mlir(self, indent_level = 0):
-        return self._loop.print_cpp(indent_level)
+        return self._loop.print_mlir(indent_level)
     
     def print_tree(self, indent_level=0):
         return f"""DataBlockUnaryMax:
@@ -1340,8 +1375,8 @@ class If(Statement):
 """ + ' ' * indent_level * Node.spaces_per_tab + "}"
     
     def print_sycl(self, indent_level=0):
-        statement_prints = [statement.print_cpp(indent_level + 1) for statement in self._statements]
-        return ' ' * indent_level * Node.spaces_per_tab + f"""if constexpr ({self._boolean.print_cpp()}) {{
+        statement_prints = [statement.print_sycl(indent_level + 1) for statement in self._statements]
+        return ' ' * indent_level * Node.spaces_per_tab + f"""if constexpr ({self._boolean.print_sycl()}) {{
 {os.linesep.join(statement_prints)}
 """ + ' ' * indent_level * Node.spaces_per_tab + "}"
     
@@ -1488,7 +1523,7 @@ class Max(Statement):
         return ' ' * indent_level * Node.spaces_per_tab + f"""std::max({self._lhs.print_omp()}, {self._rhs.print_omp()});"""
 
     def print_sycl(self, indent_level=0):
-        return ' ' * indent_level * Node.spaces_per_tab + f"""std::max({self._lhs.print_sycl()}, {self._rhs.print_sycl()});"""
+        return ' ' * indent_level * Node.spaces_per_tab + f"""::sycl::max({self._lhs.print_sycl()}, {self._rhs.print_sycl()});"""
 
     def print_mlir(self, indent_level=0):
         return ' ' * indent_level * Node.spaces_per_tab + f"""affine.max({self._lhs.print_mlir()}, {self._rhs.print_mlir()});"""
@@ -1514,38 +1549,46 @@ class MemoryAllocation(Statement):
             MemoryAllocation.memoryAllocated[-1].append(self)
 
         if len(self._dimensions) > 1:
-            size = self._dimensions[-2]
+            self._size = self._dimensions[-2]
             for i in range(len(self._dimensions) - 3, -1, -1):
-                size = size * self._dimensions[i]
+                self._size = self._size * self._dimensions[i]
 
             self._loop = For([Integer(0), self._dimensions[-1]])
-            self._loop.add_statement(MemoryAllocation(Subscript(self._name, self._loop.get_iteration_variable()), self._type, [size], False, False))
+            self._loop.add_statement(MemoryAllocation(Subscript(self._name, self._loop.get_iteration_variable()), self._type, [self._size], False, False))
             self._loop.close_scope()
     
     def print_cpp(self, indent_level=0):
         if len(self._dimensions) == 1:
             return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_cpp() + "* " if self._specify_type else ""}{self._name.print_cpp()} = new {self._type.print_cpp()}[{self._dimensions[0].print_cpp()}];"""
         else:
-            size = self._dimensions[-2]
-            for i in range(len(self._dimensions) - 3, -1, -1):
-                size = size * self._dimensions[i]
-
-            return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_cpp()}** {self._name.print_cpp()} = new {self._type.print_cpp()}*[{self._dimensions[-1].print_cpp()}];
+            if Node.use_accelerator == False:
+                return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_cpp()}** {self._name.print_cpp()} = new {self._type.print_cpp()}*[{self._dimensions[-1].print_cpp()}];
 {self._loop.print_cpp(indent_level)}"""
+            else:
+                return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_cpp()}* {self._name.print_cpp()} = new {self._type.print_cpp()}[{(self._size * self._dimensions[-1]).print_cpp()}];"""
+
         
     def print_omp(self, indent_level=0):
         if len(self._dimensions) == 1:
             return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp() + "* " if self._specify_type else ""}{self._name.print_omp()} = new {self._type.print_omp()}[{self._dimensions[0].print_omp()}];"""
         else:
-            return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp()}** {self._name.print_omp()} = new {self._type.print_omp()}*[{self._dimensions[-1].print_omp()}];
+            if Node.use_accelerator == False:
+                return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp()}** {self._name.print_omp()} = new {self._type.print_omp()}*[{self._dimensions[-1].print_omp()}];
 {self._loop.print_omp(indent_level)}"""
+            else:
+                return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp()}* {self._name.print_omp()} = new {self._type.print_omp()}[{(self._size * self._dimensions[-1]).print_omp()}];"""
         
     def print_sycl(self, indent_level=0):
         if len(self._dimensions) == 1:
-            return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_sycl() + "* " if self._specify_type else ""}{self._name.print_sycl()} = new {self._type.print_sycl()}[{self._dimensions[0].print_sycl()}];"""
+            return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_sycl() + "* " if self._specify_type else ""}{self._name.print_sycl()} = ::sycl::malloc_shared<{self._type.print_omp()}>({self._dimensions[0].print_sycl()}, queue);"""
         else:
-            return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_sycl()}** {self._name.print_sycl()} = new {self._type.print_sycl()}*[{self._dimensions[-1].print_sycl()}];
-{self._loop.print_sycl(indent_level)}"""
+            return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_sycl()}* {self._name.print_sycl()} = ::sycl::malloc_shared<{self._type.print_omp()}>({(self._size * self._dimensions[-1]).print_sycl()}, queue);"""
+            #size = self._dimensions[-1]
+            #for i in range(len(self._dimensions) - 2, -1, -1):
+            #    size = size * self._dimensions[i]
+            #return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_sycl()}** {self._name.print_sycl()} = ::sycl::malloc_shared<{self._type.print_omp()}*>({size.print_sycl()}, queue);"""
+            #return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_sycl()}** {self._name.print_sycl()} = ::sycl::malloc_shared<{self._type.print_omp()}*>({self._dimensions[-1].print_sycl()}, queue);
+#{self._loop.print_sycl(indent_level)}"""
         
     def print_mlir(self, indent_level=0):
         return ' ' * indent_level * Node.spaces_per_tab + f"""{self._name.print_mlir()} = memref.alloc() : {self._name.get_type().print_mlir()}"""
@@ -1573,22 +1616,28 @@ class MemoryDeallocation(Statement):
         if len(self._dimensions) == 1:
             return ' ' * indent_level * Node.spaces_per_tab + f"""delete[] {self._name.print_cpp()};"""
         else:
-            return f"""{self._loop.print_cpp(indent_level)}
+            if Node.use_accelerator == False:
+                return f"""{self._loop.print_cpp(indent_level)}
 {' ' * indent_level * Node.spaces_per_tab}delete[] {self._name.print_cpp()};"""
+            else:
+                return f"""{' ' * indent_level * Node.spaces_per_tab}delete[] {self._name.print_cpp()};"""
 
     def print_omp(self, indent_level=0):
         if len(self._dimensions) == 1:
             return ' ' * indent_level * Node.spaces_per_tab + f"""delete[] {self._name.print_omp()};"""
         else:
-            return f"""{self._loop.print_omp(indent_level)}
+            if Node.use_accelerator == False:
+                return f"""{self._loop.print_omp(indent_level)}
 {' ' * indent_level * Node.spaces_per_tab}delete[] {self._name.print_omp()};"""
+            else:
+                return f"""{' ' * indent_level * Node.spaces_per_tab}delete[] {self._name.print_omp()};"""
 
     def print_sycl(self, indent_level=0):
-        if len(self._dimensions) == 1:
-            return ' ' * indent_level * Node.spaces_per_tab + f"""delete[] {self._name.print_sycl()};"""
-        else:
-            return f"""{self._loop.print_sycl(indent_level)}
-{' ' * indent_level * Node.spaces_per_tab}delete[] {self._name.print_sycl()};"""
+        return ' ' * indent_level * Node.spaces_per_tab + f"""::sycl::free({self._name.print_sycl()}, queue);"""
+        #else:
+        #    return f"""{' ' * indent_level * Node.spaces_per_tab}::sycl::free({self._name.print_sycl()}, queue);"""
+#            return f"""{self._loop.print_sycl(indent_level)}
+#{' ' * indent_level * Node.spaces_per_tab}::sycl::free({self._name.print_sycl()}, queue);"""
 
     def print_mlir(self, indent_level=0):
         return ' ' * indent_level * Node.spaces_per_tab + f"""memref.dealloc {self._name.print_mlir()} : {self._name.get_type().print_mlir()}"""
@@ -1629,23 +1678,42 @@ class DataBlockConstructionFromExisting(Statement):
         self._dataBlock = dataBlock
         self._dataBlock.id = name.id
         Name.variables.update({self._name.id: self._dataBlock})
+        FunctionDefinition._syclDataToCopy.append(self)
 
     def print_cpp(self, indent_level = 0):
         type_print = self._name.get_type().print_cpp()
-        if len(self._dataBlock._iteration_range) > 1:
+        if len(self._dataBlock._iteration_range) > 1 and Node.use_accelerator == False:
             type_print += "*"
         return ' ' * indent_level * Node.spaces_per_tab + f"{type_print} {self._name.print_cpp()} = {self._dataBlock._internal.print_cpp()};"
     
     def print_omp(self, indent_level = 0):
         type_print = self._name.get_type().print_omp()
-        if len(self._dataBlock._iteration_range) > 1:
+        if len(self._dataBlock._iteration_range) > 1 and Node.use_accelerator == False:
             type_print += "*"
         return ' ' * indent_level * Node.spaces_per_tab + f"{type_print} {self._name.print_omp()} = {self._dataBlock._internal.print_omp()};"
     
     def print_sycl(self, indent_level = 0):
         type_print = self._name.get_type().print_sycl()
-        if len(self._dataBlock._iteration_range) > 1:
+        if len(self._dataBlock._iteration_range) > 1 and Node.use_accelerator == False:
             type_print += "*"
+        return ' ' * indent_level * Node.spaces_per_tab + f"{type_print} {self._name.print_sycl()} = {self._dataBlock._internal.print_sycl()};"
+#            step_size = Integer(1)
+#            for d in self._dataBlock._iteration_range[0:-1]:
+#                step_size = step_size * (d[1] - d[0])
+#            size = step_size * (self._dataBlock._iteration_range[-1][1] - self._dataBlock._iteration_range[-1][0])
+#            return f"""{' ' * indent_level * Node.spaces_per_tab}auto {self._name.print_sycl()} = ::sycl::malloc_shared<double>({size.print_sycl()}, queue);
+#{' ' * indent_level * Node.spaces_per_tab}for (int z = 0; z < {(self._dataBlock._iteration_range[-1][1]-self._dataBlock._iteration_range[-1][0]).print_sycl()}; z++){{
+#""" + (f"""{' ' * (indent_level + 1) * Node.spaces_per_tab}queue.memcpy(&{self._name.print_sycl()}[{step_size.print_sycl()} * z], {self._dataBlock._internal.print_sycl()}[z], {step_size.print_sycl()} * sizeof({self._dataBlock._underlying_type.print_sycl()})).wait();""" if self._dataBlock._internal.print_sycl()[-4:] != "QOut" else """""") + f"""
+#{' ' * indent_level * Node.spaces_per_tab}}}
+#"""
+#            for d in self._dataBlock._iteration_range[0:-1]:
+#                size = size * (d[1] - d[0])
+#            return f"""{' ' * indent_level * Node.spaces_per_tab}auto {self._name.print_sycl()} = ::sycl::malloc_shared<double*>({(self._dataBlock._iteration_range[-1][1]-self._dataBlock._iteration_range[-1][0]).print_sycl()}, queue);
+#{' ' * indent_level * Node.spaces_per_tab}for (int z = 0; z < {(self._dataBlock._iteration_range[-1][1]-self._dataBlock._iteration_range[-1][0]).print_sycl()}; z++){{
+#{' ' * (indent_level + 1) * Node.spaces_per_tab}{self._name.print_sycl()}[z] = ::sycl::malloc_shared<double>({size.print_sycl()}, queue);
+#""" + (f"""{' ' * (indent_level + 1) * Node.spaces_per_tab}queue.memcpy({self._name.print_sycl()}[z], {self._dataBlock._internal.print_sycl()}[z], {size.print_sycl()} * sizeof({self._dataBlock._underlying_type.print_sycl()})).wait();""" if self._dataBlock._internal.print_sycl()[-4:] != "QOut" else """""") + f"""
+#{' ' * indent_level * Node.spaces_per_tab}}}
+#"""
         return ' ' * indent_level * Node.spaces_per_tab + f"{type_print} {self._name.print_sycl()} = {self._dataBlock._internal.print_sycl()};"
     
     def print_mlir(self, indent_level = 0):
@@ -1754,19 +1822,33 @@ class DataBlockConstructionFromFunction(Statement):
         for i in range(len(inner_loops) - 1, -1, -1):
             inner_loops[i].close_scope()
         self.initialisation.close_scope()
+        self._loops = inner_loops
+        self._loops.insert(0, self.initialisation)
 
     def print_cpp(self, indent_level = 0):
         return f"""{self.memoryAllocation.print_cpp(indent_level)}
 {self.initialisation.print_cpp(indent_level)}"""
     
     def print_omp(self, indent_level = 0):
+        if Node.use_accelerator == True:
+            omp_pragma = "#pragma omp target teams distribute parallel for simd collapse(Dimensions + 1) device(targetDevice)"
+        else:
+            omp_pragma = "#pragma omp parallel for simd collapse(Dimensions + 1) schedule(static, 1)"
         return f"""{self.memoryAllocation.print_omp(indent_level)}
-{' ' * indent_level * Node.spaces_per_tab}#pragma omp parallel for simd collapse(Dimensions + 1) schedule(static, 1)
+{' ' * indent_level * Node.spaces_per_tab + omp_pragma}
 {self.initialisation.print_omp(indent_level)}"""
     
     def print_sycl(self, indent_level = 0):
-        return f"""{self.memoryAllocation.print_sycl(indent_level)}
-{self.initialisation.print_sycl(indent_level)}"""
+        ranges = [f"range{i} = {loop.get_interval_size().print_sycl()};" for i, loop in enumerate(self._loops[0:3])]
+        indexing = [f"int {loop.get_iteration_variable().print_sycl()} = index[{i}];" for i, loop in enumerate(self._loops[0:3])]
+        statement_prints = [statement.print_sycl(indent_level + 1) for statement in self._loops[2]._statements]
+        return self.memoryAllocation.print_sycl(indent_level) + os.linesep.join(ranges) + "\n" + ' ' * indent_level * Node.spaces_per_tab + f"""queue.submit([&](::sycl::handler& handler) {{
+{' ' * indent_level * Node.spaces_per_tab}handler.parallel_for(::sycl::range<3>{{range0, range1, range2}}, [=](::sycl::item<3> index) {{
+{os.linesep.join(indexing)}
+{os.linesep.join(statement_prints)}
+{' ' * (indent_level + 1) * Node.spaces_per_tab}}});
+{' ' * indent_level * Node.spaces_per_tab}}}).wait();"""
+
 
     def print_mlir(self, indent_level = 0):
         return f"""{self.memoryAllocation.print_mlir(indent_level)}
@@ -1813,15 +1895,15 @@ class DataBlockAssignment(Statement):
         else:
             self._rhs = rhs
 
-        loops = []
+        self._loops = []
         index = []
 
-        loops.append(For([Integer(0), self._lhs._iteration_range[-1][1] - self._lhs._iteration_range[-1][0]]))
+        self._loops.append(For([Integer(0), self._lhs._iteration_range[-1][1] - self._lhs._iteration_range[-1][0]]))
         for i in range(len(self._lhs._memory_range) - 2, -1, -1):
-            loops.append(For([Integer(0), self._lhs._iteration_range[i][1] - self._lhs._iteration_range[i][0]]))
+            self._loops.append(For([Integer(0), self._lhs._iteration_range[i][1] - self._lhs._iteration_range[i][0]]))
        
         for i in range(len(self._lhs._memory_range) - 1, -1, -1):
-            index.append(loops[i].get_iteration_variable())              
+            index.append(self._loops[i].get_iteration_variable())              
 
         if type(self._rhs.get_type()) is TDataBlock:
             rhs_offset = []
@@ -1836,24 +1918,38 @@ class DataBlockAssignment(Statement):
 
         lhs_offset = [Integer(0) for i in self._lhs._iteration_range]
 
-        loops[-1].add_statement(Assignment(self._lhs.multidimensional_index(index), self._rhs.multidimensional_index(index)))
-        for i in range(0, len(loops) - 1):
-            loops[i].add_statement(loops[i + 1])
+        self._loops[-1].add_statement(Assignment(self._lhs.multidimensional_index(index), self._rhs.multidimensional_index(index)))
+        for i in range(0, len(self._loops) - 1):
+            self._loops[i].add_statement(self._loops[i + 1])
 
-        for loop in loops[::-1]:
+        for loop in self._loops[::-1]:
             loop.close_scope()
-        self._loop = loops[0]
-        self._numDimensions = len(loops)
+        self._loop = self._loops[0]
+        self._numDimensions = len(self._loops)
     
     def print_cpp(self, indent_level = 0):
         return self._loop.print_cpp(indent_level)
     
     def print_omp(self, indent_level = 0):
-        return ' ' * indent_level * Node.spaces_per_tab + f"""#pragma omp parallel for simd collapse(Dimensions + 1) schedule(static, 1)
+        if Node.use_accelerator == True:
+            omp_pragma = "#pragma omp target teams distribute parallel for simd collapse(Dimensions + 1) device(targetDevice)"
+        else:
+            omp_pragma = "#pragma omp parallel for simd collapse(Dimensions + 1) schedule(static, 1)"
+        return ' ' * indent_level * Node.spaces_per_tab + omp_pragma + f"""
 {self._loop.print_omp(indent_level)}"""
     
     def print_sycl(self, indent_level = 0):
-        return self._loop.print_sycl(indent_level)
+        #return self._loop.print_sycl(indent_level)
+        ranges = [f"range{i} = {loop.get_interval_size().print_sycl()};" for i, loop in enumerate(self._loops[0:3])]
+        indexing = [f"int {loop.get_iteration_variable().print_sycl()} = index[{i}];" for i, loop in enumerate(self._loops[0:3])]
+        statement_prints = [statement.print_sycl(indent_level + 1) for statement in self._loops[2]._statements]
+        return os.linesep.join(ranges) + "\n" + ' ' * indent_level * Node.spaces_per_tab + f"""queue.submit([&](::sycl::handler& handler) {{
+{' ' * indent_level * Node.spaces_per_tab}handler.parallel_for(::sycl::range<3>{{range0, range1, range2}}, [=](::sycl::item<3> index) {{
+{os.linesep.join(indexing)}
+{os.linesep.join(statement_prints)}
+{' ' * (indent_level + 1) * Node.spaces_per_tab}}});
+{' ' * indent_level * Node.spaces_per_tab}}}).wait();"""
+
 
     def print_mlir(self, indent_level = 0):
         return self._loop.print_mlir(indent_level)

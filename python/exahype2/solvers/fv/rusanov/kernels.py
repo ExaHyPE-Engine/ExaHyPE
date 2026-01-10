@@ -57,35 +57,47 @@ def create_rusanov_kernel_definitions_2d():
                        DSL.SyntaxTree.Argument("sourceTerm", DSL.SyntaxTree.TCustom("const SourceFunctor&")),
                        DSL.SyntaxTree.Argument("maxEigenvalue", DSL.SyntaxTree.TCustom("const MaxEigenvalueFunctor&"))]
 
-  rusanov_kernel = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"]).print_cpp()
-  rusanov_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"]).print_definition_with_timer()
-  rusanov_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"]).print_declaration()
-  rusanov_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"]).print_declaration_with_timer()
+  rusanov_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"])
+  rusanov_kernel = rusanov_tree.print_cpp()
+  rusanov_call_with_measurement = rusanov_tree.print_definition_with_timer()
+  rusanov_kernel_declaration = rusanov_tree.print_declaration()
+  rusanov_call_with_measurement_declaration = rusanov_tree.print_declaration_with_timer()
 
-  rusanov_stateless_kernel = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True).print_cpp()
-  rusanov_stateless_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True).print_definition_with_timer()
-  rusanov_stateless_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True).print_declaration()
-  rusanov_stateless_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True).print_declaration_with_timer()
+  rusanov_stateless_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], stateless=True)
+  rusanov_stateless_kernel = rusanov_stateless_tree.print_cpp()
+  rusanov_stateless_call_with_measurement = rusanov_stateless_tree.print_definition_with_timer()
+  rusanov_stateless_kernel_declaration = rusanov_stateless_tree.print_declaration()
+  rusanov_stateless_call_with_measurement_declaration = rusanov_stateless_tree.print_declaration_with_timer()
 
-  rusanov_accelerator_kernel = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True, True).print_cpp()
-  rusanov_accelerator_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True, True).print_definition_with_timer()
-  rusanov_accelerator_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True, True).print_declaration()
-  rusanov_accelerator_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True, True).print_declaration_with_timer()
+  #rusanov_accelerator_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True, True).print_cpp()
+  #rusanov_accelerator_kernel = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True, True).print_cpp()
+  #rusanov_accelerator_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True, True).print_definition_with_timer()
+  #rusanov_accelerator_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True, True).print_declaration()
+  #rusanov_accelerator_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True, True).print_declaration_with_timer()
 
-  rusanov_omp_kernel = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"]).print_omp()
-  rusanov_omp_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"]).print_definition_with_timer()
-  rusanov_omp_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"]).print_declaration()
-  rusanov_omp_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"]).print_declaration_with_timer()
+  rusanov_omp_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"])
+  rusanov_omp_kernel = rusanov_omp_tree.print_omp()
+  rusanov_omp_call_with_measurement = rusanov_omp_tree.print_definition_with_timer()
+  rusanov_omp_kernel_declaration = rusanov_omp_tree.print_declaration()
+  rusanov_omp_call_with_measurement_declaration = rusanov_omp_tree.print_declaration_with_timer()
 
-  rusanov_omp_stateless_kernel = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], True).print_omp()
-  rusanov_omp_stateless_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], True).print_definition_with_timer()
-  rusanov_omp_stateless_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], True).print_declaration()
-  rusanov_omp_stateless_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], True).print_declaration_with_timer()
+  rusanov_omp_stateless_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], stateless=True)
+  rusanov_omp_stateless_kernel = rusanov_omp_stateless_tree.print_omp()
+  rusanov_omp_stateless_call_with_measurement = rusanov_omp_stateless_tree.print_definition_with_timer()
+  rusanov_omp_stateless_kernel_declaration = rusanov_omp_stateless_tree.print_declaration()
+  rusanov_omp_stateless_call_with_measurement_declaration = rusanov_omp_stateless_tree.print_declaration_with_timer()
 
-  rusanov_omp_accelerator_kernel = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], True, True).print_omp()
-  rusanov_omp_accelerator_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], True, True).print_definition_with_timer()
-  rusanov_omp_accelerator_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], True, True).print_declaration()
-  rusanov_omp_accelerator_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], True, True).print_declaration_with_timer()
+  rusanov_omp_accelerator_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], stateless=True, use_accelerator=True)
+  rusanov_omp_accelerator_kernel = rusanov_omp_accelerator_tree.print_omp()
+  rusanov_omp_accelerator_call_with_measurement = rusanov_omp_accelerator_tree.print_definition_with_timer()
+  rusanov_omp_accelerator_kernel_declaration = rusanov_omp_accelerator_tree.print_declaration()
+  rusanov_omp_accelerator_call_with_measurement_declaration = rusanov_omp_accelerator_tree.print_declaration_with_timer()
+
+  rusanov_sycl_accelerator_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "sycl"], stateless=True, use_accelerator=True)
+  rusanov_sycl_accelerator_kernel = rusanov_sycl_accelerator_tree.print_sycl()
+  rusanov_sycl_accelerator_call_with_measurement = rusanov_sycl_accelerator_tree.print_definition_with_timer()
+  rusanov_sycl_accelerator_kernel_declaration = rusanov_sycl_accelerator_tree.print_declaration()
+  rusanov_sycl_accelerator_call_with_measurement_declaration = rusanov_sycl_accelerator_tree.print_declaration_with_timer()
 
   if not os.path.exists("kernels"):
       os.makedirs("kernels")
@@ -99,14 +111,13 @@ def create_rusanov_kernel_definitions_2d():
 #include "peano4/utils/Loop.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
+#include <fstream>
 
 {rusanov_kernel_declaration}
 {rusanov_call_with_measurement_declaration}        
 
 {rusanov_stateless_kernel_declaration}
 {rusanov_stateless_call_with_measurement_declaration}
-{rusanov_accelerator_kernel_declaration}
-{rusanov_accelerator_call_with_measurement_declaration}
 
 #if defined(SharedOMP)
 {rusanov_omp_kernel_declaration}
@@ -120,6 +131,11 @@ def create_rusanov_kernel_definitions_2d():
 {rusanov_omp_accelerator_call_with_measurement_declaration}
 #endif
 
+#if defined(GPUOffloadingSYCL)
+{rusanov_sycl_accelerator_kernel_declaration}
+{rusanov_sycl_accelerator_call_with_measurement_declaration}
+#endif
+
 #include "rusanov2d.cpph"
 """)
   file.close()
@@ -129,8 +145,6 @@ def create_rusanov_kernel_definitions_2d():
   file.write(rusanov_call_with_measurement)
   file.write(rusanov_stateless_kernel)
   file.write(rusanov_stateless_call_with_measurement)
-  file.write(rusanov_accelerator_kernel)
-  file.write(rusanov_accelerator_call_with_measurement)
 
   file.write("#if defined(SharedOMP)\n")
   file.write(rusanov_omp_kernel)
@@ -142,6 +156,11 @@ def create_rusanov_kernel_definitions_2d():
   file.write("#if defined(GPUOffloadingOMP)\n")
   file.write(rusanov_omp_accelerator_kernel)
   file.write(rusanov_omp_accelerator_call_with_measurement)
+  file.write("#endif\n")
+
+  file.write("#if defined(GPUOffloadingSYCL)\n")
+  file.write(rusanov_sycl_accelerator_kernel)
+  file.write(rusanov_sycl_accelerator_call_with_measurement)
   file.write("#endif\n")
   file.close()
 
@@ -160,35 +179,46 @@ def create_rusanov_kernel_definitions_3d():
                        DSL.SyntaxTree.Argument("sourceTerm", DSL.SyntaxTree.TCustom("const SourceFunctor&")),
                        DSL.SyntaxTree.Argument("maxEigenvalue", DSL.SyntaxTree.TCustom("const MaxEigenvalueFunctor&"))]
 
-  rusanov_kernel = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"]).print_cpp()
-  rusanov_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"]).print_definition_with_timer()
-  rusanov_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"]).print_declaration()
-  rusanov_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"]).print_declaration_with_timer()
+  rusanov_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"])
+  rusanov_kernel = rusanov_tree.print_cpp()
+  rusanov_call_with_measurement = rusanov_tree.print_definition_with_timer()
+  rusanov_kernel_declaration = rusanov_tree.print_declaration()
+  rusanov_call_with_measurement_declaration = rusanov_tree.print_declaration_with_timer()
 
-  rusanov_stateless_kernel = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True).print_cpp()
-  rusanov_stateless_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True).print_definition_with_timer()
-  rusanov_stateless_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True).print_declaration()
-  rusanov_stateless_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True).print_declaration_with_timer()
+  rusanov_stateless_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], stateless=True)
+  rusanov_stateless_kernel = rusanov_stateless_tree.print_cpp()
+  rusanov_stateless_call_with_measurement = rusanov_stateless_tree.print_definition_with_timer()
+  rusanov_stateless_kernel_declaration = rusanov_stateless_tree.print_declaration()
+  rusanov_stateless_call_with_measurement_declaration = rusanov_stateless_tree.print_declaration_with_timer()
 
   rusanov_accelerator_kernel = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True, True).print_cpp()
   rusanov_accelerator_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True, True).print_definition_with_timer()
   rusanov_accelerator_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True, True).print_declaration()
   rusanov_accelerator_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], True, True).print_declaration_with_timer()
 
-  rusanov_omp_kernel = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"]).print_omp()
-  rusanov_omp_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"]).print_definition_with_timer()
-  rusanov_omp_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"]).print_declaration()
-  rusanov_omp_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"]).print_declaration_with_timer()
+  rusanov_omp_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"])
+  rusanov_omp_kernel = rusanov_omp_tree.print_omp()
+  rusanov_omp_call_with_measurement = rusanov_omp_tree.print_definition_with_timer()
+  rusanov_omp_kernel_declaration = rusanov_omp_tree.print_declaration()
+  rusanov_omp_call_with_measurement_declaration = rusanov_omp_tree.print_declaration_with_timer()
 
-  rusanov_omp_stateless_kernel = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], True).print_omp()
-  rusanov_omp_stateless_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], True).print_definition_with_timer()
-  rusanov_omp_stateless_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], True).print_declaration()
-  rusanov_omp_stateless_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], True).print_declaration_with_timer()
+  rusanov_omp_stateless_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], stateless=True)
+  rusanov_omp_stateless_kernel = rusanov_omp_stateless_tree.print_omp()
+  rusanov_omp_stateless_call_with_measurement = rusanov_omp_stateless_tree.print_definition_with_timer()
+  rusanov_omp_stateless_kernel_declaration = rusanov_omp_stateless_tree.print_declaration()
+  rusanov_omp_stateless_call_with_measurement_declaration = rusanov_omp_stateless_tree.print_declaration_with_timer()
 
-  rusanov_omp_accelerator_kernel = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], True, True).print_omp()
-  rusanov_omp_accelerator_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], True, True).print_definition_with_timer()
-  rusanov_omp_accelerator_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], True, True).print_declaration()
-  rusanov_omp_accelerator_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], True, True).print_declaration_with_timer()
+  rusanov_omp_accelerator_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], stateless=True, use_accelerator=True)
+  rusanov_omp_accelerator_kernel = rusanov_omp_accelerator_tree.print_omp()
+  rusanov_omp_accelerator_call_with_measurement = rusanov_omp_accelerator_tree.print_definition_with_timer()
+  rusanov_omp_accelerator_kernel_declaration = rusanov_omp_accelerator_tree.print_declaration()
+  rusanov_omp_accelerator_call_with_measurement_declaration = rusanov_omp_accelerator_tree.print_declaration_with_timer()
+
+  rusanov_sycl_accelerator_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "sycl"], stateless=True, use_accelerator=True)
+  rusanov_sycl_accelerator_kernel = rusanov_sycl_accelerator_tree.print_sycl()
+  rusanov_sycl_accelerator_call_with_measurement = rusanov_sycl_accelerator_tree.print_definition_with_timer()
+  rusanov_sycl_accelerator_kernel_declaration = rusanov_sycl_accelerator_tree.print_declaration()
+  rusanov_sycl_accelerator_call_with_measurement_declaration = rusanov_sycl_accelerator_tree.print_declaration_with_timer()
 
   if not os.path.exists("kernels"):
       os.makedirs("kernels")
@@ -202,6 +232,7 @@ def create_rusanov_kernel_definitions_3d():
 #include "peano4/utils/Loop.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
+#include <fstream>
              
 {rusanov_kernel_declaration}
 {rusanov_call_with_measurement_declaration}
@@ -220,6 +251,11 @@ def create_rusanov_kernel_definitions_3d():
 #if defined(GPUOffloadingOMP)
 {rusanov_omp_accelerator_kernel_declaration}
 {rusanov_omp_accelerator_call_with_measurement_declaration}
+#endif
+
+#if defined(GPUOffloadingSYCL)
+{rusanov_sycl_accelerator_kernel_declaration}
+{rusanov_sycl_accelerator_call_with_measurement_declaration}
 #endif
 
 #include "rusanov3d.cpph"
@@ -245,6 +281,12 @@ def create_rusanov_kernel_definitions_3d():
   file.write(rusanov_omp_accelerator_kernel)
   file.write(rusanov_omp_accelerator_call_with_measurement)
   file.write("#endif\n")
+
+  file.write("#if defined(GPUOffloadingSYCL)\n")
+  file.write(rusanov_sycl_accelerator_kernel)
+  file.write(rusanov_sycl_accelerator_call_with_measurement)
+  file.write("#endif\n")
+
   file.close()
 
 def create_compute_Riemann_kernel_for_Rusanov_dsl(flux_implementation,
@@ -348,7 +390,7 @@ def create_compute_Riemann_kernel_for_Rusanov_dsl(flux_implementation,
     {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
     {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
     {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
-    >(targetDevice, patchData);
+    >(targetDevice, gpuPatchData);
 """
   else:
     assert False, "Not supported combination: {} x {}".format(solver_variant, kernel_variant)

@@ -36,10 +36,7 @@ namespace tarch {
  * then has to wait before the lazy evaluation is due, so we know that the right
  * tasks are inserted.
  *
- * @see
- *
- *
- * ## @todo
+ * ## Orchestration
  *
  * This task is always paired up with an instance of ProcessReadyTask. This
  * task takes the task _task and puts it into the _taskQueue. After that, it
@@ -71,7 +68,7 @@ class tarch::multicore::taskfusion::LogReadyTask: public tarch::multicore::Task 
      * If this routine is invoked, we know that all the incoming dependencies
      * of _task are now complete. We refrain from running the task now (even
      * though it would be valid). Instead, we lock our queue and add the task.
-     * translateFusableTaskIntoTaskSequence() should already have issued a
+     * handleFusableTask() should already have issued a
      * follow-up task of type ProcessReadyTask. Therefore, this is all to be
      * done here. No more work.
      */

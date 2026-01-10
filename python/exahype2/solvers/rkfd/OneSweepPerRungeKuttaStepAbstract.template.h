@@ -103,8 +103,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     static std::bitset<Dimensions> PeriodicBC;
 
-    double getMinTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
-    double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
+    double getMinTimeStamp() const final;
+    double getMaxTimeStamp() const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
@@ -224,10 +224,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      *
      * @return Actually observed sizes, not the admissible quantities
      */
-    double getMaxPatchSize(bool currentTimeStep = true) const;
-    double getMinPatchSize(bool currentTimeStep = true) const;
-    double getMaxGridCellSize(bool currentTimeStep = true) const;
-    double getMinGridCellSize(bool currentTimeStep = true) const;
+    double getMaxPatchSize() const;
+    double getMinPatchSize() const;
+    double getMaxGridCellSize() const;
+    double getMinGridCellSize() const;
 
     /**
      * Within the FD context, mesh is an alias for patch if it is not

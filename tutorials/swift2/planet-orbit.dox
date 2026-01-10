@@ -33,7 +33,7 @@ This snippet stems from tests/swift2/planet-orbit/planet-orbit.py.
 
 Peano will need to know the value of some general properties.
 For more information, consult the documentation of swift2.Project
-and also the @ref page_architecture "remarks on build variants":
+and also the @ref page_architecture_home "remarks on build variants":
 
 @snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit Configure project
 
@@ -42,7 +42,7 @@ The call of swift2.Project.set_load_balancing() activates one of Peano's
 generic load balancing strategies. The last line is notably interesting:
 It instructs the Python API to parse the settings of your configure (autotools)
 or CMake run. That is, all the flags that you specified throughout
-@ref page_installation "your installation" will automatically be picked
+@ref page_installation_home "your installation" will automatically be picked
 up by the code that the Python script will ultimately produce.
 
 ## Generate a genuine Peano project

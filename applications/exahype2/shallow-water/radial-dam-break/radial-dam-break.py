@@ -88,7 +88,10 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     refinement_criterion=refinement_criterion,
     flux="applications::exahype2::swe::flux(Q, x, h, t, dt, normal, F);",
     ncp="applications::exahype2::swe::nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);",
-    eigenvalues="return applications::exahype2::swe::maxEigenvalue(Q, x, h, t, dt, normal);",
+    eigenvalues="""
+    double lambda[NumberOfUnknowns] = {0.};
+    applications::exahype2::swe::maxEigenvalue(Q, x, h, t, dt, normal, lambda);
+    return *std::max_element(lambda, lambda+NumberOfUnknowns);""",
 )
 aderdg_solver.plot_description = ", ".join(unknowns.keys())
 aderdg_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])

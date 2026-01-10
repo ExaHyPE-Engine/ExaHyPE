@@ -18,26 +18,26 @@ All their C/C++ code is holds within the directory src.
 Peano's layer architecture applies to all simulations built on top of Peano, too, i.e.
 every Peano application, at the end of the day, follows a similar architecture blueprint.
 
-@image html architecture-static.png
+@image html documentation/architecture-static.png
 
-- **Technical Architecture (tarch)** The @ref tarch_home "technical architecture" provides unified interfaces for tasking,
+- **Technical Architecture (tarch)** The @ref page_tarch_home "technical architecture" provides unified interfaces for tasking,
   the logging, GPU offloading, basic linear algebra, and so forth.
   It is a set of loosly coupled building
   blocks that hide away technical details.
   It is used
   by Peano's core, all the toolboxes, extensions, and we also recommend the user
   codes to use the features from the tarch. Details on the tarch are given
-  in the @ref peano_home "core Peano documentation".
+  in the @ref page_peano4_home "core Peano documentation".
   There's for example a namespace to
   handle multicore parallelism, a logging component, or a collection of
   primitive linear algebra routines for small problems. It is written solely in
   C++ and its purpose is to hide away third-party dependencies such as OpenMP
   or MPI. I originally designed it as a stand-alone thing which is not tied to
   Peano though I'm not aware of any other project that currently uses it. The
-  layer is pronounced ``T Arch'' and is encapsulated in a namespace
+  layer is pronounced ```T Arch``` and is encapsulated in a namespace
   tarch, as I didn't want to write the full name technical
   architecture every time.
-- **Peano** The namespace peano4 hosts the @ref peano_home "Peano 4 core". It is
+- **Peano** The namespace peano4 hosts the @ref page_peano4_home "Peano 4 core". It is
   entirely written in C++ (using the tarch) and holds the heart and brain of the
   code, i.e. all the data management, the mesh management, the tree traversals and the domain
   decomposition.
@@ -67,7 +67,7 @@ This is, to a certain degree, a usp of Peano and discussed in the original Peano
 where we use the term Hollywood Principle to explain this design decision.
 Roughly, any Peano 4 application realises the following control flow:
 
-@image html architecture-dynamic.png
+@image html documentation/architecture-dynamic.png
 
 1. The user codes hosts the main file. It creates a spacetree. If you have a run a
    parallel code, each rank hosts a sets of spacetrees, as spacetrees can decide to
@@ -154,15 +154,15 @@ By default, the code builds various versions of each library:
 The version terminology is as follows:
 
 - **debug** The debug versions of the archives all have the postfix
-  `_debug`. If you link against these versions, the full set of
+  ```_debug```. If you link against these versions, the full set of
   assertions, of all tracing and all debug messages is available;
   though you can always filter on the application-level which
   information you want to see.
 - **asserts** Thsee versions of the archives all have the postfix
-  `_asserts`. If you link against these versions, all assertions are
+  ```_asserts```. If you link against these versions, all assertions are
   on. The code also contains tracing macros (see below).
 -  **tracing** The release versions of the archives all have the
-   postfix `_trace`. If you link against these versions, all assertions
+   postfix ```_trace```. If you link against these versions, all assertions
    and debug messages are removed, but some tracing is active. You can
    switch on/off the tracing per class, and different tracing backends allow
    you to connect to different (profiling) tools.
@@ -186,7 +186,7 @@ libraries.  This glue code is generated through the Python API.
   large-scale Peano applications.
 - **src** Holds the C++ Peano sources of the Peano core and all the
   toolboxes.
-- **src/api** Holds the Python API scripts. Within the `api`
+- **src/api** Holds the Python API scripts. Within the ```api```
   subdirectory, you find scripts for both the Peano core API, toolboxes and
   large-scale Peano applications.
 - **tests** Collection of small test cases that can be automised.

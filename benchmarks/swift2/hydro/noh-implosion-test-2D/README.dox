@@ -1,6 +1,6 @@
 /**
 
- @page benchmarks_swift2_hydro_noh_imposion_test_2D 2D Noh implosion test
+ @page benchmarks_swift2_hydro_noh_implosion_test_2D 2D Noh implosion test
 
  Simple Noh implosion test benchmark in 2D with @f$ N ^d @f$ particles. The setup
  yields snapshots similar to the ones below.
@@ -11,7 +11,12 @@
 
 
  As with all Swift 2 experiments, you have to ensure that you translate with
- ```--enable-particles --enable-swift``` before you start working with the
+ 
+ 
+        --enable-particles --enable-swift
+         
+ 
+ before you start working with the
  scripts. Furthermore, the Python path has to be set properly:
 
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -89,26 +94,24 @@
 
  After completion, we zip the outcome via
 
- ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  tar -czvf MyMachine-$OMP_NUM_THREADS-threads.tar.gz *.out
- ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
  The zipped outcome can be visualised by a call similar to
 
- ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 python3 plot-comparison-of-implementation-variants.py -o MyMachine MyMachine-8-threads.tar.gz MyMachine-16-threads.tar.gz ...
- ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
- @image html Hamilton8-2400.png
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
  On SuperMUC, we see some irregularities for the biggest setups. Therefore, it
  makes sense to exclude them from some visualisation:
 
- ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  python3 plot-comparison-of-implementation-variants.py -o SuperMUC   SuperMUC-112-threads.tar.gz  SuperMUC-56-threads.tar.gz SuperMUC-28-threads.tar.gz SuperMUC-14-threads.tar.gz
  python3 plot-comparison-of-implementation-variants.py -o SuperMUC-small                          SuperMUC-56-threads.tar.gz SuperMUC-28-threads.tar.gz SuperMUC-14-threads.tar.gz
- ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
  # The impact of the mesh on the global runtime
@@ -306,7 +309,8 @@ else:
   observers for a call to this routine, and then to open the corresponding
   .optrpt file of the cpp file. Vectorisation should be successful for the
   routine calling forceKernelVectorised() and look similar to
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         LOOP BEGIN at ../../../../src/swift2/kernels/ParticleParticleInteraction.cpph (580, 7)
 
             LOOP BEGIN at ../../../../src/swift2/kernels/ParticleParticleInteraction.cpph (589, 11)
@@ -348,7 +352,7 @@ else:
                     remark #25436: Loop completely unrolled by 3
                 LOOP END
             LOOP END
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
  */

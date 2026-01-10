@@ -51,7 +51,7 @@ namespace tarch {
      * Works if and only if the matrix does not contain any zeroes, as this
      * routine yields
      *
-     * @f$ A_{ij} \gets A_{ij}^{-1} @f4
+     * @f$ A_{ij} \gets A_{ij}^{-1} @f$
      *
      * which is not @f$ A^{-1} @f$. If you want to have the inverse, you have
      * to look, for example, into LUDecomposition.

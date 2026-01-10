@@ -51,28 +51,28 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() 
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize(bool ofCurrentlyRunningGridSweep) const {
-  return getMinVolumeSize(ofCurrentlyRunningGridSweep) * NumberOfFiniteVolumesPerAxisPerPatch;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize() const {
+  return getMinVolumeSize() * NumberOfFiniteVolumesPerAxisPerPatch;
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxPatchSize(bool ofCurrentlyRunningGridSweep) const {
-  return getMaxVolumeSize(ofCurrentlyRunningGridSweep) * NumberOfFiniteVolumesPerAxisPerPatch;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxPatchSize() const {
+  return getMaxVolumeSize() * NumberOfFiniteVolumesPerAxisPerPatch;
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinVolumeSize(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _minVolumeHThisTimeStep : _minVolumeH;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinVolumeSize() const {
+  return _minVolumeH;
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxVolumeSize(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _maxVolumeHThisTimeStep : _maxVolumeH;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxVolumeSize() const {
+  return _maxVolumeH;
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _minTimeStampThisTimeStep : _minTimeStamp;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp() const {
+  return _minTimeStamp;
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _maxTimeStampThisTimeStep : _maxTimeStamp;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
+  return _maxTimeStamp;
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
@@ -361,6 +361,8 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "primary-after-grid-initialisation";
     case SolverState::Plotting:
       return "plotting";
+    case SolverState::Suspended:
+      return "suspended";
   }
   return "<undef>";
 }

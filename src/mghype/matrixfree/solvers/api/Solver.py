@@ -39,6 +39,7 @@ class Solver:
     self._abstract_solver_implementation_extras = """ """
 
 
+  #! [mghype_matrixfree_solvers_api_Solver_add_to_mesh]
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     datamodel.add_vertex(self._vertex_data)
     datamodel.add_face(self._face_data)
@@ -54,6 +55,7 @@ class Solver:
     observer.use_vertex(self._vertex_data)
     observer.use_face(  self._face_data)
     observer.use_cell(  self._cell_data)
+  #! [mghype_matrixfree_solvers_api_Solver_add_to_mesh]
   
   def typename(self):
     return self._name
