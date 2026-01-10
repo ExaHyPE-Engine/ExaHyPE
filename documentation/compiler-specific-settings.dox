@@ -62,6 +62,9 @@ namespace in the technical architecture.
 
 # Particular machines
 
+While we try to consolidate toolchain-, machine- or vendor-specific data on
+the pages below, some information is also scattered on the site @ref page_faq_home.
+
 - @subpage page_machines_hamilton
 - @subpage page_machines
 
@@ -71,6 +74,9 @@ namespace in the technical architecture.
 - @subpage tarch_accelerator_SYCL
 
 # Vendor toolchains and compiler settings
+
+While we try to consolidate toolchain-, machine- or vendor-specific data on
+the pages below, some information is also scattered on the site @ref page_faq_home.
 
 - @subpage documentation_toolchains_amd
 - @subpage documentation_toolchains_gnu

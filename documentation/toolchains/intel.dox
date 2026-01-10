@@ -190,6 +190,9 @@ export I_MPI_CXX=icpx
 ./configure --with-mpi=mpiicpc
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# Troubleshooting
+
+All the troubleshooting is covered by @ref page_faq_home.
 
  */
  

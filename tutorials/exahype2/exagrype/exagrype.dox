@@ -3,7 +3,7 @@
 @page tutorials_exahype2_applications_exagrype How to Use ExaGRyPE
 
 
-@image html arty.png
+@image html tutorials/exahype2/exagrype2/arty.png
 
 This section is designed to provide instructions on installing and using the Numerical
 Relativity code ExaGRyPE. Contribution and comments to improve this tutorial are much 
