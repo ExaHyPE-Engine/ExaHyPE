@@ -36,24 +36,6 @@ void benchmarks::exahype2::ccz4::MulticoreOrchestration::endBSPSection(int neste
   }
 }
 
-int benchmarks::exahype2::ccz4::MulticoreOrchestration::getNumberOfTasksToHoldBack(int taskType) {
-  if ( taskType == tasks::CCZ4SBH_FVEnclaveTask::getEnclaveTaskTypeId() ) {
-    _finiteVolumeTasksInThisBSPSection++;
-  }
-
-  if (
-    _nestedBSPLevels>0
-    and
-    tarch::accelerator::Device::getInstance().getNumberOfDevices()>0
-    and
-    taskType == tasks::CCZ4SBH_FVEnclaveTask::getEnclaveTaskTypeId()
-  ) {
-    return _maxFiniteVolumeTasks;
-  }
-  else {
-    return 0;
-  }
-}
 
 benchmarks::exahype2::ccz4::MulticoreOrchestration::FuseInstruction benchmarks::exahype2::ccz4::MulticoreOrchestration::getNumberOfTasksToFuseAndTargetDevice(
   int taskType

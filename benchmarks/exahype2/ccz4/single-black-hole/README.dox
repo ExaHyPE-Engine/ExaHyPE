@@ -61,11 +61,11 @@ Builds always resemble:
 ~~~~~~~~~~~~~~~~~~~~~~~
 export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4
 
-python3 performance-studies.py -lbm tailored -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6
+python3 performance-studies.py -lbm tailored -s fd4-rk1-ps-3 --scheduler native-no-priorities --trees 6
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 
-As always, the parameter --help makes the Python script yield further info,
+As always, the parameter ```--help``` makes the Python script yield further info,
 while the sections below enlist characteristic choices of the parameters.
 
 Depending on your system, you might have to load the GSL module separately
@@ -508,7 +508,17 @@ I found that OpenMP is comparatively slow. TBB does a way nicer job. I
 therefore recommend to use TBB in this case for the benchmarking.
 
 
-# Code remarks (FD4-FV scheme)
+# Implementation
+
+The section below discusses various simulation-specific implementation choices.
+
+## The FD4-FV scheme
+
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+  This discussion is relevant if and only if you use a combined solver.
+  These solvers are all available through the Python front-end if you use one of the variants containing a ```limited```
+</div>
+
 
 Even simple initial conditions can make our higher-order Finite Differences solver
 fail: The higher order solution representation is not capable to resolve
@@ -528,7 +538,7 @@ unfolds its full potential.
 
 @todo Remove the KO terms here
 
-@image html two-different-solvers.png
+@image html benchmarks/exahype2/ccz4/single-black-hole/two-different-solvers.png
 
 The image above illustrates our concept: There's an FD4 solver which computes
 the solution in the whole domain. This solution is is illustrated via the horizontal
@@ -559,7 +569,7 @@ FD4 is. Furthermore, this separation of responsibilities allows us, in theory,
 to use the same limiter with RKDG as well.
 
 
-## Time step size
+### Time step size
 
 As we combine solvers, we have to ensure that their time step sizes match. This 
 means that the Finite Volume patch size has to be calibrated
@@ -598,7 +608,7 @@ sizes, and sets this minimum as own admissible size as well as the admissible
 time step size of the limiter.
 
 
-## The Finite Volume solver
+### The Finite Volume solver
 
 Our FV solver is, through various inheritance levels, a subclass of 
 peano.exahype2.solvers.fv.EnclaveTasking which in turn inherits from
@@ -655,9 +665,9 @@ should go straight onto a core or the GPU. To re-prioritise, we add
 to the constructor.
 
 
-## The FD4 solver
+### The FD4 solver
 
-### FD4-FV coupling (projection) 
+#### FD4-FV coupling (projection) 
 
 To realise the coupling, we have to augment the FD4 solver by some additional 
 pre- and post-processing steps:
@@ -722,7 +732,7 @@ temporary volumetric step, but is a realisation which can be implemented
 with the on-board routines and the logic of it is rather clear.
 
 
-### FV-FD4 coupling (restriction)
+#### FV-FD4 coupling (restriction)
 
 The coupling from the Finite Volume scheme to FD4 in contrast is a real
 volumetric coupling: We overwrite the FD4's self._action_set_postprocess_solution 
