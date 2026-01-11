@@ -3,7 +3,7 @@
 @page tutorials_exahype2_applications_exagrype How to Use ExaGRyPE
 
 
-@image html tutorials/exahype2/exagrype2/arty.png
+@image html tutorials/exahype2/exagrype/arty.png
 
 This section is designed to provide instructions on installing and using the Numerical
 Relativity code ExaGRyPE. Contribution and comments to improve this tutorial are much 
@@ -25,7 +25,6 @@ welcomed and appreciated.
 -  Feature benchmarks
   - \ref benchmarks_exahype2_ccz4_gauge_wave
   - \ref benchmarks_exahype2_ccz4_single_black_hole
-  - \ref benchmarks_exahype2_ccz4_single_black_hole_performance
 - \subpage tutorials_exahype2_applications_exagrype_faq
 
 

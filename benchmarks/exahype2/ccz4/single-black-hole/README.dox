@@ -1,31 +1,62 @@
 /** 
 
-@page benchmarks_exahype2_ccz4_single_black_hole Solver coupling (Single Schwarzschild black hole)
+@page benchmarks_exahype2_ccz4_single_black_hole Single Schwarzschild black hole
+
+<img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/BH_LMC.png" />
 
 <!-- Add this one for href links to subitems -->
 @tableofcontents
 
 
-Benchmark which solves the single black hole described in a ExaGRyPE simulation. 
+
+Benchmark which solves the single black hole (schwarzschild black hole) described in a ExaGRyPE simulation. 
 While the output is not particularly exciting (the simulation should yield a 
 stationary solution after a while), it is numerically challenging as we have
 sophisticated boundary condition effects, a singularity in the centre which 
 can lead to oscillations, need a scheme with low numerical dissipation, and 
-so forth. Therefore, this benchmark combines two different solvers - a 
-dissipative Finite Volume scheme and a higher order scheme - to obtain a
-compromise between accuracy and stability. 
+have highly varying spatial resolution needs, i.e. need a fine resolution around
+the black hole, while we can keep the mesh coarse far away . 
 
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
-  For this benchmark, the following extensions are mandatory:
-  
-  - blockstructured (`--enable-blockstructured`)
-  - exahype2 (`--enable-exahype2`)
-  
-  Furthermore, you will need the GNU Scientific Library (GSL) installed on your system. 
+
+The benchmark comes along in different flavours:
+
+- with AMR vs a regular mesh;
+- using one solver only or a combination of two solvers;
+- different multicore tasking strategies.
+
+
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+  Prior to benchmarking this setup, we recommend that you should ensure
+  that @ref benchmarks_exahype2_ccz4_kernel_benchmarks and the 
+  @ref benchmarks_exahype2_ccz4_gauge_wave complete successfully. 
+  One assesses the computational efficiency for various kernel variants over
+  different platforms, and the other validates the numerical accuracy of the 
+  overall solver assembly (convergence orders).
 </div>
 
 
 # Build executable
+
+<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+  This benchmark requires a third-party tool: You will need the GNU Scientific Library (GSL) installed on your system. 
+</div>
+
+
+For this single black hole benchmark, the following Peano toolboxes are mandatory:
+  
+  - blockstructured (```--enable-blockstructured```)
+  - exahype2 (```--enable-exahype2```)
+  
+In theory, the benchmark passes without parallelisation. In practice, it is so 
+computationally demanding that we recommend to use multithreading and MPI. Due 
+to this, you also need
+
+   - load balancing (```--enable-load-balancing```)
+
+GPU support is, as always, optional. Other advanced features such as particle 
+tracers are not used. 
+
+Builds always resemble:
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4
@@ -36,8 +67,6 @@ python3 performance-studies.py -lbm tailored -s fd4-rk1-limited-ps-3 --scheduler
 
 As always, the parameter --help makes the Python script yield further info,
 while the sections below enlist characteristic choices of the parameters.
-There are different scripts in the directory.
-They serve different purposes and support slightly different parameters.
 
 Depending on your system, you might have to load the GSL module separately
 before you build the application:
@@ -45,6 +74,8 @@ before you build the application:
 ~~~~~~~~~~~~~~~~~~~~~~~
 module load gsl
 ~~~~~~~~~~~~~~~~~~~~~~~
+
+
 
 
 # Clean up old and temporary files
@@ -66,6 +97,12 @@ To get rid of the output files, type in
 ~~~~~~~~~~~~~~~~~~~~~~~
 rm *patch-file *vtu *.pvd *.bak *.csv
 ~~~~~~~~~~~~~~~~~~~~~~~
+
+# Solver variants
+
+Therefore, this benchmark combines two different solvers - a 
+dissipative Finite Volume scheme and a higher order scheme - to obtain a
+compromise between accuracy and stability. 
 
 
 # Visualise outcome
