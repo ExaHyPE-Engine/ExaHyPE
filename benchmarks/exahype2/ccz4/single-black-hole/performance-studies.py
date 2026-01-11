@@ -180,6 +180,9 @@ if __name__ == "__main__":
     ########################################################################################
     # Configure run
     ########################################################################################
+    project.add_mainfile_include( "tarch/multicore/orchestration/Hardcoded.h")
+    project.add_mainfile_include( "MulticoreOrchestration.h")
+    
     if args.scheduler == "native-no-priorities":
             project.set_multicore_orchestration(
                 "tarch::multicore::orchestration::Hardcoded::createNative()"

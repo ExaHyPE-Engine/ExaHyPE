@@ -12,11 +12,17 @@ namespace tarch {
   }   // namespace multicore
 } // namespace tarch
 
+
 /**
- * A hard coded strategy that can realise a few standard tasking patterns
+ * A hard coded strategy how to handle tasks and task fusion
+ *
+ * This hardcoded variant can be used to realise a few standard tasking
+ * patterns. As trivial example, it allows us to switch off all tasking,
+ * to map all tasks immediately onto one GPU device, or to fix the number
+ * of tasks that are to be fused.
  *
  */
-class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orchestration::Strategy {
+class tarch::multicore::orchestration::Hardcoded: public ::tarch::multicore::orchestration::Strategy {
   private:
     int  _minTasksToFuse;
     int  _maxTasksToFuse;
