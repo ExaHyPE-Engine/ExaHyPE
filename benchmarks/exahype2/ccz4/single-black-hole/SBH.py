@@ -687,7 +687,8 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
         marker.getSelectedFaceNumber(),
         {0.0, 0.0, 0.0},
         fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
-        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value,
+        -1 // @todo Han, can you add a comment here please why we do -1?
       );
       """
         )

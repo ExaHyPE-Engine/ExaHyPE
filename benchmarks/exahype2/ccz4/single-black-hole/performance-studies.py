@@ -180,50 +180,49 @@ if __name__ == "__main__":
     ########################################################################################
     # Configure run
     ########################################################################################
-    if "limited" in args.solver:
-        if args.scheduler == "native-no-priorities":
+    if args.scheduler == "native-no-priorities":
             project.set_multicore_orchestration(
                 "tarch::multicore::orchestration::Hardcoded::createNative()"
             )
             enable_higher_priority_for_FV_tasks = False
             parallelise_interpolation = KernelParallelisation.NONE
             fv_kernel_parallelisation = KernelParallelisation.NONE
-        elif args.scheduler == "native":
+    elif args.scheduler == "native":
             project.set_multicore_orchestration(
                 "tarch::multicore::orchestration::Hardcoded::createNative()"
             )
             enable_higher_priority_for_FV_tasks = True
             parallelise_interpolation = KernelParallelisation.NONE
             fv_kernel_parallelisation = KernelParallelisation.NONE
-        elif args.scheduler == "tailored":
+    elif args.scheduler == "tailored":
             project.set_multicore_orchestration(
                 "new benchmarks::exahype2::ccz4::MulticoreOrchestration()"
             )
             enable_higher_priority_for_FV_tasks = True
             parallelise_interpolation = KernelParallelisation.NONE
             fv_kernel_parallelisation = KernelParallelisation.NONE
-        elif args.scheduler == "parallel-for":
+    elif args.scheduler == "parallel-for":
             project.set_multicore_orchestration(
                 "new benchmarks::exahype2::ccz4::MulticoreOrchestration()"
             )
             enable_higher_priority_for_FV_tasks = True
             parallelise_interpolation = KernelParallelisation.PARALLEL_FOR
             fv_kernel_parallelisation = KernelParallelisation.NONE
-        elif args.scheduler == "subtasks":
+    elif args.scheduler == "subtasks":
             project.set_multicore_orchestration(
                 "new benchmarks::exahype2::ccz4::MulticoreOrchestration()"
             )
             enable_higher_priority_for_FV_tasks = True
             parallelise_interpolation = KernelParallelisation.SUBTASKS
             fv_kernel_parallelisation = KernelParallelisation.NONE
-        elif args.scheduler == "subtasks-and-kernel-parallelisation":
+    elif args.scheduler == "subtasks-and-kernel-parallelisation":
             project.set_multicore_orchestration(
                 "new benchmarks::exahype2::ccz4::MulticoreOrchestration()"
             )
             enable_higher_priority_for_FV_tasks = True
             parallelise_interpolation = KernelParallelisation.SUBTASKS
             fv_kernel_parallelisation = KernelParallelisation.SUBTASKS
-        else:
+    else:
             assert False, "not supported yet"
 
     added_limiter = False
@@ -368,11 +367,9 @@ if __name__ == "__main__":
     peano4_project.output.makefile.add_cpp_file(
         "../../../../applications/exahype2/ccz4/libtwopunctures/Newton.cpp"
     )
-    if added_limiter:
-        peano4_project.output.makefile.add_cpp_file("MulticoreOrchestration.cpp")
-    # peano4_project.output.makefile.add_h_file(
-    #    "../CompressedFloat.h"
-    # )
+
+    peano4_project.output.makefile.add_cpp_file("MulticoreOrchestration.cpp")
+
     peano4_project.output.makefile.add_CXX_flag("-DIncludeTwoPunctures")
     if added_limiter:
         peano4_project.output.makefile.add_CXX_flag("-DCoupleWithFV")

@@ -807,6 +807,8 @@ solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
 
 ## Concurrency analysis with default task orchestration
 
+@todo Docu that this only kicks in for limited options
+@todo Machen die Orchestration nicht auch fuer fd4 Sinn?
 
    When we visualise the CPU occupation, we get an image similar to the one
    below.
