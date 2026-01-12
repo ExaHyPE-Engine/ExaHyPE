@@ -2,14 +2,42 @@
 
  @page documentation_toolchains_intel Intel's OneAPI ecosystem
 
+<img width="20%" src="https://upload.wikimedia.org/wikipedia/en/f/fa/OneAPI-rgb-3000.png" />
+
+
+<!-- Add this one for href links to subitems -->
+ @tableofcontents
+
+
 <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
 You will find examples how this toolchain is used on particular machines on the page @ref page_machines.
 </div>
 
 
-### Intel toolchain
+# Intel-specific compiler flags
 
-<img width="10%" src="https://upload.wikimedia.org/wikipedia/en/f/fa/OneAPI-rgb-3000.png" />
+There are two particular flags that we find useful in Peano if Intel's software
+stack is used. 
+
+- Adding
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  CXXFLAGS="... -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  to all compiles yields more detailed trace data.
+- Adding
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  CXXFLAGS="... -DTBB_USE_ASSERT"
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  helps to debug TBB-based applications.
+
+At the moment, we add the following flags to the compile automatically when the Intel toolchain is
+activated (see below). Obviously, nothing stops users from adding those flags manually even if they 
+prefer not to rely on Peano's support for the Intel toolchain.
+
+
+
+# Intel toolchain (tool traces)
+
 
 Peano provides support for Intel's (oneAPI) toolchain through two routes:
 The ITAC interface and the Instrumentation and Tracing Technology (ITT).
@@ -34,28 +62,8 @@ the setup to the Intel analysis tools.
 Most production runs will not use the Intel toolchain, but rather set all
 Intel-specific flags for compiler and linker manually.
 
-
-### Intel-specific compiler flags
-
-At the moment, we add the following flags to the compile when the Intel toolchain is
-activated:
-
-- We add
-  ~~~~~~~~~~~~~~~~~~~~~~~
-  CXXFLAGS="... -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
-  ~~~~~~~~~~~~~~~~~~~~~~~
-  to all compiles.
-- We add
-  ~~~~~~~~~~~~~~~~~~~~~~~
-  CXXFLAGS="... -DTBB_USE_ASSERT"
-  ~~~~~~~~~~~~~~~~~~~~~~~
-  to all debug and assert builds.
-
-
-### The loggers
-
-Even though you have switched to the Intel loggers, you will not get
-any trace information if you build in release mode. You have to switch
+Once you have switched to the Intel loggers, you will not get
+any trace information anymore if you build in release mode. You have to switch
 to the trace mode (or assertions or debug) - compare general remarks on
 @ref page_architecture_home "Peano's build modi" - to get traces or annotation
 info.
@@ -68,24 +76,22 @@ The first trace command will then enable it.
 For further discussion on logging, please see the \ref tarch_logging "generic logging description for Peano".
 
 
-### Threading Building Blocks (TBB)
+# Threading Building Blocks (TBB)
 
-We found that the newer Intel compilers provide a flag
+Peano relies on advanced TBB features, and not all of them are found in 
+normal release (as of January 2026): some of the features we need and have
+developed are so far only in TBB preview versions. Consequently, only loading
+a TBB module and adding 
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 LIBS = "-ltbb"
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-which means you don't have to manually link against TBB anymore. It also
-should provide all the includes. It is not clear what flags are set (might
-be more than only a few include paths), so we found this route more
-reliable rather than adding TBB paths and libraries manually.
-
-If the version of TBB being used used blocked_rangeNd instead of blocked_nd_range
-then the compile definition TBB_USE_OLD_BLOCKED_RANGE_ND is required.
+might not work with Peano. Details on the TBB extensions are compiled in a 
+separate document on @ref tbb_extension. 
 
 
-### OpenMP and OpenMP offloading
+# OpenMP and OpenMP offloading
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 CC=icx CXX=icpx ./configure --with-multithreading=omp --with-gpu=omp CFLAGS="-O3 -W -Wall -Wno-attributes -fiopenmp -fopenmp-targets=spir64" CXXFLAGS="-std=c++20 -O3 -W -Wall -Wno-attributes -fiopenmp -fopenmp-targets=spir64" LDFLAGS="-march=native -mtune=native -fiopenmp -fopenmp-targets=spir64"
@@ -94,14 +100,26 @@ CC=icx CXX=icpx ./configure --with-multithreading=omp --with-gpu=omp CFLAGS="-O3
 Intel suggests to use -fiopenmp for performance and features: https://www.intel.com/content/www/us/en/developer/articles/guide/porting-guide-for-icc-users-to-dpcpp-or-icx.html
 
 
-### SYCL and SYCL offloading
+# SYCL and SYCL offloading
+
+Peano can use SYCL as both multithreading backend and as GPU offloading 
+pathway. If SYCL is only used for the accelerator, you can combine with 
+TBB and C++ multithreading besides with SYCL itself.
+
+
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+We consider using SYCL as multithreading back-end to be experimental at best at 
+the moment. For production runs, we rather recommend to combine SYCL for the 
+GPUs with TBB on the host.
+</div>
+
 
 SYCL is directly supported via icpx. There are only a few things to do:
 
-- Translate your code with --with-multithreading=sycl and/or --with-gpu=sycl.
-- Add CXXFLAGS="... -fsycl" to your compiler flags. This way, all the headers
+- Translate your code with ```--with-multithreading=sycl``` and/or ```--with-gpu=sycl```, depending on for what you want to use SYCL.
+- Add ```CXXFLAGS="... -fsycl"``` to your compiler flags. This way, all the headers
   of SYCL are known to icpx.
-- Add LDFLAGS="... -fsycl" to your linker flags. This way,
+- Add ```LDFLAGS="... -fsycl"``` to your linker flags. This way,
   the linker will automatically add all SYCL libraries. Furthermore, it will
   know when it builds the final applications that it should embed both the
   device kernels and the CPU kernels into the executable. If you use
@@ -112,23 +130,27 @@ terminate called after throwing an instance of 'sycl::_V1::runtime_error'
   what():  No kernel named _ZTSZZN7toolbox15blockstructured64interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linearEiiiiiPKdPdN6peano45utils15LoopParallelismEENKUlRT_E_clIN4sycl3_V17handlerEEEDaS8_EUlNSC_2idILi3EEEE_ was found -46 (PI_ERROR_INVALID_KERNEL_NAME)
 Aborted (core dumped)
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-- Ensure CXX=icpx points to the icpx compiler.
-- Ensure CC=icx points to the icpx compiler if you work with the autotools.
+- Ensure ```CXX=icpx``` points to the icpx compiler.
+- Ensure ```CC=icx``` points to the icpx compiler if you work with the autotools.
   This is not intuitive and actually quite a hack, but you need it to work:
   `configure` will test if you C compiler is compatible with your linker
-  flags. However, the `-fsycl` command is unknown to the default C compiler
+  flags. However, the ```-fsycl``` command is unknown to the default C compiler
   (usually gcc) and your configure will fail miserably. By letting the C
   compiler variable point to the Intel oneAPI C compiler, you ensure that the
   sanity check within the configuration phase passes.
 - Reset the MPI compiler (see below; if you want to use MPI).
 
-For Intel GPUs:
+Here are some example scripts:
+
+## Intel GPUs
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 CC=icx CXX=icpx ./configure --with-multithreading=sycl --with-gpu=sycl CFLAGS="-O3 -W -Wall -Wno-attributes -fsycl -fsycl-targets=spir64 -fsycl-device-code-split -fp-model=consistent" CXXFLAGS="-std=c++20 -O3 -W -Wall -Wno-attributes -fsycl -fsycl-targets=spir64 -fsycl-device-code-split -fp-model=consistent" LDFLAGS="-march=native -mtune=native -fsycl -fsycl-targets=spir64 -fsycl-device-code-split -fp-model=consistent"
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-For NVIDIA GPUs (Intel LLVM, Codeplay):
+## NVIDIA GPUs
+
+Her we use the Intel LLVM patch as provided through Codeplay:
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 CC=icx CXX=icpx ./configure --with-multithreading=sycl --with-gpu=sycl CFLAGS="-O3 -W -Wall -Wno-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_XX" CXXFLAGS="-std=c++20 -O3 -W -Wall -Wno-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_XX" LDFLAGS="-march=native -mtune=native -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_XX"
@@ -136,7 +158,14 @@ CC=icx CXX=icpx ./configure --with-multithreading=sycl --with-gpu=sycl CFLAGS="-
 
 where XX has to be replaced by the actual compute capability of the device.
 
-For AMD GPUs (Intel LLVM, Codeplay):
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+It is our understanding at the moment (January 2026) that this toolchain is not maintained anymore.
+You might want to switch to <a href="https://github.com/neuroradiology/OpenSYCL">OpenSYCL</a> instead.
+</div>
+
+## AMD GPUs
+
+Again with Intel toolchain as patched by Codeplay:
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 CC=icx CXX=icpx ./configure --with-multithreading=sycl --with-gpu=sycl CFLAGS="-O3 -W -Wall -Wno-attributes -fsycl -fsycl-targets=amdgcn-amd-amdsha -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=amdgcn-amd-amdsha --offload-arch=gfxXXX" CXXFLAGS="-std=c++20 -O3 -W -Wall -Wno-attributes -fsycl -fsycl-targets=amdgcn-amd-amdsha -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=amdgcn-amd-amdsha --offload-arch=gfxXXX" LDFLAGS="-march=native -mtune=native -fsycl -fsycl-targets=amdgcn-amd-amdsha -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=amdgcn-amd-amdsha --offload-arch=gfxXXX"
@@ -144,7 +173,13 @@ CC=icx CXX=icpx ./configure --with-multithreading=sycl --with-gpu=sycl CFLAGS="-
 
 where XXX has to be replaced by the actual compute capability of the device.
 
-### MPI
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+It is our understanding at the moment (January 2026) that this toolchain is not maintained anymore.
+You might want to switch to <a href="https://github.com/neuroradiology/OpenSYCL">OpenSYCL</a> instead.
+</div>
+
+
+# Intel MPI
 
 Intel's MPI wrapper is mpiicpc even though they now want you to use icpx
 instead of icc/icpc. To tell the MPI wrapper that you want to use icpx,
@@ -155,6 +190,9 @@ export I_MPI_CXX=icpx
 ./configure --with-mpi=mpiicpc
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# Troubleshooting
+
+All the troubleshooting is covered by @ref page_faq_home.
 
  */
  

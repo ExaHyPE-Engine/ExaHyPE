@@ -18,11 +18,46 @@ hook-in points for applications performing per-element, per-vertex, and so
 forth operations on the grid. It also provides interfaces for dynamic load
 balancing, sophisticated geometry representations, and other features.
 
+
+<table border="0">
+ <tr>
+  <td>
+   @image html documentation/icons/exagrype.png width=200px
+   @ref applications_exahype2_ExaGRyPE
+  </td>
+  <td>
+   @image html documentation/icons/exaseis.g width=200px
+   @ref applications_exahype2_exaseis
+  </td>
+ </tr>
+ <tr>
+  <td>
+   @image html documentation/exahype2/ExaHyPE-logo.jpg width=200px
+   @ref page_exahype2_home
+  </td>
+  <td>
+   @image html documentation/icons/MGHyPE.png width=200px
+   @ref page_multigrid_home
+  </td>
+  <td>
+   @image html documentation/icons/swift.png width=200px
+   @ref page_swift2_home
+  </td>
+ </tr>
+</table>
+
+
 On top of Peano, we have created multiple extensions which use this meshing infrastructure for particular application domains.
 Examples are extensions for SPH (@ref page_swift2_home), hyperbolic solvers (@ref page_exahype2_home) or multigrid (@ref page_multigrid_home).
 The @ref page_architecture_home "architecture page" provides an overview including some illustrations.
 Again, the extensions are kind of tools that allow you to write simulations for your particular domain.
 They are typically not "ready to use" products, even though some of these applications can almost be used as such.
+
+On top of these extensions, we in return implement various applications. 
+@ref applications_exahype2_ExaGRyPE and @ref applications_exahype2_exaseis are popular examples.
+You find more examples of applications in the respective subdirectories.
+
+
 
 <br /><br />
 <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 

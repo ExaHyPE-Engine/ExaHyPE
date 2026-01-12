@@ -173,7 +173,7 @@ the same. The illustration shows the minimal overlap that we can typically
 use. Both the upper and the lower mesh illustrate the same mesh. I use colours
 to show which solver exists in which mesh cell.
 
-@image html coupling.png
+@image html tutorials/exahype2/coupling.png
 
 - Solver A is running within the filled cells visualised on the the top. In 
   empty cells, A neither solves anything nor does it hold data. 

@@ -27,7 +27,7 @@
  * AMR for DG is basically a Riemann problem and can be illustrated in 1d.
  * Let there be two levels called coarse and fine as illustrated below:
  *
- * @image html adaptive-mesh-refinement.png
+ * @image html src/exahype2/dg/adaptive-mesh-refinement.png
  *
  * Every face holds the polynomial value left and right of it. So the green
  * face (it is a vertex here as we illustrate things in 1d, but it is really
@@ -124,7 +124,7 @@ namespace exahype2 {
      * In the example above, we work with polynomials of order three.
      * We hence have four quadrature points.
      *
-     * @image html interpolation.png
+     * @image html src/exahype2/dg/interpolation.png
      *
      * In the example above, the weights in c1, c2, c3 and c4 span a
      * polynomial (blue). InterpolationMatrix1d points to
@@ -199,7 +199,7 @@ namespace exahype2 {
      * The image below illustrates the same example as used in
      * interpolateRiemannSolution():
      *
-     * @image html interpolation.png
+     * @image html src/exahype2/dg/interpolation.png
      *
      * Different to the interpolation, we pick one of the three submatrices
      * of RestrictionMatrix1d, compute the c1, c2, c3 and c4 values and then

@@ -22,6 +22,11 @@
 namespace tarch {
   namespace multicore {
     /**
+     * Returns a queue for the host
+     *
+     * @see tarch::accelerator::getSYCLQueue( int number ) in this context, as
+     * well as @ref tarch_accelerator_SYCL.
+     *
      * @return SYCL queue for the host
      */
     sycl::queue& getHostSYCLQueue();

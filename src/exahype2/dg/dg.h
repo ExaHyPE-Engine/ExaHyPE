@@ -74,7 +74,7 @@
  * The F and S term can potentially couple n unknowns per dof from the previous
  * time step with each other. But this is irrelevant to the formulation of the problem.
  *
- * @image html shape-functions.png
+ * @image html src/exahype2/dg/shape-functions.png
  *
  * Each of the @f$ (p+1)^d @f$ unknowns carries one shape function.
  * The picture above illustrates this: There's a polynomial which is tied to one
@@ -327,7 +327,7 @@
  * of the polynomial and just read out the solution value right at the face; we do not yet 
  * exploit this fact).
  *
- * @image html solution-projection.png
+ * @image html src/exahype2/dg/solution-projection.png
  *
  * In the 2d example above, the four bottom sample points and their weight define the
  * blue polynomial along the horizontal line. The other 12 integration points in the
