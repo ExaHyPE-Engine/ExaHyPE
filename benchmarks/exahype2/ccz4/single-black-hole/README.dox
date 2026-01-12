@@ -1,43 +1,72 @@
 /** 
 
-@page benchmarks_exahype2_ccz4_single_black_hole Solver coupling (Single Schwarzschild black hole)
+@page benchmarks_exahype2_ccz4_single_black_hole Single Schwarzschild black hole
+
+<img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/BH_LMC.png" />
 
 <!-- Add this one for href links to subitems -->
 @tableofcontents
 
 
-Benchmark which solves the single black hole described in a ExaGRyPE simulation. 
+
+Benchmark which solves the single black hole (schwarzschild black hole) described in a ExaGRyPE simulation. 
 While the output is not particularly exciting (the simulation should yield a 
 stationary solution after a while), it is numerically challenging as we have
 sophisticated boundary condition effects, a singularity in the centre which 
 can lead to oscillations, need a scheme with low numerical dissipation, and 
-so forth. Therefore, this benchmark combines two different solvers - a 
-dissipative Finite Volume scheme and a higher order scheme - to obtain a
-compromise between accuracy and stability. 
+have highly varying spatial resolution needs, i.e. need a fine resolution around
+the black hole, while we can keep the mesh coarse far away . 
 
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
-  For this benchmark, the following extensions are mandatory:
-  
-  - blockstructured (`--enable-blockstructured`)
-  - exahype2 (`--enable-exahype2`)
-  
-  Furthermore, you will need the GNU Scientific Library (GSL) installed on your system. 
+
+The benchmark comes along in different flavours:
+
+- with AMR vs a regular mesh;
+- using one solver only or a combination of two solvers;
+- different multicore tasking strategies.
+
+
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+  Prior to benchmarking this setup, we recommend that you should ensure
+  that @ref benchmarks_exahype2_ccz4_kernel_benchmarks and the 
+  @ref benchmarks_exahype2_ccz4_gauge_wave complete successfully. 
+  One assesses the computational efficiency for various kernel variants over
+  different platforms, and the other validates the numerical accuracy of the 
+  overall solver assembly (convergence orders).
 </div>
 
 
 # Build executable
 
+<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+  This benchmark requires a third-party tool: You will need the GNU Scientific Library (GSL) installed on your system. 
+</div>
+
+
+For this single black hole benchmark, the following Peano toolboxes are mandatory:
+  
+  - blockstructured (```--enable-blockstructured```)
+  - exahype2 (```--enable-exahype2```)
+  
+In theory, the benchmark passes without parallelisation. In practice, it is so 
+computationally demanding that we recommend to use multithreading and MPI. Due 
+to this, you also need
+
+   - load balancing (```--enable-load-balancing```)
+
+GPU support is, as always, optional. Other advanced features such as particle 
+tracers are not used. 
+
+Builds always resemble:
+
 ~~~~~~~~~~~~~~~~~~~~~~~
 export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4
 
-python3 performance-studies.py -lbm tailored -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6
+python3 performance-studies.py -lbm tailored -s fd4-rk1-ps-3 --scheduler native-no-priorities --trees 6
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 
-As always, the parameter --help makes the Python script yield further info,
+As always, the parameter ```--help``` makes the Python script yield further info,
 while the sections below enlist characteristic choices of the parameters.
-There are different scripts in the directory.
-They serve different purposes and support slightly different parameters.
 
 Depending on your system, you might have to load the GSL module separately
 before you build the application:
@@ -45,6 +74,8 @@ before you build the application:
 ~~~~~~~~~~~~~~~~~~~~~~~
 module load gsl
 ~~~~~~~~~~~~~~~~~~~~~~~
+
+
 
 
 # Clean up old and temporary files
@@ -66,6 +97,12 @@ To get rid of the output files, type in
 ~~~~~~~~~~~~~~~~~~~~~~~
 rm *patch-file *vtu *.pvd *.bak *.csv
 ~~~~~~~~~~~~~~~~~~~~~~~
+
+# Solver variants
+
+Therefore, this benchmark combines two different solvers - a 
+dissipative Finite Volume scheme and a higher order scheme - to obtain a
+compromise between accuracy and stability. 
 
 
 # Visualise outcome
@@ -471,7 +508,17 @@ I found that OpenMP is comparatively slow. TBB does a way nicer job. I
 therefore recommend to use TBB in this case for the benchmarking.
 
 
-# Code remarks (FD4-FV scheme)
+# Implementation
+
+The section below discusses various simulation-specific implementation choices.
+
+## The FD4-FV scheme
+
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+  This discussion is relevant if and only if you use a combined solver.
+  These solvers are all available through the Python front-end if you use one of the variants containing a ```limited```
+</div>
+
 
 Even simple initial conditions can make our higher-order Finite Differences solver
 fail: The higher order solution representation is not capable to resolve
@@ -491,7 +538,7 @@ unfolds its full potential.
 
 @todo Remove the KO terms here
 
-@image html two-different-solvers.png
+@image html benchmarks/exahype2/ccz4/single-black-hole/two-different-solvers.png
 
 The image above illustrates our concept: There's an FD4 solver which computes
 the solution in the whole domain. This solution is is illustrated via the horizontal
@@ -522,7 +569,7 @@ FD4 is. Furthermore, this separation of responsibilities allows us, in theory,
 to use the same limiter with RKDG as well.
 
 
-## Time step size
+### Time step size
 
 As we combine solvers, we have to ensure that their time step sizes match. This 
 means that the Finite Volume patch size has to be calibrated
@@ -561,7 +608,7 @@ sizes, and sets this minimum as own admissible size as well as the admissible
 time step size of the limiter.
 
 
-## The Finite Volume solver
+### The Finite Volume solver
 
 Our FV solver is, through various inheritance levels, a subclass of 
 peano.exahype2.solvers.fv.EnclaveTasking which in turn inherits from
@@ -618,9 +665,9 @@ should go straight onto a core or the GPU. To re-prioritise, we add
 to the constructor.
 
 
-## The FD4 solver
+### The FD4 solver
 
-### FD4-FV coupling (projection) 
+#### FD4-FV coupling (projection) 
 
 To realise the coupling, we have to augment the FD4 solver by some additional 
 pre- and post-processing steps:
@@ -685,7 +732,7 @@ temporary volumetric step, but is a realisation which can be implemented
 with the on-board routines and the logic of it is rather clear.
 
 
-### FV-FD4 coupling (restriction)
+#### FV-FD4 coupling (restriction)
 
 The coupling from the Finite Volume scheme to FD4 in contrast is a real
 volumetric coupling: We overwrite the FD4's self._action_set_postprocess_solution 
@@ -760,6 +807,8 @@ solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
 
 ## Concurrency analysis with default task orchestration
 
+@todo Docu that this only kicks in for limited options
+@todo Machen die Orchestration nicht auch fuer fd4 Sinn?
 
    When we visualise the CPU occupation, we get an image similar to the one
    below.

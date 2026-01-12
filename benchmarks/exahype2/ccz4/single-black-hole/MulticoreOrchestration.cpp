@@ -5,15 +5,14 @@
 #include "tarch/multicore/Task.h"
 #include "tarch/accelerator/Device.h"
 
-#ifdef PureFV
-#else
+#if !defined(PureFV)
 #include "tasks/CCZ4SBH_FD4EnclaveTask.h"
 #endif
 
-#ifdef PureFD4
-#else
+#if !defined(PureFD4)
 #include "tasks/CCZ4SBH_FVEnclaveTask.h"
 #endif
+
 
 benchmarks::exahype2::ccz4::MulticoreOrchestration::MulticoreOrchestration():
   _nestedBSPLevels(0),
@@ -36,45 +35,29 @@ void benchmarks::exahype2::ccz4::MulticoreOrchestration::endBSPSection(int neste
   }
 }
 
-int benchmarks::exahype2::ccz4::MulticoreOrchestration::getNumberOfTasksToHoldBack(int taskType) {
-  if ( taskType == tasks::CCZ4SBH_FVEnclaveTask::getEnclaveTaskTypeId() ) {
-    _finiteVolumeTasksInThisBSPSection++;
-  }
 
-  if (
-    _nestedBSPLevels>0
-    and
-    tarch::accelerator::Device::getInstance().getNumberOfDevices()>0
-    and
-    taskType == tasks::CCZ4SBH_FVEnclaveTask::getEnclaveTaskTypeId()
-  ) {
-    return _maxFiniteVolumeTasks;
-  }
-  else {
-    return 0;
-  }
-}
-
-benchmarks::exahype2::ccz4::MulticoreOrchestration::FuseInstruction benchmarks::exahype2::ccz4::MulticoreOrchestration::getNumberOfTasksToFuseAndTargetDevice(
+benchmarks::exahype2::ccz4::MulticoreOrchestration::FuseInstruction benchmarks::exahype2::ccz4::MulticoreOrchestration::fuse(
   int taskType
 ) {
-  if (
-    taskType == tasks::CCZ4SBH_FVEnclaveTask::getEnclaveTaskTypeId()
-  ) {
-    return benchmarks::exahype2::ccz4::MulticoreOrchestration::FuseInstruction(
-      0, 1, 1
-    );
-  }
-  else {
-    return benchmarks::exahype2::ccz4::MulticoreOrchestration::FuseInstruction(
-      0, 16, std::numeric_limits<int>::max()
-    );
-  }
+  auto FVFuseInstruction = benchmarks::exahype2::ccz4::MulticoreOrchestration::FuseInstruction(
+    0, 1, 1
+  );
+
+  auto FDFuseInstruction = benchmarks::exahype2::ccz4::MulticoreOrchestration::FuseInstruction(
+    0, 16, std::numeric_limits<int>::max()
+  );
+
+  #if defined(PureFD4)
+  return FDFuseInstruction;
+  #elif defined(PureFV)
+  return FVFuseInstruction;
+  #else
+  return taskType == tasks::CCZ4SBH_FVEnclaveTask::getEnclaveTaskTypeId()
+                   ? FVFuseInstruction
+                   : FDFuseInstruction;
+  #endif
 }
 
-bool benchmarks::exahype2::ccz4::MulticoreOrchestration::fuseTasksImmediatelyWhenSpawned(int taskType) {
-  return true;
-}
 
 tarch::multicore::orchestration::Strategy::ExecutionPolicy benchmarks::exahype2::ccz4::MulticoreOrchestration::paralleliseForkJoinSection(
   int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier

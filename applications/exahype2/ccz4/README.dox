@@ -2,7 +2,7 @@
 
 @page applications_exahype2_ExaGRyPE ExaGRyPE
 
-@image html arty.png
+@image html tutorials/exahype2/exagrype/arty.png
 
 <!-- Add this one for href links to subitems -->
 \tableofcontents
@@ -25,6 +25,16 @@ by ExaHyPE2, future versions will enable full simulations of modified gravity th
 The release paper of ExaGRyPE is provided below for interested users. The code is completely open-sources and can 
 be found in the Peano repositories. \ref tutorials_exahype2_applications_exagrype provide a tutorial on how to install
 and run the code. 
+
+
+<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+  As ExaHyPE's applications are built on top of ExaHyPE, we decided to embed 
+  all application-specific content straight into ExaHyPE. Consequently, all
+  data are scattered: The application-specific benchmarks are part of ExaHyPE's
+  benchmark collection, the tutorials are a subset of the tutorials (which makes
+  sense as they build on top of ExaHyPE and Peano), and so forth. However, 
+  deep crosslinks are provided below.
+</div>
 
 
 # Physics Note
@@ -74,6 +84,17 @@ variables with
 
 Both formulations are now available in the code for difference scenarios. Users are referred to Appendix B
 of the paper below for more details of equations and formulation used in ExaGRyPE.
+
+
+# Deep links
+
+
+- @ref tutorials_exahype2_applications_exagrype "Tutorials"
+- ExaGRyPE benchmarks (cmp @ref page_exahype_benchmarks "overview of all ExaHyPE benchmarks")
+  - \ref benchmarks_exahype2_ccz4_kernel_benchmarks
+  - \ref benchmarks_exahype2_ccz4_gauge_wave
+  - \ref benchmarks_exahype2_ccz4_single_black_hole
+- Example simulations
 
 # Reference papers
 

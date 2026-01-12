@@ -82,12 +82,17 @@ class Project(object):
 
 
     def set_load_balancing(self, load_balancer_name, load_balancer_arguments=""):
-        """
-        load_balancer_name: string
+        """! Set load balancing scheme
+        
+        The load balancing scheme controls how subtress are distributed both
+        among ranks and threads, i.e. the instance is important for MPI but 
+        also whenever you use any multithreading strategy.
+        
+        @param load_balancer_name: string
           Should be full-qualified name of the load balancer.
           By default, I recommend to pass "toolbox::loadbalancing::strategies::RecursiveSubdivision".
 
-        load_balancer_arguments: string
+        @param load_balancer_arguments: string
           If your load balancing requires parameters, add them
           here. It is a string that will be copied into the C++ class instantiation.
           Please add the brackets yourself, i.e. "(3,4,5)" is fine, but "3,4,5" is not.
@@ -100,27 +105,62 @@ class Project(object):
 
     def set_log_filter_file(self, file_name):
         """! Set a log filter file name
-        Pass in the empty string, if you want the code to use the hard-coded
-        defaults.
+        
+        Pass in the empty string, if you don't want the code to use the 
+        hard-coded defaults. That is, by default an ExaHyPE2 application
+        searches for a file exahype.log-filter. Through this call, you can 
+        instruct the project to use another filter file.
+        
+        @param file_name String
+          Name of the log filter file that the application should load on 
+          startup.
+          
         """
         self._log_filter_file = file_name
 
 
     def set_number_of_threads(self, value):
         """! Set number of threads to use
+        
         Pass in number of threads (positive integer) or a string such as
-        "tarch::multicore::Core::UseDefaultNumberOfThreads".
+        "tarch::multicore::Core::UseDefaultNumberOfThreads". Please note that
+        this value is handed through to Peano which in turn passes it on the
+        tarch::multicore::Core::configure(int). It then depends on the 
+        multithreading backend if this backend allows you to set the thread
+        count manually. Many backends (such as OpenMP) do not allow this, 
+        but require users to use environment variables (or scheduler options)
+        instead.
+        
         """
         self._number_of_threads = value
 
 
     def set_multicore_orchestration(self, value):
         """! Set orchestration
+        
+        The orchestration accepts one value which is a C++ statement. This
         value has to be a string which creates an orchestration object,
-        i.e., an object of the type tarch::multicore::orchestration::Orchestration.
+        i.e. an object of the type tarch::multicore::orchestration::Orchestration,
+        on the heap.
+        
         You can either create it directly (in this case you need to add a new),
         or you can use a factory method such as
-        "tarch::multicore::orchestration::StrategyFactory::createDefaultStrategy()".
+        tarch::multicore::orchestration::StrategyFactory::createDefaultStrategy().
+        
+        Depending on where you come from, you might have to add the strategy's
+        header file to the project explicitly. By default, the ExaHyPE 2 
+        project only is aware of very few strategies. Here's an example:
+        
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        project.add_mainfile_include( "tarch/multicore/orchestration/Hardcoded.h")
+        project.set_multicore_orchestration(
+            "new benchmarks::exahype2::ccz4::MulticoreOrchestration()"
+        )
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        @see exahype2.Project.add_mainfile_include()        
+        @param value C++ expression delivering a new orchestration object on the heap
+        
         """
         self._multicore_orchestration = value
 

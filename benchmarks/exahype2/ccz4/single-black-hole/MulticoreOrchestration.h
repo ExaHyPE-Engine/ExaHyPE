@@ -32,24 +32,10 @@ namespace benchmarks {
  * - Each FV patch makes an object well-suited for a GPU. If there is an
  *   accelerator, we offload immediately.
  * - If there is accelerator, we map each FV patch immediately to a
- *   proper task.
- * - All other tasks are held back yet mapped onto proper tasks after the
- *   producing BSP section has terminated or until we know that all the
- *   Finite Volume tasks are out.
- *
- * ## Realisation
- *
- * I hijack getNumberOfTasksToHoldBack() to keep track of the total number
- * of enclave tasks. This is a constant here, so I can derive it via a max
- * function and I know that the right value will be in there after the
- * first grid sweep.
- *
- * The "magic" happens in getNumberOfTasksToHoldBack() and the documentation
- * of this rule provides some further details.
- *
- * We disable any nested parallelism. See paralleliseForkJoinSection()'s
- * documentation.
- *
+ *   proper GPU task.
+ * - All other tasks are fused properly.
+ * - We disable any nested parallelism. See paralleliseForkJoinSection()'s
+ *   documentation.
  *
  */
 class benchmarks::exahype2::ccz4::MulticoreOrchestration: public tarch::multicore::orchestration::Strategy {
@@ -65,12 +51,20 @@ class benchmarks::exahype2::ccz4::MulticoreOrchestration: public tarch::multicor
      * Maximum number of finite volume tasks in the system. I don't use this
      * value at the moment, but might want to use it for GPUs.
      *
-     * @see startBSPSection()
+     * @see _finiteVolumeTasksInThisBSPSection
      */
     int _maxFiniteVolumeTasks;
 
     /**
      * Current number of finite volume tasks that already have been spawned.
+     *
+     * This is a local temporary attribute which I use to accumulate a
+     * new value for _maxFiniteVolumeTasks, i.e. eventually this value
+     * is rolled over into _maxFiniteVolumeTasks and cleared. While I
+     * accumulate a new value, the "valid" attribute _maxFiniteVolumeTasks
+     * remains unaltered, i.e. we work with the previous valid value.
+     *
+     * @see startBSPSection()
      */
     int _finiteVolumeTasksInThisBSPSection;
 
@@ -101,36 +95,13 @@ class benchmarks::exahype2::ccz4::MulticoreOrchestration: public tarch::multicor
     virtual void            endBSPSection(int nestedParallelismLevel) override;
 
     /**
-     * How many tasks should be held back
-     *
-     * If we have a GPU and we are given a FV task, we hold it back, as we
-     * know that fuseTasksImmediatelyWhenSpawned(int taskType) yields true immediately
-     * and we hence offload. If there is no GPU, we map FV tasks onto proper
-     * tasks immediately.
-     *
-     * The routine is basically where the magic happens and where the logic
-     * of the class description is realised.
-     *
-     */
-    virtual int             getNumberOfTasksToHoldBack(int taskType) override;
-
-    /**
      * Ensure right cardinality ends up on GPU
      *
      * If we hae a Finite Volume task, we send it off to the GPU immediately.
      * If we have FD4 tasks, we wait until we have 16 of them and then send them
      * off. The 16 is arbitrary. I just needed one number.
      */
-    virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice(int taskType) override;
-
-    /**
-     * Ensure Finite Volume tasks end up on GPU asap
-     *
-     * Always true as we want to get the Finite Volume tasks to the
-     * accelerator as soon as possible. All other tasks might remain on the
-     * CPU or not. Here, it makes no big difference.
-     */
-    virtual bool            fuseTasksImmediatelyWhenSpawned(int taskType) override;
+    virtual FuseInstruction fuse(int taskType) override;
 
     /**
      * Determine how to parallelise a fork/join section

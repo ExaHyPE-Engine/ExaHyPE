@@ -335,7 +335,9 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
           double                                       dt,
           int                                          normal
         ) -> double {
-          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
+          double temp;
+          repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal, &temp );
+          return temp;
         },
         [&](
           double * __restrict__                        Q,
@@ -657,7 +659,9 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
           double                                       dt,
           int                                          normal
         ) -> double {
-          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
+		  double temp;
+          repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal, &temp );
+          return temp;
         },
         [&](
           double * __restrict__                        Q,
@@ -683,7 +687,8 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
         marker.getSelectedFaceNumber(),
         {0.0, 0.0, 0.0},
         fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
-        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value,
+        -1 // @todo Han, can you add a comment here please why we do -1?
       );
       """
         )

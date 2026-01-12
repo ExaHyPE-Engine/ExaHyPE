@@ -149,7 +149,11 @@ in the CMake configuration.
   @ref page_compiler_specific_settings_home "compiler-specific settings". Ensure that
   the flag ```CompilerCLANG``` is enabled and used.
 
-
+- ***My compiler fails with ```array 'new' cannot have initialization arguments```***
+  All-time classic with many compilers: Add ```--std=c++23``` to your CXXFLAGS 
+  and the issue should be gone.
+  
+   
 ## Vendor-specific toolchains
 
 - ***configure fails for the NVIDIA compiler*** For NVIDIA, we have to make CXX

@@ -74,7 +74,7 @@ rm *patch-file *vtu *.pvd *.bak *.csv
 
 # Visualisation
 
-@image html GW_visual.png
+@image html tutorials/exahype2/exagrype/GW_visual.png
 
 The output of ExaHyPE is given in peano patch file and one can use the following commands to 
 convert them into normal vtu files, and inspect in other tools like paraview.
