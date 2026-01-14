@@ -51,6 +51,10 @@ SolverChoices = [
             "fd4-rk1-limited-ps-3",
             "fd4-rk1-limited-ps-6",
         ] 
+
+#
+# Enclave versions are missing
+#
                
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
