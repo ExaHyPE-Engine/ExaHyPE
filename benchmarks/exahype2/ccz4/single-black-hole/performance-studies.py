@@ -32,6 +32,16 @@ from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
 
 #python3 performance-studies.py -lbm tailored -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6 --interpolation-method linear -cs 5.4 --plot
 
+LoadBalancingMetrics = ["generic", "tailored"]
+SchedulerChoices = [
+            "native-no-priorities",
+            "native",
+            "tailored",
+            "parallel-for",
+            "subtasks",
+            "subtasks-and-kernel-parallelisation",
+        ]
+        
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="ExaHyPE 2 - CCZ4-Performance studies benchmarking script"
@@ -78,7 +88,7 @@ if __name__ == "__main__":
         "--trees",
         dest="trees",
         type=int,
-        required=True,
+        default=0,
         help="Number of trees (subpartitions) per rank",
     )
     parser.add_argument(
@@ -110,23 +120,16 @@ if __name__ == "__main__":
         "-sched",
         "--scheduler",
         dest="scheduler",
-        choices=[
-            "native-no-priorities",
-            "native",
-            "tailored",
-            "parallel-for",
-            "subtasks",
-            "subtasks-and-kernel-parallelisation",
-        ],
-        required=True,
+        choices=SchedulerChoices,
+        default=SchedulerChoices[0],
         help="Task scheduler flavours",
     )
     parser.add_argument(
         "-lbm",
         "--load-balancing-metric",
         dest="load_balancing_metric",
-        choices=["generic", "tailored"],
-        required=True,
+        choices=LoadBalancingMetrics,
+        default=LoadBalancingMetrics[0],
         help="Load balancing metric",
     )
     parser.add_argument(
@@ -301,7 +304,8 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation(args.peanodir, peano4.output.string_to_mode(args.mode))
 
-    if args.load_balancing_metric == "generic":
+    if args.load_balancing_metric == "generic" and args.trees>0:
+        assert args.trees>=0 
         project.set_load_balancing(
             "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
             """
@@ -316,7 +320,20 @@ if __name__ == "__main__":
                 args.trees, 2 * args.trees
             ),
         )
+    elif args.load_balancing_metric == "generic":
+        assert args.trees==0 
+        project.set_load_balancing(
+            "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
+            """
+          new ::exahype2::LoadBalancingConfiguration(
+            0.98, 
+            1
+          ),
+          new toolbox::loadbalancing::metrics::CellCount()
+        """
+        )
     else:
+        assert args.trees>0
         load_balancing_cell_label = (
             exahype2.grid.FineGridCellLoadBalancingCostMetric.create_cell_label(project)
         )
