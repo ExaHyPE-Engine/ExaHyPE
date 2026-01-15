@@ -33,7 +33,7 @@ toolbox::loadbalancing::strategies::Hardcoded::Hardcoded(
   auto mode            = modes.begin();
 
   while (gridSweep != gridSweeps.end()) {
-    validateAndAddSplitInstruction( Split( *gridSweep, *splittingTree, *cells, *destinationRank, *mode ) );
+    _splits.push( Split( *gridSweep, *splittingTree, *cells, *destinationRank, *mode ) );
     gridSweep++;
     splittingTree++;
     cells++;
@@ -62,7 +62,7 @@ toolbox::loadbalancing::strategies::Hardcoded::Hardcoded(
   auto destinationRank = destinationRanks.begin();
 
   while (gridSweep != gridSweeps.end()) {
-    validateAndAddSplitInstruction( Split( *gridSweep, *splittingTree, *cells, *destinationRank, mode ) );
+    _splits.push( Split( *gridSweep, *splittingTree, *cells, *destinationRank, mode ) );
     gridSweep++;
     splittingTree++;
     cells++;
@@ -71,19 +71,26 @@ toolbox::loadbalancing::strategies::Hardcoded::Hardcoded(
 }
 
 
-void toolbox::loadbalancing::strategies::Hardcoded::validateAndAddSplitInstruction( Split newSplit ) {
-  if ( newSplit.destinationRank>=tarch::mpi::Rank::getInstance().getNumberOfRanks() ) {
-    int oldRank = newSplit.destinationRank;
-    int newRank = newSplit.destinationRank % tarch::mpi::Rank::getInstance().getNumberOfRanks();
-    newSplit.destinationRank = newRank;
+void toolbox::loadbalancing::strategies::Hardcoded::Split::validateAndAmend() {
+  #if defined(MPI)
+  assertion1( tarch::mpi::Rank::getInstance().isInitialised(), toString() );
+
+  const int MaxRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  #else
+  const int MaxRanks = 1;
+  #endif
+
+  if ( destinationRank>=MaxRanks ) {
+    int oldRank = destinationRank;
+    int newRank = oldRank % tarch::mpi::Rank::getInstance().getNumberOfRanks();
+    destinationRank = newRank;
     logWarning(
       "validateAndAddSplitInstruction(Split)",
       "split instruction tried to assign trees to rank " << oldRank <<
       " even though there are only " << tarch::mpi::Rank::getInstance().getNumberOfRanks() <<
-      " ranks. Altered entry into " << newSplit.toString()
+      " ranks. Altered entry into " << toString()
     );
   }
-  _splits.push( newSplit );
 }
 
 
@@ -125,6 +132,8 @@ void toolbox::loadbalancing::strategies::Hardcoded::finishStep() {
 
     Split split( _splits.front() );
     _splits.pop();
+
+    split.validateAndAmend();
 
     if ( peano4::parallel::SpacetreeSet::getInstance().isLocalSpacetree( split.splittingTree) ) {
       if ( _state==State::SwitchedOff ) {

@@ -248,8 +248,8 @@ def lower_to_peano4_project(project,
 
     return peano4_project
 
-               
-if __name__ == "__main__":
+
+def get_command_line_args():
     parser = argparse.ArgumentParser(
         description="ExaHyPE 2 - CCZ4 single black hole benchmarking script"
     )
@@ -361,7 +361,12 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-
+    return args
+               
+               
+if __name__ == "__main__":
+    args = get_command_line_args()
+    
     # =================================
     # Create project
     # =================================
