@@ -58,7 +58,7 @@ SolverChoices = [
                
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="ExaHyPE 2 - CCZ4-Performance studies benchmarking script"
+        description="ExaHyPE 2 - CCZ4 single black hole benchmarking script"
     )
     parser.add_argument(
         "-j",

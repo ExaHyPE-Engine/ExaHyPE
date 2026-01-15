@@ -120,6 +120,21 @@ is only active in a tiny cross-shaped region within.
 @image html benchmarks/exahype2/ccz4/single-black-hole/grid-setup.png
 
 
+# Solver and optimisation variants
+
+## Solvers
+
+All solvers are declared within the Python file SBH.py. 
+Each solver therein is a subclass of a CCZ4 solver, tailored exactly towards 
+the single black hole setup.
+Each solver therein is also available to be used from the command line by 
+picking a variant through ```--solver```.
+
+- Finite Volume solvers all start with a ```fv-``` prefix (if you use the 
+  command line) followed by the patch size. We exclusively employ enclave
+  solvers in this setup, i.e. each Finite Volume solver spawns tasks.
+  
+
 # Production runs
 
 Han's original setup uses the full-blown CCZ4 setup with 
