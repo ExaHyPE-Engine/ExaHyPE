@@ -249,7 +249,6 @@ if __name__ == "__main__":
         )
         project.add_solver(my_primary_solver)
         added_limiter = False
-        args.end_time *= 10
     elif "fd4-rk1-limited-ps-" in args.solver:
         FD4PatchSize = 16*int(args.solver[-1])
         my_primary_solver = FD4SolverWithLimiter(
@@ -292,7 +291,6 @@ if __name__ == "__main__":
         )
         project.add_solver(my_primary_solver)
         added_limiter = False
-        args.end_time *= 10
     else:
         raise "unknown solver type {}".format(args.solver)
 
@@ -336,10 +334,10 @@ if __name__ == "__main__":
     elif args.load_balancing_metric == "generic":
         assert args.trees==0 
         project.set_load_balancing(
-            "toolbox::loadbalancing::strategies::cascade::SpreadOutHierarchically",
+            "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
             """
           new ::exahype2::LoadBalancingConfiguration(
-            0.98, 
+            0.98,  
             1
           ),
           new toolbox::loadbalancing::metrics::CellCount()

@@ -165,7 +165,11 @@ Here are some canonical settings:
 
 Description     | Solver         | Cell size | End time | Patch size | Remarks   | Build command
 ----------------|----------------|-----------|----------|------------|-----------|---------------
-Minimal setup   | Finite Volumes | 1.8       | 1e-2     |          6 | You cannot see AMR here, but already gives you 9,683 cells. The FV patch size means that the CFD conditions do not match. This is a toy setup for a local laptop. It scales only up to 4-8 cores, as it so too small. Despite the small patch size (6 is production-mode level), we see the impact of the lack of scaling. | ```python3 performance-studies.py -s fv-6 -et 1e-2 --plot 0.0 --cell-size 1.8```
+Minimal setup   | Finite Volumes | 1.8       | 1e-1     |          6 | You cannot see AMR here, but already gives you 19,683 cells. Load balancing should be really good. The FV patch size means that the CFD conditions do not match. This is a toy setup for a local laptop. It scales only up to 4-8 cores, as it so too small. Despite the small patch size (6 is production-mode level), we see the impact of the lack of scaling. | ```python3 performance-studies.py -s fv-6 -et 0.1 --plot 0.0 --cell-size 1.8```
+
+
+
+<!--
 Proper minimal setup | fv       | 1.8       | 1e-2 |       6 | You cannot see AMR here either, but the FV patch size is a proper one, i.e. the black hole is resolved such that the CFL conditions of the FV and FD scheme match.
 One node setup  | fv            | 0.6       | 1e-3     |          6 | This setup is already too big to be solved without AMR on a single node. We see that normal, native tasking performs best.
 One node setpu  | fv            | 0.1       | 1e-4     |          6 | Use xxx nodes for regular grid
@@ -174,6 +178,7 @@ One node setpu  | fv            | 0.1       | 1e-4     |          6 | Use xxx no
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 python3 performance-studies.py -s fd4-rk1-ps-3 -et 1e-2 --plot 0.0 --cell-size 1.8
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-->
 
 
 For all the upscaling studies, we use the same kind of benchmarks. They can be 
