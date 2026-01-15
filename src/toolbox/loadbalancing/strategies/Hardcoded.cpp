@@ -1,4 +1,4 @@
-#include "../strategies/Hardcoded.h"
+#include "toolbox/loadbalancing/strategies/Hardcoded.h"
 
 #include "toolbox/loadbalancing/loadbalancing.h"
 
@@ -33,7 +33,7 @@ toolbox::loadbalancing::strategies::Hardcoded::Hardcoded(
   auto mode            = modes.begin();
 
   while (gridSweep != gridSweeps.end()) {
-    _splits.push( Split( *gridSweep, *splittingTree, *cells, *destinationRank, *mode ) );
+    validateAndAddSplitInstruction( Split( *gridSweep, *splittingTree, *cells, *destinationRank, *mode ) );
     gridSweep++;
     splittingTree++;
     cells++;
@@ -62,12 +62,28 @@ toolbox::loadbalancing::strategies::Hardcoded::Hardcoded(
   auto destinationRank = destinationRanks.begin();
 
   while (gridSweep != gridSweeps.end()) {
-    _splits.push( Split( *gridSweep, *splittingTree, *cells, *destinationRank, mode ) );
+    validateAndAddSplitInstruction( Split( *gridSweep, *splittingTree, *cells, *destinationRank, mode ) );
     gridSweep++;
     splittingTree++;
     cells++;
     destinationRank++;
   }
+}
+
+
+void toolbox::loadbalancing::strategies::Hardcoded::validateAndAddSplitInstruction( Split newSplit ) {
+  if ( newSplit.destinationRank>=tarch::mpi::Rank::getInstance().getNumberOfRanks() ) {
+    int oldRank = newSplit.destinationRank;
+    int newRank = newSplit.destinationRank % tarch::mpi::Rank::getInstance().getNumberOfRanks();
+    newSplit.destinationRank = newRank;
+    logWarning(
+      "validateAndAddSplitInstruction(Split)",
+      "split instruction tried to assign trees to rank " << oldRank <<
+      " even though there are only " << tarch::mpi::Rank::getInstance().getNumberOfRanks() <<
+      " ranks. Altered entry into " << newSplit.toString()
+    );
+  }
+  _splits.push( newSplit );
 }
 
 
@@ -114,9 +130,7 @@ void toolbox::loadbalancing::strategies::Hardcoded::finishStep() {
       if ( _state==State::SwitchedOff ) {
         logError(
           "finishStep()",
-          "wanted to split " << split.numberOfCells << " cell(s) from tree " <<
-          split.splittingTree << " and to deploy them to new tree on rank " << split.destinationRank <<
-          ". However, load (re-)balancing is deactivated"
+          "wanted to split " << split.toString() << ". However, load (re-)balancing is deactivated"
         );
       }
       else if (not peano4::parallel::SpacetreeSet::getInstance().split(
@@ -126,9 +140,7 @@ void toolbox::loadbalancing::strategies::Hardcoded::finishStep() {
       )) {
         logWarning(
           "finishStep()",
-          "had been told to split " << split.numberOfCells << " cell(s) from tree " <<
-          split.splittingTree << " and to deploy them to new tree on rank " << split.destinationRank <<
-          ". However, that failed"
+          "had told Peano to split " << split.toString() << ", but split failed"
         );
       }
     }
@@ -139,3 +151,16 @@ void toolbox::loadbalancing::strategies::Hardcoded::finishStep() {
 
 
 void toolbox::loadbalancing::strategies::Hardcoded::finishSimulation() {}
+
+
+std::string toolbox::loadbalancing::strategies::Hardcoded::Split::toString() const {
+  std::ostringstream msg;
+  msg << "(gridSweep=" << gridSweep
+      << ",splittingTree=" << splittingTree
+      << ",numberOfCells=" << numberOfCells
+      << ",destinationRank=" << destinationRank
+      << ",mode=" << peano4::SplitInstruction::toString(mode)
+      << ")";
+  return msg.str();
+}
+

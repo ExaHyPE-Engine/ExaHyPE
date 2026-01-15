@@ -1,9 +1,10 @@
 /** 
 
-@page benchmarks_exahype2_ccz4_gauge_wave RKDG Solver (Gauge Wave)
+@page benchmarks_exahype2_ccz4_gauge_wave CCZ4 Gauge Wave
 
 \tableofcontents
 
+@image html benchmarks/exahype2/ccz4/gauge-wave/example-output/Tracer-dg0-rk1-0.1-rank-0-snapshot-0.csv.png
 
 Very simple benchmark with a time-invariant solution subject to a shift that we can use to assess the convergence order.
 
@@ -14,7 +15,12 @@ conditions all all sides. In theory, the wave we simulate should be a
 standing wave leaving the domain on the right and re-entering it on the left.
 If the wave shape or its amplitude change over time, this is due to numerical
 effects. The setup is thus convenient to assess properties of different
-numerical schemes.  
+numerical schemes.
+
+We also hijack this scheme to assess the impact of various implementation nuances:
+As we have no really complex physical behaviour once the convergence order is there,
+it is a nice toy problem to study a few other things such as the impact of the 
+memory organisation.
 
 
 ## Prepare Peano
@@ -23,10 +29,19 @@ Peano has to be built with the ExaHyPE extension plus the tracers, i.e.
 with 
 
 ~~~~~~~~~~~~~~~~~~~~~~~
---enable-blockstructured --enable-particles --enable-loadbalancing --enable-finiteelements --enable-mghype --enable-swift --enable-exahype
+--enable-blockstructured --enable-particles --enable-loadbalancing --enable-exahype
 ~~~~~~~~~~~~~~~~~~~~~~~
 
+There are not really any tracers in this setup as per a tracer sense. However,
+we insert indeed very few particles, keep them at one place throughout the 
+simulation, and track the solution at the tracers' location. They serve as probes, 
+and their outcomes are kind of an in-situ postprocessing: Without them, we would 
+have to dump the whole solution over the whole runtime, just to sample the solution
+at one point in space (or foliation) for each and every snapshot. Tracers are a 
+more convenient technique to obtain exactly the same insight with small memory
+footprint and I/O load.
 
+ 
 ## Build executables
 
 It is reasonable to start the Python script with the --help option once to 

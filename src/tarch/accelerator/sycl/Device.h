@@ -146,11 +146,27 @@ namespace tarch {
      * getNumberOfSYCLQueues(). The actual device number might be totally
      * different.
      *
-     * If you use SYCL on the host, too, you should not access this queue
-     * throught he accelerator namespace, but use the tarch::multicore
-     * namespace.
+     * ## SYCL used as multithreading back end
      *
+     * If you use SYCL on the host, too, you should not access this queue
+     * through he accelerator namespace, but use the tarch::multicore
+     * namespace. If the caller however uses this routine (for example
+     * to throw a compute kernel into the mix of host tasks), then we
+     * manually map this call onto tarch::multicore::getHostSYCLQueue().
+     * This means we need an ifdef here to cover that special case.
+     *
+     * ## SYCL only used for accelerators
+     *
+     * If SharedSYCL is not used, then tarch::accelerator::Device::configure()
+     * will have created an explicit host queue, and therefore we can serve
+     * a call with tarch::accelerator::Device::HostDevice by directly
+     * mapping it onto the map syclQueues, which has to have an entry for
+     * this value.
+     *
+     * @see tarch::accelerator::Device::configure()
      * @see tarch::multicore::getHostSYCLQueue()
+     *
+     * @param number Either valid device number of tarch::accelerator::Device::HostDevice.
      */
     sycl::queue& getSYCLQueue( int number );
 

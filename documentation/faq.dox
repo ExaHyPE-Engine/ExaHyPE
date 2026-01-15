@@ -11,7 +11,18 @@ new features, please consult the respective components, packages, extensions
 and toolboxes.
 
 
-# Autotools
+# Build environment
+
+- ***How can I switch between the different build systems?***
+
+The code generator always favours autotools. I.e. if an autotools build is present, the code generator chooses to use autotools.
+The environment variable `PEANO_CMAKE_BUILD_DIR` can be set to point to a CMake build folder.
+Then, the code generator will favour CMake instead of autotools. If there are multiple CMake build folders present (e.g. a GPU build and a non-GPU build),
+simply setting the flag `PEANO_CMAKE_BUILD_DIR` to one particular build folder tells the code generator which one to use.
+Unsetting the environment variable allows to switch back to autotools.
+If only one of the build systems has been configured, the code generator will choose the one present.
+
+## Autotools
 
 - ***configure fails with ...*** Before you start
   any further investigation, update to the latest version of the autotools,
@@ -31,7 +42,7 @@ and toolboxes.
 
 
 
-# CMake
+## CMake
 
 - ***Why am I seeing "Permission Denied" errors when using CCACHE in a Docker container on MacOS?***
 
@@ -45,17 +56,11 @@ This can be easily resolve by setting
 
 in the CMake configuration.
 
-- ***How can I switch between the different build systems?***
-
-The code generator always favours autotools. I.e. if an autotools build is present, the code generator chooses to use autotools.
-The environment variable `PEANO_CMAKE_BUILD_DIR` can be set to point to a CMake build folder.
-Then, the code generator will favour CMake instead of autotools. If there are multiple CMake build folders present (e.g. a GPU build and a non-GPU build),
-simply setting the flag `PEANO_CMAKE_BUILD_DIR` to one particular build folder tells the code generator which one to use.
-Unsetting the environment variable allows to switch back to autotools.
-If only one of the build systems has been configured, the code generator will choose the one present.
 
 
 # Compilation
+
+## Generic C++ issues
  
 - ***The translation fails with the error***
 
@@ -144,24 +149,12 @@ If only one of the build systems has been configured, the code generator will ch
   @ref page_compiler_specific_settings_home "compiler-specific settings". Ensure that
   the flag ```CompilerCLANG``` is enabled and used.
 
-- ***My compiler terminates with errors when I enable OpenMP multithreading***
-  Make sure that you are using a compiler with OpenMP 5.0 support, such as GCC 9.x.
-
-- ***I configured Peano with HDF5, but my application (experiment or benchmark) will not compile***
-  The application will parse the configure call used by Peano to feed its
-  Makefile. To get
-  the correct flags for HDF5 support for your experiment, you might want to add
-  the following or similar flags to your Peano configuration call:
-
-                   LDFLAGS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++"
-
-  This list is not comprehense and might differ on each system. The safest way
-  to find these flags is to run the HDF5 compiler with verbose. It is actually
-  only a wrapper around your real compiler which sets some variables, i.e. the
-  verbose mode should give you the flags that are set, and then you can add
-  these flags manually to your configure call. The Peano 4 applications then
-  will pick up these flags automatically the next time you invoke the Python
-  scripts.
+- ***My compiler fails with ```array 'new' cannot have initialization arguments```***
+  All-time classic with many compilers: Add ```--std=c++23``` to your CXXFLAGS 
+  and the issue should be gone.
+  
+   
+## Vendor-specific toolchains
 
 - ***configure fails for the NVIDIA compiler*** For NVIDIA, we have to make CXX
   and CC point to the C++ compiler, as both are passed the same
@@ -179,13 +172,11 @@ If only one of the build systems has been configured, the code generator will ch
   The page @ref page_compiler_specific_settings_home holds some additional, bespoke information
   for the NVIDIA toolchain, which might be of further help.
 
-- ***My compiler stops with***
 
-                /apps/developers/compilers/gcc/13.2/1/default/lib/gcc/x86_64-pc-linux-gnu/13.2.0/../../../../include/c++/13.2.0/chrono:2320:48: error: call to consteval function 'std::chrono::hh_mm_ss::_S_fractional_width' is not a constant expression
-                static constexpr unsigned fractional_width = {_S_fractional_width()};
+## OpenMP 
 
-  We have seen this with too ***new*** C++ standard libs such as the version 13.2.
-  Use an older one such as 11.2.
+- ***My compiler terminates with errors when I enable OpenMP multithreading***
+  Make sure that you are using a compiler with OpenMP 5.0 support, such as GCC 9.x.
 
 - ***With Intel's OpenMP, we get the following error***
 
@@ -196,6 +187,40 @@ If only one of the build systems has been configured, the code generator will ch
   runtime, i.e. use -fopenmp. Switch to -fiopenmp instead.
   
   
+
+## SYCL
+
+- ***My compiler terminates (often in autotools setup phase) once I enable -fsycl ***
+  This happens if you add ```CXXFLAGS=-fsycl``` and the autotools try to enable the 
+  default C compiler with this flag. To fix it, set ```CC=icpx``` to the C++ compiler, too.
+
+## Third-party tools
+
+- ***I configured Peano with HDF5, but my application (experiment or benchmark) will not compile***
+  The application will parse the configure call used by Peano to feed its
+  Makefile. To get
+  the correct flags for HDF5 support for your experiment, you might want to add
+  the following or similar flags to your Peano configuration call:
+
+                   LDFLAGS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++"
+
+  This list is not comprehense and might differ on each system. The safest way
+  to find these flags is to run the HDF5 compiler with verbose. It is actually
+  only a wrapper around your real compiler which sets some variables, i.e. the
+  verbose mode should give you the flags that are set, and then you can add
+  these flags manually to your configure call. The Peano 4 applications then
+  will pick up these flags automatically the next time you invoke the Python
+  scripts.
+
+
+- ***My compiler stops with***
+
+                /apps/developers/compilers/gcc/13.2/1/default/lib/gcc/x86_64-pc-linux-gnu/13.2.0/../../../../include/c++/13.2.0/chrono:2320:48: error: call to consteval function 'std::chrono::hh_mm_ss::_S_fractional_width' is not a constant expression
+                static constexpr unsigned fractional_width = {_S_fractional_width()};
+
+  We have seen this with too ***new*** C++ standard libs such as the version 13.2.
+  Use an older one such as 11.2.
+
 # Linking
 
 - ***The linking fails for the tutorials even though I've followed all instructions***
@@ -260,12 +285,17 @@ If only one of the build systems has been configured, the code generator will ch
     you might have to manually load a newer GNU version after you've loaded your
     core compiler.
 
+## SYCL
+
   - ***sycl-ls show OpenCL devices instead of Level Zero (Intel PVC)*** 
     This can happen if the following environment variable was set 
     
                       ZET_ENABLE_PROGRAM_DEBUGGING=1
                       
     Simply unset it to fix the issue.
+
+- The JIT compiler crashes due to the FPGA emulation device on our cluster (NCC). If this happens on
+  your machine, try putting SYCL_DEVICE_FILTER=gpu before the command to run the benchmark.
 
 
 # Python

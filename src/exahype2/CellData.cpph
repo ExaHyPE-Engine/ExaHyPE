@@ -77,7 +77,7 @@ exahype2::CopyCellDataGPU<inType, outType>::CopyCellDataGPU(
   targetDevice(cellData.targetDevice),
   QInStride(inputPatchSize),
   QOutStride(outputPatchSize) {
-  auto queue = tarch::accelerator::getSYCLQueue(targetDevice);
+  sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
   QIn = ::sycl::malloc_device<inType>(cellData.numberOfCells * inputPatchSize, queue);
   QOut = ::sycl::malloc_device<inType>(cellData.numberOfCells * outputPatchSize, queue);
   cellCentre    = ::sycl::malloc_device<tarch::la::Vector<Dimensions, double>>(cellData.numberOfCells, queue);

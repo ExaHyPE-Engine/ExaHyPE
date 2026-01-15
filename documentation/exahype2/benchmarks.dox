@@ -11,6 +11,7 @@ Before you start, ensure that you have configured and built Peano as specified f
   - \subpage benchmarks_exahype2_acoustic_kernel_benchmarks
   - \subpage benchmarks_exahype2_elastic_kernel_benchmarks
   - \subpage benchmarks_exahype2_shallow_water_kernel_benchmarks
+  - \subpage benchmarks_exahype2_ccz4_kernel_benchmarks
 - Euler benchmarks
   - \subpage benchmarks_exahype2_euler_smooth_setup
 <!--  - \subpage benchmarks_exahype2_ccz4_kernel_benchmarks -->
@@ -19,7 +20,6 @@ Before you start, ensure that you have configured and built Peano as specified f
 - ExaGRyPE/Astrophysics
   - \subpage benchmarks_exahype2_ccz4_gauge_wave
   - \subpage benchmarks_exahype2_ccz4_single_black_hole
-  - \subpage benchmarks_exahype2_ccz4_single_black_hole_performance
   - \subpage benchmarks_exahype2_euler_spherical_accretion_upscaling
 
 
