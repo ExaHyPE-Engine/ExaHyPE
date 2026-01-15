@@ -155,6 +155,9 @@ void toolbox::loadbalancing::strategies::Hardcoded::finishStep() {
     }
   }
 
+  _statistics.updateGlobalView();
+  _blacklist.update();
+
   dumpStatistics();
 }
 

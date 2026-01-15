@@ -5,10 +5,12 @@
 tarch::logging::Log toolbox::loadbalancing::AbstractLoadBalancing::_log("toolbox::loadbalancing::AbstractLoadBalancing"
 );
 
+
 std::ostream& operator<<(std::ostream& out, const toolbox::loadbalancing::AbstractLoadBalancing& balancing) {
   out << balancing.toString();
   return out;
 }
+
 
 toolbox::loadbalancing::AbstractLoadBalancing::AbstractLoadBalancing(
   Configuration* configuration, CostMetrics* costMetrics
@@ -18,6 +20,7 @@ toolbox::loadbalancing::AbstractLoadBalancing::AbstractLoadBalancing(
   _configuration(configuration),
   _costMetrics(costMetrics),
   _state(State::Undefined) {}
+
 
 toolbox::loadbalancing::AbstractLoadBalancing::~AbstractLoadBalancing() {
   if (_configuration != nullptr) {
@@ -38,8 +41,16 @@ void toolbox::loadbalancing::AbstractLoadBalancing::setConfigurationAndMetricsNu
 std::string toolbox::loadbalancing::AbstractLoadBalancing::toString() const {
   std::ostringstream msg;
 
-  msg << "(state=" << ::toString(_state) << ",statistics=" << _statistics.toString()
-      << ",cost-metrics=" << _costMetrics->toString() << ",blacklist=" << _blacklist.toString() << ")";
+  msg << "(state=" << ::toString(_state) << ",statistics=" << _statistics.toString();
+
+  if (_costMetrics!=nullptr) {
+    msg << ",cost-metrics=" << _costMetrics->toString();
+  }
+  else {
+    msg << ",no-cost-metrics";
+  }
+
+  msg<< ",blacklist=" << _blacklist.toString() << ")";
 
   return msg.str();
 }
