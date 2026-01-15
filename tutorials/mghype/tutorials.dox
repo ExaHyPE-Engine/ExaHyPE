@@ -24,10 +24,10 @@ instructions!
 - \subpage tutorials_mghype_hitchhikers-guide
 - Numerics tour de force
   - \subpage tutorials_mghype_numerics_continuous_galerkin_poisson
-  - \subpage tutorials_mghype_numerics_mixed_dg_poisson
-  - \subpage tutorials_multigrid_matrixfree_continuous_galerkin_poisson
+  - \subpage tutorials_mghype_numerics_generic_mixed_dg
+<!--  - \subpage tutorials_multigrid_matrixfree_continuous_galerkin_poisson -->
   - \subpage tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson
-  - \subpage tutorials_multigrid_matrixfree_mixed_DG_poisson
+  - \subpage tutorials_mghype_matrixfree_mixed_DG_poisson
 - Examples
   - \subpage tutorials_mghype_examples_01_matrix-free-cg
   - \subpage tutorials_mghype_examples_02_higher-order-cg

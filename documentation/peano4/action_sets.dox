@@ -15,7 +15,7 @@ These functions are used to inject domain behaviour into the mesh traversals:
 peano4.solversteps.ActionSet
 
 
-@image html spacetree.png
+@image html documentation/peano4/spacetree.png
 
 - Peano splits up the spacetree into multiple trees which are distributed over 
   the ranks and threads. This gives us @ref page_peano_domain_decomposition "a multiscale, non-overlapping domain decomposition".

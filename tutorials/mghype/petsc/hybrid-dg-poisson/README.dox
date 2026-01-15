@@ -12,7 +12,7 @@ traversal.
 
 
 Before we dive into details, it is important to study 
-@ref page_multigrid_numerics_Disontinuous_Galerkin "Discontinous Galerkin" methods first, 
+<!-- @ref page_multigrid_numerics_Disontinuous_Galerkin "Discontinous Galerkin" methods first,  -->
 as we generalise some ideas from there. 
 We onte that it is reasonable to skip the Poisson equation example - our 
 all-time classic - for this particular method, as the advection problem is 
@@ -21,8 +21,9 @@ easier to digest.
 
 # Method
 
+<!--
 Whenever we follow the @ref page_multigrid_numerics_Mixed_Galerkin "the mixed Galerkin formulation" 
-or even the basic @ref page_multigrid_numerics_Disontinuous_Galerkin "DG" workflow,
+ or even the basic @ref page_multigrid_numerics_Disontinuous_Galerkin "DG" workflow, -->
 we end up with the integrals over faces.
 
 
@@ -160,7 +161,7 @@ The rationale behind the construction of @f$ \lambda _u @f$ is not too difficult
 My argument goes as follows: If we walk from the left cell to the right, then the
 average gradient in the sketch
 
-  @image html average_gradient.png
+<!--  @image html average_gradient.png -->
 
 is the average of two blue lines. However, if we do an intermediate step into some 
 @f$ \lambda _u @f$ which is very high (higher than any blue line), then we have 
@@ -170,7 +171,7 @@ How much effect the jump has compared to the change
   from left to right derivative is controlled via @f$ \gamma @f$. 
 
 
-Different to the @ref page_multigrid_numerics_Mixed_Galerkin "Discontinous Galerkin formulation"
+<!-- Different to the @ref page_multigrid_numerics_Mixed_Galerkin "Discontinous Galerkin formulation" -->
 where we solve the Riemann problem manually, we have fewer degrees of freedom to 
 be stored per face. If we solve the Riemann problem, we manually derive equations
 for @f$ \lambda _u @f$ and @f$ \lambda _\phi @f$, and these "outcomes" can be different
@@ -190,11 +191,12 @@ quantities to each face, where the @f$ \hat K @f$ is also referred to as
 We set it to one here, as we always discuss the Poisson equation. The operators passed
 in therefore change:
 
-- cell-to-cell remains exactly the same as in the @ref page_multigrid_numerics_Mixed_Galerkin "mixed formulation". Nothing has changed here.
+<!-- - cell-to-cell remains exactly the same as in the @ref page_multigrid_numerics_Mixed_Galerkin "mixed formulation". Nothing has changed here.
 - cell-to-face remains exactly the same as in the @ref page_multigrid_numerics_Mixed_Galerkin "mixed formulation". Nothing has changed here.
 - face-to-face becomes a @f$ \mathbb{R}^{ \hat K \cdot (p+1)^{d-1} \times \hat K \cdot (p+1)^{d-1} } @f$ matrix. It describes how the additional hybrid formulation unknowns interact.
 - face-to-cell changes dimensions compared @ref page_multigrid_numerics_Mixed_Galerkin "to the plain mixed formulation". It is now from @f$ \mathbb{R}^{ K \cdot (p+1)^d \times \hat K \cdot (p+1)^{d-1} } @f$, i.e. describes how the outcome of the additioanl equation system (over @f$ \lambda _u @f$ in the example above) is mapped onto the cell data.
 - There is a new operator face-to-rhs which takes the projections and maps them onto the right-hand side of the additional equation system.
+-->
 
 The distinction between an explicit cell-to-face projection of the solution and 
 the face-to-rhs is convenient, as the construction of the right-hand side might

@@ -1,10 +1,13 @@
-#ifndef TEMPLATE_DIFFUSEINTERFACE_HEADER
-#define TEMPLATE_DIFFUSEINTERFACE_HEADER
+#pragma once
 
 #include "../../../../ExaHyPE/kernels/GaussLegendreBasis.h"
 #include "../../../../ExaHyPE/kernels/KernelUtils.h"
 
 enum Position { above, at, below };
+
+/// @cond false
+///
+/// Somehow confuses Doxygen. Likely due to overly complicated templates.
 
 template <class Shortcuts, int basisSize>
 class DiffuseInterface {
@@ -456,4 +459,5 @@ private:
   double volume_testfunction;
 };
 
-#endif
+
+/// @endcond

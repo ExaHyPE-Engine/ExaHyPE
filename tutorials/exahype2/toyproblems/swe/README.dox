@@ -141,7 +141,7 @@ auxiliary variables in the direction defined by the normal's current value.
 
 | t=0.0 s                    | t=1.0 s                    |
 | :-------------------------:|:-------------------------: |
-| ![](SWE_start.png)         | ![](SWE_end.png)           |
+| ![](tutorials/exahype2/toyproblems/swe/SWE_start.png)         | ![](tutorials/exahype2/toyproblems/swe/SWE_end.png)           |
 
 The computed height of the fluid according to our computation of the shallow water equations at times t=0.0 s and t=1.0 s.
 The fluid has rushed in from the sides to fill the depression at the center.

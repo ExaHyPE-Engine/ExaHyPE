@@ -399,7 +399,7 @@ namespace exahype2::fv::rusanov::sycl {
      * modelled them as local variables, but then they are destroyed at the
      * end of the scope block, and we get a memory error.
      *
-     * An alternative to the ``store them in a vector'' approach would be to
+     * An alternative to the "store them in a vector" approach would be to
      * use smart pointers.
      *
      */

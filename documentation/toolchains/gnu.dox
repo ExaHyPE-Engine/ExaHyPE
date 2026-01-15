@@ -1,0 +1,20 @@
+/**
+
+ @page documentation_toolchains_gnu GNU-based toolchains
+
+
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+You will find examples how this toolchain is used on particular machines on the page @ref page_machines.
+</div>
+
+
+
+ ### OpenMP and OpenMP offloading
+
+~~~~~~~~~~~~~~~~~~~~~~~
+CC=gcc CXX=g++ ./configure --with-multithreading=omp --with-gpu=omp CFLAGS="-O3 -W -Wall -Wno-attributes -fopenmp -foffload=nvptx-none -march=native" CXXFLAGS="-std=c++20 -O3 -W -Wall -Wno-attributes -fopenmp -foffload=nvptx-none -march=native" LDFLAGS="-fopenmp -foffload=nvptx-none -march=native -mtune=native"
+~~~~~~~~~~~~~~~~~~~~~~~
+
+
+ */
+ 

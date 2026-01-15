@@ -77,6 +77,15 @@ class tarch::accelerator::Device {
      * By default, SYCL makes no device visible to the user. You have to call
      * configure() manually to make GPUs available to Peano.
      *
+     * If Peano is configured with SYCL as multithreading back end, we know
+     * that the multicore component has already created a SYCL queue on the
+     * CPU. See tarch::multicore::getHostSYCLQueue for details. In this case,
+     * we expect the accelerator package to use this queue if there are tasks
+     * for the CPU. We don't want to have two CPU queues. If we use another
+     * threading back end in combination with SYCL, then we have to construct
+     * an explict CPU queue to be prepared to handle kernels that shall go
+     * onto the host. tarch::accelerator::getSYCLQueue() provides more
+     * information on that.
      */
     void configure(const std::set<int>& devicesToUse = {});
 

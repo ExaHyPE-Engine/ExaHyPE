@@ -187,8 +187,8 @@
  * over the load distribution and tells you also how many trees aka subpartitions
  * you employ per rank.
  *
- * @image html runtime_analysis_loadbalancing_example00.png
- * @image html runtime_analysis_loadbalancing_example01.png
+ * @image html src/toolbox/loadbalancing/runtime_analysis_loadbalancing_example00.png
+ * @image html src/toolbox/loadbalancing/runtime_analysis_loadbalancing_example01.png
  *
  *
  * ## Displaying the domain decomposition in Paraview
@@ -205,17 +205,17 @@
  * example. In Paraview you can switch to the last variable of the grid which represents which tree
  * the volumes belong to:
  *
- * @image html visualise_domain_decomposition0.png
+ * @image html src/toolbox/loadbalancing/visualise_domain_decomposition0.png
  *
  * You can further look into individual trees by adding Filters - Calculator to extract the field
  * information
  *
- * @image html visualise_domain_decomposition1.png
+ * @image html src/toolbox/loadbalancing/visualise_domain_decomposition1.png
  *
  * and then apply Filters - Threshold where you can alter the minimum and maximum to visualise the
  * certain partition:
  *
- * @image html visualise_domain_decomposition2.png
+ * @image html src/toolbox/loadbalancing/visualise_domain_decomposition2.png
  *
  *
  * ## Visualising Tree structure with spliting
@@ -244,7 +244,7 @@
  * nodes from different subtrees. The whole tree will be illustrated so the first matrix will always be 3^d, then 
  * 9^d, 27^d,...etc.
  * 
- * @image html visualise_tree_split.png
+ * @image html src/toolbox/loadbalancing/visualise_tree_split.png
  * 
  * ## Performance flaws
  *
@@ -253,7 +253,7 @@
  * discuss generic details which are not tied to this toolbox. However, they
  * are very useful to get the most out of this toolbox:
  *
- * - Peano has a @ref page_peano_runtime_analysis "dedicated runtime analysis discussion" which
+ * - Peano has a @ref page_peano_domain_decomposition "dedicated runtime analysis discussion" which
  *   can help to understand the runtime behaviour shaped by the domain
  *   decomposition.
  * - Peano has a dedicated page on @ref page_peano_performance_optimisation "performance optimisation".

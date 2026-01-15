@@ -5,6 +5,7 @@
 <!-- Add this one for href links to subitems -->
   @tableofcontents
 
+<!--
   As several code types are built on top of the same Peano infrastructure, we can always combine them or alter the underlying Peano representation by adding additional mesh traversals for example. 
 
   Peano's Python API is a mere wrapper around the Peano C++ core, i.e. it 
@@ -237,7 +238,7 @@
   
   # Lowering two codes into a Peano project (additively)
 
-
+-->
 
  */
  

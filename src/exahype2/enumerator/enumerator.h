@@ -23,7 +23,7 @@ namespace exahype2::enumerator {
    * I assume that each patch is supplemented by a halo layer. It is embedded
    * into this halo. The index you hand into the enumerator can have negative
    * entries, and then you access elements of the halo layer. So the intention
-   * is that (0,0,0) is always the left bottom ``active'' volume no matter how
+   * is that (0,0,0) is always the left bottom "active" volume no matter how
    * big the halo layer is.
    *
    * In most ExaHyPE 2 codes, I have patches supplemented with halo layers and

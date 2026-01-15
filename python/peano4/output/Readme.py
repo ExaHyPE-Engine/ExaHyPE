@@ -39,6 +39,7 @@ While it is thus not a perfect description, the core concepts by means of
 data structures and user model is the same as in Peano 4. Please cite this
 paper when you use the software:
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         @article{Weinzierl:2019:Peano,                    
           author = {Weinzierl, Tobias},                   
           title = {The Peano Software-Parallel, Automaton-Based, Dynamically Adaptive Grid Traversals},                    
@@ -58,6 +59,7 @@ paper when you use the software:
           numpages = {41},                    
           keywords = {Software, spacetree, adaptive mesh refinement, parallel multiscale grid traversal
         }
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 There is an earlier publication about Peano in SISC which discusses the core 
@@ -65,6 +67,7 @@ algorithms with the stacks in great detail. This paper can be seen as release
 paper for previous Peano code generations (generation 2).
 
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         @article{10.1137/100799071,
           author = {Weinzierl, Tobias and Mehl, Miriam},
           title = {Peano-A Traversal and Storage Scheme for Octree-Like Adaptive Cartesian Multiscale Grids}, 
@@ -84,6 +87,8 @@ paper for previous Peano code generations (generation 2).
           numpages = {29}, 
           keywords = {octree, cache efficiency, multiscale, space-filling curve, adaptive Cartesian grid, spacetree, partial differential equation} 
         }
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 """
 
   def __init__(self):

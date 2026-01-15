@@ -107,7 +107,7 @@ sophisticated calls such as
    make PETSC_DIR=/path/to/petsc PETSC_ARCH=system_architecture all
   ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-\but most of the time, I don't need these. 
+but most of the time, I don't need these. 
 
 
 From hereon, we will use a variable PETSC_DIR which is the prefix directory.

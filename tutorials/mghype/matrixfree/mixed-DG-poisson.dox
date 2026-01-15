@@ -1,6 +1,6 @@
 /**
 
-@page tutorials_multigrid_matrixfree_mixed_DG_poisson Matrix-free mixed DG for the Poisson equation
+@page tutorials_mghype_matrixfree_mixed_DG_poisson Matrix-free mixed DG for the Poisson equation
 
 This simple example discusses the most basic steps behind a matrix-free mixed Discontinuous Galerkin solver for the Poisson equation. 
 
@@ -14,14 +14,11 @@ class to construct a working solver.
 
 
 
-@include{doc} tutorials/multigrid/generic-mixed-DG.dox
-
-
 # Project setup
  
 Creating a project is a one-liner:
 
-@snippet tests/multigrid/matrixfree/poisson/dg.py Create project
+<!-- @snippet tests/multigrid/matrixfree/poisson/dg.py Create project -->
 
 
 # Create the solver
@@ -35,7 +32,7 @@ The solver construction also is a "one-liner" using the following observations:
 - We solve the numerical flux on the face to obtain both a @f$ \hat u @f$ value
   and a @f$ \widehat{(n,p)} @f$ value. We set solutions_per_face_node=2.
 
-@snippet tests/multigrid/matrixfree/poisson/dg.py Instantiate solver
+<!-- @snippet tests/multigrid/matrixfree/poisson/dg.py Instantiate solver -->
 
 
 ## Matrices
@@ -89,15 +86,5 @@ The PDE over the secondary variables is structurally simpler:
 All the entries on the left-hand side have a scaling of @f$ h^{d-1} @f$.
 
 
-@snippet tests/multigrid/matrixfree/poisson/dg.py Construct matrices
-
-
-@todo Tobias and Alex should discuss.
-
-
-## The Riemann problem (numerical flux)
-
-@todo Tobias, please write.
- 
  
 */

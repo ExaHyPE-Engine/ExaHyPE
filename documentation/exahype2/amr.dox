@@ -11,10 +11,10 @@ same.
 
 By default,  solvers operate on a regular grid. To facilitate an
 adaptive mesh, you have to ensure that your solver is aware that you
-operate with different $h_{\text{max}}>h_{\text{min}}$. So you have to
+operate with different @f$h_{\text{max}}>h_{\text{min}}@f$. So you have to
 alter these two flags of your solver instantiation. As  operates with
 three-partitioning, you have to pick
-$h_{\text{min}} \leq \frac{1}{3} h_{\text{max}}$ to switch on
+@f$h_{\text{min}} \leq \frac{1}{3} h_{\text{max}}@f$ to switch on
 adaptivity.
 
 Once AMR is, in principle enabled, you still have to supplement a
@@ -33,10 +33,10 @@ have to add the routine manually, as 's code generator never overwrites
 a user solver. A simple default implementation of this routine resembles
 
 This version does not (yet) any adaptivity. Your solver returns `Keep`
-all the time, so  will create a mesh that just matches $h_{\text{max}}$
+all the time, so  will create a mesh that just matches @f$h_{\text{max}}@f$
 as specified via the solver and then keep this match. Once you return
 `Refine`, it will however refine. If your mesh however becomes finer
-than your solver's $h_{\text{min}}$,  will ignore the refinement request
+than your solver's @f$h_{\text{min}}@f$,  will ignore the refinement request
 of your  solver.
 
 `Keep` keeps the mesh as it is. That is, if you return `Keep` for an
@@ -47,7 +47,7 @@ or not refine if the minimum mesh size would be violated too harshly.
 That is, if some parts of the mesh ask for a refinement and direct
 neighbours want to coarsen, the refinement gets higher priority. Along
 the same lines, erase instructions will simply be ignored if the
-resulting mesh would be coarser than $h_{\text{max}}$.
+resulting mesh would be coarser than @f$h_{\text{max}}@f$.
 
 It is important to keep in mind that refinement requests are not
 immediately realised by . Refinements are requested in one time step,

@@ -118,7 +118,7 @@ peano4_project.generate()
  them is called solution-Poisson.peano-patch-file and it is a meta file, i.e.
  it links to all the other files written by different ranks and threads on 
  your parallel computer. You can inspect patch files in a text editor, and 
- their format @ref peano_patch_file "is described in the patch file format section".
+ their format @ref tarch_patch_file_format "is described in the patch file format section".
  
  To visualise the outcome, you can go down different paths. I have pvpython 
  installed, i.e. Paraview with the Python terminal. In this case, we can type 

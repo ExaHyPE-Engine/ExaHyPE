@@ -173,7 +173,7 @@ the same. The illustration shows the minimal overlap that we can typically
 use. Both the upper and the lower mesh illustrate the same mesh. I use colours
 to show which solver exists in which mesh cell.
 
-@image html coupling.png
+@image html tutorials/exahype2/coupling.png
 
 - Solver A is running within the filled cells visualised on the the top. In 
   empty cells, A neither solves anything nor does it hold data. 
@@ -278,7 +278,7 @@ take into account
 
 1. in which order these solvers run; If that makes a difference, you
    might want to use the dedicated post- and pre-processing action sets.
-2. wheather or not you use @ref page_exahype_solvers_enclave_solvers "enclave solvers". The later ones take the data out of the
+2. wheather or not you use @ref documentation_exahype2_solvers_enclave_solvers "enclave solvers". The later ones take the data out of the
    mesh after their primary sweep and insert it back into the mesh. 
    This has to be taken into account when you interpolate: data might
    be extracted from the mesh and then be put back in;

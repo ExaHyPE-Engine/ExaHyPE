@@ -246,14 +246,14 @@ if __name__ == "__main__":
             """
 
       def get_user_action_set_includes(self):
-        """
+        """!
          We take this routine to add a few additional include statements.
         """
         return SuperClass.get_user_action_set_includes(self) + self._my_user_includes
 
       def add_adm_constriants(self):
-        """
-          @add adm constriants (Hamilton and Momentum)
+        """!
+          Add adm constriants (Hamilton and Momentum)
         """
         self._auxiliary_variables = 4
 

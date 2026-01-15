@@ -12,6 +12,7 @@ actual calculation:
    "warm up" calculation steps and are also sorted once more, should they
    have been inserted into the wrong cells.
 
+
 # The initial (regular) mesh
 
 The first step is important, even when particles are allowed to change
@@ -20,7 +21,7 @@ the start what the biggest and smallest radius might be, but the radius
 can change freely in-between those thresholds. Actually the radius might
 even become smaller, but the mesh width you pass in initially is used to
 constrain the AMR throughout the simulation. See
-@ref initial_smoothing_lengths_and_search_radii for details on how to tweak the
+initial_smoothing_lengths_and_search_radii for details on how to tweak the
 initial search radii.
 
 The dynamic mesh refinement might decide to introduce an extremely fine
@@ -48,28 +49,40 @@ We have chosen the default initial grid to be fully refined so that there
 will be a sufficient number of cells to distribute among sub-trees to occupy
 many cores from the very beginning, i.e. without waiting for the adaptive
 refinement to kick in later. You can instead only create a coarse grid by
-passing the `initial_grid_coarse=True` argument to
-Project.set_global_simulation_parameters() in your python script. See
-python/swift2/Project.py for more.
+passing the 
+
+            initial_grid_coarse=True
+
+argument to
+
+            Project.set_global_simulation_parameters() 
+            
+in your python script. See python/swift2/Project.py for more.
 
 
 
-
-## Altering the initial mesh size
+## Altering the mesh size
 
 To alter the initial mesh size, you have to tell each individual particle
 species that you are using what its maximum mesh size will be. Most codes set
-this quantity in the particle's definition in the Python script, i.e. through
-the Python constructor via the `min_h` and `max_h` parameters in the particle
-constructor (see e.g. python/swift2/particle/SPHParticle.py and
+this quantity in the particle definition in the Python script, i.e. through
+the Python constructor via the 
+
+              min_h
+
+and
+
+              max_h
+
+parameters in the particle constructor (see e.g. python/swift2/particle/SPHParticle.py and
 swift2.particle.SPHParticle()).
+
+
 
 As Peano uses three-partitioning, the mesh size choices can seem to appear
 weird. Each Python script run produces a README-xxxx.md file which provides
 details on the arising mesh sizes. Alternatively, you can study the
 implementation in swift2.Project.__compute_global_max_h().
-
-
 
 
 ## Implementation
@@ -111,7 +124,6 @@ initial mesh construction strategies. Switching the load balancing scheme
 is done in the Python script vi the function swift2.Project.set_load_balancing().
 
 
-
 ## Playing around with the maximum particle radius
 
 From the grid's perspective, there is no direct reason why you cannot pick the
@@ -135,6 +147,7 @@ step calling add_action_set(). The passed action sets have to
 throw all the particles you want to have into your mesh.
 There are three mainstream ways to implement initial conditions for the
 simulations:
+
 
   - Insert particle by coordinates (```python/swift2/input/InsertParticlesByCoordinates.py```).
   - Insert particle along a regular mesh (```python/swift2/input/InsertParticlesAlongCartesianGrid.py```).
@@ -175,13 +188,15 @@ into the domain, these calculations are best modelled as
 @ref swift_particle_new_solver "steps within the particle lifecycle".
 
 
+
+
 <!-- Use 'section' command here to be able to reference the section somewhere
     else rather than the entire page. 'section' corresponds to h1. First word
     after 'section' cmd will be the anchor ID you need to use with the 'ref' cmd. -->
 @section page_swift_initial_conditions_SwiftHDF5 Insert particles from an HDF5 file
 
 A basic HDF5 reader that is compatible with IC files from the original Swift code is
-implemented in ```InsertParticlesFromHDF5File.py```.
+implemented in InsertParticlesFromHDF5File.py.
 In order to make use of the HDF5 Initial conditions reader, Peano must have been
 configured with HDF5 enabled and linked. Instructions are provided
 @ref section_compile_swift2_with_hdf5 "here". Also make sure to install the
@@ -211,6 +226,7 @@ There are a few key policies to follow whenever you insert particles:
       );
 ~~~~~~~~~~~~~~~~~~~~~~
 
+
 Obviously, the names for the parameters for toolbox::particles::insertParticleIntoCell()
 depend on the location from where you call the routine.
 As you insert particles into cells (even though the code will then assign
@@ -218,14 +234,10 @@ them to vertices adjacent to the cells), you plug into touchCellFirstTime()
 or touchCellLastTime(). I recommend the former. These two events always are
 given a parameter
 
-~~~~~~~~~~~~~~~~~~~~~~
-   const peano4::datamanagement::CellMarker& marker
-~~~~~~~~~~~~~~~~~~~~~~
+       const peano4::datamanagement::CellMarker& marker
 
 and you can use peano4::datamanagement::CellMarker::isContained() to check
 if a particle should be fitted into a cell.
-
-
 
 
 
@@ -240,8 +252,8 @@ The particles' smoothing lengths, interaction radii, and search radii are
 related quantities. See the discussion in @ref swift_terminology for details.
 
 The initial maximal search radii of particles can be set indirectly through the
-maximal and minimal smoothing lengths, which are set by the `h_hydro_max` and
-`h_hydro_min` parameters of the particle species (see
+maximal and minimal smoothing lengths, which are set by the h_hydro_max and
+h_hydro_min parameters of the particle species (see
 SPHParticle.set_parameters() in
 python/swift2/particle/SPHLeapfrogFixedSearchRadius.py). Note that those
 parameters are min/max particle *smoothing lengths*, not search radii.
@@ -249,19 +261,13 @@ To convert between smoothing lengths and search radii, look into
 swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius() and
 swift2.sphtools.sph_kernel_get_interaction_radius().
 
-However, for some experiments it may also be convenient to limit the (initial)
-search radii by the imposed (initial) cell sizes. We do this directly in the
-code snippets specifyig the initial conditions in python/swift2/scenario/*.py.
-The initial cell sizes can be set via the `min_h` and `max_h` arguments
-to the particle constructor (see e.g. python/swift2/particle/SPHParticle.py and
-swift2.particle.SPHParticle()).
 
 Regarding the actual smoothing lengths of particles, we require the user to
 provide an initial guess. The better the guess is, the fewer iterations we need
 to do to determine it in the initial setup. A guess of zero will lead to problems.
-Usually, the guess `a * dx`, where `a` is a factor of ~ a few and `dx` is the
-mean interparticle distance (e.g. boxsize / # particles per dimension) is good
+Usually, the guess @f$ a \cdot dx @f$, where @f$a>0@f$ is a factor of something a few and @f$dx@f$ is the
+mean interparticle distance (e.g. boxsize / particles per dimension) is good
 enough.
 
-
 */
+

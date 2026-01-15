@@ -23,6 +23,14 @@
 #include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/grid/TraversalObserver.h"
 
+/**
+ * @cond false
+ *
+ * Doxygen struggles with the Jinja 2 template suff. We therefore disable the
+ * documentation parser.
+ */
+
+
 {% if FLOAT_TYPE=="std::float16_t" or FLOAT_TYPE=="std::bfloat16_t" %}
 #include <stdfloat>
 {% endif %}
@@ -278,4 +286,7 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   #endif
 };
 
+/**
+ * @endcond
+ */
 

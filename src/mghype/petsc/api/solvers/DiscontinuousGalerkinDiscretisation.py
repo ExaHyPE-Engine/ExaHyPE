@@ -287,7 +287,7 @@ Define body of constructor
 class DiscontinuousGalerkinDiscretisation(Solver):
   """!
    
-  \page petsc_dg_solver Discontinuous Galerkin Solver with PETSc
+  Discontinuous Galerkin Solver with PETSc
 
   ## The weak formulation
 

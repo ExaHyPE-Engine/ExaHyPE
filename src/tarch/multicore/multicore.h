@@ -506,10 +506,11 @@ namespace tarch {
        *
        * I originally had
        *
-       * ~~~~~~~~~~~~~~~~~~~~~
+       *
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   #pragma omp atomic
   numberOfSpawnedTasks++;
-         ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        *
        * outside of the if/else cascade. However, that means that the
        * subsequent canServeDependencyEntry() calls will not increase the
@@ -521,18 +522,20 @@ namespace tarch {
        *
        * OpenMP now supports iterators and accessors over arrays. I tried
        *
-       * ~~~~~~~~~~~~~~~~~~~~~
+       *
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       DependencyTrackingDataType* outDependencyPointer = dependencyTrackingBaseAddress + taskNumber;
       [...]
       #pragma omp task [...] depend(out: *outDependencyPointer) untied
-         ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        *
        * but that didn't work. So it seems that OpenMP struggles with the
        * dereferencing. However, it seems that
        *
-       * ~~~~~~~~~~~~~~~~~~~~~
+       *
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       #pragma omp task [...] depend(out: dependencyTrackingBaseAddress[taskNumber]) untied
-         ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        *
        * does work.
        *

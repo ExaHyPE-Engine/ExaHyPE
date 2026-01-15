@@ -2,6 +2,14 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/NonCriticalAssertions.h"
 
+/**
+ * @cond false
+ *
+ * We don't want this file to be parsed by Doxygen, as its syntax is not yet
+ * compatible with the tool. There's also no reason to parse this file, as all
+ * important documentation is in the header file.
+ */
+
 
 template <typename T>
 toolbox::particles::SieveParticles<T> toolbox::particles::ParticleSet<T>::_sieveParticles;
@@ -352,3 +360,7 @@ template <typename T>
 int toolbox::particles::ParticleSet<T>::getNumberOfRemainingLocalParticles() {
   return _numberOfRemainingLocalParticles;
 }
+
+/**
+ * @endcond
+ */

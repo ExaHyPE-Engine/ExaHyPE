@@ -55,7 +55,8 @@ class peano4::grid::tests::GridTraversalEventGeneratorTest: public tarch::tests:
      *
      * This examples stems from the following (buggy) output:
      *
-     * <pre>
+     *
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 18465645121  00:00:18     rank:0       core:0       trace        peano4::grid::Spacetree::isVertexAdjacentToLocalSpacetree(...)               in:vertex.toString():(state=Unrefined,adjacentRanks=[3,3,3,3],backupOfAdjacentRanks=[3,3,3,3],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.62963,0.407407],level=3),splittingIsConsideredLocal:1,joiningIsConsideredLocal:1 (file:peano4/grid/Spacetree.cpp,line:95)
 18465660468  00:00:18     rank:0       core:0       trace        peano4::grid::Spacetree::isVertexAdjacentToLocalSpacetree(...)               out:result:0 (file:peano4/grid/Spacetree.cpp,line:108)
 18465677543  00:00:18     rank:0       core:0       trace        peano4::grid::Spacetree::isVertexAdjacentToLocalSpacetree(...)               in:vertex.toString():(state=Unrefined,adjacentRanks=[3,2,3,2],backupOfAdjacentRanks=[3,2,3,2],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.666667,0.407407],level=3),splittingIsConsideredLocal:1,joiningIsConsideredLocal:1 (file:peano4/grid/Spacetree.cpp,line:95)
@@ -84,7 +85,7 @@ parameter marker.toString(): (x=[0.648148,0.425926],h=[0.037037,0.037037],select
 parameter _spacetreeId: 2
 peano4: observers/CreateGrid.cpp:1313: virtual void examples::exahype2::euler::observers::CreateGrid::receiveAndMergeFaceHorizontally(const peano4::grid::GridTraversalEvent&, int, int, int, int): Assertion `false' failed.
 Aborted (core dumped)
-  </pre>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      * We run through this cell from left bottom to top right and this cell is
      * created while we span this whole third level from scratch. That is, all

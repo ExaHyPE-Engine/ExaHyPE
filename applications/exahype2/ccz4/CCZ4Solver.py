@@ -1099,7 +1099,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
     We have now a smaller number of real unknowns, i.e. only those guys who
     belong to the "original" second-order formulation. The remaining quantities
     compared to a first-order formulation are technically material or auxiliary
-    quantities. We model them as such, which allows ExaHyPE`s data management
+    quantities. We model them as such, which allows ExaHyPE's data management
     to deal more efficiently with them.
 
 

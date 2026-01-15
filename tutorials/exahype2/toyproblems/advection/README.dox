@@ -113,7 +113,7 @@ Our fluxes in x- and y-directions are:
 
 | t=0.0 s                     |  t=0.5 s                   |
 | :--------------------------:|:-------------------------: |
-| ![](Advection_2D_start.png) | ![](Advection_2D_end.png)  |
+| ![](tutorials/exahype2/toyproblems/advection/Advection_2D_start.png) | ![](tutorials/exahype2/toyproblems/advection/Advection_2D_end.png)  |
 
 The measured quantity in x-direction respectively at time t=0.0 s and t=0.5 s.
 

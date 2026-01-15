@@ -10,35 +10,47 @@ It neglects other effects such as multithreading orchestration overhead or MPI d
 While this might be of limited relevance for large-scale runs, where scalability, IO overheads and other
 factors play a dominant role, it tells us what the core compute routines could, in theory, deliver.
 
-To run the benchmark, change into the benchmark's directory. The directory
+## Prepare the environment
+
+Prior to a build, ExaHyPE has to be configured and built correctly. For this, 
+please follow the instructions on @ref page_exahype2_home (scroll down to the rubric Building the ExaHyPE 2 extension).
+Notably ensure that the toolboxes are in place. 
+You don't need the multithreading or GPU extensions. If you enable them, the 
+kernel benchmarks benchmark these features. Otherwise, they benchmark the single
+core setup.
+
+
+Once built, change into the benchmark's directory. The directory
 hosts a set of benchmarks which assess the sole performance of the individual
 kernels on the CPU and GPUs. These benchmarks are shipped through Python
 scripts which should run out-of-the-box. Besides the benchmarking scripts
-themselves, there is also a plotting script which help you to produce fancy graphs.
+themselves, we also ship a plotting script which help you to produce fancy graphs.
 
-# Build and run benchmarks
+# Build benchmarks
+
 There are different benchmarks for the different solver types (e.g., Finite
 Volumes (FV) and Discontinuous Galerkin (DG)) and you have to build different executables
 for different patch sizes, orders or dimensions.
 
 ## Finite Volumes Rusanov
+
 To build the executables you can run following commands:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
     export PYTHONPATH=../../../../python
 
-    python3 kernel-benchmarks.py --dim 2 --patch-size 4 --num-patches 512
-    python3 kernel-benchmarks.py --dim 2 --patch-size 6 --num-patches 512
-    python3 kernel-benchmarks.py --dim 2 --patch-size 8 --num-patches 512
-
-    python3 kernel-benchmarks.py --dim 3 --patch-size 4 --num-patches 512
-    python3 kernel-benchmarks.py --dim 3 --patch-size 6 --num-patches 512
-    python3 kernel-benchmarks.py --dim 3 --patch-size 8 --num-patches 512
-
-    make -j
+    python3 kernel-benchmarks-fv-rusanov-dsl.py --dim 2 --patch-size 4 --num-patches 512
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+The extension dsl here is misleading in the sense that all of our kernels 
+currently transition into a DSL-based formalism. In that sense, the extension
+is obsolete. However, the DSL unfolds its full potential if and only you use
+@ref page_third-party_xDSL. Without it, the kernel benchmarks fall back to some 
+default kernel generations which are plain C++ with SYCL or OpenMP, 
+respectively.
+
 ## Cleanup
+
 You can throw away all of the glue code after a successful build.
 This is triggered by:
 
@@ -49,19 +61,34 @@ This is triggered by:
 
 If you want to keep the executable, you will need to rename it.
 
-## Run benchmarks
+# Run benchmarks
+
 All the benchmarks run out of the box without any user interaction once built.
 For most runs, you don't have to specify anything.
+Depending on the build configuration, your file's name is similar to 
 
-However, OpenMP, SYCL and other back-ends might want you to configure your
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+./KernelBenchmarksFVRusanovDSL.Release
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+which obviously checks the Rusanov Finite Volume scheme with a release 
+build. Nothing stops you from setting up a build with assertions or even in
+debug mode (type in ```--help``` for the Python script to see options).
+
+
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+OpenMP, SYCL and other back-ends might want you to configure your
 environment in specific ways. You might have to set some environment
 variables specifying the GPUs to use or core counts accordingly.
-The exact usage obviously depends strongly @ref page_compiler_specific_settings "on your software stack".
+The exact usage obviously depends strongly @ref page_compiler_specific_settings_home "on your software stack".
 
-The JIT compiler crashes due to the FPGA emulation device on our cluster (NCC). If this happens on
-your machine, try putting SYCL_DEVICE_FILTER=gpu before the command to run the benchmark.
+If you encounter issues with a particular backend, it makes sense to 
+study the page on @ref page_faq_home.
+</div>
+
 
 # Outputs
+
 All of them produce outputs in a similar way, so it is easier to interpret the
 outcomes. All outcome is piped onto the terminal. It looks similar to
 
@@ -184,6 +211,13 @@ single kernel launch (for multiple patches) is not able to exploit all threads,
 launching multiple kernels in parallel should improve the throughput.
 
 # Plotting
+
+For any postprocessing, we recommend that the test's output is piped into a file:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+./KernelBenchmarksFVRusanovDSL.Release > output.txt
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 The directory hosts a script called plot.py which solely takes the output piped into a file as input.
 
 These scatter plots report the throughput for particular combinations of

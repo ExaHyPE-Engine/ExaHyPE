@@ -1,5 +1,6 @@
 #include "Device.h"
 #include "tarch/accelerator/Device.h"
+#include "tarch/multicore/Core.h"
 
 #include <map>
 
@@ -36,14 +37,13 @@ void tarch::accelerator::Device::configure(const std::set<int>& devicesToUse)
     auto devices = platform.get_devices();
     for (auto& device : devices)
     {
-      if (syclQueues.count(physicalNumberOfDevices) > 0)
-      {
-        logInfo("initSYCLQueues(...)", "skip device #" << physicalNumberOfDevices << " (SYCL queue already set up)");
+      if (syclQueues.count(physicalNumberOfDevices) > 0) {
+        logInfo("configure(std::set<int>)", "skip device #" << physicalNumberOfDevices << " (SYCL queue already set up)");
       }
       else if (syclQueues.count(physicalNumberOfDevices) == 0 and (devicesToUse.empty() or devicesToUse.count(physicalNumberOfDevices) > 0))
       {
         logInfo(
-          "initSYCLQueues(...)",
+          "configure(std::set<int>)",
           "init physical device #"
             << physicalNumberOfDevices << " as logical device " << logicalNumberOfDevices
             << ". Device numbers from hereon refer to logical devices"
@@ -54,12 +54,18 @@ void tarch::accelerator::Device::configure(const std::set<int>& devicesToUse)
       else
       {
 #if PeanoDebug > 0
-        logInfo("initSYCLQueues(...)", "skip device #" << physicalNumberOfDevices << " (masked out)");
+        logInfo("configure(std::set<int>)", "skip device #" << physicalNumberOfDevices << " (masked out)");
 #endif
       }
       physicalNumberOfDevices++;
     }
   }
+
+  #if !defined(SharedSYCL)
+  sycl::queue q( sycl::cpu_selector_v );
+  syclQueues.insert(std::pair<int, sycl::queue>(tarch::accelerator::Device::HostDevice, q));
+  logInfo("configure(std::set<int>)", "manually added CPU (host) queue for device " << tarch::accelerator::Device::HostDevice );
+  #endif
 }
 
 void tarch::accelerator::Device::shutdown() { syclQueues.clear(); }
@@ -70,6 +76,12 @@ int tarch::accelerator::Device::getNumberOfDevices() const { return syclQueues.s
 
 sycl::queue& tarch::accelerator::getSYCLQueue(int number)
 {
+  #if defined(SharedSYCL)
+  if (number==tarch::accelerator::Device::HostDevice) {
+    return tarch::multicore::getHostSYCLQueue();
+  }
+  #endif
+
   assertion1(syclQueues.count(number) == 1, number);
   return syclQueues[number];
 }

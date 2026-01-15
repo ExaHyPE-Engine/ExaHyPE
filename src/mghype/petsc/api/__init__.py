@@ -3,7 +3,7 @@
 from .Project import Project
 from .PETScMain import PETScMain
 
-import multigrid.petsc.api.solvers
+import mghype.petsc.api.solvers
 
 print( "Peano 4 - PETSc back-end" )
 

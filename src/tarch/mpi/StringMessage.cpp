@@ -80,10 +80,11 @@ void tarch::mpi::StringMessage::receive(tarch::mpi::StringMessage& buffer, int s
   MPI_Probe( source, tag, communicator, &status );
   int count;
   MPI_Get_count( &status, MPI_CHAR, &count );
-  char tmp[count];
-  MPI_Recv( &tmp, count, MPI_CHAR, source, tag, communicator, &status);
+  char* tmp = new char[count];
+  MPI_Recv( tmp, count, MPI_CHAR, source, tag, communicator, &status);
   buffer._senderDestinationRank = status.MPI_SOURCE;
-  buffer._data = tmp;
+  buffer._data = *tmp;
+  delete[] tmp;
 }
 
 
@@ -125,10 +126,11 @@ void tarch::mpi::StringMessage::receive(
   }
   int count;
   MPI_Get_count( &status, MPI_CHAR, &count );
-  char tmp[count];
-  MPI_Recv( &tmp, count, MPI_CHAR, source, tag, communicator, &status);
+  char* tmp = new char[count];
+  MPI_Recv( tmp, count, MPI_CHAR, source, tag, communicator, &status);
   buffer._senderDestinationRank = status.MPI_SOURCE;
-  buffer._data = tmp;
+  buffer._data = *tmp;
+  delete[] tmp;
 }
 
 

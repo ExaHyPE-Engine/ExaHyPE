@@ -13,7 +13,7 @@ namespace toolbox {
      * Leave the tracer particles where they are.
      *
      * Essentially, this is a complicated way to write down a
-     * ``not an operation''  (nope). The routine simply does nothing with
+     * "not an operation"  (nope). The routine simply does nothing with
      * the particle passed.
      */
     template <typename Particle>
@@ -25,17 +25,6 @@ namespace toolbox {
     template <typename ParticleAccessor>
     concept ParticleTimeSteppingAccessor = requires { typename ParticleAccessor::Particle; };
 
-    /*
-
-     //(ParticleAccessor accessor, ) {
-
-          accessor.x(Particle&)       -> tarch::la::Vector< Dimensions, double>&;
-          accessor.x(const Particle&) -> const tarch::la::Vector< Dimensions, double>&;
-
-          accessor.v(Particle&)       -> tarch::la::Vector< Dimensions, double>&;
-          accessor.v(const Particle&) -> const tarch::la::Vector< Dimensions, double>&;
-    */
-    //    };
 
     template <typename Particle>
     struct ParticleAccessorIdentity {

@@ -1,0 +1,84 @@
+/**
+
+@page page_machines_hamilton Reference configurations for Hamilton (Durham)
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+This page contains information on particular machines that we use heavily.
+The page is not supposed to provide general information about certain software stacks.
+For such information, please consult the toolchain discussions on the parent page @ref page_compiler_specific_settings_home. 
+</div>
+
+
+<img width="20%" src="https://nccadmin.webspace.durham.ac.uk/wp-content/themes/core/assets/img/theme/branding-assets/durham-university-logo.svg" />
+
+Hamilton 8 is Durham's internal supercomputer.
+It is a system powered by AMD EPYC processors.
+I nevertheless prefer the Intel toolchain on the machine.
+
+
+Hamilton's default oneapi module is built against a GCC version which is too old and lacks
+important features within its standard library.
+Therefore, you have to manuall load the latest gcc.
+This is usually prevented by the system and leads to a conflict (so that you
+can't have multiple GCC versions loaded).
+We therefore have to disable conflict checks a priori.
+Eventually, I end up with 
+
+~~~~~~~~~~~~~~~~~~~~~~
+module purge
+module load oneapi/2024.2
+export FLAVOUR_NOCONFLICT=1
+module load gcc/14.2
+module load intelmpi
+module load tbb/2022.0
+ 
+export I_MPI_CXX=icpx
+~~~~~~~~~~~~~~~~~~~~~~
+
+For the vectorisation, we recognise that we always need
+
+~~~~~~~~~~~~~~~~~~~~~~
+ -Ofast -ffast-math
+~~~~~~~~~~~~~~~~~~~~~~
+
+If you use mpiicpc, the MPI wrapper still refers to icpc even though icpc is
+officially deprecated.
+Therefore, I manually have to repoint it to icpx.
+The other options to do this (via additional script arguments, e.g.) all failed
+on this machine.
+
+
+- TBB runs
+~~~~~~~~~~~~~~~~~~~~~~
+./configure CXX=icpx CC=icx 'CXXFLAGS=-O3 -ffast-math -mtune=native -march=native -fma -fomit-frame-pointer -std=c++20 -fno-exceptions -Wno-unknown-attributes -Wno-gcc-compat' LIBS="-ltbb" LDFLAGS="-L${TBBROOT}/lib" --enable-mghype --enable-exahype --enable-blockstructured --enable-finiteelements --with-multithreading=tbb_extension --enable-loadbalancing
+~~~~~~~~~~~~~~~~~~~~~~
+
+
+## Older settings (not tested atm)
+
+- MPI production runs
+~~~~~~~~~~~~~~~~~~~~~~
+./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g -std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -qopenmp -Wno-unknown-attributes" LDFLAGS="-fiopenmp -g" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran
+~~~~~~~~~~~~~~~~~~~~~~
+- Performance analysis runs with single node tracing
+~~~~~~~~~~~~~~~~~~~~~~
+module load vtune
+./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g -std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -qopenmp -Wno-unknown-attributes -I${VTUNE_HOME}/vtune/latest/include" LDFLAGS="-qopenmp -g -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=itt
+~~~~~~~~~~~~~~~~~~~~~~
+- MPI performance analysis runs
+~~~~~~~~~~~~~~~~~~~~~~
+module load vtune
+./configure CC=icpx CXX=icpx CXXFLAGS="-I${VTUNE_HOME}/vtune/latest/include -I${VT_ROOT}/include -Ofast -g -std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -qopenmp -Wno-unknown-attributes" LDFLAGS="-qopenmp -g -L${VT_LIB_DIR} -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-lVT ${VT_ADD_LIBS} -littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=itac
+~~~~~~~~~~~~~~~~~~~~~~
+
+
+Further to these flags, I @ref page_faq_home "pause and resume the data collection" manually in
+ExaHyPE and Swift. This is however something I do in the main() routine of
+the respective applications.
+
+
+*/
+
