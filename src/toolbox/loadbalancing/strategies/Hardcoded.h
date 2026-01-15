@@ -50,6 +50,24 @@ namespace toolbox {
  * decision-making is hardcoded whereas here the actual decisions are. In this
  * sense, the present name might be chosen inappropriately.
  *
+ *
+ * ## Fit to system configuration
+ *
+ * The idea behind the hardcoded strategy is that users pipe in a particular
+ * configuration tied to their specific choice of ranks. That is, if the rank
+ * count changes, they'd likel instantiate the hardcoded strategy with a
+ * different setup.
+ *
+ * If a hardcoded setup does not use all ranks, i.e. if a user increases the
+ * MPI rank cound but fails to amend the configuration of the hardcoded
+ * scheme, then there's nothing we can do here. Indeed, there might be cases
+ * where this makes sense, if the hardcoded strategy is used in combination
+ * with another load balancing scheme.
+ *
+ * If the strategy is used with fewer ranks than the configuration uses, i.e.
+ * if the hardcoded strategy wants to deploy to rank 20 and there are only
+ * 10 ranks, then we write an error and continue with a mock up. See
+ * validateAndAddSplitInstruction() for details.
  */
 class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
@@ -79,7 +97,7 @@ class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalanci
      * that the logInfo will crash. So better stay silent and avoid logInfo()
      * calls here.
      *
-     *
+     * @see Documentation of class Hardcoded for details on any error handling.
      */
     Hardcoded(
       std::initializer_list<int> gridSweeps,
@@ -117,6 +135,8 @@ class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalanci
       peano4::SplitInstruction::Mode mode;
       Split( const Split& split );
       Split( int gridSweep_, int splittingTree_, int numberOfCells_, int destinationRank_, peano4::SplitInstruction::Mode mode_ );
+
+      std::string toString() const;
     };
 
     std::queue< Split >   _splits;
@@ -127,6 +147,8 @@ class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalanci
      * rather than at specific points in time.
      */
     int    _currentGridSweep;
+
+    void validateAndAddSplitInstruction( Split instruction );
 };
 
 

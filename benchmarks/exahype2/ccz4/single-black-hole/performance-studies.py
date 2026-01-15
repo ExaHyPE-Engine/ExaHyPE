@@ -30,11 +30,35 @@ from CCZ4Solver import (
 from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStep
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
 
-#python3 performance-studies.py -lbm tailored -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6 --interpolation-method linear -cs 5.4 --plot
+LoadBalancingMetrics = ["generic", "tailored"]
+SchedulerChoices = [
+            "native-no-priorities",
+            "native",
+            "tailored",
+            "parallel-for",
+            "subtasks",
+            "subtasks-and-kernel-parallelisation",
+        ]
+SolverChoices_FiniteVolumes_PatchSize6  = "fv-6"
+SolverChoices_FiniteVolumes_PatchSize48 = "fv-48"
+SolverChoices_FiniteVolumes_PatchSize96 = "fv-96"
+SolverChoices = [
+            SolverChoices_FiniteVolumes_PatchSize6,
+            SolverChoices_FiniteVolumes_PatchSize48,
+            SolverChoices_FiniteVolumes_PatchSize96,
+            "fd4-rk1-ps-3",
+            "fd4-rk1-ps-6",
+            "fd4-rk1-limited-ps-3",
+            "fd4-rk1-limited-ps-6",
+        ] 
 
+#
+# Enclave versions are missing
+#
+               
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="ExaHyPE 2 - CCZ4-Performance studies benchmarking script"
+        description="ExaHyPE 2 - CCZ4 single black hole benchmarking script"
     )
     parser.add_argument(
         "-j",
@@ -71,14 +95,14 @@ if __name__ == "__main__":
         "--end-time",
         dest="end_time",
         type=float,
-        default=0.01,
+        required=True,
         help="End of simulation",
     )
     parser.add_argument(
         "--trees",
         dest="trees",
         type=int,
-        required=True,
+        default=0,
         help="Number of trees (subpartitions) per rank",
     )
     parser.add_argument(
@@ -86,7 +110,7 @@ if __name__ == "__main__":
         "--cell-size",
         dest="cell_size",
         type=float,
-        default=1.8,
+        required=True,
         help="Minimal cell size (AMR) or regular mesh cell size (without AMR), default=1.8",
     )
     parser.add_argument("-m",   "--mode",               dest="mode",           choices=peano4.output.CompileModes, default=peano4.output.CompileModes[0], help="|".join(peano4.output.CompileModes) )
@@ -101,45 +125,31 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p",
         "--plot",
-        dest="plot",
-        action="store_true",
-        default=False,
-        help="Plot initial and final solution",
+        dest="plot_interval",
+        type=float,
+        help="Plot solution every value time intervals",
     )
     parser.add_argument(
         "-sched",
         "--scheduler",
         dest="scheduler",
-        choices=[
-            "native-no-priorities",
-            "native",
-            "tailored",
-            "parallel-for",
-            "subtasks",
-            "subtasks-and-kernel-parallelisation",
-        ],
-        required=True,
+        choices=SchedulerChoices,
+        default=SchedulerChoices[0],
         help="Task scheduler flavours",
     )
     parser.add_argument(
         "-lbm",
         "--load-balancing-metric",
         dest="load_balancing_metric",
-        choices=["generic", "tailored"],
-        required=True,
+        choices=LoadBalancingMetrics,
+        default=LoadBalancingMetrics[0],
         help="Load balancing metric",
     )
     parser.add_argument(
         "-s",
         "--solver",
         dest="solver",
-        choices=[
-            "fv",
-            "fd4-rk1-ps-3",
-            "fd4-rk1-ps-6",
-            "fd4-rk1-limited-ps-3",
-            "fd4-rk1-limited-ps-6",
-        ],
+        choices=SolverChoices,
         required=True,
         help="Pick solver type",
     )
@@ -239,9 +249,8 @@ if __name__ == "__main__":
         )
         project.add_solver(my_primary_solver)
         added_limiter = False
-        args.end_time *= 10
     elif "fd4-rk1-limited-ps-" in args.solver:
-        FD4PatchSize = int(args.solver[-1])
+        FD4PatchSize = 16*int(args.solver[-1])
         my_primary_solver = FD4SolverWithLimiter(
             name="CCZ4SBH",
             patch_size=FD4PatchSize,
@@ -261,35 +270,40 @@ if __name__ == "__main__":
         project.add_solver(my_primary_solver)
         project.add_solver(my_secondary_solver)
         added_limiter = True
-    elif "fv" in args.solver:
+    elif (
+      args.solver == SolverChoices_FiniteVolumes_PatchSize6
+      or 
+      args.solver == SolverChoices_FiniteVolumes_PatchSize48
+      or 
+      args.solver == SolverChoices_FiniteVolumes_PatchSize96
+      ):
+        if args.solver == SolverChoices_FiniteVolumes_PatchSize6:
+            patch_size = 6
+        if args.solver == SolverChoices_FiniteVolumes_PatchSize48:
+            patch_size = 48
+        if args.solver == SolverChoices_FiniteVolumes_PatchSize96:
+            patch_size = 96
         my_primary_solver = FVSolver(
             name="CCZ4SBH",
-            patch_size=4,
+            patch_size=patch_size,
             min_cell_size=args.cell_size,
             max_cell_size=max_cell_size,
         )
         project.add_solver(my_primary_solver)
         added_limiter = False
-        args.end_time *= 10
     else:
         raise "unknown solver type {}".format(args.solver)
 
     ########################################################################################
     # Build the project
     ########################################################################################
-
-    if args.plot:
-        plot_interval = args.end_time
-    else:
-        plot_interval = 0.0
-
     project.set_global_simulation_parameters(
         dimensions,  # dimensions
         offset,
         domain_size,
         args.end_time,
         0.0,
-        plot_interval,
+        args.plot_interval,
         [False, False, False],
         8,  # plotter precision
     )
@@ -301,9 +315,10 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation(args.peanodir, peano4.output.string_to_mode(args.mode))
 
-    if args.load_balancing_metric == "generic":
+    if args.load_balancing_metric == "generic" and args.trees>0:
+        assert args.trees>=0 
         project.set_load_balancing(
-            "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
+            "toolbox::loadbalancing::strategies::cascade::SpreadOutHierarchically",
             """
           new ::exahype2::LoadBalancingConfiguration(
             0.98, 
@@ -316,7 +331,20 @@ if __name__ == "__main__":
                 args.trees, 2 * args.trees
             ),
         )
+    elif args.load_balancing_metric == "generic":
+        assert args.trees==0 
+        project.set_load_balancing(
+            "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+            """
+          new ::exahype2::LoadBalancingConfiguration(
+            0.98,  
+            1
+          ),
+          new toolbox::loadbalancing::metrics::CellCount()
+        """
+        )
     else:
+        assert args.trees>0
         load_balancing_cell_label = (
             exahype2.grid.FineGridCellLoadBalancingCostMetric.create_cell_label(project)
         )

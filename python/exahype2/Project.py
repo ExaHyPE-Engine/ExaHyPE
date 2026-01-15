@@ -88,6 +88,19 @@ class Project(object):
         among ranks and threads, i.e. the instance is important for MPI but 
         also whenever you use any multithreading strategy.
         
+        Similar to set_multicore_orchestration(), you have to let the project
+        know about where the load balancing is held. If you rely on the 
+        load balancing toolbox and if you have configured Peano with the 
+        load balancing toolbox, then simply adding the right eader is 
+        sufficient:
+        
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        project.add_mainfile_include( "toolbox/loadbalancing/strategies/Hardcoded.h)
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        
+        If you use a bespoke load balancing, you also have to add the 
+        implementation file or hosting library to the project.
+ 
         @param load_balancer_name: string
           Should be full-qualified name of the load balancer.
           By default, I recommend to pass "toolbox::loadbalancing::strategies::RecursiveSubdivision".
