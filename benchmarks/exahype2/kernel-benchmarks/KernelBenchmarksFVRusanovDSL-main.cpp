@@ -10,7 +10,7 @@
 #include "repositories/SolverRepository.h"
 #include "repositories/StepRepository.h"
 
-#include "tasks/FVRusanovEnclaveTask.h"
+#include "kernels/rusanov.h"
 
 #include "peano4/peano.h"
 
@@ -203,7 +203,7 @@ void wrapHostKernel(int device, exahype2::CellData<double, double>& patchData) {
 template <void (*Kernel)(int, exahype2::CopyCellDataGPU<double, double>&, tarch::timing::Measurement&)>
 void wrapDeviceKernel(int device, ::exahype2::CellData<double, double>& patchData) {
   assertion(device != tarch::accelerator::Device::HostDevice);
-  ::exahype2::CopyCellDataGPU<double, double> gpuCellData(patchData, NumberOfInputEntriesPerPatch, NumberOfOutputEntriesPerPatch);
+  ::exahype2::CopyCellDataGPU<double, double> gpuCellData(patchData, NumberOfInputEntriesPerPatch, NumberOfOutputEntriesPerPatch, device);
   Kernel(device, gpuCellData, timingComputeKernel);
   gpuCellData.copyBackAndDestroy();
 }

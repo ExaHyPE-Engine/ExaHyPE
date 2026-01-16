@@ -16,12 +16,22 @@ namespace applications {
     namespace ccz4 {
 
       /**
+       * A bug in the LLVM OpenMP implementation prevents the usage of
+       * arrays in target functions. This means that an alternative version
+       * is required that eliminates these arrays. This applies to the
+       * source and npc functors.
+       * 
+       * TODO: Check if replacing the arrays on the stack with arrays on
+       * the heap fixes the issue.
+       * 
        * @see source() for a discussion of annotations.
        */
-      #if defined(SharedOMP)
+      #if defined(GPUOffloadingOMP)
+      #pragma omp declare target
+      #elif defined(SharedOMP)
       #pragma omp declare simd
       #endif
-      KeywordToAvoidDuplicateSymbolsForInlinedFunctions void ncp(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal,
+      static GPUCallableInlineMethod void ncp(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal,
         const int CCZ4LapseType,
         const double CCZ4ds,
         const double CCZ4c,
@@ -33,6 +43,9 @@ namespace applications {
         const double CCZ4mu,
         const double CCZ4SO
       ) InlineMethod;
+      #if defined(GPUOffloadingOMP)
+      #pragma omp end declare target
+      #endif
 
       /**
        * The source term is one out of two terms that we use in our CCZ4
@@ -50,10 +63,12 @@ namespace applications {
        *
        * @see ncp()
        */
-      #if defined(SharedOMP)
+      #if defined(GPUOffloadingOMP)
+      #pragma omp declare target
+      #elif defined(SharedOMP)
       #pragma omp declare simd
       #endif
-      KeywordToAvoidDuplicateSymbolsForInlinedFunctions void source(double* S, const double* const Q,
+      static GPUCallableInlineMethod void source(double* S, const double* const Q,
         const int CCZ4LapseType,
         const double CCZ4ds,
         const double CCZ4c,
@@ -69,11 +84,16 @@ namespace applications {
         const double CCZ4k3,
         const double CCZ4SO
       ) InlineMethod;
+      #if defined(GPUOffloadingOMP)
+      #pragma omp end declare target
+      #endif
 
-      #if defined(SharedOMP)
+      #if defined(GPUOffloadingOMP)
+      #pragma omp declare target
+      #elif defined(SharedOMP)
       #pragma omp declare simd
       #endif
-      KeywordToAvoidDuplicateSymbolsForInlinedFunctions void maxEigenvalue(
+      static GPUCallableInlineMethod void maxEigenvalue(
         const double* const Q,
         int                 normal,
         const double        CCZ4e,
@@ -82,7 +102,9 @@ namespace applications {
         const double        CCZ4GLMd,
         double*             maxEigenvalue
       ) InlineMethod;
-
+      #if defined(GPUOffloadingOMP)
+      #pragma omp end declare target
+      #endif
 
       /**
        * @todo Han
@@ -145,7 +167,10 @@ namespace applications {
   }
 }
 
+#if defined(GPUOffloadingOMP)
+#include "CCZ4KernelsOpenMP.cpph"
+#else
 #include "CCZ4Kernels.cpph"
-
+#endif
 
 

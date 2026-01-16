@@ -45,7 +45,7 @@ namespace tarch {
    */
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
-  void gpuAbort();
+  inline void gpuAbort(){}
 #pragma omp end declare target
 #elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
   GPUCallableMethod void gpuAbort();
@@ -155,8 +155,10 @@ namespace tarch {
   #if defined(GPUOffloadingOMP)
   #pragma omp declare target
   #endif
-  double* memset(double* dest, double ch, size_t byteCount);
+  inline double* memset(double* dest, double ch, size_t byteCount);
   #if defined(GPUOffloadingOMP)
   #pragma omp end declare target
   #endif
 } // namespace tarch
+
+#include "accelerator.cpph"

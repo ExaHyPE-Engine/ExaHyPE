@@ -4,10 +4,6 @@
 
 #if defined(GPUOffloadingOMP)
 
-#pragma omp declare target
-void tarch::gpuAbort() {}
-#pragma omp end declare target
-
 void* tarch::internal::allocateRawData(
   std::size_t     size,
   MemoryLocation  location,
