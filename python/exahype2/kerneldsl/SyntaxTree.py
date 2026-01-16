@@ -1193,7 +1193,15 @@ class DataBlockUnaryMax:
         return self._loop.print_cpp(indent_level)
     
     def print_omp(self, indent_level = 0):
+        if Node.use_accelerator:
+            return f"""{' ' * indent_level * Node.spaces_per_tab}omp_target_memset(maxEigenvalues, 0, N * sizeof(double), targetDevice);
+{' ' * indent_level * Node.spaces_per_tab}for (int {self._loop._iteration_variable.print_cpp()} = {self._loop._iteration_range[0].print_cpp()}; {self._loop._iteration_variable.print_cpp()} < {self._loop._iteration_range[1].print_cpp()}; {self._loop._iteration_variable.print_cpp()}++) {{
+{' ' * (indent_level + 1) * Node.spaces_per_tab}#pragma omp target teams distribute parallel for simd collapse(Dimensions) reduction(max:{self._outputVariable.multidimensional_index([self._loop.get_iteration_variable()]).print_omp()})
+{self._loop._statements[1].print_omp(indent_level + 1)}
+{' ' * indent_level * Node.spaces_per_tab}}}
+"""
         return self._loop.print_omp(indent_level)
+
     
     def print_sycl(self, indent_level = 0):
         ranges = [f"range{i} = {loop.get_interval_size().print_sycl()};" for i, loop in enumerate(self._loops[0:3])]
@@ -1369,8 +1377,8 @@ class If(Statement):
 """ + ' ' * indent_level * Node.spaces_per_tab + "}"
     
     def print_omp(self, indent_level=0):
-        statement_prints = [statement.print_cpp(indent_level + 1) for statement in self._statements]
-        return ' ' * indent_level * Node.spaces_per_tab + f"""if constexpr ({self._boolean.print_cpp()}) {{
+        statement_prints = [statement.print_omp(indent_level + 1) for statement in self._statements]
+        return ' ' * indent_level * Node.spaces_per_tab + f"""if constexpr ({self._boolean.print_omp()}) {{
 {os.linesep.join(statement_prints)}
 """ + ' ' * indent_level * Node.spaces_per_tab + "}"
     
@@ -1569,15 +1577,19 @@ class MemoryAllocation(Statement):
 
         
     def print_omp(self, indent_level=0):
-        if len(self._dimensions) == 1:
-            return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp() + "* " if self._specify_type else ""}{self._name.print_omp()} = new {self._type.print_omp()}[{self._dimensions[0].print_omp()}];"""
-        else:
-            if Node.use_accelerator == False:
+        if Node.use_accelerator == False:
+            if len(self._dimensions) == 1:
+                return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp() + "* " if self._specify_type else ""}{self._name.print_omp()} = new {self._type.print_omp()}[{self._dimensions[0].print_omp()}];"""
+            else:
                 return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp()}** {self._name.print_omp()} = new {self._type.print_omp()}*[{self._dimensions[-1].print_omp()}];
 {self._loop.print_omp(indent_level)}"""
+        else:   
+            if len(self._dimensions) == 1:
+                return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp() + "* " if self._specify_type else ""}{self._name.print_omp()} = ({self._type.print_omp()}*)omp_target_alloc(sizeof({self._type.print_omp()}) * {self._dimensions[0].print_omp()}, targetDevice);"""
             else:
-                return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp()}* {self._name.print_omp()} = new {self._type.print_omp()}[{(self._size * self._dimensions[-1]).print_omp()}];"""
-        
+                return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp()}* {self._name.print_omp()} = ({self._type.print_omp()}*)omp_target_alloc(sizeof({self._type.print_omp()}) * {(self._size * self._dimensions[-1]).print_omp()}, targetDevice);"""
+
+    
     def print_sycl(self, indent_level=0):
         if len(self._dimensions) == 1:
             return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_sycl() + "* " if self._specify_type else ""}{self._name.print_sycl()} = ::sycl::malloc_shared<{self._type.print_omp()}>({self._dimensions[0].print_sycl()}, queue);"""
@@ -1623,14 +1635,14 @@ class MemoryDeallocation(Statement):
                 return f"""{' ' * indent_level * Node.spaces_per_tab}delete[] {self._name.print_cpp()};"""
 
     def print_omp(self, indent_level=0):
-        if len(self._dimensions) == 1:
-            return ' ' * indent_level * Node.spaces_per_tab + f"""delete[] {self._name.print_omp()};"""
-        else:
-            if Node.use_accelerator == False:
+        if Node.use_accelerator == False:
+            if len(self._dimensions) == 1:
+                return ' ' * indent_level * Node.spaces_per_tab + f"""delete[] {self._name.print_omp()};"""
+            else:
                 return f"""{self._loop.print_omp(indent_level)}
 {' ' * indent_level * Node.spaces_per_tab}delete[] {self._name.print_omp()};"""
-            else:
-                return f"""{' ' * indent_level * Node.spaces_per_tab}delete[] {self._name.print_omp()};"""
+        else:
+            return ' ' * indent_level * Node.spaces_per_tab + f"""omp_target_free({self._name.print_omp()}, targetDevice);"""
 
     def print_sycl(self, indent_level=0):
         return ' ' * indent_level * Node.spaces_per_tab + f"""::sycl::free({self._name.print_sycl()}, queue);"""

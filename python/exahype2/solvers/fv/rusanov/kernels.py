@@ -390,7 +390,7 @@ def create_compute_Riemann_kernel_for_Rusanov_dsl(flux_implementation,
     {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
     {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
     {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
-    >(targetDevice, gpuPatchData);
+    >(gpuPatchData.targetDevice, gpuPatchData);
 """
   else:
     assert False, "Not supported combination: {} x {}".format(solver_variant, kernel_variant)
