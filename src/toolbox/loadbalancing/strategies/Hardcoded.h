@@ -67,7 +67,7 @@ namespace toolbox {
  * If the strategy is used with fewer ranks than the configuration uses, i.e.
  * if the hardcoded strategy wants to deploy to rank 20 and there are only
  * 10 ranks, then we write an error and continue with a mock up. See
- * validateAndAddSplitInstruction() for details.
+ * validateAndAmend() for details.
  */
 class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
@@ -84,6 +84,7 @@ class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalanci
      * then tree 2 will split in the grid sweeps 4, 5 and 8. It will try to
      * deploy 11, 12 or 13 cells to the ranks 22, 23 or 24, respectively.
      *
+     *
      * ## Implementation
      *
      * We do not work with initialiser lists internally. Instead, the
@@ -96,6 +97,15 @@ class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalanci
      * before the logging infrastructure is properly configured. This means
      * that the logInfo will crash. So better stay silent and avoid logInfo()
      * calls here.
+     *
+     *
+     * ## Pitfall
+     *
+     * At this point, I may not yet call validateAndAmend() as this one
+     * requires MPI to be properly initialised. If the hardcoded strategy
+     * is used as kind of a global variable - a typical application case -
+     * then the initialisation consequently breaks down.
+     *
      *
      * @see Documentation of class Hardcoded for details on any error handling.
      */
@@ -111,7 +121,7 @@ class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalanci
      * Shortcut around other constructor
      *
      * In this variant, all split modes are of the same type and there's a
-     * default.
+     * default. See the other constructor for details.
      */
     Hardcoded(
       std::initializer_list<int> gridSweeps,
@@ -137,6 +147,24 @@ class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalanci
       Split( int gridSweep_, int splittingTree_, int numberOfCells_, int destinationRank_, peano4::SplitInstruction::Mode mode_ );
 
       std::string toString() const;
+
+      /**
+       * Validate a split instruction
+       *
+       * This operation validates the split operation and amends its state if
+       * required. That means notably that it looks if the target tree does
+       * exist in an MPI environment. If not, it uses a module division to fix
+       * the assignment.
+       *
+       *
+       * ## Implementation pitfalls
+       *
+       * I originally called validateAndAmend immediately when I built up the
+       * split lists. However, this happens at startup time for many codes. At
+       * this point MPI_Init might not have been called, i.e. the rank might
+       * not yet be properly configured.
+       */
+      void validateAndAmend();
     };
 
     std::queue< Split >   _splits;
@@ -147,8 +175,6 @@ class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalanci
      * rather than at specific points in time.
      */
     int    _currentGridSweep;
-
-    void validateAndAddSplitInstruction( Split instruction );
 };
 
 

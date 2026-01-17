@@ -266,7 +266,7 @@ void step() {
 #else
   if (tarch::mpi::Rank::getInstance().isGlobalMaster())
 #endif
-  logInfo("step()", "Starting AlgorithmicStep [" << {{SUBNAMESPACE}}repositories::StepRepository::toString(stepName)<<"]" );
+  logInfo("step()", "start AlgorithmicStep [" << {{SUBNAMESPACE}}repositories::StepRepository::toString(stepName)<<"]" );
 
   static tarch::timing::Watch watch("::", "step()", false);
 
