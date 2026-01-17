@@ -47,9 +47,7 @@ benchmarks::exahype2::ccz4::MulticoreOrchestration::FuseInstruction benchmarks::
     0, 16, std::numeric_limits<int>::max()
   );
 
-  #if defined(PureFD4)
-  return FDFuseInstruction;
-  #elif defined(PureFV)
+  #if defined(PureFD4) or defined(PureFV)
   return FVFuseInstruction;
   #else
   return taskType == tasks::CCZ4SBH_FVEnclaveTask::getEnclaveTaskTypeId()
