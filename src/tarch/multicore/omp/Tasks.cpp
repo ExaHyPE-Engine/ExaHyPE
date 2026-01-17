@@ -124,7 +124,7 @@ void tarch::multicore::omp::internal::spawnTaskWithOpenMP6(
   assertion1( tarch::multicore::omp::majorOpenMPVersion()>=6, tarch::multicore::omp::majorOpenMPVersion() );
 
   #if _OPENMP>=202411
-    #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), inout: dependencyTrackingMemory[outDependency[j]]) untied transparent
+    #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), inout: dependencyTrackingMemory[outDependency[j]]) shared(numberOfPendingTasks) untied transparent
     {
       OTTER_TASK_START(task);
       job->run();
@@ -177,8 +177,9 @@ void tarch::multicore::omp::internal::spawnTaskWithOpenMP5(
     logDebug( "spawnTaskWithOpenMP5(...)", "set task status " << outDependency[0] << " to spawned" );
   }
 
-  // #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), out: dependencyTrackingMemory[outDependency[j]]) firstprivate(inDependencies,outDependency,job) shared(numberOfPendingTasks,dependencyTrackingMemory) untied
-  #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), out: dependencyTrackingMemory[outDependency[j]]) untied
+  assertion2( outDependency.empty() or outDependency[0]<dependencyTrackingMemorySize, outDependency[0], dependencyTrackingMemorySize );
+
+  #pragma omp task priority(job->getPriority()) shared(numberOfPendingTasks) untied
   {
     // Polling thread
     bool isReady;
