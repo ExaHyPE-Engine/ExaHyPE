@@ -18,6 +18,7 @@
   - \subpage documentation_tarch_visualisation
 - HPC
   - \subpage page_tarch_multicore 
+  - \ref tarch::multicore "Multithreading architecture and implementation"
   - \subpage page_tarch_mpi 
   - \subpage tarch_accelerator_SYCL
   - \subpage documentation_tarch_task_fusion_strategies

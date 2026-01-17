@@ -251,7 +251,7 @@ namespace tarch {
        * task queue. If there are no incoming dependencies, we can directly
        * dump the actual task.
        *
-       * @image html taskfusion-LazyEvaluation.png
+       * @image html src/tarch/multicore/taskfusion/taskfusion-LazyEvaluation.png
        *
        * After that, we can return. If someone waits for our task (which we
        * replaced with the LogReadyTask), we have to ensure that the task
@@ -326,7 +326,7 @@ namespace tarch {
        * that all tasks have finished. In the latter case, any follow-up wait
        * degenerates to an anti-dependency.
        *
-       * @image html taskfusion-LazyEvaluation.png
+       * @image html src/tarch/multicore/taskfusion/taskfusion-LazyEvaluation.png
        *
        * The spawning of our task of interest has either created a LogReadyTask
        * instance, or it has directly dropped the task that we wait for into
