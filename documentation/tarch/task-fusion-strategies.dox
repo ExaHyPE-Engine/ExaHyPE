@@ -14,7 +14,7 @@ A high-level overview of what task fusion strategies we have on the table is
 available from the enum tarch::multicore::orchestration::FusionImplementation
 which is used to pick one of the implementation variants.
 This page is written for programmers who want to use/adopt the task fusion 
-within their own code. 
+within their own code.  
 
 
 <div style="background-color: #ccf; padding: 10px; border: 1px solid green;"> 
@@ -28,16 +28,23 @@ within their own code.
 
 
 
-## Prepare  
+# Prepare your task
 
 To be able to fuse tasks, we have to assign tasks are unique number. A very 
-simple way to do this is to create a static marker. While it is possible to
+imple way to do this is to create a static marker. While it is possible to
 hardcode a task number, it is not particularly elegant and reasonable: If 
 you later combine two different applications, you have to be absolutely sure
 that they do not use the same index for different tasks. It is safer to 
-rely on the peano4::parallel::getTaskType() factory method to produce unique
-identifiers:
+rely on the @ref peano4::parallel::getTaskType() factory method to produce unique
+identifiers.
 
+As soon as your task type is not tarch::multicore::Task::DontFuse, the task's
+canFuse() routine will return true. Consequently, Peano's technical architecture
+will embed the spawned tasks into a queue and try to fuse the tasks from there.
+
+
+
+## Task type numbers of tasks constructed through a functor
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 static int residualTaskType     = peano4::parallel::getTaskType("UpdateResidualTask");
@@ -48,31 +55,67 @@ tarch::multicore::TaskWithCopyOfFunctor* updateResidualTask = new tarch::multico
 );  
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
 This is absolutely fine and works. However, it becomes convenient later on, if
 we have a way to access this task type number, i.e. if it is not embedded 
-somewhere in a function. In a proper task class, you can make it a static 
-field. We'll demonstrate workarounds for this later on.
-</div>
+somewhere in a function:
 
-As soon as your task type is not tarch::multicore::Task::DontFuse, the task's
-canFuse() routine will return true. Consequently, Peano's technical architecture
-will embed the spawned tasks into a queue and try to fuse the tasks from there.
+## Tasks modelled as explicit classes
+
+In a proper task class, you can make the task type a static field. ExaHyPE
+for example gives each enclave task an attribute
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    /**
+     * This is a unique static id which we use both for task fusion and within
+     * SmartMPI to distinguish different task types.
+     */
+    static int                                _enclaveTaskTypeId;
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+by default. It then initialises this similar to
 
 
-## Pick a task orchestration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+int benchmarks::exahype2::ccz4::tasks::CCZ4SBH_FD4EnclaveTask::_enclaveTaskTypeId(peano4::parallel::getTaskType("benchmarks::exahype2::ccz4::tasks::CCZ4SBH_FD4EnclaveTask"));
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The task orchestration is controlled through tarch::multicore::setOrchestration().
-The code uses the orchestrations' getFusionImplementation() to find out which 
-implementation for the task fusion to pick. More details on the variants can be 
-found in the documentation of 
-the enum tarch::multicore::orchestration::FusionImplementation. Besides the implementation variant, the orchestration is also the 
-global instance that decides how many tasks to pack into one fusable task, onto
-which device to deploy the new meta task, and so forth.
+For each task class, we now have a dedicated task type number. We can also 
+use this one outside of the class later on for the orchestration (see below).
 
-The default orchestration is determined through tarch::multicore::orchestration::createDefaultStrategy().
+Once a task has a valid task type id, its @ref tarch::multicore::Task::canFuse()
+will return true and hence permit task fusion. If you want, you can still
+overwrite this routine and disable task fusion on a per-task level, i.e. even 
+though a task might have a valid type which labels it as fusable in principle,
+nothing stops a user from labelling specific tasks as not fusable, i.e. to 
+veto any fusion.
+
+
+# Pick a task orchestration
+
+The task orchestration is controlled through @ref tarch::multicore::setOrchestration().
+It sets a global instane of @ref tarch::multicore::orchestration::Strategy 
+which determines from hereon how the task fusion (and overall orchestration)
+behaves.
+
+From a task fusion point of view, there are only two functions relevant in the
+orchestration:
+
+1. The code uses the orchestrations' getFusionImplementation() to find out which 
+   implementation for the task fusion to pick. More details on the variants can be 
+   found in the documentation of 
+   the enum @ref tarch::multicore::orchestration::FusionImplementation. Besides the implementation variant, the orchestration is also the 
+   global instance that decides how many tasks to pack into one fusable task, onto
+   which device to deploy the new meta task, and so forth. This is kind of a 
+   global setting guiding the fusion algorithmics.
+2. The technical architecture then uses fuse() per task type to determine how 
+   many tasks to actually bundle and on which device they shall go.
+   
+In short, the first function of the orchestration determines how the task 
+fusion is realised, while the second steers which tasks are offloaded when.
+
+The default orchestration is determined through @ref tarch::multicore::orchestration::createDefaultStrategy().
 You can reset the strategy manually. Most extension's Python interfaces provide
-a routine for this (e.g. exahype2.project.Project.set_multicore_orchestration()).
+a routine for this (e.g. @ref exahype2.project.Project.set_multicore_orchestration() in ExaHyPE).
 
 <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
 Before you continue, it is reasonable to enable the statistics mode of Peano 
@@ -82,18 +125,18 @@ task has already completed. You get a feeling of the business of the system.
 </div>
 
 
-## Tweak the fusion kernel
+# Tweak the fusion kernel
 
 One of the purposes of task fusion - besides a reduction of overheads - is the
 capability to introduce bespoke compute kernels that handle a whole set of 
 tasks instead of a single one. They might even take them and ship them to a 
-GPU. For this, you have to overwrite tarch::multicore::Tasks::fuse(). The 
-default is just a while loop over tasks.
+GPU. For this, you have to overwrite @ref tarch::multicore::Tasks::fuse(). The 
+default is just a loop over tasks.
 
 In our latest write-up, we call these fusion kernels ***executor***.
 
 
-## Tailor the task orchestration
+# Tailor the task orchestration
 
 The default orchestration strategies do not distinguish different task types
 and they are not particularly bespoke. In most cases, you will have to tweak
@@ -108,7 +151,7 @@ mghype::MultigridDefaultMulticoreOrchestration.
 
 
 
-### Status
+## Status
 
 Whenever tarch::multicore::taskfusion::ProcessReadyTask::run() kicks off, it 
 invokes updateFuseStatistics() on the orchestration. We receive
@@ -121,7 +164,7 @@ This allows to make statements on the load, as the stats are only updated if
 the underlying tasks is not processed yet.
 
 
-### Disable tasks
+## Disable tasks
 
 Let the task return instruction.maxTasks=0 to disable the fusion completely.
 In this case, the fusable tasks are spawned as native tasks. 
@@ -131,7 +174,7 @@ On the other hand, task queue stats (size of queues, average size of queues,
 process statistics) won't be updated anymore.
 
 
-### Reduce fused batch size
+## Reduce fused batch size
 
 If the average number of ready tasks in the queue is higher than the
 max fused tasks every time a process ready task is invoked, the
@@ -145,7 +188,7 @@ bunch of tasks, e.g. on an accelerator.
 
 
 
-### Distinguish different tasks types
+## Distinguish different tasks types
 
 If you have only one single type of tasks, decisions are easy. However, most
 codes feature different (fusable) task types and hence want to make different
@@ -197,30 +240,7 @@ tarch::multicore::orchestration::Strategy::FuseInstruction mghype::MultigridDefa
 
 
 
-## Task fusion variants and mapping onto runtimes
-
-Peano comes along with several variants how to implement the fusion.
-These versions can be controlled through the fusion orchestration object.
-
-
-As it stands, all variants are fully implemented if you use our OneTBB, either the preview version supporting dynamic task graphs or and older TBB version subject to our extensions.
-For this, you have to compile with
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
---with-multithreading=tbb_extension
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-For OpenMP, some variants require OpenMP 6, as we heavily rely on transparent task graphs.
-Yet, if applications do not share task dependencies between mesh traversals, older OpenMP versions work too.
-
-All the variants are described as part of the documentation around the enum 
-data structure tarch::multicore::orchestration::FusionImplementation.
-
-
-
-
-
-## Further links
+# Further links
 
 - The namespace tarch::multicore::orchestration features a couple of 
   pre-defined, hardcoded orchestration strategies.

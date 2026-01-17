@@ -23,48 +23,124 @@ namespace tarch {
    @namespace tarch::multicore
 
 
-   This page describes Peano 4's multithreading namespace. A more high-level
-   overview is provided through @ref page_tarch_multicore.
+   This page describes Peano 4's multithreading namespace. A high-level
+   overview is provided through @ref page_tarch_multicore. This high-level
+   page describes the multicore component from a user perspective, whereas
+   the present namespace documentation focuses on the implementation of all
+   multithreading within Peano.
 
 
-   ## Writing your own code with multithreading features
+   # Multicore architecture
 
-   If you wanna distinguish in your code between multicore and no-multicore variants,
-   please use
-
-  ~~~~~~~~~~~~~~~~~~~~~~~~
-  #include "tarch/multicore/multicore.h"
-  ~~~~~~~~~~~~~~~~~~~~~~~~
-
-  and
-
-  ~~~~~~~~~~~~~~~~~~~~~~~~
-  #if defined(SharedMemoryParallelisation)
-  ~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-   With the symbol SharedMemoryParallelisation, you make your code independent of
-   OpenMP, TBB or C++ threading.
-
-
-   ## Multicore architecture
-
-   The multithreading environment is realised through a small set of classes. User
-   codes work with these classes. Each type/function has an implementation within
+   The multithreading environment is realised through a small set of classes
+   and functions within the namespace @ref tarch::multicore. User
+   code programmes against these classes and functions. Each type/function has
+   a vanilla implementation within the directory
    src/multicore. This implementation is a dummy that ensures that all code works
-   properly without any multithreading support. Subdirectories hold alternative
+   properly without any multithreading support.
+
+
+   Subdirectories hold alternative
    implementations (backends) which are enabled once the user selects a certain multithreading
    implementation variant, i.e. depending on the ifdefs set, one of the
    subdirectories is used. Some implementations introduce further headers, but user
    code is never supposed to work against functions or classes held within
    subdirectories.
 
-    @image html multicore_architecture.png
+   @image html src/tarch/multicore/multicore_architecture.png
 
 
-   ## Backends
+   # Where to find documentation
 
-   ### OpenMP
+   As most backend-specific subdirectories solely contain specific implementation
+   files, i.e. no headers, all back-end specific documentation resides directly
+   within the actual routines. That is, many multicore routines have different
+   sections within the documentation (in the header) which discusses how the
+   routine semantics are mapped onto specific back-ends.
+
+   This implies that documentation about a specific backend (e.g. "how is the
+   multithreading done with OpenMP") is not consolidated within a specific file.
+   It is scattered among various routines.
+
+
+   # Task execution patterns and orchestration
+
+   Peano works with arbitrary dynamic task graphs where individual tasks are
+   identified by a unique number (cmp discussion on Task graphs on @ref page_tarch_multicore, which
+   provides details how to use this feature from a programmer's point of view).
+   Within the task graph, the code makes no assumptions on
+
+   - how many tasks are created at most at one point;
+   - if a task A that has spawned another task B is still alive when B becomes
+     ready;
+   - how many of the tasks have the same type.
+
+   The second variant is particularly important: It implies that Peano makes
+   no assumption at all about a certain well-structuredness (tree structure)
+   of the task graph. Many task graphs will be constructed along a tree pattern,
+   where tasks fork into more and more children tasks. However, it is absolutely
+   not necessary that a task waits for all children that is has created before it
+   terminates itself, i.e. we do not require the task graph to unfold and collapse
+   along a tree pattern.
+
+   @image html src/tarch/multicore/typical-task-graphs.png
+
+   Notably, each mesh
+   traversal creates one task per subdomain on a rank when we trigger a mesh
+   traversal. These mesh traversals might span tasks with complex dependencies,
+   while we wait for them to terminate in a subsequent mesh traversal. We allow
+   for producer-consumer patterns without strong synchronisation.
+
+   In the example above, the mesh traversal is a task (bright red) which in
+   turn creates four traversal tasks, as four local subdomains reside on this
+   rank (dark green). These traversals assemble a rather complex task graph
+   (blue) and then terminate. But they do not wait for the nodes of this task
+   graph to complete, too. Later on, we issue another mesh traversal (dark red)
+   spawning four children in a fork-join manner (bright green). These child
+   tasks now might wait for tasks from the task graph (bright blue).
+
+   Peano supports various task execution patterns which are guided through the
+   task orchestrations. Users can switch the orchestration for their code or
+   even write bespoke strategies how to arrange the orchestration.
+
+   The orchestration determines, for example, which tasks end up on which GPU,
+   or if a code wants to fuse multiple tasks into big meta tasks.
+
+
+   ## Orchestration details
+
+   The information how tasks can be orchestrated but also how the orchestration
+   is programmed is all consolidated within the namespace tarch::multicore::orchestration.
+   You can swap the orchestration through calls of @ref tarch::multicore::swapOrchestration().
+
+   Bespoke orchestrations have to inherit from @ref tarch::multicore::orchestration::Strategy.
+   The signature of this class showcases how much control the user has
+   eventually over the task orchestration, as all orchestration is guided
+   via callbacks to the strategy in control.
+
+   ## Task fusion
+
+   The canonical starting point to learn more about Peano's task fusion is the page
+   @ref documentation_tarch_task_fusion_strategies.
+
+   An overview of the most important strategy decisions - in particular when it
+   comes to fusion - is available through @ref tarch::multicore:orchestration::FusionImplementation.
+
+   # Backends
+
+   The backend of choice is set when we compile Peano, i.e. through the
+   autotools or CMake. Details are provided on
+   @ref page_tarch_multicore documentation.
+   In principle, all programming should be completely backend-agnostic. However,
+   there are some high-level issues with have to be considered. For some back-ends,
+   we also have to provide workarounds and provide some additional utility
+   features.
+
+   ## OpenMP
+
+   <img src="https://upload.wikimedia.org/wikipedia/commons/e/eb/OpenMP_logo.png" width="400px" />
+
+   ### High-level usage (main function)
 
    If you want to use the OpenMP backend, you have to embed your whole main loop
    within an
@@ -75,7 +151,11 @@ namespace tarch {
   {
   ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   environment. Furthermore, you will have to use
+   environment.
+
+   ### Using OpenMP code
+
+   Furthermore, you will have to use
 
   ~~~~~~~~~~~~~~~~~~~~~~~~~
     export OMP_NESTED=true
@@ -84,10 +164,40 @@ namespace tarch {
    on some systems, as we rely heavily on nested parallelism.
 
 
-   ## Documentation
+   At the moment,
+   OpenMP does not allow you to set the number of used threads within the
+   application, i.e. through @ref tarch::multicore::Core. Instead, you have to
+   set ```OMP_NUM_THREADS``` accordingly.
 
-   The core documentation of Peano's multicore layer is part of the generic
-   @ref page_tarch_multicore documentation.
+
+   ### Transparent tasks
+
+   The realisation of task patterns as described above requires transparent
+   task dependencies as they become available with OpenMP 6. As many production
+   systems do not support OpenMP 6 yet, Peano has a workaround to mirror
+   transparent task dependencies. Consequently, the documentation of individual
+   routines and their implementation often distinguishes which OpenMP version
+   is actually supported and maps onto the implementation. There is a routine
+   tarch::multicore::omp::majorOpenMPVersion() which allows code to switch
+   depending on the version. This routine is for the implementation internal
+   only, so there is no Doxygen documentation for it.
+
+   The documentation of the OpenMP 5 workarounds, but also some details on
+   OpenMP 6 can be found in the documentation of the namespace
+   @ref tarch::multicore::omp::internal.
+
+
+   ## OneTBB
+
+   <img src="https://oneapi.io/wp-content/uploads/2019/11/cropped-oneAPI-rgb-3000@2x.png" width="400px" />
+
+   Peano's usage pattern of OneTBB
+
+
+   ## SYCL
+
+   <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/SYCL_logo.svg/2560px-SYCL_logo.svg.png" width="400px" />
+
 
    */
   namespace multicore {
@@ -506,11 +616,10 @@ namespace tarch {
        *
        * I originally had
        *
-       *
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  #pragma omp atomic
-  numberOfSpawnedTasks++;
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * #pragma omp atomic
+       * numberOfSpawnedTasks++;
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        *
        * outside of the if/else cascade. However, that means that the
        * subsequent canServeDependencyEntry() calls will not increase the
@@ -522,20 +631,18 @@ namespace tarch {
        *
        * OpenMP now supports iterators and accessors over arrays. I tried
        *
-       *
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      DependencyTrackingDataType* outDependencyPointer = dependencyTrackingBaseAddress + taskNumber;
-      [...]
-      #pragma omp task [...] depend(out: *outDependencyPointer) untied
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * DependencyTrackingDataType* outDependencyPointer = dependencyTrackingBaseAddress + taskNumber;
+       * [...]
+       * #pragma omp task [...] depend(out: *outDependencyPointer) untied
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        *
        * but that didn't work. So it seems that OpenMP struggles with the
        * dereferencing. However, it seems that
        *
-       *
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      #pragma omp task [...] depend(out: dependencyTrackingBaseAddress[taskNumber]) untied
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * #pragma omp task [...] depend(out: dependencyTrackingBaseAddress[taskNumber]) untied
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        *
        * does work.
        *
@@ -717,10 +824,10 @@ namespace tarch {
      * onto a set of physical tasks, it is really not clear what we gain in
      * the end, as we again introduce overhead.
      *
-     * @param firstTask First task. This is a task which can be fused. The pointer
-     *   is valid. The ownership of firstTask is handed over to the called routine,
+     * @param myTask First task. This is a task which can be fused. The pointer
+     *   is valid. The ownership of myTask is handed over to the called routine,
      *   i.e. processFusedTask() has to ensure that it is deleted.
-     * @param otherTasks List of tasks of the same type. The list can be empty.
+     * @param tasksOfSameType List of tasks of the same type. The list can be empty.
      *   processFusedTask() has to ensure that all tasks stored within the list are
      *   executed and subsequently destroyed.
      * @param device Target device on which the fused tasks should be executed. Can

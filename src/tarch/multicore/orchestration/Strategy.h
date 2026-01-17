@@ -127,7 +127,7 @@ namespace tarch {
          * process it, but we also might combine it with multiple other
          * tasks.
          *
-         * @image html taskfusion-LazyEvaluation.png
+         * @image html src/tarch/multicore/taskfusion/taskfusion-LazyEvaluation.png
          *
          * After we know that they are either running or ready, we trigger the
          * fusion. The core routines to study how this is all implemented are
@@ -186,7 +186,7 @@ namespace tarch {
          * tasks) with dependencies that can be fused, we split this task up
          * into three logical tasks:
          *
-         * @image html taskfusion-ProducerConsumerTaskSequence.png
+         * @image html src/tarch/multicore/taskfusion/taskfusion-ProducerConsumerTaskSequence.png
          *
          * One task is a preparation task (red), and the other one is the
          * actual processing (yellow). In-between there's a fusion task (blue).
@@ -237,7 +237,7 @@ namespace tarch {
          * this queue. If the queue is big enough, i.e. holds more tasks than
          * the lower threshold of the strategy, then we issue a consumer task.
          *
-         * @image html taskfusion-EagerConsumerTasks.png
+         * @image html src/tarch/multicore/taskfusion/taskfusion-EagerConsumerTasks.png
          *
          *
          * The arising task pattern can be similar to LazyEvaluation, but it

@@ -38,7 +38,7 @@ namespace exahype2 {
  * responsibility to destroy it) to the bookkeeping and then can be deleted
  * themselves.
  *
- * ## Usage:
+ * # Usage:
  *
  * Every ExaHyPE solver category defines its own enclave tasks being subclasses
  * of the present, generic type. Enclave tasks are always to be spawned with
@@ -58,7 +58,7 @@ namespace exahype2 {
  * you will get huge enclave task maps and an overflow if you are unlucky.
  *
  *
- * ## Data ownership
+ * # Data ownership
  *
  * - The run() operation allocates the output data and then invokes the functor.
  * - I assume that the functor frees the input data.
@@ -69,7 +69,17 @@ namespace exahype2 {
  *   output will be on the heap and is eventually passed over to the enclave
  *   bookkeeping. See exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver().
  *
- * ## SmartMPI
+ * # Fusion
+ *
+ * As long as you construct enclave tasks with a valid type id, i.e. not
+ * tarch::multicore::Task::DontFuse, the enclave task is fusable. Details on
+ * the fusion mechanism are provided in @ref documentation_tarch_task_fusion_strategies.
+ *
+ * Even after an enclave task is marked as, in principle, fusable, you can
+ * still veto any fusion by overwriting the superclass' @ref tarch::multicore::Task::canFuse().
+ *
+ *
+ * # SmartMPI
  *
  * If you enable SmartMPI, then all enclave tasks are SmartMPI tasks, too. I could
  * realise this through multiple inheritance, but I have to know excactly how big
@@ -122,7 +132,9 @@ public:
    * @param inputValues        Has to be created on heap via
    *   tarch::multicore::allocateMemory().
    * @param enclaveTaskTypeId  Unique id for this type. If you use task
-   *   merging, only tasks of the same type will be merged.
+   *   merging, only tasks of the same type will be merged. You can pass in
+   *   tarch::multicore::Task::DontFuse to avoid any fusion. See class
+   *   documentation for more details.
    * @param outputValues If you pass in nullptr, then the enclave task will
    *   create a new array on the heap for the task output and then move this
    *   one over into the bookkeeping from where it eventually will be copied
