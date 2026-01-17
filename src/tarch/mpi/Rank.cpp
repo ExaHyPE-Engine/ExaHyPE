@@ -527,11 +527,14 @@ void tarch::mpi::Rank::setCommunicator( MPI_Comm communicator, [[maybe_unused]] 
   if (result!=MPI_SUCCESS) {
     logError( "setCommunicator(...)", "initialisation failed: " + MPIReturnValueToString(result) );
   }
+  assertion1(_numberOfProcessors>0, _numberOfProcessors);
 
   result = MPI_Comm_rank( _communicator, &_rank );
   if (result!=MPI_SUCCESS) {
     logError( "setCommunicator(...)", "initialisation failed: " + MPIReturnValueToString(result) );
   }
+  assertion2(_rank>=0, _numberOfProcessors, _rank);
+  assertion2(_rank<_numberOfProcessors, _numberOfProcessors, _rank);
 }
 #endif
 

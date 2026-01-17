@@ -184,9 +184,14 @@ namespace tarch {
          *    we are not ready yet.
          * 2. We cannot handle self-dependencies, i.e. in-out ones. If we spot
          *    an in-out dependency, we remove it from inDependencies (therefore
-         *    it is not const), wait manually for it to terminate by polling
-         *    the status, and then we carry on. The manual wait is important,
-         *    as we will overwrite the status with pending immediately after.
+         *    it is not const), wait manually for our predecessor task to
+         *    terminate by polling the status, and then we carry on. The manual
+         *    wait is important, as we will overwrite the status with pending
+         *    immediately after.
+         *
+         * As we do all of our dependency management manually, we don't have to
+         * rely on any OpenMP dependencies at all. But it might actually make
+         * sense to employ them too (see remarks below).
          *
          *
          * ## Assumptions
@@ -198,8 +203,9 @@ namespace tarch {
          *   within inDependencies and outDependency;
          * - The semaphore dependencyTrackingSemaphore is locked with a read lock.
          * 
+         *
          * ## Issues we found
-
+         *
          * It is possible that many threads spawn tasks at the same time that have
          * to wait for other tasks that are currently stored in the ready queue.
          * As we poll the ready queue state, this can lead to starvation.
@@ -209,6 +215,48 @@ namespace tarch {
          * so it will eventually end up with one that is ready to process. This
          * can also occur in waitForTasks(...), and the problem is dealt with in the
          * same way. 
+         *
+         *
+         * ## Implementation decision
+         *
+         * Modelling the out dependencies as vector is not particularly elegant.
+         * As each task as at most one out dependency (its "number"), we could
+         * have worked with an integer making one particular value, e.g. -1,
+         * mean "no dependency". As I work with a vector however, I can use
+         * OpenMP's iterators.
+         *
+         *
+         * ## Flaws and known issues
+         *
+         * Logically, there is no need for the spawned task to have any
+         * dependencies, as all dependency management is done manually through
+         * polling. This is not very elegant. Indeed, I'm afraid that it can
+         * lead to starvation. Therefore, I would like to use dependencies.
+         * If the lack of transparent dependencies leads to antidependencies,
+         * i.e. tasks start prematurely, I don't care, as we still have the
+         * manual handling.
+         *
+         * If the dependency management works however, the task runtime ensures
+         * that we do not stress the system through polling too much.
+         * Therefore, I originally had this splendid idea to use
+         *
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         * #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), out: dependencyTrackingMemory[outDependency[j]]) shared(numberOfPendingTasks) untied
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         *
+         * for the tasks. However, this made the code crash in the OpenMP
+         * runtime non-deterministically.
+         *
+         * @see tarch::multicore::omp::internal::hasTaskFinishedInOpenMP5() as counterpart how to
+         *   manually wait for tasks.
+         *
+         * @param job Pointer to the actual task. Is never a nullptr.
+         * @param inDependencies Number of in-dependencies. All of these
+         *   indices can be served by the underlying memory region. Set might
+         *   be empty.
+         * @param outDependency Out-dependency which is either an empty set
+         *   meaning that there is no out-dependency and noone will ever wait
+         *   for this specific task, or it holds exactly one number.
          */
         void spawnTaskWithOpenMP5(
           tarch::multicore::Task*                           job,
