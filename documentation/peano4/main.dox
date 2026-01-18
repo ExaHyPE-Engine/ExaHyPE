@@ -12,8 +12,8 @@ We can consider it to be some kind of pattern/best practice.
 
 ## Preparation
 
-At startup, any Peano application will want to configure its MPI and shared 
-memory environment. 
+At startup, any Peano application will want to configure its MPI and shared
+memory environment.
 For this, Peano provides some routines:
 
 
@@ -22,7 +22,7 @@ peano4::initParallelEnvironment(&argc,&argv);
 peano4::fillLookupTables();
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-peano4::initParallelEnvironment() calls in return all MPI initialisation and hence 
+peano4::initParallelEnvironment() calls in return all MPI initialisation and hence
 ensures that the singleton tarch::Rank is properly configured.
 There are corresponding shutdown routines as well.
 
@@ -30,7 +30,7 @@ There are corresponding shutdown routines as well.
 ## Set up the spacetree
 
 The set of spacetrees in Peano is, atm, unique, i.e. there is only one set.
-However, the set can host multiple trees, which basically means you apply 
+However, the set can host multiple trees, which basically means you apply
 domain decomposition.
 To create the spacetree set, you can use
 
@@ -45,20 +45,20 @@ where the first argument is the offset of the computational domain and the secon
 argument is the bounding box.
 The line creates a trivial spacetree, i.e. a degenerated tree spanning a 3x3 (2d)
 or 3x3x3 (3d) mesh.
-You can later on refine it, but this is where we start. 
-If you have many ranks, only the first rank will hold a tree initially. 
+You can later on refine it, but this is where we start.
+If you have many ranks, only the first rank will hold a tree initially.
 All other ranks host an empty spacetree set.
 
 
 ## Run through a mesh
 
-Peano realises an SPMD paradigm, i.e. if one rank runs through its spacetrees, 
+Peano realises an SPMD paradigm, i.e. if one rank runs through its spacetrees,
 all ranks have to traverse their trees.
 Furthermore, if one rank uses a particular observer for one traversal, all other
 traversals have to use the same observer, too.
 
 
-A simple way to ensure this is to let 
+A simple way to ensure this is to let
 the global master set a counter/id which uniquely
 identifies which step to run next.
 It then says ``go ahead'' and runs this step itself.
@@ -109,21 +109,21 @@ step, as long as all ranks do exactly the same.
 
 
 The numbers within the case statements are kind of magic constants and you can
-redefine them. 
+redefine them.
 However, I recommend to read the documentation of peano4::parallel::Node::setNextProgramStep().
 There are some predefined constants that you should not use.
 
 
 ## Python API
 
-If you use the Python API, you specify the individual algorithmic steps of 
-interest. The generator creates one observer per step (hosted in a generated 
+If you use the Python API, you specify the individual algorithmic steps of
+interest. The generator creates one observer per step (hosted in a generated
 subdirectory observers) and it also generates a subdirectory repositories.
 
-repositories in turn hosts a generated class StepRepository. It defines a big 
+repositories in turn hosts a generated class StepRepository. It defines a big
 enumeration for all potential steps, i.e. you don't have to write the switch
 statements over your own integers. You can exchange the enums.
 
 
  */
- 
+

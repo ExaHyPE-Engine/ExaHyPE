@@ -23,7 +23,7 @@ we can try implementing our own equation, let's try out the shallow-water equati
         h u_1^2 + \frac{g*h^2}{2}   & h u_1 u_2 \\
         h u_2 u_1                   & h u_2^2  + \frac{g*h^2}{2} \\
         0                           & 0
-    \end{pmatrix}} = \vec{0}
+    \end{pmatrix}}_{ flux } = \vec{0}
 \end{equation*}
 @f$
 
@@ -46,7 +46,7 @@ With eigenvalues:
 \end{equation*}
 @f$
 
-These are an approximation for the movement of shallow non-viscous fluids, i.e., they assume that there is no pressure
+Here u_n is the velocity in the corresponding normal direction. These are an approximation for the movement of shallow non-viscous fluids, i.e., they assume that there is no pressure
 differential within the fluid, and no loss of velocity due to friction.
 Their components are the water height \b h, the momentum in \b x- and \b y- direction \b hu_1 and \b hu_2 respectively,
 and the bathymetry \b b, which is the height of the ground below the liquid. They also use the gravity \b g=9.81.
@@ -122,6 +122,7 @@ Cells can be sub-divided into \b 3^d cells so long as this would not cause the s
 - Exercises
   - First, let's modify our flux to remove the term that shouldn't be in it, and implement our NCP.
     The NCP is implemented into the parameter `BTimesDeltaQ`, and depends on the gradients of the values, which are stored in the parameter `deltaQ`.
+    (Note that `deltaQ` is the finite difference in each normal direction)
   - Then, let's modify our starting conditions. Let's try running a <em>radial dam-break</em>, that is a circular one.
     And let's have it be dependent on the bathymetry.
     For this, set the water height to be constant at \b 1.0, and the bathymetry to be \b 0.2 within a distance of \b 0.5 of the center of the domain,

@@ -6,10 +6,10 @@
 
 
  To compile with multicore support, you have to invoke the configure script with
- the option 
- 
+ the option
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
---with-multithreading=value 
+--with-multithreading=value
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 where value is
@@ -19,8 +19,8 @@ where value is
    this option, you first have to ensure that your CXXFLAGS and LDFLAGS point to
    the right include or library, respectively, directories. LDFLAGS also has to
    compromise either -ltbb or -tbb_debug.
- - ```tbb_extension```. Is an alternative TBB version that does not require the 
-   very latest TBB extensions. 
+ - ```tbb_extension```. Is an alternative TBB version that does not require the
+   very latest TBB extensions.
  - ```openmp```. This adds OpenMP support. We currently develop against OpenMP 4.x
    though some of our routines use OpenMP target and thus are developed against
    OpenMP 5.
@@ -35,14 +35,14 @@ where value is
  tarch::multicore.
 
 <br /><br />
-<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
-As of today (2025-03-29), OpenMP's tasking implementation is not 100% stable. As 
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
+As of today (2025-03-29), OpenMP's tasking implementation is not 100% stable. As
 long as you don't use task dependencies excessively, you should be fine, but if you
 use complex task graphs, you might run into occasional seg faults in the OpenMP
 runtime.
 
 As of today (2025-03-29), TBB's dynamic task graphs are only available as preview
-in UXL's internal repositories. So you either have to install those extensions, 
+in UXL's internal repositories. So you either have to install those extensions,
 or you pick ```tbb_extension```.
 </div>
 
@@ -66,9 +66,9 @@ or you pick ```tbb_extension```.
  internal synchronisation mechanism. Usually, I use the semaphores through lock
  objects. As they rely on the semaphore implementations, they are generic and work
  for any backend.
- 
+
  So the standard use is that you have
- 
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 static tarch::multicore::BooleanSemaphore myFancySemaphore;
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -78,32 +78,32 @@ static tarch::multicore::BooleanSemaphore myFancySemaphore;
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 { // scope starts
   tarch::multicore::Lock lock(myFancySemaphore);
-  
+
   // [all of this is protected]
-  
-} // end of scope destroys lock object and therefore frees semaphore  
+
+} // end of scope destroys lock object and therefore frees semaphore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
  The class tarch::multicore::BooleanSemaphore should be studied for a more detailed
  documentation of the thread locks.
- 
- 
- The plain semaphore does not work recursively, i.e. if a thread locks a 
+
+
+ The plain semaphore does not work recursively, i.e. if a thread locks a
  semaphore and then locks again, it deadlocks itself. You can avoid this
  by switching to a recursive semaphore. They are more expensive yet allow
  that a thread locks the same semaphore repeatedly.
- 
+
  Each semaphore also supports a try_lock() operation, so you can do busy
  polling. try_lock's are not supported by the tarch::multicore::Lock object.
- You have to access the semaphore directly and manually free it later, 
- whereas the Lock object automatically frees the semaphore in its 
+ You have to access the semaphore directly and manually free it later,
+ whereas the Lock object automatically frees the semaphore in its
  destructor (unless you do so before that manually).
 
 
 ## Atomics
 
-At the moment, the tarch does ***not*** provide a backend-independent 
-abstraction of atomics. We hope that such a thing would be obsolete 
+At the moment, the tarch does ***not*** provide a backend-independent
+abstraction of atomics. We hope that such a thing would be obsolete
 anyway, as C++'s std::atomic works with all backends. If this is not the
 case and if you need atomics, you have to write backend-specific variants
 protected by preprocessor macros (see below).
@@ -124,8 +124,8 @@ In this case, you have to use tarch::multicore::MultiReadSingleWriteSemaphore.
 
 # Write bespoke multithreaded variants
 
-The namespace tarch::multicore provides a set of preprocessor macros and 
-further information how to write bespoke code for codes that have to 
+The namespace tarch::multicore provides a set of preprocessor macros and
+further information how to write bespoke code for codes that have to
 distinguish single-threaded realisation from bespoke variants.
 
 
@@ -140,7 +140,7 @@ if you prefer to work with lambdas.
 The actually task submission, dependency tracking, and synchronisation
 then is all realised through functions within the namespace
 tarch::multicore.
-Consult the function 
+Consult the function
 tarch::multicore::spawnTask().
 
 
@@ -185,28 +185,28 @@ task types or task graph types, respectively:
 
    ### Task fusion
 
-   The core idea behind task fusion is that there's no right, generic, global task 
+   The core idea behind task fusion is that there's no right, generic, global task
    granularity on modern HPC systems. Instead, we may assume that
-   
+
    - too small tasks are bad as they induce too much of an overhead. Nevertheless,
      they might be the right modelling tool/language;
    - smallish tasks perform good on CPUs;
    - GPUs require rather huge tasks.
-   
-   In Peano, we try to use as small tasks as possible, but equip the runtime to 
-   bundle (fuse) these tasks later on at runtime. This is different to other 
-   codes which require codes to come up with the large, fused tasks a priori - 
+
+   In Peano, we try to use as small tasks as possible, but equip the runtime to
+   bundle (fuse) these tasks later on at runtime. This is different to other
+   codes which require codes to come up with the large, fused tasks a priori -
    for example by working with larger patches.
-   
-   Tasks that can be fused have to implement the canFuse() predicate, and they 
+
+   Tasks that can be fused have to implement the canFuse() predicate, and they
    have to provide a function which can handle a set of tasks of the same type.
    Details on how the fusion is implemented are provided in the documentation
    of the namespace tarch::multicore::taskfusion.
-   
+
    There is a separate @ref documentation_tarch_task_fusion_strategies "page on task fusion strategies"
    and things to consider if you want to tune and tailor how tasks are bundled
    (both on the CPU and the GPU).
-   
+
 
    ### Orchestration and (auto-)tuning
 
@@ -215,10 +215,10 @@ task types or task graph types, respectively:
    tarch::multicore::setOrchestration().
    With the strategy you can control the fusion of tasks and its shipping onto
    GPUs, but also how fork-join sections in the code should be handled.
-   
+
    Various subclasses of tarch::multicore::orchestration::Strategy show
-   examples how you 
-   
+   examples how you
+
    - ship every single free task to the GPU that's GPU-ready;
    - use solely domain decomposition;
    - realise a combination of these paradigms;

@@ -4,12 +4,17 @@
 
 \tableofcontents
 
-- Seismology
+- Seismology (waves in elastic media)
   - \subpage applications_exahype2_exaseis
 - Astrophysics
   - \subpage applications_exahype2_ExaGRyPE
-- Tsunamis and Flooding
+- Free-Surface Geophysical Flows
   - \subpage applications_exahype2_shallow_water
+  - \subpage applications_exahype2_landslides
+- Computational Fluid Dynamics and Atmospheric
+  - \subpage applications_exahype2_gravity_waves
+- Plasma Physics
+  - \subpage applications_exahype2_mhd
 
 This directory holds links to some showcase applications of ExaHyPE. Many of these
 applications are the base for some cooked-down @ref page_exahype_benchmarks "benchmarks".

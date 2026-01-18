@@ -1,0 +1,64 @@
+/**
+
+@page page_exahype2_numerics_DG Discontinuous Galerkin
+
+\tableofcontents
+
+In the Finite Volume method, we assume a constant value in each computational cell. In Discontinuous Galerkin
+(DG) method, we use a higher-order polynomial to represent the solution. The polynomial solution is defined
+everywhere inside the cell, including boundaries. Therefore, values at the faces can be obtained by projection. However,
+since the polynomials are independent in each cell, this results in two different
+values at each interface (therefore called "Discontinuous" Galerkin). The DG method resolves this ambiguity by using numerical flux (usually by solving a Riemann problem)
+to compute a single, consistent flux value.
+
+The following is the overall procedure of the DG method:
+
+1. Discretize the domain
+2. Define a local approximation: Inside each element \f$K\f$, the solution \f$ u \f$ is approximated
+by a function \f$u_h\f$ which is typically a Lagrange polynomial of degree \f$p\f$. The collection of all such polynomial
+functions on an element forms a local function space.
+For each element \f$K\f$, we write
+\f[
+        u(x,t) \approx u_h(x,t) = \sum_{j=1}^N c_j(t)\phi_j(x)
+\f]
+where \f$\phi_j(x)\f$ are the basis functions and \f$c_j(t)\f$ are the time-dependent
+coefficients we need to find.
+
+3. Formulate the local weak form:
+For each element \f$ K \f$, we take the PDE and multiply it by a test function \f$ v_h \f$, and
+integrate over this element.
+For a generic conversation law PDE:
+\f[
+        \frac{\partial u}{\partial t} + \nabla \cdot f(u) = 0
+\f]
+Multiply by \f$ v_h \f$ and integrating over \f$ K\f$ gives
+\f[
+        \int_K (\frac{\partial u_h}{\partial t})v_h dx + \int_K (\nabla \cdot f(u_h))v_h dx = 0
+\f]
+Applying integration by parts, we get
+\f[
+        \int_K (\frac{\partial u_h}{\partial t})v_h dx + \oint_{\partial K} (f(u_h) \cdot n)v_h dS - \int_K f(u_h)\cdot \nabla v_h dx = 0
+\f]
+4. Introduce a numerical flux:
+Since the solution \f$ u_h \f$ is discontinuous across element boundaries, it has two different values at any shared
+interface, \f$ u_h^{-} \f$ and \f$ u_h^{+} \f$ from the left and the right element. To solve the ambiguity,
+we replace the physical flux \f$ f(u_h)\cdot n \f$ with a numerical flux, denoted by \f$ \hat{f} \f$. The weak formulation
+for the element \f$ K \f$ now becomes
+\f[
+        \int_K (\frac{\partial u_h}{\partial t})v_h dx + \oint_{\partial K} \hat{f} (u_h^-, u_h^+, n)v_h dS - \int_K f(u_h)\cdot \nabla v_h dx = 0
+\f]
+5. Assemble and solve the system
+The equation from step 4 holds for any choice of test function \f$ v_h \f$. By choosing
+a set of basis functions for \f$ v_h \f$, we obtain a system of ODE for the unknown coefficients \f$ c_j(t) \f$
+within each element. Note that in the Galerkin method, we use the same basis function set as the work space and the test space. Namely,
+we choose \f$ v_h  = \phi_j \f$ for each \f$ j \f$. By this, we obtain several terms that can be precomputed. For example, the first term becomes
+\f[
+        \sum_{i} c_i \int_K (\frac{\partial \phi_i}{\partial t}) \phi_j dx
+\f]
+where \f$ \int_K (\frac{\partial \phi_i}{\partial t}) \phi_j dx  \f$ can be precomputed.
+After assembling the system for all elements, we can solve it forward in time by the Euler method or
+higher-order Runge-Kutta method to find the solution at any desired time \f$ T \f$.
+
+
+
+*/

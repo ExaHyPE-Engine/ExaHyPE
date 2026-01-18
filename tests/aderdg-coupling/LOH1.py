@@ -4,7 +4,7 @@ import os, sys
 
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
-sys.path.insert(0, os.path.abspath("../../../applications/exahype2/exaseis/cartesian"))
+sys.path.insert(0, os.path.abspath("../../../applications/exaseis/cartesian"))
 import Elastic
 
 sys.path.insert(0, os.path.abspath("./coupling"))
@@ -73,8 +73,8 @@ for theSolver in [hpSolver, lpSolver]:
   )
 
   theSolver.add_user_solver_includes("""
-  #include "../../../applications/exahype2/exaseis/ExaSeis_core/Numerics/cartesianRoutines.h"
-  #include "../../../applications/exahype2/exaseis/ExaSeis_core/Numerics/riemannsolverIsotropic.h"
+  #include "../../../applications/exaseis/ExaSeis_core/Numerics/cartesianRoutines.h"
+  #include "../../../applications/exaseis/ExaSeis_core/Numerics/riemannsolverIsotropic.h"
   """)
 
   project.add_solver(theSolver)

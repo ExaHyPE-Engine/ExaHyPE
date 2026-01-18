@@ -5,7 +5,7 @@
 \tableofcontents
 
 
-## HDF5 
+## HDF5
 
 Peano does not need hdf5. There's no generic input file format, and it can write
 its own mesh files without hdf5. Things are different if you want to dump hdf5,

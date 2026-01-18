@@ -7,7 +7,7 @@
 
 ExaHyPE 2  relies on Peano's standard output routines to write file dumps,
 and it employs Peano's standard terminal routines to dump runtime information.
-Further to that, you can enable @ref tarch_logging "Peano's statistics" if you require more in-depth 
+Further to that, you can enable @ref tarch_logging "Peano's statistics" if you require more in-depth
 (profile) information.
 
 
@@ -23,7 +23,7 @@ As the files can be rather large, the simulation configuration allows you to
 specify exactly how often you want to see file dumps, and you can also add
 spatial filters.
 The latter help you to visualise only subdomains.
-As we rely on Peano's infrastructure, you can use the scripts from 
+As we rely on Peano's infrastructure, you can use the scripts from
 @ref documentation_tarch_visualisation to convert the output files into vtu files.
 
 
@@ -43,13 +43,13 @@ Finite Volumes are organised in patches:
 The organisation in patches is not visible unless you study AMR resolution
 boundaries.
 If you are interested in seeing the patch boundaries, use the
-```--shrink-cells``` option and pass in a value that is smaller than one. 
+```--shrink-cells``` option and pass in a value that is smaller than one.
 You then will see gaps (voids) between the individual patches.
 
 
 ## Discontinuous Galerkin
 
-If you use ExaHyPE's Discontinuous Galerkin solvers with non-Lobatto nodes, 
+If you use ExaHyPE's Discontinuous Galerkin solvers with non-Lobatto nodes,
 the file dumps will look pretty ragged.
 This is due to the fact that the DG quadrature points are not placed on the cell
 faces.
@@ -64,12 +64,12 @@ the quadrature points.
 It is important to note that the shrinking distorts the actual physical layout
 of the quadrature points, i.e.~the output will not really reflect the solution
 anymore.
-Alternatively, 
+Alternatively,
 you can averaging over cells and display only the average.
 Consult the script's help.
 
 
-# Logging 
+# Logging
 
 ExaHyPE searches for a text file exahype.log-filter in the working
 directory.
@@ -77,10 +77,10 @@ If no such file is found (or the file is corrupted), then it will use some
 default filter rules, i.e. dump the information to the terminal that I consider
 to be most important.
 If you want to adopt the output, I strongly recommend that you add a log filter
-configuration file. 
+configuration file.
 
 
-Often, users are only interested in a particular phase of the simulation or want 
+Often, users are only interested in a particular phase of the simulation or want
 to specify different log entries per program phase. The program phases offered
 by default are
 

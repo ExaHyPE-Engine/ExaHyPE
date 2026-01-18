@@ -106,6 +106,9 @@ if use_tracers:
     #     output_precision=10, clear_database_after_flush=False
     # ))
 
+    if not os.path.exists("tracers"):
+        os.makedirs("tracers")
+
     theSolver._abstract_solver_user_declarations += "double QuadraturePoints1d[Order+1];"
     # TODO: This is not good in many ways. A private variable member of the solver should not be hijacked like this!
     theSolver._start_simulation_implementation += """

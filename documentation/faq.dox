@@ -33,14 +33,14 @@ Unsetting the environment variable allows to switch back to autotools.
 If only one of the build systems has been configured, the code generator will choose the one present.
 
 # Compilation
- 
+
 - ***The translation fails with the error***
   ~~~~~~~~~~~~~~~~~~~
   '#pragma float_control(precise, off)' is illegal when except is enabled
   ~~~~~~~~~~~~~~~~~~~
-  We have seen this error with some LLVM-based compilers. Please re-translate with ```-fno-exceptions```. 
+  We have seen this error with some LLVM-based compilers. Please re-translate with ```-fno-exceptions```.
   Unfortunately, this disables some error checking in the checkpoint and file output routines.
-  If that does not help, you might want to reduce the optimisation level. On 
+  If that does not help, you might want to reduce the optimisation level. On
   Intel, switching from -fast to -O3 does work in some cases.
 
 - ***My C++ version is too old***
@@ -239,10 +239,10 @@ undefined reference to for_write_seq_list
     numpy in principle. However, not all features (solvers in ExaHyPE, e.g.)
     might be available if you have no numpy.
 
-- ***The formatting scripts yields error messages***. Remove the .formatting_python_env 
+- ***The formatting scripts yields error messages***. Remove the .formatting_python_env
   directory and re-run the format.py script. Sometimes, errors can occur if the
-  system python libraries get updated or the user has altered their pythonpath 
-  (which is why the PYTHONPATH variable is best left unmodified.) 
+  system python libraries get updated or the user has altered their pythonpath
+  (which is why the PYTHONPATH variable is best left unmodified.)
   Removing the .formatting_python_env dir will prompt format.py to re-install all it needs.
 
 # Performance analysis

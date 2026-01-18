@@ -143,16 +143,16 @@ you want.
 
 ## Single level interactions
 
-If particles can only interact with their level, you can use 
-peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction or 
+If particles can only interact with their level, you can use
+peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction or
 peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction_ContiguousParticles.
 Both types differ in their assumptions of how the particles are organised in
 memory. Other than that, their realisation is rather straightforward:
 
-As particles are tied to vertices, we know that a particle has not been 
+As particles are tied to vertices, we know that a particle has not been
 read prior to the touchVertexFirstTime() for the corresopnding vertex.
 We let touchVertexFirstTime() imply an event alike touchParticleFirstTime().
-If a cell is hit, we know that all of its vertices have been read, and 
+If a cell is hit, we know that all of its vertices have been read, and
 therefore all of its particles have been.
 After we have touched a vertex for the last time, we also won't access its
 particles anymore.
@@ -234,9 +234,9 @@ where they have to lift particles to the next coarser level. In the iteration
 n+1, a particle hence might reside on a coarser level and will be dropped.
 However, if we plug into touchCellFirstTime(), these drops have not yet
 happened. That is, the particle currently resides on the wrong level and
-consequently messes up our active and passive particle sets. 
+consequently messes up our active and passive particle sets.
 
-There are work-arounds. For example, you can check via 
+There are work-arounds. For example, you can check via
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if (
@@ -305,7 +305,7 @@ The particle toolbox offers two flavours of both type of particle interactions:
 - peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles vs peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_Sets, and
 - peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction vs peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction_ContiguousParticles.
 
-For all of them, particle sets are not persistent, i.e. they are built up 
+For all of them, particle sets are not persistent, i.e. they are built up
 on-the-fly.
 Yet, the realisation can make certain assumptions about their memory layout.
 These assumptions are discussed on a subpage of the @ref page_toolbox_particles_realisation.

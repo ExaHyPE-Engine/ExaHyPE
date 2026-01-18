@@ -2,6 +2,16 @@
 
 @page applications_exahype2_shallow_water_tafjord_landslide Landslide on the Tafjord Region of Norway
 
+We also simulate a landslide-generated tsunami in Tafjord using the nonlinear shallow-water
+equations within the ExaHyPE 2 framework. This test case represents an idealised model of
+a rapid mass movement into a fjord and the resulting long-wave motion.
+At \f$ t=0 \f$ the water depth \f$ h \f$ is set equal to the sampled displacement and the bed
+elevation \f$ z \f$ is given by the digital elevation model, yielding a data-driven initial condition that
+captures the complex geometry of the fjord and the imposed wave or slide footprint.
+All other flow variables are initially zero. At the open boundaries the solution is simply
+copied from inside to outside, corresponding to non-reflective boundary conditions that allow
+waves to leave the computational domain with minimal spurious reflection.
+
 ![Tafjord Google Earth Image](Tafjord_GoogleEarth.png)
 
 <p align="center">

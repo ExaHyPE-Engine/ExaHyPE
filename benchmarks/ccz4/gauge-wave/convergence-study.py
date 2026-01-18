@@ -316,7 +316,7 @@ if "sofd4" in args.solver:
 
 
 my_solver.add_makefile_parameters(
-    peano4_project, "../../../../applications/exahype2/ccz4"
+    peano4_project, "../../../../applications/ccz4"
 )
 
 peano4_project.generate(throw_away_data_after_generation=False)

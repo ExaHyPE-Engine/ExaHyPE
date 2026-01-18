@@ -1,0 +1,13 @@
+/**
+\page page_numerics Numerics
+
+This page provides an overview of the core numerical ingredients in ExaHyPE 2.
+
+- \subpage page_exahype2_numerics_finite-differences
+- \subpage page_exahype2_numerics_fv
+- \subpage page_tutorials_exahype2_numerics_higher_order_finite_volumes
+- \subpage page_exahype2_numerics_Runge-Kutta
+- \subpage page_exahype2_numerics_DG
+- \subpage page_exahype2_numerics_ADER-DG
+
+*/

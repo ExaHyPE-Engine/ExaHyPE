@@ -1,4 +1,4 @@
-/** 
+/**
 
 @page page_tutorials_exahype2_numerics_higher_order_finite_volumes Higher Order Finite Volumes
 
@@ -15,7 +15,7 @@ MUSCL (Monotonic Upstream-centred Scheme for Conservation Laws) schemes assume t
 where @f$ s_i = ave(u^n_{i+1} - u^n_i, u^n_i - u^n_{i-1}) @f$ is the slope at volume @f$ i @f$.
 
 The left and right face values are calculated as
-@f{eqnarray*} 
+@f{eqnarray*}
     u^n_{i-\frac{1}{2}} = u^i_n - \frac{1}{2}s_i
     u^n_{i+\frac{1}{2}} = u^i_n + \frac{1}{2}s_i
 @f}

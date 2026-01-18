@@ -35,7 +35,7 @@ alon each coordinate axis, then Peano's approach also works with cells.
 Such shifted meshes are often called ***dual*** meshes and I therefore speak
 of a ***dual tree***.
 There are other notions of dual trees in literature, where two trees are used
-to construct the interaction sets. 
+to construct the interaction sets.
 We do not follow this naming convention.
 
 

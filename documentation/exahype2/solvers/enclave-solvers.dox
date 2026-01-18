@@ -34,20 +34,20 @@ mesh sweep.
 
 An enclave cell is every cell that is ***not*** a skeleton cell, i.e. each cell
 is either enclave or skeleton. All logic behind enclave tasking is implemented
-within peano4::datamanagement::CellMarker which offers 
-peano4::datamanagement::CellMarker::hasBeenEnclaveCell(),
-peano4::datamanagement::CellMarker::willBeEnclaveCell(),
-peano4::datamanagement::CellMarker::hasBeenSkeletonCell(), and
-peano4::datamanagement::CellMarker::willBeSkeletonCell().
+within peano4::datamanagement::CellMarker which offers
+`peano4::datamanagement::CellMarker::hasBeenEnclaveCell()`,
+`peano4::datamanagement::CellMarker::willBeEnclaveCell()`,
+`peano4::datamanagement::CellMarker::hasBeenSkeletonCell()`, and
+`peano4::datamanagement::CellMarker::willBeSkeletonCell()`.
 
 
-A skeleton cell is a cell which 
+A skeleton cell is a cell which
 
 1. is adjacent to a subdomain boundary or
 2. is adjacent to a mesh resolution change.
 
-The second condition excludes any cell which is adjacent to a hanging vertex. 
-See peano4::datamanagement::CellMarker::hasBeenEnclaveCell() for implementation 
+The second condition excludes any cell which is adjacent to a hanging vertex.
+See `peano4::datamanagement::CellMarker::hasBeenEnclaveCell()` for implementation
 details.
 
 
@@ -59,10 +59,10 @@ The distinction enclave cell vs skeleton cell determines
 
 This distinction cannot be "recast", altered or extended. It is baked
 into ExaHyPE's DNA. Futhermore, we strongly recommend that the distinction
-enclave vs skeleton has ***no*** impact on ***what*** is computed. If 
-you need different compute kernels depending depending on a type of a 
-cell, the enclave distinction should not be taken into account at all. 
-It is merely the decision how stuff is stored and administered and 
+enclave vs skeleton has ***no*** impact on ***what*** is computed. If
+you need different compute kernels depending depending on a type of a
+cell, the enclave distinction should not be taken into account at all.
+It is merely the decision how stuff is stored and administered and
 mapped onto tasks.
 
 
@@ -70,22 +70,22 @@ mapped onto tasks.
 ## Optimistic enclave tasking
 
 Optimistic enclave tasking sticks to the data flow of enclave tasking. However,
-it has this idea that we immediately spawn an enclave task again, once we have 
+it has this idea that we immediately spawn an enclave task again, once we have
 merged its outcome into the result. This obviously cannot work in many cases:
 
-- If we work with a Finite Volume scheme, we cannot spawn the enclave task 
+- If we work with a Finite Volume scheme, we cannot spawn the enclave task
   immediately again, as the halo data are not available. We could do some tricks
   like updating only the interior of a patch. However, this is nasty, as we then
-  have to postprocess the outer layer of a patch. Not sure if there's any 
+  have to postprocess the outer layer of a patch. Not sure if there's any
   potential gain overall.
 - If we work with Finite Differences, we have exactly the same issue: These
-  schemes rely on a halo, too, and this makes it impossible to spawn a task 
-  immediately again. Even worse, overlaps of more than one mean that the 
+  schemes rely on a halo, too, and this makes it impossible to spawn a task
+  immediately again. Even worse, overlaps of more than one mean that the
   potential inner part of a patch which we could immediatly update becomes
   tiny.
-  
-The situation is different for Discontinuous Galerking-type solvers, where we 
-explicitly distinguish the Riemann solves from the internal solve. After an 
+
+The situation is different for Discontinuous Galerking-type solvers, where we
+explicitly distinguish the Riemann solves from the internal solve. After an
 update of the solution, i.e. the linear combination of the volumetric integral
 and the Riemann contribution, we can immediately issue a rerun of the volumetric
 contribution again.

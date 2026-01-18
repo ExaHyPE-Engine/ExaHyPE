@@ -1,6 +1,6 @@
 /**
 
-\page tarch_tests Unit tests 
+\page tarch_tests Unit tests
 
 
 Peano introduces its own lightweight test concept with picks up best
@@ -32,14 +32,14 @@ as follows:
 namespace myproject namespace tests class TestCase;
 
 class myproject::tests::TestCase : public tarch::tests::TestCase {
-  private: 
-    /** 
-     * These operations implement the real tests. 
-     */ 
-    void test1(); 
-    void test2(); 
-  public: 
-    TestCase(); 
+  private:
+    /**
+     * These operations implement the real tests.
+     */
+    void test1();
+    void test2();
+  public:
+    TestCase();
     virtual ~TestCase();
 
     void run() override;
@@ -64,7 +64,7 @@ Once these steps are handled, you can run the tests within your `main`.
 For the core and tarch routines, I provide factory methods
 
 ~~~~~~~~~~~~~~~~~
-tarch::getUnitTests(); 
+tarch::getUnitTests();
 peano4::getUnitTests();
 ~~~~~~~~~~~~~~~~~
 
@@ -73,19 +73,19 @@ which deliver a test suite. To run them, I typically insert snippets
 alike
 
 ~~~~~~~~~~~~~~~~~
-int unitTestsErrors = 0; 
+int unitTestsErrors = 0;
 tarch::tests::TestCase* tests = nullptr;
 
-tests = tarch::getUnitTests(); 
-tests->run(); 
-unitTestsErrors += tests->getNumberOfErrors(); 
+tests = tarch::getUnitTests();
+tests->run();
+unitTestsErrors += tests->getNumberOfErrors();
 delete tests;
 ~~~~~~~~~~~~~~~~~
 
 into my main. It returns an output similar to
 
 ~~~~~~~~~~~~~~~~~
-running test case collection "exahype2.tests.c" ...... ok 
+running test case collection "exahype2.tests.c" ...... ok
 running test case collection \"exahype2.tests.solvers\" .. ok running test case
 collection \"exahype2.tests\" \.... ok running test case collection
 \"peano4.grid.tests\" \...\...\...\...\...\..... ok running test case

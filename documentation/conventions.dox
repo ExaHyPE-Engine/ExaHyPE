@@ -41,7 +41,7 @@
 # Python Conventions / Style Guide
 
 Most users will interact with Peano through the Python API, which acts as glue to stick
-together various C++ snippets in a way that can be modified for each experiment. 
+together various C++ snippets in a way that can be modified for each experiment.
 
 We aim for our Python to look something like the [PEP-8 style guide for Python](https://peps.python.org/pep-0008/).
 In particular, methods should be named all in lowercase, with words separated by underscores, such as:
@@ -160,8 +160,8 @@ formatter on generated files.
 
 
 
-<div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
-Our formatting scripts works only within a virtual environment. To create such 
+<div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid green;">
+Our formatting scripts works only within a virtual environment. To create such
 an environment, follow the following steps:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -171,12 +171,12 @@ python3 -m venv .formatting_python_env
 source .formatting_python_env/bin/activate
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We install the Python environments, remove old formatting tools, create a new 
+We install the Python environments, remove old formatting tools, create a new
 environment within the Peano directory and finally activate this environment.
-From hereon, future steps should only require the very last step. 
+From hereon, future steps should only require the very last step.
 </div>
 
-As with other parts of the code, the @ref page_faq_home might contain further 
+As with other parts of the code, the @ref page_faq_home might contain further
 helpful instructions.
 
 

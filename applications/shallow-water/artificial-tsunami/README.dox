@@ -9,7 +9,7 @@ The displacement can be described via the function @f$ d(x, y) @f$:
 
 \f{align*}{
 d(x, y) &= 5m \cdot d_x(x)d_y(y) \\
-d_x(x) &= sin((\frac{x}{500m}+1) \cdot \pi) \\
+d_x(x) &= \sin((\frac{x}{500m}+1) \cdot \pi) \\
 d_y(y) &= -(\frac{y}{500m})^2+1
 \f}
 

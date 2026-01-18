@@ -2,9 +2,52 @@
 
 @page applications_exahype2_exaseis ExaSeis
 
-## Scenarios
+ExaSeis is a dynamically adaptive discontinuous Galerkin framework for the simulation of seismic wave propagation and earthquakes.
+It targets the scattering of linear elastic waves in heterogeneous, isotropic and anisotropic Earth models
+with complex free-surface topography, while avoiding traditional mesh-generation pipelines.
+
+The key idea of ExaSeis is a curvilinear formulation of the elastic wave equation.
+Instead of solving directly in Cartesian coordinates \f$(x,y,z)\f$, ExaSeis introduces computational coordinates
+\f$(q, r, s) \in \tilde{Omega} = [0,1] \times [0,1] \times [0,1] \f$, and stores a smooth mapping between the
+computational and the physical domain.
+
+\f[
+    (x (q, r, s) , y (q, r, s) , z (q, r, s)) \leftrightarrow (q (x, y, z) , r (x, y, z) , s (x, y, z))
+\f]
+
+This allows ExaSeis to represent complicated geometries (e.g. mountain ranges in the Zugspitze setup) on topologically simple meshes:
+the computational grid remains Cartesian, while the curvilinear mapping conforms to the physical free surface.
+
+On this curvilinear mesh, we consider the elastic equation of motion and split the spatial operator into conservative fluxes and non-conservative products,
+
+\f[
+        \textbf{Flux}(\bar{Q}) := \sum_\mathbf{\xi = q,r,s} H_\xi^{-1}(\textbf{e}_\mathbf{\xi}(0)[\textbf{J}\sqrt{\xi_x^2 + \xi_y^2 + \xi_z^2}\textbf{FL}(\bar{Q}(t))]|_{\mathbf{\xi}=0} + \textbf{e}_\mathbf{\xi}(1)[\textbf{J}\sqrt{\xi_x^2 + \xi_y^2 + \xi_z^2}\textbf{FR}(\bar{Q}(t))]|_{\mathbf{\xi}=1} )
+\f]
+
+where the antisymmetric split form is useful for designing provably stable discretisations on curvilinear meshes with complex geometries and strongly varying material properties.
+While the ExaHyPE engine provides a Rusanov flux as a default numerical flux, ExaSeis replaces it with a metric-aware numerical flux that incorporates the Jacobian and metric terms arising from the curvilinear transformation in order to correctly treat free surfaces and material interfaces.
+
+Beyond the curvilinear geometry, ExaSeis provides two major building blocks for computational seismology:
+
+- Dynamic rupture: faults are placed accurately in the physical domain via the same curvilinear mapping and are aligned between elements so that they can be resolved by specialised Riemann solvers. These solvers incorporate complex friction laws, cohesion, and stress build-up and release to model earthquake source dynamics.
+- Perfectly matched layers (PML): to mimic an effectively infinite Earth, ExaSeis augments the outer region of the mesh with PMLs that damp outgoing waves. This reduces artificial reflections from the domain boundaries and approximates wave radiation into an unbounded medium.
 
 \li \subpage applications_exahype2_exaseis_cartesian
-\li \subpage applications_exahype2_exaseis_rupture
 
+# Reference papers
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+@article{Duru:2022:ExaSeis,
+title = {A stable discontinuous Galerkin method for linear elastodynamics in 3D geometrically complex elastic solids using physics based numerical fluxes},
+journal = {Computer Methods in Applied Mechanics and Engineering},
+volume = {389},
+pages = {114386},
+year = {2022},
+issn = {0045-7825},
+doi = {https://doi.org/10.1016/j.cma.2021.114386},
+url = {https://www.sciencedirect.com/science/article/abs/pii/S0045782521006459},
+author = {Kenneth Duru, Leonhard Rannabauer, Alice-Agnes Gabriel, On Ki Angel Ling, Heiner Igel, Michael Bader},
+keywords = {Scattering of high frequency seismic surface waves; Adaptive discontinuous Galerkin finite element method; Physics-based flux; Complex free-surface topography; Stability; Spectral accuracy},
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */

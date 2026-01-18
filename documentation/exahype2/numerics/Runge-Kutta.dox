@@ -1,21 +1,38 @@
-/** 
+/**
 
-@page page_tutorials_exahype2_numerics_Runge-Kutta Runge Kutta
+@page page_exahype2_numerics_Runge-Kutta Runge-Kutta
 
 \tableofcontents
 
+In numerical analysis, the Runge–Kutta methods are a family of implicit and explicit iterative methods, which includes the Euler method.
+Unlike the Euler method, it not only takes the left and right boundaries of the interval, but can also consider points within the interval in each timestep, which increases
+the order of the method.
 
+For simplicity, we first consider the initial value problem:
+\f[
+ y'(t) = f(t, y), y(t_0) = y_0
+\f]
 
-<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
-This page is not yet written (properly).
-</div>
+where \f$ y \f$ is an unknown function of time \f$ t \f$, which we want to approximate. We now pick a step-size \f$ h > 0\f$
 
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
-This page is a crude run-through through the Finite Volumes numerical scheme as we find it in ExaHyPE.
-It covers the basics without most of the actual maths that you find in textbooks.
-In a first run through the tutorials, it might be reasonable to skip this page, to continue
-with some hands-on examples and then to return to this description once you have a code 
-up and running and want to deep dive into the methodology.
-</div>
-    
+By the fundamental theorem of calculus,
+\f[
+    y(t_0 + h) =  y(t_0) + h \int_0^1 y'(t_0 + \theta h) d \theta   \\
+    =  y(t_0) + h \int_0^1 f(t_0 + \theta h, y(t_0 + \theta h))d\theta
+
+\f]
+which motivates
+\f[
+    y_1 = y_0 + h \sum_{i=1}^s b_i f(t_0 + c_i h, Y_i)
+\f]
+where we have weights \f$ b_1, \cdots, b_s > 0 \f$ and nodes \f$ c_1, \cdots , c_s \in [0,1] \f$.
+Then we choose the internal stages \f$ Y_i \approx y(t_0 + c_i h) \f$ by
+\f[
+        Y_i = y_0 + h \sum_{j=1}^s a_{ij} f(t_0 + c_j h, Y_j), i = 1, \cdots, s
+\f]
+
+If the weights satisfy \f$ a_{ij} = 0 \f$ for \f$ j\geq i \f$, then the method is explicit. In particular, \f$ Y_1 = y_0 \f$
+
+In our ExaHype solver, we use the Runge-Kutta method together with the Discrete Galerkin method or the Finite Difference method, where the
+Runge-Kutta method is used for high-order temporal discretization. Runge–Kutta time stepping requires \f$ n \f$ traversals per time step, since each of the \f$ n \f$ stages must be followed by a synchronization of the grid state (including halo/MPI exchanges) before the next stage can start.
 */
