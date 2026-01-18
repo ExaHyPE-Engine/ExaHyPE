@@ -1,6 +1,6 @@
 /**
 
-@page applications_exahype2_shallow_water Shallow Water Application
+@page applications_exahype2_shallow_water Tsunamis and Coastal Flooding (Shallow Water)
 
 \tableofcontents
 
@@ -92,9 +92,6 @@ is implemented as a non-conservative product.
 \li \subpage applications_exahype2_shallow_water_chile_tsunami
 \li \subpage applications_exahype2_shallow_water_tohoku_tsunami
 
-## Landslides
 
-\li \subpage applications_exahype2_shallow_water_dam_break_landslide
-\li \subpage applications_exahype2_shallow_water_tafjord_landslide
 
 */

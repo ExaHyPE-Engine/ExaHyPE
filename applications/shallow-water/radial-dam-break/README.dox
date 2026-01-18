@@ -2,10 +2,22 @@
 
 @page applications_exahype2_shallow_water_radial_dam_break Radial Dam Break
 
-Scenario simulating a radial dam break enclosed by a dry bathymetry ring.
+Here we simulate a radial dam break enclosed by a dry bathymetry ring. In the setup, a circular
+dam of slightly higher water level is placed at the centre of a square domain, surrounded by
+initially still water and a dry annular region. When the dam is released, a radially symmetric
+wave propagates outward, interacts with the dry ring, and reflects from the boundaries.
+
+The model is based on the two-dimensional nonlinear shallow-water equations for the water depth
+\f$ h \f$, depth-averaged momenta and \f$ hu \f$, \f$ hv \f$, and the bathymetry \f$ z \f$.
+The computational domain is a \f$ 10 \times 10 m^2 \f$ square. A circular dam of radius
+\f$ R = 1m \f$ is centred in the middle of the domain; inside the dam the water depth is
+\f$ h = 1.1m \f$, while outside the dam it is initially \f$ h = 1.0m \f$. Additionally, a dry
+ring is imposed between radii \f$ 2R \f$ and \f$ 3R \f$: in this annulus the bathymetry is raised to
+\f$ z = 1.2m \f$ and the water depth is set to zero, producing an initially dry region that the
+wave must overtop. Everywhere else the bottom is flat with \f$ z = 0\f$.
+The initial conditions are as follows:
 
 \f{align*}{
-r &= \sqrt{(\frac{N}{2} - x)^2 + (\frac{N}{2} - y)^2}, \\
 h(x, y, 0) &= \begin{cases}
   1.1 & \text{if } r \leq{} \frac{N}{10} \\
   0.0 & \text{if } 2\frac{N}{10} \leq{} r \leq{} 3\frac{N}{10} \\

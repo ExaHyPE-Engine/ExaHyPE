@@ -111,7 +111,7 @@ So, now that we've gone through all of this, let's go take a look at our results
 These should be within the folder `solutions` and are stored as HDF5/XMF or VTU/PVD files,
 which we can read and visualise using e.g., ParaView:
 
-    paraview solutions/PlanarAcousticSolver.pvd
+    paraview solutions/PlanarAcousticSolver.xmf
 
 If you've followed all of the steps until now, you should have following initial conditions for the pressure:
 

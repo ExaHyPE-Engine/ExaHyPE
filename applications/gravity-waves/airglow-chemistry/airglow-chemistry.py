@@ -19,7 +19,7 @@ from AirglowInitialization import (
 """
 This application demonstrates how to setup a scenario for airglow chemistry.
 It shows steady states for chemicals and needed interpolations for coupling with the stratified atmosphere model.
-Input files can be obtained from https://kauai.ccmc.gsfc.nasa.gov/instantrun/nrlmsis/
+Input files can be obtained from https://ccmc.gsfc.nasa.gov/models/NRLMSIS~00/
 
 The application makes the following assumptions:
   - The height passed to the initial conditions is in [m];

@@ -16,8 +16,8 @@ There are different flavours (implementations) how to administer and store parti
 
 
 The particle set flavours can be controlled via the generator object within
-peano4.toolbox.particles.ParticleSet. Consult the documentation there. 
-Each particle set, from the outside, is a collection of pointers to the 
+peano4.toolbox.particles.ParticleSet. Consult the documentation there.
+Each particle set, from the outside, is a collection of pointers to the
 real particles. However the
 actual realisation of the sets internally can differ.
 
@@ -26,18 +26,18 @@ The signature design of the set flavours is guided by a few simple principles.
 They are the same for each flavour.
 Internally, we have to major realisations:
 
-- peano4/toolbox/particles/ParticleSet_ScatteredOnHeap_IndexedByStdContainer.template.h gives you a realisation which 
-  stores pointers to particles on the heap. The container for these pointers can 
-  be chosen by the user, i.e. can be either std::vector or std::array or std::set 
+- peano4/toolbox/particles/ParticleSet_ScatteredOnHeap_IndexedByStdContainer.template.h gives you a realisation which
+  stores pointers to particles on the heap. The container for these pointers can
+  be chosen by the user, i.e. can be either std::vector or std::array or std::set
   or whatever you like.
 - peano4/toolbox/particles/ParticleSet_MemoryPool.h is a realisation which internally uses the @ref toolbox_particles_memorypool
-  "memory pool" to hold the particles. It then will construct sets of particle 
+  "memory pool" to hold the particles. It then will construct sets of particle
   pointers over the pool, exploiting the knowledge that the underlying chunks of
   data are contiguous.
-  
+
 Both of these inherit from toolbox::particles::ParticleSet.
 As the exact types per application result from an instantiation of these jinja
-templates, they cannot be parsed by doxygen. 
+templates, they cannot be parsed by doxygen.
 However, you can browse any application code spitting them out for docu (the
 doxygen template holds info), and we summarise their common interface here:
 
@@ -60,12 +60,12 @@ administers pointers to particles. The indices are destroyed, the particles
 themselves remain there. If another stack references the same particles, you
 neither have a leak nor will you induce an invalid memory access.
 
-The routine deleteParticle() allows you to actually delete a particle (and 
-to remove it from the list). This routine has to be handled with care. If 
+The routine deleteParticle() allows you to actually delete a particle (and
+to remove it from the list). This routine has to be handled with care. If
 someone else holds a pointer to the underlying particle, this pointer all at
 a sudden becomes invalid without any further notification.
 
-deleteParticles() is a shortcut to delete all particles associated with a 
+deleteParticles() is a shortcut to delete all particles associated with a
 vertex/stack entry.
 
 
@@ -82,16 +82,16 @@ Routines such as toString() are offered to faciliate @ref tarch_logging.
   - storePersistently(const peano4::datamanagement::VertexMarker& marker)
   - loadPersistently(const peano4::datamanagement::VertexMarker& marker)
 
-control if particles are to be sent/received or held in-between 
-iterations. 
+control if particles are to be sent/received or held in-between
+iterations.
 
 Further to that, the routine mergeWithParticle()
 defines how to particles held on different subdomains are merged into
 each other.
-We receive particle sets from other trees, as well as from 
+We receive particle sets from other trees, as well as from
 sieve sets. These are sent out after
 particles have been touched for the last time from their previous "owner".
-mergeWithParticle() merges an incoming particle set from neighbour into the 
+mergeWithParticle() merges an incoming particle set from neighbour into the
 local set, i.e. we run through neighbour and assess what to do with the particles
 therein. Basically, we look at its state and then decide whether to
 enqueue the particle here, too. Furthermore, we do some state switches.
@@ -116,7 +116,7 @@ they really should be added or not.
 
 # Multiscale transitions
 
-The particles type is associated with toolbox::particles::ParticleSet. The 
+The particles type is associated with toolbox::particles::ParticleSet. The
 latter holds routines how to manage multiscale transitions along the lines
 of @ref page_toolbox_particles_mesh_consistency.
 
@@ -124,14 +124,14 @@ of @ref page_toolbox_particles_mesh_consistency.
 
 # Eliminate spatial duplicates
 
-The routine eliminateSpatialDuplicates() has to be offered by each vertex 
-set. Run over set and removes one of the two particles that reside at same 
+The routine eliminateSpatialDuplicates() has to be offered by each vertex
+set. Run over set and removes one of the two particles that reside at same
 location.
 
-Such an eliminate of duplicates can be motivated through the merger, where it 
-can happen that multiple ranks tell us about a particle (some of them have 
+Such an eliminate of duplicates can be motivated through the merger, where it
+can happen that multiple ranks tell us about a particle (some of them have
 virtual copies, some have local ones), as the association of particles to trees
-is not unique. After all, we work with floating point arithmetics. Those are 
+is not unique. After all, we work with floating point arithmetics. Those are
 the bad guys. Keeping redundant particles will introduce wrong physics (doubled
 forces for example) in many cases, or even lead to crashes (division by zero).
 
@@ -144,10 +144,10 @@ where and why we need this elimination routine.
 
 # Clone
 
-The operation clone() is a deep clone. We get data from somewhere else and 
-create our own version with which we can work from hereon. Besides the 
+The operation clone() is a deep clone. We get data from somewhere else and
+create our own version with which we can work from hereon. Besides the
 particles, we also copy (aka clone) the debug x and h values.
-The clone itself is mechanical. The actual logic how to keep different cloned 
+The clone itself is mechanical. The actual logic how to keep different cloned
 stacks consistent is all buried within merge().
 
 

@@ -35,21 +35,21 @@ The eigenvalues of the 2 dimensional euler equation are:
                       \lambda_3
                       \end{array} \right) =
     \left(
-    \begin{array}{lr} u - c \\
-                      u \\
-                      u + c
+    \begin{array}{lr} u_n - c \\
+                      u_n \\
+                      u_n + c
                       \end{array} \right)
 \end{equation*}
 @f$
 
-We've also made use of two variables, the speed of sound in a medium \b c is defined as:
+We've also made use of two variables, the speed of sound in a medium \f$c\f$ is defined as:
 @f$
 \begin{equation}
     c = \sqrt{\frac{\gamma p}{\rho} }
 \end{equation}
 @f$
 
-And the pressure \b p can, for an ideal gas, be computed as:
+And the pressure \f$p\f$     can, for an ideal gas, be computed as:
 @f$
 \begin{equation}
     p = (\gamma - 1) (E - \frac{\rho}{2} (u_1^2 + u_2^2) )
@@ -81,7 +81,7 @@ Here \b 22 means that there are 22 volumes per spatial dimension, so for a 2D pr
 
 - Exercises
     - First, create and fill a configuration file. Use a Finite Volumes solver for this, then set the domain size to \b 120x120,
-      the offset to \b -10x-60 and the end-time to \b 10.0 .
+      the offset to \f$(-10, -60)\f$ and the end-time to \f$10.0\f$ .
       You can choose the mesh refinement of your choice, but we recommend a depth of 5 over the whole domain.
 
     - Once you are content with your configuration file, implement the flux and the eigenvalues for your solver.
@@ -99,7 +99,7 @@ Here \b 22 means that there are 22 volumes per spatial dimension, so for a 2D pr
           y_t = 5*0.12* ( 0.2969*\sqrt{x_n} - 0.1260*x_n - 0.3516*x_n^2 + 0.2843*x_n^3 - 0.1104*x_n^4 )
       \end{equation}
       @f$
-      where \b x_n is \b x/100.
+      where \f$x_n\f$ is \f$x/100\f$.
       The initial conditions within the airfoil should be <b>[1000, 1.0, 0.0, 2.5]^T</b>, those outside of the airfoil should be <b>[1.0, 1.0, 0.0, 2.5]^T</b>.
       (Note: We have committed here what we in the business call a "not accurate cheaty fake result", there are many good ways to simulate what we want to simulate and this is not one of them.
       But this is easy and it'll make a nice picture if you did it right, so don't tell anyone.)

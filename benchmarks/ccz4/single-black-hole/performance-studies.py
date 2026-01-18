@@ -20,7 +20,7 @@ from SBH import FVSolver
 
 # See comments in README.dox
 # export PYTHONPATH=../../../../python
-# export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
+# export PYTHONPATH=$PYTHONPATH:../../../../applications/ccz4
 from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import (
@@ -291,33 +291,33 @@ if __name__ == "__main__":
     peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 
     my_primary_solver.add_makefile_parameters(
-        peano4_project, "../../../../applications/exahype2/ccz4"
+        peano4_project, "../../../../applications/ccz4"
     )
 
     peano4_project.output.makefile.add_linker_flag("-lm -lgsl -lgslcblas")
     peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Utilities.cpp"
+        "../../../../applications/ccz4/libtwopunctures/TP_Utilities.cpp"
     )
     peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Parameters.cpp"
+        "../../../../applications/ccz4/libtwopunctures/TP_Parameters.cpp"
     )
     peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Logging.cpp"
+        "../../../../applications/ccz4/libtwopunctures/TP_Logging.cpp"
     )
     peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/libtwopunctures/TwoPunctures.cpp"
+        "../../../../applications/ccz4/libtwopunctures/TwoPunctures.cpp"
     )
     peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/libtwopunctures/CoordTransf.cpp"
+        "../../../../applications/ccz4/libtwopunctures/CoordTransf.cpp"
     )
     peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/libtwopunctures/Equations.cpp"
+        "../../../../applications/ccz4/libtwopunctures/Equations.cpp"
     )
     peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/libtwopunctures/FuncAndJacobian.cpp"
+        "../../../../applications/ccz4/libtwopunctures/FuncAndJacobian.cpp"
     )
     peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/libtwopunctures/Newton.cpp"
+        "../../../../applications/ccz4/libtwopunctures/Newton.cpp"
     )
     if added_limiter:
         peano4_project.output.makefile.add_cpp_file("MulticoreOrchestration.cpp")

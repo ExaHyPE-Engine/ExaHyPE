@@ -7,8 +7,8 @@
 
 
 
-Peano has a variety of functions which are called during spacetree traversal events. For 
-a full description, please see <a href="https://dl.acm.org/doi/10.1145/3319797"> the original article on Peano. </a> 
+Peano has a variety of functions which are called during spacetree traversal events. For
+a full description, please see <a href="https://dl.acm.org/doi/10.1145/3319797"> the original article on Peano. </a>
 These functions are used to inject domain behaviour into the mesh traversals:
 
 
@@ -17,32 +17,32 @@ peano4.solversteps.ActionSet
 
 @image html spacetree.png
 
-- Peano splits up the spacetree into multiple trees which are distributed over 
+- Peano splits up the spacetree into multiple trees which are distributed over
   the ranks and threads. This gives us @ref page_peano_domain_decomposition "a multiscale, non-overlapping domain decomposition".
-- Each "subtree" is traversed by an automaton which runs through the tree 
+- Each "subtree" is traversed by an automaton which runs through the tree
   octant-wise. It starts from the top and runs through the local tree
   depth-first. You receive a sequence of touchCellFirstTime() events while
   the automaton goes from coarse to fine, and then the automaton also triggers
   touchCellLastTime() events when it backtracks from the finer level back into
-  coarser cells. 
-- Besides the cell-specific events per spacetree octant, the automaton also 
-  triggers vertex and face events when it loads (touches) a vertex or face 
+  coarser cells.
+- Besides the cell-specific events per spacetree octant, the automaton also
+  triggers vertex and face events when it loads (touches) a vertex or face
   for the first time.
 - The automaton also triggers events when it has to create hanging vertices or
   faces.
 - There are touchFaceLastTime() and touchVertexLastTime() counterparts.
 - The automaton triggers events when it starts and finishes a travesal.
-- If you refine or erase the mesh - I use the term erase as the natural 
+- If you refine or erase the mesh - I use the term erase as the natural
   other term "coarsen" is used by the multigrid community when they switch
   to a coarser resolution yet keep the data from finer levels for future
   operations - the automaton triggers events, too.
-  
-Every event is mapped onto actions, aka function calls. Users can associate 
-multiple action sets with each travesal, such that the automaton calls a 
+
+Every event is mapped onto actions, aka function calls. Users can associate
+multiple action sets with each travesal, such that the automaton calls a
 series of actions from the individual action sets for each event.
 
 
-Within the Python API, peano4.solversteps.ActionSet represents an action 
+Within the Python API, peano4.solversteps.ActionSet represents an action
 set.
 This class represents the abstraction layer that we use to model the actual
 event behaviour.
@@ -68,11 +68,11 @@ createCell | Invoked in the context of dynamic mesh refinement when we refine. U
 destroyCell | Invoked in the context of dynamic mesh refinement when we erase. Might be used to wrap up data or project data that otherwise would be lost onto coarser resolution levels. | Called after touchCellLastTime. No further event will be triggered for this cell. Precedes the destruction of the adjacent faces and vertices.
 ------------- | ------------- | -------------
 createHangingVertex | Invoked in the context of adaptive meshes. Hanging vertices are not persistent aka stored in-between two mesh traversals. Actually, the traversal automaton might create them multiple times, i.e. up to @f$ 2^d-1 @f$ times throughout the traversal if it wants. Used to project data from the next coarser level onto the hanging entity. | Called before any event for an adjacent face or cell is invoked.
-destroyHangingVertex | Invoked in the context of adaptive meshes. Hanging vertices are not persistent aka stored in-between two mesh traversals and hence are destroyed for every creation encountered per mesh sweep. | Last action happening for a vertex. As we traverse the tree top-down, all the coarser parent data are still valid and no touchLastXXX event has been called for those guys. 
+destroyHangingVertex | Invoked in the context of adaptive meshes. Hanging vertices are not persistent aka stored in-between two mesh traversals and hence are destroyed for every creation encountered per mesh sweep. | Last action happening for a vertex. As we traverse the tree top-down, all the coarser parent data are still valid and no touchLastXXX event has been called for those guys.
 createHangingFace | Invoked in the context of adaptive meshes. Hanging faces are not persistent aka stored in-between two mesh traversals. Used to project data from the next coarser level onto the hanging entity. | Called before any event for an adjacent cell is invoked.
 destroyHangingFace | Invoked in the context of adaptive meshes. Hanging faces are not persistent aka stored in-between two mesh traversals and hence are destroyed for every creation encountered per mesh sweep. | Precedes the destruction of adjacent hanging vertices.
 ------------- | ------------- | -------------
-touchVertexFirstTime | Invoked when vertex is loaded for the first time or directly after its creation. | Pior to any other operation on this vertex or an adjacent face or cell. Called directly after createPersistentVertex if this is a brand new vertex. All first and creational events on all coarser data have been called before. 
+touchVertexFirstTime | Invoked when vertex is loaded for the first time or directly after its creation. | Pior to any other operation on this vertex or an adjacent face or cell. Called directly after createPersistentVertex if this is a brand new vertex. All first and creational events on all coarser data have been called before.
 touchVertexLastTime | Invoked when vertex is accessed for the last time in this mesh sweep. | After all adjacent cells have been traversed and all "last" operations on all adjacent faces and cells have complted. destroyPersistentVertex is the only event that might be called afterwards for this vertex in this sweep if the mesh erases. All first and creational events on all coarser data have been called before.
 touchFaceFirstTime | Invoked when face is loaded for the first time. | Invoked after touchVertexFirstTime for adjacent vertices. Precedes event on the two adjacent cells. All first and creational events on all coarser data have been called before.
 touchFaceLastTime | Invoked when face is accessed for the last time in this mesh sweep. | After all adjacent cells have been traversed (see touchCellLastTime). All first and creational events on all coarser data have been called before.
@@ -83,29 +83,29 @@ touchCellLastTime | Invoked when the traversal automaton moves from fine to coar
 
 ## Example
 
-We illustrate some of this behaviour by means of a sketch we usually use to 
+We illustrate some of this behaviour by means of a sketch we usually use to
 explain domain decomposition. So please ignore the colours of the cells in
 this example:
 
 @image html domain-decomposition/replicated-boundary-data.png
 
-In a serial code, Peano runs through the mesh. Here's some statements on 
+In a serial code, Peano runs through the mesh. Here's some statements on
 events triggered throughout the traversal:
 
 - Before it kicks off the traversal, beginTraversal() is called.
 - When the code hits cell A, it first of all calls touchVertexFirstTime() on
   the green vertex, as this vertex has never been used before. This is the only
   time touchVertexFirstTime() is called for this particular vertex.
-- We get a touchCellFirstTime() event for cell A. At this point, we know that 
+- We get a touchCellFirstTime() event for cell A. At this point, we know that
   touchVertexFirstTime() has been called once and exactly once for all
   @f$ 2^d @f$ adjacent vertices.
 - As the cell is not refined further, we immediately get a touchCellLastTime()
-  after the touchCellFirstTime(). 
+  after the touchCellFirstTime().
 - When we continue the right neighbour, we'll invoke touchVertexFirstTime() on
   the red vertex. However, such knowledge should not be encoded into any
-  action set logic. 
+  action set logic.
 - At one point later throughout the traversal, we'll get a touchCellLastTime()
-  for cell B. 
+  for cell B.
 - After this one has returned, Peano knows that the green vertex will never be
   used by any of its @f$ 2^d @f$ adjacent cells, i.e. we know that touchCellLastTime()
   has been called for all of these guys. Consequently, the code will now invoke
@@ -115,20 +115,20 @@ events triggered throughout the traversal:
 
 ## Markers
 
-Whenever you encounter a face, vertex or cell, Peano's action sets will be 
+Whenever you encounter a face, vertex or cell, Peano's action sets will be
 given a single or set of the grid entities. That is, for each vertex, face
 and cell data set, the corresponding events will get a reference or pointer
-to them. 
+to them.
 So now you can manipulate them.
 
 
 ### Spatial information on context
 
-Cells, faces and vertices do not carry information such as position. They 
+Cells, faces and vertices do not carry information such as position. They
 also do not know if they are local, they are hanging, ... Such information is
 held separatedly. We actually do not hold it at all, but compute it on-the-fly
-within the Peano core. To the action set, the information is exposed through 
-a marker object. That is, every action set is also passed a marker object 
+within the Peano core. To the action set, the information is exposed through
+a marker object. That is, every action set is also passed a marker object
 which you can query to get this information.
 
 
@@ -136,10 +136,10 @@ Please note that all grid entities seem to hold positions and mesh sizes.
 However, these properties are only available in debug mode and should not be
 used by user code. I use them to print out meaningful debug data (so you know
 where the code is within the mesh) and I use them within assertions to check
-if the grid is consistent, i.e. Peano's core stores the right mesh data at 
+if the grid is consistent, i.e. Peano's core stores the right mesh data at
 the right place.
 
-The markers of relevance are 
+The markers of relevance are
 
 - peano4::datamanagement::VertexMarker
 - peano4::datamanagement::FaceMarker
@@ -148,13 +148,13 @@ The markers of relevance are
 
 ### Multiscale data
 
-The actions reacting to events, i.e. operations within the action set, also 
+The actions reacting to events, i.e. operations within the action set, also
 have access to the direct parent data one level coarser.
-Peano always only passes through pointers to coarser data. 
+Peano always only passes through pointers to coarser data.
 For each vertex data, you will for example get one pointer to the corresponding
 data.
-To access the right data, Peano passes in an enumerator object. 
-You have to use the enumerator to pick the correct element from the array 
+To access the right data, Peano passes in an enumerator object.
+You have to use the enumerator to pick the correct element from the array
 identified by the pointer.
 
 Enumerators of interest are:
@@ -171,17 +171,17 @@ There's no cell enumerator, as you never get more than one cell.
 ## Sequence and parallelisation of actions
 
 
-<div style="color:Black ; background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
-The term parallelisation here has noting to do with domain decomposition. It simply 
+<div style="color:Black ; background-color: #ccf ; padding: 10px; border: 1px solid green;">
+The term parallelisation here has noting to do with domain decomposition. It simply
 means that you might want to do various things for a cell/vertex/face when you hit
-it for the first/last time and these things can run in parallel. 
+it for the first/last time and these things can run in parallel.
 @ref page_peano_domain_decomposition "Domain decomposition is discussed separatedly".
 </div>
-    
+
 
 An algorithmic step (Observer) within Python corresonds 1:1 to a class of the
-type peano4::grid::GridTraversalObserver, and it holds a set of actions. Actions 
-are represented by the Python class peano4.solversteps.ActionSet. Each action set within an observer (algorithmic step) has two relevant 
+type peano4::grid::GridTraversalObserver, and it holds a set of actions. Actions
+are represented by the Python class peano4.solversteps.ActionSet. Each action set within an observer (algorithmic step) has two relevant
 properties:
 
 - descend_invocation_order

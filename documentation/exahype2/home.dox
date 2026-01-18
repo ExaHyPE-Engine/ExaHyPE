@@ -10,7 +10,7 @@ It is built on top of ExaHyPE 2 as an extension.
 ExaHyPE 2 solves partial differential equations of the form
 
 @f$
-\frac{\partial Q}{\partial t} + \nabla . F(Q, \nabla Q) + B(Q) . \nabla Q= S(Q) + \sum_{i = 1}^{n_{ps}} \delta_i
+\frac{\partial Q}{\partial t} + \nabla \cdot F(Q, \nabla Q) + B(Q) \cdot \nabla Q= S(Q) + \sum_{i = 1}^{n_{ps}} \delta_i
 @f$
 
 although there are specialised solver variants within ExaHyPE which support other terms such as second-order spatial operators.
@@ -23,35 +23,26 @@ and innovation programme under grant agreement No 671698 (ExaHyPE).
   - \subpage page_exahype2_tutorials
   - \subpage page_exahype_applications
   - \subpage page_exahype_benchmarks
-- Numerics tour de force (hands-on explanation of core numerical ingredients)
-  - \subpage page_tutorials_exahype2_numerics_finite_volumes
-  - \subpage page_tutorials_exahype2_numerics_higher_order_finite_volumes
-  - \subpage page_tutorials_exahype2_numerics_discontinous-Galerkin
-  - \subpage page_tutorials_exahype2_numerics_finite-differences
-  - \subpage page_tutorials_exahype2_numerics_Runge-Kutta
-  - \subpage page_tutorials_exahype2_numerics_ADER-DG
-- Core functionality, numerics and ingredients
-  - \subpage exahype2_dg
-  - \subpage exahype2_dg_DG_AMR
-  - \subpage documentation_exahype2_solvers_enclave_solvers
-  - \subpage page_exahype_tracer
-  - \subpage page_exahype_boundary_conditions
-  - \subpage page_exahype_amr
-- Postprocessing and data analysis
-  - \subpage page_exahype_visualisation
-  - \subpage page_exahype_extend-visualisation
-- HPC
-  - \subpage page_exahype_domain-decomposition
-  - \subpage page_exahype_multicore
-  - \subpage page_exahype_gpu
-  - \subpage page_exahype_runtime_analysis
-  - \subpage page_exahype_performance_optimisation
-- Utilities
-  - \subpage exahype2_enumerator
-- Related pages
-  - @ref page_peano4_home
-  - @ref page_tarch_home
-
+  - \subpage page_numerics
+  - \subpage page_solvers
+  - \subpage page_tutorials
+  - Core functionality, numerics and ingredients
+    - \subpage documentation_exahype2_solvers_enclave_solvers
+    - \subpage page_exahype_tracer
+    - \subpage page_exahype_boundary_conditions
+    - \subpage page_exahype_amr
+  - Postprocessing and data analysis
+    - \subpage page_exahype_visualisation
+    - \subpage page_exahype_extend-visualisation
+  - HPC
+    - \subpage page_exahype_domain-decomposition
+    - \subpage page_exahype_multicore
+    - \subpage page_exahype_gpu
+    - \subpage page_exahype_runtime_analysis
+    - \subpage page_exahype_performance_optimisation
+  - Related pages
+    - @ref page_peano4_home
+    - @ref page_tarch_home
 
 # Building the ExaHyPE 2 extension
 

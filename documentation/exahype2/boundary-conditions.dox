@@ -1,8 +1,8 @@
 /**
 
  @page page_exahype_boundary_conditions Boundary conditions
- 
- 
+
+
 
 Boundary conditions often are tricky to implement and solely up to the
 user. In , Dirichlet and Neumann boundary conditions on Cartesian meshes

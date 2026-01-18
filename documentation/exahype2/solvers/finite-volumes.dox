@@ -1,47 +1,42 @@
-/** 
+/**
 
-@page page_tutorials_exahype2_numerics_finite_volumes Finite Volumes
+@page documentation_exahype2_solvers_finite_volumes Finite Volume solver
 
 \tableofcontents
 
 
+ExaHyPE 2 offers a range of Finite Volume solvers. They are designed to be
+stand-alone solvers, but nothing stops you from using them as a posteriori
+limiters by @ref tutorials_exahype2_coupling "coupling them to higher order schemes".
+Some hands-on descriptions of the numerics can be found in @ref page_tutorials_exahype2_numerics_finite_volumes "the tutorial section".
 
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
-This page is a crude run-through through the Finite Volumes numerical scheme as we find it in ExaHyPE.
-It covers the basics without most of the actual maths that you find in textbooks.
-In a first run through the tutorials, it might be reasonable to skip this page, to continue
-with some hands-on examples and then to return to this description once you have a code 
-up and running and want to deep dive into the methodology.
-</div>
-    
-    
+
+@todo Das sollte viel mehr Projektionen enthalten, also wie die Realisiert sind
+
 ExaHyPE's Finite Volume scheme is based upon block-structured Cartesian meshes.
-All Finite Volume solvers work with blockstructured AMR: They embed @f$p \times p@f$ patches 
-into the octants (cells of the spacetree). To avoid confusion, I prefer to 
+All Finite Volume solvers work with blockstructured AMR: They embed @f$ p \times p@f$ patches
+into the octants (cells of the spacetree). To avoid confusion, I prefer to
 use the term volume for the cells within the patch, as cell would be
-ambigous given that we construct the  host mesh from spacetree cells.
+ambigous given that we construct the host mesh from spacetree cells.
+
 
 @image html documentation/exahype2/solvers/block-structured.png
 
-With the Finite Volume methods, we only have single-shot methods at the moment. 
+With the Finite Volume methods, we only have single-shot methods at the moment.
 That is, Peano runs over the octants of the mesh, i.e. the patches.
 Per patch, it calls and ExaHyPE update kernel, which takes the patch and moves it forwards in time by a given @f$ \Delta t @f$.
-ExaHyPE is shipped with several update schemes. You can obviously also write your own 
+ExaHyPE is shipped with several update schemes. You can obviously also write your own
 numerical scheme manually, or you employ ExaHyPE's kernel domain-specific language (DSL).
 
-
-# Storage scheme
+## Storage scheme
 
 Every patch has to depends upon its neighbouring, i.e. face-connected patches.
-To be able to do this, ExaHyPE passes a  
-@f$ (p+2N)^d @f$ patch into a kernel.
-The p is the number of volumes per patch. The d is the dimension, i.e. two or three.
-The @f$ N \geq 1 @f$ is a halo around the cell.
-Different Finite Volume schemes have different halo sizes. 
+To be able to do this, ExaHyPE passes a @f$ (p+2N)^d @f$ patch into a kernel, where @f$ p @f$ is the number of volumes per patch, @f$ d @f$ is the dimension,
+and @f$ N \geq 1 @f$ is halo size.
+Different Finite Volume schemes have different halo sizes.
 You may assume that ExaHyPE befills these halo values with valid data from the neighbours, i.e. their synchronisation is none of the kernel's business.
 The input is called @f$ Q_{in} @f$ from hereon.
-The kernel returns a @f$ (p+2 N)^d @f$ with the new time step's data. 
-It is called @f$ Q_{out} @f$.
+The kernel returns a @f$ (p+2 N)^d @f$ with the new time step's data, called @f$ Q_{out} @f$.
 
 
 Here are some details about the data used within the kernels:
@@ -49,9 +44,9 @@ Here are some details about the data used within the kernels:
 - The halo data, i.e. the @f$ N @f$ layer around the patch is automatically befilled.
   However, we only maintain the face-connected data. Consequently, the diagonal (corners)
   do not exist. To make the whole logic easier, the @f$ Q_{in} @f$ nevertheless hold these data.
-  They contain garbage. Example: In a @f$ 7 \times 7 @f$ patch world with @f$ N=2 @f$, we have 
-  49 volumes in the core centre, surrounded by @f$ 2d \cdot (N \cdot p^{d-1}) = 4 \dot (2 \dot 7) @f$ face-connected values. 
-  The @f$ 4 \cdot (2 \cdot 2 ) @f$ corners of the halo do not hold any meaningful data. 
+  They contain garbage. Example: In a @f$ 7 \times 7 @f$ patch world with @f$ N=2 @f$, we have
+  49 volumes in the core centre, surrounded by @f$ 2d \cdot (N \cdot p^{d-1}) = 4 \cdot (2 \cdot 7) @f$ face-connected values.
+  The @f$ 4 \cdot (2 \cdot 2 ) @f$ corners of the halo do not hold any meaningful data.
   Nevertheless, we let @f$ Q_{in} @f$ holds a @f$ (7+2\cdot 2) @f$ volumes
 - The volumes within @f$ Q_{in} @f$ and @f$ Q_{out} @f$ are ordered lexicographically.
 - The data are stores as array of structs (AoS).
@@ -61,97 +56,79 @@ Here are some details about the data used within the kernels:
 - Besides @f$ Q_{in} @f$ and @f$ Q_{out} @f$ a kernel is given the current time @f$ t @f$ and the time step size @f$ \Delta t @f$.
 - We never write a kernel for only one patch. We always write kernels that can advanced multiple patches in one go.
   So the "update one patch" is a special case.
- 
 
-# Finite Volumes in a nutshell
+## Data structures
 
-In Finite Volumes, we assume that each voxel holds exactly one value per PDE quantity.
-We assume that the solution is constant within the volume.
+Each Finite Volume solver embeds @f$N \times N@f$ patches
+into the octants (cells of the spacetree).
+ExaHyPE is built on top of Peano, and Peano realises a strict element-wise
+traversal, i.e. there's no way to access the neighbour cell of a cell
+directly. However, we can hijack the faces.
 
-
-@image html finite-volumes.png
-
-In the 1d illustration above, we have a patch with @f$ p=5 @f$ volumes, one quantity and a halo of one.
-That is, we are given a @f$ Q_{in} @f$ with 7 values and return 5 new values for the next time step.
-So now we do the math:
-
-If the solution per volume is constant, nothing happens within the volume per time step.
-The solution inside is kind of "stable".
-If something happens with a volume, i.e. if the solution grows or goes down, then this must be due to stuff flowing in or out of the voxel.
-We can write this down as integral over each volume V:
-
-@f$ 
- \int _V Q_k(t+\Delta t) dx = \int _V Q_k(t) dx + \Delta t \cdot \int _V \partial _t Q_k(t) dx 
-@f$
-
-We have already used an explicit Euler time integrator here.
-Next, we make the formula a little bit simpler exploiting the fact that a volume shall have the volume length @f$ h @f$ and each volume is a square or cube, respectively.
-Once again, it helps that the solution is constant per volume.
-
-@f{eqnarray*} 
- \int _V Q_k(t+\Delta t) dx & = & \int _V Q_k(t) dx + \Delta t \cdot \int _V \partial _t Q_k(t) dx \\
- h^d Q_k(t+\Delta t) & = & h^d Q_k(t) dx + \Delta t \cdot \int _V \partial _t Q_k(t) dx \\
- h^d Q_k(t+\Delta t) & = & h^d Q_k(t) dx + \Delta t \cdot \int _V \nabla F(Q_k(t)) + S(Q_k)  dx
-@f}
-
-In the last line, we now insert our PDE written as
-
-@f$ 
- \partial _t Q(t) = \nabla F(Q(t)) + S(Q) 
-@f$
-
-and use the divergence theorem:
-
-@f{eqnarray*} 
- h^d Q_k(t+\Delta t) & = & h^d Q_k(t) dx + \Delta t \cdot \int _V \nabla F(Q_k(t)) + S_k(Q)  dx \\
- Q_k(t+\Delta t) & = & Q_k(t) dx + \frac{\Delta t}{h^d} \cdot \left( \oint _{\partial V} (F(Q_k(t)),n) dS(x) + h^d \cdot S(Q_k) \right)
-@f}
-
-So in principle, we now know exactly what to do:
-
-- Loop over all volumes in the patch.
-- Copy its @f$ Q_{in} @f$ in @f$ Q_{out} @f$.
-- Add the source term @f$ S(Q_k) @f$ scaled by the time step size.
-- Add this additional term of inflow or outflow. Again, we can exploit the fact
-  that the normal n has only one entry with @f$ \pm 1 @f$ (so F returns a 
-  vector, but we pick only one entry and scale it maybe with a -1). And then we
-  scale the whole thing with a @f$ h^{d-1} @f$ as we integrate over a surface, but
-  the straightaway divide by @f$ h^d @f$. 
-  
-The problem is that we don't know the F value at the voxel. That thing doesn't really exist.
-The solution has no value there, as it jumps.
-So we have to approximate this term @f$ F(Q) @f$ at the voxel boundary with a numerical flux.
+The idea here is that we embed a @f$ 2N@f$ @f$ (d = 2) @f$ or
+@f$2N^2 @f$ @f$ (d=3) @f$, respectively, patches into each face. Let
+this auxiliary patch overlap the adjacent cells. Then, we effectively
+have a halo of one cell available within each cell: We know the cell
+data. We also have access to the @f$ 2d @f$ faces where each hosts a
+degenerated patch. One layer of this patch is a copy of our own data,
+i.e. does not give us additional information. The other layer of the
+auxiliary patch however holds data from the neighbour. It gives us
+information from the neighbour patch.
 
 
+### Keeping face and patch data consistent
 
-# Rusanov
+Projecting the patches onto the face data structures and back is a
+mechanical task. Therefore,  we offer a toolbox to relieve you from the
+pain to recode it over and over again. Using this toolbox, you add the
+projections to your algorithmic steps, and the API then automatically
+injects these features (aspects) into your code:
 
-One of the simlest flux is Rusanov:
+@image html ProjectPatchOntoFaces.png
 
-@f$
-    {F|}_{n}(Q) \approx \frac{1}{2} (F_n^+(Q) + F_n^-(Q)) - (Q^+ - Q^-) \cdot \text{max}(\lambda_{max,n}(Q^+),\lambda_{max,n}(Q^-))
-@f$
-
-The flux on a face @f$ {F}_{n}(Q) @f$ is the average of the flux within the left adjacent cell and the right adjacent cell.
-This average is denoted by a red circle in the sketch above.
-If we only used the average, we would get a solution where shocks smear out quickly.
-In the sketch above, the wave/shock travels from left to right, so it makes sense to assume that actually way more flow goes left-right than right-to-left.
-Averaging is not a good idea.
-So we take the difference @f$ Q^+ - Q^- @f$, we know how to correct the numerical flux.
-Take into account that the "remaining" eigenvalues are all positive for a stricly hyperbolic system.
-Globally, there is one negative eigenvalue but that one corresponds to the time dimension and is already taken care of.
-
-Yet, the speed matters: If the flow is very slow, then we only should correct the average by a tiny amount.
-If the wave travels very fast, we should significantly take this solution gradient into account.
-The wave speed it approximated/bounded by the maximum eigenvalue along the direction of interest.
-Again, we cannot evaluate the maximum eigenvalue on the face directly, but we only are interested in the maximum eigenvalue.
-Therefore, we can evaluate the directional eigenvalue in the left and right volume and again take the maximum of those guys.
+The image above illustrates what `ProjectPatchOntoFaces` does: It knows
+the dimensions of both the patches and the face auxiliary data
+structures and thus can ensure that the right data is copied from the
+cell into the @f$2^d@f$ faces when we leave a cell throughout the grid
+traversal.
 
 
-# An implementation 
+### Augment patch with halo
 
-Our discussion of an implementation of the scheme - which can be read as 
-blueprint of our compute kernels in ExaHyPE - is inspired by 
+The action set `ReconstructPatchAndApplyFunctor` works slighlty
+different yet can be read, from a patch projection point of view, as
+transpose of `ProjectPatchOntoFaces`: It creates a auxiliary variable
+`reconstructedX` with X being the name you gave the Unknowns of the
+patch. This auxiliary variable has the dimensions
+@f$N+2 \times N+2 \times N+2@f$. It then copies over the patch data into
+this auxiliary patch and uses the faces to supplement it with halo data
+around it. So that it, you get the original patch data plus the cells
+around it in one big patch.
+
+
+## Code organisation
+
+Peano offers a toolbox in  `toolbox::blockstructured` which offers most of the
+basic data structures and action sets.
+The actual patches can either be embedded as plain arrays into each cell, or
+they can be held as arrays on the heap and the cells hold (smart) pointers
+to these heap objects.
+It depends on your use case which variant is faster.
+
+
+On the Python API side, the class `exahype2.solvers.fv.FV` is the base class
+of all Finite Volume solvers.
+Its class documentation holds a lot of background information on the solver
+design and data flows.
+There are two major subclasses: `exahype2.solvers.fv.SingleSweep` and
+`exahype2.solvers.fv.EnclaveTasking`.
+They realise a straightforward realisation with one mesh traversal per
+time step or the @ref page_exahype_solvers_enclave_solvers "enclave concept", respectively.
+
+## Implementation
+
+Our discussion of an implementation of the scheme - which can be read as
+blueprint of our compute kernels in ExaHyPE - is inspired by
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 @article{10.1145/3406835,
@@ -193,8 +170,8 @@ This algorithm consists of a strict sequence of steps:
 - We evaluate @f$ F(Q)_z @f$ per voxel. That the flux in one direction. The output is stored in a @f$ p \times p \times (p+2N) @f$ patch where each volume holds @f$ K_{pde} @f$ values.
   The output is called @f$ Q_{F_z} @f$. Note that this is the core patch extended by the halo in one direction!
 
-Now all temporary data are available. We prepare the output and then add the 
-PDE contributions. This part is basically a stencil variant. Or we can write it 
+Now all temporary data are available. We prepare the output and then add the
+PDE contributions. This part is basically a stencil variant. Or we can write it
 down as a tensor-vector product which is added to @f$ Q_{out} @f$:
 
 - We copy over @f$ Q_{in} @f$ into @f$ Q_{out} @f$. Per voxel, we have o copy @f$ K_{pde} + K_{aux} @f$ unknowns.
@@ -208,7 +185,7 @@ Below is schematic illustration of the data flow:
 
 @image html data-flow-finite-volumes.png
 
-Note that the scheme as well as the description lack an important detail: 
+Note that the scheme as well as the description lack an important detail:
 Every single step is to be done over a set of patches, as we update multiple patches in one go.
 In the kernels, we can write down this logic as a sequence of operators, but once you employ our xDSL kernel language, the underlying kernel generator will permute and fuse all the loops and operations.
 

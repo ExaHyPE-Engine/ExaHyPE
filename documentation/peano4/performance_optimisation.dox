@@ -7,16 +7,16 @@
 
 
 This section discusses some Peano-specific performance optimisation steps.
-While Peano provides simplistic performance analysis 
+While Peano provides simplistic performance analysis
 features to spot some flaws, a proper performance optimisation would likely
 rely on external performance analysis tools.
 
 
-If you plan to run any performance analysis with the Intel or NVIDIA tools, I 
+If you plan to run any performance analysis with the Intel or NVIDIA tools, I
 recommend you to switch to the @ref page_compiler_specific_settings_home "respective toolchain and logging"
 before you continue.
-For other performance tools such as Scalasca/Score-P, Peano offers bespoke 
-toolchains, too. 
+For other performance tools such as Scalasca/Score-P, Peano offers bespoke
+toolchains, too.
 These toolchains ensure that all tracing information is piped into appropriate
 data formats.
 
@@ -24,11 +24,11 @@ data formats.
 Most developers start with a release build for the performance analysis.
 However, you might want to switch the tracing on for a
 deeper insight.
-Consult Peano's discussion of @ref page_architecture_home "Build variants". 
-If you use tracing, you will have to use a proper log filter, as Peano's log 
+Consult Peano's discussion of @ref page_architecture_home "Build variants".
+If you use tracing, you will have to use a proper log filter, as Peano's log
 information otherwise becomes huge, i.e. challenging to handle, and the enormous
 data quickly pollutes the runtime measurements.
-The data also might be skewed slightly due to measurement overhead. 
+The data also might be skewed slightly due to measurement overhead.
 
 
 Besides the trace option, Peano also offers a statistics mode where the code
@@ -36,23 +36,23 @@ samples certain key properties. These statistics are meant to complement real
 performance analysis with domain-specific data: We think that it is the job
 of a performance analyis tool to uncover what is going wrong and the statistics
 then can help to clarify why this happens from an application's point of view.
- 
- 
-## Compiler 
+
+
+## Compiler
 
 ### Compiler feedback
 
 Any optimisation should be guided by compiler feedback and proper performance
-analysis. For the (online) performance analysis, Peano provides tailored 
+analysis. For the (online) performance analysis, Peano provides tailored
 extensions for some tools such as Intel's VTune or the NVIDIA NSight tools.
 They are realised as bespoke @ref tarch_logging "logging devices".
 
 If you want to use compiler feedback, we do routinely use the Intel toolchain.
-For them, the flag -qopt-report=3 yields useful feedback. However, running the 
+For them, the flag -qopt-report=3 yields useful feedback. However, running the
 whole code with compiler feedback yields a lot and lot of files. It also seems
-to slow the translation process down. I therefore 
+to slow the translation process down. I therefore
 recommend that you first find the observer class which invokes the compute kernel
-you are interested in. After that, create the Makefile (only once, as it will 
+you are interested in. After that, create the Makefile (only once, as it will
 be overwritten). Within the makefile, alter the linker step:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -71,8 +71,8 @@ solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You throw away the object file and then you rebuild this single file yet with 
-the optimisation reports on. 
+You throw away the object file and then you rebuild this single file yet with
+the optimisation reports on.
 
 
 ### Inter-procedural optimisation
@@ -80,22 +80,22 @@ the optimisation reports on.
 Most successful vectorsation passes depend upon successful inlining (despite
 marking functions as vectorisable). To facilitate this inlining, you can either
 move implementations into the header, or you can use ipo. The following remarks
-discuss ipo in the context of the Intel compiler, but we assume similar 
+discuss ipo in the context of the Intel compiler, but we assume similar
 workflows to apply to any LLVM-based toolchain.
 
-The switch to ipo requires some manual modifications of the underlying 
+The switch to ipo requires some manual modifications of the underlying
 Makefile:
 
 1. We remove the object files manually which have been produced by the standard
    compilation process.
 2. We retranslate all the cpp files again in one rush using the -c -ipo option.
-3. All the resulting object files will end up in the root directly. We 
-   consequently rescatter them, i.e. move them again into the places where the 
+3. All the resulting object files will end up in the root directly. We
+   consequently rescatter them, i.e. move them again into the places where the
    object files had originally been placed.
-4. We add -ipo as additional linker command, as the linker otherwise will not 
+4. We add -ipo as additional linker command, as the linker otherwise will not
    recognise the object file format. Furthermore, I repeat the opt-report flag
-   for the linker phase. Otherwise, I'll not get any feedback. 
-   
+   for the linker phase. Otherwise, I'll not get any feedback.
+
 Here is an example excerpt of a successful, modified Makefile:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -112,14 +112,14 @@ The final ipo optimisation report will end up in a file ipo_out.optrpt.
 
 ## Domain decomposition
 
-We use the same geometric load balancing for both the MPI code and on the node. 
-In the latter case, subpartitions aka subtrees are distributed over several 
+We use the same geometric load balancing for both the MPI code and on the node.
+In the latter case, subpartitions aka subtrees are distributed over several
 threads. The load balancing can be written manually for your application, or you
-can use classes from the @ref toolbox_loadbalancing "load balancing toolbox" 
+can use classes from the @ref toolbox_loadbalancing "load balancing toolbox"
 that is shipped with Peano.
 
-The documentation of the @ref toolbox_loadbalancing "load balancing toolbox" 
-contains some generic explanations why certain things work the way they do 
+The documentation of the @ref toolbox_loadbalancing "load balancing toolbox"
+contains some generic explanations why certain things work the way they do
 and what has to be taken into account if a code suffers from certain behaviour.
 It is important to read through these explanations prior to tweaking the load
 balancing as discussed below.
@@ -128,9 +128,9 @@ balancing as discussed below.
 
 ### The domain decomposition works (I see multiple trees), but I don't get any/good speedup
 
-Before you continue, check if the individual trees are well-balanced. Do they 
-have the same size? If not, you might want to study the remarks below on 
-ill-balanced partiitons. Now, assume they are well-balanced. 
+Before you continue, check if the individual trees are well-balanced. Do they
+have the same size? If not, you might want to study the remarks below on
+ill-balanced partiitons. Now, assume they are well-balanced.
 If you have a well balanced problem, the trees have all roughly the same amount
 of local cells:
 
@@ -138,7 +138,7 @@ of local cells:
 toolbox::loadbalancing::dumpStatistics()                12 tree(s): (#0:19653/7108)(#1:19644/1365)(#2:19644/2461)(#3:19644/2445)(#4:19644/2525)(#5:19644/2645)(#6:19644/2621)(#7:19644/2789)(#8:19644/2493)(#9:19644/2709)(#10:19644/2485)(#11:19644/1685) total=235737/33331 (local/remote)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-All looks fine here. 
+All looks fine here.
 If you don't get any (reasonable) speedup, then you should look at the ratio between
 the total number of local cells and the total number of remote cells (granularity).
 
@@ -159,35 +159,35 @@ To remedy this effect you will need to find ways on how to increase the granular
 
 Possible ways to do so can be:
 
-- Increase the problem size. If your problem is too small, you always run risk to 
+- Increase the problem size. If your problem is too small, you always run risk to
   overdecompose. Once the problem per thread or rank is too small, there's not much
   you can do anymore.
 - Restrict the number of spacetrees (subpartitions) per rank.
-- Add task-based parallelism. Try out enclave solvers (with restricted number 
+- Add task-based parallelism. Try out enclave solvers (with restricted number
   of trees) for ExaHyPE, e.g.
 
 
 <div style="color:Black ; background-color:#75e12f">
- Domain decomposition introduces a severe overhead. Therefore, your runtime might go down as you 
- increase the number of trees. More trees means more effort to keep data consistent between 
- subpartitions. Therefore, it can be advantageous to limit the number of trees, i.e. not to 
- book out all threads. The threads then have to be kept busy otherwise (through 
+ Domain decomposition introduces a severe overhead. Therefore, your runtime might go down as you
+ increase the number of trees. More trees means more effort to keep data consistent between
+ subpartitions. Therefore, it can be advantageous to limit the number of trees, i.e. not to
+ book out all threads. The threads then have to be kept busy otherwise (through
  task parallelism or parallel fors inside compute kernels, e.g.).
 </div>
 
 
 ### The individual trees are of significantly different sizes
 
-Most of Peano's solvers (such as ExaHyPE) support tasking to facilitate 
+Most of Peano's solvers (such as ExaHyPE) support tasking to facilitate
 light-weight load balancing. However, even the best load balancing will not
 be able to compensate for a poor initial geometric distribution. To assess
 the quality of your partition, Peano's loadbalancing toolbox \ref page_peano_runtime_analysis "provides a script"
-that visualises the distribution of cells. 
+that visualises the distribution of cells.
 
- @image html runtime_analysis_loadbalancing_example00.png 
+ @image html runtime_analysis_loadbalancing_example00.png
 
 If the cell distribution is similar to the one above, you have subpartitions
-of significantly different sizes. 
+of significantly different sizes.
 In a profile, such an ill-balanced setup materialises typically in high task
 runtime spin times.
 In OpenMP for example, __kmp_fork_barrier() appears high up in the list of the most expensive routine.
@@ -199,51 +199,51 @@ is a proper load balancing for two cores, as we have 13 vs 14 cells.
 There are some generic ideas that you can try out:
 
 1. Use an incremental load balancing scheme. Schemes like toolbox::loadbalancing::SpreadOut
-   try to make all cores busy as soon as possible and thus often run into 
+   try to make all cores busy as soon as possible and thus often run into
    geometric decompositions that are difficult later on to "fix". Other schemes
-   like toolbox::loadbalancing::RecursiveBipartitioning work incrementally and 
-   thus get better approximations of an optimal domain splitting. Basically 
-   what happens is that an initial decision to make a split hardly ever is 
+   like toolbox::loadbalancing::RecursiveBipartitioning work incrementally and
+   thus get better approximations of an optimal domain splitting. Basically
+   what happens is that an initial decision to make a split hardly ever is
    undone in Peano. So if an early split is unfortunate, the code will have to
    compensate for this later on - as it is the case with any greedy algorithm.
    See third idea in this context.
-2. Build up the mesh before you split. Let the load balancing kick in after you 
+2. Build up the mesh before you split. Let the load balancing kick in after you
    have set up the mesh. This is often difficult with complex applications, but
    might be worth a try. Often the next recipe is easier to realise:
-3. Hand out trees carefully. Notably if you use a cascade of load balancing 
+3. Hand out trees carefully. Notably if you use a cascade of load balancing
    schemes (e.g. a spreading strategy first), restrict the number of trees that
    are used in early phases. So you get a rough first guess of a domain decomposition
    using a limited number of cores, and then you add more cores when you do the
-   fine balancing afterwards with a finer mesh. 
+   fine balancing afterwards with a finer mesh.
 4. Use a higher mesh quality. Load balancing schemes all are guided by heuristics,
-   i.e. how good has the decomposition have to be. Most schemes accept a 
+   i.e. how good has the decomposition have to be. Most schemes accept a
    configuration object to specify some thresholds. Increase the load balancing
    quality.
 5. Allow each node to host more trees than cores. You can have an (almost) arbitrary
    number of trees per node. The trees are then mapped by Peano onto threads. If
    you have too many trees however, you create a lot of overhead for this mapping.
    By default, most load balancing schemes allow the code to use up to twice the
-   number of trees than cores. This value can be increased. Be aware of the 
-   discussion above, as this idea contradicts the experience there (for some 
+   number of trees than cores. This value can be increased. Be aware of the
+   discussion above, as this idea contradicts the experience there (for some
    applications).
 6. Introduce a better cost metric. By default, Peano uses a geometric cost metric,
-   i.e. it counts the number of cells and tries to balance this count. If the 
-   number if not representative of the actual workload, then this will result in 
+   i.e. it counts the number of cells and tries to balance this count. If the
+   number if not representative of the actual workload, then this will result in
    a poor workload distribution.
 
 
 
 <div style="color:Black ; background-color:#75e12f">
- Tweaking the load balancing manually is the last resort. Most codes benefit from 
- employing a 
+ Tweaking the load balancing manually is the last resort. Most codes benefit from
+ employing a
  @ref toolbox_loadbalancing "cascade of different load balancing schemes" and
- eventually get away with a pure geometric cost model. 
+ eventually get away with a pure geometric cost model.
 </div>
 
-It is important to keep in mind that all data displayed here on the terminal 
+It is important to keep in mind that all data displayed here on the terminal
 are geometric data. If you have a highly inhomogeneous cost, as you use kernels
 with varying workload (particles or non-linear solvers within cells), if you
-use task parallelism heavily, if you use adaptive mesh refinement, or if you 
+use task parallelism heavily, if you use adaptive mesh refinement, or if you
 use different localised solvers in different subdomains, then all the data
 here as well as the recommendations have to be taken with a pinch of salt.
 
@@ -253,23 +253,23 @@ here as well as the recommendations have to be taken with a pinch of salt.
 
 See the comment above on the recursive top-down splitting. In this context:
 
-- If you use a generic algorithm to load balance, reduce the load balancing 
+- If you use a generic algorithm to load balance, reduce the load balancing
   quality that you aim for. No load balancing will be able to ensure 100% perfect
   load, as we work in a discrete setup, so they will have some threshold. If you
-  work with a very fine mesh, then it is important to use a high load balancing quality (we typically start with 
-  something around 95%). However, if you want to use only few cells per core, 
-  a smaller load balancing quality (something like 80%) should be 
+  work with a very fine mesh, then it is important to use a high load balancing quality (we typically start with
+  something around 95%). However, if you want to use only few cells per core,
+  a smaller load balancing quality (something like 80%) should be
   absolutely fine. Every time the load balancing threshold is violated, Peano will
   try to split up subpartitions, and you might end up with very small aka cheap
-  partitions if the load is too cheap. Even worse, the bipartitioning might not 
+  partitions if the load is too cheap. Even worse, the bipartitioning might not
   be able to resolve the ill-balancing.
 - Use a load balancer, which immediately spreads out over the cores once the
-  grid construction starts. toolbox::loadbalancing::SpreadOut is a good example.  
+  grid construction starts. toolbox::loadbalancing::SpreadOut is a good example.
 
 Using the schemes that spread out immediately often makes the resulting domain
-decomposition quality worse, as they realise a greedy approach which kicks in 
+decomposition quality worse, as they realise a greedy approach which kicks in
 while the grid is not completely constructed. In such a case, use a combination
-(cascade) of load balancing schemes, i.e. start with spreading and then use 
+(cascade) of load balancing schemes, i.e. start with spreading and then use
 something fairer.
 
 
@@ -296,7 +296,7 @@ Once you dump the output into a file and you visualise it with \ref page_peano_r
 too small trees also usually manifest in very high remote cell counts, i.e.
 large numbers of outer and coarse cells, compared to actual fine grid cells.
 Use the flag --remote-cells.
-Below is an example where we have many trees per rank, and each tree hosts only 
+Below is an example where we have many trees per rank, and each tree hosts only
 a few local fine grid cells compared to total number of cells per tree:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -312,15 +312,15 @@ but the remote cells (empty circles) are by magnitudes more.
 In this case, it might be wise to reduce the tree size and to remove the overhead
 in return.
 
-Obviously, it depends on the load balancer that you use how to ensure that the 
-number of trees is not too big. The generic load balancer toolbox::loadbalancing::RecursiveSubdivision for example 
+Obviously, it depends on the load balancer that you use how to ensure that the
+number of trees is not too big. The generic load balancer toolbox::loadbalancing::RecursiveSubdivision for example
 accepts a configuration, and this configuration can pick a minimum tree size.
 
-If you restrict your subtree/subpartition size, you run risk that you end up with 
-a domain decomposition which cannot keep all cores busy. 
-In this case, you have to increase the code's concurrency otherwise, i.e. not via 
+If you restrict your subtree/subpartition size, you run risk that you end up with
+a domain decomposition which cannot keep all cores busy.
+In this case, you have to increase the code's concurrency otherwise, i.e. not via
 geometric decomposition.
-Additional tasking within your code for example is an option, or compute kernels which 
+Additional tasking within your code for example is an option, or compute kernels which
 themselves can use more than one core.
 
 
@@ -338,17 +338,17 @@ tarch::MemoryLocation.
 
 Peano realises a strict cell-wise traversal paradigm, where individual
 actions @ref peano_action_sets "are tied to single cells, faces or vertices".
-Therefore, @ref peano_amr "Peano's AMR" is also controlled by sets of 
+Therefore, @ref peano_amr "Peano's AMR" is also controlled by sets of
 refine and erase events. The decision to refine or erase a mesh is made
-by Peano by comparing each and every mesh entity against the set of 
-erase and refine commands. This happens in 
+by Peano by comparing each and every mesh entity against the set of
+erase and refine commands. This happens in
 peano4::grid::Spacetree::updateVertexAfterLoad().
 
-If you work with thousands of mesh refinement and coarsening events, the 
+If you work with thousands of mesh refinement and coarsening events, the
 AMR checks themselves become time-consuming. Therefore, each tree traversal
-invokes peano4::grid::GridControlEvent::merge() on the command first. This routine tries to 
-consolidate many erase and refine commands into fewer ones, and it also 
-throws away those erase commands which contradict refines. However, you 
+invokes peano4::grid::GridControlEvent::merge() on the command first. This routine tries to
+consolidate many erase and refine commands into fewer ones, and it also
+throws away those erase commands which contradict refines. However, you
 can still tune this behaviour:
 
 - As each and every traversal automaton calls the merger, it might make
@@ -356,33 +356,33 @@ can still tune this behaviour:
   over to Peano. This way, you avoid multiple (though parallel) merges
   on different threads and ranks.
 - The GridControlEvent::merge() operation will search for refine and erase commands which
-  are adjacent to each other and combine them into one. So it 
-  intrinsically works with hexahedral areas. Try to ensure that your 
-  refine and erase commands span a hexahedral area, so they can be 
+  are adjacent to each other and combine them into one. So it
+  intrinsically works with hexahedral areas. Try to ensure that your
+  refine and erase commands span a hexahedral area, so they can be
   combined into one single command. For this, you might refine a little
   bit too aggressively but gain in terms of effective runtime.
 - The GridControlEvent::merge() operation works with a certain tolerance (as it works with
-  floating point numbers, but also with geometric data). If you invoke 
+  floating point numbers, but also with geometric data). If you invoke
   GridControlEvent::merge() yourself, you can add in a higher tolerance and hence merge
-  together subareas that are to be refined or erased which are not 
-  exactly adjacent to each other but close.  
+  together subareas that are to be refined or erased which are not
+  exactly adjacent to each other but close.
 
 
 
 ## Multithreading optimisation
 
-Peano supports both task-based and data parallelism. The former is specific to 
+Peano supports both task-based and data parallelism. The former is specific to
 extensions such as Swift or ExaHyPE, i.e. each has their own tasking approach.
 There are some generic recommendations though, and we discuss them below. All
 Peano codes can support data parallelism by a textbook non-overlapping domain
-decomposition. Actually, we use the same tree-based multiscale domain 
+decomposition. Actually, we use the same tree-based multiscale domain
 decomposition that we also use for MPI.
 
 
 To enable the tree deccomposition, a load balancing scheme has to be activated.
 This makes Peano yield multiple trees and these trees are then either distibuted
-among ranks or among threads or both. 
-Therefore, the generic domain decomposition tweaks and flaws are discussed in a 
+among ranks or among threads or both.
+Therefore, the generic domain decomposition tweaks and flaws are discussed in a
 section of its own above on data decomposition.
 
 
@@ -390,15 +390,15 @@ section of its own above on data decomposition.
 
 In this case, the tasks are typically too small.
 Tiny tasks flood the system and then induce a massive overhead.
-In this case, @ref documentation_tarch_task_fusion_strategies "task fusion" is the number one technique that might ride to our 
+In this case, @ref documentation_tarch_task_fusion_strategies "task fusion" is the number one technique that might ride to our
 rescue.
 
 
 ### The code shows significant spinning time
 
-If these spinning times are introduced through tarch::multicore::waitForTasks(), 
-then it might pay off to pass in one of the hint flags if you know that all the 
-tasks you wait for are either fused or native. Further to that, you have to 
+If these spinning times are introduced through tarch::multicore::waitForTasks(),
+then it might pay off to pass in one of the hint flags if you know that all the
+tasks you wait for are either fused or native. Further to that, you have to
 play around with @ref documentation_tarch_task_fusion_strategies "different task fusion strategies".
 
 
@@ -406,8 +406,8 @@ play around with @ref documentation_tarch_task_fusion_strategies "different task
 
 ### Switching from one to two ranks increases the runtime
 
-Validate if both ranks get roughly the same number of cells. If this holds, the 
-performance drop is due to a bad per-rank (shared memory) load balancing most of 
+Validate if both ranks get roughly the same number of cells. If this holds, the
+performance drop is due to a bad per-rank (shared memory) load balancing most of
 the times. Study the recommendations above after you have visualised the distribution
 of the cells per rank.
 
@@ -430,22 +430,22 @@ build: 3d, with mpi (2 ranks), omp (64 threads), no gpu support
  597638762240 00:09:57     rank:0       core:36      info         exahype2::RefinementControl::finishStep()               share my 0 event(s) with others
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We have 41 or 49 trees, respectively, on a single rank. 
-While this might be reasonably balanced, we have 64 cores/threads per rank and 
-hence can conclude that our load balancing does not keep all cores busy. 
+We have 41 or 49 trees, respectively, on a single rank.
+While this might be reasonably balanced, we have 64 cores/threads per rank and
+hence can conclude that our load balancing does not keep all cores busy.
 We loose out on threads.
 Enclave tasking and parallel compute kernels can, to some degree, mitigate this
-problem, but we should aim for a proper work distribution right from the 
+problem, but we should aim for a proper work distribution right from the
 start, i.e. geometrically.
-Further to our observations so far, we see that rank 0 is significantly heavier in terms of total cell 
+Further to our observations so far, we see that rank 0 is significantly heavier in terms of total cell
 count.
 
 
-What we furthermore see from the logs (as well as from the plot) is that each rank 
-has one massive tree, and then a lot of smaller trees. The smaller ones are all 
+What we furthermore see from the logs (as well as from the plot) is that each rank
+has one massive tree, and then a lot of smaller trees. The smaller ones are all
 properly balanced, i.e. they are all of the same size (around 75 on rank 0 and around 38
-on rank 1). But then we have this one massive tree besides these small ones. 
-That is not a good load balancing, and - if you use OpenMP - will manifest in 
+on rank 1). But then we have this one massive tree besides these small ones.
+That is not a good load balancing, and - if you use OpenMP - will manifest in
 high spin times per node:
 
 
@@ -463,14 +463,14 @@ Collection and Platform Info
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-In this case, we observe that the individual rank has made a reasonable load 
+In this case, we observe that the individual rank has made a reasonable load
 balancing decision once it has "recovered" from the global spread out over
 all ranks:
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 3460753894   00:00:03     rank:0       core:32      info         peano4::parallel::SpacetreeSet::split(int,int)          trigger split of tree 0 into tree 22 with 76 fine grid cells
-[...] 
+[...]
 3951177679   00:00:03     rank:0       core:38      info         peano4::grid::Spacetree::traverse(GridTraversalObserver)    have not been able to assign enough cells from 0 to new tree 112 (should have deployed 75 more cells)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -2,10 +2,10 @@
 
   @page page_peano_localisation Localisation of data and data exchange
 
-Peano allows you to attach data to faces, cells and vertices. 
+Peano allows you to attach data to faces, cells and vertices.
 By default, it stores these
 data everywhere within the domain on each and every resolution level.
-However, you can alter this behaviour. 
+However, you can alter this behaviour.
 This page discusses how this altering is implemented.
 There's a @ref tutorials_peano4_mask_out_data_usage "dedicated tutorial on this topic" which you might want to study first.
 
@@ -26,16 +26,16 @@ supplements the generated class with a static routine
 ::peano4::grid::LoadStoreComputeFlag MyClass::loadStoreComputeFlag(...)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It is the content of this enum which dictates if data is stored, loaded or 
+It is the content of this enum which dictates if data is stored, loaded or
 even provided to the solvers. Provided deserves further explanation: Whenever
-Peano runs into a cell, vertex, face, it ensures that all the user data is 
-there. This is important to ensure that all pointer arithmetic behind the 
+Peano runs into a cell, vertex, face, it ensures that all the user data is
+there. This is important to ensure that all pointer arithmetic behind the
 scenes makes sense. However, you might work with data which is held on the
 heap, i.e. your face data for example might point to a chunk of data on the
 heap. In this case, you can instruct Peano via the LoadStoreComputeFlag that
-you don't want to store and load the pointers to these heap data and you 
+you don't want to store and load the pointers to these heap data and you
 also don't want it to create (temporary) data at any point.
-Along these lines, you can also associate data with grid entitites which is 
+Along these lines, you can also associate data with grid entitites which is
 always created temporarily and made available to the solver, but is never
 ever stored or loaded. This is quite useful if you have multiple action sets
 within one observer which pass on information. In some way, such temporary data

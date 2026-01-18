@@ -1,6 +1,47 @@
 /**
 
-@page applications_exahype2_exaseis_cartesian Cartesian LOH.1
+@page applications_exahype2_exaseis_cartesian Cartesian
+
+Linear elastodynamics describes waves propagating through
+elastic heterogeneous media by relating displacements, velocities,
+stress and strain. We write the momentum equations of motion as:
+
+\f{eqnarray*}{
+\frac{\partial}{\partial t} \begin{pmatrix}
+                \sigma \\ \rho v
+               \end{pmatrix}
+               +
+               \begin{pmatrix}
+               E(\lambda, \mu) & 0 \\
+               0  & 0
+               \end{pmatrix}
+               \cdot \nabla
+               \begin{pmatrix}
+                v \\ \sigma
+               \end{pmatrix}
+               + \nabla \cdot
+               \begin{pmatrix}
+                0 \\ \sigma
+               \end{pmatrix}
+                =
+               0
+\f}
+
+where \f$\rho \f$ denotes the mass density, \f$ v \f$ the velocity, the stress tensor \f$ \sigma = (\sigma_{xx},\sigma_{yy}, \sigma_{zz},\sigma_{xy},\sigma_{xz},\sigma_{yz})\f$, and
+\f$ E(\lambda, \mu)\f$ the material matrix depends only on the two Lamé constants \f$ \lambda \f$ and \f$ \mu \f$ of the material.
+
+These equations can be used to simulate seismic waves, such
+as those radiated by earthquakes. The restriction of ExaHyPE to Cartesian meshes seems to be restrictive.
+However, adaptive Cartesian meshes can be extended to allow
+the modelling of complex topography.
+
+To verify the accuracy of this method we solve the layer over homogeneous halfspace (LOH.1) benchmark problem described
+by Day et al. This problem is a well-known reference benchmark for seismic wave propagation in numerical codes. The LOH.1
+benchmark considers way propagation in a hexahedral geometry filled with two materials that are stacked on top of each other.
+The first material is characterised by a lower density and smaller seismic wave speeds.
+
+A point source is placed 2 km below the surface at the centre of the domain, such that the resulting wave propagates through
+the change of material.
 
 \image html Geometry.png
 

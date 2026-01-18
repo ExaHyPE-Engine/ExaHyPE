@@ -1,0 +1,15 @@
+/**
+@page applications_exahype2_airglow Airglow chemistry
+
+This example couples 3D gravity‐wave dynamics with a simplified airglow chemistry
+model in the mesosphere and lower thermosphere. Background temperature and composition
+profiles are imported from external atmosphere models (e.g. NRLMSISE), and are then used to
+construct steady states for the major species \f$ (\text{O}, \text{O}_2, \text{N}_2, \text{O}_3) \f$ and the airglow emitters
+(OH vibrational levels, excited oxygen).
+
+On top of this steady background, ExaHyPE 2 evolves a finite–volume Godunov solver that transports the chemical species with
+prescribed winds and applies height-dependent production and loss terms.
+Different sets of Einstein coefficients can be selected to study how the gravity waves
+modulate the airglow layer and its emission bands.
+
+*/

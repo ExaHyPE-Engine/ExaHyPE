@@ -1,21 +1,37 @@
-/** 
+/**
 
-@page page_tutorials_exahype2_numerics_discontinous-Galerkin Discontinuous Galerkin
+@page page_exahype2_numerics_finite-differences Finite Difference
 
 \tableofcontents
+Finite-difference methods (FD) are a class of numerical methods for solving differential
+equations by approximating derivatives with finite differences. By this, we can convert ODEs
+or PDEs (which may be nonlinear) into a system of linear equations that can be solved by matrix
+algebra techniques.
 
+Here we give a classic example using the FD method to solve the 2D Poisson equation:
 
+We consider
+\f[
+    -\Delta u = f \ \text{in} \ \Omega = (0,1)^2 \\
+    u|_{\partial \Omega} = 0
+\f]
 
-<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
-This page is not yet written (properly).
-</div>
-
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
-This page is a crude run-through through the Finite Volumes numerical scheme as we find it in ExaHyPE.
-It covers the basics without most of the actual maths that you find in textbooks.
-In a first run through the tutorials, it might be reasonable to skip this page, to continue
-with some hands-on examples and then to return to this description once you have a code 
-up and running and want to deep dive into the methodology.
-</div>
-    
+Let \f$ h>0 \f$ the mesh size such that \f$ Mh = 1 \f$ for \f$ M \in \mathbb{N} \f$.
+We introduce the equidistant mesh \f$ \Omega_h = \{ (x_h, y_l) = (kh, lh) \ | \ 0 \leq k,l \leq M \} \f$,
+the discrete boundary \f$ \partial \Omega_h = \partial \Omega \cap \Omega_h \f$ and a discrete function
+\f$ u_h: \Omega_h \to \mathbb{R} \f$, abbreviating \f$ u_{k,l} = u_h(x_k, y_l)\f$.
+For interior points in \f$ \Omega_h \f$, we discretize the Laplace operator as
+\f[
+    u_{xx}(x_k, y_l) = \frac{1}{h^2} (u_{k-1, l} - 2u_{k, l} + u_{k+1, l}) + O(h^2) \\
+    u_{yy}(x_k, y_l) = \frac{1}{h^2} (u_{k, l - 1} - 2u_{k, l} + u_{k, l+1}) + O(h^2)
+\f]
+We thus define a discrete Laplace operator according to
+\f[
+    -h^2 \Delta_h u_h(x_k, y_l) = (4u_{k,l} - u_{k-1, l} - u_{k+1, l} - u_{k, l - 1} - u_{k, l+1})
+\f]
+With the discrete right-handside \f$ (f_h)_{k,l} = f(x_k, y_l) \f$, we obtain the interior discretization of \f$ -\Delta u = f \ \text{in}\  \Omega\f$
+as
+\f[
+    -\Delta_h u_h = f_h
+\f]
 */

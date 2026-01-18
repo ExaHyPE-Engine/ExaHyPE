@@ -327,15 +327,15 @@ If you activate the statistics, automatically writes some runtime
 statistics into the stats file. These statistics give you, for example,
 and overview how many tasks are in flight at any time, or how long 's
 MPI routines had to wait for incoming data. The output format is plain
-csv and thus straightforward to parse. 
+csv and thus straightforward to parse.
 
 
 However, the directory `python/peano4/postprocessing` also holds some scripts
-to postprocess and visualise the outcome. The starting point is the inspect 
+to postprocess and visualise the outcome. The starting point is the inspect
 command, which really only tells you which column holds which data.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-python3 ~/git/Peano/python/peano4/postprocessing/inspect-statistics.py statistics-rank-0.csv 
+python3 ~/git/Peano/python/peano4/postprocessing/inspect-statistics.py statistics-rank-0.csv
 Column 	| Counter
 --------|----------------
 0	|  time (always used to plot)
@@ -357,7 +357,7 @@ python3 ~/git/Peano/python/peano4/postprocessing/plot-statistics.py -c 4,5,6 -o 
 
 @image html logging-statistcs.png
 
-I provide different visualisation types. The statistics file contains 
+I provide different visualisation types. The statistics file contains
 exclusively deltas and it samples. Hence, it might somtimes look as if almost
 no data were in the database. Yet, this could also be due to the fact that the
 code logs the same value all the time. Use --help to find out more about
