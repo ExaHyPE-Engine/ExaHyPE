@@ -69,8 +69,15 @@ public:
 
 
   /**
+   * Create a string representation of load balancing object
+   *
    * Generic string serialisation. You might want to extend it. Therefore,
    * the routine is labelled as virtual.
+   *
+   * The routine has to be able to deal with the fact that _costMetrics
+   * might be nullptr according to AbstractLoadBalancing(). The configuration
+   * in return does not feed into toString(). Therefore, we don't have to check
+   * if it is pointing to nullptr.
    */
   virtual std::string toString() const;
 
@@ -81,13 +88,28 @@ public:
   virtual void enable(bool);
 
 
+  /**
+   * Has mesh split recently
+   *
+   * Means that mesh has split over the past three iterations. The number three
+   * is hard-coded, as we need three iterations to perform a proper split:
+   *
+   * 1. Trigger the split,
+   * 2. split the mesh actually,
+   * 3. update all the stats.
+   *
+   * If we have then not come to the conclusion that we should immediately
+   * split again, then we haven't split recently.
+   */
   virtual bool hasSplitRecently() const;
 
 
   /**
-   * Clarifies whether load balancing is, in principle, enabled. Might however
-   * mean that the load balancing is currently (temporarily) disabled. In
-   * this case, the routine still returns true.
+   * Is load balancing enabled
+   *
+   * Clarifies whether load balancing is, in principle, enabled. We we return
+   * true, it means that we are not disabled. The balancer might still be
+   * temporarily suspended.
    */
   bool isEnabled(bool globally) const;
 

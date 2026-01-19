@@ -7,67 +7,31 @@ namespace tarch {
   namespace multicore {
     namespace omp {
       /**
-       * Grow the memory region used for the dependency tracking
-       *
-       * Addresses that represent dependencies in OpenMP have to correspond to
-       * allocated, user-owned memory. To ensure this is the case, I hold one
-       * big memory block for all the dependencies.
-       *
-       * Unfortunately, I do not know how big this memory block has to be. So I
-       * use any check if an out condition can be served as an
-       * opportunity to grow the memory region which arises always if
-       * there are no more tasks pending that might use the dependency tracking.
-       * This happens in shouldGrowDependencyMemory().
-       *
-       * ## Thread safety
-       *
-       * No new tasks with dependencies can not be spawned while I grow the memory
-       * region. This means we need a critical section in the routine around this
-       * one: multiple threads can read, but if one decides to write, no other
-       * thread should do anything related.
-       *
-       * ## Dependencies
-       *
-       * I originally had this idea that each task could increment/decrement a
-       * counter, so I can check if tasks are still pending. If so, I'd increment.
-       * But this does not work: If a task decrements the counter and signals
-       * "I'm done", OpenMP might not have tidied up the underlying memory region.
-       * So if I now free the memory (as I think no tasks are there anymore), this
-       * might happen at exactly the point in time where OpenMP still updates its
-       * out-dependencies. Therefore I loop over all potential in-dependencies
-       * (many of them will be antidependencies) to ensure that OpenMP really has
-       * done all of its work. A simple wait will btw not work: It only works on
-       * directly children.
-       *
-       * ## Remark
-       *
-       * At this point, I do not use the routine. For some applications, it might
-       * be reasonable to invoke it, but it has to happen outside.
-       */
-      void reserveDependencyTrackingMemory();
-
-      /**
        * OpenMP-internal namespace
        *
-       * I originally had some helper functions within the C++ code. However,
-       * Peano implements this policy that all documentation should be in the
-       * header (and the documentation extracts also only header info into the
-       * generated HTML pages). Therefore, I decided to introduce this
-       * internal namespace.
+       * Peano's task fusion pattern requires transparent tasks. An explanation
+       * of this can be found in @ref tarch::multicore. Just scroll down to the
+       * caption "Task execution patterns and orchestration" in the detailed
+       * description.
        *
-       * The variables used internally by our mapping of Peano's tasking onto
-       * OpenMP tasks still remain in the implementation file only.
+       * OpenMP supports transparent tasks with version 6. Peano therefore
+       * has an internal helper routine tarch::multicore::omp::majorOpenMPVersion(),
+       * through which we can check if this major version is already supported.
+       * Depending on the OpenMP version, we can either directly map our task
+       * graphs onto tasks, or we have to work around the whole transparency
+       * thing. No matter if we have OpenMP 6 or not, the fundamental idea of
+       * how we map Peano's task numbers, which are all integers, onto OpenMP
+       * task dependencies.
        *
        *
-       * ## Task dependencies
+       * # Task dependencies: mapping integer task numbers onto addresses
        *
        * Dependency tracking in OpenMP is organised via addresses. These
        * addresses are sole helpers, i.e. the underlying memory region doesn't
        * hold any data with semantics. However, it has to be owned by the
        * application code. To ensure this is the case, we allocate some chunk
-       * only for the dependency tracking and hold its baseline address in this
-       * variable. This chunk memory is held by the pointer
-       * dependencyTrackingBaseAddress.
+       * only for the dependency tracking and hold its baseline address in a
+       * variable dependencyTrackingBaseAddress.
        *
        * The initial default size of this memory tracking is specified by
        * DefaultSizeOfMemoryRegionUsedForDependencyTracking. This is implicitly
@@ -94,10 +58,39 @@ namespace tarch {
        * terminated. If the task is currently executed immediately by another
        * thread, as we don't have dependency memory, there's no way for the
        * taskwait to actually wait for the task to terminate. All tasks are
-       * therefore mapped onto actual tasks as a matter of principle. If we
-       * have to wait to get some memory allocations through before we issue
-       * the task, then we wait.
+       * therefore mapped onto actual tasks as a matter of principle.
        *
+       * If we don't have the memory to administer a task, we have to grow
+       * it before we continue handling it. The process how to handle a new
+       * task thus is always the same:
+       *
+       * - Invoke @ref tarch::multicore::omp::internal::reserveDependencyTrackingMemory()
+       *   to ensure that memory is available to handle a task number.
+       * - For all dependencies that we handle, check with @ref tarch::multicore::omp::internal::canServeDependencyEntry()
+       *   if these had been mapped onto proper tasks before. If not, we can
+       *   just ignore these dependencies (this also holds for task waits).
+       * - Check via tarch::multicore::omp::majorOpenMPVersion() if we can
+       *   map a task onto a transparent task or need to do all depencency
+       *   tracking manually.
+       *
+       * You find this pattern in @ref tarch::multicore::native::spawnTask()
+       * for example.
+       *
+       *
+       * ## Tasks in OpenMP before version 5
+       *
+       * If we have OpenMP 5 or earlier, we don't have transparent tasks, so
+       * have to provide a workaround. What we do it that we do not only
+       * allocate some memory for dependency tracking, we also set each entry
+       * to one of the following values:
+       *
+       * - TaskNumberNotUsedYet
+       * - TaskNumberSpawned
+       * - TaskNumberRunning
+       * - TaskNumberTerminated
+       *
+       * Task waits are then realised through atomics and polling over these
+       * variables.
        *
        */
       namespace internal {
@@ -109,6 +102,46 @@ namespace tarch {
          * Used only for debugging reasons.
          */
         std::string OpenMP5TaskStatus(DependencyTrackingDataType);
+
+        /**
+         * Grow the memory region used for the dependency tracking
+         *
+         * Addresses that represent dependencies in OpenMP have to correspond to
+         * allocated, user-owned memory. To ensure this is the case, I hold one
+         * big memory block for all the dependencies.
+         *
+         * Unfortunately, I do not know how big this memory block has to be. So I
+         * use any check if an out condition can be served as an
+         * opportunity to grow the memory region which arises always if
+         * there are no more tasks pending that might use the dependency tracking.
+         * This happens in shouldGrowDependencyMemory().
+         *
+         * ## Thread safety
+         *
+         * No new tasks with dependencies can not be spawned while I grow the memory
+         * region. This means we need a critical section in the routine around this
+         * one: multiple threads can read, but if one decides to write, no other
+         * thread should do anything related.
+         *
+         * ## Dependencies
+         *
+         * I originally had this idea that each task could increment/decrement a
+         * counter, so I can check if tasks are still pending. If so, I'd increment.
+         * But this does not work: If a task decrements the counter and signals
+         * "I'm done", OpenMP might not have tidied up the underlying memory region.
+         * So if I now free the memory (as I think no tasks are there anymore), this
+         * might happen at exactly the point in time where OpenMP still updates its
+         * out-dependencies. Therefore I loop over all potential in-dependencies
+         * (many of them will be antidependencies) to ensure that OpenMP really has
+         * done all of its work. A simple wait will btw not work: It only works on
+         * directly children.
+         *
+         * ## Remark
+         *
+         * At this point, I do not use the routine. For some applications, it might
+         * be reasonable to invoke it, but it has to happen outside.
+         */
+        void reserveDependencyTrackingMemory();
 
         /**
          * Spawn task using OpenMP 6 syntax
@@ -156,7 +189,7 @@ namespace tarch {
          *  a vector here (even if the udnerlying type is a set), as we use OpenMP's
          *  iterator.
          *
-         * @param outDependencies Is either empty or contains exactly one element. As
+         * @param outDependency Is either empty or contains exactly one element. As
          *  we use a vector, we can work with OpenMP's iterator supporting both an
          *  outgoing dependency and no dependencies at all.
          */
@@ -184,9 +217,14 @@ namespace tarch {
          *    we are not ready yet.
          * 2. We cannot handle self-dependencies, i.e. in-out ones. If we spot
          *    an in-out dependency, we remove it from inDependencies (therefore
-         *    it is not const), wait manually for it to terminate by polling
-         *    the status, and then we carry on. The manual wait is important,
-         *    as we will overwrite the status with pending immediately after.
+         *    it is not const), wait manually for our predecessor task to
+         *    terminate by polling the status, and then we carry on. The manual
+         *    wait is important, as we will overwrite the status with pending
+         *    immediately after.
+         *
+         * As we do all of our dependency management manually, we don't have to
+         * rely on any OpenMP dependencies at all. But it might actually make
+         * sense to employ them too (see remarks below).
          *
          *
          * ## Assumptions
@@ -198,8 +236,9 @@ namespace tarch {
          *   within inDependencies and outDependency;
          * - The semaphore dependencyTrackingSemaphore is locked with a read lock.
          * 
+         *
          * ## Issues we found
-
+         *
          * It is possible that many threads spawn tasks at the same time that have
          * to wait for other tasks that are currently stored in the ready queue.
          * As we poll the ready queue state, this can lead to starvation.
@@ -209,6 +248,48 @@ namespace tarch {
          * so it will eventually end up with one that is ready to process. This
          * can also occur in waitForTasks(...), and the problem is dealt with in the
          * same way. 
+         *
+         *
+         * ## Implementation decision
+         *
+         * Modelling the out dependencies as vector is not particularly elegant.
+         * As each task as at most one out dependency (its "number"), we could
+         * have worked with an integer making one particular value, e.g. -1,
+         * mean "no dependency". As I work with a vector however, I can use
+         * OpenMP's iterators.
+         *
+         *
+         * ## Flaws and known issues
+         *
+         * Logically, there is no need for the spawned task to have any
+         * dependencies, as all dependency management is done manually through
+         * polling. This is not very elegant. Indeed, I'm afraid that it can
+         * lead to starvation. Therefore, I would like to use dependencies.
+         * If the lack of transparent dependencies leads to antidependencies,
+         * i.e. tasks start prematurely, I don't care, as we still have the
+         * manual handling.
+         *
+         * If the dependency management works however, the task runtime ensures
+         * that we do not stress the system through polling too much.
+         * Therefore, I originally had this splendid idea to use
+         *
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         * #pragma omp task priority(job->getPriority()) depend(iterator(j=0:inDependencies.size()), in: dependencyTrackingMemory[inDependencies[j]]) depend(iterator(j=0:outDependency.size()), out: dependencyTrackingMemory[outDependency[j]]) shared(numberOfPendingTasks) untied
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         *
+         * for the tasks. However, this made the code crash in the OpenMP
+         * runtime non-deterministically.
+         *
+         * @see tarch::multicore::omp::internal::hasTaskFinishedInOpenMP5() as counterpart how to
+         *   manually wait for tasks.
+         *
+         * @param job Pointer to the actual task. Is never a nullptr.
+         * @param inDependencies Number of in-dependencies. All of these
+         *   indices can be served by the underlying memory region. Set might
+         *   be empty.
+         * @param outDependency Out-dependency which is either an empty set
+         *   meaning that there is no out-dependency and noone will ever wait
+         *   for this specific task, or it holds exactly one number.
          */
         void spawnTaskWithOpenMP5(
           tarch::multicore::Task*                           job,

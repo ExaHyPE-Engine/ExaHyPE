@@ -30,15 +30,27 @@ from CCZ4Solver import (
 from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStep
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
 
-LoadBalancingMetrics = ["generic", "tailored"]
+LoadBalancingMetrics_Generic  = "generic"
+LoadBalancingMetrics_Tailored = "tailored"
+LoadBalancingMetrics_Offline_Regular = "offline-regular"
+LoadBalancingMetrics = [LoadBalancingMetrics_Generic, LoadBalancingMetrics_Tailored, LoadBalancingMetrics_Offline_Regular]
+
+SchedulerChoices_Native                        = "native"
+SchedulerChoices_NativePriorities              = "native-priorities"
+SchedulerChoices_LazyEvaluation                = "gpu-lazy-evaluation"
+SchedulerChoices_TimedExecution                = "gpu-timed-execution"
+SchedulerChoices_ProducerConsumerTaskSequence  = "gpu-producer-consumer"
+SchedulerChoices_EagerConsumerTasks            = "gpu-eager-consumer-tasks"
 SchedulerChoices = [
-            "native-no-priorities",
-            "native",
-            "tailored",
-            "parallel-for",
-            "subtasks",
-            "subtasks-and-kernel-parallelisation",
+            SchedulerChoices_Native,
+            SchedulerChoices_NativePriorities,
+            SchedulerChoices_LazyEvaluation,
+            SchedulerChoices_TimedExecution,
+            SchedulerChoices_ProducerConsumerTaskSequence,
+            SchedulerChoices_EagerConsumerTasks
         ]
+
+
 SolverChoices_FiniteVolumes_PatchSize6  = "fv-6"
 SolverChoices_FiniteVolumes_PatchSize48 = "fv-48"
 SolverChoices_FiniteVolumes_PatchSize96 = "fv-96"
@@ -52,11 +64,200 @@ SolverChoices = [
             "fd4-rk1-limited-ps-6",
         ] 
 
-#
-# Enclave versions are missing
-#
-               
-if __name__ == "__main__":
+
+def create_exahype2_project(
+        executable,
+        end_time,
+        plot_interval,
+        peano_dir,
+        mode,
+        ):
+    """!
+    
+    Create the vanilla ExaHyPE 2 project which we then use to supplement with 
+    solvers. That is, this routine does nto add any solvers yet
+    
+    """
+    project = exahype2.Project(
+        ["benchmarks", "exahype2", "ccz4"],
+        "ccz4",
+        executable=executable,
+    )
+
+    dimensions = 3
+    offset = [-9, -9, -9]
+    domain_size = [18, 18, 18]
+
+    project.set_global_simulation_parameters(
+        dimensions,  # dimensions
+        offset,
+        domain_size,
+        args.end_time,
+        0.0,
+        args.plot_interval,
+        [False, False, False],
+        8,  # plotter precision
+    )
+
+    project.set_output_path("./")
+ 
+    project.set_Peano4_installation(peano_dir, peano4.output.string_to_mode(mode))
+      
+    return project
+
+
+def add_generic_load_balancing(project, 
+                               trees,
+                               ):
+    assert trees>=0 
+    if trees>0:
+        project.set_load_balancing(
+            "toolbox::loadbalancing::strategies::cascade::SpreadOutHierarchically",
+            """
+          new ::exahype2::LoadBalancingConfiguration(
+            0.98, 
+            1, 
+            {},
+            {}
+          ),
+          new toolbox::loadbalancing::metrics::CellCount()
+        """.format(
+                trees, trees
+            ),
+        )
+    else:
+        project.set_load_balancing(
+            "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+            """
+          new ::exahype2::LoadBalancingConfiguration(
+            0.98,  
+            1
+          ),
+          new toolbox::loadbalancing::metrics::CellCount()
+        """
+        )
+         
+def add_hardcoded_load_balancing_over_regular_mesh(project, 
+                                                   trees):
+    """!
+    
+     @todo This is not nice. The signature should accept the mesh 
+     size, call Dmitry's offline load balancer and hand the outcome
+     over to the load balancing directly.
+    
+    """
+    project.set_load_balancing(
+      "toolbox::loadbalancing::strategies::Hardcoded",
+      "{ {6,6,6}, {0,0,0}, {4921,4921,4920}, {0,0,0}, peano4::SplitInstruction::Mode::AggressiveTopDown}"
+    )
+
+
+def add_load_balancing_with_cost_metric(project,
+                                        trees):
+        load_balancing_cell_label = (
+            exahype2.grid.FineGridCellLoadBalancingCostMetric.create_cell_label(project)
+        )
+        load_balancing_action_set = exahype2.grid.FineGridCellLoadBalancingCostMetric(
+            load_balancing_cell_label, "1.0 / (1.0+tarch::la::norm2(marker.x()))"
+        )
+        project.add_action_set_to_create_grid(load_balancing_action_set)
+        if trees==0:
+            configuration = """
+          new ::exahype2::LoadBalancingConfiguration(
+            0.98, 
+            1, 
+            {},
+            {}
+          ),
+          new toolbox::loadbalancing::metrics::CustomCellWeight()
+        """.format(
+                trees, trees
+            )
+        else:
+            configuration = """
+          new ::exahype2::LoadBalancingConfiguration(
+            0.98, 
+            1, 
+          ),
+          new toolbox::loadbalancing::metrics::CustomCellWeight()
+        """
+        project.set_load_balancing(
+            "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
+            configuration,
+        )
+
+
+def lower_to_peano4_project(project,
+                            verbose,
+                            add_fv,
+                            add_fd4,
+                            ):
+    """!
+    
+    Take the ExaHyPE 2 project with all the CCZ4 solvers and lower it
+    into a plain Peano project. Then, add all the CCZ4-specific implementation
+    fiels to the build setup.
+    
+    This routine also adds the multicore orchestration implementation. This
+    can be done totally agonistic to the fact if the tailored orchestration
+    is used or not. After all, the linker will throw it out if it is not 
+    used at all.
+    
+    """
+    peano4_project = project.generate_Peano4_project(verbose)
+
+    my_primary_solver.add_makefile_parameters(
+        peano4_project, "../../../../applications/exahype2/ccz4"
+    )
+
+    peano4_project.output.makefile.add_linker_flag("-lm -lgsl -lgslcblas")
+    peano4_project.output.makefile.add_cpp_file(
+        "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Utilities.cpp"
+    )
+    peano4_project.output.makefile.add_cpp_file(
+        "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Parameters.cpp"
+    )
+    peano4_project.output.makefile.add_cpp_file(
+        "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Logging.cpp"
+    )
+    peano4_project.output.makefile.add_cpp_file(
+        "../../../../applications/exahype2/ccz4/libtwopunctures/TwoPunctures.cpp"
+    )
+    peano4_project.output.makefile.add_cpp_file(
+        "../../../../applications/exahype2/ccz4/libtwopunctures/CoordTransf.cpp"
+    )
+    peano4_project.output.makefile.add_cpp_file(
+        "../../../../applications/exahype2/ccz4/libtwopunctures/Equations.cpp"
+    )
+    peano4_project.output.makefile.add_cpp_file(
+        "../../../../applications/exahype2/ccz4/libtwopunctures/FuncAndJacobian.cpp"
+    )
+    peano4_project.output.makefile.add_cpp_file(
+        "../../../../applications/exahype2/ccz4/libtwopunctures/Newton.cpp"
+    )
+
+    peano4_project.output.makefile.add_cpp_file("MulticoreOrchestration.cpp")
+
+    peano4_project.output.makefile.add_CXX_flag("-DIncludeTwoPunctures")
+    if add_fv and add_fd4:
+        peano4_project.output.makefile.add_CXX_flag("-DCoupleWithFV")
+        peano4_project.output.makefile.add_cpp_file("CCZ4SBH_FV.cpp")
+        peano4_project.output.makefile.add_h_file("CCZ4SBH_FV.h")
+        peano4_project.output.makefile.add_cpp_file("CCZ4SBH_FD4.cpp")
+        peano4_project.output.makefile.add_h_file("CCZ4SBH_FD4.h")
+    elif add_fv:
+        peano4_project.output.makefile.add_CXX_flag("-DPureFV")
+        peano4_project.output.makefile.add_cpp_file("CCZ4SBH_FV.cpp")
+        peano4_project.output.makefile.add_h_file("CCZ4SBH_FV.h")
+    else:
+        peano4_project.output.makefile.add_CXX_flag("-DPureFD4")
+        peano4_project.output.makefile.add_cpp_file("CCZ4SBH_FD4.cpp")
+        peano4_project.output.makefile.add_h_file("CCZ4SBH_FD4.h")
+
+    return peano4_project
+
+
+def get_command_line_args():
     parser = argparse.ArgumentParser(
         description="ExaHyPE 2 - CCZ4 single black hole benchmarking script"
     )
@@ -168,19 +369,64 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+    return args
 
-    #
-    # Start of real ExaHyPE 2 script
-    #
-    project = exahype2.Project(
-        ["benchmarks", "exahype2", "ccz4"],
-        "ccz4",
-        executable=args.output,
-    )
 
-    dimensions = 3
-    offset = [-9, -9, -9]
-    domain_size = [18, 18, 18]
+def configure_multicore_configuration(scheduler):
+    """!
+    
+    Add a proper scheduler to the project
+    
+    """
+        
+    if args.scheduler == SchedulerChoices_Native:
+        project.add_mainfile_include( "tarch/multicore/orchestration/Hardcoded.h")
+        project.set_multicore_orchestration(
+            "tarch::multicore::orchestration::Hardcoded::createNative()"
+        )
+    elif args.scheduler == SchedulerChoices_NativePriorities:
+        project.add_mainfile_include( "MulticoreOrchestration.h")
+        project.set_multicore_orchestration(
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::DisableFusionAndMapOntoNativeTask)"
+        )
+    elif args.scheduler == SchedulerChoices_LazyEvaluation:
+        project.add_mainfile_include( "MulticoreOrchestration.h")
+        project.set_multicore_orchestration(
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::LazyEvaluation)"
+        )
+    elif args.scheduler == SchedulerChoices_TimedExecution:
+        project.add_mainfile_include( "MulticoreOrchestration.h")
+        project.set_multicore_orchestration(
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::TimedExecution)"
+        )
+    elif args.scheduler == SchedulerChoices_ProducerConsumerTaskSequence:
+        project.add_mainfile_include( "MulticoreOrchestration.h")
+        project.set_multicore_orchestration(
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskSequence)"
+        )
+    elif args.scheduler == SchedulerChoices_EagerConsumerTasks:
+        project.add_mainfile_include( "MulticoreOrchestration.h")
+        project.set_multicore_orchestration(
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks)"
+        )
+    else:
+            assert False, "not supported yet"
+           
+               
+if __name__ == "__main__":
+    args = get_command_line_args()
+    
+    # =================================
+    # Create project
+    # =================================
+    project = create_exahype2_project( 
+        executable    = args.output,
+        end_time      = args.end_time,
+        plot_interval = args.plot_interval,
+        peano_dir     = args.peanodir, 
+        mode          = args.mode
+        )
+    
 
     if args.amr:
         max_cell_size = domain_size[0] / 3.0
@@ -190,53 +436,7 @@ if __name__ == "__main__":
     ########################################################################################
     # Configure run
     ########################################################################################
-    project.add_mainfile_include( "tarch/multicore/orchestration/Hardcoded.h")
-    project.add_mainfile_include( "MulticoreOrchestration.h")
-    
-    if args.scheduler == "native-no-priorities":
-            project.set_multicore_orchestration(
-                "tarch::multicore::orchestration::Hardcoded::createNative()"
-            )
-            enable_higher_priority_for_FV_tasks = False
-            parallelise_interpolation = KernelParallelisation.NONE
-            fv_kernel_parallelisation = KernelParallelisation.NONE
-    elif args.scheduler == "native":
-            project.set_multicore_orchestration(
-                "tarch::multicore::orchestration::Hardcoded::createNative()"
-            )
-            enable_higher_priority_for_FV_tasks = True
-            parallelise_interpolation = KernelParallelisation.NONE
-            fv_kernel_parallelisation = KernelParallelisation.NONE
-    elif args.scheduler == "tailored":
-            project.set_multicore_orchestration(
-                "new benchmarks::exahype2::ccz4::MulticoreOrchestration()"
-            )
-            enable_higher_priority_for_FV_tasks = True
-            parallelise_interpolation = KernelParallelisation.NONE
-            fv_kernel_parallelisation = KernelParallelisation.NONE
-    elif args.scheduler == "parallel-for":
-            project.set_multicore_orchestration(
-                "new benchmarks::exahype2::ccz4::MulticoreOrchestration()"
-            )
-            enable_higher_priority_for_FV_tasks = True
-            parallelise_interpolation = KernelParallelisation.PARALLEL_FOR
-            fv_kernel_parallelisation = KernelParallelisation.NONE
-    elif args.scheduler == "subtasks":
-            project.set_multicore_orchestration(
-                "new benchmarks::exahype2::ccz4::MulticoreOrchestration()"
-            )
-            enable_higher_priority_for_FV_tasks = True
-            parallelise_interpolation = KernelParallelisation.SUBTASKS
-            fv_kernel_parallelisation = KernelParallelisation.NONE
-    elif args.scheduler == "subtasks-and-kernel-parallelisation":
-            project.set_multicore_orchestration(
-                "new benchmarks::exahype2::ccz4::MulticoreOrchestration()"
-            )
-            enable_higher_priority_for_FV_tasks = True
-            parallelise_interpolation = KernelParallelisation.SUBTASKS
-            fv_kernel_parallelisation = KernelParallelisation.SUBTASKS
-    else:
-            assert False, "not supported yet"
+    configure_multicore_configuration(args.scheduler)
 
     added_limiter = False
     if "fd4-rk1-ps-" in args.solver:
@@ -294,129 +494,25 @@ if __name__ == "__main__":
     else:
         raise "unknown solver type {}".format(args.solver)
 
-    ########################################################################################
-    # Build the project
-    ########################################################################################
-    project.set_global_simulation_parameters(
-        dimensions,  # dimensions
-        offset,
-        domain_size,
-        args.end_time,
-        0.0,
-        args.plot_interval,
-        [False, False, False],
-        8,  # plotter precision
-    )
-
-    project.set_output_path("./")
     # probe_point = [-12,-12,0.0]
     # project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
     # my_solver.select_dofs_to_print = [0,12,16,17,18,54,59,60]
 
-    project.set_Peano4_installation(args.peanodir, peano4.output.string_to_mode(args.mode))
-
-    if args.load_balancing_metric == "generic" and args.trees>0:
-        assert args.trees>=0 
-        project.set_load_balancing(
-            "toolbox::loadbalancing::strategies::cascade::SpreadOutHierarchically",
-            """
-          new ::exahype2::LoadBalancingConfiguration(
-            0.98, 
-            1, 
-            {},
-            {}
-          ),
-          new toolbox::loadbalancing::metrics::CellCount()
-        """.format(
-                args.trees, 2 * args.trees
-            ),
-        )
-    elif args.load_balancing_metric == "generic":
-        assert args.trees==0 
-        project.set_load_balancing(
-            "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
-            """
-          new ::exahype2::LoadBalancingConfiguration(
-            0.98,  
-            1
-          ),
-          new toolbox::loadbalancing::metrics::CellCount()
-        """
-        )
+    if args.load_balancing_metric == LoadBalancingMetrics_Generic:
+        add_generic_load_balancing(project, args.trees)
+    elif args.load_balancing_metric == LoadBalancingMetrics_Tailored:
+        add_load_balancing_with_cost_metric(project, args.trees)
+    elif args.load_balancing_metric == LoadBalancingMetrics_Offline_Regular:
+        add_hardcoded_load_balancing_over_regular_mesh(project, args.trees)
     else:
-        assert args.trees>0
-        load_balancing_cell_label = (
-            exahype2.grid.FineGridCellLoadBalancingCostMetric.create_cell_label(project)
-        )
-        load_balancing_action_set = exahype2.grid.FineGridCellLoadBalancingCostMetric(
-            load_balancing_cell_label, "1.0 / (1.0+tarch::la::norm2(marker.x()))"
-        )
-        project.add_action_set_to_create_grid(load_balancing_action_set)
-        project.set_load_balancing(
-            "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
-            """
-          new ::exahype2::LoadBalancingConfiguration(
-            0.98, 
-            1, 
-            {},
-            {}
-          ),
-          new toolbox::loadbalancing::metrics::CustomCellWeight()
-        """.format(
-                args.trees, 2 * args.trees
-            ),
-        )
+        assert False, "variant not supported"
 
-    peano4_project = project.generate_Peano4_project(verbose=args.verbose)
-
-    my_primary_solver.add_makefile_parameters(
-        peano4_project, "../../../../applications/exahype2/ccz4"
-    )
-
-    peano4_project.output.makefile.add_linker_flag("-lm -lgsl -lgslcblas")
-    peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Utilities.cpp"
-    )
-    peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Parameters.cpp"
-    )
-    peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Logging.cpp"
-    )
-    peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/libtwopunctures/TwoPunctures.cpp"
-    )
-    peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/libtwopunctures/CoordTransf.cpp"
-    )
-    peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/libtwopunctures/Equations.cpp"
-    )
-    peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/libtwopunctures/FuncAndJacobian.cpp"
-    )
-    peano4_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/ccz4/libtwopunctures/Newton.cpp"
-    )
-
-    peano4_project.output.makefile.add_cpp_file("MulticoreOrchestration.cpp")
-
-    peano4_project.output.makefile.add_CXX_flag("-DIncludeTwoPunctures")
-    if added_limiter:
-        peano4_project.output.makefile.add_CXX_flag("-DCoupleWithFV")
-        peano4_project.output.makefile.add_cpp_file("CCZ4SBH_FV.cpp")
-        peano4_project.output.makefile.add_h_file("CCZ4SBH_FV.h")
-        peano4_project.output.makefile.add_cpp_file("CCZ4SBH_FD4.cpp")
-        peano4_project.output.makefile.add_h_file("CCZ4SBH_FD4.h")
-    elif "fv" in args.solver:
-        peano4_project.output.makefile.add_CXX_flag("-DPureFV")
-        peano4_project.output.makefile.add_cpp_file("CCZ4SBH_FV.cpp")
-        peano4_project.output.makefile.add_h_file("CCZ4SBH_FV.h")
-    else:
-        peano4_project.output.makefile.add_CXX_flag("-DPureFD4")
-        peano4_project.output.makefile.add_cpp_file("CCZ4SBH_FD4.cpp")
-        peano4_project.output.makefile.add_h_file("CCZ4SBH_FD4.h")
-
+    peano4_project = lower_to_peano4_project(project,
+                                             args.verbose,
+                                             add_fv = "fv"   in args.solver or added_limiter,
+                                             add_fd4 = "fd4" in args.solver or added_limiter,
+                                             )
+    
     peano4_project.generate(throw_away_data_after_generation=False)
     peano4_project.build(
         make=not args.no_make, make_clean_first=True, number_of_parallel_builds=args.j

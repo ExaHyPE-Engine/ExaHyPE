@@ -66,21 +66,26 @@ This refined splitting method ensures effective load balancing throughout the en
 ### Hardcoded parameter extraction (offline replay)
 
 The helper [`SplitTrees.extract_hardcoded_split_parameters`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py) returns four lists:
-`(gridSweeps, splittingTrees, numberOfCells, subTrees)` to feed into [`toolbox::loadbalancing::strategies::Hardcoded`](src/toolbox/loadbalancing/strategies/Hardcoded.h).
+`(gridSweeps, splittingTrees, numberOfCells, subTrees)` to feed into
+[`toolbox::loadbalancing::strategies::Hardcoded`](src/toolbox/loadbalancing/strategies/Hardcoded.h).
 
-Semantics (non-leaf-centric):
-- `gridSweeps`: `base_sweep * target_subtree_id` (even numbers if base_sweep=2).
-- `splittingTrees`: unique parent subtree id at earliest appearance level
-- `numberOfCells`: count of cells with the target subtree id on the earliest level where it first appears (ignores deeper descendants created later).
-- `subTrees`: actual subtree ids introduced; must be mapped to destination MPI ranks when constructing the hardcoded strategy (they are not ranks).
+Semantics (multi-level, non-leaf-centric):
+- `gridSweeps`: `base_sweep * (level + 1)`, where `level` is 0-based w.r.t. the API tree arrays.
+  The helper can emit multiple split operations for the same target subtree, one per level.
+- `splittingTrees`: unique parent subtree id for all introduced cells on that level, or 0 if ambiguous.
+- `numberOfCells`: number of cells introduced on that level, i.e. cells with the target subtree id whose
+  parent exists (level>0) and has a different subtree id. For level 0, it is the number of cells on level 0
+  that already belong to the target subtree.
+- `subTrees`: subtree ids introduced by the splits (not ranks). You must map these subtree ids to destination
+  MPI ranks when constructing the hardcoded strategy.
 
 Example constructor usage (C++):
 ```
 toolbox::loadbalancing::strategies::Hardcoded(
-  {2,4},        // gridSweeps
-  {0,0},        // splittingTrees
-  {44,45},      // numberOfCells
-  {1,2},        // destinationRanks (mapped from subTrees)
+  {2,4,6},      // gridSweeps
+  {0,0,0},      // splittingTrees
+  {9,81,1093},  // numberOfCells
+  {1,1,1},      // destinationRanks (mapped from subTrees)
   peano4::SplitInstruction::Mode::BottomUp
 );
 ```

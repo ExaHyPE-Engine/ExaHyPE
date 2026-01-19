@@ -12,8 +12,16 @@ namespace tarch {
   }   // namespace multicore
 } // namespace tarch
 
+
 /**
- * Deploy all tasks to one GPU
+ * Deploy all tasks to GPU
+ *
+ * This is a very simple orchestration which tries to get all tasks over
+ * to a GPU. For this, it relies on @ref tarch::multicore::orchestration::FusionImplementation::LazyEvaluation
+ * as orchestration strategy. The class puts no restrictions on the number of
+ * tasks that it can fuse. Depending on how the object is initialised, all
+ * tasks either go on one GPU, or the routine runs round robin through all
+ * accelerators.
  */
 class tarch::multicore::orchestration::AllOnGPU: public tarch::multicore::orchestration::Strategy {
 private:
@@ -59,5 +67,8 @@ public:
     double probabilityThatTaskIsCompleted
   ) override;
 
+  /**
+   * Hardcoded to @ref tarch::multicore::orchestration::FusionImplementation::LazyEvaluation.
+   */
   virtual FusionImplementation getFusionImplementation() const override;
 };

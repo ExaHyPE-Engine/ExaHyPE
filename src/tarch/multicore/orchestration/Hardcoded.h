@@ -59,10 +59,6 @@ class tarch::multicore::orchestration::Hardcoded: public ::tarch::multicore::orc
      * @param numberOfTasksToFuse The remaining tasks(<numberOfTasksToFuse) will
      *   remain stuck in the background queue and will stay there until processed
      *   lazily.
-     * @param fuseImmediately Fuse right when they are spawned. Otherwise, tasks
-     *   end up in a local queue. If a thread runs out of work, it looks into this
-     *   queue and then fuses. So the fuse happens later, but it does not hold
-     *   back any task production thread.
      * @param targetDevice Non-negative number or tarch::multicore::Task::Host.
      */
     static Hardcoded* createFuseAll(
