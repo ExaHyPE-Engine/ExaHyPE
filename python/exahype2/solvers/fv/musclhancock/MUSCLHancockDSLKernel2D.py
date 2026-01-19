@@ -21,37 +21,53 @@ def timeStepWithMUSCLHancock(patchData: "CellData<double, double>&") -> "void":
     output = input[:, 0:NV, 0:NV]
 
     if EvaluateSource:
-       source = DataBlock([[0, NumberOfUnknowns + NumberOfAuxiliaryVariables], [0, NV], [0, NV], [0, N]], eval("sourceTerm", input[:, 0:NV, 0:NV], x, h, t, dt))
-       output = output + dt * source
-
+       source = DataBlock([[0, NumberOfUnknowns], [0, NV], [0, NV], [0, N]], eval("sourceTerm", input[:, 0:NV, 0:NV], x, h, t, dt))
+       output[0:NumberOfUnknowns, 0:NV, 0:NV] = output[0:NumberOfUnknowns, 0:NV, 0:NV] + dt * source
+    
     #Compute slope with van Albada limiter
     epsilon = 0.01
-    slopeRight = input[0:NumberOfUnknowns, 0:NV+2, 0:NV] - input[0:NumberOfUnknowns, -1:NV+1, 0:NV]
-    slopeLeft = input[0:NumberOfUnknowns, -1:NV+1, 0:NV] - input[0:NumberOfUnknowns, -2:NV, 0:NV]
+    slopeRight = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV+2, 0:NV] - input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, -1:NV+1, 0:NV]
+    slopeLeft = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, -1:NV+1, 0:NV] - input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, -2:NV, 0:NV]
     slopeX = ((slopeRight * slopeRight + epsilon * epsilon)*slopeLeft + (slopeLeft * slopeLeft + epsilon * epsilon)*slopeRight) \
             / (slopeLeft * slopeLeft + slopeRight * slopeRight + 2 * epsilon * epsilon)
 
-    slopeTop = input[0:NumberOfUnknowns, 0:NV, 0:NV+2] - input[0:NumberOfUnknowns, 0:NV, -1:NV+1]
-    slopeBottom = input[0:NumberOfUnknowns, 0:NV, -1:NV+1] - input[0:NumberOfUnknowns, 0:NV, -2:NV]
+    slopeTop = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, 0:NV+2] - input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, -1:NV+1]
+    slopeBottom = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, -1:NV+1] - input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, -2:NV]
     slopeY = ((slopeTop * slopeTop + epsilon * epsilon)*slopeBottom + (slopeBottom * slopeBottom + epsilon * epsilon)*slopeTop) \
             / (slopeBottom * slopeBottom + slopeTop * slopeTop + 2 * epsilon * epsilon)
 
     #Compute face values
-    leftFace = input[0:NumberOfUnknowns, -1:NV+1, 0:NV] - 0.5 * slopeX
-    rightFace = input[0:NumberOfUnknowns, -1:NV+1, 0:NV] + 0.5 * slopeX
-    bottomFace = input[0:NumberOfUnknowns, 0:NV, -1:NV+1] - 0.5 * slopeY
-    topFace = input[0:NumberOfUnknowns, 0:NV, -1:NV+1] + 0.5 * slopeY
+    leftFace = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, -1:NV+1, 0:NV] - 0.5 * slopeX
+    rightFace = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, -1:NV+1, 0:NV] + 0.5 * slopeX
+    bottomFace = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, -1:NV+1] - 0.5 * slopeY
+    topFace = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, -1:NV+1] + 0.5 * slopeY
 
     #Evolve face values by half time step
-    fluxLeft = DataBlock([[0, NumberOfUnknowns], [-1, NV+1], [0, NV], [0, N]], eval("flux", leftFace, x, h, t, dt, 0))
-    fluxRight = DataBlock([[0, NumberOfUnknowns], [-1, NV+1], [0, NV], [0, N]], eval("flux", rightFace, x, h, t, dt, 0))
-    leftFace = leftFace - 0.5 * (dt / h(0)) * (fluxRight - fluxLeft)
-    rightFace = rightFace - 0.5 * (dt / h(0)) * (fluxRight - fluxLeft)
-
-    fluxBottom = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV+1], [0, N]], eval("flux", bottomFace, x, h, t, dt, 1))
-    fluxTop = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV+1], [0, N]], eval("flux", topFace, x, h, t, dt, 1))
-    bottomFace = bottomFace - 0.5 * (dt / h(1)) * (fluxTop - fluxBottom)
-    topFace = topFace - 0.5 * (dt / h(1)) * (fluxTop - fluxBottom)
+    if EvaluateFlux:
+        fluxLeft = DataBlock([[0, NumberOfUnknowns], [-1, NV+1], [0, NV], [0, N]], eval("flux", leftFace, x, h, t, dt, 0))
+        fluxRight = DataBlock([[0, NumberOfUnknowns], [-1, NV+1], [0, NV], [0, N]], eval("flux", rightFace, x, h, t, dt, 0))
+        fluxBottom = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV+1], [0, N]], eval("flux", bottomFace, x, h, t, dt, 1))
+        fluxTop = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV+1], [0, N]], eval("flux", topFace, x, h, t, dt, 1))
+        
+        leftFace[0:NumberOfUnknowns, -1:NV+1, 0:NV] = leftFace[0:NumberOfUnknowns, -1:NV+1, 0:NV] \
+                        - 0.5 * (dt / h(0)) * (fluxRight - fluxLeft) 
+        rightFace[0:NumberOfUnknowns, -1:NV+1, 0:NV] = rightFace[0:NumberOfUnknowns, -1:NV+1, 0:NV] \
+                        - 0.5 * (dt / h(0)) * (fluxRight - fluxLeft) 
+        bottomFace[0:NumberOfUnknowns, 0:NV, -1:NV+1] = bottomFace[0:NumberOfUnknowns, 0:NV, -1:NV+1] \
+                        - 0.5 * (dt / h(1)) * (fluxTop - fluxBottom) 
+        topFace[0:NumberOfUnknowns, 0:NV, -1:NV+1] = topFace[0:NumberOfUnknowns, 0:NV, -1:NV+1] \
+                        - 0.5 * (dt / h(1)) * (fluxTop - fluxBottom) 
+        
+    if EvaluateSource:
+       sourceLeftFace = DataBlock([[0, NumberOfUnknowns], [-1, NV+1], [0, NV], [0, N]], eval("sourceTerm", leftFace, x, h, t, dt))
+       sourceRightFace = DataBlock([[0, NumberOfUnknowns], [-1, NV+1], [0, NV], [0, N]], eval("sourceTerm", rightFace, x, h, t, dt))
+       sourceBottomFace = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV+1], [0, N]], eval("sourceTerm", bottomFace, x, h, t, dt))
+       sourceTopFace = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV+1], [0, N]], eval("sourceTerm", topFace, x, h, t, dt))
+       
+       leftFace[0:NumberOfUnknowns, 0:NV, 0:NV] = leftFace[0:NumberOfUnknowns, 0:NV, 0:NV] + 0.5 * dt * sourceLeftFace
+       rightFace[0:NumberOfUnknowns, 0:NV, 0:NV] = rightFace[0:NumberOfUnknowns, 0:NV, 0:NV] + 0.5 * dt * sourceRightFace
+       bottomFace[0:NumberOfUnknowns, 0:NV, 0:NV] = bottomFace[0:NumberOfUnknowns, 0:NV, 0:NV] + 0.5 * dt * sourceBottomFace
+       topFace[0:NumberOfUnknowns, 0:NV, 0:NV] = topFace[0:NumberOfUnknowns, 0:NV, 0:NV] + 0.5 * dt * sourceTopFace
 
     #Evolve volumes
     maxEigenvaluesLeft = DataBlock([[0, 1], [-1, NV+1], [0, NV], [0, N]], eval("maxEigenvalue", leftFace, x, h, t, dt, 0))
@@ -62,15 +78,21 @@ def timeStepWithMUSCLHancock(patchData: "CellData<double, double>&") -> "void":
     maxEigenvaluesTop = DataBlock([[0, 1], [0, NV], [-1, NV+1], [0, N]], eval("maxEigenvalue", topFace, x, h, t, dt, 1))    
     lambdaY = max(maxEigenvaluesBottom[0:1, 0:NV, 0:NV+1], maxEigenvaluesTop[0:1, 0:NV, -1:NV])
 
-    timeAveragedfluxLeft = DataBlock([[0, NumberOfUnknowns], [-1, NV + 1], [0, NV], [0, N]], eval("flux", leftFace, x, h, t, dt, 0))
-    timeAveragedfluxRight = DataBlock([[0, NumberOfUnknowns], [-1, NV + 1], [0, NV], [0, N]], eval("flux", rightFace, x, h, t, dt, 0))
-    timeAveragedfluxBottom = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV + 1], [0, N]], eval("flux", bottomFace, x, h, t, dt, 1))
-    timeAveragedfluxTop = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV + 1], [0, N]], eval("flux", topFace, x, h, t, dt, 1))
+    rusanovFluxLeft = - 0.5 * lambdaX[0:1, 0:NV, 0:NV] * (leftFace[0:NumberOfUnknowns, 0:NV, 0:NV] - rightFace[0:NumberOfUnknowns, -1:NV-1, 0:NV])
+    rusanovFluxRight = - 0.5 * lambdaX[0:1, 1:NV+1, 0:NV] * (leftFace[0:NumberOfUnknowns, 1:NV+1, 0:NV] - rightFace[0:NumberOfUnknowns, 0:NV, 0:NV])
+    rusanovFluxBottom = - 0.5 * lambdaY[0:1, 0:NV, 0:NV] * (bottomFace[0:NumberOfUnknowns, 0:NV, 0:NV] - topFace[0:NumberOfUnknowns, 0:NV, -1:NV-1])
+    rusanovFluxTop = - 0.5 * lambdaY[0:1, 0:NV, 1:NV+1] * (bottomFace[0:NumberOfUnknowns, 0:NV, 1:NV+1] - topFace[0:NumberOfUnknowns, 0:NV, 0:NV])
 
-    rusanovFluxLeft = 0.5 * (timeAveragedfluxLeft[:, 0:NV, 0:NV] + timeAveragedfluxRight[:, -1:NV-1, 0:NV]) - 0.5 * lambdaX[0:1, 0:NV, 0:NV] * (leftFace[:, 0:NV, 0:NV] - rightFace[:, -1:NV-1, 0:NV])
-    rusanovFluxRight = 0.5 * (timeAveragedfluxLeft[:, 1:NV+1, 0:NV] + timeAveragedfluxRight[:, 0:NV, 0:NV]) - 0.5 * lambdaX[0:1, 1:NV+1, 0:NV] * (leftFace[:, 1:NV+1, 0:NV] - rightFace[:, 0:NV, 0:NV])
-    rusanovFluxBottom = 0.5 * (timeAveragedfluxBottom[:, 0:NV, 0:NV] + timeAveragedfluxTop[:, 0:NV, -1:NV-1]) - 0.5 * lambdaY[0:1, 0:NV, 0:NV] * (bottomFace[:, 0:NV, 0:NV] - topFace[:, 0:NV, -1:NV-1])
-    rusanovFluxTop = 0.5 * (timeAveragedfluxBottom[:, 0:NV, 1:NV+1] + timeAveragedfluxTop[:, 0:NV, 0:NV]) - 0.5 * lambdaY[0:1, 0:NV, 1:NV+1] * (bottomFace[:, 0:NV, 1:NV+1] - topFace[:, 0:NV, 0:NV])
+    if EvaluateFlux:
+        timeAveragedfluxLeft = DataBlock([[0, NumberOfUnknowns], [-1, NV + 1], [0, NV], [0, N]], eval("flux", leftFace, x, h, t, dt, 0))
+        timeAveragedfluxRight = DataBlock([[0, NumberOfUnknowns], [-1, NV + 1], [0, NV], [0, N]], eval("flux", rightFace, x, h, t, dt, 0))
+        timeAveragedfluxBottom = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV + 1], [0, N]], eval("flux", bottomFace, x, h, t, dt, 1))
+        timeAveragedfluxTop = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV + 1], [0, N]], eval("flux", topFace, x, h, t, dt, 1))
+
+        rusanovFluxLeft = rusanovFluxLeft + 0.5 * (timeAveragedfluxLeft[:, 0:NV, 0:NV] + timeAveragedfluxRight[:, -1:NV-1, 0:NV])
+        rusanovFluxRight = rusanovFluxRight + 0.5 * (timeAveragedfluxLeft[:, 1:NV+1, 0:NV] + timeAveragedfluxRight[:, 0:NV, 0:NV])
+        rusanovFluxBottom = rusanovFluxBottom + 0.5 * (timeAveragedfluxBottom[:, 0:NV, 0:NV] + timeAveragedfluxTop[:, 0:NV, -1:NV-1])
+        rusanovFluxTop = rusanovFluxTop + 0.5 * (timeAveragedfluxBottom[:, 0:NV, 1:NV+1] + timeAveragedfluxTop[:, 0:NV, 0:NV])
     
     output[0:NumberOfUnknowns, :, :] = output[0:NumberOfUnknowns, :, :] + (dt / h(0)) * NV * (rusanovFluxLeft - rusanovFluxRight)
     output[0:NumberOfUnknowns, :, :] = output[0:NumberOfUnknowns, :, :] + (dt / h(1)) * NV * (rusanovFluxBottom - rusanovFluxTop)

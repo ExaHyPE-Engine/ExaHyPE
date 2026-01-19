@@ -15,12 +15,16 @@
 
 
 benchmarks::exahype2::ccz4::MulticoreOrchestration::MulticoreOrchestration(
-  const tarch::multicore::orchestration::FusionImplementation&  fusionImplementation
+  const tarch::multicore::orchestration::FusionImplementation&  fusionImplementation,
+  int minFusedTasks,
+  int maxFusedTasks
 ):
   _nestedBSPLevels(0),
   _maxFiniteVolumeTasks(0),
   _finiteVolumeTasksInThisBSPSection(0),
-  _fusionImplementation(fusionImplementation)
+  _fusionImplementation(fusionImplementation),
+  _minFusedTasks(minFusedTasks),
+  _maxFusedTasks(maxFusedTasks)
 {}
 
 
@@ -55,11 +59,11 @@ benchmarks::exahype2::ccz4::MulticoreOrchestration::FuseInstruction benchmarks::
   );
 
   auto FDFuseInstruction = benchmarks::exahype2::ccz4::MulticoreOrchestration::FuseInstruction(
-    targetDevice, 16, std::numeric_limits<int>::max()
+    targetDevice, _minFusedTasks, _maxFusedTasks
   );
 
   #if defined(PureFD4) or defined(PureFV)
-  return FVFuseInstruction;
+  return FDFuseInstruction;
   #else
   return taskType == tasks::CCZ4SBH_FVEnclaveTask::getEnclaveTaskTypeId()
                    ? FVFuseInstruction
