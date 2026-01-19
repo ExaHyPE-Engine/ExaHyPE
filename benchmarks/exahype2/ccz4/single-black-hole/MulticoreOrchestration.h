@@ -68,8 +68,20 @@ class benchmarks::exahype2::ccz4::MulticoreOrchestration: public tarch::multicor
      */
     int _finiteVolumeTasksInThisBSPSection;
 
+    tarch::multicore::orchestration::FusionImplementation  _fusionImplementation;
+
   public:
-    MulticoreOrchestration();
+    /**
+     * Construct the orchestration
+     *
+     * @param fusionImplementation Which fusion scheme to use. There's some
+     *   documentation on @ref benchmarks_exahype2_ccz4_single_black_hole on
+     *   these choices, but then notably @ref tarch::multicore::orchestration::FusionImplementation
+     *   itself.
+     */
+    MulticoreOrchestration(
+      const tarch::multicore::orchestration::FusionImplementation&  fusionImplementation
+    );
     virtual ~MulticoreOrchestration() = default;
 
     /**
@@ -112,4 +124,19 @@ class benchmarks::exahype2::ccz4::MulticoreOrchestration: public tarch::multicor
      * I'm happy for a section to be processed in parallel.
      */
     virtual ExecutionPolicy paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) override;
+
+    /**
+     * Nop
+     */
+    virtual void updateFuseStatistics(
+      int    taskType,
+      int    queueSize,
+      double averageNumberOfPendingReadyTasksPerProcessTaskExecution,
+      double probabilityThatTaskIsCompleted
+    ) override;
+
+    /**
+     * Return the fusion implementation variant that has been configured in the constructor.
+     */
+    virtual tarch::multicore::orchestration::FusionImplementation getFusionImplementation() const override;
 };

@@ -35,14 +35,22 @@ LoadBalancingMetrics_Tailored = "tailored"
 LoadBalancingMetrics_Offline_Regular = "offline-regular"
 LoadBalancingMetrics = [LoadBalancingMetrics_Generic, LoadBalancingMetrics_Tailored, LoadBalancingMetrics_Offline_Regular]
 
+SchedulerChoices_Native                        = "native"
+SchedulerChoices_NativePriorities              = "native-priorities"
+SchedulerChoices_LazyEvaluation                = "gpu-lazy-evaluation"
+SchedulerChoices_TimedExecution                = "gpu-timed-execution"
+SchedulerChoices_ProducerConsumerTaskSequence  = "gpu-producer-consumer"
+SchedulerChoices_EagerConsumerTasks            = "gpu-eager-consumer-tasks"
 SchedulerChoices = [
-            "native-no-priorities",
-            "native",
-            "tailored",
-            "parallel-for",
-            "subtasks",
-            "subtasks-and-kernel-parallelisation",
+            SchedulerChoices_Native,
+            SchedulerChoices_NativePriorities,
+            SchedulerChoices_LazyEvaluation,
+            SchedulerChoices_TimedExecution,
+            SchedulerChoices_ProducerConsumerTaskSequence,
+            SchedulerChoices_EagerConsumerTasks
         ]
+
+
 SolverChoices_FiniteVolumes_PatchSize6  = "fv-6"
 SolverChoices_FiniteVolumes_PatchSize48 = "fv-48"
 SolverChoices_FiniteVolumes_PatchSize96 = "fv-96"
@@ -94,7 +102,7 @@ def create_exahype2_project(
     project.set_output_path("./")
  
     project.set_Peano4_installation(peano_dir, peano4.output.string_to_mode(mode))
-  
+      
     return project
 
 
@@ -362,7 +370,48 @@ def get_command_line_args():
 
     args = parser.parse_args()
     return args
-               
+
+
+def configure_multicore_configuration(scheduler):
+    """!
+    
+    Add a proper scheduler to the project
+    
+    """
+        
+    if args.scheduler == SchedulerChoices_Native:
+        project.add_mainfile_include( "tarch/multicore/orchestration/Hardcoded.h")
+        project.set_multicore_orchestration(
+            "tarch::multicore::orchestration::Hardcoded::createNative()"
+        )
+    elif args.scheduler == SchedulerChoices_NativePriorities:
+        project.add_mainfile_include( "MulticoreOrchestration.h")
+        project.set_multicore_orchestration(
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::DisableFusionAndMapOntoNativeTask)"
+        )
+    elif args.scheduler == SchedulerChoices_LazyEvaluation:
+        project.add_mainfile_include( "MulticoreOrchestration.h")
+        project.set_multicore_orchestration(
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::LazyEvaluation)"
+        )
+    elif args.scheduler == SchedulerChoices_TimedExecution:
+        project.add_mainfile_include( "MulticoreOrchestration.h")
+        project.set_multicore_orchestration(
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::TimedExecution)"
+        )
+    elif args.scheduler == SchedulerChoices_ProducerConsumerTaskSequence:
+        project.add_mainfile_include( "MulticoreOrchestration.h")
+        project.set_multicore_orchestration(
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskSequence)"
+        )
+    elif args.scheduler == SchedulerChoices_EagerConsumerTasks:
+        project.add_mainfile_include( "MulticoreOrchestration.h")
+        project.set_multicore_orchestration(
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks)"
+        )
+    else:
+            assert False, "not supported yet"
+           
                
 if __name__ == "__main__":
     args = get_command_line_args()
@@ -387,53 +436,7 @@ if __name__ == "__main__":
     ########################################################################################
     # Configure run
     ########################################################################################
-    project.add_mainfile_include( "tarch/multicore/orchestration/Hardcoded.h")
-    project.add_mainfile_include( "MulticoreOrchestration.h")
-    
-    if args.scheduler == "native-no-priorities":
-            project.set_multicore_orchestration(
-                "tarch::multicore::orchestration::Hardcoded::createNative()"
-            )
-            enable_higher_priority_for_FV_tasks = False
-            parallelise_interpolation = KernelParallelisation.NONE
-            fv_kernel_parallelisation = KernelParallelisation.NONE
-    elif args.scheduler == "native":
-            project.set_multicore_orchestration(
-                "tarch::multicore::orchestration::Hardcoded::createNative()"
-            )
-            enable_higher_priority_for_FV_tasks = True
-            parallelise_interpolation = KernelParallelisation.NONE
-            fv_kernel_parallelisation = KernelParallelisation.NONE
-    elif args.scheduler == "tailored":
-            project.set_multicore_orchestration(
-                "new benchmarks::exahype2::ccz4::MulticoreOrchestration()"
-            )
-            enable_higher_priority_for_FV_tasks = True
-            parallelise_interpolation = KernelParallelisation.NONE
-            fv_kernel_parallelisation = KernelParallelisation.NONE
-    elif args.scheduler == "parallel-for":
-            project.set_multicore_orchestration(
-                "new benchmarks::exahype2::ccz4::MulticoreOrchestration()"
-            )
-            enable_higher_priority_for_FV_tasks = True
-            parallelise_interpolation = KernelParallelisation.PARALLEL_FOR
-            fv_kernel_parallelisation = KernelParallelisation.NONE
-    elif args.scheduler == "subtasks":
-            project.set_multicore_orchestration(
-                "new benchmarks::exahype2::ccz4::MulticoreOrchestration()"
-            )
-            enable_higher_priority_for_FV_tasks = True
-            parallelise_interpolation = KernelParallelisation.SUBTASKS
-            fv_kernel_parallelisation = KernelParallelisation.NONE
-    elif args.scheduler == "subtasks-and-kernel-parallelisation":
-            project.set_multicore_orchestration(
-                "new benchmarks::exahype2::ccz4::MulticoreOrchestration()"
-            )
-            enable_higher_priority_for_FV_tasks = True
-            parallelise_interpolation = KernelParallelisation.SUBTASKS
-            fv_kernel_parallelisation = KernelParallelisation.SUBTASKS
-    else:
-            assert False, "not supported yet"
+    configure_multicore_configuration(args.scheduler)
 
     added_limiter = False
     if "fd4-rk1-ps-" in args.solver:
