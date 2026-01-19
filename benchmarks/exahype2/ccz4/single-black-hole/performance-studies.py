@@ -60,6 +60,7 @@ SolverChoices = [
             SolverChoices_FiniteVolumes_PatchSize96,
             "fd4-rk1-ps-3",
             "fd4-rk1-ps-6",
+            "fd4-rk1-ps-6-enclave",
             "fd4-rk1-limited-ps-3",
             "fd4-rk1-limited-ps-6",
         ] 
@@ -367,6 +368,21 @@ def get_command_line_args():
         default="linear",
         help="Set method to interpolate between solvers",
     )
+    # If --max-tasks is specified, --min-tasks must also be specifed due to the order of arguments in the C++ code
+    parser.add_argument(
+        "-min-tasks",
+        "--min-tasks",
+        type=int,
+        default=-1,
+        help="minimum number of tasks that are fused together using the hardcoded fusion implementation"
+    )
+    parser.add_argument(
+        "-max-tasks",
+        "--max-tasks",
+        type=int,
+        default=-1,
+        help="maximum number of tasks that are fused together using the hardcoded fusion implementation"
+    )
 
     args = parser.parse_args()
     return args
@@ -378,7 +394,13 @@ def configure_multicore_configuration(scheduler):
     Add a proper scheduler to the project
     
     """
-        
+    if args.min_tasks == -1:
+        task_fusion_size_string = ""
+    elif args.max_tasks == -1:
+        task_fusion_size_string = f", {args.min_tasks}"
+    else:
+        task_fusion_size_string = f", {args.min_tasks}, {args.max_tasks}"
+         
     if args.scheduler == SchedulerChoices_Native:
         project.add_mainfile_include( "tarch/multicore/orchestration/Hardcoded.h")
         project.set_multicore_orchestration(
@@ -387,27 +409,27 @@ def configure_multicore_configuration(scheduler):
     elif args.scheduler == SchedulerChoices_NativePriorities:
         project.add_mainfile_include( "MulticoreOrchestration.h")
         project.set_multicore_orchestration(
-            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::DisableFusionAndMapOntoNativeTask)"
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::DisableFusionAndMapOntoNativeTask" + task_fusion_size_string + ")"
         )
     elif args.scheduler == SchedulerChoices_LazyEvaluation:
         project.add_mainfile_include( "MulticoreOrchestration.h")
         project.set_multicore_orchestration(
-            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::LazyEvaluation)"
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::LazyEvaluation" + task_fusion_size_string + ")"
         )
     elif args.scheduler == SchedulerChoices_TimedExecution:
         project.add_mainfile_include( "MulticoreOrchestration.h")
         project.set_multicore_orchestration(
-            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::TimedExecution)"
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::TimedExecution" + task_fusion_size_string + ")"
         )
     elif args.scheduler == SchedulerChoices_ProducerConsumerTaskSequence:
         project.add_mainfile_include( "MulticoreOrchestration.h")
         project.set_multicore_orchestration(
-            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskSequence)"
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskSequence" + task_fusion_size_string + ")"
         )
     elif args.scheduler == SchedulerChoices_EagerConsumerTasks:
         project.add_mainfile_include( "MulticoreOrchestration.h")
         project.set_multicore_orchestration(
-            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks)"
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks" + task_fusion_size_string + ")"
         )
     else:
             assert False, "not supported yet"

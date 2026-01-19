@@ -43,7 +43,7 @@ constexpr double TimeStamp    = 0.5;
 constexpr double TimeStepSize = 1e-6;
 constexpr double CellSize     = 0.1;
 constexpr double CellOffset   = 4.0;
-constexpr int    HaloSize     = 1;
+constexpr int    HaloSize     = 2;
 
 static_assert(Accuracy >= std::numeric_limits<double>::epsilon() || Accuracy == 0.0);
 
@@ -200,10 +200,12 @@ void wrapHostKernel(int device, exahype2::CellData<double, double>& patchData) {
   Kernel(patchData, timingComputeKernel, loopPlacement);
 }
 
-template <void (*Kernel)(int, exahype2::CellData<double, double>&, tarch::timing::Measurement&)>
-void wrapDeviceKernel(int device, exahype2::CellData<double, double>& patchData) {
+template <void (*Kernel)(int, exahype2::CopyCellDataGPU<double, double>&, tarch::timing::Measurement&)>
+void wrapDeviceKernel(int device, ::exahype2::CellData<double, double>& patchData) {
   assertion(device != tarch::accelerator::Device::HostDevice);
-  Kernel(device, patchData, timingComputeKernel);
+  ::exahype2::CopyCellDataGPU<double, double> gpuCellData(patchData, NumberOfInputEntriesPerPatch, NumberOfOutputEntriesPerPatch, device);
+  Kernel(device, gpuCellData, timingComputeKernel);
+  gpuCellData.copyBackAndDestroy();
 }
 
 /**
@@ -382,26 +384,68 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       ::tarch::accelerator::Device::HostDevice,
       localPatches
     );
-    //#if defined (SharedOMP)
-    //assessKernel(wrapHostKernel<
-    //  exahype2::fv::rusanov::omp::timeStepWithRusanovStateless<
-    //    FVMUSCLHancock,
-    //    FVMUSCLHancock::NumberOfFiniteVolumesPerAxisPerPatch,
-    //    HaloSize,
-    //    FVMUSCLHancock::NumberOfUnknowns,
-    //    FVMUSCLHancock::NumberOfAuxiliaryVariables,
-    //    EvaluateFlux,
-    //    EvaluateNonconservativeProduct,
-    //    EvaluateSource,
-    //    EvaluateMaximumEigenvalueAfterTimeStep>
-    //  >,
-    //  "host, AoS, omp",
-    //  launchingThreads,
-    //  ::tarch::accelerator::Device::HostDevice,
-    //  localPatches
-    //);
-    //#endif
-}
+    #if defined (SharedOMP)
+    assessKernel(wrapHostKernel<
+      exahype2::fv::musclhancock::omp::timeStepWithMUSCLHancockStateless<
+        FVMUSCLHancock,
+        FVMUSCLHancock::NumberOfFiniteVolumesPerAxisPerPatch,
+        HaloSize,
+        FVMUSCLHancock::NumberOfUnknowns,
+        FVMUSCLHancock::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep>
+      >,
+      "host, AoS, omp",
+      launchingThreads,
+      ::tarch::accelerator::Device::HostDevice,
+      localPatches
+    );
+    #endif
+  }
+
+  if constexpr (AssessDeviceKernels) {
+    #if defined (GPUOffloadingOMP)
+    assessKernel(wrapDeviceKernel<
+      exahype2::fv::musclhancock::omp::timeStepWithMUSCLHancockStateless<
+        FVMUSCLHancock,
+        FVMUSCLHancock::NumberOfFiniteVolumesPerAxisPerPatch,
+        HaloSize,
+        FVMUSCLHancock::NumberOfUnknowns,
+        FVMUSCLHancock::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep>
+      >,
+      "device, AoS, omp",
+      launchingThreads,
+      0,
+      localPatches
+    );
+    #endif
+
+    #if defined (GPUOffloadingSYCL)
+    assessKernel(wrapDeviceKernel<
+      exahype2::fv::musclhancock::sycl::timeStepWithMUSCLHancockStateless<
+        FVMUSCLHancock,
+        FVMUSCLHancock::NumberOfFiniteVolumesPerAxisPerPatch,
+        HaloSize,
+        FVMUSCLHancock::NumberOfUnknowns,
+        FVMUSCLHancock::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep>
+      >,
+      "device, AoS, sycl",
+      launchingThreads,
+      0,
+      localPatches
+    );
+    #endif
+  }
 }
 
 

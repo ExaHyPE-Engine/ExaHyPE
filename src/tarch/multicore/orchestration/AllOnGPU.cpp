@@ -5,10 +5,11 @@
 
 #include <limits>
 
-tarch::multicore::orchestration::AllOnGPU::AllOnGPU(int device):
+tarch::multicore::orchestration::AllOnGPU::AllOnGPU(int device, tarch::multicore::orchestration::FusionImplementation fusionImplementation):
   _device(device),
   _deviceToUse(device==RoundRobin ? 0 : _device),
-  _isInBspSection(false) {}
+  _isInBspSection(false),
+  _fusionImplementation(fusionImplementation) {}
 
 void tarch::multicore::orchestration::AllOnGPU::startBSPSection(int nestedParallelismLevel) {
   if (nestedParallelismLevel <= 1) {
@@ -62,5 +63,5 @@ void tarch::multicore::orchestration::AllOnGPU::updateFuseStatistics(
 
 
 tarch::multicore::orchestration::FusionImplementation tarch::multicore::orchestration::AllOnGPU::getFusionImplementation() const {
-  return tarch::multicore::orchestration::FusionImplementation::LazyEvaluation;
+  return _fusionImplementation;
 }

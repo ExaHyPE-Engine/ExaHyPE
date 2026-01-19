@@ -12,58 +12,79 @@ def timeStepWithMUSCLHancock(patchData: "CellData<double, double>&") -> "void":
     N = Integer("patchData.numberOfCells")
     t = DataBlock([[0, N]], "patchData.t", "double")
     dt = DataBlock([[0, N]], "patchData.dt", "double")
-    h = DataBlock([[0, N]], "patchData.cellSize", "tarch::la::Vector<2, double>")
-    x = DataBlock([[0, N]], "patchData.cellCentre", "tarch::la::Vector<2, double>")
+    h = DataBlock([[0, N]], "patchData.cellSize", "tarch::la::Vector<3, double>")
+    x = DataBlock([[0, N]], "patchData.cellCentre", "tarch::la::Vector<3, double>")
     maxEigenvalues = DataBlock([[0, N]], "patchData.maxEigenvalue", "double")
 
     input = DataBlock([[0, NumberOfUnknowns + NumberOfAuxiliaryVariables], [-H, NV + H], [-H, NV + H], [-H, NV + H], [0, N]], "patchData.QIn")
     output = DataBlock([[0, NumberOfUnknowns + NumberOfAuxiliaryVariables], [0, NV], [0, NV], [0, NV], [0, N]], "patchData.QOut")
-    output = input[:, 0:NV, 0:NV]
+    output = input[:, 0:NV, 0:NV, 0:NV]
 
     if EvaluateSource:
-       source = DataBlock([[0, NumberOfUnknowns + NumberOfAuxiliaryVariables], [0, NV], [0, NV], [0, NV], [0, N]], eval("sourceTerm", input[:, 0:NV, 0:NV, 0:NV], x, h, t, dt))
-       output = output + dt * source
-
+       source = DataBlock([[0, NumberOfUnknowns], [0, NV], [0, NV], [0, NV], [0, N]], eval("sourceTerm", input[:, 0:NV, 0:NV, 0:NV], x, h, t, dt))
+       output[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV] = output[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV] + dt * source
+    
     #Compute slope with van Albada limiter
     epsilon = 0.01
-    slopeRight = input[0:NumberOfUnknowns, 0:NV+2, 0:NV, 0:NV] - input[0:NumberOfUnknowns, -1:NV+1, 0:NV, 0:NV]
-    slopeLeft = input[0:NumberOfUnknowns, -1:NV+1, 0:NV, 0:NV] - input[0:NumberOfUnknowns, -2:NV, 0:NV, 0:NV]
+    slopeRight = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV+2, 0:NV, 0:NV] - input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, -1:NV+1, 0:NV, 0:NV]
+    slopeLeft = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, -1:NV+1, 0:NV, 0:NV] - input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, -2:NV, 0:NV, 0:NV]
     slopeX = ((slopeRight * slopeRight + epsilon * epsilon)*slopeLeft + (slopeLeft * slopeLeft + epsilon * epsilon)*slopeRight) \
             / (slopeLeft * slopeLeft + slopeRight * slopeRight + 2 * epsilon * epsilon)
 
-    slopeTop = input[0:NumberOfUnknowns, 0:NV, 0:NV+2, 0:NV] - input[0:NumberOfUnknowns, 0:NV, -1:NV+1, 0:NV]
-    slopeBottom = input[0:NumberOfUnknowns, 0:NV, -1:NV+1, 0:NV] - input[0:NumberOfUnknowns, 0:NV, -2:NV, 0:NV]
+    slopeTop = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, 0:NV+2, 0:NV] - input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, -1:NV+1, 0:NV]
+    slopeBottom = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, -1:NV+1, 0:NV] - input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, -2:NV, 0:NV]
     slopeY = ((slopeTop * slopeTop + epsilon * epsilon)*slopeBottom + (slopeBottom * slopeBottom + epsilon * epsilon)*slopeTop) \
             / (slopeBottom * slopeBottom + slopeTop * slopeTop + 2 * epsilon * epsilon)
     
-    slopeFar = input[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV+2] - input[0:NumberOfUnknowns, 0:NV, 0:NV, -1:NV+1]
-    slopeNear = input[0:NumberOfUnknowns, 0:NV, 0:NV, -1:NV+1] - input[0:NumberOfUnknowns, 0:NV, 0:NV, -2:NV]
+    slopeFar = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, 0:NV, 0:NV+2] - input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, 0:NV, -1:NV+1]
+    slopeNear = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, 0:NV, -1:NV+1] - input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, 0:NV, -2:NV]
     slopeZ = ((slopeFar * slopeFar + epsilon * epsilon)*slopeNear + (slopeNear * slopeNear + epsilon * epsilon)*slopeFar) \
             / (slopeNear * slopeNear + slopeFar * slopeFar + 2 * epsilon * epsilon)
 
     #Compute face values
-    leftFace = input[0:NumberOfUnknowns, -1:NV+1, 0:NV, 0:NV] - 0.5 * slopeX
-    rightFace = input[0:NumberOfUnknowns, -1:NV+1, 0:NV, 0:NV] + 0.5 * slopeX
-    bottomFace = input[0:NumberOfUnknowns, 0:NV, -1:NV+1, 0:NV] - 0.5 * slopeY
-    topFace = input[0:NumberOfUnknowns, 0:NV, -1:NV+1, 0:NV] + 0.5 * slopeY
-    nearFace = input[0:NumberOfUnknowns, 0:NV, 0:NV, -1:NV+1] - 0.5 * slopeZ
-    farFace = input[0:NumberOfUnknowns, 0:NV, 0:NV, -1:NV+1] + 0.5 * slopeZ
+    leftFace = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, -1:NV+1, 0:NV, 0:NV] - 0.5 * slopeX
+    rightFace = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, -1:NV+1, 0:NV, 0:NV] + 0.5 * slopeX
+    bottomFace = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, -1:NV+1, 0:NV] - 0.5 * slopeY
+    topFace = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, -1:NV+1, 0:NV] + 0.5 * slopeY
+    nearFace = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, 0:NV, -1:NV+1] - 0.5 * slopeZ
+    farFace = input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV, 0:NV, -1:NV+1] + 0.5 * slopeZ
 
     #Evolve face values by half time step
-    fluxLeft = DataBlock([[0, NumberOfUnknowns], [-1, NV+1], [0, NV], [0, NV], [0, N]], eval("flux", leftFace, x, h, t, dt, 0))
-    fluxRight = DataBlock([[0, NumberOfUnknowns], [-1, NV+1], [0, NV], [0, NV], [0, N]], eval("flux", rightFace, x, h, t, dt, 0))
-    leftFace = leftFace - 0.5 * (dt / h(0)) * (fluxRight - fluxLeft)
-    rightFace = rightFace - 0.5 * (dt / h(0)) * (fluxRight - fluxLeft)
-
-    fluxBottom = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV+1], [0, NV], [0, N]], eval("flux", bottomFace, x, h, t, dt, 1))
-    fluxTop = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV+1], [0, NV], [0, N]], eval("flux", topFace, x, h, t, dt, 1))
-    bottomFace = bottomFace - 0.5 * (dt / h(1)) * (fluxTop - fluxBottom)
-    topFace = topFace - 0.5 * (dt / h(1)) * (fluxTop - fluxBottom)
-
-    fluxNear = DataBlock([[0, NumberOfUnknowns], [0, NV], [0, NV], [-1, NV+1], [0, N]], eval("flux", nearFace, x, h, t, dt, 2))
-    fluxFar = DataBlock([[0, NumberOfUnknowns], [0, NV], [0, NV], [-1, NV+1], [0, N]], eval("flux", farFace, x, h, t, dt, 2))
-    nearFace = bottomFace - 0.5 * (dt / h(2)) * (fluxFar - fluxNear)
-    farFace = topFace - 0.5 * (dt / h(2)) * (fluxFar - fluxNear)
+    if EvaluateFlux:
+        fluxLeft = DataBlock([[0, NumberOfUnknowns], [-1, NV+1], [0, NV], [0, NV], [0, N]], eval("flux", leftFace, x, h, t, dt, 0))
+        fluxRight = DataBlock([[0, NumberOfUnknowns], [-1, NV+1], [0, NV], [0, NV], [0, N]], eval("flux", rightFace, x, h, t, dt, 0))
+        fluxBottom = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV+1], [0, NV], [0, N]], eval("flux", bottomFace, x, h, t, dt, 1))
+        fluxTop = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV+1], [0, NV], [0, N]], eval("flux", topFace, x, h, t, dt, 1))
+        fluxNear = DataBlock([[0, NumberOfUnknowns], [0, NV], [0, NV], [-1, NV+1], [0, N]], eval("flux", nearFace, x, h, t, dt, 2))
+        fluxFar = DataBlock([[0, NumberOfUnknowns], [0, NV], [0, NV], [-1, NV+1], [0, N]], eval("flux", farFace, x, h, t, dt, 2))
+        
+        leftFace[0:NumberOfUnknowns, -1:NV+1, 0:NV, 0:NV] = leftFace[0:NumberOfUnknowns, -1:NV+1, 0:NV, 0:NV] \
+                        - 0.5 * (dt / h(0)) * (fluxRight - fluxLeft) 
+        rightFace[0:NumberOfUnknowns, -1:NV+1, 0:NV, 0:NV] = rightFace[0:NumberOfUnknowns, -1:NV+1, 0:NV, 0:NV] \
+                        - 0.5 * (dt / h(0)) * (fluxRight - fluxLeft) 
+        bottomFace[0:NumberOfUnknowns, 0:NV, -1:NV+1, 0:NV] = bottomFace[0:NumberOfUnknowns, 0:NV, -1:NV+1, 0:NV] \
+                        - 0.5 * (dt / h(1)) * (fluxTop - fluxBottom) 
+        topFace[0:NumberOfUnknowns, 0:NV, -1:NV+1, 0:NV] = topFace[0:NumberOfUnknowns, 0:NV, -1:NV+1, 0:NV] \
+                        - 0.5 * (dt / h(1)) * (fluxTop - fluxBottom) 
+        nearFace[0:NumberOfUnknowns, 0:NV, 0:NV, -1:NV+1] = nearFace[0:NumberOfUnknowns, 0:NV, 0:NV, -1:NV+1] \
+                        - 0.5 * (dt / h(2)) * (fluxFar - fluxNear)
+        farFace[0:NumberOfUnknowns, 0:NV, 0:NV, -1:NV+1] = farFace[0:NumberOfUnknowns, 0:NV, 0:NV, -1:NV+1] \
+                        - 0.5 * (dt / h(2)) * (fluxFar - fluxNear)
+        
+    if EvaluateSource:
+       sourceLeftFace = DataBlock([[0, NumberOfUnknowns], [-1, NV+1], [0, NV], [0, NV], [0, N]], eval("sourceTerm", leftFace, x, h, t, dt))
+       sourceRightFace = DataBlock([[0, NumberOfUnknowns], [-1, NV+1], [0, NV], [0, NV], [0, N]], eval("sourceTerm", rightFace, x, h, t, dt))
+       sourceBottomFace = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV+1], [0, NV], [0, N]], eval("sourceTerm", bottomFace, x, h, t, dt))
+       sourceTopFace = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV+1], [0, NV], [0, N]], eval("sourceTerm", topFace, x, h, t, dt))
+       sourceNearFace = DataBlock([[0, NumberOfUnknowns], [0, NV], [0, NV], [-1, NV+1], [0, N]], eval("sourceTerm", nearFace, x, h, t, dt))
+       sourceFarFace = DataBlock([[0, NumberOfUnknowns], [0, NV], [0, NV], [-1, NV+1], [0, N]], eval("sourceTerm", farFace, x, h, t, dt))
+       
+       leftFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV] = leftFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV] + 0.5 * dt * sourceLeftFace
+       rightFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV] = rightFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV] + 0.5 * dt * sourceRightFace
+       bottomFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV] = bottomFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV] + 0.5 * dt * sourceBottomFace
+       topFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV] = topFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV] + 0.5 * dt * sourceTopFace
+       nearFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV] = nearFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV] + 0.5 * dt * sourceNearFace
+       farFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV] = farFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV] + 0.5 * dt * sourceFarFace
 
     #Evolve volumes
     maxEigenvaluesLeft = DataBlock([[0, 1], [-1, NV+1], [0, NV], [0, NV], [0, N]], eval("maxEigenvalue", leftFace, x, h, t, dt, 0))
@@ -76,26 +97,33 @@ def timeStepWithMUSCLHancock(patchData: "CellData<double, double>&") -> "void":
 
     maxEigenvaluesNear = DataBlock([[0, 1], [0, NV], [0, NV], [-1, NV+1], [0, N]], eval("maxEigenvalue", nearFace, x, h, t, dt, 2))
     maxEigenvaluesFar = DataBlock([[0, 1], [0, NV], [0, NV], [-1, NV+1], [0, N]], eval("maxEigenvalue", farFace, x, h, t, dt, 2))    
-    lambdaY = max(maxEigenvaluesNear[0:1, 0:NV, 0:NV, 0:NV+1], maxEigenvaluesFar[0:1, 0:NV, 0:NV, -1:NV])
+    lambdaZ = max(maxEigenvaluesNear[0:1, 0:NV, 0:NV, 0:NV+1], maxEigenvaluesFar[0:1, 0:NV, 0:NV, -1:NV])
 
+    rusanovFluxLeft = - 0.5 * lambdaX[0:1, 0:NV, 0:NV, 0:NV] * (leftFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV] - rightFace[0:NumberOfUnknowns, -1:NV-1, 0:NV, 0:NV])
+    rusanovFluxRight = - 0.5 * lambdaX[0:1, 1:NV+1, 0:NV, 0:NV] * (leftFace[0:NumberOfUnknowns, 1:NV+1, 0:NV, 0:NV] - rightFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV])
+    rusanovFluxBottom = - 0.5 * lambdaY[0:1, 0:NV, 0:NV, 0:NV] * (bottomFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV] - topFace[0:NumberOfUnknowns, 0:NV, -1:NV-1, 0:NV])
+    rusanovFluxTop = - 0.5 * lambdaY[0:1, 0:NV, 1:NV+1, 0:NV] * (bottomFace[0:NumberOfUnknowns, 0:NV, 1:NV+1, 0:NV] - topFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV])
+    rusanovFluxNear = - 0.5 * lambdaZ[0:1, 0:NV, 0:NV, 0:NV] * (nearFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV] - farFace[0:NumberOfUnknowns, 0:NV, 0:NV, -1:NV-1])
+    rusanovFluxFar = - 0.5 * lambdaZ[0:1, 0:NV, 0:NV, 1:NV+1] * (nearFace[0:NumberOfUnknowns, 0:NV, 0:NV, 1:NV+1] - farFace[0:NumberOfUnknowns, 0:NV, 0:NV, 0:NV])
 
-    timeAveragedfluxLeft = DataBlock([[0, NumberOfUnknowns], [-1, NV + 1], [0, NV], [0, NV], [0, N]], eval("flux", leftFace, x, h, t, dt, 0))
-    timeAveragedfluxRight = DataBlock([[0, NumberOfUnknowns], [-1, NV + 1], [0, NV], [0, NV], [0, N]], eval("flux", rightFace, x, h, t, dt, 0))
-    timeAveragedfluxBottom = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV + 1], [0, NV], [0, N]], eval("flux", bottomFace, x, h, t, dt, 1))
-    timeAveragedfluxTop = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV + 1], [0, NV], [0, N]], eval("flux", topFace, x, h, t, dt, 1))
-    timeAveragedfluxNear = DataBlock([[0, NumberOfUnknowns], [0, NV], [0, NV], [-1, NV + 1], [0, N]], eval("flux", nearFace, x, h, t, dt, 2))
-    timeAveragedfluxFar = DataBlock([[0, NumberOfUnknowns], [0, NV], [0, NV], [-1, NV + 1], [0, N]], eval("flux", farFace, x, h, t, dt, 2))
+    if EvaluateFlux:
+        timeAveragedfluxLeft = DataBlock([[0, NumberOfUnknowns], [-1, NV + 1], [0, NV], [0, NV], [0, N]], eval("flux", leftFace, x, h, t, dt, 0))
+        timeAveragedfluxRight = DataBlock([[0, NumberOfUnknowns], [-1, NV + 1], [0, NV], [0, NV], [0, N]], eval("flux", rightFace, x, h, t, dt, 0))
+        timeAveragedfluxBottom = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV + 1], [0, NV], [0, N]], eval("flux", bottomFace, x, h, t, dt, 1))
+        timeAveragedfluxTop = DataBlock([[0, NumberOfUnknowns], [0, NV], [-1, NV + 1], [0, NV], [0, N]], eval("flux", topFace, x, h, t, dt, 1))
+        timeAveragedfluxNear = DataBlock([[0, NumberOfUnknowns], [0, NV], [0, NV], [-1, NV + 1], [0, N]], eval("flux", nearFace, x, h, t, dt, 2))
+        timeAveragedfluxFar = DataBlock([[0, NumberOfUnknowns], [0, NV], [0, NV], [-1, NV + 1], [0, N]], eval("flux", farFace, x, h, t, dt, 2))
 
-    rusanovFluxLeft = 0.5 * (timeAveragedfluxLeft[:, 0:NV, 0:NV, 0:NV] + timeAveragedfluxRight[:, -1:NV-1, 0:NV, 0:NV]) - 0.5 * lambdaX[0:1, 0:NV, 0:NV, 0:NV] * (leftFace[:, 0:NV, 0:NV, 0:NV] - rightFace[:, -1:NV-1, 0:NV, 0:NV])
-    rusanovFluxRight = 0.5 * (timeAveragedfluxLeft[:, 1:NV+1, 0:NV, 0:NV] + timeAveragedfluxRight[:, 0:NV, 0:NV, 0:NV]) - 0.5 * lambdaX[0:1, 1:NV+1, 0:NV, 0:NV] * (leftFace[:, 1:NV+1, 0:NV, 0:NV] - rightFace[:, 0:NV, 0:NV, 0:NV])
-    rusanovFluxBottom = 0.5 * (timeAveragedfluxBottom[:, 0:NV, 0:NV, 0:NV] + timeAveragedfluxTop[:, 0:NV, -1:NV-1, 0:NV]) - 0.5 * lambdaY[0:1, 0:NV, 0:NV, 0:NV] * (bottomFace[:, 0:NV, 0:NV, 0:NV] - topFace[:, 0:NV, -1:NV-1, 0:NV])
-    rusanovFluxTop = 0.5 * (timeAveragedfluxBottom[:, 0:NV, 1:NV+1, 0:NV] + timeAveragedfluxTop[:, 0:NV, 0:NV, 0:NV]) - 0.5 * lambdaY[0:1, 0:NV, 1:NV+1, 0:NV] * (bottomFace[:, 0:NV, 1:NV+1, 0:NV] - topFace[:, 0:NV, 0:NV, 0:NV])
-    rusanovFluxNear = 0.5 * (timeAveragedfluxNear[:, 0:NV, 0:NV, 0:NV] + timeAveragedfluxFar[:, 0:NV, 0:NV, -1:NV-1]) - 0.5 * lambdaY[0:1, 0:NV, 0:NV, 0:NV] * (nearFace[:, 0:NV, 0:NV, 0:NV] - farFace[:, 0:NV, 0:NV, -1:NV-1])
-    rusanovFluxFar = 0.5 * (timeAveragedfluxNear[:, 0:NV, 0:NV, 1:NV+1] + timeAveragedfluxFar[:, 0:NV, 0:NV, 0:NV]) - 0.5 * lambdaY[0:1, 0:NV, 0:NV, 1:NV+1] * (nearFace[:, 0:NV, 0:NV, 1:NV+1] - farFace[:, 0:NV, 0:NV, 0:NV])
+        rusanovFluxLeft = rusanovFluxLeft + 0.5 * (timeAveragedfluxLeft[:, 0:NV, 0:NV, 0:NV] + timeAveragedfluxRight[:, -1:NV-1, 0:NV, 0:NV])
+        rusanovFluxRight = rusanovFluxRight + 0.5 * (timeAveragedfluxLeft[:, 1:NV+1, 0:NV, 0:NV] + timeAveragedfluxRight[:, 0:NV, 0:NV, 0:NV])
+        rusanovFluxBottom = rusanovFluxBottom + 0.5 * (timeAveragedfluxBottom[:, 0:NV, 0:NV, 0:NV] + timeAveragedfluxTop[:, 0:NV, -1:NV-1, 0:NV])
+        rusanovFluxTop = rusanovFluxTop + 0.5 * (timeAveragedfluxBottom[:, 0:NV, 1:NV+1, 0:NV] + timeAveragedfluxTop[:, 0:NV, 0:NV, 0:NV])
+        rusanovFluxNear = rusanovFluxNear + 0.5 * (timeAveragedfluxNear[:, 0:NV, 0:NV, 0:NV] + timeAveragedfluxFar[:, 0:NV, 0:NV, -1:NV-1])
+        rusanovFluxFar = rusanovFluxFar + 0.5 * (timeAveragedfluxNear[:, 0:NV, 0:NV, 1:NV+1] + timeAveragedfluxFar[:, 0:NV, 0:NV, 0:NV])
     
-    output[0:NumberOfUnknowns, :, :] = output[0:NumberOfUnknowns, :, :] + (dt / h(0)) * NV * (rusanovFluxLeft - rusanovFluxRight)
-    output[0:NumberOfUnknowns, :, :] = output[0:NumberOfUnknowns, :, :] + (dt / h(1)) * NV * (rusanovFluxBottom - rusanovFluxTop)
-    output[0:NumberOfUnknowns, :, :] = output[0:NumberOfUnknowns, :, :] + (dt / h(2)) * NV * (rusanovFluxNear - rusanovFluxFar)
+    output[0:NumberOfUnknowns, :, :, :] = output[0:NumberOfUnknowns, :, :, :] + (dt / h(0)) * NV * (rusanovFluxLeft - rusanovFluxRight)
+    output[0:NumberOfUnknowns, :, :, :] = output[0:NumberOfUnknowns, :, :, :] + (dt / h(1)) * NV * (rusanovFluxBottom - rusanovFluxTop)
+    output[0:NumberOfUnknowns, :, :, :] = output[0:NumberOfUnknowns, :, :, :] + (dt / h(2)) * NV * (rusanovFluxNear - rusanovFluxFar)
 
     #if EvaluateNonconservativeProduct:
     #   average_x = 0.5 * (input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, -1:NV, 0:NV] + input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NV + 1, 0:NV])
