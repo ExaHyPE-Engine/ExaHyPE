@@ -14,11 +14,15 @@
 #endif
 
 
-benchmarks::exahype2::ccz4::MulticoreOrchestration::MulticoreOrchestration():
+benchmarks::exahype2::ccz4::MulticoreOrchestration::MulticoreOrchestration(
+  const tarch::multicore::orchestration::FusionImplementation&  fusionImplementation
+):
   _nestedBSPLevels(0),
   _maxFiniteVolumeTasks(0),
-  _finiteVolumeTasksInThisBSPSection(0)
-  {}
+  _finiteVolumeTasksInThisBSPSection(0),
+  _fusionImplementation(fusionImplementation)
+{}
+
 
 void benchmarks::exahype2::ccz4::MulticoreOrchestration::startBSPSection(int nestedParallelismLevel) {
   if (_nestedBSPLevels==0) {
@@ -27,6 +31,7 @@ void benchmarks::exahype2::ccz4::MulticoreOrchestration::startBSPSection(int nes
   _nestedBSPLevels++;
 
 }
+
 
 void benchmarks::exahype2::ccz4::MulticoreOrchestration::endBSPSection(int nestedParallelismLevel) {
   _nestedBSPLevels--;
@@ -39,12 +44,18 @@ void benchmarks::exahype2::ccz4::MulticoreOrchestration::endBSPSection(int neste
 benchmarks::exahype2::ccz4::MulticoreOrchestration::FuseInstruction benchmarks::exahype2::ccz4::MulticoreOrchestration::fuse(
   int taskType
 ) {
+  int targetDevice = tarch::multicore::Task::Host;
+
+  if (tarch::accelerator::Device::getInstance().getNumberOfDevices() > 0) {
+    targetDevice = 1 + rand() % (tarch::accelerator::Device::getInstance().getNumberOfDevices());
+  }
+
   auto FVFuseInstruction = benchmarks::exahype2::ccz4::MulticoreOrchestration::FuseInstruction(
-    0, 1, 1
+    targetDevice, 1, 1
   );
 
   auto FDFuseInstruction = benchmarks::exahype2::ccz4::MulticoreOrchestration::FuseInstruction(
-    0, 16, std::numeric_limits<int>::max()
+    targetDevice, 16, std::numeric_limits<int>::max()
   );
 
   #if defined(PureFD4) or defined(PureFV)
@@ -66,4 +77,17 @@ tarch::multicore::orchestration::Strategy::ExecutionPolicy benchmarks::exahype2:
   else {
     return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel;
   }
+}
+
+
+void benchmarks::exahype2::ccz4::MulticoreOrchestration::updateFuseStatistics(
+  int    taskType,
+  int    queueSize,
+  double averageNumberOfPendingReadyTasksPerProcessTaskExecution,
+  double probabilityThatTaskIsCompleted
+) {}
+
+
+tarch::multicore::orchestration::FusionImplementation benchmarks::exahype2::ccz4::MulticoreOrchestration::getFusionImplementation() const {
+  return _fusionImplementation;
 }
