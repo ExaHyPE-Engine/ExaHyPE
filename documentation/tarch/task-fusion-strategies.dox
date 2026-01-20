@@ -259,12 +259,8 @@ We next check @ref tarch::multicore::SpawnedTasksStatisticsIdentifier.
 
 Finally, we plot the following quantities (maybe all in one go by picking column indicies separated by columns, i.e. similar to ```1,2,3,8```):
 
-  - @ref tarch::multicore::taskfusion::MapFusedTaskOntoNativeTaskStatisticsIdentifier
-  - @ref tarch::multicore::taskfusion::DirectlyInsertFusedTaskIntoReadyQueueStatisticsIdentifier
-  - @ref tarch::multicore::taskfusion::LogReadyTask::SubmitFusedTasksStatisticsIdentifier
-  - @ref tarch::multicore::taskfusion::ProcessOneReadyTask::ProcessOneReadyTaskFromFusableTasksStatisticsIdentifier
-  - @ref tarch::multicore::taskfusion::ProcessOneReadyTask::WaitedForOneReadyTaskFromFusableTasksStatisticsIdentifier
-  
+
+### How many tasks are inserted?
 
   The flags @ref tarch::multicore::taskfusion::MapFusedTaskOntoNativeTaskStatisticsIdentifier,
   @ref tarch::multicore::taskfusion::DirectlyInsertFusedTaskIntoReadyQueueStatisticsIdentifier and
@@ -278,7 +274,10 @@ Finally, we plot the following quantities (maybe all in one go by picking column
   In the example above, we see that a lot of tasks are spawned. All of these
   tasks are also fusable, as the red and green triangles overlap. Unfortunately,
   all fusable tasks are then directly mapped onto native tasks. This indicates 
-  that the chosen task orchestration does not work.
+  that the chosen task orchestration does not work. Likely, an unfortunate 
+  orchestration has been chosen.
+
+### Has somebody messed up with/vetoed the fusion?
 
   The quantity @ref tarch::multicore::taskfusion::ProcessOneReadyTask::ProcessOneReadyTaskFromFusableTasksStatisticsIdentifier 
   tells us how many fusable tasks have been manually removed from the fusable
@@ -289,7 +288,7 @@ Finally, we plot the following quantities (maybe all in one go by picking column
   should be low compared to the total number of tasks as explained in their
   documentation.
 
-  @image html statistics-working-fusion.png
+  @image html documentation/tarch/statistics-working-fusion.png
   
   In the example above, all outcomes are rather promising: We see that all
   spawned tasks are also fusable, and that they are all inserted directly 
@@ -297,11 +296,21 @@ Finally, we plot the following quantities (maybe all in one go by picking column
   runtime has to wait for some ready task, but that happens infrequently,
   which means the fusion is kicking in most of the time.
 
+### How many tasks have really been fused?
 
-## Assess fusion quality
+Of particular relevance in practice are 
+@ref tarch::multicore::taskfusion::FusableTasksQueue::SizeOfFusableTaskQueueStatisticsIdentifier
+ and @ref tarch::multicore::taskfusion::ProcessSetOfReadyTasks::ProcessFusedTasksStatisticsIdentifier.
+They track the size of the fused queue and how many tasks have been extracted per fusion.
 
-We wrap the whole discussion up with some 
-  
+  @image html documentation/tarch/statistics-fused-tasks.png
+ 
+In the example above, we inserted around 250 tasks into the queue, which then
+immediately got fused into one big meta task hosting 250 tasks. Nothing 
+happened after that for 60s, before we enter a certain sequence. Per step
+within this sequence, we insert around 250 tasks, which then seemed to be 
+grabbed always in one go.
+
     
   
   
