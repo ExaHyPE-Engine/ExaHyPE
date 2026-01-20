@@ -255,7 +255,7 @@ void finishTimeStep() {
   smartmpi::tick();
   #endif
 
-  if (tarch::multicore::getOrchestration().getFusionImplementation()==tarch::multicore::orchestration::FusionImplementation::LazyEvaluation) {
+  if (tarch::multicore::getOrchestration().getFusionImplementation()==tarch::multicore::orchestration::FusionImplementation::TimedExecution) {
     tarch::multicore::taskfusion::processAndFuseAllReadyTasks();
   }
 
