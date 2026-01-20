@@ -70,11 +70,13 @@ void tarch::logging::Statistics::clear() {
 }
 
 
-bool tarch::logging::Statistics::acceptNewData(const std::string& identifier, bool disableSampling) {
+bool tarch::logging::Statistics::acceptNewData(const std::string& identifier, bool disableSampling, bool clearAfterDatabaseDump) {
   _dataSetMap[identifier]._counter++;
   _dataSetMap[identifier]._watch.stop();
 
   bool result = false;
+
+  constexpr double DifferenceThreshold = 0.1;
 
   if (
     disableSampling
@@ -95,6 +97,25 @@ bool tarch::logging::Statistics::acceptNewData(const std::string& identifier, bo
   ) {
     result = true;
   }
+  else if (
+    _dataSetMap[identifier]._data.size()>1
+    and
+    std::get<1>( _dataSetMap[identifier]._data[_dataSetMap[identifier]._data.size()-1] ) > std::get<1>( _dataSetMap[identifier]._data[_dataSetMap[identifier]._data.size()-2] ) * (1.0 + DifferenceThreshold)
+    and
+    not clearAfterDatabaseDump
+  ) {
+    result = true;
+  }
+  else if (
+    _dataSetMap[identifier]._data.size()>1
+    and
+    std::get<1>( _dataSetMap[identifier]._data[_dataSetMap[identifier]._data.size()-1] ) < std::get<1>( _dataSetMap[identifier]._data[_dataSetMap[identifier]._data.size()-2] ) * (1.0 - DifferenceThreshold)
+    and
+    not clearAfterDatabaseDump
+  ) {
+    result = true;
+  }
+
 
   if (result) {
     _dataSetMap[identifier]._counter = 0;
@@ -142,7 +163,7 @@ void tarch::logging::Statistics::log( const std::string& identifier, double valu
   tarch::multicore::Lock lock(_semaphore);
   initData(identifier);
   updateDataSnapshot(identifier,value);
-  if ( acceptNewData(identifier, disableSampling) ) {
+  if ( acceptNewData(identifier, disableSampling, false /*clearAfterDatabaseDump*/) ) {
     _globalWatch.stop();
     double t = _globalWatch.getCalendarTime();
     logDebug( "log(string,double)", identifier << "=" << value );
@@ -158,7 +179,7 @@ void tarch::logging::Statistics::inc( const std::string& identifier, double valu
   double newValue = std::get<1>( _dataSetMap[identifier]._data.back() ) + value;
   updateDataSnapshot(identifier,newValue);
 
-  if ( acceptNewData(identifier, disableSampling) ) {
+  if ( acceptNewData(identifier, disableSampling, clearAfterDatabaseDump) ) {
     _globalWatch.stop();
     double t = _globalWatch.getCalendarTime();
     _dataSetMap[identifier].createNewSnapshot(t, clearAfterDatabaseDump);

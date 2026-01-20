@@ -79,6 +79,8 @@ class tarch::multicore::taskfusion::FusableTasksQueue {
   public:
     static constexpr int AnyTask = -1;
 
+    static const std::string SizeOfFusableTaskQueueStatisticsIdentifier;
+
     FusableTasksQueue(int type_);
     ~FusableTasksQueue()                        = default;
     FusableTasksQueue(const FusableTasksQueue&) = delete;

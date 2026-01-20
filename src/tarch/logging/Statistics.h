@@ -209,9 +209,11 @@ class tarch::logging::Statistics {
      * If the data has not changed since the last snapshot, I don't write
      * anything.
      *
+     * If data has changed by more than 10%, I always write.
+     *
      * @return Write a new snapshot.
      */
-    bool acceptNewData(const std::string& identifier, bool disableSampling);
+    bool acceptNewData(const std::string& identifier, bool disableSampling, bool clearAfterDatabaseDump);
 
     /**
      * Ensures that dataset is there. If not, it creates a new entry.

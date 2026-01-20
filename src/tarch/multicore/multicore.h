@@ -213,6 +213,93 @@ namespace tarch {
      const std::set<TaskNumber> NoInDependencies = std::set<TaskNumber>();
 
      /**
+      * Statistics identifier for spawned tasks
+      *
+      * If you translate in statistics mode, Peano's tarch will yield a
+      * statistics file, where it tracks the number of tasks that we spawn
+      * over time.
+      *
+      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      * python3 ~/git/Peano/python/peano4/postprocessing/inspect-statistics.py statistics-rank-0.csv
+      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      *
+      * over the output file (with the .csv extension), the script tells
+      * you in which column it dumps data of this flag.
+      *
+      * If you visualise this through
+      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      * python3 ~/git/Peano/python/peano4/postprocessing/plot-statistics.py -c 3 -pt scatter -o pdf statistics-rank-0.csv
+      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      *
+      * with the correct column number, you get a plot similar to
+      *
+      * @image html src/tarch/multicore/statistics-spawned-tasks.png
+      *
+      * This scatter plot shows us how many tasks have been spawned over a
+      * certain time frame. The scatter plot is not that easy to ready, but
+      * the system probes the system regularly for the accumulated value of
+      * all spawned tasks and dumps it. After that, it resets the accumulated
+      * value to zero.
+      *
+      * In the example above, it does not mean that we get only up to 1,000
+      * tasks. To make statements on the total number of tasks at any point
+      * in the system, we would have to take the density (x-spacing) of the
+      * points into account. What it tells us however is that we have a
+      * relatively high task spawn frequency. In only very rare cases, we
+      * encounter only a few tasks.
+      *
+      * Many applications do not plot only this quantity, but plot
+      * SpawnedFusableTasksStatisticsIdentifier at the same time, so
+      * users can compare the number of spawned tasks against the number
+      * of fusable tasks at any point.
+      *
+      * @ref tarch_logging
+      */
+     extern const std::string SpawnedTasksStatisticsIdentifier;
+
+     /**
+      * Number of fusable tasks over time
+      * Please consult std::string SpawnedTasksStatisticsIdentifier
+      * for a description. This identifier does not probe all tasks,
+      * but only those for which canFuse() holds.
+      */
+     extern const std::string SpawnedFusableTasksStatisticsIdentifier;
+
+
+     /**
+      * Statistics identifier for active BSP sections
+      *
+      * If you translate in statistics mode, Peano's tarch will yield a
+      * statistics file, where it tracks the number of fork-join (BSP)
+      * partitions over time. If you invoke
+      *
+      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      * python3 ~/git/Peano/python/peano4/postprocessing/inspect-statistics.py statistics-rank-0.csv
+      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      *
+      * over the output file (with the .csv extension), the script tells
+      * you in which column it dumps data of this flag.
+      *
+      * If you visualise this through
+      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      * python3 ~/git/Peano/python/peano4/postprocessing/plot-statistics.py -c 3 -pt scatter -o pdf statistics-rank-0.csv
+      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      *
+      * with the correct column number, you get a plot similar to
+      *
+      * @image html src/tarch/multicore/statistics-bsp.png
+      *
+      * In this example, we have a warm-up (e.g. grid construction) phase up to
+      * t=340. After that, the actual computation starts and the BSP level, i.e.
+      * number of forked tasks in a fork-join sense, is either 0 or 8. For most
+      * of the time, we seem to have 8 threads busy processing 8 rank-local
+      * subpartitions.
+      *
+      * @ref tarch_logging
+      */
+     extern const std::string BSPConcurrencyLevelStatisticsIdentifier;
+
+     /**
       * Construct string representation
       *
       * Returns a string representation of the task set which either is
@@ -801,39 +888,5 @@ namespace tarch {
      * Wait for all tasks notably has to take fused tasks into account.
      */
     void waitForAllTasks();
-
-
-    /**
-     * Process a fused task
-     *
-     * A fused task is a task (which can be fused) and a list of further
-     * tasks which are of the same type and, hence, can be fused, too. This
-     * routine has to process all tasks, delete all the instances, i.e. both
-     * myTask and all pointers stored in tasksOfSameType, and return. It is
-     * blocking in the sense that we are guaranteed that tasks have completed
-     * once this function returns. For the execution, we rely on myTask's
-     * fuse() operation, i.e. this routine is solely there for the memory
-     * management.
-     *
-     * ## Generic efficiency remarks
-     *
-     * It is generally not clear if it is better to spawn all tasks again as
-     * a big parallel for, or to process them sequentially without any further
-     * tasking. After all, the task fusion has been introduced to reduce task
-     * management overhead. If we now take a set of tasks and again map them
-     * onto a set of physical tasks, it is really not clear what we gain in
-     * the end, as we again introduce overhead.
-     *
-     * @param myTask First task. This is a task which can be fused. The pointer
-     *   is valid. The ownership of myTask is handed over to the called routine,
-     *   i.e. processFusedTask() has to ensure that it is deleted.
-     * @param tasksOfSameType List of tasks of the same type. The list can be empty.
-     *   processFusedTask() has to ensure that all tasks stored within the list are
-     *   executed and subsequently destroyed.
-     * @param device Target device on which the fused tasks should be executed. Can
-     *   be host if the tasks should end up on the host.
-     */
-    void processFusedTask(Task* myTask, const std::vector<tarch::multicore::Task*>& tasksOfSameType, int device);
-
   } // namespace multicore
 } // namespace tarch
