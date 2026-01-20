@@ -109,79 +109,15 @@ generated code does make sense.
 
 ### Assess suitability
 
-Before we look into generated code or even start to implement something for 
-GPUs, we should assess if there are any tasks that could, in theory, go to the 
-accelerator.
-
-<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
-Many developers jump straight into accelerator programming and then are 
-frustrated if ExaHyPE does not use the GPU and blame the code. Most of their 
-time, they haven't done their homework: Peano always tries to maximise the 
-CPU usage first before it offloads to the GPU. For tiny problems or unfortunate
-load balancing, the code hence might not use the GPU even though the code is,
-in principle, GPU-ready. This is a natural consequence of our aim to 
-<b>minimise data movements</b>. If we don't have to ship data to the GPU, we
-don't do it!
-</div>
-
-Peano provides an ecosystem to assess to which degree a code might be suitable
-for an accelerator even before we start the porting:
-
-1. Compile in the @ref tarch_logging "statistics mode". This requires you to switch to
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-project.set_Peano4_installation(..., peano4.output.CompileMode.Stats)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-2. Run the code. I recommend that you use a fairly short run, i.e. only a few
-   time steps. The code will provide a statistics file:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-tarch::logging::Statistics::writeToCSV(string)          write statistics to file statistics-rank-0.csv (total no of entries=117)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-3. Peano's postprocessing comes along with several scripts to inspect and 
-   to postprocess the outcome. Inspect the statistics file
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-python3 ~/git/Peano/python/peano4/postprocessing/inspect-statistics.py statistics-rank-0.csv 
-Column 	| Counter
---------|----------------
-0	|  time (always used to plot)
-1	|  exahype2::EnclaveBookkeeping::memory-allocations
-2	|  mpi wait times
-3	|  tarch::multicore::bsp-concurrency-level
-4	|  tarch::multicore::spawned-tasks
-5	|  tarch::multicore::taskfusion::process-fused-tasks
-6	|  tarch::multicore::taskfusion::submit-fused-tasks
-7	|  grid-control-events
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   to find out which column gives you information about spawned tasks and all
-   the fused tasks.
-4. Visualise the number of tasks over time:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-python3 ~/git/Peano/python/peano4/postprocessing/plot-statistics.py -c 4,5,6 -o pdf statistics-rank-0.csv
-python3 ~/git/Peano/python/peano4/postprocessing/plot-statistics.py -c 5 -pt step -o pdf statistics-rank-0.csv
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If we get pictures similar to 
-
-@image html gpu-statistics-00.png
-@image html gpu-statistics-01.png
-
-we face issues: Apparently the code does spawn a lot of tasks which could, in 
-theory, be fused, but the fusion only ever takes one task at a time and deploys
-it. Consult the @ref tarch_logging "statistics page" for some more information on 
-the plots.
-
-In this example, we clearly don't produce tasks quickly enough. There are 
-always some cores idling which snap away fusable tasks before they can 
-accumulate on the host. Further to that, the scheduler changes its behaviour
-after some time and no tasks are produced at all anymore. These effects have 
-to be studied and sorted out first, before we continue to try to offload to the
-GPU.
-
+Follow the instructions on @ref documentation_tarch_task_fusion_strategies to 
+cross-validate that fusion in principle is enabled.
 
 
 ### Enable stateless compute kernels
 
 
 @todo Some of the content below should go into the Jupyter notebook
+@todo Tim, this is for you as well I guess
 
 You next have to instruct your solver that 
 you plan to have patch or cell updates without (write) access to the solver's internal 
