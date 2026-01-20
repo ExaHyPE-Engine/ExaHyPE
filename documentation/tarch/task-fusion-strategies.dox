@@ -204,16 +204,19 @@ We follow the guidelines on @ref tarch_logging:
 python3 ~/git/Peano/python/peano4/postprocessing/inspect-statistics.py statistics-rank-0.csv
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  Column 	| Counter
-  --------- | ----------------
-  0	|  time (always used to plot)
-  1	|  exahype2::EnclaveBookkeeping::memory-allocations
-  2	|  mpi wait times
-  3	|  tarch::multicore::BSPConcurrencyLevelStatisticsIdentifier
-  4	|  tarch::multicore::SpawnedFusableTasksStatisticsIdentifier
-  5	|  tarch::multicore::SpawnedTasksStatisticsIdentifier
-  6	|  tarch::multicore::taskfusion::submit-fused-tasks
-  7	|  grid-control-events
+Column 	| Counter
+--------- | ----------------
+0	|  time (always used to plot)
+1	|  exahype2::EnclaveBookkeeping::memory-allocations
+2	|  mpi wait times
+3	|  tarch::multicore::BSPConcurrencyLevelStatisticsIdentifier
+4	|  tarch::multicore::SpawnedFusableTasksStatisticsIdentifier
+5	|  tarch::multicore::SpawnedTasksStatisticsIdentifier
+6	|  tarch::multicore::taskfusion::DirectlyInsertFusedTaskIntoReadyQueueStatisticsIdentifier(0)
+7	|  tarch::multicore::taskfusion::FusableTasksQueue::SizeOfFusableTaskQueueStatisticsIdentifier(0)
+8	|  tarch::multicore::taskfusion::ProcessOneReadyTask::WaitedForOneReadyTaskFromFusableTasksStatisticsIdentifier(0)
+9	|  tarch::multicore::taskfusion::ProcessSetOfReadyTasks::ProcessFusedTasksStatisticsIdentifier(0)
+10	|  grid-control-events
     
   This table tells us which column numbers we have to pick per metric that we 
   study. We next will refer to a series of plots of certain metrics, which we
@@ -221,7 +224,10 @@ python3 ~/git/Peano/python/peano4/postprocessing/inspect-statistics.py statistic
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 python3 ~/git/Peano/python/peano4/postprocessing/plot-statistics.py -c 3 -scatter -o pdf statistics-rank-0.csv
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-  We pass in a 3 here, but would refer to entry from column 3 in the table above.
+  We pass in a 3 here, but would refer to entry from column 3 in the table 
+  above. The values in brackets in the table above allow you to distinguish 
+  different task types btw. In the present example, there is only one task type
+  in the code that can be fused.
 
 
 ## Cross-validate BSP/fork-join parallelism and sufficient task production

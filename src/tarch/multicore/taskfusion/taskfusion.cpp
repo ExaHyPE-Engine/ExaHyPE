@@ -69,19 +69,19 @@ void tarch::multicore::taskfusion::handleFusableTask(
 
   if (tarch::multicore::getOrchestration().getFusionImplementation()==tarch::multicore::orchestration::FusionImplementation::DisableFusionAndMapOntoNativeTask) {
     logDebug( "handleFusableTask(...)", "map fusable task " << taskNumber << " onto native task" );
-    ::tarch::logging::Statistics::getInstance().inc(MapFusedTaskOntoNativeTaskStatisticsIdentifier, 1, false, true);
+    ::tarch::logging::Statistics::getInstance().inc(MapFusedTaskOntoNativeTaskStatisticsIdentifier + "(" + std::to_string(task->getTaskType()) + ")", 1, false, true);
     native::spawnTask(task, inDependencies, taskNumber);
   }
   else if (tarch::multicore::getOrchestration().getFusionImplementation()==tarch::multicore::orchestration::FusionImplementation::DisableFusionAndProcessImmediately) {
     logDebug( "handleFusableTask(...)", "execute fusable task " << taskNumber << " directly" );
-    ::tarch::logging::Statistics::getInstance().inc(ProcessFusedTaskDirectlyStatisticsIdentifier, 1, false, true);
+    ::tarch::logging::Statistics::getInstance().inc(ProcessFusedTaskDirectlyStatisticsIdentifier + "(" + std::to_string(task->getTaskType()) + ")", 1, false, true);
     waitForTasks(inDependencies);
     task->run();
     delete task;
   }
   else if (instruction.maxTasks<=1) {
     logDebug( "handleFusableTask(...)", "map fusable task " << taskNumber << " onto native task" );
-    ::tarch::logging::Statistics::getInstance().inc(MapFusedTaskOntoNativeTaskStatisticsIdentifier, 1, false, true);
+    ::tarch::logging::Statistics::getInstance().inc(MapFusedTaskOntoNativeTaskStatisticsIdentifier + "(" + std::to_string(task->getTaskType()) + ")", 1, false, true);
     native::spawnTask(task, inDependencies, taskNumber);
   }
   else {
@@ -131,7 +131,7 @@ void tarch::multicore::taskfusion::handleFusableTask_LazyEvaluation(
   logTraceInWith1Argument( "handleFusableTask_LazyEvaluation(...)", taskNumber );
   if ( taskNumber==tarch::multicore::NoOutDependencies or inDependencies.empty() ) {
     logDebug( "handleFusableTask_LazyEvaluation(...)", "insert task " << taskNumber << " directly into fusion queue" );
-    ::tarch::logging::Statistics::getInstance().inc(DirectlyInsertFusedTaskIntoReadyQueueStatisticsIdentifier, 1, false, true);
+    ::tarch::logging::Statistics::getInstance().inc(DirectlyInsertFusedTaskIntoReadyQueueStatisticsIdentifier + "(" + std::to_string(task->getTaskType()) + ")", 1, false, true);
     taskQueue.insertReadyTask(
       task,
       taskNumber
@@ -183,7 +183,7 @@ void tarch::multicore::taskfusion::handleFusableTask_ProducerConsumerTaskSequenc
   std::set<TaskNumber>  processReadyTaskInDependencyNumber = tarch::multicore::NoInDependencies;
 
   if ( taskNumber==tarch::multicore::NoOutDependencies or inDependencies.empty() ) {
-    ::tarch::logging::Statistics::getInstance().inc(DirectlyInsertFusedTaskIntoReadyQueueStatisticsIdentifier, 1, false, true);
+    ::tarch::logging::Statistics::getInstance().inc(DirectlyInsertFusedTaskIntoReadyQueueStatisticsIdentifier + "(" + std::to_string(task->getTaskType()) + ")", 1, false, true);
     taskQueue.insertReadyTask(
       task,
       taskNumber

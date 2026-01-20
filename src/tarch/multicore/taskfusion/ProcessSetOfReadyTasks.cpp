@@ -57,7 +57,7 @@ void tarch::multicore::taskfusion::ProcessSetOfReadyTasks::run() {
           }
         }
 
-        tarch::logging::Statistics::getInstance().log(ProcessFusedTasksStatisticsIdentifier, extractedTaskNumbers.size());
+        tarch::logging::Statistics::getInstance().log(ProcessFusedTasksStatisticsIdentifier + "(" + std::to_string(_taskQueue.getType()) + ")", 1+extractedTaskNumbers.size(), true);
         processFusedTask(firstTask, extractedTaskPointers, instruction.device);
 
         _taskQueue.runningTaskFinished( firstTaskNumber );

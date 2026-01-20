@@ -31,7 +31,7 @@ void tarch::multicore::taskfusion::ProcessOneReadyTask::run() {
     Task* task =  _taskQueue.extractReadyTask( _taskNumber, _taskNumber );
 
     if ( task!=nullptr ) {
-      ::tarch::logging::Statistics::getInstance().inc(ProcessOneReadyTaskFromFusableTasksStatisticsIdentifier, 1, false, true);
+      ::tarch::logging::Statistics::getInstance().inc(ProcessOneReadyTaskFromFusableTasksStatisticsIdentifier + "(" + std::to_string(_taskQueue.getType()) + ")", 1, false, true);
 
       logDebug( "run()", "task " << _taskNumber << " is ready, i.e. not running yet. Execute it manually" );
 
@@ -42,7 +42,7 @@ void tarch::multicore::taskfusion::ProcessOneReadyTask::run() {
       _taskQueue.runningTaskFinished(_taskNumber);
     }
     else {
-      ::tarch::logging::Statistics::getInstance().inc(WaitedForOneReadyTaskFromFusableTasksStatisticsIdentifier, 1, false, true);
+      ::tarch::logging::Statistics::getInstance().inc(WaitedForOneReadyTaskFromFusableTasksStatisticsIdentifier + "(" + std::to_string(_taskQueue.getType()) + ")", 1, false, true);
 
       logDebug( "run()", "task " << _taskNumber << " seems to be running atm (grabbed by another consumer task)" );
 
