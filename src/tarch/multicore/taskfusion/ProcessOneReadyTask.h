@@ -31,7 +31,39 @@ class tarch::multicore::taskfusion::ProcessOneReadyTask: public tarch::multicore
     FusableTasksQueue& _taskQueue;
     const TaskNumber   _taskNumber;
 
-    static tarch::logging::Log _log;
+    static tarch::logging::Log  _log;
+
+    /**
+     * Track how often runtime extracted single task from fusable task queue
+     *
+     * The quantity tells us how many fusable tasks have been manually removed
+     * from the fusable queue, as the runtime requested the task outcome asap.
+     *
+     * The impact/implication of this tracker is discussed on
+     * @ref documentation_tarch_task_fusion_strategies. To visualise it, you
+     * can follow the same scheme as used for @ref tarch::multicore::SpawnedTasksStatisticsIdentifier.
+     *
+     * If this counter is high compared to the total number of fusable tasks,
+     * it means that the runtime had been asked frequently that a task outcome
+     * is now urgently needed. Therefore, it decided to interrupt the fusion,
+     * search for this one task, complete it "manually" with high priority and
+     * return. A high counter hence means that the fusion is not really
+     * efficient.
+     *
+     *
+     *
+     * @see WaitedForOneReadyTaskFromFusableTasksStatisticsIdentifier
+     */
+    static const std::string    ProcessOneReadyTaskFromFusableTasksStatisticsIdentifier;
+
+    /**
+     *
+  Along the same lines, @ref tarch::multicore::taskfusion::ProcessOneReadyTask::WaitedForOneReadyTaskFromFusableTasksStatisticsIdentifier
+  tracks how often the runtime tried to extract a task from the queue but it
+  had, at that point, already been processed by someone else. We therefore
+  had to wait.
+     */
+    static const std::string    WaitedForOneReadyTaskFromFusableTasksStatisticsIdentifier;
 
   public:
     /**

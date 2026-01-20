@@ -8,7 +8,7 @@
 
 
 tarch::logging::Log tarch::multicore::taskfusion::ProcessSetOfReadyTasks::_log( "tarch::multicore::taskfusion::ProcessSetOfReadyTasks" );
-const std::string tarch::multicore::taskfusion::ProcessSetOfReadyTasks::ProcessFusedTasksStatisticsIdentifier = "tarch::multicore::taskfusion::process-fused-tasks";
+const std::string tarch::multicore::taskfusion::ProcessSetOfReadyTasks::ProcessFusedTasksStatisticsIdentifier = "tarch::multicore::taskfusion::ProcessSetOfReadyTasks::ProcessFusedTasksStatisticsIdentifier";
 
 
 tarch::multicore::taskfusion::ProcessSetOfReadyTasks::ProcessSetOfReadyTasks(
@@ -71,3 +71,11 @@ void tarch::multicore::taskfusion::ProcessSetOfReadyTasks::run() {
   }
 }
 
+
+void tarch::multicore::taskfusion::ProcessSetOfReadyTasks::processFusedTask(Task* myTask, const std::vector<tarch::multicore::Task*>& tasksOfSameType, int device) {
+  myTask->fuse(tasksOfSameType, device);
+  for (auto& p: tasksOfSameType) {
+    delete p;
+  }
+  delete myTask;
+}
