@@ -14,7 +14,28 @@ Colours = [ "#ff0000",
             "#00ffff",
           ]
 
+Markers = [
+            "v",
+            "^",
+            "x",
+            "o",
+            "<",
+            ">"
+          ]
+
 if __name__ == "__main__":
+  """!
+  
+  Script to postprocess statistics outcomes
+  
+  This script can produce two types of data: a CSV file which contains only
+  specific data (it then serves as a filter to a bigger CSV file), or a plot
+  of specific data. For the plot, we can either dump data as scatter plot, 
+  or we can use historic data. After all, all data are time series, so we
+  end up with some kind of step function plot for the latter.
+  
+  
+  """
   parser = argparse.ArgumentParser(description="""
 Peano 4 statistics postprocessing
 
@@ -48,6 +69,12 @@ they have.
                       action="store_true",
                       default=False,    
                       help="Write min-max bars" )
+  parser.add_argument("-v", 
+                      "--verbose",  
+                      dest="verbose",
+                      action="store_true",
+                      default=False,    
+                      help="Verbose" )
   args = parser.parse_args()
   
   columns = [ int(x) for x in args.columns.split(",") ]
@@ -56,18 +83,19 @@ they have.
   if args.output=="pdf" or args.output=="png":    
     plt.clf()
 
-  #
-  # Every entry of interest is characterised through a time stamp and a 
-  # measurement output from Peano. Measureemnt outputs always tell you 
-  # the (average) value, the min value, the max value and the number of 
-  # samples.
-  #
-  timestamps = []
-  values     = []
-  min_values = []
-  max_values = []
-  samples    = []
   for column in columns:
+    #
+    # Every entry of interest is characterised through a time stamp and a 
+    # measurement output from Peano. Measureemnt outputs always tell you 
+    # the (average) value, the min value, the max value and the number of 
+    # samples.
+    #
+    timestamps = []
+    values     = []
+    min_values = []
+    max_values = []
+    samples    = []
+  
     #
     # Read input file
     #
@@ -75,11 +103,16 @@ they have.
     metric = None
     for line in input_file:
       if metric==None:
+        # If metric still equals None, then we are in the very
+        # first line, and we use this first line to extract the
+        # metric from the input file
         metric = line.split( "," )[column]
         print( "parse metric {}".format(metric) )
       elif line.strip()!="":
         time_stamp = float(line.split( "," )[0])
         token      = line.split( "," )[column].strip()
+        if len(timestamps)>0 and time_stamp<timestamps[-1]:
+          print( "data consistency error for data at {}, as last time stamp had been {}".format(time_stamp,timestamps[-1]) )
         if token!="":
           timestamps.append(time_stamp )
           value = float( token.split("(")[1].split("/")[0])
@@ -97,6 +130,8 @@ they have.
     #
     # Dump csv
     #
+    if args.verbose:
+      print( "dump {} data points for label {}".format(len(timestamps),metric) )    
     if args.output=="csv":
       output_file = open( args.file + "-column-" + str(column) + ".csv", "w" )
       output_file.write( "time, value, min, max, count\n" )
@@ -120,8 +155,10 @@ they have.
       if args.minmax:
         for i in zip(timestamps,min_values,max_values):
           plt.plot( [i[0],i[0]], [i[1],i[2]], color=Colours[colour] )
-      plt.scatter( timestamps, values, color=Colours[colour], alpha=0.5, label=metric )
+      plt.scatter( timestamps, values, marker=Markers[colour], color=Colours[colour], alpha=0.5, label=metric )
 
+  plt.rc('legend', fontsize = 6)
+  
   if args.output=="pdf":    
     plt.legend()
     plt.savefig( args.file + ".pdf" )
