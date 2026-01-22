@@ -5,7 +5,7 @@
 #include "tarch/logging/Statistics.h"
 
 
-const std::string tarch::multicore::taskfusion::LogReadyTask::SubmitFusedTasksStatisticsIdentifier = "tarch::multicore::taskfusion::submit-fused-tasks";
+const std::string tarch::multicore::taskfusion::LogReadyTask::SubmitFusedTasksStatisticsIdentifier = "tarch::multicore::taskfusion::LogReadyTask::SubmitFusedTasksStatisticsIdentifier";
 tarch::logging::Log tarch::multicore::taskfusion::LogReadyTask::_log( "tarch::multicore::taskfusion::LogReadyTask" );
 
 

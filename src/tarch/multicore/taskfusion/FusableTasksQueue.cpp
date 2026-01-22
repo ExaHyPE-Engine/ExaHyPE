@@ -9,6 +9,7 @@
 
 
 tarch::logging::Log  tarch::multicore::taskfusion::FusableTasksQueue::_log( "tarch::multicore::taskfusion::FusableTasksQueue" );
+const std::string tarch::multicore::taskfusion::FusableTasksQueue::SizeOfFusableTaskQueueStatisticsIdentifier("tarch::multicore::taskfusion::FusableTasksQueue::SizeOfFusableTaskQueueStatisticsIdentifier");
 
 
 tarch::multicore::taskfusion::FusableTasksQueue::FusableTasksQueue(int type):
@@ -26,6 +27,7 @@ void tarch::multicore::taskfusion::FusableTasksQueue::insertReadyTask( Task* tas
 
 std::pair< tarch::multicore::TaskNumber, tarch::multicore::Task* > tarch::multicore::taskfusion::FusableTasksQueue::extractFirstReadyTask( TaskNumber handlingTask ) {
   tarch::multicore::Lock readyTaskLock(_readyTasksSemaphore);
+  ::tarch::logging::Statistics::getInstance().log(SizeOfFusableTaskQueueStatisticsIdentifier + "(" + std::to_string(_type) + ")", _readyTasks.size());
   if ( _readyTasks.empty() ) {
     return {-1, nullptr};
   }
@@ -48,6 +50,8 @@ tarch::multicore::Task*  tarch::multicore::taskfusion::FusableTasksQueue::extrac
     _runningTasks[ taskNumber ] = handlingTask;
     Task* task = _readyTasks[taskNumber];
     _readyTasks.erase(taskNumber);
+
+    ::tarch::logging::Statistics::getInstance().log(SizeOfFusableTaskQueueStatisticsIdentifier + "(" + std::to_string(_type) + ")", _readyTasks.size());
 
     return task;
   }
@@ -118,6 +122,7 @@ void tarch::multicore::taskfusion::FusableTasksQueue::drainReadyTasks() {
 
   while (nextTaskNumber!=AnyTask) {
     tarch::multicore::Lock readyTaskLock(_readyTasksSemaphore);
+    ::tarch::logging::Statistics::getInstance().log(SizeOfFusableTaskQueueStatisticsIdentifier + "(" + std::to_string(_type) + ")", _readyTasks.size());
     nextTaskNumber = AnyTask;
     if (not _readyTasks.empty()) {
       nextTaskNumber = _readyTasks.begin()->first;

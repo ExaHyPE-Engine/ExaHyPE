@@ -48,6 +48,16 @@ class tarch::multicore::taskfusion::LogReadyTask: public tarch::multicore::Task 
     const int           _taskNumber;
     FusableTasksQueue&  _taskQueue;
 
+    /**
+     * Statistics identifier
+     *
+     * This statistics identifier tells you how many tasks have actually been
+     * submitted through a LogReadyTask. If fusable tasks hit the runtime and
+     * are ready already, we insert them straight. If they are not ready yet,
+     * they are given in custody of a LogReadyTask which dumps them later. To
+     * analyse this flag, you can follow the recipe of
+     * @ref tarch::multicore::SpawnedTasksStatisticsIdentifier.
+     */
     static const std::string SubmitFusedTasksStatisticsIdentifier;
 
     static tarch::logging::Log _log;

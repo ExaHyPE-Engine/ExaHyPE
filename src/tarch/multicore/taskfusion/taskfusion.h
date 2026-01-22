@@ -87,6 +87,55 @@ namespace tarch {
      *
      */
     namespace taskfusion {
+      /**
+       * Track how many tasks are directly inserted into ready queue
+       *
+       * The counter tracks
+       * those tasks where the runtime things they should be fused. As the
+       * tasks are already ready, it would be harakiri to run through instances
+       * of LogReadyTask. Instead, we can insert those tasks directly into the
+       * queue of fusable tasks.
+       *
+       * This counter is the direct counterpart to
+       * @ref tarch::multicore::taskfusion::LogReadyTask::SubmitFusedTasksStatisticsIdentifier.
+       * Please study this flag for further information including hints how to
+       * visualise the outcome.
+       */
+      extern const std::string DirectlyInsertFusedTaskIntoReadyQueueStatisticsIdentifier;
+
+      /**
+       * Track number of fused tasks that are mapped directly onto native tasks
+       *
+       * The orchestration might decide to map fusable tasks onto native tasks
+       * for various reasons. All of them are discussed in the documentation of
+       * handleFusableTask(). If we assess the task fusion, it is a problem if
+       * the task fusion actually never kicks in, i.e. if all tasks end up as
+       * native tasks.
+       *
+       * @image html documentation/tarch/statistics-flawed-handling-of-tasks.png
+       *
+       * Visualising this counter flags the underlying problem. There's also a
+       * longer discussion on @ref documentation_tarch_task_fusion_strategies
+       * which refers to the pic above (where we have lots of fusable tasks, but
+       * all of them end up being mapped onto native ones).
+       */
+      extern const std::string MapFusedTaskOntoNativeTaskStatisticsIdentifier;
+
+      /**
+       * Track number of tasks that are executed directly
+       *
+       * This is an even stronger flavour of MapFusedTaskOntoNativeTaskStatisticsIdentifier,
+       * where tasks are not even mapped onto native tasks but actually
+       * executed straightaway.
+       *
+       * Consult
+       * @ref tarch::multicore::orchestration::FusionImplementation::DisableFusionAndProcessImmediately
+       * as well as the documentation handleFusableTask(). This counter/task
+       * processing scheme should be used with uttermost care, as it potentially
+       * breaks the tasking semantics.
+       */
+      extern const std::string ProcessFusedTaskDirectlyStatisticsIdentifier;
+
       struct FusableTasksQueue;
 
       /**
@@ -126,7 +175,7 @@ namespace tarch {
        *
        * ## LazyEvaluation
        *
-       * Almost trival realisation of the core functionality through
+       * Almost trivial realisation of the core functionality through
        * handleFusableTask_LazyEvaluation(). The interesting stuff, i.e. the
        * fusion and task processing, all happens in ensureHeldBackTasksAreMappedOntoNativeTasks()
        * which in turn calls ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation().
@@ -176,6 +225,13 @@ namespace tarch {
        *
        * The routine can be used to set off timed execution as discussed in
        * tarch::multicore::orchestration::FusionImplementation.
+       *
+       * ## Implementation
+       *
+       * Calling waitForTask() will handle native tasks, but also will
+       * eventually lead back to a call of ensureHeldBackTasksAreMappedOntoNativeTasks()
+       *
+       *
        *
        */
       void processAndFuseAllReadyTasks();

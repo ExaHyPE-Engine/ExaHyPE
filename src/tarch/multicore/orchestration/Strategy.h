@@ -12,7 +12,8 @@ namespace tarch {
        *
        * The default strategy is AllOnGPU at the moment if you have GPU
        * support. Without GPU support, we use a Hardcoded variant that
-       *
+       * keeps all tasks on the host, but tries to fuse as aggressively
+       * as possible.
        */
       Strategy* createDefaultStrategy();
 

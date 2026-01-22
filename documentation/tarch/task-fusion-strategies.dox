@@ -4,22 +4,23 @@
 
 @tableofcontents
 
-Task fusion is one of the many magic knobs that can make a huge difference in 
-your application performance.
+Task fusion is one of the many magic knobs that can make a huge difference in your application performance and also is one key tool to faciliate GPU offloading. 
+
+
 This page dives into some design principles behind the task fusion and provides
-a high-level overview.
+a high-level overview as well as programming guidelines.
 Details on how the fusion is implemented are provided in the documentation
-of the namespace tarch::multicore::taskfusion.
-A high-level overview of what task fusion strategies we have on the table is
-available from the enum tarch::multicore::orchestration::FusionImplementation
-which is used to pick one of the implementation variants.
-This page is written for programmers who want to use/adopt the task fusion 
+of the namespace @ref tarch::multicore::taskfusion.
+From there, you can also navigate to a 
+high-level overview of what task fusion strategies we have on the table, which
+is all content available from @ref tarch::multicore::orchestration::FusionImplementation.
+This page however is written for programmers who want to use/adopt the task fusion 
 within their own code.  
 
 
 <div style="background-color: #ccf; padding: 10px; border: 1px solid green;"> 
  This page and references therein describe how the task fusion is realised
- and how we control its behaviour. 
+ through the technical architecture. 
  It is very C++-centric. 
  Individual Peano extensions such as ExaHyPE expose the freedom to pick and 
  configure task fusion strategies through their Python interface. For this,
@@ -30,34 +31,48 @@ within their own code.
 
 # Prepare your task
 
-To be able to fuse tasks, we have to assign tasks are unique number. A very 
-imple way to do this is to create a static marker. While it is possible to
+<div style="background-color: #cfc; padding: 10px; border: 1px solid green;"> 
+ This step is mandatory.
+</div>
+
+To be able to fuse tasks, we have to assign tasks are unique type number. 
+This is not the number of a task as we use it for dependency management, but 
+one that identifies its type.
+A very simple way to do this is to create a static marker either within the 
+task class or somewhere in your code that is set once and then used for all
+instances of this task. 
+
+
+While it is possible to
 hardcode a task number, it is not particularly elegant and reasonable: If 
 you later combine two different applications, you have to be absolutely sure
-that they do not use the same index for different tasks. It is safer to 
+that they do not use the same type number for different tasks. It is safer to 
 rely on the @ref peano4::parallel::getTaskType() factory method to produce unique
 identifiers.
 
-As soon as your task type is not tarch::multicore::Task::DontFuse, the task's
-canFuse() routine will return true. Consequently, Peano's technical architecture
-will embed the spawned tasks into a queue and try to fuse the tasks from there.
 
-
-
-## Task type numbers of tasks constructed through a functor
+## Task type numbers for tasks constructed through a functor
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+auto updateResidualFunctor = []() -> void {
+  [...]
+}
+
 static int residualTaskType     = peano4::parallel::getTaskType("UpdateResidualTask");
 tarch::multicore::TaskWithCopyOfFunctor* updateResidualTask = new tarch::multicore::TaskWithCopyOfFunctor(
   residualTaskType,
   tarch::multicore::Task::DefaultPriority,
   updateResidualFunctor
 );  
+tarch::multicore::spawnTask( updateResidualTask );
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This is absolutely fine and works. However, it becomes convenient later on, if
-we have a way to access this task type number, i.e. if it is not embedded 
-somewhere in a function:
+This code snippet spawns a task passing in a functor and hence mirrors code as 
+you would write it in TBB or plain C++. The interesting thing in the present
+snippet is the argument residualTaskType. By default, we would pass in 
+tarch::multicore::Task::DontFuse. As we hand over a valid id, we implicitly
+signal to the runtime that many tasks with this functor will be spawned, and 
+the runtime should try to fuse them into one big task if possible.
 
 ## Tasks modelled as explicit classes
 
@@ -65,18 +80,22 @@ In a proper task class, you can make the task type a static field. ExaHyPE
 for example gives each enclave task an attribute
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+class MyEnclaveTask: public tarch::multicore::Task {
+  protected:
     /**
      * This is a unique static id which we use both for task fusion and within
      * SmartMPI to distinguish different task types.
      */
     static int                                _enclaveTaskTypeId;
+    
+  [...]
+};
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 by default. It then initialises this similar to
 
-
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-int benchmarks::exahype2::ccz4::tasks::CCZ4SBH_FD4EnclaveTask::_enclaveTaskTypeId(peano4::parallel::getTaskType("benchmarks::exahype2::ccz4::tasks::CCZ4SBH_FD4EnclaveTask"));
+int MyEnclaveTask::_enclaveTaskTypeId(peano4::parallel::getTaskType("benchmarks::exahype2::ccz4::tasks::CCZ4SBH_FD4EnclaveTask"));
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For each task class, we now have a dedicated task type number. We can also 
@@ -90,7 +109,20 @@ nothing stops a user from labelling specific tasks as not fusable, i.e. to
 veto any fusion.
 
 
+## What happens due to a valid task type number
+
+As soon as your task type is not tarch::multicore::Task::DontFuse, the task's
+canFuse() routine will return true (unless you overwrite it again manually in 
+the case where you have an explicit class type). Consequently, Peano's technical architecture
+will embed the spawned tasks into a queue and try to fuse the tasks with the 
+same type id if there are many of the same type ready.
+
+
 # Pick a task orchestration
+
+<div style="background-color: #cfc; padding: 10px; border: 1px solid green;"> 
+ You can skip this step if you want, as Peano's default should already enable task fusion.
+</div>
 
 The task orchestration is controlled through @ref tarch::multicore::setOrchestration().
 It sets a global instane of @ref tarch::multicore::orchestration::Strategy 
@@ -114,17 +146,174 @@ In short, the first function of the orchestration determines how the task
 fusion is realised, while the second steers which tasks are offloaded when.
 
 The default orchestration is determined through @ref tarch::multicore::orchestration::createDefaultStrategy().
+It should also ready enable fusion. 
+
+
 You can reset the strategy manually. Most extension's Python interfaces provide
-a routine for this (e.g. @ref exahype2.project.Project.set_multicore_orchestration() in ExaHyPE).
+a routine for this (e.g. ExaHyPE's exahype2.project.Project.set_multicore_orchestration()).
+
+
+# Doublecheck that tasks are fused
 
 <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
-Before you continue, it is reasonable to enable the statistics mode of Peano 
-and to track how many tasks there are, on average, in the queue whenever an
-instance of ProcessReadyTask fires off, i.e. doesn't see that its underlying
-task has already completed. You get a feeling of the business of the system.
+ Even though this step does not add any functionality, it is absolutely key that you run through these steps before you continue.
 </div>
 
+Before you continue, it is key to validate that the fusion in principle is 
+working. It makes no sense to directly start performance assessments or even
+tuning.
+For this, switch to Peano's statistics mode. 
+In Python, it is set through 
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+project.set_Peano4_installation(peano_dir,mode)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+but most people favour settting it through a string argument and to offer it
+to a script user to set it externally:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+parser.add_argument(
+    "-m",   
+    "--mode",               
+    dest="mode",           
+    choices=peano4.output.CompileModes, default=peano4.output.CompileModes[0], help="|".join(peano4.output.CompileModes) 
+)
+
+[...]
+
+project.set_Peano4_installation(peano_dir, peano4.output.string_to_mode(mode))
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+## Prep the data
+
+Once the statistics mode is switched on, we can track how many tasks there are,
+on average, in the queue:
+We follow the guidelines on @ref tarch_logging:
+
+- Compile the code in statistics mode (cmp remarks above)
+- Run the application. You will get an output similar to
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  tarch::logging::Statistics::writeToCSV(string)          write statistics to file statistics-rank-0.csv (total no of entries=881)
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  There will be one file per rank, i.e. the next steps have to be done on a per-rank basis.
+- We next inspect these statistics to identify the metrics that inform us about 
+  the task fusion:
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 ~/git/Peano/python/peano4/postprocessing/inspect-statistics.py statistics-rank-0.csv
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Column 	| Counter
+--------- | ----------------
+0	|  time (always used to plot)
+1	|  exahype2::EnclaveBookkeeping::memory-allocations
+2	|  mpi wait times
+3	|  tarch::multicore::BSPConcurrencyLevelStatisticsIdentifier
+4	|  tarch::multicore::SpawnedFusableTasksStatisticsIdentifier
+5	|  tarch::multicore::SpawnedTasksStatisticsIdentifier
+6	|  tarch::multicore::taskfusion::DirectlyInsertFusedTaskIntoReadyQueueStatisticsIdentifier(0)
+7	|  tarch::multicore::taskfusion::FusableTasksQueue::SizeOfFusableTaskQueueStatisticsIdentifier(0)
+8	|  tarch::multicore::taskfusion::ProcessOneReadyTask::WaitedForOneReadyTaskFromFusableTasksStatisticsIdentifier(0)
+9	|  tarch::multicore::taskfusion::ProcessSetOfReadyTasks::ProcessFusedTasksStatisticsIdentifier(0)
+10	|  grid-control-events
+    
+  This table tells us which column numbers we have to pick per metric that we 
+  study. We next will refer to a series of plots of certain metrics, which we
+  create through calls similar to
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+python3 ~/git/Peano/python/peano4/postprocessing/plot-statistics.py -c 3 -scatter -o pdf statistics-rank-0.csv
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+  We pass in a 3 here, but would refer to entry from column 3 in the table 
+  above. The values in brackets in the table above allow you to distinguish 
+  different task types btw. In the present example, there is only one task type
+  in the code that can be fused.
+
+
+## Cross-validate BSP/fork-join parallelism and sufficient task production
+
+A first check crossvalidates the BSP levels. Plotting 
+  the quantity @ref tarch::multicore::BSPConcurrencyLevelStatisticsIdentifier
+  gives us an overview of the fork-join parallelism at any point in time.
+  Please consult the documentation of this flag and check that there's the
+  correct number of fork-join tasks, i.e. subpartitions per rank, such that
+  we produce tasks sufficiently quickly. For the task fusion, it is 
+  important to cross-validate that we work with a reasonable number of BSP
+  partitions, such that tasks are produced quickly enough. 
+
+
+We next check @ref tarch::multicore::SpawnedTasksStatisticsIdentifier.
+  If no tasks are spawned, we do not have to continue to study any fusion.
+  It is convenient to plot @ref tarch::multicore::SpawnedFusableTasksStatisticsIdentifier
+  at the same time, as we are really interested in fusable tasks only.
+  
+  If the plot resembles something alike
+  
+  @image html documentation/tarch/statistics-task-fusion-task-numbers.png
+
+  then all is fine: Here, we issue a lot of tasks, and all of them are
+  actually also fusable. It is ok if there's fewer fusable tasks, but there
+  should be a healthy number, so we can actually fuse.
+  
+## Assess that fusion is kicking in
+
+Finally, we plot the following quantities (maybe all in one go by picking column indicies separated by columns, i.e. similar to ```1,2,3,8```):
+
+
+### How many tasks are inserted?
+
+  The flags @ref tarch::multicore::taskfusion::MapFusedTaskOntoNativeTaskStatisticsIdentifier,
+  @ref tarch::multicore::taskfusion::DirectlyInsertFusedTaskIntoReadyQueueStatisticsIdentifier and
+  @ref tarch::multicore::taskfusion::LogReadyTask::SubmitFusedTasksStatisticsIdentifier.
+  clarify how the fused tasks have been handled. Their sum should equal what we 
+  get out from 
+  @ref tarch::multicore::SpawnedFusableTasksStatisticsIdentifier.
+  
+  @image html documentation/tarch/statistics-flawed-handling-of-tasks.png
+  
+  In the example above, we see that a lot of tasks are spawned. All of these
+  tasks are also fusable, as the red and green triangles overlap. Unfortunately,
+  all fusable tasks are then directly mapped onto native tasks. This indicates 
+  that the chosen task orchestration does not work. Likely, an unfortunate 
+  orchestration has been chosen.
+
+### Has somebody messed up with/vetoed the fusion?
+
+  The quantity @ref tarch::multicore::taskfusion::ProcessOneReadyTask::ProcessOneReadyTaskFromFusableTasksStatisticsIdentifier 
+  tells us how many fusable tasks have been manually removed from the fusable
+  queue, as the runtime requested the task outcome asap.
+  Along the same lines, @ref tarch::multicore::taskfusion::ProcessOneReadyTask::WaitedForOneReadyTaskFromFusableTasksStatisticsIdentifier
+  tracks how often the runtime tried to extract a task from the queue but it 
+  had, at that point, already been processed by someone else. Both counters
+  should be low compared to the total number of tasks as explained in their
+  documentation.
+
+  @image html documentation/tarch/statistics-working-fusion.png
+  
+  In the example above, all outcomes are rather promising: We see that all
+  spawned tasks are also fusable, and that they are all inserted directly 
+  into the ready queue. These three symbols overlap. Every now and then, the 
+  runtime has to wait for some ready task, but that happens infrequently,
+  which means the fusion is kicking in most of the time.
+
+### How many tasks have really been fused?
+
+Of particular relevance in practice are 
+@ref tarch::multicore::taskfusion::FusableTasksQueue::SizeOfFusableTaskQueueStatisticsIdentifier
+ and @ref tarch::multicore::taskfusion::ProcessSetOfReadyTasks::ProcessFusedTasksStatisticsIdentifier.
+They track the size of the fused queue and how many tasks have been extracted per fusion.
+
+  @image html documentation/tarch/statistics-fused-tasks.png
+ 
+In the example above, we inserted around 250 tasks into the queue, which then
+immediately got fused into one big meta task hosting 250 tasks. Nothing 
+happened after that for 60s, before we enter a certain sequence. Per step
+within this sequence, we insert around 250 tasks, which then seemed to be 
+grabbed always in one go.
+
+    
+  
+  
 # Tweak the fusion kernel
 
 One of the purposes of task fusion - besides a reduction of overheads - is the
