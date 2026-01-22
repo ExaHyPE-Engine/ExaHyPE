@@ -1,27 +1,24 @@
 spack:
   specs:
-    - python@3.13.5 %gcc
+    - llvm-amdgpu@6.4.1
+    - rocm-openmp-extras@6.4.1
+    - python@3.14.0
     - py-pip@25.1.1
-    - llvm-amdgpu@6.4.1 %gcc
-    - rocm-openmp-extras@6.4.1 %gcc
-    - libxsmm@1.17 +generator %gcc
-    - easi@1.6.1 jit=lua %gcc
-    - boost@1.88.0 +filesystem +fiber +context %gcc
-    - memkind@1.14.0 %gcc
-    - openblas@0.3.28 %gcc
-    - eigen@3.4.0 %gcc
-    - papi@7.1.0 %gcc
-    - likwid@5.4.1 %gcc
-    - hwloc@2.11.1 %gcc
-    - ucx@1.17.0 %gcc
-    - mpich@4.3.0 %gcc
-    - metis@5.1.0 %gcc
-    - parmetis@4.0.3 %gcc
-    - petsc@3.22.2 +mpi +memkind +metis +hwloc +openmp %gcc
-    - hdf5@1.14.6 -fortran -java +threadsafe +mpi +shared +cxx +hl %gcc
-    - netcdf-c@4.9.2 +mpi +shared %gcc
-    - netcdf-cxx4@4.3.1 +pic +shared %gcc
-    - parallel-netcdf@1.14.0 +cxx -fortran +pic +shared %gcc
+    - mpich@4.3.2
+    - hwloc@2.12.2
+    - ucx@1.19.0
+    - libxsmm@1.17 +generator
+    - easi@1.6.1 jit=lua
+    - memkind@1.14.0
+    - papi@7.2.0
+    - likwid@5.4.1
+    - metis@5.1.0
+    - parmetis@4.0.3
+    - boost@1.88.0 +filesystem +fiber +context
+    - petsc@3.22.2 +mpi +memkind +metis +hwloc +openmp
+    - hdf5@1.14.6 -fortran -java +threadsafe +mpi +shared +cxx +hl
+    - netcdf-c@4.9.2 +mpi +shared
+    - parallel-netcdf@1.14.1 +cxx -fortran +pic +shared
   packages:
     all:
       target: [x86_64]
@@ -29,5 +26,6 @@ spack:
     unify: true
     reuse: true
   config:
-    install_tree: /opt/software
+    install_tree:
+      root: /opt/software
   view: /opt/views/view

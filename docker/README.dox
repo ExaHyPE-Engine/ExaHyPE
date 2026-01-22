@@ -25,19 +25,19 @@ To use the prebuilt images, we do recommended that you first clone Peano, then n
 and run the Docker container interactively by mapping the Peano directory into the container (here, we use `work` as our mapping point):
 
 ```shell
-docker run -it -v ${PWD}:/work --rm --privileged peanoframework/<compiler> /bin/bash
+docker run -it -v ${PWD}:/work --rm --privileged peanoframework/<compiler>
 ```
 
 ### With GPU Support
 
 ```shell
-docker run -it -v ${PWD}:/work --rm --gpus=all --privileged peanoframework/<compiler> /bin/bash
+docker run -it -v ${PWD}:/work --rm --gpus=all --privileged peanoframework/<compiler>
 ```
 
 ### With Port Forwarding (JupyterLab)
 
 ```shell
-docker run -it -v ${PWD}:/work -p 53155:53155 --rm --privileged peanoframework/<compiler> /bin/bash
+docker run -it -v ${PWD}:/work -p 53155:53155 --rm --privileged peanoframework/<compiler>
 ```
 
 and then you can run
