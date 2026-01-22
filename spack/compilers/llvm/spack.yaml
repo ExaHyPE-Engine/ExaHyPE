@@ -1,28 +1,23 @@
 spack:
   specs:
-    - python@3.13.5 %gcc
+    - llvm@19.1.7 +clang +libomptarget +libomptarget_debug +gold targets=all
+    - python@3.14.0
     - py-pip@25.1.1
-    - llvm@19.1.7 +clang +libomptarget +libomptarget_debug +gold %gcc
-    - libxsmm@1.17 +generator %gcc
-    - easi@1.6.1 jit=lua %gcc
-    - boost@1.88.0 +filesystem +fiber +context %gcc
-    - memkind@1.14.0 %gcc
-    - openblas@0.3.28 %gcc
-    - eigen@3.4.0 %gcc
-    - papi@7.1.0 %gcc
-    - likwid@5.4.1 +cuda %gcc
-    - hwloc@2.11.1 +cuda %gcc
-    - ucx@1.17.0 +cuda %gcc
-    - zlib-ng@2.2.4 %gcc
     - cuda@12.9.0
-    - openmpi@5.0.8 +cuda fabrics=ucx %gcc
-    - metis@5.1.0 %gcc
-    - parmetis@4.0.3 %gcc
-    - petsc@3.22.2 +mpi +memkind +metis +hwloc +openmp %gcc
-    - hdf5@1.14.6 -fortran -java +threadsafe +mpi +shared +cxx +hl %gcc
-    - netcdf-c@4.9.2 +mpi +shared %gcc
-    - netcdf-cxx4@4.3.1 +pic +shared %gcc
-    - parallel-netcdf@1.14.0 +cxx -fortran +pic +shared %gcc
+    - hwloc@2.12.2 +cuda
+    - ucx@1.19.0 +cuda
+    - openmpi@5.0.8 +cuda fabrics=ucx
+    - libxsmm@1.17 +generator
+    - easi@1.6.1 jit=lua
+    - memkind@1.14.0
+    - papi@7.2.0
+    - likwid@5.4.1
+    - metis@5.1.0
+    - parmetis@4.0.3
+    - petsc@3.22.2 +mpi +memkind +metis +hwloc +openmp
+    - hdf5@1.14.6 -fortran -java +threadsafe +mpi +shared +cxx +hl
+    - netcdf-c@4.9.2 +mpi +shared
+    - parallel-netcdf@1.14.1 +cxx -fortran +pic +shared
   packages:
     all:
       target: [x86_64]
@@ -30,5 +25,6 @@ spack:
     unify: true
     reuse: true
   config:
-    install_tree: /opt/software
+    install_tree:
+      root: /opt/software
   view: /opt/views/view

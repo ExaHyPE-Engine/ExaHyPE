@@ -75,6 +75,12 @@ RUN apt-get update -y && apt-get upgrade -y && apt-get install -y --no-install-r
     libmimalloc-dev \
     libnuma-dev \
     libnuma1 \
+    libnss3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libgtk-3-0 \
+    libasound2t64 \
     nodejs \
     zlib1g \
     zlib1g-dev && \
@@ -83,11 +89,12 @@ RUN apt-get update -y && apt-get upgrade -y && apt-get install -y --no-install-r
     apt-get autoclean -y && \
     rm -rf /var/lib/apt/lists/*
 
-RUN wget https://github.com/doxygen/doxygen/releases/download/Release_1_14_0/doxygen-1.14.0.linux.bin.tar.gz && \
-    gunzip doxygen-1.14.0.linux.bin.tar.gz && \
-    tar xf doxygen-1.14.0.linux.bin.tar && \
-    cd doxygen-1.14.0/ && \
-    make install && \
-    rm -rf /doxygen-1.14.0.linux.bin.tar
+ARG DOXYGEN_VERSION=1.10.0
+ARG DOXYGEN_RELEASE=Release_1_10_0
+
+RUN wget -q https://github.com/doxygen/doxygen/releases/download/${DOXYGEN_RELEASE}/doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz \
+    && tar -xzf doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz \
+    && cp doxygen-${DOXYGEN_VERSION}/bin/doxygen /usr/local/bin/ \
+    && rm -rf doxygen-${DOXYGEN_VERSION} doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz
 
 CMD ["/bin/bash"]
