@@ -90,7 +90,46 @@ class tarch::multicore::taskfusion::ProcessSetOfReadyTasks: public tarch::multic
     const int          _taskNumber;
 
     static tarch::logging::Log  _log;
+
+
     static const std::string    ProcessFusedTasksStatisticsIdentifier;
+
+    /**
+     * Process a fused task
+     *
+     * A fused task is a task (which can be fused) and a list of further
+     * tasks which are of the same type and, hence, can be fused, too. This
+     * routine has to process all tasks, delete all the instances, i.e. both
+     * myTask and all pointers stored in tasksOfSameType, and return. It is
+     * blocking in the sense that we are guaranteed that tasks have completed
+     * once this function returns. For the execution, we rely on myTask's
+     * fuse() operation, i.e. this routine is solely there for the memory
+     * management.
+     *
+     * This is the only routine in the whole code where the actual specific
+     * fuse() of a task is invoked. This is the single point of contact.
+     *
+     *
+     * ## Code organisation
+     *
+     * I originally had this function in tarch::multicore. However, it is
+     * really only used here. Further to that, I found it inappropriate to
+     * host it in the general namespace, which also serves as kind of an API
+     * to higher code layers. The fusion itself is never triggered from a
+     * higher level directly.
+     *
+     *
+     * @param myTask First task. This is a task which can be fused. The pointer
+     *   is valid. The ownership of myTask is handed over to the called routine,
+     *   i.e. processFusedTask() has to ensure that it is deleted.
+     * @param tasksOfSameType List of tasks of the same type. The list can be empty.
+     *   processFusedTask() has to ensure that all tasks stored within the list are
+     *   executed and subsequently destroyed.
+     * @param device Target device on which the fused tasks should be executed. Can
+     *   be host if the tasks should end up on the host.
+     */
+    void processFusedTask(Task* myTask, const std::vector<tarch::multicore::Task*>& tasksOfSameType, int device);
+
 
   public:
     /**

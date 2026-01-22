@@ -353,10 +353,10 @@ into Excel and see exactly the same. But sometimes I find the Python script
 easier. From hereon, you can visualise the outcome:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-python3 ~/git/Peano/python/peano4/postprocessing/plot-statistics.py -c 4,5,6 -o pdf statistics-rank-0.csv
+python3 ~/git/Peano/python/peano4/postprocessing/plot-statistics.py -c 4,5,6 -pt scatter -o pdf statistics-rank-0.csv 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-@image html logging-statistcs.png
+@image html documentation/tarch/logging-statistics.png
 
 I provide different visualisation types. The statistics file contains 
 exclusively deltas and it samples. Hence, it might somtimes look as if almost

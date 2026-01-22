@@ -25,9 +25,12 @@ namespace {
 
   tarch::logging::Log _log("tarch::multicore");
 
-  const std::string BSPConcurrencyLevelStatisticsIdentifier("tarch::multicore::bsp-concurrency-level");
-  const std::string SpawnedTasksStatisticsIdentifier("tarch::multicore::spawned-tasks");
 }
+
+
+const std::string tarch::multicore::SpawnedTasksStatisticsIdentifier("tarch::multicore::SpawnedTasksStatisticsIdentifier");
+const std::string tarch::multicore::SpawnedFusableTasksStatisticsIdentifier("tarch::multicore::SpawnedFusableTasksStatisticsIdentifier");
+const std::string tarch::multicore::BSPConcurrencyLevelStatisticsIdentifier("tarch::multicore::BSPConcurrencyLevelStatisticsIdentifier");
 
 
 std::string tarch::multicore::toString( const std::set<TaskNumber>& taskNumbers ) {
@@ -186,20 +189,12 @@ void tarch::multicore::spawnTask(
   tarch::logging::Statistics::getInstance().inc(SpawnedTasksStatisticsIdentifier, 1, false, true);
 
   if (task->canFuse()) {
+    tarch::logging::Statistics::getInstance().inc(SpawnedFusableTasksStatisticsIdentifier, 1, false, true);
     taskfusion::handleFusableTask(task, inDependencies, taskNumber);
   }
   else {
     native::spawnTask(task, inDependencies, taskNumber);
   }
-}
-
-
-void tarch::multicore::processFusedTask(Task* myTask, const std::vector<tarch::multicore::Task*>& tasksOfSameType, int device) {
-  myTask->fuse(tasksOfSameType, device);
-  for (auto& p: tasksOfSameType) {
-    delete p;
-  }
-  delete myTask;
 }
 
 
