@@ -59,27 +59,20 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
 
   SubdomainBuffers localData = mergeSubdomains();
 
-  unsigned long long localNumPoints = localData.pointsXYZ.size() / 3;
-  unsigned long long localNumCells  = localData.types.size();
+  const unsigned long long localNumPoints = localData.pointsXYZ.size() / 3;
+  const unsigned long long localNumCells  = localData.types.size();
 
-  // We need to know the topology size to scan it, but we haven't built it yet.
-  // Fortunately, for the XDMF Mixed format, the size is exactly:
-  // numCells (for the types) + size of connectivity array
-
-  // Variable-size elements (Polyvertex, Polyline, Polygon) require an explicit
-  // node count in the XDMF stream: [Type, Count, Nodes...].
-  // Fixed elements only need: [Type, Nodes...].
+  // Compute localTopoSize for XDMF Mixed format
   unsigned long long localTopoSize = 0;
   {
     int connIdx = 0;
     for (size_t i = 0; i < localData.types.size(); i++) {
-      int vtkType  = localData.types[i];
-      int xdmfType = toXdmfType(vtkType);
-      int numNodes = localData.offsets[i] - connIdx;
-      connIdx      = localData.offsets[i];
+      const int vtkType  = localData.types[i];
+      const int xdmfType = toXdmfType(vtkType);
+      const int numNodes = localData.offsets[i] - connIdx;
+      connIdx            = localData.offsets[i];
 
       localTopoSize += 1; // The Type ID
-      // XDMF Types 1 (Polyvertex), 2 (Polyline), 3 (Polygon) are variable size
       if (xdmfType >= 1 and xdmfType <= 3) {
         localTopoSize += 1; // The Count integer
       }
@@ -97,21 +90,23 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
 
 #if defined(WITH_MPI)
   MPI_Comm comm = tarch::mpi::Rank::getInstance().getCommunicator();
-  // Use Scan to find write offsets for this rank
-  MPI_Scan(&localNumPoints, &offsetPoints, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
-  MPI_Scan(&localNumCells, &offsetCells, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
-  MPI_Scan(&localTopoSize, &offsetTopo, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
 
-  // Scan is inclusive, we need exclusive for offset
-  offsetPoints -= localNumPoints;
-  offsetCells -= localNumCells;
-  offsetTopo -= localTopoSize;
+  unsigned long long local[3]  = {localNumPoints, localNumCells, localTopoSize};
+  unsigned long long prefix[3] = {0ull, 0ull, 0ull};
+  unsigned long long totals[3] = {0ull, 0ull, 0ull};
+
+  // Inclusive prefix sums; subtract local to get exclusive offsets.
+  MPI_Scan(local, prefix, 3, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+  offsetPoints = prefix[0] - local[0];
+  offsetCells  = prefix[1] - local[1];
+  offsetTopo   = prefix[2] - local[2];
 
   // TODO: Use tarch MPI routines
   // Use Allreduce to get global file sizes (Rank 0 needs this for XMF, everyone for HDF5 dataspace)
-  MPI_Allreduce(&localNumPoints, &totalPoints, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
-  MPI_Allreduce(&localNumCells, &totalCells, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
-  MPI_Allreduce(&localTopoSize, &totalTopo, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+  MPI_Allreduce(local, totals, 3, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+  totalPoints = totals[0];
+  totalCells  = totals[1];
+  totalTopo   = totals[2];
 #endif
 
   // Prepare Topology (Convert VTK-style to XDMF Mixed format)
@@ -123,13 +118,13 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
 
   std::int32_t connIdx = 0;
   for (std::size_t i = 0; i < localData.types.size(); i++) {
-    int vtkType  = localData.types[i];
-    int xdmfType = toXdmfType(vtkType);
+    const int vtkType  = localData.types[i];
+    const int xdmfType = toXdmfType(vtkType);
 
     // Calculate number of nodes for this cell
     // The offsets array in SubdomainBuffers contains the end index of connectivity for cell i
-    std::int32_t endIdx   = localData.offsets[i];
-    std::int32_t numNodes = endIdx - connIdx;
+    const std::int32_t endIdx   = localData.offsets[i];
+    const std::int32_t numNodes = endIdx - connIdx;
 
     localXdmfTopology.push_back(xdmfType);
 
@@ -139,7 +134,7 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
     }
 
     for (int k = 0; k < numNodes; k++) {
-      long long globalIndex = localData.connectivity[connIdx++] + offsetPoints;
+      const long long globalIndex = localData.connectivity[connIdx++] + offsetPoints;
       localXdmfTopology.push_back(static_cast<std::int32_t>(globalIndex));
     }
   }
@@ -215,16 +210,16 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
 
   // Write Point Data Fields
   for (const auto& field : localData.pointFields) {
-    hsize_t fDims[2]  = {totalPoints, (hsize_t)field.components};
-    hsize_t flDims[2] = {localNumPoints, (hsize_t)field.components};
+    hsize_t fDims[2]  = {totalPoints, static_cast<hsize_t>(field.components)};
+    hsize_t flDims[2] = {localNumPoints, static_cast<hsize_t>(field.components)};
     hsize_t fOff[2]   = {offsetPoints, 0};
     writeDataset("/data/" + field.name, 2, fDims, flDims, fOff, field.values.data(), H5T_NATIVE_FLOAT);
   }
 
   // Write Cell Data Fields
   for (const auto& field : localData.cellFields) {
-    hsize_t fDims[2]  = {totalCells, (hsize_t)field.components};
-    hsize_t flDims[2] = {localNumCells, (hsize_t)field.components};
+    hsize_t fDims[2]  = {totalCells, static_cast<hsize_t>(field.components)};
+    hsize_t flDims[2] = {localNumCells, static_cast<hsize_t>(field.components)};
     hsize_t fOff[2]   = {offsetCells, 0};
     writeDataset("/cell_data/" + field.name, 2, fDims, flDims, fOff, field.values.data(), H5T_NATIVE_FLOAT);
   }
@@ -261,14 +256,11 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
       auto writeAttrs = [&](const std::vector<DataField>& fields, const std::string& center, const std::string& path) {
         for (const auto& field : fields) {
           std::string type = "Scalar";
-          if (field.components == 3)
+          if (field.components == 3) {
             type = "Vector";
-          else if (field.components == 6)
-            type = "Tensor6";
-          else if (field.components == 9)
-            type = "Tensor";
-          else if (field.components > 1)
+          } else if (field.components != 1) {
             type = "Matrix";
+          }
 
           out
             << "   <Attribute Name=\"" << field.name << "\" AttributeType=\"" << type << "\" Center=\"" << center
