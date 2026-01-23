@@ -27,7 +27,7 @@ namespace applications {
        * @see source() for a discussion of annotations.
        */
       #if defined(GPUOffloadingOMP)
-      #pragma omp declare target
+      #pragma omp declare simd target
       #elif defined(SharedOMP)
       #pragma omp declare simd
       #endif
@@ -43,9 +43,6 @@ namespace applications {
         const double CCZ4mu,
         const double CCZ4SO
       ) InlineMethod;
-      #if defined(GPUOffloadingOMP)
-      #pragma omp end declare target
-      #endif
 
       /**
        * The source term is one out of two terms that we use in our CCZ4
@@ -64,7 +61,7 @@ namespace applications {
        * @see ncp()
        */
       #if defined(GPUOffloadingOMP)
-      #pragma omp declare target
+      #pragma omp declare simd target
       #elif defined(SharedOMP)
       #pragma omp declare simd
       #endif
@@ -84,12 +81,9 @@ namespace applications {
         const double CCZ4k3,
         const double CCZ4SO
       ) InlineMethod;
-      #if defined(GPUOffloadingOMP)
-      #pragma omp end declare target
-      #endif
 
       #if defined(GPUOffloadingOMP)
-      #pragma omp declare target
+      #pragma omp declare simd target
       #elif defined(SharedOMP)
       #pragma omp declare simd
       #endif
@@ -102,9 +96,6 @@ namespace applications {
         const double        CCZ4GLMd,
         double*             maxEigenvalue
       ) InlineMethod;
-      #if defined(GPUOffloadingOMP)
-      #pragma omp end declare target
-      #endif
 
       /**
        * @todo Han
