@@ -741,7 +741,8 @@ class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
 #include "toolbox/blockstructured/Projection.h"        
 #include "toolbox/blockstructured/Restriction.h"        
 #include "toolbox/blockstructured/Interpolation.h"        
-#include "toolbox/blockstructured/Copy.h"        
+#include "toolbox/blockstructured/Copy.h"    
+#include "exahype2/fd/BoundaryConditions.h"
 """
         ## For compatibility. Name makes no sense. But the value
         ## guides the AMR pattern
@@ -781,6 +782,61 @@ class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
 
         """
         super(FVSolver, self).create_action_sets()
+
+        self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = (
+            """
+      double Qinf[59]={1.0, 0.0, 0.0, 1.0, 0.0, 1.0,        //q0-5
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0,                      //q6-11
+         0.0, 0.0, 0.0, 0.0,                                //q12-15
+         1.0, 0.0, 0.0, 0.0,                                //q16-19
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0,                      //q20-25
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,       //q26-34
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,       //q35-52
+         0.0, 1.0, 0.0, 0.0, 0.0, 0.0                       //q53-58
+      }; //approximate background solution at infinity 
+      ::exahype2::fd::applySommerfeldConditions(
+        [&](
+          const double * __restrict__                  Q,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  gridCellH,
+          double                                       t,
+          double                                       dt,
+          int                                          normal
+        ) -> double {
+		  double temp;
+          repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal, &temp );
+          return temp;
+        },
+        [&](
+          double * __restrict__                        Q,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  gridCellH
+        ) -> void {
+          for (int i=0; i<"""
+            + str(self._unknowns + self._auxiliary_variables)
+            + """; i++) {
+            Q[i] = 0.0;
+          }
+          Q[0] = 1.0; Q[3] = 1.0; Q[5] = 1.0;
+          Q[16] = 0.95; Q[54] = 0.95;
+        },
+        marker.x(),
+        marker.h(),
+        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        {{OVERLAP}},
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        marker.getSelectedFaceNumber(),
+        {0.0, 0.0, 0.0},
+        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value,
+        -1 // @todo Han, can you add a comment here please why we do -1?
+      );
+      """
+        )
 
 
 def update_solver_parameters_for_single_black_hole(solver):

@@ -409,7 +409,7 @@ def configure_multicore_configuration(scheduler):
     elif args.scheduler == SchedulerChoices_NativePriorities:
         project.add_mainfile_include( "MulticoreOrchestration.h")
         project.set_multicore_orchestration(
-            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::DisableFusionAndMapOntoNativeTask" + task_fusion_size_string + ")"
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::DisableFusionAndMapOntoNativeTask)"
         )
     elif args.scheduler == SchedulerChoices_LazyEvaluation:
         project.add_mainfile_include( "MulticoreOrchestration.h")

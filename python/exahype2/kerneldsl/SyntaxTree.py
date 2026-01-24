@@ -1196,7 +1196,7 @@ class DataBlockUnaryMax:
         if Node.use_accelerator:
             return f"""{' ' * indent_level * Node.spaces_per_tab}omp_target_memset(maxEigenvalues, 0, N * sizeof(double), targetDevice);
 {' ' * indent_level * Node.spaces_per_tab}for (int {self._loop._iteration_variable.print_cpp()} = {self._loop._iteration_range[0].print_cpp()}; {self._loop._iteration_variable.print_cpp()} < {self._loop._iteration_range[1].print_cpp()}; {self._loop._iteration_variable.print_cpp()}++) {{
-{' ' * (indent_level + 1) * Node.spaces_per_tab}#pragma omp target teams distribute parallel for simd collapse(Dimensions) reduction(max:{self._outputVariable.multidimensional_index([self._loop.get_iteration_variable()]).print_omp()})
+{' ' * (indent_level + 1) * Node.spaces_per_tab}#pragma omp target teams loop collapse(Dimensions) reduction(max:{self._outputVariable.multidimensional_index([self._loop.get_iteration_variable()]).print_omp()})
 {self._loop._statements[1].print_omp(indent_level + 1)}
 {' ' * indent_level * Node.spaces_per_tab}}}
 """
@@ -1843,7 +1843,7 @@ class DataBlockConstructionFromFunction(Statement):
     
     def print_omp(self, indent_level = 0):
         if Node.use_accelerator == True:
-            omp_pragma = "#pragma omp target teams distribute parallel for simd collapse(Dimensions + 1) device(targetDevice)"
+            omp_pragma = "#pragma omp target teams loop collapse(Dimensions + 1) device(targetDevice)"
         else:
             omp_pragma = "#pragma omp parallel for simd collapse(Dimensions + 1) schedule(static, 1)"
         return f"""{self.memoryAllocation.print_omp(indent_level)}
@@ -1944,7 +1944,7 @@ class DataBlockAssignment(Statement):
     
     def print_omp(self, indent_level = 0):
         if Node.use_accelerator == True:
-            omp_pragma = "#pragma omp target teams distribute parallel for simd collapse(Dimensions + 1) device(targetDevice)"
+            omp_pragma = "#pragma omp target teams loop collapse(Dimensions + 1) device(targetDevice)"
         else:
             omp_pragma = "#pragma omp parallel for simd collapse(Dimensions + 1) schedule(static, 1)"
         return ' ' * indent_level * Node.spaces_per_tab + omp_pragma + f"""
