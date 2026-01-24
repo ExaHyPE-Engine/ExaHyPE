@@ -415,14 +415,16 @@ void peano4::parallel::Node::shutdown() {
 
 peano4::parallel::Node::GridDataExchangeMetaInformation peano4::parallel::Node::
   getGridDataExchangeMetaInformation(int sendingTreeId, int receivingTreeId, ExchangeMode exchange) const {
-  logTraceInWith3Arguments("getGridDataExchangeTag()", sendingTreeId, receivingTreeId, toString(exchange));
 
-  assertion(sendingTreeId >= 0);
-  assertion(sendingTreeId < MaxSpacetreesPerRank);
+  const int localSendingTreeId   = getLocalTreeId(sendingTreeId);
+  const int localReceivingTreeId = getLocalTreeId(receivingTreeId);
+
+  assertion(localSendingTreeId >= 0);
+  assertion5(localSendingTreeId < MaxSpacetreesPerRank, sendingTreeId, MaxSpacetreesPerRank, getRank(sendingTreeId), getLocalTreeId(sendingTreeId), getNumberOfRegisteredTrees());
   // assertion2(getLocalTreeId(sendingTreeId) <= getNumberOfRegisteredTrees(), getLocalTreeId(sendingTreeId),
   // getNumberOfRegisteredTrees());
 
-  int tag = StacksPerCommunicationPartner / 2 * getLocalTreeId(receivingTreeId);
+  int tag = StacksPerCommunicationPartner / 2 * localReceivingTreeId;
   switch (exchange) {
   case ExchangeMode::HorizontalData:
     tag += 0;
@@ -432,10 +434,9 @@ peano4::parallel::Node::GridDataExchangeMetaInformation peano4::parallel::Node::
     break;
   }
 
-  logTraceOutWith1Argument("getGridDataExchangeTag()", tag);
   return peano4::parallel::Node::GridDataExchangeMetaInformation(
     tag,
-    _dataExchangeCommunicators[getLocalTreeId(sendingTreeId)]
+    _dataExchangeCommunicators[localSendingTreeId]
   );
 }
 
