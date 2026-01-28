@@ -61,6 +61,18 @@ in the CMake configuration.
 # Compilation
 
 ## Generic C++ issues
+
+- ***With GCC I get***
+
+             ParticleSet.h:71:9: error: declaration of 'using SieveParticles = class toolbox::particles::SieveParticles<T>' changes meaning of 'SieveParticles' [-fpermissive]
+             71 |   using SieveParticles = SieveParticles<T>;
+             
+  This seems to be a bug in our code which the particles toolbox hosts and 
+  GCC finds. A 
+  discussion of this one can be found on 
+  <a href="https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96593">Bugzilla</a>.
+  However, it seems that LLVM has no issue with this code and newer GCCs
+  (e.g. from 13.3.0 onwards) have no issue with this code.             
  
 - ***The translation fails with the error***
 

@@ -68,7 +68,23 @@ public:
   typedef T             DoFType;
   typedef std::list<T*> ParticleList;
 
-  using SieveParticles = SieveParticles<T>;
+  /**
+   * Using declaration
+   *
+   * ## Bug report
+   *
+   * See FAQ entries on <a href="https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96593">Bugzilla</a>.
+   * I think our code is correct, as it defines SieveParticles as an embedded
+   * type. But the GNU community does not agree. I tried to fix the original
+   * bug by using a fully qualified identifier. Previously I had
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * using SieveParticles = SieveParticles<T>;
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * With the new version, the code might also pass older GCC versions.
+   */
+  using SieveParticles = ::toolbox::particles::SieveParticles<T>;
 
 #if PeanoDebug >= 1
   void                                  setDebugX(const tarch::la::Vector<Dimensions, double>& data);
