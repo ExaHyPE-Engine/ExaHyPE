@@ -4,6 +4,7 @@
 \tableofcontents
 
 
+- \subpage multigrid_architecture
 - Numerica
   - \subpage page_multigrid_terminology
   - \subpage page_multigrid_unfolding
