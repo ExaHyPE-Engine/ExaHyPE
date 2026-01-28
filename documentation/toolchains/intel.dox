@@ -51,10 +51,15 @@ the two options below:
 
 Broadly speaking, the toolchains alters the code in two ways:
 
-- It enables ITAC or ITT.
-- It switches the line logger to the ITAC or ITT logger. That is, trace data are not
+- It enables ITAC or ITT, respectively.
+- It switches the line logger to the @ref tarch_logging "ITAC or ITT logger". That is, trace data are not
   pipes onto the terminal anymore, but are passed into the ITAC or ITT API.
-- It adds some Intel-specific compile flags.
+- It adds some Intel-specific compile flags such as the ones discussed above.
+
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+ITAC is there for legacy reasons. As Intel deprecates ITAC, it is recommended to use ITT (for VTune) and otherwise employ
+a tool such as Scalasca/Score-P for MPI. For these tools, Peano offers @ref tarch_logging "dedicated loggers", too.
+</div>
 
 The enumeration shows that the name Intel toolchain is misleading.
 We are actually not tailoring the build to the Intel toolchain, but we tailor
@@ -62,18 +67,15 @@ the setup to the Intel analysis tools.
 Most production runs will not use the Intel toolchain, but rather set all
 Intel-specific flags for compiler and linker manually.
 
-Once you have switched to the Intel loggers, you will not get
-any trace information anymore if you build in release mode. You have to switch
+Despite having switched to the Intel loggers, you will not get
+meaningful trace information if you build in release mode. You have to switch
 to the trace mode (or assertions or debug) - compare general remarks on
 @ref page_architecture_home "Peano's build modi" - to get traces or annotation
 info.
-
 Once you try to trace your code with the Intel tool, the size of the traces
 quickly becomes unmanageable or the performance might go down.
-Therefore, we disable the trace by default.
-The first trace command will then enable it.
-
-For further discussion on logging, please see the \ref tarch_logging "generic logging description for Peano".
+However, you can combine @ref tarch_logging "log filters" to narrow down the number of 
+classes and namespaces that actually trace.
 
 
 # Threading Building Blocks (TBB)

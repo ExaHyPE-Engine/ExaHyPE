@@ -167,39 +167,89 @@ It is automatically enabled once you configure with
 ./configure --with-toolchain=nvidia
 ~~~~~~~~~~~~~~~~~~~~~
 
+More detail on this logger is also provided on the page @ref documentation_toolchains_nvidia.
+
+Picking this logger implies that all tracing information is 
+piped into a format that is of use for NSight. 
+Note that comprehensive trace 
+information is only available in trace mode or higher
+(@ref page_architecture_home "see comments on Peano's build modi").
+Trace filters can be used to narrow down the information tracked.
+All info log output as well as warning and error message are still
+shown on the terminal.
+
+### ITT logger
+
+To select this logger, compile with `-DUseLogService=ITTLogger`.
+It is automatically enabled once you configure with
+~~~~~~~~~~~~~~~~~~~~~
+./configure --with-toolchain=itt
+~~~~~~~~~~~~~~~~~~~~~
+
+More detail on this logger is also provided on the page @ref documentation_toolchains_intel.
+
+Picking this flag implies that all trace information is piped into
+The Instrumentation and Tracing Technology API (ITT API).
+Note that comprehensive trace 
+information is only available in trace mode or higher
+(@ref page_architecture_home "see comments on Peano's build modi").
+Trace filters can be used to narrow down the information tracked.
+All info log output as well as warning and error message are still
+shown on the terminal.
+
+
 
 ### ITAC logger
 
-To select this logger, configure with
+To select this logger, compile with `-DUseLogService=ITACLogger`.
+It is automatically enabled once you configure with
 ~~~~~~~~~~~~~~~~~~~~~
-./configure --with-toolchain=intel
+./configure --with-toolchain=itac
 ~~~~~~~~~~~~~~~~~~~~~
 
-This switch
-sets, automatically, the compile flag `-DUseLogService=ITACLogger`.
-You can however also set the logger via the CXXFLAGS.
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+ITAC is there for legacy reasons, but is deprecated by Intel.
+</div>
+
+
+More detail on this logger is also provided on the page @ref documentation_toolchains_intel.
 
 The ITAC logger forwards all trace commands to Intel's profiling/tracing
-library. You can now compile 's tracing backend, and will continue to
-plot all `info` statements to the terminal. The trace statements however
-are piped directly into ITAC, i.e. if you analyse the code with Intel's
-`traceanalyzer` or VTune, you should see the -specific annotations and
-traces. You can also use 's log filter to filter which events are
-actually handed over to ITAC.
+library. 
+Picking this flag implies that all trace information is piped into
+The Instrumentation and Tracing Technology API (ITT API).
+Note that comprehensive trace 
+information is only available in trace mode or higher
+(@ref page_architecture_home "see comments on Peano's build modi").
+Trace filters can be used to narrow down the information tracked.
+All info log output as well as warning and error message are still
+shown on the terminal.
 
-I've recognised that the Intel scripts often do not include the ITAC
-headers that requires in their search path. In this case, you will have
-to augment your configure call:
-
-The class tarch::logging::ITACLogger provides further detail on the usage of the
-logging back-end. The punch line is that you have to translate in trace
-mode to get proper ITAC data. As the trace information of quickly
-becomes vast, I recommend to create a log filter, and start a run where
-you disable all but the top-level tracing information.
+ITAC output can be analysed with Intel's
+`traceanalyzer` as well as VTune.
 
 
-Log filter
-----------
+### Score-P logger
+
+To select this logger, compile with `-DUseLogService=ScorePLogger`.
+It is automatically enabled once you configure with
+~~~~~~~~~~~~~~~~~~~~~
+./configure --with-toolchain=scorep
+~~~~~~~~~~~~~~~~~~~~~
+
+Score-P is the tool feeding into Scalasca and other software.
+Picking this logger implies that all trace information is piped into
+the Score-P library.
+Note that comprehensive trace 
+information is only available in trace mode or higher
+(@ref page_architecture_home "see comments on Peano's build modi").
+All info log output as well as warning and error message are still
+shown on the terminal.
+
+
+
+
+## Log filter
 
 The amount of log information often becomes hard to track; notably if
 you run in debug mode. Often, you are interested only in a subset of all
