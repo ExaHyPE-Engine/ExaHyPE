@@ -168,6 +168,7 @@ It is automatically enabled once you configure with
 ~~~~~~~~~~~~~~~~~~~~~
 
 More detail on this logger is also provided on the page @ref documentation_toolchains_nvidia.
+It links your code against an instance of @ref tarch::logging::NVTXLogger for all outputs.
 
 Picking this logger implies that all tracing information is 
 piped into a format that is of use for NSight. 
@@ -178,7 +179,8 @@ Trace filters can be used to narrow down the information tracked.
 All info log output as well as warning and error message are still
 shown on the terminal.
 
-### ITT logger
+
+### ITT logger (Intel's OneAPI toolbox for VTune)
 
 To select this logger, compile with `-DUseLogService=ITTLogger`.
 It is automatically enabled once you configure with
@@ -187,9 +189,10 @@ It is automatically enabled once you configure with
 ~~~~~~~~~~~~~~~~~~~~~
 
 More detail on this logger is also provided on the page @ref documentation_toolchains_intel.
+It links your code against an instance of @ref tarch::logging::ITTLogger for all outputs.
 
 Picking this flag implies that all trace information is piped into
-The Instrumentation and Tracing Technology API (ITT API).
+<a href="https://intel.github.io/ittapi/">The Instrumentation and Tracing Technology API (ITT API)</a>.
 Note that comprehensive trace 
 information is only available in trace mode or higher
 (@ref page_architecture_home "see comments on Peano's build modi").
@@ -198,6 +201,12 @@ All info log output as well as warning and error message are still
 shown on the terminal.
 
 
+If this logger is picked, you have to ensure that ```ittnotify.h```
+is in your path and that all linker data is set properly.
+Intel <a href="https://intel.github.io/ittapi/src/compile-and-link-with-itt-api.html">maintains a dedicated site for this</a>, 
+as the library seems not to be in the standard paths of OneAPI.
+To use ITT, you might also have to set the ```INTEL_LIBITTNOTIFY64``` environment
+variable before you start your application.
 
 ### ITAC logger
 
@@ -239,7 +248,9 @@ It is automatically enabled once you configure with
 
 Score-P is the tool feeding into Scalasca and other software.
 Picking this logger implies that all trace information is piped into
-the Score-P library.
+the Score-P library, as it
+links your code against an instance of @ref tarch::logging::ScorePLogger for all outputs.
+
 Note that comprehensive trace 
 information is only available in trace mode or higher
 (@ref page_architecture_home "see comments on Peano's build modi").
