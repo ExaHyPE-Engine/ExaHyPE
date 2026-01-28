@@ -205,6 +205,21 @@ If this logger is picked, you have to ensure that ```ittnotify.h```
 is in your path and that all linker data is set properly.
 Intel <a href="https://intel.github.io/ittapi/src/compile-and-link-with-itt-api.html">maintains a dedicated site for this</a>, 
 as the library seems not to be in the standard paths of OneAPI.
+On my system, the tracing library is now fully integrated into VTune
+and therefore found within the VTune directories. 
+That means,
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+CXX="-I${VTUNE_PROFILER_DIR}/include ..." LDFLAGS="-L${VTUNE_PROFILER_DIR}/lib64 ..." LIBS="... -littnotify"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+sets the correct path, as the 
+
+            source .../intel/oneapi/setvars.sh
+
+script (or corresponding module file) exports ```VTUNE_PROFILER_DIR```.
+
+
 To use ITT, you might also have to set the ```INTEL_LIBITTNOTIFY64``` environment
 variable before you start your application.
 
