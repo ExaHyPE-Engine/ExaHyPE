@@ -22,6 +22,7 @@ apptainer build apptainer/intel.sif apptainer/Apptainer.intel
 apptainer build apptainer/nvidia.sif apptainer/Apptainer.nvidia
 apptainer build apptainer/amd.sif apptainer/Apptainer.amd
 apptainer build apptainer/llvm.sif apptainer/Apptainer.llvm
+apptainer build apptainer/exahype2.sif apptainer/Apptainer.exahype2
 ```
 
 ## Usage
