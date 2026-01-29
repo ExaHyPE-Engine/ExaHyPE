@@ -88,9 +88,10 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
         double                                       dt,
-        int                                          normal
+        int                                          normal,
+        double*                                      maxEigenvalue
       )->double {
-        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, x, t, dt, normal );
+        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, x, t, dt, normal, maxEigenvalue );
       },
       repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
     );

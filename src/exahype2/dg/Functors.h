@@ -91,7 +91,8 @@ namespace exahype2 {
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       double                                       dt,
-      int                                          normal
+      int                                          normal,
+      double*                                      maxEigenvalue
     ) >   MaxEigenvalue;
 
 

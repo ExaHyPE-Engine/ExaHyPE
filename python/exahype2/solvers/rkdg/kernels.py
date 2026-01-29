@@ -46,6 +46,7 @@ def create_abstract_solver_declarations(
       double                                       t,
       double                                       dt,
       int                                          normal,
+      double*                                      maxEigenvalue,
       Offloadable
     );
     #if defined(OpenMPGPUOffloading)
@@ -65,7 +66,8 @@ def create_abstract_solver_declarations(
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       double                                       t,
       double                                       dt,
-      int                                          normal
+      int                                          normal,
+      double*                                      maxEigenvalue
     ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
 
     {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
@@ -231,7 +233,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   double                                       t,
   double                                       dt,
-  int                                          normal
+  int                                          normal,
+  double*                                      maxEigenvalue
 ) {
   {{EIGENVALUES_IMPLEMENTATION}}
 }
@@ -307,6 +310,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   double                                       t,
   double                                       dt,
   int                                          normal,
+  double*                                      maxEigenvalue,
   Offloadable
 ) {
   {{EIGENVALUES_IMPLEMENTATION}};
@@ -470,7 +474,8 @@ def create_solver_declarations(
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       double                                       t,
       double                                       dt,
-      int                                          normal
+      int                                          normal,
+      double*                                      maxEigenvalue
     ) override;
     {% endif %}
 
@@ -586,6 +591,7 @@ def create_solver_declarations(
       double                                       t,
       double                                       dt,
       int                                          normal,
+      double*                                      maxEigenvalue,
       Offloadable
     );
     #if defined(OpenMPGPUOffloading)
@@ -686,7 +692,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   double                                       t,
   double                                       dt,
-  int                                          normal
+  int                                          normal,
+  double*                                      maxEigenvalue
 )  {
   logTraceInWith4Arguments( "maxEigenvalue(...)", x, t, dt, normal );
   // @todo implement
@@ -754,6 +761,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   double                                       t,
   double                                       dt,
   int                                          normal,
+  double*                                      maxEigenvalue,
   Offloadable
 )  {
   // @todo implement
