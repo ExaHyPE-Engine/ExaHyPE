@@ -1437,7 +1437,7 @@ def construct_DG_source_term():
 
 def construct_DG_eigenvalues():
     return """
-  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+  ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd, maxEigenvalue );
 """
 
 
