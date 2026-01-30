@@ -22,12 +22,12 @@ private:
   std::vector<typename T::DoFType> _receiveBuffer;
 
 public:
-  StackWithSerialisation()                                         = default;
-  virtual ~StackWithSerialisation() override                       = default;
-  StackWithSerialisation(const StackWithSerialisation&)            = delete;
-  StackWithSerialisation& operator=(const StackWithSerialisation&) = delete;
-  StackWithSerialisation(StackWithSerialisation&&)                 = delete;
-  StackWithSerialisation& operator=(StackWithSerialisation&&)      = delete;
+  StackWithSerialisation()                                             = default;
+  virtual ~StackWithSerialisation() override                           = default;
+  StackWithSerialisation(const StackWithSerialisation&)                = delete;
+  StackWithSerialisation& operator=(const StackWithSerialisation&)     = delete;
+  StackWithSerialisation(StackWithSerialisation&&) noexcept            = default;
+  StackWithSerialisation& operator=(StackWithSerialisation&&) noexcept = default;
 
 #ifdef WITH_MPI
   void startSend(const SendReceiveContext context, const int rank, const int tag, const MPI_Comm comm) {

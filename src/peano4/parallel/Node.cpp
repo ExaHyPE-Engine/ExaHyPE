@@ -28,7 +28,6 @@ void peano4::parallel::Node::initMPIDatatypes() {
 
   peano4::grid::AutomatonState::initDatatype();
   peano4::grid::GridVertex::initDatatype();
-  peano4::grid::GridStatistics::initDatatype();
   peano4::grid::GridControlEvent::initDatatype();
 #endif
 }
@@ -41,7 +40,6 @@ void peano4::parallel::Node::shutdownMPIDatatypes() {
   peano4::grid::AutomatonState::shutdownDatatype();
   peano4::grid::GridVertex::shutdownDatatype();
   peano4::grid::GridControlEvent::shutdownDatatype();
-  peano4::grid::GridStatistics::shutdownDatatype();
 #endif
 }
 

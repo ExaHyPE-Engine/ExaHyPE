@@ -3,6 +3,7 @@
 #include "SolverRepository.h"
 
 #include "Constants.h"
+#include "DataRepository.h"
 
 #include "tarch/multicore/Core.h"
 #include "tarch/accelerator/Device.h"
@@ -205,6 +206,7 @@ void finishTimeStep() {
   ::exahype2::RefinementControlService::getInstance().finishStep();
 
   loadBalancer.update();
+  DataRepository::updateMemoryUsage();
 
   {% for item in TRACERS -%}
   logDebug("finishTimeStep()", vertexdata::{{ item }}Set::printParticleStateStatistics());
@@ -237,9 +239,9 @@ void finishPlottingStep() {
   {%- endfor %}
 }
 
-void printTimeStep(bool ofCurrentlyRunningGridSweep) {
+void logTimeStep(bool ofCurrentlyRunningGridSweep) {
   {% for item in SOLVERS -%}
-  {{ item[1] }}.printTimeStep(ofCurrentlyRunningGridSweep);
+  {{ item[1] }}.logTimeStep(ofCurrentlyRunningGridSweep);
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 }
@@ -256,6 +258,7 @@ void finishSimulation() {
   {{ item[1] }}.finishSimulation();
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
+
   loadBalancer.update();
   ::exahype2::RefinementControlService::getInstance().finishStep();
 }

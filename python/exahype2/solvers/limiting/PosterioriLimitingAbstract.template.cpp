@@ -145,12 +145,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   }
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::printTimeStep(bool ofCurrentlyRunningGridSweep) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep(bool ofCurrentlyRunningGridSweep) {
   {{PRINT_TIME_STEP_IMPLEMENTATION}}
 
   if (getNumberOfTroubledCells(ofCurrentlyRunningGridSweep) > 0 /*and (_solverState == SolverState::RegularSolver or _solverState == SolverState::LimiterSolver)*/) {
-    logInfo("printTimeStep()", "Solver {{SOLVER_NAME}}:");
-    logInfo("printTimeStep()", "Number of troubled cells: " << getNumberOfTroubledCells(ofCurrentlyRunningGridSweep));
+    logInfo("logTimeStep()", "Number of troubled cells: " << getNumberOfTroubledCells(ofCurrentlyRunningGridSweep));
   }
 }
 

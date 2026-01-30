@@ -164,8 +164,6 @@ void peano4::grid::Spacetree::traverse(GridTraversalObserver& observer, bool cal
 
   observer.beginTraversal(_root.x, _root.h);
   descend(_root, vertices, observer);
-  _statistics.maxDepth++;
-  _statistics.minDepth++;
   observer.endTraversal(_root.x, _root.h);
   _root.setInverted(not _root.getInverted());
 
@@ -628,6 +626,7 @@ void peano4::grid::Spacetree::storeVertices(
     }
 
     if (type == VertexType::Hanging) {
+      _statistics.numberOfHangingVertices++;
       continue;
     }
     if (type == VertexType::Delete) {
@@ -644,6 +643,7 @@ void peano4::grid::Spacetree::storeVertices(
     }
     auto* pushStack = cachedStack;
     pushStack->push(std::move(vSlot));
+    _statistics.numberOfVertices++;
   }
 }
 
@@ -1148,6 +1148,9 @@ void peano4::grid::Spacetree::descend(const AutomatonState& state, GridVertex ve
     } else {
       if (SpacetreeHelper::isSpacetreeNodeLocal(fineGridVertices, _id, _splitTriggered, _splitting, _joinTriggered, _joining, true, true)) {
         _statistics.numberOfLocalUnrefinedCells++;
+        int currentLevel = fineGridStates[kLinearised].level;
+        _statistics.minDepth = std::min(_statistics.minDepth, currentLevel);
+        _statistics.maxDepth = std::max(_statistics.maxDepth, currentLevel);
       } else {
         _statistics.numberOfRemoteUnrefinedCells++;
       }

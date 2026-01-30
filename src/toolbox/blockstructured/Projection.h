@@ -4,7 +4,7 @@
 
 #include "tarch/CompilerSpecificSettings.h"
 
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 
 namespace toolbox {
   namespace blockstructured {

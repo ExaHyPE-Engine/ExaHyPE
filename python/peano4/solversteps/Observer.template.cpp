@@ -88,15 +88,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::beginTraversal(const tarch::la::Vector<DIMENS
   repositories::DataRepository::DataKey key(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
 {%- for cell in CELLS %}
-  repositories::DataRepository::_{{ cell.logical_type_name }}Stack.getForPush(key)->pushBlock(1);
+  repositories::DataRepository::{{ cell.logical_type_name }}Stack.getForPush(key)->pushBlock(1);
 {%- endfor %}
 
 {%- for face in FACES %}
-  repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPush(key)->pushBlock(TWO_TIMES_D);
+  repositories::DataRepository::{{ face.logical_type_name }}Stack.getForPush(key)->pushBlock(TWO_TIMES_D);
 {%- endfor %}
 
 {%- for vertex in VERTICES %}
-  repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPush(key)->pushBlock(TWO_POWER_D);
+  repositories::DataRepository::{{ vertex.logical_type_name }}Stack.getForPush(key)->pushBlock(TWO_POWER_D);
 {%- endfor %}
 
   logTraceOutWith2Arguments("beginTraversal()", x, h);
@@ -109,18 +109,18 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterNode(const ::peano4::grid::GridTraversal
   repositories::DataRepository::DataKey key(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
 {%- for vertex in VERTICES %}
-  ::peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> fineGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TWO_POWER_D - 1));
-  ::peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> coarseGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TWO_POWER_D * 2 - 1));
+  ::peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> fineGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TWO_POWER_D - 1));
+  ::peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> coarseGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TWO_POWER_D * 2 - 1));
 {%- endfor %}
 
 {%- for face in FACES %}
-  ::peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> fineGrid{{ face.logical_type_name }}(&repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPop(key)->top(TWO_TIMES_D - 1));
-  ::peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> coarseGrid{{ face.logical_type_name }}(&repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPop(key)->top(TWO_TIMES_D * 2 - 1));
+  ::peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> fineGrid{{ face.logical_type_name }}(&repositories::DataRepository::{{ face.logical_type_name }}Stack.getForPop(key)->top(TWO_TIMES_D - 1));
+  ::peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> coarseGrid{{ face.logical_type_name }}(&repositories::DataRepository::{{ face.logical_type_name }}Stack.getForPop(key)->top(TWO_TIMES_D * 2 - 1));
 {%- endfor %}
 
 {%- for cell in CELLS %}
-  auto& fineGrid{{ cell.logical_type_name }} = repositories::DataRepository::_{{ cell.logical_type_name }}Stack.getForPop(key)->top(0);
-  auto& coarseGrid{{ cell.logical_type_name }} = repositories::DataRepository::_{{ cell.logical_type_name }}Stack.getForPop(key)->top(1);
+  auto& fineGrid{{ cell.logical_type_name }} = repositories::DataRepository::{{ cell.logical_type_name }}Stack.getForPop(key)->top(0);
+  auto& coarseGrid{{ cell.logical_type_name }} = repositories::DataRepository::{{ cell.logical_type_name }}Stack.getForPop(key)->top(1);
 {%- endfor %}
 
 {%- if VERTICES %}
@@ -272,18 +272,18 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversal
   repositories::DataRepository::DataKey key(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
 {%- for vertex in VERTICES %}
-  ::peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> fineGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TWO_POWER_D - 1));
-  ::peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> coarseGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TWO_POWER_D * 2 - 1));
+  ::peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> fineGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TWO_POWER_D - 1));
+  ::peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> coarseGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TWO_POWER_D * 2 - 1));
 {%- endfor %}
 
 {%- for face in FACES %}
-  ::peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> fineGrid{{ face.logical_type_name }}(&repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPop(key)->top(TWO_TIMES_D - 1));
-  ::peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> coarseGrid{{ face.logical_type_name }}(&repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPop(key)->top(TWO_TIMES_D * 2 - 1));
+  ::peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> fineGrid{{ face.logical_type_name }}(&repositories::DataRepository::{{ face.logical_type_name }}Stack.getForPop(key)->top(TWO_TIMES_D - 1));
+  ::peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> coarseGrid{{ face.logical_type_name }}(&repositories::DataRepository::{{ face.logical_type_name }}Stack.getForPop(key)->top(TWO_TIMES_D * 2 - 1));
 {%- endfor %}
 
 {%- for cell in CELLS %}
-  auto& fineGrid{{ cell.logical_type_name }} = repositories::DataRepository::_{{ cell.logical_type_name }}Stack.getForPop(key)->top(0);
-  auto& coarseGrid{{ cell.logical_type_name }} = repositories::DataRepository::_{{ cell.logical_type_name }}Stack.getForPop(key)->top(1);
+  auto& fineGrid{{ cell.logical_type_name }} = repositories::DataRepository::{{ cell.logical_type_name }}Stack.getForPop(key)->top(0);
+  auto& coarseGrid{{ cell.logical_type_name }} = repositories::DataRepository::{{ cell.logical_type_name }}Stack.getForPop(key)->top(1);
 {%- endfor %}
 
 {%- if CELLS %}
@@ -437,15 +437,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::endTraversal(const tarch::la::Vector<DIMENSIO
   repositories::DataRepository::DataKey key(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
 {%- for cell in CELLS %}
-  repositories::DataRepository::_{{ cell.logical_type_name }}Stack.getForPop(key)->popBlock(1);
+  repositories::DataRepository::{{ cell.logical_type_name }}Stack.getForPop(key)->popBlock(1);
 {%- endfor %}
 
 {%- for face in FACES %}
-  repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPop(key)->popBlock(TWO_TIMES_D);
+  repositories::DataRepository::{{ face.logical_type_name }}Stack.getForPop(key)->popBlock(TWO_TIMES_D);
 {%- endfor %}
 
 {%- for vertex in VERTICES %}
-  repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPop(key)->popBlock(TWO_POWER_D);
+  repositories::DataRepository::{{ vertex.logical_type_name }}Stack.getForPop(key)->popBlock(TWO_POWER_D);
 {%- endfor %}
 
   logTraceOutWith2Arguments("endTraversal()", x, h);
@@ -468,7 +468,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadVertexData(const ::peano4::grid::GridTrav
   repositories::DataRepository::DataKey keyOut(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
 {%- for vertex in VERTICES %}
-  auto pushBlock{{ vertex.logical_type_name }} = repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPush(keyOut)->pushBlock(TWO_POWER_D);
+  auto pushBlock{{ vertex.logical_type_name }} = repositories::DataRepository::{{ vertex.logical_type_name }}Stack.getForPush(keyOut)->pushBlock(TWO_POWER_D);
 {%- endfor %}
 
   for (int i = 0; i < TWO_POWER_D; i++) {
@@ -495,7 +495,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadVertexData(const ::peano4::grid::GridTrav
       const bool loadData       = ::peano4::grid::loadPersistently(flag);
 
       if (dataResidesOnIntermediateStack or (isInOutStack and loadData)) {
-        auto* _pop = repositories::DataRepository::_{{vertex.logical_type_name}}Stack.getForPop(vertexKeyIn);
+        auto* _pop = repositories::DataRepository::{{vertex.logical_type_name}}Stack.getForPop(vertexKeyIn);
         assertion(not _pop->empty());
         pushBlock{{vertex.logical_type_name}}.set(outVertexStackPosition, _pop->pop());
       } else if (initialiseNewStackContentWithoutData or not computeOnData) {
@@ -519,7 +519,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeVertexData(const ::peano4::grid::GridTra
   repositories::DataRepository::DataKey keyIn(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
 {%- for vertex in VERTICES | reverse %}
-  auto popBlock{{ vertex.logical_type_name }} = repositories::DataRepository::_{{ vertex.logical_type_name }}Stack.getForPop(keyIn)->popBlock(TWO_POWER_D);
+  auto popBlock{{ vertex.logical_type_name }} = repositories::DataRepository::{{ vertex.logical_type_name }}Stack.getForPop(keyIn)->popBlock(TWO_POWER_D);
 {%- endfor %}
 
   for (int i = 0; i < TWO_POWER_D; i++) {
@@ -544,7 +544,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeVertexData(const ::peano4::grid::GridTra
 
       if (dataShallBePushedOntoIntermediateStack or (isInOutStack and storeData)) {
         auto& data = popBlock{{vertex.logical_type_name}}.get(inVertexStackPosition);
-        auto* _push = repositories::DataRepository::_{{vertex.logical_type_name}}Stack.getForPush(vertexKeyOut);
+        auto* _push = repositories::DataRepository::{{vertex.logical_type_name}}Stack.getForPush(vertexKeyOut);
         _push->push(std::move(data));
       } else {
         // Unused grid entity: Do nothing
@@ -565,13 +565,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendVertexData(int position, int toStack, ::p
 
 {%- for vertex in VERTICES %}
   {
-    /*const*/ auto& data = repositories::DataRepository::_{{vertex.logical_type_name}}Stack.getForPop(key)->top(TWO_POWER_D - 1 - position);
+    /*const*/ auto& data = repositories::DataRepository::{{vertex.logical_type_name}}Stack.getForPop(key)->top(TWO_POWER_D - 1 - position);
     if (
       ::peano4::grid::storePersistently({{vertex.full_qualified_type}}::loadStoreComputeFlag(marker))
       and
       (data.send(marker) or context == ::peano4::stacks::SendReceiveContext::ForkDomain or context == ::peano4::stacks::SendReceiveContext::JoinDomain)
     ) {
-      repositories::DataRepository::_{{vertex.logical_type_name}}Stack.getForPush(_spacetreeId, toStack)->push(data); // std::move(data)
+      repositories::DataRepository::{{vertex.logical_type_name}}Stack.getForPush(_spacetreeId, toStack)->push(data); // std::move(data)
     }
   }
 {%- endfor %}
@@ -588,9 +588,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeVertexData(int position, int f
 
 {%- for vertex in VERTICES %}
   {
-    auto& data = repositories::DataRepository::_{{vertex.logical_type_name}}Stack.getForPush(key)->top(TWO_POWER_D - 1 - position);
+    auto& data = repositories::DataRepository::{{vertex.logical_type_name}}Stack.getForPush(key)->top(TWO_POWER_D - 1 - position);
     if (::peano4::grid::loadPersistently({{vertex.full_qualified_type}}::loadStoreComputeFlag(marker)) and data.receiveAndMerge(marker)) {
-      const auto& incomingData = repositories::DataRepository::_{{vertex.logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->pop();
+      const auto& incomingData = repositories::DataRepository::{{vertex.logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->pop();
       data.merge(context, incomingData, marker, _spacetreeId);
     }
   }
@@ -608,7 +608,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadFaceData(const ::peano4::grid::GridTraver
   repositories::DataRepository::DataKey keyOut(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
 {%- for face in FACES %}
-  auto pushBlock{{ face.logical_type_name }} = repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPush(keyOut)->pushBlock(TWO_TIMES_D);
+  auto pushBlock{{ face.logical_type_name }} = repositories::DataRepository::{{ face.logical_type_name }}Stack.getForPush(keyOut)->pushBlock(TWO_TIMES_D);
 {%- endfor %}
 
   for (int i = 0; i < TWO_TIMES_D; i++) {
@@ -636,7 +636,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadFaceData(const ::peano4::grid::GridTraver
       const bool loadData       = ::peano4::grid::loadPersistently(flag);
 
       if (dataResidesOnIntermediateStack or (isInOutStack and loadData)) {
-        auto* _pop = repositories::DataRepository::_{{face.logical_type_name}}Stack.getForPop(faceKeyIn);
+        auto* _pop = repositories::DataRepository::{{face.logical_type_name}}Stack.getForPop(faceKeyIn);
         assertion(not _pop->empty());
         pushBlock{{face.logical_type_name}}.set(outFaceStackPosition, _pop->pop());
       } else if (initialiseNewStackContentWithoutData or not computeOnData) {
@@ -660,7 +660,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeFaceData(const ::peano4::grid::GridTrave
   repositories::DataRepository::DataKey keyIn(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
 {%- for face in FACES | reverse %}
-  auto popBlock{{ face.logical_type_name }} = repositories::DataRepository::_{{ face.logical_type_name }}Stack.getForPop(keyIn)->popBlock(TWO_TIMES_D);
+  auto popBlock{{ face.logical_type_name }} = repositories::DataRepository::{{ face.logical_type_name }}Stack.getForPop(keyIn)->popBlock(TWO_TIMES_D);
 {%- endfor %}
 
   for (int i = 0; i < TWO_TIMES_D; i++) {
@@ -686,7 +686,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeFaceData(const ::peano4::grid::GridTrave
 
       if (dataShallBePushedOntoIntermediateStack or (isInOutStack and storeData)) {
         auto& data = popBlock{{face.logical_type_name}}.get(inFaceStackPosition);
-        auto* _push = repositories::DataRepository::_{{face.logical_type_name}}Stack.getForPush(faceKeyOut);
+        auto* _push = repositories::DataRepository::{{face.logical_type_name}}Stack.getForPush(faceKeyOut);
         _push->push(std::move(data));
       } else {
         // Unused grid entity: Do nothing
@@ -708,13 +708,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendFaceData(int position, int toStack, ::pea
 
 {%- for face in FACES %}
   {
-    /*const*/ auto& data = repositories::DataRepository::_{{face.logical_type_name}}Stack.getForPop(key)->top(TWO_TIMES_D - 1 - position);
+    /*const*/ auto& data = repositories::DataRepository::{{face.logical_type_name}}Stack.getForPop(key)->top(TWO_TIMES_D - 1 - position);
     if (
       ::peano4::grid::storePersistently({{face.full_qualified_type}}::loadStoreComputeFlag(marker))
       and
       (data.send(marker) or context == ::peano4::stacks::SendReceiveContext::ForkDomain or context == ::peano4::stacks::SendReceiveContext::JoinDomain)
     ) {
-      repositories::DataRepository::_{{face.logical_type_name}}Stack.getForPush(_spacetreeId, toStack)->push(data); // std::move(data)
+      repositories::DataRepository::{{face.logical_type_name}}Stack.getForPush(_spacetreeId, toStack)->push(data); // std::move(data)
     }
   }
 {%- endfor %}
@@ -732,9 +732,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFaceData(int position, int fro
 
 {%- for face in FACES %}
   {
-    auto& data = repositories::DataRepository::_{{face.logical_type_name}}Stack.getForPush(key)->top(TWO_TIMES_D - 1 - position);
+    auto& data = repositories::DataRepository::{{face.logical_type_name}}Stack.getForPush(key)->top(TWO_TIMES_D - 1 - position);
     if (::peano4::grid::loadPersistently({{face.full_qualified_type}}::loadStoreComputeFlag(marker)) and data.receiveAndMerge(marker)) {
-      const auto& incomingData = repositories::DataRepository::_{{face.logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->pop();
+      const auto& incomingData = repositories::DataRepository::{{face.logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->pop();
       data.merge(context, incomingData, marker, _spacetreeId);
     }
   }
@@ -765,14 +765,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadCellData(const ::peano4::grid::GridTraver
 {%- for cell in CELLS %}
   // Load cell {{cell.logical_type_name}}
   {
-    auto pushBlock = repositories::DataRepository::_{{cell.logical_type_name}}Stack.getForPush(keyOut)->pushBlock(1);
+    auto pushBlock = repositories::DataRepository::{{cell.logical_type_name}}Stack.getForPush(keyOut)->pushBlock(1);
 
     const auto flag           = {{cell.full_qualified_type}}::loadStoreComputeFlag(cellMarker);
     const bool computeOnData  = ::peano4::grid::computeOnData(flag);
     const bool loadData       = ::peano4::grid::loadPersistently(flag);
 
     if (dataResidesOnInputStack and loadData) {
-      auto* _pop = repositories::DataRepository::_{{cell.logical_type_name}}Stack.getForPop(cellKeyIn);
+      auto* _pop = repositories::DataRepository::{{cell.logical_type_name}}Stack.getForPop(cellKeyIn);
       assertion(not _pop->empty());
       pushBlock.set(0, _pop->pop());
     } else if (initialiseNewStackContentWithoutData or not computeOnData) {
@@ -807,14 +807,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeCellData(const ::peano4::grid::GridTrave
 {%- for cell in CELLS | reverse %}
   // Store cell {{cell.logical_type_name}}
   {
-    auto popBlock = repositories::DataRepository::_{{cell.logical_type_name}}Stack.getForPop(keyIn)->popBlock(1);
+    auto popBlock = repositories::DataRepository::{{cell.logical_type_name}}Stack.getForPop(keyIn)->popBlock(1);
 
     const auto flag       = {{cell.full_qualified_type}}::loadStoreComputeFlag(cellMarker);
     const bool storeData  = ::peano4::grid::storePersistently(flag);
 
     if (dataShallBePushedOntoIntermediateStack or (isInOutStack and storeData)) {
       auto& data = popBlock.get(0);
-      auto* _push = repositories::DataRepository::_{{cell.logical_type_name}}Stack.getForPush(cellKeyOut);
+      auto* _push = repositories::DataRepository::{{cell.logical_type_name}}Stack.getForPush(cellKeyOut);
       _push->push(std::move(data));
     } else {
       // Unused grid entity: Do nothing
@@ -834,13 +834,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendCellData(int toStack, ::peano4::stacks::S
 
 {%- for cell in CELLS %}
   {
-    /*const*/ auto& data = repositories::DataRepository::_{{cell.logical_type_name}}Stack.getForPop(key)->top();
+    /*const*/ auto& data = repositories::DataRepository::{{cell.logical_type_name}}Stack.getForPop(key)->top();
     if (
       ::peano4::grid::storePersistently({{cell.full_qualified_type}}::loadStoreComputeFlag(marker))
       and
       (data.send(marker) or context == ::peano4::stacks::SendReceiveContext::ForkDomain or context == ::peano4::stacks::SendReceiveContext::JoinDomain)
     ) {
-      repositories::DataRepository::_{{cell.logical_type_name}}Stack.getForPush(_spacetreeId, toStack)->push(data); // std::move(data)
+      repositories::DataRepository::{{cell.logical_type_name}}Stack.getForPush(_spacetreeId, toStack)->push(data); // std::move(data)
     }
   }
 {%- endfor %}
@@ -857,9 +857,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeCellData(int fromStack, ::pean
 
 {%- for cell in CELLS %}
   {
-    auto& data = repositories::DataRepository::_{{cell.logical_type_name}}Stack.getForPush(key)->top();
+    auto& data = repositories::DataRepository::{{cell.logical_type_name}}Stack.getForPush(key)->top();
     if (::peano4::grid::loadPersistently({{cell.full_qualified_type}}::loadStoreComputeFlag(marker)) and data.receiveAndMerge(marker)) {
-      const auto& incomingData = repositories::DataRepository::_{{cell.logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->pop();
+      const auto& incomingData = repositories::DataRepository::{{cell.logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->pop();
       data.merge(context, incomingData, marker, _spacetreeId);
     }
   }
@@ -874,15 +874,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllHorizontalDataExchangeStacks(bool 
   logTraceInWith2Arguments("exchangeAllHorizontalDataExchangeStacks()", symmetricDataCardinality, _spacetreeId);
 
 {%- for cell in CELLS %}
-  ::peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(repositories::DataRepository::_{{cell.logical_type_name}}Stack, _spacetreeId, symmetricDataCardinality);
+  ::peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(repositories::DataRepository::{{cell.logical_type_name}}Stack, _spacetreeId, symmetricDataCardinality);
 {%- endfor %}
 
 {%- for face in FACES %}
-  ::peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(repositories::DataRepository::_{{face.logical_type_name}}Stack, _spacetreeId, symmetricDataCardinality);
+  ::peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(repositories::DataRepository::{{face.logical_type_name}}Stack, _spacetreeId, symmetricDataCardinality);
 {%- endfor %}
 
 {%- for vertex in VERTICES %}
-  ::peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(repositories::DataRepository::_{{vertex.logical_type_name}}Stack, _spacetreeId, symmetricDataCardinality);
+  ::peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(repositories::DataRepository::{{vertex.logical_type_name}}Stack, _spacetreeId, symmetricDataCardinality);
 {%- endfor %}
 
   logTraceOut("exchangeAllHorizontalDataExchangeStacks()");
@@ -893,15 +893,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllPeriodicBoundaryDataStacks() {
   logTraceInWith1Argument("exchangeAllPeriodicBoundaryDataStacks()", _spacetreeId);
 
 {%- for cell in CELLS %}
-  ::peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks(repositories::DataRepository::_{{cell.logical_type_name}}Stack, _spacetreeId);
+  ::peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks(repositories::DataRepository::{{cell.logical_type_name}}Stack, _spacetreeId);
 {%- endfor %}
 
 {%- for face in FACES %}
-  ::peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks(repositories::DataRepository::_{{face.logical_type_name}}Stack, _spacetreeId);
+  ::peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks(repositories::DataRepository::{{face.logical_type_name}}Stack, _spacetreeId);
 {%- endfor %}
 
 {%- for vertex in VERTICES %}
-  ::peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks(repositories::DataRepository::_{{vertex.logical_type_name}}Stack, _spacetreeId);
+  ::peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks(repositories::DataRepository::{{vertex.logical_type_name}}Stack, _spacetreeId);
 {%- endfor %}
 
   logTraceOut("exchangeAllPeriodicBoundaryDataStacks()");
@@ -912,15 +912,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromSplittingTreeToNewTree(int newW
   logTraceInWith2Arguments("streamDataFromSplittingTreeToNewTree()", newWorker, _spacetreeId);
 
 {%- for cell in CELLS %}
-  ::peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(repositories::DataRepository::_{{cell.logical_type_name}}Stack, _spacetreeId, newWorker);
+  ::peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(repositories::DataRepository::{{cell.logical_type_name}}Stack, _spacetreeId, newWorker);
 {%- endfor %}
 
 {%- for face in FACES %}
-  ::peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(repositories::DataRepository::_{{face.logical_type_name}}Stack, _spacetreeId, newWorker);
+  ::peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(repositories::DataRepository::{{face.logical_type_name}}Stack, _spacetreeId, newWorker);
 {%- endfor %}
 
 {%- for vertex in VERTICES %}
-  ::peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(repositories::DataRepository::_{{vertex.logical_type_name}}Stack, _spacetreeId, newWorker);
+  ::peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(repositories::DataRepository::{{vertex.logical_type_name}}Stack, _spacetreeId, newWorker);
 {%- endfor %}
 
   logTraceOut("streamDataFromSplittingTreeToNewTree()");
@@ -931,15 +931,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromJoiningTreeToMasterTree(int mas
   logTraceInWith2Arguments("streamDataFromJoiningTreeToMasterTree()", master, _spacetreeId);
 
 {%- for cell in CELLS %}
-  ::peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(repositories::DataRepository::_{{cell.logical_type_name}}Stack, _spacetreeId, master);
+  ::peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(repositories::DataRepository::{{cell.logical_type_name}}Stack, _spacetreeId, master);
 {%- endfor %}
 
 {%- for face in FACES %}
-  ::peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(repositories::DataRepository::_{{face.logical_type_name}}Stack, _spacetreeId, master);
+  ::peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(repositories::DataRepository::{{face.logical_type_name}}Stack, _spacetreeId, master);
 {%- endfor %}
 
 {%- for vertex in VERTICES %}
-  ::peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(repositories::DataRepository::_{{vertex.logical_type_name}}Stack, _spacetreeId, master);
+  ::peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(repositories::DataRepository::{{vertex.logical_type_name}}Stack, _spacetreeId, master);
 {%- endfor %}
 
   logTraceOut("streamDataFromJoiningTreeToMasterTree()");
@@ -950,15 +950,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::finishAllOutstandingSendsAndReceives() {
   logTraceInWith1Argument("finishAllOutstandingSendsAndReceives()", _spacetreeId);
 
 {%- for cell in CELLS %}
-  ::peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(repositories::DataRepository::_{{cell.logical_type_name}}Stack, _spacetreeId);
+  ::peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(repositories::DataRepository::{{cell.logical_type_name}}Stack, _spacetreeId);
 {%- endfor %}
 
 {%- for face in FACES %}
-  ::peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(repositories::DataRepository::_{{face.logical_type_name}}Stack, _spacetreeId);
+  ::peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(repositories::DataRepository::{{face.logical_type_name}}Stack, _spacetreeId);
 {%- endfor %}
 
 {%- for vertex in VERTICES %}
-  ::peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(repositories::DataRepository::_{{vertex.logical_type_name}}Stack, _spacetreeId);
+  ::peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(repositories::DataRepository::{{vertex.logical_type_name}}Stack, _spacetreeId);
 {%- endfor %}
 
   logTraceOut("finishAllOutstandingSendsAndReceives()");
@@ -969,15 +969,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
   logTraceInWith1Argument("deleteAllStacks()", _spacetreeId);
 
 {%- for cell in CELLS %}
-  ::peano4::parallel::SpacetreeSet::deleteAllStacks(repositories::DataRepository::_{{cell.logical_type_name}}Stack, _spacetreeId);
+  ::peano4::parallel::SpacetreeSet::deleteAllStacks(repositories::DataRepository::{{cell.logical_type_name}}Stack, _spacetreeId);
 {%- endfor %}
 
 {%- for face in FACES %}
-  ::peano4::parallel::SpacetreeSet::deleteAllStacks(repositories::DataRepository::_{{face.logical_type_name}}Stack, _spacetreeId);
+  ::peano4::parallel::SpacetreeSet::deleteAllStacks(repositories::DataRepository::{{face.logical_type_name}}Stack, _spacetreeId);
 {%- endfor %}
 
 {%- for vertex in VERTICES %}
-  ::peano4::parallel::SpacetreeSet::deleteAllStacks(repositories::DataRepository::_{{vertex.logical_type_name}}Stack, _spacetreeId);
+  ::peano4::parallel::SpacetreeSet::deleteAllStacks(repositories::DataRepository::{{vertex.logical_type_name}}Stack, _spacetreeId);
 {%- endfor %}
 
   logTraceOut("deleteAllStacks()");

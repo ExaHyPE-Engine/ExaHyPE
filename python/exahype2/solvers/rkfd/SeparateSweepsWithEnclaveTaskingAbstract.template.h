@@ -13,7 +13,7 @@
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/accelerator/accelerator.h"
 
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 
 #include "Constants.h"
 
@@ -169,7 +169,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishTimeStep() override;
 
-    virtual void printTimeStep(bool ofCurrentlyRunningGridSweep) override;
+    virtual void logTimeStep(bool ofCurrentlyRunningGridSweep) override;
 
     /**
      * If you hook into this routine, ensure the abstract base class

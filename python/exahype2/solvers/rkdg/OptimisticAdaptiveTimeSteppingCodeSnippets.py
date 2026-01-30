@@ -22,7 +22,6 @@ class OptimisticAdaptiveTimeSteppingCodeSnippets( exahype2.solvers.OptimisticAda
     and
     isFirstGridSweepOfTimeStep()
   ) {
-    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
     logInfo( "startTimeStep()", "t              = " << _minTimeStampThisTimeStep );
     logInfo( "startTimeStep()", "dt             = " << getAdmissibleTimeStepSize() );
     if (_cancelOptimisticTasks) {

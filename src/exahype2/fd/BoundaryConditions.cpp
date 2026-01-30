@@ -1,6 +1,6 @@
 #include "BoundaryConditions.h"
 
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 #include "peano4/utils/Loop.h"
 
 #include "tarch/logging/Log.h"

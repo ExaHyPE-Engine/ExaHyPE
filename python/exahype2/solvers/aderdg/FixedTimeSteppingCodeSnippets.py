@@ -10,12 +10,11 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
     def create_print_time_step_implementation(self):
         return """
   if (tarch::la::greater(getMaxCellSize(ofCurrentlyRunningGridSweep), 0.0)) {
-    logInfo("printTimeStep()", "Solver {{SOLVER_NAME}}:");
-    logDebug("printTimeStep()", "Phase  = " << toString(_solverState));
-    logInfo("printTimeStep()", "t       = " << getMinTimeStamp(ofCurrentlyRunningGridSweep) << " / " << MinTerminalTime);
-    logInfo("printTimeStep()", "dt      = " << getTimeStepSize());
-    logInfo("printTimeStep()", "h_{min} = " << getMinCellSize(ofCurrentlyRunningGridSweep) << " (patch size)");
-    logInfo("printTimeStep()", "h_{max} = " << getMaxCellSize(ofCurrentlyRunningGridSweep) << " (patch size)");
+    logDebug("logTimeStep()", "Phase  = " << toString(_solverState));
+    logInfo("logTimeStep()", "t       = " << getMinTimeStamp(ofCurrentlyRunningGridSweep) << " / " << MinTerminalTime);
+    logInfo("logTimeStep()", "dt      = " << getTimeStepSize());
+    logInfo("logTimeStep()", "h_{min} = " << getMinCellSize(ofCurrentlyRunningGridSweep) << " (patch size)");
+    logInfo("logTimeStep()", "h_{max} = " << getMaxCellSize(ofCurrentlyRunningGridSweep) << " (patch size)");
   }
 """
 

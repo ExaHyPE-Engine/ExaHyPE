@@ -3,8 +3,8 @@
 #pragma once
 
 #include "GridControlEvent.h"
+#include "peano4/Globals.h"
 #include "peano4/stacks/SendReceiveContext.h"
-#include "peano4/utils/Globals.h"
 #include "tarch/la/Vector.h"
 
 #include <set>

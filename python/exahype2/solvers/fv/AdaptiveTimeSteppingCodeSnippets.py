@@ -16,13 +16,12 @@ class AdaptiveTimeSteppingCodeSnippets(exahype2.solvers.AdaptiveTimeSteppingCode
   def create_print_time_step_implementation(self):
     return """
   if (tarch::la::greater(getMaxVolumeSize(ofCurrentlyRunningGridSweep), 0.0) and tarch::la::greater(getMaxEigenvalue(ofCurrentlyRunningGridSweep), 0.0)) {
-    logInfo("printTimeStep()", "Solver {{SOLVER_NAME}}:");
-    logDebug("printTimeStep()", "Phase       = " << toString(_solverState));
-    logInfo("printTimeStep()", "t            = " << getMinTimeStamp(ofCurrentlyRunningGridSweep) << " / " << MinTerminalTime);
-    logInfo("printTimeStep()", "dt           = " << getAdmissibleTimeStepSize(ofCurrentlyRunningGridSweep));
-    logInfo("printTimeStep()", "h_{min}      = " << getMinVolumeSize(ofCurrentlyRunningGridSweep) << " (volume size)");
-    logInfo("printTimeStep()", "h_{max}      = " << getMaxVolumeSize(ofCurrentlyRunningGridSweep) << " (volume size)");
-    logInfo("printTimeStep()", "lambda_{max} = " << getMaxEigenvalue(ofCurrentlyRunningGridSweep));
+    logDebug("logTimeStep()", "Phase       = " << toString(_solverState));
+    logInfo("logTimeStep()", "t            = " << getMinTimeStamp(ofCurrentlyRunningGridSweep) << " / " << MinTerminalTime);
+    logInfo("logTimeStep()", "dt           = " << getAdmissibleTimeStepSize(ofCurrentlyRunningGridSweep));
+    logInfo("logTimeStep()", "h_{min}      = " << getMinVolumeSize(ofCurrentlyRunningGridSweep) << " (volume size)");
+    logInfo("logTimeStep()", "h_{max}      = " << getMaxVolumeSize(ofCurrentlyRunningGridSweep) << " (volume size)");
+    logInfo("logTimeStep()", "lambda_{max} = " << getMaxEigenvalue(ofCurrentlyRunningGridSweep));
   }
 """
 

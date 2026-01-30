@@ -12,7 +12,7 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 
 #include "kernels/{{SOLVER_NAME}}/Quadrature.h"
 
@@ -101,7 +101,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishTimeStep() override;
 
-    virtual void printTimeStep(bool ofCurrentlyRunningGridSweep) override;
+    virtual void logTimeStep(bool ofCurrentlyRunningGridSweep) override;
 
     /**
      * If you hook into this routine, ensure the abstract base class

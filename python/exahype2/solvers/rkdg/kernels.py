@@ -785,7 +785,6 @@ def create_start_time_step_implementation_for_fixed_time_stepping(
     and
     isFirstGridSweepOfTimeStep()
   ) {
-    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
     logInfo( "step()", "t       = " << _minTimeStampThisTimeStep );
     logInfo( "step()", "dt      = " << getTimeStepSize() );
     logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep );

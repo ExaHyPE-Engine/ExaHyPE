@@ -4,7 +4,7 @@
 
 #include "repositories/DataRepository.h"
 
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/grid/GridTraversalEvent.h"
 #include "peano4/grid/GridTraversalObserver.h"

@@ -245,7 +245,7 @@ static double _timeStepSize;
         # Particle statistics code
         particle_statistics_code = jinja2.Template("""
     // TODO: Only print if number of particles > 0
-    logInfo("printTimeStep()", vertexdata::{{PARTICLES_CONTAINER}}::printTotalNumberOfParticles());
+    logInfo("logTimeStep()", vertexdata::{{PARTICLES_CONTAINER}}::printTotalNumberOfParticles());
 """
         ).render(**self.tracerDict)
 

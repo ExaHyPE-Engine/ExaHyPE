@@ -359,11 +359,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       repositories::{{LAST_SOLVER[0]}}.getSolverState() == Abstract{{LAST_SOLVER[1]}}::SolverState::IsSolvingAfterGridInitialisation
     ) {
     _solverState = SolverState::StillNeedsToSolve;
-    logDebug("finishTimeStep()", "solver {{SOLVER_NAME}} reset due to solver {{LAST_SOLVER[1]}} being in its IsSolving state");
   }
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::printTimeStep(bool ofCurrentlyRunningGridSweep) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep(bool ofCurrentlyRunningGridSweep) {
   {{PRINT_TIME_STEP_IMPLEMENTATION}}
 }
 

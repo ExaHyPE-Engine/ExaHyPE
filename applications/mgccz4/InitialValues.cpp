@@ -9,7 +9,7 @@
 
 #include "tarch/la/Vector.h"
 
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 
 #include <stdio.h>
 #include <string.h>

@@ -7,7 +7,7 @@
 #include <map>
 #include <string>
 
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 #include "tarch/la/Vector.h"
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"

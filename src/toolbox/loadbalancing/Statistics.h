@@ -31,6 +31,15 @@ public:
   int getLocalNumberOfInnerUnrefinedCells() const;
   int getGlobalNumberOfInnerUnrefinedCells() const;
 
+  int getLocalNumberOfOuterUnrefinedCells() const;
+  int getGlobalNumberOfOuterUnrefinedCells() const;
+
+  int getLocalNumberOfVertices() const;
+  int getGlobalNumberOfVertices() const;
+
+  int getLocalNumberOfHangingVertices() const;
+  int getGlobalNumberOfHangingVertices() const;
+
   int getLocalNumberOfTrees() const;
   int getGlobalNumberOfTrees() const;
 
@@ -39,12 +48,17 @@ public:
 
   int getGlobalNumberOfRanksWithEnabledLoadBalancing() const;
 
-  int    getGlobalMinTreeLoad() const;
-  int    getGlobalMaxTreeLoad() const;
-  double getGlobalTreeLoadRatioInPercentage() const;
+  int getGlobalMinTreeLoad() const;
+  int getGlobalMaxTreeLoad() const;
 
   std::size_t getLocalMemoryUsageInBytes() const;
   std::size_t getGlobalMemoryUsageInBytes() const;
+
+  int getLocalMinDepth() const;
+  int getGlobalMinDepth() const;
+
+  int getLocalMaxDepth() const;
+  int getGlobalMaxDepth() const;
 
   double getLocalMinH() const;
   double getGlobalMinH() const;
@@ -67,6 +81,15 @@ private:
 
   int _localNumberOfInnerUnrefinedCells;
   int _globalNumberOfInnerUnrefinedCells;
+
+  int _localNumberOfOuterUnrefinedCells;
+  int _globalNumberOfOuterUnrefinedCells;
+
+  int _localNumberOfVertices;
+  int _globalNumberOfVertices;
+
+  int _localNumberOfHangingVertices;
+  int _globalNumberOfHangingVertices;
 
   int _localNumberOfTrees;
   int _globalNumberOfTrees;
@@ -97,6 +120,11 @@ private:
   std::uint64_t _localMemoryUsageInBytes;
   std::uint64_t _globalMemoryUsageInBytes;
 
+  int _localMinDepth;
+  int _localMaxDepth;
+  int _globalMinDepth;
+  int _globalMaxDepth;
+
   double _localMinH;
   double _globalMinH;
 
@@ -107,18 +135,29 @@ private:
 
 #ifdef WITH_MPI
   MPI_Request* _globalNumberOfInnerUnrefinedCellsRequest;
+  MPI_Request* _globalNumberOfOuterUnrefinedCellsRequest;
+  MPI_Request* _globalNumberOfVerticesRequest;
+  MPI_Request* _globalNumberOfHangingVerticesRequest;
   MPI_Request* _globalNumberOfSplitsRequest;
   MPI_Request* _globalNumberOfTreesRequest;
   MPI_Request* _globalNumberOfRanksWithEnabledLoadBalancingRequest;
   MPI_Request* _globalMinTreeLoadRequest;
   MPI_Request* _globalMaxTreeLoadRequest;
   MPI_Request* _globalMemoryUsageInBytesRequest;
+  MPI_Request* _globalMinDepthRequest;
+  MPI_Request* _globalMaxDepthRequest;
   MPI_Request* _globalMinHRequest;
   MPI_Request* _globalNumberOfStationarySweepsRequest;
 #endif
 
   int           _globalNumberOfInnerUnrefinedCellsBufferIn;
   int           _globalNumberOfInnerUnrefinedCellsBufferOut;
+  int           _globalNumberOfOuterUnrefinedCellsBufferIn;
+  int           _globalNumberOfOuterUnrefinedCellsBufferOut;
+  int           _globalNumberOfVerticesBufferIn;
+  int           _globalNumberOfVerticesBufferOut;
+  int           _globalNumberOfHangingVerticesBufferIn;
+  int           _globalNumberOfHangingVerticesBufferOut;
   int           _globalNumberOfSplitsIn;
   int           _globalNumberOfSplitsOut;
   int           _globalNumberOfTreesIn;
@@ -131,6 +170,10 @@ private:
   int           _globalMaxTreeLoadOut;
   std::uint64_t _globalMemoryUsageInBytesIn;
   std::uint64_t _globalMemoryUsageInBytesOut;
+  int           _globalMinDepthIn;
+  int           _globalMinDepthOut;
+  int           _globalMaxDepthIn;
+  int           _globalMaxDepthOut;
   double        _globalMinHIn;
   double        _globalMinHOut;
   int           _globalNumberOfStationarySweepsIn;

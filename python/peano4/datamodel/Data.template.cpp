@@ -2,12 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "{{CLASSNAME}}.h"
 
-#include "tarch/Assertions.h"
-#include "tarch/accelerator/accelerator.h"
-
-#include <cstring> // std::memcpy, std::memset
-#include <utility> // std::exchange
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _data(tarch::allocateMemory<DoFType>(Cardinality, tarch::MemoryLocation::Heap)) {
 
@@ -24,60 +18,12 @@
   }
 }
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(const {{CLASSNAME}}& other):
-  _data(nullptr) {
-  clone(other);
-}
-
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}({{CLASSNAME}}&& other) noexcept:
-  _data(std::exchange(other._data, nullptr)) {}
-
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}& {{NAMESPACE | join("::")}}::{{CLASSNAME}}::operator=({{CLASSNAME}}&& other) noexcept {
-  if (this != &other) {
-    if (_data) {
-      tarch::freeMemory(_data, tarch::MemoryLocation::Heap); // TODO: Is this needed? How often is this called?
-    }
-    _data = std::exchange(other._data, nullptr);
-  }
-  return *this;
-}
-
-// {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFType* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::data() {
-//   if (not _data) {
-//     _data = tarch::allocateMemory<DoFType>(Cardinality, tarch::MemoryLocation::Heap);
-//   }
-//   return _data;
-// }
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other) {
-  if (this == &other) return;
-
-  if (other._data == nullptr) {
-    // other has no data: just reset
-    if (_data) {
-      tarch::freeMemory(_data, tarch::MemoryLocation::Heap);
-      _data = nullptr;
-    }
-    return;
-  }
-
-  DoFType* newbuf = tarch::allocateMemory<DoFType>(Cardinality, tarch::MemoryLocation::Heap);
-  assertion(newbuf);
-  std::memcpy(newbuf, other._data, Cardinality * sizeof(DoFType));
-
-  // Commit
-  if (_data) {
-    tarch::freeMemory(_data, tarch::MemoryLocation::Heap);
-  }
-  _data = newbuf;
-}
-
 {% if DATA_ASSOCIATION == 1 %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
-  [[maybe_unused]] ::peano4::stacks::SendReceiveContext context,
-  [[maybe_unused]] const {{CLASSNAME}}& neighbour,
-  [[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker,
-  [[maybe_unused]] int spacetreeId
+  [[maybe_unused]] ::peano4::stacks::SendReceiveContext           context,
+  [[maybe_unused]] const {{CLASSNAME}}&                           neighbour,
+  [[maybe_unused]] const ::peano4::datamanagement::VertexMarker&  marker,
+  [[maybe_unused]] int                                            spacetreeId
 ) {
   {{MERGE_METHOD_DEFINITION}}
 }
@@ -97,10 +43,10 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge([[maybe_unused]]
 
 {% if DATA_ASSOCIATION == 2 %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
-  [[maybe_unused]] ::peano4::stacks::SendReceiveContext context,
-  [[maybe_unused]] const {{CLASSNAME}}& neighbour,
-  [[maybe_unused]] const ::peano4::datamanagement::FaceMarker& marker,
-  [[maybe_unused]] int spacetreeId
+  [[maybe_unused]] ::peano4::stacks::SendReceiveContext         context,
+  [[maybe_unused]] const {{CLASSNAME}}&                         neighbour,
+  [[maybe_unused]] const ::peano4::datamanagement::FaceMarker&  marker,
+  [[maybe_unused]] int                                          spacetreeId
 ) {
   {{MERGE_METHOD_DEFINITION}}
 }
@@ -120,10 +66,10 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge([[maybe_unused]]
 
 {% if DATA_ASSOCIATION == 3 %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
-  [[maybe_unused]] ::peano4::stacks::SendReceiveContext context,
-  [[maybe_unused]] const {{CLASSNAME}}& neighbour,
-  [[maybe_unused]] const ::peano4::datamanagement::CellMarker& marker,
-  [[maybe_unused]] int spacetreeId
+  [[maybe_unused]] ::peano4::stacks::SendReceiveContext         context,
+  [[maybe_unused]] const {{CLASSNAME}}&                         neighbour,
+  [[maybe_unused]] const ::peano4::datamanagement::CellMarker&  marker,
+  [[maybe_unused]] int                                          spacetreeId
 ) {
   {{MERGE_METHOD_DEFINITION}}
 }

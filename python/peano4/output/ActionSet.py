@@ -95,7 +95,7 @@ class ActionSet(object):
           outputfile.write( "#ifndef {}\n#define {}\n\n\n".format(include_guard, include_guard))
 
           outputfile.write( """
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 #include "peano4/datamanagement/VertexEnumerator.h"
 #include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/datamanagement/FaceEnumerator.h"

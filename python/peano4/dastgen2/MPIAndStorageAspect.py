@@ -104,7 +104,7 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
 #include "peano4/grid/LoadStoreComputeFlag.h"
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 #include "peano4/stacks/SendReceiveContext.h"
 """
         )

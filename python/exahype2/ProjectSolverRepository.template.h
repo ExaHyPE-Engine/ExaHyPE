@@ -24,7 +24,7 @@ namespace {{ item }} {
 
   extern toolbox::loadbalancing::LoadBalancer loadBalancer;
 
-  static constexpr int PrintTimeStepIntervalInSeconds = {{PRINT_TIME_STEP_INTERVAL_IN_SECONDS}};
+  static constexpr int LogTimeStepIntervalInSeconds = {{LOG_TIME_STEP_INTERVAL_IN_SECONDS}};
 
   /**
    * Return the global min time stamp over all solvers.
@@ -85,7 +85,7 @@ namespace {{ item }} {
   void finishTimeStep();
   void finishPlottingStep();
 
-  void printTimeStep(bool ofCurrentlyRunningGridSweep = false);
+  void logTimeStep(bool ofCurrentlyRunningGridSweep = false);
 
   void startSimulation();
   void finishSimulation();

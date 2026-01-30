@@ -19,8 +19,48 @@ public:
   virtual ~StackWithCustomSerialisation() override                             = default;
   StackWithCustomSerialisation(const StackWithCustomSerialisation&)            = delete;
   StackWithCustomSerialisation& operator=(const StackWithCustomSerialisation&) = delete;
-  StackWithCustomSerialisation(StackWithCustomSerialisation&&)                 = delete;
-  StackWithCustomSerialisation& operator=(StackWithCustomSerialisation&&)      = delete;
+
+  INLINE_METHOD StackWithCustomSerialisation(StackWithCustomSerialisation&& other) noexcept:
+    Stack<T>(std::move(other)) // Calls the base move logic
+#ifdef WITH_MPI
+    ,
+    mpiCountRequest(other.mpiCountRequest),
+    mpiDataRequest(other.mpiDataRequest),
+    countBuffer(std::move(other.countBuffer)),
+    dataBuffer(std::move(other.dataBuffer)),
+    mpiComm(other.mpiComm),
+    mpiContext(other.mpiContext)
+#endif
+  {
+#ifdef WITH_MPI
+    // Reset source handles so two objects don't think they own the same MPI request
+    other.mpiCountRequest = MPI_REQUEST_NULL;
+    other.mpiDataRequest  = MPI_REQUEST_NULL;
+    other.mpiComm         = MPI_COMM_NULL;
+#endif
+  }
+
+  INLINE_METHOD StackWithCustomSerialisation& operator=(StackWithCustomSerialisation&& other) noexcept {
+    if (this != &other) {
+      // Call base class move assignment
+      Stack<T>::operator=(std::move(other));
+
+#ifdef WITH_MPI
+      countBuffer = std::move(other.countBuffer);
+      dataBuffer  = std::move(other.dataBuffer);
+
+      mpiCountRequest = other.mpiCountRequest;
+      mpiDataRequest  = other.mpiDataRequest;
+      mpiComm         = other.mpiComm;
+      mpiContext      = other.mpiContext;
+
+      other.mpiCountRequest = MPI_REQUEST_NULL;
+      other.mpiDataRequest  = MPI_REQUEST_NULL;
+      other.mpiComm         = MPI_COMM_NULL;
+#endif
+    }
+    return *this;
+  }
 
 #ifdef WITH_MPI
   MPI_Request mpiCountRequest = MPI_REQUEST_NULL;

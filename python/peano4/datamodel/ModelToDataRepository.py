@@ -10,38 +10,22 @@ class ModelToDataRepository(object):
         self.model = model
         self.d = {}
 
-    def __build_up_dictionary_for_one_data_set(self, i):
-        self.d["DATA_CONTAINER_INCLUDES"] += i.generator.get_header_file_include()
-        self.d["DATA_CONTAINER_INCLUDES"] += "\n"
+    def __build_up_dictionary_for_one_data_set(self, i, prefix):
+        """
+        :param prefix: Should be "CELL", "FACE" or "VERTEX"
+        """
+        self.d[prefix + "_DATA_CONTAINER_INCLUDES"] += i.generator.get_header_file_include()
+        self.d[prefix + "_DATA_CONTAINER_INCLUDES"] += "\n"
 
-        self.d["DATA_CONTAINER_DECLARATION"] += (
-            "static ::peano4::stacks::TreeToStacks<"
-            + i.generator.get_stack_container()
-            + "> _"
-            + i.get_logical_type_name()
-            + "Stack;\n"
-        )
-        self.d["DATA_CONTAINER_INSTANTIATION"] += (
-            "::peano4::stacks::TreeToStacks<"
-            + i.generator.get_stack_container()
-            + "> "
-            + self.d["FULL_QUALIFIED_CLASSNAME"]
-            + "::_"
-            + i.get_logical_type_name()
-            + "Stack;\n"
-        )
-
-        self.d["DATA_CONTAINERS"].append(
-            {"name": i.get_logical_type_name(), "fq": i.get_full_qualified_type()}
+        self.d[prefix + "_DATA_CONTAINERS"].append(
+            {"stack": i.generator.get_stack_container(), "name": i.get_logical_type_name(), "fq": i.get_full_qualified_type()}
         )
 
     def __parse_data_declarations_in_model(self, n):
         subdirectory = self.model.subdirectories[n]
-        self.d["DATA_CONTAINER_INCLUDES"] = ""
-        self.d["DATA_CONTAINER_DECLARATION"] = ""
-        self.d["DATA_CONTAINER_INSTANTIATION"] = ""
-        self.d["DATA_CONTAINERS"] = []
-        self.d["FULL_QUALIFIED_DATA_CONTAINERS"] = []
+        for prefix in ["CELL", "FACE", "VERTEX"]:
+            self.d[prefix + "_DATA_CONTAINER_INCLUDES"] = ""
+            self.d[prefix + "_DATA_CONTAINERS"] = []
 
         self.d["FULL_QUALIFIED_CLASSNAME"] = ""
         for i in self.__get_full_namespace(n):
@@ -51,15 +35,15 @@ class ModelToDataRepository(object):
 
         for i in self.model.cell_data:
             if i.subdirectory == subdirectory:
-                self.__build_up_dictionary_for_one_data_set(i)
+                self.__build_up_dictionary_for_one_data_set(i, "CELL")
 
         for i in self.model.face_data:
             if i.subdirectory == subdirectory:
-                self.__build_up_dictionary_for_one_data_set(i)
+                self.__build_up_dictionary_for_one_data_set(i, "FACE")
 
         for i in self.model.vertex_data:
             if i.subdirectory == subdirectory:
-                self.__build_up_dictionary_for_one_data_set(i)
+                self.__build_up_dictionary_for_one_data_set(i, "VERTEX")
 
     def __get_full_namespace(self, i):
         return self.model.namespaces[i] + ["repositories"]

@@ -14,12 +14,11 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
     def create_print_time_step_implementation(self):
         return """
   if (tarch::la::greater(getMaxH(ofCurrentlyRunningGridSweep), 0.0)) {
-    logInfo("printTimeStep()", "Solver {{SOLVER_NAME}}:");
-    logDebug("printTimeStep()", "Phase  = " << toString(_solverState));
-    logInfo("printTimeStep()", "t       = " << getMinTimeStamp(ofCurrentlyRunningGridSweep) << " / " << MinTerminalTime);
-    logInfo("printTimeStep()", "dt      = " << getTimeStepSize());
-    logInfo("printTimeStep()", "h_{min} = " << getMinH(ofCurrentlyRunningGridSweep) << " (internodal distance)");
-    logInfo("printTimeStep()", "h_{max} = " << getMaxH(ofCurrentlyRunningGridSweep) << " (internodal distance)");
+    logDebug("logTimeStep()", "Phase  = " << toString(_solverState));
+    logInfo("logTimeStep()", "t       = " << getMinTimeStamp(ofCurrentlyRunningGridSweep) << " / " << MinTerminalTime);
+    logInfo("logTimeStep()", "dt      = " << getTimeStepSize());
+    logInfo("logTimeStep()", "h_{min} = " << getMinH(ofCurrentlyRunningGridSweep) << " (internodal distance)");
+    logInfo("logTimeStep()", "h_{max} = " << getMaxH(ofCurrentlyRunningGridSweep) << " (internodal distance)");
   }
 """
 

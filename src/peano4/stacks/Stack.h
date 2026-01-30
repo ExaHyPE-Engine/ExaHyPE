@@ -113,13 +113,52 @@ public:
   virtual ~Stack() noexcept      = default;
   Stack(const Stack&)            = delete;
   Stack& operator=(const Stack&) = delete;
-  Stack(Stack&&)                 = delete;
-  Stack& operator=(Stack&&)      = delete;
+
+  INLINE_METHOD Stack(Stack&& other) noexcept:
+    _data(std::move(other._data)),
+    _logicalSize(other._logicalSize),
+    _ioMode(other._ioMode),
+    _ioRank(other._ioRank),
+    _ioTag(other._ioTag)
+#ifdef WITH_MPI
+    ,
+    _ioMPIRequest(other._ioMPIRequest),
+    _ioMPIActive(other._ioMPIActive)
+#endif
+  {
+    // Reset the source to a safe empty state
+    other._logicalSize = 0;
+    other._ioMode      = IOMode::None;
+#ifdef WITH_MPI
+    other._ioMPIRequest = MPI_REQUEST_NULL;
+    other._ioMPIActive  = false;
+#endif
+  }
+
+  INLINE_METHOD Stack& operator=(Stack&& other) noexcept {
+    if (this != &other) {
+      _data        = std::move(other._data);
+      _logicalSize = other._logicalSize;
+      _ioMode      = other._ioMode;
+      _ioRank      = other._ioRank;
+      _ioTag       = other._ioTag;
+#ifdef WITH_MPI
+      _ioMPIRequest = other._ioMPIRequest;
+      _ioMPIActive  = other._ioMPIActive;
+
+      other._ioMPIRequest = MPI_REQUEST_NULL;
+      other._ioMPIActive  = false;
+#endif
+      other._logicalSize = 0;
+      other._ioMode      = IOMode::None;
+    }
+    return *this;
+  }
 
   INLINE_METHOD std::size_t push(const T& element) {
     if (_logicalSize < _data.size()) {
-      //_data[_logicalSize] = element;
-      _data[_logicalSize] = T(element); // Copy-construct temp, then move-assign
+      _data[_logicalSize] = element;
+      // _data[_logicalSize] = T(element); // Copy-construct temp, then move-assign
     } else {
       _data.push_back(element); // Copy element into std::vector
     }
@@ -249,9 +288,11 @@ public:
   INLINE_METHOD bool empty() const noexcept { return _logicalSize == 0; }
 
   INLINE_METHOD void clear() {
-    _data.clear(); // @TODO: Is this needed?
-    _logicalSize = 0;
+    shallowClear();
+    _data.clear();
   }
+
+  INLINE_METHOD void shallowClear() { _logicalSize = 0; }
 
 #ifdef WITH_MPI
   /**

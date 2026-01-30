@@ -24,11 +24,11 @@ class Model(object):
         return (
             "(#Cells="
             + str(len(self.cell_data))
-            + ",#Faces="
+            + ", #Faces="
             + str(len(self.face_data))
-            + ",#Vertices="
+            + ", #Vertices="
             + str(len(self.vertex_data))
-            + ",#GlobalData="
+            + ", #GlobalData="
             + str(len(self.global_data))
             + ")"
         )

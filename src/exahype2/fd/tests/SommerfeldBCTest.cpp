@@ -1,6 +1,6 @@
 #include "SommerfeldBCTest.h"
 
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 #include "peano4/utils/Loop.h"
 #include "tarch/la/Vector.h"
 
