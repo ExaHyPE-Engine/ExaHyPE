@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Solver.h"
 
-#include "exahype2/VolumeIndex.h"
+#include "exahype2/fv/VolumeIndex.h"
 #include "exahype2/fv/PatchUtils.h"
 
 {% import 'Loop.template.h' as patch with context %}{# get template macros #}

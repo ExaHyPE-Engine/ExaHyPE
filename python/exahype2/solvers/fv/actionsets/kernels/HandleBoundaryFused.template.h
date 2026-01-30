@@ -9,6 +9,7 @@
 #include "toolbox/blockstructured/Projection.h"
 #include "tarch/la/Vector.h"
 #include "exahype2/fv/PatchUtils.h"
+#include "exahype2/fv/VolumeIndex.h"
 
 #include "{{SOLVER_NAME}}.h"
 
@@ -33,6 +34,7 @@ void handleBoundaryFused(
   const double                                t,
   const double                                dt,
   const int                                   numberOfFaces,
+  const int                                   numberOfCells,
   const int                                   targetDevice
 );
 

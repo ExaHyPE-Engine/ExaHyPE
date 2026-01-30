@@ -1,6 +1,6 @@
 #include "Riemann.h"
 
-#include "exahype2/VolumeIndex.h"
+#include "exahype2/fv/VolumeIndex.h"
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 #include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
 
@@ -182,16 +182,16 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
 
   // Project left/right
   for (int y=0; y<order+1; y++) {
-    const auto left = volumeIndex(1, y);
-    const auto right = volumeIndex(0, y);
+    const auto left = fv::toVolumeIndex(1, y);
+    const auto right = fv::toVolumeIndex(0, y);
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
     faceQLeft [ leftRightFaceEnumerator(left,unknown) ] = 0.0;
     faceQRight[ leftRightFaceEnumerator(right,unknown) ] = 0.0;
   }}
 
   for (int y=0; y<order+1; y++) {
-    const auto left = volumeIndex(1, y);
-    const auto right = volumeIndex(0, y);
+    const auto left = fv::toVolumeIndex(1, y);
+    const auto right = fv::toVolumeIndex(0, y);
   for (int x=0; x<order+1; x++) {
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
     faceQLeft [ leftRightFaceEnumerator(left,unknown) ] += BasisFunctionValuesLeft[x]       * cellQ[ cellEnumerator(0,{x,y},unknown) ];
@@ -200,16 +200,16 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
 
   // Project up/down
   for (int x=0; x<order+1; x++) {
-    const auto bottom = volumeIndex(x, 1);
-    const auto up = volumeIndex(x, 0);
+    const auto bottom = fv::toVolumeIndex(x, 1);
+    const auto up = fv::toVolumeIndex(x, 0);
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
     faceQBottom [ bottomTopFaceEnumerator(bottom,unknown) ] = 0.0;
     faceQUp     [ bottomTopFaceEnumerator(up,unknown) ] = 0.0;
   }}
 
   for (int x=0; x<order+1; x++) {
-    const auto bottom = volumeIndex(x, 1);
-    const auto up = volumeIndex(x, 0);
+    const auto bottom = fv::toVolumeIndex(x, 1);
+    const auto up = fv::toVolumeIndex(x, 0);
   for (int y=0; y<order+1; y++) {
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
     faceQBottom [ bottomTopFaceEnumerator(bottom,unknown) ] += BasisFunctionValuesLeft[y]       * cellQ[ cellEnumerator(0,{x,y},unknown) ];
@@ -240,8 +240,8 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
   // Project left/right
   for (int y=0; y<order+1; y++) {
   for (int z=0; z<order+1; z++) {
-    const auto left = volumeIndex(1, y, z);
-    const auto right = volumeIndex(0, y, z);
+    const auto left = fv::toVolumeIndex(1, y, z);
+    const auto right = fv::toVolumeIndex(0, y, z);
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
     faceQLeft   [ leftRightFaceEnumerator(left,unknown) ] = 0.0;
     faceQRight  [ leftRightFaceEnumerator(right,unknown) ] = 0.0;
@@ -249,8 +249,8 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
 
   for (int y=0; y<order+1; y++) {
   for (int z=0; z<order+1; z++) {
-    const auto left = volumeIndex(1, y, z);
-    const auto right = volumeIndex(0, y, z);
+    const auto left = fv::toVolumeIndex(1, y, z);
+    const auto right = fv::toVolumeIndex(0, y, z);
   for (int x=0; x<order+1; x++) {
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
     faceQLeft   [ leftRightFaceEnumerator(left,unknown) ] += BasisFunctionValuesLeft[x]       * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
@@ -260,8 +260,8 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
   // Project down/up
   for (int x=0; x<order+1; x++) {
   for (int z=0; z<order+1; z++) {
-    const auto bottom = volumeIndex(x, 1, z);
-    const auto up = volumeIndex(x, 0, z);
+    const auto bottom = fv::toVolumeIndex(x, 1, z);
+    const auto up = fv::toVolumeIndex(x, 0, z);
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
     faceQBottom [ bottomTopFaceEnumerator(bottom,unknown) ] = 0.0;
     faceQUp     [ bottomTopFaceEnumerator(up,unknown) ] = 0.0;
@@ -269,8 +269,8 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
 
   for (int x=0; x<order+1; x++) {
   for (int z=0; z<order+1; z++) {
-    const auto bottom = volumeIndex(x, 1, z);
-    const auto up = volumeIndex(x, 0, z);
+    const auto bottom = fv::toVolumeIndex(x, 1, z);
+    const auto up = fv::toVolumeIndex(x, 0, z);
   for (int y=0; y<order+1; y++) {
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
     faceQBottom [ bottomTopFaceEnumerator(bottom,unknown) ] += BasisFunctionValuesLeft[y]       * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
@@ -280,8 +280,8 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
   // Project front/back
   for (int x=0; x<order+1; x++) {
   for (int y=0; y<order+1; y++) {
-    const auto front = volumeIndex(x, y, 1);
-    const auto back = volumeIndex(x, y, 0);
+    const auto front = fv::toVolumeIndex(x, y, 1);
+    const auto back = fv::toVolumeIndex(x, y, 0);
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
     faceQFront [ frontBackFaceEnumerator(front,unknown) ] = 0.0;
     faceQBack  [ frontBackFaceEnumerator(back,unknown) ] = 0.0;
@@ -289,8 +289,8 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
 
   for (int x=0; x<order+1; x++) {
   for (int y=0; y<order+1; y++) {
-    const auto front = volumeIndex(x, y, 1);
-    const auto back = volumeIndex(x, y, 0);
+    const auto front = fv::toVolumeIndex(x, y, 1);
+    const auto back = fv::toVolumeIndex(x, y, 0);
   for (int z=0; z<order+1; z++) {
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
     faceQFront [ frontBackFaceEnumerator(front,unknown) ] += BasisFunctionValuesLeft[z]       * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];

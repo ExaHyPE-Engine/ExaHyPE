@@ -2,9 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 {% macro ComputeFluxesAndPerformTimeStep() %}
-  const auto volumeSize = ::exahype2::fv::getVolumeSize(patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}});
-  const auto volumeIndex = ::exahype2::volumeIndex(x, y {% if DIMENSIONS==3 %}, z {% endif %});
-  const auto volumeCentre = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeIndex);
+  auto volumeIndex = ::exahype2::fv::toVolumeIndex(x, y {% if DIMENSIONS==3 %}, z {% endif %});
+  auto [volumeSize, volumeCentre] = ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, {{NUMBER_OF_VOLUMES_PER_AXIS}}>(
+    patchCentre, patchSize, volumeIndex
+  );
 
 {% if DIMENSIONS==2 %}
   const {{STORAGE_PRECISION}}* const NOALIAS QInCenter = &QIn[(volumeIndex(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndex(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}}];
@@ -98,8 +99,13 @@
     volumeIndexLeft (normal) -= {{HALO_SIZE}};
     volumeIndexRight(normal) += {{HALO_SIZE}};
 
-    const auto volumeCentreLeft  = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeIndexLeft);
-    const auto volumeCentreRight = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeIndexRight);
+    auto [volumeSizeLeft, volumeCentreLeft] = ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, {{NUMBER_OF_VOLUMES_PER_AXIS}}>(
+      patchCentre, patchSize, volumeIndexLeft
+    );
+
+    auto [volumeSizeRight, volumeCentreRight] = ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, {{NUMBER_OF_VOLUMES_PER_AXIS}}>(
+      patchCentre, patchSize, volumeIndexRight
+    );
 
 {% if DIMENSIONS==2 %}
     const auto indexLeft = (volumeIndexLeft(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} + (volumeIndexLeft(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}};

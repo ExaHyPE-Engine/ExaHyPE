@@ -88,7 +88,7 @@ Scalar tarch::la::norm1(const Vector<Size, Scalar>& vector) {
 }
 
 template <int Size, typename Scalar>
-inline GPU_CALLABLE_METHOD
+INLINE_METHOD GPU_CALLABLE_METHOD
 Scalar tarch::la::norm2Squared(const Vector<Size, Scalar>& vector) {
   Scalar result(vector(0) * vector(0));
   for (int i = 1; i < Size; i++) {
@@ -98,7 +98,7 @@ Scalar tarch::la::norm2Squared(const Vector<Size, Scalar>& vector) {
 }
 
 template <int Size, typename Scalar>
-inline GPU_CALLABLE_METHOD
+INLINE_METHOD GPU_CALLABLE_METHOD
 Scalar tarch::la::norm2(const Vector<Size, Scalar>& vector) {
   return std::sqrt(norm2Squared(vector));
 }

@@ -3,7 +3,7 @@
 
 include_guard(GLOBAL)
 
-set(KOKKOS_VERSION "4.7.01" CACHE STRING "")
+set(KOKKOS_VERSION "5.0.1" CACHE STRING "")
 
 function(_kokkos_build_user_args out_var)
   if(NOT DEFINED WITH_GPU_ARCH OR "${WITH_GPU_ARCH}" STREQUAL "none")
@@ -11,7 +11,6 @@ function(_kokkos_build_user_args out_var)
   endif()
 
   set(_args
-    "-DKokkos_Enable_DEPRECATED_CODE=OFF"
     "-DKokkos_ENABLE_SERIAL=ON"
     "-DKokkos_ENABLE_OPENMP=OFF"
     "-DKokkos_ARCH_NATIVE=ON"
@@ -20,7 +19,7 @@ function(_kokkos_build_user_args out_var)
   string(TOLOWER "${WITH_GPU_ARCH}" _w)
 
   if(_w MATCHES "^sm_([0-9]+)$")
-    list(APPEND _args "-DKokkos_ENABLE_CUDA=ON")
+    list(APPEND _args "-DKokkos_ENABLE_CUDA=ON" "-DKokkos_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE=OFF")
     set(_sm "${CMAKE_MATCH_1}")
     set(_CUDA_MAP
       60 PASCAL60
@@ -105,7 +104,7 @@ if(NOT Kokkos_FOUND)
       ${Kokkos_USER_CMAKE_ARGS}
     RESULT_VARIABLE result
     OUTPUT_QUIET
-    ERROR_QUIET
+    # ERROR_QUIET
   )
   if(result)
     message(FATAL_ERROR "CMake step for Kokkos failed: ${result}")
@@ -115,7 +114,7 @@ if(NOT Kokkos_FOUND)
     COMMAND ${CMAKE_COMMAND} --build ${kokkos_BINARY_DIR} --config Release --target install --parallel ${AVAILABLE_PROCESSOR_COUNT}
     RESULT_VARIABLE result
     OUTPUT_QUIET
-    ERROR_QUIET
+    # ERROR_QUIET
   )
   if(result)
     message(FATAL_ERROR "Build step for Kokkos failed: ${result}")

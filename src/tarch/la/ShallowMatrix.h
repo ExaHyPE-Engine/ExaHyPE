@@ -69,7 +69,7 @@ class tarch::la::ShallowMatrix {
      *
      * @see Vector::operator[] for remarks on SSE efficiency
      */
-    inline Scalar & operator() (
+    INLINE_METHOD Scalar & operator() (
       int rowIndex,
       int colIndex
     ) {
@@ -83,7 +83,7 @@ class tarch::la::ShallowMatrix {
     /**
      * Returns const element at given row and column index (from 0..size-1).
      */
-    inline const Scalar & operator() (
+    INLINE_METHOD const Scalar & operator() (
       int rowIndex,
       int colIndex
     ) const {

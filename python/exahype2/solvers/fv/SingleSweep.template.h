@@ -17,5 +17,7 @@ private:
   static tarch::logging::Log _log;
 
 public:
+  TARGET_DECLARE
   {{SOLVER_USER_DECLARATIONS}}
+  TARGET_DECLARE_END
 };

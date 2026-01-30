@@ -23,9 +23,9 @@ compute_primitive_variables = r"""
 
 max_eigenvalue = r"""
   {compute_primitive_variables}
-  const auto speedOfSound = std::sqrt(GAMMA * p * irho);
-  auto result = std::fmax(0.0, std::fabs(u_n - speedOfSound));
-  result = std::fmax(result, std::fabs(u_n + speedOfSound));
+  const auto speedOfSound = sqrt(GAMMA * p * irho);
+  auto result = fmax(0.0, fabs(u_n - speedOfSound));
+  result = fmax(result, fabs(u_n + speedOfSound));
   return result;
 """.format(
     compute_primitive_variables=compute_primitive_variables

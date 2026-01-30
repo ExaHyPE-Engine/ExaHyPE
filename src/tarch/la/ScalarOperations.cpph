@@ -1,17 +1,17 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-inline GPU_CALLABLE_METHOD
+INLINE_METHOD GPU_CALLABLE_METHOD
 int tarch::la::abs(int value) {
   return value < 0 ? - value : value;
 }
 
-inline GPU_CALLABLE_METHOD
+INLINE_METHOD GPU_CALLABLE_METHOD
 double tarch::la::abs(double value) {
   return std::abs(value);
 }
 
-inline GPU_CALLABLE_METHOD
+INLINE_METHOD GPU_CALLABLE_METHOD
 int tarch::la::aPowI(int i, int a) {
   int result = 1;
   for (int d=0; d<i; d++) {
@@ -20,7 +20,7 @@ int tarch::la::aPowI(int i, int a) {
   return result;
 }
 
-inline GPU_CALLABLE_METHOD
+INLINE_METHOD GPU_CALLABLE_METHOD
 bool tarch::la::greater(
   double lhs,
   double rhs,
@@ -29,7 +29,7 @@ bool tarch::la::greater(
   return lhs - rhs >  tolerance;
 }
 
-inline GPU_CALLABLE_METHOD
+INLINE_METHOD GPU_CALLABLE_METHOD
 bool tarch::la::greaterEquals(
   double lhs,
   double rhs,
@@ -38,7 +38,7 @@ bool tarch::la::greaterEquals(
   return lhs - rhs >= - tolerance;
 }
 
-inline GPU_CALLABLE_METHOD
+INLINE_METHOD GPU_CALLABLE_METHOD
 bool tarch::la::smaller(
   double lhs,
   double rhs,
@@ -47,7 +47,7 @@ bool tarch::la::smaller(
   return lhs - rhs < -tolerance;
 }
 
-inline GPU_CALLABLE_METHOD
+INLINE_METHOD GPU_CALLABLE_METHOD
 bool tarch::la::smallerEquals(
   double lhs,
   double rhs,
@@ -56,7 +56,7 @@ bool tarch::la::smallerEquals(
   return lhs - rhs <= tolerance;
 }
 
-inline GPU_CALLABLE_METHOD
+INLINE_METHOD GPU_CALLABLE_METHOD
 bool tarch::la::equals(
   double lhs,
   double rhs,
@@ -65,7 +65,7 @@ bool tarch::la::equals(
   return std::abs(rhs - lhs) <= tolerance;
 }
 
-inline GPU_CALLABLE_METHOD
+INLINE_METHOD GPU_CALLABLE_METHOD
 int tarch::la::sign(double number, double tolerance) {
   if (greater(number, tolerance)) {
      return 1;
@@ -75,13 +75,13 @@ int tarch::la::sign(double number, double tolerance) {
   return 0;
 }
 
-inline GPU_CALLABLE_METHOD
+INLINE_METHOD GPU_CALLABLE_METHOD
 int tarch::la::round(double value) {
   // return static_cast<int>(std::round(value));
   return static_cast<int>(std::floor(value + 0.5));
 }
 
-inline GPU_CALLABLE_METHOD
+INLINE_METHOD GPU_CALLABLE_METHOD
 int tarch::la::round(float value) {
   // return static_cast<int>(std::round(value));
   return static_cast<int>(std::floor(value + static_cast<float>(0.5)));

@@ -4,6 +4,10 @@
 
 #include <limits>
 
+#include "tarch/accelerator/accelerator.h"
+
+TARGET_DECLARE
+
 namespace tarch {
   namespace la {
     constexpr double PI = 3.1415926535897932384626433832795028841972;
@@ -72,3 +76,5 @@ namespace tarch {
     double convertAbsoluteIntoRelativeValue(double referenceValue, double value);
   } // namespace la
 } // namespace tarch
+
+TARGET_DECLARE_END

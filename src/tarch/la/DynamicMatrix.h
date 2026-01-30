@@ -25,7 +25,7 @@ private:
   int     _rows;
   double* _m;
 
-  static inline int serialise(
+  static INLINE_METHOD int serialise(
     int                  row,
     int                  col,
     [[maybe_unused]] int Rows,
@@ -34,7 +34,7 @@ private:
     return col + row * Cols;
   }
 
-  int inline serialise(int row, int col) const {
+  int INLINE_METHOD serialise(int row, int col) const {
     return serialise(row, col, _rows, _cols);
   }
 

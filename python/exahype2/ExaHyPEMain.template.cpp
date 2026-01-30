@@ -31,14 +31,6 @@
 #include <iomanip>
 #include <sstream>
 
-#ifdef WITH_SCOREP_USER
-#include <scorep/SCOREP_User.h>
-#else
-#define SCOREP_USER_REGION_DEFINE(handle)
-#define SCOREP_USER_REGION_BEGIN(handle, name, type)
-#define SCOREP_USER_REGION_END(handle)
-#endif
-
 using namespace {{NAMESPACE | join("::")}};
 
 namespace {
@@ -294,8 +286,6 @@ void performAlgorithmicStep(
   static tarch::timing::Watch watch("::", "performAlgorithmicStep()", false);
   watch.start();
 
-  SCOREP_USER_REGION_BEGIN(AlgorithmicStep, repositories::StepRepository::toString(stepName).c_str(), SCOREP_USER_REGION_TYPE_COMMON)
-
   startStepHook();
   Observer::prepareTraversal();
 
@@ -304,8 +294,6 @@ void performAlgorithmicStep(
 
   Observer::unprepareTraversal();
   finishStepHook();
-
-  SCOREP_USER_REGION_END(AlgorithmicStep)
 
   watch.stop();
   measurement.setValue(watch.getCalendarTime());
@@ -316,8 +304,6 @@ void performAlgorithmicStep(
 void runNextAlgorithmicStep() {
   int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
   auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
-
-  SCOREP_USER_REGION_DEFINE(AlgorithmicStep)
 
   switch (stepName) {
   case repositories::StepRepository::Steps::CreateGridWithoutRefinement:

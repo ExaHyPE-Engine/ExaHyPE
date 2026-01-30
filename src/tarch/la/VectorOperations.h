@@ -29,11 +29,11 @@ namespace tarch {
      * summed up squared component values.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Scalar norm2(const Vector<Size, Scalar>& vector);
 
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Scalar norm2Squared(const Vector<Size, Scalar>& vector);
 
     /**

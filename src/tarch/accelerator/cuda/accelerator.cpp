@@ -43,14 +43,12 @@ void* tarch::accelerator::allocateRawData(std::size_t sizeInBytes, MemoryLocatio
   }
 
   assertion(data);
-
   MemoryBlocks::getInstance().bookmarkMemoryBlock(data, sizeInBytes);
-
   return data;
 }
 
 void tarch::accelerator::freeRawData(void* data, MemoryLocation location, int device) {
-  if (!data) {
+  if (not data) {
     return;
   }
 

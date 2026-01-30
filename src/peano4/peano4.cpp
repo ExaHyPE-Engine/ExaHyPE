@@ -56,6 +56,8 @@ namespace {
       buildInfo += "CUDA";
 #elif defined(WITH_GPU_KOKKOS)
       buildInfo += "Kokkos";
+#elif defined(WITH_GPU_OMPT)
+      buildInfo += "OMPT";
 #endif
       buildInfo += ": ";
       buildInfo += std::to_string(tarch::accelerator::Device::getInstance().getNumberOfDevices());

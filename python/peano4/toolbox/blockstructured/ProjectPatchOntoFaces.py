@@ -166,7 +166,9 @@ class ProjectPatchOntoFaces(ActionSet):
             headfile_template=kernels_templates_prefix
             + "/ProjectPatchFused.template.h",
             cppfile_template=kernels_templates_prefix
-            + "/ProjectPatchFused.template.cpp",
+            + "/ProjectPatchFused"
+            + (f".{d['GPU']}" if d["GPU"] != "no" else "")
+            + ".template.cpp",
             classname=kernels_output_path + "/ProjectPatchFused",
             namespace=kernels_namespace,
             subdirectory=subdirectory + ".",

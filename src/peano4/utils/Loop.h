@@ -21,13 +21,13 @@ namespace peano4 {
      *
      * @return a vector containing zero values only.
      */
-    inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector();
+    INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector();
 
     /**
      * @return a vector containing only zero values besides the dim-th entry. This
      *         entry is set value.
      */
-    inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector(int dim, int value);
+    INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector(int dim, int value);
 
     /**
      * Creates a start vector. Each component is set either 0 or max-1 depending
@@ -35,7 +35,7 @@ namespace peano4 {
      *
      * @return a start vector for an oscillating loop.
      */
-    inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector(int max, const LoopDirection& direction);
+    INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector(int max, const LoopDirection& direction);
   }
 }
 

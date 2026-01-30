@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RiemannSolverFused.h"
 
-#include "exahype2/VolumeIndex.h"
+#include "exahype2/fv/VolumeIndex.h"
 #include "exahype2/fv/PatchUtils.h"
 
 #include "tarch/accelerator/accelerator.h"
@@ -11,53 +11,78 @@
 
 {% from 'ComputeFluxesAndPerformTimeStep.macro.h' import ComputeFluxesAndPerformTimeStep with context %}
 
+struct RiemannSolverFusedFunctor {
+  const {{COMPUTE_PRECISION}}* _QInFlattened;
+  {{COMPUTE_PRECISION}}*       _QOutFlattened;
+  const double*                _patchCentres;
+  const double*                _patchSizes;
+  double                       _timeStamp;
+  double                       _timeStepSize;
+
+  RiemannSolverFusedFunctor(
+    const {{COMPUTE_PRECISION}}* QInFlattened,
+    {{COMPUTE_PRECISION}}*       QOutFlattened,
+    const double*                patchCentres,
+    const double*                patchSizes,
+    double                       timeStamp,
+    double                       timeStepSize
+  ) : _QInFlattened(QInFlattened),
+      _QOutFlattened(QOutFlattened),
+      _patchCentres(patchCentres),
+      _patchSizes(patchSizes),
+      _timeStamp(timeStamp),
+      _timeStepSize(timeStepSize) {}
+
+  using member_type = Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace>::member_type;
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const member_type& teamMember, double& maxEigenvalue) const {
+    const int patchIndex      = teamMember.league_rank();
+    const double timeStamp    = _timeStamp;
+    const double timeStepSize = _timeStepSize;
+
+    const {{COMPUTE_PRECISION}}* const QIn = &_QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %}];
+    {{COMPUTE_PRECISION}}* const QOut      = &_QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
+
+    const tarch::la::Vector<DIMENSIONS, double> patchCentre{_patchCentres + patchIndex * {{DIMENSIONS}}};
+    const tarch::la::Vector<DIMENSIONS, double> patchSize{_patchSizes + patchIndex * {{DIMENSIONS}}};
+    Kokkos::parallel_reduce(
+      Kokkos::TeamVectorRange(
+        teamMember,
+        {{NUMBER_OF_VOLUMES_PER_AXIS ** DIMENSIONS}}
+      ),
+      KOKKOS_LAMBDA(const int index, double& maxEigenvalueAfterTimeStep) {
+      {% if DIMENSIONS == 3 %}
+        const int x = index / ({{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}});
+        const int y = (index / {{NUMBER_OF_VOLUMES_PER_AXIS}}) % {{NUMBER_OF_VOLUMES_PER_AXIS}};
+        const int z = index % {{NUMBER_OF_VOLUMES_PER_AXIS}};
+      {% else %}
+        const int x = index / {{NUMBER_OF_VOLUMES_PER_AXIS}};
+        const int y = index % {{NUMBER_OF_VOLUMES_PER_AXIS}};
+      {% endif %}
+        {{ ComputeFluxesAndPerformTimeStep() | indent(8) }}
+      },
+      Kokkos::Max<double>(maxEigenvalue)
+    );
+  }
+};
+
 double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&                       solver,
   ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData,
   [[maybe_unused]] const int                                             targetDevice
 ) {
-  const int numberOfPatches                       = patchData.numberOfCells;
-  const {{COMPUTE_PRECISION}}* const QInFlattened = patchData.QInFlattened;
-  {{COMPUTE_PRECISION}}* const QOutFlattened      = patchData.QOutFlattened;
-  const double* const patchCentres                = patchData.cellCentre[0].data();
-  const double* const patchSizes                  = patchData.cellSize[0].data();
-  const double timeStamp                          = patchData.t;
-  const double timeStepSize                       = patchData.dt;
-
-{% if COMPUTE_MAX_EIGENVALUE %}
-  double maxEigenvalueAfterTimeStep = 0.0;
-{% endif %}
-
-  Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> teamPolicy(numberOfPatches, Kokkos::AUTO);
-  Kokkos::parallel_reduce("RiemannSolver", teamPolicy, KOKKOS_LAMBDA (const Kokkos::TeamPolicy<>::member_type& teamMember, double& maxEigenvalueAfterTimeStep) {
-    const int patchIndex                   = teamMember.league_rank();
-    const {{COMPUTE_PRECISION}}* const QIn = &QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %}];
-    {{COMPUTE_PRECISION}}* const QOut      = &QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
-
-    const tarch::la::Vector<DIMENSIONS, double> patchCentre {
-      patchCentres[patchIndex * {{DIMENSIONS}}],
-      patchCentres[patchIndex * {{DIMENSIONS}} + 1]
-      {% if DIMENSIONS==3 %} , patchCentres[patchIndex * {{DIMENSIONS}} + 2] {% endif %}
-    };
-    const tarch::la::Vector<DIMENSIONS, double> patchSize {
-      patchSizes[patchIndex * {{DIMENSIONS}}],
-      patchSizes[patchIndex * {{DIMENSIONS}} + 1]
-      {% if DIMENSIONS==3 %} , patchSizes[patchIndex * {{DIMENSIONS}} + 2] {% endif %}
-    };
-{% if DIMENSIONS == 3 %}
-    Kokkos::parallel_for(Kokkos::TeamVectorMDRange(teamMember, {{NUMBER_OF_VOLUMES_PER_AXIS}}, {{NUMBER_OF_VOLUMES_PER_AXIS}}, {{NUMBER_OF_VOLUMES_PER_AXIS}}), [=, &maxEigenvalueAfterTimeStep](const int x, const int y, const int z) {
-{% else %}
-    Kokkos::parallel_for(Kokkos::TeamVectorMDRange(teamMember, {{NUMBER_OF_VOLUMES_PER_AXIS}}, {{NUMBER_OF_VOLUMES_PER_AXIS}}), [=, &maxEigenvalueAfterTimeStep](const int x, const int y) {
-{% endif %}
-      {{ ComputeFluxesAndPerformTimeStep() | indent(4)}}
-    });
-  }, Kokkos::Max<double>(maxEigenvalueAfterTimeStep));
-
-{% if COMPUTE_MAX_EIGENVALUE==True %}
-  return maxEigenvalueAfterTimeStep;
-{% else %}
-  return 0.0;
-{% endif %}
+  return riemannSolverFused(
+	solver,
+	patchData.QInFlattened,
+	patchData.QOutFlattened,
+	patchData.t,
+	patchData.dt,
+	patchData.cellCentre[0].data(),
+	patchData.cellSize[0].data(),
+	patchData.numberOfCells,
+	targetDevice
+  );
 }
 
 double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
@@ -74,33 +99,24 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
 {% if COMPUTE_MAX_EIGENVALUE %}
   double maxEigenvalueAfterTimeStep = 0.0;
 {% endif %}
+  RiemannSolverFusedFunctor functor(
+    QInFlattened,
+    QOutFlattened,
+    patchCentres,
+    patchSizes,
+    timeStamp,
+    timeStepSize
+  );
 
   Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> teamPolicy(numberOfPatches, Kokkos::AUTO);
-  Kokkos::parallel_reduce("RiemannSolver", teamPolicy, KOKKOS_LAMBDA (const Kokkos::TeamPolicy<>::member_type& teamMember, double& maxEigenvalueAfterTimeStep) {
-    const int patchIndex                   = teamMember.league_rank();
-    const {{COMPUTE_PRECISION}}* const QIn = &QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %}];
-    {{COMPUTE_PRECISION}}* const QOut      = &QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
+  Kokkos::parallel_reduce(
+	"RiemannSolver",
+	teamPolicy,
+	functor,
+	Kokkos::Max<double>(maxEigenvalueAfterTimeStep)
+  );
 
-    const tarch::la::Vector<DIMENSIONS, double> patchCentre {
-      patchCentres[patchIndex * {{DIMENSIONS}}],
-      patchCentres[patchIndex * {{DIMENSIONS}} + 1]
-      {% if DIMENSIONS==3 %} , patchCentres[patchIndex * {{DIMENSIONS}} + 2] {% endif %}
-    };
-    const tarch::la::Vector<DIMENSIONS, double> patchSize {
-      patchSizes[patchIndex * {{DIMENSIONS}}],
-      patchSizes[patchIndex * {{DIMENSIONS}} + 1]
-      {% if DIMENSIONS==3 %} , patchSizes[patchIndex * {{DIMENSIONS}} + 2] {% endif %}
-    };
-{% if DIMENSIONS == 3 %}
-    Kokkos::parallel_for(Kokkos::TeamVectorMDRange(teamMember, {{NUMBER_OF_VOLUMES_PER_AXIS}}, {{NUMBER_OF_VOLUMES_PER_AXIS}}, {{NUMBER_OF_VOLUMES_PER_AXIS}}), [=, &maxEigenvalueAfterTimeStep](const int x, const int y, const int z) {
-{% else %}
-    Kokkos::parallel_for(Kokkos::TeamVectorMDRange(teamMember, {{NUMBER_OF_VOLUMES_PER_AXIS}}, {{NUMBER_OF_VOLUMES_PER_AXIS}}), [=, &maxEigenvalueAfterTimeStep](const int x, const int y) {
-{% endif %}
-      {{ ComputeFluxesAndPerformTimeStep() | indent(4)}}
-    });
-  }, Kokkos::Max<double>(maxEigenvalueAfterTimeStep));
-
-{% if COMPUTE_MAX_EIGENVALUE==True %}
+{% if COMPUTE_MAX_EIGENVALUE %}
   return maxEigenvalueAfterTimeStep;
 {% else %}
   return 0.0;

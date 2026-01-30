@@ -15,21 +15,26 @@
 
 #include "tarch/CompilerSpecificSettings.h"
 
-namespace tarch {
+#define TARGET_DECLARE
+#define TARGET_DECLARE_END
+#define GPU_CALLABLE_METHOD
+
 // https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#nvcc-identification-macro
 // defined(_NVHPC_CUDA) || defined(__NVCOMPILER_CUDA__) || defined(__CUDACC__) || defined(NVCC) || defined(__NVCC__)
 #if defined(WITH_GPU_CUDA)
+#undef GPU_CALLABLE_METHOD
 #define GPU_CALLABLE_METHOD __host__ __device__
-  GPU_CALLABLE_METHOD void           gpuAbort();
-#elif defined(WITH_GPU_SYCL)
-#define GPU_CALLABLE_METHOD
-  void gpuAbort();
 #elif defined(WITH_GPU_KOKKOS)
+#undef GPU_CALLABLE_METHOD
 #define GPU_CALLABLE_METHOD KOKKOS_FUNCTION
-#else
-#define GPU_CALLABLE_METHOD
+#elif defined(WITH_GPU_OMPT)
+#undef TARGET_DECLARE
+#undef TARGET_DECLARE_END
+#define TARGET_DECLARE _Pragma("omp declare target")
+#define TARGET_DECLARE_END _Pragma("omp end declare target")
 #endif
 
+namespace tarch {
   namespace accelerator {
     void* allocateRawData(std::size_t sizeInBytes, MemoryLocation location, int device);
     void* allocateRawDataOnHeap(std::size_t sizeInBytes);

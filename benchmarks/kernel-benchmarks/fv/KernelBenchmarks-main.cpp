@@ -421,6 +421,7 @@ int main(int argc, char** argv) {
       timeStamp,
       dt,
       enclaveGrid.getNumberOfBoundaryFaces(),
+      enclaveGrid.getNumberOfEnclaveCells(),
       0
     );
     watchBoundary.stop();

@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RiemannSolverFused.h"
 
-#include "exahype2/VolumeIndex.h"
+#include "exahype2/fv/VolumeIndex.h"
 #include "exahype2/fv/PatchUtils.h"
 
 {% from 'ComputeFluxesAndPerformTimeStep.macro.h' import ComputeFluxesAndPerformTimeStep with context %}
@@ -36,47 +36,42 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   const int                                           numberOfPatches,
   [[maybe_unused]] const int                          targetDevice
 ) {
+  constexpr int PatchCardinality = {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %};
+  constexpr int PatchCardinalityWithHalo = {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %};
+
 {% if COMPUTE_MAX_EIGENVALUE %}
   double maxEigenvalueAfterTimeStep = 0.0;
-{% endif %}
-
-  const int volumesPerAxis = {{NUMBER_OF_VOLUMES_PER_AXIS}};
-  const int volumesPerPatch = volumesPerAxis * volumesPerAxis {% if DIMENSIONS==3 %} * volumesPerAxis {% endif %};
-  const int totalCells = numberOfPatches * volumesPerPatch;
-
-{% if MULTITHREADING == "ON" %}
-#pragma omp parallel for schedule(static) {% if COMPUTE_MAX_EIGENVALUE==True %} reduction(max : maxEigenvalueAfterTimeStep) {% endif %}
-{% endif %}
-  for (int globalIdx = 0; globalIdx < totalCells; ++globalIdx) {
-    const int patchIndex = globalIdx / volumesPerPatch;
-    const int cellIdx    = globalIdx % volumesPerPatch;
-
-{% if DIMENSIONS == 3 %}
-    const int z = cellIdx / (volumesPerAxis * volumesPerAxis);
-    const int r = cellIdx % (volumesPerAxis * volumesPerAxis);
-    const int y = r / volumesPerAxis;
-    const int x = r % volumesPerAxis;
+#define OMP_REDUCTION_CLAUSE reduction(max:maxEigenvalueAfterTimeStep)
 {% else %}
-    const int y = cellIdx / volumesPerAxis;
-    const int x = cellIdx % volumesPerAxis;
+#define OMP_REDUCTION_CLAUSE
 {% endif %}
 
-    const {{COMPUTE_PRECISION}}* const QIn = &QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %}];
-    {{COMPUTE_PRECISION}}* const QOut      = &QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
+#pragma omp parallel for collapse({{DIMENSIONS + 1}}) schedule(static) \
+  OMP_REDUCTION_CLAUSE
+  for (int patchIndex = 0; patchIndex < numberOfPatches; ++patchIndex)
+{% if DIMENSIONS==3 %}
+  for (int z = 0; z < {{NUMBER_OF_VOLUMES_PER_AXIS}}; ++z)
+{% endif %}
+  for (int y = 0; y < {{NUMBER_OF_VOLUMES_PER_AXIS}}; ++y)
+  for (int x = 0; x < {{NUMBER_OF_VOLUMES_PER_AXIS}}; ++x) {
+    const auto p = patchIndex;
+
+    const {{COMPUTE_PRECISION}}* const QIn = &QInFlattened[p * PatchCardinalityWithHalo];
+    {{COMPUTE_PRECISION}}* const QOut      = &QOutFlattened[p * PatchCardinality];
 
     const tarch::la::Vector<DIMENSIONS, double> patchCentre {
-      patchCentres[patchIndex * {{DIMENSIONS}}],
-      patchCentres[patchIndex * {{DIMENSIONS}} + 1]
-      {% if DIMENSIONS==3 %} , patchCentres[patchIndex * {{DIMENSIONS}} + 2] {% endif %}
+      patchCentres[p * {{DIMENSIONS}}],
+      patchCentres[p * {{DIMENSIONS}} + 1]
+      {% if DIMENSIONS==3 %} , patchCentres[p * {{DIMENSIONS}} + 2] {% endif %}
     };
     const tarch::la::Vector<DIMENSIONS, double> patchSize {
-      patchSizes[patchIndex * {{DIMENSIONS}}],
-      patchSizes[patchIndex * {{DIMENSIONS}} + 1]
-      {% if DIMENSIONS==3 %} , patchSizes[patchIndex * {{DIMENSIONS}} + 2] {% endif %}
+      patchSizes[p * {{DIMENSIONS}}],
+      patchSizes[p * {{DIMENSIONS}} + 1]
+      {% if DIMENSIONS==3 %} , patchSizes[p * {{DIMENSIONS}} + 2] {% endif %}
     };
 
     {{ ComputeFluxesAndPerformTimeStep() | indent(2)}}
-  } // globalIdx
+  }
 
 {% if COMPUTE_MAX_EIGENVALUE %}
   return maxEigenvalueAfterTimeStep;
