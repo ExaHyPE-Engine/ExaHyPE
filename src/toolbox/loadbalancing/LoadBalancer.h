@@ -27,10 +27,14 @@ public:
   int         getMaxPermittedTreesPerRank() const;
   int         getGlobalNumberOfTrees() const;
   int         getGlobalNumberOfInnerUnrefinedCells() const;
+  int         getGlobalNumberOfOuterUnrefinedCells() const;
+  int         getGlobalNumberOfVertices() const;
+  int         getGlobalNumberOfHangingVertices() const;
   int         getGlobalMinTreeLoad() const;
   int         getGlobalMaxTreeLoad() const;
-  double      getGlobalTreeLoadRatioInPercentage() const;
   std::size_t getGlobalMemoryUsageInBytes() const;
+  int         getGlobalMinDepth() const;
+  int         getGlobalMaxDepth() const;
   double      getGlobalMinH() const;
   int         getGlobalNumberOfStationarySweeps() const;
 

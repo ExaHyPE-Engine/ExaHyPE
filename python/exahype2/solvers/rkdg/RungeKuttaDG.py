@@ -960,7 +960,7 @@ We use RK("""
         return """
 #include "tarch/la/Vector.h"
 
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 #include "peano4/utils/Loop.h"
 
 #include "repositories/SolverRepository.h"

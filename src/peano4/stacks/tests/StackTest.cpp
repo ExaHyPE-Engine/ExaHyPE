@@ -42,6 +42,8 @@ void peano4::stacks::tests::StackTest::testPushData() {
     Stack<TestDataOnStack> stack;
     stack.reserve(10);
 
+    // TODO: Test with copy constructor as well
+
     for (int n = 0; n < 5; n++) {
       stack.push(TestDataOnStack(n));
     }

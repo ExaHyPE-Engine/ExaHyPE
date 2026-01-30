@@ -9,7 +9,7 @@
 #include "tarch/multicore/multicore.h"
 
 #include "peano4/grid/GridControlEvent.h"
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 
 #include "exahype2/fv/PatchUtils.h"
 

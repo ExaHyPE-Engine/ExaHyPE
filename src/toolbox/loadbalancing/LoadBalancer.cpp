@@ -68,17 +68,29 @@ int toolbox::loadbalancing::LoadBalancer::getGlobalNumberOfInnerUnrefinedCells()
   return _statistics.getGlobalNumberOfInnerUnrefinedCells();
 }
 
+int toolbox::loadbalancing::LoadBalancer::getGlobalNumberOfOuterUnrefinedCells() const {
+  return _statistics.getGlobalNumberOfOuterUnrefinedCells();
+}
+
+int toolbox::loadbalancing::LoadBalancer::getGlobalNumberOfVertices() const {
+  return _statistics.getGlobalNumberOfVertices();
+}
+
+int toolbox::loadbalancing::LoadBalancer::getGlobalNumberOfHangingVertices() const {
+  return _statistics.getGlobalNumberOfHangingVertices();
+}
+
 int toolbox::loadbalancing::LoadBalancer::getGlobalMinTreeLoad() const { return _statistics.getGlobalMinTreeLoad(); }
 
 int toolbox::loadbalancing::LoadBalancer::getGlobalMaxTreeLoad() const { return _statistics.getGlobalMaxTreeLoad(); }
 
-double toolbox::loadbalancing::LoadBalancer::getGlobalTreeLoadRatioInPercentage() const {
-  return _statistics.getGlobalTreeLoadRatioInPercentage();
-}
-
 std::size_t toolbox::loadbalancing::LoadBalancer::getGlobalMemoryUsageInBytes() const {
   return _statistics.getGlobalMemoryUsageInBytes();
 }
+
+int toolbox::loadbalancing::LoadBalancer::getGlobalMinDepth() const { return _statistics.getGlobalMinDepth(); }
+
+int toolbox::loadbalancing::LoadBalancer::getGlobalMaxDepth() const { return _statistics.getGlobalMaxDepth(); }
 
 double toolbox::loadbalancing::LoadBalancer::getGlobalMinH() const { return _statistics.getGlobalMinH(); }
 

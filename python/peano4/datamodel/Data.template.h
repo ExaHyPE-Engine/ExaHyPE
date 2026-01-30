@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/mpi.h"
 
@@ -10,10 +11,12 @@
 #include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/grid/LoadStoreComputeFlag.h"
 #include "peano4/stacks/SendReceiveContext.h"
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 
-#include <string>
 #include <memory>
+#include <string>
+#include <cstring> // std::memcpy, std::memset
+#include <utility> // std::exchange
 
 {% if FLOAT_TYPE=="std::float16_t" or FLOAT_TYPE=="std::bfloat16_t" %}
 #include <stdfloat>
@@ -48,10 +51,39 @@ public:
   explicit {{CLASSNAME}}(ObjectConstruction) noexcept;
   ~{{CLASSNAME}}() noexcept;
 
-  {{CLASSNAME}}(const {{CLASSNAME}}& other);
-  {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other) = delete;
-  {{CLASSNAME}}({{CLASSNAME}}&& other) noexcept;
-  {{CLASSNAME}}& operator=({{CLASSNAME}}&& other) noexcept;
+  INLINE_METHOD {{CLASSNAME}}(const {{CLASSNAME}}& other):
+    _data(nullptr) {
+    *this = other;
+  }
+
+  INLINE_METHOD {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other) {
+    if (this == &other) {
+      return *this;
+    }
+
+    // Handle case where source is empty
+    if (other._data == nullptr) {
+      // Do not free the memory here so it can be reused later
+      return *this;
+    }
+
+    // Reuse existing memory
+    // If we already have memory, don't free and malloc again. Just overwrite.
+    if (_data == nullptr) {
+      _data = tarch::allocateMemory<DoFType>(Cardinality, tarch::MemoryLocation::Heap);
+    }
+
+    std::memcpy(_data, other._data, Cardinality * sizeof(DoFType));
+    return *this;
+  }
+
+  INLINE_METHOD {{CLASSNAME}}({{CLASSNAME}}&& other) noexcept:
+    _data(std::exchange(other._data, nullptr)) {}
+
+  INLINE_METHOD {{CLASSNAME}}& operator=({{CLASSNAME}}&& other) noexcept {
+    std::swap(_data, other._data);
+    return *this;
+  }
 
   INLINE_METHOD DoFType* data() noexcept {
     return _data;
@@ -59,8 +91,6 @@ public:
   INLINE_METHOD const DoFType* data() const noexcept {
     return _data;
   }
-
-  void clone(const {{CLASSNAME}}& other);
 
 {% if DATA_ASSOCIATION == 1 -%}
   void merge(::peano4::stacks::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const ::peano4::datamanagement::VertexMarker& marker, int spacetreeId);

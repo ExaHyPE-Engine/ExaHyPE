@@ -4,6 +4,8 @@
 
 #include "tarch/Assertions.h"
 
+#include <string>
+
 #ifdef WITH_MPI
 #include <mpi.h>
 #endif
@@ -60,3 +62,5 @@ namespace peano4::stacks {
   }
 #endif
 } // namespace peano4::stacks
+
+std::string toString(peano4::stacks::SendReceiveContext context);

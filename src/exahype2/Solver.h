@@ -51,9 +51,9 @@ public:
   virtual void startGridInitialisationStep()  = 0;
   virtual void finishGridInitialisationStep() = 0;
 
-  virtual void startTimeStep()                                 = 0;
-  virtual void finishTimeStep()                                = 0;
-  virtual void printTimeStep(bool ofCurrentlyRunningGridSweep) = 0;
+  virtual void startTimeStep()                               = 0;
+  virtual void finishTimeStep()                              = 0;
+  virtual void logTimeStep(bool ofCurrentlyRunningGridSweep) = 0;
 
   virtual void startPlottingStep()  = 0;
   virtual void finishPlottingStep() = 0;

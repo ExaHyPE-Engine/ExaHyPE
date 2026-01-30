@@ -9,7 +9,7 @@
 
 #include "tarch/la/Vector.h"
 
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 
 #ifdef IncludeTwoPunctures
 #include "libtwopunctures/TP_bindding.h"

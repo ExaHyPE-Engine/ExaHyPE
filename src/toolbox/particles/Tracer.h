@@ -3,7 +3,7 @@
 #pragma once
 
 #include "peano4/datamanagement/CellMarker.h"
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 
 // #include <concepts>
 

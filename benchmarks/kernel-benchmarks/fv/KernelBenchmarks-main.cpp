@@ -15,10 +15,10 @@
 #include "kernels/FVSolver/ReconstructPatch.h"
 #include "kernels/FVSolver/ReconstructPatchFused.h"
 #include "kernels/FVSolver/RiemannSolverFused.h"
+#include "peano4/Globals.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceEnumerator.h"
 #include "peano4/peano4.h"
-#include "peano4/utils/Globals.h"
 #include "peano4/utils/Loop.h"
 #include "tarch/logging/Log.h"
 #include "tarch/plotter/AMRPlotter.h"
@@ -35,7 +35,7 @@ using namespace benchmarks::exahype2::kernelbenchmarks;
 namespace {
   tarch::logging::Log        _log("");
   tarch::timing::Measurement timeStepMeasurement;
-  double                     printNextTimeStep                = 0.0;
+  double                     logNextTimeStep                  = 0.0;
   bool                       haveReceivedNonCriticalAssertion = false;
 
   std::vector<peano4::datamanagement::CellMarker> _cells;
@@ -63,7 +63,7 @@ namespace {
   }
 } // namespace
 
-void printFinalStatistics(
+void logFinalStatistics(
   const tarch::timing::Measurement& measurement,
   const tarch::timing::Measurement& measurementBoundary,
   const tarch::timing::Measurement& measurementReconstruct,
@@ -72,38 +72,38 @@ void printFinalStatistics(
 ) {
   if (measurementBoundary.getNumberOfMeasurements() > 0) {
     logInfo(
-      "printFinalStatistics()",
-      "Boundary handling:                       " << measurementBoundary.getAccumulatedValue(
-      ) << "s\t" << measurementBoundary.toString()
+      "logFinalStatistics()",
+      "Boundary handling:                       "
+        << measurementBoundary.getAccumulatedValue() << "s\t" << measurementBoundary.toString()
     );
   }
   if (measurementReconstruct.getNumberOfMeasurements() > 0) {
     logInfo(
-      "printFinalStatistics()",
-      "Reconstruction:                          " << measurementReconstruct.getAccumulatedValue(
-      ) << "s\t" << measurementReconstruct.toString()
+      "logFinalStatistics()",
+      "Reconstruction:                          "
+        << measurementReconstruct.getAccumulatedValue() << "s\t" << measurementReconstruct.toString()
     );
   }
   if (measurementRiemann.getNumberOfMeasurements() > 0) {
     logInfo(
-      "printFinalStatistics()",
-      "Riemann solver:                          " << measurementRiemann.getAccumulatedValue(
-      ) << "s\t" << measurementRiemann.toString()
+      "logFinalStatistics()",
+      "Riemann solver:                          "
+        << measurementRiemann.getAccumulatedValue() << "s\t" << measurementRiemann.toString()
     );
   }
   if (measurementProjection.getNumberOfMeasurements() > 0) {
     logInfo(
-      "printFinalStatistics()",
-      "Projection:                              " << measurementProjection.getAccumulatedValue(
-      ) << "s\t" << measurementProjection.toString()
+      "logFinalStatistics()",
+      "Projection:                              "
+        << measurementProjection.getAccumulatedValue() << "s\t" << measurementProjection.toString()
     );
   }
 
   if (measurement.getNumberOfMeasurements() > 0) {
     logInfo(
-      "printFinalStatistics()",
-      "Time stepping:                           " << measurement.getAccumulatedValue(
-      ) << "s\t" << measurement.toString()
+      "logFinalStatistics()",
+      "Time stepping:                           "
+        << measurement.getAccumulatedValue() << "s\t" << measurement.toString()
     );
 
     const auto globalNumberOfPatches = _cells.size();
@@ -112,11 +112,11 @@ void printFinalStatistics(
                                    * (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
 
     logInfo(
-      "printFinalStatistics()",
+      "logFinalStatistics()",
       "Average patch updates per second:  " << globalNumberOfPatches / measurement.getValue()
     );
     logInfo(
-      "printFinalStatistics()",
+      "logFinalStatistics()",
       "Average DoF updates per second:    " << totalNumberOfDoFs / measurement.getValue()
     );
   }
@@ -482,7 +482,7 @@ int main(int argc, char** argv) {
     timeStepWatch.stop();
     timeStepMeasurement.setValue(timeStepWatch.getCalendarTime());
 
-    if (timeStepMeasurement.getAccumulatedValue() >= printNextTimeStep) {
+    if (timeStepMeasurement.getAccumulatedValue() >= logNextTimeStep) {
       const auto totalPersistentMemory = DataRepository::getInstance().getMemoryUsageInBytes();
 
       const auto globalNumberOfPatches = _cells.size();
@@ -492,8 +492,8 @@ int main(int argc, char** argv) {
 
       std::ostringstream msg;
       msg
-        << "#Patches=" << toScientificNotationString(globalNumberOfPatches) << ", #DoFs="
-        << toScientificNotationString(totalNumberOfDoFs) << ", #Memory=" << std::fixed << std::setprecision(2)
+        << "Patches=" << toScientificNotationString(globalNumberOfPatches) << ", DoFs="
+        << toScientificNotationString(totalNumberOfDoFs) << ", Memory=" << std::fixed << std::setprecision(2)
         << tarch::convertMemorySize(totalPersistentMemory, tarch::chooseMemoryUsageFormat(totalPersistentMemory)) << " "
         << tarch::toString(tarch::chooseMemoryUsageFormat(totalPersistentMemory));
       logInfo("main()", msg.str());
@@ -511,8 +511,8 @@ int main(int argc, char** argv) {
         );
       }
 
-      repositories::printTimeStep(false);
-      printNextTimeStep += repositories::PrintTimeStepIntervalInSeconds;
+      repositories::logTimeStep(false);
+      logNextTimeStep += repositories::LogTimeStepIntervalInSeconds;
     }
 
     if (repositories::getMinTimeStamp() >= MinTerminalTime and repositories::getMaxTimeStamp() >= MaxTerminalTime) {
@@ -537,13 +537,13 @@ int main(int argc, char** argv) {
     logWarning("main()", "Terminated gracefully after noncritical assertion");
     returnCode = EXIT_FAILURE;
   } else {
-    // Print final timestep information
-    repositories::printTimeStep(false);
+    // Log final timestep information
+    repositories::logTimeStep(false);
     logInfo("main()", "Terminated successfully");
     returnCode = EXIT_SUCCESS;
   }
 
-  printFinalStatistics(
+  logFinalStatistics(
     measurement,
     measurementBoundary,
     measurementReconstruct,

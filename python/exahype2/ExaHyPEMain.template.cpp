@@ -41,29 +41,8 @@ namespace {
   tarch::timing::Measurement timeStepMeasurement;
   tarch::timing::Measurement plotMeasurement;
 
-  static double printNextTimeStep = 0.0;
+  static double logNextTimeStep = 0.0;
   static bool haveReceivedNonCriticalAssertion = false;
-
-  template <typename T>
-  std::string toScientificNotationString(T value, int precision = 4, bool considerSign = false, double threshold = 1e6) {
-    std::ostringstream out;
-    double v = static_cast<double>(value);
-
-    if (std::abs(v) < threshold) {
-      if (considerSign) {
-        out << std::showpos;
-      }
-      out << value;
-      return out.str();
-    }
-
-    out << std::scientific << std::setprecision(precision);
-    if (considerSign) {
-      out << std::showpos;
-    }
-    out << v;
-    return out.str();
-  }
 } // namespace
 
 /**
@@ -76,29 +55,19 @@ bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumbe
 
   // If the mesh size has decreased, we pause refinement to let the grid settle.
   if (tarch::la::smaller(repositories::loadBalancer.getGlobalMinH(), currentMinH)) {
-    [[maybe_unused]] const double oldH = currentMinH; // Only for logging
-    currentMinH = repositories::loadBalancer.getGlobalMinH();
-
-    logDebug(
-      "shouldContinueGridConstruction()",
-      "Mesh refinement detected (h_{min} decreased: " << oldH << " -> " << currentMinH << "). " <<
-      "Switching to 'CreateGridWithoutRefinement' to allow grid to settle."
-    );
-
+    [[maybe_unused]] const double oldH  = currentMinH; // Only for logging
+    currentMinH                         = repositories::loadBalancer.getGlobalMinH();
+    const auto globalNumberOfLeaves     = static_cast<unsigned long>(repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells());
+    const auto maxDepth                 = repositories::loadBalancer.getGlobalMaxDepth();
+    logInfo("shouldContinueGridConstruction()", "Mesh refinement detected (h_{min} decreased: " << oldH << " -> " << currentMinH << "), Leaves=" << globalNumberOfLeaves << ", Levels=" << maxDepth);
     peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithoutRefinement));
     return true;
   }
 
   // If new trees (subdomains) have appeared, we pause refinement to let the load balancer settle.
   if (repositories::loadBalancer.getGlobalNumberOfTrees() > currentGlobalNumberOfTrees) {
-    const int newTreeCount = repositories::loadBalancer.getGlobalNumberOfTrees();
-
-    logDebug(
-      "shouldContinueGridConstruction()",
-      "Rebalancing detected (Tree count increased: " << currentGlobalNumberOfTrees << " -> " << newTreeCount << "). " <<
-      "Switching to 'CreateGridWithoutRefinement' to postpone further refinement."
-    );
-
+    const auto newTreeCount = repositories::loadBalancer.getGlobalNumberOfTrees();
+    logInfo("shouldContinueGridConstruction()", "Rebalancing detected (Tree count increased: " << currentGlobalNumberOfTrees << " -> " << newTreeCount << ")");
     currentGlobalNumberOfTrees = newTreeCount;
     peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithoutRefinement));
     return true;
@@ -117,19 +86,13 @@ bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumbe
     // Happens if we have small meshes, and too many ranks to satisfy the mesh splitting.
     static int numberOfStationarySweeps = 0;
     if (repositories::loadBalancer.getGlobalNumberOfStationarySweeps() == 0 and numberOfStationarySweeps < repositories::loadBalancer.getNumberOfSettlingIterations()) {
-      logDebug(
-        "shouldContinueGridConstruction()",
-        "Admissible mesh size reached, but at least one rank still has pending refinement events."
-      );
+      logInfo("shouldContinueGridConstruction()", "Admissible mesh size reached, but at least one rank still has pending refinement events.");
       peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithRefinement));
       ++numberOfStationarySweeps;
       return true;
     }
 
-    logDebug(
-      "shouldContinueGridConstruction()",
-      "Grid construction complete. Admissible mesh size reached (h_{min}=" << currentMinH << ", admissible h_{min}=" << repositories::getMinAdmissibleMeshSize() << ") and load balancing has converged."
-    );
+    logInfo("shouldContinueGridConstruction()", "Grid construction complete: Admissible mesh size reached (h_{min}=" << currentMinH << ", admissible h_{min}=" << repositories::getMinAdmissibleMeshSize() << ") and load balancing has converged.");
     return false;
   }
 
@@ -138,22 +101,15 @@ bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumbe
   return true;
 }
 
-/**
- * Decide which step to run next
- *
- * ## Control of the parallel grid construction
- *
- * @return continues to run
- */
 bool selectNextAlgorithmicStep() {
-  static bool                                   gridConstructed                       = false;
-  static bool                                   gridInitialised                       = false;
-  static double                                 nextMaxPlotTimeStamp                  = FirstPlotTimeStamp;
-  static double                                 nextMinPlotTimeStamp                  = FirstPlotTimeStamp;
-  static bool                                   haveJustWrittenSnapshot               = false;
-  static double                                 minH                                  = std::numeric_limits<double>::max();
-  static int                                    globalNumberOfTrees                   = 0;
-  bool                                          continueToSolve                       = true;
+  static bool    gridConstructed         = false;
+  static bool    gridInitialised         = false;
+  static double  nextMaxPlotTimeStamp    = FirstPlotTimeStamp;
+  static double  nextMinPlotTimeStamp    = FirstPlotTimeStamp;
+  static bool    haveJustWrittenSnapshot = false;
+  static double  minH                    = std::numeric_limits<double>::max();
+  static int     globalNumberOfTrees     = 0;
+  bool           continueToSolve         = true;
 
   if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNonCriticalAssertion) {
     peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution));
@@ -226,54 +182,68 @@ bool selectNextAlgorithmicStep() {
   return continueToSolve;
 }
 
-void printNextAlgorithmicStep(const repositories::StepRepository::Steps& stepName, bool printStatistics) {
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo("printNextAlgorithmicStep()", "Starting AlgorithmicStep " << "[" << repositories::StepRepository::toString(stepName) << "]");
+void logGlobalStatistics() {
+  const auto globalNumberOfLeaves = static_cast<unsigned long>(repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells());
 
-    if (printStatistics) {
-      const auto minLoad                = repositories::loadBalancer.getGlobalMinTreeLoad();
-      const auto maxLoad                = repositories::loadBalancer.getGlobalMaxTreeLoad();
-      const auto loadPct                = repositories::loadBalancer.getGlobalTreeLoadRatioInPercentage();
+  {
+    const auto globalNumberOfVertices         = static_cast<unsigned long>(repositories::loadBalancer.getGlobalNumberOfVertices());
+    const auto globalNumberOfHangingVertices  = static_cast<unsigned long>(repositories::loadBalancer.getGlobalNumberOfHangingVertices());
+    const auto totalNumberOfVertices          = globalNumberOfVertices + globalNumberOfHangingVertices;
+    const auto minDepth                       = repositories::loadBalancer.getGlobalMinDepth();
+    const auto maxDepth                       = repositories::loadBalancer.getGlobalMaxDepth();
+    std::ostringstream msg;
+    msg << "Leaves=" << globalNumberOfLeaves
+        << ", Vertices=" << totalNumberOfVertices << " (Local=" << globalNumberOfVertices << ", Hanging=" << globalNumberOfHangingVertices << ")"
+        << ", Levels=" << maxDepth << " (min=" << minDepth << ", max=" << maxDepth << ")";
+    logInfo("logTopology()", msg.str());
+  }
 
-      const auto memoryUsedByGrid       = repositories::loadBalancer.getGlobalMemoryUsageInBytes();
-      const auto memoryUsedByHeap       = repositories::DataRepository::getGlobalMemoryUsageInBytes();
-      const auto totalPersistentMemory  = memoryUsedByGrid + memoryUsedByHeap;
+  {
+    const auto minLoad                    = repositories::loadBalancer.getGlobalMinTreeLoad();
+    const auto maxLoad                    = repositories::loadBalancer.getGlobalMaxTreeLoad();
+    const auto efficiency                 = (maxLoad > 0) ? (static_cast<double>(minLoad) / maxLoad) * 100.0 : 100.0;
+    const auto globalNumberOfOuterLeaves  = static_cast<double>(repositories::loadBalancer.getGlobalNumberOfOuterUnrefinedCells());
+    const auto overhead                   = (globalNumberOfLeaves > 0) ? (globalNumberOfOuterLeaves / globalNumberOfLeaves) * 100.0 : 0.0;
+    const auto globalNumberOfTrees        = static_cast<unsigned long>(repositories::loadBalancer.getGlobalNumberOfTrees());
+    std::ostringstream msg;
+    msg << "Trees=" << globalNumberOfTrees
+        << ", Efficiency=" << std::fixed << std::setprecision(2) << efficiency << "% (min=" << minLoad << ", max=" << maxLoad << ")"
+        << ", Overhead=" << std::fixed << std::setprecision(2) << overhead << "%";
+    logInfo("logLoadBalancing()", msg.str());
+  }
 
-      const auto dofs                   = static_cast<double>(repositories::getNumberOfDoFs());
-      const auto globalNumberOfPatches  = static_cast<double>(repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells());
-      const auto totalNumberOfDoFs      = dofs * globalNumberOfPatches;
+  {
+    const auto memoryUsedByGrid       = repositories::loadBalancer.getGlobalMemoryUsageInBytes();
+    const auto memoryUsedByCellData   = repositories::DataRepository::getGlobalCellDataMemoryUsageInBytes();
+    const auto memoryUsedByFaceData   = repositories::DataRepository::getGlobalFaceDataMemoryUsageInBytes();
+    const auto memoryUsedByVertexData = repositories::DataRepository::getGlobalVertexDataMemoryUsageInBytes();
+    const auto totalPersistentMemory  = memoryUsedByGrid + memoryUsedByCellData+ memoryUsedByFaceData + memoryUsedByVertexData;
+    std::ostringstream msg;
+    msg << std::fixed << std::setprecision(2) << tarch::convertMemorySize(totalPersistentMemory, tarch::chooseMemoryUsageFormat(totalPersistentMemory)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(totalPersistentMemory))
+        << " (Grid=" << std::fixed << std::setprecision(2) << tarch::convertMemorySize(memoryUsedByGrid, tarch::chooseMemoryUsageFormat(memoryUsedByGrid)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(memoryUsedByGrid))
+        << ", CellData=" << std::fixed << std::setprecision(2) << tarch::convertMemorySize(memoryUsedByCellData, tarch::chooseMemoryUsageFormat(memoryUsedByCellData)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(memoryUsedByCellData))
+        << ", FaceData=" << std::fixed << std::setprecision(2) << tarch::convertMemorySize(memoryUsedByFaceData, tarch::chooseMemoryUsageFormat(memoryUsedByFaceData)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(memoryUsedByFaceData))
+        << ", VertexData=" << std::fixed << std::setprecision(2) << tarch::convertMemorySize(memoryUsedByVertexData, tarch::chooseMemoryUsageFormat(memoryUsedByVertexData)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(memoryUsedByVertexData))
+        << ")";
+    logInfo("logMemoryUsage()", msg.str());
+  }
 
-      std::ostringstream msg;
-      // TODO: Write everything in a log file as well
-      msg << "#Patches="  << toScientificNotationString(globalNumberOfPatches)
-          << ", #DoFs="   << toScientificNotationString(totalNumberOfDoFs)
-          << ", #Trees="  << toScientificNotationString(repositories::loadBalancer.getGlobalNumberOfTrees())
-          << ", #Load="   << std::fixed << std::setprecision(2) << loadPct << "% (min=" << minLoad << ", max=" << maxLoad << ")"
-          << ", #Memory=" << std::fixed << std::setprecision(2) << tarch::convertMemorySize(totalPersistentMemory, tarch::chooseMemoryUsageFormat(totalPersistentMemory)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(totalPersistentMemory))
-          << " (Grid="    << std::fixed << std::setprecision(2) << tarch::convertMemorySize(memoryUsedByGrid, tarch::chooseMemoryUsageFormat(memoryUsedByGrid)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(memoryUsedByGrid))
-          << ", Heap="    << std::fixed << std::setprecision(2) << tarch::convertMemorySize(memoryUsedByHeap, tarch::chooseMemoryUsageFormat(memoryUsedByHeap)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(memoryUsedByHeap))
-          << ")";
-      logInfo("printNextAlgorithmicStep()", msg.str());
+  tarch::logging::Statistics::getInstance().log("MemoryUsage", tarch::accelerator::MemoryManager::getStatistics());
+  tarch::logging::Statistics::getInstance().log("LoadBalancing", toolbox::loadbalancing::LoadBalancer::getStatistics());
 
-      tarch::logging::Statistics::getInstance().log("MemoryUsage", tarch::accelerator::MemoryManager::getStatistics());
-      tarch::logging::Statistics::getInstance().log("LoadBalancing", toolbox::loadbalancing::LoadBalancer::getStatistics());
-
-      if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
-        const auto dt               = timeStepMeasurement.getMostRecentValue();
-        const auto patchesPerSecond = globalNumberOfPatches / dt;
-        const auto dofsPerSecond    = totalNumberOfDoFs     / dt;
-        logInfo("printNextAlgorithmicStep()",
-          "Patch updates per second: " << toScientificNotationString(patchesPerSecond) <<
-          ", DoF updates per second: " << toScientificNotationString(dofsPerSecond)
-        );
-      }
-    }
+  if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
+    const auto dofs               = static_cast<unsigned long>(repositories::getNumberOfDoFs());
+    const auto totalNumberOfDoFs  = dofs * globalNumberOfLeaves;
+    const auto dt                 = timeStepMeasurement.getMostRecentValue();
+    const auto patchesPerSecond   = globalNumberOfLeaves / dt;
+    const auto dofsPerSecond      = totalNumberOfDoFs    / dt;
+    logInfo("logThroughput()",
+      "Patch updates per second: " << patchesPerSecond
+      << ", DoF updates per second: " << dofsPerSecond
+    );
   }
 }
 
-/**
- * Perform one algorithmic step
- */
 template <class Observer>
 void performAlgorithmicStep(
   repositories::StepRepository::Steps stepName,
@@ -297,8 +267,6 @@ void performAlgorithmicStep(
 
   watch.stop();
   measurement.setValue(watch.getCalendarTime());
-
-  repositories::DataRepository::updateMemoryUsage();
 }
 
 void runNextAlgorithmicStep() {
@@ -307,7 +275,6 @@ void runNextAlgorithmicStep() {
 
   switch (stepName) {
   case repositories::StepRepository::Steps::CreateGridWithoutRefinement:
-    printNextAlgorithmicStep(stepName, true);
     performAlgorithmicStep<observers::CreateGridWithoutRefinement>(
       stepName,
       [](){ repositories::startGridConstructionStep(); },
@@ -316,7 +283,6 @@ void runNextAlgorithmicStep() {
     );
     break;
   case repositories::StepRepository::Steps::CreateGridWithRefinement:
-    printNextAlgorithmicStep(stepName, false);
     performAlgorithmicStep<observers::CreateGridWithRefinement>(
       stepName,
       [](){ repositories::startGridConstructionStep(); },
@@ -325,7 +291,6 @@ void runNextAlgorithmicStep() {
     );
     break;
   case repositories::StepRepository::Steps::InitGrid:
-    printNextAlgorithmicStep(stepName, true);
     repositories::loadBalancer.enable(false); // TODO: Remove (dynamic AMR)
     performAlgorithmicStep<observers::InitGrid>(
       stepName,
@@ -333,9 +298,11 @@ void runNextAlgorithmicStep() {
       [](){ repositories::finishGridInitialisationStep(); },
       gridInitialisationMeasurement
     );
+    if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+      logInfo("performAlgorithmicStep()", "Grid initialisation complete")
+    }
     break;
   case repositories::StepRepository::Steps::PlotSolution:
-    printNextAlgorithmicStep(stepName, false);
     performAlgorithmicStep<observers::PlotSolution>(
       stepName,
       [](){ repositories::startPlottingStep(); },
@@ -350,12 +317,12 @@ void runNextAlgorithmicStep() {
       [](){ repositories::finishTimeStep(); },
       timeStepMeasurement
     );
-    if (timeStepMeasurement.getAccumulatedValue() >= printNextTimeStep and repositories::mayPlot()) {
-      printNextAlgorithmicStep(stepName, true);
+    if (timeStepMeasurement.getAccumulatedValue() >= logNextTimeStep and repositories::mayPlot()) {
       if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-        repositories::printTimeStep(false);
+        repositories::logTimeStep(false);
+        logGlobalStatistics();
       }
-      printNextTimeStep += repositories::PrintTimeStepIntervalInSeconds;
+      logNextTimeStep += repositories::LogTimeStepIntervalInSeconds;
     }
     break;
   case repositories::StepRepository::Steps::Undef:
@@ -386,26 +353,26 @@ void shutdownEnvironment() {
   peano4::shutdown();
 }
 
-void printFinalStatistics() {
+void logFinalStatistics() {
   if (gridConstructionMeasurement.getNumberOfMeasurements() > 0) {
-    logInfo("printFinalStatistics()", "Grid construction:                 " << gridConstructionMeasurement.getAccumulatedValue() << "s\t" << gridConstructionMeasurement.toString());
+    logInfo("logFinalStatistics()", "Grid construction:                 " << gridConstructionMeasurement.getAccumulatedValue() << "s\t" << gridConstructionMeasurement.toString());
   }
   if (gridInitialisationMeasurement.getNumberOfMeasurements() > 0) {
-    logInfo("printFinalStatistics()", "Grid initialisation:               " << gridInitialisationMeasurement.getAccumulatedValue() << "s\t" << gridInitialisationMeasurement.toString());
+    logInfo("logFinalStatistics()", "Grid initialisation:               " << gridInitialisationMeasurement.getAccumulatedValue() << "s\t" << gridInitialisationMeasurement.toString());
   }
   if (plotMeasurement.getNumberOfMeasurements() > 0) {
-    logInfo("printFinalStatistics()", "Plotting:                          " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString());
+    logInfo("logFinalStatistics()", "Plotting:                          " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString());
   }
   if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
     const auto dofs                   = static_cast<double>(repositories::getNumberOfDoFs());
-    const auto globalNumberOfPatches  = static_cast<double>(repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells());
-    const auto totalNumberOfDoFs      = dofs * globalNumberOfPatches;
+    const auto globalNumberOfLeaves   = static_cast<double>(repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells());
+    const auto totalNumberOfDoFs      = dofs * globalNumberOfLeaves;
     const auto dt                     = timeStepMeasurement.getValue();
-    const auto patchesPerSecond       = globalNumberOfPatches / dt;
-    const auto dofsPerSecond          = totalNumberOfDoFs     / dt;
-    logInfo("printFinalStatistics()", "Time stepping:                     " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString());
-    logInfo("printFinalStatistics()", "Average patch updates per second:  " << toScientificNotationString(patchesPerSecond));
-    logInfo("printFinalStatistics()", "Average DoF updates per second:    " << toScientificNotationString(dofsPerSecond));
+    const auto patchesPerSecond       = globalNumberOfLeaves / dt;
+    const auto dofsPerSecond          = totalNumberOfDoFs    / dt;
+    logInfo("logFinalStatistics()", "Time stepping:                     " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString());
+    logInfo("logFinalStatistics()", "Average patch updates per second:  " << patchesPerSecond);
+    logInfo("logFinalStatistics()", "Average DoF updates per second:    " << dofsPerSecond);
   }
 }
 
@@ -422,9 +389,9 @@ int runGlobalMaster() {
     logWarning("runGlobalMaster()", "Terminated gracefully after noncritical assertion");
     return EXIT_FAILURE;
   } else {
-    repositories::printTimeStep(false);
+    repositories::logTimeStep(false);
     logInfo("runGlobalMaster()", "Terminated successfully");
-    printFinalStatistics();
+    logFinalStatistics();
     return EXIT_SUCCESS;
   }
 }

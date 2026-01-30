@@ -13,11 +13,10 @@ class FixedTimeSteppingCodeSnippets( exahype2.solvers.FixedTimeSteppingCodeSnipp
   def create_print_time_step_implementation(self):
     return """
   if (_maxGridCellHThisTimeStep>0.0) {
-    logInfo( "printTimeStep()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "printTimeStep()", "t       = " << _minTimeStampThisTimeStep );
-    logInfo( "printTimeStep()", "dt      = " << getTimeStepSize() );
-    logInfo( "printTimeStep()", "h_{min} = " << _minGridCellHThisTimeStep << " (individual grid cell within a patch)");
-    logInfo( "printTimeStep()", "h_{max} = " << _maxGridCellHThisTimeStep << " (individual grid cell within a patch)" );
+    logInfo( "logTimeStep()", "t       = " << _minTimeStampThisTimeStep );
+    logInfo( "logTimeStep()", "dt      = " << getTimeStepSize() );
+    logInfo( "logTimeStep()", "h_{min} = " << _minGridCellHThisTimeStep << " (individual grid cell within a patch)");
+    logInfo( "logTimeStep()", "h_{max} = " << _maxGridCellHThisTimeStep << " (individual grid cell within a patch)" );
   }
 """
 

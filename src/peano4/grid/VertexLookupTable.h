@@ -3,7 +3,7 @@
 #pragma once
 
 #include "AutomatonState.h"
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 #include "tarch/la/Vector.h"
 
 #include <array>

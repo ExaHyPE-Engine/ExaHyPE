@@ -44,7 +44,7 @@ class Project(object):
         self._time_in_between_plots = 0.1
         self._load_balancer_configuration = ""
         self._log_filter_file         = "exahype.log-filter"
-        self._print_time_step_interval_in_seconds = 10
+        self._log_time_step_interval_in_seconds = 10
         self._additional_includes     = [ "tarch/logging/LogFilterFileReader.h",
                                           "tarch/accelerator/Device.h"
                                         ]
@@ -80,8 +80,8 @@ class Project(object):
         """
         self._log_filter_file = file_name
 
-    def set_print_time_step_interval_in_seconds(self, value):
-        self._print_time_step_interval_in_seconds = value
+    def set_log_time_step_interval_in_seconds(self, value):
+        self._log_time_step_interval_in_seconds = value
 
     def set_build_mode(self, mode=peano4.output.CompileMode.Release):
         self._build_mode = mode
@@ -112,7 +112,7 @@ class Project(object):
         size_string += "}"
         self._project.constants.add_include("""#include <bitset>""")
         self._project.constants.add_include("""#include "tarch/la/Vector.h" """)
-        self._project.constants.add_include("""#include "peano4/utils/Globals.h" """)
+        self._project.constants.add_include("""#include "peano4/Globals.h" """)
         self._project.constants.export_const_with_type(
             "DomainOffset", offset_string, "tarch::la::Vector<DIMENSIONS,double>"
         )
@@ -262,7 +262,7 @@ thus appreciate any citation of the original release paper
             "LOAD_BALANCER_CONFIGURATION": self._load_balancer_configuration,
             "TRACERS":                  [x.name for x in self._tracer_particles],
             "LOG_FILTER_FILE":          self._log_filter_file,
-            "PRINT_TIME_STEP_INTERVAL_IN_SECONDS": self._print_time_step_interval_in_seconds,
+            "LOG_TIME_STEP_INTERVAL_IN_SECONDS": self._log_time_step_interval_in_seconds,
             "ADDITIONAL_INCLUDES":      self._additional_includes,
         }
 

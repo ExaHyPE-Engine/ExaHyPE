@@ -13,7 +13,7 @@
 #include "peano4/datamanagement/FaceMarker.h"
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/utils/Loop.h"
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 
 /**
  * @page exahype2_dg_DG_AMR Discontinuous Galerkin adaptive mesh refinement

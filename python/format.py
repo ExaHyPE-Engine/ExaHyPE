@@ -15,8 +15,8 @@ default_clang_format_file_name = ".clang-format"
 target_branch = "muc/exahype"
 
 # Formatting tools versions
-black_version = "23.3.0"
-clang_version = "20.1.3"
+black_version = "24.3.0"
+clang_version = "21.1.8"
 
 # Global variables for easy access
 verbose = True  # Will be overwritten by arg parser

@@ -12,7 +12,7 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 #include "peano4/grid/GridTraversalObserver.h"
 
 

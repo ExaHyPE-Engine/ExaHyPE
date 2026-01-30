@@ -50,7 +50,6 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
     and
     _maxCellHThisTimeStep>0.0
   ) {
-    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
     logInfo( "startTimeStep()", "t            = " << _minTimeStampThisTimeStep << " / " << MinTerminalTime);
     logInfo( "startTimeStep()", "dt           = " << getAdmissibleTimeStepSize() );
     logInfo( "startTimeStep()", "h_{min}      = " << _minCellHThisTimeStep );

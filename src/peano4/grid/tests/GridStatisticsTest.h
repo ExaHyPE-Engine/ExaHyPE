@@ -14,7 +14,6 @@ private:
   void testClear();
   void testOperators();
   void testMemoryUsage();
-  void testMPIDatatype();
 
 public:
   GridStatisticsTest();

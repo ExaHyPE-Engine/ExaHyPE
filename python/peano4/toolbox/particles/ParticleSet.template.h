@@ -10,7 +10,7 @@
 #include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/grid/LoadStoreComputeFlag.h"
 #include "peano4/stacks/Stack.h"
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 
 #include "toolbox/particles/ParticleSet.h"
 

@@ -4,10 +4,10 @@
 
 #include "Compare.h"
 #include "Decrement.h"
-#include "Globals.h"
 #include "Increment.h"
 #include "Linearised.h"
 #include "LoopDirection.h"
+#include "peano4/Globals.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"

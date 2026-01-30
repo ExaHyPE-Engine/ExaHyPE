@@ -2,7 +2,7 @@
 
 #include "peano4/grid/FaceType.h"
 #include "peano4/grid/GridTraversalEventGenerator.h"
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 #include "peano4/utils/Loop.h"
 #include "tarch/la/Vector.h"
 

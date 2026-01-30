@@ -56,7 +56,6 @@ class FixedTimeSteppingCodeSnippets( exahype2.solvers.FixedTimeSteppingCodeSnipp
       
     return """
   if (""" + predicate + """) {
-    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
     logInfo( "startTimeStep()", "t       = " << _minTimeStampThisTimeStep );
     logInfo( "startTimeStep()", "dt      = " << getTimeStepSize() );
     logInfo( "startTimeStep()", "h_{min} = " << _minCellHThisTimeStep );

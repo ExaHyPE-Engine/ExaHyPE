@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 #include "exahype2/CellData.h"
 #include "peano4/utils/Loop.h"
 #include "toolbox/blockstructured/Enumeration.h"

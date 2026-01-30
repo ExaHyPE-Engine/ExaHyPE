@@ -7,7 +7,7 @@
 #include "exahype2/Solver.h"
 #include "exahype2/RefinementControl.h"
 
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/la/Vector.h"
@@ -134,7 +134,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishTimeStep() override;
 
-    virtual void printTimeStep(bool ofCurrentlyRunningGridSweep) override;
+    virtual void logTimeStep(bool ofCurrentlyRunningGridSweep) override;
 
     /**
      * If you hook into this routine, ensure the abstract base class

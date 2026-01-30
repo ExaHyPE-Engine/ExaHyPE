@@ -2,12 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 #include "tarch/Assertions.h"
 
 namespace peano4 {
   namespace datamanagement {
-    template <class Vertex> struct VertexEnumerator;
+    template <class Vertex>
+    struct VertexEnumerator;
   } // namespace datamanagement
 } // namespace peano4
 
@@ -49,7 +50,8 @@ namespace peano4 {
  *
  * @see peano4::datamanagement::FaceEnumerator for the same discussion for vertices.
  */
-template <class Vertex> struct peano4::datamanagement::VertexEnumerator {
+template <class Vertex>
+struct peano4::datamanagement::VertexEnumerator {
 private:
   Vertex* _vertices[TWO_POWER_D];
 

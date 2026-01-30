@@ -14,7 +14,7 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 
-#include "peano4/utils/Globals.h"
+#include "peano4/Globals.h"
 
 #include "Constants.h"
 
