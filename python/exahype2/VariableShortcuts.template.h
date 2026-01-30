@@ -19,6 +19,7 @@ namespace {{ item }} {
  *
  * You might want to use a typedef to shorten the notation.
  */
+TARGET_DECLARE
 class {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}} {
 public:
   static constexpr int NumberOfDistinctVariables = {{VARIABLE_NAMES|length}};
@@ -35,3 +36,5 @@ public:
   constexpr int operator [] (const int index) const noexcept { return Q[index]; }
   constexpr int operator () (const int index) const noexcept { return Q[index]; }
 };
+TARGET_DECLARE_END
+

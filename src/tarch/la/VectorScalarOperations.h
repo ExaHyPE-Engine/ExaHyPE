@@ -16,7 +16,7 @@ namespace tarch {
      * No temporary objects are created during the operation.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<Size, Scalar>& operator*=(Vector<Size, Scalar>& vector, const Scalar& scalar);
 
     /**
@@ -26,7 +26,7 @@ namespace tarch {
      * No temporary objects are created during the operation.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<Size, Scalar>& operator/=(Vector<Size, Scalar>& vector, const Scalar& scalar);
 
     /**
@@ -36,7 +36,7 @@ namespace tarch {
      * No temporary objects are created during the operation.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<Size, Scalar>& operator+=(Vector<Size, Scalar>& vector, const Scalar& scalar);
 
     /**
@@ -46,7 +46,7 @@ namespace tarch {
      * No temporary objects are created during the operation.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<Size, Scalar>& operator-=(Vector<Size, Scalar>& vector, const Scalar& scalar);
 
     /**
@@ -56,11 +56,11 @@ namespace tarch {
      * A temporary vector is created during the operation and copied as result.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<Size, Scalar> operator*(const Vector<Size, Scalar>& vector, const Scalar& scalar);
 
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<Size, Scalar> operator*(const Scalar& scalar, const Vector<Size, Scalar>& vector);
 
     /**
@@ -70,7 +70,7 @@ namespace tarch {
      * A temporary vector is created during the operation and copied as result.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<Size, Scalar> operator/(const Vector<Size, Scalar>& vector, const Scalar& scalar);
 
     /**
@@ -80,11 +80,11 @@ namespace tarch {
      * A temporary vector is created during the operation and copied as result.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<Size, Scalar> operator+(const Vector<Size, Scalar>& vector, const Scalar& scalar);
 
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<Size, Scalar> operator+(const Scalar& scalar, const Vector<Size, Scalar>& vector);
 
     /**
@@ -94,7 +94,7 @@ namespace tarch {
      * A temporary vector is created during the operation and copied as result.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<Size, Scalar> operator-(const Vector<Size, Scalar>& vector, const Scalar& scalar);
 
     /**

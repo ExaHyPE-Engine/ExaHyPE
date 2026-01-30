@@ -2,8 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/accelerator/accelerator.h"
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 
 #include <bitset>
@@ -15,7 +15,7 @@ namespace peano4 {
      *
      * @return true if all entries of counter are smaller max
      */
-    inline GPU_CALLABLE_METHOD int dCmp(const tarch::la::Vector<DIMENSIONS, int>& counter, int max);
+    INLINE_METHOD GPU_CALLABLE_METHOD int dCmp(const tarch::la::Vector<DIMENSIONS, int>& counter, int max);
 
     /**
      * Element-wise comparison for the for d-dimensional for loops
@@ -27,7 +27,7 @@ namespace peano4 {
      * @return true if all entries of counter are smaller than their corresponding
      *         entries in max
      */
-    inline GPU_CALLABLE_METHOD int dCmp(
+    INLINE_METHOD GPU_CALLABLE_METHOD int dCmp(
       const tarch::la::Vector<DIMENSIONS, int>& counter,
       const tarch::la::Vector<DIMENSIONS, int>& max
     );
@@ -37,7 +37,7 @@ namespace peano4 {
      *
      * @returns true, if dLinearised(counter, XXX) < dLinearised(max, XXX)
      */
-    inline GPU_CALLABLE_METHOD bool dCmpLinearOrder(
+    INLINE_METHOD GPU_CALLABLE_METHOD bool dCmpLinearOrder(
       const tarch::la::Vector<DIMENSIONS, int>& counter,
       const tarch::la::Vector<DIMENSIONS, int>& max
     );

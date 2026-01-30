@@ -119,7 +119,7 @@ struct tarch::la::SmartPointerVector {
      * We do not allow assignment of a SmartPointerVector this itself. Consequently, we can
      * insert an ivdep statement and thus allow the compiler to optimise.
      */
-    inline SmartPointerVector<Size,Scalar>& operator= (const SmartPointerVector<Size,Scalar>& toAssign);
+    INLINE_METHOD SmartPointerVector<Size,Scalar>& operator= (const SmartPointerVector<Size,Scalar>& toAssign);
 
     /**
      * Conversion assignment operator
@@ -128,7 +128,7 @@ struct tarch::la::SmartPointerVector {
      * already holds a valid memory region, so we can take each element of
      * vector and copy it over.
      */
-    inline SmartPointerVector<Size,Scalar>& operator=( const Vector<Size,Scalar>& vector );
+    INLINE_METHOD SmartPointerVector<Size,Scalar>& operator=( const Vector<Size,Scalar>& vector );
 
     /**
      * Assign all entries the same value
@@ -136,7 +136,7 @@ struct tarch::la::SmartPointerVector {
      * As we work with smart pointers, we can return a copy here. Actually, I
      * got some compiler errors when I tried to return a reference.
      */
-    inline SmartPointerVector<Size,Scalar>& operator=( const Scalar& vector );
+    INLINE_METHOD SmartPointerVector<Size,Scalar>& operator=( const Scalar& vector );
 
     /**
      * Returns the number of components of the SmartPointerVector.
@@ -152,7 +152,7 @@ struct tarch::la::SmartPointerVector {
      *   calls, i.e. SmartPointerVector element accesses, as function calls and does not SmartPointerVectorise
      *   loops containing SmartPointerVector element accesses.
      */
-    inline const Scalar& operator[] (int index) const {
+    INLINE_METHOD const Scalar& operator[] (int index) const {
 #if !defined(WITH_GPU)
           assertion3 ( index >= 0, index, Size, ::toString(*this) );
           assertion4 ( index < Size, index, Size, ::toString(*this), "you may not take the indexth entry from a SmartPointerVector with only Size components" );
@@ -165,7 +165,7 @@ struct tarch::la::SmartPointerVector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline Scalar& operator[] (int index) {
+    INLINE_METHOD Scalar& operator[] (int index) {
 #if !defined(WITH_GPU)
           assertion3 ( index >= 0, index, Size, ::toString(*this) );
           assertion3 ( index < Size, index, Size, ::toString(*this) );
@@ -184,7 +184,7 @@ struct tarch::la::SmartPointerVector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline const Scalar& operator() (int index) const {
+    INLINE_METHOD const Scalar& operator() (int index) const {
 #if !defined(WITH_GPU)
           assertion3 ( index >= 0, index, Size, ::toString(*this) );
           assertion3 ( index < Size, index, Size, ::toString(*this) );
@@ -197,7 +197,7 @@ struct tarch::la::SmartPointerVector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline Scalar& operator() (int index) {
+    INLINE_METHOD Scalar& operator() (int index) {
 #if !defined(WITH_GPU)
         assertion3 ( index >= 0, index, Size, ::toString(*this) );
         assertion3 ( index < Size, index, Size, ::toString(*this) );

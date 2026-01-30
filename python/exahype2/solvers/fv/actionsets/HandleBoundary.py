@@ -149,7 +149,9 @@ class HandleBoundary(AbstractFVActionSet):
             headfile_template=kernels_templates_prefix
             + "/HandleBoundaryFused.template.h",
             cppfile_template=kernels_templates_prefix
-            + "/HandleBoundaryFused.template.cpp",
+            + "/HandleBoundaryFused"
+            + (f".{d['GPU']}" if d["GPU"] != "no" else "")
+            + ".template.cpp",
             classname=kernels_output_path + "/HandleBoundaryFused",
             namespace=kernels_namespace,
             subdirectory=subdirectory + ".",

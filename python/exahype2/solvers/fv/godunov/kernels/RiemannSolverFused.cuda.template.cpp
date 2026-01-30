@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RiemannSolverFused.h"
 
-#include "exahype2/VolumeIndex.h"
+#include "exahype2/fv/VolumeIndex.h"
 #include "exahype2/fv/PatchUtils.h"
 
 #include "tarch/accelerator/accelerator.h"
@@ -20,24 +20,16 @@ kernel(
   const double* const NOALIAS                patchSizes,
   const double                               timeStamp,
   const double                               timeStepSize
-  {% if COMPUTE_MAX_EIGENVALUE==True %} , {{COMPUTE_PRECISION}}* const NOALIAS maxEigenvalues {% endif %}
+  {% if COMPUTE_MAX_EIGENVALUE %} , {{COMPUTE_PRECISION}}* const NOALIAS maxEigenvalues {% endif %}
 ) {
   const int patchIndex                   = blockIdx.x;
   const {{COMPUTE_PRECISION}}* const QIn = &QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %}];
   {{COMPUTE_PRECISION}}* const QOut      = &QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
 
-  const tarch::la::Vector<DIMENSIONS, double> patchCentre {
-    patchCentres[patchIndex * {{DIMENSIONS}}],
-    patchCentres[patchIndex * {{DIMENSIONS}} + 1]
-    {% if DIMENSIONS==3 %} , patchCentres[patchIndex * {{DIMENSIONS}} + 2] {% endif %}
-  };
-  const tarch::la::Vector<DIMENSIONS, double> patchSize {
-    patchSizes[patchIndex * {{DIMENSIONS}}],
-    patchSizes[patchIndex * {{DIMENSIONS}} + 1]
-    {% if DIMENSIONS==3 %} , patchSizes[patchIndex * {{DIMENSIONS}} + 2] {% endif %}
-  };
+  const tarch::la::Vector<DIMENSIONS, double> patchCentre{patchCentres + patchIndex * {{DIMENSIONS}}};
+  const tarch::la::Vector<DIMENSIONS, double> patchSize{patchSizes + patchIndex * {{DIMENSIONS}}};
 
-{% if COMPUTE_MAX_EIGENVALUE==True %}
+{% if COMPUTE_MAX_EIGENVALUE %}
     double maxEigenvalueAfterTimeStep = 0.0;
 {% endif %}
 
@@ -51,7 +43,7 @@ kernel(
     } // y
 {% if DIMENSIONS==3 %}  } // z {% endif %}
 
-{% if COMPUTE_MAX_EIGENVALUE==True %}
+{% if COMPUTE_MAX_EIGENVALUE %}
   __shared__ {{COMPUTE_PRECISION}} sdata[{% if DIMENSIONS==3 %} 512 {% else %} 256 {% endif %}];
 {% if DIMENSIONS==3 %}
   const int tid = threadIdx.z * (blockDim.x * blockDim.y) + threadIdx.y * blockDim.x + threadIdx.x;
@@ -77,70 +69,17 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData,
   [[maybe_unused]] const int                                             targetDevice
 ) {
-  const int numberOfPatches = patchData.numberOfCells;
-
-{% if COMPUTE_MAX_EIGENVALUE==True %}
-  {{COMPUTE_PRECISION}}* maxEigenvalues = tarch::accelerator::MemoryManager::getInstance().allocate<{{COMPUTE_PRECISION}}>(
-    numberOfPatches,
-    tarch::MemoryLocation::Device,
-    targetDevice
+  return riemannSolverFused(
+	solver,
+	patchData.QInFlattened,
+	patchData.QOutFlattened,
+	patchData.t,
+	patchData.dt,
+	patchData.cellCentre[0].data(),
+	patchData.cellSize[0].data(),
+	patchData.numberOfCells,
+	targetDevice
   );
-{% endif %}
-
-  {% if DIMENSIONS==3 %} const dim3 dimBlock(8, 8, 8); {% else %} const dim3 dimBlock(16, 16, 1); {% endif %}
-  const dim3 dimGrid(numberOfPatches, 1, 1);
-  CHECK_CUDA_ERROR(cudaSetDevice(targetDevice));
-
-  kernel<<<dimGrid, dimBlock, 0, tarch::accelerator::deviceStreamGet()>>>(
-    patchData.QInFlattened,
-    patchData.QOutFlattened,
-    patchData.cellCentre[0].data(),
-    patchData.cellSize[0].data(),
-    patchData.t,
-    patchData.dt
-    {% if COMPUTE_MAX_EIGENVALUE==True %} , maxEigenvalues {% endif %}
-  );
-
-{% if COMPUTE_MAX_EIGENVALUE==True %}
-  {{COMPUTE_PRECISION}}* cubMaxEigenvalue = nullptr;
-  CHECK_CUDA_ERROR(cudaMalloc(&cubMaxEigenvalue, sizeof(double)));
-  void* cubTempStorage = nullptr;
-  std::size_t cubTempStorageBytes = 0;
-  cub::DeviceReduce::Max(
-    cubTempStorage,
-    cubTempStorageBytes,
-    maxEigenvalues,
-    cubMaxEigenvalue,
-    numberOfPatches
-  );
-  CHECK_CUDA_ERROR(cudaMalloc(&cubTempStorage, cubTempStorageBytes));
-  cub::DeviceReduce::Max(
-    cubTempStorage,
-    cubTempStorageBytes,
-    maxEigenvalues,
-    cubMaxEigenvalue,
-    numberOfPatches
-  );
-  double maxEigenvalueAfterTimeStep = 0.0;
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    &maxEigenvalueAfterTimeStep,
-    cubMaxEigenvalue,
-    sizeof({{COMPUTE_PRECISION}}),
-    cudaMemcpyDeviceToHost,
-    tarch::accelerator::deviceStreamGet()
-  ));
-  CHECK_CUDA_ERROR(cudaFree(cubTempStorage));
-  CHECK_CUDA_ERROR(cudaFree(cubMaxEigenvalue));
-  tarch::accelerator::MemoryManager::getInstance().free(maxEigenvalues, targetDevice);
-{% endif %}
-
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(tarch::accelerator::deviceStreamGet()));
-
-{% if COMPUTE_MAX_EIGENVALUE==True %}
-  return maxEigenvalueAfterTimeStep;
-{% else %}
-  return 0.0;
-{% endif %}
 }
 
 double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
@@ -154,7 +93,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   const int                                           numberOfPatches,
   [[maybe_unused]] const int                          targetDevice
 ) {
-{% if COMPUTE_MAX_EIGENVALUE==True %}
+{% if COMPUTE_MAX_EIGENVALUE %}
   {{COMPUTE_PRECISION}}* maxEigenvalues = tarch::accelerator::MemoryManager::getInstance().allocate<{{COMPUTE_PRECISION}}>(
     numberOfPatches,
     tarch::MemoryLocation::Device,
@@ -173,10 +112,10 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
     patchSizes,
     timeStamp,
     timeStepSize
-    {% if COMPUTE_MAX_EIGENVALUE==True %} , maxEigenvalues {% endif %}
+    {% if COMPUTE_MAX_EIGENVALUE %} , maxEigenvalues {% endif %}
   );
 
-{% if COMPUTE_MAX_EIGENVALUE==True %}
+{% if COMPUTE_MAX_EIGENVALUE %}
   {{COMPUTE_PRECISION}}* cubMaxEigenvalue = nullptr;
   CHECK_CUDA_ERROR(cudaMalloc(&cubMaxEigenvalue, sizeof(double)));
   void* cubTempStorage = nullptr;
@@ -211,7 +150,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(tarch::accelerator::deviceStreamGet()));
 
-{% if COMPUTE_MAX_EIGENVALUE==True %}
+{% if COMPUTE_MAX_EIGENVALUE %}
   return maxEigenvalueAfterTimeStep;
 {% else %}
   return 0.0;

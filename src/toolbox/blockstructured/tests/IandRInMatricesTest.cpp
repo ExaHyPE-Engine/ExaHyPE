@@ -938,13 +938,17 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
 
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
-      for (int k = 0; k < 3; k++) {
+      for (int k = 0; k < (DIMENSIONS == 3 ? 3 : 1); k++) {
         peano4::grid::GridTraversalEvent event;
-        event.setRelativePositionToFather(
-          tarch::la::Vector<DIMENSIONS, int>{i, j, k}
-        );
 
-        for (int axis = 0; axis < 3; axis++) {
+        if constexpr (DIMENSIONS == 2) {
+          event.setRelativePositionToFather(tarch::la::Vector<DIMENSIONS,int>{i, j});
+        }
+        if constexpr (DIMENSIONS == 3) {
+          event.setRelativePositionToFather(tarch::la::Vector<DIMENSIONS,int>{i, j, k});
+        }
+
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
           peano4::datamanagement::FaceMarker marker1 = event.getFaceMarker();
           marker1.select(axis);
           int                                patchIndexLinear = -1;
@@ -1391,7 +1395,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
 
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
-      for (int k = 0; k < 3; k++) {
+      for (int k = 0; k < (DIMENSIONS == 3 ? 3 : 1); k++) {
         peano4::grid::GridTraversalEvent event;
         if constexpr (DIMENSIONS == 2){
           event.setRelativePositionToFather(

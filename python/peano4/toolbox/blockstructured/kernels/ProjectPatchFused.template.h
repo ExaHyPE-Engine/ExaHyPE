@@ -3,6 +3,7 @@
 #pragma once
 
 #include "exahype2/CellData.h"
+#include "exahype2/fv/VolumeIndex.h"
 
 {% for item in NAMESPACE -%}
 namespace {{ item }} {

@@ -15,7 +15,7 @@ namespace tarch {
      * No temporary vector is created.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<Size, Scalar>& operator+=(Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
@@ -24,7 +24,7 @@ namespace tarch {
      * No temporary vector is created.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<Size, Scalar>& operator-=(Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
@@ -33,7 +33,7 @@ namespace tarch {
      * A temporary vector is created and copied to store return back the result.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<Size, Scalar> operator+(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
@@ -42,7 +42,7 @@ namespace tarch {
      * A temporary vector is created and copied to store return back the result.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<Size, Scalar> operator-(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
@@ -50,7 +50,7 @@ namespace tarch {
      * results into result.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<Size, Scalar> multiplyComponents(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
@@ -58,7 +58,7 @@ namespace tarch {
      * results into result.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<Size, Scalar> divideComponents(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
@@ -67,7 +67,7 @@ namespace tarch {
      * For the outer dot product consult the file MatrixVectorOperations.h.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Scalar operator*(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
@@ -76,7 +76,7 @@ namespace tarch {
      * For the outer dot product consult the file MatrixVectorOperations.h.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Scalar dot(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
@@ -85,14 +85,14 @@ namespace tarch {
      * For the outer dot product consult the file MatrixVectorOperations.h.
      */
     template <int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Scalar innerDot(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
      * Performs the cross product of two 3D vectors into result.
      */
     template <typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<3, Scalar> cross(const Vector<3, Scalar>& lhs, const Vector<3, Scalar>& rhs);
 
     /**

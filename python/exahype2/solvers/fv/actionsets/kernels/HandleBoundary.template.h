@@ -8,6 +8,7 @@
 #include "toolbox/blockstructured/Projection.h"
 #include "tarch/la/Vector.h"
 #include "exahype2/fv/PatchUtils.h"
+#include "exahype2/fv/VolumeIndex.h"
 
 #include "{{SOLVER_NAME}}.h"
 

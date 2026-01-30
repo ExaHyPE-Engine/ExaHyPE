@@ -11,10 +11,10 @@
   {%- elif loop.last %}
   // Furthest from node
   {%- endif -%} {# comments #}
-  const auto nodeLeft{{i}}  = ::exahype2::volumeIndex(node(0) - {{i + 1}}, node(1));
-  const auto nodeRight{{i}} = ::exahype2::volumeIndex(node(0) + {{i + 1}}, node(1));
-  const auto nodeDown{{i}}  = ::exahype2::volumeIndex(node(0),             node(1) - {{i + 1}});
-  const auto nodeTop{{i}}   = ::exahype2::volumeIndex(node(0),             node(1) + {{i + 1}});
+  const auto nodeLeft{{i}}  = ::exahype2::fv::toVolumeIndex(node(0) - {{i + 1}}, node(1));
+  const auto nodeRight{{i}} = ::exahype2::fv::toVolumeIndex(node(0) + {{i + 1}}, node(1));
+  const auto nodeDown{{i}}  = ::exahype2::fv::toVolumeIndex(node(0),             node(1) - {{i + 1}});
+  const auto nodeTop{{i}}   = ::exahype2::fv::toVolumeIndex(node(0),             node(1) + {{i + 1}});
   {% endfor %} {# order range #}
   {% else %} {# dimensions #}
   {% for i in range(ORDER) -%}
@@ -23,12 +23,12 @@
   {%- elif loop.last %}
   // Furthest from node
   {%- endif -%} {# comments #}
-  const auto nodeLeft{{i}}  = ::exahype2::volumeIndex(node(0) - {{i + 1}}, node(1),             node(2));
-  const auto nodeRight{{i}} = ::exahype2::volumeIndex(node(0) + {{i + 1}}, node(1),             node(2));
-  const auto nodeDown{{i}}  = ::exahype2::volumeIndex(node(0),             node(1) - {{i + 1}}, node(2));
-  const auto nodeTop{{i}}   = ::exahype2::volumeIndex(node(0),             node(1) + {{i + 1}}, node(2));
-  const auto nodeBack{{i}}  = ::exahype2::volumeIndex(node(0),             node(1),             node(2) - {{i + 1}});
-  const auto nodeFront{{i}} = ::exahype2::volumeIndex(node(0),             node(1),             node(2) + {{i + 1}});
+  const auto nodeLeft{{i}}  = ::exahype2::fv::toVolumeIndex(node(0) - {{i + 1}}, node(1),             node(2));
+  const auto nodeRight{{i}} = ::exahype2::fv::toVolumeIndex(node(0) + {{i + 1}}, node(1),             node(2));
+  const auto nodeDown{{i}}  = ::exahype2::fv::toVolumeIndex(node(0),             node(1) - {{i + 1}}, node(2));
+  const auto nodeTop{{i}}   = ::exahype2::fv::toVolumeIndex(node(0),             node(1) + {{i + 1}}, node(2));
+  const auto nodeBack{{i}}  = ::exahype2::fv::toVolumeIndex(node(0),             node(1),             node(2) - {{i + 1}});
+  const auto nodeFront{{i}} = ::exahype2::fv::toVolumeIndex(node(0),             node(1),             node(2) + {{i + 1}});
   {% endfor %} {# order range #}
   {% endif %} {# dimensions #}
 
@@ -42,7 +42,7 @@
   for (int z = 0; z < {{ NUMBER_OF_NODES_PER_AXIS }}; ++z) {
     for (int y = 0; y < {{ NUMBER_OF_NODES_PER_AXIS }}; ++y) {
       for (int x = 0; x < {{ NUMBER_OF_NODES_PER_AXIS }}; ++x) {
-        const auto node       = ::exahype2::volumeIndex(x, y, z);
+        const auto node       = ::exahype2::fv::toVolumeIndex(x, y, z);
         const auto h          = ::exahype2::fv::getVolumeSize(patchSize, {{NUMBER_OF_NODES_PER_AXIS}});
         const auto nodeCentre = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_NODES_PER_AXIS}}, node);
         {{ solverMacros.createMemoryOnStack() | indent(4) }}
@@ -54,7 +54,7 @@
   {% else %}
   for (int y = 0; y < {{ NUMBER_OF_NODES_PER_AXIS }}; ++y) {
     for (int x = 0; x < {{ NUMBER_OF_NODES_PER_AXIS }}; ++x) {
-      const auto node       = ::exahype2::volumeIndex(x, y);
+      const auto node       = ::exahype2::fv::toVolumeIndex(x, y);
       const auto h          = ::exahype2::fv::getVolumeSize(patchSize, {{NUMBER_OF_NODES_PER_AXIS}});
       const auto nodeCentre = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_NODES_PER_AXIS}}, node);
       {{ solverMacros.createMemoryOnStack() | indent(4) }}

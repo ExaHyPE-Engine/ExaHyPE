@@ -6,7 +6,7 @@ class SolverDeclarations:
     def create_solver_user_declarations(self):
         template = """
     {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
-    static inline
+    static INLINE_METHOD
     void initialCondition(
       [[maybe_unused]] {{STORAGE_PRECISION}}* const NOALIAS         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -20,7 +20,7 @@ class SolverDeclarations:
     {% endif %}
 
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" and BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     void boundaryConditions(
       [[maybe_unused]] const {{STORAGE_PRECISION}}* const NOALIAS   Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] {{STORAGE_PRECISION}}* const NOALIAS         Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -36,7 +36,7 @@ class SolverDeclarations:
     {% endif %}
 
     {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" and REFINEMENT_CRITERION_IMPLEMENTATION!="<none>" %}
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     ::exahype2::RefinementCommand refinementCriterion(
       [[maybe_unused]] const {{STORAGE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -53,7 +53,7 @@ class SolverDeclarations:
     {% endif %}
 
     {% if MAX_EIGENVALUE_IMPLEMENTATION!="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     double maxEigenvalue(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -71,7 +71,7 @@ class SolverDeclarations:
     {% endif %}
 
     {% if FLUX_IMPLEMENTATION!="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" %}
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     void flux(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -88,7 +88,7 @@ class SolverDeclarations:
     {% endif %}
 
     {% if NCP_IMPLEMENTATION!="<user-defined>" and NCP_IMPLEMENTATION!="<none>" %}
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     void nonconservativeProduct(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -106,7 +106,7 @@ class SolverDeclarations:
     {% endif %}
 
     {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     void sourceTerm(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -122,7 +122,7 @@ class SolverDeclarations:
     {% endif %}
 
     {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     void diffusiveSourceTerm(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   deltaQ, // deltaQ[{{DIMENSIONS}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})]
@@ -139,7 +139,7 @@ class SolverDeclarations:
     {% endif %}
 
     {% if RIEMANN_SOLVER_IMPLEMENTATION!="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     double solveRiemannProblem(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -160,7 +160,7 @@ class SolverDeclarations:
     {% endif %}
 
     {% if ADJUST_SOLUTION_IMPLEMENTATION!="<user-defined>" and ADJUST_SOLUTION_IMPLEMENTATION!="<none>" %}
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     void adjustSolution(
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -175,7 +175,7 @@ class SolverDeclarations:
     {% endif %}
 
     {% if LIMITER_IMPLEMENTATION!="<user-defined>" and LIMITER_IMPLEMENTATION!="<none>" %}
-    static inline GPU_CALLABLE_METHOD
+    static INLINE_METHOD GPU_CALLABLE_METHOD
     {{COMPUTE_PRECISION}} limit(
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   QL,
       [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q,

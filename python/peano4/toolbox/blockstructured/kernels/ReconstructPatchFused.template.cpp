@@ -6,31 +6,20 @@
 
 #include "toolbox/blockstructured/Enumeration.h"
 
-{% if GPU != "no" %}
-{% set fused_loop_path = GPU ~ "/Loop.macro.h" %}
-{% else %}
-{% set fused_loop_path = "Loop.macro.h" %}
-{% endif %}
-
-{% import fused_loop_path as fused with context %}
-{% import 'CopyPatchAndFillHalo.macro.h' as operation with context %}{# get template macros #}
-{% import 'CopyPatchAndFillHaloNoPointers.macro.h' as operation_without_facepointer with context %}{# get template macros #}
-
-{% if GPU == "cuda" %}
-{{ fused.defineGlobalKernel(operation) }}
-{{ fused.defineGlobalKernel(operation_without_facepointer) }}
-{% elif GPU == "sycl" %}
-#include "tarch/accelerator/sycl/Device.h"
-#include <sycl/sycl.hpp>
-{% elif GPU == "kokkos" %}
-#include "Kokkos_Core.hpp"
-{% endif %}
+{% from 'CopyPatchAndFillHalo.macro.h' import CopyPatchAndFillHalo with context %}
 
 void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatchFused(
   ::exahype2::CellData<{{PRECISION}}, {{PRECISION}}, 3>& patchData,
   const int                                              targetDevice
 ) {
-  {{ fused.loopOverPatches(operation) }}
+  reconstructPatchFused(
+    patchData.QInFlattened,
+    patchData.facesFlattened,
+    patchData.faceIndices,
+    patchData.QOutFlattened,
+    patchData.numberOfCells,
+    targetDevice
+  );
 }
 
 void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatchFused(
@@ -41,5 +30,19 @@ void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatchFused(
   const int                           numberOfPatches,
   const int                           targetDevice
 ) {
-  {{ fused.loopOverPatchesNoPatchData(operation_without_facepointer) }}
+{% if MULTITHREADING == "ON" %}
+  #pragma omp parallel for schedule(static)
+{% endif %}
+  for (int patchIndex = 0; patchIndex < numberOfPatches; ++patchIndex) {
+    const auto* const QIn = &QInFlattened[patchIndex * {{DOFS*UNKNOWNS}}];
+    auto* const QOut      = &QOutFlattened[patchIndex * {{DOFS_WITH_OVERLAP*UNKNOWNS}}];
+
+{% if DIMENSIONS==3 %}
+    for (int z = 0; z < {{DOFS_PER_AXIS}}; ++z)
+{% endif %}
+    for (int y = 0; y < {{DOFS_PER_AXIS}}; ++y)
+    for (int x = 0; x < {{DOFS_PER_AXIS}}; ++x) {
+      {{ CopyPatchAndFillHalo() | indent(2) }}
+    }
+  }
 }

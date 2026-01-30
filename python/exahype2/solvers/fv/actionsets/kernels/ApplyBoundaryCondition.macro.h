@@ -1,21 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-{% macro inner_loop_macro() %}
-  auto serialisePatchIndex = [](const tarch::la::Vector<DIMENSIONS, int>& overlapCell, int normal) {
-    int base   = 1;
-    int result = 0;
-    for (int d = 0; d < DIMENSIONS; d++) {
-      result += overlapCell(d) * base;
-      if (d==normal) {
-        base *= {{HALO_SIZE}} * 2;
-      } else {
-        base *= {{NUMBER_OF_VOLUMES_PER_AXIS}};
-      }
-    }
-    return result;
-  };
-
+{% macro ApplyBoundaryCondition() %}
   tarch::la::Vector<DIMENSIONS,double> volumeH    = ::exahype2::fv::getVolumeSize(patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}});
   tarch::la::Vector<DIMENSIONS,double> faceOffset = patchCentre - 0.5 * patchSize;
 
@@ -28,17 +14,17 @@
       tarch::la::Vector<DIMENSIONS, int> volume;
       {% if DIMENSIONS==3 %}
       if ((faceNumber%DIMENSIONS) == 0) {
-        volume = {0, x0, x1};
+        volume = ::exahype2::fv::toVolumeIndex(0, x0, x1);
       } else if ((faceNumber%DIMENSIONS) == 1) {
-        volume = {x0, 0, x1};
+        volume = ::exahype2::fv::toVolumeIndex(x0, 0, x1);
       } else {
-        volume = {x1, x0, 0};
+        volume = ::exahype2::fv::toVolumeIndex(x1, x0, 0);
       }
       {% else %}
       if ((faceNumber%DIMENSIONS) == 0) {
-        volume = {0, x0};
+        volume = ::exahype2::fv::toVolumeIndex(0, x0);
       } else {
-        volume = {x0, 0};
+        volume = ::exahype2::fv::toVolumeIndex(x0, 0);
       }
       {% endif %}
 
@@ -77,45 +63,4 @@
       }
     } // x0
   } // x1
-{% endmacro %}
-
-{% macro loopOverPatches() %}
-  auto*                  faces          = patchData.faces;
-  const uint64_t*        patchIndices   = patchData.patchIndicesOfBoundaryFaces;
-  const uint8_t*         faceNumbers    = patchData.boundaryFaceNumbers;
-  const int              numberOfFaces  = patchData.numberOfBoundaryFaces;
-  const auto*            cellCentres    = patchData.cellCentre;
-  const auto*            cellSizes      = patchData.cellSize;
-  const double           t              = patchData.t;
-
-  {% if MULTITHREADING == "ON" %}
-  #pragma omp parallel for schedule(static)
-  {% endif %}
-  for (int boundaryFaceIndex = 0; boundaryFaceIndex < numberOfFaces; ++boundaryFaceIndex) {
-    const uint64_t patchIndex = patchIndices[boundaryFaceIndex];
-    const int      faceNumber = faceNumbers[boundaryFaceIndex];
-
-    tarch::la::Vector<DIMENSIONS, double> patchSize   = cellSizes[patchIndex];
-    tarch::la::Vector<DIMENSIONS, double> patchCentre = cellCentres[patchIndex];
-    double* Q = faces[patchIndex][2][faceNumber];
-
-    {{ inner_loop_macro() | indent(2) }}
-  }
-{% endmacro %}
-
-{% macro loopOverPatchesNoPatchData() %}
-  {% if MULTITHREADING == "ON" %}
-  #pragma omp parallel for schedule(static)
-  {% endif %}
-  for (int boundaryFaceIndex = 0; boundaryFaceIndex < numberOfFaces; ++boundaryFaceIndex) {
-    const uint64_t faceIndex  = faceIndices[boundaryFaceIndex];
-    const int      faceNumber = faceNumbers[boundaryFaceIndex];
-    const uint64_t cellIndex  = cellIndices[boundaryFaceIndex];
-
-    tarch::la::Vector<DIMENSIONS, double> patchSize   = cellSizes[cellIndex];
-    tarch::la::Vector<DIMENSIONS, double> patchCentre = cellCentres[cellIndex];
-    double* Q = &facesFlattened[faceIndex * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %}];
-
-    {{ inner_loop_macro() | indent(2) }}
-  }
 {% endmacro %}

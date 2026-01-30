@@ -15,34 +15,34 @@
 
 {% if DIMENSIONS==2 %}
     const auto volumeLeft =
-      normal == 0 ? ::exahype2::volumeIndex(volume(0) - {{HALO_SIZE - 1}}, volume(1))
-                  : ::exahype2::volumeIndex(volume(0),                     volume(1) - {{HALO_SIZE - 1}});
+      normal == 0 ? ::exahype2::fv::toVolumeIndex(volume(0) - {{HALO_SIZE - 1}}, volume(1))
+                  : ::exahype2::fv::toVolumeIndex(volume(0),                     volume(1) - {{HALO_SIZE - 1}});
     const auto volumeLeftLeft =
-      normal == 0 ? ::exahype2::volumeIndex(volume(0) - {{HALO_SIZE}}, volume(1))
-                  : ::exahype2::volumeIndex(volume(0),                 volume(1) - {{HALO_SIZE}});
+      normal == 0 ? ::exahype2::fv::toVolumeIndex(volume(0) - {{HALO_SIZE}}, volume(1))
+                  : ::exahype2::fv::toVolumeIndex(volume(0),                 volume(1) - {{HALO_SIZE}});
     const auto volumeRight =
-      normal == 0 ? ::exahype2::volumeIndex(volume(0) + {{HALO_SIZE - 1}}, volume(1))
-                  : ::exahype2::volumeIndex(volume(0),                     volume(1) + {{HALO_SIZE - 1}});
+      normal == 0 ? ::exahype2::fv::toVolumeIndex(volume(0) + {{HALO_SIZE - 1}}, volume(1))
+                  : ::exahype2::fv::toVolumeIndex(volume(0),                     volume(1) + {{HALO_SIZE - 1}});
     const auto volumeRightRight =
-      normal == 0 ? ::exahype2::volumeIndex(volume(0) + {{HALO_SIZE}}, volume(1))
-                  : ::exahype2::volumeIndex(volume(0),                 volume(1) + {{HALO_SIZE}});
+      normal == 0 ? ::exahype2::fv::toVolumeIndex(volume(0) + {{HALO_SIZE}}, volume(1))
+                  : ::exahype2::fv::toVolumeIndex(volume(0),                 volume(1) + {{HALO_SIZE}});
     {% else %}
     const auto volumeLeft =
-      normal == 0 ? ::exahype2::volumeIndex(volume(0) - {{HALO_SIZE - 1}}, volume(1),                     volume(2)) :
-      normal == 1 ? ::exahype2::volumeIndex(volume(0),                     volume(1) - {{HALO_SIZE - 1}}, volume(2))
-                  : ::exahype2::volumeIndex(volume(0),                     volume(1),                     volume(2) - {{HALO_SIZE - 1}});
+      normal == 0 ? ::exahype2::fv::toVolumeIndex(volume(0) - {{HALO_SIZE - 1}}, volume(1),                     volume(2)) :
+      normal == 1 ? ::exahype2::fv::toVolumeIndex(volume(0),                     volume(1) - {{HALO_SIZE - 1}}, volume(2))
+                  : ::exahype2::fv::toVolumeIndex(volume(0),                     volume(1),                     volume(2) - {{HALO_SIZE - 1}});
     const auto volumeLeftLeft =
-      normal == 0 ? ::exahype2::volumeIndex(volume(0) - {{HALO_SIZE}}, volume(1),                 volume(2)) :
-      normal == 1 ? ::exahype2::volumeIndex(volume(0),                 volume(1) - {{HALO_SIZE}}, volume(2))
-                  : ::exahype2::volumeIndex(volume(0),                 volume(1),                 volume(2) - {{HALO_SIZE}});
+      normal == 0 ? ::exahype2::fv::toVolumeIndex(volume(0) - {{HALO_SIZE}}, volume(1),                 volume(2)) :
+      normal == 1 ? ::exahype2::fv::toVolumeIndex(volume(0),                 volume(1) - {{HALO_SIZE}}, volume(2))
+                  : ::exahype2::fv::toVolumeIndex(volume(0),                 volume(1),                 volume(2) - {{HALO_SIZE}});
     const auto volumeRight =
-      normal == 0 ? ::exahype2::volumeIndex(volume(0) + {{HALO_SIZE - 1}}, volume(1),                     volume(2)) :
-      normal == 1 ? ::exahype2::volumeIndex(volume(0),                     volume(1) + {{HALO_SIZE - 1}}, volume(2))
-                  : ::exahype2::volumeIndex(volume(0),                     volume(1),                     volume(2) + {{HALO_SIZE - 1}});
+      normal == 0 ? ::exahype2::fv::toVolumeIndex(volume(0) + {{HALO_SIZE - 1}}, volume(1),                     volume(2)) :
+      normal == 1 ? ::exahype2::fv::toVolumeIndex(volume(0),                     volume(1) + {{HALO_SIZE - 1}}, volume(2))
+                  : ::exahype2::fv::toVolumeIndex(volume(0),                     volume(1),                     volume(2) + {{HALO_SIZE - 1}});
     const auto volumeRightRight =
-      normal == 0 ? ::exahype2::volumeIndex(volume(0) + {{HALO_SIZE}}, volume(1),                 volume(2)) :
-      normal == 1 ? ::exahype2::volumeIndex(volume(0),                 volume(1) + {{HALO_SIZE}}, volume(2))
-                  : ::exahype2::volumeIndex(volume(0),                 volume(1),                 volume(2) + {{HALO_SIZE}});
+      normal == 0 ? ::exahype2::fv::toVolumeIndex(volume(0) + {{HALO_SIZE}}, volume(1),                 volume(2)) :
+      normal == 1 ? ::exahype2::fv::toVolumeIndex(volume(0),                 volume(1) + {{HALO_SIZE}}, volume(2))
+                  : ::exahype2::fv::toVolumeIndex(volume(0),                 volume(1),                 volume(2) + {{HALO_SIZE}});
 {% endif %}
 
     {{ caller() }}

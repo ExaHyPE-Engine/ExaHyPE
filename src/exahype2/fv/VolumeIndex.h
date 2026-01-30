@@ -6,8 +6,9 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 
-namespace exahype2 {
+namespace exahype2::fv {
   // Constructs a tarch::la::Vector<N, int> from variadic args
+  TARGET_DECLARE
   template <int N, typename... Args>
   struct VolumeIndex {
     static_assert(N > 0, "VolumeIndex<N,...> must have N > 0");
@@ -32,13 +33,14 @@ namespace exahype2 {
     template <int I>
     static INLINE_METHOD GPU_CALLABLE_METHOD void fillVector(VectorType&) {}
   };
+  TARGET_DECLARE_END
 
   /**
    * A lot of the loop routines expect a voxel (or face) index which is
    * a vector over integers. Syntactically, we can just hand over
    *
    * <pre>
-     volumeIndex(x, y, z)
+     toVolumeIndex(x, y, z)
      </pre>
    *
    * Peano's vector class then provides the right constructor to convert
@@ -50,10 +52,12 @@ namespace exahype2 {
    * the compiler takes care of that.
    */
   // Factory function: Deduces N from argument count
+  TARGET_DECLARE
   template <class... Args>
-  static INLINE_METHOD GPU_CALLABLE_METHOD auto volumeIndex(Args... args) {
+  static INLINE_METHOD GPU_CALLABLE_METHOD auto toVolumeIndex(Args... args) {
     constexpr int N = sizeof...(args);
-    static_assert(N > 0, "volumeIndex() must be called with at least one argument");
+    static_assert(N > 0, "toVolumeIndex() must be called with at least one argument");
     return VolumeIndex<N, Args...>::generate(args...);
   }
-} // namespace exahype2
+  TARGET_DECLARE_END
+} // namespace exahype2::fv

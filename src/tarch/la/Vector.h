@@ -34,7 +34,7 @@ namespace tarch {
      * the hood.
      */
     template <typename NewScalarType, int Size, typename Scalar>
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     tarch::la::Vector<Size,NewScalarType> convertScalar(const tarch::la::Vector<Size,Scalar>& vector);
   }
 }
@@ -77,6 +77,7 @@ std::string toString(const tarch::la::Vector<Size,Scalar>& vector);
  * only if it has to hand over raw pointers to MPI, e.g.
  *
  */
+TARGET_DECLARE
 template <int Size, typename Scalar> struct tarch::la::Vector {
 private:
   Scalar _values[Size];
@@ -85,9 +86,9 @@ private:
     /**
      * Clang requires the always_inline attribute, as it otherwise makes weird decisions.
      */
-    inline Vector() = default;
+    INLINE_METHOD Vector() = default;
 
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector(const Scalar* values);
 
     /**
@@ -97,26 +98,26 @@ private:
      * routine relies on an iterator and the iterator within the C++ std lib
      * won't be inlined.
      */
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD
     Vector(std::initializer_list<Scalar> values);
 
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD
     Vector(const std::bitset<Size>& values);
 
     /**
      * Construct new vector and initialise all components with initialValue.
      */
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector(const Scalar& initialValue);
 
-    inline ~Vector() = default;
+    INLINE_METHOD ~Vector() = default;
 
     /**
      * Assignment operator for any vector type.
      *
      * Default assignment as this class needs to be trivially copyable.
      */
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector<Size, Scalar>& operator = (const Vector<Size, Scalar>& toAssign) = default;
 
     /**
@@ -124,13 +125,13 @@ private:
      *
      * @see operator= for default copy.
      */
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Vector(const Vector<Size, Scalar>& toCopy) = default;
 
     /**
      * Returns the number of components of the vector.
      */
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     int size() const;
 
     /**
@@ -142,7 +143,7 @@ private:
      *   calls, i.e. vector element accesses, as function calls and does not vectorise
      *   loops containing vector element accesses.
      */
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     const Scalar& operator[] (int index) const {
       #if !defined(WITH_GPU)
       assertion3(index >= 0, index, Size, ::toString(*this));
@@ -156,7 +157,7 @@ private:
      *
      * @see operator[] for remarks on SSE
      */
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Scalar& operator[] (int index) {
       #if !defined(WITH_GPU)
       assertion3(index >= 0, index, Size, ::toString(*this));
@@ -176,7 +177,7 @@ private:
      *
      * @see operator[] for remarks on SSE
      */
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     const Scalar& operator() (int index) const {
       #if !defined(WITH_GPU)
       assertion3(index >= 0, index, Size, ::toString(*this));
@@ -190,7 +191,7 @@ private:
      *
      * @see operator[] for remarks on SSE
      */
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Scalar& operator() (int index) {
       #if !defined(WITH_GPU)
       assertion3(index >= 0, index, Size, ::toString(*this));
@@ -204,19 +205,22 @@ private:
      * beautiful one as it harms the OO idea, but in many cases it is
      * convenient to have this operation.
      */
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     Scalar* data() {
       return _values;
     }
 
-    inline GPU_CALLABLE_METHOD
+    INLINE_METHOD GPU_CALLABLE_METHOD
     const Scalar* data() const {
       return _values;
     }
 };
+TARGET_DECLARE_END
 
+TARGET_DECLARE
 #include "Vector.cpph"
 #include "VectorOperations.h"
 #include "VectorScalarOperations.h"
 #include "VectorVectorOperations.h"
 #include "VectorSlice.h"
+TARGET_DECLARE_END

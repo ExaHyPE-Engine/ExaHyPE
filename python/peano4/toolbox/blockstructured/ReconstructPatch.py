@@ -180,7 +180,9 @@ class ReconstructPatch(ActionSet):
             headfile_template=kernels_templates_prefix
             + "/ReconstructPatchFused.template.h",
             cppfile_template=kernels_templates_prefix
-            + "/ReconstructPatchFused.template.cpp",
+            + "/ReconstructPatchFused"
+            + (f".{d['GPU']}" if d["GPU"] != "no" else "")
+            + ".template.cpp",
             classname=kernels_output_path + "/ReconstructPatchFused",
             namespace=kernels_namespace,
             subdirectory=subdirectory + ".",

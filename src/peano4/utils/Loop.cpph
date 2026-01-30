@@ -1,12 +1,12 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::utils::dStartVector() {
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::utils::dStartVector() {
   tarch::la::Vector<DIMENSIONS, int> result(0);
   return result;
 }
 
-inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::utils::dStartVector(int dim, int value) {
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::utils::dStartVector(int dim, int value) {
   tarch::la::Vector<DIMENSIONS, int> result(0);
 #if !defined(WITH_GPU)
   assertion2(dim >= 0, dim, value);
@@ -17,10 +17,7 @@ inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::utils::dSt
   return result;
 }
 
-inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::utils::dStartVector(
-  int                  max,
-  const LoopDirection& direction
-) {
+INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::utils::dStartVector(int max, const LoopDirection& direction) {
   tarch::la::Vector<DIMENSIONS, int> result;
 #if !defined(WITH_GPU)
   assertion2(max > 0 && max <= 3, max, direction);

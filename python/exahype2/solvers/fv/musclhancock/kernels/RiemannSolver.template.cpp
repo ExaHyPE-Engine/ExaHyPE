@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RiemannSolver.h"
 
-#include "exahype2/VolumeIndex.h"
+#include "exahype2/fv/VolumeIndex.h"
 #include "exahype2/fv/PatchUtils.h"
 
 {% import 'LoopOverVolumes.macro.h' as patch with context %}

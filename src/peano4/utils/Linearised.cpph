@@ -1,7 +1,7 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-inline GPU_CALLABLE_METHOD int peano4::utils::getKeyForDLinearisedLookup(
+INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::getKeyForDLinearisedLookup(
   const tarch::la::Vector<DIMENSIONS, int>& counter,
   int                                       max
 ) {
@@ -22,7 +22,7 @@ inline GPU_CALLABLE_METHOD int peano4::utils::getKeyForDLinearisedLookup(
   return result;
 }
 
-inline GPU_CALLABLE_METHOD int peano4::utils::getKeyForDDeLinearisedLookup(int value, int max) {
+INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::getKeyForDDeLinearisedLookup(int value, int max) {
 #if !defined(WITH_GPU)
   assertion2(max >= 2 && max <= MAX_TABLE, max, MAX_TABLE);
   assertion1(value >= 0 && value < tarch::la::aPowI(DIMENSIONS, max), value);
@@ -31,7 +31,7 @@ inline GPU_CALLABLE_METHOD int peano4::utils::getKeyForDDeLinearisedLookup(int v
   return value + (max - 2) * MaxIndexOfLinearisation;
 }
 
-inline GPU_CALLABLE_METHOD int peano4::utils::dLinearised(const std::bitset<DIMENSIONS>& counter) {
+INLINE_METHOD int peano4::utils::dLinearised(const std::bitset<DIMENSIONS>& counter) {
   int result = 0;
   int base   = 1;
   for (int d = 0; d < DIMENSIONS; d++) {
@@ -41,7 +41,10 @@ inline GPU_CALLABLE_METHOD int peano4::utils::dLinearised(const std::bitset<DIME
   return result;
 }
 
-inline GPU_CALLABLE_METHOD int peano4::utils::dLinearised(const tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
+INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::dLinearised(
+  const tarch::la::Vector<DIMENSIONS, int>& counter,
+  int                                       max
+) {
 #ifdef DLINEAR_USE_LOOKUP
   if (max > MAX_TABLE) {
     return dLinearisedWithoutLookup(counter, max);
@@ -62,7 +65,7 @@ inline GPU_CALLABLE_METHOD int peano4::utils::dLinearised(const tarch::la::Vecto
 #endif
 }
 
-inline GPU_CALLABLE_METHOD int peano4::utils::dLinearisedWithoutLookup(
+INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::dLinearisedWithoutLookup(
   const tarch::la::Vector<DIMENSIONS, int>& counter,
   int                                       max
 ) {
@@ -81,7 +84,7 @@ inline GPU_CALLABLE_METHOD int peano4::utils::dLinearisedWithoutLookup(
   return result;
 }
 
-inline GPU_CALLABLE_METHOD int peano4::utils::d2Linearised(const tarch::la::Vector<2, int>& counter, int max) {
+INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::d2Linearised(const tarch::la::Vector<2, int>& counter, int max) {
   int result = counter(2 - 1);
 #if !defined(WITH_GPU)
   assertion2(counter(2 - 1) >= 0, counter, max);
@@ -97,7 +100,7 @@ inline GPU_CALLABLE_METHOD int peano4::utils::d2Linearised(const tarch::la::Vect
   return result;
 }
 
-inline GPU_CALLABLE_METHOD int peano4::utils::d3Linearised(const tarch::la::Vector<3, int>& counter, int max) {
+INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::d3Linearised(const tarch::la::Vector<3, int>& counter, int max) {
   int result = counter(3 - 1);
 #if !defined(WITH_GPU)
   assertion2(counter(3 - 1) >= 0, counter, max);
@@ -113,7 +116,7 @@ inline GPU_CALLABLE_METHOD int peano4::utils::d3Linearised(const tarch::la::Vect
   return result;
 }
 
-inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::utils::dDelinearised(int value, int max) {
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::utils::dDelinearised(int value, int max) {
 #ifdef DLINEAR_USE_LOOKUP
   if (max > MAX_TABLE) {
     return dDelinearisedWithoutLookup(value, max);
@@ -135,7 +138,7 @@ inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::utils::dDe
 #endif
 }
 
-inline GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::utils::dDelinearisedWithoutLookup(
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::utils::dDelinearisedWithoutLookup(
   int value,
   int max
 ) {

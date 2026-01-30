@@ -48,18 +48,21 @@ class AdaptivityCriterion(AbstractFVActionSet):
     not fineGridCell{{CELL_LABEL_NAME}}.getAMDCriterionEvaluatedThroughoutGridConstruction()
   ) {
     dfor(volume, {{NUMBER_OF_VOLUMES_PER_AXIS}}) {
+      auto [volumeSize, volumeCentre] = ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, {{NUMBER_OF_VOLUMES_PER_AXIS}}>(
+        marker.getX(), marker.getH(), volume
+      );
       {% if STATELESS_REFINEMENT_CRITERION==True %}
       refinementCriterion = refinementCriterion and {{FULL_QUALIFIED_SOLVER_NAME}}::refinementCriterion(
         nullptr,
-        ::exahype2::fv::getVolumeCentre( marker.getX(), marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
-        ::exahype2::fv::getVolumeSize( marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
+        volumeCentre,
+        volumeSize,
         0.0
       );
       {% else %}
       refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
         nullptr,
-        ::exahype2::fv::getVolumeCentre( marker.getX(), marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
-        ::exahype2::fv::getVolumeSize( marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
+        volumeCentre,
+        volumeSize,
         0.0
       );
       {% endif %}
@@ -84,18 +87,21 @@ class AdaptivityCriterion(AbstractFVActionSet):
   ) {
     int index = 0;
     dfor(volume, {{NUMBER_OF_VOLUMES_PER_AXIS}}) {
+      auto [volumeSize, volumeCentre] = ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, {{NUMBER_OF_VOLUMES_PER_AXIS}}>(
+        marker.getX(), marker.getH(), volume
+      );
       {% if STATELESS_REFINEMENT_CRITERION==True %}
       refinementCriterion = refinementCriterion and {{FULL_QUALIFIED_SOLVER_NAME}}::refinementCriterion(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + index,
-        ::exahype2::fv::getVolumeCentre( marker.getX(), marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
-        ::exahype2::fv::getVolumeSize( marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
+        volumeCentre,
+        volumeSize,
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
       );
       {% else %}
       refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + index,
-        ::exahype2::fv::getVolumeCentre( marker.getX(), marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
-        ::exahype2::fv::getVolumeSize( marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
+        volumeCentre,
+        volumeSize,
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
       );
       {% endif %}

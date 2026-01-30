@@ -25,6 +25,8 @@ set(SOURCES
   accelerator/cuda/ExecutionPolicy.cpp
   accelerator/kokkos/accelerator.cpp
   accelerator/kokkos/Device.cpp
+  accelerator/ompt/accelerator.cpp
+  accelerator/ompt/Device.cpp
   accelerator/sycl/accelerator.cpp
   accelerator/sycl/Device.cpp
 

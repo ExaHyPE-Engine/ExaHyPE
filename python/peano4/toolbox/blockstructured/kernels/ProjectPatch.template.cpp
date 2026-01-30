@@ -7,12 +7,46 @@
 #include "toolbox/blockstructured/Enumeration.h"
 #include "toolbox/blockstructured/Projection.h"
 
-{% import 'Loop.macro.h' as patch with context %}{# get template macros #}
-{% import 'CopyPatchOntoFaces.macro.h' as operation with context %}{# get template macros #}
+{% from 'CopyPatchOntoFaces.macro.h' import CopyPatchOntoFaces with context %}
 
 void {{FULL_QUALIFIED_NAMESPACE}}::projectPatch(
   const {{PRECISION}}* NOALIAS const QIn,
   {{PRECISION}}* NOALIAS const faces[TWO_TIMES_D]
 ) {
-  {{ patch.loopOverCells(operation) }}
+  {% if DIMENSIONS==3 %}
+  for (int z = 0; z < {{DOFS_PER_AXIS}}; ++z)
+  {% endif %}
+  for (int y = 0; y < {{DOFS_PER_AXIS}}; ++y)
+  for (int x = 0; x < {{DOFS_PER_AXIS}}; ++x) {
+    for (int d = 0; d < DIMENSIONS; d++) {
+      for (int i = 0; i < {{OVERLAP}}; i++) {
+        const tarch::la::Vector<DIMENSIONS, int> sourceCell = ::exahype2::fv::toVolumeIndex(x, y {% if DIMENSIONS==3 %}, z {% endif %});
+        tarch::la::Vector<DIMENSIONS, int> patchCell   = sourceCell;
+        tarch::la::Vector<DIMENSIONS, int> overlapCell = sourceCell;
+        patchCell(d)   = i;
+        overlapCell(d) = i + {{OVERLAP}};
+
+        int patchCellSerialised   = ::peano4::utils::dLinearised(patchCell, {{DOFS_PER_AXIS}});
+        int overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, {{DOFS_PER_AXIS}}, {{OVERLAP}}, d);
+        for (int j = 0; j < {{UNKNOWNS}}; j++) {
+          #if !defined(WITH_GPU)
+          assertion7({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i, sourceCell, d, patchCell, overlapCell);
+          #endif
+          faces[d][overlapCellSerialised * {{UNKNOWNS}} + j] = QIn[patchCellSerialised * {{UNKNOWNS}} + j];
+        }
+
+        patchCell(d)   = i + {{DOFS_PER_AXIS}} - {{OVERLAP}};
+        overlapCell(d) = i;
+
+        patchCellSerialised   = ::peano4::utils::dLinearised(patchCell, {{DOFS_PER_AXIS}});
+        overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, {{DOFS_PER_AXIS}}, {{OVERLAP}}, d);
+        for (int j = 0; j < {{UNKNOWNS}}; j++) {
+          #if !defined(WITH_GPU)
+          assertion7({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i, sourceCell, d, patchCell, overlapCell);
+          #endif
+          faces[d + DIMENSIONS][overlapCellSerialised * {{UNKNOWNS}} + j] = QIn[patchCellSerialised * {{UNKNOWNS}} + j];
+        }
+      }
+    }
+  }
 }

@@ -1,7 +1,7 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-inline GPU_CALLABLE_METHOD int peano4::utils::dCmp(
+INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::dCmp(
   const tarch::la::Vector<DIMENSIONS, int>& counter,
   const tarch::la::Vector<DIMENSIONS, int>& max
 ) {
@@ -16,7 +16,7 @@ inline GPU_CALLABLE_METHOD int peano4::utils::dCmp(
   return result;
 }
 
-inline GPU_CALLABLE_METHOD int peano4::utils::dCmp(const tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
+INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::dCmp(const tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
   int result = true;
   for (int i = 0; i < DIMENSIONS; i++) {
 #if !defined(WITH_GPU)
@@ -28,7 +28,7 @@ inline GPU_CALLABLE_METHOD int peano4::utils::dCmp(const tarch::la::Vector<DIMEN
   return result;
 }
 
-inline GPU_CALLABLE_METHOD bool peano4::utils::dCmpLinearOrder(
+INLINE_METHOD GPU_CALLABLE_METHOD bool peano4::utils::dCmpLinearOrder(
   const tarch::la::Vector<DIMENSIONS, int>& counter,
   const tarch::la::Vector<DIMENSIONS, int>& max
 ) {

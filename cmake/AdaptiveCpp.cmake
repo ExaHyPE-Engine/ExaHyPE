@@ -3,7 +3,7 @@
 
 include_guard(GLOBAL)
 
-set(ACPP_VERSION "25.02.0" CACHE STRING "")
+set(ACPP_VERSION "25.10.0" CACHE STRING "")
 set(ACPP_TARGETS "generic" CACHE STRING "")
 set(ACPP_COMPILER_FEATURE_PROFILE "full" CACHE STRING "")
 set(ACPP_DEBUG_LEVEL 0 CACHE STRING "0=no debug, 1=errors, 2=warnings, 3=info")
@@ -38,7 +38,7 @@ if(NOT AdaptiveCpp_FOUND)
       -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}
     RESULT_VARIABLE result
     OUTPUT_QUIET
-    ERROR_QUIET
+    # ERROR_QUIET
   )
   if(result)
     message(FATAL_ERROR "CMake step for AdaptiveCpp failed: ${result}")
@@ -48,7 +48,7 @@ if(NOT AdaptiveCpp_FOUND)
     COMMAND ${CMAKE_COMMAND} --build ${adaptivecpp_BINARY_DIR} --config Release --target install --parallel ${AVAILABLE_PROCESSOR_COUNT}
     RESULT_VARIABLE result
     OUTPUT_QUIET
-    ERROR_QUIET
+    # ERROR_QUIET
   )
   if(result)
     message(FATAL_ERROR "Build step for AdaptiveCpp failed: ${result}")

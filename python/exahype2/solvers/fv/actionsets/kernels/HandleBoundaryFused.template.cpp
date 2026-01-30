@@ -2,29 +2,43 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "HandleBoundaryFused.h"
 
-{% if GPU != "no" %}
-{% set fused_loop_path = GPU ~ "/Loop.macro.h" %}
-{% else %}
-{% set fused_loop_path = "Loop.macro.h" %}
-{% endif %}
+{% from "ApplyBoundaryCondition.macro.h" import ApplyBoundaryCondition with context %}
 
-{% import fused_loop_path as fused with context %}
-
-{% if GPU == "cuda" %}
-{{ fused.defineGlobalKernel() }}
-{% elif GPU == "sycl" or MULTITHREADING == "sycl" %}
-#include "tarch/accelerator/sycl/Device.h"
-#include <sycl/sycl.hpp>
-{% elif GPU == "kokkos" %}
-#include "Kokkos_Core.hpp"
-{% endif %}
+namespace {
+  auto serialisePatchIndex = [](const tarch::la::Vector<DIMENSIONS, int>& overlapCell, int normal) {
+    int base   = 1;
+    int result = 0;
+    for (int d = 0; d < DIMENSIONS; d++) {
+      result += overlapCell(d) * base;
+      if (d==normal) {
+        base *= {{HALO_SIZE}} * 2;
+      } else {
+        base *= {{NUMBER_OF_VOLUMES_PER_AXIS}};
+      }
+    }
+    return result;
+  };
+}
 
 void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                                        solver,
   ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData,
   const int                                                              targetDevice
 ) {
-  {{ fused.loopOverPatches() }}
+  handleBoundaryFused(
+    solver,
+    patchData.facesFlattened,
+    patchData.boundaryFaceIndices,
+    patchData.boundaryFaceNumbers,
+    patchData.patchIndicesOfBoundaryFaces,
+    patchData.cellCentre,
+    patchData.cellSize,
+    patchData.t,
+    patchData.dt,
+    patchData.numberOfBoundaryFaces,
+    patchData.numberOfCells,
+    targetDevice
+  );
 }
 
 void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
@@ -38,7 +52,21 @@ void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
   const double                                t,
   const double                                dt,
   const int                                   numberOfFaces,
+  const int                                   numberOfCells,
   const int                                   targetDevice
 ) {
-  {{ fused.loopOverPatchesNoPatchData() }}
+  {% if MULTITHREADING == "ON" %}
+  #pragma omp parallel for schedule(static)
+  {% endif %}
+  for (int boundaryFaceIndex = 0; boundaryFaceIndex < numberOfFaces; ++boundaryFaceIndex) {
+    const uint64_t faceIndex  = faceIndices[boundaryFaceIndex];
+    const int      faceNumber = faceNumbers[boundaryFaceIndex];
+    const uint64_t cellIndex  = cellIndices[boundaryFaceIndex];
+
+    tarch::la::Vector<DIMENSIONS, double> patchSize   = cellSizes[cellIndex];
+    tarch::la::Vector<DIMENSIONS, double> patchCentre = cellCentres[cellIndex];
+    double* Q = &facesFlattened[faceIndex * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %}];
+
+    {{ ApplyBoundaryCondition() | indent(2) }}
+  }
 }

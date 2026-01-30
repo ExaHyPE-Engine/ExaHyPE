@@ -3,6 +3,7 @@
 #pragma once
 
 #include "peano4/utils/Globals.h"
+#include "exahype2/fv/VolumeIndex.h"
 
 #include "tarch/CompilerSpecificSettings.h"
 

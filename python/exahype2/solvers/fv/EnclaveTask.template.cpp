@@ -76,34 +76,23 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   hostFacesUpdate.reserve(numberOfPatches * TWO_TIMES_D * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %});
   hostFacesNew.reserve(numberOfPatches * TWO_TIMES_D * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %});
 
-  std::unordered_map<{{STORAGE_PRECISION}}*, int>                    facesOldHostToDevice;
+  std::unordered_map<{{STORAGE_PRECISION}}*, int>                    faceMapHostToDevice;
   std::unordered_map<{{STORAGE_PRECISION}}*, {{STORAGE_PRECISION}}*> facesOldDeviceToHost;
-
-  std::unordered_map<{{STORAGE_PRECISION}}*, int>                    facesUpdateHostToDevice;
   std::unordered_map<{{STORAGE_PRECISION}}*, {{STORAGE_PRECISION}}*> facesUpdateDeviceToHost;
-
-  std::unordered_map<{{STORAGE_PRECISION}}*, int>                    facesNewHostToDevice;
   std::unordered_map<{{STORAGE_PRECISION}}*, {{STORAGE_PRECISION}}*> facesNewDeviceToHost;
 
   auto processTaskFaces = [&](Task* task) {
     auto* typedTask = static_cast<{{ENCLAVE_TASK_TYPE}}*>(task);
     for (int f = 0; f < TWO_TIMES_D; ++f) {
-      {{STORAGE_PRECISION}}* faceKeyOld = typedTask->_faces[0][f];
-      if (facesOldHostToDevice.find(faceKeyOld) == facesOldHostToDevice.end()) {
-        facesOldHostToDevice[faceKeyOld] = static_cast<int>(facesOldHostToDevice.size());
-        hostFacesOld.insert(hostFacesOld.end(), faceKeyOld, faceKeyOld + {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %});
-      }
-
+      {{STORAGE_PRECISION}}* faceKeyOld    = typedTask->_faces[0][f];
       {{STORAGE_PRECISION}}* faceKeyUpdate = typedTask->_faces[1][f];
-      if (facesUpdateHostToDevice.find(faceKeyUpdate) == facesUpdateHostToDevice.end()) {
-        facesUpdateHostToDevice[faceKeyUpdate] = static_cast<int>(facesUpdateHostToDevice.size());
-        hostFacesUpdate.insert(hostFacesUpdate.end(), faceKeyUpdate, faceKeyUpdate + {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %});
-      }
+      {{STORAGE_PRECISION}}* faceKeyNew    = typedTask->_faces[2][f];
 
-      {{STORAGE_PRECISION}}* faceKeyNew = typedTask->_faces[2][f];
-      if (facesNewHostToDevice.find(faceKeyNew) == facesNewHostToDevice.end()) {
-        facesNewHostToDevice[faceKeyNew] = static_cast<int>(facesNewHostToDevice.size());
+      if (faceMapHostToDevice.find(faceKeyNew) == faceMapHostToDevice.end()) {
+        faceMapHostToDevice[faceKeyNew] = static_cast<int>(faceMapHostToDevice.size());
         hostFacesNew.insert(hostFacesNew.end(), faceKeyNew, faceKeyNew + {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %});
+        hostFacesUpdate.insert(hostFacesUpdate.end(), faceKeyUpdate, faceKeyUpdate + {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %});
+        hostFacesOld.insert(hostFacesOld.end(), faceKeyOld, faceKeyOld + {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %});
       }
     }
   };
@@ -123,8 +112,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   hostFacesUpdate.clear();
   hostFacesNew.clear();
 
+  std::vector<uint64_t> hostFaceIndices;
   std::vector<uint64_t> patchIndicesOfBoundaryFaces;
   std::vector<uint8_t>  boundaryFaceNumbers;
+  std::vector<uint64_t> boundaryFaceIndices;
 
   int patchIndex = 0;
   for (auto& otherTask: otherTasks) {
@@ -136,24 +127,29 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 
     for (int f = 0; f < TWO_TIMES_D; ++f) {
       auto* faceKeyOld                          = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_faces[0][f];
-      auto deviceIndexOld                       = facesOldHostToDevice.at(faceKeyOld);
-      auto* deviceFaceOld                       = deviceFacesOld + deviceIndexOld * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
+      auto* faceKeyUpdate                       = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_faces[1][f];
+      auto* faceKeyNew                          = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_faces[2][f];
+      auto faceIndex                            = faceMapHostToDevice.at(faceKeyNew);
+
+      // pointer based setup for each faceType
+      auto* deviceFaceOld                       = deviceFacesOld + faceIndex * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
       patchData.faces[patchIndex][0][f]         = deviceFaceOld;
       facesOldDeviceToHost[deviceFaceOld]       = faceKeyOld;
-      auto* faceKeyUpdate                       = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_faces[1][f];
-      auto deviceIndexUpdate                    = facesUpdateHostToDevice.at(faceKeyUpdate);
-      auto* deviceFaceUpdate                    = deviceFacesUpdate + deviceIndexUpdate * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
+
+      auto* deviceFaceUpdate                    = deviceFacesUpdate + faceIndex * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
       patchData.faces[patchIndex][1][f]         = deviceFaceUpdate;
       facesUpdateDeviceToHost[deviceFaceUpdate] = faceKeyUpdate;
-      auto* faceKeyNew                          = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_faces[2][f];
-      auto deviceIndexNew                       = facesNewHostToDevice.at(faceKeyNew);
-      auto* deviceFaceNew                       = deviceFacesNew + deviceIndexNew * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
+
+      auto* deviceFaceNew                       = deviceFacesNew + faceIndex * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
       patchData.faces[patchIndex][2][f]         = deviceFaceNew;
       facesNewDeviceToHost[deviceFaceNew]       = faceKeyNew;
+
+      hostFaceIndices.push_back(faceIndex);
 
       if (static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_isBoundary[f]) {
         patchIndicesOfBoundaryFaces.push_back(patchIndex);
         boundaryFaceNumbers.push_back(f);
+        boundaryFaceIndices.push_back(faceIndex);
       }
     }
 
@@ -170,30 +166,37 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 
   for (int f = 0; f < TWO_TIMES_D; ++f) {
     auto* faceKeyOld                          = _faces[0][f];
-    auto deviceIndexOld                       = facesOldHostToDevice.at(faceKeyOld);
-    auto* deviceFaceOld                       = deviceFacesOld + deviceIndexOld * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
+    auto* faceKeyUpdate                       = _faces[1][f];
+    auto* faceKeyNew                          = _faces[2][f];
+    auto faceIndex                            = faceMapHostToDevice.at(faceKeyNew);
+
+    // pointer based setup for each faceType
+    auto* deviceFaceOld                       = deviceFacesOld + faceIndex * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
     patchData.faces[patchIndex][0][f]         = deviceFaceOld;
     facesOldDeviceToHost[deviceFaceOld]       = faceKeyOld;
-    auto* faceKeyUpdate                       = _faces[1][f];
-    auto deviceIndexUpdate                    = facesUpdateHostToDevice.at(faceKeyUpdate);
-    auto* deviceFaceUpdate                    = deviceFacesUpdate + deviceIndexUpdate * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
+
+    auto* deviceFaceUpdate                    = deviceFacesUpdate + faceIndex * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
     patchData.faces[patchIndex][1][f]         = deviceFaceUpdate;
     facesUpdateDeviceToHost[deviceFaceUpdate] = faceKeyUpdate;
-    auto* faceKeyNew                          = _faces[2][f];
-    auto deviceIndexNew                       = facesNewHostToDevice.at(faceKeyNew);
-    auto* deviceFaceNew                       = deviceFacesNew + deviceIndexNew * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
+
+    auto* deviceFaceNew                       = deviceFacesNew + faceIndex * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
     patchData.faces[patchIndex][2][f]         = deviceFaceNew;
     facesNewDeviceToHost[deviceFaceNew]       = faceKeyNew;
 
+    // Index into pool (index is same for every face type)
+    hostFaceIndices.push_back(faceIndex);
+
     if (_isBoundary[f]) {
-        patchIndicesOfBoundaryFaces.push_back(patchIndex);
-        boundaryFaceNumbers.push_back(f);
-      }
+      patchIndicesOfBoundaryFaces.push_back(patchIndex);
+      boundaryFaceNumbers.push_back(f);
+      boundaryFaceIndices.push_back(faceIndex);
+    }
   }
   patchData.numberOfBoundaryFaces = boundaryFaceNumbers.size();
   if (patchData.numberOfBoundaryFaces > 0) {
-    patchData.patchIndicesOfBoundaryFaces   = tarch::accelerator::MemoryManager::getInstance().allocate<uint64_t>(patchIndicesOfBoundaryFaces.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-    patchData.boundaryFaceNumbers   = tarch::accelerator::MemoryManager::getInstance().allocate<uint8_t>(boundaryFaceNumbers.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+    patchData.patchIndicesOfBoundaryFaces = tarch::accelerator::MemoryManager::getInstance().allocate<uint64_t>(patchIndicesOfBoundaryFaces.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+    patchData.boundaryFaceNumbers         = tarch::accelerator::MemoryManager::getInstance().allocate<uint8_t>(boundaryFaceNumbers.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+    patchData.boundaryFaceIndices         = tarch::accelerator::MemoryManager::getInstance().allocate<uint64_t>(boundaryFaceIndices.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
 
     std::copy_n(
       patchIndicesOfBoundaryFaces.data(),
@@ -205,8 +208,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
       boundaryFaceNumbers.size(),
       patchData.boundaryFaceNumbers
     );
+    std::copy_n(
+      boundaryFaceIndices.data(),
+      boundaryFaceIndices.size(),
+      patchData.boundaryFaceIndices
+    );
     patchIndicesOfBoundaryFaces.clear();
     boundaryFaceNumbers.clear();
+    boundaryFaceIndices.clear();
   }
   patchData.QInFlattened = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(
     numberOfPatches * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %},
@@ -217,6 +226,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     numberOfPatches * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %},
     tarch::MemoryLocation::Pinned,
     TARGET_DEVICE
+  );
+  patchData.facesFlattened = deviceFacesNew;
+  patchData.faceIndices = tarch::accelerator::MemoryManager::getInstance().allocate<uint64_t>(
+    hostFaceIndices.size(),
+    tarch::MemoryLocation::Pinned,
+    TARGET_DEVICE
+  );
+  std::copy_n(
+    hostFaceIndices.data(),
+    hostFaceIndices.size(),
+    patchData.faceIndices
   );
 
   if (patchData.numberOfBoundaryFaces > 0) {
@@ -294,7 +314,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
     for (int f = 0; f < TWO_TIMES_D; f++) {
       auto* deviceFaceOld     = patchData.faces[patchIndex][0][f];
-      auto* deviceFaceUpdate  = patchData.faces[patchIndex][1][f];
       auto* deviceFaceNew     = patchData.faces[patchIndex][2][f];
       auto* hostFaceOld       = facesOldDeviceToHost[deviceFaceOld];
       auto* hostFaceNew       = facesNewDeviceToHost[deviceFaceNew];
@@ -314,7 +333,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
         {{HALO_SIZE}},
         f % DIMENSIONS,
         f < DIMENSIONS,
-        deviceFaceUpdate,
+        deviceFaceNew,
         hostFaceNew
       );
     }
@@ -322,9 +341,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 
   tarch::accelerator::MemoryManager::getInstance().free(patchData.QInFlattened, TARGET_DEVICE);
   tarch::accelerator::MemoryManager::getInstance().free(patchData.QOutFlattened, TARGET_DEVICE);
+  tarch::accelerator::MemoryManager::getInstance().free(patchData.faceIndices, TARGET_DEVICE);
   if (patchData.numberOfBoundaryFaces > 0) {
     tarch::accelerator::MemoryManager::getInstance().free(patchData.patchIndicesOfBoundaryFaces, TARGET_DEVICE);
     tarch::accelerator::MemoryManager::getInstance().free(patchData.boundaryFaceNumbers, TARGET_DEVICE);
+    tarch::accelerator::MemoryManager::getInstance().free(patchData.boundaryFaceIndices, TARGET_DEVICE);
   }
   tarch::accelerator::MemoryManager::getInstance().free(deviceFacesOld, TARGET_DEVICE);
   tarch::accelerator::MemoryManager::getInstance().free(deviceFacesUpdate, TARGET_DEVICE);
@@ -332,23 +353,4 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 
   {{COMPUTE_NEW_TIME_STEP_SIZE}}
   repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, _t + _dt, tarch::la::min(_marker.getH()), tarch::la::max(_marker.getH()));
-}
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData) {
-  // Before swap: QIn is with halo, QOut is without halo
-  // After swap: QIn is without halo, QOut is with halo (that is reconstructed as next step)
-  std::swap(patchData.QInFlattened, patchData.QOutFlattened);
-  kernels::{{SOLVER_NAME}}::reconstructPatchFused(patchData, TARGET_DEVICE);
-  // QOut of patch reconstruction is now QIn for the Riemann solver
-  // QIn for patch reconstruction is now QOut of the Riemann solver
-  std::swap(patchData.QInFlattened, patchData.QOutFlattened);
-
-  const auto maxEigenvalue = {{FUSED_COMPUTE_KERNEL_CALL}}
-
-  std::swap(patchData.QInFlattened, patchData.QOutFlattened);
-  kernels::{{SOLVER_NAME}}::projectPatchFused(patchData, TARGET_DEVICE);
-  std::swap(patchData.QInFlattened, patchData.QOutFlattened);
-
-  {{COMPUTE_NEW_TIME_STEP_SIZE}}
-  repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, patchData.t + patchData.dt, tarch::la::min(patchData.cellSize[0]), tarch::la::max(patchData.cellSize[0]));
 }
