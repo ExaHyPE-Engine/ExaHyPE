@@ -283,9 +283,6 @@ void tarch::la::DynamicMatrix::batchedMultiplyAoS(
 
   for (int col = 0; col < _cols; col++) {
     for (int rowInResult = 0; rowInResult < resultSize; rowInResult++)
-#ifdef SharedOMP
-#pragma omp simd
-#endif
       for (int i = 0; i < batchSize; i++) {
         assertion3(
           rowInResult + firstRow < _rows,
