@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=upscaling
+#SBATCH --job-name=trees
 #SBATCH -p multi
 #SBATCH --nodes=1
 #SBATCH -n 1
 #SBATCH -c 128
-#SBATCH --time=48:00:00
+#SBATCH --time=12:00:00
 #SBATCH --mail-type=END
 #SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
 #SBATCH --array=1,2,3,4,6,8,9,16,27,32,64,128,256 
