@@ -11,11 +11,13 @@ welcomed and appreciated.
 
 # Content
 
-- \subpage tutorials_exahype2_applications_exagrype_setup
+- \subpage tutorials_exahype2_applications_exagrype_configure
 - \subpage tutorials_exahype2_applications_exagrype_running
   - Gauge Wave
   - Single Schwarzschild Black Hole
   - Binary Black Hole Merger
+- \subpage tutorials_exahype2_applications_exagrype_visualize
+- \subpage tutorials_exahype2_applications_exagrype_setup
 - \subpage tutorials_exahype2_applications_exagrype_clusters
 - \subpage tutorials_exahype2_applications_exagrype_advanced
   - Adding New Physics Scenarios
