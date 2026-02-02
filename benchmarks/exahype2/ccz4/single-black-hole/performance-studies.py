@@ -114,7 +114,7 @@ def add_generic_load_balancing(project,
     assert trees>=0 
     if trees>0:
         project.set_load_balancing(
-            "toolbox::loadbalancing::strategies::cascade::SpreadOutHierarchically",
+            "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
             """
           new ::exahype2::LoadBalancingConfiguration(
             0.98, 
