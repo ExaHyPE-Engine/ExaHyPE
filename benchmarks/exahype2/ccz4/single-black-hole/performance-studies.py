@@ -41,13 +41,15 @@ SchedulerChoices_LazyEvaluation                = "gpu-lazy-evaluation"
 SchedulerChoices_TimedExecution                = "gpu-timed-execution"
 SchedulerChoices_ProducerConsumerTaskSequence  = "gpu-producer-consumer"
 SchedulerChoices_EagerConsumerTasks            = "gpu-eager-consumer-tasks"
+SchedulerChoices_NoTasks                       = "no-tasks"
 SchedulerChoices = [
             SchedulerChoices_Native,
             SchedulerChoices_NativePriorities,
             SchedulerChoices_LazyEvaluation,
             SchedulerChoices_TimedExecution,
             SchedulerChoices_ProducerConsumerTaskSequence,
-            SchedulerChoices_EagerConsumerTasks
+            SchedulerChoices_EagerConsumerTasks,
+            SchedulerChoices_NoTasks
         ]
 
 
@@ -408,6 +410,11 @@ def configure_multicore_configuration(scheduler):
         project.add_mainfile_include( "MulticoreOrchestration.h")
         project.set_multicore_orchestration(
             "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks)"
+        )
+    elif args.scheduler == SchedulerChoices_NoTasks:
+        project.add_mainfile_include( "MulticoreOrchestration.h")
+        project.set_multicore_orchestration(
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::DisableFusionAndProcessImmediately)"
         )
     else:
             assert False, "not supported yet"
