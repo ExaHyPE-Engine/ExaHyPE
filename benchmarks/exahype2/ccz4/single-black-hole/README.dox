@@ -201,7 +201,7 @@ Here are some canonical settings:
 Description     | Solver         | Cell size | End time | Patch size | Remarks   | Build command
 ----------------|----------------|-----------|----------|------------|-----------|---------------
 Minimal setup   | Finite Volumes | 5.4       | 1.0      |          6 | Toy problem with 729 cells. Tells you if the code, in principle, works. Should crash at one point suddenly as the eigenvalue becomes zero, which showcases that this setup is too coarse to capture anything that has a physical meaning. | ```python3 performance-studies.py -s fv-6 -et 1.0 --plot 0.0 --cell-size 5.4```
-Minimal setup   | Finite Volumes | 1.8       | 1e-1     |          6 | You cannot see AMR here, but already gives you 19,683 cells. Load balancing should be really good. This is kind of the largest regular mesh setup that I can fit on a local laptop. | ```python3 performance-studies.py -s fv-6 -et 0.1 --plot 0.0 --cell-size 1.8```
+Simplest FV setup for single node workstation (laptop)  | Finite Volumes | 1.8       | 1e-1     |          6 | You cannot see AMR here, but already gives you 19,683 cells. Load balancing should be really good. This is kind of the largest regular mesh setup that I can fit on a local laptop. | ```python3 performance-studies.py -s fv-6 -et 0.1 --plot 0.0 --cell-size 1.8```
 
 
 ## Tasks scheduling and orchestration
@@ -226,6 +226,7 @@ For each of these benchmarks, I test them with various schedulers:
 - ```--scheduler gpu-eager-consumer-tasks``` Tasks are shipped off to the GPU using
   Peano's eager consumer pattern.Compare to the description
   in @ref tarch::multicore::orchestration::FusionImplementation.
+- ```--scheduler --no-tasks``` No tasking is used, i.e. everything that could be mapped onto a task is executed immediately.
 
 
 If an orchestration with task fusion is picked and you employ a combined FV-FD 
@@ -244,6 +245,44 @@ One node setpu  | fv            | 0.1       | 1e-4     |          6 | Use xxx no
 python3 performance-studies.py -s fd4-rk1-ps-3 -et 1e-2 --plot 0.0 --cell-size 1.8
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -->
+
+
+# Studying the right number of subpartitions per node
+
+We start with some experiments where we artifically restrict the number subpartitions uses on the node.
+If we use one subpartition per core, we quickly run into a situation where the individual subpartitions become too small and overhead eats up all scalability improvements.
+Therefore, a first step restricts the number of trees through ```--trees```.
+While we do so, we first disable all tasking manually:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 performance-studies.py -s fv-6 -et 0.01 --plot 0.0 --cell-size 0.6 --scheduler no-tasks --trees 16
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+## Building all the benchmarks in one go
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+for TREES in 1 2 3 4 6 8 9 16 27 32 64 128 256 
+do
+  python3 performance-studies.py -s fv-6 -et 0.01 --plot 0.0 --cell-size 0.6 --scheduler no-tasks --trees $TREES --output peano-$TREES-trees
+done
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There's a job script in @ref scripts/Hamilton8-different-tress.sbatch, 
+which can serve as a starting point if you want to submit experiments to a 
+supercomputer with an array job. This script is for @ref page_machines_hamilton "Hamilton 8" but most 
+Slurm scripts will look similar.
+
+
+Once the data is in, it might be best to package it into one archive
+```tar -czvf results.tar.gz results-*``` as there's a postprocessing
+script in the scripts subdirectory of the benchmark that can read 
+zips and create output data:
+
+
+
+
+# Todo cleanup
 
 
 ## Building all benchmarks in one go

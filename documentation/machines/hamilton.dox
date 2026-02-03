@@ -38,6 +38,8 @@ module load intelmpi
 module load tbb/2022.0
  
 export I_MPI_CXX=icpx
+
+module load python/3.13.9
 ~~~~~~~~~~~~~~~~~~~~~~
 
 For the vectorisation, we recognise that we always need
