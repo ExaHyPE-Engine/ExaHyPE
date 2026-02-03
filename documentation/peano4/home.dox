@@ -35,7 +35,7 @@ either use Peano's Python API or they use an extension built on top of Peano
 - Related pages
   - @ref page_tarch_home
 - Postprocessing scripts
-  - @ref toolbox_loadbalancing "Load balancing visualisation scripts" 
+  - @ref page_toolbox_loadbalancing_api_api_postprocessing "Load balancing visualisation scripts" 
 
 
 

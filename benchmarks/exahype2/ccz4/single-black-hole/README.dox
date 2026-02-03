@@ -275,11 +275,22 @@ Slurm scripts will look similar.
 
 
 Once the data is in, it might be best to package it into one archive
-```tar -czvf results.tar.gz results-*``` as there's a postprocessing
-script in the scripts subdirectory of the benchmark that can read 
-zips and create output data:
+```tar -czvf results.tar.gz results-*``` as there's a dedicated script
+```plot-trees-vs-runtime.py```
+in the scripts subdirectory of the benchmark that can read 
+zips and create output data.
+The script is based upon the 
+@ref page_toolbox_loadbalancing_api_api_postprocessing "load balancing postprocessing scripts"
+and yields plots similar to the one below.
 
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PYTHONPATH=~/git/Peano/src/toolbox/loadbalancing/api/postprocessing
+
+python3 scripts/plot-trees-vs-runtime.py results.tar.gz  --output trees-vs-runtime
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+@image html benchmarks/exahype2/ccz4/single-black-hole/trees-vs-runtime.png
 
 
 # Todo cleanup
