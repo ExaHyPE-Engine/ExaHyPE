@@ -263,10 +263,11 @@ python3 performance-studies.py -s fv-6 -et 0.01 --plot 0.0 --cell-size 0.6 --sch
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4
+module load python
 for TREES in 1 2 3 4 6 8 9 16 27 32 64 128 256 
 do
-  python3 performance-studies.py -s fv-6 -et 0.01 --plot 0.0 --cell-size 0.6   --scheduler no-tasks --trees $TREES --output peano-regular-$TREES-trees
-  python3 performance-studies.py -s fv-6 -et 0.01 --plot 0.0 --cell-size 0.067 --scheduler no-tasks --trees $TREES --output peano-regular-$TREES-trees
+  python3 performance-studies.py -s fv-6 -et 0.001 --plot 0.0 --cell-size 0.2   --scheduler no-tasks --trees $TREES --output peano-regular-$TREES-trees
+  python3 performance-studies.py -s fv-6 -et 0.001 --plot 0.0 --cell-size 0.067 --scheduler no-tasks --trees $TREES --output peano-regular-$TREES-trees
 done
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

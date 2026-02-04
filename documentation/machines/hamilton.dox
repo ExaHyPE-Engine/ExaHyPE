@@ -33,8 +33,8 @@ Eventually, I end up with
 module purge
 module load oneapi/2025.2
 export FLAVOUR_NOCONFLICT=1
-module load gcc/14.2
-module load intelmpi
+module load gcc/15.2
+module load intelmpi/2021.16
 module load tbb/2022.0
  
 export I_MPI_CXX=icpx
