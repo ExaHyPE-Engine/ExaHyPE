@@ -11,17 +11,12 @@
  
 source /etc/profile.d/modules.sh
  
-# adopt to your build/system
 module purge
 module load oneapi/2025.2
 export FLAVOUR_NOCONFLICT=1
 module load gcc
-module load intelmpi
 export I_MPI_CXX=icpx
  
- 
- 
-export THREADS=$SLURM_ARRAY_TASK_ID
- 
-./peano-$SLURM_ARRAY_TASK_ID-trees > results-$SLURM_ARRAY_TASK_ID.out
+./peano-regular-$SLURM_ARRAY_TASK_ID-trees  > results-regular-$SLURM_ARRAY_TASK_ID.out
+./peano-adaptive-$SLURM_ARRAY_TASK_ID-trees > results-adaptive-$SLURM_ARRAY_TASK_ID.out
 
