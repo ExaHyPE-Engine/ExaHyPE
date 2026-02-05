@@ -215,7 +215,8 @@ void exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
 
     dfor(k,order+1) {
       for(int direction=0; direction<Dimensions; direction++) {
-        double nodeEigenvalue = maxEigenvalue(
+        double nodeEigenvalue;
+        maxEigenvalue(
           cellData.QOut[cellIndex] + enumerator(0,k,0),
           getQuadraturePoint(
             cellData.cellCentre[cellIndex],
@@ -226,7 +227,8 @@ void exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
           ),
           cellData.t[cellIndex],
           cellData.dt[cellIndex],
-          direction
+          direction,
+          &nodeEigenvalue
         );
 
         assertion( nodeEigenvalue>=0.0 );

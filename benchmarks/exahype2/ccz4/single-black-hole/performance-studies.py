@@ -62,6 +62,7 @@ SolverChoices = [
             SolverChoices_FiniteVolumes_PatchSize96,
             "fd4-rk1-ps-3",
             "fd4-rk1-ps-6",
+            "fd4-rk1-ps-6-enclave",
             "fd4-rk1-limited-ps-3",
             "fd4-rk1-limited-ps-6",
         ] 
@@ -73,6 +74,8 @@ def create_exahype2_project(
         plot_interval,
         peano_dir,
         mode,
+        offset,
+        domain_size
         ):
     """!
     
@@ -87,8 +90,6 @@ def create_exahype2_project(
     )
 
     dimensions = 3
-    offset = [-9, -9, -9]
-    domain_size = [18, 18, 18]
 
     project.set_global_simulation_parameters(
         dimensions,  # dimensions
@@ -369,6 +370,31 @@ def get_command_line_args():
         default="linear",
         help="Set method to interpolate between solvers",
     )
+<<<<<<< HEAD
+    parser.add_argument(
+        "-product",
+        "--production-run",
+        dest="production_run",
+        type=int,
+        default=0,
+        help="switch to the pre-defined production run setup",
+=======
+    # If --max-tasks is specified, --min-tasks must also be specifed due to the order of arguments in the C++ code
+    parser.add_argument(
+        "-min-tasks",
+        "--min-tasks",
+        type=int,
+        default=-1,
+        help="minimum number of tasks that are fused together using the hardcoded fusion implementation"
+    )
+    parser.add_argument(
+        "-max-tasks",
+        "--max-tasks",
+        type=int,
+        default=-1,
+        help="maximum number of tasks that are fused together using the hardcoded fusion implementation"
+>>>>>>> refs/remotes/origin/p4
+    )
 
     args = parser.parse_args()
     return args
@@ -380,7 +406,13 @@ def configure_multicore_configuration(scheduler):
     Add a proper scheduler to the project
     
     """
-        
+    if args.min_tasks == -1:
+        task_fusion_size_string = ""
+    elif args.max_tasks == -1:
+        task_fusion_size_string = f", {args.min_tasks}"
+    else:
+        task_fusion_size_string = f", {args.min_tasks}, {args.max_tasks}"
+         
     if args.scheduler == SchedulerChoices_Native:
         project.add_mainfile_include( "tarch/multicore/orchestration/Hardcoded.h")
         project.set_multicore_orchestration(
@@ -394,22 +426,22 @@ def configure_multicore_configuration(scheduler):
     elif args.scheduler == SchedulerChoices_LazyEvaluation:
         project.add_mainfile_include( "MulticoreOrchestration.h")
         project.set_multicore_orchestration(
-            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::LazyEvaluation)"
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::LazyEvaluation" + task_fusion_size_string + ")"
         )
     elif args.scheduler == SchedulerChoices_TimedExecution:
         project.add_mainfile_include( "MulticoreOrchestration.h")
         project.set_multicore_orchestration(
-            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::TimedExecution)"
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::TimedExecution" + task_fusion_size_string + ")"
         )
     elif args.scheduler == SchedulerChoices_ProducerConsumerTaskSequence:
         project.add_mainfile_include( "MulticoreOrchestration.h")
         project.set_multicore_orchestration(
-            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskSequence)"
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskSequence" + task_fusion_size_string + ")"
         )
     elif args.scheduler == SchedulerChoices_EagerConsumerTasks:
         project.add_mainfile_include( "MulticoreOrchestration.h")
         project.set_multicore_orchestration(
-            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks)"
+            "new MulticoreOrchestration(tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks" + task_fusion_size_string + ")"
         )
     elif args.scheduler == SchedulerChoices_NoTasks:
         project.add_mainfile_include( "MulticoreOrchestration.h")
@@ -423,6 +455,37 @@ def configure_multicore_configuration(scheduler):
 if __name__ == "__main__":
     args = get_command_line_args()
     
+    if args.amr:
+        max_cell_size = domain_size[0] / 3.0
+        min_cell_size = args.cell_size
+    else:
+        max_cell_size = args.cell_size
+        min_cell_size = args.cell_size
+
+    offset = [-9, -9, -9]
+    domain_size   = [18, 18, 18]
+
+    # here we prepare the production run setup, the domain size, the minimum and maximal cell size 
+    # need to be changed accordingly. The refinementCriterion, which would be implemented in _FD4.cpp
+    # file, is controled by the flag variable "production_run" itself.
+    # The patch size is assumed to be 6 in the setup.
+    if args.production_run==1: #here is the "standard" production run setup
+        max_cell_size = 0.4*6
+        min_cell_size = 0.04*6
+        # offset and domain size remain unchanged
+    elif args.production_run==2: #here is a bigger production run setup
+        max_cell_size = 0.7*6
+        min_cell_size = 0.03*6
+        offset = [-18, -18, -18]
+        domain_size   = [36, 36, 36]
+    elif args.production_run==3: 
+        #here is a much bigger setup which we shall be able to simulate for gravitational wave
+        # extraction in the future
+        max_cell_size = 6.1*6
+        min_cell_size = 0.03*6
+        offset = [-162, -162, -162]
+        domain_size   = [324, 324, 324]
+
     # =================================
     # Create project
     # =================================
@@ -431,14 +494,10 @@ if __name__ == "__main__":
         end_time      = args.end_time,
         plot_interval = args.plot_interval,
         peano_dir     = args.peanodir, 
-        mode          = args.mode
+        mode          = args.mode,
+        offset        = offset,
+        domain_size   = domain_size
         )
-    
-
-    if args.amr:
-        max_cell_size = domain_size[0] / 3.0
-    else:
-        max_cell_size = args.cell_size
 
     ########################################################################################
     # Configure run
@@ -451,17 +510,22 @@ if __name__ == "__main__":
         my_primary_solver = FD4SolverWithoutLimiter(
             name="CCZ4SBH",
             patch_size=FD4PatchSize,
-            min_cell_size=args.cell_size,
+            min_cell_size=min_cell_size,
             max_cell_size=max_cell_size,
+            production_run=args.production_run #send the corresponding flag to cpp level for refinement control
         )
+        if args.production_run>0: #then we shall use second-order interpolation and restriction
+            exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_interpolation( my_primary_solver ) 
+            exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_restriction( my_primary_solver ) 
         project.add_solver(my_primary_solver)
         added_limiter = False
+
     elif "fd4-rk1-limited-ps-" in args.solver:
         FD4PatchSize = 16*int(args.solver[-1])
         my_primary_solver = FD4SolverWithLimiter(
             name="CCZ4SBH",
             patch_size=FD4PatchSize,
-            min_cell_size=args.cell_size,
+            min_cell_size=min_cell_size,
             max_cell_size=max_cell_size,
             parallelisation_of_interpolation=parallelise_interpolation,
             parallelisation_of_kernels=fv_kernel_parallelisation,

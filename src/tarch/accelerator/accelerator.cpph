@@ -1,0 +1,38 @@
+#include "Device.h"
+
+#include "tarch/Assertions.h"
+#include "tarch/multicore/multicore.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
+
+#include <cstring>
+
+#if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingCPP)
+#define GPUOffloadingOff
+#endif
+
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
+double* tarch::memset(double* dest, double ch, size_t byteCount){
+  #if defined(GPUOffloadingOff)
+  assertion2( byteCount%sizeof(double)==0, ch, byteCount );
+  #endif
+  #if defined(OpenMPManuallyOffloadMemset)
+  for (size_t i=0; i<byteCount/sizeof(double); i++){
+    dest[i] = ch;
+  }
+  return dest;
+  #else
+  return static_cast<double*>(
+    std::memset(
+      static_cast<void*>(dest),
+      //static_cast<int>(ch),
+      ch,
+      byteCount
+    )
+  );
+  #endif
+}
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif

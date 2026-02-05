@@ -50,9 +50,44 @@ void benchmarks::exahype2::ccz4::prepareTwoPunctures() {
   const tarch::la::Vector<Dimensions, double>& meshCellH,
   double                                       t
 ) {
-  return tarch::la::norm2(volumeX) - std::sqrt(Dimensions)*meshCellH(0) < BlackHoleFVRegion
+  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+
+  if (ProductionRun==1){ 
+    constexpr int NumberOfRefinementLayers = 2;
+    double Radius[NumberOfRefinementLayers] = {3.0, 1.5};
+    double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
+    result = ::exahype2::RefinementCommand::Keep;
+    for (int i=0; i<NumberOfRefinementLayers; i++) {
+      if (tarch::la::norm2(volumeX)<Radius[i] and tarch::la::max(meshCellH)>MaxH[i]) {
+       result=::exahype2::RefinementCommand::Refine;
+      }
+    }
+  } else if (ProductionRun==2){ 
+    constexpr int NumberOfRefinementLayers = 3;
+    double Radius[NumberOfRefinementLayers] = {8.0, 5.0, 2.0};
+    double MaxH[NumberOfRefinementLayers]   = {0.25, 0.08, 0.03};
+    result = ::exahype2::RefinementCommand::Keep;
+    for (int i=0; i<NumberOfRefinementLayers; i++) {
+      if (tarch::la::norm2(volumeX)<Radius[i] and tarch::la::max(meshCellH)>MaxH[i]) {
+       result=::exahype2::RefinementCommand::Refine;
+      }
+    }
+  } else if (ProductionRun==3){ 
+    constexpr int NumberOfRefinementLayers = 5;
+    double Radius[NumberOfRefinementLayers] = {60.0, 30.0, 15.0, 8.0, 4.0};
+    double MaxH[NumberOfRefinementLayers]   = {2.1, 0.7, 0.25, 0.08, 0.03};
+    result = ::exahype2::RefinementCommand::Keep;
+    for (int i=0; i<NumberOfRefinementLayers; i++) {
+      if (tarch::la::norm2(volumeX)<Radius[i] and tarch::la::max(meshCellH)>MaxH[i]) {
+       result=::exahype2::RefinementCommand::Refine;
+      }
+    }
+  } else {
+    result = tarch::la::norm2(volumeX) - std::sqrt(Dimensions)*meshCellH(0) < BlackHoleFVRegion
        ? ::exahype2::RefinementCommand::Refine
        : ::exahype2::RefinementCommand::Keep;
+  }
+  return result;
 }
 
 benchmarks::exahype2::ccz4::CCZ4SBH_FD4::CCZ4SBH_FD4() { prepareTwoPunctures(); }

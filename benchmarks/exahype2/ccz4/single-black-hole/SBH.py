@@ -125,8 +125,8 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
                 kernel_variant=exahype2.solvers.fv.rusanov.kernels.KernelVariant.PatchWiseAoSHeap,
             )
 
-        self.add_all_solver_constants()
         update_solver_parameters_for_single_black_hole(self)
+        self.add_all_solver_constants()
 
     def _store_cell_data_default_guard(self):
         """!
@@ -272,6 +272,8 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
             refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
             boundary_conditions=exahype2.solvers.PDETerms.None_Implementation,
         )
+
+        update_solver_parameters_for_single_black_hole(self)
         self.add_all_solver_constants()
 
         if parallelisation_of_kernels == KernelParallelisation.SUBTASKS:
@@ -280,7 +282,6 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
             )
             pass
 
-        update_solver_parameters_for_single_black_hole(self)
 
         if self.interpolation_method == "matrix":
             solver_matrix_interpolator = exahype2.solvers.SolverMatrixInterpolator(
@@ -580,6 +581,7 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
         patch_size,
         min_cell_size,
         max_cell_size,
+        production_run = 0
     ):
         self._name_without_FD4_extension = name
 
@@ -609,8 +611,9 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
             boundary_conditions=exahype2.solvers.PDETerms.None_Implementation,
         )
 
-        self.add_all_solver_constants()
+        self.integer_constants["ProductionRun"] = production_run
         update_solver_parameters_for_single_black_hole(self)
+        self.add_all_solver_constants()
 
     def create_action_sets(self):
         """!
@@ -741,7 +744,8 @@ class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
 #include "toolbox/blockstructured/Projection.h"        
 #include "toolbox/blockstructured/Restriction.h"        
 #include "toolbox/blockstructured/Interpolation.h"        
-#include "toolbox/blockstructured/Copy.h"        
+#include "toolbox/blockstructured/Copy.h"    
+#include "exahype2/fd/BoundaryConditions.h"
 """
         ## For compatibility. Name makes no sense. But the value
         ## guides the AMR pattern
@@ -753,8 +757,8 @@ class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
             boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
         )
 
-        self.add_all_solver_constants()
         update_solver_parameters_for_single_black_hole(self)
+        self.add_all_solver_constants()
 
     def create_action_sets(self):
         """!
@@ -781,6 +785,61 @@ class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
 
         """
         super(FVSolver, self).create_action_sets()
+
+        self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = (
+            """
+      double Qinf[59]={1.0, 0.0, 0.0, 1.0, 0.0, 1.0,        //q0-5
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0,                      //q6-11
+         0.0, 0.0, 0.0, 0.0,                                //q12-15
+         1.0, 0.0, 0.0, 0.0,                                //q16-19
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0,                      //q20-25
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,       //q26-34
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,       //q35-52
+         0.0, 1.0, 0.0, 0.0, 0.0, 0.0                       //q53-58
+      }; //approximate background solution at infinity 
+      ::exahype2::fd::applySommerfeldConditions(
+        [&](
+          const double * __restrict__                  Q,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  gridCellH,
+          double                                       t,
+          double                                       dt,
+          int                                          normal
+        ) -> double {
+		  double temp;
+          repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal, &temp );
+          return temp;
+        },
+        [&](
+          double * __restrict__                        Q,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  gridCellH
+        ) -> void {
+          for (int i=0; i<"""
+            + str(self._unknowns + self._auxiliary_variables)
+            + """; i++) {
+            Q[i] = 0.0;
+          }
+          Q[0] = 1.0; Q[3] = 1.0; Q[5] = 1.0;
+          Q[16] = 0.95; Q[54] = 0.95;
+        },
+        marker.x(),
+        marker.h(),
+        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        {{OVERLAP}},
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        marker.getSelectedFaceNumber(),
+        {0.0, 0.0, 0.0},
+        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value,
+        -1 // @todo Han, can you add a comment here please why we do -1?
+      );
+      """
+        )
 
 
 def update_solver_parameters_for_single_black_hole(solver):

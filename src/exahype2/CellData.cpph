@@ -70,11 +70,11 @@ template<typename inType, typename outType>
 exahype2::CopyCellDataGPU<inType, outType>::CopyCellDataGPU(
   const CellData<inType, outType>& cellData,
   int inputPatchSize,
-  int outputPatchSize
+  int outputPatchSize,
+  int device
 ):
   numberOfCells(cellData.numberOfCells),
   memoryLocation(cellData.memoryLocation),
-  targetDevice(cellData.targetDevice),
   QInStride(inputPatchSize),
   QOutStride(outputPatchSize) {
   sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
@@ -124,18 +124,116 @@ void exahype2::CopyCellDataGPU<inType, outType>::copyBackAndDestroy() {
   ::sycl::free(id, queue);
   ::sycl::free(maxEigenvalue, queue);
 }
+
+#elif defined(GPUOffloadingOMP)
+#include <omp.h> 
+
+/*template<typename inType, typename outType>
+exahype2::CopyCellDataGPU<inType, outType>::CopyCellDataGPU(
+  const CellData<inType, outType>& cellData,
+  int inputPatchSize,
+  int outputPatchSize,
+  int device
+):
+  numberOfCells(cellData.numberOfCells),
+  memoryLocation(cellData.memoryLocation),
+  QInStride(inputPatchSize),
+  QOutStride(outputPatchSize),
+  targetDevice(device == -1 ? cellData.targetDevice : device)
+  {
+  QIn = (inType*)malloc(numberOfCells * QInStride * sizeof(inType));
+  QOut = (outType*)malloc(numberOfCells * QOutStride * sizeof(outType));
+  cellCentre    = cellData.cellCentre;
+  cellSize      = cellData.cellSize;
+  t             = cellData.t;
+  dt            = cellData.dt;
+  id            = cellData.id;
+  maxEigenvalue = cellData.maxEigenvalue;
+  QInHost = cellData.QIn;
+  QOutHost = cellData.QOut;
+  maxEigenvalueHost = cellData.maxEigenvalue;
+
+  for (int i = 0; i < numberOfCells; i++){
+    memcpy(&QIn[QInStride * i], QInHost[i], QInStride * sizeof(inType));
+  }
+}
+
+template<typename inType, typename outType>
+void exahype2::CopyCellDataGPU<inType, outType>::copyBackAndDestroy() {
+  for (int i = 0; i < numberOfCells; i++){
+    memcpy(QOutHost[i], &QOut[QOutStride * i], QOutStride * sizeof(outType));
+  }
+
+  free(QIn);
+  free(QOut);
+}*/
+
+template<typename inType, typename outType>
+exahype2::CopyCellDataGPU<inType, outType>::CopyCellDataGPU(
+  const CellData<inType, outType>& cellData,
+  int inputPatchSize,
+  int outputPatchSize,
+  int device
+):
+  numberOfCells(cellData.numberOfCells),
+  memoryLocation(cellData.memoryLocation),
+  QInStride(inputPatchSize),
+  QOutStride(outputPatchSize),
+  targetDevice(0)
+  {
+  QIn = (inType*)omp_target_alloc(cellData.numberOfCells * inputPatchSize * sizeof(inType), targetDevice);
+  QOut = (outType*)omp_target_alloc(cellData.numberOfCells * outputPatchSize * sizeof(outType), targetDevice);
+  cellCentre    = (tarch::la::Vector<Dimensions, double>*)omp_target_alloc(cellData.numberOfCells * sizeof(tarch::la::Vector<Dimensions, double>), targetDevice);
+  cellSize      = (tarch::la::Vector<Dimensions, double>*)omp_target_alloc(cellData.numberOfCells * sizeof(tarch::la::Vector<Dimensions, double>), targetDevice);
+  t             = (double*)omp_target_alloc(cellData.numberOfCells * sizeof(double), targetDevice);
+  dt            = (double*)omp_target_alloc(cellData.numberOfCells * sizeof(double), targetDevice);
+  id            = (int*)omp_target_alloc(cellData.numberOfCells * sizeof(int), targetDevice);
+  maxEigenvalue = (double*)omp_target_alloc(cellData.numberOfCells * sizeof(double), targetDevice);
+  QInHost = cellData.QIn;
+  QOutHost = cellData.QOut;
+  maxEigenvalueHost = cellData.maxEigenvalue;
+
+  for (int i = 0; i < numberOfCells; i++){
+    omp_target_memcpy(&QIn[i * QInStride], cellData.QIn[i], QInStride * sizeof(inType), 0, 0, targetDevice, omp_get_initial_device());
+  }
+  omp_target_memcpy(cellCentre, cellData.cellCentre, numberOfCells * sizeof(tarch::la::Vector<Dimensions, double>), 0, 0, targetDevice, omp_get_initial_device());
+  omp_target_memcpy(cellSize, cellData.cellSize, numberOfCells * sizeof(tarch::la::Vector<Dimensions, double>), 0, 0, targetDevice, omp_get_initial_device());
+  omp_target_memcpy(t, cellData.t, numberOfCells * sizeof(double), 0, 0, targetDevice, omp_get_initial_device());
+  omp_target_memcpy(dt, cellData.dt, numberOfCells * sizeof(double), 0, 0, targetDevice, omp_get_initial_device());
+  omp_target_memcpy(id, cellData.id, numberOfCells * sizeof(int), 0, 0, targetDevice, omp_get_initial_device());
+  omp_target_memcpy(maxEigenvalue, cellData.maxEigenvalue, numberOfCells * sizeof(double), 0, 0, targetDevice, omp_get_initial_device());
+}
+
+template<typename inType, typename outType>
+void exahype2::CopyCellDataGPU<inType, outType>::copyBackAndDestroy() {
+  for (int i = 0; i < numberOfCells; i++){
+    omp_target_memcpy(QOutHost[i], &QOut[i * QOutStride], QOutStride * sizeof(outType), 0, 0, omp_get_initial_device(), targetDevice);
+  }
+  omp_target_memcpy(maxEigenvalueHost, maxEigenvalue, numberOfCells * sizeof(double), 0, 0, omp_get_initial_device(), targetDevice);
+
+  omp_target_free(QIn, targetDevice);
+  omp_target_free(QOut, targetDevice);
+  omp_target_free(cellCentre, targetDevice);
+  omp_target_free(cellSize, targetDevice);
+  omp_target_free(t, targetDevice);
+  omp_target_free(dt, targetDevice);
+  omp_target_free(id, targetDevice);
+  omp_target_free(maxEigenvalue, targetDevice);
+}
 #else
 template<typename inType, typename outType>
 exahype2::CopyCellDataGPU<inType, outType>::CopyCellDataGPU(
   const CellData<inType, outType>& cellData,
   int inputPatchSize,
-  int outputPatchSize
+  int outputPatchSize,
+  int device
 ):
   numberOfCells(cellData.numberOfCells),
   memoryLocation(cellData.memoryLocation),
-  targetDevice(cellData.targetDevice),
   QInStride(inputPatchSize),
-  QOutStride(outputPatchSize) {
+  QOutStride(outputPatchSize),
+  targetDevice(device == -1 ? cellData.targetDevice : device) 
+  {
   QIn           = tarch::allocateMemory<inType>(cellData.numberOfCells * inputPatchSize, memoryLocation, targetDevice);
   cellCentre    = tarch::allocateMemory<tarch::la::Vector<Dimensions, double>>(cellData.numberOfCells, memoryLocation, targetDevice);
   cellSize      = tarch::allocateMemory<tarch::la::Vector<Dimensions, double>>(cellData.numberOfCells, memoryLocation, targetDevice);

@@ -159,6 +159,17 @@ namespace exahype2 {
 
 //  using CellData = CellData<double, double>;
 
+  /**
+   * This structure is used to manage the movement of data between the
+   * host and devices. Copies to the device occur automatically on
+   * construction, but copies back must be triggered manually using
+   * copyBackAndDestroy().
+   * 
+   * The OpenMP implementation manages 2 versions, one using allocations
+   * on the device, and another that keeps data on the host. This second 
+   * version requires explicit maps in the kernel, which do not currently
+   * exist. For this reason it is currently not in use.
+   */
   template<typename inType=double, typename outType=double>
   struct CopyCellDataGPU{
     /* 
@@ -182,7 +193,7 @@ namespace exahype2 {
     outType** QOutHost;
     double* maxEigenvalueHost;
 
-    CopyCellDataGPU(const CellData<inType, outType>& cellData, int inputPatchSize, int outputPatchSize);
+    CopyCellDataGPU(const CellData<inType, outType>& cellData, int inputPatchSize, int outputPatchSize, int device = -1);
     void copyBackAndDestroy();
     
     std::string toString() const;

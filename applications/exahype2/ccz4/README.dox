@@ -2,7 +2,7 @@
 
 @page applications_exahype2_ExaGRyPE ExaGRyPE
 
-@image html tutorials/exahype2/exagrype/arty.png
+@image html tutorials/exahype2/exagrype/exagrype_logo.png
 
 <!-- Add this one for href links to subitems -->
 \tableofcontents
@@ -16,7 +16,7 @@ domain decomposition and task parallelism, and it supports the injection of part
 static data probes or as moving tracers.
 
 ExaGRyPE is actively under development as a part of the ExaHyPE projects and is evolving as a novel 
-numerical relativity code within the computational astrophysics community. Planned enhancements include optimizing
+numerical relativity code within the computational astrophysics field. ExaGRyPE is also a member of the <a href="https://www.uknumericalrelativity.org/home">UKNR community</a>. Planned enhancements include optimizing
 its performance, porting it to GPUs, and extending its capabilities to simulate more complex scenarios beyond
 black hole spacetimes. These advancements will involve incorporating matter components via standard Euler fields
 or Smoothed-Particle Hydrodynamics (SPH). Additionally, thanks to the high flexibility in dimensionality offered
@@ -24,7 +24,7 @@ by ExaHyPE2, future versions will enable full simulations of modified gravity th
 
 The release paper of ExaGRyPE is provided below for interested users. The code is completely open-sources and can 
 be found in the Peano repositories. \ref tutorials_exahype2_applications_exagrype provide a tutorial on how to install
-and run the code. 
+and run the code on a cluster or your laptop. 
 
 
 <div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
@@ -38,6 +38,7 @@ and run the code.
 
 
 # Physics Note
+## Vacuum Spacetime
 
 The ExaGRyPE code solves the Einstein equations in the Z4 formulation
 
@@ -85,9 +86,10 @@ variables with
 Both formulations are now available in the code for difference scenarios. Users are referred to Appendix B
 of the paper below for more details of equations and formulation used in ExaGRyPE.
 
+## Ordinary Matter (gas fluid)
+This part is still under testing. 
 
-# Deep links
-
+# Further links
 
 - @ref tutorials_exahype2_applications_exagrype "Tutorials"
 - ExaGRyPE benchmarks (cmp @ref page_exahype_benchmarks "overview of all ExaHyPE benchmarks")

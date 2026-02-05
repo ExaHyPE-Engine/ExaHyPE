@@ -1,0 +1,61 @@
+/**
+
+@page tutorials_exahype2_applications_exagrype_visualize Visualization of ExaGRyPE Output
+
+@image html tutorials/exahype2/exagrype/GW_visual.png
+
+# Plotting
+
+The Peano plotting would be automatically switched on if users pass a positive \c args.plot_step_size. The code would then try to plot every given step size in code time, and it would plot the initial snapshot and the final snapshot when the \c args.end_time is reached, even if it just dumps a regular snapshot according to the time interval. The default plotting format of Peano is the patch file, which contains the solution arrays in each cell; each thread on each rank would dump its own patch file in a parallel run.
+
+The following commands convert the Peano patch files into normal vtu files, which then can be inspected in other standard visualization tools like paraview.
+
+~~~~~~~~~~~~~~~~~~~~~~~
+export PYTHONPATH=/path/to/Peano/python/
+python3 /path/to/Peano/python/peano4/visualisation/render.py solution-CCZ4.peano-patch-file -j32
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The render script supports parallel snapshot processing, and you can set the process number you 
+would like to run at the same time by set parameter after -j.
+
+In the Python API script of ExaGRyPE, users are allowed to control the clips/parts and the variables they would like to have in their snapshot files. There are lines like
+
+~~~~~~~~~~~~~~~~~~~~~~~
+probe_point = [-100, -100, 0.0]
+project.add_plot_filter( probe_point,[200.0, 200.0, 0.01], 1 )
+my_solver.select_dofs_to_print = [0,12,16,17,18,53,54,59,60]
+~~~~~~~~~~~~~~~~~~~~~~~
+
+If you set \c project.add_plot_filter as \f$ ([a,b,c],[d,e,f], K)\f$, the code would dump all patches that contains cells having coordinates within the rectangle clip \f$ ([a,b,c], [a+d,b+e,c+f]) \f$. The final parameter indicates the frequency of the plotting (plot when \f$ K \f$th  time the \c plot_step_size is reached, 1 is recommended). In the example code above, a slice of the x-y plane will be output. By specifying the \c select_dofs_to_print, users can control the size of the solution array per cell. In ExaGRyPE, we have 58 basic variables plus extra monitoring variables; the basic variables mapping is given below:
+
+@f$
+ [0]\tilde{\gamma}_{xx},[1]\tilde{\gamma}_{xy},[2]\tilde{\gamma}_{xz},[3]\tilde{\gamma}_{yy},[4]\tilde{\gamma}_{yz},[5]\tilde{\gamma}_{zz},\\
+    [6]\tilde{A}_{xx},[7]\tilde{A}_{xy},[8]\tilde{A}_{xz},[9]\tilde{A}_{yy},[10]\tilde{A}_{yz},[11]\tilde{A}_{zz},\\
+    [12]\Theta,[13]\hat{\Gamma}^x,[14]\hat{\Gamma}^y,[15]\hat{\Gamma}^z,\\
+    [16]\alpha,[17]\beta^x,[18]\beta^y,[19]\beta^z,[20]b^x,[21]b^y,[22]b^z,\\
+    [23]A_x,[24]A_y,[25]A_z,\\
+    [26]B^x_x,[27]B^y_x,[28]B^z_x,[29]B^x_y,[30]B^y_y,[31]B^z_y,[32]B^x_z,[33]B^y_z,[34]B^z_z,\\
+    [35]D_{xxx},[36]D_{xxy},[37]D_{xxz},[38]D_{xyy},[39]D_{xyz},[40]D_{xzz},\\
+    [41]D_{yxx},[42]D_{yxy},[43]D_{yxz},[44]D_{yyy},[45]D_{yyz},[46]D_{yzz},\\
+    [47]D_{zxx},[48]D_{zxy},[49]D_{zxz},[50]D_{zyy},[51]D_{zyz},[52]D_{zzz},\\
+    [53]K,[54]\phi,[55]P_x,[56]P_y,[57]P_z.
+@f$
+
+# Output Inspection
+
+Here we provide a brief introduction on how to inspect the output files, using a snapshot from one singble black hole simulation as an example. The converted vtu file can be opened directly in the paraview:
+
+@image html tutorials/exahype2/exagrype/para_vis_01.png
+
+As the patch sizes are different at different AMR levels, the thickness is thus different as well. Using the slice tool (fourth in the third line of the quick toolbars) and choosing Z normal gives you a actuall slice of the x-y plane of the simulation. You can also switch to "surface with edges" from "surface" on the second line of the quick toolbars to check the AMR pattern:
+
+@image html tutorials/exahype2/exagrype/para_vis_02.png
+
+Using the list in the second line of the quick bar you can select the variables you would like to inspect, for the black hole spacetimes, the most characteristic variables that one may look into is the conformal factor (\f$ \phi \f$, 54), the lapse function (\f$ \alpha \f$, 16) and the physical constraints (\f$ H, M_i \f$, 59-62 if outputted). Using the plot over line tool, you can check the profiles of variables in a separate panel:
+
+@image html tutorials/exahype2/exagrype/para_vis_03.png
+
+You can switch among snapshots of different timestamps using the buttons on the first line of the quick tool bars, for the Single Schwarzschild Black Hole, the solution should remain static after some relaxing time. Therefore, the color map and the profile of the variables should only change, if any, a little in the snapshots from the latter time of simulation.
+
+*/
+
