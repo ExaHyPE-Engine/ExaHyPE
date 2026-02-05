@@ -181,8 +181,9 @@ if __name__ == "__main__":
         project.add_solver(my_primary_solver)
         added_limiter = False
         my_primary_solver.set_implementation(
-          refinement_criterion="""::exahype2::RefinementCommand artificialRefinement(x, h);""",
+          refinement_criterion="""return artificialRefinement(x, h);""",
         )
+        my_primary_solver.add_user_solver_includes( "SingleBlackHoleScenario.h")
 
     elif "fd4-rk1-limited-ps-" in args.solver:
         FD4PatchSize = 16*int(args.solver[-1])
@@ -196,8 +197,9 @@ if __name__ == "__main__":
             interpolation_method=args.interpolation_method,
         )
         my_primary_solver.set_implementation(
-          refinement_criterion="""::exahype2::RefinementCommand artificialRefinement(x, h);""",
+          refinement_criterion="""return artificialRefinement(x, h);""",
         )
+        my_primary_solver.add_user_solver_includes( "SingleBlackHoleScenario.h")
 
         my_secondary_solver = Limiter(
             name="CCZ4SBH",
@@ -228,8 +230,10 @@ if __name__ == "__main__":
             max_cell_size=max_cell_size,
         )
         my_primary_solver.set_implementation(
-          refinement_criterion="""::exahype2::RefinementCommand artificialRefinement(x, h);""",
+          refinement_criterion="""return artificialRefinement(volumeCentre, volumeH);""",
         )
+        my_primary_solver.add_user_solver_includes( """#include "SingleBlackHoleScenario.h" """)
+
         project.add_solver(my_primary_solver)
         added_limiter = False
     else:

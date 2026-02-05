@@ -43,6 +43,16 @@ void benchmarks::exahype2::ccz4::prepareTwoPunctures() {
 }
 
 
+::exahype2::RefinementCommand benchmarks::exahype2::ccz4::artificialRefinement(
+  const tarch::la::Vector<Dimensions, double>& x,
+  const tarch::la::Vector<Dimensions, double>& h
+) {
+  return tarch::la::norm2(x)<tarch::la::max(h)
+       ? ::exahype2::RefinementCommand::Refine
+       : ::exahype2::RefinementCommand::Keep;
+}
+
+
 ::exahype2::RefinementCommand benchmarks::exahype2::ccz4::refinementCriterion(
   const tarch::la::Vector<Dimensions, double>& x,
   const tarch::la::Vector<Dimensions, double>& h,

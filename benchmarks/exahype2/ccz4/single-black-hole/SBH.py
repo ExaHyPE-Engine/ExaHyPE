@@ -104,7 +104,7 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
 
         self.set_implementation(
             initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-            refinement_criterion=exahype2.solvers.PDETerms.None_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
         )
 
@@ -269,7 +269,7 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
 
         self.set_implementation(
             initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-            refinement_criterion=exahype2.solvers.PDETerms.None_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             boundary_conditions=exahype2.solvers.PDETerms.None_Implementation,
         )
 
@@ -607,7 +607,7 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
 
         self.set_implementation(
             initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-            refinement_criterion=exahype2.solvers.PDETerms.None_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             boundary_conditions=exahype2.solvers.PDETerms.None_Implementation,
         )
 
@@ -753,7 +753,7 @@ class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
 
         self.set_implementation(
             initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-            refinement_criterion=exahype2.solvers.PDETerms.None_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
         )
 

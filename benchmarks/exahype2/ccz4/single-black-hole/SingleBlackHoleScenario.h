@@ -26,11 +26,11 @@ namespace benchmarks {
       void prepareTwoPunctures();
 
       /**
-       * @todo Han This routine deserves some documentation
+       * @todo Tobias should document this one
        */
       ::exahype2::RefinementCommand artificialRefinement(
         const tarch::la::Vector<Dimensions, double>& x,
-        const tarch::la::Vector<Dimensions, double>& cellH
+        const tarch::la::Vector<Dimensions, double>& h 
       );
 
       /**

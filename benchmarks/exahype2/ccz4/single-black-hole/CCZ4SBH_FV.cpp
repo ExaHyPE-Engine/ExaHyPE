@@ -22,24 +22,6 @@ benchmarks::exahype2::ccz4::CCZ4SBH_FV::CCZ4SBH_FV() {
 }
 
 
-::exahype2::RefinementCommand benchmarks::exahype2::ccz4::CCZ4SBH_FV::refinementCriterion(
-  const double * __restrict__ Q, // Q[59+0],
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
-  double                                       t
-) {
-  if (tarch::la::equals(t,0.0)) {
-    return benchmarks::exahype2::ccz4::refinementCriterion(
-      x,
-      h,
-      MaxAdmissibleCellH,
-      MinAdmissibleCellH
-    );
-  }
-  else return ::exahype2::RefinementCommand::Keep;
-}
-
-
 void benchmarks::exahype2::ccz4::CCZ4SBH_FV::initialCondition(
   double* __restrict__ Q,
   const tarch::la::Vector<Dimensions, double>& volumeCentre,
