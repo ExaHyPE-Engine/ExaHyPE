@@ -12,11 +12,6 @@ namespace benchmarks {
   namespace exahype2 {
     namespace ccz4 {
       class CCZ4SBH_FV;
-#ifdef PureFV
-      extern TP::TwoPunctures* twoPunctures;
-
-      void prepareTwoPunctures();
-#endif
     } // namespace ccz4
   }   // namespace exahype2
 } // namespace benchmarks
@@ -98,6 +93,20 @@ public:
   virtual void finishTimeStep() override;
 
   void incNumberOfPatches();
+
+
+  /**
+   * Refinement criterion
+   *
+   * Delegate to benchmarks::exahype2::ccz4::refinementCriterion()
+   * for time t=0, i.e. for the initial condition.
+   */
+  virtual ::exahype2::RefinementCommand refinementCriterion(
+    const double * __restrict__ Q, // Q[59+0],
+    const tarch::la::Vector<Dimensions,double>&  x,
+    const tarch::la::Vector<Dimensions,double>&  h,
+    double                                       t
+  ) override;
 
 private:
   static bool isCellOverlappingWithBHImpactArea(

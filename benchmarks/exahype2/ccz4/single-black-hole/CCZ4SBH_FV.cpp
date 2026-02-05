@@ -1,6 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "CCZ4SBH_FV.h"
+#include "SingleBlackHoleScenario.h"
 
 #ifdef PureFV
 #else
@@ -15,46 +16,29 @@
 tarch::multicore::BooleanSemaphore benchmarks::exahype2::ccz4::CCZ4SBH_FV::_semaphore;
 tarch::logging::Log benchmarks::exahype2::ccz4::CCZ4SBH_FV::_log("benchmarks::exahype2::ccz4::CCZ4SBH_FV");
 
-#ifdef PureFV
-TP::TwoPunctures* benchmarks::exahype2::ccz4::twoPunctures = nullptr;
 
-void benchmarks::exahype2::ccz4::prepareTwoPunctures() {
-  if (twoPunctures == nullptr) {
-    twoPunctures = new TP::TwoPunctures();
-
-    // first we set the parameter. TODO:find a way to read parameter from python script
-    // int swi=0;//0--single black hole, 1--BBH hoc, 2--BBH rotation, 3--GW150914
-
-    twoPunctures->par_b             = 1.0;
-    twoPunctures->center_offset[0]  = -1.0;
-    twoPunctures->center_offset[1]  = 0.0;
-    twoPunctures->center_offset[2]  = 0.0;
-    twoPunctures->target_M_plus     = 1.0; // adm mass
-    twoPunctures->par_P_plus[0]     = 0.0;
-    twoPunctures->par_P_plus[1]     = 0.0;
-    twoPunctures->par_P_plus[2]     = 0.0; // linear momentum
-    twoPunctures->par_S_plus[0]     = 0.0;
-    twoPunctures->par_S_plus[1]     = 0.0;
-    twoPunctures->par_S_plus[2]     = 0.0; // spin
-    twoPunctures->target_M_minus    = 0.0; // adm mass
-    twoPunctures->par_P_minus[0]    = 0.0;
-    twoPunctures->par_P_minus[1]    = 0.0;
-    twoPunctures->par_P_minus[2]    = 0.0; // linear momentum
-    twoPunctures->par_S_minus[0]    = 0.0;
-    twoPunctures->par_S_minus[1]    = 0.0;
-    twoPunctures->par_S_minus[2]    = 0.0;          // spin
-    twoPunctures->grid_setup_method = "evaluation"; // evaluation or Taylor expansion
-    twoPunctures->TP_epsilon        = 1e-6;
-
-    twoPunctures->PrintParameters();
-
-    // then solve the equation
-    twoPunctures->Run();
-  }
+benchmarks::exahype2::ccz4::CCZ4SBH_FV::CCZ4SBH_FV() {
+  prepareTwoPunctures();
 }
-#endif
 
-benchmarks::exahype2::ccz4::CCZ4SBH_FV::CCZ4SBH_FV() { prepareTwoPunctures(); }
+
+::exahype2::RefinementCommand benchmarks::exahype2::ccz4::CCZ4SBH_FV::refinementCriterion(
+  const double * __restrict__ Q, // Q[59+0],
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  double                                       t
+) {
+  if (tarch::la::equals(t,0.0)) {
+    return benchmarks::exahype2::ccz4::refinementCriterion(
+      x,
+      h,
+      MaxAdmissibleCellH,
+      MinAdmissibleCellH
+    );
+  }
+  else return ::exahype2::RefinementCommand::Keep;
+}
+
 
 void benchmarks::exahype2::ccz4::CCZ4SBH_FV::initialCondition(
   double* __restrict__ Q,

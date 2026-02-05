@@ -81,8 +81,8 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         super(Limiter, self).__init__(
             name=name + "_FV",
             patch_size=SubPatchSize,
-            min_volume_h=1.0 / 65536,
-            max_volume_h=65536,
+            min_volume_h=1.0 / 65536, # @so refine to the minimum
+            max_volume_h=1.0 / 65536, # @not really a regular grid, as we work localised
             pde_terms_without_state=True,
         )
         self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
@@ -104,7 +104,7 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
 
         self.set_implementation(
             initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
             boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
         )
 
@@ -753,7 +753,7 @@ class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
 
         self.set_implementation(
             initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
             boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
         )
 
