@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=trees
+#SBATCH --job-name=trees-regular
 #SBATCH -p multi
 #SBATCH --nodes=1
 #SBATCH -n 1
@@ -18,5 +18,4 @@ module load gcc/15.2
 export I_MPI_CXX=icpx
  
 ./peano-regular-$SLURM_ARRAY_TASK_ID-trees  > results-regular-$SLURM_ARRAY_TASK_ID.out
-./peano-adaptive-$SLURM_ARRAY_TASK_ID-trees > results-adaptive-$SLURM_ARRAY_TASK_ID.out
 

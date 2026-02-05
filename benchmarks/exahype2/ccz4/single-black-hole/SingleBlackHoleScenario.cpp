@@ -1,6 +1,10 @@
 #include "SingleBlackHoleScenario.h"
 #include "Constants.h"
 
+namespace {
+  tarch::logging::Log _log( "benchmarks::exahype2::ccz4" );
+}
+
 TP::TwoPunctures* benchmarks::exahype2::ccz4::twoPunctures = nullptr;
 
 void benchmarks::exahype2::ccz4::prepareTwoPunctures() {
@@ -47,6 +51,7 @@ void benchmarks::exahype2::ccz4::prepareTwoPunctures() {
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
+  std::cout << "max=" << maxH << ", min=" << minH << ", h=" << h << std::endl;
   assertion2( maxH>=minH, maxH, minH );
 
   int refinementLevels = 0;
@@ -58,6 +63,8 @@ void benchmarks::exahype2::ccz4::prepareTwoPunctures() {
 
   if ( h(0)>maxH ) {
     result = ::exahype2::RefinementCommand::Refine;
+  }
+  else if (refinementLevels==0) {
   }
   else if (refinementLevels==1) {
     constexpr int NumberOfRefinementLayers = 2;
@@ -81,8 +88,7 @@ void benchmarks::exahype2::ccz4::prepareTwoPunctures() {
       }
     }
   }
-//  else if (refinementLevels==3) {
-  else {
+  else if (refinementLevels==3) {
     constexpr int NumberOfRefinementLayers = 5;
     double Radius[NumberOfRefinementLayers] = {60.0, 30.0, 15.0, 8.0, 4.0};
     double MaxH[NumberOfRefinementLayers]   = {2.1, 0.7, 0.25, 0.08, 0.03};
