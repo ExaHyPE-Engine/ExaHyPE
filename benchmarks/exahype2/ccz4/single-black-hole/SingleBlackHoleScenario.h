@@ -28,13 +28,20 @@ namespace benchmarks {
       /**
        * @todo Han This routine deserves some documentation
        */
+      ::exahype2::RefinementCommand artificialRefinement(
+        const tarch::la::Vector<Dimensions, double>& x,
+        const tarch::la::Vector<Dimensions, double>& cellH
+      );
+
+      /**
+       * @todo Han This routine deserves some documentation, as well sa likely some assertions that it is only used with the right domain sizes
+       */
       ::exahype2::RefinementCommand refinementCriterion(
         const tarch::la::Vector<Dimensions, double>& x,
         const tarch::la::Vector<Dimensions, double>& h,
         double                                       maxH,
         double                                       minH
       );
-
     }
   }
 }
