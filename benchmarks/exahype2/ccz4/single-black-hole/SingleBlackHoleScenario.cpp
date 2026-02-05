@@ -47,9 +47,15 @@ void benchmarks::exahype2::ccz4::prepareTwoPunctures() {
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
+  assertion2( maxH>=minH, maxH, minH );
 
-  // @todo Somehow compute from stuff
   int refinementLevels = 0;
+  double currentFinestLevelRelativeToCoarsest = maxH;
+  while (currentFinestLevelRelativeToCoarsest > minH) {
+    refinementLevels++;
+    currentFinestLevelRelativeToCoarsest /= 3.0;
+  }
+
   if ( h(0)>maxH ) {
     result = ::exahype2::RefinementCommand::Refine;
   }
@@ -86,6 +92,9 @@ void benchmarks::exahype2::ccz4::prepareTwoPunctures() {
        result=::exahype2::RefinementCommand::Refine;
       }
     }
+  }
+  else {
+    logWarning( "refinementCriterion(...)", "no support for " << refinementLevels << " different refinement levels" );
   }
 
 /*
