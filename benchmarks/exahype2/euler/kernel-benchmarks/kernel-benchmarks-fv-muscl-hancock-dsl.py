@@ -76,13 +76,27 @@ parser.add_argument(
     action="store_true",
     help="Enable a floating-point exception handler.",
 )
+parser.add_argument(
+    "-d",
+    "--dimensions",
+    default=2,
+    choices = [2, 3],
+    type=int,
+    help="Number of dimensions to use: 2 or 3",
+)
+parser.add_argument(
+    "-j",
+    default=-1,
+    type=int,
+    help="Number of parallel builds to use",
+)
 
 args = parser.parse_args()
 
 fv_muscl_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
     name="FVMUSCLHancock",
     patch_size=args.patch_size,
-    unknowns={"rho": 1,  "u": 1, "v": 1, "e": 1},
+    unknowns={"rho": 1,  "u": 1, "v": 1, "e": 1} if args.dimensions == 2 else {"rho": 1,  "u": 1, "v": 1, "w": 1, "e": 1},
     auxiliary_variables = {},
     min_volume_h=0.001,  # max_cell_size -> arbitrary value
     max_volume_h=0.001,  # min_cell_size -> arbitrary value
@@ -114,14 +128,14 @@ project = exahype2.Project(
 project.add_solver(fv_muscl_solver)
 
 project.set_global_simulation_parameters(
-    dimensions=2,
-    size=[1.0, 1.0],
-    offset=[0.0, 0.0],
+    dimensions=args.dimensions,
+    size=[1.0] * args.dimensions,
+    offset=[0.0] * args.dimensions,
     min_end_time=0.1,
     max_end_time=0.1,
     first_plot_time_stamp=0.0,
     time_in_between_plots=0.0,
-    periodic_BC=[False, False]
+    periodic_BC=[False] * args.dimensions
 )
 
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
@@ -163,6 +177,7 @@ benchmark_main_file = "../../kernel-benchmarks/KernelBenchmarksFVMUSCLHancockDSL
 os.system("cp {} KernelBenchmarksFVMUSCLHancockDSL-main.cpp".format(benchmark_main_file))
 
 project.output.makefile.add_CXX_flag("-DGRAV=9.81")
+
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
 
 print(project)

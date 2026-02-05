@@ -355,7 +355,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
   );
 }
 
-
+static bool gpuIsBusy = false;
 /**
  * Also merge the current task
  */
@@ -390,31 +390,35 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::vector<Task*>& 
   //
   bool foundOffloadingBranch = false;
 
-  auto gpuPatchData = ::exahype2::CopyCellDataGPU(patchData, _numberOfInputValues, _numberOfResultValues);
+  if (!gpuIsBusy){
+    gpuIsBusy = true;
+    auto gpuPatchData = ::exahype2::CopyCellDataGPU(patchData, _numberOfInputValues, _numberOfResultValues);
 
-  #if defined(GPUOffloadingOMP)
-  if (targetDevice>=0) {
-    foundOffloadingBranch = true;
-    ::exahype2::fd::{{KERNEL_NAMESPACE}}::omp::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    #if defined(GPUOffloadingOMP)
+    if (gpuPatchData.targetDevice>=0) {
+      foundOffloadingBranch = true;
+      ::exahype2::fd::{{KERNEL_NAMESPACE}}::omp::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    }
+    #endif
+
+    #if defined(GPUOffloadingHIP)
+    if (gpuPatchData.targetDevice>=0) {
+      foundOffloadingBranch = true;
+      ::exahype2::fd::{{KERNEL_NAMESPACE}}::hip::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    }
+    #endif
+
+    #if defined(GPUOffloadingSYCL)
+    if (gpuPatchData.targetDevice>=0 or targetDevice==Host) {
+      foundOffloadingBranch = true;
+
+      ::exahype2::fd::{{KERNEL_NAMESPACE}}::sycl::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    }
+    #endif
+
+    gpuPatchData.copyBackAndDestroy();
+    gpuIsBusy = false;
   }
-  #endif
-
-  #if defined(GPUOffloadingHIP)
-  if (targetDevice>=0) {
-    foundOffloadingBranch = true;
-    ::exahype2::fd::{{KERNEL_NAMESPACE}}::hip::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
-  }
-  #endif
-
-  #if defined(GPUOffloadingSYCL)
-  if (targetDevice>=0 or targetDevice==Host) {
-    foundOffloadingBranch = true;
-
-    ::exahype2::fd::{{KERNEL_NAMESPACE}}::sycl::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
-  }
-  #endif
-
-  gpuPatchData.copyBackAndDestroy();
 
   if (not foundOffloadingBranch) {
     ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}

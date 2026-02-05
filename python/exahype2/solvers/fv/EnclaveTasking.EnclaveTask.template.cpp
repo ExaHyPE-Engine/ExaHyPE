@@ -363,7 +363,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::vector<Task*>& o
   auto gpuPatchData = ::exahype2::CopyCellDataGPU(patchData, _numberOfInputValues, _numberOfResultValues);
   
 #if defined(GPUOffloadingOMP)
-  if (targetDevice >= 0) {
+  if (gpuPatchData.targetDevice >= 0) {
     foundOffloadingBranch = true;
     ::exahype2::fv::{{KERNEL_NAMESPACE}}::omp::{{FUSED_COMPUTE_KERNEL_CALL_STATELESS_GPU}}
   }

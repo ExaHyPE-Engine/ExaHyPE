@@ -29,11 +29,9 @@ def timeStepWithRusanov(patchData: "CellData<double, double>&") -> "void":
        source = DataBlock([[0, NumberOfUnknowns], [0, NumberOfVolumesPerAxisInPatch], [0, NumberOfVolumesPerAxisInPatch], [0, NumberOfVolumesPerAxisInPatch], [0, N]], eval("sourceTerm", input[:, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch], x, h, t, dt))
        output[0:NumberOfUnknowns, :, :, :] = output[0:NumberOfUnknowns, :, :, :] + dt * source
 
-    #logDataBlock(input[:, :, :, :, 0], "Input.txt")
     maxEigenvaluesX = DataBlock([[0, 1], [-HaloSize, NumberOfVolumesPerAxisInPatch + HaloSize], [-HaloSize, NumberOfVolumesPerAxisInPatch + HaloSize], [-HaloSize, NumberOfVolumesPerAxisInPatch + HaloSize], [0, N]], eval("maxEigenvalue", input, x, h, t, dt, 0))
     maxEigenvaluesY = DataBlock([[0, 1], [-HaloSize, NumberOfVolumesPerAxisInPatch + HaloSize], [-HaloSize, NumberOfVolumesPerAxisInPatch + HaloSize], [-HaloSize, NumberOfVolumesPerAxisInPatch + HaloSize], [0, N]], eval("maxEigenvalue", input, x, h, t, dt, 1))
     maxEigenvaluesZ = DataBlock([[0, 1], [-HaloSize, NumberOfVolumesPerAxisInPatch + HaloSize], [-HaloSize, NumberOfVolumesPerAxisInPatch + HaloSize], [-HaloSize, NumberOfVolumesPerAxisInPatch + HaloSize], [0, N]], eval("maxEigenvalue", input, x, h, t, dt, 2))
-    #logDataBlock(maxEigenvaluesX[:, :, :, :, 0], "EigenX.txt")
     
     lambdaLeft = max(maxEigenvaluesX[0:1, -1:NumberOfVolumesPerAxisInPatch-1, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch], maxEigenvaluesX[0:1, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch])
     lambdaRight = max(maxEigenvaluesX[0:1, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch], maxEigenvaluesX[0:1, 1:NumberOfVolumesPerAxisInPatch + 1, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch])
@@ -41,14 +39,10 @@ def timeStepWithRusanov(patchData: "CellData<double, double>&") -> "void":
     lambdaTop = max(maxEigenvaluesY[0:1, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch], maxEigenvaluesY[0:1, 0:NumberOfVolumesPerAxisInPatch, 1:NumberOfVolumesPerAxisInPatch + 1, 0:NumberOfVolumesPerAxisInPatch])
     lambdaNear = max(maxEigenvaluesZ[0:1, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch, -1:NumberOfVolumesPerAxisInPatch-1], maxEigenvaluesZ[0:1, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch])
     lambdaFar = max(maxEigenvaluesZ[0:1, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch], maxEigenvaluesZ[0:1, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch, 1:NumberOfVolumesPerAxisInPatch + 1])
-    #logDataBlock(lambdaLeft[:, :, :, :, 0], "LambdaLeft.txt")
-    #logDataBlock(lambdaRight[:, :, :, :, 0], "LambdaRight.txt")
+
     fluxLeft = -1.0 * lambdaLeft * (input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch] - input[0:NumberOfVolumesPerAxisInPatch, -1:NumberOfVolumesPerAxisInPatch-1, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch])
     fluxRight = -1.0 * lambdaRight * (input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 1:NumberOfVolumesPerAxisInPatch+1, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch] - input[0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch])
     output = output + dt / h(0) * (fluxLeft - fluxRight) * NumberOfVolumesPerAxisInPatch * 0.5
-    #logDataBlock(fluxLeft[:, :, :, :, 0], "FluxLeft.txt")
-    #logDataBlock(fluxLeft[:, :, :, :, 0], "FluxRight.txt")
-    #logDataBlock(output[:, :, :, :, 0], "Output.txt")
     fluxBottom = -1.0 * lambdaBottom * (input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch] - input[0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch, -1:NumberOfVolumesPerAxisInPatch-1, 0:NumberOfVolumesPerAxisInPatch])
     fluxTop = -1.0 * lambdaTop * (input[0:NumberOfUnknowns + NumberOfAuxiliaryVariables, 0:NumberOfVolumesPerAxisInPatch, 1:NumberOfVolumesPerAxisInPatch+1, 0:NumberOfVolumesPerAxisInPatch] - input[0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch, 0:NumberOfVolumesPerAxisInPatch])
     output = output + dt / h(1) * (fluxBottom - fluxTop) * NumberOfVolumesPerAxisInPatch * 0.5

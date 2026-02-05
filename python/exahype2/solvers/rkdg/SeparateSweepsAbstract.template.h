@@ -211,8 +211,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      *
      * @return Actually observed sizes, not the admissible quantities
      */
-    double getMaxCellSize(bool currentTimeStep = true) const;
-    double getMinCellSize(bool currentTimeStep = true) const;
+    double getMaxCellSize() const;
+    double getMinCellSize() const;
 
     /**
      * Within the DG context, mesh is an alias for cell.

@@ -95,30 +95,23 @@ def create_musclhancock_kernel_definitions_2d():
   musclhancock_stateless_kernel_declaration = musclhancock_stateless_kernel_tree.print_declaration()
   musclhancock_stateless_call_with_measurement_declaration = musclhancock_stateless_kernel_tree.print_declaration_with_timer()
 
-#  musclhancock_stateless_kernel = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], True).print_cpp()
-#  musclhancock_stateless_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], True).print_definition_with_timer()
-#  musclhancock_stateless_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], True).print_declaration()
-#  musclhancock_stateless_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], True).print_declaration_with_timer()
-#
-#  musclhancock_accelerator_kernel = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], True, True).print_cpp()
-#  musclhancock_accelerator_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], True, True).print_definition_with_timer()
-#  musclhancock_accelerator_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], True, True).print_declaration()
-#  musclhancock_accelerator_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], True, True).print_declaration_with_timer()
-#
-#  musclhancock_omp_kernel = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"]).print_omp()
-#  musclhancock_omp_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"]).print_definition_with_timer()
-#  musclhancock_omp_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"]).print_declaration()
-#  musclhancock_omp_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"]).print_declaration_with_timer()
-#
-#  musclhancock_omp_stateless_kernel = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], True).print_omp()
-#  musclhancock_omp_stateless_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], True).print_definition_with_timer()
-#  musclhancock_omp_stateless_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], True).print_declaration()
-#  musclhancock_omp_stateless_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], True).print_declaration_with_timer()
-#
-#  musclhancock_omp_accelerator_kernel = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], True, True).print_omp()
-#  musclhancock_omp_accelerator_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], True, True).print_definition_with_timer()
-#  musclhancock_omp_accelerator_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], True, True).print_declaration()
-#  musclhancock_omp_accelerator_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], True, True).print_declaration_with_timer()
+  musclhancock_omp_kernel_tree = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], stateless=False)
+  musclhancock_omp_kernel = musclhancock_omp_kernel_tree.print_omp()
+  musclhancock_omp_call_with_measurement = musclhancock_omp_kernel_tree.print_definition_with_timer()
+  musclhancock_omp_kernel_declaration = musclhancock_omp_kernel_tree.print_declaration()
+  musclhancock_omp_call_with_measurement_declaration = musclhancock_omp_kernel_tree.print_declaration_with_timer()
+
+  musclhancock_omp_stateless_kernel_tree = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], stateless=True)
+  musclhancock_omp_stateless_kernel = musclhancock_omp_stateless_kernel_tree.print_omp()
+  musclhancock_omp_stateless_call_with_measurement = musclhancock_omp_stateless_kernel_tree.print_definition_with_timer()
+  musclhancock_omp_stateless_kernel_declaration = musclhancock_omp_stateless_kernel_tree.print_declaration()
+  musclhancock_omp_stateless_call_with_measurement_declaration = musclhancock_omp_stateless_kernel_tree.print_declaration_with_timer()
+
+  musclhancock_omp_accelerator_kernel_tree = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock2d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], stateless=True, use_accelerator=True)
+  musclhancock_omp_accelerator_kernel = musclhancock_omp_accelerator_kernel_tree.print_omp()
+  musclhancock_omp_accelerator_call_with_measurement = musclhancock_omp_accelerator_kernel_tree.print_definition_with_timer()
+  musclhancock_omp_accelerator_kernel_declaration = musclhancock_omp_accelerator_kernel_tree.print_declaration()
+  musclhancock_omp_accelerator_call_with_measurement_declaration = musclhancock_omp_accelerator_kernel_tree.print_declaration_with_timer()
 
   if not os.path.exists("kernels"):
       os.makedirs("kernels")
@@ -137,23 +130,21 @@ def create_musclhancock_kernel_definitions_2d():
 {musclhancock_call_with_measurement_declaration}   
 
 {musclhancock_stateless_kernel_declaration}
-{musclhancock_stateless_call_with_measurement_declaration}"""
-#{musclhancock_accelerator_kernel_declaration}
-#{musclhancock_accelerator_call_with_measurement_declaration}
-#
-##if defined(SharedOMP)
-#{musclhancock_omp_kernel_declaration}
-#{musclhancock_omp_call_with_measurement_declaration}
-#{musclhancock_omp_stateless_kernel_declaration}
-#{musclhancock_omp_stateless_call_with_measurement_declaration}
-##endif
-#
-##if defined(GPUOffloadingOMP)
-#{musclhancock_omp_accelerator_kernel_declaration}
-#{musclhancock_omp_accelerator_call_with_measurement_declaration}
-##endif
+{musclhancock_stateless_call_with_measurement_declaration}
 
-"""#include "musclhancock2d.cpph"
+#if defined(SharedOMP)
+{musclhancock_omp_kernel_declaration}
+{musclhancock_omp_call_with_measurement_declaration}
+{musclhancock_omp_stateless_kernel_declaration}
+{musclhancock_omp_stateless_call_with_measurement_declaration}
+#endif
+
+#if defined(GPUOffloadingOMP)
+{musclhancock_omp_accelerator_kernel_declaration}
+{musclhancock_omp_accelerator_call_with_measurement_declaration}
+#endif
+
+#include "musclhancock2d.cpph"
 """)
   file.close()
 
@@ -162,20 +153,18 @@ def create_musclhancock_kernel_definitions_2d():
   file.write(musclhancock_call_with_measurement)
   file.write(musclhancock_stateless_kernel)
   file.write(musclhancock_stateless_call_with_measurement)
-#  file.write(musclhancock_accelerator_kernel)
-#  file.write(musclhancock_accelerator_call_with_measurement)
-#
-#  file.write("#if defined(SharedOMP)\n")
-#  file.write(musclhancock_omp_kernel)
-#  file.write(musclhancock_omp_call_with_measurement)
-#  file.write(musclhancock_omp_stateless_kernel)
-#  file.write(musclhancock_omp_stateless_call_with_measurement)
-#  file.write("#endif\n")
-#
-#  file.write("#if defined(GPUOffloadingOMP)\n")
-#  file.write(musclhancock_omp_accelerator_kernel)
-#  file.write(musclhancock_omp_accelerator_call_with_measurement)
-#  file.write("#endif\n")
+
+  file.write("#if defined(SharedOMP)\n")
+  file.write(musclhancock_omp_kernel)
+  file.write(musclhancock_omp_call_with_measurement)
+  file.write(musclhancock_omp_stateless_kernel)
+  file.write(musclhancock_omp_stateless_call_with_measurement)
+  file.write("#endif\n")
+
+  file.write("#if defined(GPUOffloadingOMP)\n")
+  file.write(musclhancock_omp_accelerator_kernel)
+  file.write(musclhancock_omp_accelerator_call_with_measurement)
+  file.write("#endif\n")
   file.close()
 
 def create_musclhancock_kernel_definitions_3d():
@@ -193,36 +182,35 @@ def create_musclhancock_kernel_definitions_3d():
                        DSL.SyntaxTree.Argument("sourceTerm", DSL.SyntaxTree.TCustom("const SourceFunctor&")),
                        DSL.SyntaxTree.Argument("maxEigenvalue", DSL.SyntaxTree.TCustom("const MaxEigenvalueFunctor&"))]
 
-  musclhancock_kernel_tree = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"])
+  musclhancock_kernel_tree = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], stateless=False)
   musclhancock_kernel = musclhancock_kernel_tree.print_cpp()
   musclhancock_call_with_measurement = musclhancock_kernel_tree.print_definition_with_timer()
   musclhancock_kernel_declaration = musclhancock_kernel_tree.print_declaration()
   musclhancock_call_with_measurement_declaration = musclhancock_kernel_tree.print_declaration_with_timer()
 
-#  musclhancock_stateless_kernel = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], True).print_cpp()
-#  musclhancock_stateless_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], True).print_definition_with_timer()
-#  musclhancock_stateless_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], True).print_declaration()
-#  musclhancock_stateless_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], True).print_declaration_with_timer()#
+  musclhancock_stateless_kernel_tree = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], stateless=True)
+  musclhancock_stateless_kernel = musclhancock_stateless_kernel_tree.print_cpp()
+  musclhancock_stateless_call_with_measurement = musclhancock_stateless_kernel_tree.print_definition_with_timer()
+  musclhancock_stateless_kernel_declaration = musclhancock_stateless_kernel_tree.print_declaration()
+  musclhancock_stateless_call_with_measurement_declaration = musclhancock_stateless_kernel_tree.print_declaration_with_timer()
 
-#  musclhancock_accelerator_kernel = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], True, True).print_cpp()
-#  musclhancock_accelerator_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], True, True).print_definition_with_timer()
-#  musclhancock_accelerator_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], True, True).print_declaration()
-#  musclhancock_accelerator_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock"], True, True).print_declaration_with_timer()#
+  musclhancock_omp_kernel_tree = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], stateless=False)
+  musclhancock_omp_kernel = musclhancock_omp_kernel_tree.print_omp()
+  musclhancock_omp_call_with_measurement = musclhancock_omp_kernel_tree.print_definition_with_timer()
+  musclhancock_omp_kernel_declaration = musclhancock_omp_kernel_tree.print_declaration()
+  musclhancock_omp_call_with_measurement_declaration = musclhancock_omp_kernel_tree.print_declaration_with_timer()
 
-#  musclhancock_omp_kernel = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"]).print_omp()
-#  musclhancock_omp_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"]).print_definition_with_timer()
-#  musclhancock_omp_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"]).print_declaration()
-#  musclhancock_omp_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"]).print_declaration_with_timer()#
+  musclhancock_omp_stateless_kernel_tree = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], stateless=True)
+  musclhancock_omp_stateless_kernel = musclhancock_omp_stateless_kernel_tree.print_omp()
+  musclhancock_omp_stateless_call_with_measurement = musclhancock_omp_stateless_kernel_tree.print_definition_with_timer()
+  musclhancock_omp_stateless_kernel_declaration = musclhancock_omp_stateless_kernel_tree.print_declaration()
+  musclhancock_omp_stateless_call_with_measurement_declaration = musclhancock_omp_stateless_kernel_tree.print_declaration_with_timer()
 
-#  musclhancock_omp_stateless_kernel = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], True).print_omp()
-#  musclhancock_omp_stateless_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], True).print_definition_with_timer()
-#  musclhancock_omp_stateless_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], True).print_declaration()
-#  musclhancock_omp_stateless_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], True).print_declaration_with_timer()#
-
-#  musclhancock_omp_accelerator_kernel = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], True, True).print_omp()
-#  musclhancock_omp_accelerator_call_with_measurement = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], True, True).print_definition_with_timer()
-#  musclhancock_omp_accelerator_kernel_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], True, True).print_declaration()
-#  musclhancock_omp_accelerator_call_with_measurement_declaration = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], True, True).print_declaration_with_timer()
+  musclhancock_omp_accelerator_kernel_tree = DSL.Parser().parse(exahype2.solvers.fv.musclhancock.timeStepWithMUSCLHancock3d, template_parameters, functor_arguments, ["exahype2", "fv", "musclhancock", "omp"], stateless=True, use_accelerator=True)
+  musclhancock_omp_accelerator_kernel = musclhancock_omp_accelerator_kernel_tree.print_omp()
+  musclhancock_omp_accelerator_call_with_measurement = musclhancock_omp_accelerator_kernel_tree.print_definition_with_timer()
+  musclhancock_omp_accelerator_kernel_declaration = musclhancock_omp_accelerator_kernel_tree.print_declaration()
+  musclhancock_omp_accelerator_call_with_measurement_declaration = musclhancock_omp_accelerator_kernel_tree.print_declaration_with_timer()
 
   if not os.path.exists("kernels"):
       os.makedirs("kernels")
@@ -238,48 +226,44 @@ def create_musclhancock_kernel_definitions_3d():
 #include "tarch/timing/Watch.h"
 
 {musclhancock_kernel_declaration}
-{musclhancock_call_with_measurement_declaration}"""        
+{musclhancock_call_with_measurement_declaration}   
 
-#{musclhancock_stateless_kernel_declaration}
-#{musclhancock_stateless_call_with_measurement_declaration}
-#{musclhancock_accelerator_kernel_declaration}
-#{musclhancock_accelerator_call_with_measurement_declaration}
-#
-##if defined(SharedOMP)
-#{musclhancock_omp_kernel_declaration}
-#{musclhancock_omp_call_with_measurement_declaration}
-#{musclhancock_omp_stateless_kernel_declaration}
-#{musclhancock_omp_stateless_call_with_measurement_declaration}
-##endif
-#
-##if defined(GPUOffloadingOMP)
-#{musclhancock_omp_accelerator_kernel_declaration}
-#{musclhancock_omp_accelerator_call_with_measurement_declaration}
-##endif
+{musclhancock_stateless_kernel_declaration}
+{musclhancock_stateless_call_with_measurement_declaration}
 
-"""#include "musclhancock3d.cpph"
+#if defined(SharedOMP)
+{musclhancock_omp_kernel_declaration}
+{musclhancock_omp_call_with_measurement_declaration}
+{musclhancock_omp_stateless_kernel_declaration}
+{musclhancock_omp_stateless_call_with_measurement_declaration}
+#endif
+
+#if defined(GPUOffloadingOMP)
+{musclhancock_omp_accelerator_kernel_declaration}
+{musclhancock_omp_accelerator_call_with_measurement_declaration}
+#endif
+
+#include "musclhancock3d.cpph"
 """)
   file.close()
 
   file = open("kernels/musclhancock3d.cpph", "w")
   file.write(musclhancock_kernel)
   file.write(musclhancock_call_with_measurement)
-#  file.write(musclhancock_stateless_kernel)
-#  file.write(musclhancock_stateless_call_with_measurement)
-#  file.write(musclhancock_accelerator_kernel)
-#  file.write(musclhancock_accelerator_call_with_measurement)
-#
-#  file.write("#if defined(SharedOMP)\n")
-#  file.write(musclhancock_omp_kernel)
-#  file.write(musclhancock_omp_call_with_measurement)
-#  file.write(musclhancock_omp_stateless_kernel)
-#  file.write(musclhancock_omp_stateless_call_with_measurement)
-#  file.write("#endif\n")
-#
-#  file.write("#if defined(GPUOffloadingOMP)\n")
-#  file.write(musclhancock_omp_accelerator_kernel)
-#  file.write(musclhancock_omp_accelerator_call_with_measurement)
-#  file.write("#endif\n")
+  file.write(musclhancock_stateless_kernel)
+  file.write(musclhancock_stateless_call_with_measurement)
+
+  file.write("#if defined(SharedOMP)\n")
+  file.write(musclhancock_omp_kernel)
+  file.write(musclhancock_omp_call_with_measurement)
+  file.write(musclhancock_omp_stateless_kernel)
+  file.write(musclhancock_omp_stateless_call_with_measurement)
+  file.write("#endif\n")
+
+  file.write("#if defined(GPUOffloadingOMP)\n")
+  file.write(musclhancock_omp_accelerator_kernel)
+  file.write(musclhancock_omp_accelerator_call_with_measurement)
+  file.write("#endif\n")
   file.close()
 
 def create_compute_Riemann_kernel_for_MUSCLHancock_dsl(flux_implementation,
