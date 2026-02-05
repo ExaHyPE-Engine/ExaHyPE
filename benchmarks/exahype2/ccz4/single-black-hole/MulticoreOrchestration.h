@@ -69,6 +69,8 @@ class benchmarks::exahype2::ccz4::MulticoreOrchestration: public tarch::multicor
     int _finiteVolumeTasksInThisBSPSection;
 
     tarch::multicore::orchestration::FusionImplementation  _fusionImplementation;
+    int _minFusedTasks;
+    int _maxFusedTasks;
 
   public:
     /**
@@ -80,7 +82,9 @@ class benchmarks::exahype2::ccz4::MulticoreOrchestration: public tarch::multicor
      *   itself.
      */
     MulticoreOrchestration(
-      const tarch::multicore::orchestration::FusionImplementation&  fusionImplementation
+      const tarch::multicore::orchestration::FusionImplementation&  fusionImplementation,
+      int minFusedTasks = 16,
+      int maxFusedTasks = std::numeric_limits<int>::max()
     );
     virtual ~MulticoreOrchestration() = default;
 

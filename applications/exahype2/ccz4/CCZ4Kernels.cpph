@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-
+#if not defined(GPUOffloadingOMP)
 void applications::exahype2::ccz4::maxEigenvalue(
         const double* const Q,
         int                 normal,
@@ -21,7 +21,9 @@ void applications::exahype2::ccz4::maxEigenvalue(
   const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
   maxEigenvalue[0] = std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
 }
+#endif
 
+#if not defined(GPUOffloadingOMP)
 //this version use alpha and phi
 void applications::exahype2::ccz4::source(double* S, const double* const Q,
       const int CCZ4LapseType,
@@ -533,8 +535,9 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
         for (int i = 0; i < 3; i++) S[55+i] = 0.0;
     }
 }
+#endif
 
-
+#if not defined(GPUOffloadingOMP)
 void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal,
       const int CCZ4LapseType,
       const double CCZ4ds,
@@ -1021,6 +1024,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         for (int i = 0; i < 3; i++) BgradQ[55+i] = 0.0;
     }
 }
+#endif
 /*
 
 //we write the quantities hydrodynamics needs required explicitiy to make stuff more clearly

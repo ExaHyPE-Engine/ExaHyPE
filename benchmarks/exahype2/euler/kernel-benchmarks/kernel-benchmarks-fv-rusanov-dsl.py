@@ -84,7 +84,12 @@ parser.add_argument(
     type=int,
     help="Number of dimensions to use: 2 or 3",
 )
-
+parser.add_argument(
+    "-j",
+    default=-1,
+    type=int,
+    help="Number of parallel builds to use",
+)
 args = parser.parse_args()
 
 fv_rusanov_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
@@ -170,8 +175,12 @@ project.constants.define_value("GAMMA", str(1.0))
 benchmark_main_file = "../../kernel-benchmarks/KernelBenchmarksFVRusanovDSL-main.cpp"
 os.system("cp {} KernelBenchmarksFVRusanovDSL-main.cpp".format(benchmark_main_file))
 
+# Add the necessary Euler implementation files
+#project.output.makefile.add_cpp_file("AbstractEuler.cpp")
+
 project.output.makefile.add_CXX_flag("-DGRAV=9.81")
-project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
+
+project.build(make=True, make_clean_first=True, throw_away_data_after_build=True, number_of_parallel_builds=32)
 
 print(project)
 print(fv_rusanov_solver)

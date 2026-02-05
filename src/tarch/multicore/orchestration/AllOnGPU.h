@@ -28,6 +28,7 @@ private:
   const int   _device;
   int         _deviceToUse;
   bool        _isInBspSection;
+  const FusionImplementation _fusionImplementation;
 
   void toggleDevice();
 public:
@@ -39,7 +40,7 @@ public:
    * @param device Either a nonnegative integer picking one device or
    *   RoundRobin.
    */
-  AllOnGPU(int device);
+  AllOnGPU(int device, FusionImplementation FusionImplementation = FusionImplementation::LazyEvaluation);
 
   virtual void startBSPSection(int nestedParallelismLevel) override;
   virtual void endBSPSection(int nestedParallelismLevel) override;

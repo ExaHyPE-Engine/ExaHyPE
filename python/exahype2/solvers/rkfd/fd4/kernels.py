@@ -471,7 +471,7 @@ def create_compute_kernel_for_FD4InExaGRyPE_DSL(flux_implementation,
       false, // Runge-Kutta, so no need to copy old data over or to take dt into account
       {% if SECONDORDER %} true {% else %} false {% endif %}, //if we have SO enabled, the quantities that get advections would be different
       {% if SECONDORDER %} false {% else %} true {% endif %} //if we have SO enabled, the quantities that get advections would be different
-    >(targetDevice, gpuPatchData);
+    >(gpuPatchData.targetDevice, gpuPatchData);
   """
   else:
     assert False, "not supported combination: {} x {}".format( solver_variant, kernel_variant )
@@ -582,7 +582,7 @@ def create_compute_kernel_for_FD4_DSL(flux_implementation,
       {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       false // Runge-Kutta, so no need to copy old data over or to take dt into account
-    >(targetDevice, gpuPatchData);
+    >(gpuPatchData.targetDevice, gpuPatchData);
   """
   else:
     assert False, "not supported combination: {} x {}".format( solver_variant, kernel_variant )

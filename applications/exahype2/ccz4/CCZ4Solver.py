@@ -534,9 +534,87 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(
         )
 
 
+class CCZ4Solver_FV_MUSCL_GlobalAdaptiveTimeStepWithEnclaveTasking(
+    AbstractCCZ4Solver, exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep
+):
+    """!
+
+    CCZ4 solver using finite volumes and global adaptive time stepping incl enclave tasking
+
+    Please consult CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking.
+
+    """
+
+    def __init__(
+        self, name, patch_size, min_volume_h, max_volume_h, pde_terms_without_state
+    ):
+        AbstractCCZ4Solver.__init__(self)
+        exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep.__init__(
+            self,
+            name=name,
+            patch_size=patch_size,
+            unknowns=sum(self._FO_formulation_unknowns.values()),
+            auxiliary_variables=0,
+            min_volume_h=min_volume_h,
+            max_volume_h=max_volume_h,
+            time_step_relaxation=AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation,
+            pde_terms_without_state=pde_terms_without_state,
+        )
+        self._add_standard_includes()
+
+        self.set_implementation(
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
+            ncp=construct_FV_ncp(),
+            flux=exahype2.solvers.PDETerms.None_Implementation,
+            source_term=construct_FV_source_term(),
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
+            eigenvalues=construct_FV_eigenvalues(),
+        )
+
+        self.postprocess_updated_patch += construct_FV_postprocessing_kernel()
+
+    def add_tracer(
+        self,
+        name,
+        coordinates,
+        project,
+        number_of_entries_between_two_db_flushes,
+        data_delta_between_two_snapsots,
+        time_delta_between_two_snapsots,
+        clear_database_after_flush,
+        tracer_unknowns,
+    ):
+        """!
+
+        Add tracer to project
+
+        Consult exahype2.tracer.DumpTracerIntoDatabase for an explanation of
+        some of the arguments. Most of them are simply piped through to this
+        class.
+
+        project: exahype2.Project
+
+        """
+        add_tracer_to_FV_solver(
+            name,
+            coordinates,
+            project,
+            self,
+            number_of_entries_between_two_db_flushes,
+            data_delta_between_two_snapsots,
+            time_delta_between_two_snapsots,
+            clear_database_after_flush,
+            tracer_unknowns,
+        )
+
+
 def construct_FD4_ncp():
     return """
+#if defined(GPUOffloadingOMP)
+  double* deltaQSerialised = new double[NumberOfUnknowns*3];
+#else
   double deltaQSerialised[NumberOfUnknowns*3];
+#endif
   for (int i=0; i<NumberOfUnknowns; i++) {
     deltaQSerialised[i+0*NumberOfUnknowns] = 0.0;
     deltaQSerialised[i+1*NumberOfUnknowns] = 0.0;
@@ -545,12 +623,19 @@ def construct_FD4_ncp():
     deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
   ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
+#if defined(GPUOffloadingOMP)
+  delete[] deltaQSerialised;
+#endif
 """
 
 
 def construct_FV_ncp():
     return """
+#if defined(GPUOffloadingOMP)
+  double* deltaQSerialised = new double[NumberOfUnknowns*3];
+#else
   double deltaQSerialised[NumberOfUnknowns*3];
+#endif
   for (int i=0; i<NumberOfUnknowns; i++) {
     deltaQSerialised[i+0*NumberOfUnknowns] = 0.0;
     deltaQSerialised[i+1*NumberOfUnknowns] = 0.0;
@@ -559,6 +644,9 @@ def construct_FV_ncp():
     deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
   ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
+#if defined(GPUOffloadingOMP)
+  delete[] deltaQSerialised;
+#endif
 """
 
 
@@ -1321,7 +1409,11 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
 
 def construct_DG_ncp():
     return """
+#if defined(GPUOffloadingOMP)
+  double* dQdxSerialised = new double[NumberOfUnknowns*3];
+#else
   double dQdxSerialised[NumberOfUnknowns*3];
+#endif
   for (int i=0; i<NumberOfUnknowns; i++) {
     dQdxSerialised[i+0*NumberOfUnknowns] = 0.0;
     dQdxSerialised[i+1*NumberOfUnknowns] = 0.0;
@@ -1330,6 +1422,9 @@ def construct_DG_ncp():
     dQdxSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
   ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, dQdxSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
+#if defined(GPUOffloadingOMP)
+  delete[] dQdxSerialised;
+#endif
 """
 
 
@@ -1342,7 +1437,7 @@ def construct_DG_source_term():
 
 def construct_DG_eigenvalues():
     return """
-  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+  ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd, maxEigenvalue );
 """
 
 
