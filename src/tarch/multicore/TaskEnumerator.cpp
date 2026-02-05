@@ -22,21 +22,29 @@ tarch::multicore::TaskEnumerator::TaskEnumerator():
 
 
 void tarch::multicore::TaskEnumerator::reset() {
+  assertion2( _enumeratorNumber>=0, _enumeratorNumber, toString() );
+  assertion2( _enumeratorNumber<_enumerator.size(), _enumeratorNumber, toString() );
   _enumerator.at(_enumeratorNumber)->reset();
 }
 
 
 int tarch::multicore::TaskEnumerator::size() const {
+  assertion2( _enumeratorNumber>=0, _enumeratorNumber, toString() );
+  assertion2( _enumeratorNumber<_enumerator.size(), _enumeratorNumber, toString() );
   return _enumerator.at(_enumeratorNumber)->size();
 }
 
 
 int tarch::multicore::TaskEnumerator::getNumber() {
+  assertion2( _enumeratorNumber>=0, _enumeratorNumber, toString() );
+  assertion2( _enumeratorNumber<_enumerator.size(), _enumeratorNumber, toString() );
   return _enumerator.at(_enumeratorNumber)->getNumber();
 }
 
 
 void tarch::multicore::TaskEnumerator::releaseNumber( int number ) {
+  assertion2( _enumeratorNumber>=0, _enumeratorNumber, toString() );
+  assertion2( _enumeratorNumber<_enumerator.size(), _enumeratorNumber, toString() );
   _enumerator.at(_enumeratorNumber)->releaseNumber(number);
 }
 
