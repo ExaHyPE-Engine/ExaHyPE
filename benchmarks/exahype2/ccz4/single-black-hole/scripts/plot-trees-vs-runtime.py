@@ -67,14 +67,13 @@ A generic script to create speedup plots.
         min_local_cells_per_tree[ trees ] = data.min_local_cells_per_snapshot(rank)[-1]
         max_virtual_cells_per_tree[ trees ] = data.max_virtual_cells_per_snapshot(rank)[-1]
         min_virtual_cells_per_tree[ trees ] = data.min_virtual_cells_per_snapshot(rank)[-1]
-#        os.remove(data_file)
+        os.remove(data_file)
  
     bar_width = 1.0/6.0   
     tree_keys = sorted( runtime.keys() )
     x_data = range(0,len(tree_keys))
     
     ax1.set_xlabel('Number of trees per rank')
-    #ax1.set_ylabel('Runtime [t]=s', color=color_tps)
    
     color_runtime = "tab:blue"
     ax1.set_ylabel('Runtime', color=color_runtime)
@@ -84,14 +83,11 @@ A generic script to create speedup plots.
              label="Runtime",
              color=color_runtime,
              )
-    #bars1 = ax1.bar(x - width/2, df['TPS'], width, label='TPS', color=color_tps, alpha=0.7)
 
     ax1.tick_params(axis='y', labelcolor=color_runtime)
     ax1.set_xticks(x_data)
     ax1.set_xticklabels( tree_keys )
     
-    
-# Instantiate a second axes that shares the same x-axis
     ax2 = ax1.twinx()
     
     color_cells = 'tab:red'
@@ -127,11 +123,7 @@ A generic script to create speedup plots.
              label="Min virtual cells",
              color=color_cells,
              )
-#    bars2 = ax2.bar(x + width/2, df['Virtual Cell Number'], width, label='Virtual Cell Number', color=color_vcell, alpha=0.7)
-#    ax2.tick_params(axis='y', labelcolor=color_vcell)
 
-    #plt.xlabel( "time" )
-    #plt.ylabel( "trees per rank" )
     plt.legend()
     plt.savefig( args.output + ".pdf" )
     plt.savefig( args.output + ".png" )

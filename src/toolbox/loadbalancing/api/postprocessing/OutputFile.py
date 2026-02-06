@@ -288,3 +288,7 @@ class OutputFile(object):
             result.append(new_entry)
         return result
         
+        
+    def is_valid(self):
+        return hasattr(self, "_runtime")        
+        

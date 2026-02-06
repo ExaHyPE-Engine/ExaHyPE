@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=trees-regular
+#SBATCH --job-name=trees-scheduler
 #SBATCH -p multi
 #SBATCH --nodes=1
 #SBATCH -n 1
@@ -20,5 +20,5 @@ export I_MPI_CXX=icpx
 
 for SCHEDULER in no-tasks native gpu-lazy-evaluation gpu-timed-execution gpu-eager-consumer-tasks
 do
-  ./peano-regular-$SCHEDULER > results-regular-$SCHEDULER.out
+  ./peano-regular-$SCHEDULER > results-scheduler-regular-$SCHEDULER.out
 done
