@@ -63,6 +63,11 @@ Also ```-ffast-math``` seems not to work anymore.
 No surprises here. 
 We usually use the Intel OpenMP runtime, which is enabled through ```-fiopenmp``` as compared to the generic LLVM OpenMP runtime.
 
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+  Peano's core code does not use exceptions and the ```-fno-exceptions``` flag hence works.
+  However, some external libraries such as those used by ExaGRyPE do use 
+  exceptions, and you therefore have to remove this flag from the configuration. 
+</div>
 
 
 # TBB configurations
@@ -84,6 +89,11 @@ module load tbb/2022.2
 There seems to be an issue with the libraries (at least was up to TBB 2024.2 on all systems that we tried).
 So we better set the library path explicitly.
 
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+  Peano's core code does not use exceptions and the ```-fno-exceptions``` flag hence works.
+  However, some external libraries such as those used by ExaGRyPE do use 
+  exceptions, and you therefore have to remove this flag from the configuration. 
+</div>
 
 # Intel MPI
 
