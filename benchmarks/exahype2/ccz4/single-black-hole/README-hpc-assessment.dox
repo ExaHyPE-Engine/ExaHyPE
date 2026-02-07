@@ -181,7 +181,10 @@ python3 scripts/plot-trees-vs-runtime.py results-adaptive.tar.gz  --output trees
 
 ## Regular grid outcomes
 
-@image html benchmarks/exahype2/ccz4/single-black-hole/trees-vs-runtime-regular.png
+@image html benchmarks/exahype2/ccz4/single-black-hole/scripts/omp-trees-vs-runtime-regular.png
+
+The above images stem from an OpenMP run on Hamilton 8 (top) and a run on the 
+same machine using Intel's TBB with @ref tbb_extension "Peano's TBB extension" (bottom).
 
 We see that there is a sweet spot whenever we hit the canonical @f$ 3^d @f$ 
 subpartition count. We also see that there is limited sense in going beyond
@@ -196,7 +199,10 @@ even better.
 
 ## Adaptive mesh outcomes
 
-@image html benchmarks/exahype2/ccz4/single-black-hole/trees-vs-runtime-adaptive.png
+@image html benchmarks/exahype2/ccz4/single-black-hole/scripts/omp-trees-vs-runtime-adaptive.png
+
+The above images stem from an OpenMP run on Hamilton 8 (top) and a run on the 
+same machine using Intel's TBB with @ref tbb_extension "Peano's TBB extension" (bottom).
 
 The adaptive mesh data is more interesting:
 The balancing of cells with the present load balancing scheme is poor.
@@ -280,8 +286,11 @@ This time, I pack the regular grid data and the adaptive grid data into one
 single archive. The script should visualise both variants, and it also provides
 a plot with a linear y-axis and one where we use the log scale.
 
-@image html benchmarks/exahype2/ccz4/single-black-hole/different-schedulers.png
-@image html benchmarks/exahype2/ccz4/single-black-hole/different-schedulers-log.png
+@image html benchmarks/exahype2/ccz4/single-black-hole/omp-different-schedulers.png
+@image html benchmarks/exahype2/ccz4/single-black-hole/omp-different-schedulers-log.png
+
+The above images stem from an OpenMP run on Hamilton 8 (first two plots) and a run on the 
+same machine using Intel's TBB with @ref tbb_extension "Peano's TBB extension" (bottom two plots).
 
 
 ## Evaluation
@@ -395,8 +404,8 @@ the overall scalability is poor with the present rather coarse mesh:
 
 
 
-@image html benchmarks/exahype2/ccz4/single-black-hole/omp-8-trees-with-amr-cs-1.8-ps-3.png
-@image html benchmarks/exahype2/ccz4/single-black-hole/omp-8-trees-with-amr-cs-0.6-ps-6.png
+@image html benchmarks/exahype2/ccz4/single-black-hole/scripts/omp-8-trees-with-amr-cs-1.8-ps-3.png
+@image html benchmarks/exahype2/ccz4/single-black-hole/scripts/omp-8-trees-with-amr-cs-0.6-ps-6.png
 
 
 
