@@ -11,7 +11,7 @@ Stage: build
 
   . /opt/spack/share/spack/setup-env.sh
   spack compiler find
-  spack -e . external find
+  spack -e . external find curl cmake ccache git ninja
   spack -e . concretize
   spack -e . install --fail-fast
   spack gc -y

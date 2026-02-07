@@ -79,6 +79,28 @@ LLVM_SharedOMP_MPI:
       - .continuous_integration/pipelines/cmake.yml
     strategy: depend
 
+Intel_SharedTBB_MPI:
+  extends: .Variables
+  stage: Compiler
+  variables:
+    CC: "icx"
+    CXX: "icpx"
+    IMAGE_TAG: "${IMAGE_INTEL}"
+    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
+                            -DENABLE_EXAHYPE=ON \
+                            -DENABLE_LOADBALANCING=ON \
+                            -DENABLE_BLOCKSTRUCTURED=ON \
+                            -DENABLE_SWIFT=ON \
+                            -DENABLE_PARTICLES=ON \
+                            -DENABLE_MGHYPE=ON \
+                            -DENABLE_FINITEELEMENTS=ON \
+                            -DWITH_MULTITHREADING=tbb \
+                            -DWITH_MPI=ON"
+  trigger:
+    include:
+      - .continuous_integration/pipelines/cmake.yml
+    strategy: depend
+
 NVIDIA:
   extends: .Variables
   stage: Compiler

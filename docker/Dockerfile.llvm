@@ -3,13 +3,11 @@ FROM peanoframework/spack:latest AS builder
 WORKDIR /opt/spack-environment
 
 COPY spack/compilers/llvm/spack.yaml spack.yaml
-COPY spack/compilers/llvm/fix_fortran.py fix_fortran.py
 
 RUN . /opt/spack/share/spack/setup-env.sh && \
     spack compiler find && \
-    python3 fix_fortran.py && rm -f fix_fortran.py && \
     spack env activate . && \
-    spack external find && \
+    spack external find curl cmake ccache git ninja && \
     spack concretize && \
     spack install --fail-fast && \
     spack gc -y && \
@@ -20,6 +18,7 @@ RUN . /opt/spack/share/spack/setup-env.sh && spack env activate --sh -d . > acti
 RUN { \
       echo '#!/bin/sh' \
       && echo '.' /opt/spack-environment/activate.sh \
+      && echo export LD_LIBRARY_PATH=/opt/views/view/lib/x86_64-unknown-linux-gnu:'$LD_LIBRARY_PATH' \
       && echo 'exec "$@"'; \
     } > /entrypoint.sh \
 && chmod a+x /entrypoint.sh \
