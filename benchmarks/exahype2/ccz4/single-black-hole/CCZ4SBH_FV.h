@@ -12,11 +12,6 @@ namespace benchmarks {
   namespace exahype2 {
     namespace ccz4 {
       class CCZ4SBH_FV;
-#ifdef PureFV
-      extern TP::TwoPunctures* twoPunctures;
-
-      void prepareTwoPunctures();
-#endif
     } // namespace ccz4
   }   // namespace exahype2
 } // namespace benchmarks

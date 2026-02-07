@@ -177,7 +177,7 @@
  * The invocation is close to trivial
  *
  * ~~~~~~~~~~~~~~~~~~~~~
- * python3 ~/git/Peano/python/peano4/toolbox/loadbalancing/plot_load_distribution.py mpi/ccz4-backfill-fv-0.05-4-ranks.results
+ * python3 ~/git/Peano/src/toolbox/loadbalancing/api/postprocessing/plot_load_distribution.py mpi/ccz4-backfill-fv-0.05-4-ranks.results
  * ~~~~~~~~~~~~~~~~~~~~~
  *
  * though you might want to study the help dumped if you pass --help.
@@ -357,6 +357,9 @@
  * For offline decomposition and analysis of adaptive mesh trees, there is
  * a dedicated subpage:
  * @subpage page_toolbox_loadbalancing_api
+ *
+ * @subpage page_toolbox_loadbalancing_api_api_postprocessing is a dedicated
+ * page only discussing scripts that we ship to visualise the outcomes.
  */
 namespace toolbox {
   /**

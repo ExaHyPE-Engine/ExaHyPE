@@ -1,0 +1,36 @@
+/**
+
+@page page_toolbox_loadbalancing_api_api_postprocessing Postprocessing of load balancing data
+
+There are multiple postprocessing scripts shipped with the toolbox.
+All of them use instances of OutputFile to parse a text file as written 
+by Peano and then dump this information into various outputs.
+All of them rely on the fact that you have the logging switched on for 
+the toolbox, and there are lines in the file with the trace
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+toolbox::loadbalancing::dumpStatistics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+i.e. trace information has to be there as well.
+
+
+- plot_load_distribution.py provides a plot of the load distribution over 
+  time and hence yields plots similar to 
+
+  @image html src/toolbox/loadbalancing/runtime_analysis_loadbalancing_example00.png
+
+  This type of visualisation is particularly helpful whenever we have dynamic 
+  load balancing and want to understand how the cells evolve over time. 
+  Apparently, the plot above does not employ dynamic rebalancing and hence is a
+  pretty bad example for this script.
+
+- The @ref benchmarks_exahype2_ccz4_single_black_hole_hpc_assessment "Schwarzschild black hole benchmark" 
+  is shipped with a script which employs the load balancing parser to distill some 
+  domain-specific knowledge. It can serve as a baseline of other tailored scripts
+  producing outputs similar to
+  
+  @image html benchmarks/exahype2/ccz4/single-black-hole/trees-vs-runtime-regular.png
+   
+*/
