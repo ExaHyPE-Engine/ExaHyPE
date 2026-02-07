@@ -1,4 +1,4 @@
-FROM ubuntu:24.10
+FROM ubuntu:24.04
 
 LABEL peano-framework.org=http://www.peano-framework.org/
 
@@ -13,8 +13,8 @@ RUN apt-get update -y && apt-get upgrade -y && apt-get install -y --no-install-r
     software-properties-common \
     apt-utils \
     build-essential \
-    g++ \
     gcc \
+    g++ \
     gfortran \
     bash \
     wget \
@@ -71,11 +71,11 @@ RUN apt-get update -y && apt-get upgrade -y && apt-get install -y --no-install-r
     libsimde-dev \
     libudev-dev \
     libsystemd-dev \
-    libcurl4-openssl-dev \
     libgsl-dev \
-    nodejs \
+    libmimalloc-dev \
     libnuma-dev \
     libnuma1 \
+    nodejs \
     zlib1g \
     zlib1g-dev && \
     apt-get clean -y && \

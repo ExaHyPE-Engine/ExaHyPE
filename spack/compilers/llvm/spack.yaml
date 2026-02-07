@@ -1,10 +1,11 @@
 spack:
   specs:
-    - python@3.13.0 %gcc
-    - py-pip@24.3.1 %gcc
-    - llvm@18.1.8 +clang +libomptarget +libomptarget_debug +gold %gcc
+    - python@3.13.5 %gcc
+    - py-pip@25.1.1
+    - llvm@19.1.7 +clang +libomptarget +libomptarget_debug +gold %gcc
     - libxsmm@1.17 +generator %gcc
-    - easi@1.5.0 jit=lua %gcc
+    - easi@1.6.1 jit=lua %gcc
+    - boost@1.88.0 +filesystem +fiber +context %gcc
     - memkind@1.14.0 %gcc
     - openblas@0.3.28 %gcc
     - eigen@3.4.0 %gcc
@@ -12,12 +13,13 @@ spack:
     - likwid@5.4.1 +cuda %gcc
     - hwloc@2.11.1 +cuda %gcc
     - ucx@1.17.0 +cuda %gcc
-    - cuda@12.6.3 +allow-unsupported-compilers %gcc
-    - openmpi@5.0.5 +cuda fabrics=ucx %gcc
+    - zlib-ng@2.2.4 %gcc
+    - cuda@12.9.0
+    - openmpi@5.0.8 +cuda fabrics=ucx %gcc
     - metis@5.1.0 %gcc
     - parmetis@4.0.3 %gcc
     - petsc@3.22.2 +mpi +memkind +metis +hwloc +openmp %gcc
-    - hdf5@1.14.5 -fortran -java +threadsafe +mpi +shared +cxx +hl %gcc
+    - hdf5@1.14.6 -fortran -java +threadsafe +mpi +shared +cxx +hl %gcc
     - netcdf-c@4.9.2 +mpi +shared %gcc
     - netcdf-cxx4@4.3.1 +pic +shared %gcc
     - parallel-netcdf@1.14.0 +cxx -fortran +pic +shared %gcc

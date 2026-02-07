@@ -45,6 +45,7 @@ Intel_SharedOMP_MPI:
     CFLAGS: ""
     CXXFLAGS: "-O3 -std=c++20 -w -fiopenmp"
     LDFLAGS: "-fiopenmp"
+    LIBS: ""
     IMAGE_TAG: "${IMAGE_INTEL}"
     CONFIGURATION_OPTIONS: "--enable-exahype \
                             --enable-loadbalancing \
@@ -69,6 +70,7 @@ LLVM_SharedOMP_MPI:
     CFLAGS: ""
     CXXFLAGS: "-O3 -std=c++20 -w -fopenmp"
     LDFLAGS: "-fopenmp"
+    LIBS: ""
     IMAGE_TAG: "${IMAGE_LLVM}"
     CONFIGURATION_OPTIONS: "--enable-exahype \
                             --enable-loadbalancing \
@@ -84,6 +86,31 @@ LLVM_SharedOMP_MPI:
       - .continuous_integration/pipelines/automake.yml
     strategy: depend
 
+Intel_SharedTBB_MPI:
+  extends: .Variables
+  stage: Compiler
+  variables:
+    CC: "icx"
+    CXX: "icpx"
+    CFLAGS: ""
+    CXXFLAGS: "-O3 -std=c++20 -w"
+    LDFLAGS: ""
+    LIBS: "-ltbb"
+    IMAGE_TAG: "${IMAGE_INTEL}"
+    CONFIGURATION_OPTIONS: "--enable-exahype \
+                            --enable-loadbalancing \
+                            --enable-blockstructured \
+                            --enable-swift \
+                            --enable-particles \
+                            --enable-mghype \
+                            --enable-finiteelements \
+                            --with-multithreading=tbb_extension \
+                            --with-mpi=mpiicpx"
+  trigger:
+    include:
+      - .continuous_integration/pipelines/automake.yml
+    strategy: depend
+
 NVIDIA:
   extends: .Variables
   stage: Compiler
@@ -93,6 +120,7 @@ NVIDIA:
     CFLAGS: ""
     CXXFLAGS: "-O3 -std=c++20 -w"
     LDFLAGS: ""
+    LIBS: ""
     IMAGE_TAG: "${IMAGE_NVIDIA}"
     CONFIGURATION_OPTIONS: "--enable-exahype \
                             --enable-loadbalancing \
@@ -115,6 +143,7 @@ AMD:
     CFLAGS: ""
     CXXFLAGS: "-O3 -std=c++20 -w"
     LDFLAGS: ""
+    LIBS: ""
     IMAGE_TAG: "${IMAGE_AMD}"
     CONFIGURATION_OPTIONS: "--enable-exahype \
                             --enable-loadbalancing \

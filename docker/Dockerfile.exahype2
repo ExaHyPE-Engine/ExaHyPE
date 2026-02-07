@@ -10,37 +10,22 @@ COPY applications/exahype2/ /exahype2/applications
 COPY benchmarks/exahype2/ /exahype2/benchmarks
 
 RUN . /opt/spack/share/spack/setup-env.sh && \
-    spack env create -d . && \
-    spack env activate -p . && \
-    spack config add packages:all:target:[x86_64] && \
-    spack config add config:install_tree:/opt/software && \
-    spack config add concretizer:unify:true && \
-    spack external find && \
+    spack config add config:install_tree:root:/opt/software && \
     spack repo add . && \
-    spack add exahype2 && \
-    spack concretize --reuse && \
-    spack install --fail-fast && \
+    spack install --fail-fast exahype2 && \
     spack gc -y && \
     spack clean -a
 
-RUN . /opt/spack/share/spack/setup-env.sh && spack env activate --sh -d . > activate.sh
-
-RUN { \
-      echo '#!/bin/sh' \
-      && echo '.' /opt/spack-environment/activate.sh \
-      && echo 'exec "$@"'; \
-    } > /entrypoint.sh \
-&& chmod a+x /entrypoint.sh \
-&& ln -s /opt/views/view /opt/view
+RUN . /opt/spack/share/spack/setup-env.sh && \
+    spack load --sh exahype2 | \
+      sed 's/^spack load.*//' > /etc/profile.d/exahype2.sh
 
 FROM peanoframework/base:latest
 
 COPY --from=builder /exahype2 /exahype2
-COPY --from=builder /opt/spack-environment /opt/spack-environment
 COPY --from=builder /opt/software /opt/software
-COPY --from=builder /entrypoint.sh /entrypoint.sh
+COPY --from=builder /etc/profile.d/exahype2.sh /etc/profile.d/
 
 WORKDIR /exahype2
 
-ENTRYPOINT ["/entrypoint.sh"]
-CMD ["/bin/bash"]
+CMD ["/bin/bash", "-l"]
