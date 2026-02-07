@@ -1,6 +1,6 @@
 /** 
 
-@page benchmarks_exahype2_ccz4_single_black_hole_hpc_assessment HPC assessment
+@page benchmarks_exahype2_ccz4_single_black_hole_hpc_assessment HPC assessment benchmarks
 
 <!-- Add this one for href links to subitems -->
 @tableofcontents
@@ -17,6 +17,18 @@ choices. Anecdotal evidence fees into the settings used by @ref benchmarks_exahy
 All the different benchmarking ingredients for the HPC assessment are available
 through the script ```performance-studies.py```. 
 
+This page first provides some generic description of the variants. This text
+serves primarily as background reading. Most readers might skip it. From 
+hereon, we demonstrate how to assess certain system properties systematically:
+
+1. Determine a proper number of domain subpartitions per rank/node.
+2. Exploit offline load balancing to determine close-to-optimal splittings.
+3. Enable tasking on top of rank-local domain decomposition.
+4. Offload to GPUs.
+
+Each section discussing one of the items above kicks off with a reference 
+configuration. You should be able to run this as it is as kind of a sanity
+check.
 
 # Generic settings
 
@@ -114,6 +126,17 @@ While we do so, we first disable all tasking manually, and we also stick exclusi
 python3 performance-studies.py -s fv-6 --plot 0.0 --scheduler no-tasks --trees ... ...
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+<br /><br />
+<div style="background-color: #ccc ; padding: 10px; border: 1px solid green;"> 
+  <b> Example setup </b>
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 performance-studies.py -s fv-6 -et 1e-2 --plot 0.0 --scheduler no-tasks --trees 32 --cell-size 1.8 --output test
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  This setup yields a relatively small regular grid scenario which should 
+  complete within a few minutes and be well-balanced without any further
+  effort. 
+</div>
+
 
 ## Building all the benchmarks in one go
 
@@ -175,12 +198,44 @@ even better.
 
 @image html benchmarks/exahype2/ccz4/single-black-hole/trees-vs-runtime-adaptive.png
 
+The adaptive mesh data is more interesting:
+The balancing of cells with the present load balancing scheme is poor.
+Consequently, we need a more sophisticated load balancing scheme.
+
+
+# Set up an adaptive mesh scenario with offline load balancing
+
+<br /><br />
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+  This part is currently under construction and not ready to be released yet.
+</div>
+
 
 # Find the right tasking back-end
 
-It is next an interesting question what kind of tasking back-end is most
+Once we are reasonably satisfied with the load balancing per rank,
+it is an interesting question what kind of tasking back-end is most
 advantageous for the settings. That is, now we fix the number of subpartitions
 to a reasonable choice and we alter the scheduling orchestration.
+We know that we cannot exploit all cores through domain decomposition 
+alone, and hence hope that the tasks step in and help us exploit those
+cores that we haven't used yet, i.e. we use the whole node, use a reasonable
+number of subtrees per node and hence use a few cores to handle those subtrees,
+and then let those subtrees spawn tasks which should bring in the idling 
+remaining threads.
+
+
+<br /><br />
+<div style="background-color: #ccc ; padding: 10px; border: 1px solid green;"> 
+  <b> Example setup </b>
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 performance-studies.py -s fv-6 -et 1e-2 --plot 0.0 --cell-size 1.8 --trees 32 --scheduler native --output test
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  This setup yields a relatively small regular grid scenario which should 
+  complete within a few minutes and be well-balanced without any further
+  effort. As we pick native as scheduler, the test should use more than the
+  32 threads that we occupy with subpartitions.
+</div>
 
 
 ## Building all the benchmarks in one go
@@ -191,7 +246,8 @@ export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4
 module load python
 for SCHEDULER in no-tasks native gpu-lazy-evaluation gpu-timed-execution gpu-eager-consumer-tasks
 do
-  python3 performance-studies.py -s fv-6 -et 1e-2       --plot 0.0 --cell-size 0.6     --trees 27   --scheduler $SCHEDULER --output peano-regular-$SCHEDULER
+  python3 performance-studies.py -s fv-6 -et 1e-2       --plot 0.0 --cell-size 1.8     --trees 27   --scheduler $SCHEDULER --output peano-regular-$SCHEDULER
+  python3 performance-studies.py -s fv-6 -et 1e-6 -amr  --plot 0.0 --cell-size 0.00123 --trees 64   --scheduler $SCHEDULER --output peano-adaptive-$SCHEDULER
 done
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -201,6 +257,10 @@ subdirectory which works for Hamilton. This time, we cannot straightforwardly
 use array jobs, so I decided to stick with one big script which runs through 
 the variants. We do not farm out.
 
+The mesh size is delibertely chosen coarser than in a previous setup. As we 
+bundle tasks, we temporarily need more memory, so having some slack would 
+help.
+
 
 ## Postprocessing
 
@@ -209,19 +269,61 @@ can handle archives directly:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 tar -czvf results-scheduler.tar.gz results-scheduler*.out
+
+[... maybe copy stuff onto your local machine]
+
+export PYTHONPATH=~/git/Peano/src/toolbox/loadbalancing/api/postprocessing
 python3 scripts/plot-schedulers.py --output different-schedulers results-scheduler.tar.gz
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This time, I pack the regular grid data and the adaptive grid data into one
-single archive. The script should visualise both variants.
+single archive. The script should visualise both variants, and it also provides
+a plot with a linear y-axis and one where we use the log scale.
+
+@image html benchmarks/exahype2/ccz4/single-black-hole/different-schedulers.png
+@image html benchmarks/exahype2/ccz4/single-black-hole/different-schedulers-log.png
 
 
-# Todo cleanup and work into main text
+## Evaluation
+
+The lessons learned now are not trivial anymore:
+
+- Native tasking on top of the domain decomposition pays off.
+- Lazy evaluation where these tasks are parked and then processed en bloc once 
+  we need them is not a good idea. It likely introduces load imbalances, as we
+  discuss below.
+- Timed execution means that we wait for all tasks to build up and then handle
+  them en bloc at the end of the mesh traversal. This might be a good idea for
+  GPUs which need a reasonable chunk of work to perform well, but it is a very
+  poor idea on a CPU-only system.
+- Eager consumers seem to work fine for adaptive meshes with unreasonable load
+  balancing, but introduce too much overhead for a regular mesh, such that the
+  tasked variant with this orchestration is actually slower than the baseline
+  code without any tasking. 
+
+<br /><br />
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+  Todos:
+  - Add a remark to our paper that the memory footprint can become a problem if
+    we park tasks. We also have to quantify this impact.
+  - Run some performance analysis what happens in the bad cases.
+</div>
 
 
+# GPU offloading
 
-# Scaling and performance analysis
+<br /><br />
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+  This part is currently under construction and not ready to be released yet.
+</div>
 
+# Scaling
+
+<br /><br />
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+  This part is currently under construction and not ready to be released yet.
+  Please ignore all the stuff that is written below.
+</div>
 
 ## Script to create output plots
 

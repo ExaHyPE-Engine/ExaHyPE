@@ -26,7 +26,13 @@ namespace benchmarks {
       void prepareTwoPunctures();
 
       /**
-       * @todo Tobias should document this one
+       * Creates an artificially steep refinement
+       *
+       * The artificial refinement zooms into the black hole as aggressively as
+       * possible and otherwise uses an as coarse grid as supported. For a
+       * "real" black hole simulation, such an aggressive zoom-in does not
+       * yield high quality data, as we coarsen too quickly outside of the
+       * black hole and hence pollute the solution due to underrefinement.
        */
       ::exahype2::RefinementCommand artificialRefinement(
         const tarch::la::Vector<Dimensions, double>& x,

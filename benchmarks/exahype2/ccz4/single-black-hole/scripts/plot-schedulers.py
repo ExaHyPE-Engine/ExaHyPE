@@ -88,22 +88,30 @@ A generic script to create speedup plots.
          
     bar_width = 0.9   
     
-    plt.ylabel('Runtime')
+    plt.ylabel('Runtime [t]=s')
     plt.bar( range(0,len(Variants)),
              runtimes,
              width=bar_width,
-             label="Runtime",
+             #label="Runtime",
              )
+             
+    Offset_From_X_Axis = 10
 
     for i in range(0,len(Variants)):
-        plt.text( i-0.2, 
-                  1, 
+        plt.text( i-0.25, 
+                  Offset_From_X_Axis, 
                   Variants[i].strip().replace(",","\n"), 
                   rotation=-90,
                   )
                
     plt.xticks([],[])
     
-    plt.legend()
+    # No need for a legend here
+    #plt.legend()
     plt.savefig( args.output + ".pdf" )
     plt.savefig( args.output + ".png" )
+    
+    plt.yscale( "log" )
+
+    plt.savefig( args.output + "-log.pdf" )
+    plt.savefig( args.output + "-log.png" )

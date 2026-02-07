@@ -34,9 +34,10 @@ module purge
 module load oneapi/2025.2
 export FLAVOUR_NOCONFLICT=1
 module load gcc/15.2
-module load intelmpi/2021.16
+
 module load tbb/2022.0
  
+module load intelmpi/2021.16
 export I_MPI_CXX=icpx
 
 module load python/3.13.9
@@ -66,11 +67,21 @@ We usually use the Intel OpenMP runtime, which is enabled through ```-fiopenmp``
 
 # TBB configurations
 
+We offer these two TBB backends: One with our own extensions, which kind of
+serve as preview of upcoming TBB variants, and then we have an implementation
+which uses these new features yet requires a relatively new TBB version in 
+return. 
+@ref tbb_extension "There is a separate page" discussing these particular 
+features. It also describes how to switch them on partially. For Hamilton,
+we usually use the old-fashioned way:
+
 ~~~~~~~~~~~~~~~~~~~~~~
+module load tbb/2022.2
+
 ./configure CXX=icpx CC=icx CXXFLAGS="-std=c++20 -O3 -mtune=native -march=native -fma -fomit-frame-pointer -fno-exceptions -Wno-unknown-attributes -Wno-gcc-compat" LIBS="-ltbb" LDFLAGS="-L${TBBROOT}/lib" --enable-mghype --enable-exahype --enable-blockstructured --enable-finiteelements --with-multithreading=tbb_extension --enable-loadbalancing
 ~~~~~~~~~~~~~~~~~~~~~~
 
-There seems to be an issue with the libraries (at least was up to TBB 2024.2).
+There seems to be an issue with the libraries (at least was up to TBB 2024.2 on all systems that we tried).
 So we better set the library path explicitly.
 
 

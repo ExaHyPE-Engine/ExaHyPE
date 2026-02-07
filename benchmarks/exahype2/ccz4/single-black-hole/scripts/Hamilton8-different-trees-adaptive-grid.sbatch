@@ -17,5 +17,7 @@ export FLAVOUR_NOCONFLICT=1
 module load gcc/15.2
 export I_MPI_CXX=icpx
  
+module load tbb/2022.2
+ 
 ./peano-adaptive-$SLURM_ARRAY_TASK_ID-trees > results-adaptive-$SLURM_ARRAY_TASK_ID.out
 
