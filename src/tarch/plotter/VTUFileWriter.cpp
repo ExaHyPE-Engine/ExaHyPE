@@ -69,12 +69,20 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
     return;
   }
 
+#ifdef USE_ZLIB
   struct Block {
-    std::string               xmlHeader;
     std::vector<std::uint8_t> binaryData;
   };
-  std::vector<Block> blocks;
-  std::size_t        currentFileOffset = 0;
+  std::vector<Block> appendedBlocks;
+#else
+  struct Block {
+    std::uint64_t sizeBytes;
+    const void*   data;
+  };
+  std::vector<Block> appendedBlocks;
+#endif
+
+  std::uint64_t currentFileOffset = 0;
 
   auto addBlock =
     [&](
@@ -83,79 +91,74 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
       const std::string& name,
       int                components,
       const auto&        dataVec
-    ) {
-      // Do not return early if empty to write the XML header even if the array has size 0
-      // if (dataVec.empty()) {
-      //   return;
-      // }
+    ) -> std::string {
+    // Generate XML Header
+    std::ostringstream ss;
+    ss << "        <" << tagName << " type=\"" << type << "\" Name=\"" << name << "\"";
+    if (components > 1) {
+      ss << " NumberOfComponents=\"" << components << "\"";
+    }
+    ss << " format=\"appended\" offset=\"" << currentFileOffset << "\"/>\n";
+    const std::string xmlHeader = ss.str();
 
-      Block b;
-
-      // Generate XML Header
-      std::ostringstream ss;
-      ss << "        <" << tagName << " type=\"" << type << "\" Name=\"" << name << "\"";
-      if (components > 1) {
-        ss << " NumberOfComponents=\"" << components << "\"";
-      }
-      ss << " format=\"appended\" offset=\"" << currentFileOffset << "\"/>\n";
-      b.xmlHeader = ss.str();
-
-      // Generate binary payload (UInt64 size + raw data)
-      using T                        = typename std::decay_t<decltype(dataVec)>::value_type;
-      std::uint64_t uncompressedSize = dataVec.size() * sizeof(T);
+    // Prepare appended payload
+    using T                       = typename std::decay_t<decltype(dataVec)>::value_type;
+    const std::uint64_t dataBytes = static_cast<std::uint64_t>(dataVec.size()) * sizeof(T);
 
 #ifdef USE_ZLIB
-      static_assert(
-        sizeof(uLong) >= 8,
-        "Critical Safety Error: ZLib's 'uLong' is only 32-bit on this platform (likely Windows). "
-        "This makes it impossible to safely compress >4GB buffers without chunking. "
-        "Refusing to compile to prevent heap corruption. Disable ZLib in the CMake configuration."
-      );
+    static_assert(
+      sizeof(uLong) >= 8,
+      "Critical Safety Error: ZLib's 'uLong' is only 32-bit on this platform (likely Windows). "
+      "This makes it impossible to safely compress >4GB buffers without chunking. "
+      "Refusing to compile to prevent heap corruption. Disable ZLib in the CMake configuration."
+    );
 
-      uLongf destLen = compressBound(uncompressedSize);
+    Block b;
 
-      std::uint64_t header[4];
-      header[0] = 1;                // Number of blocks
-      header[1] = uncompressedSize; // Block size
-      header[2] = uncompressedSize; // Last block size
+    uLongf destLen = compressBound(static_cast<uLong>(dataBytes));
 
-      std::size_t headerBytes = 4 * sizeof(std::uint64_t);
+    std::uint64_t header[4];
+    header[0] = 1;         // Number of blocks
+    header[1] = dataBytes; // Block size
+    header[2] = dataBytes; // Last block size
 
-      // Reserve space for Header + Max Compressed Size
-      b.binaryData.resize(headerBytes + destLen);
+    const std::size_t headerBytes = 4 * sizeof(std::uint64_t);
 
-      // Copy the partial header (first 3 uint64s)
-      std::memcpy(b.binaryData.data(), header, 3 * sizeof(std::uint64_t));
+    // Reserve space for Header + Max Compressed Size
+    b.binaryData.resize(headerBytes + static_cast<std::size_t>(destLen));
 
-      int res = compress(
-        b.binaryData.data() + headerBytes,
-        &destLen,
-        reinterpret_cast<const Bytef*>(dataVec.data()),
-        uncompressedSize
-      );
-      if (res != Z_OK) {
-        throw std::runtime_error("Zlib compression failed");
-      }
+    // Copy the partial header (first 3 uint64s)
+    std::memcpy(b.binaryData.data(), header, 3 * sizeof(std::uint64_t));
 
-      std::uint64_t compressedSize64 = destLen;
-      std::memcpy(b.binaryData.data() + 3 * sizeof(std::uint64_t), &compressedSize64, sizeof(std::uint64_t));
+    int res = compress(
+      reinterpret_cast<Bytef*>(b.binaryData.data() + headerBytes),
+      &destLen,
+      reinterpret_cast<const Bytef*>(dataVec.data()),
+      static_cast<uLong>(dataBytes)
+    );
+    if (res != Z_OK) {
+      throw std::runtime_error("Zlib compression failed");
+    }
 
-      // Shrink vector to actual size (Header + Actual Compressed Size)
-      b.binaryData.resize(headerBytes + destLen);
+    std::uint64_t compressedSize64 = destLen;
+    std::memcpy(b.binaryData.data() + 3 * sizeof(std::uint64_t), &compressedSize64, sizeof(std::uint64_t));
+
+    // Shrink vector to actual size (Header + Actual Compressed Size)
+    b.binaryData.resize(headerBytes + static_cast<std::size_t>(destLen));
+
+    currentFileOffset += static_cast<std::uint64_t>(b.binaryData.size());
+    appendedBlocks.push_back(std::move(b));
 #else
-      b.binaryData.reserve(sizeof(std::uint64_t) + uncompressedSize);
+    Block b;
+    b.sizeBytes = dataBytes;
+    b.data      = dataVec.empty() ? nullptr : static_cast<const void*>(dataVec.data());
 
-      const std::uint8_t* sizePtr = reinterpret_cast<const std::uint8_t*>(&uncompressedSize);
-      b.binaryData.insert(b.binaryData.end(), sizePtr, sizePtr + sizeof(std::uint64_t));
-
-      const std::uint8_t* dataPtr = reinterpret_cast<const std::uint8_t*>(dataVec.data());
-      b.binaryData.insert(b.binaryData.end(), dataPtr, dataPtr + uncompressedSize);
+    currentFileOffset += sizeof(std::uint64_t) + dataBytes;
+    appendedBlocks.push_back(std::move(b));
 #endif
 
-      // Update offset and store
-      currentFileOffset += b.binaryData.size();
-      blocks.push_back(std::move(b));
-    };
+    return xmlHeader;
+  };
 
   // We write raw memory, so we must tell VTK what order the bytes are in.
   const std::uint16_t endianCheck    = 1;
@@ -178,33 +181,27 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
   // -- Point data --
   out << "      <PointData>\n";
   for (const auto& f : mergedSubdomains.pointFields) {
-    addBlock("DataArray", "Float32", f.name, f.components, f.values);
-    out << blocks.back().xmlHeader;
+    out << addBlock("DataArray", "Float32", f.name, f.components, f.values);
   }
   out << "      </PointData>\n";
 
   // -- Cell data --
   out << "      <CellData>\n";
   for (const auto& f : mergedSubdomains.cellFields) {
-    addBlock("DataArray", "Float32", f.name, f.components, f.values);
-    out << blocks.back().xmlHeader;
+    out << addBlock("DataArray", "Float32", f.name, f.components, f.values);
   }
   out << "      </CellData>\n";
 
   // -- Points --
   out << "      <Points>\n";
-  addBlock("DataArray", "Float32", "Points", 3, mergedSubdomains.pointsXYZ);
-  out << blocks.back().xmlHeader;
+  out << addBlock("DataArray", "Float32", "Points", 3, mergedSubdomains.pointsXYZ);
   out << "      </Points>\n";
 
   // -- Cells --
   out << "      <Cells>\n";
-  addBlock("DataArray", "Int32", "connectivity", 1, mergedSubdomains.connectivity);
-  out << blocks.back().xmlHeader;
-  addBlock("DataArray", "Int32", "offsets", 1, mergedSubdomains.offsets);
-  out << blocks.back().xmlHeader;
-  addBlock("DataArray", "UInt8", "types", 1, mergedSubdomains.types);
-  out << blocks.back().xmlHeader;
+  out << addBlock("DataArray", "Int32", "connectivity", 1, mergedSubdomains.connectivity);
+  out << addBlock("DataArray", "Int32", "offsets", 1, mergedSubdomains.offsets);
+  out << addBlock("DataArray", "UInt8", "types", 1, mergedSubdomains.types);
   out << "      </Cells>\n";
 
   out << "    </Piece>\n";
@@ -214,9 +211,18 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
   out << "  <AppendedData encoding=\"raw\">\n";
   out << "_"; // Separator
 
-  for (const auto& b : blocks) {
+#ifdef USE_ZLIB
+  for (const auto& b : appendedBlocks) {
     out.write(reinterpret_cast<const char*>(b.binaryData.data()), b.binaryData.size());
   }
+#else
+  for (const auto& b : appendedBlocks) {
+    out.write(reinterpret_cast<const char*>(&b.sizeBytes), sizeof(std::uint64_t));
+    if (b.sizeBytes > 0) {
+      out.write(reinterpret_cast<const char*>(b.data), b.sizeBytes);
+    }
+  }
+#endif
 
   out << "\n  </AppendedData>\n";
   out << "</VTKFile>\n";
