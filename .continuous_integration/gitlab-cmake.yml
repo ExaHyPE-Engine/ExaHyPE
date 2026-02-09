@@ -94,7 +94,7 @@ Intel_SharedTBB_MPI:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
-                            -DWITH_MULTITHREADING=tbb \
+                            -DWITH_MULTITHREADING=tbb_extension \
                             -DWITH_MPI=ON"
   trigger:
     include:
