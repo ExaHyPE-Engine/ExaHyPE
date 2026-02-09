@@ -4,6 +4,7 @@
 
 
 #include "tarch/Enumerator.h"
+#include "tarch/multicore/MultiReadSingleWriteSemaphore.h"
 #include <set>
 #include <string>
 
@@ -31,6 +32,11 @@ namespace tarch {
  * two instances of tarch::multicore::TaskEnumerator, then the first instance
  * would only hand out numbers from 0 to 5000-1, and the second one only from
  * 5000 to 10000-1. They ensure that there is no conflict.
+ *
+ * The actual task number administration is thread-safe, as we rely internally
+ * on tarch::Enumerator instances on the heap. However, the creation of these
+ * heap objects can lead to race conditions. Therefore, we protect this access
+ * explicitly with a semaphore allowing for multiple reads but only one write.
  */
 class tarch::multicore::TaskEnumerator {
   public:
@@ -65,8 +71,20 @@ class tarch::multicore::TaskEnumerator {
     std::string toString() const;
 
   private:
+    static tarch::multicore::MultiReadSingleWriteSemaphore  _enumeratorSequenceSemaphore;
     static std::vector< tarch::Enumerator* >  _enumerator;
     static tarch::logging::Log                _log;
-    const int                                 _enumeratorNumber;
+
+    /**
+     * Number of enumerator that's tied to this instance
+     *
+     * The value serves as index to access _enumerator.
+     *
+     * Logically, this attribute is a const attribute. We however cannot
+     * make it const, as the constructor first of all has to lock the
+     * array _enumerator, then it can determine what the value of
+     * _enumeratorNumber number is.
+     */
+    int                                 _enumeratorNumber;
 };
 

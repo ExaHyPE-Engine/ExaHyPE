@@ -7,7 +7,7 @@ COPY spack/compilers/nvidia/spack.yaml spack.yaml
 RUN . /opt/spack/share/spack/setup-env.sh && \
     spack compiler find && \
     spack env activate . && \
-    spack external find && \
+    spack external find curl cmake ccache git ninja && \
     spack concretize && \
     spack install --fail-fast && \
     spack gc -y && \

@@ -11,12 +11,13 @@ Stage: build
 
   . /opt/spack/share/spack/setup-env.sh
   spack compiler find
-  spack -e . external find
+  spack -e . external find curl cmake ccache git ninja
   spack -e . concretize
   spack -e . install --fail-fast
   spack gc -y
   spack clean
   spack env activate --sh -d . >> /opt/spack-environment/environment_modifications.sh
+  echo export LD_LIBRARY_PATH=/opt/views/view/lib/x86_64-unknown-linux-gnu:'$LD_LIBRARY_PATH' >> /opt/spack-environment/environment_modifications.sh
 
 Bootstrap: docker
 From: peanoframework/base:latest

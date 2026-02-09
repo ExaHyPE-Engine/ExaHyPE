@@ -1,6 +1,6 @@
 FROM peanoframework/base:latest
 
-RUN wget https://github.com/spack/spack/archive/refs/heads/develop.tar.gz -O /opt/spack.tar.gz && \
+RUN wget https://github.com/spack/spack/releases/download/v1.0.2/spack-1.0.2.tar.gz -O /opt/spack.tar.gz && \
 mkdir -p /opt/spack && \
 tar -xzf /opt/spack.tar.gz -C /opt/spack --strip-components=1 && \
 rm /opt/spack.tar.gz

@@ -160,15 +160,26 @@ namespace exahype2 {
 //  using CellData = CellData<double, double>;
 
   /**
-   * This structure is used to manage the movement of data between the
-   * host and devices. Copies to the device occur automatically on
+   * Cousing to CellData which administers copies on the accelerator
+   *
+   *
+   * This is a variant of CellData which also present GPU data. However, this
+   * flavour copies all data manually onto the GPU, whereas its parent is a
+   * proxy around data. As we copy data over, we can also rearrange all data.
+   * From a user point of view, the big difference is that we have to invoke
+   * copyBackAndDestroy() manually to eliminate the data on the device:
+   *
+   * Copies to the device occur automatically on
    * construction, but copies back must be triggered manually using
    * copyBackAndDestroy().
    * 
-   * The OpenMP implementation manages 2 versions, one using allocations
+   * The OpenMP implementation offers two versions, one using allocations
    * on the device, and another that keeps data on the host. This second 
    * version requires explicit maps in the kernel, which do not currently
    * exist. For this reason it is currently not in use.
+   *
+   * @todo Shall we retire the second version then if it is not used
+   *       at all?
    */
   template<typename inType=double, typename outType=double>
   struct CopyCellDataGPU{
@@ -193,7 +204,18 @@ namespace exahype2 {
     outType** QOutHost;
     double* maxEigenvalueHost;
 
-    CopyCellDataGPU(const CellData<inType, outType>& cellData, int inputPatchSize, int outputPatchSize, int device = -1);
+    /**
+     * Construct a copy object
+     *
+     * @param device Valid device by handling in value greater or equal to
+     *   0 or otherwise tarch::accelerator::Device::HostDevice.
+     */
+    CopyCellDataGPU(
+      const CellData<inType, outType>&   cellData,
+      int                                inputPatchSize,
+      int                                outputPatchSize,
+      int                                device = tarch::accelerator::Device::HostDevice
+    );
     void copyBackAndDestroy();
     
     std::string toString() const;
