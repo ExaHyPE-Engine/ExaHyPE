@@ -15,8 +15,10 @@ module load oneapi/2025.2
 export FLAVOUR_NOCONFLICT=1
 module load gcc/15.2
 export I_MPI_CXX=icpx
+
+module load tbb/2022.2
+
  
-./peano-regular-$SLURM_ARRAY_TASK_ID-trees  > results-regular-$SLURM_ARRAY_TASK_ID.out
 
 for SCHEDULER in no-tasks native gpu-lazy-evaluation gpu-timed-execution gpu-eager-consumer-tasks
 do
