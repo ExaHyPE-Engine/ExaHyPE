@@ -192,7 +192,7 @@ if __name__ == "__main__":
         my_primary_solver.set_implementation(
           refinement_criterion="""return artificialRefinement(x, h);""",
         )
-        my_primary_solver.add_user_solver_includes( "SingleBlackHoleScenario.h")
+        my_primary_solver.add_user_solver_includes( """#include "SingleBlackHoleScenario.h" """)
 
     elif "fd4-rk1-limited-ps-" in args.solver:
         FD4PatchSize = 16*int(args.solver[-1])
@@ -208,7 +208,7 @@ if __name__ == "__main__":
         my_primary_solver.set_implementation(
           refinement_criterion="""return artificialRefinement(x, h);""",
         )
-        my_primary_solver.add_user_solver_includes( "SingleBlackHoleScenario.h")
+        my_primary_solver.add_user_solver_includes( """#include "SingleBlackHoleScenario.h" """)
 
         my_secondary_solver = Limiter(
             name="CCZ4SBH",

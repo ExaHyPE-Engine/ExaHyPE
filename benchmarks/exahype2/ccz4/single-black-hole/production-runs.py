@@ -152,6 +152,7 @@ if __name__ == "__main__":
             min_cell_size=min_cell_size,
             max_cell_size=max_cell_size
         )
+    my_primary_solver.add_user_solver_includes( """#include "SingleBlackHoleScenario.h" """)
     exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_interpolation( my_primary_solver ) 
     exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_restriction( my_primary_solver ) 
     
