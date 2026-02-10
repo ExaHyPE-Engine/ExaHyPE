@@ -9,24 +9,6 @@
 tarch::logging::Log benchmarks::exahype2::ccz4::CCZ4SBH_FD4::_log("benchmarks::exahype2::ccz4::CCZ4SBH_FD4");
 
 
-::exahype2::RefinementCommand benchmarks::exahype2::ccz4::CCZ4SBH_FD4::refinementCriterion(
-  const double* __restrict__ Q, // Q[59+0]
-  const tarch::la::Vector<Dimensions, double>& volumeX,
-  const tarch::la::Vector<Dimensions, double>& meshCellH,
-  double                                       t
-) {
-  if (tarch::la::equals(t,0.0)) {
-    return benchmarks::exahype2::ccz4::refinementCriterion(
-      volumeX,
-      meshCellH,
-      MaxAdmissibleCellH,
-      MinAdmissibleCellH
-    );
-  }
-  else return ::exahype2::RefinementCommand::Keep;
-}
-
-
 benchmarks::exahype2::ccz4::CCZ4SBH_FD4::CCZ4SBH_FD4() {
   prepareTwoPunctures();
 }

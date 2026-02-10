@@ -1,48 +1,104 @@
 /** 
 
-@page benchmarks_exahype2_ccz4_single_black_hole_production_benchmarks Production benchmarks
+@page benchmarks_exahype2_ccz4_single_black_hole_production_benchmarks Production-type benchmarks
 
 <!-- Add this one for href links to subitems -->
 @tableofcontents
 
-The "standard" single Schwarzschild black hole simulation in the original application script goes like
+Real single black hole Schwarzschild simulations differ from the @ref benchmarks_exahype2_ccz4_single_black_hole_hpc_assessment "HPCish benchmarks"
+in terms of their resolution and their runtime:
+For all of the settings, we cannot arbitrarily scale them down (such that they 
+fit onto a single node), and we have to evolve them over a certain time span
+to get confidence in the outcome and reach a stationary solution.
+
+
+# Background
+
+The black hole simulation in the application folder resembles
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 python3 ccz4.py -ext adm -impl fd4-rk1-adaptive -s single-puncture -maxh 0.4 -minh 0.04 -ps 6 -plt 0.5 -et 100 -exn sbh27 --domain_r 9.0 --ReSwi 7 -cfl 0.1 -outdir ./ --KOSigma 8.0 -sommerfeld
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-It is straightforward to map this setup into the benchmark framework, as only resolution (including AMR level) and domain size change in the production run; everything else remains the same (after all, they are still simulating a single black hole). Therefore, we introduce the \c production_run flag in the command-line argument. For which you can change the resolution (minimum and maximal cell sizes) and domain size quickly, the flag itself is also used to indicate the refinement criterion the code should use for the corresponding production run setup. Taking the setup above as an example, you should set the maximal and minimum cell size as
+It is straightforward to map such a setup to the benchmark framework, where only resolution (including AMR level) and domain size change remain free parameters.
+All other settings are hard-coded and remain the same (after all, they are still simulating a single black hole). 
 
-~~~~~~~~~~~~~~~~~~~~~~~
-if args.production_run==1: #here is the "standard" production run setup
-    max_cell_size = 0.4*6
-    min_cell_size = 0.04*6
-    # offset and domain size remain unchanged
-~~~~~~~~~~~~~~~~~~~~~~~
 
-where we assume the patch size is 6 (notice in the original command we are specifying meshcell size, not cell size). And in the \c refinementCriterion() of \c CCZ4SBH_FD4.cpp, we write:
+While the application domain-specific settings are somehow free, there is quite
+some choice to tweak the core HPC properties of the simulation engine.
+For the benchmarks, we decided to hard-code those guys, too, and to pick 
+reasonbale parameters from the @ref benchmarks_exahype2_ccz4_single_black_hole_hpc_assessment. 
 
-~~~~~~~~~~~~~~~~~~~~~~~
-::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-if (ProductionRun==1){ 
-  constexpr int NumberOfRefinementLayers = 2;
-  double Radius[NumberOfRefinementLayers] = {3.0, 1.5};
-  double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
-  result = ::exahype2::RefinementCommand::Keep;
-  for (int i=0; i<NumberOfRefinementLayers; i++) {
-    if (tarch::la::norm2(volumeX)<Radius[i] and tarch::la::max(meshCellH)>MaxH[i]) {
-     result=::exahype2::RefinementCommand::Refine;
-    }
-  }
-}
-~~~~~~~~~~~~~~~~~~~~~~~
+
+This expertise manifests in one routine in the script:
+
+@snippet production-runs.py Single black hole heuristics
+
+
+## Scenario 1
+
+<div style="background-color: #ccc ; padding: 10px; border: 1px solid green;"> 
+ Scenario 1 is triggered through 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4
+python3 production-runs.py -et 2.0 --scenario 1 --plot 0.01
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+</div>
+
+The core settings are defined by the snippet
+
+@snippet production-runs.py Single black hole scenario 1
+
+where we assume the patch size is 6 (notice in the original command we are specifying meshcell size, not cell size). 
+For the \c refinementCriterion() we inject:
+
+@snippet SingleBlackHoleScenario.cpp Single black hole scenario 1
 
 to ask the code to refine to the next finer level when \f$ r<3 \f$, then refine again to the finest level when \f$ r<1.5 \f$ (the actual refine radius would be bigger than the specified due to Peano refinement strategy). 
 
-The Python call for the production run mode is
-~~~~~~~~~~~~~~~~~~~~~~~
-python3 performance-studies.py -s fd4-rk1-ps-6 -et 1e-2 --plot 0.0 --cell-size 0.0 -product 1
-~~~~~~~~~~~~~~~~~~~~~~~
-Notice the \c --cell-size argument here is dummy, it is overwritten by the production run setup. You can add your production run setup easily by adding a new flag number and corresponding resolution and domain size setup. In the code, we pre-provide a bigger simulation setup besides the standard one above.
+
+## Scenario 2
+
+<div style="background-color: #ccc ; padding: 10px; border: 1px solid green;"> 
+ Scenario 1 is triggered through 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4
+python3 production-runs.py -et 2.0 --scenario 2 --plot 0.01
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+</div>
+
+The core settings are defined by the snippet
+
+@snippet production-runs.py Single black hole scenario 2
+
+where we assume the patch size is 6 (notice in the original command we are specifying meshcell size, not cell size). 
+For the \c refinementCriterion() we inject:
+
+@snippet SingleBlackHoleScenario.cpp Single black hole scenario 2
+
+to ask the code to refine to the next finer level when \f$ r<3 \f$, then refine again to the finest level when \f$ r<1.5 \f$ (the actual refine radius would be bigger than the specified due to Peano refinement strategy). 
+
+
+## Scenario 3
+
+<div style="background-color: #ccc ; padding: 10px; border: 1px solid green;"> 
+ Scenario 1 is triggered through 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4
+python3 production-runs.py -et 2.0 --scenario 3 --plot 0.01
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+</div>
+
+The core settings are defined by the snippet
+
+@snippet production-runs.py Single black hole scenario 3
+
+where we assume the patch size is 6 (notice in the original command we are specifying meshcell size, not cell size). 
+For the \c refinementCriterion() we inject:
+
+@snippet SingleBlackHoleScenario.cpp Single black hole scenario 3
+
+to ask the code to refine to the next finer level when \f$ r<3 \f$, then refine again to the finest level when \f$ r<1.5 \f$ (the actual refine radius would be bigger than the specified due to Peano refinement strategy). 
+
 
 */

@@ -7,6 +7,10 @@ import argparse
 from single_black_hole_settings import *
 
 
+Offset = [-9, -9, -9]
+Domain_size = [18, 18, 18]
+
+
 def get_command_line_args():
     parser = argparse.ArgumentParser(
         description="ExaHyPE 2 - CCZ4 single black hole benchmarking script"
@@ -146,6 +150,8 @@ if __name__ == "__main__":
     # =================================
     project = create_exahype2_project( 
         executable    = args.output,
+        offset        = Offset,
+        domain_size   = Domain_size,
         end_time      = args.end_time,
         plot_interval = args.plot_interval,
         peano_dir     = args.peanodir, 
@@ -168,6 +174,9 @@ if __name__ == "__main__":
                                       args.max_tasks,
                                       )
 
+    ########################################################################################
+    # Configure solvers
+    ########################################################################################
     added_limiter = False
     if "fd4-rk1-ps-" in args.solver:
         FD4PatchSize = int(args.solver[-1])
