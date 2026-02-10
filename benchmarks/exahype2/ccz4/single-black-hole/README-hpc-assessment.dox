@@ -288,10 +288,11 @@ This time, I pack the regular grid data and the adaptive grid data into one
 single archive. The script should visualise both variants, and it also provides
 a plot with a linear y-axis and one where we use the log scale.
 
-@image html benchmarks/exahype2/ccz4/single-black-hole/scripts/omp-different-schedulers.png
-@image html benchmarks/exahype2/ccz4/single-black-hole/scripts/omp-different-schedulers-log.png
-@image html benchmarks/exahype2/ccz4/single-black-hole/scripts/tbb-different-schedulers.png
-@image html benchmarks/exahype2/ccz4/single-black-hole/scripts/tbb-different-schedulers-log.png
+
+| Scale | OpenMP | TBB
+| ----- | ------ | ---
+| linear | @image html benchmarks/exahype2/ccz4/single-black-hole/scripts/omp-different-schedulers.png | @image html benchmarks/exahype2/ccz4/single-black-hole/scripts/tbb-different-schedulers.png
+| log    | @image html benchmarks/exahype2/ccz4/single-black-hole/scripts/omp-different-schedulers-log.png | @image html benchmarks/exahype2/ccz4/single-black-hole/scripts/tbb-different-schedulers-log.png
 
 The above images stem from an OpenMP run on Hamilton 8 (first two plots) and a run on the 
 same machine using Intel's TBB with @ref tbb_extension "Peano's TBB extension" (bottom two plots).
