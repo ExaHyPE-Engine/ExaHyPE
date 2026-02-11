@@ -181,7 +181,7 @@ Possible ways to do so can be:
 Most of Peano's solvers (such as ExaHyPE) support tasking to facilitate 
 light-weight load balancing. However, even the best load balancing will not
 be able to compensate for a poor initial geometric distribution. To assess
-the quality of your partition, Peano's loadbalancing toolbox \ref page_peano_domain_decomposition "provides a script"
+the quality of your partition, Peano's loadbalancing toolbox \ref toolbox_loadbalancing "provides a script"
 that visualises the distribution of cells. 
 
  @image html runtime_analysis_loadbalancing_example00.png 

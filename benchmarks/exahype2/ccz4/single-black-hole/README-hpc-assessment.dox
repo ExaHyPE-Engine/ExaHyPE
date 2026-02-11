@@ -1,0 +1,426 @@
+/** 
+
+@page benchmarks_exahype2_ccz4_single_black_hole_hpc_assessment HPC assessment benchmarks
+
+<!-- Add this one for href links to subitems -->
+@tableofcontents
+
+One difficulty in letting ExaGRyPE run is that there's a plethora of different
+setting that one can pick from. This is quite natural for a research code but
+quickly becomes challenging for people who just wanna have a go or start
+benchmarking. It also means that shipping a proper benchmark is far from 
+trivial.
+
+The single black hole benchmark is written in a way such that it supports many
+different settings. We can therefore play around with them and find good 
+choices. Anecdotal evidence fees into the settings used by @ref benchmarks_exahype2_ccz4_single_black_hole_production_benchmarks.
+All the different benchmarking ingredients for the HPC assessment are available
+through the script ```performance-studies.py```. 
+
+This page first provides some generic description of the variants. This text
+serves primarily as background reading. Most readers might skip it. From 
+hereon, we demonstrate how to assess certain system properties systematically:
+
+1. Determine a proper number of domain subpartitions per rank/node.
+2. Exploit offline load balancing to determine close-to-optimal splittings.
+3. Enable tasking on top of rank-local domain decomposition.
+4. Offload to GPUs.
+
+Each section discussing one of the items above kicks off with a reference 
+configuration. You should be able to run this as it is as kind of a sanity
+check.
+
+# Generic settings
+
+Benchmarking and playing around with the single black hole is never easy, as it is a rather complex setup
+already with a rather long initialisation and grid construction phase. However,
+it is possible to benchmark it once you disable plots, the tracers, and you use
+an unreasonable coarse mesh. That is, we disable a lot of key features for the 
+benchmarking runs. In general, we apply the following simplifications:
+
+
+- We reduce the end time drastically to ```-et 1e-2``` via the Python API front-end.
+- We omit any output by defaulting the ```--plot 0``` from the Python call to zero which switches off the plotting.
+
+A typical setup therefore resembles
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 performance-studies.py -et 1e-2 --plot 0.0 ...
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+# Solver, algorithm and optimisation variants
+
+## Solvers
+
+The script allows us to toggle between different solver variants from the command line by 
+picking a variant through ```--solver```.
+
+- Finite Volume solvers all start with a ```fv-``` prefix (if you use the 
+  command line) followed by the patch size. We exclusively employ enclave
+  solvers in this setup, i.e. each Finite Volume solver spawns tasks.
+
+
+## Load balancing
+
+Proper load balancing between ranks and threads is obviously key for good performance.
+The benchmark supports a couple of load balancing schemes to empirically study different concepts:
+
+- ```generic``` uses an instance of toolbox::loadbalancing::strategies::cascade::SpreadOutHierarchically.
+  That is, we first populate all ranks and then all threads, unless the Python API
+  specifies the value ```trees``` which constraints the maximum number of subpartitions
+  (trees) that we employ per rank. 
+- ```tailored``` is generic as well, but it uses a cost functional which 
+  hard-codes information about the Schwarzschild solution: The closer a cell to
+  the centre, the higher its weight.
+- ```offline-regular``` uses the offline balancer over a regular mesh, i.e. 
+  it uses the cell size to anticipate what a regular mesh would look like and 
+  then computes an optimal partitioning before we even start the compute.
+  
+Constraining the number of trees does not mean that threads idle: We use
+task-based parallelism on top of domain decomposition and hence assume that
+idle threads grab tasks and hence automatically balance out illpartitioning.
+
+
+
+
+## Tasks scheduling and orchestration
+
+For each benchmarks, there are various schedulers:
+
+- ```--scheduler native``` Picks the native, hardcoded scheduler from Peano. 
+  This disables all task fusion and also all GPU offloading.
+- ```--scheduler native-piorities``` Constructs an instance of 
+  @ref benchmarks::exahype2::ccz4::MulticoreOrchestration as task orchestration. It still disables all the 
+  task fusion (and therefore GPU offloading), but now activates features 
+  such as 
+- ```--scheduler gpu-lazy-evaluation``` Tasks are shipped off to the GPU lazily,
+  i.e.~when the task results are requested. Compare to the description
+  in @ref tarch::multicore::orchestration::FusionImplementation.
+- ```--scheduler gpu-timed-execution``` Tasks are shipped en bloc to the GPU after
+  each mesh sweep that produces tasks. Compare to the description
+  in @ref tarch::multicore::orchestration::FusionImplementation.
+- ```--scheduler gpu-producer-consumer``` Shipped off to the GPU with producer-consumer 
+  tasksCompare to the description
+  in @ref tarch::multicore::orchestration::FusionImplementation.
+- ```--scheduler gpu-eager-consumer-tasks``` Tasks are shipped off to the GPU using
+  Peano's eager consumer pattern.Compare to the description
+  in @ref tarch::multicore::orchestration::FusionImplementation.
+- ```--scheduler --no-tasks``` No tasking is used, i.e. everything that could be mapped onto a task is executed immediately.
+
+
+If an orchestration with task fusion is picked and you employ a combined FV-FD 
+solver, then only the Finite Volume tasks are sent off to the accelerator. 
+Details on this behaviour can be found in 
+@ref benchmarks::exahype2::ccz4::MulticoreOrchestration.
+
+
+# Studying the right number of subpartitions per node
+
+We start with some experiments where we artifically restrict the number subpartitions uses on the node.
+If we use one subpartition per core, we quickly run into a situation where the individual subpartitions become too small and overhead eats up all scalability improvements.
+Therefore, a first step restricts the number of trees through ```--trees```.
+While we do so, we first disable all tasking manually, and we also stick exclusively to Finite Volumes:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 performance-studies.py -s fv-6 --plot 0.0 --scheduler no-tasks --trees ... ...
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+<br /><br />
+<div style="background-color: #ccc ; padding: 10px; border: 1px solid green;"> 
+  <b> Example setup </b>
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 performance-studies.py -s fv-6 -et 1e-2 --plot 0.0 --scheduler no-tasks --trees 32 --cell-size 1.8 --output test
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  This setup yields a relatively small regular grid scenario which should 
+  complete within a few minutes and be well-balanced without any further
+  effort. 
+</div>
+
+
+## Building all the benchmarks in one go
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+rm README-*
+export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4
+module load python
+for TREES in 1 2 3 4 6 8 9 16 27 32 64 128 256 
+do
+  python3 performance-studies.py -s fv-6 -et 1e-2       --plot 0.0 --cell-size 0.6    --scheduler no-tasks --trees $TREES --output peano-regular-$TREES-trees
+  python3 performance-studies.py -s fv-6 -et 1e-6 -amr --plot 0.0 --cell-size 0.00123 --scheduler no-tasks --trees $TREES --output peano-adaptive-$TREES-trees
+done
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There are two job script in the scripts subdirectory, 
+which can serve as a starting point if you want to submit experiments to a 
+supercomputer with an array job. This script is for @ref page_machines_hamilton "Hamilton 8" but most 
+Slurm scripts will look similar.
+
+
+Once the data is in, it might be best to package it into two archives
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tar -czvf results-adaptive.tar.gz results-adaptive-*
+tar -czvf results-regular.tar.gz results-regular-* 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+and to copy them over onto a local computer. There is a dedicated script
+plot-trees-vs-runtime.py in the scripts subdirectory of the benchmark that can read 
+zips and create output data.
+The script is based upon the 
+@ref page_toolbox_loadbalancing_api_api_postprocessing "load balancing postprocessing scripts"
+and yields plots similar to the one below.
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PYTHONPATH=~/git/Peano/src/toolbox/loadbalancing/api/postprocessing
+
+python3 scripts/plot-trees-vs-runtime.py results-regular.tar.gz   --output trees-vs-runtime-regular
+python3 scripts/plot-trees-vs-runtime.py results-adaptive.tar.gz  --output trees-vs-runtime-adaptive
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+## Regular grid outcomes
+
+@image html benchmarks/exahype2/ccz4/single-black-hole/scripts/omp-trees-vs-runtime-regular.png
+
+The above images stem from an OpenMP run on Hamilton 8 (top) and a run on the 
+same machine using Intel's TBB with @ref tbb_extension "Peano's TBB extension" (bottom).
+
+We see that there is a sweet spot whenever we hit the canonical @f$ 3^d @f$ 
+subpartition count. We also see that there is limited sense in going beyond
+27 subpartitions on a rank. The crucial question here is whether this is a 
+general pattern, or if the workload per partition then simply becomes too
+small. 
+
+To a certain degree, we have to analyse adaptive meshes to find an answer to
+this question, although an in-depth performance analysis would obviously be 
+even better.
+
+
+## Adaptive mesh outcomes
+
+@image html benchmarks/exahype2/ccz4/single-black-hole/scripts/omp-trees-vs-runtime-adaptive.png
+
+The above images stem from an OpenMP run on Hamilton 8 (top) and a run on the 
+same machine using Intel's TBB with @ref tbb_extension "Peano's TBB extension" (bottom).
+
+The adaptive mesh data is more interesting:
+The balancing of cells with the present load balancing scheme is poor.
+Consequently, we need a more sophisticated load balancing scheme.
+
+
+# Set up an adaptive mesh scenario with offline load balancing
+
+<br /><br />
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+  This part is currently under construction and not ready to be released yet.
+</div>
+
+
+# Find the right tasking back-end
+
+Once we are reasonably satisfied with the load balancing per rank,
+it is an interesting question what kind of tasking back-end is most
+advantageous for the settings. That is, now we fix the number of subpartitions
+to a reasonable choice and we alter the scheduling orchestration.
+We know that we cannot exploit all cores through domain decomposition 
+alone, and hence hope that the tasks step in and help us exploit those
+cores that we haven't used yet, i.e. we use the whole node, use a reasonable
+number of subtrees per node and hence use a few cores to handle those subtrees,
+and then let those subtrees spawn tasks which should bring in the idling 
+remaining threads.
+
+
+<br /><br />
+<div style="background-color: #ccc ; padding: 10px; border: 1px solid green;"> 
+  <b> Example setup </b>
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 performance-studies.py -s fv-6 -et 1e-2 --plot 0.0 --cell-size 1.8 --trees 32 --scheduler native --output test
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  This setup yields a relatively small regular grid scenario which should 
+  complete within a few minutes and be well-balanced without any further
+  effort. As we pick native as scheduler, the test should use more than the
+  32 threads that we occupy with subpartitions.
+</div>
+
+
+## Building all the benchmarks in one go
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+rm README-*
+export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4
+module load python
+for SCHEDULER in no-tasks native gpu-lazy-evaluation gpu-timed-execution gpu-eager-consumer-tasks
+do
+  python3 performance-studies.py -s fv-6 -et 1e-2       --plot 0.0 --cell-size 1.8     --trees 27   --scheduler $SCHEDULER --output peano-regular-$SCHEDULER
+  python3 performance-studies.py -s fv-6 -et 1e-6 -amr  --plot 0.0 --cell-size 0.00123 --trees 64   --scheduler $SCHEDULER --output peano-adaptive-$SCHEDULER
+done
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Despite the prefix gpu, all of these schemes also should work on a CPU-only
+system. Again, there's an example Slurm submission script in the scripts
+subdirectory which works for Hamilton. This time, we cannot straightforwardly
+use array jobs, so I decided to stick with one big script which runs through 
+the variants. We do not farm out.
+
+The mesh size is delibertely chosen coarser than in a previous setup. As we 
+bundle tasks, we temporarily need more memory, so having some slack would 
+help.
+
+
+## Postprocessing
+
+Again, the cleanest way is to create on archive as my postprocessing script
+can handle archives directly:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+tar -czvf results-scheduler.tar.gz results-scheduler*.out
+
+[... maybe copy stuff onto your local machine]
+
+export PYTHONPATH=~/git/Peano/src/toolbox/loadbalancing/api/postprocessing
+python3 scripts/plot-schedulers.py --output different-schedulers results-scheduler.tar.gz
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This time, I pack the regular grid data and the adaptive grid data into one
+single archive. The script should visualise both variants, and it also provides
+a plot with a linear y-axis and one where we use the log scale.
+
+@image html benchmarks/exahype2/ccz4/single-black-hole/scripts/omp-different-schedulers.png
+@image html benchmarks/exahype2/ccz4/single-black-hole/scripts/omp-different-schedulers-log.png
+
+The above images stem from an OpenMP run on Hamilton 8 (first two plots) and a run on the 
+same machine using Intel's TBB with @ref tbb_extension "Peano's TBB extension" (bottom two plots).
+
+
+## Evaluation
+
+The lessons learned now are not trivial anymore:
+
+- Native tasking on top of the domain decomposition pays off.
+- Lazy evaluation where these tasks are parked and then processed en bloc once 
+  we need them is not a good idea. It likely introduces load imbalances, as we
+  discuss below.
+- Timed execution means that we wait for all tasks to build up and then handle
+  them en bloc at the end of the mesh traversal. This might be a good idea for
+  GPUs which need a reasonable chunk of work to perform well, but it is a very
+  poor idea on a CPU-only system.
+- Eager consumers seem to work fine for adaptive meshes with unreasonable load
+  balancing, but introduce too much overhead for a regular mesh, such that the
+  tasked variant with this orchestration is actually slower than the baseline
+  code without any tasking. 
+
+<br /><br />
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+  Todos:
+  - Add a remark to our paper that the memory footprint can become a problem if
+    we park tasks. We also have to quantify this impact.
+  - Run some performance analysis what happens in the bad cases.
+</div>
+
+
+# GPU offloading
+
+<br /><br />
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+  This part is currently under construction and not ready to be released yet.
+</div>
+
+# Scaling
+
+<br /><br />
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+  This part is currently under construction and not ready to be released yet.
+  Please ignore all the stuff that is written below.
+</div>
+
+## Script to create output plots
+
+Below is a template of a script how to creates data points. You will have to 
+amend the prefix accordingly.
+Note that we really only are interested in one line from the output and that's 
+the time to solution that is spent on the actual solver, i.e. bare any I/O and 
+mesh generation.
+
+
+@todo Script needs work
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PREFIX=tbb or omp or sycl
+
+export CELL_SIZE=1.8
+
+OUTPUT=results/$PREFIX.txt
+echo $PREFIX > $OUTPUT
+for AMR in without-amr with-amr
+do
+  for TREES in 1 6 8 12
+  do
+    for SCHEDULER in native-no-priorities native tailored parallel-for subtasks subtasks-and-kernel-parallelisation
+    do
+      FILE=results/$PREFIX-$AMR-$SCHEDULER-$TREES-trees-$CELL_SIZE.txt
+      echo $FILE >> $OUTPUT
+      grep "time stepping:" $FILE >> $OUTPUT
+    done
+  done
+done
+echo wrote all data to $OUTPUT
+
+tar -cf $PREFIX-$SCHEDULER-without-amr-$TREES-trees.tar --files-from /dev/null
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The last line packs the data from one upscaling exercise into a tar archive.
+Single files are obviously more convenient to move around between computers, 
+but archives are notably directly supported by Peano's postprocessing scripts.
+
+
+## Plotting performance data
+
+Get the tar archives. After that, we can use the out-of-the-box Peano scripts
+to generate the plots
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PREFIX=omp
+export TREES=8
+
+OUTPUT=$PREFIX-$TREES-trees-without-amr
+python3 ../../../../python/exahype2/postprocessing/plot-scaling.py --max-cores-per-rank=-1 --log-x --log-y --output $OUTPUT \
+  --label "native tasking, subtasks, subtasks and parallel kernels" --title "No AMR" \
+  $PREFIX-native-without-amr-$TREES-trees.tar.gz \
+  $PREFIX-subtasks-without-amr-$TREES-trees.tar.gz \
+  $PREFIX-subtasks-and-kernel-parallelisation-without-amr-$TREES-trees.tar.gz
+
+export OUTPUT=$PREFIX-$TREES-trees-with-amr
+python3 ../../../../python/exahype2/postprocessing/plot-scaling.py --max-cores-per-rank=-1 --log-x --log-y --output $OUTPUT \
+  --label "native tasking, subtasks, subtasks and parallel kernels" --title "AMR, patch size 3, cell size 1.8" \
+  $PREFIX-native-without-amr-$TREES-trees.tar.gz \
+  $PREFIX-subtasks-without-amr-$TREES-trees.tar.gz \
+  $PREFIX-subtasks-and-kernel-parallelisation-without-amr-$TREES-trees.tar.gz
+ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+which clearly showcase that the kernel parallelisation pays off even though 
+the overall scalability is poor with the present rather coarse mesh:
+
+
+
+@image html benchmarks/exahype2/ccz4/single-black-hole/scripts/omp-8-trees-with-amr-cs-1.8-ps-3.png
+@image html benchmarks/exahype2/ccz4/single-black-hole/scripts/omp-8-trees-with-amr-cs-0.6-ps-6.png
+
+
+
+# Some other setups
+
+
+Here are some canonical settings:
+
+
+Description     | Solver         | Cell size | End time | Patch size | Remarks   | Build command
+----------------|----------------|-----------|----------|------------|-----------|---------------
+Minimal setup   | Finite Volumes | 5.4       | 1.0      |          6 | Toy problem with 729 cells. Tells you if the code, in principle, works. Should crash at one point suddenly as the eigenvalue becomes zero, which showcases that this setup is too coarse to capture anything that has a physical meaning. | ```python3 performance-studies.py -s fv-6 -et 1.0 --plot 0.0 --cell-size 5.4```
+Simplest FV setup for single node workstation (laptop)  | Finite Volumes | 1.8       | 1e-1     |          6 | You cannot see AMR here, but already gives you 19,683 cells. Load balancing should be really good. This is kind of the largest regular mesh setup that I can fit on a local laptop. | ```python3 performance-studies.py -s fv-6 -et 0.1 --plot 0.0 --cell-size 1.8```
+
+
+
+
+*/

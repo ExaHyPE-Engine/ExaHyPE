@@ -26,7 +26,7 @@ default:
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} python3 -m compileall -f ./
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing;"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "CFLAGS=\"${CFLAGS}\" CC=${CC} CXXFLAGS=\"${CXXFLAGS}\" CXX=${CXX} LDFLAGS=\"${LDFLAGS}\" ./configure ${CONFIGURATION_OPTIONS}"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "CFLAGS=\"${CFLAGS}\" CC=${CC} CXXFLAGS=\"${CXXFLAGS}\" CXX=${CXX} LDFLAGS=\"${LDFLAGS}\" LIBS=\"${LIBS}\" ./configure ${CONFIGURATION_OPTIONS}"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} make -j $(nproc --all)
   artifacts:
     paths:

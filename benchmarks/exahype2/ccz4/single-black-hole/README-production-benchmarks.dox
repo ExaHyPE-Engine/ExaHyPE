@@ -1,0 +1,48 @@
+/** 
+
+@page benchmarks_exahype2_ccz4_single_black_hole_production_benchmarks Production benchmarks
+
+<!-- Add this one for href links to subitems -->
+@tableofcontents
+
+The "standard" single Schwarzschild black hole simulation in the original application script goes like
+
+~~~~~~~~~~~~~~~~~~~~~~~
+python3 ccz4.py -ext adm -impl fd4-rk1-adaptive -s single-puncture -maxh 0.4 -minh 0.04 -ps 6 -plt 0.5 -et 100 -exn sbh27 --domain_r 9.0 --ReSwi 7 -cfl 0.1 -outdir ./ --KOSigma 8.0 -sommerfeld
+~~~~~~~~~~~~~~~~~~~~~~~
+
+It is straightforward to map this setup into the benchmark framework, as only resolution (including AMR level) and domain size change in the production run; everything else remains the same (after all, they are still simulating a single black hole). Therefore, we introduce the \c production_run flag in the command-line argument. For which you can change the resolution (minimum and maximal cell sizes) and domain size quickly, the flag itself is also used to indicate the refinement criterion the code should use for the corresponding production run setup. Taking the setup above as an example, you should set the maximal and minimum cell size as
+
+~~~~~~~~~~~~~~~~~~~~~~~
+if args.production_run==1: #here is the "standard" production run setup
+    max_cell_size = 0.4*6
+    min_cell_size = 0.04*6
+    # offset and domain size remain unchanged
+~~~~~~~~~~~~~~~~~~~~~~~
+
+where we assume the patch size is 6 (notice in the original command we are specifying meshcell size, not cell size). And in the \c refinementCriterion() of \c CCZ4SBH_FD4.cpp, we write:
+
+~~~~~~~~~~~~~~~~~~~~~~~
+::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+if (ProductionRun==1){ 
+  constexpr int NumberOfRefinementLayers = 2;
+  double Radius[NumberOfRefinementLayers] = {3.0, 1.5};
+  double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
+  result = ::exahype2::RefinementCommand::Keep;
+  for (int i=0; i<NumberOfRefinementLayers; i++) {
+    if (tarch::la::norm2(volumeX)<Radius[i] and tarch::la::max(meshCellH)>MaxH[i]) {
+     result=::exahype2::RefinementCommand::Refine;
+    }
+  }
+}
+~~~~~~~~~~~~~~~~~~~~~~~
+
+to ask the code to refine to the next finer level when \f$ r<3 \f$, then refine again to the finest level when \f$ r<1.5 \f$ (the actual refine radius would be bigger than the specified due to Peano refinement strategy). 
+
+The Python call for the production run mode is
+~~~~~~~~~~~~~~~~~~~~~~~
+python3 performance-studies.py -s fd4-rk1-ps-6 -et 1e-2 --plot 0.0 --cell-size 0.0 -product 1
+~~~~~~~~~~~~~~~~~~~~~~~
+Notice the \c --cell-size argument here is dummy, it is overwritten by the production run setup. You can add your production run setup easily by adding a new flag number and corresponding resolution and domain size setup. In the code, we pre-provide a bigger simulation setup besides the standard one above.
+
+*/

@@ -34,7 +34,7 @@ parser.add_argument(
     "-p",
     "--num-patches",
     nargs="+",
-    default=[32, 64, 128, 256, 512, 1024, 2048],
+    default=[32, 64, 128, 256],
     type=int,
     help="Number of patches to study",
 )

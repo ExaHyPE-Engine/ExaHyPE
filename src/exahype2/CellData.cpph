@@ -75,6 +75,7 @@ exahype2::CopyCellDataGPU<inType, outType>::CopyCellDataGPU(
 ):
   numberOfCells(cellData.numberOfCells),
   memoryLocation(cellData.memoryLocation),
+  targetDevice(device),
   QInStride(inputPatchSize),
   QOutStride(outputPatchSize) {
   sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);

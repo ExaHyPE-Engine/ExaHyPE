@@ -136,6 +136,7 @@ class AbstractCCZ4Solver(object):
         self.integer_constants = {
             "CCZ4LapseType": 0,
             "CCZ4SO": 0,
+            "ProductionRun":0
         }
         self.double_constants = {
             "CCZ4ds": 1.0,

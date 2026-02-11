@@ -161,7 +161,7 @@ is satisfied, available criteria including count of entries, data changes, posit
 entires exceed the threshold your specified (1000 in the example above), the code will output a csv file for current data 
 and clear the data base. 
 
-We recommended to output csv file every now and them during the simulation, it will help to reduce memory footprint, and it is
+We recommended to output csv file every now and then during the simulation, it will help to reduce memory footprint, and it is
 also safer, as a crash does not trigger automatically dumping, i.e., all particle data still in the memory will lost in this case.
 
 # Coupling Multiple Numerical Schemes (Solvers) 

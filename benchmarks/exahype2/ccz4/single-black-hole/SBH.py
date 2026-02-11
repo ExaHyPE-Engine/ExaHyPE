@@ -81,8 +81,8 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         super(Limiter, self).__init__(
             name=name + "_FV",
             patch_size=SubPatchSize,
-            min_volume_h=1.0 / 65536,
-            max_volume_h=65536,
+            min_volume_h=1.0 / 65536, # @so refine to the minimum
+            max_volume_h=1.0 / 65536, # @not really a regular grid, as we work localised
             pde_terms_without_state=True,
         )
         self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
@@ -125,8 +125,8 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
                 kernel_variant=exahype2.solvers.fv.rusanov.kernels.KernelVariant.PatchWiseAoSHeap,
             )
 
-        self.add_all_solver_constants()
         update_solver_parameters_for_single_black_hole(self)
+        self.add_all_solver_constants()
 
     def _store_cell_data_default_guard(self):
         """!
@@ -269,9 +269,11 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
 
         self.set_implementation(
             initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-            refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             boundary_conditions=exahype2.solvers.PDETerms.None_Implementation,
         )
+
+        update_solver_parameters_for_single_black_hole(self)
         self.add_all_solver_constants()
 
         if parallelisation_of_kernels == KernelParallelisation.SUBTASKS:
@@ -280,7 +282,6 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
             )
             pass
 
-        update_solver_parameters_for_single_black_hole(self)
 
         if self.interpolation_method == "matrix":
             solver_matrix_interpolator = exahype2.solvers.SolverMatrixInterpolator(
@@ -580,6 +581,7 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
         patch_size,
         min_cell_size,
         max_cell_size,
+        production_run = 0
     ):
         self._name_without_FD4_extension = name
 
@@ -605,12 +607,13 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
 
         self.set_implementation(
             initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-            refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             boundary_conditions=exahype2.solvers.PDETerms.None_Implementation,
         )
 
-        self.add_all_solver_constants()
+        self.integer_constants["ProductionRun"] = production_run
         update_solver_parameters_for_single_black_hole(self)
+        self.add_all_solver_constants()
 
     def create_action_sets(self):
         """!
@@ -754,8 +757,8 @@ class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
             boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
         )
 
-        self.add_all_solver_constants()
         update_solver_parameters_for_single_black_hole(self)
+        self.add_all_solver_constants()
 
     def create_action_sets(self):
         """!
