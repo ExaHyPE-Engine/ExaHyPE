@@ -86,7 +86,7 @@
 
 .ExaHyPE2_SBH:
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/single-black-hole; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 python3 performance-studies.py -s fv-6 -et 1e-2 --plot 0.0 --cell-size 1.8 --output sbh"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/single-black-hole; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 python3 performance-studies.py -s fv-6 -et 1e-4 --trees 32 --scheduler native --plot 0.0 --cell-size 1.8 --output sbh"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/single-black-hole; ./sbh"
 
 #.ExaHyPE2_SBH_Enclave:
