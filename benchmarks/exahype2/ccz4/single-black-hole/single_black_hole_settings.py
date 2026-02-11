@@ -50,8 +50,6 @@ SolverChoices = [
 
 
 Dimensions = 3
-Offset = [-9, -9, -9]
-Domain_size = [18, 18, 18]
 
 
 from SBH import KernelParallelisation
@@ -130,15 +128,20 @@ def configure_multicore_configuration(project,
 
 def create_exahype2_project(
         executable,
+        offset,
+        domain_size,
         end_time,
         plot_interval,
         peano_dir,
         mode,
+        
         ):
     """!
     
     Create the vanilla ExaHyPE 2 project which we then use to supplement with 
     solvers. That is, this routine does nto add any solvers yet
+    
+    @param mode String identifying the build mode
     
     """
     project = exahype2.Project(
@@ -149,8 +152,8 @@ def create_exahype2_project(
 
     project.set_global_simulation_parameters(
         Dimensions,  # dimensions
-        Offset,
-        Domain_size,
+        offset,
+        domain_size,
         end_time,
         0.0,
         plot_interval,
