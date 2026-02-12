@@ -62,12 +62,13 @@ A generic script to create speedup plots.
         rank = 0
         trees = max( data.trees_per_snapshot(rank) )
 
-        runtime[ trees ] = data.runtime
-        max_local_cells_per_tree[ trees ] = data.max_local_cells_per_snapshot(rank)[-1]
-        min_local_cells_per_tree[ trees ] = data.min_local_cells_per_snapshot(rank)[-1]
-        max_virtual_cells_per_tree[ trees ] = data.max_virtual_cells_per_snapshot(rank)[-1]
-        min_virtual_cells_per_tree[ trees ] = data.min_virtual_cells_per_snapshot(rank)[-1]
-        os.remove(data_file)
+        if data.is_valid():
+          runtime[ trees ] = data.runtime
+          max_local_cells_per_tree[ trees ] = data.max_local_cells_per_snapshot(rank)[-1]
+          min_local_cells_per_tree[ trees ] = data.min_local_cells_per_snapshot(rank)[-1]
+          max_virtual_cells_per_tree[ trees ] = data.max_virtual_cells_per_snapshot(rank)[-1]
+          min_virtual_cells_per_tree[ trees ] = data.min_virtual_cells_per_snapshot(rank)[-1]
+          os.remove(data_file)
  
     bar_width = 1.0/6.0   
     tree_keys = sorted( runtime.keys() )

@@ -53,72 +53,66 @@ void benchmarks::exahype2::ccz4::prepareTwoPunctures() {
 }
 
 
-::exahype2::RefinementCommand benchmarks::exahype2::ccz4::refinementCriterion(
+//! [Single black hole scenario 1]
+::exahype2::RefinementCommand benchmarks::exahype2::ccz4::refinementCriterionScenario1(
   const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
-  double                                       maxH,
-  double                                       minH
+  const tarch::la::Vector<Dimensions, double>& h
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-  std::cout << "max=" << maxH << ", min=" << minH << ", h=" << h << std::endl;
-  assertion2( maxH>=minH, maxH, minH );
-
-  int refinementLevels = 0;
-  double currentFinestLevelRelativeToCoarsest = maxH;
-  while (currentFinestLevelRelativeToCoarsest > minH) {
-    refinementLevels++;
-    currentFinestLevelRelativeToCoarsest /= 3.0;
-  }
-
-  if ( h(0)>maxH ) {
-    result = ::exahype2::RefinementCommand::Refine;
-  }
-  else if (refinementLevels==0) {
-  }
-  else if (refinementLevels==1) {
-    constexpr int NumberOfRefinementLayers = 2;
-    double Radius[NumberOfRefinementLayers] = {3.0, 1.5};
-    double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
-    result = ::exahype2::RefinementCommand::Keep;
-    for (int i=0; i<NumberOfRefinementLayers; i++) {
-      if (tarch::la::norm2(x)<Radius[i] and tarch::la::max(h)>MaxH[i]) {
-       result=::exahype2::RefinementCommand::Refine;
-      }
+  constexpr int NumberOfRefinementLayers = 2;
+  double Radius[NumberOfRefinementLayers] = {3.0, 1.5};
+  double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
+  result = ::exahype2::RefinementCommand::Keep;
+  for (int i=0; i<NumberOfRefinementLayers; i++) {
+    if (tarch::la::norm2(x)<Radius[i]) {
+      result=::exahype2::RefinementCommand::Refine;
     }
   }
-  else if (refinementLevels==2) {
-    constexpr int NumberOfRefinementLayers = 3;
-    double Radius[NumberOfRefinementLayers] = {8.0, 5.0, 2.0};
-    double MaxH[NumberOfRefinementLayers]   = {0.25, 0.08, 0.03};
-    result = ::exahype2::RefinementCommand::Keep;
-    for (int i=0; i<NumberOfRefinementLayers; i++) {
-      if (tarch::la::norm2(x)<Radius[i] and tarch::la::max(h)>MaxH[i]) {
-       result=::exahype2::RefinementCommand::Refine;
-      }
-    }
-  }
-  else if (refinementLevels==3) {
-    constexpr int NumberOfRefinementLayers = 5;
-    double Radius[NumberOfRefinementLayers] = {60.0, 30.0, 15.0, 8.0, 4.0};
-    double MaxH[NumberOfRefinementLayers]   = {2.1, 0.7, 0.25, 0.08, 0.03};
-    result = ::exahype2::RefinementCommand::Keep;
-    for (int i=0; i<NumberOfRefinementLayers; i++) {
-      if (tarch::la::norm2(x)<Radius[i] and tarch::la::max(h)>MaxH[i]) {
-       result=::exahype2::RefinementCommand::Refine;
-      }
-    }
-  }
-  else {
-    logWarning( "refinementCriterion(...)", "no support for " << refinementLevels << " different refinement levels" );
-  }
 
-/*
-  else {
-    result = tarch::la::norm2(x) - std::sqrt(Dimensions)*h(0) < BlackHoleFVRegion
-       ? ::exahype2::RefinementCommand::Refine
-       : ::exahype2::RefinementCommand::Keep;
-  }
-*/
   return result;
 }
+//! [Single black hole scenario 1]
+
+
+//! [Single black hole scenario 2]
+::exahype2::RefinementCommand benchmarks::exahype2::ccz4::refinementCriterionScenario2(
+  const tarch::la::Vector<Dimensions, double>& x,
+  const tarch::la::Vector<Dimensions, double>& h
+) {
+  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+
+  constexpr int NumberOfRefinementLayers = 3;
+  double Radius[NumberOfRefinementLayers] = {8.0, 5.0, 2.0};
+  double MaxH[NumberOfRefinementLayers]   = {0.25, 0.08, 0.03};
+  result = ::exahype2::RefinementCommand::Keep;
+  for (int i=0; i<NumberOfRefinementLayers; i++) {
+    if (tarch::la::norm2(x)<Radius[i]) {
+      result=::exahype2::RefinementCommand::Refine;
+    }
+  }
+  return result;
+}
+//! [Single black hole scenario 2]
+
+
+//! [Single black hole scenario 3]
+::exahype2::RefinementCommand benchmarks::exahype2::ccz4::refinementCriterionScenario3(
+  const tarch::la::Vector<Dimensions, double>& x,
+  const tarch::la::Vector<Dimensions, double>& h
+) {
+  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+
+  constexpr int NumberOfRefinementLayers = 5;
+  double Radius[NumberOfRefinementLayers] = {60.0, 30.0, 15.0, 8.0, 4.0};
+  double MaxH[NumberOfRefinementLayers]   = {2.1, 0.7, 0.25, 0.08, 0.03};
+  result = ::exahype2::RefinementCommand::Keep;
+  for (int i=0; i<NumberOfRefinementLayers; i++) {
+    if (tarch::la::norm2(x)<Radius[i]) {
+     result=::exahype2::RefinementCommand::Refine;
+    }
+  }
+
+  return result;
+}
+//! [Single black hole scenario 3]
