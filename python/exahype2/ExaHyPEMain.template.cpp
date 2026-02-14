@@ -51,22 +51,22 @@ namespace {
  * @return true if construction should continue (sets next step implicitly), false if construction is done.
  */
 bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumberOfTrees) {
-  assertion(repositories::loadBalancer.getGlobalNumberOfTrees() > 0);
+  assertion(repositories::loadBalancer.getStatistics().getGlobalNumberOfTrees() > 0);
 
   // If the mesh size has decreased, we pause refinement to let the grid settle.
-  if (tarch::la::smaller(repositories::loadBalancer.getGlobalMinH(), currentMinH)) {
+  if (tarch::la::smaller(repositories::loadBalancer.getStatistics().getGlobalMinH(), currentMinH)) {
     [[maybe_unused]] const double oldH  = currentMinH; // Only for logging
-    currentMinH                         = repositories::loadBalancer.getGlobalMinH();
-    const auto globalNumberOfLeaves     = static_cast<unsigned long>(repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells());
-    const auto maxDepth                 = repositories::loadBalancer.getGlobalMaxDepth();
+    currentMinH                         = repositories::loadBalancer.getStatistics().getGlobalMinH();
+    const auto globalNumberOfLeaves     = static_cast<unsigned long>(repositories::loadBalancer.getStatistics().getGlobalNumberOfInnerUnrefinedCells());
+    const auto maxDepth                 = repositories::loadBalancer.getStatistics().getGlobalMaxDepth();
     logInfo("shouldContinueGridConstruction()", "Mesh refinement detected (h_{min} decreased: " << oldH << " -> " << currentMinH << "), Leaves=" << globalNumberOfLeaves << ", Levels=" << maxDepth);
     peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithoutRefinement));
     return true;
   }
 
   // If new trees (subdomains) have appeared, we pause refinement to let the load balancer settle.
-  if (repositories::loadBalancer.getGlobalNumberOfTrees() > currentGlobalNumberOfTrees) {
-    const auto newTreeCount = repositories::loadBalancer.getGlobalNumberOfTrees();
+  if (repositories::loadBalancer.getStatistics().getGlobalNumberOfTrees() > currentGlobalNumberOfTrees) {
+    const auto newTreeCount = repositories::loadBalancer.getStatistics().getGlobalNumberOfTrees();
     logInfo("shouldContinueGridConstruction()", "Rebalancing detected (Tree count increased: " << currentGlobalNumberOfTrees << " -> " << newTreeCount << ")");
     currentGlobalNumberOfTrees = newTreeCount;
     peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithoutRefinement));
@@ -77,7 +77,7 @@ bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumbe
   if (
     tarch::la::smallerEquals(currentMinH, repositories::getMinAdmissibleMeshSize())
     and
-    repositories::loadBalancer.hasStagnated()
+    repositories::loadBalancer.isStagnating()
     and
     // Ensure that a proper creation has been ran before, so the mesh had the opportunity to refine further if it has not done yet.
     repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep()) == repositories::StepRepository::Steps::CreateGridWithRefinement
@@ -85,7 +85,7 @@ bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumbe
     // If we get in an infinite loop because Peano is not able to get all ranks stationary, then we break the loop after reaching the number of settling iterations given by the load balancer.
     // Happens if we have small meshes, and too many ranks to satisfy the mesh splitting.
     static int numberOfStationarySweeps = 0;
-    if (repositories::loadBalancer.getGlobalNumberOfStationarySweeps() == 0 and numberOfStationarySweeps < repositories::loadBalancer.getNumberOfSettlingIterations()) {
+    if (repositories::loadBalancer.getStatistics().getGlobalNumberOfStationarySweeps() == 0 and numberOfStationarySweeps < repositories::loadBalancer.getNumberOfSettlingIterations()) {
       logInfo("shouldContinueGridConstruction()", "Admissible mesh size reached, but at least one rank still has pending refinement events.");
       peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithRefinement));
       ++numberOfStationarySweeps;
@@ -183,14 +183,14 @@ bool selectNextAlgorithmicStep() {
 }
 
 void logGlobalStatistics() {
-  const auto globalNumberOfLeaves = static_cast<unsigned long>(repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells());
+  const auto globalNumberOfLeaves = static_cast<unsigned long>(repositories::loadBalancer.getStatistics().getGlobalNumberOfInnerUnrefinedCells());
 
   {
-    const auto globalNumberOfVertices         = static_cast<unsigned long>(repositories::loadBalancer.getGlobalNumberOfVertices());
-    const auto globalNumberOfHangingVertices  = static_cast<unsigned long>(repositories::loadBalancer.getGlobalNumberOfHangingVertices());
+    const auto globalNumberOfVertices         = static_cast<unsigned long>(repositories::loadBalancer.getStatistics().getGlobalNumberOfVertices());
+    const auto globalNumberOfHangingVertices  = static_cast<unsigned long>(repositories::loadBalancer.getStatistics().getGlobalNumberOfHangingVertices());
     const auto totalNumberOfVertices          = globalNumberOfVertices + globalNumberOfHangingVertices;
-    const auto minDepth                       = repositories::loadBalancer.getGlobalMinDepth();
-    const auto maxDepth                       = repositories::loadBalancer.getGlobalMaxDepth();
+    const auto minDepth                       = repositories::loadBalancer.getStatistics().getGlobalMinDepth();
+    const auto maxDepth                       = repositories::loadBalancer.getStatistics().getGlobalMaxDepth();
     std::ostringstream msg;
     msg << "Leaves=" << globalNumberOfLeaves
         << ", Vertices=" << totalNumberOfVertices << " (Local=" << globalNumberOfVertices << ", Hanging=" << globalNumberOfHangingVertices << ")"
@@ -199,12 +199,12 @@ void logGlobalStatistics() {
   }
 
   {
-    const auto minLoad                    = repositories::loadBalancer.getGlobalMinTreeLoad();
-    const auto maxLoad                    = repositories::loadBalancer.getGlobalMaxTreeLoad();
+    const auto minLoad                    = repositories::loadBalancer.getStatistics().getGlobalMinTreeLoad();
+    const auto maxLoad                    = repositories::loadBalancer.getStatistics().getGlobalMaxTreeLoad();
     const auto efficiency                 = (maxLoad > 0) ? (static_cast<double>(minLoad) / maxLoad) * 100.0 : 100.0;
-    const auto globalNumberOfOuterLeaves  = static_cast<double>(repositories::loadBalancer.getGlobalNumberOfOuterUnrefinedCells());
+    const auto globalNumberOfOuterLeaves  = static_cast<double>(repositories::loadBalancer.getStatistics().getGlobalNumberOfOuterUnrefinedCells());
     const auto overhead                   = (globalNumberOfLeaves > 0) ? (globalNumberOfOuterLeaves / globalNumberOfLeaves) * 100.0 : 0.0;
-    const auto globalNumberOfTrees        = static_cast<unsigned long>(repositories::loadBalancer.getGlobalNumberOfTrees());
+    const auto globalNumberOfTrees        = static_cast<unsigned long>(repositories::loadBalancer.getStatistics().getGlobalNumberOfTrees());
     std::ostringstream msg;
     msg << "Trees=" << globalNumberOfTrees
         << ", Efficiency=" << std::fixed << std::setprecision(2) << efficiency << "% (min=" << minLoad << ", max=" << maxLoad << ")"
@@ -213,7 +213,7 @@ void logGlobalStatistics() {
   }
 
   {
-    const auto memoryUsedByGrid       = repositories::loadBalancer.getGlobalMemoryUsageInBytes();
+    const auto memoryUsedByGrid       = repositories::loadBalancer.getStatistics().getGlobalMemoryUsageInBytes();
     const auto memoryUsedByCellData   = repositories::DataRepository::getGlobalCellDataMemoryUsageInBytes();
     const auto memoryUsedByFaceData   = repositories::DataRepository::getGlobalFaceDataMemoryUsageInBytes();
     const auto memoryUsedByVertexData = repositories::DataRepository::getGlobalVertexDataMemoryUsageInBytes();
@@ -229,7 +229,7 @@ void logGlobalStatistics() {
   }
 
   tarch::logging::Statistics::getInstance().log("MemoryUsage", tarch::accelerator::MemoryManager::getStatistics());
-  tarch::logging::Statistics::getInstance().log("LoadBalancing", toolbox::loadbalancing::LoadBalancer::getStatistics());
+  tarch::logging::Statistics::getInstance().log("LoadBalancing", toolbox::loadbalancing::LoadBalancer::getLocalLoadBalancing());
 
   if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
     const auto dofs               = static_cast<unsigned long>(repositories::getNumberOfDoFs());
@@ -365,7 +365,7 @@ void logFinalStatistics() {
   }
   if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
     const auto dofs                   = static_cast<double>(repositories::getNumberOfDoFs());
-    const auto globalNumberOfLeaves   = static_cast<double>(repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells());
+    const auto globalNumberOfLeaves   = static_cast<double>(repositories::loadBalancer.getStatistics().getGlobalNumberOfInnerUnrefinedCells());
     const auto totalNumberOfDoFs      = dofs * globalNumberOfLeaves;
     const auto dt                     = timeStepMeasurement.getValue();
     const auto patchesPerSecond       = globalNumberOfLeaves / dt;

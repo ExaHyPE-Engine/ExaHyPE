@@ -4,33 +4,29 @@
 
 #include "tarch/logging/Log.h"
 
-#include <map>
 #include <string>
+#include <unordered_map>
 
 namespace toolbox::loadbalancing {
   class Blacklist;
 } // namespace toolbox::loadbalancing
 
 /**
- * Blacklisting
+ * Blacklisting of spacetrees after splits.
  *
- * A tree requires two traversals to split. If a tree is identified as split candidate, the
- * code hence will tell it to split, but will try to split exactly the same tree again
- * in the subsequent iteration.
+ * Rationale:
+ * After a split is triggered, the affected tree's local statistics are temporarily
+ * skewed (ownership / data movement / reduction latency). If the load balancer
+ * immediately considers the same tree again, it may repeatedly pick it as split
+ * candidate.
  *
- * The tree's stats (how many cells does it own) at this point are skewed, as the
- * tree has not yet successfully given away cells. Indeed, a tree needs at least three
- * iterations to 'recover'. The first one initialises the split. The second traversal
- * conducts the split and eventually moves around data, but the ownership in this
- * traversal still is with the master. Therefore, the master still has all the local
- * cells. After the third split, the master has actually given away its cells.
+ * We therefore track split candidates in a map and keep them "blacklisted" for a
+ * small number of iterations (default: 3). Additionally, if the tree's local cell
+ * count has not changed since the split, we keep it on the blacklist to avoid
+ * repeatedly triggering splits that don't actually fork off cells.
  *
- * Therefore, we work with a blacklist map: Whenever we have identified a tree that is to
- * be split, we memorise it and give it an internal weight of 3. Memorise means it is
- * stored in a map. As long as a rank is on the blacklist map, it may not be selected
- * as potential split tree. After each iteration, we reduce the weight of the blacklisted
- * trees by one. If a weight becomes zero, we eventually remove it from the blacklist.
- *
+ * The blacklist entries are kept even when inactive so we can keep cumulative
+ * counters (e.g. how often a tree split).
  */
 class toolbox::loadbalancing::Blacklist {
 public:
@@ -38,67 +34,56 @@ public:
   ~Blacklist() = default;
 
   /**
-   * Update blacklist at end of traversal
+   * Update blacklist at end of traversal.
    *
-   * - If a tree has unsuccessfully tried to merge its children, then we
-   *   increase its blacklist lifetime, so it at least does not start to
-   *   fork further.
-   * - If a tree is on the blacklist but has not yet changed its number
-   *   of local cells, it means that this tree has forked before (so was
-   *   added to the blacklist) but then was not able to split some cells
-   *   off. So it should remain on the blacklist to ensure that we are not
-   *   trying to split this tree over and over again.
+   * - If a tree reports that it removed an empty subtree, we extend (or re-enable)
+   *   the blacklist to avoid immediately forking further.
+   * - If a tree is active on the blacklist but its local cell count did not change
+   *   since the baseline snapshot, we keep it blacklisted.
+   * - Otherwise, we count down its remaining lifetime until it becomes inactive.
    */
   void update();
 
   /**
-   * Inform blacklist that the load balancing has just triggered a split.
-   * newParent is the number of the tree which has triggered this split.
+   * Inform blacklist that load balancing has just triggered a split on treeId.
    */
-  void triggeredSplit(int newParent);
+  void notifySplit(int treeId);
 
   std::string toString() const;
 
-  bool isBlacklisted(int treeNumber) const;
+  bool isBlacklisted(int treeId) const;
 
 private:
-  struct BlacklistData {
+  static constexpr int InitialLifetime = 3;
+
+  struct Entry {
     /**
-     * Remaining steps how long this blacklist entry should stay on. If the
-     * value equals zero, the blacklist entry is inactive, i.e. the
-     * underlying tree is not on the blacklist anymore. We usually keep the
-     * entry in our data structure however, so we can remember information
-     * such as the total number of splits per tree.
+     * Remaining iterations to keep the entry active.
+     * 0 => inactive (tree is not blacklisted).
      */
-    int lifetime;
+    int lifetime = 0;
 
     /**
-     * Store number of unrefined cells at time of split
+     * Baseline snapshot of numberOfLocalUnrefinedCells when the split (or
+     * degeneration handling) occurred.
      */
-    int numberOfUnrefinedCells;
+    int baselineNumberOfUnrefinedCells = 0;
 
-    int numberOfSplits;
-    int numberOfDegeneratedChildren;
+    /** Cumulative number of split notifications for this tree. */
+    int numberOfSplits = 0;
 
-    /**
-     * New blacklist entry for entry which has not yet been on blacklist
-     * before, i.e. which has to be unknown to us beforehand.
-     *
-     * @param treeNumber Number of tree that is to be blacklisted. We do
-     *   not store this number, but we use the number to query the tree
-     *   on its number of unrefined octants.
-     */
-    BlacklistData(int treeNumber);
+    /** Cumulative number of times we observed "removed empty subtree". */
+    int numberOfDegeneratedChildren = 0;
+
+    Entry() = default;
+    explicit Entry(int treeId);
   };
 
   static tarch::logging::Log _log;
 
   /**
-   * Map of trees numbers onto blacklist entries. Being in that map does
-   * not necessarily mean a tree is blacklisted. For this, we have to study
-   * its lifetime counter.
-   *
-   * @see BlacklistData
+   * Map treeId -> entry. Presence in the map does not imply active blacklisting;
+   * check Entry::lifetime > 0.
    */
-  std::map<int, BlacklistData> _blacklist;
+  std::unordered_map<int, Entry> _blacklist;
 };

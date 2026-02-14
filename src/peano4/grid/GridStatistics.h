@@ -10,7 +10,7 @@ namespace peano4::grid {
 } // namespace peano4::grid
 
 struct peano4::grid::GridStatistics {
-  int maxDepth = -1;
+  int maxDepth = 0;
   int minDepth = std::numeric_limits<int>::max();
 
   int numberOfLocalUnrefinedCells  = 0;
@@ -29,7 +29,9 @@ struct peano4::grid::GridStatistics {
   static constexpr std::uint8_t CoarseningHasBeenVetoed = 1 << 0;
   static constexpr std::uint8_t RemovedEmptySubtree     = 1 << 1;
 
-  tarch::la::Vector<DIMENSIONS, double> minH = tarch::la::Vector<DIMENSIONS, double>(std::numeric_limits<double>::max());
+  tarch::la::Vector<DIMENSIONS, double> minH = tarch::la::Vector<DIMENSIONS, double>(
+    std::numeric_limits<double>::max()
+  );
 
   GridStatistics() noexcept = default;
   enum class ObjectConstruction { NoData };

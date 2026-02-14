@@ -22,8 +22,8 @@ void tests::peano4::grid::EmptyTraversalObserver::leaveNode(const ::peano4::grid
   return new EmptyTraversalObserver();
 }
 
-std::vector<::peano4::grid::GridControlEvent> tests::peano4::grid::EmptyTraversalObserver::getGridControlEvents(
-) const {
+std::vector<::peano4::grid::GridControlEvent> tests::peano4::grid::EmptyTraversalObserver::
+  getGridControlEvents() const {
   std::vector<::peano4::grid::GridControlEvent> controlEvents;
   return controlEvents;
 }

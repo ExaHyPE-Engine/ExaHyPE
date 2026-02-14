@@ -22,11 +22,7 @@ int exahype2::LoadBalancingConfiguration::translateSetMaxNumberOfTreesIntoRealNu
   int result = -1;
   if (value <= 0) {
     const int threads = tarch::multicore::Core::getInstance().getNumberOfThreads();
-    // const double exp      = std::ceil(std::log(threads) / std::log(3.0));
-    // const int    nextPow3 = static_cast<int>(std::pow(3.0, exp));
-    // assertion(nextPow3 > 0);
-    // result = nextPow3;
-    result = threads;
+    result            = threads;
   } else {
     assertion(value > 0);
     result = value;
@@ -34,16 +30,18 @@ int exahype2::LoadBalancingConfiguration::translateSetMaxNumberOfTreesIntoRealNu
   return result;
 }
 
-int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::State state) {
+int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::State state) const {
   return translateSetMaxNumberOfTreesIntoRealNumberOfTrees(_maxNumberOfTrees);
 }
 
-double exahype2::LoadBalancingConfiguration::getWorstCaseBalancingRatio(toolbox::loadbalancing::State) {
+double exahype2::LoadBalancingConfiguration::getWorstCaseBalancingRatio(toolbox::loadbalancing::State) const {
   return _loadBalancingQuality;
 }
 
-int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing::State) { return _minSizeOfTree; }
+int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing::State) const { return _minSizeOfTree; }
 
-peano4::grid::SplitInstruction::Mode exahype2::LoadBalancingConfiguration::getMode(toolbox::loadbalancing::State) {
+peano4::grid::SplitInstruction::Mode exahype2::LoadBalancingConfiguration::getMode(
+  toolbox::loadbalancing::State
+) const {
   return _mode;
 }

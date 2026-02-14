@@ -6,9 +6,15 @@ file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 set(SOURCES
   Blacklist.cpp
   Configuration.cpp
+  InterRankDistributionStrategy.cpp
+  IntraRankDistributionStrategy.cpp
   LoadBalancer.cpp
   State.cpp
   Statistics.cpp
+  UnitTests.cpp
+  tests/BlacklistTest.cpp
+  tests/LoadBalancerTest.cpp
+  tests/StatisticsTest.cpp
 )
 
 install_peano_headers(

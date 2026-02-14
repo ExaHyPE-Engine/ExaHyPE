@@ -21,28 +21,28 @@ public:
   /**
    * Constraint on the number of trees per rank.
    */
-  virtual int getMaxLocalTreesPerRank(State state) = 0;
+  virtual int getMaxLocalTreesPerRank(State state) const = 0;
 
   /**
    * Control when to balance between ranks.
    */
-  virtual double getWorstCaseBalancingRatio(State state) = 0;
+  virtual double getWorstCaseBalancingRatio(State state) const = 0;
 
-  virtual peano4::grid::SplitInstruction::Mode getMode(State state) = 0;
+  virtual peano4::grid::SplitInstruction::Mode getMode(State state) const = 0;
 
   /**
    * Minimum tree size.
    */
-  virtual int getMinTreeSize(State state) = 0;
+  virtual int getMinTreeSize(State state) const = 0;
 };
 
-class toolbox::loadbalancing::DefaultConfiguration: public toolbox::loadbalancing::Configuration {
+class toolbox::loadbalancing::DefaultConfiguration final: public toolbox::loadbalancing::Configuration {
 public:
-  DefaultConfiguration()                   = default;
-  virtual ~DefaultConfiguration() override = default;
+  DefaultConfiguration()           = default;
+  ~DefaultConfiguration() override = default;
 
-  virtual int                                  getMaxLocalTreesPerRank(State state) override;
-  virtual double                               getWorstCaseBalancingRatio(State state) override;
-  virtual int                                  getMinTreeSize(State state) override;
-  virtual peano4::grid::SplitInstruction::Mode getMode(State state) override;
+  int                                  getMaxLocalTreesPerRank(State state) const override;
+  double                               getWorstCaseBalancingRatio(State state) const override;
+  int                                  getMinTreeSize(State state) const override;
+  peano4::grid::SplitInstruction::Mode getMode(State state) const override;
 };

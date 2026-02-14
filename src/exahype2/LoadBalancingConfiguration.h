@@ -11,7 +11,7 @@ namespace exahype2 {
 /**
  * ExaHyPE 2-specific load balancing configuration
  */
-class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Configuration {
+class exahype2::LoadBalancingConfiguration final: public toolbox::loadbalancing::Configuration {
 private:
   const double                               _loadBalancingQuality;
   const int                                  _minSizeOfTree;
@@ -31,10 +31,10 @@ public:
     peano4::grid::SplitInstruction::Mode mode                 = peano4::grid::SplitInstruction::Mode::BottomUp
   );
 
-  virtual ~LoadBalancingConfiguration() override = default;
+  ~LoadBalancingConfiguration() override = default;
 
-  virtual int                                  getMaxLocalTreesPerRank(toolbox::loadbalancing::State state) override;
-  virtual double                               getWorstCaseBalancingRatio(toolbox::loadbalancing::State state) override;
-  virtual int                                  getMinTreeSize(toolbox::loadbalancing::State state) override;
-  virtual peano4::grid::SplitInstruction::Mode getMode(toolbox::loadbalancing::State state) override;
+  int                                  getMaxLocalTreesPerRank(toolbox::loadbalancing::State state) const override;
+  double                               getWorstCaseBalancingRatio(toolbox::loadbalancing::State state) const override;
+  int                                  getMinTreeSize(toolbox::loadbalancing::State state) const override;
+  peano4::grid::SplitInstruction::Mode getMode(toolbox::loadbalancing::State state) const override;
 };

@@ -26,7 +26,9 @@ void tests::peano4::grid::CreateGridObserver::leaveNode(const ::peano4::grid::Gr
 std::vector<::peano4::grid::GridControlEvent> tests::peano4::grid::CreateGridObserver::getGridControlEvents() const {
   std::vector<::peano4::grid::GridControlEvent> controlEvents;
   ::peano4::grid::GridControlEvent              newEvent;
+
   newEvent.setRefinementControl(::peano4::grid::GridControlEvent::RefinementControl::Refine);
+
 #if DIMENSIONS == 2
   newEvent.offset = {0.0, 0.0};
   newEvent.width  = {1.0, 1.0};
@@ -36,6 +38,7 @@ std::vector<::peano4::grid::GridControlEvent> tests::peano4::grid::CreateGridObs
   newEvent.width  = {1.0, 1.0, 1.0};
   newEvent.h      = {MinH, MinH, MinH};
 #endif
+
   controlEvents.push_back(std::move(newEvent));
   return controlEvents;
 }

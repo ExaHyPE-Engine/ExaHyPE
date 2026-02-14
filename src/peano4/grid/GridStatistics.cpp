@@ -43,7 +43,7 @@ peano4::grid::GridStatistics operator+=(peano4::grid::GridStatistics& lhs, const
 
 void peano4::grid::GridStatistics::clear(bool isGlobalMasterTree) {
   minDepth                     = std::numeric_limits<int>::max();
-  maxDepth                     = -1;
+  maxDepth                     = 0;
   numberOfLocalUnrefinedCells  = 0;
   numberOfRemoteUnrefinedCells = 0;
   numberOfLocalRefinedCells    = isGlobalMasterTree ? 1 : 0;
