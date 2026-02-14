@@ -10,6 +10,10 @@
 #include "toolbox/blockstructured/UnitTests.h"
 #endif
 
+#ifdef ENABLE_TOOLBOX_LOADBALANCING
+#include "toolbox/loadbalancing/UnitTests.h"
+#endif
+
 #ifdef ENABLE_TOOLBOX_PARTICLES
 #include "toolbox/particles/UnitTests.h"
 #endif
@@ -43,6 +47,13 @@ int runTests() {
 
 #ifdef ENABLE_TOOLBOX_BLOCKSTRUCTURED
   tests = toolbox::blockstructured::getUnitTests();
+  tests->run();
+  unitTestsErrors += tests->getNumberOfErrors();
+  delete tests;
+#endif
+
+#ifdef ENABLE_TOOLBOX_LOADBALANCING
+  tests = toolbox::loadbalancing::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;

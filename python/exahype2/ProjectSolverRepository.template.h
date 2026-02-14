@@ -20,11 +20,11 @@ namespace {{ item }} {
   extern {{ item[0] }} {{ item[1] }};
   {% endfor %}
 
-  extern ::exahype2::RefinementControl  refinementControl;
+  extern ::exahype2::RefinementControl refinementControl;
 
   extern toolbox::loadbalancing::LoadBalancer loadBalancer;
 
-  static constexpr int LogTimeStepIntervalInSeconds = {{LOG_TIME_STEP_INTERVAL_IN_SECONDS}};
+  static constexpr double LogTimeStepIntervalInSeconds = {{LOG_TIME_STEP_INTERVAL_IN_SECONDS}};
 
   /**
    * Return the global min time stamp over all solvers.

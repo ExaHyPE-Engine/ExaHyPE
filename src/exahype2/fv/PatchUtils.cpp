@@ -52,9 +52,9 @@ namespace {
       return ",...";
     } else {
       assertion(false);
+      return "<undef>";
     }
 #endif
-    return "<undef>";
   }
 } // namespace
 

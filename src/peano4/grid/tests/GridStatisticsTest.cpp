@@ -19,7 +19,7 @@ void peano4::grid::tests::GridStatisticsTest::testStatistics() {
   GridStatistics statistics;
 
   validateEquals(statistics.minDepth, std::numeric_limits<int>::max());
-  validateEquals(statistics.maxDepth, -1);
+  validateEquals(statistics.maxDepth, 0);
   validateEquals(statistics.numberOfLocalUnrefinedCells, 0);
   validateEquals(statistics.numberOfRemoteUnrefinedCells, 0);
   validateEquals(statistics.numberOfLocalRefinedCells, 0);
@@ -81,7 +81,7 @@ void peano4::grid::tests::GridStatisticsTest::testClear() {
   statistics.clear(true);
 
   validateEquals(statistics.minDepth, std::numeric_limits<int>::max());
-  validateEquals(statistics.maxDepth, -1);
+  validateEquals(statistics.maxDepth, 0);
   validateEquals(statistics.numberOfLocalUnrefinedCells, 0);
   validateEquals(statistics.numberOfRemoteUnrefinedCells, 0);
   validateEquals(statistics.numberOfLocalRefinedCells, 1);

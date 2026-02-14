@@ -1,11 +1,10 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "RegularGrid-main.h"
+#include "Spacetree-main.h"
 
 #include "Constants.h"
 #include "CreateGridObserver.h"
 #include "EmptyTraversalObserver.h"
-#include "VTUPlotterObserver.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/peano4.h"
 #include "tarch/logging/Log.h"
@@ -48,19 +47,6 @@ int main(int argc, char** argv) {
   spacetree.traverse(emptyTraversalObserver, true);
   watch.stop();
   logInfo("main()", "Empty traversal took " << watch.getCalendarTime() << "s: " << spacetree.getGridStatistics());
-  logInfo(
-    "main()",
-    "Average cell updates per second: "
-      << spacetree.getGridStatistics().numberOfLocalUnrefinedCells / watch.getCalendarTime()
-  );
-
-  VTUPlotterObserver plotterObserver(0);
-  watch.start();
-  VTUPlotterObserver::prepareTraversal();
-  spacetree.traverse(plotterObserver);
-  VTUPlotterObserver::unprepareTraversal();
-  watch.stop();
-  logInfo("main()", "Grid plotting took " << watch.getCalendarTime() << "s: " << spacetree.getGridStatistics());
 
   ::peano4::shutdown();
 

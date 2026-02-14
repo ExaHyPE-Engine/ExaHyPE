@@ -7,26 +7,24 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <string>
+
 namespace toolbox::loadbalancing {
   class Statistics;
 } // namespace toolbox::loadbalancing
 
-/**
- * Statistics helper routine for load balancing
- *
- * Please note that we assume a SPMD paradigm, i.e. if one rank uses
- * statistics, the other ranks all have to use such an object, too. The
- * individual objects communicate with each other.
- */
 class toolbox::loadbalancing::Statistics {
 public:
-  /**
-   * Set all the MPI requests to nullptr.
-   */
+  static constexpr int NumberOfWords = 15;
+
   Statistics();
-  ~Statistics() = default;
+  ~Statistics();
 
   void updateGlobalView();
+  bool hasConsistentViewOfWorld() const;
 
   int getLocalNumberOfInnerUnrefinedCells() const;
   int getGlobalNumberOfInnerUnrefinedCells() const;
@@ -46,10 +44,12 @@ public:
   void incLocalNumberOfSplits(int delta = 1);
   int  getNumberOfStateUpdatesWithoutAnySplit() const;
 
-  int getGlobalNumberOfRanksWithEnabledLoadBalancing() const;
+  int getGlobalNumberOfRanksWithAtLeastOneTree() const;
 
   int getGlobalMinTreeLoad() const;
   int getGlobalMaxTreeLoad() const;
+
+  int getGlobalRankWithMaxTreeLoad() const;
 
   std::size_t getLocalMemoryUsageInBytes() const;
   std::size_t getGlobalMemoryUsageInBytes() const;
@@ -66,18 +66,12 @@ public:
   int getLocalNumberOfStationarySweeps() const;
   int getGlobalNumberOfStationarySweeps() const;
 
-  /**
-   * If the stats spot some inconsistencies (local number of cells is bigger
-   * than global number, e.g.) this means that the non-blocking data exchange
-   * is lagging behind. In this case, this routine returns false;
-   */
-  bool hasConsistentViewOfWorld() const;
-  void notifyOfStateChange(State state);
-
-  std::string toString() const;
-
 private:
+  void waitForGlobalDataExchange();
+
   static tarch::logging::Log _log;
+
+  bool _isViewConsistent;
 
   int _localNumberOfInnerUnrefinedCells;
   int _globalNumberOfInnerUnrefinedCells;
@@ -94,20 +88,9 @@ private:
   int _localNumberOfTrees;
   int _globalNumberOfTrees;
 
-  bool _isLocalLoadBalancingEnabled;
-  int  _globalNumberOfRanksWithEnabledLoadBalancing;
+  int _globalNumberOfRanksWithAtLeastOneTree;
 
-  /**
-   * This is my local accumulator where I keep track of how often I did
-   * split in this iteration. At the end of each iteration, I roll this
-   * one over into global or send it out.
-   */
   int _localNumberOfSplits;
-
-  /**
-   * Lags behind global number by one iteration in an MPI world as data
-   * will arrive with one iteration delay.
-   */
   int _globalNumberOfSplits;
 
   int _numberOfStateUpdatesWithoutAnySplit;
@@ -116,6 +99,7 @@ private:
   int _localMaxTreeLoad;
   int _globalMinTreeLoad;
   int _globalMaxTreeLoad;
+  int _globalRankWithMaxTreeLoad;
 
   std::uint64_t _localMemoryUsageInBytes;
   std::uint64_t _globalMemoryUsageInBytes;
@@ -131,53 +115,12 @@ private:
   int _localNumberOfStationarySweeps;
   int _globalNumberOfStationarySweeps;
 
-  bool _isViewConsistent;
-
 #ifdef WITH_MPI
-  MPI_Request* _globalNumberOfInnerUnrefinedCellsRequest;
-  MPI_Request* _globalNumberOfOuterUnrefinedCellsRequest;
-  MPI_Request* _globalNumberOfVerticesRequest;
-  MPI_Request* _globalNumberOfHangingVerticesRequest;
-  MPI_Request* _globalNumberOfSplitsRequest;
-  MPI_Request* _globalNumberOfTreesRequest;
-  MPI_Request* _globalNumberOfRanksWithEnabledLoadBalancingRequest;
-  MPI_Request* _globalMinTreeLoadRequest;
-  MPI_Request* _globalMaxTreeLoadRequest;
-  MPI_Request* _globalMemoryUsageInBytesRequest;
-  MPI_Request* _globalMinDepthRequest;
-  MPI_Request* _globalMaxDepthRequest;
-  MPI_Request* _globalMinHRequest;
-  MPI_Request* _globalNumberOfStationarySweepsRequest;
+  // Pack everything into one record (uint64_t words), reduced via a custom MPI_Op.
+  // Store the double as raw bits in a uint64_t.
+  std::array<std::uint64_t, NumberOfWords> _globalExchangeSend{};
+  std::array<std::uint64_t, NumberOfWords> _globalExchangeRecv{};
+  MPI_Request                              _globalExchangeRequest;
+  bool                                     _globalExchangeInFlight;
 #endif
-
-  int           _globalNumberOfInnerUnrefinedCellsBufferIn;
-  int           _globalNumberOfInnerUnrefinedCellsBufferOut;
-  int           _globalNumberOfOuterUnrefinedCellsBufferIn;
-  int           _globalNumberOfOuterUnrefinedCellsBufferOut;
-  int           _globalNumberOfVerticesBufferIn;
-  int           _globalNumberOfVerticesBufferOut;
-  int           _globalNumberOfHangingVerticesBufferIn;
-  int           _globalNumberOfHangingVerticesBufferOut;
-  int           _globalNumberOfSplitsIn;
-  int           _globalNumberOfSplitsOut;
-  int           _globalNumberOfTreesIn;
-  int           _globalNumberOfTreesOut;
-  int           _globalNumberOfRanksWithEnabledLoadBalancingIn;
-  int           _globalNumberOfRanksWithEnabledLoadBalancingOut;
-  int           _globalMinTreeLoadIn;
-  int           _globalMinTreeLoadOut;
-  int           _globalMaxTreeLoadIn;
-  int           _globalMaxTreeLoadOut;
-  std::uint64_t _globalMemoryUsageInBytesIn;
-  std::uint64_t _globalMemoryUsageInBytesOut;
-  int           _globalMinDepthIn;
-  int           _globalMinDepthOut;
-  int           _globalMaxDepthIn;
-  int           _globalMaxDepthOut;
-  double        _globalMinHIn;
-  double        _globalMinHOut;
-  int           _globalNumberOfStationarySweepsIn;
-  int           _globalNumberOfStationarySweepsOut;
-
-  void waitForGlobalDataExchange();
 };

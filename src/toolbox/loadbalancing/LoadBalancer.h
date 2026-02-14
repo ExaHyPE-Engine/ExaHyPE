@@ -7,45 +7,36 @@
 #include "State.h"
 #include "Statistics.h"
 
+#include <memory>
 #include <set>
 #include <string>
 
 namespace toolbox::loadbalancing {
   class LoadBalancer;
+  namespace tests {
+    class LoadBalancerTest;
+  } // namespace tests
 } // namespace toolbox::loadbalancing
 
 class toolbox::loadbalancing::LoadBalancer {
+  friend class tests::LoadBalancerTest;
+
 public:
   LoadBalancer(Configuration* configuration = new DefaultConfiguration);
   ~LoadBalancer();
 
   void enable(bool value);
-  bool isEnabled(bool globally) const;
-
   void update();
 
-  int         getMaxPermittedTreesPerRank() const;
-  int         getGlobalNumberOfTrees() const;
-  int         getGlobalNumberOfInnerUnrefinedCells() const;
-  int         getGlobalNumberOfOuterUnrefinedCells() const;
-  int         getGlobalNumberOfVertices() const;
-  int         getGlobalNumberOfHangingVertices() const;
-  int         getGlobalMinTreeLoad() const;
-  int         getGlobalMaxTreeLoad() const;
-  std::size_t getGlobalMemoryUsageInBytes() const;
-  int         getGlobalMinDepth() const;
-  int         getGlobalMaxDepth() const;
-  double      getGlobalMinH() const;
-  int         getGlobalNumberOfStationarySweeps() const;
-
-  bool hasStagnated() const;
+  bool isStagnating() const;
   bool hasSplitRecently() const;
 
+  int getMaxPermittedTreesPerRank() const;
   int getNumberOfSettlingIterations() const;
 
-  std::string toString() const;
+  const Statistics& getStatistics() const;
 
-  static std::string getStatistics();
+  static std::string getLocalLoadBalancing();
 
 private:
   static tarch::logging::Log _log;
@@ -55,8 +46,21 @@ private:
   Statistics     _statistics;
   State          _state;
 
-  void updateInterRankLoadBalancing();
-  void updateIntraRankLoadBalancing();
+  class Strategy {
+  public:
+    virtual ~Strategy()                    = default;
+    virtual State update(LoadBalancer& lb) = 0;
+  };
+
+  class InterRankDistributionStrategy;
+  class IntraRankDistributionStrategy;
+
+  std::unique_ptr<Strategy> _strategy;
+
+  static std::unique_ptr<Strategy> makeInterRankDistributionStrategy();
+  static std::unique_ptr<Strategy> makeIntraRankDistributionStrategy();
+
+  void setState(State state);
 
   /**
    * Finds the local spacetree with the highest number of local unrefined cells

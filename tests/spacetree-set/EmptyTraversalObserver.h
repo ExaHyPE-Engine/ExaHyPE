@@ -3,30 +3,15 @@
 #pragma once
 
 #include "peano4/grid/GridTraversalObserver.h"
-#include "tarch/plotter/AMRPlotter.h"
-#include "tarch/plotter/VTUFileWriter.h"
 
-namespace tests::peano4::grid {
-  class VTUPlotterObserver;
-} // namespace tests::peano4::grid
+namespace tests::peano4::parallel {
+  class EmptyTraversalObserver;
+} // namespace tests::peano4::parallel
 
-class tests::peano4::grid::VTUPlotterObserver final: public ::peano4::grid::GridTraversalObserver {
-private:
-  std::string _filename;
-  int         _spacetreeId;
-  int         _localSpacetreeId;
-
-  static std::unique_ptr<tarch::plotter::VTUFileWriter>        _fileWriter;
-  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> _subdomainPlotter;
-
-  std::unique_ptr<tarch::plotter::AMRPlotter> _amrPlotter;
-
+class tests::peano4::parallel::EmptyTraversalObserver final: public ::peano4::grid::GridTraversalObserver {
 public:
-  VTUPlotterObserver(int treeId);
-  ~VTUPlotterObserver() override = default;
-
-  static void prepareTraversal();
-  static void unprepareTraversal();
+  EmptyTraversalObserver()           = default;
+  ~EmptyTraversalObserver() override = default;
 
   void beginTraversal(
     const tarch::la::Vector<DIMENSIONS, double>& x,
