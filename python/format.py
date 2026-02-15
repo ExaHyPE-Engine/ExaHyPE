@@ -16,17 +16,18 @@ target_branch = "muc/exahype"
 
 # Formatting tools versions
 black_version = "24.3.0"
+pydocstringformatter_version = "0.7.5"
 clang_version = "21.1.8"
 
 # Global variables for easy access
-verbose = True  # Will be overwritten by arg parser
+verbose = False  # Will be overwritten by arg parser
 black_checked = False
+pydocstringformatter_checked = False
 clang_checked = False
 
 
 def get_root():
-    """
-    Get the root dir of the repository.
+    """Get the root dir of the repository.
 
     returns:
     rootdir: str
@@ -36,8 +37,8 @@ def get_root():
     cmd = "git rev-parse --show-toplevel"
 
     if verbose:
-        print("Searching for root dir via git.")
-        print("Running '{}'.".format(cmd))
+        print("Searching for root dir via git")
+        print("Running '{}'".format(cmd))
 
     gitrevparse = subprocess.run(
         cmd,
@@ -53,9 +54,7 @@ def get_root():
 
 
 def get_default_clang_format(root):
-    """
-    Try and find the default clang format style file
-    """
+    """Try and find the default clang format style file."""
 
     clang_format_style_file = os.path.join(root, default_clang_format_file_name)
 
@@ -72,15 +71,16 @@ def get_venv_path(root):
 
 
 def git_is_available():
-    """
-    Check whether git is available. Returns True if that is the case.
+    """Check whether git is available.
+
+    Returns True if that is the case.
     """
     # Does it run?
     cmd = "git --version"
 
     if verbose:
-        print("Checking if git is available.")
-        print("Running '{}'.".format(cmd))
+        print("Checking if git is available")
+        print("Running '{}'".format(cmd))
 
     run = subprocess.run(
         cmd,
@@ -99,20 +99,19 @@ def git_is_available():
 
 
 def check_black(black_cmd):
-    """
-    Check that the black executable runs, and is the correct version.
+    """Check that the black executable runs, and is the correct version.
+
     The subprocess call crashes if there is an error with black.
     """
     global black_checked
-
     if not black_checked:
         # Does it run?
 
         cmd = black_cmd + " --version"
 
         if verbose:
-            print("Checking black formatter runs.")
-            print("Running '{}'.".format(cmd))
+            print("Checking black formatter runs")
+            print("Running '{}'".format(cmd))
 
         try:
             run = subprocess.run(
@@ -122,11 +121,11 @@ def check_black(black_cmd):
                 capture_output=True,
             )
         except Exception as e:
-            print(
-                "Failed to invoke formatter: {} Check that black is available and consult the documentation for information on required packages and settings".format(
+            raise RuntimeError(
+                "Failed to invoke formatter: {}. Check that black is available and consult the documentation for information on required packages and settings".format(
                     e
                 )
-            )
+            ) from e
 
         # Now check the version
         stdout = run.stdout.decode("UTF-8")
@@ -150,9 +149,50 @@ def check_black(black_cmd):
     return
 
 
-def check_clang(clang_cmd):
+def check_pydocstringformatter(pydocstringformatter_cmd):
     """
-    Check that the clang-format executable runs, and is the correct version.
+    Check that the pydocstringformatter executable runs, and is the correct version.
+
+    The subprocess call crashes if there is an error with pydocstringformatter.
+    """
+    global pydocstringformatter_checked
+    if not pydocstringformatter_checked:
+        cmd = pydocstringformatter_cmd + " -v"
+
+        if verbose:
+            print("Checking pydocstringformatter runs")
+            print("Running '{}'".format(cmd))
+
+        run = subprocess.run(
+            cmd,
+            shell=True,
+            check=True,
+            capture_output=True,
+        )
+
+        stdout = run.stdout.decode("UTF-8").strip()
+        # Some versions print only the version, others may include the program name.
+        installed_version = stdout.split()[-1] if stdout else ""
+        if installed_version != pydocstringformatter_version:
+            raise ValueError(
+                (
+                    "pydocstringformatter executable has version {0} but I require {1}.\n"
+                    + "Please remove all contents from the directory '{2}' and re-run this script."
+                ).format(
+                    installed_version,
+                    pydocstringformatter_version,
+                    python_venv_dir,
+                )
+            )
+
+        pydocstringformatter_checked = True
+
+    return
+
+
+def check_clang(clang_cmd):
+    """Check that the clang-format executable runs, and is the correct version.
+
     The subprocess call crashes if there is an error with clang-format.
     """
     global clang_checked
@@ -188,9 +228,7 @@ def check_clang(clang_cmd):
 
 
 def install_black_formatting_tool(root):
-    """
-    Installs a specific version of `black`
-    """
+    """Installs a specific version of `black`."""
     venv_path = get_venv_path(root)
 
     bfepython = os.path.join(venv_path, "bin", "python3")
@@ -203,8 +241,8 @@ def install_black_formatting_tool(root):
     # The actual install
     cmd = bfepython + " -m pip install click==8.1.3 black==" + black_version
     if verbose:
-        print("Installing black formatter.")
-        print("Running '{}'.".format(cmd))
+        print("Installing black formatter")
+        print("Running '{}'".format(cmd))
 
     run = subprocess.run(
         cmd,
@@ -219,10 +257,38 @@ def install_black_formatting_tool(root):
     return
 
 
+def install_pydocstringformatter_formatting_tool(root):
+    """Installs a specific version of `pydocstringformatter`."""
+    venv_path = get_venv_path(root)
+
+    python = os.path.join(venv_path, "bin", "python3")
+
+    if not os.path.exists(python):
+        raise FileNotFoundError(
+            "Something went horribly wrong when setting up the venv."
+        )
+
+    cmd = (
+        python + " -m pip install pydocstringformatter==" + pydocstringformatter_version
+    )
+    if verbose:
+        print("Installing pydocstringformatter")
+        print("Running '{}'".format(cmd))
+
+    subprocess.run(
+        cmd,
+        shell=True,
+        check=True,
+    )
+
+    pydocstringformatter_path = os.path.join(venv_path, "bin", "pydocstringformatter")
+    check_pydocstringformatter(pydocstringformatter_path)
+
+    return
+
+
 def install_clang_formatting_tool(root):
-    """
-    Installs a specific version of `clang-format`
-    """
+    """Installs a specific version of `clang-format`."""
     venv_path = get_venv_path(root)
 
     clangpython = os.path.join(venv_path, "bin", "python3")
@@ -235,8 +301,8 @@ def install_clang_formatting_tool(root):
     # The actual install
     cmd = clangpython + " -m pip install clang-format==" + clang_version
     if verbose:
-        print("Installing clang-format.")
-        print("Running '{}'.".format(cmd))
+        print("Installing clang-format")
+        print("Running '{}'".format(cmd))
 
     run = subprocess.run(
         cmd,
@@ -252,9 +318,7 @@ def install_clang_formatting_tool(root):
 
 
 def setup_venv(root):
-    """
-    Set up a virtual env for the formatting tools, if it doesn't exist yet.
-    """
+    """Set up a virtual env for the formatting tools, if it doesn't exist yet."""
 
     venv_path = get_venv_path(root)
 
@@ -265,7 +329,7 @@ def setup_venv(root):
         cmd = "python3 -m venv " + venv_path
 
         if verbose:
-            print("Running '{}'.".format(cmd))
+            print("Running '{}'".format(cmd))
         run = subprocess.run(cmd, shell=True, check=True)
 
         if not os.path.exists(venv_path):
@@ -273,11 +337,13 @@ def setup_venv(root):
 
         # If the venv didn't exist, neither do the formatting tools. Install them.
         install_black_formatting_tool(root)
+        install_pydocstringformatter_formatting_tool(root)
         install_clang_formatting_tool(root)
 
 
 def get_black_command(root):
     """!
+
     Get the full command used to invoke the Python formatter 'black'.
     First get the path to the 'black' executable. It should be in the
     $ROOT_REPOSITORY_ROOT/$PYTHON_VENV_DIR/bin/ directory.
@@ -303,9 +369,36 @@ def get_black_command(root):
     return black_cmd
 
 
-def get_clang_command(root, clang_format_file):
+def get_pydocstringformatter_command(root):
+    """!
+
+    Get the full command used to invoke the Python docstring formatter
+    'pydocstringformatter'.
+
+    The executable should be in the
+    $ROOT_REPOSITORY_ROOT/$PYTHON_VENV_DIR/bin/ directory.
     """
-    Get the full command used to invoke the clang-format tool.
+
+    # Check if venv exists, and create it if it doesn't.
+    setup_venv(root)
+
+    venv_path = get_venv_path(root)
+    pydocstringformatter_path = os.path.join(venv_path, "bin", "pydocstringformatter")
+
+    if not os.path.exists(pydocstringformatter_path):
+        install_pydocstringformatter_formatting_tool(root)
+
+    check_pydocstringformatter(pydocstringformatter_path)
+
+    pydocstringformatter_cmd = pydocstringformatter_path
+    pydocstringformatter_cmd += " --quiet "
+
+    return pydocstringformatter_cmd
+
+
+def get_clang_command(root, clang_format_file):
+    """Get the full command used to invoke the clang-format tool.
+
     First get the path to the 'clang-format' executable. It should be in the
     $ROOT_REPOSITORY_ROOT/$PYTHON_VENV_DIR/bin/ directory.
 
@@ -342,16 +435,14 @@ def get_clang_command(root, clang_format_file):
 
 
 def setup_parser(root, clangfile):
-    """
-    Set up the argument parser.
-    """
+    """Set up the argument parser."""
 
     parser = argparse.ArgumentParser(
         prog="format.py",
-        description="Run 'clang-format' on C/C++ files, run 'black' on Python files",
+        description="Run 'clang-format' on C/C++ files, run 'black' and 'pydocstringformatter' on Python files",
         epilog="""
     By default, this formatting script will compare your current git branch with the
-    p4 branch, and format all the files that you have modified on your local branch.
+    muc/exahype branch, and format all the files that you have modified on your local branch.
     Alternatively, you can specify to compare against a different branch or to provide
     a list of files you want formatted by specifying the corresponding flags,
     respectively.
@@ -403,17 +494,13 @@ def setup_parser(root, clangfile):
 
 
 def is_pythonfile(filename):
-    """
-    Does this look like a Python file?
-    """
+    """Does this look like a Python file?"""
 
     return filename.endswith(".py")
 
 
 def is_cppfile(filename):
-    """
-    Does this look like a C/C++ file?
-    """
+    """Does this look like a C/C++ file?"""
 
     suffixes = [".h", ".hpp", ".cpph", ".c", ".cpp", ".cu", ".cuh"]
 
@@ -435,8 +522,8 @@ def is_cppfile(filename):
 
 
 def run_python_formatter(filename, dry_run, root):
-    """
-    Run the black formatter on the provided file.
+    """Run the black and pydocstringformatter formatters on the provided file.
+
     If dry_run is True, don't modify the file, just report
     whether it would modify the file.
 
@@ -444,36 +531,71 @@ def run_python_formatter(filename, dry_run, root):
     and the dry_run flag was provided, or 0 otherwise.
     """
 
+    pydocstringformatter_cmd = get_pydocstringformatter_command(root)
     black_cmd = get_black_command(root)
+
+    needs_formatting = 0
 
     # First run in dry-run mode to accurately count whether we
     # need to/do format through the return code.
-    cmd = black_cmd + " --check "
+    cmd = pydocstringformatter_cmd + " --exit-code "
 
     if verbose:
-        print("Checking '{}' using '{}'.".format(filename, cmd))
-    run = subprocess.run(cmd + filename, stdout=subprocess.DEVNULL, shell=True)
+        print("Checking '{}' using '{}' (docstrings)".format(filename, cmd))
+    run = subprocess.run(
+        cmd + filename,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        shell=True,
+        cwd=root,
+    )
+    if run.returncode != 0:
+        needs_formatting = 1
 
-    returncode = run.returncode
-    if returncode != 0:
-        returncode = 1
+    cmd = black_cmd + " --check "
+    if verbose:
+        print("Checking '{}' using '{}' (black)".format(filename, cmd))
+    run = subprocess.run(
+        cmd + filename,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        shell=True,
+        cwd=root,
+    )
+    if run.returncode != 0:
+        needs_formatting = 1
 
     if dry_run:
-        return returncode
+        return needs_formatting
 
     # If not dry run: Now actually format the file
     if verbose:
-        print("Running '{} {}'.".format(black_cmd, filename))
-    run = subprocess.run(
-        black_cmd + " " + filename, stdout=subprocess.DEVNULL, shell=True
+        print("Running '{} -w {}'.".format(pydocstringformatter_cmd, filename))
+    subprocess.run(
+        pydocstringformatter_cmd + " -w " + filename,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        shell=True,
+        cwd=root,
     )
 
-    return returncode
+    if verbose:
+        print("Running '{} {}'".format(black_cmd, filename))
+    subprocess.run(
+        black_cmd + " " + filename,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        shell=True,
+        cwd=root,
+    )
+
+    return needs_formatting
 
 
 def run_clang_formatter(filename, dry_run, clang_format_file, root):
     """
     Run the clang formatter on the provided file.
+
     If dry_run is True, don't modify the file, just report
     whether it would modify the file.
 
@@ -487,7 +609,7 @@ def run_clang_formatter(filename, dry_run, clang_format_file, root):
     # need to/do format through the return code.
     cmd = clang_cmd + " --dry-run "
     if verbose:
-        print("Checking '{}' using '{}'.".format(filename, cmd))
+        print("Checking '{}' using '{}'".format(filename, cmd))
     # Pipe sterr to /dev/null too here. In dry run mode, every line that needs
     # to be changed will otherwise be printed to stderr.
     run = subprocess.run(
@@ -495,6 +617,7 @@ def run_clang_formatter(filename, dry_run, clang_format_file, root):
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         shell=True,
+        cwd=root,
     )
 
     returncode = run.returncode
@@ -505,7 +628,7 @@ def run_clang_formatter(filename, dry_run, clang_format_file, root):
         return returncode
 
     if verbose:
-        print("Running '{} {}'.".format(clang_cmd, filename))
+        print("Running '{} {}'".format(clang_cmd, filename))
     # Pipe sterr to /dev/null too here. In dry run mode, every line that needs
     # to be changed will otherwise be printed to stderr.
     run = subprocess.run(
@@ -513,6 +636,7 @@ def run_clang_formatter(filename, dry_run, clang_format_file, root):
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         shell=True,
+        cwd=root,
     )
 
     return returncode
@@ -526,30 +650,32 @@ def main():
         root = get_root()
     else:
         root = repo_rootdir
-    clang_format_file = get_default_clang_format(root)
 
-    parser = setup_parser(root, clang_format_file)
+    default_clang_format_file = os.path.join(root, default_clang_format_file_name)
+    parser = setup_parser(root, default_clang_format_file)
     args = parser.parse_args()
 
     # Are we using default clang file?
     if args.style is not None:
-        clang_format_file = args.style
+        clang_format_file = os.path.abspath(args.style)
         if not os.path.exists(clang_format_file):
             raise FileNotFoundError(
                 "Provided clang-format file '{}' doesn't exist.".format(
                     clang_format_file
                 )
             )
+    else:
+        clang_format_file = get_default_clang_format(root)
 
     verbose = args.verbose
 
     if verbose:
-        print("Using clang-format file '{}'.".format(clang_format_file))
+        print("Using clang-format file '{}'".format(clang_format_file))
 
     # Is this a dry run?
     dry_run = args.dry_run
     if dry_run and verbose:
-        print("Starting a dry run.")
+        print("Starting a dry run")
 
     # Update target branch?
     if args.branch is not None:
@@ -567,10 +693,11 @@ def main():
 
     # Check first if file list was given by user
     if args.files is not None:
-        if os.path.isdir(args.files[0]):
+        first_path = os.path.abspath(args.files[0])
+        if os.path.isdir(first_path):
             if verbose:
                 print("Formatting all files in this directory.")
-            for root, dirs, files in os.walk(root):
+            for dirpath, dirs, files in os.walk(first_path):
                 # Check if 'python_venv_dir' is in the list of subdirectories
                 if python_venv_dir in dirs:
                     # If it's present, remove it from the list of subdirectories to skip it in the iteration.
@@ -578,7 +705,7 @@ def main():
                 if "submodules" in dirs:
                     dirs.remove("submodules")
                 for filename in files:
-                    f = os.path.join(root, filename)
+                    f = os.path.join(dirpath, filename)
                     if not (is_pythonfile(f) or is_cppfile(f)):
                         if verbose:
                             print(
@@ -593,19 +720,20 @@ def main():
                 print("File list provided. Formatting only provided list.")
 
             for f in args.files:
-                if not os.path.exists(f):
+                abs_f = os.path.abspath(f)
+                if not os.path.exists(abs_f):
                     if verbose:
-                        print("Didn't find file '{}', ignoring it".format(f))
+                        print("Didn't find file '{}', ignoring it".format(abs_f))
                     continue
-                if not (is_pythonfile(f) or is_cppfile(f)):
+                if not (is_pythonfile(abs_f) or is_cppfile(abs_f)):
                     if verbose:
                         print(
                             "File '{}' doesn't look like a Python nor C/C++ file to me, skipping it.".format(
-                                f
+                                abs_f
                             )
                         )
                     continue
-                filelist.append(f)
+                filelist.append(abs_f)
 
     else:
         # Make sure that the branch exists
@@ -618,12 +746,12 @@ def main():
                 stdout=subprocess.DEVNULL,
             )
         except subprocess.CalledProcessError:
-            print("Something went wrong when trying to check whether branch exists.")
+            print("Something went wrong when trying to check whether branch exists")
             print("Command that failed was: '{}'.".format(git_check_branch_exists_cmd))
             sys.exit(1)
 
         if verbose:
-            print("Comparing against", target_branch, "branch.")
+            print("Comparing against", target_branch, "branch")
         # No file list means we're checking for git diffs
         # So get file list from a git diff now
         gitdiff = subprocess.run(
@@ -691,7 +819,7 @@ def main():
         )
         prefix = "Can be formatted:"
     else:
-        print("Formatted", nmodified, "files.")
+        print("Formatted", nmodified, "files")
         prefix = "Has been formatted:"
 
     if verbose:

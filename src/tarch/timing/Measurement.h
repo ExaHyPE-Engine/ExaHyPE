@@ -1,4 +1,3 @@
-// Copyright (C) 2009 Technische Universitaet Muenchen
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
@@ -7,7 +6,6 @@
 #include "tarch/logging/Log.h"
 
 #include <string>
-
 
 namespace tarch::timing {
   class Measurement;
