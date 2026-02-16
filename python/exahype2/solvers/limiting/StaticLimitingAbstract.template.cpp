@@ -21,11 +21,11 @@ tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() {}
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp(bool ofCurrentlyRunningGridSweep) const {
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp() const {
   return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMinTimeStamp();
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp(bool ofCurrentlyRunningGridSweep) const {
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
   return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMaxTimeStamp();
 }
 
@@ -118,7 +118,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   }
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep(bool ofCurrentlyRunningGridSweep) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep() {
   {{PRINT_TIME_STEP_IMPLEMENTATION}}
 
   if (getNumberOfTroubledCells() > 0) {

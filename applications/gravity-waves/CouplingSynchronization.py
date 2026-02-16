@@ -186,7 +186,7 @@ def coupleTimeStepping(atmospheric_solver, diffusion_solver, chemical_solver):
             """
       const double timeStepSize = repositories::"""
             + atmospheric_solver.get_name_of_global_instance()
-            + """.getAdmissibleTimeStepSize(false);
+            + """.getAdmissibleTimeStepSize();
     """
         )
 
@@ -197,7 +197,7 @@ def coupleTimeStepping(atmospheric_solver, diffusion_solver, chemical_solver):
             """
       const double timeStepSize = repositories::"""
             + atmospheric_solver.get_name_of_global_instance()
-            + """.getAdmissibleTimeStepSize(false);
+            + """.getAdmissibleTimeStepSize();
     """
         )
 

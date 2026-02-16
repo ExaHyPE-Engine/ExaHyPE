@@ -76,11 +76,11 @@ if (
     if ( 
       p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::NotMovedYet and marker.isContained(p->getX())
     ) {
-      p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::Moved;
-
       {{PROJECTION_KERNEL}}(
         {{PROJECTION_KERNEL_ARGUMENTS}}
       );
+      
+      p->setMoveState( globaldata::{{PARTICLE}}::MoveState::Moved );
     }
   }
 }

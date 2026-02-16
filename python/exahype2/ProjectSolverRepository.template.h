@@ -36,7 +36,7 @@ namespace {{ item }} {
    * whereas the big cells still span a large time span. Hence, on the other
    * hand, there's also a (time-)local time stamp.
    */
-  double getMinTimeStamp(bool ofCurrentlyRunningGridSweep = false);
+  double getMinTimeStamp();
 
   /**
    * Return max time stamp of all solvers.
@@ -46,7 +46,7 @@ namespace {{ item }} {
    * to know how far in the future all the solvers are, but we still want to
    * know what a valid time stamp is. So we have to take the minimum here.
    */
-  double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep = false);
+  double getMaxTimeStamp();
   double getMinTimeStepSize();
   double getMaxTimeStepSize();
   double getMinMeshSize();
@@ -85,7 +85,7 @@ namespace {{ item }} {
   void finishTimeStep();
   void finishPlottingStep();
 
-  void logTimeStep(bool ofCurrentlyRunningGridSweep = false);
+  void logTimeStep();
 
   void startSimulation();
   void finishSimulation();

@@ -22,11 +22,11 @@ tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() {}
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp(bool ofCurrentlyRunningGridSweep) const {
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp() const {
   return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMinTimeStamp();
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp(bool ofCurrentlyRunningGridSweep) const {
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
   return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMaxTimeStamp();
 }
 
@@ -145,11 +145,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   }
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep(bool ofCurrentlyRunningGridSweep) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep() {
   {{PRINT_TIME_STEP_IMPLEMENTATION}}
 
-  if (getNumberOfTroubledCells(ofCurrentlyRunningGridSweep) > 0 /*and (_solverState == SolverState::RegularSolver or _solverState == SolverState::LimiterSolver)*/) {
-    logInfo("logTimeStep()", "Number of troubled cells: " << getNumberOfTroubledCells(ofCurrentlyRunningGridSweep));
+  if (getNumberOfTroubledCells() > 0 /*and (_solverState == SolverState::RegularSolver or _solverState == SolverState::LimiterSolver)*/) {
+    logInfo("logTimeStep()", "Number of troubled cells: " << getNumberOfTroubledCells());
   }
 }
 
@@ -221,8 +221,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::addTroubledCell() {
   ++_numberOfTroubledCellsThisTimeStep;
 }
 
-int {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getNumberOfTroubledCells(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _numberOfTroubledCellsThisTimeStep : _numberOfTroubledCells;
+int {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getNumberOfTroubledCells() const {
+  return _numberOfTroubledCells;
 }
 
 {% if ADMISSIBILITY_IMPLEMENTATION!="<empty>" and ADMISSIBILITY_IMPLEMENTATION!="<user-defined>" %}

@@ -18,13 +18,13 @@ class AdaptiveTimeSteppingCodeSnippets(
 
     def create_print_time_step_implementation(self):
         return """
-  if (tarch::la::greater(getMaxH(ofCurrentlyRunningGridSweep), 0.0) and tarch::la::greater(getMaxEigenvalue(ofCurrentlyRunningGridSweep), 0.0)) {
+  if (tarch::la::greater(getMaxH(), 0.0) and tarch::la::greater(getMaxEigenvalue(), 0.0)) {
     logDebug("logTimeStep()", "Phase       = " << toString(_solverState));
-    logInfo("logTimeStep()", "t            = " << getMinTimeStamp(ofCurrentlyRunningGridSweep) << " / " << MinTerminalTime);
-    logInfo("logTimeStep()", "dt           = " << getAdmissibleTimeStepSize(ofCurrentlyRunningGridSweep));
-    logInfo("logTimeStep()", "h_{min}      = " << getMinH(ofCurrentlyRunningGridSweep) << " (internodal distance)");
-    logInfo("logTimeStep()", "h_{max}      = " << getMaxH(ofCurrentlyRunningGridSweep) << " (internodal distance)");
-    logInfo("logTimeStep()", "lambda_{max} = " << getMaxEigenvalue(ofCurrentlyRunningGridSweep));
+    logInfo("logTimeStep()", "t            = " << getMinTimeStamp() << " / " << MinTerminalTime);
+    logInfo("logTimeStep()", "dt           = " << getAdmissibleTimeStepSize());
+    logInfo("logTimeStep()", "h_{min}      = " << getMinH() << " (internodal distance)");
+    logInfo("logTimeStep()", "h_{max}      = " << getMaxH() << " (internodal distance)");
+    logInfo("logTimeStep()", "lambda_{max} = " << getMaxEigenvalue());
   }
 """
 

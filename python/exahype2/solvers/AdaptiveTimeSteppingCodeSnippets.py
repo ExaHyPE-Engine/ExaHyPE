@@ -19,7 +19,7 @@ protected:
 
 public:
   void setMaxEigenvalue(double eigenvalue);
-  double getMaxEigenvalue(bool ofCurrentlyRunningGridSweep = true) const;
+  double getMaxEigenvalue() const;
 
   /**
    * @return Admissible time step size for the current sweep, i.e.
@@ -28,7 +28,7 @@ public:
    *         you have to scale it for cells that are not on the finest
    *         mesh resolution.
    */
-  virtual double getAdmissibleTimeStepSize(bool ofCurrentlyRunningGridSweep = true) const;
+  virtual double getAdmissibleTimeStepSize() const;
 """
 
     def create_abstract_solver_user_definitions(self):
@@ -40,12 +40,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue(double eigenv
   }
 }
 
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getMaxEigenvalue(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _maxEigenvalueThisTimeStep : _maxEigenvalue;
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getMaxEigenvalue() const {
+  return _maxEigenvalue;
 }
 
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _admissibleTimeStepSizeThisTimeStep : _admissibleTimeStepSize;
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() const {
+  return _admissibleTimeStepSize;
 }
 """
 

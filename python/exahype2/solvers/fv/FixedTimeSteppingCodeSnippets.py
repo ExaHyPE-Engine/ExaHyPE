@@ -13,12 +13,12 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
 
     def create_print_time_step_implementation(self):
         return """
-  if (tarch::la::greater(getMaxVolumeSize(ofCurrentlyRunningGridSweep), 0.0)) {
+  if (tarch::la::greater(getMaxVolumeSize(), 0.0)) {
     logDebug("logTimeStep()", "Phase  = " << toString(_solverState));
-    logInfo("logTimeStep()", "t       = " << getMinTimeStamp(ofCurrentlyRunningGridSweep) << " / " << MinTerminalTime);
+    logInfo("logTimeStep()", "t       = " << getMinTimeStamp() << " / " << MinTerminalTime);
     logInfo("logTimeStep()", "dt      = " << getTimeStepSize());
-    logInfo("logTimeStep()", "h_{min} = " << getMinVolumeSize(ofCurrentlyRunningGridSweep) << " (volume size)");
-    logInfo("logTimeStep()", "h_{max} = " << getMaxVolumeSize(ofCurrentlyRunningGridSweep) << " (volume size)");
+    logInfo("logTimeStep()", "h_{min} = " << getMinVolumeSize() << " (volume size)");
+    logInfo("logTimeStep()", "h_{max} = " << getMaxVolumeSize() << " (volume size)");
   }
 """
 

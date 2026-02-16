@@ -511,7 +511,7 @@ int main(int argc, char** argv) {
         );
       }
 
-      repositories::logTimeStep(false);
+      repositories::logTimeStep();
       logNextTimeStep += repositories::LogTimeStepIntervalInSeconds;
     }
 
@@ -538,7 +538,7 @@ int main(int argc, char** argv) {
     returnCode = EXIT_FAILURE;
   } else {
     // Log final timestep information
-    repositories::logTimeStep(false);
+    repositories::logTimeStep();
     logInfo("main()", "Terminated successfully");
     returnCode = EXIT_SUCCESS;
   }

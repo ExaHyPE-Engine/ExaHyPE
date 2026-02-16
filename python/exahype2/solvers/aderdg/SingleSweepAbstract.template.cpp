@@ -60,20 +60,20 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
   return BasePowerExponent<Order + 1, DIMENSIONS>::value * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCellSize(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _minCellHThisTimeStep : _minCellH;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCellSize() const {
+  return _minCellH;
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxCellSize(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _maxCellHThisTimeStep : _maxCellH;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxCellSize() const {
+  return _maxCellH;
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _minTimeStampThisTimeStep : _minTimeStamp;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp() const {
+  return _minTimeStamp;
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _maxTimeStampThisTimeStep : _maxTimeStamp;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
+  return _maxTimeStamp;
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
@@ -299,7 +299,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   }
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep(bool ofCurrentlyRunningGridSweep) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep() {
   {{PRINT_TIME_STEP_IMPLEMENTATION}}
 }
 

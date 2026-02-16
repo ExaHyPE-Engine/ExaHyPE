@@ -194,7 +194,7 @@ advection_solver._compute_time_step_size = (
     """
   const double timeStepSize = repositories::"""
     + euler_solver.get_name_of_global_instance()
-    + """.getAdmissibleTimeStepSize(false);
+    + """.getAdmissibleTimeStepSize();
 """
 )
 

@@ -151,7 +151,7 @@ orithmStepUpdates=1,...,dependencyChecksAlgorithmStepMaskOuts=0,...,dependencyCh
    *   particle; or
    * - dropped on either of the trees where it yields a local particle.
    *
-   * @image html MultiscaleTransitionsTest_testLiftDropOfParticleAssociatedWithVertex03.png
+   * @image html src/toolbox/particles/tests/MultiscaleTransitionsTest_testLiftDropOfParticleAssociatedWithVertex03.png
    *
    * After studying the setup, it became clear that the sorting per se was
    * correct: The problem here is that the particle should never have ended
