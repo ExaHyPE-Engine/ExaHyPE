@@ -165,6 +165,12 @@ def create_exahype2_project(
     return project
 
 
+def add_no_load_balancing(project,
+    project.set_load_balancing(
+        "toolbox::loadbalancing::strategies::NoLoadBalancing",
+        )
+
+
 def add_generic_load_balancing(project, 
                                trees,
                                ):

@@ -243,7 +243,9 @@ if __name__ == "__main__":
     # project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
     # my_solver.select_dofs_to_print = [0,12,16,17,18,54,59,60]
 
-    if args.load_balancing_metric == LoadBalancingMetrics_Generic:
+    if args.trees == 1:
+        add_no_load_balancing(project)
+    elif args.load_balancing_metric == LoadBalancingMetrics_Generic:
         add_generic_load_balancing(project, args.trees)
     elif args.load_balancing_metric == LoadBalancingMetrics_Tailored:
         add_load_balancing_with_cost_metric(project, args.trees)
