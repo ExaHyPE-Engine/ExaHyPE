@@ -33,6 +33,7 @@ set(SOURCES
   grid/tests/GridStatisticsTest.cpp
   grid/tests/GridTraversalEventGeneratorTest.cpp
   grid/tests/GridVertexTest.cpp
+  grid/tests/SpacetreeHelperTest.cpp
   grid/tests/SpacetreeTest.cpp
 
   parallel/parallel.cpp
