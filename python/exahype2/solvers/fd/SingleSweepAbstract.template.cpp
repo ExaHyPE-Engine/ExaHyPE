@@ -56,28 +56,28 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
   return BasePowerExponent<NumberOfNodesPerAxisPerPatch, DIMENSIONS>::value * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize(bool ofCurrentlyRunningGridSweep) const {
-  return getMinH(ofCurrentlyRunningGridSweep) * NumberOfNodesPerAxisPerPatch;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize() const {
+  return getMinH() * NumberOfNodesPerAxisPerPatch;
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxPatchSize(bool ofCurrentlyRunningGridSweep) const {
-  return getMaxH(ofCurrentlyRunningGridSweep) * NumberOfNodesPerAxisPerPatch;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxPatchSize() const {
+  return getMaxH() * NumberOfNodesPerAxisPerPatch;
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinH(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _minHThisTimeStep : _minH;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinH() const {
+  return _minH;
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxH(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _maxHThisTimeStep : _maxH;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxH() const {
+  return _maxH;
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _minTimeStampThisTimeStep : _minTimeStamp;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp() const {
+  return _minTimeStamp;
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _maxTimeStampThisTimeStep : _maxTimeStamp;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
+  return _maxTimeStamp;
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
@@ -362,7 +362,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   }
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep(bool ofCurrentlyRunningGridSweep) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep() {
   {{PRINT_TIME_STEP_IMPLEMENTATION}}
 }
 

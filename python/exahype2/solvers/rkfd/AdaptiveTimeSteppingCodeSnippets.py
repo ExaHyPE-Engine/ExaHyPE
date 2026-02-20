@@ -15,12 +15,12 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
 
   def create_print_time_step_implementation(self):
     return """
-  if (tarch::la::greater(getMaxGridCellSize(ofCurrentlyRunningGridSweep), 0.0) and tarch::la::greater(getMaxEigenvalue(ofCurrentlyRunningGridSweep), 0.0)) {
-    logInfo("logTimeStep()", "t            = " << getMinTimeStamp(ofCurrentlyRunningGridSweep) << " / " << MinTerminalTime);
+  if (tarch::la::greater(getMaxGridCellSize(), 0.0) and tarch::la::greater(getMaxEigenvalue(), 0.0)) {
+    logInfo("logTimeStep()", "t            = " << getMinTimeStamp() << " / " << MinTerminalTime);
     logInfo("logTimeStep()", "dt           = " << getAdmissibleTimeStepSize());
-    logInfo("logTimeStep()", "h_{min}      = " << getMinGridCellSize(ofCurrentlyRunningGridSweep) << " (individual grid cell within a patch)");
-    logInfo("logTimeStep()", "h_{max}      = " << getMaxGridCellSize(ofCurrentlyRunningGridSweep) << " (individual grid cell within a patch)");
-    logInfo("logTimeStep()", "lambda_{max} = " << getMaxEigenvalue(ofCurrentlyRunningGridSweep));
+    logInfo("logTimeStep()", "h_{min}      = " << getMinGridCellSize() << " (individual grid cell within a patch)");
+    logInfo("logTimeStep()", "h_{max}      = " << getMaxGridCellSize() << " (individual grid cell within a patch)");
+    logInfo("logTimeStep()", "lambda_{max} = " << getMaxEigenvalue());
   }
 """
 

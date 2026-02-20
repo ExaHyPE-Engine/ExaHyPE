@@ -15,13 +15,13 @@ class AdaptiveTimeSteppingCodeSnippets(exahype2.solvers.AdaptiveTimeSteppingCode
 
   def create_print_time_step_implementation(self):
     return """
-  if (tarch::la::greater(getMaxVolumeSize(ofCurrentlyRunningGridSweep), 0.0) and tarch::la::greater(getMaxEigenvalue(ofCurrentlyRunningGridSweep), 0.0)) {
+  if (tarch::la::greater(getMaxVolumeSize(), 0.0) and tarch::la::greater(getMaxEigenvalue(), 0.0)) {
     logDebug("logTimeStep()", "Phase       = " << toString(_solverState));
-    logInfo("logTimeStep()", "t            = " << getMinTimeStamp(ofCurrentlyRunningGridSweep) << " / " << MinTerminalTime);
-    logInfo("logTimeStep()", "dt           = " << getAdmissibleTimeStepSize(ofCurrentlyRunningGridSweep));
-    logInfo("logTimeStep()", "h_{min}      = " << getMinVolumeSize(ofCurrentlyRunningGridSweep) << " (volume size)");
-    logInfo("logTimeStep()", "h_{max}      = " << getMaxVolumeSize(ofCurrentlyRunningGridSweep) << " (volume size)");
-    logInfo("logTimeStep()", "lambda_{max} = " << getMaxEigenvalue(ofCurrentlyRunningGridSweep));
+    logInfo("logTimeStep()", "t            = " << getMinTimeStamp() << " / " << MinTerminalTime);
+    logInfo("logTimeStep()", "dt           = " << getAdmissibleTimeStepSize());
+    logInfo("logTimeStep()", "h_{min}      = " << getMinVolumeSize() << " (volume size)");
+    logInfo("logTimeStep()", "h_{max}      = " << getMaxVolumeSize() << " (volume size)");
+    logInfo("logTimeStep()", "lambda_{max} = " << getMaxEigenvalue());
   }
 """
 
@@ -30,6 +30,8 @@ class AdaptiveTimeSteppingCodeSnippets(exahype2.solvers.AdaptiveTimeSteppingCode
   if (isFirstGridSweepOfTimeStep()) {
     _maxEigenvalue = _maxEigenvalueThisTimeStep;
     _maxEigenvalueThisTimeStep = 0.0;
+
+    _admissibleTimeStepSize = _admissibleTimeStepSizeThisTimeStep;
   }
 """
 
@@ -42,7 +44,7 @@ class AdaptiveTimeSteppingCodeSnippets(exahype2.solvers.AdaptiveTimeSteppingCode
 
     temp_implementation = super(AdaptiveTimeSteppingCodeSnippets, self).create_finish_time_step_implementation() + """
     if (isLastGridSweepOfTimeStep() and tarch::la::greater(_maxEigenvalueThisTimeStep, 0.0)) {
-      _admissibleTimeStepSize = _admissibleTimeStepSizeThisTimeStep;
+      //_admissibleTimeStepSize = _admissibleTimeStepSizeThisTimeStep;
       _admissibleTimeStepSizeThisTimeStep = """ + str(self._time_step_relaxation) + """ * _minVolumeHThisTimeStep / _maxEigenvalueThisTimeStep;
 """
 

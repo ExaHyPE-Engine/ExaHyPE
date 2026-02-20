@@ -21,20 +21,20 @@ class AdaptiveTimeSteppingCodeSnippets(
     );
 
     repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue(maxEigenvalue);
-    const double newTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false) > 0.0 ?
-      repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * tarch::la::min(marker.getH()) / repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false) :
+    const double newTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinCellSize() > 0.0 ?
+      repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * tarch::la::min(marker.getH()) / repositories::{{SOLVER_INSTANCE}}.getMinCellSize() :
       0.0;
 """
 
     def create_print_time_step_implementation(self):
         return """
-  if (tarch::la::greater(getMaxCellSize(ofCurrentlyRunningGridSweep), 0.0) and tarch::la::greater(getMaxEigenvalue(ofCurrentlyRunningGridSweep), 0.0)) {
+  if (tarch::la::greater(getMaxCellSize(), 0.0) and tarch::la::greater(getMaxEigenvalue(), 0.0)) {
     logDebug("logTimeStep()", "Phase       = " << toString(_solverState));
-    logInfo("logTimeStep()", "t            = " << getMinTimeStamp(ofCurrentlyRunningGridSweep) << " / " << MinTerminalTime);
-    logInfo("logTimeStep()", "dt           = " << getAdmissibleTimeStepSize(ofCurrentlyRunningGridSweep));
-    logInfo("logTimeStep()", "h_{min}      = " << getMinCellSize(ofCurrentlyRunningGridSweep) << " (patch size)");
-    logInfo("logTimeStep()", "h_{max}      = " << getMaxCellSize(ofCurrentlyRunningGridSweep) << " (patch size)");
-    logInfo("logTimeStep()", "lambda_{max} = " << getMaxEigenvalue(ofCurrentlyRunningGridSweep));
+    logInfo("logTimeStep()", "t            = " << getMinTimeStamp() << " / " << MinTerminalTime);
+    logInfo("logTimeStep()", "dt           = " << getAdmissibleTimeStepSize());
+    logInfo("logTimeStep()", "h_{min}      = " << getMinCellSize() << " (patch size)");
+    logInfo("logTimeStep()", "h_{max}      = " << getMaxCellSize() << " (patch size)");
+    logInfo("logTimeStep()", "lambda_{max} = " << getMaxEigenvalue());
   }
 """
 

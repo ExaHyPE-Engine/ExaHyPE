@@ -319,7 +319,7 @@ void runNextAlgorithmicStep() {
     );
     if (timeStepMeasurement.getAccumulatedValue() >= logNextTimeStep and repositories::mayPlot()) {
       if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-        repositories::logTimeStep(false);
+        repositories::logTimeStep();
         logGlobalStatistics();
       }
       logNextTimeStep += repositories::LogTimeStepIntervalInSeconds;
@@ -389,7 +389,7 @@ int runGlobalMaster() {
     logWarning("runGlobalMaster()", "Terminated gracefully after noncritical assertion");
     return EXIT_FAILURE;
   } else {
-    repositories::logTimeStep(false);
+    repositories::logTimeStep();
     logInfo("runGlobalMaster()", "Terminated successfully");
     logFinalStatistics();
     return EXIT_SUCCESS;

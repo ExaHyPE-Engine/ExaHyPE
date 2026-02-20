@@ -30,18 +30,10 @@ public:
   Solver()          = default;
   virtual ~Solver() = default;
 
-  /**
-   * There are two different flavours of a minimal time stamp: On the one hand,
-   * there's a global minimum time stamp over the whole mesh. This might not
-   * be the min time stamp after the last update. If you have local time
-   * stepping, then some cells might just have done a tiny time step,
-   * whereas the big cells still span a large time span. Hence, no the other
-   * hand, there's also a (time-)local time stamp.
-   */
-  virtual double getMinTimeStamp(bool ofLastTimeStepOnly = false) const = 0;
-  virtual double getMaxTimeStamp(bool ofLastTimeStepOnly = false) const = 0;
-  virtual double getMinTimeStepSize() const                             = 0;
-  virtual double getMaxTimeStepSize() const                             = 0;
+  virtual double getMinTimeStamp() const    = 0;
+  virtual double getMaxTimeStamp() const    = 0;
+  virtual double getMinTimeStepSize() const = 0;
+  virtual double getMaxTimeStepSize() const = 0;
 
   virtual void startGridConstructionStep()  = 0;
   virtual void finishGridConstructionStep() = 0;
@@ -51,9 +43,9 @@ public:
   virtual void startGridInitialisationStep()  = 0;
   virtual void finishGridInitialisationStep() = 0;
 
-  virtual void startTimeStep()                               = 0;
-  virtual void finishTimeStep()                              = 0;
-  virtual void logTimeStep(bool ofCurrentlyRunningGridSweep) = 0;
+  virtual void startTimeStep()  = 0;
+  virtual void finishTimeStep() = 0;
+  virtual void logTimeStep()    = 0;
 
   virtual void startPlottingStep()  = 0;
   virtual void finishPlottingStep() = 0;

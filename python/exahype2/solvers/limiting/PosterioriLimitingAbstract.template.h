@@ -46,8 +46,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     SolverState getSolverState() const;
 
-    double getMinTimeStamp(bool ofCurrentlyRunningGridSweep = false) const final;
-    double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep = false) const final;
+    double getMinTimeStamp() const final;
+    double getMaxTimeStamp() const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
@@ -101,7 +101,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishTimeStep() override;
 
-    virtual void logTimeStep(bool ofCurrentlyRunningGridSweep) override;
+    virtual void logTimeStep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class
@@ -151,7 +151,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
         */
         void addTroubledCell();
 
-        int getNumberOfTroubledCells(bool ofCurrentlyRunningGridSweep = true) const;
+        int getNumberOfTroubledCells() const;
 
         /**
         * Default implementation. Please overwrite.

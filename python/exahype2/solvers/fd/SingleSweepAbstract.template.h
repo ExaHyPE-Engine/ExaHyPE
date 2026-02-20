@@ -93,8 +93,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     static std::bitset<DIMENSIONS> PeriodicBC;
 
-    double getMinTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
-    double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
+    double getMinTimeStamp() const final;
+    double getMaxTimeStamp() const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
@@ -134,7 +134,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishTimeStep() override;
 
-    virtual void logTimeStep(bool ofCurrentlyRunningGridSweep) override;
+    virtual void logTimeStep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class
@@ -148,23 +148,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishPlottingStep() override;
 
-    /**
-     * @param currentTimeStep If you set this to false, you'll get the
-     *   quantity from the preceding time step. This is important for
-     *   local time stepping with fixed subcycling, as they have to
-     *   know the sizes from the last time step throughout the traversal,
-     *   where the current patch size might just be re-evaluated.
-     *
-     * @return Actually observed sizes, not the admissible quantities
-     */
-    double getMaxPatchSize(bool currentTimeStep = true) const;
-    double getMinPatchSize(bool currentTimeStep = true) const;
-    double getMaxH(bool currentTimeStep = true) const;
-    double getMinH(bool currentTimeStep = true) const;
+    double getMaxPatchSize() const;
+    double getMinPatchSize() const;
+    double getMaxH() const;
+    double getMinH() const;
 
-    /**
-     * Within the FV context, mesh is an alias for patch.
-     */
     virtual double getMaxMeshSize() const override final;
     virtual double getMinMeshSize() const override final;
 

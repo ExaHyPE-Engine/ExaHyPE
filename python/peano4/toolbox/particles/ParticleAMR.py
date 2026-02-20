@@ -76,7 +76,7 @@ class ParticleAMR(ActionSet):
         """
         super(ParticleAMR, self).__init__(descend_invocation_order=1, parallel=False)
         if min_particles_per_cell < 0:
-            raise Exception(
+            raise ValueError(
                 "invalid min number of particles pre cell (has to be positive): {}".format(
                     min_particles_per_cell
                 )
@@ -86,7 +86,7 @@ class ParticleAMR(ActionSet):
             max_particles_per_cell < min_particles_per_cell
             or max_particles_per_cell < 0
         ):
-            raise Exception(
+            raise ValueError(
                 "max number of particles ({}) has to be bigger or equal to min number ({}) and it has to be positive".format(
                     max_particles_per_cell, min_particles_per_cell
                 )
@@ -101,7 +101,7 @@ class ParticleAMR(ActionSet):
             "PARTICLE_SET": particle_set.name,
             "PARTICLE": particle_set.particle_model.name,
         }
-        pass
+        return
 
     def user_should_modify_template(self):
         return False
