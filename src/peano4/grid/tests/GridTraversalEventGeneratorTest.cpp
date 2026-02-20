@@ -1,401 +1,913 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "GridTraversalEventGeneratorTest.h"
 
-#include "peano4/grid/FaceType.h"
 #include "peano4/grid/GridTraversalEventGenerator.h"
-#include "peano4/Globals.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/grid/GridTraversalObserver.h"
+#include "peano4/grid/PeanoCurve.h"
+#include "peano4/grid/SpacetreeHelper.h"
+#include "peano4/grid/VertexType.h"
 #include "tarch/la/Vector.h"
 
+#include <bitset>
+#include <set>
 
-tarch::logging::Log peano4::grid::tests::GridTraversalEventGeneratorTest::_log(
-  "peano4::grid::tests::GridTraversalEventGeneratorTest"
-);
+namespace {
+  peano4::grid::AutomatonState makeBaseState(bool inverted) {
+    peano4::grid::AutomatonState s;
+    s.level = 2;
+
+    for (int d = 0; d < DIMENSIONS; ++d) {
+      s.x[d] = 0.0;
+      s.h[d] = 1.0;
+    }
+
+    s.setInverted(inverted);
+
+    for (int i = 0; i < TWO_TIMES_D; ++i) {
+      s.accessNumber[i] = 0;
+    }
+    return s;
+  }
+
+  peano4::grid::AutomatonState makeSimpleState() { return makeBaseState(false); }
+
+  peano4::grid::AutomatonState makeStateWithTemporaryReadStacks() {
+    auto s = makeBaseState(false);
+    // Any negative face access number => temporary stacks for faces/vertices touching that face.
+    // Setting all faces ensures all vertices/faces use temporary stacks.
+    for (int i = 0; i < TWO_TIMES_D; ++i) {
+      s.accessNumber[i] = -1;
+    }
+    return s;
+  }
+
+  peano4::grid::AutomatonState makeStateWithTemporaryWriteStacks() {
+    auto s = makeBaseState(false);
+    // Any positive face access number => temporary write stacks for faces/vertices touching that face.
+    // Setting all faces ensures all vertices/faces use temporary stacks for writing.
+    for (int i = 0; i < TWO_TIMES_D; ++i) {
+      s.accessNumber[i] = 1;
+    }
+    return s;
+  }
+
+  tarch::la::Vector<DIMENSIONS, int> makeZeroRelPos() {
+    tarch::la::Vector<DIMENSIONS, int> v;
+    for (int d = 0; d < DIMENSIONS; ++d) {
+      v[d] = 0;
+    }
+    return v;
+  }
+
+  void setAllAdj(peano4::grid::GridVertex& v, int r) {
+    for (int i = 0; i < TWO_POWER_D; ++i) {
+      v.adjacentRanks[i]         = r;
+      v.backupOfAdjacentRanks[i] = r;
+    }
+  }
+
+  void setAllVerticesLocal(peano4::grid::GridVertex vertices[TWO_POWER_D], int treeId) {
+    for (int v = 0; v < TWO_POWER_D; ++v) {
+      vertices[v].setState(peano4::grid::GridVertex::State::Unrefined);
+      setAllAdj(vertices[v], treeId);
+    }
+  }
+
+  void setFaceVerticesNonLocal(peano4::grid::GridVertex vertices[TWO_POWER_D], int faceIndex, int remoteRank) {
+    const auto& T      = peano4::grid::SpacetreeHelper::getFaceAdjTables();
+    const int   normal = faceIndex % DIMENSIONS;
+    for (int k = 0; k < TWO_POWER_D / 2; ++k) {
+      const int vIdx                           = T.faceVerts[faceIndex][k];
+      const int i0                             = T.adjIdx0[normal][vIdx];
+      const int i1                             = T.adjIdx1[normal][vIdx];
+      vertices[vIdx].adjacentRanks[i0]         = remoteRank;
+      vertices[vIdx].adjacentRanks[i1]         = remoteRank;
+      vertices[vIdx].backupOfAdjacentRanks[i0] = remoteRank;
+      vertices[vIdx].backupOfAdjacentRanks[i1] = remoteRank;
+    }
+
+    for (int v = 0; v < TWO_POWER_D; ++v) {
+      const int owningSlot                          = TWO_POWER_D - v - 1;
+      vertices[v].adjacentRanks[owningSlot]         = remoteRank;
+      vertices[v].backupOfAdjacentRanks[owningSlot] = remoteRank;
+    }
+  }
+} // namespace
 
 peano4::grid::tests::GridTraversalEventGeneratorTest::GridTraversalEventGeneratorTest():
   TestCase("peano4::grid::tests::GridTraversalEventGeneratorTest") {}
 
-void peano4::grid::tests::GridTraversalEventGeneratorTest::testAreFacesLocal2() {
-// #if DIMENSIONS == 2
-//   GridTraversalEventGenerator generator0(0);
-//   GridTraversalEventGenerator generator1(1);
-
-//   GridVertex vertices[TWO_POWER_D];
-
-//   vertices[0].setState(GridVertex::State::HangingVertex);
-//   vertices[0].adjacentRanks         = {0, 1, 0, 1};
-//   vertices[0].backupOfAdjacentRanks = {0, 1, 0, 1};
-
-//   vertices[1].setState(GridVertex::State::Unrefined);
-//   vertices[1].adjacentRanks         = {1, 1, 1, 1};
-//   vertices[1].backupOfAdjacentRanks = {1, 1, 1, 1};
-
-//   vertices[2].setState(GridVertex::State::HangingVertex);
-//   vertices[2].adjacentRanks         = {0, 1, 0, 1};
-//   vertices[2].backupOfAdjacentRanks = {0, 1, 0, 1};
-
-//   vertices[3].setState(GridVertex::State::Unrefined);
-//   vertices[3].adjacentRanks         = {1, 1, 1, 1};
-//   vertices[3].backupOfAdjacentRanks = {1, 1, 1, 1};
-
-//   std::bitset<TWO_TIMES_D> result0 = generator0.areFacesLocal(
-//     vertices,
-//     SplitSpecification(),
-//     std::set<int>(),
-//     std::set<int>(),
-//     std::set<int>()
-//   );
-
-//   validateWithParams1(not result0[0], result0);
-//   validateWithParams1(not result0[1], result0);
-//   validateWithParams1(not result0[2], result0);
-//   validateWithParams1(not result0[3], result0);
-
-//   std::bitset<TWO_TIMES_D> result1 = generator1.areFacesLocal(
-//     vertices,
-//     SplitSpecification(),
-//     std::set<int>(),
-//     std::set<int>(),
-//     std::set<int>()
-//   );
-
-//   validateWithParams1(result1[0], result1);
-//   validateWithParams1(result1[1], result1);
-//   validateWithParams1(result1[2], result1);
-//   validateWithParams1(result1[3], result1);
-// #endif
+void peano4::grid::tests::GridTraversalEventGeneratorTest::run() {
+  testMethod(testCreateEnterNodeTraversalEvent_AllLocalPersistent);
+  testMethod(testCreateEnterNodeTraversalEvent_InOutNoDataAndHasSplitOverride);
+  testMethod(testCreateEnterNodeTraversalEvent_TemporaryStacksDontYieldNoData);
+  testMethod(testCreateEnterNodeTraversalEvent_VertexStateSpecialCases);
+  testMethod(testCreateEnterNodeTraversalEvent_CellNoDataAndHasSplitOverride);
+  testMethod(testCreateLeaveNodeTraversalEvent_DeleteOnInOut);
+  testMethod(testCreateLeaveNodeTraversalEvent_TemporaryStacksDontYieldNoData);
 }
 
+void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterNodeTraversalEvent_AllLocalPersistent() {
+  const int treeId = 1;
 
-void peano4::grid::tests::GridTraversalEventGeneratorTest::testAreFacesLocal1() {
-// #if DIMENSIONS == 2
-//   GridTraversalEventGenerator generator(1);
+  GridTraversalEventGenerator generator(treeId);
 
-//   GridTraversalEvent event;
-//   GridVertex         vertices[TWO_POWER_D];
+  GridVertex coarseGridVertices[TWO_POWER_D];
+  GridVertex fineGridVertices[TWO_POWER_D];
+  setAllVerticesLocal(coarseGridVertices, treeId);
+  setAllVerticesLocal(fineGridVertices, treeId);
 
-//   vertices[0].setState(GridVertex::State::Unrefined);
-//   vertices[0].adjacentRanks         = {0, 0, 1, 1};
-//   vertices[0].backupOfAdjacentRanks = {0, 0, 1, 1};
-//   vertices[1].setState(GridVertex::State::Unrefined);
-//   vertices[1].adjacentRanks         = {0, -1, 1, -1};
-//   vertices[1].backupOfAdjacentRanks = {0, -1, 1, -1};
-//   vertices[2].setState(GridVertex::State::Unrefined);
-//   vertices[2].adjacentRanks         = {1, 1, -1, -1};
-//   vertices[2].backupOfAdjacentRanks = {1, 1, -1, -1};
-//   vertices[3].setState(GridVertex::State::Unrefined);
-//   vertices[3].adjacentRanks         = {1, -1, -1, -1};
-//   vertices[3].backupOfAdjacentRanks = {1, -1, -1, -1};
+  VertexType vertexTypes[TWO_POWER_D];
+  for (int i = 0; i < TWO_POWER_D; ++i) {
+    vertexTypes[i] = VertexType::Persistent;
+  }
 
-//   std::bitset<TWO_TIMES_D>
-//     result = generator.areFacesLocal(vertices, SplitSpecification(), std::set<int>(), std::set<int>(), std::set<int>());
+  const AutomatonState state  = makeSimpleState();
+  const auto           relPos = makeZeroRelPos();
 
-//   validateWithParams1(result[0], result);
-//   validateWithParams1(result[1], result);
-//   validateWithParams1(result[2], result);
-//   validateWithParams1(result[3], result);
-// #endif
+  const SplitSpecification splitTriggered;
+  const std::set<int>      splitting;
+  const std::set<int>      joinTriggered;
+  const std::set<int>      joining;
+  const std::set<int>      hasSplit;
+
+  const GridTraversalEvent event = generator.createEnterNodeTraversalEvent(
+    coarseGridVertices,
+    fineGridVertices,
+    vertexTypes,
+    state,
+    splitTriggered,
+    splitting,
+    joinTriggered,
+    joining,
+    hasSplit,
+    relPos,
+    true
+  );
+
+  validate(event.getIsCellLocal());
+
+  const std::bitset<DIMENSIONS> coordinates = PeanoCurve::getFirstVertexIndex(state);
+  for (int i = 0; i < TWO_POWER_D; ++i) {
+    const std::bitset<DIMENSIONS> vertexIndex(coordinates ^ std::bitset<DIMENSIONS>(i));
+    const int                     vertexPosition = static_cast<int>(vertexIndex.to_ulong());
+
+    validateEqualsWithParams2(event.getVertexDataTo(i), vertexPosition, i, vertexPosition);
+    validate(event.getIsVertexLocal(vertexPosition));
+
+    const int stackNumber = PeanoCurve::getVertexReadStackNumber(state, vertexIndex);
+    validateEqualsWithParams2(event.getVertexDataFrom(i), stackNumber, i, stackNumber);
+  }
+
+  for (int i = 0; i < TWO_TIMES_D; ++i) {
+    const int faceIndex   = PeanoCurve::getFaceNumberAlongCurve(state, i);
+    const int stackNumber = PeanoCurve::getFaceReadStackNumber(state, faceIndex);
+
+    validateEqualsWithParams2(event.getFaceDataTo(i), faceIndex, i, faceIndex);
+    validate(event.getIsFaceLocal(faceIndex));
+    validateEqualsWithParams2(event.getFaceDataFrom(i), stackNumber, i, stackNumber);
+  }
+
+  const int cellStack = PeanoCurve::getCellReadStackNumber(state);
+  validateEquals(event.getCellData(), cellStack);
 }
 
+void peano4::grid::tests::GridTraversalEventGeneratorTest::
+  testCreateEnterNodeTraversalEvent_InOutNoDataAndHasSplitOverride() {
+  const int treeId     = 1;
+  const int remoteRank = 2;
 
-void peano4::grid::tests::GridTraversalEventGeneratorTest::testGetFaceType() {
-#if DIMENSIONS == 2
-  // GridTraversalEventGenerator generator(2);
+  GridTraversalEventGenerator generator(treeId);
 
-  // GridVertex coarseGridVertices[TWO_POWER_D];
+  GridVertex coarseGridVertices[TWO_POWER_D];
+  GridVertex fineGridVertices[TWO_POWER_D];
+  setAllVerticesLocal(coarseGridVertices, treeId);
+  setAllVerticesLocal(fineGridVertices, treeId);
 
-  // coarseGridVertices[0].setState(GridVertex::State::Refining);
-  // coarseGridVertices[1].setState(GridVertex::State::Refining);
-  // coarseGridVertices[2].setState(GridVertex::State::Refining);
-  // coarseGridVertices[3].setState(GridVertex::State::Refining);
+  VertexType vertexTypes[TWO_POWER_D];
+  for (int i = 0; i < TWO_POWER_D; ++i) {
+    vertexTypes[i] = VertexType::Persistent;
+  }
 
-  // auto result = getFaceType(coarseGridVertices, {2, 2}, 0);
-  // validateWithParams1(result == FaceType::New, toString(result));
+  const AutomatonState state  = makeSimpleState();
+  const auto           relPos = makeZeroRelPos();
 
-  // result = getFaceType(coarseGridVertices, {2, 2}, 1);
-  // validateWithParams1(result == FaceType::New, toString(result));
+  // Choose a vertex along the curve whose read stack is an in/out stack.
+  int                     chosenVertexI     = -1;
+  int                     chosenVertexPos   = -1;
+  int                     chosenVertexStack = -1;
+  std::bitset<DIMENSIONS> chosenVertexIndex;
+  {
+    const std::bitset<DIMENSIONS> coordinates = PeanoCurve::getFirstVertexIndex(state);
+    for (int i = 0; i < TWO_POWER_D; ++i) {
+      const std::bitset<DIMENSIONS> vertexIndex(coordinates ^ std::bitset<DIMENSIONS>(i));
+      const int                     stack = PeanoCurve::getVertexReadStackNumber(state, vertexIndex);
+      if (PeanoCurve::isInOutStack(stack)) {
+        chosenVertexI     = i;
+        chosenVertexIndex = vertexIndex;
+        chosenVertexPos   = static_cast<int>(vertexIndex.to_ulong());
+        chosenVertexStack = stack;
+        break;
+      }
+    }
+  }
+  validate(chosenVertexI >= 0);
 
-  // result = getFaceType(coarseGridVertices, {2, 2}, 2);
-  // validateWithParams1(result == FaceType::New, toString(result));
+  // Make the chosen vertex non-local.
+  setAllAdj(fineGridVertices[chosenVertexPos], remoteRank);
 
-  // result = getFaceType(coarseGridVertices, {2, 2}, 3);
-  // validateWithParams1(result == FaceType::New, toString(result));
-#endif
+  // Choose a face along the curve whose read stack is an in/out stack.
+  int chosenFaceI     = -1;
+  int chosenFaceIndex = -1;
+  int chosenFaceStack = -1;
+  {
+    for (int i = 0; i < TWO_TIMES_D; ++i) {
+      const int faceIndex = PeanoCurve::getFaceNumberAlongCurve(state, i);
+      const int stack     = PeanoCurve::getFaceReadStackNumber(state, faceIndex);
+      if (PeanoCurve::isInOutStack(stack)) {
+        chosenFaceI     = i;
+        chosenFaceIndex = faceIndex;
+        chosenFaceStack = stack;
+        break;
+      }
+    }
+  }
+  validate(chosenFaceI >= 0);
+
+  // Make the chosen face non-local by changing the adjacency entries that define that face.
+  setFaceVerticesNonLocal(fineGridVertices, chosenFaceIndex, remoteRank);
+
+  const SplitSpecification splitTriggered;
+  const std::set<int>      splitting;
+  const std::set<int>      joinTriggered;
+  const std::set<int>      joining;
+
+  // Without hasSplit, in/out + non-local yields NoData.
+  {
+    const std::set<int>      hasSplit;
+    const GridTraversalEvent event = generator.createEnterNodeTraversalEvent(
+      coarseGridVertices,
+      fineGridVertices,
+      vertexTypes,
+      state,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining,
+      hasSplit,
+      relPos,
+      true
+    );
+
+    validate(not event.getIsVertexLocal(chosenVertexPos));
+    validateEquals(event.getVertexDataFrom(chosenVertexI), GridTraversalObserver::NoData);
+
+    validate(not event.getIsFaceLocal(chosenFaceIndex));
+    validateEquals(event.getFaceDataFrom(chosenFaceI), GridTraversalObserver::NoData);
+  }
+
+  // With hasSplit containing the remote owner, the generator must keep the stack id.
+  {
+    const std::set<int>      hasSplit = {remoteRank};
+    const GridTraversalEvent event    = generator.createEnterNodeTraversalEvent(
+      coarseGridVertices,
+      fineGridVertices,
+      vertexTypes,
+      state,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining,
+      hasSplit,
+      relPos,
+      true
+    );
+
+    validateEquals(event.getVertexDataFrom(chosenVertexI), chosenVertexStack);
+    validateEquals(event.getFaceDataFrom(chosenFaceI), chosenFaceStack);
+  }
 }
 
+void peano4::grid::tests::GridTraversalEventGeneratorTest::
+  testCreateEnterNodeTraversalEvent_TemporaryStacksDontYieldNoData() {
+  const int treeId     = 1;
+  const int remoteRank = 2;
 
-void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveCellTraversalEvent1() {
-  // GridVertex vertices[TWO_POWER_D];
-  // dfor2(k) vertices[kScalar].setState(GridVertex::State::Refined);
-  // vertices[kScalar].adjacentRanks = {-1};
-  // vertices[kScalar].setFlag(GridVertex::HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep, true);
-  // vertices[kScalar].setFlag(GridVertex::IsAntecessorOfRefinedVertexInCurrentTreeSweep, true);
-  // vertices[kScalar].level = 0;
+  GridTraversalEventGenerator generator(treeId);
 
-  // AutomatonState(const int& level, const tarch::la::Vector<DIMENSIONS,double>& x, const
-  // tarch::la::Vector<DIMENSIONS,double>& h, const bool& inverted, const std::bitset<DIMENSIONS>& evenFlags, const
-  // tarch::la::Vector<TWO_TIMES_D,short int>& accessNumber);
-  // AutomatonState state;
-  // state.level = 0;
-  // state.x     = {0.0};
-  // state.h     = {1.0};
-  // state.setInverted(false);
+  GridVertex coarseGridVertices[TWO_POWER_D];
+  GridVertex fineGridVertices[TWO_POWER_D];
+  setAllVerticesLocal(coarseGridVertices, treeId);
+  setAllVerticesLocal(fineGridVertices, treeId);
 
-  /*
-    observer.enterCell(createLeaveCellTraversalEvent(
-      vertices, fineGridVertices, fineGridStates[peano4::utils::dLinearised(k,3)], k
-    ));
-  */
+  VertexType vertexTypes[TWO_POWER_D];
+  for (int i = 0; i < TWO_POWER_D; ++i) {
+    vertexTypes[i] = VertexType::Persistent;
+  }
+
+  const AutomatonState state  = makeStateWithTemporaryReadStacks();
+  const auto           relPos = makeZeroRelPos();
+
+  // Pick a vertex with a temporary read stack.
+  int chosenVertexI     = -1;
+  int chosenVertexPos   = -1;
+  int chosenVertexStack = -1;
+  {
+    const std::bitset<DIMENSIONS> coordinates = PeanoCurve::getFirstVertexIndex(state);
+    for (int i = 0; i < TWO_POWER_D; ++i) {
+      const std::bitset<DIMENSIONS> vertexIndex(coordinates ^ std::bitset<DIMENSIONS>(i));
+      const int                     stack = PeanoCurve::getVertexReadStackNumber(state, vertexIndex);
+      if (PeanoCurve::isTemporaryStack(stack)) {
+        chosenVertexI     = i;
+        chosenVertexPos   = static_cast<int>(vertexIndex.to_ulong());
+        chosenVertexStack = stack;
+        break;
+      }
+    }
+  }
+  validate(chosenVertexI >= 0);
+
+  // Pick a face with a temporary read stack.
+  int chosenFaceI     = -1;
+  int chosenFaceIndex = -1;
+  int chosenFaceStack = -1;
+  {
+    for (int i = 0; i < TWO_TIMES_D; ++i) {
+      const int faceIndex = PeanoCurve::getFaceNumberAlongCurve(state, i);
+      const int stack     = PeanoCurve::getFaceReadStackNumber(state, faceIndex);
+      if (PeanoCurve::isTemporaryStack(stack)) {
+        chosenFaceI     = i;
+        chosenFaceIndex = faceIndex;
+        chosenFaceStack = stack;
+        break;
+      }
+    }
+  }
+  validate(chosenFaceI >= 0);
+
+  // Make chosen vertex and face non-local.
+  setAllAdj(fineGridVertices[chosenVertexPos], remoteRank);
+  setFaceVerticesNonLocal(fineGridVertices, chosenFaceIndex, remoteRank);
+
+  const SplitSpecification splitTriggered;
+  const std::set<int>      splitting;
+  const std::set<int>      joinTriggered;
+  const std::set<int>      joining;
+  const std::set<int>      hasSplit;
+
+  const GridTraversalEvent event = generator.createEnterNodeTraversalEvent(
+    coarseGridVertices,
+    fineGridVertices,
+    vertexTypes,
+    state,
+    splitTriggered,
+    splitting,
+    joinTriggered,
+    joining,
+    hasSplit,
+    relPos,
+    true
+  );
+
+  // Temporary stacks must not be reset to NoData even if non-local.
+  validate(not event.getIsVertexLocal(chosenVertexPos));
+  validateEquals(event.getVertexDataFrom(chosenVertexI), chosenVertexStack);
+
+  validate(not event.getIsFaceLocal(chosenFaceIndex));
+  validateEquals(event.getFaceDataFrom(chosenFaceI), chosenFaceStack);
 }
 
+void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterNodeTraversalEvent_VertexStateSpecialCases() {
+  const int treeId = 1;
 
-/*
-void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateNeighbourExchangeLists() {
-  #if DIMENSIONS==2
-  GridTraversalEventGenerator generator(1);
+  GridTraversalEventGenerator generator(treeId);
 
-  GridTraversalEvent event;
-  GridVertex vertices[TWO_POWER_D];
+  VertexType vertexTypes[TWO_POWER_D];
+  for (int i = 0; i < TWO_POWER_D; ++i) {
+    vertexTypes[i] = VertexType::Persistent;
+  }
 
-  vertices[0].setState( GridVertex::State::Unrefined );
-  vertices[0].setAdjacentRanks( { -1, 1, -1, 0 } );
-  vertices[0].setBackupOfAdjacentRanks( { -1, 1, -1, 0 } );
-  vertices[1].setState( GridVertex::State::Unrefined );
-  vertices[1].setAdjacentRanks( { 1, 1, 0, 1 } );
-  vertices[1].setBackupOfAdjacentRanks( { 1, 1, 0, 1 } );
-  vertices[2].setState( GridVertex::State::Unrefined );
-  vertices[2].setAdjacentRanks( { -1, 0, -1, 0 } );
-  vertices[2].setBackupOfAdjacentRanks( { -1, 0, -1, 0 } );
-  vertices[3].setState( GridVertex::State::Unrefined );
-  vertices[3].setAdjacentRanks( { 0, 1, 0, 0 } );
-  vertices[3].setBackupOfAdjacentRanks( { 0, 1, 0, 0 } );
+  const SplitSpecification splitTriggered;
+  const std::set<int>      splitting;
+  const std::set<int>      joinTriggered;
+  const std::set<int>      joining;
+  const std::set<int>      hasSplit;
 
-  event.setIsVertexLocal( 0, true );
-  event.setIsVertexLocal( 1, true );
-  event.setIsVertexLocal( 2, true );
-  event.setIsVertexLocal( 3, true );
-  event.setIsFaceLocal( 0, true );
-  event.setIsFaceLocal( 1, true );
-  event.setIsFaceLocal( 2, true );
-  event.setIsFaceLocal( 3, true );
+  // Select a deterministic vertex along the curve (i=0).
+  auto pickVertexAtI0 =
+    [](const AutomatonState& state, int& outVertexI, int& outVertexPos, std::bitset<DIMENSIONS>& outVertexIndex) {
+      const std::bitset<DIMENSIONS> coordinates = PeanoCurve::getFirstVertexIndex(state);
+      outVertexI                                = 0;
+      outVertexIndex                            = (coordinates ^ std::bitset<DIMENSIONS>(0));
+      outVertexPos                              = static_cast<int>(outVertexIndex.to_ulong());
+    };
 
-  // enter cell; no load balancing going on
-  generator.createNeighbourExchangeLists( vertices, event, true );
-
-  validateEqualsWithParams1( event.getExchangeFaceData(0), GridTraversalObserver::NoData, event.toString() );
-  validateEqualsWithParams1( event.getExchangeFaceData(1), 1,                         event.toString() );
-  validateEqualsWithParams1( event.getExchangeFaceData(2), 1,                         event.toString() );
-  validateEqualsWithParams1( event.getExchangeFaceData(3), GridTraversalObserver::NoData, event.toString() );
-
-  vertices[0].setState( GridVertex::State::Unrefined );
-  vertices[0].setAdjacentRanks( { -1, 0, -1, 1 } );
-  vertices[0].setBackupOfAdjacentRanks( { -1, 0, -1, 1 } );
-  vertices[1].setState( GridVertex::State::Unrefined );
-  vertices[1].setAdjacentRanks( { 0, 0, 1, 0 } );
-  vertices[1].setBackupOfAdjacentRanks( { 0, 0, 1, 0 } );
-  vertices[2].setState( GridVertex::State::Unrefined );
-  vertices[2].setAdjacentRanks( { -1, 1, -1, 1 } );
-  vertices[2].setBackupOfAdjacentRanks( { -1, 1, -1, 1 } );
-  vertices[3].setState( GridVertex::State::Unrefined );
-  vertices[3].setAdjacentRanks( { 1, 0, 1, 1 } );
-  vertices[3].setBackupOfAdjacentRanks( { 1, 0, 1, 1 } );
-
-  event.setIsVertexLocal( 0, true );
-  event.setIsVertexLocal( 1, true );
-  event.setIsVertexLocal( 2, false );
-  event.setIsVertexLocal( 3, true );
-  event.setIsFaceLocal( 0, false );
-  event.setIsFaceLocal( 1, true );
-  event.setIsFaceLocal( 2, true );
-  event.setIsFaceLocal( 3, false );
-
-  // enter cell; just triggered the split
-  generator._splitTriggered.insert( std::pair<int,int>(1,1) );
-  generator.createNeighbourExchangeLists( vertices, event, true );
-
-  validateEqualsWithParams1( event.getExchangeFaceData(0), GridTraversalObserver::NoData, event.toString() );
-  validateEqualsWithParams1( event.getExchangeFaceData(1), GridTraversalObserver::NoData, event.toString() );
-  validateEqualsWithParams1( event.getExchangeFaceData(2), GridTraversalObserver::NoData, event.toString() );
-  validateEqualsWithParams1( event.getExchangeFaceData(3), GridTraversalObserver::NoData, event.toString() );
-
-  generator.createNeighbourExchangeLists( vertices, event, false );
-
-  validateEqualsWithParams1( event.getExchangeFaceData(0), GridTraversalObserver::NoData, event.toString() );
-  validateEqualsWithParams1( event.getExchangeFaceData(1), GridTraversalObserver::NoData, event.toString() );
-  validateEqualsWithParams1( event.getExchangeFaceData(2), GridTraversalObserver::NoData, event.toString() );
-  validateEqualsWithParams1( event.getExchangeFaceData(3), GridTraversalObserver::NoData, event.toString() );
-
-  // enter cell; just triggered the split
-  generator._splitTriggered.clear();
-  generator._splitting.insert( 1 );
-  generator.createNeighbourExchangeLists( vertices, event, true );
-
-  validateEqualsWithParams1( event.getExchangeFaceData(0), GridTraversalObserver::NoData, event.toString() );
-  validateEqualsWithParams1( event.getExchangeFaceData(1), GridTraversalObserver::NoData, event.toString() );
-  validateEqualsWithParams1( event.getExchangeFaceData(2), GridTraversalObserver::NoData, event.toString() );
-  validateEqualsWithParams1( event.getExchangeFaceData(3), GridTraversalObserver::NoData, event.toString() );
-
-  generator.createNeighbourExchangeLists( vertices, event, false );
-
-  validateEqualsWithParams1( event.getExchangeFaceData(0), GridTraversalObserver::NoData, event.toString() );
-  validateEqualsWithParams1( event.getExchangeFaceData(1), 1,                         event.toString() );
-  validateEqualsWithParams1( event.getExchangeFaceData(2), 1,                         event.toString() );
-  validateEqualsWithParams1( event.getExchangeFaceData(3), GridTraversalObserver::NoData, event.toString() );
-  #endif
-}
-*/
-
-
-void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterCellTraversalEvent1() {
-  /*
-    #if DIMENSIONS==2
-    Spacetree tree( {0.0,0.0}, {1.0,1.0} );
-    tree._id = 2;
-
+  // (1) HangingVertex => CreateOrDestroyHangingGridEntity
+  {
     GridVertex coarseGridVertices[TWO_POWER_D];
     GridVertex fineGridVertices[TWO_POWER_D];
+    setAllVerticesLocal(coarseGridVertices, treeId);
+    setAllVerticesLocal(fineGridVertices, treeId);
 
-    coarseGridVertices[0].setState( GridVertex::State::Refined );
-    coarseGridVertices[1].setState( GridVertex::State::Refined );
-    coarseGridVertices[2].setState( GridVertex::State::Refined );
-    coarseGridVertices[3].setState( GridVertex::State::Refined );
+    const AutomatonState state  = makeSimpleState();
+    const auto           relPos = makeZeroRelPos();
 
-    fineGridVertices[0].setState( GridVertex::State::Unrefined );
-    fineGridVertices[0].setAdjacentRanks( { 3, 3, 3, 3 } );
-    fineGridVertices[0].setBackupOfAdjacentRanks( { 3, 3, 3, 3 } );
-    fineGridVertices[0].setX( {0.62963,0.407407} );
+    int                     vertexI, vertexPos;
+    std::bitset<DIMENSIONS> vertexIndex;
+    pickVertexAtI0(state, vertexI, vertexPos, vertexIndex);
 
-    fineGridVertices[1].setState( GridVertex::State::Unrefined );
-    fineGridVertices[1].setAdjacentRanks( { 3, 2, 3, 2 } );
-    fineGridVertices[1].setBackupOfAdjacentRanks( { 3, 2, 3, 2 } );
-    fineGridVertices[1].setX( {0.666667,0.407407} );
+    fineGridVertices[vertexPos].setState(GridVertex::State::HangingVertex);
 
-    fineGridVertices[2].setState( GridVertex::State::New );
-    fineGridVertices[2].setAdjacentRanks( { 3, 3, 3, 3 } );
-    fineGridVertices[2].setBackupOfAdjacentRanks( { 0, 0, 0, 0 } );
-    fineGridVertices[2].setX( {0.62963,0.444444} );
-
-    fineGridVertices[3].setState( GridVertex::State::New );
-    fineGridVertices[3].setAdjacentRanks( { 3, 2, 3, 2 } );
-    fineGridVertices[3].setBackupOfAdjacentRanks( { 0, 0, 0, 0 } );
-    fineGridVertices[3].setX( {0.666667,0.444444} );
-
-    coarseGridVertices[0].setState( GridVertex::State::Refining );
-    coarseGridVertices[0].setAdjacentRanks( { 3, 3, 3, 3 } );
-
-    coarseGridVertices[1].setState( GridVertex::State::Refining );
-    coarseGridVertices[1].setAdjacentRanks( { 3, 2, 3, 2 } );
-
-    coarseGridVertices[2].setState( GridVertex::State::Refining );
-    coarseGridVertices[2].setAdjacentRanks( { 3, 3, 3, 3 } );
-
-    coarseGridVertices[3].setState( GridVertex::State::Refining );
-    coarseGridVertices[3].setAdjacentRanks( { 3, 2, 3, 2 } );
-
-    AutomatonState state(
-      3,                            // level,
-          {0.62963,0.407407},           // x
-          {0.037037,0.037037},          // h
-          true,                         // inverted
-          std::bitset<DIMENSIONS>(3),   // even flags = 11
-          {-1,-2,2,1}
+    const GridTraversalEvent event = generator.createEnterNodeTraversalEvent(
+      coarseGridVertices,
+      fineGridVertices,
+      vertexTypes,
+      state,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining,
+      hasSplit,
+      relPos,
+      true
     );
-    tarch::la::Vector<DIMENSIONS,int> relativePositionToFather = {2,2};
 
-    GridTraversalEvent event =
-    tree.createEnterCellTraversalEvent(coarseGridVertices,fineGridVertices,state,relativePositionToFather);
+    validateEquals(event.getVertexDataFrom(vertexI), GridTraversalObserver::CreateOrDestroyHangingGridEntity);
+  }
 
-    validateEqualsWithParams1( event.getFaceDataFrom(0),                                                      4,
-    event.toString() ); validateEqualsWithParams1( event.getFaceDataFrom(1), 3, event.toString() );
-    validateEqualsWithParams1( event.getFaceDataFrom(2), GridTraversalObserver::CreateOrDestroyPersistentGridEntity,
-    event.toString() ); validateEqualsWithParams1( event.getFaceDataFrom(3),
-    GridTraversalObserver::CreateOrDestroyPersistentGridEntity, event.toString() ); #endif
-  */
+  // (2) New + in/out stack => CreateOrDestroyPersistentGridEntity
+  {
+    GridVertex coarseGridVertices[TWO_POWER_D];
+    GridVertex fineGridVertices[TWO_POWER_D];
+    setAllVerticesLocal(coarseGridVertices, treeId);
+    setAllVerticesLocal(fineGridVertices, treeId);
+
+    const AutomatonState state  = makeSimpleState();
+    const auto           relPos = makeZeroRelPos();
+
+    int                     vertexI, vertexPos;
+    std::bitset<DIMENSIONS> vertexIndex;
+    pickVertexAtI0(state, vertexI, vertexPos, vertexIndex);
+
+    const int stackNumber = PeanoCurve::getVertexReadStackNumber(state, vertexIndex);
+    validate(PeanoCurve::isInOutStack(stackNumber)); // this subtest targets the in/out path
+
+    fineGridVertices[vertexPos].setState(GridVertex::State::New);
+
+    const GridTraversalEvent event = generator.createEnterNodeTraversalEvent(
+      coarseGridVertices,
+      fineGridVertices,
+      vertexTypes,
+      state,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining,
+      hasSplit,
+      relPos,
+      true
+    );
+
+    validateEquals(event.getVertexDataFrom(vertexI), GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
+  }
+
+  // (3) New + temporary stack => stack number (not CreateOrDestroyPersistentGridEntity)
+  {
+    GridVertex coarseGridVertices[TWO_POWER_D];
+    GridVertex fineGridVertices[TWO_POWER_D];
+    setAllVerticesLocal(coarseGridVertices, treeId);
+    setAllVerticesLocal(fineGridVertices, treeId);
+
+    const AutomatonState state  = makeStateWithTemporaryReadStacks();
+    const auto           relPos = makeZeroRelPos();
+
+    int                     vertexI, vertexPos;
+    std::bitset<DIMENSIONS> vertexIndex;
+    pickVertexAtI0(state, vertexI, vertexPos, vertexIndex);
+
+    const int stackNumber = PeanoCurve::getVertexReadStackNumber(state, vertexIndex);
+    validate(PeanoCurve::isTemporaryStack(stackNumber)); // this subtest targets the temporary-stack path
+
+    fineGridVertices[vertexPos].setState(GridVertex::State::New);
+
+    const GridTraversalEvent event = generator.createEnterNodeTraversalEvent(
+      coarseGridVertices,
+      fineGridVertices,
+      vertexTypes,
+      state,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining,
+      hasSplit,
+      relPos,
+      true
+    );
+
+    validateEquals(event.getVertexDataFrom(vertexI), stackNumber);
+  }
 }
 
+void peano4::grid::tests::GridTraversalEventGeneratorTest::
+  testCreateEnterNodeTraversalEvent_CellNoDataAndHasSplitOverride() {
+  const int treeId     = 1;
+  const int remoteRank = 2;
 
-void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateGenericCellTraversalEvent1() {
-// #if DIMENSIONS == 2
-//   GridTraversalEventGenerator generator(0);
+  GridTraversalEventGenerator generator(treeId);
 
-//   GridVertex coarseGridVertices[TWO_POWER_D];
-//   GridVertex fineGridVertices[TWO_POWER_D];
+  GridVertex coarseGridVertices[TWO_POWER_D];
+  GridVertex fineGridVertices[TWO_POWER_D];
+  setAllVerticesLocal(coarseGridVertices, treeId);
+  setAllVerticesLocal(fineGridVertices, treeId);
 
-//   fineGridVertices[0].setState(GridVertex::State::HangingVertex);
-//   fineGridVertices[0].adjacentRanks         = {0, 0, 0, 0};
-//   fineGridVertices[0].backupOfAdjacentRanks = {0, 0, 0, 0};
+  // Make the whole cell non-local (for isSpacetreeNodeLocal with splitting/joining treated as local).
+  for (int v = 0; v < TWO_POWER_D; ++v) {
+    setAllAdj(fineGridVertices[v], remoteRank);
+  }
 
-//   fineGridVertices[1].setState(GridVertex::State::Unrefined);
-//   fineGridVertices[1].adjacentRanks         = {0, 0, 0, 0};
-//   fineGridVertices[1].backupOfAdjacentRanks = {0, 0, 0, 0};
+  VertexType vertexTypes[TWO_POWER_D];
+  for (int i = 0; i < TWO_POWER_D; ++i) {
+    vertexTypes[i] = VertexType::Persistent;
+  }
 
-//   fineGridVertices[2].setState(GridVertex::State::HangingVertex);
-//   fineGridVertices[2].adjacentRanks         = {0, 0, 0, 0};
-//   fineGridVertices[2].backupOfAdjacentRanks = {0, 0, 0, 0};
+  const AutomatonState state  = makeSimpleState();
+  const auto           relPos = makeZeroRelPos();
 
-//   fineGridVertices[3].setState(GridVertex::State::Unrefined);
-//   fineGridVertices[3].adjacentRanks         = {0, 0, 0, 0};
-//   fineGridVertices[3].backupOfAdjacentRanks = {0, 0, 0, 0};
+  const SplitSpecification splitTriggered;
+  const std::set<int>      splitting;
+  const std::set<int>      joinTriggered;
+  const std::set<int>      joining;
 
-//   coarseGridVertices[0].setState(GridVertex::State::Unrefined);
-//   coarseGridVertices[0].adjacentRanks         = {0, 0, 0, 0};
-//   coarseGridVertices[0].backupOfAdjacentRanks = {0, 0, 0, 0};
+  // Without hasSplit: in/out cell stack + non-local => NoData.
+  {
+    const std::set<int>      hasSplit;
+    const GridTraversalEvent event = generator.createEnterNodeTraversalEvent(
+      coarseGridVertices,
+      fineGridVertices,
+      vertexTypes,
+      state,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining,
+      hasSplit,
+      relPos,
+      true
+    );
 
-//   coarseGridVertices[1].setState(GridVertex::State::Refined);
-//   coarseGridVertices[1].adjacentRanks         = {0, 0, 0, 0};
-//   coarseGridVertices[1].backupOfAdjacentRanks = {0, 0, 0, 0};
+    validate(not event.getIsCellLocal());
+    validateEquals(event.getCellData(), GridTraversalObserver::NoData);
+  }
 
-//   coarseGridVertices[2].setState(GridVertex::State::Unrefined);
-//   coarseGridVertices[2].adjacentRanks         = {0, 0, 0, 0};
-//   coarseGridVertices[2].backupOfAdjacentRanks = {0, 0, 0, 0};
+  // With hasSplit containing the owning tree => keep the cell stack id.
+  {
+    const std::set<int>      hasSplit = {remoteRank};
+    const GridTraversalEvent event    = generator.createEnterNodeTraversalEvent(
+      coarseGridVertices,
+      fineGridVertices,
+      vertexTypes,
+      state,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining,
+      hasSplit,
+      relPos,
+      true
+    );
 
-//   coarseGridVertices[3].setState(GridVertex::State::Refined);
-//   coarseGridVertices[3].adjacentRanks         = {0, 0, 0, 0};
-//   coarseGridVertices[3].backupOfAdjacentRanks = {0, 0, 0, 0};
-
-//   AutomatonState state;
-//   state.level = 4;
-//   state.x     = {0.37037, 0.358025};
-//   state.h     = {0.0123457, 0.0123457};
-//   state.setInverted(true);
-//   state.setEvenFlag(0, false);
-//   state.setEvenFlag(1, true);
-//   state.accessNumber[0] = -1;
-//   state.accessNumber[1] = 2;
-//   state.accessNumber[2] = 1;
-//   state.accessNumber[3] = 3;
-
-//   tarch::la::Vector<DIMENSIONS, int> relativePositionToFather = {0, 2};
-
-//   GridTraversalEvent event = generator.createGenericTraversalEvent(
-//     coarseGridVertices,
-//     fineGridVertices,
-//     state,
-//     SplitSpecification(),
-//     std::set<int>(),
-//     std::set<int>(),
-//     std::set<int>(),
-//     relativePositionToFather,
-//     true
-//   );
-
-//   validateEqualsWithParams1(event.getIsVertexLocal(0), true, event.toString());
-//   validateEqualsWithParams1(event.getIsVertexLocal(1), true, event.toString());
-//   validateEqualsWithParams1(event.getIsVertexLocal(2), true, event.toString());
-//   validateEqualsWithParams1(event.getIsVertexLocal(3), true, event.toString());
-
-//   validateEqualsWithParams1(event.getIsFaceLocal(0), true, event.toString());
-//   validateEqualsWithParams1(event.getIsFaceLocal(1), true, event.toString());
-//   validateEqualsWithParams1(event.getIsFaceLocal(2), true, event.toString());
-//   validateEqualsWithParams1(event.getIsFaceLocal(3), true, event.toString());
-// #endif
+    validate(not event.getIsCellLocal());
+    const int cellStack = PeanoCurve::getCellReadStackNumber(state);
+    validateEquals(event.getCellData(), cellStack);
+  }
 }
 
+void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTraversalEvent_DeleteOnInOut() {
+  const int treeId     = 1;
+  const int remoteRank = 2;
 
-void peano4::grid::tests::GridTraversalEventGeneratorTest::run() {
-  testMethod(testCreateGenericCellTraversalEvent1);
-  testMethod(testAreFacesLocal1);
-  testMethod(testAreFacesLocal2);
-  testMethod(testGetFaceType);
-  testMethod(testCreateEnterCellTraversalEvent1);
-  testMethod(testCreateLeaveCellTraversalEvent1);
+  GridTraversalEventGenerator generator(treeId);
+
+  VertexType vertexTypes[TWO_POWER_D];
+  for (int i = 0; i < TWO_POWER_D; ++i) {
+    vertexTypes[i] = VertexType::Persistent;
+  }
+
+  const AutomatonState state  = makeSimpleState();
+  const auto           relPos = makeZeroRelPos();
+
+  const SplitSpecification splitTriggered;
+  const std::set<int>      splitting;
+  const std::set<int>      joinTriggered;
+  const std::set<int>      joining;
+  const std::set<int>      hasSplit;
+
+  // Pick a vertex along the curve where the write stack is an in/out stack.
+  int                     chosenVertexI   = -1;
+  int                     chosenVertexPos = -1;
+  std::bitset<DIMENSIONS> chosenVertexIndex;
+  {
+    const std::bitset<DIMENSIONS> coordinates = PeanoCurve::getFirstVertexIndex(state);
+    for (int i = 0; i < TWO_POWER_D; ++i) {
+      const std::bitset<DIMENSIONS> vertexIndex(coordinates ^ std::bitset<DIMENSIONS>(i));
+      const int                     stack = PeanoCurve::getVertexWriteStackNumber(state, vertexIndex);
+      if (PeanoCurve::isInOutStack(stack)) {
+        chosenVertexI     = i;
+        chosenVertexIndex = vertexIndex;
+        chosenVertexPos   = static_cast<int>(vertexIndex.to_ulong());
+        break;
+      }
+    }
+  }
+  validate(chosenVertexI >= 0);
+
+  // (A) Local vertex + Delete + in/out => CreateOrDestroyPersistentGridEntity
+  {
+    GridVertex coarseGridVertices[TWO_POWER_D];
+    GridVertex fineGridVertices[TWO_POWER_D];
+    setAllVerticesLocal(coarseGridVertices, treeId);
+    setAllVerticesLocal(fineGridVertices, treeId);
+
+    fineGridVertices[chosenVertexPos].setState(GridVertex::State::Delete);
+
+    const GridTraversalEvent enter = generator.createEnterNodeTraversalEvent(
+      coarseGridVertices,
+      fineGridVertices,
+      vertexTypes,
+      state,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining,
+      hasSplit,
+      relPos,
+      true
+    );
+    const GridTraversalEvent leave = generator.createLeaveNodeTraversalEvent(
+      enter,
+      coarseGridVertices,
+      fineGridVertices,
+      vertexTypes,
+      state,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining,
+      hasSplit,
+      relPos,
+      true
+    );
+
+    validateEquals(leave.getVertexDataTo(chosenVertexI), GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
+  }
+
+  // (B) Non-local vertex + Unrefined + in/out => NoData (filtered by in/out + not local check)
+  {
+    GridVertex coarseGridVertices[TWO_POWER_D];
+    GridVertex fineGridVertices[TWO_POWER_D];
+    setAllVerticesLocal(coarseGridVertices, treeId);
+    setAllVerticesLocal(fineGridVertices, treeId);
+
+    setAllAdj(fineGridVertices[chosenVertexPos], remoteRank);
+    fineGridVertices[chosenVertexPos].setState(GridVertex::State::Unrefined);
+
+    const GridTraversalEvent enter = generator.createEnterNodeTraversalEvent(
+      coarseGridVertices,
+      fineGridVertices,
+      vertexTypes,
+      state,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining,
+      hasSplit,
+      relPos,
+      true
+    );
+    const GridTraversalEvent leave = generator.createLeaveNodeTraversalEvent(
+      enter,
+      coarseGridVertices,
+      fineGridVertices,
+      vertexTypes,
+      state,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining,
+      hasSplit,
+      relPos,
+      true
+    );
+
+    validate(not leave.getIsVertexLocal(chosenVertexPos));
+    validateEquals(leave.getVertexDataTo(chosenVertexI), GridTraversalObserver::NoData);
+  }
+
+  // (C) Non-local vertex + Delete + in/out => CreateOrDestroyPersistentGridEntity (not filtered, as the filter checks
+  // in/out stacks)
+  {
+    GridVertex coarseGridVertices[TWO_POWER_D];
+    GridVertex fineGridVertices[TWO_POWER_D];
+    setAllVerticesLocal(coarseGridVertices, treeId);
+    setAllVerticesLocal(fineGridVertices, treeId);
+
+    setAllAdj(fineGridVertices[chosenVertexPos], remoteRank);
+    fineGridVertices[chosenVertexPos].setState(GridVertex::State::Delete);
+
+    const GridTraversalEvent enter = generator.createEnterNodeTraversalEvent(
+      coarseGridVertices,
+      fineGridVertices,
+      vertexTypes,
+      state,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining,
+      hasSplit,
+      relPos,
+      true
+    );
+    const GridTraversalEvent leave = generator.createLeaveNodeTraversalEvent(
+      enter,
+      coarseGridVertices,
+      fineGridVertices,
+      vertexTypes,
+      state,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining,
+      hasSplit,
+      relPos,
+      true
+    );
+
+    validate(not leave.getIsVertexLocal(chosenVertexPos));
+    validateEquals(leave.getVertexDataTo(chosenVertexI), GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
+  }
+
+  // (D) Face: in/out write stack + non-local => NoData (early-out in leave event)
+  {
+    GridVertex coarseGridVertices[TWO_POWER_D];
+    GridVertex fineGridVertices[TWO_POWER_D];
+    setAllVerticesLocal(coarseGridVertices, treeId);
+    setAllVerticesLocal(fineGridVertices, treeId);
+
+    int chosenFaceI     = -1;
+    int chosenFaceIndex = -1;
+    {
+      for (int i = 0; i < TWO_TIMES_D; ++i) {
+        const int faceIndex = PeanoCurve::getFaceNumberAlongCurve(state, i);
+        const int stack     = PeanoCurve::getFaceWriteStackNumber(state, faceIndex);
+        if (PeanoCurve::isInOutStack(stack)) {
+          chosenFaceI     = i;
+          chosenFaceIndex = faceIndex;
+          break;
+        }
+      }
+    }
+    validate(chosenFaceI >= 0);
+
+    setFaceVerticesNonLocal(fineGridVertices, chosenFaceIndex, remoteRank);
+
+    const GridTraversalEvent enter = generator.createEnterNodeTraversalEvent(
+      coarseGridVertices,
+      fineGridVertices,
+      vertexTypes,
+      state,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining,
+      hasSplit,
+      relPos,
+      true
+    );
+    const GridTraversalEvent leave = generator.createLeaveNodeTraversalEvent(
+      enter,
+      coarseGridVertices,
+      fineGridVertices,
+      vertexTypes,
+      state,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining,
+      hasSplit,
+      relPos,
+      true
+    );
+
+    validate(not leave.getIsFaceLocal(chosenFaceIndex));
+    validateEquals(leave.getFaceDataTo(chosenFaceI), GridTraversalObserver::NoData);
+  }
+}
+
+void peano4::grid::tests::GridTraversalEventGeneratorTest::
+  testCreateLeaveNodeTraversalEvent_TemporaryStacksDontYieldNoData() {
+  const int treeId     = 1;
+  const int remoteRank = 2;
+
+  GridTraversalEventGenerator generator(treeId);
+
+  GridVertex coarseGridVertices[TWO_POWER_D];
+  GridVertex fineGridVertices[TWO_POWER_D];
+  setAllVerticesLocal(coarseGridVertices, treeId);
+  setAllVerticesLocal(fineGridVertices, treeId);
+
+  VertexType vertexTypes[TWO_POWER_D];
+  for (int i = 0; i < TWO_POWER_D; ++i) {
+    vertexTypes[i] = VertexType::Persistent;
+  }
+
+  const AutomatonState state  = makeStateWithTemporaryWriteStacks();
+  const auto           relPos = makeZeroRelPos();
+
+  // Choose a vertex with a temporary write stack.
+  int                     chosenVertexI     = -1;
+  int                     chosenVertexPos   = -1;
+  int                     chosenVertexStack = -1;
+  std::bitset<DIMENSIONS> chosenVertexIndex;
+  {
+    const std::bitset<DIMENSIONS> coordinates = PeanoCurve::getFirstVertexIndex(state);
+    for (int i = 0; i < TWO_POWER_D; ++i) {
+      const std::bitset<DIMENSIONS> vertexIndex(coordinates ^ std::bitset<DIMENSIONS>(i));
+      const int                     stack = PeanoCurve::getVertexWriteStackNumber(state, vertexIndex);
+      if (PeanoCurve::isTemporaryStack(stack)) {
+        chosenVertexI     = i;
+        chosenVertexIndex = vertexIndex;
+        chosenVertexPos   = static_cast<int>(vertexIndex.to_ulong());
+        chosenVertexStack = stack;
+        break;
+      }
+    }
+  }
+  validate(chosenVertexI >= 0);
+
+  // Choose a face with a temporary write stack.
+  int chosenFaceI     = -1;
+  int chosenFaceIndex = -1;
+  int chosenFaceStack = -1;
+  {
+    for (int i = 0; i < TWO_TIMES_D; ++i) {
+      const int faceIndex = PeanoCurve::getFaceNumberAlongCurve(state, i);
+      const int stack     = PeanoCurve::getFaceWriteStackNumber(state, faceIndex);
+      if (PeanoCurve::isTemporaryStack(stack)) {
+        chosenFaceI     = i;
+        chosenFaceIndex = faceIndex;
+        chosenFaceStack = stack;
+        break;
+      }
+    }
+  }
+  validate(chosenFaceI >= 0);
+
+  // Make vertex and face non-local.
+  setAllAdj(fineGridVertices[chosenVertexPos], remoteRank);
+  setFaceVerticesNonLocal(fineGridVertices, chosenFaceIndex, remoteRank);
+
+  // Vertex state must be one of the ones that writes to stackNumber (not Delete/Hanging).
+  fineGridVertices[chosenVertexPos].setState(GridVertex::State::Unrefined);
+
+  const SplitSpecification splitTriggered;
+  const std::set<int>      splitting;
+  const std::set<int>      joinTriggered;
+  const std::set<int>      joining;
+  const std::set<int>      hasSplit;
+
+  const GridTraversalEvent enter = generator.createEnterNodeTraversalEvent(
+    coarseGridVertices,
+    fineGridVertices,
+    vertexTypes,
+    state,
+    splitTriggered,
+    splitting,
+    joinTriggered,
+    joining,
+    hasSplit,
+    relPos,
+    true
+  );
+  const GridTraversalEvent leave = generator.createLeaveNodeTraversalEvent(
+    enter,
+    coarseGridVertices,
+    fineGridVertices,
+    vertexTypes,
+    state,
+    splitTriggered,
+    splitting,
+    joinTriggered,
+    joining,
+    hasSplit,
+    relPos,
+    true
+  );
+
+  // Temporary stacks must not be turned into NoData for non-local vertices/faces.
+  validate(not leave.getIsVertexLocal(chosenVertexPos));
+  validateEquals(leave.getVertexDataTo(chosenVertexI), chosenVertexStack);
+
+  validate(not leave.getIsFaceLocal(chosenFaceIndex));
+  validateEquals(leave.getFaceDataTo(chosenFaceI), chosenFaceStack);
 }

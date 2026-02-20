@@ -7,6 +7,7 @@
 #include "grid/tests/GridStatisticsTest.h"
 #include "grid/tests/GridTraversalEventGeneratorTest.h"
 #include "grid/tests/GridVertexTest.h"
+#include "grid/tests/SpacetreeHelperTest.h"
 #include "grid/tests/SpacetreeTest.h"
 #include "parallel/tests/NodeTest.h"
 #ifdef WITH_MPI
@@ -25,6 +26,7 @@ tarch::tests::TestCase* peano4::getUnitTests() {
   result->addTestCase(new grid::tests::GridTraversalEventGeneratorTest());
   result->addTestCase(new grid::tests::GridStatisticsTest());
   result->addTestCase(new grid::tests::GridVertexTest());
+  result->addTestCase(new grid::tests::SpacetreeHelperTest());
   result->addTestCase(new grid::tests::SpacetreeTest());
 
   result->addTestCase(new parallel::tests::NodeTest());
