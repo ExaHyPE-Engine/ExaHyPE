@@ -28,20 +28,6 @@ class benchmarks::exahype2::ccz4::CCZ4SBH_FD4: public benchmarks::exahype2::ccz4
      */
     CCZ4SBH_FD4();
     
-    /**
-     * Refinement criterion
-     *
-     * Delegate to benchmarks::exahype2::ccz4::refinementCriterion()
-     * for time t=0, i.e. for the initial condition.
-     */
-    virtual ::exahype2::RefinementCommand refinementCriterion(
-      const double * __restrict__ Q, // Q[59+0],
-      const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
-      const tarch::la::Vector<Dimensions,double>&  meshCellH,
-      double                                       t
-    ) override;
-    
-
     virtual void initialCondition(
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  meshCellCentre,

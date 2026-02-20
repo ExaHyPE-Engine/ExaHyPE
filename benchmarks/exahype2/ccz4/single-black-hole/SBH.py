@@ -581,7 +581,6 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
         patch_size,
         min_cell_size,
         max_cell_size,
-        production_run = 0
     ):
         self._name_without_FD4_extension = name
 
@@ -611,7 +610,6 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
             boundary_conditions=exahype2.solvers.PDETerms.None_Implementation,
         )
 
-        self.integer_constants["ProductionRun"] = production_run
         update_solver_parameters_for_single_black_hole(self)
         self.add_all_solver_constants()
 
