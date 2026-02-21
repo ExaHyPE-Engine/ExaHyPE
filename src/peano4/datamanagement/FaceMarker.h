@@ -75,6 +75,11 @@ struct peano4::datamanagement::FaceMarker {
     FaceMarker(const peano4::grid::GridTraversalEvent& event, int select=0);
 
     /**
+     * Copy over another marker, but select a different face.
+     */
+    FaceMarker(const FaceMarker& marker, int select);
+
+    /**
      * Selects a face within a cell, i.e. now the marker knows to which
      * face it corresponds. After that, the routine returns a this
      * reference.

@@ -33,6 +33,15 @@ peano4::datamanagement::FaceMarker::FaceMarker(
 }
 
 
+peano4::datamanagement::FaceMarker::FaceMarker(
+  const FaceMarker&  marker,
+  int                selectFace
+):
+  FaceMarker(marker) {
+  select(selectFace);
+}
+
+
 tarch::la::Vector<Dimensions,double> peano4::datamanagement::FaceMarker::x(int i) const {
   tarch::la::Vector<Dimensions,double> result( _cellCentre );
   int normal = i % Dimensions;
