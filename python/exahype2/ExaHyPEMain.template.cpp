@@ -73,17 +73,18 @@ bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumbe
     return true;
   }
 
-  // If the grid is stable (small enough and converged), terminate.
+  // If the grid is stable (small enough and converged), terminate grid construction.
   if (
-    tarch::la::smallerEquals(currentMinH, repositories::getMinAdmissibleMeshSize())
+    tarch::la::smallerEquals(currentMinH, repositories::getMinAdmissibleMeshSize() /*repositories::getMaxAdmissibleMeshSize()*/)
     and
     repositories::loadBalancer.isStagnating()
     and
     // Ensure that a proper creation has been ran before, so the mesh had the opportunity to refine further if it has not done yet.
     repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep()) == repositories::StepRepository::Steps::CreateGridWithRefinement
   ) {
-    // If we get in an infinite loop because Peano is not able to get all ranks stationary, then we break the loop after reaching the number of settling iterations given by the load balancer.
-    // Happens if we have small meshes, and too many ranks to satisfy the mesh splitting.
+    // If we get in an infinite loop because Peano is not able to get all ranks stationary,
+    // then we break the loop after reaching the number of settling iterations given by the load balancer.
+    // Happens if we have small meshes, and too many ranks to satisfy the tree splitting.
     static int numberOfStationarySweeps = 0;
     if (repositories::loadBalancer.getStatistics().getGlobalNumberOfStationarySweeps() == 0 and numberOfStationarySweeps < repositories::loadBalancer.getNumberOfSettlingIterations()) {
       logInfo("shouldContinueGridConstruction()", "Admissible mesh size reached, but at least one rank still has pending refinement events.");

@@ -11,6 +11,24 @@
 static_assert(std::is_standard_layout_v<peano4::grid::GridControlEvent>);
 static_assert(std::is_trivially_copyable_v<peano4::grid::GridControlEvent>);
 
+// static_assert(std::is_trivially_default_constructible_v<peano4::grid::GridControlEvent>);
+static_assert(std::is_trivially_copy_constructible_v<peano4::grid::GridControlEvent>);
+static_assert(std::is_trivially_copy_assignable_v<peano4::grid::GridControlEvent>);
+static_assert(std::is_trivially_move_constructible_v<peano4::grid::GridControlEvent>);
+static_assert(std::is_trivially_move_assignable_v<peano4::grid::GridControlEvent>);
+static_assert(std::is_trivially_destructible_v<peano4::grid::GridControlEvent>);
+
+static_assert(std::is_nothrow_move_constructible_v<peano4::grid::GridControlEvent>);
+static_assert(std::is_nothrow_move_assignable_v<peano4::grid::GridControlEvent>);
+
+static_assert(offsetof(peano4::grid::GridControlEvent, refinementControl) == 0);
+
+static_assert(
+  offsetof(peano4::grid::GridControlEvent, offset) > offsetof(peano4::grid::GridControlEvent, refinementControl)
+);
+static_assert(offsetof(peano4::grid::GridControlEvent, width) > offsetof(peano4::grid::GridControlEvent, offset));
+static_assert(offsetof(peano4::grid::GridControlEvent, targetH) > offsetof(peano4::grid::GridControlEvent, width));
+
 namespace {
   peano4::grid::GridControlEvent createBoundingBoxEvent(
     const peano4::grid::GridControlEvent& lhs,
@@ -22,69 +40,45 @@ namespace {
     return result;
   };
 
-  bool twoEventsOverlap(const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs) {
-    for (int d = 0; d < DIMENSIONS; ++d) {
-      if (lhs.offset[d] + lhs.width[d] < rhs.offset[d]) {
-        return false;
-      }
-      if (rhs.offset[d] + rhs.width[d] < lhs.offset[d]) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  bool refinementEventOverrulesCoarsening(
-    const peano4::grid::GridControlEvent& refineEvent,
-    const peano4::grid::GridControlEvent& eraseEvent
-  ) {
-    if (refineEvent.getRefinementControl() != peano4::grid::GridControlEvent::RefinementControl::Refine) {
-      return false;
-    }
-    if (eraseEvent.getRefinementControl() != peano4::grid::GridControlEvent::RefinementControl::Erase) {
-      return false;
-    }
-    if (not twoEventsOverlap(refineEvent, eraseEvent)) {
-      return false;
-    }
-    return tarch::la::oneSmallerEquals((1.0 / 3.0) * refineEvent.h, eraseEvent.h);
-  };
-
-  void removeEraseEventsThatAreCancelledByRefineEvents(
-    const std::list<peano4::grid::GridControlEvent>& refineEvents,
-    std::list<peano4::grid::GridControlEvent>&       eraseEvents
-  ) {
-    std::list<peano4::grid::GridControlEvent>::iterator pEraseEvent = eraseEvents.begin();
-    while (pEraseEvent != eraseEvents.end()) {
-      bool overlaps = false;
-      for (const auto& refineEvent : refineEvents) {
-        overlaps |= refinementEventOverrulesCoarsening(refineEvent, *pEraseEvent);
-      }
-      if (overlaps) {
-        pEraseEvent = eraseEvents.erase(pEraseEvent);
-      } else {
-        pEraseEvent++;
-      }
-    }
-  }
-
   bool twoEventsAreAdjacent(
     const peano4::grid::GridControlEvent& lhs,
     const peano4::grid::GridControlEvent& rhs,
     double                                tolerance
   ) {
     const double relTol = tarch::la::relativeEps(tarch::la::volume(lhs.width), tarch::la::volume(rhs.width), tolerance);
-    if (not tarch::la::equals(lhs.h, rhs.h, relTol)) {
+    if (not tarch::la::equals(lhs.targetH, rhs.targetH, relTol)) {
       return false;
     }
 
-    const auto lo     = tarch::la::min(lhs.offset, rhs.offset);
-    const auto hi     = tarch::la::max(lhs.offset + lhs.width, rhs.offset + rhs.width);
-    const auto unionW = hi - lo;
+    const auto lo    = tarch::la::min(lhs.offset, rhs.offset);
+    const auto hi    = tarch::la::max(lhs.offset + lhs.width, rhs.offset + rhs.width);
+    const auto bboxW = hi - lo;
 
-    // volume(union) <= vol(a)+vol(b) within tolerance  => face-touch or overlap
-    return tarch::la::
-      smallerEquals(tarch::la::volume(unionW), tarch::la::volume(lhs.width) + tarch::la::volume(rhs.width), relTol);
+    const double volA    = tarch::la::volume(lhs.width);
+    const double volB    = tarch::la::volume(rhs.width);
+    const double bboxVol = tarch::la::volume(bboxW);
+
+    // Compute union volume: vol(A union B) = vol(A) + vol(B) - vol(A intersect B).
+    // We use this to avoid merging two boxes whose union is not (almost) a single
+    // hyper-rectangle, as merging would otherwise introduce extra covered volume
+    // via the bounding box.
+    const auto interLo = tarch::la::max(lhs.offset, rhs.offset);
+    const auto interHi = tarch::la::min(lhs.offset + lhs.width, rhs.offset + rhs.width);
+    const auto interW  = interHi - interLo;
+
+    double interVol = 1.0;
+    for (int d = 0; d < DIMENSIONS; ++d) {
+      if (interW[d] <= 0.0) {
+        interVol = 0.0;
+        break;
+      }
+      interVol *= interW[d];
+    }
+
+    const double unionVol = volA + volB - interVol;
+
+    // If bboxVol <= unionVol (within tolerance) then the union is (almost) rectangular.
+    return tarch::la::smallerEquals(bboxVol, unionVol, relTol);
   };
 
   /**
@@ -136,7 +130,7 @@ namespace {
 } // namespace
 
 bool peano4::grid::GridControlEvent::operator<(const GridControlEvent& other) const noexcept {
-  if (tarch::la::smaller(tarch::la::volume(this->h), tarch::la::volume(other.h))) {
+  if (tarch::la::smaller(tarch::la::volume(this->targetH), tarch::la::volume(other.targetH))) {
     return true;
   }
   for (int d = 0; d < DIMENSIONS; d++) {
@@ -169,9 +163,6 @@ bool peano4::grid::GridControlEvent::operator<(const GridControlEvent& other) co
  * The algorithm works in multiple steps:
  *
  * - We separate erase from refine events.
- * - We remove those erase events which are overwritten by refinement
- *   events. As we work conservatively, refinement events are always
- *   more important than coarsening ones.
  * - Sort the events
  * - Create the erase power set.
  * - The code is asked to fuse multiple adjacent refinement events into
@@ -250,12 +241,12 @@ void peano4::grid::GridControlEvent::merge(std::vector<GridControlEvent>& events
   for (const auto& p : events) {
     if (p.getRefinementControl() == GridControlEvent::RefinementControl::Erase) {
       eraseEvents.push_back(p);
-    } else {
+    } else if (p.getRefinementControl() == GridControlEvent::RefinementControl::Refine) {
       refineEvents.push_back(p);
+    } else {
+      assertion(false);
     }
   }
-
-  removeEraseEventsThatAreCancelledByRefineEvents(refineEvents, eraseEvents);
 
   mergeAdjacentRefinementEvents(refineEvents, tolerance);
   mergeAdjacentRefinementEvents(eraseEvents, tolerance);
@@ -296,213 +287,13 @@ std::string peano4::grid::GridControlEvent::toString() const {
   }
   out << "]";
 
-  out << ", h=[";
+  out << ", TargetH=[";
   for (int d = 0; d < DIMENSIONS; ++d) {
     if (d) {
       out << ',';
     }
-    out << std::setprecision(6) << h[d];
+    out << std::setprecision(6) << targetH[d];
   }
   out << "]}";
   return out.str();
 }
-
-#ifdef WITH_MPI
-MPI_Datatype peano4::grid::GridControlEvent::Datatype = MPI_DATATYPE_NULL;
-
-MPI_Datatype peano4::grid::GridControlEvent::getForkDatatype() { return Datatype; }
-MPI_Datatype peano4::grid::GridControlEvent::getGlobalCommunicationDatatype() { return Datatype; }
-MPI_Datatype peano4::grid::GridControlEvent::getJoinDatatype() { return Datatype; }
-MPI_Datatype peano4::grid::GridControlEvent::getBoundaryExchangeDatatype() { return Datatype; }
-MPI_Datatype peano4::grid::GridControlEvent::getMultiscaleDataExchangeDatatype() { return Datatype; }
-
-void peano4::grid::GridControlEvent::freeForkDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL) {
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-void peano4::grid::GridControlEvent::freeGlobalCommunicationDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL) {
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-void peano4::grid::GridControlEvent::freeJoinDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL) {
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-void peano4::grid::GridControlEvent::freeBoundaryExchangeDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL) {
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-void peano4::grid::GridControlEvent::freeMultiscaleDataExchangeDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL) {
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-void peano4::grid::GridControlEvent::initDatatype() {
-  GridControlEvent instances[2];
-
-  constexpr int NumberOfAttributes = 4;
-  MPI_Datatype  subtypes[NumberOfAttributes];
-  int           blocklen[NumberOfAttributes];
-  MPI_Aint      disp[NumberOfAttributes];
-
-  int counter = 0;
-
-  subtypes[counter] = MPI_UINT8_T;
-  blocklen[counter] = 1;
-  MPI_Get_address(&instances[0].refinementControl, &disp[counter]);
-  ++counter;
-
-  subtypes[counter] = MPI_DOUBLE;
-  blocklen[counter] = DIMENSIONS;
-  MPI_Get_address(&(instances[0].offset.data()[0]), &disp[counter]);
-  ++counter;
-
-  subtypes[counter] = MPI_DOUBLE;
-  blocklen[counter] = DIMENSIONS;
-  MPI_Get_address(&(instances[0].width.data()[0]), &disp[counter]);
-  ++counter;
-
-  subtypes[counter] = MPI_DOUBLE;
-  blocklen[counter] = DIMENSIONS;
-  MPI_Get_address(&(instances[0].h.data()[0]), &disp[counter]);
-  ++counter;
-
-  MPI_Aint baseFirstInstance;
-  MPI_Aint baseSecondInstance;
-  MPI_Get_address(&instances[0], &baseFirstInstance);
-  MPI_Get_address(&instances[1], &baseSecondInstance);
-  MPI_Aint offset = disp[0] - baseFirstInstance;
-  MPI_Aint extent = baseSecondInstance - baseFirstInstance - offset;
-  for (int i = NumberOfAttributes - 1; i >= 0; i--) {
-    disp[i] = disp[i] - disp[0];
-  }
-
-  int          errorCode = 0;
-  MPI_Datatype tmpType;
-  errorCode += MPI_Type_create_struct(NumberOfAttributes, blocklen, disp, subtypes, &tmpType);
-  errorCode += MPI_Type_create_resized(tmpType, offset, extent, &Datatype);
-  errorCode += MPI_Type_commit(&Datatype);
-  errorCode += MPI_Type_free(&tmpType);
-
-  if (errorCode) {
-    std::stringstream ss;
-    ss << "Error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
-    throw std::runtime_error(ss.str());
-  }
-}
-
-void peano4::grid::GridControlEvent::shutdownDatatype() {
-  freeForkDatatype();
-  freeJoinDatatype();
-  freeBoundaryExchangeDatatype();
-  freeMultiscaleDataExchangeDatatype();
-  freeGlobalCommunicationDatatype();
-}
-
-void peano4::grid::GridControlEvent::
-  send(const GridControlEvent& buffer, int destination, int tag, MPI_Comm communicator) {
-  MPI_Send(&buffer, 1, Datatype, destination, tag, communicator);
-}
-
-void peano4::grid::GridControlEvent::receive(GridControlEvent& buffer, int source, int tag, MPI_Comm communicator) {
-  MPI_Status status;
-  MPI_Recv(&buffer, 1, Datatype, source, tag, communicator, &status);
-  buffer.senderDestinationRank = status.MPI_SOURCE;
-}
-
-void peano4::grid::GridControlEvent::send(
-  const GridControlEvent& buffer,
-  int                     destination,
-  int                     tag,
-  std::function<void()>   startCommunicationFunctor,
-  std::function<void()>   waitFunctor,
-  MPI_Comm                communicator
-) {
-  MPI_Request sendRequestHandle;
-  int         flag = 0;
-  MPI_Isend(&buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle);
-  MPI_Test(&sendRequestHandle, &flag, MPI_STATUS_IGNORE);
-  startCommunicationFunctor();
-  while (!flag) {
-    waitFunctor();
-    MPI_Test(&sendRequestHandle, &flag, MPI_STATUS_IGNORE);
-  }
-}
-
-void peano4::grid::GridControlEvent::receive(
-  GridControlEvent&     buffer,
-  int                   source,
-  int                   tag,
-  std::function<void()> startCommunicationFunctor,
-  std::function<void()> waitFunctor,
-  MPI_Comm              communicator
-) {
-  MPI_Status  status;
-  MPI_Request receiveRequestHandle;
-  int         flag = 0;
-  MPI_Irecv(&buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle);
-  MPI_Test(&receiveRequestHandle, &flag, &status);
-  startCommunicationFunctor();
-  while (!flag) {
-    waitFunctor();
-    MPI_Test(&receiveRequestHandle, &flag, &status);
-  }
-  buffer.senderDestinationRank = status.MPI_SOURCE;
-}
-
-void peano4::grid::GridControlEvent::
-  sendAndPollDanglingMessages(const GridControlEvent& message, int destination, int tag, MPI_Comm communicator) {
-  GridControlEvent::send(
-    message,
-    destination,
-    tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance()
-        .writeTimeOutWarning("peano4::grid::GridControlEvent", "sendAndPollDanglingMessages()", destination, tag);
-      tarch::mpi::Rank::getInstance()
-        .triggerDeadlockTimeOut("peano4::grid::GridControlEvent", "sendAndPollDanglingMessages()", destination, tag);
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
-}
-
-void peano4::grid::GridControlEvent::
-  receiveAndPollDanglingMessages(GridControlEvent& message, int source, int tag, MPI_Comm communicator) {
-  GridControlEvent::receive(
-    message,
-    source,
-    tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance()
-        .writeTimeOutWarning("peano4::grid::GridControlEvent", "receiveAndPollDanglingMessages()", source, tag);
-      tarch::mpi::Rank::getInstance()
-        .triggerDeadlockTimeOut("peano4::grid::GridControlEvent", "receiveAndPollDanglingMessages()", source, tag);
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
-}
-#endif

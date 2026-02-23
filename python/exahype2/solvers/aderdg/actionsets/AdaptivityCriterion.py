@@ -30,8 +30,6 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
     """
 
     _Template_AMR = """
-  logTraceInWith2Arguments("touchCellFirstTime(...)", marker.willBeRefined(), marker.hasBeenRefined());
-
   ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
 
   {% if GRID_CONSTRUCTION %}
@@ -44,7 +42,7 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
   } else if (
     not marker.willBeRefined()
     and
-    tarch::la::greaterEquals(tarch::la::max(marker.getH()), repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH)
+    tarch::la::greaterEquals(tarch::la::max(marker.getH()), /*3.0 **/ repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH)
     and
     not fineGridCell{{CELL_LABEL_NAME}}.getAMDCriterionEvaluatedThroughoutGridConstruction()
   ) {
@@ -72,13 +70,22 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
     and
     fineGridCell{{CELL_LABEL_NAME}}.getHasUpdated()
   ) {
-    refinementCriterion = repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
-      fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
-      marker.getX(),
-      marker.getH(),
-      repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
-    );
-
+    int linearisedIndex = 0;
+    dfor(index, {{ORDER}} + 1) {
+      refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + linearisedIndex,
+        ::exahype2::dg::getQuadraturePoint(
+          marker.getX(),
+          marker.getH(),
+          index,
+          repositories::{{SOLVER_INSTANCE}}.Order + 1,
+          kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes
+        ),
+        marker.getH(),
+        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp()
+      );
+      linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
     if (
       refinementCriterion == ::exahype2::RefinementCommand::Refine
       and
@@ -99,7 +106,6 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
   {% endif %}
 
   _localRefinementControl.addCommand(marker.getX(), marker.getH(), refinementCriterion, {{EVENT_LIFETIME}});
-  logTraceOutWith1Argument("touchCellFirstTime(...)", toString(refinementCriterion));
 """
 
     def __init__(

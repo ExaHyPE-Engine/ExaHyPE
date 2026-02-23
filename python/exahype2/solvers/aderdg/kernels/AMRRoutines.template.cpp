@@ -80,6 +80,35 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceFluxRestriction(
 {% endif %}
 }
 
+void {{FULL_QUALIFIED_NAMESPACE}}::faceUnknownsRestriction(
+  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS             lQhbndCoarse,
+  const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS lQhbndFine,
+  const tarch::la::Vector<DIMENSIONS - 1, int>&            subfaceIndex
+) {
+{% if DIMENSIONS==3 %}
+  double* tmpX = tarch::allocateMemory<double>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
+{% endif %}
+
+  {{CORRECTOR_COMPUTATION_PRECISION}}** restrictor = DGMatrices<{{CORRECTOR_COMPUTATION_PRECISION}}>::fineGridProjector1d_T_weighted;
+
+  // Apply the single level restriction operator.
+  // Use the fine level unknowns as input in the first iteration.
+{% if DIMENSIONS==2 %}
+  {{ m.gemm('face_Q_x_add', 'lQhbndFine', 'restrictor[subfaceIndex[0]]', 'lQhbndCoarse', '0', '0', '0') | indent(4) }}{##}
+{% else %}
+  for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
+    {{ m.gemm('face_Q_x', 'lQhbndFine', 'restrictor[subfaceIndex[0]]', 'tmpX', 'y*'~NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED, '0', 'y*'~NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED) | indent(6) }}{##}
+  }
+  for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
+    {{ m.gemm('face_Q_y_add', 'tmpX', 'restrictor[subfaceIndex[1]]', 'lQhbndCoarse', 'x*'~NUMBER_OF_UNKNOWNS_PADDED, '0', 'x*'~NUMBER_OF_UNKNOWNS_PADDED) | indent(6) }}{##}
+  }
+{% endif %}
+
+{% if DIMENSIONS==3 %}
+  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
+{% endif %}
+}
+
 void {{FULL_QUALIFIED_NAMESPACE}}::cellUnknownsProlongation(
   {{SOLUTION_STORAGE_PRECISION}}* NOALIAS             luhFine,
   const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS luhCoarse,

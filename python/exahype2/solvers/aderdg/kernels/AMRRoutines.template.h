@@ -22,6 +22,12 @@ void faceFluxRestriction(
   const tarch::la::Vector<DIMENSIONS - 1, int>&            subfaceIndex
 );
 
+void faceUnknownsRestriction(
+  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS             lQhbndCoarse,
+  const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS lQhbndFine,
+  const tarch::la::Vector<DIMENSIONS - 1, int>&            subfaceIndex
+);
+
 void cellUnknownsProlongation(
   {{SOLUTION_STORAGE_PRECISION}}* NOALIAS             luhFine,
   const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS luhCoarse,

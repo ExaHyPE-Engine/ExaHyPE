@@ -53,6 +53,30 @@ class DynamicAMR(AbstractADERDGActionSet):
   }
 """
 
+        self._Template_CreatePersistentFace = """
+    #if DIMENSIONS == 2
+    constexpr int SpaceFaceSize      = {{ORDER}} + 1;
+    #else
+    constexpr int SpaceFaceSize      = ({{ORDER}} + 1) * ({{ORDER}} + 1);
+    #endif
+
+    int facePosition = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : SpaceFaceSize;
+
+    // Interpolate both estimates and fluxes
+    kernels::{{SOLVER_NAME}}::faceUnknownsProlongation(
+      fineGridFace{{SOLVER_NAME}}QEstimates.data() + facePosition * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}),
+      fineGridFace{{SOLVER_NAME}}QFluxEstimates.data() + facePosition * {{NUMBER_OF_UNKNOWNS}},
+      coarseGridFaces{{SOLVER_NAME}}QEstimates(marker.getSelectedFaceNumber()).data() + facePosition * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}),
+      coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).data() + facePosition * {{NUMBER_OF_UNKNOWNS}},
+      marker.getRelativePositionWithinFatherFace()
+    );
+
+    fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp(0, std::max(coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getNewTimeStamp(0), fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(0)));
+    fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp(1, std::max(coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getNewTimeStamp(1), fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(1)));
+    fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp(0, std::max(coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getOldTimeStamp(0), fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp(0)));
+    fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp(1, std::max(coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getOldTimeStamp(1), fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp(1)));
+    """
+
         self._Template_DestroyHangingFace = """
   #if DIMENSIONS == 2
   constexpr int SpaceFaceSize      = {{ORDER}} + 1;
@@ -77,11 +101,47 @@ class DynamicAMR(AbstractADERDGActionSet):
 
     // Fluxes
     kernels::{{SOLVER_NAME}}::faceFluxRestriction(
-      coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).data() + (1-facePosition) * FluxElementsPerFace, // const double* lQhbndCoarse
-      fineGridFace{{SOLVER_NAME}}QFluxEstimates.data() + facePosition * FluxElementsPerFace, // double* lQhbndFine
+      coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).data() + (1-facePosition) * FluxElementsPerFace, // lFhbndCoarse
+      fineGridFace{{SOLVER_NAME}}QFluxEstimates.data() + facePosition * FluxElementsPerFace, // lFhbndFine
       marker.getRelativePositionWithinFatherFace() // const tarch::la::Vector<DIMENSIONS - 1, int>& subfaceIndex
     );
   }
+"""
+
+        self._Template_DestroyPersistentFace = """
+    #if DIMENSIONS == 2
+    constexpr int SpaceFaceSize      = {{ORDER}} + 1;
+    #else
+    constexpr int SpaceFaceSize      = ({{ORDER}} + 1) * ({{ORDER}} + 1);
+    #endif
+
+    constexpr int UnknownsElementsPerFace   = SpaceFaceSize * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    constexpr int FluxElementsPerFace   = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
+
+    // Unknowns left
+    kernels::{{SOLVER_NAME}}::faceUnknownsRestriction(
+      coarseGridFaces{{SOLVER_NAME}}QEstimates(marker.getSelectedFaceNumber()).data(), // lQhbndCoarse
+      fineGridFace{{SOLVER_NAME}}QEstimates.data(), // lQhbndFine
+      marker.getRelativePositionWithinFatherFace() // const tarch::la::Vector<DIMENSIONS - 1, int>& subfaceIndex
+    );
+    // Unknowns right
+    kernels::{{SOLVER_NAME}}::faceUnknownsRestriction(
+      coarseGridFaces{{SOLVER_NAME}}QEstimates(marker.getSelectedFaceNumber()).data() + UnknownsElementsPerFace, // lQhbndCoarse
+      fineGridFace{{SOLVER_NAME}}QEstimates.data() + UnknownsElementsPerFace, // lQhbndFine
+      marker.getRelativePositionWithinFatherFace() // const tarch::la::Vector<DIMENSIONS - 1, int>& subfaceIndex
+    );
+    // Fluxes left
+    kernels::{{SOLVER_NAME}}::faceFluxRestriction(
+      coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).data(), // lFhbndCoarse
+      fineGridFace{{SOLVER_NAME}}QFluxEstimates.data(), // lFhbndFine
+      marker.getRelativePositionWithinFatherFace() // const tarch::la::Vector<DIMENSIONS - 1, int>& subfaceIndex
+    );
+    // Fluxes right
+    kernels::{{SOLVER_NAME}}::faceFluxRestriction(
+      coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).data() + FluxElementsPerFace, // lFhbndCoarse
+      fineGridFace{{SOLVER_NAME}}QFluxEstimates.data() + FluxElementsPerFace, // lFhbndFine
+      marker.getRelativePositionWithinFatherFace() // const tarch::la::Vector<DIMENSIONS - 1, int>& subfaceIndex
+    );
 """
 
         self._Template_CreateCell = (
@@ -154,6 +214,18 @@ class DynamicAMR(AbstractADERDGActionSet):
             d["DELETE_GUARD"] = self._delete_guard
             d["RESTRICT_GUARD"] = self._restrict_guard
             result = jinja2.Template(self._Template_DestroyHangingFace).render(**d)
+            pass
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_CREATE_PERSISTENT_FACE
+        ):
+            result = jinja2.Template(self._Template_CreatePersistentFace).render(**d)
+            pass
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_DESTROY_PERSISTENT_FACE
+        ):
+            result = jinja2.Template(self._Template_DestroyPersistentFace).render(**d)
             pass
         if operation_name == peano4.solversteps.ActionSet.OPERATION_CREATE_CELL:
             result = jinja2.Template(self._Template_CreateCell).render(**d)

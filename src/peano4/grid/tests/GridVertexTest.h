@@ -18,8 +18,5 @@ public:
   GridVertexTest();
   ~GridVertexTest() override final = default;
 
-  /**
-   * This routine is triggered by the TestCaseCollection
-   */
   void run() override final;
 };

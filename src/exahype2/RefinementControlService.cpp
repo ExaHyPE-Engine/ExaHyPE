@@ -1,6 +1,9 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "RefinementControlService.h"
 
 #include "RefinementControl.h"
+#include "tarch/mpi/Rank.h"
 #include "tarch/multicore/RecursiveLock.h"
 #include "tarch/services/ServiceRepository.h"
 
@@ -49,19 +52,14 @@ void exahype2::RefinementControlService::receiveDanglingMessages() {
     MPI_Status  status;
     MPI_Improbe(MPI_ANY_SOURCE, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &msg, &status);
     if (flag) {
-      int numberOfMessages;
-      MPI_Get_count(&status, peano4::grid::GridControlEvent::getGlobalCommunicationDatatype(), &numberOfMessages);
+      int byteCount = 0;
+      MPI_Get_count(&status, MPI_BYTE, &byteCount);
+      const int numberOfMessages = byteCount / static_cast<int>(sizeof(peano4::grid::GridControlEvent));
       logDebug("receiveDanglingMessages()", "Got " << numberOfMessages << " event(s) from rank " << status.MPI_SOURCE);
 
       std::vector<peano4::grid::GridControlEvent> receiveBuffer;
       receiveBuffer.resize(numberOfMessages);
-      MPI_Mrecv(
-        receiveBuffer.data(),
-        numberOfMessages,
-        peano4::grid::GridControlEvent::getGlobalCommunicationDatatype(),
-        &msg,
-        MPI_STATUS_IGNORE
-      );
+      MPI_Mrecv(receiveBuffer.data(), byteCount, MPI_BYTE, &msg, MPI_STATUS_IGNORE);
 
       for (auto p : receiveBuffer) {
         _remoteNewEvents.push_back(p);
@@ -171,8 +169,8 @@ void exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() {
         _sendRequests[rank] = new MPI_Request;
         MPI_Isend(
           _copyOfCommittedEvents.data(),
-          _copyOfCommittedEvents.size(),
-          peano4::grid::GridControlEvent::getGlobalCommunicationDatatype(),
+          static_cast<int>(_copyOfCommittedEvents.size() * sizeof(peano4::grid::GridControlEvent)),
+          MPI_BYTE,
           rank,
           _reductionTag,
           tarch::mpi::Rank::getInstance().getCommunicator(),
