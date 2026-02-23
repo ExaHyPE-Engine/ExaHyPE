@@ -143,6 +143,11 @@ public:
   VertexMarker(const ::peano4::grid::GridTraversalEvent& event, int select = 0);
 
   /**
+   * Copy over another marker, but select a different vertex.
+   */
+  VertexMarker(const VertexMarker& marker, int select);
+
+  /**
    * Picks a vertex within a cell. After that, the routine returns.
    *
    * This routine is only called by Peano's internal observer, i.e. the
