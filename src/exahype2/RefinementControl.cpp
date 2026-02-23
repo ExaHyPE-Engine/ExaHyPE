@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RefinementControl.h"
 
-#include "tarch/multicore/Lock.h"
-
 exahype2::RefinementCommand exahype2::getDefaultRefinementCommand() { return RefinementCommand::Erase; }
 
 exahype2::RefinementCommand operator&&(exahype2::RefinementCommand lhs, exahype2::RefinementCommand rhs) {
@@ -30,8 +28,6 @@ std::string toString(exahype2::RefinementCommand value) {
 
 tarch::logging::Log exahype2::RefinementControl::_log("exahype2::RefinementControl");
 
-tarch::multicore::BooleanSemaphore exahype2::RefinementControl::_semaphore;
-
 exahype2::RefinementControl::RefinementControl(double tolerance):
   _tolerance(tolerance) {}
 
@@ -43,8 +39,6 @@ void exahype2::RefinementControl::addCommand(
   exahype2::RefinementCommand                  command,
   int                                          lifetime
 ) {
-  tarch::multicore::Lock lock(_semaphore);
-
   assertion(lifetime >= 1);
 
   switch (command) {
@@ -54,13 +48,15 @@ void exahype2::RefinementControl::addCommand(
 
     peano4::grid::GridControlEvent newEvent;
     newEvent.setRefinementControl(peano4::grid::GridControlEvent::RefinementControl::Refine);
-    newEvent.offset = x - 0.5 * expandedWidth;
-    newEvent.width  = expandedWidth;
-    newEvent.h      = targetH;
+    newEvent.offset  = x - 0.5 * expandedWidth;
+    newEvent.width   = expandedWidth;
+    newEvent.targetH = targetH;
 
-    assertion1(newEvent.h[0] > 0.0, newEvent.toString());
     assertion1(newEvent.width[0] > 0.0, newEvent.toString());
+    assertion1(newEvent.targetH[0] > 0.0, newEvent.toString());
+
     _newEvents.push_back(std::pair<peano4::grid::GridControlEvent, int>(newEvent, lifetime));
+
     logDebug(
       "addCommand()",
       "Added refinement for x="
@@ -70,18 +66,28 @@ void exahype2::RefinementControl::addCommand(
   case exahype2::RefinementCommand::Keep:
     break;
   case exahype2::RefinementCommand::Erase: {
-    tarch::la::Vector<DIMENSIONS, double> targetH       = 3.0 * h;
-    tarch::la::Vector<DIMENSIONS, double> expandedWidth = (1.0 + _tolerance) * targetH;
+    tarch::la::Vector<DIMENSIONS, double> targetH = 3.0 * h;
+    // Erase is evaluated on the parent cells via a containment check.
+    // A leaf centre can be shifted by up to ±h from the parent centre,
+    // so the event must be wider than the parent to always contain it:
+    // width = targetH + 2*h (= 5*h);
+    // parent half-width = targetH/2 = 1.5h;
+    // max centre shift leaf↔parent = h;
+    // required event half-width = 1.5h + h = 2.5h;
+    // required event width = 5h = targetH + 2h.
+    tarch::la::Vector<DIMENSIONS, double> expandedWidth = (1.0 + _tolerance) * (targetH + 2.0 * h);
 
     peano4::grid::GridControlEvent newEvent;
     newEvent.setRefinementControl(peano4::grid::GridControlEvent::RefinementControl::Erase);
-    newEvent.offset = x - 0.5 * expandedWidth;
-    newEvent.width  = expandedWidth;
-    newEvent.h      = targetH;
+    newEvent.offset  = x - 0.5 * expandedWidth;
+    newEvent.width   = expandedWidth;
+    newEvent.targetH = targetH;
 
-    assertion1(newEvent.h[0] > 0.0, newEvent.toString());
     assertion1(newEvent.width[0] > 0.0, newEvent.toString());
+    assertion1(newEvent.targetH[0] > 0.0, newEvent.toString());
+
     _newEvents.push_back(std::pair<peano4::grid::GridControlEvent, int>(newEvent, lifetime));
+
     logDebug(
       "addCommand()",
       "Added erase for x="
@@ -93,7 +99,7 @@ void exahype2::RefinementControl::addCommand(
 
 std::string exahype2::RefinementControl::toString() const {
   std::ostringstream msg;
-  msg << "("
-      << "#Events=" << _newEvents.size() << ")";
+  msg << "RefinementControl{"
+      << "#Events=" << _newEvents.size() << "}";
   return msg.str();
 }

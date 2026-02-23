@@ -3,7 +3,6 @@
 #pragma once
 
 #include "peano4/grid/GridControlEvent.h"
-#include "tarch/multicore/BooleanSemaphore.h"
 
 #include <list>
 #include <vector>
@@ -71,22 +70,6 @@ std::string toString(exahype2::RefinementCommand value);
  *
  * @see _committedEvents
  *
- *
- * ## Multithreading
- *
- * As we use the class within a multithreaded environment, Peano 4 creates an observer object per
- * spacetree through a clone from observer no -1 (per rank, so this observer
- * is not really an observer. It is rather an observer prototype) and then
- * asks this observer how to refine. So we design the following pattern:
- *
- * - When an observer is created, it creates its own local refinement control.
- * - We hand out refine/erase commands from the global one as this is our
- *   globally valid repository.
- * - We accumulate the refine/erase instructions locally. So we clear() our
- *   local copy when we start to run through the grid and then pipe all
- *   commands into this local object.
- * - When we are done, we merge the local copy back.
- *
  */
 class exahype2::RefinementControl {
 public:
@@ -144,8 +127,6 @@ public:
 
 private:
   static tarch::logging::Log _log;
-
-  static tarch::multicore::BooleanSemaphore _semaphore;
 
   /**
    * We blow up the region around refinement criterion slightly.

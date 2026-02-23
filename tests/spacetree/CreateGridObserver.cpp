@@ -14,7 +14,6 @@ void tests::peano4::grid::CreateGridObserver::endTraversal(
   const tarch::la::Vector<DIMENSIONS, double>& h
 ) {}
 
-
 void tests::peano4::grid::CreateGridObserver::enterNode(const ::peano4::grid::GridTraversalEvent& event) {}
 
 void tests::peano4::grid::CreateGridObserver::leaveNode(const ::peano4::grid::GridTraversalEvent& event) {}
@@ -30,13 +29,13 @@ std::vector<::peano4::grid::GridControlEvent> tests::peano4::grid::CreateGridObs
   newEvent.setRefinementControl(::peano4::grid::GridControlEvent::RefinementControl::Refine);
 
 #if DIMENSIONS == 2
-  newEvent.offset = {0.0, 0.0};
-  newEvent.width  = {1.0, 1.0};
-  newEvent.h      = {MinH, MinH};
+  newEvent.offset   = {0.0, 0.0};
+  newEvent.width    = {1.0, 1.0};
+  newEvent.targetH  = {MinH, MinH};
 #else
-  newEvent.offset = {0.0, 0.0, 0.0};
-  newEvent.width  = {1.0, 1.0, 1.0};
-  newEvent.h      = {MinH, MinH, MinH};
+  newEvent.offset   = {0.0, 0.0, 0.0};
+  newEvent.width    = {1.0, 1.0, 1.0};
+  newEvent.targetH  = {MinH, MinH, MinH};
 #endif
 
   controlEvents.push_back(std::move(newEvent));

@@ -12,7 +12,7 @@ namespace peano4::grid {
 } // namespace peano4::grid
 
 struct peano4::grid::GridVertex {
-  enum class State : std::int8_t { // std::uint8_t
+  enum class State : std::uint8_t {
     HangingVertex       = 0,
     New                 = 1,
     Unrefined           = 2,
@@ -25,7 +25,7 @@ struct peano4::grid::GridVertex {
   };
 
   std::uint8_t flags = 0;
-  std::int8_t  state = static_cast<std::int8_t>(State::New);
+  std::uint8_t state = static_cast<std::uint8_t>(State::New);
 
   int level                             = 0;
   int numberOfAdjacentRefinedLocalCells = 0;
@@ -47,7 +47,7 @@ struct peano4::grid::GridVertex {
     GridVertex() {}
 
   INLINE_METHOD State getState() const noexcept { return static_cast<State>(state); }
-  INLINE_METHOD void  setState(State s) noexcept { state = static_cast<std::int8_t>(s); }
+  INLINE_METHOD void  setState(State s) noexcept { state = static_cast<std::uint8_t>(s); }
 
   // Checks if a given bit is set (true).
   // flags & bit → masks out all bits except the one we care about.

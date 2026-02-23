@@ -17,6 +17,7 @@
     MPI_RANKS: "4"
     OMP_THREADS: "4"
     MIN_GRID_LEVELS: "2"
+    MAX_GRID_LEVELS: "1"
     CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
                             -DENABLE_EXAHYPE=ON \
                             -DENABLE_TOOLBOX_LOADBALANCING=ON \

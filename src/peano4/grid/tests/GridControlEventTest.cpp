@@ -3,6 +3,7 @@
 #include "GridControlEventTest.h"
 
 #include "peano4/grid/GridControlEvent.h"
+#include "tarch/mpi/Rank.h"
 
 peano4::grid::tests::GridControlEventTest::GridControlEventTest():
   TestCase("peano4::grid::tests::GridControlEventTest") {}
@@ -11,13 +12,14 @@ void peano4::grid::tests::GridControlEventTest::run() {
   testMethod(testOperatorLess);
   testMethod(testSort);
   testMethod(testSortDeterministicGrid);
-  testMethod(testMergeEraseRefineCancellation);
   testMethod(testMergeTolerance);
   testMethod(testMergeAdjacency);
+  testMethod(testMergeEraseAdjacency);
+  testMethod(testMergeEraseDoesNotOverMergeLShape);
   testMethod(testMerge1);
   testMethod(testMerge2);
   testMethod(testMerge3);
-  testMethod(testMPIDatatype);
+  testMethod(testMPI);
 }
 
 void peano4::grid::tests::GridControlEventTest::testOperatorLess() {
@@ -26,12 +28,12 @@ void peano4::grid::tests::GridControlEventTest::testOperatorLess() {
     a.setRefinementControl(GridControlEvent::RefinementControl::Refine);
     b.setRefinementControl(GridControlEvent::RefinementControl::Refine);
 
-    // Same volume (product of h), different offsets -> compare offsets lexicographically
+    // Same volume (product of targetH), different offsets -> compare offsets lexicographically
     for (int d = 0; d < DIMENSIONS; ++d) {
-      a.h[d]      = 0.1;
-      b.h[d]      = 0.1;
-      a.offset[d] = 0.0;
-      b.offset[d] = 0.0;
+      a.targetH[d] = 0.1;
+      b.targetH[d] = 0.1;
+      a.offset[d]  = 0.0;
+      b.offset[d]  = 0.0;
     }
 
     // Make b slightly larger along first axis offset -> a < b
@@ -47,10 +49,10 @@ void peano4::grid::tests::GridControlEventTest::testOperatorLess() {
     small.setRefinementControl(GridControlEvent::RefinementControl::Refine);
     large.setRefinementControl(GridControlEvent::RefinementControl::Refine);
     for (int d = 0; d < DIMENSIONS; ++d) {
-      small.h[d]      = 0.05;
-      large.h[d]      = 0.2;
-      small.offset[d] = 0.0;
-      large.offset[d] = 0.0;
+      small.targetH[d] = 0.05;
+      large.targetH[d] = 0.2;
+      small.offset[d]  = 0.0;
+      large.offset[d]  = 0.0;
     }
     validateTrue(small < large);
     validateTrue(not(large < small));
@@ -75,8 +77,8 @@ void peano4::grid::tests::GridControlEventTest::testSortDeterministicGrid() {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
     for (int d = 0; d < DIMENSIONS; ++d) {
-      e.h[d]     = 0.1;
-      e.width[d] = 0.2;
+      e.targetH[d] = 0.1;
+      e.width[d]   = 0.2;
       // Offsets chosen so sorting by offset[0], then offset[1], ...
       if (d == 0)
         e.offset[d] = (i % 4) * 0.1 - 0.3; // -0.3, -0.2, -0.1, 0.0 repeating
@@ -112,44 +114,6 @@ void peano4::grid::tests::GridControlEventTest::testSortDeterministicGrid() {
   }
 }
 
-void peano4::grid::tests::GridControlEventTest::testMergeEraseRefineCancellation() {
-#if DIMENSIONS == 2
-  // If a refine event overlaps an erase event and is sufficiently fine, the erase should be removed.
-  constexpr double              Tolerance = 0.01;
-  std::vector<GridControlEvent> events;
-
-  GridControlEvent eraseE;
-  eraseE.setRefinementControl(GridControlEvent::RefinementControl::Erase);
-  eraseE.offset[0] = 0.0;
-  eraseE.offset[1] = 0.0;
-  eraseE.width[0]  = 0.5;
-  eraseE.width[1]  = 0.5;
-  eraseE.h[0]      = 0.2;
-  eraseE.h[1]      = 0.2;
-
-  GridControlEvent refineE;
-  refineE.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-  refineE.offset[0] = 0.1;
-  refineE.offset[1] = 0.1;
-  refineE.width[0]  = 0.2;
-  refineE.width[1]  = 0.2;
-  // Make refineEvent h smaller so 1/3 * refine.h <= erase.h holds
-  refineE.h[0] = 0.05;
-  refineE.h[1] = 0.05;
-
-  events.push_back(eraseE);
-  events.push_back(refineE);
-
-  // After merge, we should not find the erase event (i.e., events contains only refine)
-  GridControlEvent::merge(events, Tolerance);
-  validateEquals(events.size(), 1u);
-  validateEquals(
-    static_cast<std::uint8_t>(events[0].getRefinementControl()),
-    static_cast<std::uint8_t>(GridControlEvent::RefinementControl::Refine)
-  );
-#endif
-}
-
 void peano4::grid::tests::GridControlEventTest::testMergeTolerance() {
 #if DIMENSIONS == 2
   // Two events that would be just outside tolerance when merging, and just inside tolerance.
@@ -159,12 +123,12 @@ void peano4::grid::tests::GridControlEventTest::testMergeTolerance() {
   a.setRefinementControl(GridControlEvent::RefinementControl::Refine);
   b.setRefinementControl(GridControlEvent::RefinementControl::Refine);
 
-  a.offset[0] = 0.0;
-  a.offset[1] = 0.0;
-  a.width[0]  = 0.5;
-  a.width[1]  = 0.5;
-  a.h[0]      = 0.1;
-  a.h[1]      = 0.1;
+  a.offset[0]  = 0.0;
+  a.offset[1]  = 0.0;
+  a.width[0]   = 0.5;
+  a.width[1]   = 0.5;
+  a.targetH[0] = 0.1;
+  a.targetH[1] = 0.1;
 
   // b touches a on the face but with a tiny gap relative to tolerance
   const double tinyGap = 1e-6;
@@ -172,8 +136,8 @@ void peano4::grid::tests::GridControlEventTest::testMergeTolerance() {
   b.offset[1]          = 0.0;
   b.width[0]           = 0.5;
   b.width[1]           = 0.5;
-  b.h[0]               = 0.1;
-  b.h[1]               = 0.1;
+  b.targetH[0]         = 0.1;
+  b.targetH[1]         = 0.1;
 
   // First with a tiny tolerance -> should NOT merge
   events.clear();
@@ -201,14 +165,14 @@ void peano4::grid::tests::GridControlEventTest::testMergeAdjacency() {
   GridControlEvent L;
   L.setRefinementControl(GridControlEvent::RefinementControl::Refine);
 #if DIMENSIONS == 2
-  L.offset = {-0.1, 0.0};
-  L.width  = {0.2, 0.2};
-  L.h      = {0.05, 0.05};
+  L.offset  = {-0.1, 0.0};
+  L.width   = {0.2, 0.2};
+  L.targetH = {0.05, 0.05};
 #endif
 #if DIMENSIONS == 3
-  L.offset = {-0.1, 0.0, 0.0};
-  L.width  = {0.2, 0.2, 0.2};
-  L.h      = {0.05, 0.05, 0.05};
+  L.offset  = {-0.1, 0.0, 0.0};
+  L.width   = {0.2, 0.2, 0.2};
+  L.targetH = {0.05, 0.05, 0.05};
 #endif
   events.push_back(L);
 
@@ -251,6 +215,82 @@ void peano4::grid::tests::GridControlEventTest::testMergeAdjacency() {
   validateTrue(foundSeparated);
 }
 
+void peano4::grid::tests::GridControlEventTest::testMergeEraseAdjacency() {
+  constexpr double              Tolerance = 0.1;
+  std::vector<GridControlEvent> events;
+
+  GridControlEvent L;
+  L.setRefinementControl(GridControlEvent::RefinementControl::Erase);
+#if DIMENSIONS == 2
+  L.offset  = {-0.1, 0.0};
+  L.width   = {0.2, 0.2};
+  L.targetH = {0.05, 0.05};
+#endif
+#if DIMENSIONS == 3
+  L.offset  = {-0.1, 0.0, 0.0};
+  L.width   = {0.2, 0.2, 0.2};
+  L.targetH = {0.05, 0.05, 0.05};
+#endif
+  events.push_back(L);
+
+  GridControlEvent R = L;
+  R.offset[0]        = 0.1; // Face-touch at x = 0.0
+  events.push_back(R);
+
+  GridControlEvent::merge(events, Tolerance);
+
+  validateEquals(events.size(), 1u);
+  validateEquals(
+    static_cast<std::uint8_t>(events[0].getRefinementControl()),
+    static_cast<std::uint8_t>(GridControlEvent::RefinementControl::Erase)
+  );
+  validateTrue(tarch::la::equals(events[0].offset[0], -0.1, 1e-12));
+  validateTrue(tarch::la::equals(events[0].width[0], 0.4, 1e-12));
+}
+
+void peano4::grid::tests::GridControlEventTest::testMergeEraseDoesNotOverMergeLShape() {
+  // Two erase boxes whose union is not a single axis-aligned box (L-shape).
+  // They must not be merged into the bounding box, as that would introduce
+  // erase coverage that did not exist in either original event.
+  std::vector<GridControlEvent> events;
+
+  GridControlEvent a;
+  a.setRefinementControl(GridControlEvent::RefinementControl::Erase);
+  GridControlEvent b;
+  b.setRefinementControl(GridControlEvent::RefinementControl::Erase);
+
+#if DIMENSIONS == 2
+  // a: [0,2]x[0,1]
+  a.offset  = {0.0, 0.0};
+  a.width   = {2.0, 1.0};
+  a.targetH = {0.1, 0.1};
+  // b: [1,2]x[0,2]
+  b.offset  = {1.0, 0.0};
+  b.width   = {1.0, 2.0};
+  b.targetH = {0.1, 0.1};
+#endif
+
+#if DIMENSIONS == 3
+  // Same L-shape in x/y, identical extent in z.
+  // a: [0,2]x[0,1]x[0,1]
+  a.offset  = {0.0, 0.0, 0.0};
+  a.width   = {2.0, 1.0, 1.0};
+  a.targetH = {0.1, 0.1, 0.1};
+  // b: [1,2]x[0,2]x[0,1]
+  b.offset  = {1.0, 0.0, 0.0};
+  b.width   = {1.0, 2.0, 1.0};
+  b.targetH = {0.1, 0.1, 0.1};
+#endif
+
+  events.push_back(a);
+  events.push_back(b);
+
+  GridControlEvent::merge(events, 0.0);
+
+  // Must remain two events.
+  validateEquals(events.size(), 2u);
+}
+
 void peano4::grid::tests::GridControlEventTest::testSort() {
   std::vector<GridControlEvent> events;
   events.reserve(10);
@@ -259,81 +299,81 @@ void peano4::grid::tests::GridControlEventTest::testSort() {
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.0611111, 0.05};
-    e.width  = {0.122222, 0.122222};
-    e.h      = {0.037037, 0.037037};
+    e.offset  = {-0.0611111, 0.05};
+    e.width   = {0.122222, 0.122222};
+    e.targetH = {0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.172222, -0.0611111};
-    e.width  = {0.122222, 0.233333};
-    e.h      = {0.037037, 0.037037};
+    e.offset  = {-0.172222, -0.0611111};
+    e.width   = {0.122222, 0.233333};
+    e.targetH = {0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.172222, -0.0611111};
-    e.width  = {0.122222, 0.455556};
-    e.h      = {0.037037, 0.037037};
+    e.offset  = {-0.172222, -0.0611111};
+    e.width   = {0.122222, 0.455556};
+    e.targetH = {0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.172222, 0.161111};
-    e.width  = {0.233333, 0.233333};
-    e.h      = {0.037037, 0.037037};
+    e.offset  = {-0.172222, 0.161111};
+    e.width   = {0.233333, 0.233333};
+    e.targetH = {0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.505556, 0.383333};
-    e.width  = {0.455556, 0.122222};
-    e.h      = {0.037037, 0.037037};
+    e.offset  = {-0.505556, 0.383333};
+    e.width   = {0.455556, 0.122222};
+    e.targetH = {0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.0611111, 0.05};
-    e.width  = {0.122222, 0.455556};
-    e.h      = {0.037037, 0.037037};
+    e.offset  = {-0.0611111, 0.05};
+    e.width   = {0.122222, 0.455556};
+    e.targetH = {0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.505556, 0.383333};
-    e.width  = {0.566667, 0.122222};
-    e.h      = {0.037037, 0.037037};
+    e.offset  = {-0.505556, 0.383333};
+    e.width   = {0.566667, 0.122222};
+    e.targetH = {0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.0611111, -0.0611111};
-    e.width  = {0.566667, 0.122222};
-    e.h      = {0.037037, 0.037037};
+    e.offset  = {-0.0611111, -0.0611111};
+    e.width   = {0.566667, 0.122222};
+    e.targetH = {0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.505556, -0.0611111};
-    e.width  = {0.344444, 0.455556};
-    e.h      = {0.037037, 0.037037};
+    e.offset  = {-0.505556, -0.0611111};
+    e.width   = {0.344444, 0.455556};
+    e.targetH = {0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {0.272222, -0.505556};
-    e.width  = {0.233333, 0.455556};
-    e.h      = {0.037037, 0.037037};
+    e.offset  = {0.272222, -0.505556};
+    e.width   = {0.233333, 0.455556};
+    e.targetH = {0.037037, 0.037037};
     events.push_back(e);
   }
 #endif
@@ -342,81 +382,81 @@ void peano4::grid::tests::GridControlEventTest::testSort() {
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.0611111, 0.05, 0.272222};
-    e.width  = {0.122222, 0.122222, 0.122222};
-    e.h      = {0.037037, 0.037037, 0.037037};
+    e.offset  = {-0.0611111, 0.05, 0.272222};
+    e.width   = {0.122222, 0.122222, 0.122222};
+    e.targetH = {0.037037, 0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.172222, -0.0611111, 0.272222};
-    e.width  = {0.122222, 0.233333, 0.122222};
-    e.h      = {0.037037, 0.037037, 0.037037};
+    e.offset  = {-0.172222, -0.0611111, 0.272222};
+    e.width   = {0.122222, 0.233333, 0.122222};
+    e.targetH = {0.037037, 0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.172222, -0.0611111, 0.383333};
-    e.width  = {0.122222, 0.455556, 0.122222};
-    e.h      = {0.037037, 0.037037, 0.037037};
+    e.offset  = {-0.172222, -0.0611111, 0.383333};
+    e.width   = {0.122222, 0.455556, 0.122222};
+    e.targetH = {0.037037, 0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.172222, 0.161111, 0.272222};
-    e.width  = {0.233333, 0.233333, 0.122222};
-    e.h      = {0.037037, 0.037037, 0.037037};
+    e.offset  = {-0.172222, 0.161111, 0.272222};
+    e.width   = {0.233333, 0.233333, 0.122222};
+    e.targetH = {0.037037, 0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.505556, 0.383333, 0.383333};
-    e.width  = {0.455556, 0.122222, 0.122222};
-    e.h      = {0.037037, 0.037037, 0.037037};
+    e.offset  = {-0.505556, 0.383333, 0.383333};
+    e.width   = {0.455556, 0.122222, 0.122222};
+    e.targetH = {0.037037, 0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.0611111, 0.05, 0.383333};
-    e.width  = {0.122222, 0.455556, 0.122222};
-    e.h      = {0.037037, 0.037037, 0.037037};
+    e.offset  = {-0.0611111, 0.05, 0.383333};
+    e.width   = {0.122222, 0.455556, 0.122222};
+    e.targetH = {0.037037, 0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.505556, 0.383333, 0.272222};
-    e.width  = {0.566667, 0.122222, 0.122222};
-    e.h      = {0.037037, 0.037037, 0.037037};
+    e.offset  = {-0.505556, 0.383333, 0.272222};
+    e.width   = {0.566667, 0.122222, 0.122222};
+    e.targetH = {0.037037, 0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.0611111, -0.0611111, 0.272222};
-    e.width  = {0.566667, 0.122222, 0.233333};
-    e.h      = {0.037037, 0.037037, 0.037037};
+    e.offset  = {-0.0611111, -0.0611111, 0.272222};
+    e.width   = {0.566667, 0.122222, 0.233333};
+    e.targetH = {0.037037, 0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {-0.505556, -0.0611111, 0.272222};
-    e.width  = {0.344444, 0.455556, 0.233333};
-    e.h      = {0.037037, 0.037037, 0.037037};
+    e.offset  = {-0.505556, -0.0611111, 0.272222};
+    e.width   = {0.344444, 0.455556, 0.233333};
+    e.targetH = {0.037037, 0.037037, 0.037037};
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset = {0.272222, -0.505556, 0.272222};
-    e.width  = {0.233333, 0.455556, 0.233333};
-    e.h      = {0.037037, 0.037037, 0.037037};
+    e.offset  = {0.272222, -0.505556, 0.272222};
+    e.width   = {0.233333, 0.455556, 0.233333};
+    e.targetH = {0.037037, 0.037037, 0.037037};
     events.push_back(e);
   }
 #endif
@@ -438,100 +478,100 @@ void peano4::grid::tests::GridControlEventTest::testMerge1() {
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset[0] = -0.0333333;
-    e.offset[1] = -0.0333333;
-    e.width[0]  = 0.4;
-    e.width[1]  = 0.4;
-    e.h[0]      = 0.111111;
-    e.h[1]      = 0.111111;
+    e.offset[0]  = -0.0333333;
+    e.offset[1]  = -0.0333333;
+    e.width[0]   = 0.4;
+    e.width[1]   = 0.4;
+    e.targetH[0] = 0.111111;
+    e.targetH[1] = 0.111111;
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset[0] = -0.0333333;
-    e.offset[1] = 0.3;
-    e.width[0]  = 0.4;
-    e.width[1]  = 0.4;
-    e.h[0]      = 0.111111;
-    e.h[1]      = 0.111111;
+    e.offset[0]  = -0.0333333;
+    e.offset[1]  = 0.3;
+    e.width[0]   = 0.4;
+    e.width[1]   = 0.4;
+    e.targetH[0] = 0.111111;
+    e.targetH[1] = 0.111111;
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset[0] = -0.0333333;
-    e.offset[1] = 0.633333;
-    e.width[0]  = 0.4;
-    e.width[1]  = 0.4;
-    e.h[0]      = 0.111111;
-    e.h[1]      = 0.111111;
+    e.offset[0]  = -0.0333333;
+    e.offset[1]  = 0.633333;
+    e.width[0]   = 0.4;
+    e.width[1]   = 0.4;
+    e.targetH[0] = 0.111111;
+    e.targetH[1] = 0.111111;
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset[0] = 0.3;
-    e.offset[1] = -0.0333333;
-    e.width[0]  = 0.4;
-    e.width[1]  = 0.4;
-    e.h[0]      = 0.111111;
-    e.h[1]      = 0.111111;
+    e.offset[0]  = 0.3;
+    e.offset[1]  = -0.0333333;
+    e.width[0]   = 0.4;
+    e.width[1]   = 0.4;
+    e.targetH[0] = 0.111111;
+    e.targetH[1] = 0.111111;
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset[0] = 0.633333;
-    e.offset[1] = -0.0333333;
-    e.width[0]  = 0.4;
-    e.width[1]  = 0.4;
-    e.h[0]      = 0.111111;
-    e.h[1]      = 0.111111;
+    e.offset[0]  = 0.633333;
+    e.offset[1]  = -0.0333333;
+    e.width[0]   = 0.4;
+    e.width[1]   = 0.4;
+    e.targetH[0] = 0.111111;
+    e.targetH[1] = 0.111111;
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset[0] = 0.633333;
-    e.offset[1] = 0.3;
-    e.width[0]  = 0.4;
-    e.width[1]  = 0.4;
-    e.h[0]      = 0.111111;
-    e.h[1]      = 0.111111;
+    e.offset[0]  = 0.633333;
+    e.offset[1]  = 0.3;
+    e.width[0]   = 0.4;
+    e.width[1]   = 0.4;
+    e.targetH[0] = 0.111111;
+    e.targetH[1] = 0.111111;
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset[0] = 0.3;
-    e.offset[1] = 0.3;
-    e.width[0]  = 0.4;
-    e.width[1]  = 0.4;
-    e.h[0]      = 0.111111;
-    e.h[1]      = 0.111111;
+    e.offset[0]  = 0.3;
+    e.offset[1]  = 0.3;
+    e.width[0]   = 0.4;
+    e.width[1]   = 0.4;
+    e.targetH[0] = 0.111111;
+    e.targetH[1] = 0.111111;
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset[0] = 0.3;
-    e.offset[1] = 0.633333;
-    e.width[0]  = 0.4;
-    e.width[1]  = 0.4;
-    e.h[0]      = 0.111111;
-    e.h[1]      = 0.111111;
+    e.offset[0]  = 0.3;
+    e.offset[1]  = 0.633333;
+    e.width[0]   = 0.4;
+    e.width[1]   = 0.4;
+    e.targetH[0] = 0.111111;
+    e.targetH[1] = 0.111111;
     events.push_back(e);
   }
   {
     GridControlEvent e;
     e.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-    e.offset[0] = 0.633333;
-    e.offset[1] = 0.633333;
-    e.width[0]  = 0.4;
-    e.width[1]  = 0.4;
-    e.h[0]      = 0.111111;
-    e.h[1]      = 0.111111;
+    e.offset[0]  = 0.633333;
+    e.offset[1]  = 0.633333;
+    e.width[0]   = 0.4;
+    e.width[1]   = 0.4;
+    e.targetH[0] = 0.111111;
+    e.targetH[1] = 0.111111;
     events.push_back(e);
   }
 
@@ -549,48 +589,48 @@ void peano4::grid::tests::GridControlEventTest::testMerge2() {
 
   GridControlEvent event0;
   event0.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-  event0.offset[0] = 0.316667;
-  event0.offset[1] = 0.316667;
-  event0.width[0]  = 0.366667;
-  event0.width[1]  = 0.366667;
-  event0.h[0]      = 0.111111;
-  event0.h[1]      = 0.111111;
+  event0.offset[0]  = 0.316667;
+  event0.offset[1]  = 0.316667;
+  event0.width[0]   = 0.366667;
+  event0.width[1]   = 0.366667;
+  event0.targetH[0] = 0.111111;
+  event0.targetH[1] = 0.111111;
 
   GridControlEvent event1;
   event1.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-  event1.offset[0] = 0.65;
-  event1.offset[1] = 0.316667;
-  event1.width[0]  = 0.366667;
-  event1.width[1]  = 0.366667;
-  event1.h[0]      = 0.111111;
-  event1.h[1]      = 0.111111;
+  event1.offset[0]  = 0.65;
+  event1.offset[1]  = 0.316667;
+  event1.width[0]   = 0.366667;
+  event1.width[1]   = 0.366667;
+  event1.targetH[0] = 0.111111;
+  event1.targetH[1] = 0.111111;
 
   GridControlEvent event2;
   event2.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-  event2.offset[0] = 0.65;
-  event2.offset[1] = -0.0166667;
-  event2.width[0]  = 0.366667;
-  event2.width[1]  = 0.366667;
-  event2.h[0]      = 0.111111;
-  event2.h[1]      = 0.111111;
+  event2.offset[0]  = 0.65;
+  event2.offset[1]  = -0.0166667;
+  event2.width[0]   = 0.366667;
+  event2.width[1]   = 0.366667;
+  event2.targetH[0] = 0.111111;
+  event2.targetH[1] = 0.111111;
 
   GridControlEvent event3;
   event3.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-  event3.offset[0] = 0.316667;
-  event3.offset[1] = -0.0166667;
-  event3.width[0]  = 0.366667;
-  event3.width[1]  = 0.366667;
-  event3.h[0]      = 0.111111;
-  event3.h[1]      = 0.111111;
+  event3.offset[0]  = 0.316667;
+  event3.offset[1]  = -0.0166667;
+  event3.width[0]   = 0.366667;
+  event3.width[1]   = 0.366667;
+  event3.targetH[0] = 0.111111;
+  event3.targetH[1] = 0.111111;
 
   GridControlEvent event4;
   event4.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-  event4.offset[0] = -0.0166667;
-  event4.offset[1] = -0.0166667;
-  event4.width[0]  = 0.366667;
-  event4.width[1]  = 0.366667;
-  event4.h[0]      = 0.111111;
-  event4.h[1]      = 0.111111;
+  event4.offset[0]  = -0.0166667;
+  event4.offset[1]  = -0.0166667;
+  event4.width[0]   = 0.366667;
+  event4.width[1]   = 0.366667;
+  event4.targetH[0] = 0.111111;
+  event4.targetH[1] = 0.111111;
 
   std::vector<GridControlEvent> events;
   events.push_back(event0);
@@ -611,22 +651,22 @@ void peano4::grid::tests::GridControlEventTest::testMerge3() {
 
   GridControlEvent a;
   a.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-  a.offset[0] = 0.65;
-  a.offset[1] = 0.65;
-  a.width[0]  = 0.366667;
-  a.width[1]  = 0.366667;
-  a.h[0]      = 0.111111;
-  a.h[1]      = 0.111111;
+  a.offset[0]  = 0.65;
+  a.offset[1]  = 0.65;
+  a.width[0]   = 0.366667;
+  a.width[1]   = 0.366667;
+  a.targetH[0] = 0.111111;
+  a.targetH[1] = 0.111111;
   events.push_back(a);
 
   GridControlEvent b;
   b.setRefinementControl(GridControlEvent::RefinementControl::Refine);
-  b.offset[0] = 0.883333;
-  b.offset[1] = 0.883333;
-  b.width[0]  = 0.122222;
-  b.width[1]  = 0.122222;
-  b.h[0]      = 0.037037;
-  b.h[1]      = 0.037037;
+  b.offset[0]  = 0.883333;
+  b.offset[1]  = 0.883333;
+  b.width[0]   = 0.122222;
+  b.width[1]   = 0.122222;
+  b.targetH[0] = 0.037037;
+  b.targetH[1] = 0.037037;
   events.push_back(b);
 
   GridControlEvent::merge(events, 0.4);
@@ -635,7 +675,7 @@ void peano4::grid::tests::GridControlEventTest::testMerge3() {
 #endif
 }
 
-void peano4::grid::tests::GridControlEventTest::testMPIDatatype() {
+void peano4::grid::tests::GridControlEventTest::testMPI() {
 #ifdef WITH_MPI
   auto&     rank          = tarch::mpi::Rank::getInstance();
   MPI_Comm  comm          = rank.getCommunicator();
@@ -649,34 +689,41 @@ void peano4::grid::tests::GridControlEventTest::testMPIDatatype() {
     (me % 2 == 0) ? GridControlEvent::RefinementControl::Refine : GridControlEvent::RefinementControl::Erase
   );
   for (int d = 0; d < DIMENSIONS; ++d) {
-    sendE.offset[d] = 0.1 * (d + 1) + 0.001 * me;
-    sendE.width[d]  = 0.2 + 0.01 * d + 0.0005 * me;
-    sendE.h[d]      = 0.05 * (d + 1) + 0.0001 * me;
+    sendE.offset[d]  = 0.1 * (d + 1) + 0.001 * me;
+    sendE.width[d]   = 0.2 + 0.01 * d + 0.0005 * me;
+    sendE.targetH[d] = 0.05 * (d + 1) + 0.0001 * me;
   }
 
   GridControlEvent recvE;
+  MPI_Status       status;
 
   if (numberOfRanks == 1) {
-    MPI_Sendrecv( // TODO: Capture result for error checking
-      &sendE, 1, GridControlEvent::Datatype, me, tag,
-      &recvE, 1, GridControlEvent::Datatype, me, tag,
-      comm, MPI_STATUS_IGNORE
+    MPI_Sendrecv(
+      &sendE,
+      sizeof(GridControlEvent),
+      MPI_BYTE,
+      me,
+      tag,
+      &recvE,
+      sizeof(GridControlEvent),
+      MPI_BYTE,
+      me,
+      tag,
+      comm,
+      &status
     );
-    recvE.senderDestinationRank = me;
-    // GridControlEvent::send(sendE, me, tag, comm);
-    // GridControlEvent::receive(recvE, me, tag, comm);
   } else {
     const int dest = (me + 1) % numberOfRanks;
     const int src  = (me - 1 + numberOfRanks) % numberOfRanks;
 
     if ((me % 2) == 0) {
       // Even ranks send then receive
-      GridControlEvent::send(sendE, dest, tag, comm);
-      GridControlEvent::receive(recvE, src, tag, comm);
+      MPI_Send(&sendE, sizeof(GridControlEvent), MPI_BYTE, dest, tag, comm);
+      MPI_Recv(&recvE, sizeof(GridControlEvent), MPI_BYTE, src, tag, comm, &status);
     } else {
       // Odd ranks receive then send
-      GridControlEvent::receive(recvE, src, tag, comm);
-      GridControlEvent::send(sendE, dest, tag, comm);
+      MPI_Recv(&recvE, sizeof(GridControlEvent), MPI_BYTE, src, tag, comm, &status);
+      MPI_Send(&sendE, sizeof(GridControlEvent), MPI_BYTE, dest, tag, comm);
     }
   }
 
@@ -693,9 +740,9 @@ void peano4::grid::tests::GridControlEventTest::testMPIDatatype() {
 
     validateTrue(std::fabs(recvE.offset[d] - expOffset) < 1e-12);
     validateTrue(std::fabs(recvE.width[d] - expWidth) < 1e-12);
-    validateTrue(std::fabs(recvE.h[d] - expH) < 1e-12);
+    validateTrue(std::fabs(recvE.targetH[d] - expH) < 1e-12);
   }
 
-  validateEquals(recvE.senderDestinationRank, expectedSenderRank);
+  validateEquals(status.MPI_SOURCE, expectedSenderRank);
 #endif
 }

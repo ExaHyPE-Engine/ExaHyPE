@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/logging/Log.h"
 #include "tarch/tests/TestCase.h"
 
 namespace peano4::grid::tests {
@@ -14,20 +13,18 @@ private:
   void testOperatorLess();
   void testSort();
   void testSortDeterministicGrid();
-  void testMergeEraseRefineCancellation();
   void testMergeTolerance();
   void testMergeAdjacency();
+  void testMergeEraseAdjacency();
+  void testMergeEraseDoesNotOverMergeLShape();
   void testMerge1();
   void testMerge2();
   void testMerge3();
-  void testMPIDatatype();
+  void testMPI();
 
 public:
   GridControlEventTest();
   ~GridControlEventTest() override final = default;
 
-  /**
-   * This routine is triggered by the TestCaseCollection
-   */
   void run() override final;
 };
