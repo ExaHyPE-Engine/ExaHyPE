@@ -129,8 +129,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     virtual void initialCondition(
       double * NOALIAS Q,
       const tarch::la::Vector<DIMENSIONS,double>&  meshCellCentre,
-      const tarch::la::Vector<DIMENSIONS,double>&  meshCellH,
-      bool                                         gridIsConstructed
+      const tarch::la::Vector<DIMENSIONS,double>&  meshCellH
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
 

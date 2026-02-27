@@ -40,6 +40,8 @@ struct peano4::grid::GridVertex {
   static constexpr std::uint8_t IsAntecessorOfRefinedVertexInCurrentTreeSweep       = 1 << 1; // = 0b00000010
   static constexpr std::uint8_t HasBeenParentOfSubtreeVertexInPreviousTreeSweep     = 1 << 2; // = 0b00000100
   static constexpr std::uint8_t IsParentOfSubtreeVertexInCurrentTreeSweep           = 1 << 3; // = 0b00001000
+  // Used to reconstruct previously hanging faces
+  static constexpr std::uint8_t HasBeenVertexTypeHangingInPreviousTreeSweep         = 1 << 5; // = 0b00010000
 
   GridVertex() noexcept = default;
   enum class ObjectConstruction { NoData };

@@ -17,8 +17,7 @@ tarch::logging::Log benchmarks::exahype2::ccz4::CCZ4::_log("benchmarks::exahype2
 void benchmarks::exahype2::ccz4::CCZ4::initialCondition(
   double* NOALIAS                              Q,
   const tarch::la::Vector<DIMENSIONS, double>& volumeX,
-  const tarch::la::Vector<DIMENSIONS, double>& volumeH,
-  bool                                         gridIsConstructed
+  const tarch::la::Vector<DIMENSIONS, double>& volumeH
 ) {
   constexpr int    nVars       = 59;
   constexpr double pi          = M_PI;

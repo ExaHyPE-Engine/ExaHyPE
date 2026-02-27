@@ -175,8 +175,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   double * NOALIAS                        Q,
   const tarch::la::Vector<DIMENSIONS,double>&  meshCellCentre,
-  const tarch::la::Vector<DIMENSIONS,double>&  meshCellH,
-  bool                                         gridIsConstructed
+  const tarch::la::Vector<DIMENSIONS,double>&  meshCellH
 ) {
   {{INITIAL_CONDITIONS_IMPLEMENTATION}}
 }

@@ -10,11 +10,8 @@ tarch::logging::Log   examples::exahype2::finitevolumes::MHD::_log( "examples::e
 void examples::exahype2::finitevolumes::MHD::initialCondition(
   double * NOALIAS Q,
   const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
-  const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
-  bool                                         gridIsConstructed
+  const tarch::la::Vector<DIMENSIONS,double>&  volumeH
 ) {
-  logTraceInWith3Arguments( "initialCondition(...)", volumeCentre, volumeH, gridIsConstructed );
-
   double xd[DIMENSIONS];
   for (int d=0; d< DIMENSIONS; d++) xd[d] = 0.0;//x[d];
   double t = 0;
@@ -23,8 +20,6 @@ void examples::exahype2::finitevolumes::MHD::initialCondition(
     assert(std::isfinite(Q[i]));
     assert(!std::isnan(Q[i]));
   }
-
-  logTraceOut( "initialCondition(...)" );
 }
 
 

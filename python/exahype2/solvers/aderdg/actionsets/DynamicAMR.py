@@ -25,7 +25,7 @@ class DynamicAMR(AbstractADERDGActionSet):
         self._interpolate_guard = interpolate_guard
         self._restrict_guard = restrict_guard
 
-        self._Template_CreateHangingFace = """
+        self._Template_TouchHangingFaceFirstTime = """
   if ({{INTERPOLATE_GUARD}}) {
     #if DIMENSIONS == 2
     constexpr int SpaceFaceSize      = {{ORDER}} + 1;
@@ -53,7 +53,7 @@ class DynamicAMR(AbstractADERDGActionSet):
   }
 """
 
-        self._Template_CreatePersistentFace = """
+        self._Template_CreateFace = """
     #if DIMENSIONS == 2
     constexpr int SpaceFaceSize      = {{ORDER}} + 1;
     #else
@@ -77,26 +77,25 @@ class DynamicAMR(AbstractADERDGActionSet):
     fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp(1, std::max(coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getOldTimeStamp(1), fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp(1)));
     """
 
-        self._Template_DestroyHangingFace = """
+        self._Template_TouchHangingFaceLastTime = """
   #if DIMENSIONS == 2
   constexpr int SpaceFaceSize      = {{ORDER}} + 1;
   #else
   constexpr int SpaceFaceSize      = ({{ORDER}} + 1) * ({{ORDER}} + 1);
   #endif
 
-  constexpr int FluxElementsPerFace   = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
+  constexpr int FluxElementsPerFace = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
 
   if ({{DELETE_GUARD}}) {
     int facePosition = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : 1;
     auto* FOut = coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).data() + (1 - facePosition) * FluxElementsPerFace;
 
-    //Delete the elements on the side of the face that the Riemann fluxes will be merged onto. Because of the
-    //  merge operations this must be on the side on which the fine cells are.
+    // Delete the elements on the side of the face that the Riemann fluxes will be merged onto. Because of the
+    // merge operations this must be on the side on which the fine cells are.
     std::fill_n(FOut, FluxElementsPerFace, 0.0);
   }
 
   if ({{RESTRICT_GUARD}}) {
-
     int facePosition = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : 1;
 
     // Fluxes
@@ -108,15 +107,15 @@ class DynamicAMR(AbstractADERDGActionSet):
   }
 """
 
-        self._Template_DestroyPersistentFace = """
+        self._Template_DestroyFace = """
     #if DIMENSIONS == 2
     constexpr int SpaceFaceSize      = {{ORDER}} + 1;
     #else
     constexpr int SpaceFaceSize      = ({{ORDER}} + 1) * ({{ORDER}} + 1);
     #endif
 
-    constexpr int UnknownsElementsPerFace   = SpaceFaceSize * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    constexpr int FluxElementsPerFace   = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
+    constexpr int UnknownsElementsPerFace = SpaceFaceSize * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    constexpr int FluxElementsPerFace     = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
 
     // Unknowns left
     kernels::{{SOLVER_NAME}}::faceUnknownsRestriction(
@@ -146,8 +145,6 @@ class DynamicAMR(AbstractADERDGActionSet):
 
         self._Template_CreateCell = (
             """
-  logTraceIn( "createCell(...)" );
-
   kernels::{{SOLVER_NAME}}::cellUnknownsProlongation(
     fineGridCell{{SOLVER_NAME}}Q.data(),
     coarseGridCell{{SOLVER_NAME}}Q.data(),
@@ -164,15 +161,11 @@ class DynamicAMR(AbstractADERDGActionSet):
             + """.setTimeStepSize( coarseGridCell"""
             + solver._cell_label.name
             + """.getTimeStepSize() );
-
-  logTraceOut( "createCell(...)" );
 """
         )
 
         self._Template_DestroyCell = (
             """
-  logTraceInWith1Argument( "destroyCell(...)", marker.toString() );
-
   kernels::{{SOLVER_NAME}}::cellUnknownsRestriction(
     fineGridCell{{SOLVER_NAME}}Q.data(),
     coarseGridCell{{SOLVER_NAME}}Q.data(),
@@ -189,8 +182,6 @@ class DynamicAMR(AbstractADERDGActionSet):
             + """.setTimeStepSize( fineGridCell"""
             + solver._cell_label.name
             + """.getTimeStepSize() );
-  
-  logTraceOut( "destroyCell(...)" );
 """
         )
 
@@ -203,29 +194,38 @@ class DynamicAMR(AbstractADERDGActionSet):
         self._solver._init_dictionary_with_default_parameters(d)
         self._solver.add_entries_to_text_replacement_dictionary(d)
 
-        if operation_name == peano4.solversteps.ActionSet.OPERATION_CREATE_HANGING_FACE:
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_HANGING_FACE_FIRST_TIME
+        ):
             d["INTERPOLATE_GUARD"] = self._interpolate_guard
-            result = jinja2.Template(self._Template_CreateHangingFace).render(**d)
+            result = jinja2.Template(self._Template_TouchHangingFaceFirstTime).render(
+                **d
+            )
             pass
         if (
             operation_name
-            == peano4.solversteps.ActionSet.OPERATION_DESTROY_HANGING_FACE
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_HANGING_FACE_LAST_TIME
         ):
-            d["DELETE_GUARD"] = self._delete_guard
+            d["DELETE_GUARD"] = (
+                self._delete_guard
+            )  # TODO: Shouldn't be called like this anymore
             d["RESTRICT_GUARD"] = self._restrict_guard
-            result = jinja2.Template(self._Template_DestroyHangingFace).render(**d)
+            result = jinja2.Template(self._Template_TouchHangingFaceLastTime).render(
+                **d
+            )
             pass
         if (
             operation_name
-            == peano4.solversteps.ActionSet.OPERATION_CREATE_PERSISTENT_FACE
+            == peano4.solversteps.ActionSet.OPERATION_CREATE_FACE
         ):
-            result = jinja2.Template(self._Template_CreatePersistentFace).render(**d)
+            result = jinja2.Template(self._Template_CreateFace).render(**d)
             pass
         if (
             operation_name
-            == peano4.solversteps.ActionSet.OPERATION_DESTROY_PERSISTENT_FACE
+            == peano4.solversteps.ActionSet.OPERATION_DESTROY_FACE
         ):
-            result = jinja2.Template(self._Template_DestroyPersistentFace).render(**d)
+            result = jinja2.Template(self._Template_DestroyFace).render(**d)
             pass
         if operation_name == peano4.solversteps.ActionSet.OPERATION_CREATE_CELL:
             result = jinja2.Template(self._Template_CreateCell).render(**d)

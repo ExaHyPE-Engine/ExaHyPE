@@ -257,6 +257,52 @@ void peano4::grid::Spacetree::updateVertexAfterLoad(
     receiveAndMergeGridVertexAtHorizontalBoundary(vertex);
     receiveAndMergeGridVertexAtVerticalBoundary(vertex);
 
+    // We cache, per coarse-grid vertex, whether it should be treated as hanging-like when
+    // reconstructing the previous sweep’s derived vertex types.
+    //
+    // This is not the same as the vertex state was literally HangingVertex.
+    // The flag is used by getCoarseGridVertexTypeFromPreviousTreeSweep() /
+    // getVertexTypesFromPreviousTreeSweep() to rebuild the previous VertexType[] array for a cell.
+    // That reconstruction only distinguishes two coarse categories: {Persistent, Hanging}.
+    // Several transient / AMR-boundary states are conservatively mapped to VertexType::Hanging,
+    // because they indicate the vertex is on/near a refinement/coarsening interface where
+    // fine-grid entities can be hanging and their data may not be stable like interior entities.
+    //
+    // Rationale for each state treated as hanging-like (=> VertexType::Hanging):
+    // - RefinementTriggered: refinement will introduce fine-grid constraints at this vertex.
+    // - New: vertex has just been created by AMR; it is not a stable interior vertex yet.
+    // - Delete: vertex is being removed by AMR; treat as non-persistent for previous-type reconstruction.
+    // - Unrefined: vertex belongs to a coarse region adjacent to refinement; this typically induces
+    //   hanging configurations on the fine grid when projected down.
+    // - HangingVertex: the literal hanging-vertex state.
+    //
+    // All other states are treated as persistent interior for the purposes of the previous-sweep
+    // VertexType reconstruction.
+    const auto s = vertex.getState();
+    const bool prevCoarseVertexTypeWasHanging =
+      s == GridVertex::State::RefinementTriggered
+      or s == GridVertex::State::Delete
+      or s == GridVertex::State::New
+      or s == GridVertex::State::Unrefined
+      or s == GridVertex::State::HangingVertex;
+    vertex.setFlag(GridVertex::HasBeenVertexTypeHangingInPreviousTreeSweep, prevCoarseVertexTypeWasHanging);
+
+    // const auto s = vertex.getState();
+    // const bool prevCoarseVertexTypeWasHanging =
+    //   s == GridVertex::State::RefinementTriggered
+    //   or s == GridVertex::State::Unrefined
+    //   or s == GridVertex::State::HangingVertex;
+    // vertex.setFlag(GridVertex::HasBeenVertexTypeHangingInPreviousTreeSweep, prevCoarseVertexTypeWasHanging);
+
+    // const auto s = vertex.getState();
+    // const bool prevCoarseVertexTypeWasHanging =
+    //   (s == GridVertex::State::HangingVertex)
+    //   or (s == GridVertex::State::Unrefined and vertex.getFlag(GridVertex::HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep));
+    // vertex.setFlag(GridVertex::HasBeenVertexTypeHangingInPreviousTreeSweep, prevCoarseVertexTypeWasHanging);
+
+    // const bool prevCoarseVertexTypeWasHanging = (vertex.getState() == GridVertex::State::HangingVertex);
+    // vertex.setFlag(GridVertex::HasBeenVertexTypeHangingInPreviousTreeSweep, prevCoarseVertexTypeWasHanging);
+
     vertex.setFlag(GridVertex::HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep, vertex.getFlag(GridVertex::IsAntecessorOfRefinedVertexInCurrentTreeSweep));
     vertex.setFlag(GridVertex::HasBeenParentOfSubtreeVertexInPreviousTreeSweep, vertex.getFlag(GridVertex::IsParentOfSubtreeVertexInCurrentTreeSweep));
 
@@ -1247,10 +1293,8 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
     int inVertexStack              = enterCellTraversalEvent.getVertexDataFrom(i);
     int inVertexPositionWithinCell = enterCellTraversalEvent.getVertexDataTo(i);
 
-    if (peano4::grid::PeanoCurve::isInOutStack(inVertexStack)) {
-      assertion(inVertexStack != peano4::grid::GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
-      assertion(inVertexStack != peano4::grid::GridTraversalObserver::CreateOrDestroyHangingGridEntity);
-
+    const bool isHangingVertex = enterCellTraversalEvent.getIsVertexHanging(inVertexPositionWithinCell);
+    if (peano4::grid::PeanoCurve::isInOutStack(inVertexStack) and not isHangingVertex) {
       if (enterCellTraversalEvent.getIsVertexLocal(inVertexPositionWithinCell)) {
         const auto& neighbours = getNeighbourTrees(fineGridVertices[inVertexPositionWithinCell], true);
         for (const auto& p : neighbours) {
@@ -1288,10 +1332,9 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
   for (int i = 0; i < TWO_TIMES_D; i++) {
     int inFaceStack              = enterCellTraversalEvent.getFaceDataFrom(i);
     int inFacePositionWithinCell = enterCellTraversalEvent.getFaceDataTo(i);
-    if (peano4::grid::PeanoCurve::isInOutStack(inFaceStack)) {
-      assertion(inFaceStack != peano4::grid::GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
-      assertion(inFaceStack != peano4::grid::GridTraversalObserver::CreateOrDestroyHangingGridEntity);
 
+    const bool isHangingFace = enterCellTraversalEvent.getIsFaceHanging(inFacePositionWithinCell);
+    if (peano4::grid::PeanoCurve::isInOutStack(inFaceStack) and not isHangingFace) {
       if (enterCellTraversalEvent.getIsFaceLocal(inFacePositionWithinCell)) {
         int neighbour = getNeighbourTrees(fineGridVertices, inFacePositionWithinCell, true);
         if (neighbour >= 0) {
@@ -1341,10 +1384,8 @@ void peano4::grid::Spacetree::sendUserData(
     int outVertexStack              = leaveCellTraversalEvent.getVertexDataTo(i);
     int outVertexPositionWithinCell = leaveCellTraversalEvent.getVertexDataFrom(i);
 
-    if (peano4::grid::PeanoCurve::isInOutStack(outVertexStack)) {
-      assertion(outVertexStack != peano4::grid::GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
-      assertion(outVertexStack != peano4::grid::GridTraversalObserver::CreateOrDestroyHangingGridEntity);
-
+    const bool isHangingVertex = leaveCellTraversalEvent.getIsVertexHanging(outVertexPositionWithinCell);
+    if (peano4::grid::PeanoCurve::isInOutStack(outVertexStack) and not isHangingVertex) {
       if (leaveCellTraversalEvent.getIsVertexLocal(outVertexPositionWithinCell)) {
         const auto& neighbours = getNeighbourTrees(fineGridVertices[outVertexPositionWithinCell], false);
 
@@ -1415,9 +1456,8 @@ void peano4::grid::Spacetree::sendUserData(
     int outFaceStack              = leaveCellTraversalEvent.getFaceDataTo(i);
     int outFacePositionWithinCell = leaveCellTraversalEvent.getFaceDataFrom(i);
 
-    if (peano4::grid::PeanoCurve::isInOutStack(outFaceStack)) {
-      assertion(outFaceStack != peano4::grid::GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
-      assertion(outFaceStack != peano4::grid::GridTraversalObserver::CreateOrDestroyHangingGridEntity);
+    const bool isHangingFace = leaveCellTraversalEvent.getIsFaceHanging(outFacePositionWithinCell);
+    if (peano4::grid::PeanoCurve::isInOutStack(outFaceStack) and not isHangingFace) {
       if (leaveCellTraversalEvent.getIsFaceLocal(outFacePositionWithinCell)) {
         int neighbour = getNeighbourTrees(fineGridVertices, outFacePositionWithinCell, false);
         if (neighbour >= 0) {

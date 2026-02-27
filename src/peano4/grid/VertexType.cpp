@@ -55,6 +55,7 @@ inline peano4::grid::VertexType getCoarseGridVertexType(const peano4::grid::Grid
   return VertexType::Hanging;
 }
 
+// Recursive fallback for higher dimensions
 inline peano4::grid::VertexType getVertexType(
   peano4::grid::GridVertex           coarseGridVertices[TWO_POWER_D],
   tarch::la::Vector<DIMENSIONS, int> position,
@@ -232,5 +233,174 @@ void peano4::grid::getVertexTypes(
   for (int i = 0; i < TWO_POWER_D; ++i) {
     std::bitset<DIMENSIONS> offset(i);
     result[i] = getVertexType(coarseGridVertices, position + tarch::la::Vector<DIMENSIONS, int>(offset));
+  }
+}
+
+inline peano4::grid::VertexType getCoarseGridVertexTypeFromPreviousTreeSweep(
+  const peano4::grid::GridVertex& coarseGridVertex
+) {
+  using namespace peano4::grid;
+  return coarseGridVertex.getFlag(GridVertex::HasBeenVertexTypeHangingInPreviousTreeSweep)
+           ? VertexType::Hanging
+           : VertexType::Persistent;
+}
+
+inline peano4::grid::VertexType getVertexTypeFromPreviousTreeSweep(
+  peano4::grid::GridVertex                  coarseGridVertices[TWO_POWER_D],
+  const tarch::la::Vector<DIMENSIONS, int>& position
+) {
+  using namespace peano4::grid;
+
+#if DIMENSIONS == 2
+  assertion(position(0) >= 0 and position(0) <= 3);
+  assertion(position(1) >= 0 and position(1) <= 3);
+
+  VertexType c00 = getCoarseGridVertexTypeFromPreviousTreeSweep(
+    coarseGridVertices[peano4::utils::dLinearised({0, 0}, 2)]
+  );
+  VertexType c01 = getCoarseGridVertexTypeFromPreviousTreeSweep(
+    coarseGridVertices[peano4::utils::dLinearised({0, 1}, 2)]
+  );
+  VertexType c10 = getCoarseGridVertexTypeFromPreviousTreeSweep(
+    coarseGridVertices[peano4::utils::dLinearised({1, 0}, 2)]
+  );
+  VertexType c11 = getCoarseGridVertexTypeFromPreviousTreeSweep(
+    coarseGridVertices[peano4::utils::dLinearised({1, 1}, 2)]
+  );
+
+  const int x = position(0), y = position(1);
+
+  if ((x == 0 or x == 3) and (y == 0 or y == 3)) {
+    const int ix = (x == 0 ? 0 : 1);
+    const int iy = (y == 0 ? 0 : 1);
+    return (ix == 0 ? (iy == 0 ? c00 : c01) : (iy == 0 ? c10 : c11));
+  }
+
+  if (x == 0 or x == 3) {
+    const int  ix = (x == 0 ? 0 : 1);
+    VertexType v0 = (ix == 0 ? c00 : c10);
+    VertexType v1 = (ix == 0 ? c01 : c11);
+    return mergeVertexTypes(v0, v1);
+  }
+  if (y == 0 or y == 3) {
+    const int  iy = (y == 0 ? 0 : 1);
+    VertexType v0 = (iy == 0 ? c00 : c01);
+    VertexType v1 = (iy == 0 ? c10 : c11);
+    return mergeVertexTypes(v0, v1);
+  }
+
+  return mergeVertexTypes(mergeVertexTypes(c00, c01), mergeVertexTypes(c10, c11));
+#elif DIMENSIONS == 3
+  assertion(position(0) >= 0 and position(0) <= 3);
+  assertion(position(1) >= 0 and position(1) <= 3);
+  assertion(position(2) >= 0 and position(2) <= 3);
+
+  const int x = position(0), y = position(1), z = position(2);
+
+  auto C = [&](int ix, int iy, int iz) -> VertexType {
+    return getCoarseGridVertexTypeFromPreviousTreeSweep(
+      coarseGridVertices[peano4::utils::dLinearised({ix, iy, iz}, 2)]
+    );
+  };
+  VertexType c000 = C(0, 0, 0), c001 = C(0, 0, 1), c010 = C(0, 1, 0), c011 = C(0, 1, 1), c100 = C(1, 0, 0),
+             c101 = C(1, 0, 1), c110 = C(1, 1, 0), c111 = C(1, 1, 1);
+
+  if ((x == 0 or x == 3) and (y == 0 or y == 3) and (z == 0 or z == 3)) {
+    const int ix = (x == 0 ? 0 : 1);
+    const int iy = (y == 0 ? 0 : 1);
+    const int iz = (z == 0 ? 0 : 1);
+    if (ix == 0) {
+      return (iy == 0 ? (iz == 0 ? c000 : c001) : (iz == 0 ? c010 : c011));
+    } else {
+      return (iy == 0 ? (iz == 0 ? c100 : c101) : (iz == 0 ? c110 : c111));
+    }
+  }
+
+  if ((x == 0 or x == 3) and (y == 0 or y == 3)) {
+    const int  ix = (x == 0 ? 0 : 1);
+    const int  iy = (y == 0 ? 0 : 1);
+    VertexType v0 = (ix ? (iy ? c110 : c100) : (iy ? c010 : c000));
+    VertexType v1 = (ix ? (iy ? c111 : c101) : (iy ? c011 : c001));
+    return mergeVertexTypes(v0, v1);
+  }
+  if ((x == 0 or x == 3) and (z == 0 or z == 3)) {
+    const int  ix = (x == 0 ? 0 : 1);
+    const int  iz = (z == 0 ? 0 : 1);
+    VertexType v0 = (ix ? (iz ? c101 : c100) : (iz ? c001 : c000));
+    VertexType v1 = (ix ? (iz ? c111 : c110) : (iz ? c011 : c010));
+    return mergeVertexTypes(v0, v1);
+  }
+  if ((y == 0 or y == 3) and (z == 0 or z == 3)) {
+    const int  iy = (y == 0 ? 0 : 1);
+    const int  iz = (z == 0 ? 0 : 1);
+    VertexType v0 = (iy ? (iz ? c011 : c010) : (iz ? c001 : c000));
+    VertexType v1 = (iy ? (iz ? c111 : c110) : (iz ? c101 : c100));
+    return mergeVertexTypes(v0, v1);
+  }
+
+  if (x == 0 or x == 3) {
+    const int  ix = (x == 0 ? 0 : 1);
+    VertexType v0 = (ix ? c100 : c000);
+    VertexType v1 = (ix ? c101 : c001);
+    VertexType v2 = (ix ? c110 : c010);
+    VertexType v3 = (ix ? c111 : c011);
+    return mergeVertexTypes(mergeVertexTypes(v0, v1), mergeVertexTypes(v2, v3));
+  }
+  if (y == 0 or y == 3) {
+    const int  iy = (y == 0 ? 0 : 1);
+    VertexType v0 = (iy ? c010 : c000);
+    VertexType v1 = (iy ? c011 : c001);
+    VertexType v2 = (iy ? c110 : c100);
+    VertexType v3 = (iy ? c111 : c101);
+    return mergeVertexTypes(mergeVertexTypes(v0, v1), mergeVertexTypes(v2, v3));
+  }
+  if (z == 0 or z == 3) {
+    const int  iz = (z == 0 ? 0 : 1);
+    VertexType v0 = (iz ? c001 : c000);
+    VertexType v1 = (iz ? c011 : c010);
+    VertexType v2 = (iz ? c101 : c100);
+    VertexType v3 = (iz ? c111 : c110);
+    return mergeVertexTypes(mergeVertexTypes(v0, v1), mergeVertexTypes(v2, v3));
+  }
+
+  return mergeVertexTypes(
+    mergeVertexTypes(mergeVertexTypes(c000, c001), mergeVertexTypes(c010, c011)),
+    mergeVertexTypes(mergeVertexTypes(c100, c101), mergeVertexTypes(c110, c111))
+  );
+#else
+  // Recursive fallback for higher dimensions
+  auto getVertexTypeRec = [&](auto&& self, tarch::la::Vector<DIMENSIONS, int> pos, int dim) -> VertexType {
+    if (dim < 0) {
+      const int linearIndex = peano4::utils::dLinearised(pos, 2);
+      return getCoarseGridVertexTypeFromPreviousTreeSweep(coarseGridVertices[linearIndex]);
+    }
+    if (pos(dim) == 0) {
+      return self(self, pos, dim - 1);
+    } else if (pos(dim) == 3) {
+      pos(dim) = 1;
+      return self(self, pos, dim - 1);
+    }
+    tarch::la::Vector<DIMENSIONS, int> posCopy = pos;
+    pos(dim)                                   = 0;
+    VertexType lhs                             = self(self, pos, dim - 1);
+    posCopy(dim)                               = 1;
+    VertexType rhs                             = self(self, posCopy, dim - 1);
+    return mergeVertexTypes(lhs, rhs);
+  };
+  return getVertexTypeRec(getVertexTypeRec, position, DIMENSIONS - 1);
+#endif
+}
+
+void peano4::grid::getVertexTypesFromPreviousTreeSweep(
+  GridVertex                                coarseGridVertices[TWO_POWER_D],
+  const tarch::la::Vector<DIMENSIONS, int>& position,
+  VertexType                                result[TWO_POWER_D]
+) {
+  for (int i = 0; i < TWO_POWER_D; ++i) {
+    std::bitset<DIMENSIONS> offset(i);
+    result[i] = getVertexTypeFromPreviousTreeSweep(
+      coarseGridVertices,
+      position + tarch::la::Vector<DIMENSIONS, int>(offset)
+    );
   }
 }

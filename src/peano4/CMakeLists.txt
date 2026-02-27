@@ -29,12 +29,15 @@ set(SOURCES
   grid/VertexLookupTable.cpp
   grid/VertexType.cpp
   grid/tests/AutomatonStateTest.cpp
+  grid/tests/CellTypeTest.cpp
+  grid/tests/FaceTypeTest.cpp
   grid/tests/GridControlEventTest.cpp
   grid/tests/GridStatisticsTest.cpp
   grid/tests/GridTraversalEventGeneratorTest.cpp
   grid/tests/GridVertexTest.cpp
   grid/tests/SpacetreeHelperTest.cpp
   grid/tests/SpacetreeTest.cpp
+  grid/tests/VertexTypeTest.cpp
 
   parallel/parallel.cpp
   parallel/Node.cpp

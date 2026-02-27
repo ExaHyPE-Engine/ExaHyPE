@@ -80,7 +80,7 @@ theSolver._start_grid_initialisation_implementation += DynamicRuptureElastic.ini
 theSolver._destructor_implementation += PMLElastic.abstractDestructor()
 theSolver.add_user_solver_includes(PMLDynamicRuptureElastic.userIncludes())
 
-project = exahype2.Project(["exahype2", "elastic"], "pml", executable=scenario)
+project = exahype2.Project(["applications", "exahype2", "exaseis"], "pml", executable=scenario)
 
 project.add_solver(theSolver)
 

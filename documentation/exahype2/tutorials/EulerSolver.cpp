@@ -14,8 +14,7 @@ double airfoilSymmetric(double x, double c = 100, double t = 0.12) {
 void tutorials::exahype2::euler::EulerSolver::initialCondition(
   [[maybe_unused]] double* const NOALIAS                        Q, // Q[4+0]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const bool                                   gridIsConstructed
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
 ) {
   const double y = airfoilSymmetric(x[0]);
 

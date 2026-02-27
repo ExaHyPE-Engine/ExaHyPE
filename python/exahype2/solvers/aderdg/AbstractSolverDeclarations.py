@@ -5,7 +5,7 @@ import jinja2
 
 class AbstractSolverDeclarations:
     def __init__(self, dictionary):
-      self.d = dictionary
+        self.d = dictionary
 
     def create_abstract_solver_user_declarations(self):
         Template = jinja2.Template(
@@ -19,19 +19,11 @@ class AbstractSolverDeclarations:
      *              function is tied to the point. You just have to scale it with h. By
      *              translating the shape function's centre to x, you can reconstruct where
      *              the shape function is placed within the computational domain.
-     * @param gridIsConstructed Boolean holds if grid is completely constructed.
-     *              initialCondition() is invoked both by the grid construction and the
-     *              initialisation, and you might want to do different things depending on
-     *              the context. For most applications, they initialise data if and only if
-     *              gridIsConstructed holds, but others might also initialise data throughout
-     *              the construction to guide AMR criteria.
-     *
      */
     virtual void initialCondition(
       {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<DIMENSIONS, double>&  x,
-      const tarch::la::Vector<DIMENSIONS, double>&  h,
-      const bool                                    gridIsConstructed
+      const tarch::la::Vector<DIMENSIONS, double>&  h
     ) = 0;
     {% endif %}
 

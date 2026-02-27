@@ -156,10 +156,9 @@ If you get stuck or have a typo you cannot quite find, you can find an example s
 Initial conditions:
 
     void exahype2::training::swe::SWESolver::initialCondition(
-      [[maybe_unused]] double* const NOALIAS Q, // Q[4+0]
+      [[maybe_unused]] double* const NOALIAS                        Q, // Q[4+0]
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-      [[maybe_unused]] const bool                                   gridIsConstructed
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
     ) {
       Q[Shortcuts::hu + 0] = 0.0; // v_x
       Q[Shortcuts::hu + 1] = 0.0; // v_y
@@ -170,8 +169,8 @@ Initial conditions:
 Boundary conditions:
 
     void exahype2::training::swe::SWESolver::boundaryConditions(
-      [[maybe_unused]] const double* const NOALIAS   Qinside, // Qinside[4+0]
-      [[maybe_unused]] double* const NOALIAS         Qoutside, // Qoutside[4+0]
+      [[maybe_unused]] const double* const NOALIAS                  Qinside, // Qinside[4+0]
+      [[maybe_unused]] double* const NOALIAS                        Qoutside, // Qoutside[4+0]
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
@@ -261,10 +260,9 @@ Overall these should yield following end results:
 Initial conditions:
 
     void exahype2::training::swe::SWESolver::initialCondition(
-      [[maybe_unused]] double* const NOALIAS Q, // Q[4+0]
+      [[maybe_unused]] double* const NOALIAS                        Q, // Q[4+0]
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-      [[maybe_unused]] const bool                                   gridIsConstructed
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
     ) {
       Q[Shortcuts::hu + 0] = 0.0; // v_x
       Q[Shortcuts::hu + 1] = 0.0; // v_y
@@ -275,7 +273,7 @@ Initial conditions:
 Flux:
 
     void exahype2::training::swe::SWESolver::flux(
-      [[maybe_unused]] const double* const NOALIAS   Q, // Q[4+0]
+      [[maybe_unused]] const double* const NOALIAS                  Q, // Q[4+0]
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,

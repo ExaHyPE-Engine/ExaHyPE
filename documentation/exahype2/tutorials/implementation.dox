@@ -87,10 +87,9 @@ But we still need to define our initial conditions, we do so in the function app
 and we prescribe a sinus for the initial conditions:
 
     void exahype2::training::acoustic::PlanarAcousticSolver::initialCondition(
-      [[maybe_unused]] double* const NOALIAS Q, // Q[3+0]
+      [[maybe_unused]] double* const NOALIAS                        Q, // Q[3+0]
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-      [[maybe_unused]] const bool                                   gridIsConstructed
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
     ) {
       const double val = cos(-std::numbers::pi * (x[0] + x[1])); // Simple translation in positive diagonal direction
 
@@ -101,7 +100,7 @@ and we prescribe a sinus for the initial conditions:
       constexpr double rho = 1.0;
 
       const double kr = std::sqrt(2 * K0 * rho); // These are defined by the eigenvector of the plane wave operator
-      Q[Shortcuts::p]         = kr * val;
+      Q[Shortcuts::p] = kr * val;
     }
 
 Finally, we would normally need to define boundary conditions to make our problem well-defined,

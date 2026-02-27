@@ -34,19 +34,14 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESP
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   double * NOALIAS Q,
   const tarch::la::Vector<DIMENSIONS,double>&  meshCellCentre,
-  const tarch::la::Vector<DIMENSIONS,double>&  meshCellH,
-  bool                                         gridIsConstructed
+  const tarch::la::Vector<DIMENSIONS,double>&  meshCellH
 ) {
-  logTraceInWith3Arguments( "initialCondition(...)", meshCellCentre, meshCellH, gridIsConstructed );
-
   // @todo Implement your stuff here, but ensure all entries are
   //   initialised incl all auxiliary variables. The snippet below
   //   sets everything to zero
   for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;
   }
-
-  logTraceOut( "initialCondition(...)" );
 }
 {% endif %}
 

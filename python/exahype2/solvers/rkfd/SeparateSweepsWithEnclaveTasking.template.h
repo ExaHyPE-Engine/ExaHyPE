@@ -59,8 +59,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
     virtual void initialCondition(
       double * NOALIAS Q,
       const tarch::la::Vector<DIMENSIONS,double>&  meshCellCentre,
-      const tarch::la::Vector<DIMENSIONS,double>&  meshCellH,
-      bool                                         gridIsConstructed
+      const tarch::la::Vector<DIMENSIONS,double>&  meshCellH
     ) override;
     {% endif %}
 

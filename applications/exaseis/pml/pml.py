@@ -81,7 +81,7 @@ theSolver._start_grid_initialisation_implementation +=  PMLElastic.init_grid_ste
 theSolver._destructor_implementation +=  PMLElastic.abstractDestructor()
 theSolver.add_user_solver_includes(PMLElastic.userIncludes())
 
-project = exahype2.Project(["exahype2", "elastic"], "pml", executable=scenario+"_l_"+str(min_level)+"_o_"+str(order)+"_pr_"+precision)
+project = exahype2.Project(["applications", "exahype2", "exaseis"], "pml", executable=scenario+"_l_"+str(min_level)+"_o_"+str(order)+"_pr_"+precision)
 project.add_solver(theSolver)
 
 if use_tracers:

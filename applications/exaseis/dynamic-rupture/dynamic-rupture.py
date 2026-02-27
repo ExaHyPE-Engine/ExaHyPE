@@ -84,7 +84,7 @@ theSolver._destructor_implementation +=  DynamicRuptureElastic.abstractDestructo
 theSolver.add_user_solver_includes(DynamicRuptureElastic.userIncludes())
 
 filename=scenario+"_l_"+str(min_level)+"_o_"+str(order)+"_pr_"+str(precision)
-project = exahype2.Project(["exahype2", "elastic"], "dynamicRupture", executable=filename)
+project = exahype2.Project(["applications", "exahype2", "exaseis"], "dynamicRupture", executable=filename)
 project.add_solver(theSolver)
 
 project.add_action_set_to_timestepping(

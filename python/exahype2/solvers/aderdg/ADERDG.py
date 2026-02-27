@@ -366,11 +366,8 @@ class ADERDG(object):
         self._action_set_update_cell_label.descend_invocation_order = 0
 
         # Sets initial conditions for the solution
-        self._action_set_initial_conditions = exahype2.solvers.aderdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true")
+        self._action_set_initial_conditions = exahype2.solvers.aderdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard())
         self._action_set_initial_conditions.descend_invocation_order = 1
-
-        self._action_set_initial_conditions_for_grid_construction = exahype2.solvers.aderdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
-        self._action_set_initial_conditions_for_grid_construction.descend_invocation_order = 1
 
         self._action_set_handle_boundary = exahype2.solvers.aderdg.actionsets.HandleBoundary(self, self._store_boundary_data_default_guard())
         self._action_set_handle_boundary.descend_invocation_order = 1
@@ -601,7 +598,6 @@ class ADERDG(object):
         step.add_action_set(self._action_set_postprocess_solution)
 
     def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
-        step.add_action_set(self._action_set_initial_conditions_for_grid_construction)
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         if evaluate_refinement_criterion:

@@ -12,8 +12,7 @@ tarch::logging::Log applications::exahype2::ShallowWater::FVSolver::_log(
 void applications::exahype2::ShallowWater::FVSolver::initialCondition(
   [[maybe_unused]] double* const NOALIAS                        Q, // Q[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const bool                                   gridIsConstructed
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
 ) {
   Q[Shortcuts::h]  = 100;
   Q[Shortcuts::hu] = 0;

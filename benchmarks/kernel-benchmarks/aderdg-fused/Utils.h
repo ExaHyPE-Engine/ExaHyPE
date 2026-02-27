@@ -47,9 +47,8 @@ namespace benchmarks {
               repositories::instanceOfAderSolver.Order + 1,
               kernels::AderSolver::Quadrature<SolverPrecision>::nodes
             ),
-            CellSize,
+            CellSize
             // index,
-            true
           );
           linearisedIndex += AderSolver::NumberOfUnknowns + AderSolver::NumberOfAuxiliaryVariables;
         }

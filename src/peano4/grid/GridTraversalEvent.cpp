@@ -62,18 +62,15 @@ peano4::datamanagement::CellMarker peano4::grid::GridTraversalEvent::getCellMark
   setFlag(isParentCellLocal != 0, datamanagement::CellMarker::IsParentLocal);
   setFlag(isVertexAdjacentToParallelDomainBoundary == 0, datamanagement::CellMarker::AllVerticesInsideDomain);
 
-  bool oneVertexHanging            = false;
-  bool oneVertexCreatedOrDestroyed = false;
+  const bool oneVertexHanging            = (isVertexHanging != 0);
+  bool       oneVertexCreatedOrDestroyed = false;
 
   for (int i = 0; i < TWO_POWER_D; ++i) {
     const int to   = vertexDataTo[i];
     const int from = vertexDataFrom[i];
 
-    oneVertexHanging |= (to == GridTraversalObserver::CreateOrDestroyHangingGridEntity);
-    oneVertexHanging |= (from == GridTraversalObserver::CreateOrDestroyHangingGridEntity);
-
-    oneVertexCreatedOrDestroyed |= (to == GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
-    oneVertexCreatedOrDestroyed |= (from == GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
+    oneVertexCreatedOrDestroyed |= (to == GridTraversalObserver::CreateOrDestroyGridEntity);
+    oneVertexCreatedOrDestroyed |= (from == GridTraversalObserver::CreateOrDestroyGridEntity);
   }
 
   if (oneVertexHanging) {
@@ -107,7 +104,8 @@ peano4::datamanagement::FaceMarker peano4::grid::GridTraversalEvent::getFaceMark
   marker.cellIsLocal                      = (isCellLocal != 0);
   marker.relativePositionWithinFatherCell = relativePositionToFather;
 
-  marker.isLocalMask = isFaceLocal;
+  marker.isLocalMask   = isFaceLocal;
+  marker.isHangingMask = isFaceHanging;
 
   marker.hasBeenRefinedMask = 0;
   marker.willBeRefinedMask  = 0;

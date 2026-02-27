@@ -46,7 +46,7 @@ solver.set_implementation(
   Q[3] = r < 0.1 ? 0.0 : 0.05;
 """,
     boundary_conditions="""
-  initialCondition(Qoutside, x, h, true);
+  initialCondition(Qoutside, x, h);
 """,
     refinement_criterion="""
   auto result = ::exahype2::RefinementCommand::Keep;

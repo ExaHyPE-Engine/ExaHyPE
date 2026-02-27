@@ -270,7 +270,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
             result += self._Template_Sieve.render(**self.d)
         if operation_name == ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
             result = self.__Template_LiftOrReassignParticles.render(**self.d)
-        if operation_name == ActionSet.OPERATION_DESTROY_PERSISTENT_VERTEX:
+        if operation_name == ActionSet.OPERATION_DESTROY_VERTEX:
             result = self._Template_LiftAllParticles.render(**self.d)
         if operation_name == ActionSet.OPERATION_END_TRAVERSAL:
             result = self._Template_EndTraversal.render(**self.d)

@@ -1,6 +1,6 @@
 import peano4, exahype2
 
-project = exahype2.Project(["exahype2", "elastic"], "pml", executable="TPV5_2D")
+project = exahype2.Project(["applications", "exahype2", "exaseis"], "pml", executable="TPV5_2D")
 
 unknowns = {"v": 2, "sigma": 3, "u": 2}
 auxiliary_variables = {

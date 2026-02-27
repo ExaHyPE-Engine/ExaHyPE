@@ -15,8 +15,7 @@ class SolverDeclarations:
     void initialCondition(
       [[maybe_unused]] {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&   x,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&   h,
-      [[maybe_unused]] const bool                                     gridIsConstructed
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&   h
     ) {
       {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<empty>" %}
       {{INITIAL_CONDITIONS_IMPLEMENTATION}}
@@ -229,9 +228,8 @@ class SolverDeclarations:
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     void initialCondition(
       {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS, double>& x,
-      const tarch::la::Vector<DIMENSIONS, double>& h,
-      const bool                                   gridIsConstructed
+      const tarch::la::Vector<DIMENSIONS, double>&  x,
+      const tarch::la::Vector<DIMENSIONS, double>&  h
     ) override final;
     {% endif %}
 

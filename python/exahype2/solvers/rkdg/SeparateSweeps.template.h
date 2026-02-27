@@ -57,8 +57,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
     virtual void initialCondition(
       double * NOALIAS Q,
       const tarch::la::Vector<DIMENSIONS,double>&  x,
-      const tarch::la::Vector<DIMENSIONS,double>&  h,
-      bool                                         gridIsConstructed
+      const tarch::la::Vector<DIMENSIONS,double>&  h
     ) override;
     {% endif %}
 

@@ -9,8 +9,7 @@ tarch::logging::Log tutorials::exahype2::acoustic::PlanarAcousticSolver::_log(
 void tutorials::exahype2::acoustic::PlanarAcousticSolver::initialCondition(
   [[maybe_unused]] double* const NOALIAS                        Q, // Q[3+0]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const bool                                   gridIsConstructed
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
 ) {
   // Simple translation in positive diagonal direction
   const double val = cos(-std::numbers::pi * (x[0] + x[1]));
@@ -23,7 +22,7 @@ void tutorials::exahype2::acoustic::PlanarAcousticSolver::initialCondition(
 
   // These are defined by the eigenvector of the plane wave operator
   const double kr = std::sqrt(2 * K0 * rho);
-  Q[Shortcuts::p]         = kr * val;
+  Q[Shortcuts::p] = kr * val;
 }
 
 void tutorials::exahype2::acoustic::PlanarAcousticSolver::boundaryConditions(

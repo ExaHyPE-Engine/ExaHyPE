@@ -49,11 +49,20 @@ public:
    * cannot really hold any data as the user never sees them.
    */
   static constexpr int NoData = -1;
+
   /**
-   * Implies that the data will then be local or had been local.
+   * Create/destroy marker used by the traversal event.
+   *
+   * Semantics:
+   * - On enter events: value indicates that the entity is newly created
+   *   and therefore has no previous persistent data to pop.
+   * - On leave events: value indicates that the entity is about to be
+   *   destroyed and therefore must not be written persistently.
+   *
+   * Whether an entity is hanging is orthogonal and must be queried via the
+   * corresponding marker (FaceMarker/VertexMarker).
    */
-  static constexpr int CreateOrDestroyPersistentGridEntity = -2;
-  static constexpr int CreateOrDestroyHangingGridEntity    = -3;
+  static constexpr int CreateOrDestroyGridEntity = -2;
 
   virtual void loadCellData(const GridTraversalEvent&) {};
   virtual void loadFaceData(const GridTraversalEvent&) {};
