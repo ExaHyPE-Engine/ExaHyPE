@@ -59,14 +59,9 @@ benchmarks::exahype2::ccz4::CCZ4SBH_FV::CCZ4SBH_FV() { prepareTwoPunctures(); }
 void benchmarks::exahype2::ccz4::CCZ4SBH_FV::initialCondition(
   double* NOALIAS                              Q,
   const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& volumeH,
-  bool                                         gridIsConstructed
+  const tarch::la::Vector<DIMENSIONS, double>& volumeH
 ) {
-  logTraceInWith3Arguments("initialCondition(...)", volumeCentre, volumeH, gridIsConstructed);
-
-  applications::exahype2::ccz4::ApplyTwoPunctures(Q, volumeCentre, 0, twoPunctures, not gridIsConstructed);
-
-  logTraceOut("initialCondition(...)");
+  applications::exahype2::ccz4::ApplyTwoPunctures(Q, volumeCentre, 0, twoPunctures, false);
 }
 
 void benchmarks::exahype2::ccz4::CCZ4SBH_FV::reduceAdmissibleTimeStepSize(double timeStepSize) {

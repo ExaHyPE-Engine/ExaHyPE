@@ -61,24 +61,16 @@ class StepToActionSet(object):
         if len(self.step.vertex_data) > 0:
             new_action_set.operations.append(
                 [
-                    peano4.solversteps.ActionSet.OPERATION_CREATE_PERSISTENT_VERTEX,
+                    peano4.solversteps.ActionSet.OPERATION_CREATE_VERTEX,
                     "void",
                 ]
                 + self.step.get_vertex_operations_signature()
             )
             new_action_set.operations.append(
                 [
-                    peano4.solversteps.ActionSet.OPERATION_DESTROY_PERSISTENT_VERTEX,
+                    peano4.solversteps.ActionSet.OPERATION_DESTROY_VERTEX,
                     "void",
                 ]
-                + self.step.get_vertex_operations_signature()
-            )
-            new_action_set.operations.append(
-                [peano4.solversteps.ActionSet.OPERATION_CREATE_HANGING_VERTEX, "void"]
-                + self.step.get_vertex_operations_signature()
-            )
-            new_action_set.operations.append(
-                [peano4.solversteps.ActionSet.OPERATION_DESTROY_HANGING_VERTEX, "void"]
                 + self.step.get_vertex_operations_signature()
             )
             new_action_set.operations.append(
@@ -89,22 +81,28 @@ class StepToActionSet(object):
                 [peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME, "void"]
                 + self.step.get_vertex_operations_signature()
             )
+            new_action_set.operations.append(
+                [
+                    peano4.solversteps.ActionSet.OPERATION_TOUCH_HANGING_VERTEX_FIRST_TIME,
+                    "void",
+                ]
+                + self.step.get_vertex_operations_signature()
+            )
+            new_action_set.operations.append(
+                [
+                    peano4.solversteps.ActionSet.OPERATION_TOUCH_HANGING_VERTEX_LAST_TIME,
+                    "void",
+                ]
+                + self.step.get_vertex_operations_signature()
+            )
 
         if len(self.step.face_data) > 0:
             new_action_set.operations.append(
-                [peano4.solversteps.ActionSet.OPERATION_CREATE_PERSISTENT_FACE, "void"]
+                [peano4.solversteps.ActionSet.OPERATION_CREATE_FACE, "void"]
                 + self.step.get_face_operations_signature()
             )
             new_action_set.operations.append(
-                [peano4.solversteps.ActionSet.OPERATION_DESTROY_PERSISTENT_FACE, "void"]
-                + self.step.get_face_operations_signature()
-            )
-            new_action_set.operations.append(
-                [peano4.solversteps.ActionSet.OPERATION_CREATE_HANGING_FACE, "void"]
-                + self.step.get_face_operations_signature()
-            )
-            new_action_set.operations.append(
-                [peano4.solversteps.ActionSet.OPERATION_DESTROY_HANGING_FACE, "void"]
+                [peano4.solversteps.ActionSet.OPERATION_DESTROY_FACE, "void"]
                 + self.step.get_face_operations_signature()
             )
             new_action_set.operations.append(
@@ -113,6 +111,20 @@ class StepToActionSet(object):
             )
             new_action_set.operations.append(
                 [peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_LAST_TIME, "void"]
+                + self.step.get_face_operations_signature()
+            )
+            new_action_set.operations.append(
+                [
+                    peano4.solversteps.ActionSet.OPERATION_TOUCH_HANGING_FACE_FIRST_TIME,
+                    "void",
+                ]
+                + self.step.get_face_operations_signature()
+            )
+            new_action_set.operations.append(
+                [
+                    peano4.solversteps.ActionSet.OPERATION_TOUCH_HANGING_FACE_LAST_TIME,
+                    "void",
+                ]
                 + self.step.get_face_operations_signature()
             )
 

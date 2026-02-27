@@ -12,12 +12,11 @@ class UpdateFaceLabel(ActionSet):
         return solver_name + "FaceLabel"
 
     """
-  
    SetLabels is an action set which is automatically merged into all ExaHyPE2
    steps by the project. There's nothing for the user solvers to be done here.
-   
+
    There are four fields which have a value per side of the face:
-   
+
    - Updated: Boolean[2]
      Shows if the corresponding adjacent cell (left vs right) has performed a
      time step.
@@ -57,7 +56,7 @@ class UpdateFaceLabel(ActionSet):
    simpler to spot inconsistencies and missing data updates.
    
    ## IsHanging and AboveHanging
-   
+   TODO: Outdated documentation
    IsHanging is a redundant information. If a face is hanging, it is not held
    persistently. Consequently, we get a createHangingFace() in each and every
    mesh traversal and hence know implicitly that the face is hanging. The flag
@@ -73,7 +72,7 @@ class UpdateFaceLabel(ActionSet):
    AboveHanging is historical information. If the mesh is just about to refine,
    then the flag might not be set even though we literally just add new 
    "subfaces". If a mesh coarsens, the flag might be set, even though we 
-   literally just remove the adjacen fine grid cells. If you need to know what
+   literally just remove the adjacent fine grid cells. If you need to know what
    happened in this very iteration, you can read out the flag NewAboveHanging,
    but this one is only valid in touchFaceLastTime(), i.e. while we ascend in
    the tree.
@@ -118,15 +117,15 @@ class UpdateFaceLabel(ActionSet):
   fineGridFace{{FACE_LABEL_NAME}}.setOldTimeStamp( 0.0 );
 """
 
-    _Template_CreateHangingFace = """
+    _Template_TouchHangingFaceFirstTime = """
   fineGridFace{{FACE_LABEL_NAME}}.setUpdatedTimeStamp( 0.0 );
   fineGridFace{{FACE_LABEL_NAME}}.setNewTimeStamp( 0.0 );
   fineGridFace{{FACE_LABEL_NAME}}.setOldTimeStamp( 0.0 );
-  fineGridFace{{FACE_LABEL_NAME}}.setIsHanging( true );
+  fineGridFace{{FACE_LABEL_NAME}}.setIsHanging(true);
   coarseGridFaces{{FACE_LABEL_NAME}}(marker.getSelectedFaceNumber()).setNewAboveHanging( true );
 """
 
-    _Template_DestroyHangingFace = """
+    _Template_TouchHangingFaceLastTime = """
 """
 
     _Template_TouchFaceLastTime = """
@@ -145,19 +144,20 @@ class UpdateFaceLabel(ActionSet):
         d = {}
         d["FACE_LABEL_NAME"] = UpdateFaceLabel.get_attribute_name(self._solver_name)
 
-        if (
-            operation_name == ActionSet.OPERATION_CREATE_PERSISTENT_FACE
-            or operation_name == ActionSet.OPERATION_CREATE_HANGING_FACE
-        ):
+        if operation_name == ActionSet.OPERATION_CREATE_FACE:
             result = jinja2.Template(self._Template_CreateFace).render(**d)
-        if operation_name == ActionSet.OPERATION_CREATE_HANGING_FACE:
-            result = jinja2.Template(self._Template_CreateHangingFace).render(**d)
         if operation_name == ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
             result = jinja2.Template(self._Template_TouchFaceFirstTime).render(**d)
         if operation_name == ActionSet.OPERATION_TOUCH_FACE_LAST_TIME:
             result = jinja2.Template(self._Template_TouchFaceLastTime).render(**d)
-        if operation_name == ActionSet.OPERATION_DESTROY_HANGING_FACE:
-            result = jinja2.Template(self._Template_DestroyHangingFace).render(**d)
+        if operation_name == ActionSet.OPERATION_TOUCH_HANGING_FACE_FIRST_TIME:
+            result = jinja2.Template(self._Template_TouchHangingFaceFirstTime).render(
+                **d
+            )
+        if operation_name == ActionSet.OPERATION_TOUCH_HANGING_FACE_LAST_TIME:
+            result = jinja2.Template(self._Template_TouchHangingFaceLastTime).render(
+                **d
+            )
 
         return result
 

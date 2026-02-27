@@ -39,8 +39,7 @@ public:
   virtual void initialCondition(
     double* NOALIAS Q,
     const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeH,
-    bool                                         gridIsConstructed
+    const tarch::la::Vector<DIMENSIONS, double>& volumeH
   ) override;
 
   /**

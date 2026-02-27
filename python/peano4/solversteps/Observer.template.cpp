@@ -5,11 +5,11 @@
 {{DATAREPOSITORY_INCLUDES}}
 
 #include "peano4/grid/PeanoCurve.h"
-#include "peano4/datamanagement/VertexEnumerator.h"
-#include "peano4/datamanagement/VertexMarker.h"
+#include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceEnumerator.h"
 #include "peano4/datamanagement/FaceMarker.h"
-#include "peano4/datamanagement/CellMarker.h"
+#include "peano4/datamanagement/VertexEnumerator.h"
+#include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/parallel/SpacetreeSet.h"
 
 #include "tarch/Assertions.h"
@@ -86,6 +86,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::beginTraversal(const tarch::la::Vector<DIMENS
   // statements, a top(1) call would raise an assertion.
   //
   repositories::DataRepository::DataKey key(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
+  repositories::DataRepository::DataKey keyIn(_spacetreeId, 1); // TODO: Use pre-defined input/output stack numbers
+  repositories::DataRepository::DataKey keyOut(_spacetreeId, 2);
 
 {%- for cell in CELLS %}
   repositories::DataRepository::{{ cell.logical_type_name }}Stack.getForPush(key)->pushBlock(1);
@@ -93,10 +95,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::beginTraversal(const tarch::la::Vector<DIMENS
 
 {%- for face in FACES %}
   repositories::DataRepository::{{ face.logical_type_name }}Stack.getForPush(key)->pushBlock(TWO_TIMES_D);
+  repositories::DataRepository::{{ face.logical_type_name }}HangingStack.getForPush(keyIn);
+  repositories::DataRepository::{{ face.logical_type_name }}HangingStack.getForPush(keyOut);
 {%- endfor %}
 
 {%- for vertex in VERTICES %}
   repositories::DataRepository::{{ vertex.logical_type_name }}Stack.getForPush(key)->pushBlock(TWO_POWER_D);
+  repositories::DataRepository::{{ vertex.logical_type_name }}HangingStack.getForPush(keyIn);
+  repositories::DataRepository::{{ vertex.logical_type_name }}HangingStack.getForPush(keyOut);
 {%- endfor %}
 
   logTraceOutWith2Arguments("beginTraversal()", x, h);
@@ -133,36 +139,30 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterNode(const ::peano4::grid::GridTraversal
     const bool isLocal = vertexMarker.isLocal();
     if (not isLocal) { continue; }
 
-    const bool isCreatePersistent = inVertexStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyPersistentGridEntity;
-    const bool isCreateHanging    = inVertexStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyHangingGridEntity;
+    const bool isCreateOrDestroy  = inVertexStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
+    const bool isHanging          = vertexMarker.isHanging();
     const bool isInOut            = ::peano4::grid::PeanoCurve::isInOutStack(inVertexStack);
 
-    if (isCreatePersistent) {
+    if (isCreateOrDestroy) {
 {%- for action_set in ACTIVE_ACTION_SETS %}
-      {{action_set.name}}.createPersistentVertex(vertexMarker,
-{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}(pick), {%- endfor %}
-{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
-{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
-{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
-      );
-
-      {{action_set.name}}.touchVertexFirstTime(vertexMarker,
+      {{action_set.name}}.createVertex(vertexMarker,
 {%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}(pick), {%- endfor %}
 {%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
 {%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
 {%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
       );
 {%- endfor %}
-    } else if (isCreateHanging) {
+    }
+    if (isHanging and (isCreateOrDestroy or isInOut)) {
 {%- for action_set in ACTIVE_ACTION_SETS %}
-      {{action_set.name}}.createHangingVertex(vertexMarker,
+      {{action_set.name}}.touchHangingVertexFirstTime(vertexMarker,
 {%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}(pick), {%- endfor %}
 {%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
 {%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
 {%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
       );
 {%- endfor %}
-    } else if (isInOut) {
+    } else if (isCreateOrDestroy or isInOut) {
 {%- for action_set in ACTIVE_ACTION_SETS %}
       {{action_set.name}}.touchVertexFirstTime(vertexMarker,
 {%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}(pick), {%- endfor %}
@@ -185,21 +185,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterNode(const ::peano4::grid::GridTraversal
     const bool isLocal = faceMarker.isLocal();
     if (not isLocal) { continue; }
 
-    const bool isCreatePersistent = inFaceStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyPersistentGridEntity;
-    const bool isCreateHanging    = inFaceStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyHangingGridEntity;
+    const bool isCreateOrDestroy  = inFaceStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
+    const bool isHanging          = faceMarker.isHanging();
     const bool isInOut            = ::peano4::grid::PeanoCurve::isInOutStack(inFaceStack);
 
-    if (isCreatePersistent) {
+    if (isCreateOrDestroy) {
 {%- for action_set in ACTIVE_ACTION_SETS %}
-      {{action_set.name}}.createPersistentFace(faceMarker,
-{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
-{%- for face in FACES %} fineGrid{{ face.logical_type_name }}(pick), {%- endfor %}
-{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
-{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
-{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
-      );
-
-      {{action_set.name}}.touchFaceFirstTime(faceMarker,
+      {{action_set.name}}.createFace(faceMarker,
 {%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
 {%- for face in FACES %} fineGrid{{ face.logical_type_name }}(pick), {%- endfor %}
 {%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
@@ -207,9 +199,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterNode(const ::peano4::grid::GridTraversal
 {%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
       );
 {%- endfor %}
-    } else if (isCreateHanging) {
+    }
+    if (isHanging and (isCreateOrDestroy or isInOut)) {
 {%- for action_set in ACTIVE_ACTION_SETS %}
-      {{action_set.name}}.createHangingFace(faceMarker,
+      {{action_set.name}}.touchHangingFaceFirstTime(faceMarker,
 {%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
 {%- for face in FACES %} fineGrid{{ face.logical_type_name }}(pick), {%- endfor %}
 {%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
@@ -217,7 +210,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterNode(const ::peano4::grid::GridTraversal
 {%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
       );
 {%- endfor %}
-    } else if (isInOut) {
+    } else if (isCreateOrDestroy or isInOut) {
 {%- for action_set in ACTIVE_ACTION_SETS %}
       {{action_set.name}}.touchFaceFirstTime(faceMarker,
 {%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
@@ -236,7 +229,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterNode(const ::peano4::grid::GridTraversal
   const bool cellIsLocal = cellMarker.isLocal();
   if (cellIsLocal) {
     const int cellData = event.getCellData();
-    const bool cellCreatePersistent = cellData == ::peano4::grid::GridTraversalObserver::CreateOrDestroyPersistentGridEntity;
+    const bool cellCreatePersistent = cellData == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
     if (cellCreatePersistent) {
 {%- for action_set in ACTIVE_ACTION_SETS %}
       {{action_set.name}}.createCell(cellMarker,
@@ -302,7 +295,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversal
 {%- endfor %}
 
     const int cellData = event.getCellData();
-    if (cellData == ::peano4::grid::GridTraversalObserver::CreateOrDestroyPersistentGridEntity) {
+    if (cellData == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity) {
 {%- for action_set in ACTIVE_ACTION_SETS | reverse %}
       {{action_set.name}}.destroyCell(cellMarker,
 {%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
@@ -327,11 +320,21 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversal
     const bool isLocal = faceMarker.isLocal();
     if (not isLocal) { continue; }
 
-    const bool isCreatePersistent = outFaceStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyPersistentGridEntity;
-    const bool isCreateHanging    = outFaceStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyHangingGridEntity;
+    const bool isCreateOrDestroy  = outFaceStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
+    const bool isHanging          = faceMarker.isHanging();
     const bool isInOut            = ::peano4::grid::PeanoCurve::isInOutStack(outFaceStack);
 
-    if (isCreatePersistent) {
+    if (isHanging and (isInOut or isCreateOrDestroy)) {
+{%- for action_set in ACTIVE_ACTION_SETS | reverse %}
+      {{action_set.name}}.touchHangingFaceLastTime(faceMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} fineGrid{{ face.logical_type_name }}(pick), {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+      );
+{%- endfor %}
+    } else if (isInOut or isCreateOrDestroy) {
 {%- for action_set in ACTIVE_ACTION_SETS | reverse %}
       {{action_set.name}}.touchFaceLastTime(faceMarker,
 {%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
@@ -340,27 +343,11 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversal
 {%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
 {%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
       );
-      {{action_set.name}}.destroyPersistentFace(faceMarker,
-{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
-{%- for face in FACES %} fineGrid{{ face.logical_type_name }}(pick), {%- endfor %}
-{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
-{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
-{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
-      );
 {%- endfor %}
-    } else if (isCreateHanging) {
+    }
+    if (isCreateOrDestroy) {
 {%- for action_set in ACTIVE_ACTION_SETS | reverse %}
-      {{action_set.name}}.destroyHangingFace(faceMarker,
-{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
-{%- for face in FACES %} fineGrid{{ face.logical_type_name }}(pick), {%- endfor %}
-{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
-{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
-{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
-      );
-{%- endfor %}
-    } else if (isInOut) {
-{%- for action_set in ACTIVE_ACTION_SETS | reverse %}
-      {{action_set.name}}.touchFaceLastTime(faceMarker,
+      {{action_set.name}}.destroyFace(faceMarker,
 {%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
 {%- for face in FACES %} fineGrid{{ face.logical_type_name }}(pick), {%- endfor %}
 {%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
@@ -382,11 +369,20 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversal
     const bool isLocal = vertexMarker.isLocal();
     if (not isLocal) { continue; }
 
-    const bool isCreatePersistent = outVertexStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyPersistentGridEntity;
-    const bool isCreateHanging    = outVertexStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyHangingGridEntity;
+    const bool isCreateOrDestroy  = outVertexStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
+    const bool isHanging          = vertexMarker.isHanging();
     const bool isInOut            = ::peano4::grid::PeanoCurve::isInOutStack(outVertexStack);
 
-    if (isCreatePersistent) {
+    if (isHanging and (isCreateOrDestroy or isInOut)) {
+{%- for action_set in ACTIVE_ACTION_SETS | reverse %}
+      {{action_set.name}}.touchHangingVertexLastTime(vertexMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}(pick), {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+      );
+{%- endfor %}
+    } else if (isCreateOrDestroy or isInOut) {
 {%- for action_set in ACTIVE_ACTION_SETS | reverse %}
       {{action_set.name}}.touchVertexLastTime(vertexMarker,
 {%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}(pick), {%- endfor %}
@@ -394,26 +390,11 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversal
 {%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
 {%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
       );
-
-      {{action_set.name}}.destroyPersistentVertex(vertexMarker,
-{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}(pick), {%- endfor %}
-{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
-{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
-{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
-      );
 {%- endfor %}
-    } else if (isCreateHanging) {
+    }
+    if (isCreateOrDestroy) {
 {%- for action_set in ACTIVE_ACTION_SETS | reverse %}
-      {{action_set.name}}.destroyHangingVertex(vertexMarker,
-{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}(pick), {%- endfor %}
-{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
-{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
-{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
-      );
-{%- endfor %}
-    } else if (isInOut) {
-{%- for action_set in ACTIVE_ACTION_SETS | reverse %}
-      {{action_set.name}}.touchVertexLastTime(vertexMarker,
+      {{action_set.name}}.destroyVertex(vertexMarker,
 {%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}(pick), {%- endfor %}
 {%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
 {%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
@@ -474,36 +455,60 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadVertexData(const ::peano4::grid::GridTrav
   for (int i = 0; i < TWO_POWER_D; i++) {
     const int inVertexStack          = event.getVertexDataFrom(i);
     const int outVertexStackPosition = event.getVertexDataTo(i);
-    const bool isInOutStack          = ::peano4::grid::PeanoCurve::isInOutStack(inVertexStack);
-
-    const bool isCreateOrDestroy = inVertexStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyPersistentGridEntity or
-                                   inVertexStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyHangingGridEntity;
-    const bool isNoData          = inVertexStack == ::peano4::grid::GridTraversalObserver::NoData;
-
-    const bool dataResidesOnIntermediateStack       = not isInOutStack and not isCreateOrDestroy and not isNoData;
-    const bool initialiseNewStackContentWithData    = isCreateOrDestroy;
-    const bool initialiseNewStackContentWithoutData = isNoData;
 
     ::peano4::datamanagement::VertexMarker vertexMarker(event, outVertexStackPosition);
+
+    const bool isHangingVertex   = vertexMarker.isHanging();
+    const bool isInOutStack      = ::peano4::grid::PeanoCurve::isInOutStack(inVertexStack);
+    const bool isCreateOrDestroy = inVertexStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
+    const bool isNoData          = inVertexStack == ::peano4::grid::GridTraversalObserver::NoData;
+    const bool isTemporaryStack  = not (isInOutStack or isCreateOrDestroy or isNoData);
+
     repositories::DataRepository::DataKey vertexKeyIn(_spacetreeId, inVertexStack);
 
 {%- for vertex in VERTICES %}
     // Load vertex {{vertex.logical_type_name}}
     {
       const auto flag           = {{vertex.full_qualified_type}}::loadStoreComputeFlag(vertexMarker);
-      const bool computeOnData  = ::peano4::grid::computeOnData(flag);
       const bool loadData       = ::peano4::grid::loadPersistently(flag);
+      const bool computeOnData  = ::peano4::grid::computeOnData(flag);
 
-      if (dataResidesOnIntermediateStack or (isInOutStack and loadData)) {
-        auto* _pop = repositories::DataRepository::{{vertex.logical_type_name}}Stack.getForPop(vertexKeyIn);
-        assertion(not _pop->empty());
-        pushBlock{{vertex.logical_type_name}}.set(outVertexStackPosition, _pop->pop());
-      } else if (initialiseNewStackContentWithoutData or not computeOnData) {
-        // Do nothing as we have already pushed the block and emplaced entities without any data
-      } else if (initialiseNewStackContentWithData or computeOnData) {
+      if (isHangingVertex) {
+        if (loadData) {
+          // If this is a newly created hanging vertex
+          if (isCreateOrDestroy) {
+            pushBlock{{vertex.logical_type_name}}.emplace_default(outVertexStackPosition);
+          } else if (isInOutStack) {
+            auto* _pop = repositories::DataRepository::{{vertex.logical_type_name}}HangingStack.getForPop(vertexKeyIn);
+            if (not _pop->empty()) {
+              pushBlock{{vertex.logical_type_name}}.set(outVertexStackPosition, _pop->pop());
+            } else {
+              pushBlock{{vertex.logical_type_name}}.emplace_default(outVertexStackPosition);
+            }
+          } else {
+            // Ignore
+          }
+        } else if (computeOnData) {
+          pushBlock{{vertex.logical_type_name}}.emplace_default(outVertexStackPosition);
+        } else {
+          // Ignore
+        }
+      } else if (isCreateOrDestroy) {
+        // Newly created persistent (non-hanging) vertex: initialise only if required
         pushBlock{{vertex.logical_type_name}}.emplace_default(outVertexStackPosition);
-      } else { // TODO: When does this happen? Document this!
-        // Unused grid entity: Do nothing
+      } else if (isNoData) {
+        // Do nothing
+      } else {
+        // Existing stack (temporary or in/out)
+        if (isTemporaryStack or (isInOutStack and loadData)) {
+          auto* _pop = repositories::DataRepository::{{vertex.logical_type_name}}Stack.getForPop(vertexKeyIn);
+          assertion(not _pop->empty());
+          pushBlock{{vertex.logical_type_name}}.set(outVertexStackPosition, _pop->pop());
+        } else if (computeOnData) {
+          pushBlock{{vertex.logical_type_name}}.emplace_default(outVertexStackPosition);
+        } else {
+          // Ignore
+        }
       }
     }
 {%- endfor %}
@@ -525,29 +530,47 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeVertexData(const ::peano4::grid::GridTra
   for (int i = 0; i < TWO_POWER_D; i++) {
     const int inVertexStackPosition   = event.getVertexDataFrom(i);
     const int outVertexStack          = event.getVertexDataTo(i);
-    const bool isInOutStack           = ::peano4::grid::PeanoCurve::isInOutStack(outVertexStack);
-
-    const bool isCreateOrDestroy = outVertexStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyPersistentGridEntity or
-                                   outVertexStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyHangingGridEntity;
-    const bool isNoData          = outVertexStack == ::peano4::grid::GridTraversalObserver::NoData;
-
-    const bool dataShallBePushedOntoIntermediateStack = not isInOutStack and not isCreateOrDestroy and not isNoData;
 
     ::peano4::datamanagement::VertexMarker vertexMarker(event, inVertexStackPosition);
+
+    const bool isHangingVertex   = vertexMarker.isHanging();
+    const bool isInOutStack      = ::peano4::grid::PeanoCurve::isInOutStack(outVertexStack);
+    const bool isCreateOrDestroy = outVertexStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
+    const bool isNoData          = outVertexStack == ::peano4::grid::GridTraversalObserver::NoData;
+    const bool isTemporaryStack  = not (isInOutStack or isCreateOrDestroy or isNoData);
+
     repositories::DataRepository::DataKey vertexKeyOut(_spacetreeId, outVertexStack);
 
 {%- for vertex in VERTICES | reverse %}
-    // Load vertex {{vertex.logical_type_name}}
+    // Store vertex {{vertex.logical_type_name}}
     {
-      const auto flag       = {{vertex.full_qualified_type}}::loadStoreComputeFlag(vertexMarker);
-      const bool storeData  = ::peano4::grid::storePersistently(flag);
+      const bool storeData  = ::peano4::grid::storePersistently({{vertex.full_qualified_type}}::loadStoreComputeFlag(vertexMarker));
 
-      if (dataShallBePushedOntoIntermediateStack or (isInOutStack and storeData)) {
-        auto& data = popBlock{{vertex.logical_type_name}}.get(inVertexStackPosition);
-        auto* _push = repositories::DataRepository::{{vertex.logical_type_name}}Stack.getForPush(vertexKeyOut);
-        _push->push(std::move(data));
+      if (isHangingVertex) {
+        if (storeData) {
+          if (isCreateOrDestroy) {
+            // Discard
+          } else if (isInOutStack) {
+            auto& data  = popBlock{{vertex.logical_type_name}}.get(inVertexStackPosition);
+            auto* _push = repositories::DataRepository::{{vertex.logical_type_name}}HangingStack.getForPush(vertexKeyOut);
+            _push->push(std::move(data));
+          } else {
+            // Discard
+          }
+        } else {
+          // Discard
+        }
+      } else if (isCreateOrDestroy or isNoData) {
+        // Discard
       } else {
-        // Unused grid entity: Do nothing
+        // Existing Stack (Temporary or In/Out)
+        if (isTemporaryStack or (isInOutStack and storeData)) {
+          auto& data  = popBlock{{vertex.logical_type_name}}.get(inVertexStackPosition);
+          auto* _push = repositories::DataRepository::{{vertex.logical_type_name}}Stack.getForPush(vertexKeyOut);
+          _push->push(std::move(data));
+        } else {
+          // Discard
+        }
       }
     }
 {%- endfor %}
@@ -614,37 +637,61 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadFaceData(const ::peano4::grid::GridTraver
   for (int i = 0; i < TWO_TIMES_D; i++) {
     const int inFaceStack           = event.getFaceDataFrom(i);
     const int outFaceStackPosition  = event.getFaceDataTo(i);
-    const bool isInOutStack         = ::peano4::grid::PeanoCurve::isInOutStack(inFaceStack);
-
-    const bool isCreateOrDestroy = inFaceStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyPersistentGridEntity or
-                                   inFaceStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyHangingGridEntity;
-    const bool isNoData          = inFaceStack == ::peano4::grid::GridTraversalObserver::NoData;
-
-    const bool dataResidesOnIntermediateStack       = not isInOutStack and not isCreateOrDestroy and not isNoData;
-    const bool initialiseNewStackContentWithData    = isCreateOrDestroy;
-    const bool initialiseNewStackContentWithoutData = isNoData;
 
     ::peano4::datamanagement::FaceMarker faceMarker = event.getFaceMarker();
     faceMarker.select(outFaceStackPosition);
+
+    const bool isHangingFace        = faceMarker.isHanging();
+    const bool isInOutStack         = ::peano4::grid::PeanoCurve::isInOutStack(inFaceStack);
+    const bool isCreateOrDestroy    = inFaceStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
+    const bool isNoData             = inFaceStack == ::peano4::grid::GridTraversalObserver::NoData;
+    const bool isTemporaryStack     = not (isInOutStack or isCreateOrDestroy or isNoData);
+
     repositories::DataRepository::DataKey faceKeyIn(_spacetreeId, inFaceStack);
 
 {%- for face in FACES %}
     // Load face {{face.logical_type_name}}
     {
       const auto flag           = {{face.full_qualified_type}}::loadStoreComputeFlag(faceMarker);
-      const bool computeOnData  = ::peano4::grid::computeOnData(flag);
       const bool loadData       = ::peano4::grid::loadPersistently(flag);
+      const bool computeOnData  = ::peano4::grid::computeOnData(flag);
 
-      if (dataResidesOnIntermediateStack or (isInOutStack and loadData)) {
-        auto* _pop = repositories::DataRepository::{{face.logical_type_name}}Stack.getForPop(faceKeyIn);
-        assertion(not _pop->empty());
-        pushBlock{{face.logical_type_name}}.set(outFaceStackPosition, _pop->pop());
-      } else if (initialiseNewStackContentWithoutData or not computeOnData) {
-        // Do nothing as we have already pushed the block and emplaced entities without any data
-      } else if (initialiseNewStackContentWithData or computeOnData) {
+      if (isHangingFace) {
+        if (loadData) {
+          if (isCreateOrDestroy) {
+            pushBlock{{face.logical_type_name}}.emplace_default(outFaceStackPosition);
+          } else if (isInOutStack) {
+            auto* _pop = repositories::DataRepository::{{face.logical_type_name}}HangingStack.getForPop(faceKeyIn);
+            if (not _pop->empty()) {
+              pushBlock{{face.logical_type_name}}.set(outFaceStackPosition, _pop->pop());
+            } else {
+              pushBlock{{face.logical_type_name}}.emplace_default(outFaceStackPosition);
+            }
+          } else {
+            // Ignore
+          }
+        } else if (computeOnData) {
+          pushBlock{{face.logical_type_name}}.emplace_default(outFaceStackPosition);
+        } else {
+          // Ignore
+        }
+      } else if (isCreateOrDestroy) {
+        // Push with new data
         pushBlock{{face.logical_type_name}}.emplace_default(outFaceStackPosition);
-      } else { // TODO: When does this happen? Document this!
-        // Unused grid entity: Do nothing
+      } else if (isNoData) {
+        // Do nothing as we have already pushed the block and emplaced entities without any data
+      } else {
+        // Existing Stack (Temporary or In/Out)
+        if (isTemporaryStack or (isInOutStack and loadData)) {
+          auto* _pop = repositories::DataRepository::{{face.logical_type_name}}Stack.getForPop(faceKeyIn);
+          assertion(not _pop->empty());
+          pushBlock{{face.logical_type_name}}.set(outFaceStackPosition, _pop->pop());
+        } else if (computeOnData) {
+          // We are on an In/Out stack but do not load data. However, we need a valid instance in memory to compute on.
+          pushBlock{{face.logical_type_name}}.emplace_default(outFaceStackPosition);
+        } else {
+          // Ignore
+        }
       }
     }
 {%- endfor %}
@@ -664,32 +711,50 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeFaceData(const ::peano4::grid::GridTrave
 {%- endfor %}
 
   for (int i = 0; i < TWO_TIMES_D; i++) {
-    const int inFaceStackPosition  = event.getFaceDataFrom(i);
-    const int outFaceStack         = event.getFaceDataTo(i);
-    const bool isInOutStack        = ::peano4::grid::PeanoCurve::isInOutStack(outFaceStack);
-
-    const bool isCreateOrDestroy = outFaceStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyPersistentGridEntity or
-                                   outFaceStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyHangingGridEntity;
-    const bool isNoData          = outFaceStack == ::peano4::grid::GridTraversalObserver::NoData;
-
-    const bool dataShallBePushedOntoIntermediateStack = not isInOutStack and not isCreateOrDestroy and not isNoData;
+    const int inFaceStackPosition   = event.getFaceDataFrom(i);
+    const int outFaceStack          = event.getFaceDataTo(i);
 
     ::peano4::datamanagement::FaceMarker faceMarker = event.getFaceMarker();
     faceMarker.select(inFaceStackPosition);
+
+    const bool isHangingFace        = faceMarker.isHanging();
+    const bool isInOutStack         = ::peano4::grid::PeanoCurve::isInOutStack(outFaceStack);
+    const bool isCreateOrDestroy    = outFaceStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
+    const bool isNoData             = outFaceStack == ::peano4::grid::GridTraversalObserver::NoData;
+    const bool isTemporaryStack     = not (isInOutStack or isCreateOrDestroy or isNoData);
+
     repositories::DataRepository::DataKey faceKeyOut(_spacetreeId, outFaceStack);
 
 {%- for face in FACES | reverse %}
     // Store face {{face.logical_type_name}}
     {
-      const auto flag       = {{face.full_qualified_type}}::loadStoreComputeFlag(faceMarker);
-      const bool storeData  = ::peano4::grid::storePersistently(flag);
+      const bool storeData = ::peano4::grid::storePersistently({{face.full_qualified_type}}::loadStoreComputeFlag(faceMarker));
 
-      if (dataShallBePushedOntoIntermediateStack or (isInOutStack and storeData)) {
-        auto& data = popBlock{{face.logical_type_name}}.get(inFaceStackPosition);
-        auto* _push = repositories::DataRepository::{{face.logical_type_name}}Stack.getForPush(faceKeyOut);
-        _push->push(std::move(data));
+      if (isHangingFace) {
+        if (storeData) {
+          if (isCreateOrDestroy) {
+            // Discard
+          } else if (isInOutStack) {
+            auto& data = popBlock{{face.logical_type_name}}.get(inFaceStackPosition);
+            auto* _push = repositories::DataRepository::{{face.logical_type_name}}HangingStack.getForPush(faceKeyOut);
+            _push->push(std::move(data));
+          } else {
+            // Discard
+          }
+        } else {
+          // Discard
+        }
+      } else if (isCreateOrDestroy or isNoData) {
+        // Discard
       } else {
-        // Unused grid entity: Do nothing
+        // Existing Stack (Temporary or In/Out)
+        if (isTemporaryStack or (isInOutStack and storeData)) {
+          auto& data = popBlock{{face.logical_type_name}}.get(inFaceStackPosition);
+          auto* _push = repositories::DataRepository::{{face.logical_type_name}}Stack.getForPush(faceKeyOut);
+          _push->push(std::move(data));
+        } else {
+          // Discard
+        }
       }
     }
 {%- endfor %}
@@ -751,16 +816,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadCellData(const ::peano4::grid::GridTraver
 
   repositories::DataRepository::DataKey keyOut(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
-  const int inCellStack = event.getCellData();
   ::peano4::datamanagement::CellMarker cellMarker = event.getCellMarker();
-  repositories::DataRepository::DataKey cellKeyIn(_spacetreeId, inCellStack);
 
-  const bool isCreateOrDestroy  = inCellStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyPersistentGridEntity;
+  const int inCellStack         = event.getCellData();
+  const bool isCreateOrDestroy  = inCellStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
   const bool isNoData           = inCellStack == ::peano4::grid::GridTraversalObserver::NoData;
+  const bool isTemporaryStack   = not (isCreateOrDestroy or isNoData);
 
-  const bool dataResidesOnInputStack              = not isCreateOrDestroy and not isNoData;
-  const bool initialiseNewStackContentWithData    = isCreateOrDestroy;
-  const bool initialiseNewStackContentWithoutData = isNoData;
+  repositories::DataRepository::DataKey cellKeyIn(_spacetreeId, inCellStack);
 
 {%- for cell in CELLS %}
   // Load cell {{cell.logical_type_name}}
@@ -768,19 +831,19 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadCellData(const ::peano4::grid::GridTraver
     auto pushBlock = repositories::DataRepository::{{cell.logical_type_name}}Stack.getForPush(keyOut)->pushBlock(1);
 
     const auto flag           = {{cell.full_qualified_type}}::loadStoreComputeFlag(cellMarker);
-    const bool computeOnData  = ::peano4::grid::computeOnData(flag);
     const bool loadData       = ::peano4::grid::loadPersistently(flag);
+    const bool computeOnData  = ::peano4::grid::computeOnData(flag);
 
-    if (dataResidesOnInputStack and loadData) {
+    if (isTemporaryStack and loadData) {
       auto* _pop = repositories::DataRepository::{{cell.logical_type_name}}Stack.getForPop(cellKeyIn);
       assertion(not _pop->empty());
       pushBlock.set(0, _pop->pop());
-    } else if (initialiseNewStackContentWithoutData or not computeOnData) {
+    } else if (isNoData or not computeOnData) {
       // Do nothing as we have already pushed the block and emplaced entities without any data
-    } else if (initialiseNewStackContentWithData or computeOnData) {
+    } else if (isCreateOrDestroy or computeOnData) {
       pushBlock.emplace_default(0);
     } else {
-      // Unused grid entity: Do nothing
+      assertion(false);
     }
   }
 {%- endfor %}
@@ -794,30 +857,30 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeCellData(const ::peano4::grid::GridTrave
 
   repositories::DataRepository::DataKey keyIn(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
-  const int outCellStack = event.getCellData();
-  const bool isInOutStack = ::peano4::grid::PeanoCurve::isInOutStack(outCellStack);
   ::peano4::datamanagement::CellMarker cellMarker = event.getCellMarker();
-  repositories::DataRepository::DataKey cellKeyOut(_spacetreeId, outCellStack);
 
-  const bool isCreateOrDestroy  = outCellStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyPersistentGridEntity;
+  const int outCellStack        = event.getCellData();
+  const bool isInOutStack       = ::peano4::grid::PeanoCurve::isInOutStack(outCellStack);
+  const bool isCreateOrDestroy  = outCellStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
   const bool isNoData           = outCellStack == ::peano4::grid::GridTraversalObserver::NoData;
+  const bool isTemporaryStack   = not (isInOutStack or isCreateOrDestroy or isNoData);
 
-  const bool dataShallBePushedOntoIntermediateStack = not isInOutStack and not isCreateOrDestroy and not isNoData;
+  repositories::DataRepository::DataKey cellKeyOut(_spacetreeId, outCellStack);
 
 {%- for cell in CELLS | reverse %}
   // Store cell {{cell.logical_type_name}}
   {
     auto popBlock = repositories::DataRepository::{{cell.logical_type_name}}Stack.getForPop(keyIn)->popBlock(1);
 
-    const auto flag       = {{cell.full_qualified_type}}::loadStoreComputeFlag(cellMarker);
-    const bool storeData  = ::peano4::grid::storePersistently(flag);
+    const bool storeData = ::peano4::grid::storePersistently({{cell.full_qualified_type}}::loadStoreComputeFlag(cellMarker));
 
-    if (dataShallBePushedOntoIntermediateStack or (isInOutStack and storeData)) {
+    if (isTemporaryStack or (isInOutStack and storeData)) {
       auto& data = popBlock.get(0);
       auto* _push = repositories::DataRepository::{{cell.logical_type_name}}Stack.getForPush(cellKeyOut);
       _push->push(std::move(data));
     } else {
-      // Unused grid entity: Do nothing
+      // Entities that are not leaves are ignored
+      // assertion(false);
     }
   }
 {%- endfor %}
@@ -917,10 +980,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromSplittingTreeToNewTree(int newW
 
 {%- for face in FACES %}
   ::peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(repositories::DataRepository::{{face.logical_type_name}}Stack, _spacetreeId, newWorker);
+  ::peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(repositories::DataRepository::{{face.logical_type_name}}HangingStack, _spacetreeId, newWorker);
 {%- endfor %}
 
 {%- for vertex in VERTICES %}
   ::peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(repositories::DataRepository::{{vertex.logical_type_name}}Stack, _spacetreeId, newWorker);
+  ::peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(repositories::DataRepository::{{vertex.logical_type_name}}HangingStack, _spacetreeId, newWorker);
 {%- endfor %}
 
   logTraceOut("streamDataFromSplittingTreeToNewTree()");
@@ -936,10 +1001,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromJoiningTreeToMasterTree(int mas
 
 {%- for face in FACES %}
   ::peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(repositories::DataRepository::{{face.logical_type_name}}Stack, _spacetreeId, master);
+  ::peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(repositories::DataRepository::{{face.logical_type_name}}HangingStack, _spacetreeId, master);
 {%- endfor %}
 
 {%- for vertex in VERTICES %}
   ::peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(repositories::DataRepository::{{vertex.logical_type_name}}Stack, _spacetreeId, master);
+  ::peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(repositories::DataRepository::{{vertex.logical_type_name}}HangingStack, _spacetreeId, master);
 {%- endfor %}
 
   logTraceOut("streamDataFromJoiningTreeToMasterTree()");
@@ -955,10 +1022,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::finishAllOutstandingSendsAndReceives() {
 
 {%- for face in FACES %}
   ::peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(repositories::DataRepository::{{face.logical_type_name}}Stack, _spacetreeId);
+  ::peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(repositories::DataRepository::{{face.logical_type_name}}HangingStack, _spacetreeId);
 {%- endfor %}
 
 {%- for vertex in VERTICES %}
   ::peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(repositories::DataRepository::{{vertex.logical_type_name}}Stack, _spacetreeId);
+  ::peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(repositories::DataRepository::{{vertex.logical_type_name}}HangingStack, _spacetreeId);
 {%- endfor %}
 
   logTraceOut("finishAllOutstandingSendsAndReceives()");
@@ -974,6 +1043,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
 
 {%- for face in FACES %}
   ::peano4::parallel::SpacetreeSet::deleteAllStacks(repositories::DataRepository::{{face.logical_type_name}}Stack, _spacetreeId);
+  ::peano4::parallel::SpacetreeSet::deleteAllStacks(repositories::DataRepository::{{face.logical_type_name}}HangingStack, _spacetreeId);
 {%- endfor %}
 
 {%- for vertex in VERTICES %}

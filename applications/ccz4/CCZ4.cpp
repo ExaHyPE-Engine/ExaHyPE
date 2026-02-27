@@ -143,11 +143,8 @@ applications::exahype2::ccz4::CCZ4::CCZ4() {
 void applications::exahype2::ccz4::CCZ4::initialCondition(
   double * NOALIAS Q,
   const tarch::la::Vector<DIMENSIONS,double>&  volumeX,
-  const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
-  bool                                         gridIsConstructed
+  const tarch::la::Vector<DIMENSIONS,double>&  volumeH
 ) {
-  logTraceInWith3Arguments( "initialCondition(...)", volumeX, volumeH, gridIsConstructed );
-
   if ( Scenario==0 ) {
     applications::exahype2::ccz4::gaugeWave(Q, volumeX, 0);
   }
@@ -163,8 +160,7 @@ void applications::exahype2::ccz4::CCZ4::initialCondition(
   #ifdef IncludeTwoPunctures
   else if ( Scenario==2 ) {
 
-   // We use the bool to trigger the hgh res interpolation once the grid is constructed
-    applications::exahype2::ccz4::ApplyTwoPunctures(Q, volumeX, 0, _tp, not gridIsConstructed); //we interpolate for real IC here.
+    applications::exahype2::ccz4::ApplyTwoPunctures(Q, volumeX, 0, _tp, false); //we interpolate for real IC here.
   }
   #endif
   else {
@@ -178,7 +174,6 @@ void applications::exahype2::ccz4::CCZ4::initialCondition(
   for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;
   }
-  logTraceOut( "initialCondition(...)" );
 }
 
 

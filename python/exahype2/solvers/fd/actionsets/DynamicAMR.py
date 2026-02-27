@@ -4,32 +4,11 @@ import peano4
 import exahype2
 import jinja2
 
-
 import peano4.toolbox.blockstructured.DynamicAMR
 
 
 class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
-    """
-
-    The ExaHyPE 2 Finite Volume handling of (dynamically) adaptive meshes
-
-    This class is basically a plain copy of the DynamicAMR action set
-    from the toolbox. However, we have to ensure that we also set the
-    update markers appropriately such that restricted data are taken
-    into account. This action set thus has to be studied in combination
-    with the ProjectPatchOntoFaces action set which is very similar and
-    also enriches the toolbox version by this marker aspect.
-
-    """
-
     def __init__(self, solver, interpolation, restriction):
-        """
-        Construct object
-
-        Please consult exahype2.solvers.rkfd.actionsets.DynamicAMR's class
-        documentation of details.
-
-        """
         super(DynamicAMR, self).__init__(
             patch=solver._patch,
             patch_overlap_interpolation=solver._patch_overlap_old,
@@ -62,16 +41,8 @@ class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
             "coarseGridFaces" + solver._name
         )
 
-        """
-    
-    Touch first time does nothing proper. It simply clears the halo
-    layer.
-    
-    """
         self._Template_TouchFaceFirstTime = """
   if ( {{CLEAR_GUARD}} ) {
-    logTraceInWith2Arguments( "touchFaceFirstTime(...)", marker.toString(), "clear halo layer {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}" );
-    
     ::toolbox::blockstructured::clearHaloLayerAoS(
       marker,
       {{DOFS_PER_AXIS}},
@@ -79,24 +50,18 @@ class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
       {{UNKNOWNS}},
       {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}QUpdate.data()
     );
-
-    logTraceOut( "touchFaceFirstTime(...)" );
   }
 """
 
         """
-    
     Very similar to original toolbox's routine, but this one restricts
     into QUpdate, and leaves QOld and QNew unchanged. Furthermore to the
     actual data restriction, we also restrict the updated flag and the 
     time face's time stamp.
-    
     """
-        self._Template_DestroyHangingFace = (
+        self._Template_TouchHangingFaceLastTime = (
             """
-  if ( {{RESTRICT_GUARD}} ) {
-    logTraceInWith4Arguments( "destroyHangingFace(...)", "{{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}", "{{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}", marker.getSelectedFaceNumber(), marker.toString() );
-
+  if ({{RESTRICT_GUARD}}) {
     ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
@@ -118,17 +83,13 @@ class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
     coarseGridFaces"""
             + solver._face_label.name
             + """(marker.getSelectedFaceNumber()).setUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1,newTimeStamp);
-    
-    logTraceOut( "destroyHangingFace(...)" );
   }
 """
         )
 
-        self._Template_DestroyPersistentFace = (
-            """ 
+        self._Template_DestroyFace = (
+            """
   if ( not marker.isInteriorFaceWithinPatch() ) {
-    logTraceIn( "destroyPersistentFace(...)" );
-    
     ::toolbox::blockstructured::restrictHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
@@ -155,10 +116,10 @@ class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
       {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}QOld.data(),
       {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}QOld(marker.getSelectedFaceNumber()).data()
     );
-    
+
     // A coarse face might have been non-persistent before. So it might
     // not carry a valid boundary flag, and we have to re-analyse it and
-    // set it accordingly.    
+    // set it accordingly.
     tarch::la::Vector<DIMENSIONS, double> offset(DomainOffset);
     tarch::la::Vector<DIMENSIONS, double> size(DomainSize);
     bool isBoundary = false;
@@ -200,25 +161,19 @@ class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
             + solver._face_label.name
             + """(marker.getSelectedFaceNumber()).setUpdatedTimeStamp(i,updatedTimeStamp);
     }
-  
-    logTraceOut( "destroyPersistentFace(...)" );
   }
 """
         )
 
         """
-    
     Again, a 1:1 extension of the toolbox routine which interpolates both QOld
     and QNew. The clue here is that we treat the solution initialisation 
     separately: Here, we do not interpolate. We initialise using the solver's
     callback themselves.
-    
     """
-        self._Template_CreateHangingFace = (
+        self._Template_TouchHangingFaceFirstTime = (
             """
   if ( {{INTERPOLATE_GUARD}} ) {
-    logTraceInWith1Argument( "createHangingFace(...)", marker.toString() );
-
     ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
@@ -275,8 +230,6 @@ class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
             + """.setOldTimeStamp(leftRightEntry,coarseGridFaces"""
             + solver._face_label.name
             + """(marker.getSelectedFaceNumber()).getOldTimeStamp(leftRightEntry));
-
-    logTraceOut( "createHangingFace(...)" );
   }
   else if ( repositories::"""
             + solver.get_name_of_global_instance()
@@ -285,9 +238,6 @@ class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
             + """::SolverState::GridInitialisation ) {
     /*
      @todo Not required for FV, but compare to FD4 variant what has to be done throughout initialisation.
-
-    logTraceInWith1Argument( "createHangingFace(...)", marker.toString() );
-
     int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
     dfore(i, {{DOFS_PER_AXIS}}, normal, 0) {
       for( int j=0; j<2*{{OVERLAP}}; j++) {
@@ -327,8 +277,6 @@ class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
         );
       }
     }
-
-    logTraceOut( "createHangingFace(...)" );
     */
   }
 """
@@ -340,12 +288,9 @@ class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
     important that we initialise the time step sizes properly. As we deal
     with a persistent face, we set both the left and right time stamp from
     the coarse face.
-
     """
-        self._Template_CreatePersistentFace = (
+        self._Template_CreateFace = (
             """
-  logTraceInWith1Argument( "createPersistentFace(...)", marker.toString() );
-
   ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
@@ -376,7 +321,7 @@ class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
             + solver._name
             + """QNew.data()
   );
-  
+
   // It is important that we clear the halo layer. If we have two layers of 
   // AMR, the finest one will restrict into QUpdate (so it has to be properly
   // initialised as 0).
@@ -399,15 +344,11 @@ class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
             + """.setOldTimeStamp(coarseGridCell"""
             + solver._cell_label.name
             + """.getTimeStamp());
-  
-  logTraceOutWith1Argument( "createPersistentFace(...)", marker.toString() );
 """
         )
 
         self._Template_CreateCell = (
             """
-  logTraceIn( "createCell(...)" );
-
   ::toolbox::blockstructured::interpolateCell_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
@@ -437,15 +378,11 @@ class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
             + """.setTimeStepSize( coarseGridCell"""
             + solver._cell_label.name
             + """.getTimeStepSize() );
-
-  logTraceOut( "createCell(...)" );
 """
         )
 
         self._Template_DestroyCell = (
             """
-  logTraceInWith1Argument( "destroyCell(...)", marker.toString() );
-
   ::toolbox::blockstructured::restrictCell_AoS_{{RESTRICTION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
@@ -476,8 +413,6 @@ class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
             + """.setTimeStepSize( fineGridCell"""
             + solver._cell_label.name
             + """.getTimeStepSize() );
-
-  logTraceOut( "destroyCell(...)" );
 """
         )
 

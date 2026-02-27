@@ -315,7 +315,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
             result = self._Template_BeginTraversal.render(**self.d)
         if (
             self._drop_into_hanging_vertices
-            and operation_name == ActionSet.OPERATION_CREATE_HANGING_VERTEX
+            and operation_name == ActionSet.OPERATION_TOUCH_HANGING_VERTEX_FIRST_TIME
         ):
             result = self._Template_Drop.render(**self.d)
             result += self._Template_Sieve.render(**self.d)
@@ -326,7 +326,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
             result = self.__Template_ValidateParticleLevelAssociation.render(**self.d)
         if operation_name == ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
             result = self.__Template_ReassignAndLiftWithinCell.render(**self.d)
-        if operation_name == ActionSet.OPERATION_DESTROY_PERSISTENT_VERTEX:
+        if operation_name == ActionSet.OPERATION_DESTROY_VERTEX:
             result = self._Template_LiftAllParticles.render(**self.d)
         if operation_name == ActionSet.OPERATION_END_TRAVERSAL:
             result = self._Template_EndTraversal.render(**self.d)

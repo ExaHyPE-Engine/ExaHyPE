@@ -23,6 +23,7 @@ from exahype2.VariableShortcuts import VariableShortcuts
 
 from peano4.Logger import log
 
+
 class CellCenteredFiniteDifferences(object):
     """
     Abstract solver for patch-based finite differences
@@ -64,6 +65,7 @@ class CellCenteredFiniteDifferences(object):
                     0.0,0.0,0.0,0.0,1.0
             };" "" )
     """
+
     def __init__(
         self,
         name,
@@ -124,7 +126,9 @@ class CellCenteredFiniteDifferences(object):
         self._kernel_namespace = kernel_namespace
 
         self._plotter = peano4.plotter.HDF5PatchAMRPlotter
-        self._variable_shortcuts = VariableShortcuts(name, unknowns, auxiliary_variables)
+        self._variable_shortcuts = VariableShortcuts(
+            name, unknowns, auxiliary_variables
+        )
 
         if min_meshcell_h > max_meshcell_h:
             print(
@@ -138,7 +142,6 @@ class CellCenteredFiniteDifferences(object):
         self._solver_template_file_class_name = None
 
         self._action_set_initial_conditions = None
-        self._action_set_initial_conditions_for_grid_construction = None
         self._action_set_AMR = None
         self._action_set_AMR_commit_without_further_analysis = None
         self._action_set_handle_boundary = None
@@ -180,7 +183,9 @@ class CellCenteredFiniteDifferences(object):
         self._interpolation = "#error Not yet defined"
         self._restriction = "#error Not yet defined"
 
-        self._baseline_action_set_descend_invocation_order = baseline_action_set_descend_invocation_order
+        self._baseline_action_set_descend_invocation_order = (
+            baseline_action_set_descend_invocation_order
+        )
 
         self.create_data_structures()
         self.create_action_sets()
@@ -351,13 +356,13 @@ The finest mesh width of """
 
     def number_of_Runge_Kutta_steps(self):
         """!
-        
+
         Return number of steps required to realise the Runge-Kutta scheme
-        
+
         Delegate to ButcherTableau.RungeKutta_steps, which tells us for a given
-        polynomial order _rk_order how many Runge Kutta steps we have to 
+        polynomial order _rk_order how many Runge Kutta steps we have to
         employ.
-        
+
         """
         return RungeKutta_steps(self._rk_order)
 
@@ -427,12 +432,18 @@ The finest mesh width of """
         """
         self._patch = peano4.datamodel.Patch(
             (self._patch_size, self._patch_size, self._patch_size),
-            self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
+            self._variable_shortcuts.unknowns
+            + self._variable_shortcuts.auxiliary_variables,
             self._unknown_identifier(),
         )
         self._patch_reconstructed = peano4.datamodel.Patch(
-            (self._patch_size + 2 * self._overlap, self._patch_size + 2 * self._overlap, self._patch_size + 2 * self._overlap),
-            self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
+            (
+                self._patch_size + 2 * self._overlap,
+                self._patch_size + 2 * self._overlap,
+                self._patch_size + 2 * self._overlap,
+            ),
+            self._variable_shortcuts.unknowns
+            + self._variable_shortcuts.auxiliary_variables,
             self._unknown_identifier() + "Reconstructed",
         )
         self._patch_estimates = peano4.datamodel.Patch(
@@ -446,23 +457,24 @@ The finest mesh width of """
         )
         self._patch_overlap_old = peano4.datamodel.Patch(
             (2 * self._overlap, self._patch_size, self._patch_size),
-            self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
+            self._variable_shortcuts.unknowns
+            + self._variable_shortcuts.auxiliary_variables,
             self._unknown_identifier() + "Old",
         )
         self._patch_overlap_new = peano4.datamodel.Patch(
             (2 * self._overlap, self._patch_size, self._patch_size),
-            self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
+            self._variable_shortcuts.unknowns
+            + self._variable_shortcuts.auxiliary_variables,
             self._unknown_identifier() + "New",
         )
         self._patch_overlap_update = peano4.datamodel.Patch(
             (2 * self._overlap, self._patch_size, self._patch_size),
-            self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
+            self._variable_shortcuts.unknowns
+            + self._variable_shortcuts.auxiliary_variables,
             self._unknown_identifier() + "Update",
         )
 
-        self._patch.generator = peano4.datamodel.PatchToData(
-            self._patch, "double"
-        )
+        self._patch.generator = peano4.datamodel.PatchToData(self._patch, "double")
         self._patch_reconstructed.generator = peano4.datamodel.PatchToData(
             self._patch_reconstructed, "double"
         )
@@ -502,16 +514,20 @@ The finest mesh width of """
 #include "repositories/SolverRepository.h" 
 """
 
-        self._patch.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_cell_data_to_compute_kernels_default_guard(),
-            self._load_cell_data_default_guard(),
-            self._store_cell_data_default_guard(),
+        self._patch.generator.load_store_compute_flag = (
+            "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+                self._provide_cell_data_to_compute_kernels_default_guard(),
+                self._load_cell_data_default_guard(),
+                self._store_cell_data_default_guard(),
+            )
         )
 
-        self._patch_estimates.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_cell_data_to_compute_kernels_default_guard(),
-            self._load_cell_data_default_guard(),
-            self._store_cell_data_default_guard(),
+        self._patch_estimates.generator.load_store_compute_flag = (
+            "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+                self._provide_cell_data_to_compute_kernels_default_guard(),
+                self._load_cell_data_default_guard(),
+                self._store_cell_data_default_guard(),
+            )
         )
 
         self._patch_overlap_old.generator.send_condition = "false"
@@ -523,22 +539,28 @@ The finest mesh width of """
         self._patch_overlap_update.generator.send_condition = "false"
         self._patch_overlap_update.generator.receive_and_merge_condition = "false"
 
-        self._patch_overlap_old.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-          self._provide_face_data_to_compute_kernels_default_guard(),
-          self._load_face_data_default_guard(),
-          self._store_face_data_default_guard(),
+        self._patch_overlap_old.generator.load_store_compute_flag = (
+            "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+                self._provide_face_data_to_compute_kernels_default_guard(),
+                self._load_face_data_default_guard(),
+                self._store_face_data_default_guard(),
+            )
         )
 
-        self._patch_overlap_new.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-          self._provide_face_data_to_compute_kernels_default_guard(),
-          self._load_face_data_default_guard(),
-          self._store_face_data_default_guard(),
+        self._patch_overlap_new.generator.load_store_compute_flag = (
+            "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+                self._provide_face_data_to_compute_kernels_default_guard(),
+                self._load_face_data_default_guard(),
+                self._store_face_data_default_guard(),
+            )
         )
 
-        self._patch_overlap_update.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-          self._provide_face_data_to_compute_kernels_default_guard(),
-          "false",
-          "false"
+        self._patch_overlap_update.generator.load_store_compute_flag = (
+            "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+                self._provide_face_data_to_compute_kernels_default_guard(),
+                "false",
+                "false",
+            )
         )
 
         self._patch.generator.includes += """
@@ -620,12 +642,7 @@ The finest mesh width of """
         """
         self._action_set_initial_conditions = (
             exahype2.solvers.rkfd.actionsets.InitialCondition(
-                self, self._store_cell_data_default_guard(), "true"
-            )
-        )
-        self._action_set_initial_conditions_for_grid_construction = (
-            exahype2.solvers.rkfd.actionsets.InitialCondition(
-                self, self._store_cell_data_default_guard(), "false"
+                self, self._store_cell_data_default_guard()
             )
         )
         self._action_set_AMR = exahype2.solvers.rkfd.actionsets.AdaptivityCriterion(
@@ -704,9 +721,6 @@ The finest mesh width of """
         self._action_set_initial_conditions.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 1
         )
-        self._action_set_initial_conditions_for_grid_construction.descend_invocation_order = (
-            self._baseline_action_set_descend_invocation_order + 1
-        )
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order
         )
@@ -731,7 +745,9 @@ The finest mesh width of """
         self._action_set_project_patch_onto_faces.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 6
         )
-        self._action_set_AMR.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 6
+        self._action_set_AMR.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 6
+        )
         self._action_set_postprocess_solution.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order
         )  # will be in touch last
@@ -742,27 +758,26 @@ The finest mesh width of """
         self._action_set_update_cell = None
         self._action_set_reconstruct_patch = None
 
-
     def _provide_cell_data_to_compute_kernels_default_guard(self):
-       return (
-                        "not marker.willBeRefined() "
-                        + "and repositories::"
-                        + self.get_name_of_global_instance()
-                        + ".getSolverState()!="
-                        + self._name
-                        + "::SolverState::GridConstruction"
-                )
+        return (
+            "not marker.willBeRefined() "
+            + "and repositories::"
+            + self.get_name_of_global_instance()
+            + ".getSolverState()!="
+            + self._name
+            + "::SolverState::GridConstruction"
+        )
 
     def _provide_face_data_to_compute_kernels_default_guard(self):
         return (
-                        "not marker.willBeRefined() "
-                        + "and repositories::"
-                        + self.get_name_of_global_instance()
-                        + ".getSolverState()!="
-                        + self._name
-                        + "::SolverState::GridConstruction"
-                )
-                
+            "not marker.willBeRefined() "
+            + "and repositories::"
+            + self.get_name_of_global_instance()
+            + ".getSolverState()!="
+            + self._name
+            + "::SolverState::GridConstruction"
+        )
+
     def _store_cell_data_default_guard(self):
         """!
 
@@ -958,12 +973,9 @@ The finest mesh width of """
 
     def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
         """
-
         The boundary information is set only once. It is therefore important that
         we ues the face label and initialise it properly.
-
         """
-        step.add_action_set(self._action_set_initial_conditions_for_grid_construction)
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         if evaluate_refinement_criterion:
@@ -1025,7 +1037,9 @@ The finest mesh width of """
             time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
             guard=self._load_cell_data_default_guard(),
         )
-        plotter.descend_invocation_order = self._baseline_action_set_descend_invocation_order
+        plotter.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order
+        )
         step.add_action_set(plotter)
 
     def add_actions_to_perform_time_step(self, step):
@@ -1060,8 +1074,12 @@ The finest mesh width of """
     def add_entries_to_text_replacement_dictionary(self, d):
         pass
 
-    def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory=""):
-        self._action_set_reconstruct_patch.generate_kernels(namespace, output, dimensions, subdirectory)
+    def add_implementation_files_to_project(
+        self, namespace, output, dimensions, subdirectory=""
+    ):
+        self._action_set_reconstruct_patch.generate_kernels(
+            namespace, output, dimensions, subdirectory
+        )
 
         templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
 
@@ -1070,7 +1088,7 @@ The finest mesh width of """
         else:
             templatefile_prefix += self._solver_template_file_class_name
 
-        if(subdirectory):
+        if subdirectory:
             subdirectory += "/"
 
         abstractHeaderDictionary = {}
@@ -1107,9 +1125,13 @@ The finest mesh width of """
 
         output.add(generated_abstract_header_file)
         output.add(generated_solver_files)
-        output.makefile.add_h_file(subdirectory + "Abstract" + self._name + ".h", generated=True)
+        output.makefile.add_h_file(
+            subdirectory + "Abstract" + self._name + ".h", generated=True
+        )
         output.makefile.add_h_file(subdirectory + self._name + ".h", generated=True)
-        output.makefile.add_cpp_file(subdirectory + "Abstract" + self._name + ".cpp", generated=True)
+        output.makefile.add_cpp_file(
+            subdirectory + "Abstract" + self._name + ".cpp", generated=True
+        )
         output.makefile.add_cpp_file(subdirectory + self._name + ".cpp", generated=True)
 
     def set_solver_constants(self, datastring):
@@ -1136,7 +1158,9 @@ The finest mesh width of """
         d["SOLVER_NAME"] = self._name
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
         d["NUMBER_OF_UNKNOWNS"] = self._variable_shortcuts.unknowns
-        d["NUMBER_OF_AUXILIARY_VARIABLES"] = self._variable_shortcuts.auxiliary_variables
+        d["NUMBER_OF_AUXILIARY_VARIABLES"] = (
+            self._variable_shortcuts.auxiliary_variables
+        )
         d["SOLVER_NUMBER"] = 22
 
         d["ASSERTION_WITH_1_ARGUMENTS"] = "nonCriticalAssertion1"
@@ -1155,19 +1179,21 @@ The finest mesh width of """
 
         d["SOLVER_INCLUDES"] = self.user_solver_includes
 
-        d[
-            "BOUNDARY_CONDITIONS_IMPLEMENTATION"
-        ] = self._boundary_conditions_implementation
-        d[
-            "REFINEMENT_CRITERION_IMPLEMENTATION"
-        ] = self._refinement_criterion_implementation
+        d["BOUNDARY_CONDITIONS_IMPLEMENTATION"] = (
+            self._boundary_conditions_implementation
+        )
+        d["REFINEMENT_CRITERION_IMPLEMENTATION"] = (
+            self._refinement_criterion_implementation
+        )
         d["INITIAL_CONDITIONS_IMPLEMENTATION"] = self._initial_conditions_implementation
 
         d["COMPUTE_KERNEL_CALL"] = jinja2.Template(
             self._compute_kernel_call, undefined=jinja2.DebugUndefined
         ).render(**d)
 
-        d["RECONSTRUCTION_KERNEL_CALL"] = jinja2.Template(self._reconstruction_kernel_call, undefined=jinja2.DebugUndefined).render(**d)
+        d["RECONSTRUCTION_KERNEL_CALL"] = jinja2.Template(
+            self._reconstruction_kernel_call, undefined=jinja2.DebugUndefined
+        ).render(**d)
         d["PRIMARY_VARS_INDICES"] = self._primary_variables_indices
         d["AUXILIARY_VARS_INDICES"] = self._auxiliary_variables_indices
 

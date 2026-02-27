@@ -79,7 +79,7 @@ theSolver._start_grid_initialisation_implementation += CurvilinearElastic.init_g
 theSolver.add_user_solver_includes(CurvilinearElastic.userIncludes())
 
 filename = scenario+"_l"+str(min_level)+"_o"+str(order)+"_pr_"+precision
-project = exahype2.Project(["exahype2", "elastic"], "curvi", executable="LOH1")
+project = exahype2.Project(["applications", "exahype2", "exaseis"], "curvi", executable="LOH1")
 
 project.add_solver(theSolver)
 

@@ -95,7 +95,6 @@ class FD(object):
         self._templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
 
         self._action_set_initial_conditions = None
-        self._action_set_initial_conditions_for_grid_construction = None
         self._action_set_AMR = None
         self._action_set_AMR_throughout_grid_construction = None
         self._action_set_AMR_commit_without_further_analysis = None
@@ -446,12 +445,7 @@ The finest mesh width of """
         """
         self._action_set_initial_conditions = (
             exahype2.solvers.fd.actionsets.InitialCondition(
-                self, self._store_cell_data_default_guard(), "true"
-            )
-        )
-        self._action_set_initial_conditions_for_grid_construction = (
-            exahype2.solvers.fd.actionsets.InitialCondition(
-                self, self._store_cell_data_default_guard(), "false"
+                self, self._store_cell_data_default_guard()
             )
         )
         self._action_set_AMR_throughout_grid_construction = (
@@ -528,9 +522,6 @@ The finest mesh width of """
         self._action_set_enclave_tasking = None
 
         self._action_set_initial_conditions.descend_invocation_order = (
-            self._baseline_action_set_descend_invocation_order + 1
-        )
-        self._action_set_initial_conditions_for_grid_construction.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 1
         )
         self._action_set_AMR.descend_invocation_order = (
@@ -736,7 +727,6 @@ The finest mesh width of """
         The boundary information is set only once. It is therefore important that
         we ues the face label and initialise it properly.
         """
-        step.add_action_set(self._action_set_initial_conditions_for_grid_construction)
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         if evaluate_refinement_criterion:

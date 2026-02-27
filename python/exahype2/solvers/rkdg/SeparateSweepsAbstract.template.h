@@ -104,19 +104,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      *
      * @param x     Position of point that is to be initialised within computational domain.
      * @param h     Size of cell within which the point is placed.
-     * @param gridIsConstructed Boolean holds if grid is completely constructed.
-     *              initialCondition() is invoked both by the grid construction and the
-     *              initialisation, and you might want to do different things depending on
-     *              the context. For most applications, they initialise data if and only if
-     *              gridIsConstructed holds, but others might also initialise data throughout
-     *              the construction to guide AMR criteria.
-     *
      */
     virtual void initialCondition(
       double * NOALIAS                        Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<DIMENSIONS,double>&  x,
-      const tarch::la::Vector<DIMENSIONS,double>&  h,
-      bool                                         gridIsConstructed
+      const tarch::la::Vector<DIMENSIONS,double>&  h
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<none>" %}

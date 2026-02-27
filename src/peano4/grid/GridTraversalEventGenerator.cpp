@@ -103,12 +103,38 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     }
   }
 
+  const CellType cellType          = getCellType(vertexTypes);
+  // If the cell is going away, we do not push hanging data keyed by this cell’s in/out stack number
+  const bool     cellExistedBefore = spacetreeStateIsRunning
+                                 and (cellType == CellType::Persistent or cellType == CellType::Delete);
+  VertexType previousVertexTypes[TWO_POWER_D];
+  for (int k = 0; k < TWO_POWER_D; ++k) {
+    previousVertexTypes[k] = VertexType::Persistent;
+  }
+  if (cellExistedBefore) {
+    getVertexTypesFromPreviousTreeSweep(coarseGridVertices, relativePositionToFather, previousVertexTypes);
+  }
+
   const std::bitset<DIMENSIONS> coordinates = PeanoCurve::getFirstVertexIndex(state);
   for (int i = 0; i < TWO_POWER_D; i++) {
     const std::bitset<DIMENSIONS> vertexIndex(coordinates ^ std::bitset<DIMENSIONS>(i));
     const int                     stackNumber    = PeanoCurve::getVertexReadStackNumber(state, vertexIndex);
     const int                     vertexPosition = vertexIndex.to_ulong();
+
     event.setVertexDataTo(i, vertexPosition);
+    event.setIsVertexHanging(vertexPosition, false);
+
+    const auto type = fineGridVertices[vertexPosition].getState();
+
+    if (type == GridVertex::State::HangingVertex) {
+      event.setIsVertexHanging(vertexPosition, true);
+      if (cellExistedBefore and previousVertexTypes[vertexPosition] == VertexType::Hanging) {
+        event.setVertexDataFrom(i, PeanoCurve::getCellReadStackNumber(state));
+      } else {
+        event.setVertexDataFrom(i, GridTraversalObserver::CreateOrDestroyGridEntity);
+      }
+      continue;
+    }
 
     bool willBeNoData = PeanoCurve::isInOutStack(stackNumber) and not event.getIsVertexLocal(vertexPosition);
 
@@ -128,13 +154,13 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       continue;
     }
 
-    switch (fineGridVertices[vertexPosition].getState()) {
+    switch (type) {
     case GridVertex::State::HangingVertex:
-      event.setVertexDataFrom(i, GridTraversalObserver::CreateOrDestroyHangingGridEntity);
+      assertion(false);
       break;
     case GridVertex::State::New: {
       if (PeanoCurve::isInOutStack(stackNumber)) {
-        event.setVertexDataFrom(i, GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
+        event.setVertexDataFrom(i, GridTraversalObserver::CreateOrDestroyGridEntity);
       } else {
         event.setVertexDataFrom(i, stackNumber);
       }
@@ -154,7 +180,23 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   for (int i = 0; i < TWO_TIMES_D; i++) {
     const int faceIndex   = PeanoCurve::getFaceNumberAlongCurve(state, i);
     const int stackNumber = PeanoCurve::getFaceReadStackNumber(state, faceIndex);
+
     event.setFaceDataTo(i, faceIndex);
+    event.setIsFaceHanging(faceIndex, false);
+
+    const FaceType type = getFaceType(vertexTypes, faceIndex);
+
+    if (type == FaceType::Hanging) {
+      event.setIsFaceHanging(faceIndex, true);
+      const FaceType previousType = cellExistedBefore ? getFaceType(previousVertexTypes, faceIndex)
+                                                      : FaceType::Persistent;
+      if (cellExistedBefore and previousType == FaceType::Hanging) {
+        event.setFaceDataFrom(i, PeanoCurve::getCellReadStackNumber(state));
+      } else {
+        event.setFaceDataFrom(i, GridTraversalObserver::CreateOrDestroyGridEntity);
+      }
+      continue;
+    }
 
     bool willBeNoData = PeanoCurve::isInOutStack(stackNumber) and not event.getIsFaceLocal(faceIndex);
 
@@ -177,18 +219,17 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       continue;
     }
 
-    const FaceType type = getFaceType(vertexTypes, faceIndex);
     switch (type) {
+    case FaceType::Hanging:
+      assertion(false);
+      break;
     case FaceType::New: {
       if (PeanoCurve::isInOutStack(stackNumber)) {
-        event.setFaceDataFrom(i, GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
+        event.setFaceDataFrom(i, GridTraversalObserver::CreateOrDestroyGridEntity);
       } else {
         event.setFaceDataFrom(i, stackNumber);
       }
     } break;
-    case FaceType::Hanging:
-      event.setFaceDataFrom(i, GridTraversalObserver::CreateOrDestroyHangingGridEntity);
-      break;
     case FaceType::Persistent:
     case FaceType::Delete:
       event.setFaceDataFrom(i, stackNumber);
@@ -196,11 +237,10 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     }
   }
 
-  const int      stackNumber = PeanoCurve::getCellReadStackNumber(state);
-  const CellType type        = getCellType(vertexTypes);
-  switch (type) {
+  const int stackNumber = PeanoCurve::getCellReadStackNumber(state);
+  switch (cellType) {
   case CellType::New:
-    event.setCellData(GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
+    event.setCellData(GridTraversalObserver::CreateOrDestroyGridEntity);
     break;
   case CellType::Persistent:
     event.setCellData(stackNumber);
@@ -274,16 +314,46 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       .to_ulong()
   );
 
+  const CellType cellType = getCellType(vertexTypes);
+
   const std::bitset<DIMENSIONS> coordinates = PeanoCurve::getFirstVertexIndex(state);
   for (int i = 0; i < TWO_POWER_D; i++) {
     const std::bitset<DIMENSIONS> vertexIndex(coordinates ^ std::bitset<DIMENSIONS>(i));
-    const int                     stackNumber    = PeanoCurve::getVertexWriteStackNumber(state, vertexIndex);
-    const int                     vertexPosition = vertexIndex.to_ulong();
-    leaveNodeTraversalEvent.setVertexDataFrom(i, vertexPosition);
+    const int                     stackNumber       = PeanoCurve::getVertexWriteStackNumber(state, vertexIndex);
+    const int                     vertexPosition    = vertexIndex.to_ulong();
+    const bool                    wasHangingOnEnter = enterNodeTraversalEvent.getIsVertexHanging(vertexPosition);
 
-    switch (fineGridVertices[vertexPosition].getState()) {
+    leaveNodeTraversalEvent.setVertexDataFrom(i, vertexPosition);
+    leaveNodeTraversalEvent.setIsVertexHanging(vertexPosition, false);
+
+    const auto type         = fineGridVertices[vertexPosition].getState();
+    const bool isHangingNow = (type == GridVertex::State::HangingVertex);
+
+    if (wasHangingOnEnter and not isHangingNow) {
+      leaveNodeTraversalEvent.setIsVertexHanging(vertexPosition, true);
+      leaveNodeTraversalEvent.setVertexDataTo(i, GridTraversalObserver::CreateOrDestroyGridEntity);
+      continue;
+    }
+
+    if (isHangingNow) {
+      leaveNodeTraversalEvent.setIsVertexHanging(vertexPosition, true);
+      if (cellType == CellType::Delete) {
+        leaveNodeTraversalEvent.setVertexDataTo(i, GridTraversalObserver::CreateOrDestroyGridEntity);
+      } else {
+        leaveNodeTraversalEvent.setVertexDataTo(i, PeanoCurve::getCellWriteStackNumber(state));
+      }
+      continue;
+    }
+
+    if (PeanoCurve::isInOutStack(stackNumber)
+        and not leaveNodeTraversalEvent.getIsVertexLocal(vertexIndex.to_ulong())) {
+      leaveNodeTraversalEvent.setVertexDataTo(i, GridTraversalObserver::NoData);
+      continue;
+    }
+
+    switch (type) {
     case GridVertex::State::HangingVertex:
-      leaveNodeTraversalEvent.setVertexDataTo(i, GridTraversalObserver::CreateOrDestroyHangingGridEntity);
+      assertion(false);
       break;
     case GridVertex::State::New:
     case GridVertex::State::Unrefined:
@@ -296,34 +366,66 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       break;
     case GridVertex::State::Delete: {
       if (PeanoCurve::isInOutStack(stackNumber)) {
-        leaveNodeTraversalEvent.setVertexDataTo(i, GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
+        leaveNodeTraversalEvent.setVertexDataTo(i, GridTraversalObserver::CreateOrDestroyGridEntity);
       } else {
         leaveNodeTraversalEvent.setVertexDataTo(i, stackNumber);
       }
     } break;
     }
-
-    if (PeanoCurve::isInOutStack(leaveNodeTraversalEvent.getVertexDataTo(i))
-        and not leaveNodeTraversalEvent.getIsVertexLocal(vertexIndex.to_ulong())) {
-      leaveNodeTraversalEvent.setVertexDataTo(i, GridTraversalObserver::NoData);
-    }
   }
 
   for (int i = 0; i < TWO_TIMES_D; i++) {
-    const int faceIndex   = PeanoCurve::getFaceNumberAlongCurve(state, i);
-    const int stackNumber = PeanoCurve::getFaceWriteStackNumber(state, faceIndex);
-    leaveNodeTraversalEvent.setFaceDataFrom(i, faceIndex);
+    const int  faceIndex         = PeanoCurve::getFaceNumberAlongCurve(state, i); // facePositionWithinCell
+    const int  stackNumber       = PeanoCurve::getFaceWriteStackNumber(state, faceIndex);
+    const bool wasHangingOnEnter = enterNodeTraversalEvent.getIsFaceHanging(faceIndex);
 
-    // If it will become NoData, skip getFaceType entirely.
+    leaveNodeTraversalEvent.setFaceDataFrom(i, faceIndex);
+    leaveNodeTraversalEvent.setIsFaceHanging(faceIndex, false);
+
+    const FaceType type         = getFaceType(vertexTypes, faceIndex);
+    const bool     isHangingNow = (type == FaceType::Hanging);
+
+    // On leave, hanging-ness may have changed due to AMR effects in the DFS.
+    // The 'vertexTypes' array is computed before we descend and is not updated.
+    // Therefore, recompute the current face hanging-ness directly from the
+    // current fineGridVertices states.
+    // bool isHangingNow = true;
+    // {
+    //   const int normal = faceIndex % DIMENSIONS;
+    //   const int side   = (faceIndex >= DIMENSIONS) ? 1 : 0;
+    //   for (int v = 0; v < TWO_POWER_D; ++v) {
+    //     if (((v >> normal) & 1) != side) continue; // only vertices adjacent to this face
+    //     if (fineGridVertices[v].getState() != GridVertex::State::HangingVertex) {
+    //       isHangingNow = false;
+    //       break;
+    //     }
+    //   }
+    // }
+
+    if (wasHangingOnEnter and not isHangingNow) {
+      leaveNodeTraversalEvent.setIsFaceHanging(faceIndex, true);
+      leaveNodeTraversalEvent.setFaceDataTo(i, GridTraversalObserver::CreateOrDestroyGridEntity);
+      continue;
+    }
+
+    if (isHangingNow) {
+      leaveNodeTraversalEvent.setIsFaceHanging(faceIndex, true);
+      if (cellType == CellType::Delete) {
+        leaveNodeTraversalEvent.setFaceDataTo(i, GridTraversalObserver::CreateOrDestroyGridEntity);
+      } else {
+        leaveNodeTraversalEvent.setFaceDataTo(i, PeanoCurve::getCellWriteStackNumber(state));
+      }
+      continue;
+    }
+
     if (PeanoCurve::isInOutStack(stackNumber) and not leaveNodeTraversalEvent.getIsFaceLocal(faceIndex)) {
       leaveNodeTraversalEvent.setFaceDataTo(i, GridTraversalObserver::NoData);
       continue;
     }
 
-    const FaceType type = getFaceType(vertexTypes, faceIndex);
     switch (type) {
     case FaceType::Hanging:
-      leaveNodeTraversalEvent.setFaceDataTo(i, GridTraversalObserver::CreateOrDestroyHangingGridEntity);
+      assertion(false);
       break;
     case FaceType::New:
     case FaceType::Persistent:
@@ -331,7 +433,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       break;
     case FaceType::Delete:
       if (PeanoCurve::isInOutStack(stackNumber)) {
-        leaveNodeTraversalEvent.setFaceDataTo(i, GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
+        leaveNodeTraversalEvent.setFaceDataTo(i, GridTraversalObserver::CreateOrDestroyGridEntity);
       } else {
         leaveNodeTraversalEvent.setFaceDataTo(i, stackNumber);
       }
@@ -339,9 +441,8 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     }
   }
 
-  const int      stackNumber = PeanoCurve::getCellWriteStackNumber(state);
-  const CellType type        = getCellType(vertexTypes);
-  switch (type) {
+  const int stackNumber = PeanoCurve::getCellWriteStackNumber(state);
+  switch (cellType) {
   case CellType::New:
     leaveNodeTraversalEvent.setCellData(stackNumber);
     break;
@@ -349,7 +450,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     leaveNodeTraversalEvent.setCellData(stackNumber);
     break;
   case CellType::Delete:
-    leaveNodeTraversalEvent.setCellData(GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
+    leaveNodeTraversalEvent.setCellData(GridTraversalObserver::CreateOrDestroyGridEntity);
     break;
   }
   if (PeanoCurve::isInOutStack(leaveNodeTraversalEvent.getCellData())

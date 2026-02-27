@@ -11,8 +11,7 @@ class SolverDefinitions:
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::initialCondition(
   [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const bool                                   gridIsConstructed
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
 ) {
   // @todo Implement
 }

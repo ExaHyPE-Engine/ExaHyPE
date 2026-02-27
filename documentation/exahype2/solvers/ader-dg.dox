@@ -105,6 +105,8 @@ A straightforward implementation of ADER-DG for adaptive meshes hence commits
 to a ***solve Riemann problem only on persistent faces and project outcome onto
 hanging faces*** policy:
 
+TODO: This documentation is now outdated with the introduction of persistent hanging grid data
+
 1. Primary sweep
    - When a hanging face is destroyed, we project the valid half of the
      projected solution onto the next coarser level.

@@ -11,8 +11,7 @@ class AbstractSolverDeclarations:
     virtual void initialCondition(
       {{COMPUTE_PRECISION}}* const NOALIAS          Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<DIMENSIONS, double>&  x,
-      const tarch::la::Vector<DIMENSIONS, double>&  h,
-      const bool                                    gridIsConstructed
+      const tarch::la::Vector<DIMENSIONS, double>&  h
     ) = 0;
     {% endif %}
 

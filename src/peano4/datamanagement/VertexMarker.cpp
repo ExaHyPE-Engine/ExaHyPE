@@ -37,22 +37,8 @@ peano4::datamanagement::VertexMarker::VertexMarker(const peano4::grid::GridTrave
   _isAdjacentToParallelDomainBoundary = event.getIsVertexAdjacentToParallelDomainBoundary();
   _isAdjacentCellLocal                = event.getIsAdjacentCellLocal();
   _isParentOfSubtree                  = event.getIsVertexParentOfSubtree();
-
-  _isHanging = 0;
-  for (int i = 0; i < TWO_POWER_D; i++) {
-    if (event.getVertexDataTo(i) == peano4::grid::GridTraversalObserver::CreateOrDestroyHangingGridEntity) {
-      int position = event.getVertexDataFrom(i);
-      assertion(not _isHanging[position]);
-      _isHanging[position] = true;
-    }
-    if (event.getVertexDataFrom(i) == peano4::grid::GridTraversalObserver::CreateOrDestroyHangingGridEntity) {
-      int position = event.getVertexDataTo(i);
-      assertion(not _isHanging[position]);
-      _isHanging[position] = true;
-    }
-  }
-
-  _isParentVertexLocal = event.getIsParentVertexLocal();
+  _isHanging                          = event.getIsVertexHanging();
+  _isParentVertexLocal                = event.getIsParentVertexLocal();
 }
 
 tarch::la::Vector<DIMENSIONS, int> peano4::datamanagement::VertexMarker::getRelativePositionWithinFatherCell() const {

@@ -3,5 +3,4 @@
 #include "GridTraversalObserver.h"
 
 constexpr int peano4::grid::GridTraversalObserver::NoData;
-constexpr int peano4::grid::GridTraversalObserver::CreateOrDestroyPersistentGridEntity;
-constexpr int peano4::grid::GridTraversalObserver::CreateOrDestroyHangingGridEntity;
+constexpr int peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;

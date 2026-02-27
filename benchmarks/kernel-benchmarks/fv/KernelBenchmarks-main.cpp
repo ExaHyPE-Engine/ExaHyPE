@@ -245,8 +245,7 @@ void applyInitialConditions() {
             AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
             volume
           ),
-          ::exahype2::fv::getVolumeSize(marker.getH(), AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch),
-          true
+          ::exahype2::fv::getVolumeSize(marker.getH(), AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch)
         );
       }
     }

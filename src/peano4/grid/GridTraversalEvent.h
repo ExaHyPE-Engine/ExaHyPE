@@ -28,11 +28,13 @@ struct peano4::grid::GridTraversalEvent final {
   std::uint8_t willBeRefined{0};
 
   std::uint8_t isVertexLocal{0};
+  std::uint8_t isVertexHanging{0};
   std::uint8_t isParentVertexLocal{0};
   std::uint8_t isVertexParentOfSubtree{0};
   std::uint8_t isVertexAdjacentToParallelDomainBoundary{0};
 
   std::uint8_t isFaceLocal{0};
+  std::uint8_t isFaceHanging{0};
   std::uint8_t isFaceAdjacentToParallelDomainBoundary{0};
 
   std::uint8_t  isCellLocal{0};
@@ -80,6 +82,11 @@ struct peano4::grid::GridTraversalEvent final {
   INLINE_METHOD void         setIsVertexLocal(std::uint8_t m) noexcept { isVertexLocal = m; }
   INLINE_METHOD void         setIsVertexLocal(int v, bool on) noexcept { bitSet8(isVertexLocal, v, on); }
 
+  INLINE_METHOD std::uint8_t getIsVertexHanging() const noexcept { return isVertexHanging; }
+  INLINE_METHOD bool         getIsVertexHanging(int v) const noexcept { return bitTest8(isVertexHanging, v); }
+  INLINE_METHOD void         setIsVertexHanging(std::uint8_t m) noexcept { isVertexHanging = m; }
+  INLINE_METHOD void         setIsVertexHanging(int v, bool on) noexcept { bitSet8(isVertexHanging, v, on); }
+
   INLINE_METHOD std::uint8_t getIsParentVertexLocal() const noexcept { return isParentVertexLocal; }
   INLINE_METHOD bool         getIsParentVertexLocal(int v) const noexcept { return bitTest8(isParentVertexLocal, v); }
   INLINE_METHOD void         setIsParentVertexLocal(std::uint8_t m) noexcept { isParentVertexLocal = m; }
@@ -107,6 +114,11 @@ struct peano4::grid::GridTraversalEvent final {
   INLINE_METHOD bool         getIsFaceLocal(int f) const noexcept { return bitTest8(isFaceLocal, f); }
   INLINE_METHOD void         setIsFaceLocal(std::uint8_t m) noexcept { isFaceLocal = m; }
   INLINE_METHOD void         setIsFaceLocal(int f, bool on) noexcept { bitSet8(isFaceLocal, f, on); }
+
+  INLINE_METHOD std::uint8_t getIsFaceHanging() const noexcept { return isFaceHanging; }
+  INLINE_METHOD bool         getIsFaceHanging(int f) const noexcept { return bitTest8(isFaceHanging, f); }
+  INLINE_METHOD void         setIsFaceHanging(std::uint8_t m) noexcept { isFaceHanging = m; }
+  INLINE_METHOD void         setIsFaceHanging(int f, bool on) noexcept { bitSet8(isFaceHanging, f, on); }
 
   INLINE_METHOD std::uint8_t getIsFaceAdjacentToParallelDomainBoundary() const noexcept {
     return isFaceAdjacentToParallelDomainBoundary;

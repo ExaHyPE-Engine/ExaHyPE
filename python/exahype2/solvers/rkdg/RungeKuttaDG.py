@@ -682,14 +682,6 @@ We use RK("""
             exahype2.solvers.rkdg.actionsets.InitialCondition(
                 self,
                 self._query_fine_grid_cell_in_action_set_if_it_holds_solution(),
-                "true",
-            )
-        )
-        self._action_set_initial_conditions_for_grid_construction = (
-            exahype2.solvers.rkdg.actionsets.InitialCondition(
-                self,
-                self._query_fine_grid_cell_in_action_set_if_it_holds_solution(),
-                "false",
             )
         )
         self._action_set_AMR = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(
@@ -803,9 +795,6 @@ We use RK("""
         )
 
         self._action_set_initial_conditions.descend_invocation_order = (
-            self._baseline_action_set_descend_invocation_order + 1
-        )
-        self._action_set_initial_conditions_for_grid_construction.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 1
         )
 
@@ -1000,7 +989,6 @@ We use RK("""
          The boundary information is set only once. It is therefore important that
          we ues the face label and initialise it properly.
         """
-        step.add_action_set(self._action_set_initial_conditions_for_grid_construction)
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         if evaluate_refinement_criterion:

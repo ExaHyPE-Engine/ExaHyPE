@@ -9,9 +9,11 @@
 
 {% for container in VERTEX_DATA_CONTAINERS -%}
 ::peano4::stacks::TreeToStacks<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}Stack;
+::peano4::stacks::TreeToStacks<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}HangingStack;
 {% endfor -%}
 {% for container in FACE_DATA_CONTAINERS -%}
 ::peano4::stacks::TreeToStacks<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}Stack;
+::peano4::stacks::TreeToStacks<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}HangingStack;
 {% endfor -%}
 {% for container in CELL_DATA_CONTAINERS -%}
 ::peano4::stacks::TreeToStacks<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}Stack;
@@ -42,9 +44,11 @@ void {{FULL_QUALIFIED_CLASSNAME}}::init() {
 
 {%- for container in VERTEX_DATA_CONTAINERS %}
   {{ container.name }}Stack.resize(numberOfMaxGlobalSpacetrees);
+  {{ container.name }}HangingStack.resize(numberOfMaxGlobalSpacetrees);
 {%- endfor %}
 {%- for container in FACE_DATA_CONTAINERS %}
   {{ container.name }}Stack.resize(numberOfMaxGlobalSpacetrees);
+  {{ container.name }}HangingStack.resize(numberOfMaxGlobalSpacetrees);
 {%- endfor %}
 {%- for container in CELL_DATA_CONTAINERS %}
   {{ container.name }}Stack.resize(numberOfMaxGlobalSpacetrees);
@@ -54,9 +58,11 @@ void {{FULL_QUALIFIED_CLASSNAME}}::init() {
 void {{FULL_QUALIFIED_CLASSNAME}}::shutdown() {
 {%- for container in VERTEX_DATA_CONTAINERS %}
   {{ container.name }}Stack.clear();
+  {{ container.name }}HangingStack.clear();
 {%- endfor %}
 {%- for container in FACE_DATA_CONTAINERS %}
   {{ container.name }}Stack.clear();
+  {{ container.name }}HangingStack.clear();
 {%- endfor %}
 {%- for container in CELL_DATA_CONTAINERS %}
   {{ container.name }}Stack.clear();
@@ -76,7 +82,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::shutdown() {
 }
 
 void {{FULL_QUALIFIED_CLASSNAME}}::updateMemoryUsage() {
-_localCellDataMemoryUsageInBytes = 0;
+  _localCellDataMemoryUsageInBytes = 0;
   _localFaceDataMemoryUsageInBytes = 0;
   _localVertexDataMemoryUsageInBytes = 0;
 
@@ -85,9 +91,11 @@ _localCellDataMemoryUsageInBytes = 0;
 {%- endfor %}
 {%- for container in FACE_DATA_CONTAINERS %}
   _localFaceDataMemoryUsageInBytes += {{container.name}}Stack.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
+  _localFaceDataMemoryUsageInBytes += {{container.name}}HangingStack.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
 {%- endfor %}
 {%- for container in VERTEX_DATA_CONTAINERS %}
   _localVertexDataMemoryUsageInBytes += {{container.name}}Stack.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
+  _localVertexDataMemoryUsageInBytes += {{container.name}}HangingStack.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
 {%- endfor %}
 
 #ifdef WITH_MPI

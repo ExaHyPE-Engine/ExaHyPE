@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "peano4/stacks/TreeToStacks.h"
 #include "peano4/stacks/Stack.h"
 #include "peano4/stacks/StackWithSerialisation.h"
@@ -34,9 +33,11 @@ public:
 
 {% for container in VERTEX_DATA_CONTAINERS -%}
   static ::peano4::stacks::TreeToStacks<{{container.stack}}> {{container.name}}Stack;
+  static ::peano4::stacks::TreeToStacks<{{container.stack}}> {{container.name}}HangingStack;
 {% endfor -%}
 {% for container in FACE_DATA_CONTAINERS -%}
   static ::peano4::stacks::TreeToStacks<{{container.stack}}> {{container.name}}Stack;
+  static ::peano4::stacks::TreeToStacks<{{container.stack}}> {{container.name}}HangingStack;
 {% endfor -%}
 {% for container in CELL_DATA_CONTAINERS -%}
   static ::peano4::stacks::TreeToStacks<{{container.stack}}> {{container.name}}Stack;

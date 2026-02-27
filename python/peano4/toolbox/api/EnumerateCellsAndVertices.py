@@ -16,10 +16,11 @@ def construct_marker_name(task_name):
     return task_name + "MeshNumber"
 
 
-def create_vertex_marker(task_name,
-                         full_qualified_enumerator_type = "tarch::Enumerator",
-                         enumerator_include = """ #include "tarch/Enumerator.h" """
-                         ):
+def create_vertex_marker(
+    task_name,
+    full_qualified_enumerator_type="tarch::Enumerator",
+    enumerator_include=""" #include "tarch/Enumerator.h" """,
+):
     """!
 
     Create vertex marker
@@ -45,8 +46,8 @@ def create_vertex_marker(task_name,
     Furthermore, you have to add the use_vertex and use_cell instructions to
     each observer (algorithm step) before you add the action sets to the sets
     in turn.
-    
-    Please note that this marker not only holds an index for the vertex. It 
+
+    Please note that this marker not only holds an index for the vertex. It
     also hosts the markers of the adjacent cells.
 
     """
@@ -107,7 +108,7 @@ class AssignNumbersToMesh(ActionSet):
     Gives each mesh entity a unique number
 
     Also ensure that a vertex knows about the numbers of the adjacent cells.
-    The numbers are unique per rank, but not unique globally. We achieve 
+    The numbers are unique per rank, but not unique globally. We achieve
     uniqueness by relying on the tarch::Enumerator.
 
     """
@@ -121,11 +122,11 @@ class AssignNumbersToMesh(ActionSet):
         Initialise assignment
 
         @param task_name: String
-          The name of the task (attribute tied to the mesh entity) to be 
+          The name of the task (attribute tied to the mesh entity) to be
           manipulated.
 
         """
-        super( AssignNumbersToMesh, self ).__init__()
+        super(AssignNumbersToMesh, self).__init__()
         self._task_name = task_name
         pass
 
@@ -135,10 +136,7 @@ class AssignNumbersToMesh(ActionSet):
         Very simple operation which basically resets all data
 
         """
-        if (
-            operation_name == ActionSet.OPERATION_CREATE_PERSISTENT_VERTEX
-            or operation_name == ActionSet.OPERATION_CREATE_HANGING_VERTEX
-        ):
+        if operation_name == ActionSet.OPERATION_CREATE_VERTEX:
             return """
             fineGridVertex{}.setNumber(tarch::Enumerator::NoNumber);
             for (int i=0; i<TWO_POWER_D; i++) {{
@@ -149,10 +147,7 @@ class AssignNumbersToMesh(ActionSet):
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
             )
-        if (
-            operation_name == ActionSet.OPERATION_DESTROY_PERSISTENT_VERTEX
-            or operation_name == ActionSet.OPERATION_DESTROY_HANGING_VERTEX
-        ):
+        if operation_name == ActionSet.OPERATION_DESTROY_VERTEX:
             return """
             fineGridVertex{}.getEnumerator().releaseNumber( fineGridVertex{}.getNumber() );
             """.format(
@@ -224,12 +219,13 @@ class AssignNumbersToMesh(ActionSet):
 
 class ClearNumbersOnMesh(ActionSet):
     """!
-    
+
     Clear all the numbers on the mesh
-    
+
     We set all entries to AdjacentCellNumber.
-    
+
     """
+
     def __init__(self, task_name):
         self._task_name = task_name
         pass

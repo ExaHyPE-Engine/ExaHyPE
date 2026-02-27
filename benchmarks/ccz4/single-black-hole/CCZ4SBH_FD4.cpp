@@ -60,14 +60,9 @@ benchmarks::exahype2::ccz4::CCZ4SBH_FD4::CCZ4SBH_FD4() { prepareTwoPunctures(); 
 void benchmarks::exahype2::ccz4::CCZ4SBH_FD4::initialCondition(
   double* NOALIAS Q,
   const tarch::la::Vector<DIMENSIONS, double>& meshCellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& meshCellH,
-  bool                                         gridIsConstructed
+  const tarch::la::Vector<DIMENSIONS, double>& meshCellH
 ) {
-  logTraceInWith3Arguments("initialCondition(...)", meshCellCentre, meshCellH, gridIsConstructed);
-
-  applications::exahype2::ccz4::ApplyTwoPunctures(Q, meshCellCentre, 0, twoPunctures, not gridIsConstructed);
-
-  logTraceOut("initialCondition(...)");
+  applications::exahype2::ccz4::ApplyTwoPunctures(Q, meshCellCentre, 0, twoPunctures, false);
 }
 
 void benchmarks::exahype2::ccz4::CCZ4SBH_FD4::startTimeStep(

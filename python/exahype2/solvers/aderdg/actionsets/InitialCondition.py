@@ -15,8 +15,7 @@ class InitialCondition(AbstractADERDGActionSet):
     repositories::{{SOLVER_INSTANCE}}.initialCondition(
       fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
       marker.getX(),
-      marker.getH(),
-      {{GRID_IS_CONSTRUCTED}}
+      marker.getH()
     );
 {% else %}
     dfor(index, {{ORDER}} + 1) {
@@ -29,8 +28,7 @@ class InitialCondition(AbstractADERDGActionSet):
           repositories::{{SOLVER_INSTANCE}}.Order + 1,
           kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes
         ),
-        marker.getH(),
-        {{GRID_IS_CONSTRUCTED}}
+        marker.getH()
       );
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
@@ -53,10 +51,9 @@ class InitialCondition(AbstractADERDGActionSet):
   }
 """
 
-    def __init__(self, solver, guard, grid_is_constructed):
+    def __init__(self, solver, guard):
         super(InitialCondition, self).__init__(solver)
         self._guard = guard
-        self._grid_is_constructed = grid_is_constructed
         self._initialise_patches = solver._initialise_patches
 
     def get_body_of_operation(self, operation_name):
@@ -69,7 +66,6 @@ class InitialCondition(AbstractADERDGActionSet):
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
             d["PREDICATE"] = self._guard
-            d["GRID_IS_CONSTRUCTED"] = self._grid_is_constructed
             d["INITIALISE_PATCHES"] = self._initialise_patches
             result = jinja2.Template(self._Template_InitialCondition).render(**d)
         return result

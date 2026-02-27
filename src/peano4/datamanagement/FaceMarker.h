@@ -35,6 +35,7 @@ struct peano4::datamanagement::FaceMarker {
   std::uint8_t hasBeenRefinedMask{0};
   std::uint8_t willBeRefinedMask{0};
   std::uint8_t isLocalMask{0};
+  std::uint8_t isHangingMask{0};
 
   /**
    * Entries from (0,1,2). (0,0) or (0,0,0) is the left, bottom cell.
@@ -150,6 +151,9 @@ struct peano4::datamanagement::FaceMarker {
 
   INLINE_METHOD bool isLocal() const { return isLocal(selectedFace); }
   INLINE_METHOD bool isLocal(int i) const { return (isLocalMask >> i) & 1u; }
+
+  INLINE_METHOD bool isHanging() const { return isHanging(selectedFace); }
+  INLINE_METHOD bool isHanging(int i) const { return (isHangingMask >> i) & 1u; }
 
   /**
    * Return relative position within father cell. The result is from

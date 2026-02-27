@@ -84,7 +84,7 @@ tarch::timing::Measurement timingComputeKernel;
  *
  * We use the values from the centralMost Cell in the domain
  * with an arbitrary cell size of 1/81 of the domain size.
- * 
+ *
  * TODO: should we update this to actual initial conditions?
  */
 void initInputData(double* Q) {
@@ -92,7 +92,7 @@ void initInputData(double* Q) {
   //   Q[i] = std::sin(1.0 * i / (NumberOfInputEntriesPerCell) * tarch::la::PI);
   // }
 
-  int linearisedIndex = 0; 
+  int linearisedIndex = 0;
   dfor(index, AderSolver::Order + 1) {
     repositories::instanceOfAderSolver.initialCondition(
       Q + linearisedIndex,
@@ -103,9 +103,8 @@ void initInputData(double* Q) {
         repositories::instanceOfAderSolver.Order + 1,
         kernels::AderSolver::Quadrature<double>::nodes
       ),
-      CellSize,
+      CellSize
       //index,
-      true
     );
     linearisedIndex += AderSolver::NumberOfUnknowns + AderSolver::NumberOfAuxiliaryVariables;
   }

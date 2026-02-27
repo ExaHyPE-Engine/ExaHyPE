@@ -7,18 +7,13 @@ import peano4.datamodel.DaStGen2
 
 
 class UpdateCellLabel(ActionSet):
-    """! Update the cell label within a sweep
+    """!
     Update the cell label initialises cell labels correctly when a cell is
     created, and it also resets the update flag.
     """
 
     def get_attribute_name(solver_name):
         return solver_name + "CellLabel"
-
-    """
-   SetLabels is an action set which is automatically merged into all ExaHyPE2
-   steps by the project. There's nothing for the user solvers to be done here.
-  """
 
     def __init__(self, solver_name):
         super(UpdateCellLabel, self).__init__(

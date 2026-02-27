@@ -7,8 +7,7 @@ tarch::logging::Log tutorials::exahype2::swe::SWESolver::_log("tutorials::exahyp
 void tutorials::exahype2::swe::SWESolver::initialCondition(
   [[maybe_unused]] double* const NOALIAS                        Q, // Q[4+0]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const bool                                   gridIsConstructed
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
 ) {
   Q[Shortcuts::hu + 0] = 0.0; // v_x
   Q[Shortcuts::hu + 1] = 0.0; // v_y
@@ -36,9 +35,11 @@ void tutorials::exahype2::swe::SWESolver::boundaryConditions(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t
 ) {
-  return (std::abs(::tarch::la::norm2(x) - 0.5) < 0.2 ?
-    ::exahype2::RefinementCommand::Refine :
-    ::exahype2::RefinementCommand::Keep);
+  return (
+    std::abs(::tarch::la::norm2(x) - 0.5) < 0.2
+      ? ::exahype2::RefinementCommand::Refine
+      : ::exahype2::RefinementCommand::Keep
+  );
 }
 
 double tutorials::exahype2::swe::SWESolver::maxEigenvalue(
@@ -64,7 +65,7 @@ void tutorials::exahype2::swe::SWESolver::flux(
   [[maybe_unused]] const int                                    normal,
   [[maybe_unused]] double* const NOALIAS                        F // F[4]
 ) {
-  double ih    = 1.0 / Q[Shortcuts::h];
+  double ih            = 1.0 / Q[Shortcuts::h];
   F[Shortcuts::h]      = Q[Shortcuts::hu + normal];
   F[Shortcuts::hu + 0] = Q[Shortcuts::hu + normal] * Q[Shortcuts::hu + 0] * ih;
   F[Shortcuts::hu + 1] = Q[Shortcuts::hu + normal] * Q[Shortcuts::hu + 1] * ih;
@@ -81,7 +82,7 @@ void tutorials::exahype2::swe::SWESolver::nonconservativeProduct(
   [[maybe_unused]] const int                                    normal,
   [[maybe_unused]] double* const NOALIAS                        BTimesDeltaQ // BTimesDeltaQ[4]
 ) {
-  constexpr double g = 9.81;
+  constexpr double g         = 9.81;
   BTimesDeltaQ[Shortcuts::h] = 0.0;
   switch (normal) {
   case 0:

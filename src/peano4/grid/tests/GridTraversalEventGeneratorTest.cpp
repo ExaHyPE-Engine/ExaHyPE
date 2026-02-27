@@ -403,7 +403,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterNodeTr
       outVertexPos                              = static_cast<int>(outVertexIndex.to_ulong());
     };
 
-  // (1) HangingVertex => CreateOrDestroyHangingGridEntity
+  // (1) HangingVertex => CreateOrDestroyGridEntity + hanging marker set
   {
     GridVertex coarseGridVertices[TWO_POWER_D];
     GridVertex fineGridVertices[TWO_POWER_D];
@@ -433,10 +433,11 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterNodeTr
       true
     );
 
-    validateEquals(event.getVertexDataFrom(vertexI), GridTraversalObserver::CreateOrDestroyHangingGridEntity);
+    validate(event.getIsVertexHanging(vertexPos));
+    validateEquals(event.getVertexDataFrom(vertexI), GridTraversalObserver::CreateOrDestroyGridEntity);
   }
 
-  // (2) New + in/out stack => CreateOrDestroyPersistentGridEntity
+  // (2) New + in/out stack => CreateOrDestroyGridEntity
   {
     GridVertex coarseGridVertices[TWO_POWER_D];
     GridVertex fineGridVertices[TWO_POWER_D];
@@ -469,10 +470,10 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterNodeTr
       true
     );
 
-    validateEquals(event.getVertexDataFrom(vertexI), GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
+    validateEquals(event.getVertexDataFrom(vertexI), GridTraversalObserver::CreateOrDestroyGridEntity);
   }
 
-  // (3) New + temporary stack => stack number (not CreateOrDestroyPersistentGridEntity)
+  // (3) New + temporary stack => stack number (not CreateOrDestroyGridEntity)
   {
     GridVertex coarseGridVertices[TWO_POWER_D];
     GridVertex fineGridVertices[TWO_POWER_D];
@@ -622,7 +623,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
   }
   validate(chosenVertexI >= 0);
 
-  // (A) Local vertex + Delete + in/out => CreateOrDestroyPersistentGridEntity
+  // (A) Local vertex + Delete + in/out => CreateOrDestroyGridEntity
   {
     GridVertex coarseGridVertices[TWO_POWER_D];
     GridVertex fineGridVertices[TWO_POWER_D];
@@ -659,7 +660,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
       true
     );
 
-    validateEquals(leave.getVertexDataTo(chosenVertexI), GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
+    validateEquals(leave.getVertexDataTo(chosenVertexI), GridTraversalObserver::CreateOrDestroyGridEntity);
   }
 
   // (B) Non-local vertex + Unrefined + in/out => NoData (filtered by in/out + not local check)
@@ -704,8 +705,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
     validateEquals(leave.getVertexDataTo(chosenVertexI), GridTraversalObserver::NoData);
   }
 
-  // (C) Non-local vertex + Delete + in/out => CreateOrDestroyPersistentGridEntity (not filtered, as the filter checks
-  // in/out stacks)
+  // (C) Non-local vertex + Delete + in/out => NoData (not filtered, as the filter checks in/out stacks)
   {
     GridVertex coarseGridVertices[TWO_POWER_D];
     GridVertex fineGridVertices[TWO_POWER_D];
@@ -744,7 +744,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
     );
 
     validate(not leave.getIsVertexLocal(chosenVertexPos));
-    validateEquals(leave.getVertexDataTo(chosenVertexI), GridTraversalObserver::CreateOrDestroyPersistentGridEntity);
+    validateEquals(leave.getVertexDataTo(chosenVertexI), GridTraversalObserver::NoData);
   }
 
   // (D) Face: in/out write stack + non-local => NoData (early-out in leave event)

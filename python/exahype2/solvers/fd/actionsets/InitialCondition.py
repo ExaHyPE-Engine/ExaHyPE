@@ -12,11 +12,9 @@ class InitialCondition(AbstractFDActionSet):
         self,
         solver,
         guard,
-        grid_is_constructed,
     ):
         AbstractFDActionSet.__init__(self, solver)
         self.guard = guard
-        self.grid_is_constructed = grid_is_constructed
 
     def get_body_of_operation(self, operation_name):
         result = ""
@@ -29,7 +27,6 @@ class InitialCondition(AbstractFDActionSet):
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
             d["PREDICATE"] = self.guard
-            d["GRID_IS_CONSTRUCTED"] = self.grid_is_constructed
             result = jinja2.Template(self.TemplateInitialCondition).render(**d)
 
         return result
@@ -54,10 +51,10 @@ class InitialCondition(AbstractFDActionSet):
         )
 
     def get_static_initialisations(self, full_qualified_classname):
-            return """\n"""
+        return """\n"""
 
     def get_attributes(self):
-            return """\n"""
+        return """\n"""
 
     TemplateInitialCondition = """
   if ({{PREDICATE}}) {
@@ -67,15 +64,13 @@ class InitialCondition(AbstractFDActionSet):
       {{FULL_QUALIFIED_SOLVER_NAME}}::initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + index,
         ::exahype2::fv::getVolumeCentre(marker.getX(), marker.getH(), {{NUMBER_OF_NODES_PER_AXIS}}, volume),
-        ::exahype2::fv::getVolumeSize(marker.getH(), {{NUMBER_OF_NODES_PER_AXIS}}),
-        {{GRID_IS_CONSTRUCTED}}
+        ::exahype2::fv::getVolumeSize(marker.getH(), {{NUMBER_OF_NODES_PER_AXIS}})
       );
       {% else %}
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + index,
         ::exahype2::fv::getVolumeCentre(marker.getX(), marker.getH(), {{NUMBER_OF_NODES_PER_AXIS}}, volume),
-        ::exahype2::fv::getVolumeSize(marker.getH(), {{NUMBER_OF_NODES_PER_AXIS}}),
-        {{GRID_IS_CONSTRUCTED}}
+        ::exahype2::fv::getVolumeSize(marker.getH(), {{NUMBER_OF_NODES_PER_AXIS}})
       );
       {% endif %}
     }

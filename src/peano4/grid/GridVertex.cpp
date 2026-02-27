@@ -26,6 +26,7 @@ peano4::grid::GridVertex peano4::grid::GridVertex::create(
   newVertex.setFlag(GridVertex::IsAntecessorOfRefinedVertexInCurrentTreeSweep, not isNewFineGridVertex);
   newVertex.clearFlag(peano4::grid::GridVertex::HasBeenParentOfSubtreeVertexInPreviousTreeSweep);
   newVertex.clearFlag(peano4::grid::GridVertex::IsParentOfSubtreeVertexInCurrentTreeSweep);
+  newVertex.clearFlag(peano4::grid::GridVertex::HasBeenVertexTypeHangingInPreviousTreeSweep);
   return newVertex;
 }
 
@@ -123,6 +124,7 @@ std::string peano4::grid::GridVertex::toString() const {
   addFlag("IsAntecessorOfRefinedVertexInCurrentTreeSweep", IsAntecessorOfRefinedVertexInCurrentTreeSweep);
   addFlag("HasBeenParentOfSubtreeVertexInPreviousTreeSweep", HasBeenParentOfSubtreeVertexInPreviousTreeSweep);
   addFlag("IsParentOfSubtreeVertexInCurrentTreeSweep", IsParentOfSubtreeVertexInCurrentTreeSweep);
+  addFlag("HasBeenVertexTypeHangingInPreviousTreeSweep", HasBeenVertexTypeHangingInPreviousTreeSweep);
   if (first) {
     out << "None"; // No flags set
   }
