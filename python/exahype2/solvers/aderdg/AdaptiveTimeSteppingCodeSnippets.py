@@ -47,10 +47,6 @@ class AdaptiveTimeSteppingCodeSnippets(
 """
 
     def create_finish_time_step_implementation(self):
-        """
-        This routine is inserted after we have reduced all global quantities. These
-        are the quantities with the postfix ThisTimeStep.
-        """
         return (
             super(
                 AdaptiveTimeSteppingCodeSnippets, self
@@ -61,16 +57,27 @@ class AdaptiveTimeSteppingCodeSnippets(
         and
         tarch::la::greater(_maxEigenvalueThisTimeStep, 0.0)
       ) {
-        const double minCellSize = _minCellHThisTimeStep;
         _admissibleTimeStepSize = _admissibleTimeStepSizeThisTimeStep;
+
         // The max eigenvalue here is already the sum of the eigenvalues in each direction scaled with the volume size in that direction.
-        _admissibleTimeStepSizeThisTimeStep = std::min(MinTerminalTime - _minTimeStampThisTimeStep, CFL * PNPM / _maxEigenvalueThisTimeStep);
-        if (std::isnan(_admissibleTimeStepSizeThisTimeStep) or std::isinf(_admissibleTimeStepSizeThisTimeStep)) {
-          tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_admissibleTimeStepSizeThisTimeStep > 0", "Invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSizeThisTimeStep));
+        const auto dtCFL = CFL * PNPM / _maxEigenvalueThisTimeStep;
+
+        if (not std::isfinite(dtCFL)) {
+          tarch::triggerNonCriticalAssertion(__FILE__, __LINE__,
+            "std::isfinite(dtCFL)",
+            "Invalid (NaN or inf) time step size: " + std::to_string(dtCFL)
+          );
         }
-        if (tarch::la::smallerEquals(_admissibleTimeStepSizeThisTimeStep, 0.0, 1e-10)) {
-          logWarning("finishTimeStep()", "Degenerated time step size of " << std::to_string(_admissibleTimeStepSizeThisTimeStep) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h=" << minCellSize << ")");
+
+        if (tarch::la::smallerEquals(dtCFL, 0.0, 1e-10)) {
+          logWarning(
+            "finishTimeStep()",
+            "Degenerated time step size of " << std::to_string(dtCFL) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h=" << _minCellHThisTimeStep << ")"
+          );
         }
+
+        const auto dtToEnd                  = std::max(0.0, MinTerminalTime - _minTimeStampThisTimeStep);
+        _admissibleTimeStepSizeThisTimeStep = std::min(dtToEnd, dtCFL);
       }
 """
         )
