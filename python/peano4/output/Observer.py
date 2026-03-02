@@ -491,6 +491,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::unprepareTraversal() {
         the template into the output file once per action. Per action, the dictionary's
         entries are updated. Otherwise, the dictionary remains unchanged.
 
+        @todo It is not clear what manual_dict really means, and I think it is never none. Documentation might have to be updated, too.
 
         output_file:
           Handle on output file
@@ -559,6 +560,10 @@ std::vector< peano4::grid::GridControlEvent > {{FULL_QUALIFIED_CLASSNAME}}::getG
     TemplateEnterCell_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalEvent&  event ) {
   logTraceInWith2Arguments( "enterCell(...)", _spacetreeId, event.toString() );
+  
+  [[maybe_unused]] const peano4::datamanagement::CellMarker    cellMarker( event );
+  [[maybe_unused]] const peano4::datamanagement::FaceMarker    faceMarker( event );
+  [[maybe_unused]] const peano4::datamanagement::VertexMarker  vertexMarker(event);
 """
 
     TemplateLoadCell_VertexLoad = r"""
@@ -571,7 +576,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       int outVertexStackPosition = event.getVertexDataTo(i);
       logDebug("loadCell(...)", "vertex stack " << inVertexStack << "->pos-" << outVertexStackPosition );
 
-      peano4::datamanagement::VertexMarker  marker(event,outVertexStackPosition);
+      peano4::datamanagement::VertexMarker  marker(vertexMarker,outVertexStackPosition);
 
       bool dataResidesOnIntermediateStack = 
         not peano4::grid::PeanoCurve::isInOutStack(inVertexStack)
@@ -662,7 +667,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
     TemplateEnterCell_VertexMappingCall = r"""
   // Handle vertex {{logical_type_name}}
   {
-    peano4::datamanagement::VertexMarker  marker(event);
+    peano4::datamanagement::VertexMarker  marker = vertexMarker;
 
     for (int i=0; i<TwoPowerD; i++) {
       int inVertexStack  = event.getVertexDataFrom(i);
@@ -729,7 +734,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       int outFaceStackPosition = event.getFaceDataTo(i);
       logDebug("loadCell(...)", "face stack " << inFaceStack << "->pos-" << outFaceStackPosition );
 
-      peano4::datamanagement::FaceMarker  marker(event,outFaceStackPosition);
+      peano4::datamanagement::FaceMarker  marker(faceMarker,outFaceStackPosition);
 
       bool dataResidesOnIntermediateStack = 
         not peano4::grid::PeanoCurve::isInOutStack(inFaceStack)
@@ -830,7 +835,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
     TemplateEnterCell_FaceMappingCall = r"""
   // Handle face {{logical_type_name}}
   {
-    peano4::datamanagement::FaceMarker marker( event );
+    peano4::datamanagement::FaceMarker marker = faceMarker;
+    
     for (int i=0; i<TwoTimesD; i++) {
       int inFaceStack = event.getFaceDataFrom(i);
       int pick        = event.getFaceDataTo(i);
@@ -897,7 +903,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
     [&]()->void {
     auto view = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( 1 );
 
-    peano4::datamanagement::CellMarker  marker(event);
+    const peano4::datamanagement::CellMarker&  marker = cellMarker;
 
     const int inCellStack  = event.getCellData();
     const int outCellStack = peano4::grid::PeanoCurve::CallStack;
@@ -983,7 +989,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
     TemplateEnterCell_CellMappingCall = r"""
   // Invoke creational events on cell {{logical_type_name}}
   {
-    peano4::datamanagement::CellMarker marker( event );
+    peano4::datamanagement::CellMarker marker = cellMarker;
+    
     if (
       event.getCellData()==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
       and
@@ -1187,23 +1194,37 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 void {{FULL_QUALIFIED_CLASSNAME}}::loadCell( const peano4::grid::GridTraversalEvent&  event ) {
   logTraceInWith2Arguments( "loadCell(...)", _spacetreeId, event.toString() );
   
+  [[maybe_unused]] const peano4::datamanagement::CellMarker    cellMarker( event );
+  [[maybe_unused]] const peano4::datamanagement::FaceMarker    faceMarker( event );
+  [[maybe_unused]] const peano4::datamanagement::VertexMarker  vertexMarker(event);
+  
   std::vector< tarch::multicore::Task* >  tasks;
 """
 
     TemplateStoreCell_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::storeCell( const peano4::grid::GridTraversalEvent&  event ) {
   logTraceInWith2Arguments( "storeCell(...)", _spacetreeId, event.toString() );
+  
+  [[maybe_unused]] const peano4::datamanagement::CellMarker    cellMarker( event );
+  [[maybe_unused]] const peano4::datamanagement::FaceMarker    faceMarker( event );
+  [[maybe_unused]] const peano4::datamanagement::VertexMarker  vertexMarker(event);
+
   std::vector< tarch::multicore::Task* >  tasks;
 """
 
     TemplateLeaveCell_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalEvent&  event ) {
   logTraceInWith2Arguments( "leaveCell(...)", _spacetreeId, event.toString() );
+  
+  [[maybe_unused]] const peano4::datamanagement::CellMarker    cellMarker( event );
+  [[maybe_unused]] const peano4::datamanagement::FaceMarker    faceMarker( event );
+  [[maybe_unused]] const peano4::datamanagement::VertexMarker  vertexMarker(event);
 """
 
     TemplateLeaveCell_MappingCall = """
   {
-    peano4::datamanagement::CellMarker marker( event );
+    peano4::datamanagement::CellMarker marker = cellMarker;
+    
     if (
       marker.isLocal()
     ) {
@@ -1218,7 +1239,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
     TemplateLeaveCell_CellStore_MappingCall = """
   {
-    peano4::datamanagement::CellMarker marker( event );
+    peano4::datamanagement::CellMarker marker = cellMarker;
+    
     if (
       event.getCellData()==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
       and
@@ -1242,7 +1264,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
     const int outCellStack  = event.getCellData();
     logDebug("storeCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack );
 
-    peano4::datamanagement::CellMarker  marker(event);
+    const peano4::datamanagement::CellMarker&  marker = cellMarker;
 
     auto view = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( 1 );
 
@@ -1285,8 +1307,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
     TemplateLeaveCell_FaceStore_MappingCall = """
   // Handle face {{logical_type_name}}
   {
-    peano4::datamanagement::FaceMarker  marker(event);
-
+    peano4::datamanagement::FaceMarker  marker = faceMarker;
+    
     for (int i=0; i<TwoTimesD; i++) {
       int outFaceStack      = event.getFaceDataTo(i);
       int pick              = event.getFaceDataFrom(i);
@@ -1349,7 +1371,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
       int outFaceStack         = event.getFaceDataTo(i);
       logDebug("storeCell(...)", "pos-" << inFaceStackPosition << "->face stack " << outFaceStack );
 
-      peano4::datamanagement::FaceMarker  marker(event,inFaceStackPosition);
+      peano4::datamanagement::FaceMarker  marker(faceMarker,inFaceStackPosition);
 
       {{full_qualified_type}}& data = view.get(inFaceStackPosition);
 
@@ -1390,7 +1412,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
     TemplateLeaveCell_VertexStore_MappingCall = """
   // Handle vertex {{logical_type_name}}
   {
-    peano4::datamanagement::VertexMarker  marker(event);
+    peano4::datamanagement::VertexMarker  marker = vertexMarker;
 
     for (int i=0; i<TwoPowerD; i++) {
       int outVertexStack        = event.getVertexDataTo(i);
@@ -1450,7 +1472,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
       int outVertexStack         = event.getVertexDataTo(i);
       logDebug("storeCell(...)", "pos-" << inVertexStackPosition << "->vertex stack " << outVertexStack);
 
-      peano4::datamanagement::VertexMarker  marker(event,inVertexStackPosition);
+      peano4::datamanagement::VertexMarker  marker(vertexMarker,inVertexStackPosition);
 
       {{full_qualified_type}}& data = view.get(inVertexStackPosition);
 
@@ -1762,11 +1784,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::finishAllOutstandingSendsAndReceives() {
 void {{FULL_QUALIFIED_CLASSNAME}}::sendVertex(int position, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) {
   logTraceInWith4Arguments( "sendVertex(int,int,int)", position, toStack, event.toString(), _spacetreeId );
 
+  [[maybe_unused]] const peano4::datamanagement::VertexMarker  vertexMarker(event);
 """
 
     TemplateSendVertex_SendCall = """
   {
-    peano4::datamanagement::VertexMarker  marker(event,position);
+    peano4::datamanagement::VertexMarker  marker(vertexMarker,position);
 
     const {{full_qualified_type}}& data = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
       {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
@@ -1805,11 +1828,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendVertex(int position, int toStack, ::peano
 void {{FULL_QUALIFIED_CLASSNAME}}::sendFace(int position, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) {
   logTraceInWith4Arguments( "sendFace(int,int,int)", position, toStack, event.toString(), _spacetreeId );
 
+  [[maybe_unused]] const peano4::datamanagement::FaceMarker    faceMarker( event );
 """
 
     TemplateSendFace_SendCall = """
   {
-    peano4::datamanagement::FaceMarker  marker(event,position);
+    peano4::datamanagement::FaceMarker  marker(faceMarker,position);
     const {{full_qualified_type}}& data = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
       {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
     )->top(TwoTimesD-1-position);
@@ -1849,11 +1873,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendFace(int position, int toStack, ::peano4:
 void {{FULL_QUALIFIED_CLASSNAME}}::sendCell(int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) {
   logTraceInWith3Arguments( "sendCell(int,int,int)", toStack, event.toString(), _spacetreeId );
 
+  [[maybe_unused]] const peano4::datamanagement::CellMarker    cellMarker( event );
 """
 
     TemplateSendCell_SendCall = """
   {
-    peano4::datamanagement::CellMarker  marker(event);
+    const peano4::datamanagement::CellMarker&  marker = cellMarker;
+    
     const {{full_qualified_type}}&  data = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top();
     if (
       ::peano4::grid::storePersistently( {{full_qualified_type}}::loadStoreComputeFlag(
@@ -1891,6 +1917,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendCell(int toStack, ::peano4::grid::Travers
     TemplateReceiveAndMergeCell_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeCell(int fromStack, peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent& event ) {
   logTraceInWith3Arguments( "receiveAndMergeCell(...)", fromStack, event.toString(), _spacetreeId );
+  
+  [[maybe_unused]] const peano4::datamanagement::CellMarker    cellMarker( event );
 """
 
     TemplateReceiveAndMergeCell_Epilogue = """
@@ -1903,6 +1931,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeCell(int fromStack, peano4::gr
     TemplateReceiveAndMergeVertex_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeVertex(int position, int fromStack, peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) {
   logTraceInWith4Arguments( "receiveAndMergeVertex(...)", position, fromStack, event.toString(), _spacetreeId );
+
+  [[maybe_unused]] const peano4::datamanagement::VertexMarker  vertexMarker(event);
 """
 
     TemplateReceiveAndMergeVertex_Epilogue = """
@@ -1922,11 +1952,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeVertex(int position, int fromS
     TemplateReceiveAndMergeFace_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromStack, peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) {
   logTraceInWith4Arguments( "receiveAndMergeFace(...)", position, fromStack, event.toString(), _spacetreeId );
+  
+  [[maybe_unused]] const peano4::datamanagement::FaceMarker    faceMarker( event );
 """
 
     TemplateReceiveAndMergeVertex_ReceiveAndMergeCalls = """
   {
-    peano4::datamanagement::VertexMarker  marker(event,position);
+    peano4::datamanagement::VertexMarker  marker(vertexMarker,position);
     {{full_qualified_type}}& data = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
       {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
     )->top(TwoPowerD-1-position);
@@ -1981,7 +2013,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
 
     TemplateReceiveAndMergeFace_ReceiveAndMergeCalls = """
   {
-    peano4::datamanagement::FaceMarker  marker(event,position);
+    peano4::datamanagement::FaceMarker  marker(faceMarker,position);
     {{full_qualified_type}}& data = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
       {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
     )->top(TwoTimesD-1-position);
@@ -2029,7 +2061,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
 
     TemplateReceiveAndMergeCell_ReceiveAndMergeCalls = """
   {
-    peano4::datamanagement::CellMarker  marker(event);
+    const peano4::datamanagement::CellMarker&  marker = cellMarker;
 
     {{full_qualified_type}}& data = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
       {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)

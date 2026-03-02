@@ -61,8 +61,18 @@ peano4::datamanagement::VertexMarker::VertexMarker(
     }
   }
 
-
   _isParentVertexLocal = event.getIsParentVertexLocal();
+}
+
+
+
+
+peano4::datamanagement::VertexMarker::VertexMarker(
+  const VertexMarker&  marker,
+  int                  selectVertex
+):
+  VertexMarker(marker) {
+  select(selectVertex);
 }
 
 
