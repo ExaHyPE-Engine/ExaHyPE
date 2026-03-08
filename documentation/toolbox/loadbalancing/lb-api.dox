@@ -102,14 +102,19 @@ The following diagrams show the same tree structure before and after applying hi
 \par State after Stages I and II (input to Stage III):
 @image html tree_stage1a.png
 
-After Stages I and II, 6 leaves have been assigned to Subtree 1 (green): 3 at Level 2 and 3 at Level 3. Bottom-up propagation has already ensured parent-child consistency.
+After Stages I and II, Subtree 1 (green) spans two levels. At Level 2, four cells belong to
+Subtree 1: three leaves (L2A1, L2A2, L2A3, all children of L1A) and one non-leaf (L2B1, child
+of L1B, promoted to Subtree 1 by Stage II because all its children belong to Subtree 1).
+At Level 3, three leaves (L3B1A, L3B1B, L3B1C, all children of L2B1) also belong to Subtree 1.
+All other nodes remain in Subtree 0 (gold).
 
 \par Extracted Split Parameters (after Stages I–II, before Stage III):
 ```
-{2; 0→1; 3}   // Level 2: 3 cells of Subtree 1 first appear here
-{4; 0→1; 3}   // Level 3: 3 additional cells of Subtree 1 appear here
+{2; 0→1; 4}   // Level 2: 4 cells of Subtree 1 first appear here
+               //   (3 leaves under L1A + 1 non-leaf L2B1 under L1B promoted by Stage II)
+{4; 0→1; 3}   // Level 3: 3 leaf cells of Subtree 1 under L2B1 appear here
 ```
-Total: **2 split operations** (reflecting multi-level appearance)
+Total: **2 split operations** (reflecting multi-level appearance of Subtree 1)
 
 \par After Stage III — Hierarchical Optimisation:
 @image html tree_stage2a.png
