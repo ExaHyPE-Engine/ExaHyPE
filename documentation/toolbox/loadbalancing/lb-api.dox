@@ -43,15 +43,15 @@ This input method is essential for algorithm development and provides a baseline
 
 The `SplitTrees` module (`src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`) implements the core optimisation algorithms for redistributing computational work across multiple compute resources. These strategies enable you to achieve balanced workload distribution, handle adaptive mesh challenges, maintain mesh topology.
 
-The API provides two complementary approaches to tree splitting:
+The API provides three sequential stages of tree splitting:
 
 ### Stage I: Leaf Distribution
 
 The `split_leaves` function provides comprehensive load balancing that addresses the unique challenges of adaptive mesh refinement by distributing all computational work (leaf nodes) regardless of their refinement level, ensuring optimal load balance for spatially varying mesh structures.
 
-After Stage I completes leaf distribution, two alternative Stage II algorithms can be applied:
+After Stage I completes distributing ALL leaf nodes on the lowest admissible level, Stage II can be applied:
 
-### Stage II Algorithm 1: Bottom-Up Propagation
+### Stage II: Bottom-Up Propagation
 
 The `_update_non_leaf_assignments()` function propagates subtree assignments upward through the tree hierarchy using simple parent-child inheritance.
 
@@ -62,13 +62,13 @@ Bottom-up traversal where parent nodes inherit subtree assignments when all thei
 - Simple single-pass algorithm
 - Maintains strict parent-child consistency
 - Does not optimise split count or structure
-- Good baseline for initial leaf distribution
+- Required precondition for Stage III
 
 #### Illustrative Cases of Bottom-Up Propagation Multi‑level Tree Splitting
 
 The following diagrams illustrate two scenarios showing how multi-level splitting of leaves with bottom-up propagation supports adaptive mesh refinement. Green nodes indicate leaves assigned to Subtree 1, whilst yellow nodes denote leaves assigned to Subtree 0.
 
-The splitting algorithm identifies all leaves (including those at intermediate levels) and distributes them across subtrees (Stage I), then applies bottom-up propagation (Stage II Algorithm 1) to ensure that parent nodes whose children all belong to the same subtree are themselves assigned to that subtree.
+The bottom-up propagation (Stage II) ensures that parent nodes whose children all belong to the same subtree are themselves assigned to that subtree.
 
 @image html tree_examples_combined_a.png
 
@@ -80,18 +80,18 @@ A simple case in which only one node at Level 2 has children belonging to Subtre
 \par Scenario 2:
 A more complex case in which multiple nodes at Level 2 have children. Here, the propagation of subtree assignments extends upwards across several levels.
 
-This bottom-up propagation method ensures effective load balancing throughout the entire tree structure whilst maintaining strict parent-child consistency.
+This bottom-up propagation method ensures effective load balancing throughout the entire tree structure whilst maintaining strict parent-child consistency, and prepares the tree for optional Stage III hierarchical optimisation.
 
-### Stage II Algorithm 2: Hierarchical Optimisation
+### Stage III: Hierarchical Optimisation (TBD) @todo
 
-The `_optimize_split_hierarchy()` function minimises the total number of split operations whilst preserving load balance from Stage I.
+The `_optimize_split_hierarchy()` function minimises the total number of split operations whilst preserving load balance established by Stages I and II.
 
 \par Algorithm
-Iterative optimisation that restructures the split hierarchy by moving split decisions up the tree when beneficial.
+Iterative optimisation that restructures the split hierarchy by moving split decisions up the tree when beneficial. Requires Stage II (bottom-up propagation) to have been applied first, so that non-leaf subtree assignments are consistent before the optimisation begins.
 
 \par Characteristics
 - Multi-pass iterative optimisation
-- Maintains tree topology constraints
+- Maintains tree topology constraints established by Stage II
 - Actively minimises split operation count
 - Optimises for runtime splitting efficiency
 
@@ -99,20 +99,19 @@ Iterative optimisation that restructures the split hierarchy by moving split dec
 
 The following diagrams show the same tree structure before and after applying hierarchical optimisation. This algorithm transforms the split structure to reduce the number of split operations whilst maintaining identical load distribution.
 
-\par Initial State (Stage I: Leaf Distribution Only):
+\par State after Stages I and II (input to Stage III):
 @image html tree_stage1a.png
 
-After Stage I leaf distribution, 6 leaves have been assigned to Subtree 1 (green): 3 at Level 2 and 3 at Level 3. No Stage II algorithm has been applied yet.
+After Stages I and II, 6 leaves have been assigned to Subtree 1 (green): 3 at Level 2 and 3 at Level 3. Bottom-up propagation has already ensured parent-child consistency.
 
-\par Extracted Split Parameters (from leaf-only distribution):
+\par Extracted Split Parameters (after Stages I–II, before Stage III):
 ```
-// Based on earliest level where each subtree appears
 {2; 0→1; 3}   // Level 2: 3 cells of Subtree 1 first appear here
 {4; 0→1; 3}   // Level 3: 3 additional cells of Subtree 1 appear here
 ```
 Total: **2 split operations** (reflecting multi-level appearance)
 
-\par After Hierarchical Optimisation (Stage II Algorithm 2):
+\par After Stage III — Hierarchical Optimisation:
 @image html tree_stage2a.png
 
 The hierarchical optimisation recognises that the 6 leaves in Subtree 1 (3 at Level 2 + 3 at Level 3) collectively equal one Level 1 cell's worth of descendants (3^(2×1) = 9 total descendants). Therefore, it restructures the splits:
@@ -132,12 +131,12 @@ The optimisation moves the split decision up one level. Instead of creating Subt
 
 \par More Complex Example
 
-\par Initial State (Stage I: Leaf Distribution Only):
+\par State after Stages I and II (input to Stage III):
 @image html tree_stage1b.png
 
-After Stage I, three subtrees (1, 2, 3) each own 9 cells at Level 2 under the same Level 1 parent L1A (Subtree 0). All three are independent splits from Subtree 0.
+After Stages I and II, three subtrees (1, 2, 3) each own 9 cells at Level 2 under the same Level 1 parent L1A (Subtree 0). All three are independent splits from Subtree 0.
 
-\par Extracted Split Parameters (from leaf-only distribution):
+\par Extracted Split Parameters (after Stages I–II, before Stage III):
 ```
 Level 2: {2; 0→1; 9}   // 9 cells of Subtree 1 appear at Level 2
 Level 2: {2; 0→2; 9}   // 9 cells of Subtree 2 appear at Level 2
@@ -145,7 +144,7 @@ Level 2: {2; 0→3; 9}   // 9 cells of Subtree 3 appear at Level 2
 ```
 Total: **3 operations** (27 cells = one Level-1 parent's full complement in 3D: 3^3)
 
-\par After Hierarchical Optimisation (Stage II Algorithm 2):
+\par After Stage III — Hierarchical Optimisation:
 @image html tree_stage2b.png
 
 L1A is promoted to Subtree 1 at Level 1, and Subtrees 2 and 3 are re-parented from Subtree 1 rather than from Subtree 0.
@@ -169,21 +168,28 @@ The algorithm applies when M trees on level L satisfy:
 
 This hierarchical approach prepares the split structure for integration with cost-aware optimisation strategies, enabling more efficient domain decomposition in practice.
 
-### Algorithm Comparison
+### Algorithm Overview
 
-| Aspect | Bottom-Up Propagation | Hierarchical Optimisation |
-|--------|----------------------|---------------------------|
-| **Objective** | Maintain parent-child consistency | Minimise split operations |
-| **Complexity** | O(levels × cells) single pass | O(levels² × trees) iterative |
-| **Split Count** | Not optimised | Actively minimised |
-| **Use Case** | Initial distribution | Cost-aware optimisation |
-| **Integration** | Built into `split_leaves()` | Future Stage II replacement |
+The three stages are applied in sequence within `split_leaves()`:
+
+```python
+split_leaves(peano_tree, number_of_splits):
+    # Stage I:   distribute leaf nodes across subtrees
+    # Stage II:  bottom-up propagation (_update_non_leaf_assignments)
+    # Stage III: hierarchical optimisation (_optimize_split_hierarchy)  # TBD
+```
+
+| Stage | Function | Objective | Complexity |
+|-------|----------|-----------|------------|
+| **I** | `split_leaves()` (initial stage) | Distribute leaves across subtrees | O(levels × cells) |
+| **II** | `_update_non_leaf_assignments()` | Propagate subtree ids bottom-up | O(levels × cells) single pass |
+| **III** | `_optimize_split_hierarchy()` | Minimise split operation count | O(levels² × trees) iterative |
 
 ### Future Extensions
 Planned development includes:
-- **Hierarchical Optimisation Integration**: Replace `_update_non_leaf_assignments` with `_optimize_split_hierarchy` as default Stage II
+- **Stage III Implementation**: Implement `_optimize_split_hierarchy()` as the third stage in `split_leaves()`
 - **Cost-Aware Splitting**: Integration with splitting cost functions from @ref page_toolbox_loadbalancing_strategies
-- **Hybrid Approaches**: Configurable Stage II algorithm selection based on problem characteristics
+- **Hybrid Approaches**: Configurable stage selection based on problem characteristics
 
 ## Hardcoded parameter extraction (offline replay)
 
