@@ -19,7 +19,13 @@ This approach allows us to make informed splitting decisions that minimise both 
 
 # Core Components
 
-## Input Generators
+The API is organised into two phases:
+
+- **Phase 1: Input Generators** — read or generate the tree structure to be analysed.
+- **Phase 2: Splitting Strategies** — apply up to three sequential stages to redistribute
+  computational work and optimise the resulting split hierarchy.
+
+## Phase 1: Input Generators
 
 ### Grid Patch File Reader
 The `GridPatchFileReader` module in `src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py` enables users to analyse existing simulation data by converting Peano grid checkpoint files into the Tree structure format. This module allows you to analyse real simulation data, handle complex adaptive patterns, support multi-domain decompositions, enable offline optimisation. For complete implementation details, data representation examples, and coordinate systems, see the `Tree` class documentation in `src/toolbox/loadbalancing/api/Tree.py`.
@@ -31,17 +37,34 @@ The `RegularGridGenerator` module (`src/toolbox/loadbalancing/api/Input/RegularG
 
 This input method is essential for algorithm development and provides a baseline for comparing optimisation strategies.
 
-## Splitting Strategies
+## Phase 2: Splitting Strategies
 
-The `SplitTrees` module (`src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`) implements the core optimisation algorithms for redistributing computational work across multiple compute resources. These strategies enable you to achieve balanced workload distribution, handle adaptive mesh challenges, maintain mesh topology.
+The `SplitTrees` module (`src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`) implements the core optimisation algorithms for redistributing computational work across multiple compute resources. These strategies enable you to achieve balanced workload distribution, handle adaptive mesh challenges, and maintain mesh topology.
 
-The API provides three sequential stages of tree splitting:
+The splitting phase consists of up to three sequential stages applied within `split_leaves()`:
+
+```python
+split_leaves(peano_tree, number_of_splits):
+    # Stage I:            distribute leaf nodes across subtrees
+    # Stage II:           bottom-up propagation (_update_non_leaf_assignments)
+    # Stage III (opt.):   hierarchical optimisation (_optimize_split_hierarchy)  # TBD
+```
+
+| Stage | Function | Objective | Complexity |
+|-------|----------|-----------|------------|
+| **I** | `split_leaves()` (core loop) | Distribute leaves across subtrees | O(levels × cells) |
+| **II** | `_update_non_leaf_assignments()` | Propagate subtree ids bottom-up | O(levels × cells) single pass |
+| **III** | `_optimize_split_hierarchy()` | Minimise split operation count | O(levels² × trees) iterative |
+
+Stage I and Stage II are always executed. Stage III is optional and has not yet been implemented (see @todo below).
 
 ### Stage I: Leaf Distribution
 
-The `split_leaves` function provides comprehensive load balancing that addresses the unique challenges of adaptive mesh refinement by distributing all computational work (leaf nodes) regardless of their refinement level, ensuring optimal load balance for spatially varying mesh structures.
-
-After Stage I completes distributing ALL leaf nodes on the lowest admissible level, Stage II can be applied:
+The core loop of `split_leaves()` identifies all leaf nodes across every refinement level and
+distributes them as evenly as possible across the requested number of subtrees.
+A node is a leaf if it resides on the finest level or has no children on the next level.
+After Stage I, only leaf nodes carry updated subtree assignments; all non-leaf nodes still
+belong to their original subtree and are updated by Stage II.
 
 ### Stage II: Bottom-Up Propagation
 
@@ -164,23 +187,6 @@ The algorithm applies when M trees on level L satisfy:
 - Enables hierarchical split restructuring
 
 This hierarchical approach prepares the split structure for integration with cost-aware optimisation strategies, enabling more efficient domain decomposition in practice.
-
-### Algorithm Overview
-
-The three stages are applied in sequence within `split_leaves()`:
-
-```python
-split_leaves(peano_tree, number_of_splits):
-    # Stage I:   distribute leaf nodes across subtrees
-    # Stage II:  bottom-up propagation (_update_non_leaf_assignments)
-    # Stage III (optional): hierarchical optimisation (_optimize_split_hierarchy)  # TBD
-```
-
-| Stage | Function | Objective | Complexity |
-|-------|----------|-----------|------------|
-| **I** | `split_leaves()` (initial stage) | Distribute leaves across subtrees | O(levels × cells) |
-| **II** | `_update_non_leaf_assignments()` | Propagate subtree ids bottom-up | O(levels × cells) single pass |
-| **III** | `_optimize_split_hierarchy()` | Minimise split operation count | O(levels² × trees) iterative |
 
 ### Future Extensions
 Planned development includes:
