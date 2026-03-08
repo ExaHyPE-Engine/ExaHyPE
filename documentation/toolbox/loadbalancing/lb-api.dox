@@ -80,9 +80,9 @@ A simple case in which only one node at Level 2 has children belonging to Subtre
 \par Scenario 2:
 A more complex case in which multiple nodes at Level 2 have children. Here, the propagation of subtree assignments extends upwards across several levels.
 
-This bottom-up propagation method ensures effective load balancing throughout the entire tree structure whilst maintaining strict parent-child consistency, and prepares the tree for optional Stage III hierarchical optimisation.
+This bottom-up propagation method ensures effective load balancing throughout the entire tree structure whilst maintaining strict parent-child consistency, and prepares the tree for the optional hierarchical optimisation (Stage III).
 
-### Stage III: Hierarchical Optimisation (TBD) @todo
+### Stage III (optional): Hierarchical Optimisation (TBD) @todo
 
 The `_optimize_split_hierarchy()` function minimises the total number of split operations whilst preserving load balance established by Stages I and II.
 
@@ -181,7 +181,7 @@ The three stages are applied in sequence within `split_leaves()`:
 split_leaves(peano_tree, number_of_splits):
     # Stage I:   distribute leaf nodes across subtrees
     # Stage II:  bottom-up propagation (_update_non_leaf_assignments)
-    # Stage III: hierarchical optimisation (_optimize_split_hierarchy)  # TBD
+    # Stage III (optional): hierarchical optimisation (_optimize_split_hierarchy)  # TBD
 ```
 
 | Stage | Function | Objective | Complexity |
@@ -192,7 +192,7 @@ split_leaves(peano_tree, number_of_splits):
 
 ### Future Extensions
 Planned development includes:
-- **Stage III Implementation**: Implement `_optimize_split_hierarchy()` as the third stage in `split_leaves()`
+- **Stage III Implementation**: Implement the (optional) third stage `_optimize_split_hierarchy()` in `split_leaves()` as outlined above
 - **Cost-Aware Splitting**: Integration with splitting cost functions from @ref page_toolbox_loadbalancing_strategies
 - **Hybrid Approaches**: Configurable stage selection based on problem characteristics
 
