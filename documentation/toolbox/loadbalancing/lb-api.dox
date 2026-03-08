@@ -19,18 +19,10 @@ This approach allows us to make informed splitting decisions that minimise both 
 
 # Core Components
 
-## Tree Data Structure
-
-The `Tree` class in `src/toolbox/loadbalancing/api/Tree.py` provides the central data structure for representing and analysing adaptive mesh trees in the offline load balancing framework. This class enables users to analyse mesh structures, support adaptive meshes, enable load balancing operations, integrate with Peano workflows.
-
-The `Tree` class serves as the bridge between Peano's mesh representation and the offline optimisation algorithms, allowing users to analyse existing mesh structures and develop optimised load balancing strategies.
-
-For complete implementation details, data representation examples, and coordinate systems, see the `Tree` class documentation in `src/toolbox/loadbalancing/api/Tree.py`.
-
 ## Input Generators
 
 ### Grid Patch File Reader
-The `GridPatchFileReader` module in `src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py` enables users to analyse existing simulation data by converting Peano grid checkpoint files into the Tree format. This module allows you to analyse real simulation data, handle complex adaptive patterns, support multi-domain decompositions, enable offline optimisation.
+The `GridPatchFileReader` module in `src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py` enables users to analyse existing simulation data by converting Peano grid checkpoint files into the Tree structure format. This module allows you to analyse real simulation data, handle complex adaptive patterns, support multi-domain decompositions, enable offline optimisation. For complete implementation details, data representation examples, and coordinate systems, see the `Tree` class documentation in `src/toolbox/loadbalancing/api/Tree.py`.
 
 This input method is ideal for optimising load balancing strategies based on real application behaviour and mesh patterns.
 
