@@ -110,7 +110,7 @@ def split_finest_level(peano_tree: Tree, number_of_splits: int) -> Tree: # might
 
 def split_leaves(peano_tree: Tree, number_of_splits: int) -> Tree:
     """
-    Split a tree into the specified number of splits by distributing ALL leaf nodes.
+    Split a tree into the specified number of splits by distributing ALL leaf nodes on the lowest admissible level.
     This includes leaves at the finest level AND leaves at coarser levels (nodes that weren't refined further).
     
     ## Algorithm Overview
@@ -254,6 +254,7 @@ def split_leaves(peano_tree: Tree, number_of_splits: int) -> Tree:
     # If the parent and at least one child of a node are both associated to the same subtree,
     # then this non-leaf node must be associated to that subtree as well
     _update_non_leaf_assignments(peano_tree)
+    # _optimize_split_hierarchy(peano_tree)  # TBD: further optimize hierarchy
     
     # Update tree metadata after all splits
     peano_tree._subtree_count = number_of_splits + 1
