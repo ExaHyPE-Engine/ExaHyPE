@@ -188,8 +188,7 @@ The algorithm applies when M trees on level L satisfy:
 
 This hierarchical approach prepares the split structure for integration with cost-aware optimisation strategies, enabling more efficient domain decomposition in practice.
 
-### Future Extensions
-Planned development includes:
+### Planned development
 - **Stage III Implementation**: Implement the (optional) third stage `_optimize_split_hierarchy()` in `split_leaves()` as outlined above
 - **Cost-Aware Splitting**: Integration with splitting cost functions from @ref page_toolbox_loadbalancing_strategies
 - **Hybrid Approaches**: Configurable stage selection based on problem characteristics
@@ -300,15 +299,5 @@ The API tracks and reports performance metrics for:
 - **Total Processing Time**: End-to-end processing duration
 
 This enables analysis of scaling behaviour and identification of computational bottlenecks in the offline optimisation process.
-
-# Future Development
-
-Planned extensions to the API include:
-
-- **Hierarchical Optimisation Integration**: Implement `_optimize_split_hierarchy` as configurable Stage II alternative
-- **Cost Function Integration**: Implementation of splitting cost models from theoretical framework
-- **Advanced Algorithms**: Cost-aware optimisation strategies that minimise splitting costs whilst maintaining load balance, hierarchical splitting with early-stage decisions, and guided refinement approaches
-- **Peano Integration Tools**: Direct export mechanisms for hardcoded load balancer configuration
-- **Parallel Processing**: Support for parallel tree analysis and splitting operations
 
 */
