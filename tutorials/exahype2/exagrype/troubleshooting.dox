@@ -1,25 +1,81 @@
 /**
+@page tutorials_exahype2_applications_exagrype_faq Troubleshooting
 
-@page tutorials_exahype2_applications_exagrype_faq TroubleShooting
+This page is a collection of errors and bugs you may encounter while using ExaGRyPE, along with some
+potential solutions. Obviously there will always be new issues beyond this list; if so,
+please do not hesitate to contact us directly via email, Slack, office knock, etc.
 
-This papge is for a collection of errors and bugs you may encouter during using ExaGRyPE and some 
-potential solutions for them. Obviously there will always be new issues beyond this list, if so, 
-please do not hesitate to contact us directly via Email/Slack/office-knock etc.  
+### Peano Compilation
 
-# Peano Compiling
-
-If you encouter issues in this stage, it is very likely due to an old compiler or supporting library. Please
-make sure you load an as-new-as-possible Intel compiler and MPI module. Also please make sure you set the 
-compiler correctly:
+If you encounter issues at this stage, it is very likely due to an old compiler or supporting library. Please
+install or load an as-new-as-possible Intel compiler (the currently working one for me is 2025.2.1) and MPI module. 
+Also please make sure you set the compiler correctly:
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 export I_MPI_CXX=icpx
 ./configure CC=icx CXX=icpx --with-mpi=mpiicpx --with-multithreading=omp CXXFLAGS="......
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-For more information on dependencies and prerequisites, please check the page \ref page_installation_home.
+We provide a list of the modules you need to load on COSMA/DINE as an example in \ref tutorials_exahype2_applications_exagrype_clusters. For more information on dependencies and prerequisites, please check the page \ref page_installation_home.
 
-# To be continued...
+### GSL Library
+
+Depending on your system, you might have to load the GSL module separately
+for running ExaGRyPE. It is required by the external library for
+initial conditions for black holes (not needed for the gauge wave scenario). 
+
+In principle the library is already implemented in ExaHyPE and no external 
+inclusion is needed, but the entry below is kept just in case. The GSL module is available
+on most cluster systems.
+
+~~~~~~~~~~~~~~~~~~~~~~~
+module load gsl
+~~~~~~~~~~~~~~~~~~~~~~~
+
+and include the installation in the CXX flags in the configuration
+
+~~~~~~~~~~~~~~~~~~~~~~~
+CXXFLAGS="...... -Ipath/to/gsl/version/include ......"
+~~~~~~~~~~~~~~~~~~~~~~~
+
+### Python Related Issue
+
+Remember to add the Python directory of Peano into the \c PYTHONPATH of your system, or your script would crash immediately with no module issue. We recommend to use absolute path in long term usuage:
+
+~~~~~~~~~~~~~~~~~~~~~~~
+export PYTHONPATH=/path/to/your/Peano/python
+export PYTHONPATH=$PYTHONPATH:/path/to/your/Peano/applications/exahype2/ccz4
+~~~~~~~~~~~~~~~~~~~~~~~
+
+If you see Python report the missing of \c ast_comments or \c jinja2 when running the ExaGRyPE API script, that indicate 
+you forget to install them. On clusters where you may not have authorization of module installation, use \c --user arguement
+
+~~~~~~~~~~~~~~~~~~~~~~~
+pip3 install jinja2 --user
+pip3 install ast_comments --user
+~~~~~~~~~~~~~~~~~~~~~~~
+
+If you see 
+
+~~~~~~~~~~~~~~~~~~~~~~~
+"vtk is not available. Cannot process VTU/VTK files"
+~~~~~~~~~~~~~~~~~~~~~~~
+
+When you call the \c render.py script of Peano, that means you miss the vtk library in your Python installation. Use
+
+~~~~~~~~~~~~~~~~~~~~~~~
+pip3 install vtk --user
+~~~~~~~~~~~~~~~~~~~~~~~
+
+also try
+
+~~~~~~~~~~~~~~~~~~~~~~~
+python3 -m pip install --user vtk --no-cache-dir
+~~~~~~~~~~~~~~~~~~~~~~~
+
+if \c pip3 does not work properly.
+
+### To be continued...
 
 */
 

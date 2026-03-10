@@ -13,10 +13,12 @@ the suggest loading module and setup (before compiling the Peano kernel) when yo
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 module purge
-module load intel_comp/2024.2.0
-module load compiler-rt tbb compiler mpi 
+module load cosma
+module load intel_comp/2025.2.1 compiler-rt tbb umf compiler mpi
+module load intel_mpi
 export FLAVOUR_NOCONFLICT=1
-module load python
+module load gnu_comp/13.1.0
+export I_MPI_CC=icx
 export I_MPI_CXX=icpx
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -41,12 +43,14 @@ The following script gives an exmaple for submitting ExaGRyPE job to the cluster
 
 #SBATCH -o %A.out
 #SBATCH -e %A.err
-#SBATCH -p bluefield1
-#SBATCH -A durham
+#SBATCH -p cosma7
+#SBATCH -A prj00
 #SBATCH -t 24:00:00
 #SBATCH --ntasks-per-node=1
 #SBATCH --nodes=2
 #SBATCH -J ExaGRyPE
+#SBATCH --exclusive
+#SBATCH --no-requeue
 
 echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
 
@@ -58,9 +62,9 @@ module load python
 
 export UCX_TLS=ud,sm,self
 
-export OMP_NUM_THREADS=32
+export OMP_NUM_THREADS=28
 
-mpirun ./peano4_test
+mpirun ./peano4_sbh --timeout 18000
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 
