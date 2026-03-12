@@ -15,19 +15,34 @@ class EmptyPostprocessSolution(AbstractADERDGActionSet):
 
     def __init__(self, solver):
         super(EmptyPostprocessSolution, self).__init__(solver)
-        self._compute_kernel = ""
+        self._cell_compute_kernel = ""
+        self._face_compute_kernel = ""
+        self.descend_invocation_order = 1
 
     def get_body_of_operation(self, operation_name):
         result = ""
         if (
             operation_name
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME
+            and self._cell_compute_kernel != ""
         ):
             d = {}
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
             result = jinja2.Template(
-                self._compute_kernel, undefined=jinja2.DebugUndefined
+                self._cell_compute_kernel, undefined=jinja2.DebugUndefined
+            ).render(**d)
+            pass
+        elif (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_LAST_TIME
+            and self._face_compute_kernel != ""
+        ):
+            d = {}
+            self._solver._init_dictionary_with_default_parameters(d)
+            self._solver.add_entries_to_text_replacement_dictionary(d)
+            result = jinja2.Template(
+                self._face_compute_kernel, undefined=jinja2.DebugUndefined
             ).render(**d)
             pass
         return result
@@ -40,7 +55,7 @@ class EmptyPostprocessSolution(AbstractADERDGActionSet):
         return result
 
 
-class DoFWisePostprocessSolution(AbstractADERDGActionSet):
+class DoFWisePostprocessSolution(EmptyPostprocessSolution):
     """
     PostprocessSolution differs from other action sets, as I only create it once. See
     ADERDG.create_action_sets(). Once the instance does exist, you can tailor it. But you
@@ -60,8 +75,6 @@ class DoFWisePostprocessSolution(AbstractADERDGActionSet):
     def __init__(self, solver):
         super(DoFWisePostprocessSolution, self).__init__(solver)
         self._guard = "true"
-        self._compute_kernel = ""
-        self.descend_invocation_order = 1
 
     def add_postprocessing_kernel(self, operation_per_point):
         """
@@ -75,7 +88,7 @@ class DoFWisePostprocessSolution(AbstractADERDGActionSet):
         operation_per_point: String
           C/C++ code snippet
         """
-        self._compute_kernel += (
+        self._cell_compute_kernel += (
             """
 {
   {{COMPUTE_TIME_STEP_SIZE}}
@@ -115,26 +128,6 @@ class DoFWisePostprocessSolution(AbstractADERDGActionSet):
 """
         )
 
-    def get_body_of_operation(self, operation_name):
-        result = ""
-        if (
-            operation_name
-            == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME
-        ):
-            d = {}
-            self._solver._init_dictionary_with_default_parameters(d)
-            self._solver.add_entries_to_text_replacement_dictionary(d)
-            d["PREDICATE"] = jinja2.Template(
-                self._guard, undefined=jinja2.DebugUndefined
-            ).render(**d)
-            result = jinja2.Template(
-                self._compute_kernel, undefined=jinja2.DebugUndefined
-            ).render(**d)
-        return result
-
-    def get_action_set_name(self):
-        return __name__.replace(".py", "").replace(".", "_")
-
     def get_includes(self):
         return (
             super(DoFWisePostprocessSolution, self).get_includes()
@@ -144,11 +137,10 @@ class DoFWisePostprocessSolution(AbstractADERDGActionSet):
         )
 
 
-class CellWisePostprocessSolution(AbstractADERDGActionSet):
+class CellWisePostprocessSolution(EmptyPostprocessSolution):
     def __init__(self, solver):
         super(CellWisePostprocessSolution, self).__init__(solver)
         self._guard = "true"
-        self._compute_kernel = ""
 
     def add_postprocessing_kernel(self, operation_per_cell):
         """
@@ -162,7 +154,7 @@ class CellWisePostprocessSolution(AbstractADERDGActionSet):
         operation_per_point: String
           C/C++ code snippet
         """
-        self._compute_kernel += (
+        self._cell_compute_kernel += (
             """
 {
   {{COMPUTE_TIME_STEP_SIZE}}
@@ -183,23 +175,3 @@ class CellWisePostprocessSolution(AbstractADERDGActionSet):
 }
 """
         )
-
-    def get_body_of_operation(self, operation_name):
-        result = ""
-        if (
-            operation_name
-            == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME
-        ):
-            d = {}
-            self._solver._init_dictionary_with_default_parameters(d)
-            self._solver.add_entries_to_text_replacement_dictionary(d)
-            d["PREDICATE"] = jinja2.Template(
-                self._guard, undefined=jinja2.DebugUndefined
-            ).render(**d)
-            result = jinja2.Template(
-                self._compute_kernel, undefined=jinja2.DebugUndefined
-            ).render(**d)
-        return result
-
-    def get_action_set_name(self):
-        return __name__.replace(".py", "").replace(".", "_")

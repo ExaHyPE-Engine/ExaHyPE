@@ -86,7 +86,7 @@ def different_basis_postprocessing_kernel(condition, order, proj, solver_name):
     }
 """)
 
-def same_basis_postprocessing_kernel(condition, order, solver_name):
+def same_basis_postprocessing_kernel(condition, solver_name):
    return ("""
     if (
       repositories::{{SOLVER_INSTANCE}}.isFirstGridSweepOfTimeStep()
@@ -105,29 +105,24 @@ def same_basis_postprocessing_kernel(condition, order, solver_name):
       constexpr int FluxElementsPerFace   = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
       constexpr int BasisElementsPerFace  = SpaceFaceSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
 
-      for (int d = 0; d < DIMENSIONS; d++) {
+      // 1 if right side, 0 if left
+      //const int ownFaceSide = marker.getSelectedFaceNumber() > DIMENSIONS;
+      const int ownFaceSide = fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdated(0) ? 0 : 1;
+
+      // Make sure that I have indeed been updated, as if the split is between spacetrees it is possible
+      // neither side has been updated
+      if( fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdated(ownFaceSide) ){
         // Projected solution estimations
         std::copy_n(
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).data() + BasisElementsPerFace,
+          fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.data() + ownFaceSide * BasisElementsPerFace,
           BasisElementsPerFace,
-          fineGridFaces""" + solver_name + """Estimates(d).data() + BasisElementsPerFace
+          fineGridFace""" + solver_name + """QEstimates.data() + ownFaceSide * BasisElementsPerFace
         );
-        std::copy_n(
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+DIMENSIONS).data(),
-          BasisElementsPerFace,
-          fineGridFaces""" + solver_name + """Estimates(d+DIMENSIONS).data()
-        );
-
         // Projected flux estimations
         std::copy_n(
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).data() + FluxElementsPerFace,
+          fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.data() + ownFaceSide * FluxElementsPerFace,
           FluxElementsPerFace,
-          fineGridFaces""" + solver_name + """FluxEstimates(d).data() + FluxElementsPerFace
-        );
-        std::copy_n(
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).data(),
-          FluxElementsPerFace,
-          fineGridFaces""" + solver_name + """FluxEstimates(d+DIMENSIONS).data()
+          fineGridFace""" + solver_name + """QFluxEstimates.data() + ownFaceSide * FluxElementsPerFace
         );
       }
     }
@@ -179,6 +174,30 @@ inline void dg2dgFace(pTo* Qto, const pFrom* Qfrom, const double* proj, int toPo
 }
 """
 
+def updateSolverStorage(solver, cond):
+    s1_load_cell    = solver._load_cell_data_default_guard() + cond
+    s1_store_cell   = solver._store_cell_data_default_guard() + cond
+    s1_provide_cell = solver._provide_cell_data_to_compute_kernels_default_guard() + cond
+
+    solver._load_cell_data_default_guard = lambda : s1_load_cell
+    solver._store_cell_data_default_guard = lambda : s1_store_cell
+    solver._provide_cell_data_to_compute_kernels_default_guard = lambda : s1_provide_cell
+
+    # Remove faces load
+    s1_load_face    = solver._load_face_data_default_guard() + cond
+    s1_store_face   = solver._store_face_data_default_guard() + cond
+    s1_provide_face = solver._provide_face_data_to_compute_kernels_default_guard() + cond
+
+    solver._load_face_data_default_guard = lambda : s1_load_face
+    solver._store_face_data_default_guard = lambda : s1_store_face
+    solver._provide_face_data_to_compute_kernels_default_guard = lambda : s1_provide_face
+
+    solver.set_implementation()
+
+    solver._rhs_estimates_projection.generator.send_condition               += cond
+    solver._rhs_estimates_projection.generator.receive_and_merge_condition  += cond
+    solver._flux_estimates_projection.generator.send_condition              += cond
+    solver._flux_estimates_projection.generator.receive_and_merge_condition += cond
 
 ############################################################
     #This is a variant which would also let you remove a bunch of other unnecessary operations as well
@@ -193,42 +212,32 @@ def fuseADERSolvers(solver1, solver2, cond_1, cond_2):
     solver_1_cond = " and " + cond_1
     solver_2_cond = " and " + cond_2
 
-    s1  = solver1._load_cell_data_default_guard() + solver_1_cond
-    s12 = solver1._store_cell_data_default_guard() + solver_1_cond
-    s13 = solver1._provide_cell_data_to_compute_kernels_default_guard() + solver_1_cond
+    updateSolverStorage(solver1, solver_1_cond)
+    updateSolverStorage(solver2, solver_2_cond)
 
-    def s1_guard():
-       return s1
+#     # Checks for periodic bc, in which case the boundaries should still be covered in case
+#     # the neigbour on the other side exists
+#     s1_face_cond = (" and (" + cond_1 + """
+#   or (PeriodicBC.test(0) and (marker.x()[0]==DomainOffset[0] or (marker.x()[0]==DomainOffset[0]+DomainSize[0]) ) ) 
+#   or (PeriodicBC.test(1) and (marker.x()[1]==DomainOffset[1] or (marker.x()[1]==DomainOffset[1]+DomainSize[1]) ) )
+# #if DIMENSIONS==3
+#   or (PeriodicBC.test(2) and (marker.x()[2]==DomainOffset[2] or (marker.x()[2]==DomainOffset[2]+DomainSize[2]) ) )
+# #endif
+#   )
+# """)
+#     solver1._rhs_estimates_projection.generator.send_condition += s1_face_cond
+#     solver1._rhs_estimates_projection.generator.receive_and_merge_condition += s1_face_cond
 
-    def s12_guard():
-       return s12
+    # s2_load_cell    = solver2._load_cell_data_default_guard() + solver_2_cond
+    # s2_store_cell   = solver2._store_cell_data_default_guard() + solver_2_cond
+    # s2_provide_cell = solver2._provide_cell_data_to_compute_kernels_default_guard() + solver_2_cond
 
-    def s13_guard():
-       return s13
+    # solver2._load_cell_data_default_guard = lambda : s2_load_cell
+    # solver2._store_cell_data_default_guard = lambda : s2_store_cell
+    # solver2._provide_cell_data_to_compute_kernels_default_guard = lambda : s2_provide_cell
 
-    solver1._load_cell_data_default_guard = s1_guard
-    solver1._store_cell_data_default_guard = s12_guard
-    solver1._provide_cell_data_to_compute_kernels_default_guard = s13_guard
-
-    s2  = solver2._load_cell_data_default_guard() + solver_2_cond
-    s21 = solver2._store_cell_data_default_guard() + solver_2_cond
-    s23 = solver2._provide_cell_data_to_compute_kernels_default_guard() + solver_2_cond
-
-    def s2_guard():
-       return s2 
-
-    def s21_guard():
-       return s21
-
-    def s23_guard():
-       return s23
-
-    solver2._load_cell_data_default_guard = s2_guard
-    solver2._store_cell_data_default_guard = s21_guard
-    solver2._provide_cell_data_to_compute_kernels_default_guard = s23_guard
-
-    solver1.set_implementation()
-    solver2.set_implementation()
+    # solver1.set_implementation()
+    # solver2.set_implementation()
 
 ############################################################
 #Variant 2: quick and dirty but functional and easy to make work, also more flexible
@@ -265,8 +274,8 @@ def fuseADERSolvers(solver1, solver2, cond_1, cond_2):
       proj1 = flatten(compute_projector_to_point_set(aderSolver1QuadPoints, aderSolver2QuadPoints))
       proj2 = flatten(compute_projector_to_point_set(aderSolver2QuadPoints, aderSolver1QuadPoints))
       # add postprocessing action set to interpolate and copy data from one face to the other
-      solver1._action_set_postprocess_solution._compute_kernel += different_basis_postprocessing_kernel(solver_1_cond, str(solver2._order), proj1, solver2._unknown_identifier())
-      solver2._action_set_postprocess_solution._compute_kernel += different_basis_postprocessing_kernel(solver_2_cond, str(solver1._order), proj2, solver1._unknown_identifier())
+      solver1._action_set_postprocess_solution._compute_cell_kernel += different_basis_postprocessing_kernel(solver_1_cond, str(solver2._order), proj1, solver2._unknown_identifier())
+      solver2._action_set_postprocess_solution._compute_cell_kernel += different_basis_postprocessing_kernel(solver_2_cond, str(solver1._order), proj2, solver1._unknown_identifier())
 
       # provide helper function to both solvers:
       if not os.path.exists("observers"):
@@ -282,6 +291,5 @@ def fuseADERSolvers(solver1, solver2, cond_1, cond_2):
       solver2.add_user_solver_includes("""\n#include "observers/dg2dgface.h"\n""")
     else:
       # add postprocessing action set to copy data from one face to the other
-      solver1._action_set_postprocess_solution._compute_kernel += same_basis_postprocessing_kernel(solver_1_cond, str(solver2._order), solver2._unknown_identifier())
-      solver2._action_set_postprocess_solution._compute_kernel += same_basis_postprocessing_kernel(solver_2_cond, str(solver1._order), solver1._unknown_identifier())
-       
+      solver1._action_set_postprocess_solution._face_compute_kernel += same_basis_postprocessing_kernel(solver_1_cond + solver_2_cond, solver2.name)
+      solver2._action_set_postprocess_solution._face_compute_kernel += same_basis_postprocessing_kernel(solver_1_cond + solver_2_cond, solver1.name)
