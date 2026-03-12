@@ -312,6 +312,26 @@ ADERDG GRMHD Tests:
     - Build
   retry: 0
 
+ADERDG Coupling Tests:
+  stage: Test
+  parallel:
+    matrix:
+    - build_type: [Release, Debug]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-coupling; PYTHONPATH=$CI_PROJECT_DIR/python python3 LOH1.py -m $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-coupling; $PARALLEL_LAUNCH ./coupled_LOH1;"
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOnMain
+    - .BeforeScriptSanitiser
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 0
+
 RKDG Tests:
   stage: Test
   parallel:

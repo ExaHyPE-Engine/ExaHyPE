@@ -385,7 +385,11 @@ class ADERDG(object):
         # extrapolated solution to the faces.
         # Correction uses the extrapolated face solutions from the predictor and the neighboring
         # cells to compute a solution at the next time step.
-        self._action_set_correction = exahype2.solvers.aderdg.actionsets.Correction(self, self._store_cell_data_default_guard())
+        self._action_set_correction = exahype2.solvers.aderdg.actionsets.Correction(
+            solver=self, 
+            cell_guard=self._store_cell_data_default_guard(),
+            face_guard=self._store_face_data_default_guard()
+        )
         self._action_set_correction.descend_invocation_order = 2  # Needs to happen after handle_boundary
 
         self._action_set_prediction = exahype2.solvers.aderdg.actionsets.Prediction(self, self._store_cell_data_default_guard())
@@ -455,6 +459,21 @@ class ADERDG(object):
     def add_user_solver_includes(self, value):
         self._user_solver_includes += value
 
+    def _load_cell_data_default_guard(self):
+        return (
+            "not marker.hasBeenRefined() "
+            + "and repositories::"
+            + self.get_name_of_global_instance()
+            + ".getSolverState()!="
+            + self._name
+            + "::SolverState::GridConstruction "
+            + "and repositories::"
+            + self.get_name_of_global_instance()
+            + ".getSolverState()!="
+            + self._name
+            + "::SolverState::GridInitialisation"
+        )
+
     def _store_cell_data_default_guard(self):
         return (
             "not marker.willBeRefined() "
@@ -475,17 +494,7 @@ class ADERDG(object):
                     + "::SolverState::GridConstruction"
                 )
 
-    def _provide_face_data_to_compute_kernels_default_guard(self):
-        return (
-                    "not marker.willBeRefined() "
-                    + "and repositories::"
-                    + self.get_name_of_global_instance()
-                    + ".getSolverState()!="
-                    + self._name
-                    + "::SolverState::GridConstruction"
-                )
-
-    def _load_cell_data_default_guard(self):
+    def _load_face_data_default_guard(self):
         return (
             "not marker.hasBeenRefined() "
             + "and repositories::"
@@ -510,20 +519,15 @@ class ADERDG(object):
             + "::SolverState::GridConstruction"
         )
 
-    def _load_face_data_default_guard(self):
+    def _provide_face_data_to_compute_kernels_default_guard(self):
         return (
-            "not marker.hasBeenRefined() "
-            + "and repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()!="
-            + self._name
-            + "::SolverState::GridConstruction "
-            + "and repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()!="
-            + self._name
-            + "::SolverState::GridInitialisation"
-        )
+                    "not marker.willBeRefined() "
+                    + "and repositories::"
+                    + self.get_name_of_global_instance()
+                    + ".getSolverState()!="
+                    + self._name
+                    + "::SolverState::GridConstruction"
+                )
 
     def _store_boundary_data_default_guard(self):
         return (

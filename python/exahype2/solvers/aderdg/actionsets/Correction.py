@@ -42,7 +42,7 @@ class Correction(AbstractADERDGActionSet):
 """
 
     _Template_TouchCellFirstTime = """
-  if ({{GUARD}}) {
+  if ({{CELL_GUARD}}) {
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
     // Reuse the same timeStepSize from the predictor
     const double timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
@@ -81,13 +81,13 @@ class Correction(AbstractADERDGActionSet):
   }
 """
 
-    def __init__(self, solver, guard):
+    def __init__(self, solver, cell_guard, face_guard):
         super(Correction, self).__init__(solver)
-        self.guard = guard
-        self.face_guard = guard
+        self.cell_guard = cell_guard
+        self.face_guard = face_guard
 
     def _add_action_set_entries_to_dictionary(self, d):
-        d["GUARD"] = self.guard
+        d["CELL_GUARD"] = self.cell_guard
         d["FACE_GUARD"] = self.face_guard
 
     def get_body_of_operation(self, operation_name):

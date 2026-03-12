@@ -11,8 +11,10 @@
 #include "Constants.h"
 
 #include "tarch/multicore/Lock.h"
+#include "tarch/services/ServiceRepository.h"
 
 #include "repositories/SolverRepository.h"
+
 
 tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
@@ -59,6 +61,9 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
   return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMinMeshSize();
 }
 
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
+  return 0;
+}
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::SolverState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSolverState() const {
   return _solverState;

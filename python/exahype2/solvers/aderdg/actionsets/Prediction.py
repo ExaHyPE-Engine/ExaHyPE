@@ -96,6 +96,10 @@ class Prediction(AbstractADERDGActionSet):
       // Timestamp information for boundary handling
       fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setNewTimeStamp(1, timeStamp);
       fineGridFaces{{SOLVER_NAME}}FaceLabel(d + DIMENSIONS).setNewTimeStamp(0, timeStamp);
+
+      // Set Updated
+      fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setUpdated(1, true);
+      fineGridFaces{{SOLVER_NAME}}FaceLabel(d + DIMENSIONS).setUpdated(0, true);
     }
 
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);

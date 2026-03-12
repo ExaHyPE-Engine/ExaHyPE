@@ -4,23 +4,26 @@ import os, sys
 
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
-sys.path.insert(0, os.path.abspath("../../../applications/exaseis/cartesian"))
+sys.path.insert(0, os.path.abspath("../../applications/exaseis/cartesian"))
 import Elastic
 
-sys.path.insert(0, os.path.abspath("./coupling"))
-from coupling import StaticCoupling
+parser = exahype2.ArgumentParser("ExaHyPE 2 - ADER-DG Coupled Solvers Testing Script")
+parser.set_defaults(
+    min_depth=2,
+    degrees_of_freedom=6,
+    number_of_snapshots=0,
+)
+args = parser.parse_args()
 
-min_level           = 3
-max_depth           = 0
-order               = 5
+order = args.degrees_of_freedom - 1
 
-e_t                 = 2.0
-plot_dt             = 0.0
-polynomials         = "legendre"
-use_tracers         = True
+if args.build_mode == "Debug":
+    end_time = 0.1
+else:
+    end_time = 2.0
 
-# size    = [ 9.0, 9.0, 9.0]  # thousand meters
-# offset  = [-4.5, 0., -4.5]  # thousand meters
+polynomials = "legendre"
+use_tracers = True
 
 offset = [-2.025, 0.0, -2.025]
 size = [12.15, 12.15, 12.15]
@@ -28,11 +31,11 @@ size = [12.15, 12.15, 12.15]
 unknowns            = {"v": 3, "sigma": 6}
 auxiliary_variables = {"rho":1, "cp": 1, "cs": 1}
 
-max_h               = 1.1 * min(size) / (3.0**min_level)
-min_h               = max_h / (3.0**max_depth)
+max_h               = 1.1 * min(size) / (3.0**args.min_depth)
+min_h               = max_h * 3.0 ** (-args.amr_levels)
 
 project = exahype2.Project( ["applications", "exahype2", "elastic"], ".",
-  executable="LOH_level_"+str(min_level)+"_order_"+str(order)+"_"+polynomials )
+  executable="coupled_LOH1" )
 
 hpSolver=exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   name="hpElastic",  order=order,
@@ -54,6 +57,41 @@ lpSolver.add_kernel_optimisations(
   precision = "fp32"
 )
 
+if use_tracers:
+  tracer_particles = project.add_tracer(name="Tracer", particle_attributes=12)
+
+  project.add_action_set_to_initialisation(
+      exahype2.tracer.InsertParticlesByCoordinates(
+          particle_set=tracer_particles,
+          coordinates=[
+            [0.000, 0., 0.693], [0.000, 0., 5.543], [0.000, 0., 10.392],
+            [0.490, 0., 0.490], [3.919, 0., 3.919], [7.348, 0., 7.3480],
+            [0.577, 0., 0.384], [4.612, 0., 3.075], [8.647, 0., 5.7640]
+          ]
+      )
+  )
+
+  project.add_action_set_to_timestepping(
+      peano4.toolbox.particles.api.UpdateParallelState(particle_set=tracer_particles)
+  )
+
+  if not os.path.exists("tracers"):
+      os.makedirs("tracers")
+
+
+from fuseADERSolvers import fuseADERSolvers
+fuseADERSolvers(hpSolver, lpSolver, """
+  ( marker.getX()[0] < DomainOffset[0] + 9.1*marker.getH()[0] and
+    marker.getX()[1] <                   8.1*marker.getH()[1] and
+    marker.getX()[2] < DomainOffset[2] + 11.1*marker.getH()[2])
+""", """
+  ( marker.getX()[0] > DomainOffset[0] + 8.9*marker.getH()[0] or
+    marker.getX()[1] >                   7.9*marker.getH()[1] or
+    marker.getX()[2] > DomainOffset[2] + 10.9*marker.getH()[2])
+"""
+)
+
+
 for theSolver in [hpSolver, lpSolver]:
 
   theSolver.set_implementation(
@@ -73,64 +111,71 @@ for theSolver in [hpSolver, lpSolver]:
   )
 
   theSolver.add_user_solver_includes("""
-  #include "../../../applications/exaseis/ExaSeis_core/Numerics/cartesianRoutines.h"
-  #include "../../../applications/exaseis/ExaSeis_core/Numerics/riemannsolverIsotropic.h"
+  #include "../../applications/exaseis/ExaSeis_core/Numerics/cartesianRoutines.h"
+  #include "../../applications/exaseis/ExaSeis_core/Numerics/riemannsolverIsotropic.h"
   """)
 
   project.add_solver(theSolver)
 
   if use_tracers:
-      project.add_action_set_to_timestepping(
-        exahype2.tracer.NewDGTracer(
-          coordinates=[
-            [0.000, 0., 0.693], [0.000, 0., 5.543], [0.000, 0., 10.392],
-            [0.490, 0., 0.490], [3.919, 0., 3.919], [7.348, 0., 7.3480],
-            [0.577, 0., 0.384], [4.612, 0., 3.075], [8.647, 0., 5.7640]
-          ],
-          solver=theSolver,
-          filename="tracers/Cartesian_level_"+str(min_level)+"_order_"+str(order)+"_"+polynomials+theSolver.get_name_of_global_instance(),
-          data_delta_between_two_snapshots=1e16, time_delta_between_two_snapshots=0.01,
-          output_precision=10, clear_database_after_flush=False
-      ))
+    project.add_action_set_to_timestepping(
+        exahype2.tracer.DiscontinuousGalerkinTracing(
+            tracer_particles, theSolver,
+            project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"
+        )
+    )
 
-      theSolver._abstract_solver_user_declarations += "double QuadraturePoints1d[Order+1];"
-      theSolver._constructor_implementation += """
-      std::copy_n(
-        kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
-        (Order+1),
-        QuadraturePoints1d
-      );"""
+    project.add_action_set_to_timestepping(
+        exahype2.tracer.DumpTracerIntoDatabase(
+            particle_set=tracer_particles, solver=theSolver,
+            filename="tracers/Cartesian_l"+str(args.min_depth)+"_o"+str(order)+"_"+polynomials+theSolver.get_name_of_global_instance(),
+            data_delta_between_two_snapsots=1e16, time_delta_between_two_snapsots=0.01,
+            output_precision=10, clear_database_after_flush=False
+        )
+    )
+
+    theSolver._abstract_solver_user_declarations += "double QuadraturePoints1d[Order+1];"
+    theSolver._start_simulation_implementation += """
+    std::copy_n(
+      kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
+      (Order+1),
+      QuadraturePoints1d
+    );"""
+
+# sys.path.insert(0, os.path.abspath("./coupling"))
+# from coupling import StaticCoupling
+# limiter = StaticCoupling(
+#   name            = "limitingSolver",
+#   regularSolver   = hpSolver,
+#   limitingSolver  = lpSolver,
+#   limiting_criterion_implementation = """
+#   // return 
+#   return // 9x8x11
+#     x[0] > -2.025 && x[0] <  2.025 &&
+#                      x[1] <  3.600 &&  
+#     x[2] > -2.025 && x[2] <= 2.925
+#   ;
+# """
+# )
+# project.add_solver(limiter)
 
 
-limiter = StaticCoupling(
-  name            = "limitingSolver",
-  regularSolver   = hpSolver,
-  limitingSolver  = lpSolver,
-  limiting_criterion_implementation = """
-  // return 
-  return // 9x8x11
-    x[0] > -2.025 && x[0] <  2.025 &&
-                     x[1] <  3.600 &&  
-    x[2] > -2.025 && x[2] <= 2.925
-  ;
-"""
-)
-project.add_solver(limiter)
-
-if plot_dt > 0.0:
-  project.set_output_path("solutions")
+if args.number_of_snapshots <= 0:
+    time_in_between_plots = 0.0
+else:
+    time_in_between_plots = end_time / args.number_of_snapshots
+    project.set_output_path(args.output)
 
 project.set_global_simulation_parameters(
   dimensions            = 3,
   offset                = offset[0:3],
   size                  = size[0:3],
-  min_end_time          = e_t,
+  min_end_time          = end_time,
   first_plot_time_stamp = 0.0,
-  time_in_between_plots = plot_dt,
+  time_in_between_plots = time_in_between_plots,
 )
 
 project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration()")
-project.set_build_mode(peano4.output.CompileMode.Release)
+project.set_build_mode(mode=peano4.output.string_to_mode(args.build_mode))
 peano4_project = project.generate_Peano4_project("False")
-
 peano4_project.build(make_clean_first=True)

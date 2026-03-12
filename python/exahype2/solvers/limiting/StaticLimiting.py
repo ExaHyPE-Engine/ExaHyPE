@@ -237,12 +237,20 @@ class StaticLimiting(object):
             + "CellLabel::Troubled_Marker::LIMITER_TO_REGULAR"
         )
 
-        self._regular_solver._action_set_correction.guard += (
+        self._regular_solver._action_set_correction.cell_guard += (
             " and fineGridCell"
             + self._name
             + "CellLabel.getTroubled_Marker()<=celldata::"
             + self._name
             + "CellLabel::Troubled_Marker::REGULAR_TO_LIMITER"
+        )
+
+        self._regular_solver._action_set_correction.face_guard += (
+            " and fineGridFace"
+            + self._name
+            + "FaceLabel.getTroubled_Marker()<=facedata::"
+            + self._name
+            + "FaceLabel::Troubled_Marker::LIMITER_TO_REGULAR"
         )
 
         update_patch_guard = (

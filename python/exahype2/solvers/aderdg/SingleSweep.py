@@ -136,7 +136,7 @@ class SingleSweep(ADERDG):
             self.get_name_of_global_instance(), self._name
         )
 
-        self._action_set_correction.guard = (
+        self._action_set_correction.cell_guard = (
             self._store_cell_data_default_guard()
             + " and repositories::{}.isLastGridSweepOfTimeStep()".format(
                 self.get_name_of_global_instance()
