@@ -25,6 +25,7 @@ std::uint64_t {{FULL_QUALIFIED_CLASSNAME}}::_localFaceDataMemoryUsageInBytes = 0
 std::uint64_t {{FULL_QUALIFIED_CLASSNAME}}::_globalFaceDataMemoryUsageInBytes = 0;
 std::uint64_t {{FULL_QUALIFIED_CLASSNAME}}::_localVertexDataMemoryUsageInBytes = 0;
 std::uint64_t {{FULL_QUALIFIED_CLASSNAME}}::_globalVertexDataMemoryUsageInBytes = 0;
+std::size_t   {{FULL_QUALIFIED_CLASSNAME}}::_numberOfMaxGlobalSpacetrees = 0;
 
 void {{FULL_QUALIFIED_CLASSNAME}}::init() {
 #ifdef WITH_MPI
@@ -39,19 +40,21 @@ void {{FULL_QUALIFIED_CLASSNAME}}::init() {
 {%- endfor %}
 #endif
 
-  const int numberOfMaxGlobalSpacetrees = loadBalancer.getMaxPermittedTreesPerRank() * tarch::mpi::Rank::getInstance().getNumberOfRanks();
-  ::peano4::grid::Spacetree::_vertexStack.resize(numberOfMaxGlobalSpacetrees); // TODO: Resize it somewhere else or add static resize function to the spacetree class
+  ::peano4::grid::Spacetree::_vertexStack.resize(_numberOfMaxGlobalSpacetrees);
 
 {%- for container in VERTEX_DATA_CONTAINERS %}
-  {{ container.name }}Stack.resize(numberOfMaxGlobalSpacetrees);
-  {{ container.name }}HangingStack.resize(numberOfMaxGlobalSpacetrees);
+  {{ container.name }}Stack.resize(_numberOfMaxGlobalSpacetrees);
+  {{ container.name }}HangingStack.resize(_numberOfMaxGlobalSpacetrees);
 {%- endfor %}
 {%- for container in FACE_DATA_CONTAINERS %}
-  {{ container.name }}Stack.resize(numberOfMaxGlobalSpacetrees);
-  {{ container.name }}HangingStack.resize(numberOfMaxGlobalSpacetrees);
+  {{ container.name }}Stack.resize(_numberOfMaxGlobalSpacetrees);
+  {{ container.name }}Stack.setStackSizeHint(getMaxNumberOfFaces());
+  {{ container.name }}HangingStack.resize(_numberOfMaxGlobalSpacetrees);
+  {{ container.name }}HangingStack.setStackSizeHint(getMaxNumberOfFaces());
 {%- endfor %}
 {%- for container in CELL_DATA_CONTAINERS %}
-  {{ container.name }}Stack.resize(numberOfMaxGlobalSpacetrees);
+  {{ container.name }}Stack.resize(_numberOfMaxGlobalSpacetrees);
+  {{ container.name }}Stack.setStackSizeHint(getMaxNumberOfPatches());
 {%- endfor %}
 }
 
@@ -149,4 +152,8 @@ std::size_t {{FULL_QUALIFIED_CLASSNAME}}::getLocalVertexDataMemoryUsageInBytes()
 
 std::size_t {{FULL_QUALIFIED_CLASSNAME}}::getGlobalVertexDataMemoryUsageInBytes() {
   return _globalVertexDataMemoryUsageInBytes;
+}
+
+void {{FULL_QUALIFIED_CLASSNAME}}::setNumberOfMaxGlobalSpacetrees(std::size_t numberOfMaxGlobalSpacetrees) {
+  _numberOfMaxGlobalSpacetrees = numberOfMaxGlobalSpacetrees;
 }

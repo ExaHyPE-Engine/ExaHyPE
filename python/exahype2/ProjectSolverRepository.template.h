@@ -62,6 +62,9 @@ namespace {{ item }} {
    */
   double getMinAdmissibleMeshSize();
 
+  std::size_t getMaxNumberOfPatches();
+  std::size_t getMaxNumberOfFaces();
+
   void startGridConstructionStep();
   void startGridInitialisationStep();
 

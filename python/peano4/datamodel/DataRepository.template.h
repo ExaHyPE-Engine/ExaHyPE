@@ -27,6 +27,7 @@ private:
   static std::uint64_t _globalFaceDataMemoryUsageInBytes;
   static std::uint64_t _localVertexDataMemoryUsageInBytes;
   static std::uint64_t _globalVertexDataMemoryUsageInBytes;
+  static std::size_t   _numberOfMaxGlobalSpacetrees;
 
 public:
   using DataKey = ::peano4::stacks::StackKey; // TODO: Remove and use the stacks::StackKey
@@ -53,4 +54,6 @@ public:
   static std::size_t getGlobalFaceDataMemoryUsageInBytes();
   static std::size_t getLocalVertexDataMemoryUsageInBytes();
   static std::size_t getGlobalVertexDataMemoryUsageInBytes();
+
+  static void setNumberOfMaxGlobalSpacetrees(std::size_t numberOfMaxGlobalSpacetrees);
 };

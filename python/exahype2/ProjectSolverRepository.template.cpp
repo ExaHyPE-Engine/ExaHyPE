@@ -135,6 +135,20 @@ double getMinAdmissibleMeshSize() {
   return result;
 }
 
+std::size_t getMaxNumberOfPatches() {
+  const auto ratio = DomainSize[0] / std::min(getMinAdmissibleMeshSize(), DomainSize[0]);
+  const std::size_t depth = static_cast<std::size_t>(std::round(std::log(ratio) / std::log(3.0))) + 1;
+  const std::size_t patches = std::max(std::size_t{9}, static_cast<size_t>(std::pow(3, depth * DIMENSIONS)));
+  return patches;
+}
+
+std::size_t getMaxNumberOfFaces() {
+  const auto ratio = DomainSize[0] / std::min(getMinAdmissibleMeshSize(), DomainSize[0]);
+  const std::size_t depth = static_cast<std::size_t>(std::round(std::log(ratio) / std::log(3.0))) + 1;
+  const std::size_t facesPerDimension = std::max(std::size_t{12}, static_cast<size_t>(std::pow(3, depth * DIMENSIONS) + std::pow(3, depth)));
+  return facesPerDimension * DIMENSIONS;
+}
+
 double getMinTimeStepSize() {
   double result = std::numeric_limits<double>::max();
   {% for item in SOLVERS -%}
