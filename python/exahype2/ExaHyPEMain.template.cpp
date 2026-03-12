@@ -339,6 +339,8 @@ void setupEnvironment(int argc, char** argv) {
   ::exahype2::writeCopyrightMessage();
 
   repositories::initLogFilters();
+  const int numberOfMaxGlobalSpacetrees = repositories::loadBalancer.getMaxPermittedTreesPerRank() * tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  repositories::DataRepository::setNumberOfMaxGlobalSpacetrees(numberOfMaxGlobalSpacetrees);
   repositories::DataRepository::init();
   repositories::startSimulation();
 

@@ -106,10 +106,7 @@ protected:
   };
 
 public:
-  INLINE_METHOD Stack() {
-    //reserve(143489070); // TODO: Don't make this a magic number. Peano should know how many cells it maximally creates.
-  }
-
+  INLINE_METHOD Stack() noexcept = default;
   virtual ~Stack() noexcept      = default;
   Stack(const Stack&)            = delete;
   Stack& operator=(const Stack&) = delete;

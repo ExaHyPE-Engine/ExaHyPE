@@ -49,6 +49,8 @@ private:
   // Requires resize() to be called before usage of trees.
   std::vector<TreeData> _trees;
 
+  std::size_t _stackSizeHint;
+
   INLINE_METHOD T* createStack(int treeId, int stackId) {
     assertion3(treeId >= 0, treeId, stackId, typeid(T).name());
     assertion3(stackId >= 0, treeId, stackId, typeid(T).name());
@@ -58,6 +60,7 @@ private:
     auto [it, inserted] = stacks.try_emplace(stackId);
     if (inserted) {
       it->second = std::make_unique<T>();
+      it->second->reserve(_stackSizeHint);
       logDebug("createStack()", " Created stack " << stackId << " in tree " << treeId << " for " << typeid(T).name());
     }
     return it->second.get();
@@ -65,7 +68,7 @@ private:
 
 public:
   INLINE_METHOD explicit TreeToStacks() noexcept:
-    _trees(parallel::Node::MaxSpacetreesPerRank) {}
+    _trees(parallel::Node::MaxSpacetreesPerRank), _stackSizeHint(0) {}
 
   ~TreeToStacks() noexcept = default;
 
@@ -95,6 +98,8 @@ public:
     }
     return total;
   }
+
+  INLINE_METHOD void setStackSizeHint(const std::size_t stackSizeHint) { _stackSizeHint = stackSizeHint; }
 
   // Clears all stacks for all spacetrees.
   INLINE_METHOD void clear() {
