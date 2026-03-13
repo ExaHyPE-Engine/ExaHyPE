@@ -20,6 +20,11 @@ class SingleSweep(ADERDG):
         number_of_enclave_tasks: int,
         split_sweeps=False,
     ):
+        # If turned on it turns the solver from a single sweep to a separate sweeps solver,
+        #   i.e. the predictor and corrector steps occur on separate traversals of the domain.
+        #   this can be useful for debugging, or for some additional features such as limiting.
+        self._split_sweeps = split_sweeps
+
         super(SingleSweep, self).__init__(
             name=name,
             order=order,
@@ -33,93 +38,54 @@ class SingleSweep(ADERDG):
 
         self._solver_template_file_class_name = "SingleSweep"
 
-        # If turned on it turns the solver from a single sweep to a separate sweeps solver,
-        #   i.e. the predictor and corrector steps occur on separate traversals of the domain.
-        #   this can be useful for debugging, or for some additional features such as limiting.
-        self._split_sweeps = split_sweeps
-
     def create_data_structures(self):
         super(SingleSweep, self).create_data_structures()
 
-        self.initialisation_sweep_guard = (
-            "("
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::GridInitialisation"
-            + ")"
-        )
+        solver_state = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()"
+        is_last_sweep = "repositories::" + self.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep()"
+        is_first_sweep = "repositories::" + self.get_name_of_global_instance() + ".isFirstGridSweepOfTimeStep()"
+        min_time_stamp = "repositories::" + self.get_name_of_global_instance() + ".getMinTimeStamp()"
+
+        initial_prediction = self._name + "::SolverState::InitialPrediction"
+        grid_initialisation = self._name + "::SolverState::GridInitialisation"
+        plotting = self._name + "::SolverState::Plotting"
+        prediction_on_hanging = self._name + "::SolverState::PredictionOnHangingCells"
+
         self.first_iteration_after_initialisation_guard = (
-            "("
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::InitialPrediction or "
-            + "(repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::Plotting"
-            + " and repositories::"
-            + self.get_name_of_global_instance()
-            + ".getMinTimeStamp()==0.))"
+            "(" + solver_state + "==" + initial_prediction + " or "
+            + "(" + solver_state + "==" + plotting + " and " + min_time_stamp + "==0.))"
+        )
+        self.initialisation_sweep_guard = (
+            "(" + solver_state + "==" + grid_initialisation + ")"
         )
 
-        self._rhs_estimates_projection.generator.send_condition = (
-            "true or repositories::"
-            + self.get_name_of_global_instance()
-            + ".isFirstGridSweepOfTimeStep() or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::PredictionOnHangingCells or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::Plotting"
+        send_condition = (
+            "(" + is_first_sweep + ") or " +
+            "(" + solver_state + "==" + prediction_on_hanging + ") or " +
+            "(" + solver_state + "==" + plotting + " and " + min_time_stamp + "!=0.0 " +")"
         )
 
-        self._rhs_estimates_projection.generator.receive_and_merge_condition = (
-            "true or repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::PredictionOnHangingCells or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".isLastGridSweepOfTimeStep()"
+        send_condition_split_sweeps = (
+            "(" + is_first_sweep + ") or " +
+            "(" + solver_state + "==" + prediction_on_hanging + ")"
         )
 
-        self._flux_estimates_projection.generator.send_condition = (
-            "true or repositories::"
-            + self.get_name_of_global_instance()
-            + ".isFirstGridSweepOfTimeStep() or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::PredictionOnHangingCells or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::Plotting"
+        receive_condition = (
+            "(" + solver_state + "==" + prediction_on_hanging + ") or" +
+            "(" + is_last_sweep + ") or " +
+            "(" + solver_state + "==" + plotting + " and " + min_time_stamp + "!=0.0 " +")"
         )
 
-        self._flux_estimates_projection.generator.receive_and_merge_condition = (
-            "true or repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::PredictionOnHangingCells or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".isLastGridSweepOfTimeStep()"
+        receive_condition_split_sweeps = (
+            "(" + solver_state + "==" + prediction_on_hanging + ") or" +
+            "(" + is_last_sweep + ")"
         )
+
+        self._rhs_estimates_projection.generator.send_condition = send_condition if not self._split_sweeps else send_condition_split_sweeps
+        self._rhs_estimates_projection.generator.receive_and_merge_condition = receive_condition if not self._split_sweeps else receive_condition_split_sweeps
+
+        self._flux_estimates_projection.generator.send_condition = send_condition if not self._split_sweeps else send_condition_split_sweeps
+        self._flux_estimates_projection.generator.receive_and_merge_condition = receive_condition if not self._split_sweeps else receive_condition_split_sweeps
 
     def create_action_sets(self):
         super(SingleSweep, self).create_action_sets()
