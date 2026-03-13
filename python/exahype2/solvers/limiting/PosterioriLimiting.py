@@ -189,6 +189,8 @@ class PosterioriLimiting(object):
         self._limiter_solver._compute_time_step_size = compute_time_step_size
         self._regular_solver._compute_time_step_size = compute_time_step_size
 
+        self._regular_solver.create_data_structures()
+
     @abstractmethod
     def create_action_sets(self):
         self._action_set_save_new_cell_data = SaveNewCellData(

@@ -126,6 +126,8 @@ class StaticLimiting(object):
         self._limiter_solver._compute_time_step_size = compute_time_step_size
         self._regular_solver._compute_time_step_size = compute_time_step_size
 
+        self._regular_solver.create_data_structures()
+
     """
     Creates the action sets, these are actions tied to the grid that are executed at given points of
     grid generation, construction or steps of the ADER-DG solver. Peano handles grid structures that
