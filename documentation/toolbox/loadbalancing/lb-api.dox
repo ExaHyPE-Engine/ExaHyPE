@@ -79,21 +79,35 @@ Bottom-up traversal where parent nodes inherit subtree assignments when all thei
 - Does not optimise split count or structure
 - Required precondition for Stage III
 
-#### Illustrative Cases of Bottom-Up Propagation Multi‑level Tree Splitting
+#### Illustrative Scenarios of Bottom-Up Propagation Multi‑level Tree Splitting
 
-The following diagrams illustrate two scenarios showing how multi-level splitting of leaves with bottom-up propagation supports adaptive mesh refinement. Green nodes indicate leaves assigned to Subtree 1, whilst yellow nodes denote leaves assigned to Subtree 0.
+The following scenarios aim to illustrate expected and non-expected cases of multi-level splitting of leaves with bottom-up propagation for adaptive mesh refinement. Green nodes indicate leaves assigned to Subtree 1, whilst yellow nodes denote leaves assigned to Subtree 0.
 
-The bottom-up propagation (Stage II) ensures that parent nodes whose children all belong to the same subtree are themselves assigned to that subtree.
+In general, the bottom-up propagation (Stage II) ensures that parent nodes whose children all belong to the same subtree are themselves assigned to that subtree, but with additional constraints:
+
+\par Scenario 1:
 
 @image html tree_examples_combined_a.png
 
-\par Scenario 1:
-A simple case in which only one node at Level 2 has children belonging to Subtree 1. In this instance, the propagation of subtree assignments extends upwards by only a single level.
+A simple case in which only one node at Level 2 has children belonging to Subtree 1. In this instance, the propagation of subtree assignments extends upwards by only a single level. The illustrated splitting strategy ensures that splitting occurs only once at Level 2; if propagation continued one more level, splitting would have to occur twice at Levels 1 and 2, which would be less efficient. This is the expected case for a single-level split of leaves.
+
+\par Scenario 1a (wrong):
+
+@image html tree_examples_combined_a_wrong.png
+
+If the propagation continued one level further than necessary, both `L1A` and `L1B` would be promoted to Subtree 1 — `L1A` because all its children (`L2A1`–`L2A3`) are already green from Stage I, and `L1B` because its child `L2B1` is green. However, since their sibling `L1C` remains in Subtree 0, a split at Level 1 is now required in addition to the split at Level 2, resulting in two split operations instead of one. Image (I) shows the output of `split_leaves()` (Stage I); image (II) shows the suboptimal result of an over-eager bottom-up propagation.
+
+\par Scenario 2:
 
 @image html tree_examples_combined_b.png
 
-\par Scenario 2:
-A more complex case in which multiple nodes at Level 2 have children. Here, the propagation of subtree assignments extends upwards across several levels.
+A more complex case in which multiple nodes at Level 2 have children. Here, the propagation of subtree assignments extends upwards across several levels. Thanks to the second propagation upwards, we choose the strategy where splitting occurs only once at Level 1; otherwise, splitting would have to occur at both Levels 1 and 2, which would be less efficient.
+
+\par Scenario 2a (wrong):
+
+@image html tree_examples_combined_b_wrong.png
+
+If the propagation stopped one level too early, `L1A` and `L1B` would remain in Subtree 0 despite all of their leaf descendants belonging to Subtree 1. The split boundary would then have to be drawn at Level 2 between the green and gold nodes, in addition to the Level 1 boundary between `L1C` and its siblings — again resulting in two split operations instead of one. Image (I) shows the output of `split_leaves()` (Stage I); image (II) shows the suboptimal result of an incomplete bottom-up propagation.
 
 This bottom-up propagation method ensures effective load balancing throughout the entire tree structure whilst maintaining strict parent-child consistency, and prepares the tree for the optional hierarchical optimisation (Stage III).
 
