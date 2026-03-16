@@ -95,19 +95,19 @@ A simple case in which only one node at Level 2 has children belonging to Subtre
 
 @image html tree_examples_combined_a_wrong.png
 
-If the propagation continued one level further than necessary, both `L1A` and `L1B` would be promoted to Subtree 1 — `L1A` because all its children (`L2A1`–`L2A3`) are already green from Stage I, and `L1B` because its child `L2B1` is green. However, since their sibling `L1C` remains in Subtree 0, a split at Level 1 is now required in addition to the split at Level 2, resulting in two split operations instead of one. Image (I) shows the output of `split_leaves()` (Stage I); image (II) shows the suboptimal result of an over-eager bottom-up propagation.
+If the propagation continued one level further than necessary, `L1A` would be promoted to Subtree 1 because all its children (`L2A1`–`L2A3`) are already green from Stage I. Note that `L1B` correctly remains in Subtree 0 since only one of its children (`L2B1`) is green whilst `L2B2` and `L2B3` are not. Nevertheless, promoting `L1A` alone is already suboptimal: since its siblings `L1B` and `L1C` remain in Subtree 0, a split at Level 1 is now required in addition to the split at Level 2, resulting in two split operations instead of one. Image (I) shows the output of `split_leaves()` (Stage I); image (II) shows the suboptimal result of an over-eager bottom-up propagation.
 
 \par Scenario 2:
 
 @image html tree_examples_combined_b.png
 
-A more complex case in which multiple nodes at Level 2 have children. Here, the propagation of subtree assignments extends upwards across several levels. Thanks to the second propagation upwards, we choose the strategy where splitting occurs only once at Level 1; otherwise, splitting would have to occur at both Levels 1 and 2, which would be less efficient.
+A more complex case in which multiple nodes at Level 2 have children. Here, the propagation of subtree assignments extends upwards across several levels. In both the correct and wrong cases there is only one split — but at different levels. The correct strategy places the split at Level 1 (dividing just 3 nodes: `L1A`, `L1B` vs `L1C`), which is more efficient than the wrong strategy, which would place it at Level 2 (dividing all 9 Level-2 nodes).
 
 \par Scenario 2a (wrong):
 
 @image html tree_examples_combined_b_wrong.png
 
-If the propagation stopped one level too early, `L1A` and `L1B` would remain in Subtree 0 despite all of their leaf descendants belonging to Subtree 1. The split boundary would then have to be drawn at Level 2 between the green and gold nodes, in addition to the Level 1 boundary between `L1C` and its siblings — again resulting in two split operations instead of one. Image (I) shows the output of `split_leaves()` (Stage I); image (II) shows the suboptimal result of an incomplete bottom-up propagation.
+If the propagation stopped one level too early, `L1A` and `L1B` would remain in Subtree 0 despite all of their leaf descendants belonging to Subtree 1. The split is then placed at Level 2, dividing all 9 Level-2 nodes (6 green vs 3 gold), which is less efficient because a higher-level split covers the same subtree assignment with fewer split bookkeeping entries. Image (I) shows the output of `split_leaves()` (Stage I); image (II) shows the suboptimal result of an incomplete bottom-up propagation.
 
 This bottom-up propagation method ensures effective load balancing throughout the entire tree structure whilst maintaining strict parent-child consistency, and prepares the tree for the optional hierarchical optimisation (Stage III).
 
