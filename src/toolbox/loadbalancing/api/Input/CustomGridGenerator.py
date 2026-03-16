@@ -63,8 +63,8 @@ This module fits into extended offline decomposition workflows:
 tree = CustomGridGenerator("MyCustomTree", "path/to/tree_structure.yaml")
 
 # Apply additional splitting
-from Strategies.SplitTrees import split_leaves
-further_split = split_leaves(tree, number_of_splits=2)
+from Strategies.SplitTrees import split_tree
+further_split = split_tree(tree, number_of_splits=2)
 
 # Compare with original structure
 from Visualize.TreeVisualizer import TreeVisualizer
@@ -219,8 +219,8 @@ def CustomGridGenerator(name, yaml_file_path):
         print(f"Subtrees: {tree._subtree_count}")
         
         # Apply additional processing
-        from Strategies.SplitTrees import split_leaves
-        extended_tree = split_leaves(tree, number_of_splits=2)
+        from Strategies.SplitTrees import split_tree
+        extended_tree = split_tree(tree, number_of_splits=2)
         ```
         
     Note:

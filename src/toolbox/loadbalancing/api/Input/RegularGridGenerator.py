@@ -143,8 +143,8 @@ def RegularGridGenerator(name, max_level, dimension):
         print(f"Levels: {test_tree._max_level}")
         
         # Apply splitting for load balancing test
-        from Strategies.SplitTrees import split_leaves
-        balanced_tree = split_leaves(test_tree, number_of_splits=3)
+        from Strategies.SplitTrees import split_tree
+        balanced_tree = split_tree(test_tree, number_of_splits=3)
         ```
         
     Note:

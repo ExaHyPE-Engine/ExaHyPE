@@ -148,7 +148,7 @@ def main():
         dest="topology_update",
         action="store_false",
         default=True,
-        help="Disable topology preservation (skip non-leaf subtree propagation) during split_leaves()."
+        help="Disable topology preservation (skip non-leaf subtree propagation) during split_tree()."
     )
 
     args = parser.parse_args()
@@ -259,15 +259,15 @@ def main():
         
         split_start_time = time.time()
 
-        # a runtime switch for whether split_leaves() performs its Stage II topology propagation
+        # a runtime switch for whether split_tree() performs its Stage II bottom-up propagation
         if args.topology_update:
-            tree = split_strategy.split_leaves(tree, args.num_splits)
+            tree = split_strategy.split_tree(tree, args.num_splits)
         else:
             # Temporarily disable SplitTrees._update_non_leaf_assignments without editing SplitTrees.py
             original_update = split_strategy._update_non_leaf_assignments
             try:
                 split_strategy._update_non_leaf_assignments = lambda _tree: None
-                tree = split_strategy.split_leaves(tree, args.num_splits)
+                tree = split_strategy.split_tree(tree, args.num_splits)
             finally:
                 split_strategy._update_non_leaf_assignments = original_update
 

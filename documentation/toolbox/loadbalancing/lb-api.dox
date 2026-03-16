@@ -41,10 +41,10 @@ This input method is essential for algorithm development and provides a baseline
 
 The `SplitTrees` module (`src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`) implements the core optimisation algorithms for redistributing computational work across multiple compute resources. These strategies enable you to achieve balanced workload distribution, handle adaptive mesh challenges, and maintain mesh topology.
 
-The splitting phase consists of up to three sequential stages applied within `split_leaves()`:
+The splitting phase consists of up to three sequential stages applied within `split_tree()`:
 
 ```python
-split_leaves(peano_tree, number_of_splits):
+split_tree(peano_tree, number_of_splits):
     # Stage I:            distribute leaf nodes across subtrees
     # Stage II:           bottom-up propagation (_update_non_leaf_assignments)
     # Stage III (opt.):   hierarchical optimisation (_optimize_split_hierarchy)  # TBD
@@ -52,7 +52,7 @@ split_leaves(peano_tree, number_of_splits):
 
 | Stage | Function | Objective | Complexity |
 |-------|----------|-----------|------------|
-| **I** | `split_leaves()` (core loop) | Distribute leaves across subtrees | O(levels × cells) |
+| **I** | `split_tree()` (core loop) | Distribute leaves across subtrees | O(levels × cells) |
 | **II** | `_update_non_leaf_assignments()` | Propagate subtree ids bottom-up | O(levels × cells) single pass |
 | **III** | `_optimize_split_hierarchy()` | Minimise split operation count | O(levels² × trees) iterative |
 
@@ -60,7 +60,7 @@ Stage I and Stage II are always executed. Stage III is optional and has not yet 
 
 ### Stage I: Leaf Distribution
 
-The core loop of `split_leaves()` identifies all leaf nodes across every refinement level and
+The core loop of `split_tree()` identifies all leaf nodes across every refinement level and
 distributes them as evenly as possible across the requested number of subtrees.
 A node is a leaf if it resides on the finest level or has no children on the next level.
 After Stage I, only leaf nodes carry updated subtree assignments; all non-leaf nodes still
@@ -95,7 +95,7 @@ A simple case in which only one node at Level 2 has children belonging to Subtre
 
 @image html tree_examples_combined_a_wrong.png
 
-If the propagation continued one level further than necessary, `L1A` would be promoted to Subtree 1 because all its children (`L2A1`–`L2A3`) are already green from Stage I. Note that `L1B` correctly remains in Subtree 0 since only one of its children (`L2B1`) is green whilst `L2B2` and `L2B3` are not. Nevertheless, promoting `L1A` alone is already suboptimal: since its siblings `L1B` and `L1C` remain in Subtree 0, a split at Level 1 is now required in addition to the split at Level 2, resulting in two split operations instead of one. Image (I) shows the output of `split_leaves()` (Stage I); image (II) shows the suboptimal result of an over-eager bottom-up propagation.
+If the propagation continued one level further than necessary, `L1A` would be promoted to Subtree 1 because all its children (`L2A1`–`L2A3`) are already green from Stage I. Note that `L1B` correctly remains in Subtree 0 since only one of its children (`L2B1`) is green whilst `L2B2` and `L2B3` are not. Nevertheless, promoting `L1A` alone is already suboptimal: since its siblings `L1B` and `L1C` remain in Subtree 0, a split at Level 1 is now required in addition to the split at Level 2, resulting in two split operations instead of one. Image (I) shows the output of `split_tree()` (Stage I); image (II) shows the suboptimal result of an over-eager bottom-up propagation.
 
 \par Scenario 2:
 
@@ -107,7 +107,7 @@ A more complex case in which multiple nodes at Level 2 have children. Here, the 
 
 @image html tree_examples_combined_b_wrong.png
 
-If the propagation stopped one level too early, `L1A` and `L1B` would remain in Subtree 0 despite all of their leaf descendants belonging to Subtree 1. The split is then placed at Level 2, dividing all 9 Level-2 nodes (6 green vs 3 gold), which is less efficient because a higher-level split covers the same subtree assignment with fewer split bookkeeping entries. Image (I) shows the output of `split_leaves()` (Stage I); image (II) shows the suboptimal result of an incomplete bottom-up propagation.
+If the propagation stopped one level too early, `L1A` and `L1B` would remain in Subtree 0 despite all of their leaf descendants belonging to Subtree 1. The split is then placed at Level 2, dividing all 9 Level-2 nodes (6 green vs 3 gold), which is less efficient because a higher-level split covers the same subtree assignment with fewer split bookkeeping entries. Image (I) shows the output of `split_tree()` (Stage I); image (II) shows the suboptimal result of an incomplete bottom-up propagation.
 
 This bottom-up propagation method ensures effective load balancing throughout the entire tree structure whilst maintaining strict parent-child consistency, and prepares the tree for the optional hierarchical optimisation (Stage III).
 
@@ -203,7 +203,7 @@ The algorithm applies when M trees on level L satisfy:
 This hierarchical approach prepares the split structure for integration with cost-aware optimisation strategies, enabling more efficient domain decomposition in practice.
 
 ### Planned development
-- **Stage III Implementation**: Implement the (optional) third stage `_optimize_split_hierarchy()` in `split_leaves()` as outlined above
+- **Stage III Implementation**: Implement the (optional) third stage `_optimize_split_hierarchy()` in `split_tree()` as outlined above
 - **Cost-Aware Splitting**: Integration with splitting cost functions from @ref page_toolbox_loadbalancing_strategies
 - **Hybrid Approaches**: Configurable stage selection based on problem characteristics
 

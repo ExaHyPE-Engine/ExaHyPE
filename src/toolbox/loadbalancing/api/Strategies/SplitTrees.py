@@ -108,7 +108,7 @@ def split_finest_level(peano_tree: Tree, number_of_splits: int) -> Tree: # might
     
     return peano_tree
 
-def split_leaves(peano_tree: Tree, number_of_splits: int) -> Tree:
+def split_tree(peano_tree: Tree, number_of_splits: int) -> Tree:
     """
     Split a tree into the specified number of splits by distributing ALL leaf nodes on the lowest admissible level.
     This includes leaves at the finest level AND leaves at coarser levels (nodes that weren't refined further).
@@ -304,7 +304,7 @@ def _update_non_leaf_assignments(peano_tree: Tree) -> None:
         peano_tree: Tree object to update
         
     Note:
-        This function is called automatically by split_leaves() and should generally
+        This function is called automatically by split_tree() and should generally
         not be called directly unless implementing custom splitting strategies.
     """
     print("Updating non-leaf node assignments to maintain tree topology...")
