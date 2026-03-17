@@ -84,6 +84,11 @@ namespace {{ item }} {
 
   constexpr int getFusedSTPVISize() {return {{shift}};}
 
+{% if not IS_LINEAR %}
+  // lQi + rhs + lFi + lSi + gradQ
+  constexpr int getPicardSize() {return {{lQiSize+lQiSize+lFiSize+lSiSize+gradQSize}}; }
+{% endif %}
+
   // Shifts for boundary conditions
 {% set shift2 = 0 %}
   constexpr int getBndFaceShift() {return {{shift2}};}

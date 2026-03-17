@@ -10,7 +10,11 @@
 namespace {{ item }} {
 {%- endfor %}
 
+{% if IS_LINEAR %}
 template <typename cStoreType, typename pCompType, typename pStoreType>
+{% else %}
+template <typename cStoreType, typename pCompType, typename picardCompType, typename pStoreType>
+{% endif %}
 int fusedSpaceTimePredictorVolumeIntegral{{NAME_SUFFIX}}(
   {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
   pStoreType* const NOALIAS                     lQhbnd[TWO_TIMES_D],

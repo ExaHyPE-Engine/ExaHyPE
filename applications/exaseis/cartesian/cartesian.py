@@ -35,21 +35,19 @@ theSolver=exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
 
 theSolver.add_kernel_optimisations(
   is_linear=True, polynomials=(Polynomials.Gauss_Lobatto if polynomials=="lobatto" else Polynomials.Gauss_Legendre)
-  ,solution_persistent_storage_precision=precision
-  ,predictor_computation_precisions=[precision]
-  ,corrector_computation_precision=precision
+  ,precision=precision
 )
 
 theSolver.set_implementation(
-  initial_conditions    = Elastic.initial(),
-  boundary_conditions   = Elastic.boundary(),
-  max_eigenvalue   = Elastic.eigenvalue(),
-  flux          = Elastic.flux(),
-  refinement_criterion = Elastic.refinement_criterion(),
-  riemann_solver=Elastic.riemann_solver(),
-  number_of_point_sources = 1,
-  point_source=Elastic.point_source(),
-  init_point_source_location=Elastic.init_point_source()
+  initial_conditions          = Elastic.initial(),
+  boundary_conditions         = Elastic.boundary(),
+  max_eigenvalue              = Elastic.eigenvalue(),
+  flux                        = Elastic.flux(),
+  refinement_criterion        = Elastic.refinement_criterion(),
+  riemann_solver              = Elastic.riemann_solver(),
+  number_of_point_sources     = 1,
+  point_source                = Elastic.point_source(),
+  init_point_source_location  = Elastic.init_point_source()
 )
 
 theSolver.add_user_solver_includes("""

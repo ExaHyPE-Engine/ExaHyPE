@@ -25,16 +25,16 @@ class BufferSizes(object):
 
         # SPT buffer sizes
         # default values
-        self.d["lQiSize"] = -1
-        self.d["lQiNextSize"] = -1
-        self.d["lPiSize"] = -1
-        self.d["lFiSize"] = -1
-        self.d["lSiSize"] = -1
-        self.d["lQhiSize"] = -1
-        self.d["lFhiSize"] = -1
-        self.d["lShiSize"] = -1
-        self.d["gradQSize"] = -1
-        self.d["PSiSize"] = -1
+        self.d["lQiSize"]     = 0
+        self.d["lQiNextSize"] = 0
+        self.d["lPiSize"]     = 0
+        self.d["lFiSize"]     = 0
+        self.d["lSiSize"]     = 0
+        self.d["lQhiSize"]    = 0
+        self.d["lFhiSize"]    = 0
+        self.d["lShiSize"]    = 0
+        self.d["gradQSize"]   = 0
+        self.d["PSiSize"]     = 0
 
         if self.d["IS_LINEAR"]:
             self.d["lQiSize"] = nDataPad * (nDof**nDim)

@@ -114,7 +114,7 @@ class ADERDG(object):
         self._predictor_computation_precisions      = [PrecisionType["double"]]
         self._corrector_computation_precision       = PrecisionType["double"]
         self._solution_persistent_storage_precision = PrecisionType["double"]
-        self._precompute_picard_precision           = False
+        self._precompute_picard_precision           = PrecisionType["double"]
         self._use_half_precision                    = False
 
         self._additional_precisions = None
@@ -828,6 +828,7 @@ class ADERDG(object):
 
         d["PREDICTOR_COMPUTATION_PRECISIONS"] = self._predictor_computation_precisions
         d["CORRECTOR_COMPUTATION_PRECISION"]  = self._corrector_computation_precision
+        d["PICARD_COMPUTATION_PRECISION"]     = self._precompute_picard_precision
 
         d["COMPUTATION_PRECISIONS"] = self._predictor_computation_precisions[:]
         if self._additional_precisions!=None and self._additional_precisions not in d["COMPUTATION_PRECISIONS"]:
