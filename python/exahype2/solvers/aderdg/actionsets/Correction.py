@@ -38,6 +38,10 @@ class Correction(AbstractADERDGActionSet):
     const bool isBoundary = fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary();
     const auto& faceCentre = marker.getX();
     {{RIEMANN_SOLVER_CALL}}
+
+    // Set Updated
+    fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdated(0, true);
+    fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdated(1, true);
   }
 """
 
