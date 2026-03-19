@@ -208,7 +208,7 @@ namespace tarch {
 
      using TaskNumber = int;
 
-     constexpr TaskNumber NoOutDependencies = -1;
+     constexpr TaskNumber NoOutDependencies = -2;
 
      const std::set<TaskNumber> NoInDependencies = std::set<TaskNumber>();
 
@@ -362,6 +362,13 @@ namespace tarch {
      * You may pass NoDependency as taskNumber. In this case, you have a
      * fire-and-forget task which is just pushed out there without anybody
      * ever waiting for it later on (at least not via task dependencies).
+     *
+     * There is also the opportunity to pass in ImmediateExecute as task
+     * number. This option is there as place-holder: A lot of tasking
+     * front-ends work with a final number of task numbers. If they run out
+     * of numbers, they will get an "error code" telling the code "I don't have
+     * any free numbers left". In this case, we can still pass on the task to
+     * this routine and map the magic number to ImmediateExecute.
      *
      *
      * ## Data ownership

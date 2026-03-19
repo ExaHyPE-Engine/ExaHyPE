@@ -24,7 +24,6 @@ namespace {
   tarch::multicore::orchestration::Strategy* orchestrationStrategy = tarch::multicore::orchestration::createDefaultStrategy();
 
   tarch::logging::Log _log("tarch::multicore");
-
 }
 
 
