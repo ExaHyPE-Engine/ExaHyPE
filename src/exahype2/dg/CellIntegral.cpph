@@ -173,4 +173,25 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
       } //if useNCP
     } // dof
   } //currentCell
+  
+}
+
+template <
+  typename Solver,
+  int      order,
+  int      unknowns,
+  int      auxiliaryVariables
+>
+void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
+  ::exahype2::CellData<double, double>&          cellData,
+  bool                                           evaluateFlux,
+  bool                                           evaluateNonconservativeProduct,
+  bool                                           evaluateSource,
+  bool                                           evaluatePointSources,
+  tarch::timing::Measurement&                    measurement
+){
+  tarch::timing::Watch watch("exahype2::dg", "cellIntegral_patchwise_in_situ_GaussLegendre", false, true);
+  ::exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre<Solver,order, unknowns, auxiliaryVariables>(cellData, evaluateFlux, evaluateNonconservativeProduct, evaluateSource, evaluatePointSources);
+  watch.stop();
+  measurement.setValue(watch.getCalendarTime());
 }

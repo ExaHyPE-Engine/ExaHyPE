@@ -9,4 +9,6 @@ from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFac
     compute_number_of_face_projection_quantities,
 )
 
+from .CellIntegral2D import cellIntegral as cellIntegral2d
+from .CellIntegral3D import cellIntegral as cellIntegral3d
 from .RungeKuttaDG import Storage

@@ -10,10 +10,13 @@ from exahype2.solvers.rkdg.kernels import create_solver_definitions
 
 from exahype2.solvers.rkdg.kernels import SolverVariant
 
-from exahype2.solvers.rkdg.kernels         import create_volumetric_solver_call
+from exahype2.solvers.rkdg.kernels         import create_cell_integral_kernel_definitions
+from exahype2.solvers.rkdg.kernels         import clear_dg_kernel_file
+from exahype2.solvers.rkdg.kernels         import create_volumetric_solver_call_dsl
 from exahype2.solvers.rkdg.kernels         import create_add_solver_contributions_call
 from exahype2.solvers.rkdg.kernels         import create_multiply_with_inverted_mass_matrix_call
 from exahype2.solvers.rkdg.rusanov.kernels import create_Riemann_solver_call
+from exahype2.solvers.rkdg.rusanov.kernels import create_Riemann_solver_kernel_definitions
 
 from exahype2.solvers.rkdg.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
@@ -72,8 +75,13 @@ class GlobalAdaptiveTimeStep(SeparateSweeps):
     self._compute_eigenvalue                              = True
 
     self._kernel_namespace                                = "rusanov"
-    self._volumetric_compute_kernel_call                  = create_volumetric_solver_call(self._basis, SolverVariant.WithVirtualFunctions)
-    self._volumetric_compute_kernel_call_stateless        = create_volumetric_solver_call(self._basis, SolverVariant.Stateless)
+
+    clear_dg_kernel_file()
+    create_cell_integral_kernel_definitions(self._kernel_namespace)
+    create_Riemann_solver_kernel_definitions()
+
+    self._volumetric_compute_kernel_call                  = create_volumetric_solver_call_dsl(self._basis, SolverVariant.WithVirtualFunctions)
+    self._volumetric_compute_kernel_call_stateless        = create_volumetric_solver_call_dsl(self._basis, SolverVariant.Stateless)
     self._Riemann_compute_kernel_call                     = create_Riemann_solver_call(self._basis, FaceProjections.Solution)
     # TODO: self._Riemann_compute_kernel_call_stateless =
     self._add_solver_contributions_call                   = create_add_solver_contributions_call(self._basis)
@@ -149,4 +157,5 @@ class GlobalAdaptiveTimeStep(SeparateSweeps):
   def user_action_set_includes(self):
     return super(GlobalAdaptiveTimeStep, self).user_action_set_includes + """
 #include "exahype2/dg/rusanov/Rusanov.h"
+#include "kernels/dg.h"
 """
