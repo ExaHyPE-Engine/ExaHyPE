@@ -90,8 +90,8 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
         double                                       dt,
         int                                          normal,
         double*                                      maxEigenvalue
-      )->double {
-        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, x, t, dt, normal, maxEigenvalue );
+      )->void {
+        repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, x, t, dt, normal, maxEigenvalue );
       },
       repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
     );

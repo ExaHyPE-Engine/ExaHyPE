@@ -5,16 +5,184 @@ import jinja2
 from enum import Enum
 
 from exahype2.solvers.PDETerms import PDETerms
+import os
 import exahype2
+import exahype2.kerneldsl as DSL
 
 from exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix import GaussLegendreBasis
-
 
 class SolverVariant(Enum):
     WithVirtualFunctions = 0
     Stateless = 1
     Accelerator = 2
 
+def clear_dg_kernel_file():
+  if os.path.exists("kernels"):
+    file = open("kernels/dg.h", "w")
+    file.close()
+
+def create_cell_integral_kernel_definitions(namespace):
+  if not os.path.exists("kernels"):
+      os.makedirs("kernels")
+  
+  file = open("kernels/dg.h", "a")
+  file.write("""#if Dimensions == 2
+#include "dg_cellIntegral2d.h"
+#elif Dimensions == 3
+#include "dg_cellIntegral3d.h"
+#endif
+""")
+  
+  create_cell_integral_kernel_definitions_2d(namespace)
+  create_cell_integral_kernel_definitions_3d(namespace)
+
+def create_cell_integral_kernel_definitions_2d(namespace):
+  template_parameters = [DSL.SyntaxTree.Argument("DGOrder", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("NumberOfUnknowns", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("NumberOfAuxiliaryVariables", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("EvaluateFlux", DSL.SyntaxTree.TBoolean()),
+                        DSL.SyntaxTree.Argument("EvaluateNonconservativeProduct", DSL.SyntaxTree.TBoolean()),
+                        DSL.SyntaxTree.Argument("EvaluateSource", DSL.SyntaxTree.TBoolean()),
+                        DSL.SyntaxTree.Argument("EvaluatePointSources", DSL.SyntaxTree.TBoolean())]
+
+  functor_arguments = [DSL.SyntaxTree.Argument("flux", DSL.SyntaxTree.TCustom("const Flux&")),
+                       DSL.SyntaxTree.Argument("nonconservativeProduct", DSL.SyntaxTree.TCustom("const NonConservativeProduct&")),
+                       DSL.SyntaxTree.Argument("sourceTerm", DSL.SyntaxTree.TCustom("const Source&")),
+                       DSL.SyntaxTree.Argument("pointSource", DSL.SyntaxTree.TCustom("const PointSources&")),
+                       DSL.SyntaxTree.Argument("getQuadraturePoint", DSL.SyntaxTree.TCustom("const QuadraturePoint&")),
+                       DSL.SyntaxTree.Argument("QuadraturePoints1d", DSL.SyntaxTree.TCustom("const double*")),
+                       DSL.SyntaxTree.Argument("MassMatrixDiagonal1d", DSL.SyntaxTree.TCustom("const double*")),
+                       DSL.SyntaxTree.Argument("StiffnessOperator1d", DSL.SyntaxTree.TCustom("const double*")),
+                       DSL.SyntaxTree.Argument("DerivativeOperator1d", DSL.SyntaxTree.TCustom("const double*"))]
+
+  dg_stateless_tree = DSL.Parser().parse(exahype2.solvers.rkdg.cellIntegral2d, template_parameters, functor_arguments, ["exahype2", "dg", namespace], stateless=True)
+  dg_stateless_kernel = dg_stateless_tree.print_cpp()
+  dg_stateless_call_with_measurement = dg_stateless_tree.print_definition_with_timer()
+  dg_stateless_kernel_declaration = dg_stateless_tree.print_declaration()
+  dg_stateless_call_with_measurement_declaration = dg_stateless_tree.print_declaration_with_timer()
+
+  dg_stateless_omp_accelerator_tree = DSL.Parser().parse(exahype2.solvers.rkdg.cellIntegral2d, template_parameters, functor_arguments, ["exahype2", "dg", "omp", namespace], stateless=True, use_accelerator=True)
+  dg_stateless_omp_accelerator_kernel = dg_stateless_omp_accelerator_tree.print_omp()
+  dg_stateless_omp_accelerator_call_with_measurement = dg_stateless_omp_accelerator_tree.print_definition_with_timer()
+  dg_stateless_omp_accelerator_kernel_declaration = dg_stateless_omp_accelerator_tree.print_declaration()
+  dg_stateless_omp_accelerator_call_with_measurement_declaration = dg_stateless_omp_accelerator_tree.print_declaration_with_timer()
+
+  dg_tree = DSL.Parser().parse(exahype2.solvers.rkdg.cellIntegral2d, template_parameters, functor_arguments, ["exahype2", "dg", namespace], stateless=False)
+  dg_kernel = dg_tree.print_cpp()
+  dg_call_with_measurement = dg_tree.print_definition_with_timer()
+  dg_kernel_declaration = dg_tree.print_declaration()
+  dg_call_with_measurement_declaration = dg_tree.print_declaration_with_timer()
+
+  if not os.path.exists("kernels"):
+      os.makedirs("kernels")
+  
+  file = open("kernels/dg_cellIntegral2d.h", "w")
+  file.write(f"""#pragma once
+#include "exahype2/CellData.h"
+#include "exahype2/VolumeIndex.h"
+#include "exahype2/dg/DGUtils.h"
+#include "exahype2/dg/Functors.h"
+#include "peano4/utils/Loop.h"
+#include "tarch/timing/Measurement.h"
+#include "tarch/timing/Watch.h"
+#include <fstream>
+             
+{dg_stateless_kernel_declaration}
+{dg_stateless_call_with_measurement_declaration}
+
+{dg_stateless_omp_accelerator_kernel_declaration}
+{dg_stateless_omp_accelerator_call_with_measurement_declaration}
+
+{dg_kernel_declaration}
+{dg_call_with_measurement_declaration}
+
+#include "dg_cellIntegral2d.cpph"
+""")
+  file.close()
+
+  file = open("kernels/dg_cellIntegral2d.cpph", "w")
+  file.write("#include \"exahype2/dg/DGUtils.h\"\n")
+  file.write(dg_stateless_kernel)
+  file.write(dg_stateless_call_with_measurement)
+  file.write(dg_stateless_omp_accelerator_kernel)
+  file.write(dg_stateless_omp_accelerator_call_with_measurement)
+  file.write(dg_kernel)
+  file.write(dg_call_with_measurement)
+  file.close()
+
+def create_cell_integral_kernel_definitions_3d(namespace):
+  template_parameters = [DSL.SyntaxTree.Argument("DGOrder", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("NumberOfUnknowns", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("NumberOfAuxiliaryVariables", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("EvaluateFlux", DSL.SyntaxTree.TBoolean()),
+                        DSL.SyntaxTree.Argument("EvaluateNonconservativeProduct", DSL.SyntaxTree.TBoolean()),
+                        DSL.SyntaxTree.Argument("EvaluateSource", DSL.SyntaxTree.TBoolean()),
+                        DSL.SyntaxTree.Argument("EvaluatePointSources", DSL.SyntaxTree.TBoolean())]
+
+  functor_arguments = [DSL.SyntaxTree.Argument("flux", DSL.SyntaxTree.TCustom("const Flux&")),
+                       DSL.SyntaxTree.Argument("nonconservativeProduct", DSL.SyntaxTree.TCustom("const NonConservativeProduct&")),
+                       DSL.SyntaxTree.Argument("sourceTerm", DSL.SyntaxTree.TCustom("const Source&")),
+                       DSL.SyntaxTree.Argument("pointSource", DSL.SyntaxTree.TCustom("const PointSources&")),
+                       DSL.SyntaxTree.Argument("getQuadraturePoint", DSL.SyntaxTree.TCustom("const QuadraturePoint&")),
+                       DSL.SyntaxTree.Argument("QuadraturePoints1d", DSL.SyntaxTree.TCustom("const double*")),
+                       DSL.SyntaxTree.Argument("MassMatrixDiagonal1d", DSL.SyntaxTree.TCustom("const double*")),
+                       DSL.SyntaxTree.Argument("StiffnessOperator1d", DSL.SyntaxTree.TCustom("const double*")),
+                       DSL.SyntaxTree.Argument("DerivativeOperator1d", DSL.SyntaxTree.TCustom("const double*"))]
+  
+  dg_stateless_tree = DSL.Parser().parse(exahype2.solvers.rkdg.cellIntegral3d, template_parameters, functor_arguments, ["exahype2", "dg", namespace], stateless=True)
+  dg_stateless_kernel = dg_stateless_tree.print_cpp()
+  dg_stateless_call_with_measurement = dg_stateless_tree.print_definition_with_timer()
+  dg_stateless_kernel_declaration = dg_stateless_tree.print_declaration()
+  dg_stateless_call_with_measurement_declaration = dg_stateless_tree.print_declaration_with_timer()
+
+  dg_stateless_omp_accelerator_tree = DSL.Parser().parse(exahype2.solvers.rkdg.cellIntegral3d, template_parameters, functor_arguments, ["exahype2", "dg", "omp", namespace], stateless=True, use_accelerator=True)
+  dg_stateless_omp_accelerator_kernel = dg_stateless_omp_accelerator_tree.print_cpp()
+  dg_stateless_omp_accelerator_call_with_measurement = dg_stateless_omp_accelerator_tree.print_definition_with_timer()
+  dg_stateless_omp_accelerator_kernel_declaration = dg_stateless_omp_accelerator_tree.print_declaration()
+  dg_stateless_omp_accelerator_call_with_measurement_declaration = dg_stateless_omp_accelerator_tree.print_declaration_with_timer()
+
+  dg_tree = DSL.Parser().parse(exahype2.solvers.rkdg.cellIntegral3d, template_parameters, functor_arguments, ["exahype2", "dg", namespace], stateless=False)
+  dg_kernel = dg_tree.print_cpp()
+  dg_call_with_measurement = dg_tree.print_definition_with_timer()
+  dg_kernel_declaration = dg_tree.print_declaration()
+  dg_call_with_measurement_declaration = dg_tree.print_declaration_with_timer()
+
+  if not os.path.exists("kernels"):
+      os.makedirs("kernels")
+  
+  file = open("kernels/dg_cellIntegral3d.h", "w")
+  file.write(f"""#pragma once
+#include "exahype2/CellData.h"
+#include "exahype2/VolumeIndex.h"
+#include "exahype2/dg/DGUtils.h"
+#include "exahype2/dg/Functors.h"
+#include "peano4/utils/Loop.h"
+#include "tarch/timing/Measurement.h"
+#include "tarch/timing/Watch.h"
+#include <fstream>
+             
+{dg_stateless_kernel_declaration}
+{dg_stateless_call_with_measurement_declaration}
+
+{dg_stateless_omp_accelerator_kernel_declaration}
+{dg_stateless_omp_accelerator_call_with_measurement_declaration}
+
+{dg_kernel_declaration}
+{dg_call_with_measurement_declaration}
+
+#include "dg_cellIntegral3d.cpph"
+""")
+  file.close()
+
+  file = open("kernels/dg_cellIntegral3d.cpph", "w")
+  file.write("#include \"exahype2/dg/DGUtils.h\"\n")
+  file.write(dg_stateless_kernel)
+  file.write(dg_stateless_call_with_measurement)
+  file.write(dg_stateless_omp_accelerator_kernel)
+  file.write(dg_stateless_omp_accelerator_call_with_measurement)
+  file.write(dg_kernel)
+  file.write(dg_call_with_measurement)
+  file.close()
 
 def create_abstract_solver_declarations(
     flux_implementation,
@@ -37,10 +205,10 @@ def create_abstract_solver_declarations(
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-    static double maxEigenvalue(
+    static void maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       double                                       t,
@@ -49,7 +217,7 @@ def create_abstract_solver_declarations(
       double*                                      maxEigenvalue,
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -61,7 +229,7 @@ def create_abstract_solver_declarations(
      * @return Max eigenvalue. Result has to be positive, so we are actually speaking
      *   about the maximum absolute eigenvalue.
      */
-    virtual double maxEigenvalue(
+    virtual void maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       double                                       t,
@@ -76,7 +244,7 @@ def create_abstract_solver_declarations(
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static void flux(
@@ -88,7 +256,7 @@ def create_abstract_solver_declarations(
       double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -110,7 +278,7 @@ def create_abstract_solver_declarations(
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static void nonconservativeProduct(
@@ -123,7 +291,7 @@ def create_abstract_solver_declarations(
       double * __restrict__                        BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -146,7 +314,7 @@ def create_abstract_solver_declarations(
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static void sourceTerm(
@@ -157,7 +325,7 @@ def create_abstract_solver_declarations(
       double * __restrict__ S,
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -178,7 +346,7 @@ def create_abstract_solver_declarations(
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     void pointSource(
@@ -189,7 +357,7 @@ def create_abstract_solver_declarations(
       double * __restrict__ S,
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -203,6 +371,58 @@ def create_abstract_solver_declarations(
       double * __restrict__ S
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
     {% endif %}
+
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static void  getQuadraturePoint(
+      const tarch::la::Vector<Dimensions,int>&     index,
+      const tarch::la::Vector<Dimensions,double>&  cellCentre,
+      const tarch::la::Vector<Dimensions,double>&  cellSize,
+      int                                 polynomialOrder,
+      const double* __restrict__          quadraturePoints,
+      tarch::la::Vector<Dimensions,double>* __restrict__  quadraturePositions,
+      Offloadable
+    );
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static void  getQuadraturePointInFace(
+      const tarch::la::Vector<Dimensions,int>&     index,
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  cellSize,
+      int                                 polynomialOrder,
+      int                                 faceOrientation,
+      const double* __restrict__          quadraturePoints,
+      tarch::la::Vector<Dimensions,double>* __restrict__  quadraturePositions,
+      Offloadable
+    );
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+
+    void  getQuadraturePoint(
+      const tarch::la::Vector<Dimensions,int>&     index,
+      const tarch::la::Vector<Dimensions,double>&  cellCentre,
+      const tarch::la::Vector<Dimensions,double>&  cellSize,
+      int                                 polynomialOrder,
+      const double* __restrict__          quadraturePoints,
+      tarch::la::Vector<Dimensions,double>* __restrict__  quadraturePositions
+    );
+
+    void  getQuadraturePointInFace(
+      const tarch::la::Vector<Dimensions,int>&     index,
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  cellSize,
+      int                                 polynomialOrder,
+      int                                 faceOrientation,
+      const double* __restrict__          quadraturePoints,
+      tarch::la::Vector<Dimensions,double>* __restrict__  quadraturePositions
+    );
 """,
         undefined=jinja2.DebugUndefined,
     )
@@ -228,7 +448,7 @@ def create_abstract_solver_definitions(
     Template = jinja2.Template(
         """
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   double                                       t,
@@ -301,10 +521,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
 {% endif %}
 
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   double                                       t,
@@ -315,13 +535,13 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 ) {
   {{EIGENVALUES_IMPLEMENTATION}};
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
@@ -339,13 +559,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   {{FLUX_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
@@ -364,13 +584,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   {{NCP_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
@@ -387,13 +607,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   {{SOURCE_TERM_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 {% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
@@ -411,10 +631,58 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
   {{POINT_SOURCE_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 {% endif %}
+
+void  {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getQuadraturePoint(
+  const tarch::la::Vector<Dimensions,int>&     index,
+  const tarch::la::Vector<Dimensions,double>&  cellCentre,
+  const tarch::la::Vector<Dimensions,double>&  cellSize,
+  int                                 polynomialOrder,
+  const double* __restrict__          quadraturePoints,
+  tarch::la::Vector<Dimensions,double>* __restrict__  quadraturePositions,
+  Offloadable
+){
+  quadraturePositions[0] = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, polynomialOrder, quadraturePoints);
+}
+
+void  {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getQuadraturePointInFace(
+  const tarch::la::Vector<Dimensions,int>&     index,
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  cellSize,
+  int                                 polynomialOrder,
+  int                                 faceOrientation,
+  const double* __restrict__          quadraturePoints,
+  tarch::la::Vector<Dimensions,double>* __restrict__  quadraturePositions,
+  Offloadable
+){
+  ::exahype2::dg::getQuadraturePointInFace(faceCentre, cellSize, index, polynomialOrder, faceOrientation, quadraturePoints, quadraturePositions);
+}
+
+void  {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getQuadraturePoint(
+  const tarch::la::Vector<Dimensions,int>&     index,
+  const tarch::la::Vector<Dimensions,double>&  cellCentre,
+  const tarch::la::Vector<Dimensions,double>&  cellSize,
+  int                                 polynomialOrder,
+  const double* __restrict__          quadraturePoints,
+  tarch::la::Vector<Dimensions,double>* __restrict__  quadraturePositions
+){
+  quadraturePositions[0] = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, polynomialOrder, quadraturePoints);
+}
+
+void  {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getQuadraturePointInFace(
+  const tarch::la::Vector<Dimensions,int>&     index,
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  cellSize,
+  int                                 polynomialOrder,
+  int                                 faceOrientation,
+  const double* __restrict__          quadraturePoints,
+  tarch::la::Vector<Dimensions,double>* __restrict__  quadraturePositions
+){
+  ::exahype2::dg::getQuadraturePointInFace(faceCentre, cellSize, index, polynomialOrder, faceOrientation, quadraturePoints, quadraturePositions);
+}
 """,
         undefined=jinja2.DebugUndefined,
     )
@@ -469,7 +737,7 @@ def create_solver_declarations(
      * @return Max eigenvalue. Result has to be positive, so we are actually speaking
      *   about the maximum absolute eigenvalue.
      */
-    virtual double maxEigenvalue(
+    virtual void maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       double                                       t,
@@ -517,7 +785,7 @@ def create_solver_declarations(
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
      static void sourceTerm(
@@ -529,7 +797,7 @@ def create_solver_declarations(
        double * __restrict__ S,
        Offloadable
      );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -550,7 +818,7 @@ def create_solver_declarations(
      * but helps the compiler to distinguish the different function variants.
      */
      #error point sources not implemented yet
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
      static void pointSource(
@@ -562,7 +830,7 @@ def create_solver_declarations(
        double * __restrict__ S,
        Offloadable
      );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -573,7 +841,7 @@ def create_solver_declarations(
      * this signature and to copy the implementation into the header. So it would
      * read 
      *
-     * static inline double maxEigenvalue( ... ) {
+     * static inline void maxEigenvalue( ... ) {
      *  code here
      * }
      *
@@ -582,10 +850,10 @@ def create_solver_declarations(
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-    static double maxEigenvalue(
+    static void maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       double                                       t,
@@ -594,7 +862,7 @@ def create_solver_declarations(
       double*                                      maxEigenvalue,
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -614,7 +882,7 @@ def create_solver_declarations(
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static void flux(
@@ -626,7 +894,7 @@ def create_solver_declarations(
       double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -646,7 +914,7 @@ def create_solver_declarations(
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static void nonconservativeProduct(
@@ -659,7 +927,7 @@ def create_solver_declarations(
       double * __restrict__                        BTimesDeltaQ,     // BTimesDeltaQ[5]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -687,7 +955,7 @@ def create_solver_definitions(
     Template = jinja2.Template(
         """
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   double                                       t,
@@ -752,10 +1020,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 {% endif %}
 
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   double                                       t,
@@ -766,13 +1034,13 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 )  {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 {% endif %}
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
@@ -786,13 +1054,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 )  {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 {% endif %}
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
@@ -807,13 +1075,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 )  {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 {% endif %}
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
@@ -826,13 +1094,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 ) {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 {% endif %}
 
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
 #error  point sources not implemented yet
@@ -846,7 +1114,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 ) {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 {% endif %}
@@ -925,7 +1193,133 @@ def create_start_time_step_implementation_for_fixed_time_stepping(
 """
     )
 
+def create_volumetric_solver_call_dsl(polynomial_basis, solver_variant):
+    """
+    A set of default volumetric kernel calls. You might want to use different
+    solver calls in your code depending on the context.
 
+    ## Difference to Finite Volume (FV) implementation
+
+    In the FV code base, I need the implementation routines as argument: As we work
+    with FV, the generic FV class does not know which implementations are around. If
+    you work with a domain-specific dg solver, e.g., then there is no such
+    thing as an ncp.
+
+    For the DG schemes, things are different: Every DG solver in ExaHyPE 2 in principle
+    supports the ncp. So the base Python class already instantiates the corresponding
+    dictionary entries, and we can use them straightaway.
+
+    ## Arguments
+
+    solver_variant: SolverVariant
+      Picks different implementation variants
+    """
+    if (
+        isinstance(polynomial_basis, GaussLegendreBasis)
+        and solver_variant == SolverVariant.WithVirtualFunctions
+    ):
+        return """cellIntegral<{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
+        {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}, //useNCP
+        {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }}, //useSource
+        {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }} //usePointSource
+      >(
+      cellData,
+      [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double * __restrict__                        F
+      )->void {
+        {% if FLUX_IMPLEMENTATION!="<none>" %}
+        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,dt,normal,F);
+        {% endif %}
+      }, //flux
+      [&](
+          const double * __restrict__                  Q,
+          const double * __restrict__                  deltaQ,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          double                                       t,
+          double                                       dt,
+          int                                          normal,
+          double * __restrict__                        F
+        ) -> void {
+          {% if NCP_IMPLEMENTATION!="<none>" %}
+          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, deltaQ, faceCentre, t, dt, normal, F);
+          {% endif %}
+        }, //ncp
+      [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        double                                       dt,
+        double * __restrict__                        S
+      ) -> void {
+        {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+        repositories::{{SOLVER_INSTANCE}}.sourceTerm(Q,x,t,dt,S);
+        {% endif %}
+      }, //source
+      [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  cellCentre,
+        const tarch::la::Vector<Dimensions,double>&  cellH,
+        double                                       t,
+        double                                       dt
+      ) -> std::vector<::exahype2::dg::PointSource> {
+        {% if POINT_SOURCES_IMPLEMENTATION!="<none>" %}
+        return repositories::{{SOLVER_INSTANCE}}.pointSources(Q,cellCentre,cellH,t,dt);
+        {% else %}
+        return std::vector<::exahype2::dg::PointSource>();
+        {% endif %}
+      }, //source
+      [&](
+        const tarch::la::Vector<Dimensions,int>&     index,
+        const tarch::la::Vector<Dimensions,double>&  cellCentre,
+        const tarch::la::Vector<Dimensions,double>&  cellSize,
+        int                                 polynomialOrder,
+        const double* __restrict__          quadraturePoints,
+        tarch::la::Vector<Dimensions,double>* __restrict__  quadraturePositions
+      ) -> std::vector<::exahype2::dg::PointSource> {
+        repositories::{{SOLVER_INSTANCE}}.getQuadraturePoint(index, cellCentre, cellSize, polynomialOrder, quadraturePoints, quadraturePositions);
+      }, //quadraturePoints
+      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d,
+      repositories::{{SOLVER_INSTANCE}}.StiffnessOperator1d,
+      repositories::{{SOLVER_INSTANCE}}.DerivativeOperator1d
+    );
+"""
+    elif (
+        isinstance(polynomial_basis, GaussLegendreBasis)
+        and solver_variant == SolverVariant.Stateless
+    ):
+        return """cellIntegralStateless<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},
+          {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},          //useFlux
+          {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }},           //useNCP
+          {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }},   //useSource
+          {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }}  //usePointSource
+        >(
+      cellData
+    );
+"""
+    elif (
+        isinstance(polynomial_basis, GaussLegendreBasis)
+        and solver_variant == SolverVariant.Accelerator
+    ):
+        return """cellIntegralStateless<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},
+          {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},          //useFlux
+          {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }},           //useNCP
+          {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }},   //useSource
+          {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }}  //usePointSource
+      >(
+      gpuCellData.targetDevice,
+      gpuCellData
+    );
+"""
+    else:
+        return "#solver variant not implemented yet"
+    
 def create_volumetric_solver_call(polynomial_basis, solver_variant):
     """
     A set of default volumetric kernel calls. You might want to use different
@@ -935,7 +1329,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
 
     In the FV code base, I need the implementation routines as argument: As we work
     with FV, the generic FV class does not know which implementations are around. If
-    you work with a domain-specific Rusanov solver, e.g., then there is no such
+    you work with a domain-specific dg solver, e.g., then there is no such
     thing as an ncp.
 
     For the DG schemes, things are different: Every DG solver in ExaHyPE 2 in principle

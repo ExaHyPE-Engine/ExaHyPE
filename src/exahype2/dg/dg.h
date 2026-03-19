@@ -245,6 +245,10 @@
  * - (3.1) Compute source term contribution to @f$ \hat Q @f$
  * - t.b.d.
  * - (5) Per cell, take the Q values and add the contribution @f$ dt \cdot M^{-1} \hat Q @f$.
+ * 
+ * A final consideration is that for higher dimensions the shape functions'
+ * tensor-product structure can be exploited to obtain higher order mass matrices
+ * @f$ M_{2d} = M \otimes M @f$ and @f$ M_{3d} = M_{2d} \otimes M @f$.
  *
  *
  * ### Flux term
@@ -289,6 +293,13 @@
  * the fact that the polynomials are orthogonal. It is hence sufficient to
  * have a one-dimensional @f$ D_{1d} @f$ diffusion operator and the one-dimensional
  * mass entries to construct all diffusion operators.
+ * 
+ * More specifically, this higher dimension form can be split into the product of a mass
+ * matrix and a stiffness matrix. WHen considering the flux along the x-axis, the mass
+ * matrix is applied along the y-axis and z-axis, so we can calculate the relevant matrix
+ * as @f$ M_x = M \otimes M \otimes I @f$. The stiffness matrix is only applied along the
+ * x-axis, so it can be calculated as @f$ K_x = I \otimes I \otimes K @f$. The final
+ * contribution from the flux along the x-axis is then @f$ h(1) \cdot h(2) \cdot MKF(Q) @f$.
  *
  * The scaling of the volumetric contribution is in @f$ h^{d-1} @f$. We have a
  * @f$ h^d @f$ from the integral, and we have
@@ -305,6 +316,20 @@
  * - (5) Per cell, take the Q values and add the contribution @f$ dt \cdot M^{-1} \hat Q @f$.
  *
  *
+ * ### Nodal Shape Functions
+ * ExaHyPE uses a nodal approach, in which the value stored for each dof is the true value at 
+ * that quadrature point. The shape functions operate as interpolating polynomials between the 
+ * quadrature points. This differs from a modal approach, where a linear combination of all
+ * shape functions must be taken to obtain the value at any point. This means that the source
+ * and flux values can be easily obtained like in other schemes.
+ * 
+ * The spacing of the nodes is not necessarily equidistant. We obtain better accuracy using
+ * Legendre nodes, which are the roots of the Legendre polynomial of order @f$ p @f$. The
+ * Lagrange polynomials which we use as shape functions are not necessarily orthogonal, so
+ * we may not have a diagonal mass matrix. However, we do if we use Legendre nodes. We could
+ * also use Gauss-Lobatto nodes, which would not lead to a diagonal mass matrix, but would
+ * simplify the projection onto faces.
+ * 
  * #### Projection onto faces
  *
  * To apply any Riemann solver of our choice, we first have to project the current
