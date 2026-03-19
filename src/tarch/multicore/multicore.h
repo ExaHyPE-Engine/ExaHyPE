@@ -208,7 +208,13 @@ namespace tarch {
 
      using TaskNumber = int;
 
-     constexpr TaskNumber NoOutDependencies = -2;
+     /**
+      * Should be the same as tarch::Enumerator::NoNumber, but I cannot use it
+      * here due to cyclic includes. The reason why it should be NoNumber is
+      * explained in spawnTask().
+      */
+     constexpr TaskNumber ExecuteImmediately = -1;
+     constexpr TaskNumber NoOutDependencies =  -2;
 
      const std::set<TaskNumber> NoInDependencies = std::set<TaskNumber>();
 
@@ -363,12 +369,13 @@ namespace tarch {
      * fire-and-forget task which is just pushed out there without anybody
      * ever waiting for it later on (at least not via task dependencies).
      *
-     * There is also the opportunity to pass in ImmediateExecute as task
+     * There is also the opportunity to pass in ExecuteImmediately as task
      * number. This option is there as place-holder: A lot of tasking
      * front-ends work with a final number of task numbers. If they run out
      * of numbers, they will get an "error code" telling the code "I don't have
      * any free numbers left". In this case, we can still pass on the task to
-     * this routine and map the magic number to ImmediateExecute.
+     * this routine. ExecuteImmediately is the same as NoNumber left, so we
+     * just run this task immediately and crack on.
      *
      *
      * ## Data ownership
