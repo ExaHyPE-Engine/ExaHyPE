@@ -27,8 +27,8 @@ topography:
       components:
         - !AxisAlignedCuboidalDomainFilter
           limits:
-            z: [-1.106, 110.60]
-            y: [-56.406, 56.41706]
+            z: [-1.0, 110.0]
+            y: [-55.0, 55.0]
           components: !ASAGI
             file: "north_iceland_fault.nc"
             parameters: [z]

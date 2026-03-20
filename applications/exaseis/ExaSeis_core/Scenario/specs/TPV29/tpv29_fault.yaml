@@ -7,7 +7,7 @@
     t_0: 0.5
     f_cy : 0.0
     f_wy : 20.0
-    f_cz :  0.0
+    f_cz : 20.0
     f_wz : 20.0
 [s_xx, s_yy, s_zz, s_xy, s_yz, s_xz]: !EvalModel
   parameters: [Omega, Pf, s_zz0, b_11, b_33, b_13]

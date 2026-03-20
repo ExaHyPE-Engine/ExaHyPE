@@ -15,10 +15,14 @@ import Scenario
 
 
 available_scenarios = {
-    "TPV5": Scenario.TPV5(),
-    "TPV26": Scenario.TPV26(), 
-    "TPV28": Scenario.TPV28(),
-    "TPV29": Scenario.TPV29()
+    "TPV5":     Scenario.TPV5(),
+    "TPV6":     Scenario.TPV6(),
+    "TPV16":    Scenario.TPV16(),
+    "TPV26":    Scenario.TPV26(),
+    "TPV28":    Scenario.TPV28(),
+    "TPV29":    Scenario.TPV29(),
+    "TPV34":    Scenario.TPV34(),
+    "Husavik":  Scenario.Husavik()
 }
 
 
@@ -36,7 +40,7 @@ auxiliary_variables = {
 offset  = my_scenario.domain_offset
 size    = my_scenario.domain_size
 
-plot_dt  = 0.0
+plot_dt  = 1.0
 end_time = my_scenario.end_time
 
 order = 5
@@ -74,7 +78,7 @@ theSolver.set_implementation(
     ncp                   = DynamicRuptureElastic.ncp(), # same as curvi
     material_parameters   = DynamicRuptureElastic.multiplyMaterialParameterMatrix(), #same as curvi +u term
     source_term           = DynamicRuptureElastic.algebraic_source(),
-    riemann_solver=DynamicRuptureElastic.riemann_solver()
+    riemann_solver        = DynamicRuptureElastic.riemann_solver()
 )
 
 theSolver._abstract_solver_user_declarations += DynamicRuptureElastic.abstractDeclarations()
@@ -88,8 +92,9 @@ project = exahype2.Project(["applications", "exahype2", "exaseis"], "dynamicRupt
 project.add_solver(theSolver)
 
 project.add_action_set_to_timestepping(
-    exahype2.tracer.CurviTracer(
+  exahype2.tracer.CurviTracer(
     coordinates= my_scenario.tracer_coordinates,
+    fault_coordinates=my_scenario.fault_coordinates,
     solver=theSolver,
     filename=filename,
     data_delta_between_two_snapshots=1e16, time_delta_between_two_snapshots=0.01,
@@ -99,6 +104,13 @@ project.add_action_set_to_timestepping(
 
 if plot_dt > 0.0:
   project.set_output_path("solutions"+filename)
+
+  theSolver.set_face_plotter(peano4.plotter.HDF5FaceNodalPlotter, """
+      ((marker.getSelectedFaceNumber() % DIMENSIONS) == 2-repositories::""" + theSolver.get_name_of_global_instance() + """.context->fault_normal) and
+      std::abs(marker.getX()[2-repositories::""" + theSolver.get_name_of_global_instance() + """.context->fault_normal]-repositories::""" \
+        + theSolver.get_name_of_global_instance() + """.context->fault_position)< 0.5*marker.getH()[2-repositories::""" \
+        + theSolver.get_name_of_global_instance() + """.context->fault_normal]
+      """)
 
 project.set_global_simulation_parameters(
     dimensions=3,

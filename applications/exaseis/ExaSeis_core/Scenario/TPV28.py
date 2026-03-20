@@ -15,8 +15,8 @@ class TPV28(Scenario):
     The description of the scenario can be found at: https://strike.scec.org/cvws/tpv28docs.html
     """
 
-    domain_offset   = [4.5,  0., 4.5]
-    domain_size     = [27., 27., 27.] #leads to a cell size of 0.3333 for 81 cells
+    domain_offset   = [0.56,  0., 0.56]
+    domain_size     = [38.88, 38.88, 38.88]
 
     end_time = 13.0
 
@@ -28,6 +28,9 @@ class TPV28(Scenario):
           [23.0, 0.0, 20.0],
           [17.0, 0.0, 35.0],
           [23.0, 0.0, 35.0],
+    ]
+
+    fault_coordinates = [
           # on-fault at surface (3)
           [20.0, 0.0,  5.0],
           [20.0, 0.0, 20.0], #surface above fault hypocenter

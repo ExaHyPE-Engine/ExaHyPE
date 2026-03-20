@@ -5,10 +5,11 @@
 #include "dynamicRupture.h"
 
 template <class Shortcuts, int basisSize, int numberOfVariables, int numberOfParameters, typename T>
-void ContextDynamicRupture<Shortcuts, basisSize, numberOfVariables, numberOfParameters, T>::riemannSolver(
+bool ContextDynamicRupture<Shortcuts, basisSize, numberOfVariables, numberOfParameters, T>::riemannSolver(
   T* FL, T* FR,
   const T* const QL, const T* const QR,
   const double t, const double dt,
+  const tarch::la::Vector<DIMENSIONS, double>& facePos,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const int direction,
   bool isBoundaryFace,
@@ -29,27 +30,32 @@ void ContextDynamicRupture<Shortcuts, basisSize, numberOfVariables, numberOfPara
   int elt_y = int(std::round((QL[idx_QLR(0,0,Shortcuts::curve_grid+1)] -
                               this->domainOffset[1])/ this->max_dx)) * basisSize;
 
-  bool is_fault = (direction == 0);
+  // see extended comment in ContextDynamicRupture, we compare our
+  // position to the stored position of the fault in reference space
+  bool is_fault = (direction == 2-fault_normal)
+    && std::abs(facePos[2-fault_normal]-fault_position)< 0.5*cellSize[2-fault_normal];
 
-  toolbox::curvi::Root* root = this->interface->getRoot();
-  toolbox::curvi::InnerNode* fault_node = static_cast<toolbox::curvi::InnerNode*>(root->getChild());
+  // bool is_fault = (direction == 0);
 
-  toolbox::curvi::Coordinate fault_coords[2];
-  fault_node->getCoordinates(fault_coords);
-  toolbox::curvi::Coordinate fault_normal = fault_node->getFaceNormal();
-  T position = fault_node->getPosition();
+  // toolbox::curvi::Root* root = this->interface->getRoot();
+  // toolbox::curvi::InnerNode* fault_node = static_cast<toolbox::curvi::InnerNode*>(root->getChild());
 
-  for (int i = 0; i < basisSize; i++) {
-    for (int j = 0; j < basisSize; j++) {
-      T eta = QL[idx_QLR(i,j,Shortcuts::curve_grid + (2-fault_normal))];
-      T xi  = QL[idx_QLR(i,j,Shortcuts::curve_grid + (2-fault_coords[0]))];
-      T mu  = QL[idx_QLR(i,j,Shortcuts::curve_grid + (2-fault_coords[1]))];
+  // toolbox::curvi::Coordinate fault_coords[2];
+  // fault_node->getCoordinates(fault_coords);
+  // toolbox::curvi::Coordinate fault_normal = fault_node->getFaceNormal();
+  // T position = fault_node->getPosition();
 
-      T per_position = position + fault_node->evalPerturbation(xi,mu);
+  // for (int i = 0; i < basisSize; i++) {
+  //   for (int j = 0; j < basisSize; j++) {
+  //     T eta = QL[idx_QLR(i,j,Shortcuts::curve_grid + (2-fault_normal))];
+  //     T xi  = QL[idx_QLR(i,j,Shortcuts::curve_grid + (2-fault_coords[0]))];
+  //     T mu  = QL[idx_QLR(i,j,Shortcuts::curve_grid + (2-fault_coords[1]))];
 
-      is_fault = is_fault  && (std::abs(eta - per_position) < cellSize[2-fault_normal] * 0.5);
-    }
-  }
+  //     T per_position = position + fault_node->evalPerturbation(xi,mu);
+
+  //     is_fault = is_fault  && (std::abs(eta - per_position) < cellSize[2-fault_normal] * 0.5);
+  //   }
+  // }
 
   T FLn ,FLm ,FLl ,FRn ,FRm ,FRl;
   T FLx ,FLy ,FLz ,FRx ,FRy ,FRz;
@@ -296,4 +302,6 @@ void ContextDynamicRupture<Shortcuts, basisSize, numberOfVariables, numberOfPara
 
     }    
   }
+
+  return is_fault;
 }

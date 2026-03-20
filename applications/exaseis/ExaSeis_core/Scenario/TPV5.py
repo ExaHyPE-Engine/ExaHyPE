@@ -14,8 +14,8 @@ class TPV5(Scenario):
     The description of the scenario can be found at: https://strike.scec.org/cvws/tpv5docs.html
     """
 
-    domain_offset   = [6.5,  0., 6.5] #centers the fault which is at 20.
-    domain_size     = [27., 27., 27.] #leads to a cell size of 0.333 for 81 cells
+    domain_offset   = [3.8, 0.0, 3.8] #centers the fault which is at 20.
+    domain_size     = [32.4, 32.4, 32.4] #leads to one cell outside of fault on each side (with 27 cells)
 
     end_time = 10.0
 
@@ -30,6 +30,9 @@ class TPV5(Scenario):
           [17.0, 7.5, 32.0],
           [23.0, 7.5,  8.0],
           [23.0, 7.5, 32.0],
+    ]
+
+    fault_coordinates = [
           # on-fault at surface
           [20.0, 0.0,  8.0],
           [20.0, 0.0, 12.5],

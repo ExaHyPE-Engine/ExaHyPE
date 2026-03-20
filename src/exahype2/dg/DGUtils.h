@@ -12,13 +12,13 @@
 
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/datamanagement/CellMarker.h"
+#include "peano4/datamanagement/FaceMarker.h"
 #include "peano4/Globals.h"
 #include "peano4/utils/Loop.h"
 
 #include "Functors.h"
 
 #include "exahype2/fv/PatchUtils.h"
-
 
 
 namespace exahype2 {
@@ -218,7 +218,7 @@ namespace exahype2 {
     );
 
     /**
-     * Evaluate the DG polynomial
+     * Evaluate the DG polynomial in a volume
      *
      * Evaluate the Lagrangian polynomial within the cell specified by marker in
      * one point. Return the value unknown within this interpolated point.
@@ -247,7 +247,7 @@ namespace exahype2 {
      * @param QuadratureNodes1d  Arrangement of the quadrature points on the 1d
      *   unit interval, i.e. from 0 to 1.
      * @param unknownsPerDoF Total number of unknowns within a degree of
-     *   freedom. Shoudl incorporate the number of material parameters.
+     *   freedom. Should incorporate the number of material parameters.
      * @param Q              Pointer to data stored as AoS. The size of this
      *   data field is @f$ (order+1)^d \cdot unknownsPerDoF @f$.
      * @param x              Point of interest where the overall polynomial
@@ -258,9 +258,42 @@ namespace exahype2 {
     QStoreType evaluatePolynomial(
       const peano4::datamanagement::CellMarker&    marker,
       int                                          order,
-      const double* NOALIAS                   QuadratureNodes1d,
+      const double* NOALIAS                        QuadratureNodes1d,
       int                                          unknownsPerDoF,
-      const QStoreType* NOALIAS               Q,
+      const QStoreType* NOALIAS                    Q,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
+      int                                          unknown
+    );
+
+    /**
+     * Evaluate the DG polynomial on a face
+     *
+     * Evaluate the Lagrangian polynomial within the face specified by marker in
+     * one point. Return the value unknown within this interpolated point.
+     *
+     * The realisation is analogous to the evaluation on cells, but skips one
+     * spatial dimension
+     *
+     * @param marker         Marker that specifies the face, i.e. its size and
+     *   offset.
+     * @param order          Order of the polynomial.
+     * @param QuadratureNodes1d  Arrangement of the quadrature points on the 1d
+     *   unit interval, i.e. from 0 to 1.
+     * @param unknownsPerDoF Total number of unknowns within a degree of
+     *   freedom. Should incorporate the number of material parameters.
+     * @param Q              Pointer to data stored as AoS. The size of this
+     *   data field is @f$ (order+1)^(d-1) \cdot unknownsPerDoF @f$.
+     * @param x              Point of interest where the overall polynomial
+     *   solution is to be evaluated.
+     * @param unknown        Unknown of interest.
+     */
+    template<typename QStoreType>
+    QStoreType evaluatePolynomial(
+      const peano4::datamanagement::FaceMarker&    marker,
+      int                                          order,
+      const double* NOALIAS                        QuadratureNodes1d,
+      int                                          unknownsPerDoF,
+      const QStoreType* NOALIAS                    Q,
       const tarch::la::Vector<DIMENSIONS,double>&  x,
       int                                          unknown
     );

@@ -38,6 +38,9 @@ class TPV26(Scenario):
           [10.0, 0.0, 40.0],
           [30.0, 0.0, 40.0],
           [40.0, 0.0, 40.0],
+    ]
+
+    fault_coordinates = [
           # on-fault at surface (2 total)
           [20.0, 0.0, 15.0],
           [20.0, 0.0, 35.0],

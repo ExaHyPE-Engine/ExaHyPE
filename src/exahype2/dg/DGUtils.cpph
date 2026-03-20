@@ -3,9 +3,9 @@ template <typename QStoreType>
 QStoreType exahype2::dg::evaluatePolynomial(
   const peano4::datamanagement::CellMarker&    marker,
   int                                          order,
-  const double* NOALIAS                   QuadratureNodes1d,
+  const double* NOALIAS                        QuadratureNodes1d,
   int                                          unknownsPerDoF,
-  const QStoreType* NOALIAS               Q,
+  const QStoreType* NOALIAS                    Q,
   const tarch::la::Vector<DIMENSIONS,double>&  x,
   int                                          unknown
 ) {
@@ -25,6 +25,56 @@ QStoreType exahype2::dg::evaluatePolynomial(
     }
     int dofLinearised = peano4::utils::dLinearised(currentDoF,order+1);
     result += enumerator/denominator * Q[ dofLinearised * unknownsPerDoF + unknown ];
+  }
+  return result;
+}
+
+template <typename QStoreType>
+QStoreType exahype2::dg::evaluatePolynomial(
+  const peano4::datamanagement::FaceMarker&    marker,
+  int                                          order,
+  const double* NOALIAS                        QuadratureNodes1d,
+  int                                          unknownsPerDoF,
+  const QStoreType* NOALIAS                    Q,
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
+  int                                          unknown
+) {
+
+  const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
+
+  // Compute the projection of the point x onto the interval [0 - 1] in each direction
+  const tarch::la::Vector<DIMENSIONS,double>&  x_fixed = {
+    (x[0] - marker.getX()[0]) / (marker.getH()[0]) + 0.5,
+    (x[1] - marker.getX()[1]) / (marker.getH()[1]) + 0.5,
+#if DIMENSIONS==3
+    (x[2] - marker.getX()[2]) / (marker.getH()[2]) + 0.5,
+#endif
+  };
+
+  // Store the position of the DoF currently under consideration
+  int dofLinearised = 0;
+
+  QStoreType result = 0.0;
+  dfore(currentDoF, order+1, normal, 0) {
+    double denominator = 1.0;
+    double enumerator  = 1.0;
+    for (int d=0; d<DIMENSIONS; d++) {
+
+      // Skip the normal dimension
+      if (d==normal) continue;
+
+      for (int i=0; i<order+1; i++) {
+        if ( i!=currentDoF(d) ) {
+          double normalisedQuadratePointDistance = QuadratureNodes1d[currentDoF(d)]-QuadratureNodes1d[i];
+          double distanceToQuadraturePoint1d     = ( x_fixed(d)- QuadratureNodes1d[i] );
+          denominator *= normalisedQuadratePointDistance;
+          enumerator  *= distanceToQuadraturePoint1d;
+        }
+      }
+    }
+ 
+    result += enumerator/denominator * Q[ dofLinearised + unknown ];
+    dofLinearised += unknownsPerDoF;
   }
   return result;
 }

@@ -1,0 +1,11 @@
+!IdentityMap
+  components:
+  - !ASAGI
+      file: tpv34_rhovsvp.nc
+      var: data
+      parameters: [rho, vs, vp]
+      components: !FunctionMap
+        map:
+          rho:    return rho;
+          cs:     return vs;
+          cp: return vp;

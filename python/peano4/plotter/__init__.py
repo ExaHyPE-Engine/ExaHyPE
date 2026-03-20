@@ -17,3 +17,6 @@ from .NetCDFPatchNodalPlotter import NetCDFPatchNodalPlotter
 from .VTUPatchAMRPlotter import VTUPatchAMRPlotter
 from .VTUPatchNodalPlotter import VTUPatchNodalPlotter
 from .VTUParticlePlotter import VTUParticlePlotter
+
+from .FaceNodalPlotter import FaceNodalPlotter
+from .HDF5FaceNodalPlotter import HDF5FaceNodalPlotter
