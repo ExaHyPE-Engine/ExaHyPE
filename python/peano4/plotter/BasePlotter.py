@@ -34,6 +34,9 @@ class BasePlotter(ActionSet):
             **self.d
         )
 
+    def set_output_path(self, output_path):
+        self.d["OUTPUT_PATH"] = output_path
+
     def get_destructor_body(self):
         return ""
 

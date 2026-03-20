@@ -7,7 +7,7 @@ def initial(pointwise_initial_conditions):
       const {{SOLUTION_STORAGE_PRECISION}}* const x,
       const tarch::la::Vector<DIMENSIONS,double>& center,
       const double t,
-      const double dt, 
+      const double dt,
       {{SOLUTION_STORAGE_PRECISION}}* Q
     ) -> void { """ + pointwise_initial_conditions + """
     }
@@ -117,7 +117,7 @@ def algebraic_source():
   return """
   std::fill_n(S, NumberOfAuxiliaryVariables, 0);
 
-  S[9]  = -Q[0]; 
+  S[9]  = -Q[0];
   S[10] = -Q[1];
   S[11] = -Q[2];
 """
@@ -144,16 +144,14 @@ def multiplyMaterialParameterMatrix():
   rhs[3]=(2*mu) * rhs[3] +lam_temp;
   rhs[4]=(2*mu) * rhs[4] +lam_temp;
   rhs[5]=(2*mu) * rhs[5] +lam_temp;
-  
+
   rhs[6]= mu*rhs[6];
   rhs[7]= mu*rhs[7];
   rhs[8]= mu*rhs[8];
-  
+
   rhs[9]=  rhs[9];
   rhs[10]= rhs[10];
   rhs[11]= rhs[11];
-
-
 """
 
 def riemann_solver():
@@ -162,7 +160,7 @@ def riemann_solver():
     FL, FR,
     QL, QR,
     t, dt,
-    h,
+    x, h,
     direction,
     isBoundaryFace,
     faceIndex,
@@ -205,7 +203,7 @@ tarch::la::Vector<DIMENSIONS,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
     result[2] = curviInterface->invertProjection(toolbox::curvi::Coordinate::Z, fixedCoords);
 
     return result;
-  } 
+  }
   catch (std::domain_error e) {
     logInfo("invertProjection()", "Caught an error with tracer at " << coordinates << ", and therefore not shifting its position");
     return coordinates;
@@ -220,7 +218,6 @@ public:
 
   tarch::la::Vector<DIMENSIONS,double> invertProjection(const tarch::la::Vector<DIMENSIONS,double> coordinates);
 
-protected:
   static ContextDynamicRupture<VariableShortcuts{{SOLVER_NAME}}, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>* context;
 """
 
@@ -229,7 +226,7 @@ def init_grid_step_implementation(scenario_string):
   std::copy_n(
     kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
     (Order+1),
-    QuadraturePoints1d    
+    QuadraturePoints1d
   );
 
   std::string topography_string = \"""" + scenario_string + """.yaml";
@@ -238,27 +235,27 @@ def init_grid_step_implementation(scenario_string):
   double maxDSize = std::numeric_limits<double>::min();
   double minDSize = std::numeric_limits<double>::max();
   tarch::la::Vector<DIMENSIONS, double> sizes = DomainSize;
-  
+
   for(int i=0; i<DIMENSIONS; i++){
     if(sizes[i]>maxDSize){
       maxDSize = sizes[i];
     }
     if(sizes[i]<minDSize){
       minDSize = sizes[i];
-    }    
+    }
   }
-  
+
   int depth = 0;
-  
+
   //finding coarsest possible Mesh level
   while(maxDSize>MaxAdmissibleCellH){
     depth += 1;
     maxDSize /= 3.0;
   }
-  
+
   double realCoarsestMeshSize = maxDSize;
-  double coarsestMeshLevel = depth;  
-  
+  double coarsestMeshLevel = depth;
+
   depth = 0;
   while(minDSize>MinAdmissibleCellH){
     depth += 1;

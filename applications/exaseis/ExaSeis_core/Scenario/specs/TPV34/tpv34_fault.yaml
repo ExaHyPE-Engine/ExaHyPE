@@ -1,0 +1,57 @@
+!Switch
+[s_yy,s_zz,s_xy,s_yz]: !ConstantMap
+  map:
+    s_yy: 0.0
+    s_zz: 0.0
+    s_xy: 0.0
+    s_yz: 0.0
+[s_xx,s_xz,n_yz]: !EvalModel
+  parameters: [y_coord,z_coord,mu_mult]
+  model: !AffineMap
+    matrix:
+      z: [0.0, 1.0, 0.0]
+      y: [0.0, 0.0, 1.0]
+    translation:
+      z: 0.0
+      y: -20.0
+    components: !ASAGI
+      file: tpv34_mu_mult_plus.nc
+      parameters: [y_coord,z_coord,mu_mult]
+      var: data
+      interpolation: linear
+  components: !FunctionMap
+    map:
+      s_xx: |
+        return -60.00 * mu_mult;
+      s_xz: |
+        return 30.00 * mu_mult;
+      n_yz: |
+        r = sqrt((y_coord-7.5)*(y_coord-7.5)+z_coord*z_coord);
+        if (r <= 1.4) {
+          return 4.95 * mu_mult;
+        }
+        if (1.4 <= r && r <= 2.0){
+          return 2.475 * (1.0 + cos(3.14159265359 * (r-1.4)/0.6)) * mu_mult;
+        }
+        return 0.0;
+[mu_s, mu_d, d_c, t_0, f_cy, f_wy, f_cz, f_wz]: !ConstantMap
+  map:
+    mu_s:   0.580
+    mu_d:   0.450
+    d_c:    0.18
+    t_0:    0.5
+    f_cy :  0.0
+    f_wy : 15.0
+    f_cz : 20.0
+    f_wz : 15.0
+[cohesion]: !FunctionMap
+  map:
+    cohesion: |
+      if(y < 2.4) {
+        return 0.425 * (2.4 - y);
+      }
+      return 0.0;
+[forced_rupture_time]: !ConstantMap
+  map:
+    forced_rupture_time: 9999999.0
+[rho,cs,cp]: !Include material.yaml

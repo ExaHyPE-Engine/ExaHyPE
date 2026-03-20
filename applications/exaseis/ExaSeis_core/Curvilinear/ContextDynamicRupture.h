@@ -58,14 +58,60 @@ public:
     query.x(0,2) = 0;
 
     model->evaluate(query,adapter);
+
+
+    // We want to find the position of the fault so that we can check whether we
+    // are on the fault in the Riemann solver.
+    // Since the curve might be rough or not aligned with our domain axes, the position
+    // of the curve in reference space is not constant.
+    // However since curvi maps the reference space onto the physical space in such a way
+    // that the fault is contiguous, this means that there is one position in the reference
+    // space (i.e. Peano positions) that the fault falls on, and we would like to find this position.
+    // Curvi does not however does not provide this position in a trivial way, so what we do
+    // is we try to find one point which is on the fault, and invert the projection to find
+    // what position in reference space maps to this point.
+    // This will not provide an entirely accurate position, but should provide a rough
+    // estimate, which we assume is accurate to a half-cells distance.
+
+    toolbox::curvi::Root* root = this->interface->getRoot();
+    toolbox::curvi::InnerNode* fault_node = static_cast<toolbox::curvi::InnerNode*>(root->getChild());
+    fault_normal = fault_node->getFaceNormal();
+
+    // We look for a point on the fault and, for lack of better options, pick
+    // the point at the center of the fault
+    double fault_center[3];
+    fault_center[toolbox::curvi::Coordinate::X] = this->domainOffset[0] + domainSize[0];
+    fault_center[toolbox::curvi::Coordinate::Y] = this->domainOffset[1] + domainSize[1];
+    fault_center[toolbox::curvi::Coordinate::Z] = this->domainOffset[2] + domainSize[2];
+
+    // Get the position on the plane, i.e. if you are on a y-z plane you
+    // need y and z to query the perturbation at this point
+    toolbox::curvi::Coordinate fault_coords[2];
+    fault_node->getCoordinates(fault_coords);
+    T xi = fault_center[(2-fault_coords[0])];
+    T mu = fault_center[(2-fault_coords[1])];
+
+    // this gives the base position of the fault in the physical space,
+    // i.e. if the fault has been placed at x = 20.0 this returns 20.,
+    // but does not take into account possible perturbations on said fault
+    // so we need to add these
+    fault_center[fault_normal] = fault_node->getPosition()
+      + fault_node->evalPerturbation(xi, mu);
+
+    // Finally, we query the interface as to the position in reference space which
+    // would get mapped to this position
+    fault_position = this->interface->invertProjection(fault_normal, fault_center);
+
+
   }
 
 public:
 
-  void riemannSolver(
+  bool riemannSolver(
     T* FL, T* FR,
     const T* const QL, const T* const QR,
     const double t, const double dt,
+    const tarch::la::Vector<DIMENSIONS, double>& facePos,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     const int direction,
     bool isBoundaryFace,
@@ -135,4 +181,11 @@ public:
   T f_cz;
   T f_wz;
 
+  // In reference space, i.e. this should correspond to the position
+  // as viewed by ExaHyPE of the fault.
+  T fault_position;
+
+  // Normal on which the fault lies, i.e. if this axis is x, then
+  // the fault is on a y-z plane.
+  toolbox::curvi::Coordinate fault_normal;
 };

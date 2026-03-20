@@ -13,11 +13,14 @@ sys.path.insert(0, os.path.abspath("../ExaSeis_core"))
 import Scenario
 
 available_scenarios = {
-    "TPV5": Scenario.TPV5(),
-    "TPV26": Scenario.TPV26(), 
-    "TPV28": Scenario.TPV28(),
-    "TPV29": Scenario.TPV29(),
-    "Husavik": Scenario.Husavik()
+    "TPV5":     Scenario.TPV5(),
+    "TPV6":     Scenario.TPV6(),
+    "TPV16":    Scenario.TPV16(),
+    "TPV26":    Scenario.TPV26(),
+    "TPV28":    Scenario.TPV28(),
+    "TPV29":    Scenario.TPV29(),
+    "TPV34":    Scenario.TPV34(),
+    "Husavik":  Scenario.Husavik()
 }
 
 scenario = "TPV28"
@@ -89,6 +92,7 @@ filename = scenario+"_l_"+str(min_level)+"_o_"+str(order)+"_pr_"+str(precision)
 project.add_action_set_to_timestepping(
     exahype2.tracer.CurviTracer(
     coordinates= my_scenario.tracer_coordinates,
+    fault_coordinates=my_scenario.fault_coordinates,
     solver=theSolver,
     filename=filename,
     data_delta_between_two_snapshots=1e16, time_delta_between_two_snapshots=0.01,

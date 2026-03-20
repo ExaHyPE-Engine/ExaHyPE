@@ -76,6 +76,9 @@ class Husavik(Scenario):
       [36.51336697284584,    0.12614619980480768, -42.29182654225224]   #body38.37st-42.29dp0.00
     ]
 
+    fault_coordinates = [
+    ]
+
     def initial_conditions(self):
         return """
         double rho, mu, lambda;

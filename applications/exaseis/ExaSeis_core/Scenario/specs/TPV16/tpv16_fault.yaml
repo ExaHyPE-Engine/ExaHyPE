@@ -1,0 +1,40 @@
+!Switch
+[s_yy, s_zz, s_yz]: !ConstantMap
+  map:
+    s_yy: 0.0
+    s_zz: 0.0
+    s_yz: 0.0
+[s_xx, s_xz, s_xy, cohesion, mu_s, mu_d, d_c, forced_rupture_time]: !AffineMap
+  matrix:
+    z: [0.0, 1.0, 0.0]    
+    y: [0.0, 0.0, 1.0]
+  translation:
+    z: 0.0
+    y: 4.0
+  components:
+    - !AxisAlignedCuboidalDomainFilter
+      limits:
+        z: [0,19.5]
+        y: [0 ,48.0]
+      components: !ASAGI
+        file: tpv16_fault.nc
+        parameters: [s_xx, s_xz, s_xy, mu_s, mu_d, d_c, cohesion, forced_rupture_time]
+        var: data
+    - !ConstantMap
+      map:
+        s_xx: -60.0
+        s_xz: 0.0
+        s_xy: 0.0
+        mu_s: 0.677
+        mu_d: 0.373
+        d_c: 0.4
+        cohesion: 0.0 
+        forced_rupture_time: 999999.9
+[t_0, f_cy, f_wy, f_cz, f_wz, n_yz]: !ConstantMap
+  map:
+     t_0  : 0.5
+     f_cy : 0.0
+     f_wy : 19.5
+     f_cz : 20.0
+     f_wz : 24.0
+     n_yz : 0.0

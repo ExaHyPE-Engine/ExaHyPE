@@ -1,5 +1,5 @@
 domain:
-  offset: [-4.3,  0.0, -4.3]
+  offset: [-3.4,  0.0, -3.4]
   size:   [48.6, 48.6, 48.6]
   mode:   [ {{MODE}}, {{MODE}}, {{MODE}}  ]
 topography: !Analytic

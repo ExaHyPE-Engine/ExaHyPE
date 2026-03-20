@@ -1,6 +1,6 @@
 domain: 
-  offset: [6.5, 0.0, 6.5]
-  size:   [27., 27., 27.]
+  offset: [3.8, 0.0, 3.8]
+  size:   [32.4, 32.4, 32.4]
   mode:   [ {{MODE}}, {{MODE}}, {{MODE}}  ]  
 topography: !Analytic  
   coordinates: ["Z","X"]

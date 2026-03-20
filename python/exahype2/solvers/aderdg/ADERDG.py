@@ -80,7 +80,6 @@ class ADERDG(object):
         """
         self._order = order
 
-        self._plotter = peano4.plotter.HDF5PatchNodalPlotter
         self._variable_shortcuts = VariableShortcuts(name, unknowns, auxiliary_variables)
 
         """
@@ -437,6 +436,9 @@ class ADERDG(object):
             self._action_set_postprocess_solution = exahype2.solvers.aderdg.actionsets.EmptyPostprocessSolution(solver=self)
         self._action_set_postprocess_solution.descend_invocation_order = 4
 
+        self._plotter = None
+        self.set_plotter(peano4.plotter.HDF5PatchNodalPlotter)
+
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (
             """ ExaHyPE 2 ADER-DG solver of order: """
@@ -609,9 +611,6 @@ class ADERDG(object):
         else:
             step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
-    def set_plotter(self, plotter_option):
-        self._plotter_option = plotter_option
-
     def add_actions_to_plot_solution(self, step, output_path):
         d = {}
         self._init_dictionary_with_default_parameters(d)
@@ -620,23 +619,8 @@ class ADERDG(object):
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
 
-        mapping = []
-        for z in self._basis.quadrature_points():
-            for y in self._basis.quadrature_points():
-                for x in self._basis.quadrature_points():
-                    mapping.append((x, y, z))
-
-        plotter = self._plotter(
-            output_path=output_path,
-            filename=self._name,
-            patch=self._previous_time_step,
-            dataset_name=self._unknown_identifier(),
-            description=self._variable_shortcuts.plot_description,
-            mapping=mapping,
-            time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
-            guard=self._load_cell_data_default_guard(),
-        )
-        step.add_action_set(plotter)
+        self._plotter.set_output_path(output_path)
+        step.add_action_set(self._plotter)
 
         step.add_action_set(self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement)
 
@@ -1135,7 +1119,40 @@ class ADERDG(object):
         self.create_action_sets()
 
     def set_plotter(self, plotter):
-        self._plotter = plotter
+        mapping = []
+        for z in self._basis.quadrature_points():
+            for y in self._basis.quadrature_points():
+                for x in self._basis.quadrature_points():
+                    mapping.append((x, y, z))
+
+        self._plotter = plotter(
+            output_path=self._name,
+            filename=self._name,
+            patch=self._previous_time_step,
+            dataset_name=self._unknown_identifier(),
+            description=self._variable_shortcuts.plot_description,
+            mapping=mapping,
+            time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+            guard=self._load_cell_data_default_guard(),
+        )
+
+    def set_face_plotter(self, plotter, guard):
+        mapping = []
+        for z in self._basis.quadrature_points():
+            for y in self._basis.quadrature_points():
+                for x in self._basis.quadrature_points():
+                    mapping.append((x, y, z))
+
+        self._plotter = plotter(
+            output_path=self._name,
+            filename=self._name,
+            patch=self._rhs_estimates_projection,
+            dataset_name=self._unknown_identifier() + "Estimates",
+            description=self._variable_shortcuts.plot_description,
+            mapping=mapping,
+            time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+            guard=self._load_face_data_default_guard() + " and " + guard,
+        )
 
 def get_face_overlap_merge_implementation(patch_overlap):
     d = {
