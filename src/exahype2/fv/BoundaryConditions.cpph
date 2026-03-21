@@ -24,7 +24,7 @@ void exahype2::fv::applyBoundaryConditions(
 ) {
   static tarch::logging::Log _log( "exahype2::fv" );
 
-  auto serialisePatchIndex = [&](tarch::la::Vector<DIMENSIONS,int> overlapCell) {{
+  const auto serialisePatchIndex = [&](tarch::la::Vector<DIMENSIONS,int> overlapCell) {{
     int base   = 1;
     int result = 0;
     for (int d=0; d<DIMENSIONS; d++) {{

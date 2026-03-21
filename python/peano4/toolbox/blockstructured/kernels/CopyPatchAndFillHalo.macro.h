@@ -3,7 +3,7 @@
 
 {% macro CopyPatchAndFillHalo() %}
   //
-  // Copy inner patch.
+  // Copy inner patch
   //
   const tarch::la::Vector<DIMENSIONS, int> sourceCell = ::exahype2::fv::toVolumeIndex(x, y {% if DIMENSIONS==3 %}, z {% endif %});
   const tarch::la::Vector<DIMENSIONS, int> destinationCell = sourceCell + tarch::la::Vector<DIMENSIONS, int>({{OVERLAP}});
@@ -22,7 +22,7 @@
     #endif
   }
 
-  auto serialisePatchIndex = [](const tarch::la::Vector<DIMENSIONS, int>& overlapCell, int normal) {
+  const auto serialisePatchIndex = [](const tarch::la::Vector<DIMENSIONS, int>& overlapCell, int normal) {
     int base   = 1;
     int result = 0;
     for (int d = 0; d < DIMENSIONS; d++) {
@@ -49,7 +49,7 @@
       int sourceCellSerialised      = serialisePatchIndex(sourceCell, d);
       int destinationCellSerialised = peano4::utils::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
 
-      std::uint64_t faceIndex = faceIndices[patchIndex * TWO_TIMES_D + d];
+      auto faceIndex = faceIndices[patchIndex * TWO_TIMES_D + d];
 
       #if defined(WITH_OPENMP)
       #pragma omp simd

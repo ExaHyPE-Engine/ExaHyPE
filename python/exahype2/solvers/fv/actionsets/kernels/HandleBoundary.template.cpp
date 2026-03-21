@@ -4,7 +4,7 @@
 
 {% from "ApplyBoundaryCondition.macro.h" import ApplyBoundaryCondition with context %}
 namespace {
-  auto serialisePatchIndex = [](const tarch::la::Vector<DIMENSIONS, int>& overlapCell, int normal) {
+  const auto serialisePatchIndex = [](const tarch::la::Vector<DIMENSIONS, int>& overlapCell, int normal) {
     int base   = 1;
     int result = 0;
     for (int d = 0; d < DIMENSIONS; d++) {

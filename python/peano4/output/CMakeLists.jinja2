@@ -36,6 +36,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE INTERNAL "")
 file(WRITE "${PROJECT_BINARY_DIR}/.gitignore" "*")
 
 list(APPEND CMAKE_PREFIX_PATH {{CMAKE_BUILD_DIR}})
+
 find_package(Peano CONFIG REQUIRED)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
@@ -96,6 +97,25 @@ foreach(src IN LISTS GENERATED_CXX_SOURCES)
 endforeach()
 {% endif %}
 
+{% if GPU == "hip" %}
+set(HIP_ARCH "{{GPU_ARCH}}")
+set(HIP_PLATFORM "amd" CACHE STRING "" FORCE)
+set(CMAKE_HIP_PLATFORM "amd" CACHE STRING "" FORCE)
+
+message(STATUS "Using HIP_ARCH=${HIP_ARCH}")
+set(CMAKE_HIP_HOST_COMPILER "${CMAKE_CXX_COMPILER}")
+
+enable_language(HIP)
+set(CMAKE_HIP_ARCHITECTURES "${HIP_ARCH}" CACHE STRING "" FORCE)
+
+foreach(src IN LISTS GENERATED_CXX_SOURCES)
+  if(${src} MATCHES "kernels/.*Fused\\.[^.]+$")
+    message(STATUS "Setting HIP language for file: ${src}")
+    set_source_files_properties(${src} PROPERTIES LANGUAGE HIP)
+  endif()
+endforeach()
+{% endif %}
+
 add_executable({{EXECUTABLENAME}})
 target_sources({{EXECUTABLENAME}} PRIVATE ${SOURCES})
 target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::PeanoOptions ${GENERATED_LDFLAGS})
@@ -119,6 +139,13 @@ set_target_properties({{EXECUTABLENAME}} PROPERTIES
   CUDA_SEPARABLE_COMPILATION OFF
   CUDA_RESOLVE_DEVICE_SYMBOLS OFF
   CUDA_ARCHITECTURES "${CUDA_ARCH}"
+)
+{% endif %}
+
+{% if GPU == "hip" %}
+set_target_properties({{EXECUTABLENAME}} PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+  HIP_ARCHITECTURES "${HIP_ARCH}"
 )
 {% endif %}
 

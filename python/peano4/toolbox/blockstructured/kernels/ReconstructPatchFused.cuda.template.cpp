@@ -16,9 +16,9 @@ kernel(
   const std::uint64_t*               faceIndices,
   {{PRECISION}}* const NOALIAS       QOutFlattened
 ) {
-  const int patchIndex    = blockIdx.x;
-  const auto* const QIn   = &QInFlattened[patchIndex * {{DOFS*UNKNOWNS}}];
-  auto* const QOut        = &QOutFlattened[patchIndex * {{DOFS_WITH_OVERLAP*UNKNOWNS}}];
+  const auto patchIndex = blockIdx.x;
+  const auto* const QIn = &QInFlattened[patchIndex * {{DOFS*UNKNOWNS}}];
+  auto* const QOut      = &QOutFlattened[patchIndex * {{DOFS_WITH_OVERLAP*UNKNOWNS}}];
 
   {% if DIMENSIONS==3 %}
   for (int z = threadIdx.z; z < {{DOFS_PER_AXIS}}; z += {% if DIMENSIONS==3 %} 8 {% else %} 16 {% endif %}) {

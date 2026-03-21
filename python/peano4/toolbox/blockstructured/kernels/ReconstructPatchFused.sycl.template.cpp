@@ -35,17 +35,17 @@ void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatchFused(
 ) {
   sycl::queue& queue = *static_cast<sycl::queue*>(tarch::accelerator::getSYCLQueue(targetDevice));
 
-  {% if DIMENSIONS == 3 %}
+{% if DIMENSIONS == 3 %}
   auto ndRange = sycl::nd_range(
     sycl::range(numberOfPatches * 8, 8, 8),
     sycl::range(8, 8, 8)
   );
-  {% else %}
+{% else %}
   auto ndRange = sycl::nd_range(
     sycl::range(numberOfPatches * 16, 16),
     sycl::range(16, 16)
   );
-  {% endif %}
+{% endif %}
 
   sycl::event event = queue.submit([&](sycl::handler& handle) {
     handle.parallel_for(ndRange, [=](sycl::nd_item<{{DIMENSIONS}}> item) {

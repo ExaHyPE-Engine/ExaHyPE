@@ -22,7 +22,7 @@ kernel(
   const double                               timeStepSize
   {% if COMPUTE_MAX_EIGENVALUE %} , {{COMPUTE_PRECISION}}* const NOALIAS maxEigenvalues {% endif %}
 ) {
-  const int patchIndex                   = blockIdx.x;
+  const auto patchIndex                  = blockIdx.x;
   const {{COMPUTE_PRECISION}}* const QIn = &QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %}];
   {{COMPUTE_PRECISION}}* const QOut      = &QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
 
@@ -30,7 +30,7 @@ kernel(
   const tarch::la::Vector<DIMENSIONS, double> patchSize{patchSizes + patchIndex * {{DIMENSIONS}}};
 
 {% if COMPUTE_MAX_EIGENVALUE %}
-    double maxEigenvalueAfterTimeStep = 0.0;
+  double maxEigenvalueAfterTimeStep = 0.0;
 {% endif %}
 
 {% if DIMENSIONS==3 %}
@@ -46,9 +46,9 @@ kernel(
 {% if COMPUTE_MAX_EIGENVALUE %}
   __shared__ {{COMPUTE_PRECISION}} sdata[{% if DIMENSIONS==3 %} 512 {% else %} 256 {% endif %}];
 {% if DIMENSIONS==3 %}
-  const int tid = threadIdx.z * (blockDim.x * blockDim.y) + threadIdx.y * blockDim.x + threadIdx.x;
+  const auto tid = threadIdx.z * (blockDim.x * blockDim.y) + threadIdx.y * blockDim.x + threadIdx.x;
 {% else %}
-  const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+  const auto tid = threadIdx.y * blockDim.x + threadIdx.x;
 {% endif %}
   sdata[tid] = maxEigenvalueAfterTimeStep;
   __syncthreads();
@@ -70,15 +70,15 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   [[maybe_unused]] const int                                             targetDevice
 ) {
   return riemannSolverFused(
-	solver,
-	patchData.QInFlattened,
-	patchData.QOutFlattened,
-	patchData.t,
-	patchData.dt,
-	patchData.cellCentre[0].data(),
-	patchData.cellSize[0].data(),
-	patchData.numberOfCells,
-	targetDevice
+    solver,
+    patchData.QInFlattened,
+    patchData.QOutFlattened,
+    patchData.t,
+    patchData.dt,
+    patchData.cellCentre[0].data(),
+    patchData.cellSize[0].data(),
+    patchData.numberOfCells,
+    targetDevice
   );
 }
 
@@ -120,21 +120,21 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   CHECK_CUDA_ERROR(cudaMalloc(&cubMaxEigenvalue, sizeof(double)));
   void* cubTempStorage = nullptr;
   std::size_t cubTempStorageBytes = 0;
-  cub::DeviceReduce::Max(
+  CHECK_CUDA_ERROR(cub::DeviceReduce::Max(
     cubTempStorage,
     cubTempStorageBytes,
     maxEigenvalues,
     cubMaxEigenvalue,
     numberOfPatches
-  );
+  ));
   CHECK_CUDA_ERROR(cudaMalloc(&cubTempStorage, cubTempStorageBytes));
-  cub::DeviceReduce::Max(
+  CHECK_CUDA_ERROR(cub::DeviceReduce::Max(
     cubTempStorage,
     cubTempStorageBytes,
     maxEigenvalues,
     cubMaxEigenvalue,
     numberOfPatches
-  );
+  ));
   double maxEigenvalueAfterTimeStep = 0.0;
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     &maxEigenvalueAfterTimeStep,

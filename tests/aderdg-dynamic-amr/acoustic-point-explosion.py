@@ -50,13 +50,8 @@ solver.set_implementation(
     refinement_criterion="""
   auto result = ::exahype2::RefinementCommand::Keep;
 
-#if DIMENSIONS == 2
   static constexpr double sourceRadius = 2.2;
-  const tarch::la::Vector<DIMENSIONS, double> sourceCentre = {1.0, 1.0};
-#else
-  static constexpr double sourceRadius = 2.2;
-  const tarch::la::Vector<DIMENSIONS, double> sourceCentre = {1.0, 1.0, 1.0};
-#endif
+  const tarch::la::Vector<DIMENSIONS, double> sourceCentre(1.0);
 
   static constexpr double t0 = 0.8;
   if (tarch::la::greaterEquals(t, 0.0) and tarch::la::smallerEquals(t, t0)) {
@@ -108,14 +103,8 @@ solver.set_implementation(
 #if DIMENSIONS == 3
   S[Shortcuts::u + 2] = 0.0;
 #endif
-
-#if DIMENSIONS == 2
   constexpr double sourceRadius = 0.10;
-  const bool sourceLocation = tarch::la::norm2(x - tarch::la::Vector<DIMENSIONS, double>({1.0, 1.0})) <= sourceRadius;
-#else
-  constexpr double sourceRadius = 0.10;
-  const bool sourceLocation = tarch::la::norm2(x - tarch::la::Vector<DIMENSIONS, double>({1.0, 1.0, 1.0})) <= sourceRadius;
-#endif
+  const bool sourceLocation = tarch::la::norm2(x - tarch::la::Vector<DIMENSIONS, double>(1.0)) <= sourceRadius;
 
   if (sourceLocation) {
     static constexpr double t0 = 0.7;

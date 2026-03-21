@@ -19,7 +19,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatch(
   for (int y = 0; y < {{DOFS_PER_AXIS}}; ++y)
   for (int x = 0; x < {{DOFS_PER_AXIS}}; ++x) {
     //
-    // Copy inner patch.
+    // Copy inner patch
     //
     const tarch::la::Vector<DIMENSIONS, int> sourceCell = ::exahype2::fv::toVolumeIndex(x, y {% if DIMENSIONS==3 %}, z {% endif %});
     const tarch::la::Vector<DIMENSIONS, int> destinationCell = sourceCell + tarch::la::Vector<DIMENSIONS, int>({{OVERLAP}});

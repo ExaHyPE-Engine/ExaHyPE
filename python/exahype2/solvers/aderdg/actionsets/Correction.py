@@ -33,13 +33,13 @@ class Correction(AbstractADERDGActionSet):
     {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFace{{SOLVER_NAME}}QFluxEstimates.data() + FluxElementsPerFace;
     {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFace{{SOLVER_NAME}}QEstimates.data();
     {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFace{{SOLVER_NAME}}QEstimates.data() + BasisElementsPerFace;
-    const int direction = marker.getSelectedFaceNumber() % DIMENSIONS;
-    const int faceNumber  = marker.getSelectedFaceNumber();
-    const bool isBoundary = fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary();
-    const auto& faceCentre = marker.getX();
+    const int direction     = marker.getSelectedFaceNumber() % DIMENSIONS;
+    const int faceNumber    = marker.getSelectedFaceNumber();
+    const bool isBoundary   = fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary();
+    const auto& faceCentre  = marker.getX();
+
     {{RIEMANN_SOLVER_CALL}}
 
-    // Set Updated
     fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdated(0, true);
     fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdated(1, true);
   }

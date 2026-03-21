@@ -23,6 +23,11 @@ set(SOURCES
   accelerator/cuda/DevicePropertiesCache.cpp
   accelerator/cuda/ErrorCheck.cpp
   accelerator/cuda/ExecutionPolicy.cpp
+  accelerator/hip/accelerator.cpp
+  accelerator/hip/Device.cpp
+  accelerator/hip/DevicePropertiesCache.cpp
+  accelerator/hip/ErrorCheck.cpp
+  accelerator/hip/ExecutionPolicy.cpp
   accelerator/kokkos/accelerator.cpp
   accelerator/kokkos/Device.cpp
   accelerator/ompt/accelerator.cpp

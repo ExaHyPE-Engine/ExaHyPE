@@ -7,7 +7,7 @@ if(NOT DEFINED WITH_GPU_ARCH OR "${WITH_GPU_ARCH}" STREQUAL "none")
   message(FATAL_ERROR "WITH_GPU_ARCH must be set to one of: sm_<cc>, gfx<arch>, spir64")
 endif()
 
-if(${CMAKE_CXX_COMPILER_ID} MATCHES ".*Clang")
+if(${CMAKE_CXX_COMPILER_ID} MATCHES ".*[Cc]lang")
   if(WITH_GPU_VENDOR STREQUAL "nvidia")
     set(OFFLOADING_FLAGS -fopenmp-targets=nvptx64-nvidia-cuda --offload-arch=${WITH_GPU_ARCH})
   elseif(WITH_GPU_VENDOR STREQUAL "amd")

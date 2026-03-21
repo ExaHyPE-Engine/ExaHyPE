@@ -32,7 +32,7 @@
   auto faceCentreLeft(volumeCentre);
   faceCentreLeft(normal) -= 0.5 * volumeSize(normal);
   auto faceCentreRight(volumeCentre);
-  faceCentreRight(normal) += 0.5 * volumeSize(normal); 
+  faceCentreRight(normal) += 0.5 * volumeSize(normal);
 
   // Retrieve user data
   {% if STATELESS_RIEMANN_SOLVER==True %}

@@ -16,7 +16,7 @@ kernel(
   {{PRECISION}}*       const NOALIAS facePool,
   const std::uint64_t*               faceIndices
 ) {
-  const int patchIndex  = blockIdx.x;
+  const auto patchIndex = blockIdx.x;
   const auto* const QIn = &QInFlattened[patchIndex * {{DOFS*UNKNOWNS}}];
 
   {% if DIMENSIONS==3 %}
