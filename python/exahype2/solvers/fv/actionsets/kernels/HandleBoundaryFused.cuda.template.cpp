@@ -24,11 +24,11 @@ __global__ static void
 {% if DIMENSIONS==3 %} __launch_bounds__(32) {% else %} __launch_bounds__(32) {% endif %}
 kernel(
   {{STORAGE_PRECISION}}* const                               facesFlattened,
-  const uint64_t*              __restrict__                  faceIndices,
-  const uint8_t*               __restrict__                  faceNumbers,
+  const std::uint64_t*              __restrict__             faceIndices,
+  const std::uint8_t*               __restrict__             faceNumbers,
   const tarch::la::Vector<DIMENSIONS, double>* __restrict__  cellCentres,
   const tarch::la::Vector<DIMENSIONS, double>* __restrict__  cellSizes,
-  const uint64_t*              __restrict__                  cellIndices,
+  const std::uint64_t*              __restrict__             cellIndices,
   const double                                               t,
   const int                                                  numberOfFaces
 ) {
@@ -36,14 +36,14 @@ kernel(
   if (threadIdx.x | threadIdx.y | threadIdx.z) return;
 
   const auto boundaryFaceIndex = blockIdx.x;
-  const uint64_t    faceIndex = faceIndices[boundaryFaceIndex];
-  const int        faceNumber = faceNumbers[boundaryFaceIndex];
-  const uint64_t    cellIndex = cellIndices[boundaryFaceIndex];
+  const auto faceIndex  = faceIndices[boundaryFaceIndex];
+  const auto faceNumber = static_cast<int>(faceNumbers[boundaryFaceIndex]);
+  const auto cellIndex  = cellIndices[boundaryFaceIndex];
 
-  tarch::la::Vector<DIMENSIONS,double> patchSize   = cellSizes[cellIndex];
-  tarch::la::Vector<DIMENSIONS,double> patchCentre = cellCentres[cellIndex];
+  auto patchSize   = cellSizes[cellIndex];
+  auto patchCentre = cellCentres[cellIndex];
 
-  double* Q = &facesFlattened[faceIndex * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %}];
+  auto* Q = &facesFlattened[faceIndex * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %}];
 
   {{ ApplyBoundaryCondition() | indent(2) }}
 }
@@ -72,9 +72,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
 void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
   {{FULL_QUALIFIED_SOLVER_NAME}}&             solver,
   {{STORAGE_PRECISION}}*                      facesFlattened,
-  const uint64_t*                             faceIndices,
-  const uint8_t*                              faceNumbers,
-  const uint64_t*                             cellIndices,
+  const std::uint64_t*                        faceIndices,
+  const std::uint8_t*                         faceNumbers,
+  const std::uint64_t*                        cellIndices,
   const tarch::la::Vector<DIMENSIONS,double>* cellCentres,
   const tarch::la::Vector<DIMENSIONS,double>* cellSizes,
   const double                                t,

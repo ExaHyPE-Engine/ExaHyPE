@@ -18,15 +18,15 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   [[maybe_unused]] const int                                             targetDevice
 ) {
   return riemannSolverFused(
-	solver,
-	patchData.QInFlattened,
-	patchData.QOutFlattened,
-	patchData.t,
-	patchData.dt,
-	patchData.cellCentre[0].data(),
-	patchData.cellSize[0].data(),
-	patchData.numberOfCells,
-	targetDevice
+    solver,
+    patchData.QInFlattened,
+    patchData.QOutFlattened,
+    patchData.t,
+    patchData.dt,
+    patchData.cellCentre[0].data(),
+    patchData.cellSize[0].data(),
+    patchData.numberOfCells,
+    targetDevice
   );
 }
 
@@ -54,7 +54,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
     sycl::range(numberOfPatches * 8, 8, 8),
     sycl::range(8, 8, 8)
   );
-  {% else %}
+{% else %}
   auto ndRange = sycl::nd_range(
     sycl::range(numberOfPatches * 16, 16),
     sycl::range(16, 16)
@@ -72,16 +72,16 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
 {% else %}
     handle.parallel_for(ndRange, [=](sycl::nd_item<{{DIMENSIONS}}> item) {
 {% endif %}
-      const int patchIndex                   = item.get_group(0);
+      const auto patchIndex                  = item.get_group(0);
       const {{COMPUTE_PRECISION}}* const QIn = &QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %}];
       {{COMPUTE_PRECISION}}* const QOut      = &QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
 
-      const tarch::la::Vector<DIMENSIONS, double> patchCentre {
+      const auto patchCentre = tarch::la::Vector<DIMENSIONS, double> {
         patchCentres[patchIndex * {{DIMENSIONS}}],
         patchCentres[patchIndex * {{DIMENSIONS}} + 1]
         {% if DIMENSIONS==3 %} , patchCentres[patchIndex * {{DIMENSIONS}} + 2] {% endif %}
       };
-      const tarch::la::Vector<DIMENSIONS, double> patchSize {
+      const auto patchSize = tarch::la::Vector<DIMENSIONS, double> {
         patchSizes[patchIndex * {{DIMENSIONS}}],
         patchSizes[patchIndex * {{DIMENSIONS}} + 1]
         {% if DIMENSIONS==3 %} , patchSizes[patchIndex * {{DIMENSIONS}} + 2] {% endif %}

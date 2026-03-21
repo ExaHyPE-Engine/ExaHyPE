@@ -30,9 +30,9 @@ struct ReconstructPatchFusedFunctor {
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const member_type& teamMember) const {
-    const int patchIndex  = teamMember.league_rank();
-    const auto* const QIn = &_QInFlattened[patchIndex * {{DOFS*UNKNOWNS}}];
-    auto* const QOut      = &_QOutFlattened[patchIndex * {{DOFS_WITH_OVERLAP*UNKNOWNS}}];
+    const auto patchIndex     = teamMember.league_rank();
+    const auto* const QIn     = &_QInFlattened[patchIndex * {{DOFS*UNKNOWNS}}];
+    auto* const QOut          = &_QOutFlattened[patchIndex * {{DOFS_WITH_OVERLAP*UNKNOWNS}}];
 
     const auto* const facePool = _facePool;
     const auto* faceIndices    = _faceIndices;
@@ -87,6 +87,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatchFused(
     QOutFlattened
   );
 
-  Kokkos::parallel_for("patch-loop", teamPolicy, functor);
+  Kokkos::parallel_for("PatchLoop", teamPolicy, functor);
   Kokkos::fence();
 }

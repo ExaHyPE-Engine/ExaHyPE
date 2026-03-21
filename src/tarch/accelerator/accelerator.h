@@ -7,6 +7,8 @@
 
 #if defined(WITH_GPU_CUDA)
 #include "cuda/Device.h" // To get access to the __device__ keyword
+#elif defined(WITH_GPU_HIP)
+#include "hip/Device.h" // To get access to the __device__ keyword
 #endif
 
 #if defined(WITH_GPU_KOKKOS)
@@ -21,7 +23,7 @@
 
 // https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#nvcc-identification-macro
 // defined(_NVHPC_CUDA) || defined(__NVCOMPILER_CUDA__) || defined(__CUDACC__) || defined(NVCC) || defined(__NVCC__)
-#if defined(WITH_GPU_CUDA)
+#if defined(WITH_GPU_CUDA) or defined(WITH_GPU_HIP)
 #undef GPU_CALLABLE_METHOD
 #define GPU_CALLABLE_METHOD __host__ __device__
 #elif defined(WITH_GPU_KOKKOS)

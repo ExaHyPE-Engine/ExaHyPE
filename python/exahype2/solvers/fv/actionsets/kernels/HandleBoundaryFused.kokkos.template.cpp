@@ -8,31 +8,28 @@
 
 struct HandleBoundaryFusedFunctor {
   {{STORAGE_PRECISION}}*                      _facesFlattened;
-  const uint64_t*                             _faceIndices;
-  const uint8_t*                              _faceNumbers;
-  const uint64_t*                             _cellIndices;
+  const std::uint64_t*                        _faceIndices;
+  const std::uint8_t*                         _faceNumbers;
+  const std::uint64_t*                        _cellIndices;
   const tarch::la::Vector<DIMENSIONS,double>* _cellCentres;
   const tarch::la::Vector<DIMENSIONS,double>* _cellSizes;
   double                                      _t;
-  double                                      _dt;
 
   HandleBoundaryFusedFunctor(
     {{STORAGE_PRECISION}}*                      facesFlattened,
-    const uint64_t*                             faceIndices,
-    const uint8_t*                              faceNumbers,
-    const uint64_t*                             cellIndices,
+    const std::uint64_t*                        faceIndices,
+    const std::uint8_t*                         faceNumbers,
+    const std::uint64_t*                        cellIndices,
     const tarch::la::Vector<DIMENSIONS,double>* cellCentres,
     const tarch::la::Vector<DIMENSIONS,double>* cellSizes,
-    double                                      t,
-    double                                      dt
+    double                                      t
   ) : _facesFlattened(facesFlattened),
       _faceIndices(faceIndices),
       _faceNumbers(faceNumbers),
       _cellIndices(cellIndices),
       _cellCentres(cellCentres),
       _cellSizes(cellSizes),
-      _t(t),
-      _dt(dt) {}
+      _t(t) {}
 
   KOKKOS_INLINE_FUNCTION
   int serialisePatchIndex(const tarch::la::Vector<DIMENSIONS, int>& overlapCell, int normal) const {
@@ -51,14 +48,13 @@ struct HandleBoundaryFusedFunctor {
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int boundaryFaceIndex) const {
-    const uint64_t faceIndex = _faceIndices[boundaryFaceIndex];
-    const int faceNumber     = _faceNumbers[boundaryFaceIndex];
-    const uint64_t cellIndex = _cellIndices[boundaryFaceIndex];
-    tarch::la::Vector<DIMENSIONS,double> patchSize   = _cellSizes[cellIndex];
-    tarch::la::Vector<DIMENSIONS,double> patchCentre = _cellCentres[cellIndex];
-    double* Q = &_facesFlattened[faceIndex * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %}];
+    const auto faceIndex  = _faceIndices[boundaryFaceIndex];
+    const auto faceNumber = static_cast<int>(_faceNumbers[boundaryFaceIndex]);
+    const auto cellIndex  = _cellIndices[boundaryFaceIndex];
+    auto patchSize   = _cellSizes[cellIndex];
+    auto patchCentre = _cellCentres[cellIndex];
+    auto* Q = &_facesFlattened[faceIndex * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %}];
     const double t  = _t;
-    const double dt = _dt;
     {{ ApplyBoundaryCondition() | indent(2) }}
   }
 };
@@ -87,9 +83,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
 void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
   {{FULL_QUALIFIED_SOLVER_NAME}}&             solver,
   {{STORAGE_PRECISION}}*                      facesFlattened,
-  const uint64_t*                             faceIndices,
-  const uint8_t*                              faceNumbers,
-  const uint64_t*                             cellIndices,
+  const std::uint64_t*                        faceIndices,
+  const std::uint8_t*                         faceNumbers,
+  const std::uint64_t*                        cellIndices,
   const tarch::la::Vector<DIMENSIONS,double>* cellCentres,
   const tarch::la::Vector<DIMENSIONS,double>* cellSizes,
   const double                                t,
@@ -105,11 +101,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
     cellIndices,
     cellCentres,
     cellSizes,
-    t,
-    dt
+    t
   );
   Kokkos::parallel_for(
-    "boundary-face-loop",
+    "BoundaryFaceLoop",
     Kokkos::RangePolicy<
       Kokkos::DefaultExecutionSpace,
       Kokkos::LaunchBounds<128, 1>

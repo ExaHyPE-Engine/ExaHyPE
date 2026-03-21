@@ -31,11 +31,7 @@ boundary_conditions = """
 refinement_criterion = """
   auto result = ::exahype2::RefinementCommand::Keep;
 
-#if DIMENSIONS == 3
-  tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.5, 0.5};
-#else
-  tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.5};
-#endif
+  tarch::la::Vector<DIMENSIONS, double> circleCentre(0.5);
 
   if (tarch::la::equals(t, 0.0)) {
     if (tarch::la::norm2(x - circleCentre) < 0.1) {

@@ -112,10 +112,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   hostFacesUpdate.clear();
   hostFacesNew.clear();
 
-  std::vector<uint64_t> hostFaceIndices;
-  std::vector<uint64_t> patchIndicesOfBoundaryFaces;
-  std::vector<uint8_t>  boundaryFaceNumbers;
-  std::vector<uint64_t> boundaryFaceIndices;
+  std::vector<std::uint64_t> hostFaceIndices;
+  std::vector<std::uint64_t> patchIndicesOfBoundaryFaces;
+  std::vector<std::uint8_t>  boundaryFaceNumbers;
+  std::vector<std::uint64_t> boundaryFaceIndices;
 
   int patchIndex = 0;
   for (auto& otherTask: otherTasks) {
@@ -194,9 +194,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   }
   patchData.numberOfBoundaryFaces = boundaryFaceNumbers.size();
   if (patchData.numberOfBoundaryFaces > 0) {
-    patchData.patchIndicesOfBoundaryFaces = tarch::accelerator::MemoryManager::getInstance().allocate<uint64_t>(patchIndicesOfBoundaryFaces.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-    patchData.boundaryFaceNumbers         = tarch::accelerator::MemoryManager::getInstance().allocate<uint8_t>(boundaryFaceNumbers.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-    patchData.boundaryFaceIndices         = tarch::accelerator::MemoryManager::getInstance().allocate<uint64_t>(boundaryFaceIndices.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+    patchData.patchIndicesOfBoundaryFaces = tarch::accelerator::MemoryManager::getInstance().allocate<std::uint64_t>(patchIndicesOfBoundaryFaces.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+    patchData.boundaryFaceNumbers         = tarch::accelerator::MemoryManager::getInstance().allocate<std::uint8_t>(boundaryFaceNumbers.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+    patchData.boundaryFaceIndices         = tarch::accelerator::MemoryManager::getInstance().allocate<std::uint64_t>(boundaryFaceIndices.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
 
     std::copy_n(
       patchIndicesOfBoundaryFaces.data(),
@@ -228,7 +228,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     TARGET_DEVICE
   );
   patchData.facesFlattened = deviceFacesNew;
-  patchData.faceIndices = tarch::accelerator::MemoryManager::getInstance().allocate<uint64_t>(
+  patchData.faceIndices = tarch::accelerator::MemoryManager::getInstance().allocate<std::uint64_t>(
     hostFaceIndices.size(),
     tarch::MemoryLocation::Pinned,
     TARGET_DEVICE

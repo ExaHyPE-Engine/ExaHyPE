@@ -28,12 +28,12 @@ struct ProjectPatchFusedFunctor {
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const member_type& teamMember) const {
-    const int patchIndex = teamMember.league_rank();
+    const auto patchIndex      = teamMember.league_rank();
 
     const auto* const QIn      = &_QInFlattened[patchIndex * {{DOFS*UNKNOWNS}}];
     auto* const       facePool = _facePool;
     const auto* faceIndices    = _faceIndices;
-   {% if DIMENSIONS == 3 %}
+{% if DIMENSIONS == 3 %}
     Kokkos::parallel_for(
       Kokkos::TeamVectorMDRange(
         teamMember,
@@ -77,6 +77,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectPatchFused(
   Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> teamPolicy(numberOfPatches, Kokkos::AUTO);
 
   ProjectPatchFusedFunctor functor(QInFlattened, facePool, faceIndices);
-  Kokkos::parallel_for("patch-loop", teamPolicy, functor);
+  Kokkos::parallel_for("PatchLoop", teamPolicy, functor);
   Kokkos::fence();
 }

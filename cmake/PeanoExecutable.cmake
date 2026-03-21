@@ -56,6 +56,10 @@ function(add_peano_executable)
     add_cuda_to_target(${target})
   endif()
 
+  if(WITH_HIP)
+    add_hip_to_target(${target})
+  endif()
+
   install(TARGETS ${target}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   )

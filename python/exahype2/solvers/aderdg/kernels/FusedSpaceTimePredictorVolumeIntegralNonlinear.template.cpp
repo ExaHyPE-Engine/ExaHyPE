@@ -51,72 +51,41 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   const tarch::la::Vector<DIMENSIONS, double>&      cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>&      cellSize,
   const double                                      timeStamp,
-  const double                                      myTimeStepSize
+  const double                                      myTimeStepSize // TODO: Inconsistent naming scheme!
 ) {
-//   pCompType memory[getFusedSTPVISize()] __attribute__((aligned(ALIGNMENT)));
-//   //pCompType* memory = tarch::accelerator::MemoryManager::getInstance().allocate<pCompType>(getFusedSTPVISize(), tarch::MemoryLocation::Heap, tarch::accelerator::Device::DefaultDevice);
+  pCompType timeStepSize = myTimeStepSize; // TODO: This is really inelegant! We have static_cast for this!
+  pCompType memory[getFusedSTPVISize() - getPicardSize()] __attribute__((aligned(ALIGNMENT)));
 
-//   pCompType* lQi   = memory + getlQiShift();
-//   pCompType* lQhi  = memory + getlQhiShift();
-
-//   pCompType* rhs   = memory + getRhsShift();
-
-// {% if USE_FLUX %}
-//   pCompType* lFi   = memory + getlFiShift();
-//   pCompType* lFhi  = memory + getlFhiShift();
-// {% else %}
-//   pCompType* lFi   = nullptr;
-// {% endif %}
-
-// {% if USE_SOURCE or USE_NCP %}
-//   pCompType* lSi   = memory + getlSiShift();
-//   pCompType* lShi  = memory + getlShiShift();
-// {% else %}
-//   pCompType* lSi   = nullptr;
-// {% endif %}
-
-// {% if USE_NCP or USE_DIFFUSIVE_FLUX %}
-//   pCompType* gradQ = memory + getGradQShift();
-// {% else %}
-//   pCompType* gradQ = nullptr;
-// {% endif %}
-
-  pCompType timeStepSize = myTimeStepSize;
-  pCompType memory[getFusedSTPVISize()-getPicardSize()] __attribute__((aligned(ALIGNMENT)));
-
-  pCompType* lQhi  = memory;
+  pCompType* lQhi = memory;
 {% if USE_FLUX %}
-  pCompType* lFhi  = memory + getlQhiSize();
+  pCompType* lFhi = memory + getlQhiSize();
 {% endif %}
- {% if USE_SOURCE or USE_NCP %}
-  pCompType* lShi  = memory + getlQhiSize() + getlFhiSize();
+{% if USE_SOURCE or USE_NCP %}
+  pCompType* lShi = memory + getlQhiSize() + getlFhiSize();
 {% endif %}
 
   picardCompType picardMemory[getPicardSize()] __attribute__((aligned(ALIGNMENT)));
-  picardCompType* lQi   = picardMemory;
-  picardCompType* rhs   = picardMemory + getlQiSize();
+
+  picardCompType* lQi = picardMemory;
+  picardCompType* rhs = picardMemory + getlQiSize();
 
 {% if USE_FLUX %}
-  picardCompType* lFi   = picardMemory + 2*getlQiSize();
+  picardCompType* lFi = picardMemory + 2 * getlQiSize();
 {% else %}
-  picardCompType* lFi   = nullptr;
+  picardCompType* lFi = nullptr;
 {% endif %}
 
 {% if USE_SOURCE or USE_NCP %}
-  picardCompType* lSi   = picardMemory + 2*getlQiSize() + getlFiSize();
+  picardCompType* lSi = picardMemory + 2 * getlQiSize() + getlFiSize();
 {% else %}
-  picardCompType* lSi   = nullptr;
+  picardCompType* lSi = nullptr;
 {% endif %}
 
 {% if USE_NCP or USE_DIFFUSIVE_FLUX %}
-  picardCompType* gradQ = picardMemory + 2*getlQiSize() + getlFiSize() + getlSiSize();
+  picardCompType* gradQ = picardMemory + 2 * getlQiSize() + getlFiSize() + getlSiSize();
 {% else %}
   picardCompType* gradQ = nullptr;
 {% endif %}
-
-  //********************
-  //****** Picard ******
-  //********************
 
   const tarch::la::Vector<DIMENSIONS, pCompType> invDx = convertScalar<pCompType>(invertEntries(cellSize));
 
@@ -127,6 +96,9 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
     }
   }
 
+  //********************
+  //****** Picard ******
+  //********************
   picardCompType new_lQi_slice[{{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(ALIGNMENT)));
   // 2: Discrete Picard iterations
   int numberOfPicardIterations = 0;
@@ -339,8 +311,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   }
 {% endif %}
 
-  //tarch::accelerator::MemoryManager::getInstance().free(memory, tarch::accelerator::Device::DefaultDevice);
-
   // Return number of Picard iterations, std::min to avoid doing a +1 if the loop has not been exited early.
   return std::min(numberOfPicardIterations + 1, {{2*NUMBER_OF_DOF+1}});
 }
@@ -373,14 +343,14 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
   const double                                      timeStamp,
   const double                                      timeStepSize
 ) {
-  const pCompType* Kxi    = DGMatrices<pCompType>::Kxi;
- 
+  const pCompType* Kxi = DGMatrices<pCompType>::Kxi;
+
   const tarch::la::Vector<DIMENSIONS, pCompType> invDx = convertScalar<pCompType>(invertEntries(cellSize));
 
-  const pCompType dtByDx[DIMENSIONS] = { (pCompType) timeStepSize * invDx[0], (pCompType) timeStepSize * invDx[1]
-    {% if DIMENSIONS == 3 %}
+  const pCompType dtByDx[DIMENSIONS] = { (pCompType) timeStepSize * invDx[0], (pCompType) timeStepSize * invDx[1] // TODO: This should be static_cast!
+{% if DIMENSIONS == 3 %}
       , (pCompType) timeStepSize * invDx[2]
-    {% endif %}
+{% endif %}
   };
 
   for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) { // Time DOFs
@@ -653,7 +623,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
   } // t
 
   // 3: Multiply with (K1)^(-1) to get the discrete time integral of the discrete Picard iteration
-  const pCompType* iK1_T  = DGMatrices<pCompType>::iK1_T;
+  const pCompType* iK1_T = DGMatrices<pCompType>::iK1_T;
   pCompType sqRes = 0.0;
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     {{ m.gemm('lqi', 'rhs', 's_m_QSlice', 'new_lQi_slice',
@@ -676,12 +646,12 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 
 template {{PICARD_COMPUTATION_PRECISION}} {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                               solver,
-  {{PICARD_COMPUTATION_PRECISION}}* NOALIAS  lQi,
-  {{PICARD_COMPUTATION_PRECISION}}* NOALIAS  rhs,
-  {{PICARD_COMPUTATION_PRECISION}}* NOALIAS  lFi,
-  {{PICARD_COMPUTATION_PRECISION}}* NOALIAS  lSi,
-  {{PICARD_COMPUTATION_PRECISION}}* NOALIAS  gradQ,
-  {{PICARD_COMPUTATION_PRECISION}}* NOALIAS  new_lQi_slice,
+  {{PICARD_COMPUTATION_PRECISION}}* NOALIAS                     lQi,
+  {{PICARD_COMPUTATION_PRECISION}}* NOALIAS                     rhs,
+  {{PICARD_COMPUTATION_PRECISION}}* NOALIAS                     lFi,
+  {{PICARD_COMPUTATION_PRECISION}}* NOALIAS                     lSi,
+  {{PICARD_COMPUTATION_PRECISION}}* NOALIAS                     gradQ,
+  {{PICARD_COMPUTATION_PRECISION}}* NOALIAS                     new_lQi_slice,
   const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS           luh,
   const tarch::la::Vector<DIMENSIONS, double>&                  cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>&                  cellSize,

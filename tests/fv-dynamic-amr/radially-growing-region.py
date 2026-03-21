@@ -33,11 +33,10 @@ boundary_conditions = """
 refinement_criterion = """
   auto result = ::exahype2::RefinementCommand::Keep;
 
+  tarch::la::Vector<DIMENSIONS, double> centre0(5.0);
 #if DIMENSIONS == 3
-  tarch::la::Vector<DIMENSIONS, double> centre0 = {5.0, 5.0, 5.0};
   constexpr double maxRadius = 7.5;
 #else
-  tarch::la::Vector<DIMENSIONS, double> centre0 = {5.0, 5.0};
   constexpr double maxRadius = 5.0;
 #endif
 

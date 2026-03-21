@@ -59,12 +59,12 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
     const {{COMPUTE_PRECISION}}* const QIn = &QInFlattened[p * PatchCardinalityWithHalo];
     {{COMPUTE_PRECISION}}* const QOut      = &QOutFlattened[p * PatchCardinality];
 
-    const tarch::la::Vector<DIMENSIONS, double> patchCentre {
+    const auto patchCentre = tarch::la::Vector<DIMENSIONS, double> {
       patchCentres[p * {{DIMENSIONS}}],
       patchCentres[p * {{DIMENSIONS}} + 1]
       {% if DIMENSIONS==3 %} , patchCentres[p * {{DIMENSIONS}} + 2] {% endif %}
     };
-    const tarch::la::Vector<DIMENSIONS, double> patchSize {
+    const auto patchSize = tarch::la::Vector<DIMENSIONS, double> {
       patchSizes[p * {{DIMENSIONS}}],
       patchSizes[p * {{DIMENSIONS}} + 1]
       {% if DIMENSIONS==3 %} , patchSizes[p * {{DIMENSIONS}} + 2] {% endif %}

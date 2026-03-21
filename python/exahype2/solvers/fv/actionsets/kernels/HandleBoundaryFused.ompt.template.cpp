@@ -5,7 +5,7 @@
 {% from "ApplyBoundaryCondition.macro.h" import ApplyBoundaryCondition with context %}
 
 namespace {
-  auto serialisePatchIndex = [](const tarch::la::Vector<DIMENSIONS, int>& overlapCell, int normal) {
+  const auto serialisePatchIndex = [](const tarch::la::Vector<DIMENSIONS, int>& overlapCell, int normal) {
     int base   = 1;
     int result = 0;
     for (int d = 0; d < DIMENSIONS; d++) {
@@ -44,9 +44,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
 void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
   {{FULL_QUALIFIED_SOLVER_NAME}}&             solver,
   {{STORAGE_PRECISION}}*                      facesFlattened,
-  const uint64_t*                             faceIndices,
-  const uint8_t*                              faceNumbers,
-  const uint64_t*                             cellIndices,
+  const std::uint64_t*                        faceIndices,
+  const std::uint8_t*                         faceNumbers,
+  const std::uint64_t*                        cellIndices,
   const tarch::la::Vector<DIMENSIONS,double>* cellCentres,
   const tarch::la::Vector<DIMENSIONS,double>* cellSizes,
   const double                                t,
@@ -67,13 +67,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
   #pragma omp target teams distribute parallel for device(targetDevice) \
     is_device_ptr(faceIndices, faceNumbers, cellIndices, cellCentres, cellSizes, facesFlattened)
   for (int boundaryFaceIndex = 0; boundaryFaceIndex < numberOfFaces; ++boundaryFaceIndex) {
-    const uint64_t faceIndex  = faceIndices[boundaryFaceIndex];
-    const int      faceNumber = faceNumbers[boundaryFaceIndex];
-    const uint64_t cellIndex  = cellIndices[boundaryFaceIndex];
+    const auto faceIndex  = faceIndices[boundaryFaceIndex];
+    const auto faceNumber = static_cast<int>(faceNumbers[boundaryFaceIndex]);
+    const auto cellIndex  = cellIndices[boundaryFaceIndex];
 
-    tarch::la::Vector<DIMENSIONS, double> patchSize   = cellSizes[cellIndex];
-    tarch::la::Vector<DIMENSIONS, double> patchCentre = cellCentres[cellIndex];
-    double* Q = &facesFlattened[faceIndex * FaceCardinality];
+    auto patchSize   = cellSizes[cellIndex];
+    auto patchCentre = cellCentres[cellIndex];
+    auto* Q = &facesFlattened[faceIndex * FaceCardinality];
 
     {{ ApplyBoundaryCondition() | indent(2) }}
   }

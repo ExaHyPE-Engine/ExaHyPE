@@ -25,7 +25,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::applyBoundaryConditions(
 ) {
   static tarch::logging::Log _log( "exahype2::fd" );
 
-  auto serialisePatchIndex = [&](tarch::la::Vector<DIMENSIONS,int> overlapCell) {
+  const auto serialisePatchIndex = [&](tarch::la::Vector<DIMENSIONS,int> overlapCell) {
     int base   = 1;
     int result = 0;
     for (int d=0; d<DIMENSIONS; d++) {
@@ -60,7 +60,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::applyBoundaryConditions(
       {%- for i in range(ORDER) %}
       outsideVolume{{i}}(faceNumber % DIMENSIONS) = overlap-{{i+1}};
       {%- endfor %}
-  
+
       int insideVolumeSerialised   = serialisePatchIndex(insideVolume);
       {%- for i in range(ORDER) %}
       int outsideVolumeSerialised{{i}} = serialisePatchIndex(outsideVolume{{i}});
@@ -68,18 +68,18 @@ void {{FULL_QUALIFIED_NAMESPACE}}::applyBoundaryConditions(
 
       logDebug(
         "applyBoundaryConditions(...)",
-        insideVolume << "->" << 
+        insideVolume << "->" <<
         {%- for i in range(ORDER) %}
-        outsideVolume{{i}} {%- if not loop.last -%} << ","{%- endif -%} << 
+        outsideVolume{{i}} {%- if not loop.last -%} << ","{%- endif -%} <<
         {%- endfor %}
-        " (" << insideVolumeSerialised << "->" << 
+        " (" << insideVolumeSerialised << "->" <<
         {%- for i in range(ORDER) %}
         outsideVolumeSerialised{{i}} {%- if not loop.last -%} << ","{%- endif -%} <<
         {%- endfor %}
-        "): " << 
+        "): " <<
         "(" << *(Q + insideVolumeSerialised * unknowns) << ",...)^T->" <<
         {%- for i in range(ORDER) %}
-        "(" << *(Q + outsideVolumeSerialised{{i}} * unknowns) << ",...)^T" {%- if not loop.last -%} << "," <<{%- endif -%} 
+        "(" << *(Q + outsideVolumeSerialised{{i}} * unknowns) << ",...)^T" {%- if not loop.last -%} << "," <<{%- endif -%}
         {%- endfor %}
       );
 
@@ -104,18 +104,18 @@ void {{FULL_QUALIFIED_NAMESPACE}}::applyBoundaryConditions(
 
       logDebug(
         "applyBoundaryConditions(...)",
-        insideVolume << "->" << 
+        insideVolume << "->" <<
         {%- for i in range(ORDER) %}
-        outsideVolume{{i}} {%- if not loop.last -%} << ","{%- endif -%} << 
+        outsideVolume{{i}} {%- if not loop.last -%} << ","{%- endif -%} <<
         {%- endfor %}
-        " (" << insideVolumeSerialised << "->" << 
+        " (" << insideVolumeSerialised << "->" <<
         {%- for i in range(ORDER) %}
         outsideVolumeSerialised{{i}} {%- if not loop.last -%} << ","{%- endif -%} <<
         {%- endfor %}
-        "): " << 
+        "): " <<
         "(" << *(Q + insideVolumeSerialised * unknowns) << ",...)^T->" <<
         {%- for i in range(ORDER) %}
-        "(" << *(Q + outsideVolumeSerialised{{i}} * unknowns) << ",...)^T" {%- if not loop.last -%} << "," <<{%- endif -%} 
+        "(" << *(Q + outsideVolumeSerialised{{i}} * unknowns) << ",...)^T" {%- if not loop.last -%} << "," <<{%- endif -%}
         {%- endfor %}
       );
 

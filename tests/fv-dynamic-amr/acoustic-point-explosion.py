@@ -33,13 +33,8 @@ boundary_conditions = """
 refinement_criterion = """
   auto result = ::exahype2::RefinementCommand::Keep;
 
-#if DIMENSIONS == 2
   static constexpr double sourceRadius = 0.5;
-  const tarch::la::Vector<DIMENSIONS, double> sourceCentre = {1.0, 1.0};
-#else
-  static constexpr double sourceRadius = 0.5;
-  const tarch::la::Vector<DIMENSIONS, double> sourceCentre = {1.0, 1.0, 1.0};
-#endif
+  const tarch::la::Vector<DIMENSIONS, double> sourceCentre(1.0);
 
   static constexpr double t0 = 0.7;
   if (tarch::la::greaterEquals(t, 0.0) and tarch::la::smallerEquals(t, t0)) {

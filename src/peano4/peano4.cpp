@@ -52,6 +52,8 @@ namespace {
       buildInfo += ", GPU Backend ";
 #if defined(WITH_GPU_SYCL)
       buildInfo += "SYCL";
+#elif defined(WITH_GPU_HIP)
+      buildInfo += "HIP";
 #elif defined(WITH_GPU_CUDA)
       buildInfo += "CUDA";
 #elif defined(WITH_GPU_KOKKOS)

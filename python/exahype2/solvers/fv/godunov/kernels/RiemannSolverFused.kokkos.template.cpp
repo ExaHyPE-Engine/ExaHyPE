@@ -37,7 +37,7 @@ struct RiemannSolverFusedFunctor {
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const member_type& teamMember, double& maxEigenvalue) const {
-    const int patchIndex      = teamMember.league_rank();
+    const auto patchIndex     = teamMember.league_rank();
     const double timeStamp    = _timeStamp;
     const double timeStepSize = _timeStepSize;
 
@@ -52,14 +52,14 @@ struct RiemannSolverFusedFunctor {
         {{NUMBER_OF_VOLUMES_PER_AXIS ** DIMENSIONS}}
       ),
       KOKKOS_LAMBDA(const int index, double& maxEigenvalueAfterTimeStep) {
-      {% if DIMENSIONS == 3 %}
+{% if DIMENSIONS == 3 %}
         const int x = index / ({{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}});
         const int y = (index / {{NUMBER_OF_VOLUMES_PER_AXIS}}) % {{NUMBER_OF_VOLUMES_PER_AXIS}};
         const int z = index % {{NUMBER_OF_VOLUMES_PER_AXIS}};
-      {% else %}
+{% else %}
         const int x = index / {{NUMBER_OF_VOLUMES_PER_AXIS}};
         const int y = index % {{NUMBER_OF_VOLUMES_PER_AXIS}};
-      {% endif %}
+{% endif %}
         {{ ComputeFluxesAndPerformTimeStep() | indent(8) }}
       },
       Kokkos::Max<double>(maxEigenvalue)
@@ -73,15 +73,15 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   [[maybe_unused]] const int                                             targetDevice
 ) {
   return riemannSolverFused(
-	solver,
-	patchData.QInFlattened,
-	patchData.QOutFlattened,
-	patchData.t,
-	patchData.dt,
-	patchData.cellCentre[0].data(),
-	patchData.cellSize[0].data(),
-	patchData.numberOfCells,
-	targetDevice
+    solver,
+    patchData.QInFlattened,
+    patchData.QOutFlattened,
+    patchData.t,
+    patchData.dt,
+    patchData.cellCentre[0].data(),
+    patchData.cellSize[0].data(),
+    patchData.numberOfCells,
+    targetDevice
   );
 }
 
@@ -110,10 +110,10 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
 
   Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> teamPolicy(numberOfPatches, Kokkos::AUTO);
   Kokkos::parallel_reduce(
-	"RiemannSolver",
-	teamPolicy,
-	functor,
-	Kokkos::Max<double>(maxEigenvalueAfterTimeStep)
+    "RiemannSolver",
+    teamPolicy,
+    functor,
+    Kokkos::Max<double>(maxEigenvalueAfterTimeStep)
   );
 
 {% if COMPUTE_MAX_EIGENVALUE %}

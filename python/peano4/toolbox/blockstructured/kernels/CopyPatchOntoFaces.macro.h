@@ -13,7 +13,7 @@
       int patchCellSerialised   = peano4::utils::dLinearised(patchCell, {{DOFS_PER_AXIS}});
       int overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, {{DOFS_PER_AXIS}}, {{OVERLAP}}, d);
 
-      std::uint64_t faceIndex = faceIndices[patchIndex * TWO_TIMES_D + d];
+      auto faceIndex = faceIndices[patchIndex * TWO_TIMES_D + d];
 
       #if defined(WITH_OPENMP)
       #pragma omp simd
@@ -24,7 +24,7 @@
         #if !defined(WITH_GPU)
         assertion6({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i, sourceCell, d, patchCell, overlapCell);
         #endif
-        uint64_t index = faceIndex * {{UNKNOWNS * FACES_PER_DOF}} + overlapCellSerialised * {{UNKNOWNS}} + j;
+        auto index = faceIndex * {{UNKNOWNS * FACES_PER_DOF}} + overlapCellSerialised * {{UNKNOWNS}} + j;
         facePool[index] = QIn[patchCellSerialised * {{UNKNOWNS}} + j];
       }
 
@@ -45,7 +45,7 @@
         #if !defined(WITH_GPU)
         assertion6({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i,sourceCell, d, patchCell, overlapCell);
         #endif
-        uint64_t index = faceIndex * {{UNKNOWNS * FACES_PER_DOF}} + overlapCellSerialised * {{UNKNOWNS}} + j;
+        auto index = faceIndex * {{UNKNOWNS * FACES_PER_DOF}} + overlapCellSerialised * {{UNKNOWNS}} + j;
         facePool[index] = QIn[patchCellSerialised * {{UNKNOWNS}} + j];
       }
     }

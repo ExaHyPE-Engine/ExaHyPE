@@ -8,7 +8,7 @@
 #include <sycl/sycl.hpp>
 
 namespace {
-  auto serialisePatchIndex = [](const tarch::la::Vector<DIMENSIONS, int>& overlapCell, int normal) {
+  const auto serialisePatchIndex = [](const tarch::la::Vector<DIMENSIONS, int>& overlapCell, int normal) {
     int base   = 1;
     int result = 0;
     for (int d = 0; d < DIMENSIONS; d++) {
@@ -47,9 +47,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
 void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
   {{FULL_QUALIFIED_SOLVER_NAME}}&             solver,
   {{STORAGE_PRECISION}}*                      facesFlattened,
-  const uint64_t*                             faceIndices,
-  const uint8_t*                              faceNumbers,
-  const uint64_t*                             cellIndices,
+  const std::uint64_t*                        faceIndices,
+  const std::uint8_t*                         faceNumbers,
+  const std::uint64_t*                        cellIndices,
   const tarch::la::Vector<DIMENSIONS,double>* cellCentres,
   const tarch::la::Vector<DIMENSIONS,double>* cellSizes,
   const double                                t,
@@ -62,16 +62,16 @@ void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
 
   sycl::event event = queue.submit([&](sycl::handler& h) {
     h.parallel_for(sycl::range<1>(numberOfFaces), [=](sycl::id<1> gid) {
-      auto boundaryFaceIndex = gid[0];
+      const auto boundaryFaceIndex = gid[0];
 
-      uint64_t faceIndex  = faceIndices[boundaryFaceIndex];
-      int      faceNumber = faceNumbers[boundaryFaceIndex];
-      uint64_t cellIndex  = cellIndices[boundaryFaceIndex];
+      const auto faceIndex  = faceIndices[boundaryFaceIndex];
+      const auto faceNumber = static_cast<int>(faceNumbers[boundaryFaceIndex]);
+      const auto cellIndex  = cellIndices[boundaryFaceIndex];
 
-      tarch::la::Vector<DIMENSIONS,double> patchSize   = cellSizes[cellIndex];
-      tarch::la::Vector<DIMENSIONS,double> patchCentre = cellCentres[cellIndex];
+      auto patchSize   = cellSizes[cellIndex];
+      auto patchCentre = cellCentres[cellIndex];
 
-      double* Q = &facesFlattened[
+      auto* Q = &facesFlattened[
         faceIndex * ({% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %})
       ];
 
