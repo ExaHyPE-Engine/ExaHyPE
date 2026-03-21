@@ -174,6 +174,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 {% endif %}
     break;
   case SolverState::InitialPrediction:
+    // TODO: This assumes isotropic cells. On a regular rectangular global domain,
+    // this can still satisfy _minCellHThisTimeStep < _maxCellHThisTimeStep, which triggers
+    // the PredictionOnHangingCells state and can lead to wrong coupled limiter/FV updates.
+    // This may also be the case with limiting and (static) AMR.
     _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ? SolverState::PredictionOnHangingCells : SolverState::TimeStep;
     break;
   case SolverState::PredictionOnHangingCells:
@@ -183,6 +187,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 {% if USE_SEPARATE_SWEEPS is sameas True %}
     _solverState = SolverState::InitialPrediction;
 {% else %}
+    // TODO: Same as above.
     _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ? SolverState::PredictionOnHangingCells : SolverState::TimeStep;
 {% endif %}
     break;
@@ -304,7 +309,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep() {
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep() {
-  assertion(mayPlot());
+  assertion(mayPlot() or tarch::hasNonCriticalAssertionBeenViolated());
   _solverState = SolverState::Plotting;
 }
 

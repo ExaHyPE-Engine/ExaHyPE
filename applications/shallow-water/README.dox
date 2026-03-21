@@ -92,6 +92,11 @@ is implemented as a non-conservative product.
 \li \subpage applications_exahype2_shallow_water_chile_tsunami
 \li \subpage applications_exahype2_shallow_water_tohoku_tsunami
 
+## Meteotsunamis
+
+\li \subpage applications_exahype2_shallow_water_meteotsunami_r1
+\li \subpage applications_exahype2_shallow_water_meteotsunami_gulf_of_mexico
+
 
 
 */

@@ -1,0 +1,89 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include "../MathDerivatives.h"
+#include "../MeteotsunamiLaws.h"
+#include "../ProjectionAEA.h"
+#include "AtmosphericPressure.h"
+
+template <class T, class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
+static inline GPU_CALLABLE_METHOD void applications::exahype2::ShallowWater::meteotsunami::sourceTerm(
+  const T* const NOALIAS                       Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  T* const NOALIAS                             S
+) {
+  namespace constants = ::applications::exahype2::ShallowWater;
+
+  // Default values
+  for (std::size_t n = 0; n < NumberOfUnknowns; n++) {
+    S[n] = 0.0;
+  }
+
+  // Check water level if too small
+  if (Q[Shortcuts::h] <= constants::hThreshold) {
+    return;
+  }
+
+  const auto xCoord = x(0);
+  const auto yCoord = x(1);
+
+  auto projectionFunctionForward = [](const auto lon, const auto lat) {
+    return projection::AEA::ellipsoid::forward<
+      constants::aeaEllipsoidA,
+      constants::aeaEllipsoidE,
+      constants::aeaStdParallel1,
+      constants::aeaStdParallel2,
+      constants::aeaLon0,
+      constants::aeaLat0>(lon, lat);
+  };
+
+  auto projectionFunctionInverse = [](const auto x, const auto y) {
+    return projection::AEA::ellipsoid::inverse<
+      constants::aeaEllipsoidA,
+      constants::aeaEllipsoidE,
+      constants::aeaStdParallel1,
+      constants::aeaStdParallel2,
+      constants::aeaLon0,
+      constants::aeaLat0>(x, y);
+  };
+
+  const auto [lonCoord, latCoord] = projectionFunctionInverse(xCoord, yCoord);
+
+  // Update Source term
+
+  // Corriolis force
+  S[Shortcuts::hu] = applications::exahype2::ShallowWater::coriolisForce::sphere<constants::coriolis_omega>(latCoord)
+                     * Q[Shortcuts::hv];
+  S[Shortcuts::hv] = -applications::exahype2::ShallowWater::coriolisForce::sphere<constants::coriolis_omega>(latCoord)
+                     * Q[Shortcuts::hu];
+
+  // Bottom/Manning friction
+  S[Shortcuts::hu] += applications::exahype2::ShallowWater::bottomFriction::manningFriction<
+                        constants::g,
+                        constants::manning_param>(Q[Shortcuts::h], Q[Shortcuts::hu], Q[Shortcuts::hv])
+                      * Q[Shortcuts::hu];
+  S[Shortcuts::hv] += applications::exahype2::ShallowWater::bottomFriction::manningFriction<
+                        constants::g,
+                        constants::manning_param>(Q[Shortcuts::h], Q[Shortcuts::hu], Q[Shortcuts::hv])
+                      * Q[Shortcuts::hv];
+
+  // Function wrapper for partial derivative
+  auto wrapperAtmosphericPressure =
+    [projectionFunctionInverse, projectionFunctionForward](const auto x, const auto y, const auto t) {
+      return applications::exahype2::ShallowWater::GulfOfMexico::atmosphericPressure<
+        constants::pointLonA,
+        constants::pointLatA,
+        constants::pointLonB,
+        constants::pointLatB>(x, y, t, projectionFunctionForward, projectionFunctionInverse);
+    };
+
+  // Atmospheric pressure forcing
+  S[Shortcuts::hu] += -Q[Shortcuts::h] * numerics::_3D::partialX(wrapperAtmosphericPressure, xCoord, yCoord, t)
+                      / constants::water_density;
+  S[Shortcuts::hv] += -Q[Shortcuts::h] * numerics::_3D::partialY(wrapperAtmosphericPressure, xCoord, yCoord, t)
+                      / constants::water_density;
+}

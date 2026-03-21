@@ -53,6 +53,9 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
         return """
     _admissibleTimeStepSize = 0.0;
     _admissibleTimeStepSizeThisTimeStep = 0.0;
+
+    _maxEigenvalue = 0.0;
+    _maxEigenvalueThisTimeStep = 0.0;
 """
 
     def create_compute_time_step_size(self):

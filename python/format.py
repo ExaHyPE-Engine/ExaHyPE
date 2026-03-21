@@ -570,7 +570,7 @@ def run_python_formatter(filename, dry_run, root):
 
     # If not dry run: Now actually format the file
     if verbose:
-        print("Running '{} -w {}'.".format(pydocstringformatter_cmd, filename))
+        print("Running '{} -w {}'".format(pydocstringformatter_cmd, filename))
     subprocess.run(
         pydocstringformatter_cmd + " -w " + filename,
         stdout=subprocess.DEVNULL,
