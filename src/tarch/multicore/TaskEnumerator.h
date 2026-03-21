@@ -52,6 +52,9 @@ class tarch::multicore::TaskEnumerator {
      * this rank. The function delegates the call to an instance of
      * @ref tarch::Enumerator::getNumber(). Consequently, it is
      * thread-safe.
+     *
+     * @return Non-zero number or tarch::Enumerator::NoNumber if there's no
+     *   number left.
      */
     int getNumber();
 

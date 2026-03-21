@@ -330,6 +330,11 @@ namespace tarch {
        * This routine has to be used in combination with handleFusableTask_LazyEvaluation().
        * It does, different as the name suggests, not enqueue any task. Instead, it simply
        * evaluates if the task queue is ready for a fusion task. If so, it spawns one.
+       *
+       * This consumer of tasks can be totally independent of the actual task
+       * Number. The only important thing is that it has a valid task number.
+       * So if we wait for a task later, we have to be able to see that someone
+       * potentially grabbed this one and have to wait for it.
        */
       void handleFusableTask_EagerConsumerTasks(
         Task*                  task,
