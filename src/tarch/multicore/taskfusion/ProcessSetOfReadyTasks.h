@@ -6,6 +6,7 @@
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Task.h"
+#include "tarch/multicore/TaskEnumerator.h"
 #include "tarch/multicore/taskfusion/taskfusion.h"
 
 
@@ -89,6 +90,8 @@ class tarch::multicore::taskfusion::ProcessSetOfReadyTasks: public tarch::multic
     FusableTasksQueue& _taskQueue;
     const int          _taskNumber;
 
+    const bool          _administerYourOwnTemporaryTaskLocalNumber;
+
     static tarch::logging::Log  _log;
 
 
@@ -130,8 +133,10 @@ class tarch::multicore::taskfusion::ProcessSetOfReadyTasks: public tarch::multic
      */
     void processFusedTask(Task* myTask, const std::vector<tarch::multicore::Task*>& tasksOfSameType, int device);
 
-
+    static tarch::multicore::TaskEnumerator _enumerator;
   public:
+    static constexpr TaskNumber AdministerYourOwnTemporaryTaskLocalNumber = -3;
+
     /**
      * Construct process ready task
      *
@@ -201,5 +206,7 @@ class tarch::multicore::taskfusion::ProcessSetOfReadyTasks: public tarch::multic
      *   for details on the realisation of the task fusion.
      */
     virtual void run() override;
+
+    TaskNumber getNumber() const;
 };
 
