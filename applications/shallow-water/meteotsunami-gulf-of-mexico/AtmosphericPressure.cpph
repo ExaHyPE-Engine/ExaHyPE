@@ -1,0 +1,107 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <auto pointLonA, auto pointLatA, auto pointLonB, auto pointLatB>
+static inline auto applications::exahype2::ShallowWater::GulfOfMexico::atmosphericPressure(
+  const auto x,
+  const auto y,
+  const auto t,
+  auto       projectionFunctionForward,
+  auto       projectionFunctionInverse
+) {
+  constexpr auto aLon = pointLonA;
+  constexpr auto aLat = pointLatA;
+
+  constexpr auto bLon = pointLonB;
+  constexpr auto bLat = pointLatB;
+
+  const auto [lon, lat] = projectionFunctionInverse(x, y);
+
+  // https://edanya.uma.es/hysea/index.php/benchmarks/meteo-tsunami/143-reproducing-real-meteotsunami-in-the-gulf-of-mexico
+  auto pressureGaus = [](const auto x, const auto y) {
+    constexpr auto C  = 1;
+    constexpr auto AL = 37.61;
+    constexpr auto AR = 4.665;
+    constexpr auto BL = 0.31;
+    constexpr auto BR = 0.5;
+    const auto     y2 = ((y / C) * (y / C));
+    if (x < 0) {
+      return -AL * 100 * x * std::exp(-y2 - ((x / BL) * (x / BL)));
+    }
+    if (x > 0) {
+      return -AR * 100 * x * std::exp(-y2 - ((x / BR) * (x / BR)));
+    }
+    return 0.0;
+  };
+
+  auto distanceOverTime = [](const auto t) {
+    constexpr auto speed = 20.0; // 20 m/s
+    return speed * t;
+  };
+
+  auto pointOnVector = [projectionFunctionForward](const auto l) {
+    // In geographic lon/lat, the A→B connection is generally curved on the globe.
+    // In projected AEA x/y (meters), we can treat A→B as a straight segment for local operations.
+    // Precompute the segment vector (dx, dy) and its length once (thread-safe statics).
+    static const auto   A    = projectionFunctionForward(aLon, aLat);
+    static const auto   B    = projectionFunctionForward(bLon, bLat);
+    static const auto   dx   = B.first - A.first;
+    static const auto   dy   = B.second - A.second;
+    static const double dist = std::hypot(dx, dy);
+
+    const double t = (dist > 0.0) ? (l / dist) : 0.0;
+
+    const double x = A.first + t * dx;
+    const double y = A.second + t * dy;
+
+    return std::pair{x, y}; // {x, y}
+  };
+
+  // Rotates (lon, lat) so that the path from a to b lies along the x-axis; used to align atmospheric pressure
+  // spatially.
+  auto rotLonLatOffsets =
+    [projectionFunctionForward](const auto lon, const auto lat, const auto centerLon, const auto centerLat) {
+      // Compute the angle in projected x/y (meters), not lon/lat (degrees):
+      // x/y have uniform metric units (no cos(lat) scaling, no dateline wrap), so atan2(dy,dx) yields a
+      // physically correct direction for rotation and alignment.
+      static const auto A         = projectionFunctionForward(aLon, aLat);
+      static const auto B         = projectionFunctionForward(bLon, bLat);
+      static const auto distanceX = B.first - A.first;
+      static const auto distanceY = B.second - A.second;
+
+      static const auto rad = std::atan2(distanceY, distanceX);
+
+      static const auto s = std::sin(rad);
+      static const auto c = std::cos(rad);
+
+      // Use remainder to unwrap the longitude delta into (−180, 180]: this avoids 360° jumps at the dateline
+      // so we rotate using the smallest local offset around the center (ensure lon units are degrees).
+      // Only longitude wraps at the dateline; latitude has no 360° discontinuity,
+      // so unwrapping is needed for lon deltas but not for lat.
+
+      const auto offsetLon = lon - centerLon;
+      const auto offsetLat = lat - centerLat;
+
+      const auto       unwrapLon     = std::remainder(offsetLon, 360.0);
+      constexpr double D2R           = M_PI / 180.0;
+      const auto       scalingFactor = std::cos(centerLat * D2R); // scale longitude by cos(latitude)
+      const auto       scaledLon     = unwrapLon * scalingFactor;
+
+      const auto newLon = (scaledLon * c) + (offsetLat * s);
+      const auto newLat = (-scaledLon * s) + (offsetLat * c);
+
+      const auto normalisedLon = std::abs(scalingFactor) > 1e-12 ? (newLon / scalingFactor) : 0.0;
+      return std::pair{normalisedLon, newLat};
+    };
+
+  const auto distance           = distanceOverTime(t);
+  const auto [centerX, centerY] = pointOnVector(distance);
+
+  // Offsets cannot be projected: map projections take absolute lon/lat ↔ x/y points.
+  // Because the inverse/forward map is nonlinear, inverse(center+offset) − inverse(center) ≠ inverse(offset).
+  // Always project absolute points first, then form offsets in the target space.
+  const auto [centerLon, centerLat] = projectionFunctionInverse(centerX, centerY);
+
+  const auto [rotLon, rotLat] = rotLonLatOffsets(lon, lat, centerLon, centerLat);
+  return pressureGaus(rotLon, rotLat);
+};

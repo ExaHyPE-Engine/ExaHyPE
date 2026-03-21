@@ -135,7 +135,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   case SolverState::Suspended:
     // Checks if _solverState is in the Suspended state and return.
     // Prevents nullification of eigenvalues if the solver is suspended.
-
 {% if SOLVERS_BEFORE_IN_COUPLING | length == 0 -%}
     // This solver can solve in the very first grid sweep of the TimeStep observer
     // as no solvers come before it in the coupling.

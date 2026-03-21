@@ -1,0 +1,199 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include <cmath>
+#include <utility>
+
+template <auto EllipsoidA, auto EllipsoidE, auto StdParallel1Deg, auto StdParallel2Deg, auto Lon0Deg, auto Lat0Deg>
+static inline auto projection::AEA::ellipsoid::forward(const auto lonDeg, const auto latDeg) {
+  constexpr auto a            = EllipsoidA;
+  constexpr auto e            = EllipsoidE;
+  constexpr auto stdParallel1 = StdParallel1Deg;
+  constexpr auto stdParallel2 = StdParallel2Deg;
+  constexpr auto lon0         = Lon0Deg;
+  constexpr auto lat0         = Lat0Deg; // Latitude of Origin (Grad)
+
+  constexpr auto toRad = M_PI / 180.0;
+
+  constexpr auto stdParallel1Rad = stdParallel1 * toRad;
+  constexpr auto stdParallel2Rad = stdParallel2 * toRad;
+  constexpr auto lat0Rad         = lat0 * toRad;
+  constexpr auto lon0Rad         = lon0 * toRad;
+
+  const auto lonRad = lonDeg * toRad;
+  const auto latRad = latDeg * toRad;
+
+  constexpr auto e2         = e * e;
+  constexpr auto oneMinusE2 = 1.0 - (e * e);
+
+  auto m = [](const auto phi) { return std::cos(phi) / std::sqrt(1.0 - (e2 * std::sin(phi) * std::sin(phi))); };
+
+  static const auto m1 = m(stdParallel1Rad);
+  static const auto m2 = m(stdParallel2Rad);
+
+  auto q = [](const auto phi) {
+    const auto sinPhi  = std::sin(phi);
+    const auto sinPhi2 = sinPhi * sinPhi;
+    return oneMinusE2
+           * ((std::sin(phi) / (1.0 - (e2 * sinPhi2))) - ((1.0 / (2.0 * e)) * std::log((1.0 - (e * std::sin(phi))) / (1.0 + (e * std::sin(phi))))));
+  };
+
+  static const auto q0 = q(lat0Rad);
+  static const auto q1 = q(stdParallel1Rad);
+  static const auto q2 = q(stdParallel2Rad);
+
+  const auto qLat = q(latRad);
+
+  static const auto n  = ((m1 * m1) - (m2 * m2)) / (q2 - q1);
+  static const auto C  = (m1 * m1) + (n * q1);
+  static const auto p0 = a * std::sqrt(C - (n * q0)) / n;
+
+  const auto p     = a * std::sqrt(C - (n * qLat)) / n;
+  const auto theta = n * (lonRad - lon0Rad);
+
+  const auto x = p * std::sin(theta);
+  const auto y = p0 - (p * std::cos(theta));
+
+  return std::pair{x, y};
+};
+
+template <
+  auto EllipsoidA,
+  auto EllipsoidE,
+  auto StdParallel1Deg,
+  auto StdParallel2Deg,
+  auto Lon0Deg,
+  auto Lat0Deg,
+  auto MaxIter,
+  auto Tolerance>
+static inline auto projection::AEA::ellipsoid::inverse(const auto x, const auto y) {
+  constexpr auto tol = Tolerance;
+
+  constexpr auto a            = EllipsoidA;      // semi-major axis
+  constexpr auto e            = EllipsoidE;      // eccentricity
+  constexpr auto stdParallel1 = StdParallel1Deg; // standard parallel 1 (deg)
+  constexpr auto stdParallel2 = StdParallel2Deg; // standard parallel 2 (deg)
+  constexpr auto lon0         = Lon0Deg;         // central meridian (deg)
+  constexpr auto lat0         = Lat0Deg;         // latitude of origin (deg)         // Latitude of Origin (Grad)
+
+  constexpr auto toRad = M_PI / 180.0;
+
+  constexpr auto stdParallel1Rad = stdParallel1 * toRad;
+  constexpr auto stdParallel2Rad = stdParallel2 * toRad;
+  constexpr auto lat0Rad         = lat0 * toRad;
+  constexpr auto lon0Rad         = lon0 * toRad;
+
+  constexpr auto e2         = e * e;
+  constexpr auto oneMinusE2 = 1.0 - (e * e);
+
+  auto m = [](const auto phi) { return std::cos(phi) / std::sqrt(1.0 - (e2 * std::sin(phi) * std::sin(phi))); };
+
+  static const auto m1 = m(stdParallel1Rad);
+  static const auto m2 = m(stdParallel2Rad);
+
+  auto q = [](const auto phi) {
+    const auto sinPhi  = std::sin(phi);
+    const auto sinPhi2 = sinPhi * sinPhi;
+    return oneMinusE2
+           * ((std::sin(phi) / (1.0 - (e2 * sinPhi2))) - ((1.0 / (2.0 * e)) * std::log((1.0 - (e * std::sin(phi))) / (1.0 + (e * std::sin(phi))))));
+  };
+
+  static const auto q0 = q(lat0Rad);
+  static const auto q1 = q(stdParallel1Rad);
+  static const auto q2 = q(stdParallel2Rad);
+
+  static const auto n  = ((m1 * m1) - (m2 * m2)) / (q2 - q1);
+  static const auto C  = (m1 * m1) + (n * q1);
+  static const auto p0 = a * std::sqrt(C - (n * q0)) / n;
+
+  const auto p    = std::sqrt((x * x) + ((p0 - y) * (p0 - y)));
+  const auto qnew = (C - (p * p * n * n / (a * a))) / n;
+
+  auto phi = std::asin(qnew / 2);
+
+  for (int i = 0; i < static_cast<int>(MaxIter); ++i) {
+    const auto sinPhi  = std::sin(phi);
+    const auto cosPhi  = std::cos(phi);
+    const auto sinPhi2 = sinPhi * sinPhi;
+    const auto denom   = 1.0 - (e2 * sinPhi2);
+
+    const auto num1 = qnew / oneMinusE2;
+    const auto num2 = sinPhi / denom;
+    const auto num3 = (1.0 / (2.0 * e)) * std::log((1.0 - e * sinPhi) / (1.0 + e * sinPhi));
+
+    const auto deltaPhi = (1.0 - (e2 * sinPhi2)) * (1.0 - (e2 * sinPhi2)) / (2.0 * cosPhi) * (num1 - num2 + num3);
+    const auto phiNew   = phi + deltaPhi;
+
+    if (std::abs(phiNew - phi) < tol) {
+      break;
+    }
+    phi = phiNew;
+  }
+
+  const auto theta = std::atan2(x, p0 - y);
+  const auto lon   = lon0Rad + (theta / n);
+
+  return std::pair{
+    lon / toRad,
+    phi / toRad,
+  };
+};
+
+template <auto Lon0Deg, auto Lat0Deg, auto StdParallel1Deg, auto StdParallel2Deg, auto EarthRadius>
+static inline auto projection::AEA::sphere::forward(const auto lon, const auto lat) {
+  constexpr auto lon0         = Lon0Deg;
+  constexpr auto lat0         = Lat0Deg;
+  constexpr auto stdParallel1 = StdParallel1Deg;
+  constexpr auto stdParallel2 = StdParallel2Deg;
+  constexpr auto R            = EarthRadius;
+
+  constexpr auto toRad = M_PI / 180.0;
+
+  constexpr auto stdParallel1Rad = stdParallel1 * toRad;
+  constexpr auto stdParallel2Rad = stdParallel2 * toRad;
+  constexpr auto lat0Rad         = lat0 * toRad;
+  constexpr auto lon0Rad         = lon0 * toRad;
+
+  const auto lonRad = lon * toRad;
+  const auto latRad = lat * toRad;
+
+  static const auto n  = (std::sin(stdParallel1Rad) + std::sin(stdParallel2Rad)) / 2;
+  static const auto C  = (std::cos(stdParallel1Rad) * std::cos(stdParallel1Rad)) + (2 * n * std::sin(stdParallel1Rad));
+  static const auto p0 = R * std::sqrt(C - (2 * n * std::sin(lat0Rad))) / n;
+
+  const auto p     = R * std::sqrt(C - (2 * n * std::sin(latRad))) / n;
+  const auto theta = n * (lonRad - lon0Rad);
+
+  const auto x = p * std::sin(theta);
+  const auto y = p0 - (p * std::cos(theta));
+
+  return std::pair{x, y};
+};
+
+template <auto Lon0Deg, auto Lat0Deg, auto StdParallel1Deg, auto StdParallel2Deg, auto EarthRadius>
+static inline auto projection::AEA::sphere::inverse(const auto x, const auto y) {
+  constexpr auto lon0         = Lon0Deg;
+  constexpr auto lat0         = Lat0Deg;
+  constexpr auto stdParallel1 = StdParallel1Deg;
+  constexpr auto stdParallel2 = StdParallel2Deg;
+  constexpr auto R            = EarthRadius;
+
+  constexpr auto toRad = M_PI / 180.0;
+
+  constexpr auto stdParallel1Rad = stdParallel1 * toRad;
+  constexpr auto stdParallel2Rad = stdParallel2 * toRad;
+  constexpr auto lat0Rad         = lat0 * toRad;
+  constexpr auto lon0Rad         = lon0 * toRad;
+
+  static const auto n  = (std::sin(stdParallel1Rad) + std::sin(stdParallel2Rad)) / 2;
+  static const auto C  = (std::cos(stdParallel1Rad) * std::cos(stdParallel1Rad)) + (2 * n * std::sin(stdParallel1Rad));
+  static const auto p0 = R * std::sqrt(C - (2 * n * std::sin(lat0Rad))) / n;
+
+  const auto p     = std::sqrt((x * x) + ((p0 - y) * (p0 - y)));
+  const auto theta = std::atan2(x, p0 - y);
+
+  const auto lat = std::asin((C - ((p * n / R) * (p * n / R))) / (2 * n));
+  const auto lon = lon0Rad + (theta / n);
+
+  return std::pair{lon / toRad, lat / toRad};
+};

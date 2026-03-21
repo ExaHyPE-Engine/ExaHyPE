@@ -32,12 +32,12 @@ namespace {{ item }} {
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
-    {% if USE_VARIABLE_SHORTCUTS is sameas True %}
+{% if USE_VARIABLE_SHORTCUTS is sameas True %}
     /*
      * Enables the usage of shortcuts to access variables, e.g. use Q[Shortcuts::{{VARIABLE_NAMES[0]}}] instead of Q[0]
      */
     using Shortcuts = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
-    {% endif %}
+{% endif %}
 
     enum class SolverState {
       GridConstruction,
@@ -98,54 +98,18 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
-    /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
-     */
     virtual void startGridConstructionStep() override;
-
-    /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
-     */
     virtual void finishGridConstructionStep() override;
 
-    /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
-     */
     virtual void startGridInitialisationStep() override;
-
-    /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
-     */
     virtual void finishGridInitialisationStep() override;
 
-    /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
-     */
     virtual void startTimeStep() override;
-
-    /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
-     */
     virtual void finishTimeStep() override;
 
     virtual void logTimeStep() override;
 
-    /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
-     */
     virtual void startPlottingStep() override;
-
-    /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
-     */
     virtual void finishPlottingStep() override;
 
     double getMaxPatchSize() const;
@@ -174,31 +138,15 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     SolverState getSolverState() const;
 
-    /**
-     * Always holds.
-     */
     virtual bool mayPlot() const override;
 
-    /**
-     * This predicate is always true, as we work with a single-sweep
-     * implementation, i.e. each grid sweep realises one time step.
-     */
     bool isFirstGridSweepOfTimeStep() const;
     bool isLastGridSweepOfTimeStep() const;
 
-    /**
-     * Feel free to overwrite in user code, but ensure the superclass
-     * implementation is still invoked, too.
-     */
     virtual void startSimulation() override;
+    virtual void finishSimulation() override;
 
     virtual void suspendSolversForOneGridSweep() override;
-
-    /**
-     * Feel free to overwrite in user code, but ensure the superclass
-     * implementation is still invoked, too.
-     */
-    virtual void finishSimulation() override;
 
     {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 

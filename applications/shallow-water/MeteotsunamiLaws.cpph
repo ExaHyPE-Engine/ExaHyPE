@@ -1,0 +1,27 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include <cmath>
+
+template <auto param>
+static inline auto applications::exahype2::ShallowWater::coriolisForce::constant() {
+  return param;
+};
+
+template <auto f0, auto beta>
+static inline auto applications::exahype2::ShallowWater::coriolisForce::betaPlane(const auto y) {
+  return f0 + (beta * y);
+};
+
+template <auto omega>
+static inline auto applications::exahype2::ShallowWater::coriolisForce::sphere(const auto latDeg) {
+  constexpr auto D2R = M_PI / 180.0;
+  return 2.0 * omega * std::sin(D2R * latDeg);
+};
+
+template <auto gravity, auto param>
+static inline auto applications::exahype2::ShallowWater::bottomFriction::
+  manningFriction(const auto h, const auto hu, const auto hv) {
+  const auto h73 = (h * h * std::cbrt(h)); // h^(7/3) is not stable for small h -> 0, TODO may need some
+                                           // more work
+  return -gravity * param * param * std::hypot(hu, hv) / h73;
+}
