@@ -335,6 +335,57 @@ namespace tarch {
        * Number. The only important thing is that it has a valid task number.
        * So if we wait for a task later, we have to be able to see that someone
        * potentially grabbed this one and have to wait for it.
+       *
+       * ## Implementation details
+       *
+       * The processing of a set of task set is ready by construction, as we
+       * spawn it if and only if the number of pending ready tasks is big enough.
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *   if (taskQueue.getNumberOfReadyTasks()>=fuseInstruction.minTasks) {
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       * We note that this is quite a dangerous statement: If we assemble major
+       * parts of the task graph dynamically and have a lot of log ready tasks,
+       * then this statement might in some cases never hold. So it might happen
+       * that we launch quite a lot of tasks eventually, but at the time when
+       * they are spawned, we map them all on onto a log ready task helper
+       * task. So none ever triggers this statement.
+       *
+       * Therefore, it is
+       * not clear if this strategy is of value, which makes indirectly the
+       * case for a support of multiple processing schemes.
+       *
+       * If the condition however holds, then we can spawn the task immediately
+       * as ready task:
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * ProcessSetOfReadyTasks* newFusionTask = new tarch::multicore::taskfusion::ProcessSetOfReadyTasks(ProcessSetOfReadyTasks::AdministerYourOwnTemporaryTaskLocalNumber, taskQueue);
+       *   tarch::multicore::spawnTask(
+       *   newFusionTask,
+       *   tarch::multicore::NoInDependencies,
+       *   newFusionTask->getNumber()
+       * );
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       * That is a valid implementation. What we don't want to do is to make
+       * the process task have taskNumber (as out dependency). If we did that,
+       * there might be a wait on this task and we'd introduce algorithmic
+       * latency.
+       *
+       * However, it makes sense to have taskNumber as in-dependency. If the
+       * underlying task is ready by construction, there's no log task, and we
+       * insert the task directly into the fusion queue. This in-dependency
+       * hence is trivially fullfilled and hence degenerates.
+       *
+       * If there is a log ready task, the fused task kicks in only once the
+       * corresponding log task is ready. This is logicall not required (there
+       * are already enough task int eh queue), but ensures that there are not
+       * too many process ready task at any point.
+       *
+       * More importantly, it provides the task runtime with hints should it
+       * follow a DFS strategy. In this case, the in dependency provides
+       * guidance.
        */
       void handleFusableTask_EagerConsumerTasks(
         Task*                  task,

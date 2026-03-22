@@ -164,7 +164,8 @@ void tarch::multicore::taskfusion::handleFusableTask_EagerConsumerTasks(
     ProcessSetOfReadyTasks* newFusionTask = new tarch::multicore::taskfusion::ProcessSetOfReadyTasks(ProcessSetOfReadyTasks::AdministerYourOwnTemporaryTaskLocalNumber, taskQueue);
     tarch::multicore::spawnTask(
       newFusionTask,
-      tarch::multicore::NoInDependencies,
+      {taskNumber},
+//      tarch::multicore::NoInDependencies,
       newFusionTask->getNumber()
     );
   }
