@@ -252,7 +252,7 @@ python3 performance-studies.py -s fv-6 -et 1e-2 --plot 0.0 --cell-size 1.8 --tre
 rm README-peano-*
 export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4
 module load python
-for SCHEDULER in no-tasks native gpu-lazy-evaluation gpu-timed-execution gpu-eager-consumer-tasks
+for SCHEDULER in no-tasks native gpu-lazy-evaluation gpu-timed-execution gpu-eager-consumer-tasks gpu-producer-consumer
 do
   python3 performance-studies.py -s fv-6 -et 1e-2       --plot 0.0 --cell-size 1.8     --trees 27   --scheduler $SCHEDULER --output peano-regular-$SCHEDULER
   python3 performance-studies.py -s fv-6 -et 1e-6 -amr  --plot 0.0 --cell-size 0.00123 --trees 64   --scheduler $SCHEDULER --output peano-adaptive-$SCHEDULER

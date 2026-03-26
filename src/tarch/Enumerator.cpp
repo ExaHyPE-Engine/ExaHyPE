@@ -64,10 +64,18 @@ void tarch::Enumerator::setMax( int max ) {
 void tarch::Enumerator::releaseNumber( int number ) {
   assertion1(number >= 0, number);
   tarch::multicore::Lock lock( _semaphore );
-  assertionEquals(_activeNumbers.count(number), 1);
-  _activeNumbers.erase(number);
-  if (number>=_lastNumberHandedOut) {
-    _lastNumberHandedOut /= 2;
+
+  assertion2(number==NoNumber or _activeNumbers.count(number)==1, number, _activeNumbers.count(number));
+
+  if (number==NoNumber) {
+    assertionEquals(_activeNumbers.count(number), 0);
+  }
+  else {
+    assertionEquals(_activeNumbers.count(number), 1);
+    _activeNumbers.erase(number);
+    if (number>=_lastNumberHandedOut) {
+      _lastNumberHandedOut /= 2;
+    }
   }
 }
 

@@ -9,6 +9,7 @@
 
 tarch::logging::Log tarch::multicore::taskfusion::ProcessSetOfReadyTasks::_log( "tarch::multicore::taskfusion::ProcessSetOfReadyTasks" );
 const std::string tarch::multicore::taskfusion::ProcessSetOfReadyTasks::ProcessFusedTasksStatisticsIdentifier = "tarch::multicore::taskfusion::ProcessSetOfReadyTasks::ProcessFusedTasksStatisticsIdentifier";
+tarch::multicore::TaskEnumerator tarch::multicore::taskfusion::ProcessSetOfReadyTasks::_enumerator;
 
 
 tarch::multicore::taskfusion::ProcessSetOfReadyTasks::ProcessSetOfReadyTasks(
@@ -17,7 +18,8 @@ tarch::multicore::taskfusion::ProcessSetOfReadyTasks::ProcessSetOfReadyTasks(
 ):
   Task(DontFuse,DefaultPriority),
   _taskQueue( taskQueue ),
-  _taskNumber( taskNumber ) {
+  _taskNumber(taskNumber==AdministerYourOwnTemporaryTaskLocalNumber ? _enumerator.getNumber() : taskNumber),
+  _administerYourOwnTemporaryTaskLocalNumber(taskNumber==AdministerYourOwnTemporaryTaskLocalNumber) {
   assertion( _taskNumber!= tarch::multicore::taskfusion::FusableTasksQueue::AnyTask );
 }
 
@@ -69,6 +71,10 @@ void tarch::multicore::taskfusion::ProcessSetOfReadyTasks::run() {
       logDebug( "run(...)", "fused task " << _taskNumber << " finished" );
     }
   }
+
+  if (_administerYourOwnTemporaryTaskLocalNumber) {
+    _enumerator.releaseNumber( _taskNumber );
+  }
 }
 
 
@@ -78,4 +84,9 @@ void tarch::multicore::taskfusion::ProcessSetOfReadyTasks::processFusedTask(Task
     delete p;
   }
   delete myTask;
+}
+
+
+tarch::multicore::TaskNumber tarch::multicore::taskfusion::ProcessSetOfReadyTasks::getNumber() const {
+  return _taskNumber;
 }

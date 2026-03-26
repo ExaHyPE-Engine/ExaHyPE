@@ -153,6 +153,14 @@ namespace tarch {
          * provides context about important implementational considerations.
          *
          *
+         * #### Remark on task dependency modelling
+         *
+         * The set consumer tasks do logically not have to be in on the
+         * critical path, i.e. it is ok to spawn them as "freelancer" without
+         * any dependency on the log task and the actual individual task
+         * consumer. We just have to give the set task a unique number, so the
+         * task consumer can wait for it, should it have grabbed the one task
+         * that is needs to be sure is processed.
          */
         LazyEvaluation,
 
@@ -261,6 +269,15 @@ namespace tarch {
          * <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
          * This variant might require OpenMP 6.
          * </div>
+         *
+         * #### Task dependency management
+         *
+         * Consult @ref handleFusableTask_EagerConsumerTasks() for details
+         * and notably rationale why the set consumer can run kind of
+         * independently. This mirrors decisions of the lazy tasking and means
+         * that the we don't model the set consumer task as part of the
+         * (critical) task graph, even though we need to be able to wait for
+         * it.
          */
         EagerConsumerTasks
       };
