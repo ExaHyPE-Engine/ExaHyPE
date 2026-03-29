@@ -13,7 +13,7 @@ variables:
 # Define one sub-pipeline per toolchain:
 ########################################################
 
-GCC:
+GCC Serial:
   extends: .Variables
   stage: Compiler
   variables:
@@ -32,7 +32,7 @@ GCC:
       pipeline_variables: true
       yaml_variables: true
 
-GCC OpenMP MPI:
+GCC Parallel:
   extends: .Variables
   stage: Compiler
   variables:
@@ -51,26 +51,7 @@ GCC OpenMP MPI:
       pipeline_variables: true
       yaml_variables: true
 
-Intel:
-  extends: .Variables
-  stage: Compiler
-  variables:
-    CC: "icx"
-    CXX: "icpx"
-    IMAGE_TAG: "${IMAGE_INTEL}"
-    PARALLEL_LAUNCH: ""
-    CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
-                            -DWITH_MULTITHREADING=OFF \
-                            -DWITH_MPI=OFF"
-  trigger:
-    include:
-      - .continuous_integration/gitlab-exahype2.yml
-    strategy: depend
-    forward:
-      pipeline_variables: true
-      yaml_variables: true
-
-Intel OpenMP MPI:
+Intel Parallel:
   extends: .Variables
   stage: Compiler
   variables:
@@ -89,26 +70,7 @@ Intel OpenMP MPI:
       pipeline_variables: true
       yaml_variables: true
 
-LLVM:
-  extends: .Variables
-  stage: Compiler
-  variables:
-    CC: "clang"
-    CXX: "clang++"
-    IMAGE_TAG: "${IMAGE_LLVM}"
-    PARALLEL_LAUNCH: ""
-    CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
-                            -DWITH_MULTITHREADING=OFF \
-                            -DWITH_MPI=OFF"
-  trigger:
-    include:
-      - .continuous_integration/gitlab-exahype2.yml
-    strategy: depend
-    forward:
-      pipeline_variables: true
-      yaml_variables: true
-
-LLVM OpenMP MPI:
+LLVM Parallel:
   extends: .Variables
   stage: Compiler
   variables:
@@ -127,26 +89,7 @@ LLVM OpenMP MPI:
       pipeline_variables: true
       yaml_variables: true
 
-NVIDIA:
-  extends: .Variables
-  stage: Compiler
-  variables:
-    CC: "nvc"
-    CXX: "nvc++"
-    IMAGE_TAG: "${IMAGE_NVIDIA}"
-    PARALLEL_LAUNCH: ""
-    CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
-                            -DWITH_MULTITHREADING=OFF \
-                            -DWITH_MPI=OFF"
-  trigger:
-    include:
-      - .continuous_integration/gitlab-exahype2.yml
-    strategy: depend
-    forward:
-      pipeline_variables: true
-      yaml_variables: true
-
-NVIDIA OpenMP MPI:
+NVIDIA Parallel:
   extends: .Variables
   stage: Compiler
   variables:
@@ -165,26 +108,7 @@ NVIDIA OpenMP MPI:
       pipeline_variables: true
       yaml_variables: true
 
-AMD:
-  extends: .Variables
-  stage: Compiler
-  variables:
-    CC: "amdclang"
-    CXX: "amdclang++"
-    IMAGE_TAG: "${IMAGE_AMD}"
-    PARALLEL_LAUNCH: ""
-    CONFIGURATION_OPTIONS: "${CONFIGURATION_OPTIONS} \
-                            -DWITH_MULTITHREADING=OFF \
-                            -DWITH_MPI=OFF"
-  trigger:
-    include:
-      - .continuous_integration/gitlab-exahype2.yml
-    strategy: depend
-    forward:
-      pipeline_variables: true
-      yaml_variables: true
-
-AMD OpenMP MPI:
+AMD Parallel:
   extends: .Variables
   stage: Compiler
   variables:
