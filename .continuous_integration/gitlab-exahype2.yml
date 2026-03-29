@@ -30,7 +30,7 @@ Build:
     paths:
       - ./build/UnitTests*
       - ./build/CTestTestfile.cmake
-      - ./install/*
+      - ./install/
     expire_in: 24 hours
   allow_failure: false
   extends:
@@ -52,8 +52,6 @@ Unit Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 Spacetree Tests:
@@ -69,8 +67,6 @@ Spacetree Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 Spacetree Set Tests:
@@ -86,8 +82,6 @@ Spacetree Set Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 FV Tests:
@@ -108,8 +102,6 @@ FV Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 FV Tracers Tests:
@@ -130,8 +122,6 @@ FV Tracers Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 FV Coupling Tests:
@@ -151,8 +141,6 @@ FV Coupling Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 FV Static AMR Tests:
@@ -172,8 +160,6 @@ FV Static AMR Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 FV Dynamic AMR Tests:
@@ -194,8 +180,6 @@ FV Dynamic AMR Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 FD Tests:
@@ -215,8 +199,6 @@ FD Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 FV-FD Coupling Tests:
@@ -236,8 +218,6 @@ FV-FD Coupling Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 ADERDG Tests:
@@ -258,8 +238,6 @@ ADERDG Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 ADERDG Static AMR Tests:
@@ -278,8 +256,6 @@ ADERDG Static AMR Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 ADERDG Dynamic AMR Tests:
@@ -300,8 +276,6 @@ ADERDG Dynamic AMR Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 ADERDG Limiting Tests:
@@ -321,8 +295,6 @@ ADERDG Limiting Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 ADERDG GRMHD Tests:
@@ -342,8 +314,6 @@ ADERDG GRMHD Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 ADERDG Coupling Tests:
@@ -362,8 +332,6 @@ ADERDG Coupling Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 RKDG Tests:
@@ -383,8 +351,6 @@ RKDG Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 Fortran Coupling Tests:
@@ -399,8 +365,6 @@ Fortran Coupling Tests:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 Acoustic Tutorials:
@@ -415,8 +379,6 @@ Acoustic Tutorials:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 SWE Tutorials:
@@ -431,8 +393,6 @@ SWE Tutorials:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 Euler Tutorials:
@@ -447,8 +407,6 @@ Euler Tutorials:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 Gravity Waves Application:
@@ -469,8 +427,6 @@ Gravity Waves Application:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 Shallow Water Application:
@@ -490,8 +446,6 @@ Shallow Water Application:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 ExaSeis Application:
@@ -509,8 +463,6 @@ ExaSeis Application:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 Landslide Application:
@@ -528,8 +480,6 @@ Landslide Application:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 Kernel Benchmark:
@@ -549,8 +499,6 @@ Kernel Benchmark:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 Gauge Wave FV Benchmark:
@@ -566,8 +514,6 @@ Gauge Wave FV Benchmark:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0
 
 Single Black Hole Benchmark:
@@ -583,6 +529,4 @@ Single Black Hole Benchmark:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  dependencies:
-    - Build
   retry: 0

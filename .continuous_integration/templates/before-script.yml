@@ -1,21 +1,12 @@
 .BeforeScript:
   before_script:
     - echo "Running CI with $(nproc) cores"
-    - ls
-    - pwd
-    - whoami
-    - hostname
     - git --version
-    - echo $CI_BUILDS_DIR
-    - echo $CI_PROJECT_DIR
-    - echo $CI_COMMIT_SHA
-    - echo $CI_COMMIT_BRANCH
-    - echo $APPTAINER_BINDDIR
-    - echo $APPTAINER_IMAGEDIR
-    - echo $CC
-    - echo $CXX
-    - echo $CFLAGS
-    - echo $CXXFLAGS
-    - echo $LDFLAGS
-    - echo $CONFIGURATION_OPTIONS
-    - echo $PARALLEL_LAUNCH
+    - echo "project=$CI_PROJECT_DIR commit=$CI_COMMIT_SHA branch=$CI_COMMIT_BRANCH"
+    - echo "container_bind=$APPTAINER_BINDDIR container_image_dir=$APPTAINER_IMAGEDIR"
+    - echo "cc=$CC cxx=$CXX"
+    - echo "cflags=$CFLAGS"
+    - echo "cxxflags=$CXXFLAGS"
+    - echo "ldflags=$LDFLAGS"
+    - echo "cmake_options=$CONFIGURATION_OPTIONS"
+    - echo "parallel_launch=$PARALLEL_LAUNCH"
