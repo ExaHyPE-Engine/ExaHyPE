@@ -184,13 +184,13 @@ if __name__ == "__main__":
             name="CCZ4SBH",
             patch_size=FD4PatchSize,
             min_cell_size=min_cell_size,
-            max_cell_size=max_cell_size,
-            production_run=args.production_run #send the corresponding flag to cpp level for refinement control
+            max_cell_size=max_cell_size#,
+            #production_run=args.production_run #send the corresponding flag to cpp level for refinement control
         )
         project.add_solver(my_primary_solver)
         added_limiter = False
         my_primary_solver.set_implementation(
-          refinement_criterion="""return artificialRefinement(x, h);""",
+          refinement_criterion="""return artificialRefinement(meshCellCentre, meshCellH);""",
         )
         my_primary_solver.add_user_solver_includes( """#include "SingleBlackHoleScenario.h" """)
 

@@ -67,8 +67,8 @@ tree = GridPatchFileReader(
 )
 
 # Integrate with splitting strategies
-from Strategies.SplitTrees import split_leaves
-split_tree = split_leaves(tree, number_of_splits=4)
+from Strategies.SplitTrees import split_tree
+split_tree = split_tree(tree, number_of_splits=4)
 
 # Generate the optimised tree structure in YAML format
 from Strategies.SplitTrees import generate_tree_yaml

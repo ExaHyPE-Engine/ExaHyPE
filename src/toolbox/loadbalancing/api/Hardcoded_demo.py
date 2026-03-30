@@ -25,8 +25,8 @@ def demo(file_path: str, dimension: int):
 
     # Reset to single subtree and apply splitting to create multiple subtrees for the demo
     tree = split_strategy.reset_tree_to_single_subtree(tree)
-    tree = split_strategy.split_leaves(tree, number_of_splits=2)  # creates subtrees {0,1,2}
-    print("After split_leaves():")
+    tree = split_strategy.split_tree(tree, number_of_splits=2)  # creates subtrees {0,1,2}
+    print("After split_tree():")
     print(tree)
 
     # Extract hardcoded split parameters

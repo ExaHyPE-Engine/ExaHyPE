@@ -4,33 +4,31 @@
 
 @tableofcontents
 
-The load balancing API provides tools for offline decomposition of adaptive mesh trees in Peano. This API enables analysis and optimization of tree structures to achieve better load distribution across compute resources through strategic tree splitting operations.
+The load balancing API provides tools for offline decomposition of adaptive mesh trees in Peano. This API enables analysis and optimisation of tree structures to achieve better load distribution across compute resources through strategic tree splitting operations.
 
 # Overview
 
-The offline load balancing approach transforms the traditional online load balancing problem into an offline optimization problem. Instead of making splitting decisions during mesh construction without knowledge of the final structure, we:
+The offline load balancing approach transforms the traditional online load balancing problem into an offline optimisation problem. Instead of making splitting decisions during mesh construction without knowledge of the final structure, we:
 
 1. **Construct the complete mesh** without any load balancing
-2. **Checkpoint the initial solution** and analyze the full tree structure  
+2. **Checkpoint the initial solution** and analyse the full tree structure  
 3. **Derive optimal load balancing** using complete tree knowledge
 4. **Restart with hardcoded load balancing** based on the optimal strategy
 
-This approach allows us to make informed splitting decisions that minimize both computational cost and load imbalance, as described in @ref page_toolbox_loadbalancing_strategies.
+This approach allows us to make informed splitting decisions that minimise both computational cost and load imbalance, as described in @ref page_toolbox_loadbalancing_strategies.
 
 # Core Components
 
-## Tree Data Structure
+The API is organised into two phases:
 
-The `Tree` class in `src/toolbox/loadbalancing/api/Tree.py` provides the central data structure for representing and analysing adaptive mesh trees in the offline load balancing framework. This class enables users to analyse mesh structures, support adaptive meshes, enable load balancing operations, integrate with Peano workflows.
+- **Phase 1: Input Generators** — read or generate the tree structure to be analysed.
+- **Phase 2: Splitting Strategies** — apply up to three sequential stages to redistribute
+  computational work and optimise the resulting split hierarchy.
 
-The `Tree` class serves as the bridge between Peano's mesh representation and the offline optimisation algorithms, allowing users to analyse existing mesh structures and develop optimised load balancing strategies.
-
-For complete implementation details, data representation examples, and coordinate systems, see the `Tree` class documentation in `src/toolbox/loadbalancing/api/Tree.py`.
-
-## Input Generators
+## Phase 1: Input Generators
 
 ### Grid Patch File Reader
-The `GridPatchFileReader` module in `src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py` enables users to analyse existing simulation data by converting Peano grid checkpoint files into the Tree format. This module allows you to analyse real simulation data, handle complex adaptive patterns, support multi-domain decompositions, enable offline optimisation.
+The `GridPatchFileReader` module in `src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py` enables users to analyse existing simulation data by converting Peano grid checkpoint files into the Tree structure format. This module allows you to analyse real simulation data, handle complex adaptive patterns, support multi-domain decompositions, enable offline optimisation. For complete implementation details, data representation examples, and coordinate systems, see the `Tree` class documentation in `src/toolbox/loadbalancing/api/Tree.py`.
 
 This input method is ideal for optimising load balancing strategies based on real application behaviour and mesh patterns.
 
@@ -39,31 +37,177 @@ The `RegularGridGenerator` module (`src/toolbox/loadbalancing/api/Input/RegularG
 
 This input method is essential for algorithm development and provides a baseline for comparing optimisation strategies.
 
-## Splitting Strategies
+## Phase 2: Splitting Strategies
 
-The `SplitTrees` module (`src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`) implements the core optimisation algorithms for redistributing computational work across multiple compute resources. These strategies enable you to achieve balanced workload distribution, handle adaptive mesh challenges, maintain mesh topology.
+The `SplitTrees` module (`src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`) implements the core optimisation algorithms for redistributing computational work across multiple compute resources. These strategies enable you to achieve balanced workload distribution, handle adaptive mesh challenges, and maintain mesh topology.
 
-The `split_leaves` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py` provides comprehensive load balancing that addresses the unique challenges of adaptive mesh refinement by distributing all computational work (leaf nodes) regardless of their refinement level, ensuring optimal load balance for spatially varying mesh structures.
+The splitting phase consists of up to three sequential stages applied within `split_tree()`:
 
-### Illustrative Cases of Multi‑level Tree Splitting
+```python
+split_tree(peano_tree, number_of_splits):
+    # Stage I:            distribute leaf nodes across subtrees
+    # Stage II:           bottom-up propagation (_update_non_leaf_assignments)
+    # Stage III (opt.):   hierarchical optimisation (_optimize_split_hierarchy)  # TBD
+```
 
-Let's look at examples of splitting 4-level trees.
-The following diagrams illustrate two scenarios showing how multi-level splitting of leaves supports adaptive mesh refinement.
-Green nodes indicate leaves assigned to Subtree 1, while yellow nodes denote leaves assigned to Subtree 0.
-In each scenario, the splitting algorithm identifies all leaves (including those at intermediate levels) and distributes them across subtrees (stage I, see the `split_leaves()` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`) while preserving the constraints of the tree topology (stage II, see the `_update_non_leaf_assignments()` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`).
-Stage II ensures that parent nodes whose children all belong to the same subtree are themselves assigned to that subtree, provided that no other nodes at the parent's level also have all their children in that subtree.
+| Stage | Function | Objective | Complexity |
+|-------|----------|-----------|------------|
+| **I** | `split_tree()` (core loop) | Distribute leaves across subtrees | O(levels × cells) |
+| **II** | `_update_non_leaf_assignments()` | Propagate subtree ids bottom-up | O(levels × cells) single pass |
+| **III** | `_optimize_split_hierarchy()` | Minimise split operation count | O(levels² × trees) iterative |
+
+Stage I and Stage II are always executed. Stage III is optional and has not yet been implemented (see @todo below).
+
+### Stage I: Leaf Distribution
+
+The core loop of `split_tree()` identifies all leaf nodes across every refinement level and
+distributes them as evenly as possible across the requested number of subtrees.
+A node is a leaf if it resides on the finest level or has no children on the next level.
+After Stage I, only leaf nodes carry updated subtree assignments; all non-leaf nodes still
+belong to their original subtree and are updated by Stage II.
+
+### Stage II: Bottom-Up Propagation
+
+The `_update_non_leaf_assignments()` function propagates subtree assignments upward through the tree hierarchy using simple parent-child inheritance.
+
+\par Algorithm
+Bottom-up traversal where parent nodes inherit subtree assignments when all their children belong to the same subtree.
+
+\par Characteristics
+- Simple single-pass algorithm
+- Maintains strict parent-child consistency
+- Does not optimise split count or structure
+- Required precondition for Stage III
+
+#### Illustrative Scenarios of Bottom-Up Propagation Multi‑level Tree Splitting
+
+The following scenarios aim to illustrate expected and non-expected cases of multi-level splitting of leaves with bottom-up propagation for adaptive mesh refinement. Green nodes indicate leaves assigned to Subtree 1, whilst yellow nodes denote leaves assigned to Subtree 0.
+
+In general, the bottom-up propagation (Stage II) ensures that parent nodes whose children all belong to the same subtree are themselves assigned to that subtree, but with additional constraints:
+
+\par Scenario 1:
 
 @image html tree_examples_combined_a.png
 
-(1) A simple case in which only one node at Level 2 has children belonging to Subtree 1. In this instance, the propagation of subtree assignments extends upwards by only a single level.
+A simple case in which only one node at Level 2 has children belonging to Subtree 1. In this instance, the propagation of subtree assignments extends upwards by only a single level. The illustrated splitting strategy ensures that splitting occurs only once at Level 2; if propagation continued one more level, splitting would have to occur twice at Levels 1 and 2, which would be less efficient. This is the expected case for a single-level split of leaves.
+
+\par Scenario 1a (wrong):
+
+@image html tree_examples_combined_a_wrong.png
+
+If the propagation continued one level further than necessary, `L1A` would be promoted to Subtree 1 because all its children (`L2A1`–`L2A3`) are already green from Stage I. Note that `L1B` correctly remains in Subtree 0 since only one of its children (`L2B1`) is green whilst `L2B2` and `L2B3` are not. Nevertheless, promoting `L1A` alone is already suboptimal: since its siblings `L1B` and `L1C` remain in Subtree 0, a split at Level 1 is now required in addition to the split at Level 2, resulting in two split operations instead of one. Image (I) shows the output of `split_tree()` (Stage I); image (II) shows the suboptimal result of an over-eager bottom-up propagation.
+
+\par Scenario 2:
 
 @image html tree_examples_combined_b.png
 
-(2) A more complex case in which multiple nodes at Level 2 have children. Here, the propagation of subtree assignments extends upwards across several levels.
+A more complex case in which multiple nodes at Level 2 have children. Here, the propagation of subtree assignments extends upwards across several levels. In both the correct and wrong cases there is only one split — but at different levels. The correct strategy places the split at Level 1 (dividing just 3 nodes: `L1A`, `L1B` vs `L1C`), which is more efficient than the wrong strategy, which would place it at Level 2 (dividing all 9 Level-2 nodes).
 
-This refined splitting method ensures effective load balancing throughout the entire tree structure.
+\par Scenario 2a (wrong):
 
-### Hardcoded parameter extraction (offline replay)
+@image html tree_examples_combined_b_wrong.png
+
+If the propagation stopped one level too early, `L1A` and `L1B` would remain in Subtree 0 despite all of their leaf descendants belonging to Subtree 1. The split is then placed at Level 2, dividing all 9 Level-2 nodes (6 green vs 3 gold), which is less efficient because a higher-level split covers the same subtree assignment with fewer split bookkeeping entries. Image (I) shows the output of `split_tree()` (Stage I); image (II) shows the suboptimal result of an incomplete bottom-up propagation.
+
+This bottom-up propagation method ensures effective load balancing throughout the entire tree structure whilst maintaining strict parent-child consistency, and prepares the tree for the optional hierarchical optimisation (Stage III).
+
+### Stage III (optional): Hierarchical Optimisation (TBD) @todo
+
+The `_optimize_split_hierarchy()` function minimises the total number of split operations whilst preserving load balance established by Stages I and II.
+
+\par Algorithm
+Iterative optimisation that restructures the split hierarchy by moving split decisions up the tree when beneficial. Requires Stage II (bottom-up propagation) to have been applied first, so that non-leaf subtree assignments are consistent before the optimisation begins.
+
+\par Characteristics
+- Multi-pass iterative optimisation
+- Maintains tree topology constraints established by Stage II
+- Actively minimises split operation count
+- Optimises for runtime splitting efficiency
+
+#### Illustrative Cases of Hierarchically-Optimised Multi‑level Tree Splitting
+
+The following diagrams show the same tree structure before and after applying hierarchical optimisation. This algorithm transforms the split structure to reduce the number of split operations whilst maintaining identical load distribution.
+
+\par State after Stages I and II (input to Stage III):
+@image html tree_stage1a.png
+
+After Stages I and II, Subtree 1 (green) spans two levels. At Level 2, four cells belong to
+Subtree 1: three leaves (L2A1, L2A2, L2A3, all children of L1A) and one non-leaf (L2B1, child
+of L1B, promoted to Subtree 1 by Stage II because all its children belong to Subtree 1).
+At Level 3, three leaves (L3B1A, L3B1B, L3B1C, all children of L2B1) also belong to Subtree 1.
+All other nodes remain in Subtree 0 (gold).
+
+\par Extracted Split Parameters (after Stages I–II, before Stage III):
+```
+{2; 0→1; 4}   // Level 2: 4 cells of Subtree 1 first appear here
+               //   (3 leaves under L1A + 1 non-leaf L2B1 under L1B promoted by Stage II)
+{4; 0→1; 3}   // Level 3: 3 leaf cells of Subtree 1 under L2B1 appear here
+```
+Total: **2 split operations** (reflecting multi-level appearance of Subtree 1)
+
+\par After Stage III — Hierarchical Optimisation:
+@image html tree_stage2a.png
+
+The hierarchical optimisation recognises that the 6 leaves in Subtree 1 (3 at Level 2 + 3 at Level 3) collectively equal one Level 1 cell's worth of descendants (3^(2×1) = 9 total descendants). Therefore, it restructures the splits:
+
+\par Optimised Split Parameters:
+```
+{2; 0→1; 1}   // Level 1: Move 1 cell from Subtree 0 to Subtree 1
+{4; 1→1; 6}   // Level 2+: All 6 leaves now hierarchically under parent 1
+```
+Total: **2 operations**, but hierarchically restructured
+
+\par Key Insight:
+The optimisation moves the split decision up one level. Instead of creating Subtree 1 piecemeal across two levels, we:
+1. Create Subtree 1 earlier (at Level 1)
+2. All 6 leaves become descendants of this single Level 1 parent
+3. Enables better cost optimisation for actual splitting operations
+
+\par More Complex Example
+
+\par State after Stages I and II (input to Stage III):
+@image html tree_stage1b.png
+
+After Stages I and II, three subtrees (1, 2, 3) each own 9 cells at Level 2 under the same Level 1 parent L1A (Subtree 0). All three are independent splits from Subtree 0.
+
+\par Extracted Split Parameters (after Stages I–II, before Stage III):
+```
+Level 2: {2; 0→1; 9}   // 9 cells of Subtree 1 appear at Level 2
+Level 2: {2; 0→2; 9}   // 9 cells of Subtree 2 appear at Level 2
+Level 2: {2; 0→3; 9}   // 9 cells of Subtree 3 appear at Level 2
+```
+Total: **3 operations** (27 cells = one Level-1 parent's full complement in 3D: 3^3)
+
+\par After Stage III — Hierarchical Optimisation:
+@image html tree_stage2b.png
+
+L1A is promoted to Subtree 1 at Level 1, and Subtrees 2 and 3 are re-parented from Subtree 1 rather than from Subtree 0.
+
+\par Optimised Split Parameters:
+```
+Level 1: {2; 0→1; 9}   // Promote L1A: Subtree 1 now owns the Level-1 parent (9 = 3^(d*1))
+Level 2: {4; 1→2; 9}   // Re-parent 9 cells from Subtree 1 to Subtree 2
+Level 2: {4; 1→3; 9}   // Re-parent 9 cells from Subtree 1 to Subtree 3
+```
+Total: **Still 3 operations**, but now:
+- First split creates intermediate hierarchy at Level 1
+- Subsequent splits build from that intermediate parent
+- Enables better splitting cost optimisation in practice
+
+\par Optimisation Conditions:
+The algorithm applies when M trees on level L satisfy:
+- All have common parent p at level L-1
+- Sum of cells equals 3^(d*L) (one parent's worth)
+- Enables hierarchical split restructuring
+
+This hierarchical approach prepares the split structure for integration with cost-aware optimisation strategies, enabling more efficient domain decomposition in practice.
+
+### Planned development
+- **Stage III Implementation**: Implement the (optional) third stage `_optimize_split_hierarchy()` in `split_tree()` as outlined above
+- **Cost-Aware Splitting**: Integration with splitting cost functions from @ref page_toolbox_loadbalancing_strategies
+- **Hybrid Approaches**: Configurable stage selection based on problem characteristics
+
+## Hardcoded parameter extraction (offline replay)
 
 The helper [`SplitTrees.extract_hardcoded_split_parameters`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py) returns four lists:
 `(gridSweeps, splittingTrees, numberOfCells, subTrees)` to feed into
@@ -90,12 +234,7 @@ toolbox::loadbalancing::strategies::Hardcoded(
 );
 ```
 
-### Future Extensions
-Planned development includes:
-- **Hierarchical Strategies**: Multi-level splitting approaches with cost optimization
-- **Cost-Aware Splitting**: Integration with splitting cost functions from @ref page_toolbox_loadbalancing_strategies
-
-## Output and Visualization
+## Output and Visualisation
 
 ### YAML Generation
 The `generate_tree_yaml` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py` creates comprehensive YAML files for Peano integration, containing:
@@ -109,7 +248,7 @@ These YAML files serve as the output format for integrating optimised decomposit
 
 For detailed YAML format specifications and generation parameters, see the `generate_tree_yaml` function documentation in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`.
 
-### Tree Visualization  
+### Tree Visualisation  
 The API integrates with visualisation tools to generate graphical representations of tree structures in multiple formats:
 
 - **Static Formats**: High-resolution PDF and PNG files for publications and reports
@@ -132,14 +271,17 @@ The [`OfflineDecomposition.py`](src/toolbox/loadbalancing/api/OfflineDecompositi
 ## Key Usage Patterns
 
 ```bash
-# Analyze existing simulation data
+# Analyse existing simulation data
 python3 OfflineDecomposition.py -f /path/to/grid/files -d 3 -p
 
 # Generate test cases for algorithm development
 python3 OfflineDecomposition.py -d 2 -l 4 -p
 
-# Apply load balancing optimization
+# Apply load balancing optimisation
 python3 OfflineDecomposition.py -d 3 -l 3 -s 4 -p
+
+# Disable any Stage II topology update for leaf-only distribution
+python3 OfflineDecomposition.py -d 3 -l 3 -s 4 --no-topology-update
 ```
 
 ## Workflow Integration
@@ -156,9 +298,9 @@ For complete command-line options, parameter details, and usage examples, see th
 
 The script generates several output files for analysis and integration:
 
-- **Original YAML**: Complete structure of the input tree before optimization
+- **Original YAML**: Complete structure of the input tree before optimisation
 - **Split YAML**: Optimised tree structure after applying splitting strategies  
-- **Visualization Files**: PDF and PNG plots of tree structures (when visualization is enabled)
+- **Visualisation Files**: PDF and PNG plots of tree structures (when visualisation is enabled)
 - **Performance Metrics**: Timing information for each processing stage
 
 # Performance Considerations
@@ -171,14 +313,5 @@ The API tracks and reports performance metrics for:
 - **Total Processing Time**: End-to-end processing duration
 
 This enables analysis of scaling behaviour and identification of computational bottlenecks in the offline optimisation process.
-
-# Future Development
-
-Planned extensions to the API include:
-
-- **Cost Function Integration**: Implementation of splitting cost models from theoretical framework
-- **Advanced Algorithms**: Cost-aware optimization strategies that minimize splitting costs while maintaining load balance, hierarchical splitting with early-stage decisions, and guided refinement approaches
-- **Peano Integration Tools**: Direct export mechanisms for hardcoded load balancer configuration
-- **Parallel Processing**: Support for parallel tree analysis and splitting operations
 
 */

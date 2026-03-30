@@ -98,7 +98,7 @@ class Tree(object):
 	tree = RegularGridGenerator("test", max_level=3, dimension=2)
 	
 	# Apply load balancing splitting
-	split_tree = split_leaves(tree, number_of_splits=3)
+	split_tree = split_tree(tree, number_of_splits=3)
 	
 	# Generate visualization
 	TreeVisualizer(split_tree, dimension=2, filename="balanced_tree")
