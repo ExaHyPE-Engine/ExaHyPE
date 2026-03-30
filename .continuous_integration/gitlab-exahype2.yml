@@ -436,7 +436,7 @@ Shallow Water Application:
     - scenario: [artificial-tsunami, chile-tsunami, circular-island, dam-break-landslide, meteotsunami-gulf-of-mexico, meteotsunami-r1, oscillating-lake, radial-dam-break, solitary-wave, tafjord-landslide, three-mounds-channel, tohoku-tsunami]
       build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/shallow-water/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -m $build_type -md ${MIN_GRID_LEVELS};"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/shallow-water/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -m $build_type -md ${MIN_GRID_LEVELS} -ns 0;"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/shallow-water/$scenario; $PARALLEL_LAUNCH ./ExaHyPE;"
   allow_failure: false
   extends:

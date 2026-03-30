@@ -1129,7 +1129,7 @@ class ADERDG(object):
             output_path=self._name,
             filename=self._name,
             patch=self._previous_time_step,
-            dataset_name=self._unknown_identifier(),
+            dataset_name=self._unknown_identifier() + "_old",
             description=self._variable_shortcuts.plot_description,
             mapping=mapping,
             time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
