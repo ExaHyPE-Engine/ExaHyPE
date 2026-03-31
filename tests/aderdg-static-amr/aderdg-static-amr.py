@@ -7,7 +7,7 @@ parser = exahype2.ArgumentParser("ExaHyPE 2 - ADER-DG Static AMR Testing Script"
 parser.set_defaults(
     min_depth=3,
     amr_levels=2,
-    degrees_of_freedom=4,
+    degrees_of_freedom=5,
 )
 args = parser.parse_args()
 
@@ -50,7 +50,8 @@ solver.set_implementation(
 """,
     refinement_criterion="""
   auto result = ::exahype2::RefinementCommand::Keep;
-  if (x[0] < 0.3) {
+  double r = std::sqrt((x[0] - 0.5) * (x[0] - 0.5) + (x[1] - 0.5) * (x[1] - 0.5));
+  if (r < 0.2) {
     result = ::exahype2::RefinementCommand::Refine;
   }
   return result;

@@ -16,11 +16,11 @@ class Correction(AbstractADERDGActionSet):
 
     {{COMPUTE_TIME_STEP_SIZE}}
 
-#if DIMENSIONS == 2
+    #if DIMENSIONS == 2
     constexpr int SpaceFaceSize = {{ORDER}} + 1;
-#else
+    #else
     constexpr int SpaceFaceSize = ({{ORDER}} + 1) * ({{ORDER}} + 1);
-#endif
+    #endif
 
     constexpr int FluxElementsPerFace   = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
     constexpr int BasisElementsPerFace  = SpaceFaceSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
@@ -58,20 +58,16 @@ class Correction(AbstractADERDGActionSet):
       const int direction = d;
 
       // Negative face
-      if (!fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()) {
-        // If above hanging face, the Riemann fluxes have been received from the other side and are therefore on that side.
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).data() + (fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getAboveHanging() ? 0 : FluxElementsPerFace);
-        const int orientation = 0;
-        {{FACE_INTEGRAL_CALL}}
-      }
+      // If above hanging face, the Riemann fluxes have been received from the other side and are therefore on that side.
+      {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).data() + (fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getAboveHanging()[0] ? 0 : FluxElementsPerFace);
+      int orientation = 0;
+      {{FACE_INTEGRAL_CALL}}
 
       // Positive face
-      if (!fineGridFaces{{SOLVER_NAME}}FaceLabel(d + DIMENSIONS).getIsHanging()) {
-        // If above hanging face, the Riemann fluxes have been received from the other side and are therefore on that side.
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).data() + (fineGridFaces{{SOLVER_NAME}}FaceLabel(d + DIMENSIONS).getAboveHanging() ? FluxElementsPerFace : 0);
-        const int orientation = 1;
-        {{FACE_INTEGRAL_CALL}}
-      }
+      // If above hanging face, the Riemann fluxes have been received from the other side and are therefore on that side.
+      FIn = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).data() + (fineGridFaces{{SOLVER_NAME}}FaceLabel(d + DIMENSIONS).getAboveHanging()[1] ? FluxElementsPerFace : 0);
+      orientation = 1;
+      {{FACE_INTEGRAL_CALL}}
     } // for d
 
     {{POSTPROCESS_UPDATED_PATCH}}
