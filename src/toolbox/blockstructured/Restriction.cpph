@@ -1124,20 +1124,17 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
       }
       coarseVolume /= 3;
 
-      assertion3(coarseVolume(0) >= 0, kFine, iFine, marker);
-      assertion3(coarseVolume(1) >= 0, kFine, iFine, marker);
-      assertion3(
-        coarseVolume(0) < numberOfDoFsPerAxisInPatch,
-        kFine,
-        iFine,
-        marker
-      );
-      assertion3(
-        coarseVolume(1) < numberOfDoFsPerAxisInPatch,
-        kFine,
-        iFine,
-        marker
-      );
+      // The normal component addresses the 2*overlap halo slots, while the
+      // tangential components address patch-local cells.
+      for (int d = 0; d < DIMENSIONS; d++) {
+        assertion3(coarseVolume(d) >= 0, kFine, iFine, marker);
+        assertion3(
+          coarseVolume(d) < (d == normal ? 2 * overlap : numberOfDoFsPerAxisInPatch),
+          kFine,
+          iFine,
+          marker
+        );
+      }
 
       [[maybe_unused]] tarch::la::Vector<DIMENSIONS, double> volumeXCoarse
         = leftBottomCornerOfHaloCoarse

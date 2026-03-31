@@ -49,6 +49,8 @@ parameter tarch::la::DynamicMatrix::vectorToString(fineGridFaceEulerQUpdate.data
      */
     void testInterpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear();
 
+    void testInterpolateHaloLayer_AoS_piecewise_constant_withSingleVolumePatch();
+
   public:
 
     /**
@@ -66,4 +68,3 @@ parameter tarch::la::DynamicMatrix::vectorToString(fineGridFaceEulerQUpdate.data
      */
     virtual void run() override;
 };
-

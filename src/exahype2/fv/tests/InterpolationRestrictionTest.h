@@ -68,6 +68,8 @@ Aborted (core dumped)
      */
     void testAverageRestrictionWithTensorProduct();
 
+    void testAverageRestrictionWithSingleVolumePatch();
+
   public:
     InterpolationRestrictionTest();
 
