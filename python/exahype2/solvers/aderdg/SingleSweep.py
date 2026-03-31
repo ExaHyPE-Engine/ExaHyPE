@@ -92,14 +92,9 @@ class SingleSweep(ADERDG):
 
         self._action_set_prediction.guard = (
             self._store_cell_data_default_guard()
-            + " and not isHangingCell"
             + " and repositories::{}.isFirstGridSweepOfTimeStep()".format(
                 self.get_name_of_global_instance()
             )
-        )
-
-        self._action_set_prediction_on_hanging_cells.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells and isHangingCell".format(
-            self.get_name_of_global_instance(), self._name
         )
 
         self._action_set_correction.cell_guard = (
@@ -114,9 +109,11 @@ class SingleSweep(ADERDG):
             + " and repositories::{}.isLastGridSweepOfTimeStep()".format(
                 self.get_name_of_global_instance()
             )
-            + " and not fineGridFace"
+            + " and not (fineGridFace"
             + self._name
-            + "FaceLabel.getAboveHanging()"
+            + "FaceLabel.getAboveHanging()[0] or fineGridFace"
+            + self._name
+            + "FaceLabel.getAboveHanging()[1])"
         )
 
     def get_user_action_set_includes(self):
@@ -136,8 +133,10 @@ class SingleSweep(ADERDG):
     def _delete_face_data_default_guard(self):
         return super(
             SingleSweep, self
-        )._delete_face_data_default_guard() + " and repositories::{}.isFirstGridSweepOfTimeStep()".format(
-            self.get_name_of_global_instance()
+        )._delete_face_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells".format(
+            self.get_name_of_global_instance(), self._name
+        ) + " and (fineGridFace{}FaceLabel.getAboveHanging()[0] or fineGridFace{}FaceLabel.getAboveHanging()[1])".format(
+            self._name, self._name
         )
 
     def _restrict_face_data_default_guard(self):

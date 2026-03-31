@@ -8,20 +8,14 @@ import peano4.solversteps
 
 class Prediction(AbstractADERDGActionSet):
     """
+    ADER-DG prediction action set.
+
     The extrapolated solution from the space-time predictor has to be projected onto
     the faces, so we can then solve the Riemann problems. So the projection
     happens in one grid sweep, the corresponding Riemann solve in the next one.
     """
 
     _Template_TouchCellFirstTime = """
-  bool isHangingCell = false;
-  for (int d = 0; d < 2 * DIMENSIONS; d++) {
-    if (fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()) {
-      isHangingCell = true;
-      break;
-    }
-  }
-
   if ({{GUARD}}) {
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
     {{COMPUTE_TIME_STEP_SIZE}}

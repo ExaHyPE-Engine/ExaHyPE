@@ -226,13 +226,12 @@ def generate_kernels(solver, d, output, subdirectory):
 
     solver._face_integral_call = jinja2.Template(
         """
-    const double inverseDxDirection = 1.0 / marker.getH()[d];
     kernels::{{SOLVER_NAME}}::faceIntegral(
       QNew,
       FIn,
       direction,
       orientation,
-      inverseDxDirection,
+      1.0 / marker.getH()[d], // inverseDxDirection
       timeStepSize
     );
 """,

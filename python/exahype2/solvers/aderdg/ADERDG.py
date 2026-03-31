@@ -394,9 +394,6 @@ class ADERDG(object):
         self._action_set_prediction = exahype2.solvers.aderdg.actionsets.Prediction(self, self._store_cell_data_default_guard())
         self._action_set_prediction.descend_invocation_order = 3
 
-        self._action_set_prediction_on_hanging_cells = exahype2.solvers.aderdg.actionsets.PredictionOnHangingCells(self, self._store_cell_data_default_guard())
-        self._action_set_prediction_on_hanging_cells.descend_invocation_order = 3
-
         # Handles adaptive mesh refinement
         self._action_set_AMR = exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(
             solver=self,
@@ -632,7 +629,6 @@ class ADERDG(object):
         step.add_action_set(self._action_set_handle_boundary)
         step.add_action_set(self._action_set_correction)
         step.add_action_set(self._action_set_prediction)
-        step.add_action_set(self._action_set_prediction_on_hanging_cells)
 
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
