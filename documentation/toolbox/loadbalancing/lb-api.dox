@@ -91,6 +91,18 @@ In general, the bottom-up propagation (Stage II) ensures that parent nodes whose
 
 A simple case in which only one node at Level 2 has children belonging to Subtree 1. In this instance, the propagation of subtree assignments extends upwards by only a single level. The illustrated splitting strategy ensures that splitting occurs only once at Level 2; if propagation continued one more level, splitting would have to occur twice at Levels 1 and 2, which would be less efficient. This is the expected case for a single-level split of leaves.
 
+\par Extracted Split Parameters (Stage I only / before Stage II propagation):
+```
+{6; 0→1; 3}   // API level 2 (L2*): only the three leaves under L1A are introduced (L2A1–L2A3)
+{8; 0→1; 3}   // API level 3 (L3*): the three leaves under L2B1 are introduced because L2B1 is still Subtree 0
+```
+
+\par Extracted Split Parameters (after Stages I–II):
+```
+{6; 0→1; 4}   // API level 2 (L2*): 4 cells of Subtree 1 are introduced here
+             //   (3 leaves under L1A + 1 non-leaf L2B1 under L1B promoted by Stage II)
+```
+
 \par Scenario 1a (wrong):
 
 @image html tree_examples_combined_a_wrong.png
@@ -103,11 +115,23 @@ If the propagation continued one level further than necessary, `L1A` would be pr
 
 A more complex case in which multiple nodes at Level 2 have children. Here, the propagation of subtree assignments extends upwards across several levels. In both the correct and wrong cases there is only one split — but at different levels. The correct strategy places the split at Level 1 (dividing just 3 nodes: `L1A`, `L1B` vs `L1C`), which is more efficient than the wrong strategy, which would place it at Level 2 (dividing all 9 Level-2 nodes).
 
+\par Extracted Split Parameters (Stage I only / before Stage II propagation):
+```
+{6; 0→1; 5}   // API level 2 (L2*): 5 leaves introduced by Stage I (L2A1–L2A3, L2B2–L2B3)
+{8; 0→1; 3}   // API level 3 (L3*): 3 leaves introduced under L2B1 (parent still Subtree 0 before Stage II)
+```
+
+\par Extracted Split Parameters (after Stages I–II):
+```
+{4; 0→1; 2}   // API level 1 (L1*): introduce Subtree 1 via L1A and L1B (children of Root)
+```
+
 \par Scenario 2a (wrong):
 
 @image html tree_examples_combined_b_wrong.png
 
 If the propagation stopped one level too early, `L1A` and `L1B` would remain in Subtree 0 despite all of their leaf descendants belonging to Subtree 1. The split is then placed at Level 2, dividing all 9 Level-2 nodes (6 green vs 3 gold), which is less efficient because a higher-level split covers the same subtree assignment with fewer split bookkeeping entries. Image (I) shows the output of `split_tree()` (Stage I); image (II) shows the suboptimal result of an incomplete bottom-up propagation.
+
 
 This bottom-up propagation method ensures effective load balancing throughout the entire tree structure whilst maintaining strict parent-child consistency, and prepares the tree for the optional hierarchical optimisation (Stage III).
 
@@ -136,14 +160,6 @@ Subtree 1: three leaves (L2A1, L2A2, L2A3, all children of L1A) and one non-leaf
 of L1B, promoted to Subtree 1 by Stage II because all its children belong to Subtree 1).
 At Level 3, three leaves (L3B1A, L3B1B, L3B1C, all children of L2B1) also belong to Subtree 1.
 All other nodes remain in Subtree 0 (gold).
-
-\par Extracted Split Parameters (after Stages I–II, before Stage III):
-```
-{2; 0→1; 4}   // Level 2: 4 cells of Subtree 1 first appear here
-               //   (3 leaves under L1A + 1 non-leaf L2B1 under L1B promoted by Stage II)
-{4; 0→1; 3}   // Level 3: 3 leaf cells of Subtree 1 under L2B1 appear here
-```
-Total: **2 split operations** (reflecting multi-level appearance of Subtree 1)
 
 \par After Stage III — Hierarchical Optimisation:
 @image html tree_stage2a.png
