@@ -37,7 +37,6 @@ void toolbox::loadbalancing::tests::StatisticsTest::testPackedReductionMatchesSi
   validateEquals(stats.getLocalMinDepth(), gridStats.minDepth);
   validateEquals(stats.getLocalMaxDepth(), gridStats.maxDepth);
   validateEquals(stats.getLocalNumberOfStationarySweeps(), gridStats.numberOfStationarySweeps);
-  validate(stats.getLocalMemoryUsageInBytes() >= 0);
 
   // Capture the local values from this first snapshot. If MPI is enabled with >1 rank,
   // the global fields will correspond to this snapshot after the next updateGlobalView() call.

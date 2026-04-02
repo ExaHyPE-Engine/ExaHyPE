@@ -129,7 +129,7 @@ public:
 
     if (finished) {
       if (this->_ioMode == IOMode::MPISend) {
-        this->clear();
+        this->shallowClear();
         logDebug("tryToFinishSendOrReceive()", "Send complete: " << this->toString());
       } else if (this->_ioMode == IOMode::MPIReceive) {
         logDebug("tryToFinishSendOrReceive()", "Receive complete: " << this->toString());

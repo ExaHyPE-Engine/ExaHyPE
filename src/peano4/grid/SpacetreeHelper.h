@@ -3,10 +3,13 @@
 #pragma once
 
 #include "GridVertex.h"
+#include "SpacetreeState.h"
 #include "SplitInstruction.h"
+#include "TreeIdSet.h"
 
+#include <array>
 #include <bitset>
-#include <set>
+#include <vector>
 
 namespace peano4::grid {
   class SpacetreeHelper;
@@ -42,6 +45,16 @@ public:
   static constexpr int RankOfPeriodicBoundaryCondition               = -2;
   static constexpr int NumberOfStationarySweepsToWaitAtLeastTillJoin = 2;
 
+  struct NeighbourTrees {
+    std::array<int, TWO_POWER_D> ids;
+    int                          count = 0;
+
+    INLINE_METHOD int size() const { return count; }
+    INLINE_METHOD int operator[](int i) const { return ids[i]; }
+
+    INLINE_METHOD operator std::vector<int>() const { return std::vector<int>(ids.begin(), ids.begin() + count); }
+  };
+
   static const FaceAdjTables&      getFaceAdjTables();
   static const Patch3x3IndexTable& getPatch3x3IndexTable();
 
@@ -52,17 +65,54 @@ public:
     int        out[TWO_POWER_D]
   );
 
+  static bool doesRankIdentifyHorizontalDataExchange(
+    int                       rank,
+    int                       treeNumber,
+    const SplitSpecification& splitTriggered,
+    const TreeIdSet&          splitting,
+    const TreeIdSet&          joining,
+    bool                      calledByReceivingProcess,
+    SpacetreeState            treeState
+  );
+
+  static int getNeighbourTreeAlongFace(
+    GridVertex                fineGridVertices[TWO_POWER_D],
+    int                       faceNumber,
+    const int                 treeNumber,
+    const SplitSpecification& splitTriggered,
+    const TreeIdSet&          splitting,
+    const TreeIdSet&          joining,
+    bool                      calledByReceivingProcess,
+    SpacetreeState            treeState,
+    bool                      noParallelTopologyChanges
+  );
+
+  static NeighbourTrees getNeighbourTreesAlongVertex(
+    const GridVertex&         vertex,
+    const int                 treeNumber,
+    const SplitSpecification& splitTriggered,
+    const TreeIdSet&          splitting,
+    const TreeIdSet&          joining,
+    bool                      calledByReceivingProcess,
+    SpacetreeState            treeState,
+    bool                      noParallelTopologyChanges
+  );
+
   INLINE_METHOD static bool isVertexAdjacentToLocalSpacetree(
     const GridVertex&         vertex,
     const int                 treeNumber,
     const SplitSpecification& splitTriggered,
-    const std::set<int>&      splitting,
-    const std::set<int>&      joinTriggered,
-    const std::set<int>&      joining,
+    const TreeIdSet&          splitting,
+    const TreeIdSet&          joinTriggered,
+    const TreeIdSet&          joining,
     bool                      splittingIsConsideredLocal,
     bool                      joiningIsConsideredLocal,
     bool                      isHangingVertexAdjacentToLocalTree
   ) {
+    const bool checkSplit     = not splitTriggered.empty();
+    const bool checkSplitting = splittingIsConsideredLocal and not splitting.empty();
+    const bool checkJoining   = joiningIsConsideredLocal and not joining.empty();
+
     bool result = false;
 
     for (auto i = 0; i < TWO_POWER_D; i++) {
@@ -71,12 +121,12 @@ public:
       assertion(splitTriggered.count(adjacentRank) <= 1);
       assertion(splitting.count(adjacentRank) <= 1);
 
-      const bool inSplit     = not splitTriggered.empty() and splitTriggered.count(adjacentRank);
-      const bool inSplitting = not splitting.empty() and splitting.count(adjacentRank);
-      const bool inJoining   = not joining.empty() and joining.count(adjacentRank);
-      if (adjacentRank == treeNumber or inSplit or (splittingIsConsideredLocal and inSplitting)
-          or (joiningIsConsideredLocal and inJoining)) {
+      const bool inSplit     = checkSplit and splitTriggered.count(adjacentRank);
+      const bool inSplitting = checkSplitting and splitting.count(adjacentRank);
+      const bool inJoining   = checkJoining and joining.count(adjacentRank);
+      if (adjacentRank == treeNumber or inSplit or inSplitting or inJoining) {
         result = true;
+        break;
       }
     }
 
@@ -88,10 +138,27 @@ public:
     GridVertex                vertices[TWO_POWER_D],
     const int                 treeNumber,
     const SplitSpecification& splitTriggered,
-    const std::set<int>&      splitting,
-    const std::set<int>&      joinTriggered,
-    const std::set<int>&      joining
+    const TreeIdSet&          splitting,
+    const TreeIdSet&          joinTriggered,
+    const TreeIdSet&          joining,
+    bool                      noParallelTopologyChanges
   ) {
+    if (noParallelTopologyChanges) {
+      std::bitset<TWO_POWER_D> bitset;
+      for (int i = 0; i < TWO_POWER_D; ++i) {
+        bool isLocal = false;
+        for (int j = 0; j < TWO_POWER_D; ++j) {
+          // Keep locality conservative until the current and backup snapshots converge again.
+          if (vertices[i].adjacentRanks[j] == treeNumber or vertices[i].backupOfAdjacentRanks[j] == treeNumber) {
+            isLocal = true;
+            break;
+          }
+        }
+        bitset.set(i, isLocal);
+      }
+      return bitset;
+    }
+
     std::bitset<TWO_POWER_D> bitset;
     for (auto i = 0; i < TWO_POWER_D; i++) {
       bitset.set(
@@ -116,10 +183,46 @@ public:
     GridVertex                vertices[TWO_POWER_D],
     const int                 treeNumber,
     const SplitSpecification& splitTriggered,
-    const std::set<int>&      splitting,
-    const std::set<int>&      joinTriggered,
-    const std::set<int>&      joining
+    const TreeIdSet&          splitting,
+    const TreeIdSet&          joinTriggered,
+    const TreeIdSet&          joining,
+    bool                      noParallelTopologyChanges
   ) {
+    if (noParallelTopologyChanges) {
+      std::bitset<TWO_TIMES_D> result;
+      const auto&              T = SpacetreeHelper::getFaceAdjTables();
+
+      for (int faceNumber = 0; faceNumber < TWO_TIMES_D; ++faceNumber) {
+        const int  normal  = faceNumber % DIMENSIONS;
+        const bool upper   = faceNumber >= DIMENSIONS;
+        bool       isLocal = false;
+
+        for (int i = 0; i < TWO_POWER_D / 2; ++i) {
+          const int         vIdx = T.faceVerts[faceNumber][i];
+          const GridVertex& v    = vertices[vIdx];
+          const int         i0   = T.adjIdx0[normal][vIdx];
+          const int         i1   = T.adjIdx1[normal][vIdx];
+
+          if (v.getState() != GridVertex::State::HangingVertex or upper) {
+            if (v.adjacentRanks[i0] == treeNumber) {
+              isLocal = true;
+              break;
+            }
+          }
+          if (v.getState() != GridVertex::State::HangingVertex or not upper) {
+            if (v.adjacentRanks[i1] == treeNumber) {
+              isLocal = true;
+              break;
+            }
+          }
+        }
+
+        result.set(faceNumber, isLocal);
+      }
+
+      return result;
+    }
+
     std::bitset<TWO_TIMES_D> result;
 
     const auto& T = SpacetreeHelper::getFaceAdjTables();
@@ -164,33 +267,60 @@ public:
     GridVertex                vertices[TWO_POWER_D],
     const int                 treeNumber,
     const SplitSpecification& splitTriggered,
-    const std::set<int>&      splitting,
-    const std::set<int>&      joinTriggered,
-    const std::set<int>&      joining
+    const TreeIdSet&          splitting,
+    const TreeIdSet&          joinTriggered,
+    const TreeIdSet&          joining,
+    bool                      noParallelTopologyChanges
   );
 
   static std::bitset<TWO_TIMES_D> areFacesAdjacentToParallelDomainBoundary(
     GridVertex                vertices[TWO_POWER_D],
     const int                 treeNumber,
     const SplitSpecification& splitTriggered,
-    const std::set<int>&      splitting,
-    const std::set<int>&      joinTriggered,
-    const std::set<int>&      joining,
-    bool                      calledByLeaveCell
+    const TreeIdSet&          splitting,
+    const TreeIdSet&          joinTriggered,
+    const TreeIdSet&          joining,
+    bool                      calledByLeaveCell,
+    bool                      noParallelTopologyChanges
   );
 
   static bool areAllVerticesNonHanging(GridVertex vertices[TWO_POWER_D]);
 
-  static bool isSpacetreeNodeLocal(
+  INLINE_METHOD static bool isSpacetreeNodeLocal(
     GridVertex                vertices[TWO_POWER_D],
     const int                 treeNumber,
     const SplitSpecification& splitTriggered,
-    const std::set<int>&      splitting,
-    const std::set<int>&      joinTriggered,
-    const std::set<int>&      joining,
+    const TreeIdSet&          splitting,
+    const TreeIdSet&          joinTriggered,
+    const TreeIdSet&          joining,
     bool                      splittingIsConsideredLocal,
-    bool                      joiningIsConsideredLocal
-  );
+    bool                      joiningIsConsideredLocal,
+    bool                      noParallelTopologyChanges
+  ) {
+    if (noParallelTopologyChanges) {
+      for (int k = 0; k < TWO_POWER_D; ++k) {
+        const int  rank      = vertices[k].adjacentRanks[TWO_POWER_D - k - 1];
+        const bool isHanging = vertices[k].getState() == GridVertex::State::HangingVertex;
+        if (not isHanging and rank != treeNumber) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    for (int k = 0; k < TWO_POWER_D; ++k) {
+      const int  rank      = vertices[k].adjacentRanks[TWO_POWER_D - k - 1];
+      const bool isHanging = vertices[k].getState() == GridVertex::State::HangingVertex;
+
+      if (not isHanging and rank != treeNumber and splitTriggered.count(rank) == 0
+          and (not splittingIsConsideredLocal or splitting.count(rank) == 0)
+          and (not joiningIsConsideredLocal or joining.count(rank) == 0)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 
   static bool isSpacetreeNodeRefined(GridVertex vertices[TWO_POWER_D]);
 
@@ -199,17 +329,17 @@ public:
     GridVertex                fineGridVertices[TWO_POWER_D],
     const int                 treeNumber,
     const SplitSpecification& splitTriggered,
-    const std::set<int>&      splitting,
-    const std::set<int>&      joinTriggered,
-    const std::set<int>&      joining
+    const TreeIdSet&          splitting,
+    const TreeIdSet&          joinTriggered,
+    const TreeIdSet&          joining
   );
 
   static int getTreeOwningSpacetreeNode(
     GridVertex                vertices[TWO_POWER_D],
     const int                 treeNumber,
     const SplitSpecification& splitTriggered,
-    const std::set<int>&      splitting,
-    const std::set<int>&      joinTriggered,
-    const std::set<int>&      joining
+    const TreeIdSet&          splitting,
+    const TreeIdSet&          joinTriggered,
+    const TreeIdSet&          joining
   );
 };

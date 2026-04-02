@@ -58,8 +58,12 @@ class BasePlotter(ActionSet):
   }
 
   // Recreate it to adjust the number of spacetrees in case of dynamic load balancing
+  const auto localSpacetrees = ::peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
+  const int numberOfLocalSubdomains = localSpacetrees.empty()
+    ? 0
+    : (::peano4::parallel::Node::getInstance().getLocalTreeId(*localSpacetrees.rbegin()) + 1);
   _fileWriter.reset();
-  _fileWriter = std::make_unique<tarch::plotter::{{FILE_WRITER}}>("{{OUTPUT_PATH}}", ::peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size());
+  _fileWriter = std::make_unique<tarch::plotter::{{FILE_WRITER}}>("{{OUTPUT_PATH}}", numberOfLocalSubdomains);
 
   _time = {{TIMESTAMP}};
 """

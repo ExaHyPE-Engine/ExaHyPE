@@ -138,6 +138,11 @@ int peano4::grid::PeanoCurve::getOutputStackNumber(const AutomatonState& state) 
 
 
 int peano4::grid::PeanoCurve::getVertexReadStackNumber(const AutomatonState&  state, const std::bitset<DIMENSIONS>&  vertex ) {
+  return getVertexReadStackNumber(state, static_cast<int>(vertex.to_ulong()));
+}
+
+
+int peano4::grid::PeanoCurve::getVertexReadStackNumber(const AutomatonState& state, int vertexMask) {
   const auto& a = state.accessNumber;
 
   int bestVal  = -2*DIMENSIONS - 1; // Largest negative
@@ -146,7 +151,7 @@ int peano4::grid::PeanoCurve::getVertexReadStackNumber(const AutomatonState&  st
 
   UNROLL(DIMENSIONS)
   for (int d = 0; d < DIMENSIONS; ++d) {
-    const int face = vertex[d] ? d + DIMENSIONS : d;
+    const int face = ((vertexMask >> d) & 1) ? d + DIMENSIONS : d;
     const int v    = a[face];
     if ((v < 0) && (v > bestVal)) {
       bestVal  = v;
@@ -181,6 +186,11 @@ bool peano4::grid::PeanoCurve::isTemporaryStack( int number ) {
 
 
 int peano4::grid::PeanoCurve::getVertexWriteStackNumber(const AutomatonState& cell, const std::bitset<DIMENSIONS>& vertex ) {
+  return getVertexWriteStackNumber(cell, static_cast<int>(vertex.to_ulong()));
+}
+
+
+int peano4::grid::PeanoCurve::getVertexWriteStackNumber(const AutomatonState& cell, int vertexMask ) {
   const auto& a = cell.accessNumber;
 
   int bestVal  =  2*DIMENSIONS + 1; // Smallest positive
@@ -189,7 +199,7 @@ int peano4::grid::PeanoCurve::getVertexWriteStackNumber(const AutomatonState& ce
 
   UNROLL(DIMENSIONS)
   for (int d = 0; d < DIMENSIONS; ++d) {
-    const int face = vertex[d] ? d + DIMENSIONS : d;
+    const int face = ((vertexMask >> d) & 1) ? d + DIMENSIONS : d;
     const int v    = a[face];
     if ((v > 0) && (v < bestVal)) {
       bestVal  = v;

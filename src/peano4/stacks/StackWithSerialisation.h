@@ -120,7 +120,7 @@ public:
     MPI_Test(&this->_ioMPIRequest, &flag, MPI_STATUS_IGNORE);
     if (flag) {
       if (this->_ioMode == IOMode::MPISend) {
-        this->clear();
+        this->shallowClear();
         logDebug("tryToFinishSendOrReceive()", "Send complete: " << this->toString());
       } else if (this->_ioMode == IOMode::MPIReceive) {
         deserialise();

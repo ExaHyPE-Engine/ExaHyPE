@@ -21,8 +21,11 @@ private:
   void testGetNeighbourTreesVertexSendReceive();
   void testGetNeighbourTreesFaceSendReceive();
   void testIsFaceAlongPeriodicBoundaryCondition();
+  void testTraverseWithPeriodicBoundaryConditionsUsesStableVertexBoundaryFlags();
   void testIncrementNumberOfAdjacentRefinedLocalCells();
   void testDoesRankIndexIdentifyHorizontalDataExchange();
+  void testDescend();
+  void testDescendWhileInRunningState();
 
 public:
   SpacetreeTest();

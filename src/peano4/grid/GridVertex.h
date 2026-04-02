@@ -3,6 +3,7 @@
 #pragma once
 
 #include "peano4/Globals.h"
+#include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 
 #include <bitset>
@@ -29,19 +30,18 @@ struct peano4::grid::GridVertex {
 
   int level                             = 0;
   int numberOfAdjacentRefinedLocalCells = 0;
+#if PEANO_DEBUG >= 1
+  tarch::la::Vector<DIMENSIONS, double> x{};
+#endif
 
   std::array<int, TWO_POWER_D> adjacentRanks{};
   std::array<int, TWO_POWER_D> backupOfAdjacentRanks{};
 
-  // Bit positions (right to left = least significant bit first):
-  // [bit3][bit2][bit1][bit0]
-  //   8     4     2     1   <-- decimal value of each bit
   static constexpr std::uint8_t HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep = 1 << 0; // = 0b00000001
   static constexpr std::uint8_t IsAntecessorOfRefinedVertexInCurrentTreeSweep       = 1 << 1; // = 0b00000010
   static constexpr std::uint8_t HasBeenParentOfSubtreeVertexInPreviousTreeSweep     = 1 << 2; // = 0b00000100
   static constexpr std::uint8_t IsParentOfSubtreeVertexInCurrentTreeSweep           = 1 << 3; // = 0b00001000
-  // Used to reconstruct previously hanging faces
-  static constexpr std::uint8_t HasBeenVertexTypeHangingInPreviousTreeSweep         = 1 << 5; // = 0b00010000
+  static constexpr std::uint8_t HasBeenVertexTypeHangingInPreviousTreeSweep         = 1 << 4; // = 0b00010000
 
   GridVertex() noexcept = default;
   enum class ObjectConstruction { NoData };
@@ -50,49 +50,45 @@ struct peano4::grid::GridVertex {
 
   INLINE_METHOD State getState() const noexcept { return static_cast<State>(state); }
   INLINE_METHOD void  setState(State s) noexcept { state = static_cast<std::uint8_t>(s); }
+#if PEANO_DEBUG >= 1
+  INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getX() const noexcept { return x; }
+  INLINE_METHOD void   setX(const tarch::la::Vector<DIMENSIONS, double>& value) noexcept { x = value; }
+  INLINE_METHOD double getX(int d) const noexcept { return x[d]; }
+  INLINE_METHOD void   setX(int d, double value) noexcept { x[d] = value; }
 
-  // Checks if a given bit is set (true).
-  // flags & bit → masks out all bits except the one we care about.
-  // If result is non-zero → that bit is set → return true.
+  static tarch::la::Vector<DIMENSIONS, double> getVertexCoordinate(
+    const tarch::la::Vector<DIMENSIONS, double>& cellX,
+    const tarch::la::Vector<DIMENSIONS, double>& cellH,
+    int                                          vertexIndex
+  );
+#endif
+
   INLINE_METHOD bool getFlag(std::uint8_t bit) const noexcept { return (flags & bit) != 0; }
-
-  // Turns on a given bit (sets it to 1).
-  // Bitwise OR (|=) sets the given bit to 1 while leaving all others unchanged.
   INLINE_METHOD void setFlag(std::uint8_t bit) noexcept { flags |= bit; }
   INLINE_METHOD void setFlag(std::uint8_t bit, bool v) noexcept { v ? setFlag(bit) : clearFlag(bit); }
-
-  // Turns off a given bit (sets it to 0).
-  // ~bit flips all bits (1→0, 0→1), making a mask with all bits = 1 except the one we want to clear.
-  // Bitwise AND (&=) with that mask sets the target bit to 0 without touching the others.
   INLINE_METHOD void clearFlag(std::uint8_t bit) noexcept { flags &= ~bit; }
 
   std::string toString() const;
 
-  /**
-   * Factory mechanism
-   *
-   * We expect the calling code to tell us about the adjacent ranks of a
-   * vertex. There is a routine Spacetree::getAdjacentRanksForNewVertex()
-   * which allows you to distill adjacency information while you step down
-   * within the tree and create new vertices. This is information we write
-   * directly into the new data plus the backup of the old data. This means,
-   * by the time we create a new vertex, anybody analysing the adjacency
-   * information thinks that this data has always been there.
-   *
-   * @image html GridVertex.png
-   *
-   * @param adjacentRanks Typically the result from
-   * Spacetree::getAdjacentRanksForNewVertex(coarseGridVertices, vertexPositionWithin3x3Patch).
-   */
   static GridVertex create(
-    int                                 level,
-    GridVertex::State                   state,
-    const std::array<int, TWO_POWER_D>& adjacentRanks,
-    bool                                isNewFineGridVertex
+    int                                          level,
+    GridVertex::State                            state,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const std::array<int, TWO_POWER_D>&          adjacentRanks,
+    bool                                         isNewFineGridVertex
+  );
+
+  static GridVertex create(
+    int                                          level,
+    GridVertex::State                            state,
+    const tarch::la::Vector<DIMENSIONS, double>& cellX,
+    const tarch::la::Vector<DIMENSIONS, double>& cellH,
+    int                                          vertexIndex,
+    const std::array<int, TWO_POWER_D>&          adjacentRanks,
+    bool                                         isNewFineGridVertex
   );
 
   static bool areAllVerticesRefined(GridVertex vertices[TWO_POWER_D]);
-
   static bool areAllVerticesUnrefined(GridVertex vertices[TWO_POWER_D]);
 
   /**

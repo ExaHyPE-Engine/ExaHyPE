@@ -32,7 +32,6 @@ public:
   bool hasSplitRecently() const;
 
   int getMaxPermittedTreesPerRank() const;
-  int getNumberOfSettlingIterations() const;
 
   const Statistics& getStatistics() const;
 

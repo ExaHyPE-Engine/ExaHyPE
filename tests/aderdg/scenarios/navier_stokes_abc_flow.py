@@ -12,7 +12,8 @@ import math
 
 class NavierStokesABCFlow(Scenario):
     """
-    Arnold-Beltrami-Childress flow, described e.g. in doi.org/10.1016/j.jcp.2016.05.009
+    Arnold-Beltrami-Childress flow, described e.g. in doi.org/10.1016/j.jcp.2016.05.009.
+
     Somewhat analogous to Taylor-Green vortex, but in 3D.
     """
 
@@ -20,7 +21,7 @@ class NavierStokesABCFlow(Scenario):
     _offset = -math.pi
     _domain_size = 2 * math.pi
     _periodic_bc = True
-    _plot_dt = 0.01
+    _plot_dt = 0.0
     _end_time = 0.1
 
     _equation = NavierStokes(

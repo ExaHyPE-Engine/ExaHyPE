@@ -12,7 +12,8 @@ import math
 
 class NavierStokesTaylorGreenVortex(Scenario):
     """
-    Originally described in doi.org/10.1098/rspa.1937.0036, the Taylor-Green Vortex
+    Originally described in doi.org/10.1098/rspa.1937.0036, the Taylor-Green Vortex.
+
     is a scenario for the incompressible Navier-Stokes equations essentially describing
     rotating segments with constant density.
 
@@ -23,7 +24,7 @@ class NavierStokesTaylorGreenVortex(Scenario):
     _offset = 0.0
     _domain_size = 2 * math.pi
     _periodic_bc = True
-    _plot_dt = 1.0
+    _plot_dt = 0.0
     _end_time = 10.0
 
     _equation = NavierStokes(

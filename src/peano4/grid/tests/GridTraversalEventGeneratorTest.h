@@ -16,6 +16,7 @@ namespace peano4 {
 class peano4::grid::tests::GridTraversalEventGeneratorTest final: public tarch::tests::TestCase {
 private:
   void testCreateEnterNodeTraversalEvent_AllLocalPersistent();
+  void testCreateEnterNodeTraversalEvent_VertexBoundaryImpliesLocalInFastPath();
   void testCreateEnterNodeTraversalEvent_InOutNoDataAndHasSplitOverride();
   void testCreateEnterNodeTraversalEvent_TemporaryStacksDontYieldNoData();
   void testCreateEnterNodeTraversalEvent_VertexStateSpecialCases();

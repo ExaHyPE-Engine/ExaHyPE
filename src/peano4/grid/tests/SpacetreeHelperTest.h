@@ -16,7 +16,10 @@ namespace peano4 {
 class peano4::grid::tests::SpacetreeHelperTest final: public tarch::tests::TestCase {
 private:
   void testGetAdjacentRanksOfFace_SendVsReceiveAndStateFiltering();
+  void testGetNeighbourTreesAlongVertex();
+  void testGetNeighbourTreeAlongFace();
   void testAreFacesLocal_HangingVertexRules();
+  void testStableTopologyLocalityHelpers();
   void testParallelDomainBoundaryAdjacencyFlags();
   void testPatch3x3IndexTable();
   void testFaceAdjacencyTables();

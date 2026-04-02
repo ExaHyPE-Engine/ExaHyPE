@@ -2,8 +2,8 @@
 # use, please see the copyright notice at www.peano-framework.org
 import peano4
 
-max_depth = 6
-dimension = 2
+max_depth = 5
+dimension = 3
 build_mode = peano4.output.CompileMode.Release
 
 project = peano4.Project(
