@@ -11,6 +11,8 @@
 #include "grid/tests/GridVertexTest.h"
 #include "grid/tests/SpacetreeHelperTest.h"
 #include "grid/tests/SpacetreeTest.h"
+#include "grid/tests/TreeIdSetTest.h"
+#include "grid/tests/VertexLookupTableTest.h"
 #include "grid/tests/VertexTypeTest.h"
 #include "parallel/tests/NodeTest.h"
 #ifdef WITH_MPI
@@ -30,9 +32,11 @@ tarch::tests::TestCase* peano4::getUnitTests() {
   result->addTestCase(new grid::tests::GridControlEventTest());
   result->addTestCase(new grid::tests::GridTraversalEventGeneratorTest());
   result->addTestCase(new grid::tests::GridStatisticsTest());
+  result->addTestCase(new grid::tests::TreeIdSetTest());
   result->addTestCase(new grid::tests::GridVertexTest());
   result->addTestCase(new grid::tests::SpacetreeHelperTest());
   result->addTestCase(new grid::tests::SpacetreeTest());
+  result->addTestCase(new grid::tests::VertexLookupTableTest());
   result->addTestCase(new grid::tests::VertexTypeTest());
 
   result->addTestCase(new parallel::tests::NodeTest());

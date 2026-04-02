@@ -47,16 +47,23 @@ void peano4::grid::tests::GridVertexTest::testFlagsAndState() {
   vertex.setFlag(GridVertex::HasBeenParentOfSubtreeVertexInPreviousTreeSweep, false);
   validateFalse(vertex.getFlag(GridVertex::HasBeenParentOfSubtreeVertexInPreviousTreeSweep));
 
-  //std::cout << vertex << std::endl;
+  // std::cout << vertex << std::endl;
 }
 
 void peano4::grid::tests::GridVertexTest::testCreateGridVertex() {
   std::array<int, TWO_POWER_D> adj{};
   adj.fill(7);
-  GridVertex vertex = GridVertex::create(3, GridVertex::State::Refined, adj, false);
+  tarch::la::Vector<DIMENSIONS, double> x(0.0);
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    x[d] = 0.25 * (d + 1);
+  }
+  GridVertex vertex = GridVertex::create(3, GridVertex::State::Refined, x, adj, false);
 
   validateEquals(static_cast<int>(vertex.getState()), static_cast<int>(GridVertex::State::Refined));
   validateEquals(vertex.level, 3);
+#if PEANO_DEBUG >= 1
+  validateWithParams2(tarch::la::equals(vertex.getX(), x), vertex.getX(), x);
+#endif
 
   // Adjacent ranks & backup equal to input
   for (int i = 0; i < TWO_POWER_D; ++i) {
@@ -106,6 +113,11 @@ void peano4::grid::tests::GridVertexTest::testMPIDatatype() {
   sendV.setState(GridVertex::State::Refining);
   sendV.level                             = 7 + me; // Make it rank-distinct
   sendV.numberOfAdjacentRefinedLocalCells = 3 + me;
+#if PEANO_DEBUG >= 1
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    sendV.setX(d, 0.125 * (d + 1) + 0.001 * me);
+  }
+#endif
 
   for (std::size_t i = 0; i < sendV.adjacentRanks.size(); ++i) {
     sendV.adjacentRanks[i]         = static_cast<int>(i + 10 + me);
@@ -142,6 +154,11 @@ void peano4::grid::tests::GridVertexTest::testMPIDatatype() {
   validateEquals(static_cast<int>(recvV.state), static_cast<int>(GridVertex::State::Refining));
   validateEquals(recvV.level, 7 + expectedSenderRank);
   validateEquals(recvV.numberOfAdjacentRefinedLocalCells, 3 + expectedSenderRank);
+#if PEANO_DEBUG >= 1
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    validateNumericalEquals(recvV.getX(d), 0.125 * (d + 1) + 0.001 * expectedSenderRank);
+  }
+#endif
 
   for (std::size_t i = 0; i < sendV.adjacentRanks.size(); ++i) {
     validateEquals(recvV.adjacentRanks[i], static_cast<int>(i + 10 + expectedSenderRank));

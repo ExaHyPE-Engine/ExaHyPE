@@ -95,6 +95,7 @@ else()
     -Woverloaded-virtual
     -Wnon-virtual-dtor
     -Wno-unused-parameter
+    -Wunused-but-set-variable
   )
 endif()
 

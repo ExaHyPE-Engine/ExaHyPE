@@ -3,15 +3,16 @@
 #pragma once
 
 #include "AutomatonState.h"
+#include "FaceType.h"
 #include "GridTraversalEvent.h"
 #include "GridVertex.h"
 #include "SpacetreeState.h"
 #include "SplitInstruction.h"
+#include "TreeIdSet.h"
+#include "VertexLookupTable.h"
 #include "VertexType.h"
 #include "tarch/logging/Log.h"
 #include "tarch/tests/TestCase.h"
-
-#include <set>
 
 namespace peano4::grid {
   class GridTraversalEventGenerator;
@@ -31,13 +32,16 @@ public:
     GridVertex                                coarseGridVertices[TWO_POWER_D],
     GridVertex                                fineGridVertices[TWO_POWER_D],
     const VertexType                          vertexTypes[TWO_POWER_D],
+    const FaceType                            precomputedFaceTypes[TWO_TIMES_D],
     const AutomatonState&                     state,
     const SplitSpecification&                 splitTriggered,
-    const std::set<int>&                      splitting,
-    const std::set<int>&                      joinTriggered,
-    const std::set<int>&                      joining,
-    const std::set<int>&                      hasSplit,
+    const TreeIdSet&                          splitting,
+    const TreeIdSet&                          joinTriggered,
+    const TreeIdSet&                          joining,
+    const TreeIdSet&                          hasSplit,
     const tarch::la::Vector<DIMENSIONS, int>& relativePositionToFather,
+    const VertexLookupTable&                  lut,
+    bool                                      noParallelTopologyChanges,
     bool                                      spacetreeStateIsRunning
   ) const;
 
@@ -46,13 +50,16 @@ public:
     GridVertex                                coarseGridVertices[TWO_POWER_D],
     GridVertex                                fineGridVertices[TWO_POWER_D],
     const VertexType                          vertexTypes[TWO_POWER_D],
+    const FaceType                            precomputedFaceTypes[TWO_TIMES_D],
     const AutomatonState&                     state,
     const SplitSpecification&                 splitTriggered,
-    const std::set<int>&                      splitting,
-    const std::set<int>&                      joinTriggered,
-    const std::set<int>&                      joining,
-    const std::set<int>&                      hasSplit,
+    const TreeIdSet&                          splitting,
+    const TreeIdSet&                          joinTriggered,
+    const TreeIdSet&                          joining,
+    const TreeIdSet&                          hasSplit,
     const tarch::la::Vector<DIMENSIONS, int>& relativePositionToFather,
+    const VertexLookupTable&                  lut,
+    bool                                      noParallelTopologyChanges,
     bool                                      spacetreeStateIsRunning
   ) const;
 };

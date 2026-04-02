@@ -72,16 +72,6 @@ bool toolbox::loadbalancing::LoadBalancer::hasSplitRecently() const {
   return _statistics.getNumberOfStateUpdatesWithoutAnySplit() < 3; // TODO: Don't use hardcoded magic numbers
 }
 
-int toolbox::loadbalancing::LoadBalancer::getNumberOfSettlingIterations() const {
-  // Define the necessary settling time
-  // - 3 iterations: Required for a tree to physically split and clear the Blacklist.
-  // - 1 iteration:  Required for local statistics to update after the physical change.
-  // - 1 iteration:  Required for global MPI reduction to reflect the new local stats.
-  constexpr int RequiredSettlingIterations = 5;
-  int           result                     = RequiredSettlingIterations;
-  return result;
-}
-
 const toolbox::loadbalancing::Statistics& toolbox::loadbalancing::LoadBalancer::getStatistics() const {
   return _statistics;
 }

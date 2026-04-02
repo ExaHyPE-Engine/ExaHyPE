@@ -49,9 +49,9 @@ public:
 
     // We target the first free rank, then jump by the number of currently active ranks.
     // This ensures that if Rank 0 and Rank 1 both split, they target different free ranks.
-    const int firstFreeRank = numberOfRanksThatHoldAtLeastOneTree;
-    const int stride        = numberOfRanksThatHoldAtLeastOneTree;
-    const int myRank        = tarch::mpi::Rank::getInstance().getRank();
+    const auto firstFreeRank = numberOfRanksThatHoldAtLeastOneTree;
+    const auto stride        = numberOfRanksThatHoldAtLeastOneTree;
+    const auto myRank        = tarch::mpi::Rank::getInstance().getRank();
 
     // Ranks holding trees form a prefix [0..K-1]
     assertion(myRank < numberOfRanksThatHoldAtLeastOneTree);
@@ -66,8 +66,8 @@ public:
     }
 
     // We treat the current load as a pool to be shared evenly among (availableTargets + Me).
-    int participants = availableTargets + 1; // +1 for myself
-    int currentLoad  = localHeaviestTreeLoad;
+    auto participants = availableTargets + 1; // +1 for myself
+    auto currentLoad  = localHeaviestTreeLoad;
 
     for (int targetRank = firstFreeRank + myRank; targetRank < numberOfRanks; targetRank += stride) {
       // Divide the current remaining load by the remaining participants.

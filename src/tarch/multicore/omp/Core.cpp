@@ -15,15 +15,6 @@
 #include <omp.h>
 
 bool tarch::multicore::Core::init() {
-  // if (omp_get_num_procs() != omp_get_max_threads()) {
-  //   logDebug(
-  //     "init()",
-  //     "omp_get_num_procs() reports "
-  //       << omp_get_num_procs() << " while omp_get_max_threads() reports " << omp_get_max_threads()
-  //       << ". Take smaller value to avoid overbooking."
-  //   );
-  // }
-
   const int maxThreads = std::min(omp_get_num_procs(), omp_get_max_threads());
   omp_set_num_threads(maxThreads);
   _numberOfThreads = omp_get_max_threads();

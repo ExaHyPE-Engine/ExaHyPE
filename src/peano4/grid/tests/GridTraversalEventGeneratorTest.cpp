@@ -2,15 +2,16 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "GridTraversalEventGeneratorTest.h"
 
+#include "peano4/grid/FaceType.h"
 #include "peano4/grid/GridTraversalEventGenerator.h"
 #include "peano4/grid/GridTraversalObserver.h"
 #include "peano4/grid/PeanoCurve.h"
 #include "peano4/grid/SpacetreeHelper.h"
+#include "peano4/grid/VertexLookupTable.h"
 #include "peano4/grid/VertexType.h"
 #include "tarch/la/Vector.h"
 
 #include <bitset>
-#include <set>
 
 namespace {
   peano4::grid::AutomatonState makeBaseState(bool inverted) {
@@ -93,6 +94,84 @@ namespace {
       vertices[v].backupOfAdjacentRanks[owningSlot] = remoteRank;
     }
   }
+  // Wrapper: builds precomputed vertex index/stack arrays from state and forwards to generator.
+  peano4::grid::GridTraversalEvent callCreateEnterNodeTraversalEvent(
+    const peano4::grid::GridTraversalEventGenerator& gen,
+    peano4::grid::GridVertex                         coarseGridVertices[TWO_POWER_D],
+    peano4::grid::GridVertex                         fineGridVertices[TWO_POWER_D],
+    const peano4::grid::VertexType                   vertexTypes[TWO_POWER_D],
+    const peano4::grid::AutomatonState&              state,
+    const peano4::grid::SplitSpecification&          splitTriggered,
+    const peano4::grid::TreeIdSet&                   splitting,
+    const peano4::grid::TreeIdSet&                   joinTriggered,
+    const peano4::grid::TreeIdSet&                   joining,
+    const peano4::grid::TreeIdSet&                   hasSplit,
+    const tarch::la::Vector<DIMENSIONS, int>&        relPos,
+    bool                                             noParallelTopologyChanges,
+    bool                                             spacetreeStateIsRunning
+  ) {
+    const peano4::grid::VertexLookupTable& lut = peano4::grid::createVertexLookupTable(state, relPos);
+    peano4::grid::FaceType                 faceTypes[TWO_TIMES_D];
+    for (int i = 0; i < TWO_TIMES_D; ++i) {
+      faceTypes[i] = peano4::grid::getFaceType(vertexTypes, lut.faceIndex[i]);
+    }
+    return gen.createEnterNodeTraversalEvent(
+      coarseGridVertices,
+      fineGridVertices,
+      vertexTypes,
+      faceTypes,
+      state,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining,
+      hasSplit,
+      relPos,
+      lut,
+      noParallelTopologyChanges,
+      spacetreeStateIsRunning
+    );
+  }
+
+  peano4::grid::GridTraversalEvent callCreateLeaveNodeTraversalEvent(
+    const peano4::grid::GridTraversalEventGenerator& gen,
+    const peano4::grid::GridTraversalEvent&          enterEvent,
+    peano4::grid::GridVertex                         coarseGridVertices[TWO_POWER_D],
+    peano4::grid::GridVertex                         fineGridVertices[TWO_POWER_D],
+    const peano4::grid::VertexType                   vertexTypes[TWO_POWER_D],
+    const peano4::grid::AutomatonState&              state,
+    const peano4::grid::SplitSpecification&          splitTriggered,
+    const peano4::grid::TreeIdSet&                   splitting,
+    const peano4::grid::TreeIdSet&                   joinTriggered,
+    const peano4::grid::TreeIdSet&                   joining,
+    const peano4::grid::TreeIdSet&                   hasSplit,
+    const tarch::la::Vector<DIMENSIONS, int>&        relPos,
+    bool                                             noParallelTopologyChanges,
+    bool                                             spacetreeStateIsRunning
+  ) {
+    const peano4::grid::VertexLookupTable& lut = peano4::grid::createVertexLookupTable(state, relPos);
+    peano4::grid::FaceType                 faceTypes[TWO_TIMES_D];
+    for (int i = 0; i < TWO_TIMES_D; ++i) {
+      faceTypes[i] = peano4::grid::getFaceType(vertexTypes, lut.faceIndex[i]);
+    }
+    return gen.createLeaveNodeTraversalEvent(
+      enterEvent,
+      coarseGridVertices,
+      fineGridVertices,
+      vertexTypes,
+      faceTypes,
+      state,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining,
+      hasSplit,
+      relPos,
+      lut,
+      noParallelTopologyChanges,
+      spacetreeStateIsRunning
+    );
+  }
 } // namespace
 
 peano4::grid::tests::GridTraversalEventGeneratorTest::GridTraversalEventGeneratorTest():
@@ -100,6 +179,7 @@ peano4::grid::tests::GridTraversalEventGeneratorTest::GridTraversalEventGenerato
 
 void peano4::grid::tests::GridTraversalEventGeneratorTest::run() {
   testMethod(testCreateEnterNodeTraversalEvent_AllLocalPersistent);
+  testMethod(testCreateEnterNodeTraversalEvent_VertexBoundaryImpliesLocalInFastPath);
   testMethod(testCreateEnterNodeTraversalEvent_InOutNoDataAndHasSplitOverride);
   testMethod(testCreateEnterNodeTraversalEvent_TemporaryStacksDontYieldNoData);
   testMethod(testCreateEnterNodeTraversalEvent_VertexStateSpecialCases);
@@ -126,13 +206,14 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterNodeTr
   const AutomatonState state  = makeSimpleState();
   const auto           relPos = makeZeroRelPos();
 
-  const SplitSpecification splitTriggered;
-  const std::set<int>      splitting;
-  const std::set<int>      joinTriggered;
-  const std::set<int>      joining;
-  const std::set<int>      hasSplit;
+  const SplitSpecification      splitTriggered;
+  const peano4::grid::TreeIdSet splitting;
+  const peano4::grid::TreeIdSet joinTriggered;
+  const peano4::grid::TreeIdSet joining;
+  const peano4::grid::TreeIdSet hasSplit;
 
-  const GridTraversalEvent event = generator.createEnterNodeTraversalEvent(
+  const GridTraversalEvent event = callCreateEnterNodeTraversalEvent(
+    generator,
     coarseGridVertices,
     fineGridVertices,
     vertexTypes,
@@ -143,6 +224,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterNodeTr
     joining,
     hasSplit,
     relPos,
+    true,
     true
   );
 
@@ -171,6 +253,64 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterNodeTr
 
   const int cellStack = PeanoCurve::getCellReadStackNumber(state);
   validateEquals(event.getCellData(), cellStack);
+}
+
+void peano4::grid::tests::GridTraversalEventGeneratorTest::
+  testCreateEnterNodeTraversalEvent_VertexBoundaryImpliesLocalInFastPath() {
+  const int treeId = 1;
+
+  GridTraversalEventGenerator generator(treeId);
+
+  GridVertex coarseGridVertices[TWO_POWER_D];
+  GridVertex fineGridVertices[TWO_POWER_D];
+  setAllVerticesLocal(coarseGridVertices, treeId);
+  setAllVerticesLocal(fineGridVertices, treeId);
+
+  // Craft a vertex where current adjacency says "non-local", while backup adjacency
+  // is mixed local/remote. This used to trigger the debug assertion in fast-path mode.
+  fineGridVertices[0].setState(GridVertex::State::Unrefined);
+  for (int j = 0; j < TWO_POWER_D; ++j) {
+    fineGridVertices[0].adjacentRanks[j]         = 2;
+    fineGridVertices[0].backupOfAdjacentRanks[j] = (j % 2 == 0) ? treeId : 2;
+  }
+
+  VertexType vertexTypes[TWO_POWER_D];
+  for (int i = 0; i < TWO_POWER_D; ++i) {
+    vertexTypes[i] = VertexType::Persistent;
+  }
+
+  const AutomatonState state  = makeSimpleState();
+  const auto           relPos = makeZeroRelPos();
+
+  const SplitSpecification      splitTriggered;
+  const peano4::grid::TreeIdSet splitting;
+  const peano4::grid::TreeIdSet joinTriggered;
+  const peano4::grid::TreeIdSet joining;
+  const peano4::grid::TreeIdSet hasSplit;
+
+  const GridTraversalEvent event = callCreateEnterNodeTraversalEvent(
+    generator,
+    coarseGridVertices,
+    fineGridVertices,
+    vertexTypes,
+    state,
+    splitTriggered,
+    splitting,
+    joinTriggered,
+    joining,
+    hasSplit,
+    relPos,
+    true, // noParallelTopologyChanges
+    true
+  );
+
+  for (int i = 0; i < TWO_POWER_D; ++i) {
+    validateWithParams2(
+      not event.getIsVertexAdjacentToParallelDomainBoundary(i) or event.getIsVertexLocal(i),
+      i,
+      event.toString()
+    );
+  }
 }
 
 void peano4::grid::tests::GridTraversalEventGeneratorTest::
@@ -213,6 +353,9 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
     }
   }
   validate(chosenVertexI >= 0);
+  validateEquals(chosenVertexPos, static_cast<int>(chosenVertexIndex.to_ulong()));
+  validateEquals(chosenVertexStack, PeanoCurve::getVertexReadStackNumber(state, chosenVertexIndex));
+  validate(PeanoCurve::isInOutStack(chosenVertexStack));
 
   // Make the chosen vertex non-local.
   setAllAdj(fineGridVertices[chosenVertexPos], remoteRank);
@@ -238,15 +381,16 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
   // Make the chosen face non-local by changing the adjacency entries that define that face.
   setFaceVerticesNonLocal(fineGridVertices, chosenFaceIndex, remoteRank);
 
-  const SplitSpecification splitTriggered;
-  const std::set<int>      splitting;
-  const std::set<int>      joinTriggered;
-  const std::set<int>      joining;
+  const SplitSpecification      splitTriggered;
+  const peano4::grid::TreeIdSet splitting;
+  const peano4::grid::TreeIdSet joinTriggered;
+  const peano4::grid::TreeIdSet joining;
 
   // Without hasSplit, in/out + non-local yields NoData.
   {
-    const std::set<int>      hasSplit;
-    const GridTraversalEvent event = generator.createEnterNodeTraversalEvent(
+    const peano4::grid::TreeIdSet hasSplit;
+    const GridTraversalEvent      event = callCreateEnterNodeTraversalEvent(
+      generator,
       coarseGridVertices,
       fineGridVertices,
       vertexTypes,
@@ -257,6 +401,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
       joining,
       hasSplit,
       relPos,
+      true,
       true
     );
 
@@ -269,8 +414,9 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
 
   // With hasSplit containing the remote owner, the generator must keep the stack id.
   {
-    const std::set<int>      hasSplit = {remoteRank};
-    const GridTraversalEvent event    = generator.createEnterNodeTraversalEvent(
+    const peano4::grid::TreeIdSet hasSplit = {remoteRank};
+    const GridTraversalEvent      event    = callCreateEnterNodeTraversalEvent(
+      generator,
       coarseGridVertices,
       fineGridVertices,
       vertexTypes,
@@ -281,6 +427,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
       joining,
       hasSplit,
       relPos,
+      true,
       true
     );
 
@@ -350,13 +497,14 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
   setAllAdj(fineGridVertices[chosenVertexPos], remoteRank);
   setFaceVerticesNonLocal(fineGridVertices, chosenFaceIndex, remoteRank);
 
-  const SplitSpecification splitTriggered;
-  const std::set<int>      splitting;
-  const std::set<int>      joinTriggered;
-  const std::set<int>      joining;
-  const std::set<int>      hasSplit;
+  const SplitSpecification      splitTriggered;
+  const peano4::grid::TreeIdSet splitting;
+  const peano4::grid::TreeIdSet joinTriggered;
+  const peano4::grid::TreeIdSet joining;
+  const peano4::grid::TreeIdSet hasSplit;
 
-  const GridTraversalEvent event = generator.createEnterNodeTraversalEvent(
+  const GridTraversalEvent event = callCreateEnterNodeTraversalEvent(
+    generator,
     coarseGridVertices,
     fineGridVertices,
     vertexTypes,
@@ -367,6 +515,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
     joining,
     hasSplit,
     relPos,
+    true,
     true
   );
 
@@ -388,11 +537,11 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterNodeTr
     vertexTypes[i] = VertexType::Persistent;
   }
 
-  const SplitSpecification splitTriggered;
-  const std::set<int>      splitting;
-  const std::set<int>      joinTriggered;
-  const std::set<int>      joining;
-  const std::set<int>      hasSplit;
+  const SplitSpecification      splitTriggered;
+  const peano4::grid::TreeIdSet splitting;
+  const peano4::grid::TreeIdSet joinTriggered;
+  const peano4::grid::TreeIdSet joining;
+  const peano4::grid::TreeIdSet hasSplit;
 
   // Select a deterministic vertex along the curve (i=0).
   auto pickVertexAtI0 =
@@ -419,7 +568,8 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterNodeTr
 
     fineGridVertices[vertexPos].setState(GridVertex::State::HangingVertex);
 
-    const GridTraversalEvent event = generator.createEnterNodeTraversalEvent(
+    const GridTraversalEvent event = callCreateEnterNodeTraversalEvent(
+      generator,
       coarseGridVertices,
       fineGridVertices,
       vertexTypes,
@@ -430,6 +580,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterNodeTr
       joining,
       hasSplit,
       relPos,
+      true,
       true
     );
 
@@ -456,7 +607,8 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterNodeTr
 
     fineGridVertices[vertexPos].setState(GridVertex::State::New);
 
-    const GridTraversalEvent event = generator.createEnterNodeTraversalEvent(
+    const GridTraversalEvent event = callCreateEnterNodeTraversalEvent(
+      generator,
       coarseGridVertices,
       fineGridVertices,
       vertexTypes,
@@ -467,6 +619,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterNodeTr
       joining,
       hasSplit,
       relPos,
+      true,
       true
     );
 
@@ -492,7 +645,8 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterNodeTr
 
     fineGridVertices[vertexPos].setState(GridVertex::State::New);
 
-    const GridTraversalEvent event = generator.createEnterNodeTraversalEvent(
+    const GridTraversalEvent event = callCreateEnterNodeTraversalEvent(
+      generator,
       coarseGridVertices,
       fineGridVertices,
       vertexTypes,
@@ -503,6 +657,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterNodeTr
       joining,
       hasSplit,
       relPos,
+      true,
       true
     );
 
@@ -535,15 +690,16 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
   const AutomatonState state  = makeSimpleState();
   const auto           relPos = makeZeroRelPos();
 
-  const SplitSpecification splitTriggered;
-  const std::set<int>      splitting;
-  const std::set<int>      joinTriggered;
-  const std::set<int>      joining;
+  const SplitSpecification      splitTriggered;
+  const peano4::grid::TreeIdSet splitting;
+  const peano4::grid::TreeIdSet joinTriggered;
+  const peano4::grid::TreeIdSet joining;
 
   // Without hasSplit: in/out cell stack + non-local => NoData.
   {
-    const std::set<int>      hasSplit;
-    const GridTraversalEvent event = generator.createEnterNodeTraversalEvent(
+    const peano4::grid::TreeIdSet hasSplit;
+    const GridTraversalEvent      event = callCreateEnterNodeTraversalEvent(
+      generator,
       coarseGridVertices,
       fineGridVertices,
       vertexTypes,
@@ -554,6 +710,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
       joining,
       hasSplit,
       relPos,
+      true,
       true
     );
 
@@ -563,8 +720,9 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
 
   // With hasSplit containing the owning tree => keep the cell stack id.
   {
-    const std::set<int>      hasSplit = {remoteRank};
-    const GridTraversalEvent event    = generator.createEnterNodeTraversalEvent(
+    const peano4::grid::TreeIdSet hasSplit = {remoteRank};
+    const GridTraversalEvent      event    = callCreateEnterNodeTraversalEvent(
+      generator,
       coarseGridVertices,
       fineGridVertices,
       vertexTypes,
@@ -575,6 +733,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
       joining,
       hasSplit,
       relPos,
+      true,
       true
     );
 
@@ -598,11 +757,11 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
   const AutomatonState state  = makeSimpleState();
   const auto           relPos = makeZeroRelPos();
 
-  const SplitSpecification splitTriggered;
-  const std::set<int>      splitting;
-  const std::set<int>      joinTriggered;
-  const std::set<int>      joining;
-  const std::set<int>      hasSplit;
+  const SplitSpecification      splitTriggered;
+  const peano4::grid::TreeIdSet splitting;
+  const peano4::grid::TreeIdSet joinTriggered;
+  const peano4::grid::TreeIdSet joining;
+  const peano4::grid::TreeIdSet hasSplit;
 
   // Pick a vertex along the curve where the write stack is an in/out stack.
   int                     chosenVertexI   = -1;
@@ -622,6 +781,8 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
     }
   }
   validate(chosenVertexI >= 0);
+  validateEquals(chosenVertexPos, static_cast<int>(chosenVertexIndex.to_ulong()));
+  validate(PeanoCurve::isInOutStack(PeanoCurve::getVertexWriteStackNumber(state, chosenVertexIndex)));
 
   // (A) Local vertex + Delete + in/out => CreateOrDestroyGridEntity
   {
@@ -632,7 +793,8 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
 
     fineGridVertices[chosenVertexPos].setState(GridVertex::State::Delete);
 
-    const GridTraversalEvent enter = generator.createEnterNodeTraversalEvent(
+    const GridTraversalEvent enter = callCreateEnterNodeTraversalEvent(
+      generator,
       coarseGridVertices,
       fineGridVertices,
       vertexTypes,
@@ -643,9 +805,11 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
       joining,
       hasSplit,
       relPos,
+      true,
       true
     );
-    const GridTraversalEvent leave = generator.createLeaveNodeTraversalEvent(
+    const GridTraversalEvent leave = callCreateLeaveNodeTraversalEvent(
+      generator,
       enter,
       coarseGridVertices,
       fineGridVertices,
@@ -657,6 +821,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
       joining,
       hasSplit,
       relPos,
+      true,
       true
     );
 
@@ -673,7 +838,8 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
     setAllAdj(fineGridVertices[chosenVertexPos], remoteRank);
     fineGridVertices[chosenVertexPos].setState(GridVertex::State::Unrefined);
 
-    const GridTraversalEvent enter = generator.createEnterNodeTraversalEvent(
+    const GridTraversalEvent enter = callCreateEnterNodeTraversalEvent(
+      generator,
       coarseGridVertices,
       fineGridVertices,
       vertexTypes,
@@ -684,9 +850,11 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
       joining,
       hasSplit,
       relPos,
+      true,
       true
     );
-    const GridTraversalEvent leave = generator.createLeaveNodeTraversalEvent(
+    const GridTraversalEvent leave = callCreateLeaveNodeTraversalEvent(
+      generator,
       enter,
       coarseGridVertices,
       fineGridVertices,
@@ -698,6 +866,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
       joining,
       hasSplit,
       relPos,
+      true,
       true
     );
 
@@ -715,7 +884,8 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
     setAllAdj(fineGridVertices[chosenVertexPos], remoteRank);
     fineGridVertices[chosenVertexPos].setState(GridVertex::State::Delete);
 
-    const GridTraversalEvent enter = generator.createEnterNodeTraversalEvent(
+    const GridTraversalEvent enter = callCreateEnterNodeTraversalEvent(
+      generator,
       coarseGridVertices,
       fineGridVertices,
       vertexTypes,
@@ -726,9 +896,11 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
       joining,
       hasSplit,
       relPos,
+      true,
       true
     );
-    const GridTraversalEvent leave = generator.createLeaveNodeTraversalEvent(
+    const GridTraversalEvent leave = callCreateLeaveNodeTraversalEvent(
+      generator,
       enter,
       coarseGridVertices,
       fineGridVertices,
@@ -740,6 +912,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
       joining,
       hasSplit,
       relPos,
+      true,
       true
     );
 
@@ -771,7 +944,8 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
 
     setFaceVerticesNonLocal(fineGridVertices, chosenFaceIndex, remoteRank);
 
-    const GridTraversalEvent enter = generator.createEnterNodeTraversalEvent(
+    const GridTraversalEvent enter = callCreateEnterNodeTraversalEvent(
+      generator,
       coarseGridVertices,
       fineGridVertices,
       vertexTypes,
@@ -782,9 +956,11 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
       joining,
       hasSplit,
       relPos,
+      true,
       true
     );
-    const GridTraversalEvent leave = generator.createLeaveNodeTraversalEvent(
+    const GridTraversalEvent leave = callCreateLeaveNodeTraversalEvent(
+      generator,
       enter,
       coarseGridVertices,
       fineGridVertices,
@@ -796,6 +972,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
       joining,
       hasSplit,
       relPos,
+      true,
       true
     );
 
@@ -844,6 +1021,9 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
     }
   }
   validate(chosenVertexI >= 0);
+  validateEquals(chosenVertexPos, static_cast<int>(chosenVertexIndex.to_ulong()));
+  validateEquals(chosenVertexStack, PeanoCurve::getVertexWriteStackNumber(state, chosenVertexIndex));
+  validate(PeanoCurve::isTemporaryStack(chosenVertexStack));
 
   // Choose a face with a temporary write stack.
   int chosenFaceI     = -1;
@@ -870,13 +1050,14 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
   // Vertex state must be one of the ones that writes to stackNumber (not Delete/Hanging).
   fineGridVertices[chosenVertexPos].setState(GridVertex::State::Unrefined);
 
-  const SplitSpecification splitTriggered;
-  const std::set<int>      splitting;
-  const std::set<int>      joinTriggered;
-  const std::set<int>      joining;
-  const std::set<int>      hasSplit;
+  const SplitSpecification      splitTriggered;
+  const peano4::grid::TreeIdSet splitting;
+  const peano4::grid::TreeIdSet joinTriggered;
+  const peano4::grid::TreeIdSet joining;
+  const peano4::grid::TreeIdSet hasSplit;
 
-  const GridTraversalEvent enter = generator.createEnterNodeTraversalEvent(
+  const GridTraversalEvent enter = callCreateEnterNodeTraversalEvent(
+    generator,
     coarseGridVertices,
     fineGridVertices,
     vertexTypes,
@@ -887,9 +1068,11 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
     joining,
     hasSplit,
     relPos,
+    true,
     true
   );
-  const GridTraversalEvent leave = generator.createLeaveNodeTraversalEvent(
+  const GridTraversalEvent leave = callCreateLeaveNodeTraversalEvent(
+    generator,
     enter,
     coarseGridVertices,
     fineGridVertices,
@@ -901,6 +1084,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
     joining,
     hasSplit,
     relPos,
+    true,
     true
   );
 

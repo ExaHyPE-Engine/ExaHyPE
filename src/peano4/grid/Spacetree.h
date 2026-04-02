@@ -16,8 +16,13 @@
 #include "peano4/stacks/Stack.h"
 #include "peano4/stacks/TreeToStacks.h"
 
-#include <set>
+#include "TreeIdSet.h"
+
 #include <bitset>
+#include <array>
+#include <deque>
+#include <unordered_set>
+#include <vector>
 
 namespace peano4 {
   namespace grid {
@@ -63,7 +68,7 @@ class peano4::grid::Spacetree {
      * Actually, I should introduce a special constructor for this.
      */
     int            _masterId;
-    std::set<int>  _childrenIds;
+    std::unordered_set<int>  _childrenIds;
 
     /**
      * Indicate per axis whether we have periodic boundary conditions.
@@ -79,7 +84,7 @@ class peano4::grid::Spacetree {
      */
     SplitSpecification   _splitTriggered;
 
-    std::set<int>        _splitting;
+    TreeIdSet  _splitting;
 
     GridTraversalEventGenerator _gridTraversalEventGenerator;
 
@@ -87,7 +92,7 @@ class peano4::grid::Spacetree {
      * I need this post-mortem list to identify which tree structures have to be
      * copied/replicated where.
      */
-    std::set<int>        _hasSplit;
+    TreeIdSet  _hasSplit;
 
 
     constexpr static int NoJoin = -1;
@@ -95,14 +100,17 @@ class peano4::grid::Spacetree {
      * This should be -1 if no join is triggered. Otherwise it holds the id of
      * the joining rank.
      */
-    std::set< int >      _joinTriggered;
+    TreeIdSet  _joinTriggered;
 
     /**
      * If master: Set of workers that should join
      */
-    std::set< int >      _joining;
+    TreeIdSet  _joining;
 
-    std::vector<VertexLookupTable> _vertexLookupTables;
+    bool _noParallelTopologyChanges;
+
+    // Cache entries live in a thread-local unordered_map; element references stay valid across rehashes.
+    std::deque<const VertexLookupTable*> _vertexLookupTables;
 
     std::vector<GridControlEvent>       _gridControlEvents;
 
@@ -138,16 +146,6 @@ class peano4::grid::Spacetree {
     ) const;
 
     /**
-     * You may exchange data horizontally with rank if and only if
-     *
-     * - a grid entity is local
-     * - this predicate holds for rank
-     *
-     * @see getNeighbourTrees()
-     */
-    bool doesRankIndexIdentifyHorizontalDataExchange(int rank, bool calledByReceivingProcess) const;
-
-    /**
      *
      *
      * ## Veto erases
@@ -166,6 +164,12 @@ class peano4::grid::Spacetree {
       const AutomatonState& state,
       GridVertex            vertices[TWO_POWER_D],
       GridTraversalObserver&    observer
+    );
+
+    void descendWhileInRunningState(
+      const AutomatonState& state,
+      GridVertex            vertices[TWO_POWER_D],
+      GridTraversalObserver& observer
     );
 
     /**
@@ -194,18 +198,18 @@ class peano4::grid::Spacetree {
       const AutomatonState&                        fineGridState,
       GridVertex                                   coarseGridVertices[TWO_POWER_D],
       GridVertex                                   fineGridVertices[TWO_POWER_D],
-      const VertexType vertexTypes[TWO_POWER_D],
+      const VertexType                             vertexTypes[TWO_POWER_D],
       const tarch::la::Vector<DIMENSIONS,int>&     cellPositionWithin3x3Patch,
-      GridTraversalObserver&                           observer
+      GridTraversalObserver&                       observer
     );
 
     void storeVertices(
       const AutomatonState&                        fineGridState,
       GridVertex                                   coarseGridVertices[TWO_POWER_D],
       GridVertex                                   fineGridVertices[TWO_POWER_D],
-      const VertexType vertexTypes[TWO_POWER_D],
+      const VertexType                             vertexTypes[TWO_POWER_D],
       const tarch::la::Vector<DIMENSIONS,int>&     cellPositionWithin3x3Patch,
-      GridTraversalObserver&                           observer
+      GridTraversalObserver&                       observer
     );
 
     /**
@@ -610,52 +614,6 @@ class peano4::grid::Spacetree {
      * and they might be messed up with different split types are combined.
      */
     void split(int treeId, const SplitInstruction& instruction);
-
-    /**
-     * Get the ids of the surrounding cells of a vertex.
-     *
-     * This operation studies the vertex only. Please check manually whether
-     * your code is in the states SpacetreeState::NewFromSplit or
-     * SpacetreeState::EmptyRun. Joining is not taken into account
-     * either. So as a summary: I do analyse the vertex data and I do
-     * take into account whether subranks are currently joining or
-     * triggered to split. But I do ignore the current spacetree's
-     * state.
-     *
-     * The operation returns the empty vector if a vertex is not local.
-     * It also returns the empty vector if a vertex is hanging.
-     *
-     * @param calledByReceivingProcess The operation relies on
-     *   GridTraversalEventGenerator::getAdjacentRanksOfFace() to find the
-     *   adjacent faces. This routine in turn uses getBackupOfAdjacentRanks()
-     *   if you invoke it on the receiving side and the new adjacent ranks
-     *   otherwise.
-     *
-     */
-    std::vector<int> getNeighbourTrees( const GridVertex& vertex, bool calledByReceivingProcess ) const;
-
-    /**
-     * Get the ids of the surround ids of a face.
-     *
-     * We really return only neighbour ids, i.e. no ids of periodic boundary conditions.
-     *
-     * <h2> Implementation remarks </h2>
-     *
-     * The domain ids (adjacency lists) along the boundary tell us what the neighbour
-     * number is. If a neighbouring rank has triggered a split, we get an updated
-     * adjacency list for affected vertices. This list is immediately merged into the
-     * the local vertex. The new entries however are only to be taken into account
-     * when we send data. For receives, we should stick to the old entries. Therefore,
-     * we use the backup of the adjacency list when we receive data, but we use the
-     * updated/new list when we send out stuff.
-     *
-     * If we bump into a new vertex, we should explicitly ignore it when we receive.
-     * After all, new vertices cannot yet have triggered incoming data. The counterpart
-     * is deleted vertices which should not contribute towards a send command.
-     *
-     * @return -1  (GridTraversalObserver::NoData) if there's no neighbour or face is not local.
-     */
-    int  getNeighbourTrees( GridVertex vertex[TWO_POWER_D], int faceNumber, bool calledByReceivingProcess ) const;
 
     bool isFaceAlongPeriodicBoundaryCondition(GridVertex vertex[TWO_POWER_D], int faceNumber, bool calledByReceivingProcess) const;
 

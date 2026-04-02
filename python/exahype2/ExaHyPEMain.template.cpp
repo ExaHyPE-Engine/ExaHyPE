@@ -52,11 +52,13 @@ namespace {
  */
 bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumberOfTrees) {
   assertion(repositories::loadBalancer.getStatistics().getGlobalNumberOfTrees() > 0);
+  static bool finishConditionSeenLastSweep = false;
 
   // If the mesh size has decreased, we pause refinement to let the grid settle.
   if (tarch::la::smaller(repositories::loadBalancer.getStatistics().getGlobalMinH(), currentMinH)) {
     [[maybe_unused]] const double oldH  = currentMinH; // Only for logging
     currentMinH                         = repositories::loadBalancer.getStatistics().getGlobalMinH();
+    finishConditionSeenLastSweep        = false;
     const auto globalNumberOfLeaves     = static_cast<unsigned long>(repositories::loadBalancer.getStatistics().getGlobalNumberOfInnerUnrefinedCells());
     const auto maxDepth                 = repositories::loadBalancer.getStatistics().getGlobalMaxDepth();
     logInfo("shouldContinueGridConstruction()", "Mesh refinement detected (h_{min} decreased: " << oldH << " -> " << currentMinH << "), Leaves=" << globalNumberOfLeaves << ", Levels=" << maxDepth);
@@ -69,33 +71,35 @@ bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumbe
     const auto newTreeCount = repositories::loadBalancer.getStatistics().getGlobalNumberOfTrees();
     logInfo("shouldContinueGridConstruction()", "Rebalancing detected (Tree count increased: " << currentGlobalNumberOfTrees << " -> " << newTreeCount << ")");
     currentGlobalNumberOfTrees = newTreeCount;
+    finishConditionSeenLastSweep = false;
     peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithoutRefinement));
     return true;
   }
 
-  // If the grid is stable (small enough and converged), terminate grid construction.
-  if (
-    tarch::la::smallerEquals(currentMinH, repositories::getMinAdmissibleMeshSize() /*repositories::getMaxAdmissibleMeshSize()*/)
+  const bool hasReachedGridConstructionConvergence =
+    tarch::la::smallerEquals(currentMinH, repositories::getMinAdmissibleMeshSize())
     and
     repositories::loadBalancer.isStagnating()
     and
     // Ensure that a proper creation has been ran before, so the mesh had the opportunity to refine further if it has not done yet.
-    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep()) == repositories::StepRepository::Steps::CreateGridWithRefinement
-  ) {
-    // If we get in an infinite loop because Peano is not able to get all ranks stationary,
-    // then we break the loop after reaching the number of settling iterations given by the load balancer.
-    // Happens if we have small meshes, and too many ranks to satisfy the tree splitting.
-    static int numberOfStationarySweeps = 0;
-    if (repositories::loadBalancer.getStatistics().getGlobalNumberOfStationarySweeps() == 0 and numberOfStationarySweeps < repositories::loadBalancer.getNumberOfSettlingIterations()) {
-      logInfo("shouldContinueGridConstruction()", "Admissible mesh size reached, but at least one rank still has pending refinement events.");
-      peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithRefinement));
-      ++numberOfStationarySweeps;
-      return true;
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep()) == repositories::StepRepository::Steps::CreateGridWithRefinement;
+
+  // If the grid is stable (small enough and converged), terminate grid construction only after one confirmed globally stationary refinement sweep.
+  if (hasReachedGridConstructionConvergence) {
+    // TODO: This is needed to ensure we have a converged grid creation (especially for AMR). However, with periodic BCs this currently leads to a deadlock.
+    // Therefore, we don't use this at the moment (set to true). This should be used as soon as periodic BCs work across subdomains.
+    const bool hasConfirmedStationarySweep = /*repositories::loadBalancer.getStatistics().getGlobalNumberOfStationarySweeps() > 0;*/ true;
+    if (finishConditionSeenLastSweep and hasConfirmedStationarySweep) {
+      logInfo("shouldContinueGridConstruction()", "Grid construction complete: Admissible mesh size reached (h_{min}=" << currentMinH << ", admissible h_{min}=" << repositories::getMinAdmissibleMeshSize() << ") and load balancing has converged");
+      return false;
     }
 
-    logInfo("shouldContinueGridConstruction()", "Grid construction complete: Admissible mesh size reached (h_{min}=" << currentMinH << ", admissible h_{min}=" << repositories::getMinAdmissibleMeshSize() << ") and load balancing has converged.");
-    return false;
+    finishConditionSeenLastSweep = true;
+    peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithRefinement));
+    return true;
   }
+
+  finishConditionSeenLastSweep = false;
 
   // If we are here, the mesh is stationary but not yet fine enough.
   peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithRefinement));

@@ -20,13 +20,16 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   GridVertex                                coarseGridVertices[TWO_POWER_D],
   GridVertex                                fineGridVertices[TWO_POWER_D],
   const VertexType                          vertexTypes[TWO_POWER_D],
+  const FaceType                            precomputedFaceTypes[TWO_TIMES_D],
   const AutomatonState&                     state,
   const SplitSpecification&                 splitTriggered,
-  const std::set<int>&                      splitting,
-  const std::set<int>&                      joinTriggered,
-  const std::set<int>&                      joining,
-  const std::set<int>&                      hasSplit,
+  const TreeIdSet&                          splitting,
+  const TreeIdSet&                          joinTriggered,
+  const TreeIdSet&                          joining,
+  const TreeIdSet&                          hasSplit,
   const tarch::la::Vector<DIMENSIONS, int>& relativePositionToFather,
+  const VertexLookupTable&                  lut,
+  bool                                      noParallelTopologyChanges,
   bool                                      spacetreeStateIsRunning
 ) const {
   GridTraversalEvent event;
@@ -38,27 +41,94 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   event.setWillBeRefined(GridVertex::willVerticesBeRefined(fineGridVertices).to_ulong());
   event.setRelativePositionToFather(relativePositionToFather);
 
-  event.setIsCellLocal(
-    SpacetreeHelper::
-      isSpacetreeNodeLocal(fineGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining, true, true)
-  );
-  event.setIsParentCellLocal(
-    state.level > 1
-    and SpacetreeHelper::
-      isSpacetreeNodeLocal(coarseGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining, true, true)
-  );
-  event.setIsFaceLocal(
-    SpacetreeHelper::areFacesLocal(fineGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining)
-      .to_ulong()
-  );
-  event.setIsVertexLocal(
-    SpacetreeHelper::areVerticesLocal(fineGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining)
-      .to_ulong()
-  );
-  event.setIsParentVertexLocal(
-    SpacetreeHelper::areVerticesLocal(coarseGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining)
-      .to_ulong()
-  );
+  if (noParallelTopologyChanges) {
+    event.setIsCellLocal(
+      SpacetreeHelper::isSpacetreeNodeLocal(
+        fineGridVertices,
+        _treeNumber,
+        splitTriggered,
+        splitting,
+        joinTriggered,
+        joining,
+        true,
+        true,
+        true
+      )
+    );
+    event.setIsParentCellLocal(
+      state.level > 1
+      and SpacetreeHelper::isSpacetreeNodeLocal(
+        coarseGridVertices,
+        _treeNumber,
+        splitTriggered,
+        splitting,
+        joinTriggered,
+        joining,
+        true,
+        true,
+        true
+      )
+    );
+    event.setIsFaceLocal(
+      SpacetreeHelper::
+        areFacesLocal(fineGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining, true)
+          .to_ulong()
+    );
+    event.setIsVertexLocal(
+      SpacetreeHelper::
+        areVerticesLocal(fineGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining, true)
+          .to_ulong()
+    );
+    event.setIsParentVertexLocal(
+      SpacetreeHelper::
+        areVerticesLocal(coarseGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining, true)
+          .to_ulong()
+    );
+  } else {
+    event.setIsCellLocal(
+      SpacetreeHelper::isSpacetreeNodeLocal(
+        fineGridVertices,
+        _treeNumber,
+        splitTriggered,
+        splitting,
+        joinTriggered,
+        joining,
+        true,
+        true,
+        false
+      )
+    );
+    event.setIsParentCellLocal(
+      state.level > 1
+      and SpacetreeHelper::isSpacetreeNodeLocal(
+        coarseGridVertices,
+        _treeNumber,
+        splitTriggered,
+        splitting,
+        joinTriggered,
+        joining,
+        true,
+        true,
+        false
+      )
+    );
+    event.setIsFaceLocal(
+      SpacetreeHelper::
+        areFacesLocal(fineGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining, false)
+          .to_ulong()
+    );
+    event.setIsVertexLocal(
+      SpacetreeHelper::
+        areVerticesLocal(fineGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining, false)
+          .to_ulong()
+    );
+    event.setIsParentVertexLocal(
+      SpacetreeHelper::
+        areVerticesLocal(coarseGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining, false)
+          .to_ulong()
+    );
+  }
+
   event.setIsVertexAdjacentToParallelDomainBoundary(
     SpacetreeHelper::areVerticesAdjacentToParallelDomainBoundary(
       fineGridVertices,
@@ -66,7 +136,8 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       splitTriggered,
       splitting,
       joinTriggered,
-      joining
+      joining,
+      noParallelTopologyChanges
     )
       .to_ulong()
   );
@@ -78,7 +149,8 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       splitting,
       joinTriggered,
       joining,
-      false
+      false,
+      noParallelTopologyChanges
     )
       .to_ulong()
   );
@@ -103,9 +175,9 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     }
   }
 
-  const CellType cellType          = getCellType(vertexTypes);
+  const CellType cellType = getCellType(vertexTypes);
   // If the cell is going away, we do not push hanging data keyed by this cell’s in/out stack number
-  const bool     cellExistedBefore = spacetreeStateIsRunning
+  const bool cellExistedBefore = spacetreeStateIsRunning
                                  and (cellType == CellType::Persistent or cellType == CellType::Delete);
   VertexType previousVertexTypes[TWO_POWER_D];
   for (int k = 0; k < TWO_POWER_D; ++k) {
@@ -115,11 +187,9 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     getVertexTypesFromPreviousTreeSweep(coarseGridVertices, relativePositionToFather, previousVertexTypes);
   }
 
-  const std::bitset<DIMENSIONS> coordinates = PeanoCurve::getFirstVertexIndex(state);
   for (int i = 0; i < TWO_POWER_D; i++) {
-    const std::bitset<DIMENSIONS> vertexIndex(coordinates ^ std::bitset<DIMENSIONS>(i));
-    const int                     stackNumber    = PeanoCurve::getVertexReadStackNumber(state, vertexIndex);
-    const int                     vertexPosition = vertexIndex.to_ulong();
+    const int stackNumber    = lut.readStack[i];
+    const int vertexPosition = lut.vIdx[i];
 
     event.setVertexDataTo(i, vertexPosition);
     event.setIsVertexHanging(vertexPosition, false);
@@ -129,7 +199,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     if (type == GridVertex::State::HangingVertex) {
       event.setIsVertexHanging(vertexPosition, true);
       if (cellExistedBefore and previousVertexTypes[vertexPosition] == VertexType::Hanging) {
-        event.setVertexDataFrom(i, PeanoCurve::getCellReadStackNumber(state));
+        event.setVertexDataFrom(i, lut.cellReadStack);
       } else {
         event.setVertexDataFrom(i, GridTraversalObserver::CreateOrDestroyGridEntity);
       }
@@ -178,20 +248,20 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   }
 
   for (int i = 0; i < TWO_TIMES_D; i++) {
-    const int faceIndex   = PeanoCurve::getFaceNumberAlongCurve(state, i);
-    const int stackNumber = PeanoCurve::getFaceReadStackNumber(state, faceIndex);
+    const int faceIndex   = lut.faceIndex[i];
+    const int stackNumber = lut.faceReadStack[i];
 
     event.setFaceDataTo(i, faceIndex);
     event.setIsFaceHanging(faceIndex, false);
 
-    const FaceType type = getFaceType(vertexTypes, faceIndex);
+    const FaceType type = precomputedFaceTypes[i];
 
     if (type == FaceType::Hanging) {
       event.setIsFaceHanging(faceIndex, true);
       const FaceType previousType = cellExistedBefore ? getFaceType(previousVertexTypes, faceIndex)
                                                       : FaceType::Persistent;
       if (cellExistedBefore and previousType == FaceType::Hanging) {
-        event.setFaceDataFrom(i, PeanoCurve::getCellReadStackNumber(state));
+        event.setFaceDataFrom(i, lut.cellReadStack);
       } else {
         event.setFaceDataFrom(i, GridTraversalObserver::CreateOrDestroyGridEntity);
       }
@@ -237,7 +307,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     }
   }
 
-  const int stackNumber = PeanoCurve::getCellReadStackNumber(state);
+  const int stackNumber = lut.cellReadStack;
   switch (cellType) {
   case CellType::New:
     event.setCellData(GridTraversalObserver::CreateOrDestroyGridEntity);
@@ -279,49 +349,52 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   GridVertex                                coarseGridVertices[TWO_POWER_D],
   GridVertex                                fineGridVertices[TWO_POWER_D],
   const VertexType                          vertexTypes[TWO_POWER_D],
+  const FaceType                            precomputedFaceTypes[TWO_TIMES_D],
   const AutomatonState&                     state,
   const SplitSpecification&                 splitTriggered,
-  const std::set<int>&                      splitting,
-  const std::set<int>&                      joinTriggered,
-  const std::set<int>&                      joining,
-  const std::set<int>&                      hasSplit,
+  const TreeIdSet&                          splitting,
+  const TreeIdSet&                          joinTriggered,
+  const TreeIdSet&                          joining,
+  const TreeIdSet&                          hasSplit,
   const tarch::la::Vector<DIMENSIONS, int>& relativePositionToFather,
+  const VertexLookupTable&                  lut,
+  bool                                      noParallelTopologyChanges,
   bool                                      spacetreeStateIsRunning
 ) const {
   GridTraversalEvent leaveNodeTraversalEvent = enterNodeTraversalEvent;
 
-  leaveNodeTraversalEvent.setIsVertexAdjacentToParallelDomainBoundary(
-    SpacetreeHelper::areVerticesAdjacentToParallelDomainBoundary(
-      fineGridVertices,
-      _treeNumber,
-      splitTriggered,
-      splitting,
-      joinTriggered,
-      joining
-    )
-      .to_ulong()
-  );
-  leaveNodeTraversalEvent.setIsFaceAdjacentToParallelDomainBoundary(
-    SpacetreeHelper::areFacesAdjacentToParallelDomainBoundary(
-      fineGridVertices,
-      _treeNumber,
-      splitTriggered,
-      splitting,
-      joinTriggered,
-      joining,
-      true
-    )
-      .to_ulong()
-  );
+  bool hasTransientVertices = not noParallelTopologyChanges;
+  if (not hasTransientVertices) {
+    for (int k = 0; k < TWO_POWER_D; ++k) {
+      const auto s = fineGridVertices[k].getState();
+      if (s == GridVertex::State::New or s == GridVertex::State::Delete) {
+        hasTransientVertices = true;
+        break;
+      }
+    }
+  }
+  if (hasTransientVertices) {
+    leaveNodeTraversalEvent.setIsFaceAdjacentToParallelDomainBoundary(
+      SpacetreeHelper::areFacesAdjacentToParallelDomainBoundary(
+        fineGridVertices,
+        _treeNumber,
+        splitTriggered,
+        splitting,
+        joinTriggered,
+        joining,
+        true,
+        noParallelTopologyChanges
+      )
+        .to_ulong()
+    );
+  }
 
   const CellType cellType = getCellType(vertexTypes);
 
-  const std::bitset<DIMENSIONS> coordinates = PeanoCurve::getFirstVertexIndex(state);
   for (int i = 0; i < TWO_POWER_D; i++) {
-    const std::bitset<DIMENSIONS> vertexIndex(coordinates ^ std::bitset<DIMENSIONS>(i));
-    const int                     stackNumber       = PeanoCurve::getVertexWriteStackNumber(state, vertexIndex);
-    const int                     vertexPosition    = vertexIndex.to_ulong();
-    const bool                    wasHangingOnEnter = enterNodeTraversalEvent.getIsVertexHanging(vertexPosition);
+    const int  stackNumber       = lut.writeStack[i];
+    const int  vertexPosition    = lut.vIdx[i];
+    const bool wasHangingOnEnter = enterNodeTraversalEvent.getIsVertexHanging(vertexPosition);
 
     leaveNodeTraversalEvent.setVertexDataFrom(i, vertexPosition);
     leaveNodeTraversalEvent.setIsVertexHanging(vertexPosition, false);
@@ -340,13 +413,12 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       if (cellType == CellType::Delete) {
         leaveNodeTraversalEvent.setVertexDataTo(i, GridTraversalObserver::CreateOrDestroyGridEntity);
       } else {
-        leaveNodeTraversalEvent.setVertexDataTo(i, PeanoCurve::getCellWriteStackNumber(state));
+        leaveNodeTraversalEvent.setVertexDataTo(i, lut.cellWriteStack);
       }
       continue;
     }
 
-    if (PeanoCurve::isInOutStack(stackNumber)
-        and not leaveNodeTraversalEvent.getIsVertexLocal(vertexIndex.to_ulong())) {
+    if (PeanoCurve::isInOutStack(stackNumber) and not leaveNodeTraversalEvent.getIsVertexLocal(vertexPosition)) {
       leaveNodeTraversalEvent.setVertexDataTo(i, GridTraversalObserver::NoData);
       continue;
     }
@@ -375,14 +447,14 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   }
 
   for (int i = 0; i < TWO_TIMES_D; i++) {
-    const int  faceIndex         = PeanoCurve::getFaceNumberAlongCurve(state, i); // facePositionWithinCell
-    const int  stackNumber       = PeanoCurve::getFaceWriteStackNumber(state, faceIndex);
+    const int  faceIndex         = lut.faceIndex[i];
+    const int  stackNumber       = lut.faceWriteStack[i];
     const bool wasHangingOnEnter = enterNodeTraversalEvent.getIsFaceHanging(faceIndex);
 
     leaveNodeTraversalEvent.setFaceDataFrom(i, faceIndex);
     leaveNodeTraversalEvent.setIsFaceHanging(faceIndex, false);
 
-    const FaceType type         = getFaceType(vertexTypes, faceIndex);
+    const FaceType type         = precomputedFaceTypes[i];
     const bool     isHangingNow = (type == FaceType::Hanging);
 
     // On leave, hanging-ness may have changed due to AMR effects in the DFS.
@@ -413,7 +485,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       if (cellType == CellType::Delete) {
         leaveNodeTraversalEvent.setFaceDataTo(i, GridTraversalObserver::CreateOrDestroyGridEntity);
       } else {
-        leaveNodeTraversalEvent.setFaceDataTo(i, PeanoCurve::getCellWriteStackNumber(state));
+        leaveNodeTraversalEvent.setFaceDataTo(i, lut.cellWriteStack);
       }
       continue;
     }
@@ -441,7 +513,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     }
   }
 
-  const int stackNumber = PeanoCurve::getCellWriteStackNumber(state);
+  const int stackNumber = lut.cellWriteStack;
   switch (cellType) {
   case CellType::New:
     leaveNodeTraversalEvent.setCellData(stackNumber);

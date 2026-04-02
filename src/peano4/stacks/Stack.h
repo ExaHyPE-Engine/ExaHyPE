@@ -393,7 +393,7 @@ public:
     MPI_Test(&_ioMPIRequest, &flag, MPI_STATUS_IGNORE);
     if (flag) {
       if (_ioMode == IOMode::MPISend) {
-        clear();
+        shallowClear();
         logDebug("tryToFinishSendOrReceive()", "Send complete: " << toString());
       } else if (_ioMode == IOMode::MPIReceive) {
         logDebug("tryToFinishSendOrReceive()", "Receive complete: " << toString());

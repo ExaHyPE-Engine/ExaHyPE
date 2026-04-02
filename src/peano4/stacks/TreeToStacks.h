@@ -68,7 +68,8 @@ private:
 
 public:
   INLINE_METHOD explicit TreeToStacks() noexcept:
-    _trees(parallel::Node::MaxSpacetreesPerRank), _stackSizeHint(0) {}
+    _trees(parallel::Node::MaxSpacetreesPerRank),
+    _stackSizeHint(0) {}
 
   ~TreeToStacks() noexcept = default;
 

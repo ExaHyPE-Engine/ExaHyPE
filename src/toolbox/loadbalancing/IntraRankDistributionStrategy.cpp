@@ -17,14 +17,14 @@ public:
   ~IntraRankDistributionStrategy() override = default;
 
   State update(LoadBalancer& lb) override {
-    const int numberOfThreads          = tarch::multicore::Core::getInstance().getNumberOfThreads();
-    const int maxPermittedTreesPerRank = lb.getMaxPermittedTreesPerRank();
+    const auto numberOfThreads          = tarch::multicore::Core::getInstance().getNumberOfThreads();
+    const auto maxPermittedTreesPerRank = lb.getMaxPermittedTreesPerRank();
 
     if (numberOfThreads <= 1 or lb._statistics.getLocalNumberOfTrees() >= maxPermittedTreesPerRank) {
       return State::Stagnation;
     }
 
-    if (lb._statistics.getNumberOfStateUpdatesWithoutAnySplit() > lb.getNumberOfSettlingIterations()) {
+    if (lb._statistics.getNumberOfStateUpdatesWithoutAnySplit() > 5) {
       logWarning("update()", "Current local mesh is too small or poorly balanced to split further into trees");
       return State::Stagnation;
     }
@@ -42,22 +42,23 @@ public:
                                          .getGridStatistics(localHeaviestTreeId)
                                          .numberOfLocalUnrefinedCells;
 
-    const int minTreeSize                           = lb._configuration->getMinTreeSize(lb._state);
-    const int numberOfTreesToAccommodateMinTreeSize = std::max(localHeaviestTreeLoad / minTreeSize, 1);
+    const auto minTreeSize                           = lb._configuration->getMinTreeSize(lb._state);
+    const auto numberOfTreesToAccommodateMinTreeSize = std::max(localHeaviestTreeLoad / minTreeSize, 1);
 
     if (numberOfTreesToAccommodateMinTreeSize < maxPermittedTreesPerRank) {
       return State::IntraRankDistribution;
     }
 
-    const int    numberOfAllowedTrees = std::min({numberOfTreesToAccommodateMinTreeSize, maxPermittedTreesPerRank});
-    unsigned int numberOfSplits       = numberOfAllowedTrees - 1;
+    const auto numberOfAllowedTrees = std::min({numberOfTreesToAccommodateMinTreeSize, maxPermittedTreesPerRank});
+    auto       numberOfSplits       = numberOfAllowedTrees - 1;
+
     if (numberOfSplits > 0) {
-      const int numberOfCellsPerTree = std::max(
+      const auto numberOfCellsPerTree = std::max(
         static_cast<int>(std::round(localHeaviestTreeLoad / numberOfAllowedTrees)),
         1
       );
 
-      unsigned int remainder = localHeaviestTreeLoad - (numberOfCellsPerTree * numberOfAllowedTrees);
+      auto remainder = localHeaviestTreeLoad - (numberOfCellsPerTree * numberOfAllowedTrees);
       while (numberOfSplits) {
         if (remainder > 0) {
           lb.triggerSplit(numberOfCellsPerTree + 1, tarch::mpi::Rank::getInstance().getRank(), localHeaviestTreeId);

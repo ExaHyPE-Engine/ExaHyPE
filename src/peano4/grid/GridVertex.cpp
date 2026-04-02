@@ -11,15 +11,35 @@
 static_assert(std::is_standard_layout_v<peano4::grid::GridVertex>);
 static_assert(std::is_trivially_copyable_v<peano4::grid::GridVertex>);
 
+#if PEANO_DEBUG >= 1
+tarch::la::Vector<DIMENSIONS, double> peano4::grid::GridVertex::getVertexCoordinate(
+  const tarch::la::Vector<DIMENSIONS, double>& cellX,
+  const tarch::la::Vector<DIMENSIONS, double>& cellH,
+  int                                          vertexIndex
+) {
+  tarch::la::Vector<DIMENSIONS, double> result = cellX;
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    if ((vertexIndex & (1 << d)) != 0) {
+      result[d] += cellH[d];
+    }
+  }
+  return result;
+}
+#endif
+
 peano4::grid::GridVertex peano4::grid::GridVertex::create(
-  int                                 level,
-  GridVertex::State                   state,
-  const std::array<int, TWO_POWER_D>& adjacentRanks,
-  bool                                isNewFineGridVertex
+  int                                          level,
+  GridVertex::State                            state,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const std::array<int, TWO_POWER_D>&          adjacentRanks,
+  bool                                         isNewFineGridVertex
 ) {
   GridVertex newVertex;
   newVertex.level = level;
   newVertex.setState(state);
+#if PEANO_DEBUG >= 1
+  newVertex.setX(x);
+#endif
   newVertex.adjacentRanks         = adjacentRanks;
   newVertex.backupOfAdjacentRanks = adjacentRanks;
   newVertex.setFlag(GridVertex::HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep, not isNewFineGridVertex);
@@ -28,6 +48,22 @@ peano4::grid::GridVertex peano4::grid::GridVertex::create(
   newVertex.clearFlag(peano4::grid::GridVertex::IsParentOfSubtreeVertexInCurrentTreeSweep);
   newVertex.clearFlag(peano4::grid::GridVertex::HasBeenVertexTypeHangingInPreviousTreeSweep);
   return newVertex;
+}
+
+peano4::grid::GridVertex peano4::grid::GridVertex::create(
+  int                                          level,
+  GridVertex::State                            state,
+  const tarch::la::Vector<DIMENSIONS, double>& cellX,
+  const tarch::la::Vector<DIMENSIONS, double>& cellH,
+  int                                          vertexIndex,
+  const std::array<int, TWO_POWER_D>&          adjacentRanks,
+  bool                                         isNewFineGridVertex
+) {
+#if PEANO_DEBUG >= 1
+  return create(level, state, getVertexCoordinate(cellX, cellH, vertexIndex), adjacentRanks, isNewFineGridVertex);
+#else
+  return create(level, state, tarch::la::Vector<DIMENSIONS, double>(0.0), adjacentRanks, isNewFineGridVertex);
+#endif
 }
 
 bool peano4::grid::GridVertex::areAllVerticesRefined(GridVertex vertices[TWO_POWER_D]) {
@@ -132,6 +168,9 @@ std::string peano4::grid::GridVertex::toString() const {
 
   out << ", NumberOfAdjacentRefinedLocalCells=" << numberOfAdjacentRefinedLocalCells;
   out << ", Level=" << level;
+#if PEANO_DEBUG >= 1
+  out << ", X=" << x;
+#endif
   out << ", AdjacentRanks=(";
   for (std::size_t i = 0; i < adjacentRanks.size(); ++i) {
     if (i > 0) {
@@ -193,10 +232,15 @@ void peano4::grid::GridVertex::freeMultiscaleDataExchangeDatatype() {
 void peano4::grid::GridVertex::initDatatype() {
   GridVertex instances[2];
 
-  constexpr int NumberOfAttributes = 6;
-  MPI_Datatype  subtypes[NumberOfAttributes];
-  int           blocklen[NumberOfAttributes];
-  MPI_Aint      disp[NumberOfAttributes];
+  constexpr int NumberOfAttributes =
+#if PEANO_DEBUG >= 1
+    7;
+#else
+    6;
+#endif
+  MPI_Datatype subtypes[NumberOfAttributes];
+  int          blocklen[NumberOfAttributes];
+  MPI_Aint     disp[NumberOfAttributes];
 
   int counter = 0;
 
@@ -219,6 +263,13 @@ void peano4::grid::GridVertex::initDatatype() {
   blocklen[counter] = 1;
   MPI_Get_address(&instances[0].numberOfAdjacentRefinedLocalCells, &disp[counter]);
   counter++;
+
+#if PEANO_DEBUG >= 1
+  subtypes[counter] = MPI_DOUBLE;
+  blocklen[counter] = DIMENSIONS;
+  MPI_Get_address(&(instances[0].getX().data()[0]), &disp[counter]);
+  counter++;
+#endif
 
   subtypes[counter] = MPI_INT;
   blocklen[counter] = TWO_POWER_D;

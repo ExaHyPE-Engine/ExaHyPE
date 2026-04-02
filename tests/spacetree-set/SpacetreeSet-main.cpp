@@ -208,11 +208,11 @@ namespace {
   }
 
   bool selectNextAlgorithmicStep() {
-    static bool   initialised                = false;
-    static bool   gridConstructed            = false;
-    static double currentMinH                = std::numeric_limits<double>::max();
-    static int    currentGlobalNumberOfTrees = 0;
-    static int    numberOfStationarySweeps   = 0;
+    static bool   initialised                  = false;
+    static bool   gridConstructed              = false;
+    static double currentMinH                  = std::numeric_limits<double>::max();
+    static int    currentGlobalNumberOfTrees   = 0;
+    static bool   finishConditionSeenLastSweep = false;
 
     if (not initialised) {
       peano4::parallel::Node::getInstance().setNextProgramStep(CreateGridWithRefinement);
@@ -237,41 +237,37 @@ namespace {
     const int currentProgramStep = peano4::parallel::Node::getInstance().getCurrentProgramStep();
 
     if (tarch::la::smaller(loadBalancer.getStatistics().getGlobalMinH(), currentMinH)) {
-      currentMinH = loadBalancer.getStatistics().getGlobalMinH();
+      currentMinH                  = loadBalancer.getStatistics().getGlobalMinH();
+      finishConditionSeenLastSweep = false;
       peano4::parallel::Node::getInstance().setNextProgramStep(CreateGridWithoutRefinement);
       return true;
     }
 
     if (loadBalancer.getStatistics().getGlobalNumberOfTrees() > currentGlobalNumberOfTrees) {
-      currentGlobalNumberOfTrees = loadBalancer.getStatistics().getGlobalNumberOfTrees();
+      currentGlobalNumberOfTrees   = loadBalancer.getStatistics().getGlobalNumberOfTrees();
+      finishConditionSeenLastSweep = false;
       peano4::parallel::Node::getInstance().setNextProgramStep(CreateGridWithoutRefinement);
       return true;
     }
 
-    if (tarch::la::smallerEquals(currentMinH, MinH) and loadBalancer.isStagnating()
-        and currentProgramStep == CreateGridWithRefinement) {
-      // Guard against rare infinite loops when not all ranks become stationary.
-      if (loadBalancer.getStatistics().getGlobalNumberOfStationarySweeps() == 0
-          and numberOfStationarySweeps < loadBalancer.getNumberOfSettlingIterations()) {
-        logInfo(
-          "selectNextAlgorithmicStep()",
-          "Admissible mesh size reached, but at least one rank still has pending refinement events."
-        );
-        peano4::parallel::Node::getInstance().setNextProgramStep(CreateGridWithRefinement);
-        ++numberOfStationarySweeps;
+    const bool hasReachedGridConstructionConvergence = tarch::la::smallerEquals(currentMinH, MinH)
+                                                       and loadBalancer.isStagnating()
+                                                       and currentProgramStep == CreateGridWithRefinement;
+
+    if (hasReachedGridConstructionConvergence) {
+      const bool hasConfirmedStationarySweep = loadBalancer.getStatistics().getGlobalNumberOfStationarySweeps() > 0;
+      if (finishConditionSeenLastSweep and hasConfirmedStationarySweep) {
+        gridConstructed = true;
+        peano4::parallel::Node::getInstance().setNextProgramStep(EmptyTraversal);
         return true;
       }
 
-      logInfo(
-        "selectNextAlgorithmicStep()",
-        "Grid construction complete. Admissible mesh size reached (h_{min}="
-          << currentMinH << ", admissible h_{min}=" << MinH << ") and load balancing has converged."
-      );
-
-      gridConstructed = true;
-      peano4::parallel::Node::getInstance().setNextProgramStep(EmptyTraversal);
+      finishConditionSeenLastSweep = true;
+      peano4::parallel::Node::getInstance().setNextProgramStep(CreateGridWithRefinement);
       return true;
     }
+
+    finishConditionSeenLastSweep = false;
 
     peano4::parallel::Node::getInstance().setNextProgramStep(CreateGridWithRefinement);
     return true;

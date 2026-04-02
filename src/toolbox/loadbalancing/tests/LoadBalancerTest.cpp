@@ -58,7 +58,6 @@ toolbox::loadbalancing::tests::LoadBalancerTest::LoadBalancerTest():
 void toolbox::loadbalancing::tests::LoadBalancerTest::run() {
   testMethod(testEnableDisableAndConfigurationHook);
   testMethod(testHasSplitRecentlyThreshold);
-  testMethod(testSettlingIterations);
   testMethod(testLocalLoadBalancingString);
 }
 
@@ -114,11 +113,6 @@ void toolbox::loadbalancing::tests::LoadBalancerTest::testHasSplitRecentlyThresh
   lb._statistics.incLocalNumberOfSplits(1);
   validateEquals(lb._statistics.getNumberOfStateUpdatesWithoutAnySplit(), 0);
   validate(lb.hasSplitRecently());
-}
-
-void toolbox::loadbalancing::tests::LoadBalancerTest::testSettlingIterations() {
-  toolbox::loadbalancing::LoadBalancer lb(new DeterministicConfiguration());
-  validateEquals(lb.getNumberOfSettlingIterations(), 5);
 }
 
 void toolbox::loadbalancing::tests::LoadBalancerTest::testLocalLoadBalancingString() {

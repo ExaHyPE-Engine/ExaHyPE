@@ -16,7 +16,6 @@ class toolbox::loadbalancing::tests::LoadBalancerTest final: public tarch::tests
 private:
   void testEnableDisableAndConfigurationHook();
   void testHasSplitRecentlyThreshold();
-  void testSettlingIterations();
   void testLocalLoadBalancingString();
 
 public:
