@@ -124,6 +124,7 @@ target_compile_definitions({{EXECUTABLENAME}} PRIVATE ${GENERATED_CXXFLAGS} TARG
 
 set(CMAKE_BUILD_TYPE "" CACHE INTERNAL "")
 
+{% if GPU != "kokkos" %}
 include(CheckIPOSupported)
 check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
 if(IPO_SUPPORTED)
@@ -132,6 +133,7 @@ if(IPO_SUPPORTED)
     INTERPROCEDURAL_OPTIMIZATION TRUE
   )
 endif()
+{% endif %}
 
 {% if GPU == "cuda" %}
 set_target_properties({{EXECUTABLENAME}} PROPERTIES

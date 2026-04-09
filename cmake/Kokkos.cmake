@@ -88,8 +88,8 @@ if(NOT Kokkos_FOUND)
     )
   endif()
 
-  set(kokkos_BINARY_DIR ${CMAKE_BINARY_DIR}/Kokkos-build)
-  set(kokkos_INSTALL_DIR ${CMAKE_BINARY_DIR}/Kokkos-install)
+  set(kokkos_BINARY_DIR ${CMAKE_BINARY_DIR}/kokkos-build)
+  set(kokkos_INSTALL_DIR ${CMAKE_BINARY_DIR}/kokkos-install)
   file(MAKE_DIRECTORY ${kokkos_BINARY_DIR})
   file(MAKE_DIRECTORY ${kokkos_INSTALL_DIR})
 
