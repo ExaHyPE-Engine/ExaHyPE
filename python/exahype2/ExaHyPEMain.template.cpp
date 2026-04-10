@@ -3,6 +3,7 @@
 #include "{{MAIN_NAME}}.h"
 
 #include "Constants.h"
+#include "RuntimeParameters.h"
 #include "observers/CreateGridWithRefinement.h"
 #include "observers/CreateGridWithoutRefinement.h"
 #include "observers/InitGrid.h"
@@ -109,12 +110,15 @@ bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumbe
 bool selectNextAlgorithmicStep() {
   static bool    gridConstructed         = false;
   static bool    gridInitialised         = false;
-  static double  nextMaxPlotTimeStamp    = FirstPlotTimeStamp;
-  static double  nextMinPlotTimeStamp    = FirstPlotTimeStamp;
+  static double  nextMaxPlotTimeStamp    = ::exahype2::getFirstPlotTimeStamp();
+  static double  nextMinPlotTimeStamp    = ::exahype2::getFirstPlotTimeStamp();
   static bool    haveJustWrittenSnapshot = false;
   static double  minH                    = std::numeric_limits<double>::max();
   static int     globalNumberOfTrees     = 0;
   bool           continueToSolve         = true;
+  const double   timeInBetweenPlots      = ::exahype2::getTimeInBetweenPlots();
+  const double   minTerminalTime         = ::exahype2::getMinTerminalTime();
+  const double   maxTerminalTime         = ::exahype2::getMaxTerminalTime();
 
   if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNonCriticalAssertion) {
     peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution));
@@ -131,52 +135,52 @@ bool selectNextAlgorithmicStep() {
     }
   } else {
     if (
-      TimeInBetweenPlots > 0.0
+      timeInBetweenPlots > 0.0
       and
-      repositories::getMinTimeStamp() < MinTerminalTime
+      repositories::getMinTimeStamp() < minTerminalTime
       and
-      repositories::getMaxTimeStamp() < MaxTerminalTime
+      repositories::getMaxTimeStamp() < maxTerminalTime
       and
       (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp)
       and
       repositories::mayPlot()
     ) {
-      nextMinPlotTimeStamp += TimeInBetweenPlots;
-      nextMaxPlotTimeStamp += TimeInBetweenPlots;
+      nextMinPlotTimeStamp += timeInBetweenPlots;
+      nextMaxPlotTimeStamp += timeInBetweenPlots;
 
       if (nextMinPlotTimeStamp < repositories::getMinTimeStamp()) {
         logWarning(
           "selectNextAlgorithmicStep()",
           "Code is asked to plot every dt="
-            << TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
-            << "So postpone next plot to t=" << (repositories::getMinTimeStamp() + TimeInBetweenPlots)
+            << timeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
+            << "So postpone next plot to t=" << (repositories::getMinTimeStamp() + timeInBetweenPlots)
         );
-        nextMinPlotTimeStamp = repositories::getMinTimeStamp() + TimeInBetweenPlots;
+        nextMinPlotTimeStamp = repositories::getMinTimeStamp() + timeInBetweenPlots;
       } else if (nextMaxPlotTimeStamp < repositories::getMaxTimeStamp()) {
         logWarning(
           "selectNextAlgorithmicStep()",
           "Code is asked to plot every dt="
-            << TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
-            << "So postpone next plot to t=" << (repositories::getMaxTimeStamp() + TimeInBetweenPlots)
+            << timeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
+            << "So postpone next plot to t=" << (repositories::getMaxTimeStamp() + timeInBetweenPlots)
         );
-        nextMaxPlotTimeStamp = repositories::getMaxTimeStamp() + TimeInBetweenPlots;
+        nextMaxPlotTimeStamp = repositories::getMaxTimeStamp() + timeInBetweenPlots;
       }
 
       nextMaxPlotTimeStamp = std::max(nextMaxPlotTimeStamp, nextMinPlotTimeStamp);
 
       peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution));
       haveJustWrittenSnapshot = true;
-    } else if (repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime) {
+    } else if (repositories::getMinTimeStamp() < minTerminalTime and repositories::getMaxTimeStamp() < maxTerminalTime) {
       peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::TimeStep));
       continueToSolve         = true;
       haveJustWrittenSnapshot = false;
     } else {
-      if (not haveJustWrittenSnapshot and TimeInBetweenPlots > 0.0 and repositories::mayPlot()) {
+      if (not haveJustWrittenSnapshot and timeInBetweenPlots > 0.0 and repositories::mayPlot()) {
         peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution));
         haveJustWrittenSnapshot = true;
         nextMinPlotTimeStamp    = std::numeric_limits<double>::max();
         nextMaxPlotTimeStamp    = std::numeric_limits<double>::max();
-      } else if (not haveJustWrittenSnapshot and TimeInBetweenPlots > 0.0 and not repositories::mayPlot()) {
+      } else if (not haveJustWrittenSnapshot and timeInBetweenPlots > 0.0 and not repositories::mayPlot()) {
         continueToSolve = true; // don't want to terminate immediately but to wait for incomplete time steps to complete
       } else {
         continueToSolve = false;
@@ -337,7 +341,25 @@ void runNextAlgorithmicStep() {
 }
 
 void setupEnvironment(int argc, char** argv) {
-  peano4::init(&argc, &argv, DomainOffset, DomainSize, PeriodicBC);
+  const std::string configFilePath = ::exahype2::extractConfigFileFromCommandLine(argc, argv);
+  ::exahype2::RuntimeConfiguration fallbackConfiguration;
+  fallbackConfiguration.domainOffset       = DomainOffset;
+  fallbackConfiguration.domainSize         = DomainSize;
+  fallbackConfiguration.minTerminalTime    = MinTerminalTime;
+  fallbackConfiguration.maxTerminalTime    = MaxTerminalTime;
+  fallbackConfiguration.firstPlotTimeStamp = FirstPlotTimeStamp;
+  fallbackConfiguration.timeInBetweenPlots = TimeInBetweenPlots;
+  fallbackConfiguration.periodicBC         = PeriodicBC;
+  fallbackConfiguration.plotOutputPath     = OutputPath;
+
+  const auto runtimeConfiguration = ::exahype2::loadRuntimeConfiguration(configFilePath, fallbackConfiguration);
+  RuntimeParameters::load(configFilePath);
+
+  peano4::init(&argc, &argv, runtimeConfiguration.domainOffset, runtimeConfiguration.domainSize, runtimeConfiguration.periodicBC);
+
+  if (not configFilePath.empty() and tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logInfo("setupEnvironment()", "Loaded runtime configuration from " << configFilePath);
+  }
 
   peano4::writeCopyrightMessage();
   ::exahype2::writeCopyrightMessage();

@@ -4,17 +4,19 @@ import peano4
 import exahype2
 
 initial_conditions_with_input_file = """
-  static tarch::reader::NetCDFFieldParser fieldParser(
-    \"artificial_bath_1000.nc\",
-    \"artificial_displ_1000.nc\",
+  static tarch::reader::NetCDFFieldSampler fieldSampler(
+    {
+      {\"bathymetry\", \"artificial_bath_1000.nc\"},
+      {\"displacement\", \"artificial_displ_1000.nc\"}
+    },
     DomainSize(0),
     DomainSize(1),
     DomainOffset(0),
     DomainOffset(1)
   );
 
-  const double bathymetryBeforeEarthquake = fieldParser.sampleTopology(x(0), x(1));
-  const double displacement               = fieldParser.sampleDisplacement(x(0), x(1));
+  const double bathymetryBeforeEarthquake = fieldSampler.sample(\"bathymetry\", x(0), x(1));
+  const double displacement               = fieldSampler.sample(\"displacement\", x(0), x(1));
   const double bathymetryAfterEarthquake  = bathymetryBeforeEarthquake + displacement;
 
   Q[Shortcuts::h]  = -std::min(bathymetryBeforeEarthquake, 0.0);
@@ -106,7 +108,7 @@ aderdg_solver.add_kernel_optimisations(
 aderdg_solver.add_user_solver_includes(
     """
 #include "../PDE.h"
-#include "tarch/reader/NetCDFFieldParser.h"
+#include "tarch/reader/NetCDFFieldSampler.h"
 """
 )
 

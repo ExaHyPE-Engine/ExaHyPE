@@ -3,6 +3,8 @@
 import os
 import sys
 import logging
+import re
+import json
 
 import peano4
 import dastgen2
@@ -59,6 +61,7 @@ class Project(object):
         self._particle_variable_names = []
         self._particle_variable_pos = [0]
         self._use_particle_var_shortcut = False
+        self._runtime_parameters = []
 
         self.create_grid_with_refinement = peano4.solversteps.Step("CreateGridWithRefinement", False)
         self.create_grid_without_refinement = peano4.solversteps.Step("CreateGridWithoutRefinement", False)
@@ -88,6 +91,99 @@ class Project(object):
 
     def add_solver(self, solver):
         self._solvers.append(solver)
+
+    def add_runtime_parameter(self, name, parameter_type, default_value):
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+            raise ValueError(f"Invalid runtime parameter name '{name}'. Use a valid C++ identifier.")
+
+        is_array = isinstance(parameter_type, (tuple, list))
+        if is_array:
+            if len(parameter_type) != 2:
+                raise ValueError(
+                    f"Array runtime parameter '{name}' must use a type specification of the form ('double', N)."
+                )
+            base_type = parameter_type[0]
+            array_size = parameter_type[1]
+            if base_type not in ("double", "int", "bool"):
+                raise ValueError(
+                    f"Unsupported array runtime parameter base type '{base_type}'. Supported types are: double, int, bool."
+                )
+            if not isinstance(array_size, int) or array_size <= 0:
+                raise ValueError(f"Array runtime parameter '{name}' expects a positive integer size.")
+            if not isinstance(default_value, (list, tuple)) or len(default_value) != array_size:
+                raise ValueError(
+                    f"Array runtime parameter '{name}' expects exactly {array_size} default values."
+                )
+        else:
+            base_type = parameter_type
+            array_size = None
+            if base_type not in ("double", "int", "bool", "string"):
+                raise ValueError(
+                    f"Unsupported runtime parameter type '{base_type}'. Supported types are: double, int, bool, string."
+                )
+
+        accessor_name = "get" + name[0].upper() + name[1:]
+        scalar_cpp_type = {
+            "double": "double",
+            "int": "int",
+            "bool": "bool",
+            "string": "std::string",
+        }[base_type]
+        if is_array:
+            cpp_type = f"tarch::la::Vector<{array_size}, {scalar_cpp_type}>"
+            literal = "{" + ", ".join(
+                (
+                    repr(float(value))
+                    if base_type == "double"
+                    else str(value)
+                    if base_type == "int"
+                    else "true" if value else "false"
+                )
+                for value in default_value
+            ) + "}"
+            getter = {
+                "double": "getDoubleArray",
+                "int": "getIntegerArray",
+                "bool": "getBooleanArray",
+            }[base_type]
+            return_type = f"tarch::la::Vector<DIMENSIONS, {scalar_cpp_type}>"
+        else:
+            if base_type == "double" and not isinstance(default_value, (int, float)):
+                raise ValueError(f"Runtime parameter '{name}' expects a numeric default value.")
+            if base_type == "int" and not isinstance(default_value, int):
+                raise ValueError(f"Runtime parameter '{name}' expects an integer default value.")
+            if base_type == "bool" and not isinstance(default_value, bool):
+                raise ValueError(f"Runtime parameter '{name}' expects a boolean default value.")
+            if base_type == "string" and not isinstance(default_value, str):
+                raise ValueError(f"Runtime parameter '{name}' expects a string default value.")
+
+            cpp_type = scalar_cpp_type
+            if base_type == "double":
+                literal = repr(float(default_value))
+                getter = "getDouble"
+            elif base_type == "int":
+                literal = str(default_value)
+                getter = "getInteger"
+            elif base_type == "bool":
+                literal = "true" if default_value else "false"
+                getter = "getBoolean"
+            else:
+                literal = json.dumps(default_value)
+                getter = "getString"
+            return_type = cpp_type
+
+        self._runtime_parameters.append(
+            {
+                "name": name,
+                "accessor_name": accessor_name,
+                "cpp_type": cpp_type,
+                "return_type": return_type,
+                "is_array": is_array,
+                "scalar_cpp_type": scalar_cpp_type,
+                "default_value": literal,
+                "getter": getter,
+            }
+        )
 
     def remove_all_solvers(self):
         self._solvers = []
@@ -138,6 +234,7 @@ class Project(object):
         )
 
         self._project.constants.export_boolean_sequence("PeriodicBC", self._periodic_BC)
+        self._project.constants.export_string("OutputPath", self._output_path)
 
         build_string = "python3 "
         for i in sys.argv:
@@ -297,6 +394,28 @@ thus appreciate any citation of the original release paper
         self._project.output.add(generated_solver_files)
         self._project.output.makefile.add_cpp_file(
             self._project.subdirectory + "repositories/SolverRepository.cpp", generated=True
+        )
+
+    def __generate_runtime_parameters(self):
+        template_directory = os.path.dirname(os.path.realpath(__file__).replace(".pyc", "").replace(".py", ""))
+        dictionary = {
+            "RUNTIME_PARAMETERS": self._runtime_parameters,
+        }
+        generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+            os.path.join(template_directory, "RuntimeParameters.template.h"),
+            os.path.join(template_directory, "RuntimeParameters.template.cpp"),
+            "RuntimeParameters",
+            self._project.namespace,
+            self._project.subdirectory,
+            dictionary,
+            True,
+        )
+        self._project.output.add(generated_files)
+        self._project.output.makefile.add_h_file(
+            self._project.subdirectory + "RuntimeParameters.h", generated=True
+        )
+        self._project.output.makefile.add_cpp_file(
+            self._project.subdirectory + "RuntimeParameters.cpp", generated=True
         )
 
     # TODO: Move to solvers
@@ -500,6 +619,7 @@ thus appreciate any citation of the original release paper
                 solver.add_implementation_files_to_project(self._project.namespace, self._project.output, self._dimensions, self._subdirectory)
 
         self.__generate_solver_repository()
+        self.__generate_runtime_parameters()
 
         self._project.main = exahype2.ExaHyPEMain(self._project)
         return self._project

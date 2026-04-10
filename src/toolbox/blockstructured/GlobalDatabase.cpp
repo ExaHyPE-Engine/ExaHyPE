@@ -3,6 +3,7 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/mpi/Rank.h"
 
+#include <filesystem>
 #include <fstream>
 
 #include <algorithm>
@@ -98,6 +99,10 @@ void toolbox::blockstructured::GlobalDatabase::dumpCSVFile() {
 
   tarch::multicore::Lock lock(_semaphore);
   if (not _data.empty()) {
+    const std::filesystem::path outputPath(snapshotFileName.str());
+    if (outputPath.has_parent_path()) {
+      std::filesystem::create_directories(outputPath.parent_path());
+    }
     logInfo( "dumpCSVFile()", "Dump particle trajectory database " << snapshotFileName.str() );
     std::ofstream file( snapshotFileName.str() );
     file << std::scientific;

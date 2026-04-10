@@ -4,7 +4,10 @@
 #include "tarch/mpi/Rank.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <fstream>
+#include <sstream>
+#include <stdexcept>
 
 
 tarch::logging::Log toolbox::particles::TrajectoryDatabase::_log( "toolbox::particles::TrajectoryDatabase" );
@@ -53,6 +56,7 @@ toolbox::particles::TrajectoryDatabase::TrajectoryDatabase( int growthBetweenTwo
   _numberOfDataPointsPerParticle(0),
   _deltaBetweenTwoDatabaseFlushes(growthBetweenTwoDatabaseFlushes),
   _thresholdForNextDatabaseFlush(growthBetweenTwoDatabaseFlushes==0 ? std::numeric_limits<int>::max() : growthBetweenTwoDatabaseFlushes),
+  _precision(8),
   _clearDatabaseAfterFlush(clearDatabaseAfterFlush),
   _deltasAreRelative(deltasAreRelative),
   _rank(-1),
@@ -118,14 +122,22 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
 
   tarch::multicore::Lock lock(_semaphore);
   if (not _data.empty()) {
+    const std::filesystem::path outputPath(snapshotFileName.str());
+    if (outputPath.has_parent_path()) {
+      std::filesystem::create_directories(outputPath.parent_path());
+    }
     logDebug( "dumpCSVFile()", "dump particle trajectory database " << snapshotFileName.str() );
     std::ofstream file( snapshotFileName.str() );
-    file << std::scientific;
+    file << std::scientific << std::setprecision(_precision);
     #if DIMENSIONS==2
-    file << "number(0), number(1), t, x(0), x(1), data " << std::endl;
+    file << "number(0), number(1), t, x(0), x(1)";
     #else
-    file << "number(0), number(1), t, x(0), x(1), x(2), data " << std::endl;
+    file << "number(0), number(1), t, x(0), x(1), x(2)";
     #endif
+    for (int i=0; i<_numberOfDataPointsPerParticle; i++) {
+      file << ", data(" << i << ")";
+    }
+    file << std::endl;
 
     for (auto& particle: _data) {
       for (auto& snapshot: particle.second) {
@@ -133,17 +145,14 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
              << ", "
              << particle.first.second
 			 << ", "
-			 //<< std::setprecision (6)
 			 << snapshot.timestamp;
         #if DIMENSIONS==2
-        file //<< std::setprecision (_precision) 
-             << ", "
+        file << ", "
              << snapshot.x(0)
              << ", "
              << snapshot.x(1);
         #else
-        file //<< std::setprecision (_precision) 
-             << ", "
+        file << ", "
              << snapshot.x(0)
              << ", "
              << snapshot.x(1)
@@ -152,7 +161,6 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
         #endif
 
         if (snapshot.data!=nullptr) {
-          //file.precision(_precision);
           for (int i=0; i<_numberOfDataPointsPerParticle; i++) {
             file << ", "
                  << snapshot.data[i];
@@ -359,6 +367,16 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
   int                                          numberOfDataEntries,
   double*                                      data
 ) {
+  if (not _data.empty() and _numberOfDataPointsPerParticle != numberOfDataEntries) {
+    std::ostringstream message;
+    message
+      << "Inconsistent number of particle data entries: database expects "
+      << _numberOfDataPointsPerParticle
+      << " but received "
+      << numberOfDataEntries
+      << ".";
+    throw std::runtime_error(message.str());
+  }
   assertion( _numberOfDataPointsPerParticle==numberOfDataEntries or _data.empty());
   _numberOfDataPointsPerParticle = std::max(_numberOfDataPointsPerParticle,numberOfDataEntries);
 

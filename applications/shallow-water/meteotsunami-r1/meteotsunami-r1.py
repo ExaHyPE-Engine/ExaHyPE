@@ -49,15 +49,14 @@ manning_coefficient_value = manning_coefficient(H)
 print("Manning coefficient:", manning_coefficient_value)
 
 initial_conditions = f"""
-  static tarch::reader::NetCDFFieldParser fieldParser(
-    "bathymetry/test_R1_dx100_H{H}_b.grd",
+  static tarch::reader::NetCDFFieldSampler fieldSampler(
+    {{
+      {{"bathymetry", "bathymetry/test_R1_dx100_H{H}_b.grd", "z", "x", "y"}}
+    }},
     PhysicalDomainSizeX,
     PhysicalDomainSizeY,
     PhysicalDomainOffsetX,
-    PhysicalDomainOffsetY,
-    "z",
-    "x",
-    "y"
+    PhysicalDomainOffsetY
   );
 
   // TODO: This sampling is needed to make the square domain works without NaNs. However, it gives unphysical solutions.
@@ -69,7 +68,7 @@ initial_conditions = f"""
     x(1) < PhysicalDomainOffsetY ? PhysicalDomainOffsetY :
     (x(1) > PhysicalDomainOffsetY + PhysicalDomainSizeY ? PhysicalDomainOffsetY + PhysicalDomainSizeY : x(1));
 
-  const double bathymetry = fieldParser.sampleTopology(sampleX, sampleY);
+  const double bathymetry = fieldSampler.sample("bathymetry", sampleX, sampleY);
     Q[Shortcuts::h]  = -std::min(bathymetry, 0.0);
     Q[Shortcuts::hu] = 0.0;
     Q[Shortcuts::hv] = 0.0;
@@ -204,7 +203,7 @@ aderdg_solver.add_user_solver_includes(
     """
 #include "../PDE.h"
 #include "SourceTerm.h"
-#include "tarch/reader/NetCDFFieldParser.h"
+#include "tarch/reader/NetCDFFieldSampler.h"
  """
 )
 
@@ -229,7 +228,7 @@ fv_solver.add_user_solver_includes(
     """
 #include "../FWaveRiemannSolver.h"
 #include "SourceTerm.h"
-#include "tarch/reader/NetCDFFieldParser.h"
+#include "tarch/reader/NetCDFFieldSampler.h"
  """
 )
 

@@ -4,17 +4,19 @@ import peano4
 import exahype2
 
 initial_conditions = """
-  static tarch::reader::NetCDFFieldParser fieldParser(
-    \"chile_gebco_usgs_2000m_bath.nc\",
-    \"chile_gebco_usgs_2000m_displ.nc\",
+  static tarch::reader::NetCDFFieldSampler fieldSampler(
+    {
+      {\"bathymetry\", \"chile_gebco_usgs_2000m_bath.nc\"},
+      {\"displacement\", \"chile_gebco_usgs_2000m_displ.nc\"}
+    },
     7000000.0,
     4000000.0,
     0.0,
     0.0
   );
 
-  const double bathymetryBeforeEarthquake = fieldParser.sampleTopology(x(0), x(1));
-  const double displacement               = fieldParser.sampleDisplacement(x(0), x(1));
+  const double bathymetryBeforeEarthquake = fieldSampler.sample(\"bathymetry\", x(0), x(1));
+  const double displacement               = fieldSampler.sample(\"displacement\", x(0), x(1));
   const double bathymetryAfterEarthquake  = bathymetryBeforeEarthquake + displacement;
 
   Q[Shortcuts::h]  = -std::min(bathymetryBeforeEarthquake, 0.0);
@@ -24,10 +26,10 @@ initial_conditions = """
 """
 
 boundary_conditions = """
-  Qoutside[0] = Qinside[0];
-  Qoutside[1] = 0.0;
-  Qoutside[2] = 0.0;
-  Qoutside[3] = Qinside[3];
+  Qoutside[Shortcuts::h]  = Qinside[Shortcuts::h];
+  Qoutside[Shortcuts::hu] = 0.0;
+  Qoutside[Shortcuts::hv] = 0.0;
+  Qoutside[Shortcuts::z]  = Qinside[Shortcuts::z];
 """
 
 is_physically_admissible = """
@@ -126,7 +128,7 @@ aderdg_solver.set_implementation(
 aderdg_solver.add_user_solver_includes(
     """
 #include "../PDE.h"
-#include "tarch/reader/NetCDFFieldParser.h"
+#include "tarch/reader/NetCDFFieldSampler.h"
 """
 )
 
@@ -149,7 +151,7 @@ fv_solver.set_implementation(
 fv_solver.add_user_solver_includes(
     """
 #include "../FWaveRiemannSolver.h"
-#include "tarch/reader/NetCDFFieldParser.h"
+#include "tarch/reader/NetCDFFieldSampler.h"
 """
 )
 

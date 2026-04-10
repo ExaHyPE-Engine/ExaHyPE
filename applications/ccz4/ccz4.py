@@ -489,7 +489,7 @@ if __name__ == "__main__":
         dump_action_set=exahype2.tracer.DumpTracerIntoDatabase(
           particle_set=tracer_particles,
           solver=my_solver,
-          filename=args.path+"Tracer-test",
+          filename="Tracer-test",
           number_of_entries_between_two_db_flushes=1000,
           output_precision=8,
           data_delta_between_two_snapsots=1e16,
@@ -531,7 +531,7 @@ if __name__ == "__main__":
         dump_action_set=exahype2.tracer.DumpTracerIntoDatabase(
           particle_set=tracer_particles,
           solver=my_solver,
-          filename=args.path+"Tracer-BHTracker",
+          filename="Tracer-BHTracker",
           number_of_entries_between_two_db_flushes=1000,
           output_precision=8,
           data_delta_between_two_snapsots=1e16,
@@ -581,7 +581,7 @@ if __name__ == "__main__":
     userinfo.append(("output directory: "+path, None))
     print("=========================================================")
     if not args.add_tracer==0:
-      userinfo.append(("tracer output file: "+args.path+"Tracer-test", None))
+      userinfo.append(("tracer output file: " + path + "Tracer-test", None))
     if not args.restart_timestamp==0.0:
       userinfo.append(("the code will restart from the first checkpoint after timestamp "+str(args.restart_timestamp), None))
     if len(userinfo) >0:

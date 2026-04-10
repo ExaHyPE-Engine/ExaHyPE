@@ -3,7 +3,9 @@
 #pragma once
 
 #include "Constants.h"
+#include "RuntimeParameters.h"
 
+#include "exahype2/exahype2.h"
 #include "exahype2/Solver.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/PrecisionControl.h"

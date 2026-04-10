@@ -15,6 +15,9 @@
 #include "plotter/tests/HDF5FileWriterTest.h"
 #include "plotter/tests/NetCDFFileWriterTest.h"
 #include "plotter/tests/VTUFileWriterTest.h"
+#include "reader/tests/JSONReaderTest.h"
+#include "reader/tests/NetCDFFieldSamplerTest.h"
+#include "reader/tests/NetCDFFileReaderTest.h"
 #include "tests/TreeTestCaseCollection.h"
 
 tarch::tests::TestCase* tarch::getUnitTests() {
@@ -37,6 +40,9 @@ tarch::tests::TestCase* tarch::getUnitTests() {
   result->addTestCase(new plotter::tests::HDF5FileWriterTest());
   result->addTestCase(new plotter::tests::NetCDFFileWriterTest());
   result->addTestCase(new plotter::tests::VTUFileWriterTest());
+  result->addTestCase(new reader::tests::JSONReaderTest());
+  result->addTestCase(new reader::tests::NetCDFFileReaderTest());
+  result->addTestCase(new reader::tests::NetCDFFieldSamplerTest());
 
   return result;
 }

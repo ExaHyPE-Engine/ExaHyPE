@@ -1,20 +1,38 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+import os
+
 import peano4
 import exahype2
 
 initial_conditions = """
-  static tarch::reader::NetCDFFieldParser fieldParser(
-    \"tohoku_gebco_ucsb3_2000m_hawaii_bath.nc\",
-    \"tohoku_gebco_ucsb3_2000m_hawaii_displ.nc\",
-    7000000.0,
-    4000000.0,
-    0.0,
-    0.0
+  const auto bathymetrySize   = RuntimeParameters::getBathymetrySize();
+  const auto bathymetryOffset = RuntimeParameters::getBathymetryOffset();
+  static tarch::reader::NetCDFFieldSampler bathymetrySampler(
+    {
+      {\"bathymetry\", RuntimeParameters::getBathymetryFile()}
+    },
+    bathymetrySize(0),
+    bathymetrySize(1),
+    bathymetryOffset(0),
+    bathymetryOffset(1)
   );
 
-  const double bathymetryBeforeEarthquake = fieldParser.sampleTopology(x(0), x(1));
-  const double displacement               = fieldParser.sampleDisplacement(x(0), x(1));
+  const auto displacementSize   = RuntimeParameters::getDisplacementSize();
+  const auto displacementOffset = RuntimeParameters::getDisplacementOffset();
+  static tarch::reader::NetCDFFieldSampler displacementSampler(
+    {
+      {\"displacement\", RuntimeParameters::getDisplacementFile()}
+    },
+    displacementSize(0),
+    displacementSize(1),
+    displacementOffset(0),
+    displacementOffset(1)
+  );
+
+  const auto displacementPosition         = RuntimeParameters::getDisplacementPosition();
+  const double bathymetryBeforeEarthquake = bathymetrySampler.sample(\"bathymetry\", x(0), x(1));
+  const double displacement               = displacementSampler.sample(\"displacement\", x(0) - displacementPosition(0), x(1) - displacementPosition(1));
   const double bathymetryAfterEarthquake  = bathymetryBeforeEarthquake + displacement;
 
   Q[Shortcuts::h]  = -std::min(bathymetryBeforeEarthquake, 0.0);
@@ -24,10 +42,10 @@ initial_conditions = """
 """
 
 boundary_conditions = """
-  Qoutside[0] = Qinside[0];
-  Qoutside[1] = 0.0;
-  Qoutside[2] = 0.0;
-  Qoutside[3] = Qinside[3];
+  Qoutside[Shortcuts::h]  = Qinside[Shortcuts::h];
+  Qoutside[Shortcuts::hu] = 0.0;
+  Qoutside[Shortcuts::hv] = 0.0;
+  Qoutside[Shortcuts::z]  = Qinside[Shortcuts::z];
 """
 
 is_physically_admissible = """
@@ -38,9 +56,14 @@ is_physically_admissible = """
 """
 
 parser = exahype2.ArgumentParser()
+parser.add_argument(
+    "--use-probes",
+    action="store_true",
+    help="Insert stationary probes and dump tracer data at their positions.",
+)
 parser.set_defaults(
     min_depth=4,
-    end_time=5000.0,
+    end_time=5600.0,
     degrees_of_freedom=7,
 )
 args = parser.parse_args()
@@ -50,7 +73,14 @@ constants = {
     "hThreshold": [1e-5, "double"],
 }
 
-size = [4e6, 4e6]
+size = [1798000, 1798000]
+offset = [-499000.0, -949000.0]
+
+probe_coordinates = [
+    [545735.266126, 62716.4740303],
+    [1050678.21, 798352.124]
+]
+
 max_h = 1.1 * min(size) / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
 dg_order = args.degrees_of_freedom - 1
@@ -107,7 +137,7 @@ aderdg_solver.set_implementation(
 aderdg_solver.add_user_solver_includes(
     """
 #include "../PDE.h"
-#include "tarch/reader/NetCDFFieldParser.h"
+#include "tarch/reader/NetCDFFieldSampler.h"
 """
 )
 
@@ -130,7 +160,7 @@ fv_solver.set_implementation(
 fv_solver.add_user_solver_includes(
     """
 #include "../FWaveRiemannSolver.h"
-#include "tarch/reader/NetCDFFieldParser.h"
+#include "tarch/reader/NetCDFFieldSampler.h"
 """
 )
 
@@ -151,6 +181,13 @@ project = exahype2.Project(
 project.add_solver(aderdg_solver)
 project.add_solver(fv_solver)
 project.add_solver(limiter_solver)
+project.add_runtime_parameter("bathymetryFile", "string", "tohoku_gebco_ucsb3_2000m_hawaii_bath.nc")
+project.add_runtime_parameter("displacementFile", "string", "tohoku_gebco_ucsb3_2000m_hawaii_displ.nc")
+project.add_runtime_parameter("bathymetrySize", ("double", 2), [6998000.0, 3998000.0])
+project.add_runtime_parameter("bathymetryOffset", ("double", 2), [-499000.0, -2490000.0])
+project.add_runtime_parameter("displacementSize", ("double", 2), [498000.0, 798000.0])
+project.add_runtime_parameter("displacementOffset", ("double", 2), [-249000.0, -399000.0])
+project.add_runtime_parameter("displacementPosition", ("double", 2), [0.0, 0.0])
 
 if args.number_of_snapshots <= 0:
     time_in_between_plots = 0.0
@@ -158,10 +195,50 @@ else:
     time_in_between_plots = args.end_time / args.number_of_snapshots
     project.set_output_path(args.output)
 
+if args.use_probes and probe_coordinates:
+    os.makedirs(args.output, exist_ok=True)
+
+    probe_particles = project.add_tracer(name="Probe", particle_attributes=4)
+
+    project.add_action_set_to_initialisation(
+        exahype2.tracer.InsertParticlesByCoordinates(
+            particle_set=probe_particles,
+            coordinates=probe_coordinates,
+        )
+    )
+
+    project.add_action_set_to_timestepping(
+        exahype2.tracer.DiscontinuousGalerkinTracing(
+            probe_particles,
+            aderdg_solver,
+            project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle",
+        )
+    )
+
+    project.add_action_set_to_timestepping(
+        exahype2.tracer.DumpTracerIntoDatabase(
+            particle_set=probe_particles,
+            solver=aderdg_solver,
+            filename="Probes",
+            data_delta_between_two_snapsots=1e16,
+            time_delta_between_two_snapsots=50,
+            output_precision=17,
+            clear_database_after_flush=False,
+        )
+    )
+
+    aderdg_solver._abstract_solver_user_declarations += "double QuadraturePoints1d[Order+1];"
+    aderdg_solver._start_simulation_implementation += """
+    std::copy_n(
+      kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
+      (Order+1),
+      QuadraturePoints1d
+    );"""
+
 project.set_global_simulation_parameters(
     dimensions=2,
     size=size,
-    offset=[0.0, 0.0],
+    offset=offset,
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     first_plot_time_stamp=0.0,

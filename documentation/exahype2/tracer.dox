@@ -123,6 +123,8 @@ database:
 
 Dumping tracers into a (CSV) database is attractive, as these files are
 easier to parse/postprocess than mesh data files. At the same time, you
+only pass the relative file name here; the dump is written beneath the
+project/runtime output path.
 can dump particles more often than you plot data snapshots, and these
 dumps can even be adaptive, i.e. you dump if and only if a particle
 actually moves. The exahype2.tracer.DumpTracerIntoDatabase documentation provides
