@@ -250,7 +250,7 @@ from pathlib import Path
 error_measurement = exahype2.solvers.fv.ErrorMeasurementParticles(
     fv_solver,
     error_measurement_implementation=analytical_solution,
-    output_file_name=args.output + "/Error_" + Path(__file__).name,
+    output_file_name="Error_" + Path(__file__).name,
     particle_set=tracer_particles,
     descend_invocation_order=65536,  # After all other action sets
 )

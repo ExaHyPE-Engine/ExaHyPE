@@ -14,18 +14,17 @@ offset = [
 size = [square_side, square_side]
 
 initial_conditions = """
-  static tarch::reader::NetCDFFieldParser fieldParser(
-    "bathymetry/gebco_projection.nc",
+  static tarch::reader::NetCDFFieldSampler fieldSampler(
+    {
+      {"bathymetry", "bathymetry/gebco_projection.nc", "Band1", "x", "y"}
+    },
     PhysicalDomainSizeX,
     PhysicalDomainSizeY,
     PhysicalDomainOffsetX,
-    PhysicalDomainOffsetY,
-    "Band1",
-    "x",
-    "y"
+    PhysicalDomainOffsetY
   );
 
-  const double bathymetry = fieldParser.sampleTopology(x(0), x(1));
+  const double bathymetry = fieldSampler.sample("bathymetry", x(0), x(1));
 
   if (bathymetry < -15000) {
     Q[Shortcuts::h]  = 999;
@@ -182,7 +181,7 @@ aderdg_solver.add_user_solver_includes(
     """
 #include "../PDE.h"
 #include "SourceTerm.h"
-#include "tarch/reader/NetCDFFieldParser.h"
+#include "tarch/reader/NetCDFFieldSampler.h"
 """
 )
 
@@ -207,7 +206,7 @@ fv_solver.add_user_solver_includes(
     """
 #include "../FWaveRiemannSolver.h"
 #include "SourceTerm.h"
-#include "tarch/reader/NetCDFFieldParser.h"
+#include "tarch/reader/NetCDFFieldSampler.h"
 """
 )
 

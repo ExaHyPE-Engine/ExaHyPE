@@ -34,7 +34,7 @@ find_library(NetCDF_LIBRARY
 )
 
 set(NetCDF_VERSION "")
-set(NetCDF_HAS_NC4 FALSE)
+set(NetCDF_HAS_HDF5 FALSE)
 set(NetCDF_IS_PARALLEL FALSE)
 
 if(NetCDF_INCLUDE_DIR AND EXISTS "${NetCDF_INCLUDE_DIR}/netcdf_meta.h")
@@ -58,12 +58,16 @@ if(NetCDF_INCLUDE_DIR AND EXISTS "${NetCDF_INCLUDE_DIR}/netcdf_meta.h")
   endif()
 
   # Check for NetCDF-4 support (HDF5 backend)
-  if("${_netcdf_meta_content}" MATCHES "#define[ \t]+NC_HAS_NC4[ \t]+1")
-    set(NetCDF_HAS_NC4 TRUE)
+  # NetCDF-C 4.9.3 may not define NC_HAS_NC4 in netcdf_meta.h anymore.
+  # Use NC_HAS_HDF5 as the primary check, and keep NC_HAS_NC4 as fallback.
+  if("${_netcdf_meta_content}" MATCHES "#define[ \t]+NC_HAS_HDF5[ \t]+1"
+     OR "${_netcdf_meta_content}" MATCHES "#define[ \t]+NC_HAS_NC4[ \t]+1")
+    set(NetCDF_HAS_HDF5 TRUE)
   endif()
 
   # Check for parallel support
-  if("${_netcdf_meta_content}" MATCHES "#define[ \t]+NC_HAS_PARALLEL4?[ \t]+1")
+  if("${_netcdf_meta_content}" MATCHES "#define[ \t]+NC_HAS_PARALLEL4[ \t]+1"
+     OR "${_netcdf_meta_content}" MATCHES "#define[ \t]+NC_HAS_PARALLEL[ \t]+1")
     set(NetCDF_IS_PARALLEL TRUE)
   endif()
 endif()

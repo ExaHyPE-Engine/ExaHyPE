@@ -8,6 +8,7 @@ from .PDETerms import PDETerms
 # TODO: Derive from ErrorMeasurement
 class ErrorMeasurementParticles:
     """!
+
     Error measurement tool for ExaHyPE 2 tracer particles.
     """
 
@@ -34,6 +35,7 @@ class ErrorMeasurementParticles:
         solver.add_user_solver_includes(
             """
 #include "toolbox/blockstructured/GlobalDatabase.h"
+#include "exahype2/exahype2.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 """
@@ -80,7 +82,7 @@ def create_start_simulation_implementation_for_error_measurement(
         """
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     _errorDatabase.setDeltaBetweenTwoDatabaseFlushes({{FLUSH_DELTA}});
-    _errorDatabase.setOutputFileName("{{FILENAME}}");
+    _errorDatabase.setOutputFileName(::exahype2::getPlotOutputPath() + "{{FILENAME}}");
     _errorDatabase.setDataName("l0-error, l2-error, l_inf-error");
     // _errorDatabase.setOutputPrecision({{OUTPUT_PRECISION}});
     _errorDatabase.setDataDeltaBetweenTwoSnapshots({{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}});

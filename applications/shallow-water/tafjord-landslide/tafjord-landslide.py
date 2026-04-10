@@ -10,23 +10,19 @@ initial_conditions = """
     Q[i] = 0.0;
   }
 
-  static tarch::reader::NetCDFFieldParser fieldParser(
-    \"Tafjord_5m_EPSG25832.nc\",
-    \"ini_3.0Mm3_5m_EPSG25832.nc\",
+  static tarch::reader::NetCDFFieldSampler fieldSampler(
+    {
+      {\"bathymetry\", \"Tafjord_5m_EPSG25832.nc\", \"Band1\", \"x\", \"y\"},
+      {\"displacement\", \"ini_3.0Mm3_5m_EPSG25832.nc\", \"Band1\", \"x\", \"y\"}
+    },
     DomainSize(0),
     DomainSize(1),
     DomainOffset(0),
-    DomainOffset(1),
-    "Band1",
-    "x",
-    "y",
-    "Band1",
-    "x",
-    "y"
+    DomainOffset(1)
   );
 
-  Q[Shortcuts::h] = fieldParser.sampleDisplacement(x(0), x(1));
-  Q[Shortcuts::z] = fieldParser.sampleTopology(x(0), x(1));
+  Q[Shortcuts::h] = fieldSampler.sample(\"displacement\", x(0), x(1));
+  Q[Shortcuts::z] = fieldSampler.sample(\"bathymetry\", x(0), x(1));
 """
 
 boundary_conditions = """
@@ -139,7 +135,7 @@ aderdg_solver.add_user_solver_includes(
 #include "../PDE.h"
 #include "../FrictionLaws.h"
 #include "../RusanovRiemannSolver.h"
-#include "tarch/reader/NetCDFFieldParser.h"
+#include "tarch/reader/NetCDFFieldSampler.h"
 """
 )
 
@@ -167,7 +163,7 @@ fv_solver.add_user_solver_includes(
 #include "../PDE.h"
 #include "../FrictionLaws.h"
 #include "../RusanovRiemannSolver.h"
-#include "tarch/reader/NetCDFFieldParser.h"
+#include "tarch/reader/NetCDFFieldSampler.h"
 """
 )
 

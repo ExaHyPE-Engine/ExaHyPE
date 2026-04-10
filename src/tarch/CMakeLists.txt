@@ -113,8 +113,12 @@ set(SOURCES
   plotter/tests/VTUFileWriterTest.cpp
 
   reader/CSVReader.cpp
-  reader/NetCDFFieldParser.cpp
+  reader/JSONReader.cpp
+  reader/NetCDFFieldSampler.cpp
   reader/NetCDFFileReader.cpp
+  reader/tests/NetCDFFieldSamplerTest.cpp
+  reader/tests/NetCDFFileReaderTest.cpp
+  reader/tests/JSONReaderTest.cpp
 
   services/Service.cpp
   services/ServiceRepository.cpp

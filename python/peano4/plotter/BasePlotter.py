@@ -63,7 +63,7 @@ class BasePlotter(ActionSet):
     ? 0
     : (::peano4::parallel::Node::getInstance().getLocalTreeId(*localSpacetrees.rbegin()) + 1);
   _fileWriter.reset();
-  _fileWriter = std::make_unique<tarch::plotter::{{FILE_WRITER}}>("{{OUTPUT_PATH}}", numberOfLocalSubdomains);
+  _fileWriter = std::make_unique<tarch::plotter::{{FILE_WRITER}}>(::exahype2::getPlotOutputPath(), numberOfLocalSubdomains);
 
   _time = {{TIMESTAMP}};
 """
@@ -77,7 +77,7 @@ class BasePlotter(ActionSet):
   assertion(_timeSeriesWriter != nullptr);
 
   _timeSeriesWriter->writeSnapshotFile("{{FILENAME}}", _time, *_fileWriter);
-  _timeSeriesWriter->writeTimeSeriesMetaFile("{{OUTPUT_PATH}}", "{{FILENAME}}");
+  _timeSeriesWriter->writeTimeSeriesMetaFile(::exahype2::getPlotOutputPath(), "{{FILENAME}}");
 """
         ).render(**self.d)
 
@@ -118,6 +118,7 @@ class BasePlotter(ActionSet):
 #include "peano4/utils/Loop.h"
 #include "peano4/parallel/Node.h"
 #include "peano4/parallel/SpacetreeSet.h"
+#include "exahype2/exahype2.h"
 """
 
     def get_static_initialisations(self, full_qualified_classname):
