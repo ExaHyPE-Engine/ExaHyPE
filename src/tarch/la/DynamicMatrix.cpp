@@ -434,17 +434,6 @@ void tarch::la::DynamicMatrix::replicateRows(
     numberOfReplications,
     shiftAfterEveryReplication
   );
-  assertion3(
-    numberOfReplications >= 2,
-    blockSize,
-    numberOfReplications,
-    shiftAfterEveryReplication
-  );
-
-  double* oldData = _m;
-  int     oldRows = _rows;
-  int     oldCols = _cols;
-
   assertion2(
     numberOfReplications >= 1,
     numberOfReplications,
@@ -455,6 +444,21 @@ void tarch::la::DynamicMatrix::replicateRows(
     numberOfReplications,
     shiftAfterEveryReplication
   );
+
+  if (numberOfReplications == 1) {
+    return;
+  }
+
+  assertion3(
+    numberOfReplications >= 2,
+    blockSize,
+    numberOfReplications,
+    shiftAfterEveryReplication
+  );
+
+  double* oldData = _m;
+  int     oldRows = _rows;
+  int     oldCols = _cols;
 
   const int numberOfBlocks = _rows / blockSize;
   _rows                    = _rows * numberOfReplications;
@@ -509,17 +513,6 @@ void tarch::la::DynamicMatrix::replicateCols(
     numberOfReplications,
     shiftAfterEveryReplication
   );
-  assertion3(
-    numberOfReplications >= 2,
-    blockSize,
-    numberOfReplications,
-    shiftAfterEveryReplication
-  );
-
-  double* oldData = _m;
-  int     oldRows = _rows;
-  int     oldCols = _cols;
-
   assertion2(
     numberOfReplications >= 1,
     numberOfReplications,
@@ -530,6 +523,21 @@ void tarch::la::DynamicMatrix::replicateCols(
     numberOfReplications,
     shiftAfterEveryReplication
   );
+
+  if (numberOfReplications == 1) {
+    return;
+  }
+
+  assertion3(
+    numberOfReplications >= 2,
+    blockSize,
+    numberOfReplications,
+    shiftAfterEveryReplication
+  );
+
+  double* oldData = _m;
+  int     oldRows = _rows;
+  int     oldCols = _cols;
 
   const int numberOfBlocks = _cols / blockSize;
   _cols                    = _cols * numberOfReplications;

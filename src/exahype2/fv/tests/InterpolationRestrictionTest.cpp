@@ -21,6 +21,7 @@ void exahype2::fv::tests::InterpolationRestrictionTest::run() {
   testMethod (testPiecewiseConstantInterpolationWithTensorProduct1);
 
   testMethod( testAverageRestrictionWithTensorProduct );
+  testMethod( testAverageRestrictionWithSingleVolumePatch );
   testMethod( testInjectionExtrapolationRestrictionWithTensorProduct );
 
   testMethod (testPiecewiseConstantInterpolationWithTensorProduct2);
@@ -250,6 +251,43 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestrictionWi
     coarseGridFaceValues[3*2+0], coarseGridFaceValues[4*2+0], coarseGridFaceValues[5*2+0]
   );
   #endif
+}
+
+
+void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestrictionWithSingleVolumePatch() {
+#if DIMENSIONS==2
+  peano4::grid::GridTraversalEvent event;
+  event.setRelativePositionToFather( {0,0} );
+#else
+  peano4::grid::GridTraversalEvent event;
+  event.setRelativePositionToFather( {0,0,0} );
+#endif
+
+  peano4::datamanagement::FaceMarker marker = event.getFaceMarker();
+  marker.select(DIMENSIONS);
+
+  double fineGridFaceValues[]   = {0.0, 0.0};
+  double coarseGridFaceValues[] = {0.0, 0.0};
+
+#if DIMENSIONS==2
+  fineGridFaceValues[0] = 3.0;
+  fineGridFaceValues[1] = 6.0;
+#else
+  fineGridFaceValues[0] = 9.0;
+  fineGridFaceValues[1] = 18.0;
+#endif
+
+  ::toolbox::blockstructured::restrictHaloLayer_AoS_averaging(
+    marker,
+    1,   // numberOfDoFsPerAxisInPatch
+    1,   // overlap
+    1,   // unknowns
+    fineGridFaceValues,
+    coarseGridFaceValues
+  );
+
+  validateNumericalEquals( coarseGridFaceValues[0], 1.0 );
+  validateNumericalEquals( coarseGridFaceValues[1], 2.0 );
 }
 
 
@@ -578,5 +616,4 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testInjectionExtrapolati
   }
   #endif
 }
-
 

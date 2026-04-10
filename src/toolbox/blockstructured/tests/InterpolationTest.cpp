@@ -11,9 +11,37 @@ toolbox::blockstructured::tests::InterpolationTest::InterpolationTest():
 
 
 void toolbox::blockstructured::tests::InterpolationTest::run() {
+  testMethod(testInterpolateHaloLayer_AoS_piecewise_constant_withSingleVolumePatch);
   testMethod(testRestrictHaloLayer_AoS_averaging);
   testMethod(testRestrictCellForBreakingDam);
   testMethod(testInterpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear);
+}
+
+
+void toolbox::blockstructured::tests::InterpolationTest::testInterpolateHaloLayer_AoS_piecewise_constant_withSingleVolumePatch() {
+  peano4::grid::GridTraversalEvent event;
+#if DIMENSIONS==2
+  event.setRelativePositionToFather( {0,0} );
+#else
+  event.setRelativePositionToFather( {0,0,0} );
+#endif
+  peano4::datamanagement::FaceMarker faceMarker = event.getFaceMarker();
+  faceMarker.select(0);
+
+  double coarseGridValues[] = {3.0, 7.0};
+  double fineGridValues[]   = {0.0, 0.0};
+
+  toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
+    faceMarker,
+    1,
+    1,
+    1,
+    coarseGridValues,
+    fineGridValues
+  );
+
+  validateNumericalEquals( fineGridValues[0], 3.0 );
+  validateNumericalEquals( fineGridValues[1], 7.0 );
 }
 
 
