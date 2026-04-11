@@ -4,11 +4,38 @@
 
 #include "{{SOLVER_NAME}}.h"
 
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
+
+#include <cstddef>
 
 {% for item in NAMESPACE -%}
 namespace {{ item }} {
 {%- endfor %}
+
+// TODO: This should be centralised somewhere (DataRepository) and count to the memory usage
+template <typename T>
+struct PredictorScratchBuffer{{NAME_SUFFIX}} {
+  T* data = nullptr;
+
+  PredictorScratchBuffer{{NAME_SUFFIX}}() = default;
+  PredictorScratchBuffer{{NAME_SUFFIX}}(const PredictorScratchBuffer{{NAME_SUFFIX}}&) = delete;
+  PredictorScratchBuffer{{NAME_SUFFIX}}& operator=(const PredictorScratchBuffer{{NAME_SUFFIX}}&) = delete;
+  PredictorScratchBuffer{{NAME_SUFFIX}}(PredictorScratchBuffer{{NAME_SUFFIX}}&&) = delete;
+  PredictorScratchBuffer{{NAME_SUFFIX}}& operator=(PredictorScratchBuffer{{NAME_SUFFIX}}&&) = delete;
+
+  ~PredictorScratchBuffer{{NAME_SUFFIX}}() {
+    tarch::accelerator::freeRawDataOnHeap(data);
+  }
+
+  T* get(const std::size_t entries) {
+    if (data == nullptr and entries > 0) {
+      data = reinterpret_cast<T*>(tarch::accelerator::allocateRawDataOnHeap(entries * sizeof(T)));
+    }
+
+    return data;
+  }
+};
 
 {% if IS_LINEAR %}
 template <typename cStoreType, typename pCompType, typename pStoreType>

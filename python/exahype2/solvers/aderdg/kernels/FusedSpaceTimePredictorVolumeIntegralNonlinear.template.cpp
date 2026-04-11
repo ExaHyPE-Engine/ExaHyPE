@@ -51,10 +51,15 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   const tarch::la::Vector<DIMENSIONS, double>&      cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>&      cellSize,
   const double                                      timeStamp,
-  const double                                      myTimeStepSize // TODO: Inconsistent naming scheme!
+  const double                                      timeStepSize
 ) {
-  pCompType timeStepSize = myTimeStepSize; // TODO: This is really inelegant! We have static_cast for this!
-  pCompType memory[getFusedSTPVISize() - getPicardSize()] __attribute__((aligned(ALIGNMENT)));
+  const pCompType predictorTimeStepSize = static_cast<pCompType>(timeStepSize);
+  static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<pCompType> predictorScratch;
+  static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<picardCompType> picardScratch;
+  static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<picardCompType> newLQiSliceScratch;
+  static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<pCompType> coeffVolumeScratch;
+
+  pCompType* memory = predictorScratch.get(getFusedSTPVISize() - getPicardSize());
 
   pCompType* lQhi = memory;
 {% if USE_FLUX %}
@@ -64,7 +69,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   pCompType* lShi = memory + getlQhiSize() + getlFhiSize();
 {% endif %}
 
-  picardCompType picardMemory[getPicardSize()] __attribute__((aligned(ALIGNMENT)));
+  picardCompType* picardMemory = picardScratch.get(getPicardSize());
 
   picardCompType* lQi = picardMemory;
   picardCompType* rhs = picardMemory + getlQiSize();
@@ -90,16 +95,21 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   const tarch::la::Vector<DIMENSIONS, pCompType> invDx = convertScalar<pCompType>(invertEntries(cellSize));
 
   // 1: Trivial initial guess
-  for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) {
-    for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
-      std::copy_n(&luh[{{NUMBER_OF_DATA}} * xyz], {{NUMBER_OF_DATA}}, &lQi[{{NUMBER_OF_DATA_PADDED}} * (xyz + {{NUMBER_OF_DOF**DIMENSIONS}} * t)]);
-    }
+  for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
+    std::copy_n(&luh[{{NUMBER_OF_DATA}} * xyz], {{NUMBER_OF_DATA}}, &lQi[{{NUMBER_OF_DATA_PADDED}} * xyz]);
+  }
+  for (int t = 1; t < {{NUMBER_OF_DOF}}; t++) {
+    std::copy_n(
+      lQi,
+      {{NUMBER_OF_DATA_PADDED * NUMBER_OF_DOF**DIMENSIONS}},
+      lQi + t * {{NUMBER_OF_DATA_PADDED * NUMBER_OF_DOF**DIMENSIONS}}
+    );
   }
 
   //********************
   //****** Picard ******
   //********************
-  picardCompType new_lQi_slice[{{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(ALIGNMENT)));
+  picardCompType* new_lQi_slice = newLQiSliceScratch.get({{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}});
   // 2: Discrete Picard iterations
   int numberOfPicardIterations = 0;
   for (; numberOfPicardIterations < {{2*NUMBER_OF_DOF+1}}; numberOfPicardIterations++) {
@@ -115,7 +125,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
       cellCentre,
       cellSize,
       timeStamp,
-      myTimeStepSize
+      timeStepSize
     );
 
     if (sqRes < (1e-7 * 1e-7)) {
@@ -263,10 +273,10 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   // We start accumulate volume terms of the corrector here as soon as the predictor is computed.
   // Here we use that Kxi already consists 1D spatial weights. Two other spatial weights have the same
   // indexing, therefore they cancel out.
-  pCompType coeffVolume[{{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}] __attribute__((aligned(ALIGNMENT)));
+  pCompType* coeffVolume = coeffVolumeScratch.get({{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}});
   for (int i = 0; i < {{NUMBER_OF_DOF}}; i++) {
     for (int j = 0; j < {{NUMBER_OF_DOF}}; j++) {
-      coeffVolume[i * {{NUMBER_OF_DOF_PADDED}} + j] = DGMatrices<pCompType>::Kxi_T[i * {{NUMBER_OF_DOF_PADDED}} + j] * timeStepSize * Quadrature<pCompType>::iweights1[i];
+      coeffVolume[i * {{NUMBER_OF_DOF_PADDED}} + j] = DGMatrices<pCompType>::Kxi_T[i * {{NUMBER_OF_DOF_PADDED}} + j] * predictorTimeStepSize * Quadrature<pCompType>::iweights1[i];
     }
   }
 
@@ -306,7 +316,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     SIMD(aligned(luh,lShi:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
-      luh[xyz * {{NUMBER_OF_DATA}} + n] += timeStepSize * lShi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+      luh[xyz * {{NUMBER_OF_DATA}} + n] += predictorTimeStepSize * lShi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
     }
   }
 {% endif %}
@@ -347,9 +357,9 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 
   const tarch::la::Vector<DIMENSIONS, pCompType> invDx = convertScalar<pCompType>(invertEntries(cellSize));
 
-  const pCompType dtByDx[DIMENSIONS] = { (pCompType) timeStepSize * invDx[0], (pCompType) timeStepSize * invDx[1] // TODO: This should be static_cast!
+  const pCompType dtByDx[DIMENSIONS] = { static_cast<pCompType>(timeStepSize) * invDx[0], static_cast<pCompType>(timeStepSize) * invDx[1]
 {% if DIMENSIONS == 3 %}
-      , (pCompType) timeStepSize * invDx[2]
+      , static_cast<pCompType>(timeStepSize) * invDx[2]
 {% endif %}
   };
 

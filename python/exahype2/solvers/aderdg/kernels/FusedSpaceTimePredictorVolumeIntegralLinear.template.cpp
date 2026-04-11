@@ -46,17 +46,19 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   , const std::vector<int>&                         pointSources
 {% endif %}
 ) {
-  pCompType memory[getFusedSTPVISize()] __attribute__((aligned(ALIGNMENT)));
+  static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<pCompType> scratch; // Per-thread and per-instantiation scratch allocates on first use and is reused afterwards.
 
-  pCompType* lQi   = memory + getlQiShift();
-  pCompType* lQhi  = memory + getlQhiShift();
+  pCompType* memory = scratch.get(getFusedSTPVISize());
 
-  pCompType* lFi   = memory + getlFiShift();
-  pCompType* lFhi  = memory + getlFhiShift();
+  pCompType* lQi  = memory + getlQiShift();
+  pCompType* lQhi = memory + getlQhiShift();
+
+  pCompType* lFi  = memory + getlFiShift();
+  pCompType* lFhi = memory + getlFhiShift();
 
 {% if USE_SOURCE %}
-  pCompType* lSi   = memory + getlSiShift();
-  pCompType* lShi  = memory + getlShiShift();
+  pCompType* lSi  = memory + getlSiShift();
+  pCompType* lShi = memory + getlShiShift();
 {% endif %}
 
 {% if USE_NCP %}
