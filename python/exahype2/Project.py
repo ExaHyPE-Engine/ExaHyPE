@@ -69,6 +69,52 @@ class Project(object):
         self.plot_solution = peano4.solversteps.Step("PlotSolution", False)
         self.perform_time_step = peano4.solversteps.Step("TimeStep", False)
 
+    @staticmethod
+    def _parse_exahype_load_balancer_configuration(load_balancer_configuration):
+        match = re.match(
+            r"^(?P<prefix>\s*new\s+[\w:]*LoadBalancingConfiguration)\s*(?:\((?P<args>.*)\))?\s*$",
+            load_balancer_configuration,
+        )
+        if not match:
+            return None
+
+        args = match.group("args")
+        if args is None or args.strip() == "":
+            return {
+                "prefix": match.group("prefix").strip(),
+                "args": [],
+            }
+
+        parsed_args = [arg.strip() for arg in args.split(",")]
+        if any(arg == "" for arg in parsed_args):
+            return None
+
+        return {
+            "prefix": match.group("prefix").strip(),
+            "args": parsed_args,
+        }
+
+    def _render_load_balancer_configuration(self):
+        parsed_configuration = self._parse_exahype_load_balancer_configuration(
+            self._load_balancer_configuration
+        )
+        if parsed_configuration is None:
+            return self._load_balancer_configuration
+
+        args = parsed_configuration["args"]
+        if len(args) >= 5:
+            return self._load_balancer_configuration
+
+        defaults = [
+            "0.9",
+            "1",
+            "-1",
+            "peano4::grid::SplitInstruction::Mode::BottomUp",
+            "PeriodicBC.count()>0",
+        ]
+        rendered_args = args + defaults[len(args) :]
+        return f"{parsed_configuration['prefix']}({', '.join(rendered_args)})"
+
     def set_load_balancer(self, load_balancer_configuration=""):
         """
         load_balancer_configuration: string
@@ -356,7 +402,7 @@ thus appreciate any citation of the original release paper
     def __set_solver_repository_dict(self):
         self.solverRepositoryDictionary = {
             "SOLVERS":                  [],
-            "LOAD_BALANCER_CONFIGURATION": self._load_balancer_configuration,
+            "LOAD_BALANCER_CONFIGURATION": self._render_load_balancer_configuration(),
             "TRACERS":                  [x.name for x in self._tracer_particles],
             "LOG_FILTER_FILE":          self._log_filter_file,
             "LOG_TIME_STEP_INTERVAL_IN_SECONDS": self._log_time_step_interval_in_seconds,

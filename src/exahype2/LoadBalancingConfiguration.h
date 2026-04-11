@@ -17,6 +17,7 @@ private:
   const int                                  _minSizeOfTree;
   const int                                  _maxNumberOfTrees;
   const peano4::grid::SplitInstruction::Mode _mode;
+  const bool                                 _hasPeriodicBC;
 
   int translateSetMaxNumberOfTreesIntoRealNumberOfTrees(int value) const;
 
@@ -28,7 +29,8 @@ public:
     double                               loadBalancingQuality = 0.9,
     int                                  minSizeOfTree        = 1,
     int                                  maxNumberOfTrees     = -1,
-    peano4::grid::SplitInstruction::Mode mode                 = peano4::grid::SplitInstruction::Mode::BottomUp
+    peano4::grid::SplitInstruction::Mode mode                 = peano4::grid::SplitInstruction::Mode::BottomUp,
+    bool                                 hasPeriodicBC        = false
   );
 
   ~LoadBalancingConfiguration() override = default;
