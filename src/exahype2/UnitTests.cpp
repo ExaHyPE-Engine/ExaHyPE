@@ -6,7 +6,6 @@
 #include "dg/tests/CellIntegralTest.h"
 #include "dg/tests/DGUtilsTest.h"
 #include "dg/tests/RiemannTest.h"
-#include "fd/tests/SommerfeldBCTest.h"
 #include "fv/tests/ApplySplit1DRiemannToPatchTest.h"
 #include "fv/tests/CopyPatchTest.h"
 #include "fv/tests/InterpolationRestrictionTest.h"
@@ -22,8 +21,6 @@ tarch::tests::TestCase* exahype2::getUnitTests() {
   result->addTestCase(new dg::tests::DGUtilsTest());
   result->addTestCase(new dg::tests::RiemannTest());
   result->addTestCase(new dg::rusanov::tests::RiemannTest());
-
-  result->addTestCase(new fd::tests::SommerfeldBCTest());
 
   result->addTestCase(new fv::tests::CopyPatchTest());
   result->addTestCase(new fv::tests::InterpolationRestrictionTest());

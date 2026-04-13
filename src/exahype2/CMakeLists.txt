@@ -38,14 +38,6 @@ set(SOURCES
   dg/rusanov/Rusanov.cpp
   dg/rusanov/tests/RiemannTest.cpp
 
-  fd/BoundaryConditions.cpp
-  fd/LoopBody.cpp
-  fd/PatchUtils.cpp
-  fd/tests/SommerfeldBCTest.cpp
-  fd/fd4/FD4_patchwise_functors.cpp
-  fd/fd4/LoopBody.cpp
-  fd/fd4/SOCCZ4_ver/FD4_patchwise_functors.cpp
-
   fv/BoundaryConditions.cpp
   fv/InterpolationRestriction.cpp
   fv/PatchUtils.cpp

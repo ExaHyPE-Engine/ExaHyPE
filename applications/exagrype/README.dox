@@ -1,0 +1,81 @@
+/**
+@page applications_exahype2_ExaGRyPE ExaGRyPE
+
+ExaGRyPE is the ExaHyPE 2 application for numerical relativity experiments
+based on the first-order CCZ4 formulation of Einstein's equations. It
+provides application setups, kernels, and solver glue for scenarios such as
+the gauge-wave test while sharing common CCZ4 operators across different
+solver configurations.
+
+The unknowns are grouped as
+@code
+{
+  "gamma_tilde": 6,
+  "A_tilde": 6,
+  "theta": 1,
+  "gamma_hat": 3,
+  "alpha": 1,
+  "beta": 3,
+  "b": 3,
+  "grad_alpha": 3,
+  "grad_beta": 9,
+  "grad_gamma_tilde": 18,
+  "K": 1,
+  "phi": 1,
+  "grad_phi": 3,
+}
+@endcode
+
+The entries represent:
+- @f$\tilde{\gamma}_{ij}@f$: conformal metric, stored as
+  @f$(xx,xy,xz,yy,yz,zz)@f$.
+- @f$\tilde{A}_{ij}@f$: traceless extrinsic curvature, stored as
+  @f$(xx,xy,xz,yy,yz,zz)@f$.
+- @f$\Theta@f$: temporal component of the Z4 vector.
+- @f$\hat{\Gamma}^i@f$: contracted conformal Christoffel symbols together
+  with the spatial Z4 contribution, stored as @f$(x,y,z)@f$.
+- @f$\alpha@f$: lapse.
+- @f$\beta^i@f$: shift vector, stored as @f$(x,y,z)@f$.
+- @f$b^i@f$: gamma-driver auxiliary vector, stored as @f$(x,y,z)@f$.
+- `grad_alpha`: the first derivatives of the lapse,
+  @f$A_i = \partial_i \alpha@f$, stored as @f$(x,y,z)@f$.
+- `grad_beta`: the first derivatives of the shift,
+  @f$B_{ij} = \partial_i \beta^j@f$, stored as
+  @f$(xx,xy,xz,yx,yy,yz,zx,zy,zz)@f$.
+- `grad_gamma_tilde`: the first derivatives of the conformal metric,
+  @f$D_{kij} = \partial_k \tilde{\gamma}_{ij}@f$, grouped by derivative
+  direction:
+  @f$x:(xx,xy,xz,yy,yz,zz)@f$,
+  @f$y:(xx,xy,xz,yy,yz,zz)@f$,
+  @f$z:(xx,xy,xz,yy,yz,zz)@f$.
+- @f$K@f$: trace of the extrinsic curvature.
+- @f$\phi@f$: conformal factor.
+- `grad_phi`: the first derivatives of the conformal factor,
+  @f$P_i = \partial_i \phi@f$, stored as @f$(x,y,z)@f$.
+
+In terms of state-vector indices, the layout is
+@code
+[0]  gamma_tilde_xx   [1]  gamma_tilde_xy   [2]  gamma_tilde_xz
+[3]  gamma_tilde_yy   [4]  gamma_tilde_yz   [5]  gamma_tilde_zz
+[6]  A_tilde_xx       [7]  A_tilde_xy       [8]  A_tilde_xz
+[9]  A_tilde_yy       [10] A_tilde_yz       [11] A_tilde_zz
+[12] theta
+[13] gamma_hat_x      [14] gamma_hat_y      [15] gamma_hat_z
+[16] alpha
+[17] beta_x           [18] beta_y           [19] beta_z
+[20] b_x              [21] b_y              [22] b_z
+[23] A_x              [24] A_y              [25] A_z
+[26] B_xx             [27] B_xy             [28] B_xz
+[29] B_yx             [30] B_yy             [31] B_yz
+[32] B_zx             [33] B_zy             [34] B_zz
+[35] D_x_xx           [36] D_x_xy           [37] D_x_xz
+[38] D_x_yy           [39] D_x_yz           [40] D_x_zz
+[41] D_y_xx           [42] D_y_xy           [43] D_y_xz
+[44] D_y_yy           [45] D_y_yz           [46] D_y_zz
+[47] D_z_xx           [48] D_z_xy           [49] D_z_xz
+[50] D_z_yy           [51] D_z_yz           [52] D_z_zz
+[53] K
+[54] phi
+[55] P_x              [56] P_y              [57] P_z
+@endcode
+*/

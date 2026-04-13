@@ -1,0 +1,19 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+namespace applications::exahype2::exagrype {
+  template <class Shortcuts>
+  static inline GPU_CALLABLE_METHOD double maxEigenvalue(const double* const Q, int normal) {
+    const double np   = 1.0;
+    const double qmin = std::min(
+      {Q[Shortcuts::gamma_tilde + 0], Q[Shortcuts::gamma_tilde + 3], Q[Shortcuts::gamma_tilde + 5]}
+    );
+    const double alpha = std::max({1.0, Q[Shortcuts::alpha]}) * std::max({1.0, pow(Q[Shortcuts::phi], 1.0 / np)})
+                         / std::sqrt(qmin);
+
+    constexpr double sqrtwo = 1.4142135623730951;
+    const double     tempA  = alpha * std::max({sqrtwo, CCZ4E, CCZ4Ds, 2.0 / alpha});
+    const double     tempB  = Q[Shortcuts::beta + normal]; // DOT_PRODUCT(Q(18:20),nv(:))
+    return std::max(std::abs(tempA + tempB), std::abs(tempA - tempB));
+  }
+} // namespace applications::exahype2::exagrype

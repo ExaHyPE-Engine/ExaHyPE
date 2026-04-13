@@ -60,7 +60,7 @@ class UpdatePatch(AbstractFVActionSet):
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
   } else if (not marker.willBeRefined() and not marker.hasBeenRefined()) { // Required in cases where the if-guard above is extended by a solver
     const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-    const double timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
+    [[maybe_unused]] const double timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
 
     assertion2(tarch::la::greaterEquals(timeStepSize, 0.0), timeStepSize, timeStamp);
     assertion2(tarch::la::greaterEquals(timeStamp,    0.0), timeStepSize, timeStamp);

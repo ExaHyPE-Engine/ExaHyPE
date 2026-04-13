@@ -8,7 +8,6 @@ import exahype2.grid
 
 import exahype2.solvers.fv
 import exahype2.solvers.fd
-import exahype2.solvers.rkfd
 import exahype2.solvers.rkdg
 import exahype2.solvers.aderdg
 import exahype2.solvers.limiting
