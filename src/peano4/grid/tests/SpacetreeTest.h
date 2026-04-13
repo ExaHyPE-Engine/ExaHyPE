@@ -24,8 +24,10 @@ private:
   void testTraverseWithPeriodicBoundaryConditionsUsesStableVertexBoundaryFlags();
   void testIncrementNumberOfAdjacentRefinedLocalCells();
   void testDoesRankIndexIdentifyHorizontalDataExchange();
+  void testHorizontalExchangeSymmetry();
+  void testNoTopologyChangeParity();
+  void testVertexNeighbourPermutationInvariance();
   void testDescend();
-  void testDescendWhileInRunningState();
 
 public:
   SpacetreeTest();

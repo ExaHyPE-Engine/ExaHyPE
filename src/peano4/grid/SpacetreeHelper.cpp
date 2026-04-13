@@ -8,6 +8,50 @@
 #include <tuple>
 #include <utility>
 
+namespace {
+  struct FaceAdjacentRanks {
+    int first;
+    int second;
+  };
+
+  INLINE_METHOD FaceAdjacentRanks readFaceAdjacentRanks(
+    peano4::grid::GridVertex fineGridVertices[TWO_POWER_D],
+    int                      faceNumber,
+    int                      vertexIndex,
+    bool                     calledByReceivingProcess
+  ) {
+    const auto& T      = peano4::grid::SpacetreeHelper::getFaceAdjTables();
+    const int   normal = faceNumber % DIMENSIONS;
+
+    const peano4::grid::GridVertex& v       = fineGridVertices[vertexIndex];
+    const auto                      state   = v.getState();
+    const bool                      invalid = calledByReceivingProcess
+                                                ? (state == peano4::grid::GridVertex::State::HangingVertex
+                              or state == peano4::grid::GridVertex::State::New)
+                                                : (state == peano4::grid::GridVertex::State::HangingVertex
+                              or state == peano4::grid::GridVertex::State::Delete);
+    const auto&                     adj     = calledByReceivingProcess ? v.backupOfAdjacentRanks : v.adjacentRanks;
+    const int                       i0      = T.adjIdx0[normal][vertexIndex];
+    const int                       i1      = T.adjIdx1[normal][vertexIndex];
+
+    return {invalid ? -1 : adj[i0], invalid ? -1 : adj[i1]};
+  }
+
+  INLINE_METHOD void insertSortedUnique(peano4::grid::SpacetreeHelper::NeighbourTrees& neighbourIds, int rank) {
+    int insertPos = 0;
+    while (insertPos < neighbourIds.count and neighbourIds.ids[insertPos] < rank) {
+      insertPos++;
+    }
+    if (insertPos == neighbourIds.count or neighbourIds.ids[insertPos] != rank) {
+      for (int j = neighbourIds.count; j > insertPos; --j) {
+        neighbourIds.ids[j] = neighbourIds.ids[j - 1];
+      }
+      neighbourIds.ids[insertPos] = rank;
+      neighbourIds.count++;
+    }
+  }
+} // namespace
+
 const peano4::grid::SpacetreeHelper::Patch3x3IndexTable peano4::grid::SpacetreeHelper::_patch3x3Table = [] {
   Patch3x3IndexTable t{};
   for (int k = 0; k < TWO_POWER_D; ++k) {
@@ -67,39 +111,24 @@ void peano4::grid::SpacetreeHelper::getAdjacentRanksOfFace(
   int        out[TWO_POWER_D]
 ) {
   assertion(faceNumber >= 0 and faceNumber < TWO_TIMES_D);
-  const auto& T      = getFaceAdjTables();
-  const int*  verts  = T.faceVerts[faceNumber];
-  const int   normal = faceNumber % DIMENSIONS;
+  const auto& T     = getFaceAdjTables();
+  const int*  verts = T.faceVerts[faceNumber];
 
   int counter = 0;
 
   if (calledByReceivingProcess) {
     // Use backupOfAdjacentRanks for all contributing vertices
     for (int k = 0; k < TWO_POWER_D / 2; ++k) {
-      const int         vIdx  = verts[k];
-      const GridVertex& v     = fineGridVertices[vIdx];
-      const auto        state = v.getState();
-      // Receiving side ignores New
-      const bool  invalid = (state == GridVertex::State::HangingVertex) or (state == GridVertex::State::New);
-      const auto& adj     = v.backupOfAdjacentRanks;
-      const int   i0      = T.adjIdx0[normal][vIdx];
-      const int   i1      = T.adjIdx1[normal][vIdx];
-      out[counter++]      = invalid ? -1 : adj[i0];
-      out[counter++]      = invalid ? -1 : adj[i1];
+      const auto adjacentRanks = readFaceAdjacentRanks(fineGridVertices, faceNumber, verts[k], true);
+      out[counter++]           = adjacentRanks.first;
+      out[counter++]           = adjacentRanks.second;
     }
   } else {
     // Use (current) adjacentRanks for all contributing vertices
     for (int k = 0; k < TWO_POWER_D / 2; ++k) {
-      const int         vIdx  = verts[k];
-      const GridVertex& v     = fineGridVertices[vIdx];
-      const auto        state = v.getState();
-      // Sending side ignores Delete
-      const bool  invalid = (state == GridVertex::State::HangingVertex) or (state == GridVertex::State::Delete);
-      const auto& adj     = v.adjacentRanks;
-      const int   i0      = T.adjIdx0[normal][vIdx];
-      const int   i1      = T.adjIdx1[normal][vIdx];
-      out[counter++]      = invalid ? -1 : adj[i0];
-      out[counter++]      = invalid ? -1 : adj[i1];
+      const auto adjacentRanks = readFaceAdjacentRanks(fineGridVertices, faceNumber, verts[k], false);
+      out[counter++]           = adjacentRanks.first;
+      out[counter++]           = adjacentRanks.second;
     }
   }
 }
@@ -134,9 +163,8 @@ int peano4::grid::SpacetreeHelper::getNeighbourTreeAlongFace(
   SpacetreeState            treeState,
   bool                      noParallelTopologyChanges
 ) {
-  const auto& T      = getFaceAdjTables();
-  const int   normal = faceNumber % DIMENSIONS;
-  const int*  verts  = T.faceVerts[faceNumber];
+  const auto& T     = getFaceAdjTables();
+  const int*  verts = T.faceVerts[faceNumber];
 
   if (noParallelTopologyChanges) {
     bool       isAdjacentToLocalRank = false;
@@ -145,17 +173,9 @@ int peano4::grid::SpacetreeHelper::getNeighbourTreeAlongFace(
                                                                 : (treeState != SpacetreeState::Joining);
 
     for (int k = 0; k < TWO_POWER_D / 2; ++k) {
-      const int         vIdx    = verts[k];
-      const GridVertex& v       = fineGridVertices[vIdx];
-      const auto        state   = v.getState();
-      const bool        invalid = calledByReceivingProcess
-                                    ? (state == GridVertex::State::HangingVertex or state == GridVertex::State::New)
-                                    : (state == GridVertex::State::HangingVertex or state == GridVertex::State::Delete);
-      const auto&       adj     = calledByReceivingProcess ? v.backupOfAdjacentRanks : v.adjacentRanks;
-      const int         i0      = T.adjIdx0[normal][vIdx];
-      const int         i1      = T.adjIdx1[normal][vIdx];
-      const int         r0      = invalid ? -1 : adj[i0];
-      const int         r1      = invalid ? -1 : adj[i1];
+      const auto adjacentRanks = readFaceAdjacentRanks(fineGridVertices, faceNumber, verts[k], calledByReceivingProcess);
+      const int r0 = adjacentRanks.first;
+      const int r1 = adjacentRanks.second;
 
       isAdjacentToLocalRank |= r0 == treeNumber or r1 == treeNumber;
 
@@ -224,17 +244,9 @@ int peano4::grid::SpacetreeHelper::getNeighbourTreeAlongFace(
   };
 
   for (int k = 0; k < TWO_POWER_D / 2; ++k) {
-    const int         vIdx    = verts[k];
-    const GridVertex& v       = fineGridVertices[vIdx];
-    const auto        state   = v.getState();
-    const bool        invalid = calledByReceivingProcess
-                                  ? (state == GridVertex::State::HangingVertex or state == GridVertex::State::New)
-                                  : (state == GridVertex::State::HangingVertex or state == GridVertex::State::Delete);
-    const auto&       adj     = calledByReceivingProcess ? v.backupOfAdjacentRanks : v.adjacentRanks;
-    const int         i0      = T.adjIdx0[normal][vIdx];
-    const int         i1      = T.adjIdx1[normal][vIdx];
-    const int         r0      = invalid ? -1 : adj[i0];
-    const int         r1      = invalid ? -1 : adj[i1];
+    const auto adjacentRanks = readFaceAdjacentRanks(fineGridVertices, faceNumber, verts[k], calledByReceivingProcess);
+    const int  r0            = adjacentRanks.first;
+    const int  r1            = adjacentRanks.second;
 
     processAdjacentRank(r0);
     processAdjacentRank(r1);
@@ -275,17 +287,7 @@ peano4::grid::SpacetreeHelper::NeighbourTrees peano4::grid::SpacetreeHelper::get
         continue;
       }
 
-      int insertPos = 0;
-      while (insertPos < neighbourIds.count and neighbourIds.ids[insertPos] < rank) {
-        insertPos++;
-      }
-      if (insertPos == neighbourIds.count or neighbourIds.ids[insertPos] != rank) {
-        for (int j = neighbourIds.count; j > insertPos; --j) {
-          neighbourIds.ids[j] = neighbourIds.ids[j - 1];
-        }
-        neighbourIds.ids[insertPos] = rank;
-        neighbourIds.count++;
-      }
+      insertSortedUnique(neighbourIds, rank);
     }
 
     if (not isLocalVertex) {
@@ -344,17 +346,7 @@ peano4::grid::SpacetreeHelper::NeighbourTrees peano4::grid::SpacetreeHelper::get
       continue;
     }
 
-    int insertPos = 0;
-    while (insertPos < neighbourIds.count and neighbourIds.ids[insertPos] < rank) {
-      insertPos++;
-    }
-    if (insertPos == neighbourIds.count or neighbourIds.ids[insertPos] != rank) {
-      for (int j = neighbourIds.count; j > insertPos; --j) {
-        neighbourIds.ids[j] = neighbourIds.ids[j - 1];
-      }
-      neighbourIds.ids[insertPos] = rank;
-      neighbourIds.count++;
-    }
+    insertSortedUnique(neighbourIds, rank);
   }
 
   if (not isLocalVertex) {
@@ -460,23 +452,14 @@ std::bitset<TWO_TIMES_D> peano4::grid::SpacetreeHelper::areFacesAdjacentToParall
 
   if (noParallelTopologyChanges) {
     for (int j = 0; j < TWO_TIMES_D; j++) {
-      const int  normal    = j % DIMENSIONS;
       const int* verts     = T.faceVerts[j];
       bool       oneLocal  = false;
       bool       oneRemote = false;
 
       for (int k = 0; k < TWO_POWER_D / 2 and not(oneLocal and oneRemote); ++k) {
-        const int         vIdx    = verts[k];
-        const GridVertex& v       = vertices[vIdx];
-        const auto        state   = v.getState();
-        const bool        invalid = calledByLeaveCell
-                                      ? (state == GridVertex::State::HangingVertex or state == GridVertex::State::New)
-                                      : (state == GridVertex::State::HangingVertex or state == GridVertex::State::Delete);
-        const auto&       adj     = calledByLeaveCell ? v.backupOfAdjacentRanks : v.adjacentRanks;
-        const int         i0      = T.adjIdx0[normal][vIdx];
-        const int         i1      = T.adjIdx1[normal][vIdx];
-        const int         r0      = invalid ? -1 : adj[i0];
-        const int         r1      = invalid ? -1 : adj[i1];
+        const auto adjacentRanks = readFaceAdjacentRanks(vertices, j, verts[k], calledByLeaveCell);
+        const int  r0            = adjacentRanks.first;
+        const int  r1            = adjacentRanks.second;
 
         if (r0 >= 0 or r0 == RankOfPeriodicBoundaryCondition) {
           oneLocal |= r0 == treeNumber;
@@ -519,24 +502,14 @@ std::bitset<TWO_TIMES_D> peano4::grid::SpacetreeHelper::areFacesAdjacentToParall
   };
 
   for (int j = 0; j < TWO_TIMES_D; j++) {
-    const int  normal    = j % DIMENSIONS;
     const int* verts     = T.faceVerts[j];
     bool       oneLocal  = false;
     bool       oneRemote = false;
 
     for (int k = 0; k < TWO_POWER_D / 2 and not(oneLocal and oneRemote); ++k) {
-      const int         vIdx    = verts[k];
-      const GridVertex& v       = vertices[vIdx];
-      const auto        state   = v.getState();
-      const bool        invalid = calledByLeaveCell
-                                    ? (state == GridVertex::State::HangingVertex or state == GridVertex::State::New)
-                                    : (state == GridVertex::State::HangingVertex or state == GridVertex::State::Delete);
-      const auto&       adj     = calledByLeaveCell ? v.backupOfAdjacentRanks : v.adjacentRanks;
-
-      const int i0 = T.adjIdx0[normal][vIdx];
-      const int i1 = T.adjIdx1[normal][vIdx];
-      const int r0 = invalid ? -1 : adj[i0];
-      const int r1 = invalid ? -1 : adj[i1];
+      const auto adjacentRanks = readFaceAdjacentRanks(vertices, j, verts[k], calledByLeaveCell);
+      const int  r0            = adjacentRanks.first;
+      const int  r1            = adjacentRanks.second;
 
       auto accumulate = [&](int r) {
         const bool valid = (r >= 0) or (r == SpacetreeHelper::RankOfPeriodicBoundaryCondition);
