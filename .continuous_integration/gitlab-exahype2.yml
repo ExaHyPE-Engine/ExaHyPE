@@ -465,6 +465,26 @@ ExaSeis Application:
     - job: Build
   retry: 0
 
+ExaGRyPE Application:
+  stage: Applications
+  parallel:
+    matrix:
+    - scenario: [gauge-wave]
+      solver: [fv]
+      build_type: [Release, Debug]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exagrype/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py --solver $solver -m $build_type -md 1 -ns 0;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exagrype/$scenario; $PARALLEL_LAUNCH ./ExaGRyPE;"
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOnMain
+    - .BeforeScriptSanitiser
+  needs:
+    - job: Build
+  retry: 0
+
 Landslide Application:
   stage: Applications
   parallel:
@@ -491,36 +511,6 @@ Kernel Benchmark:
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/kernel-benchmarks/$kernel; PYTHONPATH=$CI_PROJECT_DIR/python python3 $kernel.py -m $build_type -md ${MIN_GRID_LEVELS};"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/kernel-benchmarks/$kernel; ./KernelBenchmarks"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOnMain
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-  retry: 0
-
-Gauge Wave FV Benchmark:
-  stage: Benchmarks
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/ccz4/gauge-wave-fv; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python python3 gauge-wave-fv.py"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/ccz4/gauge-wave-fv; $PARALLEL_LAUNCH ./GaugeWaveFV"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOnMain
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-  retry: 0
-
-Single Black Hole Benchmark:
-  stage: Benchmarks
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/ccz4/performance-testbed; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/ccz4 python3 performance_testbed.py -et 0.01 -minh 0.05"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/ccz4/performance-testbed; $PARALLEL_LAUNCH ./peano4_test"
   allow_failure: false
   extends:
     - .Tags

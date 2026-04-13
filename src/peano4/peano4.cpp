@@ -4,8 +4,9 @@
 
 #include "parallel/Node.h"
 #include "parallel/SpacetreeSet.h"
-#include "tarch/CPUFeatures.h"
+#include "tarch/CPUFeatureDetection.h"
 #include "tarch/NonCriticalAssertions.h"
+#include "tarch/StackSizeLimitDetection.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/accelerator/MemoryBlocks.h"
 #include "tarch/accelerator/MemoryManager.h"
@@ -46,7 +47,8 @@ namespace {
       buildInfo += " Thread(s)";
 #endif
 
-      buildInfo += ", CPU: " + tarch::getCPUFeatures();
+      buildInfo += ", CPU: " + tarch::detectCPUFeatures();
+      buildInfo += ", Stack Size: " + tarch::detectStackSizeLimit();
 
 #if defined(WITH_GPU)
       buildInfo += ", GPU Backend ";
