@@ -118,14 +118,17 @@ void peano4::grid::tests::SpacetreeTest::run() {
   testMethod(testUpdateVertexRanksWithinCell);
   testMethod(testIncrementNumberOfAdjacentRefinedLocalCells);
   testMethod(testDoesRankIndexIdentifyHorizontalDataExchange);
+  testMethod(testHorizontalExchangeSymmetry);
+  testMethod(testNoTopologyChangeParity);
+  testMethod(testVertexNeighbourPermutationInvariance);
   testMethod(testDescend);
-  testMethod(testDescendWhileInRunningState);
   testMethod(testGetNeighbourTreesVertexSendReceive);
   testMethod(testGetNeighbourTreesFaceSendReceive);
   testMethod(testIsFaceAlongPeriodicBoundaryCondition);
   testMethod(testTraverseWithPeriodicBoundaryConditionsUsesStableVertexBoundaryFlags);
 }
 
+// Checks the coarse-grid restriction mapping from 3^D patch coordinates back to 2^D parent-cell coordinates.
 void peano4::grid::tests::SpacetreeTest::testRestrictToCoarseGrid() {
 #if DIMENSIONS == 2
   tarch::la::Vector<DIMENSIONS, int> positionInPatch;
@@ -189,6 +192,7 @@ void peano4::grid::tests::SpacetreeTest::testRestrictToCoarseGrid() {
 #endif
 }
 
+// Verifies that updating ranks within one cell only overwrites the owning adjacency slot of each vertex.
 void peano4::grid::tests::SpacetreeTest::testUpdateVertexRanksWithinCell() {
 #if DIMENSIONS == 2
   GridVertex fineGridVertices[TWO_POWER_D];
@@ -219,6 +223,7 @@ void peano4::grid::tests::SpacetreeTest::testUpdateVertexRanksWithinCell() {
 #endif
 }
 
+// Verifies vertex neighbour discovery for send/receive, including filtering of splitting ranks and hanging vertices.
 void peano4::grid::tests::SpacetreeTest::testGetNeighbourTreesVertexSendReceive() {
 #if DIMENSIONS == 2
   Spacetree tree({0.0, 0.0}, {1.0, 1.0});
@@ -357,6 +362,7 @@ void peano4::grid::tests::SpacetreeTest::testGetNeighbourTreesVertexSendReceive(
 #endif
 }
 
+// Verifies face neighbour discovery for send/receive, including suppression of invalid vertices and non-local faces.
 void peano4::grid::tests::SpacetreeTest::testGetNeighbourTreesFaceSendReceive() {
 #if DIMENSIONS == 2
   Spacetree tree({0.0, 0.0}, {1.0, 1.0});
@@ -456,6 +462,8 @@ void peano4::grid::tests::SpacetreeTest::testGetNeighbourTreesFaceSendReceive() 
 #endif
 }
 
+// Verifies that periodic boundary markers are recognised on faces only when the face is still adjacent to the local
+// tree.
 void peano4::grid::tests::SpacetreeTest::testIsFaceAlongPeriodicBoundaryCondition() {
 #if DIMENSIONS == 2
   Spacetree tree({0.0, 0.0}, {1.0, 1.0});
@@ -493,6 +501,8 @@ void peano4::grid::tests::SpacetreeTest::testIsFaceAlongPeriodicBoundaryConditio
 #endif
 }
 
+// Verifies that traversal reports vertex boundary flags consistently with vertex locality when periodic boundaries are
+// active.
 void peano4::grid::tests::SpacetreeTest::testTraverseWithPeriodicBoundaryConditionsUsesStableVertexBoundaryFlags() {
   std::bitset<DIMENSIONS> periodicBC;
   periodicBC.set(0); // x-direction
@@ -520,6 +530,8 @@ void peano4::grid::tests::SpacetreeTest::testTraverseWithPeriodicBoundaryConditi
   Spacetree::_vertexStack.clear(tree._id);
 }
 
+// Checks that counting adjacent refined local cells increments the per-vertex counter once per contributing local
+// refined cell.
 void peano4::grid::tests::SpacetreeTest::testIncrementNumberOfAdjacentRefinedLocalCells() {
 #if DIMENSIONS == 2
   GridVertex vertices[TWO_POWER_D];
@@ -540,6 +552,7 @@ void peano4::grid::tests::SpacetreeTest::testIncrementNumberOfAdjacentRefinedLoc
 #endif
 }
 
+// Verifies the primitive horizontal-exchange predicate across mandatory exclusions, transition states, and tree states.
 void peano4::grid::tests::SpacetreeTest::testDoesRankIndexIdentifyHorizontalDataExchange() {
 #if DIMENSIONS == 2
   Spacetree tree({0.0, 0.0}, {1.0, 1.0});
@@ -697,6 +710,372 @@ void peano4::grid::tests::SpacetreeTest::testDoesRankIndexIdentifyHorizontalData
 #endif
 }
 
+// Verifies that matching synthetic topologies produce protocol-symmetric sender/receiver decisions for both vertices
+// and faces.
+void peano4::grid::tests::SpacetreeTest::testHorizontalExchangeSymmetry() {
+  Spacetree sender         = createUnitTree();
+  Spacetree receiver       = createUnitTree();
+  sender._id               = 1;
+  receiver._id             = 2;
+  sender._spacetreeState   = SpacetreeState::Running;
+  receiver._spacetreeState = SpacetreeState::Running;
+
+  GridVertex vertexOnSender;
+  vertexOnSender.setState(GridVertex::State::Unrefined);
+  GridVertex vertexOnReceiver;
+  vertexOnReceiver.setState(GridVertex::State::Unrefined);
+  for (int i = 0; i < TWO_POWER_D; ++i) {
+    vertexOnSender.adjacentRanks[i]           = -1;
+    vertexOnSender.backupOfAdjacentRanks[i]   = -1;
+    vertexOnReceiver.adjacentRanks[i]         = -1;
+    vertexOnReceiver.backupOfAdjacentRanks[i] = -1;
+  }
+  vertexOnSender.adjacentRanks[0]         = sender._id;
+  vertexOnSender.backupOfAdjacentRanks[0] = sender._id;
+  vertexOnSender.adjacentRanks[1]         = receiver._id;
+  vertexOnSender.backupOfAdjacentRanks[1] = receiver._id;
+
+  vertexOnReceiver.adjacentRanks[0]         = receiver._id;
+  vertexOnReceiver.backupOfAdjacentRanks[0] = receiver._id;
+  vertexOnReceiver.adjacentRanks[1]         = sender._id;
+  vertexOnReceiver.backupOfAdjacentRanks[1] = sender._id;
+
+  const auto senderNeighbours = SpacetreeHelper::getNeighbourTreesAlongVertex(
+    vertexOnSender,
+    sender._id,
+    sender._splitTriggered,
+    sender._splitting,
+    sender._joining,
+    false,
+    sender._spacetreeState,
+    false
+  );
+  const auto receiverNeighbours = SpacetreeHelper::getNeighbourTreesAlongVertex(
+    vertexOnReceiver,
+    receiver._id,
+    receiver._splitTriggered,
+    receiver._splitting,
+    receiver._joining,
+    true,
+    receiver._spacetreeState,
+    false
+  );
+
+  validateEqualsWithParams1(senderNeighbours.size(), 1, vectorToString(senderNeighbours));
+  validateEqualsWithParams1(receiverNeighbours.size(), 1, vectorToString(receiverNeighbours));
+  validateEquals(senderNeighbours[0], receiver._id);
+  validateEquals(receiverNeighbours[0], sender._id);
+
+  GridVertex senderFaceVertices[TWO_POWER_D];
+  GridVertex receiverFaceVertices[TWO_POWER_D];
+  for (int v = 0; v < TWO_POWER_D; ++v) {
+    senderFaceVertices[v].setState(GridVertex::State::Unrefined);
+    receiverFaceVertices[v].setState(GridVertex::State::Unrefined);
+    for (int j = 0; j < TWO_POWER_D; ++j) {
+      senderFaceVertices[v].adjacentRanks[j]           = sender._id;
+      senderFaceVertices[v].backupOfAdjacentRanks[j]   = sender._id;
+      receiverFaceVertices[v].adjacentRanks[j]         = receiver._id;
+      receiverFaceVertices[v].backupOfAdjacentRanks[j] = receiver._id;
+    }
+  }
+
+  const auto& T      = SpacetreeHelper::getFaceAdjTables();
+  const int   face   = 0;
+  const int   normal = face % DIMENSIONS;
+  const int   v0     = T.faceVerts[face][0];
+  const int   i0     = T.adjIdx0[normal][v0];
+
+  senderFaceVertices[v0].adjacentRanks[i0]           = receiver._id;
+  senderFaceVertices[v0].backupOfAdjacentRanks[i0]   = receiver._id;
+  receiverFaceVertices[v0].adjacentRanks[i0]         = sender._id;
+  receiverFaceVertices[v0].backupOfAdjacentRanks[i0] = sender._id;
+
+  const int senderFaceNeighbour = SpacetreeHelper::getNeighbourTreeAlongFace(
+    senderFaceVertices,
+    face,
+    sender._id,
+    sender._splitTriggered,
+    sender._splitting,
+    sender._joining,
+    false,
+    sender._spacetreeState,
+    false
+  );
+  const int receiverFaceNeighbour = SpacetreeHelper::getNeighbourTreeAlongFace(
+    receiverFaceVertices,
+    face,
+    receiver._id,
+    receiver._splitTriggered,
+    receiver._splitting,
+    receiver._joining,
+    true,
+    receiver._spacetreeState,
+    false
+  );
+
+  validateEquals(senderFaceNeighbour, receiver._id);
+  validateEquals(receiverFaceNeighbour, sender._id);
+}
+
+// Verifies that the fast no-topology-change path matches the generic helper path when all transition sets are empty.
+void peano4::grid::tests::SpacetreeTest::testNoTopologyChangeParity() {
+  Spacetree tree       = createUnitTree();
+  tree._id             = 1;
+  tree._spacetreeState = SpacetreeState::Running;
+  tree._splitTriggered.clear();
+  tree._splitting.clear();
+  tree._joining.clear();
+
+  GridVertex vertex;
+  vertex.setState(GridVertex::State::Unrefined);
+  for (int i = 0; i < TWO_POWER_D; ++i) {
+    vertex.adjacentRanks[i]         = -1;
+    vertex.backupOfAdjacentRanks[i] = -1;
+  }
+  vertex.adjacentRanks[0]         = tree._id;
+  vertex.backupOfAdjacentRanks[0] = tree._id;
+  vertex.adjacentRanks[1]         = 2;
+  vertex.backupOfAdjacentRanks[1] = 2;
+
+  const auto sendNoChange = SpacetreeHelper::getNeighbourTreesAlongVertex(
+    vertex,
+    tree._id,
+    tree._splitTriggered,
+    tree._splitting,
+    tree._joining,
+    false,
+    tree._spacetreeState,
+    true
+  );
+  const auto sendGeneric = SpacetreeHelper::getNeighbourTreesAlongVertex(
+    vertex,
+    tree._id,
+    tree._splitTriggered,
+    tree._splitting,
+    tree._joining,
+    false,
+    tree._spacetreeState,
+    false
+  );
+  const auto recvNoChange = SpacetreeHelper::getNeighbourTreesAlongVertex(
+    vertex,
+    tree._id,
+    tree._splitTriggered,
+    tree._splitting,
+    tree._joining,
+    true,
+    tree._spacetreeState,
+    true
+  );
+  const auto recvGeneric = SpacetreeHelper::getNeighbourTreesAlongVertex(
+    vertex,
+    tree._id,
+    tree._splitTriggered,
+    tree._splitting,
+    tree._joining,
+    true,
+    tree._spacetreeState,
+    false
+  );
+
+  validateEqualsWithParams2(
+    vectorToString(sendNoChange),
+    vectorToString(sendGeneric),
+    vectorToString(sendNoChange),
+    vectorToString(sendGeneric)
+  );
+  validateEqualsWithParams2(
+    vectorToString(recvNoChange),
+    vectorToString(recvGeneric),
+    vectorToString(recvNoChange),
+    vectorToString(recvGeneric)
+  );
+
+  GridVertex faceVertices[TWO_POWER_D];
+  for (int v = 0; v < TWO_POWER_D; ++v) {
+    faceVertices[v].setState(GridVertex::State::Unrefined);
+    for (int j = 0; j < TWO_POWER_D; ++j) {
+      faceVertices[v].adjacentRanks[j]         = tree._id;
+      faceVertices[v].backupOfAdjacentRanks[j] = tree._id;
+    }
+  }
+
+  const auto& T                              = SpacetreeHelper::getFaceAdjTables();
+  const int   face                           = 0;
+  const int   normal                         = face % DIMENSIONS;
+  const int   v0                             = T.faceVerts[face][0];
+  const int   i0                             = T.adjIdx0[normal][v0];
+  faceVertices[v0].adjacentRanks[i0]         = 2;
+  faceVertices[v0].backupOfAdjacentRanks[i0] = 2;
+
+  const int sendFaceNoChange = SpacetreeHelper::getNeighbourTreeAlongFace(
+    faceVertices,
+    face,
+    tree._id,
+    tree._splitTriggered,
+    tree._splitting,
+    tree._joining,
+    false,
+    tree._spacetreeState,
+    true
+  );
+  const int sendFaceGeneric = SpacetreeHelper::getNeighbourTreeAlongFace(
+    faceVertices,
+    face,
+    tree._id,
+    tree._splitTriggered,
+    tree._splitting,
+    tree._joining,
+    false,
+    tree._spacetreeState,
+    false
+  );
+  const int recvFaceNoChange = SpacetreeHelper::getNeighbourTreeAlongFace(
+    faceVertices,
+    face,
+    tree._id,
+    tree._splitTriggered,
+    tree._splitting,
+    tree._joining,
+    true,
+    tree._spacetreeState,
+    true
+  );
+  const int recvFaceGeneric = SpacetreeHelper::getNeighbourTreeAlongFace(
+    faceVertices,
+    face,
+    tree._id,
+    tree._splitTriggered,
+    tree._splitting,
+    tree._joining,
+    true,
+    tree._spacetreeState,
+    false
+  );
+
+  validateEquals(sendFaceNoChange, sendFaceGeneric);
+  validateEquals(recvFaceNoChange, recvFaceGeneric);
+
+  const auto vertexBoundaryNoChange = SpacetreeHelper::areVerticesAdjacentToParallelDomainBoundary(
+    faceVertices,
+    tree._id,
+    tree._splitTriggered,
+    tree._splitting,
+    tree._joinTriggered,
+    tree._joining,
+    true
+  );
+  const auto vertexBoundaryGeneric = SpacetreeHelper::areVerticesAdjacentToParallelDomainBoundary(
+    faceVertices,
+    tree._id,
+    tree._splitTriggered,
+    tree._splitting,
+    tree._joinTriggered,
+    tree._joining,
+    false
+  );
+  const auto faceBoundaryNoChange = SpacetreeHelper::areFacesAdjacentToParallelDomainBoundary(
+    faceVertices,
+    tree._id,
+    tree._splitTriggered,
+    tree._splitting,
+    tree._joinTriggered,
+    tree._joining,
+    false,
+    true
+  );
+  const auto faceBoundaryGeneric = SpacetreeHelper::areFacesAdjacentToParallelDomainBoundary(
+    faceVertices,
+    tree._id,
+    tree._splitTriggered,
+    tree._splitting,
+    tree._joinTriggered,
+    tree._joining,
+    false,
+    false
+  );
+
+  validateEquals(vertexBoundaryNoChange.to_string(), vertexBoundaryGeneric.to_string());
+  validateEquals(faceBoundaryNoChange.to_string(), faceBoundaryGeneric.to_string());
+}
+
+// Verifies that permuting adjacency entries without changing the represented topology does not change vertex neighbour
+// results.
+void peano4::grid::tests::SpacetreeTest::testVertexNeighbourPermutationInvariance() {
+  Spacetree tree       = createUnitTree();
+  tree._id             = 1;
+  tree._spacetreeState = SpacetreeState::Running;
+
+  GridVertex a;
+  GridVertex b;
+  a.setState(GridVertex::State::Unrefined);
+  b.setState(GridVertex::State::Unrefined);
+  for (int i = 0; i < TWO_POWER_D; ++i) {
+    a.adjacentRanks[i]         = -1;
+    a.backupOfAdjacentRanks[i] = -1;
+    b.adjacentRanks[i]         = -1;
+    b.backupOfAdjacentRanks[i] = -1;
+  }
+  a.adjacentRanks[0]         = tree._id;
+  a.adjacentRanks[1]         = 3;
+  a.adjacentRanks[2]         = 2;
+  a.backupOfAdjacentRanks[0] = tree._id;
+  a.backupOfAdjacentRanks[1] = 5;
+  a.backupOfAdjacentRanks[2] = 4;
+
+  b.adjacentRanks[0]                       = 2;
+  b.adjacentRanks[TWO_POWER_D - 2]         = tree._id;
+  b.adjacentRanks[TWO_POWER_D - 1]         = 3;
+  b.backupOfAdjacentRanks[0]               = 4;
+  b.backupOfAdjacentRanks[TWO_POWER_D - 2] = tree._id;
+  b.backupOfAdjacentRanks[TWO_POWER_D - 1] = 5;
+
+  const auto sendA = SpacetreeHelper::getNeighbourTreesAlongVertex(
+    a,
+    tree._id,
+    tree._splitTriggered,
+    tree._splitting,
+    tree._joining,
+    false,
+    tree._spacetreeState,
+    false
+  );
+  const auto sendB = SpacetreeHelper::getNeighbourTreesAlongVertex(
+    b,
+    tree._id,
+    tree._splitTriggered,
+    tree._splitting,
+    tree._joining,
+    false,
+    tree._spacetreeState,
+    false
+  );
+  const auto recvA = SpacetreeHelper::getNeighbourTreesAlongVertex(
+    a,
+    tree._id,
+    tree._splitTriggered,
+    tree._splitting,
+    tree._joining,
+    true,
+    tree._spacetreeState,
+    false
+  );
+  const auto recvB = SpacetreeHelper::getNeighbourTreesAlongVertex(
+    b,
+    tree._id,
+    tree._splitTriggered,
+    tree._splitting,
+    tree._joining,
+    true,
+    tree._spacetreeState,
+    false
+  );
+
+  validateEquals(vectorToString(sendA), vectorToString(sendB));
+  validateEquals(vectorToString(recvA), vectorToString(recvB));
+}
+
+// Verifies that descending a simple local tree still triggers the expected observer callbacks and statistics updates.
 void peano4::grid::tests::SpacetreeTest::testDescend() {
   Spacetree tree = createUnitTree();
   Spacetree::_vertexStack.clear(tree._id);
@@ -716,53 +1095,6 @@ void peano4::grid::tests::SpacetreeTest::testDescend() {
 
   CountingTraversalObserver observer;
   tree.descend(tree._root, vertices, observer);
-
-  validateEquals(observer.loadVertexDataCalls, THREE_POWER_D);
-  validateEquals(observer.loadFaceDataCalls, THREE_POWER_D);
-  validateEquals(observer.loadCellDataCalls, THREE_POWER_D);
-  validateEquals(observer.enterNodeCalls, THREE_POWER_D);
-  validateEquals(observer.leaveNodeCalls, THREE_POWER_D);
-  validateEquals(observer.storeVertexDataCalls, THREE_POWER_D);
-  validateEquals(observer.storeFaceDataCalls, THREE_POWER_D);
-  validateEquals(observer.storeCellDataCalls, THREE_POWER_D);
-  validateEquals(static_cast<int>(observer.enteredLevels.size()), THREE_POWER_D);
-  validateEquals(static_cast<int>(observer.enteredCellIsLocal.size()), THREE_POWER_D);
-  for (int level : observer.enteredLevels) {
-    validateEquals(level, 1);
-  }
-  for (bool isLocal : observer.enteredCellIsLocal) {
-    validate(isLocal);
-  }
-
-  const int expectedLocalRefinedCells = tree._id == 0 ? 1 : 0;
-  validateEquals(tree._statistics.numberOfLocalRefinedCells, expectedLocalRefinedCells);
-  validateEquals(tree._statistics.numberOfRemoteRefinedCells, 0);
-  validateEquals(tree._statistics.numberOfLocalUnrefinedCells, THREE_POWER_D);
-  validateEquals(tree._statistics.numberOfRemoteUnrefinedCells, 0);
-  validateEquals(tree._vertexLookupTables.size(), 0);
-
-  Spacetree::_vertexStack.clear(tree._id);
-}
-
-void peano4::grid::tests::SpacetreeTest::testDescendWhileInRunningState() {
-  Spacetree tree = createUnitTree();
-  Spacetree::_vertexStack.clear(tree._id);
-
-  CountingTraversalObserver primingObserver;
-  tree.traverse(primingObserver, true);
-
-  validate(tree._spacetreeState == SpacetreeState::Running);
-  validateEquals(tree._vertexLookupTables.size(), 0);
-
-  GridVertex vertices[TWO_POWER_D];
-  createRootVertices(tree._id, GridVertex::State::Refined, vertices);
-
-  tree._statistics.clear(tree._id == 0);
-  tree._gridControlEvents.clear();
-  tree._noParallelTopologyChanges = true;
-
-  CountingTraversalObserver observer;
-  tree.descendWhileInRunningState(tree._root, vertices, observer);
 
   validateEquals(observer.loadVertexDataCalls, THREE_POWER_D);
   validateEquals(observer.loadFaceDataCalls, THREE_POWER_D);

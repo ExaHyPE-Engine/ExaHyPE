@@ -166,12 +166,6 @@ class peano4::grid::Spacetree {
       GridTraversalObserver&    observer
     );
 
-    void descendWhileInRunningState(
-      const AutomatonState& state,
-      GridVertex            vertices[TWO_POWER_D],
-      GridTraversalObserver& observer
-    );
-
     /**
      * Every local refined cell should call this routine. We increment the
      * respective counter. Upon storage, we then refine if the counter
