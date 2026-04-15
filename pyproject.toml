@@ -49,9 +49,10 @@ dynamic = ["readme", "dependencies"]
 
 [project.scripts]
 format = "format:main"
-create-animation = "visualisation.create_animation_from_png:main"
 plot-probe-data = "plot_probe_data:main"
 plot-error-norms = "plot_error_norms:main"
+compare-solutions = "compare_solution:main"
+render-solution = "render_solution:main"
 
 [build-system]
 requires = ["setuptools>=61.0"]

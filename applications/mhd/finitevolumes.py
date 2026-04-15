@@ -18,7 +18,6 @@ import peano4
 import peano4.datamodel
 import peano4.solversteps
 import peano4.output
-import peano4.visualisation
 import peano4.toolbox.blockstructured
 
 
@@ -93,13 +92,5 @@ peano4_project.output.makefile.add_Fortran_file( "InitialData.f90" )
 peano4_project.generate(peano4.output.Overwrite.Default)
 peano4_project.build()
 success = peano4_project.run( [] )
-
-
-if success:
-  convert = peano4.visualisation.Convert( "solutionMHD", True )
-  convert.set_visualisation_tools_path( "../../../../src/visualisation" )
-  convert.extract_fine_grid()
-  convert.convert_to_vtk()
-
 
 
