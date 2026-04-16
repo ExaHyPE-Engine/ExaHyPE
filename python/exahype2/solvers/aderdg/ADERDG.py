@@ -817,6 +817,8 @@ class ADERDG(object):
             d["COMPUTATION_PRECISIONS"].append(self._corrector_computation_precision)
         if self._precompute_picard_precision!=False and self._precompute_picard_precision not in d["COMPUTATION_PRECISIONS"]:
             d["COMPUTATION_PRECISIONS"].append(self._precompute_picard_precision)
+        if self._solution_persistent_storage_precision not in d["COMPUTATION_PRECISIONS"]:
+            d["COMPUTATION_PRECISIONS"].append(self._solution_persistent_storage_precision)
         d["NUMBER_OF_PREDICTOR_PRECISIONS"] = len(d["PREDICTOR_COMPUTATION_PRECISIONS"])
         d["NUMBER_OF_PRECISIONS"] = len(d["COMPUTATION_PRECISIONS"])
 

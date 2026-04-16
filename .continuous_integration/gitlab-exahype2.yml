@@ -506,7 +506,7 @@ Kernel Benchmark:
   stage: Benchmarks
   parallel:
     matrix:
-    - kernel: [fv, aderdg, aderdg-fused]
+    - kernel: [fv, aderdg]
       build_type: [Release, Debug]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/kernel-benchmarks/$kernel; PYTHONPATH=$CI_PROJECT_DIR/python python3 $kernel.py -m $build_type -md ${MIN_GRID_LEVELS};"
