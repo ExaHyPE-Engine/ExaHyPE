@@ -66,13 +66,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
   }
 }
 
-{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 template void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
-  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*        lduh,
+  {{SOLUTION_STORAGE_PRECISION}}*                   lduh,
   const {{CORRECTOR_COMPUTATION_PRECISION}}* const  lFhbnd,
   const int                                         direction,
   const int                                         orientation,
   const double                                      inverseDxDirection,
   const double                                      timeStepSize
 );
-{% endfor %}

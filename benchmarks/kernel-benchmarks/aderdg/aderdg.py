@@ -6,102 +6,105 @@ import peano4, exahype2
 sys.path.insert(0, os.path.abspath("../../../tests/aderdg"))
 import scenarios
 
-available_scenarios = {
-    "AcousticPlanarWaves": scenarios.AcousticPlanarWaves(dimensions=2),
-    "AdvectionLinear": scenarios.AdvectionLinear(),
-    "ElasticPlanarWaves": scenarios.ElasticPlanarWaves(dimensions=2),
-    "EulerGaussianBell": scenarios.EulerGaussianBell(),
-    "EulerIsentropicVortex": scenarios.EulerIsentropicVortex(),
-    "SWERadialDamBreak": scenarios.SWERadialDamBreak(),
-    "SWERestingLake": scenarios.SWERestingLake(),
-}
 
-parser = argparse.ArgumentParser(
-    description="ExaHyPE 2 - ADER-DG Kernel Benchmarking Script"
+parser = exahype2.ArgumentParser("ExaHyPE 2 ADER-DG Kernel Benchmarking Script")
+parser.set_defaults(
+    min_depth=3,
+    degrees_of_freedom=6,
 )
+
 parser.add_argument(
-    "-m",
-    "--build-mode",
-    choices=peano4.output.CompileModes,
-    default=peano4.output.CompileModes[0],  # Release
-    help="|".join(peano4.output.CompileModes),
-)
-parser.add_argument(
-    "-t",
-    "--num-threads",
-    type=int,
-    default=1,
-    help="Number of launching threads",
-)
-parser.add_argument(
-    "-o",
-    "--order",
-    type=int,
-    default=5,
-    help="Order of the underlying ADER-DG solver.",
-)
-parser.add_argument(
-    "-c",
-    "--num-cells",
-    type=int,
-    nargs="+",
-    default=[32, 64, 128, 256, 512, 1024, 2048],
-    help="Number of patches to study",
-)
-parser.add_argument(
-    "-samples",
+    "-s",
     "--samples",
     type=int,
-    default=10,
-    help="Number of samples per measurement",
+    default=0,
+    help="Set number of samples for benchmarking, if not set, run until scenario end",
 )
 parser.add_argument(
-    "-a",
-    "--accuracy",
-    type=float,
-    default=0.0,
-    help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check. Pass in values < 0 to use machine epsilon (default).",
-)
-parser.add_argument(
-    "-cpu",
-    "--cpu",
-    action="store_true",
-    help="Assess host kernels",
-)
-parser.add_argument(
-    "-gpu",
-    "--gpu",
-    action="store_true",
-    help="Assess device kernels",
-)
-parser.add_argument(
-    "-pr", "--precision",
+    "-pr",
+    "--precision",
     choices=["double", "float", "fp16", "bf16"],
     default="double",
     help="Precision in which the solver should be computed.",
 )
 parser.add_argument(
-    "-s",
-    "--scenario",
-    choices=available_scenarios.keys(),
-    default="ElasticPlanarWaves",
-    help="Scenario which should be used as a base for the benchmarking",
+    "-st_pr",
+    "--storage_precision",
+    choices=["double", "float", "fp16", "bf16"],
+    default=None,
+    help="Precision in which the solution should be stored, supersedes the precision argument.",
 )
 parser.add_argument(
-    "-md",
-    "--min-depth",
-    type=int,
-    default=6,
-    help="Determines maximum size of a single cell on each axis.",
+    "-pr_pr",
+    "--predictor_precision",
+    choices=["double", "float", "fp16", "bf16"],
+    default=None,
+    help="Precision in which the predictor should be computed, supersedes the precision argument.",
+)
+parser.add_argument(
+    "-cr_pr",
+    "--corrector_precision",
+    choices=["double", "float", "fp16", "bf16"],
+    default=None,
+    help="Precision in which the corrector should be computed, supersedes the precision argument.",
 )
 
 args = parser.parse_args()
 
-scenario = available_scenarios[args.scenario]
+scenario = scenarios.ElasticPlanarWaves(dimensions=args.dimensions)
+
+boundary_conditions = """
+ // Lamé parameters
+ constexpr double mu     =  4.0;
+ constexpr double lambda = -4.0;
+
+ // Constant auxiliary parameters
+ constexpr double rho  = 1.0;
+ constexpr double cp   = 2.0;
+ constexpr double cs   = 2.0;
+
+ constexpr double w = -2*M_PI;
+
+ const double val_x = cos( w*t -std::numbers::pi*x[0]);
+ const double val_y = cos( w*t -std::numbers::pi*x[1]);
+#if DIMENSIONS==2
+  // Stresses
+  Qoutside[2] = val_x*(lambda+2*mu)  + val_y*lambda;         //xx
+  Qoutside[3] = val_x*lambda         + val_y*(lambda+2*mu);  //yy
+  Qoutside[4] = val_x*mu + val_y*mu;                         //xy
+
+  // Velocities
+  Qoutside[0] = val_x*cp + val_y*cs; //vx
+  Qoutside[1] = val_y*cp + val_x*cs; //vy
+
+  Qoutside[5] = rho;
+  Qoutside[6] = cp;
+  Qoutside[7] = cs;
+#else
+  const double val_z = cos( w*t -std::numbers::pi*x[2]);
+
+  // Stresses
+  Qoutside[3] = val_x*(lambda+2*mu)  + val_y*lambda        + val_z*lambda;         //xx
+  Qoutside[4] = val_x*lambda         + val_y*(lambda+2*mu) + val_z*lambda;         //yy
+  Qoutside[5] = val_x*lambda         + val_y*lambda        + val_z*(lambda+2*mu);  //zz
+  Qoutside[6] = val_x*mu; //xy
+  Qoutside[7] = val_z*mu; //xz
+  Qoutside[8] = val_y*mu; //yz
+
+  // Velocities
+  Qoutside[0] = val_x*cp + val_z*cs; //vx
+  Qoutside[1] = val_y*cp + val_x*cs; //vy
+  Qoutside[2] = val_z*cp + val_y*cs; //vz
+
+  Qoutside[9] = rho;
+  Qoutside[10] = cp;
+  Qoutside[11] = cs;
+#endif
+"""
 
 ader_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     name="AderSolver",
-    order=args.order,
+    order=args.degrees_of_freedom - 1,
     unknowns=scenario._equation.num_unknowns,
     auxiliary_variables=scenario._equation.num_auxiliary_variables,
     min_cell_h=0.001,  # max_cell_size -> arbitrary value
@@ -112,12 +115,26 @@ ader_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
 ader_solver.add_kernel_optimisations(
     polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
     is_linear=scenario._equation.is_linear,
-    precision=args.precision,
+    predictor_computation_precisions=[
+        (
+            args.predictor_precision
+            if args.predictor_precision is not None
+            else args.precision
+        )
+    ],
+    corrector_computation_precision=(
+        args.corrector_precision
+        if args.corrector_precision is not None
+        else args.precision
+    ),
+    solution_persistent_storage_precision=(
+        args.storage_precision if args.storage_precision is not None else args.precision
+    ),
 )
 
 ader_solver.set_implementation(
     initial_conditions=scenario.initial_conditions(),
-    boundary_conditions=scenario.boundary_conditions(),
+    boundary_conditions=boundary_conditions,
     max_eigenvalue=scenario._equation.eigenvalues(),
     flux=scenario._equation.flux(),
     ncp=scenario._equation.ncp(),
@@ -132,48 +149,66 @@ project = exahype2.Project(
 )
 project.add_solver(ader_solver)
 
+if args.number_of_snapshots <= 0:
+    time_in_between_plots = 0.0
+else:
+    time_in_between_plots = scenario._end_time / args.number_of_snapshots
+    project.set_output_path(args.output)
+
 project.set_global_simulation_parameters(
-    dimensions=2,
-    size=[1.0, 1.0],
-    offset=[0.0, 0.0],
-    min_end_time=0.1,
-    max_end_time=0.1,
+    dimensions=scenario._dimensions,
+    size=[scenario._domain_size, scenario._domain_size, scenario._domain_size][
+        0 : scenario._dimensions
+    ],
+    offset=[scenario._offset, scenario._offset, scenario._offset][
+        0 : scenario._dimensions
+    ],
+    min_end_time=scenario._end_time,
+    max_end_time=scenario._end_time,
     first_plot_time_stamp=0.0,
-    time_in_between_plots=0.0,
-    periodic_BC=[False, False],
+    time_in_between_plots=time_in_between_plots,
+    periodic_BC=[False, False, False][0 : scenario._dimensions],
 )
 
 project.set_build_mode(mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
 
-accuracy = args.accuracy
-if accuracy < 0:
-    import numpy
-
-    accuracy = default = numpy.finfo(float).eps
-project.constants.export_constexpr_with_type("Accuracy", str(accuracy), "double")
-
 project.constants.export_constexpr_with_type(
-    "NumberOfSamples", str(args.samples), "int"
-)
-
-formatted_num_cells = "{{{}}}".format(", ".join(str(val) for val in args.num_cells))
-project.constants.export_const_with_type(
-    "NumberOfCellsToStudy",
-    str(formatted_num_cells),
-    "tarch::la::Vector<%s, int>" % len(args.num_cells),
+    "GridLength", str(3**args.min_depth), "int"
 )
 
 project.constants.export_constexpr_with_type(
-    "NumberOfLaunchingThreads", str(args.num_threads), "int"
+    "ShouldPlot", "true" if args.number_of_snapshots > 0 else "false", "bool"
 )
 
-if args.cpu == False and args.gpu == False:
-    project.constants.export_boolean("AssessHostKernels", True)
-    project.constants.export_boolean("AssessDeviceKernels", True)
-else:
-    project.constants.export_boolean("AssessHostKernels", True if args.cpu else False)
-    project.constants.export_boolean("AssessDeviceKernels", True if args.gpu else False)
+project.constants.export_constexpr_with_type(
+    "UseAMR", "true" if args.amr_levels > 0 else "false", "bool"
+)
 
-project.output.makefile.add_cpp_file("KernelBenchmarks-main.cpp")
+project.constants.export_constexpr_with_type("Samples", str(args.samples), "int")
+
+makefile = project.output.makefile
+makefile.add_cpp_file("KernelBenchmarks-main.cpp")
+
+makefile.add_h_file("DataRepository.h")
+makefile.add_cpp_file("DataRepository.cpp")
+
+makefile.add_h_file("EnclaveDataRepository.h")
+makefile.add_cpp_file("EnclaveDataRepository.cpp")
+
+makefile.add_h_file("EnclaveTasks.h")
+makefile.add_cpp_file("EnclaveTasks.cpp")
+
+makefile.add_CXX_flag(
+    "-DSolverStoragePrecision=" + ader_solver._solution_persistent_storage_precision
+)
+makefile.add_CXX_flag(
+    "-DSolverPredictorPrecision=" + ader_solver._predictor_computation_precisions[0]
+)
+makefile.add_CXX_flag(
+    "-DSolverCorrectorPrecision=" + ader_solver._corrector_computation_precision
+)
+
+print(ader_solver._predictor_computation_precisions[0])
+
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

@@ -86,13 +86,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   cCompType smax = std::fmax(smaxL, smaxR);
 
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
-    SIMD(aligned(tmp_bnd,QL,QR:ALIGNMENT))
+    SIMD(aligned(tmp_bnd,QL:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
       tmp_bnd[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] = smax * (QL[xy * {{NUMBER_OF_DATA_PADDED}} + n] - QR[xy * {{NUMBER_OF_DATA_PADDED}} + n]);
     }
   }
 
-  SIMD(aligned(FL,FR,tmp_bnd:ALIGNMENT))
+  SIMD(aligned(FL,tmp_bnd:ALIGNMENT))
   for (int xyn = 0; xyn < {{NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xyn++) {
     FL[xyn] = 0.5 * (FL[xyn] + FR[xyn] + tmp_bnd[xyn]);
   }
@@ -105,7 +105,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   cCompType ncp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
 
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
-    SIMD(aligned(Qavg,QL,QR,gradQ:ALIGNMENT))
+    SIMD(aligned(Qavg,QL,gradQ:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
        Qavg[n] = 0.5 * (QL[xy * {{NUMBER_OF_DATA_PADDED}} + n] + QR[xy * {{NUMBER_OF_DATA_PADDED}} + n]);
        gradQ[n] = QR[xy * {{NUMBER_OF_DATA_PADDED}} + n] - QL[xy * {{NUMBER_OF_DATA_PADDED}} + n];
@@ -130,7 +130,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
       ncp
     );
 
-    SIMD(aligned(FL,FR,ncp:ALIGNMENT))
+    SIMD(aligned(FL,ncp:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
       FR[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] -= 0.5 * ncp[n];
       FL[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += 0.5 * ncp[n];
