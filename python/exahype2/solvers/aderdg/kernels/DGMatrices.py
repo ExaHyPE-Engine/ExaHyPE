@@ -31,6 +31,9 @@ class DGMatrices(object):
         self.d["nDofPadTimesnDof_seq"] = range(
             self.d["NUMBER_OF_DOF_PADDED"] * self.d["NUMBER_OF_DOF"]
         )
+        self.d["nDofTimesnDof_seq"] = range(
+            self.d["NUMBER_OF_DOF"] * self.d["NUMBER_OF_DOF"]
+        )
 
         # [FLCoeff 0...0]; [FRCoeff 0...0];
         # right now FLCoeff, FRCoeff no pad (gives no benefit w.r.t libxsmm)
@@ -63,7 +66,8 @@ class DGMatrices(object):
         # dudx
         MM = MathUtils.assembleMassMatrix(xGPN, wGPN, self.d["NUMBER_OF_DOF"])
         dudx = MathUtils.assembleDiscreteDerivativeOperator(MM, Kxi)
-        self.d["dudx"] = MathUtils.matrixPadAndFlatten_ColMajor(dudx, padSize)
+        # self.d["dudx"] = MathUtils.matrixPadAndFlatten_ColMajor(dudx, padSize)
+        self.d["dudx"] = MathUtils.matrixPadAndFlatten_ColMajor(dudx, 0)
         self.d["dudx_T"] = MathUtils.matrixPadAndFlatten_RowMajor(
             dudx, padSize
         )  # transpose

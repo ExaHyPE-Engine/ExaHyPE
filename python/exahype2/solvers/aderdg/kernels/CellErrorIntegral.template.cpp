@@ -33,7 +33,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellErrorIntegral(
   const double cellVolume = cellSize[0] * cellSize[1] * cellSize[2];
 {% endif %}
 
-  double solution[{{NUMBER_OF_UNKNOWNS_PADDED}}];
+  double solution[{{NUMBER_OF_UNKNOWNS}}];
   int linearisedIndex = 0;
 
   // Iterate over all quadrature points in the cell
@@ -60,13 +60,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellErrorIntegral(
     );
 
     // Increment the respective errors
-    for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS_PADDED}}; unknown++) {
+    for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; unknown++) {
       double error = std::abs(Q[linearisedIndex + unknown] - solution[unknown]);
       errors[0] += weight * error; // L1 norm
       errors[1] += weight * error * error; // L2 norm
       errors[2] = std::max(errors[2], error); // L_{inf} norm
     }
 
-    linearisedIndex += {{NUMBER_OF_DATA_PADDED}};
+    linearisedIndex += {{NUMBER_OF_DATA}};
   }
 }

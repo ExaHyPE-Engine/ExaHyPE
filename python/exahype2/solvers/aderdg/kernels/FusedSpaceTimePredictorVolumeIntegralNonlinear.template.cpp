@@ -195,6 +195,9 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
     std::memset(lFhbnd[i], 0, {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
   }
 
+  // TODO: lQhbnd/lFhbnd now use unpadded per-face strides. Verify the aligned
+  // SIMD assumptions below still hold for every yz/xz/xy face slice when
+  // NUMBER_OF_DATA or NUMBER_OF_UNKNOWNS are not multiples of SIMDLEN.
   // x-direction: face 0 (left) and face 2(2D) / 3(3D) (right)
   for (int yz = 0; yz < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; yz++) {
     // Matrix-Vector Products
@@ -315,7 +318,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
 {% if USE_NCP or USE_SOURCE %}
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     SIMD(aligned(luh,lShi:ALIGNMENT))
-    for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
+    for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
       luh[xyz * {{NUMBER_OF_DATA}} + n] += predictorTimeStepSize * lShi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
     }
   }
@@ -540,7 +543,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 {% if USE_NCP or USE_SOURCE or USE_DIFFUSIVE_SOURCE %}
 {% if USE_NCP %}
     pCompType tmpNCP[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(ALIGNMENT)));
-    pCompType gradQ_PDE[{{NUMBER_OF_UNKNOWNS*DIMENSIONS}}] __attribute__((aligned(ALIGNMENT)));
+    pCompType gradQ_PDE[{{NUMBER_OF_UNKNOWNS_PADDED*DIMENSIONS}}] __attribute__((aligned(ALIGNMENT)));
 {% endif %}
 
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
@@ -557,10 +560,10 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 {% endif %}
 
 {% if USE_NCP %}
-      std::copy_n(gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz, {{NUMBER_OF_UNKNOWNS}}, gradQ_PDE);
-      std::copy_n(gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz + {{1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}, {{NUMBER_OF_UNKNOWNS}}, gradQ_PDE + {{1*NUMBER_OF_UNKNOWNS}});
+      std::copy_n(gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz, {{NUMBER_OF_UNKNOWNS_PADDED}}, gradQ_PDE);
+      std::copy_n(gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz + {{1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}, {{NUMBER_OF_UNKNOWNS_PADDED}}, gradQ_PDE + {{1*NUMBER_OF_UNKNOWNS_PADDED}});
 {% if DIMENSIONS==3 %}
-      std::copy_n(gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz + {{2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}, {{NUMBER_OF_UNKNOWNS}}, gradQ_PDE + {{2*NUMBER_OF_UNKNOWNS}});
+      std::copy_n(gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz + {{2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}, {{NUMBER_OF_UNKNOWNS_PADDED}}, gradQ_PDE + {{2*NUMBER_OF_UNKNOWNS_PADDED}});
 {% endif %}
 {% endif %}
 

@@ -50,11 +50,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
   cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
 
+  // TODO: This loop still iterates over NUMBER_OF_DATA_PADDED while QL/QR are
+  // indexed with the unpadded NUMBER_OF_DATA stride below. A padded build can
+  // therefore read past one face slice unless storage and loop bounds match.
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     SIMD(aligned(QavL,QavR,QL:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_DATA_PADDED}}; n++) {
-      QavL[n] += Quadrature<cCompType>::weights2[xy] * QL[xy * {{NUMBER_OF_DATA_PADDED}} + n];
-      QavR[n] += Quadrature<cCompType>::weights2[xy] * QR[xy * {{NUMBER_OF_DATA_PADDED}} + n];
+      QavL[n] += Quadrature<cCompType>::weights2[xy] * QL[xy * {{NUMBER_OF_DATA}} + n];
+      QavR[n] += Quadrature<cCompType>::weights2[xy] * QR[xy * {{NUMBER_OF_DATA}} + n];
     }
   }
 
@@ -88,15 +91,17 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     SIMD(aligned(tmp_bnd,QL:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
-      tmp_bnd[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] = smax * (QL[xy * {{NUMBER_OF_DATA_PADDED}} + n] - QR[xy * {{NUMBER_OF_DATA_PADDED}} + n]);
+      tmp_bnd[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] = smax * (QL[xy * {{NUMBER_OF_DATA}} + n] - QR[xy * {{NUMBER_OF_DATA}} + n]);
     }
   }
 
   SIMD(aligned(FL,tmp_bnd:ALIGNMENT))
-  for (int xyn = 0; xyn < {{NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xyn++) {
-    FL[xyn] = 0.5 * (FL[xyn] + FR[xyn] + tmp_bnd[xyn]);
+  for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
+    for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
+      FL[xy*{{NUMBER_OF_UNKNOWNS}} + n] = 0.5 * (FL[xy*{{NUMBER_OF_UNKNOWNS}} + n] + FR[xy*{{NUMBER_OF_UNKNOWNS}} + n] + tmp_bnd[xy*{{NUMBER_OF_UNKNOWNS_PADDED}} + n]);
+    }
   }
-  std::copy_n(FL, {{NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}, FR);
+  std::copy_n(FL, {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}, FR);
   tarch::freeMemory(tmp_bnd, tarch::MemoryLocation::Heap);
 
 {% if USE_NCP %}
@@ -107,12 +112,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     SIMD(aligned(Qavg,QL,gradQ:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
-       Qavg[n] = 0.5 * (QL[xy * {{NUMBER_OF_DATA_PADDED}} + n] + QR[xy * {{NUMBER_OF_DATA_PADDED}} + n]);
-       gradQ[n] = QR[xy * {{NUMBER_OF_DATA_PADDED}} + n] - QL[xy * {{NUMBER_OF_DATA_PADDED}} + n];
+       Qavg[n] = 0.5 * (QL[xy * {{NUMBER_OF_DATA}} + n] + QR[xy * {{NUMBER_OF_DATA}} + n]);
+       gradQ[n] = QR[xy * {{NUMBER_OF_DATA}} + n] - QL[xy * {{NUMBER_OF_DATA}} + n];
     }
 {% if NUMBER_OF_AUXILIARY_VARIABLES != 0 %}
     for (int n = {{NUMBER_OF_UNKNOWNS}}; n < {{NUMBER_OF_DATA}}; n++) {
-      Qavg[n] = 0.5 * (QL[xy * {{NUMBER_OF_DATA_PADDED}} + n] + QR[xy * {{NUMBER_OF_DATA_PADDED}} + n]);
+      Qavg[n] = 0.5 * (QL[xy * {{NUMBER_OF_DATA}} + n] + QR[xy * {{NUMBER_OF_DATA}} + n]);
     }
 {% endif %}
 {% if STATELESS_NCP %}
@@ -131,9 +136,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     );
 
     SIMD(aligned(FL,ncp:ALIGNMENT))
-    for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
-      FR[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] -= 0.5 * ncp[n];
-      FL[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += 0.5 * ncp[n];
+    for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
+      FR[xy * {{NUMBER_OF_UNKNOWNS}} + n] -= 0.5 * ncp[n];
+      FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] += 0.5 * ncp[n];
     }
   }
 {% endif %}

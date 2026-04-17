@@ -41,19 +41,21 @@ class AMRRoutines(object):
         nDof = self.d["NUMBER_OF_DOF"]
         nDof2 = nDof * nDof
         nDofPad = self.d["NUMBER_OF_DOF_PADDED"]
-        nUnknownsPad = self.d["NUMBER_OF_UNKNOWNS_PADDED"]
+        nUnknowns = self.d["NUMBER_OF_UNKNOWNS"]
         nData = self.d["NUMBER_OF_DATA"]
-        nDataPad = self.d["NUMBER_OF_DATA_PADDED"]
 
         # Always overwrite input (no need to set to 0), except if add.
         # nDim-1 face projection, inputs are padded.
+        # TODO: These GEMMs now use unpadded NUMBER_OF_DATA/NUMBER_OF_UNKNOWNS
+        # row strides but still mark A/C as aligned. Recheck the alignment flags
+        # for face and cell tensor slices in padded SIMD builds.
         self.d["GEMMS"]["face_Q_x"] = Gemms(
-            nDataPad,
+            nData,
             nDof,
             nDof,
-            nDataPad,
+            nData,
             nDofPad,
-            nDataPad,
+            nData,
             1,
             0,
             1,
@@ -64,12 +66,12 @@ class AMRRoutines(object):
             self.d["SOLUTION_STORAGE_PRECISION"],
         )
         self.d["GEMMS"]["face_F_x"] = Gemms(
-            nUnknownsPad,
+            nUnknowns,
             nDof,
             nDof,
-            nUnknownsPad,
+            nUnknowns,
             nDofPad,
-            nUnknownsPad,
+            nUnknowns,
             1,
             0,
             1,
@@ -80,12 +82,12 @@ class AMRRoutines(object):
             self.d["SOLUTION_STORAGE_PRECISION"],
         )
         self.d["GEMMS"]["face_Q_x_add"] = Gemms(
-            nDataPad,
+            nData,
             nDof,
             nDof,
-            nDataPad,
+            nData,
             nDofPad,
-            nDataPad,
+            nData,
             1,
             1,
             1,
@@ -96,12 +98,12 @@ class AMRRoutines(object):
             self.d["SOLUTION_STORAGE_PRECISION"],
         )
         self.d["GEMMS"]["face_F_x_add"] = Gemms(
-            nUnknownsPad,
+            nUnknowns,
             nDof,
             nDof,
-            nUnknownsPad,
+            nUnknowns,
             nDofPad,
-            nUnknownsPad,
+            nUnknowns,
             1,
             1,
             1,
@@ -113,12 +115,12 @@ class AMRRoutines(object):
         )
         if nDim == 3:
             self.d["GEMMS"]["face_Q_y"] = Gemms(
-                nDataPad,
+                nData,
                 nDof,
                 nDof,
-                nDataPad * nDof,
+                nData * nDof,
                 nDofPad,
-                nDataPad * nDof,
+                nData * nDof,
                 1,
                 0,
                 1,
@@ -129,12 +131,12 @@ class AMRRoutines(object):
                 self.d["SOLUTION_STORAGE_PRECISION"],
             )
             self.d["GEMMS"]["face_F_y"] = Gemms(
-                nUnknownsPad,
+                nUnknowns,
                 nDof,
                 nDof,
-                nUnknownsPad * nDof,
+                nUnknowns * nDof,
                 nDofPad,
-                nUnknownsPad * nDof,
+                nUnknowns * nDof,
                 1,
                 0,
                 1,
@@ -145,12 +147,12 @@ class AMRRoutines(object):
                 self.d["SOLUTION_STORAGE_PRECISION"],
             )
             self.d["GEMMS"]["face_Q_y_add"] = Gemms(
-                nDataPad,
+                nData,
                 nDof,
                 nDof,
-                nDataPad * nDof,
+                nData * nDof,
                 nDofPad,
-                nDataPad * nDof,
+                nData * nDof,
                 1,
                 1,
                 1,
@@ -161,12 +163,12 @@ class AMRRoutines(object):
                 self.d["SOLUTION_STORAGE_PRECISION"],
             )
             self.d["GEMMS"]["face_F_y_add"] = Gemms(
-                nUnknownsPad,
+                nUnknowns,
                 nDof,
                 nDof,
-                nUnknownsPad * nDof,
+                nUnknowns * nDof,
                 nDofPad,
-                nUnknownsPad * nDof,
+                nUnknowns * nDof,
                 1,
                 1,
                 1,
@@ -183,7 +185,7 @@ class AMRRoutines(object):
             nDof,
             nData,
             nDofPad,
-            nDataPad,
+            nData,
             1,
             0,
             0,
@@ -197,12 +199,12 @@ class AMRRoutines(object):
 
         if nDim == 3:
             self.d["GEMMS"]["volume_y"] = Gemms(
-                nDataPad,
+                nData,
                 nDof,
                 nDof,
-                nDataPad * nDof,
+                nData * nDof,
                 nDofPad,
-                nDataPad * nDof,
+                nData * nDof,
                 1,
                 0,
                 1,
@@ -217,7 +219,7 @@ class AMRRoutines(object):
                 nData,
                 nDof,
                 nDof,
-                nDataPad * nDof2,
+                nData * nDof2,
                 nDofPad,
                 nData * nDof2,
                 1,
@@ -234,7 +236,7 @@ class AMRRoutines(object):
                 nData,
                 nDof,
                 nDof,
-                nDataPad * nDof2,
+                nData * nDof2,
                 nDofPad,
                 nData * nDof2,
                 1,
@@ -252,7 +254,7 @@ class AMRRoutines(object):
                 nData,
                 nDof,
                 nDof,
-                nDataPad * nDof,
+                nData * nDof,
                 nDofPad,
                 nData * nDof,
                 1,
@@ -269,7 +271,7 @@ class AMRRoutines(object):
                 nData,
                 nDof,
                 nDof,
-                nDataPad * nDof,
+                nData * nDof,
                 nDofPad,
                 nData * nDof,
                 1,
