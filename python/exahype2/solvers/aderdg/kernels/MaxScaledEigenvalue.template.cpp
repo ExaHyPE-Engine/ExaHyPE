@@ -38,7 +38,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::maxScaledEigenvalue(
 {% else %}
           denominator += solver.maxEigenvalue(
 {% endif %}
-            &luh[linearisedIndex * {{NUMBER_OF_DATA_PADDED}}],
+            &luh[linearisedIndex * {{NUMBER_OF_DATA}}],
             ::exahype2::dg::getQuadraturePoint(
               cellCentre,
               cellSize,

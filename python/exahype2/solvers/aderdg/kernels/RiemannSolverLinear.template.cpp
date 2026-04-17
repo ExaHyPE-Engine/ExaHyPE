@@ -51,8 +51,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
    * We compute the averages of the material parameters but
    * do not use them in the max eigenvalue calculation.
    */
-  std::memset(FL, 0, {{NUMBER_OF_UNKNOWNS_PADDED * NUMBER_OF_DOF * NUMBER_OF_DOF_3D}} * sizeof(cCompType));
-  std::memset(FR, 0, {{NUMBER_OF_UNKNOWNS_PADDED * NUMBER_OF_DOF * NUMBER_OF_DOF_3D}} * sizeof(cCompType));
+  std::memset(FL, 0, {{NUMBER_OF_UNKNOWNS * NUMBER_OF_DOF * NUMBER_OF_DOF_3D}} * sizeof(cCompType));
+  std::memset(FR, 0, {{NUMBER_OF_UNKNOWNS * NUMBER_OF_DOF * NUMBER_OF_DOF_3D}} * sizeof(cCompType));
 
   // Compute the average unkown and auxiliary variables from the left and the right
   cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
@@ -60,9 +60,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     SIMD(aligned(QavL,QavR,QL:ALIGNMENT))
-    for (int n = 0; n < {{NUMBER_OF_DATA_PADDED}}; n++) {
-      QavL[n] += Quadrature<cCompType>::weights2[xy] * QL[xy * {{NUMBER_OF_DATA_PADDED}} + n];
-      QavR[n] += Quadrature<cCompType>::weights2[xy] * QR[xy * {{NUMBER_OF_DATA_PADDED}} + n];
+    for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
+      QavL[n] += Quadrature<cCompType>::weights2[xy] * QL[xy * {{NUMBER_OF_DATA}} + n];
+      QavR[n] += Quadrature<cCompType>::weights2[xy] * QR[xy * {{NUMBER_OF_DATA}} + n];
     }
   }
 
@@ -118,7 +118,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     SIMD(aligned(Qdiff,QL:ALIGNMENT))
     for (int n = 0 ; n < {{NUMBER_OF_UNKNOWNS}} ; n++) {
-      Qdiff[n] = 0.5 * (QR[xy * {{NUMBER_OF_DATA_PADDED}} + n] - QL[xy * {{NUMBER_OF_DATA_PADDED}} + n]);
+      Qdiff[n] = 0.5 * (QR[xy * {{NUMBER_OF_DATA}} + n] - QL[xy * {{NUMBER_OF_DATA}} + n]);
     }
 
 {% if USE_NCP %}
@@ -154,8 +154,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 {% endif %}{# USE_MATERIAL_PARAMETERS #}
 
     SIMD(aligned(FL,ncp:ALIGNMENT))
-    for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
-      FL[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += ncp[n];
+    for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
+      FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] += ncp[n];
     }
 {% endif %}{# USE_NCP #}
 
@@ -192,14 +192,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 
     SIMD(aligned(FL,fluxValues:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
-      FL[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += fluxValues[n];
+      FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] += fluxValues[n];
     }
 {% endif %}{# USE_FLUX #}
 
     SIMD(aligned(FL,Qdiff:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
-      FR[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] = FL[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] + smax * Qdiff[n];
-      FL[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] -= smax * Qdiff[n];
+      FR[xy * {{NUMBER_OF_UNKNOWNS}} + n] = FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] + smax * Qdiff[n];
+      FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] -= smax * Qdiff[n];
     }
   } // xy
 {% endif %}

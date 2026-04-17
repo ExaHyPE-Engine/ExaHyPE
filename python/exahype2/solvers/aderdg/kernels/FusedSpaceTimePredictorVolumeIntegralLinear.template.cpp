@@ -211,7 +211,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
           SIMD(aligned(tmpArray,lFi:ALIGNMENT))
           for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
             tmpArray[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3] += lFi[yz * {{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} + it_2 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
-              * invDx[0] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF}} + it_2];
+              * invDx[0] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF_PADDED}} + it_2];
           }
         }
       }
@@ -230,7 +230,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
             for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
               tmpArray[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
                 += lFi[{{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} + z * {{NUMBER_OF_DOF*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} + x * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_2 * {{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
-                * invDx[1] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF}} + it_2];
+                * invDx[1] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF_PADDED}} + it_2];
             }
           }
         }
@@ -257,7 +257,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
           for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
             tmpArray[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
               += lFi[{{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} + xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_2 * {{NUMBER_OF_DOF*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
-              * invDx[2] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF}} + it_2];
+              * invDx[2] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF_PADDED}} + it_2];
           }
         }
       }
@@ -286,7 +286,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
           SIMD(aligned(lQi,gradQ:ALIGNMENT))
           for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
             gradQ[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3] += lQi[yz*{{NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED}} + it_2 * {{NUMBER_OF_DATA_PADDED}} + it_3]
-              * invDx[0] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF}} + it_2];
+              * invDx[0] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF_PADDED}} + it_2];
           }
         }
       } // it_2
@@ -327,7 +327,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
             SIMD(aligned(lQi,gradQ:ALIGNMENT))
             for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
               gradQ[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3] += lQi[z * {{NUMBER_OF_DOF*NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED}} + x * {{NUMBER_OF_DATA_PADDED}} + it_2 * {{NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED}} + it_3]
-                * invDx[1] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF}} + it_2];
+                * invDx[1] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF_PADDED}} + it_2];
             }
           }
         } // it_2
@@ -370,7 +370,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
           SIMD(aligned(lQi,gradQ:ALIGNMENT))
           for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
             gradQ[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3] += lQi[xy * {{NUMBER_OF_DATA_PADDED}} + it_2 * {{NUMBER_OF_DOF*NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED}} + it_3]
-              * invDx[2] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF}} + it_2];
+              * invDx[2] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF_PADDED}} + it_2];
           }
         }
       } // it_2
@@ -471,7 +471,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
       SIMD(aligned(lQi,lFi{{',lSi' if USE_SOURCE else ''}}:ALIGNMENT))
-      for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
+      for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
         lQi[xyz*{{NUMBER_OF_DATA_PADDED}} + n] = -(
             lFi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n]
           + lFi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1 * (NUMBER_OF_DOF**DIMENSIONS) * NUMBER_OF_UNKNOWNS_PADDED}}]
@@ -547,6 +547,9 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     std::memset(lFhbnd[i], 0, {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
   }
 
+  // TODO: lQhbnd/lFhbnd now use unpadded per-face strides. Verify the aligned
+  // SIMD assumptions below still hold for every yz/xz/xy face slice when
+  // NUMBER_OF_DATA or NUMBER_OF_UNKNOWNS are not multiples of SIMDLEN.
   // x-direction: face 0 (left) and face 2(2D) / 3(3D) (right)
   for (int yz = 0; yz < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; yz++) {
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
@@ -620,7 +623,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     SIMD(aligned(luh,lFhi{{',lShi' if USE_SOURCE else ''}}:ALIGNMENT))
-    for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
+    for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
         luh[xyz*{{NUMBER_OF_DATA}} + n] -= timeStepSize * //Quadrature<pCompType>::weights3[xyz] *
             (
 {% if USE_FLUX or USE_NCP %}

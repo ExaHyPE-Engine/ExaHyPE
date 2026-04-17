@@ -17,9 +17,8 @@ class AlignmentHelper:
         Returns the 'size' padded to the next multiple of the SIMD width.
         Logic: roundup(size / width) * width
         """
-        return size_without_padding
-        # TODO: Padding with a SIMD length of > 1 does not work
-        # return self._simd_width * int((size_without_padding + (self._simd_width - 1)) / self._simd_width)
+        # return size_without_padding
+        return self._simd_width * int((size_without_padding + (self._simd_width - 1)) / self._simd_width)
 
     def get_pad_size(self, size_without_padding):
         return self.get_size_with_padding(size_without_padding) - size_without_padding

@@ -12,14 +12,11 @@ class BufferSizes(object):
     def generate_kernels(
         self, solver, namespace, output, subdirectory, template_prefix, output_path
     ):
-        nUnknowns = self.d["NUMBER_OF_UNKNOWNS_PADDED"]
+        nUnknowns = self.d["NUMBER_OF_UNKNOWNS"]
         nUnknownsPad = self.d["NUMBER_OF_UNKNOWNS_PADDED"]
-        nAuxVar = self.d["NUMBER_OF_AUXILIARY_VARIABLES"]
-        nAuxVarPad = self.d["NUMBER_OF_AUXILIARY_VARIABLES"]
         nData = self.d["NUMBER_OF_DATA"]
         nDataPad = self.d["NUMBER_OF_DATA_PADDED"]
         nDof = self.d["NUMBER_OF_DOF"]
-        nDofPad = self.d["NUMBER_OF_DOF_PADDED"]
         nDof3D = self.d["NUMBER_OF_DOF_3D"]
         nDim = self.d["DIMENSIONS"]
 
@@ -61,9 +58,9 @@ class BufferSizes(object):
                 self.d["gradQSize"] = nUnknownsPad * (nDof**nDim) * nDim
 
         # Face buffer size (Riemann)
-        self.d["BndFaceSize"] = nDataPad * (nDof * nDof3D)
+        self.d["BndFaceSize"] = nData * (nDof * nDof3D)
         self.d["BndFaceTotalSize"] = 2 * nDim * self.d["BndFaceSize"]
-        self.d["BndFluxSize"] = nUnknownsPad * (nDof * nDof3D)
+        self.d["BndFluxSize"] = nUnknowns * (nDof * nDof3D)
         self.d["BndFluxTotalSize"] = 2 * nDim * self.d["BndFluxSize"]
 
         generated_kernels = peano4.output.Jinja2TemplatedHeaderFile(

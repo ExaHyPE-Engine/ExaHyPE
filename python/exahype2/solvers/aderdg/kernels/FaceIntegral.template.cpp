@@ -24,6 +24,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
   const cCompType scaling = (2.0 * orientation - 1.0) * inverseDxDirection;
 {% endif %}
 
+  // TODO: lduh/lFhbnd now use unpadded NUMBER_OF_DATA/NUMBER_OF_UNKNOWNS
+  // strides. Verify each per-face slice still satisfies ALIGNMENT before
+  // keeping the aligned SIMD assumptions below.
   switch (direction) {
   case 0: // x-faces, left-right flux.
     for (int zy = 0; zy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; zy++) {
@@ -32,7 +35,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
         SIMD(aligned(lduh,FCoeff,lFhbnd:ALIGNMENT))
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
           lduh[(zy * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA}} + n] -= Quadrature<cCompType>::iweights3[zy * {{NUMBER_OF_DOF}} + x]
-            * scaledWeight * FCoeff[x] * lFhbnd[zy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+            * scaledWeight * FCoeff[x] * lFhbnd[zy * {{NUMBER_OF_UNKNOWNS}} + n];
         }
       }
     }
@@ -45,7 +48,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
           SIMD(aligned(lduh,FCoeff,lFhbnd:ALIGNMENT))
           for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
             lduh[((z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA}} + n] -= Quadrature<cCompType>::iweights3[(z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x]
-              * scaledWeight * FCoeff[y] * lFhbnd[(z * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+              * scaledWeight * FCoeff[y] * lFhbnd[(z * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS}} + n];
           }
         }
       }
@@ -58,7 +61,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
         SIMD(aligned(lduh,FCoeff,lFhbnd:ALIGNMENT))
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
           lduh[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + yx) * {{NUMBER_OF_DATA}} + n] -= Quadrature<cCompType>::iweights3[z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + yx]
-            * scaledWeight * FCoeff[z] * lFhbnd[yx * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+            * scaledWeight * FCoeff[z] * lFhbnd[yx * {{NUMBER_OF_UNKNOWNS}} + n];
         }
       }
     }

@@ -287,7 +287,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                         self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
                     )
                 self.d["GEMMS"]["lduh_x"] = Gemms(
-                    nUnknownsPad,
+                    nUnknowns,
                     nDof,
                     nDof,
                     nUnknownsPad,
@@ -303,7 +303,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
                 )
                 self.d["GEMMS"]["lduh_y"] = Gemms(
-                    nUnknownsPad,
+                    nUnknowns,
                     nDof,
                     nDof,
                     nUnknownsPad,
@@ -320,7 +320,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                 )
                 if self.d["DIMENSIONS"] >= 3:
                     self.d["GEMMS"]["lduh_z"] = Gemms(
-                        nUnknownsPad,
+                        nUnknowns,
                         nDof,
                         nDof,
                         nUnknownsPad,
