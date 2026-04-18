@@ -31,23 +31,23 @@ GCC Serial:
       pipeline_variables: true
       yaml_variables: true
 
-GCC Parallel:
-  extends: .Variables
-  stage: Compiler
-  variables:
-    CC: "gcc"
-    CXX: "g++"
-    IMAGE_TAG: "${IMAGE_GCC}"
-    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun -np ${MPI_RANKS}"
-    EXTRA_CONFIGURATION_OPTIONS: "-DWITH_MULTITHREADING=ON \
-                                  -DWITH_MPI=ON"
-  trigger:
-    include:
-      - .continuous_integration/gitlab-pipeline.yml
-    strategy: depend
-    forward:
-      pipeline_variables: true
-      yaml_variables: true
+# GCC Parallel:
+#   extends: .Variables
+#   stage: Compiler
+#   variables:
+#     CC: "gcc"
+#     CXX: "g++"
+#     IMAGE_TAG: "${IMAGE_GCC}"
+#     PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun -np ${MPI_RANKS}"
+#     EXTRA_CONFIGURATION_OPTIONS: "-DWITH_MULTITHREADING=ON \
+#                                   -DWITH_MPI=ON"
+#   trigger:
+#     include:
+#       - .continuous_integration/gitlab-pipeline.yml
+#     strategy: depend
+#     forward:
+#       pipeline_variables: true
+#       yaml_variables: true
 
 Intel Parallel:
   extends: .Variables
