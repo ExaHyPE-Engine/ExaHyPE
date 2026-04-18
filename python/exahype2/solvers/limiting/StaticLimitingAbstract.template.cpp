@@ -162,7 +162,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
   return (
-    _solverState != SolverState::LimiterStatusSpreadingToNeighbours
+    _solverState == SolverState::TimeStep
     and
     repositories::{{REGULAR_SOLVER_INSTANCE}}.isFirstGridSweepOfTimeStep()
     and
@@ -172,7 +172,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
   return (
-    _solverState != SolverState::LimiterStatusSpreadingToNeighbours
+    _solverState == SolverState::TimeStep
     and
     repositories::{{REGULAR_SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
     and

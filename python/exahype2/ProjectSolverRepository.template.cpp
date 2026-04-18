@@ -64,18 +64,18 @@ std::string getSolverStateDescriptions() {
 }
 
 bool isFirstGridSweepOfTimeStep() {
-  bool result = true;
+  bool result = false;
   {% for item in SOLVERS -%}
-  result &= {{ item[1] }}.isFirstGridSweepOfTimeStep();
+  result |= {{ item[1] }}.isFirstGridSweepOfTimeStep();
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
 }
 
 bool isLastGridSweepOfTimeStep() {
-  bool result = true;
+  bool result = false;
   {% for item in SOLVERS -%}
-  result &= {{ item[1] }}.isLastGridSweepOfTimeStep();
+  result |= {{ item[1] }}.isLastGridSweepOfTimeStep();
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;

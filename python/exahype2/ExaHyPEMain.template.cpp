@@ -36,6 +36,7 @@ using namespace {{NAMESPACE | join("::")}};
 
 namespace {
   tarch::logging::Log _log("");
+  static tarch::timing::Watch watch("::", "", false, false);
 
   tarch::timing::Measurement gridConstructionMeasurement;
   tarch::timing::Measurement gridInitialisationMeasurement;
@@ -257,13 +258,9 @@ template <class Observer>
 void performAlgorithmicStep(
   repositories::StepRepository::Steps stepName,
   std::function<void()>               startStepHook,
-  std::function<void()>               finishStepHook,
-  tarch::timing::Measurement&         measurement
+  std::function<void()>               finishStepHook
 ) {
   tarch::logging::LogFilter::getInstance().switchProgramPhase(repositories::StepRepository::toString(stepName));
-
-  static tarch::timing::Watch watch("::", "performAlgorithmicStep()", false);
-  watch.start();
 
   startStepHook();
   Observer::prepareTraversal();
@@ -273,9 +270,6 @@ void performAlgorithmicStep(
 
   Observer::unprepareTraversal();
   finishStepHook();
-
-  watch.stop();
-  measurement.setValue(watch.getCalendarTime());
 }
 
 void runNextAlgorithmicStep() {
@@ -286,26 +280,44 @@ void runNextAlgorithmicStep() {
   case repositories::StepRepository::Steps::CreateGridWithoutRefinement:
     performAlgorithmicStep<observers::CreateGridWithoutRefinement>(
       stepName,
-      [](){ repositories::startGridConstructionStep(); },
-      [](){ repositories::finishGridConstructionStep(); },
-      gridConstructionMeasurement
+      [](){
+        repositories::startGridConstructionStep();
+        watch.start();
+      },
+      [](){
+        watch.stop();
+        gridConstructionMeasurement.setValue(watch.getCalendarTime());
+        repositories::finishGridConstructionStep();
+      }
     );
     break;
   case repositories::StepRepository::Steps::CreateGridWithRefinement:
     performAlgorithmicStep<observers::CreateGridWithRefinement>(
       stepName,
-      [](){ repositories::startGridConstructionStep(); },
-      [](){ repositories::finishGridConstructionStep(); },
-      gridConstructionMeasurement
+      [](){
+        repositories::startGridConstructionStep();
+        watch.start();
+      },
+      [](){
+        watch.stop();
+        gridConstructionMeasurement.setValue(watch.getCalendarTime());
+        repositories::finishGridConstructionStep();
+      }
     );
     break;
   case repositories::StepRepository::Steps::InitGrid:
     repositories::loadBalancer.enable(false); // TODO: Remove (dynamic AMR)
     performAlgorithmicStep<observers::InitGrid>(
       stepName,
-      [](){ repositories::startGridInitialisationStep(); },
-      [](){ repositories::finishGridInitialisationStep(); },
-      gridInitialisationMeasurement
+      [](){
+        repositories::startGridInitialisationStep();
+        watch.start();
+      },
+      [](){
+        watch.stop();
+        gridInitialisationMeasurement.setValue(watch.getCalendarTime());
+        repositories::finishGridInitialisationStep();
+      }
     );
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
       logInfo("performAlgorithmicStep()", "Grid initialisation complete")
@@ -314,17 +326,33 @@ void runNextAlgorithmicStep() {
   case repositories::StepRepository::Steps::PlotSolution:
     performAlgorithmicStep<observers::PlotSolution>(
       stepName,
-      [](){ repositories::startPlottingStep(); },
-      [](){ repositories::finishPlottingStep(); },
-      plotMeasurement
+      [](){
+        repositories::startPlottingStep();
+        watch.start();
+      },
+      [](){
+        watch.stop();
+        plotMeasurement.setValue(watch.getCalendarTime());
+        repositories::finishPlottingStep();
+      }
     );
     break;
   case repositories::StepRepository::Steps::TimeStep:
     performAlgorithmicStep<observers::TimeStep>(
       stepName,
-      [](){ repositories::startTimeStep(); },
-      [](){ repositories::finishTimeStep(); },
-      timeStepMeasurement
+      [](){
+        repositories::startTimeStep();
+        if (repositories::isFirstGridSweepOfTimeStep()) {
+          watch.start();
+        }
+      },
+      [](){
+        if (repositories::isLastGridSweepOfTimeStep()) {
+          watch.stop();
+          timeStepMeasurement.setValue(watch.getCalendarTime());
+        }
+        repositories::finishTimeStep();
+      }
     );
     if (timeStepMeasurement.getAccumulatedValue() >= logNextTimeStep and repositories::mayPlot()) {
       if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
