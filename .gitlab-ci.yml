@@ -17,4 +17,4 @@ workflow:
 # We define a job within the Compiler stage.
 # We use the include statement so that this job does everything in the .yml file linked below.
 include:
-  - .continuous_integration/gitlab-compiler.yml
+  - .continuous_integration/gitlab-toolchains.yml

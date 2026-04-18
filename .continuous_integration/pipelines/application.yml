@@ -1,0 +1,92 @@
+Gravity Waves:
+  stage: Application
+  parallel:
+    matrix:
+    - scenario: [airglow-chemistry, thunderstorm]
+      dimensions: [2]
+      build_type: [Release, Debug]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/gravity-waves/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -d $dimensions -m $build_type;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/gravity-waves/$scenario; $PARALLEL_LAUNCH ./ExaHyPE;"
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOnMain
+    - .BeforeScriptSanitiser
+  needs:
+    - job: Build
+  retry: 0
+
+Shallow Water:
+  stage: Application
+  parallel:
+    matrix:
+    - scenario: [artificial-tsunami, chile-tsunami, circular-island, dam-break-landslide, meteotsunami-gulf-of-mexico, meteotsunami-r1, oscillating-lake, radial-dam-break, solitary-wave, tafjord-landslide, three-mounds-channel, tohoku-tsunami]
+      build_type: [Release, Debug]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/shallow-water/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -m $build_type -md ${MIN_GRID_LEVELS} -ns 0;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/shallow-water/$scenario; $PARALLEL_LAUNCH ./ExaHyPE;"
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOnMain
+    - .BeforeScriptSanitiser
+  needs:
+    - job: Build
+  retry: 0
+
+ExaSeis:
+  stage: Application
+  parallel:
+    matrix:
+    - scenario: [cartesian, curvilinear, dynamic-rupture, pml, pml-dynamic-rupture]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaseis/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py;"
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOnMain
+    - .BeforeScriptSanitiser
+  needs:
+    - job: Build
+  retry: 0
+
+ExaGRyPE:
+  stage: Application
+  parallel:
+    matrix:
+    - scenario: [gauge-wave]
+      solver: [fv]
+      build_type: [Release, Debug]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exagrype/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py --solver $solver -m $build_type -md 1 -ns 0;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exagrype/$scenario; $PARALLEL_LAUNCH ./ExaGRyPE;"
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOnMain
+    - .BeforeScriptSanitiser
+  needs:
+    - job: Build
+  retry: 0
+
+Landslide:
+  stage: Application
+  parallel:
+    matrix:
+    - scenario: [fv, limited]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/landslide/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario-landslide-tsunami.py;"
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOnMain
+    - .BeforeScriptSanitiser
+  needs:
+    - job: Build
+  retry: 0
