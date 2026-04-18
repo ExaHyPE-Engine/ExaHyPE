@@ -1,45 +1,3 @@
-include:
-  - .continuous_integration/templates/tags.yml
-  - .continuous_integration/templates/variables.yml
-  - .continuous_integration/templates/before-script.yml
-  - .continuous_integration/templates/run-rules.yml
-
-stages:
-  - Build
-  - Test
-  - Tutorials
-  - Applications
-  - Benchmarks
-
-default:
-  interruptible: true
-
-.BeforeScriptSanitiser:
-  before_script:
-    - !reference [".BeforeScript", "before_script"]
-    - python3 .continuous_integration/sanitise_path.py build/CTestTestfile.cmake build/CMakeCache.txt install/PeanoTargets.cmake
-
-Build:
-  stage: Build
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} python3 -m compileall -f ./
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CC=${CC} CXX=${CXX} cmake .. -GNinja ${CONFIGURATION_OPTIONS} -DCMAKE_INSTALL_PREFIX=../install"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build; ninja; ninja install"
-    - mv build/src/unittests/CTestTestfile.cmake build/CTestTestfile.cmake
-  artifacts:
-    paths:
-      - ./build/UnitTests*
-      - ./build/CTestTestfile.cmake
-      - ./install/
-    expire_in: 24 hours
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnDev
-    - .BeforeScript
-  retry: 0
-
 Unit Tests:
   stage: Test
   script:
@@ -54,7 +12,7 @@ Unit Tests:
     - job: Build
   retry: 0
 
-Spacetree Tests:
+Spacetree:
   stage: Test
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/spacetree; PYTHONPATH=$CI_PROJECT_DIR/python python3 spacetree.py;"
@@ -69,7 +27,7 @@ Spacetree Tests:
     - job: Build
   retry: 0
 
-Spacetree Set Tests:
+Spacetree Set:
   stage: Test
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/spacetree-set; PYTHONPATH=$CI_PROJECT_DIR/python python3 spacetree-set.py;"
@@ -84,7 +42,7 @@ Spacetree Set Tests:
     - job: Build
   retry: 0
 
-FV Tests:
+FV:
   stage: Test
   parallel:
     matrix:
@@ -104,7 +62,7 @@ FV Tests:
     - job: Build
   retry: 0
 
-FV Tracers Tests:
+FV Tracers:
   stage: Test
   parallel:
     matrix:
@@ -124,7 +82,7 @@ FV Tracers Tests:
     - job: Build
   retry: 0
 
-FV Coupling Tests:
+FV Coupling:
   stage: Test
   parallel:
     matrix:
@@ -143,7 +101,7 @@ FV Coupling Tests:
     - job: Build
   retry: 0
 
-FV Static AMR Tests:
+FV Static AMR:
   stage: Test
   parallel:
     matrix:
@@ -162,7 +120,7 @@ FV Static AMR Tests:
     - job: Build
   retry: 0
 
-FV Dynamic AMR Tests:
+FV Dynamic AMR:
   stage: Test
   parallel:
     matrix:
@@ -182,7 +140,7 @@ FV Dynamic AMR Tests:
     - job: Build
   retry: 0
 
-FD Tests:
+FD:
   stage: Test
   parallel:
     matrix:
@@ -201,7 +159,7 @@ FD Tests:
     - job: Build
   retry: 0
 
-FV-FD Coupling Tests:
+FV-FD Coupling:
   stage: Test
   parallel:
     matrix:
@@ -220,13 +178,13 @@ FV-FD Coupling Tests:
     - job: Build
   retry: 0
 
-ADERDG Tests:
+ADERDG:
   stage: Test
   parallel:
     matrix:
     - scenario: [AdvectionLinear, AcousticPlanarWaves, ElasticPlanarWaves, EulerGaussianBell, EulerIsentropicVortex, SWERadialDamBreak, SWERestingLake, NavierStokesCosineBubble, NavierStokesTwoBubbles, NavierStokesTaylorGreen, NavierStokesABCFlow]
       build_type: [Release, Debug]
-      precision:  [float, double]
+      precision: [float, double]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg; PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg.py -s $scenario -m $build_type -pr $precision -md ${MIN_GRID_LEVELS};"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg; $PARALLEL_LAUNCH ./ExaHyPE;"
@@ -240,7 +198,7 @@ ADERDG Tests:
     - job: Build
   retry: 0
 
-ADERDG Static AMR Tests:
+ADERDG Static AMR:
   stage: Test
   parallel:
     matrix:
@@ -258,7 +216,7 @@ ADERDG Static AMR Tests:
     - job: Build
   retry: 0
 
-ADERDG Dynamic AMR Tests:
+ADERDG Dynamic AMR:
   stage: Test
   parallel:
     matrix:
@@ -278,7 +236,7 @@ ADERDG Dynamic AMR Tests:
     - job: Build
   retry: 0
 
-ADERDG Limiting Tests:
+ADERDG Limiting:
   stage: Test
   parallel:
     matrix:
@@ -297,7 +255,7 @@ ADERDG Limiting Tests:
     - job: Build
   retry: 0
 
-ADERDG GRMHD Tests:
+ADERDG GRMHD:
   stage: Test
   parallel:
     matrix:
@@ -316,7 +274,7 @@ ADERDG GRMHD Tests:
     - job: Build
   retry: 0
 
-ADERDG Coupling Tests:
+ADERDG Coupling:
   stage: Test
   parallel:
     matrix:
@@ -334,7 +292,7 @@ ADERDG Coupling Tests:
     - job: Build
   retry: 0
 
-RKDG Tests:
+RKDG:
   stage: Test
   parallel:
     matrix:
@@ -353,164 +311,10 @@ RKDG Tests:
     - job: Build
   retry: 0
 
-Fortran Coupling Tests:
+Fortran Coupling:
   stage: Test
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fortran-coupling; PYTHONPATH=$CI_PROJECT_DIR/python python3 fortran-coupling.py;"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOnMain
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-  retry: 0
-
-Acoustic Tutorials:
-  stage: Tutorials
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/acoustic; ipython Acoustic.ipynb;"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOnMain
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-  retry: 0
-
-SWE Tutorials:
-  stage: Tutorials
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd documentation/exahype2/tutorials; ipython SWE.ipynb;"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOnMain
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-  retry: 0
-
-Euler Tutorials:
-  stage: Tutorials
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd documentation/exahype2/tutorials; PYTHONPATH=$CI_PROJECT_DIR/python python3 euler.py;"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOnMain
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-  retry: 0
-
-Gravity Waves Application:
-  stage: Applications
-  parallel:
-    matrix:
-    - scenario: [airglow-chemistry, thunderstorm]
-      dimensions: [2]
-      build_type: [Release, Debug]
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/gravity-waves/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -d $dimensions -m $build_type;"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/gravity-waves/$scenario; $PARALLEL_LAUNCH ./ExaHyPE;"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOnMain
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-  retry: 0
-
-Shallow Water Application:
-  stage: Applications
-  parallel:
-    matrix:
-    - scenario: [artificial-tsunami, chile-tsunami, circular-island, dam-break-landslide, meteotsunami-gulf-of-mexico, meteotsunami-r1, oscillating-lake, radial-dam-break, solitary-wave, tafjord-landslide, three-mounds-channel, tohoku-tsunami]
-      build_type: [Release, Debug]
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/shallow-water/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -m $build_type -md ${MIN_GRID_LEVELS} -ns 0;"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/shallow-water/$scenario; $PARALLEL_LAUNCH ./ExaHyPE;"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOnMain
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-  retry: 0
-
-ExaSeis Application:
-  stage: Applications
-  parallel:
-    matrix:
-    - scenario: [cartesian, curvilinear, dynamic-rupture, pml, pml-dynamic-rupture]
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaseis/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py;"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOnMain
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-  retry: 0
-
-ExaGRyPE Application:
-  stage: Applications
-  parallel:
-    matrix:
-    - scenario: [gauge-wave]
-      solver: [fv]
-      build_type: [Release, Debug]
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exagrype/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py --solver $solver -m $build_type -md 1 -ns 0;"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exagrype/$scenario; $PARALLEL_LAUNCH ./ExaGRyPE;"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOnMain
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-  retry: 0
-
-Landslide Application:
-  stage: Applications
-  parallel:
-    matrix:
-    - scenario: [fv, limited]
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/landslide/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario-landslide-tsunami.py;"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOnMain
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-  retry: 0
-
-Kernel Benchmark:
-  stage: Benchmarks
-  parallel:
-    matrix:
-    - kernel: [fv, aderdg]
-      build_type: [Release, Debug]
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/kernel-benchmarks/$kernel; PYTHONPATH=$CI_PROJECT_DIR/python python3 $kernel.py -m $build_type -md ${MIN_GRID_LEVELS};"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/kernel-benchmarks/$kernel; ./KernelBenchmarks"
   allow_failure: false
   extends:
     - .Tags
