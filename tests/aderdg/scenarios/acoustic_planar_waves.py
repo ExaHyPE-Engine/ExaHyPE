@@ -15,7 +15,6 @@ class AcousticPlanarWaves(Scenario):
     Scenario reproduced from Dumbser & Käser, https://doi.org/10.1111/j.1365-246X.2006.03120.x (Chapter 5, p. 328)
     """
 
-    _plot_dt = 0.0
     _offset = -1.0
     _domain_size = 2.0
     _periodic_bc = True
@@ -23,8 +22,8 @@ class AcousticPlanarWaves(Scenario):
     def __init__(self, dimensions, iterations=2):
         self._dimensions = dimensions
         self._end_time = iterations * sqrt(dimensions)
-        self._K0 = 4.0
-        self._rho = 1.0
+        self._K0 = 4
+        self._rho = 1
         self._equation = Acoustic(dimensions, rho=self._rho, K0=self._K0)
 
     def initial_conditions(self):
@@ -38,27 +37,27 @@ class AcousticPlanarWaves(Scenario):
 #endif
   ));
 
-  Q[1] = val;
-  Q[2] = val;
+  Q[Shortcuts::v+0] = val;
+  Q[Shortcuts::v+1] = val;
 #if DIMENSIONS==3
-  Q[3] = val;
+  Q[Shortcuts::v+2] = val;
 #endif
 
-  constexpr double K0  = """
+  constexpr auto K0  = """
             + str(self._K0)
             + """;
-  constexpr double rho = """
+  constexpr auto rho = """
             + str(self._rho)
             + """;
 
   // These are defined by the eigenvector of the plane wave operator
 #if DIMENSIONS==3
-  const double kr = K0*std::sqrt(rho/(3.0*K0)) + 2*std::sqrt(K0*rho/3.0);
+  const auto kr = K0*std::sqrt(rho/(3*K0)) + 2*std::sqrt(K0*rho/3);
 #else
-  const double kr = std::sqrt(2*K0*rho);
+  const auto kr = std::sqrt(2*K0*rho);
 #endif
 
-  Q[0] = kr*val;
+  Q[Shortcuts::p] = kr*val;
 """
         )
 
@@ -66,7 +65,6 @@ class AcousticPlanarWaves(Scenario):
         return (
             """
   const double w = 2*std::sqrt(DIMENSIONS)*M_PI;
-
   const double val = cos( w*t - std::numbers::pi*(
       x[0] + x[1]
 #if DIMENSIONS==3
@@ -74,23 +72,23 @@ class AcousticPlanarWaves(Scenario):
 #endif
   ));
 
-  solution[1] = val;
-  solution[2] = val;
+  solution[Shortcuts::v+0] = val;
+  solution[Shortcuts::v+1] = val;
 
-  constexpr double K0  = """
+  constexpr auto K0  = """
             + str(self._K0)
             + """;
-  constexpr double rho = """
+  constexpr auto rho = """
             + str(self._rho)
             + """;
 
 #if DIMENSIONS==3
-  solution[3] = val;
-  const double kr = K0*std::sqrt(rho/(3.0*K0)) + 2*std::sqrt(K0*rho/3.0);
+  solution[Shortcuts::v+2] = val;
+  const auto kr = K0*std::sqrt(rho/(3*K0)) + 2*std::sqrt(K0*rho/3);
 #else
-  const double kr = std::sqrt(2*K0*rho);
+  const auto kr = std::sqrt(2*K0*rho);
 #endif
 
-  solution[0] = kr*val;
+  solution[Shortcuts::p] = kr*val;
 """
         )

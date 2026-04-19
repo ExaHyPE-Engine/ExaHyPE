@@ -17,10 +17,6 @@ from .LagrangeBasis import render_tensor_1
 from .LagrangeBasis import render_tensor_2
 from .LagrangeBasis import render_tensor_3
 
-from numpy import number
-
-
-
 
 class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   r"""
@@ -69,6 +65,10 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   
   def __init__(self,polynomial_order):
     super(LagrangeBasisWithDiagonalMassMatrix,self).__init__(polynomial_order)
+    self.dictionary = {
+      True: {},
+      False: {}
+    }
       
       
   def __str__(self):
@@ -325,35 +325,6 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
       return restriction_matrix   
 
 
-  def __compute_K1(self):
-    r"""
-    
-    @todo Not yet updated atm but seems also not to be used anywhere
-    
-    Computes the difference between the reference element mass operator 
-    evaluated at point xi=1.0 and the element stiffness matrix.
-    
-    :return: delta between the reference element mass operator at point xi=1.0 and the element stiffness matrix 
-    """
-    phi1, _ = self.__evaluate(1.0)
-    Kxi = self.__stiffness_operator    
-
-    K1  = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)]
-    #FRm = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)]
-
-    for k in range(0, self.__num_points):
-      for l in range(0, self.__num_points):
-        #FRm[k][l] = phi1[k]*phi1[l]
-        K1[k][l]  = phi1[k]*phi1[l] - Kxi[k][l]
-    
-    #K1_orig = np.subtract(FRm,self.__stiffness_operator)
-    #for k in range(0, self.__num_points):
-    #  for l in range(0, self.__num_points):
-    #    print(K1[k][l] - K1_orig[k][l])
-   
-    return K1    
-      
-      
   def __compute_derivative_operator(self):
     r"""
 
@@ -368,39 +339,8 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
         dQdx[row][col] = self.derivative1d( self.quadrature_points[row], col)
 
     return dQdx
-  
 
-  def __compute_fine_grid_projector(self, j):
-    r"""
-    
-    @todo Definitely useful, but not used atm
-    
-    Transforms the degrees of freedom located on a coarse grid edge
-    quadrature_points to degrees of freedoms located on quadrature_points of a fine grid edge.
-    The difference in levels is 1.
-    
-    Let us denote by P the  fine grid projector (= equidistantGridProjector). The fine grid DoF 
-    are computed according to:
-    
-    u^{fine;j}_i =  sum_{m} P^{j}_im u^{coarse}_m
-     
-    Args:
-      j:
-      subinterval index
-    
-    Returns:
-       fineGridProjector:
-        Operator to express polynomial function associated with original interval with basis functions associated with subinterval j
-    """
-    fineGridProjector = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)] # 4 x 4 for self.__max_poly_order=3
-    
-    for i in range(0, self.__num_points): # Eq. basis
-      phi_i, _ = self.__evaluate((self.__quadrature_points[i]+j)/mp.mpf(3.0)) # comma after phi_i is important
-      for m in range(0, self.__num_points): # DG basis
-        fineGridProjector[m][i] = phi_i[m]
-    return fineGridProjector
-  
-  
+
   def __compute_basis_function_values_left(self):
     r"""
     
@@ -412,107 +352,70 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     """
     return [ self.value1d(0.0, number) for number in range(self.dofs_per_axis) ]  
     
-      
-  def __compute_equidistant_grid_projector(self):
-    """
-    
-    @todo Not used atm, but definitely useful
-    
-    Transforms the degrees of freedom located at non-equidistant Lagrange support points
-    quadrature_points to degrees of freedoms located at quadrature_points of an equidistant grid over (0,1).
-    
-    Let us denote by P the  projection operator (= equidistantGridProjector). The equidistant DoF 
-    are computed according to:
-    
-    u^eq_i =  sum_{m} P_im u^DG_m
-    
-    Returns:
-       equidistantGridProjector:
-        The corresponding degrees of freedom located at quadrature_points of an equidistant grid over (0,1).
-    """
-    equidistantGridProjector = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)] # 4 x 4 for self.__max_poly_order=3
-    subxi = mp.linspace(mp.mpf(0.0), mp.mpf(1.0), self.__num_points)
-    
-    for i in range(0, self.__num_points): # Eq. basis
-      phi_i, _ = self.__evaluate(subxi[i]) # comma after phi_i is important
-      for m in range(0, self.__num_points): # DG basis
-        equidistantGridProjector[m][i] = phi_i[m]
-    return equidistantGridProjector
-  
-  
+
   def init_dictionary_with_default_parameters(self,dictionary,use_multidimensional_arrays):
-    def snake_to_camel(word):
-      return ''.join(x.capitalize() or '_' for x in word.lower().split('_'))
 
-    basisDeclarations = ""
-    basisInitializers = ""
-    
-    dictionary["ORDER"]               = self.order
-    dictionary["BASIS_DECLARATIONS"]  = ""
-    dictionary["BASIS_INITIALIZERS"]  = ""
-    
-    dictionary["BASIS_DECLARATIONS"] += "/**\n"
-    dictionary["BASIS_DECLARATIONS"] += self.QuadraturePoints1dDocumentation
-    dictionary["BASIS_DECLARATIONS"] += "*/\n"
-    #dictionary["BASIS_DECLARATIONS"] += "static const double QuadraturePoints1d[DGOrder+1];\n\n"
-    #dictionary["BASIS_INITIALIZERS"] += "             QuadraturePoints1d{},\n".format( render_tensor_1(self.quadrature_points) )
-    dictionary["BASIS_DECLARATIONS"] += "static constexpr double QuadraturePoints1d[] = {};\n\n".format( render_tensor_1(self.quadrature_points) )
-    
-    dictionary["BASIS_DECLARATIONS"] += "/**\n"
-    dictionary["BASIS_DECLARATIONS"] += self.QuadratureWeights1dDocumentation
-    dictionary["BASIS_DECLARATIONS"] += "*/\n"
-    #dictionary["BASIS_DECLARATIONS"] += "const double QuadratureWeights1d[DGOrder+1];\n\n"
-    #dictionary["BASIS_INITIALIZERS"] += "             QuadratureWeights1d{},\n".format( render_tensor_1(self.quadrature_weights) )
-    dictionary["BASIS_DECLARATIONS"] += "static constexpr double QuadratureWeights1d[] = {};\n\n".format( render_tensor_1(self.quadrature_weights) )
+    # As the dictionary takes considerable time to initialize and its content does not change
+    # we just initialize it once and reuse it.
+    d = self.dictionary[use_multidimensional_arrays]
+    if not d:
+        d["ORDER"]               = self.order
+        d["BASIS_DECLARATIONS"]  = ""
+        d["BASIS_INITIALIZERS"]  = ""
+        
+        d["BASIS_DECLARATIONS"] += "/**\n"
+        d["BASIS_DECLARATIONS"] += self.QuadraturePoints1dDocumentation
+        d["BASIS_DECLARATIONS"] += "*/\n"
+        d["BASIS_DECLARATIONS"] += "static constexpr double QuadraturePoints1d[] = {};\n\n".format( render_tensor_1(self.quadrature_points) )
+        
+        d["BASIS_DECLARATIONS"] += "/**\n"
+        d["BASIS_DECLARATIONS"] += self.QuadratureWeights1dDocumentation
+        d["BASIS_DECLARATIONS"] += "*/\n"
+        d["BASIS_DECLARATIONS"] += "static constexpr double QuadratureWeights1d[] = {};\n\n".format( render_tensor_1(self.quadrature_weights) )
 
-    dictionary["BASIS_DECLARATIONS"] += "/**\n"
-    dictionary["BASIS_DECLARATIONS"] += self.MassMatrix1dDocumentation
-    dictionary["BASIS_DECLARATIONS"] += "*/\n"
-    #dictionary["BASIS_DECLARATIONS"] += "const double MassMatrixDiagonal1d[DGOrder+1];\n\n"
-    #dictionary["BASIS_INITIALIZERS"] += "             MassMatrixDiagonal1d{},\n".format( render_tensor_1(self.__compute_mass_matrix_diagonal()) )
-    dictionary["BASIS_DECLARATIONS"] += "static constexpr double MassMatrixDiagonal1d[] = {};\n\n".format( render_tensor_1(self.__compute_mass_matrix_diagonal()) )
+        d["BASIS_DECLARATIONS"] += "/**\n"
+        d["BASIS_DECLARATIONS"] += self.MassMatrix1dDocumentation
+        d["BASIS_DECLARATIONS"] += "*/\n"
+        d["BASIS_DECLARATIONS"] += "static constexpr double MassMatrixDiagonal1d[] = {};\n\n".format( render_tensor_1(self.__compute_mass_matrix_diagonal()) )
 
-    dictionary["BASIS_DECLARATIONS"] += "/**\n"
-    dictionary["BASIS_DECLARATIONS"] += self.StiffnessOperator1dDocumentation
-    dictionary["BASIS_DECLARATIONS"] += "*/\n"
-    if use_multidimensional_arrays:        
-      #dictionary["BASIS_DECLARATIONS"] += "const double StiffnessOperator1d[DGOrder+1][DGOrder+1];\n\n"
-      #dictionary["BASIS_INITIALIZERS"] += "             StiffnessOperator1d{},\n".format( render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
-      dictionary["BASIS_DECLARATIONS"] += "static constexpr double StiffnessOperator1d[][] = {};\n\n".format( render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
-    else:
-      #dictionary["BASIS_DECLARATIONS"] += "const double StiffnessOperator1d[(DGOrder+1)*(DGOrder+1)];\n\n"
-      #dictionary["BASIS_INITIALIZERS"] += "             StiffnessOperator1d{},\n".format( render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
-      dictionary["BASIS_DECLARATIONS"] += "static constexpr double StiffnessOperator1d[] = {};\n\n".format( render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
+        d["BASIS_DECLARATIONS"] += "/**\n"
+        d["BASIS_DECLARATIONS"] += self.StiffnessOperator1dDocumentation
+        d["BASIS_DECLARATIONS"] += "*/\n"
+        if use_multidimensional_arrays:        
+          d["BASIS_DECLARATIONS"] += "static constexpr double StiffnessOperator1d[][] = {};\n\n".format( render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
+        else:
+          d["BASIS_DECLARATIONS"] += "static constexpr double StiffnessOperator1d[] = {};\n\n".format( render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
 
-    dictionary["BASIS_DECLARATIONS"] += "/**\n"
-    dictionary["BASIS_DECLARATIONS"] += self.BasisFunctionValuesLeft1dDocumentation
-    dictionary["BASIS_DECLARATIONS"] += "*/\n"
-    dictionary["BASIS_DECLARATIONS"] += "static constexpr double BasisFunctionValuesLeft1d[] = {};\n\n".format( render_tensor_1(self.__compute_basis_function_values_left()) )
+        d["BASIS_DECLARATIONS"] += "/**\n"
+        d["BASIS_DECLARATIONS"] += self.BasisFunctionValuesLeft1dDocumentation
+        d["BASIS_DECLARATIONS"] += "*/\n"
+        d["BASIS_DECLARATIONS"] += "static constexpr double BasisFunctionValuesLeft1d[] = {};\n\n".format( render_tensor_1(self.__compute_basis_function_values_left()) )
 
-    dictionary["BASIS_DECLARATIONS"] += "/**\n"
-    dictionary["BASIS_DECLARATIONS"] += self.DerivativeOperator1dDocumentation
-    dictionary["BASIS_DECLARATIONS"] += "*/\n"
-    if use_multidimensional_arrays:        
-      dictionary["BASIS_DECLARATIONS"] += "static constexpr double DerivativeOperator1d[][] = {};\n\n".format( render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
-    else:
-      dictionary["BASIS_DECLARATIONS"] += "static constexpr double DerivativeOperator1d[] = {};\n\n".format( render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
+        d["BASIS_DECLARATIONS"] += "/**\n"
+        d["BASIS_DECLARATIONS"] += self.DerivativeOperator1dDocumentation
+        d["BASIS_DECLARATIONS"] += "*/\n"
+        if use_multidimensional_arrays:        
+          d["BASIS_DECLARATIONS"] += "static constexpr double DerivativeOperator1d[][] = {};\n\n".format( render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
+        else:
+          d["BASIS_DECLARATIONS"] += "static constexpr double DerivativeOperator1d[] = {};\n\n".format( render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
 
-    dictionary["BASIS_DECLARATIONS"] += "/**\n"
-    dictionary["BASIS_DECLARATIONS"] += self.RestrictionMatrix1dDocumentation
-    dictionary["BASIS_DECLARATIONS"] += "*/\n"
-    if use_multidimensional_arrays:        
-      dictionary["BASIS_DECLARATIONS"] += "static constexpr double RestrictionMatrix1d[][][] = {};\n\n".format( render_tensor_3(self.__compute_restriction_matrix(),use_multidimensional_arrays) )
-    else:
-      dictionary["BASIS_DECLARATIONS"] += "static constexpr double RestrictionMatrix1d[] = {};\n\n".format( render_tensor_3(self.__compute_restriction_matrix(),use_multidimensional_arrays) )
+        d["BASIS_DECLARATIONS"] += "/**\n"
+        d["BASIS_DECLARATIONS"] += self.RestrictionMatrix1dDocumentation
+        d["BASIS_DECLARATIONS"] += "*/\n"
+        if use_multidimensional_arrays:        
+          d["BASIS_DECLARATIONS"] += "static constexpr double RestrictionMatrix1d[][][] = {};\n\n".format( render_tensor_3(self.__compute_restriction_matrix(),use_multidimensional_arrays) )
+        else:
+          d["BASIS_DECLARATIONS"] += "static constexpr double RestrictionMatrix1d[] = {};\n\n".format( render_tensor_3(self.__compute_restriction_matrix(),use_multidimensional_arrays) )
 
-    dictionary["BASIS_DECLARATIONS"] += "/**\n"
-    dictionary["BASIS_DECLARATIONS"] += self.InterpolationMatrix1dDocumentation
-    dictionary["BASIS_DECLARATIONS"] += "*/\n"
-    if use_multidimensional_arrays:        
-      dictionary["BASIS_DECLARATIONS"] += "static constexpr double InterpolationMatrix1d[][][] = {};\n\n".format( render_tensor_3(self.__compute_interpolation_matrix(),use_multidimensional_arrays) )
-    else:
-      dictionary["BASIS_DECLARATIONS"] += "static constexpr double InterpolationMatrix1d[] = {};\n\n".format( render_tensor_3(self.__compute_interpolation_matrix(),use_multidimensional_arrays) )
+        d["BASIS_DECLARATIONS"] += "/**\n"
+        d["BASIS_DECLARATIONS"] += self.InterpolationMatrix1dDocumentation
+        d["BASIS_DECLARATIONS"] += "*/\n"
+        if use_multidimensional_arrays:        
+          d["BASIS_DECLARATIONS"] += "static constexpr double InterpolationMatrix1d[][][] = {};\n\n".format( render_tensor_3(self.__compute_interpolation_matrix(),use_multidimensional_arrays) )
+        else:
+          d["BASIS_DECLARATIONS"] += "static constexpr double InterpolationMatrix1d[] = {};\n\n".format( render_tensor_3(self.__compute_interpolation_matrix(),use_multidimensional_arrays) )
 
+    dictionary.update(d)
 
   @property
   @abstractmethod

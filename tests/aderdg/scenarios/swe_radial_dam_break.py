@@ -15,7 +15,6 @@ class SWERadialDamBreak(Scenario):
     a bump in the bathymetry in the centre.
     """
 
-    _plot_dt = 0.0
     _offset = -0.5
     _domain_size = 1.0
     _periodic_bc = False
@@ -39,16 +38,16 @@ class SWERadialDamBreak(Scenario):
     0.0
   };
 
-  Q[0] = 2.0; // h
-  Q[1] = 0.0; // v_x
-  Q[2] = 0.0; // v_y
-  Q[3] = (tarch::la::norm2(x - damBreakCenter) < 0.2 ? 0.5 : 0.0); // b
+  Q[Shortcuts::h]   = 2; // h
+  Q[Shortcuts::v+0] = 0; // v_x
+  Q[Shortcuts::v+1] = 0; // v_y
+  Q[Shortcuts::b]   = (tarch::la::norm2(x - damBreakCenter) < 0.2 ? 0.5 : 0); // b
 """
 
     def boundary_conditions(self):
         return """
-  Qoutside[0] = 2.0; // h
-  Qoutside[1] = 0.0; // v_x
-  Qoutside[2] = 0.0; // v_y
-  Qoutside[3] = 0.0; // b
+  Qoutside[Shortcuts::h]    = 2; // h
+  Qoutside[Shortcuts::v+0]  = 0; // v_x
+  Qoutside[Shortcuts::v+1]  = 0; // v_y
+  Qoutside[Shortcuts::b]    = 0; // b
 """

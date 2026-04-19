@@ -31,9 +31,9 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
         solver,
         filename,
         number_of_entries_between_two_db_flushes=65536,
-        data_delta_between_two_snapsots=1e-8,
-        position_delta_between_two_snapsots=1e-8,
-        time_delta_between_two_snapsots=0,
+        data_delta_between_two_snapshots=1e-8,
+        position_delta_between_two_snapshots=1e-8,
+        time_delta_between_two_snapshots=0,
         output_precision=8,
         clear_database_after_flush=True,
         use_relative_deltas=False,
@@ -44,7 +44,7 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
 
         Constructor
 
-        data_delta_between_two_snapsots: Float
+        data_delta_between_two_snapshots: Float
          See toolbox::particles::TrajectoryDatabase::TrajectoryDatabase(). The 
          argument maps 1:1 to the constructor's argument dataDelta.
                   
@@ -52,7 +52,7 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
          file. The frequency of datafile writes is solely controlled via 
          number_of_entries_between_two_db_flushes.
 
-        position_delta_between_two_snapsots: Float
+        position_delta_between_two_snapshots: Float
          See toolbox::particles::TrajectoryDatabase::TrajectoryDatabase(). The 
          argument maps 1:1 to the constructor's argument positionDelta.
          
@@ -60,7 +60,7 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
          file. The frequency of datafile writes is solely controlled via 
          number_of_entries_between_two_db_flushes.
 
-        time_delta_between_two_snapsots: Float
+        time_delta_between_two_snapshots: Float
          See toolbox::particles::TrajectoryDatabase::TrajectoryDatabase(). The 
          argument maps 1:1 to the constructor's argument timeDelta.
          
@@ -87,9 +87,9 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
         self.d = {}
         self.d["PARTICLE"] = particle_set.particle_model.name
         self.d["PARTICLES_CONTAINER"] = particle_set.name
-        self.d["DATA_DELTA"] = data_delta_between_two_snapsots
-        self.d["POSITION_DELTA"] = position_delta_between_two_snapsots
-        self.d["TIME_DELTA"] = time_delta_between_two_snapsots
+        self.d["DATA_DELTA"] = data_delta_between_two_snapshots
+        self.d["POSITION_DELTA"] = position_delta_between_two_snapshots
+        self.d["TIME_DELTA"] = time_delta_between_two_snapshots
         self.d["OUTPUT_PRECISION"] = output_precision
         self.d["FILENAME"] = filename
         self.d["SOLVER_NAME"] = solver._name

@@ -6,7 +6,7 @@ from .equation import Equation
 class Acoustic(Equation):
     def __init__(self, dimensions, rho=1.0, K0=4.0):
         self.dimensions = dimensions
-        self.num_unknowns = 3 if dimensions == 2 else 4
+        self.num_unknowns = {"p": 1, "v": dimensions}
         self.num_auxiliary_variables = 0
         self.rho = rho
         self.K0 = K0
@@ -15,7 +15,7 @@ class Acoustic(Equation):
     def eigenvalues(self):
         return (
             """
-  const double c = std::sqrt("""
+  const auto c = std::sqrt("""
             + str(self.K0)
             + "/"
             + str(self.rho)
@@ -27,20 +27,20 @@ class Acoustic(Equation):
     def flux(self):
         return (
             """
-  constexpr double K0      = """
+  constexpr auto K0      = """
             + str(self.K0)
             + """;
-  constexpr double inv_rho = 1.0 / """
+  constexpr auto inv_rho = 1 / """
             + str(self.rho)
             + """;
 
-  F[0] = K0 * Q[normal+1];
-  F[1] = 0.0;
-  F[2] = 0.0;
+  F[Shortcuts::p] = K0 * Q[Shortcuts::v + normal];
+  F[Shortcuts::v + 0] = 0;
+  F[Shortcuts::v + 1] = 0;
 #if DIMENSIONS==3
-  F[3] = 0.0;
+  F[Shortcuts::v + 2] = 0;
 #endif
 
-  F[normal+1] = inv_rho * Q[0];
+  F[Shortcuts::v + normal] = inv_rho * Q[Shortcuts::p];
 """
         )

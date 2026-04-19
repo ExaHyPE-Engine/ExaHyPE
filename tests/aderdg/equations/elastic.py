@@ -6,53 +6,50 @@ from .equation import Equation
 class Elastic(Equation):
     def __init__(self, dimensions):
         self.dimensions = dimensions
-        self.num_unknowns = 5 if dimensions == 2 else 9
-        self.num_auxiliary_variables = 3
+        self.num_unknowns = {"v": dimensions, "sigma": (3 if dimensions == 2 else 6)}
+        5 if dimensions == 2 else 9
+        self.num_auxiliary_variables = {"rho": 1, "cp": 1, "cs": 1}
         self.is_linear = True
 
     def eigenvalues(self):
         return """
-#if DIMENSIONS==2
-  const double cp = Q[6];
-  const double cs = Q[7];
-#else
-  const double cp = Q[10];
-  const double cs = Q[11];
-#endif
-  return std::fmax(std::abs(cp), std::abs(cs));
+  return std::fmax(
+    std::abs(Q[Shortcuts::cp]), 
+    std::abs(Q[Shortcuts::cs])
+  );
 """
 
     def flux(self):
         return (
             """
     // Lamé parameters
-    const double iRho   = 1.0/Q[5];
-    const double Mu     = Q[5] * Q[7] * Q[7];             // rho*cs*cs
-    const double Lambda = Q[5] * Q[6] * Q[6] - 2.0 * Mu;  // rho*cp*cp-2*Mu
+    const auto iRho   = 1/Q[Shortcuts::rho];
+    const auto Mu     = Q[Shortcuts::rho] * Q[Shortcuts::cs] * Q[Shortcuts::cs];          //rho*cs*cs
+    const auto Lambda = Q[Shortcuts::rho] * Q[Shortcuts::cp] * Q[Shortcuts::cp] - 2 * Mu; //rho*cp*cp - 2 Mu
 
     switch (normal) {
     case 0:
-      F[0] = -iRho * Q[2];
-      F[1] = -iRho * Q[4];
-      F[2] = -(2.0 * Mu + Lambda) * Q[0];
-      F[3] = -Lambda * Q[0];
-      F[4] = -Mu * Q[1];
+      F[Shortcuts::v+0] = -iRho * Q[Shortcuts::sigma+0];
+      F[Shortcuts::v+1] = -iRho * Q[Shortcuts::sigma+2];
+      F[Shortcuts::sigma+0] = -(2 * Mu + Lambda) * Q[Shortcuts::v+0];
+      F[Shortcuts::sigma+1] = -Lambda * Q[Shortcuts::v+0];
+      F[Shortcuts::sigma+2] = -Mu * Q[Shortcuts::v+1];
       break;
     case 1:
-      F[0] = -iRho * Q[4];
-      F[1] = -iRho * Q[3];
-      F[2] = -Lambda * Q[1];
-      F[3] = -(2.0 * Mu + Lambda) * Q[1];
-      F[4] = -Mu * Q[0];
+      F[Shortcuts::v+0] = -iRho * Q[Shortcuts::sigma+2];
+      F[Shortcuts::v+1] = -iRho * Q[Shortcuts::sigma+1];
+      F[Shortcuts::sigma+0] = -Lambda * Q[Shortcuts::v+1];
+      F[Shortcuts::sigma+1] = -(2 * Mu + Lambda) * Q[Shortcuts::v+1];
+      F[Shortcuts::sigma+2] = -Mu * Q[Shortcuts::v+0];
       break;
     }
 """
             if self.dimensions == 2
             else """
   // Lamé parameters
-  const double iRho   = 1.0/Q[9];
-  const double Mu     = Q[9] * Q[11] * Q[11];             //rho*cs*cs
-  const double Lambda = Q[9] * Q[10] * Q[10] - 2.0 * Mu;  //rho*cp*cp - 2 Mu
+  const auto iRho   = 1/Q[Shortcuts::rho];
+  const auto Mu     = Q[Shortcuts::rho] * Q[Shortcuts::cs] * Q[Shortcuts::cs];          //rho*cs*cs
+  const auto Lambda = Q[Shortcuts::rho] * Q[Shortcuts::cp] * Q[Shortcuts::cp] - 2 * Mu; //rho*cp*cp - 2 Mu
 
   /*
   vars in order are:
@@ -60,37 +57,37 @@ class Elastic(Equation):
   */
   switch(normal) {
     case 0:
-      F[0] = - iRho*Q[3]; // -sigma_xx/rho
-      F[1] = - iRho*Q[6]; // -sigma_xy/rho
-      F[2] = - iRho*Q[7]; // -sigma_xz/rho
-      F[3] = -(Lambda + 2*Mu) * Q[0]; // -vx * (l+2m)
-      F[4] = - Lambda * Q[0];         // -vy * l
-      F[5] = - Lambda * Q[0];         // -vz * l
-      F[6] = - Mu * Q[1];             // -vy * m
-      F[7] = - Mu * Q[2];             // -vz * m
-      F[8] =   0.0;                   //   0.
+      F[Shortcuts::v+0] = - iRho*Q[Shortcuts::sigma+0]; // -sigma_xx/rho
+      F[Shortcuts::v+1] = - iRho*Q[Shortcuts::sigma+3]; // -sigma_xy/rho
+      F[Shortcuts::v+2] = - iRho*Q[Shortcuts::sigma+4]; // -sigma_xz/rho
+      F[Shortcuts::sigma+0] = -(Lambda + 2*Mu) * Q[Shortcuts::v+0]; // -vx * (l+2m)
+      F[Shortcuts::sigma+1] = - Lambda * Q[Shortcuts::v+0];         // -vy * l
+      F[Shortcuts::sigma+2] = - Lambda * Q[Shortcuts::v+0];         // -vz * l
+      F[Shortcuts::sigma+3] = - Mu * Q[Shortcuts::v+1];             // -vy * m
+      F[Shortcuts::sigma+4] = - Mu * Q[Shortcuts::v+2];             // -vz * m
+      F[Shortcuts::sigma+5] =   0;                                  //   0.
       break;
     case 1:
-      F[0] = - iRho*Q[6]; // -sigma_xy/rho
-      F[1] = - iRho*Q[4]; // -sigma_yy/rho
-      F[2] = - iRho*Q[8]; // -sigma_yz/rho
-      F[3] = - Lambda * Q[1];         // -vx * l
-      F[4] = -(Lambda + 2*Mu) * Q[1]; // -vy * (l+2m)
-      F[5] = - Lambda * Q[1];         // -vz * l
-      F[6] = - Mu * Q[0];             // -vx * m
-      F[7] =   0.0;                   //   0.
-      F[8] = - Mu * Q[2];             // -vz * m
+      F[Shortcuts::v+0] = - iRho*Q[Shortcuts::sigma+3]; // -sigma_xy/rho
+      F[Shortcuts::v+1] = - iRho*Q[Shortcuts::sigma+1]; // -sigma_yy/rho
+      F[Shortcuts::v+2] = - iRho*Q[Shortcuts::sigma+5]; // -sigma_yz/rho
+      F[Shortcuts::sigma+0] = - Lambda * Q[Shortcuts::v+1];         // -vx * l
+      F[Shortcuts::sigma+1] = -(Lambda + 2*Mu) * Q[Shortcuts::v+1]; // -vy * (l+2m)
+      F[Shortcuts::sigma+2] = - Lambda * Q[Shortcuts::v+1];         // -vz * l
+      F[Shortcuts::sigma+3] = - Mu * Q[Shortcuts::v+0];             // -vx * m
+      F[Shortcuts::sigma+4] =   0;                                  //   0.
+      F[Shortcuts::sigma+5] = - Mu * Q[Shortcuts::v+2];             // -vz * m
       break;
     case 2:
-      F[0] = - iRho*Q[7]; // -sigma_xz/rho
-      F[1] = - iRho*Q[8]; // -sigma_yz/rho
-      F[2] = - iRho*Q[5]; // -sigma_zz/rho
-      F[3] = - Lambda * Q[2];         // -vx * l
-      F[4] = - Lambda * Q[2];         // -vy * l
-      F[5] = -(Lambda + 2*Mu) * Q[2]; // -vz * (l+2m)
-      F[6] =   0.0;                   //   0.
-      F[7] = - Mu * Q[0];             // -vx * m
-      F[8] = - Mu * Q[1];             // -vy * m
+      F[Shortcuts::v+0] = - iRho*Q[Shortcuts::sigma+4]; // -sigma_xz/rho
+      F[Shortcuts::v+1] = - iRho*Q[Shortcuts::sigma+5]; // -sigma_yz/rho
+      F[Shortcuts::v+2] = - iRho*Q[Shortcuts::sigma+2]; // -sigma_zz/rho
+      F[Shortcuts::sigma+0] = - Lambda * Q[Shortcuts::v+2];         // -vx * l
+      F[Shortcuts::sigma+1] = - Lambda * Q[Shortcuts::v+2];         // -vy * l
+      F[Shortcuts::sigma+2] = -(Lambda + 2*Mu) * Q[Shortcuts::v+2]; // -vz * (l+2m)
+      F[Shortcuts::sigma+3] =   0;                                  //   0.
+      F[Shortcuts::sigma+4] = - Mu * Q[Shortcuts::v+0];             // -vx * m
+      F[Shortcuts::sigma+5] = - Mu * Q[Shortcuts::v+1];             // -vy * m
   }
 """
         )

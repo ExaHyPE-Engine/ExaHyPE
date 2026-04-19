@@ -24,7 +24,6 @@ class NavierStokesTaylorGreenVortex(Scenario):
     _offset = 0.0
     _domain_size = 2 * math.pi
     _periodic_bc = True
-    _plot_dt = 0.0
     _end_time = 10.0
 
     _equation = NavierStokes(
@@ -47,11 +46,11 @@ class NavierStokesTaylorGreenVortex(Scenario):
         return (
             """
     constexpr auto gamma = 1.4;
-    constexpr auto q0 = 0.0;
+    constexpr auto q0 = 0;
     constexpr auto referenceViscosity = 0.1;
     const double Ft = std::exp(-2 * referenceViscosity * t);
 
-    const double rho = 1.0;
+    const double rho = 1;
     solution[Shortcuts::rho] = rho;
     solution[Shortcuts::j+0] = std::sin(x[0]) * std::cos(x[1]) * Ft;
     solution[Shortcuts::j+1] = -1 * std::cos(x[0]) * std::sin(x[1]) * Ft;
@@ -60,7 +59,7 @@ class NavierStokesTaylorGreenVortex(Scenario):
     const double pressure = p_0 + ((rho * Ft * Ft) / 4) *
                                       (std::cos(2 * x[0]) + std::cos(2 * x[1]));
     auto j = &solution[Shortcuts::j];
-    auto Z = 0.0;
+    auto Z = 0;
     """
             + self._equation.evaluate_energy()
             + """

@@ -8,9 +8,11 @@ import jinja2
 sys.path.insert(0, os.path.abspath("../equations"))
 from equations import SWE_W_Bathymetry
 
+
 class SWERestingLake(Scenario):
     """
     Resting lake scenario for the shallow water equations.
+
     The real water height H as defined by the sum of the water column h and
     the bathymetry b is constant over the entire domain, meaning that there
     should be no changes on the entire domain, but because we use the sum of
@@ -22,7 +24,6 @@ class SWERestingLake(Scenario):
     dampen out these waves or do they oscillate out of control.
     """
 
-    _plot_dt = 0.0
     _offset = -0.5
     _domain_size = 1.0
     _periodic_bc = True
@@ -39,25 +40,31 @@ class SWERestingLake(Scenario):
     def _initial_conditions(self, Q):
         d = {"VARIABLE": Q}
         return {
-        "bilinear": jinja2.Template("""
-    {{VARIABLE}}[1] = 0.0;
-    {{VARIABLE}}[2] = 0.0;
-    {{VARIABLE}}[3] = 1.0 - std::abs(x[0]) - std::abs(x[1]);
-    {{VARIABLE}}[0] = 2.0 - {{VARIABLE}}[3];
-""").render(**d),
-    "sinusoidal": jinja2.Template("""
-    {{VARIABLE}}[1] = 0.0;
-    {{VARIABLE}}[2] = 0.0;
-    {{VARIABLE}}[3] = sin( 2*M_PI * (x[0]+x[1]) );
-    {{VARIABLE}}[0] = 2.0 - {{VARIABLE}}[3];
-""").render(**d),
-    "constant": jinja2.Template("""
-    {{VARIABLE}}[1] = 0.0;
-    {{VARIABLE}}[2] = 0.0;
-    {{VARIABLE}}[3] = 1.0;
-    {{VARIABLE}}[0] = 2.0 - {{VARIABLE}}[3];
-""").render(**d)
-    }
+            "bilinear": jinja2.Template(
+                """
+    {{VARIABLE}}[Shortcuts::v+0]  = 0;
+    {{VARIABLE}}[Shortcuts::v+1]  = 0;
+    {{VARIABLE}}[Shortcuts::b]    = 1 - std::abs(x[0]) - std::abs(x[Shortcuts::v+0]);
+    {{VARIABLE}}[Shortcuts::h]    = 2 - {{VARIABLE}}[Shortcuts::b];
+"""
+            ).render(**d),
+            "sinusoidal": jinja2.Template(
+                """
+    {{VARIABLE}}[Shortcuts::v+0]  = 0;
+    {{VARIABLE}}[Shortcuts::v+1]  = 0;
+    {{VARIABLE}}[Shortcuts::b]    = sin( 2*M_PI * (x[0]+x[Shortcuts::v+0]) );
+    {{VARIABLE}}[Shortcuts::h]    = 2 - {{VARIABLE}}[Shortcuts::b];
+"""
+            ).render(**d),
+            "constant": jinja2.Template(
+                """
+    {{VARIABLE}}[Shortcuts::v+0]  = 0;
+    {{VARIABLE}}[Shortcuts::v+1]  = 0;
+    {{VARIABLE}}[Shortcuts::b]    = 1;
+    {{VARIABLE}}[Shortcuts::h]    = 2 - {{VARIABLE}}[Shortcuts::b];
+"""
+            ).render(**d),
+        }
 
     def initial_conditions(self):
         return self._initial_conditions("Q")[self._scenario]

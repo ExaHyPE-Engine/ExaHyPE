@@ -220,8 +220,8 @@ if args.use_probes and probe_coordinates:
             particle_set=probe_particles,
             solver=aderdg_solver,
             filename="Probes",
-            data_delta_between_two_snapsots=1e16,
-            time_delta_between_two_snapsots=50,
+            data_delta_between_two_snapshots=1e16,
+            time_delta_between_two_snapshots=50,
             output_precision=17,
             clear_database_after_flush=False,
         )

@@ -14,7 +14,6 @@ class EulerGaussianBell(Scenario):
     Scenario reproduced from Ioratti, Dumbser & Loubère, https://doi.org/10.1007/s10915-020-01209-w (p. 44)
     """
 
-    _plot_dt = 0.0
     _offset = -0.5
     _domain_size = 1.0
     _periodic_bc = True
@@ -26,16 +25,16 @@ class EulerGaussianBell(Scenario):
 
     def initial_conditions(self):
         return """
-  Q[0] = 0.02*(1.0+std::exp(-0.5*tarch::la::norm2(x)*tarch::la::norm2(x)/0.01));
+  Q[Shortcuts::rho] = 0.02*(1+std::exp(-0.5*tarch::la::norm2(x)*tarch::la::norm2(x)/0.01));
 
-  Q[1] = 1.0*Q[0];
-  Q[2] = 1.0*Q[0];
+  Q[Shortcuts::v+0] = Q[Shortcuts::rho];
+  Q[Shortcuts::v+1] = Q[Shortcuts::rho];
 
-  constexpr double gamma = 1.4;
-  constexpr double p = 1.0;
+  constexpr auto gamma = 1.4;
+  constexpr auto p = 1;
 
   //Should lead to a constant p over the domain given the initial conditions
-  Q[3] = p/(gamma-1.0) + 0.5*(Q[1]*Q[1]+Q[2]*Q[2]) / Q[0];
+  Q[Shortcuts::E] = p/(gamma-1) + 0.5*(Q[Shortcuts::v+0]*Q[Shortcuts::v+0]+Q[Shortcuts::v+1]*Q[Shortcuts::v+1]) / Q[Shortcuts::rho];
 """
 
     def analytical_solution(self):
@@ -50,15 +49,14 @@ class EulerGaussianBell(Scenario):
   tarch::la::Vector<DIMENSIONS,double> pos = { (x[0] - t) + (int)(t + .5 - x[0]),
                                                (x[1] - t) + (int)(t + .5 - x[1]) };
 
-  solution[0] = 0.02*(1.0+std::exp(-0.5*tarch::la::norm2(pos)*tarch::la::norm2(pos)/0.01));
+  solution[Shortcuts::rho] = 0.02*(1+std::exp(-0.5*tarch::la::norm2(pos)*tarch::la::norm2(pos)/0.01));
 
-  solution[1] = 1.0*solution[0];
-  solution[2] = 1.0*solution[0];
-  solution[3] = 0.;
+  solution[Shortcuts::v+0] = solution[Shortcuts::rho];
+  solution[Shortcuts::v+1] = solution[Shortcuts::rho];
 
-  constexpr double gamma = 1.4;
-  constexpr double p = 1.0;
+  constexpr auto gamma = 1.4;
+  constexpr auto p = 1;
 
   //Should lead to a constant p over the domain given the initial conditions
-  solution[3] = p/(gamma-1.0) + 0.5*(solution[1]*solution[1]+solution[2]*solution[2]) / solution[0];
+  solution[Shortcuts::E] = p/(gamma-1) + 0.5*(solution[Shortcuts::v+0]*solution[Shortcuts::v+0]+solution[Shortcuts::v+1]*solution[Shortcuts::v+1]) / solution[Shortcuts::rho];
 """

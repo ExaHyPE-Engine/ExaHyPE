@@ -86,7 +86,7 @@ if use_tracers:
         exahype2.tracer.DumpTracerIntoDatabase(
             particle_set=tracer_particles, solver=theSolver,
             filename="tracers/Cartesian_level_"+str(min_level)+"_order_"+str(order)+"_"+polynomials+"_precision_"+str(precision),
-            data_delta_between_two_snapsots=1e16, time_delta_between_two_snapsots=0.01,
+            data_delta_between_two_snapshots=1e16, time_delta_between_two_snapshots=0.01,
             output_precision=10, clear_database_after_flush=False
         )
     )

@@ -6,7 +6,7 @@ from .equation import Equation
 class Advection(Equation):
     def __init__(self, dimensions, adv_speed=1.0):
         self.dimensions = dimensions
-        self.num_unknowns = 2 if dimensions == 2 else 3
+        self.num_unknowns = {"v": dimensions}
         self.num_auxiliary_variables = 0
         self.adv_speed = adv_speed
         self.is_linear = True
@@ -24,13 +24,13 @@ class Advection(Equation):
     def flux(self):
         return (
             """
-    F[0] = 0.0;
-    F[1] = 0.0;
+    F[Shortcuts::v + 0] = 0;
+    F[Shortcuts::v + 1] = 0;
 #if DIMENSIONS == 3
-    F[2] = 0.0;
+    F[Shortcuts::v + 2] = 0;
 #endif
 
-    F[normal] = """
+    F[Shortcuts::v + normal] = """
             + str(self.adv_speed)
             + """ * Q[normal];
 """
