@@ -129,7 +129,7 @@ for theSolver in [hpSolver, lpSolver]:
         exahype2.tracer.DumpTracerIntoDatabase(
             particle_set=tracer_particles, solver=theSolver,
             filename="tracers/Cartesian_l"+str(args.min_depth)+"_o"+str(order)+"_"+polynomials+theSolver.get_name_of_global_instance(),
-            data_delta_between_two_snapsots=1e16, time_delta_between_two_snapsots=0.01,
+            data_delta_between_two_snapshots=1e16, time_delta_between_two_snapshots=0.01,
             output_precision=10, clear_database_after_flush=False
         )
     )

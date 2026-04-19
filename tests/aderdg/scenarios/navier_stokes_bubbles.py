@@ -11,7 +11,7 @@ from equations import NavierStokes
 
 class NavierStokesBubbles(Scenario):
     """
-    Scenarios described in doi.org/10.1007/978-3-030-43229-4_27
+    Scenarios described in doi.org/10.1007/978-3-030-43229-4_27.
 
     Simulation of cloud formations via the compressible Navier-Stokes equations.
     See the function 'mapQuantities' below for a note on the visualisation.
@@ -21,7 +21,6 @@ class NavierStokesBubbles(Scenario):
     _offset = 0.0
     _domain_size = 1000.0
     _periodic_bc = False
-    _plot_dt = 50.0
     # _end_time = 600
     _end_time = 100
 
@@ -77,7 +76,7 @@ class NavierStokesBubbles(Scenario):
             + str(self._background_potential_temperature)
             + """;
   constexpr auto gravity = 9.81;
-  constexpr auto q0 = 0.0;
+  constexpr auto q0 = 0;
 
   """
             + self.evaluate_perturbation()
@@ -86,7 +85,7 @@ class NavierStokesBubbles(Scenario):
   auto potentialT = backgroundPotentialTemperature;
   potentialT += perturbation;
 
-  std::fill_n(Q, NumberOfUnknowns+NumberOfAuxiliaryVariables, 0.0);
+  std::fill_n(Q, NumberOfUnknowns+NumberOfAuxiliaryVariables, 0);
 
   // First compute overall state """
             + (self.evaluate_hydrostatic_pressure())
@@ -131,7 +130,7 @@ class NavierStokesBubbles(Scenario):
             + str(self._background_potential_temperature)
             + """;
   constexpr auto gravity = 9.81;
-  constexpr auto q0 = 0.0;
+  constexpr auto q0 = 0;
   
   std::copy_n(Qinside, NumberOfUnknowns+NumberOfAuxiliaryVariables, Qoutside);
 
@@ -152,7 +151,7 @@ class NavierStokesBubbles(Scenario):
   Qoutside[Shortcuts::backgroundstate+0] = Qoutside[Shortcuts::rho];
   Qoutside[Shortcuts::backgroundstate+1] = pressure;
 
-  auto Z = 0.0;
+  auto Z = 0;
   """
             + self._equation.evaluate_energy()
             + """
@@ -179,14 +178,14 @@ void tests::exahype2::aderdg::ADERDGSolver::mapQuantities(
             + str(self._reference_pressure)
             + """;
   constexpr auto gravity = 9.81;
-  constexpr auto q0 = 0.0;
+  constexpr auto q0 = 0;
 
   const auto j = &Q[Shortcuts::j];
   auto E = Q[Shortcuts::E];
   auto rho = Q[Shortcuts::rho];
   auto height = Q[Shortcuts::height];
 
-  const auto Z = 0.0;
+  const auto Z = 0;
   """
             + self._equation.evaluate_pressure()
             + """

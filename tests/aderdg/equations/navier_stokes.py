@@ -78,7 +78,7 @@ class NavierStokes(Equation):
 #endif
     ;
 
-    const auto pressure = (gamma-1) * (E - 0.5 * (1.0/rho) * jDot - chemicalEnergy);
+    const auto pressure = (gamma-1) * (E - 0.5 * (1/rho) * jDot - chemicalEnergy);
 """
         )
 
@@ -139,10 +139,10 @@ class NavierStokes(Equation):
     const auto E = Q[Shortcuts::E];
     const auto rho = Q[Shortcuts::rho];
     const auto height = """
-            + ("Q[Shortcuts::height]" if self._use_gravity else "0.0")
+            + ("Q[Shortcuts::height]" if self._use_gravity else "0")
             + """;
     const auto Z = """
-            + ("Q[Shortcuts::Z];" if self._use_advection else "0.0;")
+            + ("Q[Shortcuts::Z];" if self._use_advection else "0;")
             + self.evaluate_pressure()
             + """
     const auto u_n = Q[Shortcuts::j+normal]/rho;
@@ -174,7 +174,7 @@ class NavierStokes(Equation):
             self.eigenvalue_functions()
             + """
     return maxEval(Q, normal) 
-      + diffusiveEval(Q, normal)*2.0/(h[normal]*PNPM);
+      + diffusiveEval(Q, normal)*2/(h[normal]*PNPM);
 """
         )
 
@@ -185,17 +185,13 @@ class NavierStokes(Equation):
   const auto j = &Q[Shortcuts::j];
   const auto E = Q[Shortcuts::E];
   const auto Z = """
-            + ("Q[Shortcuts::Z]" if self._use_advection else "0.0")
+            + ("Q[Shortcuts::Z]" if self._use_advection else "0")
             + """;
   const auto height = """
-            + ("Q[Shortcuts::height]" if self._use_gravity else "0.0")
+            + ("Q[Shortcuts::height]" if self._use_gravity else "0")
             + """;
   const auto backgroundPressure = """
-            + (
-                "Q[Shortcuts::backgroundstate+1]"
-                if self._use_background_state
-                else "0.0"
-            )
+            + ("Q[Shortcuts::backgroundstate+1]" if self._use_background_state else "0")
             + """;
 
   constexpr auto gravity = 9.81;
@@ -369,7 +365,7 @@ class NavierStokes(Equation):
             return PDETerms.None_Implementation
         return (
             """
-  std::fill_n(S, NumberOfUnknowns, 0.0);
+  std::fill_n(S, NumberOfUnknowns, 0);
 
   auto rhoPertubation = Q[Shortcuts::rho];
 """
@@ -393,8 +389,8 @@ class NavierStokes(Equation):
         return (
             """
   constexpr int strideQ = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  {{CORRECTOR_COMPUTATION_PRECISION}} QavL[strideQ] __attribute__((aligned(16))) = {0.0};
-  {{CORRECTOR_COMPUTATION_PRECISION}} QavR[strideQ] __attribute__((aligned(16))) = {0.0};
+  {{CORRECTOR_COMPUTATION_PRECISION}} QavL[strideQ] __attribute__((aligned(16))) = {0};
+  {{CORRECTOR_COMPUTATION_PRECISION}} QavR[strideQ] __attribute__((aligned(16))) = {0};
 
 #if DIMENSIONS==3
       constexpr int faceSize = (Order+1)*(Order+1);

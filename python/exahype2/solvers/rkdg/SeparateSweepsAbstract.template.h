@@ -17,7 +17,7 @@
 #include "Constants.h"
 
 {% if USE_VARIABLE_SHORTCUTS is sameas True %}
-#include "VariableShortcuts.h"
+#include "VariableShortcuts{{SOLVER_NAME}}.h"
 {% endif %}
 
 {{SOLVER_INCLUDES}}
@@ -34,6 +34,13 @@
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
+  {% if USE_VARIABLE_SHORTCUTS is sameas True %}
+  /*
+   * Enables the usage of shortcuts to access variables, e.g. use Q[Shortcuts::{{VARIABLE_NAMES[0]}}] instead of Q[0]
+   */
+  using Shortcuts = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
+{% endif %}
+
     enum class SolverState {
       GridConstruction,
       GridInitialisation,

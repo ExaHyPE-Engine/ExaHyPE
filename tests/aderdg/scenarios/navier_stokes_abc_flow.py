@@ -21,7 +21,6 @@ class NavierStokesABCFlow(Scenario):
     _offset = -math.pi
     _domain_size = 2 * math.pi
     _periodic_bc = True
-    _plot_dt = 0.0
     _end_time = 0.1
 
     _equation = NavierStokes(
@@ -44,7 +43,7 @@ class NavierStokesABCFlow(Scenario):
         return (
             """
     constexpr auto gamma = 1.4;
-    constexpr auto q0 = 0.0;
+    constexpr auto q0 = 0;
     constexpr auto referenceViscosity = 0.01;
 
     const auto c = 100 / gamma;
@@ -54,14 +53,14 @@ class NavierStokesABCFlow(Scenario):
         std::sin(x[2]) * std::cos(x[1])) *
             Ft * Ft;
 
-    const double rho = 1.0;
+    const double rho = 1;
     solution[Shortcuts::rho] = rho;
     solution[Shortcuts::j+0] = (std::sin(x[2]) + std::cos(x[1])) * Ft;
     solution[Shortcuts::j+1] = (std::sin(x[0]) + std::cos(x[2])) * Ft;
     solution[Shortcuts::j+2] = (std::sin(x[1]) + std::cos(x[0])) * Ft;
 
     auto j = &solution[Shortcuts::j];
-    auto Z = 0.0;
+    auto Z = 0;
     """
             + self._equation.evaluate_energy()
             + """

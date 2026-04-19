@@ -182,11 +182,11 @@ ADERDG:
   stage: Test
   parallel:
     matrix:
-    - scenario: [AdvectionLinear, AcousticPlanarWaves, ElasticPlanarWaves, EulerGaussianBell, EulerIsentropicVortex, SWERadialDamBreak, SWERestingLake, NavierStokesCosineBubble, NavierStokesTwoBubbles, NavierStokesTaylorGreen, NavierStokesABCFlow]
+    - scenario: [AdvectionLinear, AcousticPlanarWaves, ElasticPlanarWaves, ElasticRickerPulse, EulerGaussianBell, EulerIsentropicVortex, SWERadialDamBreak, SWERestingLake, NavierStokesCosineBubble, NavierStokesTwoBubbles, NavierStokesTaylorGreen, NavierStokesABCFlow]
       build_type: [Release, Debug]
       precision: [float, double]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg; PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg.py -s $scenario -m $build_type -pr $precision -md ${MIN_GRID_LEVELS};"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg; PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg.py -s $scenario -m $build_type -pr $precision -md ${MIN_GRID_LEVELS} -ns 0;"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg; $PARALLEL_LAUNCH ./ExaHyPE;"
   allow_failure: false
   extends:
@@ -299,7 +299,7 @@ RKDG:
     - scenario: [AcousticPlanarWaves, AdvectionLinear, ElasticPlanarWaves, EulerIsentropicVortex, SWERestingLake]
       build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/rkdg; PYTHONPATH=$CI_PROJECT_DIR/python python3 rkdg.py -s $scenario -m $build_type -md ${MIN_GRID_LEVELS};"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/rkdg; PYTHONPATH=$CI_PROJECT_DIR/python python3 rkdg.py -s $scenario -m $build_type -md ${MIN_GRID_LEVELS} -ns 0;"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/rkdg; $PARALLEL_LAUNCH ./ExaHyPE;"
   allow_failure: false
   extends:

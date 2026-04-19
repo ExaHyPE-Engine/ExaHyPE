@@ -15,7 +15,6 @@ class AdvectionLinear(Scenario):
     in each spatial dimension.
     """
 
-    _plot_dt = 0.0
     _periodic_bc = False
 
     def __init__(self, dimensions=2):
@@ -24,18 +23,18 @@ class AdvectionLinear(Scenario):
 
     def initial_conditions(self):
         return """
-  Q[0] = x[0];
-  Q[1] = x[1];
+  Q[Shortcuts::v+0] = x[0];
+  Q[Shortcuts::v+1] = x[1];
 #if DIMENSIONS==3
-  Q[2] = x[2];
+  Q[Shortcuts::v+2] = x[2];
 #endif
 """
 
     def boundary_conditions(self):
         return """
-  Qoutside[0] = x[0] - t;
-  Qoutside[1] = x[1] - t;
+  Qoutside[Shortcuts::v+0] = x[0] - t;
+  Qoutside[Shortcuts::v+1] = x[1] - t;
 #if DIMENSIONS==3
-  Qoutside[2] = x[2] - t;
+  Qoutside[Shortcuts::v+2] = x[2] - t;
 #endif
 """

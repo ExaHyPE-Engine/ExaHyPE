@@ -78,7 +78,7 @@ project.add_action_set_to_timestepping(
     exahype2.tracer.DumpTracerIntoDatabase(
         particle_set=tracer_particles, solver=theSolver,
         filename="tracer-TPV5-"+str(min_level)+"-o-"+str(order),
-        data_delta_between_two_snapsots=1e16, time_delta_between_two_snapsots=0.01,
+        data_delta_between_two_snapshots=1e16, time_delta_between_two_snapshots=0.01,
         output_precision=10, clear_database_after_flush=False
     )
 )

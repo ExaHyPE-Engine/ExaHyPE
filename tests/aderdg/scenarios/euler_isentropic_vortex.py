@@ -14,7 +14,6 @@ class EulerIsentropicVortex(Scenario):
     Scenario reproduced from Ioratti, Dumbser & Loubère, https://doi.org/10.1007/s10915-020-01209-w (p. 43)
     """
 
-    _plot_dt = 0.0
     _offset = -5.0
     _domain_size = 10.0
     _end_time = 10.0
@@ -28,33 +27,33 @@ class EulerIsentropicVortex(Scenario):
     def initial_conditions(self):
         return (
             """
-  static constexpr double epsilon = 5.0;
-  static constexpr double pi = std::numbers::pi;
-  static constexpr double i_pi = 1./pi;
-  static constexpr double eos_gamma = 1.4;
+  static constexpr auto epsilon = 5;
+  static constexpr auto pi = std::numbers::pi;
+  static constexpr auto i_pi = 1./pi;
+  static constexpr auto eos_gamma = 1.4;
 
-  const double r = tarch::la::norm2(x);
-  const double du = 0.5 * epsilon / pi * exp(0.5 * (1. - r * r)) * (- x[1]);
-  const double dv = 0.5 * epsilon / pi * exp(0.5 * (1. - r * r)) * (x[0]);
-  const double dTemp = -(eos_gamma - 1.) * epsilon*epsilon / 8. / eos_gamma / pi / pi *
+  const auto r = tarch::la::norm2(x);
+  const auto du = 0.5 * epsilon / pi * exp(0.5 * (1. - r * r)) * (- x[1]);
+  const auto dv = 0.5 * epsilon / pi * exp(0.5 * (1. - r * r)) * (x[0]);
+  const auto dTemp = -(eos_gamma - 1.) * epsilon*epsilon / 8. / eos_gamma / pi / pi *
                  exp(1. - r * r);
-  const double drho = pow(1. + dTemp, 1. / (eos_gamma - 1.)) - 1.;
-  const double dp = pow(1. + dTemp, eos_gamma / (eos_gamma - 1.)) - 1.;
+  const auto drho = pow(1. + dTemp, 1. / (eos_gamma - 1.)) - 1.;
+  const auto dp = pow(1. + dTemp, eos_gamma / (eos_gamma - 1.)) - 1.;
 
-  constexpr double rho_inf = 1.;
-  constexpr double p_inf = 1.;
-  constexpr double u_inf = """
+  constexpr auto rho_inf = 1;
+  constexpr auto p_inf = 1;
+  constexpr auto u_inf = """
             + str(self._velocity)
             + """;
-  constexpr double v_inf = """
+  constexpr auto v_inf = """
             + str(self._velocity)
             + """;
 
-	Q[0] = rho_inf + drho; // fluid density
-	Q[1] = Q[0] * (u_inf + du); // momentum
-	Q[2] = Q[0] * (v_inf + dv);
+	Q[Shortcuts::rho] = rho_inf + drho; // fluid density
+	Q[Shortcuts::v+0] = Q[Shortcuts::rho] * (u_inf + du); // momentum
+	Q[Shortcuts::v+1] = Q[Shortcuts::rho] * (v_inf + dv);
 	// total energy = internal energy + kinetic energy
-	Q[3] = (p_inf + dp) / (eos_gamma-1) + 0.5*Q[0] * ((u_inf+du)*(u_inf+du)+(v_inf+dv)*(v_inf+dv));
+	Q[Shortcuts::E] = (p_inf + dp) / (eos_gamma-1) + 0.5*Q[Shortcuts::rho] * ((u_inf+du)*(u_inf+du)+(v_inf+dv)*(v_inf+dv));
 """
         )
 
@@ -68,36 +67,36 @@ class EulerIsentropicVortex(Scenario):
     Therefore we find the point x - v*t, and then shift this by instances
     of 10.0 until we find the point within the domain.
   */
-  constexpr double rho_inf = 1.;
-  constexpr double p_inf = 1.;
-  constexpr double u_inf = """
+  constexpr auto rho_inf = 1.;
+  constexpr auto p_inf = 1.;
+  constexpr auto u_inf = """
             + str(self._velocity)
             + """;
-  constexpr double v_inf = """
+  constexpr auto v_inf = """
             + str(self._velocity)
             + """;
 
-  const double t_capped = t  - (int) t / 10;
+  const auto t_capped = std::fmod(t,10.);
   tarch::la::Vector<DIMENSIONS,double> pos = { (x[0] - u_inf*t_capped) < -5.0 ? (x[0] - u_inf*t_capped) + 10. : (x[0] - u_inf*t_capped),
                                                (x[1] - v_inf*t_capped) < -5.0 ? (x[1] - v_inf*t_capped) + 10. : (x[1] - v_inf*t_capped) };
 
-  static constexpr double epsilon = 5.0;
-  static constexpr double pi = std::numbers::pi;
-  static constexpr double i_pi = 1./pi;
-  static constexpr double eos_gamma = 1.4;
+  static constexpr auto epsilon = 5.0;
+  static constexpr auto pi = std::numbers::pi;
+  static constexpr auto i_pi = 1./pi;
+  static constexpr auto eos_gamma = 1.4;
 
-  const double r = tarch::la::norm2(pos);
-  const double du = 0.5 * epsilon / pi * exp(0.5 * (1. - r * r)) * (- pos[1]);
-  const double dv = 0.5 * epsilon / pi * exp(0.5 * (1. - r * r)) * (pos[0]);
-  const double dTemp = -(eos_gamma - 1.) * epsilon*epsilon / 8. / eos_gamma / pi / pi *
+  const auto r = tarch::la::norm2(pos);
+  const auto du = 0.5 * epsilon / pi * exp(0.5 * (1. - r * r)) * (- pos[1]);
+  const auto dv = 0.5 * epsilon / pi * exp(0.5 * (1. - r * r)) * (pos[0]);
+  const auto dTemp = -(eos_gamma - 1.) * epsilon*epsilon / 8. / eos_gamma / pi / pi *
                  exp(1. - r * r);
-  const double drho = pow(1. + dTemp, 1. / (eos_gamma - 1.)) - 1.;
-  const double dp = pow(1. + dTemp, eos_gamma / (eos_gamma - 1.)) - 1.;
+  const auto drho = pow(1. + dTemp, 1. / (eos_gamma - 1.)) - 1.;
+  const auto dp = pow(1. + dTemp, eos_gamma / (eos_gamma - 1.)) - 1.;
 
-	solution[0] = rho_inf + drho; // fluid density
-	solution[1] = solution[0] * (u_inf + du); // momentum
-	solution[2] = solution[0] * (v_inf + dv);
+	solution[Shortcuts::rho] = rho_inf + drho; // fluid density
+	solution[Shortcuts::v+0] = solution[Shortcuts::rho] * (u_inf + du); // momentum
+	solution[Shortcuts::v+1] = solution[Shortcuts::rho] * (v_inf + dv);
 	// total energy = internal energy + kinetic energy
-	solution[3] = (p_inf + dp) / (eos_gamma-1) + 0.5*solution[0] * ((u_inf+du)*(u_inf+du)+(v_inf+dv)*(v_inf+dv));
+	solution[Shortcuts::E] = (p_inf + dp) / (eos_gamma-1) + 0.5*solution[Shortcuts::rho] * ((u_inf+du)*(u_inf+du)+(v_inf+dv)*(v_inf+dv));
 """
         )
