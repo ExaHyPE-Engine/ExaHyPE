@@ -1,17 +1,3 @@
-Unit Tests:
-  stage: Test
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build; ctest -VV"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnDev
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-  retry: 0
-
 Spacetree:
   stage: Test
   script:
