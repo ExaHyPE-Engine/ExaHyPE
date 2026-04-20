@@ -5,6 +5,7 @@ import sys
 import logging
 import re
 import json
+import inspect
 
 import peano4
 import dastgen2
@@ -46,7 +47,7 @@ class Project(object):
         self._time_in_between_plots = 0.1
         self._load_balancer_configuration = ""
         self._log_filter_file         = "exahype.log-filter"
-        self._log_time_step_interval_in_seconds = 10
+        self._log_time_step_interval_in_seconds = 10.0
         self._additional_includes     = [ "tarch/logging/LogFilterFileReader.h",
                                           "tarch/accelerator/Device.h"
                                         ]
@@ -130,7 +131,7 @@ class Project(object):
         self._log_filter_file = file_name
 
     def set_log_time_step_interval_in_seconds(self, value):
-        self._log_time_step_interval_in_seconds = value
+        self._log_time_step_interval_in_seconds = float(value)
 
     def set_build_mode(self, mode=peano4.output.CompileMode.Release):
         self._build_mode = mode
@@ -243,15 +244,12 @@ class Project(object):
         before we export the constants.
         """
         self._project.constants.clear()
-        offset_string = "{" + str(self._domain_offset[0])
-        size_string = "{" + str(self._domain_size[0])
-        for i in range(1, self._dimensions):
-            offset_string += ","
-            size_string += ","
-            offset_string += str(self._domain_offset[i])
-            size_string += str(self._domain_size[i])
-        offset_string += "}"
-        size_string += "}"
+
+        def render_vector(values):
+            return "{" + ",".join(str(value) for value in values[: self._dimensions]) + "}"
+
+        offset_string = render_vector(self._domain_offset)
+        size_string = render_vector(self._domain_size)
         self._project.constants.add_include("""#include <bitset>""")
         self._project.constants.add_include("""#include "tarch/la/Vector.h" """)
         self._project.constants.add_include("""#include "peano4/Globals.h" """)
@@ -282,10 +280,7 @@ class Project(object):
         self._project.constants.export_boolean_sequence("PeriodicBC", self._periodic_BC)
         self._project.constants.export_string("OutputPath", self._output_path)
 
-        build_string = "python3 "
-        for i in sys.argv:
-            build_string += " "
-            build_string += i
+        build_string = " ".join(["python3", *sys.argv])
         self._project.constants.export_string("BuildInformation", build_string)
 
         self._project.output.readme.add_package_description(
@@ -378,6 +373,7 @@ thus appreciate any citation of the original release paper
         assert (
             len(self._domain_size) == dimensions
         ), "domain offset vector and dimensions don't match"
+        assert len(periodic_BC) >= dimensions, "periodic boundary condition vector and dimensions don't match"
 
         self._max_terminal_time = max_end_time
         self._min_terminal_time = min_end_time
@@ -387,17 +383,15 @@ thus appreciate any citation of the original release paper
             "TimeInBetweenPlots", str(self._time_in_between_plots)
         )
 
-        self._periodic_BC = []
-        for d in range(0, dimensions):
-            self._periodic_BC.append(periodic_BC[d])
+        self._periodic_BC = list(periodic_BC[:dimensions])
 
     def set_output_path(self, path):
         self._output_path = path
         if not self._output_path.endswith("/"):
             self._output_path += "/"
 
-    def add_mainfile_include(self,value):
-        self._additional_includes.append( value )
+    def add_mainfile_include(self, value):
+        self._additional_includes.append(value)
 
     def __set_solver_repository_dict(self):
         self.solverRepositoryDictionary = {
@@ -422,9 +416,7 @@ thus appreciate any citation of the original release paper
                 (solver._name, solver.get_name_of_global_instance())
             )
 
-        templatefile_prefix = (
-            os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
-        )
+        templatefile_prefix = os.path.splitext(os.path.realpath(__file__))[0]
         generated_solver_files = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
                 templatefile_prefix + "SolverRepository.template.h",
@@ -443,7 +435,7 @@ thus appreciate any citation of the original release paper
         )
 
     def __generate_runtime_parameters(self):
-        template_directory = os.path.dirname(os.path.realpath(__file__).replace(".pyc", "").replace(".py", ""))
+        template_directory = os.path.dirname(os.path.realpath(__file__))
         dictionary = {
             "RUNTIME_PARAMETERS": self._runtime_parameters,
         }
@@ -462,6 +454,25 @@ thus appreciate any citation of the original release paper
         )
         self._project.output.makefile.add_cpp_file(
             self._project.subdirectory + "RuntimeParameters.cpp", generated=True
+        )
+
+    @staticmethod
+    def __solver_accepts_abstract_overwrite(solver):
+        try:
+            signature = inspect.signature(solver.add_implementation_files_to_project)
+        except (TypeError, ValueError):
+            return False
+        return "abstract_overwrite" in signature.parameters
+
+    def __add_solver_implementation_files(self, solver):
+        kwargs = {"subdirectory": self._subdirectory}
+        if self.__solver_accepts_abstract_overwrite(solver):
+            kwargs["abstract_overwrite"] = self._abstract_overwrite
+        solver.add_implementation_files_to_project(
+            self._project.namespace,
+            self._project.output,
+            self._dimensions,
+            **kwargs,
         )
 
     # TODO: Move to solvers
@@ -617,10 +628,7 @@ thus appreciate any citation of the original release paper
         generate_Peano4_project() again to get a new snapshot/version of the
         Peano setup.
         """
-        if verbose:
-            setup_logging(level=logging.DEBUG)
-        else:
-            setup_logging(level=logging.INFO)
+        setup_logging(level=logging.DEBUG if verbose else logging.INFO)
 
         # self._project.cleanup()
 
@@ -629,25 +637,30 @@ thus appreciate any citation of the original release paper
         self._project.output.makefile.set_mode(self._build_mode)
         self.__export_constants()
 
-        self._project.solversteps.add_step(self.create_grid_with_refinement)
-        self._project.solversteps.add_step(self.create_grid_without_refinement)
-        self._project.solversteps.add_step(self.init_grid)
-        self._project.solversteps.add_step(self.plot_solution)
-        self._project.solversteps.add_step(self.perform_time_step)
+        solver_steps = (
+            self.create_grid_with_refinement,
+            self.create_grid_without_refinement,
+            self.plot_solution,
+            self.perform_time_step,
+            self.init_grid,
+        )
+        for step in (
+            self.create_grid_with_refinement,
+            self.create_grid_without_refinement,
+            self.init_grid,
+            self.plot_solution,
+            self.perform_time_step,
+        ):
+            self._project.solversteps.add_step(step)
 
         for solver in self._solvers:
-            log.debug("---------------------------------------")
-            log.debug("Create data for solver " + solver._name)
-            log.debug("---------------------------------------")
-            log.debug(str(solver))
+            log.debug("Prepare solver %s", solver._name)
+            log.debug("%s", solver)
 
             solver.add_to_Peano4_datamodel(self._project.datamodel)
 
-            solver.add_use_data_statements_to_Peano4_solver_step(self.create_grid_with_refinement)
-            solver.add_use_data_statements_to_Peano4_solver_step(self.create_grid_without_refinement)
-            solver.add_use_data_statements_to_Peano4_solver_step(self.plot_solution)
-            solver.add_use_data_statements_to_Peano4_solver_step(self.perform_time_step)
-            solver.add_use_data_statements_to_Peano4_solver_step(self.init_grid)
+            for step in solver_steps:
+                solver.add_use_data_statements_to_Peano4_solver_step(step)
 
             solver.add_actions_to_create_grid(self.create_grid_with_refinement, evaluate_refinement_criterion=True)
             solver.add_actions_to_create_grid(self.create_grid_without_refinement, evaluate_refinement_criterion=False)
@@ -657,12 +670,7 @@ thus appreciate any citation of the original release paper
 
             solver.add_actions_to_perform_time_step(self.perform_time_step)
 
-            if self._abstract_overwrite==False:
-                solver.add_implementation_files_to_project(
-                    self._project.namespace, self._project.output, self._dimensions, self._subdirectory, self._abstract_overwrite
-                )
-            else:
-                solver.add_implementation_files_to_project(self._project.namespace, self._project.output, self._dimensions, self._subdirectory)
+            self.__add_solver_implementation_files(solver)
 
         self.__generate_solver_repository()
         self.__generate_runtime_parameters()

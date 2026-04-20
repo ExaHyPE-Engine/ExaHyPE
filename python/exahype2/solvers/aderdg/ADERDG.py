@@ -23,6 +23,7 @@ from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobat
 from exahype2.VariableShortcuts import VariableShortcuts
 
 from peano4.Logger import log
+from peano4.output.Helper import render_jinja2_template
 
 """
 Used to have a central way for all of this class' descendants to differentiate between Gauss-Legendre
@@ -774,6 +775,9 @@ class ADERDG(object):
         pass
 
     def _init_dictionary_with_default_parameters(self, d):
+        def render_template(template):
+            return render_jinja2_template(template, d, jinja2.DebugUndefined)
+
         d["DIMENSIONS"]         = self._dimensions
         d["NAMESPACE"]          = self._namespace
         d["SOLVER_NAME"]        = self._name
@@ -830,58 +834,56 @@ class ADERDG(object):
         d["SOLVER_CONSTANTS"] = self._solver_constants
         d["SOLVER_INCLUDES"]  = self.get_user_solver_includes()
 
-        d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = jinja2.Template(
-            self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["ABSTRACT_SOLVER_USER_DEFINITIONS"] = jinja2.Template(
-            self._abstract_solver_user_definitions, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["SOLVER_USER_DECLARATIONS"] = jinja2.Template(
-            self._solver_user_declarations, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["SOLVER_USER_DEFINITIONS"] = jinja2.Template(
-            self._solver_user_definitions, undefined=jinja2.DebugUndefined
-        ).render(**d)
+        d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = render_template(
+            self._abstract_solver_user_declarations
+        )
+        d["ABSTRACT_SOLVER_USER_DEFINITIONS"] = render_template(
+            self._abstract_solver_user_definitions
+        )
+        d["SOLVER_USER_DECLARATIONS"] = render_template(
+            self._solver_user_declarations
+        )
+        d["SOLVER_USER_DEFINITIONS"] = render_template(
+            self._solver_user_definitions
+        )
 
-        d["START_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
-            self._start_time_step_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["FINISH_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
-            self._finish_time_step_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["PRINT_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
-            self._print_time_step_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["START_GRID_INITIALISATION_IMPLEMENTATION"] = jinja2.Template(
-            self._start_grid_initialisation_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
+        d["START_TIME_STEP_IMPLEMENTATION"] = render_template(
+            self._start_time_step_implementation
+        )
+        d["FINISH_TIME_STEP_IMPLEMENTATION"] = render_template(
+            self._finish_time_step_implementation
+        )
+        d["PRINT_TIME_STEP_IMPLEMENTATION"] = render_template(
+            self._print_time_step_implementation
+        )
+        d["START_GRID_INITIALISATION_IMPLEMENTATION"] = render_template(
+            self._start_grid_initialisation_implementation
+        )
 
-        d["CONSTRUCTOR_IMPLEMENTATION"] = jinja2.Template(
-            self._constructor_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["DESTRUCTOR_IMPLEMENTATION"] = jinja2.Template(
-            self._destructor_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["COMPUTE_TIME_STEP_SIZE"] = jinja2.Template(
-            self._compute_time_step_size, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["COMPUTE_NEW_TIME_STEP_SIZE"] = jinja2.Template(
-            self._compute_new_time_step_size, undefined=jinja2.DebugUndefined
-        ).render(**d)
+        d["CONSTRUCTOR_IMPLEMENTATION"] = render_template(
+            self._constructor_implementation
+        )
+        d["DESTRUCTOR_IMPLEMENTATION"] = render_template(
+            self._destructor_implementation
+        )
+        d["COMPUTE_TIME_STEP_SIZE"] = render_template(self._compute_time_step_size)
+        d["COMPUTE_NEW_TIME_STEP_SIZE"] = render_template(
+            self._compute_new_time_step_size
+        )
 
-        d["START_SIMULATION_IMPLEMENTATION"] = jinja2.Template(
-            self._start_simulation_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["FINISH_SIMULATION_IMPLEMENTATION"] = jinja2.Template(
-            self._finish_simulation_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
+        d["START_SIMULATION_IMPLEMENTATION"] = render_template(
+            self._start_simulation_implementation
+        )
+        d["FINISH_SIMULATION_IMPLEMENTATION"] = render_template(
+            self._finish_simulation_implementation
+        )
 
-        d["PREPROCESS_RECONSTRUCTED_PATCH"] = jinja2.Template(
-            self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["POSTPROCESS_UPDATED_PATCH"] = jinja2.Template(
-            self._postprocess_updated_patch, undefined=jinja2.DebugUndefined
-        ).render(**d)
+        d["PREPROCESS_RECONSTRUCTED_PATCH"] = render_template(
+            self._preprocess_reconstructed_patch
+        )
+        d["POSTPROCESS_UPDATED_PATCH"] = render_template(
+            self._postprocess_updated_patch
+        )
 
         d["INITIAL_CONDITIONS_IMPLEMENTATION"] = self._initial_conditions_implementation
         d["BOUNDARY_CONDITIONS_IMPLEMENTATION"] = self._boundary_conditions_implementation

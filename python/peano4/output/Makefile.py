@@ -7,6 +7,7 @@ import jinja2
 
 from copy import deepcopy
 
+from .Helper import get_jinja2_template
 from .Helper import write_file
 
 from .CompileMode import CompileMode
@@ -544,11 +545,7 @@ then this message can typically be ignored.
         def generate_output_file(input_file_path, output_file_path):
             if write_file(overwrite, self.default_overwrite, output_file_path):
                 log.debug("Write " + output_file_path)
-                template_loader = jinja2.FileSystemLoader(
-                    searchpath=os.path.split(input_file_path)[0]
-                )
-                templateEnv = jinja2.Environment(loader=template_loader)
-                template = templateEnv.get_template(os.path.split(input_file_path)[1])
+                template = get_jinja2_template(input_file_path)
                 with open(output_file_path, "w") as output:
                     output.write(template.render(self.d))
 

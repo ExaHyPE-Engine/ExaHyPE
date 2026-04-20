@@ -1,18 +1,37 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
+import importlib
+
 print("ExaHyPE 2 (C) www.peano-framework.org")
 
-import exahype2.tracer
-import exahype2.grid
+_LAZY_MODULES = {
+    "tracer": "exahype2.tracer",
+    "grid": "exahype2.grid",
+    "solvers": "exahype2.solvers",
+}
 
-import exahype2.solvers.fv
-import exahype2.solvers.fd
-import exahype2.solvers.rkdg
-import exahype2.solvers.aderdg
-import exahype2.solvers.limiting
+_LAZY_ATTRIBUTES = {
+    "ArgumentParser": (".ArgumentParser", "ArgumentParser"),
+    "Project": (".Project", "Project"),
+    "ExaHyPEMain": (".ExaHyPEMain", "ExaHyPEMain"),
+    "VariableShortcuts": (".VariableShortcuts", "VariableShortcuts"),
+}
 
-from .ArgumentParser import ArgumentParser
-from .Project import Project
-from .ExaHyPEMain import ExaHyPEMain
-from .VariableShortcuts import VariableShortcuts
+__all__ = list(_LAZY_MODULES.keys()) + list(_LAZY_ATTRIBUTES.keys())
+
+
+def __getattr__(name):
+    if name in _LAZY_MODULES:
+        value = importlib.import_module(_LAZY_MODULES[name])
+        globals()[name] = value
+        return value
+
+    if name in _LAZY_ATTRIBUTES:
+        module_name, attribute_name = _LAZY_ATTRIBUTES[name]
+        module = importlib.import_module(module_name, __name__)
+        value = getattr(module, attribute_name)
+        globals()[name] = value
+        return value
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

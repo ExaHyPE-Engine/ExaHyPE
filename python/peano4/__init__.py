@@ -1,14 +1,29 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-print("Peano 4 (C) www.peano-framework.org")
+import importlib
 
-import peano4.datamodel
-import peano4.solversteps
-import peano4.output
-import peano4.toolbox
-import peano4.plotter
+print("Peano 4 (C) www.peano-framework.org")
 
 from .Logger import log
 from .Project import Project
 from .PeanoMain import PeanoMain
+
+_LAZY_MODULES = {
+    "datamodel": "peano4.datamodel",
+    "solversteps": "peano4.solversteps",
+    "output": "peano4.output",
+    "toolbox": "peano4.toolbox",
+    "plotter": "peano4.plotter",
+}
+
+__all__ = list(_LAZY_MODULES.keys()) + ["log", "Project", "PeanoMain"]
+
+
+def __getattr__(name):
+    if name in _LAZY_MODULES:
+        value = importlib.import_module(_LAZY_MODULES[name])
+        globals()[name] = value
+        return value
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
