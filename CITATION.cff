@@ -1,6 +1,5 @@
 # This CITATION.cff file was generated with cffinit.
 # Visit https://bit.ly/cffinit to generate yours today!
-
 cff-version: 1.2.0
 title: Peano
 message: >-
@@ -10,6 +9,8 @@ type: software
 authors:
   - given-names: Tobias
     family-names: Weinzierl
+  - given-names: Neil
+    family-names: Albuquerque
   - given-names: Sean
     family-names: Baccas
   - given-names: Cristian
@@ -32,18 +33,24 @@ authors:
     family-names: Ivkovic
   - given-names: Lando
     family-names: Jahn
+  - given-names: Simon
+    family-names: Jokel
   - given-names: Sven
     family-names: Köppel
   - given-names: Chung
     family-names: Loi
   - given-names: Marc
     family-names: Marot-Lassauzaie
+  - given-names: Nikita
+    family-names: Mashaev
   - given-names: Eike
     family-names: Mueller
   - given-names: Daniel
     family-names: Nagy
   - given-names: Dmitry
     family-names: Nikolaenko
+  - given-names: Miren
+    family-names: Radia
   - given-names: Pawel
     family-names: Radtke
   - given-names: Anne

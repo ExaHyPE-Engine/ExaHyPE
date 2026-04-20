@@ -6,6 +6,7 @@ license = { file = "LICENSE" }
 requires-python = ">=3.11"
 authors = [
   { name = "Tobias Weinzierl", email = "tobias.weinzierl@durham.ac.uk" },
+  { name = "Neil Albuquerque" },
   { name = "Sean Baccas" },
   { name = "Cristian Barrera-Hinojosa" },
   { name = "Alexander Belozerov" },
@@ -17,12 +18,15 @@ authors = [
   { name = "Uzmar Gomez" },
   { name = "Mladen Ivkovic" },
   { name = "Lando Jahn" },
+  { name = "Simon Jokel" },
   { name = "Sven Köppel" },
   { name = "Chung Loi" },
   { name = "Marc Marot-Lassauzaie" },
+  { name = "Nikita Mashaev" },
   { name = "Eike Mueller" },
   { name = "Daniel Nagy" },
   { name = "Dmitry Nikolaenko" },
+  { name = "Miren Radia" },
   { name = "Pawel Radtke" },
   { name = "Anne Reinarz" },
   { name = "Philipp Samfass" },
