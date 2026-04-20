@@ -3,7 +3,7 @@ From: peanoframework/spack:latest
 Stage: build
 
 %files
-  spack/compilers/llvm/spack.yaml /spack.yaml
+  environments/spack/compilers/gcc/spack.yaml /spack.yaml
 
 %post
   mkdir /opt/spack-environment && cd /opt/spack-environment
@@ -17,7 +17,16 @@ Stage: build
   spack gc -y
   spack clean
   spack env activate --sh -d . >> /opt/spack-environment/environment_modifications.sh
-  echo export LD_LIBRARY_PATH=/opt/views/view/lib/x86_64-unknown-linux-gnu:'$LD_LIBRARY_PATH' >> /opt/spack-environment/environment_modifications.sh
+
+  . /opt/spack-environment/environment_modifications.sh
+  cd /
+  git clone -b muc/exahype https://gitlab.lrz.de/hpcsoftware/Peano.git
+  cd Peano
+  mkdir build && cd build
+  cmake .. \
+    -GNinja \
+    -DCMAKE_INSTALL_PREFIX=/opt/Peano
+  ninja && ninja install
 
 Bootstrap: docker
 From: peanoframework/base:latest
@@ -26,27 +35,33 @@ Stage: final
 %environment
   TZ=UTC
   DEBIAN_FRONTEND=noninteractive
-
-%files
-  requirements.txt /requirements.txt
+  export PEANO_SRC_ROOT_DIR=/opt/Peano
+  export PEANO_CMAKE_BUILD_DIR=/opt/Peano
 
 %files from build
   /opt/spack-environment /opt
   /opt/software /opt
   /opt/views /opt
   /opt/spack-environment/environment_modifications.sh /opt/spack-environment/environment_modifications.sh
+  /opt/Peano /opt/Peano
+  /Peano/requirements.txt /requirements.txt
 
 %post
   export TZ=UTC
   export DEBIAN_FRONTEND=noninteractive
 
-  . /opt/spack-environment/environment_modifications.sh && pip install -r /requirements.txt && rm /requirements.txt
+  # Load the build-time environment so pip finds the Spack python
+  . /opt/spack-environment/environment_modifications.sh
+
+  # Install requirements
+  pip install -r /requirements.txt && rm /requirements.txt
 
   # Symlink the old view location
   ln -s /opt/views/view /opt/view
 
-  # Modify the environment without relying on sourcing shell specific files at startup
+  # Add Spack environment vars to the container runtime
   cat /opt/spack-environment/environment_modifications.sh >> $SINGULARITY_ENVIRONMENT
+  echo 'export PYTHONPATH=/opt/Peano/python:$PYTHONPATH' >> $SINGULARITY_ENVIRONMENT
 
 %labels
   peano-framework.org http://www.peano-framework.org/

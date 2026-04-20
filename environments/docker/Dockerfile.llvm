@@ -2,7 +2,7 @@ FROM peanoframework/spack:latest AS builder
 
 WORKDIR /opt/spack-environment
 
-COPY spack/compilers/intel/spack.yaml spack.yaml
+COPY environments/spack/compilers/llvm/spack.yaml spack.yaml
 
 RUN . /opt/spack/share/spack/setup-env.sh && \
     spack compiler find && \
@@ -18,6 +18,7 @@ RUN . /opt/spack/share/spack/setup-env.sh && spack env activate --sh -d . > acti
 RUN { \
       echo '#!/bin/sh' \
       && echo '.' /opt/spack-environment/activate.sh \
+      && echo export LD_LIBRARY_PATH=/opt/views/view/lib/x86_64-unknown-linux-gnu:'$LD_LIBRARY_PATH' \
       && echo 'exec "$@"'; \
     } > /entrypoint.sh \
 && chmod a+x /entrypoint.sh \

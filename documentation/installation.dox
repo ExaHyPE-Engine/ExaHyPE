@@ -212,10 +212,8 @@ Peano currently relies on the following Python packages/projects:
 @include ../requirements.txt
 
 
-# Containers
+# Prebuilt Environments and Packages
 
-\li \subpage page_installation_with_spack
-\li \subpage page_installation_with_docker
-\li \subpage page_installation_with_apptainer
+\li \subpage page_installation_with_environments
 
 */

@@ -2,8 +2,8 @@ FROM peanoframework/spack:latest AS builder
 
 WORKDIR /opt/spack-environment
 
-COPY spack/repo.yaml .
-COPY spack/packages/exahype2 packages/exahype2
+COPY environments/spack/repo.yaml .
+COPY environments/spack/packages/exahype2 packages/exahype2
 COPY tests/ /exahype2/tests
 COPY tutorials/ /exahype2/tutorials
 COPY applications/ /exahype2/applications

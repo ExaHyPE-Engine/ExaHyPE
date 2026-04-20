@@ -60,7 +60,7 @@ add_library(PeanoOptions INTERFACE)
 target_compile_features(PeanoOptions INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 install(TARGETS PeanoOptions EXPORT ${PROJECT_NAME}Targets)
 
-include(CPUArch)
+include(DetectCPUArch)
 include(Mimalloc)
 include(PeanoLibrary)
 include(PeanoExecutable)

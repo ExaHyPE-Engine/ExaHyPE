@@ -3,7 +3,7 @@ From: peanoframework/spack:latest
 Stage: build
 
 %files
-  spack/compilers/gcc/spack.yaml /spack.yaml
+  environments/spack/compilers/llvm/spack.yaml /spack.yaml
 
 %post
   mkdir /opt/spack-environment && cd /opt/spack-environment
@@ -17,6 +17,7 @@ Stage: build
   spack gc -y
   spack clean
   spack env activate --sh -d . >> /opt/spack-environment/environment_modifications.sh
+  echo export LD_LIBRARY_PATH=/opt/views/view/lib/x86_64-unknown-linux-gnu:'$LD_LIBRARY_PATH' >> /opt/spack-environment/environment_modifications.sh
 
 Bootstrap: docker
 From: peanoframework/base:latest

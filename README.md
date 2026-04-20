@@ -36,18 +36,11 @@ All software is available as open source through [www.peano-framework.org](http:
 
 Get started with Peano following our [Installation Guide](https://hpcsoftware.pages.gitlab.lrz.de/Peano/de/dd9/page_installation_home.html).
 
-# Docker
+# Environments
 
-We maintain a collection of [Dockerfiles](https://hpcsoftware.pages.gitlab.lrz.de/Peano/df/dbb/page_installation_with_docker.html).
-
-# Apptainer
-
-We maintain a collection of [Apptainer Definition Files](https://hpcsoftware.pages.gitlab.lrz.de/Peano/db/d56/page_installation_with_apptainer.html).
-
-# Spack
-
-To considerably alleviate the installation process of Peano, especially on HPC systems,
-we provide [packages](https://hpcsoftware.pages.gitlab.lrz.de/Peano/d6/db6/page_installation_with_spack.html) that rely on [Spack](https://github.com/spack/spack/wiki).
+We maintain packaged [environments](environments)
+for Docker, Apptainer, and [Spack](https://github.com/spack/spack/wiki) to simplify
+setup on workstations and HPC systems.
 
 # Contributing
 

@@ -96,8 +96,8 @@ set(WITH_SIMDLEN   ${WITH_SIMDLEN} CACHE INTERNAL "Number of double-precision el
 set(WITH_ALIGNMENT ${WITH_ALIGNMENT} CACHE INTERNAL "Memory alignment in bytes required for vectorized loads/stores (e.g., 32 for AVX2)")
 set(CPU_ARCH_FLAGS ${_DETECTED_FLAGS} CACHE INTERNAL "Detected CPU architecture compiler flags")
 
-message(STATUS "Using CPU architecture flags: ${CPU_ARCH_FLAGS}")
-message(STATUS "Using CPU features: ALIGNMENT=${WITH_ALIGNMENT}, SIMDLEN=${WITH_SIMDLEN}")
+message(STATUS "Detected CPU architecture flags: ${CPU_ARCH_FLAGS}")
+message(STATUS "Detected CPU features: ALIGNMENT=${WITH_ALIGNMENT}, SIMDLEN=${WITH_SIMDLEN}")
 
 target_compile_definitions(PeanoOptions INTERFACE
   SIMDLEN=${WITH_SIMDLEN}
