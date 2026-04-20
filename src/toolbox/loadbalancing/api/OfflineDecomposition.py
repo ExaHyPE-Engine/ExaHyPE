@@ -135,21 +135,15 @@ def display_hardcoded_split_parameters(peano_tree: Tree, title: str) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description='Offline Tree Decomposition for Load Balancing')
-    parser.add_argument("-f", 	"--file", 		dest="file_path", 	    type=str,                           help="Path to input grid patch file (e.g., Input/example2)" )
-    parser.add_argument("-y", 	"--yaml", 		dest="yaml_path", 	    type=str,                           help="Path to input YAML file created by generate_tree_yaml()" )
-    parser.add_argument("-p", 	"--plot", 		dest="plot_flag", 	    default=False, action="store_true", help="Generate and save visualization plots of the tree structure" )
-    parser.add_argument("-d",   "--dimension",  dest="grid_dimension",  type=int,                           help="Spatial dimension of the grid (2 for 2D, 3 for 3D) - auto-detected from YAML if not specified" )
-    parser.add_argument("-l",   "--max-level",  dest="max_level",  	    type=int, default=0,                help="Maximum refinement level for artificial regular grid generation" )
-    parser.add_argument("-s",   "--splits", 	dest="num_splits",      type=int,                           help="Number of additional subtrees to create via splitting")
-    parser.add_argument("-o",   "--output",     dest="output_yaml",     type=str, default="output.yaml",    help="Output YAML file path for storing split results and tree structure")
-
-    parser.add_argument(
-        "--no-topology-update",
-        dest="topology_update",
-        action="store_false",
-        default=True,
-        help="Disable topology preservation (skip non-leaf subtree propagation) during split_tree()."
-    )
+    parser.add_argument("-f", 	"--file", 		dest="file_path", 	    type=str,                                                   help="Path to input grid patch file (e.g., Input/example2)" )
+    parser.add_argument("-y", 	"--yaml", 		dest="yaml_path", 	    type=str,                                                   help="Path to input YAML file created by generate_tree_yaml()" )
+    parser.add_argument("-p", 	"--plot", 		dest="plot_flag", 	                action="store_true",    default=False,          help="Generate and save visualization plots of the tree structure" )
+    parser.add_argument("-d",   "--dimension",  dest="grid_dimension",  type=int,                                                   help="Spatial dimension of the grid (2 for 2D, 3 for 3D) - auto-detected from YAML if not specified" )
+    parser.add_argument("-l",   "--max-level",  dest="max_level",  	    type=int,                           default=0,              help="Maximum refinement level for artificial regular grid generation" )
+    parser.add_argument("-s",   "--splits", 	dest="num_splits",      type=int,                                                   help="Number of additional subtrees to create via splitting")
+    parser.add_argument("-o",   "--output",     dest="output_yaml",     type=str,                           default="output.yaml",  help="Output YAML file path for storing split results and tree structure")
+    parser.add_argument("-t",   "--traversal",  dest="traversal_mode",  type=str,   choices=["bfs", "dfs"], default="bfs",          help="Stage I traversal mode for split_tree(): 'bfs' (default) or 'dfs'")
+    parser.add_argument("--no-topology-update", dest="topology_update",             action="store_false",   default=True,           help="Disable topology preservation (skip non-leaf subtree propagation) during split_tree()")
 
     args = parser.parse_args()
 
@@ -261,13 +255,13 @@ def main():
 
         # a runtime switch for whether split_tree() performs its Stage II bottom-up propagation
         if args.topology_update:
-            tree = split_strategy.split_tree(tree, args.num_splits)
+            tree = split_strategy.split_tree(tree, args.num_splits, traversal=args.traversal_mode)
         else:
             # Temporarily disable SplitTrees._propagate_bottom_up without editing SplitTrees.py
             original_update = split_strategy._propagate_bottom_up
             try:
                 split_strategy._propagate_bottom_up = lambda _tree: None
-                tree = split_strategy.split_tree(tree, args.num_splits)
+                tree = split_strategy.split_tree(tree, args.num_splits, traversal=args.traversal_mode)
             finally:
                 split_strategy._propagate_bottom_up = original_update
 

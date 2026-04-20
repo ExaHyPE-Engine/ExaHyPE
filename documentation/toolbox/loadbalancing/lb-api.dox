@@ -43,10 +43,10 @@ The `SplitTrees` module (`src/toolbox/loadbalancing/api/Strategies/SplitTrees.py
 The splitting phase consists of up to three sequential stages applied within `split_tree()`:
 
 ```python
-split_tree(peano_tree, number_of_splits):
-    # Stage I:            distribute leaf nodes across subtrees
-    # Stage II:           bottom-up propagation (_propagate_bottom_up)
-    # Stage III (opt.):   hierarchical optimisation (_optimize_split_hierarchy)  # TBD
+split_tree(peano_tree, number_of_splits, traversal="bfs"):
+  # Stage I:            distribute leaf nodes across subtrees
+  # Stage II:           bottom-up propagation (_propagate_bottom_up)
+  # Stage III (opt.):   hierarchical optimisation (_optimize_split_hierarchy)  # TBD
 ```
 
 | Stage | Function | Objective | Complexity |
@@ -60,6 +60,12 @@ _Stage I_ and _Stage II_ are always executed. _Stage III_ is optional and has no
 ### Stage I: Leaf Distribution
 
 The core loop of `split_tree()` identifies all leaf nodes across every refinement level and distributes them as evenly as possible across the requested number of subtrees. A node is a leaf if it resides on the finest level or has no children on the next level. After _Stage I_, only leaf nodes carry updated subtree assignments; all non-leaf nodes still belong to their original subtree and are updated by _Stage II_.
+
+Stage I now supports two traversal modes:
+- `traversal="bfs"` uses `_distribute_leaves_bfs()` and visits leaves in level-order.
+- `traversal="dfs"` uses `_distribute_leaves_dfs()` and visits leaves in depth-first order.
+
+Both variants preserve the same balancing policy; they differ only in the order in which eligible leaves are discovered and therefore assigned to target subtrees.
 
 ### Stage II: Bottom-Up Propagation
 
