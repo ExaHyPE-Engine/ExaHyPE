@@ -263,13 +263,13 @@ def main():
         if args.topology_update:
             tree = split_strategy.split_tree(tree, args.num_splits)
         else:
-            # Temporarily disable SplitTrees._update_non_leaf_assignments without editing SplitTrees.py
-            original_update = split_strategy._update_non_leaf_assignments
+            # Temporarily disable SplitTrees._propagate_bottom_up without editing SplitTrees.py
+            original_update = split_strategy._propagate_bottom_up
             try:
-                split_strategy._update_non_leaf_assignments = lambda _tree: None
+                split_strategy._propagate_bottom_up = lambda _tree: None
                 tree = split_strategy.split_tree(tree, args.num_splits)
             finally:
-                split_strategy._update_non_leaf_assignments = original_update
+                split_strategy._propagate_bottom_up = original_update
 
         split_end_time = time.time()
 

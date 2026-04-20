@@ -45,14 +45,14 @@ The splitting phase consists of up to three sequential stages applied within `sp
 ```python
 split_tree(peano_tree, number_of_splits):
     # Stage I:            distribute leaf nodes across subtrees
-    # Stage II:           bottom-up propagation (_update_non_leaf_assignments)
+    # Stage II:           bottom-up propagation (_propagate_bottom_up)
     # Stage III (opt.):   hierarchical optimisation (_optimize_split_hierarchy)  # TBD
 ```
 
 | Stage | Function | Objective | Complexity |
 |-------|----------|-----------|------------|
 | **I** | `split_tree()` (core loop) | Distribute leaves across subtrees | O(levels × cells) |
-| **II** | `_update_non_leaf_assignments()` | Propagate subtree ids bottom-up | O(levels × cells) single pass |
+| **II** | `_propagate_bottom_up()` | Propagate subtree ids bottom-up | O(levels × cells) single pass |
 | **III** | `_optimize_split_hierarchy()` | Minimise split operation count | O(levels² × trees) iterative |
 
 _Stage I_ and _Stage II_ are always executed. _Stage III_ is optional and has not yet been implemented (see @todo below).
@@ -63,7 +63,7 @@ The core loop of `split_tree()` identifies all leaf nodes across every refinemen
 
 ### Stage II: Bottom-Up Propagation
 
-The `_update_non_leaf_assignments()` function propagates subtree assignments upward through the tree hierarchy using simple parent-child inheritance.
+The `_propagate_bottom_up()` function propagates subtree assignments upward through the tree hierarchy using simple parent-child inheritance.
 
 \par Algorithm
 Bottom-up traversal where parent nodes inherit subtree assignments when all their children belong to the same subtree.
