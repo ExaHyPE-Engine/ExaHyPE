@@ -71,6 +71,21 @@ function(_kokkos_build_user_args out_var)
   set(${out_var} "${_args}" PARENT_SCOPE)
 endfunction()
 
+function(_kokkos_build_parallel_args out_var)
+  if(DEFINED AVAILABLE_PROCESSOR_COUNT AND AVAILABLE_PROCESSOR_COUNT GREATER 0)
+    set(_build_jobs "${AVAILABLE_PROCESSOR_COUNT}")
+  else()
+    include(ProcessorCount)
+    ProcessorCount(_build_jobs)
+  endif()
+
+  if(DEFINED _build_jobs AND _build_jobs GREATER 0)
+    set(${out_var} --parallel ${_build_jobs} PARENT_SCOPE)
+  else()
+    set(${out_var} "" PARENT_SCOPE)
+  endif()
+endfunction()
+
 find_package(Kokkos CONFIG QUIET)
 
 if(NOT Kokkos_FOUND)
@@ -79,6 +94,7 @@ if(NOT Kokkos_FOUND)
   set(FETCHCONTENT_QUIET ON)
 
   _kokkos_build_user_args(Kokkos_USER_CMAKE_ARGS)
+  _kokkos_build_parallel_args(Kokkos_BUILD_PARALLEL_ARGS)
 
   FetchContent_GetProperties(Kokkos)
   if(NOT Kokkos_POPULATED)
@@ -101,6 +117,8 @@ if(NOT Kokkos_FOUND)
       -DCMAKE_INSTALL_PREFIX=${kokkos_INSTALL_DIR}
       -DCMAKE_BUILD_TYPE=Release
       -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}
+      -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+      -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
       ${Kokkos_USER_CMAKE_ARGS}
     RESULT_VARIABLE result
     OUTPUT_QUIET
@@ -111,7 +129,7 @@ if(NOT Kokkos_FOUND)
   endif()
 
   execute_process(
-    COMMAND ${CMAKE_COMMAND} --build ${kokkos_BINARY_DIR} --config Release --target install --parallel ${AVAILABLE_PROCESSOR_COUNT}
+    COMMAND ${CMAKE_COMMAND} --build ${kokkos_BINARY_DIR} --config Release --target install ${Kokkos_BUILD_PARALLEL_ARGS}
     RESULT_VARIABLE result
     OUTPUT_QUIET
     # ERROR_QUIET

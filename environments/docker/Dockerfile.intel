@@ -2,7 +2,7 @@ FROM peanoframework/spack:latest AS builder
 
 WORKDIR /opt/spack-environment
 
-COPY spack/compilers/nvidia/spack.yaml spack.yaml
+COPY environments/spack/compilers/intel/spack.yaml spack.yaml
 
 RUN . /opt/spack/share/spack/setup-env.sh && \
     spack compiler find && \

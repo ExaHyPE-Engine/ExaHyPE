@@ -1,0 +1,16 @@
+/**
+
+@page page_installation_with_environments Environments
+
+This directory bundles the packaged software environments that complement
+Peano's native CMake-based build.
+
+- \subpage page_installation_with_docker
+- \subpage page_installation_with_apptainer
+- \subpage page_installation_with_spack
+
+The Docker and Apptainer recipes reuse the Spack environments shipped in the
+same directory tree. Keep the files together if you extend or rebuild these
+setups.
+
+*/

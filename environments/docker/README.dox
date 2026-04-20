@@ -3,6 +3,7 @@
 @page page_installation_with_docker Installation with Docker
 
 Here we maintain Dockerfiles for different compilers.
+They reuse the Spack environments stored under `environments/spack`.
 
 ## Usage
 
@@ -56,24 +57,24 @@ To build the Docker images, make sure to execute the following commands in the P
 ### Building Base Images
 
 ```shell
-docker build -t peanoframework/base -f docker/Dockerfile.base .
-docker build -t peanoframework/spack -f docker/Dockerfile.spack .
+docker build -t peanoframework/base -f environments/docker/Dockerfile.base .
+docker build -t peanoframework/spack -f environments/docker/Dockerfile.spack .
 ```
 
 ### Building Compiler Images
 
 ```shell
-docker build -t peanoframework/gcc -f docker/Dockerfile.gcc .
-docker build -t peanoframework/intel -f docker/Dockerfile.intel .
-docker build -t peanoframework/nvidia -f docker/Dockerfile.nvidia .
-docker build -t peanoframework/amd -f docker/Dockerfile.amd .
-docker build -t peanoframework/llvm -f docker/Dockerfile.llvm .
+docker build -t peanoframework/gcc -f environments/docker/Dockerfile.gcc .
+docker build -t peanoframework/intel -f environments/docker/Dockerfile.intel .
+docker build -t peanoframework/nvidia -f environments/docker/Dockerfile.nvidia .
+docker build -t peanoframework/amd -f environments/docker/Dockerfile.amd .
+docker build -t peanoframework/llvm -f environments/docker/Dockerfile.llvm .
 ```
 
 ### Building Extension Images
 
 ```shell
-docker build -t peanoframework/exahype2 -f docker/Dockerfile.exahype2 .
+docker build -t peanoframework/exahype2 -f environments/docker/Dockerfile.exahype2 .
 ```
 
 */

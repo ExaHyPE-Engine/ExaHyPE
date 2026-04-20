@@ -3,7 +3,7 @@ From: peanoframework/spack:latest
 Stage: build
 
 %files
-  spack/compilers/amd/spack.yaml /spack.yaml
+  environments/spack/compilers/intel/spack.yaml /spack.yaml
 
 %post
   mkdir /opt/spack-environment && cd /opt/spack-environment
