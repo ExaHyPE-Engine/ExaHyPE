@@ -7,6 +7,8 @@ import jinja2
 from pathlib import Path
 from copy import deepcopy
 
+from .Helper import get_jinja2_template
+from .Helper import render_jinja2_template
 from .Helper import write_file
 
 from .Overwrite import Overwrite
@@ -58,20 +60,21 @@ dictionary entries besides the ones manually handed over by the user.
     if template_file!=None and write_file(overwrite,self.default_overwrite,full_qualified_filename):
       log.debug("Write {}".format(full_qualified_filename))
 
-      template_loader = jinja2.FileSystemLoader(searchpath=os.path.split(template_file)[0])
-      templateEnv = jinja2.Environment(loader=template_loader, undefined=jinja2.DebugUndefined)
-      template = templateEnv.get_template( os.path.split(template_file)[1] )
+      template = get_jinja2_template(template_file, jinja2.DebugUndefined)
+      rendered_text = template.render(self.d)
 
       if self.apply_iteratively:
         old_size                = 0
-        rendered_text           = template.render(self.d)
         while "{{" in rendered_text and len(rendered_text)!=old_size:
           old_size      = len(rendered_text)
-          template      = jinja2.Template(rendered_text, undefined=jinja2.DebugUndefined)
-          rendered_text = template.render( self.d )
+          rendered_text = render_jinja2_template(
+            rendered_text,
+            self.d,
+            jinja2.DebugUndefined,
+          )
 
       with open( full_qualified_filename, "w" ) as output:
-        output.write( template.render(self.d) )
+        output.write( rendered_text )
 
   def generate(self,overwrite,directory):
     if not os.path.exists( directory + "/" + self.subdirectory ):

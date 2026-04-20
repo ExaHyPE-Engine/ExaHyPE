@@ -9,25 +9,10 @@ import peano4.toolbox.blockstructured.DynamicAMR
 
 class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
     """
-
     The ExaHyPE 2 Finite Volume handling of (dynamically) adaptive meshes
-
-    This class is basically a plain copy of the DynamicAMR action set
-    from the toolbox. However, we have to ensure that we also set the
-    update markers appropriately such that restricted data are taken
-    into account. This action set thus has to be studied in combination
-    with the ProjectPatchOntoFaces action set which is very similar and
-    also enriches the toolbox version by this marker aspect.
     """
 
     def __init__(self, solver, interpolation, restriction):
-        """
-        Construct object
-
-        Please consult exahype2.solvers.rkfd.actionsets.DynamicAMR's class
-        documentation of details.
-
-        """
         super(DynamicAMR, self).__init__(
             patch=solver._patch,
             patch_overlap_interpolation=solver._patch_overlap_old,

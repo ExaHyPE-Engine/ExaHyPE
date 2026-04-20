@@ -32,6 +32,7 @@ from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFac
 )
 
 from peano4.Logger import log
+from peano4.output.Helper import render_jinja2_template
 
 class RungeKuttaDG(object):
     r"""!
@@ -1171,6 +1172,9 @@ We use RK("""
         self._solver_constants += datastring
 
     def _init_dictionary_with_default_parameters(self, d):
+        def render_template(template):
+            return render_jinja2_template(template, d, jinja2.DebugUndefined)
+
         """
         This one is called by all algorithmic steps before I invoke
         add_entries_to_text_replacement_dictionary().
@@ -1221,17 +1225,13 @@ We use RK("""
 
         # d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
         # d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
-        d["PREPROCESS_RECONSTRUCTED_CELL"] = jinja2.Template(
-            self._preprocess_cell, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["POSTPROCESS_UPDATED_CELL_AFTER_RUNGE_KUTTA_STEP"] = jinja2.Template(
-            self._postprocess_updated_cell_after_Runge_Kutta_step,
-            undefined=jinja2.DebugUndefined,
-        ).render(**d)
-        d["POSTPROCESS_UPDATED_CELL_AFTER_FINAL_LINEAR_COMBINATION"] = jinja2.Template(
-            self._postprocess_updated_cell_after_final_linear_combination,
-            undefined=jinja2.DebugUndefined,
-        ).render(**d)
+        d["PREPROCESS_RECONSTRUCTED_CELL"] = render_template(self._preprocess_cell)
+        d["POSTPROCESS_UPDATED_CELL_AFTER_RUNGE_KUTTA_STEP"] = render_template(
+            self._postprocess_updated_cell_after_Runge_Kutta_step
+        )
+        d["POSTPROCESS_UPDATED_CELL_AFTER_FINAL_LINEAR_COMBINATION"] = render_template(
+            self._postprocess_updated_cell_after_final_linear_combination
+        )
         d[
             "BOUNDARY_CONDITIONS_IMPLEMENTATION"
         ] = self._boundary_conditions_implementation
@@ -1239,43 +1239,41 @@ We use RK("""
             "REFINEMENT_CRITERION_IMPLEMENTATION"
         ] = self._refinement_criterion_implementation
         d["INITIAL_CONDITIONS_IMPLEMENTATION"] = self._initial_conditions_implementation
-        d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = jinja2.Template(
-            self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["ABSTRACT_SOLVER_USER_DEFINITIONS"] = jinja2.Template(
-            self._abstract_solver_user_definitions, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["SOLVER_USER_DECLARATIONS"] = jinja2.Template(
-            self._solver_user_declarations, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["SOLVER_USER_DEFINITIONS"] = jinja2.Template(
-            self._solver_user_definitions, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["START_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
-            self._start_time_step_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["FINISH_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
-            self._finish_time_step_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["PRINT_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
-            self._print_time_step_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["CONSTRUCTOR_IMPLEMENTATION"] = jinja2.Template(
-            self._constructor_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["COMPUTE_TIME_STEP_SIZE"] = jinja2.Template(
-            self._compute_time_step_size, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["COMPUTE_NEW_TIME_STEP_SIZE"] = jinja2.Template(
-            self._compute_new_time_step_size, undefined=jinja2.DebugUndefined
-        ).render(**d)
+        d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = render_template(
+            self._abstract_solver_user_declarations
+        )
+        d["ABSTRACT_SOLVER_USER_DEFINITIONS"] = render_template(
+            self._abstract_solver_user_definitions
+        )
+        d["SOLVER_USER_DECLARATIONS"] = render_template(
+            self._solver_user_declarations
+        )
+        d["SOLVER_USER_DEFINITIONS"] = render_template(
+            self._solver_user_definitions
+        )
+        d["START_TIME_STEP_IMPLEMENTATION"] = render_template(
+            self._start_time_step_implementation
+        )
+        d["FINISH_TIME_STEP_IMPLEMENTATION"] = render_template(
+            self._finish_time_step_implementation
+        )
+        d["PRINT_TIME_STEP_IMPLEMENTATION"] = render_template(
+            self._print_time_step_implementation
+        )
+        d["CONSTRUCTOR_IMPLEMENTATION"] = render_template(
+            self._constructor_implementation
+        )
+        d["COMPUTE_TIME_STEP_SIZE"] = render_template(self._compute_time_step_size)
+        d["COMPUTE_NEW_TIME_STEP_SIZE"] = render_template(
+            self._compute_new_time_step_size
+        )
 
-        d["START_SIMULATION_IMPLEMENTATION"] = jinja2.Template(
-            self._start_simulation_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["FINISH_SIMULATION_IMPLEMENTATION"] = jinja2.Template(
-            self._finish_simulation_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
+        d["START_SIMULATION_IMPLEMENTATION"] = render_template(
+            self._start_simulation_implementation
+        )
+        d["FINISH_SIMULATION_IMPLEMENTATION"] = render_template(
+            self._finish_simulation_implementation
+        )
 
         d["FLUX_IMPLEMENTATION"] = self._flux_implementation
         d["NCP_IMPLEMENTATION"] = self._ncp_implementation
@@ -1290,25 +1288,24 @@ We use RK("""
         self._basis.init_dictionary_with_default_parameters(d, False)
 
         # Has to come last, as we already use the other entries
-        d["VOLUMETRIC_COMPUTE_KERNEL_CALL"] = jinja2.Template(
-            self._volumetric_compute_kernel_call, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS"] = jinja2.Template(
-            self._volumetric_compute_kernel_call_stateless, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["RIEMANN_COMPUTE_KERNEL_CALL"] = jinja2.Template(
-            self._Riemann_compute_kernel_call, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["RIEMANN_COMPUTE_KERNEL_CALL_STATELESS"] = jinja2.Template(
-            self._Riemann_compute_kernel_call_stateless, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["ADD_SOLVER_CONTRIBUTIONS_CALL"] = jinja2.Template(
-            self._add_solver_contributions_call, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["MULTIPLY_WITH_INVERTED_MASS_MATRIX_CALL"] = jinja2.Template(
-            self._multiply_with_inverted_mass_matrix_call,
-            undefined=jinja2.DebugUndefined,
-        ).render(**d)
+        d["VOLUMETRIC_COMPUTE_KERNEL_CALL"] = render_template(
+            self._volumetric_compute_kernel_call
+        )
+        d["VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS"] = render_template(
+            self._volumetric_compute_kernel_call_stateless
+        )
+        d["RIEMANN_COMPUTE_KERNEL_CALL"] = render_template(
+            self._Riemann_compute_kernel_call
+        )
+        d["RIEMANN_COMPUTE_KERNEL_CALL_STATELESS"] = render_template(
+            self._Riemann_compute_kernel_call_stateless
+        )
+        d["ADD_SOLVER_CONTRIBUTIONS_CALL"] = render_template(
+            self._add_solver_contributions_call
+        )
+        d["MULTIPLY_WITH_INVERTED_MASS_MATRIX_CALL"] = render_template(
+            self._multiply_with_inverted_mass_matrix_call
+        )
 
     @property
     def unknowns(self):

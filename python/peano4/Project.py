@@ -127,11 +127,18 @@ class Project (object):
       ExaHyPE). It really strips everything down to the stuff you
       absolutely need to translate and run the code.
     """
-    log.info("Generate all code ...")
+    log.info(
+      "Generate project %s in %s",
+      self.project_name,
+      os.path.abspath(self.directory),
+    )
     self.is_generated = True
     self.is_built = False
     if len(self.output.artefacts)>0:
-      log.info("Some artefacts have already been added to repository ... assume this is intentional (by higher abstraction layer, e.g.)")
+      log.debug(
+        "Project already holds %d pre-registered artefacts before generation",
+        len(self.output.artefacts),
+      )
 
     self.output.readme.add_package_description( self.constants.readme_entry() )
 
@@ -146,7 +153,7 @@ class Project (object):
     else:
       self.constants.generate(overwrite, self.directory)
 
-    log.info("Generation complete")
+    log.info("Generation complete (%d artefacts)", len(self.output.artefacts))
 
     if throw_away_data_after_generation:
       self.datamodel = None
@@ -181,16 +188,16 @@ class Project (object):
 
     if make:
       if make_clean_first:
-        log.info("Clean up project in {}".format(self.directory))
+        log.info("Clean up project in %s", os.path.abspath(self.directory))
         try:
           subprocess.check_call(["make", "clean"], cwd=self.directory, stderr=subprocess.DEVNULL)
         except Exception as e:
-          pass
+          log.debug("Ignore failing make clean in %s: %s", os.path.abspath(self.directory), e)
         self.is_built = False
         log.info("Clean complete")
 
       if not self.is_built:
-        log.info("Start to compile with concurrency level of " + str(number_of_parallel_builds) + " ...")
+        log.info("Start to compile in %s with concurrency level %d", os.path.abspath(self.directory), number_of_parallel_builds)
         try:
           process = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], cwd=self.directory, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
           # Extract warnings and errors from error message
@@ -213,11 +220,11 @@ class Project (object):
         except Exception as e:
           self.is_built = True
           self.build_was_successful = False
-          log.error(str(e))
+          log.error("%s", e)
           log.error("Compile was not successful")
           sys.exit(1)
       else:
-        log.error("Cannot build as code generation has not been successful")
+        log.info("Skip build because project is already marked as built")
 
     if throw_away_data_after_build:
       self.cleanup()
@@ -241,7 +248,7 @@ class Project (object):
       self.build()
 
     if not rebuild_if_required or (self.is_built and self.build_was_successful):
-      log.info("Run executable " + str(executable))
+      log.info("Run executable %s", executable)
 
       invocation  = []
       if prefix!=None:
@@ -257,17 +264,21 @@ class Project (object):
           result = subprocess.run( invocation, stdout=open( pipefile, "w" ), stderr=subprocess.PIPE )
         if result.returncode==0:
           if pipefile==None:
-            log.info(result.stdout.decode("utf-8"))
+            stdout = result.stdout.decode("utf-8")
+            if stdout:
+              log.info("%s", stdout)
           if result.stderr!=None:
-            log.info(result.stderr.decode("utf-8"))
+            stderr = result.stderr.decode("utf-8")
+            if stderr:
+              log.warning("%s", stderr)
           log.info("Run completed without error code, but check for warnings and numerical assertions/errors")
+          success = True
         else:
-          log.error(result.stderr.decode("utf-8"))
+          log.error("%s", result.stderr.decode("utf-8"))
           log.error("Run failed")
-        success = True
       except Exception as e:
-        log.error("Run of application was not successful: " + str(e))
-        log.error("Invocation: " + str(invocation))
+        log.error("Run of application was not successful: %s", e)
+        log.error("Invocation: %s", invocation)
     else:
       log.error("Cannot run as code compilation has not been successful")
     return success

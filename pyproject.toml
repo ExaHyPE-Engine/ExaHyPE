@@ -52,11 +52,11 @@ dynamic = ["readme", "dependencies"]
 "Homepage" = "http://www.peano-framework.org"
 
 [project.scripts]
-format = "format:main"
-plot-probe-data = "plot_probe_data:main"
-plot-error-norms = "plot_error_norms:main"
-compare-solutions = "compare_solution:main"
-render-solution = "render_solution:main"
+format = "postprocessing.format:main"
+plot-probe-data = "postprocessing.plot_probe_data:main"
+plot-error-norms = "postprocessing.plot_error_norms:main"
+compare-solutions = "postprocessing.compare_solution:main"
+render-solution = "postprocessing.render_solution:main"
 
 [build-system]
 requires = ["setuptools>=61.0"]

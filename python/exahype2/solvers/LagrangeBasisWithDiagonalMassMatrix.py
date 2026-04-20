@@ -2,15 +2,8 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 
-#import mpmath as mp
-#import numpy as np
-#from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto # quadrature_points by default in [-1,1]
-
-
-import scipy
-from scipy.integrate import quad
-
 from abc import abstractmethod
+from scipy.special import roots_sh_legendre
 
 from .LagrangeBasis import LagrangeBasis
 from .LagrangeBasis import render_tensor_1
@@ -65,10 +58,8 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   
   def __init__(self,polynomial_order):
     super(LagrangeBasisWithDiagonalMassMatrix,self).__init__(polynomial_order)
-    self.dictionary = {
-      True: {},
-      False: {}
-    }
+    self._cached_basis_entries  = {}
+    self._cached_basis_declarations = {}
       
       
   def __str__(self):
@@ -115,10 +106,9 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   where @f$ \phi _i,\phi _j @f$ are Lagrange basis functions associated with
   the quadrature within the unit-interval. They are polynomials of maximum order N-1.
 
-  Our implementation is quite some overkill, as I assemble the whole mass matrix 
-  and then extract only the diagonal.  If we use Legendre nodes as support points, 
-  this diagonal is an exact evaluation, i.e. the mass matrix is diagonal. If
-  we use Lobatto nodes, it is an approximation.
+  For the diagonal or lumped setting handled by this class, the diagonal entries
+  coincide with the quadrature weights. This is exact for Legendre nodes and the
+  intended lumped approximation for Lobatto-type nodes.
   
   Please note that this is a 1d mass matrix: If we have a polynomial of order p,
   we have @f$ (p+1)^d @f$ dofs in total per cell. My matrix has only the dimensions
@@ -127,9 +117,6 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   if we know that we have a tensor product approach of the shape functions and a 
   diagonal mass matrix.
 
-  @todo I don't know if we need renormalisation for Lobatto nodes, i.e. if we 
-  should ensure that the row sum is preserved
-  
   This is an operation which maps nodal data into a weak space, i.e. the outcome has
   to be scaled with h to be correct. It stems from a 1d integral. If you want to 
   compute the real mass matrix output, you have to multiply the outcome along each
@@ -143,7 +130,7 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
   The matrix holds 
   
-  @f$  K_{ij} = <\partial _x \phi _i, \phi _j> = w_j (\partial _x \phi _j) (x_i) @f$
+  @f$  K_{ij} = <\partial _x \phi _i, \phi _j> = w_j (\partial _x \phi _i) (x_j) @f$
     
   where @f$ \phi _i, \phi _j @f$ are Lagrange basis functions associated with
   the support (quadrature) points @f$ x_i @f$ and @f$ x_j @f$ within the unit
@@ -209,23 +196,6 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     within the file exahype2/dg/Riemann.h.
 """      
     
-  def __compute_barycentric_weights(self):
-    r"""
-    
-    See Eq. 3.2 in
-    https://people.maths.ox.ac.uk/trefethen/barycentric.pdf
-    
-    """
-    result = [0.0]*self.__num_points
-    for j,xj in enumerate(self.__quadrature_points):
-      divisor = 1.0
-      for k,xk in enumerate(self.__quadrature_points):
-        if j != k:
-          divisor *= (xj-xk)
-      result[j] = 1.0/divisor
-    return result
-     
-     
   def __compute_mass_matrix_diagonal(self):
     r"""
     
@@ -233,14 +203,7 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     as doxygen does not extract documentation from private routines in Python.
          
     """
-    mass_matrix = [ [0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ]
-    
-    for row in range(0,self.dofs_per_axis):
-      for col in range(0,self.dofs_per_axis):
-        ans,err = quad(lambda x: self.value1d(x,row) * self.value1d(x,col),0,1)
-        mass_matrix[row][col] = ans
-
-    return [ mass_matrix[i][i] for i in range(0,self.dofs_per_axis) ]
+    return list(self.quadrature_weights)
 
 
   def __compute_stiffness_operator(self):
@@ -252,12 +215,14 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
       into generated C++ code.
     
     """
-    stiffness_matrix = [ [0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ]
-    
-    for row in range(0,self.dofs_per_axis):
-      for col in range(0,self.dofs_per_axis):
-        ans,err = quad(lambda x: self.derivative1d(x,row) * self.value1d(x,col),0,1)
-        stiffness_matrix[row][col] = ans
+    dofs_per_axis      = self.dofs_per_axis
+    quadrature_points  = self.quadrature_points
+    quadrature_weights = self.quadrature_weights
+    stiffness_matrix   = [ [0.0 for _ in range(dofs_per_axis)] for _ in range(dofs_per_axis) ]
+
+    for row in range(dofs_per_axis):
+      for col in range(dofs_per_axis):
+        stiffness_matrix[row][col] = quadrature_weights[col] * self.derivative1d(quadrature_points[col],row)
 
     return stiffness_matrix
   
@@ -281,17 +246,18 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     if self._polynomial_order == 0:
       return [[[1.0]],[[1.0]],[[1.0]]]
     else:
-      interp_matrix = [ [0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,3*self.dofs_per_axis) ]
-      interp_matrix = [ [[0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ] for _ in range(0,3) ]
-      fine_grid_point = [0.0 for _ in range(0,3*self.dofs_per_axis) ]  
-      for index in range(0,self.dofs_per_axis):
-        fine_grid_point[index                     ]=self.quadrature_points[index]/3.0
-        fine_grid_point[index+  self.dofs_per_axis]=self.quadrature_points[index]/3.0+1.0/3.0
-        fine_grid_point[index+2*self.dofs_per_axis]=self.quadrature_points[index]/3.0+2.0/3.0
-      for block in range(0, 3):
-        for row in range(0, self.dofs_per_axis):
-          for col in range(0, self.dofs_per_axis):
-            interp_matrix[block][row][col]=self.value1d(fine_grid_point[row],col)
+      dofs_per_axis     = self.dofs_per_axis
+      quadrature_points = self.quadrature_points
+      interp_matrix     = [ [[0.0 for _ in range(dofs_per_axis)] for _ in range(dofs_per_axis)] for _ in range(3) ]
+      fine_grid_points  = [0.0 for _ in range(3*dofs_per_axis)]
+      for index in range(dofs_per_axis):
+        fine_grid_points[index]                   = quadrature_points[index] / 3.0
+        fine_grid_points[index +   dofs_per_axis] = quadrature_points[index] / 3.0 + 1.0 / 3.0
+        fine_grid_points[index + 2*dofs_per_axis] = quadrature_points[index] / 3.0 + 2.0 / 3.0
+      for block in range(3):
+        for row in range(dofs_per_axis):
+          for col in range(dofs_per_axis):
+            interp_matrix[block][row][col] = self.value1d(fine_grid_points[row],col)
 
       return interp_matrix 
 
@@ -311,16 +277,18 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     if self._polynomial_order == 0:
       return [[[1.0/3.0]],[[1.0/3.0]],[[1.0/3.0]]]
     else:
-      restriction_matrix = [ [[0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ] for _ in range(0,3) ]
-      fine_grid_point = [0.0 for _ in range(0,3*self.dofs_per_axis) ]  
-      for index in range(0,self.dofs_per_axis):
-        fine_grid_point[index                     ]=self.quadrature_points[index]/3.0
-        fine_grid_point[index+  self.dofs_per_axis]=self.quadrature_points[index]/3.0+1.0/3.0
-        fine_grid_point[index+2*self.dofs_per_axis]=self.quadrature_points[index]/3.0+2.0/3.0
-      for block in range(0, 3):
-        for row in range(0, self.dofs_per_axis):
-          for col in range(0, self.dofs_per_axis):
-            restriction_matrix[block][row][col]=self.value1d(fine_grid_point[col],row)/3.0
+      dofs_per_axis      = self.dofs_per_axis
+      quadrature_points  = self.quadrature_points
+      restriction_matrix = [ [[0.0 for _ in range(dofs_per_axis)] for _ in range(dofs_per_axis)] for _ in range(3) ]
+      fine_grid_points   = [0.0 for _ in range(3*dofs_per_axis)]
+      for index in range(dofs_per_axis):
+        fine_grid_points[index]                   = quadrature_points[index] / 3.0
+        fine_grid_points[index +   dofs_per_axis] = quadrature_points[index] / 3.0 + 1.0 / 3.0
+        fine_grid_points[index + 2*dofs_per_axis] = quadrature_points[index] / 3.0 + 2.0 / 3.0
+      for block in range(3):
+        for row in range(dofs_per_axis):
+          for col in range(dofs_per_axis):
+            restriction_matrix[block][row][col] = self.value1d(fine_grid_points[col],row) / 3.0
 
       return restriction_matrix   
 
@@ -332,11 +300,13 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
       into generated C++ code.
 
     """
-    dQdx = [ [0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ]
-    
-    for row in range(0,self.dofs_per_axis):
-      for col in range(0,self.dofs_per_axis):
-        dQdx[row][col] = self.derivative1d( self.quadrature_points[row], col)
+    dofs_per_axis     = self.dofs_per_axis
+    quadrature_points = self.quadrature_points
+    dQdx              = [ [0.0 for _ in range(dofs_per_axis)] for _ in range(dofs_per_axis) ]
+
+    for row in range(dofs_per_axis):
+      for col in range(dofs_per_axis):
+        dQdx[row][col] = self.derivative1d(quadrature_points[row], col)
 
     return dQdx
 
@@ -350,72 +320,101 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
       does and is also used to inject documentation into the generated C++ code.
     
     """
-    return [ self.value1d(0.0, number) for number in range(self.dofs_per_axis) ]  
-    
+    return [ self.value1d(0.0, number) for number in range(self.dofs_per_axis) ]
 
+
+  def _get_cached_basis_entry(self, key, compute):
+    if key not in self._cached_basis_entries:
+      self._cached_basis_entries[key] = compute()
+    return self._cached_basis_entries[key]
+
+
+  @staticmethod
+  def __render_basis_declaration(documentation, declaration):
+    return "/**\n{}*/\n{}\n\n".format(documentation, declaration)
+  
+  
   def init_dictionary_with_default_parameters(self,dictionary,use_multidimensional_arrays):
+    dictionary["ORDER"]               = self.order
+    if use_multidimensional_arrays not in self._cached_basis_declarations:
+      basis_declarations = ""
 
-    # As the dictionary takes considerable time to initialize and its content does not change
-    # we just initialize it once and reuse it.
-    d = self.dictionary[use_multidimensional_arrays]
-    if not d:
-        d["ORDER"]               = self.order
-        d["BASIS_DECLARATIONS"]  = ""
-        d["BASIS_INITIALIZERS"]  = ""
-        
-        d["BASIS_DECLARATIONS"] += "/**\n"
-        d["BASIS_DECLARATIONS"] += self.QuadraturePoints1dDocumentation
-        d["BASIS_DECLARATIONS"] += "*/\n"
-        d["BASIS_DECLARATIONS"] += "static constexpr double QuadraturePoints1d[] = {};\n\n".format( render_tensor_1(self.quadrature_points) )
-        
-        d["BASIS_DECLARATIONS"] += "/**\n"
-        d["BASIS_DECLARATIONS"] += self.QuadratureWeights1dDocumentation
-        d["BASIS_DECLARATIONS"] += "*/\n"
-        d["BASIS_DECLARATIONS"] += "static constexpr double QuadratureWeights1d[] = {};\n\n".format( render_tensor_1(self.quadrature_weights) )
+      basis_declarations += self.__render_basis_declaration(
+        self.QuadraturePoints1dDocumentation,
+        "static constexpr double QuadraturePoints1d[] = {};".format( render_tensor_1(self.quadrature_points) )
+      )
 
-        d["BASIS_DECLARATIONS"] += "/**\n"
-        d["BASIS_DECLARATIONS"] += self.MassMatrix1dDocumentation
-        d["BASIS_DECLARATIONS"] += "*/\n"
-        d["BASIS_DECLARATIONS"] += "static constexpr double MassMatrixDiagonal1d[] = {};\n\n".format( render_tensor_1(self.__compute_mass_matrix_diagonal()) )
+      basis_declarations += self.__render_basis_declaration(
+        self.QuadratureWeights1dDocumentation,
+        "static constexpr double QuadratureWeights1d[] = {};".format( render_tensor_1(self.quadrature_weights) )
+      )
 
-        d["BASIS_DECLARATIONS"] += "/**\n"
-        d["BASIS_DECLARATIONS"] += self.StiffnessOperator1dDocumentation
-        d["BASIS_DECLARATIONS"] += "*/\n"
-        if use_multidimensional_arrays:        
-          d["BASIS_DECLARATIONS"] += "static constexpr double StiffnessOperator1d[][] = {};\n\n".format( render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
-        else:
-          d["BASIS_DECLARATIONS"] += "static constexpr double StiffnessOperator1d[] = {};\n\n".format( render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
+      basis_declarations += self.__render_basis_declaration(
+        self.MassMatrix1dDocumentation,
+        "static constexpr double MassMatrixDiagonal1d[] = {};".format(
+          render_tensor_1(
+            self._get_cached_basis_entry("mass_matrix_diagonal", self.__compute_mass_matrix_diagonal)
+          )
+        )
+      )
 
-        d["BASIS_DECLARATIONS"] += "/**\n"
-        d["BASIS_DECLARATIONS"] += self.BasisFunctionValuesLeft1dDocumentation
-        d["BASIS_DECLARATIONS"] += "*/\n"
-        d["BASIS_DECLARATIONS"] += "static constexpr double BasisFunctionValuesLeft1d[] = {};\n\n".format( render_tensor_1(self.__compute_basis_function_values_left()) )
+      stiffness_operator = self._get_cached_basis_entry("stiffness_operator", self.__compute_stiffness_operator)
+      if use_multidimensional_arrays:
+        stiffness_declaration = "static constexpr double StiffnessOperator1d[][] = {};".format(
+          render_tensor_2(stiffness_operator,use_multidimensional_arrays)
+        )
+      else:
+        stiffness_declaration = "static constexpr double StiffnessOperator1d[] = {};".format(
+          render_tensor_2(stiffness_operator,use_multidimensional_arrays)
+        )
+      basis_declarations += self.__render_basis_declaration(self.StiffnessOperator1dDocumentation, stiffness_declaration)
 
-        d["BASIS_DECLARATIONS"] += "/**\n"
-        d["BASIS_DECLARATIONS"] += self.DerivativeOperator1dDocumentation
-        d["BASIS_DECLARATIONS"] += "*/\n"
-        if use_multidimensional_arrays:        
-          d["BASIS_DECLARATIONS"] += "static constexpr double DerivativeOperator1d[][] = {};\n\n".format( render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
-        else:
-          d["BASIS_DECLARATIONS"] += "static constexpr double DerivativeOperator1d[] = {};\n\n".format( render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
+      basis_declarations += self.__render_basis_declaration(
+        self.BasisFunctionValuesLeft1dDocumentation,
+        "static constexpr double BasisFunctionValuesLeft1d[] = {};".format(
+          render_tensor_1(
+            self._get_cached_basis_entry("basis_function_values_left", self.__compute_basis_function_values_left)
+          )
+        )
+      )
 
-        d["BASIS_DECLARATIONS"] += "/**\n"
-        d["BASIS_DECLARATIONS"] += self.RestrictionMatrix1dDocumentation
-        d["BASIS_DECLARATIONS"] += "*/\n"
-        if use_multidimensional_arrays:        
-          d["BASIS_DECLARATIONS"] += "static constexpr double RestrictionMatrix1d[][][] = {};\n\n".format( render_tensor_3(self.__compute_restriction_matrix(),use_multidimensional_arrays) )
-        else:
-          d["BASIS_DECLARATIONS"] += "static constexpr double RestrictionMatrix1d[] = {};\n\n".format( render_tensor_3(self.__compute_restriction_matrix(),use_multidimensional_arrays) )
+      derivative_operator = self._get_cached_basis_entry("derivative_operator", self.__compute_derivative_operator)
+      if use_multidimensional_arrays:
+        derivative_declaration = "static constexpr double DerivativeOperator1d[][] = {};".format(
+          render_tensor_2(derivative_operator,use_multidimensional_arrays)
+        )
+      else:
+        derivative_declaration = "static constexpr double DerivativeOperator1d[] = {};".format(
+          render_tensor_2(derivative_operator,use_multidimensional_arrays)
+        )
+      basis_declarations += self.__render_basis_declaration(self.DerivativeOperator1dDocumentation, derivative_declaration)
 
-        d["BASIS_DECLARATIONS"] += "/**\n"
-        d["BASIS_DECLARATIONS"] += self.InterpolationMatrix1dDocumentation
-        d["BASIS_DECLARATIONS"] += "*/\n"
-        if use_multidimensional_arrays:        
-          d["BASIS_DECLARATIONS"] += "static constexpr double InterpolationMatrix1d[][][] = {};\n\n".format( render_tensor_3(self.__compute_interpolation_matrix(),use_multidimensional_arrays) )
-        else:
-          d["BASIS_DECLARATIONS"] += "static constexpr double InterpolationMatrix1d[] = {};\n\n".format( render_tensor_3(self.__compute_interpolation_matrix(),use_multidimensional_arrays) )
+      restriction_matrix = self._get_cached_basis_entry("restriction_matrix", self.__compute_restriction_matrix)
+      if use_multidimensional_arrays:
+        restriction_declaration = "static constexpr double RestrictionMatrix1d[][][] = {};".format(
+          render_tensor_3(restriction_matrix,use_multidimensional_arrays)
+        )
+      else:
+        restriction_declaration = "static constexpr double RestrictionMatrix1d[] = {};".format(
+          render_tensor_3(restriction_matrix,use_multidimensional_arrays)
+        )
+      basis_declarations += self.__render_basis_declaration(self.RestrictionMatrix1dDocumentation, restriction_declaration)
 
-    dictionary.update(d)
+      interpolation_matrix = self._get_cached_basis_entry("interpolation_matrix", self.__compute_interpolation_matrix)
+      if use_multidimensional_arrays:
+        interpolation_declaration = "static constexpr double InterpolationMatrix1d[][][] = {};".format(
+          render_tensor_3(interpolation_matrix,use_multidimensional_arrays)
+        )
+      else:
+        interpolation_declaration = "static constexpr double InterpolationMatrix1d[] = {};".format(
+          render_tensor_3(interpolation_matrix,use_multidimensional_arrays)
+        )
+      basis_declarations += self.__render_basis_declaration(self.InterpolationMatrix1dDocumentation, interpolation_declaration)
+
+      self._cached_basis_declarations[use_multidimensional_arrays] = basis_declarations
+
+    dictionary["BASIS_DECLARATIONS"] = self._cached_basis_declarations[use_multidimensional_arrays]
+    dictionary["BASIS_INITIALIZERS"] = ""
 
   @property
   @abstractmethod
@@ -440,15 +439,16 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     split this one up into two version.
     
     """  
-    enumerator  = 1.0
+    quadrature_points = self.quadrature_points
+    enumerator        = 1.0
     for i in range(0,self.dofs_per_axis):
       if i!=number:
-        enumerator  *= (x-self.quadrature_points[i])
+        enumerator  *= (x-quadrature_points[i])
         
     denominator = 1.0
     for i in range(0,self.dofs_per_axis):
       if i!=number:
-        denominator *= (self.quadrature_points[number]-self.quadrature_points[i])
+        denominator *= (quadrature_points[number]-quadrature_points[i])
         
     return enumerator/denominator
 
@@ -484,7 +484,7 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
     where the stiffness matrix K is defined as 
 
-    K_ij = <d/dx phi_i, phi_j>_[0,1] = w_j (d/dx phi_j) (x_i) 
+    K_ij = <d/dx phi_i, phi_j>_[0,1] = w_j (d/dx phi_i) (x_j)
  
     :return: transposed derivative operator
 
@@ -494,21 +494,19 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     
     """  
 
+    quadrature_points = self.quadrature_points
     result = 0.0
     for l in range(0,self.dofs_per_axis):
       if l!=number:
         enumerator  = 1.0
-        denominator = 1.0/(self.quadrature_points[number]-self.quadrature_points[l])
+        denominator = 1.0/(quadrature_points[number]-quadrature_points[l])
         for m in range(0,self.dofs_per_axis):
           if m!=number and m!=l:
-            enumerator  *= x-self.quadrature_points[m]
-            denominator *= 1.0/(self.quadrature_points[number]-self.quadrature_points[m])
+            enumerator  *= x-quadrature_points[m]
+            denominator *= 1.0/(quadrature_points[number]-quadrature_points[m])
         result += enumerator*denominator
     return result
   
-from scipy.special import legendre
-from scipy.special import roots_sh_legendre
-
 class GaussLegendreBasis(LagrangeBasisWithDiagonalMassMatrix):
   r"""
   
@@ -524,7 +522,8 @@ class GaussLegendreBasis(LagrangeBasisWithDiagonalMassMatrix):
   """
   
   def __init__(self,polynomial_order):
-    super(GaussLegendreBasis,self).__init__(polynomial_order)  
+    super(GaussLegendreBasis,self).__init__(polynomial_order)
+    self._quadrature_points, self._quadrature_weights = roots_sh_legendre(self._polynomial_order+1)
     
   
   @property
@@ -551,8 +550,7 @@ class GaussLegendreBasis(LagrangeBasisWithDiagonalMassMatrix):
     https://en.wikipedia.org/wiki/Legendre_polynomials#Shifted_Legendre_polynomials
     
     """
-    roots, weights = scipy.special.roots_sh_legendre(self._polynomial_order+1)
-    return roots    
+    return self._quadrature_points
     
   
   @property
@@ -579,8 +577,7 @@ class GaussLegendreBasis(LagrangeBasisWithDiagonalMassMatrix):
     https://en.wikipedia.org/wiki/Legendre_polynomials#Shifted_Legendre_polynomials
     
     """
-    roots, weights = scipy.special.roots_sh_legendre(self._polynomial_order+1)
-    return weights
+    return self._quadrature_weights
 
 
 
@@ -600,8 +597,9 @@ class GaussLobattoBasisWithLumpedDiagonalBasis(LagrangeBasisWithDiagonalMassMatr
     
   @property
   def quadrature_points(self):
-    assert False, "to be implemented by subclass"
-    raise Exception( "check implementation. See class comment")
-    x,w = quadrature.gauss_lobatto(self.dofs_per_axis,PREC_DIGITS) 
-    return self._transform_and_sort_points_and_weights(x,w)
+    raise NotImplementedError("Gauss-Lobatto support points are not implemented for this basis variant.")
 
+
+  @property
+  def quadrature_weights(self):
+    raise NotImplementedError("Gauss-Lobatto weights are not implemented for this basis variant.")

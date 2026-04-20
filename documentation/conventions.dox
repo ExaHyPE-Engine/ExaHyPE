@@ -134,14 +134,14 @@ The usage is straightforward. The script can be found in ``Peano/format.py``.
 To format all files that differ from files on the main ``p4`` branch, simply run
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-python3 format.py
+python3 python/postprocessing/format.py
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you want to compare your local branch to a different branch than ``p4``, you can
 specify that using the ``-b`` or ``--branch`` flag, e.g.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-python3 format.py --branch branch-I-want-to-merge-into
+python3 python/postprocessing/format.py --branch branch-I-want-to-merge-into
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Note that the format script detects potential files which might need formatting using
@@ -151,7 +151,7 @@ If you prefer to run the formatting script on individual files only, you can spe
 them using the ``--files`` flag:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-python3 format.py --files myfile1.py myCppFile.cpp myCppHeaderFile.h
+python3 python/postprocessing/format.py --files myfile1.py myCppFile.cpp myCppHeaderFile.h
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``--files`` flag doesn't check whether the files you provide are traced by git, and
@@ -182,4 +182,3 @@ helpful instructions.
 
 
  */
-
