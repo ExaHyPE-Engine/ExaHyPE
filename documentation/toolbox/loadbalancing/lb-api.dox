@@ -45,19 +45,21 @@ The `SplitTrees` module (`src/toolbox/loadbalancing/api/Strategies/SplitTrees.py
 The splitting phase consists of up to three sequential stages applied within `split_tree()`:
 
 ```python
-split_tree(peano_tree, number_of_splits, traversal="bfs"):
-  # Stage I:            distribute leaf nodes across subtrees
-  # Stage II:           bottom-up propagation (_propagate_bottom_up)
-  # Stage III (opt.):   hierarchical optimisation (_optimize_split_hierarchy)  # TBD
+split_tree(peano_tree, number_of_splits, traversal="bfs"|"dfs", optimize_hierarchy=False):
+  # Stage I:            distribute leaf nodes across subtrees (`_distribute_leaves_bfs()` or `_distribute_leaves_dfs()`)
+  # Stage II:           bottom-up propagation (`_propagate_bottom_up()`)
+  # Stage III (opt.):   hierarchical optimisation (`_optimize_split_hierarchy()`)  # TBD
 ```
 
 | Stage | Function | Objective | Complexity |
 |-------|----------|-----------|------------|
-| **I** | `split_tree()` (core loop) | Distribute leaves across subtrees | O(levels × cells) |
-| **II** | `_propagate_bottom_up()` | Propagate subtree ids bottom-up | O(levels × cells) single pass |
-| **III** | `_optimize_split_hierarchy()` | Minimise split operation count | O(levels² × trees) iterative |
+| **I** | `_distribute_leaves_bfs()` or `_distribute_leaves_dfs()` | Distribute leaves across subtrees | O(Ncells) |
+| **II** | `_propagate_bottom_up()` | Propagate subtree ids bottom-up | O(Ncells) single pass |
+| **III** | `_optimize_split_hierarchy()` | Minimise split operation count | TBD (not implemented yet) |
 
 _Stage I_ and _Stage II_ are always executed. _Stage III_ is optional and has not yet been implemented. @todo
+
+Here, `Ncells` denotes the total number of represented cells across all stored levels. For _Stage I_, BFS and DFS traversal have the same asymptotic complexity O(Ncells); they differ only in visitation order and constant-factor overhead.
 
 ### Stage I: Leaf Distribution
 

@@ -108,7 +108,12 @@ def split_finest_level(peano_tree: Tree, number_of_splits: int) -> Tree: # might
     
     return peano_tree
 
-def split_tree(peano_tree: Tree, number_of_splits: int, traversal: str = "bfs") -> Tree:
+def split_tree(
+    peano_tree: Tree,
+    number_of_splits: int,
+    traversal: str = "bfs",
+    optimize_hierarchy: bool = False,
+) -> Tree:
     """
     Split a tree using a staged load-balancing workflow.
 
@@ -124,12 +129,14 @@ def split_tree(peano_tree: Tree, number_of_splits: int, traversal: str = "bfs") 
         traversal: Stage I traversal strategy. Supported values:
             - "bfs": level-order leaf collection (default)
             - "dfs": depth-first leaf collection
+        optimize_hierarchy: If True, request Stage III hierarchical optimisation.
+            Stage III is currently not implemented and will be skipped.
 
     Returns:
         The same tree instance with updated subtree assignments.
 
     Notes:
-        - Stage III is not implemented yet and is currently disabled.
+        - Stage III is optional and currently not implemented.
         - If number_of_splits <= 0, the tree is returned unchanged.
     """
     if number_of_splits <= 0:
@@ -155,7 +162,9 @@ def split_tree(peano_tree: Tree, number_of_splits: int, traversal: str = "bfs") 
         return peano_tree
 
     _propagate_bottom_up(peano_tree)
-    # _optimize_hierarchy(peano_tree)  # Stage III (TBD)
+
+    if optimize_hierarchy:
+        print("Stage III requested, but _optimize_hierarchy() is not implemented yet. Skipping.")
 
     # Update tree metadata after all stages
     peano_tree._subtree_count = number_of_splits + 1
