@@ -118,11 +118,11 @@ Total: **2 operations and 5 cell updates**.
 ```
 Total: **1 operation and 1 cell update**.
 
-\par Suboptimal splitting:
+\par Incorrect Stage II application (illustrative):
 
-@image html tree1_stages1-2_subopt_combined.png
+@image html tree1_stages1-2_wrong_combined.png
 
-If propagation is stopped one level too early in _Stage II_, `L1C` is not promoted even though all its children are already in Subtree 1. The result is a Level-2 split that introduces `L2C1`, `L2C2`, and `L2C3` instead of a single Level-1 introduction via `L1C`. The leaf-to-subtree mapping is unchanged, but bookkeeping is worse (3 introduced cells instead of 1), making this outcome suboptimal.
+If propagation is stopped one level too early in _Stage II_, `L1C` is not promoted even though all its children are already in Subtree 1. The result is a Level-2 split that introduces `L2C1`, `L2C2`, and `L2C3` instead of a single Level-1 introduction via `L1C`. The leaf-to-subtree mapping is unchanged, but bookkeeping is worse (3 introduced cells instead of 1), so this illustrates an incorrect Stage II application.
 
 \par Scenario 2: Multiple nodes at Level 2 have children
 
@@ -147,9 +147,9 @@ Total: **2 operations and 7 cell updates**.
 ```
 Total: **1 operation and 5 cell updates**.
 
-\par Suboptimal splitting:
+\par Incorrect Stage II application (illustrative):
 
-@image html tree2_stages1-2_subopt_combined.png
+@image html tree2_stages1-2_wrong_combined.png
 
 If propagation continues one level further than desired, `L1C` is promoted to Subtree 1 because all of its children are already green. However, `L1B` remains mixed, so the cells in Subtree 1 under `L1B` still require a Level-2 introduction. This creates two split levels (Level 1 and Level 2) instead of a single Level-2 split, i.e. more split operations for the same final leaf assignment.
 
@@ -186,6 +186,10 @@ Total: **5 operations and 18 cell updates**.
 Total: **5 operations and 10 cell updates**.
 
 ### Stage III (optional): Hierarchical Optimisation
+
+\par Scenario 3: A multi-way split across 4 subtrees after _Stage III_
+
+@image html tree3_stages2-3_combined.png
 
 @todo [Stage III] Finalise hierarchical optimisation semantics and update this section once the implementation is available.
 
