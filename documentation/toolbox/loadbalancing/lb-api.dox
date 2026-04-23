@@ -68,8 +68,8 @@ Here, `Ncells` denotes the total number of represented cells across all stored l
 The core loop of `split_tree()` identifies all leaf nodes across every refinement level and distributes them as evenly as possible across the requested number of subtrees. A node is a leaf if it resides on the finest level or has no children on the next level. After _Stage I_, only leaf nodes carry updated subtree assignments; all non-leaf nodes still belong to their original subtree and are updated by _Stage II_.
 
 Stage I now supports two traversal modes:
-- `traversal="bfs"` uses `_distribute_leaves_bfs()` and visits leaves in level-order.
-- `traversal="dfs"` uses `_distribute_leaves_dfs()` and visits leaves in depth-first order.
+- `traversal="bfs"` uses `_distribute_leaves_bfs()` and visits leaves in level-order ("Breadth First Search" variant).
+- `traversal="dfs"` uses `_distribute_leaves_dfs()` and visits leaves in depth-first order ("Depth First Search" variant).
 
 Both variants preserve the same balancing policy; they differ only in the order in which eligible leaves are discovered and therefore assigned to target subtrees.
 
