@@ -108,58 +108,107 @@ def split_finest_level(peano_tree: Tree, number_of_splits: int) -> Tree: # might
     
     return peano_tree
 
-def split_tree(peano_tree: Tree, number_of_splits: int) -> Tree:
+def split_tree(
+    peano_tree: Tree,
+    number_of_splits: int,
+    traversal: str = "bfs",
+    optimize_hierarchy: bool = False,
+) -> Tree:
     """
-    Split a tree into the specified number of splits by distributing ALL leaf nodes on the lowest admissible level.
-    This includes leaves at the finest level AND leaves at coarser levels (nodes that weren't refined further).
-    
-    ## Algorithm Overview
-    
-    The splitting algorithm operates in two stages:
-    1. **Leaf Distribution**: Identify and redistribute all leaf nodes across subtrees
-    2. **Topology Preservation**: Update non-leaf nodes to maintain tree hierarchy constraints
-    
-    ## Leaf Node Identification
-    
-    A node is considered a leaf if:
-    - It exists at the finest level (always a leaf), OR
-    - It exists at a coarser level AND has no children in the next level
-    
-    ## Distribution Strategy
-    
-    - Uses round-robin assignment to ensure balanced distribution
-    - Handles remainder nodes by assigning extras to first subtrees
-    - Preserves spatial ordering through sequential array traversal
-    
-    ## Technical Constraints
-    
-    - Maintains Peano's tree topology constraint during Stage II
-    - Only redistributes nodes originally in subtree 0
-    - Preserves node weights (existence flags) throughout
-    
+    Split a tree using a staged load-balancing workflow.
+
+    Stages:
+    1. _distribute_leaves_bfs() or _distribute_leaves_dfs(): Redistribute leaf nodes across subtrees.
+    2. _propagate_bottom_up(): Propagate subtree ownership to internal nodes.
+    3. _optimize_hierarchy() (optional, TBD): Further reduce split complexity.
+
     Args:
-        peano_tree: Tree object to split
-        number_of_splits: Number of subtrees to create (total subtrees = original + number_of_splits)
-        
+        peano_tree: Tree to split (modified in place).
+        number_of_splits: Number of additional subtrees to create.
+            Total subtree count after splitting is number_of_splits + 1.
+        traversal: Stage I traversal strategy. Supported values:
+            - "bfs": level-order leaf collection (default)
+            - "dfs": depth-first leaf collection
+        optimize_hierarchy: If True, request Stage III hierarchical optimisation.
+            Stage III is currently not implemented and will be skipped.
+
     Returns:
-        Modified Tree object with applied splits
-        
-    Note:
-        This function modifies the input tree in-place and calls _update_non_leaf_assignments()
-        to ensure tree topology constraints are satisfied.
+        The same tree instance with updated subtree assignments.
+
+    Notes:
+        - Stage III is optional and currently not implemented.
+        - If number_of_splits <= 0, the tree is returned unchanged.
     """
     if number_of_splits <= 0:
-        print(f"No splitting needed (number_of_splits = {number_of_splits}).")
+        print(f"No splitting requested (number_of_splits = {number_of_splits}).")
         return peano_tree
-        
-    print(f"Splitting tree '{peano_tree._name}' into {number_of_splits + 1} subtrees using ALL leaves")
-    
+
+    print(
+        f"Splitting tree '{peano_tree._name}' into "
+        f"{number_of_splits + 1} subtrees (staged workflow)"
+    )
+
+    traversal_mode = traversal.lower()
+    if traversal_mode == "bfs":
+        has_leaves_to_split, moved_nodes = _distribute_leaves_bfs(peano_tree, number_of_splits)
+    elif traversal_mode == "dfs":
+        has_leaves_to_split, moved_nodes = _distribute_leaves_dfs(peano_tree, number_of_splits)
+    else:
+        raise ValueError(
+            f"Unsupported traversal '{traversal}'. Use 'bfs' or 'dfs'."
+        )
+
+    if not has_leaves_to_split:
+        return peano_tree
+
+    _propagate_bottom_up(peano_tree)
+
+    if optimize_hierarchy:
+        print("Stage III requested, but _optimize_hierarchy() is not implemented yet. Skipping.")
+
+    # Update tree metadata after all stages
+    peano_tree._subtree_count = number_of_splits + 1
+    peano_tree.update_split_pattern()
+
+    print(f"Splitting complete. Subtree count: {peano_tree._subtree_count}")
+    print(f"Leaf distribution: {moved_nodes}")
+    print(f"Split pattern: {peano_tree._split_pattern}")
+
+    return peano_tree
+
+
+def _distribute_leaves_bfs(peano_tree: Tree, number_of_splits: int) -> tuple[bool, list[int]]:
+    """
+    Stage I BFS variant of the staged load-balancing workflow.
+
+    Collect leaf cells currently assigned to subtree 0 and redistribute them
+    across `number_of_splits + 1` subtrees as evenly as possible while
+    preserving level-order traversal.
+
+    Leaf definition:
+    - Any existing cell on the finest level, or
+    - Any existing coarser-level cell with no children on the next level.
+
+    Args:
+        peano_tree: Tree to update (modified in place).
+        number_of_splits: Number of additional subtrees to create.
+
+    Returns:
+        A tuple `(has_leaves_to_split, moved_nodes_per_subtree)`:
+        - `has_leaves_to_split`: `False` if no eligible leaves were found.
+        - `moved_nodes_per_subtree`: Per-subtree counts of reassigned leaves.
+
+    Notes:
+        - Only leaves in subtree 0 are redistributed.
+        - Node existence flags (`weight`) are preserved.
+        - This stage does not update non-leaf assignments.
+    """
     # Collect all leaf nodes (at all levels) that belong to subtree 0
     leaf_nodes = []
-    
+
     for level in range(peano_tree._max_level):
         size = 3**(level + 1)
-        
+
         if peano_tree._dimension == 2:
             for a in range(size):
                 for b in range(size):
@@ -180,7 +229,7 @@ def split_tree(peano_tree: Tree, number_of_splits: int) -> Tree:
                         
                         if is_leaf:
                             leaf_nodes.append((level, a, b))
-                            
+
         elif peano_tree._dimension == 3:
             for a in range(size):
                 for b in range(size):
@@ -202,34 +251,34 @@ def split_tree(peano_tree: Tree, number_of_splits: int) -> Tree:
                             
                             if is_leaf:
                                 leaf_nodes.append((level, a, b, c))
-    
+
     total_leaves = len(leaf_nodes)
-    
+
     if total_leaves == 0:
         print("No leaf nodes found in subtree 0 to split.")
-        return peano_tree
-    
+        return (False, [])
+
     print(f"Found {total_leaves} leaf nodes across all levels to distribute")
-    
+
     # Calculate how many leaves each subtree should get for balanced distribution
     leaves_per_subtree = total_leaves // (number_of_splits + 1)
     remaining_leaves = total_leaves % (number_of_splits + 1)
-    
+
     print(f"Target distribution: {leaves_per_subtree} leaves per subtree, {remaining_leaves} extra leaves")
-    
+
     # Create distribution plan
     distribution = []
     for i in range(number_of_splits + 1):
         target_count = leaves_per_subtree + (1 if i < remaining_leaves else 0)
         distribution.append(target_count)
-    
+
     print(f"Distribution plan: {distribution}")
-    
+
     # Apply the redistribution to leaf nodes
     current_subtree = 0
     current_count = 0
     moved_nodes = [0] * (number_of_splits + 1)  # Track actual moves
-    
+
     for leaf_coords in leaf_nodes:
         if peano_tree._dimension == 2:
             level, a, b = leaf_coords
@@ -244,68 +293,215 @@ def split_tree(peano_tree: Tree, number_of_splits: int) -> Tree:
             peano_tree._tree_arrays[level][a][b][c] = (1, current_subtree)
             moved_nodes[current_subtree] += 1
             current_count += 1
-        
+
         # Check if current subtree is full, move to next
         if current_count >= distribution[current_subtree] and current_subtree < number_of_splits:
             current_subtree += 1
             current_count = 0
-    
-    # Update non-leaf nodes to follow the tree topology constraint:
-    # If the parent and at least one child of a node are both associated to the same subtree,
-    # then this non-leaf node must be associated to that subtree as well
-    _update_non_leaf_assignments(peano_tree)
-    # _optimize_split_hierarchy(peano_tree)  # TBD: further optimize hierarchy
-    
-    # Update tree metadata after all splits
-    peano_tree._subtree_count = number_of_splits + 1
-    peano_tree.update_split_pattern()
-    
-    print(f"Leaf splitting completed. New subtree count: {peano_tree._subtree_count}")
-    print(f"Actual distribution: {moved_nodes}")
-    print(f"New split pattern: {peano_tree._split_pattern}")
-    
-    return peano_tree
+
+    return (True, moved_nodes)
 
 
-def _update_non_leaf_assignments(peano_tree: Tree) -> None:
+def _distribute_leaves_dfs(peano_tree: Tree, number_of_splits: int) -> tuple[bool, list[int]]:
     """
-    Update non-leaf node assignments to follow tree topology constraints.
+    Stage I variant using depth-first traversal order.
 
-    ## Algorithm Details
-    
-    This function implements Peano's fundamental tree topology constraint:
-    "If all children of a node belong to the same subtree, the parent should also belong to that subtree."
-    
-    ## Processing Order
-    
-    - Processes levels from finest to coarsest (bottom-up)
-    - Skips the finest level (contains only leaves)
-    - Uses 3:1 refinement ratio for child-parent relationships
-    
-    ## Parent-Child Mapping
-    
-    For a parent node at coordinates (a,b) on level L:
-    - Children are located at (3*a to 3*(a+1)-1, 3*b to 3*(b+1)-1) on level L+1
-    - For 3D: extends to (3*c to 3*(c+1)-1) in third dimension
-    
-    ## Assignment Logic
-    
-    - Collects subtree IDs of all existing children
-    - If all children belong to same subtree → assign parent to that subtree
-    - If children span multiple subtrees → parent assignment unchanged
-    
-    ## Constraints Preserved
-    
-    - Only modifies nodes where ALL children have identical subtree assignments
-    - Respects existing node weights (never creates or destroys nodes)
-    - Maintains spatial relationships within tree hierarchy
-    
+    Collect leaf cells currently assigned to subtree 0 and redistribute them
+    across `number_of_splits + 1` subtrees as evenly as possible.
+    The redistribution logic is identical to `_distribute_leaves_bfs()`, but leaf
+    discovery order follows DFS instead of level-order scanning.
+
     Args:
-        peano_tree: Tree object to update
-        
-    Note:
-        This function is called automatically by split_tree() and should generally
-        not be called directly unless implementing custom splitting strategies.
+        peano_tree: Tree to update (modified in place).
+        number_of_splits: Number of additional subtrees to create.
+
+    Returns:
+        A tuple `(has_leaves_to_split, moved_nodes_per_subtree)`:
+        - `has_leaves_to_split`: `False` if no eligible leaves were found.
+        - `moved_nodes_per_subtree`: Per-subtree counts of reassigned leaves.
+    """
+    leaf_nodes = []
+    visited = set()
+    max_level = peano_tree._max_level
+
+    def _node_exists(level: int, a: int, b: int, c: int | None = None) -> bool:
+        if peano_tree._dimension == 2:
+            return peano_tree._tree_arrays[level][a][b][0] == 1
+        return peano_tree._tree_arrays[level][a][b][c][0] == 1
+
+    def _node_subtree(level: int, a: int, b: int, c: int | None = None) -> int:
+        if peano_tree._dimension == 2:
+            return peano_tree._tree_arrays[level][a][b][1]
+        return peano_tree._tree_arrays[level][a][b][c][1]
+
+    def _children_2d(level: int, a: int, b: int) -> tuple[bool, list[tuple[int, int]]]:
+        if level == max_level - 1:
+            return (False, [])
+
+        child_size = 3 ** (level + 2)
+        children = []
+        has_existing_children = False
+        for child_a in range(3 * a, min(3 * (a + 1), child_size)):
+            for child_b in range(3 * b, min(3 * (b + 1), child_size)):
+                if _node_exists(level + 1, child_a, child_b):
+                    has_existing_children = True
+                    if _node_subtree(level + 1, child_a, child_b) == 0:
+                        children.append((child_a, child_b))
+
+        return (has_existing_children, children)
+
+    def _children_3d(level: int, a: int, b: int, c: int) -> tuple[bool, list[tuple[int, int, int]]]:
+        if level == max_level - 1:
+            return (False, [])
+
+        child_size = 3 ** (level + 2)
+        children = []
+        has_existing_children = False
+        for child_a in range(3 * a, min(3 * (a + 1), child_size)):
+            for child_b in range(3 * b, min(3 * (b + 1), child_size)):
+                for child_c in range(3 * c, min(3 * (c + 1), child_size)):
+                    if _node_exists(level + 1, child_a, child_b, child_c):
+                        has_existing_children = True
+                        if _node_subtree(level + 1, child_a, child_b, child_c) == 0:
+                            children.append((child_a, child_b, child_c))
+
+        return (has_existing_children, children)
+
+    def _dfs_2d(level: int, a: int, b: int) -> None:
+        key = (level, a, b)
+        if key in visited:
+            return
+        visited.add(key)
+
+        has_existing_children, children = _children_2d(level, a, b)
+        if not has_existing_children:
+            leaf_nodes.append((level, a, b))
+            return
+
+        for child_a, child_b in children:
+            _dfs_2d(level + 1, child_a, child_b)
+
+    def _dfs_3d(level: int, a: int, b: int, c: int) -> None:
+        key = (level, a, b, c)
+        if key in visited:
+            return
+        visited.add(key)
+
+        has_existing_children, children = _children_3d(level, a, b, c)
+        if not has_existing_children:
+            leaf_nodes.append((level, a, b, c))
+            return
+
+        for child_a, child_b, child_c in children:
+            _dfs_3d(level + 1, child_a, child_b, child_c)
+
+    # Start DFS from all subtree-0 nodes that are roots of subtree-0 components.
+    # A component root is a level-0 node or a node whose parent is not in subtree 0.
+    for level in range(max_level):
+        size = 3 ** (level + 1)
+
+        if peano_tree._dimension == 2:
+            for a in range(size):
+                for b in range(size):
+                    if not _node_exists(level, a, b):
+                        continue
+                    if _node_subtree(level, a, b) != 0:
+                        continue
+
+                    is_component_root = level == 0
+                    if not is_component_root:
+                        pa, pb = a // 3, b // 3
+                        parent_exists = _node_exists(level - 1, pa, pb)
+                        parent_subtree0 = parent_exists and _node_subtree(level - 1, pa, pb) == 0
+                        is_component_root = not parent_subtree0
+
+                    if is_component_root:
+                        _dfs_2d(level, a, b)
+
+        elif peano_tree._dimension == 3:
+            for a in range(size):
+                for b in range(size):
+                    for c in range(size):
+                        if not _node_exists(level, a, b, c):
+                            continue
+                        if _node_subtree(level, a, b, c) != 0:
+                            continue
+
+                        is_component_root = level == 0
+                        if not is_component_root:
+                            pa, pb, pc = a // 3, b // 3, c // 3
+                            parent_exists = _node_exists(level - 1, pa, pb, pc)
+                            parent_subtree0 = (
+                                parent_exists and _node_subtree(level - 1, pa, pb, pc) == 0
+                            )
+                            is_component_root = not parent_subtree0
+
+                        if is_component_root:
+                            _dfs_3d(level, a, b, c)
+
+    total_leaves = len(leaf_nodes)
+
+    if total_leaves == 0:
+        print("No leaf nodes found in subtree 0 to split.")
+        return (False, [])
+
+    print(f"Found {total_leaves} leaf nodes across all levels to distribute (DFS order)")
+
+    leaves_per_subtree = total_leaves // (number_of_splits + 1)
+    remaining_leaves = total_leaves % (number_of_splits + 1)
+
+    print(f"Target distribution: {leaves_per_subtree} leaves per subtree, {remaining_leaves} extra leaves")
+
+    distribution = []
+    for i in range(number_of_splits + 1):
+        target_count = leaves_per_subtree + (1 if i < remaining_leaves else 0)
+        distribution.append(target_count)
+
+    print(f"Distribution plan: {distribution}")
+
+    current_subtree = 0
+    current_count = 0
+    moved_nodes = [0] * (number_of_splits + 1)
+
+    for leaf_coords in leaf_nodes:
+        if peano_tree._dimension == 2:
+            level, a, b = leaf_coords
+            peano_tree._tree_arrays[level][a][b] = (1, current_subtree)
+            moved_nodes[current_subtree] += 1
+            current_count += 1
+
+        elif peano_tree._dimension == 3:
+            level, a, b, c = leaf_coords
+            peano_tree._tree_arrays[level][a][b][c] = (1, current_subtree)
+            moved_nodes[current_subtree] += 1
+            current_count += 1
+
+        if current_count >= distribution[current_subtree] and current_subtree < number_of_splits:
+            current_subtree += 1
+            current_count = 0
+
+    return (True, moved_nodes)
+
+
+def _propagate_bottom_up(peano_tree: Tree) -> None:
+    """
+    Stage II of the staged load-balancing workflow.
+
+    Propagate subtree assignments from leaves to internal nodes in a bottom-up pass.
+    For each existing non-leaf node, if all existing children belong to the same
+    subtree, assign the parent to that subtree.
+
+    Args:
+        peano_tree: Tree to update (modified in place).
+
+    Returns:
+        None.
+
+    Notes:
+        - Operates from finest internal level to root.
+        - Preserves node existence flags (`weight`).
+        - Parents with mixed-child subtree assignments remain unchanged.
+        - Intended to run after Stage I (`_distribute_leaves_bfs()` or `_distribute_leaves_dfs()`).
     """
     print("Updating non-leaf node assignments to maintain tree topology...")
     

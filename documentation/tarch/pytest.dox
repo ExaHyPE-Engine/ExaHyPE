@@ -22,7 +22,7 @@ To keep feedback fast and robust, we separate:
 - **C++ unit tests** (Peano's internal framework, see \ref tarch_tests)  
   executed via `make check` (Automake `TESTS` list).
 - **Python unit tests** (pytest)  
-  executed via `python3 -m pytest` and not coupled to autotools.
+  executed via `python3 -m pytest -q` and not coupled to autotools.
 - **Python integration tests** (pytest marker `integration`)  
   optional/explicit because they may require MPI, toolchains, PETSc, etc.
 
@@ -44,21 +44,17 @@ without spawning builds.
 Pytest configuration
 --------------------
 
-Configure pytest centrally in [pyproject.toml](../../pyproject.toml):
+Configure pytest centrally in [pytest.ini](../../pytest.ini):
 
 - default run discovers tests in `tests/unit`
-- integration tests are run only with `-m integration`
+- Python test discovery is limited to files matching `test_*.py`
 
 Example configuration:
 
-\code{.toml}
-[tool.pytest.ini_options]
-testpaths = ["tests/unit"]
-python_files = ["test_*.py"]
-addopts = "-ra"
-markers = [
-  "integration: slow tests that generate/build/run Peano projects",
-]
+\code{.ini}
+[pytest]
+testpaths = tests/unit
+python_files = test_*.py
 \endcode
 
 Local execution
@@ -69,8 +65,12 @@ After setting up a Python environment with `pytest` installed:
 Run only Python *unit* tests:
 
 \code{.sh}
-python3 -m pytest
+python3 -m pytest -q
 \endcode
+
+Because [pytest.ini](../../pytest.ini) sets `testpaths = tests/unit`, this
+command automatically discovers and runs all matching Python test scripts under
+`tests/unit/` from the repository root.
 
 Run integration tests explicitly:
 
@@ -92,7 +92,7 @@ export PYTHONPATH=/path/to/Peano/python
 A convenient pattern for pytest runs is:
 
 \code{.sh}
-PYTHONPATH="$PWD/python" python3 -m pytest
+PYTHONPATH="$PWD/python" python3 -m pytest -q
 \endcode
 
 What to test (recommendation)
@@ -110,7 +110,7 @@ What to test (recommendation)
 - short runs with tiny meshes/end times
 - checks that produced output files exist
 
-Mark these with `@pytest.mark.integration` to keep them out of default runs.
+Default pytest runs are limited to `tests/unit` via `pytest.ini`. Future integration tests can be placed under `tests/integration`; if they are marked with `@pytest.mark.integration`, register that marker in `pytest.ini`.
 
 Relation to Peano's C++ unit test architecture
 ----------------------------------------------

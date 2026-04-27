@@ -11,7 +11,7 @@ import Strategies.SplitTrees as split_strategy
 def test_bottom_up_propagation_promotes_parent_if_all_children_same_subtree_2d():
     """
     Stage II ("Bottom-Up Propagation") invariant test for
-    [`Strategies.SplitTrees._update_non_leaf_assignments`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py).
+    [`Strategies.SplitTrees._propagate_bottom_up`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py).
 
     If all existing children of a parent belong to the same subtree, then after
     Stage II the parent has to be assigned to that subtree as well.
@@ -40,7 +40,7 @@ def test_bottom_up_propagation_promotes_parent_if_all_children_same_subtree_2d()
     tree._tree_arrays[child_level][0][2] = (1, 0)  # keep mixed
 
     # Act: run Stage II only
-    split_strategy._update_non_leaf_assignments(tree)
+    split_strategy._propagate_bottom_up(tree)
 
     # Assert: uniform-children parent is promoted
     assert tree._tree_arrays[parent_level][parent_a][parent_b] == (1, 1)
