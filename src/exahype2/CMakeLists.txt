@@ -17,12 +17,6 @@ set(SOURCES
   UnitTests.cpp
   tests/EnclaveBookkeepingTest.cpp
 
-  enumerator/AoSLexicographicEnumerator.cpp
-  enumerator/AoSoALexicographicEnumerator.cpp
-  enumerator/FaceAoSLexicographicEnumerator.cpp
-  enumerator/SingleDoFEnumerator.cpp
-  enumerator/SoALexicographicEnumerator.cpp
-
   dg/BoundaryConditions.cpp
   dg/CellIntegral.cpp
   dg/DGUtils.cpp
@@ -32,9 +26,6 @@ set(SOURCES
   dg/tests/DGUtilsTest.cpp
   dg/tests/RiemannTest.cpp
   dg/tests/TestUtils.cpp
-  dg/average/Average.cpp
-  dg/fluxaverage/FluxAverage.cpp
-  dg/laxfriedrichs/LaxFriedrichs.cpp
   dg/rusanov/Rusanov.cpp
   dg/rusanov/tests/RiemannTest.cpp
 

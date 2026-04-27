@@ -1,7 +1,6 @@
-#include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
-
 #include "peano4/utils/Loop.h"
 #include "Rusanov.h"
+#include "toolbox/blockstructured/Enumeration.h"
 
 void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
   [[maybe_unused]] ::exahype2::dg::Flux                         flux,
@@ -21,11 +20,11 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
   [[maybe_unused]] const double* NOALIAS                   projectedValues,
   [[maybe_unused]] double* NOALIAS                         solution
 ) {
+  const int normal = faceNumber % DIMENSIONS;
+  const int inputStride = unknowns + auxiliaryVariables;
+  const int outputStride = unknowns;
   tarch::la::Vector<DIMENSIONS,double> faceOffset = faceCentre - 0.5 * cellSize;
-  faceOffset(faceNumber%DIMENSIONS) += 0.5 * cellSize(faceNumber%DIMENSIONS);
-
-  exahype2::enumerator::FaceAoSLexicographicEnumerator inputEnumerator (faceNumber,order+1,1,unknowns,auxiliaryVariables);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator outputEnumerator(faceNumber,order+1,1,unknowns,0);
+  faceOffset(normal) += 0.5 * cellSize(normal);
 
   double* deltaQ          = new double[unknowns+auxiliaryVariables];
   double* averageQ        = new double[unknowns+auxiliaryVariables];
@@ -43,60 +42,68 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
     tarch::la::Vector<DIMENSIONS,int>    leftDoF  = dof;
     tarch::la::Vector<DIMENSIONS,int>    rightDoF = dof;
 
-    leftDoF(faceNumber % DIMENSIONS)  = 0;
-    rightDoF(faceNumber % DIMENSIONS) = 1;
+    leftDoF(normal)  = 0;
+    rightDoF(normal) = 1;
+    const int leftInputOffset
+      = toolbox::blockstructured::serialiseVoxelIndexInOverlap(leftDoF, order + 1, 1, normal) * inputStride;
+    const int rightInputOffset
+      = toolbox::blockstructured::serialiseVoxelIndexInOverlap(rightDoF, order + 1, 1, normal) * inputStride;
+    const int leftOutputOffset
+      = toolbox::blockstructured::serialiseVoxelIndexInOverlap(leftDoF, order + 1, 1, normal) * outputStride;
+    const int rightOutputOffset
+      = toolbox::blockstructured::serialiseVoxelIndexInOverlap(rightDoF, order + 1, 1, normal) * outputStride;
 
     //initialize solution to 0
     for(int var=0; var<unknowns; var++){
-      solution[ outputEnumerator(leftDoF,var)  ] = 0.0;
-      solution[ outputEnumerator(rightDoF,var) ] = 0.0;
+      solution[leftOutputOffset + var] = 0.0;
+      solution[rightOutputOffset + var] = 0.0;
     }
 
     for(int var=0; var<unknowns+auxiliaryVariables; var++){
-      deltaQ[ var ] = projectedValues[ inputEnumerator(rightDoF,var) ]
-                    - projectedValues[ inputEnumerator(leftDoF,var) ];
-      averageQ[ var ] = 0.5 * projectedValues[ inputEnumerator(rightDoF,var) ]
-                      + 0.5 * projectedValues[ inputEnumerator(leftDoF,var) ];
+      deltaQ[var] = projectedValues[rightInputOffset + var]
+                  - projectedValues[leftInputOffset + var];
+      averageQ[var] = 0.5 * projectedValues[rightInputOffset + var]
+                    + 0.5 * projectedValues[leftInputOffset + var];
     }
 
     double leftEigenvalue = maxEigenvalue(
-                    projectedValues + inputEnumerator(leftDoF,0),
+                    projectedValues + leftInputOffset,
                     x,
                     t,
                     dt,
-                    faceNumber%DIMENSIONS );
+                    normal );
 
     double rightEigenvalue = maxEigenvalue(
-                    projectedValues + inputEnumerator(rightDoF,0),
+                    projectedValues + rightInputOffset,
                     x,
                     t,
                     dt,
-                    faceNumber%DIMENSIONS );
+                    normal );
 
     double maxEigenvalue = std::max(leftEigenvalue,rightEigenvalue);
 
     for(int var=0; var<unknowns; var++){
-      solution[ outputEnumerator(leftDoF,var)  ] -= 0.5 * maxEigenvalue * deltaQ[var];
-      solution[ outputEnumerator(rightDoF,var) ] -= 0.5 * maxEigenvalue * deltaQ[var];
+      solution[leftOutputOffset + var] -= 0.5 * maxEigenvalue * deltaQ[var];
+      solution[rightOutputOffset + var] -= 0.5 * maxEigenvalue * deltaQ[var];
     }
 
     if(evaluateFlux){
-      flux( projectedValues + inputEnumerator( leftDoF, 0 ),
+      flux( projectedValues + leftInputOffset,
             x,
             t,
             dt,
-            faceNumber%DIMENSIONS, //normal
+            normal,
             fluxValuesLeft);
-      flux( projectedValues + inputEnumerator (rightDoF, 0),
+      flux( projectedValues + rightInputOffset,
             x,
             t,
             dt,
-            faceNumber%DIMENSIONS, //normal
+            normal,
             fluxValuesRight);
 
       for(int var=0; var<unknowns; var++){
-        solution[ outputEnumerator(leftDoF,var)  ] += 0.5 * (fluxValuesLeft[var]+fluxValuesRight[var]);
-        solution[ outputEnumerator(rightDoF,var) ] += 0.5 * (fluxValuesLeft[var]+fluxValuesRight[var]);
+        solution[leftOutputOffset + var] += 0.5 * (fluxValuesLeft[var]+fluxValuesRight[var]);
+        solution[rightOutputOffset + var] += 0.5 * (fluxValuesLeft[var]+fluxValuesRight[var]);
       }
     }
 
@@ -107,12 +114,12 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
           x,
           t,
           dt,
-          faceNumber%DIMENSIONS, //normal
+          normal,
           ncpValues);
 
       for (int var=0; var<unknowns; var++) {
-        solution[ outputEnumerator(leftDoF,var)  ] += 0.5 * ncpValues[var];
-        solution[ outputEnumerator(rightDoF,var) ] -= 0.5 * ncpValues[var];
+        solution[leftOutputOffset + var] += 0.5 * ncpValues[var];
+        solution[rightOutputOffset + var] -= 0.5 * ncpValues[var];
       }
     }
   }

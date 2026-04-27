@@ -56,14 +56,20 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
   if ({{PREDICATE}}) {
     {{COMPUTE_TIME_STEP_SIZE}}
 
-    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1,            {{ORDER}}+1, 0, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
-    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{ORDER}}+1, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
+    #if DIMENSIONS==2
+    constexpr int numberOfDoFsPerCell = ({{ORDER}}+1) * ({{ORDER}}+1);
+    #else
+    constexpr int numberOfDoFsPerCell = ({{ORDER}}+1) * ({{ORDER}}+1) * ({{ORDER}}+1);
+    #endif
+    constexpr int valuesPerDoF = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     
     dfor( dof, {{ORDER}}+1 ) {
+      const int dofSerialised = peano4::utils::dLinearised(dof, {{ORDER}}+1);
+      const int solutionOffset = dofSerialised * valuesPerDoF;
       for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
         {% for WEIGHT_NO in range(0,WEIGHTS|length) %}
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] += 
-          timeStepSize * {{WEIGHTS[WEIGHT_NO]}} * fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[ solutionOffset + unknown ] +=
+          timeStepSize * {{WEIGHTS[WEIGHT_NO]}} * fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()[ ({{WEIGHT_NO}} * numberOfDoFsPerCell + dofSerialised) * {{NUMBER_OF_UNKNOWNS}} + unknown ];
         {% endfor %}
       }
     }
@@ -210,6 +216,6 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
         return (
             super(ComputeFinalLinearCombination, self).get_includes()
             + """
-#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
+#include "peano4/utils/Linearised.h"
 """
         )

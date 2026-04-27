@@ -33,25 +33,31 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
     
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
-    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1,            {{ORDER}}+1, 0, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
-    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{ORDER}}+1, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
+    #if DIMENSIONS==2
+    constexpr int numberOfDoFsPerCell = ({{ORDER}}+1) * ({{ORDER}}+1);
+    #else
+    constexpr int numberOfDoFsPerCell = ({{ORDER}}+1) * ({{ORDER}}+1) * ({{ORDER}}+1);
+    #endif
+    constexpr int valuesPerDoF = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     
     dfor( dof, {{ORDER}}+1 ) {
+      const int dofSerialised = peano4::utils::dLinearised(dof, {{ORDER}}+1);
+      const int solutionOffset = dofSerialised * valuesPerDoF;
       for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
-        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data()[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] = 
-          fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ];      
+        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data()[ solutionOffset + unknown ] =
+          fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[ solutionOffset + unknown ];
 
         {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO]|length) %}
         {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
-        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data()[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] += 
+        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data()[ solutionOffset + unknown ] +=
           timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
-          fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+          fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()[ ({{WEIGHT_NO}} * numberOfDoFsPerCell + dofSerialised) * {{NUMBER_OF_UNKNOWNS}} + unknown ];
         {% endif %}
         {% endfor %}
       }      
       for (int unknown={{NUMBER_OF_UNKNOWNS}}; unknown<{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
-        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data()[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] = 
-          fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ];      
+        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data()[ solutionOffset + unknown ] =
+          fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[ solutionOffset + unknown ];
       }
     }
       
@@ -109,5 +115,5 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
 
   def get_includes(self):
     return super(LinearCombinationOfEstimates,self).get_includes() + """
-#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
+#include "peano4/utils/Linearised.h"
 """    

@@ -101,16 +101,11 @@ class DoFWisePostprocessSolution(EmptyPostprocessSolution):
   ) {
     logTraceIn("touchCellFirstTime(...)");
 
-    ::exahype2::enumerator::AoSLexicographicEnumerator enumerator(
-      1, // Only one patch
-      {{ORDER}} + 1,
-      0, // Halo size,
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}}
-    );
+    constexpr int valuesPerDoF = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
 
     dfor(index, {{ORDER}} + 1) {
-      double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + enumerator(0, index, 0);
+      double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.data()
+        + peano4::utils::dLinearised(index, {{ORDER}} + 1) * valuesPerDoF;
       auto    x        =         ::exahype2::aderdg::getQuadraturePoint(
         marker.getX(),
         marker.getH(),
@@ -132,7 +127,7 @@ class DoFWisePostprocessSolution(EmptyPostprocessSolution):
         return (
             super(DoFWisePostprocessSolution, self).get_includes()
             + """
-#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
+#include "peano4/utils/Linearised.h"
 """
         )
 

@@ -1477,16 +1477,6 @@ The finest mesh width of """
         to alter the auxiliary variables in both the patch data and the
         reconstructed data.
 
-        ## Access
-
-        We recommend that you use the AoS enumerator exahype2::enumerator::AoSLexicographicEnumerator.
-        This one has to be given 1 as number of cells/patches, it requires the size
-        of the patch, its halo size, you have to pass it the unknowns and the correct
-        number of auxiliary parameters. If you want the preprocessing also to alter
-        the actual input, you need a second enumerator. In this second one, all
-        parameters are the same besides the halo size, which you have to set to 0:
-        The input patch has no halo. This halo is only added temporarily in the
-        reconstruction step.
         """
         self._preprocess_reconstructed_patch = kernel
         self.create_data_structures()

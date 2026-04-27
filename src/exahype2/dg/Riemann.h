@@ -141,9 +141,8 @@ namespace exahype2 {
      *
      * ## Implementation
      *
-     * I first construct a
-     * face enumerator. So I don't really have to care about the serialisation
-     * of the dofs anymore. This is all done by the enumerator.
+     * I first serialise the face-local degrees of freedom explicitly and then
+     * multiply the result with the unknown stride.
      *
      * Next, I compute the total number of unknowns (doubles) in the fine grid
      * face and set them all to zero. From now on, I can accumulate the result.

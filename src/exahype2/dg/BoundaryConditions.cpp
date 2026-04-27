@@ -6,7 +6,7 @@
 
 #include "tarch/logging/Log.h"
 
-#include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
+#include "toolbox/blockstructured/Enumeration.h"
 
 
 void exahype2::dg::applyBoundaryConditions(
@@ -34,40 +34,41 @@ void exahype2::dg::applyBoundaryConditions(
   logTraceInWith3Arguments( "applyBoundaryConditions(...)", faceCentre, cellSize, faceNumber);
 
 //  tarch::la::Vector<DIMENSIONS,double> volumeH    = exahype2::fv::getVolumeSize(patchSize, numberOfVolumesPerAxisInPatch);
+  const int normal = faceNumber % DIMENSIONS;
+  const int stride = unknowns + auxiliaryVariables;
   tarch::la::Vector<DIMENSIONS,double> faceOffset = faceCentre - 0.5 * cellSize;
-  faceOffset(faceNumber%DIMENSIONS) += 0.5 * cellSize(faceNumber%DIMENSIONS);
+  faceOffset(normal) += 0.5 * cellSize(normal);
 
-  exahype2::enumerator::FaceAoSLexicographicEnumerator enumerator(faceNumber,order+1,1,unknowns,auxiliaryVariables);
-
-  dfore(dof,order+1,faceNumber % DIMENSIONS,0) {
+  dfore(dof,order+1,normal,0) {
     tarch::la::Vector<DIMENSIONS,double> x;
     for (int d=0; d<DIMENSIONS; d++) {
       x(d)  = faceOffset(d);
-      x(d) += (d==faceNumber % DIMENSIONS) ? 0.0 : quadraturePoints[dof(d)] * cellSize(d);
+      x(d) += (d==normal) ? 0.0 : quadraturePoints[dof(d)] * cellSize(d);
     }
 
     tarch::la::Vector<DIMENSIONS,int>    insideDoF  = dof;
     tarch::la::Vector<DIMENSIONS,int>    outsideDoF = dof;
     if (faceNumber<DIMENSIONS) {
-      insideDoF(faceNumber % DIMENSIONS)  = 1;
-      outsideDoF(faceNumber % DIMENSIONS) = 0;
+      insideDoF(normal)  = 1;
+      outsideDoF(normal) = 0;
     }
     else {
-      insideDoF(faceNumber % DIMENSIONS)  = 0;
-      outsideDoF(faceNumber % DIMENSIONS) = 1;
+      insideDoF(normal)  = 0;
+      outsideDoF(normal) = 1;
     }
 
-    int insideDoFSerialised  = enumerator(insideDoF,0);
-    int outsideDoFSerialised = enumerator(outsideDoF,0);
+    const int insideDoFSerialised
+      = toolbox::blockstructured::serialiseVoxelIndexInOverlap(insideDoF, order + 1, 1, normal) * stride;
+    const int outsideDoFSerialised
+      = toolbox::blockstructured::serialiseVoxelIndexInOverlap(outsideDoF, order + 1, 1, normal) * stride;
 
     boundaryCondition(
       Q + insideDoFSerialised,
       Q + outsideDoFSerialised,
-      x, t, dt, faceNumber%DIMENSIONS
+      x, t, dt, normal
     );
   }
 
   logTraceOut( "applyBoundaryConditions(...)" );
 }
-
 

@@ -2,8 +2,6 @@
 
 #include "peano4/utils/Loop.h"
 
-#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
-
 void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
   ::exahype2::CellData<double, double>&          cellData,
   const int                                      order,
@@ -22,22 +20,8 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
   bool                                           evaluateSource,
   bool                                           /*evaluatePointSources*/
 ) {
-  exahype2::enumerator::AoSLexicographicEnumerator enumeratorIn(
-    1,           // number of cells in one memory chunk
-    order+1,     // numberOfDoFsPerAxisInCell
-    0,           // no halo
-    unknowns,
-    auxiliaryVariables
-  );
-
-  exahype2::enumerator::AoSLexicographicEnumerator enumeratorOut(
-    1,           // number of cells in one memory chunk
-    order+1,     // numberOfDoFsPerAxisInCell
-    0,           // no halo
-    unknowns,
-    0            // no auxiliary variables
-  );
-
+  const int inputStride = unknowns + auxiliaryVariables;
+  const int outputStride = unknowns;
   double* fluxValues      = evaluateFlux                   ? new double[unknowns]                      : nullptr;
   double* sourceValues    = evaluateSource                 ? new double[unknowns]                      : nullptr;
   double* gradientValues  = evaluateNonconservativeProduct ? new double[(unknowns+auxiliaryVariables)] : nullptr;
@@ -56,8 +40,9 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
     //const int nodesPerCell = getNodesPerCell(nodesPerAxis);
 
     dfor( dof, order+1 ) {
+      const int dofSerialised = peano4::utils::dLinearised(dof, nodesPerAxis);
       for(int var=0; var<unknowns; var++){
-        cellQout[enumeratorOut(currentCell,dof,var)] = 0.0;
+        cellQout[dofSerialised * outputStride + var] = 0.0;
       }
 
       if(evaluateFlux){
@@ -73,8 +58,9 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
               contributingNodeIndex,
               order,
               quadratureNodes);
+          const int contributingNodeSerialised = peano4::utils::dLinearised(contributingNodeIndex, nodesPerAxis);
 
-          flux( &cellQin[enumeratorIn(currentCell, contributingNodeIndex, 0)],
+          flux( &cellQin[contributingNodeSerialised * inputStride],
                 position,
                 t,
                 dt,
@@ -92,7 +78,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
           }
 
           for(int var=0; var<unknowns; var++){
-            cellQout[enumeratorOut(currentCell, dof, var)] += coeff * fluxValues[var];
+            cellQout[dofSerialised * outputStride + var] += coeff * fluxValues[var];
           } //var
         } // dim/i combination
       }//if useFlux
@@ -109,7 +95,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
 
         //compute source term contributions
         source(
-          &cellQin[enumeratorIn(currentCell, dof, 0)],
+          &cellQin[dofSerialised * inputStride],
           position,
           t,
           dt,
@@ -123,7 +109,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
         #endif
 
         for(int var=0; var<unknowns; var++){
-          cellQout[enumeratorOut(currentCell, dof, var)] += coeff * sourceValues[var];
+          cellQout[dofSerialised * outputStride + var] += coeff * sourceValues[var];
         } //var
       } //if useSource
 
@@ -156,15 +142,16 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
           for(int node=0; node<nodesPerAxis; node++){
             contributingNodeIndex[dim] = node;
             const double coeffDerivative = invDx * derivativeOperator[node + nodesPerAxis*dof(dim)];
+            const int contributingNodeSerialised = peano4::utils::dLinearised(contributingNodeIndex, nodesPerAxis);
 
             for(int var=0; var<strideQ; var++){
-              gradientValues[var] += coeffDerivative * cellQin[enumeratorIn(currentCell, contributingNodeIndex, var)];
+              gradientValues[var] += coeffDerivative * cellQin[contributingNodeSerialised * inputStride + var];
               assertion(gradientValues[var]==gradientValues[var]);
             } // var
           } //node
 
           nonconservativeProduct(
-            &cellQin[enumeratorIn(currentCell, dof, 0)],
+            &cellQin[dofSerialised * inputStride],
             gradientValues,
             position,
             t,
@@ -174,7 +161,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
 
           for(int var=0; var<unknowns; var++){
             assertion(ncpValues[var]==ncpValues[var]);
-            cellQout[enumeratorOut(currentCell, dof, var)] -= coeff * ncpValues[var];
+            cellQout[dofSerialised * outputStride + var] -= coeff * ncpValues[var];
           } //var
         } //dim
       } //if useNCP
@@ -202,21 +189,16 @@ void exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
   MaxEigenvalue                           maxEigenvalue,
   const double* NOALIAS              QuadratureNodes1d
 ) {
-  ::exahype2::enumerator::AoSLexicographicEnumerator  enumerator(
-    1, // number of patches stored per continuous memory segment
-    order+1,
-    0, // halo
-    unknowns,
-    auxiliaryVariables
-  );
+  const int stride = unknowns + auxiliaryVariables;
 
   for (int cellIndex=0; cellIndex<cellData.numberOfCells; cellIndex++) {
     double eigenvalue = std::numeric_limits<double>::min();
 
     dfor(k,order+1) {
+      const int dofSerialised = peano4::utils::dLinearised(k, order + 1);
       for(int direction=0; direction<DIMENSIONS; direction++) {
         double nodeEigenvalue = maxEigenvalue(
-          cellData.QOut[cellIndex] + enumerator(0,k,0),
+          cellData.QOut[cellIndex] + dofSerialised * stride,
           getQuadraturePoint(
             cellData.cellCentre[cellIndex],
             cellData.cellSize[cellIndex],
@@ -262,16 +244,11 @@ void exahype2::dg::multiplyWithInvertedMassMatrix_GaussLegendre(
   const int                                      /*auxiliaryVariables*/,
   const double* NOALIAS                     massMatrixDiagonal1d
 ) {
-  exahype2::enumerator::AoSLexicographicEnumerator enumerator(
-    1,           // number of cells in one memory chunk
-    order+1,     // numberOfDoFsPerAxisInCell
-    0,           // no halo
-    unknowns,
-    0            // no auxiliary variables here
-  );
+  const int stride = unknowns;
 
   for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++) {
     dfor( dof, order+1 ) {
+      const int dofSerialised = peano4::utils::dLinearised(dof, order + 1);
       double* NOALIAS  cellQInOut = cellData.QOut[currentCell];
 
       #if DIMENSIONS==2
@@ -288,7 +265,7 @@ void exahype2::dg::multiplyWithInvertedMassMatrix_GaussLegendre(
       assertion( diagonal>0.0 );
 
       for(int var=0; var<unknowns; var++) {
-        cellQInOut[ enumerator(currentCell,dof,var) ] = 1.0 / diagonal * cellQInOut[enumerator(currentCell,dof,var)];
+        cellQInOut[dofSerialised * stride + var] = 1.0 / diagonal * cellQInOut[dofSerialised * stride + var];
       }
     }
   }

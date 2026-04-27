@@ -48,9 +48,8 @@ namespace exahype2 {
        *         2 3
        *         0 1
        *
-       * The lrEnumerator is used for quantities that we evaluate right and
-       * left of the face. The faceEnumerator is for data that we evaluate
-       * directly on the face.
+       * We serialise the face-local degrees of freedom explicitly and then
+       * multiply the resulting index with the input or output stride.
        *
        * ## Linearity in h
        *
@@ -158,4 +157,3 @@ namespace exahype2 {
     }
   }
 }
-
