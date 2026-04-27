@@ -1,0 +1,9 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+namespace peano4::version {
+  inline constexpr char GitBranch[] = "@GIT_BRANCH_ESCAPED@";
+  inline constexpr char GitCommitHash[] = "@GIT_COMMIT_HASH_ESCAPED@";
+  inline constexpr char GitCommitMessage[] = "@GIT_COMMIT_MESSAGE_ESCAPED@";
+}

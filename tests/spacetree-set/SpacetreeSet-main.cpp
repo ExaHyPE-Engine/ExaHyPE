@@ -150,7 +150,6 @@ namespace {
     );
 
     peano4::init(&argc, &argv, DomainOffset, DomainSize, 0);
-    peano4::writeCopyrightMessage();
   }
 
   void shutdownEnvironment() { peano4::shutdown(); }

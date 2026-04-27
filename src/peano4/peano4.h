@@ -5,8 +5,6 @@
 #include "tarch/la/Vector.h"
 
 namespace peano4 {
-  void writeCopyrightMessage();
-
   void init(
     int*                                         argc,
     char***                                      argv,

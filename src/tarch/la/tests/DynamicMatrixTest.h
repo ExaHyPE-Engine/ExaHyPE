@@ -4,40 +4,21 @@
 
 #include "tarch/tests/TestCase.h"
 
-namespace tarch {
-  namespace la {
-    namespace tests {
-      class DynamicMatrixTest;
-    }
-  }
-}
+namespace tarch::la::tests {
+  class DynamicMatrixTest;
+} // namespace tarch::la::tests
 
-/**
- * Provides tests for types Vector, DynamicVector and all Vector functionality.
- */
-class tarch::la::tests::DynamicMatrixTest: public tarch::tests::TestCase {
-  private:
-
-  /**
-   * Tests constructors.
-   */
+class tarch::la::tests::DynamicMatrixTest final: public tarch::tests::TestCase {
+private:
   void testBatchedMultiplyAoS();
+  void testInterpolationMatrixEditing();
+  void testMultiplyAndTranspose();
+  void testKroneckerConstruction();
+  void testAccessorsAndCopies();
+  void testGramSchmidtAndTriangularInverseWithSingularColumn();
 
 public:
-
-  /**
-   * Cosntructor.
-   */
-  DynamicMatrixTest ();
-
-  /**
-   * Destructor, empty.
-   */
-  virtual ~DynamicMatrixTest () {}
-
-  /**
-   * This routine is triggered by the TestCaseCollection
-   */
-  virtual void run() override;
+  DynamicMatrixTest();
+  ~DynamicMatrixTest() override = default;
+  void run() override;
 };
-

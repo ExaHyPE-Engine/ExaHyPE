@@ -5,7 +5,7 @@
 
 #include <vector>
 
-#include "tarch/la/la.h"
+#include "tarch/la/ScalarOperations.h"
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/Assertions.h"

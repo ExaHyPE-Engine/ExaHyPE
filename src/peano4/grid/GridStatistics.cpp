@@ -3,6 +3,7 @@
 #include "GridStatistics.h"
 
 #include "GridVertex.h"
+#include "tarch/tarch.h"
 
 #include <algorithm>
 #include <iomanip>

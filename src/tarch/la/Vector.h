@@ -2,225 +2,119 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "la.h"
-
 #include "tarch/Assertions.h"
-#include "tarch/accelerator/accelerator.h"
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/accelerator.h"
 
 #include <bitset>
 #include <initializer_list>
 #include <sstream>
 #include <string>
 
-namespace tarch {
-  namespace la {
-    template <int Size, typename Scalar> struct Vector;
+namespace tarch::la {
+  template <int Size, typename Scalar>
+  struct Vector;
 
-    /**
-     * Convert the scalar type underlying a vector
-     *
-     * This routine takes a vector of size Size over type Scalar and returns a
-     * new vector of the same size but with type NewScalarType. A typical usage
-     * looks similar to
-     *
-     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     * tarch::la::Vector< DIMENSIONS, int > myVector = ...
-     * tarch::la::Vector< DIMENSIONS, double > converted = tarch::la::convertScalar<double>( myVector );
-     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *
-     * The conversion assumes that C++ natively supports a conversion from
-     * Scalar to NewScalarType. We do not employ any explicit typecasting under
-     * the hood.
-     */
-    template <typename NewScalarType, int Size, typename Scalar>
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    tarch::la::Vector<Size,NewScalarType> convertScalar(const tarch::la::Vector<Size,Scalar>& vector);
-  }
-}
+  template <typename NewScalarType, int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Size, NewScalarType> convertScalar(
+    const tarch::la::Vector<Size, Scalar>& vector
+  );
 
-/**
- * Pipes the elements of a vector into a std::string and returns the string.
- *
- * Not a member of the class as I otherwise can't translate it for GPUs.
- */
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> makeVector(const Scalar& value0, const Scalar& value1);
+
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> makeVector(
+    const Scalar& value0,
+    const Scalar& value1,
+    const Scalar& value2
+  );
+
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> makeVector(
+    const Scalar& value0,
+    const Scalar& value1,
+    const Scalar& value2,
+    const Scalar& value3
+  );
+} // namespace tarch::la
+
 template <int Size, typename Scalar>
-std::string toString(const tarch::la::Vector<Size,Scalar>& vector);
+std::string toString(const tarch::la::Vector<Size, Scalar>& vector);
 
-/**
- * Simple vector class
- *
- * Most features concerning vectors are deployed into separate headers:
- *
- * - Access only few elements within vector (subvector): VectorSlice.h
- * - Functions over the vector such as norms: VectorOperations.h
- * - Binary operators over vectors: VectorScalarOperations.h and
- *   VectorVectorOperations.h
- *
- * There are multiple ways how to construct a vector:
- *
- * - You can use the standard constructor which gives a vector with garbage
- *   entries. You can then set individual entries manually.
- * - You can use the constructor with a scalar which initialises all entries
- *   with the same value.
- * - You can use initialiser lists, i.e. lists in curly brackets { and }, to
- *   construct a vector from a list.
- *
- * To access entries of a vector, the class provides both access via an
- * array notation, i.e. through [...], and with round brackets. The latter
- * notation resembles Matlab. No matter which accessor you use, enumeration
- * always starts with zero.
- *
- * The class wraps an array of fixed size. Therefore, you can access the raw
- * data via data(), but this violates ideas of object-oriented programming
- * and hence should be done with care. Peano for example does this if and
- * only if it has to hand over raw pointers to MPI, e.g.
- *
- */
 TARGET_DECLARE
-template <int Size, typename Scalar> struct tarch::la::Vector {
+template <int Size, typename Scalar>
+struct tarch::la::Vector {
 private:
-  Scalar _values[Size];
+  Scalar _values[Size]{};
 
-  public:
-    /**
-     * Clang requires the always_inline attribute, as it otherwise makes weird decisions.
-     */
-    INLINE_METHOD Vector() = default;
+public:
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector();
 
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Vector(const Scalar* values);
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector(const Scalar* values);
 
-    /**
-     * Initialisation via initialisation list.
-     *
-     * You can't inline an initialisation list, as the realisation of this
-     * routine relies on an iterator and the iterator within the C++ std lib
-     * won't be inlined.
-     */
-    INLINE_METHOD
-    Vector(std::initializer_list<Scalar> values);
+  INLINE_METHOD
+  Vector(std::initializer_list<Scalar> values);
 
-    INLINE_METHOD
-    Vector(const std::bitset<Size>& values);
+  INLINE_METHOD
+  Vector(const std::bitset<Size>& values);
 
-    /**
-     * Construct new vector and initialise all components with initialValue.
-     */
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Vector(const Scalar& initialValue);
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector(const Scalar& initialValue);
 
-    INLINE_METHOD ~Vector() = default;
+  INLINE_METHOD GPU_CALLABLE_METHOD int size() const;
 
-    /**
-     * Assignment operator for any vector type.
-     *
-     * Default assignment as this class needs to be trivially copyable.
-     */
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Vector<Size, Scalar>& operator = (const Vector<Size, Scalar>& toAssign) = default;
+  INLINE_METHOD GPU_CALLABLE_METHOD const Scalar& operator[](int index) const;
 
-    /**
-     * Copy constructor to copy from any vector type.
-     *
-     * @see operator= for default copy.
-     */
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Vector(const Vector<Size, Scalar>& toCopy) = default;
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar& operator[](int index);
 
-    /**
-     * Returns the number of components of the vector.
-     */
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    int size() const;
+  INLINE_METHOD GPU_CALLABLE_METHOD const Scalar& operator()(int index) const;
 
-    /**
-     * Returns read-only ref. to component of given index.
-     *
-     * <h2> SSE Optimisation </h2>
-     *
-     * - We have to manually inline this operation. Otherwise, icc interprets operator
-     *   calls, i.e. vector element accesses, as function calls and does not vectorise
-     *   loops containing vector element accesses.
-     */
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    const Scalar& operator[] (int index) const {
-      #if !defined(WITH_GPU)
-      assertion3(index >= 0, index, Size, ::toString(*this));
-      assertion3(index < Size, index, Size, ::toString(*this));
-      #endif
-      return _values[index];
-    }
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar& operator()(int index);
 
-    /**
-     * Returns ref. to component of given index.
-     *
-     * @see operator[] for remarks on SSE
-     */
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Scalar& operator[] (int index) {
-      #if !defined(WITH_GPU)
-      assertion3(index >= 0, index, Size, ::toString(*this));
-      assertion3(index < Size, index, Size, ::toString(*this));
-      #endif
-      return _values[index];
-    }
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar* data();
 
-    /**
-     * Returns read-only ref. to component of given index.
-     *
-     * If we use the vector on the GPU, we cannot have assertions. If we use
-     * SYCL on the CPU for the multitasking, we cannot have assertions in the
-     * SYCL part either, as SYCL aims to be platform-independent, i.e. has to
-     * assume that the code generated also will be deployed to a GPU. See
-     * discussion on @ref tarch_accelerator_SYCL.
-     *
-     * @see operator[] for remarks on SSE
-     */
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    const Scalar& operator() (int index) const {
-      #if !defined(WITH_GPU)
-      assertion3(index >= 0, index, Size, ::toString(*this));
-      assertion3(index < Size, index, Size, ::toString(*this));
-      #endif
-      return _values[index];
-    }
-
-    /**
-     * Returns ref. to component of given index.
-     *
-     * @see operator[] for remarks on SSE
-     */
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Scalar& operator() (int index) {
-      #if !defined(WITH_GPU)
-      assertion3(index >= 0, index, Size, ::toString(*this));
-      assertion3(index < Size, index, Size, ::toString(*this));
-      #endif
-      return _values[index];
-    }
-
-    /**
-     * This routine returns a pointer to the first data element. Not a
-     * beautiful one as it harms the OO idea, but in many cases it is
-     * convenient to have this operation.
-     */
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Scalar* data() {
-      return _values;
-    }
-
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    const Scalar* data() const {
-      return _values;
-    }
+  INLINE_METHOD GPU_CALLABLE_METHOD const Scalar* data() const;
 };
 TARGET_DECLARE_END
 
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> tarch::la::makeVector(
+  const Scalar& value0,
+  const Scalar& value1
+) {
+  Vector<2, Scalar> result;
+  result._values[0] = value0;
+  result._values[1] = value1;
+  return result;
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> tarch::la::
+  makeVector(const Scalar& value0, const Scalar& value1, const Scalar& value2) {
+  Vector<3, Scalar> result;
+  result._values[0] = value0;
+  result._values[1] = value1;
+  result._values[2] = value2;
+  return result;
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> tarch::la::
+  makeVector(const Scalar& value0, const Scalar& value1, const Scalar& value2, const Scalar& value3) {
+  Vector<4, Scalar> result;
+  result._values[0] = value0;
+  result._values[1] = value1;
+  result._values[2] = value2;
+  result._values[3] = value3;
+  return result;
+}
+
 TARGET_DECLARE
 #include "Vector.cpph"
+#include "Vector2.h"
+#include "Vector3.h"
+#include "Vector4.h"
 #include "VectorOperations.h"
 #include "VectorScalarOperations.h"
 #include "VectorVectorOperations.h"
-#include "VectorSlice.h"
 TARGET_DECLARE_END

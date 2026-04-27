@@ -2,8 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "peano4.h"
 
-#include "parallel/Node.h"
-#include "parallel/SpacetreeSet.h"
+#include "peano4/Version.h"
+#include "peano4/parallel/Node.h"
+#include "peano4/parallel/SpacetreeSet.h"
 #include "tarch/CPUFeatureDetection.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/StackSizeLimitDetection.h"
@@ -17,6 +18,8 @@
 #include "tarch/tarch.h"
 
 #include <fstream>
+#include <iomanip>
+#include <sstream>
 
 /**
  * For the machine name. If it doesn't work, switch it off in the file
@@ -28,58 +31,63 @@
 
 namespace {
   tarch::logging::Log _log("peano4");
+  constexpr int       StartupHeaderLabelWidth = 20;
 
-  void writeBuildInfo() {
+  template <typename T>
+  void logStartupHeaderEntry(const std::string& label, const T& value) {
+    std::ostringstream message;
+    message << std::left << std::setw(StartupHeaderLabelWidth) << (label + ":") << value;
+    logInfo("logStartupHeader()", message.str());
+  }
+
+  void logStartupHeader() {
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      std::string buildInfo = "Build: ";
-      buildInfo += std::to_string(DIMENSIONS);
-      buildInfo += "d";
+      logInfo("logStartupHeader()", "Peano 4 (C) www.peano-framework.org");
+      logStartupHeaderEntry("Dimensions", DIMENSIONS);
 
+      std::string mpiInfo = "Off";
 #if defined(WITH_MPI)
-      buildInfo += ", MPI: ";
-      buildInfo += std::to_string(tarch::mpi::Rank::getInstance().getNumberOfRanks());
-      buildInfo += " Rank(s)";
+      mpiInfo = std::to_string(tarch::mpi::Rank::getInstance().getNumberOfRanks()) + " Rank(s)";
 #endif
+      logStartupHeaderEntry("MPI", mpiInfo);
 
+      std::string openmpInfo = "Off";
 #if defined(WITH_OPENMP)
-      buildInfo += ", OpenMP: ";
-      buildInfo += std::to_string(tarch::multicore::Core::getInstance().getNumberOfThreads());
-      buildInfo += " Thread(s)";
+      openmpInfo = std::to_string(tarch::multicore::Core::getInstance().getNumberOfThreads()) + " Thread(s)";
 #endif
+      logStartupHeaderEntry("OpenMP", openmpInfo);
 
-      buildInfo += ", CPU: " + tarch::detectCPUFeatures();
-      buildInfo += ", Stack Size: " + tarch::detectStackSizeLimit();
+      logStartupHeaderEntry("CPU Features", tarch::detectCPUFeatures());
+      logStartupHeaderEntry("Stack Size", tarch::detectStackSizeLimit());
 
+      std::string gpuInfo = "None";
 #if defined(WITH_GPU)
-      buildInfo += ", GPU Backend ";
 #if defined(WITH_GPU_SYCL)
-      buildInfo += "SYCL";
+      gpuInfo = "SYCL";
 #elif defined(WITH_GPU_HIP)
-      buildInfo += "HIP";
+      gpuInfo = "HIP";
 #elif defined(WITH_GPU_CUDA)
-      buildInfo += "CUDA";
+      gpuInfo = "CUDA";
 #elif defined(WITH_GPU_KOKKOS)
-      buildInfo += "Kokkos";
+      gpuInfo = "Kokkos";
 #elif defined(WITH_GPU_OMPT)
-      buildInfo += "OMPT";
+      gpuInfo = "OMPT";
 #endif
-      buildInfo += ": ";
-      buildInfo += std::to_string(tarch::accelerator::Device::getInstance().getNumberOfDevices());
-      buildInfo += " Device(s)";
+      if (gpuInfo != "None") {
+        gpuInfo += ", ";
+        gpuInfo += std::to_string(tarch::accelerator::Device::getInstance().getNumberOfDevices());
+        gpuInfo += " Device(s)";
+      }
 #endif
+      logStartupHeaderEntry("GPU Backend", gpuInfo);
 
-      buildInfo += ", Debug Level: " + std::to_string(PEANO_DEBUG);
-
-      logInfo("writeBuildInfo()", buildInfo);
+      logStartupHeaderEntry("Debug Level", PEANO_DEBUG);
+      logStartupHeaderEntry("Git Branch", peano4::version::GitBranch);
+      logStartupHeaderEntry("Git Commit Message", peano4::version::GitCommitMessage);
+      logStartupHeaderEntry("Git Commit Hash", peano4::version::GitCommitHash);
     }
   }
 } // namespace
-
-void peano4::writeCopyrightMessage() {
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo("writeCopyrightMessage()", "Peano 4 (C) www.peano-framework.org");
-  }
-}
 
 void peano4::init(
   int*                                         argc,
@@ -117,7 +125,7 @@ void peano4::init(
   peano4::parallel::Node::getInstance().init();
   peano4::parallel::SpacetreeSet::getInstance().init(offset, width, periodicBC);
 
-  writeBuildInfo();
+  logStartupHeader();
 }
 
 void peano4::shutdown() {
@@ -133,4 +141,6 @@ void peano4::shutdown() {
   tarch::accelerator::MemoryBlocks::getInstance().clear();
   tarch::multicore::Core::getInstance().shutdown();
   tarch::mpi::Rank::getInstance().shutdown();
+
+  logInfo("shutdown()", "Peano terminated successfully");
 }

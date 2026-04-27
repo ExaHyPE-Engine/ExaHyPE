@@ -4,42 +4,18 @@
 
 #include "tarch/tests/TestCase.h"
 
-namespace tarch {
-  namespace la {
-    namespace tests {
-      class ScalarTest;
-    }
-  }
-}
+namespace tarch::la::tests {
+  class ScalarTest;
+} // namespace tarch::la::tests
 
-class tarch::la::tests::ScalarTest : public tarch::tests::TestCase
-{
+class tarch::la::tests::ScalarTest final: public tarch::tests::TestCase {
 private:
-
-  void testComparison ();
-
-  void testAbs ();
+  void testComparison();
+  void testAbs();
+  void testAdditionalScalarFunctions();
 
 public:
-
-  /**
-   * Constructor.
-   */
-  ScalarTest ();
-
-  /**
-   * Destructor, empty.
-   */
-  virtual ~ScalarTest () {};
-
-  /**
-   * Runs all tests.
-   */
-  virtual void run ();
-
-  /**
-   * Sets up test environment.
-   */
-  virtual void setUp () {}
+  ScalarTest();
+  ~ScalarTest() override = default;
+  void run() override;
 };
-

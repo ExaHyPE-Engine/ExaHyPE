@@ -60,27 +60,25 @@ namespace {
 
 namespace {
   void storeRuntimeConfiguration(const exahype2::RuntimeConfiguration& configuration) {
-    std::fill_n(exahype2::internal::RuntimeParametersStorage.domainOffset, 3, 0.0);
-    std::fill_n(exahype2::internal::RuntimeParametersStorage.domainSize, 3, 1.0);
-    std::fill_n(exahype2::internal::RuntimeParametersStorage.periodicBC, 3, false);
+    std::fill_n(exahype2::internal::domainOffset, 3, 0.0);
+    std::fill_n(exahype2::internal::domainSize, 3, 1.0);
+    std::fill_n(exahype2::internal::periodicBoundaryConditions, 3, 0);
 
     for (int d = 0; d < DIMENSIONS; ++d) {
-      exahype2::internal::RuntimeParametersStorage.domainOffset[d] = configuration.domainOffset[d];
-      exahype2::internal::RuntimeParametersStorage.domainSize[d]   = configuration.domainSize[d];
-      exahype2::internal::RuntimeParametersStorage.periodicBC[d]   = configuration.periodicBC[d];
+      exahype2::internal::domainOffset[d]               = configuration.domainOffset[d];
+      exahype2::internal::domainSize[d]                 = configuration.domainSize[d];
+      exahype2::internal::periodicBoundaryConditions[d] = configuration.periodicBC[d] ? 1 : 0;
     }
-    exahype2::internal::RuntimeParametersStorage.minTerminalTime    = configuration.minTerminalTime;
-    exahype2::internal::RuntimeParametersStorage.maxTerminalTime    = configuration.maxTerminalTime;
-    exahype2::internal::RuntimeParametersStorage.firstPlotTimeStamp = configuration.firstPlotTimeStamp;
-    exahype2::internal::RuntimeParametersStorage.timeInBetweenPlots = configuration.timeInBetweenPlots;
-    exahype2::internal::RuntimeParametersStorage.plotOutputPath     = normaliseOutputPath(configuration.plotOutputPath);
+    exahype2::internal::minTerminalTime    = configuration.minTerminalTime;
+    exahype2::internal::maxTerminalTime    = configuration.maxTerminalTime;
+    exahype2::internal::firstPlotTimeStamp = configuration.firstPlotTimeStamp;
+    exahype2::internal::timeInBetweenPlots = configuration.timeInBetweenPlots;
+    exahype2::internal::outputPath         = normaliseOutputPath(configuration.plotOutputPath);
   }
 } // namespace
 
 namespace exahype2::internal {
-  TARGET_DECLARE
-  RuntimeParameters RuntimeParametersStorage;
-  TARGET_DECLARE_END
+  std::string outputPath = "./";
 } // namespace exahype2::internal
 
 std::string exahype2::extractConfigFileFromCommandLine(int& argc, char** argv) {
@@ -138,12 +136,6 @@ exahype2::RuntimeConfiguration exahype2::loadRuntimeConfiguration(
 
   storeRuntimeConfiguration(result);
   return result;
-}
-
-void exahype2::writeCopyrightMessage() {
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo("writeCopyrightMessage()", "ExaHyPE 2 (C) www.peano-framework.org");
-  }
 }
 
 void exahype2::setDefaultLogStatements() {

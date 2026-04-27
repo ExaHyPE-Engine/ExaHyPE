@@ -389,9 +389,6 @@ void setupEnvironment(int argc, char** argv) {
     logInfo("setupEnvironment()", "Loaded runtime configuration from " << configFilePath);
   }
 
-  peano4::writeCopyrightMessage();
-  ::exahype2::writeCopyrightMessage();
-
   repositories::initLogFilters();
   const int numberOfMaxGlobalSpacetrees = repositories::loadBalancer.getMaxPermittedTreesPerRank() * tarch::mpi::Rank::getInstance().getNumberOfRanks();
   repositories::DataRepository::setNumberOfMaxGlobalSpacetrees(numberOfMaxGlobalSpacetrees);
@@ -443,11 +440,11 @@ int runGlobalMaster() {
   peano4::parallel::Node::getInstance().continueToRun(); // Send terminate instruction to other ranks
 
   if (haveReceivedNonCriticalAssertion) {
-    logWarning("runGlobalMaster()", "Terminated gracefully after noncritical assertion");
+    logWarning("runGlobalMaster()", "ExaHyPE terminated gracefully after noncritical assertion");
     return EXIT_FAILURE;
   } else {
     repositories::logTimeStep();
-    logInfo("runGlobalMaster()", "Terminated successfully");
+    logInfo("runGlobalMaster()", "ExaHyPE terminated successfully");
     logFinalStatistics();
     return EXIT_SUCCESS;
   }

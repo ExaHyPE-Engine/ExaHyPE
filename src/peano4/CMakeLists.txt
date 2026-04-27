@@ -3,6 +3,12 @@
 
 file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Version.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/Version.h
+  @ONLY
+)
+
 set(SOURCES
   peano4.cpp
   UnitTests.cpp
@@ -69,6 +75,11 @@ set(SOURCES
 
 install_peano_headers(
   PATTERNS ${HEADER_EXTENSIONS_TO_GLOB}
+)
+
+install(
+  FILES ${CMAKE_CURRENT_BINARY_DIR}/Version.h
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/peano4
 )
 
 foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)

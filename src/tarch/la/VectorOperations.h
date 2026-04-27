@@ -5,132 +5,190 @@
 #include "ScalarOperations.h"
 #include "Vector.h"
 
-#include <limits>
-#include <sstream>
+#include <cmath>
+#include <iosfwd>
 #include <vector>
 
-/**
- * Forward declaration
- */
 template <int Size, typename Scalar>
 std::string toString(const tarch::la::Vector<Size, Scalar>& vector);
 
-namespace tarch {
-  namespace la {
+namespace tarch::la {
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar norm1(const Vector<Size, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar norm1(const Vector<2, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar norm1(const Vector<3, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar norm1(const Vector<4, Scalar>& vector);
 
-    /**
-     * Computes the 1-norm of the vector, i.e. it sums up abs. component values.
-     */
-    template <int Size, typename Scalar>
-    Scalar norm1(const Vector<Size, Scalar>& vector);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar norm2(const Vector<Size, Scalar>& vector);
 
-    /**
-     * Computes the 2-norm of the vector, i.e. it takes the square-root of
-     * summed up squared component values.
-     */
-    template <int Size, typename Scalar>
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Scalar norm2(const Vector<Size, Scalar>& vector);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar norm2Squared(const Vector<Size, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar norm2Squared(const Vector<2, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar norm2Squared(const Vector<3, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar norm2Squared(const Vector<4, Scalar>& vector);
 
-    template <int Size, typename Scalar>
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Scalar norm2Squared(const Vector<Size, Scalar>& vector);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar normMax(const Vector<Size, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar normMax(const Vector<2, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar normMax(const Vector<3, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar normMax(const Vector<4, Scalar>& vector);
 
-    /**
-     * Computes the max-norm of the vector.
-     */
-    template <int Size, typename Scalar>
-    Scalar normMax(const Vector<Size, Scalar>& vector);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<Size, Scalar> abs(const Vector<Size, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<2, Scalar> abs(const Vector<2, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar> abs(const Vector<3, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> abs(const Vector<4, Scalar>& vector);
 
-    /**
-     * Computes the absolute component values of the vector, creating a
-     * temporary vector to hold the result.
-     *
-     * @return A copy of the temporary holding the result.
-     */
-    template <int Size, typename Scalar>
-    Vector<Size, Scalar> abs(const Vector<Size, Scalar>& vector);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar sum(const Vector<Size, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar sum(const Vector<2, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar sum(const Vector<3, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar sum(const Vector<4, Scalar>& vector);
 
-    /**
-     * Sums up the component values of the vector.
-     */
-    template <int Size, typename Scalar>
-    Scalar sum(const Vector<Size, Scalar>& vector);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar volume(const Vector<Size, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar volume(const Vector<2, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar volume(const Vector<3, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar volume(const Vector<4, Scalar>& vector);
 
-    /**
-     * Computes the volume of the tetrahedron spanned by the Cartesian unit vectors
-     * scaled by the corresponding components of the given vector.
-     */
-    template <int Size, typename Scalar>
-    Scalar volume(const Vector<Size, Scalar>& vector);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool allEntriesAreTheSame(const Vector<Size, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool allEntriesAreTheSame(const Vector<2, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool allEntriesAreTheSame(const Vector<3, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool allEntriesAreTheSame(const Vector<4, Scalar>& vector);
 
-    template <int Size, typename Scalar>
-    bool allEntriesAreTheSame(const Vector<Size, Scalar>& vector);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar average(const Vector<Size, Scalar>& vector);
 
-    /**
-     * Computes the volume of the tetrahedron spanned by the Cartesian unit vectors
-     * scaled by the corresponding components of the given vector.
-     */
-    template <int Size, typename Scalar>
-    Scalar average(const Vector<Size, Scalar>& vector);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int indexMax(const Vector<Size, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int indexMax(const Vector<2, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int indexMax(const Vector<3, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int indexMax(const Vector<4, Scalar>& vector);
 
-    /**
-     * Returns the index of the element with maximal value (NOT absolute value).
-     */
-    template <int Size, typename Scalar>
-    int indexMax(const Vector<Size, Scalar>& vector);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int indexMin(const Vector<Size, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int indexMin(const Vector<2, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int indexMin(const Vector<3, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int indexMin(const Vector<4, Scalar>& vector);
 
-    /**
-     * Returns the index of the element with minimal value (NOT absolute value).
-     */
-    template <int Size, typename Scalar>
-    int indexMin(const Vector<Size, Scalar>& vector);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar max(const Vector<Size, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar max(const Vector<2, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar max(const Vector<3, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar max(const Vector<4, Scalar>& vector);
 
-    /**
-     * Returns the element with maximal value (NOT absolute value).
-     */
-    template <int Size, typename Scalar>
-    Scalar max(const Vector<Size, Scalar>& vector);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar maxAbs(const Vector<Size, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar maxAbs(const Vector<2, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar maxAbs(const Vector<3, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar maxAbs(const Vector<4, Scalar>& vector);
 
-    /**
-     * Returns the element with maximal absolute value.
-     */
-    template <int Size, typename Scalar>
-    Scalar maxAbs(const Vector<Size, Scalar>& vector);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar min(const Vector<Size, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar min(const Vector<2, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar min(const Vector<3, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar min(const Vector<4, Scalar>& vector);
 
-    /**
-     * Returns the element with minimal value (NOT absolute value).
-     */
-    template <int Size, typename Scalar>
-    Scalar min(const Vector<Size, Scalar>& vector);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<Size, Scalar> invertEntries(const Vector<Size, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<2, Scalar> invertEntries(const Vector<2, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar> invertEntries(const Vector<3, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> invertEntries(const Vector<4, Scalar>& vector);
 
-    template <int Size, typename Scalar>
-    Vector<Size, Scalar> invertEntries(const Vector<Size, Scalar>& vector);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool contains(const Vector<Size, Scalar>& vector, const Scalar& value);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool contains(const Vector<2, Scalar>& vector, const Scalar& value);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool contains(const Vector<3, Scalar>& vector, const Scalar& value);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool contains(const Vector<4, Scalar>& vector, const Scalar& value);
 
-    template <int Size, typename Scalar>
-    bool contains(const Vector<Size, Scalar>& vector, const Scalar& value);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int count(const Vector<Size, Scalar>& vector, const Scalar& value);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int count(const Vector<2, Scalar>& vector, const Scalar& value);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int count(const Vector<3, Scalar>& vector, const Scalar& value);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int count(const Vector<4, Scalar>& vector, const Scalar& value);
 
-    template <int Size, typename Scalar>
-    int count(const Vector<Size, Scalar>& vector, const Scalar& value);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<Size, Scalar> floor(const Vector<Size, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<2, Scalar> floor(const Vector<2, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar> floor(const Vector<3, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> floor(const Vector<4, Scalar>& vector);
 
-    template <int Size, typename Scalar>
-    Vector<Size, Scalar> floor(const Vector<Size, Scalar>& vector);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int isEntryNan(const Vector<Size, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int isEntryNan(const Vector<2, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int isEntryNan(const Vector<3, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int isEntryNan(const Vector<4, Scalar>& vector);
 
-    template <int Size, typename Scalar>
-    int isEntryNan(const Vector<Size, Scalar>& vector);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int isEntryFinite(const Vector<Size, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int isEntryFinite(const Vector<2, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int isEntryFinite(const Vector<3, Scalar>& vector);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int isEntryFinite(const Vector<4, Scalar>& vector);
 
-    template <int Size, typename Scalar>
-    int isEntryFinite(const Vector<Size, Scalar>& vector);
-
-    template <int Size, typename Scalar>
-    std::vector<Scalar> toSTLVector(const Vector<Size, Scalar>& vector);
-  } // namespace la
-} // namespace tarch
+  template <int Size, typename Scalar>
+  INLINE_METHOD std::vector<Scalar> toSTLVector(const Vector<Size, Scalar>& vector);
+} // namespace tarch::la
 
 /**
  * Streams the component values into a comma separated representation.
  */
 template <int Size, typename Scalar>
-std::ostream& operator<<(std::ostream& os, const tarch::la::Vector<Size, Scalar>& vector);
+INLINE_METHOD std::ostream& operator<<(std::ostream& os, const tarch::la::Vector<Size, Scalar>& vector);
 
 #include "VectorOperations.cpph"

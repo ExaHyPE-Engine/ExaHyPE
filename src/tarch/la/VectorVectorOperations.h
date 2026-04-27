@@ -2,263 +2,372 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "Scalar.h"
 #include "Vector.h"
 
-#include "tarch/Assertions.h"
-#include "tarch/CompilerSpecificSettings.h"
+namespace tarch::la {
+  /**
+   * Adds rVector to lVector and assigns the result to lVector.
+   *
+   * No temporary vector is created.
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<Size, Scalar>& operator+=(
+    Vector<Size, Scalar>&       lhs,
+    const Vector<Size, Scalar>& rhs
+  );
 
-namespace tarch {
-  namespace la {
-    /**
-     * Adds rVector to lVector and assigns the result to lVector.
-     *
-     * No temporary vector is created.
-     */
-    template <int Size, typename Scalar>
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Vector<Size, Scalar>& operator+=(Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<2, Scalar>& operator+=(Vector<2, Scalar>& lhs, const Vector<2, Scalar>& rhs);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar>& operator+=(Vector<3, Scalar>& lhs, const Vector<3, Scalar>& rhs);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar>& operator+=(Vector<4, Scalar>& lhs, const Vector<4, Scalar>& rhs);
 
-    /**
-     * Subtracts rVector from lVector and assigns the result to lVector.
-     *
-     * No temporary vector is created.
-     */
-    template <int Size, typename Scalar>
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Vector<Size, Scalar>& operator-=(Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
+  /**
+   * Subtracts rVector from lVector and assigns the result to lVector.
+   *
+   * No temporary vector is created.
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<Size, Scalar>& operator-=(
+    Vector<Size, Scalar>&       lhs,
+    const Vector<Size, Scalar>& rhs
+  );
 
-    /**
-     * Adds rVector to lVector.
-     *
-     * A temporary vector is created and copied to store return back the result.
-     */
-    template <int Size, typename Scalar>
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Vector<Size, Scalar> operator+(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<2, Scalar>& operator-=(Vector<2, Scalar>& lhs, const Vector<2, Scalar>& rhs);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar>& operator-=(Vector<3, Scalar>& lhs, const Vector<3, Scalar>& rhs);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar>& operator-=(Vector<4, Scalar>& lhs, const Vector<4, Scalar>& rhs);
 
-    /**
-     * Subtracts rVector from lVector.
-     *
-     * A temporary vector is created and copied to store return back the result.
-     */
-    template <int Size, typename Scalar>
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Vector<Size, Scalar> operator-(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
+  /**
+   * Adds rVector to lVector.
+   *
+   * A temporary vector is created and copied to store return back the result.
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<Size, Scalar> operator+(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs
+  );
 
-    /**
-     * Multiplies every component of the vectors with each other and writes the
-     * results into result.
-     */
-    template <int Size, typename Scalar>
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Vector<Size, Scalar> multiplyComponents(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<2, Scalar> operator+(
+    const Vector<2, Scalar>& lhs,
+    const Vector<2, Scalar>& rhs
+  );
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar> operator+(
+    const Vector<3, Scalar>& lhs,
+    const Vector<3, Scalar>& rhs
+  );
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> operator+(
+    const Vector<4, Scalar>& lhs,
+    const Vector<4, Scalar>& rhs
+  );
 
-    /**
-     * Divides every component of the vectors with each other and writes the
-     * results into result.
-     */
-    template <int Size, typename Scalar>
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Vector<Size, Scalar> divideComponents(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
+  /**
+   * Subtracts rVector from lVector.
+   *
+   * A temporary vector is created and copied to store return back the result.
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<Size, Scalar> operator-(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs
+  );
 
-    /**
-     * Performs the dot (=inner) product of two vectors.
-     *
-     * For the outer dot product consult the file MatrixVectorOperations.h.
-     */
-    template <int Size, typename Scalar>
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Scalar operator*(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<2, Scalar> operator-(
+    const Vector<2, Scalar>& lhs,
+    const Vector<2, Scalar>& rhs
+  );
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar> operator-(
+    const Vector<3, Scalar>& lhs,
+    const Vector<3, Scalar>& rhs
+  );
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> operator-(
+    const Vector<4, Scalar>& lhs,
+    const Vector<4, Scalar>& rhs
+  );
 
-    /**
-     * Performs the dot (=inner) product of two vectors.
-     *
-     * For the outer dot product consult the file MatrixVectorOperations.h.
-     */
-    template <int Size, typename Scalar>
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Scalar dot(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
+  /**
+   * Multiplies every component of the vectors with each other and writes the
+   * results into result.
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<Size, Scalar> multiplyComponents(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs
+  );
 
-    /**
-     * Performs the dot (=inner) product of two vectors.
-     *
-     * For the outer dot product consult the file MatrixVectorOperations.h.
-     */
-    template <int Size, typename Scalar>
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Scalar innerDot(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<2, Scalar> multiplyComponents(
+    const Vector<2, Scalar>& lhs,
+    const Vector<2, Scalar>& rhs
+  );
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar> multiplyComponents(
+    const Vector<3, Scalar>& lhs,
+    const Vector<3, Scalar>& rhs
+  );
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> multiplyComponents(
+    const Vector<4, Scalar>& lhs,
+    const Vector<4, Scalar>& rhs
+  );
 
-    /**
-     * Performs the cross product of two 3D vectors into result.
-     */
-    template <typename Scalar>
-    INLINE_METHOD GPU_CALLABLE_METHOD
-    Vector<3, Scalar> cross(const Vector<3, Scalar>& lhs, const Vector<3, Scalar>& rhs);
+  /**
+   * Divides every component of the vectors with each other and writes the
+   * results into result.
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<Size, Scalar> divideComponents(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs
+  );
 
-    /**
-     * Compares to vectors on equality by means of a numerical accuracy.
-     *
-     * @param tolerance Absolute tolerance. If you prefer to use a relative
-     *  measure, you might want to use tarch::la::relativeEps()
-     */
-    template <int Size, typename Scalar>
-    bool equals(
-      const Vector<Size, Scalar>& lhs,
-      const Vector<Size, Scalar>& rhs,
-      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
-    );
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<2, Scalar> divideComponents(
+    const Vector<2, Scalar>& lhs,
+    const Vector<2, Scalar>& rhs
+  );
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar> divideComponents(
+    const Vector<3, Scalar>& lhs,
+    const Vector<3, Scalar>& rhs
+  );
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> divideComponents(
+    const Vector<4, Scalar>& lhs,
+    const Vector<4, Scalar>& rhs
+  );
 
-    /**
-     * Compares sequentially every component pair of lVector and rVector, and stops
-     * as soon as one is greater than the other.
-     *
-     * Defines an absolute pairwise ordering between (unequal) vectors.
-     *
-     * @param tolerance Absolute tolerance. If you prefer to use a relative
-     *  measure, you might want to use tarch::la::relativeEps()
-     */
-    template <int Size, typename Scalar>
-    bool firstGreater(
-      const Vector<Size, Scalar>& lhs,
-      const Vector<Size, Scalar>& rhs,
-      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
-    );
+  /**
+   * Performs the dot (=inner) product of two vectors.
+   *
+   * For the outer dot product consult the file MatrixVectorOperations.h.
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar operator*(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
-    /**
-     * Returns true, if one component of lVector is greater than the corresponding
-     * component in rVector up to numerical accuracy.
-     *
-     * @param tolerance Absolute tolerance. If you prefer to use a relative
-     *  measure, you might want to use tarch::la::relativeEps()
-     */
-    template <int Size, typename Scalar>
-    bool oneGreater(
-      const Vector<Size, Scalar>& lhs,
-      const Vector<Size, Scalar>& rhs,
-      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
-    );
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar operator*(const Vector<2, Scalar>& lhs, const Vector<2, Scalar>& rhs);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar operator*(const Vector<3, Scalar>& lhs, const Vector<3, Scalar>& rhs);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar operator*(const Vector<4, Scalar>& lhs, const Vector<4, Scalar>& rhs);
 
-    /**
-     * Returns true, if one component of lVector is greater or equals than the
-     * corresponding component in rVector up to numerical accuracy.
-     */
-    template <int Size, typename Scalar>
-    bool oneGreaterEquals(
-      const Vector<Size, Scalar>& lhs,
-      const Vector<Size, Scalar>& rhs,
-      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
-    );
+  /**
+   * Performs the dot (=inner) product of two vectors.
+   *
+   * For the outer dot product consult the file MatrixVectorOperations.h.
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar dot(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
-    /**
-     * Returns true, if all components of lVector are greater than the corresponding
-     * components in rVector up to numerical accuracy.
-     *
-     * @param tolerance Absolute tolerance. If you prefer to use a relative
-     *  measure, you might want to use tarch::la::relativeEps()
-     */
-    template <int Size, typename Scalar>
-    bool allGreater(
-      const Vector<Size, Scalar>& lhs,
-      const Vector<Size, Scalar>& rhs,
-      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
-    );
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar dot(const Vector<2, Scalar>& lhs, const Vector<2, Scalar>& rhs);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar dot(const Vector<3, Scalar>& lhs, const Vector<3, Scalar>& rhs);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar dot(const Vector<4, Scalar>& lhs, const Vector<4, Scalar>& rhs);
 
-    /**
-     * Returns true, if all components of lVector are greater or equals than the corresponding
-     * components in rVector up to numerical accuracy.
-     */
-    template <int Size, typename Scalar>
-    bool allGreaterEquals(
-      const Vector<Size, Scalar>& lhs,
-      const Vector<Size, Scalar>& rhs,
-      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
-    );
+  /**
+   * Performs the dot (=inner) product of two vectors.
+   *
+   * For the outer dot product consult the file MatrixVectorOperations.h.
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar innerDot(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
-    template <int Size, typename Scalar>
-    bool allSmaller(
-      const Vector<Size, Scalar>& lhs,
-      const Vector<Size, Scalar>& rhs,
-      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
-    );
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar innerDot(const Vector<2, Scalar>& lhs, const Vector<2, Scalar>& rhs);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar innerDot(const Vector<3, Scalar>& lhs, const Vector<3, Scalar>& rhs);
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar innerDot(const Vector<4, Scalar>& lhs, const Vector<4, Scalar>& rhs);
 
-    template <int Size, typename Scalar>
-    bool allSmallerEquals(
-      const Vector<Size, Scalar>& lhs,
-      const Vector<Size, Scalar>& rhs,
-      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
-    );
+  /**
+   * Performs the cross product of two 3D vectors into result.
+   */
+  template <typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar> cross(const Vector<3, Scalar>& lhs, const Vector<3, Scalar>& rhs);
 
-    template <int Size, typename Scalar>
-    bool oneSmaller(
-      const Vector<Size, Scalar>& lhs,
-      const Vector<Size, Scalar>& rhs,
-      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
-    );
+  /**
+   * Compares to vectors on equality by means of a numerical accuracy.
+   *
+   * @param tolerance Absolute tolerance. If you prefer to use a relative
+   *  measure, you might want to use tarch::la::relativeEps()
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool equals(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs,
+    const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
+  );
 
-    template <int Size, typename Scalar>
-    bool oneSmallerEquals(
-      const Vector<Size, Scalar>& lhs,
-      const Vector<Size, Scalar>& rhs,
-      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
-    );
+  /**
+   * Compares sequentially every component pair of lVector and rVector, and stops
+   * as soon as one is greater than the other.
+   *
+   * Defines an absolute pairwise ordering between (unequal) vectors.
+   *
+   * @param tolerance Absolute tolerance. If you prefer to use a relative
+   *  measure, you might want to use tarch::la::relativeEps()
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool firstGreater(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs,
+    const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
+  );
 
-    /**
-     * Component-wise max evaluation
-     */
-    template <int Size, typename Scalar>
-    Vector<Size, Scalar> max(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
+  /**
+   * Returns true, if one component of lVector is greater than the corresponding
+   * component in rVector up to numerical accuracy.
+   *
+   * @param tolerance Absolute tolerance. If you prefer to use a relative
+   *  measure, you might want to use tarch::la::relativeEps()
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool oneGreater(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs,
+    const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
+  );
 
-    /**
-     * Component-wise min evaluation
-     */
-    template <int Size, typename Scalar>
-    Vector<Size, Scalar> min(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
+  /**
+   * Returns true, if one component of lVector is greater or equals than the
+   * corresponding component in rVector up to numerical accuracy.
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool oneGreaterEquals(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs,
+    const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
+  );
 
-    /**
-     * Bit-wise comparison of the components of two vectors for equality.
-     *
-     * This method should not be used for floating-point valued vectors. Instead,
-     * equals() is the suitable comparison.
-     */
-    template <int Size, typename Scalar>
-    bool operator==(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
+  /**
+   * Returns true, if all components of lVector are greater than the corresponding
+   * components in rVector up to numerical accuracy.
+   *
+   * @param tolerance Absolute tolerance. If you prefer to use a relative
+   *  measure, you might want to use tarch::la::relativeEps()
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool allGreater(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs,
+    const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
+  );
 
-    /**
-     * Bit-wise comparison of the components of two vectors for inequality.
-     *
-     * This method should not be used for floating-point valued vectors. Instead,
-     * !equals() is the suitable comparison.
-     */
-    template <int Size, typename Scalar>
-    bool operator!=(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
+  /**
+   * Returns true, if all components of lVector are greater or equals than the corresponding
+   * components in rVector up to numerical accuracy.
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool allGreaterEquals(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs,
+    const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
+  );
 
-    /**
-     * Return Index of element which is not equals.
-     *
-     */
-    template <int Size, typename Scalar>
-    int equalsReturnIndex(
-      const Vector<Size, Scalar>& lhs,
-      const Vector<Size, Scalar>& rhs,
-      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
-    );
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool allSmaller(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs,
+    const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
+  );
 
-    template <int Size>
-    int equalsReturnIndex(const Vector<Size, int>& lhs, const Vector<Size, int>& rhs);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool allSmallerEquals(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs,
+    const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
+  );
 
-    /**
-     * Run through both vectors and count how many entries are the same.
-     */
-    template <int Size>
-    int countEqualEntries(const Vector<Size, int>& lhs, const Vector<Size, int>& rhs);
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool oneSmaller(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs,
+    const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
+  );
 
-    template <int Size, typename Scalar>
-    int countEqualEntries(
-      const Vector<Size, Scalar>& lhs,
-      const Vector<Size, Scalar>& rhs,
-      const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
-    );
-  } // namespace la
-} // namespace tarch
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool oneSmallerEquals(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs,
+    const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
+  );
+
+  /**
+   * Component-wise max evaluation
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<Size, Scalar> max(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs
+  );
+
+  /**
+   * Component-wise min evaluation
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<Size, Scalar> min(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs
+  );
+
+  /**
+   * Bit-wise comparison of the components of two vectors for equality.
+   *
+   * This method should not be used for floating-point valued vectors. Instead,
+   * equals() is the suitable comparison.
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool operator==(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
+
+  /**
+   * Bit-wise comparison of the components of two vectors for inequality.
+   *
+   * This method should not be used for floating-point valued vectors. Instead,
+   * !equals() is the suitable comparison.
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool operator!=(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
+
+  /**
+   * Return Index of element which is not equals.
+   *
+   */
+  template <int Size, typename Scalar>
+  INLINE_METHOD int equalsReturnIndex(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs,
+    const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
+  );
+
+  template <int Size>
+  INLINE_METHOD GPU_CALLABLE_METHOD int equalsReturnIndex(const Vector<Size, int>& lhs, const Vector<Size, int>& rhs);
+
+  /**
+   * Run through both vectors and count how many entries are the same.
+   */
+  template <int Size>
+  INLINE_METHOD GPU_CALLABLE_METHOD int countEqualEntries(const Vector<Size, int>& lhs, const Vector<Size, int>& rhs);
+
+  template <int Size, typename Scalar>
+  INLINE_METHOD GPU_CALLABLE_METHOD int countEqualEntries(
+    const Vector<Size, Scalar>& lhs,
+    const Vector<Size, Scalar>& rhs,
+    const Scalar                tolerance = NUMERICAL_ZERO_DIFFERENCE
+  );
+} // namespace tarch::la
 
 #include "VectorVectorOperations.cpph"

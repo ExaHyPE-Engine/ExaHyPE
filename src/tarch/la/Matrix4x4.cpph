@@ -1,0 +1,127 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar>::Matrix():
+  _values() {}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar>::Matrix(const Scalar& value) {
+  for (int i = 0; i < 16; i++) {
+    _values[i] = value;
+  }
+}
+
+template <typename Scalar>
+INLINE_METHOD tarch::la::Matrix<4, 4, Scalar>::Matrix(std::initializer_list<Scalar> values):
+  _values() {
+  assertion2(values.size() <= 16, values.size(), 16);
+  int index = 0;
+  for (auto p = values.begin(); p != values.end(); p++) {
+    _values[index] = *p;
+    index++;
+  }
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::Matrix<4, 4, Scalar>::rows() const {
+  return 4;
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::Matrix<4, 4, Scalar>::cols() const {
+  return 4;
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::Matrix<4, 4, Scalar>::size() const {
+  return 16;
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar& tarch::la::Matrix<4, 4, Scalar>::operator()(int rowIndex, int colIndex) {
+  assertion5(rowIndex >= 0, 4, 4, rowIndex, colIndex, toString());
+  assertion5(colIndex >= 0, 4, 4, rowIndex, colIndex, toString());
+  assertion5(rowIndex < 4, 4, 4, rowIndex, colIndex, toString());
+  assertion5(colIndex < 4, 4, 4, rowIndex, colIndex, toString());
+  return _values[rowIndex * 4 + colIndex];
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD const Scalar& tarch::la::Matrix<4, 4, Scalar>::operator()(
+  int rowIndex,
+  int colIndex
+) const {
+  assertion5(rowIndex >= 0, 4, 4, rowIndex, colIndex, toString());
+  assertion5(colIndex >= 0, 4, 4, rowIndex, colIndex, toString());
+  assertion5(rowIndex < 4, 4, 4, rowIndex, colIndex, toString());
+  assertion5(colIndex < 4, 4, 4, rowIndex, colIndex, toString());
+  return _values[rowIndex * 4 + colIndex];
+}
+
+template <typename Scalar>
+std::string tarch::la::Matrix<4, 4, Scalar>::toString() const {
+  std::ostringstream os;
+  os << "[";
+  for (int i = 0; i < 4; i++) {
+    os << "[";
+    for (int j = 0; j < 4; j++) {
+      os << _values[i * 4 + j];
+      if (j + 1 < 4) {
+        os << ",";
+      }
+    }
+    os << "]";
+    if (i + 1 < 4) {
+      os << ",";
+    }
+  }
+  os << "]";
+  return os.str();
+}
+
+template <typename Scalar>
+std::string tarch::la::Matrix<4, 4, Scalar>::toPrettyString(int numberOfDigits) const {
+  std::ostringstream os;
+  os << "[" << std::setiosflags(std::ios::fixed) << std::setprecision(numberOfDigits);
+  for (int i = 0; i < 4; i++) {
+    os << std::endl;
+    for (int j = 0; j < 4; j++) {
+      if (tarch::la::abs(_values[i * 4 + j]) >= 0.0) {
+        os << " ";
+      }
+      os << _values[i * 4 + j];
+      if (j + 1 < 4) {
+        os << ", ";
+      }
+    }
+    if (i + 1 < 4) {
+      os << ",";
+    }
+  }
+  os << std::endl << "]";
+  return os.str();
+}
+
+template <typename Scalar>
+template <typename NewScalarType>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, NewScalarType> tarch::la::Matrix<4, 4, Scalar>::
+  convertScalar() const {
+  tarch::la::Matrix<4, 4, NewScalarType> result;
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      result(i, j) = operator()(i, j);
+    }
+  }
+  return result;
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar* tarch::la::Matrix<4, 4, Scalar>::data() {
+  return _values;
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD const Scalar* tarch::la::Matrix<4, 4, Scalar>::data() const {
+  return _values;
+}

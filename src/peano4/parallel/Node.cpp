@@ -189,12 +189,18 @@ std::bitset<2 * DIMENSIONS> peano4::parallel::Node::getPeriodicBoundaryNumber(
   std::bitset<2 * DIMENSIONS> result;
 
   for (int d = 0; d < 2 * DIMENSIONS; d++) {
-    bool                                        allFlagsSet = true;
-    dfor2(k) tarch::la::Vector<DIMENSIONS, int> entry;
-    entry                 = k;
-    entry(d % DIMENSIONS) = d / DIMENSIONS;
-    allFlagsSet &= flags[utils::dLinearised(entry, 2)] == grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition;
-    enddforx if (allFlagsSet) { result.set(d); }
+    bool allFlagsSet = true;
+    for (int i = 0; i < TWO_POWER_D; i++) {
+      std::bitset<DIMENSIONS>            point(static_cast<unsigned long>(i));
+      tarch::la::Vector<DIMENSIONS, int> entry(point);
+      entry(d % DIMENSIONS) = d / DIMENSIONS;
+
+      const bool current = flags[utils::dLinearised(entry, 2)] == grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition;
+      allFlagsSet        = allFlagsSet && current;
+    }
+    if (allFlagsSet) {
+      result.set(d);
+    }
   }
   return result;
 }

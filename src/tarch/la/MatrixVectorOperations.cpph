@@ -1,9 +1,8 @@
-#ifdef UseOpenblas
-#include <cblas.h>
-#endif
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 
 template <int Rows, int Cols, typename Scalar>
-tarch::la::Vector<Rows, Scalar> tarch::la::multiply(
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Rows, Scalar> tarch::la::multiply(
   const Matrix<Rows, Cols, Scalar>& matrix,
   const Vector<Cols, Scalar>&       vector
 ) {
@@ -16,12 +15,51 @@ tarch::la::Vector<Rows, Scalar> tarch::la::multiply(
   return result;
 }
 
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> tarch::la::multiply(
+  const Matrix<2, 2, Scalar>& matrix,
+  const Vector<2, Scalar>&    vector
+) {
+  return Vector<2, Scalar>{
+    matrix(0, 0) * vector._values[0] + matrix(0, 1) * vector._values[1],
+    matrix(1, 0) * vector._values[0] + matrix(1, 1) * vector._values[1]
+  };
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> tarch::la::multiply(
+  const Matrix<3, 3, Scalar>& matrix,
+  const Vector<3, Scalar>&    vector
+) {
+  return Vector<3, Scalar>{
+    matrix(0, 0) * vector._values[0] + matrix(0, 1) * vector._values[1] + matrix(0, 2) * vector._values[2],
+    matrix(1, 0) * vector._values[0] + matrix(1, 1) * vector._values[1] + matrix(1, 2) * vector._values[2],
+    matrix(2, 0) * vector._values[0] + matrix(2, 1) * vector._values[1] + matrix(2, 2) * vector._values[2]
+  };
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> tarch::la::multiply(
+  const Matrix<4, 4, Scalar>& matrix,
+  const Vector<4, Scalar>&    vector
+) {
+  return Vector<4, Scalar>{
+    matrix(0, 0) * vector._values[0] + matrix(0, 1) * vector._values[1] + matrix(0, 2) * vector._values[2]
+      + matrix(0, 3) * vector._values[3],
+    matrix(1, 0) * vector._values[0] + matrix(1, 1) * vector._values[1] + matrix(1, 2) * vector._values[2]
+      + matrix(1, 3) * vector._values[3],
+    matrix(2, 0) * vector._values[0] + matrix(2, 1) * vector._values[1] + matrix(2, 2) * vector._values[2]
+      + matrix(2, 3) * vector._values[3],
+    matrix(3, 0) * vector._values[0] + matrix(3, 1) * vector._values[1] + matrix(3, 2) * vector._values[2]
+      + matrix(3, 3) * vector._values[3]
+  };
+}
 
 /**
  * Compute r = r + alpha * M * v
  */
 template <int Rows, int Cols, typename Scalar>
-void tarch::la::matVec(
+INLINE_METHOD GPU_CALLABLE_METHOD void tarch::la::matVec(
   const Matrix<Rows, Cols, Scalar>& matrix,
   Scalar                            alpha,
   const Vector<Cols, Scalar>&       v,
@@ -34,42 +72,72 @@ void tarch::la::matVec(
   }
 }
 
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD void tarch::la::
+  matVec(const Matrix<2, 2, Scalar>& matrix, Scalar alpha, const Vector<2, Scalar>& v, Vector<2, Scalar>& r) {
+  r._values[0] += alpha * (matrix(0, 0) * v._values[0] + matrix(0, 1) * v._values[1]);
+  r._values[1] += alpha * (matrix(1, 0) * v._values[0] + matrix(1, 1) * v._values[1]);
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD void tarch::la::
+  matVec(const Matrix<3, 3, Scalar>& matrix, Scalar alpha, const Vector<3, Scalar>& v, Vector<3, Scalar>& r) {
+  r._values[0] += alpha * (matrix(0, 0) * v._values[0] + matrix(0, 1) * v._values[1] + matrix(0, 2) * v._values[2]);
+  r._values[1] += alpha * (matrix(1, 0) * v._values[0] + matrix(1, 1) * v._values[1] + matrix(1, 2) * v._values[2]);
+  r._values[2] += alpha * (matrix(2, 0) * v._values[0] + matrix(2, 1) * v._values[1] + matrix(2, 2) * v._values[2]);
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD void tarch::la::
+  matVec(const Matrix<4, 4, Scalar>& matrix, Scalar alpha, const Vector<4, Scalar>& v, Vector<4, Scalar>& r) {
+  r._values[0]
+    += alpha
+       * (matrix(0, 0) * v._values[0] + matrix(0, 1) * v._values[1] + matrix(0, 2) * v._values[2] + matrix(0, 3) * v._values[3]);
+  r._values[1]
+    += alpha
+       * (matrix(1, 0) * v._values[0] + matrix(1, 1) * v._values[1] + matrix(1, 2) * v._values[2] + matrix(1, 3) * v._values[3]);
+  r._values[2]
+    += alpha
+       * (matrix(2, 0) * v._values[0] + matrix(2, 1) * v._values[1] + matrix(2, 2) * v._values[2] + matrix(2, 3) * v._values[3]);
+  r._values[3]
+    += alpha
+       * (matrix(3, 0) * v._values[0] + matrix(3, 1) * v._values[1] + matrix(3, 2) * v._values[2] + matrix(3, 3) * v._values[3]);
+}
 
 template <int Rows, int Cols, typename Scalar>
-tarch::la::Vector<Rows, Scalar> tarch::la::operator*(
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Rows, Scalar> tarch::la::operator*(
   const Matrix<Rows, Cols, Scalar>& matrix,
   const Vector<Cols, Scalar>&       vector
 ) {
   return multiply(matrix, vector);
 }
 
-#ifdef UseOpenblas
-template <int Rows, int Cols>
-tarch::la::Vector<Rows, double> tarch::la::operator*(
-  const Matrix<Rows, Cols, double>& matrix,
-  const Vector<Cols, double>&       vector
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> tarch::la::operator*(
+  const Matrix<2, 2, Scalar>& matrix,
+  const Vector<2, Scalar>&    vector
 ) {
-  tarch::la::Vector<Rows, double> output;
-  cblas_dgemv(
-    CblasRowMajor,
-    CblasNoTrans,
-    Rows,
-    Cols,
-    1,
-    matrix.data(),
-    Rows,
-    vector.data(),
-    1,
-    0,
-    output.data(),
-    1
-  );
-  return output;
+  return multiply(matrix, vector);
 }
-#endif
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> tarch::la::operator*(
+  const Matrix<3, 3, Scalar>& matrix,
+  const Vector<3, Scalar>&    vector
+) {
+  return multiply(matrix, vector);
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> tarch::la::operator*(
+  const Matrix<4, 4, Scalar>& matrix,
+  const Vector<4, Scalar>&    vector
+) {
+  return multiply(matrix, vector);
+}
 
 template <int Size, typename Scalar>
-tarch::la::Matrix<Size, Size, Scalar> tarch::la::outerDot(
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Size, Size, Scalar> tarch::la::outerDot(
   const Vector<Size, Scalar>& lhs,
   const Vector<Size, Scalar>& rhs
 ) {

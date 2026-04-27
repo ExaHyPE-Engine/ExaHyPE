@@ -1,0 +1,78 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar>::Vector():
+  _values{} {}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar>::Vector(const Scalar* values):
+  _values{values[0], values[1], values[2]} {}
+
+template <typename Scalar>
+INLINE_METHOD tarch::la::Vector<3, Scalar>::Vector(std::initializer_list<Scalar> values):
+  _values{} {
+  auto p = values.begin();
+  if (p != values.end()) {
+    _values[0] = *p;
+    p++;
+  }
+  if (p != values.end()) {
+    _values[1] = *p;
+    p++;
+  }
+  if (p != values.end()) {
+    _values[2] = *p;
+  }
+}
+
+template <typename Scalar>
+INLINE_METHOD tarch::la::Vector<3, Scalar>::Vector(const std::bitset<3>& values):
+  _values{values[0] ? Scalar(1) : Scalar(0), values[1] ? Scalar(1) : Scalar(0), values[2] ? Scalar(1) : Scalar(0)} {}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar>::Vector(const Scalar& initialValue):
+  _values{initialValue, initialValue, initialValue} {}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::Vector<3, Scalar>::size() const {
+  return 3;
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD const Scalar& tarch::la::Vector<3, Scalar>::operator[](int index) const {
+#if !defined(WITH_GPU)
+  assertion3(index >= 0, index, 3, ::toString(*this));
+  assertion3(index < 3, index, 3, ::toString(*this));
+#endif
+  return _values[index];
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar& tarch::la::Vector<3, Scalar>::operator[](int index) {
+#if !defined(WITH_GPU)
+  assertion3(index >= 0, index, 3, ::toString(*this));
+  assertion3(index < 3, index, 3, ::toString(*this));
+#endif
+  return _values[index];
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD const Scalar& tarch::la::Vector<3, Scalar>::operator()(int index) const {
+  return (*this)[index];
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar& tarch::la::Vector<3, Scalar>::operator()(int index) {
+  return (*this)[index];
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar* tarch::la::Vector<3, Scalar>::data() {
+  return _values;
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD const Scalar* tarch::la::Vector<3, Scalar>::data() const {
+  return _values;
+}

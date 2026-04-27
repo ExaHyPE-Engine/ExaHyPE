@@ -4,40 +4,18 @@
 
 #include "tarch/tests/TestCase.h"
 
-namespace tarch {
-  namespace la {
-    namespace tests {
-      class GramSchmidtTest;
-    }
-  }
-}
+namespace tarch::la::tests {
+  class GramSchmidtTest;
+} // namespace tarch::la::tests
 
-/**
- * Provides tests for types Vector, DynamicVector and all Vector functionality.
- */
-class tarch::la::tests::GramSchmidtTest: public tarch::tests::TestCase {
-  private:
+class tarch::la::tests::GramSchmidtTest final: public tarch::tests::TestCase {
+private:
+  void testModifiedGramSchmidt();
+  void testDynamicModifiedGramSchmidt();
+  void testModifiedGramSchmidtWithSingularColumn();
 
-  /**
-   * Tests constructors.
-   */
-  void testModifiedGramSchmidt ();
-
-  public:
-
-    /**
-     * Cosntructor.
-     */
-    GramSchmidtTest ();
-
-    /**
-     * Destructor, empty.
-     */
-    virtual ~GramSchmidtTest () {}
-
-    /**
-     * This routine is triggered by the TestCaseCollection
-     */
-    virtual void run() override;
+public:
+  GramSchmidtTest();
+  ~GramSchmidtTest() override = default;
+  void run() override;
 };
-

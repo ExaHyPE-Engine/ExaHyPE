@@ -2,79 +2,42 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <limits>
-
 #include "tarch/accelerator/accelerator.h"
+
+#include <limits>
 
 TARGET_DECLARE
 
-namespace tarch {
-  namespace la {
-    constexpr double PI = 3.1415926535897932384626433832795028841972;
-    constexpr double E  = 2.7182818284590452353602874713526624977572;
-#ifdef MACHINE_PRECISION
-    constexpr double NUMERICAL_ZERO_DIFFERENCE = MACHINE_PRECISION;
-#else
-    constexpr double NUMERICAL_ZERO_DIFFERENCE = 1.0e-8;
-#endif
+namespace tarch::la {
+  constexpr double PI                        = 3.1415926535897932384626433832795028841972;
+  constexpr double E                         = 2.7182818284590452353602874713526624977572;
+  constexpr double NUMERICAL_ZERO_DIFFERENCE = 1.0e-8;
 
-    /**
-     * Determine a relative tolerance from one or two values
-     *
-     * This routine equals relativeEps, but if the normalisation quantities
-     * become smaller than 1.0, then we pick eps instead of eps times this
-     * value smaller than 1.0. So basically the normalisation with valueA
-     * (and valueB) kicks in iff the bigger value of the two is bigger than
-     * 1.0.
-     */
-    double relativeEpsNormalisedAgainstValueGreaterOne(
-      double valueA, double valueB = std::numeric_limits<double>::min(), double eps = NUMERICAL_ZERO_DIFFERENCE
-    );
+  /**
+   * Like `relativeEps()`, but never scales by values smaller than `1.0`.
+   */
+  double relativeEpsNormalisedAgainstValueGreaterOne(
+    double valueA,
+    double valueB = std::numeric_limits<double>::min(),
+    double eps    = NUMERICAL_ZERO_DIFFERENCE
+  );
 
-    /**
-     * Determine a relative tolerance from one or two values
-     *
-     * This routine takes eps and scales it with the maximum of the absolute
-     * values of the arguments.
-     *
-     * The version with two arguments can be seen as
-     * wrapper around a 'scalar' relativeEps() variant which forwards the
-     * bigger value. This is very often used in combination with the greater
-     * and smaller macros, where you wanna compare prescribing a comparison
-     * tolerance.
-     *
-     * If you have only one argument, set valueB=valueA.
-     */
-    double relativeEps(
-      double valueA,
-      double valueB = std::numeric_limits<double>::min(),
-      double eps    = NUMERICAL_ZERO_DIFFERENCE
-    );
+  /**
+   * Scale `eps` with the larger absolute input value.
+   */
+  double relativeEps(
+    double valueA,
+    double valueB = std::numeric_limits<double>::min(),
+    double eps    = NUMERICAL_ZERO_DIFFERENCE
+  );
 
-    /**
-     * I need the maximum of three values all the time, to I decided to write a
-     * function for this.
-     */
-    double max(double a, double b, double c);
+  double max(double a, double b, double c);
 
-    /**
-     * The minimum of three values to complement max()
-     */
-    double min(double a, double b, double c);
+  double min(double a, double b, double c);
 
-    /**
-     * Wrapper around std::pow which is redirected to Intel's implementation on
-     * Intel machines.
-     */
-    double pow(double base, double exponent);
+  double pow(double base, double exponent);
 
-    /**
-     * Convert an absolute value into a relative one. That is if the
-     * referenceValue is smaller than one, then we do nothing. Otherwise,
-     * we divide the absolute value by the reference value.
-     */
-    double convertAbsoluteIntoRelativeValue(double referenceValue, double value);
-  } // namespace la
-} // namespace tarch
+  double convertAbsoluteIntoRelativeValue(double referenceValue, double value);
+} // namespace tarch::la
 
 TARGET_DECLARE_END

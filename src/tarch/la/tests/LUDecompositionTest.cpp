@@ -1,84 +1,69 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "LUDecompositionTest.h"
+
+#include "tarch/la/DynamicMatrix.h"
 #include "tarch/la/LUDecomposition.h"
-#include "tarch/la/Matrix.h"
-#include "tarch/la/Vector.h"
-
-
 
 tarch::la::tests::LUDecompositionTest::LUDecompositionTest():
-  TestCase ("tarch::la::tests::LUDecompositionTest") {
-}
-
+  TestCase("tarch::la::tests::LUDecompositionTest") {}
 
 void tarch::la::tests::LUDecompositionTest::run() {
-  testMethod (testLUNoPivoting);
-  testMethod (testLU);
-  testMethod (testInversion0 );
-  testMethod (testInversion1 );
+  testMethod(testBackSubstitution);
+  testMethod(testInvertUpperTriangular);
+  testMethod(testStaticBackSubstitution);
+  testMethod(testStaticInvertUpperTriangular);
 }
 
+void tarch::la::tests::LUDecompositionTest::testBackSubstitution() {
+  DynamicMatrix R(3, 3, {{2.0, 1.0, -1.0}, {0.0, 3.0, 2.0}, {0.0, 0.0, 4.0}});
 
-void tarch::la::tests::LUDecompositionTest::testLUNoPivoting() {
+  double rhs[3] = {2.0, 5.0, 8.0};
+  double x[3]   = {0.0, 0.0, 0.0};
+
+  tarch::la::backSubstitution(R, rhs, x);
+
+  validateNumericalEquals(x[2], 2.0);
+  validateNumericalEquals(x[1], 1.0 / 3.0);
+  validateNumericalEquals(x[0], 11.0 / 6.0);
 }
 
+void tarch::la::tests::LUDecompositionTest::testInvertUpperTriangular() {
+  DynamicMatrix R(3, 3, {{2.0, 1.0, -1.0}, {0.0, 3.0, 2.0}, {0.0, 0.0, 4.0}});
 
-void tarch::la::tests::LUDecompositionTest::testLU() {
-  // Test is obviously buggy. The pivot values are doubles but the test uses
-  // them as integer in line 57.
-  Matrix<2,2,double> A = {
-    4.0, 3.0,
-    6.0, 3.0
-  };
-  Matrix<2,2,double> LU = {
-    4.0, 3.0,
-    1.5, -1.5
-  };
+  DynamicMatrix inverseR = tarch::la::invertUpperTriangular(R);
+  DynamicMatrix identity = R * inverseR;
 
-  tarch::la::lu(A);
-
-  validateEquals( A, LU );
+  validateNumericalEquals(identity(0, 0), 1.0);
+  validateNumericalEquals(identity(1, 1), 1.0);
+  validateNumericalEquals(identity(2, 2), 1.0);
+  validateNumericalEquals(identity(0, 1), 0.0);
+  validateNumericalEquals(identity(0, 2), 0.0);
+  validateNumericalEquals(identity(1, 2), 0.0);
 }
 
+void tarch::la::tests::LUDecompositionTest::testStaticBackSubstitution() {
+  Matrix<3, 3, double> R   = {2.0, 1.0, -1.0, 0.0, 3.0, 2.0, 0.0, 0.0, 4.0};
+  Vector<3, double>    rhs = {2.0, 5.0, 8.0};
+  Vector<3, double>    x(0.0);
 
-void tarch::la::tests::LUDecompositionTest::testInversion0(){
-  // checking if Lapack correctly configured. Invert
-  // a diagonal matrix.
+  tarch::la::backSubstitution(R, rhs, x);
 
-  Matrix<5,5,double> A = {
-    1,0,0,0,0,
-    0,2,0,0,0,
-    0,0,3,0,0,
-    0,0,0,4,0,
-    0,0,0,0,5
-  };
-
-  Matrix<5,5,double> AInverted = {
-    1,0,0,0,0,
-    0,1./2,0,0,0,
-    0,0,1./3,0,0,
-    0,0,0,1./4,0,
-    0,0,0,0,1./5
-  };
-
-  validateEquals( invert(A), AInverted );
+  validateNumericalEquals(x[2], 2.0);
+  validateNumericalEquals(x[1], 1.0 / 3.0);
+  validateNumericalEquals(x[0], 11.0 / 6.0);
 }
 
+void tarch::la::tests::LUDecompositionTest::testStaticInvertUpperTriangular() {
+  Matrix<3, 3, double> R = {2.0, 1.0, -1.0, 0.0, 3.0, 2.0, 0.0, 0.0, 4.0};
 
-void tarch::la::tests::LUDecompositionTest::testInversion1(){
-  // checking if Lapack correctly configured. Invert
-  // a diagonal matrix.
+  Matrix<3, 3, double> inverseR = tarch::la::invertUpperTriangular(R);
+  Matrix<3, 3, double> identity = R * inverseR;
 
-  Matrix<2,2,double> A = {
-    -1.0, 3.0/2.0,
-    1.0, -1.0
-  };
-
-  Matrix<2,2,double> AInverted = {
-    2, 3,
-    2, 2
-  };
-
-  validateEquals( invert(A), AInverted );
+  validateNumericalEquals(identity(0, 0), 1.0);
+  validateNumericalEquals(identity(1, 1), 1.0);
+  validateNumericalEquals(identity(2, 2), 1.0);
+  validateNumericalEquals(identity(0, 1), 0.0);
+  validateNumericalEquals(identity(0, 2), 0.0);
+  validateNumericalEquals(identity(1, 2), 0.0);
 }

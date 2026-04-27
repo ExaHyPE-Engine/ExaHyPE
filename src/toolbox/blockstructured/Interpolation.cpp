@@ -68,7 +68,7 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
   assertionEquals1(P1d.rows(), 3 * numberOfDoFsPerAxisInPatch, P1d.toString());
 
 #if DIMENSIONS == 3
-  tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix(P1d, P1d, false);
+  tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix(P1d, P1d);
 #else
   tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix(P1d);
 #endif
@@ -105,7 +105,7 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
   assertionEquals1(P1d.rows(), 3 * numberOfDoFsPerAxisInPatch, P1d.toString());
 
 #if DIMENSIONS == 3
-  tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix(P1d, P1d, false);
+  tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix(P1d, P1d);
 #else
   tarch::la::DynamicMatrix* P               = new tarch::la::DynamicMatrix(P1d);
 #endif
@@ -248,7 +248,7 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
     "1d interpolation matrix: " << P1d.toString(true)
   );
 
-  tarch::la::DynamicMatrix P2d(P1d, P1d, false);
+  tarch::la::DynamicMatrix P2d(P1d, P1d);
   logDebug(
     "createLinearInterpolationMatrix(...)",
     "2d interpolation matrix: " << P2d.toString(true)
@@ -256,7 +256,7 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
 
   logTraceOut("createLinearInterpolationMatrix(...)");
 #if DIMENSIONS == 3
-  return new tarch::la::DynamicMatrix(P2d, P1d, false);
+  return new tarch::la::DynamicMatrix(P2d, P1d);
 #else
   return new tarch::la::DynamicMatrix(P2d);
 #endif
