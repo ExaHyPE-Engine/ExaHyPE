@@ -343,7 +343,8 @@
  * as we work in a Discontinuous Galerkin setup. We hence do not store four weights in the
  * example above, but we do hold eight weights, i.e. both the weights from the left and the
  * right side. These weights are stored lexicographically in line with the Finite Volume
- * solver. See the documentation of the face enumerator exahype2::enumerator::FaceAoSLexicographicEnumerator.
+ * solver, i.e. each face degree of freedom is serialised explicitly and then multiplied
+ * by the variable stride.
  * In the vanilla version of ExaHyPE, we do only store the solution left and right. For more
  * sophisticated Riemann solver, you can also store derivatives, e.g., from both sides.
  *
@@ -531,8 +532,8 @@
  *
  * ## Todo list
  *
- * - Strides should completely go away and should be subsumed in the enumerators. So the
- *   enumerators is where all the logic sits and the logic is completely encapsulated there.
+ * - Keep the memory layout explicit in the kernels and avoid introducing another dedicated
+ *   indexing abstraction layer.
  * - Investigate if we could remove a few other matrices from the generated Python code
  * - Point sources are missing
  *

@@ -2,7 +2,7 @@
 #include "TestUtils.h"
 #include "../Riemann.h"
 #include "../DGUtils.h"
-#include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
+#include "toolbox/blockstructured/Enumeration.h"
 
 exahype2::dg::tests::RiemannTest::RiemannTest():
   tarch::tests::TestCase( "exahype2::dg::tests::RiemannTest" ) {
@@ -101,22 +101,20 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
   validateNumericalEquals( QyL[12],  1.0 );
   validateNumericalEquals( QyL[13], -1.0 );
   #if DIMENSIONS==3
-  exahype2::enumerator::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,3+1,1,1,1);
-
-  validateEquals( bottomTopFaceEnumerator({0,0,0},0), 0 );
-  validateEquals( bottomTopFaceEnumerator({0,0,0},1), 1 );
-  validateEquals( bottomTopFaceEnumerator({1,0,0},0), 2 );
-  validateEquals( bottomTopFaceEnumerator({1,0,0},1), 3 );
-  validateEquals( bottomTopFaceEnumerator({0,1,0},0), 8 );
-  validateEquals( bottomTopFaceEnumerator({0,1,0},1), 9 );
-  validateEquals( bottomTopFaceEnumerator({1,1,0},0), 10 );
-  validateEquals( bottomTopFaceEnumerator({1,1,0},1), 11 );
-  validateEquals( bottomTopFaceEnumerator({2,1,0},0), 12 );
-  validateEquals( bottomTopFaceEnumerator({2,1,0},1), 13 );
-  validateEquals( bottomTopFaceEnumerator({3,1,0},0), 14 );
-  validateEquals( bottomTopFaceEnumerator({3,1,0},1), 15 );
-  validateEquals( bottomTopFaceEnumerator({0,0,1},0), 16 );
-  validateEquals( bottomTopFaceEnumerator({0,0,1},1), 17 );
+  validateEquals( toolbox::blockstructured::serialiseVoxelIndexInOverlap({0,0,0}, 3+1, 1, 1) * 2 + 0, 0 );
+  validateEquals( toolbox::blockstructured::serialiseVoxelIndexInOverlap({0,0,0}, 3+1, 1, 1) * 2 + 1, 1 );
+  validateEquals( toolbox::blockstructured::serialiseVoxelIndexInOverlap({1,0,0}, 3+1, 1, 1) * 2 + 0, 2 );
+  validateEquals( toolbox::blockstructured::serialiseVoxelIndexInOverlap({1,0,0}, 3+1, 1, 1) * 2 + 1, 3 );
+  validateEquals( toolbox::blockstructured::serialiseVoxelIndexInOverlap({0,1,0}, 3+1, 1, 1) * 2 + 0, 8 );
+  validateEquals( toolbox::blockstructured::serialiseVoxelIndexInOverlap({0,1,0}, 3+1, 1, 1) * 2 + 1, 9 );
+  validateEquals( toolbox::blockstructured::serialiseVoxelIndexInOverlap({1,1,0}, 3+1, 1, 1) * 2 + 0, 10 );
+  validateEquals( toolbox::blockstructured::serialiseVoxelIndexInOverlap({1,1,0}, 3+1, 1, 1) * 2 + 1, 11 );
+  validateEquals( toolbox::blockstructured::serialiseVoxelIndexInOverlap({2,1,0}, 3+1, 1, 1) * 2 + 0, 12 );
+  validateEquals( toolbox::blockstructured::serialiseVoxelIndexInOverlap({2,1,0}, 3+1, 1, 1) * 2 + 1, 13 );
+  validateEquals( toolbox::blockstructured::serialiseVoxelIndexInOverlap({3,1,0}, 3+1, 1, 1) * 2 + 0, 14 );
+  validateEquals( toolbox::blockstructured::serialiseVoxelIndexInOverlap({3,1,0}, 3+1, 1, 1) * 2 + 1, 15 );
+  validateEquals( toolbox::blockstructured::serialiseVoxelIndexInOverlap({0,0,1}, 3+1, 1, 1) * 2 + 0, 16 );
+  validateEquals( toolbox::blockstructured::serialiseVoxelIndexInOverlap({0,0,1}, 3+1, 1, 1) * 2 + 1, 17 );
 
   validateNumericalEquals( QyL[16],  0.0 );
   validateNumericalEquals( QyL[17],  0.0 );
