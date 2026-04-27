@@ -4,66 +4,22 @@
 
 #include "tarch/tests/TestCase.h"
 
-namespace tarch {
-  namespace la {
-    namespace tests {
-      class MatrixTest;
-    }
-  }
-}
+namespace tarch::la::tests {
+  class MatrixTest;
+} // namespace tarch::la::tests
 
-/**
- * Provides tests for types Vector, DynamicVector and all Vector functionality.
- */
-class tarch::la::tests::MatrixTest : public tarch::tests::TestCase
-{
+class tarch::la::tests::MatrixTest final: public tarch::tests::TestCase {
 private:
-
-  /**
-   * Tests constructors.
-   */
-  void testConstruction ();
-
-  /**
-   * Tests methods from MatrixAssign.h.
-   */
-  void testAssignment ();
-
-  /**
-   * Tests methods from MatrixOperations.h.
-   */
-  void testMatrixOperations ();
-
-  /**
-   * Tests methods from MatrixMatrixOperations.h.
-   */
-  void testMatrixMatrixOperations ();
-
-  /**
-   * Tests operations with TransposedMatrix.h.
-   */
-  void testTransposedMatrix ();
+  void testConstruction();
+  void testAssignment();
+  void testMatrixOperations();
+  void testMatrixMatrixOperations();
+  void testTransposedMatrix();
+  void testSpecialisedMatrixLayouts();
+  void testAdditionalMatrixOperations();
 
 public:
-
-  /**
-   * Cosntructor.
-   */
-  MatrixTest ();
-
-  /**
-   * Destructor, empty.
-   */
-  virtual ~MatrixTest () {};
-
-  /**
-   * This routine is triggered by the TestCaseCollection
-   */
-  virtual void run();
-
-  /**
-   * Setup your test case.
-   */
-  virtual void setUp() {};
+  MatrixTest();
+  ~MatrixTest() override = default;
+  void run() override;
 };
-

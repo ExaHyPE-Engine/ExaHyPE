@@ -2,133 +2,60 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-namespace tarch {
-  namespace la {
-    template<int Rows, int Cols, typename Scalar>
-    class Matrix;
-
-    /**
-     * Deep copy builder function
-     *
-     * We faced issues with some compiler versions with offering a constructor
-     * that simply takes a pointer to scalars. Further to that, it is not clear
-     * if such a constructor would create a deep copy or a shallow copy.
-     * Therefore, I decided to introduce an explicit builder function.
-     */
-    template<int Rows, int Cols, typename Scalar>
-    Matrix<Rows,Cols,Scalar> buildMatrix(const Scalar* values);
-  }
-}
-
-
-#include "tarch/la/MatrixOperations.h"
-#include "tarch/la/MatrixVectorOperations.h"
-#include "tarch/la/MatrixMatrixOperations.h"
-#include "tarch/la/MatrixScalarOperations.h"
-
+#include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/accelerator.h"
+#include "tarch/la/ScalarOperations.h"
 
-
-#include <string>
+#include <cstring>
 #include <initializer_list>
+#include <iomanip>
+#include <sstream>
+#include <string>
 
+namespace tarch::la {
+  template <int Rows, int Cols, typename Scalar>
+  class Matrix;
 
+  template <int Rows, int Cols, typename Scalar>
+  INLINE_METHOD Matrix<Rows, Cols, Scalar> buildMatrix(const Scalar* values);
+} // namespace tarch::la
 
-/**
- * Static (i.e. compiletime) sized matrix type.
- */
-template<int Rows, int Cols, typename Scalar>
+template <int Rows, int Cols, typename Scalar>
 class tarch::la::Matrix {
-  private:
-    /**
-     * Values of the matrix components.
-     */
-    Scalar _values[Rows*Cols];
+private:
+  Scalar                            _values[Rows * Cols];
+  friend Matrix<Rows, Cols, Scalar> buildMatrix<Rows, Cols, Scalar>(const Scalar* values);
 
-    /**
-     * Become friend of builder mechanism.
-     */
-    friend Matrix<Rows,Cols,Scalar> buildMatrix<Rows,Cols,Scalar>(const Scalar* values);
+public:
+  INLINE_METHOD GPU_CALLABLE_METHOD Matrix();
+  INLINE_METHOD GPU_CALLABLE_METHOD Matrix(const Scalar& value);
+  INLINE_METHOD
+  Matrix(std::initializer_list<Scalar> values);
 
-  public:
-    /**
-     * Constructs a non-initialized matrix.
-     */
-    Matrix();
-    /**
-     * Constructs an initialized matrix.
-     */
-    Matrix( const Scalar&  value);
-    Matrix( std::initializer_list<Scalar> values );
+  INLINE_METHOD GPU_CALLABLE_METHOD int           rows() const;
+  INLINE_METHOD GPU_CALLABLE_METHOD int           cols() const;
+  INLINE_METHOD GPU_CALLABLE_METHOD int           size() const;
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar&       operator()(int rowIndex, int colIndex);
+  INLINE_METHOD GPU_CALLABLE_METHOD const Scalar& operator()(int rowIndex, int colIndex) const;
 
-    /**
-     * Returns the number of rows in the matrix.
-     */
-    int rows() const;
+  std::string toString() const;
 
-    /**
-     * Returns the number of columns in the matrix.
-     */
-    int cols() const;
+  std::string toPrettyString(int numberOfDigits = 4) const;
 
-    /**
-     * Returns the number of total elements in the matrix.
-     */
-    int size() const;
+  template <typename NewScalarType>
+  INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, NewScalarType> convertScalar() const;
 
-    /**
-     * Returns element at given row and column index (from 0..size-1).
-     *
-     * @see Vector::operator[] for remarks on SSE efficiency
-     */
-    INLINE_METHOD Scalar & operator() (
-      int rowIndex,
-      int colIndex
-    ) {
-        assertion5( rowIndex >= 0, Rows, Cols, rowIndex, colIndex, toString() );
-        assertion5( colIndex >= 0, Rows, Cols, rowIndex, colIndex, toString() );
-        assertion5( rowIndex < Rows, Rows, Cols, rowIndex, colIndex, toString() );
-        assertion5( colIndex < Cols, Rows, Cols, rowIndex, colIndex, toString() );
-        return _values[rowIndex * Cols + colIndex];
-      }
+  INLINE_METHOD GPU_CALLABLE_METHOD Scalar* data();
 
-    /**
-     * Returns const element at given row and column index (from 0..size-1).
-     */
-    INLINE_METHOD const Scalar & operator() (
-      int rowIndex,
-      int colIndex
-    ) const {
-        assertion5( rowIndex >= 0, Rows, Cols, rowIndex, colIndex, toString() );
-        assertion5( colIndex >= 0, Rows, Cols, rowIndex, colIndex, toString() );
-        assertion5( rowIndex < Rows, Rows, Cols, rowIndex, colIndex, toString() );
-        assertion5( colIndex < Cols, Rows, Cols, rowIndex, colIndex, toString() );
-        return _values[rowIndex * Cols + colIndex];
-      }
-
-    std::string toString() const;
-
-    std::string toPrettyString(int numberOfDigits=4) const;
-
-    template <typename NewScalarType>
-    tarch::la::Matrix<Rows,Cols,NewScalarType> convertScalar() const;
-
-    /**
-     * This routine returns a pointer to the first data element. Not a
-     * beautiful one as it harms the OO idea, but in many cases it is
-     * convenient to have this operation.
-     */
-    Scalar* data() {
-      return _values;
-    }
-
-    const Scalar *  data() const {
-      return _values;
-    }
+  INLINE_METHOD GPU_CALLABLE_METHOD const Scalar* data() const;
 };
 
-
-
 #include "tarch/la/Matrix.cpph"
-
+#include "tarch/la/Matrix2x2.h"
+#include "tarch/la/Matrix3x3.h"
+#include "tarch/la/Matrix4x4.h"
+#include "tarch/la/MatrixMatrixOperations.h"
+#include "tarch/la/MatrixOperations.h"
+#include "tarch/la/MatrixScalarOperations.h"
+#include "tarch/la/MatrixVectorOperations.h"

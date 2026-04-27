@@ -1,6 +1,8 @@
 #include "NodeTest.h"
 #include "../Node.h"
 
+#include "peano4/utils/Linearised.h"
+#include "peano4/utils/Loop.h"
 #include "tarch/la/Vector.h"
 
 #include "peano4/grid/SpacetreeHelper.h"
@@ -122,10 +124,84 @@ void peano4::parallel::tests::NodeTest::testGetPeriodicBoundaryNumber() {
   #endif
 }
 
+void peano4::parallel::tests::NodeTest::testBitsetBasedPeriodicBoundaryEnumeration() {
+  auto getPeriodicBoundaryNumberViaDforEnumeration =
+    [](const std::array<int, TWO_POWER_D>& flags) -> std::bitset<2 * DIMENSIONS> {
+    std::bitset<2 * DIMENSIONS> result;
+
+    for (int d = 0; d < 2 * DIMENSIONS; d++) {
+      bool                                        allFlagsSet = true;
+      dfor2(k) tarch::la::Vector<DIMENSIONS, int> entry;
+      entry                 = k;
+      entry(d % DIMENSIONS) = d / DIMENSIONS;
+      allFlagsSet &= flags[peano4::utils::dLinearised(entry, 2)] == peano4::grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition;
+      enddforx if (allFlagsSet) { result.set(d); }
+    }
+
+    return result;
+  };
+
+  auto getPeriodicBoundaryNumberViaExplicitBitsetLoop =
+    [](const std::array<int, TWO_POWER_D>& flags) -> std::bitset<2 * DIMENSIONS> {
+    std::bitset<2 * DIMENSIONS> result;
+
+    for (int d = 0; d < 2 * DIMENSIONS; d++) {
+      bool allFlagsSet = true;
+      for (int i = 0; i < TWO_POWER_D; i++) {
+        std::bitset<DIMENSIONS>            point(static_cast<unsigned long>(i));
+        tarch::la::Vector<DIMENSIONS, int> entry(point);
+        entry(d % DIMENSIONS) = d / DIMENSIONS;
+
+        const bool current = flags[peano4::utils::dLinearised(entry, 2)] == peano4::grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition;
+        allFlagsSet        = allFlagsSet && current;
+      }
+      if (allFlagsSet) {
+        result.set(d);
+      }
+    }
+
+    return result;
+  };
+
+  std::array<int, TWO_POWER_D> topRightFlags;
+  topRightFlags.fill(peano4::grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition);
+  topRightFlags[0] = 0;
+
+  const auto topRightLegacy = getPeriodicBoundaryNumberViaDforEnumeration(topRightFlags);
+  const auto topRightBitset = getPeriodicBoundaryNumberViaExplicitBitsetLoop(topRightFlags);
+  const auto topRightNode   = peano4::parallel::Node::getPeriodicBoundaryNumber(topRightFlags);
+
+  validateEquals(topRightBitset.to_ulong(), topRightLegacy.to_ulong());
+  validateEquals(topRightNode.to_ulong(), topRightLegacy.to_ulong());
+
+  std::array<int, TWO_POWER_D> periodicFaceFlags;
+  periodicFaceFlags.fill(1);
+  periodicFaceFlags[0] = peano4::grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition;
+  periodicFaceFlags[1] = peano4::grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition;
+
+  const auto periodicFaceLegacy = getPeriodicBoundaryNumberViaDforEnumeration(periodicFaceFlags);
+  const auto periodicFaceBitset = getPeriodicBoundaryNumberViaExplicitBitsetLoop(periodicFaceFlags);
+  const auto periodicFaceNode   = peano4::parallel::Node::getPeriodicBoundaryNumber(periodicFaceFlags);
+
+  validateEquals(periodicFaceBitset.to_ulong(), periodicFaceLegacy.to_ulong());
+  validateEquals(periodicFaceNode.to_ulong(), periodicFaceLegacy.to_ulong());
+
+  std::array<int, TWO_POWER_D> allPeriodicFlags;
+  allPeriodicFlags.fill(peano4::grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition);
+
+  const auto allPeriodicLegacy = getPeriodicBoundaryNumberViaDforEnumeration(allPeriodicFlags);
+  const auto allPeriodicBitset = getPeriodicBoundaryNumberViaExplicitBitsetLoop(allPeriodicFlags);
+  const auto allPeriodicNode   = peano4::parallel::Node::getPeriodicBoundaryNumber(allPeriodicFlags);
+
+  validateEquals(allPeriodicBitset.to_ulong(), allPeriodicLegacy.to_ulong());
+  validateEquals(allPeriodicNode.to_ulong(), allPeriodicLegacy.to_ulong());
+}
+
 
 void peano4::parallel::tests::NodeTest::run() {
   logTraceIn( "run()" );
   testMethod( testGetPeriodicBoundaryNumber );
+  testMethod( testBitsetBasedPeriodicBoundaryEnumeration );
   testMethod( testTagCalculation );
   testMethod( testGetOutputStacksForPeriodicBoundaryExchange )
   logTraceOut( "run()" );

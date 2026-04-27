@@ -62,17 +62,24 @@ void toolbox::blockstructured::tests::IandRThirdOrderTest::
 
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
-      for (int k = 0; k < 3; k++) {
+      for (int k = 0; k < (DIMENSIONS == 3 ? 3 : 1); k++) {
         peano4::grid::GridTraversalEvent event;
-        event.setRelativePositionToFather(
-          tarch::la::Vector<DIMENSIONS, int>{i, j, k}
-        );
+        if constexpr (DIMENSIONS == 2) {
+          event.setRelativePositionToFather(
+            tarch::la::Vector<DIMENSIONS, int>{i, j}
+          );
+        }
+        if constexpr (DIMENSIONS == 3) {
+          event.setRelativePositionToFather(
+            tarch::la::Vector<DIMENSIONS, int>{i, j, k}
+          );
+        }
 
-        for (int axis = 0; axis < 3; axis++) {
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
           peano4::datamanagement::FaceMarker faceMarker1 = event.getFaceMarker();
           faceMarker1.select(axis);
           peano4::datamanagement::FaceMarker faceMarker2 = event.getFaceMarker();
-          faceMarker2.select(axis + 3);
+          faceMarker2.select(axis + DIMENSIONS);
 
           for (int n = 0; n < unknowns * patchSize * patchSize * overlap * 2;
                n++)
@@ -147,7 +154,7 @@ void toolbox::blockstructured::tests::IandRThirdOrderTest::
               fineDataThirdOrder[n],
               0.01,
               faceMarker1.getRelativePositionWithinFatherFace(),
-              axis + 3,
+              axis + DIMENSIONS,
               n
             );
         }
@@ -201,17 +208,24 @@ void toolbox::blockstructured::tests::IandRThirdOrderTest::
 
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
-      for (int k = 0; k < 3; k++) {
+      for (int k = 0; k < (DIMENSIONS == 3 ? 3 : 1); k++) {
         peano4::grid::GridTraversalEvent event;
-        event.setRelativePositionToFather(
-          tarch::la::Vector<DIMENSIONS, int>{i, j, k}
-        );
+        if constexpr (DIMENSIONS == 2) {
+          event.setRelativePositionToFather(
+            tarch::la::Vector<DIMENSIONS, int>{i, j}
+          );
+        }
+        if constexpr (DIMENSIONS == 3) {
+          event.setRelativePositionToFather(
+            tarch::la::Vector<DIMENSIONS, int>{i, j, k}
+          );
+        }
 
-        for (int axis = 0; axis < 3; axis++) {
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
           peano4::datamanagement::FaceMarker faceMarker1 = event.getFaceMarker();
           faceMarker1.select(axis);
           peano4::datamanagement::FaceMarker faceMarker2 = event.getFaceMarker();
-          faceMarker2.select(axis + 3);
+          faceMarker2.select(axis + DIMENSIONS);
 
           for (int n = 0; n < unknowns * patchSize * patchSize * overlap * 2;
                n++)
@@ -289,7 +303,7 @@ void toolbox::blockstructured::tests::IandRThirdOrderTest::
               coarseDataThirdOrder[n],
               0.01,
               faceMarker1.getRelativePositionWithinFatherFace(),
-              axis + 3,
+              axis + DIMENSIONS,
               n
             );
         }

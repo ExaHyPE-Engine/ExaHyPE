@@ -67,7 +67,7 @@ std::string tarch::detectStackSizeLimit() {
 
   const auto currentLimitInKiB = stackSizeLimit.bytes / KiB;
   if (stackSizeLimit.bytes < RecommendedMinimumStackLimit) {
-    logWarning(
+    logDebug(
       "detectStackSizeLimit()",
       "Stack size of "
         << currentLimitInKiB << " KiB (=" << formatMemorySize(stackSizeLimit.bytes)

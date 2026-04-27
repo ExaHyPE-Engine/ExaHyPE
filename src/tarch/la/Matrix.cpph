@@ -1,73 +1,80 @@
-#include "tarch/Assertions.h"
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 
-
-#include <iomanip>
-#include <cstring>
-
-
-template<int Rows, int Cols, typename Scalar>
-tarch::la::Matrix<Rows,Cols,Scalar> tarch::la::buildMatrix(const Scalar* values) {
-  tarch::la::Matrix<Rows,Cols,Scalar> result;
-  std::memcpy(
-    result._values,
-    values,
-    sizeof(Scalar)*Rows*Cols
-  );
+template <int Rows, int Cols, typename Scalar>
+INLINE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::la::buildMatrix(const Scalar* values) {
+  tarch::la::Matrix<Rows, Cols, Scalar> result;
+  std::memcpy(result.data(), values, sizeof(Scalar) * Rows * Cols);
   return result;
 }
 
+template <int Rows, int Cols, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>::Matrix():
+  _values() {}
 
-template<int Rows, int Cols, typename Scalar>
-tarch::la::Matrix<Rows,Cols,Scalar>::Matrix():
-  _values() {
-}
-
-
-template<int Rows, int Cols, typename Scalar>
-tarch::la::Matrix<Rows,Cols,Scalar>::Matrix( const Scalar& initialValue ) {
-  for (int i=0; i < Rows*Cols; i++) {
+template <int Rows, int Cols, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>::Matrix(const Scalar& initialValue) {
+  for (int i = 0; i < Rows * Cols; i++) {
     _values[i] = initialValue;
   }
 }
 
-
-
-template<int Rows, int Cols, typename Scalar>
-tarch::la::Matrix<Rows,Cols,Scalar>::Matrix( std::initializer_list<Scalar> values ) {
+template <int Rows, int Cols, typename Scalar>
+INLINE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>::Matrix(std::initializer_list<Scalar> values) {
   int index = 0;
-  for (typename std::initializer_list<Scalar>::const_iterator p = values.begin(); p!=values.end(); p++) {
+  for (typename std::initializer_list<Scalar>::const_iterator p = values.begin(); p != values.end(); p++) {
     _values[index] = *p;
     index++;
   }
 }
 
-
-template<int Rows, int Cols, typename Scalar>
-int tarch::la::Matrix<Rows,Cols,Scalar>::rows() const {
+template <int Rows, int Cols, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::Matrix<Rows, Cols, Scalar>::rows() const {
   return Rows;
 }
 
-
-template<int Rows, int Cols, typename Scalar>
-int tarch::la::Matrix<Rows,Cols,Scalar>::cols() const {
+template <int Rows, int Cols, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::Matrix<Rows, Cols, Scalar>::cols() const {
   return Cols;
 }
 
-
-template<int Rows, int Cols, typename Scalar>
-int tarch::la::Matrix<Rows,Cols,Scalar>::size() const {
+template <int Rows, int Cols, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::Matrix<Rows, Cols, Scalar>::size() const {
   return Rows * Cols;
 }
 
+template <int Rows, int Cols, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar& tarch::la::Matrix<Rows, Cols, Scalar>::operator()(
+  int rowIndex,
+  int colIndex
+) {
+  assertion5(rowIndex >= 0, Rows, Cols, rowIndex, colIndex, toString());
+  assertion5(colIndex >= 0, Rows, Cols, rowIndex, colIndex, toString());
+  assertion5(rowIndex < Rows, Rows, Cols, rowIndex, colIndex, toString());
+  assertion5(colIndex < Cols, Rows, Cols, rowIndex, colIndex, toString());
+  return _values[rowIndex * Cols + colIndex];
+}
 
-template<int Rows, int Cols, typename Scalar>
-std::string tarch::la::Matrix<Rows,Cols,Scalar>::toString() const {
+template <int Rows, int Cols, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD const Scalar& tarch::la::Matrix<Rows, Cols, Scalar>::operator()(
+  int rowIndex,
+  int colIndex
+) const {
+  assertion5(rowIndex >= 0, Rows, Cols, rowIndex, colIndex, toString());
+  assertion5(colIndex >= 0, Rows, Cols, rowIndex, colIndex, toString());
+  assertion5(rowIndex < Rows, Rows, Cols, rowIndex, colIndex, toString());
+  assertion5(colIndex < Cols, Rows, Cols, rowIndex, colIndex, toString());
+  return _values[rowIndex * Cols + colIndex];
+}
+
+template <int Rows, int Cols, typename Scalar>
+std::string tarch::la::Matrix<Rows, Cols, Scalar>::toString() const {
   std::ostringstream os;
   os << "[";
-  for (int i=0; i < Rows; i++) {
+  for (int i = 0; i < Rows; i++) {
     os << "[";
-    for (int j=0; j < Cols; j++) {
-      os << _values[i * Cols + j];
+    for (int j = 0; j < Cols; j++) {
+      os << data()[i * Cols + j];
       if (j + 1 < Cols) {
         os << ",";
       }
@@ -81,19 +88,18 @@ std::string tarch::la::Matrix<Rows,Cols,Scalar>::toString() const {
   return os.str();
 }
 
-
-template<int Rows, int Cols, typename Scalar>
-std::string tarch::la::Matrix<Rows,Cols,Scalar>::toPrettyString(int numberOfDigits) const {
+template <int Rows, int Cols, typename Scalar>
+std::string tarch::la::Matrix<Rows, Cols, Scalar>::toPrettyString(int numberOfDigits) const {
   std::ostringstream os;
   os << "[";
   os << std::setiosflags(std::ios::fixed) << std::setprecision(numberOfDigits);
-  for (int i=0; i < Rows; i++) {
+  for (int i = 0; i < Rows; i++) {
     os << std::endl;
-    for (int j=0; j < Cols; j++) {
-      if ( tarch::la::abs( _values[i * Cols + j] )>=0.0) {
+    for (int j = 0; j < Cols; j++) {
+      if (tarch::la::abs(data()[i * Cols + j]) >= 0.0) {
         os << " ";
       }
-      os << _values[i * Cols + j];
+      os << data()[i * Cols + j];
       if (j + 1 < Cols) {
         os << ", ";
       }
@@ -107,15 +113,25 @@ std::string tarch::la::Matrix<Rows,Cols,Scalar>::toPrettyString(int numberOfDigi
   return os.str();
 }
 
-
-template<int Rows, int Cols, typename Scalar>
+template <int Rows, int Cols, typename Scalar>
 template <typename NewScalarType>
-tarch::la::Matrix<Rows,Cols,NewScalarType> tarch::la::Matrix<Rows,Cols,Scalar>::convertScalar() const {
-  tarch::la::Matrix<Rows,Cols,NewScalarType> result;
-  for (int i=0; i < Rows; i++) {
-    for (int j=0; j < Cols; j++) {
-      result(j,i) = operator()(j,i);
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, NewScalarType> tarch::la::Matrix<Rows, Cols, Scalar>::
+  convertScalar() const {
+  tarch::la::Matrix<Rows, Cols, NewScalarType> result;
+  for (int i = 0; i < Rows; i++) {
+    for (int j = 0; j < Cols; j++) {
+      result(i, j) = operator()(i, j);
     }
   }
   return result;
+}
+
+template <int Rows, int Cols, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar* tarch::la::Matrix<Rows, Cols, Scalar>::data() {
+  return _values;
+}
+
+template <int Rows, int Cols, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD const Scalar* tarch::la::Matrix<Rows, Cols, Scalar>::data() const {
+  return _values;
 }

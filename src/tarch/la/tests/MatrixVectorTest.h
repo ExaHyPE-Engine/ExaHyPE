@@ -2,56 +2,19 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/tests/TestCase.h"
 
+namespace tarch::la::tests {
+  class MatrixVectorTest;
+} // namespace tarch::la::tests
 
-namespace tarch {
-  namespace la {
-    namespace tests {
-      class MatrixVectorTest;
-    }
-  }
-}
-
-/**
- * Provides tests for types Vector, DynamicVector and all Vector functionality.
- */
-class tarch::la::tests::MatrixVectorTest : public tarch::tests::TestCase
-{
+class tarch::la::tests::MatrixVectorTest final: public tarch::tests::TestCase {
 private:
-
-  /**
-   * Tests methods from MatrixVectorOperations.h.
-   */
-  void testMultiplication ();
-
-  void testForwardSubstitution ();
-
-  void testBackSubstitution ();
-
-  void testSolveSystem3x3 ();
+  void testMultiplication();
+  void testAdditionalMatrixVectorOperations();
 
 public:
-
-  /**
-   * Cosntructor.
-   */
-  MatrixVectorTest ();
-
-  /**
-   * Destructor, empty.
-   */
-  virtual ~MatrixVectorTest () {};
-
-  /**
-   * This routine is triggered by the TestCaseCollection
-   */
-  virtual void run();
-
-  /**
-   * Setup your test case.
-   */
-  virtual void setUp() {};
+  MatrixVectorTest();
+  ~MatrixVectorTest() override = default;
+  void run() override;
 };
-

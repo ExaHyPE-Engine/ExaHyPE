@@ -26,6 +26,7 @@ class peano4::parallel::tests::NodeTest: public tarch::tests::TestCase {
     static tarch::logging::Log _log;
 
     void testGetPeriodicBoundaryNumber();
+    void testBitsetBasedPeriodicBoundaryEnumeration();
 
     /**
      * Boundary data exchange test case
@@ -84,5 +85,3 @@ class peano4::parallel::tests::NodeTest: public tarch::tests::TestCase {
     NodeTest();
     virtual void run() override;
 };
-
-

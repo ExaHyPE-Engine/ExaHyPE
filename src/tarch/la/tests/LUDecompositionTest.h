@@ -4,45 +4,19 @@
 
 #include "tarch/tests/TestCase.h"
 
-namespace tarch {
-  namespace la {
-    namespace tests {
-      class LUDecompositionTest;
-    }
-  }
-}
+namespace tarch::la::tests {
+  class LUDecompositionTest;
+} // namespace tarch::la::tests
 
-class tarch::la::tests::LUDecompositionTest : public tarch::tests::TestCase
-{
+class tarch::la::tests::LUDecompositionTest final: public tarch::tests::TestCase {
 private:
-
-  void testLUNoPivoting();
-
-  void testLU();
-
-  void testInversion0();
-  void testInversion1();
+  void testBackSubstitution();
+  void testInvertUpperTriangular();
+  void testStaticBackSubstitution();
+  void testStaticInvertUpperTriangular();
 
 public:
-
-  /**
-   * Constructor.
-   */
   LUDecompositionTest();
-
-  /**
-   * Destructor, empty.
-   */
-  virtual ~LUDecompositionTest() {}
-
-  /**
-   * This routine is triggered by the TestCaseCollection
-   */
-  virtual void run();
-
-  /**
-   * Setup your test case.
-   */
-  virtual void setUp() {}
+  ~LUDecompositionTest() override = default;
+  void run() override;
 };
-

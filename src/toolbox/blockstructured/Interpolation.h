@@ -7,7 +7,6 @@
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/DynamicMatrix.h"
-#include "tarch/la/DynamicMatrixOperations.h"
 #include "tarch/la/GramSchmidt.h"
 #include "tarch/la/LUDecomposition.h"
 #include "tarch/multicore/BooleanSemaphore.h"

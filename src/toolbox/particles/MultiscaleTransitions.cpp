@@ -128,14 +128,17 @@ bool toolbox::particles::particleWillBeDroppedFurther(double searchRadius, const
 
 std::bitset<TWO_POWER_D> toolbox::particles::getAdjacentCellsOwningParticle(const tarch::la::Vector<DIMENSIONS, double>& x, const peano4::datamanagement::VertexMarker& marker) {
   std::bitset<TWO_POWER_D> result = 0;
+  const tarch::la::Vector<DIMENSIONS, double> selectedVertex = marker.getX();
+  const tarch::la::Vector<DIMENSIONS, double> h              = marker.getH();
+  const double tolerance = internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
 
   dfor2(k) {
     tarch::la::Vector<DIMENSIONS, int> adjacentCell(k);
-    tarch::la::Vector<DIMENSIONS, double>
-      adjacentCellCentre = marker.getX() + tarch::la::multiplyComponents(tarch::la::convertScalar<double>(adjacentCell) + tarch::la::Vector<DIMENSIONS, double>(-0.5), marker.getH());
-    result[kScalar]      = peano4::datamanagement::CellMarker::isContained(
-      x, adjacentCellCentre, marker.getH(), internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-    );
+    tarch::la::Vector<DIMENSIONS, double> adjacentCellCentre(0.0);
+    for (int d = 0; d < DIMENSIONS; d++) {
+      adjacentCellCentre(d) = selectedVertex(d) + (static_cast<double>(adjacentCell(d)) - 0.5) * h(d);
+    }
+    result[kScalar] = peano4::datamanagement::CellMarker::isContained(x, adjacentCellCentre, h, tolerance);
   }
   enddforx
 

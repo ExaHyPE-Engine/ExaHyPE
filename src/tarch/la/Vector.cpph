@@ -1,3 +1,10 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Size, Scalar>::Vector():
+  _values{} {}
+
 template <int Size, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Size, Scalar>::Vector(const Scalar* values) {
   for (int i = 0; i < Size; i++) {
@@ -5,24 +12,21 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Size, Scalar>::Vector(const 
   }
 }
 
-/**
- * There is seemingly a bug in this constructor. For instance, the arguments peano4::initSingletons
- * to are two objects of type tarch::la::Vector, with length DIMENSIONS. However, passing in two
- * initializer lists which are longer than DIMENSIONS will cause the second to borrow from the first.
- */
 template <int Size, typename Scalar>
 INLINE_METHOD tarch::la::Vector<Size, Scalar>::Vector(std::initializer_list<Scalar> values) {
   int index = 0;
   for (typename std::initializer_list<Scalar>::const_iterator p = values.begin(); p != values.end(); p++) {
-    _values[index] = *p;
-    index++;
+    if (index < Size) {
+      _values[index] = *p;
+      index++;
+    }
   }
 }
 
 template <int Size, typename Scalar>
 INLINE_METHOD tarch::la::Vector<Size, Scalar>::Vector(const std::bitset<Size>& value) {
   for (int i = 0; i < Size; i++) {
-    _values[i] = value[i] ? 1 : 0;
+    _values[i] = value[i] ? Scalar(1) : Scalar(0);
   }
 }
 
@@ -37,6 +41,52 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Size, Scalar>::Vector(const 
 template <int Size, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::Vector<Size, Scalar>::size() const {
   return Size;
+}
+
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD const Scalar& tarch::la::Vector<Size, Scalar>::operator[](int index) const {
+#if !defined(WITH_GPU)
+  assertion3(index >= 0, index, Size, ::toString(*this));
+  assertion3(index < Size, index, Size, ::toString(*this));
+#endif
+  return _values[index];
+}
+
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar& tarch::la::Vector<Size, Scalar>::operator[](int index) {
+#if !defined(WITH_GPU)
+  assertion3(index >= 0, index, Size, ::toString(*this));
+  assertion3(index < Size, index, Size, ::toString(*this));
+#endif
+  return _values[index];
+}
+
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD const Scalar& tarch::la::Vector<Size, Scalar>::operator()(int index) const {
+#if !defined(WITH_GPU)
+  assertion3(index >= 0, index, Size, ::toString(*this));
+  assertion3(index < Size, index, Size, ::toString(*this));
+#endif
+  return _values[index];
+}
+
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar& tarch::la::Vector<Size, Scalar>::operator()(int index) {
+#if !defined(WITH_GPU)
+  assertion3(index >= 0, index, Size, ::toString(*this));
+  assertion3(index < Size, index, Size, ::toString(*this));
+#endif
+  return _values[index];
+}
+
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar* tarch::la::Vector<Size, Scalar>::data() {
+  return _values;
+}
+
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD const Scalar* tarch::la::Vector<Size, Scalar>::data() const {
+  return _values;
 }
 
 template <int Size, typename Scalar>

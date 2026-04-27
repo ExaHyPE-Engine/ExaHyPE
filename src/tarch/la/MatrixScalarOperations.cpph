@@ -1,43 +1,128 @@
-template<int Rows, int Cols, typename Scalar>
-tarch::la::Matrix<Rows,Cols,Scalar>& tarch::la::operator*=(
-  Matrix<Rows,Cols,Scalar>&  matrix,
-  const Scalar&              scalar
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <int Rows, int Cols, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>& tarch::la::operator*=(
+  Matrix<Rows, Cols, Scalar>& matrix,
+  const Scalar&               scalar
 ) {
-  #ifdef CompilerICC
-  #pragma ivdep
-  #endif
-  for (int i=0; i < Rows; i++) {
-    for (int j=0; j < Cols; j++) {
-      matrix(i,j) *= scalar;
+  for (int i = 0; i < Rows; i++) {
+    for (int j = 0; j < Cols; j++) {
+      matrix(i, j) *= scalar;
     }
   }
   return matrix;
 }
 
-
-
-template<int Rows, int Cols, typename Scalar>
-tarch::la::Matrix<Rows,Cols,Scalar> tarch::la::operator* (
-  const tarch::la::Matrix<Rows,Cols,Scalar>&  matrix,
-  const Scalar&                               scalar
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar>& tarch::la::operator*=(
+  Matrix<2, 2, Scalar>& matrix,
+  const Scalar&         scalar
 ) {
-  Matrix<Rows,Cols,Scalar> result(matrix);
-  #ifdef CompilerICC
-  #pragma ivdep
-  #endif
-  for (int i=0; i < Rows; i++) {
-    for (int j=0; j < Cols; j++) {
-      result(i,j) = matrix(i,j)*scalar;
+  Scalar* values = matrix.data();
+  values[0] *= scalar;
+  values[1] *= scalar;
+  values[2] *= scalar;
+  values[3] *= scalar;
+  return matrix;
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar>& tarch::la::operator*=(
+  Matrix<3, 3, Scalar>& matrix,
+  const Scalar&         scalar
+) {
+  Scalar* values = matrix.data();
+  for (int i = 0; i < 9; i++) {
+    values[i] *= scalar;
+  }
+  return matrix;
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar>& tarch::la::operator*=(
+  Matrix<4, 4, Scalar>& matrix,
+  const Scalar&         scalar
+) {
+  Scalar* values = matrix.data();
+  for (int i = 0; i < 16; i++) {
+    values[i] *= scalar;
+  }
+  return matrix;
+}
+
+template <int Rows, int Cols, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::la::operator*(
+  const tarch::la::Matrix<Rows, Cols, Scalar>& matrix,
+  const Scalar&                                scalar
+) {
+  Matrix<Rows, Cols, Scalar> result(matrix);
+  for (int i = 0; i < Rows; i++) {
+    for (int j = 0; j < Cols; j++) {
+      result(i, j) = matrix(i, j) * scalar;
     }
   }
   return result;
 }
 
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar> tarch::la::operator*(
+  const tarch::la::Matrix<2, 2, Scalar>& matrix,
+  const Scalar&                          scalar
+) {
+  const Scalar* values = matrix.data();
+  return Matrix<2, 2, Scalar>{values[0] * scalar, values[1] * scalar, values[2] * scalar, values[3] * scalar};
+}
 
-template<int Rows, int Cols, typename Scalar>
-tarch::la::Matrix<Rows,Cols,Scalar> tarch::la::operator* (
-  const Scalar&                               scalar,
-  const tarch::la::Matrix<Rows,Cols,Scalar>&  matrix
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar> tarch::la::operator*(
+  const tarch::la::Matrix<3, 3, Scalar>& matrix,
+  const Scalar&                          scalar
+) {
+  const Scalar* values = matrix.data();
+  return Matrix<3, 3, Scalar>{
+    values[0] * scalar,
+    values[1] * scalar,
+    values[2] * scalar,
+    values[3] * scalar,
+    values[4] * scalar,
+    values[5] * scalar,
+    values[6] * scalar,
+    values[7] * scalar,
+    values[8] * scalar
+  };
+}
+
+template <typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar> tarch::la::operator*(
+  const tarch::la::Matrix<4, 4, Scalar>& matrix,
+  const Scalar&                          scalar
+) {
+  const Scalar* values = matrix.data();
+  return Matrix<4, 4, Scalar>{
+    values[0] * scalar,
+    values[1] * scalar,
+    values[2] * scalar,
+    values[3] * scalar,
+    values[4] * scalar,
+    values[5] * scalar,
+    values[6] * scalar,
+    values[7] * scalar,
+    values[8] * scalar,
+    values[9] * scalar,
+    values[10] * scalar,
+    values[11] * scalar,
+    values[12] * scalar,
+    values[13] * scalar,
+    values[14] * scalar,
+    values[15] * scalar
+  };
+}
+
+template <int Rows, int Cols, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::la::operator*(
+  const Scalar&                                scalar,
+  const tarch::la::Matrix<Rows, Cols, Scalar>& matrix
 ) {
   return matrix * scalar;
 }

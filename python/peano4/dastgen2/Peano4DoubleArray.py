@@ -6,39 +6,38 @@ from dastgen2.Utils import LLVMSymbol
 
 class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
     """!
-        
+
     Specialisation of array using Peano's tarch
 
     Specialisation of dastgen2.attributes.DoubleArray which relies on
     Peano's tarch. Therefore, things alike the vector initialisation
     in the constructor do work. We can also directly use Peano's linear
     algebra operators.
-    
-    This routine should include Vector and SmartPointerVector. I'm however
+
+    This routine should include Vector. I'm however
     lazy here and assume that someone else will inject these includes, and
     indeed Peano uses this class always in combination with MPIAndStorageAspect
     which in turn includes the right headers.
-
     """
 
-    def __init__(self, 
-                 name, 
-                 cardinality, 
-                 valid_mantissa_bits=None, 
-                 ifdefs=[], 
-                 ):
+    def __init__(
+        self,
+        name,
+        cardinality,
+        valid_mantissa_bits=None,
+        ifdefs=[],
+    ):
         """
         See superclass' constructor.
 
         @param cardinality: String
           This is important: It is not (necessarily) an integer, but can be
           a string which is defined via a pragma or constexpr later.
-          
         """
         super(Peano4DoubleArray, self).__init__(
             name, cardinality, valid_mantissa_bits=valid_mantissa_bits, ifdefs=ifdefs
         )
-        self._cardinality       = str(cardinality)
+        self._cardinality = str(cardinality)
 
     def get_methods(self, _full_qualified_class_name, for_declaration=True):
         accessor_name = self._name[:1].title() + self._name[1:]
@@ -165,11 +164,7 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
         return [("MPI_DOUBLE", self._cardinality)]
 
     def get_to_string(self):
-        """
-
-        Return string representation of attribute.
-
-        """
+        """Return string representation of attribute."""
         if self._valid_mantissa_bits != None:
             return "get" + self._name[0].upper() + self._name[1:] + "()"
         elif self.use_data_store:

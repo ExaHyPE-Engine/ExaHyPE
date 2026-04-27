@@ -11,7 +11,6 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
 
     Represents Peano's MPI and storage aspect injected into a DaStGen model.
 
-
     This is an aspect to a DaStGen object, i.e. something that's
     added to a data model to augment it with some behaviour. The
     realisation of this aspect is manifold yet all serves the
@@ -30,7 +29,6 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
     predicates. Please study @ref page_peano_localisation for further
     documentation.
 
-
     ## Usage
 
     The instance is to be added to a DaStGen2 model through add_aspect().
@@ -38,13 +36,11 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
     If you want to inject a particular merge code, just set the internal
     string self.merge_implementation.
 
-
     ## Attributes
 
     dof_association: DoFAssociation
       Clarifies which grid entity the underlying datatype is associated
       to.
-
     """
 
     def __init__(self, dof_association_):
@@ -100,7 +96,6 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
             super(MPIAndStorageAspect, self).get_include()
             + """
 #include "tarch/la/Vector.h"
-#include "tarch/la/SmartPointerVector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
 #include "peano4/grid/LoadStoreComputeFlag.h"

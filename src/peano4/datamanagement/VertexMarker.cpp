@@ -107,9 +107,12 @@ bool peano4::datamanagement::VertexMarker::isContainedInAdjacentCells(
   double                                       scaleAdjacentCells,
   double                                       tolerance
 ) const {
+  const tarch::la::Vector<DIMENSIONS, double> selectedVertex = getX();
   bool result = true;
   for (int d = 0; d < DIMENSIONS; d++) {
-    result &= tarch::la::smallerEquals(std::abs(x(d) - (this->getX())(d)), scaleAdjacentCells * _h(d), tolerance);
+    const double distance = std::abs(x(d) - selectedVertex(d));
+    const double reach    = scaleAdjacentCells * _h(d);
+    result &= distance <= reach + tolerance;
   }
   return result;
 }
@@ -120,9 +123,10 @@ bool peano4::datamanagement::VertexMarker::isContainedInAdjacentCellsByDimension
   double                                       scaleAdjacentCells,
   double                                       tolerance
 ) const {
-  bool result = tarch::la::
-    smallerEquals(std::abs(x(dim) - (this->getX())(dim)), scaleAdjacentCells * _h(dim), tolerance);
-  return result;
+  const tarch::la::Vector<DIMENSIONS, double> selectedVertex = getX();
+  const double                                distance       = std::abs(x(dim) - selectedVertex(dim));
+  const double                                reach          = scaleAdjacentCells * _h(dim);
+  return distance <= reach + tolerance;
 }
 
 tarch::la::Vector<DIMENSIONS, int> peano4::datamanagement::VertexMarker::getRelativeAdjacentCell(

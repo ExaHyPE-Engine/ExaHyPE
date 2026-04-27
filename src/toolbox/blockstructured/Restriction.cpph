@@ -198,20 +198,19 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_second_order(
 ) {
   const int                normal = marker.getSelectedFaceNumber() % DIMENSIONS;
   T*                       stencilCenterValues = new T[unknowns];
-  tarch::la::DynamicMatrix A(2, 2);
-  //int                      row = 0;
+  tarch::la::Matrix<2, 2, T> A(0.0);
 
   A(0, 0) = 1.0 / 3.0;
   A(0, 1) = 1.0 / 18.0;
   A(1, 0) = -1.0 / 3.0;
   A(1, 1) = 1.0 / 18.0;
 
-  tarch::la::DynamicMatrix Q(A.rows(), A.rows());
-  tarch::la::DynamicMatrix R(A.rows(), A.cols());
+  tarch::la::Matrix<2, 2, T> Q(0.0);
+  tarch::la::Matrix<2, 2, T> R(0.0);
   tarch::la::modifiedGramSchmidt(A, Q, R);
 
-  tarch::la::DynamicMatrix Q_T      = tarch::la::transpose(Q);
-  tarch::la::DynamicMatrix inverseR = tarch::la::invertUpperTriangular(R);
+  const tarch::la::Matrix<2, 2, T> Q_T      = tarch::la::transpose(Q);
+  const tarch::la::Matrix<2, 2, T> inverseR = tarch::la::invertUpperTriangular(R);
 
   const int i = (normal + 1) % DIMENSIONS;
 #if DIMENSIONS == 3
@@ -265,62 +264,45 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_second_order(
         [centerIndex * unknowns + unknown];
     }
 
-    tarch::la::DynamicMatrix           deltas(2, unknowns);
     tarch::la::Vector<DIMENSIONS, int> offset(0);
     offset(normal) = 1;
 
-    int index = serialiseVoxelIndexInOverlap(
+    const int forwardIndex = serialiseVoxelIndexInOverlap(
       fineCenter + offset,
       numberOfDoFsPerAxisInPatch,
       overlap,
       normal
     );
-    for (int unknown = 0; unknown < unknowns; unknown++) {
-      deltas(
-        0,
-        unknown
-      ) = fineGridValues[index * unknowns + unknown]
-          - stencilCenterValues[unknown];
-    }
-
-    index = serialiseVoxelIndexInOverlap(
+    const int backwardIndex = serialiseVoxelIndexInOverlap(
       fineCenter - offset,
       numberOfDoFsPerAxisInPatch,
       overlap,
       normal
     );
-    for (int unknown = 0; unknown < unknowns; unknown++) {
-      deltas(
-        1,
-        unknown
-      ) = fineGridValues[index * unknowns + unknown]
-          - stencilCenterValues[unknown];
-    }
-
-    tarch::la::DynamicMatrix c           = Q_T * deltas;
-    tarch::la::DynamicMatrix derivatives = inverseR * c;
-
-
-    tarch::la::DynamicMatrix coarseMatrix(overlap, 2);
     for (int i = 0; i < overlap; i++) {
-      int distance = ((marker.getSelectedFaceNumber() < DIMENSIONS) xor swapInsideOutside) ? i * 3 + 3 - overlap : overlap - 3 - i * 3;
-
-      coarseMatrix(i, 0) = (1.0 / 3.0) * distance;
-      coarseMatrix(i, 1) = (1.0 / 18.0) * distance * distance;
-    }
-    tarch::la::DynamicMatrix coarseValues = coarseMatrix * derivatives;
-    for (int i = 0; i < overlap; i++) {
+      const int distance = ((marker.getSelectedFaceNumber() < DIMENSIONS) xor swapInsideOutside) ? i * 3 + 3 - overlap : overlap - 3 - i * 3;
       tarch::la::Vector<DIMENSIONS, int> coarseCell = kCoarse + coarseStart;
       coarseCell(normal) = ((marker.getSelectedFaceNumber() < DIMENSIONS) xor swapInsideOutside) ? i + overlap : overlap - i - 1;
-      int index = serialiseVoxelIndexInOverlap(
+      const int coarseIndex = serialiseVoxelIndexInOverlap(
         coarseCell,
         numberOfDoFsPerAxisInPatch,
         overlap,
         normal
       );
       for (int unknown = 0; unknown < unknowns; unknown++) {
-        coarseGridValues[index * unknowns + unknown]
-          = stencilCenterValues[unknown] + coarseValues(i, unknown);
+        tarch::la::Vector<2, T> deltas(0.0);
+        deltas(0) = fineGridValues[forwardIndex * unknowns + unknown]
+                    - stencilCenterValues[unknown];
+        deltas(1) = fineGridValues[backwardIndex * unknowns + unknown]
+                    - stencilCenterValues[unknown];
+
+        const tarch::la::Vector<2, T> c           = Q_T * deltas;
+        const tarch::la::Vector<2, T> derivatives = inverseR * c;
+
+        coarseGridValues[coarseIndex * unknowns + unknown]
+          = stencilCenterValues[unknown]
+            + (1.0 / 3.0) * distance * derivatives(0)
+            + (1.0 / 18.0) * distance * distance * derivatives(1);
       }
     }
   }
@@ -341,8 +323,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_third_order(
   const int normal              = marker.getSelectedFaceNumber() % DIMENSIONS;
   T*        stencilCenterValues = new T[unknowns];
 
-  tarch::la::DynamicMatrix A(3, 3);
-  //int                      row = 0;
+  tarch::la::Matrix<3, 3, T> A(0.0);
 
   A(0, 0) = 1.0 / 3.0;
   A(0, 1) = 1.0 / 18.0;
@@ -359,12 +340,12 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_third_order(
   A(2, 1)       = 2.0 / 9.0;
   A(2, 2)       = factor * 4.0 / 81.0;
 
-  tarch::la::DynamicMatrix Q(A.rows(), A.rows());
-  tarch::la::DynamicMatrix R(A.rows(), A.cols());
+  tarch::la::Matrix<3, 3, T> Q(0.0);
+  tarch::la::Matrix<3, 3, T> R(0.0);
   tarch::la::modifiedGramSchmidt(A, Q, R);
 
-  tarch::la::DynamicMatrix Q_T      = tarch::la::transpose(Q);
-  tarch::la::DynamicMatrix inverseR = tarch::la::invertUpperTriangular(R);
+  const tarch::la::Matrix<3, 3, T> Q_T      = tarch::la::transpose(Q);
+  const tarch::la::Matrix<3, 3, T> inverseR = tarch::la::invertUpperTriangular(R);
 
   const int i = (normal + 1) % DIMENSIONS;
 #if DIMENSIONS == 3
@@ -440,7 +421,6 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_third_order(
         [centerIndex * unknowns + unknown];
     }
 
-    tarch::la::DynamicMatrix           deltas(3, unknowns);
     tarch::la::Vector<DIMENSIONS, int> offset(0);
     offset(normal) = 1;
 
@@ -450,13 +430,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_third_order(
       overlap,
       normal
     );
-    for (int unknown = 0; unknown < unknowns; unknown++) {
-      deltas(
-        0,
-        unknown
-      ) = fineGridValues[index * unknowns + unknown]
-          - stencilCenterValues[unknown];
-    }
+    const int forwardIndex = index;
 
     index = serialiseVoxelIndexInOverlap(
       fineCenter - offset,
@@ -464,13 +438,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_third_order(
       overlap,
       normal
     );
-    for (int unknown = 0; unknown < unknowns; unknown++) {
-      deltas(
-        1,
-        unknown
-      ) = fineGridValues[index * unknowns + unknown]
-          - stencilCenterValues[unknown];
-    }
+    const int backwardIndex = index;
 
     offset(normal) = factor * 2.0;
     index          = serialiseVoxelIndexInOverlap(
@@ -479,39 +447,34 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_third_order(
       overlap,
       normal
     );
-    for (int unknown = 0; unknown < unknowns; unknown++) {
-      deltas(
-        2,
-        unknown
-      ) = fineGridValues[index * unknowns + unknown]
-          - stencilCenterValues[unknown];
-    }
-
-
-    tarch::la::DynamicMatrix c           = Q_T * deltas;
-    tarch::la::DynamicMatrix derivatives = inverseR * c;
-
-    tarch::la::DynamicMatrix coarseMatrix(overlap, 3);
+    const int farIndex = index;
     for (int i = 0; i < overlap; i++) {
-      int distance = ((marker.getSelectedFaceNumber() < DIMENSIONS) xor swapInsideOutside) ? i * 3 + 3 - overlap : overlap - 3 - i * 3;
-      coarseMatrix(i, 0) = (1.0 / 3.0) * distance;
-      coarseMatrix(i, 1) = (1.0 / 18.0) * distance * distance;
-      coarseMatrix(i, 2) = (1.0 / 162.0) * distance * distance * distance;
-    }
-
-    tarch::la::DynamicMatrix coarseValues = coarseMatrix * derivatives;
-    for (int i = 0; i < overlap; i++) {
+      const int distance = ((marker.getSelectedFaceNumber() < DIMENSIONS) xor swapInsideOutside) ? i * 3 + 3 - overlap : overlap - 3 - i * 3;
       tarch::la::Vector<DIMENSIONS, int> coarseCell = kCoarse + coarseStart;
       coarseCell(normal) = ((marker.getSelectedFaceNumber() < DIMENSIONS) xor swapInsideOutside) ? i + overlap : overlap - i - 1;
-      int index = serialiseVoxelIndexInOverlap(
+      const int coarseIndex = serialiseVoxelIndexInOverlap(
         coarseCell,
         numberOfDoFsPerAxisInPatch,
         overlap,
         normal
       );
       for (int unknown = 0; unknown < unknowns; unknown++) {
-        coarseGridValues[index * unknowns + unknown]
-          = stencilCenterValues[unknown] + coarseValues(i, unknown);
+        tarch::la::Vector<3, T> deltas(0.0);
+        deltas(0) = fineGridValues[forwardIndex * unknowns + unknown]
+                    - stencilCenterValues[unknown];
+        deltas(1) = fineGridValues[backwardIndex * unknowns + unknown]
+                    - stencilCenterValues[unknown];
+        deltas(2) = fineGridValues[farIndex * unknowns + unknown]
+                    - stencilCenterValues[unknown];
+
+        const tarch::la::Vector<3, T> c           = Q_T * deltas;
+        const tarch::la::Vector<3, T> derivatives = inverseR * c;
+
+        coarseGridValues[coarseIndex * unknowns + unknown]
+          = stencilCenterValues[unknown]
+            + (1.0 / 3.0) * distance * derivatives(0)
+            + (1.0 / 18.0) * distance * distance * derivatives(1)
+            + (1.0 / 162.0) * distance * distance * distance * derivatives(2);
       }
     }
   }

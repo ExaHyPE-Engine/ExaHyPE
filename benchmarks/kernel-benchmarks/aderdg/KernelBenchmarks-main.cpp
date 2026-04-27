@@ -20,6 +20,7 @@
 #include "tarch/plotter/AMRPlotter.h"
 #include "tarch/plotter/HDF5FileWriter.h"
 #include "tarch/plotter/XDMFTimeSeriesWriter.h"
+#include "tarch/tarch.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
 #include "toolbox/blockstructured/Interpolation.h"
@@ -186,23 +187,23 @@ void plotGrid() {
 
 #if DIMENSIONS == 2
             int v[4];
-            v[0]          = vertexIndices[idx];
-            v[1]          = vertexIndices[idx + s_x];
-            v[2]          = vertexIndices[idx + s_x + s_y];
-            v[3]          = vertexIndices[idx + s_y];
-            int cellIndex = _cellPlotter->plotQuadrangle(v);
+            v[0]                                 = vertexIndices[idx];
+            v[1]                                 = vertexIndices[idx + s_x];
+            v[2]                                 = vertexIndices[idx + s_x + s_y];
+            v[3]                                 = vertexIndices[idx + s_y];
+            [[maybe_unused]] const int cellIndex = _cellPlotter->plotQuadrangle(v);
 #elif DIMENSIONS == 3
           int s_z = PointsPerAxis * PointsPerAxis;
           int v[8];
-          v[0]          = vertexIndices[idx];
-          v[1]          = vertexIndices[idx + s_x];
-          v[2]          = vertexIndices[idx + s_x + s_y];
-          v[3]          = vertexIndices[idx + s_y];
-          v[4]          = vertexIndices[idx + s_z];
-          v[5]          = vertexIndices[idx + s_x + s_z];
-          v[6]          = vertexIndices[idx + s_x + s_y + s_z];
-          v[7]          = vertexIndices[idx + s_y + s_z];
-          int cellIndex = _cellPlotter->plotHexahedron(v);
+          v[0]                                 = vertexIndices[idx];
+          v[1]                                 = vertexIndices[idx + s_x];
+          v[2]                                 = vertexIndices[idx + s_x + s_y];
+          v[3]                                 = vertexIndices[idx + s_y];
+          v[4]                                 = vertexIndices[idx + s_z];
+          v[5]                                 = vertexIndices[idx + s_x + s_z];
+          v[6]                                 = vertexIndices[idx + s_x + s_y + s_z];
+          v[7]                                 = vertexIndices[idx + s_y + s_z];
+          [[maybe_unused]] const int cellIndex = _cellPlotter->plotHexahedron(v);
 #endif
           }
         }

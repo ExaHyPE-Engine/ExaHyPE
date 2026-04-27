@@ -30,7 +30,6 @@ int main(int argc, char** argv) {
 #endif
 
   ::peano4::init(&argc, &argv, DomainOffset, DomainSize, 0);
-  ::peano4::writeCopyrightMessage();
 
   ::peano4::grid::Spacetree spacetree(DomainOffset, DomainSize, 0);
 
