@@ -1,0 +1,28 @@
+{
+  "domain": {
+    "offset": [
+      -39870.0,
+      -139850.0
+    ],
+    "size": [
+      379700.0,
+      379700.0
+    ]
+  },
+  "simulation": {
+    "minTerminalTime": 100.0,
+    "maxTerminalTime": 100.0
+  },
+  "plot": {
+    "firstTimeStamp": 0.0,
+    "timeInBetweenPlots": 10.0,
+    "outputPath": "solutions"
+  },
+  "boundary": {
+    "periodic": [
+      false,
+      false
+    ]
+  },
+  "bathymetryFile": "bathymetry/test_R1_dx100_H50_b.grd"
+}

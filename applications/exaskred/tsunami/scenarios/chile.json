@@ -1,0 +1,49 @@
+{
+  "domain": {
+    "offset": [
+      3000000.0,
+      0.0
+    ],
+    "size": [
+      4000000.0,
+      4000000.0
+    ]
+  },
+  "simulation": {
+    "minTerminalTime": 5000.0,
+    "maxTerminalTime": 5000.0
+  },
+  "plot": {
+    "firstTimeStamp": 0.0,
+    "timeInBetweenPlots": 500.0,
+    "outputPath": "solutions"
+  },
+  "boundary": {
+    "periodic": [
+      false,
+      false
+    ]
+  },
+  "bathymetryFile": "bathymetry/chile_gebco_usgs_2000m_bath.nc",
+  "displacementFile": "bathymetry/chile_gebco_usgs_2000m_displ.nc",
+  "bathymetrySize": [
+    7000000.0,
+    4000000.0
+  ],
+  "bathymetryOffset": [
+    0.0,
+    0.0
+  ],
+  "displacementSize": [
+    7000000.0,
+    4000000.0
+  ],
+  "displacementOffset": [
+    0.0,
+    0.0
+  ],
+  "displacementPosition": [
+    0.0,
+    0.0
+  ]
+}

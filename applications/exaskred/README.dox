@@ -1,0 +1,39 @@
+/**
+
+@page applications_exahype2_exaskred ExaSkred
+
+\tableofcontents
+
+ExaSkred takes its name from the Norwegian word `jordskred`:
+https://en.wiktionary.org/wiki/jordskred
+
+ExaSkred is the collective name for the hazard applications of ExaHyPE.
+
+The current ExaSkred sub-applications are:
+
+\li `coupled`
+\li `tsunami`
+\li `landslide`
+\li `meteotsunami`
+
+Each application directory contains the code it needs to build and run its own
+set of cases: setup scripts, kernels, source terms, runtime parameters, and
+scenario data. Some components are shared where the same solver logic is used
+in more than one place, but the application-specific parts stay local to the
+respective subdirectory.
+
+# Scope
+
+`tsunami` collects tsunami scenarios driven by prescribed initial disturbances
+or benchmark-style setups.
+
+`meteotsunami` covers atmospherically forced long-wave events and augments the
+hydrodynamic core with pressure, friction, rotation, and projection utilities.
+
+`landslide` contains slide-generated wave applications with their own
+topography, forcing, and admissibility logic.
+
+`coupled` focuses on coupled landslide-tsunami experiments where slide motion
+and wave propagation interact.
+
+*/

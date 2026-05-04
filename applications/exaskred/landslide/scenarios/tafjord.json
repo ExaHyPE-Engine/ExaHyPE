@@ -1,0 +1,29 @@
+{
+  "domain": {
+    "offset": [
+      414895.5,
+      6904495.5
+    ],
+    "size": [
+      1900.0,
+      1900.0
+    ]
+  },
+  "simulation": {
+    "minTerminalTime": 40.0,
+    "maxTerminalTime": 40.0
+  },
+  "plot": {
+    "firstTimeStamp": 0.0,
+    "timeInBetweenPlots": 4.0,
+    "outputPath": "solutions"
+  },
+  "boundary": {
+    "periodic": [
+      false,
+      false
+    ]
+  },
+  "bathymetryFile": "bathymetry/Tafjord_5m_EPSG25832.nc",
+  "displacementFile": "bathymetry/ini_3.0Mm3_5m_EPSG25832.nc"
+}
