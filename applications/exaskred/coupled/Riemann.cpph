@@ -1,0 +1,65 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "Flux.h"
+#include "NonconservativeProduct.h"
+
+#include <cmath>
+
+template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class T>
+static inline GPU_CALLABLE_METHOD double applications::exahype2::exaskred::coupled::solveRiemannProblem(
+  const T* const NOALIAS                       QL,
+  const T* const NOALIAS                       QR,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  T* const NOALIAS                             FL,
+  T* const NOALIAS                             FR
+) {
+  flux<Shortcuts, NumberOfUnknowns>(QL, x, h, t, dt, normal, FL);
+  flux<Shortcuts, NumberOfUnknowns>(QR, x, h, t, dt, normal, FR);
+
+  const T smax = std::fmax(
+    maxEigenvalue<Shortcuts>(QL, x, h, t, dt, normal),
+    maxEigenvalue<Shortcuts>(QR, x, h, t, dt, normal)
+  );
+
+  constexpr int StateSize         = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  T             Qavg[StateSize]   = {};
+  T             deltaQ[StateSize] = {};
+  for (int i = 0; i < NumberOfUnknowns; ++i) {
+    Qavg[i]   = 0.5 * (QL[i] + QR[i]);
+    deltaQ[i] = QR[i] - QL[i];
+    FL[i]     = 0.5 * (FL[i] + FR[i] - smax * deltaQ[i]);
+    FR[i]     = FL[i];
+  }
+  for (int i = NumberOfUnknowns; i < StateSize; ++i) {
+    Qavg[i]   = 0.5 * (QL[i] + QR[i]);
+    deltaQ[i] = QR[i] - QL[i];
+  }
+
+  T ncp[NumberOfUnknowns] = {};
+  nonconservativeProduct<Shortcuts, NumberOfUnknowns, true>(Qavg, deltaQ, x, h, t, dt, normal, ncp);
+  for (int i = 0; i < NumberOfUnknowns; ++i) {
+    FL[i] += 0.5 * ncp[i];
+    FR[i] -= 0.5 * ncp[i];
+  }
+
+  T sourceSpeedLeft = 0.0;
+  if (QL[Shortcuts::lsh] > hThreshold) {
+    const T leftHeight = QL[Shortcuts::lsh] > hThreshold ? QL[Shortcuts::lsh] : hThreshold;
+    const T momentum = std::sqrt(QL[Shortcuts::lshu] * QL[Shortcuts::lshu] + QL[Shortcuts::lshv] * QL[Shortcuts::lshv]);
+    sourceSpeedLeft  = 2.0 * g * momentum * invXi / (leftHeight * leftHeight);
+  }
+
+  T sourceSpeedRight = 0.0;
+  if (QL[Shortcuts::lsh] > hThreshold) {
+    const T rightHeight = QR[Shortcuts::lsh] > hThreshold ? QR[Shortcuts::lsh] : hThreshold;
+    const T momentum = std::sqrt(QR[Shortcuts::lshu] * QR[Shortcuts::lshu] + QR[Shortcuts::lshv] * QR[Shortcuts::lshv]);
+    sourceSpeedRight = 2.0 * g * momentum * invXi / (rightHeight * rightHeight);
+  }
+
+  return std::fmax(smax, h[normal] * std::fmax(sourceSpeedLeft, sourceSpeedRight));
+}

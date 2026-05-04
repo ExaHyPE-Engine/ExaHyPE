@@ -1,0 +1,80 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "Constants.h"
+
+#include <algorithm>
+#include <cmath>
+
+namespace applications::exahype2::exaskred::riemann {
+  template <class Shortcuts, int NumberOfUnknowns, int Order, class T>
+  static inline GPU_CALLABLE_METHOD void wellBalancedRusanov(
+    const T* const NOALIAS                       QL,
+    const T* const NOALIAS                       QR,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    const double                                 t,
+    const double                                 dt,
+    const int                                    normal,
+    T* const NOALIAS                             FL,
+    T* const NOALIAS                             FR
+  ) {
+    (void)x;
+    (void)h;
+    (void)t;
+    (void)dt;
+
+    T smax = 0.0;
+    for (int xy = 0; xy < Order + 1; ++xy) {
+      const T* const leftState  = &QL[xy * NumberOfUnknowns];
+      const T* const rightState = &QR[xy * NumberOfUnknowns];
+
+      if (leftState[Shortcuts::h] > hThreshold) {
+        const T leftNormalVelocity = leftState[Shortcuts::hu + normal] / leftState[Shortcuts::h];
+        const T leftWaveSpeed      = std::sqrt(g * leftState[Shortcuts::h]);
+        smax                       = std::max(
+          smax,
+          std::fmax(std::fabs(leftNormalVelocity + leftWaveSpeed), std::fabs(leftNormalVelocity - leftWaveSpeed))
+        );
+      }
+
+      if (rightState[Shortcuts::h] > hThreshold) {
+        const T rightNormalVelocity = rightState[Shortcuts::hu + normal] / rightState[Shortcuts::h];
+        const T rightWaveSpeed      = std::sqrt(g * rightState[Shortcuts::h]);
+        smax                        = std::max(
+          smax,
+          std::fmax(std::fabs(rightNormalVelocity + rightWaveSpeed), std::fabs(rightNormalVelocity - rightWaveSpeed))
+        );
+      }
+    }
+
+    for (int xy = 0; xy < Order + 1; ++xy) {
+      const int j = xy * NumberOfUnknowns;
+
+      const T* const leftState  = &QL[j];
+      const T* const rightState = &QR[j];
+
+      FL[j + Shortcuts::h]
+        = 0.5
+          * (FL[j + Shortcuts::h] + FR[j + Shortcuts::h] + smax * (leftState[Shortcuts::h] + leftState[Shortcuts::b] - rightState[Shortcuts::h] - rightState[Shortcuts::b]));
+      FL[j + Shortcuts::hu]
+        = 0.5
+          * (FL[j + Shortcuts::hu] + FR[j + Shortcuts::hu] + smax * (leftState[Shortcuts::hu] - rightState[Shortcuts::hu]));
+      FL[j + Shortcuts::hv]
+        = 0.5
+          * (FL[j + Shortcuts::hv] + FR[j + Shortcuts::hv] + smax * (leftState[Shortcuts::hv] - rightState[Shortcuts::hv]));
+      FL[j + Shortcuts::b] = 0.0;
+
+      FR[j + Shortcuts::h]  = FL[j + Shortcuts::h];
+      FR[j + Shortcuts::hu] = FL[j + Shortcuts::hu];
+      FR[j + Shortcuts::hv] = FL[j + Shortcuts::hv];
+      FR[j + Shortcuts::b]  = 0.0;
+
+      const T jump = rightState[Shortcuts::b] + rightState[Shortcuts::h] - leftState[Shortcuts::b]
+                     - leftState[Shortcuts::h];
+      const T avgHeight = 0.5 * (leftState[Shortcuts::h] + rightState[Shortcuts::h]);
+
+      FL[j + Shortcuts::hu + normal] += 0.5 * g * avgHeight * jump;
+      FR[j + Shortcuts::hu + normal] -= 0.5 * g * avgHeight * jump;
+    }
+  }
+} // namespace applications::exahype2::exaskred::riemann

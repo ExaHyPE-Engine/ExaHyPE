@@ -1,0 +1,27 @@
+{
+  "domain": {
+    "offset": [
+      0.0,
+      0.0
+    ],
+    "size": [
+      30.0,
+      30.0
+    ]
+  },
+  "simulation": {
+    "minTerminalTime": 20.0,
+    "maxTerminalTime": 20.0
+  },
+  "plot": {
+    "firstTimeStamp": 0.0,
+    "timeInBetweenPlots": 2.0,
+    "outputPath": "solutions"
+  },
+  "boundary": {
+    "periodic": [
+      false,
+      false
+    ]
+  }
+}
