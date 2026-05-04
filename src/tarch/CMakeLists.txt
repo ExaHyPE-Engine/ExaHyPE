@@ -8,6 +8,7 @@ set(SOURCES
   StackSizeLimitDetection.cpp
   CPUFeatureDetection.cpp
   Enumerator.cpp
+  FloatingPointExceptions.cpp
   NonCriticalAssertions.cpp
   UnitTests.cpp
   tests/TestCase.cpp
@@ -137,11 +138,17 @@ install_peano_headers(
   PATTERNS ${HEADER_EXTENSIONS_TO_GLOB}
 )
 
+set(TARCH_LINK_LIBRARIES)
+if(WITH_FPE AND CMAKE_DL_LIBS)
+  list(APPEND TARCH_LINK_LIBRARIES ${CMAKE_DL_LIBS})
+endif()
+
 foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
   add_peano_library(
     NAME Tarch${mode}
     MODE ${mode}
     SOURCES ${SOURCES}
     HEADERS ${HEADERS}
+    LINK_LIBRARIES ${TARCH_LINK_LIBRARIES}
   )
 endforeach()

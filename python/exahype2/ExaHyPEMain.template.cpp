@@ -13,6 +13,7 @@
 #include "repositories/SolverRepository.h"
 #include "repositories/StepRepository.h"
 
+#include "tarch/FloatingPointExceptions.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/accelerator/MemoryManager.h"
 #include "tarch/logging/Log.h"
@@ -262,6 +263,8 @@ void performAlgorithmicStep(
 ) {
   tarch::logging::LogFilter::getInstance().switchProgramPhase(repositories::StepRepository::toString(stepName));
 
+  tarch::FloatingPointExceptions::ScopedTrap scopedTrap(__FILE__, __LINE__);
+
   startStepHook();
   Observer::prepareTraversal();
 
@@ -320,7 +323,7 @@ void runNextAlgorithmicStep() {
       }
     );
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      logInfo("performAlgorithmicStep()", "Grid initialisation complete")
+      logInfo("performAlgorithmicStep()", "Grid initialisation complete");
     }
     break;
   case repositories::StepRepository::Steps::PlotSolution:
@@ -354,7 +357,13 @@ void runNextAlgorithmicStep() {
         repositories::finishTimeStep();
       }
     );
-    if (timeStepMeasurement.getAccumulatedValue() >= logNextTimeStep and repositories::mayPlot()) {
+    if (
+      not tarch::hasNonCriticalAssertionBeenViolated()
+      and
+      timeStepMeasurement.getAccumulatedValue() >= logNextTimeStep
+      and
+      repositories::mayPlot()
+    ) {
       if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
         repositories::logTimeStep();
         logGlobalStatistics();
@@ -460,11 +469,22 @@ int main(int argc, char** argv) {
   setupEnvironment(argc, argv);
 
   int returnCode = EXIT_SUCCESS;
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    returnCode = runGlobalMaster();
-  } else {
-    runWorker();
+
+#if defined(WITH_OPENMP)
+#pragma omp parallel
+  {
+#pragma omp master
+    {
+#endif
+      if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+        returnCode = runGlobalMaster();
+      } else {
+        runWorker();
+      }
+#if defined(WITH_OPENMP)
+    }
   }
+#endif
 
   shutdownEnvironment();
   return returnCode;

@@ -3,7 +3,6 @@
 #include "EnclaveBookkeepingTest.h"
 
 #include "exahype2/EnclaveBookkeeping.h"
-
 #include "tarch/multicore/Task.h"
 
 constexpr int NumberOfTasksToExecute = 1000;
@@ -19,7 +18,7 @@ public:
 
   void fuse(const std::list<Task*>& otherTasks) override {
     numberOfTasksThatHaveBeenExecuted = otherTasks.size() + 1;
-    for (auto& otherTask: otherTasks) {
+    for (auto& otherTask : otherTasks) {
       delete otherTask;
     }
   }
@@ -34,17 +33,7 @@ exahype2::tests::EnclaveBookkeepingTest::EnclaveBookkeepingTest():
   TestCase("exahype2::tests::EnclaveBookkeepingTest") {}
 
 void exahype2::tests::EnclaveBookkeepingTest::run() {
-#ifdef WITH_OPENMP
-#pragma omp parallel
-    {
-#pragma omp master
-#endif
-      {
-        testMethod([this]() { testFusePendingTasks(); });
-      }
-#ifdef WITH_OPENMP
-    }
-#endif
+  testMethod([this]() { testFusePendingTasks(); });
 }
 
 void exahype2::tests::EnclaveBookkeepingTest::testFusePendingTasks() {

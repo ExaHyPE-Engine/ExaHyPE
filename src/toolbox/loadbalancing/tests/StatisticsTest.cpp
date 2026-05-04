@@ -74,6 +74,26 @@ void toolbox::loadbalancing::tests::StatisticsTest::testPackedReductionMatchesSi
     locMinDepthPacked = locMinD;
   }
 
+  const auto validateLocalEqualsGlobal = [&]() {
+    validateEquals(stats.getGlobalNumberOfInnerUnrefinedCells(), locInner);
+    validateEquals(stats.getGlobalNumberOfOuterUnrefinedCells(), locOuter);
+    validateEquals(stats.getGlobalNumberOfVertices(), locVerts);
+    validateEquals(stats.getGlobalNumberOfHangingVertices(), locHang);
+    validateEquals(stats.getGlobalNumberOfTrees(), locTrees);
+    validateEquals(stats.getGlobalNumberOfRanksWithAtLeastOneTree(), locHasTree);
+
+    validateEquals(static_cast<std::uint64_t>(stats.getGlobalMemoryUsageInBytes()), locMem);
+
+    if (locHasTree) {
+      validateEquals(stats.getGlobalMinTreeLoad(), locMinLoadPacked);
+      validateEquals(stats.getGlobalMinDepth(), locMinDepthPacked);
+    }
+    validateEquals(stats.getGlobalMaxTreeLoad(), locMaxLoad);
+    validateEquals(stats.getGlobalMaxDepth(), locMaxD);
+    validateNumericalEquals(stats.getGlobalMinH(), locMinH);
+    validateEquals(stats.getGlobalNumberOfStationarySweeps(), locSweeps);
+  };
+
 #ifdef WITH_MPI
   // Second call: waits for completion of the first non-blocking global exchange and unpacks it.
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
@@ -84,7 +104,7 @@ void toolbox::loadbalancing::tests::StatisticsTest::testPackedReductionMatchesSi
 #ifdef WITH_MPI
   int mpiInitialised = 0;
   MPI_Initialized(&mpiInitialised);
-  if (mpiInitialised) {
+  if (mpiInitialised and tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
     MPI_Comm comm = tarch::mpi::Rank::getInstance().getCommunicator();
 
     // SUM fields
@@ -153,26 +173,11 @@ void toolbox::loadbalancing::tests::StatisticsTest::testPackedReductionMatchesSi
 
     // Basic invariant (independent of view-consistency heuristics)
     validate(stats.getGlobalNumberOfInnerUnrefinedCells() >= stats.getLocalNumberOfInnerUnrefinedCells());
+  } else {
+    validateLocalEqualsGlobal();
   }
 #else
-  // Serial build: global == local
-  validateEquals(stats.getGlobalNumberOfInnerUnrefinedCells(), locInner);
-  validateEquals(stats.getGlobalNumberOfOuterUnrefinedCells(), locOuter);
-  validateEquals(stats.getGlobalNumberOfVertices(), locVerts);
-  validateEquals(stats.getGlobalNumberOfHangingVertices(), locHang);
-  validateEquals(stats.getGlobalNumberOfTrees(), locTrees);
-  validateEquals(stats.getGlobalNumberOfRanksWithAtLeastOneTree(), locHasTree);
-
-  validateEquals(static_cast<std::uint64_t>(stats.getGlobalMemoryUsageInBytes()), locMem);
-
-  if (locHasTree) {
-    validateEquals(stats.getGlobalMinTreeLoad(), locMinLoadPacked);
-    validateEquals(stats.getGlobalMinDepth(), locMinDepthPacked);
-  }
-  validateEquals(stats.getGlobalMaxTreeLoad(), locMaxLoad);
-  validateEquals(stats.getGlobalMaxDepth(), locMaxD);
-  validateNumericalEquals(stats.getGlobalMinH(), locMinH);
-  validateEquals(stats.getGlobalNumberOfStationarySweeps(), locSweeps);
+  validateLocalEqualsGlobal();
 #endif
 }
 
