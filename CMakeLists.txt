@@ -111,7 +111,8 @@ if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
     -Wall
     -Wextra
     -Kieee
-    #-Minfo=all
+    # -Mnovect
+    # -Minfo=all
   )
 else()
   target_compile_options(PeanoOptions INTERFACE
@@ -135,6 +136,7 @@ endif()
 
 option(WITH_MULTITHREADING "Build with multithreading (OpenMP) support" ON)
 option(WITH_MPI "Build with Message Passing Interface (MPI) support" ON)
+option(WITH_FPE "Build with floating-point exception traps" OFF)
 option(WITH_HDF5 "Build with HDF5 support" ON)
 option(WITH_NETCDF "Build with NetCDF support" ON)
 option(WITH_EASI "Build with easi support" OFF)
@@ -240,6 +242,14 @@ if(WITH_MPI)
   find_package(MPI REQUIRED)
   target_link_libraries(PeanoOptions INTERFACE MPI::MPI_CXX)
   target_compile_definitions(PeanoOptions INTERFACE WITH_MPI)
+endif()
+
+if(WITH_FPE)
+  target_compile_definitions(PeanoOptions INTERFACE WITH_FPE)
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+    # Intel's LLVM front-end rejects FENV_ACCESS without precise FP semantics.
+    target_compile_options(PeanoOptions INTERFACE -ffp-model=precise)
+  endif()
 endif()
 
 if(WITH_LIBXSMM)

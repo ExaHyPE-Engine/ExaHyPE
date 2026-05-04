@@ -34,16 +34,20 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
   double QxR[2*nodesPerFace*2];
   double QyL[2*nodesPerFace*2];
   double QyR[2*nodesPerFace*2];
+  #if DIMENSIONS==3
   double QzL[2*nodesPerFace*2];
   double QzR[2*nodesPerFace*2];
+  #endif
 
   for(int i=0; i<2*nodesPerFace*2;i++){
     QxL[i] = 0.0;
     QxR[i] = 0.0;
     QyL[i] = 0.0;
     QyR[i] = 0.0;
+    #if DIMENSIONS==3
     QzL[i] = 0.0;
     QzR[i] = 0.0;
+    #endif
   }
 
   projectVolumetricDataOntoFaces(

@@ -296,11 +296,21 @@ int main(int argc, char** argv) {
   setupEnvironment(argc, argv);
 
   int result = EXIT_SUCCESS;
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    result = runGlobalMaster();
-  } else {
-    runWorker();
+#if defined(WITH_OPENMP)
+#pragma omp parallel
+  {
+#pragma omp master
+    {
+#endif
+      if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+        result = runGlobalMaster();
+      } else {
+        runWorker();
+      }
+#if defined(WITH_OPENMP)
+    }
   }
+#endif
 
   shutdownEnvironment();
   return result;

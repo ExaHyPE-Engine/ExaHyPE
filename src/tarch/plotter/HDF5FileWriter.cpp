@@ -89,24 +89,30 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
   unsigned long long totalTopo   = localTopoSize;
 
 #if defined(WITH_MPI)
-  MPI_Comm comm = tarch::mpi::Rank::getInstance().getCommunicator();
+  auto&    rank          = tarch::mpi::Rank::getInstance();
+  MPI_Comm comm          = rank.getCommunicator();
+  bool     useParallelIO = rank.getNumberOfRanks() > 1;
 
-  unsigned long long local[3]  = {localNumPoints, localNumCells, localTopoSize};
-  unsigned long long prefix[3] = {0ull, 0ull, 0ull};
-  unsigned long long totals[3] = {0ull, 0ull, 0ull};
+  if (useParallelIO) {
+    unsigned long long local[3]  = {localNumPoints, localNumCells, localTopoSize};
+    unsigned long long prefix[3] = {0ull, 0ull, 0ull};
+    unsigned long long totals[3] = {0ull, 0ull, 0ull};
 
-  // Inclusive prefix sums; subtract local to get exclusive offsets.
-  MPI_Scan(local, prefix, 3, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
-  offsetPoints = prefix[0] - local[0];
-  offsetCells  = prefix[1] - local[1];
-  offsetTopo   = prefix[2] - local[2];
+    // Inclusive prefix sums; subtract local to get exclusive offsets.
+    MPI_Scan(local, prefix, 3, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+    offsetPoints = prefix[0] - local[0];
+    offsetCells  = prefix[1] - local[1];
+    offsetTopo   = prefix[2] - local[2];
 
-  // TODO: Use tarch MPI routines
-  // Use Allreduce to get global file sizes (Rank 0 needs this for XMF, everyone for HDF5 dataspace)
-  MPI_Allreduce(local, totals, 3, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
-  totalPoints = totals[0];
-  totalCells  = totals[1];
-  totalTopo   = totals[2];
+    // TODO: Use tarch MPI routines
+    // Use Allreduce to get global file sizes (Rank 0 needs this for XMF, everyone for HDF5 dataspace)
+    MPI_Allreduce(local, totals, 3, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+    totalPoints = totals[0];
+    totalCells  = totals[1];
+    totalTopo   = totals[2];
+  }
+#else
+  bool useParallelIO = false;
 #endif
 
   // Prepare Topology (Convert VTK-style to XDMF Mixed format)
@@ -143,13 +149,15 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
   hid_t dxpl = H5P_DEFAULT; // Data transfer property list
 
 #if defined(WITH_MPI)
-  // Property list for parallel file access
-  fapl = H5Pcreate(H5P_FILE_ACCESS);
-  H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL);
+  if (useParallelIO) {
+    // Property list for parallel file access
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    H5Pset_fapl_mpio(fapl, comm, MPI_INFO_NULL);
 
-  // Data Transfer Property List (Collective I/O for efficiency)
-  dxpl = H5Pcreate(H5P_DATASET_XFER);
-  H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
+    // Data transfer property list for collective MPI-I/O.
+    dxpl = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
+  }
 #endif
 
   hid_t fileId = H5Fcreate(h5FilePath.string().c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);

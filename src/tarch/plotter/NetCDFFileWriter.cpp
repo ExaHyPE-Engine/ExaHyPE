@@ -98,13 +98,24 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   unsigned long long totalFaces  = localNumFaces;
 
 #if defined(WITH_MPI)
-  MPI_Comm comm = tarch::mpi::Rank::getInstance().getCommunicator();
-  MPI_Scan(&localNumNodes, &offsetNodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
-  MPI_Scan(&localNumFaces, &offsetFaces, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
-  offsetNodes -= localNumNodes;
-  offsetFaces -= localNumFaces;
-  MPI_Allreduce(&localNumNodes, &totalNodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
-  MPI_Allreduce(&localNumFaces, &totalFaces, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+  auto&    rank          = tarch::mpi::Rank::getInstance();
+  MPI_Comm comm          = rank.getCommunicator();
+  bool     useParallelIO = rank.getNumberOfRanks() > 1;
+  bool     isMasterRank  = rank.isGlobalMaster();
+#else
+  bool useParallelIO = false;
+  bool isMasterRank  = true;
+#endif
+
+#if defined(WITH_MPI)
+  if (useParallelIO) {
+    MPI_Scan(&localNumNodes, &offsetNodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+    MPI_Scan(&localNumFaces, &offsetFaces, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+    offsetNodes -= localNumNodes;
+    offsetFaces -= localNumFaces;
+    MPI_Allreduce(&localNumNodes, &totalNodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+    MPI_Allreduce(&localNumFaces, &totalFaces, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+  }
 #endif
 
   // Shift connectivity to global node indices
@@ -119,10 +130,14 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   int ncid = -1;
 
 #if defined(WITH_MPI)
-  check(
-    nc_create_par(filePath.string().c_str(), NC_NETCDF4 | NC_CLOBBER, comm, MPI_INFO_NULL, &ncid),
-    "nc_create_par(" + filePath.string() + ")"
-  );
+  if (useParallelIO) {
+    check(
+      nc_create_par(filePath.string().c_str(), NC_NETCDF4 | NC_CLOBBER, comm, MPI_INFO_NULL, &ncid),
+      "nc_create_par(" + filePath.string() + ")"
+    );
+  } else {
+    check(nc_create(filePath.string().c_str(), NC_NETCDF4 | NC_CLOBBER, &ncid), "nc_create(" + filePath.string() + ")");
+  }
 #else
   check(nc_create(filePath.string().c_str(), NC_NETCDF4 | NC_CLOBBER, &ncid), "nc_create(" + filePath.string() + ")");
 #endif
@@ -298,19 +313,22 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   check(nc_enddef(ncid), "nc_enddef");
 
 #if defined(WITH_MPI)
-  check(nc_var_par_access(ncid, varMesh, NC_COLLECTIVE), "par_access mesh2d");
-  check(nc_var_par_access(ncid, varTime, NC_COLLECTIVE), "par_access time");
-  check(nc_var_par_access(ncid, varX, NC_COLLECTIVE), "par_access x");
-  check(nc_var_par_access(ncid, varY, NC_COLLECTIVE), "par_access y");
-  check(nc_var_par_access(ncid, varFaceNodes, NC_COLLECTIVE), "par_access face_nodes");
-  for (const auto& ids : pointVarIds) {
-    for (int id : ids) {
-      check(nc_var_par_access(ncid, id, NC_COLLECTIVE), "par_access point field");
+  if (useParallelIO) {
+    // Only the global master writes the replicated scalar metadata variables.
+    check(nc_var_par_access(ncid, varMesh, NC_INDEPENDENT), "par_access mesh2d");
+    check(nc_var_par_access(ncid, varTime, NC_COLLECTIVE), "par_access time");
+    check(nc_var_par_access(ncid, varX, NC_COLLECTIVE), "par_access x");
+    check(nc_var_par_access(ncid, varY, NC_COLLECTIVE), "par_access y");
+    check(nc_var_par_access(ncid, varFaceNodes, NC_COLLECTIVE), "par_access face_nodes");
+    for (const auto& ids : pointVarIds) {
+      for (int id : ids) {
+        check(nc_var_par_access(ncid, id, NC_COLLECTIVE), "par_access point field");
+      }
     }
-  }
-  for (const auto& ids : faceVarIds) {
-    for (int id : ids) {
-      check(nc_var_par_access(ncid, id, NC_COLLECTIVE), "par_access face field");
+    for (const auto& ids : faceVarIds) {
+      for (int id : ids) {
+        check(nc_var_par_access(ncid, id, NC_COLLECTIVE), "par_access face field");
+      }
     }
   }
 #endif
@@ -328,31 +346,33 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   // Write time scalar
   {
     std::size_t startT[1] = {0};
-    std::size_t countT[1] = {1};
+    std::size_t countT[1] = {useParallelIO ? static_cast<std::size_t>(isMasterRank ? 1 : 0) : 1};
     check(nc_put_vara_double(ncid, varTime, startT, countT, &time), "write time value");
   }
 
-  const float dummyF = 0.0f;
-  const int   dummyI = 0;
+  const int dummyI = 0;
 
   // Write a defined value for the mesh topology dummy variable.
-  check(nc_put_var_int(ncid, varMesh, &dummyI), "write mesh2d");
+  if (not useParallelIO or isMasterRank) {
+    check(nc_put_var_int(ncid, varMesh, &dummyI), "write mesh2d");
+  }
 
   {
-    std::size_t start[1] = {static_cast<std::size_t>(offsetNodes)};
-    std::size_t count[1] = {static_cast<std::size_t>(localNumNodes)};
-    check(nc_put_vara_float(ncid, varX, start, count, localNumNodes ? x.data() : &dummyF), "write x");
-    check(nc_put_vara_float(ncid, varY, start, count, localNumNodes ? y.data() : &dummyF), "write y");
+    if (localNumNodes > 0) {
+      std::size_t start[1] = {static_cast<std::size_t>(offsetNodes)};
+      std::size_t count[1] = {static_cast<std::size_t>(localNumNodes)};
+      check(nc_put_vara_float(ncid, varX, start, count, x.data()), "write x");
+      check(nc_put_vara_float(ncid, varY, start, count, y.data()), "write y");
+    }
   }
 
   // Write connectivity
   {
-    std::size_t start[2] = {static_cast<std::size_t>(offsetFaces), 0};
-    std::size_t count[2] = {static_cast<std::size_t>(localNumFaces), static_cast<std::size_t>(MAX_FACE_NODES)};
-    check(
-      nc_put_vara_int(ncid, varFaceNodes, start, count, localNumFaces ? localFaceNodes.data() : &dummyI),
-      "write face_nodes"
-    );
+    if (localNumFaces > 0) {
+      std::size_t start[2] = {static_cast<std::size_t>(offsetFaces), 0};
+      std::size_t count[2] = {static_cast<std::size_t>(localNumFaces), static_cast<std::size_t>(MAX_FACE_NODES)};
+      check(nc_put_vara_int(ncid, varFaceNodes, start, count, localFaceNodes.data()), "write face_nodes");
+    }
   }
 
   // Write fields

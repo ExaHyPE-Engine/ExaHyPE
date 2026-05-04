@@ -2,6 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "peano4/UnitTests.h"
 #include "peano4/peano4.h"
+#include "tarch/FloatingPointExceptions.h"
+#include "tarch/NonCriticalAssertions.h"
 #include "tarch/UnitTests.h"
 #include "tarch/logging/Log.h"
 #include "tarch/logging/LogFilter.h"
@@ -20,13 +22,6 @@
 
 #ifdef ENABLE_EXAHYPE
 #include "exahype2/UnitTests.h"
-#endif
-
-#if defined(__linux)
-#include <cfenv>
-#include <fenv.h>
-#pragma float_control(precise, on)
-#pragma STDC FENV_ACCESS ON
 #endif
 
 tarch::logging::Log _log("unittests");
@@ -240,12 +235,27 @@ int main(int argc, char** argv) {
 
   peano4::init(&argc, &argv, DomainOffset, DomainSize, 0);
 
-#if defined(__linux)
-  // feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
-  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-#endif
+  int returnCode = EXIT_SUCCESS;
 
-  int returnCode = runTests();
+#if defined(WITH_OPENMP)
+#pragma omp parallel
+  {
+#pragma omp master
+    {
+#endif
+      {
+        tarch::FloatingPointExceptions::ScopedTrap scopedTrap(__FILE__, __LINE__);
+        returnCode = runTests();
+      }
+
+      if (tarch::hasNonCriticalAssertionBeenViolated()) {
+        logError("main()", "Noncritical assertion has been triggered while running the unit tests. Quit.");
+        returnCode = EXIT_FAILURE;
+      }
+#if defined(WITH_OPENMP)
+    }
+  }
+#endif
 
   peano4::shutdown();
 

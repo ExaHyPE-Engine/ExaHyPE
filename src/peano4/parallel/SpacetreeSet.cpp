@@ -374,21 +374,11 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::GridTraversalObserve
     }
   }
 
-#if defined(WITH_OPENMP)
-#pragma omp parallel
-  {
-#pragma omp master /*single nowait*/
-    {
-#endif
-      tarch::multicore::spawnTasks(primaryTasks);
-      streamDataFromSplittingTreesToNewTrees(observer);
-      tarch::multicore::spawnTasks(secondaryTasks);
-      tarch::multicore::spawnTasks(tertiaryTasks);
-      exchangeHorizontalDataBetweenTrees(observer);
-#if defined(WITH_OPENMP)
-    }
-  }
-#endif
+  tarch::multicore::spawnTasks(primaryTasks);
+  streamDataFromSplittingTreesToNewTrees(observer);
+  tarch::multicore::spawnTasks(secondaryTasks);
+  tarch::multicore::spawnTasks(tertiaryTasks);
+  exchangeHorizontalDataBetweenTrees(observer);
 
   cleanUpTrees(observer);
   createNewTrees();

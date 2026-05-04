@@ -29,7 +29,7 @@ namespace exahype2 {
         inline tarch::la::Vector<DIMENSIONS, double> _domainOffset(0.0);
         inline tarch::la::Vector<DIMENSIONS, double> _domainSize(1.0);
         inline tarch::la::Vector<DIMENSIONS, double> _periodicBC(0.0);
-        inline static int                            _ppInteractionMethod = 0; // default = no interaction
+        [[maybe_unused]] inline static int           _ppInteractionMethod = 0; // default = no interaction
         // PP Collision parameters
 
 

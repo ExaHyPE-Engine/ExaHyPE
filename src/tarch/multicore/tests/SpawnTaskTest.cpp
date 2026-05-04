@@ -4,8 +4,8 @@
 
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Lock.h"
-#include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Task.h"
+#include "tarch/multicore/multicore.h"
 
 #include <chrono>
 #include <thread>
@@ -51,20 +51,10 @@ tarch::multicore::tests::SpawnTaskTest::SpawnTaskTest():
   TestCase("tarch::multicore::tests::SpawnTaskTest") {}
 
 void tarch::multicore::tests::SpawnTaskTest::run() {
-#ifdef WITH_OPENMP
-#pragma omp parallel
-  {
-#pragma omp master
-#endif
-    {
-      testMethod([this]() { testSpawnIndependentTask(); });
-      testMethod([this]() { testSpawnTaskWithOutDependency(); });
-      testMethod([this]() { testSpawnTaskWithInAndOutDependency(); });
-      testMethod([this]() { testSpawnTasks(); });
-    }
-#ifdef WITH_OPENMP
-  }
-#endif
+  testMethod([this]() { testSpawnIndependentTask(); });
+  testMethod([this]() { testSpawnTaskWithOutDependency(); });
+  testMethod([this]() { testSpawnTaskWithInAndOutDependency(); });
+  testMethod([this]() { testSpawnTasks(); });
 }
 
 void tarch::multicore::tests::SpawnTaskTest::testSpawnIndependentTask() {

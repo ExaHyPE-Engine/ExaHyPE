@@ -25,6 +25,7 @@
                             -DENABLE_TOOLBOX_BLOCKSTRUCTURED=ON \
                             -DENABLE_TOOLBOX_PARTICLES=ON \
                             -DENABLE_TOOLBOX_CURVI=ON \
+                            -DWITH_FPE=OFF \
                             -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
                             -DWITH_EASI=ON"
