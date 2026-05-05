@@ -28,20 +28,17 @@ class AdaptiveTimeSteppingCodeSnippets(
 
     def create_print_time_step_implementation(self):
         return """
-  if (tarch::la::greater(getMaxCellSize(), 0.0) and tarch::la::greater(getMaxEigenvalue(), 0.0)) {
-    logDebug("logTimeStep()", "Phase       = " << toString(_solverState));
-    logInfo("logTimeStep()", "t            = " << getMinTimeStamp() << " / " << MinTerminalTime);
-    logInfo("logTimeStep()", "dt           = " << getAdmissibleTimeStepSize());
-    logInfo("logTimeStep()", "h_{min}      = " << getMinCellSize() << " (patch size)");
-    logInfo("logTimeStep()", "h_{max}      = " << getMaxCellSize() << " (patch size)");
-    logInfo("logTimeStep()", "lambda_{max} = " << getMaxEigenvalue());
-  }
+  logDebug("logTimeStep()", "Phase       = " << toString(_solverState));
+  logInfo("logTimeStep()", "t            = " << getMinTimeStamp() << " / " << MinTerminalTime);
+  logInfo("logTimeStep()", "dt           = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : _admissibleTimeStepSizeThisTimeStep));
+  logInfo("logTimeStep()", "h_{min}      = " << getMinCellSize() << " (patch size)");
+  logInfo("logTimeStep()", "h_{max}      = " << getMaxCellSize() << " (patch size)");
+  logInfo("logTimeStep()", "lambda_{max} = " << getMaxEigenvalue());
 """
 
     def create_start_time_step_implementation(self):
         return """
   if (isFirstGridSweepOfTimeStep()) {
-    _maxEigenvalue = _maxEigenvalueThisTimeStep;
     _maxEigenvalueThisTimeStep = 0.0;
   }
 """

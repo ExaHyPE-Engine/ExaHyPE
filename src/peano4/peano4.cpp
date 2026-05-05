@@ -142,5 +142,5 @@ void peano4::shutdown() {
   tarch::multicore::Core::getInstance().shutdown();
   tarch::mpi::Rank::getInstance().shutdown();
 
-  logInfo("shutdown()", "Peano terminated successfully");
+  // logInfo("shutdown()", "Peano terminated successfully");
 }

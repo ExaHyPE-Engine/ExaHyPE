@@ -30,8 +30,14 @@
 
 #include "exahype2/exahype2.h"
 
+#include <algorithm>
+#include <cmath>
+#include <cstring>
 #include <iomanip>
+#include <initializer_list>
+#include <limits>
 #include <sstream>
+#include <string>
 
 using namespace {{NAMESPACE | join("::")}};
 
@@ -43,9 +49,24 @@ namespace {
   tarch::timing::Measurement gridInitialisationMeasurement;
   tarch::timing::Measurement timeStepMeasurement;
   tarch::timing::Measurement plotMeasurement;
+  tarch::timing::Measurement gridSweepMeasurement;
 
   static double logNextTimeStep = 0.0;
+  static int currentNumberOfGridSweepsOfTimeStep = 0;
+  static unsigned long numberOfCompletedTimeSteps = 0;
+  static unsigned long lastLoggedNumberOfCompletedTimeSteps = 0;
   static bool haveReceivedNonCriticalAssertion = false;
+
+  std::string formatStatisticsLabel(const char* label, std::initializer_list<const char*> labels) {
+    std::size_t width = 0;
+    for (const char* candidate: labels) {
+      width = std::max(width, std::strlen(candidate));
+    }
+
+    std::ostringstream result;
+    result << std::left << std::setw(static_cast<int>(width + 1)) << label;
+    return result.str();
+  }
 } // namespace
 
 /**
@@ -194,6 +215,14 @@ bool selectNextAlgorithmicStep() {
 }
 
 void logGlobalStatistics() {
+  const auto StatisticsLabels = {
+    "Topology:",
+    "Load Balancing:",
+    "Memory Usage:",
+    "Throughput per Timestep:",
+    "Expected Time Until Finish:"
+  };
+
   const auto globalNumberOfLeaves = static_cast<unsigned long>(repositories::loadBalancer.getStatistics().getGlobalNumberOfInnerUnrefinedCells());
 
   {
@@ -206,7 +235,7 @@ void logGlobalStatistics() {
     msg << "Leaves=" << globalNumberOfLeaves
         << ", Vertices=" << totalNumberOfVertices << " (Local=" << globalNumberOfVertices << ", Hanging=" << globalNumberOfHangingVertices << ")"
         << ", Levels=" << maxDepth << " (min=" << minDepth << ", max=" << maxDepth << ")";
-    logInfo("logTopology()", msg.str());
+    logInfo("logGlobalStatistics()", formatStatisticsLabel("Topology:", StatisticsLabels) << msg.str());
   }
 
   {
@@ -220,7 +249,7 @@ void logGlobalStatistics() {
     msg << "Trees=" << globalNumberOfTrees
         << ", Efficiency=" << std::fixed << std::setprecision(2) << efficiency << "% (min=" << minLoad << ", max=" << maxLoad << ")"
         << ", Overhead=" << std::fixed << std::setprecision(2) << overhead << "%";
-    logInfo("logLoadBalancing()", msg.str());
+    logInfo("logGlobalStatistics()", formatStatisticsLabel("Load Balancing:", StatisticsLabels) << msg.str());
   }
 
   {
@@ -236,7 +265,7 @@ void logGlobalStatistics() {
         << ", FaceData=" << std::fixed << std::setprecision(2) << tarch::convertMemorySize(memoryUsedByFaceData, tarch::chooseMemoryUsageFormat(memoryUsedByFaceData)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(memoryUsedByFaceData))
         << ", VertexData=" << std::fixed << std::setprecision(2) << tarch::convertMemorySize(memoryUsedByVertexData, tarch::chooseMemoryUsageFormat(memoryUsedByVertexData)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(memoryUsedByVertexData))
         << ")";
-    logInfo("logMemoryUsage()", msg.str());
+    logInfo("logGlobalStatistics()", formatStatisticsLabel("Memory Usage:", StatisticsLabels) << msg.str());
   }
 
   tarch::logging::Statistics::getInstance().log("MemoryUsage", tarch::accelerator::MemoryManager::getStatistics());
@@ -246,12 +275,37 @@ void logGlobalStatistics() {
     const auto dofs               = static_cast<unsigned long>(repositories::getNumberOfDoFs());
     const auto totalNumberOfDoFs  = dofs * globalNumberOfLeaves;
     const auto dt                 = timeStepMeasurement.getMostRecentValue();
-    const auto patchesPerSecond   = globalNumberOfLeaves / dt;
+    const auto leavesPerSecond    = globalNumberOfLeaves / dt;
     const auto dofsPerSecond      = totalNumberOfDoFs    / dt;
-    logInfo("logThroughput()",
-      "Patch updates per second: " << patchesPerSecond
-      << ", DoF updates per second: " << dofsPerSecond
-    );
+    std::ostringstream throughputMessage;
+    throughputMessage << formatStatisticsLabel("Throughput per Timestep:", StatisticsLabels) << leavesPerSecond << " Leaves/s, " << dofsPerSecond << " DoFs/s";
+    if (gridSweepMeasurement.getNumberOfMeasurements() > 0) {
+      const auto gridSweepsPerTimestep = gridSweepMeasurement.getMostRecentValue();
+      const auto gridSweepsPerSecond   = gridSweepsPerTimestep / dt;
+      throughputMessage << ", " << gridSweepsPerSecond << " Sweeps/s, " << gridSweepsPerTimestep << " Sweeps/Timestep";
+    }
+    logInfo("logGlobalStatistics()", throughputMessage.str());
+
+    const auto elapsedWallTime = timeStepMeasurement.getAccumulatedValue() + plotMeasurement.getAccumulatedValue();
+    const auto minTimeStamp    = repositories::getMinTimeStamp();
+    const auto maxTimeStamp    = repositories::getMaxTimeStamp();
+    const auto minTerminalTime = ::exahype2::getMinTerminalTime();
+    const auto maxTerminalTime = ::exahype2::getMaxTerminalTime();
+
+    double expectedTimeUntilFinish = std::numeric_limits<double>::max();
+    if (elapsedWallTime > 0.0 and std::isnormal(minTimeStamp) and minTimeStamp > 10.0 * std::numeric_limits<double>::min() and minTimeStamp < minTerminalTime) {
+      expectedTimeUntilFinish = std::min(expectedTimeUntilFinish, (minTerminalTime - minTimeStamp) * elapsedWallTime / minTimeStamp);
+    }
+    if (elapsedWallTime > 0.0 and std::isnormal(maxTimeStamp) and maxTimeStamp > 10.0 * std::numeric_limits<double>::min() and maxTimeStamp < maxTerminalTime) {
+      expectedTimeUntilFinish = std::min(expectedTimeUntilFinish, (maxTerminalTime - maxTimeStamp) * elapsedWallTime / maxTimeStamp);
+    }
+    if (expectedTimeUntilFinish < std::numeric_limits<double>::max() / 10.0) {
+      const auto expectedTimeUntilFinishInSeconds = static_cast<int>(expectedTimeUntilFinish + 0.5);
+      const auto hours   = expectedTimeUntilFinishInSeconds / 3600;
+      const auto minutes = (expectedTimeUntilFinishInSeconds % 3600) / 60;
+      const auto seconds = expectedTimeUntilFinishInSeconds % 60;
+      logInfo("logGlobalStatistics()", formatStatisticsLabel("Expected Time Until Finish:", StatisticsLabels) << hours << "h " << minutes << "m " << seconds << "s");
+    }
   }
 }
 
@@ -345,16 +399,20 @@ void runNextAlgorithmicStep() {
       stepName,
       [](){
         repositories::startTimeStep();
-        if (repositories::isFirstGridSweepOfTimeStep()) {
+        if (currentNumberOfGridSweepsOfTimeStep == 0) {
           watch.start();
         }
+        currentNumberOfGridSweepsOfTimeStep++;
       },
       [](){
-        if (repositories::isLastGridSweepOfTimeStep()) {
+        repositories::finishTimeStep();
+        if (repositories::mayPlot()) {
           watch.stop();
           timeStepMeasurement.setValue(watch.getCalendarTime());
+          gridSweepMeasurement.setValue(static_cast<double>(currentNumberOfGridSweepsOfTimeStep));
+          currentNumberOfGridSweepsOfTimeStep = 0;
+          numberOfCompletedTimeSteps++;
         }
-        repositories::finishTimeStep();
       }
     );
     if (
@@ -367,6 +425,7 @@ void runNextAlgorithmicStep() {
       if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
         repositories::logTimeStep();
         logGlobalStatistics();
+        lastLoggedNumberOfCompletedTimeSteps = numberOfCompletedTimeSteps;
       }
       logNextTimeStep += repositories::LogTimeStepIntervalInSeconds;
     }
@@ -416,26 +475,40 @@ void shutdownEnvironment() {
   peano4::shutdown();
 }
 
-void logFinalStatistics() {
+void logFinalGlobalStatistics() {
+  const auto FinalGlobalStatisticsLabels = {
+    "Grid Construction:",
+    "Grid Initialisation:",
+    "Plotting:",
+    "Time Stepping:",
+    "Average Throughput per Timestep:"
+  };
+
   if (gridConstructionMeasurement.getNumberOfMeasurements() > 0) {
-    logInfo("logFinalStatistics()", "Grid construction:                 " << gridConstructionMeasurement.getAccumulatedValue() << "s\t" << gridConstructionMeasurement.toString());
+    logInfo("logFinalGlobalStatistics()", formatStatisticsLabel("Grid Construction:", FinalGlobalStatisticsLabels) << gridConstructionMeasurement.getAccumulatedValue() << "s\t" << gridConstructionMeasurement.toString());
   }
   if (gridInitialisationMeasurement.getNumberOfMeasurements() > 0) {
-    logInfo("logFinalStatistics()", "Grid initialisation:               " << gridInitialisationMeasurement.getAccumulatedValue() << "s\t" << gridInitialisationMeasurement.toString());
+    logInfo("logFinalGlobalStatistics()", formatStatisticsLabel("Grid Initialisation:", FinalGlobalStatisticsLabels) << gridInitialisationMeasurement.getAccumulatedValue() << "s\t" << gridInitialisationMeasurement.toString());
   }
   if (plotMeasurement.getNumberOfMeasurements() > 0) {
-    logInfo("logFinalStatistics()", "Plotting:                          " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString());
+    logInfo("logFinalGlobalStatistics()", formatStatisticsLabel("Plotting:", FinalGlobalStatisticsLabels) << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString());
   }
   if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
     const auto dofs                   = static_cast<double>(repositories::getNumberOfDoFs());
     const auto globalNumberOfLeaves   = static_cast<double>(repositories::loadBalancer.getStatistics().getGlobalNumberOfInnerUnrefinedCells());
     const auto totalNumberOfDoFs      = dofs * globalNumberOfLeaves;
     const auto dt                     = timeStepMeasurement.getValue();
-    const auto patchesPerSecond       = globalNumberOfLeaves / dt;
+    const auto leavesPerSecond        = globalNumberOfLeaves / dt;
     const auto dofsPerSecond          = totalNumberOfDoFs    / dt;
-    logInfo("logFinalStatistics()", "Time stepping:                     " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString());
-    logInfo("logFinalStatistics()", "Average patch updates per second:  " << patchesPerSecond);
-    logInfo("logFinalStatistics()", "Average DoF updates per second:    " << dofsPerSecond);
+    logInfo("logFinalGlobalStatistics()", formatStatisticsLabel("Time Stepping:", FinalGlobalStatisticsLabels) << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString());
+    std::ostringstream throughputMessage;
+    throughputMessage << formatStatisticsLabel("Average Throughput per Timestep:", FinalGlobalStatisticsLabels) << leavesPerSecond << " Leaves/s, " << dofsPerSecond << " DoFs/s";
+    if (gridSweepMeasurement.getNumberOfMeasurements() > 0) {
+      const auto gridSweepsPerTimestep = gridSweepMeasurement.getValue();
+      const auto gridSweepsPerSecond   = gridSweepsPerTimestep / dt;
+      throughputMessage << ", " << gridSweepsPerSecond << " Sweeps/s, Sweeps/Timestep " << gridSweepMeasurement.toString();
+    }
+    logInfo("logFinalGlobalStatistics()", throughputMessage.str());
   }
 }
 
@@ -452,9 +525,12 @@ int runGlobalMaster() {
     logWarning("runGlobalMaster()", "ExaHyPE terminated gracefully after noncritical assertion");
     return EXIT_FAILURE;
   } else {
-    repositories::logTimeStep();
+    if (numberOfCompletedTimeSteps > lastLoggedNumberOfCompletedTimeSteps) {
+      repositories::logTimeStep();
+      lastLoggedNumberOfCompletedTimeSteps = numberOfCompletedTimeSteps;
+    }
     logInfo("runGlobalMaster()", "ExaHyPE terminated successfully");
-    logFinalStatistics();
+    logFinalGlobalStatistics();
     return EXIT_SUCCESS;
   }
 }

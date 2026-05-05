@@ -70,4 +70,3 @@ class SolverCodeSnippets(ABC):
   @abstractmethod 
   def create_finish_time_step_implementation(self):
     raise Exception( "abstract method, not implemented")
-

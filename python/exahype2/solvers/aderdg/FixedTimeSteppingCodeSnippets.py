@@ -9,13 +9,11 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
 
     def create_print_time_step_implementation(self):
         return """
-  if (tarch::la::greater(getMaxCellSize(), 0.0)) {
-    logDebug("logTimeStep()", "Phase  = " << toString(_solverState));
-    logInfo("logTimeStep()", "t       = " << getMinTimeStamp() << " / " << MinTerminalTime);
-    logInfo("logTimeStep()", "dt      = " << getTimeStepSize());
-    logInfo("logTimeStep()", "h_{min} = " << getMinCellSize() << " (patch size)");
-    logInfo("logTimeStep()", "h_{max} = " << getMaxCellSize() << " (patch size)");
-  }
+  logDebug("logTimeStep()", "Phase  = " << toString(_solverState));
+  logInfo("logTimeStep()", "t       = " << getMinTimeStamp() << " / " << MinTerminalTime);
+  logInfo("logTimeStep()", "dt      = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : getTimeStepSize()));
+  logInfo("logTimeStep()", "h_{min} = " << getMinCellSize() << " (patch size)");
+  logInfo("logTimeStep()", "h_{max} = " << getMaxCellSize() << " (patch size)");
 """
 
     def create_start_time_step_implementation(self):
@@ -28,10 +26,10 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
     if (isLastGridSweepOfTimeStep()) {
       assertion(_minCellH >= 0.0);
       assertion(MaxAdmissibleCellH > 0.0);
-      if (_minCellH <= MaxAdmissibleCellH) {
+      if (_minCellHThisTimeStep <= MaxAdmissibleCellH) {
         _timeStepSize  = """
             + str(self._normalised_time_step_size)
-            + """ * _minCellH  / MaxAdmissibleCellH;
+            + """ * _minCellHThisTimeStep  / MaxAdmissibleCellH;
       } else {
         _timeStepSize = 0.0;
       }
