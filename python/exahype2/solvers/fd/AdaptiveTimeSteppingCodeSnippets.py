@@ -18,20 +18,18 @@ class AdaptiveTimeSteppingCodeSnippets(
 
     def create_print_time_step_implementation(self):
         return """
-  if (tarch::la::greater(getMaxH(), 0.0) and tarch::la::greater(getMaxEigenvalue(), 0.0)) {
-    logDebug("logTimeStep()", "Phase       = " << toString(_solverState));
-    logInfo("logTimeStep()", "t            = " << getMinTimeStamp() << " / " << MinTerminalTime);
-    logInfo("logTimeStep()", "dt           = " << getAdmissibleTimeStepSize());
-    logInfo("logTimeStep()", "h_{min}      = " << getMinH() << " (internodal distance)");
-    logInfo("logTimeStep()", "h_{max}      = " << getMaxH() << " (internodal distance)");
-    logInfo("logTimeStep()", "lambda_{max} = " << getMaxEigenvalue());
-  }
+  logDebug("logTimeStep()", "Phase       = " << toString(_solverState));
+  logInfo("logTimeStep()", "t            = " << getMinTimeStamp() << " / " << MinTerminalTime);
+  logInfo("logTimeStep()", "dt           = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : _admissibleTimeStepSizeThisTimeStep));
+  logInfo("logTimeStep()", "h_{min}      = " << getMinMeshSize() << " (internodal distance)");
+  logInfo("logTimeStep()", "h_{max}      = " << getMaxMeshSize() << " (internodal distance)");
+  logInfo("logTimeStep()", "lambda_{max} = " << getMaxEigenvalue());
 """
 
     def create_start_time_step_implementation(self):
         return """
   if (isFirstGridSweepOfTimeStep()) {
-    _maxEigenvalue = _maxEigenvalueThisTimeStep;
+    _admissibleTimeStepSize = _admissibleTimeStepSizeThisTimeStep;
     _maxEigenvalueThisTimeStep = 0.0;
   }
 """
@@ -49,7 +47,6 @@ class AdaptiveTimeSteppingCodeSnippets(
             ).create_finish_time_step_implementation()
             + """
     if (isLastGridSweepOfTimeStep() and tarch::la::greater(_maxEigenvalueThisTimeStep, 0.0)) {
-      _admissibleTimeStepSize = _admissibleTimeStepSizeThisTimeStep;
       _admissibleTimeStepSizeThisTimeStep = """
             + str(self._time_step_relaxation)
             + """ * _minHThisTimeStep / _maxEigenvalueThisTimeStep;

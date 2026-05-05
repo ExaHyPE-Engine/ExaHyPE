@@ -15,29 +15,21 @@ class OptimisticAdaptiveTimeSteppingCodeSnippets( exahype2.solvers.OptimisticAda
 
   def create_start_time_step_implementation(self):
     return """
-  if (
-    tarch::mpi::Rank::getInstance().isGlobalMaster() 
-    and
-    _maxGridCellHThisTimeStep>0.0
-    and
-    isFirstGridSweepOfTimeStep()
-  ) {
-    logInfo( "startTimeStep()", "t              = " << _minTimeStampThisTimeStep );
-    logInfo( "startTimeStep()", "dt             = " << getAdmissibleTimeStepSize() );
-    if (_cancelOptimisticTasks) {
-      logInfo( "startTimeStep()", "dt_{predicted} = " << getPredictedAdmissibleTimeStepSize() << " [cancel predicted tasks]" );
-    }
-    else {
-      logInfo( "startTimeStep()", "dt_{predicted} = " << getPredictedAdmissibleTimeStepSize() );
-    }
-    logInfo( "startTimeStep()", "h_{min}        = " << _minGridCellHThisTimeStep << " (individual grid cell within a patch)");
-    logInfo( "startTimeStep()", "h_{max}        = " << _maxGridCellHThisTimeStep << " (individual grid cell within a patch)" );
-    logInfo( "startTimeStep()", "lambda_{max}   = " << _maxEigenvalue );
-  }
-
   if (isFirstGridSweepOfTimeStep()) {
     _maxEigenvalue         = 0.0;
   }
+"""
+
+
+  def create_print_time_step_implementation(self):
+    return """
+  logDebug("logTimeStep()", "Phase            = " << toString(_solverState));
+  logInfo("logTimeStep()", "t                = " << getMinTimeStamp() << " / " << MinTerminalTime);
+  logInfo("logTimeStep()", "dt               = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : getAdmissibleTimeStepSize()));
+  logInfo("logTimeStep()", "dt_{predicted}   = " << getPredictedAdmissibleTimeStepSize() << (_cancelOptimisticTasks ? " [cancel predicted tasks]" : ""));
+  logInfo("logTimeStep()", "h_{min}          = " << _minGridCellHThisTimeStep << " (individual grid cell within a patch)");
+  logInfo("logTimeStep()", "h_{max}          = " << _maxGridCellHThisTimeStep << " (individual grid cell within a patch)");
+  logInfo("logTimeStep()", "lambda_{max}     = " << getMaxEigenvalue());
 """
 
 

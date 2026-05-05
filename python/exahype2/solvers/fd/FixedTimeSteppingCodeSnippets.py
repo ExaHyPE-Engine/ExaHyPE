@@ -13,13 +13,11 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
 
     def create_print_time_step_implementation(self):
         return """
-  if (tarch::la::greater(getMaxH(), 0.0)) {
-    logDebug("logTimeStep()", "Phase  = " << toString(_solverState));
-    logInfo("logTimeStep()", "t       = " << getMinTimeStamp() << " / " << MinTerminalTime);
-    logInfo("logTimeStep()", "dt      = " << getTimeStepSize());
-    logInfo("logTimeStep()", "h_{min} = " << getMinH() << " (internodal distance)");
-    logInfo("logTimeStep()", "h_{max} = " << getMaxH() << " (internodal distance)");
-  }
+  logDebug("logTimeStep()", "Phase  = " << toString(_solverState));
+  logInfo("logTimeStep()", "t       = " << getMinTimeStamp() << " / " << MinTerminalTime);
+  logInfo("logTimeStep()", "dt      = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : getTimeStepSize()));
+  logInfo("logTimeStep()", "h_{min} = " << getMinMeshSize() << " (internodal distance)");
+  logInfo("logTimeStep()", "h_{max} = " << getMaxMeshSize() << " (internodal distance)");
 """
 
     def create_start_time_step_implementation(self):

@@ -227,20 +227,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   {{START_TIME_STEP_IMPLEMENTATION}}
 
   if ( isFirstGridSweepOfTimeStep() ) {
-    _minTimeStamp = _minTimeStampThisTimeStep;
-    _maxTimeStamp = _maxTimeStampThisTimeStep;
-
     _minTimeStampThisTimeStep = std::numeric_limits<double>::max();
     _maxTimeStampThisTimeStep = std::numeric_limits<double>::min();
 
-    _minTimeStepSize = _minTimeStepSizeThisTimeStep;
-    _maxTimeStepSize = _maxTimeStepSizeThisTimeStep;
-
     _minTimeStepSizeThisTimeStep = std::numeric_limits<double>::max();
     _maxTimeStepSizeThisTimeStep = std::numeric_limits<double>::min();
-
-    _minCellH = _minCellHThisTimeStep;
-    _maxCellH = _maxCellHThisTimeStep;
 
     _maxCellHThisTimeStep      = 0.0;
     _minCellHThisTimeStep      = std::numeric_limits<double>::max();
@@ -348,6 +339,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     if ( _maxTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0 ) {
       _maxTimeStampThisTimeStep = 0.0;
     }
+
+    _minTimeStamp    = _minTimeStampThisTimeStep;
+    _maxTimeStamp    = _maxTimeStampThisTimeStep;
+    _minTimeStepSize = _minTimeStepSizeThisTimeStep;
+    _maxTimeStepSize = _maxTimeStepSizeThisTimeStep;
+    _minCellH        = _minCellHThisTimeStep;
+    _maxCellH        = _maxCellHThisTimeStep;
   }
 
   {{FINISH_TIME_STEP_IMPLEMENTATION}}

@@ -101,5 +101,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
       tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_maxEigenvalueThisTimeStep > 0", "Max eigenvalue has reached zero, which means that the simulation cannot successfully continue: " + std::to_string(_maxEigenvalueThisTimeStep));
       _admissibleTimeStepSizeThisTimeStep = 0.0;
     }
+
+    _maxEigenvalue = _maxEigenvalueThisTimeStep;
   }
 """

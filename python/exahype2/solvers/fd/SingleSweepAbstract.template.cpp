@@ -73,11 +73,11 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxH() const {
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp() const {
-  return _minTimeStamp;
+  return _minTimeStampThisTimeStep < std::numeric_limits<double>::max() / 10.0 ? _minTimeStampThisTimeStep : _minTimeStamp;
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
-  return _maxTimeStamp;
+  return _minTimeStampThisTimeStep < std::numeric_limits<double>::max() / 10.0 ? _maxTimeStampThisTimeStep : _maxTimeStamp;
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
@@ -245,20 +245,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 
   {{START_TIME_STEP_IMPLEMENTATION}}
 
-  _minTimeStamp = _minTimeStampThisTimeStep;
-  _maxTimeStamp = _maxTimeStampThisTimeStep;
-
   _minTimeStampThisTimeStep = std::numeric_limits<double>::max();
   _maxTimeStampThisTimeStep = std::numeric_limits<double>::min();
 
-  _minTimeStepSize = _minTimeStepSizeThisTimeStep;
-  _maxTimeStepSize = _maxTimeStepSizeThisTimeStep;
-
   _minTimeStepSizeThisTimeStep = std::numeric_limits<double>::max();
   _maxTimeStepSizeThisTimeStep = std::numeric_limits<double>::min();
-
-  _minH = _minHThisTimeStep;
-  _maxH = _maxHThisTimeStep;
 
   _maxHThisTimeStep      = 0.0;
   _minHThisTimeStep      = std::numeric_limits<double>::max() / NumberOfNodesPerAxisPerPatch / 2.0;
@@ -350,6 +341,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   }
 
   {{FINISH_TIME_STEP_IMPLEMENTATION}}
+
+  if (isLastGridSweepOfTimeStep()) {
+    _minTimeStamp    = _minTimeStampThisTimeStep;
+    _maxTimeStamp    = _maxTimeStampThisTimeStep;
+    _minTimeStepSize = _minTimeStepSizeThisTimeStep;
+    _maxTimeStepSize = _maxTimeStepSizeThisTimeStep;
+    _minH            = _minHThisTimeStep;
+    _maxH            = _maxHThisTimeStep;
+  }
 
   // reset solvers if last one has finished solving
   if 

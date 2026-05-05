@@ -69,11 +69,11 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxCellSize() const {
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp() const {
-  return _minTimeStamp;
+  return _minTimeStampThisTimeStep < std::numeric_limits<double>::max() / 10.0 ? _minTimeStampThisTimeStep : _minTimeStamp;
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
-  return _maxTimeStamp;
+  return _minTimeStampThisTimeStep < std::numeric_limits<double>::max() / 10.0 ? _maxTimeStampThisTimeStep : _maxTimeStamp;
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
@@ -196,20 +196,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   {{START_TIME_STEP_IMPLEMENTATION}}
 
   if (isFirstGridSweepOfTimeStep()) {
-    _minTimeStamp = _minTimeStampThisTimeStep;
-    _maxTimeStamp = _maxTimeStampThisTimeStep;
-
     _minTimeStampThisTimeStep = std::numeric_limits<double>::max();
     _maxTimeStampThisTimeStep = std::numeric_limits<double>::min();
 
-    _minTimeStepSize = _minTimeStepSizeThisTimeStep;
-    _maxTimeStepSize = _maxTimeStepSizeThisTimeStep;
-
     _minTimeStepSizeThisTimeStep = std::numeric_limits<double>::max();
     _maxTimeStepSizeThisTimeStep = std::numeric_limits<double>::min();
-
-    _minCellH = _minCellHThisTimeStep;
-    _maxCellH = _maxCellHThisTimeStep;
 
     _maxCellHThisTimeStep      = 0.0;
     _minCellHThisTimeStep      = std::numeric_limits<double>::max();
@@ -301,6 +292,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     }
 
     {{FINISH_TIME_STEP_IMPLEMENTATION}}
+
+    if (isLastGridSweepOfTimeStep()) {
+      _minTimeStamp    = _minTimeStampThisTimeStep;
+      _maxTimeStamp    = _maxTimeStampThisTimeStep;
+      _minTimeStepSize = _minTimeStepSizeThisTimeStep;
+      _maxTimeStepSize = _maxTimeStepSizeThisTimeStep;
+      _minCellH        = _minCellHThisTimeStep;
+      _maxCellH        = _maxCellHThisTimeStep;
+    }
   }
 }
 

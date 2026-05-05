@@ -173,7 +173,6 @@ toolbox::blockstructured::GlobalDatabase::AddSnapshotAction toolbox::blockstruct
       return toolbox::blockstructured::GlobalDatabase::AddSnapshotAction::Append;
   }
   else if(tarch::la::equals(_data.front().timestamp,timestamp)){
-      logWarning( "getAction()", "There were two values for same time stamp " << timestamp << ". This is inconsistent");
       return toolbox::blockstructured::GlobalDatabase::AddSnapshotAction::Replace;
   }
   else if(timestamp - _data.front().timestamp >=_timeDelta and _timeDelta>=0.0 ){
@@ -191,6 +190,32 @@ toolbox::blockstructured::GlobalDatabase::AddSnapshotAction toolbox::blockstruct
   int                                          numberOfDataEntries,
   double*                                      data
 ) {
+  if (not _data.empty() and tarch::la::equals(_data.front().timestamp, timestamp)) {
+      double maxDataDeltaThisAction = 0.0;
+      for (int i=0; i<numberOfDataEntries; i++) {
+          maxDataDeltaThisAction = std::max(
+            maxDataDeltaThisAction,
+            std::abs(_data.front().data[i] - data[i])
+          );
+      }
+      _maxDataDelta = std::max(_maxDataDelta, maxDataDeltaThisAction);
+
+      if (
+        _deltasAreRelative
+        and
+        maxDataDeltaThisAction >= _deltaCutOffThreshold
+        and
+        maxDataDeltaThisAction / _maxDataDelta >= _dataDelta
+      ) {
+          return toolbox::blockstructured::GlobalDatabase::AddSnapshotAction::Replace;
+      }
+      else if (not _deltasAreRelative and maxDataDeltaThisAction > _dataDelta) {
+          return toolbox::blockstructured::GlobalDatabase::AddSnapshotAction::Replace;
+      }
+      else {
+          return toolbox::blockstructured::GlobalDatabase::AddSnapshotAction::Ignore;
+      }
+  }
 
   toolbox::blockstructured::GlobalDatabase::AddSnapshotAction result = getAction(timestamp);
 

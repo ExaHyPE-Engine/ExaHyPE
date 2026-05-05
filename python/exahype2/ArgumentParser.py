@@ -102,8 +102,8 @@ class ArgumentParser(argparse.ArgumentParser):
         self.add_argument(
             "-ti",
             "--print-time-interval",
-            type=int,
-            default=10,
+            type=float,
+            default=10.0,
             help="Time interval to print time step information.",
         )
         self.add_argument(
