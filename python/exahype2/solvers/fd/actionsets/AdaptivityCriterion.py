@@ -108,7 +108,7 @@ class AdaptivityCriterion(AbstractFDActionSet):
       and
       tarch::la::smallerEquals( tarch::la::max( marker.getH() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH )
     ) {
-      logDebug( "touchCellFirstTime(...)", "drop refine instructions, as mesh would be too small" );
+      logDebug("drop refine instructions, as mesh would be too small");
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } else if (
       refinementCriterion==::exahype2::RefinementCommand::Erase

@@ -20,12 +20,12 @@
 #include "peano4/datamanagement/FaceEnumerator.h"
 #include "peano4/peano4.h"
 #include "peano4/utils/Loop.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
+#include "tarch/instrumentation/Measurement.h"
+#include "tarch/instrumentation/Watch.h"
 #include "tarch/plotter/AMRPlotter.h"
 #include "tarch/plotter/PVDTimeSeriesWriter.h"
 #include "tarch/plotter/VTUFileWriter.h"
-#include "tarch/timing/Measurement.h"
-#include "tarch/timing/Watch.h"
 #include "toolbox/blockstructured/Interpolation.h"
 #include "toolbox/blockstructured/Projection.h"
 #include "toolbox/blockstructured/Restriction.h"
@@ -33,10 +33,9 @@
 using namespace benchmarks::exahype2::kernelbenchmarks;
 
 namespace {
-  tarch::logging::Log        _log("");
-  tarch::timing::Measurement timeStepMeasurement;
-  double                     logNextTimeStep                  = 0.0;
-  bool                       haveReceivedNonCriticalAssertion = false;
+  tarch::instrumentation::Measurement timeStepMeasurement;
+  double                              logNextTimeStep                  = 0.0;
+  bool                                haveReceivedNonCriticalAssertion = false;
 
   std::vector<peano4::datamanagement::CellMarker> _cells;
   const tarch::la::Vector<DIMENSIONS, double>     CellSize = DomainSize / static_cast<double>(GridLength);
@@ -64,46 +63,41 @@ namespace {
 } // namespace
 
 void logFinalStatistics(
-  const tarch::timing::Measurement& measurement,
-  const tarch::timing::Measurement& measurementBoundary,
-  const tarch::timing::Measurement& measurementReconstruct,
-  const tarch::timing::Measurement& measurementRiemann,
-  const tarch::timing::Measurement& measurementProjection
+  const tarch::instrumentation::Measurement& measurement,
+  const tarch::instrumentation::Measurement& measurementBoundary,
+  const tarch::instrumentation::Measurement& measurementReconstruct,
+  const tarch::instrumentation::Measurement& measurementRiemann,
+  const tarch::instrumentation::Measurement& measurementProjection
 ) {
   if (measurementBoundary.getNumberOfMeasurements() > 0) {
     logInfo(
-      "logFinalStatistics()",
       "Boundary handling:                       "
-        << measurementBoundary.getAccumulatedValue() << "s\t" << measurementBoundary.toString()
+      << measurementBoundary.getAccumulatedValue() << "s\t" << measurementBoundary.toString()
     );
   }
   if (measurementReconstruct.getNumberOfMeasurements() > 0) {
     logInfo(
-      "logFinalStatistics()",
       "Reconstruction:                          "
-        << measurementReconstruct.getAccumulatedValue() << "s\t" << measurementReconstruct.toString()
+      << measurementReconstruct.getAccumulatedValue() << "s\t" << measurementReconstruct.toString()
     );
   }
   if (measurementRiemann.getNumberOfMeasurements() > 0) {
     logInfo(
-      "logFinalStatistics()",
       "Riemann solver:                          "
-        << measurementRiemann.getAccumulatedValue() << "s\t" << measurementRiemann.toString()
+      << measurementRiemann.getAccumulatedValue() << "s\t" << measurementRiemann.toString()
     );
   }
   if (measurementProjection.getNumberOfMeasurements() > 0) {
     logInfo(
-      "logFinalStatistics()",
       "Projection:                              "
-        << measurementProjection.getAccumulatedValue() << "s\t" << measurementProjection.toString()
+      << measurementProjection.getAccumulatedValue() << "s\t" << measurementProjection.toString()
     );
   }
 
   if (measurement.getNumberOfMeasurements() > 0) {
     logInfo(
-      "logFinalStatistics()",
       "Time stepping:                           "
-        << measurement.getAccumulatedValue() << "s\t" << measurement.toString()
+      << measurement.getAccumulatedValue() << "s\t" << measurement.toString()
     );
 
     const auto globalNumberOfPatches = _cells.size();
@@ -111,14 +105,8 @@ void logFinalStatistics(
                                    * std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS)
                                    * (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
 
-    logInfo(
-      "logFinalStatistics()",
-      "Average patch updates per second:  " << globalNumberOfPatches / measurement.getValue()
-    );
-    logInfo(
-      "logFinalStatistics()",
-      "Average DoF updates per second:    " << totalNumberOfDoFs / measurement.getValue()
-    );
+    logInfo("Average patch updates per second:  " << globalNumberOfPatches / measurement.getValue());
+    logInfo("Average DoF updates per second:    " << totalNumberOfDoFs / measurement.getValue());
   }
 }
 
@@ -324,7 +312,6 @@ int main(int argc, char** argv) {
   peano4::init(&argc, &argv, DomainOffset, DomainSize);
 
   repositories::loadBalancer.enable(false);
-  repositories::initLogFilters();
   repositories::startSimulation();
 
   createGrid();
@@ -348,17 +335,17 @@ int main(int argc, char** argv) {
     0
   );
 
-  tarch::timing::Measurement measurement(1.0);
-  tarch::timing::Measurement measurementBoundary(1.0);
-  tarch::timing::Measurement measurementReconstruct(1.0);
-  tarch::timing::Measurement measurementRiemann(1.0);
-  tarch::timing::Measurement measurementProjection(1.0);
-  tarch::timing::Watch       timeStepWatch("::", "main()", false);
-  double                     timeStamp            = 0.0;
-  double                     nextMinPlotTimeStamp = FirstPlotTimeStamp;
-  double                     nextMaxPlotTimeStamp = FirstPlotTimeStamp;
-  bool                       continueToSolve      = true;
-  int                        count                = 0;
+  tarch::instrumentation::Measurement measurement(1.0);
+  tarch::instrumentation::Measurement measurementBoundary(1.0);
+  tarch::instrumentation::Measurement measurementReconstruct(1.0);
+  tarch::instrumentation::Measurement measurementRiemann(1.0);
+  tarch::instrumentation::Measurement measurementProjection(1.0);
+  tarch::instrumentation::Watch       timeStepWatch("::", "main()", false);
+  double                              timeStamp            = 0.0;
+  double                              nextMinPlotTimeStamp = FirstPlotTimeStamp;
+  double                              nextMaxPlotTimeStamp = FirstPlotTimeStamp;
+  bool                                continueToSolve      = true;
+  int                                 count                = 0;
 
   while (continueToSolve) {
     if (Samples > 0 and count++ >= Samples) {
@@ -404,10 +391,10 @@ int main(int argc, char** argv) {
 
     double dt = repositories::instanceOfFVSolver.getAdmissibleTimeStepSize();
 
-    tarch::timing::Watch watch("", "", false);
+    tarch::instrumentation::Watch watch("", "", false);
     watch.start();
 
-    tarch::timing::Watch watchBoundary("", "", false);
+    tarch::instrumentation::Watch watchBoundary("", "", false);
     watchBoundary.start();
     benchmarks::exahype2::kernelbenchmarks::kernels::FVSolver::handleBoundaryFused(
       repositories::instanceOfFVSolver,
@@ -425,7 +412,7 @@ int main(int argc, char** argv) {
     );
     watchBoundary.stop();
 
-    tarch::timing::Watch watchReconstruct("", "", false);
+    tarch::instrumentation::Watch watchReconstruct("", "", false);
     watchReconstruct.start();
     benchmarks::exahype2::kernelbenchmarks::kernels::FVSolver::reconstructPatchFused(
       enclaveGrid.getQ(),
@@ -437,7 +424,7 @@ int main(int argc, char** argv) {
     );
     watchReconstruct.stop();
 
-    tarch::timing::Watch watchRiemann("", "", false);
+    tarch::instrumentation::Watch watchRiemann("", "", false);
     watchRiemann.start();
     const auto maxEigenvalue = benchmarks::exahype2::kernelbenchmarks::kernels::FVSolver::riemannSolverFused(
       repositories::instanceOfFVSolver,
@@ -452,7 +439,7 @@ int main(int argc, char** argv) {
     );
     watchRiemann.stop();
 
-    tarch::timing::Watch watchProjection("", "", false);
+    tarch::instrumentation::Watch watchProjection("", "", false);
     watchProjection.start();
     benchmarks::exahype2::kernelbenchmarks::kernels::FVSolver::projectPatchFused(
       enclaveGrid.getQ(),
@@ -495,7 +482,7 @@ int main(int argc, char** argv) {
         << toScientificNotationString(totalNumberOfDoFs) << ", Memory=" << std::fixed << std::setprecision(2)
         << tarch::convertMemorySize(totalPersistentMemory, tarch::chooseMemoryUsageFormat(totalPersistentMemory)) << " "
         << tarch::toString(tarch::chooseMemoryUsageFormat(totalPersistentMemory));
-      logInfo("main()", msg.str());
+      logInfo(msg.str());
 
       if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
         const auto dt               = measurement.getMostRecentValue();
@@ -503,10 +490,9 @@ int main(int argc, char** argv) {
         const auto dofsPerSecond    = totalNumberOfDoFs / dt;
 
         logInfo(
-          "main()",
           "Patch updates per second: "
-            << toScientificNotationString(patchesPerSecond)
-            << ", DoF updates per second: " << toScientificNotationString(dofsPerSecond)
+          << toScientificNotationString(patchesPerSecond)
+          << ", DoF updates per second: " << toScientificNotationString(dofsPerSecond)
         );
       }
 
@@ -521,7 +507,7 @@ int main(int argc, char** argv) {
     if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNonCriticalAssertion) {
       continueToSolve                  = false;
       haveReceivedNonCriticalAssertion = true;
-      logError("main()", "Noncritical assertion has been triggered in code. Dump final state and terminate.");
+      logError("Noncritical assertion has been triggered in code. Dump final state and terminate.");
     }
   }
 
@@ -533,12 +519,12 @@ int main(int argc, char** argv) {
   repositories::finishSimulation();
 
   if (haveReceivedNonCriticalAssertion) {
-    logWarning("main()", "Terminated gracefully after noncritical assertion");
+    logWarning("Terminated gracefully after noncritical assertion");
     returnCode = EXIT_FAILURE;
   } else {
     // Log final timestep information
     repositories::logTimeStep();
-    logInfo("main()", "Terminated successfully");
+    logInfo("Terminated successfully");
     returnCode = EXIT_SUCCESS;
   }
 

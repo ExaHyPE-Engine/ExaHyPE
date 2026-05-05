@@ -3,8 +3,6 @@
 #include "PDE.h"
 #include "InitialData.h"
 
-tarch::logging::Log   examples::exahype2::finitevolumes::MHD::_log( "examples::exahype2::finitevolumes::MHD" );
-
 
 
 void examples::exahype2::finitevolumes::MHD::initialCondition(
@@ -31,7 +29,6 @@ double examples::exahype2::finitevolumes::MHD::maxEigenvalue(
   double                                       t,
   int                                          normal
 ) {
-  logTraceInWith4Arguments( "eigenvalues(...)", faceCentre, volumeH, t, normal );
   double nv[3] = {0.};
   double lambda[9];
   nv[normal] = 1;
@@ -42,7 +39,6 @@ double examples::exahype2::finitevolumes::MHD::maxEigenvalue(
     result = std::max( result, std::abs(lambda[i]) );
   }
   
-  logTraceOut( "eigenvalues(...)" );
   
   return result;
 }
@@ -56,9 +52,7 @@ void examples::exahype2::finitevolumes::MHD::flux(
   int                                          normal,
   double * NOALIAS F // F[9]
 ) {
-  logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
   pdeflux_(F, Q, &normal);
-  logTraceOut( "flux(...)" );
 }
 
 
@@ -70,9 +64,7 @@ void examples::exahype2::finitevolumes::MHD::boundaryConditions(
   double                                       t,
   int                                          normal
 ) {
-  logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
   for(int i=0; i< 9; i++)
       Qoutside[i]=Qinside[i];
-  logTraceOut( "boundaryConditions(...)" );
 }
 

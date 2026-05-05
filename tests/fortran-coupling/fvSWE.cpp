@@ -3,9 +3,6 @@
 #include "fvSWE.h"
 #include "exahype2/RefinementControl.h"
 
-tarch::logging::Log   tests::exahype2::fortran::fvSWE::_log( "tests::exahype2::fortran::fvSWE" );
-
-
 double tests::exahype2::fortran::fvSWE::maxEigenvalue(
   [[maybe_unused]] const double* const NOALIAS             Q, // Q[3+1]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,

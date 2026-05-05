@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Device.h"
 
-tarch::logging::Log tarch::accelerator::Device::_log("tarch::accelerator::Device");
-
 tarch::accelerator::Device& tarch::accelerator::Device::getInstance() {
   static Device instance;
   return instance;

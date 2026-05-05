@@ -4,7 +4,7 @@
 
 #ifdef WITH_MPI
 
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/tests/TestCase.h"
 
 namespace peano4 {
@@ -20,7 +20,6 @@ namespace peano4 {
  */
 class peano4::parallel::tests::PingPongTest: public tarch::tests::TestCase {
 private:
-  static tarch::logging::Log _log;
 
   void testBuiltInType();
 

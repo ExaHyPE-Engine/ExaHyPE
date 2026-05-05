@@ -10,10 +10,6 @@
 #include <cstring>
 #include <omp.h>
 
-namespace {
-  tarch::logging::Log _log("tarch::accelerator::ompt");
-} // namespace
-
 void* tarch::accelerator::allocateRawData(std::size_t sizeInBytes, MemoryLocation location, int device) {
   void* data = nullptr;
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
@@ -83,13 +79,13 @@ void tarch::accelerator::
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to host");
+    logDebug("Copy " << sizeInBytes << " bytes from host to host");
     std::memcpy(target, source, sizeInBytes);
     break;
   case MemoryLocation::Device:
   case MemoryLocation::Pinned:
     assertion1(device >= 0, device);
-    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to device");
+    logDebug("Copy " << sizeInBytes << " bytes from host to device");
     omp_target_memcpy(
       target,
       source,
@@ -113,13 +109,13 @@ void tarch::accelerator::
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyFrom()", "Copy " << sizeInBytes << " bytes from host to host");
+    logDebug("Copy " << sizeInBytes << " bytes from host to host");
     std::memcpy(target, source, sizeInBytes);
     break;
   case MemoryLocation::Device:
   case MemoryLocation::Pinned:
     assertion1(device >= 0, device);
-    logDebug("copyFrom()", "Copy " << sizeInBytes << " bytes from device to host");
+    logDebug("Copy " << sizeInBytes << " bytes from device to host");
     omp_target_memcpy(
       target,
       source,

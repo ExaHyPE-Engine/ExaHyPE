@@ -113,7 +113,7 @@ class peano4::grid::PeanoCurve {
      * const std::bitset<DIMENSIONS> coordinates = PeanoCurve::getFirstVertexIndex(state);
      * for (int i=0; i<TWO_POWER_D; i++) {
      *   std::bitset<DIMENSIONS> currentLocalVertexIndex( coordinates ^ std::bitset<DIMENSIONS>(i) );
-     *   logDebug( "loadVertices(...)", "handle vertex " << currentLocalVertexIndex );
+     *   logDebug("handle vertex " << currentLocalVertexIndex);
      * }
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *

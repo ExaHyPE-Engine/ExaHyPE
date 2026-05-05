@@ -2,10 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "PlanarAcousticSolver.h"
 
-tarch::logging::Log tutorials::exahype2::acoustic::PlanarAcousticSolver::_log(
-  "tutorials::exahype2::acoustic::PlanarAcousticSolver"
-);
-
 void tutorials::exahype2::acoustic::PlanarAcousticSolver::initialCondition(
   [[maybe_unused]] double* const NOALIAS                        Q, // Q[3+0]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,

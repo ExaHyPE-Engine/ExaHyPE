@@ -66,16 +66,14 @@ set(SOURCES
   la/tests/ScalarTest.cpp
   la/tests/VectorTest.cpp
 
-  logging/ChromeTraceFileLogger.cpp
-  logging/CommandLineLogger.cpp
-  logging/ITACLogger.cpp
-  logging/ITTLogger.cpp
-  logging/Log.cpp
-  logging/LogFilter.cpp
-  logging/LogFilterFileReader.cpp
-  logging/NVTXLogger.cpp
-  logging/ScorePLogger.cpp
-  logging/Statistics.cpp
+  instrumentation/CommandLineSink.cpp
+  instrumentation/Debug.cpp
+  instrumentation/Error.cpp
+  instrumentation/FileSink.cpp
+  instrumentation/Info.cpp
+  instrumentation/Log.cpp
+  instrumentation/Trace.cpp
+  instrumentation/Warning.cpp
 
   mpi/mpi.cpp
   mpi/BooleanSemaphore.cpp
@@ -129,9 +127,8 @@ set(SOURCES
   services/Service.cpp
   services/ServiceRepository.cpp
 
-  timing/GlidingAverageMeasurement.cpp
-  timing/Measurement.cpp
-  timing/Watch.cpp
+  instrumentation/Measurement.cpp
+  instrumentation/Watch.cpp
 )
 
 install_peano_headers(

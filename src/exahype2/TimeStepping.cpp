@@ -6,12 +6,11 @@
 
 
 std::pair<double,double> exahype2::getInterpolationWeights( double oldTimeStampOnFace, double newTimeStampOnFace, double cellTimeStamp ) {
-  static tarch::logging::Log _log( "exahype2" );
 
   double timeSpan = newTimeStampOnFace - oldTimeStampOnFace;
   assertion4( tarch::la::greaterEquals(timeSpan,0.0), timeSpan, oldTimeStampOnFace, newTimeStampOnFace, cellTimeStamp );
   if ( tarch::la::equals(timeSpan,0.0) ) {
-    logDebug( "getInterpolationWeights(double,double,double)", "time span equals zero" );
+    logDebug("time span equals zero");
     return std::pair<double,double>(0.0,1.0);
   }
   else {
@@ -20,7 +19,7 @@ std::pair<double,double> exahype2::getInterpolationWeights( double oldTimeStampO
     assertion5( tarch::la::greaterEquals(newWeight,0.0), newWeight, timeSpan, oldTimeStampOnFace, newTimeStampOnFace, cellTimeStamp );
     assertion5( tarch::la::smallerEquals(newWeight,1.0), newWeight, timeSpan, oldTimeStampOnFace, newTimeStampOnFace, cellTimeStamp );
 
-    logDebug( "getInterpolationWeights(double,double,double)", "timeSpan" << timeSpan );
+    logDebug("timeSpan" << timeSpan);
 
     return std::pair<double,double>(1.0-newWeight,newWeight);
   }
@@ -32,13 +31,9 @@ double exahype2::discretiseAndTruncateTimeStepSizes(
   double maxGlobalTimeStepSize,
   int    discretisationStepsSize
 ) {
-  static tarch::logging::Log _log( "exahype2" );
 
   if (tarch::la::greater(maxGlobalTimeStepSize,0.0) and cellTimeStepSize>maxGlobalTimeStepSize*3.0) {
-    logDebug(
-      "discretiseAndTruncateTimeStepSizes(double,double,int)",
-      "truncate cell time step size from " << cellTimeStepSize << " due to max global dt=" << maxGlobalTimeStepSize
-    );
+    logDebug("truncate cell time step size from " << cellTimeStepSize << " due to max global dt=" << maxGlobalTimeStepSize);
     cellTimeStepSize = maxGlobalTimeStepSize*3.0;
   }
 
@@ -69,6 +64,6 @@ double exahype2::discretiseAndTruncateTimeStepSizes(
     result -= incrementOnThisLevel;
   }
 
-  logDebug( "discretiseAndTruncateTimeStepSizes(double,double,int)", "reduce dt=" << cellTimeStepSize << " to " << result );
+  logDebug("reduce dt=" << cellTimeStepSize << " to " << result);
   return result;
 }

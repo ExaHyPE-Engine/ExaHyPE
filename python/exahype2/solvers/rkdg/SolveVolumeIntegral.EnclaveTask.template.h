@@ -42,7 +42,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask<
 #endif
 {
   private:
-    static tarch::logging::Log _log;
 
 #ifdef UseSmartMPI
     /**

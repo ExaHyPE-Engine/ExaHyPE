@@ -31,7 +31,6 @@ namespace {{ item }} {
 
 int statisticsExchangeTag = tarch::mpi::Rank::reserveFreeTag("SolverRepository - statistics exchange tag");
 
-tarch::logging::Log _log("{{NAMESPACE | join("::")}}::SolverRepository");
 
 {% if LOAD_BALANCER_CONFIGURATION!="" %}
 toolbox::loadbalancing::LoadBalancer loadBalancer({{LOAD_BALANCER_CONFIGURATION}});
@@ -223,7 +222,7 @@ void finishTimeStep() {
   DataRepository::updateMemoryUsage();
 
   {% for item in TRACERS -%}
-  logDebug("finishTimeStep()", vertexdata::{{ item }}Set::printParticleStateStatistics());
+  logDebug(vertexdata::{{ item }}Set::printParticleStateStatistics());
   {%- endfor %}
 }
 
@@ -275,20 +274,6 @@ void finishSimulation() {
 
   loadBalancer.update();
   ::exahype2::RefinementControlService::getInstance().finishStep();
-}
-
-void initLogFilters() {
-  {% if LOG_FILTER_FILE!="" %}
-  if (not tarch::logging::LogFilterFileReader::parsePlainTextFile("{{LOG_FILTER_FILE}}")) {
-    // Manual selection, as log filters are not there yet
-    if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      logWarning("main()", "Filter file {{LOG_FILTER_FILE}} not found or file has been corrupted. Use default logging configuration." );
-    }
-    ::exahype2::setDefaultLogStatements();
-  }
-  {% else %}
-  ::exahype2::setDefaultLogStatements();
-  {% endif %}
 }
 
 {% for item in NAMESPACE -%}

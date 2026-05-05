@@ -8,8 +8,6 @@
 
 #include <algorithm>
 
-tarch::logging::Log toolbox::blockstructured::GlobalDatabase::_log( "toolbox::blockstructured::GlobalDatabase" );
-
 
 toolbox::blockstructured::GlobalDatabase::Entry::Entry( const GlobalDatabase& database, double  timestamp_ ):
   timestamp(timestamp_),
@@ -103,7 +101,7 @@ void toolbox::blockstructured::GlobalDatabase::dumpCSVFile() {
     if (outputPath.has_parent_path()) {
       std::filesystem::create_directories(outputPath.parent_path());
     }
-    logInfo( "dumpCSVFile()", "Dump particle trajectory database " << snapshotFileName.str() );
+    logInfo("Dump particle trajectory database " << snapshotFileName.str());
     std::ofstream file( snapshotFileName.str() );
     file << std::scientific;
     file << "t, " << _dataName << std::endl;
@@ -123,8 +121,8 @@ void toolbox::blockstructured::GlobalDatabase::dumpCSVFile() {
 
   }
   else {
-    #if PEANO_DEBUG>=1
-    logInfo( "dumpCSVFile()", "Particle trajectory database is empty. Do not dump " << snapshotFileName.str() );
+    #if PEANO_DEBUG
+    logInfo("Particle trajectory database is empty. Do not dump " << snapshotFileName.str());
     #endif
   }
 
@@ -284,7 +282,7 @@ void toolbox::blockstructured::GlobalDatabase::addGlobalSnapshot(
 
   if (dumpDatabaseSnapshot()) {
     dumpCSVFile();
-    logInfo( "addGlobalSnapshot()", "Flushed database file (temporary flush - simulation has not terminated yet)" );
+    logInfo("Flushed database file (temporary flush - simulation has not terminated yet)");
     _thresholdForNextDatabaseFlush += _deltaBetweenTwoDatabaseFlushes;
   }
 }
@@ -323,7 +321,7 @@ void toolbox::blockstructured::GlobalDatabase::addGlobalSnapshot(
 
   if (dumpDatabaseSnapshot()) {
     dumpCSVFile();
-    logInfo( "addGlobalSnapshot()", "Flush database file " << _fileName << " (temporary flush - simulation has not terminated yet)" );
+    logInfo("Flush database file " << _fileName << " (temporary flush - simulation has not terminated yet)");
     _thresholdForNextDatabaseFlush = _deltaBetweenTwoDatabaseFlushes;
   }
 }

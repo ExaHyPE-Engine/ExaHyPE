@@ -23,7 +23,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::applyBoundaryConditions(
   int                                          faceNumber,
   T* NOALIAS                              Q
 ) {
-  static tarch::logging::Log _log( "exahype2::fd" );
 
   const auto serialisePatchIndex = [&](tarch::la::Vector<DIMENSIONS,int> overlapCell) {
     int base   = 1;
@@ -39,8 +38,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::applyBoundaryConditions(
     }
     return result;
   };
-
-  logTraceInWith4Arguments( "applyBoundaryConditions(...)", faceCentre, patchSize, numberOfVolumesPerAxisInPatch, faceNumber);
 
   tarch::la::Vector<DIMENSIONS,double> volumeH    = ::exahype2::fv::getVolumeSize(patchSize, numberOfVolumesPerAxisInPatch);
   tarch::la::Vector<DIMENSIONS,double> faceOffset = faceCentre - 0.5 * patchSize;
@@ -66,9 +63,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::applyBoundaryConditions(
       int outsideVolumeSerialised{{i}} = serialisePatchIndex(outsideVolume{{i}});
       {%- endfor %}
 
-      logDebug(
-        "applyBoundaryConditions(...)",
-        insideVolume << "->" <<
+      logDebug(insideVolume << "->" <<
         {%- for i in range(ORDER) %}
         outsideVolume{{i}} {%- if not loop.last -%} << ","{%- endif -%} <<
         {%- endfor %}
@@ -80,8 +75,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::applyBoundaryConditions(
         "(" << *(Q + insideVolumeSerialised * unknowns) << ",...)^T->" <<
         {%- for i in range(ORDER) %}
         "(" << *(Q + outsideVolumeSerialised{{i}} * unknowns) << ",...)^T" {%- if not loop.last -%} << "," <<{%- endif -%}
-        {%- endfor %}
-      );
+        {%- endfor %});
 
       boundaryCondition(
         Q + insideVolumeSerialised * unknowns,
@@ -102,9 +96,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::applyBoundaryConditions(
       int outsideVolumeSerialised{{i}} = serialisePatchIndex(outsideVolume{{i}});
       {%- endfor %}
 
-      logDebug(
-        "applyBoundaryConditions(...)",
-        insideVolume << "->" <<
+      logDebug(insideVolume << "->" <<
         {%- for i in range(ORDER) %}
         outsideVolume{{i}} {%- if not loop.last -%} << ","{%- endif -%} <<
         {%- endfor %}
@@ -116,8 +108,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::applyBoundaryConditions(
         "(" << *(Q + insideVolumeSerialised * unknowns) << ",...)^T->" <<
         {%- for i in range(ORDER) %}
         "(" << *(Q + outsideVolumeSerialised{{i}} * unknowns) << ",...)^T" {%- if not loop.last -%} << "," <<{%- endif -%}
-        {%- endfor %}
-      );
+        {%- endfor %});
 
       boundaryCondition(
         Q + insideVolumeSerialised * unknowns,
@@ -129,5 +120,4 @@ void {{FULL_QUALIFIED_NAMESPACE}}::applyBoundaryConditions(
     }
   }
 
-  logTraceOut( "applyBoundaryConditions(...)" );
 }

@@ -22,7 +22,7 @@ class UpdatePatch(AbstractFDActionSet):
     assertion2(tarch::la::greaterEquals(timeStepSize, 0.0), timeStamp, timeStepSize);
 
     if ({{ENCLAVE_GUARD}}) { // is skeleton cell
-#if PEANO_DEBUG > 0
+#if PEANO_DEBUG
       ::exahype2::fv::validatePatch(
         QIn,
         {{NUMBER_OF_UNKNOWNS}},
@@ -41,7 +41,7 @@ class UpdatePatch(AbstractFDActionSet):
       {% endif %}
       {{POSTPROCESS_UPDATED_PATCH}}
 
-#if PEANO_DEBUG > 0
+#if PEANO_DEBUG
       ::exahype2::fv::validatePatch(
         QOut,
         {{NUMBER_OF_UNKNOWNS}},

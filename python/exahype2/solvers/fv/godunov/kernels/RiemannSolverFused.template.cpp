@@ -4,6 +4,7 @@
 
 #include "exahype2/fv/VolumeIndex.h"
 #include "exahype2/fv/PatchUtils.h"
+#include "tarch/instrumentation/Trace.h"
 
 {% from 'ComputeFluxesAndPerformTimeStep.macro.h' import ComputeFluxesAndPerformTimeStep with context %}
 
@@ -36,6 +37,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   const int                                           numberOfPatches,
   [[maybe_unused]] const int                          targetDevice
 ) {
+  traceEnter();
+
   constexpr int PatchCardinality = {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %};
   constexpr int PatchCardinalityWithHalo = {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %};
 
@@ -46,6 +49,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
 #define OMP_REDUCTION_CLAUSE
 {% endif %}
 
+  traceEnter("Patch updates");
 #pragma omp parallel for collapse({{DIMENSIONS + 1}}) schedule(static) \
   OMP_REDUCTION_CLAUSE
   for (int patchIndex = 0; patchIndex < numberOfPatches; ++patchIndex)
@@ -72,10 +76,13 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
 
     {{ ComputeFluxesAndPerformTimeStep() | indent(2)}}
   }
+  traceLeave("Patch updates");
 
 {% if COMPUTE_MAX_EIGENVALUE %}
+  traceLeave();
   return maxEigenvalueAfterTimeStep;
 {% else %}
+  traceLeave();
   return 0.0;
 {% endif %}
 }

@@ -21,11 +21,10 @@ bool tarch::multicore::Core::init() {
 
   if (_numberOfThreads > getNumberOfUnmaskedThreads()) {
     logDebug(
-      "init()",
       "Number of configured threads ("
-        << _numberOfThreads << ") is bigger than available unmasked threads (" << getNumberOfUnmaskedThreads() << ")"
+      << _numberOfThreads << ") is bigger than available unmasked threads (" << getNumberOfUnmaskedThreads() << ")"
     );
-    logDebug("init()", "Unmasked threads: " << printUnmaskedThreads());
+    logDebug("Unmasked threads: " << printUnmaskedThreads());
   }
 
   return isInitialised();

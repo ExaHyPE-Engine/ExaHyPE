@@ -8,13 +8,9 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Task.h"
 
-namespace {
-  static tarch::logging::Log _log("tarch::multicore::omp");
-} // namespace
-
 void tarch::multicore::native::spawnTasks(const std::vector<Task*>& tasks) {
   assertion(not tasks.empty());
-  logDebug("spawnTasks()", "Spawn " << tasks.size() << " tasks");
+  logDebug("Spawn " << tasks.size() << " tasks");
 
 #if not defined(TASKLOOP_NOT_SUPPORTED)
 #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(Task::DefaultPriority) untied
@@ -44,10 +40,9 @@ void tarch::multicore::native::spawnTask(Task* task, const void* const inDepende
   assertion(outDependency);
 
   logDebug(
-    "spawnTask()",
     "Fire task "
-      << "with outgoing data dependency " << outDependency << " and "
-      << "incoming data dependency " << inDependency
+    << "with outgoing data dependency " << outDependency << " and "
+    << "incoming data dependency " << inDependency
   );
 
 #pragma omp task priority(task->getPriority()) depend(in : static_cast<const char*>(inDependency)[0]) \
@@ -66,7 +61,7 @@ void tarch::multicore::native::spawnTask(Task* task, const void* const outDepend
 #pragma omp task priority(task->getPriority()) untied
 #else
   assertion(outDependency);
-  logDebug("spawnTask()", "Fire task with with outgoing data dependency " << outDependency);
+  logDebug("Fire task with with outgoing data dependency " << outDependency);
 
 #pragma omp task priority(task->getPriority()) depend(out : static_cast<const char*>(outDependency)[0]) untied
 #endif
@@ -79,7 +74,7 @@ void tarch::multicore::native::spawnTask(Task* task, const void* const outDepend
 }
 
 void tarch::multicore::native::spawnTask(Task* task) {
-  logDebug("spawnTask()", "Fire independent task");
+  logDebug("Fire independent task");
 
 #pragma omp task priority(task->getPriority()) untied
   {
@@ -95,7 +90,7 @@ void tarch::multicore::native::waitForTask(const void* const inDependency) {
 #pragma omp taskwait
 #else
   assertion(inDependency);
-  logDebug("waitForTask()", "Wait for task with incoming data dependency " << inDependency << " to terminate");
+  logDebug("Wait for task with incoming data dependency " << inDependency << " to terminate");
 #pragma omp taskwait depend(in : static_cast<const char*>(inDependency)[0])
 #endif
 }

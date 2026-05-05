@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/tests/TestCase.h"
 
 namespace toolbox {
@@ -18,7 +18,6 @@ private:
   /**
    * Logging device
    */
-  static tarch::logging::Log _log;
 
   /**
    * Test setup from the Swift test case:

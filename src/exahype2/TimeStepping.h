@@ -4,7 +4,7 @@
 
 
 #include "tarch/la/ScalarOperations.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 
 #include "peano4/datamanagement/FaceEnumerator.h"
 
@@ -202,7 +202,6 @@ namespace exahype2 {
     const peano4::datamanagement::FaceEnumerator< FaceLabel >&  faceLabelEnumerator,
     double  timeStepSize
   ) {
-    static tarch::logging::Log _log( "exahype2" );
 
     const double Tolerance = 0.01;
     double relativeTolerance = tarch::la::equals(timeStepSize,0.0) ? tarch::la::NUMERICAL_ZERO_DIFFERENCE : Tolerance * timeStepSize;
@@ -230,12 +229,12 @@ namespace exahype2 {
       double tweakedTimeStepSize = maxOfMatchingTimeStamps - cellLabel.getTimeStamp();
       assertion2( tarch::la::greaterEquals( tweakedTimeStepSize,timeStepSize ), tweakedTimeStepSize, timeStepSize );
       if (tweakedTimeStepSize>timeStepSize) {
-        logDebug( "removeTimeStepAccummulationErrorsFromCell(...)", "adopt local time step from " << timeStepSize << " to " << tweakedTimeStepSize );
+        logDebug("adopt local time step from " << timeStepSize << " to " << tweakedTimeStepSize);
       }
       timeStepSize = tweakedTimeStepSize;
     }
 
-    logDebug( "removeTimeStepAccummulationErrorsFromCell(...)", "dt=" << timeStepSize << ", max-match=" << maxOfMatchingTimeStamps );
+    logDebug("dt=" << timeStepSize << ", max-match=" << maxOfMatchingTimeStamps);
     return timeStepSize;
   }
 

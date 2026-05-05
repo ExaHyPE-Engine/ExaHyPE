@@ -10,9 +10,6 @@
 #include <cmath>
 
 class toolbox::loadbalancing::LoadBalancer::IntraRankDistributionStrategy final: public Strategy {
-private:
-  inline static tarch::logging::Log _log{"toolbox::loadbalancing::LoadBalancer::IntraRankDistributionStrategy"};
-
 public:
   ~IntraRankDistributionStrategy() override = default;
 
@@ -25,7 +22,7 @@ public:
     }
 
     if (lb._statistics.getNumberOfStateUpdatesWithoutAnySplit() > 5) {
-      logWarning("update()", "Current local mesh is too small or poorly balanced to split further into trees");
+      logWarning("Current local mesh is too small or poorly balanced to split further into trees");
       return State::Stagnation;
     }
 

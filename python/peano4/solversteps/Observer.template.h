@@ -23,7 +23,6 @@ namespace {{ item }} {
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::peano4::grid::GridTraversalObserver {
 private:
-  static tarch::logging::Log _log;
 
   const int _spacetreeId;
 

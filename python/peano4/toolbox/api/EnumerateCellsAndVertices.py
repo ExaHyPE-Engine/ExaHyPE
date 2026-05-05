@@ -158,7 +158,7 @@ class AssignNumbersToMesh(ActionSet):
             return """
             if ( fineGridVertex{}.getNumber()==tarch::Enumerator::NoNumber ) {{
               fineGridVertex{}.setNumber( fineGridVertex{}.getEnumerator().getNumber() );
-              logDebug( "touchVertexFirstTime(...)", "set number " << fineGridVertex{}.toString() );
+              logDebug("set number " << fineGridVertex{}.toString());
             }}
             """.format(
                 construct_marker_name(self._task_name),
@@ -184,7 +184,7 @@ class AssignNumbersToMesh(ActionSet):
             return """
             if ( fineGridCell{}.getNumber()==tarch::Enumerator::NoNumber ) {{
               fineGridCell{}.setNumber( fineGridCell{}.getEnumerator().getNumber() );
-              logDebug( "touchCellFirstTime(...)", "set number " << fineGridCell{}.toString() );
+              logDebug("set number " << fineGridCell{}.toString());
             }}
             for (int i=0; i<TWO_POWER_D; i++) {{
               fineGridVertices{}(i).setAdjacentCellNumber(
@@ -240,7 +240,7 @@ class ClearNumbersOnMesh(ActionSet):
             return """
             fineGridVertex{}.setNumber(tarch::Enumerator::NoNumber);
             for (int i=0; i<TWO_POWER_D; i++) fineGridVertex{}.setAdjacentCellNumber(i,tarch::Enumerator::NoNumber);
-            logDebug( "touchVertexFirstTime(...)", "reset " << fineGridVertex{}.toString() );
+            logDebug("reset " << fineGridVertex{}.toString());
             """.format(
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
@@ -250,7 +250,7 @@ class ClearNumbersOnMesh(ActionSet):
         if operation_name == ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
             return """
             fineGridCell{}.setNumber(tarch::Enumerator::NoNumber);
-            logDebug( "touchCellFirstTime(...)", "reset " << fineGridCell{}.toString() );
+            logDebug("reset " << fineGridCell{}.toString());
             """.format(
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),

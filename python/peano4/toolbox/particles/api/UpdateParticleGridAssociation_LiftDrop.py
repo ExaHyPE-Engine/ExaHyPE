@@ -161,7 +161,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
 
     toolbox::particles::ParticleReassociationInstruction instruction = toolbox::particles::liftParticleAssociatedWithVertex(**p, marker);
 
-    #if PEANO_DEBUG > 0
+    #if PEANO_DEBUG
     int partID = (*p)->getPartid();
     #else
     int partID = -1;
@@ -176,7 +176,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
         break;
       case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
         _numberOfLiftsIntoSieveSet++;
-        logDebug( "touchVertexLastTime(...)", "have to lift particle " << (*p)->toString() << " on tree " << _spacetreeId << " globally. Previously assigned to " << marker.toString() );
+        logDebug("have to lift particle " << (*p)->toString() << " on tree " << _spacetreeId << " globally. Previously assigned to " << marker.toString());
 
         toolbox::particles::assignmentchecks::detachParticleFromVertex(
           "{{PARTICLE}}",
@@ -213,7 +213,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
       case 7:
       #endif
         _numberOfLifts ++;
-        logDebug( "touchVertexLastTime(...)", "have to lift particle " << (*p)->toString() << " to next coarser vertex " << instruction << ". Previously assigned to " << marker.toString() << ". Now lifted to " << coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).toString() );
+        logDebug("have to lift particle " << (*p)->toString() << " to next coarser vertex " << instruction << ". Previously assigned to " << marker.toString() << ". Now lifted to " << coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).toString());
         (*p)->setCellH(3.0 * marker.getH());
         toolbox::particles::updateContainedInAdjacentCellProperty(
           ::peano4::datamanagement::reconstructXOfParentVertex(marker, instruction),

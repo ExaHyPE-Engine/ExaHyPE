@@ -11,10 +11,6 @@
 #include <cstring>
 #include <sycl/sycl.hpp>
 
-namespace {
-  tarch::logging::Log _log("tarch::accelerator::sycl");
-} // namespace
-
 void* tarch::accelerator::allocateRawData(std::size_t sizeInBytes, MemoryLocation location, int device) {
   void* data = nullptr;
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
@@ -78,7 +74,7 @@ void tarch::accelerator::
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to host");
+    logDebug("Copy " << sizeInBytes << " bytes from host to host");
     std::memcpy(target, source, sizeInBytes);
     break;
   case MemoryLocation::Device:
@@ -87,7 +83,7 @@ void tarch::accelerator::
     std::memcpy(target, source, sizeInBytes);
 #else
     assertion1(device >= 0, device);
-    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to device");
+    logDebug("Copy " << sizeInBytes << " bytes from host to device");
     sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
     queue.memcpy(target, source, sizeInBytes).wait();
     // queue.submit([&](sycl::handler& handle) { handle.memcpy(target, source, sizeInBytes); }).wait_and_throw();
@@ -105,7 +101,7 @@ void tarch::accelerator::
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyFrom()", "Copy " << sizeInBytes << " bytes from host to host");
+    logDebug("Copy " << sizeInBytes << " bytes from host to host");
     std::memcpy(target, source, sizeInBytes);
     break;
   case MemoryLocation::Device:
@@ -114,7 +110,7 @@ void tarch::accelerator::
     std::memcpy(target, source, sizeInBytes);
 #else
     assertion1(device >= 0, device);
-    logDebug("copyFrom()", "Copy " << sizeInBytes << " bytes from device to host");
+    logDebug("Copy " << sizeInBytes << " bytes from device to host");
     sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
     queue.memcpy(target, source, sizeInBytes).wait();
     // queue.submit([&](sycl::handler& handle) { handle.memcpy(target, source, sizeInBytes); }).wait_and_throw();

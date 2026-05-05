@@ -83,7 +83,6 @@ class NodeWisePostprocessSolution(AbstractFDActionSet):
     and
     {{PREDICATE}}
   ) {
-    logTraceIn( "touchCellFirstTime(...)" );
 
     int index = 0;
     dfor(volume, {{NUMBER_OF_NODES_PER_AXIS}}) {
@@ -95,7 +94,6 @@ class NodeWisePostprocessSolution(AbstractFDActionSet):
             + """
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
-    logTraceOut("touchCellFirstTime(...)");
   }
 }
 """

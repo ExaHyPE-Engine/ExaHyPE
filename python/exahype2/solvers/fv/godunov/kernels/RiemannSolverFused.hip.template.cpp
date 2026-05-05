@@ -38,7 +38,7 @@ kernel(
 {% endif %}
     for (int y = threadIdx.y; y < {{NUMBER_OF_VOLUMES_PER_AXIS}}; y += {% if DIMENSIONS==3 %} 8 {% else %} 16 {% endif %}) {
       for (int x = threadIdx.x; x < {{NUMBER_OF_VOLUMES_PER_AXIS}}; x += {% if DIMENSIONS==3 %} 8 {% else %} 16 {% endif %}) {
-        {{ ComputeFluxesAndPerformTimeStep() | indent(8)}}
+        {{ ComputeFluxesAndPerformTimeStep(False) | indent(8)}}
       } // x
     } // y
 {% if DIMENSIONS==3 %}  } // z {% endif %}

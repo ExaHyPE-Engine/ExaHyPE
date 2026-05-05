@@ -262,37 +262,15 @@ undefined reference to for_write_seq_list
 
 - ***I can't see my log/trace statements.*** There's a whole set of
   things that can go wrong.
-  -   Check that your log filter specifies the class name. For efficiency
-      reasons, you can only filter per class. Ensure you don't specify
-      methods. If you do so, Peano 4 thinks your method name is a
-      (sub)class name and won't apply your filter.
   -   Ensure that your main code is translated with a reasonable debug
       flag. The makefile has to translate your code with
-      `-DPEANO_DEBUG=4` (or 1 if you are only interested in tracing).
+      `-DPEANO_DEBUG=1` (or `-DPEANO_TRACE=1` if you are only interested in tracing).
   -   Ensure you link to libraries which are built with a reasonable
-      debug level. For this, run your code and search for the header
+      diagnostic switch. For this, run your code and search for the header
 
-                   build: 2d, no mpi, C++ threading, debug level=4
+                   build: 2d, no mpi, C++ threading, debug=On
 
-      on the terminal. Again, has to be 1 or 4 at least.
-  -   Ensure you have a whitelist entry for the routine you are
-      interested in. Study how to use @ref tarch_logging "Peano's logging" or
-      insert manual log filter statements:
-
-                  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-                    tarch::logging::LogFilter::FilterListEntry(
-                      tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-                      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-                      "examples::algebraicmg",
-                      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry
-                    )
-                  );
-
-  -   If you are still unsure which log filters are active, insert
-
-                   tarch::logging::LogFilter::getInstance().printFilterListToCout();
-
-      into your code and see which entries it does enlist.
+      on the terminal. For tracing, the corresponding trace flag has to be on.
 
 - ***gdb says "not in executable format: file format not recognized"***.
   automake puts the actual executable into a `.libs` directory and
@@ -375,9 +353,8 @@ Parallelisation
 -   **I get a timeout but  claims that there are still messages in the
     MPI queue. How do I know what certain MPI messages tags mean?** All
     tags used in  are registered through the operation
-    `tarch::mpi::Rank::reserveFreeTag`. If you translate with any
-    positive value of `PEANO_DEBUG` (the trace, debug and assert library
-    variants of  do so, e.g.) then you get a list of tag semantics at
+    `tarch::mpi::Rank::reserveFreeTag`. If you translate with
+    `PEANO_DEBUG=1`, then you get a list of tag semantics at
     startup. These lists are the same as the ones you use in release
     mode, i.e. when this information is not dumped. Please note that the
     info goes straight to cout, i.e. you can't filter it. That's because

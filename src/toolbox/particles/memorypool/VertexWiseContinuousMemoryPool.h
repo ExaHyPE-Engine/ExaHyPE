@@ -111,7 +111,6 @@ struct toolbox::particles::memorypool::VertexWiseContinuousMemoryPool {
     static bool requestCompleteScatter();
 
   private:
-    static tarch::logging::Log  _log;
 
     /**
      * Is nullptr as long as data is not gathered.

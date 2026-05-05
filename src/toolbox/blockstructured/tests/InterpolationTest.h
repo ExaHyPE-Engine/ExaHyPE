@@ -3,7 +3,7 @@
 #pragma once
 
 #include "tarch/tests/TestCase.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 
 namespace toolbox {
   namespace blockstructured {

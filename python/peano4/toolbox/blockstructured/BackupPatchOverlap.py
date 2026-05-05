@@ -66,7 +66,6 @@ class BackupPatchOverlap(ActionSet):
 
   __Template = """
     if ({GUARD_PREDICATE}) {{
-      logTraceInWith3Arguments( "--backup patch overlap from {FACES_ACCESSOR_IN} into {FACES_ACCESSOR_OUT}--(...)", marker.toString(), {FACES_ACCESSOR_OUT}.data(), {FACES_ACCESSOR_IN}.data() );
       int counter = 0;
       dfore(k,{DOFS_PER_AXIS},0,0) {{
         for (int i=0; i<{OVERLAP}*2; i++) {{
@@ -77,7 +76,6 @@ class BackupPatchOverlap(ActionSet):
           }}
         }}
       }}
-      logTraceOutWith1Argument( "--backup patch overlap from {FACES_ACCESSOR_IN} into {FACES_ACCESSOR_OUT}--(...)", {FACES_ACCESSOR_IN}.data()[0] );
     }}
 """
 

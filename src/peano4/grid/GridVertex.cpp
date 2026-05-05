@@ -11,7 +11,7 @@
 static_assert(std::is_standard_layout_v<peano4::grid::GridVertex>);
 static_assert(std::is_trivially_copyable_v<peano4::grid::GridVertex>);
 
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
 tarch::la::Vector<DIMENSIONS, double> peano4::grid::GridVertex::getVertexCoordinate(
   const tarch::la::Vector<DIMENSIONS, double>& cellX,
   const tarch::la::Vector<DIMENSIONS, double>& cellH,
@@ -37,7 +37,7 @@ peano4::grid::GridVertex peano4::grid::GridVertex::create(
   GridVertex newVertex;
   newVertex.level = level;
   newVertex.setState(state);
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
   newVertex.setX(x);
 #endif
   newVertex.adjacentRanks         = adjacentRanks;
@@ -59,7 +59,7 @@ peano4::grid::GridVertex peano4::grid::GridVertex::create(
   const std::array<int, TWO_POWER_D>&          adjacentRanks,
   bool                                         isNewFineGridVertex
 ) {
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
   return create(level, state, getVertexCoordinate(cellX, cellH, vertexIndex), adjacentRanks, isNewFineGridVertex);
 #else
   return create(level, state, tarch::la::Vector<DIMENSIONS, double>(0.0), adjacentRanks, isNewFineGridVertex);
@@ -168,7 +168,7 @@ std::string peano4::grid::GridVertex::toString() const {
 
   out << ", NumberOfAdjacentRefinedLocalCells=" << numberOfAdjacentRefinedLocalCells;
   out << ", Level=" << level;
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
   out << ", X=" << x;
 #endif
   out << ", AdjacentRanks=(";
@@ -233,7 +233,7 @@ void peano4::grid::GridVertex::initDatatype() {
   GridVertex instances[2];
 
   constexpr int NumberOfAttributes =
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
     7;
 #else
     6;
@@ -264,7 +264,7 @@ void peano4::grid::GridVertex::initDatatype() {
   MPI_Get_address(&instances[0].numberOfAdjacentRefinedLocalCells, &disp[counter]);
   counter++;
 
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
   subtypes[counter] = MPI_DOUBLE;
   blocklen[counter] = DIMENSIONS;
   MPI_Get_address(&(instances[0].getX().data()[0]), &disp[counter]);

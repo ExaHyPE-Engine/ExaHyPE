@@ -126,8 +126,6 @@ public:
   std::string toString() const;
 
 private:
-  static tarch::logging::Log _log;
-
   /**
    * We blow up the region around refinement criterion slightly.
    */

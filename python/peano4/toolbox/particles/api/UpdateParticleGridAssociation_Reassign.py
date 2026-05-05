@@ -154,7 +154,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
           p, marker, i
         );
 
-      #if PEANO_DEBUG > 0
+      #if PEANO_DEBUG
       int partID = (*p)->getPartid();
       #else
       int partID = -1;
@@ -169,7 +169,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
           p++;
           break;
         case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
-          logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " has to be sieved globally. Current assocation=" << marker.toString() );
+          logDebug("particle " << (*p)->toString() << " has to be sieved globally. Current assocation=" << marker.toString());
           _numberOfLiftsIntoSieveSet++;
           toolbox::particles::assignmentchecks::detachParticleFromVertex(
             "{{PARTICLE}}",

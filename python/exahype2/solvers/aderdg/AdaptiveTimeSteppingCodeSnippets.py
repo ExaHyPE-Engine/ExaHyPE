@@ -28,12 +28,12 @@ class AdaptiveTimeSteppingCodeSnippets(
 
     def create_print_time_step_implementation(self):
         return """
-  logDebug("logTimeStep()", "Phase       = " << toString(_solverState));
-  logInfo("logTimeStep()", "t            = " << getMinTimeStamp() << " / " << MinTerminalTime);
-  logInfo("logTimeStep()", "dt           = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : _admissibleTimeStepSizeThisTimeStep));
-  logInfo("logTimeStep()", "h_{min}      = " << getMinCellSize() << " (patch size)");
-  logInfo("logTimeStep()", "h_{max}      = " << getMaxCellSize() << " (patch size)");
-  logInfo("logTimeStep()", "lambda_{max} = " << getMaxEigenvalue());
+  logDebug("Phase       = " << toString(_solverState));
+  logInfo("t            = " << getMinTimeStamp() << " / " << MinTerminalTime);
+  logInfo("dt           = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : _admissibleTimeStepSizeThisTimeStep));
+  logInfo("h_{min}      = " << getMinCellSize() << " (patch size)");
+  logInfo("h_{max}      = " << getMaxCellSize() << " (patch size)");
+  logInfo("lambda_{max} = " << getMaxEigenvalue());
 """
 
     def create_start_time_step_implementation(self):
@@ -67,10 +67,7 @@ class AdaptiveTimeSteppingCodeSnippets(
         }
 
         if (tarch::la::smallerEquals(dtCFL, 0.0, 1e-10)) {
-          logWarning(
-            "finishTimeStep()",
-            "Degenerated time step size of " << std::to_string(dtCFL) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h=" << _minCellHThisTimeStep << ")"
-          );
+          logWarning("Degenerated time step size of " << std::to_string(dtCFL) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h=" << _minCellHThisTimeStep << ")");
         }
 
         const auto dtToEnd                  = std::max(0.0, MinTerminalTime - _minTimeStampThisTimeStep);

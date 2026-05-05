@@ -256,7 +256,7 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
     faceQLeft[leftFaceOffset + unknown] = 0.0;
     faceQRight[rightFaceOffset + unknown] = 0.0;
-  }}} 
+  }}}
 
   for (int y=0; y<order+1; y++) {
   for (int z=0; z<order+1; z++) {

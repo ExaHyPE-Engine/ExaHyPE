@@ -236,7 +236,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
     }
   }
   
-  logDebug( "touchCellFirstTime(...)", "size of local/active particles=" << localParticles.size() << "/" << _activeParticles.size() << " at " << marker.toString() );
+  logDebug("size of local/active particles=" << localParticles.size() << "/" << _activeParticles.size() << " at " << marker.toString());
 
   {% if PARTICLE_CELL_UPDATE_KERNEL!=None %}
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >&  activeParticles                  = _activeParticles;

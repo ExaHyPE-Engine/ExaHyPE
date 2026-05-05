@@ -22,7 +22,6 @@ void exahype2::fv::applyBoundaryConditions(
   int                                          faceNumber,
   T* NOALIAS                              Q
 ) {
-  static tarch::logging::Log _log( "exahype2::fv" );
 
   const auto serialisePatchIndex = [&](tarch::la::Vector<DIMENSIONS,int> overlapCell) {{
     int base   = 1;
@@ -38,8 +37,6 @@ void exahype2::fv::applyBoundaryConditions(
     }}
     return result;
   }};
-
-  logTraceInWith4Arguments( "applyBoundaryConditions(...)", faceCentre, patchSize, numberOfVolumesPerAxisInPatch, faceNumber);
 
   tarch::la::Vector<DIMENSIONS,double> volumeH    = exahype2::fv::getVolumeSize(patchSize, numberOfVolumesPerAxisInPatch);
   tarch::la::Vector<DIMENSIONS,double> faceOffset = faceCentre - 0.5 * patchSize;
@@ -60,12 +57,9 @@ void exahype2::fv::applyBoundaryConditions(
       int insideVolumeSerialised  = serialisePatchIndex(insideVolume);
       int outsideVolumeSerialised = serialisePatchIndex(outsideVolume);
 
-      logDebug(
-        "applyBoundaryConditions(...)",
-        insideVolume << "->" << outsideVolume << " (" << insideVolumeSerialised << "->" << outsideVolumeSerialised << "): " <<
+      logDebug(insideVolume << "->" << outsideVolume << " (" << insideVolumeSerialised << "->" << outsideVolumeSerialised << "): " <<
         "(" << *(Q + insideVolumeSerialised * unknowns) << ",...)^T->" <<
-        "(" << *(Q + outsideVolumeSerialised * unknowns) << ",...)^T"
-      );
+        "(" << *(Q + outsideVolumeSerialised * unknowns) << ",...)^T");
 
       boundaryCondition(
         Q + insideVolumeSerialised * unknowns,
@@ -80,12 +74,9 @@ void exahype2::fv::applyBoundaryConditions(
       int insideVolumeSerialised  = serialisePatchIndex(insideVolume);
       int outsideVolumeSerialised = serialisePatchIndex(outsideVolume);
 
-      logDebug(
-        "applyBoundaryConditions(...)",
-        insideVolume << "->" << outsideVolume << " (" << insideVolumeSerialised << "->" << outsideVolumeSerialised << "): " <<
+      logDebug(insideVolume << "->" << outsideVolume << " (" << insideVolumeSerialised << "->" << outsideVolumeSerialised << "): " <<
         "(" << *(Q + insideVolumeSerialised * unknowns) << ",...)^T->" <<
-        "(" << *(Q + outsideVolumeSerialised * unknowns) << ",...)^T"
-      );
+        "(" << *(Q + outsideVolumeSerialised * unknowns) << ",...)^T");
 
       boundaryCondition(
         Q + insideVolumeSerialised * unknowns,
@@ -96,7 +87,6 @@ void exahype2::fv::applyBoundaryConditions(
     }
   }
 
-  logTraceOut( "applyBoundaryConditions(...)" );
 }
 
 

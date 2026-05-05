@@ -27,11 +27,9 @@ class RollOverUpdatedFace(AbstractFDActionSet):
     if ( {{GUARD}} ) {
       const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
       
-      logTraceInWith3Arguments( "touchFaceLastTime(...)", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), marker.toString(), normal );
       
       // Left half
       if ({{FACE_METADATA_ACCESSOR}}.getUpdated(0)) {
-        logTraceInWith1Argument( "touchFaceLastTime(...)", "left half of face"  );
         
         ::exahype2::fv::copyHalfOfHalo(
           {{UNKNOWNS}},
@@ -55,16 +53,12 @@ class RollOverUpdatedFace(AbstractFDActionSet):
         {{FACE_METADATA_ACCESSOR}}.setOldTimeStamp(0, {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(0) );
         {{FACE_METADATA_ACCESSOR}}.setNewTimeStamp(0, {{FACE_METADATA_ACCESSOR}}.getUpdatedTimeStamp(0) );
         
-        logTraceOut( "touchFaceLastTime(...)"  );
       }
       else {
-        logTraceIn( "touchFaceLastTime(...) (skip left part of face)"  );
-        logTraceOut( "touchFaceLastTime(...) (skip left part of face)"  );
       }
       
       // Right half
       if ({{FACE_METADATA_ACCESSOR}}.getUpdated(1)) {
-        logTraceInWith1Argument( "touchFaceLastTime(...)", "right half of face"  );
         
         ::exahype2::fv::copyHalfOfHalo(
           {{UNKNOWNS}},
@@ -89,15 +83,11 @@ class RollOverUpdatedFace(AbstractFDActionSet):
         {{FACE_METADATA_ACCESSOR}}.setOldTimeStamp(1, {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(1) );
         {{FACE_METADATA_ACCESSOR}}.setNewTimeStamp(1, {{FACE_METADATA_ACCESSOR}}.getUpdatedTimeStamp(1) );
         
-        logTraceOut( "touchFaceLastTime(...)" );
       }
       else {
-        logTraceIn( "touchFaceLastTime(...) (skip right part of face)"  );
-        logTraceOut( "touchFaceLastTime(...) (skip right part of face)"  );
       }
       
       int index = 0;
-      logTraceOut( "touchFaceLastTime(...)" );
     }
 """
     )

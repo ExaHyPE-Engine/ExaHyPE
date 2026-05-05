@@ -14,17 +14,17 @@ bool tarch::accelerator::Device::init() {
   Kokkos::initialize();
   numberOfDevices = Kokkos::num_devices();
 
-  logDebug("init()", "-----------------------------------------");
+  logDebug("-----------------------------------------");
   std::stringstream ss;
   Kokkos::print_configuration(ss, true); // 'true' enables verbose details
 
   std::string line;
   while (std::getline(ss, line)) {
     if (!line.empty()) {
-      logDebug("init()", line);
+      logDebug(line);
     }
   }
-  logDebug("init()", "-----------------------------------------");
+  logDebug("-----------------------------------------");
 
   return isInitialised();
 }

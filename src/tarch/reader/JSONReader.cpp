@@ -406,7 +406,7 @@ tarch::reader::JSONReader::JSONReader(const std::string& filepath):
   }
 }
 
-tarch::reader::JSONReader::~JSONReader() = default;
+tarch::reader::JSONReader::~JSONReader() {}
 
 bool tarch::reader::JSONReader::hasKey(const std::string& key) const { return hasValue(_impl->root, key); }
 

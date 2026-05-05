@@ -7,6 +7,7 @@
 
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/instrumentation/Trace.h"
 
 #include <algorithm>
 #include <cstring>
@@ -27,7 +28,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   const bool                                        isBoundary,
   const int                                         faceNumber
 ) {
+  traceEnter();
+
 {% if USE_RIEMANN_SOLVER %}
+  traceEnter("User Riemann solver");
 {% if STATELESS_RIEMANN_SOLVER %}
   {{FULL_QUALIFIED_SOLVER_NAME}}::riemannSolver(
 {% else %}
@@ -45,11 +49,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     isBoundary,
     faceNumber
   );
+  traceLeave("User Riemann solver");
 {% else %}
   cCompType* tmp_bnd = tarch::allocateMemory<cCompType>({{NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}, tarch::MemoryLocation::Heap);
   cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
   cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
 
+  traceEnter("Average states");
   // TODO: This loop still iterates over NUMBER_OF_DATA_PADDED while QL/QR are
   // indexed with the unpadded NUMBER_OF_DATA stride below. A padded build can
   // therefore read past one face slice unless storage and loop bounds match.
@@ -60,7 +66,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
       QavR[n] += Quadrature<cCompType>::weights2[xy] * QR[xy * {{NUMBER_OF_DATA}} + n];
     }
   }
+  traceLeave("Average states");
 
+  traceEnter("Max eigenvalue evaluation");
 {% if STATELESS_MAX_EIGENVALUE %}
   cCompType smaxL = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(
 {% else %}
@@ -87,7 +95,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   );
 
   cCompType smax = std::fmax(smaxL, smaxR);
+  traceLeave("Max eigenvalue evaluation");
 
+  traceEnter("Rusanov flux");
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     SIMD(aligned(tmp_bnd,QL:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
@@ -103,8 +113,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   }
   std::copy_n(FL, {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}, FR);
   tarch::freeMemory(tmp_bnd, tarch::MemoryLocation::Heap);
+  traceLeave("Rusanov flux");
 
 {% if USE_NCP %}
+  traceEnter("Nonconservative product evaluation");
   cCompType Qavg[{{NUMBER_OF_DATA}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
   cCompType gradQ[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
   cCompType ncp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
@@ -141,8 +153,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
       FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] += 0.5 * ncp[n];
     }
   }
+  traceLeave("Nonconservative product evaluation");
 {% endif %}
 {% endif %}
+  traceLeave();
 }
 
 template void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(

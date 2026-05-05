@@ -3,7 +3,7 @@
 #pragma once
 
 #include "tarch/Assertions.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 
 #include <ctime>
 #include <functional>
@@ -50,7 +50,6 @@ class tarch::mpi::Rank {
     /**
      * Logging device.
      */
-    static tarch::logging::Log _log;
 
     static Rank  _singleton;
 

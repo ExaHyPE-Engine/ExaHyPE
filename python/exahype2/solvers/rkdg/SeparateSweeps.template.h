@@ -3,7 +3,7 @@
 #pragma once
 
 #include "Abstract{{CLASSNAME}}.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
@@ -17,9 +17,6 @@
 
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
-  private:
-    static tarch::logging::Log   _log;
-
   public:
     {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}
     /**

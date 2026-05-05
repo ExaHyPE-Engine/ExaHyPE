@@ -2,10 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Restriction.h"
 
-namespace {
-  [[maybe_unused]] tarch::logging::Log _log("toolbox::blockstructured");
-} // namespace
-
 void toolbox::blockstructured::internal::projectCells_AoS(
   const peano4::datamanagement::CellMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
@@ -18,11 +14,6 @@ void toolbox::blockstructured::internal::projectCells_AoS(
     double                                fineVolumeH
   )>                                        update
 ) {
-  logTraceInWith2Arguments(
-    "projectCells_AoS(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch
-  );
 
   const double volumeHCoarse = marker.getH()(0)
                                / static_cast<double>(numberOfDoFsPerAxisInPatch)
@@ -67,5 +58,4 @@ void toolbox::blockstructured::internal::projectCells_AoS(
     );
   }
 
-  logTraceOut("projectCells_AoS(...)");
 }

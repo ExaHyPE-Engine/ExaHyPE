@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "EnclaveBookkeeping.h"
 
-tarch::logging::Log exahype2::EnclaveBookkeeping::_log("exahype2::EnclaveBookkeeping");
-
 exahype2::EnclaveBookkeeping::~EnclaveBookkeeping() {
   // clear();
 }
@@ -15,7 +13,7 @@ void exahype2::EnclaveBookkeeping::bookmarkTask(tarch::multicore::Task* task) {
   tarch::multicore::Lock lock(pendingTasksSemaphore);
 
   if (pendingTasks.count(task->getTaskType()) == 0) {
-    logDebug("bookmarkTask()", "Construct new enclave task queue for task type " << task->getTaskType());
+    logDebug("Construct new enclave task queue for task type " << task->getTaskType());
     pendingTasks[task->getTaskType()] = std::list<tarch::multicore::Task*>();
   }
 

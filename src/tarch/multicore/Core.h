@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 
 #include <set>
 #include <string>
@@ -44,8 +44,6 @@ namespace tarch {
  */
 class tarch::multicore::Core {
 private:
-  static tarch::logging::Log _log;
-
   Core() = default;
 
   int _numberOfThreads;

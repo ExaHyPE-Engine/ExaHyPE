@@ -3,7 +3,7 @@
 #pragma once
 
 #include "State.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 
@@ -68,8 +68,6 @@ public:
 
 private:
   void waitForGlobalDataExchange();
-
-  static tarch::logging::Log _log;
 
   bool _isViewConsistent;
 

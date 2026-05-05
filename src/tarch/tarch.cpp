@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch.h"
 
-#include "logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -27,10 +27,6 @@ static_assert(sizeof(short) == 2, "sizeof(short) != 2");
 static_assert(sizeof(int) == 4, "sizeof(int) != 4");
 static_assert(sizeof(long long) == 8, "sizeof(long long) != 8");
 static_assert('A' == 65, "A != 65");
-
-namespace {
-  tarch::logging::Log _log("tarch");
-} // namespace
 
 std::string tarch::toString(MemoryUsageFormat format) {
   switch (format) {
@@ -107,11 +103,11 @@ double tarch::getMemoryUsage(MemoryUsageFormat format) {
   f = fopen(work, "r");
 
   if (f == NULL) {
-    logError("getMemoryUsage()", "Can't open file " << work);
+    logError("Can't open file " << work);
     return (0);
   }
   if (fgets(work, sizeof(work), f) == NULL) {
-    logError("getMemoryUsage", "Error while reading from file");
+    logError("Error while reading from file");
   }
   fclose(f);
   strtok(work, " ");

@@ -3,16 +3,12 @@
 #include "tarch/multicore/Core.h"
 
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Task.h"
+#include "tarch/multicore/multicore.h"
 
 #ifdef COMPILER_HAS_SYSINFO
 #include <sched.h>
 #endif
-
-tarch::logging::Log tarch::multicore::Core::_log(
-  "tarch::multicore::Core"
-);
 
 std::string tarch::multicore::printUnmaskedThreads() {
   std::stringstream out;

@@ -6,7 +6,7 @@
 #include <list>
 #include <map>
 
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 
 #include "peano4/datamanagement/VertexMarker.h"
@@ -278,7 +278,6 @@ public:
   std::string toString() const;
 
 private:
-  static tarch::logging::Log _log;
 
   static void deleteParticles(ParticleList& list);
 

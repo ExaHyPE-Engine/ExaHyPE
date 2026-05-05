@@ -86,7 +86,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
       {% if DIMENSIONS==3 %} , patchSizes[patchIndex * {{DIMENSIONS}} + 2] {% endif %}
     };
 
-    {{ ComputeFluxesAndPerformTimeStep() | indent(2)}}
+    {{ ComputeFluxesAndPerformTimeStep(False) | indent(2)}}
   }
 
 {% if COMPUTE_MAX_EIGENVALUE %}

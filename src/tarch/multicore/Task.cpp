@@ -36,11 +36,13 @@ void tarch::multicore::Task::setPriority(int priority) {
 int tarch::multicore::Task::getTaskType() const { return _taskType; }
 
 void tarch::multicore::Task::fuse(const std::list<Task*>& otherTasks) {
-  for (auto& otherTask: otherTasks) {
-    while (otherTask->run()) {};
+  for (auto& otherTask : otherTasks) {
+    while (otherTask->run()) {
+    };
     delete otherTask;
   }
-  while (this->run()) {};
+  while (this->run()) {
+  };
 }
 
 std::string tarch::multicore::Task::toString() const { return "<no-description-available>"; }
@@ -49,14 +51,14 @@ tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor(
   int                          taskType,
   int                          priority,
   const std::function<bool()>& taskFunctor
-#if PEANO_DEBUG > 0
+#if PEANO_DEBUG
   ,
   const std::string& taskDescription
 #endif
 ):
   Task(taskType, priority),
   _taskFunctor(taskFunctor)
-#if PEANO_DEBUG > 0
+#if PEANO_DEBUG
   ,
   _taskDescription(taskDescription)
 #endif
@@ -66,7 +68,7 @@ tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor(
 bool tarch::multicore::TaskWithCopyOfFunctor::run() { return _taskFunctor(); }
 
 std::string tarch::multicore::TaskWithCopyOfFunctor::toString() const {
-#if PEANO_DEBUG > 0
+#if PEANO_DEBUG
   return _taskDescription;
 #else
   return "";

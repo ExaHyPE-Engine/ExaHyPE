@@ -3,7 +3,7 @@
 #pragma once
 
 #include "tarch/la/Vector.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/tests/TestCase.h"
 #include "TestParticle.h"
 

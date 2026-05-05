@@ -4,7 +4,7 @@
 
 #include "TreeManagementMessage.h"
 #include "peano4/grid/SplitInstruction.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Task.h"
 #include "tarch/services/Service.h"
@@ -271,7 +271,6 @@ private:
   /**
    * Logging device.
    */
-  static tarch::logging::Log _log;
 
   /**
    * Semaphore to protect container holding all the local trees.

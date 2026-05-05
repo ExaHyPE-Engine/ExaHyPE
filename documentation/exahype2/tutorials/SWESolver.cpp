@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "SWESolver.h"
 
-tarch::logging::Log tutorials::exahype2::swe::SWESolver::_log("tutorials::exahype2::swe::SWESolver");
-
 void tutorials::exahype2::swe::SWESolver::initialCondition(
   [[maybe_unused]] double* const NOALIAS                        Q, // Q[4+0]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,

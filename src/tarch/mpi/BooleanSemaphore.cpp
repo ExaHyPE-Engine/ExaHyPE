@@ -7,8 +7,6 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/services/ServiceRepository.h"
 
-tarch::logging::Log  tarch::mpi::BooleanSemaphore::_log( "tarch::mpi::BooleanSemaphore" );
-
 int tarch::mpi::BooleanSemaphore::_semaphoreCounter(1);
 
 tarch::mpi::BooleanSemaphore::BooleanSemaphoreService  tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::_singleton;
@@ -87,7 +85,7 @@ bool tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::tryLockSemaphoreOnGl
     gotLock              = true;
     _map[number].locked  = true;
     _map[number].rankThatLastLocked = forRank;
-    logDebug( "tryLockSemaphoreOnGlobalMaster(int,int)", "successfully locked semaphore " << number << " for rank " << forRank );
+    logDebug("successfully locked semaphore " << number << " for rank " << forRank);
   }
 
   return gotLock;
@@ -100,7 +98,7 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::lockSemaphoreOnGloba
   tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
   tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
 
-  logDebug( "lockSemaphoreOnGlobalMaster(int,int)", "will try to lock semahpore " << number << " for rank " << forRank );
+  logDebug("will try to lock semahpore " << number << " for rank " << forRank);
 
   bool gotLock      = false;
   bool wroteWarning = false;
@@ -109,7 +107,7 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::lockSemaphoreOnGloba
 
     if ( not wroteWarning and tarch::mpi::Rank::getInstance().exceededTimeOutWarningThreshold() ) {
       wroteWarning = true;
-      logWarning( "lockSemaphoreOnGlobalMaster()", "semaphore " << number << " is locked by " << _map[number].rankThatLastLocked << " and therefore cannot be locked for " << forRank );
+      logWarning("semaphore " << number << " is locked by " << _map[number].rankThatLastLocked << " and therefore cannot be locked for " << forRank);
     }
 
     receiveDanglingMessages();
@@ -127,7 +125,7 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::unlockSemaphoreOnGlo
   assertionEquals( _map[number].rankThatLastLocked, forRank );
   _map[number].locked = false;
 
-  logDebug( "unlockSemaphoreOnGlobalMaster()", "successfully released lock " << number << ". state=" << toString() );
+  logDebug("successfully released lock " << number << ". state=" << toString());
 }
 
 
@@ -144,7 +142,7 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::serveLockRequests() 
       for (auto request = _pendingLockRequests.begin(); request != _pendingLockRequests.end(); ) {
         if ( tryLockSemaphoreOnGlobalMaster(request->second, request->first) ) {
           servedLockRequest = true;
-          logDebug( "receiveDanglingMessages()", "locked sempahore " << request->second << " for rank " << request->first << ". state=" << toString() );
+          logDebug("locked sempahore " << request->second << " for rank " << request->first << ". state=" << toString());
           MPI_Send( &(request->second), 1, MPI_INT, request->first, _semaphoreTag, tarch::mpi::Rank::getInstance().getCommunicator());
           request = _pendingLockRequests.erase(request);
         }
@@ -168,16 +166,16 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::receiveDanglingMessa
 
     if (flag) {
       int number;
-      logDebug( "receiveDanglingMessages()", "there's a pending message from " << status.MPI_SOURCE );
+      logDebug("there's a pending message from " << status.MPI_SOURCE);
       MPI_Mrecv( &number, 1, MPI_INT, &msg, MPI_STATUS_IGNORE);
       assertion(number!=0);
 
-      logDebug( "receiveDanglingMessages()", "received number " << number << " from rank " << status.MPI_SOURCE );
+      logDebug("received number " << number << " from rank " << status.MPI_SOURCE);
       if (number>0) {
         tarch::multicore::Lock lock(_reserverationRequestsSemaphore);
         std::pair<int,int> newEntry( status.MPI_SOURCE, number );
         _pendingLockRequests.push_back(newEntry);
-        logDebug( "receiveDanglingMessages()", "there are " << _pendingLockRequests.size() << " lock requests in total. state=" << toString() );
+        logDebug("there are " << _pendingLockRequests.size() << " lock requests in total. state=" << toString());
       }
       else {
         releaseLock(-number);
@@ -220,11 +218,11 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::acquireLock( int num
   }
   else {
     #ifdef WITH_MPI
-    logDebug( "acquireLock()", "have to acquire lock on global master " << tarch::mpi::Rank::getGlobalMasterRank() << " and thus send master a " << number );
+    logDebug("have to acquire lock on global master " << tarch::mpi::Rank::getGlobalMasterRank() << " and thus send master a " << number);
     
     MPI_Send( &number, 1, MPI_INT, tarch::mpi::Rank::getGlobalMasterRank(), _semaphoreTag, tarch::mpi::Rank::getInstance().getCommunicator() );
 
-    logDebug( "acquireLock()", "wait for confirmation from global master rank" );
+    logDebug("wait for confirmation from global master rank");
     MPI_Request request;
     tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
     tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
@@ -261,7 +259,7 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::releaseLock( int num
   else {
     #ifdef WITH_MPI
     number = -number;
-    logDebug( "releaseLock()", "send global master " << number << " to release global lock" );
+    logDebug("send global master " << number << " to release global lock");
    
     MPI_Send( &number, 1, MPI_INT, tarch::mpi::Rank::getGlobalMasterRank(), _semaphoreTag, tarch::mpi::Rank::getInstance().getCommunicator() );
     #else

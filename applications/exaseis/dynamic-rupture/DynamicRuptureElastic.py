@@ -205,7 +205,7 @@ tarch::la::Vector<DIMENSIONS,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
     return result;
   }
   catch (std::domain_error e) {
-    logInfo("invertProjection()", "Caught an error with tracer at " << coordinates << ", and therefore not shifting its position");
+    logInfo("Caught an error with tracer at " << coordinates << ", and therefore not shifting its position");
     return coordinates;
   }
 }
@@ -276,7 +276,7 @@ def init_grid_step_implementation(scenario_string):
   std::string filename_rupture_model  = \"""" + scenario_string + """_fault.yaml";
   context->initRuptureModel(filename_rupture_model);
 
-  logInfo("startGridInitialisationStep()", "Freesurface set at " << std::to_string(_TOP * 2));
+  logInfo("Freesurface set at " << std::to_string(_TOP * 2));
 """
 
 def abstractDestructor():

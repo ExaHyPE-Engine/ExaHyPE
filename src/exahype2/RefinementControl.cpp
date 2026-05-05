@@ -26,8 +26,6 @@ std::string toString(exahype2::RefinementCommand value) {
   return "<undef>";
 }
 
-tarch::logging::Log exahype2::RefinementControl::_log("exahype2::RefinementControl");
-
 exahype2::RefinementControl::RefinementControl(double tolerance):
   _tolerance(tolerance) {}
 
@@ -58,9 +56,8 @@ void exahype2::RefinementControl::addCommand(
     _newEvents.push_back(std::pair<peano4::grid::GridControlEvent, int>(newEvent, lifetime));
 
     logDebug(
-      "addCommand()",
       "Added refinement for x="
-        << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _newEvents.size() << " instructions)"
+      << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _newEvents.size() << " instructions)"
     );
   } break;
   case exahype2::RefinementCommand::Keep:
@@ -89,9 +86,8 @@ void exahype2::RefinementControl::addCommand(
     _newEvents.push_back(std::pair<peano4::grid::GridControlEvent, int>(newEvent, lifetime));
 
     logDebug(
-      "addCommand()",
       "Added erase for x="
-        << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _newEvents.size() << " instructions)"
+      << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _newEvents.size() << " instructions)"
     );
   } break;
   }

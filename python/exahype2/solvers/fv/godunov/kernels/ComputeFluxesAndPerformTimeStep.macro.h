@@ -1,7 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-{% macro ComputeFluxesAndPerformTimeStep() %}
+{% macro ComputeFluxesAndPerformTimeStep(enable_trace=False) %}
   auto volumeIndex = ::exahype2::fv::toVolumeIndex(x, y {% if DIMENSIONS==3 %}, z {% endif %});
   auto [volumeSize, volumeCentre] = ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, {{NUMBER_OF_VOLUMES_PER_AXIS}}>(
     patchCentre, patchSize, volumeIndex
@@ -39,6 +39,9 @@
 
 {% if USE_SOURCE %}
   // ===================== Source Term =====================
+{% if enable_trace %}
+  traceEnter("Source term evaluation");
+{% endif %}
   {
     {{COMPUTE_PRECISION}} sources[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
 {% if STATELESS_SOURCE_TERM %}
@@ -52,10 +55,16 @@
       QO[unknown] += timeStepSize * sources[unknown];
     }
   }
+{% if enable_trace %}
+  traceLeave("Source term evaluation");
+{% endif %}
 {% endif %}
 
 {% if USE_DIFFUSIVE_SOURCE %}
   // ===================== Diffusive Source Term =====================
+{% if enable_trace %}
+  traceEnter("Diffusive source term evaluation");
+{% endif %}
   {
     {{COMPUTE_PRECISION}} gradQ[{{DIMENSIONS}} * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}})] __attribute__((aligned(ALIGNMENT)));
     for (int normal = 0; normal < {{DIMENSIONS}}; ++normal) {
@@ -91,6 +100,9 @@
       QO[unknown] += timeStepSize * diffSource[unknown];
     }
   }
+{% if enable_trace %}
+  traceLeave("Diffusive source term evaluation");
+{% endif %}
 {% endif %}
 
   for (int normal = 0; normal < {{DIMENSIONS}}; normal++) {
@@ -135,6 +147,10 @@
 
 {% if USE_RIEMANN_SOLVER %}
     // ===================== Riemann Solver =====================
+{% if enable_trace %}
+    traceEnter("Riemann solver");
+{% endif %}
+
     auto faceCentreLeft(volumeCentre);
     faceCentreLeft(normal)  -= static_cast<{{COMPUTE_PRECISION}}>(0.5) * volumeSize(normal);
     auto faceCentreRight(volumeCentre);
@@ -182,10 +198,20 @@
       nonCriticalAssertion(QO[unknown] == QO[unknown]);
       #endif
     } // unknown
+{% if enable_trace %}
+    traceLeave("Riemann solver");
+{% endif %}
 {% else %}
     // ===================== Generic Rusanov =====================
+{% if enable_trace %}
+    traceEnter("Generic Rusanov");
+{% endif %}
+
 {% if USE_FLUX %}
     // ===================== Flux =====================
+{% if enable_trace %}
+    traceEnter("Flux evaluation");
+{% endif %}
     {{COMPUTE_PRECISION}} fluxesLeft[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
     {{COMPUTE_PRECISION}} fluxesRight[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
     {
@@ -197,10 +223,16 @@
       solver.flux(QR, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal, fluxesRight);
 {% endif %}
     }
+{% if enable_trace %}
+    traceLeave("Flux evaluation");
+{% endif %}
 {% endif %}
 
 {% if USE_NCP %}
     // ===================== Nonconservative Product =====================
+{% if enable_trace %}
+    traceEnter("Nonconservative product evaluation");
+{% endif %}
     {{COMPUTE_PRECISION}} ncpCenter[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
     {{COMPUTE_PRECISION}} ncpLeft  [{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
     {
@@ -231,10 +263,16 @@
       solver.nonconservativeProduct(averageQLeft,   deltaQLeft,   volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, ncpLeft);
 {% endif %}
     }
+{% if enable_trace %}
+    traceLeave("Nonconservative product evaluation");
+{% endif %}
 {% endif %}
 
     {{COMPUTE_PRECISION}} maxEigenvalueLeft = 0.0;
     {{COMPUTE_PRECISION}} maxEigenvalueRight = 0.0;
+{% if enable_trace %}
+    traceEnter("Max eigenvalue evaluation");
+{% endif %}
     {
 {% if STATELESS_MAX_EIGENVALUE %}
       maxEigenvalueLeft  = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QL, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal);
@@ -252,6 +290,9 @@
       assertion(std::isfinite(maxEigenvalueRight));
       #endif
     }
+{% if enable_trace %}
+    traceLeave("Max eigenvalue evaluation");
+{% endif %}
 
     const {{COMPUTE_PRECISION}} scale = (timeStepSize * {{NUMBER_OF_VOLUMES_PER_AXIS}} * static_cast<{{COMPUTE_PRECISION}}>(0.5)) / patchSize(normal);
     //SIMD(aligned(QC,QL,QR,QO:ALIGNMENT)) // TODO: Missing alignment for fluxesLeft and fluxesRight
@@ -291,10 +332,16 @@
       nonCriticalAssertion(QO[unknown] == QO[unknown]);
       #endif
     } // unknown
+{% if enable_trace %}
+    traceLeave("Generic Rusanov");
+{% endif %}
 {% endif %}
   } // end loop over directions
 
 {% if COMPUTE_MAX_EIGENVALUE and not USE_RIEMANN_SOLVER %}
+{% if enable_trace %}
+  traceEnter("Final max eigenvalue evaluation");
+{% endif %}
   UNROLL({{DIMENSIONS}})
   for (int normal = 0; normal < {{DIMENSIONS}}; normal++) {
     maxEigenvalueAfterTimeStep = std::fmax(
@@ -306,6 +353,9 @@
 {% endif %}
     );
   }
+{% if enable_trace %}
+  traceLeave("Final max eigenvalue evaluation");
+{% endif %}
 {% endif %}
 
   #if defined(WITH_GPU)

@@ -6,6 +6,7 @@
 #include "Quadrature.h"
 
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/instrumentation/Trace.h"
 
 #include <algorithm>
 #include <cstring>
@@ -26,7 +27,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   const bool                                        isBoundary,
   const int                                         faceNumber
 ) {
+  traceEnter();
+
 {% if USE_RIEMANN_SOLVER %}
+  traceEnter("User Riemann solver");
 {% if STATELESS_RIEMANN_SOLVER %}
   {{FULL_QUALIFIED_SOLVER_NAME}}::riemannSolver(
 {% else %}
@@ -44,6 +48,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     isBoundary,
     faceNumber
   );
+  traceLeave("User Riemann solver");
 {% else %}
   /*
    * For the linear kernels, we need the material parameters in the
@@ -58,6 +63,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
   cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
 
+  traceEnter("Average states");
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     SIMD(aligned(QavL,QavR,QL:ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
@@ -65,7 +71,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
       QavR[n] += Quadrature<cCompType>::weights2[xy] * QR[xy * {{NUMBER_OF_DATA}} + n];
     }
   }
+  traceLeave("Average states");
 
+  traceEnter("Max eigenvalue evaluation");
 {% if STATELESS_MAX_EIGENVALUE %}
   cCompType smaxL = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(
 {% else %}
@@ -92,6 +100,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   );
 
   cCompType smax = std::fmax(smaxL, smaxR);
+  traceLeave("Max eigenvalue evaluation");
 
   cCompType Qavg[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT)));
 
@@ -115,6 +124,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   cCompType fluxValues[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
 {% endif %}
 
+  traceEnter("Flux and nonconservative product evaluation");
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     SIMD(aligned(Qdiff,QL:ALIGNMENT))
     for (int n = 0 ; n < {{NUMBER_OF_UNKNOWNS}} ; n++) {
@@ -202,7 +212,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
       FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] -= smax * Qdiff[n];
     }
   } // xy
+  traceLeave("Flux and nonconservative product evaluation");
 {% endif %}
+  traceLeave();
 }
 
 template void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(

@@ -12,12 +12,6 @@ void toolbox::blockstructured::internal::
     const T* NOALIAS fineGridCellValuesRight,
     T* fineGridFaceValues
   ) {
-  logTraceInWith3Arguments(
-    "projectInterpolatedFineCellsOnHaloLayer_AoS(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    overlap
-  );
 
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
@@ -66,7 +60,6 @@ void toolbox::blockstructured::internal::
     }
   }
 
-  logTraceOut("projectInterpolatedFineCellsOnHaloLayer_AoS(...)");
 }
 
 //
@@ -83,13 +76,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
   const T* NOALIAS coarseGridFaceValues,
   T* NOALIAS fineGridFaceValues
 ) {
-  logTraceInWith4Arguments(
-    "interpolateHaloLayer_AoS_piecewise_constant(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    overlap,
-    unknowns
-  );
 
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
@@ -116,10 +102,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
                         * 2 * overlap;
 #endif
 
-  logDebug(
-    "interpolateHaloLayer_AoS_piecewise_constant(...)",
-    marker.toString() << ": " << P->toString()
-  );
+  logDebug(marker.toString() << ": " << P->toString());
 
   P->batchedMultiplyAoS(
     fineGridFaceValues,   // image
@@ -132,7 +115,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
     ) * patchSize
   );
 
-  logTraceOut("interpolateHaloLayer_AoS_piecewise_constant(...)");
 }
 
 template<typename T>
@@ -145,13 +127,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
   const T* NOALIAS coarseGridFaceValues,
   T* NOALIAS fineGridFaceValues
 ) {
-  logTraceInWith4Arguments(
-    "interpolateHaloLayer_AoS_piecewise_constant(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    overlap,
-    unknowns
-  );
 
   if (marker.isInteriorFaceWithinPatch()) {
 #if DIMENSIONS == 2
@@ -215,7 +190,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
     );
   }
 
-  logTraceOut("interpolateHaloLayer_AoS_piecewise_constant(...)");
 }
 
 template<typename T>
@@ -226,12 +200,6 @@ void toolbox::blockstructured::interpolateCell_AoS_piecewise_constant(
   const T* NOALIAS coarseGridCellValues,
   T* NOALIAS fineGridCellValues
 ) {
-  logTraceInWith3Arguments(
-    "interpolateCell_AoS_piecewise_constant(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    unknowns
-  );
 
   internal::interpolateCell_AoS_piecewise_constant(
     marker.getRelativePositionWithinFatherCell(),
@@ -241,7 +209,6 @@ void toolbox::blockstructured::interpolateCell_AoS_piecewise_constant(
     fineGridCellValues
   );
 
-  logTraceOut("interpolateCell_AoS_piecewise_constant(...)");
 }
 
 template<typename T>
@@ -297,13 +264,6 @@ void toolbox::blockstructured::
     const T* NOALIAS coarseGridFaceValues,
     T* NOALIAS fineGridFaceValues
   ) {
-  logTraceInWith4Arguments(
-    "interpolateHaloLayer_AoS_linear_with_constant_extrapolation(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    overlap,
-    unknowns
-  );
 
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
@@ -332,10 +292,7 @@ void toolbox::blockstructured::
                         * 2 * overlap;
 #endif
 
-  logDebug(
-    "interpolateHaloLayer_AoS_linear_with_constant_extrapolation(...)",
-    marker.toString() << ": " << P->toString()
-  );
+  logDebug(marker.toString() << ": " << P->toString());
 
   P->batchedMultiplyAoS(
     fineGridFaceValues,   // image
@@ -348,8 +305,6 @@ void toolbox::blockstructured::
     ) * patchSize
   );
 
-  logTraceOut("interpolateHaloLayer_AoS_linear_with_constant_extrapolation(...)"
-  );
 }
 
 template<typename T>
@@ -363,13 +318,6 @@ void toolbox::blockstructured::
     const T* NOALIAS coarseGridFaceValues,
     T* NOALIAS fineGridFaceValues
   ) {
-  logTraceInWith4Arguments(
-    "interpolateHaloLayer_AoS_linear_with_constant_extrapolation(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    overlap,
-    unknowns
-  );
 
   if (marker.isInteriorFaceWithinPatch()) {
 #if DIMENSIONS == 2
@@ -435,8 +383,6 @@ void toolbox::blockstructured::
     );
   }
 
-  logTraceOut("interpolateHaloLayer_AoS_linear_with_constant_extrapolation(...)"
-  );
 }
 
 template<typename T>
@@ -448,12 +394,6 @@ void toolbox::blockstructured::
     const T* NOALIAS coarseGridCellValues,
     T* NOALIAS fineGridCellValues
   ) {
-  logTraceInWith3Arguments(
-    "interpolateCell_AoS_linear_with_constant_extrapolation(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    unknowns
-  );
 
   internal::interpolateCell_AoS_linear(
     marker.getRelativePositionWithinFatherCell(),
@@ -464,7 +404,6 @@ void toolbox::blockstructured::
     false
   );
 
-  logTraceOut("interpolateCell_AoS_linear_with_constant_extrapolation(...)");
 }
 
 template<typename T>
@@ -477,13 +416,6 @@ void toolbox::blockstructured::
     const T* NOALIAS coarseGridFaceValues,
     T* NOALIAS fineGridFaceValues
   ) {
-  logTraceInWith4Arguments(
-    "interpolateHaloLayer_AoS_linear_with_linear_extrapolation(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    overlap,
-    unknowns
-  );
 
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
@@ -512,10 +444,7 @@ void toolbox::blockstructured::
                         * 2 * overlap;
 #endif
 
-  logDebug(
-    "interpolateHaloLayer_AoS_linear_with_constant_extrapolation(...)",
-    marker.toString() << ": " << P->toString()
-  );
+  logDebug(marker.toString() << ": " << P->toString());
 
   P->batchedMultiplyAoS(
     fineGridFaceValues,   // image
@@ -528,7 +457,6 @@ void toolbox::blockstructured::
     ) * patchSize
   );
 
-  logTraceOut("interpolateHaloLayer_AoS_linear_with_linear_extrapolation(...)");
 }
 
 template<typename T>
@@ -542,13 +470,6 @@ void toolbox::blockstructured::
     const T* NOALIAS coarseGridFaceValues,
     T* NOALIAS fineGridFaceValues
   ) {
-  logTraceInWith4Arguments(
-    "interpolateHaloLayer_AoS_linear_with_linear_extrapolation(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    overlap,
-    unknowns
-  );
 
   if (marker.isInteriorFaceWithinPatch()) {
 #if DIMENSIONS == 2
@@ -614,7 +535,6 @@ void toolbox::blockstructured::
     );
   }
 
-  logTraceOut("interpolateHaloLayer_AoS_linear_with_linear_extrapolation(...)");
 }
 
 template<typename T>
@@ -626,12 +546,6 @@ void toolbox::blockstructured::
     const T* NOALIAS coarseGridCellValues,
     T* NOALIAS fineGridCellValues
   ) {
-  logTraceInWith3Arguments(
-    "interpolateCell_AoS_linear_with_linear_extrapolation(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    unknowns
-  );
 
   internal::interpolateCell_AoS_linear(
     marker.getRelativePositionWithinFatherCell(),
@@ -642,7 +556,6 @@ void toolbox::blockstructured::
     true
   );
 
-  logTraceOut("interpolateCell_AoS_linear_with_linear_extrapolation(...)");
 }
 
 template<typename T>
@@ -655,13 +568,6 @@ void toolbox::blockstructured::
     const T* NOALIAS coarseGridFaceValues,
     T* NOALIAS fineGridFaceValues
   ) {
-  logTraceInWith4Arguments(
-    "interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    overlap,
-    unknowns
-  );
 
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
@@ -689,10 +595,7 @@ void toolbox::blockstructured::
   const int patchSize = numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch * 2 * overlap;
 #endif
 
-  logDebug(
-    "interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)",
-    marker.toString() << ": " << P->toString()
-  );
+  logDebug(marker.toString() << ": " << P->toString());
 
   P->batchedMultiplyAoS(
     fineGridFaceValues,   // image
@@ -705,9 +608,6 @@ void toolbox::blockstructured::
     ) * patchSize
   );
 
-  logTraceOut(
-    "interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)"
-  );
 }
 
 template<typename T>
@@ -721,13 +621,6 @@ void toolbox::blockstructured::
     const T* NOALIAS coarseGridFaceValues,
     T* NOALIAS fineGridFaceValues
   ) {
-  logTraceInWith4Arguments(
-    "interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    overlap,
-    unknowns
-  );
 
   if (marker.isInteriorFaceWithinPatch()) {
 #if DIMENSIONS == 2
@@ -793,9 +686,6 @@ void toolbox::blockstructured::
     );
   }
 
-  logTraceOut(
-    "interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)"
-  );
 }
 
 template<typename T>
@@ -807,12 +697,6 @@ void toolbox::blockstructured::
     const T* NOALIAS coarseGridCellValues,
     T* NOALIAS fineGridCellValues
   ) {
-  logTraceInWith3Arguments(
-    "interpolateCell_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    unknowns
-  );
 
   internal::interpolateCell_AoS_linear(
     marker.getRelativePositionWithinFatherCell(),
@@ -823,9 +707,6 @@ void toolbox::blockstructured::
     false
   );
 
-  logTraceOut(
-    "interpolateCell_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)"
-  );
 }
 
 template<typename T>
@@ -838,13 +719,6 @@ void toolbox::blockstructured::
     const T* NOALIAS coarseGridFaceValues,
     T* NOALIAS fineGridFaceValues
   ) {
-  logTraceInWith4Arguments(
-    "interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    overlap,
-    unknowns
-  );
 
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
@@ -873,10 +747,7 @@ void toolbox::blockstructured::
                         * 2 * overlap;
 #endif
 
-  logDebug(
-    "interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)",
-    marker.toString() << ": " << P->toString()
-  );
+  logDebug(marker.toString() << ": " << P->toString());
 
   P->batchedMultiplyAoS(
     fineGridFaceValues,   // image
@@ -889,9 +760,6 @@ void toolbox::blockstructured::
     ) * patchSize
   );
 
-  logTraceOut(
-    "interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)"
-  );
 }
 
 template<typename T>
@@ -905,13 +773,6 @@ void toolbox::blockstructured::
     const T* NOALIAS coarseGridFaceValues,
     T* NOALIAS fineGridFaceValues
   ) {
-  logTraceInWith4Arguments(
-    "interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    overlap,
-    unknowns
-  );
 
   if (marker.isInteriorFaceWithinPatch()) {
 #if DIMENSIONS == 2
@@ -975,9 +836,6 @@ void toolbox::blockstructured::
     );
   }
 
-  logTraceOut(
-    "interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)"
-  );
 }
 
 template<typename T>
@@ -1337,12 +1195,6 @@ void toolbox::blockstructured::
     const T* NOALIAS coarseGridCellValues,
     T* NOALIAS fineGridCellValues
   ) {
-  logTraceInWith3Arguments(
-    "interpolateCell_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    unknowns
-  );
 
   internal::interpolateCell_AoS_linear(
     marker.getRelativePositionWithinFatherCell(),
@@ -1353,9 +1205,6 @@ void toolbox::blockstructured::
     true
   );
 
-  logTraceOut(
-    "interpolateCell_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)"
-  );
 }
 
 template<typename T>
@@ -2039,12 +1888,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
   const T* NOALIAS coarseGridFaceValues,
   T* NOALIAS fineGridFaceValues
 ) {
-  logTraceInWith3Arguments(
-    "interpolateHaloLayer_AoS_tensor_product(...)",
-    marker.toString(),
-    numberOfDoFsPerAxisInPatch,
-    overlap
-  );
 
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
@@ -2063,10 +1906,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
         normal
       );
 
-      logDebug(
-        "interpolateHaloLayer_AoS_tensor_product(...)",
-        "clear dof " << dest
-      );
+      logDebug("clear dof " << dest);
       for (int unknown = 0; unknown < unknowns; unknown++) {
         fineGridFaceValues[destLinearised * unknowns + unknown] = 0.0;
       }
@@ -2094,11 +1934,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
               assertion4(col >= 0, row, col, src, dest);
               assertion4(row >= 0, row, col, src, dest);
               int index = col + row * 2 * overlap;
-              logDebug(
-                "interpolateHaloLayer_AoS_tensor_product(...)",
-                "(" << row << "," << col << ")=" << index
-                    << " (normal contribution)"
-              );
+              logDebug("(" << row << "," << col << ")=" << index
+                    << " (normal contribution)");
               weight *= normalInterpolationMatrix1d[index];
               assertion(weight == weight);
             } else {
@@ -2109,20 +1946,14 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
               assertion4(col >= 0, row, col, src, dest);
               assertion4(row >= 0, row, col, src, dest);
               int index = col + row * numberOfDoFsPerAxisInPatch;
-              logDebug(
-                "interpolateHaloLayer_AoS_tensor_product(...)",
-                "(" << row << "," << col << ")=" << index
-                    << " (tangential contribution)"
-              );
+              logDebug("(" << row << "," << col << ")=" << index
+                    << " (tangential contribution)");
               weight *= tangentialInterpolationMatrix1d[index];
               assertion(weight == weight);
             }
           }
 
-          logDebug(
-            "interpolateHaloLayer_AoS_tensor_product(...)",
-            "add dof " << src << " to " << dest << " with weight " << weight
-          );
+          logDebug("add dof " << src << " to " << dest << " with weight " << weight);
 
           for (int unknown = 0; unknown < unknowns; unknown++) {
             fineGridFaceValues[destLinearised * unknowns + unknown]
@@ -2134,7 +1965,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
     }
   }
 
-  logTraceOut("interpolateHaloLayer_AoS_tensor_product(...)");
 }
 
 template<typename T>

@@ -25,7 +25,6 @@ namespace {{ item }} {
  */
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::EnclaveTask<{{STORAGE_PRECISION}}, 3> {
   private:
-    static tarch::logging::Log _log;
 
     /**
      * This is a unique static id which we use for task fusion

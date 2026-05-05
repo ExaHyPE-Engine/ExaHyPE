@@ -31,13 +31,6 @@ data quickly pollutes the runtime measurements.
 The data also might be skewed slightly due to measurement overhead.
 
 
-Besides the trace option, Peano also offers a statistics mode where the code
-samples certain key properties. These statistics are meant to complement real
-performance analysis with domain-specific data: We think that it is the job
-of a performance analyis tool to uncover what is going wrong and the statistics
-then can help to clarify why this happens from an application's point of view.
-
-
 ## Compiler
 
 ### Compiler feedback
@@ -482,4 +475,3 @@ the business. Study the single node load balancing discussion above.
 
 
  */
- 

@@ -361,7 +361,7 @@ class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
       {{FINE_GRID_CELL}}.data()
   );
 
-  #if PEANO_DEBUG > 0
+  #if PEANO_DEBUG
   ::exahype2::fv::validatePatch(
     {{FINE_GRID_CELL}}.data(),
     {{UNKNOWNS}},
@@ -395,7 +395,7 @@ class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
       {{COARSE_GRID_CELL}}.data()
   );
 
-  #if PEANO_DEBUG > 0
+  #if PEANO_DEBUG
   // Exploit the fact that we can "reuse" some FV utils here
   ::exahype2::fv::validatePatch(
     {{FINE_GRID_CELL}}.data(),

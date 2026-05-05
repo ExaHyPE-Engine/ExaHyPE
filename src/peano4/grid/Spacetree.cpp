@@ -11,7 +11,6 @@
 #include "peano4/parallel/Node.h"
 #include "peano4/parallel/SpacetreeSet.h"
 #include "peano4/utils/Loop.h"
-#include "tarch/logging/Statistics.h"
 #include "tarch/mpi/Rank.h"
 
 namespace {
@@ -27,8 +26,6 @@ namespace {
     return false;
   }
 } // namespace
-
-tarch::logging::Log peano4::grid::Spacetree::_log("peano4::grid::Spacetree");
 
 peano4::stacks::TreeToStacks<peano4::stacks::Stack<peano4::grid::GridVertex>> peano4::grid::Spacetree::_vertexStack;
 
@@ -58,7 +55,7 @@ peano4::grid::Spacetree::Spacetree(
 
   _noParallelTopologyChanges = true;
 
-  logDebug("Spacetree()", "Created spacetree with " << offset << "x" << width << " and periodic BCs=" << _periodicBC);
+  logDebug("Created spacetree with " << offset << "x" << width << " and periodic BCs=" << _periodicBC);
 }
 
 peano4::grid::Spacetree::Spacetree(
@@ -92,11 +89,12 @@ peano4::grid::Spacetree::Spacetree(
 
   _noParallelTopologyChanges = true;
 
-  logDebug("Spacetree()", "Created spacetree " << _id << " with master tree " << masterId << ": " << _root.toString());
+  logDebug("Created spacetree " << _id << " with master tree " << masterId << ": " << _root.toString());
 }
 
 void peano4::grid::Spacetree::traverse(GridTraversalObserver& observer, bool calledFromSpacetreeSet) {
-  logTraceIn("traverse()");
+  traceEnter();
+  traceEnter("Prepare traversal");
 
   for (int d = 0; d < TWO_TIMES_D; d++) {
     assertion2(_root.accessNumber[d] > -2 * DIMENSIONS, d, _root.toString());
@@ -108,10 +106,7 @@ void peano4::grid::Spacetree::traverse(GridTraversalObserver& observer, bool cal
     assertion(_joinTriggered.empty() or _splitting.empty());
     assertion(_joining.empty() or _splitTriggered.empty());
     assertion(_joining.empty() or _splitting.empty());
-    logDebug(
-      "traverse()",
-      _splitTriggered.size() << " tree splits triggered and " << _splitting.size() << " splitting trees on tree " << _id
-    );
+    logDebug(_splitTriggered.size() << " tree splits triggered and " << _splitting.size() << " splitting trees on tree " << _id);
   }
 
   _statistics.clear(_id == 0);
@@ -122,7 +117,7 @@ void peano4::grid::Spacetree::traverse(GridTraversalObserver& observer, bool cal
     _gridControlEvents = observer.getGridControlEvents();
     GridControlEvent::merge(_gridControlEvents);
     if (not _gridControlEvents.empty()) {
-      logDebug("traverse()", "Spacetree " << _id << " got " << _gridControlEvents.size() << " grid control events");
+      logDebug("Spacetree " << _id << " got " << _gridControlEvents.size() << " grid control events");
     }
   }
 
@@ -150,7 +145,7 @@ void peano4::grid::Spacetree::traverse(GridTraversalObserver& observer, bool cal
       false // isNewFineGridVertex
     );
     vertices[kScalar].setFlag(GridVertex::HasBeenParentOfSubtreeVertexInPreviousTreeSweep, true);
-    logDebug("traverse()", "Create " << vertices[kScalar].toString() << " for tree " << _id);
+    logDebug("Create " << vertices[kScalar].toString() << " for tree " << _id);
   enddforx
 
   for (int d = 0; d < DIMENSIONS; d++) {
@@ -163,16 +158,22 @@ void peano4::grid::Spacetree::traverse(GridTraversalObserver& observer, bool cal
       }
       vertices[vertexScalar].adjacentRanks[peano4::utils::dLinearised(entry, 2)] = RankOfPeriodicBoundaryCondition;
       vertices[vertexScalar].backupOfAdjacentRanks[peano4::utils::dLinearised(entry, 2)] = RankOfPeriodicBoundaryCondition;
-      enddforx logDebug(
-        "traverse()", "Set periodic boundary conditions: " << vertices[vertexScalar].toString()
-      );
+      enddforx logDebug("Set periodic boundary conditions: " << vertices[vertexScalar].toString());
       enddforx
     }
   }
 
+  traceLeave("Prepare traversal");
+  traceEnter("Observer begin traversal");
   observer.beginTraversal(_root.x, _root.h);
+  traceLeave("Observer begin traversal");
+  traceEnter("Descend");
   descend(_root, vertices, observer);
+  traceLeave("Descend");
+  traceEnter("Observer end traversal");
   observer.endTraversal(_root.x, _root.h);
+  traceLeave("Observer end traversal");
+  traceEnter("Finalise traversal");
   _root.setInverted(not _root.getInverted());
 
   if (calledFromSpacetreeSet) {
@@ -184,11 +185,8 @@ void peano4::grid::Spacetree::traverse(GridTraversalObserver& observer, bool cal
     _splitting.clear();
     for (auto& p : _splitTriggered) {
       if (p.second.numberOfFineGridCells > 0) {
-        logWarning(
-          "traverse()",
-          "Have not been able to assign enough cells from "
-            << _id << " to new tree " << p.first << " (should have deployed " << p.second << " more cells)"
-        );
+        logWarning("Have not been able to assign enough cells from "
+            << _id << " to new tree " << p.first << " (should have deployed " << p.second << " more cells)");
       }
       _splitting.insert(p.first);
     }
@@ -217,44 +215,34 @@ void peano4::grid::Spacetree::traverse(GridTraversalObserver& observer, bool cal
     case SpacetreeState::Joined:
       break;
     }
-    logDebug(
-      "traverse()", "Switched tree " << _id << " from " << grid::toString(oldState) << " into " << grid::toString(_spacetreeState)
-    );
+    logDebug("Switched tree " << _id << " from " << grid::toString(oldState) << " into " << grid::toString(_spacetreeState));
   }
 
-  logTraceOut("traverse()");
+  traceLeave("Finalise traversal");
+  traceLeave();
 }
 
 void peano4::grid::Spacetree::receiveAndMergeGridVertexAtVerticalBoundary(GridVertex& vertex) {
-  logTraceInWith2Arguments("receiveAndMergeGridVertexAtVerticalBoundary(GridVertex)", vertex.toString(), _id);
-
   for (const auto& p : _joining) {
     const auto& adjacentRanks = vertex.adjacentRanks;
     if (std::find(std::begin(adjacentRanks), std::end(adjacentRanks), p) != std::end(adjacentRanks)) {
       const int stackNo = parallel::Node::getInstance().getInputStackNumberForVerticalDataExchange(p);
-      logDebug(
-        "receiveAndMergeGridVertexAtVerticalBoundary(GridVertex)",
-        "merge "
-          << vertex.toString() << " with its replica from worker as worker is joining. Incoming stack no=" << stackNo
-      );
+      logDebug("merge "
+          << vertex.toString() << " with its replica from worker as worker is joining. Incoming stack no=" << stackNo);
 
       assertion3(not _vertexStack.getForPop(_id, stackNo)->empty(), _id, stackNo, vertex.toString());
       GridVertex copyFromFormerWorker = _vertexStack.getForPop(_id, stackNo)->pop();
 
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
       assertionVectorNumericalEquals3(
         vertex.getX(), copyFromFormerWorker.getX(), vertex.toString(), copyFromFormerWorker.toString(), _id
       );
 #endif
 
       vertex.adjacentRanks = copyFromFormerWorker.adjacentRanks;
-      logDebug(
-        "receiveAndMergeGridVertexAtVerticalBoundary(GridVertex)", "updated adjacency lists: " << vertex.toString()
-      );
+      logDebug("updated adjacency lists: " << vertex.toString());
     }
   }
-
-  logTraceOut("receiveAndMergeGridVertexAtVerticalBoundary(GridVertex)");
 }
 
 void peano4::grid::Spacetree::updateVertexAfterLoad(
@@ -335,7 +323,7 @@ void peano4::grid::Spacetree::updateVertexAfterLoad(
 
     if (vertex.getState() == GridVertex::State::RefinementTriggered) {
       if (vertexIsAdjacentToLocalTree) {
-        logDebug("updateVertexAfterLoad()", "switch vertex to refining on tree " << _id << ": " << vertex.toString());
+        logDebug("switch vertex to refining on tree " << _id << ": " << vertex.toString());
         vertex.setState(GridVertex::State::Refining);
         _statistics.numberOfStationarySweeps = 0;
       } else {
@@ -347,19 +335,14 @@ void peano4::grid::Spacetree::updateVertexAfterLoad(
       }
     } else if (vertex.getState() == GridVertex::State::EraseTriggered) {
       if (vertex.getFlag(GridVertex::HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep)) {
-        logDebug(
-          "updateVertexAfterLoad()",
-          "Vertex "
+        logDebug("Vertex "
             << vertex.toString() << " may not be erased on tree " << _id
-            << " as it is father of further refined vertices. Unroll flag."
-        );
+            << " as it is father of further refined vertices. Unroll flag.");
         vertex.setState(GridVertex::State::Refined);
         _statistics.setCoarseningHasBeenVetoed(true);
         _statistics.numberOfStationarySweeps = 0;
       } else {
-        logDebug(
-          "updateVertexAfterLoad()", "Erase vertex " << vertex.toString() << " outside of domain on tree " << _id
-        );
+        logDebug("Erase vertex " << vertex.toString() << " outside of domain on tree " << _id);
         vertex.setState(GridVertex::State::Erasing);
         _statistics.numberOfStationarySweeps = 0;
       }
@@ -373,20 +356,15 @@ void peano4::grid::Spacetree::updateVertexAfterLoad(
       and
       vertex.getState()==GridVertex::State::Refined
     ) {
-      logDebug(
-        "updateVertexAfterLoad()", "Would like to erase " << vertex.toString() << " in spacetree " << _id
-      );
+      logDebug("Would like to erase " << vertex.toString() << " in spacetree " << _id);
       vertex.setState(GridVertex::State::EraseTriggered);
     }
   }
 
   if (_spacetreeState == SpacetreeState::Joining and vertexIsAdjacentToLocalTree) {
     const int stackNo = peano4::parallel::Node::getInstance().getOutputStackNumberForVerticalDataExchange(_masterId);
-    logDebug(
-      "updateVertexAfterLoad()",
-      "Stream vertex "
-        << vertex.toString() << " from tree " << _id << " to master " << _masterId << " through stack " << stackNo
-    );
+    logDebug("Stream vertex "
+        << vertex.toString() << " from tree " << _id << " to master " << _masterId << " through stack " << stackNo);
     _vertexStack.getForPush(_id, stackNo)->push(std::move(vertex));
   }
 }
@@ -428,12 +406,9 @@ void peano4::grid::Spacetree::updateVertexBeforeStore(
       vertex.getState()==GridVertex::State::Unrefined
     ) {
       vertex.setState(GridVertex::State::RefinementTriggered);
-      logDebug(
-        "updateVertexBeforeStore()",
-        "Have to post-refine vertex "
+      logDebug("Have to post-refine vertex "
           << vertex.toString() << " as it is surrounded by 2^d refined cells on tree " << _id << " x "
-          << peano4::grid::toString(_spacetreeState)
-      );
+          << peano4::grid::toString(_spacetreeState));
     }
 
     /*
@@ -445,7 +420,7 @@ void peano4::grid::Spacetree::updateVertexBeforeStore(
           vertex.
         ) {
           vertex.setState( GridVertex::State::RefinementTriggered );
-          logDebug( "updateVertexBeforeStore()", "have to post-refine vertex " << vertex.toString() );
+          logDebug("have to post-refine vertex " << vertex.toString());
         }
     */
 
@@ -469,11 +444,8 @@ void peano4::grid::Spacetree::updateVertexBeforeStore(
 
     if (restrictIsAntecessorOfRefinedVertex) {
       dfor2(k) if (restrictToCoarseGrid(k, fineVertexPositionWithinPatch)) {
-        logDebug(
-          "updateVertexBeforeStore()",
-          "Set antecessor flag (veto coarsening) on vertex " << coarseGridVertices[kScalar].toString(
-          ) << " due to vertex " << vertex.toString()
-        );
+        logDebug("Set antecessor flag (veto coarsening) on vertex " << coarseGridVertices[kScalar].toString(
+          ) << " due to vertex " << vertex.toString());
         coarseGridVertices[kScalar].setFlag(GridVertex::IsAntecessorOfRefinedVertexInCurrentTreeSweep, true);
         coarseGridVertices[kScalar].setFlag(GridVertex::IsParentOfSubtreeVertexInCurrentTreeSweep,
           coarseGridVertices[kScalar].getFlag(GridVertex::IsParentOfSubtreeVertexInCurrentTreeSweep)
@@ -548,12 +520,9 @@ std::array<int, TWO_POWER_D> peano4::grid::Spacetree::getAdjacentRanksForNewVert
       indexToInherit.set(d, not(k(d) < 1 or vertexPositionWithin3x3Patch(d) < 3));
     }
   }
-  logDebug(
-    "createNewPersistentVertex()",
-    "inherit "
+  logDebug("inherit "
       << indexToInherit.to_ulong() << "th index from coarse vertex " << vertexToInherit << " into local index "
-      << kScalar
-  );
+      << kScalar);
   adjacentRanks[kScalar] = coarseGridVertices[vertexToInherit.to_ulong()].adjacentRanks[indexToInherit.to_ulong()];
   enddforx
 
@@ -647,7 +616,7 @@ void peano4::grid::Spacetree::loadVertices(
     } break;
     }
 
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
     const auto expectedX = GridVertex::getVertexCoordinate(fineGridStatesState.x, fineGridStatesState.h, vIndex);
     assertionVectorNumericalEquals5(
       vSlot.getX(),
@@ -661,11 +630,8 @@ void peano4::grid::Spacetree::loadVertices(
     vSlot.setX(expectedX);
 #endif
 
-#if PEANO_DEBUG >= 1
-    logDebug(
-      "loadVertices()",
-      "Handled " << peano4::grid::toString(type) << " vertex " << vIndex << " at " << vPos << ": " << vSlot.toString()
-    );
+#if PEANO_DEBUG
+    logDebug("Handled " << peano4::grid::toString(type) << " vertex " << vIndex << " at " << vPos << ": " << vSlot.toString());
     assertionEquals5(
       vSlot.level,
       fineGridStatesState.level,
@@ -731,7 +697,6 @@ void peano4::grid::Spacetree::storeVertices(
 bool peano4::grid::Spacetree::isFaceAlongPeriodicBoundaryCondition(
   GridVertex fineGridVertices[TWO_POWER_D], int faceNumber, bool calledByReceivingProcess
 ) const {
-  logTraceInWith2Arguments("isFaceAlongPeriodicBoundaryCondition()", faceNumber, calledByReceivingProcess);
 
   int adjacentRanksOfFace[TWO_POWER_D];
   SpacetreeHelper::getAdjacentRanksOfFace(fineGridVertices, faceNumber, calledByReceivingProcess, adjacentRanksOfFace);
@@ -745,9 +710,6 @@ bool peano4::grid::Spacetree::isFaceAlongPeriodicBoundaryCondition(
 
   holdsPeriodicBoundaryConditionFlag &= isAdjacentToLocalRank;
 
-  logTraceOutWith2Arguments(
-    "isFaceAlongPeriodicBoundaryCondition()", holdsPeriodicBoundaryConditionFlag, isAdjacentToLocalRank
-  );
   return holdsPeriodicBoundaryConditionFlag;
 }
 
@@ -763,12 +725,9 @@ void peano4::grid::Spacetree::mergeGridVertexAdjacencyListsAtHorizontalDomainBou
     // vertex.adjacentRanks and thereby change ownership for later neighbours.
     if (vertex.backupOfAdjacentRanks[i] == neighbour and neighbour != -1) {
       if (inVertex.adjacentRanks[i] != vertex.adjacentRanks[i]) {
-        logDebug(
-          "mergeGridVertexAdjacencyListsAtHorizontalDomainBoundary()",
-          "Update "
+        logDebug("Update "
             << i << "th entry of adjacency data of vertex " << vertex.toString() << " with neighbouring vertex "
-            << inVertex.toString() << " on tree " << _id
-        );
+            << inVertex.toString() << " on tree " << _id);
       }
       vertex.adjacentRanks[i] =  inVertex.adjacentRanks[i];
     }
@@ -786,7 +745,7 @@ void peano4::grid::Spacetree::mergeGridVertexRefinementStateAtHorizontalDomainBo
   assertion4(
     inVertex.getState() != GridVertex::State::HangingVertex, inVertex.toString(), vertex.toString(), _id, neighbour
   );
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
   assertion6(
     tarch::la::equals(vertex.getX(), inVertex.getX())
     or
@@ -853,16 +812,10 @@ void peano4::grid::Spacetree::mergeGridVertexRefinementStateAtHorizontalDomainBo
 
   if (OnlyNeighbourHasTriggeredRefinement || OnlyLocalHasTriggeredRefinement) {
     vertex.setState(GridVertex::State::RefinementTriggered);
-    logDebug(
-      "mergeGridVertexRefinementStateAtHorizontalDomainBoundary( GridVertex )",
-      "set state to " << vertex.toString() << " on tree " << _id << " due to merge with neighbour"
-    );
+    logDebug("set state to " << vertex.toString() << " on tree " << _id << " due to merge with neighbour");
   } else if (OnlyNeighbourHasTriggeredErase || OnlyLocalHasTriggeredErase) {
     vertex.setState(GridVertex::State::EraseTriggered);
-    logDebug(
-      "mergeGridVertexRefinementStateAtHorizontalDomainBoundary( GridVertex )",
-      "set state to " << vertex.toString() << " on tree " << _id << " due to merge with neighbour"
-    );
+    logDebug("set state to " << vertex.toString() << " on tree " << _id << " due to merge with neighbour");
   } else {
     assertion4(vertex.getState() == inVertex.getState(), inVertex.toString(), vertex.toString(), _id, neighbour);
   }
@@ -871,7 +824,6 @@ void peano4::grid::Spacetree::mergeGridVertexRefinementStateAtHorizontalDomainBo
 void peano4::grid::Spacetree::receiveAndMergeGridVertexAtHorizontalBoundary(GridVertex& vertex) {
   assertion(_spacetreeState != SpacetreeState::NewFromSplit and _spacetreeState != SpacetreeState::EmptyRun);
 
-  logTraceInWith1Argument("receiveAndMergeGridVertexAtHorizontalBoundary()", vertex.toString());
 
   //
   // Backup adjacency lists
@@ -909,13 +861,8 @@ void peano4::grid::Spacetree::receiveAndMergeGridVertexAtHorizontalBoundary(Grid
       assertion4(_id == 0, _id, stackNo.first, stackNo.second, vertex.toString());
       assertion3(not _vertexStack.getForPop(_id, stackNo.first)->empty(), stackNo.first, stackNo.second, _id);
       GridVertex inVertex = _vertexStack.getForPop(_id, stackNo.first)->pop();
-      logDebug(
-        "receiveAndMergeGridVertexAtHorizontalBoundary()",
-        "read periodic BC data from stack " << stackNo.first << ": " << inVertex.toString()
-      );
-      logDebug(
-        "receiveAndMergeGridVertexAtHorizontalBoundary()", "normals of involved symmetry axes: " << stackNo.second
-      );
+      logDebug("read periodic BC data from stack " << stackNo.first << ": " << inVertex.toString());
+      logDebug("normals of involved symmetry axes: " << stackNo.second);
       mergeGridVertexRefinementStateAtHorizontalDomainBoundary(vertex, inVertex, _id);
 
       dfor2(k)
@@ -930,11 +877,9 @@ void peano4::grid::Spacetree::receiveAndMergeGridVertexAtHorizontalBoundary(Grid
    }
   }
 
-  logTraceOut("receiveAndMergeGridVertexAtHorizontalBoundary()");
 }
 
 void peano4::grid::Spacetree::sendGridVertex(const GridVertex& vertex) {
-  logTraceInWith2Arguments("sendGridVertex(GridVertex)", vertex.toString(), _id);
 
   assertion2(_spacetreeState != SpacetreeState::EmptyRun, _id, peano4::grid::toString(_spacetreeState));
 
@@ -971,15 +916,11 @@ void peano4::grid::Spacetree::sendGridVertex(const GridVertex& vertex) {
     const auto outStacks = peano4::parallel::Node::getInstance().getOutputStacksForPeriodicBoundaryExchange(vertex.adjacentRanks);
     for (const auto& s : outStacks) {
       _vertexStack.getForPush(_id, s.first)->push(vertex);
-      logDebug(
-        "sendGridVertex(GridVertex)",
-        "vertex " << vertex.toString() << " on tree " << _id
-                  << " goes to stack " << s.first << " to realise periodic BC"
-      );
+      logDebug("vertex " << vertex.toString() << " on tree " << _id
+                  << " goes to stack " << s.first << " to realise periodic BC");
     }
   }
 
-  logTraceOutWith1Argument("sendGridVertex(GridVertex)", SpacetreeHelper::isVertexAdjacentToLocalSpacetree(vertex, _id, _splitTriggered, _splitting, _joinTriggered, _joining, true, true, false));
 }
 
 void peano4::grid::Spacetree::incrementNumberOfAdjacentRefinedLocalCells(GridVertex vertices[TWO_POWER_D]) {
@@ -1149,7 +1090,6 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(const AutomatonState& fi
 }
 
 void peano4::grid::Spacetree::descend(const AutomatonState& state, GridVertex vertices[TWO_POWER_D], GridTraversalObserver& observer) {
-  logTraceInWith2Arguments("descend()", state.toString(), _id);
   assertion(SpacetreeHelper::isSpacetreeNodeRefined(vertices));
 
   const bool hasJoiningTransitions   = not _joining.empty();
@@ -1179,6 +1119,7 @@ void peano4::grid::Spacetree::descend(const AutomatonState& state, GridVertex ve
 
   peano4::utils::LoopDirection loopDirection = PeanoCurve::getLoopDirection(state);
   zfor3(k, loopDirection)
+    traceEnter("Grid bookkeeping before enter");
     const auto kLinearised = utils::dLinearised(k, 3);
 
     VertexType vertexTypes[TWO_POWER_D];
@@ -1239,16 +1180,23 @@ void peano4::grid::Spacetree::descend(const AutomatonState& state, GridVertex ve
       _noParallelTopologyChanges,
       spacetreeStateIsRunning
     );
+    traceLeave("Grid bookkeeping before enter");
 
+    traceEnter("Observer data load");
     observer.loadVertexData(enterNodeGridTraversalEvent);
     observer.loadFaceData(enterNodeGridTraversalEvent);
     observer.loadCellData(enterNodeGridTraversalEvent);
+    traceLeave("Observer data load");
 
     if (canReceiveUserData) {
+      traceEnter("Observer data receive");
       receiveAndMergeUserData(fineGridStates[kLinearised], observer, enterNodeGridTraversalEvent, fineGridVertices);
+      traceLeave("Observer data receive");
     }
 
+    traceEnter("Observer enter node");
     observer.enterNode(enterNodeGridTraversalEvent);
+    traceLeave("Observer enter node");
 
     _statistics.minH = tarch::la::min(_statistics.minH, 1.0 / 3.0 * state.h);
 
@@ -1289,6 +1237,7 @@ void peano4::grid::Spacetree::descend(const AutomatonState& state, GridVertex ve
       }
     }
 
+    traceEnter("Grid bookkeeping after child");
     GridTraversalEvent leaveNodeGridTraversalEvent = _gridTraversalEventGenerator.createLeaveNodeTraversalEvent(
       enterNodeGridTraversalEvent,
       vertices,
@@ -1306,25 +1255,32 @@ void peano4::grid::Spacetree::descend(const AutomatonState& state, GridVertex ve
       _noParallelTopologyChanges,
       spacetreeStateIsRunning
     );
+    traceLeave("Grid bookkeeping after child");
 
+    traceEnter("Observer leave node");
     observer.leaveNode(leaveNodeGridTraversalEvent);
+    traceLeave("Observer leave node");
 
     if (canSendUserData) {
+      traceEnter("Observer data send");
       sendUserData(fineGridStates[kLinearised], observer, leaveNodeGridTraversalEvent, fineGridVertices);
+      traceLeave("Observer data send");
     }
 
+    traceEnter("Observer data store");
     observer.storeCellData(leaveNodeGridTraversalEvent);
     observer.storeFaceData(leaveNodeGridTraversalEvent);
     observer.storeVertexData(leaveNodeGridTraversalEvent);
+    traceLeave("Observer data store");
 
+    traceEnter("Grid bookkeeping after leave");
     if (not _noParallelTopologyChanges) {
       splitOrJoinCellBottomUp(vertices, fineGridVertices);
     }
 
     storeVertices(fineGridStates[kLinearised], vertices, fineGridVertices, vertexTypes, k, observer);
+    traceLeave("Grid bookkeeping after leave");
   endzfor
-
-  logTraceOut("descend()");
 }
 
 void peano4::grid::Spacetree::receiveAndMergeUserData(
@@ -1360,11 +1316,8 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
         );
         for (int n = 0; n < receivingNeighbourTrees.count; ++n) {
           const int p = receivingNeighbourTrees.ids[n];
-          logDebug(
-            "receiveAndMergeUserData()",
-            "receive neighbour data from neighbour "
-              << p << " for vertex " << fineGridVertices[inVertexPositionWithinCell].toString()
-          );
+          logDebug("receive neighbour data from neighbour "
+              << p << " for vertex " << fineGridVertices[inVertexPositionWithinCell].toString());
           const int fromStack = peano4::parallel::Node::getInputStackNumberForHorizontalDataExchange(p);
           observer.receiveAndMergeVertexData(
             inVertexPositionWithinCell,
@@ -1424,7 +1377,7 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
             peano4::parallel::Node::getOutputStackForPeriodicBoundaryExchange(inFacePositionWithinCell)
           );
 
-          logDebug("receiveAndMergeUserData()", "Will merge face from periodic BC stack #" << fromStack << " with local face");
+          logDebug("Will merge face from periodic BC stack #" << fromStack << " with local face");
 
           observer.receiveAndMergeFaceData(
             inFacePositionWithinCell,
@@ -1472,12 +1425,9 @@ void peano4::grid::Spacetree::sendUserData(
 
         for (int n = 0; n < outgoingNeighbourTrees.count; ++n) {
           const int p = outgoingNeighbourTrees.ids[n];
-          logDebug(
-            "sendUserData()",
-            "send local vertex data of "
+          logDebug("send local vertex data of "
               << fineGridVertices[outVertexPositionWithinCell].toString() << " from stack " << outVertexStack
-              << " on tree " << _id << " to neighbour " << p << ". Position within cell=" << outVertexPositionWithinCell
-          );
+              << " on tree " << _id << " to neighbour " << p << ". Position within cell=" << outVertexPositionWithinCell);
           const int toStack = peano4::parallel::Node::getOutputStackNumberForHorizontalDataExchange(p);
           observer.sendVertexData(
             outVertexPositionWithinCell,
@@ -1490,12 +1440,9 @@ void peano4::grid::Spacetree::sendUserData(
         if (_id == 0 and hasPeriodicBCs(fineGridVertices[outVertexPositionWithinCell].adjacentRanks)) {
           const auto outStacks = peano4::parallel::Node::getInstance().getOutputStacksForPeriodicBoundaryExchange(fineGridVertices[outVertexPositionWithinCell].adjacentRanks);
           for (const auto& stackNo : outStacks) {
-            logDebug(
-              "sendUserData()",
-              "vertex "
+            logDebug("vertex "
                 << fineGridVertices[outVertexPositionWithinCell].toString() << " on tree " << _id << " goes to stack "
-                << stackNo.first << " to realise periodic BC"
-            );
+                << stackNo.first << " to realise periodic BC");
 
             observer.sendVertexData(
               outVertexPositionWithinCell,
@@ -1509,13 +1456,10 @@ void peano4::grid::Spacetree::sendUserData(
         for (const auto& p : _splitting) {
           const auto& adjacentRanks = fineGridVertices[outVertexPositionWithinCell].backupOfAdjacentRanks;
           if (std::find(std::begin(adjacentRanks), std::end(adjacentRanks), p) != std::end(adjacentRanks)) {
-            logDebug(
-              "sendUserData()",
-              "stream local vertex data of "
+            logDebug("stream local vertex data of "
                 << fineGridVertices[outVertexPositionWithinCell].toString() << " from stack " << outVertexStack
                 << " on tree " << _id << " to upcoming worker " << p << ". Position within cell="
-                << outVertexPositionWithinCell << ". event=" << leaveCellTraversalEvent.toString()
-            );
+                << outVertexPositionWithinCell << ". event=" << leaveCellTraversalEvent.toString());
             const int toStack = peano4::parallel::Node::getOutputStackNumberForVerticalDataExchange(p);
             observer.sendVertexData(
               outVertexPositionWithinCell,
@@ -1524,10 +1468,7 @@ void peano4::grid::Spacetree::sendUserData(
               leaveCellTraversalEvent
             );
           } else {
-            logDebug(
-              "sendUserData()",
-              "skip vertex data of " << fineGridVertices[outVertexPositionWithinCell].toString() << " on tree " << _id
-            );
+            logDebug("skip vertex data of " << fineGridVertices[outVertexPositionWithinCell].toString() << " on tree " << _id);
           }
         }
       }
@@ -1553,12 +1494,9 @@ void peano4::grid::Spacetree::sendUserData(
           _noParallelTopologyChanges
         );
         if (outgoingNeighbourTree >= 0) {
-          logDebug(
-            "sendUserData()",
-            "send local face from stack "
+          logDebug("send local face from stack "
               << outFaceStack << " of tree " << _id << " to neighbour " << outgoingNeighbourTree
-              << ". Position within cell=" << outFacePositionWithinCell
-          );
+              << ". Position within cell=" << outFacePositionWithinCell);
 
           const int toStack = peano4::parallel::Node::getOutputStackNumberForHorizontalDataExchange(outgoingNeighbourTree);
           observer.sendFaceData(
@@ -1574,10 +1512,7 @@ void peano4::grid::Spacetree::sendUserData(
             outFacePositionWithinCell
           );
 
-          logDebug(
-            "sendUserData()",
-            "send local face from stack " << outFaceStack << " of tree " << _id << " to periodic BC stack #" << toStack
-          );
+          logDebug("send local face from stack " << outFaceStack << " of tree " << _id << " to periodic BC stack #" << toStack);
 
           observer.sendFaceData(
             outFacePositionWithinCell,
@@ -1592,12 +1527,9 @@ void peano4::grid::Spacetree::sendUserData(
       SpacetreeHelper::getAdjacentRanksOfFace(fineGridVertices, outFacePositionWithinCell, false, adjacentRanks);
       for (const auto& p : _splitting) {
       if (std::find(std::begin(adjacentRanks), std::end(adjacentRanks), p) != std::end(adjacentRanks)) {
-          logDebug(
-            "sendUserData()",
-            "stream local face from stack "
+          logDebug("stream local face from stack "
               << outFaceStack << " of tree " << _id << " to new worker " << p
-              << ". Position within cell=" << outFacePositionWithinCell
-          );
+              << ". Position within cell=" << outFacePositionWithinCell);
 
           const int toStack = peano4::parallel::Node::getOutputStackNumberForVerticalDataExchange(p);
           observer.sendFaceData(
@@ -1614,11 +1546,8 @@ void peano4::grid::Spacetree::sendUserData(
   //int outCellStack = leaveCellTraversalEvent.getCellData();
   for (const auto& p : _splitting) {
     if (SpacetreeHelper::getTreeOwningSpacetreeNode(fineGridVertices, _id, _splitTriggered, _splitting, _joinTriggered, _joining) == p) {
-      logDebug(
-        "sendUserData()",
-        "stream local cell of tree "
-          << _id << " to new worker " << p << ". Left bottom vertex=" << fineGridVertices[0].toString()
-      );
+      logDebug("stream local cell of tree "
+          << _id << " to new worker " << p << ". Left bottom vertex=" << fineGridVertices[0].toString());
 
       const int toStack = peano4::parallel::Node::getOutputStackNumberForVerticalDataExchange(p);
       observer.sendCellData(toStack, stacks::SendReceiveContext::ForkDomain, leaveCellTraversalEvent);
@@ -1633,12 +1562,9 @@ void peano4::grid::Spacetree::splitOrJoinCellBottomUp(GridVertex coarseGridVerti
     const bool isSplitCandidate = SpacetreeHelper::isSpacetreeNodeSplitCandidate(coarseGridVertices, fineGridVertices, _id, _splitTriggered, _splitting, _joinTriggered, _joining);
     const bool isRefined        = SpacetreeHelper::isSpacetreeNodeRefined(fineGridVertices);
 
-    logDebug(
-      "splitOrJoinCellBottomUp()",
-      "Checked cell for bottom-up splits (first target tree=" << _splitTriggered.begin()->first
+    logDebug("Checked cell for bottom-up splits (first target tree=" << _splitTriggered.begin()->first
         << "). IsRefined=" << isRefined << ", IsSplitCandidate=" << isSplitCandidate
-        << " / " << fineGridVertices[0].toString()
-    );
+        << " / " << fineGridVertices[0].toString());
 
     if (isSplitCandidate and isRefined) {
       int reducedMarker = _splittedCells.back();
@@ -1677,10 +1603,7 @@ void peano4::grid::Spacetree::splitOrJoinCellBottomUp(GridVertex coarseGridVerti
     int targetSpacetreeId = _splittedCells.back();
     _splittedCells.pop_back();
 
-    logInfo(
-      "splitOrJoinCellBottomUp()",
-      "Checked cell for top-down splits (first split " << _splitTriggered.begin()->first << ")"
-    );
+    logInfo("Checked cell for top-down splits (first split " << _splitTriggered.begin()->first << ")");
     assertion(SpacetreeHelper::isSpacetreeNodeLocal(fineGridVertices, _id, _splitTriggered, _splitting, _joinTriggered, _joining, false, false, false));
     assertion(SpacetreeHelper::isSpacetreeNodeLocal(coarseGridVertices, _id, _splitTriggered, _splitting, _joinTriggered, _joining, false, false, false));
     updateVertexRanksWithinCell(fineGridVertices, targetSpacetreeId);
@@ -1710,10 +1633,7 @@ void peano4::grid::Spacetree::splitCellTopDown(GridVertex coarseGridVertices[TWO
     } else if (not isParentSplit and isSplitCandidate and isRefined) {
       assertion(SpacetreeHelper::isSpacetreeNodeLocal(fineGridVertices, _id, _splitTriggered, _splitting, _joinTriggered, _joining, false, false, false));
       assertion(SpacetreeHelper::isSpacetreeNodeLocal(coarseGridVertices, _id, _splitTriggered, _splitting, _joinTriggered, _joining, false, false, false));
-      logDebug(
-        "splitCellTopDown()",
-        "Refined cell at " << fineGridVertices[0].toString() << " should go with all children to tree " << targetSpacetreeId
-      );
+      logDebug("Refined cell at " << fineGridVertices[0].toString() << " should go with all children to tree " << targetSpacetreeId);
       _splittedCells.push_back(targetSpacetreeId);
     } else if (not isParentSplit and isSplitCandidate and not isRefined) {
       updateSplittingCounter(targetSpacetreeId);
@@ -1721,24 +1641,21 @@ void peano4::grid::Spacetree::splitCellTopDown(GridVertex coarseGridVertices[TWO
       assertion(SpacetreeHelper::isSpacetreeNodeLocal(coarseGridVertices, _id, _splitTriggered, _splitting, _joinTriggered, _joining, false, false, false));
       _splittedCells.push_back(targetSpacetreeId);
     }
-    logDebug("splitCellTopDown()", "#SplittedCells=" << _splittedCells.size());
+    logDebug("#SplittedCells=" << _splittedCells.size());
   }
 }
 
 void peano4::grid::Spacetree::mergeCellFromWorkerWithMasterThroughoutJoin(GridVertex coarseGridVertices[TWO_POWER_D], GridVertex fineGridVertices[TWO_POWER_D]) {
   for (const auto& worker : _joining) {
     if (SpacetreeHelper::isSpacetreeNodeLocal(coarseGridVertices, _id, _splitTriggered, _splitting, _joinTriggered, _joining, false, false, false) and SpacetreeHelper::getTreeOwningSpacetreeNode(fineGridVertices, _id, _splitTriggered, _splitting, _joinTriggered, _joining) == worker) {
-      logDebug(
-        "mergeCellFromWorkerWithMasterThroughoutJoin()",
-        "Cell from worker " << worker << " is merged into master " << _id
-      );
+      logDebug("Cell from worker " << worker << " is merged into master " << _id);
       updateVertexRanksWithinCell(fineGridVertices, _id);
     } else {
       for (int i = 0; i < TWO_POWER_D; i++) {
-        logDebug("mergeCellFromWorkerWithMasterThroughoutJoin()", "- " << coarseGridVertices[i].toString());
+        logDebug("- " << coarseGridVertices[i].toString());
       }
       for (int i = 0; i < TWO_POWER_D; i++) {
-        logDebug("mergeCellFromWorkerWithMasterThroughoutJoin()", "- " << fineGridVertices[i].toString());
+        logDebug("- " << fineGridVertices[i].toString());
       }
     }
   }
@@ -1786,12 +1703,9 @@ void peano4::grid::Spacetree::split(int newSpacetreeId, const SplitInstruction& 
   auto firstMode = _splitTriggered.begin()->second.mode;
   for (auto& p : _splitTriggered) {
     if (p.second.mode != firstMode) {
-      logWarning(
-        "split()",
-        "Split of tree "
+      logWarning("Split of tree "
           << p.first << " is of type " << p.second.mode << " while other splits have mode " << firstMode
-          << ". Switch all splits to " << firstMode
-      );
+          << ". Switch all splits to " << firstMode);
       p.second.mode = firstMode;
     }
   }
@@ -1863,7 +1777,7 @@ void peano4::grid::Spacetree::joinWithMaster() {
 }
 
 void peano4::grid::Spacetree::joinWithWorker(int id) {
-  logInfo("joinWithWorker()", "Merge tree " << id << " into tree " << _id);
+  logInfo("Merge tree " << id << " into tree " << _id);
   assertion2(_joinTriggered.count(id) == 0, id, _id);
   _joinTriggered.insert(id);
   assertion2(_splitTriggered.empty(), id, toString());

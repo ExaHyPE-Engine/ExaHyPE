@@ -71,15 +71,6 @@ Consult the script's help.
 
 # Logging
 
-ExaHyPE searches for a text file exahype.log-filter in the working
-directory.
-If no such file is found (or the file is corrupted), then it will use some
-default filter rules, i.e. dump the information to the terminal that I consider
-to be most important.
-If you want to adopt the output, I strongly recommend that you add a log filter
-configuration file.
-
-
 Often, users are only interested in a particular phase of the simulation or want
 to specify different log entries per program phase. The program phases offered
 by default are
@@ -91,10 +82,6 @@ by default are
 - plot-solution
 - time-step
 
-The syntax of log filter files is discussed in the
-@ref tarch_logging "generic logging documentation of Peano".
-
 
 
 */
-

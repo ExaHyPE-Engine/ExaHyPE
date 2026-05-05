@@ -60,7 +60,7 @@ struct RiemannSolverFusedFunctor {
         const int x = index / {{NUMBER_OF_VOLUMES_PER_AXIS}};
         const int y = index % {{NUMBER_OF_VOLUMES_PER_AXIS}};
 {% endif %}
-        {{ ComputeFluxesAndPerformTimeStep() | indent(8) }}
+        {{ ComputeFluxesAndPerformTimeStep(False) | indent(8) }}
       },
       Kokkos::Max<double>(maxEigenvalue)
     );

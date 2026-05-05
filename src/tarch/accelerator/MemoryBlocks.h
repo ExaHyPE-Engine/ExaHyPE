@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 
 #include <map>
@@ -13,8 +13,6 @@ namespace tarch::accelerator {
 
 class tarch::accelerator::MemoryBlocks {
 private:
-  static tarch::logging::Log _log;
-
   std::map<void*, std::size_t> _memoryBlockTable;
   multicore::BooleanSemaphore  _memoryBlockSemaphore;
 

@@ -39,7 +39,7 @@ namespace {
       previousZeroDataEntries = 0;
       return std::to_string(value);
     }
-#if PEANO_DEBUG > 0
+#if PEANO_DEBUG
     else {
       return "," + std::to_string(value);
     }

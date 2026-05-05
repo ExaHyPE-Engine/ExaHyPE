@@ -10,8 +10,6 @@
 #include <stdexcept>
 
 
-tarch::logging::Log toolbox::particles::TrajectoryDatabase::_log( "toolbox::particles::TrajectoryDatabase" );
-
 
 toolbox::particles::TrajectoryDatabase::Entry::Entry( const TrajectoryDatabase& database, const tarch::la::Vector<DIMENSIONS,double>&  x_, double  timestamp_ ):
   x(x_),
@@ -126,7 +124,7 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
     if (outputPath.has_parent_path()) {
       std::filesystem::create_directories(outputPath.parent_path());
     }
-    logDebug( "dumpCSVFile()", "dump particle trajectory database " << snapshotFileName.str() );
+    logDebug("dump particle trajectory database " << snapshotFileName.str());
     std::ofstream file( snapshotFileName.str() );
     file << std::scientific << std::setprecision(_precision);
     #if DIMENSIONS==2
@@ -170,7 +168,7 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
       }
     }
   } else {
-    logDebug( "dumpCSVFile()", "particle trajectory database is empty. Do not dump " << snapshotFileName.str() );
+    logDebug("particle trajectory database is empty. Do not dump " << snapshotFileName.str());
   }
 
   if (_clearDatabaseAfterFlush) {
@@ -234,7 +232,7 @@ toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::Tr
       and
       not tarch::la::equals(oldX,x)
     ) {
-      logWarning( "getAction(...)", "particle " << number.first << "x" << number.second << " has two locations " << x << " and " << oldX << " for same time stamp " << timestamp << ". This is inconsistent");
+      logWarning("particle " << number.first << "x" << number.second << " has two locations " << x << " and " << oldX << " for same time stamp " << timestamp << ". This is inconsistent");
       result=toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Replace;
     }
     else if (
@@ -277,7 +275,7 @@ toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::Tr
         and
         tarch::la::equals( _data.at(number).front().timestamp, timestamp )
       ) {
-        //logWarning( "getAction(...)", "particle " << number.first << "x" << number.second << " at " << x << " has different values for same time stamp " << timestamp << ". This is inconsistent");
+        //logWarning("particle " << number.first << "x" << number.second << " at " << x << " has different values for same time stamp " << timestamp << ". This is inconsistent");
         return toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Replace;
       }
       else if ( _deltasAreRelative and _maxDataDelta>=_deltaCutOffThreshold and delta/_maxDataDelta >= _dataDelta ) {
@@ -341,7 +339,7 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
 
   if (dumpDatabaseSnapshot()) {
     dumpCSVFile();
-    logInfo( "addSnapshot(...)", "flushed database file (temporary flush - simulation has not terminated yet)" );
+    logInfo("flushed database file (temporary flush - simulation has not terminated yet)");
   }
 }
 
@@ -406,7 +404,7 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
 
   if (dumpDatabaseSnapshot()) {
     dumpCSVFile();
-    logInfo( "addSnapshot(...)", "flush database file " << _fileName << " (temporary flush - simulation has not terminated yet)" );
+    logInfo("flush database file " << _fileName << " (temporary flush - simulation has not terminated yet)");
   }
 }
 

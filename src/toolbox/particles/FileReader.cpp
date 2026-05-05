@@ -6,8 +6,6 @@
 #include <string.h>
 
 
-tarch::logging::Log  toolbox::particles::FileReader::_log( "toolbox::particles::FileReader" );
-
 
 void toolbox::particles::FileReader::readDatFile( const std::string& filename, const double scale ) {
   std::fstream fin;
@@ -16,7 +14,7 @@ void toolbox::particles::FileReader::readDatFile( const std::string& filename, c
   std::string line;
 
   if (not fin) {
-    logError( "readDatFile()", "Was not able to open file " << filename );
+    logError("Was not able to open file " << filename);
     std::abort();
   }
 
@@ -37,7 +35,7 @@ void toolbox::particles::FileReader::readDatFile( const std::string& filename, c
 
   fin.close();
 
-  logInfo( "readDatFile()", "Read " << _data.size() << " particle positions from file " << filename );
+  logInfo("Read " << _data.size() << " particle positions from file " << filename);
 }
 
 

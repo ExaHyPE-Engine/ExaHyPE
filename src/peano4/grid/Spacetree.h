@@ -11,7 +11,7 @@
 #include "SplitInstruction.h"
 #include "VertexLookupTable.h"
 
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 
 #include "peano4/stacks/Stack.h"
 #include "peano4/stacks/TreeToStacks.h"
@@ -41,7 +41,6 @@ namespace peano4 {
 }
 class peano4::grid::Spacetree {
   private:
-    static tarch::logging::Log  _log;
 
     friend class peano4::parallel::SpacetreeSet;
     friend class peano4::grid::tests::SpacetreeTest;

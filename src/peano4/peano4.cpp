@@ -11,6 +11,7 @@
 #include "tarch/accelerator/Device.h"
 #include "tarch/accelerator/MemoryBlocks.h"
 #include "tarch/accelerator/MemoryManager.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/BooleanSemaphore.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
@@ -20,6 +21,8 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
+#include <string>
+#include <vector>
 
 /**
  * For the machine name. If it doesn't work, switch it off in the file
@@ -30,62 +33,67 @@
 #endif
 
 namespace {
-  tarch::logging::Log _log("peano4");
-  constexpr int       StartupHeaderLabelWidth = 20;
+  constexpr int StartupHeaderLabelWidth = 20;
 
   template <typename T>
-  void logStartupHeaderEntry(const std::string& label, const T& value) {
+  void appendStartupHeaderEntry(std::vector<std::string>& lines, const std::string& label, const T& value) {
     std::ostringstream message;
     message << std::left << std::setw(StartupHeaderLabelWidth) << (label + ":") << value;
-    logInfo("logStartupHeader()", message.str());
+    lines.push_back(message.str());
   }
 
-  void logStartupHeader() {
-    if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      logInfo("logStartupHeader()", "Peano 4 (C) www.peano-framework.org");
-      logStartupHeaderEntry("Dimensions", DIMENSIONS);
+  std::vector<std::string> createStartupHeaderLines() {
+    std::vector<std::string> result;
+    result.push_back("Peano 4 (C) www.peano-framework.org");
+    appendStartupHeaderEntry(result, "Dimensions", DIMENSIONS);
 
-      std::string mpiInfo = "Off";
+    std::string mpiInfo = "Off";
 #if defined(WITH_MPI)
-      mpiInfo = std::to_string(tarch::mpi::Rank::getInstance().getNumberOfRanks()) + " Rank(s)";
+    mpiInfo = std::to_string(tarch::mpi::Rank::getInstance().getNumberOfRanks()) + " Rank(s)";
 #endif
-      logStartupHeaderEntry("MPI", mpiInfo);
+    appendStartupHeaderEntry(result, "MPI", mpiInfo);
 
-      std::string openmpInfo = "Off";
+    std::string openmpInfo = "Off";
 #if defined(WITH_OPENMP)
-      openmpInfo = std::to_string(tarch::multicore::Core::getInstance().getNumberOfThreads()) + " Thread(s)";
+    openmpInfo = std::to_string(tarch::multicore::Core::getInstance().getNumberOfThreads()) + " Thread(s)";
 #endif
-      logStartupHeaderEntry("OpenMP", openmpInfo);
+    appendStartupHeaderEntry(result, "OpenMP", openmpInfo);
 
-      logStartupHeaderEntry("CPU Features", tarch::detectCPUFeatures());
-      logStartupHeaderEntry("Stack Size", tarch::detectStackSizeLimit());
+    appendStartupHeaderEntry(result, "CPU Features", tarch::detectCPUFeatures());
+    appendStartupHeaderEntry(result, "Stack Size", tarch::detectStackSizeLimit());
 
-      std::string gpuInfo = "None";
+    std::string gpuInfo = "None";
 #if defined(WITH_GPU)
 #if defined(WITH_GPU_SYCL)
-      gpuInfo = "SYCL";
+    gpuInfo = "SYCL";
 #elif defined(WITH_GPU_HIP)
-      gpuInfo = "HIP";
+    gpuInfo = "HIP";
 #elif defined(WITH_GPU_CUDA)
-      gpuInfo = "CUDA";
+    gpuInfo = "CUDA";
 #elif defined(WITH_GPU_KOKKOS)
-      gpuInfo = "Kokkos";
+    gpuInfo = "Kokkos";
 #elif defined(WITH_GPU_OMPT)
-      gpuInfo = "OMPT";
+    gpuInfo = "OMPT";
 #endif
-      if (gpuInfo != "None") {
-        gpuInfo += ", ";
-        gpuInfo += std::to_string(tarch::accelerator::Device::getInstance().getNumberOfDevices());
-        gpuInfo += " Device(s)";
-      }
-#endif
-      logStartupHeaderEntry("GPU Backend", gpuInfo);
-
-      logStartupHeaderEntry("Debug Level", PEANO_DEBUG);
-      logStartupHeaderEntry("Git Branch", peano4::version::GitBranch);
-      logStartupHeaderEntry("Git Commit Message", peano4::version::GitCommitMessage);
-      logStartupHeaderEntry("Git Commit Hash", peano4::version::GitCommitHash);
+    if (gpuInfo != "None") {
+      gpuInfo += ", ";
+      gpuInfo += std::to_string(tarch::accelerator::Device::getInstance().getNumberOfDevices());
+      gpuInfo += " Device(s)";
     }
+#endif
+    appendStartupHeaderEntry(result, "GPU Backend", gpuInfo);
+
+    appendStartupHeaderEntry(
+      result,
+      "Diagnostics",
+      std::string("Trace=") + (PEANO_TRACE ? "On" : "Off") + ", Assertions=" + (PEANO_ASSERTIONS ? "On" : "Off")
+        + ", Debug=" + (PEANO_DEBUG ? "On" : "Off")
+    );
+    appendStartupHeaderEntry(result, "Git Branch", peano4::version::GitBranch);
+    appendStartupHeaderEntry(result, "Git Commit Message", peano4::version::GitCommitMessage);
+    appendStartupHeaderEntry(result, "Git Commit Hash", peano4::version::GitCommitHash);
+
+    return result;
   }
 } // namespace
 
@@ -125,7 +133,9 @@ void peano4::init(
   peano4::parallel::Node::getInstance().init();
   peano4::parallel::SpacetreeSet::getInstance().init(offset, width, periodicBC);
 
-  logStartupHeader();
+  for (const std::string& line : createStartupHeaderLines()) {
+    logInfo(line);
+  }
 }
 
 void peano4::shutdown() {
@@ -140,7 +150,7 @@ void peano4::shutdown() {
   tarch::accelerator::MemoryBlocks::getInstance().checkForMemoryLeaks();
   tarch::accelerator::MemoryBlocks::getInstance().clear();
   tarch::multicore::Core::getInstance().shutdown();
+  logInfo("Peano terminated successfully");
+  tarch::instrumentation::Log::close();
   tarch::mpi::Rank::getInstance().shutdown();
-
-  // logInfo("shutdown()", "Peano terminated successfully");
 }

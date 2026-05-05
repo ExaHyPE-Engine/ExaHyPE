@@ -16,8 +16,6 @@
 #include "repositories/SolverRepository.h"
 
 
-tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _solverState(SolverState::GridConstruction),
   _cellUpdates(0),
@@ -159,8 +157,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::printTimeStep() {
   {{PRINT_TIME_STEP_IMPLEMENTATION}}
 
   if (getNumberOfTroubledCells() > 0) {
-    logInfo("printTimeStep()", "Solver {{SOLVER_NAME}}:");
-    logInfo("printTimeStep()", "Number of troubled cells: " << getNumberOfTroubledCells());
+    logInfo("Solver {{SOLVER_NAME}}:");
+    logInfo("Number of troubled cells: " << getNumberOfTroubledCells());
   }
 }
 

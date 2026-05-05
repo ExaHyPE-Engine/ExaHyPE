@@ -37,8 +37,6 @@ public:
   typedef Container::const_iterator  const_iterator;
 
 private:
-  static tarch::logging::Log _log;
-
   Container _container;
 
 public:

@@ -4,7 +4,7 @@
 
 
 #include "tarch/tests/TestCase.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 
 
 namespace tarch {
@@ -21,7 +21,6 @@ namespace tarch {
  */
 class tarch::mpi::tests::StringTest: public tarch::tests::TestCase {
   private:
-    static tarch::logging::Log _log;
 
     /**
      * Tests constructors.

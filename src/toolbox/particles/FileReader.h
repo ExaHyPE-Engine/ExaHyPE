@@ -25,7 +25,6 @@ namespace toolbox {
  */
 class toolbox::particles::FileReader {
   private:
-    static tarch::logging::Log                         _log;
 
     std::list< tarch::la::Vector<DIMENSIONS,double> >  _data;
   public:

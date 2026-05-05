@@ -42,7 +42,7 @@ class InsertParticlesByCoordinates(
 
       _particleNumberOnThisTree++;
 
-      logInfo("touchVertexFirstTime()", "Insert particle at " << particle->getX());
+      logInfo("Insert particle at " << particle->getX());
       """
             ).render(**self.d),
             additional_includes=additional_includes

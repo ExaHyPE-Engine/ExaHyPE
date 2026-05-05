@@ -4,12 +4,6 @@
 #include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/utils/Loop.h"
 
-
-namespace {
-  tarch::logging::Log _log("toolbox::particles");
-} // namespace
-
-
 double toolbox::particles::relativeSpatialOwnershipTolerance(const ::peano4::datamanagement::CellMarker& marker) {
   return internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
 }
@@ -66,19 +60,13 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::getPart
     if (remainsOnSameLevel and currentAssociation == destAssociation) {
       return ParticleReassociationInstruction_Keep;
     } else if (remainsOnSameLevel) {
-      logDebug(
-        "getParticleReassociationInstructionWithinCellWithIntraCellReassignment(...)",
-        "reassign particle at "
-          << x << " within cell " << marker.toString() << " which had been associated with vertex " << currentAssociation << " but belongs to " << destAssociation
-      );
+      logDebug("reassign particle at "
+          << x << " within cell " << marker.toString() << " which had been associated with vertex " << currentAssociation << " but belongs to " << destAssociation);
       return destAssociation.to_ulong();
     } else if (not marker.isParentLocal()) {
       return ParticleReassociationInstruction_SieveGlobally;
     } else {
-      logDebug(
-        "getParticleReassociationInstructionWithinCellWithIntraCellReassignment(...)",
-        "lift particle at " << x << " from cell " << marker.toString() << " as difference is " << (x - marker.getX())
-      );
+      logDebug("lift particle at " << x << " from cell " << marker.toString() << " as difference is " << (x - marker.getX()));
 
       const std::bitset<DIMENSIONS> coarseDestAssociation = internal::getParticleAssociationWithinCell(x, marker.getInvokingParentCellsCentre());
 

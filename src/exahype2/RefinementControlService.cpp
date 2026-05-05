@@ -7,8 +7,6 @@
 #include "tarch/multicore/RecursiveLock.h"
 #include "tarch/services/ServiceRepository.h"
 
-tarch::logging::Log exahype2::RefinementControlService::_log("exahype2::RefinementControlService");
-
 int exahype2::RefinementControlService::_reductionTag(
   tarch::mpi::Rank::reserveFreeTag(
     "exahype2::"
@@ -55,7 +53,7 @@ void exahype2::RefinementControlService::receiveDanglingMessages() {
       int byteCount = 0;
       MPI_Get_count(&status, MPI_BYTE, &byteCount);
       const int numberOfMessages = byteCount / static_cast<int>(sizeof(peano4::grid::GridControlEvent));
-      logDebug("receiveDanglingMessages()", "Got " << numberOfMessages << " event(s) from rank " << status.MPI_SOURCE);
+      logDebug("Got " << numberOfMessages << " event(s) from rank " << status.MPI_SOURCE);
 
       std::vector<peano4::grid::GridControlEvent> receiveBuffer;
       receiveBuffer.resize(numberOfMessages);
@@ -67,10 +65,9 @@ void exahype2::RefinementControlService::receiveDanglingMessages() {
       }
 
       logDebug(
-        "receiveDanglingMessages()",
         "Now hold "
-          << _remoteNewEvents.size() << " new remote events and " << _committedEvents.size()
-          << " committed events (valid for this traversal)"
+        << _remoteNewEvents.size() << " new remote events and " << _committedEvents.size()
+        << " committed events (valid for this traversal)"
       );
     }
   }
@@ -112,12 +109,11 @@ void exahype2::RefinementControlService::finishStep() {
 
   if (not _committedEvents.empty()) {
     logDebug(
-      "finishStep()",
       "Activate "
-        << _committedEvents.size()
-        << " refinement/erase instructions (can be taken into account in next grid sweep). Keep "
-        << _localNewEvents.size() << " local event(s) to be re-delivered later (max lifetime " << maxLifetime
-        << ") besides the " << _remoteNewEvents.size() << " remote events which will also be re-delivered next"
+      << _committedEvents.size()
+      << " refinement/erase instructions (can be taken into account in next grid sweep). Keep "
+      << _localNewEvents.size() << " local event(s) to be re-delivered later (max lifetime " << maxLifetime
+      << ") besides the " << _remoteNewEvents.size() << " remote events which will also be re-delivered next"
     );
   }
 
@@ -158,10 +154,7 @@ void exahype2::RefinementControlService::freeAllPendingSendRequests() {
 void exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() {
   _sendRequests.clear();
 
-  logDebug(
-    "triggerSendOfCopyOfCommittedEvents()",
-    "Share my " << _copyOfCommittedEvents.size() << " event(s) with others"
-  );
+  logDebug("Share my " << _copyOfCommittedEvents.size() << " event(s) with others");
   if (_copyOfCommittedEvents.size() > 0) {
     _sendRequests = std::vector<MPI_Request*>(tarch::mpi::Rank::getInstance().getNumberOfRanks(), nullptr);
     for (int rank = 0; rank < tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {

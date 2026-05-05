@@ -32,7 +32,6 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
   
   
   TemplateAMR = """  
-  logTraceInWith2Arguments( "touchCellFirstTime(...)", marker.willBeRefined(), marker.hasBeenRefined() );
 
   ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
 
@@ -89,7 +88,7 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
       and 
       tarch::la::smaller( tarch::la::max( marker.getH() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH )
     ) {
-      logDebug( "touchCellFirstTime(...)", "drop refine instructions, as mesh would be too small" );
+      logDebug("drop refine instructions, as mesh would be too small");
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
     else if (refinementCriterion==::exahype2::RefinementCommand::Erase and 3.0* tarch::la::max( marker.getH() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH ) {
@@ -102,7 +101,6 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
 
   {% endif %}    
   _localRefinementControl.addCommand( marker.getX(), marker.getH(), refinementCriterion, {{EVENT_LIFETIME}} );
-  logTraceOutWith1Argument( "touchCellFirstTime(...)", toString(refinementCriterion) );
   """
   
     

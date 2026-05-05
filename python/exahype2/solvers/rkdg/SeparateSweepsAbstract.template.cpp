@@ -9,9 +9,6 @@
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/services/ServiceRepository.h"
 
-
-tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
-
 std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
 
@@ -122,7 +119,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   _maxCellHThisTimeStep = std::max(_maxCellHThisTimeStep,cellSize);
   _minCellHThisTimeStep = std::min(_minCellHThisTimeStep,cellSize);
 
-  logDebug( "update(double,double,double)", "updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << cellSize << ": t(new)=" << _minTimeStampThisTimeStep );
+  logDebug("updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << cellSize << ": t(new)=" << _minTimeStampThisTimeStep);
 }
 
 
@@ -242,9 +239,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
     _cellUpdates    = 0;
   }
 
-  // if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-  //   logInfo("startTimeStep()", "phase " + toString(_solverState));
-  // }
 }
 
 

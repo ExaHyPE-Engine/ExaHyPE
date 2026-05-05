@@ -598,9 +598,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   double                                       dt,
   int                                          normal
 )  {
-  logTraceInWith4Arguments( "maxEigenvalue(...)", x, t, dt, normal );
   // @todo implement
-  logTraceOut( "maxEigenvalue(...)" );
 }
 {% endif %}
 
@@ -613,9 +611,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   int                                          normal,
   double * NOALIAS F // F[{{NUMBER_OF_UNKNOWNS}}]
 )  {
-  logTraceInWith4Arguments( "flux(...)", faceCentre, t, dt, normal );
   // @todo implement
-  logTraceOut( "flux(...)" );
 }
 {% endif %}
 
@@ -629,9 +625,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   int                                          normal,
   double * NOALIAS                        BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
 )  {
-  logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, t, dt, normal );
   // @todo implement
-  logTraceOut( "nonconservativeProduct(...)" );
 }
 {% endif %}
 
@@ -643,14 +637,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   double                                       dt,
   double * NOALIAS                        S  // S[{{NUMBER_OF_UNKNOWNS}}]
 ) {
-  logTraceInWith3Arguments( "sourceTerm(...)", volumeCentre, t, dt );
 
   // @todo implement and ensure that all entries of S are properly set
   for (int i=0; i<NumberOfUnknowns; i++) {
     S[i] = 0.0;
   }
 
-  logTraceOut( "sourceTerm(...)" );
 }
 {% endif %}
 
@@ -779,16 +771,14 @@ def create_start_time_step_implementation_for_fixed_time_stepping(
     return (
         """
   if (
-    tarch::mpi::Rank::getInstance().isGlobalMaster() 
-    and
     _maxCellH>0.0
     and
     isFirstGridSweepOfTimeStep()
   ) {
-    logInfo( "step()", "t       = " << _minTimeStampThisTimeStep );
-    logInfo( "step()", "dt      = " << getTimeStepSize() );
-    logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep );
-    logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep );
+    logInfo("t       = " << _minTimeStampThisTimeStep);
+    logInfo("dt      = " << getTimeStepSize());
+    logInfo("h_{min} = " << _minCellHThisTimeStep);
+    logInfo("h_{max} = " << _maxCellHThisTimeStep);
   }
   _timeStepSize  = """
         + str(normalised_time_step_size)
