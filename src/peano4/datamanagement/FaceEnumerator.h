@@ -42,7 +42,7 @@ public:
    * with this routine.
    */
   FaceEnumerator() {
-#if PEANO_DEBUG > 0
+#if PEANO_DEBUG
     for (int i = 0; i < TWO_TIMES_D; i++) {
       _faces[i] = nullptr;
     }

@@ -8,9 +8,6 @@
 #include <algorithm>
 #include <cmath>
 class toolbox::loadbalancing::LoadBalancer::InterRankDistributionStrategy final: public Strategy {
-private:
-  inline static tarch::logging::Log _log{"toolbox::loadbalancing::LoadBalancer::InterRankDistributionStrategy"};
-
 public:
   ~InterRankDistributionStrategy() override = default;
 
@@ -90,13 +87,10 @@ public:
       }
 
       logDebug(
-        "update()",
         "Splitting "
-          << cellsToSplit << " cells"
-          << " from tree " << localHeaviestTreeId << " (current load: " << currentLoad << ")"
-          << " on rank " << myRank << " to free rank " << targetRank
-          << ". (Participants remaining: " << participants - 1 << ")"
-          << ")"
+        << cellsToSplit << " cells"
+        << " from tree " << localHeaviestTreeId << " on rank " << myRank << " to free rank " << targetRank
+        << " (current load=" << currentLoad << ", participants remaining=" << participants - 1 << ")"
       );
 
       lb.triggerSplit(cellsToSplit, targetRank, localHeaviestTreeId);

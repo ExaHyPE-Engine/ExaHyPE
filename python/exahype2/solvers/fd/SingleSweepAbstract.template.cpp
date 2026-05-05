@@ -7,8 +7,6 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/services/ServiceRepository.h"
 
-tarch::logging::Log     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
-
 std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
@@ -136,7 +134,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
  * @coupling: Solvers switch their state according to coupled solvers
  */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
-  logDebug("startTimeStep()", "old state of " << "{{SOLVER_NAME}}" << " is " << toString(_solverState));
+  logDebug("old state of " << "{{SOLVER_NAME}}" << " is " << toString(_solverState));
   switch (_solverState) {
     case SolverState::Suspended:
       // Checks if _solverState is in the Suspended state and return.

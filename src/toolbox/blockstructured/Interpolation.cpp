@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Interpolation.h"
 
-tarch::logging::Log toolbox::blockstructured::_log("toolbox::blockstructured");
 tarch::multicore::BooleanSemaphore toolbox::blockstructured::interpolationMapSemaphore;
 
 tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
@@ -34,11 +33,8 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
   }
   enddforx
 
-    logDebug(
-      "createPiecewiseConstantInterpolationMatrix(int)",
-      "created new volumetric matrix for "
-        << numberOfDoFsPerAxisInPatch << ": " << result->toString()
-    );
+    logDebug("created new volumetric matrix for "
+        << numberOfDoFsPerAxisInPatch << ": " << result->toString());
   return result;
 }
 
@@ -88,10 +84,7 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
 
   P->insertEmptyColumns(pattern, pattern, pattern);
   P->replicateRows(pattern, 2, pattern, false);
-  logDebug(
-    "createInterpolationMatrixFrom1dTemplateByInsertingZeroColsAndRows(...)",
-    "matrix for normal=" << normal << ": " << P->toString()
-  );
+  logDebug("matrix for normal=" << normal << ": " << P->toString());
   return P;
 }
 
@@ -130,10 +123,7 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
   // is of size 1.
   P->replicateCols(pattern, 2, 0, false);
   P->replicateRows(pattern, 2, 0, false);
-  logDebug(
-    "createInterpolationMatrixFrom1dTemplateByLinearInterpolationAlongNormal(...)",
-    "matrix for normal=" << normal << ": " << P->toString()
-  );
+  logDebug("matrix for normal=" << normal << ": " << P->toString());
   return P;
 }
 
@@ -179,10 +169,7 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
     ) = 0.0;
   }
 
-  logDebug(
-    "createLinearInterpolationMatrix(...)",
-    "1d matrix: " << P1d.toString()
-  );
+  logDebug("1d matrix: " << P1d.toString());
 
   if (interpolateLinearlyBetweenRealAndRestrictedVolumes) {
     return createInterpolationMatrixFrom1dTemplateByLinearInterpolationAlongNormal(
@@ -204,10 +191,6 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
     int  numberOfDoFsPerAxisInPatch,
     bool extrapolateLinearly
   ) {
-  logTraceInWith1Argument(
-    "createLinearInterpolationMatrix(...)",
-    numberOfDoFsPerAxisInPatch
-  );
   tarch::la::DynamicMatrix P1d(
     3,
     3,
@@ -243,18 +226,11 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
     ) = 0.0;
   }
 
-  logDebug(
-    "createLinearInterpolationMatrix(...)",
-    "1d interpolation matrix: " << P1d.toString(true)
-  );
+  logDebug("1d interpolation matrix: " << P1d.toString(true));
 
   tarch::la::DynamicMatrix P2d(P1d, P1d);
-  logDebug(
-    "createLinearInterpolationMatrix(...)",
-    "2d interpolation matrix: " << P2d.toString(true)
-  );
+  logDebug("2d interpolation matrix: " << P2d.toString(true));
 
-  logTraceOut("createLinearInterpolationMatrix(...)");
 #if DIMENSIONS == 3
   return new tarch::la::DynamicMatrix(P2d, P1d);
 #else

@@ -4,7 +4,7 @@
 #include "peano4/Globals.h"
 #include "peano4/utils/Loop.h"
 
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 
 #include "toolbox/blockstructured/Enumeration.h"
 
@@ -29,9 +29,6 @@ void exahype2::dg::applyBoundaryConditions(
   const double* NOALIAS                   quadraturePoints,
   double* NOALIAS                         Q
 ) {
-  static tarch::logging::Log _log( "exahype2::dg" );
-
-  logTraceInWith3Arguments( "applyBoundaryConditions(...)", faceCentre, cellSize, faceNumber);
 
 //  tarch::la::Vector<DIMENSIONS,double> volumeH    = exahype2::fv::getVolumeSize(patchSize, numberOfVolumesPerAxisInPatch);
   const int normal = faceNumber % DIMENSIONS;
@@ -69,6 +66,5 @@ void exahype2::dg::applyBoundaryConditions(
     );
   }
 
-  logTraceOut( "applyBoundaryConditions(...)" );
 }
 

@@ -3,7 +3,7 @@
 #pragma once
 
 #include "Abstract{{CLASSNAME}}.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
@@ -14,9 +14,6 @@
 {%- endfor %}
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
-  private:
-    static tarch::logging::Log _log;
-
   public:
   {% if ADMISSIBILITY_IMPLEMENTATION=="<user-defined>" %}
     bool isPhysicallyAdmissible(

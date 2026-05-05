@@ -10,8 +10,6 @@
 
 #include <algorithm>
 
-tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _solverState(SolverState::GridConstruction),
   _numberOfTroubledCells(0) {
@@ -122,7 +120,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep() {
   {{PRINT_TIME_STEP_IMPLEMENTATION}}
 
   if (getNumberOfTroubledCells() > 0) {
-    logInfo("logTimeStep()", "Number of troubled cells: " << getNumberOfTroubledCells());
+    logInfo("Number of troubled cells: " << getNumberOfTroubledCells());
   }
 }
 

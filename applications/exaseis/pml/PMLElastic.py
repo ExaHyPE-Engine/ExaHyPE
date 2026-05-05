@@ -463,8 +463,8 @@ def init_grid_step_implementation(scenario_string):
     kernels::{{SOLVER_NAME}}::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::dudx
   );
 
-  logInfo("startGridInitialisationStep()", "Freesurface set at " << std::to_string(_TOP * 2));
-  logInfo("startGridInitialisationStep()", "PML is using " << pml_cell_width << " elements");
+  logInfo("Freesurface set at " << std::to_string(_TOP * 2));
+  logInfo("PML is using " << pml_cell_width << " elements");
 """
 
 def abstractDestructor():

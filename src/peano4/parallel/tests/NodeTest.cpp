@@ -1,5 +1,5 @@
 #include "NodeTest.h"
-#include "../Node.h"
+#include "peano4/parallel/Node.h"
 
 #include "peano4/utils/Linearised.h"
 #include "peano4/utils/Loop.h"
@@ -7,15 +7,11 @@
 
 #include "peano4/grid/SpacetreeHelper.h"
 
-tarch::logging::Log peano4::parallel::tests::NodeTest::_log("peano4::parallel::tests::NodeTest");
-
-
 peano4::parallel::tests::NodeTest::NodeTest():
   TestCase( "peano4::parallel::tests::NodeTest" ) {
 }
 
 void peano4::parallel::tests::NodeTest::testTagCalculation() {
-  logTraceIn( "testTagCalculation()" );
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()<5) {
     Node::GridDataExchangeMetaInformation metaInfoA = peano4::parallel::Node::getInstance().getGridDataExchangeMetaInformation(0,5,peano4::parallel::Node::ExchangeMode::HorizontalData);
     Node::GridDataExchangeMetaInformation metaInfoB = peano4::parallel::Node::getInstance().getGridDataExchangeMetaInformation(5,0,peano4::parallel::Node::ExchangeMode::HorizontalData);
@@ -25,9 +21,7 @@ void peano4::parallel::tests::NodeTest::testTagCalculation() {
       peano4::parallel::Node::getInstance().getLocalTreeId(5), Node::MaxSpacetreesPerRank
     );
   }
-  logTraceOut( "testTagCalculation()" );
 }
-
 
 void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryExchange() {
   #if DIMENSIONS==2
@@ -110,7 +104,6 @@ void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryEx
   validateEqualsWithParams2( result.size(), 7, peano4::parallel::Node::toString(result), "expected output={(stack=9,bnd=111),(stack=10,bnd=110),(stack=12,bnd=101),(stack=13,bnd=100),(stack=18,bnd=011),(stack=19,bnd=010),(stack=21,bnd=001)}" );
   #endif
 }
-
 
 void peano4::parallel::tests::NodeTest::testGetPeriodicBoundaryNumber() {
   #if DIMENSIONS==2
@@ -199,10 +192,8 @@ void peano4::parallel::tests::NodeTest::testBitsetBasedPeriodicBoundaryEnumerati
 
 
 void peano4::parallel::tests::NodeTest::run() {
-  logTraceIn( "run()" );
   testMethod( testGetPeriodicBoundaryNumber );
   testMethod( testBitsetBasedPeriodicBoundaryEnumeration );
   testMethod( testTagCalculation );
   testMethod( testGetOutputStacksForPeriodicBoundaryExchange )
-  logTraceOut( "run()" );
 }

@@ -19,7 +19,6 @@ namespace {{ item }} {
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::EnclaveTask<{{SOLUTION_STORAGE_PRECISION}}, 2> {
 private:
-  static tarch::logging::Log _log;
 
   static int _enclaveTaskTypeId;
 

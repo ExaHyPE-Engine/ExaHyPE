@@ -13,8 +13,6 @@
 
 #include <numeric> // std::accumulate
 
-tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
   DoFType*                                     neighbourParticle,
   const ::peano4::datamanagement::VertexMarker&  marker,
@@ -30,10 +28,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
   Container::iterator iteratorToExistingCopy = ::toolbox::particles::particleIsDuplicate(neighbourParticle, _container.begin(), _container.end());
 
   if (neighbourParticle->getParallelState()==DoFType::ParallelState::Virtual and not incomingParticleWillBeLocal) {
-    logDebug(
-      "mergeWithParticle(...)",
-      "incoming particle " << neighbourParticle->toString() << " tied to " << marker.toString() << " is virtual on neighbour. Such a copy is not relevant as it is a copy of the halo of another rank."
-    );
+    logDebug("incoming particle " << neighbourParticle->toString() << " tied to " << marker.toString() << " is virtual on neighbour. Such a copy is not relevant as it is a copy of the halo of another rank.");
     delete neighbourParticle;
     tarch::multicore::Lock lock( _statisticsSemaphore );
     _numberOfDroppedIncomingVirtualParticles++;
@@ -45,10 +40,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
     and
     incomingParticleWillBeLocal
   ) {
-    logDebug(
-      "mergeWithParticle(...)",
-      "incoming particle " << neighbourParticle->toString() << " tied to " << marker.toString() << " is virtual on neighbour and local here, i.e. neighbour sent me back my own copy. Drop on tree " << spacetreeId << " (marker=" << marker.toString() << ")"
-    );
+    logDebug("incoming particle " << neighbourParticle->toString() << " tied to " << marker.toString() << " is virtual on neighbour and local here, i.e. neighbour sent me back my own copy. Drop on tree " << spacetreeId << " (marker=" << marker.toString() << ")");
     delete neighbourParticle;
     tarch::multicore::Lock lock( _statisticsSemaphore );
     _numberOfDroppedIncomingVirtualParticles++;
@@ -56,7 +48,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
   else if ( iteratorToExistingCopy!=end() ) {
     neighbourParticle->setParallelState( incomingParticleWillBeLocal ? DoFType::ParallelState::Local : DoFType::ParallelState::Virtual );
 
-    #if PEANO_DEBUG>0
+    #if PEANO_DEBUG
     neighbourParticle->setDebugX( (*iteratorToExistingCopy)->getDebugX() );
     int neighbourPartID = neighbourParticle->getPartid();
     #else
@@ -66,17 +58,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
     if ( (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local and incomingParticleWillBeLocal ) {
       tarch::multicore::Lock lock( _statisticsSemaphore );
       _numberOfRedundantlySharedLocalParticles++;
-      logDebug( "mergeWithParticle(...)", "inflying particle=" << neighbourParticle->toString() << " at vertex " << marker.toString() << " replaces existing copy and will be local on tree  " << spacetreeId << " (marker=" << marker.toString() << ")" );
+      logDebug("inflying particle=" << neighbourParticle->toString() << " at vertex " << marker.toString() << " replaces existing copy and will be local on tree  " << spacetreeId << " (marker=" << marker.toString() << ")");
     }
     else if (not incomingParticleWillBeLocal) {
       tarch::multicore::Lock lock( _statisticsSemaphore );
       _numberOfReplacedVirtualParticlesAlongBoundary++;
-      logDebug( "mergeWithParticle(...)", "inflying particle=" << neighbourParticle->toString() << " at vertex " << marker.toString() << " replaces existing halo copy on tree  " << spacetreeId << " (marker=" << marker.toString() << ")");
+      logDebug("inflying particle=" << neighbourParticle->toString() << " at vertex " << marker.toString() << " replaces existing halo copy on tree  " << spacetreeId << " (marker=" << marker.toString() << ")");
     }
     else {
       tarch::multicore::Lock lock( _statisticsSemaphore );
       _numberOfAddedLocalParticlesAlongBoundary++;
-      logDebug( "mergeWithParticle(...)", "inflying particle=" << neighbourParticle->toString() << " at vertex " << marker.toString() << " replaces existing halo copy but is local, i.e. particle entered subdomain");
+      logDebug("inflying particle=" << neighbourParticle->toString() << " at vertex " << marker.toString() << " replaces existing halo copy but is local, i.e. particle entered subdomain");
     }
 
     toolbox::particles::updateContainedInAdjacentCellProperty(marker, *neighbourParticle );
@@ -120,7 +112,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
   else {
     neighbourParticle->setParallelState( incomingParticleWillBeLocal ? DoFType::ParallelState::Local : DoFType::ParallelState::Virtual );
 
-    #if PEANO_DEBUG>0
+    #if PEANO_DEBUG
     int neighbourPartID = neighbourParticle->getPartid();
     #else
     int neighbourPartID = -1;
@@ -131,12 +123,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
     if (incomingParticleWillBeLocal) {
       tarch::multicore::Lock lock( _statisticsSemaphore );
       _numberOfAddedLocalParticlesAlongBoundary++;
-      logDebug( "mergeWithParticle(...)", "inflying particle=" << neighbourParticle->toString() << " at vertex " << marker.toString() << " is new local vertex");
+      logDebug("inflying particle=" << neighbourParticle->toString() << " at vertex " << marker.toString() << " is new local vertex");
     }
     else {
       tarch::multicore::Lock lock( _statisticsSemaphore );
       _numberOfAddedVirtualParticlesAlongBoundary++;
-      logDebug( "mergeWithParticle(...)", "inflying particle=" << neighbourParticle->toString() << " at vertex " << marker.toString() << " is new and will be remote on tree  " << spacetreeId << " (marker=" << marker.toString() << ")" );
+      logDebug("inflying particle=" << neighbourParticle->toString() << " at vertex " << marker.toString() << " is new and will be remote on tree  " << spacetreeId << " (marker=" << marker.toString() << ")");
     }
 
     toolbox::particles::updateContainedInAdjacentCellProperty(marker, *neighbourParticle );
@@ -167,7 +159,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
       {
         assertionVectorNumericalEquals2( neighbour._debugH, _debugH, neighbour.toString(), toString() );
 
-        logDebug( "merge(...)", "merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString() );
+        logDebug("merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString());
         for (auto p: neighbour) {
           p->setX( toolbox::particles::mirrorParticleAlongPeriodicDomains(
             p->getX(),
@@ -179,9 +171,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
           mergeWithParticle(p, marker, spacetreeId);
         }
 
-        logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.toString() << " which now hosts " << this->size() << " particle(s)" );
+        logDebug("merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.toString() << " which now hosts " << this->size() << " particle(s)");
         for (auto *p: *this) {
-          logDebug( "merge(...)", " - " << p->toString() );
+          logDebug(" - " << p->toString());
         }
 
         assertion2( isValid(), toString(), marker.toString() );
@@ -192,14 +184,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
         assertionVectorNumericalEquals2( neighbour._debugX, _debugX, neighbour.toString(), toString() );
         assertionVectorNumericalEquals2( neighbour._debugH, _debugH, neighbour.toString(), toString() );
 
-        logDebug( "merge(...)", "merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString() );
+        logDebug("merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString());
         for (auto p: neighbour) {
           mergeWithParticle(p, marker, spacetreeId);
         }
 
-        logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.toString() << " which now hosts " << this->size() << " particle(s)" );
+        logDebug("merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.toString() << " which now hosts " << this->size() << " particle(s)");
         for (auto *p: *this) {
-          logDebug( "merge(...)", " - " << p->toString() );
+          logDebug(" - " << p->toString());
         }
 
         assertion2( isValid(), toString(), marker.toString() );
@@ -290,8 +282,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& othe
     DoFType* newParticle =  new DoFType(*particle);
     _container.push_back( newParticle );
   }
-  logDebug( "clone()", "copied " << otherSet.size() << " objects over into local one of size " << size() );
-  #if PEANO_DEBUG>=1
+  logDebug("copied " << otherSet.size() << " objects over into local one of size " << size());
+  #if PEANO_DEBUG
   _debugX = otherSet._debugX;
   _debugH = otherSet._debugH;
   #endif

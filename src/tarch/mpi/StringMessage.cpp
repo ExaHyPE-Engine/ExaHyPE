@@ -1,6 +1,6 @@
 #include "StringMessage.h"
 
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/services/ServiceRepository.h"
 
 #include <sstream>

@@ -83,7 +83,7 @@ if (not marker.willBeRefined()) {
         """
   //assertion(_particleNumberOnThisTree > 0);
   if (_particleNumberOnThisTree > 0) {
-    logInfo("endIteration()", "Inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId << " (boundary vertices might host redundant particle data)");
+    logInfo("Inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId << " (boundary vertices might host redundant particle data)");
   }
 """
     )

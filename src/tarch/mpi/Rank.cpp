@@ -22,7 +22,6 @@
 #include <sys/utsname.h>
 #endif
 
-tarch::logging::Log tarch::mpi::Rank::_log("tarch::mpi::Rank");
 int     tarch::mpi::Rank::_maxTags       = -1;
 int     tarch::mpi::Rank::_tagCounter    =  0;
 
@@ -51,7 +50,7 @@ int tarch::mpi::Rank::reserveFreeTag([[maybe_unused]] const std::string& fullQua
   // We also may not use the instance, as the instance might not be up yet. I
   // also saw other stuff with cout, so better ignore it
   /*
-  #if PEANO_DEBUG>0
+  #if PEANO_DEBUG
   if ( getInstance()._rank==getGlobalMasterRank() ) {
     std::cout << "assigned message " << fullQualifiedMessageName
               << " the free tag " << result << " (" << numberOfTags << " consecutive tags reserved)" << std::endl;
@@ -88,15 +87,12 @@ void tarch::mpi::Rank::plotMessageQueues() {
   MPI_Status   status;
   MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, _communicator, &flag, &status);
   if (flag==0) {
-    logError("plotMessageQueues()", "there are no messages from any sender in MPI queue");
+    logError("there are no messages from any sender in MPI queue");
   }
   else {
-    logError(
-      "plotMessageQueues()",
-      "there is still a message in queue "
+    logError("there is still a message in queue "
       " from rank " << status.MPI_SOURCE <<
-      " with tag " << status.MPI_TAG
-    );
+      " with tag " << status.MPI_TAG);
   }
   #endif
 }
@@ -135,7 +131,7 @@ void tarch::mpi::Rank::triggerDeadlockTimeOut(
         << " seconds for " << numberOfExpectedMessages
         << " message(s) from node " << communicationPartnerRank << " with tag " << tag
         << ". Timeout. " << comment;
-    logError( "triggerDeadlockTimeOut(...)", out.str() );
+    logError(out.str());
 
     plotMessageQueues();
 
@@ -152,24 +148,15 @@ void tarch::mpi::Rank::writeTimeOutWarning(
   int                 numberOfExpectedMessages
 ) {
   if ( exceededTimeOutWarningThreshold() ) {
-    logWarning(
-      "writeTimeOutWarning(...)",
-      "operation " << className << "::" << methodName << " on node "
+    logWarning("operation " << className << "::" << methodName << " on node "
       << getRank() << " had to wait more than " << std::to_string(_timeOutWarning.count())
       << " seconds for " << numberOfExpectedMessages
-      << " message(s) from node " << communicationPartnerRank << " with tag " << tag
-    );
+      << " message(s) from node " << communicationPartnerRank << " with tag " << tag);
 
     if ( _deadlockTimeOut.count()>0 ) {
-      logWarning(
-        "writeTimeOutWarning(...)",
-        "application will terminate after " << std::to_string(_deadlockTimeOut.count()) << " seconds because of a deadlock"
-      );
+      logWarning("application will terminate after " << std::to_string(_deadlockTimeOut.count()) << " seconds because of a deadlock");
     } else {
-      logWarning(
-        "writeTimeOutWarning(...)",
-        "deadlock detection switched off as deadlock time out is set to " << _deadlockTimeOut.count() << ", i.e. you will continue to get warnings, but code will not shut down"
-      );
+      logWarning("deadlock detection switched off as deadlock time out is set to " << _deadlockTimeOut.count() << ", i.e. you will continue to get warnings, but code will not shut down");
     }
 
     if (
@@ -178,10 +165,7 @@ void tarch::mpi::Rank::writeTimeOutWarning(
       _deadlockTimeOut.count()<=0
     ) {
       std::chrono::seconds newTimeOutWarning = _timeOutWarning*2;
-      logWarning(
-        "writeTimeOutWarning(...)",
-        "increase time out warning threshold from " << std::to_string(_timeOutWarning.count()) << " seconds to " << std::to_string(newTimeOutWarning.count()) << " seconds to avoid flood of warning messages"
-      );
+      logWarning("increase time out warning threshold from " << std::to_string(_timeOutWarning.count()) << " seconds to " << std::to_string(newTimeOutWarning.count()) << " seconds to avoid flood of warning messages");
       _timeOutWarning       = newTimeOutWarning;
       _globalTimeOutWarning = _globalTimeOutWarning+_timeOutWarning;
     }
@@ -233,7 +217,6 @@ void tarch::mpi::Rank::allReduce(
   MPI_Op op,
   std::function<void()> waitor
 ) {
-  logTraceIn( "allReduce()" );
 
 //  if (getNumberOfRanks()>1) {
     MPI_Request* request = new MPI_Request();
@@ -257,7 +240,6 @@ void tarch::mpi::Rank::allReduce(
     delete request;
 //  }
 
-  logTraceOut( "allReduce()" );
 }
 
 
@@ -267,7 +249,6 @@ void tarch::mpi::Rank::reduce(
   MPI_Op op, int root,
   std::function<void()> waitor
 ) {
-  logTraceIn( "reduce()" );
 
 //  if (getNumberOfRanks()>1) {
     MPI_Request* request = new MPI_Request();
@@ -290,14 +271,12 @@ void tarch::mpi::Rank::reduce(
     delete request;
 //  }
 
-  logTraceOut( "reduce()" );
 }
 #endif
 
 
 void tarch::mpi::Rank::barrier([[maybe_unused]] std::function<void()> waitor) {
   #ifdef WITH_MPI
-  logTraceIn( "barrier()" );
 
   if (getNumberOfRanks()>1) {
     MPI_Request* request = new MPI_Request();
@@ -320,7 +299,6 @@ void tarch::mpi::Rank::barrier([[maybe_unused]] std::function<void()> waitor) {
     delete request;
   }
 
-  logTraceOut( "barrier()" );
   #endif
 }
 
@@ -339,7 +317,6 @@ bool tarch::mpi::Rank::isMessageInQueue([[maybe_unused]] int tag) const {
 }
 
 void tarch::mpi::Rank::shutdown() {
-  logTraceIn( "shutdown()" );
 
 #ifdef WITH_MPI
   assertion(_rank!=-1);
@@ -348,12 +325,11 @@ void tarch::mpi::Rank::shutdown() {
 
   int errorCode = MPI_Finalize();
   if (errorCode) {
-    logError( "shutdown()", MPIReturnValueToString(errorCode) );
+    logError(MPIReturnValueToString(errorCode));
   }
 #endif
 
   _rank         = -1;
-  logTraceOut( "shutdown()" );
 }
 
 
@@ -392,7 +368,7 @@ void tarch::mpi::Rank::logStatus() const {
   #endif
   statusMessage << ", #processors=" << _numberOfProcessors;
 
-  logInfo( "logStatus()", statusMessage.str() );
+  logInfo(statusMessage.str());
 }
 
 
@@ -405,7 +381,7 @@ bool tarch::mpi::Rank::validateMaxTagIsSupported() {
     return true;
   }
   else {
-    logWarning( "validateMaxTagIsSupported()", "maximum tag value is " << _maxTags << " though we would need " << _tagCounter << " tags. Code will likely crash" );
+    logWarning("maximum tag value is " << _maxTags << " though we would need " << _tagCounter << " tags. Code will likely crash");
     return false;
   }
 }
@@ -496,7 +472,7 @@ void tarch::mpi::Rank::setDeadlockTimeOut( int value ) {
   assertion( value>=0 );
   _deadlockTimeOut = std::chrono::seconds(value);
   if (value==0) {
-    logInfo( "setDeadlockTimeOut(int)", "set deadlock timeout to " << _deadlockTimeOut.count() << " and hence disabled timeout checks" );
+    logInfo("set deadlock timeout to " << _deadlockTimeOut.count() << " and hence disabled timeout checks");
   }
 }
 

@@ -30,7 +30,7 @@ struct peano4::grid::GridVertex {
 
   int level                             = 0;
   int numberOfAdjacentRefinedLocalCells = 0;
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
   tarch::la::Vector<DIMENSIONS, double> x{};
 #endif
 
@@ -50,7 +50,7 @@ struct peano4::grid::GridVertex {
 
   INLINE_METHOD State getState() const noexcept { return static_cast<State>(state); }
   INLINE_METHOD void  setState(State s) noexcept { state = static_cast<std::uint8_t>(s); }
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
   INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getX() const noexcept { return x; }
   INLINE_METHOD void   setX(const tarch::la::Vector<DIMENSIONS, double>& value) noexcept { x = value; }
   INLINE_METHOD double getX(int d) const noexcept { return x[d]; }

@@ -12,8 +12,6 @@ namespace peano4::stacks {
 template <class T>
 class peano4::stacks::StackWithSerialisation: public Stack<T> {
 private:
-  static tarch::logging::Log _log;
-
   static_assert(T::Cardinality > 0);
   static_assert(std::is_trivial_v<typename T::DoFType>);
   static_assert(std::is_standard_layout_v<typename T::DoFType>);
@@ -40,7 +38,7 @@ public:
     this->_ioTag  = tag;
     this->_ioRank = rank;
 
-    logDebug("startSend()", this->toString());
+    logDebug(this->toString());
 
     _sendBuffer.resize(this->size() * T::Cardinality);
     serialise();
@@ -57,9 +55,8 @@ public:
     );
     if (result != MPI_SUCCESS) {
       logError(
-        "startSend()",
         "Was not able to send to rank "
-          << this->_ioRank << " on tag " << this->_ioTag << ": " << tarch::mpi::MPIReturnValueToString(result)
+        << this->_ioRank << " on tag " << this->_ioTag << ": " << tarch::mpi::MPIReturnValueToString(result)
       );
       assertion(false);
     }
@@ -83,7 +80,7 @@ public:
     this->_ioTag  = tag;
     this->_ioRank = rank;
 
-    logDebug("startReceive()", this->toString());
+    logDebug(this->toString());
 
     this->resize(numberOfElements);
     _receiveBuffer.resize(numberOfElements * T::Cardinality);
@@ -100,10 +97,9 @@ public:
     );
     if (result != MPI_SUCCESS) {
       logError(
-        "startReceive()",
         "Was not able to receive "
-          << numberOfElements << " values from rank " << this->_ioRank << " on tag " << this->_ioTag << ": "
-          << tarch::mpi::MPIReturnValueToString(result)
+        << numberOfElements << " values from rank " << this->_ioRank << " on tag " << this->_ioTag << ": "
+        << tarch::mpi::MPIReturnValueToString(result)
       );
       assertion(false);
     }
@@ -121,10 +117,10 @@ public:
     if (flag) {
       if (this->_ioMode == IOMode::MPISend) {
         this->shallowClear();
-        logDebug("tryToFinishSendOrReceive()", "Send complete: " << this->toString());
+        logDebug("Send complete: " << this->toString());
       } else if (this->_ioMode == IOMode::MPIReceive) {
         deserialise();
-        logDebug("tryToFinishSendOrReceive()", "Receive complete: " << this->toString());
+        logDebug("Receive complete: " << this->toString());
       }
       this->_ioMode       = IOMode::None;
       this->_ioMPIActive  = false;
@@ -153,6 +149,3 @@ private:
   }
 #endif // WITH_MPI
 };
-
-template <class T>
-tarch::logging::Log peano4::stacks::StackWithSerialisation<T>::_log("peano4::stacks::StackWithSerialisation<T>");

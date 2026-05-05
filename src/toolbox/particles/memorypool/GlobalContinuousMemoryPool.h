@@ -159,7 +159,6 @@ public:
   static bool requestCompleteScatter();
 
 private:
-  static tarch::logging::Log _log;
 
   static constexpr int UndefinedMemoryPage = -1;
 

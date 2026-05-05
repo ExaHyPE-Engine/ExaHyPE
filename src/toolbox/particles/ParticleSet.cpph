@@ -2,12 +2,8 @@
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/multicore/Lock.h"
 
-
 template <typename T>
 toolbox::particles::SieveParticles<T> toolbox::particles::ParticleSet<T>::_sieveParticles;
-
-template <typename T>
-tarch::logging::Log toolbox::particles::ParticleSet<T>::_log("toolbox::particles::ParticleSet");
 
 template <typename T>
 tarch::multicore::BooleanSemaphore toolbox::particles::ParticleSet<T>::_statisticsSemaphore;
@@ -58,7 +54,7 @@ template <typename T>
 int toolbox::particles::ParticleSet<T>::_numberOfAddedVirtualParticlesAlongBoundary;
 
 
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
 template <typename T>
 void toolbox::particles::ParticleSet<T>::setDebugX(const tarch::la::Vector<DIMENSIONS, double>& data) {
   _debugX = data;
@@ -424,7 +420,7 @@ std::string toolbox::particles::ParticleSet<T>::toString(bool addBrackets) const
     << ", #lifts-into-sieve-set=" << _numberOfLiftsIntoSieveSet << ", #drops-from-sieve-set="
     << _numberOfDropsFromSieveSet << ", #remaining-particles=" << _numberOfRemainingLocalParticles;
 
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
   msg << ",x=" << _debugX << ",h=" << _debugH;
 #endif
 

@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "exahype2.h"
 
-#include "tarch/logging/LogFilter.h"
-#include "tarch/logging/LogFilterFileReader.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/reader/JSONReader.h"
 
@@ -15,7 +13,6 @@
 #include <vector>
 
 namespace {
-  tarch::logging::Log   _log("exahype2");
   constexpr const char* DefaultConfigFile = "./exahype.json";
 
   std::string normaliseOutputPath(const std::string& path) {
@@ -136,148 +133,4 @@ exahype2::RuntimeConfiguration exahype2::loadRuntimeConfiguration(
 
   storeRuntimeConfiguration(result);
   return result;
-}
-
-void exahype2::setDefaultLogStatements() {
-  tarch::logging::LogFilter::getInstance().clearFilterList();
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "",
-      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetTrace,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "",
-      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetDebug,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "",
-      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-
-
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetDebug,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "peano4",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetTrace,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "peano4",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "peano4",
-      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetDebug,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "tarch",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetTrace,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "tarch",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "tarch",
-      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetDebug,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "exahype2",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetTrace,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "exahype2",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "exahype2",
-      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetDebug,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "toolbox",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetTrace,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "toolbox",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "toolbox",
-      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
 }

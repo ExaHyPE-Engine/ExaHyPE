@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "{{CLASSNAME}}.h"
 
-tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
 
 {% if ADMISSIBILITY_IMPLEMENTATION=="<user-defined>" %}
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isPhysicallyAdmissible(

@@ -4,6 +4,7 @@
 
 #include "exahype2/fv/VolumeIndex.h"
 #include "exahype2/fv/PatchUtils.h"
+#include "tarch/instrumentation/Trace.h"
 
 {% from 'ComputeFluxesAndPerformTimeStep.macro.h' import ComputeFluxesAndPerformTimeStep with context %}
 
@@ -16,23 +17,29 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   const tarch::la::Vector<DIMENSIONS, double>&      patchCentre,
   const tarch::la::Vector<DIMENSIONS, double>&      patchSize
 ) {
+  traceEnter();
+
 {% if COMPUTE_MAX_EIGENVALUE %}
   double maxEigenvalueAfterTimeStep = 0.0;
 {% endif %}
 
+  traceEnter("Patch update");
 {% if DIMENSIONS==3 %}
   for (int z = 0; z < {{NUMBER_OF_VOLUMES_PER_AXIS}}; ++z) {
 {% endif %}
     for (int y = 0; y < {{NUMBER_OF_VOLUMES_PER_AXIS}}; ++y) {
       for (int x = 0; x < {{NUMBER_OF_VOLUMES_PER_AXIS}}; ++x) {
-        {{ ComputeFluxesAndPerformTimeStep() | indent(6)}}
+        {{ ComputeFluxesAndPerformTimeStep(True) | indent(6)}}
       } // x
     } // y
 {% if DIMENSIONS==3 %}  } // z {% endif %}
+  traceLeave("Patch update");
 
 {% if COMPUTE_MAX_EIGENVALUE %}
+  traceLeave();
   return maxEigenvalueAfterTimeStep;
 {% else %}
+  traceLeave();
   return 0.0;
 {% endif %}
 }

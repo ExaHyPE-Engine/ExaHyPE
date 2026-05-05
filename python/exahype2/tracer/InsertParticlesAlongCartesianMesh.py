@@ -40,7 +40,7 @@ class InsertParticlesAlongCartesianMesh(peano4.toolbox.particles.InsertParticles
 
       _particleNumberOnThisTree++;
       
-      logInfo( "touchVertexFirstTime(...)", "insert particle " << particle->getX() );
+      logInfo("insert particle " << particle->getX());
       """, # initialisation_call,
                noise,
                additional_includes + """  

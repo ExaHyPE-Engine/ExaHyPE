@@ -8,11 +8,6 @@
 
 #if defined(AssignmentChecks)
 
-namespace {
-  tarch::logging::Log _log("toolbox::particles::assignmentchecks");
-} // namespace
-
-
 std::string toolbox::particles::assignmentchecks::sweepHistory() {
   return internal::Database::getInstance().sweepHistory();
 }
@@ -36,14 +31,6 @@ void toolbox::particles::assignmentchecks::eraseParticle(
   const std::string&                           trace
 ) {
 
-  logTraceInWith5Arguments(
-    "eraseParticle(...)",
-    particleName,
-    particleX,
-    particleID,
-    isLocal,
-    treeId
-  );
 
   using namespace internal;
 
@@ -71,7 +58,6 @@ void toolbox::particles::assignmentchecks::eraseParticle(
     database.particleHistory(identifier)
   );
 
-  logTraceOut("eraseParticle(...)");
 }
 
 
@@ -90,16 +76,6 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   bool reassignmentOnSameTreeDepthAllowed
 ) {
 
-  logTraceInWith7Arguments(
-    "assignParticleToVertex(...)",
-    particleName,
-    particleID,
-    particleX,
-    isLocal,
-    vertexX,
-    vertexH,
-    treeId
-  );
 
 
   using namespace internal;
@@ -225,7 +201,6 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
     database.shiftIdentifierVertexInd(identifier, vertexIndNew, vertexDepthNew);
   }
 
-  logTraceOut("assignParticleToVertex(...)");
 }
 
 void toolbox::particles::assignmentchecks::moveParticle(
@@ -239,14 +214,6 @@ void toolbox::particles::assignmentchecks::moveParticle(
   const std::string&                           trace
 ) {
 
-  logTraceInWith5Arguments(
-    "moveParticle(...)",
-    particleName,
-    particleID,
-    oldParticleX,
-    newParticleX,
-    treeId
-  );
 
   using namespace internal;
   Database& database = Database::getInstance();
@@ -354,7 +321,6 @@ void toolbox::particles::assignmentchecks::moveParticle(
     database.addEvent(identifier, newEvent);
   }
 
-  logTraceOut("moveParticle(...)");
 }
 
 
@@ -369,16 +335,6 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   const std::string&                           trace
 ) {
 
-  logTraceInWith7Arguments(
-    "detachParticleFromVertex(...)",
-    particleName,
-    particleID,
-    particleX,
-    isLocal,
-    vertexX,
-    vertexH,
-    treeId
-  );
 
 
   using namespace internal;
@@ -440,7 +396,6 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
     database.particleHistory(identifier)
   );
 
-  logTraceOut("detachParticleFromVertex(...)");
 }
 
 void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
@@ -454,14 +409,6 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   const std::string&                           trace
 ) {
 
-  logTraceInWith5Arguments(
-    "assignParticleToSieveSet(...)",
-    particleName,
-    particleID,
-    particleX,
-    isLocal,
-    treeId
-  );
 
 
   using namespace internal;
@@ -490,7 +437,6 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
     database.particleHistory(identifier)
   );
 
-  logTraceOut("assignParticleToSieveSet(...)");
 }
 
 void toolbox::particles::assignmentchecks::eliminateExistingParticles() {
@@ -506,11 +452,8 @@ void toolbox::particles::assignmentchecks::ensureDatabaseIsEmpty() {
   // During a reset or initialization, we always add the "initial"
   // mesh sweep, so the database should have at least 1.
   if (database.getNumberOfSnapshots() != 1) {
-    logInfo(
-      "ensureDatabaseIsEmpty()",
-      "database still holds " << database.getNumberOfSnapshots() << " snapshots"
-    );
-    logError("ensureDatabaseIsEmpty()", database.toString());
+    logInfo("database still holds " << database.getNumberOfSnapshots() << " snapshots");
+    logError(database.toString());
   }
 }
 

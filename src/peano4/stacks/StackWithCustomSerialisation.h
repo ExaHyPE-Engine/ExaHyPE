@@ -11,9 +11,6 @@ namespace peano4::stacks {
 
 template <class T>
 class peano4::stacks::StackWithCustomSerialisation: public Stack<T> {
-private:
-  static tarch::logging::Log _log;
-
 public:
   StackWithCustomSerialisation()                                               = default;
   virtual ~StackWithCustomSerialisation() override                             = default;
@@ -85,7 +82,7 @@ public:
     this->_ioTag  = tag;
     this->_ioRank = rank;
 
-    logDebug("startSend()", this->toString());
+    logDebug(this->toString());
 
     T::startSend(*this, context, comm);
 
@@ -111,7 +108,7 @@ public:
     this->_ioTag  = tag;
     this->_ioRank = rank;
 
-    logDebug("startReceive()", this->toString());
+    logDebug(this->toString());
 
     this->resize(numberOfElements);
 
@@ -130,9 +127,9 @@ public:
     if (finished) {
       if (this->_ioMode == IOMode::MPISend) {
         this->shallowClear();
-        logDebug("tryToFinishSendOrReceive()", "Send complete: " << this->toString());
+        logDebug("Send complete: " << this->toString());
       } else if (this->_ioMode == IOMode::MPIReceive) {
-        logDebug("tryToFinishSendOrReceive()", "Receive complete: " << this->toString());
+        logDebug("Receive complete: " << this->toString());
       }
       this->_ioMode         = IOMode::None;
       this->_ioMPIActive    = false;
@@ -145,8 +142,3 @@ public:
   }
 #endif // WITH_MPI
 };
-
-template <class T>
-tarch::logging::Log peano4::stacks::StackWithCustomSerialisation<T>::_log(
-  "peano4::stacks::StackWithCustomSerialisation<T>"
-);

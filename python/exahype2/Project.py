@@ -46,11 +46,8 @@ class Project(object):
         self._first_plot_time_stamp = 0.0
         self._time_in_between_plots = 0.1
         self._load_balancer_configuration = ""
-        self._log_filter_file         = "exahype.log-filter"
         self._log_time_step_interval_in_seconds = 10.0
-        self._additional_includes     = [ "tarch/logging/LogFilterFileReader.h",
-                                          "tarch/accelerator/Device.h"
-                                        ]
+        self._additional_includes     = [ "tarch/accelerator/Device.h" ]
         self._build_mode = peano4.output.CompileMode.Asserts
         self._executable_name = executable
         self._periodic_BC = [False, False, False]
@@ -122,13 +119,6 @@ class Project(object):
           User-defined load balancer configuration that shall be used.
         """
         self._load_balancer_configuration = load_balancer_configuration
-
-    def set_log_filter_file(self, file_name):
-        """! Set a log filter file name
-        Pass in the empty string, if you want the code to use the hard-coded
-        defaults.
-        """
-        self._log_filter_file = file_name
 
     def set_log_time_step_interval_in_seconds(self, value):
         self._log_time_step_interval_in_seconds = float(value)
@@ -398,7 +388,6 @@ thus appreciate any citation of the original release paper
             "SOLVERS":                  [],
             "LOAD_BALANCER_CONFIGURATION": self._render_load_balancer_configuration(),
             "TRACERS":                  [x.name for x in self._tracer_particles],
-            "LOG_FILTER_FILE":          self._log_filter_file,
             "LOG_TIME_STEP_INTERVAL_IN_SECONDS": self._log_time_step_interval_in_seconds,
             "ADDITIONAL_INCLUDES":      self._additional_includes,
         }

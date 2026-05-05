@@ -73,7 +73,7 @@ class AssignNumbersToCells(ActionSet):
             return """
             if ( fineGridCell{}.getNumber()==tarch::Enumerator::NoNumber ) {{
               fineGridCell{}.setNumber( fineGridCell{}.getEnumerator().getNumber() );
-              logDebug( "touchCellFirstTime(...)", "set number " << fineGridCell{}.toString() );
+              logDebug("set number " << fineGridCell{}.toString());
             }}
             """.format(
                 construct_marker_name(self._task_name),

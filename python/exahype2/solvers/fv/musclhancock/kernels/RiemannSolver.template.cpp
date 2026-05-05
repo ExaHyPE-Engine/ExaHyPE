@@ -4,6 +4,7 @@
 
 #include "exahype2/fv/VolumeIndex.h"
 #include "exahype2/fv/PatchUtils.h"
+#include "tarch/instrumentation/Trace.h"
 
 {% import 'LoopOverVolumes.macro.h' as patch with context %}
 {% import 'LoopOverDimensions.macro.h' as dimensions with context %}
@@ -25,12 +26,15 @@ double {{FULL_QUALIFIED_NAMESPACE}}::updateSolutionWithRiemann(
   const tarch::la::Vector<DIMENSIONS, double>&      patchCentre,
   const tarch::la::Vector<DIMENSIONS, double>&      patchSize
 ) {
+  traceEnter();
+
   {% if COMPUTE_MAX_EIGENVALUE==True %}
   double maxEigenvalueAfterTimeStep = 0.0;
   {% endif %}
 
   {{ riemann.createMemoryOnStack() }}
 
+  traceEnter("Patch update");
   {% call patch.loopOverVolumes() %}
     {{ gather.gatherQ() }}
 
@@ -45,10 +49,13 @@ double {{FULL_QUALIFIED_NAMESPACE}}::updateSolutionWithRiemann(
     {{ riemann.computeMaxEigenvalueAfterTimeStep() }}
     {% endif %}
   {% endcall %}
+  traceLeave("Patch update");
 
   {% if COMPUTE_MAX_EIGENVALUE==True %}
+  traceLeave();
   return maxEigenvalueAfterTimeStep;
   {% else %}
+  traceLeave();
   return 0.0;
   {% endif %}
 }

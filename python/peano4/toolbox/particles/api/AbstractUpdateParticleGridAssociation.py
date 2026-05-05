@@ -287,7 +287,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin();
       while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
 
-        #if PEANO_DEBUG > 0
+        #if PEANO_DEBUG
         int partID = (*p)->getPartid();
         #else
         int partID = -1;
@@ -343,7 +343,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
             coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString(),
             _spacetreeId
           );
-          logDebug( "touchVertexFirstTime(...)", "drop particle " << (*p)->toString() << " from " << coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString() << " into " << marker.toString() );
+          logDebug("drop particle " << (*p)->toString() << " from " << coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString() << " into " << marker.toString());
           p = fineGridVertex{{PARTICLES_CONTAINER}}.grabParticle( p, coarseGridVertices{{PARTICLES_CONTAINER}}(i) );
         }
         else p++;
@@ -389,7 +389,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     _numberOfLifts+=fineGridVertex{{PARTICLES_CONTAINER}}.size();
     for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}}) {
 
-      #if PEANO_DEBUG > 0
+      #if PEANO_DEBUG
       int partID = p->getPartid();
       #else
       int partID = -1;
@@ -440,7 +440,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     _numberOfLiftsIntoSieveSet += fineGridVertex{{PARTICLES_CONTAINER}}.size();
     for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}}) {
 
-      #if PEANO_DEBUG > 0
+      #if PEANO_DEBUG
       int partID = p->getPartid();
       #else
       int partID = -1;

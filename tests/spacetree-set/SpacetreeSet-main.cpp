@@ -7,10 +7,9 @@
 #include "EmptyTraversalObserver.h"
 #include "peano4/parallel/SpacetreeSet.h"
 #include "peano4/peano4.h"
-#include "tarch/logging/Log.h"
-#include "tarch/logging/LogFilter.h"
+#include "tarch/instrumentation/Log.h"
+#include "tarch/instrumentation/Watch.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/timing/Watch.h"
 #include "toolbox/loadbalancing/LoadBalancer.h"
 
 #include <iomanip>
@@ -19,7 +18,6 @@
 using namespace tests::peano4::parallel;
 
 namespace {
-  tarch::logging::Log _log("");
 
   constexpr int CreateGridWithRefinement    = 0;
   constexpr int CreateGridWithoutRefinement = 1;
@@ -27,7 +25,7 @@ namespace {
 
   static toolbox::loadbalancing::LoadBalancer loadBalancer;
 
-  static tarch::timing::Watch watch("::", "", false);
+  static tarch::instrumentation::Watch watch("::", "", false);
 
   void setupEnvironment(int argc, char** argv) {
 #if DIMENSIONS == 2
@@ -38,132 +36,18 @@ namespace {
     const auto DomainSize   = {1.0, 1.0, 1.0};
 #endif
 
-    tarch::logging::LogFilter::getInstance().addFilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry(
-        tarch::logging::LogFilter::FilterListEntry::TargetDebug,
-        tarch::logging::LogFilter::FilterListEntry::AnyRank,
-        "tarch",
-        tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-        tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-      )
-    );
-    tarch::logging::LogFilter::getInstance().addFilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry(
-        tarch::logging::LogFilter::FilterListEntry::TargetTrace,
-        tarch::logging::LogFilter::FilterListEntry::AnyRank,
-        "tarch",
-        tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-        tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-      )
-    );
-    tarch::logging::LogFilter::getInstance().addFilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry(
-        tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-        tarch::logging::LogFilter::FilterListEntry::AnyRank,
-        "tarch",
-        tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-        tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-      )
-    );
-    tarch::logging::LogFilter::getInstance().addFilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry(
-        tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-        0,
-        "tarch",
-        tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
-        tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-      )
-    );
-
-    tarch::logging::LogFilter::getInstance().addFilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry(
-        tarch::logging::LogFilter::FilterListEntry::TargetDebug,
-        tarch::logging::LogFilter::FilterListEntry::AnyRank,
-        "peano4",
-        tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-        tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-      )
-    );
-    tarch::logging::LogFilter::getInstance().addFilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry(
-        tarch::logging::LogFilter::FilterListEntry::TargetTrace,
-        tarch::logging::LogFilter::FilterListEntry::AnyRank,
-        "peano4",
-        tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-        tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-      )
-    );
-    tarch::logging::LogFilter::getInstance().addFilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry(
-        tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-        tarch::logging::LogFilter::FilterListEntry::AnyRank,
-        "peano4",
-        tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-        tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-      )
-    );
-    tarch::logging::LogFilter::getInstance().addFilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry(
-        tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-        0,
-        "peano4",
-        tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
-        tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-      )
-    );
-
-    tarch::logging::LogFilter::getInstance().addFilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry(
-        tarch::logging::LogFilter::FilterListEntry::TargetDebug,
-        tarch::logging::LogFilter::FilterListEntry::AnyRank,
-        "toolbox",
-        tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-        tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-      )
-    );
-    tarch::logging::LogFilter::getInstance().addFilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry(
-        tarch::logging::LogFilter::FilterListEntry::TargetTrace,
-        tarch::logging::LogFilter::FilterListEntry::AnyRank,
-        "toolbox",
-        tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-        tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-      )
-    );
-    tarch::logging::LogFilter::getInstance().addFilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry(
-        tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-        tarch::logging::LogFilter::FilterListEntry::AnyRank,
-        "toolbox",
-        tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-        tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-      )
-    );
-    tarch::logging::LogFilter::getInstance().addFilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry(
-        tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-        0,
-        "toolbox",
-        tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
-        tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-      )
-    );
-
     peano4::init(&argc, &argv, DomainOffset, DomainSize, 0);
   }
 
   void shutdownEnvironment() { peano4::shutdown(); }
 
   void logGridTraversalStatistics(const char* step, double dt) {
-    if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      logInfo(
-        "logGridTraversalStatistics()",
-        step
-          << " traversal took " << std::fixed << std::setprecision(4) << dt << "s"
-          << ": Leaves=" << loadBalancer.getStatistics().getGlobalNumberOfInnerUnrefinedCells()
-          << ", Trees=" << loadBalancer.getStatistics().getGlobalNumberOfTrees()
-      );
-    }
+    logInfo(
+      step
+      << " traversal took " << std::fixed << std::setprecision(4) << dt << "s"
+      << ": Leaves=" << loadBalancer.getStatistics().getGlobalNumberOfInnerUnrefinedCells()
+      << ", Trees=" << loadBalancer.getStatistics().getGlobalNumberOfTrees()
+    );
   }
 
   void runNextAlgorithmicStep() {
@@ -171,7 +55,6 @@ namespace {
 
     switch (currentStep) {
     case CreateGridWithRefinement: {
-      tarch::logging::LogFilter::getInstance().switchProgramPhase("CreateGridWithRefinement");
       CreateGridObserver createGridObserverWithRefinement(true);
       watch.start();
       peano4::parallel::SpacetreeSet::getInstance().traverse(createGridObserverWithRefinement);
@@ -181,7 +64,6 @@ namespace {
       break;
     }
     case CreateGridWithoutRefinement: {
-      tarch::logging::LogFilter::getInstance().switchProgramPhase("CreateGridWithoutRefinement");
       CreateGridObserver createGridObserverWithoutRefinement(false);
       watch.start();
       peano4::parallel::SpacetreeSet::getInstance().traverse(createGridObserverWithoutRefinement);
@@ -191,7 +73,6 @@ namespace {
       break;
     }
     case EmptyTraversal: {
-      tarch::logging::LogFilter::getInstance().switchProgramPhase("EmptyTraversal");
       EmptyTraversalObserver emptyTraversalObserver;
       watch.start();
       peano4::parallel::SpacetreeSet::getInstance().traverse(emptyTraversalObserver);

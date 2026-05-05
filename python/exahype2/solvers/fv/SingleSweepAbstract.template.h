@@ -13,7 +13,7 @@
 
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/la/Vector.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 
 #include <algorithm>
@@ -153,7 +153,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 
   protected:
-    static tarch::logging::Log _log;
 
     SolverState _solverState;
 

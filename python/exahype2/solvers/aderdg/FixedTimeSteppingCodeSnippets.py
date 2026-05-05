@@ -9,11 +9,11 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
 
     def create_print_time_step_implementation(self):
         return """
-  logDebug("logTimeStep()", "Phase  = " << toString(_solverState));
-  logInfo("logTimeStep()", "t       = " << getMinTimeStamp() << " / " << MinTerminalTime);
-  logInfo("logTimeStep()", "dt      = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : getTimeStepSize()));
-  logInfo("logTimeStep()", "h_{min} = " << getMinCellSize() << " (patch size)");
-  logInfo("logTimeStep()", "h_{max} = " << getMaxCellSize() << " (patch size)");
+  logDebug("Phase  = " << toString(_solverState));
+  logInfo("t       = " << getMinTimeStamp() << " / " << MinTerminalTime);
+  logInfo("dt      = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : getTimeStepSize()));
+  logInfo("h_{min} = " << getMinCellSize() << " (patch size)");
+  logInfo("h_{max} = " << getMaxCellSize() << " (patch size)");
 """
 
     def create_start_time_step_implementation(self):

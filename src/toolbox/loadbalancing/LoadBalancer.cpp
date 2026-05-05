@@ -7,8 +7,6 @@
 
 #include <sstream>
 
-tarch::logging::Log toolbox::loadbalancing::LoadBalancer::_log("toolbox::loadbalancing::LoadBalancer");
-
 toolbox::loadbalancing::LoadBalancer::LoadBalancer(Configuration* configuration):
   _configuration(configuration),
   _blacklist{},
@@ -84,7 +82,7 @@ void toolbox::loadbalancing::LoadBalancer::triggerSplit(int numberOfCells, int t
   );
 
   if (not success) {
-    logError("triggerSplit()", "Wanted to split tree " << sourceTree << " but failed");
+    logError("Wanted to split tree " << sourceTree << " but failed");
     assertion(false);
   }
 

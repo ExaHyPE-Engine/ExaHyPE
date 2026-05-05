@@ -37,17 +37,17 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
       ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSizeThisTimeStep>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSizeThisTimeStep) );
     }
     if (tarch::la::smallerEquals(_admissibleTimeStepSizeThisTimeStep,0.0,1e-10) ) {
-      logWarning( "finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSizeThisTimeStep) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug in the eigenvalue computation" );
+      logWarning("Degenerated time step size of " << std::to_string(_admissibleTimeStepSizeThisTimeStep) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug in the eigenvalue computation" );
     }
   }
 """
 
   def create_print_time_step_implementation(self):
     return """
-  logDebug("logTimeStep()", "Phase       = " << toString(_solverState));
-  logInfo("logTimeStep()", "t            = " << getMinTimeStamp() << " / " << MinTerminalTime);
-  logInfo("logTimeStep()", "dt           = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : _admissibleTimeStepSizeThisTimeStep));
-  logInfo("logTimeStep()", "h_{min}      = " << getMinCellSize() << " (patch size)");
-  logInfo("logTimeStep()", "h_{max}      = " << getMaxCellSize() << " (patch size)");
-  logInfo("logTimeStep()", "lambda_{max} = " << getMaxEigenvalue());
+  logDebug("Phase       = " << toString(_solverState));
+  logInfo("t            = " << getMinTimeStamp() << " / " << MinTerminalTime);
+  logInfo("dt           = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : _admissibleTimeStepSizeThisTimeStep));
+  logInfo("h_{min}      = " << getMinCellSize() << " (patch size)");
+  logInfo("h_{max}      = " << getMaxCellSize() << " (patch size)");
+  logInfo("lambda_{max} = " << getMaxEigenvalue());
 """

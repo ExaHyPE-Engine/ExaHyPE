@@ -13,12 +13,6 @@
 #include <ranges>
 #include <vector>
 
-
-namespace {
-  tarch::logging::Log _log("toolbox::particles::assignmentchecks");
-} // namespace
-
-
 void toolbox::particles::assignmentchecks::internal::Database::
   setMaxParticleSnapshotsToKeepTrackOf(const size_t n) {
   _maxParticleEventsToKeepTrackOf = n;
@@ -28,10 +22,7 @@ void toolbox::particles::assignmentchecks::internal::Database::
 void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(
   const std::string& meshSweepName
 ) {
-  logDebug(
-    "startMeshSweep()",
-    "finish old mesh sweep with and start new one for " << meshSweepName
-  );
+  logDebug("finish old mesh sweep with and start new one for " << meshSweepName);
 
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
@@ -67,7 +58,7 @@ int toolbox::particles::assignmentchecks::internal::Database::
 
 void toolbox::particles::assignmentchecks::internal::Database::reset() {
 
-  logDebug("reset()", "Resetting database");
+  logDebug("Resetting database");
 
   _data.clear();
   _meshSweepData.clear();
@@ -94,7 +85,7 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents toolbox::
     return *newEventHistory;
   } else {
 
-#if PEANO_DEBUG > 3
+#if PEANO_DEBUG
     assertion3(
       search->first.particleID == identifier.particleID,
       "Particle identifier ID not identical",
@@ -175,7 +166,7 @@ int toolbox::particles::assignmentchecks::internal::Database::
 
   if (search != _data.end()) {
 
-#if PEANO_DEBUG > 3
+#if PEANO_DEBUG
     assertion3(
       search->first.particleID == identifier.particleID,
       "Particle identifier ID not identical",
@@ -274,7 +265,7 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
   auto search = _data.find(identifier);
   if (search != _data.end()) {
 
-#if PEANO_DEBUG > 3
+#if PEANO_DEBUG
     assertion3(
       search->first.particleID == identifier.particleID,
       "Particle identifier ID not identical",
@@ -335,7 +326,7 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
   assignmentchecks::internal::Database::
     addEvent(ParticleIdentifier identifier, Event& event) {
 
-  logDebug("addEvent()", "Adding event for " << identifier.toString());
+  logDebug("Adding event for " << identifier.toString());
 
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
@@ -354,17 +345,14 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
     _data.insert(
       std::pair<ParticleIdentifier, ParticleEvents>(identifier, newEventHistory)
     );
-    logDebug(
-      "addEvent(...) ",
-      "add new particle history thread for " + identifier.toString()
-        + ",Event:" + event.toString()
-    );
+    logDebug("add new particle history thread for " + identifier.toString()
+        + ",Event:" + event.toString());
     // there is no previous event.
     return Event(Event::Type::NotFound);
 
   } else {
 
-#if PEANO_DEBUG > 3
+#if PEANO_DEBUG
     assertion3(
       search->first.particleID == identifier.particleID,
       "Particle identifier ID not identical",
@@ -402,12 +390,9 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
       // make copy, not reference
       Event lastEvent = history.back();
 
-#if PEANO_DEBUG > 3
+#if PEANO_DEBUG
       if (lastEvent.type == Event::Type::NotFound) {
-        logDebug(
-          "addEvent(...)",
-          "Particle histroy shouldn't contain an invalid event"
-        );
+        logDebug("Particle histroy shouldn't contain an invalid event");
       }
 #endif
 
@@ -419,11 +404,8 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
         lastEvent.trace = "substitute-for-whole-trajectory/" + lastEvent.trace;
       }
 
-      logDebug(
-        "addEvent(...) ",
-        "shortening history of " << identifier.toString(
-        ) << " to " << lastEvent.toString()
-      );
+      logDebug("shortening history of " << identifier.toString(
+        ) << " to " << lastEvent.toString());
 
       history.clear();
       history.push_back(lastEvent);
@@ -432,10 +414,7 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
     // Add the new event now.
     Event previousEvent = history.back();
     history.push_back(event);
-    logDebug(
-      "addEvent(...) ",
-      "added event " + event.toString() + " " + identifier.toString()
-    );
+    logDebug("added event " + event.toString() + " " + identifier.toString());
 
     return previousEvent;
   }
@@ -461,7 +440,7 @@ void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
     "Trying to replace event of particle with no history"
   );
 
-#if PEANO_DEBUG > 3
+#if PEANO_DEBUG
   assertion3(
     search->first.particleID == identifier.particleID,
     "Particle identifier ID not identical",
@@ -532,7 +511,7 @@ void toolbox::particles::assignmentchecks::internal::Database::
     "Particle not found through its identifier"
   );
 
-#if PEANO_DEBUG > 3
+#if PEANO_DEBUG
   assertion3(
     search->first.particleID == identifier.particleID,
     "Particle identifier ID not identical",
@@ -569,11 +548,8 @@ void toolbox::particles::assignmentchecks::internal::Database::
   ParticleEvents&    history = search->second;
 
   // delete old entry in database and add the new one.
-  logDebug(
-    "shiftIdentifierCoordinates(...) ",
-    "shifting particle identifier from "
-      << key.vertexInd << " to " << newVertexInd;
-  );
+  logDebug("shifting particle identifier from "
+      << key.vertexInd << " to " << newVertexInd;);
 
   ParticleEvents historyCopy = history;
   _data.erase(key);

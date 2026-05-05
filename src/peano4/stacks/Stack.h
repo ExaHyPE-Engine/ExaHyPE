@@ -5,7 +5,7 @@
 #include "IOMode.h"
 #include "SendReceiveContext.h"
 #include "tarch/Assertions.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Rank.h"
 
 #include <memory>
@@ -21,8 +21,6 @@ namespace peano4::stacks {
 template <class T>
 class peano4::stacks::Stack {
 private:
-  static tarch::logging::Log _log;
-
   // static_assert(std::is_standard_layout_v<T>);
   // static_assert(std::is_trivially_copyable_v<T>);
   static_assert(std::is_copy_constructible_v<T>);
@@ -312,15 +310,14 @@ public:
     _ioTag  = tag;
     _ioRank = rank;
 
-    logDebug("startSend()", toString());
+    logDebug(toString());
 
     const MPI_Datatype dtype = translateContextIntoDatatype<T>(context);
     const int result = MPI_Isend(_data.data(), static_cast<int>(size()), dtype, _ioRank, _ioTag, comm, &_ioMPIRequest);
     if (result != MPI_SUCCESS) {
       logError(
-        "startSend()",
         "Was not able to send to rank "
-          << _ioRank << " on tag " << _ioTag << ": " << tarch::mpi::MPIReturnValueToString(result)
+        << _ioRank << " on tag " << _ioTag << ": " << tarch::mpi::MPIReturnValueToString(result)
       );
       assertion(false);
     }
@@ -353,7 +350,7 @@ public:
     _ioTag  = tag;
     _ioRank = rank;
 
-    logDebug("startReceive()", toString());
+    logDebug(toString());
 
     resize(numberOfElements);
 
@@ -361,10 +358,9 @@ public:
     const int          result = MPI_Irecv(_data.data(), numberOfElements, dtype, _ioRank, _ioTag, comm, &_ioMPIRequest);
     if (result != MPI_SUCCESS) {
       logError(
-        "startReceive()",
         "Was not able to receive "
-          << numberOfElements << " values from rank " << _ioRank << " on tag " << _ioTag << ": "
-          << tarch::mpi::MPIReturnValueToString(result)
+        << numberOfElements << " values from rank " << _ioRank << " on tag " << _ioTag << ": "
+        << tarch::mpi::MPIReturnValueToString(result)
       );
       assertion(false);
     }
@@ -394,9 +390,9 @@ public:
     if (flag) {
       if (_ioMode == IOMode::MPISend) {
         shallowClear();
-        logDebug("tryToFinishSendOrReceive()", "Send complete: " << toString());
+        logDebug("Send complete: " << toString());
       } else if (_ioMode == IOMode::MPIReceive) {
-        logDebug("tryToFinishSendOrReceive()", "Receive complete: " << toString());
+        logDebug("Receive complete: " << toString());
       }
       _ioMode       = IOMode::None;
       _ioMPIActive  = false;
@@ -417,6 +413,3 @@ public:
   INLINE_METHOD int    getActiveIOTag() const { return _ioMode == IOMode::None ? -1 : _ioTag; }
 #endif // WITH_MPI
 };
-
-template <class T>
-tarch::logging::Log peano4::stacks::Stack<T>::_log("peano4::stacks::Stack<T>");

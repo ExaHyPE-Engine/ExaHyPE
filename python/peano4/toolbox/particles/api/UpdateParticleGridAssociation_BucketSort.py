@@ -109,7 +109,7 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
 
     toolbox::particles::ParticleReassociationInstruction instruction = toolbox::particles::liftParticleAssociatedWithVertex(**p, marker);
 
-    #if PEANO_DEBUG > 0
+    #if PEANO_DEBUG
     int partID = (*p)->getPartid();
     #else
     int partID = -1;
@@ -119,7 +119,7 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
       case toolbox::particles::ParticleReassociationInstruction_Keep:
         if (toolbox::particles::particleWillBeDroppedFurther(**p,marker)) {
           _numberOfLiftsIntoSieveSet++;
-          logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " locally, as it has to be dropped to next level in next iteration" );
+          logDebug("lift particle " << (*p)->toString() << " locally, as it has to be dropped to next level in next iteration");
           toolbox::particles::assignmentchecks::detachParticleFromVertex(
             "{{PARTICLE}}",
             (*p)->getX(),
@@ -158,7 +158,7 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
       case 7:
       #endif
         _numberOfLiftsIntoSieveSet++;
-        logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " globally. Previously assigned to " << marker.toString() );
+        logDebug("lift particle " << (*p)->toString() << " globally. Previously assigned to " << marker.toString());
         toolbox::particles::assignmentchecks::detachParticleFromVertex(
           "{{PARTICLE}}",
           (*p)->getX(),

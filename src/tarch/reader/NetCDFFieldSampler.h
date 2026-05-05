@@ -5,7 +5,7 @@
 #ifdef WITH_NETCDF
 
 #include "NetCDFFileReader.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 
 #include <initializer_list>
 #include <string>
@@ -27,8 +27,6 @@ public:
   };
 
 private:
-  static tarch::logging::Log _log;
-
   struct Field {
     std::vector<double> values;
     std::size_t         lengthInX = 0;

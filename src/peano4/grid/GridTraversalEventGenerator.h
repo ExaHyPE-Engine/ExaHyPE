@@ -11,7 +11,7 @@
 #include "TreeIdSet.h"
 #include "VertexLookupTable.h"
 #include "VertexType.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/tests/TestCase.h"
 
 namespace peano4::grid {
@@ -22,7 +22,6 @@ class peano4::grid::GridTraversalEventGenerator {
 private:
   const int _treeNumber;
 
-  static tarch::logging::Log _log;
 
 public:
   GridTraversalEventGenerator(int id);

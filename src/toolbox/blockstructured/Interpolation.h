@@ -198,7 +198,6 @@
 namespace toolbox {
   namespace blockstructured {
 
-    extern tarch::logging::Log _log;
     extern tarch::multicore::BooleanSemaphore interpolationMapSemaphore;
 
     /**

@@ -7,8 +7,6 @@
 #include <algorithm>
 #include <sstream>
 
-tarch::logging::Log toolbox::loadbalancing::Blacklist::_log("toolbox::loadbalancing::Blacklist");
-
 namespace {
   inline decltype(auto) gridStats(int treeId) {
     return peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(treeId);
@@ -85,10 +83,9 @@ void toolbox::loadbalancing::Blacklist::notifySplit(int treeId) {
 
   if (wasActive) {
     logDebug(
-      "triggeredSplit()",
       "Split tree "
-        << treeId
-        << " though it had been on the blacklist. This can happen if a tree splits multiple times in one iteration."
+      << treeId
+      << " although it was already blacklisted. This can happen if a tree splits multiple times in one iteration."
     );
   }
 }
@@ -102,7 +99,7 @@ void toolbox::loadbalancing::Blacklist::update() {
 
     // Degeneration handling: extend / enable blacklist and refresh baseline.
     if (stats.getRemovedEmptySubtree()) {
-      logDebug("update()", "Tree " << treeId << " has degenerated child. Set/keep on blacklist");
+      logDebug("Tree " << treeId << " removed an empty subtree. Keep it on blacklist");
       e.numberOfDegeneratedChildren++;
       e.baselineNumberOfUnrefinedCells = stats.numberOfLocalUnrefinedCells;
 
@@ -123,18 +120,13 @@ void toolbox::loadbalancing::Blacklist::update() {
     //    keep the entry active (prevents repeated splitting attempts).
     const int currentCells = stats.numberOfLocalUnrefinedCells;
     if (currentCells == e.baselineNumberOfUnrefinedCells) {
-      logDebug(
-        "update()",
-        "Tree "
-          << treeId
-          << " is on blacklist but seems to have failed to fork off cells successfully (local cell count unchanged). Keep on blacklist."
-      );
+      logDebug("Tree " << treeId << " remains blacklisted because local cell count is unchanged at " << currentCells);
       continue;
     }
 
     // Progress observed: count down and deactivate when the counter reaches 0.
     if (e.lifetime == 1) {
-      logDebug("update()", "Remove tree " << treeId << " from blacklist (keep entry but mark inactive)");
+      logDebug("Remove tree " << treeId << " from blacklist. Keep entry inactive");
       e.lifetime = 0;
     } else {
       e.lifetime--;

@@ -3,7 +3,7 @@
 #pragma once
 
 #include "tarch/tests/TestCase.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 
 
 namespace peano4 {
@@ -23,7 +23,6 @@ class peano4::parallel::tests::NodeTest: public tarch::tests::TestCase {
     /**
      * Logging device
      */
-    static tarch::logging::Log _log;
 
     void testGetPeriodicBoundaryNumber();
     void testBitsetBasedPeriodicBoundaryEnumeration();

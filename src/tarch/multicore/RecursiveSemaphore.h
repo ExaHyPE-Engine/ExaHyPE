@@ -16,7 +16,7 @@ namespace tarch {
 #include <thread>
 
 #include "tarch/multicore/BooleanSemaphore.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 
 /**
  * Recursive Semaphore

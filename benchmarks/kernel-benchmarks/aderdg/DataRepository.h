@@ -8,8 +8,8 @@
 #include "facedata/AderSolverQEstimates.h"
 #include "facedata/AderSolverQFluxEstimates.h"
 #include "peano4/datamanagement/CellMarker.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/la/Vector.h"
-#include "tarch/logging/Log.h"
 
 #include <array>
 #include <string>

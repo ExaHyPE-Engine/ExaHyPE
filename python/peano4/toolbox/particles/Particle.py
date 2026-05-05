@@ -68,7 +68,7 @@ class Particle(DaStGen2):
       
     ## Debug information
       
-    If any debug level is active, each particle carries a unique identifier.
+    If PEANO_DEBUG is active, each particle carries a unique identifier.
     
     
     ## Performance optimisation
@@ -125,7 +125,7 @@ class Particle(DaStGen2):
 
         self.name = name
         # Is used in subclases
-        self.partid = dastgen2.attributes.Integer("partid", ifdefs=["PEANO_DEBUG > 0"], initval="-1")
+        self.partid = dastgen2.attributes.Integer("partid", ifdefs=["PEANO_DEBUG"], initval="-1")
 
         self.data.add_attribute(peano4.dastgen2.Peano4DoubleArray("x", "DIMENSIONS"))
         self.data.add_attribute(

@@ -12,8 +12,6 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Task.h"
 
-tarch::logging::Log peano4::parallel::tests::PingPongTest::_log("peano4::parallel::tests::PingPongTest");
-
 peano4::parallel::tests::PingPongTest::PingPongTest():
   TestCase("peano4::parallel::tests::PingPongTest") {}
 
@@ -46,14 +44,13 @@ namespace {
 
     bool run() {
       const int                  out = 23 + _data;
-      static tarch::logging::Log _log("peano4::parallel::tests::PingPongSendTask");
       if (_blockingMPI) {
         MPI_Send(&out, 1, MPI_INT, 1, _data, MPI_COMM_WORLD);
-        logDebug("PingPongSendTask()", "sent blocking message " << out << " to rank 1 with tag " << _data);
+        logDebug("sent blocking message " << out << " to rank 1 with tag " << _data);
       } else {
         MPI_Request request;
         MPI_Isend(&out, 1, MPI_INT, 1, _data, MPI_COMM_WORLD, &request);
-        logDebug("PingPongSendTask()", "sent non-blocking message " << out << " to rank 1 with tag " << _data);
+        logDebug("sent non-blocking message " << out << " to rank 1 with tag " << _data);
         MPI_Wait(&request, MPI_STATUS_IGNORE);
       }
       return false;
@@ -74,8 +71,7 @@ namespace {
 
     bool run() {
       int                        in = -12;
-      static tarch::logging::Log _log("peano4::parallel::tests::PingPongSendTask");
-      logDebug("PingPongReceiveTask()", "receive message from rank 1 with tag " << _data);
+      logDebug("receive message from rank 1 with tag " << _data);
       if (_blockingMPI) {
         MPI_Recv(&in, 1, MPI_INT, 0, _data, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       } else {
@@ -83,13 +79,10 @@ namespace {
         MPI_Irecv(&in, 1, MPI_INT, 0, _data, MPI_COMM_WORLD, &request);
         MPI_Wait(&request, MPI_STATUS_IGNORE);
       }
-      logDebug("PingPongReceiveTask()", "got content " << in);
+      logDebug("got content " << in);
       if (in != 23 + _data) {
-        logError(
-          "testMultithreadedPingPong()",
-          "received "
-            << in << " instead of " << (23 + _data) << " (blocking mode=" << _blockingMPI << ", tag=" << _data << ")"
-        );
+        logError("received "
+            << in << " instead of " << (23 + _data) << " (blocking mode=" << _blockingMPI << ", tag=" << _data << ")");
         testErrors++;
       }
       return false;

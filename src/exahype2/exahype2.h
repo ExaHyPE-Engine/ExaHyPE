@@ -34,7 +34,6 @@ namespace exahype2 {
     extern std::string outputPath;
   } // namespace internal
 
-  void                 setDefaultLogStatements();
   std::string          extractConfigFileFromCommandLine(int& argc, char** argv);
   RuntimeConfiguration loadRuntimeConfiguration(
     const std::string&          configFilePath,

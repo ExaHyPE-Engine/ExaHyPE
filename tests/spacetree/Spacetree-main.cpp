@@ -7,19 +7,14 @@
 #include "EmptyTraversalObserver.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/peano4.h"
-#include "tarch/logging/Log.h"
-#include "tarch/logging/LogFilter.h"
-#include "tarch/timing/Measurement.h"
-#include "tarch/timing/Watch.h"
-
-namespace {
-  tarch::logging::Log _log("");
-} // namespace
+#include "tarch/instrumentation/Log.h"
+#include "tarch/instrumentation/Measurement.h"
+#include "tarch/instrumentation/Watch.h"
 
 using namespace tests::peano4::grid;
 
 int main(int argc, char** argv) {
-  static tarch::timing::Watch watch("::", "step()", false);
+  static tarch::instrumentation::Watch watch("::", "step()", false);
 
 #if DIMENSIONS == 2
   const auto DomainOffset = {0.0, 0.0};
@@ -38,14 +33,14 @@ int main(int argc, char** argv) {
     watch.start();
     spacetree.traverse(createGridObserver, true);
     watch.stop();
-    logInfo("main()", "Grid construction took " << watch.getCalendarTime() << "s: " << spacetree.getGridStatistics());
+    logInfo("Grid construction took " << watch.getCalendarTime() << "s: " << spacetree.getGridStatistics());
   }
 
   EmptyTraversalObserver emptyTraversalObserver;
   watch.start();
   spacetree.traverse(emptyTraversalObserver, true);
   watch.stop();
-  logInfo("main()", "Empty traversal took " << watch.getCalendarTime() << "s: " << spacetree.getGridStatistics());
+  logInfo("Empty traversal took " << watch.getCalendarTime() << "s: " << spacetree.getGridStatistics());
 
   ::peano4::shutdown();
 

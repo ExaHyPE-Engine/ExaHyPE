@@ -13,16 +13,14 @@
 #include "repositories/SolverRepository.h"
 #include "repositories/StepRepository.h"
 
+#include "tarch/tarch.h"
 #include "tarch/FloatingPointExceptions.h"
 #include "tarch/NonCriticalAssertions.h"
-#include "tarch/accelerator/MemoryManager.h"
-#include "tarch/logging/Log.h"
-#include "tarch/logging/LogFilter.h"
-#include "tarch/logging/Statistics.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/multicore.h"
-#include "tarch/timing/Measurement.h"
-#include "tarch/timing/Watch.h"
+#include "tarch/instrumentation/Log.h"
+#include "tarch/instrumentation/Measurement.h"
+#include "tarch/instrumentation/Watch.h"
 
 #include "peano4/peano4.h"
 #include "peano4/grid/Spacetree.h"
@@ -33,6 +31,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <functional>
 #include <iomanip>
 #include <initializer_list>
 #include <limits>
@@ -42,14 +41,13 @@
 using namespace {{NAMESPACE | join("::")}};
 
 namespace {
-  tarch::logging::Log _log("");
-  static tarch::timing::Watch watch("::", "", false, false);
+  static tarch::instrumentation::Watch watch("::", "", false, false);
 
-  tarch::timing::Measurement gridConstructionMeasurement;
-  tarch::timing::Measurement gridInitialisationMeasurement;
-  tarch::timing::Measurement timeStepMeasurement;
-  tarch::timing::Measurement plotMeasurement;
-  tarch::timing::Measurement gridSweepMeasurement;
+  tarch::instrumentation::Measurement gridConstructionMeasurement;
+  tarch::instrumentation::Measurement gridInitialisationMeasurement;
+  tarch::instrumentation::Measurement timeStepMeasurement;
+  tarch::instrumentation::Measurement plotMeasurement;
+  tarch::instrumentation::Measurement gridSweepMeasurement;
 
   static double logNextTimeStep = 0.0;
   static int currentNumberOfGridSweepsOfTimeStep = 0;
@@ -85,7 +83,7 @@ bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumbe
     finishConditionSeenLastSweep        = false;
     const auto globalNumberOfLeaves     = static_cast<unsigned long>(repositories::loadBalancer.getStatistics().getGlobalNumberOfInnerUnrefinedCells());
     const auto maxDepth                 = repositories::loadBalancer.getStatistics().getGlobalMaxDepth();
-    logInfo("shouldContinueGridConstruction()", "Mesh refinement detected (h_{min} decreased: " << oldH << " -> " << currentMinH << "), Leaves=" << globalNumberOfLeaves << ", Levels=" << maxDepth);
+    logInfo("Mesh refinement detected (h_{min} decreased: " << oldH << " -> " << currentMinH << "), Leaves=" << globalNumberOfLeaves << ", Levels=" << maxDepth);
     peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithoutRefinement));
     return true;
   }
@@ -93,7 +91,7 @@ bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumbe
   // If new trees (subdomains) have appeared, we pause refinement to let the load balancer settle.
   if (repositories::loadBalancer.getStatistics().getGlobalNumberOfTrees() > currentGlobalNumberOfTrees) {
     const auto newTreeCount = repositories::loadBalancer.getStatistics().getGlobalNumberOfTrees();
-    logInfo("shouldContinueGridConstruction()", "Rebalancing detected (Tree count increased: " << currentGlobalNumberOfTrees << " -> " << newTreeCount << ")");
+    logInfo("Rebalancing detected (Tree count increased: " << currentGlobalNumberOfTrees << " -> " << newTreeCount << ")");
     currentGlobalNumberOfTrees = newTreeCount;
     finishConditionSeenLastSweep = false;
     peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGridWithoutRefinement));
@@ -114,7 +112,7 @@ bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumbe
     // Therefore, we don't use this at the moment (set to true). This should be used as soon as periodic BCs work across subdomains.
     const bool hasConfirmedStationarySweep = /*repositories::loadBalancer.getStatistics().getGlobalNumberOfStationarySweeps() > 0;*/ true;
     if (finishConditionSeenLastSweep and hasConfirmedStationarySweep) {
-      logInfo("shouldContinueGridConstruction()", "Grid construction complete: Admissible mesh size reached (h_{min}=" << currentMinH << ", admissible h_{min}=" << repositories::getMinAdmissibleMeshSize() << ") and load balancing has converged");
+      logInfo("Grid construction complete: Admissible mesh size reached (h_{min}=" << currentMinH << ", admissible h_{min}=" << repositories::getMinAdmissibleMeshSize() << ") and load balancing has converged");
       return false;
     }
 
@@ -146,7 +144,7 @@ bool selectNextAlgorithmicStep() {
   if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNonCriticalAssertion) {
     peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution));
     haveReceivedNonCriticalAssertion = true;
-    logError("selectNextAlgorithmicStep()", "Noncritical assertion has been triggered in code. Dump final state and terminate.");
+    logError("Noncritical assertion has been triggered in code. Dump final state and terminate.");
   } else if (tarch::hasNonCriticalAssertionBeenViolated()) {
     continueToSolve = false;
   } else if (gridConstructed and not gridInitialised) {
@@ -172,20 +170,14 @@ bool selectNextAlgorithmicStep() {
       nextMaxPlotTimeStamp += timeInBetweenPlots;
 
       if (nextMinPlotTimeStamp < repositories::getMinTimeStamp()) {
-        logWarning(
-          "selectNextAlgorithmicStep()",
-          "Code is asked to plot every dt="
+        logWarning("Code is asked to plot every dt="
             << timeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
-            << "So postpone next plot to t=" << (repositories::getMinTimeStamp() + timeInBetweenPlots)
-        );
+            << "So postpone next plot to t=" << (repositories::getMinTimeStamp() + timeInBetweenPlots));
         nextMinPlotTimeStamp = repositories::getMinTimeStamp() + timeInBetweenPlots;
       } else if (nextMaxPlotTimeStamp < repositories::getMaxTimeStamp()) {
-        logWarning(
-          "selectNextAlgorithmicStep()",
-          "Code is asked to plot every dt="
+        logWarning("Code is asked to plot every dt="
             << timeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
-            << "So postpone next plot to t=" << (repositories::getMaxTimeStamp() + timeInBetweenPlots)
-        );
+            << "So postpone next plot to t=" << (repositories::getMaxTimeStamp() + timeInBetweenPlots));
         nextMaxPlotTimeStamp = repositories::getMaxTimeStamp() + timeInBetweenPlots;
       }
 
@@ -235,7 +227,7 @@ void logGlobalStatistics() {
     msg << "Leaves=" << globalNumberOfLeaves
         << ", Vertices=" << totalNumberOfVertices << " (Local=" << globalNumberOfVertices << ", Hanging=" << globalNumberOfHangingVertices << ")"
         << ", Levels=" << maxDepth << " (min=" << minDepth << ", max=" << maxDepth << ")";
-    logInfo("logGlobalStatistics()", formatStatisticsLabel("Topology:", StatisticsLabels) << msg.str());
+    logInfo(formatStatisticsLabel("Topology:", StatisticsLabels) << msg.str());
   }
 
   {
@@ -249,7 +241,7 @@ void logGlobalStatistics() {
     msg << "Trees=" << globalNumberOfTrees
         << ", Efficiency=" << std::fixed << std::setprecision(2) << efficiency << "% (min=" << minLoad << ", max=" << maxLoad << ")"
         << ", Overhead=" << std::fixed << std::setprecision(2) << overhead << "%";
-    logInfo("logGlobalStatistics()", formatStatisticsLabel("Load Balancing:", StatisticsLabels) << msg.str());
+    logInfo(formatStatisticsLabel("Load Balancing:", StatisticsLabels) << msg.str());
   }
 
   {
@@ -265,11 +257,8 @@ void logGlobalStatistics() {
         << ", FaceData=" << std::fixed << std::setprecision(2) << tarch::convertMemorySize(memoryUsedByFaceData, tarch::chooseMemoryUsageFormat(memoryUsedByFaceData)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(memoryUsedByFaceData))
         << ", VertexData=" << std::fixed << std::setprecision(2) << tarch::convertMemorySize(memoryUsedByVertexData, tarch::chooseMemoryUsageFormat(memoryUsedByVertexData)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(memoryUsedByVertexData))
         << ")";
-    logInfo("logGlobalStatistics()", formatStatisticsLabel("Memory Usage:", StatisticsLabels) << msg.str());
+    logInfo(formatStatisticsLabel("Memory Usage:", StatisticsLabels) << msg.str());
   }
-
-  tarch::logging::Statistics::getInstance().log("MemoryUsage", tarch::accelerator::MemoryManager::getStatistics());
-  tarch::logging::Statistics::getInstance().log("LoadBalancing", toolbox::loadbalancing::LoadBalancer::getLocalLoadBalancing());
 
   if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
     const auto dofs               = static_cast<unsigned long>(repositories::getNumberOfDoFs());
@@ -284,7 +273,7 @@ void logGlobalStatistics() {
       const auto gridSweepsPerSecond   = gridSweepsPerTimestep / dt;
       throughputMessage << ", " << gridSweepsPerSecond << " Sweeps/s, " << gridSweepsPerTimestep << " Sweeps/Timestep";
     }
-    logInfo("logGlobalStatistics()", throughputMessage.str());
+    logInfo(throughputMessage.str());
 
     const auto elapsedWallTime = timeStepMeasurement.getAccumulatedValue() + plotMeasurement.getAccumulatedValue();
     const auto minTimeStamp    = repositories::getMinTimeStamp();
@@ -304,7 +293,7 @@ void logGlobalStatistics() {
       const auto hours   = expectedTimeUntilFinishInSeconds / 3600;
       const auto minutes = (expectedTimeUntilFinishInSeconds % 3600) / 60;
       const auto seconds = expectedTimeUntilFinishInSeconds % 60;
-      logInfo("logGlobalStatistics()", formatStatisticsLabel("Expected Time Until Finish:", StatisticsLabels) << hours << "h " << minutes << "m " << seconds << "s");
+      logInfo(formatStatisticsLabel("Expected Time Until Finish:", StatisticsLabels) << hours << "h " << minutes << "m " << seconds << "s");
     }
   }
 }
@@ -315,8 +304,6 @@ void performAlgorithmicStep(
   std::function<void()>               startStepHook,
   std::function<void()>               finishStepHook
 ) {
-  tarch::logging::LogFilter::getInstance().switchProgramPhase(repositories::StepRepository::toString(stepName));
-
   tarch::FloatingPointExceptions::ScopedTrap scopedTrap(__FILE__, __LINE__);
 
   startStepHook();
@@ -376,9 +363,7 @@ void runNextAlgorithmicStep() {
         repositories::finishGridInitialisationStep();
       }
     );
-    if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      logInfo("performAlgorithmicStep()", "Grid initialisation complete");
-    }
+    logInfo("Grid initialisation complete");
     break;
   case repositories::StepRepository::Steps::PlotSolution:
     performAlgorithmicStep<observers::PlotSolution>(
@@ -422,11 +407,9 @@ void runNextAlgorithmicStep() {
       and
       repositories::mayPlot()
     ) {
-      if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-        repositories::logTimeStep();
-        logGlobalStatistics();
-        lastLoggedNumberOfCompletedTimeSteps = numberOfCompletedTimeSteps;
-      }
+      repositories::logTimeStep();
+      logGlobalStatistics();
+      lastLoggedNumberOfCompletedTimeSteps = numberOfCompletedTimeSteps;
       logNextTimeStep += repositories::LogTimeStepIntervalInSeconds;
     }
     break;
@@ -453,22 +436,17 @@ void setupEnvironment(int argc, char** argv) {
 
   peano4::init(&argc, &argv, runtimeConfiguration.domainOffset, runtimeConfiguration.domainSize, runtimeConfiguration.periodicBC);
 
-  if (not configFilePath.empty() and tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo("setupEnvironment()", "Loaded runtime configuration from " << configFilePath);
+  if (not configFilePath.empty()) {
+    logInfo("Loaded runtime configuration from " << configFilePath);
   }
 
-  repositories::initLogFilters();
   const int numberOfMaxGlobalSpacetrees = repositories::loadBalancer.getMaxPermittedTreesPerRank() * tarch::mpi::Rank::getInstance().getNumberOfRanks();
   repositories::DataRepository::setNumberOfMaxGlobalSpacetrees(numberOfMaxGlobalSpacetrees);
   repositories::DataRepository::init();
   repositories::startSimulation();
-
-  tarch::logging::Statistics::getInstance().clear();
 }
 
 void shutdownEnvironment() {
-  tarch::logging::Statistics::getInstance().writeToCSV();
-
   repositories::finishSimulation();
   repositories::DataRepository::shutdown();
 
@@ -485,13 +463,13 @@ void logFinalGlobalStatistics() {
   };
 
   if (gridConstructionMeasurement.getNumberOfMeasurements() > 0) {
-    logInfo("logFinalGlobalStatistics()", formatStatisticsLabel("Grid Construction:", FinalGlobalStatisticsLabels) << gridConstructionMeasurement.getAccumulatedValue() << "s\t" << gridConstructionMeasurement.toString());
+    logInfo(formatStatisticsLabel("Grid Construction:", FinalGlobalStatisticsLabels) << gridConstructionMeasurement.getAccumulatedValue() << "s\t" << gridConstructionMeasurement.toString());
   }
   if (gridInitialisationMeasurement.getNumberOfMeasurements() > 0) {
-    logInfo("logFinalGlobalStatistics()", formatStatisticsLabel("Grid Initialisation:", FinalGlobalStatisticsLabels) << gridInitialisationMeasurement.getAccumulatedValue() << "s\t" << gridInitialisationMeasurement.toString());
+    logInfo(formatStatisticsLabel("Grid Initialisation:", FinalGlobalStatisticsLabels) << gridInitialisationMeasurement.getAccumulatedValue() << "s\t" << gridInitialisationMeasurement.toString());
   }
   if (plotMeasurement.getNumberOfMeasurements() > 0) {
-    logInfo("logFinalGlobalStatistics()", formatStatisticsLabel("Plotting:", FinalGlobalStatisticsLabels) << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString());
+    logInfo(formatStatisticsLabel("Plotting:", FinalGlobalStatisticsLabels) << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString());
   }
   if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
     const auto dofs                   = static_cast<double>(repositories::getNumberOfDoFs());
@@ -500,7 +478,7 @@ void logFinalGlobalStatistics() {
     const auto dt                     = timeStepMeasurement.getValue();
     const auto leavesPerSecond        = globalNumberOfLeaves / dt;
     const auto dofsPerSecond          = totalNumberOfDoFs    / dt;
-    logInfo("logFinalGlobalStatistics()", formatStatisticsLabel("Time Stepping:", FinalGlobalStatisticsLabels) << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString());
+    logInfo(formatStatisticsLabel("Time Stepping:", FinalGlobalStatisticsLabels) << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString());
     std::ostringstream throughputMessage;
     throughputMessage << formatStatisticsLabel("Average Throughput per Timestep:", FinalGlobalStatisticsLabels) << leavesPerSecond << " Leaves/s, " << dofsPerSecond << " DoFs/s";
     if (gridSweepMeasurement.getNumberOfMeasurements() > 0) {
@@ -508,7 +486,7 @@ void logFinalGlobalStatistics() {
       const auto gridSweepsPerSecond   = gridSweepsPerTimestep / dt;
       throughputMessage << ", " << gridSweepsPerSecond << " Sweeps/s, Sweeps/Timestep " << gridSweepMeasurement.toString();
     }
-    logInfo("logFinalGlobalStatistics()", throughputMessage.str());
+    logInfo(throughputMessage.str());
   }
 }
 
@@ -522,14 +500,14 @@ int runGlobalMaster() {
   peano4::parallel::Node::getInstance().continueToRun(); // Send terminate instruction to other ranks
 
   if (haveReceivedNonCriticalAssertion) {
-    logWarning("runGlobalMaster()", "ExaHyPE terminated gracefully after noncritical assertion");
+    logWarning("ExaHyPE terminated gracefully after noncritical assertion");
     return EXIT_FAILURE;
   } else {
     if (numberOfCompletedTimeSteps > lastLoggedNumberOfCompletedTimeSteps) {
       repositories::logTimeStep();
       lastLoggedNumberOfCompletedTimeSteps = numberOfCompletedTimeSteps;
     }
-    logInfo("runGlobalMaster()", "ExaHyPE terminated successfully");
+    logInfo("ExaHyPE terminated successfully");
     logFinalGlobalStatistics();
     return EXIT_SUCCESS;
   }

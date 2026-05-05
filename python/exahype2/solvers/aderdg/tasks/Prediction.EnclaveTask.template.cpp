@@ -14,10 +14,11 @@
 
 #include "peano4/parallel/parallel.h"
 
+#include "tarch/instrumentation/Trace.h"
+
 #include <algorithm>
 #include <cstring>
 
-tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
 int                 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}"));
 
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getEnclaveTaskTypeId() {
@@ -51,12 +52,13 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getEnclaveTaskTypeId() {
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& otherTasks) {
+  traceEnter("ADER DG prediction task fusion");
+
   const int numberOfCells = otherTasks.size() + 1;
 
-  logDebug("fuse()", "Rank " << tarch::mpi::Rank::getInstance().getRank()
+  logDebug("Rank " << tarch::mpi::Rank::getInstance().getRank()
     << " asked to fuse " << numberOfCells << " cells of type " << getTaskType() << " into "
-    << {{NUMBER_OF_ENCLAVE_TASKS}} << " asynchronous enclave tasks on target device " << TARGET_DEVICE
-  );
+    << {{NUMBER_OF_ENCLAVE_TASKS}} << " asynchronous enclave tasks on target device " << TARGET_DEVICE);
 
   ::exahype2::CellData<{{SOLUTION_STORAGE_PRECISION}}, {{SOLUTION_STORAGE_PRECISION}}, 2> cellData(
     numberOfCells,
@@ -90,6 +92,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   cellData.cellSize[cellIndex]            = _marker.getH();
   cellData.maxEigenvalue[cellIndex]       = 0.0;
 
+  traceEnter("Prediction kernels");
 #if defined(WITH_OPENMP)
 #pragma omp parallel for schedule(static, 1)
 #endif
@@ -159,4 +162,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     );
 {% endif %}
   }
+  traceLeave("Prediction kernels");
+  traceLeave("ADER DG prediction task fusion");
 }

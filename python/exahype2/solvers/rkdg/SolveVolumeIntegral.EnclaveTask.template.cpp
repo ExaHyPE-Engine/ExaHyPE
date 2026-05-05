@@ -14,6 +14,7 @@
 #include "peano4/utils/Loop.h"
 
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/instrumentation/Trace.h"
 
 #include "tarch/multicore/smartScheduling.h"
 
@@ -23,7 +24,6 @@
 #include <string.h>
 #include <memory>
 
-tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 int                 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}"));
 
 
@@ -39,6 +39,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   double* NOALIAS                        QIn,
   double* NOALIAS                        QOut
 ) {
+  traceEnter("Runge Kutta DG volume integral task");
+
   ::exahype2::CellData cellData(
     QIn,
     marker.getX(),
@@ -60,6 +62,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   {% endif %}
 
   ::exahype2::dg::{{VOLUMETRIC_COMPUTE_KERNEL_CALL}}
+  traceLeave("Runge Kutta DG volume integral task");
 }
 
 
@@ -183,12 +186,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::moveTask(int rank, int tag, MPI_
   MPI_Request request;
   MPI_Isend( _inputValues, _numberOfInputValues, MPI_DOUBLE, rank, tag, communicator, &request );
 
-  logInfo(
-    "moveTask(...)",
-    "sent (" << _marker.toString() << "," << tMessage.toString() << "," << dtMessage.toString() << "," << _numberOfInputValues <<
+  logInfo("sent (" << _marker.toString() << "," << tMessage.toString() << "," << dtMessage.toString() << "," << _numberOfInputValues <<
     "," << taskIdMessage.toString() << ") to rank " << rank <<
-    " via tag " << tag
-  );
+    " via tag " << tag);
 }
 
 
@@ -212,11 +212,8 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank,
   ::tarch::mpi::DoubleMessage::receive( dtMessage, rank, tag, communicator );
   ::tarch::mpi::IntegerMessage::receive( taskIdMessage, rank, tag, communicator );
 
-  logInfo(
-    "receiveTask(...)",
-    "received (" << markerMessage.toString() << "," << tMessage.toString() << "," << dtMessage.toString() << "," << taskIdMessage.toString() << ") from rank " << rank <<
-    " via tag " << tag << " and will now receive " << NumberOfInputValues << " doubles"
-  );
+  logInfo("received (" << markerMessage.toString() << "," << tMessage.toString() << "," << dtMessage.toString() << "," << taskIdMessage.toString() << ") from rank " << rank <<
+    " via tag " << tag << " and will now receive " << NumberOfInputValues << " doubles");
 
   MPI_Recv( inputValues, NumberOfInputValues, MPI_DOUBLE, rank, tag, communicator,
     MPI_STATUS_IGNORE
@@ -240,20 +237,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRan
 //  tarch::freeMemory(_inputValues,tarch::MemoryLocation::Heap );
   _functor();
 
-  logInfo(
-    "runLocallyAndSendTaskOutputToRank(...)",
-    "executed remote task on this rank. Will start to send result back"
-  );
+  logInfo("executed remote task on this rank. Will start to send result back");
 
   forwardTaskOutputToRank(rank, tag, communicator);
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
-  logInfo(
-    "forwardTaskOutputToRank(...)",
-    "will start to forward task output (which has already been computed)"
-  );
+  logInfo("will start to forward task output (which has already been computed)");
 
   ::tarch::mpi::DoubleMessage  tMessage(_t);
   ::tarch::mpi::DoubleMessage  dtMessage(_dt);
@@ -269,19 +260,16 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank
   MPI_Request request;
   MPI_Isend( _outputValues, _numberOfResultValues, MPI_DOUBLE, rank, tag, communicator, &request );
 
-  logInfo(
-    "forwardTaskOutputToRank(...)",
-    "sent (" << _marker.toString() << "," << tMessage.toString() << "," << dtMessage.toString() << "," << _numberOfResultValues <<
+  logInfo("sent (" << _marker.toString() << "," << tMessage.toString() << "," << dtMessage.toString() << "," << _numberOfResultValues <<
     "," << taskIdMessage.toString() << ") to rank " << rank <<
-    " via tag " << tag
-  );
+    " via tag " << tag);
 
   // tarch::freeMemory(_outputValues,tarch::MemoryLocation::Heap );
 }
 
 
 smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int rank, int tag, MPI_Comm communicator, const bool intentionToForward) {
-  logInfo( "receiveOutcome(...)", "rank=" << rank << ", tag=" << tag );
+  logInfo("rank=" << rank << ", tag=" << tag);
   peano4::grid::GridTraversalEvent dummyEvent;
   const int NumberOfResultValues =
     #if DIMENSIONS==2
@@ -303,11 +291,8 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
   ::tarch::mpi::DoubleMessage::receive( eValueMessage, rank, tag, communicator );
   ::tarch::mpi::IntegerMessage::receive( taskIdMessage, rank, tag, communicator );
 
-  logInfo(
-    "receiveOutcome(...)",
-    "received (" << markerMessage.toString() << "," << tMessage.toString() << "," << dtMessage.toString() << "," << taskIdMessage.toString() << ") from rank " << rank <<
-    " via tag " << tag << " and will now receive " << NumberOfResultValues << " doubles"
-  );
+  logInfo("received (" << markerMessage.toString() << "," << tMessage.toString() << "," << dtMessage.toString() << "," << taskIdMessage.toString() << ") from rank " << rank <<
+    " via tag " << tag << " and will now receive " << NumberOfResultValues << " doubles");
 
   MPI_Recv( outputValues, NumberOfResultValues, MPI_DOUBLE, rank, tag, communicator,
     MPI_STATUS_IGNORE
@@ -333,10 +318,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
     result->_maxEigenvalue = eValueMessage.getValue();
     return result;
   }
-  logInfo(
-    "receiveOutcome(...)",
-    "bookmark outcome of task " << taskIdMessage.getValue()
-  );
+  logInfo("bookmark outcome of task " << taskIdMessage.getValue());
   ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskIdMessage.getValue(),NumberOfResultValues,outputValues,eValueMessage.getValue());
   return nullptr;
 }
@@ -359,7 +341,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
  * Also merge the current task
  */
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks, int targetDevice ) {
-  logDebug("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
+  traceEnter("Runge Kutta DG volume integral task fusion");
+
+  logDebug("rank " << tarch::mpi::Rank::getInstance().getRank()
     << " asked to fuse " << (otherTasks.size() + 1) << " tasks into one large GPU task on device " << targetDevice);
 
   ::exahype2::CellData cellData(otherTasks.size() + 1, tarch::MemoryLocation::Heap, targetDevice);
@@ -398,7 +382,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #endif
 
   if (not foundOffloadingBranch) {
-    logDebug("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
+    logDebug("rank " << tarch::mpi::Rank::getInstance().getRank()
       << " cannot find offloading branch for device " << targetDevice << ". Process fused tasks on the CPU.");
     ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{FUSED_VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS_CPU}}
   }
@@ -414,6 +398,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   }
 
   // Don't rerun, so return false.
+  traceLeave("Runge Kutta DG volume integral task fusion");
   return false;
 }
 

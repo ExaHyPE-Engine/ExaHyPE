@@ -17,7 +17,7 @@ void toolbox::particles::initWithData(
   const std::vector<double>&                   initialData
 ) {
 
-#if PEANO_DEBUG > 0
+#if PEANO_DEBUG
   particle.setDebugX(x);
   particle.setDebugH(0.0);
 #endif
@@ -44,7 +44,7 @@ void toolbox::particles::initWithData(
 template <class T>
 void toolbox::particles::init(T& particle, const tarch::la::Vector<DIMENSIONS, double>& x, double searchRadius) {
 
-#if PEANO_DEBUG > 0
+#if PEANO_DEBUG
   particle.setDebugX(x);
   particle.setDebugH(0.0);
 #endif
@@ -109,14 +109,6 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
   const tarch::la::Vector<DIMENSIONS, double>& domainSize,
   bool                                         addNoise
 ) {
-  static tarch::logging::Log _log("toolbox::particles");
-  logTraceInWith4Arguments(
-    "createParticlesAlignedWithGlobalCartesianMesh(...)",
-    spacing,
-    voxelX,
-    domainOffset,
-    addNoise
-  );
   std::vector<T*> result;
 
   tarch::la::Vector<DIMENSIONS, double> biasedOffset = domainOffset + 0.5 * tarch::la::remainder(domainOffset, spacing);
@@ -162,6 +154,5 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
     result.push_back(newParticle);
   }
 
-  logTraceOutWith1Argument("createParticlesAlignedWithGlobalCartesianMesh(...)", result.size());
   return result;
 }

@@ -93,9 +93,8 @@
  *       repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
  *   );
  *    haveReceivedNoncriticialAssertion = true;
- *    logError(
- *      "selectNextAlgorithmicStep()", "non-critical assertion has been triggered in code. Dump final state and terminate"
- *    );
+ *    logError("non-critical assertion has been triggered in code. Dump final state and terminate"
+ *);
  *   }
  *   else if (tarch::hasNonCriticalAssertionBeenViolated()) {
  *     continueToSolve = false;
@@ -139,7 +138,7 @@ namespace tarch {
 
 
 
-#if PEANO_DEBUG>=2
+#if PEANO_ASSERTIONS
 #define nonCriticalAssertion(expr) if (!(expr)) { \
   ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, "" ); \
 }

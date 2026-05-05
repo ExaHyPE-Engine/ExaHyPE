@@ -10,6 +10,7 @@
 {% endif %}
 
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/instrumentation/Trace.h"
 
 #include <cstring>
 #include <algorithm>
@@ -46,6 +47,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   , const std::vector<int>&                         pointSources
 {% endif %}
 ) {
+  traceEnter();
+
   static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<pCompType> scratch; // Per-thread and per-instantiation scratch allocates on first use and is reused afterwards.
 
   pCompType* memory = scratch.get(getFusedSTPVISize());
@@ -72,6 +75,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   //***************************
   //**** Cauchy-Kovalewski ****
   //***************************
+  traceEnter("Cauchy Kovalewski predictor");
 
   // 1: Initialise time derivative
   // The zeroth time derivative (time dof number 1) is the initial condition
@@ -92,6 +96,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% if USE_POINT_SOURCE %}
   pCompType PSi[getPSiSize()] __attribute__((aligned(ALIGNMENT)));
 
+  traceEnter("Point source evaluation");
   { // 1.5: Compute point source contribution
     std::memset(PSi, 0, {{(NUMBER_OF_DOF+1)*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
 
@@ -153,6 +158,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       }
     }
   }
+  traceLeave("Point source evaluation");
 
   // Add point source to the zeroth time derivative
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
@@ -517,6 +523,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   } // i
 
 {% if USE_POINT_SOURCE %}
+  traceEnter("Point source projection");
   // Add point source to the right hand side
   pCompType sumArray[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(ALIGNMENT)));
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
@@ -537,11 +544,15 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% endif %}
     }
   }
+  traceLeave("Point source projection");
 {% endif %}
+
+  traceLeave("Cauchy Kovalewski predictor");
 
   //***********************
   //**** Extrapolation ****
   //***********************
+  traceEnter("Extrapolation");
   for(int i = 0; i < 2 * DIMENSIONS; i++) {
     std::memset(lQhbnd[i], 0, {{NUMBER_OF_DATA*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
     std::memset(lFhbnd[i], 0, {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
@@ -613,10 +624,12 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     }
   }
 {% endif %}
+  traceLeave("Extrapolation");
 
   //*****************************
   //****** Volume Integral ******
   //*****************************
+  traceEnter("Volume integral");
 
   // For linear non-conservative PDE, the volume integral is trivial, since it
   // only involves the element mass matrix, which cancels out.
@@ -640,6 +653,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     }
   }
 
+  traceLeave("Volume integral");
+  traceLeave();
   return -1; // No picard iteration in linear case
 }
 

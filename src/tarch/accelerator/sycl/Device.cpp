@@ -45,18 +45,16 @@ bool tarch::accelerator::Device::init() {
       // Skip devices that are not GPUs.
       if (device.get_info<sycl::info::device::device_type>() != sycl::info::device_type::gpu) {
         logInfo(
-          "init()",
           "Skipping physical device #" + std::to_string(physicalDeviceIndex) + " (" + platformName + " / " + deviceName
-            + ") because it is not an accelerator"
+          + ") because it is not an accelerator"
         );
         ++physicalDeviceIndex;
         continue;
       }
 
       logInfo(
-        "init()",
         "Initialising physical device #" + std::to_string(physicalDeviceIndex) + " (" + platformName + " / "
-          + deviceName + ") as logical device #" + std::to_string(logicalDeviceIndex)
+        + deviceName + ") as logical device #" + std::to_string(logicalDeviceIndex)
       );
       syclQueues.insert({logicalDeviceIndex, sycl::queue(device)});
       ++logicalDeviceIndex;

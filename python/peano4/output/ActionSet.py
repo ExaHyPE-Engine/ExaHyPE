@@ -119,9 +119,10 @@ class ActionSet(object):
           for i in self.namespace: outputfile.write( "}\n" )
 
           outputfile.write( "class " + full_qualified_classname + "{\n" )
-          outputfile.write( "  private:\n" )
-          outputfile.write( "    static tarch::logging::Log  _log;\n" )
-          outputfile.write( self.implementation.get_attributes() )
+          attributes = self.implementation.get_attributes()
+          if attributes.strip():
+            outputfile.write( "  private:\n" )
+            outputfile.write( attributes )
 
           outputfile.write( "  public:\n" )
           outputfile.write( """
@@ -168,7 +169,6 @@ class ActionSet(object):
 
       outputfile.write( "#include \"" + self.classname + ".h\"\n\n\n" )
 
-      outputfile.write( "tarch::logging::Log " + self.__get_full_qualified_class_name() + "::_log( \""+ self.__get_full_qualified_class_name() + "\");\n\n\n" )
 
       outputfile.write( self.implementation.get_static_initialisations(self.__get_full_qualified_class_name()) )
       outputfile.write( "\n\n\n" )

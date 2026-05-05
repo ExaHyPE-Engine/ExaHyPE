@@ -159,36 +159,6 @@ mark_as_advanced(SUPPORTED_ACCELERATOR_ARCHITECTURES)
 set(WITH_GPU_ARCH "none" CACHE STRING "${SUPPORTED_ACCELERATOR_ARCHITECTURES}")
 set_property(CACHE WITH_GPU_ARCH PROPERTY STRINGS ${SUPPORTED_ACCELERATOR_ARCHITECTURES})
 
-# TODO: Change to supported loggers
-set(SUPPORTED_TOOLCHAINS
-  no
-  intel nvidia scorep chrome gnu
-  CACHE STRING "Editable list of supported toolchains"
-)
-mark_as_advanced(SUPPORTED_TOOLCHAINS)
-
-set(WITH_TOOLCHAIN "no" CACHE STRING "${SUPPORTED_TOOLCHAINS}")
-set_property(CACHE WITH_TOOLCHAIN PROPERTY STRINGS ${SUPPORTED_TOOLCHAINS})
-
-if(WITH_TOOLCHAIN STREQUAL "scorep")
-  find_library(PAPI libpapi.a papi)
-  find_library(CUBE4W libcube4w.a cube4w)
-  target_link_libraries(PeanoOptions INTERFACE ${PAPI} ${CUBE4W} ${SCOREP_LIBRARIES})
-  target_link_options(PeanoOptions INTERFACE ${SCOREP_LINK_OPTION})
-  target_compile_options(PeanoOptions INTERFACE ${SCOREP_COMPILE_FLAGS})
-  target_compile_definitions(PeanoOptions INTERFACE UseScoreP UseLogService=ScorePLogger)
-elseif(WITH_TOOLCHAIN STREQUAL "itac")
-  target_link_libraries(PeanoOptions INTERFACE VT::VT)
-  target_include_directories(PeanoOptions SYSTEM INTERFACE ${VT_INCLUDE_DIRS})
-  target_link_directories(PeanoOptions INTERFACE ${VT_LIBRARIES_DIR})
-  target_compile_definitions(PeanoOptions INTERFACE UseITAC UseLogService=ITACLogger)
-elseif(WITH_TOOLCHAIN STREQUAL "nvidia")
-  check_include_files(nvToolsExt.h HAVE_NVTOOLSEXT_H)
-  find_package(CUDAToolkit REQUIRED)
-  target_link_libraries(PeanoOptions INTERFACE CUDA::nvtx3)
-  target_compile_definitions(PeanoOptions INTERFACE UseNVTX UseLogService=NVTXLogger)
-endif()
-
 option(ENABLE_TOOLBOX_PARTICLES "Enable the particles toolbox" ON)
 option(ENABLE_TOOLBOX_BLOCKSTRUCTURED "Enable the blockstructured toolbox" ON)
 option(ENABLE_TOOLBOX_LOADBALANCING "Enable the loadbalancing toolbox" ON)
@@ -210,16 +180,16 @@ set(SUPPORTED_BUILD_TYPES
 mark_as_advanced(SUPPORTED_BUILD_TYPES)
 
 set(PEANO_CXX_FLAGS_RELEASE -O3 -fomit-frame-pointer CACHE INTERNAL "")
-set(PEANO_RELEASE_DEFINITIONS -DPEANO_DEBUG=0 -DNDEBUG CACHE INTERNAL "")
+set(PEANO_RELEASE_DEFINITIONS -DPEANO_TRACE=0 -DPEANO_ASSERTIONS=0 -DPEANO_DEBUG=0 -DNDEBUG CACHE INTERNAL "" FORCE)
 
 set(PEANO_CXX_FLAGS_ASSERTS -g -O3 CACHE INTERNAL "")
-set(PEANO_ASSERTS_DEFINITIONS -DPEANO_DEBUG=2 CACHE INTERNAL "")
+set(PEANO_ASSERTS_DEFINITIONS -DPEANO_TRACE=0 -DPEANO_ASSERTIONS=1 -DPEANO_DEBUG=0 CACHE INTERNAL "" FORCE)
 
-set(PEANO_CXX_FLAGS_TRACE -g -O2 CACHE INTERNAL "")
-set(PEANO_TRACE_DEFINITIONS -DPEANO_DEBUG=1 -DNDEBUG CACHE INTERNAL "")
+set(PEANO_CXX_FLAGS_TRACE -g -O3 -fomit-frame-pointer CACHE INTERNAL "")
+set(PEANO_TRACE_DEFINITIONS -DPEANO_TRACE=1 -DPEANO_ASSERTIONS=0 -DPEANO_DEBUG=0 -DNDEBUG CACHE INTERNAL "" FORCE)
 
 set(PEANO_CXX_FLAGS_DEBUG -g -O0 CACHE INTERNAL "")
-set(PEANO_DEBUG_DEFINITIONS -DPEANO_DEBUG=4 CACHE INTERNAL "")
+set(PEANO_DEBUG_DEFINITIONS -DPEANO_TRACE=0 -DPEANO_ASSERTIONS=1 -DPEANO_DEBUG=1 CACHE INTERNAL "" FORCE)
 
 set(PEANO_EXTRA_CXX_FLAGS   "" CACHE STRING "Extra C++ flags (semicolon-separated)")
 set(PEANO_EXTRA_DEFINITIONS "" CACHE STRING "Extra preprocessor definitions (semicolon-separated)")

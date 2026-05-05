@@ -17,8 +17,6 @@
 #include <utility>
 #include <iterator>
 
-tarch::logging::Log {{FULL_QUALIFIED_CLASSNAME}}::_log("{{FULL_QUALIFIED_CLASSNAME}}");
-
 {{FULL_QUALIFIED_CLASSNAME}}::{{CLASSNAME}}(int spacetreeId):
   _spacetreeId(spacetreeId)
 {%- for action_set in ACTIVE_ACTION_SETS %}
@@ -66,16 +64,13 @@ std::vector<::peano4::grid::GridControlEvent> {{FULL_QUALIFIED_CLASSNAME}}::getG
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::prepareTraversal() {
-  logTraceIn("prepareTraversal()");
 {%- for action_set in ACTIVE_ACTION_SETS %}
   {{ action_set.full_qualified_name }}::prepareTraversal();
 {%- endfor %}
-  logTraceOut("prepareTraversal()");
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::beginTraversal(const tarch::la::Vector<DIMENSIONS, double>& x, const tarch::la::Vector<DIMENSIONS, double>& h) {
-  logTraceInWith2Arguments("beginTraversal()", x, h);
 {%- for action_set in ACTIVE_ACTION_SETS %}
   {{ action_set.name }}.beginTraversal();
 {%- endfor %}
@@ -105,12 +100,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::beginTraversal(const tarch::la::Vector<DIMENS
   repositories::DataRepository::{{ vertex.logical_type_name }}HangingStack.getForPush(keyOut);
 {%- endfor %}
 
-  logTraceOutWith2Arguments("beginTraversal()", x, h);
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::enterNode(const ::peano4::grid::GridTraversalEvent& event) {
-  logTraceInWith2Arguments("enterNode()", _spacetreeId, event.toString());
 
   repositories::DataRepository::DataKey key(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
@@ -255,12 +248,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterNode(const ::peano4::grid::GridTraversal
   }
 {%- endif %}
 
-  logTraceOut("enterNode()");
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversalEvent& event) {
-  logTraceInWith2Arguments("leaveNode()", _spacetreeId, event.toString());
 
   repositories::DataRepository::DataKey key(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
@@ -405,12 +396,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversal
   }
 {%- endif %}
 
-  logTraceOutWith1Argument("leaveNode()", _spacetreeId);
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::endTraversal(const tarch::la::Vector<DIMENSIONS, double>& x, const tarch::la::Vector<DIMENSIONS, double>& h) {
-  logTraceInWith2Arguments("endTraversal()", x, h);
 {%- for action_set in ACTIVE_ACTION_SETS %}
   {{ action_set.name }}.endTraversal();
 {%- endfor %}
@@ -429,22 +418,18 @@ void {{FULL_QUALIFIED_CLASSNAME}}::endTraversal(const tarch::la::Vector<DIMENSIO
   repositories::DataRepository::{{ vertex.logical_type_name }}Stack.getForPop(key)->popBlock(TWO_POWER_D);
 {%- endfor %}
 
-  logTraceOutWith2Arguments("endTraversal()", x, h);
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::unprepareTraversal() {
-  logTraceIn("unprepareTraversal()");
 {%- for action_set in ACTIVE_ACTION_SETS %}
   {{ action_set.full_qualified_name }}::unprepareTraversal();
 {%- endfor %}
-  logTraceOut("unprepareTraversal()");
 }
 
 
 {% if VERTICES %}
 void {{FULL_QUALIFIED_CLASSNAME}}::loadVertexData(const ::peano4::grid::GridTraversalEvent& event) {
-  logTraceInWith2Arguments("loadVertexData()", _spacetreeId, event.toString());
 
   repositories::DataRepository::DataKey keyOut(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
@@ -514,12 +499,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadVertexData(const ::peano4::grid::GridTrav
 {%- endfor %}
   }
 
-  logTraceOutWith1Argument("loadVertexData()", _spacetreeId);
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::storeVertexData(const ::peano4::grid::GridTraversalEvent& event) {
-  logTraceInWith2Arguments("storeVertexData()", _spacetreeId, event.toString());
 
   repositories::DataRepository::DataKey keyIn(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
@@ -576,12 +559,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeVertexData(const ::peano4::grid::GridTra
 {%- endfor %}
   }
 
-  logTraceOutWith1Argument("storeVertexData()", _spacetreeId);
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::sendVertexData(int position, int toStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) {
-  logTraceInWith4Arguments("sendVertexData()", position, toStack, event.toString(), _spacetreeId);
 
   ::peano4::datamanagement::VertexMarker marker(event, position);
   repositories::DataRepository::DataKey key(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
@@ -599,12 +580,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendVertexData(int position, int toStack, ::p
   }
 {%- endfor %}
 
-  logTraceOut("sendVertexData()");
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeVertexData(int position, int fromStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) {
-  logTraceInWith4Arguments("receiveAndMergeVertexData()", position, fromStack, event.toString(), _spacetreeId);
 
   ::peano4::datamanagement::VertexMarker marker(event, position);
   repositories::DataRepository::DataKey key(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
@@ -619,14 +598,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeVertexData(int position, int f
   }
 {%- endfor %}
 
-  logTraceOut("receiveAndMergeVertexData()");
 }
 {% endif %}
 
 
 {% if FACES %}
 void {{FULL_QUALIFIED_CLASSNAME}}::loadFaceData(const ::peano4::grid::GridTraversalEvent& event) {
-  logTraceInWith2Arguments("loadFaceData()", _spacetreeId, event.toString());
 
   repositories::DataRepository::DataKey keyOut(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
@@ -697,12 +674,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadFaceData(const ::peano4::grid::GridTraver
 {%- endfor %}
   }
 
-  logTraceOutWith1Argument("loadFaceData()", _spacetreeId);
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::storeFaceData(const ::peano4::grid::GridTraversalEvent& event) {
-  logTraceInWith2Arguments("storeFaceData()", _spacetreeId, event.toString());
 
   repositories::DataRepository::DataKey keyIn(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
@@ -760,12 +735,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeFaceData(const ::peano4::grid::GridTrave
 {%- endfor %}
   }
 
-  logTraceOutWith1Argument("storeFaceData()", _spacetreeId);
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::sendFaceData(int position, int toStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) {
-  logTraceInWith4Arguments("sendFaceData()", position, toStack, event.toString(), _spacetreeId);
 
   ::peano4::datamanagement::FaceMarker marker = event.getFaceMarker();
   marker.select(position);
@@ -784,12 +757,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendFaceData(int position, int toStack, ::pea
   }
 {%- endfor %}
 
-  logTraceOut("sendFaceData()");
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFaceData(int position, int fromStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) {
-  logTraceInWith4Arguments("receiveAndMergeFaceData()", position, fromStack, event.toString(), _spacetreeId);
 
   ::peano4::datamanagement::FaceMarker marker = event.getFaceMarker();
   marker.select(position);
@@ -805,14 +776,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFaceData(int position, int fro
   }
 {%- endfor %}
 
-  logTraceOut("receiveAndMergeFaceData()");
 }
 {% endif %}
 
 
 {% if CELLS %}
 void {{FULL_QUALIFIED_CLASSNAME}}::loadCellData(const ::peano4::grid::GridTraversalEvent& event) {
-  logTraceInWith2Arguments("loadCellData()", _spacetreeId, event.toString());
 
   repositories::DataRepository::DataKey keyOut(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
@@ -848,12 +817,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadCellData(const ::peano4::grid::GridTraver
   }
 {%- endfor %}
 
-  logTraceOutWith1Argument("loadCellData()", _spacetreeId);
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::storeCellData(const ::peano4::grid::GridTraversalEvent& event) {
-  logTraceInWith2Arguments("storeCellData()", _spacetreeId, event.toString());
 
   repositories::DataRepository::DataKey keyIn(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
 
@@ -885,12 +852,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeCellData(const ::peano4::grid::GridTrave
   }
 {%- endfor %}
 
-  logTraceOutWith1Argument("storeCellData()", _spacetreeId);
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::sendCellData(int toStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) {
-  logTraceInWith3Arguments("sendCellData()", toStack, event.toString(), _spacetreeId);
 
   ::peano4::datamanagement::CellMarker marker = event.getCellMarker();
   repositories::DataRepository::DataKey key(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
@@ -908,12 +873,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendCellData(int toStack, ::peano4::stacks::S
   }
 {%- endfor %}
 
-  logTraceOut("sendCellData()");
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeCellData(int fromStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) {
-  logTraceInWith3Arguments("receiveAndMergeCellData()", fromStack, event.toString(), _spacetreeId);
 
   ::peano4::datamanagement::CellMarker marker = event.getCellMarker();
   repositories::DataRepository::DataKey key(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
@@ -928,13 +891,11 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeCellData(int fromStack, ::pean
   }
 {%- endfor %}
 
-  logTraceOut("receiveAndMergeCellData()");
 }
 {% endif %}
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllHorizontalDataExchangeStacks(bool symmetricDataCardinality) {
-  logTraceInWith2Arguments("exchangeAllHorizontalDataExchangeStacks()", symmetricDataCardinality, _spacetreeId);
 
 {%- for cell in CELLS %}
   ::peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(repositories::DataRepository::{{cell.logical_type_name}}Stack, _spacetreeId, symmetricDataCardinality);
@@ -948,12 +909,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllHorizontalDataExchangeStacks(bool 
   ::peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(repositories::DataRepository::{{vertex.logical_type_name}}Stack, _spacetreeId, symmetricDataCardinality);
 {%- endfor %}
 
-  logTraceOut("exchangeAllHorizontalDataExchangeStacks()");
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllPeriodicBoundaryDataStacks() {
-  logTraceInWith1Argument("exchangeAllPeriodicBoundaryDataStacks()", _spacetreeId);
 
 {%- for cell in CELLS %}
   ::peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks(repositories::DataRepository::{{cell.logical_type_name}}Stack, _spacetreeId);
@@ -967,12 +926,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllPeriodicBoundaryDataStacks() {
   ::peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks(repositories::DataRepository::{{vertex.logical_type_name}}Stack, _spacetreeId);
 {%- endfor %}
 
-  logTraceOut("exchangeAllPeriodicBoundaryDataStacks()");
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromSplittingTreeToNewTree(int newWorker) {
-  logTraceInWith2Arguments("streamDataFromSplittingTreeToNewTree()", newWorker, _spacetreeId);
 
 {%- for cell in CELLS %}
   ::peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(repositories::DataRepository::{{cell.logical_type_name}}Stack, _spacetreeId, newWorker);
@@ -988,12 +945,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromSplittingTreeToNewTree(int newW
   ::peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(repositories::DataRepository::{{vertex.logical_type_name}}HangingStack, _spacetreeId, newWorker);
 {%- endfor %}
 
-  logTraceOut("streamDataFromSplittingTreeToNewTree()");
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromJoiningTreeToMasterTree(int master) {
-  logTraceInWith2Arguments("streamDataFromJoiningTreeToMasterTree()", master, _spacetreeId);
 
 {%- for cell in CELLS %}
   ::peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(repositories::DataRepository::{{cell.logical_type_name}}Stack, _spacetreeId, master);
@@ -1009,12 +964,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromJoiningTreeToMasterTree(int mas
   ::peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(repositories::DataRepository::{{vertex.logical_type_name}}HangingStack, _spacetreeId, master);
 {%- endfor %}
 
-  logTraceOut("streamDataFromJoiningTreeToMasterTree()");
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::finishAllOutstandingSendsAndReceives() {
-  logTraceInWith1Argument("finishAllOutstandingSendsAndReceives()", _spacetreeId);
 
 {%- for cell in CELLS %}
   ::peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(repositories::DataRepository::{{cell.logical_type_name}}Stack, _spacetreeId);
@@ -1030,12 +983,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::finishAllOutstandingSendsAndReceives() {
   ::peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(repositories::DataRepository::{{vertex.logical_type_name}}HangingStack, _spacetreeId);
 {%- endfor %}
 
-  logTraceOut("finishAllOutstandingSendsAndReceives()");
 }
 
 
 void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
-  logTraceInWith1Argument("deleteAllStacks()", _spacetreeId);
 
 {%- for cell in CELLS %}
   ::peano4::parallel::SpacetreeSet::deleteAllStacks(repositories::DataRepository::{{cell.logical_type_name}}Stack, _spacetreeId);
@@ -1050,5 +1001,4 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
   ::peano4::parallel::SpacetreeSet::deleteAllStacks(repositories::DataRepository::{{vertex.logical_type_name}}Stack, _spacetreeId);
 {%- endfor %}
 
-  logTraceOut("deleteAllStacks()");
 }

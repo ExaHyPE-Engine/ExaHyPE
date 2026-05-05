@@ -70,7 +70,7 @@ public:
 
   // using SieveParticles = SieveParticles<T>;
 
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
   void                                  setDebugX(const tarch::la::Vector<DIMENSIONS, double>& data);
   void                                  setDebugH(const tarch::la::Vector<DIMENSIONS, double>& data);
   tarch::la::Vector<DIMENSIONS, double> getDebugX() const;
@@ -222,9 +222,6 @@ public:
    * Should only be called on global master after the reduction.
    */
   static int getNumberOfRemainingLocalParticles();
-
-private:
-  static tarch::logging::Log _log;
 
 protected:
   static tarch::multicore::BooleanSemaphore _statisticsSemaphore;
@@ -380,7 +377,7 @@ protected:
    */
   static SieveParticles<T> _sieveParticles;
 
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
   tarch::la::Vector<DIMENSIONS, double> _debugX;
   tarch::la::Vector<DIMENSIONS, double> _debugH;
 #endif

@@ -3,7 +3,7 @@
 #pragma once
 
 #include "TestCase.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 
 #include <list>
 #include <map>
@@ -37,7 +37,6 @@ private:
   /**
    * Log interface the class writes to.
    */
-  static tarch::logging::Log _log;
 
   /**
    * Tells whether the testcases contained should be deleted upon destruction of this object.

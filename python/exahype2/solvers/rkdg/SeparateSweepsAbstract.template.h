@@ -255,7 +255,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     ) const;
 
   protected:
-    static tarch::logging::Log  _log;
 
     SolverState  _solverState;
 

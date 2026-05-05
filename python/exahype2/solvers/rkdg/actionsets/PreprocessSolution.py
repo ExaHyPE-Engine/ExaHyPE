@@ -85,7 +85,6 @@ class DoFWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
     and 
     {{PREDICATE}}
   ) { 
-    logTraceIn( "touchCellFirstTime(...)" );
     
     constexpr int valuesPerDoF = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     dfor( index, {{DG_ORDER}}+1 ) {
@@ -96,7 +95,6 @@ class DoFWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
       );
       """ + operation_per_point + """
     }
-    logTraceOut( "touchCellFirstTime(...)" );
   } 
 }
 """
@@ -162,11 +160,9 @@ class CellWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
     and 
     {{PREDICATE}}
   ) { 
-    logTraceIn( "touchCellFirstTime(...)" );
     
     """ + operation_per_cell + """
 
-    logTraceOut( "touchCellFirstTime(...)" );
   } 
 }
 """

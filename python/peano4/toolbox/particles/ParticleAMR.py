@@ -147,7 +147,7 @@ class ParticleAMR(ActionSet):
     newEntry.setWidth( marker.getH() * ScaleMarker );
     newEntry.setH( marker.getH()/3.0 * 1.1 );
     _localGridControlEvents.push_back(newEntry);
-    logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );
+    logDebug("add " << newEntry.toString());
   }
 
   if (
@@ -168,7 +168,7 @@ class ParticleAMR(ActionSet):
     newEntry.setWidth( marker.getH() * ScaleMarker );
     newEntry.setH( marker.getH() * ScaleMarker );
     _localGridControlEvents.push_back(newEntry);
-    logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );
+    logDebug("add " << newEntry.toString());
   }
 """
     )

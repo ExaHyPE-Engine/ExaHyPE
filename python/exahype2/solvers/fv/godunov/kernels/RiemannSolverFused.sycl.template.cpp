@@ -96,7 +96,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
 {% endif %}
         for (int y = item.get_local_id(1); y < {{NUMBER_OF_VOLUMES_PER_AXIS}}; y += {% if DIMENSIONS==3 %} 8 {% else %} 16 {% endif %}) {
           for (int x = item.get_local_id(0); x < {{NUMBER_OF_VOLUMES_PER_AXIS}}; x += {% if DIMENSIONS==3 %} 8 {% else %} 16 {% endif %}) {
-            {{ ComputeFluxesAndPerformTimeStep() | indent(10)}}
+            {{ ComputeFluxesAndPerformTimeStep(False) | indent(10)}}
           } // x
         } // y
 {% if DIMENSIONS==3 %}  } // z {% endif %}

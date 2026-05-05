@@ -30,7 +30,6 @@ class HandleBoundary(AbstractFDActionSet):
       and 
       fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary()
     ) {
-      logTraceInWith3Arguments( "touchFaceFirstTime(...)", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), (repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%DIMENSIONS]), marker.toString() );
 """
 
     TemplateHandleBoundary_KernelCalls = """
@@ -98,10 +97,9 @@ class HandleBoundary(AbstractFDActionSet):
       innerTimeStamp = {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp( isLeftEntryOutside ? 1 : 0 );
       {{FACE_METADATA_ACCESSOR}}.setOldTimeStamp( isLeftEntryOutside ? 0 : 1, innerTimeStamp );
 
-      logTraceOut( "touchFaceFirstTime(...)" );
     }
     else {
-      logDebug( "touchFaceFirstTime(...)", "skip face " << marker.toString() );
+      logDebug("skip face " << marker.toString());
     }
 """
 

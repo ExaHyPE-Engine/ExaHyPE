@@ -9,7 +9,7 @@
 
 #include "peano4/Globals.h"
 #include "tarch/la/Vector.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 
 namespace toolbox {
@@ -28,8 +28,6 @@ namespace toolbox {
  */
 class toolbox::particles::TrajectoryDatabase {
 private:
-  static tarch::logging::Log _log;
-
   std::string _fileName;
   double      _timeDelta;
   double      _dataDelta;

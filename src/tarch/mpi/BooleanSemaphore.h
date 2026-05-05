@@ -3,7 +3,7 @@
 #pragma once
 
 #include "tarch/mpi/mpi.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/services/Service.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 
@@ -307,7 +307,6 @@ s         *
     friend class Rank;
     friend class tarch::mpi::Lock;
 
-    static tarch::logging::Log  _log;
 
     static int                  _semaphoreCounter;
 

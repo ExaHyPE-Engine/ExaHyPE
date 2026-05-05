@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/NonCriticalAssertions.h"
 
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/mpi/Rank.h"
@@ -58,19 +58,18 @@ void tarch::initNonCriticalAssertionEnvironment() {
 
 
 void tarch::triggerNonCriticalAssertion( std::string file, int line, std::string expression, std::string parameterValuePairs ) {
-  static tarch::logging::Log _log("tarch");
 
   tarch::multicore::Lock lock( assertionSemaphore );
 
   if (rankWhichHasSetNonCriticalAssertion>=0 and useNonCriticalAssertions) {
-    logDebug( "triggerNonCriticalAssertion()", "Noncritical assertion " << expression << " failed in (" << file << ":" << line << ")" );
-    //logError( "triggerNonCriticalAssertion()", parameterValuePairs );
-    logDebug( "triggerNonCriticalAssertion()", "There has been a non-critical assertion before, so node should already be in shutdown mode" );
+    logDebug("Noncritical assertion " << expression << " failed in (" << file << ":" << line << ")");
+    //logError(parameterValuePairs);
+    logDebug("There has been a non-critical assertion before, so node should already be in shutdown mode");
   }
   if (rankWhichHasSetNonCriticalAssertion<0 and useNonCriticalAssertions) {
-    logError( "triggerNonCriticalAssertion()", "Noncritical assertion " << expression << " failed in (" << file << ":" << line << ")" );
-    logError( "triggerNonCriticalAssertion()", parameterValuePairs );
-    logError( "triggerNonCriticalAssertion()", "Inform rank 0 to dump solution and to shutdown application" );
+    logError("Noncritical assertion " << expression << " failed in (" << file << ":" << line << ")");
+    logError(parameterValuePairs);
+    logError("Inform rank 0 to dump solution and to shutdown application");
 
     rankWhichHasSetNonCriticalAssertion = tarch::mpi::Rank::getInstance().getRank();
 
@@ -92,7 +91,6 @@ void tarch::triggerNonCriticalAssertion( std::string file, int line, std::string
 
 bool tarch::hasNonCriticalAssertionBeenViolated() {
   #if defined(WITH_MPI)
-  static tarch::logging::Log _log("tarch");
 
   if (rankWhichHasSetNonCriticalAssertion<0) {
     int         flag = 0;
@@ -107,7 +105,7 @@ bool tarch::hasNonCriticalAssertionBeenViolated() {
         tarch::mpi::Rank::getInstance().getCommunicator()
       );
       rankWhichHasSetNonCriticalAssertion = message.getValue();
-      logError( "triggerNonCriticalAssertion()", "Received non-critical assertion from rank " << status.MPI_SOURCE );
+      logError("Received non-critical assertion from rank " << status.MPI_SOURCE);
     }
   }
   #endif

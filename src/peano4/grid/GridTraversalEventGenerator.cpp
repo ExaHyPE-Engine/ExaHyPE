@@ -11,8 +11,6 @@
 #include "SpacetreeHelper.h"
 #include "peano4/utils/Loop.h"
 
-tarch::logging::Log peano4::grid::GridTraversalEventGenerator::_log("peano4::grid::GridTraversalEventGenerator");
-
 peano4::grid::GridTraversalEventGenerator::GridTraversalEventGenerator(int id):
   _treeNumber(id) {}
 
@@ -332,7 +330,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     event.setCellData(GridTraversalObserver::NoData);
   }
 
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
   for (int i = 0; i < TWO_POWER_D; i++) {
     assertion1(event.getIsVertexLocal(i) or not event.getIsVertexAdjacentToParallelDomainBoundary(i), event.toString());
   }
@@ -530,7 +528,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     leaveNodeTraversalEvent.setCellData(GridTraversalObserver::NoData);
   }
 
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
   for (int i = 0; i < TWO_POWER_D; i++) {
     assertion1(
       leaveNodeTraversalEvent.getIsVertexLocal(i)

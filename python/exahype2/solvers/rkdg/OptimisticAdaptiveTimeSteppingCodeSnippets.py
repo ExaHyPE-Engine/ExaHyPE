@@ -23,13 +23,13 @@ class OptimisticAdaptiveTimeSteppingCodeSnippets( exahype2.solvers.OptimisticAda
 
   def create_print_time_step_implementation(self):
     return """
-  logDebug("logTimeStep()", "Phase            = " << toString(_solverState));
-  logInfo("logTimeStep()", "t                = " << getMinTimeStamp() << " / " << MinTerminalTime);
-  logInfo("logTimeStep()", "dt               = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : getAdmissibleTimeStepSize()));
-  logInfo("logTimeStep()", "dt_{predicted}   = " << getPredictedAdmissibleTimeStepSize() << (_cancelOptimisticTasks ? " [cancel predicted tasks]" : ""));
-  logInfo("logTimeStep()", "h_{min}          = " << _minGridCellHThisTimeStep << " (individual grid cell within a patch)");
-  logInfo("logTimeStep()", "h_{max}          = " << _maxGridCellHThisTimeStep << " (individual grid cell within a patch)");
-  logInfo("logTimeStep()", "lambda_{max}     = " << getMaxEigenvalue());
+  logDebug("Phase            = " << toString(_solverState));
+  logInfo("t                = " << getMinTimeStamp() << " / " << MinTerminalTime);
+  logInfo("dt               = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : getAdmissibleTimeStepSize()));
+  logInfo("dt_{predicted}   = " << getPredictedAdmissibleTimeStepSize() << (_cancelOptimisticTasks ? " [cancel predicted tasks]" : ""));
+  logInfo("h_{min}          = " << _minGridCellHThisTimeStep << " (individual grid cell within a patch)");
+  logInfo("h_{max}          = " << _maxGridCellHThisTimeStep << " (individual grid cell within a patch)");
+  logInfo("lambda_{max}     = " << getMaxEigenvalue());
 """
 
 
@@ -70,7 +70,7 @@ class OptimisticAdaptiveTimeSteppingCodeSnippets( exahype2.solvers.OptimisticAda
       ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
     }
     if (tarch::la::smallerEquals(_admissibleTimeStepSize,0.0,1e-10) ) {
-      logWarning( "finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug in the eigenvalue computation" );
+      logWarning("degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug in the eigenvalue computation");
     }
   }
 """

@@ -7,8 +7,6 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Lock.h"
 
-tarch::logging::Log tarch::accelerator::MemoryManager::_log("tarch::accelerator::MemoryManager");
-
 tarch::accelerator::MemoryManager& tarch::accelerator::MemoryManager::getInstance() {
   static tarch::accelerator::MemoryManager singleton;
   return singleton;
@@ -67,14 +65,13 @@ tarch::accelerator::MemoryManager::~MemoryManager() { clearWithoutLock(); }
 void tarch::accelerator::MemoryManager::clearWithoutLock() {
   for (auto& memoryPage : _memoryPages) {
     int device = memoryPage.first;
-    logDebug("clear()", "Free data of device " << device);
+    logDebug("Free data of device " << device);
 
     if (not memoryPage.second.usedPages.empty()) {
       logWarning(
-        "clear()",
         "Used pages on device "
-          << device << " are not empty. " << memoryPage.second.usedPages.size()
-          << " memory blocks still in use. Likely a memory leak (missing free())."
+        << device << " are not empty. " << memoryPage.second.usedPages.size()
+        << " memory blocks still in use. Likely a memory leak (missing free())."
       );
     }
 
@@ -96,8 +93,8 @@ void tarch::accelerator::MemoryManager::clear() {
   clearWithoutLock();
 }
 
-const std::map<int, tarch::accelerator::MemoryManager::MemoryPages>& tarch::accelerator::MemoryManager::getMemoryPages(
-) const {
+const std::map<int, tarch::accelerator::MemoryManager::MemoryPages>& tarch::accelerator::MemoryManager::
+  getMemoryPages() const {
   return _memoryPages;
 }
 

@@ -10,10 +10,6 @@
 
 #include <cstring>
 
-namespace {
-  tarch::logging::Log _log("tarch::accelerator::cuda");
-} // namespace
-
 void* tarch::accelerator::allocateRawData(std::size_t sizeInBytes, MemoryLocation location, int device) {
   void* data = nullptr;
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
@@ -79,13 +75,13 @@ void tarch::accelerator::
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to host");
+    logDebug("Copy " << sizeInBytes << " bytes from host to host");
     CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToHost, deviceStreamGet()));
     break;
   case MemoryLocation::Device:
   case MemoryLocation::Pinned:
     assertion1(device >= 0, device);
-    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to device");
+    logDebug("Copy " << sizeInBytes << " bytes from host to device");
     CHECK_CUDA_ERROR(cudaSetDevice(device));
 #ifdef WITH_USM
     CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToHost, deviceStreamGet()));
@@ -104,13 +100,13 @@ void tarch::accelerator::
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyFrom()", "Copy " << sizeInBytes << " bytes from host to host");
+    logDebug("Copy " << sizeInBytes << " bytes from host to host");
     CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToHost, deviceStreamGet()));
     break;
   case MemoryLocation::Device:
   case MemoryLocation::Pinned:
     assertion1(device >= 0, device);
-    logDebug("copyFrom()", "Copy " << sizeInBytes << " bytes from device to host");
+    logDebug("Copy " << sizeInBytes << " bytes from device to host");
     CHECK_CUDA_ERROR(cudaSetDevice(device));
 #ifdef WITH_USM
     CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToHost, deviceStreamGet()));

@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 
 #include <string>
 #include <unordered_map>
@@ -79,7 +79,6 @@ private:
     explicit Entry(int treeId);
   };
 
-  static tarch::logging::Log _log;
 
   /**
    * Map treeId -> entry. Presence in the map does not imply active blacklisting;

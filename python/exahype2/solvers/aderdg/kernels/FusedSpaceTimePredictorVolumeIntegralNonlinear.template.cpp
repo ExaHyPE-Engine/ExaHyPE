@@ -12,6 +12,7 @@
 #include "exahype2/dg/DGUtils.h"
 
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/instrumentation/Trace.h"
 
 #include <cstring>
 #include <algorithm>
@@ -53,6 +54,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   const double                                      timeStamp,
   const double                                      timeStepSize
 ) {
+  traceEnter();
+
   const pCompType predictorTimeStepSize = static_cast<pCompType>(timeStepSize);
   static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<pCompType> predictorScratch;
   static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<picardCompType> picardScratch;
@@ -94,6 +97,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
 
   const tarch::la::Vector<DIMENSIONS, pCompType> invDx = convertScalar<pCompType>(invertEntries(cellSize));
 
+  traceEnter("Initial predictor guess");
   // 1: Trivial initial guess
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     std::copy_n(&luh[{{NUMBER_OF_DATA}} * xyz], {{NUMBER_OF_DATA}}, &lQi[{{NUMBER_OF_DATA_PADDED}} * xyz]);
@@ -105,6 +109,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
       lQi + t * {{NUMBER_OF_DATA_PADDED * NUMBER_OF_DOF**DIMENSIONS}}
     );
   }
+  traceLeave("Initial predictor guess");
 
   //********************
   //****** Picard ******
@@ -112,6 +117,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   picardCompType* new_lQi_slice = newLQiSliceScratch.get({{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}});
   // 2: Discrete Picard iterations
   int numberOfPicardIterations = 0;
+  traceEnter("Picard iteration");
   for (; numberOfPicardIterations < {{2*NUMBER_OF_DOF+1}}; numberOfPicardIterations++) {
     picardCompType sqRes = picardIteration<cStoreType, picardCompType>(
       solver,
@@ -132,10 +138,12 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
       break;
     }
   }
+  traceLeave("Picard iteration");
 
   //***********************
   //****** Predictor ******
   //***********************
+  traceEnter("Predictor projection");
   std::memset(lQhi, 0, {{(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DATA_PADDED}} * sizeof(pCompType));
 
 {% if USE_FLUX %}
@@ -186,10 +194,12 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
       }
     }
   }
+  traceLeave("Predictor projection");
 
   //**************************
   //****** Extrapolator ******
   //**************************
+  traceEnter("Extrapolator");
   for (int i = 0; i < 2 *DIMENSIONS; i++) {
     std::memset(lQhbnd[i], 0, {{NUMBER_OF_DATA*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
     std::memset(lFhbnd[i], 0, {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
@@ -269,10 +279,12 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
     }
   }
 {% endif %}{# DIMENSIONS==3 #}
+  traceLeave("Extrapolator");
 
   //*****************************
   //****** Volume Integral ******
   //*****************************
+  traceEnter("Volume integral");
   // We start accumulate volume terms of the corrector here as soon as the predictor is computed.
   // Here we use that Kxi already consists 1D spatial weights. Two other spatial weights have the same
   // indexing, therefore they cancel out.
@@ -324,8 +336,12 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   }
 {% endif %}
 
+  traceLeave("Volume integral");
+
   // Return number of Picard iterations, std::min to avoid doing a +1 if the loop has not been exited early.
-  return std::min(numberOfPicardIterations + 1, {{2*NUMBER_OF_DOF+1}});
+  const int result = std::min(numberOfPicardIterations + 1, {{2*NUMBER_OF_DOF+1}});
+  traceLeave();
+  return result;
 }
 
 {% for PRECISION_NUM in range(0,PREDICTOR_COMPUTATION_PRECISIONS|length) %}

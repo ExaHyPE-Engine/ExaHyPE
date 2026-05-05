@@ -99,7 +99,6 @@ class DoFWisePostprocessSolution(EmptyPostprocessSolution):
     and
     {{PREDICATE}}
   ) {
-    logTraceIn("touchCellFirstTime(...)");
 
     constexpr int valuesPerDoF = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
 
@@ -117,7 +116,6 @@ class DoFWisePostprocessSolution(EmptyPostprocessSolution):
             + operation_per_point
             + """
     }
-    logTraceOut("touchCellFirstTime(...)");
   }
 }
 """
@@ -160,12 +158,10 @@ class CellWisePostprocessSolution(EmptyPostprocessSolution):
     and
     {{PREDICATE}}
   ) {
-    logTraceIn("touchCellFirstTime(...)");
     """
             + operation_per_cell
             + """
 
-    logTraceOut("touchCellFirstTime(...)");
   }
 }
 """

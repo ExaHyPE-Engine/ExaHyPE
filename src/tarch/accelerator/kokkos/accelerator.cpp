@@ -9,10 +9,6 @@
 
 #include <Kokkos_Core.hpp>
 
-namespace {
-  tarch::logging::Log _log("tarch::accelerator::kokkos");
-} // namespace
-
 void* tarch::accelerator::allocateRawData(std::size_t sizeInBytes, MemoryLocation location, int device) {
   void* data = nullptr;
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
@@ -72,11 +68,11 @@ void tarch::accelerator::
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to host");
+    logDebug("Copy " << sizeInBytes << " bytes from host to host");
     std::memcpy(target, source, sizeInBytes);
     break;
   case MemoryLocation::Device: {
-    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to device");
+    logDebug("Copy " << sizeInBytes << " bytes from host to device");
 #ifdef WITH_USM
     std::memcpy(target, source, sizeInBytes);
 #else
@@ -92,7 +88,7 @@ void tarch::accelerator::
     break;
   }
   case MemoryLocation::Pinned:
-    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to device");
+    logDebug("Copy " << sizeInBytes << " bytes from host to device");
     std::memcpy(target, source, sizeInBytes);
     break;
   }
@@ -106,11 +102,11 @@ void tarch::accelerator::
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyFrom()", "Copy " << sizeInBytes << " bytes from host to host");
+    logDebug("Copy " << sizeInBytes << " bytes from host to host");
     std::memcpy(target, source, sizeInBytes);
     break;
   case MemoryLocation::Device: {
-    logDebug("copyFrom()", "Copy " << sizeInBytes << " bytes from device to host");
+    logDebug("Copy " << sizeInBytes << " bytes from device to host");
 #ifdef WITH_USM
     std::memcpy(target, source, sizeInBytes);
 #else
@@ -126,7 +122,7 @@ void tarch::accelerator::
     break;
   }
   case MemoryLocation::Pinned:
-    logDebug("copyFrom()", "Copy " << sizeInBytes << " bytes from device to host");
+    logDebug("Copy " << sizeInBytes << " bytes from device to host");
     std::memcpy(target, source, sizeInBytes);
     break;
   }

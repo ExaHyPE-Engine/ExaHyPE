@@ -101,10 +101,10 @@ functions in a namespace. If tests fail, the interface reports the exact
 location including file name and line number.
 
 It is convenient to run tests only if you have translated your code with
-a \ref tarch_logging "sufficient debug level". When you write your own tests, I often
+\ref tarch_logging "debug diagnostics" enabled. When you write your own tests, I often
 add test attributes to the classes---fields that are not required but
 help me to validate object states. Since I protect these attributes with
-ifdefs reading Peano's debug level, they are removed from the production
+ifdefs reading Peano's `PEANO_DEBUG` switch, they are removed from the production
 code.
 
 

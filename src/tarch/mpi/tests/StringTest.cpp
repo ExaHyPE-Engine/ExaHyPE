@@ -3,8 +3,6 @@
 #include "../Rank.h"
 
 
-tarch::logging::Log tarch::mpi::tests::StringTest::_log( "tarch::mpi::tests::StringTest" );
-
 
 tarch::mpi::tests::StringTest::StringTest():
   TestCase( "tarch::mpi::tests::StringTest" ) {

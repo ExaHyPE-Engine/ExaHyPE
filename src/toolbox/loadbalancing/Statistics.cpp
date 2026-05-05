@@ -8,7 +8,6 @@
 #include <cstring>
 #include <limits>
 
-tarch::logging::Log toolbox::loadbalancing::Statistics::_log("toolbox::loadbalancing::Statistics");
 
 #ifdef WITH_MPI
 namespace {
@@ -199,11 +198,9 @@ void toolbox::loadbalancing::Statistics::waitForGlobalDataExchange() {
   // inconsistent/outdated.
   if (_globalNumberOfInnerUnrefinedCells < _localNumberOfInnerUnrefinedCells) {
     logDebug(
-      "waitForGlobalDataExchange()",
-      "Local number of cells ("
-        << _localNumberOfInnerUnrefinedCells << ") is bigger than global cell count ("
-        << _globalNumberOfInnerUnrefinedCells
-        << "). This usually happens if a forking tree has some pending refinement events and cannot refine anymore, as it has already spawned cells. Statistics might have inconsistent view of world."
+      "Local cell count "
+      << _localNumberOfInnerUnrefinedCells << " exceeds global cell count " << _globalNumberOfInnerUnrefinedCells
+      << ". Statistics view is inconsistent or outdated; this usually happens while a forking tree still has pending refinement events after spawning cells."
     );
     _isViewConsistent                  = false;
     _globalNumberOfInnerUnrefinedCells = _localNumberOfInnerUnrefinedCells;

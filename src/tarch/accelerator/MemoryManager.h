@@ -4,13 +4,14 @@
 
 #include "Device.h"
 #include "MemoryLocation.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/tarch.h"
 
 #include <list>
 #include <map>
+#include <unordered_map>
 #include <vector>
 
 namespace tarch::accelerator {
@@ -47,8 +48,6 @@ namespace tarch::accelerator {
  */
 class tarch::accelerator::MemoryManager {
 private:
-  static tarch::logging::Log _log;
-
   tarch::multicore::BooleanSemaphore _semaphore;
 
   /**

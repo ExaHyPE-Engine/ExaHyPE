@@ -163,10 +163,10 @@ for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
   // existing (virtual) particle copy.
   if (not particleWillBeLocal and p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local ) {
     p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
-    logDebug( "touchVertexLastTime(...)", "particle has left domain=" << p->toString() << " (attached to vertex " << marker.toString() << ", will be deleted after this sweep but should be inflying on other tree)" );
+    logDebug("particle has left domain=" << p->toString() << " (attached to vertex " << marker.toString() << ", will be deleted after this sweep but should be inflying on other tree)");
     _numberOfParticlesThatHaveLeftTheirDomain++;
 
-    #if PEANO_DEBUG > 0
+    #if PEANO_DEBUG
     int partID = p->getPartid();
     #else
     int partID = -1;
@@ -211,18 +211,18 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
   if (
     (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
   ) {
-    logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " is local and remains local" );
+    logDebug("particle " << (*p)->toString() << " is local and remains local");
     _numberOfRemainingLocalParticles++;
     p++;
   }
   else {
-    #if PEANO_DEBUG > 0
+    #if PEANO_DEBUG
     int partID = (*p)->getPartid();
     #else
     int partID = -1;
     #endif
 
-    logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " is virtual. Remove local copy from vertex " << marker.toString() << " on tree " << _treeNumber );
+    logDebug("particle " << (*p)->toString() << " is virtual. Remove local copy from vertex " << marker.toString() << " on tree " << _treeNumber);
     toolbox::particles::assignmentchecks::detachParticleFromVertex(
       "{{PARTICLE}}",
       (*p)->getX(),

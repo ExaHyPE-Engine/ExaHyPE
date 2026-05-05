@@ -23,7 +23,7 @@ namespace tarch {
       int       _priority;
 
     public:
-      static constexpr int NoTaskType = -1;
+      static constexpr int NoTaskType      = -1;
       static constexpr int DefaultPriority = 1024;
 
       /**
@@ -85,7 +85,7 @@ namespace tarch {
        * distinguish your tasks, you can downcast all the arguments, as you might
        * know the real type.
        *
-      */
+       */
       virtual void fuse(const std::list<Task*>& otherTasks);
 
       virtual std::string toString() const;
@@ -156,7 +156,7 @@ namespace tarch {
        */
       std::function<bool()> _taskFunctor;
 
-#if PEANO_DEBUG > 0
+#if PEANO_DEBUG
       std::string _taskDescription;
 #endif
 
@@ -174,7 +174,7 @@ namespace tarch {
         int                          taskType,
         int                          priority,
         const std::function<bool()>& taskFunctor
-#if PEANO_DEBUG > 0
+#if PEANO_DEBUG
         ,
         const std::string& taskDescription = ""
 #endif

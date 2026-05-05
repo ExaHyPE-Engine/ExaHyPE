@@ -3,9 +3,8 @@
 #pragma once
 
 #include "TreeEntry.h"
-
 #include "peano4/grid/GridVertex.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 
 #include <map>
@@ -345,7 +344,6 @@ private:
   /**
    * Logging device.
    */
-  static tarch::logging::Log _log;
 
   static Node _singleton;
 

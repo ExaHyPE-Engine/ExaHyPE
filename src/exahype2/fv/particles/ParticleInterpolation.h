@@ -8,7 +8,7 @@
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/Globals.h"
 #include "peano4/utils/Loop.h"
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 
 #include <map>
 #include <string>

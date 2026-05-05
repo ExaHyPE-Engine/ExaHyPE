@@ -15,7 +15,7 @@ namespace {
 } // namespace
 
 bool tarch::accelerator::Device::init() {
-  logDebug("init()", "-----------------------------------------");
+  logDebug("-----------------------------------------");
   CHECK_HIP_ERROR(hipGetDeviceCount(&numberOfDevices));
   for (int device = 0; device < numberOfDevices; device++) {
     CHECK_HIP_ERROR(hipSetDevice(device));
@@ -24,23 +24,20 @@ bool tarch::accelerator::Device::init() {
     std::size_t      free = 0, total = 0;
     CHECK_HIP_ERROR(hipMemGetInfo(&free, &total));
 
-    logInfo("init()", "[" << device << "]: " << prop->name);
-    logDebug("init()", "  " << prop->major << "." << prop->minor << " CC");
-    logDebug(
-      "init()",
-      "  " << free / (1024 * 1024) << " MB free of " << total / (1024 * 1024) << " MB total global memory"
-    );
-    logDebug("init()", "  " << prop->totalConstMem << " bytes constant memory");
-    logDebug("init()", "  " << prop->multiProcessorCount << " SMs");
-    logDebug("init()", "  " << prop->maxThreadsPerMultiProcessor << " threads per SM");
-    logDebug("init()", "  " << prop->regsPerMultiprocessor << " registers per SM");
-    logDebug("init()", "  " << prop->sharedMemPerMultiprocessor << " bytes shared memory per SM");
-    logDebug("init()", "  " << prop->maxThreadsPerBlock << " threads per block");
-    logDebug("init()", "  " << prop->regsPerBlock << " registers per block");
-    logDebug("init()", "  " << prop->sharedMemPerBlock << " bytes shared memory per block");
-    logDebug("init()", "  " << prop->warpSize << " threads per warp");
+    logInfo("[" << device << "]: " << prop->name);
+    logDebug("  " << prop->major << "." << prop->minor << " CC");
+    logDebug("  " << free / (1024 * 1024) << " MB free of " << total / (1024 * 1024) << " MB total global memory");
+    logDebug("  " << prop->totalConstMem << " bytes constant memory");
+    logDebug("  " << prop->multiProcessorCount << " SMs");
+    logDebug("  " << prop->maxThreadsPerMultiProcessor << " threads per SM");
+    logDebug("  " << prop->regsPerMultiprocessor << " registers per SM");
+    logDebug("  " << prop->sharedMemPerMultiprocessor << " bytes shared memory per SM");
+    logDebug("  " << prop->maxThreadsPerBlock << " threads per block");
+    logDebug("  " << prop->regsPerBlock << " registers per block");
+    logDebug("  " << prop->sharedMemPerBlock << " bytes shared memory per block");
+    logDebug("  " << prop->warpSize << " threads per warp");
   }
-  logDebug("init()", "-----------------------------------------");
+  logDebug("-----------------------------------------");
 
   return isInitialised();
 }

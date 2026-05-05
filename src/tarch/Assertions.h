@@ -6,14 +6,15 @@
 #include <mpi.h>
 #endif
 
-#if PEANO_DEBUG>=1
+#include "tarch/CompilerSpecificSettings.h"
+
+#if PEANO_ASSERTIONS
 #include <stdio.h>
 #include <stdlib.h>
 #endif
 #include <cassert>
 #include <cstdio>
-
-#include "tarch/CompilerSpecificSettings.h"
+#include <iostream>
 
   /**
    * Define the assert macro. An assertion is given a boolean expression. If
@@ -35,12 +36,12 @@
     std::cerr.precision(20); \
   }
 
-  #if PEANO_DEBUG>=2
-    #include "tarch/logging/Log.h"
+  #if PEANO_ASSERTIONS
+    #include "tarch/instrumentation/Log.h"
     #define assertionTriggersExit { \
       std::cout.flush(); \
       std::cerr.flush(); \
-      tarch::logging::Log::flushBeforeAssertion(); \
+      tarch::instrumentation::Log::flushBeforeAssertion(); \
       assert(false); \
       exit(ASSERTION_EXIT_CODE); \
     }
@@ -1074,4 +1075,3 @@
     #define assertionMsg(expr,message)
     #define assertionFail(message)
   #endif
-

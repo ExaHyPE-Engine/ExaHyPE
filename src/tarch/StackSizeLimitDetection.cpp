@@ -2,8 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "StackSizeLimitDetection.h"
 
-#include "logging/Log.h"
 #include "tarch.h"
+#include "tarch/instrumentation/Log.h"
 
 #if !defined(_WIN32)
 #include <sys/resource.h>
@@ -12,7 +12,6 @@
 #include <sstream>
 
 namespace {
-  tarch::logging::Log _log("tarch");
 
   std::string formatMemorySize(unsigned long long bytes) {
     const auto         format = tarch::chooseMemoryUsageFormat(bytes);
@@ -50,14 +49,14 @@ tarch::StackSizeLimit tarch::StackSizeLimit::detect() {
 std::string tarch::detectStackSizeLimit() {
   const auto& stackSizeLimit = getCachedStackSizeLimit();
 #if defined(_WIN32)
-  logWarning("detectStackSizeLimit()", "Stack size limit detection is not implemented on Windows");
+  logWarning("Stack size limit detection is not implemented on Windows");
   return "unknown";
 #else
   constexpr unsigned long long RecommendedMinimumStackLimitInKiB = 0x200'000ULL;
   constexpr unsigned long long RecommendedMinimumStackLimit      = RecommendedMinimumStackLimitInKiB * KiB;
 
   if (not stackSizeLimit.detected) {
-    logError("detectStackSizeLimit()", "Stack size cannot be determined because getrlimit() failed");
+    logError("Stack size cannot be determined because getrlimit() failed");
     return "unknown";
   }
 
@@ -68,12 +67,11 @@ std::string tarch::detectStackSizeLimit() {
   const auto currentLimitInKiB = stackSizeLimit.bytes / KiB;
   if (stackSizeLimit.bytes < RecommendedMinimumStackLimit) {
     logDebug(
-      "detectStackSizeLimit()",
       "Stack size of "
-        << currentLimitInKiB << " KiB (=" << formatMemorySize(stackSizeLimit.bytes)
-        << ") is lower than recommended minimum of " << RecommendedMinimumStackLimitInKiB
-        << " KiB (=" << formatMemorySize(RecommendedMinimumStackLimit)
-        << "). You can increase the stack size by running: ulimit -Ss unlimited"
+      << currentLimitInKiB << " KiB (=" << formatMemorySize(stackSizeLimit.bytes)
+      << ") is lower than recommended minimum of " << RecommendedMinimumStackLimitInKiB
+      << " KiB (=" << formatMemorySize(RecommendedMinimumStackLimit)
+      << "). You can increase the stack size by running: ulimit -Ss unlimited"
     );
   }
   return std::to_string(currentLimitInKiB) + " KiB (=" + formatMemorySize(stackSizeLimit.bytes) + ")";

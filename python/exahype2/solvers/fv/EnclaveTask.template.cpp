@@ -13,11 +13,12 @@
 
 #include "peano4/parallel/parallel.h"
 
+#include "tarch/instrumentation/Trace.h"
+
 #include <algorithm>
 #include <cstring>
 #include <unordered_map>
 
-tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
 int                 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}"));
 
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getEnclaveTaskTypeId() {
@@ -56,12 +57,13 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getEnclaveTaskTypeId() {
 #include "kernels/{{SOLVER_NAME}}/RiemannSolverFused.h"
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& otherTasks) {
+  traceEnter("Finite volume enclave task fusion");
+
   const int numberOfPatches = otherTasks.size() + 1;
 
-  logDebug("fuse()", "Rank " << tarch::mpi::Rank::getInstance().getRank()
+  logDebug("Rank " << tarch::mpi::Rank::getInstance().getRank()
     << " asked to fuse " << numberOfPatches << " patches of type " << getTaskType() << " into "
-    << {{NUMBER_OF_ENCLAVE_TASKS}} << " asynchronous enclave tasks on target device " << TARGET_DEVICE
-  );
+    << {{NUMBER_OF_ENCLAVE_TASKS}} << " asynchronous enclave tasks on target device " << TARGET_DEVICE);
 
   ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3> patchData(
     numberOfPatches,
@@ -240,7 +242,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   );
 
   if (patchData.numberOfBoundaryFaces > 0) {
+    traceEnter("Handle boundary");
     kernels::{{SOLVER_NAME}}::handleBoundaryFused(repositories::{{SOLVER_INSTANCE}}, patchData, TARGET_DEVICE);
+    traceLeave("Handle boundary");
   }
 
   // Before swap: QIn is with halo, QOut is without halo
@@ -256,7 +260,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     );
   }
 
+  traceEnter("Patch reconstruction");
   kernels::{{SOLVER_NAME}}::reconstructPatchFused(patchData, TARGET_DEVICE);
+  traceLeave("Patch reconstruction");
 
   // QOut of patch reconstruction is now QIn for the Riemann solver
   // QIn for patch reconstruction is now QOut of the Riemann solver
@@ -265,7 +271,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
     auto* const QIn = &patchData.QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
 
-#if PEANO_DEBUG > 0
+#if PEANO_DEBUG
     ::exahype2::fv::validatePatch(
       QIn,
       {{NUMBER_OF_UNKNOWNS}},
@@ -279,7 +285,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
   }
 
+  traceEnter("Riemann solver");
   const auto maxEigenvalue = {{FUSED_COMPUTE_KERNEL_CALL}}
+  traceLeave("Riemann solver");
 
   for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
     std::swap(patchData.QIn[patchIndex], patchData.QOut[patchIndex]);
@@ -293,7 +301,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 
     {{POSTPROCESS_UPDATED_PATCH}}
 
-#if PEANO_DEBUG > 0
+#if PEANO_DEBUG
     ::exahype2::fv::validatePatch(
       QOut,
       {{NUMBER_OF_UNKNOWNS}},
@@ -308,7 +316,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   // QIn is no longer needed
   // QOut of Riemann solver is now QIn for the patch reconstruction
   std::swap(patchData.QInFlattened, patchData.QOutFlattened);
+  traceEnter("Patch projection");
   kernels::{{SOLVER_NAME}}::projectPatchFused(patchData, TARGET_DEVICE);
+  traceLeave("Patch projection");
   std::swap(patchData.QInFlattened, patchData.QOutFlattened);
 
   for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
@@ -353,4 +363,5 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 
   {{COMPUTE_NEW_TIME_STEP_SIZE}}
   repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, _t + _dt, tarch::la::min(_marker.getH()), tarch::la::max(_marker.getH()));
+  traceLeave("Finite volume enclave task fusion");
 }

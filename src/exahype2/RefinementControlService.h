@@ -134,8 +134,6 @@ public:
   void merge(const RefinementControl& control);
 
 private:
-  static tarch::logging::Log _log;
-
   static tarch::multicore::RecursiveSemaphore _semaphore;
 
   RefinementControlService();

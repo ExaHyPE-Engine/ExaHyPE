@@ -28,7 +28,6 @@ DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
   const tarch::la::Vector<DIMENSIONS, double>&  particleX,
   int                                           unknown
 ) {
-  static tarch::logging::Log _log( "exahype2::fv::internal" );
   tarch::la::Vector<DIMENSIONS, int> biasedVoxel = mapBiasedParticleOntoVoxel(marker, voxelsPerAxis, particleX);
 
   double h = getVolumeLength(marker.getH(), voxelsPerAxis);
@@ -61,8 +60,6 @@ DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
   enddforx
   //if (unknown==0){
   //  //std::cout << "exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(): Q_0(should close to 1.0 always)=" << result <<std::endl;
-  //  logInfo( "projectValueOntoParticle_piecewiseLinear(...)", "particle x=" << ::toString(particleX) << ", marker=" << marker.toString() 
-  //    << ", biasedVoxel=" << ::toString(biasedVoxel)<<", result=" << result );
   //}
 
   return result;

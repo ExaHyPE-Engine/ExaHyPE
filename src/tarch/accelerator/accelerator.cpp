@@ -12,10 +12,6 @@
 #include <mimalloc.h>
 #endif
 
-namespace {
-  tarch::logging::Log _log("tarch::accelerator");
-} // namespace
-
 void* tarch::accelerator::allocateRawDataOnHeap(std::size_t sizeInBytes) {
 #ifdef USE_MIMALLOC
   return mi_malloc_aligned(sizeInBytes, ALIGNMENT);
@@ -83,7 +79,7 @@ void tarch::accelerator::
   assertion2(source, sizeInBytes, toString(location));
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
 
-  logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to host");
+  logDebug("Copy " << sizeInBytes << " bytes from host to host");
   std::memcpy(target, source, sizeInBytes);
 }
 
@@ -93,7 +89,7 @@ void tarch::accelerator::
   assertion2(source, sizeInBytes, toString(location));
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
 
-  logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to host");
+  logDebug("Copy " << sizeInBytes << " bytes from host to host");
   std::memcpy(target, source, sizeInBytes);
 }
 #endif // WITH_GPU

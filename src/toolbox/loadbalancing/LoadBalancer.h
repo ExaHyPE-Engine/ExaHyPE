@@ -38,8 +38,6 @@ public:
   static std::string getLocalLoadBalancing();
 
 private:
-  static tarch::logging::Log _log;
-
   Configuration* _configuration;
   Blacklist      _blacklist;
   Statistics     _statistics;

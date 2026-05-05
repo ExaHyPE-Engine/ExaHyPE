@@ -22,6 +22,18 @@
 #error "SIMDLEN must be provided by the build system (CMake)"
 #endif
 
+#ifndef PEANO_TRACE
+#define PEANO_TRACE 0
+#endif
+
+#ifndef PEANO_ASSERTIONS
+#define PEANO_ASSERTIONS 0
+#endif
+
+#ifndef PEANO_DEBUG
+#define PEANO_DEBUG 0
+#endif
+
 #if defined(__NVCOMPILER)
 #define TASKLOOP_NOT_SUPPORTED
 #define TASK_DEPENDENCIES_NOT_SUPPORTED

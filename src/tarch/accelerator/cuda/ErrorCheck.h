@@ -11,11 +11,15 @@ namespace tarch::accelerator::cuda {
   void checkLastError(const char* file, int line);
 } // namespace tarch::accelerator::cuda
 
-#define CHECK_CUDA_ERROR(ans) do { \
-  tarch::accelerator::cuda::checkError((ans), #ans, __FILE__, __LINE__); \
-} while (0)
-#if PEANO_DEBUG > 0
-#define CHECK_CUDA_LAST_ERROR() { tarch::accelerator::cuda::checkLastError(__FILE__, __LINE__); }
+#define CHECK_CUDA_ERROR(ans) \
+  do { \
+    tarch::accelerator::cuda::checkError((ans), #ans, __FILE__, __LINE__); \
+  } while (0)
+#if PEANO_DEBUG
+#define CHECK_CUDA_LAST_ERROR() \
+  { \
+    tarch::accelerator::cuda::checkLastError(__FILE__, __LINE__); \
+  }
 #else
 #define CHECK_CUDA_LAST_ERROR()
 #endif

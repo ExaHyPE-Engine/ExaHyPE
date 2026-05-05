@@ -17,7 +17,6 @@
 #include <thread> // std::this_thread::sleep_for
 #include <unordered_set>
 
-tarch::logging::Log    peano4::parallel::Node::_log("peano4::parallel::Node");
 peano4::parallel::Node peano4::parallel::Node::_singleton;
 
 void peano4::parallel::Node::initMPIDatatypes() {
@@ -67,10 +66,7 @@ bool peano4::parallel::Node::isGlobalMaster(int treeId) { return treeId == 0; }
 peano4::parallel::Node& peano4::parallel::Node::getInstance() { return _singleton; }
 
 int peano4::parallel::Node::reserveId(int rank, int forTreeId) {
-  logDebug(
-    "reserveId()",
-    "Trying to find and reserve new global id for master id " << forTreeId << " on rank " << rank
-  );
+  logDebug("Trying to find and reserve new global id for master id " << forTreeId << " on rank " << rank);
 
   int localTreeId = 0;
   int result      = -1;
@@ -79,18 +75,14 @@ int peano4::parallel::Node::reserveId(int rank, int forTreeId) {
       result = getId(rank, localTreeId);
     } else {
       logDebug(
-        "reserveId()",
         "Local tree "
-          << localTreeId << " (global id=" << getId(rank, localTreeId) << ") on rank " << rank << " is already in use"
+        << localTreeId << " (global id=" << getId(rank, localTreeId) << ") on rank " << rank << " is already in use"
       );
       localTreeId++;
     }
 
     if (localTreeId >= MaxSpacetreesPerRank) {
-      logWarning(
-        "reserveId()",
-        "Exceeded limit for maximal available spacetrees per rank (" << MaxSpacetreesPerRank << ")"
-      );
+      logWarning("Exceeded limit for maximal available spacetrees per rank (" << MaxSpacetreesPerRank << ")");
       result = -1;
       break;
     }
@@ -99,7 +91,7 @@ int peano4::parallel::Node::reserveId(int rank, int forTreeId) {
   if (result != -1) {
     registerId(result, forTreeId);
   } else {
-    logError("reserveId()", "Could not reserve a new tree id. No free slot found or limit reached. Abort.");
+    logError("Could not reserve a new tree id. No free slot found or limit reached. Abort.");
     std::abort();
   }
 
@@ -107,7 +99,7 @@ int peano4::parallel::Node::reserveId(int rank, int forTreeId) {
 }
 
 void peano4::parallel::Node::registerId(int id, int masterId) {
-  logDebug("registerId()", "Register new global id " << id << " for master id " << masterId);
+  logDebug("Register new global id " << id << " for master id " << masterId);
   tarch::multicore::Lock lock(_semaphore);
   assertion2(_treeEntries.count(id) == 0, id, masterId);
   assertion2(id != masterId, id, masterId);
@@ -152,7 +144,7 @@ void peano4::parallel::Node::deregisterId(int id) {
   tarch::multicore::Lock lock(_semaphore);
   _treeEntries.erase(id);
 
-  logDebug("deregisterId()", "Removed tree " << id << " from list of trees");
+  logDebug("Removed tree " << id << " from list of trees");
 }
 
 bool peano4::parallel::Node::isStorageStackNumber(int number) {
@@ -196,7 +188,7 @@ std::bitset<2 * DIMENSIONS> peano4::parallel::Node::getPeriodicBoundaryNumber(
       entry(d % DIMENSIONS) = d / DIMENSIONS;
 
       const bool current = flags[utils::dLinearised(entry, 2)] == grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition;
-      allFlagsSet        = allFlagsSet && current;
+      allFlagsSet = allFlagsSet && current;
     }
     if (allFlagsSet) {
       result.set(d);
@@ -362,22 +354,20 @@ int peano4::parallel::Node::getTreeNumberTiedToExchangeStackNumber(int number) {
 
 bool peano4::parallel::Node::continueToRun() {
 #ifdef WITH_MPI
-  logTraceIn("continueToRun()");
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     for (int i = 1; i < tarch::mpi::Rank::getInstance().getNumberOfRanks(); i++) {
       StartTraversalMessage message;
       message.setStepIdentifier(_currentProgramStep);
-      logDebug("continueToRun()", "Send out " << message.toString() << " to rank " << i);
+      logDebug("Send out " << message.toString() << " to rank " << i);
       StartTraversalMessage::sendAndPollDanglingMessages(message, i, _rankOrchestrationTag);
     }
   } else {
     StartTraversalMessage message;
     StartTraversalMessage::
       receiveAndPollDanglingMessages(message, tarch::mpi::Rank::getGlobalMasterRank(), _rankOrchestrationTag);
-    logDebug("continueToRun()", "Received message " << message.toString());
+    logDebug("Received message " << message.toString());
     _currentProgramStep = message.getStepIdentifier();
   }
-  logTraceOutWith1Argument("continueToRun()", _currentProgramStep);
 #endif
 
   return _currentProgramStep != Terminate;
@@ -391,7 +381,6 @@ void peano4::parallel::Node::setNextProgramStep(int number) {
 int peano4::parallel::Node::getCurrentProgramStep() const { return _currentProgramStep; }
 
 void peano4::parallel::Node::shutdown() {
-  logTraceIn("shutdown()");
 
   tarch::mpi::Rank::getInstance().barrier([&]() -> void {
     tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
@@ -410,8 +399,6 @@ void peano4::parallel::Node::shutdown() {
 #ifdef WITH_MPI
   MPI_Barrier(tarch::mpi::Rank::getInstance().getCommunicator());
 #endif
-
-  logTraceOut("shutdown()");
 }
 
 peano4::parallel::Node::GridDataExchangeMetaInformation peano4::parallel::Node::

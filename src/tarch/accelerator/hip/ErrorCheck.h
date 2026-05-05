@@ -15,7 +15,7 @@ namespace tarch::accelerator::hip {
   do { \
     tarch::accelerator::hip::checkError((ans), #ans, __FILE__, __LINE__); \
   } while (0)
-#if PEANO_DEBUG > 0
+#if PEANO_DEBUG
 #define CHECK_HIP_LAST_ERROR() \
   { \
     tarch::accelerator::hip::checkLastError(__FILE__, __LINE__); \

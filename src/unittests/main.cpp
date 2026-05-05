@@ -5,8 +5,7 @@
 #include "tarch/FloatingPointExceptions.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/UnitTests.h"
-#include "tarch/logging/Log.h"
-#include "tarch/logging/LogFilter.h"
+#include "tarch/instrumentation/Log.h"
 
 #ifdef ENABLE_TOOLBOX_BLOCKSTRUCTURED
 #include "toolbox/blockstructured/UnitTests.h"
@@ -23,8 +22,6 @@
 #ifdef ENABLE_EXAHYPE
 #include "exahype2/UnitTests.h"
 #endif
-
-tarch::logging::Log _log("unittests");
 
 int runTests() {
   int                     unitTestsErrors = 0;
@@ -69,7 +66,7 @@ int runTests() {
 #endif
 
   if (unitTestsErrors != 0) {
-    logError("main()", unitTestsErrors << " unit tests failed. Quit.");
+    logError(unitTestsErrors << " unit tests failed. Quit.");
     return EXIT_FAILURE;
   }
 
@@ -77,154 +74,6 @@ int runTests() {
 }
 
 int main(int argc, char** argv) {
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetDebug,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "tarch",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetTrace,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "tarch",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "tarch",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-      0,
-      "tarch",
-      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetDebug,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "peano4",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetTrace,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "peano4",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "peano4",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-      0,
-      "peano4",
-      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetDebug,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "toolbox",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetTrace,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "toolbox",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "toolbox",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-      0,
-      "toolbox",
-      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetDebug,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "exahype2",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetTrace,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "exahype2",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-      tarch::logging::LogFilter::FilterListEntry::AnyRank,
-      "exahype2",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-  tarch::logging::LogFilter::getInstance().addFilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry(
-      tarch::logging::LogFilter::FilterListEntry::TargetInfo,
-      0,
-      "exahype2",
-      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
-      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
-    )
-  );
-
 #if DIMENSIONS == 2
   const auto DomainOffset = {0.0, 0.0};
   const auto DomainSize   = {1.0, 1.0};
@@ -249,7 +98,7 @@ int main(int argc, char** argv) {
       }
 
       if (tarch::hasNonCriticalAssertionBeenViolated()) {
-        logError("main()", "Noncritical assertion has been triggered while running the unit tests. Quit.");
+        logError("Noncritical assertion has been triggered while running the unit tests. Quit.");
         returnCode = EXIT_FAILURE;
       }
 #if defined(WITH_OPENMP)

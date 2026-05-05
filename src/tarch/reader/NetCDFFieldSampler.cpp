@@ -11,8 +11,6 @@
 #include <sstream>
 #include <stdexcept>
 
-tarch::logging::Log tarch::reader::NetCDFFieldSampler::_log("tarch::reader::NetCDFFieldSampler");
-
 tarch::reader::NetCDFFieldSampler::NetCDFFieldSampler(
   std::initializer_list<FieldDescription> fields,
   double                                  lengthOfSimulationDomainInX,
@@ -47,10 +45,9 @@ tarch::reader::NetCDFFieldSampler::NetCDFFieldSampler(
 
 void tarch::reader::NetCDFFieldSampler::parseFieldFile(const FieldDescription& fieldDescription) {
   logDebug(
-    "parseFieldFile()",
     "Parse field "
-      << fieldDescription.name << " from " << fieldDescription.filePath << " with keys (" << fieldDescription.valueKey
-      << ", " << fieldDescription.xKey << ", " << fieldDescription.yKey << ")"
+    << fieldDescription.name << " from " << fieldDescription.filePath << " with keys (" << fieldDescription.valueKey
+    << ", " << fieldDescription.xKey << ", " << fieldDescription.yKey << ")"
   );
 
   if (fieldDescription.name.empty()) {

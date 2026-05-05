@@ -10,15 +10,11 @@
 template <typename Iterator>
 Iterator toolbox::particles::
   particleIsDuplicate(const typename Iterator::value_type& particle, Iterator begin, const Iterator& end) {
-  static tarch::logging::Log _log("toolbox::particles");
   while (begin != end) {
     if (tarch::la::equals((*begin)->getX(), particle->getX(), SpatialDuplicateTolerance)
         && ((*begin)->getNumber() == particle->getNumber())) {
-      logDebug(
-        "particleIsDuplicate(...)",
-        "particles "
-          << particle->toString() << " and " << (*begin)->toString() << " are duplicates (same position and number)"
-      );
+      logDebug("particles "
+          << particle->toString() << " and " << (*begin)->toString() << " are duplicates (same position and number)");
       return begin;
     }
     ++begin;
@@ -99,7 +95,6 @@ void toolbox::particles::insertParticleIntoCell(
   peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices,
   int                                                    spacetreeId
 ) {
-  static tarch::logging::Log _log("toolbox::particles");
   std::bitset<DIMENSIONS>    targetVertex;
   for (int d = 0; d < DIMENSIONS; d++) {
     assertion4(
@@ -132,12 +127,9 @@ void toolbox::particles::insertParticleIntoCell(
 
   const int linearisedTargetVertex = targetVertex.to_ulong();
 
-  logDebug(
-    "insertParticleIntoCell(...)",
-    "assign particle "
+  logDebug("assign particle "
       << newParticle->toString() << " to vertex " << linearisedTargetVertex << " in cell " << marker.toString()
-      << " (vertex=" << fineGridVertices(targetVertex.to_ulong()).toString() << ")"
-  );
+      << " (vertex=" << fineGridVertices(targetVertex.to_ulong()).toString() << ")");
   fineGridVertices(linearisedTargetVertex).addParticle(newParticle);
   int partID = -1;
   // TODO add a global simulation particle_count that checks particle id for duplicates and if not, it increases the

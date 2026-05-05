@@ -61,7 +61,7 @@ void peano4::grid::tests::GridVertexTest::testCreateGridVertex() {
 
   validateEquals(static_cast<int>(vertex.getState()), static_cast<int>(GridVertex::State::Refined));
   validateEquals(vertex.level, 3);
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
   validateWithParams2(tarch::la::equals(vertex.getX(), x), vertex.getX(), x);
 #endif
 
@@ -113,7 +113,7 @@ void peano4::grid::tests::GridVertexTest::testMPIDatatype() {
   sendV.setState(GridVertex::State::Refining);
   sendV.level                             = 7 + me; // Make it rank-distinct
   sendV.numberOfAdjacentRefinedLocalCells = 3 + me;
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
   for (int d = 0; d < DIMENSIONS; ++d) {
     sendV.setX(d, 0.125 * (d + 1) + 0.001 * me);
   }
@@ -154,7 +154,7 @@ void peano4::grid::tests::GridVertexTest::testMPIDatatype() {
   validateEquals(static_cast<int>(recvV.state), static_cast<int>(GridVertex::State::Refining));
   validateEquals(recvV.level, 7 + expectedSenderRank);
   validateEquals(recvV.numberOfAdjacentRefinedLocalCells, 3 + expectedSenderRank);
-#if PEANO_DEBUG >= 1
+#if PEANO_DEBUG
   for (int d = 0; d < DIMENSIONS; ++d) {
     validateNumericalEquals(recvV.getX(d), 0.125 * (d + 1) + 0.001 * expectedSenderRank);
   }

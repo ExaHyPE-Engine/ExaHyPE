@@ -129,8 +129,6 @@ namespace {{ item }} {
 
   int getNumberOfDoFs();
 
-  void initLogFilters();
-
   /**
    * Concatenates all the toString() results from the solvers.
    *

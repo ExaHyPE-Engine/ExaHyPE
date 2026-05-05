@@ -6,8 +6,6 @@
 
 #include <iostream>
 
-tarch::logging::Log tarch::tests::TreeTestCaseCollection::_log("tarch::tests::TreeTestCaseCollection");
-
 tarch::tests::TreeTestCaseCollection::
   TreeTestCaseCollection(const std::string& treeTestCaseCollectionName, bool deleteTestCases, bool writeToLog):
   TestCase::TestCase(treeTestCaseCollectionName),
@@ -86,7 +84,7 @@ void tarch::tests::TreeTestCaseCollection::run(const std::string& prefix) {
   }
 
   if (_writeToLog and _testCaseName != "" and not _testCases.empty()) {
-    logInfo("run()", logInformation);
+    logInfo(logInformation);
   }
 }
 

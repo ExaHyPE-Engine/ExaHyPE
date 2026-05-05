@@ -13,9 +13,6 @@ namespace {{ item }} {
 {%- endfor %}
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")}}::Abstract{{CLASSNAME}} {
-private:
-  static tarch::logging::Log _log;
-
 public:
   {{SOLVER_USER_DECLARATIONS}}
 };

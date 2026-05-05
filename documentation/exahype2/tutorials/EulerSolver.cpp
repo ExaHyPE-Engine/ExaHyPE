@@ -3,7 +3,6 @@
 //
 #include "EulerSolver.h"
 
-tarch::logging::Log tutorials::exahype2::euler::EulerSolver::_log("tutorials::exahype2::euler::EulerSolver");
 
 // c chord length, t maximum relative thickness.
 double airfoilSymmetric(double x, double c = 100, double t = 0.12) {

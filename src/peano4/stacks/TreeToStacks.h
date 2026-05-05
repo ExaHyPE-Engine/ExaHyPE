@@ -32,8 +32,6 @@ namespace peano4::stacks {
 template <class T>
 class peano4::stacks::TreeToStacks {
 private:
-  static tarch::logging::Log _log;
-
   /**
    * Data of one tree
    */
@@ -61,7 +59,7 @@ private:
     if (inserted) {
       it->second = std::make_unique<T>();
       it->second->reserve(_stackSizeHint);
-      logDebug("createStack()", " Created stack " << stackId << " in tree " << treeId << " for " << typeid(T).name());
+      logDebug(" Created stack " << stackId << " in tree " << treeId << " for " << typeid(T).name());
     }
     return it->second.get();
   }
@@ -252,6 +250,3 @@ public:
   }
   INLINE_METHOD bool holdsStack(int treeId, int stackId) const { return holdsStack(StackKey(treeId, stackId)); }
 };
-
-template <class T>
-tarch::logging::Log peano4::stacks::TreeToStacks<T>::_log("peano4::stacks::TreeToStacks<T>");

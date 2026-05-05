@@ -8,19 +8,10 @@
 #include "Task.h"
 #include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/logging/Statistics.h"
 #include "tarch/mpi/Rank.h"
-
-namespace {
-  tarch::logging::Log _log("tarch::multicore");
-
-  const std::string BSPConcurrencyLevelStatisticsIdentifier("tarch::multicore::bsp-concurrency-level");
-  const std::string SpawnedTasksStatisticsIdentifier("tarch::multicore::spawned-tasks");
-} // namespace
 
 void tarch::multicore::spawnTask(Task* task, const void* const inDependency, const void* const outDependency) {
   assertion(task != nullptr);
-  logging::Statistics::getInstance().inc(SpawnedTasksStatisticsIdentifier, 1, false, true);
 
   if (inDependency == nullptr and outDependency == nullptr) {
     native::spawnTask(task);

@@ -4,7 +4,6 @@
 #include "exahype2/RefinementControl.h"
 
 
-tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
 
 
@@ -15,12 +14,10 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESP
   const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
   double                                       t
 ) {
-  logTraceInWith3Arguments( "refinementCriterion(...)", volumeX, volumeH, t );
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
   // see comments in header file
 
-  logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
   return result;
 }
 {% endif %}
@@ -48,9 +45,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   double                                       t,
   int                                          normal
 ) {
-  logTraceInWith3Arguments( "boundaryConditions(...)", faceCentre, t, normal );
   // @todo implement
-  logTraceOut( "boundaryConditions(...)" );
 }
 {% endif %}
 

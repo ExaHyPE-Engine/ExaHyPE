@@ -7,16 +7,14 @@
 #include "peano4/grid/GridTraversalObserver.h"
 #include "peano4/grid/PeanoCurve.h"
 #include "peano4/grid/Spacetree.h"
-#include "tarch/logging/Statistics.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/services/ServiceRepository.h"
 #include "tarch/tarch.h"
-#include "tarch/timing/Watch.h"
-
-tarch::logging::Log peano4::parallel::SpacetreeSet::_log("peano4::parallel::SpacetreeSet");
+#include "tarch/instrumentation/Watch.h"
 
 peano4::parallel::SpacetreeSet peano4::parallel::SpacetreeSet::_singleton;
 
@@ -107,10 +105,7 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
         getAnswerTag(p.getMasterSpacetreeId()),
         tarch::mpi::Rank::getInstance().getCommunicator()
       );
-      logDebug(
-        "receiveDanglingMessages()",
-        "Reserved tree id " << newSpacetreeId << " for tree " << p.getMasterSpacetreeId()
-      );
+      logDebug("Reserved tree id " << newSpacetreeId << " for tree " << p.getMasterSpacetreeId());
     } break;
     case peano4::parallel::TreeManagementMessage::Action::CreateNewRemoteTree: {
       peano4::parallel::TreeManagementMessage answerMessage;
@@ -144,12 +139,9 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
       assertionMsg(false, "Should only be passed synchronously and never run through this tag");
       break;
     case peano4::parallel::TreeManagementMessage::Action::RemoveChildTreeFromBooksAsChildBecameEmpty: {
-      logInfo(
-        "receiveDanglingMessages()",
-        "Learned that remote child tree "
+      logInfo("Learned that remote child tree "
           << p.getWorkerSpacetreeId() << " of local tree " << p.getMasterSpacetreeId()
-          << " is degenerated thus had been removed"
-      );
+          << " is degenerated thus had been removed");
       getSpacetree(p.getMasterSpacetreeId())._childrenIds.erase(p.getWorkerSpacetreeId());
 
       peano4::parallel::TreeManagementMessage answerMessage;
@@ -176,7 +168,7 @@ void peano4::parallel::SpacetreeSet::receiveDanglingMessages() {
       receive(message, MPI_ANY_SOURCE, _requestMessageTag, tarch::mpi::Rank::getInstance().getCommunicator());
 
     _unansweredMessages.push_back(message);
-    logDebug("receiveDanglingMessages()", "Received new message " << message.toString());
+    logDebug("Received new message " << message.toString());
   }
 
   answerQuestions();
@@ -200,7 +192,7 @@ void peano4::parallel::SpacetreeSet::addSpacetree(int masterId, int newTreeId) {
     assertion1(message.getAction() == TreeManagementMessage::Action::Acknowledgement, message.toString());
 
     const peano4::grid::AutomatonState& state = _spacetrees.begin()->_root;
-    logDebug("addSpacetree()", "Send state " << state.toString() << " to rank " << targetRank);
+    logDebug("Send state " << state.toString() << " to rank " << targetRank);
     peano4::grid::AutomatonState::
       send(state, targetRank, _requestMessageTag, tarch::mpi::Rank::getInstance().getCommunicator());
 
@@ -340,7 +332,6 @@ void peano4::parallel::SpacetreeSet::deleteClonedObservers() {
 }
 
 void peano4::parallel::SpacetreeSet::traverse(peano4::grid::GridTraversalObserver& observer) {
-  logTraceIn("traverse()");
 
   tarch::mpi::Rank::getInstance().barrier([&]() -> void {
     tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
@@ -384,7 +375,6 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::GridTraversalObserve
   createNewTrees();
   deleteClonedObservers();
 
-  logTraceOut("traverse()");
 }
 
 void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::GridTraversalObserver& observer) {
@@ -396,7 +386,7 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::GridTraversalObs
           p->mayJoinWithMaster()
           and
         ) {
-          logInfo( "traverse(Observer)", "trigger join of tree " << p->_id << " with its master tree " << p->_masterId
+          logInfo("trigger join of tree " << p->_id << " with its master tree " << p->_masterId
      << " to enable further grid erases"); join(p->_id);
      //
           p->_masterId>=0
@@ -405,22 +395,19 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::GridTraversalObs
         }
     */
     if (p->_spacetreeState == peano4::grid::SpacetreeState::Joined) {
-      logInfo("cleanUpTrees()", "Tree " << p->_id << " has successfully joined");
+      logInfo("Tree " << p->_id << " has successfully joined");
       const int id = p->_id;
       deleteAllStacks(observer, p->_id);
       Node::getInstance().deregisterId(p->_id);
       _spacetreeIds.erase(id);
       p = _spacetrees.erase(p);
     } else if (p->mayJoinWithMaster() and p->getGridStatistics().numberOfLocalUnrefinedCells == 0) {
-      logInfo("cleanUpTrees()", "Remove empty tree " << p->_id << " with master " << p->_masterId);
+      logInfo("Remove empty tree " << p->_id << " with master " << p->_masterId);
       deleteAllStacks(observer, p->_id);
       Node::getInstance().deregisterId(p->_id);
 
       if (Node::getInstance().getRank(p->_masterId) != tarch::mpi::Rank::getInstance().getRank()) {
-        logDebug(
-          "cleanUpTrees()",
-          "Parent tree " << p->_masterId << " is not local on this rank. Remove child reference"
-        );
+        logDebug("Parent tree " << p->_masterId << " is not local on this rank. Remove child reference");
 #ifdef WITH_MPI
         TreeManagementMessage
           message(p->_masterId, p->_id, TreeManagementMessage::Action::RemoveChildTreeFromBooksAsChildBecameEmpty);
@@ -442,7 +429,7 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::GridTraversalObs
         assertionMsg(false, "Branch may not be entered");
 #endif
       } else {
-        logDebug("cleanUpTrees()", "Parent tree " << p->_masterId << " is local on this rank. Remove child reference");
+        logDebug("Parent tree " << p->_masterId << " is local on this rank. Remove child reference");
         getSpacetree(p->_masterId)._childrenIds.erase(p->_id);
         getSpacetree(p->_masterId)._statistics.setRemovedEmptySubtree(true);
       }
@@ -454,25 +441,19 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::GridTraversalObs
       const int masterRank = Node::getInstance().getRank(p->_masterId);
       if (localRank == masterRank and getSpacetree(p->_masterId).getGridStatistics().getCoarseningHasBeenVetoed()) {
         // @todo erste Meldung info
-        logError(
-          "cleanUpTrees()",
-          "Join tree "
+        logError("Join tree "
             << p->_id << " as it is deteriorated (encodes no hierarchical data) while master " << p->_masterId
-            << " resides on same rank and can't coarsen"
-        );
-        logError("cleanUpTrees()", "Not implemented yet");
+            << " resides on same rank and can't coarsen");
+        logError("Not implemented yet");
         // p->joinWithMaster();
         // getSpacetree(p->_masterId).joinWithWorker(p->_id);
       } else if (localRank == masterRank) {
-        logDebug(
-          "cleanUpTrees()",
-          "Tree " << p->_id << " is deteriorated (encodes no hierarchical data) yet seems not to constrain its master"
-        );
+        logDebug("Tree " << p->_id << " is deteriorated (encodes no hierarchical data) yet seems not to constrain its master");
       } else {
         // @todo: Aber nur, wenn es noch andere Baeume auf diesem Rank gibt
         // @todo erste Meldung info
-        logDebug("cleanUpTrees()", "I should merge tree " << p->_id << " to reduce synchronisation: " << p->toString());
-        logDebug("cleanUpTrees()", "Not implemented yet");
+        logDebug("I should merge tree " << p->_id << " to reduce synchronisation: " << p->toString());
+        logDebug("Not implemented yet");
       }
     }
     p++;
@@ -523,14 +504,14 @@ bool peano4::parallel::SpacetreeSet::split(int treeId, const grid::SplitInstruct
 
     if (tarch::mpi::Rank::getInstance().getRank() != targetRank) {
 #ifdef WITH_MPI
-      logDebug("split()", "Request new tree on rank " << targetRank);
+      logDebug("Request new tree on rank " << targetRank);
       peano4::parallel::TreeManagementMessage requestMessage;
       requestMessage.setMasterSpacetreeId(treeId);
       requestMessage.setWorkerSpacetreeId(-1);
       requestMessage.setAction(peano4::parallel::TreeManagementMessage::Action::RequestNewRemoteTree);
       TreeManagementMessage::sendAndPollDanglingMessages(requestMessage, targetRank, _requestMessageTag);
 
-      logDebug("split()", "Message " << requestMessage.toString() << " sent - wait for answer");
+      logDebug("Message " << requestMessage.toString() << " sent - wait for answer");
 
       peano4::parallel::TreeManagementMessage answerMessage;
       TreeManagementMessage::receiveAndPollDanglingMessages(answerMessage, targetRank, getAnswerTag(treeId));
@@ -549,12 +530,9 @@ bool peano4::parallel::SpacetreeSet::split(int treeId, const grid::SplitInstruct
 
     if (newSpacetreeId >= 0) {
       tree.split(newSpacetreeId, instruction);
-      logDebug(
-        "split()",
-        "Trigger split of tree "
+      logDebug("Trigger split of tree "
           << treeId << " into tree " << newSpacetreeId << " on rank " << targetRank << " with instruction "
-          << instruction
-      );
+          << instruction);
       return true;
     }
   }

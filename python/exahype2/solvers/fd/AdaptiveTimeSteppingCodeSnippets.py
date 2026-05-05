@@ -18,12 +18,12 @@ class AdaptiveTimeSteppingCodeSnippets(
 
     def create_print_time_step_implementation(self):
         return """
-  logDebug("logTimeStep()", "Phase       = " << toString(_solverState));
-  logInfo("logTimeStep()", "t            = " << getMinTimeStamp() << " / " << MinTerminalTime);
-  logInfo("logTimeStep()", "dt           = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : _admissibleTimeStepSizeThisTimeStep));
-  logInfo("logTimeStep()", "h_{min}      = " << getMinMeshSize() << " (internodal distance)");
-  logInfo("logTimeStep()", "h_{max}      = " << getMaxMeshSize() << " (internodal distance)");
-  logInfo("logTimeStep()", "lambda_{max} = " << getMaxEigenvalue());
+  logDebug("Phase       = " << toString(_solverState));
+  logInfo("t            = " << getMinTimeStamp() << " / " << MinTerminalTime);
+  logInfo("dt           = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : _admissibleTimeStepSizeThisTimeStep));
+  logInfo("h_{min}      = " << getMinMeshSize() << " (internodal distance)");
+  logInfo("h_{max}      = " << getMaxMeshSize() << " (internodal distance)");
+  logInfo("lambda_{max} = " << getMaxEigenvalue());
 """
 
     def create_start_time_step_implementation(self):
@@ -75,7 +75,7 @@ class AdaptiveTimeSteppingCodeSnippets(
         tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSizeThisTimeStep > 0", "Invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSizeThisTimeStep) );
       }
       if (tarch::la::smallerEquals(_admissibleTimeStepSizeThisTimeStep, 0.0, 1e-10)) {
-        logWarning("finishTimeStep()", "Degenerated time step size of " << std::to_string(_admissibleTimeStepSizeThisTimeStep) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug in the eigenvalue computation");
+        logWarning("Degenerated time step size of " << std::to_string(_admissibleTimeStepSizeThisTimeStep) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug in the eigenvalue computation");
       }
     }
 """

@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/logging/Log.h"
+#include "tarch/instrumentation/Log.h"
 
 namespace tarch::accelerator {
   class Device;
@@ -20,8 +20,6 @@ namespace tarch::accelerator {
  */
 class tarch::accelerator::Device {
 private:
-  static tarch::logging::Log _log;
-
   // Is default. We use init() instead.
   Device() = default;
 
