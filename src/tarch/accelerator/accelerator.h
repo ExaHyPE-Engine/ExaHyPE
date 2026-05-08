@@ -7,7 +7,9 @@
 
 #if defined(WITH_GPU_CUDA)
 #include "cuda/Device.h" // To get access to the __device__ keyword
-#elif defined(WITH_GPU_HIP)
+#endif
+
+#if defined(WITH_GPU_HIP)
 #include "hip/Device.h" // To get access to the __device__ keyword
 #endif
 
@@ -23,13 +25,17 @@
 
 // https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#nvcc-identification-macro
 // defined(_NVHPC_CUDA) || defined(__NVCOMPILER_CUDA__) || defined(__CUDACC__) || defined(NVCC) || defined(__NVCC__)
-#if defined(WITH_GPU_CUDA) or defined(WITH_GPU_HIP)
+#if defined(WITH_GPU_CUDA) || defined(WITH_GPU_HIP)
 #undef GPU_CALLABLE_METHOD
 #define GPU_CALLABLE_METHOD __host__ __device__
-#elif defined(WITH_GPU_KOKKOS)
+#endif
+
+#if defined(WITH_GPU_KOKKOS)
 #undef GPU_CALLABLE_METHOD
 #define GPU_CALLABLE_METHOD KOKKOS_FUNCTION
-#elif defined(WITH_GPU_OMPT)
+#endif
+
+#if defined(WITH_GPU_OMPT)
 #undef TARGET_DECLARE
 #undef TARGET_DECLARE_END
 #define TARGET_DECLARE _Pragma("omp declare target")
@@ -38,12 +44,21 @@
 
 namespace tarch {
   namespace accelerator {
+    void* allocateHeapMemory(std::size_t sizeInBytes);
+    void* allocateDeviceMemory(std::size_t sizeInBytes, int device);
+    void* allocatePinnedMemory(std::size_t sizeInBytes, int device);
     void* allocateRawData(std::size_t sizeInBytes, MemoryLocation location, int device);
-    void* allocateRawDataOnHeap(std::size_t sizeInBytes);
-    void* reallocateRawData(void* data, std::size_t sizeInBytes, MemoryLocation location, int device);
+    void  freeHeapMemory(void* data);
+    void  freeDeviceMemory(void* data, int device);
+    void  freePinnedMemory(void* data, int device);
     void  freeRawData(void* data, MemoryLocation location, int device);
-    void  freeRawDataOnHeap(void* data);
+    void  copyToHeapMemory(void* target, const void* source, std::size_t sizeInBytes);
+    void  copyToDeviceMemory(void* target, const void* source, std::size_t sizeInBytes, int device);
+    void  copyToPinnedMemory(void* target, const void* source, std::size_t sizeInBytes, int device);
     void  copyTo(void* target, const void* source, std::size_t sizeInBytes, MemoryLocation location, int device);
+    void  copyFromHeapMemory(const void* source, void* target, std::size_t sizeInBytes);
+    void  copyFromDeviceMemory(const void* source, void* target, std::size_t sizeInBytes, int device);
+    void  copyFromPinnedMemory(const void* source, void* target, std::size_t sizeInBytes, int device);
     void  copyFrom(const void* source, void* target, std::size_t sizeInBytes, MemoryLocation location, int device);
   } // namespace accelerator
 
@@ -64,25 +79,6 @@ namespace tarch {
     return reinterpret_cast<T*>(accelerator::allocateRawData(count * sizeof(T), location, device));
   }
 
-  template <class T>
-  T* reallocateMemory(
-    void*          memoryPtr,
-    std::size_t    count,
-    MemoryLocation location,
-    int            device = accelerator::Device::DefaultDevice
-  ) {
-    return reinterpret_cast<T*>(accelerator::reallocateRawData(memoryPtr, count * sizeof(T), location, device));
-  }
-
-  /**
-   * Free memory
-   *
-   * This routine is thread-safe in the sense that it checks if data actually
-   * point to something that is not nullptr. If data is the nullptr, the
-   * operation degenerates to nop. This is important as we use the routine
-   * within smart pointers, where we don't want to check manually if data is
-   * actually nullptr or not.
-   */
   void freeMemory(void* memoryPtr, MemoryLocation location, int device = accelerator::Device::DefaultDevice);
 
   template <class To, class From>

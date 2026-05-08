@@ -6,6 +6,7 @@
 
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/Device.h"
+#include "tarch/accelerator/MemoryAllocationCache.h"
 #include "tarch/accelerator/accelerator.h"
 
 #include <map>
@@ -71,7 +72,13 @@ bool tarch::accelerator::Device::init() {
   return isInitialised();
 }
 
-void tarch::accelerator::Device::shutdown() { syclQueues.clear(); }
+void tarch::accelerator::Device::shutdown() {
+  for (auto& queue : syclQueues) {
+    queue.second.wait();
+  }
+  MemoryAllocationCache::getInstance().clear();
+  syclQueues.clear();
+}
 
 bool tarch::accelerator::Device::isInitialised() const { return not syclQueues.empty(); }
 

@@ -2,7 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "UnitTests.h"
 
-#include "accelerator/tests/MemoryManagerTest.h"
+#include "accelerator/tests/MemoryAllocationCacheTest.h"
+#include "accelerator/tests/MemoryAllocationTest.h"
 #include "la/tests/DynamicMatrixTest.h"
 #include "la/tests/GramSchmidtTest.h"
 #include "la/tests/LUDecompositionTest.h"
@@ -33,7 +34,8 @@ tarch::tests::TestCase* tarch::getUnitTests() {
 
   result->addTestCase(new mpi::tests::StringTest());
 
-  result->addTestCase(new accelerator::tests::MemoryManagerTest());
+  result->addTestCase(new accelerator::tests::MemoryAllocationCacheTest());
+  result->addTestCase(new accelerator::tests::MemoryAllocationTest());
 
   result->addTestCase(new multicore::tests::SpawnTaskTest());
 

@@ -25,12 +25,15 @@ struct PredictorScratchBuffer{{NAME_SUFFIX}} {
   PredictorScratchBuffer{{NAME_SUFFIX}}& operator=(PredictorScratchBuffer{{NAME_SUFFIX}}&&) = delete;
 
   ~PredictorScratchBuffer{{NAME_SUFFIX}}() {
-    tarch::accelerator::freeRawDataOnHeap(data);
+    tarch::accelerator::freeHeapMemory(data);
   }
 
   T* get(const std::size_t entries) {
     if (data == nullptr and entries > 0) {
-      data = reinterpret_cast<T*>(tarch::accelerator::allocateRawDataOnHeap(entries * sizeof(T)));
+      // This buffer is thread-local. Bypass the heap allocation cache here, as
+      // thread-local scratch teardown can happen after the cache state for the
+      // same thread has already been destroyed.
+      data = reinterpret_cast<T*>(tarch::accelerator::allocateHeapMemory(entries * sizeof(T)));
     }
 
     return data;

@@ -4,6 +4,76 @@
 
 tarch::multicore::BooleanSemaphore toolbox::blockstructured::interpolationMapSemaphore;
 
+namespace {
+  void clearInterpolationMap(toolbox::blockstructured::internal::FaceInterpolationMap& map) {
+    for (auto& entry : map) {
+      delete entry.second;
+    }
+    map.clear();
+  }
+
+  void clearInterpolationMap(toolbox::blockstructured::internal::CellInterpolationMap& map) {
+    for (auto& entry : map) {
+      delete entry.second;
+    }
+    map.clear();
+  }
+} // namespace
+
+toolbox::blockstructured::internal::FaceInterpolationMap& toolbox::blockstructured::internal::
+  getPiecewiseConstantFaceInterpolationMap() {
+  static FaceInterpolationMap map;
+  return map;
+}
+
+toolbox::blockstructured::internal::FaceInterpolationMap& toolbox::blockstructured::internal::
+  getLinearWithConstantExtrapolationFaceInterpolationMap() {
+  static FaceInterpolationMap map;
+  return map;
+}
+
+toolbox::blockstructured::internal::FaceInterpolationMap& toolbox::blockstructured::internal::
+  getLinearWithLinearExtrapolationFaceInterpolationMap() {
+  static FaceInterpolationMap map;
+  return map;
+}
+
+toolbox::blockstructured::internal::FaceInterpolationMap& toolbox::blockstructured::internal::
+  getLinearWithConstantExtrapolationAndLinearNormalInterpolationFaceInterpolationMap() {
+  static FaceInterpolationMap map;
+  return map;
+}
+
+toolbox::blockstructured::internal::FaceInterpolationMap& toolbox::blockstructured::internal::
+  getLinearWithLinearExtrapolationAndLinearNormalInterpolationFaceInterpolationMap() {
+  static FaceInterpolationMap map;
+  return map;
+}
+
+toolbox::blockstructured::internal::CellInterpolationMap& toolbox::blockstructured::internal::
+  getPiecewiseConstantCellInterpolationMap() {
+  static CellInterpolationMap map;
+  return map;
+}
+
+toolbox::blockstructured::internal::CellInterpolationMap& toolbox::blockstructured::internal::
+  getLinearCellInterpolationMap() {
+  static CellInterpolationMap map;
+  return map;
+}
+
+void toolbox::blockstructured::clearInterpolationOperatorCaches() {
+  tarch::multicore::Lock lock(interpolationMapSemaphore);
+
+  clearInterpolationMap(internal::getPiecewiseConstantFaceInterpolationMap());
+  clearInterpolationMap(internal::getLinearWithConstantExtrapolationFaceInterpolationMap());
+  clearInterpolationMap(internal::getLinearWithLinearExtrapolationFaceInterpolationMap());
+  clearInterpolationMap(internal::getLinearWithConstantExtrapolationAndLinearNormalInterpolationFaceInterpolationMap());
+  clearInterpolationMap(internal::getLinearWithLinearExtrapolationAndLinearNormalInterpolationFaceInterpolationMap());
+  clearInterpolationMap(internal::getPiecewiseConstantCellInterpolationMap());
+  clearInterpolationMap(internal::getLinearCellInterpolationMap());
+}
+
 tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
   createPiecewiseConstantInterpolationMatrix(int numberOfDoFsPerAxisInPatch) {
 #if DIMENSIONS == 2

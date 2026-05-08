@@ -10,7 +10,6 @@
 #include "tarch/StackSizeLimitDetection.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/accelerator/MemoryBlocks.h"
-#include "tarch/accelerator/MemoryManager.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/BooleanSemaphore.h"
 #include "tarch/mpi/Rank.h"
@@ -24,10 +23,6 @@
 #include <string>
 #include <vector>
 
-/**
- * For the machine name. If it doesn't work, switch it off in the file
- * CompilerSpecificSettings.h.
- */
 #ifdef COMPILER_HAS_UTS_NAME
 #include <sys/utsname.h>
 #endif
@@ -145,10 +140,11 @@ void peano4::shutdown() {
   tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::getInstance().shutdown();
   tarch::services::ServiceRepository::getInstance().shutdown();
   tarch::shutdownNonCriticalAssertionEnvironment();
-  tarch::accelerator::MemoryManager::getInstance().clear();
   tarch::accelerator::Device::getInstance().shutdown();
+#if PEANO_DEBUG
   tarch::accelerator::MemoryBlocks::getInstance().checkForMemoryLeaks();
   tarch::accelerator::MemoryBlocks::getInstance().clear();
+#endif
   tarch::multicore::Core::getInstance().shutdown();
   logInfo("Peano terminated successfully");
   tarch::instrumentation::Log::close();

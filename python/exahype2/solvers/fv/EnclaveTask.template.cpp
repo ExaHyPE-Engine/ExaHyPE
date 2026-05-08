@@ -104,9 +104,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   }
   processTaskFaces(this);
 
-  {{STORAGE_PRECISION}}* deviceFacesOld    = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(hostFacesOld.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-  {{STORAGE_PRECISION}}* deviceFacesUpdate = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(hostFacesUpdate.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-  {{STORAGE_PRECISION}}* deviceFacesNew    = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(hostFacesNew.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  {{STORAGE_PRECISION}}* deviceFacesOld    = tarch::allocateMemory<{{STORAGE_PRECISION}}>(hostFacesOld.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  {{STORAGE_PRECISION}}* deviceFacesUpdate = tarch::allocateMemory<{{STORAGE_PRECISION}}>(hostFacesUpdate.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  {{STORAGE_PRECISION}}* deviceFacesNew    = tarch::allocateMemory<{{STORAGE_PRECISION}}>(hostFacesNew.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
   tarch::copyTo(deviceFacesOld, hostFacesOld.data(), hostFacesOld.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
   tarch::copyTo(deviceFacesUpdate, hostFacesUpdate.data(), hostFacesUpdate.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
   tarch::copyTo(deviceFacesNew, hostFacesNew.data(), hostFacesNew.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
@@ -196,9 +196,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   }
   patchData.numberOfBoundaryFaces = boundaryFaceNumbers.size();
   if (patchData.numberOfBoundaryFaces > 0) {
-    patchData.patchIndicesOfBoundaryFaces = tarch::accelerator::MemoryManager::getInstance().allocate<std::uint64_t>(patchIndicesOfBoundaryFaces.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-    patchData.boundaryFaceNumbers         = tarch::accelerator::MemoryManager::getInstance().allocate<std::uint8_t>(boundaryFaceNumbers.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-    patchData.boundaryFaceIndices         = tarch::accelerator::MemoryManager::getInstance().allocate<std::uint64_t>(boundaryFaceIndices.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+    patchData.patchIndicesOfBoundaryFaces = tarch::allocateMemory<std::uint64_t>(patchIndicesOfBoundaryFaces.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+    patchData.boundaryFaceNumbers         = tarch::allocateMemory<std::uint8_t>(boundaryFaceNumbers.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+    patchData.boundaryFaceIndices         = tarch::allocateMemory<std::uint64_t>(boundaryFaceIndices.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
 
     std::copy_n(
       patchIndicesOfBoundaryFaces.data(),
@@ -219,18 +219,18 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     boundaryFaceNumbers.clear();
     boundaryFaceIndices.clear();
   }
-  patchData.QInFlattened = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(
+  patchData.QInFlattened = tarch::allocateMemory<{{STORAGE_PRECISION}}>(
     numberOfPatches * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %},
     tarch::MemoryLocation::Pinned,
     TARGET_DEVICE
   );
-  patchData.QOutFlattened = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(
+  patchData.QOutFlattened = tarch::allocateMemory<{{STORAGE_PRECISION}}>(
     numberOfPatches * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %},
     tarch::MemoryLocation::Pinned,
     TARGET_DEVICE
   );
   patchData.facesFlattened = deviceFacesNew;
-  patchData.faceIndices = tarch::accelerator::MemoryManager::getInstance().allocate<std::uint64_t>(
+  patchData.faceIndices = tarch::allocateMemory<std::uint64_t>(
     hostFaceIndices.size(),
     tarch::MemoryLocation::Pinned,
     TARGET_DEVICE
@@ -349,17 +349,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     }
   }
 
-  tarch::accelerator::MemoryManager::getInstance().free(patchData.QInFlattened, TARGET_DEVICE);
-  tarch::accelerator::MemoryManager::getInstance().free(patchData.QOutFlattened, TARGET_DEVICE);
-  tarch::accelerator::MemoryManager::getInstance().free(patchData.faceIndices, TARGET_DEVICE);
+  tarch::freeMemory(patchData.QInFlattened, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  tarch::freeMemory(patchData.QOutFlattened, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  tarch::freeMemory(patchData.faceIndices, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
   if (patchData.numberOfBoundaryFaces > 0) {
-    tarch::accelerator::MemoryManager::getInstance().free(patchData.patchIndicesOfBoundaryFaces, TARGET_DEVICE);
-    tarch::accelerator::MemoryManager::getInstance().free(patchData.boundaryFaceNumbers, TARGET_DEVICE);
-    tarch::accelerator::MemoryManager::getInstance().free(patchData.boundaryFaceIndices, TARGET_DEVICE);
+    tarch::freeMemory(patchData.patchIndicesOfBoundaryFaces, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+    tarch::freeMemory(patchData.boundaryFaceNumbers, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+    tarch::freeMemory(patchData.boundaryFaceIndices, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
   }
-  tarch::accelerator::MemoryManager::getInstance().free(deviceFacesOld, TARGET_DEVICE);
-  tarch::accelerator::MemoryManager::getInstance().free(deviceFacesUpdate, TARGET_DEVICE);
-  tarch::accelerator::MemoryManager::getInstance().free(deviceFacesNew, TARGET_DEVICE);
+  tarch::freeMemory(deviceFacesOld, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  tarch::freeMemory(deviceFacesUpdate, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  tarch::freeMemory(deviceFacesNew, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
 
   {{COMPUTE_NEW_TIME_STEP_SIZE}}
   repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, _t + _dt, tarch::la::min(_marker.getH()), tarch::la::max(_marker.getH()));

@@ -15,6 +15,8 @@ void toolbox::blockstructured::tests::InterpolationTest::run() {
   testMethod(testRestrictHaloLayer_AoS_averaging);
   testMethod(testRestrictCellForBreakingDam);
   testMethod(testInterpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear);
+
+  toolbox::blockstructured::clearInterpolationOperatorCaches();
 }
 
 

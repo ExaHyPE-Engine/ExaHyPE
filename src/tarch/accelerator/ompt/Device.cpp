@@ -6,6 +6,7 @@
 
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/Device.h"
+#include "tarch/accelerator/MemoryAllocationCache.h"
 #include "tarch/accelerator/accelerator.h"
 
 #include <omp.h>
@@ -21,6 +22,8 @@ bool tarch::accelerator::Device::init() {
 
 void tarch::accelerator::Device::shutdown() {
 #pragma omp taskwait
+  MemoryAllocationCache::getInstance().clear();
+  numberOfDevices = 0;
 }
 
 bool tarch::accelerator::Device::isInitialised() const { return numberOfDevices > 0; }

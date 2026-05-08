@@ -3,7 +3,6 @@
 #pragma once
 
 #include "peano4/Globals.h"
-#include "tarch/accelerator/MemoryManager.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 

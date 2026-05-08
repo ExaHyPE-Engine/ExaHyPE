@@ -7,11 +7,14 @@
 #include "DevicePropertiesCache.h"
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/Device.h"
+#include "tarch/accelerator/MemoryAllocationCache.h"
 #include "tarch/accelerator/accelerator.h"
 
+#include <unordered_map>
+
 namespace {
-  int          numberOfDevices = 0;
-  cudaStream_t activeStream    = 0;
+  int                                                numberOfDevices = 0;
+  thread_local std::unordered_map<int, cudaStream_t> activeStreams;
 } // namespace
 
 bool tarch::accelerator::Device::init() {
@@ -45,8 +48,20 @@ bool tarch::accelerator::Device::init() {
 }
 
 void tarch::accelerator::Device::shutdown() {
-  CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-  CHECK_CUDA_ERROR(cudaDeviceReset());
+  for (int device = 0; device < numberOfDevices; device++) {
+    CHECK_CUDA_ERROR(cudaSetDevice(device));
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+  }
+
+  MemoryAllocationCache::getInstance().clear();
+
+  for (int device = 0; device < numberOfDevices; device++) {
+    CHECK_CUDA_ERROR(cudaSetDevice(device));
+    CHECK_CUDA_ERROR(cudaDeviceReset());
+  }
+
+  activeStreams.clear();
+  numberOfDevices = 0;
 }
 
 bool tarch::accelerator::Device::isInitialised() const { return numberOfDevices > 0; }
@@ -66,8 +81,17 @@ void tarch::accelerator::deviceStreamDestroy(cudaStream_t* stream) {
 
 void tarch::accelerator::deviceStreamSync(cudaStream_t stream) { CHECK_CUDA_ERROR(cudaStreamSynchronize(stream)); }
 
-void tarch::accelerator::deviceStreamSet(cudaStream_t stream) { activeStream = stream; }
+void tarch::accelerator::deviceStreamSet(cudaStream_t stream) {
+  int device = 0;
+  CHECK_CUDA_ERROR(cudaGetDevice(&device));
+  activeStreams[device] = stream;
+}
 
-cudaStream_t tarch::accelerator::deviceStreamGet() { return activeStream; }
+cudaStream_t tarch::accelerator::deviceStreamGet() {
+  int device = 0;
+  CHECK_CUDA_ERROR(cudaGetDevice(&device));
+  auto it = activeStreams.find(device);
+  return it == activeStreams.end() ? static_cast<cudaStream_t>(0) : it->second;
+}
 
 #endif // defined(WITH_GPU_CUDA)

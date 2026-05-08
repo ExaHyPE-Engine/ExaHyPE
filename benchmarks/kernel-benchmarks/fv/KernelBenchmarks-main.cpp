@@ -26,6 +26,7 @@
 #include "tarch/plotter/AMRPlotter.h"
 #include "tarch/plotter/PVDTimeSeriesWriter.h"
 #include "tarch/plotter/VTUFileWriter.h"
+#include "tarch/tarch.h"
 #include "toolbox/blockstructured/Interpolation.h"
 #include "toolbox/blockstructured/Projection.h"
 #include "toolbox/blockstructured/Restriction.h"

@@ -16,7 +16,7 @@ void tarch::accelerator::MemoryBlocks::clear() {
 }
 
 void tarch::accelerator::MemoryBlocks::checkForMemoryLeaks() {
-#if PEANO_ASSERTIONS
+#if PEANO_DEBUG
   multicore::Lock lock(_memoryBlockSemaphore);
 
   if (not _memoryBlockTable.empty()) {
@@ -25,7 +25,7 @@ void tarch::accelerator::MemoryBlocks::checkForMemoryLeaks() {
       << _memoryBlockTable.size() << " memory leaks on rank " << tarch::mpi::Rank::getInstance().getRank() << "!"
     );
   } else {
-    logInfo("Did not detect any memory leaks on rank " << tarch::mpi::Rank::getInstance().getRank() << ".");
+    logInfo("Did not detect any memory leaks on rank " << tarch::mpi::Rank::getInstance().getRank());
   }
 
   auto itr = _memoryBlockTable.begin();
@@ -38,7 +38,7 @@ void tarch::accelerator::MemoryBlocks::checkForMemoryLeaks() {
 }
 
 void tarch::accelerator::MemoryBlocks::bookmarkMemoryBlock(void* memoryBlock, std::size_t size) {
-#if PEANO_ASSERTIONS
+#if PEANO_DEBUG
   logDebug("Bookmark memory block @" << memoryBlock << " with size: " << size);
   multicore::Lock lock(_memoryBlockSemaphore);
   _memoryBlockTable[memoryBlock] = size;
@@ -46,11 +46,11 @@ void tarch::accelerator::MemoryBlocks::bookmarkMemoryBlock(void* memoryBlock, st
 }
 
 void tarch::accelerator::MemoryBlocks::removeMemoryBlock(void* memoryBlock) {
-#if PEANO_ASSERTIONS
+#if PEANO_DEBUG
   multicore::Lock lock(_memoryBlockSemaphore);
   auto            itr = _memoryBlockTable.find(memoryBlock);
   if (itr == _memoryBlockTable.end()) {
-    logError("Attempt to remove invalid memory block. Perhaps it has been removed before? Abort.");
+    logError("Attempt to remove invalid memory block. Perhaps it has been removed before? Abort");
     std::abort();
   }
   logDebug("Remove memory block @" << memoryBlock);
@@ -59,7 +59,7 @@ void tarch::accelerator::MemoryBlocks::removeMemoryBlock(void* memoryBlock) {
 }
 
 std::size_t tarch::accelerator::MemoryBlocks::getSizeOfMemoryBlock(void* memoryBlock) const {
-#if PEANO_ASSERTIONS
+#if PEANO_DEBUG
   return _memoryBlockTable.at(memoryBlock);
 #else
   return 0;

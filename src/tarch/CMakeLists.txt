@@ -16,10 +16,11 @@ set(SOURCES
 
   accelerator/accelerator.cpp
   accelerator/Device.cpp
+  accelerator/MemoryAllocationCache.cpp
   accelerator/MemoryBlocks.cpp
   accelerator/MemoryLocation.cpp
-  accelerator/MemoryManager.cpp
-  accelerator/tests/MemoryManagerTest.cpp
+  accelerator/tests/MemoryAllocationCacheTest.cpp
+  accelerator/tests/MemoryAllocationTest.cpp
   accelerator/cuda/accelerator.cpp
   accelerator/cuda/Device.cpp
   accelerator/cuda/DevicePropertiesCache.cpp
