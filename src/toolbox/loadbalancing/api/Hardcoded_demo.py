@@ -25,12 +25,15 @@ def demo(file_path: str, dimension: int):
 
     # Reset to single subtree and apply splitting to create multiple subtrees for the demo
     tree = split_strategy.reset_tree_to_single_subtree(tree)
-    tree = split_strategy.split_tree(tree, number_of_splits=2)  # creates subtrees {0,1,2}
+    gridSweeps, splittingTrees, numberOfCells, subTrees = split_strategy.split_tree(
+        tree,
+        number_of_splits=2,
+        enable_propagate_bottom_up=True,
+        enable_extract_split_instructions=True,
+    )  # creates subtrees {0,1,2}
     print("After split_tree():")
     print(tree)
 
-    # Extract hardcoded split parameters
-    gridSweeps, splittingTrees, numberOfCells, subTrees = split_strategy.extract_hardcoded_split_parameters(tree)
     print("Extracted hardcoded parameters:")
     print("  gridSweeps     =", gridSweeps)
     print("  splittingTrees =", splittingTrees)

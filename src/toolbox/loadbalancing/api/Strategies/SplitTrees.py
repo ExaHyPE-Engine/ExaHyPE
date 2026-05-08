@@ -111,39 +111,52 @@ def split_finest_level(peano_tree: Tree, number_of_splits: int) -> Tree: # might
 def split_tree(
     peano_tree: Tree,
     number_of_splits: int,
-    traversal: str = "bfs",
-    optimize_hierarchy: bool = False,
-) -> Tree:
+    traversal: str = "bfs_finest_first",
+    enable_propagate_bottom_up: bool = False,
+    enable_optimize_hierarchy: bool = False,
+    enable_extract_split_instructions: bool = False,
+) -> tuple[list[int], list[int], list[int], list[int]]:
     """
     Split a tree using a staged load-balancing workflow.
 
     Stages:
     1. _distribute_leaves_bfs() or _distribute_leaves_dfs(): Redistribute leaf nodes across subtrees.
     2. _propagate_bottom_up(): Propagate subtree ownership to internal nodes.
-    3. _optimize_hierarchy() (optional, TBD): Further reduce split complexity.
+     3. _optimize_hierarchy() (optional, TBD): Further reduce split complexity.
+     4. _extract_split_instructions() (optional): Derive hardcoded split
+         instructions from the transformed tree.
 
     Args:
         peano_tree: Tree to split (modified in place).
         number_of_splits: Number of additional subtrees to create.
             Total subtree count after splitting is number_of_splits + 1.
         traversal: Stage I traversal strategy. Supported values:
-            - "bfs": level-order leaf collection (default)
+            - "bfs": level-order leaf collection
             - "bfs_finest_first": level-order leaf collection within each level,
               but levels processed from finest to coarsest
             - "dfs": depth-first leaf collection
-        optimize_hierarchy: If True, request Stage III hierarchical optimisation.
+        enable_propagate_bottom_up: If True, enable Stage II bottom-up subtree
+            propagation after leaf redistribution.
+        enable_optimize_hierarchy: If True, request Stage III hierarchical
+            optimisation.
             Stage III is currently not implemented and will be skipped.
+        enable_extract_split_instructions: If True, run Stage IV and return the
+            derived `(gridSweeps, splittingTrees, numberOfCells, subTrees)`.
 
     Returns:
-        The same tree instance with updated subtree assignments.
+        A tuple `(gridSweeps, splittingTrees, numberOfCells, subTrees)`.
+        If Stage IV is disabled, returns `([], [], [], [])`.
 
     Notes:
         - Stage III is optional and currently not implemented.
-        - If number_of_splits <= 0, the tree is returned unchanged.
+        - The tree is still modified in place by the enabled transformation stages.
+        - If number_of_splits <= 0, no transformation stage runs.
     """
     if number_of_splits <= 0:
         print(f"No splitting requested (number_of_splits = {number_of_splits}).")
-        return peano_tree
+        if enable_extract_split_instructions:
+            return _extract_split_instructions(peano_tree)
+        return ([], [], [], [])
 
     print(
         f"Splitting tree '{peano_tree._name}' into "
@@ -167,11 +180,14 @@ def split_tree(
         )
 
     if not has_leaves_to_split:
-        return peano_tree
+        if enable_extract_split_instructions:
+            return _extract_split_instructions(peano_tree)
+        return ([], [], [], [])
 
-    _propagate_bottom_up(peano_tree)
+    if enable_propagate_bottom_up:
+        _propagate_bottom_up(peano_tree)
 
-    if optimize_hierarchy:
+    if enable_optimize_hierarchy:
         print("Stage III requested, but _optimize_hierarchy() is not implemented yet. Skipping.")
 
     # Update tree metadata after all stages
@@ -182,7 +198,10 @@ def split_tree(
     print(f"Leaf distribution: {moved_nodes}")
     print(f"Split pattern: {peano_tree._split_pattern}")
 
-    return peano_tree
+    if enable_extract_split_instructions:
+        return _extract_split_instructions(peano_tree)
+
+    return ([], [], [], [])
 
 
 def _distribute_leaves_bfs(
@@ -753,8 +772,12 @@ def reset_tree_to_single_subtree(peano_tree: Tree) -> Tree:
     
     return peano_tree
 
-def extract_hardcoded_split_parameters(peano_tree: Tree, base_sweep: int = 2) -> tuple:
+def _extract_split_instructions(
+    peano_tree: Tree, base_sweep: int = 2
+) -> tuple[list[int], list[int], list[int], list[int]]:
     """
+    Stage IV of the staged load-balancing workflow.
+
     Derive constructor lists for Peano's hardcoded load balancer from a split tree.
 
     The function scans the tree arrays and reconstructs a sequence of split operations

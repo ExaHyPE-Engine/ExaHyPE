@@ -98,13 +98,13 @@ class Tree(object):
 	tree = RegularGridGenerator("test", max_level=3, dimension=2)
 	
 	# Apply load balancing splitting
-	split_tree = split_tree(tree, number_of_splits=3)
+	split_tree(tree, number_of_splits=3)
 	
 	# Generate visualization
-	TreeVisualizer(split_tree, dimension=2, filename="balanced_tree")
+	TreeVisualizer(tree, dimension=2, filename="balanced_tree")
 	
 	# Export to YAML
-	generate_tree_yaml(split_tree, "output.yaml")
+	generate_tree_yaml(tree, "output.yaml")
 	```
 	"""
 

@@ -110,7 +110,7 @@ def display_hardcoded_split_parameters(peano_tree: Tree, title: str) -> None:
         return
     
     # Get the split parameters
-    grid_sweeps, splitting_trees, cell_counts, subtrees = split_strategy.extract_hardcoded_split_parameters(peano_tree)
+    grid_sweeps, splitting_trees, cell_counts, subtrees = split_strategy._extract_split_instructions(peano_tree)
     
     print("\n" + title)
     print("-" * len(title))
@@ -142,7 +142,7 @@ def main():
     parser.add_argument("-l",   "--max-level",  dest="max_level",  	    type=int,                           default=0,              help="Maximum refinement level for artificial regular grid generation" )
     parser.add_argument("-s",   "--splits", 	dest="num_splits",      type=int,                                                   help="Number of additional subtrees to create via splitting")
     parser.add_argument("-o",   "--output",     dest="output_yaml",     type=str,                           default="output.yaml",  help="Output YAML file path for storing split results and tree structure")
-    parser.add_argument("-t",   "--traversal",  dest="traversal_mode",  type=str,   choices=["bfs", "dfs"], default="bfs",          help="Stage I traversal mode for split_tree(): 'bfs' (default) or 'dfs'")
+    parser.add_argument("-t",   "--traversal",  dest="traversal_mode",  type=str,   choices=["bfs", "bfs_finest_first", "dfs"], default="bfs_finest_first",          help="Stage I traversal mode for split_tree(): 'bfs', 'bfs_finest_first' (default) or 'dfs'")
     parser.add_argument("--no-topology-update", dest="topology_update",             action="store_false",   default=True,           help="Disable topology preservation (skip non-leaf subtree propagation) during split_tree()")
 
     args = parser.parse_args()
@@ -253,17 +253,12 @@ def main():
         
         split_start_time = time.time()
 
-        # a runtime switch for whether split_tree() performs its Stage II bottom-up propagation
-        if args.topology_update:
-            tree = split_strategy.split_tree(tree, args.num_splits, traversal=args.traversal_mode)
-        else:
-            # Temporarily disable SplitTrees._propagate_bottom_up without editing SplitTrees.py
-            original_update = split_strategy._propagate_bottom_up
-            try:
-                split_strategy._propagate_bottom_up = lambda _tree: None
-                tree = split_strategy.split_tree(tree, args.num_splits, traversal=args.traversal_mode)
-            finally:
-                split_strategy._propagate_bottom_up = original_update
+        split_strategy.split_tree(
+            tree,
+            args.num_splits,
+            traversal=args.traversal_mode,
+            enable_propagate_bottom_up=args.topology_update,
+        )
 
         split_end_time = time.time()
 
