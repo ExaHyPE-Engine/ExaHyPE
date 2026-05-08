@@ -55,22 +55,22 @@ namespace exahype2 {
     memoryLocation(memoryLocation_),
     targetDevice(targetDevice_) {
 
-    QIn           = tarch::accelerator::MemoryManager::getInstance().allocate<inType*>(numberOfCells_, memoryLocation_, targetDevice_);
-    faces         = tarch::accelerator::MemoryManager::getInstance().allocate<inType* [NumFaceTypes][TWO_TIMES_D]>(numberOfCells_, memoryLocation_, targetDevice_);
-    cellCentre    = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<DIMENSIONS, double>>(numberOfCells_, memoryLocation_, targetDevice_);
-    cellSize      = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<DIMENSIONS, double>>(numberOfCells_, memoryLocation_, targetDevice_);
-    QOut          = tarch::accelerator::MemoryManager::getInstance().allocate<outType*>(numberOfCells_, memoryLocation_, targetDevice_);
-    maxEigenvalue = tarch::accelerator::MemoryManager::getInstance().allocate<outType>(numberOfCells_, memoryLocation_, targetDevice_);
+    QIn           = tarch::allocateMemory<inType*>(numberOfCells_, memoryLocation_, targetDevice_);
+    faces         = tarch::allocateMemory<inType* [NumFaceTypes][TWO_TIMES_D]>(numberOfCells_, memoryLocation_, targetDevice_);
+    cellCentre    = tarch::allocateMemory<tarch::la::Vector<DIMENSIONS, double>>(numberOfCells_, memoryLocation_, targetDevice_);
+    cellSize      = tarch::allocateMemory<tarch::la::Vector<DIMENSIONS, double>>(numberOfCells_, memoryLocation_, targetDevice_);
+    QOut          = tarch::allocateMemory<outType*>(numberOfCells_, memoryLocation_, targetDevice_);
+    maxEigenvalue = tarch::allocateMemory<outType>(numberOfCells_, memoryLocation_, targetDevice_);
   }
 
   template <typename inType, typename outType, int NumFaceTypes>
   CellData<inType, outType, NumFaceTypes>::~CellData() {
-    tarch::accelerator::MemoryManager::getInstance().free(QIn, targetDevice);
-    tarch::accelerator::MemoryManager::getInstance().free(faces, targetDevice);
-    tarch::accelerator::MemoryManager::getInstance().free(cellCentre, targetDevice);
-    tarch::accelerator::MemoryManager::getInstance().free(cellSize, targetDevice);
-    tarch::accelerator::MemoryManager::getInstance().free(QOut, targetDevice);
-    tarch::accelerator::MemoryManager::getInstance().free(maxEigenvalue, targetDevice);
+    tarch::freeMemory(QIn, memoryLocation, targetDevice);
+    tarch::freeMemory(faces, memoryLocation, targetDevice);
+    tarch::freeMemory(cellCentre, memoryLocation, targetDevice);
+    tarch::freeMemory(cellSize, memoryLocation, targetDevice);
+    tarch::freeMemory(QOut, memoryLocation, targetDevice);
+    tarch::freeMemory(maxEigenvalue, memoryLocation, targetDevice);
   }
 
   template <typename inType, typename outType, int NumFaceTypes>
@@ -84,4 +84,4 @@ namespace exahype2 {
     msg << "]";
     return msg.str();
   }
-}
+} // namespace exahype2

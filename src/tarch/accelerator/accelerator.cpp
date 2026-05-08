@@ -2,9 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "accelerator.h"
 
+#include "MemoryAllocationCache.h"
 #include "MemoryBlocks.h"
 #include "tarch/Assertions.h"
-#include "tarch/multicore/Lock.h"
 
 #include <cstring>
 
@@ -12,7 +12,7 @@
 #include <mimalloc.h>
 #endif
 
-void* tarch::accelerator::allocateRawDataOnHeap(std::size_t sizeInBytes) {
+void* tarch::accelerator::allocateHeapMemory(std::size_t sizeInBytes) {
 #ifdef USE_MIMALLOC
   return mi_malloc_aligned(sizeInBytes, ALIGNMENT);
 #else
@@ -20,7 +20,7 @@ void* tarch::accelerator::allocateRawDataOnHeap(std::size_t sizeInBytes) {
 #endif
 }
 
-void tarch::accelerator::freeRawDataOnHeap(void* data) {
+void tarch::accelerator::freeHeapMemory(void* data) {
 #ifdef USE_MIMALLOC
   mi_free(data);
 #else
@@ -28,68 +28,133 @@ void tarch::accelerator::freeRawDataOnHeap(void* data) {
 #endif
 }
 
-void* tarch::accelerator::reallocateRawData(void* data, std::size_t sizeInBytes, MemoryLocation location, int device) {
-  assertion(data);
-  assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
+void tarch::accelerator::copyToHeapMemory(void* target, const void* source, std::size_t sizeInBytes) {
+  std::memcpy(target, source, sizeInBytes);
+}
 
-  const std::size_t currentSizeInBytes = MemoryBlocks::getInstance().getSizeOfMemoryBlock(data);
-  if (currentSizeInBytes >= sizeInBytes) {
-    return data;
-  }
-
-  std::size_t newSizeInBytes = sizeInBytes + sizeInBytes / 2;
-  void*       newData        = allocateRawData(newSizeInBytes, location, device);
-  assertion(newData);
-
-  // TODO: Copy host to host
-  freeRawData(data, location, device);
-
-  return newData;
+void tarch::accelerator::copyFromHeapMemory(const void* source, void* target, std::size_t sizeInBytes) {
+  std::memcpy(target, source, sizeInBytes);
 }
 
 void tarch::freeMemory(void* memoryPtr, MemoryLocation location, int device) {
   accelerator::freeRawData(memoryPtr, location, device);
 }
 
-#if !defined(WITH_GPU)
-void* tarch::accelerator::allocateRawData(std::size_t sizeInBytes, [[maybe_unused]] MemoryLocation location, int) {
+void* tarch::accelerator::allocateRawData(std::size_t sizeInBytes, MemoryLocation location, int device) {
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
 
-  void* data = allocateRawDataOnHeap(sizeInBytes);
+  void* data = nullptr;
+  switch (location) {
+  case MemoryLocation::Heap:
+    data = MemoryAllocationCache::getInstance().allocate(sizeInBytes, location, device);
+    break;
+  case MemoryLocation::Pinned:
+    data = MemoryAllocationCache::getInstance().allocate(sizeInBytes, location, device);
+    break;
+  case MemoryLocation::Device:
+    data = MemoryAllocationCache::getInstance().allocate(sizeInBytes, location, device);
+    break;
+  }
   assertion(data);
 
   MemoryBlocks::getInstance().bookmarkMemoryBlock(data, sizeInBytes);
-
   return data;
 }
 
-void tarch::accelerator::freeRawData(void* data, MemoryLocation, int) {
+void tarch::accelerator::freeRawData(void* data, MemoryLocation location, int device) {
   if (!data) {
     return;
   }
 
   MemoryBlocks::getInstance().removeMemoryBlock(data);
 
-  freeRawDataOnHeap(data);
+  switch (location) {
+  case MemoryLocation::Heap:
+    MemoryAllocationCache::getInstance().free(data, location, device);
+    break;
+  case MemoryLocation::Pinned:
+    MemoryAllocationCache::getInstance().free(data, location, device);
+    break;
+  case MemoryLocation::Device:
+    MemoryAllocationCache::getInstance().free(data, location, device);
+    break;
+  }
 }
 
 void tarch::accelerator::
-  copyTo(void* target, const void* source, std::size_t sizeInBytes, [[maybe_unused]] MemoryLocation location, int) {
+  copyTo(void* target, const void* source, std::size_t sizeInBytes, MemoryLocation location, int device) {
   assertion2(target, sizeInBytes, toString(location));
   assertion2(source, sizeInBytes, toString(location));
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
 
-  logDebug("Copy " << sizeInBytes << " bytes from host to host");
-  std::memcpy(target, source, sizeInBytes);
+  switch (location) {
+  case MemoryLocation::Heap:
+    logDebug("Copy " << sizeInBytes << " bytes from host to host");
+    copyToHeapMemory(target, source, sizeInBytes);
+    break;
+  case MemoryLocation::Device:
+    logDebug("Copy " << sizeInBytes << " bytes from host to device");
+    copyToDeviceMemory(target, source, sizeInBytes, device);
+    break;
+  case MemoryLocation::Pinned:
+    logDebug("Copy " << sizeInBytes << " bytes from host to pinned host memory");
+    copyToPinnedMemory(target, source, sizeInBytes, device);
+    break;
+  }
 }
 
 void tarch::accelerator::
-  copyFrom(const void* source, void* target, std::size_t sizeInBytes, [[maybe_unused]] MemoryLocation location, int) {
+  copyFrom(const void* source, void* target, std::size_t sizeInBytes, MemoryLocation location, int device) {
   assertion2(target, sizeInBytes, toString(location));
   assertion2(source, sizeInBytes, toString(location));
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
 
-  logDebug("Copy " << sizeInBytes << " bytes from host to host");
-  std::memcpy(target, source, sizeInBytes);
+  switch (location) {
+  case MemoryLocation::Heap:
+    logDebug("Copy " << sizeInBytes << " bytes from host to host");
+    copyFromHeapMemory(source, target, sizeInBytes);
+    break;
+  case MemoryLocation::Device:
+    logDebug("Copy " << sizeInBytes << " bytes from device to host");
+    copyFromDeviceMemory(source, target, sizeInBytes, device);
+    break;
+  case MemoryLocation::Pinned:
+    logDebug("Copy " << sizeInBytes << " bytes from pinned host memory to host");
+    copyFromPinnedMemory(source, target, sizeInBytes, device);
+    break;
+  }
+}
+
+#if !defined(WITH_GPU)
+void* tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, [[maybe_unused]] int device) {
+  return allocateHeapMemory(sizeInBytes);
+}
+
+void* tarch::accelerator::allocatePinnedMemory(std::size_t sizeInBytes, [[maybe_unused]] int device) {
+  return allocateHeapMemory(sizeInBytes);
+}
+
+void tarch::accelerator::freeDeviceMemory(void* data, [[maybe_unused]] int device) { freeHeapMemory(data); }
+
+void tarch::accelerator::freePinnedMemory(void* data, [[maybe_unused]] int device) { freeHeapMemory(data); }
+
+void tarch::accelerator::
+  copyToDeviceMemory(void* target, const void* source, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+  copyToHeapMemory(target, source, sizeInBytes);
+}
+
+void tarch::accelerator::
+  copyToPinnedMemory(void* target, const void* source, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+  copyToHeapMemory(target, source, sizeInBytes);
+}
+
+void tarch::accelerator::
+  copyFromDeviceMemory(const void* source, void* target, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+  copyFromHeapMemory(source, target, sizeInBytes);
+}
+
+void tarch::accelerator::
+  copyFromPinnedMemory(const void* source, void* target, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+  copyFromHeapMemory(source, target, sizeInBytes);
 }
 #endif // WITH_GPU

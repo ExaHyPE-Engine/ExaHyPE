@@ -79,7 +79,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
 
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
-  static internal::FaceInterpolationMap faceInterpolationMap;
+  internal::FaceInterpolationMap& faceInterpolationMap = internal::getPiecewiseConstantFaceInterpolationMap();
   internal::FaceInterpolationOperatorKey
     key(numberOfDoFsPerAxisInPatch, overlap, normal);
 
@@ -219,7 +219,7 @@ void toolbox::blockstructured::internal::interpolateCell_AoS_piecewise_constant(
   const T* NOALIAS coarseGridCellValues,
   T* NOALIAS fineGridCellValues
 ) {
-  static internal::CellInterpolationMap  cellInterpolationMap;
+  internal::CellInterpolationMap&  cellInterpolationMap = internal::getPiecewiseConstantCellInterpolationMap();
   internal::CellInterpolationOperatorKey key(numberOfDoFsPerAxisInPatch);
 
   tarch::multicore::Lock lock(interpolationMapSemaphore);
@@ -267,7 +267,8 @@ void toolbox::blockstructured::
 
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
-  static internal::FaceInterpolationMap faceInterpolationMap;
+  internal::FaceInterpolationMap& faceInterpolationMap =
+    internal::getLinearWithConstantExtrapolationFaceInterpolationMap();
   internal::FaceInterpolationOperatorKey
     key(numberOfDoFsPerAxisInPatch, overlap, normal);
 
@@ -419,7 +420,8 @@ void toolbox::blockstructured::
 
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
-  static internal::FaceInterpolationMap faceInterpolationMap;
+  internal::FaceInterpolationMap& faceInterpolationMap =
+    internal::getLinearWithLinearExtrapolationFaceInterpolationMap();
   internal::FaceInterpolationOperatorKey
     key(numberOfDoFsPerAxisInPatch, overlap, normal);
 
@@ -571,7 +573,8 @@ void toolbox::blockstructured::
 
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
-  static internal::FaceInterpolationMap faceInterpolationMap;
+  internal::FaceInterpolationMap& faceInterpolationMap =
+    internal::getLinearWithConstantExtrapolationAndLinearNormalInterpolationFaceInterpolationMap();
   internal::FaceInterpolationOperatorKey
     key(numberOfDoFsPerAxisInPatch, overlap, normal);
 
@@ -722,7 +725,8 @@ void toolbox::blockstructured::
 
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
-  static internal::FaceInterpolationMap faceInterpolationMap;
+  internal::FaceInterpolationMap& faceInterpolationMap =
+    internal::getLinearWithLinearExtrapolationAndLinearNormalInterpolationFaceInterpolationMap();
   internal::FaceInterpolationOperatorKey
     key(numberOfDoFsPerAxisInPatch, overlap, normal);
 
@@ -1216,7 +1220,7 @@ void toolbox::blockstructured::internal::interpolateCell_AoS_linear(
   T* NOALIAS fineGridCellValues,
   bool extrapolateLinearly
 ) {
-  static internal::CellInterpolationMap  cellInterpolationMap;
+  internal::CellInterpolationMap&  cellInterpolationMap = internal::getLinearCellInterpolationMap();
   internal::CellInterpolationOperatorKey key(numberOfDoFsPerAxisInPatch);
 
   tarch::multicore::Lock lock(interpolationMapSemaphore);

@@ -4,6 +4,8 @@
 
 #if defined(WITH_GPU_KOKKOS)
 
+#include "tarch/accelerator/MemoryAllocationCache.h"
+
 #include <Kokkos_Core.hpp>
 
 namespace {
@@ -29,7 +31,12 @@ bool tarch::accelerator::Device::init() {
   return isInitialised();
 }
 
-void tarch::accelerator::Device::shutdown() { Kokkos::finalize(); }
+void tarch::accelerator::Device::shutdown() {
+  Kokkos::fence();
+  MemoryAllocationCache::getInstance().clear();
+  Kokkos::finalize();
+  numberOfDevices = 0;
+}
 
 bool tarch::accelerator::Device::isInitialised() const { return numberOfDevices > 0; }
 

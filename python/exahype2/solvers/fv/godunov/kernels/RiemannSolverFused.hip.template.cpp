@@ -94,7 +94,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   [[maybe_unused]] const int                          targetDevice
 ) {
 {% if COMPUTE_MAX_EIGENVALUE %}
-  {{COMPUTE_PRECISION}}* maxEigenvalues = tarch::accelerator::MemoryManager::getInstance().allocate<{{COMPUTE_PRECISION}}>(
+  {{COMPUTE_PRECISION}}* maxEigenvalues = tarch::allocateMemory<{{COMPUTE_PRECISION}}>(
     numberOfPatches,
     tarch::MemoryLocation::Device,
     targetDevice
@@ -145,7 +145,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   ));
   CHECK_HIP_ERROR(hipFree(cubTempStorage));
   CHECK_HIP_ERROR(hipFree(cubMaxEigenvalue));
-  tarch::accelerator::MemoryManager::getInstance().free(maxEigenvalues, targetDevice);
+  tarch::freeMemory(maxEigenvalues, tarch::MemoryLocation::Device, targetDevice);
 {% endif %}
 
   CHECK_HIP_ERROR(hipStreamSynchronize(tarch::accelerator::deviceStreamGet()));

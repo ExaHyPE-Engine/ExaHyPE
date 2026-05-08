@@ -6,118 +6,54 @@
 
 #include "Device.h"
 #include "tarch/Assertions.h"
-#include "tarch/accelerator/MemoryBlocks.h"
 
 #include <cstring>
 #include <sycl/sycl.hpp>
 
-void* tarch::accelerator::allocateRawData(std::size_t sizeInBytes, MemoryLocation location, int device) {
-  void* data = nullptr;
-  assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
-
-  switch (location) {
-  case MemoryLocation::Heap:
-    data = allocateRawDataOnHeap(sizeInBytes);
-    break;
-  case MemoryLocation::Device: {
-    assertion1(device >= 0, device);
-    sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
-#ifdef WITH_USM
-    data = sycl::malloc_shared(sizeInBytes, queue);
-#else
-    data = sycl::malloc_device(sizeInBytes, queue);
-#endif
-    break;
-  }
-  case MemoryLocation::Pinned: {
-    assertion1(device >= 0, device);
-    sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
-#ifdef WITH_USM
-    data = sycl::malloc_shared(sizeInBytes, queue);
-#else
-    data = sycl::malloc_host(sizeInBytes, queue);
-#endif
-    break;
-  }
-  }
-
+void* tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, int device) {
+  assertion1(device >= 0, device);
+  sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
+  void*        data  = sycl::malloc_device(sizeInBytes, queue);
   assertion(data);
-  MemoryBlocks::getInstance().bookmarkMemoryBlock(data, sizeInBytes);
   return data;
 }
 
-void tarch::accelerator::freeRawData(void* data, MemoryLocation location, int device) {
-  if (not data) {
-    return;
-  }
+void* tarch::accelerator::allocatePinnedMemory(std::size_t sizeInBytes, int device) {
+  assertion1(device >= 0, device);
+  sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
+  void*        data  = sycl::malloc_host(sizeInBytes, queue);
+  assertion(data);
+  return data;
+}
 
-  MemoryBlocks::getInstance().removeMemoryBlock(data);
+void tarch::accelerator::freeDeviceMemory(void* data, int device) {
+  assertion1(device >= 0, device);
+  sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
+  sycl::free(data, queue);
+}
 
-  switch (location) {
-  case MemoryLocation::Heap:
-    freeRawDataOnHeap(data);
-    break;
-  case MemoryLocation::Device:
-  case MemoryLocation::Pinned:
-    assertion1(device >= 0, device);
-    sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
-    sycl::free(data, queue);
-    break;
-  }
+void tarch::accelerator::freePinnedMemory(void* data, int device) { freeDeviceMemory(data, device); }
+
+void tarch::accelerator::copyToDeviceMemory(void* target, const void* source, std::size_t sizeInBytes, int device) {
+  assertion1(device >= 0, device);
+  sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
+  queue.memcpy(target, source, sizeInBytes).wait();
 }
 
 void tarch::accelerator::
-  copyTo(void* target, const void* source, std::size_t sizeInBytes, MemoryLocation location, int device) {
-  assertion(source);
-  assertion(target);
-  assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
+  copyToPinnedMemory(void* target, const void* source, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+  std::memcpy(target, source, sizeInBytes);
+}
 
-  switch (location) {
-  case MemoryLocation::Heap:
-    logDebug("Copy " << sizeInBytes << " bytes from host to host");
-    std::memcpy(target, source, sizeInBytes);
-    break;
-  case MemoryLocation::Device:
-  case MemoryLocation::Pinned: {
-#ifdef WITH_USM
-    std::memcpy(target, source, sizeInBytes);
-#else
-    assertion1(device >= 0, device);
-    logDebug("Copy " << sizeInBytes << " bytes from host to device");
-    sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
-    queue.memcpy(target, source, sizeInBytes).wait();
-    // queue.submit([&](sycl::handler& handle) { handle.memcpy(target, source, sizeInBytes); }).wait_and_throw();
-#endif
-    break;
-  }
-  }
+void tarch::accelerator::copyFromDeviceMemory(const void* source, void* target, std::size_t sizeInBytes, int device) {
+  assertion1(device >= 0, device);
+  sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
+  queue.memcpy(target, source, sizeInBytes).wait();
 }
 
 void tarch::accelerator::
-  copyFrom(const void* source, void* target, std::size_t sizeInBytes, MemoryLocation location, int device) {
-  assertion(source);
-  assertion(target);
-  assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
-
-  switch (location) {
-  case MemoryLocation::Heap:
-    logDebug("Copy " << sizeInBytes << " bytes from host to host");
-    std::memcpy(target, source, sizeInBytes);
-    break;
-  case MemoryLocation::Device:
-  case MemoryLocation::Pinned: {
-#ifdef WITH_USM
-    std::memcpy(target, source, sizeInBytes);
-#else
-    assertion1(device >= 0, device);
-    logDebug("Copy " << sizeInBytes << " bytes from device to host");
-    sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
-    queue.memcpy(target, source, sizeInBytes).wait();
-    // queue.submit([&](sycl::handler& handle) { handle.memcpy(target, source, sizeInBytes); }).wait_and_throw();
-#endif
-    break;
-  }
-  }
+  copyFromPinnedMemory(const void* source, void* target, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+  std::memcpy(target, source, sizeInBytes);
 }
 
 #endif // defined(WITH_GPU_SYCL)

@@ -1072,7 +1072,17 @@ namespace toolbox {
        */
       typedef std::map<CellInterpolationOperatorKey, tarch::la::DynamicMatrix*>
         CellInterpolationMap;
+
+      FaceInterpolationMap& getPiecewiseConstantFaceInterpolationMap();
+      FaceInterpolationMap& getLinearWithConstantExtrapolationFaceInterpolationMap();
+      FaceInterpolationMap& getLinearWithLinearExtrapolationFaceInterpolationMap();
+      FaceInterpolationMap& getLinearWithConstantExtrapolationAndLinearNormalInterpolationFaceInterpolationMap();
+      FaceInterpolationMap& getLinearWithLinearExtrapolationAndLinearNormalInterpolationFaceInterpolationMap();
+      CellInterpolationMap& getPiecewiseConstantCellInterpolationMap();
+      CellInterpolationMap& getLinearCellInterpolationMap();
     } // namespace internal
+
+    void clearInterpolationOperatorCaches();
   }   // namespace blockstructured
 } // namespace toolbox
 

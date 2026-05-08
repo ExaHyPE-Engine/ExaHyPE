@@ -145,7 +145,6 @@ option(WITH_LIBXSMM "Build with LIBXSMM support" OFF)
 option(WITH_ACPP "Build with AdaptiveCpp (SYCL) backend" OFF)
 option(WITH_KOKKOS "Build with Kokkos backend" OFF)
 option(WITH_OMPT "Build with OpenMP target backend" OFF)
-option(WITH_USM "Build with unified shared memory support" OFF)
 
 set(SUPPORTED_ACCELERATOR_ARCHITECTURES
   none
@@ -275,10 +274,6 @@ if(WITH_ZLIB)
   else()
     set(WITH_ZLIB OFF CACHE BOOL "Build with ZLIB compression support" FORCE)
   endif()
-endif()
-
-if(WITH_USM)
-  target_compile_definitions(PeanoOptions INTERFACE WITH_USM)
 endif()
 
 set(WITH_GPU "no" CACHE INTERNAL "Selected GPU backend" FORCE)

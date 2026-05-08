@@ -7,11 +7,14 @@
 #include "DevicePropertiesCache.h"
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/Device.h"
+#include "tarch/accelerator/MemoryAllocationCache.h"
 #include "tarch/accelerator/accelerator.h"
 
+#include <unordered_map>
+
 namespace {
-  int         numberOfDevices = 0;
-  hipStream_t activeStream    = 0;
+  int                                               numberOfDevices = 0;
+  thread_local std::unordered_map<int, hipStream_t> activeStreams;
 } // namespace
 
 bool tarch::accelerator::Device::init() {
@@ -43,8 +46,20 @@ bool tarch::accelerator::Device::init() {
 }
 
 void tarch::accelerator::Device::shutdown() {
-  CHECK_HIP_ERROR(hipDeviceSynchronize());
-  CHECK_HIP_ERROR(hipDeviceReset());
+  for (int device = 0; device < numberOfDevices; device++) {
+    CHECK_HIP_ERROR(hipSetDevice(device));
+    CHECK_HIP_ERROR(hipDeviceSynchronize());
+  }
+
+  MemoryAllocationCache::getInstance().clear();
+
+  for (int device = 0; device < numberOfDevices; device++) {
+    CHECK_HIP_ERROR(hipSetDevice(device));
+    CHECK_HIP_ERROR(hipDeviceReset());
+  }
+
+  activeStreams.clear();
+  numberOfDevices = 0;
 }
 
 bool tarch::accelerator::Device::isInitialised() const { return numberOfDevices > 0; }
@@ -64,8 +79,17 @@ void tarch::accelerator::deviceStreamDestroy(hipStream_t* stream) {
 
 void tarch::accelerator::deviceStreamSync(hipStream_t stream) { CHECK_HIP_ERROR(hipStreamSynchronize(stream)); }
 
-void tarch::accelerator::deviceStreamSet(hipStream_t stream) { activeStream = stream; }
+void tarch::accelerator::deviceStreamSet(hipStream_t stream) {
+  int device = 0;
+  CHECK_HIP_ERROR(hipGetDevice(&device));
+  activeStreams[device] = stream;
+}
 
-hipStream_t tarch::accelerator::deviceStreamGet() { return activeStream; }
+hipStream_t tarch::accelerator::deviceStreamGet() {
+  int device = 0;
+  CHECK_HIP_ERROR(hipGetDevice(&device));
+  auto it = activeStreams.find(device);
+  return it == activeStreams.end() ? static_cast<hipStream_t>(0) : it->second;
+}
 
 #endif // defined(WITH_GPU_HIP)
