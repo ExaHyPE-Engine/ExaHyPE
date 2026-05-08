@@ -128,6 +128,8 @@ def split_tree(
             Total subtree count after splitting is number_of_splits + 1.
         traversal: Stage I traversal strategy. Supported values:
             - "bfs": level-order leaf collection (default)
+            - "bfs_finest_first": level-order leaf collection within each level,
+              but levels processed from finest to coarsest
             - "dfs": depth-first leaf collection
         optimize_hierarchy: If True, request Stage III hierarchical optimisation.
             Stage III is currently not implemented and will be skipped.
@@ -150,12 +152,18 @@ def split_tree(
 
     traversal_mode = traversal.lower()
     if traversal_mode == "bfs":
-        has_leaves_to_split, moved_nodes = _distribute_leaves_bfs(peano_tree, number_of_splits)
+        has_leaves_to_split, moved_nodes = _distribute_leaves_bfs(
+            peano_tree, number_of_splits, finest_level_first=False
+        )
+    elif traversal_mode == "bfs_finest_first":
+        has_leaves_to_split, moved_nodes = _distribute_leaves_bfs(
+            peano_tree, number_of_splits, finest_level_first=True
+        )
     elif traversal_mode == "dfs":
         has_leaves_to_split, moved_nodes = _distribute_leaves_dfs(peano_tree, number_of_splits)
     else:
         raise ValueError(
-            f"Unsupported traversal '{traversal}'. Use 'bfs' or 'dfs'."
+            f"Unsupported traversal '{traversal}'. Use 'bfs', 'bfs_finest_first' or 'dfs'."
         )
 
     if not has_leaves_to_split:
@@ -177,13 +185,17 @@ def split_tree(
     return peano_tree
 
 
-def _distribute_leaves_bfs(peano_tree: Tree, number_of_splits: int) -> tuple[bool, list[int]]:
+def _distribute_leaves_bfs(
+    peano_tree: Tree,
+    number_of_splits: int,
+    finest_level_first: bool = False,
+) -> tuple[bool, list[int]]:
     """
     Stage I BFS variant of the staged load-balancing workflow.
 
     Collect leaf cells currently assigned to subtree 0 and redistribute them
     across `number_of_splits + 1` subtrees as evenly as possible while
-    preserving level-order traversal.
+    preserving level-order traversal within each level.
 
     Leaf definition:
     - Any existing cell on the finest level, or
@@ -192,6 +204,9 @@ def _distribute_leaves_bfs(peano_tree: Tree, number_of_splits: int) -> tuple[boo
     Args:
         peano_tree: Tree to update (modified in place).
         number_of_splits: Number of additional subtrees to create.
+        finest_level_first: If `False` (default), process levels from coarsest
+            to finest (`0..max_level-1`). If `True`, process levels from finest
+            to coarsest while keeping BFS order inside each level.
 
     Returns:
         A tuple `(has_leaves_to_split, moved_nodes_per_subtree)`:
@@ -203,10 +218,15 @@ def _distribute_leaves_bfs(peano_tree: Tree, number_of_splits: int) -> tuple[boo
         - Node existence flags (`weight`) are preserved.
         - This stage does not update non-leaf assignments.
     """
-    # Collect all leaf nodes (at all levels) that belong to subtree 0
+    # Collect all leaf nodes (at all levels) that belong to subtree 0.
+    # The level sweep can be either coarse->fine (legacy) or fine->coarse.
     leaf_nodes = []
 
-    for level in range(peano_tree._max_level):
+    level_range = range(peano_tree._max_level)
+    if finest_level_first:
+        level_range = range(peano_tree._max_level - 1, -1, -1)
+
+    for level in level_range:
         size = 3**(level + 1)
 
         if peano_tree._dimension == 2:
