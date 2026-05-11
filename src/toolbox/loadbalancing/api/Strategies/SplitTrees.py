@@ -122,9 +122,10 @@ def split_tree(
     Stages:
     1. _distribute_leaves_bfs() or _distribute_leaves_dfs(): Redistribute leaf nodes across subtrees.
     2. _propagate_bottom_up(): Propagate subtree ownership to internal nodes.
-     3. _optimize_hierarchy() (optional, TBD): Further reduce split complexity.
-     4. _extract_split_instructions() (optional): Derive hardcoded split
-         instructions from the transformed tree.
+    3. _optimize_hierarchy() (optional): Further reduce split complexity by
+       promoting complete child sets up the hierarchy.
+    4. _extract_split_instructions() (optional): Derive hardcoded split
+       instructions from the transformed tree.
 
     Args:
         peano_tree: Tree to split (modified in place).
@@ -137,9 +138,8 @@ def split_tree(
             - "dfs": depth-first leaf collection
         enable_propagate_bottom_up: If True, enable Stage II bottom-up subtree
             propagation after leaf redistribution.
-        enable_optimize_hierarchy: If True, request Stage III hierarchical
-            optimisation.
-            Stage III is currently not implemented and will be skipped.
+        enable_optimize_hierarchy: If True, enable Stage III hierarchical
+            optimisation to minimise split operations through hierarchy lifting.
         enable_extract_split_instructions: If True, run Stage IV and return the
             derived `(gridSweeps, splittingTrees, numberOfCells, subTrees)`.
 
@@ -148,9 +148,10 @@ def split_tree(
         If Stage IV is disabled, returns `([], [], [], [])`.
 
     Notes:
-        - Stage III is optional and currently not implemented.
-        - The tree is still modified in place by the enabled transformation stages.
+        - All stages after Stage I are optional.
+        - The tree is modified in place by the enabled transformation stages.
         - If number_of_splits <= 0, no transformation stage runs.
+        - Stage III requires Stage II to have been applied first for correctness.
     """
     if number_of_splits <= 0:
         print(f"No splitting requested (number_of_splits = {number_of_splits}).")
@@ -188,7 +189,7 @@ def split_tree(
         _propagate_bottom_up(peano_tree)
 
     if enable_optimize_hierarchy:
-        print("Stage III requested, but _optimize_hierarchy() is not implemented yet. Skipping.")
+        _optimize_hierarchy(peano_tree)
 
     # Update tree metadata after all stages
     peano_tree._subtree_count = number_of_splits + 1
@@ -593,6 +594,159 @@ def _propagate_bottom_up(peano_tree: Tree) -> None:
                                 peano_tree._tree_arrays[level][a][b][c] = (1, target_subtree)
     
     print("Non-leaf node assignment update completed.")
+
+def _optimize_hierarchy(peano_tree: Tree) -> None:
+    """
+    Stage III of the staged load-balancing workflow.
+
+        Minimise the total number of split operations whilst preserving load balance
+        established by Stage II. The algorithm lifts split decisions up the tree hierarchy
+        by promoting a parent on level L-1 to the dominant subtree among its children
+        on level L.
+
+        Hierarchy lifting is applicable when:
+        - All children of a parent exist (count equals 3^d, where d is the spatial
+            dimension: d=2 -> 9 children, d=3 -> 27 children)
+        - Children are mixed across at least two subtrees
+        - A dominant child subtree M exists (largest child count)
+        - The dominant subtree differs from the current parent subtree and yields a
+            reduction of lower-level split pressure
+
+        When these conditions are met, the parent is reassigned to the dominant subtree.
+        Remaining child subtrees stay on level L, but their source parent subtree is now
+        the updated one (which effectively moves part of splitting upwards).
+
+    The algorithm operates bottom-up from finest to coarsest level(s), iteratively
+    lifting applicable promotions until no further reductions are possible.
+
+    Args:
+        peano_tree: Tree to update (modified in place).
+        Required precondition: Stage II (bottom-up propagation) must have been
+        applied first to ensure non-leaf subtree consistency.
+
+    Returns:
+        None.
+
+    Notes:
+        - This function is intended to run after `_propagate_bottom_up()`.
+        - Preserves node existence flags (`weight`).
+        - Modifies only subtree assignments to reduce split operation count.
+        - Multi-pass iteration allows cascading promotions up the tree.
+        - The "all children in one subtree" case is already resolved by Stage II;
+          Stage III primarily targets mixed-child parents.
+    """
+    print("Stage III: Optimising hierarchy to minimise split operations...")
+
+    dimension = peano_tree._dimension
+    max_level = peano_tree._max_level
+    children_per_parent = 3 ** dimension
+
+    def _dominant_subtree(child_subtrees: list[int], parent_subtree: int) -> int | None:
+        """
+        Pick a promotion target from mixed child subtree assignments.
+
+        Returns the dominant subtree id when promotion is beneficial, otherwise None.
+        """
+        if len(child_subtrees) != children_per_parent:
+            return None
+
+        counts: dict[int, int] = {}
+        for subtree in child_subtrees:
+            counts[subtree] = counts.get(subtree, 0) + 1
+
+        if len(counts) <= 1:
+            # Stage II already covers this case.
+            return None
+
+        # Deterministic tie-break: larger count first, then larger subtree id.
+        ranked = sorted(counts.items(), key=lambda item: (item[1], item[0]), reverse=True)
+        dominant_subtree, dominant_count = ranked[0]
+
+        if dominant_subtree == parent_subtree:
+            return None
+
+        # Do not move ownership "backward" to an earlier subtree.
+        if dominant_subtree < parent_subtree:
+            return None
+
+        parent_count = counts.get(parent_subtree, 0)
+        if dominant_count <= parent_count:
+            return None
+
+        return dominant_subtree
+
+    # Iterate until no more optimisations can be made
+    made_changes = True
+    pass_count = 0
+
+    while made_changes:
+        made_changes = False
+        pass_count += 1
+
+        # Work from finest internal level to root (bottom-up)
+        for level in range(max_level - 2, -1, -1):
+            size = 3 ** (level + 1)
+
+            if dimension == 2:
+                for a in range(size):
+                    for b in range(size):
+                        parent_node = peano_tree._tree_arrays[level][a][b]
+                        if parent_node[0] != 1:  # Parent doesn't exist
+                            continue
+
+                        # Collect all children's subtree assignments
+                        child_subtrees = []
+                        child_size = 3 ** (level + 2)
+
+                        for child_a in range(3 * a, min(3 * (a + 1), child_size)):
+                            for child_b in range(3 * b, min(3 * (b + 1), child_size)):
+                                child_node = peano_tree._tree_arrays[level + 1][child_a][child_b]
+                                if child_node[0] == 1:  # Child exists
+                                    child_subtrees.append(child_node[1])
+
+                        target_subtree = _dominant_subtree(
+                            child_subtrees=child_subtrees,
+                            parent_subtree=parent_node[1],
+                        )
+
+                        if target_subtree is not None:
+                            peano_tree._tree_arrays[level][a][b] = (1, target_subtree)
+                            made_changes = True
+
+            elif dimension == 3:
+                for a in range(size):
+                    for b in range(size):
+                        for c in range(size):
+                            parent_node = peano_tree._tree_arrays[level][a][b][c]
+                            if parent_node[0] != 1:  # Parent doesn't exist
+                                continue
+
+                            # Collect all children's subtree assignments
+                            child_subtrees = []
+                            child_size = 3 ** (level + 2)
+
+                            for child_a in range(3 * a, min(3 * (a + 1), child_size)):
+                                for child_b in range(3 * b, min(3 * (b + 1), child_size)):
+                                    for child_c in range(3 * c, min(3 * (c + 1), child_size)):
+                                        child_node = peano_tree._tree_arrays[level + 1][
+                                            child_a][child_b][child_c]
+                                        if child_node[0] == 1:  # Child exists
+                                            child_subtrees.append(child_node[1])
+
+                            target_subtree = _dominant_subtree(
+                                child_subtrees=child_subtrees,
+                                parent_subtree=parent_node[1],
+                            )
+
+                            if target_subtree is not None:
+                                peano_tree._tree_arrays[level][a][b][c] = (
+                                    1, target_subtree)
+                                made_changes = True
+
+    print(
+        f"Hierarchy optimisation completed in {pass_count} pass(es). "
+        f"Total split operations reduced."
+    )
 
 def generate_tree_yaml(peano_tree: Tree, output_yaml_file: str) -> None:
     """
