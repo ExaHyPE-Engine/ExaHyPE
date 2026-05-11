@@ -22,7 +22,7 @@ This approach allows us to make informed splitting decisions that minimise both 
 The API is organised into four phases:
 
 - **Phase 1: Input Generators** — read or generate the tree structure to be analysed.
-- **Phase 2: Splitting Strategies** — apply up to three sequential stages to redistribute computational work and optimise the resulting split hierarchy.
+- **Phase 2: Splitting Strategies** — apply configurable staged transformations (Stage I-IV) to redistribute computational work, optionally optimise the split hierarchy, and optionally extract replay instructions.
 - **Phase 3: Hardcoded parameter extraction (offline replay)** — translate the final subtree assignment into split instructions for `toolbox::loadbalancing::strategies::Hardcoded`.
 - **Phase 4: Output and Visualisation** — export YAML and visual artefacts for inspection and integration.
 
@@ -42,24 +42,36 @@ This input method is essential for algorithm development and provides a baseline
 
 The `SplitTrees` module (`src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`) implements the core optimisation algorithms for redistributing computational work across multiple compute resources. These strategies enable you to achieve balanced workload distribution, handle adaptive mesh challenges, and maintain mesh topology.
 
-The splitting phase consists of up to three sequential stages applied within `split_tree()`:
+The splitting phase is now a configurable staged workflow executed inside `split_tree()`. Stages can be enabled/disabled via flags, and Stage I traversal can be selected explicitly.
 
 ```python
-split_tree(peano_tree, number_of_splits, traversal="bfs"|"dfs", optimize_hierarchy=False):
+split_tree(
+  peano_tree,
+  number_of_splits,
+  traversal="bfs"|"bfs_finest_first"|"dfs",
+  enable_propagate_bottom_up=False,
+  enable_optimize_hierarchy=False,
+  enable_extract_split_instructions=False,
+):
   # Stage I:            distribute leaf nodes across subtrees (`_distribute_leaves_bfs()` or `_distribute_leaves_dfs()`)
-  # Stage II:           bottom-up propagation (`_propagate_bottom_up()`)
-  # Stage III (opt.):   hierarchical optimisation (`_optimize_split_hierarchy()`)
+  # Stage II (opt.):    bottom-up propagation (`_propagate_bottom_up()`)
+  # Stage III (opt.):   hierarchical optimisation (`_optimize_hierarchy()`)  # TBD
+  # Stage IV (opt.):    split-instruction extraction (`_extract_split_instructions()`)
 ```
+
+`split_tree()` now returns a tuple `(gridSweeps, splittingTrees, numberOfCells, subTrees)`.
+If Stage IV is disabled, the function returns `([], [], [], [])` while still applying the enabled transformation stages in place.
 
 | Stage | Function | Objective | Complexity |
 |-------|----------|-----------|------------|
 | **I** | `_distribute_leaves_bfs()` or `_distribute_leaves_dfs()` | Distribute leaves across subtrees | O(Ncells) |
 | **II** | `_propagate_bottom_up()` | Propagate subtree ids bottom-up | O(Ncells) single pass |
-| **III** | `_optimize_split_hierarchy()` | Minimise split operation count | (not implemented yet) |
+| **III** | `_optimize_hierarchy()` | Minimise split operation count | (not implemented yet) |
+| **IV** | `_extract_split_instructions()` | Derive hardcoded replay split lists | O(subtrees × Ncells) |
 
-_Stage I_ and _Stage II_ are always executed. _Stage III_ is optional and has not yet been implemented.
+_Stage I_ always executes when splitting is requested. _Stage II_, _Stage III_, and _Stage IV_ are optional.
 
-@todo [Stage III] Implement `_optimize_split_hierarchy()` and replace provisional complexity notes with measured complexity and constraints.
+@todo [Stage III] Implement `_optimize_hierarchy()` and replace provisional complexity notes with measured complexity and constraints.
 
 Here, `Ncells` denotes the total number of represented cells across all stored levels. For _Stage I_, BFS and DFS traversal have the same asymptotic complexity O(Ncells); they differ only in visitation order and constant-factor overhead.
 
@@ -67,9 +79,10 @@ Here, `Ncells` denotes the total number of represented cells across all stored l
 
 The core loop of `split_tree()` identifies all leaf nodes across every refinement level and distributes them as evenly as possible across the requested number of subtrees. A node is a leaf if it resides on the finest level or has no children on the next level. After _Stage I_, only leaf nodes carry updated subtree assignments; all non-leaf nodes still belong to their original subtree and are updated by _Stage II_.
 
-Stage I now supports two traversal modes:
-- `traversal="bfs"` uses `_distribute_leaves_bfs()` and visits leaves in level-order ("Breadth First Search" variant).
-- `traversal="dfs"` uses `_distribute_leaves_dfs()` and visits leaves in depth-first order ("Depth First Search" variant).
+Stage I now supports three traversal modes:
+- `traversal="bfs"` uses `_distribute_leaves_bfs(..., finest_level_first=False)` and visits leaves in level-order from coarsest to finest level.
+- `traversal="bfs_finest_first"` uses `_distribute_leaves_bfs(..., finest_level_first=True)` and visits leaves in level-order within each level while processing levels from finest to coarsest.
+- `traversal="dfs"` uses `_distribute_leaves_dfs()` and visits leaves in depth-first order.
 
 Both variants preserve the same balancing policy; they differ only in the order in which eligible leaves are discovered and therefore assigned to target subtrees.
 
@@ -193,7 +206,7 @@ Total: **5 operations and 10 cell updates**.
 
 @todo [Stage III] Finalise hierarchical optimisation semantics and update this section once the implementation is available.
 
-The `_optimize_split_hierarchy()` function minimises the total number of split operations whilst preserving load balance established by _Stage II_. This hierarchical approach prepares the split structure for integration with cost-aware optimisation strategies, enabling more efficient domain decomposition in practice.
+The `_optimize_hierarchy()` function minimises the total number of split operations whilst preserving load balance established by _Stage II_. This hierarchical approach prepares the split structure for integration with cost-aware optimisation strategies, enabling more efficient domain decomposition in practice.
 
 \par Algorithm
 Iterative optimisation that restructures the split hierarchy by moving split decisions up the tree when beneficial. Requires _Stage II_ (bottom-up propagation) to have been applied first, so that non-leaf subtree assignments are consistent before the optimisation begins.
@@ -230,13 +243,14 @@ Consequently, Scenarios 1 and 2 do not admit a correctness-preserving hierarchy 
 @todo [Stage III Scenario 3] Add a before/after hierarchy-lifting example with extracted split parameters and explain why the lift is correctness-preserving.
 
 ### Planned development
-- **Stage III Implementation**: Implement the (optional) third stage `_optimize_split_hierarchy()` in `split_tree()` as outlined above
+- **Stage III Implementation**: Implement the (optional) third stage `_optimize_hierarchy()` in `split_tree()` as outlined above
 - **Cost-Aware Splitting**: Integration with splitting cost functions from @ref page_toolbox_loadbalancing_strategies
 - **Hybrid Approaches**: Configurable stage selection based on problem characteristics
 
 ## Phase 3: Hardcoded parameter extraction (offline replay)
 
-The helper [`SplitTrees.extract_hardcoded_split_parameters`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py) returns four lists:
+Stage IV extraction can be requested directly through `split_tree(..., enable_extract_split_instructions=True)`.
+Internally, this uses the helper `_extract_split_instructions()` and returns four lists:
 `(gridSweeps, splittingTrees, numberOfCells, subTrees)` to feed into
 [`toolbox::loadbalancing::strategies::Hardcoded`](src/toolbox/loadbalancing/strategies/Hardcoded.h).
 
@@ -316,7 +330,7 @@ python3 OfflineDecomposition.py -d 3 -l 3 -s 4 --no-topology-update
 The script integrates all API components into a complete workflow:
 1. **Phase 1: Input Generators** via [`GridPatchFileReader`](src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py) or [`RegularGridGenerator`](src/toolbox/loadbalancing/api/Input/RegularGridGenerator.py), represented through the [`Tree`](src/toolbox/loadbalancing/api/Tree.py) data structure.
 2. **Phase 2: Splitting Strategies** through [`SplitTrees`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py), including Stage I (leaf distribution), Stage II (bottom-up propagation), and optional Stage III (hierarchical optimisation).
-3. **Phase 3: Hardcoded parameter extraction (offline replay)** via [`extract_hardcoded_split_parameters`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py) to build inputs for [`toolbox::loadbalancing::strategies::Hardcoded`](src/toolbox/loadbalancing/strategies/Hardcoded.h).
+3. **Phase 3: Hardcoded parameter extraction (offline replay)** via Stage IV in `split_tree()` (internally `_extract_split_instructions()`) to build inputs for [`toolbox::loadbalancing::strategies::Hardcoded`](src/toolbox/loadbalancing/strategies/Hardcoded.h).
 4. **Phase 4: Output and Visualisation** by exporting YAML (e.g. via [`generate_tree_yaml`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py)) plus optional visual artefacts for inspection and integration.
 
 For complete command-line options, parameter details, and usage examples, see the [`OfflineDecomposition.py`](src/toolbox/loadbalancing/api/OfflineDecomposition.py) script documentation.
