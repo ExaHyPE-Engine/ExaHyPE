@@ -168,41 +168,34 @@ If propagation continues one level further than desired, `L1C` is promoted to Su
 
 \par Scenario 3: A multi-way split across 4 subtrees after _Stage II_
 
-@image html tree3_stages1-2_combined.png
+@image html tree3_stages1_2_fine_first_bfs_combined.png
 
-After _Stage II_, the leaf workload is balanced across four subtrees, but (unlike Scenario 2) no Level-1 parent can be promoted: each of `L1A`, `L1B`, and `L1C` still has children belonging to different subtrees. The final leaf assignment therefore remains expressed via introductions on Level 2. Subtree 1 occupies two refined Level-2 blocks, while Subtrees 2 and 3 each combine one refined Level-2 block with one childless Level-2 leaf (and a few Level-3 leaves coming from mixed refined blocks):
-- **Subtree 1**: refined `L2A1` and `L2A2` (6 Level-3 leaves total)
-- **Subtree 2**: refined `L2B1` (3 Level-3 leaves) plus childless leaf `L2A3` (1 leaf) and two leaves under refined `L2B2` (2 Level-3 leaves)  → 6 leaves total
-- **Subtree 3**: refined `L2C1` (3 Level-3 leaves) plus childless leaf `L2B3` (1 leaf) and one leaf under refined `L2B2` (1 Level-3 leaf) and one leaf under refined `L2C2` (1 Level-3 leaf)  → 6 leaves total
-- **Subtree 0**: the remaining leaves (all leaves under refined `L2C3` plus the remaining leaves under refined `L2C2`)  → 5 leaves total
+For the fine-first BFS ordering, _Stage I_ already yields contiguous Level-3 blocks for Subtrees 1 and 2, while Subtree 3 is composed of two childless Level-2 leaves and one refined Level-2 block. After _Stage II_, this structure is compacted on Level 2 by promoting uniform refined parents:
+- **Subtree 1**: refined `L2B1` and `L2B2` (6 Level-3 leaves total)
+- **Subtree 2**: refined `L2C1` and `L2C2` (6 Level-3 leaves total)
+- **Subtree 3**: childless leaves `L2A3` and `L2B3`, plus refined `L2C3` (3 Level-3 leaves)  → 5 leaves total
+- **Subtree 0**: remaining leaves under refined `L2A1` and `L2A2`  → 6 leaves total
 
-The bottom-up propagation ensures strict parent-child consistency: only those internal nodes whose complete descendant set belongs to one subtree are promoted. Consequently, only `L2A1`, `L2A2`, `L2B1`, and `L2C1` can be promoted on Level 2; `L2B2` and `L2C2` remain Subtree 0 because their Level-3 children are split across multiple subtrees.
+The bottom-up propagation ensures strict parent-child consistency: only internal nodes whose full descendant set belongs to one subtree are promoted. Consequently, `L2B1`, `L2B2`, `L2C1`, `L2C2`, and `L2C3` are promoted on Level 2, while `L1A`, `L1B`, and `L1C` are still resolved in _Stage III_.
 
 \par Extracted Split Parameters (_Stage I_ only / before _Stage II_ propagation):
 ```
-{6; 0→2; 1}   // API level 2 (L2*): introduce Subtree 2 via childless leaf L2A3
-{6; 0→3; 1}   // API level 2 (L2*): introduce Subtree 3 via childless leaf L2B3
-{8; 0→1; 6}   // API level 3 (L3*): introduce Subtree 1 via all 6 leaves under L2A1 and L2A2
-{8; 0→2; 5}   // API level 3 (L3*): introduce Subtree 2 via 5 leaves under L2B1 and L2B2
-{8; 0→3; 5}   // API level 3 (L3*): introduce Subtree 3 via all 3 leaves under L2C1 and a single leaf L3B2C under L2B2 and a single leaf L3C2A under L2C2.
+{8; 0→1; 6}   // API level 3 (L3*): introduce Subtree 1 via all 6 leaves under L2B1 and L2B2
+{8; 0→2; 6}   // API level 3 (L3*): introduce Subtree 2 via all 6 leaves under L2C1 and L2C2
+{6; 0→3; 2}   // API level 2 (L2*): introduce Subtree 3 via childless leaves L2A3 and L2B3
+{8; 0→3; 3}   // API level 3 (L3*): introduce Subtree 3 via all 3 leaves under L2C3
 ```
-Total: **5 operations and 18 cell updates**.
+Total: **4 operations and 17 cell updates**.
 
 \par Extracted Split Parameters (after _Stage II_):
 ```
-{6; 0→1; 2}   // API level 2 (L2*): introduce Subtree 1 via L2A1 and L2A2 (both refined)
-{6; 0→2; 2}   // API level 2 (L2*): introduce Subtree 2 via L2B1 (refined) and L2A3 (childless leaf)
-{6; 0→3; 2}   // API level 2 (L2*): introduce Subtree 3 via L2C1 (refined) and L2B3 (childless leaf)
-{8; 0→2; 2}   // API level 3 (L3*): introduce Subtree 2 via L3B2A and L3B2B (children of mixed refined L2B2 which stays Subtree 0)
-{8; 0→3; 2}   // API level 3 (L3*): introduce Subtree 3 via L3B2C (under mixed L2B2) and L3C2A (under mixed L2C2)
+{6; 0→1; 2}   // API level 2 (L2*): introduce Subtree 1 via L2B1 and L2B2 (both refined)
+{6; 0→2; 2}   // API level 2 (L2*): introduce Subtree 2 via L2C1 and L2C2 (both refined)
+{6; 0→3; 3}   // API level 2 (L2*): introduce Subtree 3 via L2A3, L2B3 (childless) and L2C3 (refined)
 ```
-Total: **5 operations and 10 cell updates**.
+Total: **3 operations and 7 cell updates**.
 
 ### Stage III (optional): Hierarchical Optimisation
-
-\par Scenario 3: A multi-way split across 4 subtrees after _Stage III_
-
-@image html tree3_stages2-3_combined.png
 
 @todo [Stage III] Finalise hierarchical optimisation semantics and update this section once the implementation is available.
 
@@ -238,9 +231,16 @@ More precisely, _Stage III_ (“hierarchy lifting”) is only applicable if we c
 
 Consequently, Scenarios 1 and 2 do not admit a correctness-preserving hierarchy lift that reduces split introductions.
 
-\par Scenario 3: A multi-way split across 4 Subtrees
+\par Scenario 3: A multi-way split across 4 subtrees after _Stage III_
 
-@todo [Stage III Scenario 3] Add a before/after hierarchy-lifting example with extracted split parameters and explain why the lift is correctness-preserving.
+@image html tree3_stages2_3_fine_first_bfs_combined.png
+
+In the fine-first BFS Scenario 3, _Stage III_ lifts two compact Level-2 regions from _Stage II_ to Level 1:
+- `L1B` is promoted to Subtree 1 (replacing the pair `L2B1`, `L2B2`)
+- `L1C` is promoted to Subtree 2 (replacing the pair `L2C1`, `L2C2`)
+- Subtree 3 remains represented on Level 2 through `L2A3`, `L2B3`, and `L2C3`
+
+This preserves the Stage-II leaf mapping while reducing hierarchy depth for Subtrees 1 and 2.
 
 ### Planned development
 - **Stage III Implementation**: Implement the (optional) third stage `_optimize_hierarchy()` in `split_tree()` as outlined above
