@@ -1,0 +1,269 @@
+import os
+import sys
+import itertools
+import pytest
+
+# Ensure the loadbalancing API is importable when running pytest from repo root
+sys.path.insert(0, os.path.abspath("src/toolbox/loadbalancing/api"))
+
+from Input.RegularGridGenerator import RegularGridGenerator
+import Strategies.SplitTrees as split_strategy
+
+
+@pytest.mark.parametrize(
+    "dimension,number_of_splits",
+    [
+        (2, 1),
+        (2, 3),
+        (3, 1),
+        (3, 3),
+    ],
+)
+def test_leaf_distribution_balanced_across_subtrees(dimension, number_of_splits):
+    """
+    Stage I ("Leaf Distribution") invariant test in 2D and 3D.
+
+    Verify that leaves from subtree 0 are distributed as evenly as possible
+    across `number_of_splits + 1` subtrees.
+    """
+    # Arrange: tree with 2 levels; all cells initially in subtree 0
+    tree = RegularGridGenerator(
+        name=f"pytest-tree-stage-i-{dimension}d", max_level=2, dimension=dimension
+    )
+
+    # Collect all leaf nodes before Stage I
+    leaf_count_before = tree._leaf_count
+
+    # Act: run Stage I only (BFS traversal, default)
+    has_leaves, moved_nodes = split_strategy._distribute_leaves_bfs(tree, number_of_splits)
+
+    # Assert: leaves were found and redistribution occurred
+    assert has_leaves
+    assert sum(moved_nodes) == leaf_count_before
+    assert len(moved_nodes) == number_of_splits + 1
+
+    # Assert: distribution is balanced (within 1 leaf per subtree)
+    max_leaves = max(moved_nodes)
+    min_leaves = min(moved_nodes)
+    assert max_leaves - min_leaves <= 1, (
+        f"Leaf distribution unbalanced: max={max_leaves}, min={min_leaves}, "
+        f"distribution={moved_nodes}"
+    )
+
+    # Assert: no subtree is empty if possible
+    if leaf_count_before >= number_of_splits + 1:
+        assert all(count > 0 for count in moved_nodes), (
+            f"Some subtrees are empty: {moved_nodes}"
+        )
+
+
+@pytest.mark.parametrize(
+    "dimension",
+    [2, 3],
+)
+def test_leaf_distribution_does_not_modify_non_leaf_nodes(dimension):
+    """
+    Stage I invariant: non-leaf nodes (internal nodes with children) must NOT
+    be modified by Stage I leaf distribution.
+    """
+    # Arrange: tree with 3 levels; all cells initially in subtree 0
+    tree = RegularGridGenerator(
+        name=f"pytest-tree-nonleaf-check-{dimension}d", max_level=3, dimension=dimension
+    )
+
+    # Capture non-leaf node assignments before Stage I
+    non_leaf_assignments_before = {}
+    for level in range(tree._max_level - 1):  # Skip finest level (only leaves)
+        size = 3 ** (level + 1)
+        if dimension == 2:
+            for a in range(size):
+                for b in range(size):
+                    node = tree._tree_arrays[level][a][b]
+                    if node[0] == 1:  # Node exists
+                        # Check if it has children
+                        child_a, child_b = 3 * a, 3 * b
+                        if (child_a < 3 ** (level + 2) and child_b < 3 ** (level + 2) and
+                            tree._tree_arrays[level + 1][child_a][child_b][0] == 1):
+                            # This is a non-leaf node
+                            non_leaf_assignments_before[(level, a, b)] = node[1]
+
+        elif dimension == 3:
+            for a in range(size):
+                for b in range(size):
+                    for c in range(size):
+                        node = tree._tree_arrays[level][a][b][c]
+                        if node[0] == 1:  # Node exists
+                            # Check if it has children
+                            child_a, child_b, child_c = 3 * a, 3 * b, 3 * c
+                            if (child_a < 3 ** (level + 2) and child_b < 3 ** (level + 2) and
+                                child_c < 3 ** (level + 2) and
+                                tree._tree_arrays[level + 1][child_a][child_b][child_c][0] == 1):
+                                # This is a non-leaf node
+                                non_leaf_assignments_before[(level, a, b, c)] = node[1]
+
+    # Act: run Stage I
+    split_strategy._distribute_leaves_bfs(tree, number_of_splits=2)
+
+    # Assert: all non-leaf nodes remain unchanged
+    for level_coords, subtree_before in non_leaf_assignments_before.items():
+        if dimension == 2:
+            level, a, b = level_coords
+            node_after = tree._tree_arrays[level][a][b]
+        else:
+            level, a, b, c = level_coords
+            node_after = tree._tree_arrays[level][a][b][c]
+
+        assert node_after[1] == subtree_before, (
+            f"Non-leaf node {level_coords} changed from subtree {subtree_before} "
+            f"to subtree {node_after[1]} during Stage I"
+        )
+
+
+@pytest.mark.parametrize(
+    "dimension",
+    [2, 3],
+)
+def test_leaf_distribution_only_redistributes_subtree_0(dimension):
+    """
+    Stage I invariant: only leaves in subtree 0 are redistributed. Leaves already
+    in other subtrees must NOT be modified.
+    """
+    # Arrange: tree with 2 levels
+    tree = RegularGridGenerator(
+        name=f"pytest-tree-subtree0-only-{dimension}d", max_level=2, dimension=dimension
+    )
+
+    # Manually assign some leaves to subtree 1 (mark a corner block)
+    finest_level = tree._max_level - 1
+    size = 3 ** (finest_level + 1)
+
+    # Mark leaves in top-right corner as subtree 1
+    corner_leaves_subtree_1 = []
+    if dimension == 2:
+        for a in range(size // 2, size):
+            for b in range(size // 2, size):
+                tree._tree_arrays[finest_level][a][b] = (1, 1)
+                corner_leaves_subtree_1.append((a, b))
+
+    elif dimension == 3:
+        for a in range(size // 2, size):
+            for b in range(size // 2, size):
+                for c in range(size // 2, size):
+                    tree._tree_arrays[finest_level][a][b][c] = (1, 1)
+                    corner_leaves_subtree_1.append((a, b, c))
+
+    # Act: run Stage I
+    split_strategy._distribute_leaves_bfs(tree, number_of_splits=1)
+
+    # Assert: leaves in subtree 1 remain in subtree 1
+    if dimension == 2:
+        for a, b in corner_leaves_subtree_1:
+            node_after = tree._tree_arrays[finest_level][a][b]
+            assert node_after[1] == 1, (
+                f"Leaf ({a},{b}) in subtree 1 was incorrectly modified to subtree {node_after[1]}"
+            )
+
+    elif dimension == 3:
+        for a, b, c in corner_leaves_subtree_1:
+            node_after = tree._tree_arrays[finest_level][a][b][c]
+            assert node_after[1] == 1, (
+                f"Leaf ({a},{b},{c}) in subtree 1 was incorrectly modified to subtree {node_after[1]}"
+            )
+
+
+@pytest.mark.parametrize(
+    "dimension",
+    [2, 3],
+)
+def test_leaf_distribution_preserves_node_existence_weights(dimension):
+    """
+    Stage I invariant: node existence flags (weights) must NOT be modified.
+    Stage I only changes subtree assignments, not node existence.
+    """
+    # Arrange: tree with 2 levels
+    tree = RegularGridGenerator(
+        name=f"pytest-tree-weights-{dimension}d", max_level=2, dimension=dimension
+    )
+
+    # Capture all node weights before Stage I
+    weights_before = {}
+    for level in range(tree._max_level):
+        size = 3 ** (level + 1)
+        if dimension == 2:
+            for a in range(size):
+                for b in range(size):
+                    weight, subtree = tree._tree_arrays[level][a][b]
+                    weights_before[(level, a, b)] = weight
+
+        elif dimension == 3:
+            for a in range(size):
+                for b in range(size):
+                    for c in range(size):
+                        weight, subtree = tree._tree_arrays[level][a][b][c]
+                        weights_before[(level, a, b, c)] = weight
+
+    # Act: run Stage I
+    split_strategy._distribute_leaves_bfs(tree, number_of_splits=2)
+
+    # Assert: all weights remain unchanged
+    for level_coords, weight_before in weights_before.items():
+        if dimension == 2:
+            level, a, b = level_coords
+            weight_after, _ = tree._tree_arrays[level][a][b]
+        else:
+            level, a, b, c = level_coords
+            weight_after, _ = tree._tree_arrays[level][a][b][c]
+
+        assert weight_after == weight_before, (
+            f"Node {level_coords} weight changed from {weight_before} to {weight_after}"
+        )
+
+
+@pytest.mark.parametrize(
+    "dimension",
+    [2, 3],
+)
+def test_leaf_distribution_returns_correct_moved_nodes_count(dimension):
+    """
+    Stage I invariant: the returned `moved_nodes` list must accurately reflect
+    how many leaves were assigned to each subtree.
+    """
+    # Arrange: tree with 2 levels
+    tree = RegularGridGenerator(
+        name=f"pytest-tree-move-count-{dimension}d", max_level=2, dimension=dimension
+    )
+
+    number_of_splits = 2
+    finest_level = tree._max_level - 1
+
+    # Act: run Stage I
+    has_leaves, moved_nodes = split_strategy._distribute_leaves_bfs(tree, number_of_splits)
+
+    # Assert: moved_nodes list length is correct
+    assert len(moved_nodes) == number_of_splits + 1
+
+    # Assert: count leaves actually assigned to each subtree and verify
+    size = 3 ** (finest_level + 1)
+    actual_counts = [0] * (number_of_splits + 1)
+
+    if dimension == 2:
+        for a in range(size):
+            for b in range(size):
+                weight, subtree = tree._tree_arrays[finest_level][a][b]
+                if weight == 1:  # Leaf exists
+                    if subtree < number_of_splits + 1:
+                        actual_counts[subtree] += 1
+
+    elif dimension == 3:
+        for a in range(size):
+            for b in range(size):
+                for c in range(size):
+                    weight, subtree = tree._tree_arrays[finest_level][a][b][c]
+                    if weight == 1:  # Leaf exists
+                        if subtree < number_of_splits + 1:
+                            actual_counts[subtree] += 1
+
+    # Compare reported counts with actual counts
+    assert actual_counts == moved_nodes, (
+        f"Reported moved_nodes {moved_nodes} does not match actual counts {actual_counts}"
+    )
