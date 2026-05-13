@@ -74,6 +74,7 @@ class Node(ABC):
     output_format = None
     spaces_per_tab = 4
     use_accelerator = False
+    use_memory_manager = False
     mlir_id_count = 0	# We need a variable to keep track of the MLIR ids %0, %1 etc.
     type_map = {}
     function_map = {}
@@ -3901,9 +3902,15 @@ class MemoryAllocation(Statement):
 {self._loop.print_omp(indent_level)}"""
         else:   
             if len(self._dimensions) == 1:
-                return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp() + "* " if self._specify_type else ""}{self._name.print_omp()} = ({self._type.print_omp()}*)omp_target_alloc(sizeof({self._type.print_omp()}) * {self._dimensions[0].print_omp()}, targetDevice);"""
+                if Node.use_memory_manager == True:
+                    return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp() + "* " if self._specify_type else ""}{self._name.print_omp()} = tarch::accelerator::GPUMemoryManager::getInstance().allocate<{self._type.print_omp()}>({self._dimensions[0].print_omp()}, targetDevice);"""
+                else:
+                    return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp() + "* " if self._specify_type else ""}{self._name.print_omp()} = ({self._type.print_omp()}*)omp_target_alloc(sizeof({self._type.print_omp()}) * {self._dimensions[0].print_omp()}, targetDevice);"""
             else:
-                return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp()}* {self._name.print_omp()} = ({self._type.print_omp()}*)omp_target_alloc(sizeof({self._type.print_omp()}) * {(self._size * self._dimensions[-1]).print_omp()}, targetDevice);"""
+                if Node.use_memory_manager == True:
+                    return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp()}* {self._name.print_omp()} = tarch::accelerator::GPUMemoryManager::getInstance().allocate<{self._type.print_omp()}>({(self._size * self._dimensions[-1]).print_omp()}, targetDevice);"""
+                else:
+                    return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp()}* {self._name.print_omp()} = ({self._type.print_omp()}*)omp_target_alloc(sizeof({self._type.print_omp()}) * {(self._size * self._dimensions[-1]).print_omp()}, targetDevice);"""
 
     def print_sycl(self, indent_level=0):
         if len(self._dimensions) == 1:
@@ -4184,7 +4191,10 @@ class MemoryDeallocation(Statement):
                 return f"""{self._loop.print_omp(indent_level)}
 {' ' * indent_level * Node.spaces_per_tab}delete[] {self._name.print_omp()};"""
         else:
-            return ' ' * indent_level * Node.spaces_per_tab + f"""omp_target_free({self._name.print_omp()}, targetDevice);"""
+            if Node.use_memory_manager:
+                return ' ' * indent_level * Node.spaces_per_tab + f"""tarch::accelerator::GPUMemoryManager::getInstance().free({self._name.print_omp()}, targetDevice);"""
+            else:
+                return ' ' * indent_level * Node.spaces_per_tab + f"""omp_target_free({self._name.print_omp()}, targetDevice);"""
 
     def print_sycl(self, indent_level=0):
         return ' ' * indent_level * Node.spaces_per_tab + f"""::sycl::free({self._name.print_sycl()}, queue);"""

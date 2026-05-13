@@ -1273,8 +1273,17 @@ void peano4::grid::Spacetree::descend(
     _spacetreeState == SpacetreeState::Running
   );
 
+  auto prunedEnterCellTraversalEvent = _gridTraversalEventGenerator.createPrunedEnterCellTraversalEvent(_spacetreeState, enterCellTraversalEvent);
+  if (_cellMarkers.count(prunedEnterCellTraversalEvent.getX()) == 0) {
+    _cellMarkers.emplace(prunedEnterCellTraversalEvent.getX(), peano4::datamanagement::CellMarker(prunedEnterCellTraversalEvent));
+  } 
+  auto cellMarkerSearch = _cellMarkers.find(prunedEnterCellTraversalEvent.getX());
+  assertion(cellMarkerSearch != _cellMarkers.end());
+  peano4::datamanagement::CellMarker& cellMarker = cellMarkerSearch->second;
+
   observer.loadCell(
-    _gridTraversalEventGenerator.createPrunedEnterCellTraversalEvent(_spacetreeState, enterCellTraversalEvent)
+    _gridTraversalEventGenerator.createPrunedEnterCellTraversalEvent(_spacetreeState, enterCellTraversalEvent),
+    cellMarker
   );
 
   if (_spacetreeState != SpacetreeState::EmptyRun and _spacetreeState != SpacetreeState::NewFromSplit and _spacetreeState != SpacetreeState::Joined) {
@@ -1284,7 +1293,8 @@ void peano4::grid::Spacetree::descend(
   }
 
   observer.enterCell(
-    _gridTraversalEventGenerator.createPrunedEnterCellTraversalEvent(_spacetreeState, enterCellTraversalEvent)
+    prunedEnterCellTraversalEvent,
+    cellMarker
   );
 
   _statistics.setMinH(tarch::la::min(_statistics.getMinH(), 1.0 / 3.0 * state.getH()));
@@ -1324,8 +1334,11 @@ void peano4::grid::Spacetree::descend(
     _spacetreeState == SpacetreeState::Running
   );
 
+  auto prunedLeaveCellTraversalEvent = _gridTraversalEventGenerator.createPrunedLeaveCellTraversalEvent(_spacetreeState, leaveCellTraversalEvent);
+  cellMarker.updateWithNewGridTraversalEvent(prunedLeaveCellTraversalEvent);
   observer.leaveCell(
-    _gridTraversalEventGenerator.createPrunedLeaveCellTraversalEvent(_spacetreeState, leaveCellTraversalEvent)
+    prunedLeaveCellTraversalEvent,
+    cellMarker
   );
 
   if (_spacetreeState != SpacetreeState::EmptyRun and _spacetreeState != SpacetreeState::Joined) {
@@ -1333,7 +1346,8 @@ void peano4::grid::Spacetree::descend(
   }
 
   observer.storeCell(
-    _gridTraversalEventGenerator.createPrunedLeaveCellTraversalEvent(_spacetreeState, leaveCellTraversalEvent)
+    _gridTraversalEventGenerator.createPrunedLeaveCellTraversalEvent(_spacetreeState, leaveCellTraversalEvent),
+    cellMarker
   );
 
   splitOrJoinCellBottomUp(vertices, fineGridVertices);

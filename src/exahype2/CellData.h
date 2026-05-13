@@ -5,6 +5,7 @@
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
 #include "config.h"
+#include "peano4/datamanagement/CellMarker.h"
 
 #include <functional>
 #include <string>
@@ -121,6 +122,13 @@ namespace exahype2 {
     double*    maxEigenvalue;
 
     /**
+     * When using an accelerator we may recieve data from both the host and device.
+     * We therefore want to track the status of this data to avoid unnecessary data 
+     * movements.
+     */
+    peano4::datamanagement::PatchWithHaloDeviceMemoryStatus* deviceMemoryStatus;
+
+    /**
      * Construct patch data object for one single cell.
      *
      * Usually, I do so only to be able to use the same kernels everywhere:
@@ -138,7 +146,8 @@ namespace exahype2 {
       double                dt_,
       outType*              QOut_,
       tarch::MemoryLocation memoryLocation_ = tarch::MemoryLocation::Heap,
-      int                   targetDevice_   = tarch::accelerator::Device::HostDevice
+      int                   targetDevice_   = tarch::accelerator::Device::HostDevice,
+      peano4::datamanagement::PatchWithHaloDeviceMemoryStatus deviceMemoryStatus_ = peano4::datamanagement::PatchWithHaloDeviceMemoryStatus::Unallocated
     );
 
     CellData(

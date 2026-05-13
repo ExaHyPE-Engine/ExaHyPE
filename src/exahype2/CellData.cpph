@@ -1,4 +1,5 @@
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/GPUMemoryManager.h"
 #include <cstring>
 
 template<typename inType, typename outType>
@@ -10,16 +11,18 @@ exahype2::CellData<inType, outType>::CellData(
   double                                       dt_,
   outType*                                     QOut_,
   tarch::MemoryLocation                        memoryLocation_,
-  int                                          targetDevice_
+  int                                          targetDevice_,
+  peano4::datamanagement::PatchWithHaloDeviceMemoryStatus   deviceMemoryStatus_ 
 ):
   CellData(1, memoryLocation_, targetDevice_) {
-  QIn[0]        = QIn_;
-  cellCentre[0] = cellCentre_;
-  cellSize[0]   = cellSize_;
-  t[0]          = t_;
-  dt[0]         = dt_;
-  QOut[0]       = QOut_;
-  id[0]         = -1;
+  QIn[0]          = QIn_;
+  cellCentre[0]   = cellCentre_;
+  cellSize[0]     = cellSize_;
+  t[0]            = t_;
+  dt[0]           = dt_;
+  QOut[0]         = QOut_;
+  deviceMemoryStatus[0] = deviceMemoryStatus_;
+  id[0]           = -1;
 }
 
 template<typename inType, typename outType>
@@ -39,6 +42,7 @@ exahype2::CellData<inType, outType>::CellData(
   id            = tarch::allocateMemory<int>(numberOfCells_, memoryLocation_, targetDevice_);
   QOut          = tarch::allocateMemory<outType*>(numberOfCells_, memoryLocation_, targetDevice_);
   maxEigenvalue = tarch::allocateMemory<double>(numberOfCells_, memoryLocation_, targetDevice_);
+  deviceMemoryStatus  = tarch::allocateMemory<peano4::datamanagement::PatchWithHaloDeviceMemoryStatus>(numberOfCells_, memoryLocation_, tarch::accelerator::Device::HostDevice);
 }
 
 template<typename inType, typename outType>
@@ -79,14 +83,14 @@ exahype2::CopyCellDataGPU<inType, outType>::CopyCellDataGPU(
   QInStride(inputPatchSize),
   QOutStride(outputPatchSize) {
   sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
-  QIn = ::sycl::malloc_device<inType>(cellData.numberOfCells * inputPatchSize, queue);
-  QOut = ::sycl::malloc_device<inType>(cellData.numberOfCells * outputPatchSize, queue);
-  cellCentre    = ::sycl::malloc_device<tarch::la::Vector<Dimensions, double>>(cellData.numberOfCells, queue);
-  cellSize      = ::sycl::malloc_device<tarch::la::Vector<Dimensions, double>>(cellData.numberOfCells, queue);
-  t             = ::sycl::malloc_device<double>(cellData.numberOfCells, queue);
-  dt            = ::sycl::malloc_device<double>(cellData.numberOfCells, queue);
-  id            = ::sycl::malloc_device<int>(cellData.numberOfCells, queue);
-  maxEigenvalue = ::sycl::malloc_device<double>(cellData.numberOfCells, queue);
+  QIn           = tarch::accelerator::GPUMemoryManager::getInstance().allocate<inType>(cellData.numberOfCells * inputPatchSize, queue);
+  QOut          = tarch::accelerator::GPUMemoryManager::getInstance().allocate<inType>(cellData.numberOfCells * outputPatchSize, queue);
+  cellCentre    = tarch::accelerator::GPUMemoryManager::getInstance().allocate<tarch::la::Vector<Dimensions, double>>(cellData.numberOfCells, queue);
+  cellSize      = tarch::accelerator::GPUMemoryManager::getInstance().allocate<tarch::la::Vector<Dimensions, double>>(cellData.numberOfCells, queue);
+  t             = tarch::accelerator::GPUMemoryManager::getInstance().allocate<double>(cellData.numberOfCells, queue);
+  dt            = tarch::accelerator::GPUMemoryManager::getInstance().allocate<double>(cellData.numberOfCells, queue);
+  id            = tarch::accelerator::GPUMemoryManager::getInstance().allocate<int>(cellData.numberOfCells, queue);
+  maxEigenvalue = tarch::accelerator::GPUMemoryManager::getInstance().allocate<double>(cellData.numberOfCells, queue);
   QInHost = cellData.QIn;
   QOutHost = cellData.QOut;
   maxEigenvalueHost = cellData.maxEigenvalue;
@@ -116,14 +120,14 @@ void exahype2::CopyCellDataGPU<inType, outType>::copyBackAndDestroy() {
   copyEvent[numberOfCells] = queue.memcpy(maxEigenvalueHost, maxEigenvalue, numberOfCells * sizeof(double));
   ::sycl::event::wait(copyEvent);
 
-  ::sycl::free(QIn, queue);
-  ::sycl::free(QOut, queue);
-  ::sycl::free(cellCentre, queue);
-  ::sycl::free(cellSize, queue);
-  ::sycl::free(t, queue);
-  ::sycl::free(dt, queue);
-  ::sycl::free(id, queue);
-  ::sycl::free(maxEigenvalue, queue);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(QIn, queue);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(QOut, queue);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(cellCentre, queue);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(cellSize, queue);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(t, queue);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(dt, queue);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(id, queue);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(maxEigenvalue, queue);
 }
 
 #elif defined(GPUOffloadingOMP)
@@ -182,20 +186,24 @@ exahype2::CopyCellDataGPU<inType, outType>::CopyCellDataGPU(
   QOutStride(outputPatchSize),
   targetDevice(0)
   {
-  QIn = (inType*)omp_target_alloc(cellData.numberOfCells * inputPatchSize * sizeof(inType), targetDevice);
-  QOut = (outType*)omp_target_alloc(cellData.numberOfCells * outputPatchSize * sizeof(outType), targetDevice);
-  cellCentre    = (tarch::la::Vector<Dimensions, double>*)omp_target_alloc(cellData.numberOfCells * sizeof(tarch::la::Vector<Dimensions, double>), targetDevice);
-  cellSize      = (tarch::la::Vector<Dimensions, double>*)omp_target_alloc(cellData.numberOfCells * sizeof(tarch::la::Vector<Dimensions, double>), targetDevice);
-  t             = (double*)omp_target_alloc(cellData.numberOfCells * sizeof(double), targetDevice);
-  dt            = (double*)omp_target_alloc(cellData.numberOfCells * sizeof(double), targetDevice);
-  id            = (int*)omp_target_alloc(cellData.numberOfCells * sizeof(int), targetDevice);
-  maxEigenvalue = (double*)omp_target_alloc(cellData.numberOfCells * sizeof(double), targetDevice);
+  QIn           = tarch::accelerator::GPUMemoryManager::getInstance().allocate<inType>(cellData.numberOfCells * inputPatchSize, targetDevice);
+  QOut          = tarch::accelerator::GPUMemoryManager::getInstance().allocate<outType>(cellData.numberOfCells * outputPatchSize, targetDevice);
+  cellCentre    = tarch::accelerator::GPUMemoryManager::getInstance().allocate<tarch::la::Vector<Dimensions, double>>(cellData.numberOfCells, targetDevice);
+  cellSize      = tarch::accelerator::GPUMemoryManager::getInstance().allocate<tarch::la::Vector<Dimensions, double>>(cellData.numberOfCells, targetDevice);
+  t             = tarch::accelerator::GPUMemoryManager::getInstance().allocate<double>(cellData.numberOfCells, targetDevice);
+  dt            = tarch::accelerator::GPUMemoryManager::getInstance().allocate<double>(cellData.numberOfCells, targetDevice);
+  id            = tarch::accelerator::GPUMemoryManager::getInstance().allocate<int>(cellData.numberOfCells, targetDevice);
+  maxEigenvalue = tarch::accelerator::GPUMemoryManager::getInstance().allocate<double>(cellData.numberOfCells, targetDevice);
   QInHost = cellData.QIn;
   QOutHost = cellData.QOut;
   maxEigenvalueHost = cellData.maxEigenvalue;
 
   for (int i = 0; i < numberOfCells; i++){
-    omp_target_memcpy(&QIn[i * QInStride], cellData.QIn[i], QInStride * sizeof(inType), 0, 0, targetDevice, omp_get_initial_device());
+    if (cellData.deviceMemoryStatus[i] == peano4::datamanagement::PatchWithHaloDeviceMemoryStatus::Exclusive) {
+      omp_target_memcpy(&QIn[i * QInStride], cellData.QIn[i], QInStride * sizeof(inType), 0, 0, targetDevice, targetDevice);
+    } else {
+      omp_target_memcpy(&QIn[i * QInStride], cellData.QIn[i], QInStride * sizeof(inType), 0, 0, targetDevice, omp_get_initial_device());
+    }
   }
   omp_target_memcpy(cellCentre, cellData.cellCentre, numberOfCells * sizeof(tarch::la::Vector<Dimensions, double>), 0, 0, targetDevice, omp_get_initial_device());
   omp_target_memcpy(cellSize, cellData.cellSize, numberOfCells * sizeof(tarch::la::Vector<Dimensions, double>), 0, 0, targetDevice, omp_get_initial_device());
@@ -212,14 +220,14 @@ void exahype2::CopyCellDataGPU<inType, outType>::copyBackAndDestroy() {
   }
   omp_target_memcpy(maxEigenvalueHost, maxEigenvalue, numberOfCells * sizeof(double), 0, 0, omp_get_initial_device(), targetDevice);
 
-  omp_target_free(QIn, targetDevice);
-  omp_target_free(QOut, targetDevice);
-  omp_target_free(cellCentre, targetDevice);
-  omp_target_free(cellSize, targetDevice);
-  omp_target_free(t, targetDevice);
-  omp_target_free(dt, targetDevice);
-  omp_target_free(id, targetDevice);
-  omp_target_free(maxEigenvalue, targetDevice);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(QIn, targetDevice);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(QOut, targetDevice);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(cellCentre, targetDevice);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(cellSize, targetDevice);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(t, targetDevice);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(dt, targetDevice);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(id, targetDevice);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(maxEigenvalue, targetDevice);
 }
 #else
 template<typename inType, typename outType>

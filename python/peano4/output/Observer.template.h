@@ -52,19 +52,23 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public peano4::grid::TraversalO
     {{CLASSNAME}}(int spacetreeId = SpacetreePrototype);
 
     virtual void loadCell(
-     const peano4::grid::GridTraversalEvent&  event
+     const peano4::grid::GridTraversalEvent&  event,
+     const peano4::datamanagement::CellMarker& cellMarker
     ) override;
 
     virtual void enterCell(
-     const peano4::grid::GridTraversalEvent&  event
+     const peano4::grid::GridTraversalEvent&  event,
+     const peano4::datamanagement::CellMarker& cellMarker
     ) override;
 
     virtual void leaveCell(
-      const peano4::grid::GridTraversalEvent&  event
+      const peano4::grid::GridTraversalEvent&  event,
+      const peano4::datamanagement::CellMarker& cellMarker
     ) override;
 
     virtual void storeCell(
-      const peano4::grid::GridTraversalEvent&  event
+      const peano4::grid::GridTraversalEvent&  event,
+      const peano4::datamanagement::CellMarker& cellMarker
     ) override;
 
     virtual TraversalObserver* clone(int spacetreeId) override;

@@ -115,6 +115,13 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
     repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
     
+    if (marker.willBeEnclaveCell()) {
+      #if not defined(GPUOffloadingOff)
+      tarch::accelerator::GPUMemoryManager::getInstance().free(marker.inputDeviceMemory[0], 0);
+      assert(marker.inputDeviceMemoryStatus[0] == peano4::datamanagement::PatchWithHaloDeviceMemoryStatus::Exclusive);
+      marker.inputDeviceMemoryStatus[0] = peano4::datamanagement::PatchWithHaloDeviceMemoryStatus::Unallocated;
+      #endif
+    }
   }
 """
   

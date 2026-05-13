@@ -1,4 +1,4 @@
-#include "GPUMemoryManager.h"
+#include "tarch/accelerator/GPUMemoryManager.h"
 
 #if defined(GPUOffloadingOMP)
 
@@ -7,15 +7,17 @@
 #include "tarch/accelerator/accelerator.h"
 
 #include <omp.h>
+#pragma omp requires unified_shared_memory
 
-tarch::logging::Log  tarch::accelerator::omp::GPUMemoryManager::_log( "tarch::accelerator::omp::GPUMemoryManager" );
+tarch::logging::Log  tarch::accelerator::GPUMemoryManager::_log( "tarch::accelerator::GPUMemoryManager" );
+int tarch::accelerator::GPUMemoryManager::_allocatedMemory;
 
-tarch::accelerator::omp::GPUMemoryManager& tarch::accelerator::omp::GPUMemoryManager::getInstance() {
-  static tarch::accelerator::omp::GPUMemoryManager singleton;
+tarch::accelerator::GPUMemoryManager& tarch::accelerator::GPUMemoryManager::getInstance() {
+  static tarch::accelerator::GPUMemoryManager singleton;
   return singleton;
 }
 
-void* tarch::accelerator::omp::GPUMemoryManager::allocateRawData( int size, int device ) {
+void* tarch::accelerator::GPUMemoryManager::allocateRawData( int size, int device ) {
   tarch::multicore::Lock lock(_semaphore);
 
   // Is device initialised?
@@ -28,6 +30,8 @@ void* tarch::accelerator::omp::GPUMemoryManager::allocateRawData( int size, int 
     _deviceMemory.at(device).freePages[size].push_back(
       omp_target_alloc(size, device)
     );
+    assertion(_deviceMemory.at(device).freePages[size][0] != nullptr);
+    _allocatedMemory += size;
   }
 
   // Grab fitting page
@@ -42,7 +46,7 @@ void* tarch::accelerator::omp::GPUMemoryManager::allocateRawData( int size, int 
   return result;
 }
 
-void tarch::accelerator::omp::GPUMemoryManager::free(void* devicePointer, int device) {
+void tarch::accelerator::GPUMemoryManager::free(void* devicePointer, int device) {
   tarch::multicore::Lock lock(_semaphore);
 
   assertion( _deviceMemory.count(device)==1 );
@@ -55,11 +59,11 @@ void tarch::accelerator::omp::GPUMemoryManager::free(void* devicePointer, int de
   _deviceMemory.at(device).freePages.at(size).push_back( devicePointer );
 }
 
-tarch::accelerator::omp::GPUMemoryManager::~GPUMemoryManager() {
+tarch::accelerator::GPUMemoryManager::~GPUMemoryManager() {
   clear();
 }
 
-void tarch::accelerator::omp::GPUMemoryManager::clear() {
+void tarch::accelerator::GPUMemoryManager::clear() {
   tarch::multicore::Lock lock(_semaphore);
 
   for (auto& deviceMemory: _deviceMemory) {
@@ -77,6 +81,7 @@ void tarch::accelerator::omp::GPUMemoryManager::clear() {
   }
 
   _deviceMemory.clear();
+  logInfo("clear()", "Total device memory allocated: " << _allocatedMemory);
 }
 
 #endif
