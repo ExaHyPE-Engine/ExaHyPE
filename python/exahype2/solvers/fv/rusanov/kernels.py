@@ -87,7 +87,7 @@ def create_rusanov_kernel_definitions_2d():
   rusanov_omp_stateless_kernel_declaration = rusanov_omp_stateless_tree.print_declaration()
   rusanov_omp_stateless_call_with_measurement_declaration = rusanov_omp_stateless_tree.print_declaration_with_timer()
 
-  rusanov_omp_accelerator_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], stateless=True, use_accelerator=True)
+  rusanov_omp_accelerator_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], stateless=True, use_accelerator=True, use_memory_manager=True)
   rusanov_omp_accelerator_kernel = rusanov_omp_accelerator_tree.print_omp()
   rusanov_omp_accelerator_call_with_measurement = rusanov_omp_accelerator_tree.print_definition_with_timer()
   rusanov_omp_accelerator_kernel_declaration = rusanov_omp_accelerator_tree.print_declaration()
@@ -208,7 +208,7 @@ def create_rusanov_kernel_definitions_3d():
   rusanov_omp_stateless_kernel_declaration = rusanov_omp_stateless_tree.print_declaration()
   rusanov_omp_stateless_call_with_measurement_declaration = rusanov_omp_stateless_tree.print_declaration_with_timer()
 
-  rusanov_omp_accelerator_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], stateless=True, use_accelerator=True)
+  rusanov_omp_accelerator_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "omp"], stateless=True, use_accelerator=True, use_memory_manager=True)
   rusanov_omp_accelerator_kernel = rusanov_omp_accelerator_tree.print_omp()
   rusanov_omp_accelerator_call_with_measurement = rusanov_omp_accelerator_tree.print_definition_with_timer()
   rusanov_omp_accelerator_kernel_declaration = rusanov_omp_accelerator_tree.print_declaration()

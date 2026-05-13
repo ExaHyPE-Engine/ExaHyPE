@@ -19,28 +19,32 @@ void peano4::grid::EmptyTraversalObserver::endTraversal(
 }
 
 void peano4::grid::EmptyTraversalObserver::loadCell(
-  [[maybe_unused]] const GridTraversalEvent&  event
+  [[maybe_unused]] const GridTraversalEvent&  event,
+  [[maybe_unused]] const peano4::datamanagement::CellMarker&  cellMarker
 ) {
   logTraceInWith1Argument( "loadCell(...)", event.toString() );
   logTraceOut( "loadCell(...)" );
 }
 
 void peano4::grid::EmptyTraversalObserver::enterCell(
-  [[maybe_unused]] const GridTraversalEvent&  event
+  [[maybe_unused]] const GridTraversalEvent&  event,
+  [[maybe_unused]] const peano4::datamanagement::CellMarker&  cellMarker 
 ) {
   logTraceInWith1Argument( "enterCell(...)", event.toString() );
   logTraceOut( "enterCell(...)" );
 }
 
 void peano4::grid::EmptyTraversalObserver::leaveCell(
-  [[maybe_unused]] const GridTraversalEvent&  event
+  [[maybe_unused]] const GridTraversalEvent&  event,
+  [[maybe_unused]] const peano4::datamanagement::CellMarker&  cellMarker 
 ) {
   logTraceInWith1Argument( "leaveCell(...)", event.toString() );
   logTraceOut( "leaveCell(...)" );
 }
 
 void peano4::grid::EmptyTraversalObserver::storeCell(
-  [[maybe_unused]] const GridTraversalEvent&  event
+  [[maybe_unused]] const GridTraversalEvent&  event,
+  [[maybe_unused]] const peano4::datamanagement::CellMarker&  cellMarker
 ) {
   logTraceInWith1Argument( "storeCell(...)", event.toString() );
   logTraceOut( "storeCell(...)" );

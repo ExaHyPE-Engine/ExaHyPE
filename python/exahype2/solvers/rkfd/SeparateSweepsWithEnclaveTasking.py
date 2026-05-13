@@ -39,6 +39,19 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       // double timeStepSize
       {{COMPUTE_TIME_STEP_SIZE}}
 
+      #if not defined(GPUOffloadingOff)
+      if ({{PREDICATES[0]}}) {
+        if (marker.willBeEnclaveCell()) {
+          ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
+          marker.inputDeviceMemory[0] = tarch::accelerator::GPUMemoryManager::getInstance().allocate<double>(enumeratorWithAuxiliaryVariablesOnReconstructedPatch.size(), 0);
+          marker.inputDeviceMemoryStatus[0] = peano4::datamanagement::PatchWithHaloDeviceMemoryStatus::OutOfDate;
+          //fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.getSmartPointer().reset(tarch::accelerator::GPUMemoryManager::getInstance().allocate<double>(fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.Cardinality, 0), [] (auto p) { tarch::accelerator::GPUMemoryManager::getInstance().free(p, 0); });
+        }
+      }
+      #else
+      marker.inputDeviceMemoryStatus[0] = peano4::datamanagement::PatchWithHaloDeviceMemoryStatus::DeviceUsageDisabled;
+      #endif
+      
       {% for PREDICATE_NO in range(0,PREDICATES|length) %}
       if ({{PREDICATES[PREDICATE_NO]}}) {
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
@@ -95,6 +108,25 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       else {
         assertion( marker.willBeEnclaveCell() );
         assertion( not marker.willBeRefined() );
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
+        
+        #if defined(GPUOffloadingOMP)
+        omp_target_memcpy(marker.inputDeviceMemory[0], oldQWithHalo, enumeratorWithAuxiliaryVariablesOnReconstructedPatch.size() * sizeof(double), 0, 0, 0, omp_get_initial_device());
+        marker.inputDeviceMemoryStatus[0] = peano4::datamanagement::PatchWithHaloDeviceMemoryStatus::Exclusive;
+
+        auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
+          marker,
+          subTimeStamp,
+          timeStepSize,
+          marker.inputDeviceMemory[0],
+          {% if MAKE_COPY_OF_ENCLAVE_TASK_DATA %}
+          nullptr
+          {% else %}
+          newQ
+          {% endif %}
+          , false
+        );
+        #else
         auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
           marker,
           subTimeStamp,
@@ -106,6 +138,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           newQ
           {% endif %}
         );
+        #endif
         
         int predecessorEnclaveTaskNumber = fineGridCell{{SEMAPHORE_LABEL}}.getSemaphoreNumber();
   

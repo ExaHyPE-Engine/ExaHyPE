@@ -333,11 +333,12 @@ class Parser:
 
         return parsed_function
 
-    def parse(self, function, template_arguments, functor_arguments, namespace = [], stateless = False, use_accelerator = False, mlir_omp = False):
+    def parse(self, function, template_arguments, functor_arguments, namespace = [], stateless = False, use_accelerator = False, mlir_omp = False, use_memory_manager = False):
         SyntaxTree.Name.variables.clear()
         SyntaxTree.For._inuse_iteration_variables.clear()
         SyntaxTree.Node.use_accelerator = False
         SyntaxTree.Node.use_mlir_omp = mlir_omp
+        SyntaxTree.Node.use_memory_manager = use_memory_manager
         #SyntaxTree.FunctionDefinition._syclDataToCopy.clear()
 
         source_code = inspect.getsource(function)

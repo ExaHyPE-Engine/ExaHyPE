@@ -4,6 +4,8 @@
 #include "peano4/parallel/SpacetreeSet.h"
 #include "peano4/utils/Globals.h"
 
+tarch::logging::Log  peano4::datamanagement::CellMarker::_log( "peano4::datamanagement::CellMarker" );
+
 std::ostream& operator<<(std::ostream& out, const peano4::datamanagement::CellMarker& marker) {
   out << marker.toString();
   return out;
@@ -22,6 +24,39 @@ peano4::datamanagement::CellMarker::CellMarker(const peano4::grid::GridTraversal
   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(
     event.getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing()
   ) {
+  for (int i = 0; i < TwoPowerD; i++) {
+    _isOneVertexHanging |= event.getVertexDataTo(i) == peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity;
+    _isOneVertexHanging |= event.getVertexDataFrom(i)
+                           == peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity;
+
+    _isOneVertexCreatedOrDestroyed |= event.getVertexDataTo(i)
+                                      == peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity;
+    _isOneVertexCreatedOrDestroyed |= event.getVertexDataFrom(i)
+                                      == peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity;
+  }
+  _relativePositionOfCellWithinFatherCell = event.getRelativePositionToFather();
+
+  bool couldBeEnclave = _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing and _areAllVerticesInsideDomain
+                        and not _isOneVertexHanging;
+
+  _willBeEnclave  = couldBeEnclave and not _willBeRefined and not _isOneVertexCreatedOrDestroyed;
+  _hasBeenEnclave = couldBeEnclave and not _hasBeenRefined and not _isOneVertexCreatedOrDestroyed;
+
+  if (_willBeEnclave){std::cout << "Enclave cell marker created" << std::endl;}
+}
+
+void peano4::datamanagement::CellMarker::updateWithNewGridTraversalEvent(const peano4::grid::GridTraversalEvent& event){
+  _centre = event.getX();
+  _h = event.getH();
+  _hasBeenRefined = event.getHasBeenRefined() != 0;
+  _willBeRefined = event.getWillBeRefined() != 0;
+  _isLocal = event.getIsCellLocal();
+  _isParentLocal = event.getIsParentCellLocal();
+  _isOneVertexHanging = false;
+  _isOneVertexCreatedOrDestroyed = false;
+  _areAllVerticesInsideDomain = event.getIsVertexAdjacentToParallelDomainBoundary().none();
+  _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing = event.getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing();
+
   for (int i = 0; i < TwoPowerD; i++) {
     _isOneVertexHanging |= event.getVertexDataTo(i) == peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity;
     _isOneVertexHanging |= event.getVertexDataFrom(i)
@@ -140,6 +175,21 @@ bool peano4::datamanagement::CellMarker::willBeSkeletonCell() const { return not
 bool peano4::datamanagement::CellMarker::hasBeenEnclaveCell() const { return _hasBeenEnclave; }
 
 bool peano4::datamanagement::CellMarker::hasBeenSkeletonCell() const { return not _hasBeenEnclave; }
+
+//void peano4::datamanagement::CellMarker::setInputMemoryStatus(const peano4::datamanagement::MemoryStatus& memoryStatus){
+//  _inputMemoryStatus = memoryStatus;
+//}
+//
+//void peano4::datamanagement::CellMarker::setOutputMemoryStatus(const peano4::datamanagement::MemoryStatus& memoryStatus){
+//  _outputMemoryStatus = memoryStatus;
+//  if (memoryStatus == MemoryStatus::DeviceHaloOutOfDate){
+//    logError("setOutputMemoryStatus(...)", "setting output memory status to DeviceHaloOutOfDate does not make sense, as it has no halo");
+//  }
+//}
+//
+//peano4::datamanagement::MemoryStatus peano4::datamanagement::CellMarker::inputMemoryStatus() const { return _inputMemoryStatus; }
+//
+//peano4::datamanagement::MemoryStatus peano4::datamanagement::CellMarker::outputMemoryStatus() const { return _outputMemoryStatus; }
 
 #ifdef Parallel
 MPI_Datatype peano4::datamanagement::CellMarker::Datatype;

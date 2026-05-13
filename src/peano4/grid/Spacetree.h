@@ -14,6 +14,7 @@
 
 #include "peano4/maps/STDStackMap.h"
 #include "peano4/maps/HierarchicalStackMap.h"
+#include "peano4/datamanagement/CellMarker.h"
 
 #include <set>
 #include <bitset>
@@ -33,6 +34,20 @@ namespace peano4 {
     class SpacetreeSet;
   }
 }
+
+struct VectorCompare{
+  bool operator()(const tarch::la::Vector<Dimensions, double>& lhs, const tarch::la::Vector<Dimensions, double>& rhs) const {
+    for (int i = 0; i < Dimensions; i++) {
+      if (lhs(i) < rhs(i)) {
+        return true;
+      }
+      else if (lhs(i) > rhs(i)) {
+        return false;
+      }
+    }
+    return false;
+  }
+};
 
 /**
  * Represents one tree
@@ -59,6 +74,13 @@ class peano4::grid::Spacetree {
 
     friend class peano4::parallel::SpacetreeSet;
     friend class peano4::grid::tests::SpacetreeTest;
+
+    /**
+    It is important that cell markers are maintained between steps so that they
+    can be used to manage device memory. Therefore, we store them in the spacetree
+    instead of recreating them on the fly.
+    */
+    std::map<tarch::la::Vector<Dimensions, double>, peano4::datamanagement::CellMarker, VectorCompare> _cellMarkers;
 
     /**
      * Can a cell be split (deployed to another rank)

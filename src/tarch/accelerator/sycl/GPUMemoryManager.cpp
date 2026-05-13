@@ -1,4 +1,4 @@
-#include "GPUMemoryManager.h"
+#include "tarch/accelerator/GPUMemoryManager.h"
 
 #if defined(GPUOffloadingSYCL)
 
@@ -7,14 +7,15 @@
 #include "tarch/accelerator/accelerator.h"
 
 
-tarch::logging::Log  tarch::accelerator::sycl::GPUMemoryManager::_log( "tarch::accelerator::sycl::GPUMemoryManager" );
+tarch::logging::Log  tarch::accelerator::GPUMemoryManager::_log( "tarch::accelerator::GPUMemoryManager" );
+int tarch::accelerator::GPUMemoryManager::_allocatedMemory;
 
-tarch::accelerator::sycl::GPUMemoryManager& tarch::accelerator::sycl::GPUMemoryManager::getInstance() {
-  static tarch::accelerator::sycl::GPUMemoryManager singleton;
+tarch::accelerator::GPUMemoryManager& tarch::accelerator::GPUMemoryManager::getInstance() {
+  static tarch::accelerator::GPUMemoryManager singleton;
   return singleton;
 }
 
-void* tarch::accelerator::sycl::GPUMemoryManager::allocateRawData( int size, ::sycl::queue& device ) {
+void* tarch::accelerator::GPUMemoryManager::allocateRawData( int size, ::sycl::queue& device ) {
   tarch::multicore::Lock lock(_semaphore);
 
   // Is device initialised?
@@ -41,7 +42,7 @@ void* tarch::accelerator::sycl::GPUMemoryManager::allocateRawData( int size, ::s
   return result;
 }
 
-void tarch::accelerator::sycl::GPUMemoryManager::free(void* devicePointer, ::sycl::queue& device) {
+void tarch::accelerator::GPUMemoryManager::free(void* devicePointer, ::sycl::queue& device) {
   tarch::multicore::Lock lock(_semaphore);
 
   assertion( _deviceMemory.count(&device)==1 );
@@ -54,11 +55,11 @@ void tarch::accelerator::sycl::GPUMemoryManager::free(void* devicePointer, ::syc
   _deviceMemory.at(&device).freePages.at(size).push_back( devicePointer );
 }
 
-tarch::accelerator::sycl::GPUMemoryManager::~GPUMemoryManager() {
+tarch::accelerator::GPUMemoryManager::~GPUMemoryManager() {
   clear();
 }
 
-void tarch::accelerator::sycl::GPUMemoryManager::clear() {
+void tarch::accelerator::GPUMemoryManager::clear() {
   tarch::multicore::Lock lock(_semaphore);
 
   for (auto& deviceMemory: _deviceMemory) {
