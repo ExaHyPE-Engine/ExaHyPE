@@ -16,6 +16,7 @@ import numpy as np
 sys.path.insert(0, os.path.abspath("src/toolbox/loadbalancing/api"))
 
 from Tree import Tree
+from Input.RegularGridGenerator import RegularGridGenerator
 
 
 def build_tree3_adaptive_2d() -> Tree:
@@ -154,3 +155,35 @@ def build_tree3_all_rows_2d() -> Tree:
     tree.update_split_pattern()
 
     return tree
+
+
+def build_stage3_mixed_parent_case_2d() -> tuple[Tree, tuple[int, int]]:
+    """
+    Build a 2D tree where Stage III can promote a mixed parent.
+
+    The returned parent coordinates identify the level-0 parent whose children
+    are configured with a dominant subtree assignment.
+    """
+    tree = RegularGridGenerator(name="pytest-stage3-integration-2d", max_level=2, dimension=2)
+
+    parent_level = 0
+    child_level = 1
+    parent_coords = (0, 0)
+
+    # Parent starts in subtree 0.
+    tree._tree_arrays[parent_level][parent_coords] = (1, 0)
+
+    children = [
+        (a, b)
+        for a in range(3 * parent_coords[0], 3 * parent_coords[0] + 3)
+        for b in range(3 * parent_coords[1], 3 * parent_coords[1] + 3)
+    ]
+
+    # Mixed children with subtree 2 dominant.
+    for coords in children[:5]:
+        tree._tree_arrays[child_level][coords] = (1, 2)
+    for coords in children[5:8]:
+        tree._tree_arrays[child_level][coords] = (1, 0)
+    tree._tree_arrays[child_level][children[8]] = (1, 1)
+
+    return tree, parent_coords

@@ -1,6 +1,5 @@
 import os
 import sys
-
 import pytest
 
 # Ensure the loadbalancing API is importable when running pytest from repo root
