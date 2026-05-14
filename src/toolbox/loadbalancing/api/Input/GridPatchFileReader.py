@@ -258,7 +258,13 @@ def GridPatchFileReader(name, file_path, dimension):
 			matrix_size=(3**level)
 			#print(level, matrix_size)
 
-			matrix=np.zeros((matrix_size, matrix_size, matrix_size), dtype=int)
+			if dimension == 3:
+				matrix = np.zeros((matrix_size, matrix_size, matrix_size), dtype=int)
+			elif dimension == 2:
+				matrix = np.zeros((matrix_size, matrix_size), dtype=int)
+			else:
+				raise ValueError(f"Unsupported dimension: {dimension}")
+
 			for offset in offsets:
 				offset_tuple = tuple(map(float, offset.split()))
 				if dimension==3:
