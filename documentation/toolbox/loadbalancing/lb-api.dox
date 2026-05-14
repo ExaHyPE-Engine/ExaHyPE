@@ -22,7 +22,7 @@ This approach allows us to make informed splitting decisions that minimise both 
 The API is organised into four phases:
 
 - **Phase 1: Input Generators** — read or generate the tree structure to be analysed.
-- **Phase 2: Splitting Strategies** — apply configurable staged transformations (Stage I-IV) to redistribute computational work, optionally optimise the split hierarchy, and optionally extract replay instructions.
+- **Phase 2: Splitting Strategies** — apply configurable staged transformations (Stage I-III) to redistribute computational work, optionally optimise the split hierarchy, and optionally extract replay instructions (Stage IV).
 - **Phase 3: Hardcoded parameter extraction (offline replay)** — translate the final subtree assignment into split instructions for `toolbox::loadbalancing::strategies::Hardcoded`.
 - **Phase 4: Output and Visualisation** — export YAML and visual artefacts for inspection and integration.
 
@@ -55,7 +55,7 @@ split_tree(
 ):
   # Stage I:            distribute leaf nodes across subtrees (`_distribute_leaves_bfs()` or `_distribute_leaves_dfs()`)
   # Stage II (opt.):    bottom-up propagation (`_propagate_bottom_up()`)
-  # Stage III (opt.):   hierarchical optimisation (`_optimize_hierarchy()`)  # TBD
+  # Stage III (opt.):   hierarchical optimisation (`_optimize_hierarchy()`)
   # Stage IV (opt.):    split-instruction extraction (`_extract_split_instructions()`)
 ```
 
@@ -66,12 +66,10 @@ If Stage IV is disabled, the function returns `([], [], [], [])` while still app
 |-------|----------|-----------|------------|
 | **I** | `_distribute_leaves_bfs()` or `_distribute_leaves_dfs()` | Distribute leaves across subtrees | O(Ncells) |
 | **II** | `_propagate_bottom_up()` | Propagate subtree ids bottom-up | O(Ncells) single pass |
-| **III** | `_optimize_hierarchy()` | Minimise split operation count | (not implemented yet) |
+| **III** | `_optimize_hierarchy()` | Minimise split operation count through hierarchy lifting | Iterative multi-pass; data-dependent |
 | **IV** | `_extract_split_instructions()` | Derive hardcoded replay split lists | O(subtrees × Ncells) |
 
 _Stage I_ always executes when splitting is requested. _Stage II_, _Stage III_, and _Stage IV_ are optional.
-
-@todo [Stage III] Implement `_optimize_hierarchy()` and replace provisional complexity notes with measured complexity and constraints.
 
 Here, `Ncells` denotes the total number of represented cells across all stored levels. For _Stage I_, BFS and DFS traversal have the same asymptotic complexity O(Ncells); they differ only in visitation order and constant-factor overhead.
 
@@ -197,24 +195,24 @@ Total: **3 operations and 7 cell updates**.
 
 ### Stage III (optional): Hierarchical Optimisation
 
-@todo [Stage III] Finalise hierarchical optimisation semantics and update this section once the implementation is available.
-
-The `_optimize_hierarchy()` function minimises the total number of split operations whilst preserving load balance established by _Stage II_. This hierarchical approach prepares the split structure for integration with cost-aware optimisation strategies, enabling more efficient domain decomposition in practice.
+The `_optimize_hierarchy()` function minimises the total number of split operations whilst preserving load balance established by _Stage II_. It does so by promoting a parent to the dominant child subtree when promotion is beneficial.
 
 \par Algorithm
-Iterative optimisation that restructures the split hierarchy by moving split decisions up the tree when beneficial. Requires _Stage II_ (bottom-up propagation) to have been applied first, so that non-leaf subtree assignments are consistent before the optimisation begins.
+Iterative bottom-up optimisation over internal levels. On each pass, for each existing parent, the algorithm inspects all existing children and computes subtree frequencies. A promotion is applied only if:
+- all children exist for that parent (`3^d` children in dimension `d`),
+- children are mixed across at least two subtrees,
+- a dominant child subtree exists,
+- the dominant subtree differs from the current parent subtree,
+- promotion does not move ownership backward to an earlier subtree id,
+- and the dominant subtree has strictly higher child count than the current parent subtree count.
 
-\par Optimisation Conditions:
-The algorithm applies when M trees on level L satisfy:
-- All have common parent p at level L-1
-- Sum of cells equals 3^(d*L) (one parent's worth)
-- Enables hierarchical split restructuring
+The process repeats until a full pass makes no changes.
 
 \par Characteristics
-- Multi-pass iterative optimisation
-- Maintains tree topology constraints established by _Stage II_
-- Actively minimises split operation count
-- Optimises for runtime splitting efficiency
+- Multi-pass iterative optimisation (converges when no further promotions are applicable)
+- Maintains Stage-II topology consistency (expects `_propagate_bottom_up()` to run first)
+- Preserves node existence flags (`weight`)
+- Changes only subtree assignments to reduce lower-level split pressure
 
 #### Illustrative Scenarios of Hierarchically-Optimised Multi‑level Tree Splitting
 
