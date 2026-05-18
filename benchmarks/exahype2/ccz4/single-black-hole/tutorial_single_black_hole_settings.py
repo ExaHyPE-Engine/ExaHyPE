@@ -214,7 +214,8 @@ from toolbox.loadbalancing.api.Input.RegularGridGenerator import RegularGridGene
 import toolbox.loadbalancing.api.Strategies.SplitTrees as split_strategy
 
 def add_hardcoded_load_balancing_over_regular_mesh(project, 
-                                                   trees):
+                                                   trees_per_rank,
+                                                   number_of_ranks):
     """!
     
      @todo This is not nice. The signature should accept the mesh 
@@ -254,11 +255,14 @@ def add_hardcoded_load_balancing_over_regular_mesh(project,
 #    tree = split_strategy.reset_tree_to_single_subtree(tree)
 
 # =========================================
-# Part 3 of tutorial: Split the tree into 5 subtrees and obtain the split instructions
+# Part 3 of tutorial: Split the tree into ranks*trees_per_rank subtrees and obtain split instructions
 # =========================================
+    total_subtrees = trees_per_rank * number_of_ranks
+    number_of_splits = total_subtrees - 1
+
     gridSweeps, splittingTrees, numberOfCells, subTrees = split_strategy.split_tree(
         tree,
-        number_of_splits=5,
+        number_of_splits=number_of_splits,
         enable_propagate_bottom_up=False,
         enable_extract_split_instructions=True,
     )  # creates subtrees {0,1,2}
@@ -279,8 +283,10 @@ def add_hardcoded_load_balancing_over_regular_mesh(project,
 # =========================================
 # Part 4 of tutorial: Hand the split instr. over to the load balancer
 # =========================================
-    # Map subtree ids to destination ranks (simple mapping; adjust for real MPI runs)
-    destinationRanks = [max(1, sid) for sid in subTrees]
+    # Map subtree ids to destination ranks according to trees_per_rank.
+    destinationRanks = [
+        min(number_of_ranks - 1, sid // trees_per_rank) for sid in subTrees
+    ]
 
     # Build Hardcoded constructor argument string (single mode variant)
     hardcoded_mode = "peano4::SplitInstruction::Mode::AggressiveTopDown"

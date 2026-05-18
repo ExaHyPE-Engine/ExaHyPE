@@ -61,6 +61,13 @@ def get_command_line_args():
         help="Number of trees (subpartitions) per rank",
     )
     parser.add_argument(
+        "--ranks",
+        dest="ranks",
+        type=int,
+        default=1,
+        help="Total number of MPI ranks used for offline hardcoded decomposition",
+    )
+    parser.add_argument(
         "-cs",
         "--cell-size",
         dest="cell_size",
@@ -252,14 +259,14 @@ if __name__ == "__main__":
     # project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
     # my_solver.select_dofs_to_print = [0,12,16,17,18,54,59,60]
 
-    if args.trees == 1:
+    if args.trees <= 1:
         add_no_load_balancing(project)
     elif args.load_balancing_metric == LoadBalancingMetrics_Generic:
         add_generic_load_balancing(project, args.trees)
     elif args.load_balancing_metric == LoadBalancingMetrics_Tailored:
         add_load_balancing_with_cost_metric(project, args.trees)
     elif args.load_balancing_metric == LoadBalancingMetrics_Offline_Regular:
-        add_hardcoded_load_balancing_over_regular_mesh(project, args.trees)
+        add_hardcoded_load_balancing_over_regular_mesh(project, args.trees, args.ranks)
     else:
         assert False, "variant not supported"
 
