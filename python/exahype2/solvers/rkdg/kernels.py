@@ -775,10 +775,10 @@ def create_start_time_step_implementation_for_fixed_time_stepping(
     and
     isFirstGridSweepOfTimeStep()
   ) {
-    logInfo("t       = " << _minTimeStampThisTimeStep);
-    logInfo("dt      = " << getTimeStepSize());
-    logInfo("h_{min} = " << _minCellHThisTimeStep);
-    logInfo("h_{max} = " << _maxCellHThisTimeStep);
+    logInfo("t" << tarch::align << _minTimeStampThisTimeStep);
+    logInfo("dt" << tarch::align << getTimeStepSize());
+    logInfo("h_{min}" << tarch::align << _minCellHThisTimeStep);
+    logInfo("h_{max}" << tarch::align << _maxCellHThisTimeStep);
   }
   _timeStepSize  = """
         + str(normalised_time_step_size)

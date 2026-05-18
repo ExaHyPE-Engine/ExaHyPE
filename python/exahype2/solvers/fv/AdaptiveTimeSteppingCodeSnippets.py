@@ -11,12 +11,11 @@ class AdaptiveTimeSteppingCodeSnippets(
 
     def create_print_time_step_implementation(self):
         return """
-  logDebug("Phase       = " << toString(_solverState));
-  logInfo("t            = " << getMinTimeStamp() << " / " << MinTerminalTime);
-  logInfo("dt           = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : _admissibleTimeStepSizeThisTimeStep));
-  logInfo("h_{min}      = " << getMinVolumeSize() << " (volume size)");
-  logInfo("h_{max}      = " << getMaxVolumeSize() << " (volume size)");
-  logInfo("lambda_{max} = " << getMaxEigenvalue());
+  logInfo("t" << tarch::align << getMinTimeStamp() << " / " << MinTerminalTime);
+  logInfo("dt" << tarch::align << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : _admissibleTimeStepSizeThisTimeStep));
+  logInfo("h_{min}" << tarch::align << getMinVolumeSize() << " (volume size)");
+  logInfo("h_{max}" << tarch::align << getMaxVolumeSize() << " (volume size)");
+  logInfo("lambda_{max}" << tarch::align << getMaxEigenvalue());
 """
 
     def create_start_time_step_implementation(self):

@@ -114,33 +114,33 @@ int tarch::instrumentation::Measurement::getNumberOfMeasurements() const { retur
 
 std::string tarch::instrumentation::Measurement::toString() const {
   std::ostringstream msg;
-  msg << "(mean=";
+  msg << "(Mean=";
   if (_numberOfMeasurements > 0) {
     msg << getValue();
   } else {
-    msg << "nan";
+    msg << "NaN";
   }
 
-  msg << ",n=" << _numberOfMeasurements;
+  msg << ", #Measurements=" << _numberOfMeasurements;
 
   if (_numberOfMeasurements > 0) {
-    msg << ",min=" << _min << "@" << _minMeasurement << ",max=" << _max << "@" << _maxMeasurement;
+    msg << ", Min=" << _min << "@" << _minMeasurement << ", Max=" << _max << "@" << _maxMeasurement;
   } else {
-    msg << ",min=nan,max=nan";
+    msg << ", Min=NaN, Max=NaN";
   }
 
   if (_numberOfMeasurements > 0) {
     const double value = getValue();
-    if (!tarch::la::equals(value, 0.0)) {
-      msg << ",rel+=" << (_max - value) / value * 100.0 << "%"
-          << ",rel-=" << (value - _min) / value * 100.0 << "%";
+    if (not tarch::la::equals(value, 0.0)) {
+      msg << ", Rel+=" << (_max - value) / value * 100.0 << "%"
+          << ", Rel-=" << (value - _min) / value * 100.0 << "%";
     }
-    msg << ",std=" << getStandardDeviation();
+    msg << ", Std=" << getStandardDeviation();
   }
 
   if (_accuracy > 0.0) {
-    msg << ",eps=" << _accuracy;
-    msg << ",status=" << (_isAccurateValue ? "converged" : "pending");
+    msg << ", Eps=" << _accuracy;
+    msg << ", Status=" << (_isAccurateValue ? "converged" : "pending");
   }
 
   msg << ")";

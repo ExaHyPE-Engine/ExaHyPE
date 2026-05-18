@@ -27,8 +27,8 @@ namespace toolbox {
      *
      * ## Enable assignment checks
      *
-     * By default, the assignment checks are enabled as soon as PEANO_DEBUG is
-     * set to a value greater than 0. However, you can explicitly disable it
+     * By default, the assignment checks are enabled as soon as PEANO_ASSERTIONS
+     * is set to a value greater than 0. However, you can explicitly disable it
      * by adding
      *
      * -DnoAssignmentChecks

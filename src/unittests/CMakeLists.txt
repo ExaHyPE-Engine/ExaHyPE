@@ -33,15 +33,30 @@ foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
       LINK_LIBRARIES  ${test_dependencies}
     )
 
+    set(test_working_directory "${CMAKE_CURRENT_BINARY_DIR}/${target}")
+    file(MAKE_DIRECTORY "${test_working_directory}")
+
     add_test(NAME ${target} COMMAND ${target})
+    set_tests_properties(${target}
+      PROPERTIES
+        WORKING_DIRECTORY "${test_working_directory}"
+    )
 
     if(WITH_MPI)
-      cmake_host_system_information(RESULT UNITTEST_LOGICAL_CORES QUERY NUMBER_OF_LOGICAL_CORES)
-      set(UNITTEST_MPI_RANKS ${UNITTEST_LOGICAL_CORES} ${MPIEXEC_MAX_NUMPROCS} 16)
-      list(SORT UNITTEST_MPI_RANKS COMPARE NATURAL ORDER ASCENDING)
-      list(GET UNITTEST_MPI_RANKS 0 UNITTEST_MPI_RANKS)
+      cmake_host_system_information(RESULT logical_cores QUERY NUMBER_OF_LOGICAL_CORES)
+      set(mpi_ranks ${logical_cores} ${MPIEXEC_MAX_NUMPROCS} 16)
+      list(SORT mpi_ranks COMPARE NATURAL ORDER ASCENDING)
+      list(GET mpi_ranks 0 mpi_ranks)
+
+      set(parallel_test_working_directory "${CMAKE_CURRENT_BINARY_DIR}/${target}Parallel")
+      file(MAKE_DIRECTORY "${parallel_test_working_directory}")
+
       add_test(NAME ${target}Parallel
-        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${UNITTEST_MPI_RANKS} ${CMAKE_BINARY_DIR}/${target}
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${mpi_ranks} ${CMAKE_BINARY_DIR}/${target}
+      )
+      set_tests_properties(${target}Parallel
+        PROPERTIES
+          WORKING_DIRECTORY "${parallel_test_working_directory}"
       )
     endif()
   endforeach()

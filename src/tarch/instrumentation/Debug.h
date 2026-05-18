@@ -10,12 +10,12 @@
 #if PEANO_DEBUG
 #define logDebug(logMacroMessageStream) \
   do { \
-    const std::string logMacroScopeName = TARCH_INSTRUMENTATION_SCOPE_NAME; \
-    if (tarch::instrumentation::Log::debugMessagesAreEnabled(logMacroScopeName)) { \
-      std::ostringstream conv; \
-      conv << logMacroMessageStream; \
-      tarch::instrumentation::Log::debugWithScopeName(logMacroScopeName, conv.str()); \
-    } \
+    tarch::instrumentation::Log:: \
+      debugIfEnabled(TARCH_LOGGING_FUNCTION_SIGNATURE, TARCH_LOGGING_FUNCTION_NAME, __FILE__, [&]() -> std::string { \
+        std::ostringstream conv; \
+        conv << logMacroMessageStream; \
+        return conv.str(); \
+      }); \
   } while (false)
 #else
 #define logDebug(logMacroMessageStream) \

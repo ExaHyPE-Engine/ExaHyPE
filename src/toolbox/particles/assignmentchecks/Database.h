@@ -13,7 +13,7 @@
 
 
 #if !defined(AssignmentChecks) and !defined(noAssignmentChecks) \
-  and PEANO_DEBUG
+  and PEANO_ASSERTIONS
 #define AssignmentChecks
 #endif
 

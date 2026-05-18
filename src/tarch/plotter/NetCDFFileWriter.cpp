@@ -314,8 +314,10 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
 
 #if defined(WITH_MPI)
   if (useParallelIO) {
-    // Only the global master writes the replicated scalar metadata variables.
-    check(nc_var_par_access(ncid, varMesh, NC_INDEPENDENT), "par_access mesh2d");
+    // Scalar metadata variables are written collectively below. Non-master ranks
+    // contribute an empty selection, which keeps parallel NetCDF/HDF5 backends in
+    // collective data mode.
+    check(nc_var_par_access(ncid, varMesh, NC_COLLECTIVE), "par_access mesh2d");
     check(nc_var_par_access(ncid, varTime, NC_COLLECTIVE), "par_access time");
     check(nc_var_par_access(ncid, varX, NC_COLLECTIVE), "par_access x");
     check(nc_var_par_access(ncid, varY, NC_COLLECTIVE), "par_access y");
@@ -350,29 +352,31 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
     check(nc_put_vara_double(ncid, varTime, startT, countT, &time), "write time value");
   }
 
-  const int dummyI = 0;
+  const float dummyF = 0.0f;
+  const int   dummyI = 0;
 
-  // Write a defined value for the mesh topology dummy variable.
-  if (not useParallelIO or isMasterRank) {
-    check(nc_put_var_int(ncid, varMesh, &dummyI), "write mesh2d");
+  // Write a defined value for the mesh topology dummy variable
+  {
+    std::size_t startMesh[1] = {0};
+    std::size_t countMesh[1] = {useParallelIO ? static_cast<std::size_t>(isMasterRank ? 1 : 0) : 1};
+    check(nc_put_vara_int(ncid, varMesh, startMesh, countMesh, &dummyI), "write mesh2d");
   }
 
   {
-    if (localNumNodes > 0) {
-      std::size_t start[1] = {static_cast<std::size_t>(offsetNodes)};
-      std::size_t count[1] = {static_cast<std::size_t>(localNumNodes)};
-      check(nc_put_vara_float(ncid, varX, start, count, x.data()), "write x");
-      check(nc_put_vara_float(ncid, varY, start, count, y.data()), "write y");
-    }
+    std::size_t start[1] = {static_cast<std::size_t>(offsetNodes)};
+    std::size_t count[1] = {static_cast<std::size_t>(localNumNodes)};
+    check(nc_put_vara_float(ncid, varX, start, count, localNumNodes ? x.data() : &dummyF), "write x");
+    check(nc_put_vara_float(ncid, varY, start, count, localNumNodes ? y.data() : &dummyF), "write y");
   }
 
   // Write connectivity
   {
-    if (localNumFaces > 0) {
-      std::size_t start[2] = {static_cast<std::size_t>(offsetFaces), 0};
-      std::size_t count[2] = {static_cast<std::size_t>(localNumFaces), static_cast<std::size_t>(MAX_FACE_NODES)};
-      check(nc_put_vara_int(ncid, varFaceNodes, start, count, localFaceNodes.data()), "write face_nodes");
-    }
+    std::size_t start[2] = {static_cast<std::size_t>(offsetFaces), 0};
+    std::size_t count[2] = {static_cast<std::size_t>(localNumFaces), static_cast<std::size_t>(MAX_FACE_NODES)};
+    check(
+      nc_put_vara_int(ncid, varFaceNodes, start, count, localNumFaces ? localFaceNodes.data() : &dummyI),
+      "write face_nodes"
+    );
   }
 
   // Write fields

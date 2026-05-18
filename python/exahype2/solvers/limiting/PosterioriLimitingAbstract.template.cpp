@@ -147,7 +147,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep() {
   {{PRINT_TIME_STEP_IMPLEMENTATION}}
 
   if (getNumberOfTroubledCells() > 0 /*and (_solverState == SolverState::RegularSolver or _solverState == SolverState::LimiterSolver)*/) {
-    logInfo("Number of troubled cells: " << getNumberOfTroubledCells());
+    logInfo("Number of troubled cells" << tarch::align << getNumberOfTroubledCells());
   }
 }
 

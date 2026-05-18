@@ -23,13 +23,12 @@ class OptimisticAdaptiveTimeSteppingCodeSnippets( exahype2.solvers.OptimisticAda
 
   def create_print_time_step_implementation(self):
     return """
-  logDebug("Phase            = " << toString(_solverState));
-  logInfo("t                = " << getMinTimeStamp() << " / " << MinTerminalTime);
-  logInfo("dt               = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : getAdmissibleTimeStepSize()));
-  logInfo("dt_{predicted}   = " << getPredictedAdmissibleTimeStepSize() << (_cancelOptimisticTasks ? " [cancel predicted tasks]" : ""));
-  logInfo("h_{min}          = " << _minGridCellHThisTimeStep << " (individual grid cell within a patch)");
-  logInfo("h_{max}          = " << _maxGridCellHThisTimeStep << " (individual grid cell within a patch)");
-  logInfo("lambda_{max}     = " << getMaxEigenvalue());
+  logInfo("t" << tarch::align << getMinTimeStamp() << " / " << MinTerminalTime);
+  logInfo("dt" << tarch::align << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : getAdmissibleTimeStepSize()));
+  logInfo("dt_{predicted}" << tarch::align << getPredictedAdmissibleTimeStepSize() << (_cancelOptimisticTasks ? " [cancel predicted tasks]" : ""));
+  logInfo("h_{min}" << tarch::align << _minGridCellHThisTimeStep << " (individual grid cell within a patch)");
+  logInfo("h_{max}" << tarch::align << _maxGridCellHThisTimeStep << " (individual grid cell within a patch)");
+  logInfo("lambda_{max}" << tarch::align << getMaxEigenvalue());
 """
 
 

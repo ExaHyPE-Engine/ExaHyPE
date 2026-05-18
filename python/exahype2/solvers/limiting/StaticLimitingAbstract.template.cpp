@@ -120,7 +120,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep() {
   {{PRINT_TIME_STEP_IMPLEMENTATION}}
 
   if (getNumberOfTroubledCells() > 0) {
-    logInfo("Number of troubled cells: " << getNumberOfTroubledCells());
+    logInfo("Number of troubled cells" << tarch::align << getNumberOfTroubledCells());
   }
 }
 
