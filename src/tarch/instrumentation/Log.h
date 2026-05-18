@@ -8,9 +8,17 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <ostream>
 #include <string>
 #include <string_view>
 #include <vector>
+
+namespace tarch {
+  inline std::ostream& align(std::ostream& out) {
+    out.put('\x1f');
+    return out;
+  }
+} // namespace tarch
 
 namespace tarch::multicore {
   class BooleanSemaphore;
@@ -38,8 +46,10 @@ class tarch::instrumentation::Log {
 private:
   enum class ConsoleStream { None, Cout, Cerr };
 
-  static constexpr std::string::size_type NumberOfStandardColumnSpaces = 12;
-  static constexpr std::string::size_type NumberOfScopeColumnSpaces    = 55;
+  static constexpr std::string::size_type NumberOfStandardColumnSpaces     = 12;
+  static constexpr std::string::size_type NumberOfScopeColumnSpaces        = 55;
+  static constexpr std::string::size_type MinimumAlignedMessagePrefixWidth = 24;
+  static constexpr char                   AlignmentMarker                  = '\x1f';
 
   struct Configuration {
     std::string              logColumnSeparator        = " ";
@@ -99,6 +109,8 @@ private:
 
   static std::string getTimeStampHumanReadable(long int timestampNanoseconds);
 
+  static std::string alignMessage(std::string_view message, std::string::size_type messageStartColumn);
+
   static std::string constructMessageString(
     std::string_view     messageType,
     long int             timestampNanoseconds,
@@ -110,6 +122,7 @@ private:
   );
 
   static void configureDebugFilter();
+  static bool debugMessagesAreConfigured();
 
   static const Configuration& getConfiguration();
 
@@ -143,6 +156,7 @@ private:
   static std::vector<std::unique_ptr<const Configuration>> _configurationSnapshots;
   static std::atomic<const Configuration*>                 _configuration;
   static std::once_flag                                    _debugFilterEnvironmentOnce;
+  static std::atomic<std::string::size_type>               _alignedMessagePrefixColumn;
 
 public:
   Log()                      = delete;
@@ -160,6 +174,22 @@ public:
   );
 
   static bool debugMessagesAreEnabled(std::string_view scopeName);
+
+  template <typename MessageFactory>
+  static void debugIfEnabled(
+    std::string_view functionSignature,
+    std::string_view functionName,
+    std::string_view fileName,
+    MessageFactory   messageFactory
+  ) {
+    if (debugMessagesAreConfigured()) {
+      const std::string scopeName = makeScopeName(functionSignature, functionName, fileName);
+      if (debugMessagesAreEnabled(scopeName)) {
+        debugWithScopeName(scopeName, messageFactory());
+      }
+    }
+  }
+
   static void debugWithScopeName(std::string_view scopeName, std::string_view message);
   static void infoWithScopeName(std::string_view scopeName, std::string_view message);
   static void warningWithScopeName(std::string_view scopeName, std::string_view message);

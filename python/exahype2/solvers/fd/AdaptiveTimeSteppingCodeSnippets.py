@@ -18,12 +18,11 @@ class AdaptiveTimeSteppingCodeSnippets(
 
     def create_print_time_step_implementation(self):
         return """
-  logDebug("Phase       = " << toString(_solverState));
-  logInfo("t            = " << getMinTimeStamp() << " / " << MinTerminalTime);
-  logInfo("dt           = " << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : _admissibleTimeStepSizeThisTimeStep));
-  logInfo("h_{min}      = " << getMinMeshSize() << " (internodal distance)");
-  logInfo("h_{max}      = " << getMaxMeshSize() << " (internodal distance)");
-  logInfo("lambda_{max} = " << getMaxEigenvalue());
+  logInfo("t" << tarch::align << getMinTimeStamp() << " / " << MinTerminalTime);
+  logInfo("dt" << tarch::align << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : _admissibleTimeStepSizeThisTimeStep));
+  logInfo("h_{min}" << tarch::align << getMinMeshSize() << " (internodal distance)");
+  logInfo("h_{max}" << tarch::align << getMaxMeshSize() << " (internodal distance)");
+  logInfo("lambda_{max}" << tarch::align << getMaxEigenvalue());
 """
 
     def create_start_time_step_implementation(self):

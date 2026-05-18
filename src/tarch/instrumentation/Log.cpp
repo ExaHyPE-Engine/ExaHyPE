@@ -10,6 +10,7 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Lock.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <memory>
 #include <utility>
@@ -26,6 +27,8 @@ std::atomic<const tarch::instrumentation::Log::Configuration*> tarch::instrument
 };
 
 std::once_flag tarch::instrumentation::Log::_debugFilterEnvironmentOnce;
+
+std::atomic<std::string::size_type> tarch::instrumentation::Log::_alignedMessagePrefixColumn{0};
 
 namespace {
   bool isGlobalMasterRankOrMpiUninitialised() {
@@ -249,6 +252,39 @@ std::string tarch::instrumentation::Log::getTimeStampHumanReadable(long int time
   return result;
 }
 
+std::string tarch::instrumentation::Log::alignMessage(
+  std::string_view       message,
+  std::string::size_type messageStartColumn
+) {
+  const std::size_t marker = message.find(AlignmentMarker);
+  if (marker == std::string_view::npos) {
+    return std::string(message);
+  }
+
+  const std::string_view prefix    = message.substr(0, marker);
+  const std::string_view suffix    = message.substr(marker + 1);
+  const auto requestedPrefixColumn = messageStartColumn + std::max(MinimumAlignedMessagePrefixWidth, prefix.size());
+
+  auto prefixColumn = _alignedMessagePrefixColumn.load(std::memory_order_relaxed);
+  while (
+    prefixColumn < requestedPrefixColumn
+    and not _alignedMessagePrefixColumn
+              .compare_exchange_weak(prefixColumn, requestedPrefixColumn, std::memory_order_relaxed)
+  ) {
+  }
+  prefixColumn = std::max(prefixColumn, requestedPrefixColumn);
+
+  const auto prefixEndColumn = messageStartColumn + prefix.size();
+  const auto separatorSpaces = prefixColumn - prefixEndColumn + 1;
+
+  std::string result;
+  result.reserve(prefix.size() + separatorSpaces + suffix.size());
+  result.append(prefix.data(), prefix.size());
+  result.append(separatorSpaces, ' ');
+  result.append(suffix.data(), suffix.size());
+  return result;
+}
+
 std::string tarch::instrumentation::Log::constructMessageString(
   std::string_view     messageType,
   long int             timestampNanoseconds,
@@ -260,8 +296,8 @@ std::string tarch::instrumentation::Log::constructMessageString(
 ) {
   std::string result;
   result.reserve(
-    message.size() + scopeName.size() + messageType.size() + configuration.logColumnSeparator.size() * 7
-    + NumberOfScopeColumnSpaces + NumberOfStandardColumnSpaces * 5 + 1
+    message.size() + MinimumAlignedMessagePrefixWidth + scopeName.size() + messageType.size()
+    + configuration.logColumnSeparator.size() * 7 + NumberOfScopeColumnSpaces + NumberOfStandardColumnSpaces * 5 + 1
   );
 
   if (configuration.logTimeStamp) {
@@ -292,7 +328,8 @@ std::string tarch::instrumentation::Log::constructMessageString(
     appendColumn(result, configuration.logColumnSeparator, NumberOfScopeColumnSpaces, scopeName);
   }
 
-  appendMessageColumn(result, configuration.logColumnSeparator, NumberOfStandardColumnSpaces, 0, message);
+  const std::string alignedMessage = alignMessage(message, result.size() + configuration.logColumnSeparator.size());
+  appendMessageColumn(result, configuration.logColumnSeparator, NumberOfStandardColumnSpaces, 0, alignedMessage);
   result += '\n';
 
   return result;
@@ -338,12 +375,21 @@ void tarch::instrumentation::Log::configureDebugFilter() {
   });
 }
 
-bool tarch::instrumentation::Log::debugMessagesAreEnabled(std::string_view scopeName) {
+bool tarch::instrumentation::Log::debugMessagesAreConfigured() {
   if (not isGlobalMasterRankOrMpiUninitialised()) {
     return false;
   }
 
   configureDebugFilter();
+  const Configuration& configuration = getConfiguration();
+  return configuration.debugEnabledByDefault or not configuration.debugScopePrefixes.empty();
+}
+
+bool tarch::instrumentation::Log::debugMessagesAreEnabled(std::string_view scopeName) {
+  if (not debugMessagesAreConfigured()) {
+    return false;
+  }
+
   const Configuration& configuration = getConfiguration();
   if (configuration.debugEnabledByDefault) {
     return true;
