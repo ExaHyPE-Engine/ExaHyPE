@@ -144,6 +144,17 @@ def get_command_line_args():
     )
 
     args = parser.parse_args()
+
+    if args.ranks < 1:
+        parser.error("--ranks must be >= 1")
+    if args.trees < 0:
+        parser.error("--trees must be >= 0")
+    if args.ranks > 1 and args.trees < 1:
+        parser.error(
+            "Unsupported combination: --ranks > 1 requires --trees >= 1 "
+            "for offline decomposition."
+        )
+
     return args
 
 
@@ -259,7 +270,7 @@ if __name__ == "__main__":
     # project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
     # my_solver.select_dofs_to_print = [0,12,16,17,18,54,59,60]
 
-    if args.trees <= 1:
+    if args.trees <= 1 and args.ranks == 1:
         add_no_load_balancing(project)
     elif args.load_balancing_metric == LoadBalancingMetrics_Generic:
         add_generic_load_balancing(project, args.trees)
