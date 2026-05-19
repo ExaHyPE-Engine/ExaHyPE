@@ -16,6 +16,8 @@
 #include "peano4/utils/Globals.h"
 
 #include "exahype2/CellData.h"
+#include "tarch/timing/Measurement.h"
+#include "tarch/timing/Watch.h"
 
 
 namespace exahype2 {
@@ -196,6 +198,20 @@ namespace exahype2 {
       bool                                           evaluatePointSources
     );
 
+    template <
+      typename Solver,
+      int      order,
+      int      unknowns,
+      int      auxiliaryVariables
+    >
+    void cellIntegral_patchwise_in_situ_GaussLegendre(
+      ::exahype2::CellData<double, double>&          cellData,
+      bool                                           evaluateFlux,
+      bool                                           evaluateNonconservativeProduct,
+      bool                                           evaluateSource,
+      bool                                           evaluatePointSources,
+      tarch::timing::Measurement&                    measurement
+    );
 
     /**
      * Final step of DG algorithm

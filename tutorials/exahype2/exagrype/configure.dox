@@ -2,12 +2,12 @@
 
 @page tutorials_exahype2_applications_exagrype_configure Configure ExaGRyPE
 
+ExaGRyPE needs to be installed as an application of the Peano framework. For general remarks on
+how to install Peano, please see \ref page_installation_home. This tutorial is also designed to be
+self-contained, and thus should include all the steps you need to run the example code.
 
-The ExaGRyPE need to be installed as an application of Peano framework, for general remark on 
-how to install Peano please see \ref page_installation_home.
-
-The code is still under actively development in the repository at branch application-ccz4
-(the name, which is not a good one, is subject to future change). To start, please clone the
+The code is still under active development in the repository at branch application-ccz4
+(the name, which is not a good one, is subject to future change). To start, please clone
 Peano and switch to the branch
 
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -15,7 +15,8 @@ git clone https://gitlab.lrz.de/hpcsoftware/Peano.git
 git checkout applications-ccz4
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-then configure and compile the Peano under main directory following 
+then configure and compile Peano under the main directory as follows (please make sure that you load
+the proper modules if you are working on a cluster such as COSMA, see \ref tutorials_exahype2_applications_exagrype_clusters)
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
@@ -23,26 +24,13 @@ libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-
 make -j
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Please notice the missing of certain installed libraries may lead to compiling errors, please check
-\ref tutorials_exahype2_applications_exagrype_faq if necessary.  
+Missing certain installed libraries may lead to configuration/compilation errors; please check
+\ref tutorials_exahype2_applications_exagrype_faq if necessary. Note you only need to compile Peano
+once as long as your working environments and Peano kernel code are unchanged. And we recommend 
+re-compiling it after you pull a new code version or change working environments (e.g., changing 
+between different login nodes of a cluster)
 
-Depending on your system, you might have to load the GSL module separately
-before your next step, it is required by the external library of
-initial condition for black holes (no need for gauge wave scenario). In principle the library is already implemented
-in the ExaHyPE and no external including is needed, but I keep the entry below just in case. GSL module is available
-for most of cluster system 
-
-~~~~~~~~~~~~~~~~~~~~~~~
-module load gsl
-~~~~~~~~~~~~~~~~~~~~~~~
-
-and include the installation in the CXX flags in configuration
-
-~~~~~~~~~~~~~~~~~~~~~~~
-CXXFLAGS="...... -Ipath/to/gsl/version/include ......"
-~~~~~~~~~~~~~~~~~~~~~~~
-
-then enter ExaGRyPE subdirectory and add the python path as
+The next step is to enter the ExaGRyPE subdirectory and add the Python path as
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 cd ./applications/exahype2/ccz4/
@@ -50,7 +38,25 @@ export PYTHONPATH=../../../python
 export PYTHONPATH=$PYTHONPATH:../../../applications/exahype2/ccz4
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-To clean the repository completely, use following lines
+ExaGRyPE requires three Python libraries that are usually not included in a standard
+Python installation. You may install them separately using the Python pipeline.
+
+~~~~~~~~~~~~~~~~~~~~~~~
+pip3 install jinja2 --user
+pip3 install ast_comments --user
+pip3 install vtk --user
+~~~~~~~~~~~~~~~~~~~~~~~
+
+also try
+
+~~~~~~~~~~~~~~~~~~~~~~~
+python3 -m pip install --user vtk --no-cache-dir
+~~~~~~~~~~~~~~~~~~~~~~~
+
+if \c pip3 does not work properly.
+
+To clean the repository completely, use the following lines
+
 ~~~~~~~~~~~~~~~~~~~~~~~
 rm -rf aclocal.m4 compile src/config.* configure *sh Makefile Makefile.in missing stamp* ar-lib autom4te.cache *.log libtool depcomp *.scan
 find . -name Makefile -delete

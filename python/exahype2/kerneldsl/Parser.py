@@ -7,21 +7,39 @@ class Parser:
         if type(constant.value) is int:
             return SyntaxTree.Integer(constant.value)
         if type(constant.value) is str:
+            if constant.value.startswith("SolverType::") and SyntaxTree.FunctionDefinition._stateless == False:
+                return SyntaxTree.String(constant.value[len("SolverType::"):])
             return SyntaxTree.String(constant.value)
         if type(constant.value) is float:
             return SyntaxTree.Float(constant.value)
+        if type(constant.value) is bool:
+            return SyntaxTree.Boolean(constant.value)
 
     def _parse_call(self, call: ast.Call):
         function = call.func
         if type(function) is ast.Name:
             if function.id == "DataBlock":
                 return self._parse_patch_constructor(call)
+            if function.id == "FaceDataBlock":
+                return self._parse_patch_constructor(call, isFace = True)
+            elif function.id == "Vector":
+                return SyntaxTree.Vector([], SyntaxTree.String(""), call.args[0].value)
+            elif function.id == "DiagonalMatrix":
+                return self._parse_diagonal_matrix_constructor(call)
+            elif function.id == "Matrix":
+                return self._parse_matrix_constructor(call)
+            elif function.id == "kroneckerProduct":
+                return self._parse_kronecker_product(call)
             elif function.id == "Integer":
                 return SyntaxTree.Integer(0, call.args[0].value)
+            elif function.id == "Float":
+                return SyntaxTree.Float(0, call.args[0].value)
             elif function.id == "FloatReference":
                 return SyntaxTree.Float(0.0, call.args[0].value, reference = True)
             elif function.id == "logDataBlock":
                 return SyntaxTree.LogDataBlock(self._parse_expression(call.args[0]), self._parse_constant(call.args[1]))
+            elif function.id == "matrixVectorProduct":
+                return self._parse_matrix_vector_product(call)
             elif function.id == "max":
                 if len(call.args) > 1:
                     return SyntaxTree.DataBlockMax(self._parse_expression(call.args[0]), self._parse_expression(call.args[1]))
@@ -30,13 +48,74 @@ class Parser:
             else:
                 return SyntaxTree.DataBlockIndex(SyntaxTree.Name(function.id), self._parse_expression(call.args[0]))
 
-    def _parse_patch_constructor(self, constructor: ast.Call):
+    def _parse_matrix_vector_product(self, call: ast.Call):
+        matrix = self._parse_expression(call.args[0])
+        vector = self._parse_expression(call.args[1])
+        return SyntaxTree.DataBlockConstructionFromMatrixVectorProduct(SyntaxTree.Name(call.args[2].id, vector.get_type()), matrix, vector)
+
+    #def _parse_vector_constructor(self, constructor: ast.Call):
+    #    return SyntaxTree.VectorFromDataBlock(self._parse_expression(constructor.args[0]))
+
+    def _parse_diagonal_matrix_constructor(self, constructor: ast.Call):
+        width = self._parse_expression(constructor.args[0])
+        array = self._parse_expression(constructor.args[1])
+        return SyntaxTree.DiagonalMatrix(width, array, [width])
+
+    def _parse_matrix_constructor(self, constructor: ast.Call):
+        rows = self._parse_expression(constructor.args[0])
+        cols = self._parse_expression(constructor.args[1])
+        array = self._parse_expression(constructor.args[2])
+        return SyntaxTree.Matrix([rows, cols], array, [rows])
+    
+    def _parse_kronecker_product(self, product: ast.Call):
+        lhs_matrix = self._parse_expression(product.args[0])
+        rhs_matrix = self._parse_expression(product.args[1])
+
+        if type(lhs_matrix.get_type()) is SyntaxTree.TDiagonalMatrix and type(rhs_matrix.get_type()) is SyntaxTree.TDiagonalMatrix:
+            if type(lhs_matrix) is SyntaxTree.Name:
+                lhs_width = SyntaxTree.Name.variables[lhs_matrix.id]._width
+            else:
+                lhs_width = lhs_matrix._width
+            
+            if type(rhs_matrix) is SyntaxTree.Name:
+                rhs_width = SyntaxTree.Name.variables[rhs_matrix.id]._width
+            else:
+                rhs_width = rhs_matrix._width
+
+            width = lhs_width * rhs_width
+            return SyntaxTree.DiagonalMatrix(width, SyntaxTree.FunctionCall("kroneckerProduct", [lhs_matrix, rhs_matrix]), [lhs_width, rhs_width])
+        else:
+            if type(lhs_matrix) is SyntaxTree.Name and type(lhs_matrix.get_type()) is SyntaxTree.TMatrix:
+                lhs_dimensions = SyntaxTree.Name.variables[lhs_matrix.id]._dimensions
+            elif type(lhs_matrix) is SyntaxTree.Name and type(lhs_matrix.get_type()) is SyntaxTree.TDiagonalMatrix:
+                lhs_dimensions = [SyntaxTree.Name.variables[lhs_matrix.id]._width, SyntaxTree.Name.variables[lhs_matrix.id]._width]
+            elif type(lhs_matrix) is SyntaxTree.TMatrix:
+                lhs_dimensions = lhs_matrix._dimensions
+            else:
+                lhs_dimensions = [lhs_matrix._width, lhs_matrix._width]
+            
+            if type(rhs_matrix) is SyntaxTree.Name and type(rhs_matrix.get_type()) is SyntaxTree.TMatrix:
+                rhs_dimensions = SyntaxTree.Name.variables[rhs_matrix.id]._dimensions
+            elif type(rhs_matrix) is SyntaxTree.Name and type(rhs_matrix.get_type()) is SyntaxTree.TDiagonalMatrix:
+                rhs_dimensions = [SyntaxTree.Name.variables[rhs_matrix.id]._width, SyntaxTree.Name.variables[rhs_matrix.id]._width]
+            elif type(rhs_matrix) is SyntaxTree.TMatrix:
+                rhs_dimensions = rhs_matrix._dimensions
+            else:
+                rhs_dimensions = [rhs_matrix._width, rhs_matrix._width]
+
+            dimensions = [lhs_dimensions[0] * rhs_dimensions[0], lhs_dimensions[1] * rhs_dimensions[1]]
+            return SyntaxTree.Matrix(dimensions, SyntaxTree.FunctionCall("kroneckerProduct", [lhs_matrix, rhs_matrix]), [lhs_dimensions[0], lhs_dimensions[1]])
+
+    def _parse_patch_constructor(self, constructor: ast.Call, isFace = False):
         iteration_range = []
         for interval in constructor.args[0].elts:
             iteration_range.append([self._parse_expression(interval.elts[0]), self._parse_expression(interval.elts[1])])
         
         if type(constructor.args[1]) is ast.Call:
             internal = SyntaxTree.String(constructor.args[1].args[0].value)
+            underlying_type = SyntaxTree.String("double")
+            if len(constructor.args) > 2:
+                underlying_type = SyntaxTree.String(constructor.args[2].value)
             function_arguments = []
             for arg in constructor.args[1].args[1:]:
                 function_arguments.append(self._parse_expression(arg))
@@ -44,17 +123,29 @@ class Parser:
                 internal = SyntaxTree.FunctionCall("SolverType::" + constructor.args[1].args[0].value, function_arguments, True)
             else:
                 internal = SyntaxTree.FunctionCall(constructor.args[1].args[0].value, function_arguments)
-            return SyntaxTree.DataBlock(iteration_range, internal, True) 
+            if not isFace:
+                return SyntaxTree.DataBlock(iteration_range, internal, True, underlying_type=underlying_type) 
+            else:
+                return SyntaxTree.FaceDataBlock(iteration_range, internal, True, underlying_type=underlying_type) 
         elif type(constructor.args[1]) is ast.Constant:
             if type(constructor.args[1].value) is str:
                 internal = SyntaxTree.String(constructor.args[1].value)
-                if len(constructor.args) > 2:
-                    return SyntaxTree.DataBlock(iteration_range, internal, False, underlying_type=SyntaxTree.String(constructor.args[2].value))
+                if not isFace:
+                    if len(constructor.args) > 2:
+                        return SyntaxTree.DataBlock(iteration_range, internal, False, underlying_type=SyntaxTree.String(constructor.args[2].value))
+                    else:
+                        return SyntaxTree.DataBlock(iteration_range, internal, False)
                 else:
-                    return SyntaxTree.DataBlock(iteration_range, internal, False)
+                    if len(constructor.args) > 2:
+                        return SyntaxTree.FaceDataBlock(iteration_range, internal, False, underlying_type=SyntaxTree.String(constructor.args[2].value))
+                    else:
+                        return SyntaxTree.FaceDataBlock(iteration_range, internal, False)
             else:
                 internal = self._parse_constant(constructor.args[1])
-                return SyntaxTree.DataBlock(iteration_range, internal, True)
+                if not isFace:
+                    return SyntaxTree.DataBlock(iteration_range, internal, True)
+                else:
+                    return SyntaxTree.FaceDataBlock(iteration_range, internal, True)
 
     def _parse_unary_operation(self, unary_operation: ast.UnaryOp):
         operand = self._parse_expression(unary_operation.operand)
@@ -80,6 +171,8 @@ class Parser:
 
         if type(lhs.get_type()) is SyntaxTree.TDataBlock or type(rhs.get_type()) is SyntaxTree.TDataBlock:
             return SyntaxTree.DataBlockBinaryOperation(operation, lhs, rhs)
+        #elif type(lhs.get_type()) is SyntaxTree.TMatrix or type(rhs.get_type()) is SyntaxTree.TMatrix:
+        #    return SyntaxTree.DiagonalMatrixBinaryOperation(operation, lhs, rhs)
         else:
             return SyntaxTree.BinaryOperation(operation, lhs, rhs)
 
@@ -121,6 +214,8 @@ class Parser:
         if type(expression) is ast.BinOp:
             return self._parse_binary_operation(expression)
         if type(expression) is ast.Name:
+            if expression.id == "index":
+                return SyntaxTree.Index()
             return SyntaxTree.Name(expression.id)
         if type(expression) is ast.Call:
             return self._parse_call(expression)
@@ -143,6 +238,23 @@ class Parser:
                     return SyntaxTree.DataBlockConstructionFromOperation(SyntaxTree.Name(id, value.get_type()), value)
                 else:
                     return SyntaxTree.DataBlockConstructionFromFunction(SyntaxTree.Name(id, value.get_type()), value)
+#        elif type(value) is SyntaxTree.VectorFromDataBlock:
+#            SyntaxTree.Name.variables.update({id: value})
+#            return None
+        elif type(value) is SyntaxTree.DiagonalMatrix:
+            SyntaxTree.Name.variables.update({id: value})
+            if type(value._internal) is SyntaxTree.FunctionCall and value._internal.id == "kroneckerProduct":
+                value._id = SyntaxTree.String(id)
+                return SyntaxTree.DiagonalMatrixConstructionFromKroneckerProduct(id, value)
+            if type(value._internal) is SyntaxTree.String:
+                return None
+            return SyntaxTree.DiagonalMatrixConstructionFromValue(id, value)
+        elif type(value) is SyntaxTree.Matrix:
+            SyntaxTree.Name.variables.update({id: value})
+            if type(value._internal) is SyntaxTree.FunctionCall and value._internal.id == "kroneckerProduct":
+                value._id = SyntaxTree.String(id)
+                return SyntaxTree.MatrixConstructionFromKroneckerProduct(id, value)
+            return None
         else:
             return SyntaxTree.Construction(SyntaxTree.Name(id, value.get_type()), value)
     
@@ -155,6 +267,8 @@ class Parser:
                 value.set_output_variable(target)
                 return value
             return SyntaxTree.DataBlockAssignment(target, value)
+        elif type(target.get_type()) is SyntaxTree.TVector:
+            return SyntaxTree.VectorAssignment(target, value)
         else:
             return SyntaxTree.Assignment(target, value)
 
@@ -189,10 +303,10 @@ class Parser:
         if type(statement) is ast.Expr:
             return self._parse_expression(statement.value)
     
-    def _parse_function(self, function: ast.FunctionDef, template, functor_arguments, namespaces, stateless, use_accelerator):
+    def _parse_function(self, function: ast.FunctionDef, template, functor_arguments, namespaces, stateless, use_accelerator, top_level = False):
         id = function.name
         return_type = SyntaxTree.TCustom(function.returns.value) if function.returns is not None else SyntaxTree.TCustom(function.returns)
-        parsed_function = SyntaxTree.FunctionDefinition(id, return_type, template, namespaces, stateless)
+        parsed_function = SyntaxTree.FunctionDefinition(id, return_type, template, namespaces, stateless, top_level)
 
         if use_accelerator:
             parsed_function.add_argument(SyntaxTree.Argument("targetDevice", SyntaxTree.TInteger()))
@@ -203,6 +317,9 @@ class Parser:
         if stateless:
             parsed_function.id = parsed_function.id + "Stateless"
             parsed_function._template.insert(0, SyntaxTree.Argument("SolverType", SyntaxTree.TCustom("class")))
+            for functor in functor_arguments:
+                if type(functor._type) is not SyntaxTree.TCustom:
+                    parsed_function.add_argument(functor)
         else:
             for functor in functor_arguments:
                 parsed_function.add_argument(functor)
@@ -216,13 +333,16 @@ class Parser:
 
         return parsed_function
 
-    def parse(self, function, template_arguments, functor_arguments, namespace = [], stateless = False, use_accelerator = False):
+    def parse(self, function, template_arguments, functor_arguments, namespace = [], stateless = False, use_accelerator = False, mlir_omp = False):
         SyntaxTree.Name.variables.clear()
         SyntaxTree.For._inuse_iteration_variables.clear()
         SyntaxTree.Node.use_accelerator = False
-        SyntaxTree.FunctionDefinition._syclDataToCopy.clear()
+        SyntaxTree.Node.use_mlir_omp = mlir_omp
+        #SyntaxTree.FunctionDefinition._syclDataToCopy.clear()
 
-        module = ast.parse(inspect.getsource(function))
+        source_code = inspect.getsource(function)
+        
+        module = ast.parse(source_code)
         function_definition = module.body[0]
         assert isinstance(function_definition, ast.FunctionDef)
         for argument in template_arguments:
@@ -232,7 +352,15 @@ class Parser:
                 SyntaxTree.Name.variables.update({argument.id: SyntaxTree.Boolean(False)})
             if type(argument._type) is SyntaxTree.TFloat:
                 SyntaxTree.Name.variables.update({argument.id: SyntaxTree.Float(99.0)})
-            
+        for argument in functor_arguments:
+            if type(argument._type) is SyntaxTree.TInteger:
+                SyntaxTree.Name.variables.update({argument.id: SyntaxTree.Integer(99)})
+            if type(argument._type) is SyntaxTree.TBoolean:
+                SyntaxTree.Name.variables.update({argument.id: SyntaxTree.Boolean(False)})
+            if type(argument._type) is SyntaxTree.TFloat:
+                SyntaxTree.Name.variables.update({argument.id: SyntaxTree.Float(99.0)})
+
         template_arguments_copy = copy.deepcopy(template_arguments)
-        root = self._parse_function(function_definition, template_arguments_copy, functor_arguments, namespace, stateless, use_accelerator)
+        root = self._parse_function(function_definition, template_arguments_copy, functor_arguments, namespace, stateless, use_accelerator, top_level = True)
+        #root.top_level(True)
         return root

@@ -94,4 +94,15 @@ performing an operation with DataBlock with different numbers of variables, and 
 them has one variable. In this case the datablock with one variable will act as if it
 contained duplicates of this variable to match the number of variables in the other 
 DataBlock.
+
+# Compiling with MLIR
+Building a benchmark that uses MLIR requires our exahype-opt executable, which must first
+be built. This assumes that the steps in \ref documentation_toolchains_llvm .
+Navigate to src/exahype2/mlir and enter the commands
+~~~~~~~~~~~~~
+mkdir build && cd build
+cmake -G Ninja .. -DMLIR_DIR=${LLVM_INSTALL_DIRECTORY}/lib/cmake/mlir
+cmake --build .
+~~~~~~~~~~~~~
+The output bin directory should then be added to your PATH.
 */
