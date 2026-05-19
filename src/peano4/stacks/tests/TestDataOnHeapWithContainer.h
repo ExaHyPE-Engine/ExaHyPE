@@ -24,8 +24,6 @@ private:
 public:
   explicit TestDataOnHeapWithContainer();
   explicit TestDataOnHeapWithContainer(std::size_t size, DoFType v);
-  enum class ObjectConstruction { NoData };
-  explicit TestDataOnHeapWithContainer(ObjectConstruction) noexcept;
   ~TestDataOnHeapWithContainer() noexcept;
 
   TestDataOnHeapWithContainer(const TestDataOnHeapWithContainer& other);

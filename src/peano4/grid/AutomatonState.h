@@ -25,9 +25,6 @@ struct peano4::grid::AutomatonState {
   flag_t flags = 0; // [0..DIMENSIONS-1] = even flags, [DIMENSIONS] = inverted
 
   AutomatonState() noexcept = default;
-  enum class ObjectConstruction { NoData };
-  AutomatonState(ObjectConstruction) noexcept:
-    AutomatonState() {}
 
   static constexpr flag_t evenMaskAll() { return (flag_t(1) << DIMENSIONS) - flag_t(1); }
   static constexpr flag_t evenMask(int i) { return flag_t(1) << i; }

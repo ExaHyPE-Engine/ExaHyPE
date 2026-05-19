@@ -98,14 +98,6 @@ struct tarch::mpi::IntegerMessage {
     static void send(const tarch::mpi::IntegerMessage& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     static void receive(   tarch::mpi::IntegerMessage& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
-
-
-    enum ObjectConstruction {
-      NoData
-    };
-
-    IntegerMessage( ObjectConstruction ):
-        IntegerMessage() {}
     
 #ifdef WITH_MPI
     static void sendAndPollDanglingMessages(const tarch::mpi::IntegerMessage& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());

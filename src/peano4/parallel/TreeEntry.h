@@ -91,14 +91,6 @@ struct peano4::parallel::TreeEntry {
     static void receive(   peano4::parallel::TreeEntry& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
-
-    enum ObjectConstruction {
-      NoData
-    };
-
-    TreeEntry( ObjectConstruction ):
-    TreeEntry() {}
-
 #ifdef WITH_MPI
     static void sendAndPollDanglingMessages(const peano4::parallel::TreeEntry& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
     static void receiveAndPollDanglingMessages(peano4::parallel::TreeEntry& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );

@@ -300,36 +300,26 @@ class ADERDG(object):
 #include "repositories/SolverRepository.h"
 """
 
-        self._current_time_step.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_cell_data_to_compute_kernels_default_guard(),
-            self._load_cell_data_default_guard(),
-            self._store_cell_data_default_guard(),
-        )
-
-        self._previous_time_step.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_cell_data_to_compute_kernels_default_guard(),
-            self._load_cell_data_default_guard(),
-            self._store_cell_data_default_guard(),
-        )
-
-        self._rhs_estimates_projection.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_face_data_to_compute_kernels_default_guard(),
-            self._load_face_data_default_guard(),
-            self._store_face_data_default_guard()
-        )
+        self._rhs_estimates_projection.generator.use_copy_for_exchange = "true"
 
         # Gets overwritten in subclasses to take into account when to send or receive faces
         self._rhs_estimates_projection.generator.send_condition = "false"
         self._rhs_estimates_projection.generator.receive_and_merge_condition = "false"
+        self._rhs_estimates_projection.generator.can_receive = self._load_face_data_default_guard()
+        self._rhs_estimates_projection.generator.can_send = self._store_face_data_default_guard()
 
-        self._flux_estimates_projection.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_face_data_to_compute_kernels_default_guard(),
-            self._load_face_data_default_guard(),
-            self._store_face_data_default_guard()
-        )
+        self._flux_estimates_projection.generator.use_copy_for_exchange = "true"
 
         self._flux_estimates_projection.generator.send_condition = "false"
         self._flux_estimates_projection.generator.receive_and_merge_condition = "false"
+        self._flux_estimates_projection.generator.can_receive = self._load_face_data_default_guard()
+        self._flux_estimates_projection.generator.can_send = self._store_face_data_default_guard()
+
+        self._previous_time_step.generator.can_receive = self._load_cell_data_default_guard()
+        self._previous_time_step.generator.can_send = self._store_cell_data_default_guard()
+
+        self._current_time_step.generator.can_receive = self._load_cell_data_default_guard()
+        self._current_time_step.generator.can_send = self._store_cell_data_default_guard()
 
         self._current_time_step.generator.includes += """
 #include "../repositories/SolverRepository.h"

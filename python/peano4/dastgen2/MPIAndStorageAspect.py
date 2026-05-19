@@ -23,11 +23,10 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
     - The aspect lets you embed a data merge operation into the
       generated data.
 
-    The aspect also determines how and
-    if we store data or not in Peano. Therefore, it covers more than
-    solely MPI. Use the store and load attribute to control these
-    predicates. Please study @ref page_peano_localisation for further
-    documentation.
+    The aspect also determines the signatures Peano expects for local
+    load/store. Local persistence is unconditional for DaStGen data at this
+    level; receive_predicate and send_predicate only guard exchange. Please
+    study @ref page_peano_localisation for further documentation.
 
     ## Usage
 
@@ -62,7 +61,6 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
         self.merge_implementation = ""
         self.receive_predicate = "true"
         self.send_predicate = "true"
-        self.load_store_compute_flag = "::peano4::grid::LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream"
         self.includes = ""
         self.implementation_file_includes = ""
         pass
@@ -98,7 +96,6 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
-#include "peano4/grid/LoadStoreComputeFlag.h"
 #include "peano4/Globals.h"
 #include "peano4/stacks/SendReceiveContext.h"
 """
@@ -123,14 +120,6 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
                 full_qualified_name
             )
             + """
-
-    enum ObjectConstruction {
-      NoData
-    };
-
-    {{name}}( ObjectConstruction ):
-        {{name}}() {}
-    
 #ifdef WITH_MPI
     static void sendAndPollDanglingMessages(const {{full_qualified_name}}& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
     static void receiveAndPollDanglingMessages({{full_qualified_name}}& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
@@ -138,29 +127,48 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
     """
         )
 
+        result += """
+    {{full_qualified_name}} createExchangeView();
+    """
+
         if self.dof_association == DoFAssociation.Vertex:
             result += """
     void merge(::peano4::stacks::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const ::peano4::datamanagement::VertexMarker& marker, int spacetreeId);
-    
-    bool receiveAndMerge(const ::peano4::datamanagement::VertexMarker& marker) const;
-    bool send(const ::peano4::datamanagement::VertexMarker& marker) const;
-    static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const ::peano4::datamanagement::VertexMarker& marker);
+
+    bool receiveAndMerge(const ::peano4::datamanagement::VertexMarker& marker, const ::peano4::stacks::SendReceiveContext context) const;
+    bool send(const ::peano4::datamanagement::VertexMarker& marker, const ::peano4::stacks::SendReceiveContext context) const;
+    INLINE_METHOD static bool load(const ::peano4::datamanagement::VertexMarker& marker) {
+      return true;
+    }
+    INLINE_METHOD static bool store(const ::peano4::datamanagement::VertexMarker& marker) {
+      return true;
+    }
 """
         elif self.dof_association == DoFAssociation.Face:
             result += """
     void merge(::peano4::stacks::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const ::peano4::datamanagement::FaceMarker& marker, int spacetreeId);
 
-    bool receiveAndMerge(const ::peano4::datamanagement::FaceMarker& marker) const;
-    bool send(const ::peano4::datamanagement::FaceMarker& marker) const;
-    static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const ::peano4::datamanagement::FaceMarker& marker);
+    bool receiveAndMerge(const ::peano4::datamanagement::FaceMarker& marker, const ::peano4::stacks::SendReceiveContext context) const;
+    bool send(const ::peano4::datamanagement::FaceMarker& marker, const ::peano4::stacks::SendReceiveContext context) const;
+    INLINE_METHOD static bool load(const ::peano4::datamanagement::FaceMarker& marker) {
+      return true;
+    }
+    INLINE_METHOD static bool store(const ::peano4::datamanagement::FaceMarker& marker) {
+      return true;
+    }
 """
         elif self.dof_association == DoFAssociation.Cell:
             result += """
     void merge(::peano4::stacks::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const ::peano4::datamanagement::CellMarker& marker, int spacetreeId);
 
-    bool receiveAndMerge(const ::peano4::datamanagement::CellMarker& marker) const;
-    bool send(const ::peano4::datamanagement::CellMarker& marker) const;
-    static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const ::peano4::datamanagement::CellMarker& marker);
+    bool receiveAndMerge(const ::peano4::datamanagement::CellMarker& marker, const ::peano4::stacks::SendReceiveContext context) const;
+    bool send(const ::peano4::datamanagement::CellMarker& marker, const ::peano4::stacks::SendReceiveContext context) const;
+    INLINE_METHOD static bool load(const ::peano4::datamanagement::CellMarker& marker) {
+      return true;
+    };
+    INLINE_METHOD static bool store(const ::peano4::datamanagement::CellMarker& marker) {
+      return true;
+    };
 """
             pass
         elif (
@@ -179,7 +187,6 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
             "merge_implementation": self.merge_implementation,
             "receive_predicate": self.receive_predicate,
             "send_predicate": self.send_predicate,
-            "load_store_compute_flag": self.load_store_compute_flag,
         }
 
         result = (
@@ -222,6 +229,12 @@ void {{full_qualified_name}}::receiveAndPollDanglingMessages({{full_qualified_na
     """
         )
 
+        result += """
+  {{full_qualified_name}} {{full_qualified_name}}::createExchangeView() {
+    return {{full_qualified_name}}(*this);
+  }
+        """
+
         if self.dof_association == DoFAssociation.Vertex:
             result += """
 void {{full_qualified_name}}::merge(::peano4::stacks::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const ::peano4::datamanagement::VertexMarker& marker, int spacetreeId) {
@@ -229,17 +242,23 @@ void {{full_qualified_name}}::merge(::peano4::stacks::SendReceiveContext context
 }
 
 
-bool {{full_qualified_name}}::receiveAndMerge(const ::peano4::datamanagement::VertexMarker& marker) const {
-  return {{receive_predicate}};
+bool {{full_qualified_name}}::receiveAndMerge(
+  const ::peano4::datamanagement::VertexMarker& marker,
+  const ::peano4::stacks::SendReceiveContext context
+) const {
+  using enum ::peano4::stacks::SendReceiveContext;
+  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
+  return isCopyContext or ({{receive_predicate}});
 }
 
 
-bool {{full_qualified_name}}::send(const ::peano4::datamanagement::VertexMarker& marker) const {
-  return {{send_predicate}};
-}
-
-::peano4::grid::LoadStoreComputeFlag {{full_qualified_name}}::loadStoreComputeFlag(const ::peano4::datamanagement::VertexMarker& marker) {
-  return {{load_store_compute_flag}};
+bool {{full_qualified_name}}::send(
+  const ::peano4::datamanagement::VertexMarker& marker,
+  const ::peano4::stacks::SendReceiveContext context
+) const {
+  using enum ::peano4::stacks::SendReceiveContext;
+  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
+  return isCopyContext or ({{send_predicate}});
 }
 """
         elif self.dof_association == DoFAssociation.Face:
@@ -249,17 +268,23 @@ void {{full_qualified_name}}::merge(::peano4::stacks::SendReceiveContext context
 }
 
 
-bool {{full_qualified_name}}::receiveAndMerge(const ::peano4::datamanagement::FaceMarker& marker) const {
-  return {{receive_predicate}};
+bool {{full_qualified_name}}::receiveAndMerge(
+  const ::peano4::datamanagement::FaceMarker& marker,
+  const ::peano4::stacks::SendReceiveContext context
+) const {
+  using enum ::peano4::stacks::SendReceiveContext;
+  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
+  return isCopyContext or ({{receive_predicate}});
 }
 
 
-bool {{full_qualified_name}}::send(const ::peano4::datamanagement::FaceMarker& marker) const {
-  return {{send_predicate}};
-}
-
-::peano4::grid::LoadStoreComputeFlag {{full_qualified_name}}::loadStoreComputeFlag(const ::peano4::datamanagement::FaceMarker& marker) {
-  return {{load_store_compute_flag}};
+bool {{full_qualified_name}}::send(
+  const ::peano4::datamanagement::FaceMarker& marker,
+  const ::peano4::stacks::SendReceiveContext context
+) const {
+  using enum ::peano4::stacks::SendReceiveContext;
+  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
+  return isCopyContext or ({{send_predicate}});
 }
 """
         elif self.dof_association == DoFAssociation.Cell:
@@ -269,16 +294,22 @@ void {{full_qualified_name}}::merge(::peano4::stacks::SendReceiveContext context
 }
 
 
-bool {{full_qualified_name}}::receiveAndMerge(const ::peano4::datamanagement::CellMarker& marker) const {
-  return {{receive_predicate}};
+bool {{full_qualified_name}}::receiveAndMerge(
+  const ::peano4::datamanagement::CellMarker& marker,
+  const ::peano4::stacks::SendReceiveContext context
+) const {
+  using enum ::peano4::stacks::SendReceiveContext;
+  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
+  return isCopyContext or ({{receive_predicate}});
 }
 
-bool {{full_qualified_name}}::send(const ::peano4::datamanagement::CellMarker& marker) const {
-  return {{send_predicate}};
-}
-
-::peano4::grid::LoadStoreComputeFlag {{full_qualified_name}}::loadStoreComputeFlag(const ::peano4::datamanagement::CellMarker& marker) {
-  return {{load_store_compute_flag}};
+bool {{full_qualified_name}}::send(
+  const ::peano4::datamanagement::CellMarker& marker,
+  const ::peano4::stacks::SendReceiveContext context
+) const {
+  using enum ::peano4::stacks::SendReceiveContext;
+  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
+  return isCopyContext or ({{send_predicate}});
 }
 """
         elif (

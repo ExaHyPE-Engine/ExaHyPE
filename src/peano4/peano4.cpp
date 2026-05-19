@@ -85,8 +85,8 @@ namespace {
         + ", Debug=" + (PEANO_DEBUG ? "On" : "Off")
     );
     appendStartupHeaderEntry(result, "Git Branch", peano4::version::GitBranch);
-    appendStartupHeaderEntry(result, "Git Commit Message", peano4::version::GitCommitMessage);
     appendStartupHeaderEntry(result, "Git Commit Hash", peano4::version::GitCommitHash);
+    appendStartupHeaderEntry(result, "Git Commit Message", peano4::version::GitCommitMessage);
 
     return result;
   }

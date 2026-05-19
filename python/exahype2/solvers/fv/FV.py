@@ -542,20 +542,6 @@ The finest mesh width of """
             self._patch_overlap_update, self._storage_precision
         )
 
-        self._patch_overlap_old.generator.merge_method_definition = (
-            peano4.toolbox.blockstructured.get_face_merge_implementation(
-                self._patch_overlap_old
-            )
-        )
-        self._patch_overlap_new.generator.merge_method_definition = (
-            peano4.toolbox.blockstructured.get_face_merge_implementation(
-                self._patch_overlap_new
-            )
-        )
-        self._patch.generator.merge_method_definition = (
-            peano4.toolbox.blockstructured.get_cell_merge_implementation(self._patch)
-        )
-
         self._patch_overlap_old.generator.includes += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h"
@@ -565,44 +551,37 @@ The finest mesh width of """
 #include "repositories/SolverRepository.h"
 """
 
-        self._patch.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_cell_data_to_compute_kernels_default_guard(),
-            self._load_cell_data_default_guard(),
-            self._store_cell_data_default_guard(),
-        )
+        # Cell data is not sent/received
+        self._patch.generator.send_condition = "false"
+        self._patch.generator.receive_and_merge_condition = "false"
+        self._patch.generator.can_receive = "false"
+        self._patch.generator.can_send = "false"
 
-        self._patch_reconstructed.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_cell_data_to_compute_kernels_default_guard(),
-            self._load_cell_data_default_guard(),
-            self._store_cell_data_default_guard(),
-        )
+        self._patch_reconstructed.generator.send_condition = "false"
+        self._patch_reconstructed.generator.receive_and_merge_condition = "false"
+        self._patch_reconstructed.generator.can_receive = "false"
+        self._patch_reconstructed.generator.can_send = "false"
 
         self._patch_overlap_old.generator.send_condition = "false"
         self._patch_overlap_old.generator.receive_and_merge_condition = "false"
+        self._patch_overlap_old.generator.can_receive = self._load_face_data_default_guard()
+        self._patch_overlap_old.generator.can_send = self._store_face_data_default_guard()
+        self._patch_overlap_old.generator.use_copy_for_exchange = "false"
+        self._patch_overlap_old.generator.merge_method_definition = "*this = std::move(neighbour);"
 
         self._patch_overlap_new.generator.send_condition = "false"
         self._patch_overlap_new.generator.receive_and_merge_condition = "false"
+        self._patch_overlap_new.generator.can_receive = self._load_face_data_default_guard()
+        self._patch_overlap_new.generator.can_send = self._store_face_data_default_guard()
+        self._patch_overlap_new.generator.use_copy_for_exchange = "false"
+        self._patch_overlap_new.generator.merge_method_definition = "*this = std::move(neighbour);"
 
         self._patch_overlap_update.generator.send_condition = "false"
         self._patch_overlap_update.generator.receive_and_merge_condition = "false"
-
-        self._patch_overlap_old.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-          self._provide_face_data_to_compute_kernels_default_guard(),
-          self._load_face_data_default_guard(),
-          self._store_face_data_default_guard(),
-        )
-
-        self._patch_overlap_new.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-          self._provide_face_data_to_compute_kernels_default_guard(),
-          self._load_face_data_default_guard(),
-          self._store_face_data_default_guard(),
-        )
-
-        self._patch_overlap_update.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-          self._provide_face_data_to_compute_kernels_default_guard(),
-          self._load_face_data_default_guard(),
-          self._store_face_data_default_guard()
-        )
+        self._patch_overlap_update.generator.can_receive = self._load_face_data_default_guard()
+        self._patch_overlap_update.generator.can_send = self._store_face_data_default_guard()
+        self._patch_overlap_update.generator.use_copy_for_exchange = "false"
+        self._patch_overlap_update.generator.merge_method_definition = "*this = std::move(neighbour);"
 
         self._patch.generator.includes += """
 #include "../repositories/SolverRepository.h"
@@ -779,16 +758,11 @@ The finest mesh width of """
     def _provide_cell_data_to_compute_kernels_default_guard(self):
         """! Default logic when to create cell data or not
 
-        ExaHyPE allows you to define when you want to load or store data, and
-        you can also define if you need some grid data for your computations.
-        You might have some temporary data per cell which is neither stored
-        nor loaded, but that has to be there while you compute. Or there might
-        be cells which don't need to store a particular piece of data. See
-        ::peano4::grid::LoadStoreComputeFlag for some details. This predicate
-        here is a default. Particular solvers will take it as a starting point
-        to make more detailed rules: an enclave solver for example might
-        decide to take the information where to store data, but to toggle the
-        storage on and off depending on the solver phase.
+        ExaHyPE keeps patch load/store topology-driven. This predicate decides
+        when cell data is provided to compute and exchange paths. Particular
+        solvers use it as a starting point for more detailed rules: an enclave
+        solver for example might keep the topology criterion but toggle data
+        exchange depending on the solver phase.
         """
         return "not marker.willBeRefined() and repositories::{}.getSolverState()!={}::SolverState::GridConstruction".format(
                    self.get_name_of_global_instance(),

@@ -543,11 +543,6 @@ We use RK("""
             self._unknown_identifier() + "RiemannSolution",
         )
 
-        self._estimate_projection.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_face_data_to_compute_kernels_default_guard(),
-            self._load_face_data_default_guard(),
-            self._store_face_data_default_guard(),
-        )
         self._current_time_step.generator = peano4.datamodel.PatchToData(
             self._current_time_step, "double"
         )
@@ -571,67 +566,57 @@ We use RK("""
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h"
 """
+
+        self._old_solution_projection.generator.includes += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h"
+"""
+
+        self._current_time_step.generator.includes += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h"
+"""
+
+        self._rhs_estimates.generator.includes += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h"
+"""
+
+        self._linear_combination_of_estimates.generator.includes += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h"
+"""
+        self._estimate_projection.generator.send_condition              = "false"
+        self._estimate_projection.generator.receive_and_merge_condition = "false"
+        self._estimate_projection.generator.can_receive      = self._load_face_data_default_guard()
+        self._estimate_projection.generator.can_send         = self._store_face_data_default_guard()
         self._estimate_projection.generator.merge_method_definition = (
             peano4.toolbox.blockstructured.get_face_merge_implementation(
                 self._estimate_projection
             )
         )
 
-        self._old_solution_projection.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_face_data_to_compute_kernels_default_guard(),
-            self._load_face_data_default_guard(),
-            self._store_face_data_default_guard(),
-        )
-        self._old_solution_projection.generator.includes += """
-#include "peano4/utils/Loop.h"
-#include "repositories/SolverRepository.h"
-"""
-
-        self._current_time_step.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_cell_data_to_compute_kernels_default_guard(),
-            self._load_cell_data_default_guard(),
-            self._store_cell_data_default_guard(),
-        )
-        self._current_time_step.generator.includes += """
-#include "peano4/utils/Loop.h"
-#include "repositories/SolverRepository.h"
-"""
-        self._current_time_step.generator.merge_method_definition = (
-            peano4.toolbox.blockstructured.get_cell_merge_implementation(
-                self._current_time_step
-            )
-        )
-
-        self._rhs_estimates.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_cell_data_to_compute_kernels_default_guard(),
-            self._load_cell_data_default_guard(),
-            self._store_cell_data_default_guard(),
-        )
-        self._rhs_estimates.generator.includes += """
-#include "peano4/utils/Loop.h"
-#include "repositories/SolverRepository.h"
-"""
-
-        self._linear_combination_of_estimates.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_cell_data_to_compute_kernels_default_guard(),
-            "false",
-            "false",
-        )        
-        self._linear_combination_of_estimates.generator.includes += """
-#include "peano4/utils/Loop.h"
-#include "repositories/SolverRepository.h"
-"""
-        self._estimate_projection.generator.send_condition = "false"
-        self._estimate_projection.generator.receive_and_merge_condition = "false"
-
-        self._old_solution_projection.generator.send_condition = "false"
+        self._old_solution_projection.generator.send_condition              = "false"
         self._old_solution_projection.generator.receive_and_merge_condition = "false"
+        self._old_solution_projection.generator.can_receive      = self._load_face_data_default_guard()
+        self._old_solution_projection.generator.can_send         = self._store_face_data_default_guard()
 
-        self._Riemann_solution.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_face_data_to_compute_kernels_default_guard(),
-            self._load_face_data_default_guard(),
-            self._store_face_data_default_guard(),
-        )
+        self._current_time_step.generator.can_receive  = self._load_cell_data_default_guard()
+        self._current_time_step.generator.can_send     = self._store_cell_data_default_guard()
+
+        self._rhs_estimates.generator.can_receive      = self._load_cell_data_default_guard()
+        self._rhs_estimates.generator.can_send         = self._store_cell_data_default_guard()
+        self._rhs_estimates.generator.send_condition              = "false"
+        self._rhs_estimates.generator.receive_and_merge_condition = "false"
+
+        self._linear_combination_of_estimates.generator.can_receive = self._load_cell_data_default_guard()
+        self._linear_combination_of_estimates.generator.can_send = self._store_cell_data_default_guard()
+
+        self._Riemann_solution.generator.can_receive       = self._load_face_data_default_guard()
+        self._Riemann_solution.generator.can_send          = self._store_face_data_default_guard()
+        self._Riemann_solution.generator.send_condition               = "false"
+        self._Riemann_solution.generator.receive_and_merge_condition  = "false"
+
         self._Riemann_solution.generator.includes += """
 #include "repositories/SolverRepository.h"
 """

@@ -214,20 +214,24 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(const ::peano4::datamanagement::VertexMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
+  [[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker,
+  [[maybe_unused]] ::peano4::stacks::SendReceiveContext context
+) {
   return true;
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(const ::peano4::datamanagement::VertexMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
+  [[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker,
+  [[maybe_unused]] ::peano4::stacks::SendReceiveContext context
+) {
   return true;
 }
 
-
-::peano4::grid::LoadStoreComputeFlag {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadStoreComputeFlag(const ::peano4::datamanagement::VertexMarker& marker) {
-  return ::peano4::grid::LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream;
+{{NAMESPACE | join("::")}}::{{CLASSNAME}} {{NAMESPACE | join("::")}}::{{CLASSNAME}}::createExchangeView() {
+    return {{CLASSNAME}}(*this);
 }
-
 
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
   std::ostringstream msg;

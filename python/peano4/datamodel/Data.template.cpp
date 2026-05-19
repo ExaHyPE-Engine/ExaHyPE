@@ -2,13 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "{{CLASSNAME}}.h"
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
-  _data(tarch::allocateMemory<DoFType>(Cardinality, tarch::MemoryLocation::Heap)) {
-
-  std::memset(_data, 0, Cardinality * sizeof(DoFType));
-}
-
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(ObjectConstruction) noexcept:
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() noexcept :
   _data(nullptr) {}
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() noexcept {
@@ -18,72 +12,144 @@
   }
 }
 
-{% if DATA_ASSOCIATION == 1 %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
-  [[maybe_unused]] ::peano4::stacks::SendReceiveContext           context,
-  [[maybe_unused]] const {{CLASSNAME}}&                           neighbour,
-  [[maybe_unused]] const ::peano4::datamanagement::VertexMarker&  marker,
-  [[maybe_unused]] int                                            spacetreeId
-) {
-  {{MERGE_METHOD_DEFINITION}}
+auto {{NAMESPACE | join("::")}}::{{CLASSNAME}}::data() -> DoFType* {
+  if (_data == nullptr) {
+    _data = tarch::allocateMemory<DoFType>(Cardinality, tarch::MemoryLocation::Heap);
+    assertion(_data != nullptr);
+    std::memset(_data, 0, Cardinality * sizeof(DoFType));
+  }
+  return _data;
 }
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send([[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker) const {
+auto {{NAMESPACE | join("::")}}::{{CLASSNAME}}::createExchangeView() -> {{CLASSNAME}} {
+  if ({{USE_COPY_FOR_EXCHANGE}}) {
+    {{CLASSNAME}} view = *this;
+    return view;
+  } else {
+    return std::move(*this);
+  }
+}
+
+{% if DATA_ASSOCIATION == 1 %}
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
+  [[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker,
+  [[maybe_unused]] ::peano4::stacks::SendReceiveContext          context
+) const {
+  using enum ::peano4::stacks::SendReceiveContext;
+  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
+  if (isCopyContext) {
+    return true;
+  }
+  if (not ({{CAN_SEND}})) {
+    return false;
+  }
   return {{SEND_CONDITION}};
 }
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge([[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker) const {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
+  [[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker,
+  [[maybe_unused]] ::peano4::stacks::SendReceiveContext          context
+) const {
+  using enum ::peano4::stacks::SendReceiveContext;
+  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
+  if (isCopyContext) {
+    return true;
+  }
+  if (not ({{CAN_RECEIVE}})) {
+    return false;
+  }
   return {{RECEIVE_AND_MERGE_CONDITION}};
 }
 
-::peano4::grid::LoadStoreComputeFlag {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadStoreComputeFlag([[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker) {
-  return {{LOAD_STORE_COMPUTE_FLAG}};
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
+  ::peano4::stacks::SendReceiveContext          context,
+  {{CLASSNAME}}&&                               neighbour,
+  const ::peano4::datamanagement::VertexMarker& marker,
+  int                                           spacetreeId
+) {
+  {{MERGE_METHOD_DEFINITION}}
 }
 {% endif %}
 
 {% if DATA_ASSOCIATION == 2 %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
-  [[maybe_unused]] ::peano4::stacks::SendReceiveContext         context,
-  [[maybe_unused]] const {{CLASSNAME}}&                         neighbour,
-  [[maybe_unused]] const ::peano4::datamanagement::FaceMarker&  marker,
-  [[maybe_unused]] int                                          spacetreeId
-) {
-  {{MERGE_METHOD_DEFINITION}}
-}
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send([[maybe_unused]] const ::peano4::datamanagement::FaceMarker& marker) const {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
+  [[maybe_unused]] const ::peano4::datamanagement::FaceMarker& marker,
+  [[maybe_unused]] ::peano4::stacks::SendReceiveContext        context
+) const {
+  using enum ::peano4::stacks::SendReceiveContext;
+  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
+  if (isCopyContext) {
+    return true;
+  }
+  if (not ({{CAN_SEND}})) {
+    return false;
+  }
   return {{SEND_CONDITION}};
 }
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge([[maybe_unused]] const ::peano4::datamanagement::FaceMarker& marker) const {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
+  [[maybe_unused]] const ::peano4::datamanagement::FaceMarker& marker,
+  [[maybe_unused]] ::peano4::stacks::SendReceiveContext        context
+) const {
+  using enum ::peano4::stacks::SendReceiveContext;
+  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
+  if (isCopyContext) {
+    return true;
+  }
+  if (not ({{CAN_RECEIVE}})) {
+    return false;
+  }
   return {{RECEIVE_AND_MERGE_CONDITION}};
 }
 
-::peano4::grid::LoadStoreComputeFlag {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadStoreComputeFlag([[maybe_unused]] const ::peano4::datamanagement::FaceMarker& marker) {
-  return {{LOAD_STORE_COMPUTE_FLAG}};
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
+  ::peano4::stacks::SendReceiveContext        context,
+  {{CLASSNAME}}&&                             neighbour,
+  const ::peano4::datamanagement::FaceMarker& marker,
+  int                                         spacetreeId
+) {
+  {{MERGE_METHOD_DEFINITION}}
 }
 {% endif %}
 
 {% if DATA_ASSOCIATION == 3 %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
-  [[maybe_unused]] ::peano4::stacks::SendReceiveContext         context,
-  [[maybe_unused]] const {{CLASSNAME}}&                         neighbour,
-  [[maybe_unused]] const ::peano4::datamanagement::CellMarker&  marker,
-  [[maybe_unused]] int                                          spacetreeId
-) {
-  {{MERGE_METHOD_DEFINITION}}
-}
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send([[maybe_unused]] const ::peano4::datamanagement::CellMarker& marker) const {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
+  [[maybe_unused]] const ::peano4::datamanagement::CellMarker& marker,
+  [[maybe_unused]] ::peano4::stacks::SendReceiveContext        context
+) const {
+  using enum ::peano4::stacks::SendReceiveContext;
+  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
+  if (isCopyContext) {
+    return true;
+  }
+  if (not ({{CAN_SEND}})) {
+    return false;
+  }
   return {{SEND_CONDITION}};
 }
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge([[maybe_unused]] const ::peano4::datamanagement::CellMarker& marker) const {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
+  [[maybe_unused]] const ::peano4::datamanagement::CellMarker& marker,
+  [[maybe_unused]] ::peano4::stacks::SendReceiveContext        context
+) const {
+  using enum ::peano4::stacks::SendReceiveContext;
+  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
+  if (isCopyContext) {
+    return true;
+  }
+  if (not ({{CAN_RECEIVE}})) {
+    return false;
+  }
   return {{RECEIVE_AND_MERGE_CONDITION}};
 }
 
-::peano4::grid::LoadStoreComputeFlag {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadStoreComputeFlag([[maybe_unused]] const ::peano4::datamanagement::CellMarker& marker) {
-  return {{LOAD_STORE_COMPUTE_FLAG}};
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
+  ::peano4::stacks::SendReceiveContext        context,
+  {{CLASSNAME}}&&                             neighbour,
+  const ::peano4::datamanagement::CellMarker& marker,
+  int                                         spacetreeId
+) {
+  {{MERGE_METHOD_DEFINITION}}
 }
 {% endif %}
 

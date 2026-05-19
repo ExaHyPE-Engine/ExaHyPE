@@ -8,7 +8,6 @@
 #include "tarch/mpi/mpi.h"
 
 #include "peano4/datamanagement/VertexMarker.h"
-#include "peano4/grid/LoadStoreComputeFlag.h"
 #include "peano4/stacks/Stack.h"
 #include "peano4/Globals.h"
 
@@ -41,9 +40,6 @@ private:
 
 public:
   explicit {{CLASSNAME}}() = default;
-  enum class ObjectConstruction { NoData };
-  explicit {{CLASSNAME}}(ObjectConstruction) noexcept:
-    {{CLASSNAME}}() {}
   ~{{CLASSNAME}}() noexcept = default;
 
   {{CLASSNAME}}(const {{CLASSNAME}}& other);
@@ -55,11 +51,19 @@ public:
   void clear();
   void clone(const {{CLASSNAME}}& other);
 
+  {{CLASSNAME}} createExchangeView();
+
   void merge(::peano4::stacks::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const ::peano4::datamanagement::VertexMarker& marker, int spacetreeId);
   void mergeWithParticle(DoFType* neighbourParticle, const ::peano4::datamanagement::VertexMarker& marker, int spacetreeId);
-  bool send(const ::peano4::datamanagement::VertexMarker& marker);
-  bool receiveAndMerge(const ::peano4::datamanagement::VertexMarker& marker);
-  static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const ::peano4::datamanagement::VertexMarker& marker);
+  bool send(const ::peano4::datamanagement::VertexMarker& marker, ::peano4::stacks::SendReceiveContext context);
+  bool receiveAndMerge(const ::peano4::datamanagement::VertexMarker& marker, ::peano4::stacks::SendReceiveContext context);
+
+  INLINE_METHOD static bool load(const ::peano4::datamanagement::VertexMarker& marker) {
+    return true;
+  }
+  INLINE_METHOD static bool store(const ::peano4::datamanagement::VertexMarker& marker) {
+    return true;
+  }
 
   void particlesCanNotBeLiftedLocally();
   Container::iterator particleCanNotBeLiftedLocally(const Container::iterator& particle);

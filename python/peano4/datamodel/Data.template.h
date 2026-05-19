@@ -9,7 +9,6 @@
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
-#include "peano4/grid/LoadStoreComputeFlag.h"
 #include "peano4/stacks/SendReceiveContext.h"
 #include "peano4/Globals.h"
 
@@ -46,9 +45,7 @@ private:
   DoFType* _data;
 
 public:
-  explicit {{CLASSNAME}}();
-  enum class ObjectConstruction { NoData };
-  explicit {{CLASSNAME}}(ObjectConstruction) noexcept;
+  explicit {{CLASSNAME}}() noexcept;
   ~{{CLASSNAME}}() noexcept;
 
   INLINE_METHOD {{CLASSNAME}}(const {{CLASSNAME}}& other):
@@ -61,9 +58,16 @@ public:
       return *this;
     }
 
-    // Handle case where source is empty
     if (other._data == nullptr) {
-      // Do not free the memory here so it can be reused later
+      // A null pointer is the only empty-state marker. Clear the target so
+      // reused stack slots cannot expose data from an earlier traversal.
+      // This is semantically required for stack reuse, but it gives up the
+      // target's reusable heap buffer.
+      // TODO: Remove, once we have memory pools.
+      if (_data != nullptr) {
+        tarch::freeMemory(_data, tarch::MemoryLocation::Heap);
+        _data = nullptr;
+      }
       return *this;
     }
 
@@ -85,32 +89,58 @@ public:
     return *this;
   }
 
-  INLINE_METHOD DoFType* data() noexcept {
-    return _data;
-  }
+  {{CLASSNAME}} createExchangeView();
+
+  DoFType* data();
+
   INLINE_METHOD const DoFType* data() const noexcept {
+    assertion(_data != nullptr);
     return _data;
   }
 
 {% if DATA_ASSOCIATION == 1 -%}
-  void merge(::peano4::stacks::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const ::peano4::datamanagement::VertexMarker& marker, int spacetreeId);
-  bool send(const ::peano4::datamanagement::VertexMarker& marker) const;
-  bool receiveAndMerge(const ::peano4::datamanagement::VertexMarker& marker) const;
-  static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const ::peano4::datamanagement::VertexMarker& marker);
+  bool send(const ::peano4::datamanagement::VertexMarker& marker, ::peano4::stacks::SendReceiveContext context) const;
+  bool receiveAndMerge(const ::peano4::datamanagement::VertexMarker& marker, ::peano4::stacks::SendReceiveContext context) const;
+  void merge(::peano4::stacks::SendReceiveContext context, {{CLASSNAME}}&& neighbour, const ::peano4::datamanagement::VertexMarker& marker, int spacetreeId);
+
+  INLINE_METHOD static bool load(const ::peano4::datamanagement::VertexMarker& marker) {
+    // Local persistence is intentionally topology-driven. Solver-state guards
+    // belong to send()/receiveAndMerge() and only affect exchange.
+    return not marker.hasBeenRefined();
+  }
+  INLINE_METHOD static bool store(const ::peano4::datamanagement::VertexMarker& marker) {
+    return not marker.willBeRefined();
+  }
 {% endif -%}
 
 {% if DATA_ASSOCIATION == 2 -%}
-  void merge(::peano4::stacks::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const ::peano4::datamanagement::FaceMarker& marker, int spacetreeId);
-  bool send(const ::peano4::datamanagement::FaceMarker& marker) const;
-  bool receiveAndMerge(const ::peano4::datamanagement::FaceMarker& marker) const;
-  static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const ::peano4::datamanagement::FaceMarker& marker);
+  bool send(const ::peano4::datamanagement::FaceMarker& marker, ::peano4::stacks::SendReceiveContext context) const;
+  bool receiveAndMerge(const ::peano4::datamanagement::FaceMarker& marker, ::peano4::stacks::SendReceiveContext context) const;
+  void merge(::peano4::stacks::SendReceiveContext context, {{CLASSNAME}}&& neighbour, const ::peano4::datamanagement::FaceMarker& marker, int spacetreeId);
+
+  INLINE_METHOD static bool load(const ::peano4::datamanagement::FaceMarker& marker) {
+    // Local persistence is intentionally topology-driven. Solver-state guards
+    // belong to send()/receiveAndMerge() and only affect exchange.
+    return not marker.hasBeenRefined();
+  }
+  INLINE_METHOD static bool store(const ::peano4::datamanagement::FaceMarker& marker) {
+    return not marker.willBeRefined();
+  }
 {% endif -%}
 
 {% if DATA_ASSOCIATION == 3 -%}
-  void merge(::peano4::stacks::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const ::peano4::datamanagement::CellMarker& marker, int spacetreeId);
-  bool send(const ::peano4::datamanagement::CellMarker& marker) const;
-  bool receiveAndMerge(const ::peano4::datamanagement::CellMarker& marker) const;
-  static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const ::peano4::datamanagement::CellMarker& marker);
+  bool send(const ::peano4::datamanagement::CellMarker& marker, ::peano4::stacks::SendReceiveContext context) const;
+  bool receiveAndMerge(const ::peano4::datamanagement::CellMarker& marker, ::peano4::stacks::SendReceiveContext context) const;
+  void merge(::peano4::stacks::SendReceiveContext context, {{CLASSNAME}}&& neighbour, const ::peano4::datamanagement::CellMarker& marker, int spacetreeId);
+
+  INLINE_METHOD static bool load(const ::peano4::datamanagement::CellMarker& marker) {
+    // Local persistence is intentionally topology-driven. Solver-state guards
+    // belong to send()/receiveAndMerge() and only affect exchange.
+    return not marker.hasBeenRefined();
+  }
+  INLINE_METHOD static bool store(const ::peano4::datamanagement::CellMarker& marker) {
+    return not marker.willBeRefined();
+  }
 {% endif -%}
 
 #ifdef WITH_MPI

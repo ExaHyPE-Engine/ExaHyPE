@@ -44,12 +44,10 @@ struct peano4::grid::GridVertex {
   static constexpr std::uint8_t HasBeenVertexTypeHangingInPreviousTreeSweep         = 1 << 4; // = 0b00010000
 
   GridVertex() noexcept = default;
-  enum class ObjectConstruction { NoData };
-  GridVertex(ObjectConstruction) noexcept:
-    GridVertex() {}
 
   INLINE_METHOD State getState() const noexcept { return static_cast<State>(state); }
   INLINE_METHOD void  setState(State s) noexcept { state = static_cast<std::uint8_t>(s); }
+
 #if PEANO_DEBUG
   INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getX() const noexcept { return x; }
   INLINE_METHOD void   setX(const tarch::la::Vector<DIMENSIONS, double>& value) noexcept { x = value; }

@@ -1182,11 +1182,7 @@ void peano4::grid::Spacetree::descend(const AutomatonState& state, GridVertex ve
     );
     traceLeave("Grid bookkeeping before enter");
 
-    traceEnter("Observer data load");
-    observer.loadVertexData(enterNodeGridTraversalEvent);
-    observer.loadFaceData(enterNodeGridTraversalEvent);
-    observer.loadCellData(enterNodeGridTraversalEvent);
-    traceLeave("Observer data load");
+    observer.loadNodeData(enterNodeGridTraversalEvent);
 
     if (canReceiveUserData) {
       traceEnter("Observer data receive");
@@ -1267,11 +1263,7 @@ void peano4::grid::Spacetree::descend(const AutomatonState& state, GridVertex ve
       traceLeave("Observer data send");
     }
 
-    traceEnter("Observer data store");
-    observer.storeCellData(leaveNodeGridTraversalEvent);
-    observer.storeFaceData(leaveNodeGridTraversalEvent);
-    observer.storeVertexData(leaveNodeGridTraversalEvent);
-    traceLeave("Observer data store");
+    observer.storeNodeData(leaveNodeGridTraversalEvent);
 
     traceEnter("Grid bookkeeping after leave");
     if (not _noParallelTopologyChanges) {
@@ -1319,7 +1311,8 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
           logDebug("receive neighbour data from neighbour "
               << p << " for vertex " << fineGridVertices[inVertexPositionWithinCell].toString());
           const int fromStack = peano4::parallel::Node::getInputStackNumberForHorizontalDataExchange(p);
-          observer.receiveAndMergeVertexData(
+          observer.receiveNodeData(
+            GridTraversalObserver::NodeData::Vertex,
             inVertexPositionWithinCell,
             fromStack, // Rank
             stacks::SendReceiveContext::BoundaryExchange,
@@ -1332,7 +1325,8 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
           const auto  outStacks = node.getOutputStacksForPeriodicBoundaryExchange(fineGridVertices[inVertexPositionWithinCell].adjacentRanks);
           for (const auto& p : outStacks) {
             const auto inId = node.getPeriodicBoundaryExchangeInputStackNumberForOutputStack(p);
-            observer.receiveAndMergeVertexData(
+            observer.receiveNodeData(
+              GridTraversalObserver::NodeData::Vertex,
               inVertexPositionWithinCell,
               inId.first,
               stacks::SendReceiveContext::PeriodicBoundaryDataSwap,
@@ -1364,7 +1358,8 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
         );
         if (receivingNeighbourTree >= 0) {
           const int fromStack = peano4::parallel::Node::getInputStackNumberForHorizontalDataExchange(receivingNeighbourTree);
-          observer.receiveAndMergeFaceData(
+          observer.receiveNodeData(
+            GridTraversalObserver::NodeData::Face,
             inFacePositionWithinCell,
             fromStack,
             stacks::SendReceiveContext::BoundaryExchange,
@@ -1379,7 +1374,8 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
 
           logDebug("Will merge face from periodic BC stack #" << fromStack << " with local face");
 
-          observer.receiveAndMergeFaceData(
+          observer.receiveNodeData(
+            GridTraversalObserver::NodeData::Face,
             inFacePositionWithinCell,
             fromStack,
             stacks::SendReceiveContext::PeriodicBoundaryDataSwap,
@@ -1429,7 +1425,8 @@ void peano4::grid::Spacetree::sendUserData(
               << fineGridVertices[outVertexPositionWithinCell].toString() << " from stack " << outVertexStack
               << " on tree " << _id << " to neighbour " << p << ". Position within cell=" << outVertexPositionWithinCell);
           const int toStack = peano4::parallel::Node::getOutputStackNumberForHorizontalDataExchange(p);
-          observer.sendVertexData(
+          observer.sendNodeData(
+            GridTraversalObserver::NodeData::Vertex,
             outVertexPositionWithinCell,
             toStack,
             stacks::SendReceiveContext::BoundaryExchange,
@@ -1444,7 +1441,8 @@ void peano4::grid::Spacetree::sendUserData(
                 << fineGridVertices[outVertexPositionWithinCell].toString() << " on tree " << _id << " goes to stack "
                 << stackNo.first << " to realise periodic BC");
 
-            observer.sendVertexData(
+            observer.sendNodeData(
+              GridTraversalObserver::NodeData::Vertex,
               outVertexPositionWithinCell,
               stackNo.first,
               stacks::SendReceiveContext::PeriodicBoundaryDataSwap,
@@ -1461,7 +1459,8 @@ void peano4::grid::Spacetree::sendUserData(
                 << " on tree " << _id << " to upcoming worker " << p << ". Position within cell="
                 << outVertexPositionWithinCell << ". event=" << leaveCellTraversalEvent.toString());
             const int toStack = peano4::parallel::Node::getOutputStackNumberForVerticalDataExchange(p);
-            observer.sendVertexData(
+            observer.sendNodeData(
+              GridTraversalObserver::NodeData::Vertex,
               outVertexPositionWithinCell,
               toStack,
               stacks::SendReceiveContext::ForkDomain,
@@ -1499,7 +1498,8 @@ void peano4::grid::Spacetree::sendUserData(
               << ". Position within cell=" << outFacePositionWithinCell);
 
           const int toStack = peano4::parallel::Node::getOutputStackNumberForHorizontalDataExchange(outgoingNeighbourTree);
-          observer.sendFaceData(
+          observer.sendNodeData(
+            GridTraversalObserver::NodeData::Face,
             outFacePositionWithinCell,
             toStack,
             stacks::SendReceiveContext::BoundaryExchange,
@@ -1514,7 +1514,8 @@ void peano4::grid::Spacetree::sendUserData(
 
           logDebug("send local face from stack " << outFaceStack << " of tree " << _id << " to periodic BC stack #" << toStack);
 
-          observer.sendFaceData(
+          observer.sendNodeData(
+            GridTraversalObserver::NodeData::Face,
             outFacePositionWithinCell,
             toStack,
             stacks::SendReceiveContext::PeriodicBoundaryDataSwap,
@@ -1532,7 +1533,8 @@ void peano4::grid::Spacetree::sendUserData(
               << ". Position within cell=" << outFacePositionWithinCell);
 
           const int toStack = peano4::parallel::Node::getOutputStackNumberForVerticalDataExchange(p);
-          observer.sendFaceData(
+          observer.sendNodeData(
+            GridTraversalObserver::NodeData::Face,
             outFacePositionWithinCell,
             toStack,
             stacks::SendReceiveContext::ForkDomain,
@@ -1550,7 +1552,13 @@ void peano4::grid::Spacetree::sendUserData(
           << _id << " to new worker " << p << ". Left bottom vertex=" << fineGridVertices[0].toString());
 
       const int toStack = peano4::parallel::Node::getOutputStackNumberForVerticalDataExchange(p);
-      observer.sendCellData(toStack, stacks::SendReceiveContext::ForkDomain, leaveCellTraversalEvent);
+      observer.sendNodeData(
+        GridTraversalObserver::NodeData::Cell,
+        0,
+        toStack,
+        stacks::SendReceiveContext::ForkDomain,
+        leaveCellTraversalEvent
+      );
     }
   }
 }

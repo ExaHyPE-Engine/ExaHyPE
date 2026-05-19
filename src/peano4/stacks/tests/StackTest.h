@@ -16,6 +16,7 @@ private:
   void testEmplaceData();
   void testPopData();
   void testClone();
+  void testReusedSlotAssignmentClearsEmptyState();
   void testPushBlockView();
   void testPopBlockView();
   void testMPIDatatype();
