@@ -44,9 +44,11 @@ class PatchToData:
         self.merge_method_definition = ""
         self.send_condition = "true"
         self.receive_and_merge_condition = "true"
-        self.load_store_compute_flag = "::peano4::grid::LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream"
+        self.can_send = "true"
+        self.can_receive = "true"
         self.includes = ""
         self.float_type = FloatTypes(float_type)
+        self.use_copy_for_exchange = "true"
 
     def __str__(self):
         result = (
@@ -56,9 +58,6 @@ class PatchToData:
             + """
   - Receive/merge condition: """
             + self.receive_and_merge_condition
-            + """
-  - Load/store compute flag: """
-            + self.load_store_compute_flag
             + """
   - Merge criterion:         """
         )
@@ -106,17 +105,17 @@ class PatchToData:
                     * self.data.dim[2]
                 )
             ),
-            "MERGE_METHOD_DECLARATIONS": "",
-            "MERGE_METHOD_DEFINITIONS": "",
             "SEND_CONDITION": self.send_condition,
             "RECEIVE_AND_MERGE_CONDITION": self.receive_and_merge_condition,
+            "CAN_SEND": self.can_send,
+            "CAN_RECEIVE": self.can_receive,
             "INCLUDES": self.includes,
             "DATA_ASSOCIATION": int(self.data.association),
             "MERGE_METHOD_DEFINITION": self.merge_method_definition,
-            "LOAD_STORE_COMPUTE_FLAG": self.load_store_compute_flag,
             "FLOAT_TYPE": self.float_type.cpp,
             "MPI_FLOAT_TYPE": self.float_type.mpi,
             "MPI_ELEMENTS_PER_FLOAT": self.float_type.number_of_mpi_types_per_element,
+            "USE_COPY_FOR_EXCHANGE": self.use_copy_for_exchange,
         }
         return d
 

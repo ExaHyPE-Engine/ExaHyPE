@@ -34,9 +34,6 @@ struct peano4::grid::GridStatistics {
   );
 
   GridStatistics() noexcept = default;
-  enum class ObjectConstruction { NoData };
-  GridStatistics(ObjectConstruction) noexcept:
-    GridStatistics() {}
 
   inline bool getCoarseningHasBeenVetoed() const noexcept { return (flags & CoarseningHasBeenVetoed) != 0; }
   inline void setCoarseningHasBeenVetoed(bool v) noexcept {

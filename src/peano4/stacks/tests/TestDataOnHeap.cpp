@@ -19,9 +19,6 @@ peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap(DoFType v):
   }
 }
 
-peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap(ObjectConstruction) noexcept:
-  _data(nullptr) {}
-
 peano4::stacks::tests::TestDataOnHeap::~TestDataOnHeap() noexcept {
   if (_data) {
     tarch::freeMemory(_data, tarch::MemoryLocation::Heap);
@@ -37,7 +34,8 @@ peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap(const TestDataOnHeap& othe
 peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap(TestDataOnHeap&& other) noexcept:
   _data(std::exchange(other._data, nullptr)) {}
 
-peano4::stacks::tests::TestDataOnHeap& peano4::stacks::tests::TestDataOnHeap::operator=(TestDataOnHeap&& other
+peano4::stacks::tests::TestDataOnHeap& peano4::stacks::tests::TestDataOnHeap::operator=(
+  TestDataOnHeap&& other
 ) noexcept {
   if (this != &other) {
     if (_data) {

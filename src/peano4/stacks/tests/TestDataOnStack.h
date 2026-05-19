@@ -20,8 +20,6 @@ public:
 
   explicit TestDataOnStack();
   explicit TestDataOnStack(int v);
-  enum class ObjectConstruction { NoData };
-  explicit TestDataOnStack(ObjectConstruction) noexcept;
   ~TestDataOnStack() noexcept = default;
 
   TestDataOnStack(const TestDataOnStack& other);

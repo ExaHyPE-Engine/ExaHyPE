@@ -346,20 +346,6 @@ The finest mesh width of """
             self._patch_overlap_update, self._storage_precision
         )
 
-        self._patch_overlap_old.generator.merge_method_definition = (
-            peano4.toolbox.blockstructured.get_face_merge_implementation(
-                self._patch_overlap_old
-            )
-        )
-        self._patch_overlap_new.generator.merge_method_definition = (
-            peano4.toolbox.blockstructured.get_face_merge_implementation(
-                self._patch_overlap_new
-            )
-        )
-        self._patch.generator.merge_method_definition = (
-            peano4.toolbox.blockstructured.get_cell_merge_implementation(self._patch)
-        )
-
         self._patch_overlap_old.generator.includes += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h"
@@ -369,54 +355,32 @@ The finest mesh width of """
 #include "repositories/SolverRepository.h"
 """
 
-        self._patch.generator.load_store_compute_flag = (
-            "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-                self._provide_cell_data_to_compute_kernels_default_guard(),
-                self._load_cell_data_default_guard(),
-                self._store_cell_data_default_guard(),
-            )
-        )
+        self._patch.generator.can_receive = self._load_cell_data_default_guard()
+        self._patch.generator.can_send = self._store_cell_data_default_guard()
 
-        self._patch_reconstructed.generator.load_store_compute_flag = (
-            "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-                self._provide_cell_data_to_compute_kernels_default_guard(),
-                self._load_cell_data_default_guard(),
-                self._store_cell_data_default_guard(),
-            )
-        )
+        self._patch_reconstructed.generator.can_receive = self._load_cell_data_default_guard()
+        self._patch_reconstructed.generator.can_send = self._store_cell_data_default_guard()
 
         self._patch_overlap_old.generator.send_condition = "false"
         self._patch_overlap_old.generator.receive_and_merge_condition = "false"
+        self._patch_overlap_old.generator.can_receive = self._load_face_data_default_guard()
+        self._patch_overlap_old.generator.can_send = self._store_face_data_default_guard()
+        self._patch_overlap_old.generator.use_copy_for_exchange = "false"
+        self._patch_overlap_old.generator.merge_method_definition = "*this = std::move(neighbour);"
 
         self._patch_overlap_new.generator.send_condition = "false"
         self._patch_overlap_new.generator.receive_and_merge_condition = "false"
+        self._patch_overlap_new.generator.can_receive = self._load_face_data_default_guard()
+        self._patch_overlap_new.generator.can_send = self._store_face_data_default_guard()
+        self._patch_overlap_new.generator.use_copy_for_exchange = "false"
+        self._patch_overlap_new.generator.merge_method_definition = "*this = std::move(neighbour);"
 
         self._patch_overlap_update.generator.send_condition = "false"
         self._patch_overlap_update.generator.receive_and_merge_condition = "false"
-
-        self._patch_overlap_old.generator.load_store_compute_flag = (
-            "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-                self._provide_face_data_to_compute_kernels_default_guard(),
-                self._load_face_data_default_guard(),
-                self._store_face_data_default_guard(),
-            )
-        )
-
-        self._patch_overlap_new.generator.load_store_compute_flag = (
-            "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-                self._provide_face_data_to_compute_kernels_default_guard(),
-                self._load_face_data_default_guard(),
-                self._store_face_data_default_guard(),
-            )
-        )
-
-        self._patch_overlap_update.generator.load_store_compute_flag = (
-            "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-                self._provide_face_data_to_compute_kernels_default_guard(),
-                self._load_face_data_default_guard(),
-                self._store_face_data_default_guard(),
-            )
-        )
+        self._patch_overlap_update.generator.can_receive = self._load_face_data_default_guard()
+        self._patch_overlap_update.generator.can_send = self._store_face_data_default_guard()
+        self._patch_overlap_update.generator.use_copy_for_exchange = "false"
+        self._patch_overlap_update.generator.merge_method_definition = "*this = std::move(neighbour);"
 
         self._patch.generator.includes += """
 #include "../repositories/SolverRepository.h"

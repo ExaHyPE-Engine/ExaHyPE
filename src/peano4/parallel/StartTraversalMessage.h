@@ -89,14 +89,6 @@ struct peano4::parallel::StartTraversalMessage {
     static void receive(   peano4::parallel::StartTraversalMessage& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
-
-    enum ObjectConstruction {
-      NoData
-    };
-
-    StartTraversalMessage( ObjectConstruction ):
-        StartTraversalMessage() {}
-
 #ifdef WITH_MPI
     static void sendAndPollDanglingMessages(const peano4::parallel::StartTraversalMessage& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
     static void receiveAndPollDanglingMessages(peano4::parallel::StartTraversalMessage& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );

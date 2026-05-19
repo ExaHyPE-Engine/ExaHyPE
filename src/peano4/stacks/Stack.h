@@ -10,6 +10,7 @@
 
 #include <memory>
 #include <sstream>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -23,7 +24,7 @@ class peano4::stacks::Stack {
 private:
   // static_assert(std::is_standard_layout_v<T>);
   // static_assert(std::is_trivially_copyable_v<T>);
-  static_assert(std::is_copy_constructible_v<T>);
+  static_assert(std::is_move_constructible_v<T>);
 
 protected:
   std::vector<T> _data{};
@@ -95,12 +96,6 @@ protected:
     ) noexcept(std::is_nothrow_destructible_v<T> && std::is_nothrow_default_constructible_v<T>) {
       emplace(index);
     }
-
-    INLINE_METHOD void emplace_no_data(std::size_t index) noexcept(
-      std::is_nothrow_destructible_v<T> && std::is_nothrow_constructible_v<T, typename T::ObjectConstruction>
-    ) {
-      emplace(index, T::ObjectConstruction::NoData);
-    }
   };
 
 public:
@@ -150,10 +145,18 @@ public:
     return *this;
   }
 
-  INLINE_METHOD std::size_t push(const T& element) {
+  INLINE_METHOD std::size_t push(const T& element)
+    requires(std::is_copy_constructible_v<T> and (std::is_copy_assignable_v<T> or std::is_move_assignable_v<T>))
+  {
     if (_logicalSize < _data.size()) {
-      _data[_logicalSize] = element;
-      // _data[_logicalSize] = T(element); // Copy-construct temp, then move-assign
+      // Reuse preserves the physical object and replaces it by assignment.
+      // Prefer direct copy assignment; otherwise copy-construct a temporary
+      // and move it into place.
+      if constexpr (std::is_copy_assignable_v<T>) {
+        _data[_logicalSize] = element;
+      } else {
+        _data[_logicalSize] = T(element);
+      }
     } else {
       _data.push_back(element); // Copy element into std::vector
     }
@@ -163,6 +166,9 @@ public:
   INLINE_METHOD std::size_t push(T&& element) { // May not be const
     // std::move is required here to make sure it is actually moved (as the argument has a name)
     if (_logicalSize < _data.size()) {
+      // Reuse preserves the physical object and replaces it by assignment.
+      // T::operator= has to replace the full semantic state, including
+      // empty/invalid handles.
       _data[_logicalSize] = std::move(element);
     } else {
       _data.push_back(std::move(element)); // Move element into std::vector
@@ -198,7 +204,6 @@ public:
       _logicalSize = size;
     } else {
       // Need more physical storage; construct new elements
-      //_data.resize(size, T(T::ObjectConstruction::NoData));
       _data.reserve(size);
       while (_data.size() < size) {
         _data.emplace_back(); // Construct in place, no assignment
@@ -250,16 +255,20 @@ public:
     const std::size_t base = _logicalSize;
     _logicalSize += numberOfElements;
     if (_data.size() < _logicalSize) {
-      //_data.resize(_logicalSize, T(T::ObjectConstruction::NoData));
       _data.reserve(_logicalSize);
       while (_data.size() < _logicalSize) {
-        _data.emplace_back(T::ObjectConstruction::NoData); // Construct in place
+        _data.emplace_back(); // Default construct
       }
     }
+    // Existing physical slots are reused as-is. Callers that fill the view
+    // must assign values whose assignment operators fully replace semantic
+    // state, including empty/invalid handles.
     return View(numberOfElements, base, this);
   }
 
-  INLINE_METHOD void clone(const Stack<T>& other) {
+  INLINE_METHOD void clone(const Stack<T>& other)
+    requires std::is_copy_constructible_v<T>
+  {
     assertion(this->empty());
     const std::size_t n = other._logicalSize;
     _data.clear();
@@ -287,7 +296,11 @@ public:
     _data.clear();
   }
 
-  INLINE_METHOD void shallowClear() { _logicalSize = 0; }
+  INLINE_METHOD void shallowClear() {
+    // Keep constructed elements for reuse; their old semantic state remains
+    // present until a later push()/View::set() assignment replaces it.
+    _logicalSize = 0;
+  }
 
 #ifdef WITH_MPI
   /**

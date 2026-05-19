@@ -50,32 +50,35 @@ public:
   static void prepareTraversal();
   static void unprepareTraversal();
 
-  virtual void beginTraversal(const tarch::la::Vector<DIMENSIONS,double>& x, const tarch::la::Vector<DIMENSIONS,double>& h) override;
-  virtual void endTraversal(const tarch::la::Vector<DIMENSIONS,double>& x, const tarch::la::Vector<DIMENSIONS,double>& h) override;
+  virtual void beginTraversal(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h
+  ) override;
+  virtual void endTraversal(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h
+  ) override;
 
   virtual void enterNode(const ::peano4::grid::GridTraversalEvent& event) override;
   virtual void leaveNode(const ::peano4::grid::GridTraversalEvent& event) override;
 
-{%- if VERTICES %}
-  virtual void loadVertexData(const ::peano4::grid::GridTraversalEvent& event) override;
-  virtual void storeVertexData(const ::peano4::grid::GridTraversalEvent& event) override;
-  virtual void sendVertexData(int position, int toStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) override;
-  virtual void receiveAndMergeVertexData(int position, int fromStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) override;
-{%- endif %}
+  virtual void loadNodeData(const ::peano4::grid::GridTraversalEvent& event) override;
+  virtual void storeNodeData(const ::peano4::grid::GridTraversalEvent& event) override;
 
-{%- if FACES %}
-  virtual void loadFaceData(const ::peano4::grid::GridTraversalEvent& event) override;
-  virtual void storeFaceData(const ::peano4::grid::GridTraversalEvent& event) override;
-  virtual void sendFaceData(int position, int toStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) override;
-  virtual void receiveAndMergeFaceData(int position, int fromStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) override;
-{%- endif %}
-
-{%- if CELLS %}
-  virtual void loadCellData(const ::peano4::grid::GridTraversalEvent& event) override;
-  virtual void storeCellData(const ::peano4::grid::GridTraversalEvent& event) override;
-  virtual void sendCellData(int toStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) override;
-  virtual void receiveAndMergeCellData(int fromStack, ::peano4::stacks::SendReceiveContext context, const ::peano4::grid::GridTraversalEvent& event) override;
-{%- endif %}
+  virtual void sendNodeData(
+    ::peano4::grid::GridTraversalObserver::NodeData nodeData,
+    int                                             position,
+    int                                             toStack,
+    ::peano4::stacks::SendReceiveContext            context,
+    const ::peano4::grid::GridTraversalEvent&       event
+  ) override;
+  virtual void receiveNodeData(
+    ::peano4::grid::GridTraversalObserver::NodeData nodeData,
+    int                                             position,
+    int                                             fromStack,
+    ::peano4::stacks::SendReceiveContext            context,
+    const ::peano4::grid::GridTraversalEvent&       event
+  ) override;
 
   virtual void exchangeAllHorizontalDataExchangeStacks(bool symmetricDataCardinality) override;
   virtual void exchangeAllPeriodicBoundaryDataStacks() override;

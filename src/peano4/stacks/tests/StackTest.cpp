@@ -10,6 +10,63 @@
 #include "peano4/stacks/StackWithSerialisation.h"
 #include "tarch/tests/TestMacros.h"
 
+#include <utility>
+
+namespace {
+  class NullableSlotData {
+  private:
+    int* _value;
+
+  public:
+    NullableSlotData():
+      _value(nullptr) {}
+
+    explicit NullableSlotData(int value):
+      _value(new int(value)) {}
+
+    ~NullableSlotData() { delete _value; }
+
+    NullableSlotData(const NullableSlotData& other):
+      _value(other._value == nullptr ? nullptr : new int(*other._value)) {}
+
+    NullableSlotData(NullableSlotData&& other) noexcept:
+      _value(std::exchange(other._value, nullptr)) {}
+
+    NullableSlotData& operator=(const NullableSlotData& other) {
+      if (this == &other) {
+        return *this;
+      }
+
+      if (other._value == nullptr) {
+        delete _value;
+        _value = nullptr;
+        return *this;
+      }
+
+      if (_value == nullptr) {
+        _value = new int;
+      }
+      *_value = *other._value;
+      return *this;
+    }
+
+    NullableSlotData& operator=(NullableSlotData&& other) noexcept {
+      if (this != &other) {
+        delete _value;
+        _value = std::exchange(other._value, nullptr);
+      }
+      return *this;
+    }
+
+    bool empty() const { return _value == nullptr; }
+
+    int value() const {
+      assertion(_value != nullptr);
+      return *_value;
+    }
+  };
+} // namespace
+
 peano4::stacks::tests::StackTest::StackTest():
   TestCase("peano4::stacks::tests::StackTest") {
 
@@ -31,6 +88,7 @@ void peano4::stacks::tests::StackTest::run() {
   testMethod(testEmplaceData);
   testMethod(testPopData);
   testMethod(testClone);
+  testMethod(testReusedSlotAssignmentClearsEmptyState);
   testMethod(testPushBlockView);
   testMethod(testPopBlockView);
   testMethod(testMPIDatatype);
@@ -338,6 +396,81 @@ void peano4::stacks::tests::StackTest::testClone() {
         validateEquals(clonedStack[n].at(i), stack[n].at(i));
       }
     }
+  }
+}
+
+void peano4::stacks::tests::StackTest::testReusedSlotAssignmentClearsEmptyState() {
+  {
+    Stack<NullableSlotData> stack;
+    stack.push(NullableSlotData(7));
+    validateEquals(stack[0].value(), 7);
+
+    stack.shallowClear();
+
+    const NullableSlotData empty;
+    stack.push(empty);
+
+    validateEquals(stack.size(), static_cast<std::size_t>(1));
+    validate(stack[0].empty());
+  }
+
+  {
+    Stack<NullableSlotData> stack;
+    auto                    initial = stack.pushBlock(1);
+    initial.set(0, NullableSlotData(9));
+    validateEquals(stack[0].value(), 9);
+
+    stack.shallowClear();
+
+    auto reused = stack.pushBlock(1);
+    reused.set(0, NullableSlotData());
+
+    validateEquals(stack.size(), static_cast<std::size_t>(1));
+    validate(stack[0].empty());
+  }
+
+  {
+    Stack<NullableSlotData> stack;
+    auto                    initial = stack.pushBlock(1);
+    initial.set(0, NullableSlotData(10));
+    validateEquals(stack[0].value(), 10);
+
+    stack.shallowClear();
+
+    auto reused = stack.pushBlock(1);
+    reused.emplace_default(0);
+
+    validateEquals(stack.size(), static_cast<std::size_t>(1));
+    validate(stack[0].empty());
+  }
+
+  {
+    StackWithSerialisation<TestDataOnHeap> stack;
+    stack.push(TestDataOnHeap(11));
+    validateEquals(stack[0].data()[0], 11);
+
+    stack.shallowClear();
+
+    TestDataOnHeap movedFrom(12);
+    TestDataOnHeap owner(std::move(movedFrom));
+    stack.push(movedFrom);
+
+    validateEquals(stack.size(), static_cast<std::size_t>(1));
+    validate(stack[0].data() == nullptr);
+  }
+
+  {
+    StackWithCustomSerialisation<TestDataOnHeapWithContainer> stack;
+    stack.push(TestDataOnHeapWithContainer(1, 13));
+    validateEquals(stack[0].at(0), 13);
+
+    stack.shallowClear();
+
+    const TestDataOnHeapWithContainer empty;
+    stack.push(empty);
+
+    validateEquals(stack.size(), static_cast<std::size_t>(1));
+    validateEquals(stack[0].size(), 0);
   }
 }
 

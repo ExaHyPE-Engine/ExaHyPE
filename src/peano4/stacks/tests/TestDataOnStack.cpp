@@ -8,15 +8,14 @@ peano4::stacks::tests::TestDataOnStack::TestDataOnStack() { data.fill(0); }
 
 peano4::stacks::tests::TestDataOnStack::TestDataOnStack(int v) { data.fill(v); }
 
-peano4::stacks::tests::TestDataOnStack::TestDataOnStack(ObjectConstruction) noexcept {}
-
 peano4::stacks::tests::TestDataOnStack::TestDataOnStack(const TestDataOnStack& other) { clone(other); }
 
 peano4::stacks::tests::TestDataOnStack::TestDataOnStack(TestDataOnStack&& other) noexcept {
   data = std::move(other.data);
 }
 
-peano4::stacks::tests::TestDataOnStack& peano4::stacks::tests::TestDataOnStack::operator=(TestDataOnStack&& other
+peano4::stacks::tests::TestDataOnStack& peano4::stacks::tests::TestDataOnStack::operator=(
+  TestDataOnStack&& other
 ) noexcept {
   if (this != &other) {
     data = std::move(other.data);

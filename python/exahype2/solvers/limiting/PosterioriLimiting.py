@@ -136,13 +136,8 @@ class PosterioriLimiting(object):
             get_face_overlap_merge_implementation(self._min_and_max_projection)
         )
 
-        self._min_and_max_projection.generator.load_store_compute_flag = (
-            "peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-                self._provide_cell_data_to_compute_kernels_default_guard(),
-                self._load_face_data_default_guard(),
-                self._store_face_data_default_guard(),
-            )
-        )
+        self._min_and_max_projection.generator.can_receive = self._load_face_data_default_guard()
+        self._min_and_max_projection.generator.can_send = self._store_face_data_default_guard()
 
         self._min_and_max_projection.generator.send_condition = (
             "repositories::"

@@ -64,16 +64,14 @@ public:
    */
   static constexpr int CreateOrDestroyGridEntity = -2;
 
-  virtual void loadCellData(const GridTraversalEvent&) {};
-  virtual void loadFaceData(const GridTraversalEvent&) {};
-  virtual void loadVertexData(const GridTraversalEvent&) {};
+  enum class NodeData { Vertex, Face, Cell };
+
+  virtual void loadNodeData(const GridTraversalEvent&) {};
 
   virtual void enterNode(const GridTraversalEvent&) = 0;
   virtual void leaveNode(const GridTraversalEvent&) = 0;
 
-  virtual void storeVertexData(const GridTraversalEvent&) {};
-  virtual void storeFaceData(const GridTraversalEvent&) {};
-  virtual void storeCellData(const GridTraversalEvent&) {};
+  virtual void storeNodeData(const GridTraversalEvent&) {};
 
   /**
    * I use the clone to create one observer object per traversal thread. So
@@ -185,13 +183,27 @@ if (peano4::parallel::Node::isGlobalMaster(spacetreeId)) {
    */
   virtual void finishAllOutstandingSendsAndReceives() {};
 
-  virtual void sendVertexData(int position, int toStack, stacks::SendReceiveContext, const GridTraversalEvent&) {};
-  virtual void sendFaceData(int position, int toStack, stacks::SendReceiveContext, const GridTraversalEvent&) {};
-  virtual void sendCellData(int toStack, stacks::SendReceiveContext, const GridTraversalEvent&) {};
-
-  virtual void receiveAndMergeVertexData(int position, int fromStack, stacks::SendReceiveContext, const GridTraversalEvent&) {};
-  virtual void receiveAndMergeFaceData(int position, int fromStack, stacks::SendReceiveContext, const GridTraversalEvent&) {};
-  virtual void receiveAndMergeCellData(int fromStack, stacks::SendReceiveContext, const GridTraversalEvent&) {};
+  /**
+   * Send/receive one routed node-data entry. For cells, position is ignored.
+   * sendNodeData() reads live call-stack data before storeNodeData() and must
+   * enqueue exchange data without consuming the source object. receiveNodeData()
+   * receives the payload and immediately merges it into the live call-stack
+   * data.
+   */
+  virtual void sendNodeData(
+    NodeData                   nodeData,
+    int                        position,
+    int                        toStack,
+    stacks::SendReceiveContext context,
+    const GridTraversalEvent&  event
+  ) {};
+  virtual void receiveNodeData(
+    NodeData                   nodeData,
+    int                        position,
+    int                        fromStack,
+    stacks::SendReceiveContext context,
+    const GridTraversalEvent&  event
+  ) {};
 
   virtual void deleteAllStacks() {};
 };

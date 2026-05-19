@@ -135,16 +135,21 @@ public:
 private:
   void serialise() {
     for (std::size_t i = 0; i < this->size(); ++i) {
-      std::copy_n(this->_data[i].data(), T::Cardinality, _sendBuffer.data() + i * T::Cardinality);
+      // Use non-const data(): generated lazy patch data materialises
+      // deterministic storage here instead of exposing stale reused slots.
+      typename T::DoFType* source = this->_data[i].data();
+      assertion(source != nullptr);
+      std::copy_n(source, T::Cardinality, _sendBuffer.data() + i * T::Cardinality);
     }
   }
 
   void deserialise() {
     for (std::size_t i = 0; i < this->size(); ++i) {
-      // if (this->_data[i].data() == nullptr) {
-      //   this->_data[i] = T(); // Default-construct allocates
-      // }
-      std::copy_n(_receiveBuffer.data() + i * T::Cardinality, T::Cardinality, this->_data[i].data());
+      // Use non-const data(): generated lazy patch data materialises receive
+      // storage on demand before the incoming payload is copied into it.
+      typename T::DoFType* target = this->_data[i].data();
+      assertion(target != nullptr);
+      std::copy_n(_receiveBuffer.data() + i * T::Cardinality, T::Cardinality, target);
     }
   }
 #endif // WITH_MPI

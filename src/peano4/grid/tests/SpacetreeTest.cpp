@@ -14,22 +14,16 @@
 
 namespace {
   struct CountingTraversalObserver final: public peano4::grid::GridTraversalObserver {
-    int               loadCellDataCalls    = 0;
-    int               loadFaceDataCalls    = 0;
-    int               loadVertexDataCalls  = 0;
-    int               enterNodeCalls       = 0;
-    int               leaveNodeCalls       = 0;
-    int               storeVertexDataCalls = 0;
-    int               storeFaceDataCalls   = 0;
-    int               storeCellDataCalls   = 0;
+    int               loadNodeDataCalls  = 0;
+    int               enterNodeCalls     = 0;
+    int               leaveNodeCalls     = 0;
+    int               storeNodeDataCalls = 0;
     std::vector<int>  enteredLevels;
     std::vector<bool> enteredCellIsLocal;
     std::vector<int>  enteredVertexBoundaryMasks;
     std::vector<int>  enteredVertexLocalMasks;
 
-    void loadCellData(const peano4::grid::GridTraversalEvent&) override { ++loadCellDataCalls; }
-    void loadFaceData(const peano4::grid::GridTraversalEvent&) override { ++loadFaceDataCalls; }
-    void loadVertexData(const peano4::grid::GridTraversalEvent&) override { ++loadVertexDataCalls; }
+    void loadNodeData(const peano4::grid::GridTraversalEvent&) override { ++loadNodeDataCalls; }
 
     void enterNode(const peano4::grid::GridTraversalEvent& event) override {
       ++enterNodeCalls;
@@ -41,9 +35,7 @@ namespace {
 
     void leaveNode(const peano4::grid::GridTraversalEvent&) override { ++leaveNodeCalls; }
 
-    void storeVertexData(const peano4::grid::GridTraversalEvent&) override { ++storeVertexDataCalls; }
-    void storeFaceData(const peano4::grid::GridTraversalEvent&) override { ++storeFaceDataCalls; }
-    void storeCellData(const peano4::grid::GridTraversalEvent&) override { ++storeCellDataCalls; }
+    void storeNodeData(const peano4::grid::GridTraversalEvent&) override { ++storeNodeDataCalls; }
 
     peano4::grid::GridTraversalObserver* clone(int) override { return new CountingTraversalObserver(*this); }
 
@@ -1096,14 +1088,10 @@ void peano4::grid::tests::SpacetreeTest::testDescend() {
   CountingTraversalObserver observer;
   tree.descend(tree._root, vertices, observer);
 
-  validateEquals(observer.loadVertexDataCalls, THREE_POWER_D);
-  validateEquals(observer.loadFaceDataCalls, THREE_POWER_D);
-  validateEquals(observer.loadCellDataCalls, THREE_POWER_D);
+  validateEquals(observer.loadNodeDataCalls, THREE_POWER_D);
   validateEquals(observer.enterNodeCalls, THREE_POWER_D);
   validateEquals(observer.leaveNodeCalls, THREE_POWER_D);
-  validateEquals(observer.storeVertexDataCalls, THREE_POWER_D);
-  validateEquals(observer.storeFaceDataCalls, THREE_POWER_D);
-  validateEquals(observer.storeCellDataCalls, THREE_POWER_D);
+  validateEquals(observer.storeNodeDataCalls, THREE_POWER_D);
   validateEquals(static_cast<int>(observer.enteredLevels.size()), THREE_POWER_D);
   validateEquals(static_cast<int>(observer.enteredCellIsLocal.size()), THREE_POWER_D);
   for (int level : observer.enteredLevels) {

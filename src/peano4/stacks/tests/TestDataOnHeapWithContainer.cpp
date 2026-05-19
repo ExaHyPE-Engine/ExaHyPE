@@ -20,9 +20,6 @@ peano4::stacks::tests::TestDataOnHeapWithContainer::TestDataOnHeapWithContainer(
   }
 }
 
-peano4::stacks::tests::TestDataOnHeapWithContainer::TestDataOnHeapWithContainer(ObjectConstruction) noexcept:
-  _container() {}
-
 peano4::stacks::tests::TestDataOnHeapWithContainer::~TestDataOnHeapWithContainer() noexcept { clear(); }
 
 peano4::stacks::tests::TestDataOnHeapWithContainer::TestDataOnHeapWithContainer(

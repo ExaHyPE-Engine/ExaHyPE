@@ -98,14 +98,6 @@ struct tarch::mpi::DoubleMessage {
     static void send(const tarch::mpi::DoubleMessage& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     static void receive(   tarch::mpi::DoubleMessage& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
-
-
-    enum ObjectConstruction {
-      NoData
-    };
-
-    DoubleMessage( ObjectConstruction ):
-        DoubleMessage() {}
     
 #ifdef WITH_MPI
     static void sendAndPollDanglingMessages(const tarch::mpi::DoubleMessage& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());

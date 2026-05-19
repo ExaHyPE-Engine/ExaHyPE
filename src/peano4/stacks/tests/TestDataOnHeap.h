@@ -22,8 +22,6 @@ private:
 public:
   explicit TestDataOnHeap();
   explicit TestDataOnHeap(DoFType v);
-  enum class ObjectConstruction { NoData };
-  explicit TestDataOnHeap(ObjectConstruction) noexcept;
   ~TestDataOnHeap() noexcept;
 
   TestDataOnHeap(const TestDataOnHeap& other);

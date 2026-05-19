@@ -26,7 +26,6 @@ set(SOURCES
   grid/GridTraversalEventGenerator.cpp
   grid/GridTraversalObserver.cpp
   grid/GridVertex.cpp
-  grid/LoadStoreComputeFlag.cpp
   grid/PeanoCurve.cpp
   grid/Spacetree.cpp
   grid/SpacetreeHelper.cpp
