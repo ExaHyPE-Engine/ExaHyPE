@@ -1,0 +1,28 @@
+/**
+
+@page page_third-party_performance_analysis_tools
+
+## ScoreP
+When usng ScoreP the configure or cmake command should be prefixed with SCOREP_WRAPPER=off,
+and the compiler names should be prefixed with scorep-. For an Intel toolchain
+with autotools this looks like:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SCOREP_WRAPPER=off ./configure CC=scorep-icx CXX=scorep-icpx ...
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+## MAQAO
+When using any performance analysis tool the compilation flag "-g" should be
+used, to generate debug information. For MAQAO this may not be sufficient, in 
+which case "-grecord-gcc-switches" should also be used.
+
+MAQAO reports can be generated on login nodes using
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+maqao oneview -R1 -- ./program
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+or on compute nodes using
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+maqao oneview -R1 --mpi-command="srun -p <partition_name> -A <account> -t <time>" -- ./program
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Find a reference guide at https://www.maqao.org/documentation/MAQAO_QuickReferenceSheet.pdf
+
+*/
