@@ -57,7 +57,7 @@ class tarch::logging::ScorePLogger {
 
     static ScorePLogger _singleton;
 
-    tarch::multicore::BooleanSemaphore _semaphore;
+    tarch::multicore::MultiReadSingleWriteSemaphore _semaphore;
 
     #ifdef UseScoreP
     std::map< std::string, SCOREP_User_RegionHandle > _scorePHandles;
@@ -180,7 +180,7 @@ class tarch::logging::ScorePLogger {
      *
      * To avoid this data race, I introduced a semaphore. This one could also
      * be implemented with TBB's atomic construct, e.g., but I prefer the
-     * semaphor / critical section technique.
+     * semaphore / critical section technique.
      *
      * @param trace    Needed in debug mode to be able to find out who called indent(false) without an indent(true)
      * @param message  Needed in debug mode to be able to find out who called indent(false) without an indent(true)
