@@ -139,9 +139,11 @@ void tarch::logging::ScorePLogger::traceIn(
   [[maybe_unused]] const std::string& message
 ) {
   #ifdef UseScoreP
-  tarch::multicore::Lock lock(_semaphore);
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lock(_semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read);
 
   if (_scorePHandles.count(trace)==0) {
+    lock.free();
+    tarch::multicore::MultiReadSingleWriteSemaphore::Lock lock(_semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Write);
     _scorePHandles.insert( std::pair<std::string, int>(trace,SCOREP_USER_INVALID_REGION) );
   }
 
@@ -157,6 +159,8 @@ void tarch::logging::ScorePLogger::traceOut(
   [[maybe_unused]] const std::string& message
 ) {
   #ifdef UseScoreP
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lock(_semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read);
+
   SCOREP_USER_REGION_LEAVE(_scorePHandles[trace]);
   #endif
 }

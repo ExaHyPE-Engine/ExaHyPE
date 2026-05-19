@@ -49,6 +49,9 @@ is obsolete. However, the DSL unfolds its full potential if and only you use
 default kernel generations which are plain C++ with SYCL or OpenMP, 
 respectively.
 
+If you wish to also benchmark the MLIR versions of the solver, add --enable-mlir to the compile
+command. Currently this is only supported for host kernels, so also add --cpu to the command.
+
 ## Cleanup
 
 You can throw away all of the glue code after a successful build.

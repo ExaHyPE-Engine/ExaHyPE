@@ -456,8 +456,9 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
     #dictionary["BASIS_DECLARATIONS"] += "static const double QuadraturePoints1d[DGOrder+1];\n\n"
     #dictionary["BASIS_INITIALIZERS"] += "             QuadraturePoints1d{},\n".format( render_tensor_1(self.quadrature_points) )
+    dictionary["BASIS_DECLARATIONS"] += "#pragma omp declare target\n"
     dictionary["BASIS_DECLARATIONS"] += "static constexpr double QuadraturePoints1d[] = {};\n\n".format( render_tensor_1(self.quadrature_points) )
-    
+    dictionary["BASIS_DECLARATIONS"] += "#pragma omp end declare target\n"
     dictionary["BASIS_DECLARATIONS"] += "/**\n"
     dictionary["BASIS_DECLARATIONS"] += self.QuadratureWeights1dDocumentation
     dictionary["BASIS_DECLARATIONS"] += "*/\n"

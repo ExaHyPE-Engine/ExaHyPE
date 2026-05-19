@@ -229,11 +229,9 @@ class tarch::mpi::Rank {
     /**
      * Wrapper around allreduce
      *
-     * Use this wrapper in Peano to reduce a value to all ranks. We recommend
-     * not to use plain MPI within Peano applications, as Peano relies on MPI+X
-     * and is strongly dynamic, i.e. you never know how many threads a rank
-     * currently employs and if one of the ranks maybe just has started to send
-     * around point to point load balancing messages.
+     * Use this wrapper in Peano to reduce a value to all ranks. Logically,
+     * this is a blocking routine. On the implementation side, we however
+     * implement it in a non-blocking way.
      *
      *
      * ## Rationale
@@ -253,7 +251,7 @@ class tarch::mpi::Rank {
      * we should be able to do something else such as answering to further
      * request messages.
      *
-     * This allreduce allows us to do so. The default waitor is a receive of
+     * Peano's allreduce allows us to do so. The default waitor is a receive of
      * pending messages. So most codes use the allReduce as follows:
      *
      * <pre>
@@ -276,7 +274,9 @@ class tarch::mpi::Rank {
      * ## Multithreading
      *
      * This reduction is completely agnostic of any multithreading. Therefore,
-     * I do recommend not to use this routine within any action set.
+     * I do recommend not to use this routine within any action set or
+     * literally any multithreaded environment: it is the responsibility of the
+     * user to ensure that only one thread per rank calls this routine.
      *
      *
      * ## Attribute semantics
@@ -298,7 +298,9 @@ class tarch::mpi::Rank {
 
 
     /**
-     * @see allReduce
+     * Blocking reduction
+     *
+     * @see allReduce As routine follows same implementation rationale.
      */
     void reduce(
       const void *sendbuf, void *recvbuf, int count,

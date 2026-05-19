@@ -47,3 +47,18 @@ tarch::la::Vector<Dimensions,double>  exahype2::dg::getQuadraturePoint(
 
   return tarch::la::multiplyComponents(result,cellSize) + cellCentre - 0.5*cellSize;
 }
+
+template<typename T>
+void  exahype2::dg::getQuadraturePointInFace(
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  cellSize,
+  const tarch::la::Vector<Dimensions,int>&     index,
+  int                                          polynomialOrder,
+  int                                          faceOrientation,
+  const T* __restrict__          quadraturePoints,
+  tarch::la::Vector<Dimensions,double>*       output
+) {
+  tarch::la::Vector<Dimensions,double> result = faceCentre - 0.5 * cellSize;
+  result(0) = quadraturePoints[index(faceOrientation % Dimensions)] * cellSize(faceOrientation % Dimensions);
+  output[0] = result;
+}
