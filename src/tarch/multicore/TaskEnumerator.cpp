@@ -7,14 +7,17 @@
 #include <limits>
 
 
-tarch::multicore::MultiReadSingleWriteSemaphore  tarch::multicore::TaskEnumerator::_enumeratorSequenceSemaphore;
+tarch::multicore::MultiReadSingleWriteSemaphore&  tarch::multicore::TaskEnumerator::_enumeratorSequenceSemaphore() {
+  static tarch::multicore::MultiReadSingleWriteSemaphore semaphore;
+  return semaphore;
+}
 std::vector< tarch::Enumerator* >   tarch::multicore::TaskEnumerator::_enumerator;
 tarch::logging::Log                 tarch::multicore::TaskEnumerator::_log( "tarch::multicore::TaskEnumerator" );
 
 
 tarch::multicore::TaskEnumerator::TaskEnumerator():
   _enumeratorNumber(-1) {
-  tarch::multicore::MultiReadSingleWriteLock enumeratorSequenceLock( _enumeratorSequenceSemaphore, tarch::multicore::MultiReadSingleWriteLock::Write );
+  tarch::multicore::MultiReadSingleWriteLock enumeratorSequenceLock( _enumeratorSequenceSemaphore(), tarch::multicore::MultiReadSingleWriteLock::Write );
 
   _enumeratorNumber = _enumerator.size();
   _enumerator.push_back( new Enumerator() );
@@ -29,7 +32,7 @@ tarch::multicore::TaskEnumerator::TaskEnumerator():
 void tarch::multicore::TaskEnumerator::reset() {
   assertion2( _enumeratorNumber>=0, _enumeratorNumber, toString() );
   assertion2( _enumeratorNumber<_enumerator.size(), _enumeratorNumber, toString() );
-  tarch::multicore::MultiReadSingleWriteLock enumeratorSequenceLock( _enumeratorSequenceSemaphore, tarch::multicore::MultiReadSingleWriteLock::Read );
+  tarch::multicore::MultiReadSingleWriteLock enumeratorSequenceLock( _enumeratorSequenceSemaphore(), tarch::multicore::MultiReadSingleWriteLock::Read );
   _enumerator.at(_enumeratorNumber)->reset();
 }
 
@@ -37,7 +40,7 @@ void tarch::multicore::TaskEnumerator::reset() {
 int tarch::multicore::TaskEnumerator::size() const {
   assertion2( _enumeratorNumber>=0, _enumeratorNumber, toString() );
   assertion2( _enumeratorNumber<_enumerator.size(), _enumeratorNumber, toString() );
-  tarch::multicore::MultiReadSingleWriteLock enumeratorSequenceLock( _enumeratorSequenceSemaphore, tarch::multicore::MultiReadSingleWriteLock::Read );
+  tarch::multicore::MultiReadSingleWriteLock enumeratorSequenceLock( _enumeratorSequenceSemaphore(), tarch::multicore::MultiReadSingleWriteLock::Read );
   return _enumerator.at(_enumeratorNumber)->size();
 }
 
@@ -45,7 +48,7 @@ int tarch::multicore::TaskEnumerator::size() const {
 int tarch::multicore::TaskEnumerator::getNumber() {
   assertion2( _enumeratorNumber>=0, _enumeratorNumber, toString() );
   assertion2( _enumeratorNumber<_enumerator.size(), _enumeratorNumber, toString() );
-  tarch::multicore::MultiReadSingleWriteLock enumeratorSequenceLock( _enumeratorSequenceSemaphore, tarch::multicore::MultiReadSingleWriteLock::Read );
+  tarch::multicore::MultiReadSingleWriteLock enumeratorSequenceLock( _enumeratorSequenceSemaphore(), tarch::multicore::MultiReadSingleWriteLock::Read );
   return _enumerator.at(_enumeratorNumber)->getNumber();
 }
 
@@ -53,13 +56,13 @@ int tarch::multicore::TaskEnumerator::getNumber() {
 void tarch::multicore::TaskEnumerator::releaseNumber( int number ) {
   assertion2( _enumeratorNumber>=0, _enumeratorNumber, toString() );
   assertion2( _enumeratorNumber<_enumerator.size(), _enumeratorNumber, toString() );
-  tarch::multicore::MultiReadSingleWriteLock enumeratorSequenceLock( _enumeratorSequenceSemaphore, tarch::multicore::MultiReadSingleWriteLock::Read );
+  tarch::multicore::MultiReadSingleWriteLock enumeratorSequenceLock( _enumeratorSequenceSemaphore(), tarch::multicore::MultiReadSingleWriteLock::Read );
   _enumerator.at(_enumeratorNumber)->releaseNumber(number);
 }
 
 
 std::string tarch::multicore::TaskEnumerator::toString() const {
-  tarch::multicore::MultiReadSingleWriteLock enumeratorSequenceLock( _enumeratorSequenceSemaphore, tarch::multicore::MultiReadSingleWriteLock::Write );
+  tarch::multicore::MultiReadSingleWriteLock enumeratorSequenceLock( _enumeratorSequenceSemaphore(), tarch::multicore::MultiReadSingleWriteLock::Write );
   std::ostringstream msg;
   msg << "{";
   for (auto& p: _enumerator) {
