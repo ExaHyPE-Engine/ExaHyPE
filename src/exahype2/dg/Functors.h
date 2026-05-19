@@ -86,7 +86,7 @@ namespace exahype2 {
       double                                       dt
     ) >   PointSources;
 
-    typedef std::function< double(
+    typedef std::function< void(
       const double * __restrict__                  Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
@@ -108,6 +108,16 @@ namespace exahype2 {
       double                                       t,
       int                                          normal
     ) >   BoundaryConditions;
+
+    
+    typedef std::function< void(
+      const tarch::la::Vector<Dimensions,int>&     index,
+      const tarch::la::Vector<Dimensions,double>&  cellCentre,
+      const tarch::la::Vector<Dimensions,double>&  cellSize,
+      int                                 polynomialOrder,
+      const double* __restrict__          quadraturePoints,
+      tarch::la::Vector<Dimensions,double>* __restrict__  quadraturePositions
+    ) >   QuadraturePoint;
 
   }
 }

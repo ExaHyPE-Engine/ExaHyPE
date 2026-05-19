@@ -20,6 +20,57 @@ where XX has to be replaced by the actual compute capability of the device.
 
 Note: We set the C++ compiler standard to 17. This is due to an issue with LLVM Clang itself. See https://github.com/llvm/llvm-project/issues/61327.
 
+### MLIR
 
+MLIR is not necessarily included in an LLVM install, so it may be necessary to build from source.
+First, clone llvm from GitHub.
+
+~~~~~~~~~~~~~~~~~
+git clone --depth 1 https://github.com/llvm/llvm-project.git
+~~~~~~~~~~~~~~~~~
+
+In general, building MLIR just involves adding "mlir" to the LLVM_ENABLE_PROJECTS CMake option.
+See https://mlir.llvm.org/getting_started/ for information. However, we generally want to build with
+offloading support. To do so follow the following steps. Note that it assumes the existence of some clang version,
+but we will build a new version of it.
+
+Modify the preexisting CMake cache file (llvm-project/offload/cmake/caches/Offload.cmake) to build MLIR. 
+After modification, the file should start with 
+~~~~~~~~~~~~~~~~~~~~
+set(LLVM_ENABLE_PROJECTS "clang;clang-tools-extra;lld;mlir" CACHE STRING "")
+~~~~~~~~~~~~~~~~~~~~
+
+Finally run the following commands
+~~~~~~~~~~~~~~~~~~~~
+cd llvm-project
+mkdir build-x86
+CC=clang CXX=clang++ cmake -S llvm -B build-x86 -C $(pwd)/offload/cmake/caches/Offload.cmake \
+      -DLLVM_TARGETS_TO_BUILD="host;NVPTX;AMDGPU" \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DLLVM_ENABLE_ASSERTIONS=ON \
+      -DCMAKE_INSTALL_PREFIX=$(pwd)/install-x86 \
+      -G "Ninja" \
+      -DLIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES="80,90" \
+      -DLIBOMP_ARCH="x86_64" \
+      -DOMPTARGET_ENABLE_DEBUG=ON \
+      -DLIBOMPTARGET_DLOPEN_PLUGINS=""
+cd build-x86
+ninja
+ninja install
+~~~~~~~~~~~~~~~~~~~~
+
+To use the built compiler remember to set environment variables appropriately. Here we show
+the settings when using an NVIDIA GPU, where ${LLVM_INSTALL_DIRECTORY} is llvm-project/install-x86.
+~~~~~~~~~~~~~~~~~~~~
+export PATH=${LLVM_INSTALL_DIRECTORY}/bin/:$PATH
+export LIBRARY_PATH=${LLVM_INSTALL_DIRECTORY}/lib/x86_64-unknown-linux-gnu/:$LIBRARY_PATH
+export LD_LIBRARY_PATH=${LLVM_INSTALL_DIRECTORY}/lib/x86_64-unknown-linux-gnu/:$LD_LIBRARY_PATH
+export LIBRARY_PATH=${LLVM_INSTALL_DIRECTORY}/lib/nvptx64-nvidia-cuda/:$LIBRARY_PATH
+export LD_LIBRARY_PATH=${LLVM_INSTALL_DIRECTORY}/lib/nvptx64-nvidia-cuda/:$LD_LIBRARY_PATH
+export LIBRARY_PATH=${LLVM_INSTALL_DIRECTORY}/lib/:$LIBRARY_PATH
+export LD_LIBRARY_PATH=${LLVM_INSTALL_DIRECTORY}/lib/:$LD_LIBRARY_PATH
+~~~~~~~~~~~~~~~~~~~~
+
+On NVIDIA hardware we also require access to cuda, so appropriate variables for this too.
  */
  

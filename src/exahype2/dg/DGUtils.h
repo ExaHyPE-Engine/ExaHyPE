@@ -52,6 +52,17 @@ namespace exahype2 {
       const T* __restrict__          quadraturePoints
     );
 
+    template<typename T>
+    void  getQuadraturePointInFace(
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  cellSize,
+      const tarch::la::Vector<Dimensions,int>&     index,
+      int                                          polynomialOrder,
+      int                                          faceOrientation,
+      const T* __restrict__          quadraturePoints,
+      tarch::la::Vector<Dimensions,double>*       output
+    );
+
     /**
      * Compute integral over shape function over cell defined by index
      *

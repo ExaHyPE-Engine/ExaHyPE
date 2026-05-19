@@ -1,16 +1,13 @@
 /**
-
 @page tutorials_exahype2_applications_exagrype How to Use ExaGRyPE
-
 
 @image html tutorials/exahype2/exagrype/arty.png
 
 This section is designed to provide instructions on installing and using the Numerical
-Relativity code ExaGRyPE. Contribution and comments to improve this tutorial are much 
+Relativity code ExaGRyPE. Contributions and comments to improve this tutorial are much
 welcomed and appreciated.
 
 # Content
-
 - \subpage tutorials_exahype2_applications_exagrype_configure
 - \subpage tutorials_exahype2_applications_exagrype_running
   - Gauge Wave
@@ -23,14 +20,15 @@ welcomed and appreciated.
   - Adding New Physics Scenarios
   - Postprocessing on-the-fly
   - Particles as Probes and Tracers
-  - Coupling Multiple Numerical Schemes(Solvers) 
+  - Coupling Multiple Numerical Schemes (Solvers)
 -  Feature benchmarks
   - \ref benchmarks_exahype2_ccz4_gauge_wave
   - \ref benchmarks_exahype2_ccz4_single_black_hole
 - \subpage tutorials_exahype2_applications_exagrype_faq
 
-
 # Reference papers
+
+The following paper contains the physics and code design of ExaGRyPE.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 @article{Zhang:2024:ExaGRyPE,
@@ -47,6 +45,4 @@ keywords = {Software design, Numerical relativity, Hyperbolic partial differenti
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
  */
-

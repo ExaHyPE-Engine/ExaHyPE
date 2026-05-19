@@ -61,21 +61,21 @@ void exahype2::dg::fluxaverage::solveRiemannProblem_pointwise_in_situ(
 
     double leftEigenvalue;
     maxEigenvalue(
-                    projectedValues + inputEnumerator(leftDoF,0),
-                    x, //TODO: add positioning
-                    t,
-                    dt,
-                    faceNumber%Dimensions,
-                    &leftEigenvalue );
+                  projectedValues + inputEnumerator(leftDoF,0),
+                  x, //TODO: add positioning
+                  t,
+                  dt,
+                  faceNumber%Dimensions, 
+                  &leftEigenvalue );
 
     double rightEigenvalue;
     maxEigenvalue(
-                    projectedValues + inputEnumerator(rightDoF,0),
-                    x, //TODO: add positioning
-                    t,
-                    dt,
-                    faceNumber%Dimensions,
-                    &rightEigenvalue );
+                  projectedValues + inputEnumerator(rightDoF,0),
+                  x, //TODO: add positioning
+                  t,
+                  dt,
+                  faceNumber%Dimensions,
+                  &rightEigenvalue );
 
     double maxEigenvalue = std::max(leftEigenvalue,rightEigenvalue);
 
