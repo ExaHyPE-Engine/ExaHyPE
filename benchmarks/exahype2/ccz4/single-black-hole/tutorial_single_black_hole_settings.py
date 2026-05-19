@@ -248,6 +248,12 @@ def add_hardcoded_load_balancing_over_regular_mesh(project,
         enable_propagate_bottom_up=False,
         enable_extract_split_instructions=True,
     )  # creates subtrees {0,1,2}
+
+    # Map subtree ids to destination ranks according to trees_per_rank.
+    destinationRanks = [
+        min(number_of_ranks - 1, sid // trees_per_rank) for sid in subTrees
+    ]
+
     print("After split_tree():")
     print(tree)
 
@@ -255,15 +261,11 @@ def add_hardcoded_load_balancing_over_regular_mesh(project,
     print("  gridSweeps     =", gridSweeps)
     print("  splittingTrees =", splittingTrees)
     print("  numberOfCells  =", numberOfCells)
-    print("  subTrees       =", subTrees, "(subtree ids, not ranks)")
+    print("  subTrees       =", subTrees)
+    print("  destinationRanks  =", destinationRanks)
 
 # @atodo Implement the mapping to number of ranks (at the moment implemented inline)
 #    split_strategy.map_to_number_of_ranks(2)
-
-    # Map subtree ids to destination ranks according to trees_per_rank.
-    destinationRanks = [
-        min(number_of_ranks - 1, sid // trees_per_rank) for sid in subTrees
-    ]
 
     # Build Hardcoded constructor argument string (single mode variant)
     hardcoded_mode = "peano4::SplitInstruction::Mode::AggressiveTopDown"
