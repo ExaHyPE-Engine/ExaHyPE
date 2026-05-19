@@ -227,31 +227,13 @@ def add_hardcoded_load_balancing_over_regular_mesh(project,
 # =========================================
 # Part 2 of tutorial: Create a regular mesh representation that we feed into our loadbalacing
 # =========================================
-#Example output:
-#    Generating 2D regular grid 'pytest-hardcoded-lb-2d' with 3 levels
-#  Level 1: 3^2 = 9 cells
-#  Level 2: 9^2 = 81 cells
-#  Level 3: 27^2 = 729 cells
-#Total cells generated: 819
-#Regular grid generation completed successfully
-#  Tree: pytest-hardcoded-lb-2d
-#  Leaf count: 729
-#  Subtree count: 1##
 
-#Peano Tree Structure From pytest-hardcoded-lb-2d
-#Domain offset:  [0, 0]
-#Domain size:    [1, 1]  
-#Dimension:              2
-#Max Level:              3
-#Leaf count:     729  
-#Subtree count:  1
-#Split pattern:  [729.]
-
-    tree = RegularGridGenerator(name="pytest-hardcoded-lb-2d", max_level=3, dimension=2)
+    tree = RegularGridGenerator(name="pytest-hardcoded-lb-3d", max_level=3, dimension=3)
     print(tree)
 
 
 # @todo This is a step that is important in the second tutorial where we read from a decomposition file rather than generate one. In the first tutorial, where we use a generated mesh, it is not required and should not be discussed
+# @todo This goes into the second part or the second tutorial around offline load balancing
 #    tree = split_strategy.reset_tree_to_single_subtree(tree)
 
 # =========================================
@@ -275,14 +257,9 @@ def add_hardcoded_load_balancing_over_regular_mesh(project,
     print("  numberOfCells  =", numberOfCells)
     print("  subTrees       =", subTrees, "(subtree ids, not ranks)")
 
-# @todo Implement the mapping to number of ranks.
+# @atodo Implement the mapping to number of ranks (at the moment implemented inline)
 #    split_strategy.map_to_number_of_ranks(2)
 
-# @atodo Again plot it.
-
-# =========================================
-# Part 4 of tutorial: Hand the split instr. over to the load balancer
-# =========================================
     # Map subtree ids to destination ranks according to trees_per_rank.
     destinationRanks = [
         min(number_of_ranks - 1, sid // trees_per_rank) for sid in subTrees
@@ -300,6 +277,11 @@ def add_hardcoded_load_balancing_over_regular_mesh(project,
         "}"
     )
 
+# @atodo Again plot it
+
+# =========================================
+# Part 4 of tutorial: Hand the split instr. over to the load balancer
+# =========================================
     project.set_load_balancing(
       "toolbox::loadbalancing::strategies::Hardcoded",
       hardcoded_config
