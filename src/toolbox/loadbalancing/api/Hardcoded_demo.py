@@ -20,11 +20,13 @@ def demo(file_path: str, dimension: int):
     if not os.path.isdir(file_path):
         raise FileNotFoundError(f"Input directory not found: {file_path}")
     print(f"Loading grid patch files from '{file_path}' (dimension={dimension})")
+# @todo Dmitry I'm happy with a name, but it really should be optional, i.e. I don't want to have to specify it here
     tree = GridPatchFileReader(name=f"Files-{file_path}", file_path=file_path, dimension=dimension)
     print(tree)
 
     # Reset to single subtree and apply splitting to create multiple subtrees for the demo
     tree = split_strategy.reset_tree_to_single_subtree(tree)
+# @todo Dmitry It should number of subtree rather than number of splits.
     gridSweeps, splittingTrees, numberOfCells, subTrees = split_strategy.split_tree(
         tree,
         number_of_splits=2,
@@ -108,6 +110,7 @@ def demo(file_path: str, dimension: int):
     peano4_project = project.generate_Peano4_project(verbose=True)
     peano4_project.generate()
     print("Demo project generated with Hardcoded load balancing.")
+    peano4_project.build(make_clean_first=True, number_of_parallel_builds=-1)
     
     # ---- Demo summary output -------------------------------------------------
     print("\n=== Hardcoded Load Balancing Summary ===")
