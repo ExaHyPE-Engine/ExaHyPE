@@ -7,14 +7,15 @@
 #include "peano4/grid/GridTraversalObserver.h"
 #include "peano4/grid/PeanoCurve.h"
 #include "peano4/grid/Spacetree.h"
+#include "peano4/grid/StackTopology.h"
 #include "tarch/instrumentation/Log.h"
+#include "tarch/instrumentation/Watch.h"
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/services/ServiceRepository.h"
 #include "tarch/tarch.h"
-#include "tarch/instrumentation/Watch.h"
 
 peano4::parallel::SpacetreeSet peano4::parallel::SpacetreeSet::_singleton;
 
@@ -22,23 +23,71 @@ tarch::multicore::BooleanSemaphore peano4::parallel::SpacetreeSet::_semaphore;
 
 peano4::parallel::SpacetreeSet& peano4::parallel::SpacetreeSet::getInstance() { return _singleton; }
 
+peano4::stacks::Stack<peano4::grid::GridVertex>& peano4::parallel::SpacetreeSet::getLocalExchangeStack(
+  int treeId,
+  int localStackId
+) {
+  return getSpacetree(treeId).getLocalExchangeVertexStack(localStackId);
+}
+
+peano4::stacks::Stack<peano4::grid::GridVertex>& peano4::parallel::SpacetreeSet::
+  getParallelExchangeStack(int treeId, int slot, peano4::grid::StackTopology::ParallelExchangeStack which) {
+  return getSpacetree(treeId).getParallelExchangeVertexStack(slot, which);
+}
+
+void peano4::parallel::SpacetreeSet::registerLocalSpacetree(peano4::grid::Spacetree& tree) {
+  const int localTreeId = Node::getInstance().getLocalTreeId(tree._id);
+  assertion4(
+    localTreeId >= 0 and localTreeId < MAX_SPACETREES_PER_RANK,
+    "Invalid local tree id",
+    tree._id,
+    localTreeId,
+    tarch::mpi::Rank::getInstance().getRank()
+  );
+  assertion4(
+    _spacetreeByLocalTreeId[localTreeId] == nullptr,
+    "Duplicate local tree id",
+    tree._id,
+    localTreeId,
+    tarch::mpi::Rank::getInstance().getRank()
+  );
+  _spacetreeByLocalTreeId[localTreeId] = &tree;
+}
+
+void peano4::parallel::SpacetreeSet::unregisterLocalSpacetree(int id) {
+  const int localTreeId = Node::getInstance().getLocalTreeId(id);
+  if (localTreeId >= 0 and localTreeId < MAX_SPACETREES_PER_RANK) {
+    [[maybe_unused]] auto* const tree = _spacetreeByLocalTreeId[localTreeId];
+    assertion4(
+      tree == nullptr or tree->_id == id,
+      "Spacetree lookup mismatch",
+      id,
+      (tree == nullptr ? -1 : tree->_id),
+      localTreeId
+    );
+    _spacetreeByLocalTreeId[localTreeId] = nullptr;
+  }
+}
+
 void peano4::parallel::SpacetreeSet::init(
   const tarch::la::Vector<DIMENSIONS, double>& offset,
   const tarch::la::Vector<DIMENSIONS, double>& width,
   const std::bitset<DIMENSIONS>&               periodicBC
 ) {
+  _spacetreeByLocalTreeId.fill(nullptr);
+
   _requestMessageTag = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::SpacetreeSet - request message");
   _answerMessageTag  = tarch::mpi::Rank::reserveFreeTag(
     "peano4::parallel::SpacetreeSet - answer message",
-    Node::MaxSpacetreesPerRank
+    MAX_SPACETREES_PER_RANK
   );
   tarch::services::ServiceRepository::getInstance().addService(this, "peano4::parallel::SpacetreeSet");
 
 #ifdef WITH_MPI
   assertion4(
     (peano4::parallel::Node::getInstance().getNumberOfRegisteredTrees() == 1
-     and tarch::mpi::Rank::getInstance().getRank() == 0
-    ) or (peano4::parallel::Node::getInstance().getNumberOfRegisteredTrees() == 0 and tarch::mpi::Rank::getInstance().getRank() != 0),
+     and tarch::mpi::Rank::getInstance().getRank() == 0)
+      or (peano4::parallel::Node::getInstance().getNumberOfRegisteredTrees() == 0 and tarch::mpi::Rank::getInstance().getRank() != 0),
     peano4::parallel::Node::getInstance().getNumberOfRegisteredTrees(),
     offset,
     width,
@@ -48,12 +97,11 @@ void peano4::parallel::SpacetreeSet::init(
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     _spacetrees.emplace_back(offset, width, periodicBC);
-    _spacetreeIds[_spacetrees.back()._id] = std::prev(_spacetrees.end());
+    registerLocalSpacetree(_spacetrees.back());
   }
 }
 
 void peano4::parallel::SpacetreeSet::shutdown() {
-  peano4::grid::Spacetree::_vertexStack.clear();
   tarch::services::ServiceRepository::getInstance().removeService(this);
 }
 
@@ -120,12 +168,10 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
       peano4::grid::AutomatonState state;
       peano4::grid::AutomatonState::
         receive(state, p.getSenderRank(), _requestMessageTag, tarch::mpi::Rank::getInstance().getCommunicator());
-      peano4::grid::Spacetree
-        newTree(p.getWorkerSpacetreeId(), p.getMasterSpacetreeId(), state.x, state.h, state.getInverted());
 
-      _spacetrees.push_back(std::move(newTree));
-      auto itPrev                = std::prev(_spacetrees.end());
-      _spacetreeIds[itPrev->_id] = itPrev;
+      _spacetrees
+        .emplace_back(p.getWorkerSpacetreeId(), p.getMasterSpacetreeId(), state.x, state.h, state.getInverted());
+      registerLocalSpacetree(_spacetrees.back());
 
       peano4::parallel::TreeManagementMessage::send(
         answerMessage,
@@ -139,9 +185,11 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
       assertionMsg(false, "Should only be passed synchronously and never run through this tag");
       break;
     case peano4::parallel::TreeManagementMessage::Action::RemoveChildTreeFromBooksAsChildBecameEmpty: {
-      logInfo("Learned that remote child tree "
-          << p.getWorkerSpacetreeId() << " of local tree " << p.getMasterSpacetreeId()
-          << " is degenerated thus had been removed");
+      logInfo(
+        "Learned that remote child tree "
+        << p.getWorkerSpacetreeId() << " of local tree " << p.getMasterSpacetreeId()
+        << " is degenerated thus had been removed"
+      );
       getSpacetree(p.getMasterSpacetreeId())._childrenIds.erase(p.getWorkerSpacetreeId());
 
       peano4::parallel::TreeManagementMessage answerMessage;
@@ -203,32 +251,34 @@ void peano4::parallel::SpacetreeSet::addSpacetree(int masterId, int newTreeId) {
     assertionMsg(false, "MPI build disabled");
 #endif
   } else {
-    peano4::grid::Spacetree newTree(
+    tarch::multicore::Lock lock(_semaphore);
+    _spacetrees.emplace_back(
       newTreeId,
       masterId,
       _spacetrees.begin()->_root.x,
       _spacetrees.begin()->_root.h,
       _spacetrees.begin()->_root.getInverted()
     );
-    tarch::multicore::Lock lock(_semaphore);
-    _spacetrees.push_back(std::move(newTree));
-    auto itPrev                = std::prev(_spacetrees.end());
-    _spacetreeIds[itPrev->_id] = itPrev;
+    registerLocalSpacetree(_spacetrees.back());
   }
 }
 
-peano4::parallel::SpacetreeSet::TraverseTask::
-  TraverseTask(peano4::grid::Spacetree& tree, SpacetreeSet& set, bool invertTreeTraversalDirectionBeforeWeStart):
+peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
+  grid::Spacetree&             tree,
+  grid::GridTraversalObserver& observer,
+  bool                         invertTreeTraversalDirectionBeforeWeStart
+):
   Task(Task::NoTaskType, Task::DefaultPriority),
   _spacetree(tree),
-  _spacetreeSet(set),
+  _observer(&observer),
   _invertTreeTraversalDirectionBeforeWeStart(invertTreeTraversalDirectionBeforeWeStart) {}
 
 bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
   if (_invertTreeTraversalDirectionBeforeWeStart) {
     _spacetree._root.setInverted(not _spacetree._root.getInverted());
   }
-  _spacetree.traverse(*_spacetreeSet._clonedObserver[_spacetree._id], true);
+  assertion(_observer);
+  _spacetree.traverse(*_observer);
   return false;
 }
 
@@ -252,54 +302,50 @@ void peano4::parallel::SpacetreeSet::createObserverCloneIfRequired(
   );
 }
 
-void peano4::parallel::SpacetreeSet::deleteAllStacks(peano4::grid::GridTraversalObserver& observer, int spacetreeId) {
-  deleteAllStacks(peano4::grid::Spacetree::_vertexStack, spacetreeId);
-  _clonedObserver[spacetreeId]->deleteAllStacks();
-}
-
 void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees(
   peano4::grid::GridTraversalObserver& observer
 ) {
   for (auto& parent : _spacetrees) {
-    const int sourceStack = grid::PeanoCurve::getInputStackNumber(parent._root);
+    const int sourceStackNumber = grid::PeanoCurve::getInputStackNumber(parent._root);
     for (auto& worker : parent._hasSplit) {
-      const int destinationStack = Node::getOutputStackNumberForVerticalDataExchange(worker);
-      assertion3(
-        peano4::grid::Spacetree::_vertexStack.getForPush(parent._id, destinationStack)->empty(),
-        parent._id,
-        destinationStack,
-        sourceStack
+      const int slot = parent.getNeighbourSlot(worker);
+      assertion4(slot >= 0, slot, parent._id, worker, parent.toString());
+
+      auto& targetStack = parent.getParallelExchangeVertexStack(
+        slot,
+        grid::StackTopology::ParallelExchangeStack::VerticalOutput
       );
-      peano4::grid::Spacetree::_vertexStack.getForPush(parent._id, destinationStack)
-        ->clone(*peano4::grid::Spacetree::_vertexStack.getForPop(parent._id, sourceStack));
-      streamDataFromSplittingTreeToNewTree(peano4::grid::Spacetree::_vertexStack, parent._id, worker);
+      assertion3(targetStack.empty(), parent._id, worker, sourceStackNumber);
+      targetStack.clone(parent.getLocalExchangeVertexStack(sourceStackNumber));
+
+      streamDataFromSplittingTreeToNewTree(*this, parent._id, worker);
       _clonedObserver[parent._id]->streamDataFromSplittingTreeToNewTree(worker);
     }
   }
 
   for (auto& p : _spacetrees) {
     if (p._spacetreeState == peano4::grid::SpacetreeState::EmptyRun) {
-      streamDataFromSplittingTreeToNewTree(peano4::grid::Spacetree::_vertexStack, p._masterId, p._id);
+      streamDataFromSplittingTreeToNewTree(*this, p._masterId, p._id);
       _clonedObserver[p._masterId]->streamDataFromSplittingTreeToNewTree(p._id);
     }
   }
 
   for (auto& p : _spacetrees) {
-    finishAllOutstandingSendsAndReceives(peano4::grid::Spacetree::_vertexStack, p._id);
+    finishAllOutstandingSendsAndReceives(*this, p._id);
     _clonedObserver[p._id]->finishAllOutstandingSendsAndReceives();
   }
 }
 
 void peano4::parallel::SpacetreeSet::exchangeHorizontalDataBetweenTrees(peano4::grid::GridTraversalObserver& observer) {
   for (auto& p : _spacetrees) {
-    exchangeAllHorizontalDataExchangeStacks(peano4::grid::Spacetree::_vertexStack, p._id, true);
-    exchangeAllPeriodicBoundaryDataStacks(peano4::grid::Spacetree::_vertexStack, p._id);
-    _clonedObserver[p._id]->exchangeAllHorizontalDataExchangeStacks(true);
+    exchangeAllHorizontalDataExchangeStacks(*this, p._id);
+    exchangeAllPeriodicBoundaryDataStacks(*this, p._id);
+    _clonedObserver[p._id]->exchangeAllHorizontalDataExchangeStacks();
     _clonedObserver[p._id]->exchangeAllPeriodicBoundaryDataStacks();
   }
 
   for (auto& p : _spacetrees) {
-    finishAllOutstandingSendsAndReceives(peano4::grid::Spacetree::_vertexStack, p._id);
+    finishAllOutstandingSendsAndReceives(*this, p._id);
     _clonedObserver[p._id]->finishAllOutstandingSendsAndReceives();
   }
 }
@@ -351,19 +397,22 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::GridTraversalObserve
     case peano4::grid::SpacetreeState::NewRoot:
     case peano4::grid::SpacetreeState::JoinTriggered:
     case peano4::grid::SpacetreeState::Joining:
-      primaryTasks.push_back(new TraverseTask(p, *this, false));
+      primaryTasks.push_back(new TraverseTask(p, *_clonedObserver[p._id], false));
       break;
     case peano4::grid::SpacetreeState::Running:
-      (p._joining.empty() ? primaryTasks : tertiaryTasks).push_back(new TraverseTask(p, *this, false));
+      (p._joining.empty() ? primaryTasks : tertiaryTasks)
+        .push_back(new TraverseTask(p, *_clonedObserver[p._id], false));
       break;
     case peano4::grid::SpacetreeState::EmptyRun:
-      secondaryTasks.push_back(new TraverseTask(p, *this, true));
-      tertiaryTasks.push_back(new TraverseTask(p, *this, false));
+      secondaryTasks.push_back(new TraverseTask(p, *_clonedObserver[p._id], true));
+      tertiaryTasks.push_back(new TraverseTask(p, *_clonedObserver[p._id], false));
       break;
     default:
       break;
     }
   }
+
+  observer.setLocalTrees();
 
   tarch::multicore::spawnTasks(primaryTasks);
   streamDataFromSplittingTreesToNewTrees(observer);
@@ -374,7 +423,6 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::GridTraversalObserve
   cleanUpTrees(observer);
   createNewTrees();
   deleteClonedObservers();
-
 }
 
 void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::GridTraversalObserver& observer) {
@@ -397,13 +445,13 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::GridTraversalObs
     if (p->_spacetreeState == peano4::grid::SpacetreeState::Joined) {
       logInfo("Tree " << p->_id << " has successfully joined");
       const int id = p->_id;
-      deleteAllStacks(observer, p->_id);
+      unregisterLocalSpacetree(id);
       Node::getInstance().deregisterId(p->_id);
-      _spacetreeIds.erase(id);
       p = _spacetrees.erase(p);
     } else if (p->mayJoinWithMaster() and p->getGridStatistics().numberOfLocalUnrefinedCells == 0) {
       logInfo("Remove empty tree " << p->_id << " with master " << p->_masterId);
-      deleteAllStacks(observer, p->_id);
+      const int id = p->_id;
+      unregisterLocalSpacetree(id);
       Node::getInstance().deregisterId(p->_id);
 
       if (Node::getInstance().getRank(p->_masterId) != tarch::mpi::Rank::getInstance().getRank()) {
@@ -433,22 +481,24 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::GridTraversalObs
         getSpacetree(p->_masterId)._childrenIds.erase(p->_id);
         getSpacetree(p->_masterId)._statistics.setRemovedEmptySubtree(true);
       }
-      const int id = p->_id;
-      _spacetreeIds.erase(id);
       p = _spacetrees.erase(p);
     } else if (p->mayJoinWithMaster()) {
       const int localRank  = Node::getInstance().getRank(p->_id);
       const int masterRank = Node::getInstance().getRank(p->_masterId);
       if (localRank == masterRank and getSpacetree(p->_masterId).getGridStatistics().getCoarseningHasBeenVetoed()) {
         // @todo erste Meldung info
-        logError("Join tree "
-            << p->_id << " as it is deteriorated (encodes no hierarchical data) while master " << p->_masterId
-            << " resides on same rank and can't coarsen");
+        logError(
+          "Join tree "
+          << p->_id << " as it is deteriorated (encodes no hierarchical data) while master " << p->_masterId
+          << " resides on same rank and can't coarsen"
+        );
         logError("Not implemented yet");
         // p->joinWithMaster();
         // getSpacetree(p->_masterId).joinWithWorker(p->_id);
       } else if (localRank == masterRank) {
-        logDebug("Tree " << p->_id << " is deteriorated (encodes no hierarchical data) yet seems not to constrain its master");
+        logDebug(
+          "Tree " << p->_id << " is deteriorated (encodes no hierarchical data) yet seems not to constrain its master"
+        );
       } else {
         // @todo: Aber nur, wenn es noch andere Baeume auf diesem Rank gibt
         // @todo erste Meldung info
@@ -485,7 +535,12 @@ peano4::grid::GridStatistics peano4::parallel::SpacetreeSet::getGridStatistics()
 }
 
 bool peano4::parallel::SpacetreeSet::isLocalSpacetree(int treeId) const {
-  return _spacetreeIds.find(treeId) != _spacetreeIds.end();
+  const int localTreeId = Node::getInstance().getLocalTreeId(treeId);
+  if (localTreeId < 0 or localTreeId >= MAX_SPACETREES_PER_RANK) {
+    return false;
+  }
+  const auto* const tree = _spacetreeByLocalTreeId[localTreeId];
+  return tree != nullptr and tree->_id == treeId;
 }
 
 std::set<int> peano4::parallel::SpacetreeSet::getLocalSpacetrees() const {
@@ -530,9 +585,10 @@ bool peano4::parallel::SpacetreeSet::split(int treeId, const grid::SplitInstruct
 
     if (newSpacetreeId >= 0) {
       tree.split(newSpacetreeId, instruction);
-      logDebug("Trigger split of tree "
-          << treeId << " into tree " << newSpacetreeId << " on rank " << targetRank << " with instruction "
-          << instruction);
+      logDebug(
+        "Trigger split of tree "
+        << treeId << " into tree " << newSpacetreeId << " on rank " << targetRank << " with instruction " << instruction
+      );
       return true;
     }
   }
@@ -541,13 +597,31 @@ bool peano4::parallel::SpacetreeSet::split(int treeId, const grid::SplitInstruct
 }
 
 peano4::grid::Spacetree& peano4::parallel::SpacetreeSet::getSpacetree(int id) {
-  auto it = _spacetreeIds.find(id);
-  assertion3(it != _spacetreeIds.end(), "No spacetree found", id, tarch::mpi::Rank::getInstance().getRank());
-  return *(it->second);
+  const int localTreeId = Node::getInstance().getLocalTreeId(id);
+  assertion4(
+    localTreeId >= 0 and localTreeId < MAX_SPACETREES_PER_RANK,
+    "Invalid local tree id",
+    id,
+    localTreeId,
+    tarch::mpi::Rank::getInstance().getRank()
+  );
+  auto* const tree = _spacetreeByLocalTreeId[localTreeId];
+  assertion4(tree != nullptr, "No spacetree found", id, localTreeId, tarch::mpi::Rank::getInstance().getRank());
+  assertion4(tree->_id == id, "Spacetree lookup mismatch", id, tree->_id, localTreeId);
+  return *tree;
 }
 
 const peano4::grid::Spacetree& peano4::parallel::SpacetreeSet::getSpacetree(int id) const {
-  auto it = _spacetreeIds.find(id);
-  assertion3(it != _spacetreeIds.end(), "No spacetree found", id, tarch::mpi::Rank::getInstance().getRank());
-  return *(it->second);
+  const int localTreeId = Node::getInstance().getLocalTreeId(id);
+  assertion4(
+    localTreeId >= 0 and localTreeId < MAX_SPACETREES_PER_RANK,
+    "Invalid local tree id",
+    id,
+    localTreeId,
+    tarch::mpi::Rank::getInstance().getRank()
+  );
+  const peano4::grid::Spacetree* const tree = _spacetreeByLocalTreeId[localTreeId];
+  assertion4(tree != nullptr, "No spacetree found", id, localTreeId, tarch::mpi::Rank::getInstance().getRank());
+  assertion4(tree->_id == id, "Spacetree lookup mismatch", id, tree->_id, localTreeId);
+  return *tree;
 }

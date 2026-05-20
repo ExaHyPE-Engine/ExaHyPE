@@ -22,7 +22,6 @@ class peano4::grid::GridTraversalEventGenerator {
 private:
   const int _treeNumber;
 
-
 public:
   GridTraversalEventGenerator(int id);
   ~GridTraversalEventGenerator() = default;

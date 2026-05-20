@@ -9,12 +9,12 @@
 #include "GridTraversalEventGenerator.h"
 #include "SpacetreeState.h"
 #include "SplitInstruction.h"
+#include "StackTopology.h"
 #include "VertexLookupTable.h"
 
 #include "tarch/instrumentation/Log.h"
 
 #include "peano4/stacks/Stack.h"
-#include "peano4/stacks/TreeToStacks.h"
 
 #include "TreeIdSet.h"
 
@@ -93,7 +93,6 @@ class peano4::grid::Spacetree {
      */
     TreeIdSet  _hasSplit;
 
-
     constexpr static int NoJoin = -1;
     /**
      * This should be -1 if no join is triggered. Otherwise it holds the id of
@@ -110,6 +109,13 @@ class peano4::grid::Spacetree {
 
     // Cache entries live in a thread-local unordered_map; element references stay valid across rehashes.
     std::deque<const VertexLookupTable*> _vertexLookupTables;
+
+    std::vector<int> _neighbourTreeIds;
+    std::array<stacks::Stack<GridVertex>, StackTopology::TotalNumberOfLocalExchangeStacks> _localExchangeVertexStacks;
+    std::vector<std::array<stacks::Stack<GridVertex>, static_cast<std::size_t>(StackTopology::ParallelExchangeStack::NumberOfStacks)>> _parallelExchangeVertexStacks;
+
+    int getOrCreateNeighbourSlot(int neighbourTreeId);
+    int getNeighbourSlot(int neighbourTreeId) const;
 
     std::vector<GridControlEvent>       _gridControlEvents;
 
@@ -617,7 +623,6 @@ class peano4::grid::Spacetree {
 
     bool isFaceAlongPeriodicBoundaryCondition(GridVertex vertex[TWO_POWER_D], int faceNumber, bool calledByReceivingProcess) const;
 
-
     /**
      * This one is to be invoked if and only if a vertex goes to the in/out
      * stacks. The routine should be called just before the vertex goes to
@@ -741,21 +746,6 @@ class peano4::grid::Spacetree {
     void mergeGridVertexAdjacencyListsAtHorizontalDomainBoundary( GridVertex& vertex, const GridVertex& inVertex, int neighbour );
 
     /**
-     * Only used by SpacetreeSet to create children of the original tree.
-     *
-     * We have to set the stats's stationary counter manually, as clear() does not
-     * reset it. We furthermore set it to -2, as we'll need two iterations to set
-     * a new remote spacetree up.
-     */
-    Spacetree(
-      int newId,
-      int masterId,
-      const tarch::la::Vector<DIMENSIONS,double>&  offset,
-      const tarch::la::Vector<DIMENSIONS,double>&  width,
-      bool  traversalInverted
-    );
-
-    /**
      * Join with master. Call this routine only for degenerated trees,
      * i.e. for trees without any refined local cells.
      *
@@ -824,24 +814,36 @@ class peano4::grid::Spacetree {
       const std::bitset<DIMENSIONS>&               periodicBC = 0
     );
 
+    Spacetree(
+      int newId,
+      int masterId,
+      const tarch::la::Vector<DIMENSIONS,double>&  offset,
+      const tarch::la::Vector<DIMENSIONS,double>&  width,
+      bool  traversalInverted
+    );
+
     ~Spacetree() = default;
+
+    stacks::Stack<GridVertex>& getLocalExchangeVertexStack(int localStackId);
+    const stacks::Stack<GridVertex>& getLocalExchangeVertexStack(int localStackId) const;
+
+    stacks::Stack<GridVertex>& getParallelExchangeVertexStack(int slot, StackTopology::ParallelExchangeStack which);
+    const stacks::Stack<GridVertex>& getParallelExchangeVertexStack(int slot, StackTopology::ParallelExchangeStack which) const;
+
+    int getNumberOfNeighbourTrees() const;
+    int getNeighbourTreeIdForSlot(int slot) const;
 
     /**
      * @see GridTraversalEvent for a discussion of the arising actions. The traversal
      *   actually does not issue these actions. It invokes only an observer and hands
      *   in the GridTraversalEvent. It is then up to the observer to read out the
      *   event and to issue the actions.
-     *
-     * @param calledFromSpacetreeSet If you use traverse directly, please do
-     *     not alter this value
      */
-    void traverse(GridTraversalObserver& observer, bool calledFromSpacetreeSet = false);
+    void traverse(GridTraversalObserver& observer);
 
     const GridStatistics& getGridStatistics() const;
 
     std::string toString() const;
 
     bool isInvolvedInJoinOrFork() const;
-
-    static stacks::TreeToStacks<stacks::Stack<GridVertex>> _vertexStack;
 };

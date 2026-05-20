@@ -18,61 +18,50 @@ namespace {
     block.emplace_default(blockPosition);
   }
 
-  template <typename Data, typename Block, typename StackContainer, typename StackKey, typename Marker>
+  template <typename Data, typename Block, typename Stack, typename Marker>
   inline void loadDataIntoBlock(
-    Block&                block,
-    int                   blockPosition,
-    StackContainer&       stack,
-    const StackKey&       keyIn,
-    const Marker&         marker,
-    bool                  isInOutStack
+    Block&        block,
+    int           blockPosition,
+    Stack&        stack,
+    const Marker& marker,
+    bool          isInOutStack
   ) {
     if (not isInOutStack) {
-      // Intermediate stack
-      auto* popStack = stack.getForPop(keyIn);
-      assertion(not popStack->empty());
-      block.set(blockPosition, popStack->pop());
+      assertion(not stack.empty());
+      block.set(blockPosition, stack.pop());
       return;
     }
 
-    if (Data::load(marker)) {
-      if (stack.holdsStack(keyIn)) {
-        if (auto* popStack = stack.getForPop(keyIn); not popStack->empty()) {
-          block.set(blockPosition, popStack->pop());
-          return;
-        }
-      }
+    if (Data::load(marker) and not stack.empty()) {
+      block.set(blockPosition, stack.pop());
+      return;
     }
 
     // resetDataInBlock(block, blockPosition);
   }
 
-  template <typename Data, typename Block, typename StackContainer, typename StackKey, typename Marker>
+  template <typename Data, typename Block, typename Stack, typename Marker>
   inline void loadDataIntoBlock(
-    Block&                block,
-    int                   blockPosition,
-    StackContainer&       stack,
-    StackContainer&       hangingStack,
-    const StackKey&       keyIn,
-    const Marker&         marker,
-    bool                  isInOutStack,
-    bool                  isHanging
+    Block&        block,
+    int           blockPosition,
+    Stack&        stack,
+    Stack&        hangingStack,
+    const Marker& marker,
+    bool          isInOutStack,
+    bool          isHanging
   ) {
     if (not isInOutStack) {
       assertion(not isHanging);
-      auto* popStack = stack.getForPop(keyIn);
-      assertion(not popStack->empty());
-      block.set(blockPosition, popStack->pop());
+      assertion(not stack.empty());
+      block.set(blockPosition, stack.pop());
       return;
     }
 
     if (Data::load(marker)) {
       auto& sourceStack = isHanging ? hangingStack : stack;
-      if (sourceStack.holdsStack(keyIn)) {
-        if (auto* popStack = sourceStack.getForPop(keyIn); not popStack->empty()) {
-          block.set(blockPosition, popStack->pop());
-          return;
-        }
+      if (not sourceStack.empty()) {
+        block.set(blockPosition, sourceStack.pop());
+        return;
       }
     }
 
@@ -81,16 +70,16 @@ namespace {
 }
 
 void {{FULL_QUALIFIED_CLASSNAME}}::loadNodeData(const ::peano4::grid::GridTraversalEvent& event) {
-  const auto keyOut = repositories::DataRepository::DataKey(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
+  const auto callStack = static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call);
 
 {%- for vertex in VERTICES %}
-  auto pushBlock{{ vertex.logical_type_name }} = repositories::DataRepository::{{ vertex.logical_type_name }}Stack.getForPush(keyOut)->pushBlock(TWO_POWER_D);
+  auto pushBlock{{ vertex.logical_type_name }} = repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).pushBlock(TWO_POWER_D);
 {%- endfor %}
 {%- for face in FACES %}
-  auto pushBlock{{ face.logical_type_name }} = repositories::DataRepository::{{ face.logical_type_name }}Stack.getForPush(keyOut)->pushBlock(TWO_TIMES_D);
+  auto pushBlock{{ face.logical_type_name }} = repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).pushBlock(TWO_TIMES_D);
 {%- endfor %}
 {%- for cell in CELLS %}
-  auto pushBlock{{ cell.logical_type_name }} = repositories::DataRepository::{{ cell.logical_type_name }}Stack.getForPush(keyOut)->pushBlock(1);
+  auto pushBlock{{ cell.logical_type_name }} = repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).pushBlock(1);
 {%- endfor %}
 
 {%- if VERTICES %}
@@ -101,11 +90,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadNodeData(const ::peano4::grid::GridTraver
     const auto isNoData               = inVertexStack == ::peano4::grid::GridTraversalObserver::NoData;
 
     if (not isCreateOrDestroy and not isNoData) {
-      assertion(inVertexStack >= ::peano4::grid::PeanoCurve::CallStack);
+      assertion(inVertexStack >= static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call));
 
-      const auto vertexKeyIn     = repositories::DataRepository::DataKey(_spacetreeId, inVertexStack);
       auto       vertexMarker    = ::peano4::datamanagement::VertexMarker(event, outVertexStackPosition);
-      const auto isInOutStack    = ::peano4::grid::PeanoCurve::isInOutStack(inVertexStack);
+      const auto isInOutStack    = ::peano4::grid::StackTopology::isInOutStack(inVertexStack);
       const auto isHangingVertex = vertexMarker.isHanging();
 
 {%- for vertex in VERTICES %}
@@ -113,9 +101,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadNodeData(const ::peano4::grid::GridTraver
       loadDataIntoBlock<{{ vertex.full_qualified_type }}>(
         pushBlock{{ vertex.logical_type_name }},
         outVertexStackPosition,
-        repositories::DataRepository::{{ vertex.logical_type_name }}Stack,
-        repositories::DataRepository::{{ vertex.logical_type_name }}HangingStack,
-        vertexKeyIn,
+        repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, inVertexStack),
+        repositories::DataRepository::{{ vertex.logical_type_name }}HangingStackContainer.getLocalExchangeStack(_spacetreeId, inVertexStack),
         vertexMarker,
         isInOutStack,
         isHangingVertex
@@ -137,12 +124,11 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadNodeData(const ::peano4::grid::GridTraver
     const auto isNoData             = inFaceStack == ::peano4::grid::GridTraversalObserver::NoData;
 
     if (not isCreateOrDestroy and not isNoData) {
-      assertion(inFaceStack >= ::peano4::grid::PeanoCurve::CallStack);
+      assertion(inFaceStack >= static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call));
 
-      const auto faceKeyIn  = repositories::DataRepository::DataKey(_spacetreeId, inFaceStack);
-      auto       faceMarker = event.getFaceMarker();
+      auto       faceMarker    = event.getFaceMarker();
       faceMarker.select(outFaceStackPosition);
-      const auto isInOutStack  = ::peano4::grid::PeanoCurve::isInOutStack(inFaceStack);
+      const auto isInOutStack  = ::peano4::grid::StackTopology::isInOutStack(inFaceStack);
       const auto isHangingFace = faceMarker.isHanging();
 
 {%- for face in FACES %}
@@ -150,9 +136,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadNodeData(const ::peano4::grid::GridTraver
       loadDataIntoBlock<{{ face.full_qualified_type }}>(
         pushBlock{{ face.logical_type_name }},
         outFaceStackPosition,
-        repositories::DataRepository::{{ face.logical_type_name }}Stack,
-        repositories::DataRepository::{{ face.logical_type_name }}HangingStack,
-        faceKeyIn,
+        repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, inFaceStack),
+        repositories::DataRepository::{{ face.logical_type_name }}HangingStackContainer.getLocalExchangeStack(_spacetreeId, inFaceStack),
         faceMarker,
         isInOutStack,
         isHangingFace
@@ -174,19 +159,17 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadNodeData(const ::peano4::grid::GridTraver
     const auto isNoData             = inCellStack == ::peano4::grid::GridTraversalObserver::NoData;
 
     if (not isCreateOrDestroy and not isNoData) {
-      assertion(inCellStack >= ::peano4::grid::PeanoCurve::CallStack);
+      assertion(inCellStack >= static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call));
 
-      const auto cellKeyIn    = repositories::DataRepository::DataKey(_spacetreeId, inCellStack);
       auto       cellMarker   = event.getCellMarker();
-      const auto isInOutStack = ::peano4::grid::PeanoCurve::isInOutStack(inCellStack);
+      const auto isInOutStack = ::peano4::grid::StackTopology::isInOutStack(inCellStack);
 
 {%- for cell in CELLS %}
       // Load cell {{ cell.logical_type_name }}
       loadDataIntoBlock<{{ cell.full_qualified_type }}>(
         pushBlock{{ cell.logical_type_name }},
         outCellStackPosition,
-        repositories::DataRepository::{{ cell.logical_type_name }}Stack,
-        cellKeyIn,
+        repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, inCellStack),
         cellMarker,
         isInOutStack
       );

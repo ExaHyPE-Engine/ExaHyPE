@@ -9,6 +9,7 @@
 #include "PeanoCurve.h"
 #include "Spacetree.h"
 #include "SpacetreeHelper.h"
+#include "StackTopology.h"
 #include "peano4/utils/Loop.h"
 
 peano4::grid::GridTraversalEventGenerator::GridTraversalEventGenerator(int id):
@@ -204,7 +205,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       continue;
     }
 
-    bool willBeNoData = PeanoCurve::isInOutStack(stackNumber) and not event.getIsVertexLocal(vertexPosition);
+    bool willBeNoData = StackTopology::isInOutStack(stackNumber) and not event.getIsVertexLocal(vertexPosition);
 
     if (willBeNoData and not hasSplit.empty()) {
       const auto& adj = fineGridVertices[vertexPosition].adjacentRanks;
@@ -227,7 +228,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       assertion(false);
       break;
     case GridVertex::State::New: {
-      if (PeanoCurve::isInOutStack(stackNumber)) {
+      if (StackTopology::isInOutStack(stackNumber)) {
         event.setVertexDataFrom(i, GridTraversalObserver::CreateOrDestroyGridEntity);
       } else {
         event.setVertexDataFrom(i, stackNumber);
@@ -266,7 +267,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       continue;
     }
 
-    bool willBeNoData = PeanoCurve::isInOutStack(stackNumber) and not event.getIsFaceLocal(faceIndex);
+    bool willBeNoData = StackTopology::isInOutStack(stackNumber) and not event.getIsFaceLocal(faceIndex);
 
     if (willBeNoData and not hasSplit.empty()) {
       int adjacency[TWO_POWER_D];
@@ -292,7 +293,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       assertion(false);
       break;
     case FaceType::New: {
-      if (PeanoCurve::isInOutStack(stackNumber)) {
+      if (StackTopology::isInOutStack(stackNumber)) {
         event.setFaceDataFrom(i, GridTraversalObserver::CreateOrDestroyGridEntity);
       } else {
         event.setFaceDataFrom(i, stackNumber);
@@ -318,7 +319,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     break;
   }
 
-  bool mayResetToNoData = PeanoCurve::isInOutStack(event.getCellData()) and not event.getIsCellLocal();
+  bool mayResetToNoData = StackTopology::isInOutStack(event.getCellData()) and not event.getIsCellLocal();
   if (mayResetToNoData and not hasSplit.empty()) {
     const auto owner = SpacetreeHelper::
       getTreeOwningSpacetreeNode(fineGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining);
@@ -416,7 +417,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       continue;
     }
 
-    if (PeanoCurve::isInOutStack(stackNumber) and not leaveNodeTraversalEvent.getIsVertexLocal(vertexPosition)) {
+    if (StackTopology::isInOutStack(stackNumber) and not leaveNodeTraversalEvent.getIsVertexLocal(vertexPosition)) {
       leaveNodeTraversalEvent.setVertexDataTo(i, GridTraversalObserver::NoData);
       continue;
     }
@@ -435,7 +436,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       leaveNodeTraversalEvent.setVertexDataTo(i, stackNumber);
       break;
     case GridVertex::State::Delete: {
-      if (PeanoCurve::isInOutStack(stackNumber)) {
+      if (StackTopology::isInOutStack(stackNumber)) {
         leaveNodeTraversalEvent.setVertexDataTo(i, GridTraversalObserver::CreateOrDestroyGridEntity);
       } else {
         leaveNodeTraversalEvent.setVertexDataTo(i, stackNumber);
@@ -488,7 +489,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       continue;
     }
 
-    if (PeanoCurve::isInOutStack(stackNumber) and not leaveNodeTraversalEvent.getIsFaceLocal(faceIndex)) {
+    if (StackTopology::isInOutStack(stackNumber) and not leaveNodeTraversalEvent.getIsFaceLocal(faceIndex)) {
       leaveNodeTraversalEvent.setFaceDataTo(i, GridTraversalObserver::NoData);
       continue;
     }
@@ -502,7 +503,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       leaveNodeTraversalEvent.setFaceDataTo(i, stackNumber);
       break;
     case FaceType::Delete:
-      if (PeanoCurve::isInOutStack(stackNumber)) {
+      if (StackTopology::isInOutStack(stackNumber)) {
         leaveNodeTraversalEvent.setFaceDataTo(i, GridTraversalObserver::CreateOrDestroyGridEntity);
       } else {
         leaveNodeTraversalEvent.setFaceDataTo(i, stackNumber);
@@ -523,7 +524,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     leaveNodeTraversalEvent.setCellData(GridTraversalObserver::CreateOrDestroyGridEntity);
     break;
   }
-  if (PeanoCurve::isInOutStack(leaveNodeTraversalEvent.getCellData())
+  if (StackTopology::isInOutStack(leaveNodeTraversalEvent.getCellData())
       and not leaveNodeTraversalEvent.getIsCellLocal()) {
     leaveNodeTraversalEvent.setCellData(GridTraversalObserver::NoData);
   }

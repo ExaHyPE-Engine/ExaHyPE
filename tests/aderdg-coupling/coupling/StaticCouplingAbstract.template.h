@@ -125,7 +125,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishTimeStep() override;
 
-    virtual void printTimeStep() override;
+    virtual void logTimeStep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class

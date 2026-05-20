@@ -31,6 +31,8 @@ set(SOURCES
   grid/SpacetreeHelper.cpp
   grid/SpacetreeState.cpp
   grid/SplitInstruction.cpp
+  grid/StackContainer.cpp
+  grid/StackTopology.cpp
   grid/VertexLookupTable.cpp
   grid/VertexType.cpp
   grid/tests/AutomatonStateTest.cpp
@@ -43,6 +45,8 @@ set(SOURCES
   grid/tests/GridVertexTest.cpp
   grid/tests/SpacetreeHelperTest.cpp
   grid/tests/SpacetreeTest.cpp
+  grid/tests/StackContainerTest.cpp
+  grid/tests/StackTopologyTest.cpp
   grid/tests/VertexLookupTableTest.cpp
   grid/tests/VertexTypeTest.cpp
 
@@ -60,12 +64,10 @@ set(SOURCES
   stacks/Stack.cpp
   stacks/StackWithCustomSerialisation.cpp
   stacks/StackWithSerialisation.cpp
-  stacks/TreeToStacks.cpp
   stacks/tests/StackTest.cpp
   stacks/tests/TestDataOnHeap.cpp
   stacks/tests/TestDataOnHeapWithContainer.cpp
   stacks/tests/TestDataOnStack.cpp
-  stacks/tests/TreeToStacksTest.cpp
 
   utils/Linearised.cpp
   utils/Loop.cpp

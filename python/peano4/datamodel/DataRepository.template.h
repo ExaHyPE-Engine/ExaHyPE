@@ -2,7 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/stacks/TreeToStacks.h"
+#include "peano4/grid/StackContainer.h"
+
 #include "peano4/stacks/Stack.h"
 #include "peano4/stacks/StackWithSerialisation.h"
 #include "peano4/stacks/StackWithCustomSerialisation.h"
@@ -30,18 +31,18 @@ private:
   static std::size_t   _numberOfMaxGlobalSpacetrees;
 
 public:
-  using DataKey = ::peano4::stacks::StackKey; // TODO: Remove and use the stacks::StackKey
-
 {% for container in VERTEX_DATA_CONTAINERS -%}
-  static ::peano4::stacks::TreeToStacks<{{container.stack}}> {{container.name}}Stack;
-  static ::peano4::stacks::TreeToStacks<{{container.stack}}> {{container.name}}HangingStack;
+  static ::peano4::grid::StackContainer<{{container.stack}}> {{container.name}}StackContainer;
+  static ::peano4::grid::StackContainer<{{container.stack}}> {{container.name}}HangingStackContainer;
 {% endfor -%}
+
 {% for container in FACE_DATA_CONTAINERS -%}
-  static ::peano4::stacks::TreeToStacks<{{container.stack}}> {{container.name}}Stack;
-  static ::peano4::stacks::TreeToStacks<{{container.stack}}> {{container.name}}HangingStack;
+  static ::peano4::grid::StackContainer<{{container.stack}}> {{container.name}}StackContainer;
+  static ::peano4::grid::StackContainer<{{container.stack}}> {{container.name}}HangingStackContainer;
 {% endfor -%}
+
 {% for container in CELL_DATA_CONTAINERS -%}
-  static ::peano4::stacks::TreeToStacks<{{container.stack}}> {{container.name}}Stack;
+  static ::peano4::grid::StackContainer<{{container.stack}}> {{container.name}}StackContainer;
 {% endfor %}
 
   static void init();

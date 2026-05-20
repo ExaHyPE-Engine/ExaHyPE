@@ -3,7 +3,6 @@
 //
 #include "EulerSolver.h"
 
-
 // c chord length, t maximum relative thickness.
 double airfoilSymmetric(double x, double c = 100, double t = 0.12) {
   return 5.0 * t * c

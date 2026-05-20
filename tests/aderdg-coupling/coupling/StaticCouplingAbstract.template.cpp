@@ -153,7 +153,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::printTimeStep() {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep() {
   {{PRINT_TIME_STEP_IMPLEMENTATION}}
 
   if (getNumberOfTroubledCells() > 0) {

@@ -140,6 +140,8 @@ if (peano4::parallel::Node::isGlobalMaster(spacetreeId)) {
     const tarch::la::Vector<DIMENSIONS, double>& h
   ) = 0;
 
+  virtual void setLocalTrees() {};
+
   /**
    * Exchange all the data along the domain boundaries. If the bool is set,
    * we do send out exactly as many elements per face or vertex as we
@@ -152,7 +154,7 @@ if (peano4::parallel::Node::isGlobalMaster(spacetreeId)) {
    * finished. You can expect the calling routine that it calls
    * finishAllOutstandingSendsAndReceives() later on.
    */
-  virtual void exchangeAllHorizontalDataExchangeStacks(bool symmetricDataCardinality) {};
+  virtual void exchangeAllHorizontalDataExchangeStacks() {};
 
   /**
    * Exchange all periodic boundary data. Periodic boundary values are always
@@ -204,6 +206,4 @@ if (peano4::parallel::Node::isGlobalMaster(spacetreeId)) {
     stacks::SendReceiveContext context,
     const GridTraversalEvent&  event
   ) {};
-
-  virtual void deleteAllStacks() {};
 };

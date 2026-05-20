@@ -79,7 +79,6 @@ private:
     explicit Entry(int treeId);
   };
 
-
   /**
    * Map treeId -> entry. Presence in the map does not imply active blacklisting;
    * check Entry::lifetime > 0.

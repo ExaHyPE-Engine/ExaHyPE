@@ -21,7 +21,7 @@ namespace {{ item }} {
 }
 {%- endfor %}
 
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::peano4::grid::GridTraversalObserver {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final: public ::peano4::grid::GridTraversalObserver {
 private:
 
   const int _spacetreeId;
@@ -43,36 +43,38 @@ public:
    */
   {{CLASSNAME}}(int spacetreeId = SpacetreePrototype);
 
-  virtual GridTraversalObserver* clone(int spacetreeId) override;
+  GridTraversalObserver* clone(int spacetreeId) override;
 
-  virtual std::vector<::peano4::grid::GridControlEvent> getGridControlEvents() const override;
+  std::vector<::peano4::grid::GridControlEvent> getGridControlEvents() const override;
 
   static void prepareTraversal();
   static void unprepareTraversal();
 
-  virtual void beginTraversal(
+  void beginTraversal(
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h
   ) override;
-  virtual void endTraversal(
+  void endTraversal(
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h
   ) override;
 
-  virtual void enterNode(const ::peano4::grid::GridTraversalEvent& event) override;
-  virtual void leaveNode(const ::peano4::grid::GridTraversalEvent& event) override;
+  void enterNode(const ::peano4::grid::GridTraversalEvent& event) override;
+  void leaveNode(const ::peano4::grid::GridTraversalEvent& event) override;
 
-  virtual void loadNodeData(const ::peano4::grid::GridTraversalEvent& event) override;
-  virtual void storeNodeData(const ::peano4::grid::GridTraversalEvent& event) override;
+  void setLocalTrees() override;
 
-  virtual void sendNodeData(
+  void loadNodeData(const ::peano4::grid::GridTraversalEvent& event) override;
+  void storeNodeData(const ::peano4::grid::GridTraversalEvent& event) override;
+
+  void sendNodeData(
     ::peano4::grid::GridTraversalObserver::NodeData nodeData,
     int                                             position,
     int                                             toStack,
     ::peano4::stacks::SendReceiveContext            context,
     const ::peano4::grid::GridTraversalEvent&       event
   ) override;
-  virtual void receiveNodeData(
+  void receiveNodeData(
     ::peano4::grid::GridTraversalObserver::NodeData nodeData,
     int                                             position,
     int                                             fromStack,
@@ -80,13 +82,11 @@ public:
     const ::peano4::grid::GridTraversalEvent&       event
   ) override;
 
-  virtual void exchangeAllHorizontalDataExchangeStacks(bool symmetricDataCardinality) override;
-  virtual void exchangeAllPeriodicBoundaryDataStacks() override;
+  void exchangeAllHorizontalDataExchangeStacks() override;
+  void exchangeAllPeriodicBoundaryDataStacks() override;
 
-  virtual void streamDataFromSplittingTreeToNewTree(int newWorker) override;
-  virtual void streamDataFromJoiningTreeToMasterTree(int masterId) override;
+  void streamDataFromSplittingTreeToNewTree(int newWorker) override;
+  void streamDataFromJoiningTreeToMasterTree(int masterId) override;
 
-  virtual void finishAllOutstandingSendsAndReceives() override;
-
-  virtual void deleteAllStacks() override;
+  void finishAllOutstandingSendsAndReceives() override;
 };

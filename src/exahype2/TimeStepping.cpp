@@ -3,8 +3,6 @@
 #include "tarch/Assertions.h"
 #include "tarch/la/ScalarOperations.h"
 
-
-
 std::pair<double,double> exahype2::getInterpolationWeights( double oldTimeStampOnFace, double newTimeStampOnFace, double cellTimeStamp ) {
 
   double timeSpan = newTimeStampOnFace - oldTimeStampOnFace;
@@ -24,7 +22,6 @@ std::pair<double,double> exahype2::getInterpolationWeights( double oldTimeStampO
     return std::pair<double,double>(1.0-newWeight,newWeight);
   }
 }
-
 
 double exahype2::discretiseAndTruncateTimeStepSizes(
   double cellTimeStepSize,

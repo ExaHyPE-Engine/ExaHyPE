@@ -194,11 +194,21 @@ set(PEANO_EXTRA_CXX_FLAGS   "" CACHE STRING "Extra C++ flags (semicolon-separate
 set(PEANO_EXTRA_DEFINITIONS "" CACHE STRING "Extra preprocessor definitions (semicolon-separated)")
 set(PEANO_EXTRA_LINK_FLAGS  "" CACHE STRING "Extra linker flags (semicolon-separated)")
 
+set(MAX_SPACETREES_PER_RANK "1024" CACHE STRING "Maximum number of spacetrees per MPI rank")
+mark_as_advanced(MAX_SPACETREES_PER_RANK)
+
 target_compile_options(PeanoOptions INTERFACE
   $<$<COMPILE_LANGUAGE:CXX>:${PEANO_EXTRA_CXX_FLAGS}>
 )
-target_compile_definitions(PeanoOptions INTERFACE ${PEANO_EXTRA_DEFINITIONS})
-target_link_options(PeanoOptions INTERFACE ${PEANO_EXTRA_LINK_FLAGS})
+
+target_compile_definitions(PeanoOptions INTERFACE
+  ${PEANO_EXTRA_DEFINITIONS}
+  MAX_SPACETREES_PER_RANK=${MAX_SPACETREES_PER_RANK}
+)
+
+target_link_options(PeanoOptions INTERFACE
+  ${PEANO_EXTRA_LINK_FLAGS}
+)
 
 if(WITH_MULTITHREADING)
   find_package(OpenMP REQUIRED)

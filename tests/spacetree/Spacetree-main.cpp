@@ -31,14 +31,14 @@ int main(int argc, char** argv) {
   CreateGridObserver createGridObserver;
   while (spacetree.getGridStatistics().minH(0) > MinH) {
     watch.start();
-    spacetree.traverse(createGridObserver, true);
+    spacetree.traverse(createGridObserver);
     watch.stop();
     logInfo("Grid construction took " << watch.getCalendarTime() << "s: " << spacetree.getGridStatistics());
   }
 
   EmptyTraversalObserver emptyTraversalObserver;
   watch.start();
-  spacetree.traverse(emptyTraversalObserver, true);
+  spacetree.traverse(emptyTraversalObserver);
   watch.stop();
   logInfo("Empty traversal took " << watch.getCalendarTime() << "s: " << spacetree.getGridStatistics());
 

@@ -3,15 +3,21 @@
 #pragma once
 
 #include "TreeManagementMessage.h"
+#include "peano4/Globals.h"
+#include "peano4/grid/GridVertex.h"
 #include "peano4/grid/SplitInstruction.h"
+#include "peano4/grid/StackTopology.h"
+#include "peano4/stacks/Stack.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Task.h"
 #include "tarch/services/Service.h"
 
+#include <array>
 #include <list>
 #include <map>
 #include <set>
+#include <vector>
 
 namespace peano4 {
   namespace grid {
@@ -26,12 +32,6 @@ namespace peano4 {
   } // namespace parallel
 } // namespace peano4
 
-/**
- * The spacetree set has to be a singleton, as it is reponsible to accept
- * requests for new trees from remote ranks. So there is only one set.
- *
- * @author Tobias Weinzierl
- */
 class peano4::parallel::SpacetreeSet: public tarch::services::Service {
 private:
   friend class peano4::grid::Spacetree;
@@ -39,6 +39,15 @@ private:
   static SpacetreeSet _singleton;
 
   std::vector<peano4::parallel::TreeManagementMessage> _unansweredMessages;
+
+  stacks::Stack<grid::GridVertex>& getLocalExchangeStack(int treeId, int localStackId);
+  stacks::Stack<grid::GridVertex>& getParallelExchangeStack(
+    int                                                treeId,
+    int                                                slot,
+    peano4::grid::StackTopology::ParallelExchangeStack which
+  );
+  void registerLocalSpacetree(peano4::grid::Spacetree& tree);
+  void unregisterLocalSpacetree(int id);
 
   /**
    * Each task triggers the traversal of one specific spacetree. After
@@ -48,121 +57,33 @@ private:
    */
   class TraverseTask: public tarch::multicore::Task {
   private:
-    peano4::grid::Spacetree& _spacetree;
-    SpacetreeSet&            _spacetreeSet;
-    const bool               _invertTreeTraversalDirectionBeforeWeStart;
+    grid::Spacetree&             _spacetree;
+    grid::GridTraversalObserver* _observer;
+    const bool                   _invertTreeTraversalDirectionBeforeWeStart;
 
   public:
-    TraverseTask(peano4::grid::Spacetree& tree, SpacetreeSet& set, bool invertTreeTraversalDirectionBeforeWeStart);
+    TraverseTask(
+      grid::Spacetree&             tree,
+      grid::GridTraversalObserver& observer,
+      bool                         invertTreeTraversalDirectionBeforeWeStart
+    );
 
     virtual bool run() override;
   };
 
 public:
-  /**
-   * Realise domain boundary exchange (over multiple scales)
-   *
-   * This routine realises the boundary data exchange, i.e. it
-   * send outs in iteration n and receives (see counterpart routine), but
-   * the received data is used only in traversal n+1. The whole exchange
-   * thus asynchronous (logically).
-   *
-   * Typically, this routine is called by user observers to for their
-   * user-defined data. We however also use it within the grid to trigger
-   * the actual vertex data exchange. As these routines all are invoked
-   * via tasks, this routine is typically invoked by multiple threads
-   * concurrently.
-   *
-   *
-   * ## Deep copy semantics for shared memory
-   *
-   * Whenever we copy a container over to another thread, we use the
-   * clone(). When we study the memory ownership, it is important to
-   * memorise that the boundary exchange containers are copies of "real"
-   * containers of the code. That is, the mesh looks at a face or vertex
-   * and stores its content persistently within the tree. Once it has
-   * done this, it analyses if this face or vertex is adjacent to a domain
-   * boundary. If so, it copies the data of interest into the boundary
-   * container. After the traversal, this copy is either sent out to
-   * another rank, or we clone() it into the container of another tree
-   * on the same rank (shared memory data exchange). After that, the
-   * original boundary container is cleared.
-   *
-   *
-   * If you work with containers over pointers, the clone()
-   * should create a deep copy, whereas otherwise any push and pull only
-   * moves pointers around. That is, a container holding boundary data
-   * basically holds pointers to data that is also held by containers
-   * administering interior data. After the traversal, it is the clone()
-   * which ensures that we actually create copies, i.e. work with
-   * real halo data which is replicated if data belongs to another tree -
-   * even if that tree resides on the same rank. Therefore, we can clear()
-   * the output stack. All data there had been pointers to data which are
-   * still held by the local tree.
-   *
-   *
-   * It is the responsibility of the actual merge to ensure that data on the
-   * input containers are probably merged into the local data. If these data
-   * are pointers, it is the responsibility of the merge to ensure that they
-   * are properly deleted. The input stack will be empty after the traversal,
-   * as the grid management will pull all data and pipe it into merges, but
-   * if they hold pointers, you have to take special care.
-   *
-   * @see python4/peano4/toolbox/particles/ParticleSet.template.h and the
-   *   merge() implementation therein for an example of a merge of a set of
-   *   pointers.
-   *
-   *
-   * ## Copy semantics for distributed memory
-   *
-   * If you launch a distributed memory exchange, it is the responsibility
-   * of the container to create a real copy on the incoming rank. If your
-   * container managed pointers, this is obviously a deep copy. It is also
-   * the container's responsibility to ensure that all data are freed when
-   * we call clear() after the send is complete.
-   *
-   * If your container holds pointers, it holds pointers which are also held
-   * by some containers that are responsible for the interior. So the clear()
-   * is just fine, as it eliminates redundant pointers.
-   *
-   *
-   * @param symmetricDataCardinality If two ranks A and B are adjacent to
-   *   each other, and if A send n entries to B, then B received exactly
-   *   n entries in turn.
-   *
-   * @see finishAllOutstandingSendsAndReceives();
-   */
   template <class Container>
-  static void exchangeAllHorizontalDataExchangeStacks(
-    Container& stackContainer,
-    int        spacetreeId,
-    bool       symmetricDataCardinality
-  );
+  static void resizeParallelExchangeStacks(Container& stackContainer);
 
-  /**
-   * Exchange periodic BC data
-   *
-   * Close to trivial routine, as it basically examines whether anything
-   * has been written to a stack that is associated with periodic BCs.
-   * If so, the corresponding stack is copied over onto the respective
-   * input stack for the subsequent iteration. This routine should
-   * degenerate to nop on all ranks besides rank 0.
-   */
+  template <class Container>
+  static void setLocalTrees(Container& stackContainer);
+
+  template <class Container>
+  static void exchangeAllHorizontalDataExchangeStacks(Container& stackContainer, int spacetreeId);
+
   template <class Container>
   static void exchangeAllPeriodicBoundaryDataStacks(Container& stackContainer, int spacetreeId);
 
-  template <class Container>
-  static void deleteAllStacks(Container& stackContainer, int spacetreeId);
-
-  /**
-   * This routine finishes all the sends and receives that are still active,
-   * i.e. it searched for pending MPI requests and waits for them to finish.
-   * After this is ensured, the routine runs over all stacks and ensures that
-   * all temporary data is released. The last step is important, as we otherwise
-   * quickly run out of memory - we replicate all data structures whenever we fork
-   * and as C++ vectors don't release memory, this memory would be lost without
-   * a manual freeing.
-   */
   template <class Container>
   static void finishAllOutstandingSendsAndReceives(Container& stackContainer, int spacetreeId);
 
@@ -296,8 +217,8 @@ private:
   /**
    * These are the local spacetrees.
    */
-  std::list<peano4::grid::Spacetree>                                    _spacetrees;
-  std::unordered_map<int, std::list<peano4::grid::Spacetree>::iterator> _spacetreeIds;
+  std::list<peano4::grid::Spacetree>                            _spacetrees;
+  std::array<peano4::grid::Spacetree*, MAX_SPACETREES_PER_RANK> _spacetreeByLocalTreeId{{nullptr}};
 
   /**
    * I create/clone one observer per local tree. This is an
@@ -310,10 +231,6 @@ private:
    * @see deleteClonedObservers
    */
   std::map<int, peano4::grid::GridTraversalObserver*> _clonedObserver;
-
-  peano4::grid::Spacetree& getSpacetree(int id);
-
-  const peano4::grid::Spacetree& getSpacetree(int id) const;
 
   /**
    * @return tag that one should use to answer one particular spacetree
@@ -335,13 +252,6 @@ private:
    * terminate.
    */
   void exchangeHorizontalDataBetweenTrees(peano4::grid::GridTraversalObserver& observer);
-
-  /**
-   * I do this after a join/after I've removed an empty tree. Have to call it
-   * explicitly, as a join does not delete/throw away the data. It simply hands
-   * on data ownership.
-   */
-  void deleteAllStacks(peano4::grid::GridTraversalObserver& observer, int spacetreeId);
 
   /**
    * Copy the data from a splitting tree onto its new workers
@@ -621,9 +531,11 @@ public:
   /**
    * Return statistics object for primary spacetree.
    */
-  peano4::grid::GridStatistics getGridStatistics() const;
-
+  peano4::grid::GridStatistics        getGridStatistics() const;
   const peano4::grid::GridStatistics& getGridStatistics(int treeId) const;
+
+  peano4::grid::Spacetree&       getSpacetree(int id);
+  const peano4::grid::Spacetree& getSpacetree(int id) const;
 
   /**
    * Split a local tree.

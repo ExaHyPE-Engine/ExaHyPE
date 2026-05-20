@@ -18,11 +18,10 @@ class DaStGen2Generator(object):
     self._data = data
 
   def get_stack_container(self):
-    return "::peano4::stacks::Stack<" + self._data.get_full_qualified_type() + ">";
+    return "::peano4::stacks::Stack<" + self._data.get_full_qualified_type() + ">"
 
   def get_header_file_include(self):
-    return "#include \"peano4/stacks/Stack.h\" \n \
-            #include \"" + self._data.namespace[-1] + "/" + self._data.name + ".h\""
+    return "#include \"" + self._data.namespace[-1] + "/" + self._data.name + ".h\""
 
 
   def construct_output(self,output):

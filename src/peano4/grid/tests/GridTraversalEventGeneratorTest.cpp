@@ -7,6 +7,7 @@
 #include "peano4/grid/GridTraversalObserver.h"
 #include "peano4/grid/PeanoCurve.h"
 #include "peano4/grid/SpacetreeHelper.h"
+#include "peano4/grid/StackTopology.h"
 #include "peano4/grid/VertexLookupTable.h"
 #include "peano4/grid/VertexType.h"
 #include "tarch/la/Vector.h"
@@ -343,7 +344,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
     for (int i = 0; i < TWO_POWER_D; ++i) {
       const std::bitset<DIMENSIONS> vertexIndex(coordinates ^ std::bitset<DIMENSIONS>(i));
       const int                     stack = PeanoCurve::getVertexReadStackNumber(state, vertexIndex);
-      if (PeanoCurve::isInOutStack(stack)) {
+      if (StackTopology::isInOutStack(stack)) {
         chosenVertexI     = i;
         chosenVertexIndex = vertexIndex;
         chosenVertexPos   = static_cast<int>(vertexIndex.to_ulong());
@@ -355,7 +356,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
   validate(chosenVertexI >= 0);
   validateEquals(chosenVertexPos, static_cast<int>(chosenVertexIndex.to_ulong()));
   validateEquals(chosenVertexStack, PeanoCurve::getVertexReadStackNumber(state, chosenVertexIndex));
-  validate(PeanoCurve::isInOutStack(chosenVertexStack));
+  validate(StackTopology::isInOutStack(chosenVertexStack));
 
   // Make the chosen vertex non-local.
   setAllAdj(fineGridVertices[chosenVertexPos], remoteRank);
@@ -368,7 +369,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
     for (int i = 0; i < TWO_TIMES_D; ++i) {
       const int faceIndex = PeanoCurve::getFaceNumberAlongCurve(state, i);
       const int stack     = PeanoCurve::getFaceReadStackNumber(state, faceIndex);
-      if (PeanoCurve::isInOutStack(stack)) {
+      if (StackTopology::isInOutStack(stack)) {
         chosenFaceI     = i;
         chosenFaceIndex = faceIndex;
         chosenFaceStack = stack;
@@ -465,7 +466,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
     for (int i = 0; i < TWO_POWER_D; ++i) {
       const std::bitset<DIMENSIONS> vertexIndex(coordinates ^ std::bitset<DIMENSIONS>(i));
       const int                     stack = PeanoCurve::getVertexReadStackNumber(state, vertexIndex);
-      if (PeanoCurve::isTemporaryStack(stack)) {
+      if (StackTopology::isLocalExchangeStack(stack)) {
         chosenVertexI     = i;
         chosenVertexPos   = static_cast<int>(vertexIndex.to_ulong());
         chosenVertexStack = stack;
@@ -483,7 +484,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
     for (int i = 0; i < TWO_TIMES_D; ++i) {
       const int faceIndex = PeanoCurve::getFaceNumberAlongCurve(state, i);
       const int stack     = PeanoCurve::getFaceReadStackNumber(state, faceIndex);
-      if (PeanoCurve::isTemporaryStack(stack)) {
+      if (StackTopology::isLocalExchangeStack(stack)) {
         chosenFaceI     = i;
         chosenFaceIndex = faceIndex;
         chosenFaceStack = stack;
@@ -603,7 +604,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterNodeTr
     pickVertexAtI0(state, vertexI, vertexPos, vertexIndex);
 
     const int stackNumber = PeanoCurve::getVertexReadStackNumber(state, vertexIndex);
-    validate(PeanoCurve::isInOutStack(stackNumber)); // this subtest targets the in/out path
+    validate(StackTopology::isInOutStack(stackNumber)); // This subtest targets the in/out path
 
     fineGridVertices[vertexPos].setState(GridVertex::State::New);
 
@@ -641,7 +642,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterNodeTr
     pickVertexAtI0(state, vertexI, vertexPos, vertexIndex);
 
     const int stackNumber = PeanoCurve::getVertexReadStackNumber(state, vertexIndex);
-    validate(PeanoCurve::isTemporaryStack(stackNumber)); // this subtest targets the temporary-stack path
+    validate(StackTopology::isLocalExchangeStack(stackNumber)); // This subtest targets the local stack path
 
     fineGridVertices[vertexPos].setState(GridVertex::State::New);
 
@@ -772,7 +773,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
     for (int i = 0; i < TWO_POWER_D; ++i) {
       const std::bitset<DIMENSIONS> vertexIndex(coordinates ^ std::bitset<DIMENSIONS>(i));
       const int                     stack = PeanoCurve::getVertexWriteStackNumber(state, vertexIndex);
-      if (PeanoCurve::isInOutStack(stack)) {
+      if (StackTopology::isInOutStack(stack)) {
         chosenVertexI     = i;
         chosenVertexIndex = vertexIndex;
         chosenVertexPos   = static_cast<int>(vertexIndex.to_ulong());
@@ -782,7 +783,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
   }
   validate(chosenVertexI >= 0);
   validateEquals(chosenVertexPos, static_cast<int>(chosenVertexIndex.to_ulong()));
-  validate(PeanoCurve::isInOutStack(PeanoCurve::getVertexWriteStackNumber(state, chosenVertexIndex)));
+  validate(StackTopology::isInOutStack(PeanoCurve::getVertexWriteStackNumber(state, chosenVertexIndex)));
 
   // (A) Local vertex + Delete + in/out => CreateOrDestroyGridEntity
   {
@@ -933,7 +934,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
       for (int i = 0; i < TWO_TIMES_D; ++i) {
         const int faceIndex = PeanoCurve::getFaceNumberAlongCurve(state, i);
         const int stack     = PeanoCurve::getFaceWriteStackNumber(state, faceIndex);
-        if (PeanoCurve::isInOutStack(stack)) {
+        if (StackTopology::isInOutStack(stack)) {
           chosenFaceI     = i;
           chosenFaceIndex = faceIndex;
           break;
@@ -1011,7 +1012,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
     for (int i = 0; i < TWO_POWER_D; ++i) {
       const std::bitset<DIMENSIONS> vertexIndex(coordinates ^ std::bitset<DIMENSIONS>(i));
       const int                     stack = PeanoCurve::getVertexWriteStackNumber(state, vertexIndex);
-      if (PeanoCurve::isTemporaryStack(stack)) {
+      if (StackTopology::isLocalExchangeStack(stack)) {
         chosenVertexI     = i;
         chosenVertexIndex = vertexIndex;
         chosenVertexPos   = static_cast<int>(vertexIndex.to_ulong());
@@ -1023,7 +1024,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
   validate(chosenVertexI >= 0);
   validateEquals(chosenVertexPos, static_cast<int>(chosenVertexIndex.to_ulong()));
   validateEquals(chosenVertexStack, PeanoCurve::getVertexWriteStackNumber(state, chosenVertexIndex));
-  validate(PeanoCurve::isTemporaryStack(chosenVertexStack));
+  validate(StackTopology::isLocalExchangeStack(chosenVertexStack));
 
   // Choose a face with a temporary write stack.
   int chosenFaceI     = -1;
@@ -1033,7 +1034,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
     for (int i = 0; i < TWO_TIMES_D; ++i) {
       const int faceIndex = PeanoCurve::getFaceNumberAlongCurve(state, i);
       const int stack     = PeanoCurve::getFaceWriteStackNumber(state, faceIndex);
-      if (PeanoCurve::isTemporaryStack(stack)) {
+      if (StackTopology::isLocalExchangeStack(stack)) {
         chosenFaceI     = i;
         chosenFaceIndex = faceIndex;
         chosenFaceStack = stack;
