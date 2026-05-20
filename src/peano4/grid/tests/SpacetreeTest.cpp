@@ -503,10 +503,9 @@ void peano4::grid::tests::SpacetreeTest::testTraverseWithPeriodicBoundaryConditi
 #endif
 
   Spacetree tree = createUnitTree(periodicBC);
-  Spacetree::_vertexStack.clear(tree._id);
 
   CountingTraversalObserver observer;
-  tree.traverse(observer, true);
+  tree.traverse(observer);
 
   validate(tree._spacetreeState == SpacetreeState::Running);
   validate(observer.enterNodeCalls > 0);
@@ -518,8 +517,6 @@ void peano4::grid::tests::SpacetreeTest::testTraverseWithPeriodicBoundaryConditi
     const int localMask    = observer.enteredVertexLocalMasks[i];
     validateEqualsWithParams2((boundaryMask & ~localMask), 0, boundaryMask, localMask);
   }
-
-  Spacetree::_vertexStack.clear(tree._id);
 }
 
 // Checks that counting adjacent refined local cells increments the per-vertex counter once per contributing local
@@ -1070,10 +1067,9 @@ void peano4::grid::tests::SpacetreeTest::testVertexNeighbourPermutationInvarianc
 // Verifies that descending a simple local tree still triggers the expected observer callbacks and statistics updates.
 void peano4::grid::tests::SpacetreeTest::testDescend() {
   Spacetree tree = createUnitTree();
-  Spacetree::_vertexStack.clear(tree._id);
 
   CountingTraversalObserver primingObserver;
-  tree.traverse(primingObserver, true);
+  tree.traverse(primingObserver);
 
   validate(tree._spacetreeState == SpacetreeState::Running);
   validateEquals(tree._vertexLookupTables.size(), 0);
@@ -1107,6 +1103,4 @@ void peano4::grid::tests::SpacetreeTest::testDescend() {
   validateEquals(tree._statistics.numberOfLocalUnrefinedCells, THREE_POWER_D);
   validateEquals(tree._statistics.numberOfRemoteUnrefinedCells, 0);
   validateEquals(tree._vertexLookupTables.size(), 0);
-
-  Spacetree::_vertexStack.clear(tree._id);
 }

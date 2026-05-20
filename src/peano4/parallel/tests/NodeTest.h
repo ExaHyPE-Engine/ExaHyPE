@@ -5,7 +5,6 @@
 #include "tarch/tests/TestCase.h"
 #include "tarch/instrumentation/Log.h"
 
-
 namespace peano4 {
   namespace parallel {
     namespace tests {
@@ -13,7 +12,6 @@ namespace peano4 {
     }
   }
 }
-
 
 /**
  * I test the mapping of vertex adjacency data onto stack numbers here.

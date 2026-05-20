@@ -10,7 +10,7 @@ namespace tarch::plotter {
 
 class tarch::plotter::JSONTimeSeriesWriter: public TimeSeriesWriter {
 public:
-  JSONTimeSeriesWriter() = default;
+  JSONTimeSeriesWriter()           = default;
   ~JSONTimeSeriesWriter() override = default;
 
   void writeTimeSeriesMetaFile(const std::string& outputDirectory, const std::string& filename) const override;

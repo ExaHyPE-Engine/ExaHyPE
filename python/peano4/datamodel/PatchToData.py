@@ -83,7 +83,6 @@ class PatchToData:
         """
         return (
             """
-#include "peano4/stacks/StackWithSerialisation.h"
 #include \""""
             + self.data.namespace[-1]
             + "/"

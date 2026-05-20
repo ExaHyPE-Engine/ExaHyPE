@@ -8,7 +8,6 @@
 #include <cstring>
 #include <limits>
 
-
 #ifdef WITH_MPI
 namespace {
   enum WordIndex : int {
@@ -292,7 +291,6 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
     }
   }
 #endif
-
 
   if (publishLocalAsGlobal) {
     _isViewConsistent = true;

@@ -2,14 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/la/ScalarOperations.h"
 #include "tarch/instrumentation/Log.h"
 
 #include "peano4/datamanagement/FaceEnumerator.h"
 
 #include <utility>
-
 
 namespace exahype2 {
   namespace internal {
@@ -149,7 +147,6 @@ namespace exahype2 {
     return result;
   }
 
-
   /**
    * Remove accumulation errors from cell time stamps
    *
@@ -237,7 +234,6 @@ namespace exahype2 {
     logDebug("dt=" << timeStepSize << ", max-match=" << maxOfMatchingTimeStamps);
     return timeStepSize;
   }
-
 
   /**
    *

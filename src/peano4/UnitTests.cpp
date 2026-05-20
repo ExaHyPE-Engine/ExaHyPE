@@ -11,6 +11,8 @@
 #include "grid/tests/GridVertexTest.h"
 #include "grid/tests/SpacetreeHelperTest.h"
 #include "grid/tests/SpacetreeTest.h"
+#include "grid/tests/StackContainerTest.h"
+#include "grid/tests/StackTopologyTest.h"
 #include "grid/tests/TreeIdSetTest.h"
 #include "grid/tests/VertexLookupTableTest.h"
 #include "grid/tests/VertexTypeTest.h"
@@ -19,7 +21,6 @@
 #include "parallel/tests/PingPongTest.h"
 #endif
 #include "stacks/tests/StackTest.h"
-#include "stacks/tests/TreeToStacksTest.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 #include "utils/tests/LinearisedTest.h"
 
@@ -36,6 +37,8 @@ tarch::tests::TestCase* peano4::getUnitTests() {
   result->addTestCase(new grid::tests::GridVertexTest());
   result->addTestCase(new grid::tests::SpacetreeHelperTest());
   result->addTestCase(new grid::tests::SpacetreeTest());
+  result->addTestCase(new grid::tests::StackContainerTest());
+  result->addTestCase(new grid::tests::StackTopologyTest());
   result->addTestCase(new grid::tests::VertexLookupTableTest());
   result->addTestCase(new grid::tests::VertexTypeTest());
 
@@ -47,7 +50,6 @@ tarch::tests::TestCase* peano4::getUnitTests() {
   result->addTestCase(new utils::tests::LinearisedTest());
 
   result->addTestCase(new stacks::tests::StackTest());
-  result->addTestCase(new stacks::tests::TreeToStacksTest());
 
   return result;
 }

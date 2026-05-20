@@ -198,7 +198,7 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testUnsupportedCellType() {
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
       cleanup(filename + ".nc");
     }
-      throw std::runtime_error("NetCDFFileWriter did not throw on unsupported cell type (Line)!");
+    throw std::runtime_error("NetCDFFileWriter did not throw on unsupported cell type!");
   }
   tarch::mpi::Rank::getInstance().barrier();
 }

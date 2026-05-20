@@ -13,7 +13,6 @@ namespace peano4 {
   } // namespace grid
 } // namespace peano4
 
-
 class peano4::grid::tests::SpacetreeTest final: public tarch::tests::TestCase {
 private:
   void testRestrictToCoarseGrid();

@@ -3,6 +3,7 @@
 #include "VertexLookupTable.h"
 
 #include "PeanoCurve.h"
+#include "StackTopology.h"
 
 #include <cstdint>
 #include <unordered_map>
@@ -67,8 +68,8 @@ namespace {
       const int writeStack = peano4::grid::PeanoCurve::getVertexWriteStackNumber(fineGridState, vIdx);
       lut.readStack[i]     = readStack;
       lut.writeStack[i]    = writeStack;
-      lut.inOutRead[i]     = peano4::grid::PeanoCurve::isInOutStack(readStack);
-      lut.inOutWrite[i]    = peano4::grid::PeanoCurve::isInOutStack(writeStack);
+      lut.inOutRead[i]     = peano4::grid::StackTopology::isInOutStack(readStack);
+      lut.inOutWrite[i]    = peano4::grid::StackTopology::isInOutStack(writeStack);
     }
 
     for (int i = 0; i < TWO_TIMES_D; ++i) {

@@ -17,7 +17,25 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendNodeData(
   const ::peano4::grid::GridTraversalEvent&       event
 ) {
   using NodeData = ::peano4::grid::GridTraversalObserver::NodeData;
-  const auto key = repositories::DataRepository::DataKey(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
+  const auto callStack = static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call);
+
+  auto outgoingStack = [&](auto& container) -> typename std::remove_reference_t<decltype(container)>::Stack& {
+    switch (context) {
+    case ::peano4::stacks::SendReceiveContext::PeriodicBoundaryDataSwap:
+      assertion2(toStack >= 0 and toStack < ::peano4::grid::StackTopology::TotalNumberOfLocalExchangeStacks, toStack, _spacetreeId);
+      return container.getLocalExchangeStack(_spacetreeId, toStack); // local stack id
+    case ::peano4::stacks::SendReceiveContext::BoundaryExchange:
+      container.resizeParallelExchangeStacks(_spacetreeId, toStack + 1);
+      return container.getParallelExchangeStack(_spacetreeId, toStack, ::peano4::grid::StackTopology::ParallelExchangeStack::HorizontalOutput);
+    case ::peano4::stacks::SendReceiveContext::ForkDomain:
+    case ::peano4::stacks::SendReceiveContext::JoinDomain:
+      container.resizeParallelExchangeStacks(_spacetreeId, toStack + 1);
+      return container.getParallelExchangeStack(_spacetreeId, toStack, ::peano4::grid::StackTopology::ParallelExchangeStack::VerticalOutput);
+    default:
+      assertionMsg(false, "Unsupported send context");
+      return container.getLocalExchangeStack(_spacetreeId, callStack);
+    }
+  };
 
   switch (nodeData) {
   case NodeData::Vertex:
@@ -26,12 +44,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendNodeData(
       auto marker = ::peano4::datamanagement::VertexMarker(event, position);
 {%- for vertex in VERTICES %}
       {
-        auto& data = repositories::DataRepository::{{vertex.logical_type_name}}Stack.getForPop(key)->top(TWO_POWER_D - 1 - position);
+        auto& data = repositories::DataRepository::{{vertex.logical_type_name}}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).top(TWO_POWER_D - 1 - position);
         if (data.send(marker, context)) {
-          pushDataForExchange(
-            *repositories::DataRepository::{{vertex.logical_type_name}}Stack.getForPush(_spacetreeId, toStack),
-            data
-          );
+          pushDataForExchange(outgoingStack(repositories::DataRepository::{{vertex.logical_type_name}}StackContainer), data);
         }
       }
 {%- endfor %}
@@ -45,12 +60,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendNodeData(
       marker.select(position);
 {%- for face in FACES %}
       {
-        auto& data = repositories::DataRepository::{{face.logical_type_name}}Stack.getForPop(key)->top(TWO_TIMES_D - 1 - position);
+        auto& data = repositories::DataRepository::{{face.logical_type_name}}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).top(TWO_TIMES_D - 1 - position);
         if (data.send(marker, context)) {
-          pushDataForExchange(
-            *repositories::DataRepository::{{face.logical_type_name}}Stack.getForPush(_spacetreeId, toStack),
-            data
-          );
+          pushDataForExchange(outgoingStack(repositories::DataRepository::{{face.logical_type_name}}StackContainer), data);
         }
       }
 {%- endfor %}
@@ -63,12 +75,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendNodeData(
       auto marker = event.getCellMarker();
 {%- for cell in CELLS %}
       {
-        auto& data = repositories::DataRepository::{{cell.logical_type_name}}Stack.getForPop(key)->top();
+        auto& data = repositories::DataRepository::{{cell.logical_type_name}}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).top();
         if (data.send(marker, context)) {
-          pushDataForExchange(
-            *repositories::DataRepository::{{cell.logical_type_name}}Stack.getForPush(_spacetreeId, toStack),
-            data
-          );
+          pushDataForExchange(outgoingStack(repositories::DataRepository::{{cell.logical_type_name}}StackContainer), data);
         }
       }
 {%- endfor %}

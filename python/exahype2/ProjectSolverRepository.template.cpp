@@ -31,7 +31,6 @@ namespace {{ item }} {
 
 int statisticsExchangeTag = tarch::mpi::Rank::reserveFreeTag("SolverRepository - statistics exchange tag");
 
-
 {% if LOAD_BALANCER_CONFIGURATION!="" %}
 toolbox::loadbalancing::LoadBalancer loadBalancer({{LOAD_BALANCER_CONFIGURATION}});
 {% else %}

@@ -2,21 +2,21 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "DataRepository.h"
 
-#include "peano4/grid/Spacetree.h"
-
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
 
 {% for container in VERTEX_DATA_CONTAINERS -%}
-::peano4::stacks::TreeToStacks<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}Stack;
-::peano4::stacks::TreeToStacks<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}HangingStack;
+::peano4::grid::StackContainer<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}StackContainer;
+::peano4::grid::StackContainer<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}HangingStackContainer;
 {% endfor -%}
+
 {% for container in FACE_DATA_CONTAINERS -%}
-::peano4::stacks::TreeToStacks<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}Stack;
-::peano4::stacks::TreeToStacks<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}HangingStack;
+::peano4::grid::StackContainer<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}StackContainer;
+::peano4::grid::StackContainer<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}HangingStackContainer;
 {% endfor -%}
+
 {% for container in CELL_DATA_CONTAINERS -%}
-::peano4::stacks::TreeToStacks<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}Stack;
+::peano4::grid::StackContainer<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}StackContainer;
 {% endfor %}
 
 std::uint64_t {{FULL_QUALIFIED_CLASSNAME}}::_localCellDataMemoryUsageInBytes = 0;
@@ -39,36 +39,19 @@ void {{FULL_QUALIFIED_CLASSNAME}}::init() {
   {{ container.fq }}::initDatatype();
 {%- endfor %}
 #endif
-
-  ::peano4::grid::Spacetree::_vertexStack.resize(_numberOfMaxGlobalSpacetrees);
-
-{%- for container in VERTEX_DATA_CONTAINERS %}
-  {{ container.name }}Stack.resize(_numberOfMaxGlobalSpacetrees);
-  {{ container.name }}HangingStack.resize(_numberOfMaxGlobalSpacetrees);
-{%- endfor %}
-{%- for container in FACE_DATA_CONTAINERS %}
-  {{ container.name }}Stack.resize(_numberOfMaxGlobalSpacetrees);
-  {{ container.name }}Stack.setStackSizeHint(getMaxNumberOfFaces());
-  {{ container.name }}HangingStack.resize(_numberOfMaxGlobalSpacetrees);
-  {{ container.name }}HangingStack.setStackSizeHint(getMaxNumberOfFaces());
-{%- endfor %}
-{%- for container in CELL_DATA_CONTAINERS %}
-  {{ container.name }}Stack.resize(_numberOfMaxGlobalSpacetrees);
-  {{ container.name }}Stack.setStackSizeHint(getMaxNumberOfPatches());
-{%- endfor %}
 }
 
 void {{FULL_QUALIFIED_CLASSNAME}}::shutdown() {
 {%- for container in VERTEX_DATA_CONTAINERS %}
-  {{ container.name }}Stack.clear();
-  {{ container.name }}HangingStack.clear();
+  {{ container.name }}StackContainer.clear();
+  {{ container.name }}HangingStackContainer.clear();
 {%- endfor %}
 {%- for container in FACE_DATA_CONTAINERS %}
-  {{ container.name }}Stack.clear();
-  {{ container.name }}HangingStack.clear();
+  {{ container.name }}StackContainer.clear();
+  {{ container.name }}HangingStackContainer.clear();
 {%- endfor %}
 {%- for container in CELL_DATA_CONTAINERS %}
-  {{ container.name }}Stack.clear();
+  {{ container.name }}StackContainer.clear();
 {%- endfor %}
 
 #ifdef WITH_MPI
@@ -90,15 +73,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::updateMemoryUsage() {
   _localVertexDataMemoryUsageInBytes = 0;
 
 {%- for container in CELL_DATA_CONTAINERS %}
-  _localCellDataMemoryUsageInBytes += {{container.name}}Stack.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
+  _localCellDataMemoryUsageInBytes += {{container.name}}StackContainer.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
 {%- endfor %}
 {%- for container in FACE_DATA_CONTAINERS %}
-  _localFaceDataMemoryUsageInBytes += {{container.name}}Stack.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
-  _localFaceDataMemoryUsageInBytes += {{container.name}}HangingStack.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
+  _localFaceDataMemoryUsageInBytes += {{container.name}}StackContainer.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
+  _localFaceDataMemoryUsageInBytes += {{container.name}}HangingStackContainer.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
 {%- endfor %}
 {%- for container in VERTEX_DATA_CONTAINERS %}
-  _localVertexDataMemoryUsageInBytes += {{container.name}}Stack.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
-  _localVertexDataMemoryUsageInBytes += {{container.name}}HangingStack.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
+  _localVertexDataMemoryUsageInBytes += {{container.name}}StackContainer.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
+  _localVertexDataMemoryUsageInBytes += {{container.name}}HangingStackContainer.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
 {%- endfor %}
 
 #ifdef WITH_MPI

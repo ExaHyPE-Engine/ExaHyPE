@@ -148,6 +148,10 @@ private:
       // Use non-const data(): generated lazy patch data materialises receive
       // storage on demand before the incoming payload is copied into it.
       typename T::DoFType* target = this->_data[i].data();
+      if (target == nullptr) {
+        this->_data[i] = T();
+        target         = this->_data[i].data();
+      }
       assertion(target != nullptr);
       std::copy_n(_receiveBuffer.data() + i * T::Cardinality, T::Cardinality, target);
     }

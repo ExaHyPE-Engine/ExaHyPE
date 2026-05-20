@@ -1,23 +1,26 @@
 void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversalEvent& event) {
-  const auto key = repositories::DataRepository::DataKey(_spacetreeId, ::peano4::grid::PeanoCurve::CallStack);
+  const auto callStack = static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call);
 
 {%- for vertex in VERTICES %}
-  ::peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> fineGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TWO_POWER_D - 1));
-  ::peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> coarseGrid{{ vertex.logical_type_name }}(&repositories::DataRepository::{{ vertex.logical_type_name }}Stack.getForPop(key)->top(TWO_POWER_D * 2 - 1));
+  auto& {{ vertex.logical_type_name }}Stack = repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, callStack);
+  ::peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> fineGrid{{ vertex.logical_type_name }}(&{{ vertex.logical_type_name }}Stack.top(TWO_POWER_D - 1));
+  ::peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> coarseGrid{{ vertex.logical_type_name }}(&{{ vertex.logical_type_name }}Stack.top(TWO_POWER_D * 2 - 1));
 {%- endfor %}
 
 {%- for face in FACES %}
-  ::peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> fineGrid{{ face.logical_type_name }}(&repositories::DataRepository::{{ face.logical_type_name }}Stack.getForPop(key)->top(TWO_TIMES_D - 1));
-  ::peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> coarseGrid{{ face.logical_type_name }}(&repositories::DataRepository::{{ face.logical_type_name }}Stack.getForPop(key)->top(TWO_TIMES_D * 2 - 1));
+  auto& {{ face.logical_type_name }}Stack = repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, callStack);
+  ::peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> fineGrid{{ face.logical_type_name }}(&{{ face.logical_type_name }}Stack.top(TWO_TIMES_D - 1));
+  ::peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> coarseGrid{{ face.logical_type_name }}(&{{ face.logical_type_name }}Stack.top(TWO_TIMES_D * 2 - 1));
 {%- endfor %}
 
 {%- for cell in CELLS %}
-  auto& fineGrid{{ cell.logical_type_name }} = repositories::DataRepository::{{ cell.logical_type_name }}Stack.getForPop(key)->top(0);
-  auto& coarseGrid{{ cell.logical_type_name }} = repositories::DataRepository::{{ cell.logical_type_name }}Stack.getForPop(key)->top(1);
+  auto& {{ cell.logical_type_name }}Stack = repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, callStack);
+  auto& fineGrid{{ cell.logical_type_name }} = {{ cell.logical_type_name }}Stack.top(0);
+  auto& coarseGrid{{ cell.logical_type_name }} = {{ cell.logical_type_name }}Stack.top(1);
 {%- endfor %}
 
 {%- if CELLS %}
-  auto       cellMarker  = event.getCellMarker();
+  auto cellMarker = event.getCellMarker();
   const auto cellIsLocal = cellMarker.isLocal();
   if (cellIsLocal) {
 {%- for action_set in ACTIVE_ACTION_SETS | reverse %}
@@ -59,7 +62,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversal
 
     const auto isCreateOrDestroy = outFaceStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
     const auto isHanging         = faceMarker.isHanging();
-    const auto isInOut           = ::peano4::grid::PeanoCurve::isInOutStack(outFaceStack);
+    const auto isInOut           = ::peano4::grid::StackTopology::isInOutStack(outFaceStack);
 
     if (isHanging and (isInOut or isCreateOrDestroy)) {
 {%- for action_set in ACTIVE_ACTION_SETS | reverse %}
@@ -108,7 +111,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversal
 
     const auto isCreateOrDestroy = outVertexStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
     const auto isHanging         = vertexMarker.isHanging();
-    const auto isInOut           = ::peano4::grid::PeanoCurve::isInOutStack(outVertexStack);
+    const auto isInOut           = ::peano4::grid::StackTopology::isInOutStack(outVertexStack);
 
     if (isHanging and (isCreateOrDestroy or isInOut)) {
 {%- for action_set in ACTIVE_ACTION_SETS | reverse %}

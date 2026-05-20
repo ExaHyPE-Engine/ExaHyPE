@@ -206,7 +206,6 @@ void plotGrid() {
   repositories::finishPlottingStep();
 }
 
-
 void interpolateBetweenAMRBorder() {
 
 #if DIMENSIONS == 2
