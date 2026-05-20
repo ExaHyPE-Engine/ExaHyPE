@@ -1,0 +1,6 @@
+ 852432298    00:00:00     rank:5       core:97      info         toolbox::loadbalancing::dumpStatistics()                0 tree(s): no trees hosted on this node - therefore no load
+ 861128102    00:00:00     rank:5       core:97      info         toolbox::loadbalancing::dumpStatistics()                0 tree(s): no trees hosted on this node - therefore no load
+ 862793283    00:00:00     rank:5       core:97      info         toolbox::loadbalancing::dumpStatistics()                0 tree(s): no trees hosted on this node - therefore no load
+ 864444568    00:00:00     rank:5       core:97      info         toolbox::loadbalancing::dumpStatistics()                0 tree(s): no trees hosted on this node - therefore no load
+ 866271194    00:00:00     rank:5       core:97      info         toolbox::loadbalancing::dumpStatistics()                0 tree(s): no trees hosted on this node - therefore no load
+cn027.ham8.dur.ac.uk:rank5.test: Reading from remote process' memory failed. Disabling CMA support

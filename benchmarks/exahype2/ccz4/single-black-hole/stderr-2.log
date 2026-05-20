@@ -1,0 +1,29 @@
+TP: The two black holes have target ADM masses of 0.000000 and 1.000000
+TP: The corresponding linear momenta are:
+TP: P_x1:0.000000	P_x2:0.000000
+TP: P_y1:0.000000	P_y2:0.000000
+TP: P_z1:0.000000	P_z2:0.000000
+TP: The corresponding spins are:
+TP: S_x1:0.000000	S_x2:0.000000
+TP: S_y1:0.000000	S_y2:0.000000
+TP: S_z1:0.000000	S_z2:0.000000
+TP: Impact parameter par_b: 1.000000
+TP: Center offset: [-1.000000,0.000000,0.000000]
+TP: Grid setup method: evaluation
+TP: Lapse smearing epsilon: 1.000000e-06
+TP: Solving puncture equation for BH-BH system
+TP: b = 1
+TP: Attempting to find bare masses.
+TP: Target ADM masses: M_p=1 and M_m=0
+TP: ADM mass tolerance: 1e-10
+TP: Bare masses: mp=1, mm=1
+TP: ADM mass error: M_p_err=0.25, M_m_err=1.25
+TP: Bare masses: mp=1, mm=0
+TP: ADM mass error: M_p_err=0, M_m_err=0
+TP: Found bare masses.
+TP: The two puncture masses are mp=1 and mm=0
+TP: Puncture 1 ADM mass is 1
+TP: Puncture 2 ADM mass is 0
+TP: The total ADM mass is 1
+TP: Preparing interpolation of result
+cn027.ham8.dur.ac.uk:rank2: Assertion failure at psm3/ptl_am/ptl.c:156: nbytes == req->req_data.recv_msglen
