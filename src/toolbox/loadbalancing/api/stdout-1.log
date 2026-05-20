@@ -1,0 +1,40 @@
+ 912473668    00:00:00     rank:1       core:60      info         exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() share my 0 event(s) with others
+ 912689594    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::dumpStatistics()                0 tree(s): no trees hosted on this node - therefore no load
+ 914488391    00:00:00     rank:1       core:60      info         exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() share my 0 event(s) with others
+ 914522695    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::dumpStatistics()                0 tree(s): no trees hosted on this node - therefore no load
+ 915757891    00:00:00     rank:1       core:60      info         exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() share my 0 event(s) with others
+ 915769412    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::dumpStatistics()                0 tree(s): no trees hosted on this node - therefore no load
+ 917068157    00:00:00     rank:1       core:60      info         exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() share my 0 event(s) with others
+ 917103353    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::dumpStatistics()                0 tree(s): no trees hosted on this node - therefore no load
+ 919836629    00:00:00     rank:1       core:60      info         peano4::parallel::SpacetreeSet::receiveDanglingMessages() reserved tree id 1 for tree 0
+ 919960903    00:00:00     rank:1       core:60      info         exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() share my 0 event(s) with others
+ 919971713    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::dumpStatistics()                0 tree(s): no trees hosted on this node - therefore no load
+ 921160521    00:00:00     rank:1       core:60      info         peano4::grid::Spacetree::Spacetree(...)                 created spacetree 1 with master tree 0
+ 924086760    00:00:00     rank:1       core:60      info         peano4::parallel::SpacetreeSet::receiveDanglingMessages() reserved tree id 4 for tree 0
+ 924114181    00:00:00     rank:1       core:60      info         exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() share my 0 event(s) with others
+ 924157864    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::dumpStatistics()                1 tree(s): (#1:9/18) total=9/18 (local/virtual)
+ 925430089    00:00:00     rank:1       core:60      info         exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() share my 0 event(s) with others
+ 925446650    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::dumpStatistics()                1 tree(s): (#1:9/18) total=9/18 (local/virtual)
+ 925461508    00:00:00     rank:1       core:60      info         peano4::grid::Spacetree::Spacetree(...)                 created spacetree 4 with master tree 0
+ 928086098    00:00:00     rank:1       core:60      info         exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() share my 0 event(s) with others
+ 928108781    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::dumpStatistics()                2 tree(s): (#1:9/18)(#4:0/27) total=9/45 (local/virtual)
+ 929413487    00:00:00     rank:1       core:60      info         exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() share my 0 event(s) with others
+ 929434597    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::dumpStatistics()                2 tree(s): (#1:9/18)(#4:0/27) total=9/45 (local/virtual)
+ 931201704    00:00:00     rank:1       core:60      info         exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() share my 0 event(s) with others
+ 931222433    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::dumpStatistics()                2 tree(s): (#1:9/18)(#4:0/27) total=9/45 (local/virtual)
+ 933004437    00:00:00     rank:1       core:60      info         exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() share my 0 event(s) with others
+ 933028663    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::dumpStatistics()                2 tree(s): (#1:9/18)(#4:0/27) total=9/45 (local/virtual)
+ 934195489    00:00:00     rank:1       core:60      info         peano4::parallel::SpacetreeSet::traverse(Observer)      remove empty tree 4 with master 0
+ 934233220    00:00:00     rank:1       core:60      info         exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() share my 0 event(s) with others
+ 934247878    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::dumpStatistics()                1 tree(s): (#1:9/18) total=9/18 (local/virtual)
+ 934298553    00:00:00     rank:1       core:60      info         ::step()                                                rank is degenerated so disable load balancing temporarily
+ 934307731    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::AbstractLoadBalancing::enable() switched load balancing off
+ 935295180    00:00:00     rank:1       core:60      info         exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() share my 0 event(s) with others
+ 935310559    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::dumpStatistics()                1 tree(s): (#1:9/18) total=9/18 (local/virtual)
+ 936380713    00:00:00     rank:1       core:60      info         exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() share my 0 event(s) with others
+ 936396713    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::dumpStatistics()                1 tree(s): (#1:9/18) total=9/18 (local/virtual)
+ 937439116    00:00:00     rank:1       core:60      info         exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() share my 0 event(s) with others
+ 937455086    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::dumpStatistics()                1 tree(s): (#1:9/18) total=9/18 (local/virtual)
+ 940171279    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::dumpStatistics()                1 tree(s): (#1:9/18) total=9/18 (local/virtual)
+ 940273662    00:00:00     rank:1       core:60      info         toolbox::loadbalancing::dumpStatistics()                1 tree(s): (#1:9/18) total=9/18 (local/virtual)
+ 940278911    00:00:00     rank:1       core:60      info         exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() share my 0 event(s) with others
