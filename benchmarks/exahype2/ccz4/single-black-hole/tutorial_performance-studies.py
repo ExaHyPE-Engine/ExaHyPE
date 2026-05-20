@@ -7,10 +7,8 @@ import argparse
 from tutorial_single_black_hole_settings import *
 
 
-# Offset = [-9, -9, -9]
-# Domain_size = [18, 18, 18]
-Offset = [0, 0, 0]
-Domain_size = [1, 1, 1]
+Offset = [-9, -9, -9]
+Domain_size = [18, 18, 18]
 
 
 def get_command_line_args():

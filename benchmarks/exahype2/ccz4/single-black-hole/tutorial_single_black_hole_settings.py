@@ -228,7 +228,7 @@ def add_hardcoded_load_balancing_over_regular_mesh(project,
 # Part 2 of tutorial: Create a regular mesh representation that we feed into our loadbalacing
 # =========================================
 
-    tree = RegularGridGenerator(name=f"pytest-hardcoded-lb-{Dimensions}d", max_level=3, dimension=Dimensions)
+    tree = RegularGridGenerator(name=f"pytest-hardcoded-lb-{Dimensions}d", max_level=1, dimension=Dimensions)
     print(tree)
 
 
