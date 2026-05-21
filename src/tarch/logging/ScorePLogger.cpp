@@ -2,7 +2,7 @@
 
 #include "tarch/Assertions.h"
 
-#include "tarch/multicore/Lock.h"
+#include "tarch/multicore/MultiReadSingleWriteLock.h"
 #include "tarch/multicore/multicore.h"
 
 #include "LogFilter.h"
@@ -92,7 +92,7 @@ void tarch::logging::ScorePLogger::debug(long int timestampNanoseconds, int rank
     timestampNanoseconds, rank, threadId, trace, message
   );
 
-  tarch::multicore::Lock lockCout( _semaphore );
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lockCout( _semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read );
   std::cout << outputMessage;
 }
 
@@ -102,7 +102,7 @@ void tarch::logging::ScorePLogger::info(long int timestampNanoseconds, int rank,
     timestampNanoseconds, rank, threadId, trace, message
   );
 
-  tarch::multicore::Lock lockCout( _semaphore );
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lockCout( _semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read );
   std::cout << outputMessage;
 }
 
@@ -112,7 +112,7 @@ void tarch::logging::ScorePLogger::warning(long int timestampNanoseconds, int ra
     timestampNanoseconds, rank, threadId, trace, message
   );
 
-  tarch::multicore::Lock lockCout( _semaphore );
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lockCout( _semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read );
   std::cerr << outputMessage;
   std::cerr.flush();
 }
@@ -123,7 +123,7 @@ void tarch::logging::ScorePLogger::error(long int timestampNanoseconds, int rank
     timestampNanoseconds, rank, threadId, trace, message
   );
 
-  tarch::multicore::Lock lockCout( _semaphore );
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lockCout( _semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read );
   std::cerr << outputMessage;
   std::cerr.flush();
 
