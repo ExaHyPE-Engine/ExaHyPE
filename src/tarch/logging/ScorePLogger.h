@@ -14,6 +14,7 @@
 #include <string>
 
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/MultiReadSingleWriteSemaphore.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/logging/Log.h"
 
