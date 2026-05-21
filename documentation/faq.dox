@@ -333,12 +333,13 @@ in the CMake configuration.
 
 # Performance analysis
 
-- ***The Intel/NVIDIA tools do not provide meaningful insight*** Read through
+- ***The Intel/NVIDIA/Score-P/... tools do not provide meaningful insight*** Read through
   the vendor-specific @ref page_compiler_specific_settings_home "supercomputer/tool remarks"
-  and pick the vendor-specific built toolchain. After that, ensure that you
-  profile the code in the profile version and not only in the release version.
-  The release builds of the libraries do not yield much additional information
-  that can be used to spot runtime flaws, e.g.
+  and pick the vendor-specific built toolchain.
+  
+- ***The tools yield meaningful data but it is tricky to map them onto actual user code*** Switch
+  to the @ref page_architecture_home "statistics flavour of Peano" and rebuild and also 
+  ensure that the -g flag is active for all builds. 
 
 - ***The Intel/NVIDIA tools yield too much data*** First, pick the
   \ref page_compiler_specific_settings_home "vendor-specific toolchain" fitting to your system/compiler. After that,

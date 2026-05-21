@@ -37,6 +37,7 @@ instructions!
   - \subpage tutorials_exahype2_hpc_domain-decomposition
   - \subpage tutorials_exahype2_hpc_tasking
   - \subpage tutorials_exahype2_hpc_gpus
+  - \subpage tutorials_exahype2_hpc_offline-load-balancing
   - \ref page_exahype_runtime_analysis "Read the comments on ExaHyPE's bespoke runtime analysis features" besides generic profiling
   - \ref page_exahype_performance_optimisation "Consult ExaHyPE's performance optimisation recommendations"
   - \subpage tutorials_exahype2_dsl_implementing_kernels
