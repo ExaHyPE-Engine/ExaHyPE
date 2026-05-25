@@ -98,7 +98,7 @@ python3 OfflineDecomposition.py -d 3 -l 3 -p -s 4
 See the load balancing API documentation for complete workflow integration details.
 """
 
-def RegularGridGenerator(name, max_level, dimension):
+def RegularGridGenerator(name=None, max_level=None, dimension=None):
     """
     Generate an artificial regular grid with uniform refinement for testing purposes.
     
@@ -122,7 +122,8 @@ def RegularGridGenerator(name, max_level, dimension):
     - **Educational Examples**: Demonstrate API functionality with simple cases
     
     Args:
-        name (str): Descriptive name for the generated tree (e.g., "TestGrid_L4")
+        name (str, optional): Descriptive name for the generated tree (e.g., "TestGrid_L4").
+            If not provided, a deterministic default name is generated from dimension and level.
         max_level (int): Maximum refinement level (must be > 0)
         dimension (int): Spatial dimension (2 for 2D, 3 for 3D)
         
@@ -152,12 +153,21 @@ def RegularGridGenerator(name, max_level, dimension):
         - For large max_level values, memory usage grows as 3^(dimension * max_level)
         - Generated trees are deterministic - same parameters always produce identical results
     """
+    if max_level is None:
+        raise ValueError("max_level must be provided")
+
+    if dimension is None:
+        raise ValueError("dimension must be provided")
+
     if max_level <= 0:
         raise ValueError(f"max_level must be > 0, got {max_level}")
     
     if dimension not in [2, 3]:
         raise ValueError(f"dimension must be 2 or 3, got {dimension}")
     
+    if name is None:
+        name = f"regular-grid-{dimension}d-l{max_level}"
+
     print(f"Generating {dimension}D regular grid '{name}' with {max_level} levels")
     
     # Calculate the tree matrices
