@@ -6,7 +6,7 @@ import peano4
 import exahype2
 
 # Workspace API modules
-from Input.GridPatchFileReader import GridPatchFileReader  # [src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py](src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py)
+from input.GridPatchFileReader import GridPatchFileReader  # [src/toolbox/loadbalancing/api/input/GridPatchFileReader.py](src/toolbox/loadbalancing/api/input/GridPatchFileReader.py)
 import Strategies.SplitTrees as split_strategy              # [src/toolbox/loadbalancing/api/Strategies/SplitTrees.py](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py)
 
 def demo(file_path: str, dimension: int):

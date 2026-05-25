@@ -5,9 +5,9 @@ import sys, time, os
 import argparse
 
 from Tree import Tree
-from Input.GridPatchFileReader import *
-from Input.RegularGridGenerator import *
-from Input.CustomGridGenerator import *
+from input.GridPatchFileReader import *
+from input.RegularGridGenerator import *
+from input.CustomGridGenerator import *
 from Visualize.TreeVisualizer import TreeVisualizer
 import Strategies.SplitTrees as split_strategy
 

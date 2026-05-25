@@ -16,7 +16,7 @@ import numpy as np
 sys.path.insert(0, os.path.abspath("src/toolbox/loadbalancing/api"))
 
 from Tree import Tree
-from Input.RegularGridGenerator import RegularGridGenerator
+from input.RegularGridGenerator import RegularGridGenerator
 
 
 def build_tree3_adaptive_2d() -> Tree:
