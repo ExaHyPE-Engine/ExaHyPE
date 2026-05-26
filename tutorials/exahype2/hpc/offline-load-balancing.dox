@@ -17,11 +17,14 @@ and then hard-code the load balancing. Indeed, this might even provide the
 baseline for something more bespoke, generic and dynamic.
 
 The following discussion illustrates the ideas behind offline load balancing
-for the single black hold benchmark of the @ref applications_exahype2_ExaGRyPE ExaGRyPE
+for the single black hole benchmark of the @ref applications_exahype2_ExaGRyPE ExaGRyPE
 solver. Actually, we use a slimmed down version of one of its standard benchmarks.
 However, the offline load balancing is not specific to ExaGRyPE: It works with
 any ExaHyPE application (and also with other Peano-based codes, even though they
 might not have a built-in support yet).
+
+For a complete reference of the offline decomposition interfaces and staged splitting workflow,
+see @ref page_toolbox_loadbalancing_api.
 
 
 # Prepare the benchmark
@@ -57,6 +60,8 @@ python3 tutorial_offline_load_balancing_sbh.py -s fd4-rk1-ps-3 -et 1e-2 --plot 1
 # Studying the Python code
 
 All the interesting stuff can be found in the file tutorial_offline_load_balancing_sbh.py.
+This tutorial focuses on a concrete workflow; the full API contracts and design rationale are
+documented in @ref page_toolbox_loadbalancing_api.
 When we do a first sanity check and compile with 
 
 
@@ -80,7 +85,7 @@ The simplest way to load balance offline for a regular grid - and a good
 starting point prior to doing something interesting - is the following idea:
 
 - Tell the offline load balancer that there will be a regular mesh. Such a mesh
-  can be synthetisized and we don't have to mess around with some complex AMR
+  can be synthesised and we don't have to mess around with some complex AMR
   structure.
 - Tell the offline load balancer to partition only the finest mesh.
 - Feed that mesh back into a hard-coded partitioning and let ExaGRyPE run.
@@ -145,10 +150,10 @@ Split pattern:	[729. 729. 729. 729. 729. 729. 729. 729. 729. 729. 729. 729. 729.
  729. 729. 729. 729. 729. 729. 729. 729. 729. 729. 729. 729. 729.]
 
 Extracted hardcoded parameters:
-  gridSweeps     = [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]
-  splittingTrees = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-  numberOfCells  = [729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729]
-  subTrees       = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
+  grid_sweeps     = [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]
+  splitting_trees = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  number_of_cells = [729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729]
+  subtrees        = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -181,7 +186,8 @@ We get something similar to
 
 This is now the time where it is really reasonable to study 
 @ref toolbox::loadbalancing::strategies::Hardcoded to understand if and why these
-inputs make sense and are correct.
+inputs make sense and are correct. For the full parameter semantics of the split
+stages and extracted instruction arrays, consult @ref page_toolbox_loadbalancing_api.
 
 
 ### Visualise the outcome
