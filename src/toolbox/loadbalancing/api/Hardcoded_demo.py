@@ -9,19 +9,19 @@ import exahype2
 from input.GridPatchFileReader import GridPatchFileReader  # [src/toolbox/loadbalancing/api/input/GridPatchFileReader.py](src/toolbox/loadbalancing/api/input/GridPatchFileReader.py)
 import Strategies.SplitTrees as split_strategy              # [src/toolbox/loadbalancing/api/Strategies/SplitTrees.py](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py)
 
-def demo(file_path: str, dimension: int):
+def demo(file_path: str, dimensions: int):
     """
     Demo: Read grid patch files, extract hardcoded split parameters, configure Hardcoded LB.
     
     Args:
         file_path: Directory containing Peano grid patch files (prefix 'grid-')
-        dimension: 2 or 3 (must match input files)
+        dimensions: 2 or 3 (must match input files)
     """
     if not os.path.isdir(file_path):
         raise FileNotFoundError(f"Input directory not found: {file_path}")
-    print(f"Loading grid patch files from '{file_path}' (dimension={dimension})")
+    print(f"Loading grid patch files from '{file_path}' (dimensions={dimensions})")
 # @todo Dmitry I'm happy with a name, but it really should be optional, i.e. I don't want to have to specify it here
-    tree = GridPatchFileReader(name=f"Files-{file_path}", file_path=file_path, dimension=dimension)
+    tree = GridPatchFileReader(name=f"Files-{file_path}", file_path=file_path, dimension=dimensions)
     print(tree)
 
     # Reset to single subtree and apply splitting to create multiple subtrees for the demo
@@ -133,6 +133,6 @@ def demo(file_path: str, dimension: int):
     print(project)
 
 if __name__ == "__main__":
-    # Adjust file_path and dimension as needed
+    # Adjust file_path and dimensions as needed
     # Provide a directory containing 'grid-*' files.
-    demo(file_path="Input/example", dimension=3)
+    demo(file_path="Input/example", dimensions=3)

@@ -57,18 +57,18 @@ balancing results.
 from Visualize.TreeVisualizer import TreeVisualizer
 
 # Generate all formats with automatic naming
-TreeVisualizer(tree, dimension=3, filename="analysis_results")
+TreeVisualizer(tree, dimensions=3, filename="analysis_results")
 # Outputs: analysis_results.pdf, analysis_results.png, analysis_results.html
 ```
 
 ### Format-specific Generation
 ```python
 # Only static formats (when Plotly not available)
-TreeVisualizer(tree, dimension=2, filename="static_only")
+TreeVisualizer(tree, dimensions=2, filename="static_only")
 
 # Interactive-only (custom implementation)
 from Visualize.TreeVisualizer import save_interactive_html
-save_interactive_html(tree, dimension=3, filename="interactive_analysis")
+save_interactive_html(tree, dimensions=3, filename="interactive_analysis")
 ```
 
 ## Integration with Load Balancing Workflow
@@ -87,14 +87,14 @@ The visualization system integrates seamlessly with the offline decomposition pr
 - **File System**: Proper error handling for permission and disk space issues
 """
 
-def save_interactive_html(input_tree, dimension, filename):
+def save_interactive_html(input_tree, dimensions, filename):
     """
     Save an interactive HTML visualization of the tree structure using plotly.
     Creates separate subplots for each level with distinctive colors for subtrees.
     
     Args:
         input_tree: Tree object to visualize
-        dimension: 2 or 3 for 2D/3D visualization
+        dimensions: 2 or 3 for 2D/3D visualization
         filename: Base filename for output files (without extension)
         
     Returns:
@@ -115,7 +115,7 @@ def save_interactive_html(input_tree, dimension, filename):
     # Track which subtrees we've seen to manage legend display
     subtrees_shown_in_legend = set()
     
-    if dimension == 3:
+    if dimensions == 3:
         # Create 3D subplots for each level
         fig = make_subplots(
             rows=1, 
@@ -208,7 +208,7 @@ def save_interactive_html(input_tree, dimension, filename):
                 )
             })
 
-    elif dimension == 2:
+    elif dimensions == 2:
         # Create 2D subplots for each level
         fig = make_subplots(
             rows=1, 
@@ -297,7 +297,7 @@ def save_interactive_html(input_tree, dimension, filename):
         x=0.02, y=0.98,
         text=f"<b>Tree Statistics:</b><br>" +
              f"Name: {input_tree._name}<br>" +
-             f"Dimensions: {dimension}D<br>" +
+             f"Dimensions: {dimensions}D<br>" +
              f"Max Level: {input_tree._max_level}<br>" +
              f"Total Leaves: {int(input_tree._leaf_count)}<br>" +
              f"Subtrees: {input_tree._subtree_count}<br>" +
@@ -328,21 +328,21 @@ def save_interactive_html(input_tree, dimension, filename):
     
     print(f"Interactive HTML visualization saved as {filename}.html")
     print(f"Features:")
-    print(f"  • Mouse rotation and zoom ({'3D rotation' if dimension == 3 else '2D zoom/pan'})")
+    print(f"  • Mouse rotation and zoom ({'3D rotation' if dimensions == 3 else '2D zoom/pan'})")
     print(f"  • Distinctive colors for {input_tree._subtree_count} subtrees")
     print(f"  • Separate subplots for each of {input_tree._max_level} levels")
     print(f"  • Hover information for each node")
     print(f"  • Full browser width layout with responsive design")
 
 
-def TreeVisualizer(input_tree, dimension, filename="TreeStructure"):
+def TreeVisualizer(input_tree, dimensions, filename="TreeStructure"):
     """
     Visualize tree structure with customizable output filename.
     Saves in PNG, PDF, and interactive HTML formats.
     
     Args:
         input_tree: Tree object to visualize
-        dimension: 2 or 3 for 2D/3D visualization
+        dimensions: 2 or 3 for 2D/3D visualization
         filename: Base filename for output files (without extension)
         
     Returns:
@@ -359,7 +359,7 @@ def TreeVisualizer(input_tree, dimension, filename="TreeStructure"):
         subtree_ids = []
         # extract the existing nodes and their indices from the tree arrays and 
         # plot them in a 3D/2D scatter
-        if dimension == 3:
+        if dimensions == 3:
             for a in range(3**(level+1)):
                 for b in range(3**(level+1)):
                     for c in range(3**(level+1)):
@@ -386,7 +386,7 @@ def TreeVisualizer(input_tree, dimension, filename="TreeStructure"):
                 axes[level].set_zlim([0, 3**(1+level)-1])
                 axes[level].set_title("Level="+str(level+1))
 
-        elif dimension == 2:
+        elif dimensions == 2:
             for a in range(3**(level+1)):
                 for b in range(3**(level+1)):
                     node, subtree_id = plot_array[a][b]
@@ -418,7 +418,7 @@ def TreeVisualizer(input_tree, dimension, filename="TreeStructure"):
     
     # Save interactive HTML format (plotly)
     if PLOTLY_AVAILABLE:
-        save_interactive_html(input_tree, dimension, filename)
+        save_interactive_html(input_tree, dimensions, filename)
     else:
         print("Plotly not available. Install with: pip install plotly")
         print("HTML export skipped - only PDF and PNG saved")

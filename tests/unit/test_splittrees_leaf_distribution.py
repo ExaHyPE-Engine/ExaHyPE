@@ -11,7 +11,7 @@ import Strategies.SplitTrees as split_strategy
 
 
 @pytest.mark.parametrize(
-    "dimension,number_of_splits",
+    "dimensions,number_of_splits",
     [
         (2, 1),
         (2, 3),
@@ -19,7 +19,7 @@ import Strategies.SplitTrees as split_strategy
         (3, 3),
     ],
 )
-def test_leaf_distribution_balanced_across_subtrees(dimension, number_of_splits):
+def test_leaf_distribution_balanced_across_subtrees(dimensions, number_of_splits):
     """
     Stage I ("Leaf Distribution") invariant test in 2D and 3D.
 
@@ -28,7 +28,7 @@ def test_leaf_distribution_balanced_across_subtrees(dimension, number_of_splits)
     """
     # Arrange: tree with 2 levels; all cells initially in subtree 0
     tree = RegularGridGenerator(
-        name=f"pytest-tree-stage-i-{dimension}d", max_level=2, dimension=dimension
+        name=f"pytest-tree-stage-i-{dimensions}d", max_level=2, dimensions=dimensions
     )
 
     # Collect all leaf nodes before Stage I
@@ -58,24 +58,24 @@ def test_leaf_distribution_balanced_across_subtrees(dimension, number_of_splits)
 
 
 @pytest.mark.parametrize(
-    "dimension",
+    "dimensions",
     [2, 3],
 )
-def test_leaf_distribution_does_not_modify_non_leaf_nodes(dimension):
+def test_leaf_distribution_does_not_modify_non_leaf_nodes(dimensions):
     """
     Stage I invariant: non-leaf nodes (internal nodes with children) must NOT
     be modified by Stage I leaf distribution.
     """
     # Arrange: tree with 3 levels; all cells initially in subtree 0
     tree = RegularGridGenerator(
-        name=f"pytest-tree-nonleaf-check-{dimension}d", max_level=3, dimension=dimension
+        name=f"pytest-tree-nonleaf-check-{dimensions}d", max_level=3, dimensions=dimensions
     )
 
     # Capture non-leaf node assignments before Stage I
     non_leaf_assignments_before = {}
     for level in range(tree._max_level - 1):  # Skip finest level (only leaves)
         size = 3 ** (level + 1)
-        if dimension == 2:
+        if dimensions == 2:
             for a in range(size):
                 for b in range(size):
                     node = tree._tree_arrays[level][a][b]
@@ -87,7 +87,7 @@ def test_leaf_distribution_does_not_modify_non_leaf_nodes(dimension):
                             # This is a non-leaf node
                             non_leaf_assignments_before[(level, a, b)] = node[1]
 
-        elif dimension == 3:
+        elif dimensions == 3:
             for a in range(size):
                 for b in range(size):
                     for c in range(size):
@@ -106,7 +106,7 @@ def test_leaf_distribution_does_not_modify_non_leaf_nodes(dimension):
 
     # Assert: all non-leaf nodes remain unchanged
     for level_coords, subtree_before in non_leaf_assignments_before.items():
-        if dimension == 2:
+        if dimensions == 2:
             level, a, b = level_coords
             node_after = tree._tree_arrays[level][a][b]
         else:
@@ -120,17 +120,17 @@ def test_leaf_distribution_does_not_modify_non_leaf_nodes(dimension):
 
 
 @pytest.mark.parametrize(
-    "dimension",
+    "dimensions",
     [2, 3],
 )
-def test_leaf_distribution_only_redistributes_subtree_0(dimension):
+def test_leaf_distribution_only_redistributes_subtree_0(dimensions):
     """
     Stage I invariant: only leaves in subtree 0 are redistributed. Leaves already
     in other subtrees must NOT be modified.
     """
     # Arrange: tree with 2 levels
     tree = RegularGridGenerator(
-        name=f"pytest-tree-subtree0-only-{dimension}d", max_level=2, dimension=dimension
+        name=f"pytest-tree-subtree0-only-{dimensions}d", max_level=2, dimensions=dimensions
     )
 
     # Manually assign some leaves to subtree 1 (mark a corner block)
@@ -139,13 +139,13 @@ def test_leaf_distribution_only_redistributes_subtree_0(dimension):
 
     # Mark leaves in top-right corner as subtree 1
     corner_leaves_subtree_1 = []
-    if dimension == 2:
+    if dimensions == 2:
         for a in range(size // 2, size):
             for b in range(size // 2, size):
                 tree._tree_arrays[finest_level][a][b] = (1, 1)
                 corner_leaves_subtree_1.append((a, b))
 
-    elif dimension == 3:
+    elif dimensions == 3:
         for a in range(size // 2, size):
             for b in range(size // 2, size):
                 for c in range(size // 2, size):
@@ -156,14 +156,14 @@ def test_leaf_distribution_only_redistributes_subtree_0(dimension):
     split_strategy._distribute_leaves_bfs(tree, number_of_splits=1)
 
     # Assert: leaves in subtree 1 remain in subtree 1
-    if dimension == 2:
+    if dimensions == 2:
         for a, b in corner_leaves_subtree_1:
             node_after = tree._tree_arrays[finest_level][a][b]
             assert node_after[1] == 1, (
                 f"Leaf ({a},{b}) in subtree 1 was incorrectly modified to subtree {node_after[1]}"
             )
 
-    elif dimension == 3:
+    elif dimensions == 3:
         for a, b, c in corner_leaves_subtree_1:
             node_after = tree._tree_arrays[finest_level][a][b][c]
             assert node_after[1] == 1, (
@@ -172,30 +172,30 @@ def test_leaf_distribution_only_redistributes_subtree_0(dimension):
 
 
 @pytest.mark.parametrize(
-    "dimension",
+    "dimensions",
     [2, 3],
 )
-def test_leaf_distribution_preserves_node_existence_weights(dimension):
+def test_leaf_distribution_preserves_node_existence_weights(dimensions):
     """
     Stage I invariant: node existence flags (weights) must NOT be modified.
     Stage I only changes subtree assignments, not node existence.
     """
     # Arrange: tree with 2 levels
     tree = RegularGridGenerator(
-        name=f"pytest-tree-weights-{dimension}d", max_level=2, dimension=dimension
+        name=f"pytest-tree-weights-{dimensions}d", max_level=2, dimensions=dimensions
     )
 
     # Capture all node weights before Stage I
     weights_before = {}
     for level in range(tree._max_level):
         size = 3 ** (level + 1)
-        if dimension == 2:
+        if dimensions == 2:
             for a in range(size):
                 for b in range(size):
                     weight, subtree = tree._tree_arrays[level][a][b]
                     weights_before[(level, a, b)] = weight
 
-        elif dimension == 3:
+        elif dimensions == 3:
             for a in range(size):
                 for b in range(size):
                     for c in range(size):
@@ -207,7 +207,7 @@ def test_leaf_distribution_preserves_node_existence_weights(dimension):
 
     # Assert: all weights remain unchanged
     for level_coords, weight_before in weights_before.items():
-        if dimension == 2:
+        if dimensions == 2:
             level, a, b = level_coords
             weight_after, _ = tree._tree_arrays[level][a][b]
         else:
@@ -220,17 +220,17 @@ def test_leaf_distribution_preserves_node_existence_weights(dimension):
 
 
 @pytest.mark.parametrize(
-    "dimension",
+    "dimensions",
     [2, 3],
 )
-def test_leaf_distribution_returns_correct_moved_nodes_count(dimension):
+def test_leaf_distribution_returns_correct_moved_nodes_count(dimensions):
     """
     Stage I invariant: the returned `moved_nodes` list must accurately reflect
     how many leaves were assigned to each subtree.
     """
     # Arrange: tree with 2 levels
     tree = RegularGridGenerator(
-        name=f"pytest-tree-move-count-{dimension}d", max_level=2, dimension=dimension
+        name=f"pytest-tree-move-count-{dimensions}d", max_level=2, dimensions=dimensions
     )
 
     number_of_splits = 2
@@ -246,7 +246,7 @@ def test_leaf_distribution_returns_correct_moved_nodes_count(dimension):
     size = 3 ** (finest_level + 1)
     actual_counts = [0] * (number_of_splits + 1)
 
-    if dimension == 2:
+    if dimensions == 2:
         for a in range(size):
             for b in range(size):
                 weight, subtree = tree._tree_arrays[finest_level][a][b]
@@ -254,7 +254,7 @@ def test_leaf_distribution_returns_correct_moved_nodes_count(dimension):
                     if subtree < number_of_splits + 1:
                         actual_counts[subtree] += 1
 
-    elif dimension == 3:
+    elif dimensions == 3:
         for a in range(size):
             for b in range(size):
                 for c in range(size):

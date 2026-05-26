@@ -17,14 +17,14 @@ def _child_coords(parent_coords):
 
 
 @pytest.mark.parametrize(
-    "dimension,parent_coords",
+    "dimensions,parent_coords",
     [
         (2, (0, 0)),
         (3, (0, 0, 0)),
     ],
 )
 def test_optimize_hierarchy_promotes_parent_to_dominant_child_subtree(
-    dimension, parent_coords
+    dimensions, parent_coords
 ):
     """
     Stage III invariant in 2D and 3D:
@@ -32,7 +32,7 @@ def test_optimize_hierarchy_promotes_parent_to_dominant_child_subtree(
     differs from the parent subtree and improves split pressure, parent is promoted.
     """
     tree = RegularGridGenerator(
-        name=f"pytest-tree-stage-iii-promote-{dimension}d", max_level=2, dimension=dimension
+        name=f"pytest-tree-stage-iii-promote-{dimensions}d", max_level=2, dimensions=dimensions
     )
 
     parent_level = 0
@@ -64,21 +64,21 @@ def test_optimize_hierarchy_promotes_parent_to_dominant_child_subtree(
 
 
 @pytest.mark.parametrize(
-    "dimension,parent_coords",
+    "dimensions,parent_coords",
     [
         (2, (1, 1)),
         (3, (1, 1, 1)),
     ],
 )
 def test_optimize_hierarchy_does_not_promote_when_move_would_be_backward(
-    dimension, parent_coords
+    dimensions, parent_coords
 ):
     """
     Stage III safety invariant in 2D and 3D:
     Parent ownership is never moved backward to a smaller subtree id.
     """
     tree = RegularGridGenerator(
-        name=f"pytest-tree-stage-iii-backward-{dimension}d", max_level=2, dimension=dimension
+        name=f"pytest-tree-stage-iii-backward-{dimensions}d", max_level=2, dimensions=dimensions
     )
 
     parent_level = 0
@@ -107,21 +107,21 @@ def test_optimize_hierarchy_does_not_promote_when_move_would_be_backward(
 
 
 @pytest.mark.parametrize(
-    "dimension,parent_coords",
+    "dimensions,parent_coords",
     [
         (2, (2, 2)),
         (3, (2, 2, 2)),
     ],
 )
 def test_optimize_hierarchy_does_not_promote_when_children_are_incomplete(
-    dimension, parent_coords
+    dimensions, parent_coords
 ):
     """
     Stage III safety invariant in 2D and 3D:
     No promotion occurs unless all 3^d children of a parent exist.
     """
     tree = RegularGridGenerator(
-        name=f"pytest-tree-stage-iii-incomplete-{dimension}d", max_level=2, dimension=dimension
+        name=f"pytest-tree-stage-iii-incomplete-{dimensions}d", max_level=2, dimensions=dimensions
     )
 
     parent_level = 0
@@ -151,18 +151,18 @@ def test_optimize_hierarchy_does_not_promote_when_children_are_incomplete(
     assert tree._tree_arrays[parent_level][parent_coords] == (1, 0)
 
 
-@pytest.mark.parametrize("dimension", [2, 3])
-def test_optimize_hierarchy_preserves_node_existence_weights(dimension):
+@pytest.mark.parametrize("dimensions", [2, 3])
+def test_optimize_hierarchy_preserves_node_existence_weights(dimensions):
     """
     Stage III invariant in 2D and 3D:
     Optimisation modifies only subtree ids, never node existence flags (weights).
     """
     tree = RegularGridGenerator(
-        name=f"pytest-tree-stage-iii-weights-{dimension}d", max_level=2, dimension=dimension
+        name=f"pytest-tree-stage-iii-weights-{dimensions}d", max_level=2, dimensions=dimensions
     )
 
     # Introduce mixed assignments to trigger potential promotions.
-    parent_coords = (0, 0) if dimension == 2 else (0, 0, 0)
+    parent_coords = (0, 0) if dimensions == 2 else (0, 0, 0)
     child_level = 1
     children = _child_coords(parent_coords)
     total_children = len(children)
@@ -178,7 +178,7 @@ def test_optimize_hierarchy_preserves_node_existence_weights(dimension):
     weights_before = {}
     for level in range(tree._max_level):
         size = 3 ** (level + 1)
-        if dimension == 2:
+        if dimensions == 2:
             for a in range(size):
                 for b in range(size):
                     weight, _ = tree._tree_arrays[level][a][b]
@@ -195,7 +195,7 @@ def test_optimize_hierarchy_preserves_node_existence_weights(dimension):
 
     # Assert all weights unchanged.
     for coords, weight_before in weights_before.items():
-        if dimension == 2:
+        if dimensions == 2:
             level, a, b = coords
             weight_after, _ = tree._tree_arrays[level][a][b]
         else:

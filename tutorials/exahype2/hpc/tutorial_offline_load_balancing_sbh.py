@@ -172,8 +172,7 @@ if __name__ == "__main__":
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid]
         tree_height_required_to_match_cell_size = math.ceil( math.log( Domain_size[0] / args.cell_size, 3.0 ) )
         
-        # @todo Dmitry I think it should be dimensions (plural). Please check against other components in ExaHyPE
-        tree = RegularGridGenerator(max_level=tree_height_required_to_match_cell_size, dimension=3)
+        tree = RegularGridGenerator(max_level=tree_height_required_to_match_cell_size, dimensions=3)
         print(tree)
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid]
         

@@ -164,7 +164,7 @@ def build_stage3_mixed_parent_case_2d() -> tuple[Tree, tuple[int, int]]:
     The returned parent coordinates identify the level-0 parent whose children
     are configured with a dominant subtree assignment.
     """
-    tree = RegularGridGenerator(name="pytest-stage3-integration-2d", max_level=2, dimension=2)
+    tree = RegularGridGenerator(name="pytest-stage3-integration-2d", max_level=2, dimensions=2)
 
     parent_level = 0
     child_level = 1

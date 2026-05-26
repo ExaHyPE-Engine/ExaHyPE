@@ -68,7 +68,7 @@ split_tree(tree, number_of_splits=2)
 
 # Compare with original structure
 from Visualize.TreeVisualizer import TreeVisualizer
-TreeVisualizer(tree, dimension=tree._dimension, filename="extended_splits")
+TreeVisualizer(tree, dimensions=tree._dimension, filename="extended_splits")
 ```
 
 ## Comparison with Other Input Methods

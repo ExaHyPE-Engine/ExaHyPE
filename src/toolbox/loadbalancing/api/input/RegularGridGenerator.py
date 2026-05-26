@@ -51,14 +51,14 @@ This module fits into the standard load balancing workflow:
 tree_2d = RegularGridGenerator(
     name="Test2D_Uniform", 
     max_level=4, 
-    dimension=2
+    dimensions=2
 )
 
 # Generate a 3D regular grid for performance testing
 tree_3d = RegularGridGenerator(
     name="Benchmark3D", 
     max_level=3, 
-    dimension=3
+    dimensions=3
 )
 ```
 
@@ -98,7 +98,7 @@ python3 OfflineDecomposition.py -d 3 -l 3 -p -s 4
 See the load balancing API documentation for complete workflow integration details.
 """
 
-def RegularGridGenerator(name=None, max_level=None, dimension=None):
+def RegularGridGenerator(name=None, max_level=None, dimensions=None):
     """
     Generate an artificial regular grid with uniform refinement for testing purposes.
     
@@ -123,9 +123,9 @@ def RegularGridGenerator(name=None, max_level=None, dimension=None):
     
     Args:
         name (str, optional): Descriptive name for the generated tree (e.g., "TestGrid_L4").
-            If not provided, a deterministic default name is generated from dimension and level.
+            If not provided, a deterministic default name is generated from dimensions and level.
         max_level (int): Maximum refinement level (must be > 0)
-        dimension (int): Spatial dimension (2 for 2D, 3 for 3D)
+        dimensions (int): Spatial dimensions (2 for 2D, 3 for 3D)
         
     Returns:
         Tree: Tree object with complete regular grid structure
@@ -136,7 +136,7 @@ def RegularGridGenerator(name=None, max_level=None, dimension=None):
         test_tree = RegularGridGenerator(
             name="Uniform_Test_2D",
             max_level=4,
-            dimension=2
+            dimensions=2
         )
         
         print(f"Generated tree: {test_tree._name}")
@@ -150,25 +150,25 @@ def RegularGridGenerator(name=None, max_level=None, dimension=None):
         
     Note:
         - Domain offset and size are set to placeholder values (origin and unit size)
-        - For large max_level values, memory usage grows as 3^(dimension * max_level)
+        - For large max_level values, memory usage grows as 3^(dimensions * max_level)
         - Generated trees are deterministic - same parameters always produce identical results
     """
     if max_level is None:
         raise ValueError("max_level must be provided")
 
-    if dimension is None:
-        raise ValueError("dimension must be provided")
+    if dimensions is None:
+        raise ValueError("dimensions must be provided")
 
     if max_level <= 0:
         raise ValueError(f"max_level must be > 0, got {max_level}")
     
-    if dimension not in [2, 3]:
-        raise ValueError(f"dimension must be 2 or 3, got {dimension}")
+    if dimensions not in [2, 3]:
+        raise ValueError(f"dimensions must be 2 or 3, got {dimensions}")
     
     if name is None:
-        name = f"regular-grid-{dimension}d-l{max_level}"
+        name = f"regular-grid-{dimensions}d-l{max_level}"
 
-    print(f"Generating {dimension}D regular grid '{name}' with {max_level} levels")
+    print(f"Generating {dimensions}D regular grid '{name}' with {max_level} levels")
     
     # Calculate the tree matrices
     artificial_arrays = []
@@ -176,18 +176,18 @@ def RegularGridGenerator(name=None, max_level=None, dimension=None):
     
     for level in range(max_level):
         size = 3**(level+1)
-        level_cells = size ** dimension
+        level_cells = size ** dimensions
         total_cells += level_cells
         
-        print(f"  Level {level+1}: {size}^{dimension} = {level_cells:,} cells")
+        print(f"  Level {level+1}: {size}^{dimensions} = {level_cells:,} cells")
         
-        if dimension == 3:
+        if dimensions == 3:
             array = np.empty((size, size, size), dtype=object)
             for a in range(size):
                 for b in range(size):
                     for c in range(size):
                         array[a][b][c] = (1, 0)  # weight=1, subtree_id=0
-        elif dimension == 2:
+        elif dimensions == 2:
             array = np.empty((size, size), dtype=object)
             for a in range(size):
                 for b in range(size):
@@ -199,15 +199,15 @@ def RegularGridGenerator(name=None, max_level=None, dimension=None):
 
     # Create the Tree class and assign properly
     # Domain offset and size are placeholder values for artificial grids
-    if dimension == 3:
+    if dimensions == 3:
         offset = [0, 0, 0]
         size = [1, 1, 1]
-    elif dimension == 2:
+    elif dimensions == 2:
         offset = [0, 0]
         size = [1, 1]
 
     # Create and populate the tree
-    peano_tree = Tree(name, dimension, offset, size)
+    peano_tree = Tree(name, dimensions, offset, size)
     peano_tree.read_in_tree_from_artificial(
         input_artificial_arrays=artificial_arrays, 
         max_level=max_level, 

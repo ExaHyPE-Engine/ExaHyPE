@@ -11,14 +11,14 @@ import Strategies.SplitTrees as split_strategy
 
 
 @pytest.mark.parametrize(
-    "dimension,target_subtree,parent_coords,mixed_parent_coords",
+    "dimensions,target_subtree,parent_coords,mixed_parent_coords",
     [
         (2, 1, (1, 1), (0, 0)),
         (3, 2, (1, 1, 1), (0, 0, 0)),
     ],
 )
 def test_bottom_up_propagation_promotes_parent_if_all_children_same_subtree(
-    dimension, target_subtree, parent_coords, mixed_parent_coords
+    dimensions, target_subtree, parent_coords, mixed_parent_coords
 ):
     """
     Stage II ("Bottom-Up Propagation") invariant test in 2D and 3D.
@@ -27,7 +27,7 @@ def test_bottom_up_propagation_promotes_parent_if_all_children_same_subtree(
     Stage II the parent has to be assigned to that subtree as well.
     """
     # Arrange: tree with 2 levels: L0 = 3^d, L1 = 9^d (children)
-    tree = RegularGridGenerator(name=f"pytest-tree-{dimension}d", max_level=2, dimension=dimension)
+    tree = RegularGridGenerator(name=f"pytest-tree-{dimensions}d", max_level=2, dimensions=dimensions)
 
     parent_level = 0
     child_level = 1

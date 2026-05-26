@@ -606,7 +606,7 @@ def _optimize_hierarchy(peano_tree: Tree) -> None:
 
         Hierarchy lifting is applicable when:
         - All children of a parent exist (count equals 3^d, where d is the spatial
-            dimension: d=2 -> 9 children, d=3 -> 27 children)
+            dimensions count: d=2 -> 9 children, d=3 -> 27 children)
         - Children are mixed across at least two subtrees
         - A dominant child subtree M exists (largest child count)
         - The dominant subtree differs from the current parent subtree and yields a
@@ -637,9 +637,9 @@ def _optimize_hierarchy(peano_tree: Tree) -> None:
     """
     print("Stage III: Optimising hierarchy to minimise split operations...")
 
-    dimension = peano_tree._dimension
+    dimensions = peano_tree._dimension
     max_level = peano_tree._max_level
-    children_per_parent = 3 ** dimension
+    children_per_parent = 3 ** dimensions
 
     def _dominant_subtree(child_subtrees: list[int], parent_subtree: int) -> int | None:
         """
@@ -687,7 +687,7 @@ def _optimize_hierarchy(peano_tree: Tree) -> None:
         for level in range(max_level - 2, -1, -1):
             size = 3 ** (level + 1)
 
-            if dimension == 2:
+            if dimensions == 2:
                 for a in range(size):
                     for b in range(size):
                         parent_node = peano_tree._tree_arrays[level][a][b]
@@ -713,7 +713,7 @@ def _optimize_hierarchy(peano_tree: Tree) -> None:
                             peano_tree._tree_arrays[level][a][b] = (1, target_subtree)
                             made_changes = True
 
-            elif dimension == 3:
+            elif dimensions == 3:
                 for a in range(size):
                     for b in range(size):
                         for c in range(size):
