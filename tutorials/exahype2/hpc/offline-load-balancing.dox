@@ -33,8 +33,10 @@ see @ref page_toolbox_loadbalancing_api.
 
 
 We follow more or less the instructions on @ref benchmarks_exahype2_ccz4_single_black_hole.
-The page provides more in-depth information on which modules you need, what other
-tools you might want to combine with ExaHyPE, and so forth.
+The page provides more in-depth information on which modules you need, what 
+other tools you might want to combine with ExaHyPE, and so forth. 
+For the present tutorial, we assume that you open a terminal window in Peano's 
+tutorials directory tutorials/exahype2/hpc.
 After setting the correct environment variables
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -193,21 +195,72 @@ stages and extracted instruction arrays, consult @ref page_toolbox_loadbalancing
 ### Visualise the outcome
 
 With a first load balancing in place, it makes sense to fire up the benchmark 
-and to visualise what the arising mesh looks like. It is also reasonable to 
-play around with the number of trees that we want to have per rank.
+and to visualise what the arising mesh looks like. The @ref toolbox_loadbalancing "domain decomposition"
+description hosts some recommendations how to do this through either bespoke
+Python scripts or via Paraview.
 
-Finally, there is a tool in the offline load balancing toolbox, which allows us
-to preview/visualise the partitioning as well, and we might want the build 
-script to do so:
+@image html src/toolbox/loadbalancing/visualise_domain_decomposition0.png
 
-@todo Dmitry can you add a screenshot here of the partitioning
+
+Intrinsically, all of the visualisation discussion in the load balancing 
+documentation is backward-looking. 
+That is, you derive a domain decomposition, you pipe it into ExaHyPE, and then
+you visualise what it did give you.
+With the offline domain decomposition, we can also visualise the envisaged 
+partitioning beforehand:
+
+
+@todo Dmitry can you add content here?
+
+
+<br /><br />
+<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+This first exercise sketches our core ambition: A mesh is either synthesized or
+read in from a snapshot, a Python toolbox computes an optimal splitting, and 
+then we (re-)launch the application with this optimised decomposition.
+</div>
 
 
 # Offload load balancing for an adaptive grid taken from a real run
 
+
+## Multiscale mesh association
+
+While this very simple example sets the overall tone, it also allows us to 
+study and understand a fundamental challenge in the administratino of 
+large-scale multiscale meshes. 
+When we pipe the hardcoded decomposition from above into an ExaHyPE run, we 
+realise that it builds up the whole mesh on one single rank and thread first
+and then decomposes this mesh in a final step.
+It is clear that this approach does not scale.
+
+
+We also notice once we profile that we pay a significant overhead with this 
+decomposition:
+Peano's fundamental paradigm is that we run through the mesh top-down. 
+With the present decomposition, all of the coarse parts of the tree remain on 
+rank 0, thread 0.
+Only the leaves are actually given to other threads and ranks.
+What we are after is a multiscale decomposition where coarser levels are 
+distributed among the ranks and threads, too.
+
+
+@image html src/toolbox/loadbalancing/visualise_tree_split.png
+
+
+The example above gives us such a partitioning: 
+Here, we have three levels. 
+On the finest one, we have a certain association of cells to trees, which in 
+turn are mapped onto ranks and threads. 
+The mapping is encoded with colours.
+However, also the coarser levels 0 and 1 have a unique assignment of trees.
+
+
 ## This is yet to be written
 
 @todo Continue
+
+
 
 
  

@@ -11,7 +11,7 @@ from SBH import FD4SolverWithoutLimiter
 
 #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_inputs]
 from toolbox.loadbalancing.api.input.RegularGridGenerator import RegularGridGenerator
-import toolbox.loadbalancing.api.Strategies.SplitTrees as split_strategy
+import toolbox.loadbalancing.api.Strategies.SplitTrees as SplitTrees
 #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_inputs]
 
 
@@ -179,7 +179,7 @@ if __name__ == "__main__":
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_split]
         number_of_subtrees = args.ranks * args.trees
 
-        grid_sweeps, splitting_trees, number_of_cells, subtrees = split_strategy.split_tree(
+        grid_sweeps, splitting_trees, number_of_cells, subtrees = SplitTrees.split_tree(
             tree,
             number_of_subtrees=number_of_subtrees,
             enable_propagate_bottom_up=False,
@@ -192,8 +192,7 @@ if __name__ == "__main__":
         print("  grid_sweeps     =", grid_sweeps)
         print("  splitting_trees =", splitting_trees)
         print("  number_of_cells =", number_of_cells)
-        print("  subtrees       =", subtrees)
-        
+        print("  subtrees       =", subtrees)        
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_split]
         
         
