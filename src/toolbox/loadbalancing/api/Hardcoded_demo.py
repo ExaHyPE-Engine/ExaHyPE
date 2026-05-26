@@ -20,8 +20,7 @@ def demo(file_path: str, dimensions: int):
     if not os.path.isdir(file_path):
         raise FileNotFoundError(f"Input directory not found: {file_path}")
     print(f"Loading grid patch files from '{file_path}' (dimensions={dimensions})")
-# @todo Dmitry I'm happy with a name, but it really should be optional, i.e. I don't want to have to specify it here
-    tree = GridPatchFileReader(name=f"Files-{file_path}", file_path=file_path, dimension=dimensions)
+    tree = GridPatchFileReader(file_path=file_path, dimensions=dimensions)
     print(tree)
 
     # Reset to single subtree and apply splitting to create multiple subtrees for the demo

@@ -162,7 +162,7 @@ def main():
             sys.exit(1)
         name = "Files-"+args.file_path
         filename = args.file_path
-        tree = GridPatchFileReader(name=name, file_path=args.file_path, dimension=args.grid_dimensions)
+        tree = GridPatchFileReader(name=name, file_path=args.file_path, dimensions=args.grid_dimensions)
     elif args.max_level > 0:
         if args.grid_dimensions is None:
             print("Error: -d/--dimensions is required when generating regular grids")
