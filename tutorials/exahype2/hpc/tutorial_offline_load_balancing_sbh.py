@@ -179,8 +179,7 @@ if __name__ == "__main__":
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_split]
         number_of_subtrees = args.ranks * args.trees
 
-        # @todo Dmitry, the correct Python nomenclature would be grid_sweeps and splitting_trees and so forth. Please adopt
-        gridSweeps, splittingTrees, numberOfCells, subTrees = split_strategy.split_tree(
+        grid_sweeps, splitting_trees, number_of_cells, subtrees = split_strategy.split_tree(
             tree,
             number_of_subtrees=number_of_subtrees,
             enable_propagate_bottom_up=False,
@@ -190,27 +189,27 @@ if __name__ == "__main__":
         print(tree)
 
         print("Extracted hardcoded parameters:")
-        print("  gridSweeps     =", gridSweeps)
-        print("  splittingTrees =", splittingTrees)
-        print("  numberOfCells  =", numberOfCells)
-        print("  subTrees       =", subTrees)
+        print("  grid_sweeps     =", grid_sweeps)
+        print("  splitting_trees =", splitting_trees)
+        print("  number_of_cells =", number_of_cells)
+        print("  subtrees       =", subtrees)
         
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_split]
         
         
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_map]
-        destinationRanks = [
-            tree_number % args.ranks for tree_number in subTrees
+        destination_ranks = [
+            tree_number % args.ranks for tree_number in subtrees
         ]
-        print("  destinationRanks  =", destinationRanks)
+        print("  destination_ranks  =", destination_ranks)
         
         hardcoded_mode = "peano4::SplitInstruction::Mode::AggressiveTopDown"
         hardcoded_config = (
             "{"
-            f"{{{', '.join(map(str, gridSweeps))}}}, "
-            f"{{{', '.join(map(str, splittingTrees))}}}, "
-            f"{{{', '.join(map(str, numberOfCells))}}}, "
-            f"{{{', '.join(map(str, destinationRanks))}}}, "
+            f"{{{', '.join(map(str, grid_sweeps))}}}, "
+            f"{{{', '.join(map(str, splitting_trees))}}}, "
+            f"{{{', '.join(map(str, number_of_cells))}}}, "
+            f"{{{', '.join(map(str, destination_ranks))}}}, "
             f"{hardcoded_mode}"
             "}"
         )
