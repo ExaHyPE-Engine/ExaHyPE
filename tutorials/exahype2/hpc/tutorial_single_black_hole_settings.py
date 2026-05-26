@@ -239,12 +239,11 @@ def add_hardcoded_load_balancing_over_regular_mesh(project,
 # =========================================
 # Part 3 of tutorial: Split the tree into ranks*trees_per_rank subtrees and obtain split instructions
 # =========================================
-    total_subtrees = trees_per_rank * number_of_ranks
-    number_of_splits = total_subtrees - 1
+    number_of_subtrees = trees_per_rank * number_of_ranks
 
     gridSweeps, splittingTrees, numberOfCells, subTrees = split_strategy.split_tree(
         tree,
-        number_of_splits=number_of_splits,
+        number_of_subtrees=number_of_subtrees,
         enable_propagate_bottom_up=False,
         enable_extract_split_instructions=True,
     )  # creates subtrees {0,1,2}

@@ -177,16 +177,14 @@ if __name__ == "__main__":
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid]
         
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_split]
-        total_subtrees = args.ranks * args.trees
-        # @todo Dmitry can we please revamp this parameter into number_of_trees? THis is more natural here
-        number_of_splits = total_subtrees - 1
+        number_of_subtrees = args.ranks * args.trees
 
         # @todo Dmitry, the correct Python nomenclature would be grid_sweeps and splitting_trees and so forth. Please adopt
         gridSweeps, splittingTrees, numberOfCells, subTrees = split_strategy.split_tree(
-          tree,
-          number_of_splits=number_of_splits,
-          enable_propagate_bottom_up=False,
-          enable_extract_split_instructions=True,
+            tree,
+            number_of_subtrees=number_of_subtrees,
+            enable_propagate_bottom_up=False,
+            enable_extract_split_instructions=True,
         ) 
         
         print(tree)
@@ -202,7 +200,7 @@ if __name__ == "__main__":
         
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_map]
         destinationRanks = [
-          tree_number % args.ranks for tree_number in subTrees
+            tree_number % args.ranks for tree_number in subTrees
         ]
         print("  destinationRanks  =", destinationRanks)
         

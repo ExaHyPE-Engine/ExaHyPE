@@ -21,7 +21,7 @@ def test_tree3_stage1_bfs_finest_first_leaf_distribution():
     Exercises the tree described by tree3_stage1_fine_first_bfs.dot:
     - 23 leaves total (21 at the finest level + 2 childless level-1 leaves).
     - BFS finest-first processes level 2 leaves before level 1 leaves.
-    - With 3 splits (4 subtrees), the balanced distribution is [6, 6, 6, 5].
+    - With 4 subtrees, the balanced distribution is [6, 6, 6, 5].
 
     Expected leaf assignments after Stage I
     (first-row positions at each level):
@@ -37,7 +37,7 @@ def test_tree3_stage1_bfs_finest_first_leaf_distribution():
 
     split_strategy.split_tree(
         peano_tree=tree,
-        number_of_splits=3,
+        number_of_subtrees=4,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=False,
         enable_optimize_hierarchy=False,
@@ -126,7 +126,7 @@ def test_tree3_stage2_bottom_up_propagation():
 
     split_strategy.split_tree(
         peano_tree=tree,
-        number_of_splits=3,
+        number_of_subtrees=4,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=True,
         enable_optimize_hierarchy=False,
@@ -186,7 +186,7 @@ def test_tree3_stage3_no_root_promotion_with_single_root_first_row_embedding():
     tree_no_stage3 = build_tree3_adaptive_2d()
     split_strategy.split_tree(
         peano_tree=tree_no_stage3,
-        number_of_splits=3,
+        number_of_subtrees=4,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=True,
         enable_optimize_hierarchy=False,
@@ -197,7 +197,7 @@ def test_tree3_stage3_no_root_promotion_with_single_root_first_row_embedding():
     tree_with_stage3 = build_tree3_adaptive_2d()
     split_strategy.split_tree(
         peano_tree=tree_with_stage3,
-        number_of_splits=3,
+        number_of_subtrees=4,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=True,
         enable_optimize_hierarchy=True,
@@ -228,14 +228,14 @@ def test_tree3_all_rows_stage1_leaf_distribution():
     Stage I test for the all-rows representation variant.
 
     In this all-rows recursive expansion variant, the represented tree is much
-    denser than the first-row embedding. For 3 splits (4 subtrees), Stage I
+    denser than the first-row embedding. For 4 subtrees, Stage I
     deterministically distributes 585 leaves as [147, 146, 146, 146].
     """
     tree = build_tree3_all_rows_2d()
 
     split_strategy.split_tree(
         peano_tree=tree,
-        number_of_splits=3,
+        number_of_subtrees=4,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=False,
         enable_optimize_hierarchy=False,
@@ -274,7 +274,7 @@ def test_tree3_all_rows_stage2_bottom_up_propagation():
 
     split_strategy.split_tree(
         peano_tree=tree,
-        number_of_splits=3,
+        number_of_subtrees=4,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=True,
         enable_optimize_hierarchy=False,
@@ -318,7 +318,7 @@ def test_tree3_all_rows_stage3_promotes_level1_not_root():
 
     split_strategy.split_tree(
         peano_tree=tree,
-        number_of_splits=3,
+        number_of_subtrees=4,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=True,
         enable_optimize_hierarchy=True,

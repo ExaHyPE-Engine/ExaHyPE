@@ -64,7 +64,7 @@ tree = CustomGridGenerator("MyCustomTree", "path/to/tree_structure.yaml")
 
 # Apply additional splitting
 from Strategies.SplitTrees import split_tree
-split_tree(tree, number_of_splits=2)
+split_tree(tree, number_of_subtrees=2)
 
 # Compare with original structure
 from Visualize.TreeVisualizer import TreeVisualizer
@@ -220,7 +220,7 @@ def CustomGridGenerator(name, yaml_file_path):
         
         # Apply additional processing
         from Strategies.SplitTrees import split_tree
-        split_tree(tree, number_of_splits=2)
+        split_tree(tree, number_of_subtrees=2)
         ```
         
     Note:

@@ -11,7 +11,7 @@ import Strategies.SplitTrees as split_strategy
 
 
 @pytest.mark.parametrize(
-    "dimensions,number_of_splits",
+    "dimensions,number_of_subtrees",
     [
         (2, 1),
         (2, 3),
@@ -19,12 +19,12 @@ import Strategies.SplitTrees as split_strategy
         (3, 3),
     ],
 )
-def test_leaf_distribution_balanced_across_subtrees(dimensions, number_of_splits):
+def test_leaf_distribution_balanced_across_subtrees(dimensions, number_of_subtrees):
     """
     Stage I ("Leaf Distribution") invariant test in 2D and 3D.
 
     Verify that leaves from subtree 0 are distributed as evenly as possible
-    across `number_of_splits + 1` subtrees.
+    across `number_of_subtrees` subtrees.
     """
     # Arrange: tree with 2 levels; all cells initially in subtree 0
     tree = RegularGridGenerator(
@@ -35,12 +35,12 @@ def test_leaf_distribution_balanced_across_subtrees(dimensions, number_of_splits
     leaf_count_before = tree._leaf_count
 
     # Act: run Stage I only (BFS traversal, default)
-    has_leaves, moved_nodes = split_strategy._distribute_leaves_bfs(tree, number_of_splits)
+    has_leaves, moved_nodes = split_strategy._distribute_leaves_bfs(tree, number_of_subtrees)
 
     # Assert: leaves were found and redistribution occurred
     assert has_leaves
     assert sum(moved_nodes) == leaf_count_before
-    assert len(moved_nodes) == number_of_splits + 1
+    assert len(moved_nodes) == number_of_subtrees
 
     # Assert: distribution is balanced (within 1 leaf per subtree)
     max_leaves = max(moved_nodes)
@@ -51,7 +51,7 @@ def test_leaf_distribution_balanced_across_subtrees(dimensions, number_of_splits
     )
 
     # Assert: no subtree is empty if possible
-    if leaf_count_before >= number_of_splits + 1:
+    if leaf_count_before >= number_of_subtrees:
         assert all(count > 0 for count in moved_nodes), (
             f"Some subtrees are empty: {moved_nodes}"
         )
@@ -102,7 +102,7 @@ def test_leaf_distribution_does_not_modify_non_leaf_nodes(dimensions):
                                 non_leaf_assignments_before[(level, a, b, c)] = node[1]
 
     # Act: run Stage I
-    split_strategy._distribute_leaves_bfs(tree, number_of_splits=2)
+    split_strategy._distribute_leaves_bfs(tree, number_of_subtrees=2)
 
     # Assert: all non-leaf nodes remain unchanged
     for level_coords, subtree_before in non_leaf_assignments_before.items():
@@ -153,7 +153,7 @@ def test_leaf_distribution_only_redistributes_subtree_0(dimensions):
                     corner_leaves_subtree_1.append((a, b, c))
 
     # Act: run Stage I
-    split_strategy._distribute_leaves_bfs(tree, number_of_splits=1)
+    split_strategy._distribute_leaves_bfs(tree, number_of_subtrees=1)
 
     # Assert: leaves in subtree 1 remain in subtree 1
     if dimensions == 2:
@@ -203,7 +203,7 @@ def test_leaf_distribution_preserves_node_existence_weights(dimensions):
                         weights_before[(level, a, b, c)] = weight
 
     # Act: run Stage I
-    split_strategy._distribute_leaves_bfs(tree, number_of_splits=2)
+    split_strategy._distribute_leaves_bfs(tree, number_of_subtrees=2)
 
     # Assert: all weights remain unchanged
     for level_coords, weight_before in weights_before.items():
@@ -233,25 +233,25 @@ def test_leaf_distribution_returns_correct_moved_nodes_count(dimensions):
         name=f"pytest-tree-move-count-{dimensions}d", max_level=2, dimensions=dimensions
     )
 
-    number_of_splits = 2
+    number_of_subtrees = 2
     finest_level = tree._max_level - 1
 
     # Act: run Stage I
-    has_leaves, moved_nodes = split_strategy._distribute_leaves_bfs(tree, number_of_splits)
+    has_leaves, moved_nodes = split_strategy._distribute_leaves_bfs(tree, number_of_subtrees)
 
     # Assert: moved_nodes list length is correct
-    assert len(moved_nodes) == number_of_splits + 1
+    assert len(moved_nodes) == number_of_subtrees
 
     # Assert: count leaves actually assigned to each subtree and verify
     size = 3 ** (finest_level + 1)
-    actual_counts = [0] * (number_of_splits + 1)
+    actual_counts = [0] * (number_of_subtrees)
 
     if dimensions == 2:
         for a in range(size):
             for b in range(size):
                 weight, subtree = tree._tree_arrays[finest_level][a][b]
                 if weight == 1:  # Leaf exists
-                    if subtree < number_of_splits + 1:
+                    if subtree < number_of_subtrees:
                         actual_counts[subtree] += 1
 
     elif dimensions == 3:
@@ -260,7 +260,7 @@ def test_leaf_distribution_returns_correct_moved_nodes_count(dimensions):
                 for c in range(size):
                     weight, subtree = tree._tree_arrays[finest_level][a][b][c]
                     if weight == 1:  # Leaf exists
-                        if subtree < number_of_splits + 1:
+                        if subtree < number_of_subtrees:
                             actual_counts[subtree] += 1
 
     # Compare reported counts with actual counts

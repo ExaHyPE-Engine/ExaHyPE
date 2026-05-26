@@ -43,7 +43,7 @@ def build_tree3_adaptive_2d() -> Tree:
     Total leaves initially (all in subtree 0):
         21 finest-level leaves + 2 childless level-1 leaves = 23
 
-    The tree has 3 splits (4 subtrees) in the tests below.
+    The tree uses 4 total subtrees in the tests below.
     """
     tree = Tree("tree3-adaptive", 2, (0.0, 0.0), (1.0, 1.0))
     tree._max_level = 4

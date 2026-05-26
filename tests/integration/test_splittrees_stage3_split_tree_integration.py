@@ -19,9 +19,9 @@ def test_split_tree_flags_enable_stage3_promotion(monkeypatch):
     - with Stage II + Stage III: parent is promoted to dominant subtree
     """
 
-    def _fake_stage_i(peano_tree, number_of_splits, finest_level_first=False):
+    def _fake_stage_i(peano_tree, number_of_subtrees, finest_level_first=False):
         # Keep preconfigured tree untouched and report synthetic Stage I stats.
-        return True, [0] * (number_of_splits + 1)
+        return True, [0] * (number_of_subtrees)
 
     # Force split_tree() to traverse Stage II/III over our handcrafted case.
     monkeypatch.setattr(split_strategy, "_distribute_leaves_bfs", _fake_stage_i)
@@ -30,7 +30,7 @@ def test_split_tree_flags_enable_stage3_promotion(monkeypatch):
     tree_stage2_only, parent_coords = build_stage3_mixed_parent_case_2d()
     result_stage2_only = split_strategy.split_tree(
         peano_tree=tree_stage2_only,
-        number_of_splits=2,
+        number_of_subtrees=3,
         traversal="bfs",
         enable_propagate_bottom_up=True,
         enable_optimize_hierarchy=False,
@@ -44,7 +44,7 @@ def test_split_tree_flags_enable_stage3_promotion(monkeypatch):
     tree_stage2_plus_3, parent_coords = build_stage3_mixed_parent_case_2d()
     result_stage2_plus_3 = split_strategy.split_tree(
         peano_tree=tree_stage2_plus_3,
-        number_of_splits=2,
+        number_of_subtrees=3,
         traversal="bfs",
         enable_propagate_bottom_up=True,
         enable_optimize_hierarchy=True,
