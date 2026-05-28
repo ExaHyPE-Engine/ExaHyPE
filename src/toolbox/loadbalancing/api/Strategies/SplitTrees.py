@@ -114,6 +114,7 @@ def split_tree(
     traversal: str = "bfs_finest_first",
     enable_propagate_bottom_up: bool = False,
     enable_optimize_hierarchy: bool = False,
+    require_all_children_for_hierarchy_optimization: bool = True,
     enable_extract_split_instructions: bool = False,
 ) -> tuple[list[int], list[int], list[int], list[int]]:
     """
@@ -139,6 +140,10 @@ def split_tree(
             propagation after leaf redistribution.
         enable_optimize_hierarchy: If True, enable Stage III hierarchical
             optimisation to minimise split operations through hierarchy lifting.
+        require_all_children_for_hierarchy_optimization: Stage III guard for
+            parent promotion. If True (default), a parent is only considered if
+            all 3^d children exist. If False, Stage III may also promote mixed
+            parents with partial child sets.
         enable_extract_split_instructions: If True, run Stage IV and return the
             derived `(gridSweeps, splittingTrees, numberOfCells, subTrees)`.
 
@@ -188,7 +193,10 @@ def split_tree(
         _propagate_bottom_up(peano_tree)
 
     if enable_optimize_hierarchy:
-        _optimize_hierarchy(peano_tree)
+        _optimize_hierarchy(
+            peano_tree,
+            require_all_children=require_all_children_for_hierarchy_optimization,
+        )
 
     # Update tree metadata after all stages
     peano_tree._subtree_count = number_of_subtrees
@@ -594,7 +602,7 @@ def _propagate_bottom_up(peano_tree: Tree) -> None:
     
     print("Non-leaf node assignment update completed.")
 
-def _optimize_hierarchy(peano_tree: Tree) -> None:
+def _optimize_hierarchy(peano_tree: Tree, require_all_children: bool = True) -> None:
     """
     Stage III of the staged load-balancing workflow.
 
@@ -622,6 +630,9 @@ def _optimize_hierarchy(peano_tree: Tree) -> None:
         peano_tree: Tree to update (modified in place).
         Required precondition: Stage II (bottom-up propagation) must have been
         applied first to ensure non-leaf subtree consistency.
+        require_all_children: If True (default), only promote parents whose
+        full 3^d child set exists. If False, also allow promotions for mixed
+        partial child sets.
 
     Returns:
         None.
@@ -646,7 +657,7 @@ def _optimize_hierarchy(peano_tree: Tree) -> None:
 
         Returns the dominant subtree id when promotion is beneficial, otherwise None.
         """
-        if len(child_subtrees) != children_per_parent:
+        if require_all_children and len(child_subtrees) != children_per_parent:
             return None
 
         counts: dict[int, int] = {}
