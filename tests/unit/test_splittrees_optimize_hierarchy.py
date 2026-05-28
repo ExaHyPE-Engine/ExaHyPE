@@ -151,6 +151,52 @@ def test_optimize_hierarchy_does_not_promote_when_children_are_incomplete(
     assert tree._tree_arrays[parent_level][parent_coords] == (1, 0)
 
 
+@pytest.mark.parametrize(
+    "dimensions,parent_coords",
+    [
+        (2, (2, 2)),
+        (3, (2, 2, 2)),
+    ],
+)
+def test_optimize_hierarchy_can_promote_with_incomplete_children_when_enabled(
+    dimensions, parent_coords
+):
+    """
+    Stage III relaxed mode in 2D and 3D:
+    If full-child-set gating is disabled, mixed partial child sets can still
+    promote a parent to the dominant subtree.
+    """
+    tree = RegularGridGenerator(
+        name=f"pytest-tree-stage-iii-incomplete-allowed-{dimensions}d", max_level=2, dimensions=dimensions
+    )
+
+    parent_level = 0
+    child_level = 1
+
+    assert tree._tree_arrays[parent_level][parent_coords] == (1, 0)
+
+    children = _child_coords(parent_coords)
+    total_children = len(children)
+    dominant_count = total_children // 2 + 1
+    parent_count = total_children - dominant_count - 1
+
+    # Build a would-be promotable mixed pattern.
+    for coords in children[:dominant_count]:
+        tree._tree_arrays[child_level][coords] = (1, 2)
+    for coords in children[dominant_count:dominant_count + parent_count]:
+        tree._tree_arrays[child_level][coords] = (1, 0)
+    tree._tree_arrays[child_level][children[-1]] = (1, 1)
+
+    # Remove one child so the set is incomplete.
+    tree._tree_arrays[child_level][children[0]] = (0, 0)
+
+    # Act: Stage III relaxed mode
+    split_strategy._optimize_hierarchy(tree, require_all_children=False)
+
+    # Parent is now allowed to be promoted to dominant subtree 2.
+    assert tree._tree_arrays[parent_level][parent_coords] == (1, 2)
+
+
 @pytest.mark.parametrize("dimensions", [2, 3])
 def test_optimize_hierarchy_preserves_node_existence_weights(dimensions):
     """
