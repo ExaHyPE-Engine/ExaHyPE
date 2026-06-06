@@ -61,7 +61,10 @@ python3 tutorial_offline_load_balancing_sbh.py -s fd4-rk1-ps-3 -et 1e-2 --plot 1
 
 # Studying the Python code
 
-All the interesting stuff can be found in the file tutorial_offline_load_balancing_sbh.py.
+All the work setting up the benchmark is in tutorial_offline_load_balancing_sbh.py.
+Here we choose the load balancing strategy that we want to use along with many other benchmark parameters.
+Some of the more specific details are in tutorial_single_black_hole_settings.py, in particular 
+add_hardcoded_load_balancing_over_regular_mesh(...), which shows how to use the hardcoded load balancer.
 This tutorial focuses on a concrete workflow; the full API contracts and design rationale are
 documented in @ref page_toolbox_loadbalancing_api.
 When we do a first sanity check and compile with 
