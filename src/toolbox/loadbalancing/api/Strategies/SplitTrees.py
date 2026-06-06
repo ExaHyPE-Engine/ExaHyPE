@@ -114,7 +114,7 @@ def split_tree(
     traversal: str = "bfs_finest_first",
     enable_propagate_bottom_up: bool = False,
     enable_optimize_hierarchy: bool = False,
-    enable_extract_split_instructions: bool = False,
+    enableextract_split_instructions: bool = False,
 ) -> tuple[list[int], list[int], list[int], list[int]]:
     """
     Split a tree using a staged load-balancing workflow.
@@ -124,7 +124,7 @@ def split_tree(
     2. _propagate_bottom_up(): Propagate subtree ownership to internal nodes.
     3. _optimize_hierarchy() (optional): Further reduce split complexity by
        promoting complete child sets up the hierarchy.
-    4. _extract_split_instructions() (optional): Derive hardcoded split
+    4. extract_split_instructions() (optional): Derive hardcoded split
        instructions from the transformed tree.
 
     Args:
@@ -139,7 +139,7 @@ def split_tree(
             propagation after leaf redistribution.
         enable_optimize_hierarchy: If True, enable Stage III hierarchical
             optimisation to minimise split operations through hierarchy lifting.
-        enable_extract_split_instructions: If True, run Stage IV and return the
+        enableextract_split_instructions: If True, run Stage IV and return the
             derived `(gridSweeps, splittingTrees, numberOfCells, subTrees)`.
 
     Returns:
@@ -154,8 +154,8 @@ def split_tree(
     """
     if number_of_subtrees <= 1:
         print(f"No splitting requested (number_of_subtrees = {number_of_subtrees}).")
-        if enable_extract_split_instructions:
-            return _extract_split_instructions(peano_tree)
+        if enableextract_split_instructions:
+            return extract_split_instructions(peano_tree)
         return ([], [], [], [])
 
     print(
@@ -180,8 +180,8 @@ def split_tree(
         )
 
     if not has_leaves_to_split:
-        if enable_extract_split_instructions:
-            return _extract_split_instructions(peano_tree)
+        if enableextract_split_instructions:
+            return extract_split_instructions(peano_tree)
         return ([], [], [], [])
 
     if enable_propagate_bottom_up:
@@ -198,8 +198,8 @@ def split_tree(
     print(f"Leaf distribution: {moved_nodes}")
     print(f"Split pattern: {peano_tree._split_pattern}")
 
-    if enable_extract_split_instructions:
-        return _extract_split_instructions(peano_tree)
+    if enableextract_split_instructions:
+        return extract_split_instructions(peano_tree)
 
     return ([], [], [], [])
 
@@ -358,6 +358,8 @@ def _distribute_leaves_dfs(peano_tree: Tree, number_of_subtrees: int) -> tuple[b
         A tuple `(has_leaves_to_split, moved_nodes_per_subtree)`:
         - `has_leaves_to_split`: `False` if no eligible leaves were found.
         - `moved_nodes_per_subtree`: Per-subtree counts of reassigned leaves.
+        
+        Both return values can be ignored if you want to.
     """
     leaf_nodes = []
     visited = set()
@@ -925,7 +927,7 @@ def reset_tree_to_single_subtree(peano_tree: Tree) -> Tree:
     
     return peano_tree
 
-def _extract_split_instructions(
+def extract_split_instructions(
     peano_tree: Tree, base_sweep: int = 2
 ) -> tuple[list[int], list[int], list[int], list[int]]:
     """
