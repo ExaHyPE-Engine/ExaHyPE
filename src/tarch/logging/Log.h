@@ -563,6 +563,8 @@ class tarch::logging::Log {
     static void exception( const std::bad_alloc& exception, const std::string& file, const int lineNumber );
 
     /**
+     * Message passed to logger
+     *
      * We could make the logMacroMessage passed into a log statement a string. However,
      * many codes write rather complicated strings and therefore spend a lot of
      * time to construct the logMacroMessage. This is fine in release mode, e.g., where

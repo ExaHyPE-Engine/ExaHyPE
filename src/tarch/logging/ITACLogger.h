@@ -13,7 +13,7 @@
 #include <map>
 #include <string>
 
-#include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/MultiReadSingleWriteSemaphore.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/logging/Log.h"
 
@@ -54,7 +54,7 @@ class tarch::logging::ITACLogger {
 
     static ITACLogger  _singleton;
 
-    tarch::multicore::BooleanSemaphore _semaphore;
+    tarch::multicore::MultiReadSingleWriteSemaphore _semaphore;
 
     std::map< std::string, int > _itacHandles;
 
@@ -163,30 +163,11 @@ class tarch::logging::ITACLogger {
     /**
      * Tells the logger to increment/decrement the indent.
      *
-     * !!! Thread Safety
-     *
-     * _indent is a global static field shared by all threads. If we increment
-     * or decrement it, this is first of all a read followed by a write.
-     * Consequently data races could occur and the counter could become smaller
-     * than zero. This ain't possible in the sequential code as each increment
-     * is accompanied by a decrement. The following table illustrates the race:
-     *
-     * || value of _indent  || Thread 1 || Thread 2
-     * |  2                 |  initial condition   |  initial condition
-     * |                    |  enter indent(false) |  enter indent(true)
-     * |                    |  fetch indent into register |  fetch indent into register
-     * |                    |  register value -= 2 |  register value += 2
-     * |  4                 |  is a little bit slower |  write back new value of indent
-     * |  0                 |  write back new value of indent |
-     *
-     * To avoid this data race, I introduced a semaphore. This one could also
-     * be implemented with TBB's atomic construct, e.g., but I prefer the
-     * semaphor / critical section technique.
-     *
-     * @param trace    Needed in debug mode to be able to find out who called indent(false) without an indent(true)
-     * @param message  Needed in debug mode to be able to find out who called indent(false) without an indent(true)
+     * For Score-P, we do not need any indentation. Consequently, we put the
+     * nop implementation into the header, so the compiler can inline the
+     * call and eventually remove it completely.
      */
-    void indent( bool indent, const std::string& trace, const std::string& message );
+    void indent( bool indent, const std::string& trace, const std::string& message ) {};
 
     void close();
 
