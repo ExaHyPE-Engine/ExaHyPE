@@ -42,9 +42,13 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       #if not defined(GPUOffloadingOff)
       if ({{PREDICATES[0]}}) {
         if (marker.willBeEnclaveCell()) {
+          // The device memory for each cell is maintained across Runge-Kutta substeps to reduce the number of allocations and deallocations.
+          // The deallocation takes place in ComputeFinalLinearCombination, which is the last step of a Runge-Kutta time step
           ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
-          marker.inputDeviceMemory[0] = tarch::accelerator::GPUMemoryManager::getInstance().allocate<double>(enumeratorWithAuxiliaryVariablesOnReconstructedPatch.size(), 0);
-          marker.inputDeviceMemoryStatus[0] = peano4::datamanagement::PatchWithHaloDeviceMemoryStatus::OutOfDate;
+          int device = 0;
+          fineGridCell{{SOLVER_NAME}}CellLabel.setDeviceNumber(device);
+          fineGridCell{{SOLVER_NAME}}CellLabel.setDeviceMemoryAddress(tarch::accelerator::GPUMemoryManager::getInstance().allocate<double>(enumeratorWithAuxiliaryVariablesOnReconstructedPatch.size(), device));
+          fineGridCell{{SOLVER_NAME}}CellLabel.setDeviceMemoryStatus(celldata::{{SOLVER_NAME}}CellLabel::DeviceMemoryStatus::OutOfDate);
           //fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.getSmartPointer().reset(tarch::accelerator::GPUMemoryManager::getInstance().allocate<double>(fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.Cardinality, 0), [] (auto p) { tarch::accelerator::GPUMemoryManager::getInstance().free(p, 0); });
         }
       }
@@ -111,20 +115,22 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
         
         #if defined(GPUOffloadingOMP)
-        omp_target_memcpy(marker.inputDeviceMemory[0], oldQWithHalo, enumeratorWithAuxiliaryVariablesOnReconstructedPatch.size() * sizeof(double), 0, 0, 0, omp_get_initial_device());
-        marker.inputDeviceMemoryStatus[0] = peano4::datamanagement::PatchWithHaloDeviceMemoryStatus::Exclusive;
+        // The reconstructed patch is copied into the allocated device memory for the cell
+        const int device = fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceNumber();
+        omp_target_memcpy(fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceMemoryAddress(), oldQWithHalo, enumeratorWithAuxiliaryVariablesOnReconstructedPatch.size() * sizeof(double), 0, 0, device, omp_get_initial_device());
+        fineGridCell{{SOLVER_NAME}}CellLabel.setDeviceMemoryStatus(celldata::{{SOLVER_NAME}}CellLabel::DeviceMemoryStatus::UpToDate);
 
         auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
           marker,
           subTimeStamp,
           timeStepSize,
-          marker.inputDeviceMemory[0],
+          fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceMemoryAddress(),
           {% if MAKE_COPY_OF_ENCLAVE_TASK_DATA %}
           nullptr
           {% else %}
           newQ
           {% endif %}
-          , false
+          , device
         );
         #else
         auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(

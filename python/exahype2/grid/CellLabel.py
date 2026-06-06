@@ -106,6 +106,10 @@ def create_cell_label(solver_name):
      some postprocessing (particles, e.g.) rely on the field.
    - TimeStepSize (similar to arguments around TimeStamp).
    - AMDCriterionEvaluatedThroughoutGridConstruction
+   - DeviceNumber is the number of the GPU that the device memory of this cell is allocated on.
+   - DeviceMemoryAddress is the pointer to the device memory of this cell. The device
+     memory is used to store the reconstructed patch of the cell when enclave tasking is used.
+   - DeviceMemoryStatus is the status of the device memory of this cell
      
    solver_name: string
      Name of the solver
@@ -118,7 +122,9 @@ def create_cell_label(solver_name):
   result.data.add_attribute( dastgen2.attributes.Double("TimeStepSize") )
   result.data.add_attribute( dastgen2.attributes.Boolean("HasUpdated") )
   result.data.add_attribute( dastgen2.attributes.Boolean("AMDCriterionEvaluatedThroughoutGridConstruction") )
-    
+  result.data.add_attribute( dastgen2.attributes.Integer("DeviceNumber") )
+  result.data.add_attribute( dastgen2.attributes.DoublePointer("DeviceMemoryAddress") )
+  result.data.add_attribute( dastgen2.attributes.Enumeration("DeviceMemoryStatus", ["Unallocated", "OutOfDate", "UpToDate"]) )
   result.peano4_mpi_and_storage_aspect.merge_implementation = """
   switch (context) {
     case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:

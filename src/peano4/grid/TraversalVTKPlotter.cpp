@@ -90,18 +90,15 @@ void peano4::grid::TraversalVTKPlotter::endTraversal(
 }
 
 void peano4::grid::TraversalVTKPlotter::loadCell(
-  [[maybe_unused]] const GridTraversalEvent& event,
-  [[maybe_unused]] const peano4::datamanagement::CellMarker&  cellMarker
+  [[maybe_unused]] const GridTraversalEvent& event
 ) {}
 
 void peano4::grid::TraversalVTKPlotter::storeCell(
-  [[maybe_unused]] const GridTraversalEvent& event,
-  [[maybe_unused]] const peano4::datamanagement::CellMarker&  cellMarker
+  [[maybe_unused]]const GridTraversalEvent& event
 ) {}
 
 void peano4::grid::TraversalVTKPlotter::enterCell(
-  const GridTraversalEvent&  event,
-  [[maybe_unused]] const peano4::datamanagement::CellMarker& cellMarker
+  const GridTraversalEvent&  event
 ) {
   bool plot = event.getWillBeRefined()==0 and event.getIsCellLocal();
   if (plot) {
@@ -139,8 +136,7 @@ void peano4::grid::TraversalVTKPlotter::plotCell(
 }
 
 void peano4::grid::TraversalVTKPlotter::leaveCell(
-  [[maybe_unused]]const GridTraversalEvent& event,
-  [[maybe_unused]] const peano4::datamanagement::CellMarker& cellMarker
+  [[maybe_unused]]const GridTraversalEvent& event
 ) {}
 
 peano4::grid::TraversalObserver*  peano4::grid::TraversalVTKPlotter::clone(int spacetreeId) {

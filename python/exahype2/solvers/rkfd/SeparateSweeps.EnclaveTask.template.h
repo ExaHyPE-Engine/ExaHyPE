@@ -79,7 +79,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     * When keeping patches on the GPU between steps or substeps we don't want the task
     * to allocate or free device memory. In this case _manageInputDeviceMemory is false.
     */
-    bool _manageInputDeviceMemory;
+    int _reconstructedPatchDeviceNumber;
 
   public:
     static int getEnclaveTaskTypeId();
@@ -120,7 +120,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
       double                                      dt,
       double* __restrict__                        reconstructedPatch,
       double* __restrict__                        output,
-      bool                                        manageInputDeviceMemory = true
+      int                                         reconstructedPatchDeviceNumber = tarch::accelerator::Device::HostDevice
     );
 
 

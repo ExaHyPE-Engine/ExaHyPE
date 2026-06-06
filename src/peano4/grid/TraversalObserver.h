@@ -61,17 +61,17 @@ public:
    */
   static constexpr int CreateOrDestroyHangingGridEntity = -3;
 
-  virtual void loadCell(const GridTraversalEvent& event, const peano4::datamanagement::CellMarker& cellMarker) = 0;
+  virtual void loadCell(const GridTraversalEvent& event) = 0;
 
   /**
    * Event is invoked per cell. It is however not called for the root cell,
    * i.e. for the cell with level 0 that does not have a parent.
    */
-  virtual void enterCell(const GridTraversalEvent& event, const peano4::datamanagement::CellMarker& cellMarker) = 0;
+  virtual void enterCell(const GridTraversalEvent& event) = 0;
 
-  virtual void leaveCell(const GridTraversalEvent& event, const peano4::datamanagement::CellMarker& cellMarker) = 0;
+  virtual void leaveCell(const GridTraversalEvent& event) = 0;
 
-  virtual void storeCell(const GridTraversalEvent& event, const peano4::datamanagement::CellMarker& cellMarker) = 0;
+  virtual void storeCell(const GridTraversalEvent& event) = 0;
 
   /**
    * I use the clone to create one observer object per traversal thread. So
