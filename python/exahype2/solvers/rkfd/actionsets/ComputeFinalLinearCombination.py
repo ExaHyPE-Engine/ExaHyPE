@@ -117,9 +117,8 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
     
     if (marker.willBeEnclaveCell()) {
       #if not defined(GPUOffloadingOff)
-      tarch::accelerator::GPUMemoryManager::getInstance().free(marker.inputDeviceMemory[0], 0);
-      assert(marker.inputDeviceMemoryStatus[0] == peano4::datamanagement::PatchWithHaloDeviceMemoryStatus::Exclusive);
-      marker.inputDeviceMemoryStatus[0] = peano4::datamanagement::PatchWithHaloDeviceMemoryStatus::Unallocated;
+      tarch::accelerator::GPUMemoryManager::getInstance().free(fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceMemoryAddress(), fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceNumber());
+      fineGridCell{{SOLVER_NAME}}CellLabel.setDeviceMemoryStatus(celldata::{{SOLVER_NAME}}CellLabel::DeviceMemoryStatus::Unallocated);
       #endif
     }
   }

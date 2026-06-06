@@ -10,29 +10,10 @@
 #include <functional>
 #include <mpi.h>
 #endif
-#include <map>
 
 namespace peano4 {
   namespace datamanagement {
     struct CellMarker;
-    enum class PatchWithHaloDeviceMemoryStatus{
-      // Modifed indicates that the data on the host iis out date
-      HaloModified,
-      CentreModified,
-      AllModified,
-
-      // Exclusive and shared indicate that the host and device data match
-      Exclusive,
-      Shared,
-
-      // OutOfDate indicates that the data on the device is out of date
-      HaloOutOfDate,
-      CentreOutOfDate,
-      OutOfDate,
-
-      Unallocated,
-      DeviceUsageDisabled
-    };
   } // namespace datamanagement
 } // namespace peano4
 
@@ -57,8 +38,6 @@ std::ostream& operator<<(std::ostream& out, const peano4::datamanagement::CellMa
  */
 struct peano4::datamanagement::CellMarker {
 private:
-  static tarch::logging::Log _log;
-
   tarch::la::Vector<Dimensions, double> _centre;
 
   tarch::la::Vector<Dimensions, double> _h;
@@ -77,21 +56,13 @@ private:
   bool _willBeEnclave;
   bool _hasBeenEnclave;
 
-
   /**
    * Entries from (0,1,2). (0,0) or (0,0,0) is the left, bottom cell.
    */
   tarch::la::Vector<Dimensions, int> _relativePositionOfCellWithinFatherCell;
 
 public:
-  // Track device memory status for multiple devices, the key is the device number
-  //mutable std::map<int, DeviceMemoryStatus> outputDeviceMemoryStatus;
-  mutable std::map<int, PatchWithHaloDeviceMemoryStatus> inputDeviceMemoryStatus;
-  mutable std::map<int, double*> inputDeviceMemory;
-
   CellMarker(const peano4::grid::GridTraversalEvent& event);
-
-  void updateWithNewGridTraversalEvent(const peano4::grid::GridTraversalEvent& event);
 
   /**
    * Has the cell been refined when we kicked off this mesh traversal
@@ -277,17 +248,6 @@ public:
    * @see hasBeenEnclaveCell()
    */
   bool willBeSkeletonCell() const;
-
-  /**
-  * Returns true if cell is stored on device, even if out of date
-  */
-  bool isOnDevice() const;
-
-//  void setInputMemoryStatus(const peano4::datamanagement::MemoryStatus& memoryStatus) mutable;
-//  void setOutputMemoryStatus(const peano4::datamanagement::MemoryStatus& memoryStatus) mutable;
-//
-//  peano4::datamanagement::MemoryStatus inputMemoryStatus() const;
-//  peano4::datamanagement::MemoryStatus outputMemoryStatus() const;
 
   tarch::la::Vector<Dimensions, int> getRelativePositionWithinFatherCell() const;
 

@@ -11,8 +11,7 @@ exahype2::CellData<inType, outType>::CellData(
   double                                       dt_,
   outType*                                     QOut_,
   tarch::MemoryLocation                        memoryLocation_,
-  int                                          targetDevice_,
-  peano4::datamanagement::PatchWithHaloDeviceMemoryStatus   deviceMemoryStatus_ 
+  int                                          targetDevice_
 ):
   CellData(1, memoryLocation_, targetDevice_) {
   QIn[0]          = QIn_;
@@ -21,7 +20,6 @@ exahype2::CellData<inType, outType>::CellData(
   t[0]            = t_;
   dt[0]           = dt_;
   QOut[0]         = QOut_;
-  deviceMemoryStatus[0] = deviceMemoryStatus_;
   id[0]           = -1;
 }
 
@@ -42,7 +40,6 @@ exahype2::CellData<inType, outType>::CellData(
   id            = tarch::allocateMemory<int>(numberOfCells_, memoryLocation_, targetDevice_);
   QOut          = tarch::allocateMemory<outType*>(numberOfCells_, memoryLocation_, targetDevice_);
   maxEigenvalue = tarch::allocateMemory<double>(numberOfCells_, memoryLocation_, targetDevice_);
-  deviceMemoryStatus  = tarch::allocateMemory<peano4::datamanagement::PatchWithHaloDeviceMemoryStatus>(numberOfCells_, memoryLocation_, tarch::accelerator::Device::HostDevice);
 }
 
 template<typename inType, typename outType>
@@ -178,7 +175,8 @@ exahype2::CopyCellDataGPU<inType, outType>::CopyCellDataGPU(
   const CellData<inType, outType>& cellData,
   int inputPatchSize,
   int outputPatchSize,
-  int device
+  int device,
+  int currentPatchDevice
 ):
   numberOfCells(cellData.numberOfCells),
   memoryLocation(cellData.memoryLocation),
@@ -199,8 +197,8 @@ exahype2::CopyCellDataGPU<inType, outType>::CopyCellDataGPU(
   maxEigenvalueHost = cellData.maxEigenvalue;
 
   for (int i = 0; i < numberOfCells; i++){
-    if (cellData.deviceMemoryStatus[i] == peano4::datamanagement::PatchWithHaloDeviceMemoryStatus::Exclusive) {
-      omp_target_memcpy(&QIn[i * QInStride], cellData.QIn[i], QInStride * sizeof(inType), 0, 0, targetDevice, targetDevice);
+    if (currentPatchDevice != tarch::accelerator::Device::HostDevice) {
+      omp_target_memcpy(&QIn[i * QInStride], cellData.QIn[i], QInStride * sizeof(inType), 0, 0, targetDevice, currentPatchDevice);
     } else {
       omp_target_memcpy(&QIn[i * QInStride], cellData.QIn[i], QInStride * sizeof(inType), 0, 0, targetDevice, omp_get_initial_device());
     }
@@ -235,7 +233,8 @@ exahype2::CopyCellDataGPU<inType, outType>::CopyCellDataGPU(
   const CellData<inType, outType>& cellData,
   int inputPatchSize,
   int outputPatchSize,
-  int device
+  int device,
+  int currentPatchDevice
 ):
   numberOfCells(cellData.numberOfCells),
   memoryLocation(cellData.memoryLocation),

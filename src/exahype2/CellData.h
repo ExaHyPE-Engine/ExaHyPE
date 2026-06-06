@@ -121,12 +121,6 @@ namespace exahype2 {
      */
     double*    maxEigenvalue;
 
-    /**
-     * When using an accelerator we may recieve data from both the host and device.
-     * We therefore want to track the status of this data to avoid unnecessary data 
-     * movements.
-     */
-    peano4::datamanagement::PatchWithHaloDeviceMemoryStatus* deviceMemoryStatus;
 
     /**
      * Construct patch data object for one single cell.
@@ -146,8 +140,7 @@ namespace exahype2 {
       double                dt_,
       outType*              QOut_,
       tarch::MemoryLocation memoryLocation_ = tarch::MemoryLocation::Heap,
-      int                   targetDevice_   = tarch::accelerator::Device::HostDevice,
-      peano4::datamanagement::PatchWithHaloDeviceMemoryStatus deviceMemoryStatus_ = peano4::datamanagement::PatchWithHaloDeviceMemoryStatus::Unallocated
+      int                   targetDevice_   = tarch::accelerator::Device::HostDevice
     );
 
     CellData(
@@ -223,7 +216,8 @@ namespace exahype2 {
       const CellData<inType, outType>&   cellData,
       int                                inputPatchSize,
       int                                outputPatchSize,
-      int                                device = tarch::accelerator::Device::HostDevice
+      int                                device = tarch::accelerator::Device::HostDevice,
+      int                                currentPatchDevice = tarch::accelerator::Device::HostDevice
     );
     void copyBackAndDestroy();
     

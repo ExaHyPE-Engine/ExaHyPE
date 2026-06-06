@@ -557,8 +557,8 @@ std::vector< peano4::grid::GridControlEvent > {{FULL_QUALIFIED_CLASSNAME}}::getG
         output_file.write(jinja2.Template(self.TemplateClone).render(**self.d))
 
     TemplateEnterCell_Prologue = """
-void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalEvent&  event, const peano4::datamanagement::CellMarker&  cellMarker ) {
-  logTraceInWith2Arguments( "enterCell(...)", _spacetreeId, cellMarker.toString() );
+void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalEvent&  event ) {
+  logTraceInWith2Arguments( "enterCell(...)", _spacetreeId, event.toString() );
 """
 
     TemplateLoadCell_VertexLoad = r"""
@@ -897,6 +897,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
     [&]()->void {
     auto view = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( 1 );
 
+    peano4::datamanagement::CellMarker  marker(event);
+
     const int inCellStack  = event.getCellData();
     const int outCellStack = peano4::grid::PeanoCurve::CallStack;
 
@@ -906,12 +908,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       inCellStack!=peano4::grid::TraversalObserver::NoData
       and
       ::peano4::grid::loadPersistently( {{full_qualified_type}}::loadStoreComputeFlag(
-          cellMarker
+          marker
           {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
       ));
     bool initialiseStackContentForNewData = 
       ::peano4::grid::computeOnData( {{full_qualified_type}}::loadStoreComputeFlag(
-          cellMarker
+          marker
           {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
       ))
       or
@@ -921,9 +923,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
     if ( dataResidesOnInputStack ) {
       logDebug( 
         "loadCell(...)", 
-        "load data of cell {{name}} with " << cellMarker.toString() << 
+        "load data of cell {{name}} with " << marker.toString() << 
         ": " << ::peano4::grid::toString( {{full_qualified_type}}::loadStoreComputeFlag(
-           cellMarker
+           marker
            {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
         ))
       );
@@ -931,8 +933,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       {{full_qualified_type}} data = std::move( {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->pop() );
 
       #if PeanoDebug>0
-      assertionVectorNumericalEquals4( data.getDebugX(), cellMarker.x(), data.getDebugX(), data.getDebugH(), cellMarker.toString(), _spacetreeId );
-      assertionVectorNumericalEquals4( data.getDebugH(), cellMarker.h(), data.getDebugX(), data.getDebugH(), cellMarker.toString(), _spacetreeId );
+      assertionVectorNumericalEquals4( data.getDebugX(), marker.x(), data.getDebugX(), data.getDebugH(), marker.toString(), _spacetreeId );
+      assertionVectorNumericalEquals4( data.getDebugH(), marker.h(), data.getDebugX(), data.getDebugH(), marker.toString(), _spacetreeId );
       #endif
 
       view.set(0,data);
@@ -943,14 +945,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       #if PeanoDebug>0
       logDebug( 
         "loadCell(...)", 
-        "initialise meta data of new cell {{name}} with " << cellMarker.toString() << 
+        "initialise meta data of new cell {{name}} with " << marker.toString() << 
         ": " << ::peano4::grid::toString( {{full_qualified_type}}::loadStoreComputeFlag(
-            cellMarker
+            marker
             {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
           ))
       );
-      data.setDebugX( cellMarker.x() );
-      data.setDebugH( cellMarker.h() );
+      data.setDebugX( marker.x() );
+      data.setDebugH( marker.h() );
       #endif
       view.set(0,data);
     }
@@ -958,14 +960,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       #if PeanoDebug>0
       logDebug( 
         "loadCell(...)", 
-        "initialise meta data of unused cell {{name}} with " << cellMarker.toString() << 
+        "initialise meta data of unused cell {{name}} with " << marker.toString() << 
         ": " << ::peano4::grid::toString( {{full_qualified_type}}::loadStoreComputeFlag(
-            cellMarker
+            marker
             {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
           ))
       );
-      view.get(0).setDebugX( cellMarker.x() );
-      view.get(0).setDebugH( cellMarker.h() );
+      view.get(0).setDebugX( marker.x() );
+      view.get(0).setDebugH( marker.h() );
       #endif
     }
   };
@@ -981,13 +983,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
     TemplateEnterCell_CellMappingCall = r"""
   // Invoke creational events on cell {{logical_type_name}}
   {
+    peano4::datamanagement::CellMarker marker( event );
     if (
       event.getCellData()==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
       and
-      cellMarker.isLocal()
+      marker.isLocal()
     ) {
       {{ACTIVE_ACTION_SET}}.createCell(
-        cellMarker,
+        marker,
         {{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_COMMA_}}
         {{MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_COMMA_}}
         {{MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY}}
@@ -1001,11 +1004,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
     TemplateEnterCell_MappingCall = r"""
   {
+    peano4::datamanagement::CellMarker marker( event );
     if (
-      cellMarker.isLocal()
+      marker.isLocal()
     ) {
       {{ACTIVE_ACTION_SET}}.touchCellFirstTime(
-         cellMarker
+         marker
         {{_COMMA_MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT}}
         {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT}}
       );
@@ -1180,30 +1184,31 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         output_file.write(jinja2.Template(self.TemplateEnterCell_Epilogue).render({}))
 
     TemplateLoadCell_Prologue = """
-void {{FULL_QUALIFIED_CLASSNAME}}::loadCell( const peano4::grid::GridTraversalEvent&  event, const peano4::datamanagement::CellMarker& cellMarker ) {
+void {{FULL_QUALIFIED_CLASSNAME}}::loadCell( const peano4::grid::GridTraversalEvent&  event ) {
   logTraceInWith2Arguments( "loadCell(...)", _spacetreeId, event.toString() );
   
   std::vector< tarch::multicore::Task* >  tasks;
 """
 
     TemplateStoreCell_Prologue = """
-void {{FULL_QUALIFIED_CLASSNAME}}::storeCell( const peano4::grid::GridTraversalEvent&  event, const peano4::datamanagement::CellMarker& cellMarker ) {
+void {{FULL_QUALIFIED_CLASSNAME}}::storeCell( const peano4::grid::GridTraversalEvent&  event ) {
   logTraceInWith2Arguments( "storeCell(...)", _spacetreeId, event.toString() );
   std::vector< tarch::multicore::Task* >  tasks;
 """
 
     TemplateLeaveCell_Prologue = """
-void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalEvent&  event, const peano4::datamanagement::CellMarker&  cellMarker ) {
+void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalEvent&  event ) {
   logTraceInWith2Arguments( "leaveCell(...)", _spacetreeId, event.toString() );
 """
 
     TemplateLeaveCell_MappingCall = """
   {
+    peano4::datamanagement::CellMarker marker( event );
     if (
-      cellMarker.isLocal()
+      marker.isLocal()
     ) {
       {{ACTIVE_ACTION_SET}}.touchCellLastTime(
-         cellMarker
+         marker
         {{_COMMA_MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT}}
         {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT}}
       );
@@ -1213,13 +1218,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
     TemplateLeaveCell_CellStore_MappingCall = """
   {
+    peano4::datamanagement::CellMarker marker( event );
     if (
       event.getCellData()==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
       and
-      cellMarker.isLocal()
+      marker.isLocal()
     ) {
     {{ACTIVE_ACTION_SET}}.destroyCell(
-      cellMarker
+      marker
         {{_COMMA_MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS}}
         ,{{MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY}}
         {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
@@ -1236,6 +1242,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
     const int outCellStack  = event.getCellData();
     logDebug("storeCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack );
 
+    peano4::datamanagement::CellMarker  marker(event);
+
     auto view = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( 1 );
 
     bool dataShallBePushedOntoIntermediateStack = 
@@ -1248,7 +1256,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         peano4::grid::PeanoCurve::isInOutStack(outCellStack)
         and
         ::peano4::grid::storePersistently( {{full_qualified_type}}::loadStoreComputeFlag(
-          cellMarker
+          marker
           {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
         ));
 
@@ -1258,7 +1266,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
     else {
       logDebug(
         "storeCell(...)",
-        "do not store cell {{name}} with " << cellMarker.x() << " x " << cellMarker.h() << ":" <<
+        "do not store cell {{name}} with " << marker.x() << " x " << marker.h() << ":" <<
         "  destroy=" << (outCellStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity) <<
         ", no-data=" << (outCellStack==peano4::grid::TraversalObserver::NoData) <<
         ", is-in/out=" << peano4::grid::PeanoCurve::isInOutStack(outCellStack)

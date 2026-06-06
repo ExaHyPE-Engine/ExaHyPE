@@ -98,7 +98,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   double                                      dt,
   double* __restrict__                        reconstructedPatch,
   double* __restrict__                        output,
-  bool                                        manageInputDeviceMemory
+  int                                         reconstructedPatchDeviceNumber
 ):
   ::exahype2::EnclaveTask(
     _enclaveTaskTypeId,
@@ -127,7 +127,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   #ifdef UseSmartMPI
   , smartmpi::Task(_enclaveTaskTypeId)
   #endif
-  , _manageInputDeviceMemory(manageInputDeviceMemory)
+  , _reconstructedPatchDeviceNumber(reconstructedPatchDeviceNumber)
 {
   setPriority( {{ENCLAVE_TASK_PRIORITY}} );
 }
@@ -356,7 +356,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::vector<Task*>& 
     patchData.QIn[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
     patchData.cellCentre[currentTask]   = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.x();
     patchData.cellSize[currentTask]     = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
-    patchData.deviceMemoryStatus[currentTask] = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.inputDeviceMemoryStatus[targetDevice];
     patchData.t[currentTask]            = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
     patchData.dt[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
     patchData.id[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_taskNumber;
@@ -366,7 +365,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::vector<Task*>& 
   patchData.QIn[currentTask]          = _inputValues;
   patchData.cellCentre[currentTask]   = _marker.x();
   patchData.cellSize[currentTask]     = _marker.h();
-  patchData.deviceMemoryStatus[currentTask] = _marker.inputDeviceMemoryStatus[targetDevice];
   patchData.t[currentTask]            = _t;
   patchData.dt[currentTask]           = _dt;
   patchData.id[currentTask]           = _taskNumber;
@@ -383,7 +381,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::vector<Task*>& 
   #if not defined(GPUOffloadingOff)
   if (!gpuIsBusy){
     gpuIsBusy = true;
-    auto gpuPatchData = ::exahype2::CopyCellDataGPU(patchData, _numberOfInputValues, _numberOfResultValues);
+    auto gpuPatchData = ::exahype2::CopyCellDataGPU(patchData, _numberOfInputValues, _numberOfResultValues, targetDevice, _reconstructedPatchDeviceNumber);
   #endif
 
     #if defined(GPUOffloadingOMP)
@@ -428,7 +426,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::vector<Task*>& 
   // ==================
   //
   for (int i=0; i<patchData.numberOfCells; i++) {
-    //tarch::freeMemory(patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(
       patchData.id[i],
       _numberOfResultValues,
@@ -439,14 +436,16 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::vector<Task*>& 
     );
   }
 
+  // If _reconstructedPatchDeviceNumber is not HostDevice, then the reconstructed patch has been copied to a GPU prior to fusing.
+  // In this case we know that the fused task is not responsible for memory management of the reconstructed patch so we do not free it.
   currentTask = 0;
   for (auto& p: otherTasks) {
-    if (static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_manageInputDeviceMemory) {
+    if (static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_reconstructedPatchDeviceNumber == tarch::accelerator::Device::HostDevice) {
       tarch::freeMemory(patchData.QIn[currentTask], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
     }
     currentTask++;
   }
-  if (_manageInputDeviceMemory) {
+  if (_reconstructedPatchDeviceNumber == tarch::accelerator::Device::HostDevice) {
     tarch::freeMemory(patchData.QIn[currentTask], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
   }
 }

@@ -89,23 +89,19 @@ class peano4::grid::TraversalVTKPlotter: public peano4::grid::TraversalObserver 
     ) override;
 
     virtual void loadCell(
-      const GridTraversalEvent&  event,
-      const peano4::datamanagement::CellMarker&  cellMarker
+      const GridTraversalEvent&  event
     ) override;
 
     virtual void storeCell(
-      const GridTraversalEvent&  event,
-      const peano4::datamanagement::CellMarker&  cellMarker
+      const GridTraversalEvent&  event
     ) override;
 
     virtual void enterCell(
-      const GridTraversalEvent&  event,
-      const peano4::datamanagement::CellMarker&  cellMarker
+      const GridTraversalEvent&  event
     ) override;
 
     virtual void leaveCell(
-      const GridTraversalEvent&  event,
-      const peano4::datamanagement::CellMarker&  cellMarker
+      const GridTraversalEvent&  event
     ) override;
 
     virtual TraversalObserver* clone(int spacetreeId) override;
