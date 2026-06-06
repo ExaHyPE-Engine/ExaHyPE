@@ -33,7 +33,8 @@ tarch::logging::NVTXLogger::~NVTXLogger() {
   close();
 }
 
-void tarch::logging::NVTXLogger::indent( bool, const std::string&, const std::string& ) {}
+// In header. See documentation there.
+// void tarch::logging::NVTXLogger::indent( bool, const std::string&, const std::string& ) {}
 
 std::string tarch::logging::NVTXLogger::getTimeStampHumanReadable( long int timestampNanoseconds ) const {
   long int timestampSeconds = timestampNanoseconds / 1000 / 1000 / 1000;

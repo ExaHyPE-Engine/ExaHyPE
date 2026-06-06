@@ -29,6 +29,7 @@ namespace tarch {
     class ITACLogger;
     class ITTLogger;
     class ScorePLogger;
+    class NoLogger;
   }
 }
 
@@ -59,7 +60,7 @@ namespace tarch {
       return conv.str(); \
     }; \
     _log.traceIn(methodName, logMacroMessage); \
-    _log.indent(true,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.indent(true,_log.getTraceInformation(methodName)); \
   }
 
 #define logTraceInWith1Argument(methodName,argument0) \
@@ -71,7 +72,7 @@ namespace tarch {
       return conv.str(); \
     }; \
     _log.traceIn (methodName, logMacroMessage); \
-    _log.indent(true, _log.getTraceInformation(methodName), logMacroMessage); \
+    _log.indent(true, _log.getTraceInformation(methodName)); \
   }
 
 #define logTraceInWith2Arguments(methodName,argument0,argument1) \
@@ -84,7 +85,7 @@ namespace tarch {
      return conv.str(); \
     }; \
     _log.traceIn (methodName, logMacroMessage); \
-    _log.indent(true, _log.getTraceInformation(methodName), logMacroMessage); \
+    _log.indent(true, _log.getTraceInformation(methodName)); \
   }
 
 #define logTraceInWith3Arguments(methodName,argument0,argument1,argument2) \
@@ -98,7 +99,7 @@ namespace tarch {
      return conv.str(); \
     }; \
     _log.traceIn (methodName, logMacroMessage); \
-    _log.indent(true,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.indent(true,_log.getTraceInformation(methodName)); \
   }
 
 #define logTraceInWith4Arguments(methodName,argument0,argument1,argument2,argument3) \
@@ -113,7 +114,7 @@ namespace tarch {
      return conv.str(); \
     }; \
     _log.traceIn (methodName, logMacroMessage); \
-    _log.indent(true,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.indent(true,_log.getTraceInformation(methodName)); \
   }
 
 #define logTraceInWith5Arguments(methodName,argument0,argument1,argument2,argument3,argument4) \
@@ -129,7 +130,7 @@ namespace tarch {
      return conv.str(); \
     }; \
     _log.traceIn (methodName, logMacroMessage); \
-    _log.indent(true,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.indent(true,_log.getTraceInformation(methodName)); \
   }
 
 #define logTraceInWith6Arguments(methodName,argument0,argument1,argument2,argument3,argument4,argument5) \
@@ -146,7 +147,7 @@ namespace tarch {
      return conv.str(); \
     }; \
     _log.traceIn (methodName, logMacroMessage); \
-    _log.indent(true,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.indent(true,_log.getTraceInformation(methodName)); \
   }
 
 #define logTraceInWith7Arguments(methodName,argument0,argument1,argument2,argument3,argument4,argument5,argument6) \
@@ -164,7 +165,7 @@ namespace tarch {
      return conv.str(); \
     }; \
     _log.traceIn (methodName, logMacroMessage); \
-    _log.indent(true,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.indent(true,_log.getTraceInformation(methodName)); \
   }
 
 #define logTraceInWith8Arguments(methodName,argument0,argument1,argument2,argument3,argument4,argument5,argument6,argument7) \
@@ -183,7 +184,7 @@ namespace tarch {
      return conv.str(); \
     }; \
     _log.traceIn (methodName, logMacroMessage); \
-    _log.indent(true,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.indent(true,_log.getTraceInformation(methodName)); \
   }
 
 #define logTraceInWith9Arguments(methodName,argument0,argument1,argument2,argument3,argument4,argument5,argument6,argument7,argument8) \
@@ -203,7 +204,7 @@ namespace tarch {
      return conv.str(); \
     }; \
     _log.traceIn (methodName, logMacroMessage); \
-    _log.indent(true,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.indent(true,_log.getTraceInformation(methodName)); \
   }
 
 #define logTraceOut(methodName) \
@@ -213,7 +214,7 @@ namespace tarch {
      conv << "out (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
      return conv.str(); \
     }; \
-    _log.indent(false,_log.getTraceInformation(methodName),logMacroMessage); \
+    _log.indent(false,_log.getTraceInformation(methodName)); \
     _log.traceOut (methodName, logMacroMessage); \
   }
 
@@ -225,7 +226,7 @@ namespace tarch {
       conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
       return conv.str(); \
     }; \
-    _log.indent(false,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.indent(false,_log.getTraceInformation(methodName)); \
     _log.traceOut (methodName, logMacroMessage); \
   }
 
@@ -238,7 +239,7 @@ namespace tarch {
      conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
      return conv.str(); \
     }; \
-    _log.indent(false,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.indent(false,_log.getTraceInformation(methodName)); \
     _log.traceOut (methodName, logMacroMessage); \
   }
 
@@ -252,7 +253,7 @@ namespace tarch {
      conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
      return conv.str(); \
     }; \
-    _log.indent(false,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.indent(false,_log.getTraceInformation(methodName)); \
     _log.traceOut (methodName, logMacroMessage); \
   }
 
@@ -267,7 +268,7 @@ namespace tarch {
      conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
      return conv.str(); \
     }; \
-    _log.indent(false,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.indent(false,_log.getTraceInformation(methodName)); \
     _log.traceOut (methodName, logMacroMessage); \
   }
 
@@ -283,7 +284,7 @@ namespace tarch {
      conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
      return conv.str(); \
     }; \
-    _log.indent(false,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.indent(false,_log.getTraceInformation(methodName)); \
     _log.traceOut (methodName, logMacroMessage); \
   }
 
@@ -300,7 +301,7 @@ namespace tarch {
      conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
      return conv.str(); \
     }; \
-    _log.indent(false,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.indent(false,_log.getTraceInformation(methodName)); \
     _log.traceOut (methodName, logMacroMessage); \
   }
 
@@ -318,7 +319,7 @@ namespace tarch {
      conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
      return conv.str(); \
     }; \
-    _log.indent(false,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.indent(false,_log.getTraceInformation(methodName)); \
     _log.traceOut (methodName, logMacroMessage); \
   }
 
@@ -338,7 +339,7 @@ namespace tarch {
      conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
      return conv.str(); \
     }; \
-    _log.indent(false,_log.getTraceInformation(methodName),logMacroMessage); \
+    _log.indent(false,_log.getTraceInformation(methodName)); \
     _log.traceOut (methodName, logMacroMessage); \
   }
 
@@ -361,7 +362,7 @@ namespace tarch {
      conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
      return conv.str(); \
    }; \
-    _log.indent(false,_log.getTraceInformation(methodName),logMacroMessage); \
+    _log.indent(false,_log.getTraceInformation(methodName)); \
     _log.traceOut (methodName, logMacroMessage); \
   }
 
@@ -667,9 +668,11 @@ class tarch::logging::Log {
      * Depending on indent the operation increments or decrements the indent.
      * The call is forwarded to the logging device.
      */
-    void indent( bool indent, const std::string& trace, Message logMacroMessage ) const;
+    void indent( bool indent, const std::string& trace ) const;
 
     std::string getTraceInformation( const std::string& methodName ) const;
 
     static void flushBeforeAssertion();
+
+    std::string getClassName() const;
 };

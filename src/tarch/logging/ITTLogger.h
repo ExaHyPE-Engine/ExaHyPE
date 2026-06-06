@@ -175,7 +175,7 @@ class tarch::logging::ITTLogger {
     /**
      * Tells the logger to increment/decrement the indent.
      *
-     * For Score-P, we do not need any indentation. Consequently, we put the
+     * For ITT, we do not need any indentation. Consequently, we put the
      * nop implementation into the header, so the compiler can inline the
      * call and eventually remove it completely.
      */

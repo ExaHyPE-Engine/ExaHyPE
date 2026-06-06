@@ -273,6 +273,12 @@ All info log output as well as warning and error message are still
 shown on the terminal.
 
 
+### No logger
+
+For performance measurements, it might make sense to use no logger at
+all. In this case, only errors and warnings are written. This degenerated
+log device is selected through `-DUseLogService=NoLogger`.
+
 
 
 ## Log filter

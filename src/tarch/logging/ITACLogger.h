@@ -163,11 +163,11 @@ class tarch::logging::ITACLogger {
     /**
      * Tells the logger to increment/decrement the indent.
      *
-     * For Score-P, we do not need any indentation. Consequently, we put the
+     * For ITAC, we do not need any indentation. Consequently, we put the
      * nop implementation into the header, so the compiler can inline the
      * call and eventually remove it completely.
      */
-    void indent( bool indent, const std::string& trace, const std::string& message ) {};
+    void indent( bool indent, const std::string& trace ) {};
 
     void close();
 

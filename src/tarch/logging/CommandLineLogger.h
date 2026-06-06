@@ -242,7 +242,7 @@ class tarch::logging::CommandLineLogger {
      * @param trace    Needed in debug mode to be able to find out who called indent(false) without an indent(true)
      * @param message  Needed in debug mode to be able to find out who called indent(false) without an indent(true)
      */
-    void indent( bool indent, const std::string& trace, const std::string& message );
+    void indent( bool indent, const std::string& trace );
 
     void setLogColumnSeparator( const std::string& separator = " ");
     void setLogTimeStamp( bool value = true );
