@@ -95,13 +95,13 @@ class Tree(object):
 	
 	```python
 	# Create a tree from artificial regular grid
-	tree = RegularGridGenerator("test", max_level=3, dimension=2)
+	tree = RegularGridGenerator("test", max_level=3, dimensions=2)
 	
 	# Apply load balancing splitting
-	split_tree(tree, number_of_splits=3)
+	split_tree(tree, number_of_subtrees=3)
 	
 	# Generate visualization
-	TreeVisualizer(tree, dimension=2, filename="balanced_tree")
+	TreeVisualizer(tree, dimensions=2, filename="balanced_tree")
 	
 	# Export to YAML
 	generate_tree_yaml(tree, "output.yaml")

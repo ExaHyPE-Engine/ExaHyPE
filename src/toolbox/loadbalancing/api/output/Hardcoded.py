@@ -3,11 +3,11 @@
 import collections.abc
 
 
-def assign_round_Robin_rank_assignment(number_of_splits,
+def assign_round_Robin_rank_assignment(number_of_subtrees,
                                        max_ranks,
                                        ):
     result = []
-    for i in range(0,len(number_of_splits)):
+    for i in range(0,len(number_of_subtrees)):
         result.append( i%max_ranks )
     return result
     

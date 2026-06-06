@@ -1,0 +1,270 @@
+/**
+
+@page tutorials_exahype2_hpc_offline-load-balancing Offline load balancing
+
+@tableofcontents
+
+Load balancing is notoriously hard and devising a bespoke load balancing for 
+your specific application can be time consuming and challenging. ExaHyPE comes
+along with a set of generic load balancing strategies, but, due to the fact 
+that they are so generic, they often struggle to get the performance right 
+unless developers invest a significant amount of effort.
+
+One straightforward starting point to get reasonable load balancing is to 
+assume that a mesh were static and to work with some offloading load balancing
+algorithm. That is, we make all load balancing decisions ahead of compile time,
+and then hard-code the load balancing. Indeed, this might even provide the 
+baseline for something more bespoke, generic and dynamic.
+
+The following discussion illustrates the ideas behind offline load balancing
+for the single black hole benchmark of the @ref applications_exahype2_ExaGRyPE ExaGRyPE
+solver. Actually, we use a slimmed down version of one of its standard benchmarks.
+However, the offline load balancing is not specific to ExaGRyPE: It works with
+any ExaHyPE application (and also with other Peano-based codes, even though they
+might not have a built-in support yet).
+
+For a complete reference of the offline decomposition interfaces and staged splitting workflow,
+see @ref page_toolbox_loadbalancing_api.
+
+
+# Prepare the benchmark
+
+<img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/BH_LMC.png" width="60%"/>
+
+
+We follow more or less the instructions on @ref benchmarks_exahype2_ccz4_single_black_hole.
+The page provides more in-depth information on which modules you need, what 
+other tools you might want to combine with ExaHyPE, and so forth. 
+For the present tutorial, we assume that you open a terminal window in Peano's 
+tutorials directory tutorials/exahype2/hpc.
+After setting the correct environment variables
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PYTHONPATH=~/git/Peano/python:~/git/Peano/src:~/git/Peano/applications/exahype2/ccz4:~/git/Peano/benchmarks/exahype2/ccz4/single-black-hole
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+where you replace the ```~/git/Peano``` with the right path on your particular 
+system, a simple
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 tutorial_offline_load_balancing_sbh.py --trees 27 --cell-size 1.8 --load-balancing-metric offline-regular-fine-grid
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+should build your setup. If you favour the big run, where all of the features 
+that we discuss below are already in, that would be somehow equal to  
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 tutorial_offline_load_balancing_sbh.py -s fd4-rk1-ps-3 -et 1e-2 --plot 1e-2 --scheduler no-tasks --trees 27 --cell-size 1.8 --output test --load-balancing-metric offline-regular
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+# Studying the Python code
+
+All the work setting up the benchmark is in tutorial_offline_load_balancing_sbh.py.
+Here we choose the load balancing strategy that we want to use along with many other benchmark parameters.
+Some of the more specific details are in tutorial_single_black_hole_settings.py, in particular 
+add_hardcoded_load_balancing_over_regular_mesh(...), which shows how to use the hardcoded load balancer.
+This tutorial focuses on a concrete workflow; the full API contracts and design rationale are
+documented in @ref page_toolbox_loadbalancing_api.
+When we do a first sanity check and compile with 
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 tutorial_offline_load_balancing_sbh.py ... --load-balancing-metric none
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+we see that this means
+
+@snippet tutorial_offline_load_balancing_sbh.py tutorials_exahype2_hpc_tutorial_offline_load_balancing_none
+
+so no load balancing at all is happening. We can run this code and it should 
+give us a single tree without any decomposition. You can visualise it in 
+Paraview.
+
+# Offload load balancing for a regular grid
+
+## Fine grid mesh association
+
+The simplest way to load balance offline for a regular grid - and a good 
+starting point prior to doing something interesting - is the following idea:
+
+- Tell the offline load balancer that there will be a regular mesh. Such a mesh
+  can be synthesised and we don't have to mess around with some complex AMR
+  structure.
+- Tell the offline load balancer to partition only the finest mesh.
+- Feed that mesh back into a hard-coded partitioning and let ExaGRyPE run.
+
+The resulting mesh should be optimal as the load balancer can distribute all 
+the leaves equally, and should yield reasonable speedup as ExaGRyPE does all
+of its calculations in the leaves, even though it will have severe 
+shortcomings.
+
+### Import correct packages
+
+The first step is to import the offline load balancing properly:
+
+@snippet tutorial_offline_load_balancing_sbh.py tutorials_exahype2_hpc_tutorial_offline_load_balancing_inputs
+
+### Create a regular mesh representation for the offline load balancing
+
+After that, we can create a representation for the library:
+
+@snippet tutorial_offline_load_balancing_sbh.py tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid
+
+The print statement above should yield an output similar to
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 tutorial_offline_load_balancing_sbh.py --trees 27 --cell-size 1.8 --load-balancing-metric offline-regular-fine-grid
+
+[...]
+
+Generating 3D regular grid 'pytest-hardcoded-lb-3d' with 3 levels
+  Level 1: 3^3 = 27 cells
+  Level 2: 9^3 = 729 cells
+  Level 3: 27^3 = 19,683 cells
+Total cells generated: 20,439
+Regular grid generation completed successfully
+  Tree: pytest-hardcoded-lb-3d
+  Leaf count: 19683
+  Subtree count: 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+which tells us that we have indeed created one big tree with three levels. 
+
+
+
+### Split the tree
+
+In the present simple setup, we want to have a hard, prescribed number of trees 
+per rank, which is set via the Python script's command line:
+
+
+@snippet tutorial_offline_load_balancing_sbh.py tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_split
+
+This gives us now a modification of the tree,
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Domain offset:	[0, 0, 0]
+Domain size: 	[1, 1, 1]  
+Dimension:		3
+Max Level:		3
+Leaf count: 	19683  
+Subtree count:	27
+Split pattern:	[729. 729. 729. 729. 729. 729. 729. 729. 729. 729. 729. 729. 729. 729.
+ 729. 729. 729. 729. 729. 729. 729. 729. 729. 729. 729. 729. 729.]
+
+Extracted hardcoded parameters:
+  grid_sweeps     = [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]
+  splitting_trees = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  number_of_cells = [729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729]
+  subtrees        = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+### Map the tree splitting onto a hard-coded load balancing scheme
+
+The splitting above is solely written down in terms of logical trees, i.e. 
+there is a tree 0 and it should have 26 children, each with 729 fine grid 
+cells. However, Peano's split() operation does not work tree numbers but
+only with ranks. Therefore, we have to map those tree numbers onto ranks
+(we do this by cyclically assigning trees to ranks) and then we can pipe
+the outcome into a hardcoded load balancing, i.e. and instance of
+@ref toolbox::loadbalancing::strategies::Hardcoded which we then add to the 
+project via set_load_balancing():
+
+
+@snippet tutorial_offline_load_balancing_sbh.py tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_map
+
+
+We get something similar to 
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+{{6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6}, 
+ {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 
+ {729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729}, 
+ {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 
+ peano4::SplitInstruction::Mode::AggressiveTopDown
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This is now the time where it is really reasonable to study 
+@ref toolbox::loadbalancing::strategies::Hardcoded to understand if and why these
+inputs make sense and are correct. For the full parameter semantics of the split
+stages and extracted instruction arrays, consult @ref page_toolbox_loadbalancing_api.
+
+
+### Visualise the outcome
+
+With a first load balancing in place, it makes sense to fire up the benchmark 
+and to visualise what the arising mesh looks like. The @ref toolbox_loadbalancing "domain decomposition"
+description hosts some recommendations how to do this through either bespoke
+Python scripts or via Paraview.
+
+@image html src/toolbox/loadbalancing/visualise_domain_decomposition0.png
+
+
+Intrinsically, all of the visualisation discussion in the load balancing 
+documentation is backward-looking. 
+That is, you derive a domain decomposition, you pipe it into ExaHyPE, and then
+you visualise what it did give you.
+With the offline domain decomposition, we can also visualise the envisaged 
+partitioning beforehand:
+
+
+@todo Dmitry can you add content here?
+
+
+<br /><br />
+<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+This first exercise sketches our core ambition: A mesh is either synthesized or
+read in from a snapshot, a Python toolbox computes an optimal splitting, and 
+then we (re-)launch the application with this optimised decomposition.
+</div>
+
+
+# Offload load balancing for an adaptive grid taken from a real run
+
+
+## Multiscale mesh association
+
+While this very simple example sets the overall tone, it also allows us to 
+study and understand a fundamental challenge in the administratino of 
+large-scale multiscale meshes. 
+When we pipe the hardcoded decomposition from above into an ExaHyPE run, we 
+realise that it builds up the whole mesh on one single rank and thread first
+and then decomposes this mesh in a final step.
+It is clear that this approach does not scale.
+
+
+We also notice once we profile that we pay a significant overhead with this 
+decomposition:
+Peano's fundamental paradigm is that we run through the mesh top-down. 
+With the present decomposition, all of the coarse parts of the tree remain on 
+rank 0, thread 0.
+Only the leaves are actually given to other threads and ranks.
+What we are after is a multiscale decomposition where coarser levels are 
+distributed among the ranks and threads, too.
+
+
+@image html src/toolbox/loadbalancing/visualise_tree_split.png
+
+
+The example above gives us such a partitioning: 
+Here, we have three levels. 
+On the finest one, we have a certain association of cells to trees, which in 
+turn are mapped onto ranks and threads. 
+The mapping is encoded with colours.
+However, also the coarser levels 0 and 1 have a unique assignment of trees.
+
+
+## This is yet to be written
+
+@todo Continue
+
+
+
+
+ 
+*/

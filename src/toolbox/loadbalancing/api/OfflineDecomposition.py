@@ -5,9 +5,9 @@ import sys, time, os
 import argparse
 
 from Tree import Tree
-from Input.GridPatchFileReader import *
-from Input.RegularGridGenerator import *
-from Input.CustomGridGenerator import *
+from input.GridPatchFileReader import *
+from input.RegularGridGenerator import *
+from input.CustomGridGenerator import *
 from Visualize.TreeVisualizer import TreeVisualizer
 import Strategies.SplitTrees as split_strategy
 
@@ -26,7 +26,7 @@ distribution across compute resources.
                         Example: -f /path/to/checkpoint/grid/files
                         Requires: Grid files with 'grid-' prefix from Peano checkpoints
 
--d, --dimension DIM     Spatial dimension (REQUIRED)
+-d, --dimensions DIM    Spatial dimensions (REQUIRED)
                         Values: 2 (for 2D grids) or 3 (for 3D grids)
                         
 -l, --max-level LEVEL   Maximum refinement level for artificial grid generation
@@ -81,14 +81,14 @@ python3 OfflineDecomposition.py -d 3 -l 3 -s 8 -p
 
 ## Performance Considerations
 
-- **Memory Usage**: Grows as 3^(dimension × max_level) for regular grids
+- **Memory Usage**: Grows as 3^(dimensions × max_level) for regular grids
 - **Processing Time**: Splitting algorithms scale with tree size
 - **File I/O**: Large checkpoint directories may require significant read time
 
 ## Error Handling
 
 The script validates:
-- Required dimension parameter
+- Required dimensions parameter
 - Valid input source (either -f or -l must be specified)
 - File accessibility and format
 - Memory constraints for large grids
@@ -138,7 +138,7 @@ def main():
     parser.add_argument("-f", 	"--file", 		dest="file_path", 	    type=str,                                                   help="Path to input grid patch file (e.g., Input/example2)" )
     parser.add_argument("-y", 	"--yaml", 		dest="yaml_path", 	    type=str,                                                   help="Path to input YAML file created by generate_tree_yaml()" )
     parser.add_argument("-p", 	"--plot", 		dest="plot_flag", 	                action="store_true",    default=False,          help="Generate and save visualization plots of the tree structure" )
-    parser.add_argument("-d",   "--dimension",  dest="grid_dimension",  type=int,                                                   help="Spatial dimension of the grid (2 for 2D, 3 for 3D) - auto-detected from YAML if not specified" )
+    parser.add_argument("-d",   "--dimensions", dest="grid_dimensions",  type=int,                                                   help="Spatial dimensions of the grid (2 for 2D, 3 for 3D) - auto-detected from YAML if not specified" )
     parser.add_argument("-l",   "--max-level",  dest="max_level",  	    type=int,                           default=0,              help="Maximum refinement level for artificial regular grid generation" )
     parser.add_argument("-s",   "--splits", 	dest="num_splits",      type=int,                                                   help="Number of additional subtrees to create via splitting")
     parser.add_argument("-o",   "--output",     dest="output_yaml",     type=str,                           default="output.yaml",  help="Output YAML file path for storing split results and tree structure")
@@ -153,23 +153,23 @@ def main():
         name = "YAML-"+os.path.basename(args.yaml_path)
         filename = args.yaml_path
         tree = CustomGridGenerator(name=name, yaml_file_path=args.yaml_path)
-        # Auto-detect dimension from loaded tree if not specified
-        if args.grid_dimension is None:
-            args.grid_dimension = tree._dimension
+        # Auto-detect dimensions from loaded tree if not specified
+        if args.grid_dimensions is None:
+            args.grid_dimensions = tree._dimension
     elif args.file_path != None:
-        if args.grid_dimension is None:
-            print("Error: -d/--dimension is required when using grid patch files")
+        if args.grid_dimensions is None:
+            print("Error: -d/--dimensions is required when using grid patch files")
             sys.exit(1)
         name = "Files-"+args.file_path
         filename = args.file_path
-        tree = GridPatchFileReader(name=name, file_path=args.file_path, dimension=args.grid_dimension)
+        tree = GridPatchFileReader(name=name, file_path=args.file_path, dimensions=args.grid_dimensions)
     elif args.max_level > 0:
-        if args.grid_dimension is None:
-            print("Error: -d/--dimension is required when generating regular grids")
+        if args.grid_dimensions is None:
+            print("Error: -d/--dimensions is required when generating regular grids")
             sys.exit(1)
         name = "Regular-Grid-Generator"
         filename="TreeStructure"
-        tree = RegularGridGenerator(name=name, max_level=args.max_level, dimension=args.grid_dimension)
+        tree = RegularGridGenerator(name=name, max_level=args.max_level, dimensions=args.grid_dimensions)
     else:
         print("No input specified. Use one of: -f (grid files), -y (YAML file), or -l (regular grid generation)")
         sys.exit(1)
@@ -229,7 +229,7 @@ def main():
         print("GENERATING ORIGINAL TREE VISUALIZATION")
         print("="*50)
         
-        TreeVisualizer(tree, args.grid_dimension, original_plot_filename)
+        TreeVisualizer(tree, args.grid_dimensions, original_plot_filename)
         print(f"Original tree visualization saved as {original_plot_filename}.pdf and {original_plot_filename}.png")
 
     viz_end_time = time.time()
@@ -313,7 +313,7 @@ def main():
             print("GENERATING SPLIT TREE VISUALIZATION")
             print("="*50)
             
-            TreeVisualizer(tree, args.grid_dimension, split_plot_filename)
+            TreeVisualizer(tree, args.grid_dimensions, split_plot_filename)
             print(f"Split tree visualization saved as {split_plot_filename}.pdf and {split_plot_filename}.png")
         
         time3 = time.time()

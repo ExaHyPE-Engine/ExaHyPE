@@ -47,7 +47,7 @@ The splitting phase is now a configurable staged workflow executed inside `split
 ```python
 split_tree(
   peano_tree,
-  number_of_splits,
+  number_of_subtrees,
   traversal="bfs"|"bfs_finest_first"|"dfs",
   enable_propagate_bottom_up=False,
   enable_optimize_hierarchy=False,
@@ -59,7 +59,7 @@ split_tree(
   # Stage IV (opt.):    split-instruction extraction (`_extract_split_instructions()`)
 ```
 
-`split_tree()` now returns a tuple `(gridSweeps, splittingTrees, numberOfCells, subTrees)`.
+`split_tree()` now returns a tuple `(grid_sweeps, splitting_trees, number_of_cells, subtrees)`.
 If _Stage IV_ is disabled, the function returns `([], [], [], [])` while still applying the enabled transformation stages in place.
 
 | Stage | Function | Objective | Complexity |
@@ -249,26 +249,26 @@ This preserves the Stage-II leaf mapping while reducing hierarchy depth for Subt
 
 _Stage IV_ extraction can be requested directly through `split_tree(..., enable_extract_split_instructions=True)`.
 Internally, this uses the helper `_extract_split_instructions()` and returns four lists:
-`(gridSweeps, splittingTrees, numberOfCells, subTrees)` to feed into
+`(grid_sweeps, splitting_trees, number_of_cells, subtrees)` to feed into
 [`toolbox::loadbalancing::strategies::Hardcoded`](src/toolbox/loadbalancing/strategies/Hardcoded.h).
 
 Semantics (multi-level, non-leaf-centric):
-- `gridSweeps`: `base_sweep * (level + 1)`, where `level` is 0-based w.r.t. the API tree arrays.
+- `grid_sweeps`: `base_sweep * (level + 1)`, where `level` is 0-based w.r.t. the API tree arrays.
   The helper can emit multiple split operations for the same target subtree, one per level.
-- `splittingTrees`: unique parent subtree id for all introduced cells on that level, or 0 if ambiguous.
-- `numberOfCells`: number of cells introduced on that level, i.e. cells with the target subtree id whose
+- `splitting_trees`: unique parent subtree id for all introduced cells on that level, or 0 if ambiguous.
+- `number_of_cells`: number of cells introduced on that level, i.e. cells with the target subtree id whose
   parent exists (level>0) and has a different subtree id. For level 0, it is the number of cells on level 0
   that already belong to the target subtree.
-- `subTrees`: subtree ids introduced by the splits (not ranks). You must map these subtree ids to destination
+- `subtrees`: subtree ids introduced by the splits (not ranks). You must map these subtree ids to destination
   MPI ranks when constructing the hardcoded strategy.
 
 Example constructor usage (C++):
 ```
 toolbox::loadbalancing::strategies::Hardcoded(
-  {2,4,6},      // gridSweeps
-  {0,0,0},      // splittingTrees
-  {9,81,1093},  // numberOfCells
-  {1,1,1},      // destinationRanks (mapped from subTrees)
+  {2,4,6},      // grid_sweeps
+  {0,0,0},      // splitting_trees
+  {9,81,1093},  // number_of_cells
+  {1,1,1},      // destination_ranks (mapped from subtrees)
   peano4::SplitInstruction::Mode::BottomUp
 );
 ```

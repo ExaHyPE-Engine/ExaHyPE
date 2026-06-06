@@ -16,7 +16,7 @@ import numpy as np
 sys.path.insert(0, os.path.abspath("src/toolbox/loadbalancing/api"))
 
 from Tree import Tree
-from Input.RegularGridGenerator import RegularGridGenerator
+from input.RegularGridGenerator import RegularGridGenerator
 
 
 def build_tree3_adaptive_2d() -> Tree:
@@ -43,7 +43,7 @@ def build_tree3_adaptive_2d() -> Tree:
     Total leaves initially (all in subtree 0):
         21 finest-level leaves + 2 childless level-1 leaves = 23
 
-    The tree has 3 splits (4 subtrees) in the tests below.
+    The tree uses 4 total subtrees in the tests below.
     """
     tree = Tree("tree3-adaptive", 2, (0.0, 0.0), (1.0, 1.0))
     tree._max_level = 4
@@ -157,6 +157,56 @@ def build_tree3_all_rows_2d() -> Tree:
     return tree
 
 
+def build_visualise_tree_split_example3_2d() -> Tree:
+    """
+    Build the 2D sparse tree used by ``visualise_tree_split_example3.png``.
+
+    The tree has 10 leaves in total and is arranged as a single branch that is
+    refined twice on the left-most child path:
+
+    - 4 finest-level leaves on the deepest branch
+    - 3 level-2 leaves on the middle branch
+    - 3 level-1 leaves directly under the root
+
+    This is the example that splits best into subtrees 4-3-3.
+    """
+    tree = Tree("visualise-tree-split-example3", 2, (0.0, 0.0), (1.0, 1.0))
+    tree._max_level = 4
+
+    # Initialise all levels with non-existent cells (weight=0)
+    for level in range(4):
+        size = 3 ** (level + 1)
+        arr = np.empty((size, size), dtype=object)
+        for a in range(size):
+            for b in range(size):
+                arr[a][b] = (0, 0)
+        tree._tree_arrays.append(arr)
+
+    def _add_branch(level: int, a: int, b: int) -> None:
+        """Create one refined node and its four corner children."""
+        tree._tree_arrays[level][a][b] = (1, 0)
+        if level == 3:
+            return
+
+        next_level = level + 1
+        base_a = 3 * a
+        base_b = 3 * b
+        child_coords = [(base_a + da, base_b + db) for da in (0, 2) for db in (0, 2)]
+
+        for child_a, child_b in child_coords:
+            tree._tree_arrays[next_level][child_a][child_b] = (1, 0)
+
+        # Refine the left-most child only, matching the documentation figure.
+        _add_branch(next_level, child_coords[0][0], child_coords[0][1])
+
+    _add_branch(0, 0, 0)
+
+    tree._subtree_count = 1
+    tree.update_split_pattern()
+
+    return tree
+
+
 def build_stage3_mixed_parent_case_2d() -> tuple[Tree, tuple[int, int]]:
     """
     Build a 2D tree where Stage III can promote a mixed parent.
@@ -164,7 +214,7 @@ def build_stage3_mixed_parent_case_2d() -> tuple[Tree, tuple[int, int]]:
     The returned parent coordinates identify the level-0 parent whose children
     are configured with a dominant subtree assignment.
     """
-    tree = RegularGridGenerator(name="pytest-stage3-integration-2d", max_level=2, dimension=2)
+    tree = RegularGridGenerator(name="pytest-stage3-integration-2d", max_level=2, dimensions=2)
 
     parent_level = 0
     child_level = 1

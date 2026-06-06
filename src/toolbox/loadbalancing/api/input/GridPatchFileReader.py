@@ -63,12 +63,12 @@ This module fits into the standard offline decomposition workflow:
 tree = GridPatchFileReader(
 	name="ExperimentData", 
 	file_path="path/to/grid/files", 
-	dimension=3
+	dimensions=3
 )
 
 # Integrate with splitting strategies
 from Strategies.SplitTrees import split_tree
-split_tree(tree, number_of_splits=4)
+split_tree(tree, number_of_subtrees=4)
 
 # Generate the optimised tree structure in YAML format
 from Strategies.SplitTrees import generate_tree_yaml
@@ -91,7 +91,7 @@ def round_sig(x, sig):
 	"""
 	return float(np.format_float_positional(x, precision=sig, unique=False, trim='k'))
 
-def read_patches(file_path, size_group, dimension):
+def read_patches(file_path, size_group, dimensions):
 	"""
 	Parse a single Peano grid patch file and extract spatial information.
 	
@@ -102,7 +102,7 @@ def read_patches(file_path, size_group, dimension):
 	Args:
 		file_path (str): Path to the grid patch file
 		size_group (defaultdict): Dictionary to store {size: [offsets]} mapping
-		dimension (int): Spatial dimension (2 or 3)
+		dimensions (int): Spatial dimensions count (2 or 3)
 		
 	Returns:
 		defaultdict: Updated size_group with patch information
@@ -117,13 +117,13 @@ def read_patches(file_path, size_group, dimension):
 		content = f.read()
 	
 	# Regular expression to extract offset and size
-	if dimension==3:
+	if dimensions==3:
 		patch_pattern = re.compile(
 			r'begin patch.*?offset ([\d.eE+\-]+ [\d.eE+\-]+ [\d.eE+\-]+).*?'
 			r'size ([\d.eE+\-]+ [\d.eE+\-]+ [\d.eE+\-]+)', 
 			re.DOTALL
 		)
-	elif dimension==2:
+	elif dimensions==2:
 		patch_pattern = re.compile(
 			r'begin patch.*?offset ([\d.eE+\-]+ [\d.eE+\-]+).*?'
 			r'size ([\d.eE+\-]+ [\d.eE+\-]+)', 
@@ -137,7 +137,7 @@ def read_patches(file_path, size_group, dimension):
 
 	return size_group
 
-def GridPatchFileReader(name, file_path, dimension):
+def GridPatchFileReader(name=None, file_path=None, dimensions=None):
 	"""
 	Main function to read Peano grid patch files and convert to Tree structure.
 	
@@ -164,9 +164,10 @@ def GridPatchFileReader(name, file_path, dimension):
 	- Reports distribution statistics for analysis
 	
 	Args:
-		name (str): Descriptive name for the resulting tree
+		name (str, optional): Descriptive name for the resulting tree.
+			If not provided, a deterministic default name is generated.
 		file_path (str): Path to directory containing grid patch files
-		dimension (int): Spatial dimension (2 for 2D, 3 for 3D)
+		dimensions (int): Spatial dimensions count (2 for 2D, 3 for 3D)
 		
 	Returns:
 		Tree: Tree object with complete spatial structure and subtree assignments
@@ -177,7 +178,7 @@ def GridPatchFileReader(name, file_path, dimension):
 		tree = GridPatchFileReader(
 			name="CCZ4_Simulation_T100", 
 			file_path="/path/to/checkpoint/grid/files",
-			dimension=3
+			dimensions=3
 		)
 		
 		print(f"Loaded tree with {tree._leaf_count} leaves")
@@ -185,6 +186,18 @@ def GridPatchFileReader(name, file_path, dimension):
 		print(f"Subtrees: {tree._subtree_count}")
 		```
 	"""
+	if file_path is None:
+		raise ValueError("file_path must be provided")
+
+	if dimensions is None:
+		raise ValueError("dimensions must be provided")
+
+	if dimensions not in [2, 3]:
+		raise ValueError(f"dimensions must be 2 or 3, got {dimensions}")
+
+	if name is None:
+		name = f"grid-patch-reader-{dimensions}d"
+
 	folder_path=file_path
 
 	if folder_path[-1] != '/':
@@ -198,7 +211,7 @@ def GridPatchFileReader(name, file_path, dimension):
 	size_groups = []   # Dictionary to store {size: [offsets]}
 	for file_path in datafiles: 
 		size_group = defaultdict(list)
-		read_patches(folder_path+'/'+file_path, size_group, dimension)
+		read_patches(folder_path+'/'+file_path, size_group, dimensions)
 		size_groups.append(size_group)
 
 	total_level=-1
@@ -230,14 +243,14 @@ def GridPatchFileReader(name, file_path, dimension):
 				max_size_key=size
 	#print(max_size)
 
-	if dimension==3:
+	if dimensions==3:
 		leftmost_offset=[999,999,999]
-	elif dimension==2:
+	elif dimensions==2:
 		leftmost_offset=[999,999]
 	for size_group in size_groups:
 		for offset in size_group[max_size_key]:
 			offset_tuple = tuple(map(float, offset.split()))
-			for m in range(dimension):
+			for m in range(dimensions):
 				if offset_tuple[m]<leftmost_offset[m]:
 					leftmost_offset[m]=offset_tuple[m]
 					leftmost_offset_key=offset
@@ -258,18 +271,18 @@ def GridPatchFileReader(name, file_path, dimension):
 			matrix_size=(3**level)
 			#print(level, matrix_size)
 
-			if dimension == 3:
+			if dimensions == 3:
 				matrix = np.zeros((matrix_size, matrix_size, matrix_size), dtype=int)
-			elif dimension == 2:
+			elif dimensions == 2:
 				matrix = np.zeros((matrix_size, matrix_size), dtype=int)
 			else:
-				raise ValueError(f"Unsupported dimension: {dimension}")
+				raise ValueError(f"Unsupported dimensions: {dimensions}")
 
 			for offset in offsets:
 				offset_tuple = tuple(map(float, offset.split()))
-				if dimension==3:
+				if dimensions==3:
 					index=[-1,-1,-1]
-				elif dimension==2:
+				elif dimensions==2:
 					index=[-1,-1]
 				for i in range(len(offset_tuple)):
 					index[i]=round((offset_tuple[i]-domain_offset[i])/size_tuple[i])
@@ -280,7 +293,7 @@ def GridPatchFileReader(name, file_path, dimension):
 		tree_matrices.append(tree_matrix)
 
 	#create the Tree class and assign properly
-	peano_tree = Tree(name, dimension, domain_offset, domain_size)
+	peano_tree = Tree(name, dimensions, domain_offset, domain_size)
 	peano_tree.read_in_tree_from_arrays(input_tree_arrays=tree_matrices, max_level=total_level, weighted=False)
 
 	return peano_tree

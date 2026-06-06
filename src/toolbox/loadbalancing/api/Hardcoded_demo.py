@@ -6,28 +6,28 @@ import peano4
 import exahype2
 
 # Workspace API modules
-from Input.GridPatchFileReader import GridPatchFileReader  # [src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py](src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py)
+from input.GridPatchFileReader import GridPatchFileReader  # [src/toolbox/loadbalancing/api/input/GridPatchFileReader.py](src/toolbox/loadbalancing/api/input/GridPatchFileReader.py)
 import Strategies.SplitTrees as split_strategy              # [src/toolbox/loadbalancing/api/Strategies/SplitTrees.py](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py)
 
-def demo(file_path: str, dimension: int):
+def demo(file_path: str, dimensions: int):
     """
     Demo: Read grid patch files, extract hardcoded split parameters, configure Hardcoded LB.
     
     Args:
         file_path: Directory containing Peano grid patch files (prefix 'grid-')
-        dimension: 2 or 3 (must match input files)
+        dimensions: 2 or 3 (must match input files)
     """
     if not os.path.isdir(file_path):
         raise FileNotFoundError(f"Input directory not found: {file_path}")
-    print(f"Loading grid patch files from '{file_path}' (dimension={dimension})")
-    tree = GridPatchFileReader(name=f"Files-{file_path}", file_path=file_path, dimension=dimension)
+    print(f"Loading grid patch files from '{file_path}' (dimensions={dimensions})")
+    tree = GridPatchFileReader(file_path=file_path, dimensions=dimensions)
     print(tree)
 
     # Reset to single subtree and apply splitting to create multiple subtrees for the demo
     tree = split_strategy.reset_tree_to_single_subtree(tree)
     gridSweeps, splittingTrees, numberOfCells, subTrees = split_strategy.split_tree(
         tree,
-        number_of_splits=2,
+        number_of_subtrees=3,
         enable_propagate_bottom_up=True,
         enable_extract_split_instructions=True,
     )  # creates subtrees {0,1,2}
@@ -108,6 +108,7 @@ def demo(file_path: str, dimension: int):
     peano4_project = project.generate_Peano4_project(verbose=True)
     peano4_project.generate()
     print("Demo project generated with Hardcoded load balancing.")
+    peano4_project.build(make_clean_first=True, number_of_parallel_builds=-1)
     
     # ---- Demo summary output -------------------------------------------------
     print("\n=== Hardcoded Load Balancing Summary ===")
@@ -130,6 +131,6 @@ def demo(file_path: str, dimension: int):
     print(project)
 
 if __name__ == "__main__":
-    # Adjust file_path and dimension as needed
+    # Adjust file_path and dimensions as needed
     # Provide a directory containing 'grid-*' files.
-    demo(file_path="Input/example", dimension=3)
+    demo(file_path="Input/example", dimensions=3)

@@ -2,24 +2,24 @@ import yaml
 from Tree import Tree
 
 # to a separate file
-def split_finest_level(peano_tree: Tree, number_of_splits: int) -> Tree: # might be goot for pipeline, peano tree in/out
+def split_finest_level(peano_tree: Tree, number_of_subtrees: int) -> Tree: # might be goot for pipeline, peano tree in/out
     """
     [Deprecated]
-    Split a tree into the specified number of splits on the finest level only.
+    Split a tree into the specified number of subtrees on the finest level only.
     It distributes leaf nodes as evenly as possible across subtrees.
     
     Args:
         peano_tree: Tree object to split
-        number_of_splits: Number of subtrees to create (total subtrees = original + number_of_splits)
+        number_of_subtrees: Total number of subtrees to create.
         
     Returns:
         Modified Tree object with applied splits
     """
-    if number_of_splits <= 0:
-        print(f"No splitting needed (number_of_splits = {number_of_splits}).")
+    if number_of_subtrees <= 1:
+        print(f"No splitting needed (number_of_subtrees = {number_of_subtrees}).")
         return peano_tree
         
-    print(f"Splitting tree '{peano_tree._name}' into {number_of_splits + 1} subtrees")
+    print(f"Splitting tree '{peano_tree._name}' into {number_of_subtrees} subtrees")
     
     # Get the finest level
     finest_level = peano_tree._max_level - 1
@@ -49,14 +49,14 @@ def split_finest_level(peano_tree: Tree, number_of_splits: int) -> Tree: # might
     print(f"Found {total_nodes} leaf nodes at finest level to distribute")
     
     # Calculate how many nodes each subtree should get for balanced distribution
-    nodes_per_subtree = total_nodes // (number_of_splits + 1)
-    remaining_nodes = total_nodes % (number_of_splits + 1)
+    nodes_per_subtree = total_nodes // (number_of_subtrees)
+    remaining_nodes = total_nodes % (number_of_subtrees)
     
     print(f"Target distribution: {nodes_per_subtree} leaf nodes per subtree, {remaining_nodes} extra leaf nodes")
     
     # Create distribution plan
     distribution = []
-    for i in range(number_of_splits + 1):
+    for i in range(number_of_subtrees):
         target_count = nodes_per_subtree + (1 if i < remaining_nodes else 0)
         distribution.append(target_count)
     
@@ -65,7 +65,7 @@ def split_finest_level(peano_tree: Tree, number_of_splits: int) -> Tree: # might
     # Apply the redistribution
     current_subtree = 0
     current_count = 0
-    moved_nodes = [0] * (number_of_splits + 1)  # Track actual moves
+    moved_nodes = [0] * (number_of_subtrees)  # Track actual moves
     
     if peano_tree._dimension == 2:
         for a in range(size):
@@ -78,7 +78,7 @@ def split_finest_level(peano_tree: Tree, number_of_splits: int) -> Tree: # might
                     current_count += 1
                     
                     # Check if current subtree is full, move to next
-                    if current_count >= distribution[current_subtree] and current_subtree < number_of_splits:
+                    if current_count >= distribution[current_subtree] and current_subtree < number_of_subtrees - 1:
                         current_subtree += 1
                         current_count = 0
                         
@@ -94,12 +94,12 @@ def split_finest_level(peano_tree: Tree, number_of_splits: int) -> Tree: # might
                         current_count += 1
                         
                         # Check if current subtree is full, move to next
-                        if current_count >= distribution[current_subtree] and current_subtree < number_of_splits:
+                        if current_count >= distribution[current_subtree] and current_subtree < number_of_subtrees - 1:
                             current_subtree += 1
                             current_count = 0
     
     # Update tree metadata after all splits
-    peano_tree._subtree_count = number_of_splits + 1
+    peano_tree._subtree_count = number_of_subtrees
     peano_tree.update_split_pattern()
     
     print(f"Splitting completed. New subtree count: {peano_tree._subtree_count}")
@@ -110,10 +110,11 @@ def split_finest_level(peano_tree: Tree, number_of_splits: int) -> Tree: # might
 
 def split_tree(
     peano_tree: Tree,
-    number_of_splits: int,
+    number_of_subtrees: int,
     traversal: str = "bfs_finest_first",
     enable_propagate_bottom_up: bool = False,
     enable_optimize_hierarchy: bool = False,
+    require_all_children_for_hierarchy_optimization: bool = True,
     enable_extract_split_instructions: bool = False,
 ) -> tuple[list[int], list[int], list[int], list[int]]:
     """
@@ -129,8 +130,7 @@ def split_tree(
 
     Args:
         peano_tree: Tree to split (modified in place).
-        number_of_splits: Number of additional subtrees to create.
-            Total subtree count after splitting is number_of_splits + 1.
+        number_of_subtrees: Total number of subtrees to create.
         traversal: Stage I traversal strategy. Supported values:
             - "bfs": level-order leaf collection
             - "bfs_finest_first": level-order leaf collection within each level,
@@ -140,6 +140,10 @@ def split_tree(
             propagation after leaf redistribution.
         enable_optimize_hierarchy: If True, enable Stage III hierarchical
             optimisation to minimise split operations through hierarchy lifting.
+        require_all_children_for_hierarchy_optimization: Stage III guard for
+            parent promotion. If True (default), a parent is only considered if
+            all 3^d children exist. If False, Stage III may also promote mixed
+            parents with partial child sets.
         enable_extract_split_instructions: If True, run Stage IV and return the
             derived `(gridSweeps, splittingTrees, numberOfCells, subTrees)`.
 
@@ -150,31 +154,31 @@ def split_tree(
     Notes:
         - All stages after Stage I are optional.
         - The tree is modified in place by the enabled transformation stages.
-        - If number_of_splits <= 0, no transformation stage runs.
+        - If number_of_subtrees <= 1, no transformation stage runs.
         - Stage III requires Stage II to have been applied first for correctness.
     """
-    if number_of_splits <= 0:
-        print(f"No splitting requested (number_of_splits = {number_of_splits}).")
+    if number_of_subtrees <= 1:
+        print(f"No splitting requested (number_of_subtrees = {number_of_subtrees}).")
         if enable_extract_split_instructions:
             return _extract_split_instructions(peano_tree)
         return ([], [], [], [])
 
     print(
         f"Splitting tree '{peano_tree._name}' into "
-        f"{number_of_splits + 1} subtrees (staged workflow)"
+        f"{number_of_subtrees} subtrees (staged workflow)"
     )
 
     traversal_mode = traversal.lower()
     if traversal_mode == "bfs":
         has_leaves_to_split, moved_nodes = _distribute_leaves_bfs(
-            peano_tree, number_of_splits, finest_level_first=False
+            peano_tree, number_of_subtrees, finest_level_first=False
         )
     elif traversal_mode == "bfs_finest_first":
         has_leaves_to_split, moved_nodes = _distribute_leaves_bfs(
-            peano_tree, number_of_splits, finest_level_first=True
+            peano_tree, number_of_subtrees, finest_level_first=True
         )
     elif traversal_mode == "dfs":
-        has_leaves_to_split, moved_nodes = _distribute_leaves_dfs(peano_tree, number_of_splits)
+        has_leaves_to_split, moved_nodes = _distribute_leaves_dfs(peano_tree, number_of_subtrees)
     else:
         raise ValueError(
             f"Unsupported traversal '{traversal}'. Use 'bfs', 'bfs_finest_first' or 'dfs'."
@@ -189,10 +193,13 @@ def split_tree(
         _propagate_bottom_up(peano_tree)
 
     if enable_optimize_hierarchy:
-        _optimize_hierarchy(peano_tree)
+        _optimize_hierarchy(
+            peano_tree,
+            require_all_children=require_all_children_for_hierarchy_optimization,
+        )
 
     # Update tree metadata after all stages
-    peano_tree._subtree_count = number_of_splits + 1
+    peano_tree._subtree_count = number_of_subtrees
     peano_tree.update_split_pattern()
 
     print(f"Splitting complete. Subtree count: {peano_tree._subtree_count}")
@@ -207,14 +214,14 @@ def split_tree(
 
 def _distribute_leaves_bfs(
     peano_tree: Tree,
-    number_of_splits: int,
+    number_of_subtrees: int,
     finest_level_first: bool = False,
 ) -> tuple[bool, list[int]]:
     """
     Stage I BFS variant of the staged load-balancing workflow.
 
     Collect leaf cells currently assigned to subtree 0 and redistribute them
-    across `number_of_splits + 1` subtrees as evenly as possible while
+    across `number_of_subtrees` subtrees as evenly as possible while
     preserving level-order traversal within each level.
 
     Leaf definition:
@@ -223,7 +230,7 @@ def _distribute_leaves_bfs(
 
     Args:
         peano_tree: Tree to update (modified in place).
-        number_of_splits: Number of additional subtrees to create.
+        number_of_subtrees: Total number of subtrees to create.
         finest_level_first: If `False` (default), process levels from coarsest
             to finest (`0..max_level-1`). If `True`, process levels from finest
             to coarsest while keeping BFS order inside each level.
@@ -301,14 +308,14 @@ def _distribute_leaves_bfs(
     print(f"Found {total_leaves} leaf nodes across all levels to distribute")
 
     # Calculate how many leaves each subtree should get for balanced distribution
-    leaves_per_subtree = total_leaves // (number_of_splits + 1)
-    remaining_leaves = total_leaves % (number_of_splits + 1)
+    leaves_per_subtree = total_leaves // (number_of_subtrees)
+    remaining_leaves = total_leaves % (number_of_subtrees)
 
     print(f"Target distribution: {leaves_per_subtree} leaves per subtree, {remaining_leaves} extra leaves")
 
     # Create distribution plan
     distribution = []
-    for i in range(number_of_splits + 1):
+    for i in range(number_of_subtrees):
         target_count = leaves_per_subtree + (1 if i < remaining_leaves else 0)
         distribution.append(target_count)
 
@@ -317,7 +324,7 @@ def _distribute_leaves_bfs(
     # Apply the redistribution to leaf nodes
     current_subtree = 0
     current_count = 0
-    moved_nodes = [0] * (number_of_splits + 1)  # Track actual moves
+    moved_nodes = [0] * (number_of_subtrees)  # Track actual moves
 
     for leaf_coords in leaf_nodes:
         if peano_tree._dimension == 2:
@@ -335,25 +342,25 @@ def _distribute_leaves_bfs(
             current_count += 1
 
         # Check if current subtree is full, move to next
-        if current_count >= distribution[current_subtree] and current_subtree < number_of_splits:
+        if current_count >= distribution[current_subtree] and current_subtree < number_of_subtrees - 1:
             current_subtree += 1
             current_count = 0
 
     return (True, moved_nodes)
 
 
-def _distribute_leaves_dfs(peano_tree: Tree, number_of_splits: int) -> tuple[bool, list[int]]:
+def _distribute_leaves_dfs(peano_tree: Tree, number_of_subtrees: int) -> tuple[bool, list[int]]:
     """
     Stage I variant using depth-first traversal order.
 
     Collect leaf cells currently assigned to subtree 0 and redistribute them
-    across `number_of_splits + 1` subtrees as evenly as possible.
+    across `number_of_subtrees` subtrees as evenly as possible.
     The redistribution logic is identical to `_distribute_leaves_bfs()`, but leaf
     discovery order follows DFS instead of level-order scanning.
 
     Args:
         peano_tree: Tree to update (modified in place).
-        number_of_splits: Number of additional subtrees to create.
+        number_of_subtrees: Total number of subtrees to create.
 
     Returns:
         A tuple `(has_leaves_to_split, moved_nodes_per_subtree)`:
@@ -487,13 +494,13 @@ def _distribute_leaves_dfs(peano_tree: Tree, number_of_splits: int) -> tuple[boo
 
     print(f"Found {total_leaves} leaf nodes across all levels to distribute (DFS order)")
 
-    leaves_per_subtree = total_leaves // (number_of_splits + 1)
-    remaining_leaves = total_leaves % (number_of_splits + 1)
+    leaves_per_subtree = total_leaves // (number_of_subtrees)
+    remaining_leaves = total_leaves % (number_of_subtrees)
 
     print(f"Target distribution: {leaves_per_subtree} leaves per subtree, {remaining_leaves} extra leaves")
 
     distribution = []
-    for i in range(number_of_splits + 1):
+    for i in range(number_of_subtrees):
         target_count = leaves_per_subtree + (1 if i < remaining_leaves else 0)
         distribution.append(target_count)
 
@@ -501,7 +508,7 @@ def _distribute_leaves_dfs(peano_tree: Tree, number_of_splits: int) -> tuple[boo
 
     current_subtree = 0
     current_count = 0
-    moved_nodes = [0] * (number_of_splits + 1)
+    moved_nodes = [0] * (number_of_subtrees)
 
     for leaf_coords in leaf_nodes:
         if peano_tree._dimension == 2:
@@ -516,7 +523,7 @@ def _distribute_leaves_dfs(peano_tree: Tree, number_of_splits: int) -> tuple[boo
             moved_nodes[current_subtree] += 1
             current_count += 1
 
-        if current_count >= distribution[current_subtree] and current_subtree < number_of_splits:
+        if current_count >= distribution[current_subtree] and current_subtree < number_of_subtrees - 1:
             current_subtree += 1
             current_count = 0
 
@@ -595,7 +602,7 @@ def _propagate_bottom_up(peano_tree: Tree) -> None:
     
     print("Non-leaf node assignment update completed.")
 
-def _optimize_hierarchy(peano_tree: Tree) -> None:
+def _optimize_hierarchy(peano_tree: Tree, require_all_children: bool = True) -> None:
     """
     Stage III of the staged load-balancing workflow.
 
@@ -606,7 +613,7 @@ def _optimize_hierarchy(peano_tree: Tree) -> None:
 
         Hierarchy lifting is applicable when:
         - All children of a parent exist (count equals 3^d, where d is the spatial
-            dimension: d=2 -> 9 children, d=3 -> 27 children)
+            dimensions count: d=2 -> 9 children, d=3 -> 27 children)
         - Children are mixed across at least two subtrees
         - A dominant child subtree M exists (largest child count)
         - The dominant subtree differs from the current parent subtree and yields a
@@ -623,6 +630,9 @@ def _optimize_hierarchy(peano_tree: Tree) -> None:
         peano_tree: Tree to update (modified in place).
         Required precondition: Stage II (bottom-up propagation) must have been
         applied first to ensure non-leaf subtree consistency.
+        require_all_children: If True (default), only promote parents whose
+        full 3^d child set exists. If False, also allow promotions for mixed
+        partial child sets.
 
     Returns:
         None.
@@ -637,9 +647,9 @@ def _optimize_hierarchy(peano_tree: Tree) -> None:
     """
     print("Stage III: Optimising hierarchy to minimise split operations...")
 
-    dimension = peano_tree._dimension
+    dimensions = peano_tree._dimension
     max_level = peano_tree._max_level
-    children_per_parent = 3 ** dimension
+    children_per_parent = 3 ** dimensions
 
     def _dominant_subtree(child_subtrees: list[int], parent_subtree: int) -> int | None:
         """
@@ -647,7 +657,7 @@ def _optimize_hierarchy(peano_tree: Tree) -> None:
 
         Returns the dominant subtree id when promotion is beneficial, otherwise None.
         """
-        if len(child_subtrees) != children_per_parent:
+        if require_all_children and len(child_subtrees) != children_per_parent:
             return None
 
         counts: dict[int, int] = {}
@@ -687,7 +697,7 @@ def _optimize_hierarchy(peano_tree: Tree) -> None:
         for level in range(max_level - 2, -1, -1):
             size = 3 ** (level + 1)
 
-            if dimension == 2:
+            if dimensions == 2:
                 for a in range(size):
                     for b in range(size):
                         parent_node = peano_tree._tree_arrays[level][a][b]
@@ -713,7 +723,7 @@ def _optimize_hierarchy(peano_tree: Tree) -> None:
                             peano_tree._tree_arrays[level][a][b] = (1, target_subtree)
                             made_changes = True
 
-            elif dimension == 3:
+            elif dimensions == 3:
                 for a in range(size):
                     for b in range(size):
                         for c in range(size):
