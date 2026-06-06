@@ -179,7 +179,7 @@ if __name__ == "__main__":
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_split]
         number_of_subtrees = args.ranks * args.trees
 
-        SplitTrees._distribute_leaves_dfs(tree, number_of_subtrees=number_of_subtrees)
+        SplitTrees.distribute_leaves_bottom_up(tree, number_of_subtrees=number_of_subtrees)
         # @todo This is a bug: This line should really be inside distribute_leaves_dfs and not external. It should be removed from here
         tree._subtree_count = number_of_subtrees
         grid_sweeps, splitting_trees, number_of_cells, subtrees = SplitTrees.extract_split_instructions(tree)
