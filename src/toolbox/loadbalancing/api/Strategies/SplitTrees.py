@@ -5,8 +5,6 @@ import yaml
 from Tree import Tree
 
 
-from .SFC import Cartesian_to_Peano_2d
-from .SFC import Cartesian_to_Peano_3d
 from .SFC import Peano_to_Cartesian_2d
 from .SFC import Peano_to_Cartesian_3d
 
@@ -113,30 +111,24 @@ def distribute_leaves_bottom_up(
     finest_level_first: bool = False,
 ) -> tuple[bool, list[int]]:
     """
-    Stage I:  BFS variant of the staged load-balancing workflow.
+    Stage I: BFS-style leaf redistribution over Peano SFC order.
 
-    This strategy runs through the mesh bottom up. It first assigns all leaves
-    on the finest level to partitions, then the leaves on the next coarser 
-    level, and so forth. This strategy is biased towards the finest mesh and 
-    particularly valuable for strategies which do more work on the finest level 
-    than on other cells. This holds for example for some p-multigrid solvers or 
-    ExaHyPE with limiter where the limiter typically kicks in on the finest 
-    mesh resolution only.
-    
-    We do assign indices per level along the Peano space filling curve. However,
-    whenever we encounter an AMR transition, we stop assigning cells to a rank.
-    That is, if there are 27 connected fine grid cells and each subtree should 
-    have 15 cells, then we assign the first 15 cells to tree 0. Tree 1 then 
-    get the remaining 27-15 cells. After that, we continue with tree 2. Through
-    this, we avoid that AMR partitions become disconnected:
-    
-    @image html distribute_leaves_bottom_up.png
-    
-    In the example above, we give a series of cells along the Peano SFC to the 
-    light blue tree. Due to the local adaptivity, an assignment would lead to 
-    disconnected partitions if we did not introduce this clear. It might also 
-    assign cells on different levels the one tree even though they are not 
-    face-connected.
+    This strategy runs through the mesh level by level. It first assigns all
+    leaves on the finest level to partitions, then the leaves on the next
+    coarser level, and so forth. Within each level, cells are visited in
+    Peano space-filling-curve order, so the redistribution follows the same
+    ordering as the SFC traversal used elsewhere in the load-balancing API.
+
+    @image html PeanoSFC.png
+
+    The goal is to keep the finest-mesh cells contiguous while respecting the
+    hierarchical tree structure. In practice, that makes the routine well
+    suited for solvers that spend most of their work on the finest cells, such
+    as limiter-based or multigrid-style workflows.
+
+    The lexicographic order that used to be documented here now lives in
+    `Strategies/Lexicographic.py`; this function intentionally uses Peano SFC
+    order instead.
     
     Leaf definition:
     - Any existing cell on the finest level, or
@@ -171,49 +163,46 @@ def distribute_leaves_bottom_up(
         size = 3**(level + 1)
 
         if peano_tree._dimension == 2:
-            for a in range(size):
-                for b in range(size):
-                    # @todo Dmitry use SFC index here
-                    current_node = peano_tree._tree_arrays[level][a][b]
-                    if current_node[0] == 1 and current_node[1] == 0:  # Node exists and belongs to subtree 0
-                        # Check if this is a leaf node
-                        is_leaf = False
-                        
-                        if level == peano_tree._max_level - 1:
-                            # Nodes at finest level are always leaves
+            for peano_index in range(size * size):
+                a, b = Peano_to_Cartesian_2d(peano_index, size)
+                current_node = peano_tree._tree_arrays[level][a][b]
+                if current_node[0] == 1 and current_node[1] == 0:  # Node exists and belongs to subtree 0
+                    # Check if this is a leaf node
+                    is_leaf = False
+
+                    if level == peano_tree._max_level - 1:
+                        # Nodes at finest level are always leaves
+                        is_leaf = True
+                    else:
+                        # Check if node has no children (not refined further)
+                        child_a, child_b = 3*a, 3*b
+                        if (child_a < 3**(level+2) and child_b < 3**(level+2) and 
+                            peano_tree._tree_arrays[level+1][child_a][child_b][0] == 0):
                             is_leaf = True
-                        else:
-                            # Check if node has no children (not refined further)
-                            child_a, child_b = 3*a, 3*b
-                            if (child_a < 3**(level+2) and child_b < 3**(level+2) and 
-                                peano_tree._tree_arrays[level+1][child_a][child_b][0] == 0):
-                                is_leaf = True
-                        
-                        if is_leaf:
-                            leaf_nodes.append((level, a, b))
+
+                    if is_leaf:
+                        leaf_nodes.append((level, a, b))
 
         elif peano_tree._dimension == 3:
-            for a in range(size):
-                for b in range(size):
-                    for c in range(size):
-                        # @todo Dmitry use SFC index here.
-                        current_node = peano_tree._tree_arrays[level][a][b][c]
-                        if current_node[0] == 1 and current_node[1] == 0:  # Node exists and belongs to subtree 0
-                            # Check if this is a leaf node
-                            is_leaf = False
-                            
-                            if level == peano_tree._max_level - 1:
-                                # Nodes at finest level are always leaves
-                                is_leaf = True
-                            else:
-                                # Check if node has no children (not refined further)
-                                child_a, child_b, child_c = 3*a, 3*b, 3*c
-                                if (child_a < 3**(level+2) and child_b < 3**(level+2) and child_c < 3**(level+2) and
-                                    peano_tree._tree_arrays[level+1][child_a][child_b][child_c][0] == 0):
-                                    is_leaf = True
-                            
-                            if is_leaf:
-                                leaf_nodes.append((level, a, b, c))
+            for peano_index in range(size * size * size):
+                a, b, c = Peano_to_Cartesian_3d(peano_index, size)
+                current_node = peano_tree._tree_arrays[level][a][b][c]
+                if current_node[0] == 1 and current_node[1] == 0:  # Node exists and belongs to subtree 0
+                    # Check if this is a leaf node
+                    is_leaf = False
+
+                    if level == peano_tree._max_level - 1:
+                        # Nodes at finest level are always leaves
+                        is_leaf = True
+                    else:
+                        # Check if node has no children (not refined further)
+                        child_a, child_b, child_c = 3*a, 3*b, 3*c
+                        if (child_a < 3**(level+2) and child_b < 3**(level+2) and child_c < 3**(level+2) and
+                            peano_tree._tree_arrays[level+1][child_a][child_b][child_c][0] == 0):
+                            is_leaf = True
+
+                    if is_leaf:
+                        leaf_nodes.append((level, a, b, c))
 
     total_leaves = len(leaf_nodes)
 
