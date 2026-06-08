@@ -1,16 +1,59 @@
 /**
 
-@page page_third-party_performance_analysis_tools
+@page page_third-party_performance_analysis_tools Performance analysis tools
 
-## ScoreP
-When usng ScoreP the configure or cmake command should be prefixed with SCOREP_WRAPPER=off,
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+Peano provides bespoke support for some external performance analysis tools.
+
+
+# ScoreP
+
+
+## Compilation
+
+When using ScoreP the configure or cmake command should be prefixed with SCOREP_WRAPPER=off,
 and the compiler names should be prefixed with scorep-. For an Intel toolchain
 with autotools this looks like:
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 SCOREP_WRAPPER=off ./configure CC=scorep-icx CXX=scorep-icpx ...
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-## MAQAO
+<br /><br />
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+The instruction above assumes that Score-P's module files are built such that 
+they provide scripts alike scorep-icx. 
+</div>
+
+
+If you compile without switching the instrumentation off, Score-P will 
+instrument every single element of all Peano libraries which will be extremely
+excessive. 
+
+## Logging
+
+Peano provides bespoke logging for Score-P. Indeed, it it not a good idea to 
+use Peano with its default @ref tarch_logging "command line logger". This 
+logger does indentation and fancy string formatting, and all of these things
+draw compute resources which pollute your profile. You don't need them and it
+is way more efficient to use the @ref tarch_logging "Score-P logger" that is 
+shipped with the code. 
+
+In summary, I recommend to add
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SCOREP_WRAPPER=off ./configure CC=scorep-icx CXX=scorep-icpx ... --with-toolchain=scorep
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+to the configuration.
+
+
+
+# MAQAO
+
 When using any performance analysis tool the compilation flag "-g" should be
 used, to generate debug information. For MAQAO this may not be sufficient, in 
 which case "-grecord-gcc-switches" should also be used.
