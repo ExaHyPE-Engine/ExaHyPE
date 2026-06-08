@@ -67,7 +67,7 @@ namespace tarch {
  *
  * ## Relation to Score-P instrumentation
  *
- * All of the Score-P labels here logical. That is, they are tied to the
+ * All of the Score-P labels here are logical. That is, they are tied to the
  * logical function name and not the real one. In practice, this is not true,
  * as Peano uses a lot of trace in and trace out macros to annotate specific
  * regions. Anyway, we kind of replicate the Score-P instrumentation and
