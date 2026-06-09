@@ -56,7 +56,7 @@ split_tree(
   # Stage I:            distribute leaf nodes across subtrees (`distribute_leaves_bottom_up()` or `distribute_leaves_top_down()`)
   # Stage II (opt.):    bottom-up propagation (`_propagate_bottom_up()`)
   # Stage III (opt.):   hierarchical optimisation (`_optimize_hierarchy()`)
-  # Stage IV (opt.):    split-instruction extraction (`_extract_split_instructions()`)
+  # Stage IV (opt.):    split-instruction extraction (`extract_split_instructions()`)
 ```
 
 `split_tree()` now returns a tuple `(grid_sweeps, splitting_trees, number_of_cells, subtrees)`.
@@ -67,7 +67,7 @@ If _Stage IV_ is disabled, the function returns `([], [], [], [])` while still a
 | **I** | `distribute_leaves_bottom_up()` or `distribute_leaves_top_down()` | Distribute leaves across subtrees | O(Ncells) |
 | **II** | `_propagate_bottom_up()` | Propagate subtree ids bottom-up | O(Ncells) single pass |
 | **III** | `_optimize_hierarchy()` | Minimise split operation count through hierarchy lifting | Iterative multi-pass; data-dependent |
-| **IV** | `_extract_split_instructions()` | Derive hardcoded replay split lists | O(subtrees × Ncells) |
+| **IV** | `extract_split_instructions()` | Derive hardcoded replay split lists | O(subtrees × Ncells) |
 
 _Stage I_ always executes when splitting is requested. _Stage II_, _Stage III_, and _Stage IV_ are optional.
 
@@ -248,7 +248,7 @@ This preserves the Stage-II leaf mapping while reducing hierarchy depth for Subt
 ## Phase 3: Hardcoded parameter extraction (offline replay)
 
 _Stage IV_ extraction can be requested directly through `split_tree(..., enable_extract_split_instructions=True)`.
-Internally, this uses the helper `_extract_split_instructions()` and returns four lists:
+Internally, this uses the helper `extract_split_instructions()` and returns four lists:
 `(grid_sweeps, splitting_trees, number_of_cells, subtrees)` to feed into
 [`toolbox::loadbalancing::strategies::Hardcoded`](src/toolbox/loadbalancing/strategies/Hardcoded.h).
 
@@ -328,7 +328,7 @@ python3 OfflineDecomposition.py -d 3 -l 3 -s 4 --no-topology-update
 The script integrates all API components into a complete workflow:
 1. **Phase 1: Input Generators** via [`GridPatchFileReader`](src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py) or [`RegularGridGenerator`](src/toolbox/loadbalancing/api/Input/RegularGridGenerator.py), represented through the [`Tree`](src/toolbox/loadbalancing/api/Tree.py) data structure.
 2. **Phase 2: Splitting Strategies** through [`SplitTrees`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py), including Stage I (leaf distribution), Stage II (bottom-up propagation), and optional Stage III (hierarchical optimisation).
-3. **Phase 3: Hardcoded parameter extraction (offline replay)** via _Stage IV_ in `split_tree()` (internally `_extract_split_instructions()`) to build inputs for [`toolbox::loadbalancing::strategies::Hardcoded`](src/toolbox/loadbalancing/strategies/Hardcoded.h).
+3. **Phase 3: Hardcoded parameter extraction (offline replay)** via _Stage IV_ in `split_tree()` (internally `extract_split_instructions()`) to build inputs for [`toolbox::loadbalancing::strategies::Hardcoded`](src/toolbox/loadbalancing/strategies/Hardcoded.h).
 4. **Phase 4: Output and Visualisation** by exporting YAML (e.g. via [`generate_tree_yaml`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py)) plus optional visual artefacts for inspection and integration.
 
 For complete command-line options, parameter details, and usage examples, see the [`OfflineDecomposition.py`](src/toolbox/loadbalancing/api/OfflineDecomposition.py) script documentation.
