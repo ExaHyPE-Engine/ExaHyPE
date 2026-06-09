@@ -182,7 +182,7 @@ if __name__ == "__main__":
         grid_sweeps, splitting_trees, number_of_cells, subtrees = SplitTrees.split_tree(
             tree,
             number_of_subtrees=number_of_subtrees,
-            enableextract_split_instructions=True,
+            enable_extract_split_instructions=True,
         )
         
         print(tree)

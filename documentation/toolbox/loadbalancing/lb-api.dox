@@ -53,7 +53,7 @@ split_tree(
   enable_optimize_hierarchy=False,
   enable_extract_split_instructions=False,
 ):
-  # Stage I:            distribute leaf nodes across subtrees (`_distribute_leaves_bfs()` or `_distribute_leaves_dfs()`)
+  # Stage I:            distribute leaf nodes across subtrees (`distribute_leaves_bottom_up()` or `distribute_leaves_top_down()`)
   # Stage II (opt.):    bottom-up propagation (`_propagate_bottom_up()`)
   # Stage III (opt.):   hierarchical optimisation (`_optimize_hierarchy()`)
   # Stage IV (opt.):    split-instruction extraction (`_extract_split_instructions()`)
@@ -64,7 +64,7 @@ If _Stage IV_ is disabled, the function returns `([], [], [], [])` while still a
 
 | Stage | Function | Objective | Complexity |
 |-------|----------|-----------|------------|
-| **I** | `_distribute_leaves_bfs()` or `_distribute_leaves_dfs()` | Distribute leaves across subtrees | O(Ncells) |
+| **I** | `distribute_leaves_bottom_up()` or `distribute_leaves_top_down()` | Distribute leaves across subtrees | O(Ncells) |
 | **II** | `_propagate_bottom_up()` | Propagate subtree ids bottom-up | O(Ncells) single pass |
 | **III** | `_optimize_hierarchy()` | Minimise split operation count through hierarchy lifting | Iterative multi-pass; data-dependent |
 | **IV** | `_extract_split_instructions()` | Derive hardcoded replay split lists | O(subtrees × Ncells) |
@@ -78,9 +78,9 @@ Here, `Ncells` denotes the total number of represented cells across all stored l
 The core loop of `split_tree()` identifies all leaf nodes across every refinement level and distributes them as evenly as possible across the requested number of subtrees. A node is a leaf if it resides on the finest level or has no children on the next level. After _Stage I_, only leaf nodes carry updated subtree assignments; all non-leaf nodes still belong to their original subtree and are updated by _Stage II_.
 
 Stage I now supports three traversal modes:
-- `traversal="bfs"` uses `_distribute_leaves_bfs(..., finest_level_first=False)` and visits leaves in level-order from coarsest to finest level.
-- `traversal="bfs_finest_first"` uses `_distribute_leaves_bfs(..., finest_level_first=True)` and visits leaves in level-order within each level while processing levels from finest to coarsest.
-- `traversal="dfs"` uses `_distribute_leaves_dfs()` and visits leaves in depth-first order.
+- `traversal="bfs"` uses `distribute_leaves_bottom_up(..., finest_level_first=False)` and visits leaves in level-order from coarsest to finest level.
+- `traversal="bfs_finest_first"` uses `distribute_leaves_bottom_up(..., finest_level_first=True)` and visits leaves in level-order within each level while processing levels from finest to coarsest.
+- `traversal="dfs"` uses `distribute_leaves_top_down()` and visits leaves in depth-first order.
 
 Both variants preserve the same balancing policy; they differ only in the order in which eligible leaves are discovered and therefore assigned to target subtrees.
 

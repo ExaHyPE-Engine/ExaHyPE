@@ -15,13 +15,14 @@ def split_tree(
     traversal: str = "bfs_finest_first",
     enable_propagate_bottom_up: bool = False,
     enable_optimize_hierarchy: bool = False,
-    enableextract_split_instructions: bool = False,
+    require_all_children_for_hierarchy_optimization: bool = True,
+    enable_extract_split_instructions: bool = False,
 ) -> tuple[list[int], list[int], list[int], list[int]]:
     """
     Split a tree using a staged load-balancing workflow.
 
     Stages:
-    1. distribute_leaves_bottom_up() or distribute_leaves_dfs(): Redistribute leaf nodes across subtrees.
+    1. distribute_leaves_bottom_up() or distribute_leaves_top_down(): Redistribute leaf nodes across subtrees.
     2. _propagate_bottom_up(): Propagate subtree ownership to internal nodes.
     3. _optimize_hierarchy() (optional): Further reduce split complexity by
        promoting complete child sets up the hierarchy.
@@ -40,7 +41,11 @@ def split_tree(
             propagation after leaf redistribution.
         enable_optimize_hierarchy: If True, enable Stage III hierarchical
             optimisation to minimise split operations through hierarchy lifting.
-        enableextract_split_instructions: If True, run Stage IV and return the
+        require_all_children_for_hierarchy_optimization: Stage III guard for
+            parent promotion. If True (default), a parent is only considered if
+            all 3^d children exist. If False, Stage III may also promote mixed
+            parents with partial child sets.
+        enable_extract_split_instructions: If True, run Stage IV and return the
             derived `(gridSweeps, splittingTrees, numberOfCells, subTrees)`.
 
     Returns:
@@ -55,7 +60,7 @@ def split_tree(
     """
     if number_of_subtrees <= 1:
         print(f"No splitting requested (number_of_subtrees = {number_of_subtrees}).")
-        if enableextract_split_instructions:
+        if enable_extract_split_instructions:
             return extract_split_instructions(peano_tree)
         return ([], [], [], [])
 
@@ -74,14 +79,14 @@ def split_tree(
             peano_tree, number_of_subtrees, finest_level_first=True
         )
     elif traversal_mode == "dfs":
-        has_leaves_to_split, moved_nodes = distribute_leaves_dfs(peano_tree, number_of_subtrees)
+        has_leaves_to_split, moved_nodes = distribute_leaves_top_down(peano_tree, number_of_subtrees)
     else:
         raise ValueError(
             f"Unsupported traversal '{traversal}'. Use 'bfs', 'bfs_finest_first' or 'dfs'."
         )
 
     if not has_leaves_to_split:
-        if enableextract_split_instructions:
+        if enable_extract_split_instructions:
             return extract_split_instructions(peano_tree)
         return ([], [], [], [])
 
@@ -89,7 +94,11 @@ def split_tree(
         _propagate_bottom_up(peano_tree)
 
     if enable_optimize_hierarchy:
-        _optimize_hierarchy(peano_tree)
+        _optimize_hierarchy(
+            peano_tree,
+            require_all_children=require_all_children_for_hierarchy_optimization,
+        )
+
 
     # Update tree metadata after all stages
     peano_tree._subtree_count = number_of_subtrees
@@ -99,7 +108,7 @@ def split_tree(
     print(f"Leaf distribution: {moved_nodes}")
     print(f"Split pattern: {peano_tree._split_pattern}")
 
-    if enableextract_split_instructions:
+    if enable_extract_split_instructions:
         return extract_split_instructions(peano_tree)
 
     return ([], [], [], [])
@@ -254,14 +263,15 @@ def distribute_leaves_bottom_up(
     return (True, moved_nodes)
 
 
-def distribute_leaves_dfs(peano_tree: Tree, number_of_subtrees: int) -> tuple[bool, list[int]]:
+def distribute_leaves_top_down(peano_tree: Tree, number_of_subtrees: int) -> tuple[bool, list[int]]:
     """
-    Stage I variant using depth-first traversal order.
+    Stage I: DFS-style leaf redistribution over the Peano SFC.
 
     Collect leaf cells currently assigned to subtree 0 and redistribute them
     across `number_of_subtrees` subtrees as evenly as possible.
     The redistribution logic is identical to `distribute_leaves_bottom_up()`, but leaf
-    discovery order follows DFS instead of level-order scanning.
+    discovery order follows DFS instead of level-order scanning. Both component-root
+    discovery and per-parent child traversal use Peano SFC order.
 
     Args:
         peano_tree: Tree to update (modified in place).
@@ -292,15 +302,16 @@ def distribute_leaves_dfs(peano_tree: Tree, number_of_subtrees: int) -> tuple[bo
         if level == max_level - 1:
             return (False, [])
 
-        child_size = 3 ** (level + 2)
         children = []
         has_existing_children = False
-        for child_a in range(3 * a, min(3 * (a + 1), child_size)):
-            for child_b in range(3 * b, min(3 * (b + 1), child_size)):
-                if _node_exists(level + 1, child_a, child_b):
-                    has_existing_children = True
-                    if _node_subtree(level + 1, child_a, child_b) == 0:
-                        children.append((child_a, child_b))
+        for peano_index in range(9):
+            local_a, local_b = Peano_to_Cartesian_2d(peano_index, 3)
+            child_a = 3 * a + local_a
+            child_b = 3 * b + local_b
+            if _node_exists(level + 1, child_a, child_b):
+                has_existing_children = True
+                if _node_subtree(level + 1, child_a, child_b) == 0:
+                    children.append((child_a, child_b))
 
         return (has_existing_children, children)
 
@@ -308,16 +319,17 @@ def distribute_leaves_dfs(peano_tree: Tree, number_of_subtrees: int) -> tuple[bo
         if level == max_level - 1:
             return (False, [])
 
-        child_size = 3 ** (level + 2)
         children = []
         has_existing_children = False
-        for child_a in range(3 * a, min(3 * (a + 1), child_size)):
-            for child_b in range(3 * b, min(3 * (b + 1), child_size)):
-                for child_c in range(3 * c, min(3 * (c + 1), child_size)):
-                    if _node_exists(level + 1, child_a, child_b, child_c):
-                        has_existing_children = True
-                        if _node_subtree(level + 1, child_a, child_b, child_c) == 0:
-                            children.append((child_a, child_b, child_c))
+        for peano_index in range(27):
+            local_a, local_b, local_c = Peano_to_Cartesian_3d(peano_index, 3)
+            child_a = 3 * a + local_a
+            child_b = 3 * b + local_b
+            child_c = 3 * c + local_c
+            if _node_exists(level + 1, child_a, child_b, child_c):
+                has_existing_children = True
+                if _node_subtree(level + 1, child_a, child_b, child_c) == 0:
+                    children.append((child_a, child_b, child_c))
 
         return (has_existing_children, children)
 
@@ -351,47 +363,47 @@ def distribute_leaves_dfs(peano_tree: Tree, number_of_subtrees: int) -> tuple[bo
 
     # Start DFS from all subtree-0 nodes that are roots of subtree-0 components.
     # A component root is a level-0 node or a node whose parent is not in subtree 0.
+    # Within each level, roots are discovered in Peano SFC order.
     for level in range(max_level):
         size = 3 ** (level + 1)
 
         if peano_tree._dimension == 2:
-            for a in range(size):
-                for b in range(size):
-                    if not _node_exists(level, a, b):
-                        continue
-                    if _node_subtree(level, a, b) != 0:
-                        continue
+            for peano_index in range(size * size):
+                a, b = Peano_to_Cartesian_2d(peano_index, size)
+                if not _node_exists(level, a, b):
+                    continue
+                if _node_subtree(level, a, b) != 0:
+                    continue
 
-                    is_component_root = level == 0
-                    if not is_component_root:
-                        pa, pb = a // 3, b // 3
-                        parent_exists = _node_exists(level - 1, pa, pb)
-                        parent_subtree0 = parent_exists and _node_subtree(level - 1, pa, pb) == 0
-                        is_component_root = not parent_subtree0
+                is_component_root = level == 0
+                if not is_component_root:
+                    pa, pb = a // 3, b // 3
+                    parent_exists = _node_exists(level - 1, pa, pb)
+                    parent_subtree0 = parent_exists and _node_subtree(level - 1, pa, pb) == 0
+                    is_component_root = not parent_subtree0
 
-                    if is_component_root:
-                        _dfs_2d(level, a, b)
+                if is_component_root:
+                    _dfs_2d(level, a, b)
 
         elif peano_tree._dimension == 3:
-            for a in range(size):
-                for b in range(size):
-                    for c in range(size):
-                        if not _node_exists(level, a, b, c):
-                            continue
-                        if _node_subtree(level, a, b, c) != 0:
-                            continue
+            for peano_index in range(size * size * size):
+                a, b, c = Peano_to_Cartesian_3d(peano_index, size)
+                if not _node_exists(level, a, b, c):
+                    continue
+                if _node_subtree(level, a, b, c) != 0:
+                    continue
 
-                        is_component_root = level == 0
-                        if not is_component_root:
-                            pa, pb, pc = a // 3, b // 3, c // 3
-                            parent_exists = _node_exists(level - 1, pa, pb, pc)
-                            parent_subtree0 = (
-                                parent_exists and _node_subtree(level - 1, pa, pb, pc) == 0
-                            )
-                            is_component_root = not parent_subtree0
+                is_component_root = level == 0
+                if not is_component_root:
+                    pa, pb, pc = a // 3, b // 3, c // 3
+                    parent_exists = _node_exists(level - 1, pa, pb, pc)
+                    parent_subtree0 = (
+                        parent_exists and _node_subtree(level - 1, pa, pb, pc) == 0
+                    )
+                    is_component_root = not parent_subtree0
 
-                        if is_component_root:
-                            _dfs_3d(level, a, b, c)
+                if is_component_root:
+                    _dfs_3d(level, a, b, c)
 
     total_leaves = len(leaf_nodes)
 
@@ -455,7 +467,7 @@ def _propagate_bottom_up(peano_tree: Tree) -> None:
         - Operates from finest internal level to root.
         - Preserves node existence flags (`weight`).
         - Parents with mixed-child subtree assignments remain unchanged.
-        - Intended to run after Stage I (`distribute_leaves_bottom_up()` or `distribute_leaves_dfs()`).
+        - Intended to run after Stage I (`distribute_leaves_bottom_up()` or `distribute_leaves_top_down()`).
     """
     print("Updating non-leaf node assignments to maintain tree topology...")
     
@@ -509,7 +521,7 @@ def _propagate_bottom_up(peano_tree: Tree) -> None:
     
     print("Non-leaf node assignment update completed.")
 
-def _optimize_hierarchy(peano_tree: Tree) -> None:
+def _optimize_hierarchy(peano_tree: Tree, require_all_children: bool = True) -> None:
     """
     Stage III of the staged load-balancing workflow.
 
@@ -537,6 +549,9 @@ def _optimize_hierarchy(peano_tree: Tree) -> None:
         peano_tree: Tree to update (modified in place).
         Required precondition: Stage II (bottom-up propagation) must have been
         applied first to ensure non-leaf subtree consistency.
+        require_all_children: If True (default), only promote parents whose
+        full 3^d child set exists. If False, also allow promotions for mixed
+        partial child sets.
 
     Returns:
         None.
@@ -561,7 +576,7 @@ def _optimize_hierarchy(peano_tree: Tree) -> None:
 
         Returns the dominant subtree id when promotion is beneficial, otherwise None.
         """
-        if len(child_subtrees) != children_per_parent:
+        if require_all_children and len(child_subtrees) != children_per_parent:
             return None
 
         counts: dict[int, int] = {}
