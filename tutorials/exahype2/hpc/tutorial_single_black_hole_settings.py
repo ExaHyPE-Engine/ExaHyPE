@@ -211,7 +211,7 @@ def add_generic_load_balancing(project,
 # Part 1 of tutorial: add the right imports
 # =========================================
 from toolbox.loadbalancing.api.input.RegularGridGenerator import RegularGridGenerator
-import toolbox.loadbalancing.api.Strategies.SplitTrees as split_strategy
+import toolbox.loadbalancing.api.strategies.SplitTrees as split_strategy
 
 def add_hardcoded_load_balancing_over_regular_mesh(project, 
                                                    trees_per_rank,

@@ -40,7 +40,7 @@ This input method is essential for algorithm development and provides a baseline
 
 ## Phase 2: Splitting Strategies
 
-The `SplitTrees` module (`src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`) implements the core optimisation algorithms for redistributing computational work across multiple compute resources. These strategies enable you to achieve balanced workload distribution, handle adaptive mesh challenges, and maintain mesh topology.
+The `SplitTrees` module (`src/toolbox/loadbalancing/api/strategies/SplitTrees.py`) implements the core optimisation algorithms for redistributing computational work across multiple compute resources. These strategies enable you to achieve balanced workload distribution, handle adaptive mesh challenges, and maintain mesh topology.
 
 The splitting phase is now a configurable staged workflow executed inside `split_tree()`. Stages can be enabled/disabled via flags, and Stage I traversal can be selected explicitly.
 
@@ -276,7 +276,7 @@ toolbox::loadbalancing::strategies::Hardcoded(
 ## Phase 4: Output and Visualisation
 
 ### YAML Generation
-The `generate_tree_yaml` function in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py` creates comprehensive YAML files for Peano integration, containing:
+The `generate_tree_yaml` function in `src/toolbox/loadbalancing/api/strategies/SplitTrees.py` creates comprehensive YAML files for Peano integration, containing:
 
 - **Tree Structure**: Complete spatial layout with (weight, subtree_id) tuples
 - **Tree Metadata**: Dimensions, refinement levels, domain boundaries, and leaf counts  
@@ -285,7 +285,7 @@ The `generate_tree_yaml` function in `src/toolbox/loadbalancing/api/Strategies/S
 
 These YAML files serve as the output format for integrating optimised decompositions back into Peano simulations.
 
-For detailed YAML format specifications and generation parameters, see the `generate_tree_yaml` function documentation in `src/toolbox/loadbalancing/api/Strategies/SplitTrees.py`.
+For detailed YAML format specifications and generation parameters, see the `generate_tree_yaml` function documentation in `src/toolbox/loadbalancing/api/strategies/SplitTrees.py`.
 
 ### Tree Visualisation  
 The API integrates with visualisation tools to generate graphical representations of tree structures in multiple formats:
@@ -301,7 +301,7 @@ The visualisation system automatically:
 - **Provides Hover Information**: Shows detailed node information in interactive mode
 - **Generates Responsive Layout**: Creates full-width browser displays for analysis
 
-For detailed implementation, customisation options, and technical specifications, see the `TreeVisualizer` module documentation in `src/toolbox/loadbalancing/api/Visualize/TreeVisualizer.py`.
+For detailed implementation, customisation options, and technical specifications, see the `TreeVisualizer` module documentation in `src/toolbox/loadbalancing/api/visualize/TreeVisualizer.py`.
 
 # Main Script: OfflineDecomposition.py
 
@@ -327,9 +327,9 @@ python3 OfflineDecomposition.py -d 3 -l 3 -s 4 --no-topology-update
 
 The script integrates all API components into a complete workflow:
 1. **Phase 1: Input Generators** via [`GridPatchFileReader`](src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py) or [`RegularGridGenerator`](src/toolbox/loadbalancing/api/Input/RegularGridGenerator.py), represented through the [`Tree`](src/toolbox/loadbalancing/api/Tree.py) data structure.
-2. **Phase 2: Splitting Strategies** through [`SplitTrees`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py), including Stage I (leaf distribution), Stage II (bottom-up propagation), and optional Stage III (hierarchical optimisation).
+2. **Phase 2: Splitting Strategies** through [`SplitTrees`](src/toolbox/loadbalancing/api/strategies/SplitTrees.py), including Stage I (leaf distribution), Stage II (bottom-up propagation), and optional Stage III (hierarchical optimisation).
 3. **Phase 3: Hardcoded parameter extraction (offline replay)** via _Stage IV_ in `split_tree()` (internally `extract_split_instructions()`) to build inputs for [`toolbox::loadbalancing::strategies::Hardcoded`](src/toolbox/loadbalancing/strategies/Hardcoded.h).
-4. **Phase 4: Output and Visualisation** by exporting YAML (e.g. via [`generate_tree_yaml`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py)) plus optional visual artefacts for inspection and integration.
+4. **Phase 4: Output and Visualisation** by exporting YAML (e.g. via [`generate_tree_yaml`](src/toolbox/loadbalancing/api/strategies/SplitTrees.py)) plus optional visual artefacts for inspection and integration.
 
 For complete command-line options, parameter details, and usage examples, see the [`OfflineDecomposition.py`](src/toolbox/loadbalancing/api/OfflineDecomposition.py) script documentation.
 

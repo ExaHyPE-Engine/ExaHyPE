@@ -11,7 +11,7 @@ from SBH import FD4SolverWithoutLimiter
 
 #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_inputs]
 from toolbox.loadbalancing.api.input.RegularGridGenerator import RegularGridGenerator
-import toolbox.loadbalancing.api.Strategies.SplitTrees as SplitTrees
+import toolbox.loadbalancing.api.strategies.SplitTrees as SplitTrees
 #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_inputs]
 
 

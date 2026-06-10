@@ -5,7 +5,7 @@ import pytest
 # Ensure the loadbalancing API is importable when running pytest from repo root
 sys.path.insert(0, os.path.abspath("src/toolbox/loadbalancing/api"))
 
-import Strategies.SplitTrees as split_strategy
+import strategies.SplitTrees as split_strategy
 from tree_builders import build_stage3_mixed_parent_case_2d
 
 

@@ -7,7 +7,7 @@ import exahype2
 
 # Workspace API modules
 from input.GridPatchFileReader import GridPatchFileReader  # [src/toolbox/loadbalancing/api/input/GridPatchFileReader.py](src/toolbox/loadbalancing/api/input/GridPatchFileReader.py)
-import Strategies.SplitTrees as split_strategy              # [src/toolbox/loadbalancing/api/Strategies/SplitTrees.py](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py)
+import strategies.SplitTrees as split_strategy              # [src/toolbox/loadbalancing/api/strategies/SplitTrees.py](src/toolbox/loadbalancing/api/strategies/SplitTrees.py)
 
 def demo(file_path: str, dimensions: int):
     """

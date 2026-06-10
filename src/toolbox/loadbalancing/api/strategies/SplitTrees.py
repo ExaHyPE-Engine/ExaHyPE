@@ -136,7 +136,7 @@ def distribute_leaves_bottom_up(
     as limiter-based or multigrid-style workflows.
 
     The lexicographic order that used to be documented here now lives in
-    `Strategies/Lexicographic.py`; this function intentionally uses Peano SFC
+    `strategies/Lexicographic.py`; this function intentionally uses Peano SFC
     order instead.
     
     Leaf definition:

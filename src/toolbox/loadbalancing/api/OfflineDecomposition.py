@@ -8,8 +8,8 @@ from Tree import Tree
 from input.GridPatchFileReader import *
 from input.RegularGridGenerator import *
 from input.CustomGridGenerator import *
-from Visualize.TreeVisualizer import TreeVisualizer
-import Strategies.SplitTrees as split_strategy
+from visualize.TreeVisualizer import TreeVisualizer
+import strategies.SplitTrees as split_strategy
 
 
 """
