@@ -1145,18 +1145,8 @@ class ADERDG(object):
         )
 
 def get_face_overlap_merge_implementation(patch_overlap):
-    d = {
-        "OVERLAP": patch_overlap.dim[0]
-        / 2,  # Assumed to always be two, but present here anyway.
-        "DOFS_PER_AXIS": patch_overlap.dim[1],
-        "UNKNOWNS": patch_overlap.no_of_unknowns,
-    }
     Template = """
-#if DIMENSIONS == 2
-  constexpr int SpaceFaceSize = {DOFS_PER_AXIS} * {UNKNOWNS}; // Order + 1
-#else
-  constexpr int SpaceFaceSize = {DOFS_PER_AXIS} * {DOFS_PER_AXIS} * {UNKNOWNS}; // (Order + 1)^2
-#endif
+  constexpr int SpaceFaceSize = Cardinality / 2;
 
   auto* dst = this->data();
   const auto* const src = neighbour.data();
@@ -1174,4 +1164,4 @@ def get_face_overlap_merge_implementation(patch_overlap):
     &dst[(1 - faceLR) * SpaceFaceSize]
   );
 """
-    return Template.format(**d)
+    return Template

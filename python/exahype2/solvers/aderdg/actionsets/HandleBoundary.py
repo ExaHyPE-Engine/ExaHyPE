@@ -20,14 +20,8 @@ class HandleBoundary(AbstractADERDGActionSet):
     // Needs to declare and define timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
 
-    #if DIMENSIONS == 2
-    constexpr int SpaceFaceSize      = {{ORDER}} + 1;
-    #else
-    constexpr int SpaceFaceSize      = ({{ORDER}} + 1) * ({{ORDER}} + 1);
-    #endif
-
-    constexpr int FluxElementsByFace   = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
-    constexpr int BasisElementsByFace  = SpaceFaceSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
+    constexpr int FluxElementsByFace   = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
+    constexpr int BasisElementsByFace  = facedata::{{SOLVER_NAME}}QEstimates::Cardinality / 2;
 
     const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
     const bool isLeftFace = marker.getSelectedFaceNumber() < DIMENSIONS;

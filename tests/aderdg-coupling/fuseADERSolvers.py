@@ -45,20 +45,12 @@ def different_basis_postprocessing_kernel(condition, order, proj, solver_name):
       constexpr int fromPoints = {{ORDER}} + 1;
       constexpr int toPoints = """ + str(order) + """ + 1;
 
-      #if DIMENSIONS == 2
-      constexpr int SpaceFaceSize      = fromPoints;
-      constexpr int SpaceFaceSize2     = toPoints;
-      #else
-      constexpr int SpaceFaceSize      = fromPoints*fromPoints;
-      constexpr int SpaceFaceSize2     = toPoints*toPoints;
-      #endif
+      constexpr int FluxElementsPerFace   = facedata::{{UNKNOWN_IDENTIFIER}}FluxEstimates::Cardinality / 2;
+      constexpr int BasisElementsPerFace  = facedata::{{UNKNOWN_IDENTIFIER}}Estimates::Cardinality / 2;
 
-      constexpr int FluxElementsPerFace   = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
-      constexpr int BasisElementsPerFace  = SpaceFaceSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
+      constexpr int FluxElementsPerFace2  = facedata::""" + solver_name + """FluxEstimates::Cardinality / 2;
+      constexpr int BasisElementsPerFace2 = facedata::""" + solver_name + """Estimates::Cardinality / 2;
 
-      constexpr int FluxElementsPerFace2  = SpaceFaceSize2 * {{NUMBER_OF_UNKNOWNS}};
-      constexpr int BasisElementsPerFace2 = SpaceFaceSize2 * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
-                                                               
       constexpr double proj[toPoints*fromPoints] = {""" + proj + """};
 
       for (int d = 0; d < DIMENSIONS; d++) {
@@ -96,14 +88,8 @@ def same_basis_postprocessing_kernel(condition, solver_name):
 
       constexpr int fromPoints = {{ORDER}} + 1;
 
-      #if DIMENSIONS == 2
-      constexpr int SpaceFaceSize      = fromPoints;
-      #else
-      constexpr int SpaceFaceSize      = fromPoints*fromPoints;
-      #endif
-
-      constexpr int FluxElementsPerFace   = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
-      constexpr int BasisElementsPerFace  = SpaceFaceSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
+      constexpr int FluxElementsPerFace   = facedata::{{UNKNOWN_IDENTIFIER}}FluxEstimates::Cardinality / 2;
+      constexpr int BasisElementsPerFace  = facedata::{{UNKNOWN_IDENTIFIER}}Estimates::Cardinality / 2;
 
       // 1 if right side, 0 if left
       //const int ownFaceSide = marker.getSelectedFaceNumber() > DIMENSIONS;
@@ -127,7 +113,7 @@ def same_basis_postprocessing_kernel(condition, solver_name):
       }
     }
 """)
-    
+
 
 def dg2dgFace():
    return """

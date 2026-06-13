@@ -16,14 +16,8 @@ class Correction(AbstractADERDGActionSet):
 
     {{COMPUTE_TIME_STEP_SIZE}}
 
-    #if DIMENSIONS == 2
-    constexpr int SpaceFaceSize = {{ORDER}} + 1;
-    #else
-    constexpr int SpaceFaceSize = ({{ORDER}} + 1) * ({{ORDER}} + 1);
-    #endif
-
-    constexpr int FluxElementsPerFace   = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
-    constexpr int BasisElementsPerFace  = SpaceFaceSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
+    constexpr int FluxElementsPerFace   = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
+    constexpr int BasisElementsPerFace  = facedata::{{SOLVER_NAME}}QEstimates::Cardinality / 2;
 
     /*
      * 2d: 0,1,2,3 -> 0,2,1,3
@@ -52,7 +46,7 @@ class Correction(AbstractADERDGActionSet):
     const double timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
 
     {{SOLUTION_STORAGE_PRECISION}}* QNew = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
-    constexpr int FluxElementsPerFace = kernels::{{SOLVER_NAME}}::getBndFluxSize();
+    constexpr int FluxElementsPerFace = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
 
     for (int d = 0; d < DIMENSIONS; d++) {
       const int direction = d;

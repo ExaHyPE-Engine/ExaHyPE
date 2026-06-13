@@ -38,7 +38,7 @@ except FileNotFoundError:
 
 
 timeIndex = csvData[0].index(' t')
-dataIndex = csvData[0].index(" data ") + args.v
+dataIndex = csvData[0].index(" data(0)") + args.v
 firstNumberIndex = csvData[0].index('number(0)')
 secondNumberIndex = csvData[0].index(' number(1)')
 if ' x(2)' in csvData[0]:

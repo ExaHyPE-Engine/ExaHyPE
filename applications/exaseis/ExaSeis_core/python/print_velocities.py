@@ -77,9 +77,9 @@ except FileNotFoundError:
 
 
 timeIndex = csvData[0].index(" t")
-vxIndex = csvData[0].index(" data ") + args.v
-vyIndex = csvData[0].index(" data ") + args.v + 1
-vzIndex = csvData[0].index(" data ") + args.v + 2
+vxIndex = csvData[0].index(" data(0)") + args.v
+vyIndex = csvData[0].index(" data(0)") + args.v + 1
+vzIndex = csvData[0].index(" data(0)") + args.v + 2
 firstNumberIndex = csvData[0].index("number(0)")
 secondNumberIndex = csvData[0].index(" number(1)")
 dim = 2

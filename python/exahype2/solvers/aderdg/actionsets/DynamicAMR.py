@@ -28,13 +28,7 @@ class DynamicAMR(AbstractADERDGActionSet):
 
         self._Template_TouchFaceFirstTime = """
   if ({{DELETE_GUARD}}) {
-    #if DIMENSIONS == 2
-    constexpr int SpaceFaceSize = {{ORDER}} + 1;
-    #else
-    constexpr int SpaceFaceSize = ({{ORDER}} + 1) * ({{ORDER}} + 1);
-    #endif
-
-    constexpr int FluxElementsPerFace = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
+    constexpr int FluxElementsPerFace = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
 
     int facePosition = fineGridFace{{SOLVER_NAME}}FaceLabel.getAboveHanging()[0] ? 0 : 1;
     auto* FOut = fineGridFace{{SOLVER_NAME}}QFluxEstimates.data() + facePosition * FluxElementsPerFace;
@@ -47,16 +41,10 @@ class DynamicAMR(AbstractADERDGActionSet):
 
         self._Template_TouchHangingFaceFirstTime = """
   if ({{INTERPOLATE_GUARD}}) {
-    #if DIMENSIONS == 2
-    constexpr int SpaceFaceSize = {{ORDER}} + 1;
-    #else
-    constexpr int SpaceFaceSize = ({{ORDER}} + 1) * ({{ORDER}} + 1);
-    #endif
-
     int facePosition = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : 1;
 
-    constexpr int FluxElementsPerFace  = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
-    constexpr int BasisElementsPerFace = SpaceFaceSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
+    constexpr int FluxElementsPerFace  = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
+    constexpr int BasisElementsPerFace = facedata::{{SOLVER_NAME}}QEstimates::Cardinality / 2;
 
     const double timeStamp = std::max(
       coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getNewTimeStamp(1-facePosition),
@@ -94,20 +82,15 @@ class DynamicAMR(AbstractADERDGActionSet):
 """
 
         self._Template_CreateFace = """
-    #if DIMENSIONS == 2
-    constexpr int SpaceFaceSize = {{ORDER}} + 1;
-    #else
-    constexpr int SpaceFaceSize = ({{ORDER}} + 1) * ({{ORDER}} + 1);
-    #endif
-
-    int facePosition = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : SpaceFaceSize;
+    int fluxFacePosition = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
+    int estimatesFacePosition = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : facedata::{{SOLVER_NAME}}QEstimates::Cardinality / 2;
 
     // Interpolate both estimates and fluxes
     kernels::{{SOLVER_NAME}}::faceUnknownsProlongation(
-      fineGridFace{{SOLVER_NAME}}QEstimates.data() + facePosition * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}),
-      fineGridFace{{SOLVER_NAME}}QFluxEstimates.data() + facePosition * {{NUMBER_OF_UNKNOWNS}},
-      coarseGridFaces{{SOLVER_NAME}}QEstimates(marker.getSelectedFaceNumber()).data() + facePosition * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}),
-      coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).data() + facePosition * {{NUMBER_OF_UNKNOWNS}},
+      fineGridFace{{SOLVER_NAME}}QEstimates.data() + estimatesFacePosition,
+      fineGridFace{{SOLVER_NAME}}QFluxEstimates.data() + fluxFacePosition,
+      coarseGridFaces{{SOLVER_NAME}}QEstimates(marker.getSelectedFaceNumber()).data() + estimatesFacePosition,
+      coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).data() + fluxFacePosition,
       marker.getRelativePositionWithinFatherFace()
     );
 
@@ -119,13 +102,7 @@ class DynamicAMR(AbstractADERDGActionSet):
 
         self._Template_TouchHangingFaceLastTime = """
   if ({{RESTRICT_GUARD}}) {
-    #if DIMENSIONS == 2
-    constexpr int SpaceFaceSize = {{ORDER}} + 1;
-    #else
-    constexpr int SpaceFaceSize = ({{ORDER}} + 1) * ({{ORDER}} + 1);
-    #endif
-
-    constexpr int FluxElementsPerFace = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
+    constexpr int FluxElementsPerFace = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
 
     int facePosition = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : 1;
 
@@ -139,14 +116,8 @@ class DynamicAMR(AbstractADERDGActionSet):
 """
 
         self._Template_DestroyFace = """
-    #if DIMENSIONS == 2
-    constexpr int SpaceFaceSize = {{ORDER}} + 1;
-    #else
-    constexpr int SpaceFaceSize = ({{ORDER}} + 1) * ({{ORDER}} + 1);
-    #endif
-
-    constexpr int UnknownsElementsPerFace = SpaceFaceSize * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    constexpr int FluxElementsPerFace     = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
+    constexpr int UnknownsElementsPerFace = facedata::{{SOLVER_NAME}}QEstimates::Cardinality / 2;
+    constexpr int FluxElementsPerFace     = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
 
     // Unknowns left
     kernels::{{SOLVER_NAME}}::faceUnknownsRestriction(

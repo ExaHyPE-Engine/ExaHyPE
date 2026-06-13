@@ -187,12 +187,7 @@ class CurviTracer(ActionSet):
         constexpr int unknownsToStore = {{UNKNOWNS_TO_STORE}};
         constexpr int unknownsPerDoF = {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}};
 
-#if DIMENSIONS==2
-        constexpr int SpaceFaceSize = ({{ORDER}} + 1);
-#else
-        constexpr int SpaceFaceSize = ({{ORDER}} + 1) * ({{ORDER}} + 1);
-#endif
-        constexpr int BasisElementsPerFace  = SpaceFaceSize * unknownsPerDoF;
+        constexpr int BasisElementsPerFace  = facedata::{{SOLVER_NAME}}QEstimates::Cardinality / 2;
 
         double data[unknownsPerDoF];
         for (int unknown=0; unknown<unknownsToStore; unknown++) {
