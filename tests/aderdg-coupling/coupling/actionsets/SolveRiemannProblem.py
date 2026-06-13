@@ -9,25 +9,11 @@ class SolveRiemannProblem(AbstractLimiterActionSet):
   TemplateCopyFaceData = """
   if ( {{PREDICATE}} ) {
 
-    constexpr int RegularSolverPoints = {{REGULAR_SOLVER_ORDER}} + 1;
-    constexpr int LimiterSolverPoints = {{LIMITER_SOLVER_ORDER}} + 1;
+    constexpr int FluxElementsPerFace   = facedata::{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates::Cardinality / 2;
+    constexpr int BasisElementsPerFace  = facedata::{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}Estimates::Cardinality / 2;
 
-    constexpr int NumberOfVariables = repositories::{{REGULAR_SOLVER_INSTANCE}}.NumberOfUnknowns;
-    constexpr int NumberOfParameters = repositories::{{REGULAR_SOLVER_INSTANCE}}.NumberOfAuxiliaryVariables;
-
-    #if DIMENSIONS == 2
-    constexpr int RegularFaceSize = RegularSolverPoints;
-    constexpr int LimiterFaceSize = LimiterSolverPoints;
-    #else
-    constexpr int RegularFaceSize = RegularSolverPoints*RegularSolverPoints;
-    constexpr int LimiterFaceSize = LimiterSolverPoints*LimiterSolverPoints;
-    #endif
-
-    constexpr int FluxElementsPerFace   = RegularFaceSize * NumberOfVariables;
-    constexpr int BasisElementsPerFace  = RegularFaceSize * (NumberOfVariables + NumberOfParameters);
-
-    constexpr int FluxElementsPerFace2  = LimiterFaceSize * NumberOfVariables;
-    constexpr int BasisElementsPerFace2 = LimiterFaceSize * (NumberOfVariables + NumberOfParameters);
+    constexpr int FluxElementsPerFace2  = facedata::{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates::Cardinality / 2;
+    constexpr int BasisElementsPerFace2 = facedata::{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}Estimates::Cardinality / 2;
 
     if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker()==celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::REGULAR){
       for(int d=0; d<DIMENSIONS; d++){

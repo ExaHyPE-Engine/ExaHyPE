@@ -26,8 +26,8 @@ class Prediction(AbstractADERDGActionSet):
     constexpr int SpaceBasisSize = ({{ORDER}} + 1) * ({{ORDER}} + 1) * ({{ORDER}} + 1);
 #endif
 
-    constexpr int BasisElementsPerFace  = kernels::{{SOLVER_NAME}}::getBndFaceSize();
-    constexpr int FluxElementsPerFace   = kernels::{{SOLVER_NAME}}::getBndFluxSize();
+    constexpr int BasisElementsPerFace  = facedata::{{SOLVER_NAME}}QEstimates::Cardinality / 2;
+    constexpr int FluxElementsPerFace   = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
 
     auto* QNew = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
     auto* QOld = fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data();

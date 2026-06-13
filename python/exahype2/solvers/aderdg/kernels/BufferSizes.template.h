@@ -18,11 +18,9 @@ namespace {{ item }} {
   constexpr int getlPiSize()     {return {{lPiSize}};}
   constexpr int getlQiNextSize() {return {{lQiNextSize}};}
 
-  constexpr int getBndFaceSize()      {return {{BndFaceSize}};} // == QR/QL size
   constexpr int getBndFaceTotalSize() {return {{BndFaceTotalSize}};} // == lQhbnd size
   constexpr int getBndGradQSize()     {return {{BndFluxSize * DIMENSIONS}};} // == gradQ size
   constexpr int getBndGradQTotalSize(){return {{BndFluxTotalSize * DIMENSIONS}};} // == gradQhbnd size
-  constexpr int getBndFluxSize()      {return {{BndFluxSize}};} // == FR/FL size
   constexpr int getBndFluxTotalSize() {return {{BndFluxTotalSize}};} // == lFhbnd size
 
   constexpr int getUpdateSize() {return {{(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}};} // == lduh size
