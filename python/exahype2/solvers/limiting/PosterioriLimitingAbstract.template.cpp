@@ -44,14 +44,6 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
   return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMinMeshSize();
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxAdmissibleMeshSize() const {
-  return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMaxAdmissibleMeshSize();
-}
-
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinAdmissibleMeshSize() const {
-  return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMinAdmissibleMeshSize();
-}
-
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
   return 0;
 }

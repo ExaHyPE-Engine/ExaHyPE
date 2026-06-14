@@ -1,6 +1,8 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import peano4, exahype2
+import argparse
+
+import exahype2
 
 from numpy import pi
 
@@ -12,21 +14,32 @@ from GRMHD import max_eigenvalue, flux, ncp
 
 available_scenarios = ["AlfvenWave", "MichelSphericalAccretion"]
 
-parser = exahype2.ArgumentParser("ExaHyPE 2 - ADER-DG GRMHD Testing Script")
-# parser.add_argument("-pr", "--precision", default="fp64", help="|".join(available_precisions))
-parser.add_argument(
-    "-s", "--scenario", default="AlfvenWave", help="|".join(available_scenarios)
-)
-parser.set_defaults(
-    min_depth=1,
-    degrees_of_freedom=6,
-    number_of_snapshots=0,
-)
-args = parser.parse_args()
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="store_true",
+        help="show this help message and continue with project help",
+    )
+    parser.add_argument("-et", "--end-time", type=float, default=None)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=6)
+    parser.add_argument("-l", "--grid-levels", type=int, default=1)
+    # parser.add_argument("-pr", "--precision", default="fp64", choices=available_precisions)
+    parser.add_argument(
+        "-s", "--scenario", choices=available_scenarios, default="AlfvenWave"
+    )
+    args, _ = parser.parse_known_args()
+    if args.help:
+        parser.print_help()
+        print()
+    return args
+
+
+args = parse_arguments()
 
 order = args.degrees_of_freedom - 1
-max_h = 1.1 * 6.0 / (3.0**args.min_depth)
-min_h = max_h * 3.0 ** (-args.amr_levels)
 
 polynomials = exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
 
@@ -45,7 +58,9 @@ elif args.scenario == "AlfvenWave":
     periodic_bc = True
     function_name = "AlfvenWaveTest"
 
-if args.build_mode == "Debug":
+if args.end_time is not None:
+    end_time = args.end_time
+elif exahype2.Project._parse_project_arguments().build_mode == "Debug":
     end_time = 0.1
 
 initial = (
@@ -84,15 +99,26 @@ analytical_solution = (
 project = exahype2.Project(
     namespace=["tests", "exahype2", "aderdg"],
     project_name=args.scenario,
-    directory=".",
+    dimensions=dimensions,
+    offset=(offset + [0.0, 0.0, 0.0])[:3],
+    size=(size + [size[-1]])[:3],
+    periodic_BC=[periodic_bc, periodic_bc, periodic_bc],
     executable="ExaHyPE",
+    min_end_time=end_time,
+    max_end_time=end_time,
+    min_grid_levels=args.grid_levels,
+    max_grid_levels=args.grid_levels,
 )
+
+if project.dimensions != dimensions:
+    raise ValueError(
+        f"Scenario {args.scenario} is {dimensions}D, but the project was configured "
+        f"for {project.dimensions}D."
+    )
 
 solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     name="ADERDGSolver",
     order=order,
-    min_cell_h=min_h,
-    max_cell_h=max_h,
     time_step_relaxation=0.9,
     unknowns={
         "rho": 1,
@@ -134,31 +160,12 @@ exahype2.solvers.aderdg.ErrorMeasurement(
     output_file_name="Error_"
     + args.scenario
     + "_md_"
-    + str(args.min_depth)
+    + str(args.grid_levels)
     + "_o_"
     + str(order),
 )
 
 project.add_solver(solver)
 
-if args.number_of_snapshots <= 0:
-    time_in_between_plots = 0.0
-else:
-    time_in_between_plots = end_time / args.number_of_snapshots
-    project.set_output_path(args.output)
-
-project.set_global_simulation_parameters(
-    dimensions=dimensions,
-    offset=offset[0:dimensions],
-    size=size[0:dimensions],
-    min_end_time=end_time,
-    max_end_time=end_time,
-    first_plot_time_stamp=0.0,
-    time_in_between_plots=time_in_between_plots,
-    periodic_BC=[periodic_bc, periodic_bc, periodic_bc][0:dimensions],
-)
-
-project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
-project.set_build_mode(mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
-project.build(make_clean_first=True)
+project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

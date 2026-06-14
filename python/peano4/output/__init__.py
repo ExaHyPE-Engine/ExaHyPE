@@ -4,6 +4,7 @@
 from .CompileMode                                   import CompileMode
 from .CompileMode                                   import CompileModes
 from .CompileMode                                   import string_to_mode
+from .CompileMode                                   import mode_to_string
 from .Constants                                     import Constants
 from .Helper                                        import Overwrite
 from .Makefile                                      import Makefile

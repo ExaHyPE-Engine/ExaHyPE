@@ -11,6 +11,7 @@
 {% endif %}
 
 #include "exahype2/CellData.h"
+#include "exahype2/RuntimeParameters.h"
 
 #include "peano4/parallel/parallel.h"
 
@@ -55,15 +56,16 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   traceEnter("ADER DG prediction task fusion");
 
   const int numberOfCells = otherTasks.size() + 1;
+  const int targetDevice  = ::exahype2::RuntimeParameters::getInstance().getTargetDevice();
 
   logDebug("Rank " << tarch::mpi::Rank::getInstance().getRank()
     << " asked to fuse " << numberOfCells << " cells of type " << getTaskType() << " into "
-    << {{NUMBER_OF_ENCLAVE_TASKS}} << " asynchronous enclave tasks on target device " << TARGET_DEVICE);
+    << {{NUMBER_OF_ENCLAVE_TASKS}} << " asynchronous enclave tasks on target device " << targetDevice);
 
   ::exahype2::CellData<{{SOLUTION_STORAGE_PRECISION}}, {{SOLUTION_STORAGE_PRECISION}}, 2> cellData(
     numberOfCells,
     tarch::MemoryLocation::Pinned,
-    TARGET_DEVICE
+    targetDevice
   );
 
   int cellIndex = 0;

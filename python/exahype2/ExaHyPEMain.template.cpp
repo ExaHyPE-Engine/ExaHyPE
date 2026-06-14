@@ -26,10 +26,11 @@
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
 
-#include "exahype2/exahype2.h"
+#include "exahype2/RuntimeParameters.h"
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <functional>
 #include <iomanip>
 #include <limits>
@@ -47,6 +48,16 @@ namespace {
   tarch::instrumentation::Measurement plotMeasurement;
   tarch::instrumentation::Measurement gridSweepMeasurement;
 
+  bool helpRequested(int argc, char** argv) {
+    for (int index = 1; index < argc; ++index) {
+      const std::string argument = argv[index];
+      if (argument == "--help" or argument == "-h") {
+        return true;
+      }
+    }
+    return false;
+  }
+
   static double logNextTimeStep = 0.0;
   static int currentNumberOfGridSweepsOfTimeStep = 0;
   static unsigned long numberOfCompletedTimeSteps = 0;
@@ -62,6 +73,7 @@ namespace {
 bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumberOfTrees) {
   assertion(repositories::loadBalancer.getStatistics().getGlobalNumberOfTrees() > 0);
   static bool finishConditionSeenLastSweep = false;
+  const double minAdmissiblePatchSize = ::exahype2::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
 
   // If the mesh size has decreased, we pause refinement to let the grid settle.
   if (tarch::la::smaller(repositories::loadBalancer.getStatistics().getGlobalMinH(), currentMinH)) {
@@ -86,7 +98,7 @@ bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumbe
   }
 
   const bool hasReachedGridConstructionConvergence =
-    tarch::la::smallerEquals(currentMinH, repositories::getMinAdmissibleMeshSize())
+    tarch::la::smallerEquals(currentMinH, minAdmissiblePatchSize)
     and
     repositories::loadBalancer.isStagnating()
     and
@@ -99,7 +111,7 @@ bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumbe
     // Therefore, we don't use this at the moment (set to true). This should be used as soon as periodic BCs work across subdomains.
     const bool hasConfirmedStationarySweep = /*repositories::loadBalancer.getStatistics().getGlobalNumberOfStationarySweeps() > 0;*/ true;
     if (finishConditionSeenLastSweep and hasConfirmedStationarySweep) {
-      logInfo("Grid construction complete: Admissible mesh size reached (h_{min}=" << currentMinH << ", admissible h_{min}=" << repositories::getMinAdmissibleMeshSize() << ") and load balancing has converged");
+      logInfo("Grid construction complete: Admissible mesh size reached (h_{min}=" << currentMinH << ", admissible h_{min}=" << minAdmissiblePatchSize << ") and load balancing has converged");
       return false;
     }
 
@@ -118,15 +130,18 @@ bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumbe
 bool selectNextAlgorithmicStep() {
   static bool    gridConstructed         = false;
   static bool    gridInitialised         = false;
-  static double  nextMaxPlotTimeStamp    = ::exahype2::getFirstPlotTimeStamp();
-  static double  nextMinPlotTimeStamp    = ::exahype2::getFirstPlotTimeStamp();
+  static double  nextMaxPlotTimeStamp    = ::exahype2::RuntimeParameters::getInstance().getFirstPlotTimeStamp();
+  static double  nextMinPlotTimeStamp    = ::exahype2::RuntimeParameters::getInstance().getFirstPlotTimeStamp();
   static bool    haveJustWrittenSnapshot = false;
   static double  minH                    = std::numeric_limits<double>::max();
   static int     globalNumberOfTrees     = 0;
   bool           continueToSolve         = true;
-  const double   timeInBetweenPlots      = ::exahype2::getTimeInBetweenPlots();
-  const double   minTerminalTime         = ::exahype2::getMinTerminalTime();
-  const double   maxTerminalTime         = ::exahype2::getMaxTerminalTime();
+  const auto&    runtimeParameters       = ::exahype2::RuntimeParameters::getInstance();
+  const double   minTerminalTime         = runtimeParameters.getMinTerminalTime();
+  const double   maxTerminalTime         = runtimeParameters.getMaxTerminalTime();
+  const double   plottingEndTime         = maxTerminalTime < std::numeric_limits<double>::max() / 10.0 ? maxTerminalTime : minTerminalTime;
+  const int      numberOfSnapshots       = runtimeParameters.getNumberOfSnapshots();
+  const double   snapshotInterval        = numberOfSnapshots <= 0 ? 0.0 : plottingEndTime / numberOfSnapshots;
 
   if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNonCriticalAssertion) {
     peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution));
@@ -143,7 +158,7 @@ bool selectNextAlgorithmicStep() {
     }
   } else {
     if (
-      timeInBetweenPlots > 0.0
+      snapshotInterval > 0.0
       and
       repositories::getMinTimeStamp() < minTerminalTime
       and
@@ -153,19 +168,19 @@ bool selectNextAlgorithmicStep() {
       and
       repositories::mayPlot()
     ) {
-      nextMinPlotTimeStamp += timeInBetweenPlots;
-      nextMaxPlotTimeStamp += timeInBetweenPlots;
+      nextMinPlotTimeStamp += snapshotInterval;
+      nextMaxPlotTimeStamp += snapshotInterval;
 
       if (nextMinPlotTimeStamp < repositories::getMinTimeStamp()) {
         logWarning("Code is asked to plot every dt="
-            << timeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
-            << "So postpone next plot to t=" << (repositories::getMinTimeStamp() + timeInBetweenPlots));
-        nextMinPlotTimeStamp = repositories::getMinTimeStamp() + timeInBetweenPlots;
+            << snapshotInterval << ", but this seems to be less than the time step size of the solvers. "
+            << "So postpone next plot to t=" << (repositories::getMinTimeStamp() + snapshotInterval));
+        nextMinPlotTimeStamp = repositories::getMinTimeStamp() + snapshotInterval;
       } else if (nextMaxPlotTimeStamp < repositories::getMaxTimeStamp()) {
         logWarning("Code is asked to plot every dt="
-            << timeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
-            << "So postpone next plot to t=" << (repositories::getMaxTimeStamp() + timeInBetweenPlots));
-        nextMaxPlotTimeStamp = repositories::getMaxTimeStamp() + timeInBetweenPlots;
+            << snapshotInterval << ", but this seems to be less than the time step size of the solvers. "
+            << "So postpone next plot to t=" << (repositories::getMaxTimeStamp() + snapshotInterval));
+        nextMaxPlotTimeStamp = repositories::getMaxTimeStamp() + snapshotInterval;
       }
 
       nextMaxPlotTimeStamp = std::max(nextMaxPlotTimeStamp, nextMinPlotTimeStamp);
@@ -177,12 +192,12 @@ bool selectNextAlgorithmicStep() {
       continueToSolve         = true;
       haveJustWrittenSnapshot = false;
     } else {
-      if (not haveJustWrittenSnapshot and timeInBetweenPlots > 0.0 and repositories::mayPlot()) {
+      if (not haveJustWrittenSnapshot and snapshotInterval > 0.0 and repositories::mayPlot()) {
         peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution));
         haveJustWrittenSnapshot = true;
         nextMinPlotTimeStamp    = std::numeric_limits<double>::max();
         nextMaxPlotTimeStamp    = std::numeric_limits<double>::max();
-      } else if (not haveJustWrittenSnapshot and timeInBetweenPlots > 0.0 and not repositories::mayPlot()) {
+      } else if (not haveJustWrittenSnapshot and snapshotInterval > 0.0 and not repositories::mayPlot()) {
         continueToSolve = true; // don't want to terminate immediately but to wait for incomplete time steps to complete
       } else {
         continueToSolve = false;
@@ -257,8 +272,8 @@ void logGlobalStatistics() {
     const auto elapsedWallTime = timeStepMeasurement.getAccumulatedValue() + plotMeasurement.getAccumulatedValue();
     const auto minTimeStamp    = repositories::getMinTimeStamp();
     const auto maxTimeStamp    = repositories::getMaxTimeStamp();
-    const auto minTerminalTime = ::exahype2::getMinTerminalTime();
-    const auto maxTerminalTime = ::exahype2::getMaxTerminalTime();
+    const auto minTerminalTime = ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime();
+    const auto maxTerminalTime = ::exahype2::RuntimeParameters::getInstance().getMaxTerminalTime();
 
     double expectedTimeUntilFinish = std::numeric_limits<double>::max();
     if (elapsedWallTime > 0.0 and std::isnormal(minTimeStamp) and minTimeStamp > 10.0 * std::numeric_limits<double>::min() and minTimeStamp < minTerminalTime) {
@@ -389,7 +404,7 @@ void runNextAlgorithmicStep() {
       repositories::logTimeStep();
       logGlobalStatistics();
       lastLoggedNumberOfCompletedTimeSteps = numberOfCompletedTimeSteps;
-      logNextTimeStep += repositories::LogTimeStepIntervalInSeconds;
+      logNextTimeStep += ::exahype2::RuntimeParameters::getInstance().getLogIntervalInSeconds();
     }
     break;
   case repositories::StepRepository::Steps::Undef:
@@ -399,24 +414,25 @@ void runNextAlgorithmicStep() {
 }
 
 void setupEnvironment(int argc, char** argv) {
-  const std::string configFilePath = ::exahype2::extractConfigFileFromCommandLine(argc, argv);
-  ::exahype2::RuntimeConfiguration fallbackConfiguration;
-  fallbackConfiguration.domainOffset       = DomainOffset;
-  fallbackConfiguration.domainSize         = DomainSize;
-  fallbackConfiguration.minTerminalTime    = MinTerminalTime;
-  fallbackConfiguration.maxTerminalTime    = MaxTerminalTime;
-  fallbackConfiguration.firstPlotTimeStamp = FirstPlotTimeStamp;
-  fallbackConfiguration.timeInBetweenPlots = TimeInBetweenPlots;
-  fallbackConfiguration.periodicBC         = PeriodicBC;
-  fallbackConfiguration.plotOutputPath     = OutputPath;
+  auto& runtimeParameters = ::exahype2::RuntimeParameters::getInstance();
+  runtimeParameters.setGeneratedDefaults(
+    {{DEFAULT_MIN_TERMINAL_TIME}},
+    {{DEFAULT_MAX_TERMINAL_TIME}},
+    {{DEFAULT_GRID_LEVELS}},
+    {{DEFAULT_MAX_GRID_LEVELS}}
+  );
+  if (helpRequested(argc, argv)) {
+    runtimeParameters.printUsage({{EXECUTABLE_NAME}});
+    RuntimeParameters::printUsage();
+    std::exit(EXIT_SUCCESS);
+  }
+  runtimeParameters.configure(argc, argv);
+  RuntimeParameters::load(runtimeParameters.getConfigFilePath(), argc, argv);
 
-  const auto runtimeConfiguration = ::exahype2::loadRuntimeConfiguration(configFilePath, fallbackConfiguration);
-  RuntimeParameters::load(configFilePath);
+  peano4::init(&argc, &argv, DomainOffset, DomainSize, PeriodicBC);
 
-  peano4::init(&argc, &argv, runtimeConfiguration.domainOffset, runtimeConfiguration.domainSize, runtimeConfiguration.periodicBC);
-
-  if (not configFilePath.empty()) {
-    logInfo("Loaded runtime configuration from " << configFilePath);
+  if (not runtimeParameters.getConfigFilePath().empty()) {
+    logInfo("Loaded runtime configuration from " << runtimeParameters.getConfigFilePath());
   }
 
   const int numberOfMaxGlobalSpacetrees = repositories::loadBalancer.getMaxPermittedTreesPerRank() * tarch::mpi::Rank::getInstance().getNumberOfRanks();

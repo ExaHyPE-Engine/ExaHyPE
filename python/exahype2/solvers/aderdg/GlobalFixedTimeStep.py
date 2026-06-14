@@ -11,8 +11,6 @@ class GlobalFixedTimeStep(SingleSweep):
         order,
         unknowns,
         auxiliary_variables,
-        min_cell_h,
-        max_cell_h,
         normalised_time_step_size,
         use_enclave_tasking=False,
         number_of_enclave_tasks=1,
@@ -22,10 +20,10 @@ class GlobalFixedTimeStep(SingleSweep):
             order=order,
             unknowns=unknowns,
             auxiliary_variables=auxiliary_variables,
-            min_cell_h=min_cell_h,
-            max_cell_h=max_cell_h,
             use_enclave_tasking=use_enclave_tasking,
             number_of_enclave_tasks=number_of_enclave_tasks,
         )
 
-        self._time_stepping_code_snippets = FixedTimeSteppingCodeSnippets(normalised_time_step_size)
+        self._time_stepping_code_snippets = FixedTimeSteppingCodeSnippets(
+            normalised_time_step_size
+        )

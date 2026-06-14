@@ -12,7 +12,6 @@ _LAZY_MODULES = {
 }
 
 _LAZY_ATTRIBUTES = {
-    "ArgumentParser": (".ArgumentParser", "ArgumentParser"),
     "Project": (".Project", "Project"),
     "ExaHyPEMain": (".ExaHyPEMain", "ExaHyPEMain"),
     "VariableShortcuts": (".VariableShortcuts", "VariableShortcuts"),

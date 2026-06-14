@@ -3,6 +3,7 @@
 #include "DataRepository.h"
 
 #include "AderSolver.h"
+#include "exahype2/RuntimeParameters.h"
 #include "peano4/utils/Linearised.h"
 #include "peano4/utils/Loop.h"
 
@@ -11,6 +12,16 @@
 #include <iterator>
 
 namespace benchmarks::exahype2::kernelbenchmarks {
+  namespace {
+    int getGridLength() {
+      int result = 1;
+      for (int level = 0; level < ::exahype2::RuntimeParameters::getInstance().getGridLevels(); ++level) {
+        result *= 3;
+      }
+      return result;
+    }
+  } // namespace
+
   int DataRepository::Indexing::linearise(
     const tarch::la::Vector<DIMENSIONS, int>&    cellIndex,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize
@@ -69,9 +80,10 @@ namespace benchmarks::exahype2::kernelbenchmarks {
   }
 
   DataRepository::DataRepository() {
-    const auto cellCount = std::pow(GridLength, DIMENSIONS);
-    const auto faceCount = std::pow(GridLength, DIMENSIONS - 1) * (GridLength + 1);
-    const int  depth     = static_cast<int>(std::round(std::log(GridLength) / std::log(3.0)));
+    const int  gridLength = getGridLength();
+    const auto cellCount  = std::pow(gridLength, DIMENSIONS);
+    const auto faceCount  = std::pow(gridLength, DIMENSIONS - 1) * (gridLength + 1);
+    const int  depth      = ::exahype2::RuntimeParameters::getInstance().getGridLevels();
 
     _depthLevels.resize(depth + 1); // For 1 AMR level
     _depthLevels[depth - 1].Q.resize(cellCount);
@@ -82,8 +94,8 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     }
 
     if (UseAMR) {
-      const auto cellCountAMR = std::pow(GridLength * 3, DIMENSIONS);
-      const auto faceCountAMR = std::pow(GridLength * 3, DIMENSIONS - 1) * (GridLength * 3 + 1);
+      const auto cellCountAMR = std::pow(gridLength * 3, DIMENSIONS);
+      const auto faceCountAMR = std::pow(gridLength * 3, DIMENSIONS - 1) * (gridLength * 3 + 1);
       _depthLevels[depth].Q.resize(cellCountAMR);
       _depthLevels[depth].QReconstructed.resize(cellCountAMR);
       for (int axis = 0; axis < DIMENSIONS; ++axis) {
@@ -109,8 +121,9 @@ namespace benchmarks::exahype2::kernelbenchmarks {
   int DataRepository::getcellQOldCardinality() const { return celldata::AderSolverQ_old::Cardinality; }
 
   std::size_t DataRepository::getMemoryUsageInBytes() const {
-    const auto  cellCount         = std::pow(GridLength, DIMENSIONS);
-    const auto  faceCount         = std::pow(GridLength, DIMENSIONS - 1) * (GridLength + 1);
+    const int   gridLength        = getGridLength();
+    const auto  cellCount         = std::pow(gridLength, DIMENSIONS);
+    const auto  faceCount         = std::pow(gridLength, DIMENSIONS - 1) * (gridLength + 1);
     const auto  volumeCount       = cellCount * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS);
     const auto  facesVolumesCount = faceCount * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS - 1) * 2;
     std::size_t totalStorageSize

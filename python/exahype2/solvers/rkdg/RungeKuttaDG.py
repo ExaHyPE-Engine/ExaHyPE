@@ -159,6 +159,7 @@ class RungeKuttaDG(object):
     - We set the updated flag if and only if we have finished the
       last Runge-Kutta step.
     """
+
     def __init__(
         self,
         name,
@@ -167,8 +168,6 @@ class RungeKuttaDG(object):
         face_projections: FaceProjections,
         unknowns,
         auxiliary_variables,
-        min_cell_h,
-        max_cell_h,
         pde_terms_without_state: bool,
         baseline_action_set_descend_invocation_order=0,
     ):
@@ -207,13 +206,6 @@ class RungeKuttaDG(object):
            unknowns and auxiliary_variables are merged into one big vector if we
            work with AoS. But the solver has to be able to distinguish them, as
            only the unknowns are subject to a hyperbolic formulation.
-
-        min_cell_h: double
-           This size refers to the individual discretisation cell.
-
-        max_cell_h: double
-           This size refers to the individual discretisation cell.
-
 
         :: Attributes
 
@@ -259,24 +251,12 @@ class RungeKuttaDG(object):
         self._multiply_with_inverted_mass_matrix_call = "#error Please set the solver property _multiply_with_inverted_mass_matrix_call in the Python class"
         self._kernel_namespace = "#error Please set the solver property _kernel_namespace in the Python class"
 
-        self._min_cell_h = min_cell_h
-        self._max_cell_h = max_cell_h
-
         self._solver_constants = ""
         self._user_action_set_includes = ""
         self._user_solver_includes = ""
 
         self._plotter = peano4.plotter.HDF5PatchNodalPlotter
         self._variable_shortcuts = VariableShortcuts(name, unknowns, auxiliary_variables)
-
-        if min_cell_h > max_cell_h:
-            raise Exception(
-                "min_cell_h ("
-                + str(min_cell_h)
-                + ") is bigger than max_cell_h ("
-                + str(max_cell_h)
-                + ")"
-            )
 
         self._solver_template_file_class_name = None
 
@@ -323,24 +303,6 @@ class RungeKuttaDG(object):
         self.create_data_structures()
         self.create_action_sets()
 
-    def get_min_number_of_spacetree_levels(self, domain_size):
-        coarsest_tree_level = 0
-        while domain_size * 3 ** (-coarsest_tree_level) > self._max_cell_h:
-            coarsest_tree_level += 1
-        return coarsest_tree_level
-
-    def get_max_number_of_spacetree_levels(self, domain_size):
-        finest_tree_level = 0
-        while domain_size * 3 ** (-finest_tree_level) > self._min_cell_h:
-            finest_tree_level += 1
-        return finest_tree_level
-
-    def get_coarsest_number_of_cells(self, domain_size):
-        return 3 ** self.get_min_number_of_spacetree_levels(domain_size)
-
-    def get_finest_number_of_cells(self, domain_size):
-        return 3 ** self.get_max_number_of_spacetree_levels(domain_size)
-
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (
             """
@@ -353,24 +315,7 @@ Real type of this solver: """
             + str(type(self))
             + """
 
-We assume that you use a domain size of (0,"""
-            + str(domain_size)
-            + """)^d. Peano 4 will cut this domain equidistantly
-and recursively into three parts along each coordinate axis. This yields a spacetree.
-
-The spacetree will at least have """
-            + str(self.get_min_number_of_spacetree_levels(domain_size))
-            + """ levels.
-The spacetree will at most have """
-            + str(self.get_max_number_of_spacetree_levels(domain_size))
-            + """ levels.
-
-The spacetree will thus span at least """
-            + str(self.get_coarsest_number_of_cells(domain_size))
-            + """ cells per coordinate axis.
-The spacetree will thus span at most """
-            + str(self.get_finest_number_of_cells(domain_size))
-            + """ cells per coordinate axis.
+Grid resolution is selected at runtime through RuntimeParameters.
 
 We use RK("""
             + str(self._rk_order)
@@ -1198,11 +1143,6 @@ We use RK("""
         d["ASSERTION_WITH_4_ARGUMENTS"] = "nonCriticalAssertion4"
         d["ASSERTION_WITH_5_ARGUMENTS"] = "nonCriticalAssertion5"
         d["ASSERTION_WITH_6_ARGUMENTS"] = "nonCriticalAssertion6"
-
-        if self._min_cell_h > self._max_cell_h:
-            raise Exception("min/max h are inconsistent")
-        d["MAX_CELL_H"] = self._max_cell_h
-        d["MIN_CELL_H"] = self._min_cell_h
 
         d["SOLVER_CONSTANTS"] = self._solver_constants
 

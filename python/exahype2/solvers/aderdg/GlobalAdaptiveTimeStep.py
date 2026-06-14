@@ -11,8 +11,6 @@ class GlobalAdaptiveTimeStep(SingleSweep):
         order,
         unknowns,
         auxiliary_variables,
-        min_cell_h,
-        max_cell_h,
         time_step_relaxation,
         use_enclave_tasking=False,
         number_of_enclave_tasks=1,
@@ -22,8 +20,6 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             order=order,
             unknowns=unknowns,
             auxiliary_variables=auxiliary_variables,
-            min_cell_h=min_cell_h,
-            max_cell_h=max_cell_h,
             use_enclave_tasking=use_enclave_tasking,
             number_of_enclave_tasks=number_of_enclave_tasks,
         )

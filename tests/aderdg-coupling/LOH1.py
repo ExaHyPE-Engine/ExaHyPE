@@ -1,26 +1,16 @@
+import argparse
+import os
+import sys
 
-import peano4, exahype2
-import os, sys
+import exahype2
 
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
 sys.path.insert(0, os.path.abspath("../../applications/exaseis/cartesian"))
 import Elastic
+degrees_of_freedom = 6
 
-parser = exahype2.ArgumentParser("ExaHyPE 2 - ADER-DG Coupled Solvers Testing Script")
-parser.set_defaults(
-    min_depth=2,
-    degrees_of_freedom=6,
-    number_of_snapshots=0,
-)
-args = parser.parse_args()
-
-order = args.degrees_of_freedom - 1
-
-if args.build_mode == "Debug":
-    end_time = 0.1
-else:
-    end_time = 2.0
+order = degrees_of_freedom - 1
 
 polynomials = "legendre"
 use_tracers = True
@@ -31,16 +21,56 @@ size = [12.15, 12.15, 12.15]
 unknowns            = {"v": 3, "sigma": 6}
 auxiliary_variables = {"rho":1, "cp": 1, "cs": 1}
 
-max_h               = 1.1 * min(size) / (3.0**args.min_depth)
-min_h               = max_h * 3.0 ** (-args.amr_levels)
 
-project = exahype2.Project(["tests", "exahype2", "aderdg"], ".",
-  executable="coupled_LOH1" )
+def parse_arguments():
+  parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+  parser.add_argument(
+    "-h",
+    "--help",
+    action="store_true",
+    help="show this help message and continue with project help",
+  )
+  parser.add_argument("-et", "--end-time", type=float, default=2.0)
+  parser.add_argument("-l", "--grid-levels", type=int, default=None)
+  parser.add_argument("-lmin", "--min-grid-levels", type=int, default=2)
+  parser.add_argument("-lmax", "--max-grid-levels", type=int, default=2)
+  args, _ = parser.parse_known_args()
+  if args.grid_levels is not None:
+      args.min_grid_levels = args.grid_levels
+      args.max_grid_levels = args.grid_levels
+  if args.help:
+    parser.print_help()
+    print()
+  return args
+
+
+args = parse_arguments()
+
+project = exahype2.Project(
+    ["tests", "exahype2", "aderdg"],
+    "LOH1",
+    executable="coupled_LOH1",
+    dimensions=3,
+    size=size[0:3],
+    offset=offset[0:3],
+    periodic_BC=[False, False, False],
+    min_end_time=args.end_time,
+    max_end_time=args.end_time,
+    min_grid_levels=args.min_grid_levels,
+    max_grid_levels=args.max_grid_levels,
+)
+
+if project.dimensions != 3:
+  raise ValueError(
+    f"LOH1 coupling is a 3D testcase, but the project was configured for "
+    f"{project.dimensions}D."
+  )
+
 
 hpSolver=exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   name="hpElastic",  order=order,
   unknowns=unknowns, auxiliary_variables=auxiliary_variables,
-  min_cell_h=min_h, max_cell_h=max_h, time_step_relaxation=0.9
+  time_step_relaxation=0.9
 )
 
 hpSolver.add_kernel_optimisations(
@@ -50,7 +80,7 @@ hpSolver.add_kernel_optimisations(
 lpSolver=exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   name="lpElastic",  order=order,
   unknowns=unknowns, auxiliary_variables=auxiliary_variables,
-  min_cell_h=min_h, max_cell_h=max_h, time_step_relaxation=0.9
+  time_step_relaxation=0.9
 )
 
 lpSolver.add_kernel_optimisations(
@@ -70,14 +100,6 @@ if use_tracers:
           ]
       )
   )
-
-  project.add_action_set_to_timestepping(
-      peano4.toolbox.particles.api.UpdateParallelState(particle_set=tracer_particles)
-  )
-
-  if not os.path.exists("tracers"):
-      os.makedirs("tracers")
-
 
 from fuseADERSolvers import fuseADERSolvers
 fuseADERSolvers(hpSolver, lpSolver, """
@@ -128,7 +150,7 @@ for theSolver in [hpSolver, lpSolver]:
     project.add_action_set_to_timestepping(
         exahype2.tracer.DumpTracerIntoDatabase(
             particle_set=tracer_particles, solver=theSolver,
-            filename="tracers/Cartesian_l"+str(args.min_depth)+"_o"+str(order)+"_"+polynomials+theSolver.get_name_of_global_instance(),
+            filename="tracers/Cartesian_o"+str(order)+"_"+polynomials+theSolver.get_name_of_global_instance(),
             data_delta_between_two_snapshots=1e16, time_delta_between_two_snapshots=0.01,
             output_precision=10, clear_database_after_flush=False
         )
@@ -158,24 +180,5 @@ for theSolver in [hpSolver, lpSolver]:
 # """
 # )
 # project.add_solver(limiter)
-
-
-if args.number_of_snapshots <= 0:
-    time_in_between_plots = 0.0
-else:
-    time_in_between_plots = end_time / args.number_of_snapshots
-    project.set_output_path(args.output)
-
-project.set_global_simulation_parameters(
-  dimensions            = 3,
-  offset                = offset[0:3],
-  size                  = size[0:3],
-  min_end_time          = end_time,
-  first_plot_time_stamp = 0.0,
-  time_in_between_plots = time_in_between_plots,
-)
-
-project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration()")
-project.set_build_mode(mode=peano4.output.string_to_mode(args.build_mode))
-peano4_project = project.generate_Peano4_project("False")
-peano4_project.build(make_clean_first=True)
+peano4_project = project.generate_Peano4_project(verbose=False)
+peano4_project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

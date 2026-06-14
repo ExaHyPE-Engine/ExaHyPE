@@ -6,6 +6,7 @@
 #include "tarch/la/Vector.h"
 
 #include <string>
+#include <vector>
 
 {% for item in NAMESPACE -%}
 namespace {{ item }} {
@@ -23,12 +24,14 @@ struct {{NAMESPACE | join("::")}}::RuntimeParameters {
   };
 
   static void load(const std::string& configFilePath);
+  static void load(const std::string& configFilePath, int& argc, char** argv);
+  static void printUsage();
 
 {%- for parameter in RUNTIME_PARAMETERS %}
 {%- if parameter.is_array %}
   static INLINE_METHOD GPU_CALLABLE_METHOD {{ parameter.return_type }} {{ parameter.accessor_name }}() {
-    tarch::la::Vector<DIMENSIONS, {{ parameter.scalar_cpp_type }}> result;
-    for (int d = 0; d < DIMENSIONS; ++d) {
+    tarch::la::Vector<{{ parameter.array_size }}, {{ parameter.scalar_cpp_type }}> result;
+    for (int d = 0; d < {{ parameter.array_size }}; ++d) {
       result[d] = _storage.{{ parameter.name }}[d];
     }
     return result;
@@ -41,6 +44,13 @@ struct {{NAMESPACE | join("::")}}::RuntimeParameters {
 {%- endfor %}
 
 private:
+{%- for parameter in RUNTIME_PARAMETERS if parameter.is_array %}
+  static {{ parameter.cpp_type }} to{{ parameter.name[0].upper() }}{{ parameter.name[1:] }}(
+    const std::vector<{{ parameter.scalar_cpp_type }}>& values,
+    const {{ parameter.cpp_type }}& defaultValue
+  );
+{%- endfor %}
+
   TARGET_DECLARE
   static Storage _storage;
   TARGET_DECLARE_END

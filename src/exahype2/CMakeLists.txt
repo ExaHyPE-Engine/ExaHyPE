@@ -4,7 +4,7 @@
 file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 
 set(SOURCES
-  exahype2.cpp
+  RuntimeParameters.cpp
   CellAccess.cpp
   CellData.cpp
   EnclaveBookkeeping.cpp

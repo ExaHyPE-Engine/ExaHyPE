@@ -7,15 +7,13 @@
 We have Peano 4 and ExaHyPE 2 installed, but how do we use it? For this, let's take a look at our first configuration file, in `tutorials/exahype2/acoustic/Acoustic.ipynb`
 The configuration files are in Python, so it should surprise no one that they start with the following:
 
-    import peano4, exahype2
+    import exahype2
 
 With our imports out of the way, we are free to define our problem, for this, let's start with a solver:
 
     my_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
         name                  = "PlanarAcousticSolver",
         order                 = 5,
-        min_cell_h            = cell_h,
-        max_cell_h            = cell_h,
         time_step_relaxation  = 0.9,
         unknowns              = {"p": 1, "v": 2},
         auxiliary_variables   = {}
@@ -43,33 +41,29 @@ With this out of the way, we need to create an environment for the solver to run
         namespace     = ["tutorials", "exahype2", "acoustic"],
         directory     = ".",
         project_name  = "PlanarWaves",
-        executable    = "PlanarWaves"
+        executable    = "PlanarWaves",
+        dimensions    = 2,
+        size          = [2., 2.],
+        offset        = [0., 0.],
+        periodic_BC   = [True, True],
+        min_end_time  = 1.414,  # sqrt(2)
+        max_end_time  = 1.414,  # sqrt(2)
+        min_grid_levels = 5,
+        max_grid_levels = 5,
     )
 
     exahype2_project.add_solver(my_solver)
 
 This handles things like the grid generation, traversal, data exchanges and such.
-Once again we need to populated it with some data, such as the number of dimensions our problem is in,
-the size of the domain, how long the simulation should run for and when to plot.
+The project also defines the number of dimensions, the size and offset of the
+domain, the default end time, the default grid levels, and whether periodic
+boundary conditions are used. Plotting and output locations are runtime
+parameters of the generated executable.
 
-We can also specify here whether we want to use periodic boundary conditions:
+Finally, we generate all the glue code we need and compile it. Build mode,
+dimensions, clean-first and parallel build jobs can be selected through the
+project script's command line:
 
-    exahype2_project.set_global_simulation_parameters(
-      dimensions            = 2,
-      size                  = [2., 2.],
-      offset                = [0., 0.],
-      min_end_time          = 1.414,  # sqrt(2)
-      max_end_time          = 1.414,  # sqrt(2)
-      first_plot_time_stamp = 0.0,
-      time_in_between_plots = 0.1,
-      periodic_BC           = [True, True],
-    )
-
-Finally, we configure the load balancer and the build mode for the project,
-and then we can generate all the glue code we need and compile it:
-
-    exahype2_project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
-    exahype2_project.set_build_mode(peano4.output.CompileMode.Release)
     peano4_project = exahype2_project.generate_Peano4_project()
     peano4_project.build()
 

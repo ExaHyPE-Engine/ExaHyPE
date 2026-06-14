@@ -1,3 +1,4 @@
+import argparse
 import sys
 import os
 
@@ -18,6 +19,7 @@ from AirglowInitialization import (
 
 """
 This application demonstrates how to setup a scenario for airglow chemistry.
+
 It shows steady states for chemicals and needed interpolations for coupling with the stratified atmosphere model.
 Input files can be obtained from https://ccmc.gsfc.nasa.gov/models/NRLMSIS~00/
 
@@ -32,10 +34,16 @@ The application makes the following assumptions:
 """
 
 if __name__ == "__main__":
-    parser = exahype2.ArgumentParser(
-        "ExaHyPE 2 Gravity Waves Airglow Chemistry Argument Parser"
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="store_true",
+        help="show this help message and continue with project help",
     )
-    parser.set_defaults(min_depth=5, degrees_of_freedom=16, end_time=500)
+    parser.add_argument("-et", "--end-time", type=float, default=500)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=16)
+    parser.add_argument("-l", "--grid-levels", type=int, default=5)
     parser.add_argument(
         "-ec",
         "--einstein-coefficients",
@@ -50,9 +58,27 @@ if __name__ == "__main__":
         type=str,
         help="Path to CSV file for use as initial conditions for this project.",
     )
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
+    if args.help:
+        parser.print_help()
+        print()
 
     size = [220e3, 220e3, 220e3]
+    project = exahype2.Project(
+        namespace=["applications", "exahype2", "GravityWaves"],
+        project_name="GravityWaves",
+        dimensions=2,
+        offset=[0, 0, 0],
+        size=size,
+        periodic_BC=[False, False, False],
+        directory=".",
+        executable="ExaHyPE",
+        min_end_time=args.end_time,
+        max_end_time=args.end_time,
+        min_grid_levels=args.grid_levels,
+        max_grid_levels=args.grid_levels,
+    )
+    dimensions = project.dimensions
 
     initial_conditions = (
         GravityWaves.get_CSV_initializer(
@@ -108,12 +134,9 @@ if __name__ == "__main__":
         #endif
       }"""
 
-    max_h = 1.1 * min(size) / (3.0**args.min_depth)
-    min_h = max_h * 3.0 ** (-args.amr_levels)
-
     unknowns_list = ["O", "O2", "N2", "O3", "H", "O2cu", "OS"]
     auxiliary_list = ["u", "v"]
-    if args.dimensions == 3:
+    if dimensions == 3:
         auxiliary_list.append("w")
     auxiliary_list.append("T")
 
@@ -142,8 +165,6 @@ if __name__ == "__main__":
         patch_size=args.degrees_of_freedom,
         unknowns=chemical_unknowns,
         auxiliary_variables=chemical_auxiliary_variables,
-        min_volume_h=min_h,
-        max_volume_h=max_h,
         time_step_relaxation=0.5,
     )
 
@@ -164,11 +185,10 @@ if __name__ == "__main__":
     riemann_solver.add_solver_constants(GravityWaves.CSV_CONSTANTS)
 
     project = GravityWaves.create_peano_project(
+        project=project,
         atmospheric_solver=None,
         diffusion_solver=None,
         chemical_solver=riemann_solver,
-        size=size[: args.dimensions],
-        arguments=args,
     )
 
     project.output.makefile.add_CXX_flag(f"""-DHORIZONTAL_WINDSPEED=10.5""")

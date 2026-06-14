@@ -1,9 +1,9 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+import argparse
 import os
 import sys
 
-import peano4
 import exahype2
 
 sys.path.insert(0, os.path.abspath("../../../tests/fv"))
@@ -32,38 +32,55 @@ boundary_conditions = """
   Qoutside[Shortcuts::rhoE]     = Qinside[Shortcuts::rhoE];
 """
 
-parser = exahype2.ArgumentParser("ExaHyPE 2 Finite Volumes Kernel Benchmarking Script")
-parser.set_defaults(
-    min_depth=4,
-    degrees_of_freedom=16,
-)
 
-parser.add_argument(
-    "-s",
-    "--samples",
-    type=int,
-    default=0,
-    help="Set number of samples for benchmarking, if not set, run until scenario end",
-)
+def parse_arguments():
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="store_true",
+        help="show this help message and continue with project help",
+    )
+    parser.add_argument("-et", "--end-time", type=float, default=0.5)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=16)
+    parser.add_argument("-l", "--grid-levels", type=int, default=4)
+    parser.add_argument(
+        "-s",
+        "--samples",
+        type=int,
+        default=0,
+        help="Set number of samples for benchmarking, if not set, run until scenario end",
+    )
+    args, _ = parser.parse_known_args()
+    if args.help:
+        parser.print_help()
+        print()
+    return args
 
-args = parser.parse_args()
+
+args = parse_arguments()
 
 size = [1.0, 1.0, 1.0]
 
 project = exahype2.Project(
     namespace=["benchmarks", "exahype2", "kernelbenchmarks"],
     project_name="KernelBenchmarks",
-    directory=".",
+    dimensions=2,
+    size=size,
+    offset=[0.0, 0.0, 0.0],
+    periodic_BC=[False, False, False],
     executable="KernelBenchmarks",
+    min_end_time=args.end_time,
+    max_end_time=args.end_time,
+    min_grid_levels=args.grid_levels,
+    max_grid_levels=args.grid_levels,
 )
 
 fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
-    unknowns={"rho": 1, "rhoU": args.dimensions, "rhoE": 1},
+    unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
     auxiliary_variables=0,
-    min_volume_h=(1.1 * min(size[0 : args.dimensions]) / (3.0**args.min_depth)),
-    max_volume_h=(1.1 * min(size[0 : args.dimensions]) / (3.0**args.min_depth)),
     time_step_relaxation=0.5,
     use_enclave_tasking=True,
 )
@@ -77,38 +94,24 @@ fv_solver.set_implementation(
 
 project.add_solver(fv_solver)
 
-if args.number_of_snapshots <= 0:
-    time_in_between_plots = 0.0
-else:
-    time_in_between_plots = args.end_time / args.number_of_snapshots
-    project.set_output_path(args.output)
-
-project.set_global_simulation_parameters(
-    dimensions=args.dimensions,
-    size=size[0 : args.dimensions],
-    offset=[0.0, 0.0, 0.0][0 : args.dimensions],
-    min_end_time=args.end_time,
-    max_end_time=args.end_time,
-    first_plot_time_stamp=0.0,
-    time_in_between_plots=time_in_between_plots,
-    periodic_BC=[False] * args.dimensions,
-)
-
-project.set_build_mode(mode=peano4.output.string_to_mode(args.build_mode))
-
 project = project.generate_Peano4_project(verbose=False)
 
 project.constants.export_constexpr_with_type(
-    "GridLength", str(3**args.min_depth), "int"
+    "BenchmarkMinTerminalTime", str(args.end_time), "double"
+)
+project.constants.export_constexpr_with_type(
+    "BenchmarkMaxTerminalTime", str(args.end_time), "double"
+)
+project.constants.export_constexpr_with_type(
+    "BenchmarkGridLevels", str(args.grid_levels), "int"
+)
+project.constants.export_constexpr_with_type(
+    "BenchmarkMaxGridLevels", str(args.grid_levels), "int"
 )
 
-project.constants.export_constexpr_with_type(
-    "ShouldPlot", "true" if args.number_of_snapshots > 0 else "false", "bool"
-)
+project.constants.export_constexpr_with_type("ShouldPlot", "true", "bool")
 
-project.constants.export_constexpr_with_type(
-    "UseAMR", "true" if args.amr_levels > 0 else "false", "bool"
-)
+project.constants.export_constexpr_with_type("UseAMR", "false", "bool")
 
 project.constants.export_constexpr_with_type("Samples", str(args.samples), "int")
 
@@ -121,7 +124,6 @@ makefile.add_cpp_file("DataRepository.cpp")
 makefile.add_h_file("EnclaveDataRepository.h")
 makefile.add_cpp_file("EnclaveDataRepository.cpp")
 
-makefile.set_target_device(args.target_device)
 makefile.add_CXX_flag("-DGAMMA=1.4")
 
-project.build()
+project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

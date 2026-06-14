@@ -147,7 +147,7 @@ class StaticCoupling(object):
             " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()==celldata::" + self._name + "CellLabel::Troubled_Marker::REGULAR"
         )
 
-        self._regular_solver._action_set_correction.guard += (
+        self._regular_solver._action_set_correction.cell_guard += (
             " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()==celldata::" + self._name + "CellLabel::Troubled_Marker::REGULAR"
         )
 
@@ -159,7 +159,7 @@ class StaticCoupling(object):
             " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()==celldata::" + self._name + "CellLabel::Troubled_Marker::TROUBLED"
         )
 
-        self._limiter_solver._action_set_correction.guard += (
+        self._limiter_solver._action_set_correction.cell_guard += (
             " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()==celldata::" + self._name + "CellLabel::Troubled_Marker::TROUBLED"
         )
 

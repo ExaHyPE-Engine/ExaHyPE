@@ -28,7 +28,7 @@ class AdaptiveTimeSteppingCodeSnippets(
 
     def create_print_time_step_implementation(self):
         return """
-  logInfo("t" << tarch::align << getMinTimeStamp() << " / " << MinTerminalTime);
+  logInfo("t" << tarch::align << getMinTimeStamp() << " / " << ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime());
   logInfo("dt" << tarch::align << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : _admissibleTimeStepSizeThisTimeStep));
   logInfo("h_{min}" << tarch::align << getMinCellSize() << " (patch size)");
   logInfo("h_{max}" << tarch::align << getMaxCellSize() << " (patch size)");
@@ -69,7 +69,7 @@ class AdaptiveTimeSteppingCodeSnippets(
           logWarning("Degenerated time step size of " << std::to_string(dtCFL) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h=" << _minCellHThisTimeStep << ")");
         }
 
-        const auto dtToEnd                  = std::max(0.0, MinTerminalTime - _minTimeStampThisTimeStep);
+        const auto dtToEnd                  = std::max(0.0, ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime() - _minTimeStampThisTimeStep);
         _admissibleTimeStepSizeThisTimeStep = std::min(dtToEnd, dtCFL);
       }
 """

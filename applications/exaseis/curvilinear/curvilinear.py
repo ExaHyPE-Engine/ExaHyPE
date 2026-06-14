@@ -1,8 +1,10 @@
-import os, sys, peano4, exahype2
+import argparse
+import os
+import sys
 
+import exahype2
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
-import os, sys
 import subprocess
 
 import CurvilinearElastic
@@ -20,10 +22,37 @@ precision = "fp64"
 use_tracers = True
 order = 5
 min_level = 3
-plot_dt  = 0.0
+max_depth = 0
 
 scenario_string = scenario.lower()
 my_scenario = available_scenarios[scenario]
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="store_true",
+        help="show this help message and continue with project help",
+    )
+    parser.add_argument("-et", "--end-time", type=float, default=my_scenario.end_time)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=order)
+    parser.add_argument("-l", "--grid-levels", type=int, default=None)
+    parser.add_argument("-lmin", "--min-grid-levels", type=int, default=min_level)
+    parser.add_argument("-lmax", "--max-grid-levels", type=int, default=min_level + max_depth)
+    args, _ = parser.parse_known_args()
+    if args.grid_levels is not None:
+        args.min_grid_levels = args.grid_levels
+        args.max_grid_levels = args.grid_levels
+    if args.help:
+        parser.print_help()
+        print()
+    return args
+
+
+args = parse_arguments()
+order = args.degrees_of_freedom
 
 unknowns = {"v": 3, "sigma": 6}
 auxiliary_variables = {
@@ -34,21 +63,32 @@ auxiliary_variables = {
 
 offset  = my_scenario.domain_offset
 size    = my_scenario.domain_size
-end_time = my_scenario.end_time
-
-max_depth = 0
-max_h = 1.1 * min(size) / (3.0**min_level)
-min_h = max_h / (3.0**max_depth)
+end_time = args.end_time
 
 my_scenario.generate_required_files(order)
+
+filename = scenario+"_l"+str(args.min_grid_levels)+"_o"+str(order)+"_pr_"+precision
+project = exahype2.Project(
+    ["applications", "exahype2", "exaseis"],
+    "curvi",
+    dimensions=3,
+    offset=offset,
+    size=size,
+    periodic_BC=[False, False, False],
+    executable="LOH1",
+    min_end_time=end_time,
+    max_end_time=end_time,
+    min_grid_levels=args.min_grid_levels,
+    max_grid_levels=args.max_grid_levels,
+)
+if project.dimensions != 3:
+    raise ValueError("The curvilinear ExaSeis application is three-dimensional.")
 
 theSolver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     name="ElasticSolver",
     order=order,
     unknowns=unknowns,
     auxiliary_variables=auxiliary_variables,
-    min_cell_h=min_h,
-    max_cell_h=max_h,
     time_step_relaxation=0.9
 )
 
@@ -78,9 +118,6 @@ theSolver._abstract_solver_user_definitions  += CurvilinearElastic.abstractUserD
 theSolver._start_grid_initialisation_implementation += CurvilinearElastic.init_grid_step_implementation(scenario_string)
 theSolver.add_user_solver_includes(CurvilinearElastic.userIncludes())
 
-filename = scenario+"_l"+str(min_level)+"_o"+str(order)+"_pr_"+precision
-project = exahype2.Project(["applications", "exahype2", "exaseis"], "curvi", executable="LOH1")
-
 project.add_solver(theSolver)
 
 if use_tracers:
@@ -93,19 +130,6 @@ if use_tracers:
         output_precision=10, clear_database_after_flush=False
     ))
 
-project.set_global_simulation_parameters(
-    dimensions=3,
-    offset=offset,
-    size=size,
-    min_end_time=end_time,
-    max_end_time=end_time,
-    first_plot_time_stamp=0.0,
-    time_in_between_plots=0.0,
-    periodic_BC=[False, False, False],
-)
-
-project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration()")
-project.set_build_mode(peano4.output.CompileMode.Release)
 peano4_project = project.generate_Peano4_project(verbose=False)
 peano4_project.build(make_clean_first=True)
 

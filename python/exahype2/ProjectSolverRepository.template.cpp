@@ -10,7 +10,7 @@
 
 #include "peano4/parallel/SpacetreeSet.h"
 
-#include "exahype2/exahype2.h"
+#include "exahype2/RuntimeParameters.h"
 #include "exahype2/LoadBalancingConfiguration.h"
 #include "exahype2/RefinementControlService.h"
 
@@ -31,11 +31,8 @@ namespace {{ item }} {
 
 int statisticsExchangeTag = tarch::mpi::Rank::reserveFreeTag("SolverRepository - statistics exchange tag");
 
-{% if LOAD_BALANCER_CONFIGURATION!="" %}
-toolbox::loadbalancing::LoadBalancer loadBalancer({{LOAD_BALANCER_CONFIGURATION}});
-{% else %}
-toolbox::loadbalancing::LoadBalancer loadBalancer(new ::exahype2::LoadBalancingConfiguration);
-{% endif %}
+
+toolbox::loadbalancing::LoadBalancer loadBalancer(new ::exahype2::LoadBalancingConfiguration(PeriodicBC.count()>0));
 
 {% for item in SOLVERS -%}
 {{ item[0] }} {{ item[1] }};
@@ -115,33 +112,17 @@ double getMaxMeshSize() {
   return result;
 }
 
-double getMaxAdmissibleMeshSize() {
-  double result = 0.0;
-  {% for item in SOLVERS -%}
-  result = std::max( result, {{ item[1] }}.getMaxAdmissibleMeshSize() );
-  {# Comment to ensure that jinja2 adds a new line#}
-  {%- endfor %}
-  return result;
-}
-
-double getMinAdmissibleMeshSize() {
-  double result = std::numeric_limits<double>::max();
-  {% for item in SOLVERS -%}
-  result = std::min( result, {{ item[1] }}.getMinAdmissibleMeshSize() );
-  {# Comment to ensure that jinja2 adds a new line#}
-  {%- endfor %}
-  return result;
-}
-
 std::size_t getMaxNumberOfPatches() {
-  const auto ratio = DomainSize[0] / std::min(getMinAdmissibleMeshSize(), DomainSize[0]);
+  const auto admissiblePatchSize = ::exahype2::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
+  const auto ratio = DomainSize[0] / std::min(admissiblePatchSize, DomainSize[0]);
   const std::size_t depth = static_cast<std::size_t>(std::round(std::log(ratio) / std::log(3.0))) + 1;
   const std::size_t patches = std::max(std::size_t{9}, static_cast<size_t>(std::pow(3, depth * DIMENSIONS)));
   return patches;
 }
 
 std::size_t getMaxNumberOfFaces() {
-  const auto ratio = DomainSize[0] / std::min(getMinAdmissibleMeshSize(), DomainSize[0]);
+  const auto admissiblePatchSize = ::exahype2::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
+  const auto ratio = DomainSize[0] / std::min(admissiblePatchSize, DomainSize[0]);
   const std::size_t depth = static_cast<std::size_t>(std::round(std::log(ratio) / std::log(3.0))) + 1;
   const std::size_t facesPerDimension = std::max(std::size_t{12}, static_cast<size_t>(std::pow(3, depth * DIMENSIONS) + std::pow(3, depth)));
   return facesPerDimension * DIMENSIONS;

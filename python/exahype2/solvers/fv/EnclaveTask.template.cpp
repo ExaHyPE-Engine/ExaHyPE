@@ -9,6 +9,7 @@
 #include "kernels/{{SOLVER_NAME}}/RiemannSolver.h"
 
 #include "exahype2/CellData.h"
+#include "exahype2/RuntimeParameters.h"
 #include "exahype2/fv/PatchUtils.h"
 
 #include "peano4/parallel/parallel.h"
@@ -60,15 +61,16 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   traceEnter("Finite volume enclave task fusion");
 
   const int numberOfPatches = otherTasks.size() + 1;
+  const int targetDevice    = ::exahype2::RuntimeParameters::getInstance().getTargetDevice();
 
   logDebug("Rank " << tarch::mpi::Rank::getInstance().getRank()
     << " asked to fuse " << numberOfPatches << " patches of type " << getTaskType() << " into "
-    << {{NUMBER_OF_ENCLAVE_TASKS}} << " asynchronous enclave tasks on target device " << TARGET_DEVICE);
+    << {{NUMBER_OF_ENCLAVE_TASKS}} << " asynchronous enclave tasks on target device " << targetDevice);
 
   ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3> patchData(
     numberOfPatches,
     tarch::MemoryLocation::Pinned,
-    TARGET_DEVICE
+    targetDevice
   );
 
   std::vector<double> hostFacesOld;
@@ -104,12 +106,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   }
   processTaskFaces(this);
 
-  {{STORAGE_PRECISION}}* deviceFacesOld    = tarch::allocateMemory<{{STORAGE_PRECISION}}>(hostFacesOld.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-  {{STORAGE_PRECISION}}* deviceFacesUpdate = tarch::allocateMemory<{{STORAGE_PRECISION}}>(hostFacesUpdate.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-  {{STORAGE_PRECISION}}* deviceFacesNew    = tarch::allocateMemory<{{STORAGE_PRECISION}}>(hostFacesNew.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-  tarch::copyTo(deviceFacesOld, hostFacesOld.data(), hostFacesOld.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-  tarch::copyTo(deviceFacesUpdate, hostFacesUpdate.data(), hostFacesUpdate.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-  tarch::copyTo(deviceFacesNew, hostFacesNew.data(), hostFacesNew.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  {{STORAGE_PRECISION}}* deviceFacesOld    = tarch::allocateMemory<{{STORAGE_PRECISION}}>(hostFacesOld.size(), tarch::MemoryLocation::Pinned, targetDevice);
+  {{STORAGE_PRECISION}}* deviceFacesUpdate = tarch::allocateMemory<{{STORAGE_PRECISION}}>(hostFacesUpdate.size(), tarch::MemoryLocation::Pinned, targetDevice);
+  {{STORAGE_PRECISION}}* deviceFacesNew    = tarch::allocateMemory<{{STORAGE_PRECISION}}>(hostFacesNew.size(), tarch::MemoryLocation::Pinned, targetDevice);
+  tarch::copyTo(deviceFacesOld, hostFacesOld.data(), hostFacesOld.size(), tarch::MemoryLocation::Pinned, targetDevice);
+  tarch::copyTo(deviceFacesUpdate, hostFacesUpdate.data(), hostFacesUpdate.size(), tarch::MemoryLocation::Pinned, targetDevice);
+  tarch::copyTo(deviceFacesNew, hostFacesNew.data(), hostFacesNew.size(), tarch::MemoryLocation::Pinned, targetDevice);
   hostFacesOld.clear();
   hostFacesUpdate.clear();
   hostFacesNew.clear();
@@ -196,9 +198,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   }
   patchData.numberOfBoundaryFaces = boundaryFaceNumbers.size();
   if (patchData.numberOfBoundaryFaces > 0) {
-    patchData.patchIndicesOfBoundaryFaces = tarch::allocateMemory<std::uint64_t>(patchIndicesOfBoundaryFaces.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-    patchData.boundaryFaceNumbers         = tarch::allocateMemory<std::uint8_t>(boundaryFaceNumbers.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-    patchData.boundaryFaceIndices         = tarch::allocateMemory<std::uint64_t>(boundaryFaceIndices.size(), tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+    patchData.patchIndicesOfBoundaryFaces = tarch::allocateMemory<std::uint64_t>(patchIndicesOfBoundaryFaces.size(), tarch::MemoryLocation::Pinned, targetDevice);
+    patchData.boundaryFaceNumbers         = tarch::allocateMemory<std::uint8_t>(boundaryFaceNumbers.size(), tarch::MemoryLocation::Pinned, targetDevice);
+    patchData.boundaryFaceIndices         = tarch::allocateMemory<std::uint64_t>(boundaryFaceIndices.size(), tarch::MemoryLocation::Pinned, targetDevice);
 
     std::copy_n(
       patchIndicesOfBoundaryFaces.data(),
@@ -222,18 +224,18 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   patchData.QInFlattened = tarch::allocateMemory<{{STORAGE_PRECISION}}>(
     numberOfPatches * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %},
     tarch::MemoryLocation::Pinned,
-    TARGET_DEVICE
+    targetDevice
   );
   patchData.QOutFlattened = tarch::allocateMemory<{{STORAGE_PRECISION}}>(
     numberOfPatches * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %},
     tarch::MemoryLocation::Pinned,
-    TARGET_DEVICE
+    targetDevice
   );
   patchData.facesFlattened = deviceFacesNew;
   patchData.faceIndices = tarch::allocateMemory<std::uint64_t>(
     hostFaceIndices.size(),
     tarch::MemoryLocation::Pinned,
-    TARGET_DEVICE
+    targetDevice
   );
   std::copy_n(
     hostFaceIndices.data(),
@@ -243,7 +245,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 
   if (patchData.numberOfBoundaryFaces > 0) {
     traceEnter("Handle boundary");
-    kernels::{{SOLVER_NAME}}::handleBoundaryFused(repositories::{{SOLVER_INSTANCE}}, patchData, TARGET_DEVICE);
+    kernels::{{SOLVER_NAME}}::handleBoundaryFused(repositories::{{SOLVER_INSTANCE}}, patchData, targetDevice);
     traceLeave("Handle boundary");
   }
 
@@ -261,7 +263,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   }
 
   traceEnter("Patch reconstruction");
-  kernels::{{SOLVER_NAME}}::reconstructPatchFused(patchData, TARGET_DEVICE);
+  kernels::{{SOLVER_NAME}}::reconstructPatchFused(patchData, targetDevice);
   traceLeave("Patch reconstruction");
 
   // QOut of patch reconstruction is now QIn for the Riemann solver
@@ -317,7 +319,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   // QOut of Riemann solver is now QIn for the patch reconstruction
   std::swap(patchData.QInFlattened, patchData.QOutFlattened);
   traceEnter("Patch projection");
-  kernels::{{SOLVER_NAME}}::projectPatchFused(patchData, TARGET_DEVICE);
+  kernels::{{SOLVER_NAME}}::projectPatchFused(patchData, targetDevice);
   traceLeave("Patch projection");
   std::swap(patchData.QInFlattened, patchData.QOutFlattened);
 
@@ -349,17 +351,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     }
   }
 
-  tarch::freeMemory(patchData.QInFlattened, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-  tarch::freeMemory(patchData.QOutFlattened, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-  tarch::freeMemory(patchData.faceIndices, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  tarch::freeMemory(patchData.QInFlattened, tarch::MemoryLocation::Pinned, targetDevice);
+  tarch::freeMemory(patchData.QOutFlattened, tarch::MemoryLocation::Pinned, targetDevice);
+  tarch::freeMemory(patchData.faceIndices, tarch::MemoryLocation::Pinned, targetDevice);
   if (patchData.numberOfBoundaryFaces > 0) {
-    tarch::freeMemory(patchData.patchIndicesOfBoundaryFaces, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-    tarch::freeMemory(patchData.boundaryFaceNumbers, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-    tarch::freeMemory(patchData.boundaryFaceIndices, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+    tarch::freeMemory(patchData.patchIndicesOfBoundaryFaces, tarch::MemoryLocation::Pinned, targetDevice);
+    tarch::freeMemory(patchData.boundaryFaceNumbers, tarch::MemoryLocation::Pinned, targetDevice);
+    tarch::freeMemory(patchData.boundaryFaceIndices, tarch::MemoryLocation::Pinned, targetDevice);
   }
-  tarch::freeMemory(deviceFacesOld, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-  tarch::freeMemory(deviceFacesUpdate, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
-  tarch::freeMemory(deviceFacesNew, tarch::MemoryLocation::Pinned, TARGET_DEVICE);
+  tarch::freeMemory(deviceFacesOld, tarch::MemoryLocation::Pinned, targetDevice);
+  tarch::freeMemory(deviceFacesUpdate, tarch::MemoryLocation::Pinned, targetDevice);
+  tarch::freeMemory(deviceFacesNew, tarch::MemoryLocation::Pinned, targetDevice);
 
   {{COMPUTE_NEW_TIME_STEP_SIZE}}
   repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, _t + _dt, tarch::la::min(_marker.getH()), tarch::la::max(_marker.getH()));

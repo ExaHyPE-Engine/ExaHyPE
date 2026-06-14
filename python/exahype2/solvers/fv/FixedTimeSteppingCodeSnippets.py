@@ -9,7 +9,7 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
 
     def create_print_time_step_implementation(self):
         return """
-  logInfo("t" << tarch::align << getMinTimeStamp() << " / " << MinTerminalTime);
+  logInfo("t" << tarch::align << getMinTimeStamp() << " / " << ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime());
   logInfo("dt" << tarch::align << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : getTimeStepSize()));
   logInfo("h_{min}" << tarch::align << getMinVolumeSize() << " (volume size)");
   logInfo("h_{max}" << tarch::align << getMaxVolumeSize() << " (volume size)");
@@ -23,14 +23,16 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
         return (
             """
     if (isLastGridSweepOfTimeStep()) {
+      const double maxAdmissibleCellSize = ::exahype2::RuntimeParameters::getInstance().getMaxAdmissibleCellSize(
+        DomainSize,
+        NumberOfFiniteVolumesPerAxisPerPatch
+      );
       assertion(_minVolumeH >= 0.0);
-      assertion(MaxAdmissibleVolumeH > 0.0);
-      if (_minVolumeHThisTimeStep <= MaxAdmissibleVolumeH) {
-        // TODO: Bug in FV: MaxAdmissibleVolumeH may change without _minVolumeHThisTimeStep changing depending on the patch size.
-        // This leads to different time step sizes for the same grid.
+      assertion(maxAdmissibleCellSize > 0.0);
+      if (_minVolumeHThisTimeStep <= maxAdmissibleCellSize) {
         _timeStepSize = """
             + str(self._normalised_time_step_size)
-            + """ * _minVolumeHThisTimeStep / MaxAdmissibleVolumeH;
+            + """ * _minVolumeHThisTimeStep / maxAdmissibleCellSize;
       } else {
         _timeStepSize = 0.0;
       }

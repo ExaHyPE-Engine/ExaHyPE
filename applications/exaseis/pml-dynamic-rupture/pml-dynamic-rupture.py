@@ -1,5 +1,8 @@
-import os, sys, peano4, exahype2
+import argparse
+import os
+import sys
 
+import exahype2
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
 sys.path.insert(0, os.path.abspath("../pml"))
@@ -37,25 +40,57 @@ auxiliary_variables = {
 
 offset   = my_scenario.domain_offset
 size     = my_scenario.domain_size
-end_time = my_scenario.end_time
-plot_dt  = 0.0
 order = 5
 min_level = 3
 max_depth = 0
-max_h = 1.1 * min(size) / (3.0**min_level)
-min_h = max_h / (3.0**max_depth)
 
 precision = "fp64"
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="store_true",
+        help="show this help message and continue with project help",
+    )
+    parser.add_argument("-et", "--end-time", type=float, default=my_scenario.end_time)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=order)
+    parser.add_argument("-l", "--grid-levels", type=int, default=min_level)
+    args, _ = parser.parse_known_args()
+    if args.help:
+        parser.print_help()
+        print()
+    return args
+
+
+args = parse_arguments()
+order = args.degrees_of_freedom
+end_time = args.end_time
+
 my_scenario.generate_required_files(order)
+
+project = exahype2.Project(
+    ["applications", "exahype2", "exaseis"],
+    "pml",
+    dimensions=3,
+    offset=offset,
+    size=size,
+    periodic_BC=[False, False, False],
+    executable=scenario,
+    min_end_time=end_time,
+    max_end_time=end_time,
+    min_grid_levels=args.grid_levels,
+    max_grid_levels=args.grid_levels,
+)
+if project.dimensions != 3:
+    raise ValueError("The PML dynamic rupture ExaSeis application is three-dimensional.")
 
 theSolver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     name="ElasticSolver",
     order=order,
     unknowns=unknowns,
     auxiliary_variables=auxiliary_variables,
-    min_cell_h=min_h,
-    max_cell_h=max_h,
     time_step_relaxation=0.9
 )
 
@@ -83,11 +118,9 @@ theSolver._start_grid_initialisation_implementation += DynamicRuptureElastic.ini
 theSolver._destructor_implementation += PMLElastic.abstractDestructor()
 theSolver.add_user_solver_includes(PMLDynamicRuptureElastic.userIncludes())
 
-project = exahype2.Project(["applications", "exahype2", "exaseis"], "pml", executable=scenario)
-
 project.add_solver(theSolver)
 
-filename = scenario+"_l_"+str(min_level)+"_o_"+str(order)+"_pr_"+str(precision)
+filename = scenario+"_l_"+str(args.grid_levels)+"_o_"+str(order)+"_pr_"+str(precision)
 
 project.add_action_set_to_timestepping(
     exahype2.tracer.CurviTracer(
@@ -100,21 +133,5 @@ project.add_action_set_to_timestepping(
     unknowns_to_store=12
 ))
 
-if plot_dt > 0.0:
-  project.set_output_path("solutions"+filename)
-
-project.set_global_simulation_parameters(
-    dimensions=3,
-    offset=offset,
-    size=size,
-    min_end_time=end_time,
-    max_end_time=end_time,
-    first_plot_time_stamp=0.0,
-    time_in_between_plots=plot_dt,
-    periodic_BC=[False, False, False],
-)
-
-project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration()")
-project.set_build_mode(peano4.output.CompileMode.Release)
 peano4_project = project.generate_Peano4_project(verbose=False)
 peano4_project.build(make_clean_first=True)

@@ -35,7 +35,7 @@ class ErrorMeasurementParticles:
         solver.add_user_solver_includes(
             """
 #include "toolbox/blockstructured/GlobalDatabase.h"
-#include "exahype2/exahype2.h"
+#include "exahype2/RuntimeParameters.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 """
@@ -82,7 +82,7 @@ def create_start_simulation_implementation_for_error_measurement(
         """
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     _errorDatabase.setDeltaBetweenTwoDatabaseFlushes({{FLUSH_DELTA}});
-    _errorDatabase.setOutputFileName(::exahype2::getPlotOutputPath() + "{{FILENAME}}");
+    _errorDatabase.setOutputFileName(::exahype2::RuntimeParameters::getInstance().getPlotOutputPath() + "{{FILENAME}}");
     _errorDatabase.setDataName("l0-error, l2-error, l_inf-error");
     // _errorDatabase.setOutputPrecision({{OUTPUT_PRECISION}});
     _errorDatabase.setDataDeltaBetweenTwoSnapshots({{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}});

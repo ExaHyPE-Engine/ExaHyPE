@@ -1,7 +1,7 @@
 Language:        Cpp
 # BasedOnStyle:  LLVM
 AccessModifierOffset: -2
-AlignAfterOpenBracket: BlockIndent
+AlignAfterOpenBracket: Align
 AlignArrayOfStructures: None
 AlignConsecutiveMacros: None
 AlignConsecutiveAssignments: true
@@ -100,7 +100,7 @@ IndentPPDirectives: None
 IndentExternBlock: AfterExternBlock
 IndentRequires:  false
 IndentWidth:     2
-IndentWrappedFunctionNames: true
+IndentWrappedFunctionNames: false
 IndentRequiresClause: true
 InsertTrailingCommas: None
 JavaScriptQuotes: Leave
@@ -124,8 +124,8 @@ PenaltyBreakOpenParenthesis: 0
 PenaltyBreakString: 100
 PenaltyBreakTemplateDeclaration: 100
 PenaltyExcessCharacter: 1000
-PenaltyReturnTypeOnItsOwnLine: 20000
-PenaltyIndentedWhitespace: 100
+PenaltyReturnTypeOnItsOwnLine: 100
+PenaltyIndentedWhitespace: 0
 PointerAlignment: Left
 PPIndentWidth:   -1
 ReferenceAlignment: Pointer

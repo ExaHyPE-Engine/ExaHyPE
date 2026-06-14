@@ -31,8 +31,6 @@ class FD(object):
         order,
         unknowns,
         auxiliary_variables,
-        min_h,
-        max_h,
         use_enclave_tasking: bool,
         number_of_enclave_tasks: int,
         solvers_before_in_coupling: list,
@@ -47,16 +45,8 @@ class FD(object):
            The order has to be bigger or equal to one. It has to be smaller or equal
            to patch_size.
 
-        min_h: double
-           This size refers to the minimum distance between nodes.
-
-        max_h: double
-           This size refers to the maximum distance between nodes.
         """
         self._name = name
-
-        self._min_h = min_h
-        self._max_h = max_h
 
         if order < 1:
             raise Exception("order (" + str(order) + ") is smaller than 1")
@@ -85,11 +75,6 @@ class FD(object):
         self._solver_constants = ""
         self._user_action_set_includes = ""
         self._user_solver_includes = ""
-
-        if min_h > max_h:
-            raise Exception(
-                "min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")"
-            )
 
         self._solver_template_file_class_name = None
 
@@ -165,38 +150,6 @@ class FD(object):
         self.create_data_structures()
         self.create_action_sets()
 
-    def get_min_number_of_spacetree_levels(self, domain_size):
-        coarsest_tree_level = 0
-        while (
-            domain_size * 3 ** (-coarsest_tree_level) / self._patch_size > self._max_h
-        ):
-            coarsest_tree_level += 1
-        return coarsest_tree_level
-
-    def get_max_number_of_spacetree_levels(self, domain_size):
-        finest_tree_level = 0
-        while domain_size * 3 ** (-finest_tree_level) / self._patch_size > self._min_h:
-            finest_tree_level += 1
-        return finest_tree_level
-
-    def get_coarsest_number_of_patches(self, domain_size):
-        return 3 ** self.get_min_number_of_spacetree_levels(domain_size)
-
-    def get_finest_number_of_patches(self, domain_size):
-        return 3 ** self.get_max_number_of_spacetree_levels(domain_size)
-
-    def get_coarsest_number_of_nodes(self, domain_size):
-        return self.get_coarsest_number_of_patches(domain_size) * self._patch_size
-
-    def get_finest_number_of_nodes(self, domain_size):
-        return self.get_finest_number_of_patches(domain_size) * self._patch_size
-
-    def get_coarsest_H(self, domain_size):
-        return domain_size / self.get_coarsest_number_of_nodes(domain_size)
-
-    def get_finest_H(self, domain_size):
-        return domain_size / self.get_finest_number_of_nodes(domain_size)
-
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (
             """
@@ -210,50 +163,11 @@ Real type of this solver: """
             + str(type(self))
             + """
 
-We assume that you use a domain size of (0,"""
-            + str(domain_size)
-            + """)^d. Peano 4 will cut this domain equidistantly
-and recursively into three parts along each coordinate axis. This yields a spacetree.
-
-The spacetree will at least have """
-            + str(self.get_min_number_of_spacetree_levels(domain_size))
-            + """ levels.
-The spacetree will at most have """
-            + str(self.get_max_number_of_spacetree_levels(domain_size))
-            + """ levels.
-
-The spacetree will thus span at least """
-            + str(self.get_coarsest_number_of_patches(domain_size))
-            + """ cells (or patches) per coordinate axis. This means a """
-            + str(self.get_coarsest_number_of_patches(domain_size))
-            + """^d grid of patches.
-The spacetree will thus span at most """
-            + str(self.get_finest_number_of_patches(domain_size))
-            + """ cells (or patches) per coordinate axis. This means a """
-            + str(self.get_finest_number_of_patches(domain_size))
-            + """^d grid of patches.
-
 ExaHyPE 2 embeds """
             + str(self._patch_size)
             + """^d patches of nodes into the finest tree level.
 
-The coarsest possible mesh will consist of """
-            + str(self.get_coarsest_number_of_nodes(domain_size))
-            + """ nodes per coordinate axis.
-The finest possible mesh will consist of """
-            + str(self.get_finest_number_of_nodes(domain_size))
-            + """ nodes per coordinate axis.
-
-The coarsest mesh width of """
-            + str(self.get_coarsest_H(domain_size))
-            + """ is thus just smaller than the maximum internodal distance """
-            + str(self._max_h)
-            + """.
-The finest mesh width of """
-            + str(self.get_finest_H(domain_size))
-            + """ is thus just smaller than the minimum internodal distance """
-            + str(self._min_h)
-            + """.
+Grid resolution is selected at runtime through RuntimeParameters.
 """
         )
 
@@ -962,11 +876,6 @@ The finest mesh width of """
             * self._patch_overlap_new.dim[2]
         )
 
-        if self._min_h > self._max_h:
-            raise Exception("min/max h are inconsistent")
-
-        d["MAX_H"] = self._max_h
-        d["MIN_H"] = self._min_h
         d["SOLVER_CONSTANTS"] = self._solver_constants
         d["SOLVER_INCLUDES"] = self.user_solver_includes
 
@@ -1067,6 +976,20 @@ The finest mesh width of """
     @property
     def patch_size(self):
         return self._patch_size
+
+    @patch_size.setter
+    def patch_size(self, value):
+        if value < 1:
+            raise Exception("Patch size has to be bigger than zero but was {}".format(value))
+        if value < self._order:
+            raise Exception(
+                "Patch size ({}) has to be bigger than or equal to order ({})".format(
+                    value, self._order
+                )
+            )
+        self._patch_size = value
+        self.create_data_structures()
+        self.create_action_sets()
 
     @property
     def last_solver(self):

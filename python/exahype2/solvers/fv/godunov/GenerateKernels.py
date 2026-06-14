@@ -111,7 +111,7 @@ def generate_fused_kernels(
     kernels::{{SOLVER_NAME}}::riemannSolverFused(
       repositories::{{SOLVER_INSTANCE}},
       patchData,
-      TARGET_DEVICE
+      targetDevice
     );
 """,
         undefined=jinja2.DebugUndefined,

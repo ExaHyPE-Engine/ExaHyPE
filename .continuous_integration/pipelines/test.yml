@@ -36,8 +36,8 @@ FV:
       dimensions: [2]
       build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv && PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -d $dimensions -m $build_type -md ${MIN_GRID_LEVELS}"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv && $PARALLEL_LAUNCH ./ExaHyPE"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv && PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py --dimensions $dimensions --build-mode $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags
@@ -56,8 +56,8 @@ FV Tracers:
       dimensions: [2]
       build_type: [Release]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-tracers && PYTHONPATH=$CI_PROJECT_DIR/python python3 $test.py"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-tracers && $PARALLEL_LAUNCH ./ExaHyPE"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-tracers && PYTHONPATH=$CI_PROJECT_DIR/python python3 $test.py --dimensions $dimensions --build-mode $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-tracers && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags
@@ -75,8 +75,8 @@ FV Coupling:
     - dimensions: [2, 3]
       build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-coupling && PYTHONPATH=$CI_PROJECT_DIR/python python3 fv-coupling.py -d $dimensions -m $build_type"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-coupling && $PARALLEL_LAUNCH ./ExaHyPE"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-coupling && PYTHONPATH=$CI_PROJECT_DIR/python python3 fv-coupling.py --dimensions $dimensions --build-mode $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-coupling && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags
@@ -94,8 +94,8 @@ FV Static AMR:
     - dimensions: [2]
       build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-static-amr && PYTHONPATH=$CI_PROJECT_DIR/python python3 fv-static-amr.py -d $dimensions -m $build_type -enclave"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-static-amr && $PARALLEL_LAUNCH ./ExaHyPE"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-static-amr && PYTHONPATH=$CI_PROJECT_DIR/python python3 fv-static-amr.py --dimensions $dimensions --build-mode $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-static-amr && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags
@@ -114,8 +114,8 @@ FV Dynamic AMR:
       dimensions: [2]
       build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-dynamic-amr && PYTHONPATH=$CI_PROJECT_DIR/python python3 $test.py -d $dimensions -m $build_type -md ${MIN_GRID_LEVELS} -amr ${MAX_GRID_LEVELS}"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-dynamic-amr && $PARALLEL_LAUNCH ./ExaHyPE"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-dynamic-amr && PYTHONPATH=$CI_PROJECT_DIR/python python3 $test.py --dimensions $dimensions --build-mode $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-dynamic-amr && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags
@@ -133,8 +133,8 @@ FD:
     - dimensions: [2, 3]
       build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fd && PYTHONPATH=$CI_PROJECT_DIR/python python3 fd.py -d $dimensions -m $build_type"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fd && $PARALLEL_LAUNCH ./ExaHyPE"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fd && PYTHONPATH=$CI_PROJECT_DIR/python python3 fd.py --dimensions $dimensions --build-mode $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fd && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags
@@ -152,8 +152,8 @@ FV-FD Coupling:
     - dimensions: [2, 3]
       build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-fd-coupling && PYTHONPATH=$CI_PROJECT_DIR/python python3 fv-fd-coupling.py -d $dimensions -m $build_type"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-fd-coupling && $PARALLEL_LAUNCH ./ExaHyPE"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-fd-coupling && PYTHONPATH=$CI_PROJECT_DIR/python python3 fv-fd-coupling.py --dimensions $dimensions --build-mode $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-fd-coupling && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags
@@ -172,8 +172,8 @@ ADERDG:
       build_type: [Release, Debug]
       precision: [float, double]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg && PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg.py -s $scenario -m $build_type -pr $precision -md ${MIN_GRID_LEVELS} -ns 0"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg && $PARALLEL_LAUNCH ./ExaHyPE"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg && PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg.py -s $scenario --build-mode $build_type -pr $precision"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags
@@ -190,8 +190,8 @@ ADERDG Static AMR:
     matrix:
     - build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-static-amr && PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg-static-amr.py -m $build_type -md ${MIN_GRID_LEVELS}"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-static-amr && $PARALLEL_LAUNCH ./ExaHyPE"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-static-amr && PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg-static-amr.py --build-mode $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-static-amr && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags
@@ -210,8 +210,8 @@ ADERDG Dynamic AMR:
       dimensions: [2]
       build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-dynamic-amr && PYTHONPATH=$CI_PROJECT_DIR/python python3 $test.py -d $dimensions -m $build_type -md ${MIN_GRID_LEVELS} -amr ${MAX_GRID_LEVELS}"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-dynamic-amr && $PARALLEL_LAUNCH ./ExaHyPE"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-dynamic-amr && PYTHONPATH=$CI_PROJECT_DIR/python python3 $test.py --dimensions $dimensions --build-mode $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-dynamic-amr && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags
@@ -229,8 +229,8 @@ ADERDG Limiting:
     - test: [static-limiting-swe, static-limiting-euler-airfoil, posteriori-limiting-euler-shock, posteriori-limiting-landslide]
       build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-limiting && PYTHONPATH=$CI_PROJECT_DIR/python python3 $test.py -m $build_type -md ${MIN_GRID_LEVELS}"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-limiting && $PARALLEL_LAUNCH ./ExaHyPE"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-limiting && PYTHONPATH=$CI_PROJECT_DIR/python python3 $test.py --build-mode $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-limiting && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags
@@ -248,8 +248,8 @@ ADERDG GRMHD:
     - scenario: [AlfvenWave, MichelSphericalAccretion]
       build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-grmhd && PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg-grmhd.py -s $scenario -m $build_type"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-grmhd && $PARALLEL_LAUNCH ./ExaHyPE"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-grmhd && PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg-grmhd.py -s $scenario --build-mode $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-grmhd && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags
@@ -266,8 +266,8 @@ ADERDG Coupling:
     matrix:
     - build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-coupling && PYTHONPATH=$CI_PROJECT_DIR/python python3 LOH1.py -m $build_type"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-coupling && $PARALLEL_LAUNCH ./coupled_LOH1"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-coupling && PYTHONPATH=$CI_PROJECT_DIR/python python3 LOH1.py --build-mode $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/aderdg-coupling && $PARALLEL_LAUNCH ./coupled_LOH1 -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags
@@ -285,8 +285,8 @@ RKDG:
     - scenario: [AcousticPlanarWaves, AdvectionLinear, ElasticPlanarWaves, EulerIsentropicVortex, SWERestingLake]
       build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/rkdg && PYTHONPATH=$CI_PROJECT_DIR/python python3 rkdg.py -s $scenario -m $build_type -md ${MIN_GRID_LEVELS} -ns 0"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/rkdg && $PARALLEL_LAUNCH ./ExaHyPE"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/rkdg && PYTHONPATH=$CI_PROJECT_DIR/python python3 rkdg.py -s $scenario --build-mode $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/rkdg && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags

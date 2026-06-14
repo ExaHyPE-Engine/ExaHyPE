@@ -13,7 +13,7 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
 
     def create_print_time_step_implementation(self):
         return """
-  logInfo("t" << tarch::align << getMinTimeStamp() << " / " << MinTerminalTime);
+  logInfo("t" << tarch::align << getMinTimeStamp() << " / " << ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime());
   logInfo("dt" << tarch::align << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : getTimeStepSize()));
   logInfo("h_{min}" << tarch::align << getMinMeshSize() << " (internodal distance)");
   logInfo("h_{max}" << tarch::align << getMaxMeshSize() << " (internodal distance)");
@@ -27,12 +27,16 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
         return (
             """
     if (isLastGridSweepOfTimeStep()) {
+      const double maxAdmissibleCellSize = ::exahype2::RuntimeParameters::getInstance().getMaxAdmissibleCellSize(
+        DomainSize,
+        NumberOfNodesPerAxisPerPatch
+      );
       assertion(_minH >= 0.0);
-      assertion(MaxAdmissibleH > 0.0);
-      if (_minHThisTimeStep <= MaxAdmissibleH) {
+      assertion(maxAdmissibleCellSize > 0.0);
+      if (_minHThisTimeStep <= maxAdmissibleCellSize) {
         _timeStepSize = """
             + str(self._normalised_time_step_size)
-            + """ * _minHThisTimeStep / MaxAdmissibleH;
+            + """ * _minHThisTimeStep / maxAdmissibleCellSize;
       } else {
         _timeStepSize = 0.0;
       }

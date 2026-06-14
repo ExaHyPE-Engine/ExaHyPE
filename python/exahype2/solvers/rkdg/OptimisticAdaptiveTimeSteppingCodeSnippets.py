@@ -23,7 +23,7 @@ class OptimisticAdaptiveTimeSteppingCodeSnippets( exahype2.solvers.OptimisticAda
 
   def create_print_time_step_implementation(self):
     return """
-  logInfo("t" << tarch::align << getMinTimeStamp() << " / " << MinTerminalTime);
+  logInfo("t" << tarch::align << getMinTimeStamp() << " / " << ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime());
   logInfo("dt" << tarch::align << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : getAdmissibleTimeStepSize()));
   logInfo("dt_{predicted}" << tarch::align << getPredictedAdmissibleTimeStepSize() << (_cancelOptimisticTasks ? " [cancel predicted tasks]" : ""));
   logInfo("h_{min}" << tarch::align << _minGridCellHThisTimeStep << " (individual grid cell within a patch)");

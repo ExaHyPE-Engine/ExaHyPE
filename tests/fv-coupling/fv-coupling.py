@@ -1,22 +1,43 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import peano4
+import argparse
+
 import exahype2
 
-parser = exahype2.ArgumentParser("ExaHyPE 2 - Finite Volumes Coupling Testing Script")
 
-parser.set_defaults(
-    min_depth=3,
-    degrees_of_freedom=16,
-    end_time=1.0,
-    periodic_boundary_conditions_x=False,
-    periodic_boundary_conditions_y=False,
-    periodic_boundary_conditions_z=False,
+def parse_arguments():
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="store_true",
+        help="show this help message and continue with project help",
+    )
+    parser.add_argument("-et", "--end-time", type=float, default=0.01)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=16)
+    parser.add_argument("-l", "--grid-levels", type=int, default=3)
+    args, _ = parser.parse_known_args()
+    if args.help:
+        parser.print_help()
+        print()
+    return args
+
+
+args = parse_arguments()
+
+project = exahype2.Project(
+    namespace=["tests", "exahype2", "fv"],
+    project_name=".",
+    dimensions=2,
+    size=[1.0, 1.0, 1.0],
+    offset=[0.0, 0.0, 0.0],
+    periodic_BC=[False, False, False],
+    executable="ExaHyPE",
+    min_end_time=args.end_time,
+    max_end_time=args.end_time,
+    min_grid_levels=args.grid_levels,
+    max_grid_levels=args.grid_levels,
 )
-args = parser.parse_args()
-
-max_h = 1.1 / 3.0**args.min_depth
-min_h = max_h * 3.0 ** (-args.amr_levels)
 
 #########
 # EULER #
@@ -27,7 +48,7 @@ euler_unknowns = {
     "rhoU": 1,
     "rhoV": 1,
 }
-if args.dimensions == 3:
+if project.dimensions == 3:
     euler_unknowns["rhoW"] = 1
 euler_unknowns["rhoE"] = 1
 
@@ -105,8 +126,6 @@ euler_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     patch_size=args.degrees_of_freedom,
     unknowns=euler_unknowns,
     auxiliary_variables=0,
-    min_volume_h=min_h,
-    max_volume_h=max_h,
     time_step_relaxation=0.5,
 )
 
@@ -127,7 +146,7 @@ advection_auxiliary_variables = {
     "rhoU": 1,
     "rhoV": 1,
 }
-if args.dimensions == 3:
+if project.dimensions == 3:
     advection_auxiliary_variables["rhoW"] = 1
 
 advection_initial_conditions = """
@@ -173,8 +192,6 @@ advection_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     patch_size=args.degrees_of_freedom,
     unknowns=advection_unknowns,
     auxiliary_variables=advection_auxiliary_variables,
-    min_volume_h=min_h,
-    max_volume_h=max_h,
     time_step_relaxation=0.5,
     solvers_before_in_coupling=[euler_solver],
 )
@@ -242,7 +259,7 @@ euler_solver.postprocess_updated_patch += f"""// Copy density and momenta
   );
 """
 
-if args.dimensions == 3:
+if project.dimensions == 3:
     euler_solver.postprocess_updated_patch += f"""
 #if DIMENSIONS == 3
   ::toolbox::blockstructured::copyUnknown(
@@ -267,39 +284,9 @@ euler_solver.last_solver = advection_solver
 # PROJECT #
 ###########
 
-project = exahype2.Project(
-    namespace=["tests", "exahype2", "fv"],
-    project_name=".",
-    directory=".",
-    executable="ExaHyPE",
-)
-
 project.add_solver(euler_solver)
 project.add_solver(advection_solver)
 
-if args.number_of_snapshots <= 0:
-    time_in_between_plots = 0.0
-else:
-    time_in_between_plots = args.end_time / args.number_of_snapshots
-    project.set_output_path(args.output)
-
-project.set_global_simulation_parameters(
-    dimensions=args.dimensions,
-    size=[1.0, 1.0, 1.0][0 : args.dimensions],
-    offset=[0.0, 0.0, 0.0][0 : args.dimensions],
-    min_end_time=args.end_time,
-    max_end_time=args.end_time,
-    first_plot_time_stamp=0.0,
-    time_in_between_plots=time_in_between_plots,
-    periodic_BC=[
-        args.periodic_boundary_conditions_x,
-        args.periodic_boundary_conditions_y,
-        args.periodic_boundary_conditions_z,
-    ],
-)
-
-project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
-project.set_build_mode(mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
 project.output.makefile.add_CXX_flag("-DGAMMA=1.4")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

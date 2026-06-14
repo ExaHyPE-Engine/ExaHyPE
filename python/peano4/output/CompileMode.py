@@ -17,12 +17,7 @@ class CompileMode(Enum):
 
 
 """!
-Overview over all compile modes available
-
-Is often used within the argument parser:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-parser.add_argument("-m", "--mode", dest="mode", choices=peano4.output.CompileModes, default=peano4.output.CompileModes[0], help="|".join(peano4.output.CompileModes))
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Overview over all compile modes available.
 """
 CompileModes = ["Release", "Trace", "Asserts", "Debug"]
 
@@ -40,4 +35,16 @@ def string_to_mode(mode: CompileMode):
         return CompileMode.Asserts
     if mode == CompileModes[3]:
         return CompileMode.Debug
+    raise Exception("Compile mode {} not supported".format(mode))
+
+
+def mode_to_string(mode: CompileMode):
+    if mode == CompileMode.Release:
+        return CompileModes[0]
+    if mode == CompileMode.Trace:
+        return CompileModes[1]
+    if mode == CompileMode.Asserts:
+        return CompileModes[2]
+    if mode == CompileMode.Debug:
+        return CompileModes[3]
     raise Exception("Compile mode {} not supported".format(mode))
