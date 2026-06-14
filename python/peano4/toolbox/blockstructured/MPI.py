@@ -51,7 +51,7 @@ def get_face_merge_implementation(patch_overlap):
             volume(faceNormal) += marker.outerNormal()(faceNormal) > 0 ? j + {OVERLAP} : j;
             const int volumeSerialised = serialisePatchIndex(volume, faceNormal);
             for (int k = 0; k < {UNKNOWNS}; k++) {{
-              assertion1(src[volumeSerialised * {UNKNOWNS} + k] == src[volumeSerialised * {UNKNOWNS} + k], src[volumeSerialised * {UNKNOWNS} + k]);
+              assertion(src[volumeSerialised * {UNKNOWNS} + k] == src[volumeSerialised * {UNKNOWNS} + k], src[volumeSerialised * {UNKNOWNS} + k]);
               dst[volumeSerialised * {UNKNOWNS} + k] = src[volumeSerialised * {UNKNOWNS} + k];
             }}
           }}
@@ -59,10 +59,10 @@ def get_face_merge_implementation(patch_overlap):
       }}
       break;
     case ::peano4::stacks::SendReceiveContext::MultiscaleExchange:
-      assertionMsg( false, "not implemented yet" );
+      assertion(false, "not implemented yet");
       break;
     default:
-      assertionMsg( false, "not implemented yet" );
+      assertion(false, "not implemented yet");
       break;
   }}
 """
@@ -79,19 +79,19 @@ def get_cell_merge_implementation(patch_overlap):
     template = """
   switch (context) {{
     case ::peano4::stacks::SendReceiveContext::BoundaryExchange:
-      assertionMsg( false, "should not be called, as cells (on the same level) cannot overlap in Peano" );
+      assertion(false, "should not be called, as cells (on the same level) cannot overlap in Peano");
       break;
       
     case ::peano4::stacks::SendReceiveContext::MultiscaleExchange:
-      assertionMsg( false, "not implemented yet" );
+      assertion(false, "not implemented yet");
       break;
 
     case ::peano4::stacks::SendReceiveContext::PeriodicBoundaryDataSwap:
-      assertionMsg( false, "should never be called" );
+      assertion(false, "should never be called");
       break;
       
     default:
-      assertionMsg( false, "not implemented yet" );
+      assertion(false, "not implemented yet");
       break;
   }}
 """

@@ -50,8 +50,8 @@ void exahype2::RefinementControl::addCommand(
     newEvent.width   = expandedWidth;
     newEvent.targetH = targetH;
 
-    assertion1(newEvent.width[0] > 0.0, newEvent.toString());
-    assertion1(newEvent.targetH[0] > 0.0, newEvent.toString());
+    assertion(newEvent.width[0] > 0.0, newEvent.toString());
+    assertion(newEvent.targetH[0] > 0.0, newEvent.toString());
 
     _newEvents.push_back(std::pair<peano4::grid::GridControlEvent, int>(newEvent, lifetime));
 
@@ -80,8 +80,8 @@ void exahype2::RefinementControl::addCommand(
     newEvent.width   = expandedWidth;
     newEvent.targetH = targetH;
 
-    assertion1(newEvent.width[0] > 0.0, newEvent.toString());
-    assertion1(newEvent.targetH[0] > 0.0, newEvent.toString());
+    assertion(newEvent.width[0] > 0.0, newEvent.toString());
+    assertion(newEvent.targetH[0] > 0.0, newEvent.toString());
 
     _newEvents.push_back(std::pair<peano4::grid::GridControlEvent, int>(newEvent, lifetime));
 

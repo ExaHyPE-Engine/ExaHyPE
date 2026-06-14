@@ -71,8 +71,8 @@ public:
     const MPI_Comm           comm,
     const int                numberOfElements
   ) {
-    assertion3(this->_ioMode == IOMode::None, rank, tag, numberOfElements);
-    assertion3(numberOfElements > 0, rank, tag, numberOfElements);
+    assertion(this->_ioMode == IOMode::None, rank, tag, numberOfElements);
+    assertion(numberOfElements > 0, rank, tag, numberOfElements);
     assertion(this->_ioMPIRequest == MPI_REQUEST_NULL);
     assertion(not this->_ioMPIActive);
 

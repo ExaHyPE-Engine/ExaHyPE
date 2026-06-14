@@ -242,7 +242,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   // Start template in python/peano4/toolbox/particles/api/AbstractUpdateParticleGridAssociation.py
 
   for (auto p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
-    assertion3(
+    assertion(
       marker.isContainedInAdjacentCells( p->getX(), 0.5*(1.0+SortingTolerance) ),
       marker.getX(),
       marker.toString(),
@@ -331,13 +331,13 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
             ::peano4::datamanagement::reconstructXOfParentVertex(marker, i),
             marker.getH()*3.0
           );
-          assertion3(
+          assertion(
             fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),
             fineGridVertex{{PARTICLES_CONTAINER}}.toString(),
             coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString(),
             _spacetreeId
           );
-          assertion3(
+          assertion(
             coarseGridVertices{{PARTICLES_CONTAINER}}(i).isValid(),
             fineGridVertex{{PARTICLES_CONTAINER}}.toString(),
             coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString(),
@@ -384,8 +384,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   }
 
   if ( marker.isParentVertexLocal(target.to_ulong()) ) {
-    assertion2( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).isValid(), coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
-    assertion2( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),                          coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
+    assertion( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).isValid(), coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
+    assertion( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),                          coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
     _numberOfLifts+=fineGridVertex{{PARTICLES_CONTAINER}}.size();
     for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}}) {
 
@@ -468,7 +468,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       );
     }
     fineGridVertex{{PARTICLES_CONTAINER}}.particlesCanNotBeLiftedLocally();
-    assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
+    assertion( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
   }
 
   // End template in python/peano4/toolbox/particles/api/AbstractUpdateParticleGridAssociation.py

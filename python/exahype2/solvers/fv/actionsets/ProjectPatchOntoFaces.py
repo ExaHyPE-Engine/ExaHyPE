@@ -4,7 +4,6 @@ import peano4
 
 import peano4.toolbox.blockstructured.ProjectPatchOntoFaces
 
-
 class ProjectPatchOntoFaces(peano4.toolbox.blockstructured.ProjectPatchOntoFaces):
     """!
     Project patch data onto faces so we can reconstruct the halo layers later on
@@ -15,7 +14,7 @@ class ProjectPatchOntoFaces(peano4.toolbox.blockstructured.ProjectPatchOntoFaces
     The big difference is that the projection also sets the isUpdated() flag and
     the UpdatedTimeStamp(). As the projection writes to these two updated
     records, it is important that you roll it over afterwards. This is done via
-    the mapping RollOverUpdatedFace.
+    the mapping RollOverUpdates.
 
     It is important to study this action set in combination with DynamicAMR. In
     the documentation of the latter I explain why we need the guard
@@ -30,21 +29,16 @@ class ProjectPatchOntoFaces(peano4.toolbox.blockstructured.ProjectPatchOntoFaces
         peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(
             self,
             patch=solver._patch,
-            patch_overlap=solver._patch_overlap_update,
+            patch_overlap=solver._patch_overlap_new,
             solver_name=solver._name,
             precision=solver._storage_precision,
-            guard="not marker.hasBeenRefined() and "
-            + guard
-            + (
-                f" and (repositories::{solver.get_name_of_global_instance()}.getSolverState() != {solver._name}::SolverState::IsSolving or marker.willBeSkeletonCell())"
-                if solver._use_enclave_tasking
-                else ""
-            ),
+            guard="not marker.hasBeenRefined() and " + guard,
             add_assertions=True,
         )
 
         self._face_metadata_accessor = "fineGridFaces" + solver._face_label.name
         self._cell_metadata_accessor = "fineGridCell" "" + solver._cell_label.name
+        self._fuse_compute_kernels = solver._fuse_compute_kernels
 
         self._Template_TouchCellLastTime += """
   if ({GUARD}) {{
@@ -64,3 +58,8 @@ class ProjectPatchOntoFaces(peano4.toolbox.blockstructured.ProjectPatchOntoFaces
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
+
+    def generate_kernels(self, namespace, output, dimensions, subdirectory):
+        super().generate_kernels(namespace, output, dimensions, subdirectory)
+        if self._fuse_compute_kernels:
+            self.generate_fused_kernels(namespace, output, dimensions, subdirectory)

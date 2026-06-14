@@ -224,11 +224,11 @@ number_of_variables_advection = (
 euler_solver.postprocess_updated_patch += f"""// Copy density and momenta
   ::toolbox::blockstructured::copyUnknown(
     {euler_solver.patch_size}, // no of unknowns per dimension
-    fineGridCell{euler_solver.name}Q.data(), // source
+    fineGridCell{euler_solver.current_unknown_identifier()}.data(), // source
     {euler_solver.variable_names.index("rho")}, // density in source
     {number_of_variables_euler}, // unknowns in source (incl material parameters)
     0, // no overlap/halo here
-    fineGridCell{advection_solver.name}Q.data(), // dest
+    fineGridCell{advection_solver.current_unknown_identifier()}.data(), // dest
     {advection_solver.variable_names.index("rho")}, // density in dest
     {number_of_variables_advection}, // unknowns in dest (incl material parameters)
     0 // no overlap/halo here
@@ -236,11 +236,11 @@ euler_solver.postprocess_updated_patch += f"""// Copy density and momenta
 
   ::toolbox::blockstructured::copyUnknown(
     {euler_solver.patch_size}, // no of unknowns per dimension
-    fineGridCell{euler_solver.name}Q.data(), // source
+    fineGridCell{euler_solver.current_unknown_identifier()}.data(), // source
     {euler_solver.variable_names.index("rhoU")}, // x-momentum in source
     {number_of_variables_euler}, // unknowns in source (incl material parameters)
     0, // no overlap/halo here
-    fineGridCell{advection_solver.name}Q.data(), // dest
+    fineGridCell{advection_solver.current_unknown_identifier()}.data(), // dest
     {advection_solver.variable_names.index("rhoU")}, // x-momentum in dest
     {number_of_variables_advection}, // unknowns in dest (incl material parameters)
     0 // no overlap/halo here
@@ -248,11 +248,11 @@ euler_solver.postprocess_updated_patch += f"""// Copy density and momenta
 
   ::toolbox::blockstructured::copyUnknown(
     {euler_solver.patch_size}, // no of unknowns per dimension
-    fineGridCell{euler_solver.name}Q.data(), // source
+    fineGridCell{euler_solver.current_unknown_identifier()}.data(), // source
     {euler_solver.variable_names.index("rhoV")}, // y-momentum in source
     {number_of_variables_euler}, // unknowns in source (incl material parameters)
     0, // no overlap/halo here
-    fineGridCell{advection_solver.name}Q.data(), // dest
+    fineGridCell{advection_solver.current_unknown_identifier()}.data(), // dest
     {advection_solver.variable_names.index("rhoV")}, // y-momentum in dest
     {number_of_variables_advection}, // unknowns in dest (incl material parameters)
     0 // no overlap/halo here
@@ -264,11 +264,11 @@ if project.dimensions == 3:
 #if DIMENSIONS == 3
   ::toolbox::blockstructured::copyUnknown(
     {euler_solver.patch_size}, // no of unknowns per dimension
-    fineGridCell{euler_solver.name}Q.data(), // source
+    fineGridCell{euler_solver.current_unknown_identifier()}.data(), // source
     {euler_solver.variable_names.index("rhoW")}, // z-momentum in source
     {number_of_variables_euler}, // unknowns in source (incl material parameters)
     0, // no overlap/halo here
-    fineGridCell{advection_solver.name}Q.data(), // dest
+    fineGridCell{advection_solver.current_unknown_identifier()}.data(), // dest
     {advection_solver.variable_names.index("rhoW")}, // z-momentum in dest
     {number_of_variables_advection}, // unknowns in dest (incl material parameters)
     0 // no overlap/halo here

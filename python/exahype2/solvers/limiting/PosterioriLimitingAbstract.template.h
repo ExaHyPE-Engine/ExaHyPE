@@ -6,7 +6,6 @@
 
 #include "exahype2/Solver.h"
 
-#include "tarch/NonCriticalAssertions.h"
 #include "tarch/la/Vector.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Rank.h"

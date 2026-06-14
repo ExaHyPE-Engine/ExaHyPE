@@ -43,8 +43,8 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
     
     const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
     
-    assertion5( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution, marker.toString(), fineGridFace{{SOLVER_NAME}}FaceLabel.toString() );
-    assertion5( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution, marker.toString(), fineGridFace{{SOLVER_NAME}}FaceLabel.toString() );
+    assertion( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution, marker.toString(), fineGridFace{{SOLVER_NAME}}FaceLabel.toString() );
+    assertion( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution, marker.toString(), fineGridFace{{SOLVER_NAME}}FaceLabel.toString() );
 
 """
 

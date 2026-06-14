@@ -7,6 +7,8 @@
 #include "toolbox/particles/assignmentchecks/tests/TestParticle.h"
 #include "toolbox/particles/assignmentchecks/TracingAPI.h"
 
+#include <cassert>
+
 toolbox::particles::assignmentchecks::tests::TestHelpers::TestHelpers():
   TestCase("toolbox::particles::assignmentchecks::tests::TestHelpers") {}
 
@@ -255,7 +257,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   }
 
   // Check number of sweeps correct
-  assertion4(
+  assertion(
     eventDatabase.getMeshSweepData().size() == meshSweepNames.size(),
     "Wrong number of mesh sweeps in database",
     eventDatabase.getMeshSweepData().size(),
@@ -264,7 +266,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   );
 
   // Check our bookkeeping
-  assertion4(
+  assertion(
     (eventDatabase.getCurrentMeshSweepIndex() + 1) == meshSweepNames.size(),
     "Wrong count of mesh sweeps in database",
     eventDatabase.getMeshSweepData().size(),
@@ -280,7 +282,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
   while (sweep != meshSweepNames.end()) {
 
-    assertion3(
+    assertion(
       *sweep == databaseSweep->getName(),
       "Wrong Sweep Name",
       *sweep,
@@ -395,7 +397,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
 
   // is particle count correct?
-  assertion3(
+  assertion(
     eventDatabase.getNumberOfTracedParticles() == static_cast<int>(nparts),
     "Wrong particle count in database",
     eventDatabase.getNumberOfTracedParticles(),
@@ -425,7 +427,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
     [[maybe_unused]] size_t nEntries = eventDatabase.getTotalParticleEntries(identifier);
     // we add 4 events per sweep.
-    assertion4(
+    assertion(
       nEntries == (meshSweepNames.size() * 4),
       "Wrong number of entries for particle ",
       p,
@@ -549,7 +551,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
   // is particle count correct?
   // nparts particles times nparts trees
-  assertion3(
+  assertion(
     eventDatabase.getNumberOfTracedParticles() == nparts * nparts,
     "Wrong particle count in database",
     eventDatabase.getNumberOfTracedParticles(),
@@ -642,7 +644,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
 
   // is particle count correct?
-  assertion2(
+  assertion(
     eventDatabase.getNumberOfTracedParticles() == 1,
     "Wrong particle count in database, should be 1",
     eventDatabase.getNumberOfTracedParticles()
@@ -662,7 +664,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   [[maybe_unused]] int nEntries = eventDatabase.getTotalParticleEntries(identifier);
   // reduce nEventsToKeep by 1 here, as we always substitute the past
   // trajectory with the last event (and modify its trace to signify that)
-  assertion6(
+  assertion(
     nEntries == (nsweeps % (nEventsToKeep - 1)),
     "Wrong number of entries for particle ",
     nEntries,
@@ -827,7 +829,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   logDebug(eventDatabase.toString());
 
   // is particle count correct?
-  assertion2(
+  assertion(
     eventDatabase.getNumberOfTracedParticles() == 1,
     "Wrong particle count in database",
     eventDatabase.getNumberOfTracedParticles()
@@ -835,7 +837,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
   // There is 1 more mesh sweep registered (intialization) than we
   // actually do.
-  assertion3(
+  assertion(
     eventDatabase.getCurrentMeshSweepIndex() == max_sweeps + 1,
     "Wrong mesh sweep count in database",
     eventDatabase.getCurrentMeshSweepIndex(),
@@ -852,7 +854,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   );
 
   // 8 is hardcoded here. Modify manually if you change test setup.
-  assertion3(
+  assertion(
     eventDatabase.getTotalParticleEntries(identifier) == 8,
     "Wrong number of snapshots stored for particle",
     eventDatabase.getTotalParticleEntries(identifier),
@@ -1001,7 +1003,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
 
   // is particle count correct?
-  assertion2(
+  assertion(
     eventDatabase.getNumberOfTracedParticles() == 1,
     "Wrong particle count in database",
     eventDatabase.getNumberOfTracedParticles()
@@ -1017,7 +1019,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   );
 
   // 13 is hardcoded here. Modify manually if you change test setup.
-  assertion3(
+  assertion(
     eventDatabase.getTotalParticleEntries(identifier) == 13,
     "Wrong number of snapshots stored for particle",
     eventDatabase.getTotalParticleEntries(identifier),
@@ -2032,7 +2034,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
   } // mesh sweep loops
 
   // is particle count correct?
-  assertion2(
+  assertion(
     eventDatabase.getNumberOfTracedParticles() == 1,
     "Wrong particle count in database",
     eventDatabase.getNumberOfTracedParticles()
@@ -2050,7 +2052,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
 
   [[maybe_unused]] size_t nEntries = eventDatabase.getTotalParticleEntries(identifier);
   // we add 4 events per sweep, and 1 initial one
-  assertion5(
+  assertion(
     nEntries == (nsweeps * 4 + 1),
     "Wrong number of entries for particle ",
     nEntries,

@@ -247,7 +247,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     // This assertion breaks when running without MPI on 1 tree with periodic
     // boundary conditions on. It doesn't account for periodic BCs being mapped
     // onto a boundary exchange too.
-    // assertion2(
+    // assertion(
     //   ::peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>1,
     //   (*p)->toString(),
     //   marker.toString()

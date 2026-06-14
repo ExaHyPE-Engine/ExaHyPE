@@ -43,10 +43,8 @@
   const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRightInterface = solver.solveRiemannProblem(extrapolatedBoundaryRight, extrapolatedBoundaryRightNeighborLeftBoundary, faceCentreRight, volumeSize, timeStamp + 0.5 * timeStepSize, timeStepSize, normal, leftGoingFluxGathered, rightGoingFluxGathered);
   {% endif %}
 
-  #if !defined(WITH_GPU)
   assertion(std::isfinite(maxEigenvalueGatheredLeftInterface));
   assertion(std::isfinite(maxEigenvalueGatheredRightInterface));
-  #endif
 
   // Compute max eigenvalue (wave speed) after time step
   maxEigenvalueAfterTimeStep = std::fmax(maxEigenvalueAfterTimeStep, std::fmax(maxEigenvalueGatheredLeftInterface, maxEigenvalueGatheredRightInterface));
@@ -57,7 +55,6 @@
   #pragma unroll
   #endif
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; unknown++) { // Compute fluxes and perform time step
-    #if !defined(WITH_GPU)
     assertion(std::isfinite(QInGathered[unknown]));
     assertion(std::isfinite(QInGatheredLeft[unknown]));
     assertion(std::isfinite(QInGatheredRight[unknown]));
@@ -67,19 +64,15 @@
 
     assertion(std::isfinite(leftGoingFluxGatheredLeft[unknown]));
     assertion(std::isfinite(rightGoingFluxGatheredLeft[unknown]));
-    #endif
 
     const {{COMPUTE_PRECISION}} fluxLeft  = rightGoingFluxGatheredLeft[unknown];
     const {{COMPUTE_PRECISION}} fluxRight = leftGoingFluxGathered[unknown];
 
     QOutGathered[unknown] += timeStepSize / patchSize(normal) * {{NUMBER_OF_VOLUMES_PER_AXIS}} * (fluxLeft - fluxRight);
 
-    #if !defined(WITH_GPU)
     assertion(std::isfinite(fluxLeft));
     assertion(std::isfinite(fluxRight));
     assertion(std::isfinite(QOutGathered[unknown]));
-    nonCriticalAssertion(QOutGathered[unknown] == QOutGathered[unknown]);
-    #endif
   } // unknown
 {% endmacro %}
 

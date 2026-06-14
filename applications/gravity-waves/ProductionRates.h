@@ -70,10 +70,8 @@ public:
 
   static inline GPU_CALLABLE_METHOD double branching(const int vibrationalState) {
 // branching rates from Makhlouf et al. 1995, Table 1
-#if !defined(WITH_GPU)
-    assertion1(vibrationalState < 10, vibrationalState);
-    assertion1(vibrationalState > -1, vibrationalState);
-#endif
+    assertion(vibrationalState < 10, vibrationalState);
+    assertion(vibrationalState > -1, vibrationalState);
 
     switch (vibrationalState) {
     case 9:
@@ -103,10 +101,8 @@ public:
 // quenching OH(v) and O into H and O2
 // rates from Makhlouf et al. "Photochemical-dynamical modeling of the measured response of airglow to gravity waves",
 // 1995, Table 1, k_{8v}
-#if !defined(WITH_GPU)
-    assertion1(vibrationalState < 10, vibrationalState);
-    assertion1(vibrationalState > -1, vibrationalState);
-#endif
+    assertion(vibrationalState < 10, vibrationalState);
+    assertion(vibrationalState > -1, vibrationalState);
     switch (vibrationalState) {
     case 0:
       return 3.9e-11;
@@ -121,13 +117,11 @@ public:
 // quenching OH(v) and O2 into OH(v') and O2
 // rates from Adler-Golden "Kinetic parameters for OH nightglow modeling consisent with recent laboratory measurements",
 // 1997, Table 3
-#if !defined(WITH_GPU)
-    assertion1(vibrationalState < 10, vibrationalState);
-    assertion1(vibrationalState > 0, vibrationalState);
-    assertion1(quenchedState < 9, quenchedState);
-    assertion1(quenchedState > -1, quenchedState);
-    assertion2(quenchedState < vibrationalState, vibrationalState, quenchedState);
-#endif
+    assertion(vibrationalState < 10, vibrationalState);
+    assertion(vibrationalState > 0, vibrationalState);
+    assertion(quenchedState < 9, quenchedState);
+    assertion(quenchedState > -1, quenchedState);
+    assertion(quenchedState < vibrationalState, vibrationalState, quenchedState);
     if (vibrationalState == 1) {
       return 2e-13;
     }
@@ -183,7 +177,7 @@ public:
       case 5:
         return 22e-13;
       default:
-        assert(false);
+        assertion(false, vibrationalState, quenchedState);
       }
     }
 
@@ -205,7 +199,7 @@ public:
       case 6:
         return 32e-13;
       default:
-        assert(false);
+        assertion(false, vibrationalState, quenchedState);
       }
     }
 
@@ -228,7 +222,7 @@ public:
       case 7:
         return 33e-13;
       default:
-        assert(false);
+        assertion(false, vibrationalState, quenchedState);
       }
     }
 
@@ -253,7 +247,7 @@ public:
       case 8:
         return 42e-13;
       default:
-        assert(false);
+        assertion(false, vibrationalState, quenchedState);
       }
     }
 
@@ -264,10 +258,8 @@ public:
 // quenching OH(v) and N2 into OH(v - 1) and N2
 // rates from Adler-Golden "Kinetic parameters for OH nightglow modeling consisent with recent laboratory measurements",
 // 1997, Table 1, k_4(v)
-#if !defined(WITH_GPU)
-    assertion1(vibrationalState < 10, vibrationalState);
-    assertion1(vibrationalState > 0, vibrationalState);
-#endif
+    assertion(vibrationalState < 10, vibrationalState);
+    assertion(vibrationalState > 0, vibrationalState);
 
     switch (vibrationalState) {
     case 1:
@@ -289,7 +281,8 @@ public:
     case 9:
       return 4.8e-13;
     default:
-      assert(false);
+      assertion(false, vibrationalState);
+      return 0.0;
     }
   }
 
@@ -304,19 +297,17 @@ public:
     const int vibrationalState,
     const int quenchedState
   ) {
-#if !defined(WITH_GPU)
-    assertion1(vibrationalState < 10, vibrationalState);
-    assertion1(vibrationalState > 0, vibrationalState);
-    assertion1(quenchedState < 9, quenchedState);
-    assertion1(quenchedState > -1, quenchedState);
-    assertion2(quenchedState < vibrationalState, vibrationalState, quenchedState);
-    assertion3(
+    assertion(vibrationalState < 10, vibrationalState);
+    assertion(vibrationalState > 0, vibrationalState);
+    assertion(quenchedState < 9, quenchedState);
+    assertion(quenchedState > -1, quenchedState);
+    assertion(quenchedState < vibrationalState, vibrationalState, quenchedState);
+    assertion(
       vibrationalState - LANGHOFFBANDWIDTH <= quenchedState,
       vibrationalState,
       quenchedState,
       LANGHOFFBANDWIDTH
     );
-#endif
 
     if (vibrationalState == 1) {
       return 15.0;
@@ -415,19 +406,17 @@ public:
     const int vibrationalState,
     const int quenchedState
   ) {
-#if !defined(WITH_GPU)
-    assertion1(vibrationalState < 10, vibrationalState);
-    assertion1(vibrationalState > 0, vibrationalState);
-    assertion1(quenchedState < 9, quenchedState);
-    assertion1(quenchedState > -1, quenchedState);
-    assertion2(quenchedState < vibrationalState, vibrationalState, quenchedState);
-    assertion3(
+    assertion(vibrationalState < 10, vibrationalState);
+    assertion(vibrationalState > 0, vibrationalState);
+    assertion(quenchedState < 9, quenchedState);
+    assertion(quenchedState > -1, quenchedState);
+    assertion(quenchedState < vibrationalState, vibrationalState, quenchedState);
+    assertion(
       vibrationalState - TURNBULLLOWEBANDWIDTH <= quenchedState,
       vibrationalState,
       quenchedState,
       TURNBULLLOWEBANDWIDTH
     );
-#endif
 
     if (vibrationalState == 1) {
       return 22.7;
@@ -534,14 +523,12 @@ public:
     const int vibrationalState,
     const int quenchedState
   ) {
-#if !defined(WITH_GPU)
-    assertion1(vibrationalState < 10, vibrationalState);
-    assertion1(vibrationalState > 0, vibrationalState);
-    assertion1(quenchedState < 9, quenchedState);
-    assertion1(quenchedState > -1, quenchedState);
-    assertion2(quenchedState < vibrationalState, vibrationalState, quenchedState);
-    assertion3(vibrationalState - GOLDMANBANDWIDTH <= quenchedState, vibrationalState, quenchedState, GOLDMANBANDWIDTH);
-#endif
+    assertion(vibrationalState < 10, vibrationalState);
+    assertion(vibrationalState > 0, vibrationalState);
+    assertion(quenchedState < 9, quenchedState);
+    assertion(quenchedState > -1, quenchedState);
+    assertion(quenchedState < vibrationalState, vibrationalState, quenchedState);
+    assertion(vibrationalState - GOLDMANBANDWIDTH <= quenchedState, vibrationalState, quenchedState, GOLDMANBANDWIDTH);
 
     if (vibrationalState == 1) {
       return 17.33;

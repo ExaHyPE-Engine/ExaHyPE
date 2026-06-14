@@ -6,6 +6,7 @@ file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 set(SOURCES
   tarch.cpp
   StackSizeLimitDetection.cpp
+  Assertions.cpp
   CPUFeatureDetection.cpp
   Enumerator.cpp
   FloatingPointExceptions.cpp

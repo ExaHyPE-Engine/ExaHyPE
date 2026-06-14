@@ -2,7 +2,6 @@
 
 #include "Constants.h"
 #include "tarch/Assertions.h"
-#include "tarch/NonCriticalAssertions.h"
 #include "tarch/la/Vector.h"
 
 namespace applications::exahype2::GravityWaves::Thunderstorm::ForcingTerms {

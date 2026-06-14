@@ -5,7 +5,7 @@ from .AdaptivityCriterion import AdaptivityCriterion
 from .HandleBoundary import HandleBoundary
 from .InitialCondition import InitialCondition
 from .ProjectPatchOntoFaces import ProjectPatchOntoFaces
-from .RollOverUpdatedFace import RollOverUpdatedFace
+from .RollOverUpdates import RollOverUpdates
 from .DynamicAMR import DynamicAMR
 from .PostprocessSolution import EmptyPostprocessSolution
 from .PostprocessSolution import VolumeWisePostprocessSolution
@@ -13,4 +13,3 @@ from .PostprocessSolutionParticles import ParticleWisePostprocessSolution
 from .PreprocessSolution import EmptyPreprocessSolution
 from .PreprocessSolution import VolumeWisePreprocessSolution
 from .UpdatePatch import UpdatePatch
-from .EnclaveTasking import EnclaveTasking

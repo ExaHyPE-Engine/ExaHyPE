@@ -11,8 +11,8 @@ ExaHyPE uses GPUs in a classic ***offloading*** mode:
 It takes particular tasks, ships them to the GPU and then ships them
 back. This happens under the hood, and neither does data reside on the
 accelerator permanently nor is the accelerator used all the time.
-Not all solvers support GPU offloading, but those that can work with
-(enclave) tasks either have accelerator support built in or can be
+Not all solvers support GPU offloading, but solver variants with tasking or
+fused-kernel support can either have accelerator support built in or can be
 tweaked relatively easy to gain something from GPU devices.
 
  If you have a solver with GPU support and want to activate this tasking, you have
@@ -76,34 +76,15 @@ ExaHyPE to the accelerator:
 
 ## GPU support (programmer's view)
 
-We offload tasks to the accelerator.
-The particular tasking concept that we implement in ExaHyPE is called enclave
-tasking.
-You find the vanilla paper of this idea in
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-@article{doi:10.1137/19M1276194,
-  author = {Charrier, Dominic Etienne and Hazelwood, Benjamin and Weinzierl, Tobias},
-  title = {Enclave Tasking for DG Methods on Dynamically Adaptive Meshes},
-  journal = {SIAM Journal on Scientific Computing},
-  volume = {42},
-  number = {3},
-  pages = {C69-C96},
-  year = {2020},
-  doi = {10.1137/19M1276194}
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-Alternatively, each lowering into Peano yields a README-xxxxx.md file. In this
+We offload tasks or fused kernel batches to the accelerator.
+Each lowering into Peano yields a README-xxxxx.md file. In this
 markup file, you also find all the information of papers that have an influence
-on your chosen solver configuration. Solvers that support enclave tasking
-typically have a distinct name. exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking is
-for example a solver which yields tasks.
+on your chosen solver configuration. Solver variants that generate accelerator
+kernels expose this through their Python configuration, for example the FV
+Godunov solvers' `fuse_compute_kernels` option.
 
-Once you have chosen such a solver and compile the code, there should be a tasks
-subdirectory after you've lowered your code to C++.
-It makes sense to look into this C++ code from time to time to check if the
+Once you have chosen such a solver and compile the code, inspect the generated
+kernel subdirectories from time to time to check if the
 generated code does make sense.
 
 
@@ -129,36 +110,26 @@ don't do it!
 
 @todo Some of the content below should go into the Jupyter notebook
 
-You next have to instruct your solver that
-you plan to have patch or cell updates without (write) access to the solver's internal
-state.
-They also don't alter the global state.
-Obviously, you can weaken these assumptions later on, but this then requires
-further manual work.
+You next have to instruct your solver that you plan to have patch or cell
+updates without (write) access to the solver's internal state. They also don't
+alter the global state. Obviously, you can weaken these assumptions later on,
+but this then requires further manual work.
 
-The Finite Volume enclave solvers for example all support stateless kernels, but the
-versions without enclave tasking do not support them. The solver
-documentation should clarify which one to select. For most of these
-GPU-enabled solvers, it is sufficient to pass an additional flag
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-pde_terms_without_state=True
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-into the constructor that tells
-the solver that we have PDE terms which have no side effect which also
-do not need the solver object.
-Consult the documentation of the respective solvers. Again,
-exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking is
-a good prototype to study:
+The exact switch depends on the solver family. Some DG solvers expose this as
+a `pde_terms_without_state=True` constructor argument. FV Godunov solvers use
+the fused-kernel generation path instead, and the PDE callbacks used by the
+fused kernel have to be available as stateless/static snippets, for example via
+`set_implementation()`:
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
+my_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
             name= "GPUFVSolver",
             patch_size=18,
-            pde_terms_without_state=True, # This part is the relevant one here
+            unknowns=5,
+            auxiliary_variables=0,
+            time_step_relaxation=0.5,
+            fuse_compute_kernels=True,
         )
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -248,17 +219,15 @@ In principle, the code is now GPU ready. Compile and run.
 
 # Tailor kernel choice
 
-Most ExaHyPE solvers employ at least three different kernel variations:
-a normal one, one that vectorises aggressively on the host, and one that
-offloads to the GPU. If you use the default configuration, all should be
-set to some reasonable defaults. If this is not the case, you can manually
-alter
+Most ExaHyPE solvers employ at least two different kernel variations: a normal
+one and a fused one that can target accelerator-oriented execution paths. If you
+use the default configuration, both should be set to some reasonable defaults.
+If this is not the case, you can manually alter
 
-        self._fused_compute_kernel_call_cpu
-        self._fused_compute_kernel_call_gpu
+        self._fused_compute_kernel_call
 
-These values hold C++ strings, which are typically method invocations to the
-corresponding computing kernels. If you play around with these values, you
+This value holds a C++ string, which is typically a method invocation to the
+corresponding computing kernel. If you play around with this value, you
 might want to study @ref page_exahype_gpu "further GPU realisation details"
 and dive into the code.
 
@@ -378,22 +347,13 @@ This includes the ExaHyPE libraries.
 # Enable stateless compute kernels
 
 
-The Finite Volume enclave solvers for example all support GPUs, but the
-versions without enclave tasking do not support them. The solver
-documentation should clarify which one to select. For most of these
-GPU-enabled solvers, it is sufficient to pass an additional flag
+The solver documentation should clarify which variants provide generated
+accelerator kernels. Some solver families expose stateless PDE terms through a
+`pde_terms_without_state=True` constructor argument. FV Godunov solvers use
+`fuse_compute_kernels=True` and stateless/static PDE snippets instead. Consult
+the documentation of the respective solvers. Examples are
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-pde_terms_without_state=True
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-for the FV variants, e.g.) that tells
-the solver that we have PDE terms which have no side effect which also
-do not need the solver object.
-Consult the documentation of the respective solvers. Examples are
-
-- exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
+- exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep with `fuse_compute_kernels=True`
 - yet to be added
 
 
@@ -435,26 +395,23 @@ your compiler struggles with the inlining, you might be forced either
 
 ## Alter compute kernel
 
-ExaHyPE solvers which support GPUs/stateless operators typically host three
-different compute kernels. These kernels are plain C++ function calls, i.e.
-strings, on the Python level.
+ExaHyPE solvers which support GPUs/stateless operators typically host multiple
+compute kernels. These kernels are plain C++ function calls, i.e. strings, on
+the Python level.
 
 - `self._compute_kernel_call` is a C++ function call for the normal task.
   This guy is called whenever you hit an octant, i.e. Finite Volume patch or
   a DG cell. It calls the virtual flux, eigenvalue, ... functions on the
   solver object.
-- `self._fused_compute_kernel_call_cpu` is a C++ function call that ExaHyPE
+- `self._fused_compute_kernel_call` is a C++ function call that ExaHyPE
   uses whenever it encounters a set of octants in the tree which can be
   processed embarrassingly parallel as they all invoke the same PDE and
   none of them alters the state of the underlying solver object. So the
   compute kernels identified by this string can call the static flux and
   eigenvalue instead of the virtual function.
-- `self._fused_compute_kernel_call_gpu` is the equivalent to
-  `_fused_compute_kernel_call_cpu` which the code uses when it decides to
-  offload a bunch of cells to an accelerator.
 
-which automatically picks a working default backend depending on your
-configuration.
+The generated fused call picks the backend-specific kernel variant depending on
+your configuration.
 
 
 While this gives you a working version quickly, you might want to switch to a
@@ -462,7 +419,7 @@ tailored variant for your particular solver. This can be done by changing the
 actual solver kernel:
 
 ~~~~~~~~~~~~~~~~~~~~~~
-mysolver._fused_compute_kernel_call_gpu = exahype2.kerneldsl.api.compile( .... )
+mysolver._fused_compute_kernel_call = exahype2.kerneldsl.api.compile( .... )
 ~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -485,7 +442,7 @@ and make the result depend on this one.
 
 
 patchCanUseStatelessPDETerms() yields, by default, true. So all compute kernels
-end up on the GPU if they are embedded into enclave tasks. You migth want to
+can end up on the GPU if they are selected for offloading. You migth want to
 alter this, and keep some kernels on the host.
 
 
@@ -501,40 +458,19 @@ multiple target GPUs in one source code anymore.
 
 Once you have a GPU-ready solver, it makes sense to doublecheck quickly if the
 solver really dispatches the correct compute kernels.
-For this, we first study the generated task.
+For this, we first study the generated fused-kernel call.
 Stateless routines are also very useful on the CPU, as we can aggressively
 vectorise over them.
-Therefore, the task should look similar to
+Therefore, the generated code should expose a call similar to
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-double benchmarks::exahype2::ccz4::tasks::CCZ4FVEnclaveTask::applyKernelToCell(...) {
-  ...
-
-  if (repositories::instanceOfCCZ4FV.patchCanUseStatelessPDETerms(
-      marker.getX(),
-      marker.getH(),
-      t,
-      dt
-  )) {
-    ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
-      ...
-     >(patchData);
-  } else {
-     ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapFunctors<
-      ...
-     >(patchData,
-     ...
-     );
-  }
-}
+_fused_compute_kernel_call = exahype2.solvers.fv.godunov.kernels.create_fused_compute_kernel_call(...)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The kernels might look completely different, but the principle is clear:
-Whenever we hit a cell, we check if patchCanUseStatelessPDETerms() holds.
-If this is not the case, we use the default version. However, if it holds,
-then we invoke the specialised version which assumes that there is a version
-with static (stateless) calls.
+Whenever we prepare a fused batch, the generated call has to dispatch the
+stateless variant that can run on the selected target.
 
 
 ## Fused compute kernels
@@ -542,44 +478,21 @@ with static (stateless) calls.
 @todo This will change completely as we switch to xDSL. Notably, we will not support
 multiple target GPUs in one source code anymore.
 
-Scroll further down until you see the fuse() routine. This one is again
-very simple to digest:
+Inspect the generated fused solver. The offloading branch is again simple to
+digest:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-bool benchmarks::exahype2::ccz4::tasks::CCZ4FVEnclaveTask::fuse(const std::list<Task*>& otherTasks, int targetDevice) {
-  ...
-  #if defined(WITH_GPU_SYCL)
-    if (targetDevice >= 0 or targetDevice == Host) {
-      foundOffloadingBranch = true;
-      ::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseHeapStateless<
-        ...
-      >(targetDevice, patchData);
-    }
-  #endif
+::exahype2::fv::rusanov::sycl::RiemannSolverFused(..., targetDevice);
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We see here, that SYCL can run on both the host and the device, whereas we pick
 the OpenMP version if and only if we have picked a valid device.
 
 
-If this call logic makes no sense, most solvers have attributes such as
-
-        self._fused_compute_kernel_call_cpu
-        self._fused_compute_kernel_call_gpu
-
-to switch to the modified kernel realisation variant. Typically, there are
-factory mechanisms to alter those guys:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-my_solver._fused_compute_kernel_call_gpu  = exahype2.solvers.fv.rusanov.kernels.create_compute_Riemann_kernel_for_Rusanov(
-  my_solver._flux_implementation,
-  my_solver._ncp_implementation,
-  my_solver._source_term_implementation,
-  compute_max_eigenvalue_of_next_time_step=True,
-  solver_variant         = exahype2.solvers.fv.rusanov.kernels.SolverVariant.Accelerator,
-  kernel_variant         = exahype2.solvers.fv.rusanov.kernels.KernelVariant.GenericAoS
-)
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+If this call logic makes no sense, FV solvers expose
+`self._fused_compute_kernel_call` as the generated call site. Advanced users
+can replace this string before lowering, but the replacement has to match the
+generated fused-kernel signature and the fused patch data layout.
 
 
 

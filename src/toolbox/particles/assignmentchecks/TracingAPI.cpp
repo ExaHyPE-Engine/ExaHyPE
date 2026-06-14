@@ -49,7 +49,7 @@ void toolbox::particles::assignmentchecks::eraseParticle(
   Event previousEvent = database.addEvent(identifier, event);
 
 
-  assertion5(
+  assertion(
     previousEvent.type == internal::Event::Type::DetachFromVertex,
     identifier.toString(),
     event.toString(),
@@ -148,7 +148,7 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
           );
 
     if (isLocal) {
-      assertion7(
+      assertion(
         (previousEvent.type == internal::Event::Type::NotFound
         ) or (previousEvent.type == internal::Event::Type::Erase)
           or isDroppingFromSieveSet or (isLifting and previousEvent.isLocal)
@@ -162,7 +162,7 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
         database.particleHistory(identifier)
       );
     } else {
-      assertion7(
+      assertion(
           (previousEvent.type == internal::Event::Type::NotFound)
           or
           (previousEvent.type == internal::Event::Type::Erase)
@@ -223,7 +223,7 @@ void toolbox::particles::assignmentchecks::moveParticle(
   // fuzzy search in the map any more. However, needs to be checked. For now, it
   // won't harm to keep this.
   [[maybe_unused]] tarch::la::Vector dx = tarch::la::abs(oldParticleX - newParticleX);
-  assertion5(
+  assertion(
     tarch::la::allSmaller(dx, tarch::la::max(vertexH)),
     "particle moved more than vertex size",
     oldParticleX,
@@ -251,7 +251,7 @@ void toolbox::particles::assignmentchecks::moveParticle(
 
   // Can't be sieve event, particle needs to have been assigned to vertex
   // first
-  assertion3(
+  assertion(
     previousEvent.type == Event::Type::AssignToVertex
       or previousEvent.type == Event::Type::MoveWhileAssociatedToVertex
       or previousEvent.type
@@ -261,7 +261,7 @@ void toolbox::particles::assignmentchecks::moveParticle(
     database.particleHistory(identifier)
   );
 
-  assertion5(
+  assertion(
     tarch::la::equals(previousEvent.vertexH, vertexH),
     "Vertices not the same",
     previousEvent.vertexH,
@@ -269,7 +269,7 @@ void toolbox::particles::assignmentchecks::moveParticle(
     treeId,
     database.particleHistory(identifier)
   );
-  assertion5(
+  assertion(
     tarch::la::equals(previousEvent.vertexX, vertexX),
     "Vertices not the same",
     previousEvent.vertexX,
@@ -362,7 +362,7 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
 
   Event previousEvent = database.addEvent(identifier, event);
 
-  assertion7(
+  assertion(
     previousEvent.type == internal::Event::Type::AssignToVertex
       or previousEvent.type
            == internal::Event::Type::MoveWhileAssociatedToVertex
@@ -376,7 +376,7 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
     trace,
     database.toString()
   );
-  assertion7(
+  assertion(
     tarch::la::equals(previousEvent.vertexX, vertexX),
     identifier.toString(),
     event.toString(),
@@ -386,7 +386,7 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
     trace,
     database.particleHistory(identifier)
   );
-  assertion6(
+  assertion(
     tarch::la::equals(previousEvent.vertexH, vertexH),
     identifier.toString(),
     event.toString(),
@@ -428,7 +428,7 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
 
   Event previousEvent = database.addEvent(identifier, event);
 
-  assertion5(
+  assertion(
     previousEvent.type == internal::Event::Type::DetachFromVertex,
     identifier.toString(),
     event.toString(),

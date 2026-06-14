@@ -79,10 +79,10 @@ tarch::la::DynamicMatrix::~DynamicMatrix() {
 }
 
 double& tarch::la::DynamicMatrix::operator()(int row, int col) {
-  assertion4(row >= 0, row, col, _rows, _cols);
-  assertion4(col >= 0, row, col, _rows, _cols);
-  assertion4(row < _rows, row, col, _rows, _cols);
-  assertion4(col < _cols, row, col, _rows, _cols);
+  assertion(row >= 0, row, col, _rows, _cols);
+  assertion(col >= 0, row, col, _rows, _cols);
+  assertion(row < _rows, row, col, _rows, _cols);
+  assertion(col < _cols, row, col, _rows, _cols);
   return _m[serialise(row, col)];
 }
 
@@ -144,10 +144,10 @@ std::string tarch::la::DynamicMatrix::toString(bool addLineBreaks) const {
 }
 
 void tarch::la::DynamicMatrix::insertEmptyColumns(int number, int where, int repeatEveryKColumns) {
-  assertion4(number > 0, number, where, repeatEveryKColumns, toString());
-  assertion4(where >= 0, number, where, repeatEveryKColumns, toString());
-  assertion4(where <= _cols, number, where, repeatEveryKColumns, toString());
-  assertion4(repeatEveryKColumns >= 0, number, where, repeatEveryKColumns, toString());
+  assertion(number > 0, number, where, repeatEveryKColumns, toString());
+  assertion(where >= 0, number, where, repeatEveryKColumns, toString());
+  assertion(where <= _cols, number, where, repeatEveryKColumns, toString());
+  assertion(repeatEveryKColumns >= 0, number, where, repeatEveryKColumns, toString());
 
   double* oldData = _m;
   int     oldRows = _rows;
@@ -214,10 +214,10 @@ void tarch::la::DynamicMatrix::replicateRows(
   int  shiftAfterEveryReplication,
   bool extendColumnsToAccommodateShifts
 ) {
-  assertion3(blockSize >= 1, blockSize, numberOfReplications, shiftAfterEveryReplication);
-  assertion3(_rows % blockSize == 0, blockSize, numberOfReplications, shiftAfterEveryReplication);
-  assertion2(numberOfReplications >= 1, numberOfReplications, shiftAfterEveryReplication);
-  assertion2(shiftAfterEveryReplication >= 0, numberOfReplications, shiftAfterEveryReplication);
+  assertion(blockSize >= 1, blockSize, numberOfReplications, shiftAfterEveryReplication);
+  assertion(_rows % blockSize == 0, blockSize, numberOfReplications, shiftAfterEveryReplication);
+  assertion(numberOfReplications >= 1, numberOfReplications, shiftAfterEveryReplication);
+  assertion(shiftAfterEveryReplication >= 0, numberOfReplications, shiftAfterEveryReplication);
 
   if (numberOfReplications == 1) {
     return;
@@ -261,10 +261,10 @@ void tarch::la::DynamicMatrix::replicateCols(
   int  shiftAfterEveryReplication,
   bool extendColumnsToAccommodateShifts
 ) {
-  assertion3(blockSize >= 1, blockSize, numberOfReplications, shiftAfterEveryReplication);
-  assertion3(_cols % blockSize == 0, blockSize, numberOfReplications, shiftAfterEveryReplication);
-  assertion2(numberOfReplications >= 1, numberOfReplications, shiftAfterEveryReplication);
-  assertion2(shiftAfterEveryReplication >= 0, numberOfReplications, shiftAfterEveryReplication);
+  assertion(blockSize >= 1, blockSize, numberOfReplications, shiftAfterEveryReplication);
+  assertion(_cols % blockSize == 0, blockSize, numberOfReplications, shiftAfterEveryReplication);
+  assertion(numberOfReplications >= 1, numberOfReplications, shiftAfterEveryReplication);
+  assertion(shiftAfterEveryReplication >= 0, numberOfReplications, shiftAfterEveryReplication);
 
   if (numberOfReplications == 1) {
     return;
@@ -305,7 +305,7 @@ void tarch::la::DynamicMatrix::replicateCols(
 tarch::la::DynamicMatrix tarch::la::operator*(const tarch::la::DynamicMatrix& A, const tarch::la::DynamicMatrix& B) {
   tarch::la::DynamicMatrix result(A.rows(), B.cols());
 
-  assertionEquals(A.cols(), B.rows());
+  assertion((A.cols()) == (B.rows()), A.cols(), B.rows());
 
   for (int row = 0; row < A.rows(); row++)
     for (int col = 0; col < B.cols(); col++)

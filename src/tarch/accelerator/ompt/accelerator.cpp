@@ -10,7 +10,7 @@
 #include <omp.h>
 
 void* tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, int device) {
-  assertion1(device >= 0, device);
+  assertion(device >= 0, device);
   void* data = omp_target_alloc(sizeInBytes, device);
   assertion(data);
   return data;
@@ -23,7 +23,7 @@ void* tarch::accelerator::allocatePinnedMemory(std::size_t sizeInBytes, [[maybe_
 }
 
 void tarch::accelerator::freeDeviceMemory(void* data, int device) {
-  assertion1(device >= 0, device);
+  assertion(device >= 0, device);
   omp_target_free(data, device);
 }
 
@@ -33,7 +33,7 @@ void tarch::accelerator::freePinnedMemory(void* data, [[maybe_unused]] int devic
 
 void tarch::accelerator::copyToDeviceMemory(void* target, const void* source, std::size_t sizeInBytes, int device) {
   const int hostDevice = omp_get_initial_device();
-  assertion1(device >= 0, device);
+  assertion(device >= 0, device);
   omp_target_memcpy(
     target,
     source,
@@ -52,7 +52,7 @@ void tarch::accelerator::
 
 void tarch::accelerator::copyFromDeviceMemory(const void* source, void* target, std::size_t sizeInBytes, int device) {
   const int hostDevice = omp_get_initial_device();
-  assertion1(device >= 0, device);
+  assertion(device >= 0, device);
   omp_target_memcpy(
     target,
     source,

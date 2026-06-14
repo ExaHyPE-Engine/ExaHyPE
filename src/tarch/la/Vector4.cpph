@@ -50,19 +50,15 @@ INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::Vector<4, Scalar>::size() const
 
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD const Scalar& tarch::la::Vector<4, Scalar>::operator[](int index) const {
-#if !defined(WITH_GPU)
-  assertion3(index >= 0, index, 4, ::toString(*this));
-  assertion3(index < 4, index, 4, ::toString(*this));
-#endif
+  assertion(index >= 0, index, 4, ::toString(*this));
+  assertion(index < 4, index, 4, ::toString(*this));
   return _values[index];
 }
 
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD Scalar& tarch::la::Vector<4, Scalar>::operator[](int index) {
-#if !defined(WITH_GPU)
-  assertion3(index >= 0, index, 4, ::toString(*this));
-  assertion3(index < 4, index, 4, ::toString(*this));
-#endif
+  assertion(index >= 0, index, 4, ::toString(*this));
+  assertion(index < 4, index, 4, ::toString(*this));
   return _values[index];
 }
 

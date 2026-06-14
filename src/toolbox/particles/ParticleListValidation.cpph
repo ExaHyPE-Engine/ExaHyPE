@@ -3,7 +3,7 @@ void toolbox::particles::ensureAllParticleListsAreGatheredOrEmpty(
   peano4::datamanagement::VertexEnumerator<T> vertices
 ) {
   for (int i=0; i<TWO_POWER_D; i++) {
-    assertion2(
+    assertion(
       vertices(i).isGathered() or vertices(i).empty(),
       i, vertices(i).toString()
     );
@@ -25,11 +25,7 @@ void toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
       assertion(iterator != activeParticles.end());
       void* iteratorsRawPointer = *iterator;
       void* arrayRawPointer     = firstParticleOfThisChunk + particleInThisChunk;
-      assertionEquals2(
-        iteratorsRawPointer, arrayRawPointer,
-        (*iterator)->toString(),
-        firstParticleOfThisChunk[particleInThisChunk].toString()
-      );
+      assertion((iteratorsRawPointer) == (arrayRawPointer), iteratorsRawPointer, arrayRawPointer, (*iterator)->toString(), firstParticleOfThisChunk[particleInThisChunk].toString());
       iterator++;
     }
   }

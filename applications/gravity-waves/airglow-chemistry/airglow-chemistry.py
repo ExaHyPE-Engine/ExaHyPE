@@ -178,6 +178,9 @@ if __name__ == "__main__":
 
     riemann_solver.add_user_solver_includes(f"""#include \"../ProductionRates.h\"\n""")
     riemann_solver.add_user_solver_includes('#include "tarch/reader/CSVReader.h"\n')
+    riemann_solver.add_user_action_set_includes(
+        '#include "toolbox/blockstructured/Enumeration.h"\n'
+    )
 
     # initialize initial tendency
     riemann_solver.postprocess_updated_patch = get_initial_tendency_postprocessing()

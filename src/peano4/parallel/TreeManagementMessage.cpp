@@ -1,11 +1,8 @@
 #include "TreeManagementMessage.h"
 
-
-
-#include <sstream>
 #include <algorithm>
-
-
+#include <iostream>
+#include <sstream>
 
 peano4::parallel::TreeManagementMessage::TreeManagementMessage(int  __masterSpacetreeId, int  __workerSpacetreeId, Action  __action){
 setMasterSpacetreeId( __masterSpacetreeId);

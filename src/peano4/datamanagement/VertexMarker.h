@@ -201,7 +201,7 @@ public:
    * Is a vertex local, i.e. not adjacent to any boundary or remote
    */
   inline bool isLocal(int i) const {
-    // assertion1(not _isLocal[i], toString()); // TODO: Is this needed?
+    // assertion(not _isLocal[i], toString()); // TODO: Is this needed?
     return _isLocal[i];
   }
 
@@ -403,7 +403,7 @@ public:
    * I originally thought I could add the assertion
    *
    * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   *   assertion2( result.all() or isAdjacentToParallelDomainBoundary(), result, toString() );
+   *   assertion( result.all() or isAdjacentToParallelDomainBoundary(), result, toString() );
    * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    *
    * However, this assertion fails at the global domain boundary, where some

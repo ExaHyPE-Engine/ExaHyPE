@@ -23,13 +23,13 @@ bool tarch::multicore::TaskComparison::operator()(Task* lhs, Task* rhs) const { 
 tarch::multicore::Task::Task(int taskType, int priority):
   _taskType(taskType),
   _priority(priority) {
-  assertion2(priority >= 0, taskType, priority);
+  assertion(priority >= 0, taskType, priority);
 }
 
 int tarch::multicore::Task::getPriority() const { return _priority; }
 
 void tarch::multicore::Task::setPriority(int priority) {
-  assertion3(priority >= 0, _taskType, _priority, priority);
+  assertion(priority >= 0, _taskType, _priority, priority);
   _priority = priority;
 }
 

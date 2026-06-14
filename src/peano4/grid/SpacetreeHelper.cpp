@@ -576,7 +576,7 @@ int peano4::grid::SpacetreeHelper::getTreeOwningSpacetreeNode(
         false,
         true
       )) {
-    assertion8(
+    assertion(
       id == NotSetYet or vertices[kScalar].adjacentRanks[TWO_POWER_D - kScalar - 1] == id,
       id,
       kScalar,
@@ -589,7 +589,7 @@ int peano4::grid::SpacetreeHelper::getTreeOwningSpacetreeNode(
     );
     id = vertices[kScalar].adjacentRanks[TWO_POWER_D - kScalar - 1];
   }
-  enddforx assertion1(
+  enddforx assertion(
     id != NotSetYet
       or not isSpacetreeNodeLocal(
         vertices,

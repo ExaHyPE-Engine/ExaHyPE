@@ -31,7 +31,7 @@ void toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::scatter() {
   }
   else if (_globalMemoryPage!=UndefinedMemoryPage and not container.empty()) {
     logDebug("scatter " << container.size() << " element(s) from large continuous memory");
-    assertion1( _globalMemory.pages[ _globalMemoryPage ].used, _globalMemoryPage );
+    assertion( _globalMemory.pages[ _globalMemoryPage ].used, _globalMemoryPage );
 
     const int size  = _globalMemory.pages[ _globalMemoryPage ].size;
     const int first = _globalMemory.pages[ _globalMemoryPage ].startIndex;
@@ -244,8 +244,8 @@ bool toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::requestCompl
 
 template <class T>
 void toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::GlobalMemory::freePage( int pageNumber ) {
-  assertion1( pageNumber>=0, pageNumber );
-  assertion1( pageNumber<pages.size(), pageNumber );
+  assertion( pageNumber>=0, pageNumber );
+  assertion( pageNumber<pages.size(), pageNumber );
 
   tarch::multicore::Lock lock( semaphore );
 
@@ -258,7 +258,7 @@ void toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::GlobalMemory
   if (pages.empty() and additionalEntriesRequested>0) {
     logInfo("global memory is completely empty, so use opportunity to increase total size from " <<
       data.size() << " to " << ( data.size() + additionalEntriesRequested ));
-    assertion3( data.size() + additionalEntriesRequested <= data.max_size(), data.size(), additionalEntriesRequested, data.max_size() );
+    assertion( data.size() + additionalEntriesRequested <= data.max_size(), data.size(), additionalEntriesRequested, data.max_size() );
     data.resize( data.size() + additionalEntriesRequested );
     additionalEntriesRequested = 0;
   }

@@ -45,7 +45,7 @@ class LOH1(Scenario):
 
   auto jacobian = Q[Shortcuts::jacobian];
 
-  assertion2(n == 0, "Only a single pointSource for LOH1",n);
+  assertion(n == 0, "Only a single pointSource for LOH1",n);
 
   constexpr double t0 = 0.1;
   constexpr double M0 = 1000.0;

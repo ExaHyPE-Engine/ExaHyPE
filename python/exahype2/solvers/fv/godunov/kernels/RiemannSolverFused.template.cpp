@@ -9,27 +9,12 @@
 {% from 'ComputeFluxesAndPerformTimeStep.macro.h' import ComputeFluxesAndPerformTimeStep with context %}
 
 double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
-  [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&                       solver,
-  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData,
-  [[maybe_unused]] const int                                             targetDevice
-) {
-  return riemannSolverFused(
-    solver,
-    patchData.QInFlattened,
-    patchData.QOutFlattened,
-    patchData.t,
-    patchData.dt,
-    patchData.cellCentre[0].data(),
-    patchData.cellSize[0].data(),
-    patchData.numberOfCells,
-    targetDevice
-  );
-}
-
-double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&    solver,
-  const {{COMPUTE_PRECISION}}* const                  QInFlattened,
-  {{COMPUTE_PRECISION}}* const                        QOutFlattened,
+  const {{STORAGE_PRECISION}}* const                  QInFlattened,
+  {{STORAGE_PRECISION}}* const                        QOutFlattened,
+  const {{STORAGE_PRECISION}}* const                  QInFaces,
+  {{STORAGE_PRECISION}}* const                        QOutFaces,
+  const std::uint64_t*                                faceIndices,
   const double                                        timeStamp,
   const double                                        timeStepSize,
   const double* const                                 patchCentres,
@@ -40,7 +25,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   traceEnter();
 
   constexpr int PatchCardinality = {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %};
-  constexpr int PatchCardinalityWithHalo = {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %};
+  constexpr int FaceCardinality = {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
 
 {% if COMPUTE_MAX_EIGENVALUE %}
   double maxEigenvalueAfterTimeStep = 0.0;
@@ -60,8 +45,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   for (int x = 0; x < {{NUMBER_OF_VOLUMES_PER_AXIS}}; ++x) {
     const auto p = patchIndex;
 
-    const {{COMPUTE_PRECISION}}* const QIn = &QInFlattened[p * PatchCardinalityWithHalo];
-    {{COMPUTE_PRECISION}}* const QOut      = &QOutFlattened[p * PatchCardinality];
+    const {{STORAGE_PRECISION}}* const QIn = &QInFlattened[p * PatchCardinality];
+    {{STORAGE_PRECISION}}* const QOut      = &QOutFlattened[p * PatchCardinality];
 
     const auto patchCentre = tarch::la::Vector<DIMENSIONS, double> {
       patchCentres[p * {{DIMENSIONS}}],
@@ -73,6 +58,14 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
       patchSizes[p * {{DIMENSIONS}} + 1]
       {% if DIMENSIONS==3 %} , patchSizes[p * {{DIMENSIONS}} + 2] {% endif %}
     };
+
+    const {{STORAGE_PRECISION}}* faceQIn[TWO_TIMES_D];
+    {{STORAGE_PRECISION}}* faceQOut[TWO_TIMES_D];
+    for (int f = 0; f < TWO_TIMES_D; f++) {
+      auto faceIndex = faceIndices[p * TWO_TIMES_D + f];
+      faceQIn[f] = &QInFaces[faceIndex * FaceCardinality];
+      faceQOut[f] = &QOutFaces[faceIndex * FaceCardinality];
+    }
 
     {{ ComputeFluxesAndPerformTimeStep() | indent(2)}}
   }

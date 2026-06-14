@@ -72,24 +72,24 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   tarch::multicore::Lock lock(_semaphore);
 
   if (tarch::la::greater(timeStepSize, 0.0)) {
-    assertion1(timeStepSize < std::numeric_limits<double>::max() / 10.0, timeStepSize);
-    assertion1(timeStepSize >= 0.0, timeStepSize);
+    assertion(timeStepSize < std::numeric_limits<double>::max() / 10.0, timeStepSize);
+    assertion(timeStepSize >= 0.0, timeStepSize);
     _minTimeStepSizeThisTimeStep = std::min(timeStepSize, _minTimeStepSizeThisTimeStep);
     _maxTimeStepSizeThisTimeStep = std::max(timeStepSize, _maxTimeStepSizeThisTimeStep);
-    assertion2(tarch::la::smallerEquals(_minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep), _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep);
+    assertion(tarch::la::smallerEquals(_minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep), _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep);
 
     _localMinTimeStampThisTimeStep = std::min(_localMinTimeStampThisTimeStep, timeStamp);
     _localMaxTimeStampThisTimeStep = std::max(_localMaxTimeStampThisTimeStep, timeStamp);
   }
 
-  assertion1(timeStamp < std::numeric_limits<double>::max() / 10.0, timeStamp);
-  assertion1(timeStamp >= 0.0, timeStamp);
+  assertion(timeStamp < std::numeric_limits<double>::max() / 10.0, timeStamp);
+  assertion(timeStamp >= 0.0, timeStamp);
   _minTimeStampThisTimeStep = std::min(timeStamp, _minTimeStampThisTimeStep);
   _maxTimeStampThisTimeStep = std::max(timeStamp, _maxTimeStampThisTimeStep);
-  assertion8(tarch::la::smallerEquals(_minTimeStampThisTimeStep, _maxTimeStampThisTimeStep), _minTimeStamp, _maxTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, minVolumeSize, maxVolumeSize);
+  assertion(tarch::la::smallerEquals(_minTimeStampThisTimeStep, _maxTimeStampThisTimeStep), _minTimeStamp, _maxTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, minVolumeSize, maxVolumeSize);
 
-  assertion1(maxVolumeSize < std::numeric_limits<double>::max() / NumberOfFiniteVolumesPerAxisPerPatch, maxVolumeSize);
-  assertion1(minVolumeSize > 0.0, minVolumeSize);
+  assertion(maxVolumeSize < std::numeric_limits<double>::max() / NumberOfFiniteVolumesPerAxisPerPatch, maxVolumeSize);
+  assertion(minVolumeSize > 0.0, minVolumeSize);
   _minVolumeHThisTimeStep = std::min(_minVolumeHThisTimeStep, minVolumeSize / NumberOfFiniteVolumesPerAxisPerPatch);
   _maxVolumeHThisTimeStep = std::max(_maxVolumeHThisTimeStep, maxVolumeSize / NumberOfFiniteVolumesPerAxisPerPatch);
 }

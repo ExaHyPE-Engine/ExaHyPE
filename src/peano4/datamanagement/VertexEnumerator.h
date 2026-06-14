@@ -96,9 +96,9 @@ public:
    * @image html VertexEnumerator.png
    */
   Vertex& operator()(int i) const {
-    assertion1(i >= 0, i);
-    assertion1(i < TWO_POWER_D, i);
-    assertion1(_vertices[i] != nullptr, i);
+    assertion(i >= 0, i);
+    assertion(i < TWO_POWER_D, i);
+    assertion(_vertices[i] != nullptr, i);
     return *(_vertices[i]);
   }
 };

@@ -14,7 +14,7 @@ class VerifyTroubledness(AbstractLimiterActionSet):
 
       bool isUnTroubled = true;
 
-      auto* Q = fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.data();
+      auto* Q = fineGridCell{{REGULAR_SOLVER_CURRENT_UNKNOWN_IDENTIFIER}}.data();
 
       {% if USE_PAC %}
       isUnTroubled &= kernels::{{SOLVER_NAME}}::isPhysicallyAdmissible(

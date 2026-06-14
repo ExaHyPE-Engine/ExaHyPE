@@ -81,7 +81,7 @@ bool toolbox::particles::dropParticle(double searchRadius, const tarch::la::Vect
   bool result = internal::fitsIntoLevel(searchRadius, marker)
             and marker.isContainedInAdjacentCells(x, 0.5, internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE);
 
-  assertion3(
+  assertion(
     not (result and liftParticleAssociatedWithVertex(true, searchRadius, x, marker)==ParticleReassociationInstruction_SieveGlobally),
     searchRadius,
     x,

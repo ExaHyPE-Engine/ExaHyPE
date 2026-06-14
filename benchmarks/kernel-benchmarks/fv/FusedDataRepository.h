@@ -6,6 +6,7 @@
 #include "tarch/la/Vector.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <iostream>
 #include <map>
 #include <string>
@@ -16,7 +17,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
   /**
    * @brief Manages GPU data for a sparse subset of active leaf cells.
    *
-   * This repository holds data for "enclave" cells designated for GPU
+   * This repository holds data for fused cells designated for GPU
    * offloading. It is designed to be rebuilt whenever the mesh changes.
    * Data is stored in a Structure-of-Arrays (SoA) layout for coalesced
    * memory access on the GPU.
@@ -29,16 +30,16 @@ namespace benchmarks::exahype2::kernelbenchmarks {
    * 5. syncDeviceToHost() - Copies results from GPU back to the host repository.
    * 6. clear() - Frees all GPU resources.
    */
-  class EnclaveDataRepository {
+  class FusedDataRepository {
   public:
-    static EnclaveDataRepository& getInstance();
+    static FusedDataRepository& getInstance();
 
-    EnclaveDataRepository(const EnclaveDataRepository&)            = delete;
-    EnclaveDataRepository& operator=(const EnclaveDataRepository&) = delete;
-    EnclaveDataRepository(EnclaveDataRepository&&)                 = delete;
-    EnclaveDataRepository& operator=(EnclaveDataRepository&&)      = delete;
+    FusedDataRepository(const FusedDataRepository&)            = delete;
+    FusedDataRepository& operator=(const FusedDataRepository&) = delete;
+    FusedDataRepository(FusedDataRepository&&)                 = delete;
+    FusedDataRepository& operator=(FusedDataRepository&&)      = delete;
 
-    ~EnclaveDataRepository();
+    ~FusedDataRepository();
 
     void startCollection();
 
@@ -49,6 +50,8 @@ namespace benchmarks::exahype2::kernelbenchmarks {
 
     void buildFromBookmarks();
 
+    void swapQNewAndQOld();
+
     void clear();
 
     void syncCellsDeviceToHost();
@@ -58,11 +61,12 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     void syncFacesHostToDevice();
 
     // --- GPU Data Accessors ---
-    double* getQ();
-    double* getQReconstructed();
+    double* getQNew();
+    double* getQOld();
 
     uint64_t* getFaceIndices();
-    double*   getFacePool();
+    double*   getFaceQNewPool();
+    double*   getFaceQOldPool();
 
     uint64_t* getBoundaryFaceIndices();
     uint8_t*  getBoundaryFaceNumbers();
@@ -71,7 +75,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     tarch::la::Vector<DIMENSIONS, double>* getCellCentres();
     tarch::la::Vector<DIMENSIONS, double>* getCellSizes();
 
-    int  getNumberOfEnclaveCells() const;
+    int  getNumberFusedCells() const;
     int  getNumberOfBoundaryFaces() const;
     bool isReady() const;
 
@@ -79,7 +83,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     double getMaxVolumeH() const;
 
   private:
-    EnclaveDataRepository();
+    FusedDataRepository();
 
     double* _combinedQBlockDevice = nullptr;
 
@@ -90,12 +94,12 @@ namespace benchmarks::exahype2::kernelbenchmarks {
 
     // --- State Management ---
     bool _isReady;
-    int  _numberOfEnclaveCells;
+    int  _numberOfFusedCells;
     int  _numberOfBoundaryFaces;
 
     // --- GPU Device Pointers ---
-    double* _QDevice;
-    double* _QReconstructedDevice;
+    double* _QNewDevice;
+    double* _QOldDevice;
 
     tarch::la::Vector<DIMENSIONS, double>* _cellCentresDevice;
     tarch::la::Vector<DIMENSIONS, double>* _cellSizesDevice;
@@ -104,7 +108,8 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     /**
      * @brief A single, contiguous block of memory holding all unique face data.
      */
-    double*   _globalFacePoolDevice;
+    double*   _globalFaceQNewPoolDevice;
+    double*   _globalFaceQOldPoolDevice;
     uint64_t* _indicesOfFacesDevice;
 
     uint64_t* _indicesOfBoundaryFacesDevice;

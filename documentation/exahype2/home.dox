@@ -27,7 +27,6 @@ and innovation programme under grant agreement No 671698 (ExaHyPE).
   - \subpage page_solvers
   - \subpage page_tutorials
   - Core functionality, numerics and ingredients
-    - \subpage documentation_exahype2_solvers_enclave_solvers
     - \subpage page_exahype_tracer
     - \subpage page_exahype_boundary_conditions
     - \subpage page_exahype_amr

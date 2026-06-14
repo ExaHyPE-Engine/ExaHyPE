@@ -108,22 +108,7 @@ tasking mechanism. It is described in
 
 Peano relies on a mixture of classic domain decomposition and task-based
 parallelism. The domain decomposition provides the baseline performance,
-and the tasking adds the big flexibility and scalability gain on top. The
-key publication discussing the overall idea and algorithmic ingredients is
-the SISC paper
-
-       @article{Charrier:2020:Enclave,
-         author = {Charrier, Dominic Etienne and Hazelwood, Benjamin and Weinzierl, Tobias},
-         title = {Enclave Tasking for DG Methods on Dynamically Adaptive Meshes},
-         journal = {SIAM Journal on Scientific Computing},
-         volume = {42},
-         number = {3},
-         pages = {C69-C96},
-         year = {2020},
-         doi = {10.1137/19M1276194},
-         URL = {https://doi.org/10.1137/19M1276194},
-         eprint = {https://doi.org/10.1137/19M1276194}
-       }
+and the tasking adds flexibility and scalability on top.
 """
         ).render(**self.d)
 

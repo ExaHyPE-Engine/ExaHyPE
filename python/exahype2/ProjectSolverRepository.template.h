@@ -104,7 +104,7 @@ namespace {{ item }} {
    * Is this the last sweep of a time step
    *
    * Some solvers require multiple mesh sweeps to realise their behaviour.
-   * Runge-Kutta solvers and enclave solvers are the most prominent examples.
+   * Runge-Kutta solvers and task-based solvers are the most prominent examples.
    * Once you call startTimeStep() for the last time, the internal states will
    * toggle and this predicate will hold. After the time step has terminated
    * and finishTimeStep() has been called, this predicate holds. That is, you

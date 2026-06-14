@@ -266,7 +266,8 @@ class StaticLimiting(object):
             + "CellLabel::Troubled_Marker::LIMITER_TO_REGULAR"
         )
         self._limiter_solver._action_set_update_patch.guard += update_patch_guard
-        self._limiter_solver._action_set_reconstruct_patch.guard += update_patch_guard
+        if hasattr(self._limiter_solver, "_action_set_reconstruct_patch"):
+            self._limiter_solver._action_set_reconstruct_patch.guard += update_patch_guard
 
     def create_readme_descriptor(self, domain_offset, domain_size):
         return """ ExaHyPE 2 Limiting solver"""
@@ -545,11 +546,17 @@ class StaticLimiting(object):
 
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
         d[
-            "REGULAR_SOLVER_UNKNOWN_IDENTIFIER"
-        ] = self._regular_solver._unknown_identifier()
+            "REGULAR_SOLVER_CURRENT_UNKNOWN_IDENTIFIER"
+        ] = self._regular_solver.current_unknown_identifier()
         d[
-            "LIMITER_SOLVER_UNKNOWN_IDENTIFIER"
-        ] = self._limiter_solver._unknown_identifier()
+            "REGULAR_SOLVER_PREVIOUS_UNKNOWN_IDENTIFIER"
+        ] = self._regular_solver.previous_unknown_identifier()
+        d[
+            "LIMITER_SOLVER_CURRENT_UNKNOWN_IDENTIFIER"
+        ] = self._limiter_solver.current_unknown_identifier()
+        d[
+            "LIMITER_SOLVER_PREVIOUS_UNKNOWN_IDENTIFIER"
+        ] = self._limiter_solver.previous_unknown_identifier()
 
         d[
             "REGULAR_SOLVER_STORAGE_PRECISION"

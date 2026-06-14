@@ -40,7 +40,7 @@ void peano4::parallel::SpacetreeSet::
   // We are the sender
   if (thisRank == sourceRank) {
     const int neighbourSlot = getInstance().getSpacetree(master).getNeighbourSlot(worker);
-    assertion2(neighbourSlot >= 0, master, worker);
+    assertion(neighbourSlot >= 0, master, worker);
     auto& sourceStack = stackContainer.getParallelExchangeStack(
       master,
       neighbourSlot,
@@ -137,7 +137,7 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(
     if (thisRank != targetRank) {
 #ifdef WITH_MPI
       const int messageSize = sourceStack.size();
-      assertion3(messageSize > 0, spacetreeId, targetTreeId, neighborSlot);
+      assertion(messageSize > 0, spacetreeId, targetTreeId, neighborSlot);
 
       // The outgoing stack size is also the incoming stack size.
       const auto sendMetaInfo = Node::getInstance().getGridDataExchangeMetaInformation(
@@ -185,7 +185,7 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(
     // We only reach here if !WITH_MPI or (WITH_MPI and thisRank == targetRank)
     assertion(thisRank == targetRank);
     const int targetSlot = getInstance().getSpacetree(targetTreeId).getNeighbourSlot(spacetreeId);
-    assertion3(targetSlot >= 0, spacetreeId, targetTreeId, neighborSlot);
+    assertion(targetSlot >= 0, spacetreeId, targetTreeId, neighborSlot);
 
 #if PEANO_DEBUG
     [[maybe_unused]] const auto& reverseOutputStack = stackContainer.getParallelExchangeStack(
@@ -193,7 +193,7 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(
       targetSlot,
       grid::StackTopology::ParallelExchangeStack::HorizontalOutput
     );
-    assertionMsg(
+    assertion(
       reverseOutputStack.empty() or reverseOutputStack.size() == sourceStack.size(),
       "Horizontal boundary exchange assumes symmetric data cardinality"
     );

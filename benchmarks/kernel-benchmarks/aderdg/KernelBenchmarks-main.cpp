@@ -6,9 +6,8 @@
 #include "AderSolver.h"
 #include "Constants.h"
 #include "DataRepository.h"
-#include "EnclaveDataRepository.h"
-#include "EnclaveTasks.h"
-#include "exahype2/EnclaveBookkeeping.h"
+#include "FusedDataRepository.h"
+#include "FusedTasks.h"
 #include "exahype2/RuntimeParameters.h"
 #include "exahype2/dg/DGUtils.h"
 #include "kernels/AderSolver/AMRRoutines.h"
@@ -505,14 +504,14 @@ int main(int argc, char** argv) {
 
   createGrid();
   initGrid();
-  EnclaveDataRepository& enclaveGrid = EnclaveDataRepository::getInstance();
-  enclaveGrid.startCollection();
+  FusedDataRepository& fusedGrid = FusedDataRepository::getInstance();
+  fusedGrid.startCollection();
   for (auto& marker : _cells) {
     if (not marker.hasBeenRefined()) {
-      enclaveGrid.bookmarkCell(marker.getX(), marker.getH());
+      fusedGrid.bookmarkCell(marker.getX(), marker.getH());
     }
   }
-  enclaveGrid.buildFromBookmarks();
+  fusedGrid.buildFromBookmarks();
 
   tarch::instrumentation::Measurement measurement(1.0);
   tarch::instrumentation::Measurement measurementBoundary(1.0);
@@ -551,7 +550,7 @@ int main(int argc, char** argv) {
       if constexpr (ShouldPlot) {
         tarch::instrumentation::Watch plotWatch("", "", false);
         plotWatch.start();
-        enclaveGrid.syncCellsDeviceToHost();
+        fusedGrid.syncCellsDeviceToHost();
         plotGrid();
         plotWatch.stop();
         plotMeasurement.setValue(plotWatch.getCalendarTime());
@@ -559,9 +558,9 @@ int main(int argc, char** argv) {
       }
     }
     if (UseAMR) {
-      enclaveGrid.syncFacesDeviceToHost();
+      fusedGrid.syncFacesDeviceToHost();
       interpolateBetweenAMRBorder();
-      enclaveGrid.syncFacesHostToDevice();
+      fusedGrid.syncFacesHostToDevice();
       // Hack to make static AMR work in the mini-app. The full-app uses face updates that get interpolated between
       // coarse and fine faces. In the mini-app we do interpolation a bit different because we only use one face type to
       // keep things simple. We therefore first restrict the fine grid faces into the coarse grid faces, we do this for
@@ -573,10 +572,10 @@ int main(int argc, char** argv) {
 
       // TODO
       //  benchmarks::exahype2::kernelbenchmarks::kernels::FVSolver::projectPatchFused(
-      //    enclaveGrid.getQ(),
-      //    enclaveGrid.getFacePool(),
-      //    enclaveGrid.getFaceIndices(),
-      //    enclaveGrid.getNumberOfEnclaveCells(),
+      //    fusedGrid.getQ(),
+      //    fusedGrid.getFacePool(),
+      //    fusedGrid.getFaceIndices(),
+      //    fusedGrid.getNumberFusedCells(),
       //    0
       //  );
     }
@@ -593,16 +592,16 @@ int main(int argc, char** argv) {
     watchPredictor.start();
     benchmarks::exahype2::kernelbenchmarks::predictorFused(
       repositories::instanceOfAderSolver,
-      enclaveGrid.getQ(),
-      enclaveGrid.getQOld(),
-      enclaveGrid.getFaceEstimatesPool(),
-      enclaveGrid.getFaceFluxesPool(),
-      enclaveGrid.getFaceIndices(),
+      fusedGrid.getQ(),
+      fusedGrid.getQOld(),
+      fusedGrid.getFaceEstimatesPool(),
+      fusedGrid.getFaceFluxesPool(),
+      fusedGrid.getFaceIndices(),
       timeStamp,
       dt,
-      enclaveGrid.getCellCentres()[0].data(),
-      enclaveGrid.getCellSizes()[0].data(),
-      enclaveGrid.getNumberOfEnclaveCells(),
+      fusedGrid.getCellCentres()[0].data(),
+      fusedGrid.getCellSizes()[0].data(),
+      fusedGrid.getNumberFusedCells(),
       0
     );
     watchPredictor.stop();
@@ -611,17 +610,17 @@ int main(int argc, char** argv) {
     watchBoundary.start();
     benchmarks::exahype2::kernelbenchmarks::handleBoundaryFused(
       repositories::instanceOfAderSolver,
-      enclaveGrid.getFaceEstimatesPool(),
-      enclaveGrid.getFaceFluxesPool(),
-      enclaveGrid.getBoundaryFaceIndices(),
-      enclaveGrid.getBoundaryFaceNumbers(),
-      enclaveGrid.getBoundaryCellIndices(),
-      enclaveGrid.getCellCentres(),
-      enclaveGrid.getCellSizes(),
+      fusedGrid.getFaceEstimatesPool(),
+      fusedGrid.getFaceFluxesPool(),
+      fusedGrid.getBoundaryFaceIndices(),
+      fusedGrid.getBoundaryFaceNumbers(),
+      fusedGrid.getBoundaryCellIndices(),
+      fusedGrid.getCellCentres(),
+      fusedGrid.getCellSizes(),
       timeStamp,
       dt,
-      enclaveGrid.getNumberOfBoundaryFaces(),
-      enclaveGrid.getNumberOfEnclaveCells(),
+      fusedGrid.getNumberOfBoundaryFaces(),
+      fusedGrid.getNumberFusedCells(),
       0
     );
     watchBoundary.stop();
@@ -630,16 +629,16 @@ int main(int argc, char** argv) {
     watchRiemann.start();
     riemannFused(
       repositories::instanceOfAderSolver,
-      enclaveGrid.getFaceEstimatesPool(),
-      enclaveGrid.getFaceFluxesPool(),
-      enclaveGrid.getUniqueFaceIndices(),
-      enclaveGrid.getFaceNumbers(),
-      enclaveGrid.getFaceCellIndices(),
+      fusedGrid.getFaceEstimatesPool(),
+      fusedGrid.getFaceFluxesPool(),
+      fusedGrid.getUniqueFaceIndices(),
+      fusedGrid.getFaceNumbers(),
+      fusedGrid.getFaceCellIndices(),
       timeStamp,
       dt,
-      enclaveGrid.getCellCentres()[0].data(),
-      enclaveGrid.getCellSizes()[0].data(),
-      enclaveGrid.getNumberOfFaces(),
+      fusedGrid.getCellCentres()[0].data(),
+      fusedGrid.getCellSizes()[0].data(),
+      fusedGrid.getNumberOfFaces(),
       0
     );
     watchRiemann.stop();
@@ -648,14 +647,14 @@ int main(int argc, char** argv) {
     watchCorrector.start();
     benchmarks::exahype2::kernelbenchmarks::correctorFused(
       repositories::instanceOfAderSolver,
-      enclaveGrid.getQ(),
-      enclaveGrid.getFaceFluxesPool(),
-      enclaveGrid.getFaceIndices(),
+      fusedGrid.getQ(),
+      fusedGrid.getFaceFluxesPool(),
+      fusedGrid.getFaceIndices(),
       timeStamp,
       dt,
-      enclaveGrid.getCellCentres()[0].data(),
-      enclaveGrid.getCellSizes()[0].data(),
-      enclaveGrid.getNumberOfEnclaveCells(),
+      fusedGrid.getCellCentres()[0].data(),
+      fusedGrid.getCellSizes()[0].data(),
+      fusedGrid.getNumberFusedCells(),
       0
     );
     watchCorrector.stop();
@@ -663,7 +662,7 @@ int main(int argc, char** argv) {
 
     const auto newTimeStepSize = repositories::instanceOfAderSolver.getAdmissibleTimeStepSize();
     repositories::instanceOfAderSolver
-      .update(newTimeStepSize, timeStamp + dt, enclaveGrid.getMinVolumeH(), enclaveGrid.getMaxVolumeH());
+      .update(newTimeStepSize, timeStamp + dt, fusedGrid.getMinVolumeH(), fusedGrid.getMaxVolumeH());
 
     timeStamp += repositories::instanceOfAderSolver.getAdmissibleTimeStepSize();
     repositories::finishTimeStep();
@@ -724,7 +723,7 @@ int main(int argc, char** argv) {
   if constexpr (ShouldPlot) {
     tarch::instrumentation::Watch plotWatch("", "", false);
     plotWatch.start();
-    enclaveGrid.syncCellsDeviceToHost();
+    fusedGrid.syncCellsDeviceToHost();
     plotGrid();
     plotWatch.stop();
     plotMeasurement.setValue(plotWatch.getCalendarTime());
@@ -762,7 +761,7 @@ int main(int argc, char** argv) {
 
   logFinalStatistics(measurement, measurementBoundary, measurementPredictor, measurementRiemann, measurementCorrector);
 
-  enclaveGrid.clear();
+  fusedGrid.clear();
   peano4::shutdown();
   return returnCode;
 }

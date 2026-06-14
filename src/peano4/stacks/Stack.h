@@ -54,28 +54,28 @@ protected:
     INLINE_METHOD std::size_t size() const { return _size; }
 
     INLINE_METHOD T& get(std::size_t index) {
-      assertion2(index < _size, index, _size);
+      assertion(index < _size, index, _size);
       return _stack->_data[_baseElement + index];
     }
 
     INLINE_METHOD const T& get(std::size_t index) const {
-      assertion2(index < _size, index, _size);
+      assertion(index < _size, index, _size);
       return _stack->_data[_baseElement + index];
     }
 
     INLINE_METHOD void set(std::size_t index, T&& value) {
-      assertion2(index < _size, index, _size);
+      assertion(index < _size, index, _size);
       _stack->_data[_baseElement + index] = std::move(value);
     }
 
     // INLINE_METHOD void set(std::size_t index, const T& value) {
-    //   assertion2(index < _size, index, _size);
+    //   assertion(index < _size, index, _size);
     //   _stack->_data[_baseElement + index] = T(value);
     // }
 
     // template <class... Args>
     // INLINE_METHOD void emplace(std::size_t index, Args&&... args) {
-    //   assertion2(index < _size, index, _size);
+    //   assertion(index < _size, index, _size);
     //   _stack->_data[_baseElement + index] = T(std::forward<Args>(args)...);
     // }
 
@@ -85,7 +85,7 @@ protected:
     INLINE_METHOD void emplace(std::size_t index, Args&&... args) noexcept(
       std::is_nothrow_destructible_v<T> && std::is_nothrow_constructible_v<T, Args...>
     ) {
-      assertion2(index < _size, index, _size);
+      assertion(index < _size, index, _size);
       T* slot = &_stack->_data[_baseElement + index];
       std::destroy_at(slot);
       std::construct_at(slot, std::forward<Args>(args)...);
@@ -354,8 +354,8 @@ public:
     const MPI_Comm           comm,
     const int                numberOfElements
   ) {
-    assertion3(_ioMode == IOMode::None, rank, tag, numberOfElements);
-    assertion3(numberOfElements > 0, rank, tag, numberOfElements);
+    assertion(_ioMode == IOMode::None, rank, tag, numberOfElements);
+    assertion(numberOfElements > 0, rank, tag, numberOfElements);
     assertion(_ioMPIRequest == MPI_REQUEST_NULL);
     assertion(not _ioMPIActive);
 

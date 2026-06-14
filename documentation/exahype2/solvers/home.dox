@@ -5,5 +5,4 @@ This page provides an overview of the different solver types in ExaHyPE 2.
 
 - \subpage documentation_exahype2_solvers_finite_volumes
 - \subpage documentation_exahype2_solvers_aderdg
-- \subpage documentation_exahype2_solvers_enclave_solvers
 */

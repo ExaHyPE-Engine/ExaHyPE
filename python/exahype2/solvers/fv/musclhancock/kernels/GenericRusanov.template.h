@@ -61,12 +61,10 @@
   {{ terms.applyNCP('QAverageGatheredLeftInterface', 'DeltaQGatheredLeftInterface', 'ncpGatheredLeftInterface', 'volumeCentreLeft', 'timeStamp') }}
   {% endif %}
 
-  #if !defined(WITH_GPU)
   assertion(std::isfinite(maxEigenvalueGatheredLeftBoundary));
   assertion(std::isfinite(maxEigenvalueGatheredRightBoundary));
   assertion(std::isfinite(maxEigenvalueGatheredRightNeighborLeftBoundary));
   assertion(std::isfinite(maxEigenvalueGatheredLeftNeighborRightBoundary));
-  #endif
 
   #if defined(WITH_OPENMP)
   #pragma omp simd
@@ -74,7 +72,6 @@
   #pragma unroll
   #endif
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; unknown++) { // Compute fluxes and perform time step
-    #if !defined(WITH_GPU)
     assertion(std::isfinite(extrapolatedBoundaryLeft[unknown]));
     assertion(std::isfinite(extrapolatedBoundaryRight[unknown]));
     assertion(std::isfinite(extrapolatedBoundaryLeftNeighborRightBoundary[unknown]));
@@ -91,7 +88,6 @@
     assertion(std::isfinite(ncpGatheredRightInterface[unknown]));
     assertion(std::isfinite(ncpGatheredLeftInterface[unknown]));
     {% endif %}
-    #endif
 
     const {{COMPUTE_PRECISION}} maxEigenvalueLeftInterface  = maxEigenvalueGatheredLeftBoundary   > maxEigenvalueGatheredLeftNeighborRightBoundary ? maxEigenvalueGatheredLeftBoundary  : maxEigenvalueGatheredLeftNeighborRightBoundary;
     const {{COMPUTE_PRECISION}} maxEigenvalueRightInterface = maxEigenvalueGatheredRightBoundary  > maxEigenvalueGatheredRightNeighborLeftBoundary ? maxEigenvalueGatheredRightBoundary : maxEigenvalueGatheredRightNeighborLeftBoundary;
@@ -108,14 +104,11 @@
 
     QOutGathered[unknown] += timeStepSize / patchSize(normal) * {{NUMBER_OF_VOLUMES_PER_AXIS}} * 0.5 * (fluxLeft - fluxRight);
 
-    #if !defined(WITH_GPU)
     assertion(std::isfinite(maxEigenvalueLeftInterface));
     assertion(std::isfinite(maxEigenvalueRightInterface));
     assertion(std::isfinite(fluxLeft));
     assertion(std::isfinite(fluxRight));
     assertion(std::isfinite(QOutGathered[unknown]));
-    nonCriticalAssertion(QOutGathered[unknown] == QOutGathered[unknown]);
-    #endif
   } // unknown
 {% endmacro %}
 

@@ -10,7 +10,7 @@ void toolbox::blockstructured::restrictCell_AoS_tensor_product(
   [[maybe_unused]] T* fineGridValues,
   [[maybe_unused]] T* coarseGridValues
 ) {
-  assertionMsg(false, "@Han, we have to implement this one");
+  assertion(false, "@Han, we have to implement this one");
 }
 
 template<typename T>
@@ -24,7 +24,7 @@ void toolbox::blockstructured::restrictCell_AoS_matrix(
   [[maybe_unused]] T* fineGridValues,
   [[maybe_unused]] T* coarseGridValues
 ) {
-  assertionMsg(false, "To be implemented");
+  assertion(false, "To be implemented");
 }
 
 template<typename T>
@@ -35,7 +35,7 @@ void toolbox::blockstructured::restrictCell_AoS_second_order(
   [[maybe_unused]] T* fineGridValues,
   [[maybe_unused]] T* coarseGridValues
 ) {
-  assertionMsg(false, "To be implemented");
+  assertion(false, "To be implemented");
 }
 
 template<typename T>
@@ -46,7 +46,7 @@ void toolbox::blockstructured::restrictCell_AoS_third_order(
   [[maybe_unused]] T* fineGridValues,
   [[maybe_unused]] T* coarseGridValues
 ) {
-  assertionMsg(false, "To be implemented");
+  assertion(false, "To be implemented");
 }
 
 template<typename T>
@@ -619,10 +619,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       logDebug("coarse volume/dof "
           << dest
           << " prior to update: " << coarseGridValues[destLinearised * unknowns + 0]);
-      assertionNumericalEquals(
-        coarseGridValues[destLinearised * unknowns + 0],
-        coarseGridValues[destLinearised * unknowns + 0]
-      );
+      assertion(tarch::la::equals((coarseGridValues[destLinearised * unknowns + 0]), (coarseGridValues[destLinearised * unknowns + 0])), coarseGridValues[destLinearised * unknowns + 0], coarseGridValues[destLinearised * unknowns + 0]);
 
       dfore(kFine, numberOfDoFsPerAxisInPatch, normal, 0) {
         for (int iFine = 0; iFine < 2 * overlap; iFine++) {
@@ -641,11 +638,11 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
               int col = iFine;
               int row = iCoarse;
 
-              assertion4(col >= 0, row, col, src, dest);
-              assertion4(row >= 0, row, col, src, dest);
+              assertion(col >= 0, row, col, src, dest);
+              assertion(row >= 0, row, col, src, dest);
 
-              assertion4(col < 2 * overlap, row, col, src, dest);
-              assertion4(row < overlap, row, col, src, dest);
+              assertion(col < 2 * overlap, row, col, src, dest);
+              assertion(row < overlap, row, col, src, dest);
 
               int index = col + row * 2 * overlap;
               weight *= normalRestrictionMatrix1d[index];
@@ -661,7 +658,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
                         + marker.getRelativePositionWithinFatherCell()(d
                           ) * numberOfDoFsPerAxisInPatch;
               int row = dest(d);
-              assertion5(
+              assertion(
                 col >= 0,
                 row,
                 col,
@@ -669,7 +666,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
                 dest,
                 marker.getRelativePositionWithinFatherCell()
               );
-              assertion5(
+              assertion(
                 row >= 0,
                 row,
                 col,
@@ -677,7 +674,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
                 dest,
                 marker.getRelativePositionWithinFatherCell()
               );
-              assertion5(
+              assertion(
                 col < 3 * numberOfDoFsPerAxisInPatch,
                 row,
                 col,
@@ -685,7 +682,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
                 dest,
                 marker.getRelativePositionWithinFatherCell()
               );
-              assertion5(
+              assertion(
                 row < numberOfDoFsPerAxisInPatch,
                 row,
                 col,
@@ -701,10 +698,10 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
             }
           }
 
-          assertion2(weight == weight, srcLinearised, destLinearised);
+          assertion(weight == weight, srcLinearised, destLinearised);
 
           for (int unknown = 0; unknown < unknowns; unknown++) {
-            assertion2(
+            assertion(
               fineGridValues[srcLinearised * unknowns + unknown]
                 == fineGridValues[srcLinearised * unknowns + unknown],
               srcLinearised,
@@ -712,7 +709,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
             );
             coarseGridValues[destLinearised * unknowns + unknown]
               += weight * fineGridValues[srcLinearised * unknowns + unknown];
-            assertion2(
+            assertion(
               coarseGridValues[destLinearised * unknowns + unknown]
                 == coarseGridValues[destLinearised * unknowns + unknown],
               srcLinearised,
@@ -811,8 +808,8 @@ void toolbox::blockstructured::
     T*      destinationValues,
     double  weightOfInjectedValue
   ) {
-  assertion1(weightOfInjectedValue >= 0.0, weightOfInjectedValue);
-  assertion1(weightOfInjectedValue <= 1.0, weightOfInjectedValue);
+  assertion(weightOfInjectedValue >= 0.0, weightOfInjectedValue);
+  assertion(weightOfInjectedValue <= 1.0, weightOfInjectedValue);
 
   // how many fine grid cells are mapped onto one destination cell
   T sourceToDestinationRatio
@@ -862,7 +859,7 @@ void toolbox::blockstructured::restrictCell_AoS_inject(
     bool restrictThisVolume = true;
     for (int d = 0; d < DIMENSIONS; d++) {
       restrictThisVolume &= (fineVolumeWithintCoarsePatch(d) % 3) == 1;
-      coarseVolume(d) = fineVolumeWithintCoarsePatch(3) / 3;
+      coarseVolume(d) = fineVolumeWithintCoarsePatch(d) / 3;
     }
 
     if (restrictThisVolume) {
@@ -875,14 +872,14 @@ void toolbox::blockstructured::restrictCell_AoS_inject(
         numberOfDoFsPerAxisInPatch
       );
       for (int j = 0; j < unknowns; j++) {
-        assertion3(
+        assertion(
           coarseGridValues[coarseVolumeLinearised * unknowns + j]
             == coarseGridValues[coarseVolumeLinearised * unknowns + j],
           coarseVolume,
           fineVolume,
           marker.toString()
         );
-        assertion3(
+        assertion(
           fineGridValues[fineVolumeLinearised * unknowns + j]
             == fineGridValues[fineVolumeLinearised * unknowns + j],
           coarseVolume,
@@ -1023,7 +1020,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
   T*                                        coarseGridValues,
   bool                                      swapInsideOutside
 ) {
-  assertion1(overlap == 1 or overlap % 3 == 0, overlap);
+  assertion(overlap == 1 or overlap % 3 == 0, overlap);
 
   bool mapFromInnerHalfOfHalo
     = not swapInsideOutside; // mapOuterCoarseGridHaloOntoInnerFineGridHalo
@@ -1072,8 +1069,8 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
       // The normal component addresses the 2*overlap halo slots, while the
       // tangential components address patch-local cells.
       for (int d = 0; d < DIMENSIONS; d++) {
-        assertion3(coarseVolume(d) >= 0, kFine, iFine, marker);
-        assertion3(
+        assertion(coarseVolume(d) >= 0, kFine, iFine, marker);
+        assertion(
           coarseVolume(d) < (d == normal ? 2 * overlap : numberOfDoFsPerAxisInPatch),
           kFine,
           iFine,
@@ -1122,7 +1119,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_inject(
   T*                                        coarseGridValues,
   bool                                      swapInsideOutside
 ) {
-  assertion1(overlap == 1 or overlap % 3 == 1, overlap);
+  assertion(overlap == 1 or overlap % 3 == 1, overlap);
 
   const int  normal = marker.getSelectedFaceNumber() % DIMENSIONS;
   const bool pickLeftHalfOfHaloOnFineGrid = (marker.getSelectedFaceNumber() >= DIMENSIONS) xor swapInsideOutside;
@@ -1169,14 +1166,14 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_inject(
           normal
         );
         for (int j = 0; j < unknowns; j++) {
-          assertion3(
+          assertion(
             coarseGridValues[coarseVolumeLinearised * unknowns + j]
               == coarseGridValues[coarseVolumeLinearised * unknowns + j],
             coarseVolume,
             fineVolume,
             marker.toString()
           );
-          assertion3(
+          assertion(
             fineGridValues[fineVolumeLinearised * unknowns + j]
               == fineGridValues[fineVolumeLinearised * unknowns + j],
             coarseVolume,

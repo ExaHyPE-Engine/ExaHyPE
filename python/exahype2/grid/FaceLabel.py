@@ -220,7 +220,7 @@ def create_face_label(solver_name):
       }
       break;
     default:
-      assertionMsg( false, "not implemented yet" );
+      assertion(false, "not implemented yet");
   }
 """
 

@@ -1,5 +1,7 @@
 #include "ParticleProjection.h"
 
+#include <iostream>
+
 void exahype2::fv::particles::projection::depositMass_PiecewiseConstant(
   const peano4::datamanagement::CellMarker& marker,
   int                                       voxelsPerAxis,
@@ -38,7 +40,7 @@ void exahype2::fv::particles::projection::depositMass_PiecewiseConstant(
   std::cout << "  voxel volume = " << volume << "\n";
 
   // Deposit density (mass/volume)
-  assertion1(index < voxelsPerAxis * voxelsPerAxis * unknownsPerVoxel, index);
+  assertion(index < voxelsPerAxis * voxelsPerAxis * unknownsPerVoxel, index);
   double deltaDensity = mass / volume;
   std::cout << "  deltaDensity = " << deltaDensity << "\n";
 

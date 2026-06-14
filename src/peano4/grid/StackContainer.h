@@ -120,7 +120,7 @@ private:
 
   int getLocalTreeIndex(int treeId) const {
     const int idx = tryGetLocalTreeIndex(treeId);
-    assertionMsg(idx >= 0, "Tree id not registered");
+    assertion(idx >= 0, "Tree id not registered");
     return idx;
   }
 

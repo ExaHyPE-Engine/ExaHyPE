@@ -1,10 +1,8 @@
 #include "IntegerMessage.h"
 
-
-
 #include <sstream>
 #include <algorithm>
-
+#include <iostream>
 
 
 tarch::mpi::IntegerMessage::IntegerMessage(int  __value){

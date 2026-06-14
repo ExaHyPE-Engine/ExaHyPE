@@ -3,9 +3,7 @@
 #pragma once
 
 
-#include <sstream>
 #include <string>
-
 
 /**
  * @page tarch_NoncriticalAssertions Noncritical assertions
@@ -36,16 +34,12 @@
  * error/assertion message per rank.
  *
  *
- * ## Macros and behaviour in release mode
+ * ## Explicit triggering and behaviour in release mode
  *
- * In line with the assertions, I offer a set of macros for non-critical
- * assertions. Again, they reduce to nop if you run in release mode, i.e.
- * I don't check for non-critical assertions anymore.
- *
- * However, the environment to handle non-critical assertions is always up, no
- * matter if you run in release mode or not. Therefore, you can manually trigger
- * a non-critical assertion through a call to triggerNonCriticalAssertion() and
- * this call then won't be removed if you compile in release mode.
+ * The environment to handle non-critical assertions is always up, no matter if
+ * you run in release mode or not. Therefore, trigger a non-critical assertion
+ * explicitly through a call to triggerNonCriticalAssertion(). This call is not
+ * removed by release builds.
  *
  *
  * ## Realisation
@@ -123,231 +117,12 @@ namespace tarch {
   /**
    * Trigger a non-critical assertion
    *
-   * You can either use this routine, or you can use the macros. They invoke
-   * this routine eventually.
-   *
    * The routine reports only details about the very first non-critical
    * assertion. All follow-up logs on this rank are ignored, i.e. we only
    * get a note and no detail. Once logged locally, we send the assertion
    * message to the global master if we are not working on the global
    * marker ourselves.
    */
-  void triggerNonCriticalAssertion( std::string file, int line, std::string expression, std::string parameterValuePairs );
+  void triggerNonCriticalAssertion(std::string file, int line, std::string expression, std::string parameterValuePairs);
   bool hasNonCriticalAssertionBeenViolated();
-}
-
-
-
-#if PEANO_ASSERTIONS
-#define nonCriticalAssertion(expr) if (!(expr)) { \
-  ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, "" ); \
-}
-
-
-#define nonCriticalAssertion1(expr,param0) if (!(expr)) { \
-  std::ostringstream msg; \
-  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
-  ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
-}
-
-
-#define nonCriticalAssertion2(expr,param0,param1) if (!(expr)) { \
-  std::ostringstream msg; \
-  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
-  msg << "parameter " << #param1 << ": " << param1 << std::endl; \
-  ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
-}
-
-
-#define nonCriticalAssertion3(expr,param0,param1,param2) if (!(expr)) { \
-  std::ostringstream msg; \
-  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
-  msg << "parameter " << #param1 << ": " << param1 << std::endl; \
-  msg << "parameter " << #param2 << ": " << param2 << std::endl; \
-  ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
-}
-
-
-#define nonCriticalAssertion4(expr,param0,param1,param2,param3) if (!(expr)) { \
-  std::ostringstream msg; \
-  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
-  msg << "parameter " << #param1 << ": " << param1 << std::endl; \
-  msg << "parameter " << #param2 << ": " << param2 << std::endl; \
-  msg << "parameter " << #param3 << ": " << param3 << std::endl; \
-  ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
-}
-
-
-#define nonCriticalAssertion5(expr,param0,param1,param2,param3,param4) if (!(expr)) { \
-  std::ostringstream msg; \
-  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
-  msg << "parameter " << #param1 << ": " << param1 << std::endl; \
-  msg << "parameter " << #param2 << ": " << param2 << std::endl; \
-  msg << "parameter " << #param3 << ": " << param3 << std::endl; \
-  msg << "parameter " << #param4 << ": " << param4 << std::endl; \
-  ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
-}
-
-
-#define nonCriticalAssertion6(expr,param0,param1,param2,param3,param4,param5) if (!(expr)) { \
-  std::ostringstream msg; \
-  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
-  msg << "parameter " << #param1 << ": " << param1 << std::endl; \
-  msg << "parameter " << #param2 << ": " << param2 << std::endl; \
-  msg << "parameter " << #param3 << ": " << param3 << std::endl; \
-  msg << "parameter " << #param4 << ": " << param4 << std::endl; \
-  msg << "parameter " << #param5 << ": " << param5 << std::endl; \
-  ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
-}
-
-
-#define nonCriticalAssertion7(expr,param0,param1,param2,param3,param4,param5,param6) if (!(expr)) { \
-  std::ostringstream msg; \
-  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
-  msg << "parameter " << #param1 << ": " << param1 << std::endl; \
-  msg << "parameter " << #param2 << ": " << param2 << std::endl; \
-  msg << "parameter " << #param3 << ": " << param3 << std::endl; \
-  msg << "parameter " << #param4 << ": " << param4 << std::endl; \
-  msg << "parameter " << #param5 << ": " << param5 << std::endl; \
-  msg << "parameter " << #param6 << ": " << param6 << std::endl; \
-  ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
-}
-
-
-#define nonCriticalAssertion8(expr,param0,param1,param2,param3,param4,param5,param6,param7) if (!(expr)) { \
-  std::ostringstream msg; \
-  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
-  msg << "parameter " << #param1 << ": " << param1 << std::endl; \
-  msg << "parameter " << #param2 << ": " << param2 << std::endl; \
-  msg << "parameter " << #param3 << ": " << param3 << std::endl; \
-  msg << "parameter " << #param4 << ": " << param4 << std::endl; \
-  msg << "parameter " << #param5 << ": " << param5 << std::endl; \
-  msg << "parameter " << #param6 << ": " << param6 << std::endl; \
-  msg << "parameter " << #param7 << ": " << param7 << std::endl; \
-  ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
-}
-
-
-#define nonCriticalAssertion9(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8) if (!(expr)) { \
-  std::ostringstream msg; \
-  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
-  msg << "parameter " << #param1 << ": " << param1 << std::endl; \
-  msg << "parameter " << #param2 << ": " << param2 << std::endl; \
-  msg << "parameter " << #param3 << ": " << param3 << std::endl; \
-  msg << "parameter " << #param4 << ": " << param4 << std::endl; \
-  msg << "parameter " << #param5 << ": " << param5 << std::endl; \
-  msg << "parameter " << #param6 << ": " << param6 << std::endl; \
-  msg << "parameter " << #param7 << ": " << param7 << std::endl; \
-  msg << "parameter " << #param8 << ": " << param8 << std::endl; \
-  ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
-}
-
-
-#define nonCriticalAssertion10(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9) if (!(expr)) { \
-  std::ostringstream msg; \
-  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
-  msg << "parameter " << #param1 << ": " << param1 << std::endl; \
-  msg << "parameter " << #param2 << ": " << param2 << std::endl; \
-  msg << "parameter " << #param3 << ": " << param3 << std::endl; \
-  msg << "parameter " << #param4 << ": " << param4 << std::endl; \
-  msg << "parameter " << #param5 << ": " << param5 << std::endl; \
-  msg << "parameter " << #param6 << ": " << param6 << std::endl; \
-  msg << "parameter " << #param7 << ": " << param7 << std::endl; \
-  msg << "parameter " << #param8 << ": " << param8 << std::endl; \
-  msg << "parameter " << #param9 << ": " << param9 << std::endl; \
-  ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
-}
-
-
-#define nonCriticalAssertion11(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10) if (!(expr)) { \
-  std::ostringstream msg; \
-  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
-  msg << "parameter " << #param1 << ": " << param1 << std::endl; \
-  msg << "parameter " << #param2 << ": " << param2 << std::endl; \
-  msg << "parameter " << #param3 << ": " << param3 << std::endl; \
-  msg << "parameter " << #param4 << ": " << param4 << std::endl; \
-  msg << "parameter " << #param5 << ": " << param5 << std::endl; \
-  msg << "parameter " << #param6 << ": " << param6 << std::endl; \
-  msg << "parameter " << #param7 << ": " << param7 << std::endl; \
-  msg << "parameter " << #param8 << ": " << param8 << std::endl; \
-  msg << "parameter " << #param9 << ": " << param9 << std::endl; \
-  msg << "parameter " << #param10 << ": " << param10 << std::endl; \
-  ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
-}
-
-
-#define nonCriticalAssertion12(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10,param11) if (!(expr)) { \
-  std::ostringstream msg; \
-  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
-  msg << "parameter " << #param1 << ": " << param1 << std::endl; \
-  msg << "parameter " << #param2 << ": " << param2 << std::endl; \
-  msg << "parameter " << #param3 << ": " << param3 << std::endl; \
-  msg << "parameter " << #param4 << ": " << param4 << std::endl; \
-  msg << "parameter " << #param5 << ": " << param5 << std::endl; \
-  msg << "parameter " << #param6 << ": " << param6 << std::endl; \
-  msg << "parameter " << #param7 << ": " << param7 << std::endl; \
-  msg << "parameter " << #param8 << ": " << param8 << std::endl; \
-  msg << "parameter " << #param9 << ": " << param9 << std::endl; \
-  msg << "parameter " << #param10 << ": " << param10 << std::endl; \
-  msg << "parameter " << #param11 << ": " << param11 << std::endl; \
-  ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
-}
-
-
-#define nonCriticalAssertion13(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10,param11,param12) if (!(expr)) { \
-  std::ostringstream msg; \
-  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
-  msg << "parameter " << #param1 << ": " << param1 << std::endl; \
-  msg << "parameter " << #param2 << ": " << param2 << std::endl; \
-  msg << "parameter " << #param3 << ": " << param3 << std::endl; \
-  msg << "parameter " << #param4 << ": " << param4 << std::endl; \
-  msg << "parameter " << #param5 << ": " << param5 << std::endl; \
-  msg << "parameter " << #param6 << ": " << param6 << std::endl; \
-  msg << "parameter " << #param7 << ": " << param7 << std::endl; \
-  msg << "parameter " << #param8 << ": " << param8 << std::endl; \
-  msg << "parameter " << #param9 << ": " << param9 << std::endl; \
-  msg << "parameter " << #param10 << ": " << param10 << std::endl; \
-  msg << "parameter " << #param11 << ": " << param11 << std::endl; \
-  msg << "parameter " << #param12 << ": " << param12 << std::endl; \
-  ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
-}
-
-
-#define nonCriticalAssertion14(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10,param11,param12,param13) if (!(expr)) { \
-  std::ostringstream msg; \
-  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
-  msg << "parameter " << #param1 << ": " << param1 << std::endl; \
-  msg << "parameter " << #param2 << ": " << param2 << std::endl; \
-  msg << "parameter " << #param3 << ": " << param3 << std::endl; \
-  msg << "parameter " << #param4 << ": " << param4 << std::endl; \
-  msg << "parameter " << #param5 << ": " << param5 << std::endl; \
-  msg << "parameter " << #param6 << ": " << param6 << std::endl; \
-  msg << "parameter " << #param7 << ": " << param7 << std::endl; \
-  msg << "parameter " << #param8 << ": " << param8 << std::endl; \
-  msg << "parameter " << #param9 << ": " << param9 << std::endl; \
-  msg << "parameter " << #param10 << ": " << param10 << std::endl; \
-  msg << "parameter " << #param11 << ": " << param11 << std::endl; \
-  msg << "parameter " << #param12 << ": " << param12 << std::endl; \
-  msg << "parameter " << #param13 << ": " << param13 << std::endl; \
-  ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
-}
-#else
-#define nonCriticalAssertion(expr)
-#define nonCriticalAssertion1(expr,param0)
-#define nonCriticalAssertion2(expr,param0,param1)
-#define nonCriticalAssertion3(expr,param0,param1,param2)
-#define nonCriticalAssertion4(expr,param0,param1,param2,param3)
-#define nonCriticalAssertion5(expr,param0,param1,param2,param3,param4)
-#define nonCriticalAssertion6(expr,param0,param1,param2,param3,param4,param5)
-#define nonCriticalAssertion7(expr,param0,param1,param2,param3,param4,param5,param6)
-#define nonCriticalAssertion8(expr,param0,param1,param2,param3,param4,param5,param6,param7)
-#define nonCriticalAssertion9(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8)
-#define nonCriticalAssertion10(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9)
-#define nonCriticalAssertion11(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10)
-#define nonCriticalAssertion12(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10,param11)
-#define nonCriticalAssertion13(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10,param11,param12)
-#define nonCriticalAssertion14(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10,param11,param12,param13)
-#endif
-
-
-
+} // namespace tarch

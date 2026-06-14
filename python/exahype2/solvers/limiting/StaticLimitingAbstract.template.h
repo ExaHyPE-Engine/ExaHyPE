@@ -6,7 +6,7 @@
 
 #include "exahype2/Solver.h"
 
-#include "tarch/NonCriticalAssertions.h"
+#include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Rank.h"
@@ -146,7 +146,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
         */
        template<typename T>
         void mapDiscreteMaximumPrincipleObservables({{COMPUTE_PRECISION}}* const observables, const T* const Q) const {
-          ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "map discrete maximum principle observables was called, it should never be.", "" );
+          assertion(false, "map discrete maximum principle observables was called, it should never be.");
         }
 
         /**
@@ -159,7 +159,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
           const {{COMPUTE_PRECISION}}&  localMax,
           const {{COMPUTE_PRECISION}}&  boundaryMinPerObservable,
           const {{COMPUTE_PRECISION}}&  previousMax) const {
-            ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "get discrete maximum principle relaxation parameter was called, it should never be.", "" );
+            assertion(false, "get discrete maximum principle relaxation parameter was called, it should never be.");
             return 0.0;
         }
 

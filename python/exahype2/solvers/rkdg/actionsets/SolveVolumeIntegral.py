@@ -53,8 +53,8 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
 
     const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
 
-    assertion3( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution );
-    assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
+    assertion( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution );
+    assertion( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
 
     double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data();
     #if DIMENSIONS==2
@@ -63,54 +63,6 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data() + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
     #endif
 
-    {% if SPAWN_VOLUME_KERNEL_AS_TASK %}
-    if (marker.willBeSkeletonCell()) {
-      ::exahype2::CellData cellData(
-        QIn,
-        marker.getX(),
-        marker.getH(),
-        timeStamp,
-        timeStepSize,
-        QOut
-      );
-
-      tasks::{{SOLVER_NAME}}_VolumetricSolverEnclaveTask::applyKernelToCell(
-        marker,
-        timeStamp,
-        timeStepSize,
-        QIn,
-        QOut
-      );
-    } else {
-      assertion(marker.willBeEnclaveCell());
-      assertion(not marker.willBeRefined());
-      auto newEnclaveTask = new tasks::{{SOLVER_NAME}}_VolumetricSolverEnclaveTask(
-        marker,
-        timeStamp,
-        timeStepSize,
-        {% if MAKE_COPY_OF_ENCLAVE_TASK_DATA %}
-        QIn
-        {% else %}
-        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.getSmartPointer(),
-        QOut
-        {% endif %}
-      );
-      
-      int predecessorEnclaveTaskNumber = fineGridCell{{SEMAPHORE_LABEL}}.getSemaphoreNumber();
-      
-      tarch::multicore::spawnTask(
-        newEnclaveTask, 
-        predecessorEnclaveTaskNumber>=0 ? std::set<int>{predecessorEnclaveTaskNumber} : tarch::multicore::NoInDependencies, 
-        newEnclaveTask->getTaskId()
-      );
-      
-      if (predecessorEnclaveTaskNumber>=0) {
-        ::exahype2::EnclaveTask<double>::releaseTaskNumber(predecessorEnclaveTaskNumber);
-      }
-
-      fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber(newEnclaveTask->getTaskId());
-    }
-    {% else %}
     ::exahype2::CellData cellData(
       QIn,
       marker.getX(),
@@ -132,13 +84,12 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     {% endif %}
 
     ::exahype2::dg::{{VOLUMETRIC_COMPUTE_KERNEL_CALL}}
-    {% endif %}
   }
   {% endfor %}
 """
 
 
-  def __init__(self,solver,spawn_volume_kernel_as_task = False):
+  def __init__(self,solver):
     """
     guard_project: String (C++ code)
       Predicate which controls if the solution is actually projected.
@@ -150,7 +101,6 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     super(SolveVolumeIntegral,self).__init__(solver)
     self.guards                      = []
     self._butcher_tableau            = ButcherTableau(self._solver._rk_order)
-    self.spawn_volume_kernel_as_task = spawn_volume_kernel_as_task
 
 
   @property
@@ -175,8 +125,6 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "PREDICATES" ]                               = self.guards
       d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
-      d[ "SPAWN_VOLUME_KERNEL_AS_TASK"]               = self.spawn_volume_kernel_as_task
-      d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._solver._name)
       result = jinja2.Template(self.TemplateCellKernel).render(**d)
       pass
     return result
@@ -187,9 +135,4 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
 
 
   def get_includes(self):
-    if self.spawn_volume_kernel_as_task:
-      return super( SolveVolumeIntegral, self ).get_includes() + """
-#include "tasks/""" + self._solver._name + """_VolumetricSolverEnclaveTask.h"
-"""
-    else:
-      return super( SolveVolumeIntegral, self ).get_includes()
+    return super( SolveVolumeIntegral, self ).get_includes()

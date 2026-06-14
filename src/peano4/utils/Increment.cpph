@@ -28,10 +28,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void peano4::utils::dInc(
 
 INLINE_METHOD GPU_CALLABLE_METHOD void peano4::utils::
   dInc(tarch::la::Vector<DIMENSIONS, int>& counter, int max, int doNotExamine) {
-#if !defined(WITH_GPU)
   assertion(doNotExamine < DIMENSIONS);
   assertion(doNotExamine >= -1);
-#endif
 
   if (doNotExamine != 0) {
     counter(0)++;

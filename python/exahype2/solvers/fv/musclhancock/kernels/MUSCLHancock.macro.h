@@ -53,11 +53,9 @@
     {{ terms.applyLimiter('QInGatheredLeftLeft', 'QInGatheredLeft', 'QInGathered', 'volumeCentreLeft', 'volumeSize', 'normal', 'unknown', 'slopeGatheredLeft[normal][unknown]') }}
     {{ terms.applyLimiter('QInGathered', 'QInGatheredRight', 'QInGatheredRightRight', 'volumeCentreRight', 'volumeSize', 'normal', 'unknown', 'slopeGatheredRight[normal][unknown]') }}
 
-    #if !defined(WITH_GPU)
     assertion(std::isfinite(slopeGathered[normal][unknown]));
     assertion(std::isfinite(slopeGatheredLeft[normal][unknown]));
     assertion(std::isfinite(slopeGatheredRight[normal][unknown]));
-    #endif
   } // unknown
 {% endmacro %}
 
@@ -143,12 +141,10 @@
     extrapolatedBoundaryLeftNeighborRightBoundary[unknown] += 0.5 * timeStepSize * updateLeftNeighborRightBoundary;
     extrapolatedBoundaryRightNeighborLeftBoundary[unknown] += 0.5 * timeStepSize * updateRightNeighborLeftBoundary;
 
-    #if !defined(WITH_GPU)
     assertion(std::isfinite(extrapolatedBoundaryLeft[unknown]));
     assertion(std::isfinite(extrapolatedBoundaryRight[unknown]));
     assertion(std::isfinite(extrapolatedBoundaryLeftNeighborRightBoundary[unknown]));
     assertion(std::isfinite(extrapolatedBoundaryRightNeighborLeftBoundary[unknown]));
-    #endif
   } // unknown
 {% endmacro %}
 

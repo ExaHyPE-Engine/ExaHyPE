@@ -21,8 +21,6 @@ std::string peano4::datamanagement::CellMarker::toString() const {
   out << ",WillBeRefined=" << willBeRefined();
   out << ",IsLocal=" << isLocal();
   out << ",IsParentLocal=" << isParentLocal();
-  out << ",HasBeenEnclave=" << hasBeenEnclaveCell();
-  out << ",WillBeEnclave=" << willBeEnclaveCell();
   out << "}";
   return out.str();
 }

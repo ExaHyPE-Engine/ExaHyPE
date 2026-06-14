@@ -9,9 +9,8 @@ class FixedTimeSteppingCodeSnippets( exahype2.solvers.FixedTimeSteppingCodeSnipp
   Code snippet generator for fixed time stepping in the Runge-Kutta schemes
   
   """
-  def __init__(self, normalised_time_step_size, use_enclave_tasking):
+  def __init__(self, normalised_time_step_size):
     self._normalised_time_step_size = normalised_time_step_size
-    self._use_enclave_tasking       = use_enclave_tasking
 
 
   def create_start_time_step_implementation(self):

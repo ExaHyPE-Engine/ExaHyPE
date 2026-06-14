@@ -28,9 +28,10 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
     if (sendFaceProjection) {
       // Convert old (untroubled) regular solver solution to the limiter solver layer
       kernels::{{SOLVER_NAME}}::projectOnFVLimiterSpaceWithoutHalo(
-        fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}_old.data(),
-        fineGridCell{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}.data()
+        fineGridCell{{REGULAR_SOLVER_PREVIOUS_UNKNOWN_IDENTIFIER}}.data(),
+        fineGridCell{{LIMITER_SOLVER_CURRENT_UNKNOWN_IDENTIFIER}}.data()
       );
+      fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setHasUpdated(true);
 
       {% if LIMITER_USE_ADJUST_SOLUTION %}
       // Adjust the projected solution
@@ -47,7 +48,7 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
           marker.getH(),
           fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp(),
           fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStepSize(),
-          fineGridCell{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}.data() + i * {{NUMBER_OF_DATA}}
+          fineGridCell{{LIMITER_SOLVER_CURRENT_UNKNOWN_IDENTIFIER}}.data() + i * {{NUMBER_OF_DATA}}
         );
       }
       {% endif %}
@@ -60,8 +61,8 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
     // On the FV layer the troubled cells and their neighbours LIMITER_TO_REGULAR were recalculated.
     // Therefore we project limited values on the regular solver layer.
     kernels::{{SOLVER_NAME}}::projectOnDGSpaceFromFVWithoutHalo(
-      fineGridCell{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}.data(),
-      fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.data()
+      fineGridCell{{LIMITER_SOLVER_CURRENT_UNKNOWN_IDENTIFIER}}.data(),
+      fineGridCell{{REGULAR_SOLVER_CURRENT_UNKNOWN_IDENTIFIER}}.data()
     );
   }
 """

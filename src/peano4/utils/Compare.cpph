@@ -7,10 +7,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::dCmp(
 ) {
   int result = true;
   for (int i = 0; i < DIMENSIONS; i++) {
-#if !defined(WITH_GPU)
-    assertion2(counter(i) <= max(i), counter, max);
-    assertion2(counter(i) >= 0, counter, max);
-#endif
+    assertion(counter(i) <= max(i), counter, max);
+    assertion(counter(i) >= 0, counter, max);
     result &= (counter(i) < max(i));
   }
   return result;
@@ -19,10 +17,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::dCmp(
 INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::dCmp(const tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
   int result = true;
   for (int i = 0; i < DIMENSIONS; i++) {
-#if !defined(WITH_GPU)
-    assertion2(counter(i) <= max, counter, max);
-    assertion2(counter(i) >= 0, counter, max);
-#endif
+    assertion(counter(i) <= max, counter, max);
+    assertion(counter(i) >= 0, counter, max);
     result &= (counter(i) < max);
   }
   return result;

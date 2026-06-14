@@ -18,52 +18,50 @@ class UpdatePatch(AbstractFDActionSet):
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
     {{COMPUTE_TIME_STEP_SIZE}}
-    assertion2(tarch::la::greaterEquals(timeStamp,    0.0), timeStamp, timeStepSize);
-    assertion2(tarch::la::greaterEquals(timeStepSize, 0.0), timeStamp, timeStepSize);
-
-    if ({{ENCLAVE_GUARD}}) { // is skeleton cell
-#if PEANO_DEBUG
-      ::exahype2::fv::validatePatch(
-        QIn,
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        {{NUMBER_OF_NODES_PER_AXIS}},
-        {{HALO_SIZE}}, // Halo size
-        std::string(__FILE__) + "(" + std::to_string(__LINE__) + ")"
-      ); // Previous time step has to be valid
-#endif
-
-      {{PREPROCESS_RECONSTRUCTED_PATCH}}
-      {% if COMPUTE_MAX_EIGENVALUE %}
-      const auto maxEigenvalue = {{COMPUTE_KERNEL_CALL}}
-      {% else %}
-      const auto _ = {{COMPUTE_KERNEL_CALL}}
-      {% endif %}
-      {{POSTPROCESS_UPDATED_PATCH}}
+    assertion(tarch::la::greaterEquals(timeStamp,    0.0), timeStamp, timeStepSize);
+    assertion(tarch::la::greaterEquals(timeStepSize, 0.0), timeStamp, timeStepSize);
 
 #if PEANO_DEBUG
-      ::exahype2::fv::validatePatch(
-        QOut,
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        {{NUMBER_OF_NODES_PER_AXIS}},
-        0, // Halo size
-        std::string(__FILE__) + "(" + std::to_string(__LINE__) + ")"
-      ); // Outcome has to be valid
+    ::exahype2::fv::validatePatch(
+      QIn,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_NODES_PER_AXIS}},
+      {{HALO_SIZE}}, // Halo size
+      std::string(__FILE__) + "(" + std::to_string(__LINE__) + ")"
+    ); // Previous time step has to be valid
 #endif
 
-      {{COMPUTE_NEW_TIME_STEP_SIZE}}
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
-      repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp + timeStepSize, tarch::la::min(marker.getH()), tarch::la::max(marker.getH()));
-    }
+    {{PREPROCESS_RECONSTRUCTED_PATCH}}
+    {% if COMPUTE_MAX_EIGENVALUE %}
+    const auto maxEigenvalue = {{COMPUTE_KERNEL_CALL}}
+    {% else %}
+    const auto _ = {{COMPUTE_KERNEL_CALL}}
+    {% endif %}
+    {{POSTPROCESS_UPDATED_PATCH}}
+
+#if PEANO_DEBUG
+    ::exahype2::fv::validatePatch(
+      QOut,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_NODES_PER_AXIS}},
+      0, // Halo size
+      std::string(__FILE__) + "(" + std::to_string(__LINE__) + ")"
+    ); // Outcome has to be valid
+#endif
+
+    {{COMPUTE_NEW_TIME_STEP_SIZE}}
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
+    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp + timeStepSize, tarch::la::min(marker.getH()), tarch::la::max(marker.getH()));
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
   } else if (not marker.willBeRefined() and not marker.hasBeenRefined()) { // Required in cases where the if-guard above is extended by a solver
     const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
     const double timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
 
-    assertion2(tarch::la::greaterEquals(timeStepSize, 0.0), timeStepSize, timeStamp);
-    assertion2(tarch::la::greaterEquals(timeStamp,    0.0), timeStepSize, timeStamp);
+    assertion(tarch::la::greaterEquals(timeStepSize, 0.0), timeStepSize, timeStamp);
+    assertion(tarch::la::greaterEquals(timeStamp,    0.0), timeStepSize, timeStamp);
 
     repositories::{{SOLVER_INSTANCE}}.update(0.0, timeStamp, tarch::la::min(marker.getH()), tarch::la::max(marker.getH()));
   }
@@ -81,16 +79,11 @@ class UpdatePatch(AbstractFDActionSet):
             + f"repositories::{solver.get_name_of_global_instance()}.getSolverState() == Abstract{solver.name}::SolverState::IsSolvingAfterGridInitialisation"
             + ")"
         )
-        self.old_accessor = "fineGridCell" + solver._patch_reconstructed.name
-        self.new_accessor = "fineGridCell" + solver._patch.name
+        self.old_accessor = "fineGridCell" + solver.previous_unknown_identifier()
+        self.new_accessor = "fineGridCell" + solver.current_unknown_identifier()
 
     def _add_action_set_entries_to_dictionary(self, d):
         d["GUARD"] = self.guard
-        d["ENCLAVE_GUARD"] = (
-            "marker.willBeSkeletonCell()"
-            if self._solver._use_enclave_tasking
-            else "true"
-        )
         d["OLD_ACCESSOR"] = self.old_accessor
         d["NEW_ACCESSOR"] = self.new_accessor
 

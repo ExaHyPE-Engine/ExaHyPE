@@ -155,7 +155,7 @@ tracing_action_set = exahype2.tracer.FiniteVolumesTracing(
   marker,
   {{PATCH_SIZE}},
   {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-  fineGridCell{{SOLVER_NAME}}Q.data(),
+  fineGridCell{{CURRENT_UNKNOWN_IDENTIFIER}}.data(),
   {1,1,1},
   {0,0,0},
   {1,0,0}

@@ -109,13 +109,13 @@ def create_cell_label(solver_name):
     result.peano4_mpi_and_storage_aspect.merge_implementation = """
   switch (context) {
     case ::peano4::stacks::SendReceiveContext::BoundaryExchange:
-      assertionMsg( false, "cells should never be subject of a boundary exchange" );
+      assertion(false, "cells should never be subject of a boundary exchange");
       break;
     case ::peano4::stacks::SendReceiveContext::ForkDomain:
       *this = neighbour;
       break;
     default:
-      assertionMsg( false, "not implemented yet" );
+      assertion(false, "not implemented yet");
   }
 """
 

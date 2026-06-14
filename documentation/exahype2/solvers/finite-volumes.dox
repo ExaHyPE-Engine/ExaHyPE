@@ -120,10 +120,9 @@ On the Python API side, the class `exahype2.solvers.fv.FV` is the base class
 of all Finite Volume solvers.
 Its class documentation holds a lot of background information on the solver
 design and data flows.
-There are two major subclasses: `exahype2.solvers.fv.SingleSweep` and
-`exahype2.solvers.fv.EnclaveTasking`.
-They realise a straightforward realisation with one mesh traversal per
-time step or the @ref page_exahype_solvers_enclave_solvers "enclave concept", respectively.
+The production FV solvers are currently single-sweep solvers. Some solver
+variants can additionally generate fused compute kernels for accelerator-oriented
+benchmark and integration paths via their `fuse_compute_kernels` option.
 
 ## Implementation
 

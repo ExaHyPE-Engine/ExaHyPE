@@ -78,24 +78,24 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   tarch::multicore::Lock lock(_semaphore);
 
   if (tarch::la::greater(timeStepSize, 0.0)) {
-    assertion1(timeStepSize < std::numeric_limits<double>::max() / 10.0, timeStepSize);
-    assertion1(timeStepSize >= 0.0, timeStepSize);
+    assertion(timeStepSize < std::numeric_limits<double>::max() / 10.0, timeStepSize);
+    assertion(timeStepSize >= 0.0, timeStepSize);
     _minTimeStepSizeThisTimeStep = std::min(timeStepSize, _minTimeStepSizeThisTimeStep);
     _maxTimeStepSizeThisTimeStep = std::max(timeStepSize, _maxTimeStepSizeThisTimeStep);
-    assertion2(tarch::la::smallerEquals(_minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep), _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep);
+    assertion(tarch::la::smallerEquals(_minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep), _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep);
 
     _localMinTimeStampThisTimeStep = std::min(_localMinTimeStampThisTimeStep, timeStamp);
     _localMaxTimeStampThisTimeStep = std::max(_localMaxTimeStampThisTimeStep, timeStamp);
   }
 
-  assertion1(timeStamp < std::numeric_limits<double>::max() / 10.0, timeStamp);
-  assertion1(timeStamp >= 0.0, timeStamp);
+  assertion(timeStamp < std::numeric_limits<double>::max() / 10.0, timeStamp);
+  assertion(timeStamp >= 0.0, timeStamp);
   _maxTimeStampThisTimeStep = std::max(timeStamp, _maxTimeStampThisTimeStep);
   _minTimeStampThisTimeStep = std::min(timeStamp, _minTimeStampThisTimeStep);
-  assertion8(tarch::la::smallerEquals(_minTimeStampThisTimeStep/*_minTimeStamp*/, _maxTimeStampThisTimeStep), _minTimeStamp, _maxTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, minCellSize, maxCellSize);
+  assertion(tarch::la::smallerEquals(_minTimeStampThisTimeStep/*_minTimeStamp*/, _maxTimeStampThisTimeStep), _minTimeStamp, _maxTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, minCellSize, maxCellSize);
 
-  assertion1(maxCellSize < std::numeric_limits<double>::max() / 10.0, maxCellSize);
-  assertion1(minCellSize > 0.0, minCellSize);
+  assertion(maxCellSize < std::numeric_limits<double>::max() / 10.0, maxCellSize);
+  assertion(minCellSize > 0.0, minCellSize);
   _maxCellHThisTimeStep = std::max(_maxCellHThisTimeStep, maxCellSize);
   _minCellHThisTimeStep = std::min(_minCellHThisTimeStep, minCellSize);
 

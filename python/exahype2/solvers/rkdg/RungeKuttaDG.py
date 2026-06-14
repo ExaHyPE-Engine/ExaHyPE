@@ -423,7 +423,7 @@ We use RK("""
           See class description. General information such as "is boundary".
 
         _cell_label: CellLabel
-          See class description. General information such as "is enclave".
+          See class description. General information about the cell.
 
         Per default, I do always store the projections onto faces, and I
         always keep the actual time step data and the cell projections. It is
@@ -1000,10 +1000,6 @@ We use RK("""
         - Solve Riemann problem: the constraint here is that it has to come after
           the boundary handling.
         - Add volume and face solution: last
-
-        If we use enclave tasking, we have to be careful when we insert the merger.
-        See SeparateSweepsWithEnclaveTasking.add_actions_to_perform_time_step() for
-        a discussion of the details.
         """
         d = {}
         self._init_dictionary_with_default_parameters(d)
@@ -1135,13 +1131,6 @@ We use RK("""
         d["NUMBER_OF_DOFS_PER_FACE_3D"] = (self._basis.dofs_per_axis) * (
             self._basis.dofs_per_axis
         )
-
-        d["ASSERTION_WITH_1_ARGUMENTS"] = "nonCriticalAssertion1"
-        d["ASSERTION_WITH_2_ARGUMENTS"] = "nonCriticalAssertion2"
-        d["ASSERTION_WITH_3_ARGUMENTS"] = "nonCriticalAssertion3"
-        d["ASSERTION_WITH_4_ARGUMENTS"] = "nonCriticalAssertion4"
-        d["ASSERTION_WITH_5_ARGUMENTS"] = "nonCriticalAssertion5"
-        d["ASSERTION_WITH_6_ARGUMENTS"] = "nonCriticalAssertion6"
 
         d["SOLVER_CONSTANTS"] = self._solver_constants
 

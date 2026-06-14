@@ -85,9 +85,7 @@ if __name__ == "__main__":
       const auto iM                 = 1.0 / M;
       const auto meanMolecularMass  = (MOLAR_MASS_NITROGEN * Q[Shortcuts::N2] + MOLAR_MASS_MOLECULAR_OXYGEN * Q[Shortcuts::O2] + MOLAR_MASS_ATOMIC_OXYGEN * Q[Shortcuts::O]) * iM; // in kg/mol
       const auto pressure           = Q[Shortcuts::rho] * UNIVERSAL_GAS_CONSTANT * Q[Shortcuts::T] / meanMolecularMass;
-      #if !defined(WITH_GPU)
-      assertion5(pressure > 0.0, M, meanMolecularMass, Q[Shortcuts::rho], Q[Shortcuts::T], pressure);
-      #endif
+      assertion(pressure > 0.0, M, meanMolecularMass, Q[Shortcuts::rho], Q[Shortcuts::T], pressure);
     
       const auto gamma = (1.4 * (M - Q[Shortcuts::O]) + 1.67 * Q[Shortcuts::O]) * iM;
 
@@ -113,9 +111,7 @@ if __name__ == "__main__":
         const auto iM                 = 1.0 / M;
         const auto meanMolecularMass  = (MOLAR_MASS_NITROGEN * Qinside[Shortcuts::N2] + MOLAR_MASS_MOLECULAR_OXYGEN * Qinside[Shortcuts::O2] + MOLAR_MASS_ATOMIC_OXYGEN * Qinside[Shortcuts::O]) * iM; // in kg/mol
         const auto pressure           = Qinside[Shortcuts::rho] * UNIVERSAL_GAS_CONSTANT * Qinside[Shortcuts::T] / meanMolecularMass;
-        #if !defined(WITH_GPU)
-        assertion5(pressure > 0.0, M, meanMolecularMass, Qinside[Shortcuts::rho], Qinside[Shortcuts::T], pressure);
-        #endif
+        assertion(pressure > 0.0, M, meanMolecularMass, Qinside[Shortcuts::rho], Qinside[Shortcuts::T], pressure);
       
         const auto gamma  = (1.4 * (M - Qinside[Shortcuts::O]) + 1.67 * Qinside[Shortcuts::O]) * iM;
 

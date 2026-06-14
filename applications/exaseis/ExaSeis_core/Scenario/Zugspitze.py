@@ -42,7 +42,7 @@ class Zugspitze(Scenario):
 
   auto jacobian = Q[Shortcuts::jacobian];
 
-  assertion2(n == 0, "Only a single pointSource for Zugspitze",n);
+  assertion(n == 0, "Only a single pointSource for Zugspitze",n);
 
   constexpr  double pi = 3.14159265359;
   constexpr  double sigma = 0.1149;

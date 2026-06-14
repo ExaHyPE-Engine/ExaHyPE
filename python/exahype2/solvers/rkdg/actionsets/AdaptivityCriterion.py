@@ -22,12 +22,9 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
     evalutae the adaptivity criterion here.
   - InitGrid has volumetric data and might want to evaluate the criterion.
     This is implicitly done by the t=0 check below.
-  - The plotting does not alter the solution. It thus makes no sense to 
+  - The plotting does not alter the solution. It thus makes no sense to
     evaluate the criterion here.
-  
-  Please consult EnclaveTasking.create_action_sets for details regarding
-  the handling of AMR within the enclave tasking concept.
-  
+
   """
   
   

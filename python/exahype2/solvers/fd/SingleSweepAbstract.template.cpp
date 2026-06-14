@@ -81,24 +81,24 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   tarch::multicore::Lock lock(_semaphore);
 
   if (tarch::la::greater(timeStepSize, 0.0)) {
-    assertion1(timeStepSize < std::numeric_limits<double>::max() / 10.0, timeStepSize);
-    assertion1(timeStepSize >= 0.0, timeStepSize);
+    assertion(timeStepSize < std::numeric_limits<double>::max() / 10.0, timeStepSize);
+    assertion(timeStepSize >= 0.0, timeStepSize);
     _minTimeStepSizeThisTimeStep = std::min(timeStepSize, _minTimeStepSizeThisTimeStep);
     _maxTimeStepSizeThisTimeStep = std::max(timeStepSize, _maxTimeStepSizeThisTimeStep);
-    assertion2(_minTimeStepSizeThisTimeStep <= _maxTimeStepSizeThisTimeStep, _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep);
+    assertion(_minTimeStepSizeThisTimeStep <= _maxTimeStepSizeThisTimeStep, _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep);
 
     _localMinTimeStampThisTimeStep = std::min(_localMinTimeStampThisTimeStep, timeStamp);
     _localMaxTimeStampThisTimeStep = std::max(_localMaxTimeStampThisTimeStep, timeStamp);
   }
 
-  assertion1(timeStamp < std::numeric_limits<double>::max() / 10.0, timeStamp);
-  assertion1(timeStamp >= 0.0, timeStamp);
+  assertion(timeStamp < std::numeric_limits<double>::max() / 10.0, timeStamp);
+  assertion(timeStamp >= 0.0, timeStamp);
   _minTimeStampThisTimeStep = std::min(timeStamp, _minTimeStampThisTimeStep);
   _maxTimeStampThisTimeStep = std::max(timeStamp, _maxTimeStampThisTimeStep);
-  assertion2(_minTimeStampThisTimeStep <= _maxTimeStampThisTimeStep, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep);
+  assertion(_minTimeStampThisTimeStep <= _maxTimeStampThisTimeStep, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep);
 
-  assertion1(maxH < std::numeric_limits<double>::max() / NumberOfNodesPerAxisPerPatch, maxH);
-  assertion1(minH > 0.0, minH);
+  assertion(maxH < std::numeric_limits<double>::max() / NumberOfNodesPerAxisPerPatch, maxH);
+  assertion(minH > 0.0, minH);
   _minHThisTimeStep = std::min(_minHThisTimeStep, minH / NumberOfNodesPerAxisPerPatch);
   _maxHThisTimeStep = std::max(_maxHThisTimeStep, maxH / NumberOfNodesPerAxisPerPatch);
 }

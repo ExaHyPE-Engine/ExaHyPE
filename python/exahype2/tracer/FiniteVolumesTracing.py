@@ -43,7 +43,7 @@ class FiniteVolumesTracing(
         marker,
         {{PATCH_SIZE}},
         {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-        fineGridCell{{SOLVER_NAME}}Q.data(),
+        fineGridCell{{CURRENT_UNKNOWN_IDENTIFIER}}.data(),
         *p
 """,
     ):
@@ -90,6 +90,7 @@ class FiniteVolumesTracing(
         self.tracerDict["PARTICLES_CONTAINER"] = particle_set.name
         self.tracerDict["SOLVER_NAME"] = solver._name
         self.tracerDict["SOLVER_INSTANCE"] = solver.get_name_of_global_instance()
+        self.tracerDict["CURRENT_UNKNOWN_IDENTIFIER"] = solver.current_unknown_identifier()
         self.tracerDict["PATCH_SIZE"] = solver._patch_size
         self.tracerDict["NUMBER_OF_UNKNOWNS"] = solver.unknowns
         self.tracerDict["NUMBER_OF_AUXILIARY_VARIABLES"] = solver.auxiliary_variables

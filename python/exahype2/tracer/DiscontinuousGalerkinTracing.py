@@ -19,8 +19,7 @@ class DiscontinuousGalerkinTracing(
 
     ## Update plug-in points
 
-    We only update cells which are marked with getHasUpdated(). For enclave solvers,
-    we assume that this flag is only set after a cell has updated. For Runge-Kutta
+    We only update cells which are marked with getHasUpdated(). For Runge-Kutta
     type solvers, I assume that this flag is set by the computation of the final
     linear combination of estimates.
 
@@ -38,7 +37,7 @@ class DiscontinuousGalerkinTracing(
         {{ORDER}},
         repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
         {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-        fineGridCell{{SOLVER_NAME}}Q.data(),
+        fineGridCell{{CURRENT_UNKNOWN_IDENTIFIER}}.data(),
         *p
 """,
     ):
@@ -54,6 +53,7 @@ class DiscontinuousGalerkinTracing(
         self.tracerDict["PARTICLES_CONTAINER"] = particle_set.name
         self.tracerDict["SOLVER_NAME"] = solver._name
         self.tracerDict["SOLVER_INSTANCE"] = solver.get_name_of_global_instance()
+        self.tracerDict["CURRENT_UNKNOWN_IDENTIFIER"] = solver.current_unknown_identifier()
         self.tracerDict["ORDER"] = solver._basis.order
         self.tracerDict["NUMBER_OF_UNKNOWNS"] = solver.unknowns
         self.tracerDict["NUMBER_OF_AUXILIARY_VARIABLES"] = solver.auxiliary_variables

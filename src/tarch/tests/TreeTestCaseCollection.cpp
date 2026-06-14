@@ -11,12 +11,7 @@ tarch::tests::TreeTestCaseCollection::
   TestCase::TestCase(treeTestCaseCollectionName),
   _writeToLog(writeToLog),
   _deleteTestCases(deleteTestCases) {
-  assertion3(
-    isNameWithoutHierarchy(treeTestCaseCollectionName),
-    treeTestCaseCollectionName,
-    deleteTestCases,
-    writeToLog
-  );
+  assertion(isNameWithoutHierarchy(treeTestCaseCollectionName), treeTestCaseCollectionName, deleteTestCases, writeToLog);
 }
 
 tarch::tests::TreeTestCaseCollection::~TreeTestCaseCollection() {
@@ -38,7 +33,7 @@ bool tarch::tests::TreeTestCaseCollection::isNameWithoutHierarchy(const std::str
 
 std::string tarch::tests::TreeTestCaseCollection::getFirstIdentifierInHierarchy(const std::string& testCaseName) {
   std::string result = testCaseName.substr(0, testCaseName.find("::"));
-  assertion2(isNameWithoutHierarchy(result), result, testCaseName);
+  assertion(isNameWithoutHierarchy(result), result, testCaseName);
   return result;
 }
 

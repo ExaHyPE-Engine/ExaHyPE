@@ -85,7 +85,7 @@ bool tarch::accelerator::Device::isInitialised() const { return not syclQueues.e
 int tarch::accelerator::Device::getNumberOfDevices() const { return syclQueues.size(); }
 
 void* tarch::accelerator::getSYCLQueue(int number) {
-  assertion1(syclQueues.count(number) == 1, number);
+  assertion(syclQueues.count(number) == 1, number);
   return &syclQueues[number];
 }
 

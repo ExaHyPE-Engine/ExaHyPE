@@ -37,14 +37,14 @@ peano4::stacks::Stack<peano4::grid::GridVertex>& peano4::parallel::SpacetreeSet:
 
 void peano4::parallel::SpacetreeSet::registerLocalSpacetree(peano4::grid::Spacetree& tree) {
   const int localTreeId = Node::getInstance().getLocalTreeId(tree._id);
-  assertion4(
+  assertion(
     localTreeId >= 0 and localTreeId < MAX_SPACETREES_PER_RANK,
     "Invalid local tree id",
     tree._id,
     localTreeId,
     tarch::mpi::Rank::getInstance().getRank()
   );
-  assertion4(
+  assertion(
     _spacetreeByLocalTreeId[localTreeId] == nullptr,
     "Duplicate local tree id",
     tree._id,
@@ -58,7 +58,7 @@ void peano4::parallel::SpacetreeSet::unregisterLocalSpacetree(int id) {
   const int localTreeId = Node::getInstance().getLocalTreeId(id);
   if (localTreeId >= 0 and localTreeId < MAX_SPACETREES_PER_RANK) {
     [[maybe_unused]] auto* const tree = _spacetreeByLocalTreeId[localTreeId];
-    assertion4(
+    assertion(
       tree == nullptr or tree->_id == id,
       "Spacetree lookup mismatch",
       id,
@@ -84,7 +84,7 @@ void peano4::parallel::SpacetreeSet::init(
   tarch::services::ServiceRepository::getInstance().addService(this, "peano4::parallel::SpacetreeSet");
 
 #ifdef WITH_MPI
-  assertion4(
+  assertion(
     (peano4::parallel::Node::getInstance().getNumberOfRegisteredTrees() == 1
      and tarch::mpi::Rank::getInstance().getRank() == 0)
       or (peano4::parallel::Node::getInstance().getNumberOfRegisteredTrees() == 0 and tarch::mpi::Rank::getInstance().getRank() != 0),
@@ -131,7 +131,7 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
       break;
     case peano4::parallel::TreeManagementMessage::Action::Acknowledgement:
     case peano4::parallel::TreeManagementMessage::Action::JoinWithWorker:
-      assertionMsg(false, "Should only be passed synchronously and never run through this tag");
+      assertion(false, "Should only be passed synchronously and never run through this tag");
       break;
     }
   }
@@ -182,7 +182,7 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
     } break;
     case peano4::parallel::TreeManagementMessage::Action::Acknowledgement:
     case peano4::parallel::TreeManagementMessage::Action::JoinWithWorker:
-      assertionMsg(false, "Should only be passed synchronously and never run through this tag");
+      assertion(false, "Should only be passed synchronously and never run through this tag");
       break;
     case peano4::parallel::TreeManagementMessage::Action::RemoveChildTreeFromBooksAsChildBecameEmpty: {
       logInfo(
@@ -237,7 +237,7 @@ void peano4::parallel::SpacetreeSet::addSpacetree(int masterId, int newTreeId) {
 
     TreeManagementMessage::
       receive(message, targetRank, getAnswerTag(masterId), tarch::mpi::Rank::getInstance().getCommunicator());
-    assertion1(message.getAction() == TreeManagementMessage::Action::Acknowledgement, message.toString());
+    assertion(message.getAction() == TreeManagementMessage::Action::Acknowledgement, message.toString());
 
     const peano4::grid::AutomatonState& state = _spacetrees.begin()->_root;
     logDebug("Send state " << state.toString() << " to rank " << targetRank);
@@ -246,9 +246,9 @@ void peano4::parallel::SpacetreeSet::addSpacetree(int masterId, int newTreeId) {
 
     TreeManagementMessage::
       receive(message, targetRank, getAnswerTag(masterId), tarch::mpi::Rank::getInstance().getCommunicator());
-    assertion1(message.getAction() == TreeManagementMessage::Action::Acknowledgement, message.toString());
+    assertion(message.getAction() == TreeManagementMessage::Action::Acknowledgement, message.toString());
 #else
-    assertionMsg(false, "MPI build disabled");
+    assertion(false, "MPI build disabled");
 #endif
   } else {
     tarch::multicore::Lock lock(_semaphore);
@@ -295,7 +295,7 @@ void peano4::parallel::SpacetreeSet::createObserverCloneIfRequired(
   if (slot == nullptr) {
     slot = observer.clone(treeId);
   }
-  assertion2(
+  assertion(
     _clonedObserver.count(treeId) == 1 and _clonedObserver[treeId] != nullptr,
     treeId,
     _clonedObserver.count(treeId)
@@ -309,13 +309,13 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees(
     const int sourceStackNumber = grid::PeanoCurve::getInputStackNumber(parent._root);
     for (auto& worker : parent._hasSplit) {
       const int slot = parent.getNeighbourSlot(worker);
-      assertion4(slot >= 0, slot, parent._id, worker, parent.toString());
+      assertion(slot >= 0, slot, parent._id, worker, parent.toString());
 
       auto& targetStack = parent.getParallelExchangeVertexStack(
         slot,
         grid::StackTopology::ParallelExchangeStack::VerticalOutput
       );
-      assertion3(targetStack.empty(), parent._id, worker, sourceStackNumber);
+      assertion(targetStack.empty(), parent._id, worker, sourceStackNumber);
       targetStack.clone(parent.getLocalExchangeVertexStack(sourceStackNumber));
 
       streamDataFromSplittingTreeToNewTree(*this, parent._id, worker);
@@ -472,9 +472,9 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::GridTraversalObs
           getAnswerTag(p->_id),
           tarch::mpi::Rank::getInstance().getCommunicator()
         );
-        assertion1(message.getAction() == TreeManagementMessage::Action::Acknowledgement, message.toString());
+        assertion(message.getAction() == TreeManagementMessage::Action::Acknowledgement, message.toString());
 #else
-        assertionMsg(false, "Branch may not be entered");
+        assertion(false, "Branch may not be entered");
 #endif
       } else {
         logDebug("Parent tree " << p->_masterId << " is local on this rank. Remove child reference");
@@ -511,7 +511,7 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::GridTraversalObs
 }
 
 const peano4::grid::GridStatistics& peano4::parallel::SpacetreeSet::getGridStatistics(int treeId) const {
-  assertion2(isLocalSpacetree(treeId), treeId, tarch::mpi::Rank::getInstance().getRank());
+  assertion(isLocalSpacetree(treeId), treeId, tarch::mpi::Rank::getInstance().getRank());
   return getSpacetree(treeId).getGridStatistics();
 }
 
@@ -574,7 +574,7 @@ bool peano4::parallel::SpacetreeSet::split(int treeId, const grid::SplitInstruct
       newSpacetreeId = answerMessage.getWorkerSpacetreeId();
 #else
       newSpacetreeId = -1;
-      assertionMsg(false, "Can't split into tree on a different rank if not compiled with parallel support");
+      assertion(false, "Can't split into tree on a different rank if not compiled with parallel support");
 #endif
     } else {
       newSpacetreeId = peano4::parallel::Node::getInstance().reserveId(
@@ -598,7 +598,7 @@ bool peano4::parallel::SpacetreeSet::split(int treeId, const grid::SplitInstruct
 
 peano4::grid::Spacetree& peano4::parallel::SpacetreeSet::getSpacetree(int id) {
   const int localTreeId = Node::getInstance().getLocalTreeId(id);
-  assertion4(
+  assertion(
     localTreeId >= 0 and localTreeId < MAX_SPACETREES_PER_RANK,
     "Invalid local tree id",
     id,
@@ -606,14 +606,14 @@ peano4::grid::Spacetree& peano4::parallel::SpacetreeSet::getSpacetree(int id) {
     tarch::mpi::Rank::getInstance().getRank()
   );
   auto* const tree = _spacetreeByLocalTreeId[localTreeId];
-  assertion4(tree != nullptr, "No spacetree found", id, localTreeId, tarch::mpi::Rank::getInstance().getRank());
-  assertion4(tree->_id == id, "Spacetree lookup mismatch", id, tree->_id, localTreeId);
+  assertion(tree != nullptr, "No spacetree found", id, localTreeId, tarch::mpi::Rank::getInstance().getRank());
+  assertion(tree->_id == id, "Spacetree lookup mismatch", id, tree->_id, localTreeId);
   return *tree;
 }
 
 const peano4::grid::Spacetree& peano4::parallel::SpacetreeSet::getSpacetree(int id) const {
   const int localTreeId = Node::getInstance().getLocalTreeId(id);
-  assertion4(
+  assertion(
     localTreeId >= 0 and localTreeId < MAX_SPACETREES_PER_RANK,
     "Invalid local tree id",
     id,
@@ -621,7 +621,7 @@ const peano4::grid::Spacetree& peano4::parallel::SpacetreeSet::getSpacetree(int 
     tarch::mpi::Rank::getInstance().getRank()
   );
   const peano4::grid::Spacetree* const tree = _spacetreeByLocalTreeId[localTreeId];
-  assertion4(tree != nullptr, "No spacetree found", id, localTreeId, tarch::mpi::Rank::getInstance().getRank());
-  assertion4(tree->_id == id, "Spacetree lookup mismatch", id, tree->_id, localTreeId);
+  assertion(tree != nullptr, "No spacetree found", id, localTreeId, tarch::mpi::Rank::getInstance().getRank());
+  assertion(tree->_id == id, "Spacetree lookup mismatch", id, tree->_id, localTreeId);
   return *tree;
 }

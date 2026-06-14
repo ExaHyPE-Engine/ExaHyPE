@@ -1,4 +1,4 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
 from .AbstractFVActionSet import AbstractFVActionSet
@@ -8,23 +8,21 @@ import jinja2
 
 class EmptyPreprocessSolution(AbstractFVActionSet):
   """
-  
-  PreprocessSolution differs from other action sets, as I only create it once. See 
+
+  PreprocessSolution differs from other action sets, as I only create it once. See
   FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
   can also completely overwrite it.
-  
+
   """
   def __init__(self,solver):
     AbstractFVActionSet.__init__(self,solver)
     # Is there for compatibility reasons
     self.guard               = "true"
     self.descend_invocation_order            = 2
-    
 
   def get_body_of_operation(self,operation_name):
     result = ""
     return result
-
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
@@ -44,18 +42,18 @@ class VolumeWisePreprocessSolution(AbstractFVActionSet):
   The postprocessing plugs into touch cell last time. It is the last action set added
   by the default implementation. Therefore, it is the first action set of which
   touchCellLastTime() is called. The reason why I plug into the leaving of the cell
-  is that some solvers may add further action sets to the solve. Enclave tasking for
-  example adds the merger as additional action set. These action sets plug into
-  touchCellFirstTime() - and consequently their first time is called after the
-  postprocessing's first time. By making the postprocessing use touchCellLastTime(),
-  I ensure that any additional action set added by a subclass can still precede the
-  postprocessing.
+  is that some solvers may add further action sets to the solve. These action sets
+  typically plug into touchCellFirstTime() - and consequently their first time is
+  called after the postprocessing's first time. By making the postprocessing use
+  touchCellLastTime(), I ensure that any additional action set added by a subclass
+  can still precede the postprocessing.
   """
   def __init__(self,solver):
     AbstractFVActionSet.__init__(self,solver)
     self.guard="true"
     self._compute_kernel=""
     self.descend_invocation_order=1
+    self.new_accessor = "fineGridCell" + solver.current_unknown_identifier()
 
   def add_postprocessing_kernel(self, operation_per_point):
     """
@@ -82,7 +80,7 @@ class VolumeWisePreprocessSolution(AbstractFVActionSet):
 
     int index = 0;
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      {{STORAGE_PRECISION}}* value = fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + index;
+      {{STORAGE_PRECISION}}* value = {{NEW_ACCESSOR}}.data() + index;
       auto x = ::exahype2::fv::getVolumeCentre(marker.getX(), marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume);
       auto h = ::exahype2::fv::getVolumeSize(marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}});
       """ + operation_per_point + """
@@ -98,11 +96,11 @@ class VolumeWisePreprocessSolution(AbstractFVActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ]           = jinja2.Template(self.guard, undefined=jinja2.DebugUndefined).render(**d)
+      d["NEW_ACCESSOR"] = self.new_accessor
+      d[ "PREDICATE" ]  = jinja2.Template(self.guard, undefined=jinja2.DebugUndefined).render(**d)
       result = jinja2.Template(self._compute_kernel, undefined=jinja2.DebugUndefined).render(**d)
-      pass 
+      pass
     return result
-
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")

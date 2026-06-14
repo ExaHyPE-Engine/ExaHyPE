@@ -11,7 +11,7 @@
 #include <sycl/sycl.hpp>
 
 void* tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, int device) {
-  assertion1(device >= 0, device);
+  assertion(device >= 0, device);
   sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
   void*        data  = sycl::malloc_device(sizeInBytes, queue);
   assertion(data);
@@ -19,7 +19,7 @@ void* tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, int devi
 }
 
 void* tarch::accelerator::allocatePinnedMemory(std::size_t sizeInBytes, int device) {
-  assertion1(device >= 0, device);
+  assertion(device >= 0, device);
   sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
   void*        data  = sycl::malloc_host(sizeInBytes, queue);
   assertion(data);
@@ -27,7 +27,7 @@ void* tarch::accelerator::allocatePinnedMemory(std::size_t sizeInBytes, int devi
 }
 
 void tarch::accelerator::freeDeviceMemory(void* data, int device) {
-  assertion1(device >= 0, device);
+  assertion(device >= 0, device);
   sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
   sycl::free(data, queue);
 }
@@ -35,7 +35,7 @@ void tarch::accelerator::freeDeviceMemory(void* data, int device) {
 void tarch::accelerator::freePinnedMemory(void* data, int device) { freeDeviceMemory(data, device); }
 
 void tarch::accelerator::copyToDeviceMemory(void* target, const void* source, std::size_t sizeInBytes, int device) {
-  assertion1(device >= 0, device);
+  assertion(device >= 0, device);
   sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
   queue.memcpy(target, source, sizeInBytes).wait();
 }
@@ -46,7 +46,7 @@ void tarch::accelerator::
 }
 
 void tarch::accelerator::copyFromDeviceMemory(const void* source, void* target, std::size_t sizeInBytes, int device) {
-  assertion1(device >= 0, device);
+  assertion(device >= 0, device);
   sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
   queue.memcpy(target, source, sizeInBytes).wait();
 }

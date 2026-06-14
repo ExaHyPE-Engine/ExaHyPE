@@ -11,6 +11,7 @@
 #include "tarch/multicore/multicore.h"
 #include "toolbox/blockstructured/Enumeration.h"
 
+#include <sstream>
 #include <vector>
 
 namespace exahype2::fv {
@@ -96,9 +97,7 @@ namespace exahype2::fv {
     const tarch::la::Vector<2, double>& h,
     const int                           numberOfVolumesPerAxisInPatch
   ) {
-#if !defined(WITH_GPU)
-    assertion2(numberOfVolumesPerAxisInPatch >= 1, h, numberOfVolumesPerAxisInPatch);
-#endif
+    assertion(numberOfVolumesPerAxisInPatch >= 1, h, numberOfVolumesPerAxisInPatch);
     tarch::la::Vector<2, double> volumeSize;
     for (int d = 0; d < 2; d++) {
       volumeSize(d) = h(d) / numberOfVolumesPerAxisInPatch;
@@ -110,9 +109,7 @@ namespace exahype2::fv {
     const tarch::la::Vector<3, double>& h,
     const int                           numberOfVolumesPerAxisInPatch
   ) {
-#if !defined(WITH_GPU)
-    assertion2(numberOfVolumesPerAxisInPatch >= 1, h, numberOfVolumesPerAxisInPatch);
-#endif
+    assertion(numberOfVolumesPerAxisInPatch >= 1, h, numberOfVolumesPerAxisInPatch);
     tarch::la::Vector<3, double> volumeSize;
     for (int d = 0; d < 3; d++) {
       volumeSize(d) = h(d) / numberOfVolumesPerAxisInPatch;

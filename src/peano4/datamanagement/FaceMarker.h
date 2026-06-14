@@ -161,11 +161,11 @@ struct peano4::datamanagement::FaceMarker {
    * (0,1,2) x (0,1,2) x (0,1,2,3).
    */
   INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> getRelativePositionWithinFatherCell() const {
-    assertion1(selectedFace >= 0, toString());
+    assertion(selectedFace >= 0, toString());
     return getRelativePositionWithinFatherCell(selectedFace);
   }
   INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> getRelativePositionWithinFatherCell(int i) const {
-    assertion2(i >= 0, i, toString());
+    assertion(i >= 0, i, toString());
     tarch::la::Vector<DIMENSIONS, int> result = relativePositionWithinFatherCell;
     const int                          normal = i % DIMENSIONS;
     result(normal) += i >= DIMENSIONS ? 1 : 0;

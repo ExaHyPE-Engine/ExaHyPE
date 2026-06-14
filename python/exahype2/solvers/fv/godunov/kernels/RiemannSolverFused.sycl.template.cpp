@@ -13,27 +13,12 @@
 {% from 'ComputeFluxesAndPerformTimeStep.macro.h' import ComputeFluxesAndPerformTimeStep with context %}
 
 double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
-  [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&                       solver,
-  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData,
-  [[maybe_unused]] const int                                             targetDevice
-) {
-  return riemannSolverFused(
-    solver,
-    patchData.QInFlattened,
-    patchData.QOutFlattened,
-    patchData.t,
-    patchData.dt,
-    patchData.cellCentre[0].data(),
-    patchData.cellSize[0].data(),
-    patchData.numberOfCells,
-    targetDevice
-  );
-}
-
-double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&    solver,
-  const {{COMPUTE_PRECISION}}* const                  QInFlattened,
-  {{COMPUTE_PRECISION}}* const                        QOutFlattened,
+  const {{STORAGE_PRECISION}}* const                  QInFlattened,
+  {{STORAGE_PRECISION}}* const                        QOutFlattened,
+  const {{STORAGE_PRECISION}}* const                  QInFaces,
+  {{STORAGE_PRECISION}}* const                        QOutFaces,
+  const std::uint64_t*                                faceIndices,
   const double                                        timeStamp,
   const double                                        timeStepSize,
   const double* const                                 patchCentres,
@@ -41,6 +26,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   const int                                           numberOfPatches,
   [[maybe_unused]] const int                          targetDevice
 ) {
+  constexpr int FaceCardinality = {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
+
   sycl::queue& queue = *static_cast<sycl::queue*>(tarch::accelerator::getSYCLQueue(targetDevice));
   //sycl::queue queue{ sycl::default_selector{} };
 
@@ -73,8 +60,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
     handle.parallel_for(ndRange, [=](sycl::nd_item<{{DIMENSIONS}}> item) {
 {% endif %}
       const auto patchIndex                  = item.get_group(0);
-      const {{COMPUTE_PRECISION}}* const QIn = &QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %}];
-      {{COMPUTE_PRECISION}}* const QOut      = &QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
+      const {{STORAGE_PRECISION}}* const QIn = &QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
+      {{STORAGE_PRECISION}}* const QOut      = &QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
 
       const auto patchCentre = tarch::la::Vector<DIMENSIONS, double> {
         patchCentres[patchIndex * {{DIMENSIONS}}],
@@ -86,6 +73,14 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
         patchSizes[patchIndex * {{DIMENSIONS}} + 1]
         {% if DIMENSIONS==3 %} , patchSizes[patchIndex * {{DIMENSIONS}} + 2] {% endif %}
       };
+
+      const {{STORAGE_PRECISION}}* faceQIn[TWO_TIMES_D];
+      {{STORAGE_PRECISION}}* faceQOut[TWO_TIMES_D];
+      for (int f = 0; f < TWO_TIMES_D; f++) {
+        auto faceIndex = faceIndices[patchIndex * TWO_TIMES_D + f];
+        faceQIn[f]  = &QInFaces[faceIndex * FaceCardinality];
+        faceQOut[f] = &QOutFaces[faceIndex * FaceCardinality];
+      }
 
 {% if COMPUTE_MAX_EIGENVALUE %}
       double maxEigenvalueAfterTimeStep = 0.0;

@@ -9,6 +9,7 @@ import dastgen2
 import peano4.output
 import peano4.datamodel
 import peano4.plotter
+import peano4.toolbox.blockstructured
 
 import exahype2.solvers.fv.actionsets
 
@@ -17,7 +18,6 @@ from exahype2.VariableShortcuts import VariableShortcuts
 from peano4.output.Helper import render_jinja2_template
 
 from peano4.Logger import log
-
 
 class FV(object):
     """!
@@ -145,9 +145,8 @@ class FV(object):
         overlap,
         unknowns,
         auxiliary_variables,
-        use_enclave_tasking: bool=False,
-        number_of_enclave_tasks: int=1,
         solvers_before_in_coupling: list=[],
+        fuse_compute_kernels=False,
         baseline_action_set_descend_invocation_order=0,
     ):
         """!
@@ -227,8 +226,7 @@ class FV(object):
         self._action_set_AMR_commit_without_further_analysis = None
         self._action_set_handle_boundary = None
         self._action_set_project_patch_onto_faces = None
-        self._action_set_roll_over_update_of_faces = None
-        self._action_set_copy_new_faces_onto_old_faces = None
+        self._action_set_roll_over_updates = None
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = None
         self._action_set_postprocess_solution = None
         self._action_set_preprocess_solution = None
@@ -241,9 +239,7 @@ class FV(object):
         self._compute_kernel_call = "#error Not yet defined"
         self._fused_compute_kernel_call = "#error Not yet defined"
 
-        self._use_enclave_tasking = use_enclave_tasking
-        self._number_of_enclave_tasks = number_of_enclave_tasks
-        self._enclave_task_priority = "tarch::multicore::Task::DefaultPriority - 1"
+        self._fuse_compute_kernels = fuse_compute_kernels
 
         self._initial_conditions_implementation = PDETerms.User_Defined_Implementation
         self._boundary_conditions_implementation = PDETerms.User_Defined_Implementation
@@ -284,7 +280,8 @@ class FV(object):
         self._finish_simulation_implementation = ""
 
         self._interpolation = "piecewise_constant"
-        self._restriction = "averaging"
+        # must use inject, as we currently do not clear the half of the coarse face we restrict into
+        self._restriction = "inject" # TODO: address this
 
         self._compute_precision = "double"
         self._storage_precision = "double"
@@ -319,7 +316,6 @@ and additional AMR levels is configured by the executable at runtime.
 """
         )
 
-
     @property
     def user_action_set_includes(self):
         """
@@ -327,7 +323,6 @@ and additional AMR levels is configured by the executable at runtime.
         routines from other header files.
         """
         return self._user_action_set_includes
-
 
     @property
     def user_solver_includes(self):
@@ -337,7 +332,6 @@ and additional AMR levels is configured by the executable at runtime.
         """
         return self._user_solver_includes
 
-
     def add_user_action_set_includes(self, value):
         """
         Add further includes to this property, if your action sets require some additional
@@ -345,14 +339,12 @@ and additional AMR levels is configured by the executable at runtime.
         """
         self._user_action_set_includes += value
 
-
     def add_user_solver_includes(self, value):
         """
         Add further includes to this property, if your solver requires some additional
         routines from other header files.
         """
         self._user_solver_includes += value
-
 
     @abstractmethod
     def create_data_structures(self):
@@ -388,59 +380,40 @@ and additional AMR levels is configured by the executable at runtime.
           local timestepping, I don't have to backup the whole patch
           (see _patch), but I need a backup of the face data to be able
           to interpolate in time.
-
-        _patch_overlap_update: Patch (2xNxN)
-          This is the new update. After the time step, I roll this
-          information over into _patch_overlap_new, while I backup the
-          previous _patch_overlap_new into _patch_overlap_old. If I
-          worked with regular meshes only, I would not need this update
-          field and could work directly with _patch_overlap_new. However,
-          AMR requires me to accumulate data within new while I need
-          the new and old data temporarily. Therefore, I employ this
-          accumulation/roll-over data which usually is not stored
-          persistently.
         """
 
         self._patch = peano4.datamodel.Patch(
             (self._patch_size, self._patch_size, self._patch_size),
             self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
-            self._unknown_identifier(), self._storage_precision
+            self.current_unknown_identifier(), self._storage_precision
         )
-        self._patch_reconstructed = peano4.datamodel.Patch(
-            (self._patch_size + 2 * self._overlap, self._patch_size + 2 * self._overlap, self._patch_size + 2 * self._overlap),
+        self._patch_old = peano4.datamodel.Patch(
+            (self._patch_size, self._patch_size, self._patch_size),
             self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
-            self._unknown_identifier() + "Reconstructed", self._storage_precision
+            self.previous_unknown_identifier(), self._storage_precision
         )
         self._patch_overlap_old = peano4.datamodel.Patch(
             (2 * self._overlap, self._patch_size, self._patch_size),
             self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
-            self._unknown_identifier() + "Old", self._storage_precision
+            self.previous_unknown_identifier(), self._storage_precision
         )
         self._patch_overlap_new = peano4.datamodel.Patch(
             (2 * self._overlap, self._patch_size, self._patch_size),
             self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
-            self._unknown_identifier() + "New", self._storage_precision
-        )
-        self._patch_overlap_update = peano4.datamodel.Patch(
-            (2 * self._overlap, self._patch_size, self._patch_size),
-            self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
-            self._unknown_identifier() + "Update", self._storage_precision
+            self.current_unknown_identifier(), self._storage_precision
         )
 
         self._patch.generator = peano4.datamodel.PatchToData(
             self._patch, self._storage_precision
         )
-        self._patch_reconstructed.generator = peano4.datamodel.PatchToData(
-            self._patch_reconstructed, self._storage_precision
+        self._patch_old.generator = peano4.datamodel.PatchToData(
+            self._patch_old, self._storage_precision
         )
         self._patch_overlap_old.generator = peano4.datamodel.PatchToData(
             self._patch_overlap_old, self._storage_precision
         )
         self._patch_overlap_new.generator = peano4.datamodel.PatchToData(
             self._patch_overlap_new, self._storage_precision
-        )
-        self._patch_overlap_update.generator = peano4.datamodel.PatchToData(
-            self._patch_overlap_update, self._storage_precision
         )
 
         self._patch_overlap_old.generator.includes += """
@@ -458,36 +431,29 @@ and additional AMR levels is configured by the executable at runtime.
         self._patch.generator.can_receive = "false"
         self._patch.generator.can_send = "false"
 
-        self._patch_reconstructed.generator.send_condition = "false"
-        self._patch_reconstructed.generator.receive_and_merge_condition = "false"
-        self._patch_reconstructed.generator.can_receive = "false"
-        self._patch_reconstructed.generator.can_send = "false"
+        self._patch_old.generator.send_condition = "false"
+        self._patch_old.generator.receive_and_merge_condition = "false"
+        self._patch_old.generator.can_receive = "false"
+        self._patch_old.generator.can_send = "false"
 
         self._patch_overlap_old.generator.send_condition = "false"
         self._patch_overlap_old.generator.receive_and_merge_condition = "false"
-        self._patch_overlap_old.generator.can_receive = self._load_face_data_default_guard()
-        self._patch_overlap_old.generator.can_send = self._store_face_data_default_guard()
+        self._patch_overlap_old.generator.can_receive = "false"
+        self._patch_overlap_old.generator.can_send = "false"
         self._patch_overlap_old.generator.use_copy_for_exchange = "false"
         self._patch_overlap_old.generator.merge_method_definition = "*this = std::move(neighbour);"
 
-        self._patch_overlap_new.generator.send_condition = "false"
-        self._patch_overlap_new.generator.receive_and_merge_condition = "false"
+        self._patch_overlap_new.generator.send_condition = "true"
+        self._patch_overlap_new.generator.receive_and_merge_condition = "true"
         self._patch_overlap_new.generator.can_receive = self._load_face_data_default_guard()
         self._patch_overlap_new.generator.can_send = self._store_face_data_default_guard()
         self._patch_overlap_new.generator.use_copy_for_exchange = "false"
         self._patch_overlap_new.generator.merge_method_definition = "*this = std::move(neighbour);"
 
-        self._patch_overlap_update.generator.send_condition = "false"
-        self._patch_overlap_update.generator.receive_and_merge_condition = "false"
-        self._patch_overlap_update.generator.can_receive = self._load_face_data_default_guard()
-        self._patch_overlap_update.generator.can_send = self._store_face_data_default_guard()
-        self._patch_overlap_update.generator.use_copy_for_exchange = "false"
-        self._patch_overlap_update.generator.merge_method_definition = "*this = std::move(neighbour);"
-
         self._patch.generator.includes += """
 #include "../repositories/SolverRepository.h"
 """
-        self._patch_reconstructed.generator.includes += """
+        self._patch_old.generator.includes += """
 #include "../repositories/SolverRepository.h"
 """
         self._patch_overlap_old.generator.includes += """
@@ -496,13 +462,9 @@ and additional AMR levels is configured by the executable at runtime.
         self._patch_overlap_new.generator.includes += """
 #include "../repositories/SolverRepository.h"
 """
-        self._patch_overlap_update.generator.includes += """
-#include "../repositories/SolverRepository.h"
-"""
 
         self._cell_label = exahype2.grid.create_cell_label(self._name)
         self._face_label = exahype2.grid.create_face_label(self._name)
-
 
     @abstractmethod
     def create_action_sets(self):
@@ -573,14 +535,7 @@ and additional AMR levels is configured by the executable at runtime.
         )
         self._action_set_handle_boundary = (
             exahype2.solvers.fv.actionsets.HandleBoundary(
-                # Use cell data here as the enclave boundary faces
-                # are identified from the enclave cell.
-                # Boundary conditions are still applied to the faces.
-                self, self._store_cell_data_default_guard() + (
-                    f" and marker.willBeSkeletonCell()"
-                    if self._use_enclave_tasking
-                    else ""
-                )
+                self, self._store_cell_data_default_guard()
             )
         )
         self._action_set_project_patch_onto_faces = (
@@ -588,18 +543,9 @@ and additional AMR levels is configured by the executable at runtime.
                 self, self._store_cell_data_default_guard()
             )
         )
-        self._action_set_roll_over_update_of_faces = (
-            exahype2.solvers.fv.actionsets.RollOverUpdatedFace(
-                self, self._store_face_data_default_guard()
-            )
-        )
-        self._action_set_copy_new_faces_onto_old_faces = (
-            peano4.toolbox.blockstructured.BackupPatchOverlap(
-                self._patch_overlap_new,
-                self._patch_overlap_old,
-                False,
-                self._store_face_data_default_guard(),
-                self._get_default_includes(),
+        self._action_set_roll_over_updates = (
+            exahype2.solvers.fv.actionsets.RollOverUpdates(
+                self, self._store_face_data_default_guard(), self._store_cell_data_default_guard()
             )
         )
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.fv.actionsets.DynamicAMR(
@@ -623,8 +569,6 @@ and additional AMR levels is configured by the executable at runtime.
         self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel(self._name)
 
         self._action_set_update_patch = None
-        self._action_set_reconstruct_patch = None
-        self._action_set_enclave_tasking = None
 
         self._action_set_initial_conditions.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 1
@@ -640,10 +584,7 @@ and additional AMR levels is configured by the executable at runtime.
         self._action_set_project_patch_onto_faces.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 1
         )  # touch cell last time, i.e. leave cell
-        self._action_set_roll_over_update_of_faces.descend_invocation_order = (
-            self._baseline_action_set_descend_invocation_order + 1
-        )
-        self._action_set_copy_new_faces_onto_old_faces.descend_invocation_order = (
+        self._action_set_roll_over_updates.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order
         )
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = (
@@ -661,9 +602,9 @@ and additional AMR levels is configured by the executable at runtime.
 
         ExaHyPE keeps patch load/store topology-driven. This predicate decides
         when cell data is provided to compute and exchange paths. Particular
-        solvers use it as a starting point for more detailed rules: an enclave
-        solver for example might keep the topology criterion but toggle data
-        exchange depending on the solver phase.
+        solvers use it as a starting point for more detailed rules, such as
+        keeping the topology criterion but toggling data exchange depending on
+        the solver phase.
         """
         return "not marker.willBeRefined() and repositories::{}.getSolverState()!={}::SolverState::GridConstruction".format(
                    self.get_name_of_global_instance(),
@@ -749,6 +690,12 @@ and additional AMR levels is configured by the executable at runtime.
     def _unknown_identifier(self):
         return self._name + "Q"
 
+    def current_unknown_identifier(self):
+        return self._name + "QNew"
+
+    def previous_unknown_identifier(self):
+        return self._name + "QOld"
+
     def get_name_of_global_instance(self):
         return "instanceOf" + self._name
 
@@ -760,7 +707,7 @@ and additional AMR levels is configured by the executable at runtime.
         log.debug("Patch data")
         log.debug("----------")
         log.debug(str(self._patch))
-        log.debug(str(self._patch_reconstructed))
+        log.debug(str(self._patch_old))
         log.debug("----------")
         log.debug("Patch overlap data")
         log.debug(str(self._patch_overlap_old))
@@ -768,10 +715,9 @@ and additional AMR levels is configured by the executable at runtime.
         log.debug("----------")
         datamodel.add_cell(self._cell_label)
         datamodel.add_cell(self._patch)
-        datamodel.add_cell(self._patch_reconstructed)
+        datamodel.add_cell(self._patch_old)
         datamodel.add_face(self._patch_overlap_old)
         datamodel.add_face(self._patch_overlap_new)
-        datamodel.add_face(self._patch_overlap_update)
         datamodel.add_face(self._face_label)
 
         if self._tracer_names:
@@ -792,11 +738,10 @@ and additional AMR levels is configured by the executable at runtime.
         data might make their load/store decisions depend on the label.
         """
         step.use_cell(self._patch)
-        step.use_cell(self._patch_reconstructed)
+        step.use_cell(self._patch_old)
         step.use_cell(self._cell_label)
         step.use_face(self._patch_overlap_old)
         step.use_face(self._patch_overlap_new)
-        step.use_face(self._patch_overlap_update)
         step.use_face(self._face_label)
 
     def _get_default_includes(self):
@@ -827,21 +772,14 @@ and additional AMR levels is configured by the executable at runtime.
 
         This is what we want to achieve:
 
-        - Project solution onto faces. This happens in touchCellLastTime(). See
+        - Roll over QNew into QOld before the next update reads the old state.
+          During the first solve sweep, this also backs up data produced by the
+          initialisation sweep.
+        - Project the initial condition onto faces. This happens in
+          touchCellLastTime(). See
           exahype2.solvers.fv.actionsets.ProjectPatchOntoFaces for comments.
-          The project will end up in QUpdate.
-        - Roll updates over on the faces from QUpdate into Q_new. This is done
-          by RollOverUpdateFace, which requires in turn that the getUpdated()
-          flag is set. As the roll-over plugs into touchFaceLastTime(), it will
-          always be called after the projection, since the latter is a cell
-          operation.
-        - Copy new face data Q_new into old face data Q_old, as this is the
-          initial sweep, i.e. the old face data otherwise might hold rubbish.
-          This is a backup operation realised through the action set
-          BackupPatchOverlap. This one plugs into touchFaceLastTime() too.
-          Therefore, it is important that its priority is smaller than the one
-          of the roll-over, since we invert the call order for the touch-last
-          events.
+          The projection writes into QNew and marks the face for the first
+          solve-sweep rollover.
         - Restrict the data to the coarser level if we are on a hanging face.
         - The postprocessing is the very last thing. It does not matter if it
           plugs into touchCellFirstTime() or touchCellLastTime(). As we invert the
@@ -849,15 +787,10 @@ and additional AMR levels is configured by the executable at runtime.
           we invoke _action_set_project_patch_onto_faces, i.e. any update will
           be projected onto the faces.
         """
-        assert (
-            self._action_set_copy_new_faces_onto_old_faces.descend_invocation_order
-            < self._action_set_roll_over_update_of_faces.descend_invocation_order
-        )
 
         step.add_action_set(self._action_set_preprocess_solution)
         step.add_action_set(self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement)
-        step.add_action_set(self._action_set_copy_new_faces_onto_old_faces)
-        step.add_action_set(self._action_set_roll_over_update_of_faces)
+        step.add_action_set(self._action_set_roll_over_updates)
         step.add_action_set(self._action_set_initial_conditions)
         step.add_action_set(self._action_set_project_patch_onto_faces)
         step.add_action_set(self._action_set_update_face_label)
@@ -876,7 +809,7 @@ and additional AMR levels is configured by the executable at runtime.
     def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
         """
         The boundary information is set only once. It is therefore important that
-        we ues the face label and initialise it properly.
+        we use the face label and initialise it properly.
         """
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
@@ -897,7 +830,7 @@ and additional AMR levels is configured by the executable at runtime.
         step.add_action_set(
             self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement
         )
-        step.add_action_set(self._action_set_roll_over_update_of_faces)
+        step.add_action_set(self._action_set_roll_over_updates)
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_project_patch_onto_faces)
@@ -906,7 +839,7 @@ and additional AMR levels is configured by the executable at runtime.
             output_path=output_path,
             filename=self._name,
             patch=self._patch,
-            dataset_name=self._unknown_identifier(),
+            dataset_name=self.current_unknown_identifier(),
             description=self._variable_shortcuts.plot_description,
             time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
             guard=self._load_cell_data_default_guard(),
@@ -957,13 +890,10 @@ and additional AMR levels is configured by the executable at runtime.
         """
         step.add_action_set(self._action_set_preprocess_solution)
         step.add_action_set(self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement)
-        step.add_action_set(self._action_set_roll_over_update_of_faces)
+        step.add_action_set(self._action_set_roll_over_updates)
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_handle_boundary)
-        if self._use_enclave_tasking:
-            step.add_action_set(self._action_set_enclave_tasking)
-        step.add_action_set(self._action_set_reconstruct_patch)
         step.add_action_set(self._action_set_update_patch)
         step.add_action_set(self._action_set_project_patch_onto_faces)
         step.add_action_set(self._action_set_AMR)
@@ -995,12 +925,7 @@ and additional AMR levels is configured by the executable at runtime.
 
         self._generate_kernels(output, subdirectory)
         self._action_set_handle_boundary.generate_kernels(namespace, output, dimensions, subdirectory)
-        self._action_set_reconstruct_patch.generate_kernels(namespace, output, dimensions, subdirectory)
         self._action_set_project_patch_onto_faces.generate_kernels(namespace, output, dimensions, subdirectory)
-        if self._use_enclave_tasking:
-            self._action_set_handle_boundary.generate_fused_kernels(namespace, output, dimensions, subdirectory)
-            self._action_set_reconstruct_patch.generate_fused_kernels(namespace, output, dimensions, subdirectory)
-            self._action_set_project_patch_onto_faces.generate_fused_kernels(namespace, output, dimensions, subdirectory)
 
         if self._solver_template_file_class_name is None:
             self._templatefile_prefix += self.__class__.__name__
@@ -1053,27 +978,6 @@ and additional AMR levels is configured by the executable at runtime.
         output.makefile.add_cpp_file(subdirectory + "Abstract" + self._name + ".cpp", generated=True)
         output.makefile.add_cpp_file(subdirectory + self._name + ".cpp", generated=True)
 
-        if self._use_enclave_tasking:
-            generated_enclave_task = (
-                peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                    headfile_template=os.path.dirname(os.path.realpath(__file__))
-                    + "/"
-                    + "EnclaveTask.template.h",
-                    cppfile_template=os.path.dirname(os.path.realpath(__file__))
-                    + "/"
-                    + "EnclaveTask.template.cpp",
-                    classname="{}EnclaveTask".format(self._name),
-                    namespace=namespace + ["tasks"],
-                    subdirectory=subdirectory + "tasks",
-                    dictionary=d,
-                    default_overwrite=True,
-                    apply_iteratively=True
-                )
-            )
-            output.add(generated_enclave_task)
-            output.makefile.add_h_file(subdirectory + "tasks/" + "{}EnclaveTask".format(self._name) + ".h", generated=True)
-            output.makefile.add_cpp_file(subdirectory + "tasks/" + "{}EnclaveTask".format(self._name) + ".cpp", generated=True)
-
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring
 
@@ -1109,10 +1013,6 @@ and additional AMR levels is configured by the executable at runtime.
         d["PATCH_CARDINALITY_1D"] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_DATA"]
         d["PATCH_CARDINALITY_2D"] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["PATCH_CARDINALITY_1D"]
         d["PATCH_CARDINALITY_3D"] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["PATCH_CARDINALITY_2D"]
-
-        d["PATCH_CARDINALITY_WITH_HALO_1D"] = (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) * d["NUMBER_OF_DATA"]
-        d["PATCH_CARDINALITY_WITH_HALO_2D"] = (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) * d["PATCH_CARDINALITY_WITH_HALO_1D"]
-        d["PATCH_CARDINALITY_WITH_HALO_3D"] = (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) * d["PATCH_CARDINALITY_WITH_HALO_2D"]
 
         d["FACE_CARDINALITY_2D"] = (
             int(self._patch_overlap_new.no_of_unknowns * self._patch_overlap_new.dim[0] * self._patch_overlap_new.dim[1])
@@ -1160,11 +1060,6 @@ and additional AMR levels is configured by the executable at runtime.
         d["STATELESS_DIFFUSIVE_SOURCE_TERM"] = self._use_stateless_diffusive_source_term
         d["STATELESS_ADJUST_SOLUTION"] = self._use_stateless_adjust_solution
         d["STATELESS_LIMITER"] = self._use_stateless_limiter
-
-        d["USE_ENCLAVE_TASKING"] = self._use_enclave_tasking
-        d["NUMBER_OF_ENCLAVE_TASKS"] = self._number_of_enclave_tasks
-        d["ENCLAVE_TASK_PRIORITY"] = self._enclave_task_priority
-        d["ENCLAVE_TASK_TYPE"] = f"{self._name}EnclaveTask"
 
         d["COMPUTE_KERNEL_CALL"] = render_template(self._compute_kernel_call)
         d["FUSED_COMPUTE_KERNEL_CALL"] = render_template(self._fused_compute_kernel_call)
@@ -1350,7 +1245,6 @@ and additional AMR levels is configured by the executable at runtime.
         will be visible there in the next time step. So you might be well-advised
         to alter the auxiliary variables in both the patch data and the
         reconstructed data.
-
         """
         self._preprocess_reconstructed_patch = kernel
         self.create_data_structures()
@@ -1389,7 +1283,6 @@ and additional AMR levels is configured by the executable at runtime.
                {{NUMBER_OF_AUXILIARY_VARIABLES}}
              );
 
-
         As highlighted from the examples above, you can use normal ExaHyPE constant
         within your injected code. Furthermore, you have the following two variables
         available:
@@ -1411,7 +1304,6 @@ and additional AMR levels is configured by the executable at runtime.
         GPU. Consequently, the snippet injected here might not have access to global
         variables (if it executes on a GPU) while the postprocessing action set
         always has access to the global program state.
-
 
         ## Attributes
 

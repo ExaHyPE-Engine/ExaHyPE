@@ -5,6 +5,7 @@
 #include "exahype2/RuntimeParameters.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/Solver.h"
+#include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/NonCriticalAssertions.h"

@@ -18,7 +18,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
   const ::peano4::datamanagement::VertexMarker&  marker,
   int                                          spacetreeId
 ) {
-  assertion3(
+  assertion(
     marker.isContainedInAdjacentCells(neighbourParticle->getX(), 0.5, toolbox::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
     neighbourParticle->toString(),
     marker.toString(),
@@ -157,7 +157,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   switch (context) {
     case ::peano4::stacks::SendReceiveContext::PeriodicBoundaryDataSwap:
       {
-        assertionVectorNumericalEquals2( neighbour._debugH, _debugH, neighbour.toString(), toString() );
+        assertion(tarch::la::equals((neighbour._debugH), (_debugH)), neighbour._debugH, _debugH, neighbour.toString(), toString());
 
         logDebug("merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString());
         for (auto p: neighbour) {
@@ -176,13 +176,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
           logDebug(" - " << p->toString());
         }
 
-        assertion2( isValid(), toString(), marker.toString() );
+        assertion( isValid(), toString(), marker.toString() );
       }
       break;
     case ::peano4::stacks::SendReceiveContext::BoundaryExchange:
       {
-        assertionVectorNumericalEquals2( neighbour._debugX, _debugX, neighbour.toString(), toString() );
-        assertionVectorNumericalEquals2( neighbour._debugH, _debugH, neighbour.toString(), toString() );
+        assertion(tarch::la::equals((neighbour._debugX), (_debugX)), neighbour._debugX, _debugX, neighbour.toString(), toString());
+        assertion(tarch::la::equals((neighbour._debugH), (_debugH)), neighbour._debugH, _debugH, neighbour.toString(), toString());
 
         logDebug("merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString());
         for (auto p: neighbour) {
@@ -194,12 +194,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
           logDebug(" - " << p->toString());
         }
 
-        assertion2( isValid(), toString(), marker.toString() );
+        assertion( isValid(), toString(), marker.toString() );
       }
       break;
 
     case ::peano4::stacks::SendReceiveContext::MultiscaleExchange:
-      assertionMsg( false, "not implemented yet" );
+      assertion(false, "not implemented yet");
       break;
 
     case ::peano4::stacks::SendReceiveContext::ForkDomain:
@@ -207,7 +207,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
       break;
 
     case ::peano4::stacks::SendReceiveContext::JoinDomain:
-      assertionMsg( false, "not implemented yet, but should be plain copy" );
+      assertion(false, "not implemented yet, but should be plain copy");
       break;
 
   }
@@ -273,10 +273,10 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& otherSet ) {
-  assertion1( _container.empty(), toString() );
+  assertion( _container.empty(), toString() );
   for (auto particle: otherSet._container) {
     // data consistency check
-    assertion2(
+    assertion(
       particle->getParallelState()==DoFType::ParallelState::Local
       or
       particle->getParallelState()==DoFType::ParallelState::Virtual,
@@ -310,7 +310,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleCanNotBeLiftedLocally(
   const Container::iterator&   particle
 ) {
-  assertion1( (*particle)->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, (*particle)->toString() );
+  assertion( (*particle)->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, (*particle)->toString() );
 
   _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle );
   return _container.erase(particle);
@@ -355,7 +355,7 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::size() const {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::addParticle(DoFType*  particle) {
   // data consistency check
-  assertion2(
+  assertion(
     particle->getParallelState()==DoFType::ParallelState::Local
     or
     particle->getParallelState()==DoFType::ParallelState::Virtual,
@@ -392,7 +392,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticles({{CLASSNAME}}&  pa
   {{CLASSNAME}}&                 sourceParticleSet
 ) {
   // data consistency check
-  assertion3(
+  assertion(
     (*particle)->getParallelState()==DoFType::ParallelState::Local
     or
     (*particle)->getParallelState()==DoFType::ParallelState::Virtual,
@@ -406,7 +406,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticles({{CLASSNAME}}&  pa
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticle( const Container::iterator&   particle ) {
   // data consistency check
-  assertion2(
+  assertion(
     (*particle)->getParallelState()==DoFType::ParallelState::Local
     or
     (*particle)->getParallelState()==DoFType::ParallelState::Virtual,
@@ -442,7 +442,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSend(::peano4::stacks::Stac
   auto& customStack = static_cast<::peano4::stacks::StackWithCustomSerialisation<{{CLASSNAME}}>&>(stack);
 
   const int numberOfElements = static_cast<int>(customStack.size());
-  assertion1(numberOfElements >= 0, numberOfElements);
+  assertion(numberOfElements >= 0, numberOfElements);
 
   customStack.countBuffer.assign(numberOfElements, 0);
   customStack.dataBuffer.clear();
@@ -455,7 +455,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSend(::peano4::stacks::Stac
       if (p != nullptr) {
         customStack.dataBuffer.push_back(*p);
       } else {
-        assertionMsg(false, "Found nullptr in {{CLASSNAME}} during startSend");
+        assertion(false, "Found nullptr in {{CLASSNAME}} during startSend");
       }
     }
   }
@@ -492,8 +492,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSend(::peano4::stacks::Stac
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startReceive(::peano4::stacks::Stack<{{CLASSNAME}}>& stack, const ::peano4::stacks::SendReceiveContext context, MPI_Comm comm, int numberOfElements) {
   auto& customStack = static_cast<::peano4::stacks::StackWithCustomSerialisation<{{CLASSNAME}}>&>(stack);
 
-  assertion1(numberOfElements >= 0, numberOfElements);
-  assertion2(numberOfElements == static_cast<int>(customStack.size()), numberOfElements, customStack.size());
+  assertion(numberOfElements >= 0, numberOfElements);
+  assertion(numberOfElements == static_cast<int>(customStack.size()), numberOfElements, customStack.size());
 
   customStack.mpiComm = comm;
   customStack.mpiContext = context;
@@ -557,12 +557,12 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::tryToFinishSendOrReceive(::peano
         customStack.mpiDataRequest = MPI_REQUEST_NULL;
 
         const int numberOfElements = static_cast<int>(customStack.size());
-        assertion2(numberOfElements == static_cast<int>(customStack.countBuffer.size()), numberOfElements, customStack.countBuffer.size());
+        assertion(numberOfElements == static_cast<int>(customStack.countBuffer.size()), numberOfElements, customStack.countBuffer.size());
 
         std::size_t offset = 0;
         for (int i = 0; i < numberOfElements; ++i) {
           const int localCount = customStack.countBuffer[i];
-          assertion1(localCount >= 0, localCount);
+          assertion(localCount >= 0, localCount);
 
           {{CLASSNAME}}& element = customStack[i];
 
@@ -571,13 +571,13 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::tryToFinishSendOrReceive(::peano
 
           element._container.reserve(static_cast<std::size_t>(localCount));
           for (int j = 0; j < localCount; ++j) {
-            assertion2(offset < customStack.dataBuffer.size(), offset, customStack.dataBuffer.size());
+            assertion(offset < customStack.dataBuffer.size(), offset, customStack.dataBuffer.size());
             // Reconstruct particles from flat buffer
             element.addParticle(new DoFType(customStack.dataBuffer[offset]));
             ++offset;
           }
         }
-        assertion1(offset == customStack.dataBuffer.size(), offset);
+        assertion(offset == customStack.dataBuffer.size(), offset);
       } else {
         allDone = false;
       }

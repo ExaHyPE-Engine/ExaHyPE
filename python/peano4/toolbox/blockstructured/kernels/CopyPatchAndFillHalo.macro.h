@@ -17,9 +17,7 @@
   #endif
   for (int j = 0; j < {{UNKNOWNS}}; j++) {
     QOut[destinationCellSerialised * {{UNKNOWNS}} + j] = QIn[sourceCellSerialised * {{UNKNOWNS}} + j];
-    #if !defined(WITH_GPU)
-    assertion2(QOut[destinationCellSerialised * {{UNKNOWNS}} + j] == QOut[destinationCellSerialised * {{UNKNOWNS}} + j], sourceCell, j);
-    #endif
+    assertion(QOut[destinationCellSerialised * {{UNKNOWNS}} + j] == QOut[destinationCellSerialised * {{UNKNOWNS}} + j], sourceCell, j);
   }
 
   const auto serialisePatchIndex = [](const tarch::la::Vector<DIMENSIONS, int>& overlapCell, int normal) {
@@ -60,9 +58,7 @@
         QOut[destinationCellSerialised * {{UNKNOWNS}} + j] = facePool[
           faceIndex * {{UNKNOWNS * FACES_PER_DOF}} + sourceCellSerialised * {{UNKNOWNS}} + j
         ];
-        #if !defined(WITH_GPU)
-        assertion4({{ASSERTION_PREFIX_FOR_HALO}} or QOut[destinationCellSerialised * {{UNKNOWNS}} + j] == QOut[destinationCellSerialised * {{UNKNOWNS}} + j], sourceCell, destinationCell, j, d);
-        #endif
+        assertion({{ASSERTION_PREFIX_FOR_HALO}} or QOut[destinationCellSerialised * {{UNKNOWNS}} + j] == QOut[destinationCellSerialised * {{UNKNOWNS}} + j], sourceCell, destinationCell, j, d);
       }
 
       sourceCell(d)             = i + {{OVERLAP}};
@@ -81,9 +77,7 @@
         QOut[destinationCellSerialised * {{UNKNOWNS}} + j] = facePool[
           faceIndex * {{UNKNOWNS * FACES_PER_DOF}} + sourceCellSerialised * {{UNKNOWNS}} + j
         ];
-        #if !defined(WITH_GPU)
-        assertion4({{ASSERTION_PREFIX_FOR_HALO}} or QOut[destinationCellSerialised * {{UNKNOWNS}} + j] == QOut[destinationCellSerialised * {{UNKNOWNS}} + j], sourceCell, destinationCell, j, d);
-        #endif
+        assertion({{ASSERTION_PREFIX_FOR_HALO}} or QOut[destinationCellSerialised * {{UNKNOWNS}} + j] == QOut[destinationCellSerialised * {{UNKNOWNS}} + j], sourceCell, destinationCell, j, d);
       }
     }
   }

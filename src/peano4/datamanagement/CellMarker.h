@@ -39,17 +39,10 @@ struct peano4::datamanagement::CellMarker {
   tarch::la::Vector<DIMENSIONS, int> relativePositionWithinFatherCell{};
 
   enum : std::uint16_t {
-    HasBeenRefined               = 1u << 0,
-    WillBeRefined                = 1u << 1,
-    IsLocal                      = 1u << 2,
-    IsParentLocal                = 1u << 3,
-    AllVerticesRefined           = 1u << 4,
-    OneVertexHanging             = 1u << 5,
-    OneVertexCreatedOrDestroyed  = 1u << 6,
-    AllVerticesInsideDomain      = 1u << 7,
-    InvokingTreeNotInvolvedInDLB = 1u << 8,
-    WillBeEnclave                = 1u << 9,
-    HasBeenEnclave               = 1u << 10
+    HasBeenRefined = 1u << 0,
+    WillBeRefined  = 1u << 1,
+    IsLocal        = 1u << 2,
+    IsParentLocal  = 1u << 3
   };
 
   std::uint16_t flags{0};
@@ -58,10 +51,6 @@ struct peano4::datamanagement::CellMarker {
   INLINE_METHOD bool willBeRefined() const { return flags & WillBeRefined; }
   INLINE_METHOD bool isLocal() const { return flags & IsLocal; }
   INLINE_METHOD bool isParentLocal() const { return flags & IsParentLocal; }
-  INLINE_METHOD bool hasBeenEnclaveCell() const { return flags & HasBeenEnclave; }
-  INLINE_METHOD bool willBeEnclaveCell() const { return flags & WillBeEnclave; }
-  INLINE_METHOD bool hasBeenSkeletonCell() const { return not(flags & HasBeenEnclave); }
-  INLINE_METHOD bool willBeSkeletonCell() const { return not(flags & WillBeEnclave); }
 
   INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getH() const { return h; }
   INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getX() const { return centre; }
@@ -73,8 +62,8 @@ struct peano4::datamanagement::CellMarker {
   INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> getInvokingParentCellsCentre() const {
     tarch::la::Vector<DIMENSIONS, double> result = centre;
     for (int d = 0; d < DIMENSIONS; d++) {
-      assertion1(relativePositionWithinFatherCell[d] >= 0, toString());
-      assertion1(relativePositionWithinFatherCell[d] <= 2, toString());
+      assertion(relativePositionWithinFatherCell[d] >= 0, toString());
+      assertion(relativePositionWithinFatherCell[d] <= 2, toString());
       if (relativePositionWithinFatherCell[d] == 0) {
         result[d] += h[d];
       }

@@ -94,7 +94,7 @@ Here is an example excerpt of a successful, modified Makefile:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
     rm tasks/*.o AbstractCCZ4SBH_FD4.o  AbstractCCZ4SBH_FV.o  CCZ4SBH_FD4.o  CCZ4SBH_FV.o
-    $(CXX) $(CXXFLAGS) -qopt-report=3 -ipo -c tasks/CCZ4SBH_FD4EnclaveTask.cpp tasks/CCZ4SBH_FVEnclaveTask.cpp AbstractCCZ4SBH_FD4.cpp AbstractCCZ4SBH_FV.cpp CCZ4SBH_FD4.cpp CCZ4SBH_FV.cpp
+    $(CXX) $(CXXFLAGS) -qopt-report=3 -ipo -c tasks/CCZ4SBH_FD4Task.cpp tasks/CCZ4SBH_FVTask.cpp AbstractCCZ4SBH_FD4.cpp AbstractCCZ4SBH_FV.cpp CCZ4SBH_FD4.cpp CCZ4SBH_FV.cpp
     mv *Task.o tasks
     $(CXX) -ipo -O3 -qopt-report=3 $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o peano_sbh_2.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -156,7 +156,7 @@ Possible ways to do so can be:
   overdecompose. Once the problem per thread or rank is too small, there's not much
   you can do anymore.
 - Restrict the number of spacetrees (subpartitions) per rank.
-- Add task-based parallelism. Try out enclave solvers (with restricted number
+- Add task-based parallelism. Try out task-based solvers (with restricted number
   of trees) for ExaHyPE, e.g.
 
 
@@ -427,7 +427,7 @@ We have 41 or 49 trees, respectively, on a single rank.
 While this might be reasonably balanced, we have 64 cores/threads per rank and
 hence can conclude that our load balancing does not keep all cores busy.
 We loose out on threads.
-Enclave tasking and parallel compute kernels can, to some degree, mitigate this
+Tasking and parallel compute kernels can, to some degree, mitigate this
 problem, but we should aim for a proper work distribution right from the
 start, i.e. geometrically.
 Further to our observations so far, we see that rank 0 is significantly heavier in terms of total cell

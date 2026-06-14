@@ -8,20 +8,16 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::uti
 
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::utils::dStartVector(int dim, int value) {
   tarch::la::Vector<DIMENSIONS, int> result(0);
-#if !defined(WITH_GPU)
-  assertion2(dim >= 0, dim, value);
-  assertion2(dim < DIMENSIONS, dim, value);
-  assertion2(value >= 0, dim, value);
-#endif
+  assertion(dim >= 0, dim, value);
+  assertion(dim < DIMENSIONS, dim, value);
+  assertion(value >= 0, dim, value);
   result(dim) = value;
   return result;
 }
 
 INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::utils::dStartVector(int max, const LoopDirection& direction) {
   tarch::la::Vector<DIMENSIONS, int> result;
-#if !defined(WITH_GPU)
-  assertion2(max > 0 && max <= 3, max, direction);
-#endif
+  assertion(max > 0 && max <= 3, max, direction);
   for (int i = 0; i < DIMENSIONS; i++) {
     if (direction[i]) {
       result(i) = 0;

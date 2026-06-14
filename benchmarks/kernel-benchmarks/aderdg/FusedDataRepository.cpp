@@ -1,39 +1,55 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "EnclaveDataRepository.h"
+#include "FusedDataRepository.h"
 
 #include "DataRepository.h"
 #include "tarch/accelerator/accelerator.h"
 
+#include <cmath>
+#include <limits>
+
 namespace benchmarks::exahype2::kernelbenchmarks {
-  EnclaveDataRepository& EnclaveDataRepository::getInstance() {
-    static EnclaveDataRepository instance;
+  FusedDataRepository& FusedDataRepository::getInstance() {
+    static FusedDataRepository instance;
     return instance;
   }
 
-  EnclaveDataRepository::EnclaveDataRepository():
+  FusedDataRepository::FusedDataRepository():
+    _combinedQBlockDevice(nullptr),
+    _minVolumeH(0.0),
+    _maxVolumeH(0.0),
     _isReady(false),
-    _numberOfEnclaveCells(0),
+    _numberOfFusedCells(0),
+    _numberOfFaces(0),
+    _numberOfBoundaryFaces(0),
     _QDevice(nullptr),
     _Q_oldDevice(nullptr),
     _cellCentresDevice(nullptr),
     _cellSizesDevice(nullptr),
     _FaceEstimatesDevice(nullptr),
-    _FaceFluxesDevice(nullptr) {}
+    _FaceFluxesDevice(nullptr),
+    _indicesOfFacesDevice(nullptr),
+    _indicesOfUniqueFacesDevice(nullptr),
+    _indicesOfBoundaryFacesDevice(nullptr),
+    _boundaryFaceNumbersDevice(nullptr),
+    _boundaryCellIndicesDevice(nullptr),
+    _faceNumbersDevice(nullptr),
+    _faceCellIndicesDevice(nullptr),
+    _cellIndicesDevice(nullptr) {}
 
-  EnclaveDataRepository::~EnclaveDataRepository() { clear(); }
+  FusedDataRepository::~FusedDataRepository() { clear(); }
 
-  void EnclaveDataRepository::startCollection() {
+  void FusedDataRepository::startCollection() {
     _bookmarkedCellCentres.clear();
     _bookmarkedCellSizes.clear();
     _uniqueFaceMap.clear();
-    _isReady              = false;
-    _numberOfEnclaveCells = 0;
-    _minVolumeH           = std::numeric_limits<double>::max();
-    _maxVolumeH           = std::numeric_limits<double>::min();
+    _isReady            = false;
+    _numberOfFusedCells = 0;
+    _minVolumeH         = std::numeric_limits<double>::max();
+    _maxVolumeH         = std::numeric_limits<double>::lowest();
   }
 
-  void EnclaveDataRepository::bookmarkCell(
+  void FusedDataRepository::bookmarkCell(
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize
   ) {
@@ -41,14 +57,17 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     _bookmarkedCellSizes.push_back(cellSize);
   }
 
-  void EnclaveDataRepository::buildFromBookmarks() {
+  void FusedDataRepository::buildFromBookmarks() {
+    clear();
+    _uniqueFaceMap.clear();
+
     if (_bookmarkedCellCentres.empty()) {
       return;
     }
 
-    clear();
-
-    _numberOfEnclaveCells                    = _bookmarkedCellCentres.size();
+    _minVolumeH                              = std::numeric_limits<double>::max();
+    _maxVolumeH                              = std::numeric_limits<double>::lowest();
+    _numberOfFusedCells                      = _bookmarkedCellCentres.size();
     DataRepository& hostRepo                 = DataRepository::getInstance();
     const auto      qCardinality             = hostRepo.getCellQCardinality();
     const auto      qOldCardinality          = hostRepo.getcellQOldCardinality();
@@ -56,8 +75,8 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     const auto      faceFluxesCardinality    = DataRepository::getInstance().getFaceFluxEstimatesCardinality();
 
     // --- 1. Allocate non-face GPU Memory ---
-    const size_t qSize              = static_cast<size_t>(_numberOfEnclaveCells) * static_cast<size_t>(qCardinality);
-    const size_t qReconstructedSize = static_cast<size_t>(_numberOfEnclaveCells) * static_cast<size_t>(qOldCardinality);
+    const size_t qSize              = static_cast<size_t>(_numberOfFusedCells) * static_cast<size_t>(qCardinality);
+    const size_t qReconstructedSize = static_cast<size_t>(_numberOfFusedCells) * static_cast<size_t>(qOldCardinality);
     const size_t totalQSize         = qSize + qReconstructedSize;
 
     _combinedQBlockDevice = tarch::allocateMemory<SolverStoragePrecision>(totalQSize, tarch::MemoryLocation::Device);
@@ -65,7 +84,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     _Q_oldDevice          = _combinedQBlockDevice + qSize;
 
     // --- 2. Copy non-face data directly (per-cell) ---
-    for (int i = 0; i < _numberOfEnclaveCells; ++i) {
+    for (int i = 0; i < _numberOfFusedCells; ++i) {
       const auto& cellCentre = _bookmarkedCellCentres[i];
       const auto& cellSize   = _bookmarkedCellSizes[i];
       _minVolumeH            = std::min(_minVolumeH, tarch::la::min(cellSize));
@@ -96,11 +115,11 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     std::vector<uint64_t>                 hostBoundaryCellIndices;
     std::vector<uint8_t>                  hostFaceNumbers;
     std::vector<uint64_t>                 hostFaceCellIndices;
-    hostGlobalFaceEstimatesPool.reserve(_numberOfEnclaveCells * 2 * faceEstimatesCardinality); // Pre-allocate rough
-                                                                                               // estimate
-    hostGlobalFaceFluxesPool.reserve(_numberOfEnclaveCells * 2 * faceFluxesCardinality); // Pre-allocate rough estimate
+    hostGlobalFaceEstimatesPool.reserve(_numberOfFusedCells * 2 * faceEstimatesCardinality); // Pre-allocate rough
+                                                                                             // estimate
+    hostGlobalFaceFluxesPool.reserve(_numberOfFusedCells * 2 * faceFluxesCardinality); // Pre-allocate rough estimate
 
-    for (int i = 0; i < _numberOfEnclaveCells; ++i) {
+    for (int i = 0; i < _numberOfFusedCells; ++i) {
       const auto& cellCentre = _bookmarkedCellCentres[i];
       const auto& cellSize   = _bookmarkedCellSizes[i];
       for (int f = 0; f < TWO_TIMES_D; ++f) {
@@ -259,15 +278,15 @@ namespace benchmarks::exahype2::kernelbenchmarks {
 
     // --- 5. Build Host-side Face Index Array ---
     uint64_t* indicesOfFacesHost = tarch::allocateMemory<uint64_t>(
-      _numberOfEnclaveCells * TWO_TIMES_D,
+      _numberOfFusedCells * TWO_TIMES_D,
       tarch::MemoryLocation::Heap
     );
     _indicesOfFacesDevice = tarch::allocateMemory<uint64_t>(
-      _numberOfEnclaveCells * TWO_TIMES_D,
+      _numberOfFusedCells * TWO_TIMES_D,
       tarch::MemoryLocation::Device
     );
 
-    for (int i = 0; i < _numberOfEnclaveCells; ++i) {
+    for (int i = 0; i < _numberOfFusedCells; ++i) {
       const auto& cellCentre = _bookmarkedCellCentres[i];
       const auto& cellSize   = _bookmarkedCellSizes[i];
       for (int f = 0; f < TWO_TIMES_D; ++f) {
@@ -284,17 +303,17 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     tarch::copyTo(
       _indicesOfFacesDevice,
       indicesOfFacesHost,
-      _numberOfEnclaveCells * TWO_TIMES_D,
+      _numberOfFusedCells * TWO_TIMES_D,
       tarch::MemoryLocation::Device
     );
 
     // --- 6. Copy Geometric Data (can be done in bulk) ---
     _cellCentresDevice = tarch::allocateMemory<tarch::la::Vector<DIMENSIONS, double>>(
-      _numberOfEnclaveCells,
+      _numberOfFusedCells,
       tarch::MemoryLocation::Device
     );
     _cellSizesDevice = tarch::allocateMemory<tarch::la::Vector<DIMENSIONS, double>>(
-      _numberOfEnclaveCells,
+      _numberOfFusedCells,
       tarch::MemoryLocation::Device
     );
     tarch::copyTo(
@@ -311,7 +330,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     _isReady = true;
   }
 
-  void EnclaveDataRepository::clear() {
+  void FusedDataRepository::clear() {
     tarch::freeMemory(_combinedQBlockDevice, tarch::MemoryLocation::Device);
     _combinedQBlockDevice = nullptr;
 
@@ -349,12 +368,12 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     _faceNumbersDevice            = nullptr;
     _faceCellIndicesDevice        = nullptr;
     _isReady                      = false;
-    _numberOfEnclaveCells         = 0;
+    _numberOfFusedCells           = 0;
     _numberOfFaces                = 0;
     _numberOfBoundaryFaces        = 0;
   }
 
-  void EnclaveDataRepository::syncCellsDeviceToHost() {
+  void FusedDataRepository::syncCellsDeviceToHost() {
     if (!_isReady) {
       return;
     }
@@ -362,7 +381,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     DataRepository& hostRepo     = DataRepository::getInstance();
     const auto      qCardinality = hostRepo.getCellQCardinality();
 
-    for (int i = 0; i < _numberOfEnclaveCells; ++i) {
+    for (int i = 0; i < _numberOfFusedCells; ++i) {
       const auto& cellCentre = _bookmarkedCellCentres[i];
       const auto& cellSize   = _bookmarkedCellSizes[i];
       tarch::copyFrom(
@@ -374,7 +393,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     }
   }
 
-  void EnclaveDataRepository::syncFacesDeviceToHost() {
+  void FusedDataRepository::syncFacesDeviceToHost() {
     if (!_isReady) {
       return;
     }
@@ -402,7 +421,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     }
   }
 
-  void EnclaveDataRepository::syncCellsHostToDevice() {
+  void FusedDataRepository::syncCellsHostToDevice() {
     if (!_isReady) {
       return;
     }
@@ -410,7 +429,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     DataRepository& hostRepo     = DataRepository::getInstance();
     const auto      qCardinality = hostRepo.getCellQCardinality();
 
-    for (int i = 0; i < _numberOfEnclaveCells; ++i) {
+    for (int i = 0; i < _numberOfFusedCells; ++i) {
       const auto& cellCentre = _bookmarkedCellCentres[i];
       const auto& cellSize   = _bookmarkedCellSizes[i];
       tarch::copyTo(
@@ -422,7 +441,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     }
   }
 
-  void EnclaveDataRepository::syncFacesHostToDevice() {
+  void FusedDataRepository::syncFacesHostToDevice() {
     if (!_isReady) {
       return;
     }
@@ -450,23 +469,23 @@ namespace benchmarks::exahype2::kernelbenchmarks {
   }
 
   // --- GPU Data Accessors ---
-  SolverStoragePrecision*   EnclaveDataRepository::getQ() { return _QDevice; }
-  SolverStoragePrecision*   EnclaveDataRepository::getQOld() { return _Q_oldDevice; }
-  SolverCorrectorPrecision* EnclaveDataRepository::getFaceEstimatesPool() { return _FaceEstimatesDevice; }
-  SolverCorrectorPrecision* EnclaveDataRepository::getFaceFluxesPool() { return _FaceFluxesDevice; }
-  uint64_t*                 EnclaveDataRepository::getFaceIndices() { return _indicesOfFacesDevice; }
-  uint64_t*                 EnclaveDataRepository::getUniqueFaceIndices() { return _indicesOfUniqueFacesDevice; }
-  uint64_t*                 EnclaveDataRepository::getBoundaryFaceIndices() { return _indicesOfBoundaryFacesDevice; }
-  uint8_t*                  EnclaveDataRepository::getBoundaryFaceNumbers() { return _boundaryFaceNumbersDevice; }
-  uint64_t*                 EnclaveDataRepository::getBoundaryCellIndices() { return _boundaryCellIndicesDevice; }
-  uint8_t*                  EnclaveDataRepository::getFaceNumbers() { return _faceNumbersDevice; }
-  uint64_t*                 EnclaveDataRepository::getFaceCellIndices() { return _faceCellIndicesDevice; }
-  tarch::la::Vector<DIMENSIONS, double>* EnclaveDataRepository::getCellCentres() { return _cellCentresDevice; }
-  tarch::la::Vector<DIMENSIONS, double>* EnclaveDataRepository::getCellSizes() { return _cellSizesDevice; }
-  int    EnclaveDataRepository::getNumberOfEnclaveCells() const { return _numberOfEnclaveCells; }
-  int    EnclaveDataRepository::getNumberOfFaces() const { return _numberOfFaces; }
-  int    EnclaveDataRepository::getNumberOfBoundaryFaces() const { return _numberOfBoundaryFaces; }
-  bool   EnclaveDataRepository::isReady() const { return _isReady; }
-  double EnclaveDataRepository::getMinVolumeH() const { return _minVolumeH; }
-  double EnclaveDataRepository::getMaxVolumeH() const { return _maxVolumeH; }
+  SolverStoragePrecision*   FusedDataRepository::getQ() { return _QDevice; }
+  SolverStoragePrecision*   FusedDataRepository::getQOld() { return _Q_oldDevice; }
+  SolverCorrectorPrecision* FusedDataRepository::getFaceEstimatesPool() { return _FaceEstimatesDevice; }
+  SolverCorrectorPrecision* FusedDataRepository::getFaceFluxesPool() { return _FaceFluxesDevice; }
+  uint64_t*                 FusedDataRepository::getFaceIndices() { return _indicesOfFacesDevice; }
+  uint64_t*                 FusedDataRepository::getUniqueFaceIndices() { return _indicesOfUniqueFacesDevice; }
+  uint64_t*                 FusedDataRepository::getBoundaryFaceIndices() { return _indicesOfBoundaryFacesDevice; }
+  uint8_t*                  FusedDataRepository::getBoundaryFaceNumbers() { return _boundaryFaceNumbersDevice; }
+  uint64_t*                 FusedDataRepository::getBoundaryCellIndices() { return _boundaryCellIndicesDevice; }
+  uint8_t*                  FusedDataRepository::getFaceNumbers() { return _faceNumbersDevice; }
+  uint64_t*                 FusedDataRepository::getFaceCellIndices() { return _faceCellIndicesDevice; }
+  tarch::la::Vector<DIMENSIONS, double>* FusedDataRepository::getCellCentres() { return _cellCentresDevice; }
+  tarch::la::Vector<DIMENSIONS, double>* FusedDataRepository::getCellSizes() { return _cellSizesDevice; }
+  int    FusedDataRepository::getNumberFusedCells() const { return _numberOfFusedCells; }
+  int    FusedDataRepository::getNumberOfFaces() const { return _numberOfFaces; }
+  int    FusedDataRepository::getNumberOfBoundaryFaces() const { return _numberOfBoundaryFaces; }
+  bool   FusedDataRepository::isReady() const { return _isReady; }
+  double FusedDataRepository::getMinVolumeH() const { return _minVolumeH; }
+  double FusedDataRepository::getMaxVolumeH() const { return _maxVolumeH; }
 } // namespace benchmarks::exahype2::kernelbenchmarks

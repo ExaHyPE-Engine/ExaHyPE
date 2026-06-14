@@ -29,9 +29,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectPatch(
         int patchCellSerialised   = ::peano4::utils::dLinearised(patchCell, {{DOFS_PER_AXIS}});
         int overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, {{DOFS_PER_AXIS}}, {{OVERLAP}}, d);
         for (int j = 0; j < {{UNKNOWNS}}; j++) {
-          #if !defined(WITH_GPU)
-          assertion7({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i, sourceCell, d, patchCell, overlapCell);
-          #endif
+          assertion({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i, sourceCell, d, patchCell, overlapCell);
           faces[d][overlapCellSerialised * {{UNKNOWNS}} + j] = QIn[patchCellSerialised * {{UNKNOWNS}} + j];
         }
 
@@ -41,9 +39,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectPatch(
         patchCellSerialised   = ::peano4::utils::dLinearised(patchCell, {{DOFS_PER_AXIS}});
         overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, {{DOFS_PER_AXIS}}, {{OVERLAP}}, d);
         for (int j = 0; j < {{UNKNOWNS}}; j++) {
-          #if !defined(WITH_GPU)
-          assertion7({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i, sourceCell, d, patchCell, overlapCell);
-          #endif
+          assertion({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i, sourceCell, d, patchCell, overlapCell);
           faces[d + DIMENSIONS][overlapCellSerialised * {{UNKNOWNS}} + j] = QIn[patchCellSerialised * {{UNKNOWNS}} + j];
         }
       }

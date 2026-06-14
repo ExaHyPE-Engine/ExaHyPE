@@ -5,7 +5,6 @@ import jinja2
 
 import peano4.output
 
-
 def generate_kernels(
     solver,
     output,
@@ -53,6 +52,8 @@ def generate_kernels(
       repositories::{{SOLVER_INSTANCE}},
       QIn,
       QOut,
+      faceQIn,
+      faceQOut,
       timeStamp,
       timeStepSize,
       marker.getX(),
@@ -60,8 +61,7 @@ def generate_kernels(
     );
 """,
         undefined=jinja2.DebugUndefined,
-    ).render(**d)
-
+        ).render(**d)
 
 def generate_fused_kernels(
     solver,
@@ -110,7 +110,16 @@ def generate_fused_kernels(
         """
     kernels::{{SOLVER_NAME}}::riemannSolverFused(
       repositories::{{SOLVER_INSTANCE}},
-      patchData,
+      patchData.QInFlattened,
+      patchData.QOutFlattened,
+      patchData.faces[0][0][0],
+      patchData.faces[0][2][0],
+      patchData.faceIndices,
+      patchData.t,
+      patchData.dt,
+      patchData.cellCentre[0].data(),
+      patchData.cellSize[0].data(),
+      patchData.numberOfCells,
       targetDevice
     );
 """,

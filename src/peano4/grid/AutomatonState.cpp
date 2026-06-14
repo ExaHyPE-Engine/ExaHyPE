@@ -115,7 +115,7 @@ void peano4::grid::AutomatonState::refineState(
   if (axis == DIMENSIONS - 1) {
     for (int i = 0; i < THREE_POWER_D; i++) {
       for (int d = 0; d < TWO_TIMES_D; d++) {
-        assertion6(
+        assertion(
           fineGridStates[i].accessNumber[d] > -2 * DIMENSIONS,
           i,
           d,
@@ -124,7 +124,7 @@ void peano4::grid::AutomatonState::refineState(
           THREE_POWER_D,
           TWO_TIMES_D
         );
-        assertion6(
+        assertion(
           fineGridStates[i].accessNumber[d] < 2 * DIMENSIONS,
           i,
           d,

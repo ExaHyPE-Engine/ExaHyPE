@@ -35,13 +35,11 @@ namespace applications::exahype2::GravityWaves::Thunderstorm::ForcingTerms {
     const double exponentialTTerm = tarch::la::pow((t - tZero), 2) / (2 * sigmaTSq);
     const double cosTerm          = std::cos(kX * x(0)) * std::cos(omega * t);
 
-#if !defined(WITH_GPU)
-    assertion1(!std::isnan(exponentialXTerm), exponentialXTerm);
-    assertion1(!std::isnan(exponentialYTerm), exponentialYTerm);
-    assertion1(!std::isnan(exponentialTTerm), exponentialTTerm);
-    assertion1(!std::isnan(FZero), FZero);
-    assertion1(!std::isnan(cosTerm), cosTerm);
-#endif
+    assertion(!std::isnan(exponentialXTerm), exponentialXTerm);
+    assertion(!std::isnan(exponentialYTerm), exponentialYTerm);
+    assertion(!std::isnan(exponentialTTerm), exponentialTTerm);
+    assertion(!std::isnan(FZero), FZero);
+    assertion(!std::isnan(cosTerm), cosTerm);
 
     // 0: rho, 2: rhov
     S[2] += Q[0] * FZero * tarch::la::pow(tarch::la::E, -exponentialXTerm - exponentialYTerm - exponentialTTerm)

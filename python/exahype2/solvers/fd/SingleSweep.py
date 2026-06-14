@@ -7,7 +7,7 @@ from .SolverDeclarations import SolverDeclarations
 from .SolverDefinitions import SolverDefinitions
 
 from exahype2.solvers.PDETerms import PDETerms
-from exahype2.solvers.fd.actionsets import UpdatePatch, EnclaveTasking
+from exahype2.solvers.fd.actionsets import UpdatePatch
 from peano4.toolbox.blockstructured.ReconstructPatch import ReconstructPatch
 
 
@@ -35,8 +35,6 @@ class SingleSweep(FD):
         order,
         unknowns,
         auxiliary_variables,
-        use_enclave_tasking: bool,
-        number_of_enclave_tasks: int,
         solvers_before_in_coupling: list,
     ):
         super(SingleSweep, self).__init__(
@@ -45,8 +43,6 @@ class SingleSweep(FD):
             order=order,
             unknowns=unknowns,
             auxiliary_variables=auxiliary_variables,
-            use_enclave_tasking=use_enclave_tasking,
-            number_of_enclave_tasks=number_of_enclave_tasks,
             solvers_before_in_coupling=solvers_before_in_coupling,
         )
 
@@ -107,15 +103,13 @@ class SingleSweep(FD):
         """
         super(SingleSweep, self).create_action_sets()
         self._action_set_update_patch = UpdatePatch(self)
-        self._action_set_enclave_tasking = EnclaveTasking(self)
         self._action_set_reconstruct_patch = ReconstructPatch(
             patch=self._patch,
             patch_overlap=self._patch_overlap_new,
             patch_reconstructed=self._patch_reconstructed,
             solver_name=self._name,
             precision=self._storage_precision,
-            guard="not marker.willBeRefined() and not marker.hasBeenRefined()"
-            + (" and marker.willBeSkeletonCell()" if self._use_enclave_tasking else ""),
+            guard="not marker.willBeRefined() and not marker.hasBeenRefined()",
             add_assertions_to_halo_exchange=True,
         )
 

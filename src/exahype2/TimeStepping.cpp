@@ -6,7 +6,7 @@
 std::pair<double,double> exahype2::getInterpolationWeights( double oldTimeStampOnFace, double newTimeStampOnFace, double cellTimeStamp ) {
 
   double timeSpan = newTimeStampOnFace - oldTimeStampOnFace;
-  assertion4( tarch::la::greaterEquals(timeSpan,0.0), timeSpan, oldTimeStampOnFace, newTimeStampOnFace, cellTimeStamp );
+  assertion( tarch::la::greaterEquals(timeSpan,0.0), timeSpan, oldTimeStampOnFace, newTimeStampOnFace, cellTimeStamp );
   if ( tarch::la::equals(timeSpan,0.0) ) {
     logDebug("time span equals zero");
     return std::pair<double,double>(0.0,1.0);
@@ -14,8 +14,8 @@ std::pair<double,double> exahype2::getInterpolationWeights( double oldTimeStampO
   else {
     double newWeight = (cellTimeStamp - oldTimeStampOnFace) / timeSpan;
 
-    assertion5( tarch::la::greaterEquals(newWeight,0.0), newWeight, timeSpan, oldTimeStampOnFace, newTimeStampOnFace, cellTimeStamp );
-    assertion5( tarch::la::smallerEquals(newWeight,1.0), newWeight, timeSpan, oldTimeStampOnFace, newTimeStampOnFace, cellTimeStamp );
+    assertion( tarch::la::greaterEquals(newWeight,0.0), newWeight, timeSpan, oldTimeStampOnFace, newTimeStampOnFace, cellTimeStamp );
+    assertion( tarch::la::smallerEquals(newWeight,1.0), newWeight, timeSpan, oldTimeStampOnFace, newTimeStampOnFace, cellTimeStamp );
 
     logDebug("timeSpan" << timeSpan);
 

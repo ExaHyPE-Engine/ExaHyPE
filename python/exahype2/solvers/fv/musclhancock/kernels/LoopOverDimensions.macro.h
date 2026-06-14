@@ -8,10 +8,8 @@
   #pragma unroll
   #endif
   for (int normal = 0; normal < {{DIMENSIONS}}; normal++) { // Loop over directions
-    #if !defined(WITH_GPU)
     assertion(normal >= 0);
     assertion(normal < DIMENSIONS);
-    #endif
 
 {% if DIMENSIONS==2 %}
     const auto volumeLeft =

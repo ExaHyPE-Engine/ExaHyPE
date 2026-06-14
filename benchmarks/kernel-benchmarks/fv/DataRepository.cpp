@@ -86,19 +86,21 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     const auto faceCount  = std::pow(gridLength, DIMENSIONS - 1) * (gridLength + 1);
     const int  depth      = ::exahype2::RuntimeParameters::getInstance().getGridLevels();
     _depthLevels.resize(depth + 1); // For 1 AMR level
-    _depthLevels[depth - 1].Q.resize(cellCount);
-    _depthLevels[depth - 1].QReconstructed.resize(cellCount);
+    _depthLevels[depth - 1].QNew.resize(cellCount);
+    _depthLevels[depth - 1].QOld.resize(cellCount);
     for (int axis = 0; axis < DIMENSIONS; ++axis) {
-      _depthLevels[depth - 1].faces[axis].resize(faceCount);
+      _depthLevels[depth - 1].facesQNew[axis].resize(faceCount);
+      _depthLevels[depth - 1].facesQOld[axis].resize(faceCount);
     }
 
     if (UseAMR) {
       const auto cellCountAMR = std::pow(gridLength * 3, DIMENSIONS);
       const auto faceCountAMR = std::pow(gridLength * 3, DIMENSIONS - 1) * (gridLength * 3 + 1);
-      _depthLevels[depth].Q.resize(cellCountAMR);
-      _depthLevels[depth].QReconstructed.resize(cellCountAMR);
+      _depthLevels[depth].QNew.resize(cellCountAMR);
+      _depthLevels[depth].QOld.resize(cellCountAMR);
       for (int axis = 0; axis < DIMENSIONS; ++axis) {
-        _depthLevels[depth].faces[axis].resize(faceCountAMR);
+        _depthLevels[depth].facesQNew[axis].resize(faceCountAMR);
+        _depthLevels[depth].facesQOld[axis].resize(faceCountAMR);
       }
     }
   }
@@ -110,27 +112,23 @@ namespace benchmarks::exahype2::kernelbenchmarks {
 
   int DataRepository::getFaceCardinality() const { return facedata::FVSolverQNew::Cardinality; }
 
-  int DataRepository::getCellQCardinality() const { return celldata::FVSolverQ::Cardinality; }
+  int DataRepository::getCellCardinality() const { return celldata::FVSolverQNew::Cardinality; }
 
-  int DataRepository::getCellQReconstructedCardinality() const { return celldata::FVSolverQReconstructed::Cardinality; }
 
   std::size_t DataRepository::getMemoryUsageInBytes() const {
-    const int  gridLength  = getGridLength();
-    const auto cellCount   = std::pow(gridLength, DIMENSIONS);
-    const auto faceCount   = std::pow(gridLength, DIMENSIONS - 1) * (gridLength + 1);
-    const auto volumeCount = cellCount * std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS);
-    const auto volumeReconstructedCount = cellCount
-                                          * std::
-                                            pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch + 2, DIMENSIONS);
-    const auto facesVolumesCount = faceCount
-                                   * std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS - 1) * 2;
-    std::size_t totalStorageSize = (volumeCount + volumeReconstructedCount + facesVolumesCount)
-                                   * (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables)
-                                   * sizeof(double);
+    std::size_t totalStorageSize = 0;
+    for (const auto& level : _depthLevels) {
+      totalStorageSize += level.QNew.size() * sizeof(CellQNew);
+      totalStorageSize += level.QOld.size() * sizeof(CellQOld);
+      for (int axis = 0; axis < DIMENSIONS; ++axis) {
+        totalStorageSize += level.facesQNew[axis].size() * sizeof(FaceQNew);
+        totalStorageSize += level.facesQOld[axis].size() * sizeof(FaceQOld);
+      }
+    }
     return totalStorageSize;
   }
 
-  double* DataRepository::getCellQ(
+  double* DataRepository::getCellQNew(
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize
   ) {
@@ -141,10 +139,10 @@ namespace benchmarks::exahype2::kernelbenchmarks {
       tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize))
     );
     int index = peano4::utils::dLinearised(cellIndex, std::pow(3, depth));
-    return _depthLevels[depth - 1].Q[index].data();
+    return _depthLevels[depth - 1].QNew[index].data();
   }
 
-  double* DataRepository::getCellQReconstructed(
+  double* DataRepository::getCellQOld(
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize
   ) {
@@ -155,11 +153,11 @@ namespace benchmarks::exahype2::kernelbenchmarks {
       tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize))
     );
     int index = peano4::utils::dLinearised(cellIndex, std::pow(3, depth));
-    return _depthLevels[depth - 1].QReconstructed[index].data();
+    return _depthLevels[depth - 1].QOld[index].data();
   }
 
   double* DataRepository::getFaceQNew(int index, int depth, int axis) {
-    auto& faceData = _depthLevels[depth - 1].faces[axis % DIMENSIONS];
+    auto& faceData = _depthLevels[depth - 1].facesQNew[axis % DIMENSIONS];
     if (axis >= DIMENSIONS) {
       // High face
       return faceData[index + 1].data();
@@ -177,6 +175,28 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     const double ratio = DomainSize[0] / cellSize[0];
     const int    depth = static_cast<int>(std::round(std::log(ratio) / std::log(3.0)));
     int          index = Indexing::getFaceIndex(cellCentre, cellSize, axis);
-    return _depthLevels[depth - 1].faces[axis % DIMENSIONS][index].data();
+    return _depthLevels[depth - 1].facesQNew[axis % DIMENSIONS][index].data();
+  }
+
+  double* DataRepository::getFaceQOld(int index, int depth, int axis) {
+    auto& faceData = _depthLevels[depth - 1].facesQOld[axis % DIMENSIONS];
+    if (axis >= DIMENSIONS) {
+      // High face
+      return faceData[index + 1].data();
+    } else {
+      // Low face
+      return faceData[index].data();
+    }
+  }
+
+  double* DataRepository::getFaceQOld(
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    int                                          axis
+  ) {
+    const double ratio = DomainSize[0] / cellSize[0];
+    const int    depth = static_cast<int>(std::round(std::log(ratio) / std::log(3.0)));
+    int          index = Indexing::getFaceIndex(cellCentre, cellSize, axis);
+    return _depthLevels[depth - 1].facesQOld[axis % DIMENSIONS][index].data();
   }
 } // namespace benchmarks::exahype2::kernelbenchmarks
