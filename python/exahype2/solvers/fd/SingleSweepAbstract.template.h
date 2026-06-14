@@ -4,6 +4,7 @@
 
 #include "Constants.h"
 
+#include "exahype2/RuntimeParameters.h"
 #include "exahype2/Solver.h"
 #include "exahype2/RefinementControl.h"
 
@@ -61,27 +62,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     static constexpr int NumberOfNodesPerAxisPerPatch = {{NUMBER_OF_NODES_PER_AXIS}};
     static constexpr int NumberOfUnknowns             = {{NUMBER_OF_UNKNOWNS}};
     static constexpr int NumberOfAuxiliaryVariables   = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-
-    /**
-     * Maximum mesh size that this solver wants/is allowed to support. Peano 4
-     * has to ensure that none of its ExaHyPE 2 solvers has to work on a mesh
-     * which is coarser than its MaxH value.
-     */
-    static constexpr double MaxAdmissiblePatchH  = {{MAX_H}} * NumberOfNodesPerAxisPerPatch;
-    static constexpr double MaxAdmissibleH = {{MAX_H}};
-    static constexpr double MaxAdmissibleCellH   = MaxAdmissiblePatchH;
-
-    /**
-     * Minimum mesh size that this solver wants to support. Peano 4 tries
-     * to ensure that none of its ExaHyPE 2 solvers has to work on a mesh
-     * which is finer than its MinH value. However, if there are multiple
-     * solvers, the interplay of these solvers might imply that some solvers
-     * work with fine mesh resolutions even though they have specified a
-     * coarser MinH.
-     */
-    static constexpr double MinAdmissiblePatchH  = {{MIN_H}} * NumberOfNodesPerAxisPerPatch;
-    static constexpr double MinAdmissibleH = {{MIN_H}};
-    static constexpr double MinAdmissibleCellH   = MinAdmissiblePatchH;
 
     {{SOLVER_CONSTANTS}}
 
@@ -155,9 +135,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     virtual double getMaxMeshSize() const override final;
     virtual double getMinMeshSize() const override final;
-
-    virtual double getMinAdmissibleMeshSize() const override final;
-    virtual double getMaxAdmissibleMeshSize() const override final;
 
     virtual int getNumberOfDoFs() const override final;
 

@@ -152,11 +152,10 @@ the SISC paper
         self.d["ACPP_DEBUG_LEVEL"] = ""
         self.d["ACPP_TARGETS"] = ""
         self.d["ACPP_DIR"] = ""
-        self.d["TARGET_DEVICE"] = "tarch::accelerator::Device::DefaultDevice"
         self.d["CMAKE_BUILD_DIR"] = ""
         self.d["FORTRAN_MODULES"] = []
         self.d["APP_SUBDIRECTORIES"] = []
-        self.set_mode(CompileMode.Debug)
+        self.set_mode(CompileMode.Release)
         self.clear_files()
 
     def set_executable_name(self, fname):
@@ -213,9 +212,9 @@ the SISC paper
         """
         mode should be of type CompileMode. Pass in
 
-        peano4.output.CompileMode.Debug
+        peano4.output.CompileMode.Release
 
-        for example. Debug is the default.
+        for example. Release is the default.
         """
         if mode == CompileMode.Debug:
             self.d["MODE"] = "Debug"
@@ -265,9 +264,6 @@ the SISC paper
 
     def set_linker_flags(self, value):
         self.d["LDFLAGS"] = value + " "
-
-    def set_target_device(self, value):
-        self.d["TARGET_DEVICE"] = value
 
     def parse_configuration_outcome(self):
         """

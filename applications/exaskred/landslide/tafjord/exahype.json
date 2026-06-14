@@ -1,0 +1,15 @@
+{
+  "end-time": 40.0,
+  "min-grid-levels": 3,
+  "max-grid-levels": 3,
+  "first-plot-time-stamp": 0.0,
+  "number-of-snapshots": 10,
+  "output-path": "solutions",
+  "log-interval": 10.0,
+  "load-balancing-quality": 0.9,
+  "min-size-of-tree": 1,
+  "max-number-of-trees-per-rank": -1,
+  "target-device": 0,
+  "bathymetry-file": "bathymetry/Tafjord_5m_EPSG25832.nc",
+  "displacement-file": "bathymetry/ini_3.0Mm3_5m_EPSG25832.nc"
+}

@@ -6,6 +6,7 @@ import logging
 import re
 import json
 import inspect
+import argparse
 
 import peano4
 import dastgen2
@@ -32,26 +33,43 @@ class Project(object):
     @see generate_Peano4_project()
     """
 
-    def __init__(self, namespace, project_name, executable, directory=".", subdirectory="", abstract_overwrite=True):
+    def __init__(
+        self,
+        namespace,
+        project_name,
+        dimensions,
+        offset,
+        size,
+        periodic_BC,
+        executable="ExaHyPE",
+        directory=".",
+        subdirectory="",
+        abstract_overwrite=True,
+        min_end_time=None,
+        max_end_time=None,
+        min_grid_levels=None,
+        max_grid_levels=None,
+    ):
         self._project = peano4.Project(namespace, project_name, directory, subdirectory)
         self._subdirectory = subdirectory
         self._abstract_overwrite = abstract_overwrite
 
+        project_arguments = Project._parse_project_arguments()
+        if project_arguments.dimensions is not None:
+            dimensions = project_arguments.dimensions
+
         self._solvers = []
-        self._domain_offset = [0.0, 0.0, 0.0]
-        self._domain_size = [1.0, 1.0, 1.0]
-        self._dimensions = 3
-        self._min_terminal_time = 1.0
-        self._max_terminal_time = 0.0
-        self._first_plot_time_stamp = 0.0
-        self._time_in_between_plots = 0.1
-        self._load_balancer_configuration = ""
-        self._log_time_step_interval_in_seconds = 10.0
-        self._additional_includes     = [ "tarch/accelerator/Device.h" ]
-        self._build_mode = peano4.output.CompileMode.Asserts
+        self._domain_offset = offset
+        self._domain_size = size
+        self._dimensions = dimensions
+        self._min_terminal_time = min_end_time
+        self._max_terminal_time = max_end_time
+        self._min_grid_levels = min_grid_levels
+        self._max_grid_levels = max_grid_levels
+        self._additional_includes = []
+        self._build_mode = Project._select_build_mode(peano4.output.CompileMode.Release)
         self._executable_name = executable
-        self._periodic_BC = [False, False, False]
-        self._output_path = "./"
+        self._periodic_BC = periodic_BC
         self._tracer_particles = []
         self._tracer_particle_sets = []
 
@@ -66,65 +84,6 @@ class Project(object):
         self.init_grid = peano4.solversteps.Step("InitGrid", False)
         self.plot_solution = peano4.solversteps.Step("PlotSolution", False)
         self.perform_time_step = peano4.solversteps.Step("TimeStep", False)
-
-    @staticmethod
-    def _parse_exahype_load_balancer_configuration(load_balancer_configuration):
-        match = re.match(
-            r"^(?P<prefix>\s*new\s+[\w:]*LoadBalancingConfiguration)\s*(?:\((?P<args>.*)\))?\s*$",
-            load_balancer_configuration,
-        )
-        if not match:
-            return None
-
-        args = match.group("args")
-        if args is None or args.strip() == "":
-            return {
-                "prefix": match.group("prefix").strip(),
-                "args": [],
-            }
-
-        parsed_args = [arg.strip() for arg in args.split(",")]
-        if any(arg == "" for arg in parsed_args):
-            return None
-
-        return {
-            "prefix": match.group("prefix").strip(),
-            "args": parsed_args,
-        }
-
-    def _render_load_balancer_configuration(self):
-        parsed_configuration = self._parse_exahype_load_balancer_configuration(
-            self._load_balancer_configuration
-        )
-        if parsed_configuration is None:
-            return self._load_balancer_configuration
-
-        args = parsed_configuration["args"]
-        if len(args) >= 5:
-            return self._load_balancer_configuration
-
-        defaults = [
-            "0.9",
-            "1",
-            "-1",
-            "peano4::grid::SplitInstruction::Mode::BottomUp",
-            "PeriodicBC.count()>0",
-        ]
-        rendered_args = args + defaults[len(args) :]
-        return f"{parsed_configuration['prefix']}({', '.join(rendered_args)})"
-
-    def set_load_balancer(self, load_balancer_configuration=""):
-        """
-        load_balancer_configuration: string
-          User-defined load balancer configuration that shall be used.
-        """
-        self._load_balancer_configuration = load_balancer_configuration
-
-    def set_log_time_step_interval_in_seconds(self, value):
-        self._log_time_step_interval_in_seconds = float(value)
-
-    def set_build_mode(self, mode=peano4.output.CompileMode.Release):
-        self._build_mode = mode
 
     def add_solver(self, solver):
         self._solvers.append(solver)
@@ -183,7 +142,7 @@ class Project(object):
                 "int": "getIntegerArray",
                 "bool": "getBooleanArray",
             }[base_type]
-            return_type = f"tarch::la::Vector<DIMENSIONS, {scalar_cpp_type}>"
+            return_type = f"tarch::la::Vector<{array_size}, {scalar_cpp_type}>"
         else:
             if base_type == "double" and not isinstance(default_value, (int, float)):
                 raise ValueError(f"Runtime parameter '{name}' expects a numeric default value.")
@@ -212,10 +171,13 @@ class Project(object):
         self._runtime_parameters.append(
             {
                 "name": name,
+                "cli_name": re.sub(r"(?<!^)([A-Z])", r"-\1", name).replace("_", "-").lower(),
                 "accessor_name": accessor_name,
                 "cpp_type": cpp_type,
                 "return_type": return_type,
                 "is_array": is_array,
+                "array_size": array_size,
+                "base_type": base_type,
                 "scalar_cpp_type": scalar_cpp_type,
                 "default_value": literal,
                 "getter": getter,
@@ -249,26 +211,7 @@ class Project(object):
         self._project.constants.export_const_with_type(
             "DomainSize", size_string, "tarch::la::Vector<DIMENSIONS,double>"
         )
-        self._project.constants.export("MinTerminalTime", str(self._min_terminal_time))
-        if self._max_terminal_time >= self._min_terminal_time:
-            self._project.constants.export(
-                "MaxTerminalTime", str(self._max_terminal_time)
-            )
-        else:
-            self._project.constants.export(
-                "MaxTerminalTime", "std::numeric_limits<double>::max()"
-            )
-
-        self._project.constants.export(
-            "FirstPlotTimeStamp", str(self._first_plot_time_stamp)
-        )
-
-        self._project.constants.export(
-            "TimeInBetweenPlots", str(self._time_in_between_plots)
-        )
-
-        self._project.constants.export_boolean_sequence("PeriodicBC", self._periodic_BC)
-        self._project.constants.export_string("OutputPath", self._output_path)
+        self._project.constants.export_boolean_sequence("PeriodicBC", self._periodic_BC[: self._dimensions])
 
         build_string = " ".join(["python3", *sys.argv])
         self._project.constants.export_string("BuildInformation", build_string)
@@ -308,77 +251,17 @@ thus appreciate any citation of the original release paper
             self._project.output.readme.add_entry(
                 i.create_readme_descriptor(self._domain_offset[0], self._domain_size[0])
             )
-        # self._min_volume_h         = min_volume_h
-        # self._max_volume_h         = max_volume_h
-
     def __configure_makefile(self):
         self._project.output.makefile.set_dimension(self._dimensions)
         self._project.output.makefile.set_executable_name(self._executable_name)
 
-    def set_global_simulation_parameters(
-        self,
-        dimensions,
-        offset,
-        size,
-        min_end_time,
-        first_plot_time_stamp,
-        time_in_between_plots,
-        periodic_BC=[False, False, False],
-        max_end_time=0.0,
-    ):
-        """
-        ! Set the global simulation parameters
+    @property
+    def dimensions(self):
+        return self._dimensions
 
-        @param dimensions: 2 or 3
-
-        @param offset: [Float]
-          Has to have dimension number of entries.
-
-        @param size: [Float}
-          Has to have dimension number of entries and all of them have to be
-          positive. At this point, we strongly suggest that all size entries
-          are exactly the same. While Peano and ExaHyPE do support anisotropic
-          meshes, most compute kernels do not, so working with something else
-          than a square or cube will likely break all numerics.
-
-        @param first_plot_time_stamp: Float
-          Is irrelevant if time_in_between_plots equals zero
-
-        @param time_in_between_plots: Float
-          Set to zero if you don't want to have any plots
-
-        @param max_end_time: Float
-          If you set it zero (or actually any value smaller than min_end_time), then
-          the code will run until the cell that lags behind the most hits the min time.
-          If you specify a valid max time however, you can stop the sim as soon as the
-          most advanced cell exceeds this threshold.
-        """
-        self._domain_offset = offset
-        self._domain_size = size
-        self._dimensions = dimensions
-
-        assert (
-            len(self._domain_offset) == dimensions
-        ), "domain offset vector and dimensions don't match"
-        assert (
-            len(self._domain_size) == dimensions
-        ), "domain offset vector and dimensions don't match"
-        assert len(periodic_BC) >= dimensions, "periodic boundary condition vector and dimensions don't match"
-
-        self._max_terminal_time = max_end_time
-        self._min_terminal_time = min_end_time
-        self._first_plot_time_stamp = first_plot_time_stamp
-        self._time_in_between_plots = time_in_between_plots
-        self._project.constants.export(
-            "TimeInBetweenPlots", str(self._time_in_between_plots)
-        )
-
-        self._periodic_BC = list(periodic_BC[:dimensions])
-
-    def set_output_path(self, path):
-        self._output_path = path
-        if not self._output_path.endswith("/"):
-            self._output_path += "/"
+    @property
+    def domain_size(self):
+        return self._domain_size[0 : self._dimensions]
 
     def add_mainfile_include(self, value):
         self._additional_includes.append(value)
@@ -386,9 +269,7 @@ thus appreciate any citation of the original release paper
     def __set_solver_repository_dict(self):
         self.solverRepositoryDictionary = {
             "SOLVERS":                  [],
-            "LOAD_BALANCER_CONFIGURATION": self._render_load_balancer_configuration(),
             "TRACERS":                  [x.name for x in self._tracer_particles],
-            "LOG_TIME_STEP_INTERVAL_IN_SECONDS": self._log_time_step_interval_in_seconds,
             "ADDITIONAL_INCLUDES":      self._additional_includes,
         }
 
@@ -427,6 +308,19 @@ thus appreciate any citation of the original release paper
         template_directory = os.path.dirname(os.path.realpath(__file__))
         dictionary = {
             "RUNTIME_PARAMETERS": self._runtime_parameters,
+            "HAS_RUNTIME_PARAMETERS": len(self._runtime_parameters) > 0,
+            "HAS_ARRAY_RUNTIME_PARAMETERS": any(
+                parameter["is_array"] for parameter in self._runtime_parameters
+            ),
+            "HAS_DOUBLE_RUNTIME_PARAMETERS": any(
+                parameter["base_type"] == "double" for parameter in self._runtime_parameters
+            ),
+            "HAS_INTEGER_RUNTIME_PARAMETERS": any(
+                parameter["base_type"] == "int" for parameter in self._runtime_parameters
+            ),
+            "HAS_BOOLEAN_RUNTIME_PARAMETERS": any(
+                parameter["base_type"] == "bool" for parameter in self._runtime_parameters
+            ),
         }
         generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
             os.path.join(template_directory, "RuntimeParameters.template.h"),
@@ -444,6 +338,41 @@ thus appreciate any citation of the original release paper
         self._project.output.makefile.add_cpp_file(
             self._project.subdirectory + "RuntimeParameters.cpp", generated=True
         )
+
+    @staticmethod
+    def _render_optional_runtime_default(value):
+        return "-1.0" if value is None else str(value)
+
+    @staticmethod
+    def _render_optional_integer_runtime_default(value):
+        return "-1" if value is None else str(value)
+
+    def _init_main_template_dictionary(self, main):
+        main.d.update(
+            {
+                "DEFAULT_MIN_TERMINAL_TIME": self._render_optional_runtime_default(
+                    self._min_terminal_time
+                ),
+                "DEFAULT_MAX_TERMINAL_TIME": self._render_optional_runtime_default(
+                    self._max_terminal_time
+                ),
+                "DEFAULT_GRID_LEVELS": self._render_optional_integer_runtime_default(
+                    self._min_grid_levels
+                ),
+                "DEFAULT_MAX_GRID_LEVELS": self._render_optional_integer_runtime_default(
+                    self._max_grid_levels
+                ),
+                "EXECUTABLE_NAME": json.dumps(self._executable_name),
+            }
+        )
+
+    def _configure_build_from_project_arguments(self):
+        project_arguments = Project._parse_project_arguments()
+        self._project._build_make_override = (
+            False if project_arguments.generate_only else None
+        )
+        self._project._build_jobs_override = project_arguments.jobs
+        self._project._build_clean_first_override = project_arguments.clean_first
 
     @staticmethod
     def __solver_accepts_abstract_overwrite(solver):
@@ -655,7 +584,7 @@ thus appreciate any citation of the original release paper
             solver.add_actions_to_create_grid(self.create_grid_without_refinement, evaluate_refinement_criterion=False)
 
             solver.add_actions_to_init_grid(self.init_grid)
-            solver.add_actions_to_plot_solution(self.plot_solution, self._output_path)
+            solver.add_actions_to_plot_solution(self.plot_solution, "./")
 
             solver.add_actions_to_perform_time_step(self.perform_time_step)
 
@@ -665,6 +594,8 @@ thus appreciate any citation of the original release paper
         self.__generate_runtime_parameters()
 
         self._project.main = exahype2.ExaHyPEMain(self._project)
+        self._init_main_template_dictionary(self._project.main)
+        self._configure_build_from_project_arguments()
         return self._project
 
 
@@ -704,3 +635,60 @@ thus appreciate any citation of the original release paper
     @property
     def additional_includes(self):
         return self._additional_includes
+
+    _project_arguments = None
+
+    @staticmethod
+    def _parse_project_arguments():
+        if Project._project_arguments is None:
+            parser = argparse.ArgumentParser(
+                allow_abbrev=False,
+                description="ExaHyPE project code generation options.",
+                formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+            )
+            parser.add_argument(
+                "-d",
+                "--dimensions",
+                type=int,
+                choices=(2, 3),
+                default=None,
+                help="Code generation dimensions.",
+            )
+            parser.add_argument(
+                "-m",
+                "--build-mode",
+                choices=peano4.output.CompileModes,
+                default=None,
+                help="Code generation build mode.",
+            )
+            parser.add_argument(
+                "--generate-only",
+                "--no-build",
+                action="store_true",
+                default=False,
+                help="Generate source files but skip compilation.",
+            )
+            parser.add_argument(
+                "-j",
+                "--jobs",
+                type=int,
+                default=None,
+                help="Parallel build jobs. Values <= 0 use the detected CPU count.",
+            )
+            parser.add_argument(
+                "--clean-first",
+                action=argparse.BooleanOptionalAction,
+                default=None,
+                help="Run make clean before compiling.",
+            )
+            Project._project_arguments, _ = parser.parse_known_args()
+        return Project._project_arguments
+
+    @staticmethod
+    def _select_build_mode(default):
+        parsed_build_mode = Project._parse_project_arguments().build_mode
+        if parsed_build_mode is not None:
+            return peano4.output.string_to_mode(parsed_build_mode)
+        if isinstance(default, str):
+            return peano4.output.string_to_mode(default)
+        return default

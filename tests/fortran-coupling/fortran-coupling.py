@@ -1,14 +1,31 @@
-import os, sys
-import peano4, exahype2
+import argparse
 
-project = exahype2.Project(["tests", "exahype2", "fortran"], ".", executable="ExaHyPE")
+import exahype2
 
-min_level           = 3
-max_depth           = 0
 order               = 5
 
 # scenario = "simple_beach"
 scenario = "oscillating_lake"
+
+
+def parse_arguments():
+  parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+  parser.add_argument(
+    "-h",
+    "--help",
+    action="store_true",
+    help="show this help message and continue with project help",
+  )
+  parser.add_argument("-et", "--end-time", type=float, default=None)
+  parser.add_argument("-l", "--grid-levels", type=int, default=3)
+  args, _ = parser.parse_known_args()
+  if args.help:
+    parser.print_help()
+    print()
+  return args
+
+
+args = parse_arguments()
 
 if scenario=="simple_beach":
   e_t                 = 100.0 #end_time
@@ -72,9 +89,30 @@ elif scenario=="oscillating_lake":
   Q[2] =  sigma * omega * cos(omega * 0) * Q[0];
 """
 
+if args.end_time is not None:
+  e_t = args.end_time
 
-max_h = 1.1 * min(size) / (3.0**min_level)
-min_h = max_h / (3.0**max_depth)
+dimensions = 2
+
+project = exahype2.Project(
+  ["tests", "exahype2", "fortran"],
+  "FortranCoupling",
+  dimensions=dimensions,
+  offset=offset + [0.0],
+  size=size + [size[-1]],
+  periodic_BC=[False, False, False],
+  executable="ExaHyPE",
+  min_end_time=e_t,
+  max_end_time=e_t,
+  min_grid_levels=args.grid_levels,
+  max_grid_levels=args.grid_levels,
+)
+
+if project.dimensions != dimensions:
+  raise ValueError(
+    f"Fortran coupling is a {dimensions}D testcase, but the project was "
+    f"configured for {project.dimensions}D."
+  )
 
 
 boundary_conditions = """
@@ -84,7 +122,6 @@ boundary_conditions = """
 
 aderSolver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   name  = "aderSWE", order = 3,
-  min_cell_h = min_h, max_cell_h = max_h,
   time_step_relaxation  = 0.9,
   unknowns              = 4,
   auxiliary_variables   = 0,
@@ -109,8 +146,6 @@ project.add_solver(aderSolver)
 fvSolver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
   name = "fvSWE",
   patch_size = 2*order+1,
-  min_volume_h          = min_h,
-  max_volume_h          = max_h,
   time_step_relaxation  = 0.9,
   unknowns              = 3,
   auxiliary_variables   = 1,
@@ -141,32 +176,10 @@ limiter = exahype2.solvers.limiting.PosterioriLimiting(
 )
 project.add_solver(limiter)
 
-project.set_output_path(
-  "posterioriSolutions_o_" + str(order) 
-    + "_l_" + str(min_level)
-    + "_d_" + str(max_depth)
-)
-
-dimensions = 2
-build_mode = peano4.output.CompileMode.Release
-
-project.set_global_simulation_parameters(
-    dimensions = dimensions,
-    offset = offset[0:dimensions],
-    size = size[0:dimensions],
-    min_end_time = e_t,
-    max_end_time = e_t,
-    first_plot_time_stamp = 0.0,
-    time_in_between_plots = 0.1,
-    periodic_BC=[False, False, False][0:dimensions]
-)
-
 project._project.output.makefile.set_Fortran_compiler("gfortran")
 # project._project.output.makefile.add_Fortran_file("rpn2_testing.f90")
 project._project.output.makefile.add_cpp_file("fvSWE.cpp")
 project._project.output.makefile.add_cpp_file("aderSWE.cpp")
 
-project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
-project.set_build_mode(build_mode)
 peano4_project = project.generate_Peano4_project(verbose=False)
-peano4_project.build(make_clean_first=True)
+peano4_project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

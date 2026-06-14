@@ -2,24 +2,17 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "LoadBalancingConfiguration.h"
 
+#include "RuntimeParameters.h"
 #include "peano4/Globals.h"
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Core.h"
 
-#include <cmath>
 #include <algorithm>
 
-exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration(
-  double                               loadBalancingQuality,
-  int                                  minSizeOfTree,
-  int                                  maxNumberOfTrees,
-  peano4::grid::SplitInstruction::Mode mode,
-  bool                                 hasPeriodicBC
-):
-  _loadBalancingQuality(loadBalancingQuality),
-  _minSizeOfTree(minSizeOfTree),
-  _maxNumberOfTrees(maxNumberOfTrees),
-  _mode(mode),
+exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration():
+  LoadBalancingConfiguration(false) {}
+
+exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration(bool hasPeriodicBC):
   _hasPeriodicBC(hasPeriodicBC) {}
 
 int exahype2::LoadBalancingConfiguration::translateSetMaxNumberOfTreesIntoRealNumberOfTrees(int value) const {
@@ -34,20 +27,21 @@ int exahype2::LoadBalancingConfiguration::translateSetMaxNumberOfTreesIntoRealNu
   return result;
 }
 
-int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::State state) const {
-  return translateSetMaxNumberOfTreesIntoRealNumberOfTrees(_maxNumberOfTrees);
+int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::State) const {
+  return translateSetMaxNumberOfTreesIntoRealNumberOfTrees(
+    RuntimeParameters::getInstance().getMaxNumberOfTreesPerRank());
 }
 
 double exahype2::LoadBalancingConfiguration::getWorstCaseBalancingRatio(toolbox::loadbalancing::State) const {
-  return _loadBalancingQuality;
+  return RuntimeParameters::getInstance().getLoadBalancingQuality();
 }
 
 int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing::State) const {
-  return _hasPeriodicBC ? std::max(_minSizeOfTree, static_cast<int>(THREE_POWER_D)) : _minSizeOfTree;
+  const int minSizeOfTree = RuntimeParameters::getInstance().getMinSizeOfTree();
+  return _hasPeriodicBC ? std::max(minSizeOfTree, static_cast<int>(THREE_POWER_D)) : minSizeOfTree;
 }
 
-peano4::grid::SplitInstruction::Mode exahype2::LoadBalancingConfiguration::getMode(
-  toolbox::loadbalancing::State
-) const {
-  return _mode;
+peano4::grid::SplitInstruction::Mode
+exahype2::LoadBalancingConfiguration::getMode(toolbox::loadbalancing::State) const {
+  return peano4::grid::SplitInstruction::Mode::BottomUp;
 }

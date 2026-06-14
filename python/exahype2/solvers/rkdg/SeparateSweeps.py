@@ -28,8 +28,6 @@ class SeparateSweeps(RungeKuttaDG):
                number_of_face_projections,
                unknowns,
                auxiliary_variables,
-               min_cell_h,
-               max_cell_h,
                pde_terms_without_state):
     """
     The super call invokes the creation of the data sets, where the guards have
@@ -73,8 +71,6 @@ class SeparateSweeps(RungeKuttaDG):
                                          number_of_face_projections,
                                          unknowns,
                                          auxiliary_variables,
-                                         min_cell_h,
-                                         max_cell_h,
                                          pde_terms_without_state)
 
     self._solver_template_file_class_name = "SeparateSweeps"

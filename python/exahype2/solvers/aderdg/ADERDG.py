@@ -68,8 +68,6 @@ class ADERDG(object):
         order,
         unknowns,
         auxiliary_variables,
-        min_cell_h,
-        max_cell_h,
         use_enclave_tasking: bool,
         number_of_enclave_tasks: int,
     ):
@@ -82,21 +80,6 @@ class ADERDG(object):
         self._order = order
 
         self._variable_shortcuts = VariableShortcuts(name, unknowns, auxiliary_variables)
-
-        """
-        Minimal and maximal accepted sizes for the cell, domain will be subdivided until the cell size is smaller
-        than the minimal size but will never be subdivided to be smaller than the minimal size.
-        """
-        if min_cell_h > max_cell_h:
-            raise Exception(
-                "min_cell_h ("
-                + str(min_cell_h)
-                + ") is bigger than max_cell_h ("
-                + str(max_cell_h)
-                + ")"
-            )
-        self._min_cell_h = min_cell_h
-        self._max_cell_h = max_cell_h
 
         self._dimensions    = 2
         self._namespace     = ""
@@ -815,11 +798,6 @@ class ADERDG(object):
             d["COMPUTATION_PRECISIONS"].append(self._solution_persistent_storage_precision)
         d["NUMBER_OF_PREDICTOR_PRECISIONS"] = len(d["PREDICTOR_COMPUTATION_PRECISIONS"])
         d["NUMBER_OF_PRECISIONS"] = len(d["COMPUTATION_PRECISIONS"])
-
-        if self._min_cell_h > self._max_cell_h:
-            raise Exception("min/max h are inconsistent")
-        d["MAX_CELL_H"] = self._max_cell_h
-        d["MIN_CELL_H"] = self._min_cell_h
 
         d["SOLVER_CONSTANTS"] = self._solver_constants
         d["SOLVER_INCLUDES"]  = self.get_user_solver_includes()

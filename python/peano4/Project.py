@@ -72,6 +72,9 @@ class Project (object):
     self.is_generated         = False
     self.is_built             = False
     self.build_was_successful = False
+    self._build_make_override = None
+    self._build_clean_first_override = None
+    self._build_jobs_override = None
 
     self.constants  = peano4.output.Constants(self)
     self.subconstants = []
@@ -180,6 +183,13 @@ class Project (object):
       throw_away_data_after_build: Bool
         see generate()
     """
+    if self._build_make_override is not None:
+      make = self._build_make_override
+    if self._build_clean_first_override is not None:
+      make_clean_first = self._build_clean_first_override
+    if self._build_jobs_override is not None:
+      number_of_parallel_builds = self._build_jobs_override
+
     if number_of_parallel_builds <= 0:
         number_of_parallel_builds = multiprocessing.cpu_count()
 

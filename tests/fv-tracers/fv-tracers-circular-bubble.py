@@ -1,6 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import peano4
+import argparse
+
 import exahype2
 
 """
@@ -44,22 +45,11 @@ def generate_random_particles(
     )
 
 
-parser = exahype2.ArgumentParser(
-    "ExaHyPE 2 - Finite Volumes Particle Tracing Testing Script"
-)
-
 interpolation_methods = {
     "None": 0,  # No interpolation (use raw values)
     "Constant": 1,  # Piecewise constant interpolation (nearest neighbor)
     "Linear": 2,  # Piecewise linear interpolation (more accurate)
 }
-parser.add_argument(
-    "-interp",
-    "--interpolation",
-    default="Constant",
-    help="|".join(interpolation_methods),
-)
-
 integration_schemes = {
     "Static": 0,  # No integration (static particles)
     "Euler": 1,  # Explicit Euler method (simple but less accurate)
@@ -69,48 +59,52 @@ integration_schemes = {
     "RK3": 5,  # 3rd order Runge-Kutta method (high accuracy)
     "RK4": 6,  # 4th order Runge-Kutta method (higher accuracy)
 }
-parser.add_argument(
-    "-integ", "--integration", default="SemiEuler", help="|".join(integration_schemes)
-)
 
-parser.set_defaults(
-    min_depth=3,
-    degrees_of_freedom=128,
-    end_time=1.0,
-)
 
-args = parser.parse_args()
+def parse_arguments():
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="store_true",
+        help="show this help message and continue with project help",
+    )
+    parser.add_argument(
+        "-interp",
+        "--interpolation",
+        choices=interpolation_methods.keys(),
+        default="Constant",
+    )
+    parser.add_argument(
+        "-integ",
+        "--integration",
+        choices=integration_schemes.keys(),
+        default="SemiEuler",
+    )
+    parser.add_argument("-et", "--end-time", type=float, default=1.0)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=128)
+    parser.add_argument("-l", "--grid-levels", type=int, default=1)
+    args, _ = parser.parse_known_args()
+    if args.help:
+        parser.print_help()
+        print()
+    return args
 
-size = [1.0, 1.0]
-offset = [0.0, 0.0]
-max_h = 1.1 * min(size) / (3.0**args.min_depth)
-min_h = max_h * 3.0 ** (-args.amr_levels)
+
+args = parse_arguments()
 
 project = exahype2.Project(
     namespace=["tests", "exahype2", "fv"],
     project_name=".",
-    directory=".",
-    executable="ExaHyPE",
-)
-
-if args.number_of_snapshots <= 0:
-    time_in_between_plots = 0.0
-else:
-    time_in_between_plots = args.end_time / args.number_of_snapshots
-    project.set_output_path(args.output)
-
-project.set_global_simulation_parameters(
     dimensions=2,
-    size=size,
-    offset=offset,
+    size=[1.0, 1.0, 1.0],
+    offset=[0.0, 0.0, 0.0],
+    periodic_BC=[False, False, False],
+    executable="ExaHyPE",
     min_end_time=args.end_time,
     max_end_time=args.end_time,
-    first_plot_time_stamp=0.0,
-    time_in_between_plots=time_in_between_plots,
-    periodic_BC=[
-        args.periodic_boundary_conditions_x,
-        args.periodic_boundary_conditions_y,
-    ],
+    min_grid_levels=args.grid_levels,
+    max_grid_levels=args.grid_levels,
 )
 
 initial_conditions = """
@@ -171,9 +165,7 @@ fv_solver = exahype2.solvers.fv.godunov.GlobalFixedTimeStep(
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": 1, "rhoV": 1, "rhoE": 1},
     auxiliary_variables=0,
-    min_volume_h=min_h,
-    max_volume_h=max_h,
-    normalised_time_step_size=0.00064,
+    normalised_time_step_size=0.00064 / (args.degrees_of_freedom**0.5),
 )
 
 fv_solver.set_implementation(
@@ -229,8 +221,6 @@ tracing_action_set.descend_invocation_order = (
 project.add_action_set_to_timestepping(tracing_action_set)
 project.add_action_set_to_initialisation(tracing_action_set)
 
-project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
-project.set_build_mode(mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
 project.output.makefile.add_CXX_flag("-DGAMMA=1.4")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

@@ -36,8 +36,6 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(SeparateSweepsWithEnclaveTasking)
     polynomials,
     unknowns,
     auxiliary_variables,
-    min_cell_h,
-    max_cell_h,
     time_step_relaxation,
     flux=PDETerms.User_Defined_Implementation,
     eigenvalues=PDETerms.User_Defined_Implementation,
@@ -60,8 +58,6 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(SeparateSweepsWithEnclaveTasking)
                                                 FaceProjections.Solution,
                                                 unknowns,
                                                 auxiliary_variables,
-                                                min_cell_h,
-                                                max_cell_h,
                                                 pde_terms_without_state)
 
     self._time_step_relaxation                                = time_step_relaxation

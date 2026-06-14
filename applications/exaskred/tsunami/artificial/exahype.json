@@ -1,0 +1,35 @@
+{
+  "end-time": 50.0,
+  "min-grid-levels": 4,
+  "max-grid-levels": 4,
+  "first-plot-time-stamp": 0.0,
+  "number-of-snapshots": 10,
+  "output-path": "solutions",
+  "log-interval": 10.0,
+  "load-balancing-quality": 0.9,
+  "min-size-of-tree": 1,
+  "max-number-of-trees-per-rank": -1,
+  "target-device": 0,
+  "bathymetry-file": "bathymetry/artificial_bath_1000.nc",
+  "displacement-file": "bathymetry/artificial_displ_1000.nc",
+  "bathymetry-size": [
+    10000.0,
+    10000.0
+  ],
+  "bathymetry-offset": [
+    0.0,
+    0.0
+  ],
+  "displacement-size": [
+    10000.0,
+    10000.0
+  ],
+  "displacement-offset": [
+    0.0,
+    0.0
+  ],
+  "displacement-position": [
+    0.0,
+    0.0
+  ]
+}

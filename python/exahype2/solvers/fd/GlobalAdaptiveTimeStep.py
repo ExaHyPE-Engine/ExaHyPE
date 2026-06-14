@@ -16,8 +16,6 @@ class GlobalAdaptiveTimeStep(SingleSweep):
         order,
         unknowns,
         auxiliary_variables,
-        min_h,
-        max_h,
         time_step_relaxation,
         use_enclave_tasking=False,
         number_of_enclave_tasks=1,
@@ -29,16 +27,15 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             order=order,
             unknowns=unknowns,
             auxiliary_variables=auxiliary_variables,
-            min_h=min_h,
-            max_h=max_h,
             use_enclave_tasking=use_enclave_tasking,
             number_of_enclave_tasks=number_of_enclave_tasks,
             solvers_before_in_coupling=solvers_before_in_coupling,
         )
 
         self._compute_eigenvalue = True
+        self._time_step_relaxation = time_step_relaxation
         self._time_stepping_code_snippets = AdaptiveTimeSteppingCodeSnippets(
-            time_step_relaxation
+            self._time_step_relaxation
         )
 
     def _generate_kernels(self, output, subdirectory):

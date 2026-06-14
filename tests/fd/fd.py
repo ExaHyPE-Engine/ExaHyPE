@@ -1,20 +1,43 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import peano4
+import argparse
+
 import exahype2
 
-parser = exahype2.ArgumentParser("ExaHyPE 2 - Finite Differences Testing Script")
 
-parser.set_defaults(
-    min_depth=-1,
-    degrees_of_freedom=16,
-    end_time=0.5,
-    time_step_relaxation=0.4,
-    periodic_boundary_conditions_x=False,
-    periodic_boundary_conditions_y=False,
-    periodic_boundary_conditions_z=False,
+def parse_arguments():
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="store_true",
+        help="show this help message and continue with project help",
+    )
+    parser.add_argument("-et", "--end-time", type=float, default=0.5)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=16)
+    parser.add_argument("-l", "--grid-levels", type=int, default=2)
+    args, _ = parser.parse_known_args()
+    if args.help:
+        parser.print_help()
+        print()
+    return args
+
+
+args = parse_arguments()
+
+project = exahype2.Project(
+    namespace=["tests", "exahype2", "fd"],
+    project_name=".",
+    dimensions=2,
+    size=[0.1, 0.1, 0.1],
+    offset=[0.0, 0.0, 0.0],
+    periodic_BC=[False, False, False],
+    executable="ExaHyPE",
+    min_end_time=args.end_time,
+    max_end_time=args.end_time,
+    min_grid_levels=args.grid_levels,
+    max_grid_levels=args.grid_levels,
 )
-args = parser.parse_args()
 
 """
 /****************************************************************************************************************************************
@@ -56,18 +79,15 @@ boundary_conditions = """
   }
 """
 
-max_h = 0.0007
-min_h = 0.0007
-
 fd_solver = exahype2.solvers.fd.GlobalFixedTimeStep(
     name="FDSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"T": 1},
     auxiliary_variables={"kappa": 1},
-    min_h=min_h,
-    max_h=max_h,
     normalised_time_step_size=(
-        args.time_step_relaxation * (min_h) ** 2 / THERMAL_DIFFUSIVITY
+        0.4
+        * (1.1 * 0.1 / (3.0**args.grid_levels) / args.degrees_of_freedom) ** 2
+        / THERMAL_DIFFUSIVITY
     ),
     order=1,
 )
@@ -90,37 +110,8 @@ fd_solver.set_implementation(
 """,
 )
 
-project = exahype2.Project(
-    namespace=["tests", "exahype2", "fd"],
-    project_name=".",
-    directory=".",
-    executable="ExaHyPE",
-)
 project.add_solver(fd_solver)
 
-if args.number_of_snapshots <= 0:
-    time_in_between_plots = 0.0
-else:
-    time_in_between_plots = args.end_time / args.number_of_snapshots
-    project.set_output_path(args.output)
-
-project.set_global_simulation_parameters(
-    dimensions=args.dimensions,
-    size=[0.1, 0.1, 0.1][0 : args.dimensions],
-    offset=[0.0, 0.0, 0.0][0 : args.dimensions],
-    min_end_time=args.end_time,
-    max_end_time=args.end_time,
-    first_plot_time_stamp=0.0,
-    time_in_between_plots=time_in_between_plots,
-    periodic_BC=[
-        args.periodic_boundary_conditions_x,
-        args.periodic_boundary_conditions_y,
-        args.periodic_boundary_conditions_z,
-    ],
-)
-
-project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
-project.set_build_mode(mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
 project.output.makefile.add_CXX_flag(f"""-DTHERMAL_DIFFUSIVITY={THERMAL_DIFFUSIVITY}""")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

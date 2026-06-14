@@ -1,3 +1,4 @@
+import argparse
 import sys
 import os
 
@@ -11,20 +12,27 @@ from EulerFWave import fWave
 from DiffusionPDE import stencil
 import GravityWaves
 
-"""
-This application is based on:
+"""This application is based on:
+
 "Breaking of thunderstorm-generated gravity waves as a source of short-period ducted waves at mesopause altitudes", Snively and Pasko, 2003, doi:10.1029/2003GL018436
 """
 
 if __name__ == "__main__":
-    parser = exahype2.ArgumentParser(
-        "ExaHyPE 2 Gravity Waves Thunderstorm Argument Parser"
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="store_true",
+        help="show this help message and continue with project help",
     )
-    parser.set_defaults(
-        min_depth=5,
-        degrees_of_freedom=16,
-        end_time=3,  # end time given in Snively and Pasko: 16000
+    parser.add_argument(
+        "-et",
+        "--end-time",
+        type=float,
+        default=3,  # end time given in Snively and Pasko: 16000
     )
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=16)
+    parser.add_argument("-l", "--grid-levels", type=int, default=5)
     parser.add_argument(
         "-csv",
         "--csv-file-path",
@@ -32,10 +40,28 @@ if __name__ == "__main__":
         type=str,
         help="Path to CSV file for use as initial conditions for this project.",
     )
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
+    if args.help:
+        parser.print_help()
+        print()
 
     # adapt to [1_200e3, 180e3, 1_200e3] for reduced model
     size = [1_200e3, 220e3, 1_200e3]
+    project = exahype2.Project(
+        namespace=["applications", "exahype2", "GravityWaves"],
+        project_name="GravityWaves",
+        dimensions=2,
+        offset=[0, 0, 0],
+        size=size,
+        periodic_BC=[False, False, False],
+        directory=".",
+        executable="ExaHyPE",
+        min_end_time=args.end_time,
+        max_end_time=args.end_time,
+        min_grid_levels=args.grid_levels,
+        max_grid_levels=args.grid_levels,
+    )
+    dimensions = project.dimensions
 
     #####################
     # ATMOSPHERE SOLVER #
@@ -140,9 +166,6 @@ if __name__ == "__main__":
         Qoutside[Shortcuts::backgroundPressure] = pressureOutside;
       }"""
 
-    max_h = 1.1 * min(size) / (3.0**args.min_depth)
-    min_h = max_h * 3.0 ** (-args.amr_levels)
-
     atmosphere_unknowns = {
         "rho": 1,
         "rhou": 1,
@@ -150,7 +173,7 @@ if __name__ == "__main__":
         "E": 1,
     }
 
-    if args.dimensions == 3:
+    if dimensions == 3:
         atmosphere_unknowns["rhow"] = 1
 
     atmosphere_auxiliary_variables = {
@@ -167,8 +190,6 @@ if __name__ == "__main__":
         patch_size=args.degrees_of_freedom,
         unknowns=atmosphere_unknowns,
         auxiliary_variables=atmosphere_auxiliary_variables,
-        min_volume_h=min_h,
-        max_volume_h=max_h,
         time_step_relaxation=0.5,
     )
 
@@ -202,7 +223,7 @@ if __name__ == "__main__":
         "v": 1,
     }
 
-    if args.dimensions == 3:
+    if dimensions == 3:
         diffusion_unknowns["w"] = 1
 
     diffusion_unknowns["T"] = 1
@@ -219,7 +240,7 @@ if __name__ == "__main__":
         "backgroundV": 1,
     }
 
-    if args.dimensions == 3:
+    if dimensions == 3:
         diffusion_auxiliary_variables["backgroundW"] = 1
     diffusion_auxiliary_variables["backgroundT"] = 1
 
@@ -290,8 +311,6 @@ if __name__ == "__main__":
         patch_size=args.degrees_of_freedom,
         unknowns=diffusion_unknowns,
         auxiliary_variables=diffusion_auxiliary_variables,
-        min_h=min_h,
-        max_h=max_h,
         time_step_relaxation=0.5,
         order=1,
         solvers_before_in_coupling=[atmosphere_solver],
@@ -312,11 +331,10 @@ if __name__ == "__main__":
     #################
 
     project = GravityWaves.create_peano_project(
+        project=project,
         atmospheric_solver=atmosphere_solver,
         diffusion_solver=diffusion_solver,
         chemical_solver=None,
-        size=size[: args.dimensions],
-        arguments=args,
     )
 
     project.output.makefile.add_cpp_file("ForcingTerms.cpph")

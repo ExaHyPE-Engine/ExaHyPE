@@ -4,7 +4,7 @@ FV Kernels:
     matrix:
     - build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/kernel-benchmarks/fv && PYTHONPATH=$CI_PROJECT_DIR/python python3 fv.py -m $build_type -md ${MIN_GRID_LEVELS} && ./KernelBenchmarks"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/kernel-benchmarks/fv && PYTHONPATH=$CI_PROJECT_DIR/python python3 fv.py --build-mode $build_type && ./KernelBenchmarks -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags
@@ -21,7 +21,7 @@ ADERDG Kernels:
     matrix:
     - build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/kernel-benchmarks/aderdg && PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg.py -m $build_type -md ${MIN_GRID_LEVELS} && ./KernelBenchmarks"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/kernel-benchmarks/aderdg && PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg.py --build-mode $build_type && ./KernelBenchmarks -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags

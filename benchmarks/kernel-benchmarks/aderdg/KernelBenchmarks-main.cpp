@@ -9,6 +9,7 @@
 #include "EnclaveDataRepository.h"
 #include "EnclaveTasks.h"
 #include "exahype2/EnclaveBookkeeping.h"
+#include "exahype2/RuntimeParameters.h"
 #include "exahype2/dg/DGUtils.h"
 #include "kernels/AderSolver/AMRRoutines.h"
 #include "peano4/Globals.h"
@@ -27,6 +28,9 @@
 #include "toolbox/blockstructured/Projection.h"
 #include "toolbox/blockstructured/Restriction.h"
 
+#include <limits>
+#include <string>
+
 #ifdef UseAMR
 #error "At the moment the kernel benchmark does not support AMR"
 #endif
@@ -39,7 +43,28 @@ namespace {
   bool                                haveReceivedNonCriticalAssertion = false;
 
   std::vector<peano4::datamanagement::CellMarker> _cells;
-  const tarch::la::Vector<DIMENSIONS, double>     CellSize = DomainSize / static_cast<double>(GridLength);
+
+  int getGridLength() {
+    int result = 1;
+    for (int level = 0; level < ::exahype2::RuntimeParameters::getInstance().getGridLevels(); ++level) {
+      result *= 3;
+    }
+    return result;
+  }
+
+  tarch::la::Vector<DIMENSIONS, double> getCellSize() {
+    return DomainSize / static_cast<double>(getGridLength());
+  }
+
+  bool helpRequested(int argc, char** argv) {
+    for (int index = 1; index < argc; ++index) {
+      const std::string argument = argv[index];
+      if (argument == "--help" or argument == "-h") {
+        return true;
+      }
+    }
+    return false;
+  }
 
   template <typename T>
   std::string toScientificNotationString(T value, int precision = 4, bool considerSign = false, double threshold = 1e6) {
@@ -207,6 +232,7 @@ void plotGrid() {
 }
 
 void interpolateBetweenAMRBorder() {
+  const auto cellSize = getCellSize();
 
 #if DIMENSIONS == 2
   constexpr int SpaceFaceSize = AbstractAderSolver::Order + 1;
@@ -215,7 +241,7 @@ void interpolateBetweenAMRBorder() {
 #endif
 
   for (auto& marker : _cells) {
-    if (marker.getH()[0] < CellSize[0]) { // Check if cell is in AMR region
+    if (marker.getH()[0] < cellSize[0]) { // Check if cell is in AMR region
       auto parentSize   = marker.getH() * 3.0;
       auto parentCenter = marker.getInvokingParentCellsCentre();
 
@@ -256,7 +282,7 @@ void interpolateBetweenAMRBorder() {
     }
   }
   for (auto& marker : _cells) {
-    if (marker.getH()[0] < CellSize[0]) { // Check if cell is in AMR region
+    if (marker.getH()[0] < cellSize[0]) { // Check if cell is in AMR region
       auto parentCenter = marker.getInvokingParentCellsCentre();
       auto parentSize   = marker.getH() * 3.0;
 
@@ -319,12 +345,13 @@ void applyInitialConditions() {
 }
 
 peano4::datamanagement::CellMarker createMarkerFromIndex(const tarch ::la ::Vector<DIMENSIONS, int>& index) {
+  const auto cellSize = getCellSize();
   tarch::la::Vector<DIMENSIONS, double> cellIndex        = tarch::la::convertScalar<double>(index);
-  tarch::la::Vector<DIMENSIONS, double> cellPositionBase = DomainOffset + CellSize / 2.0;
+  tarch::la::Vector<DIMENSIONS, double> cellPositionBase = DomainOffset + cellSize / 2.0;
   tarch::la::Vector<DIMENSIONS, double>
-    cellPosition = cellPositionBase + tarch::la::multiplyComponents(cellIndex, CellSize);
+    cellPosition = cellPositionBase + tarch::la::multiplyComponents(cellIndex, cellSize);
   peano4::datamanagement::CellMarker marker;
-  marker.h      = CellSize;
+  marker.h      = cellSize;
   marker.centre = cellPosition;
   return marker;
 }
@@ -332,19 +359,20 @@ peano4::datamanagement::CellMarker createMarkerFromIndex(const tarch ::la ::Vect
 std::vector<peano4::datamanagement::CellMarker> createRefinedMarkersFromIndex(
   const tarch ::la ::Vector<DIMENSIONS, int>& index
 ) {
+  const auto cellSize = getCellSize();
   tarch::la::Vector<DIMENSIONS, double> cellIndex              = tarch::la::convertScalar<double>(index);
   tarch::la::Vector<DIMENSIONS, double> deeperCellIndex        = cellIndex * 3.0;
-  tarch::la::Vector<DIMENSIONS, double> deeperCellSize         = CellSize / 3.0;
-  tarch::la::Vector<DIMENSIONS, double> cellPositionBase       = DomainOffset + CellSize / 2.0;
+  tarch::la::Vector<DIMENSIONS, double> deeperCellSize         = cellSize / 3.0;
+  tarch::la::Vector<DIMENSIONS, double> cellPositionBase       = DomainOffset + cellSize / 2.0;
   tarch::la::Vector<DIMENSIONS, double> deepercellPositionBase = DomainOffset + deeperCellSize / 2.0;
 
   std::vector<peano4::datamanagement::CellMarker> result;
 
   tarch::la::Vector<DIMENSIONS, double>
-    cellPosition = cellPositionBase + tarch::la::multiplyComponents(cellIndex, CellSize);
+    cellPosition = cellPositionBase + tarch::la::multiplyComponents(cellIndex, cellSize);
   peano4::datamanagement::CellMarker marker;
   marker.centre = cellPosition;
-  marker.h      = CellSize;
+  marker.h      = cellSize;
   marker.flags |= peano4::datamanagement::CellMarker::HasBeenRefined;
   result.push_back(marker);
 
@@ -364,9 +392,10 @@ std::vector<peano4::datamanagement::CellMarker> createRefinedMarkersFromIndex(
 
 void createGrid() {
   repositories::startGridConstructionStep();
-  _cells.reserve(std::pow(GridLength, DIMENSIONS));
+  const int gridLength = getGridLength();
+  _cells.reserve(std::pow(gridLength, DIMENSIONS));
   tarch::la::Vector<DIMENSIONS, double> DomainCenter = DomainOffset + DomainSize / 2.0;
-  dfor(volume, GridLength) {
+  dfor(volume, gridLength) {
     peano4::datamanagement::CellMarker marker = createMarkerFromIndex(volume);
     if (UseAMR and tarch::la::norm2(marker.getX() - DomainCenter) < 0.1) {
       auto markers = createRefinedMarkersFromIndex(volume);
@@ -387,7 +416,20 @@ void initGrid() {
 int main(int argc, char** argv) {
   int returnCode = EXIT_SUCCESS;
 
-  peano4::init(&argc, &argv, DomainOffset, DomainSize);
+  auto& runtimeParameters = ::exahype2::RuntimeParameters::getInstance();
+  runtimeParameters.setGeneratedDefaults(
+    BenchmarkMinTerminalTime,
+    BenchmarkMaxTerminalTime,
+    BenchmarkGridLevels,
+    BenchmarkMaxGridLevels
+  );
+  if (helpRequested(argc, argv)) {
+    runtimeParameters.printUsage("KernelBenchmarks");
+    return EXIT_SUCCESS;
+  }
+  runtimeParameters.configure(argc, argv);
+
+  peano4::init(&argc, &argv, DomainOffset, DomainSize, PeriodicBC);
 
   repositories::loadBalancer.enable(false);
   repositories::startSimulation();
@@ -410,23 +452,31 @@ int main(int argc, char** argv) {
   tarch::instrumentation::Measurement measurementCorrector(1.0);
   tarch::instrumentation::Watch       timeStepWatch("::", "main()", false);
   double                              timeStamp            = 0.0;
-  double                              nextMinPlotTimeStamp = FirstPlotTimeStamp;
-  double                              nextMaxPlotTimeStamp = FirstPlotTimeStamp;
+  double                              nextMinPlotTimeStamp = runtimeParameters.getFirstPlotTimeStamp();
+  double                              nextMaxPlotTimeStamp = runtimeParameters.getFirstPlotTimeStamp();
   bool                                continueToSolve      = true;
   int                                 count                = 0;
+  const double                        minTerminalTime      = runtimeParameters.getMinTerminalTime();
+  const double                        maxTerminalTime      = runtimeParameters.getMaxTerminalTime();
+  const double                        plottingEndTime      = maxTerminalTime < std::numeric_limits<double>::max() / 10.0 ? maxTerminalTime : minTerminalTime;
+  const int                           numberOfSnapshots    = runtimeParameters.getNumberOfSnapshots();
+  const double                        timeInBetweenPlots   = numberOfSnapshots <= 0 ? 0.0 : plottingEndTime / numberOfSnapshots;
 
   while (continueToSolve) {
     if (Samples > 0 and count++ >= Samples) {
       continueToSolve = false;
     }
-    if ((repositories::getMinTimeStamp() >= nextMinPlotTimeStamp
-         or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp)
-        and repositories::mayPlot()) {
+    if (
+      timeInBetweenPlots > 0.0
+      and (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp
+           or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp)
+      and repositories::mayPlot()
+    ) {
       if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
-        nextMinPlotTimeStamp += TimeInBetweenPlots;
+        nextMinPlotTimeStamp += timeInBetweenPlots;
       }
       if (repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) {
-        nextMaxPlotTimeStamp += TimeInBetweenPlots;
+        nextMaxPlotTimeStamp += timeInBetweenPlots;
       }
 
       if constexpr (ShouldPlot) {
@@ -582,10 +632,10 @@ int main(int argc, char** argv) {
       }
 
       repositories::logTimeStep();
-      logNextTimeStep += repositories::LogTimeStepIntervalInSeconds;
+      logNextTimeStep += runtimeParameters.getLogIntervalInSeconds();
     }
 
-    if (repositories::getMinTimeStamp() >= MinTerminalTime and repositories::getMaxTimeStamp() >= MaxTerminalTime) {
+    if (repositories::getMinTimeStamp() >= minTerminalTime and repositories::getMaxTimeStamp() >= maxTerminalTime) {
       continueToSolve = false;
     }
 

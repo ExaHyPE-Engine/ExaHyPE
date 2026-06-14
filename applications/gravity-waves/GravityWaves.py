@@ -1,6 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import peano4
 import exahype2
 from CouplingSynchronization import (
     setLastSolver,
@@ -158,16 +157,11 @@ def get_atmospheric_boundary_conditions(outside_accessor="Qoutside"):
 
 
 def create_peano_project(
-    atmospheric_solver, diffusion_solver, chemical_solver, size, arguments
+    project, atmospheric_solver, diffusion_solver, chemical_solver
 ):
-    offset = [0] * arguments.dimensions
-
-    project = exahype2.Project(
-        namespace=["applications", "exahype2", "GravityWaves"],
-        project_name="GravityWaves",
-        directory=".",
-        executable="ExaHyPE",
-    )
+    for solver in (atmospheric_solver, diffusion_solver, chemical_solver):
+        if solver is not None:
+            solver._dimensions = project.dimensions
 
     setLastSolver(
         atmospheric_solver=atmospheric_solver,
@@ -190,34 +184,12 @@ def create_peano_project(
         chemical_solver=chemical_solver,
     )
 
-    project.set_output_path(arguments.output)
-
-    project.set_global_simulation_parameters(
-        dimensions=arguments.dimensions,
-        size=size,
-        offset=offset,
-        min_end_time=arguments.end_time,
-        max_end_time=arguments.end_time,
-        first_plot_time_stamp=(0 if arguments.number_of_snapshots > 0 else -1),
-        time_in_between_plots=(
-            arguments.end_time / arguments.number_of_snapshots
-            if arguments.number_of_snapshots > 0
-            else 0
-        ),
-        periodic_BC=[
-            arguments.periodic_boundary_conditions_x,
-            arguments.periodic_boundary_conditions_y,
-            arguments.periodic_boundary_conditions_z,
-        ],
-    )
-
     synchronizePatchGravityWaves(
         atmospheric_solver=atmospheric_solver,
         diffusion_solver=diffusion_solver,
         chemical_solver=chemical_solver,
     )
 
-    project.set_build_mode(mode=peano4.output.string_to_mode(arguments.build_mode))
     project = project.generate_Peano4_project(verbose=True)
 
     project.output.makefile.add_CXX_flag(f"""-DGRAVITY={GRAVITY}""")

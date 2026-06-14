@@ -14,8 +14,6 @@ class SingleSweep(ADERDG):
         order,
         unknowns,
         auxiliary_variables,
-        min_cell_h,
-        max_cell_h,
         use_enclave_tasking: bool,
         number_of_enclave_tasks: int,
         split_sweeps=False,
@@ -30,8 +28,6 @@ class SingleSweep(ADERDG):
             order=order,
             unknowns=unknowns,
             auxiliary_variables=auxiliary_variables,
-            min_cell_h=min_cell_h,
-            max_cell_h=max_cell_h,
             use_enclave_tasking=use_enclave_tasking,
             number_of_enclave_tasks=number_of_enclave_tasks,
         )

@@ -42,14 +42,6 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
   return getMinPatchSize();
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxAdmissibleMeshSize() const {
-  return MaxAdmissibleCellH;
-}
-
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinAdmissibleMeshSize() const {
-  return MinAdmissibleCellH;
-}
-
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
   return BasePowerExponent<NumberOfNodesPerAxisPerPatch, DIMENSIONS>::value * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }

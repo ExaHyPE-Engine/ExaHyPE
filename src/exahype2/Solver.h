@@ -53,9 +53,6 @@ public:
   virtual double getMaxMeshSize() const = 0;
   virtual double getMinMeshSize() const = 0;
 
-  virtual double getMinAdmissibleMeshSize() const = 0;
-  virtual double getMaxAdmissibleMeshSize() const = 0;
-
   virtual int getNumberOfDoFs() const = 0;
 
   /**

@@ -13,11 +13,7 @@ namespace exahype2 {
  */
 class exahype2::LoadBalancingConfiguration final: public toolbox::loadbalancing::Configuration {
 private:
-  const double                               _loadBalancingQuality;
-  const int                                  _minSizeOfTree;
-  const int                                  _maxNumberOfTrees;
-  const peano4::grid::SplitInstruction::Mode _mode;
-  const bool                                 _hasPeriodicBC;
+  bool _hasPeriodicBC;
 
   int translateSetMaxNumberOfTreesIntoRealNumberOfTrees(int value) const;
 
@@ -25,13 +21,8 @@ public:
   /**
    * Configure load balancing
    */
-  LoadBalancingConfiguration(
-    double                               loadBalancingQuality = 0.9,
-    int                                  minSizeOfTree        = 1,
-    int                                  maxNumberOfTrees     = -1,
-    peano4::grid::SplitInstruction::Mode mode                 = peano4::grid::SplitInstruction::Mode::BottomUp,
-    bool                                 hasPeriodicBC        = false
-  );
+  LoadBalancingConfiguration();
+  explicit LoadBalancingConfiguration(bool hasPeriodicBC);
 
   ~LoadBalancingConfiguration() override = default;
 

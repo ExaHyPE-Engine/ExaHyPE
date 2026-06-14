@@ -80,10 +80,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     virtual int getNumberOfDoFs() const override final;
 
-    //TODO: link these to the max and min of the other solvers
-    static constexpr double MaxAdmissibleCellH  = 1000.;
-    static constexpr double MinAdmissibleCellH  = 0.;
-
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
@@ -216,5 +212,4 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
   {{SOLVER_USER_DECLARATIONS}}
 };
-
 

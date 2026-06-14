@@ -35,11 +35,9 @@ class SingleSweep(FV):
         overlap,
         unknowns,
         auxiliary_variables,
-        min_volume_h,
-        max_volume_h,
-        use_enclave_tasking: bool,
-        number_of_enclave_tasks: int,
-        solvers_before_in_coupling: list,
+        use_enclave_tasking: bool=False,
+        number_of_enclave_tasks: int=1,
+        solvers_before_in_coupling: list=[],
     ):
         super(SingleSweep, self).__init__(
             name=name,
@@ -47,8 +45,6 @@ class SingleSweep(FV):
             overlap=overlap,
             unknowns=unknowns,
             auxiliary_variables=auxiliary_variables,
-            min_volume_h=min_volume_h,
-            max_volume_h=max_volume_h,
             use_enclave_tasking=use_enclave_tasking,
             number_of_enclave_tasks=number_of_enclave_tasks,
             solvers_before_in_coupling=solvers_before_in_coupling,

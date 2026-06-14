@@ -1,57 +1,72 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import sys, os, argparse
-import peano4, exahype2
+import argparse
+import os
+import sys
+
+import exahype2
 
 sys.path.insert(0, os.path.abspath("../../../tests/aderdg"))
 import scenarios
 
 
-parser = exahype2.ArgumentParser("ExaHyPE 2 ADER-DG Kernel Benchmarking Script")
-parser.set_defaults(
-    min_depth=3,
-    degrees_of_freedom=6,
-)
+def parse_arguments():
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="store_true",
+        help="show this help message and continue with project help",
+    )
+    parser.add_argument("-et", "--end-time", type=float, default=None)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=6)
+    parser.add_argument("-l", "--grid-levels", type=int, default=3)
+    parser.add_argument(
+        "-s",
+        "--samples",
+        type=int,
+        default=0,
+        help="Set number of samples for benchmarking, if not set, run until scenario end",
+    )
+    parser.add_argument(
+        "-pr",
+        "--precision",
+        choices=["double", "float", "fp16", "bf16"],
+        default="double",
+        help="Precision in which the solver should be computed.",
+    )
+    parser.add_argument(
+        "-st_pr",
+        "--storage_precision",
+        choices=["double", "float", "fp16", "bf16"],
+        default=None,
+        help="Precision in which the solution should be stored, supersedes the precision argument.",
+    )
+    parser.add_argument(
+        "-pr_pr",
+        "--predictor_precision",
+        choices=["double", "float", "fp16", "bf16"],
+        default=None,
+        help="Precision in which the predictor should be computed, supersedes the precision argument.",
+    )
+    parser.add_argument(
+        "-cr_pr",
+        "--corrector_precision",
+        choices=["double", "float", "fp16", "bf16"],
+        default=None,
+        help="Precision in which the corrector should be computed, supersedes the precision argument.",
+    )
+    args, _ = parser.parse_known_args()
+    if args.help:
+        parser.print_help()
+        print()
+    return args
 
-parser.add_argument(
-    "-s",
-    "--samples",
-    type=int,
-    default=0,
-    help="Set number of samples for benchmarking, if not set, run until scenario end",
-)
-parser.add_argument(
-    "-pr",
-    "--precision",
-    choices=["double", "float", "fp16", "bf16"],
-    default="double",
-    help="Precision in which the solver should be computed.",
-)
-parser.add_argument(
-    "-st_pr",
-    "--storage_precision",
-    choices=["double", "float", "fp16", "bf16"],
-    default=None,
-    help="Precision in which the solution should be stored, supersedes the precision argument.",
-)
-parser.add_argument(
-    "-pr_pr",
-    "--predictor_precision",
-    choices=["double", "float", "fp16", "bf16"],
-    default=None,
-    help="Precision in which the predictor should be computed, supersedes the precision argument.",
-)
-parser.add_argument(
-    "-cr_pr",
-    "--corrector_precision",
-    choices=["double", "float", "fp16", "bf16"],
-    default=None,
-    help="Precision in which the corrector should be computed, supersedes the precision argument.",
-)
 
-args = parser.parse_args()
+args = parse_arguments()
 
-scenario = scenarios.ElasticPlanarWaves(dimensions=args.dimensions)
+scenario = scenarios.ElasticPlanarWaves(dimensions=2)
+end_time = scenario._end_time if args.end_time is None else args.end_time
 
 boundary_conditions = """
  // Lamé parameters
@@ -107,8 +122,6 @@ ader_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     order=args.degrees_of_freedom - 1,
     unknowns=scenario._equation.num_unknowns,
     auxiliary_variables=scenario._equation.num_auxiliary_variables,
-    min_cell_h=0.001,  # max_cell_size -> arbitrary value
-    max_cell_h=0.001,  # min_cell_size -> arbitrary value
     time_step_relaxation=0.5,
 )
 
@@ -144,46 +157,43 @@ ader_solver.set_implementation(
 project = exahype2.Project(
     namespace=["benchmarks", "exahype2", "kernelbenchmarks"],
     project_name="KernelBenchmarks",
-    directory=".",
+    dimensions=scenario._dimensions,
+    size=[scenario._domain_size, scenario._domain_size, scenario._domain_size],
+    offset=[scenario._offset, scenario._offset, scenario._offset],
+    periodic_BC=[False, False, False],
     executable="KernelBenchmarks",
+    min_end_time=end_time,
+    max_end_time=end_time,
+    min_grid_levels=args.grid_levels,
+    max_grid_levels=args.grid_levels,
 )
+
+if project.dimensions != scenario._dimensions:
+    raise ValueError(
+        f"ADER-DG kernel benchmark scenario is {scenario._dimensions}D, but the "
+        f"project was configured for {project.dimensions}D."
+    )
+
 project.add_solver(ader_solver)
 
-if args.number_of_snapshots <= 0:
-    time_in_between_plots = 0.0
-else:
-    time_in_between_plots = scenario._end_time / args.number_of_snapshots
-    project.set_output_path(args.output)
-
-project.set_global_simulation_parameters(
-    dimensions=scenario._dimensions,
-    size=[scenario._domain_size, scenario._domain_size, scenario._domain_size][
-        0 : scenario._dimensions
-    ],
-    offset=[scenario._offset, scenario._offset, scenario._offset][
-        0 : scenario._dimensions
-    ],
-    min_end_time=scenario._end_time,
-    max_end_time=scenario._end_time,
-    first_plot_time_stamp=0.0,
-    time_in_between_plots=time_in_between_plots,
-    periodic_BC=[False, False, False][0 : scenario._dimensions],
-)
-
-project.set_build_mode(mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
 
 project.constants.export_constexpr_with_type(
-    "GridLength", str(3**args.min_depth), "int"
+    "BenchmarkMinTerminalTime", str(end_time), "double"
+)
+project.constants.export_constexpr_with_type(
+    "BenchmarkMaxTerminalTime", str(end_time), "double"
+)
+project.constants.export_constexpr_with_type(
+    "BenchmarkGridLevels", str(args.grid_levels), "int"
+)
+project.constants.export_constexpr_with_type(
+    "BenchmarkMaxGridLevels", str(args.grid_levels), "int"
 )
 
-project.constants.export_constexpr_with_type(
-    "ShouldPlot", "true" if args.number_of_snapshots > 0 else "false", "bool"
-)
+project.constants.export_constexpr_with_type("ShouldPlot", "true", "bool")
 
-project.constants.export_constexpr_with_type(
-    "UseAMR", "true" if args.amr_levels > 0 else "false", "bool"
-)
+project.constants.export_constexpr_with_type("UseAMR", "false", "bool")
 
 project.constants.export_constexpr_with_type("Samples", str(args.samples), "int")
 

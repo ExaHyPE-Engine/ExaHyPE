@@ -1,97 +1,60 @@
-import peano4, exahype2
-import os, sys
 import argparse
-import subprocess
-import mpmath as mp
+import os
+import sys
+
+import exahype2
 
 sys.path.insert(0, os.path.abspath("../aderdg/"))
 sys.path.insert(0, os.path.abspath("../aderdg/scenarios"))
 import scenarios
 
-modes = {
-    "release": peano4.output.CompileMode.Release,
-    "trace": peano4.output.CompileMode.Trace,
-    "assert": peano4.output.CompileMode.Asserts,
-    "debug": peano4.output.CompileMode.Debug,
+available_precisions = ("float", "double", "fp32", "fp64", "fp16", "bf16")
+
+scenario_factories = {
+    "AcousticPlanarWaves": lambda: scenarios.AcousticPlanarWaves(dimensions=2),
+    "AdvectionLinear": scenarios.AdvectionLinear,
+    "ElasticPlanarWaves": lambda: scenarios.ElasticPlanarWaves(dimensions=2),
+    "EulerGaussianBell": scenarios.EulerGaussianBell,
+    "EulerIsentropicVortex": scenarios.EulerIsentropicVortex,
+    "SWERadialDamBreak": scenarios.SWERadialDamBreak,
+    "SWERestingLake": scenarios.SWERestingLake,
 }
 
-available_prec = {
-    "bf16", "fp16", "fp32", "fp64"
-}
 
-available_scenarios = {
-    "AcousticPlanarWaves": scenarios.AcousticPlanarWaves(dimensions=2),
-    "AdvectionLinear": scenarios.AdvectionLinear(),
-    "ElasticPlanarWaves": scenarios.ElasticPlanarWaves(dimensions=2),
-    "EulerGaussianBell": scenarios.EulerGaussianBell(),
-    "EulerIsotropicVortex": scenarios.EulerIsotropicVortex(),
-    "SWERadialDamBreak": scenarios.SWERadialDamBreak(),
-    "SWERestingLake": scenarios.SWERestingLake(),
-}
+def parse_arguments():
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="store_true",
+        help="show this help message and continue with project help",
+    )
+    parser.add_argument("-et", "--end-time", type=float, default=None)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=4)
+    parser.add_argument("-l", "--grid-levels", type=int, default=3)
+    parser.add_argument(
+        "-p",
+        "--polynomials",
+        type=int,
+        choices=(0, 1),
+        default=0,
+        help="Polynomial type, 0 is Gauss-Legendre, 1 is Gauss-Lobatto",
+    )
+    parser.add_argument("-pr", "--precision", choices=available_precisions, default="fp64")
+    parser.add_argument(
+        "-s", "--scenario", choices=scenario_factories.keys(), default="SWERadialDamBreak"
+    )
+    args, _ = parser.parse_known_args()
+    if args.help:
+        parser.print_help()
+        print()
+    return args
 
-parser = argparse.ArgumentParser(description="ExaHyPE 2 - ADER testing script")
 
-parser.add_argument(
-    "-md",
-    "--mesh-depth",
-    dest="md",
-    type=int,
-    default=3,
-    help="Depth of coarsest mesh level, i.e if 2 is specified there will be 9 cells per dimension",
-)
-parser.add_argument(
-    "-amr",
-    "--adaptive-levels",
-    dest="adaptivity_levels",
-    type=int,
-    default=0,
-    help="Number of AMR grid levels on top of hmax (0 by default)",
-)
-parser.add_argument("-o", "--order", dest="order", type=int, default=3, help="DG Order")
-parser.add_argument(
-    "-p",
-    "--p",
-    dest="polynomials",
-    type=int,
-    default=0,
-    help="Polynomial type, 0 is Gauss-Legendre, 1 is Gauss-Lobatto",
-)
-parser.add_argument(
-    "-m", "--mode", dest="mode", default="release", help="|".join(modes.keys())
-)
-parser.add_argument(
-    "-pr", "--precision", dest="precision", default="fp64", help="|".join(available_prec)
-)
-parser.add_argument(
-    "-s",
-    "--scenario",
-    dest="s",
-    default="SWERadialDamBreak",
-    help="|".join(available_scenarios.keys()),
-)
-
-args = parser.parse_args()
-
-if args.s is None:
-    while True:
-        try:
-            s = input(
-                "Which of the following scenarios would you like to try out?\n"
-                + " - ".join(available_scenarios.keys())
-                + "\n"
-            )
-            scenario = available_scenarios[s]
-        except KeyError:
-            continue
-        else:
-            # User has specified a valid scenario
-            break
-else:
-    scenario = available_scenarios[args.s]
-
-order = args.order
-max_h = 1.1 * scenario._domain_size / (3.0**args.md)
-min_h = max_h * 3.0 ** (-args.adaptivity_levels)
+args = parse_arguments()
+scenario = scenario_factories[args.scenario]()
+order = args.degrees_of_freedom - 1
+end_time = scenario._end_time if args.end_time is None else args.end_time
 
 polynomials = (
     exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
@@ -101,32 +64,45 @@ polynomials = (
 
 project = exahype2.Project(
     ["tests", "exahype2", "aderdg"],
-    ".",
+    "ADERDGCoupling",
+    dimensions=scenario._dimensions,
+    size=[scenario._domain_size for _ in range(3)],
+    offset=[scenario._offset for _ in range(3)],
+    periodic_BC=[scenario._periodic_bc for _ in range(3)],
     executable=scenario.__class__.__name__,
+    min_end_time=end_time,
+    max_end_time=end_time,
+    min_grid_levels=args.grid_levels,
+    max_grid_levels=args.grid_levels,
 )
+
+if project.dimensions != scenario._dimensions:
+    raise ValueError(
+        f"Scenario {args.scenario} is {scenario._dimensions}D, but the project "
+        f"was configured for {project.dimensions}D."
+    )
 
 solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     name=scenario.__class__.__name__,
     order=order,
-    min_cell_h=min_h,
-    max_cell_h=max_h,
     time_step_relaxation=0.9,
     unknowns=scenario._equation.num_unknowns,
-    auxiliary_variables=scenario._equation.num_auxiliary_variables
+    auxiliary_variables=scenario._equation.num_auxiliary_variables,
 )
 
 solver.add_kernel_optimisations(
-    polynomials=polynomials, is_linear=scenario._equation.is_linear,
-    riemann_solver_implementation = scenario._equation.riemann_solver(),
-    precision = args.precision
+    polynomials=polynomials,
+    is_linear=scenario._equation.is_linear,
+    precision=args.precision,
 )
 
 solver.set_implementation(
     initial_conditions=scenario.initial_conditions(),
     boundary_conditions=scenario.boundary_conditions(),
-    eigenvalues=scenario._equation.eigenvalues(),
+    max_eigenvalue=scenario._equation.eigenvalues(),
     flux=scenario._equation.flux(),
     ncp=scenario._equation.ncp(),
+    riemann_solver=scenario._equation.riemann_solver(),
 )
 
 if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementation:
@@ -138,33 +114,28 @@ if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementati
 
 project.add_solver(solver)
 
-################################################
-
 solver2 = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
-    name=scenario.__class__.__name__+"2",
+    name=scenario.__class__.__name__ + "2",
     order=order,
-    min_cell_h=min_h,
-    max_cell_h=max_h,
     time_step_relaxation=0.9,
     unknowns=scenario._equation.num_unknowns,
-    auxiliary_variables=scenario._equation.num_auxiliary_variables
+    auxiliary_variables=scenario._equation.num_auxiliary_variables,
 )
 
 solver2.add_kernel_optimisations(
-    polynomials=polynomials, is_linear=scenario._equation.is_linear,
-    riemann_solver_implementation = scenario._equation.riemann_solver(),
-    precision = "fp32"#precision = args.precision
+    polynomials=polynomials,
+    is_linear=scenario._equation.is_linear,
+    precision="fp32",
 )
 
 solver2.set_implementation(
     initial_conditions=scenario.initial_conditions(),
     boundary_conditions=scenario.boundary_conditions(),
-    eigenvalues=scenario._equation.eigenvalues(),
+    max_eigenvalue=scenario._equation.eigenvalues(),
     flux=scenario._equation.flux(),
     ncp=scenario._equation.ncp(),
+    riemann_solver=scenario._equation.riemann_solver(),
 )
-
-################################################
 
 if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementation:
     exahype2.solvers.aderdg.ErrorMeasurement(
@@ -175,32 +146,18 @@ if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementati
 
 project.add_solver(solver2)
 
-# from fuseADERSolvers import fuseADERSolvers 
-# fuseADERSolvers(solver, solver2, "marker.getX()[0]<=0.0")
-
 sys.path.insert(0, os.path.abspath("./coupling"))
 from coupling import StaticCoupling
 
 limiter = StaticCoupling(
-  name            = "limitingSolver",
-  regularSolver   = solver,
-  limitingSolver  = solver2,
-  limiting_criterion_implementation = """
+    name="limitingSolver",
+    regularSolver=solver,
+    limitingSolver=solver2,
+    limiting_criterion_implementation="""
   return x[0]<=0.0;
-"""
+""",
 )
 project.add_solver(limiter)
 
-
-################################################
-
-project.set_output_path("solutions")
-scenario.set_global_simulation_parameters(project)
-
-project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-    "new ::exahype2::LoadBalancingConfiguration(0.98)",
-)
-project.set_build_mode(modes[args.mode])
-project = project.generate_Peano4_project("False")
-project.build(make_clean_first=True)
+project = project.generate_Peano4_project(verbose=False)
+project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

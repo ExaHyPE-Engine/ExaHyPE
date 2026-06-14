@@ -8,7 +8,7 @@ import peano4.solversteps
 
 class AdaptivityCriterion(AbstractADERDGActionSet):
     """
-    The action set to realise AMR
+    The action set to realise AMR.
 
     AMR is a multistep process in ExaHyPE. Most of the relevant documentation
     on it is documented in the class exahype2::RefinementControl.
@@ -31,18 +31,20 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
 
     _Template_AMR = """
   ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
+  const double maxAdmissiblePatchSize = ::exahype2::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
+  const double minAdmissiblePatchSize = ::exahype2::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
 
   {% if GRID_CONSTRUCTION %}
   if (
     not marker.willBeRefined()
     and
-    tarch::la::greater(tarch::la::max(marker.getH()), repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH)
+    tarch::la::greater(tarch::la::max(marker.getH()), maxAdmissiblePatchSize)
   ) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
   } else if (
     not marker.willBeRefined()
     and
-    tarch::la::greaterEquals(tarch::la::max(marker.getH()), /*3.0 **/ repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH)
+    tarch::la::greaterEquals(tarch::la::max(marker.getH()), minAdmissiblePatchSize)
     and
     not fineGridCell{{CELL_LABEL_NAME}}.getAMDCriterionEvaluatedThroughoutGridConstruction()
   ) {
@@ -62,7 +64,7 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
     and
     not marker.willBeRefined()
     and
-    tarch::la::greater(tarch::la::max(marker.getH()), repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH)
+    tarch::la::greater(tarch::la::max(marker.getH()), maxAdmissiblePatchSize)
   ) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
   } else if (
@@ -89,14 +91,14 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
     if (
       refinementCriterion == ::exahype2::RefinementCommand::Refine
       and
-      tarch::la::smallerEquals(tarch::la::max(marker.getH()), 3.0 * repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH)
+      tarch::la::smallerEquals(tarch::la::max(marker.getH()), 3.0 * minAdmissiblePatchSize)
     ) {
       logDebug("drop refine instructions, as mesh would be too small");
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } else if (
       refinementCriterion == ::exahype2::RefinementCommand::Erase
       and
-      3.0 * tarch::la::max(marker.getH()) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH
+      3.0 * tarch::la::max(marker.getH()) > maxAdmissiblePatchSize
     ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     }
@@ -118,13 +120,12 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
         event_lifetime=2,
     ):
         """
-        :: Attributes
+        :: Attributes.
 
         _implement_previous_refinement_instructions: Boolean
           This name might be misleading. Consult exahype2::RefinementControl for
           a description of the control flow. This flag controls if instructions
           are picked up from the RefinementControl database.
-
 
         :: Arguments
 
@@ -210,6 +211,7 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
     def set_event_lifetime(self, value):
         """
         By default, a refinement/coarsening event is only alive for one grid sweep.
+
         After that one, the set of refine/coarsen commands is reset and we start
         again. If you work with local time stepping, subcycling, multiphysics codes,
         you might want to keep an event for more steps. In this case, you have to
@@ -230,5 +232,7 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
             super(AdaptivityCriterion, self).get_includes()
             + """
 #include "exahype2/RefinementControlService.h"
+#include "exahype2/RuntimeParameters.h"
+#include "Constants.h"
       """
         )

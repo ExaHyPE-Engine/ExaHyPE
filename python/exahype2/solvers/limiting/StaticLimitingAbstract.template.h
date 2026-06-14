@@ -53,14 +53,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     virtual double getMaxMeshSize() const override final;
     virtual double getMinMeshSize() const override final;
 
-    virtual double getMinAdmissibleMeshSize() const override final;
-    virtual double getMaxAdmissibleMeshSize() const override final;
-
     virtual int getNumberOfDoFs() const override final;
-
-    //TODO: link these to the max and min of the other solvers
-    static constexpr double MaxAdmissibleCellH  = 1000.;
-    static constexpr double MinAdmissibleCellH  = 0.;
 
     /**
      * If you hook into this routine, ensure the abstract base class

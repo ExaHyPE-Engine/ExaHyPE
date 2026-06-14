@@ -46,14 +46,6 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
   return getMinCellSize();
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxAdmissibleMeshSize() const {
-  return MaxAdmissibleCellH;
-}
-
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinAdmissibleMeshSize() const {
-  return MinAdmissibleCellH;
-}
-
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
   return BasePowerExponent<Order + 1, DIMENSIONS>::value * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }

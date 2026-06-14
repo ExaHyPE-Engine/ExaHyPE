@@ -1,5 +1,8 @@
-import os, sys, peano4, exahype2
+import argparse
+import os
+import sys
 
+import exahype2
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
 import PMLElastic
@@ -28,28 +31,64 @@ auxiliary_variables = {
 offset  = my_scenario.domain_offset
 size    = my_scenario.domain_size
 
-end_time = my_scenario.end_time
-plot_dt  = 0.0
-
 order = 5
 
 min_level = 3
 max_depth = 0
-max_h = 1.1 * min(size) / (3.0**min_level)
-min_h = max_h / (3.0**max_depth)
 
 precision = "fp64"
 use_tracers = True
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="store_true",
+        help="show this help message and continue with project help",
+    )
+    parser.add_argument("-et", "--end-time", type=float, default=my_scenario.end_time)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=order)
+    parser.add_argument("-l", "--grid-levels", type=int, default=None)
+    parser.add_argument("-lmin", "--min-grid-levels", type=int, default=min_level)
+    parser.add_argument("-lmax", "--max-grid-levels", type=int, default=min_level + max_depth)
+    args, _ = parser.parse_known_args()
+    if args.grid_levels is not None:
+        args.min_grid_levels = args.grid_levels
+        args.max_grid_levels = args.grid_levels
+    if args.help:
+        parser.print_help()
+        print()
+    return args
+
+
+args = parse_arguments()
+order = args.degrees_of_freedom
+end_time = args.end_time
+
 my_scenario.generate_required_files(order)
+
+project = exahype2.Project(
+    ["applications", "exahype2", "exaseis"],
+    "pml",
+    dimensions=3,
+    offset=offset,
+    size=size,
+    periodic_BC=[False, False, False],
+    executable=scenario+"_l_"+str(args.min_grid_levels)+"_o_"+str(order)+"_pr_"+precision,
+    min_end_time=end_time,
+    max_end_time=end_time,
+    min_grid_levels=args.min_grid_levels,
+    max_grid_levels=args.max_grid_levels,
+)
+if project.dimensions != 3:
+    raise ValueError("The PML ExaSeis application is three-dimensional.")
 
 theSolver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     name="ElasticSolver",
     order=order,
     unknowns=unknowns,
     auxiliary_variables=auxiliary_variables,
-    min_cell_h=min_h,
-    max_cell_h=max_h,
     time_step_relaxation=0.9
 )
 
@@ -81,7 +120,6 @@ theSolver._start_grid_initialisation_implementation +=  PMLElastic.init_grid_ste
 theSolver._destructor_implementation +=  PMLElastic.abstractDestructor()
 theSolver.add_user_solver_includes(PMLElastic.userIncludes())
 
-project = exahype2.Project(["applications", "exahype2", "exaseis"], "pml", executable=scenario+"_l_"+str(min_level)+"_o_"+str(order)+"_pr_"+precision)
 project.add_solver(theSolver)
 
 if use_tracers:
@@ -89,26 +127,10 @@ if use_tracers:
     exahype2.tracer.CurviTracer(
         coordinates=my_scenario.tracer_coordinates,
         solver=theSolver,
-        filename=scenario+"_level_"+str(min_level)+"-order-"+str(order)+"-precision-"+str(precision),
+        filename=scenario+"_level_"+str(args.min_grid_levels)+"-order-"+str(order)+"-precision-"+str(precision),
         data_delta_between_two_snapshots=1e16, time_delta_between_two_snapshots=0.01,
         output_precision=10, clear_database_after_flush=False
     ))
 
-if plot_dt > 0.0:
-  project.set_output_path("solutions")
-
-project.set_global_simulation_parameters(
-    dimensions=3,
-    offset=offset,
-    size=size,
-    min_end_time=end_time,
-    max_end_time=end_time,
-    first_plot_time_stamp=0.0,
-    time_in_between_plots=plot_dt,
-    periodic_BC=[False, False, False]
-)
-
-project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration()")
-project.set_build_mode(peano4.output.CompileMode.Release)
 peano4_project = project.generate_Peano4_project(verbose=False)
 peano4_project.build(make_clean_first=True)

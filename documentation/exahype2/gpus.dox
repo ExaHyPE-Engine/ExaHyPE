@@ -158,8 +158,6 @@ a good prototype to study:
 my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
             name= "GPUFVSolver",
             patch_size=18,
-            min_volume_h=0.0001,
-            max_volume_h=0.01,
             pde_terms_without_state=True, # This part is the relevant one here
         )
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -586,4 +584,3 @@ my_solver._fused_compute_kernel_call_gpu  = exahype2.solvers.fv.rusanov.kernels.
 
 
   */
-

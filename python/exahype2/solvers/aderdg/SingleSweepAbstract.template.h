@@ -5,7 +5,7 @@
 #include "Constants.h"
 #include "RuntimeParameters.h"
 
-#include "exahype2/exahype2.h"
+#include "exahype2/RuntimeParameters.h"
 #include "exahype2/Solver.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/PrecisionControl.h"
@@ -79,23 +79,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     static double pointSourceLocation[NumberOfPointSources][DIMENSIONS];
 {% endif %}
 
-    /**
-     * Maximum mesh size that this solver wants/is allowed to support. Peano 4
-     * has to ensure that none of its ExaHyPE 2 solvers has to work on a mesh
-     * which is coarser than its MaxH value.
-     */
-    static constexpr double MaxAdmissibleCellH = {{MAX_CELL_H}};
-
-    /**
-     * Minimum mesh size that this solver wants to support. Peano 4 tries
-     * to ensure that none of its ExaHyPE 2 solvers has to work on a mesh
-     * which is finer than its MinH value. However, if there are multiple
-     * solvers, the interplay of these solvers might imply that some solvers
-     * work with fine mesh resolutions even though they have specified a
-     * coarser MinH.
-     */
-    static constexpr double MinAdmissibleCellH  = {{MIN_CELL_H}};
-
     {{CLASSNAME}}();
     ~{{CLASSNAME}}();
 
@@ -156,9 +139,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual double getMaxMeshSize() const override final;
     virtual double getMinMeshSize() const override final;
-
-    virtual double getMinAdmissibleMeshSize() const override final;
-    virtual double getMaxAdmissibleMeshSize() const override final;
 
     virtual int getNumberOfDoFs() const override final;
 

@@ -24,8 +24,6 @@ namespace {{ item }} {
 
   extern toolbox::loadbalancing::LoadBalancer loadBalancer;
 
-  static constexpr double LogTimeStepIntervalInSeconds = {{LOG_TIME_STEP_INTERVAL_IN_SECONDS}};
-
   /**
    * Return the global min time stamp over all solvers.
    *
@@ -51,16 +49,6 @@ namespace {{ item }} {
   double getMaxTimeStepSize();
   double getMinMeshSize();
   double getMaxMeshSize();
-
-  /**
-   * This routine returns the minimum of the max admissible mesh sizes.
-   */
-  double getMaxAdmissibleMeshSize();
-
-  /**
-   * Return max of min admissible mesh sizes.
-   */
-  double getMinAdmissibleMeshSize();
 
   std::size_t getMaxNumberOfPatches();
   std::size_t getMaxNumberOfFaces();

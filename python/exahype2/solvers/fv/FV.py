@@ -145,11 +145,9 @@ class FV(object):
         overlap,
         unknowns,
         auxiliary_variables,
-        min_volume_h,
-        max_volume_h,
-        use_enclave_tasking: bool,
-        number_of_enclave_tasks: int,
-        solvers_before_in_coupling: list,
+        use_enclave_tasking: bool=False,
+        number_of_enclave_tasks: int=1,
+        solvers_before_in_coupling: list=[],
         baseline_action_set_descend_invocation_order=0,
     ):
         """!
@@ -178,19 +176,10 @@ class FV(object):
            work with AoS. But the solver has to be able to distinguish them, as
            only the unknowns are subject to a hyperbolic formulation.
 
-        min_volume_h: double
-           This size refers to the individual Finite Volume.
-
-        max_volume_h: double
-           This size refers to the individual Finite Volume.
-
         solvers_before_in_coupling: list[exahype2.solvers]
             List of solvers that come before this solver in a coupled simulation.
         """
         self._name = name
-
-        self._min_volume_h = min_volume_h
-        self._max_volume_h = max_volume_h
 
         self._patch_size = patch_size
         self._overlap = overlap
@@ -228,15 +217,6 @@ class FV(object):
         self._solver_constants = ""
         self._user_action_set_includes = ""
         self._user_solver_includes = ""
-
-        if min_volume_h > max_volume_h:
-            raise Exception(
-                "min_volume_h ("
-                + str(min_volume_h)
-                + ") is bigger than max_volume_h ("
-                + str(max_volume_h)
-                + ")"
-            )
 
         self._solver_template_file_class_name = None
         self._templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
@@ -315,49 +295,6 @@ class FV(object):
         self.create_data_structures()
         self.create_action_sets()
 
-    def get_min_number_of_spacetree_levels(self, domain_size):
-        coarsest_tree_level = 0
-        while (
-            domain_size * 3 ** (-coarsest_tree_level) / self._patch_size
-            > self._max_volume_h
-        ):
-            coarsest_tree_level += 1
-        return coarsest_tree_level
-
-
-    def get_max_number_of_spacetree_levels(self, domain_size):
-        finest_tree_level = 0
-        while (
-            domain_size * 3 ** (-finest_tree_level) / self._patch_size
-            > self._min_volume_h
-        ):
-            finest_tree_level += 1
-        return finest_tree_level
-
-    def get_coarsest_number_of_patches(self, domain_size):
-        return 3 ** self.get_min_number_of_spacetree_levels(domain_size)
-
-
-    def get_finest_number_of_patches(self, domain_size):
-        return 3 ** self.get_max_number_of_spacetree_levels(domain_size)
-
-
-    def get_coarsest_number_of_finite_volumes(self, domain_size):
-        return self.get_coarsest_number_of_patches(domain_size) * self._patch_size
-
-
-    def get_finest_number_of_finite_volumes(self, domain_size):
-        return self.get_finest_number_of_patches(domain_size) * self._patch_size
-
-
-    def get_coarsest_volume_size(self, domain_size):
-        return domain_size / self.get_coarsest_number_of_finite_volumes(domain_size)
-
-
-    def get_finest_volume_size(self, domain_size):
-        return domain_size / self.get_finest_number_of_finite_volumes(domain_size)
-
-
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (
             """
@@ -376,45 +313,10 @@ We assume that you use a domain size of (0,"""
             + """)^d. Peano 4 will cut this domain equidistantly
 and recursively into three parts along each coordinate axis. This yields a spacetree.
 
-The spacetree will at least have """
-            + str(self.get_min_number_of_spacetree_levels(domain_size))
-            + """ levels.
-The spacetree will at most have """
-            + str(self.get_max_number_of_spacetree_levels(domain_size))
-            + """ levels.
-
-The spacetree will thus span at least """
-            + str(self.get_coarsest_number_of_patches(domain_size))
-            + """ cells (or patches) per coordinate axis. This means a """
-            + str(self.get_coarsest_number_of_patches(domain_size))
-            + """^d grid of patches.
-The spacetree will thus span at most """
-            + str(self.get_finest_number_of_patches(domain_size))
-            + """ cells (or patches) per coordinate axis. This means a """
-            + str(self.get_finest_number_of_patches(domain_size))
-            + """^d grid of patches.
-
 ExaHyPE 2 embeds """
             + str(self._patch_size)
-            + """^d patches of Finite Volumes into the finest tree level.
-
-The coarsest possible mesh will consist of """
-            + str(self.get_coarsest_number_of_finite_volumes(domain_size))
-            + """ Finite Volumes per coordinate axis.
-The finest possible mesh will consist of """
-            + str(self.get_finest_number_of_finite_volumes(domain_size))
-            + """ Finite Volumes per coordinate axis.
-
-The coarsest mesh width of """
-            + str(self.get_coarsest_volume_size(domain_size))
-            + """ is thus just smaller than the maximum volume size """
-            + str(self._max_volume_h)
-            + """.
-The finest mesh width of """
-            + str(self.get_finest_volume_size(domain_size))
-            + """ is thus just smaller than the minimum volume size """
-            + str(self._min_volume_h)
-            + """.
+            + """^d Finite Volumes into each patch. The number of Peano grid levels
+and additional AMR levels is configured by the executable at runtime.
 """
         )
 
@@ -1219,9 +1121,6 @@ The finest mesh width of """
         d["FACE_CARDINALITY_3D"] = (
             int(self._patch_overlap_new.no_of_unknowns * self._patch_overlap_new.dim[0] * self._patch_overlap_new.dim[1] * self._patch_overlap_new.dim[2])
         )
-
-        d["MAX_VOLUME_H"] = self._max_volume_h
-        d["MIN_VOLUME_H"] = self._min_volume_h
 
         d["SOLVER_CONSTANTS"] = self._solver_constants
         d["SOLVER_INCLUDES"] = self.user_solver_includes
