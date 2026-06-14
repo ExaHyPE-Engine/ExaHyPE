@@ -122,23 +122,16 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     virtual void startTimeStep() override;
     virtual void finishTimeStep() override;
 
-    virtual void logTimeStep() override;
-
     virtual void startPlottingStep() override;
     virtual void finishPlottingStep() override;
 
     /**
      * @return Actually observed sizes, not the admissible quantities
      */
-    double getMaxCellSize() const;
-    double getMinCellSize() const;
-
-    /**
-     * Within the DG context, mesh is an alias for cell.
-     * TODO: Patch is probably the better name than mesh.
-     */
-    virtual double getMaxMeshSize() const override final;
-    virtual double getMinMeshSize() const override final;
+    double getMaxPatchSize() const override final;
+    double getMinPatchSize() const override final;
+    double getMaxCellSize() const override final;
+    double getMinCellSize() const override final;
 
     virtual int getNumberOfDoFs() const override final;
 

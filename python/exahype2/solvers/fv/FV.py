@@ -260,7 +260,7 @@ class FV(object):
 
         self._use_stateless_initial_conditions = False
         self._use_stateless_boundary_conditions = False
-        self._use_stateless_refinement_criterion = False  # TODO: Should not be stateless, as we might want to call helper functions such as getMinMeshSize()
+        self._use_stateless_refinement_criterion = False  # TODO: Should not be stateless, as we might want to call helper functions such as getMinCellSize()
         self._use_stateless_flux = False
         self._use_stateless_ncp = False
         self._use_stateless_max_eigenvalue = False
@@ -279,7 +279,6 @@ class FV(object):
 
         self._start_time_step_implementation = ""
         self._finish_time_step_implementation = ""
-        self._print_time_step_implementation = ""
         self._constructor_implementation = ""
         self._start_simulation_implementation = ""
         self._finish_simulation_implementation = ""
@@ -1188,9 +1187,6 @@ and additional AMR levels is configured by the executable at runtime.
         d["FINISH_TIME_STEP_IMPLEMENTATION"] = render_template(
             self._finish_time_step_implementation
         )
-        d["PRINT_TIME_STEP_IMPLEMENTATION"] = render_template(
-            self._print_time_step_implementation
-        )
         d["CONSTRUCTOR_IMPLEMENTATION"] = render_template(
             self._constructor_implementation
         )
@@ -1280,6 +1276,11 @@ and additional AMR levels is configured by the executable at runtime.
         self._tracer_particle_sets.append(particles)
 
         return particles
+
+    def get_solver_statistics_metadata(self):
+        return [
+            ("Patch", self._patch_size),
+        ]
 
     @property
     def unknowns(self):

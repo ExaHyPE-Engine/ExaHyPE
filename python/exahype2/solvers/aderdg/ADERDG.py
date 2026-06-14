@@ -160,7 +160,6 @@ class ADERDG(object):
 
         self._start_time_step_implementation  = ""
         self._finish_time_step_implementation = ""
-        self._print_time_step_implementation = ""
 
         self._start_grid_initialisation_implementation = ""
 
@@ -707,6 +706,11 @@ class ADERDG(object):
     def add_solver_constants(self, datastring):
         self._solver_constants += datastring
 
+    def get_solver_statistics_metadata(self):
+        return [
+            ("Order", self._order),
+        ]
+
     @property
     def name(self):
         return self._name
@@ -820,9 +824,6 @@ class ADERDG(object):
         )
         d["FINISH_TIME_STEP_IMPLEMENTATION"] = render_template(
             self._finish_time_step_implementation
-        )
-        d["PRINT_TIME_STEP_IMPLEMENTATION"] = render_template(
-            self._print_time_step_implementation
         )
         d["START_GRID_INITIALISATION_IMPLEMENTATION"] = render_template(
             self._start_grid_initialisation_implementation

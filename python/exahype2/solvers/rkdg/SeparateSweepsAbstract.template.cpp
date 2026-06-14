@@ -32,12 +32,12 @@ std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = 
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxMeshSize() const {
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxPatchSize() const {
   return getMaxCellSize();
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize() const {
   return getMinCellSize();
 }
 
@@ -63,22 +63,22 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxCellSize() const {
 
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp() const {
-  return _minTimeStamp;
+  return _minTimeStampThisTimeStep < std::numeric_limits<double>::max() / 10.0 ? _minTimeStampThisTimeStep : _minTimeStamp;
 }
 
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
-  return _maxTimeStamp;
+  return _maxTimeStampThisTimeStep > std::numeric_limits<double>::min() * 10.0 ? _maxTimeStampThisTimeStep : _maxTimeStamp;
 }
 
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
-  return _minTimeStepSize;
+  return _minTimeStepSizeThisTimeStep < std::numeric_limits<double>::max() / 10.0 ? _minTimeStepSizeThisTimeStep : _minTimeStepSize;
 }
 
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
-  return _maxTimeStepSize;
+  return _maxTimeStepSizeThisTimeStep > std::numeric_limits<double>::min() * 10.0 ? _maxTimeStepSizeThisTimeStep : _maxTimeStepSize;
 }
 
 
@@ -320,8 +320,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {
       _minTimeStampThisTimeStep = 0.0;
     }
-    if ( _maxTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0 ) {
-      _maxTimeStampThisTimeStep = 0.0;
+    if ( _maxTimeStampThisTimeStep<=std::numeric_limits<double>::min()*10.0 ) {
+      _maxTimeStampThisTimeStep = _maxTimeStamp;
     }
 
     _minTimeStamp    = _minTimeStampThisTimeStep;
@@ -334,11 +334,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 
   {{FINISH_TIME_STEP_IMPLEMENTATION}}
 }
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep() {
-  {{PRINT_TIME_STEP_IMPLEMENTATION}}
-}
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep() {
   assertion( mayPlot()  or ::tarch::hasNonCriticalAssertionBeenViolated() );

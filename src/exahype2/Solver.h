@@ -45,13 +45,14 @@ public:
 
   virtual void startTimeStep()  = 0;
   virtual void finishTimeStep() = 0;
-  virtual void logTimeStep()    = 0;
 
   virtual void startPlottingStep()  = 0;
   virtual void finishPlottingStep() = 0;
 
-  virtual double getMaxMeshSize() const = 0;
-  virtual double getMinMeshSize() const = 0;
+  virtual double getMaxPatchSize() const = 0;
+  virtual double getMinPatchSize() const = 0;
+  virtual double getMaxCellSize() const  = 0;
+  virtual double getMinCellSize() const  = 0;
 
   virtual int getNumberOfDoFs() const = 0;
 

@@ -81,7 +81,6 @@ class PosterioriLimiting(object):
         """
         self._start_time_step_implementation = ""
         self._finish_time_step_implementation = ""
-        self._print_time_step_implementation = ""
 
         self._constructor_implementation = ""
 
@@ -654,9 +653,6 @@ class PosterioriLimiting(object):
         ).render(**d)
         d["FINISH_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
             self._finish_time_step_implementation, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["PRINT_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
-            self._print_time_step_implementation, undefined=jinja2.DebugUndefined
         ).render(**d)
 
         d["CONSTRUCTOR_IMPLEMENTATION"] = jinja2.Template(

@@ -111,8 +111,8 @@ public:
   static void        reduceParticleStateStatistics();
   static std::string printParticleStateStatistics();
 
-  static void        reduceNumberOfParticles();
-  static std::string printTotalNumberOfParticles();
+  static void reduceNumberOfParticles();
+  static int  getTotalNumberOfParticles();
 
   static void        reduceReassignmentStatistics();
   static std::string printReassignmentStatistics();

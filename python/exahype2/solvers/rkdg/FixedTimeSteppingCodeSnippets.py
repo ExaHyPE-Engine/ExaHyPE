@@ -30,13 +30,13 @@ class FixedTimeSteppingCodeSnippets( exahype2.solvers.FixedTimeSteppingCodeSnipp
     else {
       _timeStepSize = 0.0;
     }
+    if (tarch::la::greater(_timeStepSize, 0.0)) {
+      if (_minTimeStepSizeThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
+        _minTimeStepSizeThisTimeStep = _timeStepSize;
+      }
+      if (_maxTimeStepSizeThisTimeStep <= std::numeric_limits<double>::min() * 10.0) {
+        _maxTimeStepSizeThisTimeStep = _timeStepSize;
+      }
+    }
   }
-"""
-
-  def create_print_time_step_implementation(self):
-    return """
-  logInfo("t" << tarch::align << getMinTimeStamp() << " / " << ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime());
-  logInfo("dt" << tarch::align << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : getTimeStepSize()));
-  logInfo("h_{min}" << tarch::align << getMinCellSize() << " (patch size)");
-  logInfo("h_{max}" << tarch::align << getMaxCellSize() << " (patch size)");
 """

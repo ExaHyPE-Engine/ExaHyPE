@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Measurement.h"
 
-#include "Log.h"
 #include "tarch/Assertions.h"
 #include "tarch/la/Scalar.h"
 #include "tarch/la/ScalarOperations.h"
@@ -10,7 +9,6 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include <sstream>
 
 tarch::instrumentation::Measurement::Measurement(const double& accuracy):
   _accuracy(accuracy),
@@ -39,12 +37,7 @@ void tarch::instrumentation::Measurement::erase() {
   _maxMeasurement       = -1;
 }
 
-double tarch::instrumentation::Measurement::getMeanValue() const {
-  assertion(_numberOfMeasurements > 0);
-  return _accumulatedValue / static_cast<double>(_numberOfMeasurements);
-}
-
-double tarch::instrumentation::Measurement::getMeanValueOfNextStep(double newValue) const {
+double tarch::instrumentation::Measurement::getAverageValueOfNextStep(double newValue) const {
   assertion(_numberOfMeasurements > 0);
   return (_accumulatedValue + newValue) / static_cast<double>(_numberOfMeasurements + 1);
 }
@@ -53,12 +46,12 @@ double tarch::instrumentation::Measurement::getAccumulatedValue() const { return
 
 double tarch::instrumentation::Measurement::getMostRecentValue() const { return _lastValue; }
 
-double tarch::instrumentation::Measurement::getValue() const {
+double tarch::instrumentation::Measurement::getAverageValue() const {
   if (_numberOfMeasurements == 0) {
     assertionEquals(_accumulatedValue, 0.0);
     return 0.0;
   } else {
-    return getMeanValue();
+    return _accumulatedValue / static_cast<double>(_numberOfMeasurements);
   }
 }
 
@@ -68,7 +61,7 @@ double tarch::instrumentation::Measurement::getStandardDeviation() const {
     return 0.0;
   } else {
     const double variance = _accumulatedSquares / static_cast<double>(_numberOfMeasurements)
-                            - getMeanValue() * getMeanValue();
+                            - getAverageValue() * getAverageValue();
     return std::sqrt(std::max(0.0, variance));
   }
 }
@@ -89,9 +82,11 @@ void tarch::instrumentation::Measurement::setValue(const double& value) {
   if (_numberOfMeasurements <= 1) {
     assertion(!_isAccurateValue);
   } else {
-    const double differenceDueToNewValue = tarch::la::smallerEquals(getMeanValue(), 1.0)
-                                             ? std::abs(getMeanValueOfNextStep(value) - getMeanValue())
-                                             : std::abs(getMeanValueOfNextStep(value) / getMeanValue() - 1.0);
+    const double averageValue            = getAverageValue();
+    const double averageValueOfNextStep  = getAverageValueOfNextStep(value);
+    const double differenceDueToNewValue = tarch::la::smallerEquals(averageValue, 1.0)
+                                             ? std::abs(averageValueOfNextStep - averageValue)
+                                             : std::abs(averageValueOfNextStep / averageValue - 1.0);
     _isAccurateValue                     = _numberOfMeasurements > 0 && differenceDueToNewValue < _accuracy;
   }
 
@@ -112,49 +107,13 @@ void tarch::instrumentation::Measurement::setValue(const double& value) {
 
 int tarch::instrumentation::Measurement::getNumberOfMeasurements() const { return _numberOfMeasurements; }
 
-std::string tarch::instrumentation::Measurement::toString() const {
-  std::ostringstream msg;
-  msg << "(Mean=";
-  if (_numberOfMeasurements > 0) {
-    msg << getValue();
-  } else {
-    msg << "NaN";
-  }
-
-  msg << ", #Measurements=" << _numberOfMeasurements;
-
-  if (_numberOfMeasurements > 0) {
-    msg << ", Min=" << _min << "@" << _minMeasurement << ", Max=" << _max << "@" << _maxMeasurement;
-  } else {
-    msg << ", Min=NaN, Max=NaN";
-  }
-
-  if (_numberOfMeasurements > 0) {
-    const double value = getValue();
-    if (not tarch::la::equals(value, 0.0)) {
-      msg << ", Rel+=" << (_max - value) / value * 100.0 << "%"
-          << ", Rel-=" << (value - _min) / value * 100.0 << "%";
-    }
-    msg << ", Std=" << getStandardDeviation();
-  }
-
-  if (_accuracy > 0.0) {
-    msg << ", Eps=" << _accuracy;
-    msg << ", Status=" << (_isAccurateValue ? "converged" : "pending");
-  }
-
-  msg << ")";
-
-  return msg.str();
-}
-
 double tarch::instrumentation::Measurement::max() const {
-  assertion1(isAccurateValue(), toString());
+  assertion1(isAccurateValue(), _numberOfMeasurements);
   return _max;
 }
 
 double tarch::instrumentation::Measurement::min() const {
-  assertion1(isAccurateValue(), toString());
+  assertion1(isAccurateValue(), _numberOfMeasurements);
   return _min;
 }
 

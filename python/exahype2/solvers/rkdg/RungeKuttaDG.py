@@ -291,7 +291,6 @@ class RungeKuttaDG(object):
 
         self._start_time_step_implementation = ""
         self._finish_time_step_implementation = ""
-        self._print_time_step_implementation = ""
 
         self._constructor_implementation = ""
 
@@ -1182,9 +1181,6 @@ We use RK("""
         d["FINISH_TIME_STEP_IMPLEMENTATION"] = render_template(
             self._finish_time_step_implementation
         )
-        d["PRINT_TIME_STEP_IMPLEMENTATION"] = render_template(
-            self._print_time_step_implementation
-        )
         d["CONSTRUCTOR_IMPLEMENTATION"] = render_template(
             self._constructor_implementation
         )
@@ -1231,6 +1227,12 @@ We use RK("""
         d["MULTIPLY_WITH_INVERTED_MASS_MATRIX_CALL"] = render_template(
             self._multiply_with_inverted_mass_matrix_call
         )
+
+    def get_solver_statistics_metadata(self):
+        return [
+            ("DG-Order", self._basis.order),
+            ("RK-Order", self._rk_order),
+        ]
 
     @property
     def unknowns(self):

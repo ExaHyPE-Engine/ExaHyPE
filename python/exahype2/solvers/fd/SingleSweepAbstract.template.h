@@ -114,8 +114,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishTimeStep() override;
 
-    virtual void logTimeStep() override;
-
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
@@ -128,13 +126,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishPlottingStep() override;
 
-    double getMaxPatchSize() const;
-    double getMinPatchSize() const;
+    double getMaxPatchSize() const override final;
+    double getMinPatchSize() const override final;
+    double getMaxCellSize() const override final;
+    double getMinCellSize() const override final;
     double getMaxH() const;
     double getMinH() const;
-
-    virtual double getMaxMeshSize() const override final;
-    virtual double getMinMeshSize() const override final;
 
     virtual int getNumberOfDoFs() const override final;
 

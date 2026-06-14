@@ -88,21 +88,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     virtual void startTimeStep() override;
     virtual void finishTimeStep() override;
 
-    virtual void logTimeStep() override;
-
     virtual void startPlottingStep() override;
     virtual void finishPlottingStep() override;
 
-    double getMaxPatchSize() const;
-    double getMinPatchSize() const;
-    double getMaxVolumeSize() const;
-    double getMinVolumeSize() const;
-
-    /**
-     * Within the FV context, mesh is an alias for patch.
-     */
-    virtual double getMaxMeshSize() const override final;
-    virtual double getMinMeshSize() const override final;
+    double getMaxPatchSize() const override final;
+    double getMinPatchSize() const override final;
+    double getMaxCellSize() const override final;
+    double getMinCellSize() const override final;
 
     virtual int getNumberOfDoFs() const override final;
 

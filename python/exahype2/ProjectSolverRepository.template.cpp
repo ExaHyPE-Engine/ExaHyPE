@@ -24,6 +24,11 @@
 {% endfor %}
 
 #include <algorithm>
+#include <iomanip>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 {% for item in NAMESPACE -%}
 namespace {{ item }} {
@@ -58,6 +63,97 @@ std::string getSolverStateDescriptions() {
   return result.str();
 }
 
+std::string formatSolverStatisticRange(double minValue, double maxValue) {
+  std::ostringstream result;
+  if (minValue == maxValue) {
+    result << minValue;
+  } else {
+    result << "[" << minValue << ", " << maxValue << "]";
+  }
+  return result.str();
+}
+
+template <typename Value>
+void appendSolverStatistic(std::ostringstream& result, const char* label, const Value& value) {
+  if (not result.str().empty()) {
+    result << ", ";
+  }
+  result << label << "=" << value;
+}
+
+template <typename Solver>
+auto appendMaxEigenvalue(std::ostringstream& result, const Solver& solver, int) -> decltype(solver.getMaxEigenvalue(), void()) {
+  appendSolverStatistic(result, "Lambda_{max}", solver.getMaxEigenvalue());
+}
+
+template <typename Solver>
+void appendMaxEigenvalue(std::ostringstream&, const Solver&, long) {}
+
+template <typename Solver>
+auto appendTroubledCells(std::ostringstream& result, const Solver& solver, int) -> decltype(solver.getNumberOfTroubledCells(), void()) {
+  if (solver.getNumberOfTroubledCells() > 0) {
+    appendSolverStatistic(result, "Troubled", solver.getNumberOfTroubledCells());
+  }
+}
+
+template <typename Solver>
+void appendTroubledCells(std::ostringstream&, const Solver&, long) {}
+
+void appendParticleCount(std::ostringstream& result, const char* particleName, int numberOfParticles) {
+  appendSolverStatistic(result, particleName, numberOfParticles);
+}
+
+template <typename Solver, typename AppendAdditionalStatistics>
+std::pair<std::string, std::string> makeSolverStatistics(const char* solverName, const Solver& solver, AppendAdditionalStatistics appendAdditionalStatistics) {
+  std::ostringstream statistics;
+  appendSolverStatistic(statistics, "dt", solver.getMinTimeStepSize());
+  appendSolverStatistic(statistics, "h", formatSolverStatisticRange(solver.getMinCellSize(), solver.getMaxCellSize()));
+  appendSolverStatistic(statistics, "DoFs", solver.getNumberOfDoFs());
+  appendAdditionalStatistics(statistics);
+  appendMaxEigenvalue(statistics, solver, 0);
+  appendTroubledCells(statistics, solver, 0);
+  return {solverName, statistics.str()};
+}
+
+std::pair<std::string, std::string> makeParticleStatistics(const char* particleName, int numberOfParticles) {
+  std::ostringstream statistics;
+  appendSolverStatistic(statistics, "Particles", numberOfParticles);
+  return {particleName, statistics.str()};
+}
+
+std::vector<std::pair<std::string, std::string>> getSolverStatistics() {
+  std::vector<std::pair<std::string, std::string>> result;
+  {% for item in SOLVERS -%}
+  {% if item[2] | length > 0 or item[3] | length > 0 -%}
+  result.push_back(makeSolverStatistics("{{ item[0] }}", {{ item[1] }}, [](std::ostringstream& result) {
+    {% for statistic in item[3] -%}
+    appendSolverStatistic(result, "{{ statistic[0] }}", "{{ statistic[1] }}");
+    {# Comment to ensure that jinja2 adds a new line#}
+    {%- endfor %}
+    {% for tracer in item[2] -%}
+    appendParticleCount(result, "{{ tracer }}", vertexdata::{{ tracer }}Set::getTotalNumberOfParticles());
+    {# Comment to ensure that jinja2 adds a new line#}
+    {%- endfor %}
+  }));
+  {% else -%}
+  result.push_back(makeSolverStatistics("{{ item[0] }}", {{ item[1] }}, [](std::ostringstream&) {}));
+  {%- endif %}
+  {# Comment to ensure that jinja2 adds a new line#}
+  {%- endfor %}
+  const auto particleStatistics = getParticleStatistics();
+  result.insert(result.end(), particleStatistics.begin(), particleStatistics.end());
+  return result;
+}
+
+std::vector<std::pair<std::string, std::string>> getParticleStatistics() {
+  std::vector<std::pair<std::string, std::string>> result;
+  {% for item in PROJECT_TRACERS -%}
+  result.push_back(makeParticleStatistics("{{ item }}", vertexdata::{{ item }}Set::getTotalNumberOfParticles()));
+  {# Comment to ensure that jinja2 adds a new line#}
+  {%- endfor %}
+  return result;
+}
+
 bool isFirstGridSweepOfTimeStep() {
   bool result = false;
   {% for item in SOLVERS -%}
@@ -89,24 +185,6 @@ double getMaxTimeStamp() {
   double result = 0.0;
   {% for item in SOLVERS -%}
   result = std::max(result, {{ item[1] }}.getMaxTimeStamp());
-  {# Comment to ensure that jinja2 adds a new line#}
-  {%- endfor %}
-  return result;
-}
-
-double getMinMeshSize() {
-  double result = std::numeric_limits<double>::max();
-  {% for item in SOLVERS -%}
-  result = std::min( result, {{ item[1] }}.getMinMeshSize() );
-  {# Comment to ensure that jinja2 adds a new line#}
-  {%- endfor %}
-  return result;
-}
-
-double getMaxMeshSize() {
-  double result = 0.0;
-  {% for item in SOLVERS -%}
-  result = std::max( result, {{ item[1] }}.getMaxMeshSize() );
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
@@ -202,6 +280,7 @@ void finishTimeStep() {
   DataRepository::updateMemoryUsage();
 
   {% for item in TRACERS -%}
+  vertexdata::{{ item }}Set::reduceNumberOfParticles();
   logDebug(vertexdata::{{ item }}Set::printParticleStateStatistics());
   {%- endfor %}
 }
@@ -228,13 +307,6 @@ void finishGridInitialisationStep() {
 void finishPlottingStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.finishPlottingStep();
-  {# Comment to ensure that jinja2 adds a new line#}
-  {%- endfor %}
-}
-
-void logTimeStep() {
-  {% for item in SOLVERS -%}
-  {{ item[1] }}.logTimeStep();
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 }

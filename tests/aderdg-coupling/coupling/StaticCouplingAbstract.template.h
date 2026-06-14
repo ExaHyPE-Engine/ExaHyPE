@@ -75,8 +75,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
-    virtual double getMaxMeshSize() const override final;
-    virtual double getMinMeshSize() const override final;
+    virtual double getMaxPatchSize() const override final;
+    virtual double getMinPatchSize() const override final;
+    virtual double getMaxCellSize() const override final;
+    virtual double getMinCellSize() const override final;
 
     virtual int getNumberOfDoFs() const override final;
 

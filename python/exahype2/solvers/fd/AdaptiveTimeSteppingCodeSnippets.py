@@ -6,24 +6,8 @@ import exahype2.solvers.AdaptiveTimeSteppingCodeSnippets
 class AdaptiveTimeSteppingCodeSnippets(
     exahype2.solvers.AdaptiveTimeSteppingCodeSnippets
 ):
-    """
-    Code snippet generator for fixed time stepping in the Runge-Kutta schemes
-
-    adaptive_starting_timeStep_size: none, hard, soft
-    """
-
-    def __init__(self, time_step_relaxation, adaptive_starting_timeStep_size="none"):
+    def __init__(self, time_step_relaxation):
         self._time_step_relaxation = time_step_relaxation
-        self._adaptive_starting_timeStep_size = adaptive_starting_timeStep_size
-
-    def create_print_time_step_implementation(self):
-        return """
-  logInfo("t" << tarch::align << getMinTimeStamp() << " / " << ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime());
-  logInfo("dt" << tarch::align << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : _admissibleTimeStepSizeThisTimeStep));
-  logInfo("h_{min}" << tarch::align << getMinMeshSize() << " (internodal distance)");
-  logInfo("h_{max}" << tarch::align << getMaxMeshSize() << " (internodal distance)");
-  logInfo("lambda_{max}" << tarch::align << getMaxEigenvalue());
-"""
 
     def create_start_time_step_implementation(self):
         return """
@@ -34,42 +18,28 @@ class AdaptiveTimeSteppingCodeSnippets(
 """
 
     def create_finish_time_step_implementation(self):
-        """
-        The superclass takes the admissible cell size and divides it by the
-        maximum eigenvalue. The Finite Difference solvers however operate with
-        patches, i.e. we have to divide by the node count per axis.
-        """
-
-        temp_implementation = (
+        return (
             super(
                 AdaptiveTimeSteppingCodeSnippets, self
             ).create_finish_time_step_implementation()
             + """
-    if (isLastGridSweepOfTimeStep() and tarch::la::greater(_maxEigenvalueThisTimeStep, 0.0)) {
+    if (
+      isLastGridSweepOfTimeStep()
+      and
+      tarch::la::greater(_maxEigenvalueThisTimeStep, 0.0)
+    ) {
       _admissibleTimeStepSizeThisTimeStep = """
             + str(self._time_step_relaxation)
             + """ * _minHThisTimeStep / _maxEigenvalueThisTimeStep;
-"""
-        )
 
-        if (
-            self._adaptive_starting_timeStep_size == "hard"
-            or self._adaptive_starting_timeStep_size == "soft"
-        ):
-            temp_implementation += """
-    if (tarch::la::equals(_minTimeStampThisTimeStep, 0, 1e-8)) {
-      _admissibleTimeStepSizeThisTimeStep *= 1e-3;
-    }
-"""
-            if self._adaptive_starting_timeStep_size == "soft":
-                temp_implementation += """
-    if (_admissibleTimeStepSize != 0.0 and _admissibleTimeStepSize < _admissibleTimeStepSizeThisTimeStep) {
-      _admissibleTimeStepSizeThisTimeStep = 0.2 * _admissibleTimeStepSizeThisTimeStep + 0.8 * _admissibleTimeStepSize;
-    }
-    _admissibleTimeStepSize = _admissibleTimeStepSizeThisTimeStep;
-"""
-
-        temp_implementation += """
+      if (tarch::la::greater(_admissibleTimeStepSizeThisTimeStep, 0.0)) {
+        if (_minTimeStepSizeThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
+          _minTimeStepSizeThisTimeStep = _admissibleTimeStepSizeThisTimeStep;
+        }
+        if (_maxTimeStepSizeThisTimeStep <= std::numeric_limits<double>::min() * 10.0) {
+          _maxTimeStepSizeThisTimeStep = _admissibleTimeStepSizeThisTimeStep;
+        }
+      }
       if (std::isnan(_admissibleTimeStepSizeThisTimeStep) or std::isinf(_admissibleTimeStepSizeThisTimeStep)) {
         tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSizeThisTimeStep > 0", "Invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSizeThisTimeStep) );
       }
@@ -78,5 +48,4 @@ class AdaptiveTimeSteppingCodeSnippets(
       }
     }
 """
-
-        return temp_implementation
+        )

@@ -109,12 +109,6 @@ fineGridCell{{SOLVER_NAME}}Q.data()
         self.tracerDict["UPDATE_KERNEL_ARGUMENTS"] = jinja2.Template(
             update_kernel_arguments
         ).render(**self.tracerDict)
-        solver._finish_time_step_implementation += """
-    vertexdata::{}::reduceNumberOfParticles();
-    """.format(
-            self.tracerDict["PARTICLES_CONTAINER"]
-        )
-
         cell_compute_kernel = """
 _timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
 
@@ -188,7 +182,6 @@ if ({{FORCE_METHOD}} != 0) {
                 **self.tracerDict
             ),
         )
-        self.extend_solver_print_implementation(solver=solver)
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
@@ -228,31 +221,4 @@ double {full_qualified_classname}::_timeStepSize;
             + """
 static double _timeStepSize;
 """
-        )
-
-    def extend_solver_print_implementation(self, solver):
-        """
-        Extend the solver's print time step implementation to include particle statistics
-        """
-        # Add necessary includes for particle statistics
-        solver.add_user_solver_includes(
-            """ #include "vertexdata/{}.h"
-    """.format(
-                self.tracerDict["PARTICLES_CONTAINER"]
-            )
-        )
-
-        # Particle statistics code
-        particle_statistics_code = jinja2.Template("""
-    // TODO: Only print if number of particles > 0
-    logInfo(vertexdata::{{PARTICLES_CONTAINER}}::printTotalNumberOfParticles());
-"""
-        ).render(**self.tracerDict)
-
-        # Get current implementation
-        current_implementation = getattr(solver, "_print_time_step_implementation", "")
-
-        # Simply append to the end - the template will handle the braces
-        solver._print_time_step_implementation = (
-            current_implementation + particle_statistics_code
         )

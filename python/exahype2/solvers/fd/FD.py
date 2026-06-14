@@ -132,7 +132,6 @@ class FD(object):
 
         self._start_time_step_implementation = ""
         self._finish_time_step_implementation = ""
-        self._print_time_step_implementation = ""
         self._constructor_implementation = ""
         self._start_simulation_implementation = ""
         self._finish_simulation_implementation = ""
@@ -928,9 +927,6 @@ Grid resolution is selected at runtime through RuntimeParameters.
         d["FINISH_TIME_STEP_IMPLEMENTATION"] = render_template(
             self._finish_time_step_implementation
         )
-        d["PRINT_TIME_STEP_IMPLEMENTATION"] = render_template(
-            self._print_time_step_implementation
-        )
         d["CONSTRUCTOR_IMPLEMENTATION"] = render_template(
             self._constructor_implementation
         )
@@ -964,6 +960,12 @@ Grid resolution is selected at runtime through RuntimeParameters.
         d["FUSED_COMPUTE_KERNEL_CALL"] = render_template(
             self._fused_compute_kernel_call
         )
+
+    def get_solver_statistics_metadata(self):
+        return [
+            ("Patch", self._patch_size),
+            ("Order", self._order),
+        ]
 
     @property
     def unknowns(self):

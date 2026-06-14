@@ -33,6 +33,14 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
     constexpr double meshDamping        = {{DG_ORDER}}==0 ? 1.0 : 1.0 / ({{DG_ORDER}} * {{DG_ORDER}});
     _admissibleTimeStepSize = _admissibleTimeStepSizeThisTimeStep;
     _admissibleTimeStepSizeThisTimeStep = """ + str(self._time_step_relaxation) + """ * _minCellHThisTimeStep * waveSpeedDamping * CockburnShuDamping * meshDamping;
+    if (tarch::la::greater(_admissibleTimeStepSizeThisTimeStep, 0.0)) {
+      if (_minTimeStepSizeThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
+        _minTimeStepSizeThisTimeStep = _admissibleTimeStepSizeThisTimeStep;
+      }
+      if (_maxTimeStepSizeThisTimeStep <= std::numeric_limits<double>::min() * 10.0) {
+        _maxTimeStepSizeThisTimeStep = _admissibleTimeStepSizeThisTimeStep;
+      }
+    }
     if ( std::isnan(_admissibleTimeStepSizeThisTimeStep) or std::isinf(_admissibleTimeStepSizeThisTimeStep) ) {
       ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSizeThisTimeStep>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSizeThisTimeStep) );
     }
@@ -40,13 +48,4 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
       logWarning("Degenerated time step size of " << std::to_string(_admissibleTimeStepSizeThisTimeStep) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug in the eigenvalue computation" );
     }
   }
-"""
-
-  def create_print_time_step_implementation(self):
-    return """
-  logInfo("t" << tarch::align << getMinTimeStamp() << " / " << ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime());
-  logInfo("dt" << tarch::align << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : _admissibleTimeStepSizeThisTimeStep));
-  logInfo("h_{min}" << tarch::align << getMinCellSize() << " (patch size)");
-  logInfo("h_{max}" << tarch::align << getMaxCellSize() << " (patch size)");
-  logInfo("lambda_{max}" << tarch::align << getMaxEigenvalue());
 """
