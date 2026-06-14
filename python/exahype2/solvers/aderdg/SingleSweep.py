@@ -225,9 +225,6 @@ class SingleSweep(ADERDG):
         self._finish_time_step_implementation = (
             self._time_stepping_code_snippets.create_finish_time_step_implementation()
         )
-        self._print_time_step_implementation = (
-            self._time_stepping_code_snippets.create_print_time_step_implementation()
-        )
         self._constructor_implementation = (
             self._time_stepping_code_snippets.create_abstract_solver_constructor_statements()
         )

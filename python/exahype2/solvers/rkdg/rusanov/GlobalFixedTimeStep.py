@@ -171,7 +171,6 @@ class GlobalFixedTimeStep(SeparateSweeps):
 
         self._start_time_step_implementation     = solver_code_snippets.create_start_time_step_implementation()
         self._finish_time_step_implementation    = solver_code_snippets.create_finish_time_step_implementation()
-        self._print_time_step_implementation     = solver_code_snippets.create_print_time_step_implementation()
         self._constructor_implementation         = solver_code_snippets.create_abstract_solver_constructor_statements()
 
 

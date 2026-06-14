@@ -267,11 +267,33 @@ thus appreciate any citation of the original release paper
         self._additional_includes.append(value)
 
     def __set_solver_repository_dict(self):
+        project_tracers = []
+        for particle in self._tracer_particles:
+            if particle.name not in project_tracers:
+                project_tracers.append(particle.name)
+
+        tracers = list(project_tracers)
+        for solver in self._solvers:
+            for particle in getattr(solver, "_tracer_particles", []):
+                if particle.name not in tracers:
+                    tracers.append(particle.name)
+
         self.solverRepositoryDictionary = {
             "SOLVERS":                  [],
-            "TRACERS":                  [x.name for x in self._tracer_particles],
+            "TRACERS":                  tracers,
+            "PROJECT_TRACERS":          project_tracers,
             "ADDITIONAL_INCLUDES":      self._additional_includes,
         }
+
+    @staticmethod
+    def __normalise_solver_statistics_metadata(solver):
+        result = []
+        if hasattr(solver, "get_solver_statistics_metadata"):
+            for label, value in solver.get_solver_statistics_metadata():
+                label = str(label)
+                value = str(value)
+                result.append((label, value))
+        return result
 
     def __generate_solver_repository(self):
         """
@@ -282,8 +304,17 @@ thus appreciate any citation of the original release paper
         self.__set_solver_repository_dict()
 
         for solver in self._solvers:
+            solver_tracers = []
+            for particle in getattr(solver, "_tracer_particles", []):
+                if particle.name not in solver_tracers:
+                    solver_tracers.append(particle.name)
             self.solverRepositoryDictionary["SOLVERS"].append(
-                (solver._name, solver.get_name_of_global_instance())
+                (
+                    solver._name,
+                    solver.get_name_of_global_instance(),
+                    solver_tracers,
+                    self.__normalise_solver_statistics_metadata(solver),
+                )
             )
 
         templatefile_prefix = os.path.splitext(os.path.realpath(__file__))[0]

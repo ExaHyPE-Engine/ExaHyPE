@@ -21,17 +21,6 @@ class OptimisticAdaptiveTimeSteppingCodeSnippets( exahype2.solvers.OptimisticAda
 """
 
 
-  def create_print_time_step_implementation(self):
-    return """
-  logInfo("t" << tarch::align << getMinTimeStamp() << " / " << ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime());
-  logInfo("dt" << tarch::align << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : getAdmissibleTimeStepSize()));
-  logInfo("dt_{predicted}" << tarch::align << getPredictedAdmissibleTimeStepSize() << (_cancelOptimisticTasks ? " [cancel predicted tasks]" : ""));
-  logInfo("h_{min}" << tarch::align << _minGridCellHThisTimeStep << " (individual grid cell within a patch)");
-  logInfo("h_{max}" << tarch::align << _maxGridCellHThisTimeStep << " (individual grid cell within a patch)");
-  logInfo("lambda_{max}" << tarch::align << getMaxEigenvalue());
-"""
-
-
   def create_finish_time_step_implementation(self):
     """
     
@@ -63,6 +52,14 @@ class OptimisticAdaptiveTimeSteppingCodeSnippets( exahype2.solvers.OptimisticAda
       _admissibleTimeStepSize          = optimalTimeStepSize;
       _predictedAdmissibleTimeStepSize = Threshold * optimalTimeStepSize;
       _cancelOptimisticTasks           = true;
+    }
+    if (tarch::la::greater(_admissibleTimeStepSize, 0.0)) {
+      if (_minTimeStepSizeThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
+        _minTimeStepSizeThisTimeStep = _admissibleTimeStepSize;
+      }
+      if (_maxTimeStepSizeThisTimeStep <= std::numeric_limits<double>::min() * 10.0) {
+        _maxTimeStepSizeThisTimeStep = _admissibleTimeStepSize;
+      }
     }
     
     if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {

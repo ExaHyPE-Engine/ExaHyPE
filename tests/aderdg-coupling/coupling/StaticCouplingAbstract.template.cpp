@@ -50,13 +50,23 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxMeshSize() const {
-  return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMaxMeshSize();
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxPatchSize() const {
+  return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMaxPatchSize();
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
-  return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMinMeshSize();
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize() const {
+  return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMinPatchSize();
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxCellSize() const {
+  return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMaxCellSize();
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCellSize() const {
+  return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMinCellSize();
 }
 
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {

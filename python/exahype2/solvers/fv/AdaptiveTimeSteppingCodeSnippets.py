@@ -9,15 +9,6 @@ class AdaptiveTimeSteppingCodeSnippets(
     def __init__(self, time_step_relaxation):
         self._time_step_relaxation = time_step_relaxation
 
-    def create_print_time_step_implementation(self):
-        return """
-  logInfo("t" << tarch::align << getMinTimeStamp() << " / " << ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime());
-  logInfo("dt" << tarch::align << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : _admissibleTimeStepSizeThisTimeStep));
-  logInfo("h_{min}" << tarch::align << getMinVolumeSize() << " (volume size)");
-  logInfo("h_{max}" << tarch::align << getMaxVolumeSize() << " (volume size)");
-  logInfo("lambda_{max}" << tarch::align << getMaxEigenvalue());
-"""
-
     def create_start_time_step_implementation(self):
         return """
   if (isFirstGridSweepOfTimeStep()) {
@@ -40,6 +31,15 @@ class AdaptiveTimeSteppingCodeSnippets(
       _admissibleTimeStepSizeThisTimeStep = """
             + str(self._time_step_relaxation)
             + """ * _minVolumeHThisTimeStep / _maxEigenvalueThisTimeStep;
+
+      if (tarch::la::greater(_admissibleTimeStepSizeThisTimeStep, 0.0)) {
+        if (_minTimeStepSizeThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
+          _minTimeStepSizeThisTimeStep = _admissibleTimeStepSizeThisTimeStep;
+        }
+        if (_maxTimeStepSizeThisTimeStep <= std::numeric_limits<double>::min() * 10.0) {
+          _maxTimeStepSizeThisTimeStep = _admissibleTimeStepSizeThisTimeStep;
+        }
+      }
 
       if (std::isnan(_admissibleTimeStepSizeThisTimeStep) or std::isinf(_admissibleTimeStepSizeThisTimeStep)) {
         tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSizeThisTimeStep > 0", "Invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSizeThisTimeStep) );

@@ -4,20 +4,8 @@ import exahype2.solvers.FixedTimeSteppingCodeSnippets
 
 
 class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippets):
-    """
-    Code snippet generator for fixed time stepping in the Runge-Kutta schemes
-    """
-
     def __init__(self, normalised_time_step_size):
         self._normalised_time_step_size = normalised_time_step_size
-
-    def create_print_time_step_implementation(self):
-        return """
-  logInfo("t" << tarch::align << getMinTimeStamp() << " / " << ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime());
-  logInfo("dt" << tarch::align << (getMinTimeStepSize() < std::numeric_limits<double>::max() / 10.0 ? getMinTimeStepSize() : getTimeStepSize()));
-  logInfo("h_{min}" << tarch::align << getMinMeshSize() << " (internodal distance)");
-  logInfo("h_{max}" << tarch::align << getMaxMeshSize() << " (internodal distance)");
-"""
 
     def create_start_time_step_implementation(self):
         return """
@@ -39,6 +27,14 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
             + """ * _minHThisTimeStep / maxAdmissibleCellSize;
       } else {
         _timeStepSize = 0.0;
+      }
+      if (tarch::la::greater(_timeStepSize, 0.0)) {
+        if (_minTimeStepSizeThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
+          _minTimeStepSizeThisTimeStep = _timeStepSize;
+        }
+        if (_maxTimeStepSizeThisTimeStep <= std::numeric_limits<double>::min() * 10.0) {
+          _maxTimeStepSizeThisTimeStep = _timeStepSize;
+        }
       }
     }
 """

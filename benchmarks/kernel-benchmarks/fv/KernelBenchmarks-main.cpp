@@ -86,6 +86,86 @@ namespace {
     out << v;
     return out.str();
   }
+
+  template <typename Value>
+  std::string formatStatistic(const std::string& label, const Value& value) {
+    std::ostringstream result;
+    result << "  " << std::left << std::setw(28) << label << value;
+    return result.str();
+  }
+
+  std::string formatSimulationTime() {
+    std::ostringstream result;
+    result << repositories::getMinTimeStamp() << " / " << ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime();
+    return formatStatistic("Time", result.str());
+  }
+
+  std::string formatTimeStep(int numberOfCompletedTimeSteps, const tarch::instrumentation::Measurement& measurement) {
+    std::ostringstream result;
+    result << "Time Step " << numberOfCompletedTimeSteps;
+    if (measurement.getNumberOfMeasurements() > 0) {
+      result << " (" << measurement.getMostRecentValue() << "s)";
+    }
+    return result.str();
+  }
+
+  [[maybe_unused]] std::string formatPlot(const tarch::instrumentation::Measurement& measurement) {
+    std::ostringstream result;
+    result << "Plot Solution (" << measurement.getMostRecentValue() << "s)";
+    return result.str();
+  }
+
+  std::string formatMeasurementTotal(const tarch::instrumentation::Measurement& measurement, const char* unit) {
+    std::ostringstream result;
+    result
+      << "Total=" << measurement.getAccumulatedValue() << unit
+      << ", Measurements=" << measurement.getNumberOfMeasurements();
+    return result.str();
+  }
+
+  std::vector<std::string> formatSolverStatistics() {
+    std::vector<std::string> result;
+    result.push_back(formatSimulationTime());
+    for (const auto& statistic : repositories::getSolverStatistics()) {
+      result.push_back(formatStatistic(statistic.first, statistic.second));
+    }
+    return result;
+  }
+
+  template <typename Bytes>
+  std::vector<std::string> formatKernelBenchmarkStatistics(
+    std::size_t                                globalNumberOfPatches,
+    double                                     totalNumberOfDoFs,
+    Bytes                                      totalPersistentMemory,
+    const tarch::instrumentation::Measurement& measurement
+  ) {
+    std::vector<std::string> result;
+
+    std::ostringstream gridMessage;
+    gridMessage
+      << "Patches=" << toScientificNotationString(globalNumberOfPatches)
+      << ", DoFs=" << toScientificNotationString(totalNumberOfDoFs);
+    result.push_back(formatStatistic("Grid", gridMessage.str()));
+
+    const auto         memoryFormat = tarch::chooseMemoryUsageFormat(totalPersistentMemory);
+    std::ostringstream memoryMessage;
+    memoryMessage
+      << "Total=" << std::fixed << std::setprecision(2) << tarch::convertMemorySize(totalPersistentMemory, memoryFormat)
+      << " " << tarch::toString(memoryFormat);
+    result.push_back(formatStatistic("Memory", memoryMessage.str()));
+
+    if (measurement.getNumberOfMeasurements() > 0) {
+      const auto dt               = measurement.getMostRecentValue();
+      const auto patchesPerSecond = globalNumberOfPatches / dt;
+      const auto dofsPerSecond    = totalNumberOfDoFs / dt;
+
+      std::ostringstream performanceMessage;
+      performanceMessage << patchesPerSecond << " Patch/s, " << dofsPerSecond << " DoF/s";
+      result.push_back(formatStatistic("Performance", performanceMessage.str()));
+    }
+
+    return result;
+  }
 } // namespace
 
 void logFinalStatistics(
@@ -96,43 +176,32 @@ void logFinalStatistics(
   const tarch::instrumentation::Measurement& measurementProjection
 ) {
   if (measurementBoundary.getNumberOfMeasurements() > 0) {
-    logInfo(
-      "Boundary handling:                       "
-      << measurementBoundary.getAccumulatedValue() << "s\t" << measurementBoundary.toString()
-    );
+    logInfo(formatStatistic("Boundary Handling", formatMeasurementTotal(measurementBoundary, "s")));
   }
   if (measurementReconstruct.getNumberOfMeasurements() > 0) {
-    logInfo(
-      "Reconstruction:                          "
-      << measurementReconstruct.getAccumulatedValue() << "s\t" << measurementReconstruct.toString()
-    );
+    logInfo(formatStatistic("Reconstruction", formatMeasurementTotal(measurementReconstruct, "s")));
   }
   if (measurementRiemann.getNumberOfMeasurements() > 0) {
-    logInfo(
-      "Riemann solver:                          "
-      << measurementRiemann.getAccumulatedValue() << "s\t" << measurementRiemann.toString()
-    );
+    logInfo(formatStatistic("Riemann Solver", formatMeasurementTotal(measurementRiemann, "s")));
   }
   if (measurementProjection.getNumberOfMeasurements() > 0) {
-    logInfo(
-      "Projection:                              "
-      << measurementProjection.getAccumulatedValue() << "s\t" << measurementProjection.toString()
-    );
+    logInfo(formatStatistic("Projection", formatMeasurementTotal(measurementProjection, "s")));
   }
 
   if (measurement.getNumberOfMeasurements() > 0) {
-    logInfo(
-      "Time stepping:                           "
-      << measurement.getAccumulatedValue() << "s\t" << measurement.toString()
-    );
+    logInfo(formatStatistic("Time Stepping", formatMeasurementTotal(measurement, "s")));
 
     const auto globalNumberOfPatches = _cells.size();
     const auto totalNumberOfDoFs     = globalNumberOfPatches
                                    * std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS)
                                    * (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
+    const auto averageStepTime = measurement.getAverageValue();
 
-    logInfo("Average patch updates per second:  " << globalNumberOfPatches / measurement.getValue());
-    logInfo("Average DoF updates per second:    " << totalNumberOfDoFs / measurement.getValue());
+    std::ostringstream performanceMessage;
+    performanceMessage
+      << "Average=" << globalNumberOfPatches / averageStepTime << " Patch/s, " << totalNumberOfDoFs / averageStepTime
+      << " DoF/s";
+    logInfo(formatStatistic("Performance", performanceMessage.str()));
   }
 }
 
@@ -383,22 +452,22 @@ int main(int argc, char** argv) {
   tarch::instrumentation::Measurement measurementReconstruct(1.0);
   tarch::instrumentation::Measurement measurementRiemann(1.0);
   tarch::instrumentation::Measurement measurementProjection(1.0);
+  tarch::instrumentation::Measurement plotMeasurement(1.0);
   tarch::instrumentation::Watch       timeStepWatch("::", "main()", false);
-  double                              timeStamp            = 0.0;
-  double                              nextMinPlotTimeStamp = runtimeParameters.getFirstPlotTimeStamp();
-  double                              nextMaxPlotTimeStamp = runtimeParameters.getFirstPlotTimeStamp();
-  bool                                continueToSolve      = true;
-  int                                 count                = 0;
-  const double                        minTerminalTime      = runtimeParameters.getMinTerminalTime();
-  const double                        maxTerminalTime      = runtimeParameters.getMaxTerminalTime();
-  const double                        plottingEndTime      = maxTerminalTime < std::numeric_limits<double>::max() / 10.0 ? maxTerminalTime : minTerminalTime;
-  const int                           numberOfSnapshots    = runtimeParameters.getNumberOfSnapshots();
-  const double                        timeInBetweenPlots   = numberOfSnapshots <= 0 ? 0.0 : plottingEndTime / numberOfSnapshots;
+  double                              timeStamp                            = 0.0;
+  double                              nextMinPlotTimeStamp                 = runtimeParameters.getFirstPlotTimeStamp();
+  double                              nextMaxPlotTimeStamp                 = runtimeParameters.getFirstPlotTimeStamp();
+  bool                                continueToSolve                      = true;
+  int                                 count                                = 0;
+  int                                 numberOfCompletedTimeSteps           = 0;
+  int                                 lastLoggedNumberOfCompletedTimeSteps = 0;
+  const double                        minTerminalTime                      = runtimeParameters.getMinTerminalTime();
+  const double                        maxTerminalTime                      = runtimeParameters.getMaxTerminalTime();
+  const double                        plottingEndTime                      = maxTerminalTime < std::numeric_limits<double>::max() / 10.0 ? maxTerminalTime : minTerminalTime;
+  const int                           numberOfSnapshots                    = runtimeParameters.getNumberOfSnapshots();
+  const double                        timeInBetweenPlots                   = numberOfSnapshots <= 0 ? 0.0 : plottingEndTime / numberOfSnapshots;
 
   while (continueToSolve) {
-    if (Samples > 0 and count++ >= Samples) {
-      continueToSolve = false;
-    }
     if (
       timeInBetweenPlots > 0.0
       and (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp
@@ -412,8 +481,13 @@ int main(int argc, char** argv) {
       }
 
       if constexpr (ShouldPlot) {
+        tarch::instrumentation::Watch plotWatch("", "", false);
+        plotWatch.start();
         enclaveGrid.syncCellsDeviceToHost();
         plotGrid();
+        plotWatch.stop();
+        plotMeasurement.setValue(plotWatch.getCalendarTime());
+        logInfo(formatPlot(plotMeasurement));
       }
     }
     if (UseAMR) {
@@ -502,12 +576,6 @@ int main(int argc, char** argv) {
     watchProjection.stop();
     watch.stop();
 
-    measurement.setValue(watch.getCalendarTime());
-    measurementBoundary.setValue(watchBoundary.getCalendarTime());
-    measurementReconstruct.setValue(watchReconstruct.getCalendarTime());
-    measurementRiemann.setValue(watchRiemann.getCalendarTime());
-    measurementProjection.setValue(watchProjection.getCalendarTime());
-
     repositories::instanceOfFVSolver.setMaxEigenvalue(maxEigenvalue);
     const auto newTimeStepSize = repositories::instanceOfFVSolver.getAdmissibleTimeStepSize();
     repositories::instanceOfFVSolver
@@ -517,38 +585,43 @@ int main(int argc, char** argv) {
     repositories::finishTimeStep();
 
     timeStepWatch.stop();
-    timeStepMeasurement.setValue(timeStepWatch.getCalendarTime());
 
-    if (timeStepMeasurement.getAccumulatedValue() >= logNextTimeStep) {
-      const auto totalPersistentMemory = DataRepository::getInstance().getMemoryUsageInBytes();
+    if (repositories::mayPlot()) {
+      measurement.setValue(watch.getCalendarTime());
+      measurementBoundary.setValue(watchBoundary.getCalendarTime());
+      measurementReconstruct.setValue(watchReconstruct.getCalendarTime());
+      measurementRiemann.setValue(watchRiemann.getCalendarTime());
+      measurementProjection.setValue(watchProjection.getCalendarTime());
+      timeStepMeasurement.setValue(timeStepWatch.getCalendarTime());
+      numberOfCompletedTimeSteps++;
 
-      const auto globalNumberOfPatches = _cells.size();
-      const auto totalNumberOfDoFs
-        = globalNumberOfPatches * std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS)
-          * (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
+      if (timeStepMeasurement.getAccumulatedValue() >= logNextTimeStep) {
+        const auto totalPersistentMemory = DataRepository::getInstance().getMemoryUsageInBytes();
 
-      std::ostringstream msg;
-      msg
-        << "Patches=" << toScientificNotationString(globalNumberOfPatches) << ", DoFs="
-        << toScientificNotationString(totalNumberOfDoFs) << ", Memory=" << std::fixed << std::setprecision(2)
-        << tarch::convertMemorySize(totalPersistentMemory, tarch::chooseMemoryUsageFormat(totalPersistentMemory)) << " "
-        << tarch::toString(tarch::chooseMemoryUsageFormat(totalPersistentMemory));
-      logInfo(msg.str());
+        const auto globalNumberOfPatches = _cells.size();
+        const auto totalNumberOfDoFs
+          = globalNumberOfPatches * std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS)
+            * (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
 
-      if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
-        const auto dt               = measurement.getMostRecentValue();
-        const auto patchesPerSecond = globalNumberOfPatches / dt;
-        const auto dofsPerSecond    = totalNumberOfDoFs / dt;
-
-        logInfo(
-          "Patch updates per second: "
-          << toScientificNotationString(patchesPerSecond)
-          << ", DoF updates per second: " << toScientificNotationString(dofsPerSecond)
-        );
+        logInfo(formatTimeStep(numberOfCompletedTimeSteps, timeStepMeasurement));
+        for (const auto& statistic : formatSolverStatistics()) {
+          logInfo(statistic);
+        }
+        for (const auto& statistic : formatKernelBenchmarkStatistics(
+               globalNumberOfPatches,
+               totalNumberOfDoFs,
+               totalPersistentMemory,
+               measurement
+             )) {
+          logInfo(statistic);
+        }
+        lastLoggedNumberOfCompletedTimeSteps = numberOfCompletedTimeSteps;
+        logNextTimeStep += runtimeParameters.getLogIntervalInSeconds();
       }
 
-      repositories::logTimeStep();
-      logNextTimeStep += runtimeParameters.getLogIntervalInSeconds();
+      if (Samples > 0 and ++count >= Samples) {
+        continueToSolve = false;
+      }
     }
 
     if (repositories::getMinTimeStamp() >= minTerminalTime and repositories::getMaxTimeStamp() >= maxTerminalTime) {
@@ -564,8 +637,13 @@ int main(int argc, char** argv) {
 
   // Plot last timestep
   if constexpr (ShouldPlot) {
+    tarch::instrumentation::Watch plotWatch("", "", false);
+    plotWatch.start();
     enclaveGrid.syncCellsDeviceToHost();
     plotGrid();
+    plotWatch.stop();
+    plotMeasurement.setValue(plotWatch.getCalendarTime());
+    logInfo(formatPlot(plotMeasurement));
   }
   repositories::finishSimulation();
 
@@ -574,7 +652,25 @@ int main(int argc, char** argv) {
     returnCode = EXIT_FAILURE;
   } else {
     // Log final timestep information
-    repositories::logTimeStep();
+    if (numberOfCompletedTimeSteps > lastLoggedNumberOfCompletedTimeSteps) {
+      logInfo(formatTimeStep(numberOfCompletedTimeSteps, timeStepMeasurement));
+      for (const auto& statistic : formatSolverStatistics()) {
+        logInfo(statistic);
+      }
+      const auto totalPersistentMemory = DataRepository::getInstance().getMemoryUsageInBytes();
+      const auto globalNumberOfPatches = _cells.size();
+      const auto totalNumberOfDoFs
+        = globalNumberOfPatches * std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS)
+          * (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
+      for (const auto& statistic : formatKernelBenchmarkStatistics(
+             globalNumberOfPatches,
+             totalNumberOfDoFs,
+             totalPersistentMemory,
+             measurement
+           )) {
+        logInfo(statistic);
+      }
+    }
     logInfo("Terminated successfully");
     returnCode = EXIT_SUCCESS;
   }

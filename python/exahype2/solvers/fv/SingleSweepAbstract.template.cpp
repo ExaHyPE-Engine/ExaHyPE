@@ -32,31 +32,23 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() 
   _solverState = SolverState::Suspended;
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxMeshSize() const {
-  return getMaxPatchSize();
-}
-
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
-  return getMinPatchSize();
-}
-
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
   return BasePowerExponent<NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS>::value * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize() const {
-  return getMinVolumeSize() * NumberOfFiniteVolumesPerAxisPerPatch;
+  return getMinCellSize() * NumberOfFiniteVolumesPerAxisPerPatch;
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxPatchSize() const {
-  return getMaxVolumeSize() * NumberOfFiniteVolumesPerAxisPerPatch;
+  return getMaxCellSize() * NumberOfFiniteVolumesPerAxisPerPatch;
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinVolumeSize() const {
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCellSize() const {
   return _minVolumeH;
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxVolumeSize() const {
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxCellSize() const {
   return _maxVolumeH;
 }
 
@@ -65,15 +57,15 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp() const {
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
-  return _minTimeStampThisTimeStep < std::numeric_limits<double>::max() / 10.0 ? _maxTimeStampThisTimeStep : _maxTimeStamp;
+  return _maxTimeStampThisTimeStep > std::numeric_limits<double>::min() * 10.0 ? _maxTimeStampThisTimeStep : _maxTimeStamp;
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
-  return _minTimeStepSize;
+  return _minTimeStepSizeThisTimeStep < std::numeric_limits<double>::max() / 10.0 ? _minTimeStepSizeThisTimeStep : _minTimeStepSize;
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
-  return _maxTimeStepSize;
+  return _maxTimeStepSizeThisTimeStep > std::numeric_limits<double>::min() * 10.0 ? _maxTimeStepSizeThisTimeStep : _maxTimeStepSize;
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, double timeStamp, double minVolumeSize, double maxVolumeSize) {
@@ -291,8 +283,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if (_minTimeStampThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
     _minTimeStampThisTimeStep = 0.0;
   }
-  if (_maxTimeStampThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
-    _maxTimeStampThisTimeStep = 0.0;
+  if (_maxTimeStampThisTimeStep <= std::numeric_limits<double>::min() * 10.0) {
+    _maxTimeStampThisTimeStep = _maxTimeStamp;
   }
 
   {{FINISH_TIME_STEP_IMPLEMENTATION}}
@@ -315,10 +307,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     ) {
     _solverState = SolverState::StillNeedsToSolve;
   }
-}
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep() {
-  {{PRINT_TIME_STEP_IMPLEMENTATION}}
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep() {

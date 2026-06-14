@@ -8,6 +8,10 @@
 
 #include "toolbox/loadbalancing/LoadBalancer.h"
 
+#include <string>
+#include <utility>
+#include <vector>
+
 {% for item in SOLVERS -%}
 #include "{{ item[0] }}.h"
 {% endfor %}
@@ -47,8 +51,6 @@ namespace {{ item }} {
   double getMaxTimeStamp();
   double getMinTimeStepSize();
   double getMaxTimeStepSize();
-  double getMinMeshSize();
-  double getMaxMeshSize();
 
   std::size_t getMaxNumberOfPatches();
   std::size_t getMaxNumberOfFaces();
@@ -75,8 +77,6 @@ namespace {{ item }} {
    */
   void finishTimeStep();
   void finishPlottingStep();
-
-  void logTimeStep();
 
   void startSimulation();
   void finishSimulation();
@@ -126,6 +126,9 @@ namespace {{ item }} {
    * upcoming mesh sweep.
    */
   std::string getSolverStateDescriptions();
+
+  std::vector<std::pair<std::string, std::string>> getSolverStatistics();
+  std::vector<std::pair<std::string, std::string>> getParticleStatistics();
 
 {% for item in NAMESPACE -%}
 }

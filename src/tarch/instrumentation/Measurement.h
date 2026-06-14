@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <string>
-
 namespace tarch::instrumentation {
   class Measurement;
 } // namespace tarch::instrumentation
@@ -56,22 +54,22 @@ private:
   int    _minMeasurement;
   int    _maxMeasurement;
 
-  double getMeanValue() const;
-  double getMeanValueOfNextStep(double newValue) const;
+  double getAverageValueOfNextStep(double newValue) const;
 
 public:
   Measurement(const double& accuracy = 0.0);
   ~Measurement() = default;
 
   /**
-   * @return Averaged value (mean value) of all measurements. If you have not
-   *   yet added a value, it returns 0.
+   * @return Averaged value of all measurements. If you have not yet added a
+   *   value, it returns 0.
    */
-  double getValue() const;
+  double getAverageValue() const;
 
   /**
    * @return Last value added. If there's none so far, the routine returns 0.
-   *   If you've only added one value so far, the result equals getValue().
+   *   If you've only added one value so far, the result equals
+   *   getAverageValue().
    */
   double getMostRecentValue() const;
 
@@ -121,9 +119,8 @@ public:
    * not overwritten. Instead, the measurement accumulates all values and
    * returns the average.
    */
-  void        setValue(const double& value);
-  int         getNumberOfMeasurements() const;
-  std::string toString() const;
+  void setValue(const double& value);
+  int  getNumberOfMeasurements() const;
 
   double max() const;
   double min() const;

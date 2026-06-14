@@ -39,6 +39,17 @@ namespace {
     return true;
 #endif
   }
+
+  std::string_view trimRightView(std::string_view value) noexcept {
+    std::size_t last = value.size();
+    while (
+      last > 0
+      and (value[last - 1] == ' ' or value[last - 1] == '\t' or value[last - 1] == '\n' or value[last - 1] == '\r')
+    ) {
+      last--;
+    }
+    return value.substr(0, last);
+  }
 } // namespace
 
 tarch::multicore::BooleanSemaphore& tarch::instrumentation::Log::getSemaphore() {
@@ -329,7 +340,8 @@ std::string tarch::instrumentation::Log::constructMessageString(
   }
 
   const std::string alignedMessage = alignMessage(message, result.size() + configuration.logColumnSeparator.size());
-  appendMessageColumn(result, configuration.logColumnSeparator, NumberOfStandardColumnSpaces, 0, alignedMessage);
+  const std::string_view trimmedMessage = trimRightView(alignedMessage);
+  appendMessageColumn(result, configuration.logColumnSeparator, 0, 0, trimmedMessage);
   result += '\n';
 
   return result;

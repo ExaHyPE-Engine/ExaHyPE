@@ -132,10 +132,8 @@ void toolbox::particles::ParticleSet<T>::reduceNumberOfParticles() {
 }
 
 template <typename T>
-std::string toolbox::particles::ParticleSet<T>::printTotalNumberOfParticles() {
-  std::ostringstream msg;
-  msg << "Number of particles: " << _numberOfRemainingGlobalParticles;
-  return msg.str();
+int toolbox::particles::ParticleSet<T>::getTotalNumberOfParticles() {
+  return _numberOfRemainingGlobalParticles;
 }
 
 template <typename T>

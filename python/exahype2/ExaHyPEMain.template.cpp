@@ -208,51 +208,138 @@ bool selectNextAlgorithmicStep() {
   return continueToSolve;
 }
 
+std::string formatTimeStep() {
+  std::ostringstream result;
+  result << "Time Step " << numberOfCompletedTimeSteps;
+  if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
+    result << " (" << timeStepMeasurement.getMostRecentValue() << "s)";
+  }
+  return result.str();
+}
+
+std::string formatPlot() {
+  std::ostringstream result;
+  result << "Plot Solution (" << plotMeasurement.getMostRecentValue() << "s)";
+  return result.str();
+}
+
+std::string formatGridInitialisation() {
+  std::ostringstream result;
+  result << "Grid Initialisation (" << gridInitialisationMeasurement.getAccumulatedValue() << "s)";
+  return result.str();
+}
+
+template <typename Value>
+std::string formatStatistic(const std::string& label, const Value& value) {
+  std::ostringstream result;
+  result << "  "
+         << std::left << std::setw(28) << label
+         << value;
+  return result.str();
+}
+
+std::string formatSimulationTime() {
+  std::ostringstream result;
+  result << repositories::getMinTimeStamp()
+         << " / " << ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime();
+  return formatStatistic("Time", result.str());
+}
+
+std::string formatETA() {
+  const auto elapsedWallTime = timeStepMeasurement.getAccumulatedValue() + plotMeasurement.getAccumulatedValue();
+  const auto minTimeStamp    = repositories::getMinTimeStamp();
+  const auto maxTimeStamp    = repositories::getMaxTimeStamp();
+  const auto minTerminalTime = ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime();
+  const auto maxTerminalTime = ::exahype2::RuntimeParameters::getInstance().getMaxTerminalTime();
+
+  double expectedTimeUntilFinish = std::numeric_limits<double>::max();
+  if (elapsedWallTime > 0.0 and std::isnormal(minTimeStamp) and minTimeStamp > 10.0 * std::numeric_limits<double>::min() and minTimeStamp < minTerminalTime) {
+    expectedTimeUntilFinish = std::min(expectedTimeUntilFinish, (minTerminalTime - minTimeStamp) * elapsedWallTime / minTimeStamp);
+  }
+  if (elapsedWallTime > 0.0 and std::isnormal(maxTimeStamp) and maxTimeStamp > 10.0 * std::numeric_limits<double>::min() and maxTimeStamp < maxTerminalTime) {
+    expectedTimeUntilFinish = std::min(expectedTimeUntilFinish, (maxTerminalTime - maxTimeStamp) * elapsedWallTime / maxTimeStamp);
+  }
+
+  std::ostringstream result;
+  if (expectedTimeUntilFinish < std::numeric_limits<double>::max() / 10.0) {
+    const auto expectedTimeUntilFinishInSeconds = static_cast<int>(expectedTimeUntilFinish + 0.5);
+    const auto hours   = expectedTimeUntilFinishInSeconds / 3600;
+    const auto minutes = (expectedTimeUntilFinishInSeconds % 3600) / 60;
+    const auto seconds = expectedTimeUntilFinishInSeconds % 60;
+    result << "ETA " << hours << "h " << minutes << "m " << seconds << "s";
+  }
+  return result.str();
+}
+
+void logSolverStatistics() {
+  logInfo(formatSimulationTime());
+  for (const auto& statistic: repositories::getSolverStatistics()) {
+    logInfo(formatStatistic(statistic.first, statistic.second));
+  }
+}
+
+template <typename Bytes>
+std::string formatMemoryUsage(Bytes bytes) {
+  std::ostringstream result;
+  const auto format = tarch::chooseMemoryUsageFormat(bytes);
+  result << std::fixed << std::setprecision(2)
+         << tarch::convertMemorySize(bytes, format) << " "
+         << tarch::toString(format);
+  return result.str();
+}
+
+std::string formatPercentage(double value) {
+  std::ostringstream result;
+  result << std::fixed << std::setprecision(2) << value << "%";
+  return result.str();
+}
+
+std::string formatMeasurementTotal(const tarch::instrumentation::Measurement& measurement, const char* unit) {
+  std::ostringstream result;
+  result << "Total=" << measurement.getAccumulatedValue() << unit
+         << ", Measurements=" << measurement.getNumberOfMeasurements();
+  return result.str();
+}
+
 void logGlobalStatistics() {
   const auto globalNumberOfLeaves = static_cast<unsigned long>(repositories::loadBalancer.getStatistics().getGlobalNumberOfInnerUnrefinedCells());
 
-  {
-    const auto globalNumberOfVertices         = static_cast<unsigned long>(repositories::loadBalancer.getStatistics().getGlobalNumberOfVertices());
-    const auto globalNumberOfHangingVertices  = static_cast<unsigned long>(repositories::loadBalancer.getStatistics().getGlobalNumberOfHangingVertices());
-    const auto totalNumberOfVertices          = globalNumberOfVertices + globalNumberOfHangingVertices;
-    const auto minDepth                       = repositories::loadBalancer.getStatistics().getGlobalMinDepth();
-    const auto maxDepth                       = repositories::loadBalancer.getStatistics().getGlobalMaxDepth();
-    std::ostringstream msg;
-    msg << "Leaves=" << globalNumberOfLeaves
-        << ", Vertices=" << totalNumberOfVertices << " (Local=" << globalNumberOfVertices << ", Hanging=" << globalNumberOfHangingVertices << ")"
-        << ", Levels=" << maxDepth << " (min=" << minDepth << ", max=" << maxDepth << ")";
-    logInfo("Topology" << tarch::align << msg.str());
-  }
+  const auto globalNumberOfVertices         = static_cast<unsigned long>(repositories::loadBalancer.getStatistics().getGlobalNumberOfVertices());
+  const auto globalNumberOfHangingVertices  = static_cast<unsigned long>(repositories::loadBalancer.getStatistics().getGlobalNumberOfHangingVertices());
+  const auto totalNumberOfVertices          = globalNumberOfVertices + globalNumberOfHangingVertices;
+  const auto minDepth                       = repositories::loadBalancer.getStatistics().getGlobalMinDepth();
+  const auto maxDepth                       = repositories::loadBalancer.getStatistics().getGlobalMaxDepth();
+  std::ostringstream topologyMessage;
+  topologyMessage << "Leaves=" << globalNumberOfLeaves
+                  << ", Vertices=" << totalNumberOfVertices << " (Local=" << globalNumberOfVertices << ", Hanging=" << globalNumberOfHangingVertices << ")"
+                  << ", Levels=" << maxDepth << " (min=" << minDepth << ", max=" << maxDepth << ")";
+  logInfo(formatStatistic("Grid", topologyMessage.str()));
 
-  {
-    const auto minLoad                    = repositories::loadBalancer.getStatistics().getGlobalMinTreeLoad();
-    const auto maxLoad                    = repositories::loadBalancer.getStatistics().getGlobalMaxTreeLoad();
-    const auto efficiency                 = (maxLoad > 0) ? (static_cast<double>(minLoad) / maxLoad) * 100.0 : 100.0;
-    const auto globalNumberOfOuterLeaves  = static_cast<double>(repositories::loadBalancer.getStatistics().getGlobalNumberOfOuterUnrefinedCells());
-    const auto overhead                   = (globalNumberOfLeaves > 0) ? (globalNumberOfOuterLeaves / globalNumberOfLeaves) * 100.0 : 0.0;
-    const auto globalNumberOfTrees        = static_cast<unsigned long>(repositories::loadBalancer.getStatistics().getGlobalNumberOfTrees());
-    std::ostringstream msg;
-    msg << "Trees=" << globalNumberOfTrees
-        << ", Efficiency=" << std::fixed << std::setprecision(2) << efficiency << "% (min=" << minLoad << ", max=" << maxLoad << ")"
-        << ", Overhead=" << std::fixed << std::setprecision(2) << overhead << "%";
-    logInfo("Load Balancing" << tarch::align << msg.str());
-  }
+  const auto minLoad                    = repositories::loadBalancer.getStatistics().getGlobalMinTreeLoad();
+  const auto maxLoad                    = repositories::loadBalancer.getStatistics().getGlobalMaxTreeLoad();
+  const auto efficiency                 = (maxLoad > 0) ? (static_cast<double>(minLoad) / maxLoad) * 100.0 : 100.0;
+  const auto globalNumberOfOuterLeaves  = static_cast<double>(repositories::loadBalancer.getStatistics().getGlobalNumberOfOuterUnrefinedCells());
+  const auto overhead                   = (globalNumberOfLeaves > 0) ? (globalNumberOfOuterLeaves / globalNumberOfLeaves) * 100.0 : 0.0;
+  const auto globalNumberOfTrees        = static_cast<unsigned long>(repositories::loadBalancer.getStatistics().getGlobalNumberOfTrees());
+  std::ostringstream loadBalancingMessage;
+  loadBalancingMessage << "Trees=" << globalNumberOfTrees
+                       << ", Efficiency=" << formatPercentage(efficiency) << " (min=" << minLoad << ", max=" << maxLoad << ")"
+                       << ", Overhead=" << formatPercentage(overhead);
+  logInfo(formatStatistic("Load", loadBalancingMessage.str()));
 
-  {
-    const auto memoryUsedByGrid       = repositories::loadBalancer.getStatistics().getGlobalMemoryUsageInBytes();
-    const auto memoryUsedByCellData   = repositories::DataRepository::getGlobalCellDataMemoryUsageInBytes();
-    const auto memoryUsedByFaceData   = repositories::DataRepository::getGlobalFaceDataMemoryUsageInBytes();
-    const auto memoryUsedByVertexData = repositories::DataRepository::getGlobalVertexDataMemoryUsageInBytes();
-    const auto totalPersistentMemory  = memoryUsedByGrid + memoryUsedByCellData+ memoryUsedByFaceData + memoryUsedByVertexData;
-    std::ostringstream msg;
-    msg << std::fixed << std::setprecision(2) << tarch::convertMemorySize(totalPersistentMemory, tarch::chooseMemoryUsageFormat(totalPersistentMemory)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(totalPersistentMemory))
-        << " (Grid=" << std::fixed << std::setprecision(2) << tarch::convertMemorySize(memoryUsedByGrid, tarch::chooseMemoryUsageFormat(memoryUsedByGrid)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(memoryUsedByGrid))
-        << ", CellData=" << std::fixed << std::setprecision(2) << tarch::convertMemorySize(memoryUsedByCellData, tarch::chooseMemoryUsageFormat(memoryUsedByCellData)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(memoryUsedByCellData))
-        << ", FaceData=" << std::fixed << std::setprecision(2) << tarch::convertMemorySize(memoryUsedByFaceData, tarch::chooseMemoryUsageFormat(memoryUsedByFaceData)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(memoryUsedByFaceData))
-        << ", VertexData=" << std::fixed << std::setprecision(2) << tarch::convertMemorySize(memoryUsedByVertexData, tarch::chooseMemoryUsageFormat(memoryUsedByVertexData)) << " " << tarch::toString(tarch::chooseMemoryUsageFormat(memoryUsedByVertexData))
-        << ")";
-    logInfo("Memory Usage" << tarch::align << msg.str());
-  }
+  const auto memoryUsedByGrid       = repositories::loadBalancer.getStatistics().getGlobalMemoryUsageInBytes();
+  const auto memoryUsedByCellData   = repositories::DataRepository::getGlobalCellDataMemoryUsageInBytes();
+  const auto memoryUsedByFaceData   = repositories::DataRepository::getGlobalFaceDataMemoryUsageInBytes();
+  const auto memoryUsedByVertexData = repositories::DataRepository::getGlobalVertexDataMemoryUsageInBytes();
+  const auto totalPersistentMemory  = memoryUsedByGrid + memoryUsedByCellData + memoryUsedByFaceData + memoryUsedByVertexData;
+  std::ostringstream memoryMessage;
+  memoryMessage << "Total=" << formatMemoryUsage(totalPersistentMemory)
+                << " (Grid=" << formatMemoryUsage(memoryUsedByGrid)
+                << ", Cell=" << formatMemoryUsage(memoryUsedByCellData)
+                << ", Face=" << formatMemoryUsage(memoryUsedByFaceData)
+                << ", Vertex=" << formatMemoryUsage(memoryUsedByVertexData)
+                << ")";
+  logInfo(formatStatistic("Memory", memoryMessage.str()));
 
   if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
     const auto dofs               = static_cast<unsigned long>(repositories::getNumberOfDoFs());
@@ -260,35 +347,18 @@ void logGlobalStatistics() {
     const auto dt                 = timeStepMeasurement.getMostRecentValue();
     const auto leavesPerSecond    = globalNumberOfLeaves / dt;
     const auto dofsPerSecond      = totalNumberOfDoFs    / dt;
-    std::ostringstream throughputMessage;
-    throughputMessage << "Throughput per Time Step" << tarch::align << leavesPerSecond << " Leaf/s, " << dofsPerSecond << " DoF/s";
+
     if (gridSweepMeasurement.getNumberOfMeasurements() > 0) {
       const auto gridSweepsPerTimestep = gridSweepMeasurement.getMostRecentValue();
       const auto gridSweepsPerSecond   = gridSweepsPerTimestep / dt;
-      throughputMessage << ", " << gridSweepsPerSecond << " Sweep/s, " << gridSweepsPerTimestep << " Sweep/Time Step";
+      std::ostringstream sweepsMessage;
+      sweepsMessage << gridSweepsPerTimestep << " (" << gridSweepsPerSecond << "/s)";
+      logInfo(formatStatistic("Sweeps", sweepsMessage.str()));
     }
-    logInfo(throughputMessage.str());
 
-    const auto elapsedWallTime = timeStepMeasurement.getAccumulatedValue() + plotMeasurement.getAccumulatedValue();
-    const auto minTimeStamp    = repositories::getMinTimeStamp();
-    const auto maxTimeStamp    = repositories::getMaxTimeStamp();
-    const auto minTerminalTime = ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime();
-    const auto maxTerminalTime = ::exahype2::RuntimeParameters::getInstance().getMaxTerminalTime();
-
-    double expectedTimeUntilFinish = std::numeric_limits<double>::max();
-    if (elapsedWallTime > 0.0 and std::isnormal(minTimeStamp) and minTimeStamp > 10.0 * std::numeric_limits<double>::min() and minTimeStamp < minTerminalTime) {
-      expectedTimeUntilFinish = std::min(expectedTimeUntilFinish, (minTerminalTime - minTimeStamp) * elapsedWallTime / minTimeStamp);
-    }
-    if (elapsedWallTime > 0.0 and std::isnormal(maxTimeStamp) and maxTimeStamp > 10.0 * std::numeric_limits<double>::min() and maxTimeStamp < maxTerminalTime) {
-      expectedTimeUntilFinish = std::min(expectedTimeUntilFinish, (maxTerminalTime - maxTimeStamp) * elapsedWallTime / maxTimeStamp);
-    }
-    if (expectedTimeUntilFinish < std::numeric_limits<double>::max() / 10.0) {
-      const auto expectedTimeUntilFinishInSeconds = static_cast<int>(expectedTimeUntilFinish + 0.5);
-      const auto hours   = expectedTimeUntilFinishInSeconds / 3600;
-      const auto minutes = (expectedTimeUntilFinishInSeconds % 3600) / 60;
-      const auto seconds = expectedTimeUntilFinishInSeconds % 60;
-      logInfo("Time to Completion" << tarch::align << hours << "h " << minutes << "m " << seconds << "s");
-    }
+    std::ostringstream throughputMessage;
+    throughputMessage << leavesPerSecond << " Leaf/s, " << dofsPerSecond << " DoF/s";
+    logInfo(formatStatistic("Performance", throughputMessage.str()));
   }
 }
 
@@ -344,6 +414,7 @@ void runNextAlgorithmicStep() {
     );
     break;
   case repositories::StepRepository::Steps::InitGrid:
+    logInfo("Grid Construction (" << gridConstructionMeasurement.getAccumulatedValue() << "s)");
     repositories::loadBalancer.enable(false); // TODO: Remove (dynamic AMR)
     performAlgorithmicStep<observers::InitGrid>(
       stepName,
@@ -357,7 +428,7 @@ void runNextAlgorithmicStep() {
         repositories::finishGridInitialisationStep();
       }
     );
-    logInfo("Grid initialisation complete");
+    logInfo(formatGridInitialisation());
     break;
   case repositories::StepRepository::Steps::PlotSolution:
     performAlgorithmicStep<observers::PlotSolution>(
@@ -372,6 +443,7 @@ void runNextAlgorithmicStep() {
         repositories::finishPlottingStep();
       }
     );
+    logInfo(formatPlot());
     break;
   case repositories::StepRepository::Steps::TimeStep:
     performAlgorithmicStep<observers::TimeStep>(
@@ -401,8 +473,13 @@ void runNextAlgorithmicStep() {
       and
       repositories::mayPlot()
     ) {
-      repositories::logTimeStep();
+      logInfo(formatTimeStep());
+      logSolverStatistics();
       logGlobalStatistics();
+      const std::string eta = formatETA();
+      if (not eta.empty()) {
+        logInfo(eta);
+      }
       lastLoggedNumberOfCompletedTimeSteps = numberOfCompletedTimeSteps;
       logNextTimeStep += ::exahype2::RuntimeParameters::getInstance().getLogIntervalInSeconds();
     }
@@ -449,31 +526,37 @@ void shutdownEnvironment() {
 }
 
 void logFinalGlobalStatistics() {
+  logInfo("Final Statistics");
+
   if (gridConstructionMeasurement.getNumberOfMeasurements() > 0) {
-    logInfo("Grid Construction" << tarch::align << gridConstructionMeasurement.getAccumulatedValue() << "s\t" << gridConstructionMeasurement.toString());
+    logInfo(formatStatistic("Grid Construction", formatMeasurementTotal(gridConstructionMeasurement, "s")));
   }
   if (gridInitialisationMeasurement.getNumberOfMeasurements() > 0) {
-    logInfo("Grid Initialisation" << tarch::align << gridInitialisationMeasurement.getAccumulatedValue() << "s\t" << gridInitialisationMeasurement.toString());
+    logInfo(formatStatistic("Grid Initialisation", formatMeasurementTotal(gridInitialisationMeasurement, "s")));
   }
   if (plotMeasurement.getNumberOfMeasurements() > 0) {
-    logInfo("Plotting" << tarch::align << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString());
+    logInfo(formatStatistic("Plot Solution", formatMeasurementTotal(plotMeasurement, "s")));
   }
   if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
     const auto dofs                   = static_cast<double>(repositories::getNumberOfDoFs());
     const auto globalNumberOfLeaves   = static_cast<double>(repositories::loadBalancer.getStatistics().getGlobalNumberOfInnerUnrefinedCells());
     const auto totalNumberOfDoFs      = dofs * globalNumberOfLeaves;
-    const auto dt                     = timeStepMeasurement.getValue();
+    const auto dt                     = timeStepMeasurement.getAverageValue();
     const auto leavesPerSecond        = globalNumberOfLeaves / dt;
     const auto dofsPerSecond          = totalNumberOfDoFs    / dt;
-    logInfo("Time Stepping" << tarch::align << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString());
-    std::ostringstream throughputMessage;
-    throughputMessage << "Average Throughput per Time Step" << tarch::align << leavesPerSecond << " Leaf/s, " << dofsPerSecond << " DoF/s";
+    logInfo(formatStatistic("Time Stepping", formatMeasurementTotal(timeStepMeasurement, "s")));
+
     if (gridSweepMeasurement.getNumberOfMeasurements() > 0) {
-      const auto gridSweepsPerTimestep = gridSweepMeasurement.getValue();
-      const auto gridSweepsPerSecond   = gridSweepsPerTimestep / dt;
-      throughputMessage << ", " << gridSweepsPerSecond << " Sweep/s, Sweep/Time Step " << gridSweepMeasurement.toString();
+      const auto gridSweepsPerTimestep = gridSweepMeasurement.getAverageValue();
+      std::ostringstream sweepsMessage;
+      sweepsMessage << "Average=" << gridSweepsPerTimestep
+                    << ", Measurements=" << gridSweepMeasurement.getNumberOfMeasurements();
+      logInfo(formatStatistic("Sweeps", sweepsMessage.str()));
     }
-    logInfo(throughputMessage.str());
+
+    std::ostringstream throughputMessage;
+    throughputMessage << "Average=" << leavesPerSecond << " Leaf/s, " << dofsPerSecond << " DoF/s";
+    logInfo(formatStatistic("Performance", throughputMessage.str()));
   }
 }
 
@@ -491,11 +574,13 @@ int runGlobalMaster() {
     return EXIT_FAILURE;
   } else {
     if (numberOfCompletedTimeSteps > lastLoggedNumberOfCompletedTimeSteps) {
-      repositories::logTimeStep();
+      logInfo(formatTimeStep());
+      logSolverStatistics();
       lastLoggedNumberOfCompletedTimeSteps = numberOfCompletedTimeSteps;
     }
-    logInfo("ExaHyPE terminated successfully");
+    logGlobalStatistics();
     logFinalGlobalStatistics();
+    logInfo("ExaHyPE terminated successfully");
     return EXIT_SUCCESS;
   }
 }
