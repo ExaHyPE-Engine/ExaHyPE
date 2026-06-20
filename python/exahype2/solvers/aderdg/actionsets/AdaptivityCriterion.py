@@ -43,7 +43,7 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
     and
     tarch::la::greaterEquals(tarch::la::max(marker.getH()), minAdmissiblePatchSize)
     and
-    not fineGridCell{{CELL_LABEL_NAME}}.getAMDCriterionEvaluatedThroughoutGridConstruction()
+    not fineGridCell{{CELL_LABEL_NAME}}.getAMRCriterionEvaluatedThroughoutGridConstruction()
   ) {
     refinementCriterion = repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
       nullptr,
@@ -51,7 +51,7 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
       marker.getH(),
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
     );
-    fineGridCell{{CELL_LABEL_NAME}}.setAMDCriterionEvaluatedThroughoutGridConstruction(true);
+    fineGridCell{{CELL_LABEL_NAME}}.setAMRCriterionEvaluatedThroughoutGridConstruction(true);
   } else {
     refinementCriterion = ::exahype2::RefinementCommand::Keep;
   }

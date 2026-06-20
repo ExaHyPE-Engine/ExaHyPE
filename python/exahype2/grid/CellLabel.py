@@ -2,8 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.solversteps.ActionSet import ActionSet
 
-import dastgen2
-import peano4.datamodel.DaStGen2
+import peano4.datamodel
 
 
 class UpdateCellLabel(ActionSet):
@@ -44,7 +43,7 @@ class UpdateCellLabel(ActionSet):
                 """
   fineGridCell"""
                 + UpdateCellLabel.get_attribute_name(self._solver_name)
-                + """.setAMDCriterionEvaluatedThroughoutGridConstruction( false );
+                + """.setAMRCriterionEvaluatedThroughoutGridConstruction( false );
   if ( tarch::la::equals(repositories::getMinTimeStamp(),0.0) ) {
     fineGridCell"""
                 + UpdateCellLabel.get_attribute_name(self._solver_name)
@@ -84,7 +83,7 @@ class UpdateCellLabel(ActionSet):
 
 def create_cell_label(solver_name):
     """!
-    Build up the DaStGen2 data structure that we need per cell to maintain
+    Build up the metadata structure that we need per cell to maintain
     per-cell data per solver.
 
     :: Attributes per cell
@@ -92,21 +91,21 @@ def create_cell_label(solver_name):
       time stepping, it is important that this time stamp is stored per cell, as
       some postprocessing (particles, e.g.) rely on the field.
     - TimeStepSize (similar to arguments around TimeStamp).
-    - AMDCriterionEvaluatedThroughoutGridConstruction
+    - AMRCriterionEvaluatedThroughoutGridConstruction
 
     solver_name: string
       Name of the solver
     """
-    result = peano4.datamodel.DaStGen2(UpdateCellLabel.get_attribute_name(solver_name))
+    result = peano4.datamodel.MetaData(UpdateCellLabel.get_attribute_name(solver_name))
 
-    result.data.add_attribute(dastgen2.attributes.Double("TimeStamp"))
-    result.data.add_attribute(dastgen2.attributes.Double("TimeStepSize"))
-    result.data.add_attribute(dastgen2.attributes.Boolean("HasUpdated"))
-    result.data.add_attribute(
-        dastgen2.attributes.Boolean("AMDCriterionEvaluatedThroughoutGridConstruction")
+    result.add_attribute(peano4.datamodel.Double("timeStamp"))
+    result.add_attribute(peano4.datamodel.Double("timeStepSize"))
+    result.add_attribute(peano4.datamodel.Boolean("hasUpdated"))
+    result.add_attribute(
+        peano4.datamodel.Boolean("AMRCriterionEvaluatedThroughoutGridConstruction")
     )
 
-    result.peano4_mpi_and_storage_aspect.merge_implementation = """
+    result.merge_method_definition = """
   switch (context) {
     case ::peano4::stacks::SendReceiveContext::BoundaryExchange:
       assertion(false, "cells should never be subject of a boundary exchange");

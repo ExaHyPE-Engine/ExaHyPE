@@ -12,9 +12,9 @@
 #include <vector>
 
 
-#if !defined(AssignmentChecks) and !defined(noAssignmentChecks) \
+#if !defined(ASSIGNMENT_CHECKS) and !defined(NO_ASSIGNMENT_CHECKS) \
   and PEANO_ASSERTIONS
-#define AssignmentChecks
+#define ASSIGNMENT_CHECKS
 #endif
 
 

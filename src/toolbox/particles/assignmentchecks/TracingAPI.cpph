@@ -15,7 +15,7 @@ std::vector<toolbox::particles::assignmentchecks::ParticlePosition> toolbox::
     container.size()
   );
 
-#ifdef AssignmentChecks
+#ifdef ASSIGNMENT_CHECKS
   int entry = 0;
   for (auto& p : container) {
     result[entry] = p->getX();
@@ -36,7 +36,7 @@ void toolbox::particles::assignmentchecks::traceParticleMovements(
   int                                          spacetreeId
 ) {
 
-#ifdef AssignmentChecks
+#ifdef ASSIGNMENT_CHECKS
 
   assertion((container.size()) == (recordedPositions.size()), container.size(), recordedPositions.size());
 

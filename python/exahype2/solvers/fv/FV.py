@@ -4,7 +4,6 @@ import os
 from abc import abstractmethod
 
 import jinja2
-import dastgen2
 
 import peano4.output
 import peano4.datamodel
@@ -1142,16 +1141,16 @@ and additional AMR levels is configured by the executable at runtime.
         self._particle_variable_names.append(particle_variable_names)
         self._particle_variable_pos.append(particle_variable_pos)
 
-        particle_attr = peano4.dastgen2.Peano4DoubleArray("data", str(unknown_count))
-        particle.data.add_attribute(particle_attr)
+        particle_attr = peano4.datamodel.DoubleArray("data", str(unknown_count))
+        particle.add_attribute(particle_attr)
         self._particle_attributes.append(particle_attr)
 
-        particle.data.add_attribute(
-            dastgen2.attributes.Enumeration("MoveState", ["NotMovedYet", "Moved"])
+        particle.add_attribute(
+            peano4.datamodel.Enumeration("moveState", ["NotMovedYet", "Moved"])
         )
 
-        particle_number = peano4.dastgen2.Peano4IntegerArray("number", "2")
-        particle.data.add_attribute(particle_number)
+        particle_number = peano4.datamodel.IntegerArray("number", "2")
+        particle.add_attribute(particle_number)
         self._particle_number.append(particle_number)
 
         particles = peano4.toolbox.particles.ParticleSet(particle)
@@ -1174,7 +1173,7 @@ and additional AMR levels is configured by the executable at runtime.
 
     def get_solver_statistics_metadata(self):
         return [
-            ("Patch", self._patch_size),
+            ("Volumes/axis", self._patch_size),
         ]
 
     @property

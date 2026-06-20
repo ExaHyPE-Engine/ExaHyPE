@@ -98,8 +98,8 @@ def parse_arguments():
         "-integ", "--integration", choices=integration_schemes.keys(), default="RK4"
     )
     parser.add_argument("-et", "--end-time", type=float, default=3.0)
-    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=64)
-    parser.add_argument("-l", "--grid-levels", type=int, default=1)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=16)
+    parser.add_argument("-l", "--grid-levels", type=int, default=3)
     args, _ = parser.parse_known_args()
     if args.help:
         parser.print_help()
@@ -241,12 +241,12 @@ source_term = """
   S[3] = -GRAVITY * Q[2];
 """
 
-fv_solver = exahype2.solvers.fv.godunov.GlobalFixedTimeStep(
+fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": 1, "rhoV": 1, "rhoE": 1},
     auxiliary_variables=0,
-    normalised_time_step_size=0.001 / (args.degrees_of_freedom**0.5),
+    time_step_relaxation=0.4,
 )
 
 fv_solver.set_implementation(

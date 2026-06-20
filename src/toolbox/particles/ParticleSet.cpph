@@ -1,7 +1,9 @@
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/multicore/Lock.h"
 
+#include <array>
 #include <sstream>
+#include <vector>
 
 template <typename T>
 toolbox::particles::SieveParticles<T> toolbox::particles::ParticleSet<T>::_sieveParticles;
@@ -29,6 +31,9 @@ int toolbox::particles::ParticleSet<T>::_numberOfDropsIntoHorizontalTreeDecompos
 
 template <typename T>
 int toolbox::particles::ParticleSet<T>::_numberOfRemainingLocalParticles;
+
+template <typename T>
+std::set<std::array<int, 2>> toolbox::particles::ParticleSet<T>::_remainingLocalParticleNumbers;
 
 template <typename T>
 int toolbox::particles::ParticleSet<T>::_numberOfRemainingGlobalParticles;
@@ -94,6 +99,8 @@ void toolbox::particles::ParticleSet<T>::clearReassignmentStatistics() {
 template <typename T>
 void toolbox::particles::ParticleSet<T>::clearParticleStateStatistics() {
   _numberOfRemainingLocalParticles          = 0;
+  _remainingLocalParticleNumbers.clear();
+  _numberOfRemainingGlobalParticles         = 0;
   _numberOfExpiredHaloParticles             = 0;
   _numberOfParticlesThatHaveLeftTheirDomain = 0;
 
@@ -112,6 +119,7 @@ std::string toolbox::particles::ParticleSet<T>::printParticleStateStatistics() {
   std::ostringstream msg;
   msg
     << "#remaining=" << _numberOfRemainingLocalParticles << ", #expired halo=" << _numberOfExpiredHaloParticles
+    << ", #unique-remaining=" << _remainingLocalParticleNumbers.size()
     << ", #left=" << _numberOfParticlesThatHaveLeftTheirDomain << ", #dropped virtual copy from neighbour="
     << _numberOfDroppedIncomingVirtualParticles << ", #redundantly owned=" << _numberOfRedundantlySharedLocalParticles
     << ", #replaced virtual=" << _numberOfReplacedVirtualParticlesAlongBoundary << ", #added local (inflying)="
@@ -123,12 +131,54 @@ std::string toolbox::particles::ParticleSet<T>::printParticleStateStatistics() {
 template <typename T>
 void toolbox::particles::ParticleSet<T>::reduceNumberOfParticles() {
 #ifdef WITH_MPI
-  const int local = _numberOfRemainingLocalParticles;
-  tarch::mpi::Rank::getInstance().allReduce(&local, &_numberOfRemainingGlobalParticles, 1, MPI_INT, MPI_SUM, []() {
-    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-  });
+  std::vector<int> localParticleNumbers;
+  localParticleNumbers.reserve(2 * _remainingLocalParticleNumbers.size());
+  for (const auto& particleNumber: _remainingLocalParticleNumbers) {
+    localParticleNumbers.push_back(particleNumber[0]);
+    localParticleNumbers.push_back(particleNumber[1]);
+  }
+
+  const int        numberOfLocalEntries = static_cast<int>(localParticleNumbers.size());
+  const int        numberOfRanks        = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  std::vector<int> entriesPerRank(numberOfRanks, 0);
+
+  MPI_Allgather(
+    &numberOfLocalEntries,
+    1,
+    MPI_INT,
+    entriesPerRank.data(),
+    1,
+    MPI_INT,
+    tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+
+  std::vector<int> displacements(numberOfRanks, 0);
+  int              totalNumberOfEntries = 0;
+  for (int rank = 0; rank < numberOfRanks; rank++) {
+    displacements[rank] = totalNumberOfEntries;
+    totalNumberOfEntries += entriesPerRank[rank];
+  }
+
+  std::vector<int> globalParticleNumbers(totalNumberOfEntries);
+  MPI_Allgatherv(
+    localParticleNumbers.empty() ? nullptr : localParticleNumbers.data(),
+    numberOfLocalEntries,
+    MPI_INT,
+    globalParticleNumbers.empty() ? nullptr : globalParticleNumbers.data(),
+    entriesPerRank.data(),
+    displacements.data(),
+    MPI_INT,
+    tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+
+  std::set<std::array<int, 2>> globalUniqueParticleNumbers;
+  assertion(totalNumberOfEntries % 2 == 0, totalNumberOfEntries);
+  for (int i = 0; i < totalNumberOfEntries; i += 2) {
+    globalUniqueParticleNumbers.insert({globalParticleNumbers[i], globalParticleNumbers[i + 1]});
+  }
+  _numberOfRemainingGlobalParticles = static_cast<int>(globalUniqueParticleNumbers.size());
 #else
-  _numberOfRemainingGlobalParticles = _numberOfRemainingLocalParticles;
+  _numberOfRemainingGlobalParticles = static_cast<int>(_remainingLocalParticleNumbers.size());
 #endif
 }
 
@@ -330,10 +380,12 @@ template <typename T>
 void toolbox::particles::ParticleSet<T>::updateNumberOfLocalAndExpiredParticles(
   int numberOfRemainingLocalParticles,
   int numberOfExpiredHaloParticles,
-  int numberOfParticlesThatHaveLeftTheirDomain
+  int numberOfParticlesThatHaveLeftTheirDomain,
+  const std::set<std::array<int, 2>>& remainingLocalParticleNumbers
 ) {
   tarch::multicore::Lock lock(_statisticsSemaphore);
   _numberOfRemainingLocalParticles += numberOfRemainingLocalParticles;
+  _remainingLocalParticleNumbers.insert(remainingLocalParticleNumbers.begin(), remainingLocalParticleNumbers.end());
   _numberOfExpiredHaloParticles += numberOfExpiredHaloParticles;
   _numberOfParticlesThatHaveLeftTheirDomain += numberOfParticlesThatHaveLeftTheirDomain;
 }

@@ -194,6 +194,11 @@ private:
    */
   void testSieveSet();
 
+  /**
+   * Test repeated cleanup of duplicate virtual halo particles.
+   */
+  void testRepeatedVirtualParticleCleanup();
+
 public:
   TestHelpers();
   virtual void run() override;

@@ -242,6 +242,9 @@ std::string formatSimulationTime() {
   std::ostringstream result;
   result << repositories::getMinTimeStamp()
          << " / " << ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime();
+  if (gridSweepMeasurement.getNumberOfMeasurements() > 0) {
+    result << ", Sweeps=" << gridSweepMeasurement.getMostRecentValue();
+  }
   return formatStatistic("Time", result.str());
 }
 
@@ -296,8 +299,27 @@ std::string formatPercentage(double value) {
 
 std::string formatMeasurementTotal(const tarch::instrumentation::Measurement& measurement, const char* unit) {
   std::ostringstream result;
+  result << "Total=" << measurement.getAccumulatedValue() << unit;
+  return result.str();
+}
+
+std::string formatMeasurementTotalAndCount(const tarch::instrumentation::Measurement& measurement, const char* unit, const char* countLabel) {
+  std::ostringstream result;
   result << "Total=" << measurement.getAccumulatedValue() << unit
-         << ", Measurements=" << measurement.getNumberOfMeasurements();
+         << ", " << countLabel << "=" << measurement.getNumberOfMeasurements();
+  return result.str();
+}
+
+std::string formatMeasurementTotalAverageAndCount(
+  const tarch::instrumentation::Measurement& measurement,
+  const char*                                unit,
+  const char*                                averageUnit,
+  const char*                                countLabel
+) {
+  std::ostringstream result;
+  result << "Total=" << measurement.getAccumulatedValue() << unit
+         << ", Avg=" << measurement.getAverageValue() << unit << "/" << averageUnit
+         << ", " << countLabel << "=" << measurement.getNumberOfMeasurements();
   return result.str();
 }
 
@@ -347,14 +369,6 @@ void logGlobalStatistics() {
     const auto dt                 = timeStepMeasurement.getMostRecentValue();
     const auto leavesPerSecond    = globalNumberOfLeaves / dt;
     const auto dofsPerSecond      = totalNumberOfDoFs    / dt;
-
-    if (gridSweepMeasurement.getNumberOfMeasurements() > 0) {
-      const auto gridSweepsPerTimestep = gridSweepMeasurement.getMostRecentValue();
-      const auto gridSweepsPerSecond   = gridSweepsPerTimestep / dt;
-      std::ostringstream sweepsMessage;
-      sweepsMessage << gridSweepsPerTimestep << " (" << gridSweepsPerSecond << "/s)";
-      logInfo(formatStatistic("Sweeps", sweepsMessage.str()));
-    }
 
     std::ostringstream throughputMessage;
     throughputMessage << leavesPerSecond << " Leaf/s, " << dofsPerSecond << " DoF/s";
@@ -459,8 +473,11 @@ void runNextAlgorithmicStep() {
         repositories::finishTimeStep();
         if (repositories::mayPlot()) {
           watch.stop();
-          timeStepMeasurement.setValue(watch.getCalendarTime());
-          gridSweepMeasurement.setValue(static_cast<double>(currentNumberOfGridSweepsOfTimeStep));
+          // Skip the first time step (warm-up phase)
+          if (numberOfCompletedTimeSteps > 0) {
+            timeStepMeasurement.setValue(watch.getCalendarTime());
+            gridSweepMeasurement.setValue(static_cast<double>(currentNumberOfGridSweepsOfTimeStep));
+          }
           currentNumberOfGridSweepsOfTimeStep = 0;
           numberOfCompletedTimeSteps++;
         }
@@ -529,13 +546,13 @@ void logFinalGlobalStatistics() {
   logInfo("Final Statistics");
 
   if (gridConstructionMeasurement.getNumberOfMeasurements() > 0) {
-    logInfo(formatStatistic("Grid Construction", formatMeasurementTotal(gridConstructionMeasurement, "s")));
+    logInfo(formatStatistic("Grid Construction", formatMeasurementTotalAndCount(gridConstructionMeasurement, "s", "Traversals")));
   }
   if (gridInitialisationMeasurement.getNumberOfMeasurements() > 0) {
     logInfo(formatStatistic("Grid Initialisation", formatMeasurementTotal(gridInitialisationMeasurement, "s")));
   }
   if (plotMeasurement.getNumberOfMeasurements() > 0) {
-    logInfo(formatStatistic("Plot Solution", formatMeasurementTotal(plotMeasurement, "s")));
+    logInfo(formatStatistic("Plot Solution", formatMeasurementTotalAndCount(plotMeasurement, "s", "Plots")));
   }
   if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
     const auto dofs                   = static_cast<double>(repositories::getNumberOfDoFs());
@@ -544,18 +561,10 @@ void logFinalGlobalStatistics() {
     const auto dt                     = timeStepMeasurement.getAverageValue();
     const auto leavesPerSecond        = globalNumberOfLeaves / dt;
     const auto dofsPerSecond          = totalNumberOfDoFs    / dt;
-    logInfo(formatStatistic("Time Stepping", formatMeasurementTotal(timeStepMeasurement, "s")));
-
-    if (gridSweepMeasurement.getNumberOfMeasurements() > 0) {
-      const auto gridSweepsPerTimestep = gridSweepMeasurement.getAverageValue();
-      std::ostringstream sweepsMessage;
-      sweepsMessage << "Average=" << gridSweepsPerTimestep
-                    << ", Measurements=" << gridSweepMeasurement.getNumberOfMeasurements();
-      logInfo(formatStatistic("Sweeps", sweepsMessage.str()));
-    }
+    logInfo(formatStatistic("Time Stepping", formatMeasurementTotalAverageAndCount(timeStepMeasurement, "s", "step", "Steps")));
 
     std::ostringstream throughputMessage;
-    throughputMessage << "Average=" << leavesPerSecond << " Leaf/s, " << dofsPerSecond << " DoF/s";
+    throughputMessage << "Avg=" << leavesPerSecond << " Leaf/s, " << dofsPerSecond << " DoF/s";
     logInfo(formatStatistic("Performance", throughputMessage.str()));
   }
 }

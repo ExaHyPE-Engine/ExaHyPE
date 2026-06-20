@@ -19,7 +19,7 @@ def parse_arguments():
     )
     parser.add_argument("-et", "--end-time", type=float, default=0.5)
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=16)
-    parser.add_argument("-l", "--grid-levels", type=int, default=1)
+    parser.add_argument("-l", "--grid-levels", type=int, default=3)
     parser.add_argument("-lmin", "--min-grid-levels", type=int, default=1)
     parser.add_argument("-lmax", "--max-grid-levels", type=int, default=1)
     args, _ = parser.parse_known_args()

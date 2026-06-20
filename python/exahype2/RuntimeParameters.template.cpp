@@ -29,13 +29,17 @@ namespace {
     return argv[index];
   }
 
+{% if HAS_STRING_RUNTIME_PARAMETERS %}
   std::string formatDefault(const std::string& value) {
     return value.empty() ? "<empty>" : value;
   }
+{% endif %}
 
+{% if HAS_BOOLEAN_RUNTIME_PARAMETERS %}
   std::string formatDefault(bool value) {
     return value ? "true" : "false";
   }
+{% endif %}
 
   template <typename T>
   std::string formatDefault(T value) {

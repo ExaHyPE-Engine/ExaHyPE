@@ -38,7 +38,6 @@ balancing, sophisticated geometry representations, and other features.
 - Extensions
   - @subpage page_exahype2_home
 - Third-party extensions
-  - @subpage page_third-party_dastgen
   - @subpage page_third-party_OpenBLAS
   - @subpage page_third-party_hdf5
 

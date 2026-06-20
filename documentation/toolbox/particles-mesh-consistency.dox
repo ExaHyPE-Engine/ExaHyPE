@@ -106,7 +106,7 @@ Consequently, it can happen that a particle is updated multiple times.
 To avoid this, I recommend that you add a boolean to each vertex:
 
 ~~~~~~~~~~~~~~~~~
-            particle.data.add_attribute( dastgen2.attributes.Enumeration("MoveState",["New","NotMovedYet","Moved"]) )
+            particle.add_attribute( peano4.datamodel.Enumeration("MoveState",["New","NotMovedYet","Moved"]) )
 ~~~~~~~~~~~~~~~~~
 
 
@@ -219,4 +219,3 @@ usage of the sieve set.
 
 
 */
-

@@ -4,11 +4,6 @@ from peano4.solversteps.ActionSet import ActionSet
 
 import jinja2
 
-import peano4.datamodel.DaStGen2
-
-import dastgen2.attributes.Integer
-
-
 class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
     """!
 
@@ -237,6 +232,19 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
   {% if PARTICLE_CELL_UPDATE_KERNEL!=None %}
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >&  activeParticles                  = _activeParticles;
   {{PARTICLE_PARTICLE_INTERACTION_KERNEL}}
+
+  // The interaction kernel is allowed to move local particles. If it does,
+  // containedInAdjacentCell becomes stale immediately. Refresh it before the
+  // next cell consumes the cached ownership bitset and checks it against the
+  // current particle position.
+  for (int i=0; i<TWO_POWER_D; i++) {
+    const std::bitset<DIMENSIONS> assignedVertex(i);
+    for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i)) {
+      toolbox::particles::updateContainedInAdjacentCellProperty(
+        marker, assignedVertex, *p
+      );
+    }
+  }
   {% endif %}
 """
     )

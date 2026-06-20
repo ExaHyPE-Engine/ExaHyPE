@@ -31,7 +31,7 @@ namespace toolbox {
      * is set to a value greater than 0. However, you can explicitly disable it
      * by adding
      *
-     * -DnoAssignmentChecks
+     * -DNO_ASSIGNMENT_CHECKS
      *
      * to your compile flags. This is important as assignment checks are very
      * expensive. The checks also might yield invalid errors once you run them
@@ -242,7 +242,11 @@ namespace toolbox {
        *
        * To make this API call valid, the particle has to be assigned to a
        * vertex beforehand. So there has to be a assignParticleToVertex()
-       * before this one.
+       * before this one. The only exception is cleanup of redundant virtual
+       * halo copies: MPI boundary and sieve exchanges can briefly create two
+       * virtual copies with the same identity on the same vertex. After the
+       * first copy has gone through detach/erase, removing the second copy is
+       * accepted as another non-local cleanup event.
        */
       void detachParticleFromVertex(
         const std::string&                           particleName,

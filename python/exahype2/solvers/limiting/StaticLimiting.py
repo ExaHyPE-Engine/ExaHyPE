@@ -5,8 +5,8 @@ from abc import abstractmethod
 
 import jinja2
 
-import dastgen2
 import peano4.output
+import peano4.datamodel
 import exahype2.grid
 import exahype2.solvers.limiting.kernels
 
@@ -94,22 +94,25 @@ class StaticLimiting(object):
         Variants = ["REGULAR", "REGULAR_TO_LIMITER", "LIMITER_TO_REGULAR", "TROUBLED"]
         self._cell_label = exahype2.grid.create_cell_label(self._name)
         self._face_label = exahype2.grid.create_face_label(self._name)
-        self._cell_label.data.add_attribute(
-            dastgen2.attributes.Enumeration(
-                name="Troubled_Marker",
+        self._cell_label.add_attribute(
+            peano4.datamodel.Enumeration(
+                name="troubledMarker",
                 variants=Variants,
-                initval="Troubled_Marker::REGULAR",
+                initval="TroubledMarker::REGULAR",
             )
         )
-        self._face_label.data.add_attribute(
-            dastgen2.attributes.Enumeration(
-                name="Troubled_Marker",
+        self._face_label.add_attribute(
+            peano4.datamodel.Enumeration(
+                name="troubledMarker",
                 variants=Variants,
-                initval="Troubled_Marker::REGULAR",
+                initval="TroubledMarker::REGULAR",
             )
         )
 
-        self._face_label.peano4_mpi_and_storage_aspect.merge_implementation += "\n_Troubled_Marker = std::max(_Troubled_Marker, neighbour.getTroubled_Marker());"
+        self._face_label.merge_method_definition = (
+            self._face_label.merge_method_definition
+            + "\n  setTroubledMarker( std::max( getTroubledMarker(), neighbour.getTroubledMarker() ) );"
+        )
 
         compute_time_step_size = (
             """
@@ -190,9 +193,9 @@ class StaticLimiting(object):
                 + "::SolverState::TimeStep"
                 + " and fineGridCell"
                 + self._name
-                + "CellLabel.getTroubled_Marker()<=celldata::"
+                + "CellLabel.getTroubledMarker()<=celldata::"
                 + self._name
-                + "CellLabel::Troubled_Marker::REGULAR_TO_LIMITER"
+                + "CellLabel::TroubledMarker::REGULAR_TO_LIMITER"
                 + " and "
                 + "repositories::"
                 + self.get_name_of_global_instance()
@@ -206,9 +209,9 @@ class StaticLimiting(object):
                 + ".isLastGridSweepOfTimeStep()"
                 + " and fineGridCell"
                 + self._name
-                + "CellLabel.getTroubled_Marker()==celldata::"
+                + "CellLabel.getTroubledMarker()==celldata::"
                 + self._name
-                + "CellLabel::Troubled_Marker::LIMITER_TO_REGULAR"
+                + "CellLabel::TroubledMarker::LIMITER_TO_REGULAR"
             ),
         )
 
@@ -233,25 +236,25 @@ class StaticLimiting(object):
         self._regular_solver._action_set_prediction.guard += (
             " and fineGridCell"
             + self._name
-            + "CellLabel.getTroubled_Marker()<=celldata::"
+            + "CellLabel.getTroubledMarker()<=celldata::"
             + self._name
-            + "CellLabel::Troubled_Marker::LIMITER_TO_REGULAR"
+            + "CellLabel::TroubledMarker::LIMITER_TO_REGULAR"
         )
 
         self._regular_solver._action_set_correction.cell_guard += (
             " and fineGridCell"
             + self._name
-            + "CellLabel.getTroubled_Marker()<=celldata::"
+            + "CellLabel.getTroubledMarker()<=celldata::"
             + self._name
-            + "CellLabel::Troubled_Marker::REGULAR_TO_LIMITER"
+            + "CellLabel::TroubledMarker::REGULAR_TO_LIMITER"
         )
 
         self._regular_solver._action_set_correction.face_guard += (
             " and fineGridFace"
             + self._name
-            + "FaceLabel.getTroubled_Marker()<=facedata::"
+            + "FaceLabel.getTroubledMarker()<=facedata::"
             + self._name
-            + "FaceLabel::Troubled_Marker::LIMITER_TO_REGULAR"
+            + "FaceLabel::TroubledMarker::LIMITER_TO_REGULAR"
         )
 
         update_patch_guard = (
@@ -261,9 +264,9 @@ class StaticLimiting(object):
             + ".isLastGridSweepOfTimeStep()"
             + " and fineGridCell"
             + self._name
-            + "CellLabel.getTroubled_Marker()>=celldata::"
+            + "CellLabel.getTroubledMarker()>=celldata::"
             + self._name
-            + "CellLabel::Troubled_Marker::LIMITER_TO_REGULAR"
+            + "CellLabel::TroubledMarker::LIMITER_TO_REGULAR"
         )
         self._limiter_solver._action_set_update_patch.guard += update_patch_guard
         if hasattr(self._limiter_solver, "_action_set_reconstruct_patch"):

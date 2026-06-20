@@ -127,6 +127,7 @@ class UpdateParallelState(ActionSet):
   // template in python/peano4/toolbox/particles/api/UpdateParallelState.py
 
   _numberOfRemainingLocalParticles = 0;
+  _remainingLocalParticleNumbers.clear();
   _numberOfExpiredHaloParticles    = 0;
   _numberOfParticlesThatHaveLeftTheirDomain        = 0;
 
@@ -141,7 +142,8 @@ class UpdateParallelState(ActionSet):
   vertexdata::{{PARTICLES_CONTAINER}}::updateNumberOfLocalAndExpiredParticles(
     _numberOfRemainingLocalParticles,
     _numberOfExpiredHaloParticles,
-    _numberOfParticlesThatHaveLeftTheirDomain
+    _numberOfParticlesThatHaveLeftTheirDomain,
+    _remainingLocalParticleNumbers
   );
 
   // end template
@@ -213,6 +215,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
   ) {
     logDebug("particle " << (*p)->toString() << " is local and remains local");
     _numberOfRemainingLocalParticles++;
+    _remainingLocalParticleNumbers.insert({(*p)->getNumber(0), (*p)->getNumber(1)});
     p++;
   }
   else {
@@ -301,6 +304,9 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
 
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
+
+#include <array>
+#include <set>
 """
         )
         return result.render(**self.d)
@@ -310,6 +316,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
   int  _treeNumber;
 
   int  _numberOfRemainingLocalParticles;
+  std::set<std::array<int, 2>> _remainingLocalParticleNumbers;
   int  _numberOfExpiredHaloParticles;
   int  _numberOfParticlesThatHaveLeftTheirDomain;
 """

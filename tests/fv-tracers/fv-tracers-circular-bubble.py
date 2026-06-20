@@ -82,8 +82,8 @@ def parse_arguments():
         default="SemiEuler",
     )
     parser.add_argument("-et", "--end-time", type=float, default=1.0)
-    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=128)
-    parser.add_argument("-l", "--grid-levels", type=int, default=1)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=16)
+    parser.add_argument("-l", "--grid-levels", type=int, default=3)
     args, _ = parser.parse_known_args()
     if args.help:
         parser.print_help()

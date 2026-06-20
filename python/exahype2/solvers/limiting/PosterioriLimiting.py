@@ -5,8 +5,8 @@ from abc import abstractmethod
 
 import jinja2
 
-import dastgen2
 import peano4.output
+import peano4.datamodel
 import exahype2.grid
 import exahype2.solvers.limiting.kernels
 
@@ -109,20 +109,23 @@ class PosterioriLimiting(object):
         Variants = ["REGULAR", "REGULAR_TO_LIMITER", "LIMITER_TO_REGULAR", "TROUBLED"]
         self._cell_label = exahype2.grid.create_cell_label(self._name)
         self._face_label = exahype2.grid.create_face_label(self._name)
-        self._cell_label.data.add_attribute(
-            dastgen2.attributes.Enumeration(name="Troubled_Marker", variants=Variants)
+        self._cell_label.add_attribute(
+            peano4.datamodel.Enumeration(name="troubledMarker", variants=Variants)
         )
-        self._face_label.data.add_attribute(
-            dastgen2.attributes.Enumeration(name="Troubled_Marker", variants=Variants)
+        self._face_label.add_attribute(
+            peano4.datamodel.Enumeration(name="troubledMarker", variants=Variants)
         )
 
-        self._cell_label.data.add_attribute(
-            dastgen2.attributes.Boolean(
-                name="WasTroubledInPreviousStep", initval="false"
+        self._cell_label.add_attribute(
+            peano4.datamodel.Boolean(
+                name="wasTroubledInPreviousStep", initval="false"
             )
         )
 
-        self._face_label.peano4_mpi_and_storage_aspect.merge_implementation += "\n_Troubled_Marker = std::max(_Troubled_Marker, neighbour.getTroubled_Marker());"
+        self._face_label.merge_method_definition = (
+            self._face_label.merge_method_definition
+            + "\n  setTroubledMarker( std::max( getTroubledMarker(), neighbour.getTroubledMarker() ) );"
+        )
 
         # This will contain the projection of the face-local minima and maxima
         self._min_and_max_projection = peano4.datamodel.Patch(
@@ -260,9 +263,9 @@ class PosterioriLimiting(object):
                 + ".isLastGridSweepOfTimeStep()"
                 + " and fineGridCell"
                 + self._name
-                + "CellLabel.getTroubled_Marker()>=celldata::"
+                + "CellLabel.getTroubledMarker()>=celldata::"
                 + self._name
-                + "CellLabel::Troubled_Marker::LIMITER_TO_REGULAR"
+                + "CellLabel::TroubledMarker::LIMITER_TO_REGULAR"
             ),
         )
 
@@ -291,9 +294,9 @@ class PosterioriLimiting(object):
             + "::SolverState::LimiterSolver"
             + " and fineGridCell"
             + self._name
-            + "CellLabel.getTroubled_Marker()>=celldata::"
+            + "CellLabel.getTroubledMarker()>=celldata::"
             + self._name
-            + "CellLabel::Troubled_Marker::LIMITER_TO_REGULAR"
+            + "CellLabel::TroubledMarker::LIMITER_TO_REGULAR"
         )
         self._limiter_solver._action_set_update_patch.guard += update_patch_guard
         if hasattr(self._limiter_solver, "_action_set_reconstruct_patch"):

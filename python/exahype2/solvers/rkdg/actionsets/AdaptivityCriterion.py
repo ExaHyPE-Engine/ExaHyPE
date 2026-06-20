@@ -47,7 +47,7 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
     and
     tarch::la::greaterEquals( tarch::la::max( marker.getH() ), minAdmissiblePatchSize )
     and
-    not fineGridCell{{CELL_LABEL_NAME}}.getAMDCriterionEvaluatedThroughoutGridConstruction()
+    not fineGridCell{{CELL_LABEL_NAME}}.getAMRCriterionEvaluatedThroughoutGridConstruction()
  ) { 
     refinementCriterion = repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
       nullptr,
@@ -55,7 +55,7 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
       marker.getH(),
       0.0
     );
-    fineGridCell{{CELL_LABEL_NAME}}.setAMDCriterionEvaluatedThroughoutGridConstruction(true);
+    fineGridCell{{CELL_LABEL_NAME}}.setAMRCriterionEvaluatedThroughoutGridConstruction(true);
   }
   else {
     refinementCriterion = ::exahype2::RefinementCommand::Keep;

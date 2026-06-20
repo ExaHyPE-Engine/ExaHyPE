@@ -3,8 +3,6 @@
 
 from peano4.solversteps.ActionSet import ActionSet
 import jinja2
-import peano4.datamodel.DaStGen2
-import dastgen2.attributes.Integer
 import numpy as np
 
 

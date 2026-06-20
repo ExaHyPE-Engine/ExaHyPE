@@ -5,9 +5,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 import jinja2
 
-import peano4.datamodel.DaStGen2
-
-import dastgen2.attributes.Integer
+import peano4.datamodel
 
 
 
@@ -23,12 +21,40 @@ def create_cell_marker(name):
   
   
   """
-  cell_marker     = peano4.datamodel.DaStGen2( name )
+  cell_marker     = peano4.datamodel.MetaData( name )
       
-  cell_marker.data.add_attribute( dastgen2.attributes.Integer("NewNumberOfParticles") )
-  cell_marker.data.add_attribute( dastgen2.attributes.Integer("NumberOfParticles") )
-  cell_marker.data.add_attribute( dastgen2.attributes.Boolean("NewParentOfRefinedCell") )
-  cell_marker.data.add_attribute( dastgen2.attributes.Boolean("ParentOfRefinedCell") )
+  cell_marker.add_attribute( peano4.datamodel.Integer("newNumberOfParticles") )
+  cell_marker.add_attribute( peano4.datamodel.Integer("numberOfParticles") )
+  cell_marker.add_attribute( peano4.datamodel.Boolean("newParentOfRefinedCell") )
+  cell_marker.add_attribute( peano4.datamodel.Boolean("parentOfRefinedCell") )
+
+  cell_marker.merge_method_definition = """
+      switch (context) {
+        case ::peano4::stacks::SendReceiveContext::BoundaryExchange:
+          assertionMsg(false, "should not be called");
+          break;
+        case ::peano4::stacks::SendReceiveContext::MultiscaleExchange:
+          setNewNumberOfParticles( getNewNumberOfParticles() + neighbour.getNewNumberOfParticles() );
+          setNumberOfParticles( getNumberOfParticles() + neighbour.getNumberOfParticles() );
+          setNewParentOfRefinedCell( getNewParentOfRefinedCell() or neighbour.getNewParentOfRefinedCell() );
+          setParentOfRefinedCell( getParentOfRefinedCell() or neighbour.getParentOfRefinedCell() );
+          break;
+        case ::peano4::stacks::SendReceiveContext::ForkDomain:
+          assertionMsg(false, "should not be called");
+          break;
+        case ::peano4::stacks::SendReceiveContext::JoinDomain:
+          setNewNumberOfParticles( getNewNumberOfParticles() + neighbour.getNewNumberOfParticles() );
+          setNumberOfParticles( getNumberOfParticles() + neighbour.getNumberOfParticles() );
+          setNewParentOfRefinedCell( getNewParentOfRefinedCell() or neighbour.getNewParentOfRefinedCell() );
+          setParentOfRefinedCell( getParentOfRefinedCell() or neighbour.getParentOfRefinedCell() );
+          break;
+        case ::peano4::stacks::SendReceiveContext::PeriodicBoundaryDataSwap:
+          assertionMsg(false, "should not be called");
+          break;
+      }
+  """
+  cell_marker.send_condition = "false"
+  cell_marker.receive_and_merge_condition = "false"
   
   return cell_marker
 
@@ -89,7 +115,7 @@ class ParticleTreeAnalysis(ActionSet):
     particle_set: ParticleSet
       This is the particle set which is to be analysed.
       
-    cell_marker: peano4.datamodel.DaStGen2 or None
+    cell_marker: peano4.datamodel.MetaData or None
       If you pass in None, the class will create an appropriate
       cell marker itself. You can also add in a cell marker that
       shall be used. In both cases, you have to ensure that your
@@ -199,4 +225,3 @@ class ParticleTreeAnalysis(ActionSet):
     if operation_name==ActionSet.OPERATION_CREATE_CELL:
       result = self.__Template_CreateCell.render(**self.d)             
     return result
-

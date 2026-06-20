@@ -15,9 +15,9 @@ class SolveRiemannProblem(AbstractLimiterActionSet):
     constexpr int FluxElementsPerFace2  = facedata::{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates::Cardinality / 2;
     constexpr int BasisElementsPerFace2 = facedata::{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}Estimates::Cardinality / 2;
 
-    if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker()==celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::REGULAR){
+    if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubledMarker()==celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker::REGULAR){
       for(int d=0; d<DIMENSIONS; d++){
-        if( fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getTroubled_Marker()==facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED ){
+        if( fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getTroubledMarker()==facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::TROUBLED ){
           //Regular face to Limiter
           // Projected solution estimations
           kernels::{{SOLVER_NAME}}::regularToLimiterFace(
@@ -33,7 +33,7 @@ class SolveRiemannProblem(AbstractLimiterActionSet):
           );
         }
 
-        if( fineGridFaces{{SOLVER_NAME}}FaceLabel(d+DIMENSIONS).getTroubled_Marker()==facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED ){
+        if( fineGridFaces{{SOLVER_NAME}}FaceLabel(d+DIMENSIONS).getTroubledMarker()==facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::TROUBLED ){
           //Regular face to Limiter
           // Projected solution estimations
           kernels::{{SOLVER_NAME}}::regularToLimiterFace(
@@ -51,7 +51,7 @@ class SolveRiemannProblem(AbstractLimiterActionSet):
 
       }
     }
-    if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker()==celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::TROUBLED){
+    if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubledMarker()==celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker::TROUBLED){
       for(int d=0; d<DIMENSIONS; d++){
 
         // Projected solution estimations
@@ -102,15 +102,15 @@ class SolveRiemannProblem(AbstractLimiterActionSet):
   #   constexpr int basisElementsPerFace  = spaceFaceSize*(NumberOfVariables+NumberOfParameters);
   #   constexpr int fluxElementsPerFace   = spaceFaceSize*NumberOfVariables;
 
-  #   if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker()==celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::REGULAR){
+  #   if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubledMarker()==celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker::REGULAR){
   #     for(int d=0; d<DIMENSIONS; d++){
-  #       if( fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getTroubled_Marker()==facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED ){
+  #       if( fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getTroubledMarker()==facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::TROUBLED ){
   #         //Regular face to Limiter
   #         std::copy_n(fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d).data()+basisElementsPerFace, basisElementsPerFace, fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d).data()+basisElementsPerFace);
   #         std::copy_n(fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d).data()+fluxElementsPerFace, fluxElementsPerFace, fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d).data()+fluxElementsPerFace);
   #       }
 
-  #       if( fineGridFaces{{SOLVER_NAME}}FaceLabel(d+DIMENSIONS).getTroubled_Marker()==facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED ){
+  #       if( fineGridFaces{{SOLVER_NAME}}FaceLabel(d+DIMENSIONS).getTroubledMarker()==facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::TROUBLED ){
   #         //Regular face to Limiter
   #         std::copy_n(fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+DIMENSIONS).data(), basisElementsPerFace, fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d+DIMENSIONS).data());
   #         std::copy_n(fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+DIMENSIONS).data(), fluxElementsPerFace, fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d+DIMENSIONS).data());
@@ -118,7 +118,7 @@ class SolveRiemannProblem(AbstractLimiterActionSet):
 
   #     }
   #   }
-  #   if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker()==celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::TROUBLED){
+  #   if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubledMarker()==celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker::TROUBLED){
   #     for(int d=0; d<DIMENSIONS; d++){
   #         std::copy_n(fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d).data()+basisElementsPerFace, basisElementsPerFace, fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}Estimates(d).data()+basisElementsPerFace);
   #         std::copy_n(fineGridFaces{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d).data()+fluxElementsPerFace, fluxElementsPerFace, fineGridFaces{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates(d).data()+fluxElementsPerFace);

@@ -6,11 +6,11 @@ import jinja2
 def reset_troubled_markers():
     return """
     // reset cell and face labels for limiting
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTroubled_Marker(celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::ADER);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTroubledMarker(celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker::ADER);
 
     for(int d=0; d<DIMENSIONS; d++){
-        fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::ADER);
-        fineGridFaces{{SOLVER_NAME}}FaceLabel(d+DIMENSIONS).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::ADER);
+        fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubledMarker(facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::ADER);
+        fineGridFaces{{SOLVER_NAME}}FaceLabel(d+DIMENSIONS).setTroubledMarker(facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::ADER);
     }
 """
 
@@ -68,15 +68,15 @@ def check_troubledness(usePAC, useDMP, useTroubledMarkers):
     template_set_troubled_markers = """
     if(!isUnTroubled){
       repositories::{{SOLVER_INSTANCE}}.addTroubledCell();
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTroubled_Marker(celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::TROUBLED);
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTroubledMarker(celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker::TROUBLED);
       for(int d=0; d<2*DIMENSIONS; d++){
-        fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED);
+        fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubledMarker(facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::TROUBLED);
       }
     }
     else{
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTroubled_Marker(celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::REGULAR);
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTroubledMarker(celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker::REGULAR);
       for(int d=0; d<2*DIMENSIONS; d++){
-        fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::REGULAR);
+        fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubledMarker(facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::REGULAR);
       }
     }
 

@@ -4,7 +4,6 @@ from peano4.solversteps.ActionSet import ActionSet
 
 
 import jinja2
-import dastgen2
 import peano4
 
 
@@ -51,27 +50,27 @@ def create_vertex_marker(
     also hosts the markers of the adjacent cells.
 
     """
-    dastgen_marker = peano4.datamodel.DaStGen2(construct_marker_name(task_name))
-    dastgen_marker.data.add_attribute(
-        dastgen2.attributes.Integer(
-            name="Number",
-            initval=UndefinedNumber,
+    marker = peano4.datamodel.MetaData(construct_marker_name(task_name))
+    marker.add_attribute(
+        peano4.datamodel.Integer(
+            name="number",
+            initval=str(UndefinedNumber),
         )
     )
-    dastgen_marker.data.add_attribute(
-        peano4.dastgen2.Peano4IntegerArray(
-            name="AdjacentCellNumber", cardinality="TWO_POWER_D"
+    marker.add_attribute(
+        peano4.datamodel.IntegerArray(
+            name="adjacentCellNumber", cardinality="TWO_POWER_D"
         )
     )
-    dastgen_marker.data.add_attribute(
-        dastgen2.attributes.UserDefinedType(
-            name="Enumerator",
+    marker.add_attribute(
+        peano4.datamodel.StaticUserDefinedType(
+            name="enumerator",
             type=full_qualified_enumerator_type,
             include=enumerator_include,
-            qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
         )
     )
-    return dastgen_marker
+    marker.includes += enumerator_include
+    return marker
 
 
 def create_cell_marker(task_name):
@@ -84,22 +83,22 @@ def create_cell_marker(task_name):
     @see create_vertex_marker() for some usage information.
 
     """
-    dastgen_marker = peano4.datamodel.DaStGen2(construct_marker_name(task_name))
-    dastgen_marker.data.add_attribute(
-        dastgen2.attributes.Integer(
-            name="Number",
-            initval=UndefinedNumber,
+    marker = peano4.datamodel.MetaData(construct_marker_name(task_name))
+    marker.add_attribute(
+        peano4.datamodel.Integer(
+            name="number",
+            initval=str(UndefinedNumber),
         )
     )
-    dastgen_marker.data.add_attribute(
-        dastgen2.attributes.UserDefinedType(
-            name="Enumerator",
+    marker.add_attribute(
+        peano4.datamodel.StaticUserDefinedType(
+            name="enumerator",
             type="tarch::Enumerator",
             include=""" #include "tarch/Enumerator.h" """,
-            qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
         )
     )
-    return dastgen_marker
+    marker.includes += """ #include "tarch/Enumerator.h" """
+    return marker
 
 
 class AssignNumbersToMesh(ActionSet):

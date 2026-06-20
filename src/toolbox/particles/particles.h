@@ -6,6 +6,9 @@
 #include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/datamanagement/VertexEnumerator.h"
 #include "tarch/la/Vector.h"
+#include "tarch/mpi/Rank.h"
+
+#include <atomic>
 
 namespace toolbox {
   namespace particles {

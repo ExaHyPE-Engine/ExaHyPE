@@ -14,14 +14,14 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
     // - FV recalculate step for TROUBLED, LIMITER_TO_REGULAR cells based on all three types of cell we sent.
     // - Note that the seconds neighbours won't be recomputed on the FV step, but will be used to recompute LIMITER_TO_REGULAR cells.
     bool sendFaceProjection = false;
-    celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker ownStatus = fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker();
-    facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker faceStatus = facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED;
-    sendFaceProjection  = (ownStatus == celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::TROUBLED);
-    sendFaceProjection |= (ownStatus == celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::LIMITER_TO_REGULAR);
+    celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker ownStatus = fineGridCell{{SOLVER_NAME}}CellLabel.getTroubledMarker();
+    facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker faceStatus = facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::TROUBLED;
+    sendFaceProjection  = (ownStatus == celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker::TROUBLED);
+    sendFaceProjection |= (ownStatus == celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker::LIMITER_TO_REGULAR);
     for (int d = 0; d < 2 * DIMENSIONS; d++) {
-      faceStatus = fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getTroubled_Marker();
-      sendFaceProjection |= (faceStatus == facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED);
-      sendFaceProjection |= (faceStatus == facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::LIMITER_TO_REGULAR);
+      faceStatus = fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getTroubledMarker();
+      sendFaceProjection |= (faceStatus == facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::TROUBLED);
+      sendFaceProjection |= (faceStatus == facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::LIMITER_TO_REGULAR);
     }
 
     // If there's no need to send anything, skip this step.

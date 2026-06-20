@@ -2,10 +2,10 @@
 # use, please see the copyright notice at www.peano-framework.org
 import os
 
-import peano4.datamodel.DaStGen2
+import peano4.datamodel
+import peano4.output
 
 from peano4.datamodel.DoF import DoF
-from peano4.datamodel.DaStGen2 import DaStGen2Generator
 
 from .Particle import Particle
 
