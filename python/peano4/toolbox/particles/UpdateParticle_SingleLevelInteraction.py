@@ -241,6 +241,19 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
   }
 
   {{PARTICLE_CELL_UPDATE_KERNEL}}
+
+  // The cell update kernel is allowed to move local particles. If it does,
+  // containedInAdjacentCell becomes stale immediately. Refresh it before the
+  // next cell consumes the cached ownership bitset and checks it against the
+  // current particle position.
+  for (int i=0; i<TWO_POWER_D; i++) {
+    const std::bitset<DIMENSIONS> assignedVertex(i);
+    for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i)) {
+      toolbox::particles::updateContainedInAdjacentCellProperty(
+        marker, assignedVertex, *p
+      );
+    }
+  }
   {% endif %}
 
   // end of template

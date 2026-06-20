@@ -4,7 +4,6 @@
 import peano4.toolbox.particles.api
 
 from .Particle import Particle
-from .ParticleAMR import ParticleAMR
 
 from .ParticleSet import ParticleSet
 
@@ -12,6 +11,10 @@ from .ParticleSet import ParticleSet
 from .UpdateParticle_MultiLevelInteraction_Sets import (
     UpdateParticle_MultiLevelInteraction_Sets,
 )
+from .InsertParticlesAlongCartesianLayoutIntoUnrefinedCells import (
+    InsertParticlesAlongCartesianLayoutIntoUnrefinedCells,
+)
+from .InsertParticlesByCoordinates import InsertParticlesByCoordinates
 from .UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles import (
     UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles,
 )
@@ -19,18 +22,10 @@ from .UpdateParticle_SingleLevelInteraction import UpdateParticle_SingleLevelInt
 from .UpdateParticle_SingleLevelInteraction_ContiguousParticles import (
     UpdateParticle_SingleLevelInteraction_ContiguousParticles,
 )
-
-
-from .ParticleTreeAnalysis import create_cell_marker
-from .ParticleTreeAnalysis import ParticleTreeAnalysis
-
-
 from .GatherParticlesInMemoryPool import GatherParticlesInMemoryPool
-
 from .InsertRandomParticlesIntoUnrefinedCells import (
     InsertRandomParticlesIntoUnrefinedCells,
 )
-from .InsertParticlesAlongCartesianLayoutIntoUnrefinedCells import (
-    InsertParticlesAlongCartesianLayoutIntoUnrefinedCells,
-)
-from .InsertParticlesByCoordinates import InsertParticlesByCoordinates
+from .ParticleAMR import ParticleAMR
+from .ParticleTreeAnalysis import create_cell_marker
+from .ParticleTreeAnalysis import ParticleTreeAnalysis

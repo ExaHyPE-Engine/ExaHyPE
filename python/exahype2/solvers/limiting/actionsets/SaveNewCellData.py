@@ -36,13 +36,13 @@ class SaveNewCellData(AbstractLimiterActionSet):
     {% if RESET_TROUBLED_MARKERS %}
     // Mark down whether the cell was troubled in the previous timestep
     fineGridCell{{SOLVER_NAME}}CellLabel.setWasTroubledInPreviousStep(
-      fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker() >= celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::LIMITER_TO_REGULAR
+      fineGridCell{{SOLVER_NAME}}CellLabel.getTroubledMarker() >= celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker::LIMITER_TO_REGULAR
     );
 
     // Resetting troubled markers
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTroubled_Marker(celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::REGULAR);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTroubledMarker(celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker::REGULAR);
     for (int d = 0; d < 2 * DIMENSIONS; d++) {
-      fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::REGULAR);
+      fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubledMarker(facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::REGULAR);
     }
     {% endif %}{# RESET_TROUBLED_MARKERS #}
 

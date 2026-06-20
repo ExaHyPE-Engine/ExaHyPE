@@ -9,8 +9,8 @@ import inspect
 import argparse
 
 import peano4
-import dastgen2
 import exahype2
+import peano4.datamodel
 
 from peano4.Logger import setup_logging, log
 
@@ -352,6 +352,9 @@ thus appreciate any citation of the original release paper
             "HAS_BOOLEAN_RUNTIME_PARAMETERS": any(
                 parameter["base_type"] == "bool" for parameter in self._runtime_parameters
             ),
+            "HAS_STRING_RUNTIME_PARAMETERS": any(
+                parameter["base_type"] == "string" for parameter in self._runtime_parameters
+            ),
         }
         generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
             os.path.join(template_directory, "RuntimeParameters.template.h"),
@@ -451,17 +454,15 @@ thus appreciate any citation of the original release paper
                 "Invalid format for 'unknowns'. Must be an integer or a dictionary."
             )
 
-        particle_attr = peano4.dastgen2.Peano4DoubleArray(
-            "data", str(self._particle_unknowns)
-        )
-        particle.data.add_attribute(particle_attr)
+        particle_attr = peano4.datamodel.DoubleArray("data", str(self._particle_unknowns))
+        particle.add_attribute(particle_attr)
 
-        particle.data.add_attribute(
-            dastgen2.attributes.Enumeration("MoveState", ["NotMovedYet", "Moved"])
+        particle.add_attribute(
+            peano4.datamodel.Enumeration("moveState", ["NotMovedYet", "Moved"])
         )
 
-        particle_number = peano4.dastgen2.Peano4IntegerArray("number", "2")
-        particle.data.add_attribute(particle_number)
+        particle_number = peano4.datamodel.IntegerArray("number", "2")
+        particle.add_attribute(particle_number)
 
         self._project.datamodel.add_global_object(particle)
         particles = peano4.toolbox.particles.ParticleSet(particle)

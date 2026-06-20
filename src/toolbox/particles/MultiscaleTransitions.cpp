@@ -73,7 +73,6 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::getPart
       return coarseDestAssociation.to_ulong() + TWO_POWER_D;
     }
   }
-  return -65536;
 }
 
 

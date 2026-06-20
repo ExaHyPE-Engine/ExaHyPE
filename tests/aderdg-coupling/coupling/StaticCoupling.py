@@ -1,7 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
-import dastgen2
 import peano4
 import exahype2
 
@@ -86,10 +84,10 @@ class StaticCoupling(object):
         Variants = ["REGULAR","REGULAR_TO_LIMITER","LIMITER_TO_REGULAR","TROUBLED"]
         self._cell_label = exahype2.grid.create_cell_label(self._name)
         self._face_label = exahype2.grid.create_face_label(self._name)
-        self._cell_label.data.add_attribute(dastgen2.attributes.Enumeration( name="Troubled_Marker",      variants=Variants, initval="Troubled_Marker::REGULAR" ) )
-        self._face_label.data.add_attribute(dastgen2.attributes.Enumeration( name="Troubled_Marker",      variants=Variants, initval="Troubled_Marker::REGULAR" ) )
+        self._cell_label.add_attribute(peano4.datamodel.Enumeration( name="troubledMarker",      variants=Variants, initval="TroubledMarker::REGULAR" ) )
+        self._face_label.add_attribute(peano4.datamodel.Enumeration( name="troubledMarker",      variants=Variants, initval="TroubledMarker::REGULAR" ) )
 
-        self._face_label.peano4_mpi_and_storage_aspect.merge_implementation += "\n  _Troubled_Marker = std::max(_Troubled_Marker, neighbour.getTroubled_Marker());"
+        self._face_label.merge_method_definition += "\n  setTroubledMarker( std::max( getTroubledMarker(), neighbour.getTroubledMarker() ) );"
 
         compute_time_step_size = """
     double timeStepSize = std::min( repositories::""" + self._regular_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize(),
@@ -123,7 +121,7 @@ class StaticCoupling(object):
         self._action_set_copy_face_data = SolveRiemannProblem(self,
           guard = ("not marker.willBeRefined() and not marker.hasBeenRefined()"
               + " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStepping"
-              # + " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()==celldata::" + self._name + "CellLabel::Troubled_Marker::REGULAR"
+              # + " and fineGridCell" + self._name + "CellLabel.getTroubledMarker()==celldata::" + self._name + "CellLabel::TroubledMarker::REGULAR"
               + " and " + "repositories::" + self.get_name_of_global_instance() + ".isFirstGridSweepOfTimeStep()"),
         )
 
@@ -144,27 +142,27 @@ class StaticCoupling(object):
         self._action_set_copy_face_data.descend_invocation_order = 10
 
         self._regular_solver._action_set_prediction.guard += (
-            " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()==celldata::" + self._name + "CellLabel::Troubled_Marker::REGULAR"
+            " and fineGridCell" + self._name + "CellLabel.getTroubledMarker()==celldata::" + self._name + "CellLabel::TroubledMarker::REGULAR"
         )
 
         self._regular_solver._action_set_correction.cell_guard += (
-            " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()==celldata::" + self._name + "CellLabel::Troubled_Marker::REGULAR"
+            " and fineGridCell" + self._name + "CellLabel.getTroubledMarker()==celldata::" + self._name + "CellLabel::TroubledMarker::REGULAR"
         )
 
         # self._regular_solver._action_set_correction.riemann_guard += (
-        #     " and fineGridFace" + self._name + "FaceLabel.getTroubled_Marker()<=facedata::" + self._name + "FaceLabel::Troubled_Marker::LIMITER_TO_REGULAR"
+        #     " and fineGridFace" + self._name + "FaceLabel.getTroubledMarker()<=facedata::" + self._name + "FaceLabel::TroubledMarker::LIMITER_TO_REGULAR"
         # )
 
         self._limiter_solver._action_set_prediction.guard += (
-            " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()==celldata::" + self._name + "CellLabel::Troubled_Marker::TROUBLED"
+            " and fineGridCell" + self._name + "CellLabel.getTroubledMarker()==celldata::" + self._name + "CellLabel::TroubledMarker::TROUBLED"
         )
 
         self._limiter_solver._action_set_correction.cell_guard += (
-            " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()==celldata::" + self._name + "CellLabel::Troubled_Marker::TROUBLED"
+            " and fineGridCell" + self._name + "CellLabel.getTroubledMarker()==celldata::" + self._name + "CellLabel::TroubledMarker::TROUBLED"
         )
 
         self._limiter_solver._action_set_correction.face_guard += (
-            " and fineGridFace" + self._name + "FaceLabel.getTroubled_Marker()>=facedata::" + self._name + "FaceLabel::Troubled_Marker::LIMITER_TO_REGULAR"
+            " and fineGridFace" + self._name + "FaceLabel.getTroubledMarker()>=facedata::" + self._name + "FaceLabel::TroubledMarker::LIMITER_TO_REGULAR"
         )
 
 

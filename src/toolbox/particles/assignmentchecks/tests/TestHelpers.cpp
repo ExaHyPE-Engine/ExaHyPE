@@ -2073,6 +2073,108 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
 }
 
 
+void toolbox::particles::assignmentchecks::tests::TestHelpers::
+  testRepeatedVirtualParticleCleanup() {
+
+#if PEANO_DEBUG
+
+  namespace ac = toolbox::particles::assignmentchecks;
+
+  ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
+  eventDatabase.reset();
+  eventDatabase.setMaxParticleSnapshotsToKeepTrackOf(1000);
+
+  std::string particleName = "TestParticle";
+
+  tarch::la::Vector<DIMENSIONS, double> particleX;
+  tarch::la::Vector<DIMENSIONS, double> vertexX;
+  tarch::la::Vector<DIMENSIONS, double> vertexH;
+
+  for (int i = 0; i < DIMENSIONS; i++) {
+    particleX(i) = 1.0;
+    vertexX(i)   = 1.0;
+    vertexH(i)   = 1.0 / 3.0;
+  }
+
+  int particleID  = 1;
+  int spacetreeId = 3;
+
+  ac::startMeshSweep("DuplicateVirtualParticleCleanup");
+
+  ac::assignParticleToVertex(
+    particleName,
+    particleX,
+    particleID,
+    false,
+    vertexX,
+    vertexH,
+    spacetreeId,
+    "createdVirtualParticle",
+    vertexX,
+    vertexH
+  );
+
+  ac::detachParticleFromVertex(
+    particleName,
+    particleX,
+    particleID,
+    false,
+    vertexX,
+    vertexH,
+    spacetreeId,
+    "firstVirtualDetach"
+  );
+  ac::eraseParticle(
+    particleName,
+    particleX,
+    particleID,
+    false,
+    vertexX,
+    vertexH,
+    spacetreeId,
+    "firstVirtualErase"
+  );
+
+  ac::detachParticleFromVertex(
+    particleName,
+    particleX,
+    particleID,
+    false,
+    vertexX,
+    vertexH,
+    spacetreeId,
+    "duplicateVirtualDetach"
+  );
+  ac::eraseParticle(
+    particleName,
+    particleX,
+    particleID,
+    false,
+    vertexX,
+    vertexH,
+    spacetreeId,
+    "duplicateVirtualErase"
+  );
+
+  ac::internal::ParticleIdentifier identifier = ac::internal::ParticleIdentifier(
+    particleName,
+    particleX,
+    vertexX,
+    vertexH,
+    particleID,
+    spacetreeId
+  );
+  assertion(
+    eventDatabase.getTotalParticleEntries(identifier) == 5,
+    eventDatabase.particleHistory(identifier)
+  );
+
+  eventDatabase.reset();
+
+#endif
+}
+
+
 void toolbox::particles::assignmentchecks::tests::TestHelpers::run() {
   testMethod(testTruthTableSearchAndIDKeys);
   testMethod(testAddingSweepsToDatabase);
@@ -2085,4 +2187,5 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::run() {
   testMethod(testPeriodicBoundaryConditions);
   testMethod(testPeriodicBoundaryConditionsCorner);
   testMethod(testSieveSet);
+  testMethod(testRepeatedVirtualParticleCleanup);
 }

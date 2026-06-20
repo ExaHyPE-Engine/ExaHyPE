@@ -2,9 +2,8 @@
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.solversteps.ActionSet import ActionSet
 
-import dastgen2
-import peano4.datamodel.DaStGen2
 import jinja2
+import peano4.datamodel
 
 
 class UpdateFaceLabel(ActionSet):
@@ -172,51 +171,39 @@ class UpdateFaceLabel(ActionSet):
 def create_face_label(solver_name):
     """
 
-    Build up the DaStGen2 data structure that we need per face to maintain
+    Build up the metadata structure that we need per face to maintain
     per-face data per solver.
 
     solver_name: string
       Name of the solver
 
     """
-    result = peano4.datamodel.DaStGen2(UpdateFaceLabel.get_attribute_name(solver_name))
+    result = peano4.datamodel.MetaData(UpdateFaceLabel.get_attribute_name(solver_name))
 
-    result.data.add_attribute(dastgen2.attributes.Boolean("Boundary"))
-    result.data.add_attribute(dastgen2.attributes.Boolean("IsHanging"))
-    # result.data.add_attribute(dastgen2.attributes.Boolean("AboveHanging"))
-    # result.data.add_attribute(dastgen2.attributes.Boolean("NewAboveHanging"))
-    result.data.add_attribute(
-        dastgen2.attributes.BooleanArray("AboveHanging", "2", compress=True)
-    )
-    result.data.add_attribute(
-        dastgen2.attributes.BooleanArray("NewAboveHanging", "2", compress=True)
-    )
-    result.data.add_attribute(
-        dastgen2.attributes.BooleanArray("Updated", "2", compress=True)
-    )
-    result.data.add_attribute(
-        peano4.dastgen2.Peano4DoubleArray("UpdatedTimeStamp", "2")
-    )
-    result.data.add_attribute(peano4.dastgen2.Peano4DoubleArray("NewTimeStamp", "2"))
-    result.data.add_attribute(peano4.dastgen2.Peano4DoubleArray("OldTimeStamp", "2"))
+    result.add_attribute(peano4.datamodel.Boolean("boundary"))
+    result.add_attribute(peano4.datamodel.Boolean("isHanging"))
+    result.add_attribute(peano4.datamodel.BooleanArray("aboveHanging", "2"))
+    result.add_attribute(peano4.datamodel.BooleanArray("newAboveHanging", "2"))
+    result.add_attribute(peano4.datamodel.BooleanArray("updated", "2"))
+    result.add_attribute(peano4.datamodel.DoubleArray("updatedTimeStamp", "2"))
+    result.add_attribute(peano4.datamodel.DoubleArray("newTimeStamp", "2"))
+    result.add_attribute(peano4.datamodel.DoubleArray("oldTimeStamp", "2"))
 
-    result.peano4_mpi_and_storage_aspect.merge_implementation = """
+    result.merge_method_definition = """
   switch (context) {
     case ::peano4::stacks::SendReceiveContext::BoundaryExchange:
     case ::peano4::stacks::SendReceiveContext::PeriodicBoundaryDataSwap:
       {
-
-        _Boundary     = _Boundary or neighbour._Boundary;
-        // _AboveHanging = _AboveHanging or neighbour._AboveHanging;
+        setBoundary( getBoundary() or neighbour.getBoundary() );
 
         const int normal         = marker.getSelectedFaceNumber() % DIMENSIONS;
         const int neighbourEntry = marker.outerNormal()(normal)<0.0 ? 0 : 1;
 
-        _Updated[ neighbourEntry ]          = neighbour._Updated[ neighbourEntry ];
-        _UpdatedTimeStamp( neighbourEntry ) = neighbour._UpdatedTimeStamp( neighbourEntry );
-        _NewTimeStamp( neighbourEntry )     = neighbour._NewTimeStamp( neighbourEntry );
-        _OldTimeStamp( neighbourEntry )     = neighbour._OldTimeStamp( neighbourEntry );
-        _AboveHanging[ neighbourEntry ]     = neighbour._AboveHanging[ neighbourEntry ];
+        setUpdated( neighbourEntry, neighbour.getUpdated( neighbourEntry ) );
+        setUpdatedTimeStamp( neighbourEntry, neighbour.getUpdatedTimeStamp( neighbourEntry ) );
+        setNewTimeStamp( neighbourEntry, neighbour.getNewTimeStamp( neighbourEntry ) );
+        setOldTimeStamp( neighbourEntry, neighbour.getOldTimeStamp( neighbourEntry ) );
+        setAboveHanging( neighbourEntry, neighbour.getAboveHanging( neighbourEntry ) );
       }
       break;
     default:

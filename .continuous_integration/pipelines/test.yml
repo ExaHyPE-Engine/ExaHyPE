@@ -54,7 +54,7 @@ FV Tracers:
     matrix:
     - test: [fv-tracers-advection, fv-tracers-circular-bubble, fv-tracers-drag-force-validation, fv-tracers-vertical-plume-rise, fv-tracers-one-body-problem, fv-tracers-radial-jet, fv-tracers-volcanic-plume-rise]
       dimensions: [2]
-      build_type: [Release]
+      build_type: [Release, Debug]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-tracers && PYTHONPATH=$CI_PROJECT_DIR/python python3 $test.py --dimensions $dimensions --build-mode $build_type"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-tracers && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"

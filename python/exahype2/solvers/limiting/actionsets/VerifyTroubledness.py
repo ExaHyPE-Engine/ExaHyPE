@@ -51,9 +51,9 @@ class VerifyTroubledness(AbstractLimiterActionSet):
 
       if (!isUnTroubled) {
         repositories::{{SOLVER_INSTANCE}}.addTroubledCell();
-        fineGridCell{{SOLVER_NAME}}CellLabel.setTroubled_Marker(celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::TROUBLED);
+        fineGridCell{{SOLVER_NAME}}CellLabel.setTroubledMarker(celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker::TROUBLED);
         for (int d = 0; d < 2 * DIMENSIONS; d++) {
-          fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED);
+          fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubledMarker(facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::TROUBLED);
         }
       }
     }

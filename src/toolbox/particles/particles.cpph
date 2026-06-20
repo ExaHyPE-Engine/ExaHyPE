@@ -11,10 +11,25 @@ template <typename Iterator>
 Iterator toolbox::particles::
   particleIsDuplicate(const typename Iterator::value_type& particle, Iterator begin, const Iterator& end) {
   while (begin != end) {
-    if (tarch::la::equals((*begin)->getX(), particle->getX(), SpatialDuplicateTolerance)
-        && ((*begin)->getNumber() == particle->getNumber())) {
-      logDebug("particles "
-          << particle->toString() << " and " << (*begin)->toString() << " are duplicates (same position and number)");
+    // Two particles are the same if they carry the same global identity
+    // getNumber() = (inserting tree, running index on that tree). This pair is
+    // unique per physical particle and is copied along with every (halo) copy,
+    // so it is the robust criterion for detecting a duplicate.
+    //
+    // We deliberately do not also require the positions to match within
+    // SpatialDuplicateTolerance. A particle sitting on a domain-/tree-boundary
+    // vertex is exchanged as a redundant copy by every adjacent tree, and these
+    // copies can drift apart by more than a fixed spatial tolerance (floating
+    // point differences accumulated during multiscale boundary transport).
+    // Gating the duplicate test on position therefore missed genuine duplicates
+    // and let the same particle be assigned to one vertex twice, tripping the
+    // assignmentchecks (an AssignToVertex directly following another
+    // AssignToVertex without an intervening detach/erase). Distinct particles
+    // always carry distinct numbers, so dropping the position test cannot merge
+    // two genuinely different particles that happen to coincide spatially.
+    if ((*begin)->getNumber() == particle->getNumber()) {
+      logDebug("Particles "
+          << particle->toString() << " and " << (*begin)->toString() << " are duplicates (same (tree,number) identity)");
       return begin;
     }
     ++begin;
@@ -131,9 +146,25 @@ void toolbox::particles::insertParticleIntoCell(
       << newParticle->toString() << " to vertex " << linearisedTargetVertex << " in cell " << marker.toString()
       << " (vertex=" << fineGridVertices(targetVertex.to_ulong()).toString() << ")");
   fineGridVertices(linearisedTargetVertex).addParticle(newParticle);
-  int partID = -1;
-  // TODO add a global simulation particle_count that checks particle id for duplicates and if not, it increases the
-  // count.
+
+#if PEANO_DEBUG
+  // Give the particle a unique identifier. The assignment-consistency checks
+  // (assignmentchecks::Database) key every particle on this id together with the
+  // tree and the vertex it sits on - but deliberately not on its position, since
+  // a particle moves. Consequently two distinct particles that share a (e.g.
+  // domain-boundary) vertex on the same tree must carry distinct ids; otherwise
+  // their independent assign/erase events are attributed to one and the same
+  // particle and look like an illegal repeated assignment, tripping the checks.
+  // We hand out a rank-local running number and fold in the MPI rank so the
+  // ids stay unique once particles travel to other ranks as halo copies (the
+  // id is part of the particle and is sent along with it). The split allows
+  // 2^11 ranks x 2^20 particles per rank and type.
+  // Widen it (or switch to the globally unique (tree,number) pair) if a
+  // run ever exceeds that.
+  static std::atomic<int> particleCounter{0};
+  const int rank = tarch::mpi::Rank::getInstance().getRank();
+  newParticle->setPartid((rank << 20) | (particleCounter.fetch_add(1) & 0xFFFFF));
+#endif
 
   tarch::la::Vector<DIMENSIONS, double>
     vertexX = marker.getX() - 0.5 * marker.getH()
@@ -142,7 +173,7 @@ void toolbox::particles::insertParticleIntoCell(
   toolbox::particles::assignmentchecks::assignParticleToVertex(
     toolbox::particles::assignmentchecks::pruneTypeName<Particle>(),
     newParticle->getX(),
-    partID,
+    newParticle->getPartid(),
     true, // is always local, we set that a few lines above
     vertexX,
     marker.getH(), // vertexH

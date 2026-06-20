@@ -45,7 +45,7 @@ class AdaptivityCriterion(AbstractFDActionSet):
     and
     tarch::la::greaterEquals(tarch::la::max( marker.getH() ), minAdmissiblePatchSize)
     and
-    not fineGridCell{{CELL_LABEL_NAME}}.getAMDCriterionEvaluatedThroughoutGridConstruction()
+    not fineGridCell{{CELL_LABEL_NAME}}.getAMRCriterionEvaluatedThroughoutGridConstruction()
   ) {
     dfor(volume, {{NUMBER_OF_NODES_PER_AXIS}}) {
       {% if STATELESS_REFINEMENT_CRITERION==True %}
@@ -64,7 +64,7 @@ class AdaptivityCriterion(AbstractFDActionSet):
       );
       {% endif %}
     }
-    fineGridCell{{CELL_LABEL_NAME}}.setAMDCriterionEvaluatedThroughoutGridConstruction(true);
+    fineGridCell{{CELL_LABEL_NAME}}.setAMRCriterionEvaluatedThroughoutGridConstruction(true);
   } else {
     refinementCriterion = ::exahype2::RefinementCommand::Keep;
   }

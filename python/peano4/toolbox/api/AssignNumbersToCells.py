@@ -4,7 +4,6 @@ from peano4.solversteps.ActionSet import ActionSet
 
 
 import jinja2
-import dastgen2
 import peano4
 
 
@@ -98,4 +97,3 @@ class AssignNumbersToCells(ActionSet):
         return """
 #include "tarch/Enumerator.h"
  """
-

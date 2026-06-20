@@ -3,10 +3,10 @@
 
 #include "TracingAPI.h"
 
-#include "Database.h" // needed for defined(AssignmentChecks) macro and ::internal namespace
+#include "Database.h" // needed for defined(ASSIGNMENT_CHECKS) macro and ::internal namespace
 
 
-#if defined(AssignmentChecks)
+#if defined(ASSIGNMENT_CHECKS)
 
 std::string toolbox::particles::assignmentchecks::sweepHistory() {
   return internal::Database::getInstance().sweepHistory();
@@ -362,12 +362,19 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
 
   Event previousEvent = database.addEvent(identifier, event);
 
-  assertion(
+  const bool particleWasAssignedToVertex =
     previousEvent.type == internal::Event::Type::AssignToVertex
       or previousEvent.type
            == internal::Event::Type::MoveWhileAssociatedToVertex
       or previousEvent.type
-           == internal::Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
+           == internal::Event::Type::ConsecutiveMoveWhileAssociatedToVertex;
+  const bool repeatedVirtualParticleCleanup =
+    not isLocal
+    and previousEvent.type == internal::Event::Type::Erase
+    and not previousEvent.isLocal;
+
+  assertion(
+    particleWasAssignedToVertex or repeatedVirtualParticleCleanup,
     identifier.toString(),
     event.toString(),
     previousEvent.toString(),
@@ -377,7 +384,8 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
     database.toString()
   );
   assertion(
-    tarch::la::equals(previousEvent.vertexX, vertexX),
+    repeatedVirtualParticleCleanup
+      or tarch::la::equals(previousEvent.vertexX, vertexX),
     identifier.toString(),
     event.toString(),
     previousEvent.toString(),
@@ -387,7 +395,8 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
     database.particleHistory(identifier)
   );
   assertion(
-    tarch::la::equals(previousEvent.vertexH, vertexH),
+    repeatedVirtualParticleCleanup
+      or tarch::la::equals(previousEvent.vertexH, vertexH),
     identifier.toString(),
     event.toString(),
     previousEvent.toString(),

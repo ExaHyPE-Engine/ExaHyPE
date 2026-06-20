@@ -15,7 +15,7 @@ class DoFAssociation(IntEnum):
     Face = 2
     Cell = 3
     #
-    # I use generic for standard MPI messages or DaStGen messages which are used
+    # I use generic for standard MPI messages or generated messages which are used
     # within the grid management and traversal, i.e. have nothing to do with particular
     # grid entities
     #

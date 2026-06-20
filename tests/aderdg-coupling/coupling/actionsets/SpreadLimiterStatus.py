@@ -8,19 +8,19 @@ import jinja2
 class SpreadLimiterStatus(AbstractLimiterActionSet):
   TemplateSpreadLimiterStatus = """
   if ( {{PREDICATE}} ) {
-      if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker()==celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::TROUBLED) return;
+      if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubledMarker()==celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker::TROUBLED) return;
 
       bool hasTroubledNeighbour = false;
       for(int d=0; d<2*DIMENSIONS; d++){
-        hasTroubledNeighbour |= fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getTroubled_Marker()==facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED;
+        hasTroubledNeighbour |= fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getTroubledMarker()==facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::TROUBLED;
       }
 
       if(hasTroubledNeighbour){
-        fineGridCell{{SOLVER_NAME}}CellLabel.setTroubled_Marker(celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::LIMITER_TO_REGULAR);
+        fineGridCell{{SOLVER_NAME}}CellLabel.setTroubledMarker(celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker::LIMITER_TO_REGULAR);
         for(int d=0; d<2*DIMENSIONS; d++){
-          fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(
-            std::max(fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getTroubled_Marker(),
-            facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::LIMITER_TO_REGULAR
+          fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubledMarker(
+            std::max(fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getTroubledMarker(),
+            facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::LIMITER_TO_REGULAR
             )
           );
         }

@@ -6,7 +6,9 @@
 #include "SieveParticles.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 
+#include <array>
 #include <list>
+#include <set>
 
 namespace toolbox {
   namespace particles {
@@ -129,7 +131,8 @@ public:
   static void updateNumberOfLocalAndExpiredParticles(
     int numberOfRemainingLocalParticles,
     int numberOfExpiredHaloParticles,
-    int numberOfParticlesThatHaveLeftTheirDomain
+    int numberOfParticlesThatHaveLeftTheirDomain,
+    const std::set<std::array<int, 2>>& remainingLocalParticleNumbers = {}
   );
 
   /**
@@ -290,6 +293,16 @@ protected:
    * See documentation of action set peano4.toolbox.particles.api.UpdateParallelState.
    */
   static int _numberOfRemainingLocalParticles;
+
+  /**
+   * Unique identities of all local particles seen in the current traversal.
+   *
+   * _numberOfRemainingLocalParticles counts vertex copies and is useful for
+   * low-level state diagnostics. User-facing particle counts have to count
+   * physical particles, so they deduplicate by the persistent particle
+   * identity (inserting tree, tree-local number).
+   */
+  static std::set<std::array<int, 2>> _remainingLocalParticleNumbers;
 
   /**
    * Set by MPI reduction in reduceNumberOfParticles()

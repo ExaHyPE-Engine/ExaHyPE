@@ -2,6 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/CompilerSpecificSettings.h"
+
 #include <atomic>
 #include <chrono>
 #include <cstddef>
@@ -58,7 +60,11 @@ private:
     bool                     logMachineName            = true;
     bool                     logThreadName             = true;
     bool                     logMessageType            = true;
+#if PEANO_DEBUG
     bool                     logScopeName              = true;
+#else
+    bool                     logScopeName              = false;
+#endif
     std::string              outputFileName            = "Peano.log";
     bool                     debugFilterConfigured     = false;
     bool                     debugEnabledByDefault     = false;

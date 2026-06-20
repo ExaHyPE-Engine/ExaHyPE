@@ -3,9 +3,7 @@
 from peano4.solversteps.ActionSet import ActionSet
 
 import jinja2
-
-import peano4.datamodel.DaStGen2
-
+import peano4.toolbox.particles
 
 
 class InsertParticlesAlongCartesianMesh(peano4.toolbox.particles.InsertParticlesAlongCartesianLayoutIntoUnrefinedCells):
@@ -66,5 +64,3 @@ class InsertParticlesAlongCartesianMesh(peano4.toolbox.particles.InsertParticles
   int _particleNumberOnThisTree;
   int _spacetreeId;
 """
-
-
