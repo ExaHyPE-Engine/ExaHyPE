@@ -17,8 +17,6 @@ class GlobalFixedTimeStep(SingleSweep):
         unknowns,
         auxiliary_variables,
         normalised_time_step_size,
-        use_enclave_tasking=False,
-        number_of_enclave_tasks=1,
         solvers_before_in_coupling=[],
     ):
         super(GlobalFixedTimeStep, self).__init__(
@@ -27,8 +25,6 @@ class GlobalFixedTimeStep(SingleSweep):
             order=order,
             unknowns=unknowns,
             auxiliary_variables=auxiliary_variables,
-            use_enclave_tasking=use_enclave_tasking,
-            number_of_enclave_tasks=number_of_enclave_tasks,
             solvers_before_in_coupling=solvers_before_in_coupling,
         )
 
@@ -44,5 +40,3 @@ class GlobalFixedTimeStep(SingleSweep):
             output=output,
             subdirectory=subdirectory,
         )
-        if self._use_enclave_tasking and self._can_fuse:
-            raise RuntimeError("Cannot use enclave tasking with FD!")

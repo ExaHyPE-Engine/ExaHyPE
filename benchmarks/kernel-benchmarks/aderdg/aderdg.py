@@ -203,11 +203,11 @@ makefile.add_cpp_file("KernelBenchmarks-main.cpp")
 makefile.add_h_file("DataRepository.h")
 makefile.add_cpp_file("DataRepository.cpp")
 
-makefile.add_h_file("EnclaveDataRepository.h")
-makefile.add_cpp_file("EnclaveDataRepository.cpp")
+makefile.add_h_file("FusedDataRepository.h")
+makefile.add_cpp_file("FusedDataRepository.cpp")
 
-makefile.add_h_file("EnclaveTasks.h")
-makefile.add_cpp_file("EnclaveTasks.cpp")
+makefile.add_h_file("FusedTasks.h")
+makefile.add_cpp_file("FusedTasks.cpp")
 
 makefile.add_CXX_flag(
     "-DSolverStoragePrecision=" + ader_solver._solution_persistent_storage_precision

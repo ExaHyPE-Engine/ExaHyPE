@@ -49,7 +49,7 @@ namespace {
     auto* inout = static_cast<std::uint64_t*>(inoutvec);
 
     [[maybe_unused]] const int n = *len;
-    assertion2(
+    assertion(
       n == toolbox::loadbalancing::Statistics::NumberOfWords,
       n,
       toolbox::loadbalancing::Statistics::NumberOfWords

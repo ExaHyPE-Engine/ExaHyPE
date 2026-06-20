@@ -7,26 +7,20 @@ inline GPU_CALLABLE_METHOD int toolbox::blockstructured::serialiseVoxelIndexInOv
   int                                       overlap,
   int                                       normal
 ) {
-#if !defined(WITH_GPU)
-  assertion4(normal >= 0, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
-  assertion4(normal < DIMENSIONS, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
-#endif
+  assertion(normal >= 0, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
+  assertion(normal < DIMENSIONS, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
 
   int base   = 1;
   int result = 0;
   for (int d = 0; d < DIMENSIONS; d++) {
     result += overlapCell(d) * base;
     if (d == normal) {
-#if !defined(WITH_GPU)
-      assertion4(overlapCell(d) >= 0, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
-      assertion4(overlapCell(d) < 2 * overlap, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
-#endif
+      assertion(overlapCell(d) >= 0, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
+      assertion(overlapCell(d) < 2 * overlap, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
       base *= overlap * 2;
     } else {
-#if !defined(WITH_GPU)
-      assertion4(overlapCell(d) >= 0, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
-      assertion4(overlapCell(d) < numberOfDoFsPerAxisInPatch, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
-#endif
+      assertion(overlapCell(d) >= 0, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
+      assertion(overlapCell(d) < numberOfDoFsPerAxisInPatch, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
       base *= numberOfDoFsPerAxisInPatch;
     }
   }
@@ -37,20 +31,16 @@ inline GPU_CALLABLE_METHOD int toolbox::blockstructured::serialisePatchIndexInOv
   const tarch::la::Vector<DIMENSIONS, int>& patchIndex,
   int                                       normal
 ) {
-#if !defined(WITH_GPU)
-  assertion2(normal >= 0, patchIndex, normal);
-  assertion2(normal < DIMENSIONS, patchIndex, normal);
-#endif
+  assertion(normal >= 0, patchIndex, normal);
+  assertion(normal < DIMENSIONS, patchIndex, normal);
 
   int base   = 1;
   int result = 0;
   for (int d = 0; d < DIMENSIONS; d++) {
     if (d != normal) {
       result += patchIndex(d) * base;
-#if !defined(WITH_GPU)
-      assertion2(patchIndex(d) >= 0, patchIndex, normal);
-      assertion2(patchIndex(d) < 3, patchIndex, normal);
-#endif
+      assertion(patchIndex(d) >= 0, patchIndex, normal);
+      assertion(patchIndex(d) < 3, patchIndex, normal);
       base *= 3;
     }
   }

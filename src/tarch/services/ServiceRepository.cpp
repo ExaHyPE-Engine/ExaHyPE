@@ -35,9 +35,9 @@ tarch::services::ServiceRepository& tarch::services::ServiceRepository::getInsta
 
 
 void tarch::services::ServiceRepository::addService( Service* const service, const std::string& name ) {
-  assertion2( service!=0, name, getListOfRegisteredServices() );
-  assertion2( !name.empty(), name, getListOfRegisteredServices() );
-  assertion2( !hasService(service), name, getListOfRegisteredServices() );
+  assertion( service!=0, name, getListOfRegisteredServices() );
+  assertion( !name.empty(), name, getListOfRegisteredServices() );
+  assertion( !hasService(service), name, getListOfRegisteredServices() );
 
   ServiceEntry entry;
   entry._name    = name;

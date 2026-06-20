@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "GridTraversalEvent.h"
 
-#include "GridTraversalObserver.h"
 #include "tarch/services/ServiceRepository.h"
 
 #include <iomanip>
@@ -60,37 +59,6 @@ peano4::datamanagement::CellMarker peano4::grid::GridTraversalEvent::getCellMark
   setFlag(willBeRefined != 0, datamanagement::CellMarker::WillBeRefined);
   setFlag(isCellLocal != 0, datamanagement::CellMarker::IsLocal);
   setFlag(isParentCellLocal != 0, datamanagement::CellMarker::IsParentLocal);
-  setFlag(isVertexAdjacentToParallelDomainBoundary == 0, datamanagement::CellMarker::AllVerticesInsideDomain);
-
-  const bool oneVertexHanging            = (isVertexHanging != 0);
-  bool       oneVertexCreatedOrDestroyed = false;
-
-  for (int i = 0; i < TWO_POWER_D; ++i) {
-    const int to   = vertexDataTo[i];
-    const int from = vertexDataFrom[i];
-
-    oneVertexCreatedOrDestroyed |= (to == GridTraversalObserver::CreateOrDestroyGridEntity);
-    oneVertexCreatedOrDestroyed |= (from == GridTraversalObserver::CreateOrDestroyGridEntity);
-  }
-
-  if (oneVertexHanging) {
-    marker.flags |= datamanagement::CellMarker::OneVertexHanging;
-  }
-  if (oneVertexCreatedOrDestroyed) {
-    marker.flags |= datamanagement::CellMarker::OneVertexCreatedOrDestroyed;
-  }
-
-  const bool couldBeEnclave = (marker.flags & datamanagement::CellMarker::AllVerticesInsideDomain)
-                              and not oneVertexHanging;
-
-  if (couldBeEnclave and not(marker.flags & datamanagement::CellMarker::WillBeRefined)
-      and not oneVertexCreatedOrDestroyed) {
-    marker.flags |= datamanagement::CellMarker::WillBeEnclave;
-  }
-  if (couldBeEnclave and not(marker.flags & datamanagement::CellMarker::HasBeenRefined)
-      and not oneVertexCreatedOrDestroyed) {
-    marker.flags |= datamanagement::CellMarker::HasBeenEnclave;
-  }
 
   return marker;
 }

@@ -150,28 +150,76 @@ def get_initial_tendency_postprocessing():
         for (int x=0; x<{{NUMBER_OF_VOLUMES_PER_AXIS}}; x++)
         for (int y=0; y<{{NUMBER_OF_VOLUMES_PER_AXIS}}; y++) {
           const int ozoneIndex = 3;
-          int oldQWithHaloOzoneIndex = ( x + {{HALO_SIZE}} + (y + {{HALO_SIZE}}) * ({{NUMBER_OF_VOLUMES_PER_AXIS}} + 2 * {{HALO_SIZE}}) ) * {{NUMBER_OF_UNKNOWNS + NUMBER_OF_AUXILIARY_VARIABLES}} + ozoneIndex;
-          int newQIndex = ( x + y * {{NUMBER_OF_VOLUMES_PER_AXIS}} ) * {{NUMBER_OF_UNKNOWNS + NUMBER_OF_AUXILIARY_VARIABLES}};
-          int newQOzoneIndex = newQIndex + ozoneIndex;
-          int newQOzoneInitialTendencyIndex = newQIndex + {{NUMBER_OF_UNKNOWNS + NUMBER_OF_AUXILIARY_VARIABLES}} - 1; // dO3dt0 should always be the last auxiliary variable
-          // initialize initial tendency for ozone
-          QOut[newQOzoneInitialTendencyIndex] = (QOut[newQOzoneIndex] - QIn[oldQWithHaloOzoneIndex]) / timeStepSize; 
+          const int dO3dt0Index = {{NUMBER_OF_UNKNOWNS + NUMBER_OF_AUXILIARY_VARIABLES}} - 1; // dO3dt0 should always be the last auxiliary variable
+          const int qIndex = ( x + y * {{NUMBER_OF_VOLUMES_PER_AXIS}} ) * {{NUMBER_OF_UNKNOWNS + NUMBER_OF_AUXILIARY_VARIABLES}};
+          const int qOzoneIndex = qIndex + ozoneIndex;
+          const int qOzoneInitialTendencyIndex = qIndex + dO3dt0Index;
+          QOut[qOzoneInitialTendencyIndex] = (QOut[qOzoneIndex] - QIn[qOzoneIndex]) / timeStepSize;
           // set ozone change to 0, since with initial tendency removed, there should be no change in ozone
-          QOut[newQOzoneIndex] = QIn[oldQWithHaloOzoneIndex];
+          QOut[qOzoneIndex] = QIn[qOzoneIndex];
+
+          // Re-project QOut onto faceQOut for boundary
+          tarch::la::Vector<DIMENSIONS, int> volumeIndex;
+          volumeIndex(0) = x;
+          volumeIndex(1) = y;
+          for (int normal = 0; normal < DIMENSIONS; ++normal) {
+            if (volumeIndex(normal) < {{HALO_SIZE}}) {
+              tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
+              overlapCell(normal) = volumeIndex(normal) + {{HALO_SIZE}};
+              const int faceBase = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
+                overlapCell, {{NUMBER_OF_VOLUMES_PER_AXIS}}, {{HALO_SIZE}}, normal
+              ) * {{NUMBER_OF_UNKNOWNS + NUMBER_OF_AUXILIARY_VARIABLES}};
+              faceQOut[normal][faceBase + ozoneIndex]  = QOut[qOzoneIndex];
+              faceQOut[normal][faceBase + dO3dt0Index] = QOut[qOzoneInitialTendencyIndex];
+            }
+            if (volumeIndex(normal) >= {{NUMBER_OF_VOLUMES_PER_AXIS}} - {{HALO_SIZE}}) {
+              tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
+              overlapCell(normal) = volumeIndex(normal) - ({{NUMBER_OF_VOLUMES_PER_AXIS}} - {{HALO_SIZE}});
+              const int faceBase = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
+                overlapCell, {{NUMBER_OF_VOLUMES_PER_AXIS}}, {{HALO_SIZE}}, normal
+              ) * {{NUMBER_OF_UNKNOWNS + NUMBER_OF_AUXILIARY_VARIABLES}};
+              faceQOut[normal + DIMENSIONS][faceBase + ozoneIndex]  = QOut[qOzoneIndex];
+              faceQOut[normal + DIMENSIONS][faceBase + dO3dt0Index] = QOut[qOzoneInitialTendencyIndex];
+            }
+          }
         }
 #else
         for (int x=0; x<{{NUMBER_OF_VOLUMES_PER_AXIS}}; x++)
         for (int y=0; y<{{NUMBER_OF_VOLUMES_PER_AXIS}}; y++)
         for (int z=0; z<{{NUMBER_OF_VOLUMES_PER_AXIS}}; z++){
           const int ozoneIndex = 3;
-          int oldQWithHaloOzoneIndex = ( x + {{HALO_SIZE}} + (y + {{HALO_SIZE}}) * ({{NUMBER_OF_VOLUMES_PER_AXIS}} + 2 * {{HALO_SIZE}}) + (z + {{HALO_SIZE}} ) * ({{NUMBER_OF_VOLUMES_PER_AXIS}} + 2 * {{HALO_SIZE}}) * ({{NUMBER_OF_VOLUMES_PER_AXIS}} + 2 * {{HALO_SIZE}})) * {{NUMBER_OF_UNKNOWNS + NUMBER_OF_AUXILIARY_VARIABLES}} + ozoneIndex;
-          int newQIndex = ( x + y * {{NUMBER_OF_VOLUMES_PER_AXIS}} + z * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} ) * {{NUMBER_OF_UNKNOWNS + NUMBER_OF_AUXILIARY_VARIABLES}};
-          int newQOzoneIndex = newQIndex + ozoneIndex;
-          int newQOzoneInitialTendencyIndex = newQIndex + {{NUMBER_OF_UNKNOWNS + NUMBER_OF_AUXILIARY_VARIABLES}} - 1; // dO3dt0 should always be the last auxiliary variable
-          // initialize initial tendency for ozone
-          QOut[newQOzoneInitialTendencyIndex] = (QOut[newQOzoneIndex] - QIn[oldQWithHaloOzoneIndex]) / timeStepSize;
+          const int dO3dt0Index = {{NUMBER_OF_UNKNOWNS + NUMBER_OF_AUXILIARY_VARIABLES}} - 1; // dO3dt0 should always be the last auxiliary variable
+          const int qIndex = ( x + y * {{NUMBER_OF_VOLUMES_PER_AXIS}} + z * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} ) * {{NUMBER_OF_UNKNOWNS + NUMBER_OF_AUXILIARY_VARIABLES}};
+          const int qOzoneIndex = qIndex + ozoneIndex;
+          const int qOzoneInitialTendencyIndex = qIndex + dO3dt0Index;
+          QOut[qOzoneInitialTendencyIndex] = (QOut[qOzoneIndex] - QIn[qOzoneIndex]) / timeStepSize;
           // set ozone change to 0, since with initial tendency removed, there should be no change in ozone
-          QOut[newQOzoneIndex] = QIn[oldQWithHaloOzoneIndex];
+          QOut[qOzoneIndex] = QIn[qOzoneIndex];
+
+          tarch::la::Vector<DIMENSIONS, int> volumeIndex;
+          volumeIndex(0) = x;
+          volumeIndex(1) = y;
+          volumeIndex(2) = z;
+          for (int normal = 0; normal < DIMENSIONS; ++normal) {
+            if (volumeIndex(normal) < {{HALO_SIZE}}) {
+              tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
+              overlapCell(normal) = volumeIndex(normal) + {{HALO_SIZE}};
+              const int faceBase = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
+                overlapCell, {{NUMBER_OF_VOLUMES_PER_AXIS}}, {{HALO_SIZE}}, normal
+              ) * {{NUMBER_OF_UNKNOWNS + NUMBER_OF_AUXILIARY_VARIABLES}};
+              faceQOut[normal][faceBase + ozoneIndex]  = QOut[qOzoneIndex];
+              faceQOut[normal][faceBase + dO3dt0Index] = QOut[qOzoneInitialTendencyIndex];
+            }
+            if (volumeIndex(normal) >= {{NUMBER_OF_VOLUMES_PER_AXIS}} - {{HALO_SIZE}}) {
+              tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
+              overlapCell(normal) = volumeIndex(normal) - ({{NUMBER_OF_VOLUMES_PER_AXIS}} - {{HALO_SIZE}});
+              const int faceBase = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
+                overlapCell, {{NUMBER_OF_VOLUMES_PER_AXIS}}, {{HALO_SIZE}}, normal
+              ) * {{NUMBER_OF_UNKNOWNS + NUMBER_OF_AUXILIARY_VARIABLES}};
+              faceQOut[normal + DIMENSIONS][faceBase + ozoneIndex]  = QOut[qOzoneIndex];
+              faceQOut[normal + DIMENSIONS][faceBase + dO3dt0Index] = QOut[qOzoneInitialTendencyIndex];
+            }
+          }
         }
 #endif
       }

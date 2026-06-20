@@ -55,12 +55,10 @@
     const auto indexWithHaloDown{{i}}   = {{ id.indexWithHalo('nodeDown'~i, 'unknown') | indent(4) }}{##}
     const auto indexWithHaloTop{{i}}    = {{ id.indexWithHalo('nodeTop'~i, 'unknown') | indent(4) }}{##}
 
-    #if !defined(WITH_GPU)
     assertion(std::isfinite(QIn[indexWithHaloLeft{{i}}]));
     assertion(std::isfinite(QIn[indexWithHaloRight{{i}}]));
     assertion(std::isfinite(QIn[indexWithHaloDown{{i}}]));
     assertion(std::isfinite(QIn[indexWithHaloTop{{i}}]));
-    #endif
 
     QInGatheredLeft{{i}}[unknown]   = QIn[indexWithHaloLeft{{i}}];
     QInGatheredRight{{i}}[unknown]  = QIn[indexWithHaloRight{{i}}];
@@ -70,10 +68,8 @@
     const auto indexWithHaloBack{{i}}   = {{ id.indexWithHalo('nodeBack'~i, 'unknown') | indent(4) }}{##}
     const auto indexWithHaloFront{{i}}  = {{ id.indexWithHalo('nodeFront'~i, 'unknown') | indent(4) }}{##}
 
-    #if !defined(WITH_GPU)
     assertion(std::isfinite(QIn[indexWithHaloBack{{i}}]));
     assertion(std::isfinite(QIn[indexWithHaloFront{{i}}]));
-    #endif
 
     QInGatheredBack{{i}}[unknown]   = QIn[indexWithHaloBack{{i}}];
     QInGatheredFront{{i}}[unknown]  = QIn[indexWithHaloFront{{i}}];
@@ -81,9 +77,9 @@
     {% endfor %} {# order range #}
 
     const int indexWithHalo = {{ id.indexWithHalo('node', 'unknown') | indent(4) }}{##}
-    #if !defined(WITH_GPU)
+
     assertion(std::isfinite(QIn[indexWithHalo]));
-    #endif
+
     QInGathered[unknown] = QIn[indexWithHalo];
     QOutGathered[unknown] = QIn[indexWithHalo];
   } // unknown
@@ -96,9 +92,7 @@
   #pragma unroll
   #endif
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) { // Scatter data into QOut
-    #if !defined(WITH_GPU)
     assertion(std::isfinite(QOutGathered[unknown]));
-    #endif
     const int index = {{ id.index('node', 'unknown') | indent(4) }}{##}
     QOut[index] = QOutGathered[unknown];
   } // unknown

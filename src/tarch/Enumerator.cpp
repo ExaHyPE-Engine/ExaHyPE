@@ -32,7 +32,7 @@ int tarch::Enumerator::getNumber() {
   constexpr int          Increment  = 23;
   constexpr int          Max    = std::numeric_limits<int>::max() - 2 * Increment;
 
-  assertion2(Max % Increment != 0, Increment, Max);
+  assertion(Max % Increment != 0, Increment, Max);
 
   while (_activeNumbers.count(result) > 0) {
     result = result % Max;
@@ -44,9 +44,9 @@ int tarch::Enumerator::getNumber() {
 
 
 void tarch::Enumerator::releaseNumber( int number ) {
-  assertion1(number >= 0, number);
+  assertion(number >= 0, number);
   tarch::multicore::Lock lock( _semaphore );
-  assertionEquals(_activeNumbers.count(number), 1);
+  assertion((_activeNumbers.count(number)) == (1), _activeNumbers.count(number), 1);
   _activeNumbers.erase(number);
 }
 

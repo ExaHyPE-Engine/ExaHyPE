@@ -173,7 +173,7 @@ int peano4::grid::PeanoCurve::getVertexReadStackNumber(
     result = static_cast<int>(StackTopology::BaseStack::NumberOfStacks) + bestFace;
   }
 
-  assertion1(result > static_cast<int>(StackTopology::BaseStack::Call), result);
+  assertion(result > static_cast<int>(StackTopology::BaseStack::Call), result);
   return result;
 }
 
@@ -208,7 +208,7 @@ int peano4::grid::PeanoCurve::getVertexWriteStackNumber(
     result = static_cast<int>(StackTopology::BaseStack::NumberOfStacks) + bestFace;
   }
 
-  assertion1(result > static_cast<int>(StackTopology::BaseStack::Call), result);
+  assertion(result > static_cast<int>(StackTopology::BaseStack::Call), result);
   return result;
 }
 
@@ -248,7 +248,7 @@ int peano4::grid::PeanoCurve::getFaceReadStackNumber(const AutomatonState& state
     result    = newResult + static_cast<int>(StackTopology::BaseStack::NumberOfStacks);
   }
 
-  assertion1(result > static_cast<int>(StackTopology::BaseStack::Call), result);
+  assertion(result > static_cast<int>(StackTopology::BaseStack::Call), result);
   return result;
 }
 
@@ -268,7 +268,7 @@ int peano4::grid::PeanoCurve::getFaceWriteStackNumber(const AutomatonState& cell
     result    = newResult + static_cast<int>(StackTopology::BaseStack::NumberOfStacks);
   }
 
-  assertion1(result > static_cast<int>(StackTopology::BaseStack::Call), result);
+  assertion(result > static_cast<int>(StackTopology::BaseStack::Call), result);
   return result;
 }
 

@@ -1,10 +1,8 @@
 #include "DoubleMessage.h"
 
-
-
 #include <sstream>
 #include <algorithm>
-
+#include <iostream>
 
 
 tarch::mpi::DoubleMessage::DoubleMessage(double  __value){

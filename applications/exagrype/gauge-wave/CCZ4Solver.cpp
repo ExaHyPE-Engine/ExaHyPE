@@ -14,7 +14,7 @@ void applications::exahype2::exagrype::CCZ4Solver::initialCondition(
   (void)h;
   ::applications::exahype2::exagrype::initialCondition(x, 0.0, NumberOfUnknowns + NumberOfAuxiliaryVariables, Q);
   for (int i = 0; i < NumberOfUnknowns; i++) {
-    assertion2(std::isfinite(Q[i]), x, i);
+    assertion(std::isfinite(Q[i]), x, i);
   }
 }
 
@@ -28,7 +28,7 @@ void applications::exahype2::exagrype::CCZ4Solver::boundaryConditions(
 ) {
   (void)h;
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    assertion4(Qinside[i] == Qinside[i], x, t, normal, i);
+    assertion(Qinside[i] == Qinside[i], x, t, normal, i);
     Qoutside[i] = Qinside[i];
   }
 }

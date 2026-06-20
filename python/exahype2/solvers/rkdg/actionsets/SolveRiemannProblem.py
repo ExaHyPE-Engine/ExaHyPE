@@ -22,12 +22,7 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
   if ({{PREDICATES[PREDICATE_NO]}}) {
     // no support for local time stepping or subcycling
     /*
-    assertionNumericalEquals2(
-      {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(0),
-      {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(1),
-      {{FACE_METADATA_ACCESSOR}}.toString(),
-      marker.toString()
-    );
+    assertion(tarch::la::equals(({{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(0)), ({{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(1))), {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(0), {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(1), {{FACE_METADATA_ACCESSOR}}.toString(), marker.toString());
     */
 
     // Doesn't make a difference if we pick left or right
@@ -39,8 +34,8 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
 
     const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
 
-    assertion5( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution, {{FACE_METADATA_ACCESSOR}}.toString(), marker.toString() );
-    assertion5( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution, {{FACE_METADATA_ACCESSOR}}.toString(), marker.toString() );
+    assertion( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution, {{FACE_METADATA_ACCESSOR}}.toString(), marker.toString() );
+    assertion( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution, {{FACE_METADATA_ACCESSOR}}.toString(), marker.toString() );
 
     const double* NOALIAS QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data();
     double* NOALIAS       QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.data();

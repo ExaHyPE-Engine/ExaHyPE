@@ -22,7 +22,7 @@ tarch::instrumentation::Measurement::Measurement(const double& accuracy):
   _minMeasurement(-1),
   _maxMeasurement(-1) {
 
-  assertion1(accuracy >= 0.0, accuracy);
+  assertion(accuracy >= 0.0, accuracy);
 }
 
 void tarch::instrumentation::Measurement::erase() {
@@ -48,7 +48,7 @@ double tarch::instrumentation::Measurement::getMostRecentValue() const { return 
 
 double tarch::instrumentation::Measurement::getAverageValue() const {
   if (_numberOfMeasurements == 0) {
-    assertionEquals(_accumulatedValue, 0.0);
+    assertion((_accumulatedValue) == (0.0), _accumulatedValue, 0.0);
     return 0.0;
   } else {
     return _accumulatedValue / static_cast<double>(_numberOfMeasurements);
@@ -57,7 +57,7 @@ double tarch::instrumentation::Measurement::getAverageValue() const {
 
 double tarch::instrumentation::Measurement::getStandardDeviation() const {
   if (_numberOfMeasurements == 0) {
-    assertionEquals(_accumulatedValue, 0.0);
+    assertion((_accumulatedValue) == (0.0), _accumulatedValue, 0.0);
     return 0.0;
   } else {
     const double variance = _accumulatedSquares / static_cast<double>(_numberOfMeasurements)
@@ -108,12 +108,12 @@ void tarch::instrumentation::Measurement::setValue(const double& value) {
 int tarch::instrumentation::Measurement::getNumberOfMeasurements() const { return _numberOfMeasurements; }
 
 double tarch::instrumentation::Measurement::max() const {
-  assertion1(isAccurateValue(), _numberOfMeasurements);
+  assertion(isAccurateValue(), _numberOfMeasurements);
   return _max;
 }
 
 double tarch::instrumentation::Measurement::min() const {
-  assertion1(isAccurateValue(), _numberOfMeasurements);
+  assertion(isAccurateValue(), _numberOfMeasurements);
   return _min;
 }
 

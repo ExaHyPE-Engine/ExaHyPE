@@ -130,8 +130,8 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
     int                             numberOfDoFsPerAxisInPatch,
     int                             normal
   ) {
-  assertionEquals1(P1d.cols(), numberOfDoFsPerAxisInPatch, P1d.toString());
-  assertionEquals1(P1d.rows(), 3 * numberOfDoFsPerAxisInPatch, P1d.toString());
+  assertion((P1d.cols()) == (numberOfDoFsPerAxisInPatch), P1d.cols(), numberOfDoFsPerAxisInPatch, P1d.toString());
+  assertion((P1d.rows()) == (3 * numberOfDoFsPerAxisInPatch), P1d.rows(), 3 * numberOfDoFsPerAxisInPatch, P1d.toString());
 
 #if DIMENSIONS == 3
   tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix(P1d, P1d);
@@ -164,8 +164,8 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
     int                             numberOfDoFsPerAxisInPatch,
     int                             normal
   ) {
-  assertionEquals1(P1d.cols(), numberOfDoFsPerAxisInPatch, P1d.toString());
-  assertionEquals1(P1d.rows(), 3 * numberOfDoFsPerAxisInPatch, P1d.toString());
+  assertion((P1d.cols()) == (numberOfDoFsPerAxisInPatch), P1d.cols(), numberOfDoFsPerAxisInPatch, P1d.toString());
+  assertion((P1d.rows()) == (3 * numberOfDoFsPerAxisInPatch), P1d.rows(), 3 * numberOfDoFsPerAxisInPatch, P1d.toString());
 
 #if DIMENSIONS == 3
   tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix(P1d, P1d);

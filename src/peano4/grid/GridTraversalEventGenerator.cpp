@@ -333,10 +333,10 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
 
 #if PEANO_DEBUG
   for (int i = 0; i < TWO_POWER_D; i++) {
-    assertion1(event.getIsVertexLocal(i) or not event.getIsVertexAdjacentToParallelDomainBoundary(i), event.toString());
+    assertion(event.getIsVertexLocal(i) or not event.getIsVertexAdjacentToParallelDomainBoundary(i), event.toString());
   }
   for (int i = 0; i < TWO_TIMES_D; i++) {
-    assertion1(event.getIsFaceLocal(i) or not event.getIsFaceAdjacentToParallelDomainBoundary(i), event.toString());
+    assertion(event.getIsFaceLocal(i) or not event.getIsFaceAdjacentToParallelDomainBoundary(i), event.toString());
   }
 #endif
 
@@ -531,14 +531,14 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
 
 #if PEANO_DEBUG
   for (int i = 0; i < TWO_POWER_D; i++) {
-    assertion1(
+    assertion(
       leaveNodeTraversalEvent.getIsVertexLocal(i)
         or not leaveNodeTraversalEvent.getIsVertexAdjacentToParallelDomainBoundary(i),
       leaveNodeTraversalEvent.toString()
     );
   }
   for (int i = 0; i < TWO_TIMES_D; i++) {
-    assertion1(
+    assertion(
       leaveNodeTraversalEvent.getIsFaceLocal(i)
         or not leaveNodeTraversalEvent.getIsFaceAdjacentToParallelDomainBoundary(i),
       leaveNodeTraversalEvent.toString()

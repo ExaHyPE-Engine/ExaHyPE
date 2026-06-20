@@ -1,6 +1,7 @@
-#include "tarch/NonCriticalAssertions.h"
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/multicore/Lock.h"
+
+#include <sstream>
 
 template <typename T>
 toolbox::particles::SieveParticles<T> toolbox::particles::ParticleSet<T>::_sieveParticles;

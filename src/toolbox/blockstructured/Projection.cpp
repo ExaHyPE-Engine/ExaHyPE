@@ -16,7 +16,7 @@ void toolbox::blockstructured::projectPatchSolutionOntoFaces(
     double* NOALIAS rightFace,
     double* NOALIAS topFace
 ) {
-  assertionEquals( DIMENSIONS, 2 );
+  assertion((DIMENSIONS) == (2), DIMENSIONS, 2);
   double* faces[4] = { leftFace, bottomFace, rightFace, topFace };
   projectPatchSolutionOntoFaces(
     numberOfVolumesPerAxisInPatch,
@@ -42,7 +42,7 @@ void toolbox::blockstructured::projectPatchSolutionOntoFaces(
     double* NOALIAS topFace,
     double* NOALIAS backFace
 ) {
-  assertionEquals( DIMENSIONS, 3 );
+  assertion((DIMENSIONS) == (3), DIMENSIONS, 3);
   double* faces[6] = { leftFace, bottomFace, frontFace, rightFace, topFace, backFace};
   projectPatchSolutionOntoFaces(
     numberOfVolumesPerAxisInPatch,
@@ -79,7 +79,7 @@ void toolbox::blockstructured::projectPatchSolutionOntoFaces(
         int patchCellSerialised   = peano4::utils::dLinearised(patchCell,numberOfVolumesPerAxisInPatch);
         int overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,numberOfVolumesPerAxisInPatch,haloSize,d);
         for (int j=0; j<unknowns; j++) {
-          assertion6(
+          assertion(
             false
             or
             Q[patchCellSerialised*unknowns+j]==Q[patchCellSerialised*unknowns+j], j,i,k,d, patchCell, overlapCell
@@ -93,7 +93,7 @@ void toolbox::blockstructured::projectPatchSolutionOntoFaces(
         patchCellSerialised   = peano4::utils::dLinearised(patchCell, numberOfVolumesPerAxisInPatch);
         overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, numberOfVolumesPerAxisInPatch, haloSize, d);
         for (int j=0; j<unknowns; j++) {
-          assertion6(
+          assertion(
             false
             or
             Q[patchCellSerialised*unknowns+j]==Q[patchCellSerialised*unknowns+j], j,i,k,d, patchCell, overlapCell
@@ -117,7 +117,7 @@ void toolbox::blockstructured::projectPatchHaloOntoFaces(
     double* NOALIAS rightFace,
     double* NOALIAS topFace
 ) {
-  assertionEquals( DIMENSIONS, 2 );
+  assertion((DIMENSIONS) == (2), DIMENSIONS, 2);
   double* faces[4] = { leftFace, bottomFace, rightFace, topFace };
   projectPatchHaloOntoFaces(
     numberOfVolumesPerAxisInPatch,
@@ -143,7 +143,7 @@ void toolbox::blockstructured::projectPatchHaloOntoFaces(
     double* NOALIAS topFace,
     double* NOALIAS backFace
 ) {
-  assertionEquals( DIMENSIONS, 3 );
+  assertion((DIMENSIONS) == (3), DIMENSIONS, 3);
   double* faces[6] = { leftFace, bottomFace, frontFace, rightFace, topFace, backFace};
   projectPatchHaloOntoFaces(
     numberOfVolumesPerAxisInPatch,
@@ -211,7 +211,7 @@ void toolbox::blockstructured::extrapolatePatchSolutionAndProjectExtrapolatedHal
     double* NOALIAS rightFace,
     double* NOALIAS topFace
 ) {
-  assertionEquals( DIMENSIONS, 2 );
+  assertion((DIMENSIONS) == (2), DIMENSIONS, 2);
   double* faces[4] = { leftFace, bottomFace, rightFace, topFace };
   extrapolatePatchSolutionAndProjectExtrapolatedHaloOntoFaces(
     numberOfVolumesPerAxisInPatch,
@@ -237,7 +237,7 @@ void toolbox::blockstructured::extrapolatePatchSolutionAndProjectExtrapolatedHal
     double* NOALIAS topFace,
     double* NOALIAS backFace
 ) {
-  assertionEquals( DIMENSIONS, 3 );
+  assertion((DIMENSIONS) == (3), DIMENSIONS, 3);
   double* faces[6] = { leftFace, bottomFace, frontFace, rightFace, topFace, backFace};
   extrapolatePatchSolutionAndProjectExtrapolatedHaloOntoFaces(
     numberOfVolumesPerAxisInPatch,

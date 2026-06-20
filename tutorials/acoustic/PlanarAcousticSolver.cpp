@@ -30,7 +30,7 @@ void tutorials::exahype2::acoustic::PlanarAcousticSolver::boundaryConditions(
   [[maybe_unused]] const int                                    normal
 ) {
   // Since we are using periodic boundary conditions, this need never be called.
-  assert(false);
+  assertion(false);
 }
 
 double tutorials::exahype2::acoustic::PlanarAcousticSolver::maxEigenvalue(

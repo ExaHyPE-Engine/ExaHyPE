@@ -13,16 +13,3 @@
   {{unknown}};
   {% endif %}
 {% endmacro %}
-
-{% macro indexWithHalo(volume, unknown) %}
-  {% if DIMENSIONS==2 %}
-  ({{volume}}(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} +
-  ({{volume}}(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}} +
-  {{unknown}};
-  {% else %}
-  ({{volume}}(2) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_2D}} +
-  ({{volume}}(1) + {{HALO_SIZE}}) * {{PATCH_CARDINALITY_WITH_HALO_1D}} +
-  ({{volume}}(0) + {{HALO_SIZE}}) * {{NUMBER_OF_DATA}} +
-  {{unknown}};
-  {% endif %}
-{% endmacro %}

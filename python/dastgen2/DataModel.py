@@ -447,10 +447,9 @@ public:
 
             output.write(
                 """
-#include <sstream>
 #include <algorithm>
-
-
+#include <iostream>
+#include <sstream>
 
 """
             )

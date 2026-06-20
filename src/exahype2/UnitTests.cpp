@@ -10,12 +10,9 @@
 #include "fv/tests/CopyPatchTest.h"
 #include "fv/tests/InterpolationRestrictionTest.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
-#include "tests/EnclaveBookkeepingTest.h"
 
 tarch::tests::TestCase* exahype2::getUnitTests() {
   tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();
-
-  result->addTestCase(new tests::EnclaveBookkeepingTest());
 
   result->addTestCase(new dg::tests::CellIntegralTest());
   result->addTestCase(new dg::tests::DGUtilsTest());

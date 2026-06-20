@@ -12,10 +12,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::getKeyForDLinearisedLookup(
     key *= MAX_TABLE;
   }
 
-#if !defined(WITH_GPU)
-  assertionEquals(key, MaxIndexOfLinearisation);
-  assertion2(max >= 2 && max <= MAX_TABLE, max, MAX_TABLE);
-#endif
+  assertion((key) == (MaxIndexOfLinearisation), key, MaxIndexOfLinearisation);
+  assertion(max >= 2 && max <= MAX_TABLE, max, MAX_TABLE);
 
   // Nothing to be held for max=0 and max=1, so decrement the offset
   result += (max - 2) * MaxIndexOfLinearisation;
@@ -23,10 +21,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::getKeyForDLinearisedLookup(
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::getKeyForDDeLinearisedLookup(int value, int max) {
-#if !defined(WITH_GPU)
-  assertion2(max >= 2 && max <= MAX_TABLE, max, MAX_TABLE);
-  assertion1(value >= 0 && value < tarch::la::aPowI(DIMENSIONS, max), value);
-#endif
+  assertion(max >= 2 && max <= MAX_TABLE, max, MAX_TABLE);
+  assertion(value >= 0 && value < tarch::la::aPowI(DIMENSIONS, max), value);
   // Nothing to be held for max=0 and max=1, so decrement the offset
   return value + (max - 2) * MaxIndexOfLinearisation;
 }
@@ -49,15 +45,14 @@ INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::dLinearised(
   if (max > MAX_TABLE) {
     return dLinearisedWithoutLookup(counter, max);
   } else {
-#if !defined(WITH_GPU)
-    assertionEquals3(
+    assertion(
+      (lookupTableDLinearised[getKeyForDLinearisedLookup(counter, max)]) == (dLinearisedWithoutLookup(counter, max)),
       lookupTableDLinearised[getKeyForDLinearisedLookup(counter, max)],
       dLinearisedWithoutLookup(counter, max),
       counter,
       max,
       getKeyForDLinearisedLookup(counter, max)
     );
-#endif
     return lookupTableDLinearised[getKeyForDLinearisedLookup(counter, max)];
   }
 #else
@@ -70,15 +65,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::dLinearisedWithoutLookup(
   int                                       max
 ) {
   int result = counter(DIMENSIONS - 1);
-#if !defined(WITH_GPU)
-  assertion2(counter(DIMENSIONS - 1) >= 0, counter, max);
-  assertion2(counter(DIMENSIONS - 1) < max, counter, max);
-#endif
+  assertion(counter(DIMENSIONS - 1) >= 0, counter, max);
+  assertion(counter(DIMENSIONS - 1) < max, counter, max);
   for (int d = DIMENSIONS - 2; d >= 0; d--) {
-#if !defined(WITH_GPU)
-    assertion2(counter(d) >= 0, counter(d), max);
-    assertion2(counter(d) < max, counter(d), max);
-#endif
+    assertion(counter(d) >= 0, counter(d), max);
+    assertion(counter(d) < max, counter(d), max);
     result = result * max + counter(d);
   }
   return result;
@@ -86,15 +77,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::dLinearisedWithoutLookup(
 
 INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::d2Linearised(const tarch::la::Vector<2, int>& counter, int max) {
   int result = counter(2 - 1);
-#if !defined(WITH_GPU)
-  assertion2(counter(2 - 1) >= 0, counter, max);
-  assertion2(counter(2 - 1) < max, counter, max);
-#endif
+  assertion(counter(2 - 1) >= 0, counter, max);
+  assertion(counter(2 - 1) < max, counter, max);
   for (int d = 2 - 2; d >= 0; d--) {
-#if !defined(WITH_GPU)
-    assertion3(counter(d) >= 0, counter, d, max);
-    assertion3(counter(d) < max, counter, d, max);
-#endif
+    assertion(counter(d) >= 0, counter, d, max);
+    assertion(counter(d) < max, counter, d, max);
     result = result * max + counter(d);
   }
   return result;
@@ -102,15 +89,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::d2Linearised(const tarch::l
 
 INLINE_METHOD GPU_CALLABLE_METHOD int peano4::utils::d3Linearised(const tarch::la::Vector<3, int>& counter, int max) {
   int result = counter(3 - 1);
-#if !defined(WITH_GPU)
-  assertion2(counter(3 - 1) >= 0, counter, max);
-  assertion2(counter(3 - 1) < max, counter, max);
-#endif
+  assertion(counter(3 - 1) >= 0, counter, max);
+  assertion(counter(3 - 1) < max, counter, max);
   for (int d = 3 - 2; d >= 0; d--) {
-#if !defined(WITH_GPU)
-    assertion2(counter(d) >= 0, counter(d), max);
-    assertion2(counter(d) < max, counter(d), max);
-#endif
+    assertion(counter(d) >= 0, counter(d), max);
+    assertion(counter(d) < max, counter(d), max);
     result = result * max + counter(d);
   }
   return result;
@@ -121,16 +104,16 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::uti
   if (max > MAX_TABLE) {
     return dDelinearisedWithoutLookup(value, max);
   } else {
-#if !defined(WITH_GPU)
     for (int d = 0; d < DIMENSIONS; d++) {
-      assertionEquals2(
+      assertion(
+        (lookupTableDDeLinearised[getKeyForDDeLinearisedLookup(value, max)](d))
+          == (dDelinearisedWithoutLookup(value, max)(d)),
         lookupTableDDeLinearised[getKeyForDDeLinearisedLookup(value, max)](d),
         dDelinearisedWithoutLookup(value, max)(d),
         value,
         max
       );
     }
-#endif
     return lookupTableDDeLinearised[getKeyForDDeLinearisedLookup(value, max)];
   }
 #else
@@ -142,9 +125,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::uti
   int value,
   int max
 ) {
-#if !defined(WITH_GPU)
-  assertion2(value >= 0, value, max);
-#endif
+  assertion(value >= 0, value, max);
   tarch::la::Vector<DIMENSIONS, int> result(0);
   for (int d = DIMENSIONS - 1; d >= 0; d--) {
     result(d) = value / tarch::la::aPowI(d, max);

@@ -33,13 +33,7 @@ class ProjectPatchOntoFaces(peano4.toolbox.blockstructured.ProjectPatchOntoFaces
             patch_overlap=solver._patch_overlap_update,
             solver_name=solver._name,
             precision=solver._storage_precision,
-            guard="not marker.hasBeenRefined() and "
-            + guard
-            + (
-                f" and (repositories::{solver.get_name_of_global_instance()}.getSolverState() != {solver._name}::SolverState::IsSolving or marker.willBeSkeletonCell())"
-                if solver._use_enclave_tasking
-                else ""
-            ),
+            guard="not marker.hasBeenRefined() and " + guard,
             add_assertions=True,
         )
 

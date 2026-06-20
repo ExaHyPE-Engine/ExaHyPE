@@ -36,16 +36,14 @@ def get_CSV_initializer(
     if initialize_density:
         density_interpolation = """// density is in g/cm^3, needs conversion into kg/m^3 = 1000 * g/cm^3
         Q[Shortcuts::rho] = 1000.0 * interpolateBetweenRows(row, nextRow, csvDensityIndex, x(1));
-        #if !defined(WITH_GPU)
-        assertion1(!std::isnan(Q[Shortcuts::rho]), Q[Shortcuts::rho]);
-        assertion1(Q[Shortcuts::rho] > 0, Q[Shortcuts::rho]);
-        #endif"""
+        assertion(!std::isnan(Q[Shortcuts::rho]), Q[Shortcuts::rho]);
+        assertion(Q[Shortcuts::rho] > 0, Q[Shortcuts::rho]);
+        """
         density_csv = """// density is in g/cm^3, needs conversion into kg/m^3 = 1000 * g/cm^3
         Q[Shortcuts::rho] = 1000.0 * tarch::reader::CSVReader::extractFundamentalTypeFromRow<double>(';', csvDensityIndex, row); 
-        #if !defined(WITH_GPU)
-        assertion1(!std::isnan(Q[Shortcuts::rho]), Q[Shortcuts::rho]);
-        assertion1(Q[Shortcuts::rho] > 0, Q[Shortcuts::rho]);
-        #endif"""
+        assertion(!std::isnan(Q[Shortcuts::rho]), Q[Shortcuts::rho]);
+        assertion(Q[Shortcuts::rho] > 0, Q[Shortcuts::rho]);
+        """
 
     if initialize_hydrogen:
         hydrogen_interpolation = """// populate hydrogen as it is also given in the model

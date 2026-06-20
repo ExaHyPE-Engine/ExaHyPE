@@ -40,7 +40,7 @@ they control.
 Each MPI rank holds one instance of the solver.
 All threads per MPI rank share the same instance of the solver.
 Peano splits up the domain into chunks along the space-filling curve.
-If you use an enclave solver, it then splits up these chunks further into tasks.
+If you use a task-based solver, it then splits up these chunks further into tasks.
 That is, operations per cell such as the Riemann solves and the patch
 postprocessing can run in parallel on each thread.
 
@@ -104,7 +104,7 @@ Each MPI rank holds one instance of the solver. All threads per MPI rank
 share the same instance of the solver.
 
  splits up the domain into chunks along the space-filling curve. If you
-use an enclave solver, it then splits up these chunks further into
+use a task-based solver, it then splits up these chunks further into
 tasks. That is, operations per cell such as the Riemann solves and the
 patch postprocessing can run in parallel on each thread.
 
@@ -150,4 +150,3 @@ such as the maximum mesh size or the admissible time step sizes.
 -->
 
  */
- 

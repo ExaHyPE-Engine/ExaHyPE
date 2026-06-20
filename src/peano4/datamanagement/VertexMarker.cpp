@@ -59,7 +59,7 @@ tarch::la::Vector<DIMENSIONS, int> peano4::datamanagement::VertexMarker::getRela
 bool peano4::datamanagement::VertexMarker::isParentVertexLocal(int i) const {
   assertion(i >= 0);
   assertion(i < TWO_POWER_D);
-  // assertion1(_isParentVertexLocal[i], toString()); // TODO: Is this needed?
+  // assertion(_isParentVertexLocal[i], toString()); // TODO: Is this needed?
   return _isParentVertexLocal[i];
 }
 
@@ -96,8 +96,8 @@ std::string peano4::datamanagement::VertexMarker::toString() const {
 }
 
 peano4::datamanagement::VertexMarker& peano4::datamanagement::VertexMarker::select(int vertexNumber) {
-  assertion2(vertexNumber >= 0, vertexNumber, toString());
-  assertion2(vertexNumber < TWO_POWER_D, vertexNumber, toString());
+  assertion(vertexNumber >= 0, vertexNumber, toString());
+  assertion(vertexNumber < TWO_POWER_D, vertexNumber, toString());
   _select = vertexNumber;
   return *this;
 }
@@ -108,7 +108,7 @@ bool peano4::datamanagement::VertexMarker::isContainedInAdjacentCells(
   double                                       tolerance
 ) const {
   const tarch::la::Vector<DIMENSIONS, double> selectedVertex = getX();
-  bool result = true;
+  bool                                        result         = true;
   for (int d = 0; d < DIMENSIONS; d++) {
     const double distance = std::abs(x(d) - selectedVertex(d));
     const double reach    = scaleAdjacentCells * _h(d);
@@ -144,7 +144,7 @@ bool peano4::datamanagement::VertexMarker::isAdjacentToParallelDomainBoundary() 
 }
 
 bool peano4::datamanagement::VertexMarker::isAdjacentToParallelDomainBoundary(int i) const {
-  assertion1(not _isAdjacentToParallelDomainBoundary[i], toString());
+  assertion(not _isAdjacentToParallelDomainBoundary[i], toString());
   return _isAdjacentToParallelDomainBoundary[i];
 }
 
@@ -155,8 +155,8 @@ tarch::la::Vector<DIMENSIONS, double> peano4::datamanagement::VertexMarker::getI
 tarch::la::Vector<DIMENSIONS, double> peano4::datamanagement::VertexMarker::getInvokingParentCellsCentre() const {
   tarch::la::Vector<DIMENSIONS, double> result = _cellCentre;
   for (int d = 0; d < DIMENSIONS; d++) {
-    assertion1(relativePositionWithinFatherCell(d) >= 0, toString());
-    assertion1(relativePositionWithinFatherCell(d) <= 2, toString());
+    assertion(relativePositionWithinFatherCell(d) >= 0, toString());
+    assertion(relativePositionWithinFatherCell(d) <= 2, toString());
     if (relativePositionWithinFatherCell(d) == 0) {
       result(d) += _h(d);
     }

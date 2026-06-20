@@ -343,7 +343,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
       double * NOALIAS S,
       Offloadable
 ) {
-  assertionMsg( false, "point sources not implemented yet" );
+  assertion(false, "point sources not implemented yet");
   {% if POINT_SOURCE_IMPLEMENTATION=="<none>" %}
   abort();
   {% else %}

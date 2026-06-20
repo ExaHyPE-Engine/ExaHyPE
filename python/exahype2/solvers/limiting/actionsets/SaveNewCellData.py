@@ -17,7 +17,7 @@ class SaveNewCellData(AbstractLimiterActionSet):
 
     kernels::{{SOLVER_NAME}}::findCellLocalMinAndMax(
       repositories::{{SOLVER_INSTANCE}},
-      fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}_old.data(),
+      fineGridCell{{REGULAR_SOLVER_PREVIOUS_UNKNOWN_IDENTIFIER}}.data(),
       localMinPerVariables, localMaxPerVariables
     );
 

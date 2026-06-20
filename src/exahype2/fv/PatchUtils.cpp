@@ -7,7 +7,7 @@ double exahype2::fv::getVolumeLength(const tarch::la::Vector<2, double>& h, int 
 }
 
 double exahype2::fv::getVolumeLength(const tarch::la::Vector<3, double>& h, int numberOfVolumesPerAxisInPatch) {
-  assertion2(numberOfVolumesPerAxisInPatch >= 1, h, numberOfVolumesPerAxisInPatch);
+  assertion(numberOfVolumesPerAxisInPatch >= 1, h, numberOfVolumesPerAxisInPatch);
   return h(0) / numberOfVolumesPerAxisInPatch;
 }
 

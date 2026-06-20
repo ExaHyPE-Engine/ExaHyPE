@@ -14,8 +14,6 @@ class SingleSweep(ADERDG):
         order,
         unknowns,
         auxiliary_variables,
-        use_enclave_tasking: bool,
-        number_of_enclave_tasks: int,
         split_sweeps=False,
     ):
         # If turned on it turns the solver from a single sweep to a separate sweeps solver,
@@ -28,8 +26,6 @@ class SingleSweep(ADERDG):
             order=order,
             unknowns=unknowns,
             auxiliary_variables=auxiliary_variables,
-            use_enclave_tasking=use_enclave_tasking,
-            number_of_enclave_tasks=number_of_enclave_tasks,
         )
 
         self._solver_template_file_class_name = "SingleSweep"

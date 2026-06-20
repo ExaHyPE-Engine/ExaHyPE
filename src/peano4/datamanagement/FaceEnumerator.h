@@ -64,9 +64,9 @@ public:
    * Get a certain face.
    */
   Face& operator()(int i) const {
-    assertion1(i >= 0, i);
-    assertion1(i < TWO_TIMES_D, i);
-    assertion1(_faces[i] != nullptr, i);
+    assertion(i >= 0, i);
+    assertion(i < TWO_TIMES_D, i);
+    assertion(_faces[i] != nullptr, i);
     return *(_faces[i]);
   }
 };

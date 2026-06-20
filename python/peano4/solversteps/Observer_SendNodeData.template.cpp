@@ -22,7 +22,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendNodeData(
   auto outgoingStack = [&](auto& container) -> typename std::remove_reference_t<decltype(container)>::Stack& {
     switch (context) {
     case ::peano4::stacks::SendReceiveContext::PeriodicBoundaryDataSwap:
-      assertion2(toStack >= 0 and toStack < ::peano4::grid::StackTopology::TotalNumberOfLocalExchangeStacks, toStack, _spacetreeId);
+      assertion(toStack >= 0 and toStack < ::peano4::grid::StackTopology::TotalNumberOfLocalExchangeStacks, toStack, _spacetreeId);
       return container.getLocalExchangeStack(_spacetreeId, toStack); // local stack id
     case ::peano4::stacks::SendReceiveContext::BoundaryExchange:
       container.resizeParallelExchangeStacks(_spacetreeId, toStack + 1);
@@ -32,7 +32,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendNodeData(
       container.resizeParallelExchangeStacks(_spacetreeId, toStack + 1);
       return container.getParallelExchangeStack(_spacetreeId, toStack, ::peano4::grid::StackTopology::ParallelExchangeStack::VerticalOutput);
     default:
-      assertionMsg(false, "Unsupported send context");
+      assertion(false, "Unsupported send context");
       return container.getLocalExchangeStack(_spacetreeId, callStack);
     }
   };

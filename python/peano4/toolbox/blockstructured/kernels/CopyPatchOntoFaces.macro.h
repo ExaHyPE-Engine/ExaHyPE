@@ -21,9 +21,7 @@
       #pragma unroll
       #endif
       for (int j = 0; j < {{UNKNOWNS}}; j++) {
-        #if !defined(WITH_GPU)
-        assertion6({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i, sourceCell, d, patchCell, overlapCell);
-        #endif
+        assertion({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i, sourceCell, d, patchCell, overlapCell);
         auto index = faceIndex * {{UNKNOWNS * FACES_PER_DOF}} + overlapCellSerialised * {{UNKNOWNS}} + j;
         facePool[index] = QIn[patchCellSerialised * {{UNKNOWNS}} + j];
       }
@@ -42,9 +40,7 @@
       #pragma unroll
       #endif
       for (int j = 0; j < {{UNKNOWNS}}; j++) {
-        #if !defined(WITH_GPU)
-        assertion6({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i,sourceCell, d, patchCell, overlapCell);
-        #endif
+        assertion({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i,sourceCell, d, patchCell, overlapCell);
         auto index = faceIndex * {{UNKNOWNS * FACES_PER_DOF}} + overlapCellSerialised * {{UNKNOWNS}} + j;
         facePool[index] = QIn[patchCellSerialised * {{UNKNOWNS}} + j];
       }

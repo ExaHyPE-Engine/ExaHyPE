@@ -52,7 +52,7 @@ DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
       } else {
         weight = 0.0;
       }
-      assertion3( tarch::la::smallerEquals(weight, 1.0), weight, k, relativeDistance );
+      assertion( tarch::la::smallerEquals(weight, 1.0), weight, k, relativeDistance );
     }
     if (weight > 0.0) {
       result += weight * Q[currentVoxelIndex * unknownsPerVoxel + unknown];

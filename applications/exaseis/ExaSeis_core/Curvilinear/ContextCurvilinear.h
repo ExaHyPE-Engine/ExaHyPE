@@ -186,7 +186,7 @@ public:
         for (int j = 0; j < basisSize; j++) {
           for (int i = 0; i < basisSize; i++) {
             for (int m = 0; m < numberOfData; m++) {
-              assertion5(std::isfinite(luh[id_xyzf(k, j, i, m)]), k, j, i, m, meshLevel);
+              assertion(std::isfinite(luh[id_xyzf(k, j, i, m)]), k, j, i, m, meshLevel);
             }
           }
         }

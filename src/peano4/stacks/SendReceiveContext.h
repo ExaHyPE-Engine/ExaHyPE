@@ -54,10 +54,10 @@ namespace peano4::stacks {
     case SendReceiveContext::JoinDomain:
       return T::getJoinDatatype();
     case SendReceiveContext::PeriodicBoundaryDataSwap:
-      assertionMsg(false, "Periodic boundary data is never exchanged via MPI");
+      assertion(false, "Periodic boundary data is never exchanged via MPI");
       return T::getGlobalCommunicationDatatype();
     }
-    assertionMsg(false, "No valid case statement found. This may not happen");
+    assertion(false, "No valid case statement found. This may not happen");
     return T::getGlobalCommunicationDatatype();
   }
 #endif

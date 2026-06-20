@@ -38,7 +38,7 @@ void toolbox::particles::assignmentchecks::traceParticleMovements(
 
 #ifdef AssignmentChecks
 
-  assertionEquals(container.size(), recordedPositions.size());
+  assertion((container.size()) == (recordedPositions.size()), container.size(), recordedPositions.size());
 
   typename ParticleContainer::const_iterator    pParticle = container.begin();
   std::vector<ParticlePosition>::const_iterator pRecordedPosition

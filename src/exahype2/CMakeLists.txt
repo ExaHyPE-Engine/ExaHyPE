@@ -7,15 +7,12 @@ set(SOURCES
   RuntimeParameters.cpp
   CellAccess.cpp
   CellData.cpp
-  EnclaveBookkeeping.cpp
-  EnclaveTask.cpp
   LoadBalancingConfiguration.cpp
   PrecisionControl.cpp
   RefinementControl.cpp
   RefinementControlService.cpp
   TimeStepping.cpp
   UnitTests.cpp
-  tests/EnclaveBookkeepingTest.cpp
 
   dg/BoundaryConditions.cpp
   dg/CellIntegral.cpp

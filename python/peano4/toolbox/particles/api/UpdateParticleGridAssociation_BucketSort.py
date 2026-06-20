@@ -180,10 +180,10 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
           "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles"
         );
         p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);
-        assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
+        assertion( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
         break;
       default:
-        assertionMsg( false, "value not implemented" );
+        assertion(false, "value not implemented");
         break;
     }
   }
@@ -219,7 +219,7 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
       );
     }
 
-    assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
+    assertion( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
 
     // template end
   }

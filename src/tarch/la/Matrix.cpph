@@ -48,10 +48,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD Scalar& tarch::la::Matrix<Rows, Cols, Scalar>:
   int rowIndex,
   int colIndex
 ) {
-  assertion5(rowIndex >= 0, Rows, Cols, rowIndex, colIndex, toString());
-  assertion5(colIndex >= 0, Rows, Cols, rowIndex, colIndex, toString());
-  assertion5(rowIndex < Rows, Rows, Cols, rowIndex, colIndex, toString());
-  assertion5(colIndex < Cols, Rows, Cols, rowIndex, colIndex, toString());
+  assertion(rowIndex >= 0, Rows, Cols, rowIndex, colIndex, toString());
+  assertion(colIndex >= 0, Rows, Cols, rowIndex, colIndex, toString());
+  assertion(rowIndex < Rows, Rows, Cols, rowIndex, colIndex, toString());
+  assertion(colIndex < Cols, Rows, Cols, rowIndex, colIndex, toString());
   return _values[rowIndex * Cols + colIndex];
 }
 
@@ -60,10 +60,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD const Scalar& tarch::la::Matrix<Rows, Cols, Sc
   int rowIndex,
   int colIndex
 ) const {
-  assertion5(rowIndex >= 0, Rows, Cols, rowIndex, colIndex, toString());
-  assertion5(colIndex >= 0, Rows, Cols, rowIndex, colIndex, toString());
-  assertion5(rowIndex < Rows, Rows, Cols, rowIndex, colIndex, toString());
-  assertion5(colIndex < Cols, Rows, Cols, rowIndex, colIndex, toString());
+  assertion(rowIndex >= 0, Rows, Cols, rowIndex, colIndex, toString());
+  assertion(colIndex >= 0, Rows, Cols, rowIndex, colIndex, toString());
+  assertion(rowIndex < Rows, Rows, Cols, rowIndex, colIndex, toString());
+  assertion(colIndex < Cols, Rows, Cols, rowIndex, colIndex, toString());
   return _values[rowIndex * Cols + colIndex];
 }
 

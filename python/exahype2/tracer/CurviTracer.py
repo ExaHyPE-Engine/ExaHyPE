@@ -15,8 +15,7 @@ class CurviTracer(ActionSet):
 
     ## Update plug-in points
 
-    We only update cells which are marked with getHasUpdated(). For enclave solvers,
-    we assume that this flag is only set after a cell has updated. For Runge-Kutta
+    We only update cells which are marked with getHasUpdated(). For Runge-Kutta
     type solvers, I assume that this flag is set by the computation of the final
     linear combination of estimates.
     """

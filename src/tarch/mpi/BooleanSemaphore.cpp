@@ -117,12 +117,12 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::lockSemaphoreOnGloba
 
 void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::unlockSemaphoreOnGlobalMaster( int number, [[maybe_unused]] int forRank ) {
   assertion( tarch::mpi::Rank::getInstance().isGlobalMaster() );
-  assertion2( number>0, number, forRank );
+  assertion( number>0, number, forRank );
 
   tarch::multicore::Lock lock(_mapAccessSemaphore);
   assertion( _map.count(number)==1 );
   assertion( _map[number].locked );
-  assertionEquals( _map[number].rankThatLastLocked, forRank );
+  assertion((_map[number].rankThatLastLocked) == (forRank), _map[number].rankThatLastLocked, forRank);
   _map[number].locked = false;
 
   logDebug("successfully released lock " << number << ". state=" << toString());
@@ -205,7 +205,7 @@ tarch::mpi::BooleanSemaphore::BooleanSemaphoreService& tarch::mpi::BooleanSemaph
 
 
 void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::addMapEntryLazily(int number) {
-  assertion1( number>0, number );
+  assertion( number>0, number );
   if ( _map.count(number)==0 ) {
     _map.insert( std::pair<int,SemaphoreMapEntry>(number,SemaphoreMapEntry()) );
   }
@@ -239,7 +239,7 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::acquireLock( int num
       MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
     }
     #else
-    assertionMsg( false, "may not happen" );
+    assertion(false, "may not happen");
     #endif
   }
 }
@@ -263,7 +263,7 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::releaseLock( int num
    
     MPI_Send( &number, 1, MPI_INT, tarch::mpi::Rank::getGlobalMasterRank(), _semaphoreTag, tarch::mpi::Rank::getInstance().getCommunicator() );
     #else
-    assertionMsg( false, "may not happen" );
+    assertion(false, "may not happen");
     #endif
   }
 }

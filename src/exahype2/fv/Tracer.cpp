@@ -31,7 +31,7 @@ tarch::la::Vector<DIMENSIONS, int> exahype2::fv::internal::mapBiasedParticleOnto
 ) {
   tarch::la::Vector<DIMENSIONS, int> result;
 
-  assertion3(voxelsPerAxis>=2, marker, voxelsPerAxis, particleX);
+  assertion(voxelsPerAxis>=2, marker, voxelsPerAxis, particleX);
   double cartesianMeshH = marker.getH()(0) / voxelsPerAxis;
 
   for (int d = 0; d < DIMENSIONS; d++) {

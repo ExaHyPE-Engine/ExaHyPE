@@ -1,6 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "EnclaveTasks.h"
+#include "FusedTasks.h"
 
 #include "celldata/AderSolverQ.h"
 #include "celldata/AderSolverQ_old.h"
@@ -170,7 +170,6 @@ void benchmarks::exahype2::kernelbenchmarks::predictorFused(
       &faceFluxesFlattened[faceIndices[(cellIndex * TWO_TIMES_D + 2 + DIMENSIONS)] * 2 * FluxElementsPerFace],
 #endif
     };
-
 
     kernels::AderSolver::fusedSpaceTimePredictorVolumeIntegral<
       SolverStoragePrecision,

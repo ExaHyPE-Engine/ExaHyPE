@@ -117,7 +117,7 @@ bool ContextDynamicRupture<Shortcuts, basisSize, numberOfVariables, numberOfPara
       T zp_p=rho_p*cp_p;      
           
       // impedance must be greater than zero !
-      assertion3(!(zp_p <= 0.0 || zp_m <= 0.0),"Impedance must be greater than zero !",zp_p,zs_p);
+      assertion(!(zp_p <= 0.0 || zp_m <= 0.0),"Impedance must be greater than zero !",zp_p,zs_p);
 
       // generate interface data preserving the amplitude of the outgoing charactertritics
       // and satisfying interface conditions exactly.

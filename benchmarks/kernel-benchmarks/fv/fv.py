@@ -82,7 +82,7 @@ fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
     auxiliary_variables=0,
     time_step_relaxation=0.5,
-    use_enclave_tasking=True,
+    fuse_compute_kernels=True,
 )
 
 fv_solver.set_implementation(
@@ -121,8 +121,8 @@ makefile.add_cpp_file("KernelBenchmarks-main.cpp")
 makefile.add_h_file("DataRepository.h")
 makefile.add_cpp_file("DataRepository.cpp")
 
-makefile.add_h_file("EnclaveDataRepository.h")
-makefile.add_cpp_file("EnclaveDataRepository.cpp")
+makefile.add_h_file("FusedDataRepository.h")
+makefile.add_cpp_file("FusedDataRepository.cpp")
 
 makefile.add_CXX_flag("-DGAMMA=1.4")
 

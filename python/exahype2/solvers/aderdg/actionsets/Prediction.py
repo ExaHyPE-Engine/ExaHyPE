@@ -61,30 +61,7 @@ class Prediction(AbstractADERDGActionSet):
     };
 
     std::copy_n(QNew, SpaceBasisSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}), QOld);
-    if ({{ENCLAVE_GUARD}}) { // is skeleton cell
-      {{SPACE_TIME_PREDICTOR_CALL}}
-    }
-{% if USE_ENCLAVE_TASKING %}
-    else { // is enclave cell
-      {{CORRECTOR_COMPUTATION_PRECISION}}* faces[2][TWO_TIMES_D];
-      bool                                 isBoundary[TWO_TIMES_D];
-      for (int d = 0; d < TWO_TIMES_D; ++d) {
-        faces[0][d] = lQhbnd[d];
-        faces[1][d] = lFhbnd[d];
-        isBoundary[d] = false;
-      }
-
-      ::exahype2::EnclaveBookkeeping::getInstance().bookmarkTask(new tasks::Prediction{{ENCLAVE_TASK_TYPE}}(
-        marker,
-        timeStamp,
-        timeStepSize,
-        QOld,
-        faces,
-        isBoundary,
-        QNew
-      ));
-    }
-{% endif %}
+    {{SPACE_TIME_PREDICTOR_CALL}}
 
     for (int d = 0; d < DIMENSIONS; d++) {
       // Timestamp information for boundary handling
@@ -108,11 +85,6 @@ class Prediction(AbstractADERDGActionSet):
 
     def _add_action_set_entries_to_dictionary(self, d):
         d["GUARD"] = self.guard
-        d["ENCLAVE_GUARD"] = (
-            "marker.willBeSkeletonCell()"
-            if self._solver._use_enclave_tasking
-            else "true"
-        )
 
     def get_body_of_operation(self, operation_name):
         result = ""
@@ -127,26 +99,8 @@ class Prediction(AbstractADERDGActionSet):
             result = jinja2.Template(self._Template_TouchCellFirstTime).render(**d)
         return result
 
-    def get_body_of_unprepareTraversal(self):
-        result = ""
-        if self._solver._use_enclave_tasking:
-            result += (
-                "::exahype2::EnclaveBookkeeping::getInstance().fusePendingTasks();"
-            )
-        return result
-
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
 
     def get_includes(self):
-        result = super(Prediction, self).get_includes()
-        if self._solver._use_enclave_tasking:
-            result += (
-                """
-#include "tasks/Prediction"""
-                + self._solver._name
-                + """EnclaveTask.h"
-#include "exahype2/EnclaveBookkeeping.h"
-"""
-            )
-        return result
+        return super(Prediction, self).get_includes()

@@ -59,25 +59,30 @@ void exahype2::fv::validatePatch(
         if (maxValues != nullptr and maxValues[i] < Q[entry]) {
           dataValid = false;
         }
+        const bool isValid = Q[entry] == Q[entry] and std::isfinite(Q[entry]) and dataValid;
         if (triggerNonCriticalAssertion) {
-          nonCriticalAssertion11(
-            Q[entry] == Q[entry] and std::isfinite(Q[entry]) and dataValid,
-            Q[entry],
-            unknowns,
-            auxiliaryVariables,
-            isDiagonal,
-            haloSize,
-            entry,
-            numberOfVolumesPerAxisInPatch,
-            haloSize,
-            k,
-            i,
-            location
-          );
-          assertion(Q[entry] == Q[entry] and std::isfinite(Q[entry]) and dataValid);
+          if (not isValid) {
+            std::ostringstream details;
+            details << "Q[entry]=" << Q[entry]
+                    << ", unknowns=" << unknowns
+                    << ", auxiliaryVariables=" << auxiliaryVariables
+                    << ", isDiagonal=" << isDiagonal
+                    << ", haloSize=" << haloSize
+                    << ", entry=" << entry
+                    << ", numberOfVolumesPerAxisInPatch=" << numberOfVolumesPerAxisInPatch
+                    << ", k=" << k
+                    << ", unknown=" << i
+                    << ", location=" << location;
+            ::tarch::triggerNonCriticalAssertion(
+              __FILE__,
+              __LINE__,
+              "Q[entry] == Q[entry] and std::isfinite(Q[entry]) and dataValid",
+              details.str()
+            );
+          }
         } else {
-          assertion12(
-            Q[entry] == Q[entry] and std::isfinite(Q[entry]) and dataValid,
+          assertion(
+            isValid,
             Q[entry],
             unknowns,
             auxiliaryVariables,

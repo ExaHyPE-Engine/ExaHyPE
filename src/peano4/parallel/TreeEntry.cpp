@@ -1,11 +1,8 @@
 #include "TreeEntry.h"
 
-
-
-#include <sstream>
 #include <algorithm>
-
-
+#include <iostream>
+#include <sstream>
 
 peano4::parallel::TreeEntry::TreeEntry(int  __id, int  __master){
 setId( __id);

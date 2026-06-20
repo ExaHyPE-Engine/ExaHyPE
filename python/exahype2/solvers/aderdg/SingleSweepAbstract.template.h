@@ -12,6 +12,7 @@
 
 #include "peano4/Globals.h"
 
+#include "tarch/Assertions.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/la/Vector.h"
 #include "tarch/instrumentation/Log.h"

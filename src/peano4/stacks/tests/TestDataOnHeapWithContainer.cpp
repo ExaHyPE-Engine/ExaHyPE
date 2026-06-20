@@ -90,7 +90,7 @@ void peano4::stacks::tests::TestDataOnHeapWithContainer::
   auto& customStack = static_cast<StackWithCustomSerialisation<TestDataOnHeapWithContainer>&>(stack);
 
   const int numberOfElements = static_cast<int>(customStack.size());
-  assertion1(numberOfElements >= 0, numberOfElements);
+  assertion(numberOfElements >= 0, numberOfElements);
 
   customStack.countBuffer.assign(numberOfElements, 0);
   customStack.dataBuffer.clear();
@@ -141,8 +141,8 @@ void peano4::stacks::tests::TestDataOnHeapWithContainer::startReceive(
 ) {
   auto& customStack = static_cast<StackWithCustomSerialisation<TestDataOnHeapWithContainer>&>(stack);
 
-  assertion1(numberOfElements >= 0, numberOfElements);
-  assertion2(numberOfElements == static_cast<int>(customStack.size()), numberOfElements, customStack.size());
+  assertion(numberOfElements >= 0, numberOfElements);
+  assertion(numberOfElements == static_cast<int>(customStack.size()), numberOfElements, customStack.size());
 
   customStack.mpiComm    = comm;
   customStack.mpiContext = context;
@@ -206,7 +206,7 @@ bool peano4::stacks::tests::TestDataOnHeapWithContainer::tryToFinishSendOrReceiv
         customStack.mpiDataRequest = MPI_REQUEST_NULL;
 
         const int numberOfElements = static_cast<int>(customStack.size());
-        assertion2(
+        assertion(
           numberOfElements == static_cast<int>(customStack.countBuffer.size()),
           numberOfElements,
           customStack.countBuffer.size()
@@ -215,7 +215,7 @@ bool peano4::stacks::tests::TestDataOnHeapWithContainer::tryToFinishSendOrReceiv
         std::size_t offset = 0;
         for (int i = 0; i < numberOfElements; ++i) {
           const int localCount = customStack.countBuffer[i];
-          assertion1(localCount >= 0, localCount);
+          assertion(localCount >= 0, localCount);
 
           TestDataOnHeapWithContainer& element = stack[i];
 
@@ -225,12 +225,12 @@ bool peano4::stacks::tests::TestDataOnHeapWithContainer::tryToFinishSendOrReceiv
 
           element._container.reserve(static_cast<std::size_t>(localCount));
           for (int j = 0; j < localCount; ++j) {
-            assertion2(offset < customStack.dataBuffer.size(), offset, customStack.dataBuffer.size());
+            assertion(offset < customStack.dataBuffer.size(), offset, customStack.dataBuffer.size());
             element._container.push_back(new DoFType(customStack.dataBuffer[offset]));
             ++offset;
           }
         }
-        assertion1(offset == customStack.dataBuffer.size(), offset);
+        assertion(offset == customStack.dataBuffer.size(), offset);
       } else {
         allDone = false;
       }

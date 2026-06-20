@@ -491,7 +491,7 @@ void tarch::instrumentation::Log::flushBeforeAssertion() {
 long int tarch::instrumentation::Log::getTimeStamp() {
   const auto now    = std::chrono::steady_clock::now();
   long int   result = std::chrono::duration_cast<std::chrono::nanoseconds>(now - _startupTime).count();
-  assertion1(result >= 0, result);
+  assertion(result >= 0, result);
   return result;
 }
 

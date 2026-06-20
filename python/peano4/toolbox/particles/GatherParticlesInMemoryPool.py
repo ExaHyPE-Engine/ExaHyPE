@@ -43,7 +43,7 @@ class GatherParticlesInMemoryPool(ActionSet):
 
     __Template_TouchVertexLastTime = jinja2.Template(
         """
-  assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isGathered(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
+  assertion( fineGridVertex{{PARTICLES_CONTAINER}}.isGathered(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
 """
     )
 

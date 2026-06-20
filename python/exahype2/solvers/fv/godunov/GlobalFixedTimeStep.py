@@ -7,7 +7,6 @@ from exahype2.solvers.fv.FixedTimeSteppingCodeSnippets import (
     FixedTimeSteppingCodeSnippets,
 )
 
-
 class GlobalFixedTimeStep(SingleSweep):
     def __init__(
         self,
@@ -16,10 +15,9 @@ class GlobalFixedTimeStep(SingleSweep):
         unknowns,
         auxiliary_variables,
         normalised_time_step_size,
-        use_enclave_tasking=False,
-        number_of_enclave_tasks=1,
         overlap=1,
         solvers_before_in_coupling=[],
+        fuse_compute_kernels=False,
     ):
         super(GlobalFixedTimeStep, self).__init__(
             name=name,
@@ -27,8 +25,7 @@ class GlobalFixedTimeStep(SingleSweep):
             overlap=overlap,
             unknowns=unknowns,
             auxiliary_variables=auxiliary_variables,
-            use_enclave_tasking=use_enclave_tasking,
-            number_of_enclave_tasks=number_of_enclave_tasks,
+            fuse_compute_kernels=fuse_compute_kernels,
             solvers_before_in_coupling=solvers_before_in_coupling,
         )
 
@@ -43,7 +40,7 @@ class GlobalFixedTimeStep(SingleSweep):
             output=output,
             subdirectory=subdirectory,
         )
-        if self._use_enclave_tasking:
+        if self._fuse_compute_kernels:
             generate_fused_kernels(
                 solver=self,
                 output=output,

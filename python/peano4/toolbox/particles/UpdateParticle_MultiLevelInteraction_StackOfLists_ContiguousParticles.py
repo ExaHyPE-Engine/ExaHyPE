@@ -425,11 +425,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
       std::bitset<TWO_POWER_D> mask = 0;
       mask.set(TWO_POWER_D-i-1);
       bool isLocal = (mask & p->getContainedInAdjacentCell()).any();
-      assertionEquals4( 
-        isLocal, 
-        marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.getH() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ),
-        marker.toString(), p->toString(), i, mask
-      );
+      assertion((isLocal) == (marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.getH() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE )), isLocal, marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.getH() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ), marker.toString(), p->toString(), i, mask);
       localParticleIsContainedInCell.push_back( isLocal );
       localParticles.push_back( p );
     }
@@ -440,7 +436,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
   {% if PARTICLE_CELL_UPDATE_KERNEL!=None %}
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >&  activeParticles = _activeParticles;
   auto& numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex;
-  assertion1( 
+  assertion(
     not numberOfCoalescedActiveParticlesPerVertex.empty()
     and
     (numberOfCoalescedActiveParticlesPerVertex.size() % TWO_POWER_D == 0),
@@ -479,7 +475,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
 
     __Template_EndTraversal = jinja2.Template(
         """
-  assertion1( _activeParticles.empty(), (*_activeParticles.begin())->toString() );
+  assertion( _activeParticles.empty(), (*_activeParticles.begin())->toString() );
 """
     )
 

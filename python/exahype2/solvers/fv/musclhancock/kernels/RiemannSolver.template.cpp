@@ -4,6 +4,7 @@
 
 #include "exahype2/fv/VolumeIndex.h"
 #include "exahype2/fv/PatchUtils.h"
+#include "toolbox/blockstructured/Enumeration.h"
 #include "tarch/instrumentation/Trace.h"
 
 {% import 'LoopOverVolumes.macro.h' as patch with context %}
@@ -18,13 +19,15 @@
 {% endif %}
 
 double {{FULL_QUALIFIED_NAMESPACE}}::updateSolutionWithRiemann(
-  [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&  solver,
-  const {{STORAGE_PRECISION}}* NOALIAS const        QIn,
-  {{STORAGE_PRECISION}}* NOALIAS const              QOut,
-  const double                                      timeStamp,
-  const double                                      timeStepSize,
-  const tarch::la::Vector<DIMENSIONS, double>&      patchCentre,
-  const tarch::la::Vector<DIMENSIONS, double>&      patchSize
+  [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&      solver,
+  const {{STORAGE_PRECISION}}* NOALIAS const            QIn,
+  {{STORAGE_PRECISION}}* NOALIAS const                  QOut,
+  const {{STORAGE_PRECISION}}* NOALIAS const            faceQIn[TWO_TIMES_D],
+  [[maybe_unused]] {{STORAGE_PRECISION}}* NOALIAS const faceQOut[TWO_TIMES_D],
+  const double                                          timeStamp,
+  const double                                          timeStepSize,
+  const tarch::la::Vector<DIMENSIONS, double>&          patchCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&          patchSize
 ) {
   traceEnter();
 
@@ -44,6 +47,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::updateSolutionWithRiemann(
     {% endcall %}
 
     {{ scatter.scatterQ() }}
+    {{ scatter.projectOntoFaces() }}
 
     {% if COMPUTE_MAX_EIGENVALUE==True %}
     {{ riemann.computeMaxEigenvalueAfterTimeStep() }}

@@ -17,9 +17,7 @@ void peano4::utils::setupLookupTableForDDelinearised() {
   for (int max = 2; max <= MAX_TABLE; max++) {
     for (int value = 0; value < tarch::la::aPowI(DIMENSIONS, max); value++) {
       int key = peano4::utils::getKeyForDDeLinearisedLookup(value, max);
-#if !defined(WITH_GPU)
-      assertion3(key >= 0 && key < MaxIndexOfLinearisation * (MAX_TABLE - 1), key, max, MaxIndexOfLinearisation);
-#endif
+      assertion(key >= 0 && key < MaxIndexOfLinearisation * (MAX_TABLE - 1), key, max, MaxIndexOfLinearisation);
       lookupTableDDeLinearised[key] = dDelinearisedWithoutLookup(value, max);
     }
   }

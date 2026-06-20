@@ -16,18 +16,31 @@ __global__ static void
 kernel(
   const {{STORAGE_PRECISION}}* const NOALIAS QInFlattened,
   {{STORAGE_PRECISION}}* const NOALIAS       QOutFlattened,
+  const {{STORAGE_PRECISION}}* const NOALIAS QInFaces,
+  {{STORAGE_PRECISION}}* const NOALIAS       QOutFaces,
+  const std::uint64_t* const NOALIAS         faceIndices,
   const double* const NOALIAS                patchCentres,
   const double* const NOALIAS                patchSizes,
   const double                               timeStamp,
   const double                               timeStepSize
   {% if COMPUTE_MAX_EIGENVALUE %} , {{COMPUTE_PRECISION}}* const NOALIAS maxEigenvalues {% endif %}
 ) {
+  constexpr int FaceCardinality = {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
+
   const auto patchIndex                  = blockIdx.x;
-  const {{COMPUTE_PRECISION}}* const QIn = &QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %}];
-  {{COMPUTE_PRECISION}}* const QOut      = &QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
+  const {{STORAGE_PRECISION}}* const QIn = &QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
+  {{STORAGE_PRECISION}}* const QOut      = &QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
 
   const tarch::la::Vector<DIMENSIONS, double> patchCentre{patchCentres + patchIndex * {{DIMENSIONS}}};
   const tarch::la::Vector<DIMENSIONS, double> patchSize{patchSizes + patchIndex * {{DIMENSIONS}}};
+
+  const {{STORAGE_PRECISION}}* faceQIn[TWO_TIMES_D];
+  {{STORAGE_PRECISION}}* faceQOut[TWO_TIMES_D];
+  for (int f = 0; f < TWO_TIMES_D; f++) {
+    auto faceIndex = faceIndices[patchIndex * TWO_TIMES_D + f];
+    faceQIn[f]  = &QInFaces[faceIndex * FaceCardinality];
+    faceQOut[f] = &QOutFaces[faceIndex * FaceCardinality];
+  }
 
 {% if COMPUTE_MAX_EIGENVALUE %}
   double maxEigenvalueAfterTimeStep = 0.0;
@@ -65,27 +78,12 @@ kernel(
 }
 
 double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
-  [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&                       solver,
-  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData,
-  [[maybe_unused]] const int                                             targetDevice
-) {
-  return riemannSolverFused(
-    solver,
-    patchData.QInFlattened,
-    patchData.QOutFlattened,
-    patchData.t,
-    patchData.dt,
-    patchData.cellCentre[0].data(),
-    patchData.cellSize[0].data(),
-    patchData.numberOfCells,
-    targetDevice
-  );
-}
-
-double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&    solver,
-  const {{COMPUTE_PRECISION}}* const                  QInFlattened,
-  {{COMPUTE_PRECISION}}* const                        QOutFlattened,
+  const {{STORAGE_PRECISION}}* const                  QInFlattened,
+  {{STORAGE_PRECISION}}* const                        QOutFlattened,
+  const {{STORAGE_PRECISION}}* const                  QInFaces,
+  {{STORAGE_PRECISION}}* const                        QOutFaces,
+  const std::uint64_t*                                faceIndices,
   const double                                        timeStamp,
   const double                                        timeStepSize,
   const double* const                                 patchCentres,
@@ -108,6 +106,9 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   kernel<<<dimGrid, dimBlock, 0, tarch::accelerator::deviceStreamGet()>>>(
     QInFlattened,
     QOutFlattened,
+    QInFaces,
+    QOutFaces,
+    faceIndices,
     patchCentres,
     patchSizes,
     timeStamp,
@@ -117,7 +118,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
 
 {% if COMPUTE_MAX_EIGENVALUE %}
   {{COMPUTE_PRECISION}}* cubMaxEigenvalue = nullptr;
-  CHECK_CUDA_ERROR(cudaMalloc(&cubMaxEigenvalue, sizeof(double)));
+  CHECK_CUDA_ERROR(cudaMalloc(&cubMaxEigenvalue, sizeof({{COMPUTE_PRECISION}})));
   void* cubTempStorage = nullptr;
   std::size_t cubTempStorageBytes = 0;
   CHECK_CUDA_ERROR(cub::DeviceReduce::Max(
@@ -135,7 +136,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
     cubMaxEigenvalue,
     numberOfPatches
   ));
-  double maxEigenvalueAfterTimeStep = 0.0;
+  {{COMPUTE_PRECISION}} maxEigenvalueAfterTimeStep = 0.0;
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     &maxEigenvalueAfterTimeStep,
     cubMaxEigenvalue,
@@ -151,7 +152,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   CHECK_CUDA_ERROR(cudaStreamSynchronize(tarch::accelerator::deviceStreamGet()));
 
 {% if COMPUTE_MAX_EIGENVALUE %}
-  return maxEigenvalueAfterTimeStep;
+  return static_cast<double>(maxEigenvalueAfterTimeStep);
 {% else %}
   return 0.0;
 {% endif %}

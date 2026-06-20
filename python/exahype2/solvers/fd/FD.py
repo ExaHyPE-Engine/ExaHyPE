@@ -31,8 +31,6 @@ class FD(object):
         order,
         unknowns,
         auxiliary_variables,
-        use_enclave_tasking: bool,
-        number_of_enclave_tasks: int,
         solvers_before_in_coupling: list,
         baseline_action_set_descend_invocation_order=0,
     ):
@@ -103,9 +101,6 @@ class FD(object):
         self._fused_compute_kernel_call = "#error Not yet defined"
 
         self._can_fuse = True
-        self._use_enclave_tasking = use_enclave_tasking
-        self._number_of_enclave_tasks = number_of_enclave_tasks
-        self._enclave_task_priority = "tarch::multicore::Task::DefaultPriority - 1"
 
         self._initial_conditions_implementation = PDETerms.User_Defined_Implementation
         self._boundary_conditions_implementation = PDETerms.User_Defined_Implementation
@@ -211,7 +206,7 @@ Grid resolution is selected at runtime through RuntimeParameters.
         self._patch = peano4.datamodel.Patch(
             (self._patch_size, self._patch_size, self._patch_size),
             self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
-            self._unknown_identifier(),
+            self.current_unknown_identifier(),
             self._storage_precision,
         )
         self._patch_reconstructed = peano4.datamodel.Patch(
@@ -221,7 +216,7 @@ Grid resolution is selected at runtime through RuntimeParameters.
                 self._patch_size + 2 * self._order,
             ),
             self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
-            self._unknown_identifier() + "Reconstructed",
+            self.previous_unknown_identifier(),
             self._storage_precision,
         )
         self._patch_overlap_old = peano4.datamodel.Patch(
@@ -397,7 +392,6 @@ Grid resolution is selected at runtime through RuntimeParameters.
 
         self._action_set_update_patch = None
         self._action_set_reconstruct_patch = None
-        self._action_set_enclave_tasking = None
 
         self._action_set_initial_conditions.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 1
@@ -521,6 +515,12 @@ Grid resolution is selected at runtime through RuntimeParameters.
 
     def _unknown_identifier(self):
         return self._name + "Q"
+
+    def current_unknown_identifier(self):
+        return self._name + "Q"
+
+    def previous_unknown_identifier(self):
+        return self._name + "QReconstructed"
 
     def get_name_of_global_instance(self):
         return "instanceOf" + self._name
@@ -682,8 +682,6 @@ Grid resolution is selected at runtime through RuntimeParameters.
         step.add_action_set(self._action_set_handle_boundary)
         step.add_action_set(self._action_set_reconstruct_patch)
         step.add_action_set(self._action_set_update_patch)
-        if self._use_enclave_tasking:
-            step.add_action_set(self._action_set_enclave_tasking)
         step.add_action_set(self._action_set_project_patch_onto_faces)
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
@@ -705,10 +703,6 @@ Grid resolution is selected at runtime through RuntimeParameters.
         self._action_set_project_patch_onto_faces.generate_kernels(
             namespace, output, dimensions, subdirectory
         )
-        if self._use_enclave_tasking and self._can_fuse:
-            self._action_set_reconstruct_patch.generate_fused_kernels(
-                namespace, output, dimensions, subdirectory
-            )
 
         if self._solver_template_file_class_name is None:
             self._templatefile_prefix += self.__class__.__name__
@@ -764,33 +758,6 @@ Grid resolution is selected at runtime through RuntimeParameters.
             subdirectory + "Abstract" + self._name + ".cpp", generated=True
         )
         output.makefile.add_cpp_file(subdirectory + self._name + ".cpp", generated=True)
-
-        if self._use_enclave_tasking:
-            generated_enclave_task = (
-                peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                    headfile_template=os.path.dirname(os.path.realpath(__file__))
-                    + "/"
-                    + "EnclaveTask.template.h",
-                    cppfile_template=os.path.dirname(os.path.realpath(__file__))
-                    + "/"
-                    + "EnclaveTask.template.cpp",
-                    classname="{}EnclaveTask".format(self._name),
-                    namespace=namespace + ["tasks"],
-                    subdirectory=subdirectory + "tasks",
-                    dictionary=d,
-                    default_overwrite=True,
-                    apply_iteratively=True,
-                )
-            )
-            output.add(generated_enclave_task)
-            output.makefile.add_h_file(
-                subdirectory + "tasks/" + "{}EnclaveTask".format(self._name) + ".h",
-                generated=True,
-            )
-            output.makefile.add_cpp_file(
-                subdirectory + "tasks/" + "{}EnclaveTask".format(self._name) + ".cpp",
-                generated=True,
-            )
 
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring
@@ -951,10 +918,6 @@ Grid resolution is selected at runtime through RuntimeParameters.
         d["COMPUTE_MAX_EIGENVALUE"] = self._compute_eigenvalue
 
         d["CAN_FUSE"] = self._can_fuse
-        d["USE_ENCLAVE_TASKING"] = self._use_enclave_tasking
-        d["NUMBER_OF_ENCLAVE_TASKS"] = self._number_of_enclave_tasks
-        d["ENCLAVE_TASK_PRIORITY"] = self._enclave_task_priority
-        d["ENCLAVE_TASK_TYPE"] = f"{self._name}EnclaveTask"
 
         d["COMPUTE_KERNEL_CALL"] = render_template(self._compute_kernel_call)
         d["FUSED_COMPUTE_KERNEL_CALL"] = render_template(

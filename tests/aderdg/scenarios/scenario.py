@@ -16,7 +16,7 @@ class Scenario:
 
     def boundary_conditions(self):
         return (
-            "assert(false);"
+            "assertion(false);"
             if self._periodic_bc
             else PDETerms.User_Defined_Implementation
         )

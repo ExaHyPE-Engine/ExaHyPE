@@ -41,7 +41,7 @@ void tarch::freeMemory(void* memoryPtr, MemoryLocation location, int device) {
 }
 
 void* tarch::accelerator::allocateRawData(std::size_t sizeInBytes, MemoryLocation location, int device) {
-  assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
+  assertion(sizeInBytes > 0, sizeInBytes, toString(location));
 
   void* data = nullptr;
   switch (location) {
@@ -83,9 +83,9 @@ void tarch::accelerator::freeRawData(void* data, MemoryLocation location, int de
 
 void tarch::accelerator::
   copyTo(void* target, const void* source, std::size_t sizeInBytes, MemoryLocation location, int device) {
-  assertion2(target, sizeInBytes, toString(location));
-  assertion2(source, sizeInBytes, toString(location));
-  assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
+  assertion(target, sizeInBytes, toString(location));
+  assertion(source, sizeInBytes, toString(location));
+  assertion(sizeInBytes > 0, sizeInBytes, toString(location));
 
   switch (location) {
   case MemoryLocation::Heap:
@@ -105,9 +105,9 @@ void tarch::accelerator::
 
 void tarch::accelerator::
   copyFrom(const void* source, void* target, std::size_t sizeInBytes, MemoryLocation location, int device) {
-  assertion2(target, sizeInBytes, toString(location));
-  assertion2(source, sizeInBytes, toString(location));
-  assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
+  assertion(target, sizeInBytes, toString(location));
+  assertion(source, sizeInBytes, toString(location));
+  assertion(sizeInBytes > 0, sizeInBytes, toString(location));
 
   switch (location) {
   case MemoryLocation::Heap:

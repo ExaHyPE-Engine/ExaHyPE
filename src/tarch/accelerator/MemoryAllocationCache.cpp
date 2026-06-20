@@ -112,20 +112,20 @@ static void bookmarkDeviceAllocation(void* pointer, std::size_t sizeInBytes, int
   [[maybe_unused]] const bool         inserted = DeviceAllocationMetadataTable
                                            .emplace(pointer, DeviceAllocationMetadata{sizeInBytes, device})
                                            .second;
-  assertion2(inserted, pointer, sizeInBytes);
+  assertion(inserted, pointer, sizeInBytes);
 }
 
 static DeviceAllocationMetadata getDeviceAllocationMetadata(void* pointer) {
   std::shared_lock<std::shared_mutex> guard(DeviceAllocationMetadataSemaphore);
   auto                                entry = DeviceAllocationMetadataTable.find(pointer);
-  assertion1(entry != DeviceAllocationMetadataTable.end(), pointer);
+  assertion(entry != DeviceAllocationMetadataTable.end(), pointer);
   return entry->second;
 }
 
 static void removeDeviceAllocationMetadata(void* pointer) {
   std::unique_lock<std::shared_mutex> guard(DeviceAllocationMetadataSemaphore);
   [[maybe_unused]] const std::size_t  erased = DeviceAllocationMetadataTable.erase(pointer);
-  assertion1(erased == 1, pointer);
+  assertion(erased == 1, pointer);
 }
 
 static void clearMemoryAllocationCacheBucket(
@@ -252,7 +252,7 @@ void* tarch::accelerator::MemoryAllocationCache::
   assertion(
     location == MemoryLocation::Heap or location == MemoryLocation::Device or location == MemoryLocation::Pinned
   );
-  assertion1(sizeInBytes > 0, sizeInBytes);
+  assertion(sizeInBytes > 0, sizeInBytes);
 
   if (location == MemoryLocation::Device) {
     DeviceMemoryAllocationCacheBucket* bucket = getDeviceMemoryAllocationCacheBucket(
@@ -288,7 +288,7 @@ void* tarch::accelerator::MemoryAllocationCache::
     bucket->count--;
     ThreadLocalMemoryAllocationCache.cachedBytes -= sizeInBytes;
 
-    assertion2(allocationHeader->sizeInBytes == sizeInBytes, allocationHeader->sizeInBytes, sizeInBytes);
+    assertion(allocationHeader->sizeInBytes == sizeInBytes, allocationHeader->sizeInBytes, sizeInBytes);
     allocationHeader->next = nullptr;
     return getPayloadPointer(allocationHeader);
   }
@@ -311,7 +311,7 @@ void tarch::accelerator::MemoryAllocationCache::free(void* pointer, MemoryLocati
 
   if (location == MemoryLocation::Device) {
     const DeviceAllocationMetadata metadata = getDeviceAllocationMetadata(pointer);
-    assertion2(metadata.device == device, metadata.device, device);
+    assertion(metadata.device == device, metadata.device, device);
 
     if (metadata.sizeInBytes > MaxCachedBlockSize
         or ThreadLocalMemoryAllocationCache.cachedBytes + metadata.sizeInBytes > MaxCachedBytesPerThread) {
@@ -337,7 +337,7 @@ void tarch::accelerator::MemoryAllocationCache::free(void* pointer, MemoryLocati
   }
 
   CachedAllocationHeader* allocationHeader = getAllocationHeader(pointer);
-  assertion1(allocationHeader->sizeInBytes > 0, allocationHeader->sizeInBytes);
+  assertion(allocationHeader->sizeInBytes > 0, allocationHeader->sizeInBytes);
 
   if (allocationHeader->sizeInBytes > MaxCachedBlockSize
       or ThreadLocalMemoryAllocationCache.cachedBytes + allocationHeader->sizeInBytes > MaxCachedBytesPerThread) {

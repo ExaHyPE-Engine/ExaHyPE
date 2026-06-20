@@ -45,12 +45,11 @@ class NodeWisePreprocessSolution(AbstractFDActionSet):
     The postprocessing plugs into touch cell last time. It is the last action set added
     by the default implementation. Therefore, it is the first action set of which
     touchCellLastTime() is called. The reason why I plug into the leaving of the cell
-    is that some solvers may add further action sets to the solve. Enclave tasking for
-    example adds the merger as additional action set. These action sets plug into
-    touchCellFirstTime() - and consequently their first time is called after the
-    postprocessing's first time. By making the postprocessing use touchCellLastTime(),
-    I ensure that any additional action set added by a subclass can still precede the
-    postprocessing.
+    is that some solvers may add further action sets to the solve. These action sets
+    typically plug into touchCellFirstTime() - and consequently their first time is
+    called after the postprocessing's first time. By making the postprocessing use
+    touchCellLastTime(), I ensure that any additional action set added by a subclass
+    can still precede the postprocessing.
     """
 
     def __init__(self, solver):

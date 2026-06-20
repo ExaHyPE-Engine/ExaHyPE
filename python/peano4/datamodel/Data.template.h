@@ -8,6 +8,7 @@
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
+#include "peano4/datamanagement/SwapHelper.h"
 #include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/stacks/SendReceiveContext.h"
 #include "peano4/Globals.h"
@@ -43,6 +44,9 @@ public:
 
 private:
   DoFType* _data;
+
+  template <typename LeftData, typename RightData>
+  friend struct ::peano4::datamanagement::SwapHelper;
 
 public:
   explicit {{CLASSNAME}}() noexcept;
@@ -96,6 +100,11 @@ public:
   INLINE_METHOD const DoFType* data() const noexcept {
     assertion(_data != nullptr);
     return _data;
+  }
+
+  template <typename OtherData>
+  INLINE_METHOD void swap(OtherData& other) noexcept {
+    ::peano4::datamanagement::SwapHelper<{{NAMESPACE | join("::")}}::{{CLASSNAME}}, OtherData>::apply(*this, other);
   }
 
 {% if DATA_ASSOCIATION == 1 -%}

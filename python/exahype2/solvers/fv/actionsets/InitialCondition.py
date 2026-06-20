@@ -6,7 +6,6 @@ import peano4.solversteps
 
 from .AbstractFVActionSet import AbstractFVActionSet
 
-
 class InitialCondition(AbstractFVActionSet):
     def __init__(self, solver, guard):
         AbstractFVActionSet.__init__(self, solver)
@@ -23,6 +22,7 @@ class InitialCondition(AbstractFVActionSet):
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
             d["PREDICATE"] = self.guard
+            d["CELL_ACCESSOR"] = "fineGridCell" + self._solver.current_unknown_identifier()
             result = jinja2.Template(self.TemplateInitialCondition).render(**d)
 
         return result
@@ -58,13 +58,13 @@ class InitialCondition(AbstractFVActionSet):
       int index = peano4::utils::dLinearised(volume,{{NUMBER_OF_VOLUMES_PER_AXIS}}) * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
       {% if STATELESS_INITIAL_CONDITIONS==True %}
       {{FULL_QUALIFIED_SOLVER_NAME}}::initialCondition(
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + index,
+        {{CELL_ACCESSOR}}.data() + index,
         ::exahype2::fv::getVolumeCentre(marker.getX(), marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
         ::exahype2::fv::getVolumeSize(marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}})
       );
       {% else %}
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + index,
+        {{CELL_ACCESSOR}}.data() + index,
         ::exahype2::fv::getVolumeCentre(marker.getX(), marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
         ::exahype2::fv::getVolumeSize(marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}})
       );

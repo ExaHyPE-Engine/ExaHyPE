@@ -134,11 +134,7 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
       std::bitset<TWO_POWER_D> mask = 0;
       mask.set(TWO_POWER_D-i-1);
       bool isLocal = (mask & p->getContainedInAdjacentCell()).any();
-      assertionEquals4( 
-        isLocal, 
-        marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.getH() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ),
-        marker.toString(), p->toString(), i, mask
-      );
+      assertion((isLocal) == (marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.getH() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE )), isLocal, marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.getH() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ), marker.toString(), p->toString(), i, mask);
       localParticleIsContainedInCell.push_back( isLocal );
       localParticles.push_front( p );
     }

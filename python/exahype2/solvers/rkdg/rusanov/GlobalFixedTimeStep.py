@@ -123,7 +123,7 @@ class GlobalFixedTimeStep(SeparateSweeps):
         # self._Riemann_solver_call = create_compute_Riemann_kernel_for_Rusanov(self._flux_implementation, self._ncp_implementation)
 
         solver_code_snippets = FixedTimeSteppingCodeSnippets(
-            self._normalised_time_step_size, False
+            self._normalised_time_step_size
         )
 
         self._abstract_solver_user_declarations = create_abstract_solver_declarations(

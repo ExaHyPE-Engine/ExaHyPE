@@ -69,8 +69,8 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(
   double continuousParticlesPerAxis = voxelH(0) / spacing;
   int    particlesPerAxis           = static_cast<int>(std::floor(continuousParticlesPerAxis));
   continuousParticlesPerAxis -= particlesPerAxis;
-  assertion4(continuousParticlesPerAxis >= 0.0, continuousParticlesPerAxis, particlesPerAxis, voxelH(0), spacing);
-  assertion4(continuousParticlesPerAxis <= 1.0, continuousParticlesPerAxis, particlesPerAxis, voxelH(0), spacing);
+  assertion(continuousParticlesPerAxis >= 0.0, continuousParticlesPerAxis, particlesPerAxis, voxelH(0), spacing);
+  assertion(continuousParticlesPerAxis <= 1.0, continuousParticlesPerAxis, particlesPerAxis, voxelH(0), spacing);
 
   const double areaOfGridSpannedByCellLocalCartesianGridAlongOneAxis = particlesPerAxis * spacing;
   assertion(tarch::la::smallerEquals(areaOfGridSpannedByCellLocalCartesianGridAlongOneAxis, voxelH(0)));

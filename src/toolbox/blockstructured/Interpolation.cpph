@@ -272,7 +272,7 @@ void toolbox::blockstructured::
   internal::FaceInterpolationOperatorKey
     key(numberOfDoFsPerAxisInPatch, overlap, normal);
 
-  assertionEquals(overlap, 1);
+  assertion((overlap) == (1), overlap, 1);
 
   tarch::multicore::Lock lock(interpolationMapSemaphore);
   if (faceInterpolationMap.count(key) == 0) {
@@ -425,7 +425,7 @@ void toolbox::blockstructured::
   internal::FaceInterpolationOperatorKey
     key(numberOfDoFsPerAxisInPatch, overlap, normal);
 
-  assertionEquals(overlap, 1);
+  assertion((overlap) == (1), overlap, 1);
 
   tarch::multicore::Lock lock(interpolationMapSemaphore);
   if (faceInterpolationMap.count(key) == 0) {
@@ -578,7 +578,7 @@ void toolbox::blockstructured::
   internal::FaceInterpolationOperatorKey
     key(numberOfDoFsPerAxisInPatch, overlap, normal);
 
-  assertionEquals(overlap, 1);
+  assertion((overlap) == (1), overlap, 1);
 
   tarch::multicore::Lock lock(interpolationMapSemaphore);
   if (faceInterpolationMap.count(key) == 0) {
@@ -730,7 +730,7 @@ void toolbox::blockstructured::
   internal::FaceInterpolationOperatorKey
     key(numberOfDoFsPerAxisInPatch, overlap, normal);
 
-  assertionEquals(overlap, 1);
+  assertion((overlap) == (1), overlap, 1);
 
   tarch::multicore::Lock lock(interpolationMapSemaphore);
   if (faceInterpolationMap.count(key) == 0) {
@@ -1935,8 +1935,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
               int col = iCoarse;
               int row = iFine;
 
-              assertion4(col >= 0, row, col, src, dest);
-              assertion4(row >= 0, row, col, src, dest);
+              assertion(col >= 0, row, col, src, dest);
+              assertion(row >= 0, row, col, src, dest);
               int index = col + row * 2 * overlap;
               logDebug("(" << row << "," << col << ")=" << index
                     << " (normal contribution)");
@@ -1947,8 +1947,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
               int row = dest(d)
                         + marker.getRelativePositionWithinFatherCell()(d
                           ) * numberOfDoFsPerAxisInPatch;
-              assertion4(col >= 0, row, col, src, dest);
-              assertion4(row >= 0, row, col, src, dest);
+              assertion(col >= 0, row, col, src, dest);
+              assertion(row >= 0, row, col, src, dest);
               int index = col + row * numberOfDoFsPerAxisInPatch;
               logDebug("(" << row << "," << col << ")=" << index
                     << " (tangential contribution)");

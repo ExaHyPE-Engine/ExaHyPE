@@ -68,8 +68,6 @@ class ADERDG(object):
         order,
         unknowns,
         auxiliary_variables,
-        use_enclave_tasking: bool,
-        number_of_enclave_tasks: int,
     ):
         self._name = name
 
@@ -149,10 +147,6 @@ class ADERDG(object):
         self._use_stateless_material_parameters = False
         self._use_diffusive_flux = False
 
-        self._use_enclave_tasking = use_enclave_tasking
-        self._number_of_enclave_tasks = number_of_enclave_tasks
-        self._enclave_task_priority = "tarch::multicore::Task::DefaultPriority - 1"
-
         self._abstract_solver_user_declarations = ""
         self._abstract_solver_user_definitions = ""
         self._solver_user_declarations = ""
@@ -225,13 +219,13 @@ class ADERDG(object):
         self._current_time_step = peano4.datamodel.Patch(
             (self._order + 1, self._order + 1, self._order + 1),
             self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
-            self._unknown_identifier(),
+            self.current_unknown_identifier(),
             self._solution_persistent_storage_precision,
         )
         self._previous_time_step = peano4.datamodel.Patch(
             (self._order + 1, self._order + 1, self._order + 1),
             self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
-            self._unknown_identifier() + "_old",
+            self.previous_unknown_identifier(),
             self._solution_persistent_storage_precision,
         )
         self._rhs_estimates_projection = peano4.datamodel.Patch(
@@ -530,6 +524,12 @@ class ADERDG(object):
     def _unknown_identifier(self):
         return self._name + "Q"
 
+    def current_unknown_identifier(self):
+        return self._name + "Q"
+
+    def previous_unknown_identifier(self):
+        return self._name + "Q_old"
+
     def get_name_of_global_instance(self):
         return "instanceOf" + self._name
 
@@ -676,27 +676,6 @@ class ADERDG(object):
         output.makefile.add_h_file(subdirectory + self._name + ".h", generated=True)
         output.makefile.add_cpp_file(subdirectory + "Abstract" + self._name + ".cpp", generated=True)
         output.makefile.add_cpp_file(subdirectory + self._name + ".cpp", generated=True)
-
-        if self._use_enclave_tasking:
-            generated_prediction_enclave_task = (
-                peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                    headfile_template=os.path.dirname(os.path.realpath(__file__))
-                    + "/tasks/"
-                    + "Prediction.EnclaveTask.template.h",
-                    cppfile_template=os.path.dirname(os.path.realpath(__file__))
-                    + "/tasks/"
-                    + "Prediction.EnclaveTask.template.cpp",
-                    classname="Prediction{}EnclaveTask".format(self._name),
-                    namespace=namespace + ["tasks"],
-                    subdirectory=subdirectory + "tasks",
-                    dictionary=d,
-                    default_overwrite=True,
-                    apply_iteratively=True
-                )
-            )
-            output.add(generated_prediction_enclave_task)
-            output.makefile.add_h_file(subdirectory + "tasks/" + "Prediction{}EnclaveTask".format(self._name) + ".h", generated=True)
-            output.makefile.add_cpp_file(subdirectory + "tasks/" + "Prediction{}EnclaveTask".format(self._name) + ".cpp", generated=True)
 
         generate_kernels(solver=self, d=d, output=output, subdirectory=subdirectory)
 
@@ -894,11 +873,6 @@ class ADERDG(object):
         d["STATELESS_POINT_SOURCE"] = self._use_stateless_point_source
         d["STATELESS_INIT_POINT_SOURCES"] = self._use_stateless_init_point_sources
         d["STATELESS_MATERIAL_PARAMETERS"] = self._use_stateless_material_parameters
-
-        d["USE_ENCLAVE_TASKING"] = self._use_enclave_tasking
-        d["NUMBER_OF_ENCLAVE_TASKS"] = self._number_of_enclave_tasks
-        d["ENCLAVE_TASK_PRIORITY"] = self._enclave_task_priority
-        d["ENCLAVE_TASK_TYPE"] = f"{self._name}EnclaveTask"
 
         d["SPACE_TIME_PREDICTOR_CALL"] = jinja2.Template(self._space_time_predictor_call, undefined=jinja2.DebugUndefined).render(**d)
         d["RIEMANN_SOLVER_CALL"] = jinja2.Template(self._riemann_solver_call, undefined=jinja2.DebugUndefined).render(**d)

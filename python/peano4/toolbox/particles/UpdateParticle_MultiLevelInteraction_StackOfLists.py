@@ -225,11 +225,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
       std::bitset<TWO_POWER_D> mask = 0;
       mask.set(TWO_POWER_D-i-1);
       bool isLocal = (mask & p->getContainedInAdjacentCell()).any();
-      assertionEquals4( 
-        isLocal, 
-        marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.getH() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ),
-        marker.toString(), p->toString(), i, mask
-      );
+      assertion((isLocal) == (marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.getH() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE )), isLocal, marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.getH() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ), marker.toString(), p->toString(), i, mask);
       localParticleIsContainedInCell.push_back( isLocal );
       localParticles.push_back( p );
       particlesAssociatedWithLocalVertices.push_back( p );
@@ -273,7 +269,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
 
     __Template_EndTraversal = jinja2.Template(
         """
-  assertion1( _activeParticles.empty(), (*_activeParticles.begin())->toString() );
+  assertion( _activeParticles.empty(), (*_activeParticles.begin())->toString() );
 """
     )
 

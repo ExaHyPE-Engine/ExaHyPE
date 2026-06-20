@@ -12,8 +12,8 @@
  then you can genuine task parallelsim.
  Typically, this is a poor idea, i.e. you are better off with a mixture of domain
  decomposition and tasking to exploit many threads.
- Further to that, only some ExaHyPE solvers (typically those with an Enclave in
- their name) support tasking and therefore benefit from the discussion below.
+ Further to that, only some ExaHyPE solver variants support tasking and
+ therefore benefit from the discussion below.
 
 
  If you have a solver with tasking and want to activate this tasking, you have
@@ -46,5 +46,3 @@
   ## Adding tasks to your ExaHyPE solver (programmer view)
 
  */
-
- 

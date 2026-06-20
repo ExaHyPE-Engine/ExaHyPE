@@ -93,7 +93,7 @@ std::set<peano4::grid::StackTopology::PeriodicBoundaryStackIdentifier> peano4::g
     if (powerSet.count(requiredEntryForThisDirection) > 0) {
       PeriodicBoundaryStackIdentifier
         newEntry(PeriodicBoundaryExchangeStackOffset + currentStackNumber, direction.to_ulong());
-      assertion4(
+      assertion(
         isPeriodicBoundaryExchangeOutputStackNumber(newEntry.first),
         newEntry.first,
         newEntry.second,

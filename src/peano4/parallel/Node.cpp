@@ -115,8 +115,8 @@ int peano4::parallel::Node::reserveId(int rank, int forTreeId) {
 void peano4::parallel::Node::registerId(int id, int masterId) {
   logDebug("Register new global id " << id << " for master id " << masterId);
   tarch::multicore::Lock lock(_semaphore);
-  assertion2(_treeEntries.count(id) == 0, id, masterId);
-  assertion2(id != masterId, id, masterId);
+  assertion(_treeEntries.count(id) == 0, id, masterId);
+  assertion(id != masterId, id, masterId);
 #ifndef WITH_MPI
   assertion(isGlobalMaster(id) or _treeEntries.count(masterId) == 1);
 #endif
@@ -153,7 +153,7 @@ void peano4::parallel::Node::createPendingCommunicators() {
 int peano4::parallel::Node::getNumberOfRegisteredTrees() const { return _treeEntries.size(); }
 
 void peano4::parallel::Node::deregisterId(int id) {
-  assertion1(_treeEntries.count(id) == 1, id);
+  assertion(_treeEntries.count(id) == 1, id);
 
   tarch::multicore::Lock lock(_semaphore);
   _treeEntries.erase(id);
@@ -183,7 +183,7 @@ bool peano4::parallel::Node::continueToRun() {
 }
 
 void peano4::parallel::Node::setNextProgramStep(int number) {
-  assertion1(number == Terminate or number >= 0, number);
+  assertion(number == Terminate or number >= 0, number);
   _currentProgramStep = number;
 }
 
@@ -217,7 +217,7 @@ peano4::parallel::Node::GridDataExchangeMetaInformation peano4::parallel::Node::
   const int localReceivingTreeId = getLocalTreeId(receivingTreeId);
 
   assertion(localSendingTreeId >= 0);
-  assertion5(
+  assertion(
     localSendingTreeId < MAX_SPACETREES_PER_RANK,
     sendingTreeId,
     MAX_SPACETREES_PER_RANK,
@@ -225,7 +225,7 @@ peano4::parallel::Node::GridDataExchangeMetaInformation peano4::parallel::Node::
     localSendingTreeId,
     getNumberOfRegisteredTrees()
   );
-  // assertion2(localSendingTreeId <= getNumberOfRegisteredTrees(), localSendingTreeId, getNumberOfRegisteredTrees());
+  // assertion(localSendingTreeId <= getNumberOfRegisteredTrees(), localSendingTreeId, getNumberOfRegisteredTrees());
 
   int tag = TagsPerReceivingTree * localReceivingTreeId + getExchangeModeTagOffset(exchange);
 

@@ -15,7 +15,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar>::Matrix(const 
 template <typename Scalar>
 INLINE_METHOD tarch::la::Matrix<2, 2, Scalar>::Matrix(std::initializer_list<Scalar> values):
   _values() {
-  assertion2(values.size() <= 4, values.size(), 4);
+  assertion(values.size() <= 4, values.size(), 4);
   int index = 0;
   for (auto p = values.begin(); p != values.end(); p++) {
     _values[index] = *p;
@@ -40,10 +40,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::Matrix<2, 2, Scalar>::size() co
 
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD Scalar& tarch::la::Matrix<2, 2, Scalar>::operator()(int rowIndex, int colIndex) {
-  assertion5(rowIndex >= 0, 2, 2, rowIndex, colIndex, toString());
-  assertion5(colIndex >= 0, 2, 2, rowIndex, colIndex, toString());
-  assertion5(rowIndex < 2, 2, 2, rowIndex, colIndex, toString());
-  assertion5(colIndex < 2, 2, 2, rowIndex, colIndex, toString());
+  assertion(rowIndex >= 0, 2, 2, rowIndex, colIndex, toString());
+  assertion(colIndex >= 0, 2, 2, rowIndex, colIndex, toString());
+  assertion(rowIndex < 2, 2, 2, rowIndex, colIndex, toString());
+  assertion(colIndex < 2, 2, 2, rowIndex, colIndex, toString());
   return _values[rowIndex * 2 + colIndex];
 }
 
@@ -52,10 +52,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD const Scalar& tarch::la::Matrix<2, 2, Scalar>:
   int rowIndex,
   int colIndex
 ) const {
-  assertion5(rowIndex >= 0, 2, 2, rowIndex, colIndex, toString());
-  assertion5(colIndex >= 0, 2, 2, rowIndex, colIndex, toString());
-  assertion5(rowIndex < 2, 2, 2, rowIndex, colIndex, toString());
-  assertion5(colIndex < 2, 2, 2, rowIndex, colIndex, toString());
+  assertion(rowIndex >= 0, 2, 2, rowIndex, colIndex, toString());
+  assertion(colIndex >= 0, 2, 2, rowIndex, colIndex, toString());
+  assertion(rowIndex < 2, 2, 2, rowIndex, colIndex, toString());
+  assertion(colIndex < 2, 2, 2, rowIndex, colIndex, toString());
   return _values[rowIndex * 2 + colIndex];
 }
 

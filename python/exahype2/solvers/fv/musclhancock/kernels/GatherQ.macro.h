@@ -12,12 +12,10 @@
   #pragma unroll
   #endif
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
-    const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(10) }}{##}
-    #if !defined(WITH_GPU)
-    assertion(std::isfinite(QIn[indexWithHalo]));
-    #endif
-    QInGathered[unknown] = QIn[indexWithHalo];
-    QOutGathered[unknown] = QIn[indexWithHalo];
+    const int centerIndex = {{ id.index('volume', 'unknown') | indent(10) }}{##}
+    assertion(std::isfinite(QIn[centerIndex]));
+    QInGathered[unknown] = QIn[centerIndex];
+    QOutGathered[unknown] = QIn[centerIndex];
   }
   {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
   {{ terms.applySource('QInGathered', 'sourceGathered', 'volumeCentre', 'timeStamp') }}
@@ -27,9 +25,7 @@
   #pragma unroll
   #endif
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; unknown++) {
-    #if !defined(WITH_GPU)
     assertion(std::isfinite(sourceGathered[unknown]));
-    #endif
     QInExtrapolationUpdate[unknown] = sourceGathered[unknown];
   }
   {% else %}

@@ -19,6 +19,10 @@
 
 #include "tarch/CompilerSpecificSettings.h"
 
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+
 #define TARGET_DECLARE
 #define TARGET_DECLARE_END
 #define GPU_CALLABLE_METHOD
@@ -42,8 +46,45 @@
 #define TARGET_DECLARE_END _Pragma("omp end declare target")
 #endif
 
+#if defined(WITH_GPU_KOKKOS)
+#define COMPILE_IF_ON_DEVICE(CODE) KOKKOS_IF_ON_DEVICE(CODE)
+#define COMPILE_IF_ON_HOST(CODE) KOKKOS_IF_ON_HOST(CODE)
+#else
+#if defined(__CUDA_ARCH__) or defined(__HIP_DEVICE_COMPILE__) or defined(__SPIR__) or defined(__SPIRV__) \
+  or defined(__SYCL_DEVICE_ONLY__) or defined(__NVPTX__) or defined(__AMDGCN__)
+#define COMPILE_IF_ON_DEVICE(CODE) {CODE}
+#define COMPILE_IF_ON_HOST(CODE)
+#else
+#define COMPILE_IF_ON_DEVICE(CODE)
+#define COMPILE_IF_ON_HOST(CODE) {CODE}
+#endif
+#endif
+
+#if defined(WITH_GPU_KOKKOS)
+#include "kokkos/Abort.h"
+#elif defined(WITH_GPU_CUDA)
+#include "cuda/Abort.h"
+#elif defined(WITH_GPU_HIP)
+#include "hip/Abort.h"
+#elif defined(WITH_GPU_SYCL)
+#include "sycl/Abort.h"
+#elif defined(WITH_GPU_OMPT)
+#include "ompt/Abort.h"
+#endif
+
 namespace tarch {
   namespace accelerator {
+#if !defined(WITH_GPU_KOKKOS) && !defined(WITH_GPU_CUDA) && !defined(WITH_GPU_HIP) && !defined(WITH_GPU_SYCL) \
+  && !defined(WITH_GPU_OMPT)
+    TARGET_DECLARE
+    inline GPU_CALLABLE_METHOD void abort(const char* message) {
+      std::fputs(message, stderr);
+      std::fflush(stderr);
+      std::_Exit(EXIT_FAILURE);
+    }
+    TARGET_DECLARE_END
+#endif
+
     void* allocateHeapMemory(std::size_t sizeInBytes);
     void* allocateDeviceMemory(std::size_t sizeInBytes, int device);
     void* allocatePinnedMemory(std::size_t sizeInBytes, int device);

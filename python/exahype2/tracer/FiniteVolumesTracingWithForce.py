@@ -66,7 +66,7 @@ class FiniteVolumesTracingWithForce(
         update_kernel_arguments="""
 *p,
 marker,
-fineGridCell{{SOLVER_NAME}}Q.data()
+fineGridCell{{CURRENT_UNKNOWN_IDENTIFIER}}.data()
 """,
         interpolation_scheme=0,
         integration_scheme=0,
@@ -82,6 +82,7 @@ fineGridCell{{SOLVER_NAME}}Q.data()
             "PARTICLES_CONTAINER": particle_set.name,
             "SOLVER_NAME": solver._name,
             "SOLVER_INSTANCE": solver.get_name_of_global_instance(),
+            "CURRENT_UNKNOWN_IDENTIFIER": solver.current_unknown_identifier(),
             "PATCH_SIZE": solver._patch_size,
             "NUMBER_OF_UNKNOWNS": solver.unknowns,
             "NUMBER_OF_AUXILIARY_VARIABLES": solver.auxiliary_variables,

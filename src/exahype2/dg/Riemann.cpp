@@ -41,7 +41,7 @@ void exahype2::dg::interpolateRiemannSolution(
                                     + row       * InterpolationMatrixDimensions
                                     + col;
           assertion(linearisedMatrixIndex>=0);
-          assertion2(linearisedMatrixIndex<3, linearisedMatrixIndex, InterpolationMatrixDimensions);
+          assertion(linearisedMatrixIndex<3, linearisedMatrixIndex, InterpolationMatrixDimensions);
           tensorProductWeight *= InterpolationMatrix1d[linearisedMatrixIndex];
         }
       }
@@ -75,7 +75,7 @@ void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
 ) {
   assertion(numberOfProjectedQuantities>=1);
   // @todo Remove as it should work in principle for other values as well, but I haven't tested it
-  assertionEquals(numberOfProjectedQuantities,1);
+  assertion((numberOfProjectedQuantities) == (1), numberOfProjectedQuantities, 1);
   const int normal = marker.getSelectedFaceNumber()%DIMENSIONS;
   const int stride = unknowns + auxiliaryVariables;
 
@@ -103,7 +103,7 @@ void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
                                     + row       * RestrictionMatrixDimensions
                                     + col;
           assertion(linearisedMatrixIndex>=0);
-          assertion2(linearisedMatrixIndex<3, linearisedMatrixIndex, RestrictionMatrixDimensions);
+          assertion(linearisedMatrixIndex<3, linearisedMatrixIndex, RestrictionMatrixDimensions);
           tensorProductWeight *= RestrictionMatrix1d[linearisedMatrixIndex];
         }
       }
@@ -334,7 +334,7 @@ void exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
   [[maybe_unused]] double* const NOALIAS          faceQBottom,
   [[maybe_unused]] double* const NOALIAS          faceQUp
 ) {
-  assertionMsg(false, "not implemented yet");
+  assertion(false, "not implemented yet");
 }
 
 void exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
@@ -350,7 +350,7 @@ void exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
   [[maybe_unused]] double* const NOALIAS          faceQFront,
   [[maybe_unused]] double* const NOALIAS          faceQBack
 ) {
-  assertionMsg(false, "not implemented yet");
+  assertion(false, "not implemented yet");
 }
 
 void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(

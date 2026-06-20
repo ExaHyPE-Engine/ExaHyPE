@@ -86,27 +86,27 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents toolbox::
   } else {
 
 #if PEANO_DEBUG
-    assertion3(
+    assertion(
       search->first.particleID == identifier.particleID,
       "Particle identifier ID not identical",
       search->first.particleID,
       identifier.particleID
     );
-    assertion3(
+    assertion(
       search->first.treeID == identifier.treeID,
       "Particle treeID not identical",
       search->first.treeID,
       identifier.treeID
     );
     for (int i = 0; i < DIMENSIONS; i++) {
-      assertion3(
+      assertion(
         search->first.vertexInd(i) == identifier.vertexInd(i),
         "Particle treeID not identical",
         search->first.vertexInd(i),
         identifier.vertexInd(i)
       );
     }
-    assertion3(
+    assertion(
       search->first.vertexDepth == identifier.vertexDepth,
       "Particle depth not identical",
       search->first.vertexDepth,
@@ -167,27 +167,27 @@ int toolbox::particles::assignmentchecks::internal::Database::
   if (search != _data.end()) {
 
 #if PEANO_DEBUG
-    assertion3(
+    assertion(
       search->first.particleID == identifier.particleID,
       "Particle identifier ID not identical",
       search->first.particleID,
       identifier.particleID
     );
-    assertion3(
+    assertion(
       search->first.treeID == identifier.treeID,
       "Particle treeID not identical",
       search->first.treeID,
       identifier.treeID
     );
     for (int i = 0; i < DIMENSIONS; i++) {
-      assertion3(
+      assertion(
         search->first.vertexInd(i) == identifier.vertexInd(i),
         "Particle treeID not identical",
         search->first.vertexInd(i),
         identifier.vertexInd(i)
       );
     }
-    assertion3(
+    assertion(
       search->first.vertexDepth == identifier.vertexDepth,
       "Particle depth not identical",
       search->first.vertexDepth,
@@ -266,27 +266,27 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
   if (search != _data.end()) {
 
 #if PEANO_DEBUG
-    assertion3(
+    assertion(
       search->first.particleID == identifier.particleID,
       "Particle identifier ID not identical",
       search->first.particleID,
       identifier.particleID
     );
-    assertion3(
+    assertion(
       search->first.treeID == identifier.treeID,
       "Particle treeID not identical",
       search->first.treeID,
       identifier.treeID
     );
     for (int i = 0; i < DIMENSIONS; i++) {
-      assertion3(
+      assertion(
         search->first.vertexInd(i) == identifier.vertexInd(i),
         "Particle treeID not identical",
         search->first.vertexInd(i),
         identifier.vertexInd(i)
       );
     }
-    assertion3(
+    assertion(
       search->first.vertexDepth == identifier.vertexDepth,
       "Particle depth not identical",
       search->first.vertexDepth,
@@ -353,27 +353,27 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
   } else {
 
 #if PEANO_DEBUG
-    assertion3(
+    assertion(
       search->first.particleID == identifier.particleID,
       "Particle identifier ID not identical",
       search->first.particleID,
       identifier.particleID
     );
-    assertion3(
+    assertion(
       search->first.treeID == identifier.treeID,
       "Particle treeID not identical",
       search->first.treeID,
       identifier.treeID
     );
     for (int i = 0; i < DIMENSIONS; i++) {
-      assertion3(
+      assertion(
         search->first.vertexInd(i) == identifier.vertexInd(i),
         "Particle treeID not identical",
         search->first.vertexInd(i),
         identifier.vertexInd(i)
       );
     }
-    assertion3(
+    assertion(
       search->first.vertexDepth == identifier.vertexDepth,
       "Particle depth not identical",
       search->first.vertexDepth,
@@ -435,33 +435,33 @@ void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
 
   auto search = _data.find(identifier);
 
-  assertion1(
+  assertion(
     search != _data.end(),
     "Trying to replace event of particle with no history"
   );
 
 #if PEANO_DEBUG
-  assertion3(
+  assertion(
     search->first.particleID == identifier.particleID,
     "Particle identifier ID not identical",
     search->first.particleID,
     identifier.particleID
   );
-  assertion3(
+  assertion(
     search->first.treeID == identifier.treeID,
     "Particle treeID not identical",
     search->first.treeID,
     identifier.treeID
   );
   for (int i = 0; i < DIMENSIONS; i++) {
-    assertion3(
+    assertion(
       search->first.vertexInd(i) == identifier.vertexInd(i),
       "Particle treeID not identical",
       search->first.vertexInd(i),
       identifier.vertexInd(i)
     );
   }
-  assertion3(
+  assertion(
     search->first.vertexDepth == identifier.vertexDepth,
     "Particle depth not identical",
     search->first.vertexDepth,
@@ -506,33 +506,33 @@ void toolbox::particles::assignmentchecks::internal::Database::
 
   auto search = _data.find(identifier);
 
-  assertion1(
+  assertion(
     search != _data.end(),
     "Particle not found through its identifier"
   );
 
 #if PEANO_DEBUG
-  assertion3(
+  assertion(
     search->first.particleID == identifier.particleID,
     "Particle identifier ID not identical",
     search->first.particleID,
     identifier.particleID
   );
-  assertion3(
+  assertion(
     search->first.treeID == identifier.treeID,
     "Particle treeID not identical",
     search->first.treeID,
     identifier.treeID
   );
   for (int i = 0; i < DIMENSIONS; i++) {
-    assertion3(
+    assertion(
       search->first.vertexInd(i) == identifier.vertexInd(i),
       "Particle treeID not identical",
       search->first.vertexInd(i),
       identifier.vertexInd(i)
     );
   }
-  assertion3(
+  assertion(
     search->first.vertexDepth == identifier.vertexDepth,
     "Particle depth not identical",
     search->first.vertexDepth,

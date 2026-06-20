@@ -294,7 +294,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
           _numberOfLifts ++;
           break;
         default:
-          assertionMsg( false, "value not implemented" );
+          assertion(false, "value not implemented");
           break;
       }
     }

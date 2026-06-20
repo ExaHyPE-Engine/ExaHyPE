@@ -12,4 +12,3 @@ from .PostprocessSolution import NodeWisePostprocessSolution
 from .PreprocessSolution import EmptyPreprocessSolution
 from .PreprocessSolution import NodeWisePreprocessSolution
 from .UpdatePatch import UpdatePatch
-from .EnclaveTasking import EnclaveTasking

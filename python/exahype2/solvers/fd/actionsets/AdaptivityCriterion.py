@@ -26,9 +26,6 @@ class AdaptivityCriterion(AbstractFDActionSet):
       This is implicitly done by the t=0 check below.
     - The plotting does not alter the solution. It thus makes no sense to
       evaluate the criterion here.
-
-    Please consult EnclaveTasking.create_action_sets for details regarding
-    the handling of AMR within the enclave tasking concept.
     """
 
     TemplateAMR = """
@@ -221,7 +218,7 @@ class AdaptivityCriterion(AbstractFDActionSet):
                 * self._solver._patch.dim[0]
                 * self._solver._patch.dim[0]
             )
-            d["CELL_ACCESSOR"] = "fineGridCell" + self._solver._patch.name
+            d["CELL_ACCESSOR"] = "fineGridCell" + self._solver.current_unknown_identifier()
             d["PREDICATE"] = (
                 "not marker.willBeRefined() and not marker.hasBeenRefined() and "
                 + self.guard

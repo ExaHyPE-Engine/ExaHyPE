@@ -7,9 +7,7 @@ from .SolverDeclarations import SolverDeclarations
 from .SolverDefinitions import SolverDefinitions
 
 from exahype2.solvers.PDETerms import PDETerms
-from exahype2.solvers.fv.actionsets import UpdatePatch, EnclaveTasking
-from peano4.toolbox.blockstructured.ReconstructPatch import ReconstructPatch
-
+from exahype2.solvers.fv.actionsets import UpdatePatch
 
 class SingleSweep(FV):
     """
@@ -35,8 +33,7 @@ class SingleSweep(FV):
         overlap,
         unknowns,
         auxiliary_variables,
-        use_enclave_tasking: bool=False,
-        number_of_enclave_tasks: int=1,
+        fuse_compute_kernels=False,
         solvers_before_in_coupling: list=[],
     ):
         super(SingleSweep, self).__init__(
@@ -45,59 +42,11 @@ class SingleSweep(FV):
             overlap=overlap,
             unknowns=unknowns,
             auxiliary_variables=auxiliary_variables,
-            use_enclave_tasking=use_enclave_tasking,
-            number_of_enclave_tasks=number_of_enclave_tasks,
+            fuse_compute_kernels=fuse_compute_kernels,
             solvers_before_in_coupling=solvers_before_in_coupling,
         )
 
         self._solver_template_file_class_name = "SingleSweep"
-
-    def create_data_structures(self):
-        """
-        Call the superclass' create_data_structures() to ensure that all the data
-        structures are in place, i.e., each cell can host a patch, that each face hosts
-        patch overlaps, and so forth. These quantities are all set to defaults. See
-        FV.create_data_structures().
-
-        After that, take the patch overlap (that's the data stored within the faces)
-        and ensure that these are sent and received via MPI whenever they are also
-        stored persistently. The default in FV is that no domain boundary data exchange
-        is active. Finally, ensure that the old data is only exchanged between the
-        initialisation sweep and the first first grid run-through.
-        """
-        super(SingleSweep, self).create_data_structures()
-
-        initialisation_sweep_guard = (
-            "("
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::GridInitialisation"
-            + ")"
-        )
-        first_iteration_after_initialisation_guard = (
-            "("
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::IsSolvingAfterGridInitialisation or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::PlottingAfterGridInitialisation"
-            + ")"
-        )
-
-        self._patch_overlap_new.generator.send_condition = "true"
-        self._patch_overlap_new.generator.receive_and_merge_condition = "true"
-
-        self._patch_overlap_old.generator.send_condition = initialisation_sweep_guard
-        self._patch_overlap_old.generator.receive_and_merge_condition = (
-            first_iteration_after_initialisation_guard
-        )
 
     def create_action_sets(self):
         """
@@ -106,16 +55,8 @@ class SingleSweep(FV):
         """
         super(SingleSweep, self).create_action_sets()
         self._action_set_update_patch = UpdatePatch(self)
-        self._action_set_enclave_tasking = EnclaveTasking(self)
-        self._action_set_reconstruct_patch = ReconstructPatch(
-            patch=self._patch,
-            patch_overlap=self._patch_overlap_new,
-            patch_reconstructed=self._patch_reconstructed,
-            solver_name=self._name,
-            precision=self._storage_precision,
-            guard="not marker.willBeRefined() and not marker.hasBeenRefined()"
-            + (" and marker.willBeSkeletonCell()" if self._use_enclave_tasking else ""),
-            add_assertions_to_halo_exchange=True,
+        self._action_set_update_patch.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 2
         )
 
     def set_implementation(

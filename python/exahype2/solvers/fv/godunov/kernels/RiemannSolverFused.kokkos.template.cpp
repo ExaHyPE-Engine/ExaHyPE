@@ -12,22 +12,31 @@
 {% from 'ComputeFluxesAndPerformTimeStep.macro.h' import ComputeFluxesAndPerformTimeStep with context %}
 
 struct RiemannSolverFusedFunctor {
-  const {{COMPUTE_PRECISION}}* _QInFlattened;
-  {{COMPUTE_PRECISION}}*       _QOutFlattened;
+  const {{STORAGE_PRECISION}}* _QInFlattened;
+  {{STORAGE_PRECISION}}*       _QOutFlattened;
+  const {{STORAGE_PRECISION}}* _QInFaces;
+  {{STORAGE_PRECISION}}*       _QOutFaces;
+  const std::uint64_t*         _faceIndices;
   const double*                _patchCentres;
   const double*                _patchSizes;
   double                       _timeStamp;
   double                       _timeStepSize;
 
   RiemannSolverFusedFunctor(
-    const {{COMPUTE_PRECISION}}* QInFlattened,
-    {{COMPUTE_PRECISION}}*       QOutFlattened,
+    const {{STORAGE_PRECISION}}* QInFlattened,
+    {{STORAGE_PRECISION}}*       QOutFlattened,
+    const {{STORAGE_PRECISION}}* QInFaces,
+    {{STORAGE_PRECISION}}*       QOutFaces,
+    const std::uint64_t*         faceIndices,
     const double*                patchCentres,
     const double*                patchSizes,
     double                       timeStamp,
     double                       timeStepSize
   ) : _QInFlattened(QInFlattened),
       _QOutFlattened(QOutFlattened),
+      _QInFaces(QInFaces),
+      _QOutFaces(QOutFaces),
+      _faceIndices(faceIndices),
       _patchCentres(patchCentres),
       _patchSizes(patchSizes),
       _timeStamp(timeStamp),
@@ -37,15 +46,25 @@ struct RiemannSolverFusedFunctor {
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const member_type& teamMember, double& maxEigenvalue) const {
+    constexpr int FaceCardinality = {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
+
     const auto patchIndex     = teamMember.league_rank();
     const double timeStamp    = _timeStamp;
     const double timeStepSize = _timeStepSize;
 
-    const {{COMPUTE_PRECISION}}* const QIn = &_QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_WITH_HALO_3D}} {% else %} {{PATCH_CARDINALITY_WITH_HALO_2D}} {% endif %}];
-    {{COMPUTE_PRECISION}}* const QOut      = &_QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
+    const {{STORAGE_PRECISION}}* const QIn = &_QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
+    {{STORAGE_PRECISION}}* const QOut      = &_QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{PATCH_CARDINALITY_3D}} {% else %} {{PATCH_CARDINALITY_2D}} {% endif %}];
 
     const tarch::la::Vector<DIMENSIONS, double> patchCentre{_patchCentres + patchIndex * {{DIMENSIONS}}};
     const tarch::la::Vector<DIMENSIONS, double> patchSize{_patchSizes + patchIndex * {{DIMENSIONS}}};
+
+    const {{STORAGE_PRECISION}}* faceQIn[TWO_TIMES_D];
+    {{STORAGE_PRECISION}}* faceQOut[TWO_TIMES_D];
+    for (int f = 0; f < TWO_TIMES_D; f++) {
+      auto faceIndex = _faceIndices[patchIndex * TWO_TIMES_D + f];
+      faceQIn[f]  = &_QInFaces[faceIndex * FaceCardinality];
+      faceQOut[f] = &_QOutFaces[faceIndex * FaceCardinality];
+    }
     Kokkos::parallel_reduce(
       Kokkos::TeamVectorRange(
         teamMember,
@@ -68,27 +87,12 @@ struct RiemannSolverFusedFunctor {
 };
 
 double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
-  [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&                       solver,
-  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData,
-  [[maybe_unused]] const int                                             targetDevice
-) {
-  return riemannSolverFused(
-    solver,
-    patchData.QInFlattened,
-    patchData.QOutFlattened,
-    patchData.t,
-    patchData.dt,
-    patchData.cellCentre[0].data(),
-    patchData.cellSize[0].data(),
-    patchData.numberOfCells,
-    targetDevice
-  );
-}
-
-double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&    solver,
-  const {{COMPUTE_PRECISION}}* const                  QInFlattened,
-  {{COMPUTE_PRECISION}}* const                        QOutFlattened,
+  const {{STORAGE_PRECISION}}* const                  QInFlattened,
+  {{STORAGE_PRECISION}}* const                        QOutFlattened,
+  const {{STORAGE_PRECISION}}* const                  QInFaces,
+  {{STORAGE_PRECISION}}* const                        QOutFaces,
+  const std::uint64_t*                                faceIndices,
   const double                                        timeStamp,
   const double                                        timeStepSize,
   const double* const                                 patchCentres,
@@ -102,6 +106,9 @@ double {{FULL_QUALIFIED_NAMESPACE}}::riemannSolverFused(
   RiemannSolverFusedFunctor functor(
     QInFlattened,
     QOutFlattened,
+    QInFaces,
+    QOutFaces,
+    faceIndices,
     patchCentres,
     patchSizes,
     timeStamp,

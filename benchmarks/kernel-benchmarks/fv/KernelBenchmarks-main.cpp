@@ -5,16 +5,13 @@
 #include "AbstractFVSolver.h"
 #include "Constants.h"
 #include "DataRepository.h"
-#include "EnclaveDataRepository.h"
 #include "FVSolver.h"
-#include "exahype2/EnclaveBookkeeping.h"
+#include "FusedDataRepository.h"
 #include "exahype2/RuntimeParameters.h"
 #include "exahype2/fv/BoundaryConditions.h"
 #include "exahype2/fv/PatchUtils.h"
 #include "kernels/FVSolver/HandleBoundaryFused.h"
 #include "kernels/FVSolver/ProjectPatchFused.h"
-#include "kernels/FVSolver/ReconstructPatch.h"
-#include "kernels/FVSolver/ReconstructPatchFused.h"
 #include "kernels/FVSolver/RiemannSolverFused.h"
 #include "peano4/Globals.h"
 #include "peano4/datamanagement/CellMarker.h"
@@ -171,21 +168,13 @@ namespace {
 void logFinalStatistics(
   const tarch::instrumentation::Measurement& measurement,
   const tarch::instrumentation::Measurement& measurementBoundary,
-  const tarch::instrumentation::Measurement& measurementReconstruct,
-  const tarch::instrumentation::Measurement& measurementRiemann,
-  const tarch::instrumentation::Measurement& measurementProjection
+  const tarch::instrumentation::Measurement& measurementRiemann
 ) {
   if (measurementBoundary.getNumberOfMeasurements() > 0) {
     logInfo(formatStatistic("Boundary Handling", formatMeasurementTotal(measurementBoundary, "s")));
   }
-  if (measurementReconstruct.getNumberOfMeasurements() > 0) {
-    logInfo(formatStatistic("Reconstruction", formatMeasurementTotal(measurementReconstruct, "s")));
-  }
   if (measurementRiemann.getNumberOfMeasurements() > 0) {
     logInfo(formatStatistic("Riemann Solver", formatMeasurementTotal(measurementRiemann, "s")));
-  }
-  if (measurementProjection.getNumberOfMeasurements() > 0) {
-    logInfo(formatStatistic("Projection", formatMeasurementTotal(measurementProjection, "s")));
   }
 
   if (measurement.getNumberOfMeasurements() > 0) {
@@ -225,7 +214,7 @@ void plotGrid() {
       const auto& patchOffset = marker.getX() - patchSize * 0.5;
 
       const auto  cellSize = patchSize / static_cast<double>(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch);
-      const auto* QOut     = DataRepository::getInstance().getCellQ(marker.getX(), marker.getH());
+      const auto* QOut     = DataRepository::getInstance().getCellQNew(marker.getX(), marker.getH());
 
       int currentDoF = 0;
       dfor(k, AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch) {
@@ -316,7 +305,7 @@ void interpolateBetweenAMRBorder() {
 void applyInitialConditions() {
   for (auto& marker : _cells) {
     if (not marker.hasBeenRefined()) {
-      double* QOut = DataRepository::getInstance().getCellQ(marker.getX(), marker.getH());
+      double* QOut = DataRepository::getInstance().getCellQNew(marker.getX(), marker.getH());
       // Initialise cell data with initial conditions.
       dfor(volume, AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch) {
         int linearIndex = peano4::utils::dLinearised(volume, AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch)
@@ -429,29 +418,27 @@ int main(int argc, char** argv) {
   createGrid();
   initGrid();
 
-  EnclaveDataRepository& enclaveGrid = EnclaveDataRepository::getInstance();
-  enclaveGrid.startCollection();
+  FusedDataRepository& fusedGrid = FusedDataRepository::getInstance();
+  fusedGrid.startCollection();
   for (auto& marker : _cells) {
     if (not marker.hasBeenRefined()) {
-      enclaveGrid.bookmarkCell(marker.getX(), marker.getH());
+      fusedGrid.bookmarkCell(marker.getX(), marker.getH());
     }
   }
 
-  enclaveGrid.buildFromBookmarks();
+  fusedGrid.buildFromBookmarks();
 
   benchmarks::exahype2::kernelbenchmarks::kernels::FVSolver::projectPatchFused(
-    enclaveGrid.getQ(),
-    enclaveGrid.getFacePool(),
-    enclaveGrid.getFaceIndices(),
-    enclaveGrid.getNumberOfEnclaveCells(),
+    fusedGrid.getQNew(),
+    fusedGrid.getFaceQNewPool(),
+    fusedGrid.getFaceIndices(),
+    fusedGrid.getNumberFusedCells(),
     0
   );
 
   tarch::instrumentation::Measurement measurement(1.0);
   tarch::instrumentation::Measurement measurementBoundary(1.0);
-  tarch::instrumentation::Measurement measurementReconstruct(1.0);
   tarch::instrumentation::Measurement measurementRiemann(1.0);
-  tarch::instrumentation::Measurement measurementProjection(1.0);
   tarch::instrumentation::Measurement plotMeasurement(1.0);
   tarch::instrumentation::Watch       timeStepWatch("::", "main()", false);
   double                              timeStamp                            = 0.0;
@@ -483,17 +470,18 @@ int main(int argc, char** argv) {
       if constexpr (ShouldPlot) {
         tarch::instrumentation::Watch plotWatch("", "", false);
         plotWatch.start();
-        enclaveGrid.syncCellsDeviceToHost();
+        fusedGrid.syncCellsDeviceToHost();
         plotGrid();
         plotWatch.stop();
         plotMeasurement.setValue(plotWatch.getCalendarTime());
         logInfo(formatPlot(plotMeasurement));
       }
     }
+    fusedGrid.swapQNewAndQOld(); // rollover QNew -> QOld
     if (UseAMR) {
-      enclaveGrid.syncFacesDeviceToHost();
+      fusedGrid.syncFacesDeviceToHost();
       interpolateBetweenAMRBorder();
-      enclaveGrid.syncFacesHostToDevice();
+      fusedGrid.syncFacesHostToDevice();
       // Hack to make static AMR work in the mini-app. The full-app uses face updates that get interpolated between
       // coarse and fine faces. In the mini-app we do interpolation a bit different because we only use one face type to
       // keep things simple. We therefore first restrict the fine grid faces into the coarse grid faces, we do this for
@@ -503,10 +491,10 @@ int main(int argc, char** argv) {
       // step therefore introduces a loss of precision at the internal faces of the AMR region. We can circumvent this
       // by reprojecting the cell data onto the faces for all cells. This is less than ideal and should be improved.
       benchmarks::exahype2::kernelbenchmarks::kernels::FVSolver::projectPatchFused(
-        enclaveGrid.getQ(),
-        enclaveGrid.getFacePool(),
-        enclaveGrid.getFaceIndices(),
-        enclaveGrid.getNumberOfEnclaveCells(),
+        fusedGrid.getQOld(),
+        fusedGrid.getFaceQOldPool(),
+        fusedGrid.getFaceIndices(),
+        fusedGrid.getNumberFusedCells(),
         0
       );
     }
@@ -523,63 +511,43 @@ int main(int argc, char** argv) {
     watchBoundary.start();
     benchmarks::exahype2::kernelbenchmarks::kernels::FVSolver::handleBoundaryFused(
       repositories::instanceOfFVSolver,
-      enclaveGrid.getFacePool(),
-      enclaveGrid.getBoundaryFaceIndices(),
-      enclaveGrid.getBoundaryFaceNumbers(),
-      enclaveGrid.getBoundaryCellIndices(),
-      enclaveGrid.getCellCentres(),
-      enclaveGrid.getCellSizes(),
+      fusedGrid.getFaceQOldPool(),
+      fusedGrid.getBoundaryFaceIndices(),
+      fusedGrid.getBoundaryFaceNumbers(),
+      fusedGrid.getBoundaryCellIndices(),
+      fusedGrid.getCellCentres(),
+      fusedGrid.getCellSizes(),
       timeStamp,
       dt,
-      enclaveGrid.getNumberOfBoundaryFaces(),
-      enclaveGrid.getNumberOfEnclaveCells(),
+      fusedGrid.getNumberOfBoundaryFaces(),
+      fusedGrid.getNumberFusedCells(),
       0
     );
     watchBoundary.stop();
-
-    tarch::instrumentation::Watch watchReconstruct("", "", false);
-    watchReconstruct.start();
-    benchmarks::exahype2::kernelbenchmarks::kernels::FVSolver::reconstructPatchFused(
-      enclaveGrid.getQ(),
-      enclaveGrid.getFacePool(),
-      enclaveGrid.getFaceIndices(),
-      enclaveGrid.getQReconstructed(),
-      enclaveGrid.getNumberOfEnclaveCells(),
-      0
-    );
-    watchReconstruct.stop();
 
     tarch::instrumentation::Watch watchRiemann("", "", false);
     watchRiemann.start();
     const auto maxEigenvalue = benchmarks::exahype2::kernelbenchmarks::kernels::FVSolver::riemannSolverFused(
       repositories::instanceOfFVSolver,
-      enclaveGrid.getQReconstructed(),
-      enclaveGrid.getQ(),
+      fusedGrid.getQOld(),
+      fusedGrid.getQNew(),
+      fusedGrid.getFaceQOldPool(),
+      fusedGrid.getFaceQNewPool(),
+      fusedGrid.getFaceIndices(),
       timeStamp,
       dt,
-      enclaveGrid.getCellCentres()[0].data(),
-      enclaveGrid.getCellSizes()[0].data(),
-      enclaveGrid.getNumberOfEnclaveCells(),
+      fusedGrid.getCellCentres()[0].data(),
+      fusedGrid.getCellSizes()[0].data(),
+      fusedGrid.getNumberFusedCells(),
       0
     );
     watchRiemann.stop();
-
-    tarch::instrumentation::Watch watchProjection("", "", false);
-    watchProjection.start();
-    benchmarks::exahype2::kernelbenchmarks::kernels::FVSolver::projectPatchFused(
-      enclaveGrid.getQ(),
-      enclaveGrid.getFacePool(),
-      enclaveGrid.getFaceIndices(),
-      enclaveGrid.getNumberOfEnclaveCells(),
-      0
-    );
-    watchProjection.stop();
     watch.stop();
 
     repositories::instanceOfFVSolver.setMaxEigenvalue(maxEigenvalue);
     const auto newTimeStepSize = repositories::instanceOfFVSolver.getAdmissibleTimeStepSize();
     repositories::instanceOfFVSolver
-      .update(newTimeStepSize, timeStamp + dt, enclaveGrid.getMinVolumeH(), enclaveGrid.getMaxVolumeH());
+      .update(newTimeStepSize, timeStamp + dt, fusedGrid.getMinVolumeH(), fusedGrid.getMaxVolumeH());
 
     timeStamp += repositories::instanceOfFVSolver.getAdmissibleTimeStepSize();
     repositories::finishTimeStep();
@@ -589,9 +557,7 @@ int main(int argc, char** argv) {
     if (repositories::mayPlot()) {
       measurement.setValue(watch.getCalendarTime());
       measurementBoundary.setValue(watchBoundary.getCalendarTime());
-      measurementReconstruct.setValue(watchReconstruct.getCalendarTime());
       measurementRiemann.setValue(watchRiemann.getCalendarTime());
-      measurementProjection.setValue(watchProjection.getCalendarTime());
       timeStepMeasurement.setValue(timeStepWatch.getCalendarTime());
       numberOfCompletedTimeSteps++;
 
@@ -636,14 +602,16 @@ int main(int argc, char** argv) {
   }
 
   // Plot last timestep
-  if constexpr (ShouldPlot) {
-    tarch::instrumentation::Watch plotWatch("", "", false);
-    plotWatch.start();
-    enclaveGrid.syncCellsDeviceToHost();
-    plotGrid();
-    plotWatch.stop();
-    plotMeasurement.setValue(plotWatch.getCalendarTime());
-    logInfo(formatPlot(plotMeasurement));
+  if (timeInBetweenPlots > 0.0) {
+    if constexpr (ShouldPlot) {
+      tarch::instrumentation::Watch plotWatch("", "", false);
+      plotWatch.start();
+      fusedGrid.syncCellsDeviceToHost();
+      plotGrid();
+      plotWatch.stop();
+      plotMeasurement.setValue(plotWatch.getCalendarTime());
+      logInfo(formatPlot(plotMeasurement));
+    }
   }
   repositories::finishSimulation();
 
@@ -675,15 +643,9 @@ int main(int argc, char** argv) {
     returnCode = EXIT_SUCCESS;
   }
 
-  logFinalStatistics(
-    measurement,
-    measurementBoundary,
-    measurementReconstruct,
-    measurementRiemann,
-    measurementProjection
-  );
+  logFinalStatistics(measurement, measurementBoundary, measurementRiemann);
 
-  enclaveGrid.clear();
+  fusedGrid.clear();
 
   peano4::shutdown();
 

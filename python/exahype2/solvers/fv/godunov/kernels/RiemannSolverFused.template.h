@@ -11,15 +11,12 @@ namespace {{ item }} {
 {%- endfor %}
 
 double riemannSolverFused(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&                                        solver,
-  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 3>& patchData,
-  const int                                                              targetDevice
-);
-
-double riemannSolverFused(
   {{FULL_QUALIFIED_SOLVER_NAME}}&    solver,
-  const {{COMPUTE_PRECISION}}* const QInFlattened,
-  {{COMPUTE_PRECISION}}* const       QOutFlattened,
+  const {{STORAGE_PRECISION}}* const QInFlattened,
+  {{STORAGE_PRECISION}}* const       QOutFlattened,
+  const {{STORAGE_PRECISION}}* const QInFaces,
+  {{STORAGE_PRECISION}}* const       QOutFaces,
+  const std::uint64_t*               faceIndices,
   const double                       timeStamp,
   const double                       timeStepSize,
   const double* const                patchCentres,

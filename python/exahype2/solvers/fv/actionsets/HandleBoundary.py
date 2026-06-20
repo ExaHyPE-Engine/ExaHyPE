@@ -7,17 +7,13 @@ import peano4.solversteps
 import os
 import jinja2
 
-
 class HandleBoundary(AbstractFVActionSet):
     """
     The global periodic boundary conditions are set in the Constants.h.
 
-    There is no need to update QOld along the faces. QOld is always rolled
-    over from QNew, i.e. we may assume it is already set correctly. It is
-    not correctly set in the very first time step (after InitGrid, we haven't
-    yet set QOld), so apply the boundary conditions here would even confuse
-    the assertions.
-
+    Boundary conditions are applied to QNew and QOld. The initialisation sweep
+    projects QNew, and the first solve sweep rolls it over before this action
+    set runs, so QOld is available here.
     """
 
     TemplateHandleBoundary_Prologue = """
@@ -39,6 +35,15 @@ class HandleBoundary(AbstractFVActionSet):
             repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
             f,
             fineGridFaces{{UNKNOWN_IDENTIFIER}}New(f).data()
+          );
+          kernels::{{SOLVER_NAME}}::handleBoundary(
+            repositories::{{SOLVER_INSTANCE}},
+            marker.getX(),
+            marker.getH(),
+            {{FACE_METADATA_ACCESSOR}}(f).getOldTimeStamp(f<DIMENSIONS ? 1 : 0),
+            repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+            f,
+            fineGridFaces{{UNKNOWN_IDENTIFIER}}Old(f).data()
           );
 """
 
@@ -130,6 +135,8 @@ class HandleBoundary(AbstractFVActionSet):
         output.makefile.add_cpp_file(
             kernels_output_path + "/HandleBoundary.cpp", generated=True
         )
+        if self._solver._fuse_compute_kernels:
+            self.generate_fused_kernels(namespace, output, dimensions, subdirectory)
 
     def generate_fused_kernels(self, namespace, output, dimensions, subdirectory):
         kernels_namespace = namespace + ["kernels", self._solver._name]

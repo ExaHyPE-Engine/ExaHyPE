@@ -4,6 +4,7 @@
 #include <sstream>
 #include <cstdlib>
 #include <chrono>
+#include <iostream>
 
 #include "Rank.h"
 #include "tarch/CompilerSpecificSettings.h"
@@ -35,7 +36,7 @@ void tarch::mpi::Rank::releaseTag(int tag) {
 
 
 int tarch::mpi::Rank::reserveFreeTag([[maybe_unused]] const std::string& fullQualifiedMessageName, [[maybe_unused]] int numberOfTags) {
-  assertion2(numberOfTags>=1,fullQualifiedMessageName,numberOfTags);
+  assertion(numberOfTags>=1,fullQualifiedMessageName,numberOfTags);
   const int result = _tagCounter;
   _tagCounter += numberOfTags;
 
@@ -76,7 +77,7 @@ void tarch::mpi::Rank::ensureThatMessageQueuesAreEmpty( [[maybe_unused]] int fro
   if (flag!=0) {
     plotMessageQueues();
   }
-  assertion3( flag==0, fromRank, tag, getRank() );
+  assertion( flag==0, fromRank, tag, getRank() );
   #endif
 }
 
@@ -476,12 +477,16 @@ void tarch::mpi::Rank::setDeadlockTimeOut( int value ) {
   }
 }
 
-void tarch::mpi::Rank::abort([[maybe_unused]] int errorCode) {
+void tarch::mpi::abort([[maybe_unused]] int errorCode) {
   std::cout.flush();
   std::cerr.flush();
   #ifdef WITH_MPI
   MPI_Abort(MPI_COMM_WORLD,errorCode);
   #else
-  std::abort();
+  std::_Exit(errorCode);
   #endif
+}
+
+void tarch::mpi::Rank::abort(int errorCode) {
+  tarch::mpi::abort(errorCode);
 }

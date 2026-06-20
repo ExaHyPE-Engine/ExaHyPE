@@ -55,18 +55,14 @@ fWave = """
       #endif
       const auto EL       = QL[Shortcuts::E];
 
-      #if !defined(WITH_GPU)
-      assertion1(rhoL > 0, rhoL);
-      assertion1(EL > 0, EL);
-      #endif
+      assertion(rhoL > 0, rhoL);
+      assertion(EL > 0, EL);
 
       const auto ML                 = QL[Shortcuts::O2] + QL[Shortcuts::O] + QL[Shortcuts::N2];
       const auto iML                = 1.0 / ML;
       const auto meanMolecularMassL = (MOLAR_MASS_NITROGEN * QL[Shortcuts::N2] + MOLAR_MASS_MOLECULAR_OXYGEN * QL[Shortcuts::O2] + MOLAR_MASS_ATOMIC_OXYGEN * QL[Shortcuts::O]) * iML; // in kg/mol
       const auto pressureL          = QL[Shortcuts::rho] * UNIVERSAL_GAS_CONSTANT * QL[Shortcuts::T] / meanMolecularMassL;
-      #if !defined(WITH_GPU)
-      assertion5(pressureL > 0.0, ML, meanMolecularMassL, QL[Shortcuts::rho], QL[Shortcuts::T], pressureL);
-      #endif
+      assertion(pressureL > 0.0, ML, meanMolecularMassL, QL[Shortcuts::rho], QL[Shortcuts::T], pressureL);
       
       const auto gammaL = (1.4 * (ML - QL[Shortcuts::O]) + 1.67 * QL[Shortcuts::O]) * iML;
       const auto HL     = (EL + pressureL) / QL[Shortcuts::rho];
@@ -81,18 +77,14 @@ fWave = """
       #endif
       const auto ER       = QR[Shortcuts::E];
 
-      #if !defined(WITH_GPU)
-      assertion1(rhoR > 0, rhoR);
-      assertion1(ER > 0, ER);
-      #endif
+      assertion(rhoR > 0, rhoR);
+      assertion(ER > 0, ER);
 
       const auto MR                 = QR[Shortcuts::O2] + QR[Shortcuts::O] + QR[Shortcuts::N2];
       const auto iMR                = 1.0 / MR;
       const auto meanMolecularMassR = (MOLAR_MASS_NITROGEN * QR[Shortcuts::N2] + MOLAR_MASS_MOLECULAR_OXYGEN * QR[Shortcuts::O2] + MOLAR_MASS_ATOMIC_OXYGEN * QR[Shortcuts::O]) * iMR; // in kg/mol
       const auto pressureR          = QR[Shortcuts::rho] * UNIVERSAL_GAS_CONSTANT * QR[Shortcuts::T] / meanMolecularMassR;
-      #if !defined(WITH_GPU)
-      assertion5(pressureR > 0.0, MR, meanMolecularMassR, QR[Shortcuts::rho], QR[Shortcuts::T], pressureR);
-      #endif
+      assertion(pressureR > 0.0, MR, meanMolecularMassR, QR[Shortcuts::rho], QR[Shortcuts::T], pressureR);
       
       const auto gammaR = (1.4 * (MR - QR[Shortcuts::O]) + 1.67 * QR[Shortcuts::O]) * iMR;
       const auto HR     = (ER + pressureR) / QR[Shortcuts::rho];

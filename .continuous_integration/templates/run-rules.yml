@@ -11,7 +11,7 @@
   rules:
     # Push pipelines only on the exact main branch
     - if: '$CI_COMMIT_BRANCH == "muc/exahype"'
-    # MR pipelines when the TARGET branch is exactly the main branch
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "muc/exahype"'
-    # Child pipeline triggered from an MR TARGETING the main branch
-    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline" && $UPSTREAM_MR_TARGET_BRANCH == "muc/exahype"'
+    # MR pipelines for any target branch
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    # Child pipeline triggered from any MR
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline" && $UPSTREAM_PIPELINE_SOURCE == "merge_request_event"'

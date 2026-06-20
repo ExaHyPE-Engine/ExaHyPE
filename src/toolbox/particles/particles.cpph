@@ -97,14 +97,14 @@ void toolbox::particles::insertParticleIntoCell(
 ) {
   std::bitset<DIMENSIONS>    targetVertex;
   for (int d = 0; d < DIMENSIONS; d++) {
-    assertion4(
+    assertion(
       tarch::la::greaterEquals(newParticle->getX()(d), marker.getX()(d) - marker.getH()(d) / 2.0),
       marker.toString(),
       newParticle->toString(),
       marker.getX()(d) - marker.getH()(d) / 2.0,
       d
     );
-    assertion4(
+    assertion(
       tarch::la::smallerEquals(newParticle->getX()(d), marker.getX()(d) + marker.getH()(d) / 2.0),
       marker.toString(),
       newParticle->toString(),
@@ -114,7 +114,7 @@ void toolbox::particles::insertParticleIntoCell(
     targetVertex[d] = newParticle->getX()(d) > marker.getX()(d);
   }
 
-  assertion3(
+  assertion(
     tarch::la::smaller(2.0 * newParticle->getSearchRadius(), tarch::la::min(marker.getH())),
     marker.toString(),
     newParticle->toString(),

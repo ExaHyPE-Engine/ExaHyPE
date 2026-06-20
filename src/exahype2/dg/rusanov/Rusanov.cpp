@@ -149,5 +149,5 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ_with_gradient_
   [[maybe_unused]] const double* NOALIAS                   projectedValues,
   [[maybe_unused]] double* NOALIAS                         solution
 ) {
-  assertionMsg(false, "not implemented yet");
+  assertion(false, "not implemented yet");
 }

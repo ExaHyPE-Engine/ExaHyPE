@@ -11,13 +11,15 @@ namespace {{ item }} {
 {%- endfor %}
 
 double updateSolutionWithRiemann(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&                 solver,
-  const {{STORAGE_PRECISION}}* NOALIAS const      QIn,
-  {{STORAGE_PRECISION}}* NOALIAS const            QOut,
-  const double                                    timeStamp,
-  const double                                    timeStepSize,
-  const tarch::la::Vector<DIMENSIONS, double>&    patchCentre,
-  const tarch::la::Vector<DIMENSIONS, double>&    patchSize
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                       solver,
+  const {{STORAGE_PRECISION}}* NOALIAS const            QIn,
+  {{STORAGE_PRECISION}}* NOALIAS const                  QOut,
+  const {{STORAGE_PRECISION}}* NOALIAS const            faceQIn[TWO_TIMES_D],
+  [[maybe_unused]] {{STORAGE_PRECISION}}* NOALIAS const faceQOut[TWO_TIMES_D],
+  const double                                          timeStamp,
+  const double                                          timeStepSize,
+  const tarch::la::Vector<DIMENSIONS, double>&          patchCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&          patchSize
 );
 
 {% for item in NAMESPACE -%}

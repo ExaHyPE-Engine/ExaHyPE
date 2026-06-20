@@ -14,7 +14,7 @@ tarch::multicore::MultiReadSingleWriteSemaphore::MultiReadSingleWriteSemaphore(b
 
 tarch::multicore::MultiReadSingleWriteSemaphore::~MultiReadSingleWriteSemaphore() {
   assertion(not _writeAccessAcquired );
-  assertionEquals( _numberOfActiveReadAccesses, 0 );
+  assertion((_numberOfActiveReadAccesses) == (0), _numberOfActiveReadAccesses, 0);
 }
 
 

@@ -292,7 +292,7 @@ namespace toolbox {
         if (lastDigit != std::string::npos) {
           result = result.substr(lastDigit + 1);
         }
-        assertion2(result.size() > 1, typeid(Particle).name(), result);
+        assertion(result.size() > 1, typeid(Particle).name(), result);
         return result.size() > 1 ? result.substr(0, result.size() - 1) : result;
       }
 
