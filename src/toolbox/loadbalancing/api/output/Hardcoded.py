@@ -21,6 +21,29 @@ def create_constructor_initialisation_string(sweep_numbers,
     
     Construct a string that can be used to feed into an instance of Hardcoded.
     
+    @todo Dmitry Do we really need such a complex signature, or could we simply accept a tree instance? Would make hte user code way simpler.
+    
+    @todo Dmitry THis routine should also return 
+        hardcoded_mode = "peano4::SplitInstruction::Mode::AggressiveTopDown"
+        or 
+        hardcoded_mode = "peano4::SplitInstruction::Mode::BottomUp"
+          respectively. The rule which one to pick is simple: If all subtrees assigned to a rank
+          k start on the same level l, i.e. we have basically a forest of subtrees where all roots
+          are on level l in the global tree, then it is AggressiveTopDown and the split (iteration)
+          number corresponds to this level l. 
+          
+          Otherwise, we have BottomUp and the split number corresponds to the coarsest level, where 
+          all trees belonging to rank k have nodes.
+          
+          @image html src/toolbox/loadbalancing/api/output/create_constructor_initialisation_string.png
+          
+          In the example above, the split happens on level 2 and is aggressive top down int he left example,
+          as all red trees start on level 2. For the right example, red trees start both on level 2 and on 
+          level 3. Therefore, it is bottom-up and level 3, as all red trees are active on level 3.
+          
+          
+        
+    
     @param sweep_numbers: [Integer] or Integer
       Has to be either a sequence of integers or a single one. If it is a 
       single one, this means that all splits happen in the same sweep. If 

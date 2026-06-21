@@ -218,13 +218,12 @@ partitioning beforehand:
 
 <br /><br />
 <div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
-This first exercise sketches our core ambition: A mesh is either synthesized or
-read in from a snapshot, a Python toolbox computes an optimal splitting, and 
-then we (re-)launch the application with this optimised decomposition.
+So far, the tutorial sketches the infrastructure of the load balancing:
+We create a synthetic mesh, apply the offline load balancing, and then 
+we (re-)launch the application with this optimised decomposition.
 </div>
 
 
-# Offload load balancing for an adaptive grid taken from a real run
 
 
 ## Multiscale mesh association
@@ -234,8 +233,9 @@ study and understand a fundamental challenge in the administratino of
 large-scale multiscale meshes. 
 When we pipe the hardcoded decomposition from above into an ExaHyPE run, we 
 realise that it builds up the whole mesh on one single rank and thread first
-and then decomposes this mesh in a final step.
-It is clear that this approach does not scale.
+and then decomposes this mesh in a final step:
+We wait for six iterations and then split 27 times.
+It is clear that this approach does not scale and we might quickly run out of memory on rank 0 for large meshes.
 
 
 We also notice once we profile that we pay a significant overhead with this 
@@ -248,18 +248,17 @@ What we are after is a multiscale decomposition where coarser levels are
 distributed among the ranks and threads, too.
 
 
-@image html src/toolbox/loadbalancing/visualise_tree_split.png
+A variant offered by Peano is the bottom-up analysis: 
+The idea is that we determine a proper fine-grid splitting and then find out if 
+we could have split on a higher level.
+The only thing we have to change is one additional step in-between the splitting
+algorithms and the pipe into the load balancer: 
 
+@snippet tutorial_offline_load_balancing_sbh.py tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_bottom_up
 
-The example above gives us such a partitioning: 
-Here, we have three levels. 
-On the finest one, we have a certain association of cells to trees, which in 
-turn are mapped onto ranks and threads. 
-The mapping is encoded with colours.
-However, also the coarser levels 0 and 1 have a unique assignment of trees.
+With the new 
 
-
-## This is yet to be written
+# Offload load balancing for an adaptive grid taken from a real run
 
 @todo Continue
 
