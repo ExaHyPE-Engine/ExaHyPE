@@ -89,7 +89,7 @@ void peano4::grid::tests::AutomatonStateTest::testFlags() {
 }
 
 void peano4::grid::tests::AutomatonStateTest::testMPIDatatype() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   auto&     rank          = tarch::mpi::Rank::getInstance();
   MPI_Comm  comm          = rank.getCommunicator();
   const int me            = rank.getRank();

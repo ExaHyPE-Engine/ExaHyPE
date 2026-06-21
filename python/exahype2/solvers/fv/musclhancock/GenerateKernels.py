@@ -8,11 +8,10 @@ import peano4.output
 def generate_kernels(
     solver,
     output,
-    subdirectory,
     reconstruction,
 ):
     kernels_namespace = solver._namespace + ["kernels", solver._name]
-    kernels_output_path = subdirectory + "kernels/" + solver._name
+    kernels_output_path = "kernels/" + solver._name
     kernels_templates_prefix = os.path.dirname(os.path.realpath(__file__)) + "/kernels/"
 
     if not os.path.exists(kernels_output_path):
@@ -32,9 +31,8 @@ def generate_kernels(
         + f"{riemann_solver_file}.template.cpp",
         classname=kernels_output_path + f"/{riemann_solver_file}",
         namespace=kernels_namespace,
-        subdirectory=subdirectory + ".",
+        subdirectory=".",
         dictionary=d,
-        default_overwrite=True,
         apply_iteratively=True,
     )
     output.add(generated_kernels)
@@ -68,7 +66,6 @@ def generate_kernels(
 def generate_fused_kernels(
     solver,
     output,
-    subdirectory,
     reconstruction,
 ):
     raise NotImplementedError(

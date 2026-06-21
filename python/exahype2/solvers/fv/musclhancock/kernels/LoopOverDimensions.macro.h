@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 {% macro loopOverDimensions() %}
-  #if defined(WITH_OPENMP)
+  #if defined(PEANO_WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll

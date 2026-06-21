@@ -76,7 +76,7 @@ void peano4::stacks::tests::TestDataOnHeap::clone(const TestDataOnHeap& other) {
   _data = newbuf;
 }
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 MPI_Datatype peano4::stacks::tests::TestDataOnHeap::getBoundaryExchangeDatatype() { return MPI_INT; }
 MPI_Datatype peano4::stacks::tests::TestDataOnHeap::getMultiscaleDataExchangeDatatype() { return MPI_INT; }
 MPI_Datatype peano4::stacks::tests::TestDataOnHeap::getForkDatatype() { return MPI_INT; }

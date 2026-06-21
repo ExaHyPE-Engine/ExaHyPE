@@ -177,7 +177,7 @@ int main(int argc, char** argv) {
   setupEnvironment(argc, argv);
 
   int result = EXIT_SUCCESS;
-#if defined(WITH_OPENMP)
+#if defined(PEANO_WITH_OPENMP)
 #pragma omp parallel
   {
 #pragma omp master
@@ -188,7 +188,7 @@ int main(int argc, char** argv) {
       } else {
         runWorker();
       }
-#if defined(WITH_OPENMP)
+#if defined(PEANO_WITH_OPENMP)
     }
   }
 #endif

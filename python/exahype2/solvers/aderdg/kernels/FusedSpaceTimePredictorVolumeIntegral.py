@@ -15,9 +15,9 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
         self.d = deepcopy(dictionary)
 
     def generate_kernels(
-        self, solver, namespace, output, subdirectory, template_prefix, output_path
+        self, solver, namespace, output, template_prefix, output_path
     ):
-        self._build_gemms(namespace, output, subdirectory, template_prefix, output_path)
+        self._build_gemms(namespace, output, template_prefix, output_path)
 
         self.d["NAME_SUFFIX"] = ""
 
@@ -71,9 +71,8 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                         + "/FusedSpaceTimePredictorVolumeIntegral"
                         + d["NAME_SUFFIX"],
                         namespace=namespace,
-                        subdirectory=subdirectory + ".",
+                        subdirectory=".",
                         dictionary=d,
-                        default_overwrite=True,
                         apply_iteratively=True,
                     )
                 )
@@ -104,9 +103,8 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
             + "FusedSpaceTimePredictorVolumeIntegralNonlinear.template.cpp",
             classname=output_path + "/FusedSpaceTimePredictorVolumeIntegral",
             namespace=namespace,
-            subdirectory=subdirectory + ".",
+            subdirectory=".",
             dictionary=self.d,
-            default_overwrite=True,
             apply_iteratively=True,
         )
         output.add(generated_kernels)
@@ -121,7 +119,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
         )
 
     def _build_gemms(
-        self, namespace, output, subdirectory, template_prefix, output_path
+        self, namespace, output, template_prefix, output_path
     ):
         # GEMMS: M, N, K, LDA, LDB, LDC, alpha, beta, Align A, Align C, name, prefetching, type
         self.d["GEMMS"] = {}

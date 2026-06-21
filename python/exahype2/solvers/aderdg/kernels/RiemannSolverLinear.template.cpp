@@ -60,12 +60,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   std::memset(FR, 0, {{NUMBER_OF_UNKNOWNS * NUMBER_OF_DOF * NUMBER_OF_DOF_3D}} * sizeof(cCompType));
 
   // Compute the average unkown and auxiliary variables from the left and the right
-  cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
-  cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
+  cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
+  cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
 
   traceEnter("Average states");
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
-    SIMD(aligned(QavL,QavR,QL:ALIGNMENT))
+    SIMD(aligned(QavL,QavR,QL:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
       QavL[n] += Quadrature<cCompType>::weights2[xy] * QL[xy * {{NUMBER_OF_DATA}} + n];
       QavR[n] += Quadrature<cCompType>::weights2[xy] * QR[xy * {{NUMBER_OF_DATA}} + n];
@@ -102,14 +102,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   cCompType smax = std::fmax(smaxL, smaxR);
   traceLeave("Max eigenvalue evaluation");
 
-  cCompType Qavg[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT)));
+  cCompType Qavg[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
-  SIMD(aligned(Qavg,QavR,QavL:ALIGNMENT))
+  SIMD(aligned(Qavg,QavR,QavL:PEANO_WITH_ALIGNMENT))
   for (int n = 0; n < {{NUMBER_OF_DATA_PADDED}}; n++) {
     Qavg[n] = 0.5 * (QavR[n] + QavL[n]);
   }
 
-  cCompType Qdiff[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(ALIGNMENT)));
+  cCompType Qdiff[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
 {% if NUMBER_OF_AUXILIARY_VARIABLES > 0 %}
   // We copy the averaged material parameters to Qdiff as they are used in the flux term
@@ -117,16 +117,16 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 {% endif %}
 
 {% if USE_NCP %}
-  cCompType ncp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
+  cCompType ncp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
 {% endif %}
 
 {% if USE_FLUX %}
-  cCompType fluxValues[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(ALIGNMENT))) = {0.0};
+  cCompType fluxValues[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
 {% endif %}
 
   traceEnter("Flux and nonconservative product evaluation");
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
-    SIMD(aligned(Qdiff,QL:ALIGNMENT))
+    SIMD(aligned(Qdiff,QL:PEANO_WITH_ALIGNMENT))
     for (int n = 0 ; n < {{NUMBER_OF_UNKNOWNS}} ; n++) {
       Qdiff[n] = 0.5 * (QR[xy * {{NUMBER_OF_DATA}} + n] - QL[xy * {{NUMBER_OF_DATA}} + n]);
     }
@@ -163,7 +163,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     );
 {% endif %}{# USE_MATERIAL_PARAMETERS #}
 
-    SIMD(aligned(FL,ncp:ALIGNMENT))
+    SIMD(aligned(FL,ncp:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
       FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] += ncp[n];
     }
@@ -200,13 +200,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     );
 {% endif %}{# USE_MATERIAL_PARAMETERS #}
 
-    SIMD(aligned(FL,fluxValues:ALIGNMENT))
+    SIMD(aligned(FL,fluxValues:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
       FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] += fluxValues[n];
     }
 {% endif %}{# USE_FLUX #}
 
-    SIMD(aligned(FL,Qdiff:ALIGNMENT))
+    SIMD(aligned(FL,Qdiff:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
       FR[xy * {{NUMBER_OF_UNKNOWNS}} + n] = FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] + smax * Qdiff[n];
       FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] -= smax * Qdiff[n];

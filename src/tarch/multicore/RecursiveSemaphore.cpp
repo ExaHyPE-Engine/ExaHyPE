@@ -1,7 +1,7 @@
 #include "tarch/multicore/RecursiveSemaphore.h"
 
 
-#ifndef WITH_MULTITHREADING
+#ifndef PEANO_WITH_MULTITHREADING
 tarch::multicore::RecursiveSemaphore::RecursiveSemaphore() {
 }
 

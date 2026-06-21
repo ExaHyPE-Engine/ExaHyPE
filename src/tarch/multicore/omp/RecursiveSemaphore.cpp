@@ -1,6 +1,6 @@
 #include "tarch/multicore/multicore.h"
 
-#ifdef WITH_OPENMP
+#ifdef PEANO_WITH_OPENMP
 #include "RecursiveSemaphore.h"
 
 tarch::multicore::RecursiveSemaphore::RecursiveSemaphore() {

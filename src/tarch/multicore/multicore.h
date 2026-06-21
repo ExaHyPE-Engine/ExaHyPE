@@ -30,10 +30,10 @@ namespace tarch {
   and
 
   ~~~~~~~~~~~~~~~~~~~~~~~~
-  #if defined(WITH_MULTITHREADING)
+  #if defined(PEANO_WITH_MULTITHREADING)
   ~~~~~~~~~~~~~~~~~~~~~~~~
 
-   With the symbol WITH_MULTITHREADING, you make your code independent of
+   With the symbol PEANO_WITH_MULTITHREADING, you make your code independent of
    OpenMP, TBB or C++ threading.
 
 

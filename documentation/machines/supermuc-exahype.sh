@@ -153,10 +153,10 @@ export CXX=icpx
 
 echo ">>> [BUILD JOB] Running CMake with Ninja..."
 cmake .. -GNinja \
-    -DWITH_MPI=ON \
-    -DWITH_MULTITHREADING=ON \
-    -DWITH_HDF5=ON \
-    -DWITH_NETCDF=ON
+    -DPEANO_WITH_MPI=ON \
+    -DPEANO_WITH_MULTITHREADING=ON \
+    -DPEANO_WITH_HDF5=ON \
+    -DPEANO_WITH_NETCDF=ON
 
 echo ">>> [BUILD JOB] Building with Ninja (using \$SLURM_CPUS_PER_TASK threads)..."
 ninja -j \$SLURM_CPUS_PER_TASK

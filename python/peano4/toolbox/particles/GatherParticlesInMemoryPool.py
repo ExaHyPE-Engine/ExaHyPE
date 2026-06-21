@@ -28,7 +28,7 @@ class GatherParticlesInMemoryPool(ActionSet):
         particle_set,
     ):
         super(GatherParticlesInMemoryPool, self).__init__(
-            descend_invocation_order=self.DefaultDescendInvocationOrder, parallel=False
+            descend_invocation_order=self.DefaultDescendInvocationOrder
         )
         self._particle_set = particle_set
         self.d = {}

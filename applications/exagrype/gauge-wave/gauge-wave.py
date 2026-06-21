@@ -187,7 +187,7 @@ solver.add_user_solver_includes(
 
 project.add_solver(solver)
 
-project = project.generate_Peano4_project(verbose=False)
+project = project.generate_Peano4_project()
 
 for const_name, const_info in constants.items():
     const_val, const_type = const_info
@@ -195,4 +195,4 @@ for const_name, const_info in constants.items():
 
 project.output.makefile.add_cpp_file("CCZ4Solver.cpp")
 project.output.makefile.add_cpp_file("InitialCondition.cpp")
-project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
+project.generate_and_build()

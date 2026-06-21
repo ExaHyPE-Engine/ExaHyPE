@@ -61,7 +61,7 @@ struct peano4::grid::AutomatonState {
     int                                axis             = DIMENSIONS - 1
   );
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   static MPI_Datatype Datatype;
   int                 senderDestinationRank = -1;
 

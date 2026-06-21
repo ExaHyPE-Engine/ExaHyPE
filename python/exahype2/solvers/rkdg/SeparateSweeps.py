@@ -1,12 +1,8 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from .RungeKuttaDG  import RungeKuttaDG
-from exahype2.solvers.PDETerms      import PDETerms
 
-import peano4
-import exahype2
 
-import jinja2
 
 
 class SeparateSweeps(RungeKuttaDG):

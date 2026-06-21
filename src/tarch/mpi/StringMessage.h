@@ -13,7 +13,7 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   #include <mpi.h>
   #include <functional>
 #endif
@@ -41,13 +41,13 @@ struct tarch::mpi::StringMessage {
 
 
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
     static void sendAndPollDanglingMessages(const tarch::mpi::StringMessage& message, int destination, int tag );
     static void receiveAndPollDanglingMessages(tarch::mpi::StringMessage& message, int source, int tag );
 #endif
     
 
-    #ifdef WITH_MPI
+    #ifdef PEANO_WITH_MPI
     /**
      * @return The rank of the sender of an object. It only make ssense to call
      *         this routine after you've invoked receive with MPI_ANY_SOURCE.

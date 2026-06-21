@@ -343,7 +343,7 @@ Type:                   """ + self.__class__.__name__
         # step.add_action_set(self._action_set_spread_limiter_status)
         step.add_action_set(self._action_set_copy_face_data)
 
-    def _generate_kernels(self, namespace, output, subdirectory, dimensions):
+    def _generate_kernels(self, namespace, output, dimensions):
         d = {}
         self._init_dictionary_with_default_parameters(d)
         self.add_entries_to_text_replacement_dictionary(d)
@@ -354,14 +354,14 @@ Type:                   """ + self.__class__.__name__
         # d["FULL_QUALIFIED_SOLVER_NAME"] ="::".join(namespace) + "::" + self._name
 
         kernels_namespace = namespace + ["kernels", self._name]
-        kernels_output_path = subdirectory + "kernels/" + self._name
+        kernels_output_path = "kernels/" + self._name
         kernels_templates_prefix = os.path.dirname(os.path.realpath(__file__)) + "/kernels/"
 
         if not os.path.exists(kernels_output_path):
            os.makedirs(kernels_output_path)
 
         kernels.Limiter(d).generate_kernels(
-            kernels_namespace, output, subdirectory, 
+            kernels_namespace, output, 
             kernels_templates_prefix, kernels_output_path,
             regular_solver_quadpoints = self._regular_solver._basis.quadrature_points(render=False),
             limiter_solver_quadpoints = self._limiter_solver._basis.quadrature_points(render=False)
@@ -372,7 +372,7 @@ Type:                   """ + self.__class__.__name__
     specifically cell or face data or grid actions such as the actionsets.
     Currently it generates solver implementation and header files.
     """
-    def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory=""):
+    def add_implementation_files_to_project(self, namespace, output, dimensions):
         """
         The ExaHyPE2 project will call this operation when it sets
         up the overall environment.
@@ -391,9 +391,8 @@ Type:                   """ + self.__class__.__name__
                 os.path.dirname(os.path.realpath(__file__)) + "/StaticCouplingAbstract.template.cpp",
                 "Abstract" + self._name,
                 namespace,
-                subdirectory + ".",
+                ".",
                 HeaderDictionary,
-                True,
                 True
             )
         )
@@ -404,22 +403,21 @@ Type:                   """ + self.__class__.__name__
                 os.path.dirname(os.path.realpath(__file__)) + "/StaticCoupling.template.cpp",
                 self._name,
                 namespace,
-                subdirectory + ".",
+                ".",
                 HeaderDictionary,
-                False,
                 True
             )
         )
 
         output.add(generated_abstract_files)
-        output.makefile.add_cpp_file(subdirectory + "Abstract" + self._name + ".cpp", generated=True)
-        output.makefile.add_h_file(subdirectory + "Abstract" + self._name + ".h", generated=True)
+        output.makefile.add_cpp_file("Abstract" + self._name + ".cpp", generated=True)
+        output.makefile.add_h_file("Abstract" + self._name + ".h", generated=True)
 
         output.add(generated_solver_files)
-        output.makefile.add_cpp_file(subdirectory + self._name + ".cpp", generated=True)
-        output.makefile.add_h_file(subdirectory + self._name + ".h", generated=True)
+        output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
+        output.makefile.add_h_file(self._name + ".h", generated=True)
 
-        self._generate_kernels(namespace, output, subdirectory, dimensions)
+        self._generate_kernels(namespace, output, dimensions)
 
     @abstractmethod
     def add_entries_to_text_replacement_dictionary(self, d):

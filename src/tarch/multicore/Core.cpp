@@ -54,7 +54,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
   return instance;
 }
 
-#ifndef WITH_MULTITHREADING
+#ifndef PEANO_WITH_MULTITHREADING
 
 bool tarch::multicore::Core::init() {
   _numberOfThreads = 1;

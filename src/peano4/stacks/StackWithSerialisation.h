@@ -27,7 +27,7 @@ public:
   StackWithSerialisation(StackWithSerialisation&&) noexcept            = default;
   StackWithSerialisation& operator=(StackWithSerialisation&&) noexcept = default;
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   void startSend(const SendReceiveContext context, const int rank, const int tag, const MPI_Comm comm) {
     assertion(this->_ioMode == IOMode::None);
     assertion(this->_ioMPIRequest == MPI_REQUEST_NULL);
@@ -156,5 +156,5 @@ private:
       std::copy_n(_receiveBuffer.data() + i * T::Cardinality, T::Cardinality, target);
     }
   }
-#endif // WITH_MPI
+#endif // PEANO_WITH_MPI
 };

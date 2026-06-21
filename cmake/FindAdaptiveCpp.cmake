@@ -1,12 +1,21 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-include_guard(GLOBAL)
-
 set(ACPP_VERSION "25.10.0" CACHE STRING "")
 set(ACPP_TARGETS "" CACHE STRING "")
 set(ACPP_COMPILER_FEATURE_PROFILE "full" CACHE STRING "")
 set(ACPP_DEBUG_LEVEL 0 CACHE STRING "0=no debug, 1=errors, 2=warnings, 3=info")
+
+# Application side: honour the settings exported by the core build.
+if(DEFINED PEANO_ADAPTIVECPP_DIR AND NOT PEANO_ADAPTIVECPP_DIR STREQUAL "")
+  set(AdaptiveCpp_DIR "${PEANO_ADAPTIVECPP_DIR}" CACHE PATH "AdaptiveCpp package config dir (from Peano core build)" FORCE)
+endif()
+if(DEFINED PEANO_ACPP_TARGETS AND NOT PEANO_ACPP_TARGETS STREQUAL "" AND ACPP_TARGETS STREQUAL "")
+  set(ACPP_TARGETS "${PEANO_ACPP_TARGETS}" CACHE STRING "" FORCE)
+endif()
+if(DEFINED PEANO_ACPP_DEBUG_LEVEL)
+  set(ACPP_DEBUG_LEVEL "${PEANO_ACPP_DEBUG_LEVEL}" CACHE STRING "" FORCE)
+endif()
 
 function(_adaptivecpp_build_parallel_args out_var out_jobs_var)
   if(DEFINED AVAILABLE_PROCESSOR_COUNT AND AVAILABLE_PROCESSOR_COUNT GREATER 0)
@@ -26,10 +35,10 @@ function(_adaptivecpp_build_parallel_args out_var out_jobs_var)
 endfunction()
 
 if(ACPP_TARGETS STREQUAL "")
-  if(WITH_GPU_ARCH MATCHES "^sm_")
-    set(ACPP_TARGETS "cuda:${WITH_GPU_ARCH}" CACHE STRING "" FORCE)
-  elseif(WITH_GPU_ARCH MATCHES "^gfx")
-    set(ACPP_TARGETS "hip:${WITH_GPU_ARCH}" CACHE STRING "" FORCE)
+  if(PEANO_WITH_GPU_ARCH MATCHES "^sm_")
+    set(ACPP_TARGETS "cuda:${PEANO_WITH_GPU_ARCH}" CACHE STRING "" FORCE)
+  elseif(PEANO_WITH_GPU_ARCH MATCHES "^gfx")
+    set(ACPP_TARGETS "hip:${PEANO_WITH_GPU_ARCH}" CACHE STRING "" FORCE)
   else()
     set(ACPP_TARGETS "generic" CACHE STRING "" FORCE)
   endif()
@@ -100,4 +109,6 @@ endif()
 message(STATUS "Found AdaptiveCpp: ${AdaptiveCpp_DIR}")
 message(STATUS "Using AdaptiveCpp targets: ${ACPP_TARGETS}")
 
-target_compile_definitions(PeanoOptions INTERFACE WITH_GPU_SYCL WITH_GPU)
+if(TARGET PeanoOptions)
+  target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_GPU_BACKEND_SYCL PEANO_WITH_GPU_BACKEND)
+endif()

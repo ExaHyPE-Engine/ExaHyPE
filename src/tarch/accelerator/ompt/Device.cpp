@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/Device.h"
 
-#if defined(WITH_GPU_OMPT)
+#if defined(PEANO_WITH_GPU_BACKEND_OMPT)
 
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/Device.h"
@@ -30,4 +30,4 @@ bool tarch::accelerator::Device::isInitialised() const { return numberOfDevices 
 
 int tarch::accelerator::Device::getNumberOfDevices() const { return numberOfDevices; }
 
-#endif // defined(WITH_GPU_OMPT)
+#endif // defined(PEANO_WITH_GPU_BACKEND_OMPT)

@@ -145,7 +145,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
 
         """
         super(UpdateParticle_MultiLevelInteraction_StackOfLists, self).__init__(
-            descend_invocation_order=1, parallel=False
+            descend_invocation_order=1
         )
 
         self._particle_set = particle_set

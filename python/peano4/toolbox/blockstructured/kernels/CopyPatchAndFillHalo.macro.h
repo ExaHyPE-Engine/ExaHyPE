@@ -10,7 +10,7 @@
   const int sourceCellSerialised      = peano4::utils::dLinearised(sourceCell, {{DOFS_PER_AXIS}});
   const int destinationCellSerialised = peano4::utils::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
 
-  #if defined(WITH_OPENMP)
+  #if defined(PEANO_WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
@@ -49,7 +49,7 @@
 
       auto faceIndex = faceIndices[patchIndex * TWO_TIMES_D + d];
 
-      #if defined(WITH_OPENMP)
+      #if defined(PEANO_WITH_OPENMP)
       #pragma omp simd
       #else
       #pragma unroll
@@ -68,7 +68,7 @@
 
       faceIndex = faceIndices[patchIndex * TWO_TIMES_D + d + DIMENSIONS];
 
-      #if defined(WITH_OPENMP)
+      #if defined(PEANO_WITH_OPENMP)
       #pragma omp simd
       #else
       #pragma unroll

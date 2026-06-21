@@ -34,15 +34,13 @@ class GlobalFixedTimeStep(SingleSweep):
             normalised_time_step_size
         )
 
-    def _generate_kernels(self, output, subdirectory):
+    def _generate_kernels(self, output):
         generate_kernels(
             solver=self,
             output=output,
-            subdirectory=subdirectory,
         )
         if self._fuse_compute_kernels:
             generate_fused_kernels(
                 solver=self,
                 output=output,
-                subdirectory=subdirectory,
             )

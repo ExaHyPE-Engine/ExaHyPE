@@ -20,4 +20,4 @@ project.output.makefile.add_cpp_file("Spacetree-main.cpp")
 project.output.makefile.add_cpp_file("CreateGridObserver.cpp")
 project.output.makefile.add_cpp_file("EmptyTraversalObserver.cpp")
 
-project.build()
+project.generate_and_build()

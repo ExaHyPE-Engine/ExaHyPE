@@ -43,13 +43,13 @@ namespace {
     appendStartupHeaderEntry(result, "Dimensions", DIMENSIONS);
 
     std::string mpiInfo = "Off";
-#if defined(WITH_MPI)
+#if defined(PEANO_WITH_MPI)
     mpiInfo = std::to_string(tarch::mpi::Rank::getInstance().getNumberOfRanks()) + " Rank(s)";
 #endif
     appendStartupHeaderEntry(result, "MPI", mpiInfo);
 
     std::string openmpInfo = "Off";
-#if defined(WITH_OPENMP)
+#if defined(PEANO_WITH_OPENMP)
     openmpInfo = std::to_string(tarch::multicore::Core::getInstance().getNumberOfThreads()) + " Thread(s)";
 #endif
     appendStartupHeaderEntry(result, "OpenMP", openmpInfo);
@@ -58,16 +58,16 @@ namespace {
     appendStartupHeaderEntry(result, "Stack Size", tarch::detectStackSizeLimit());
 
     std::string gpuInfo = "None";
-#if defined(WITH_GPU)
-#if defined(WITH_GPU_SYCL)
+#if defined(PEANO_WITH_GPU_BACKEND)
+#if defined(PEANO_WITH_GPU_BACKEND_SYCL)
     gpuInfo = "SYCL";
-#elif defined(WITH_GPU_HIP)
+#elif defined(PEANO_WITH_GPU_BACKEND_HIP)
     gpuInfo = "HIP";
-#elif defined(WITH_GPU_CUDA)
+#elif defined(PEANO_WITH_GPU_BACKEND_CUDA)
     gpuInfo = "CUDA";
-#elif defined(WITH_GPU_KOKKOS)
+#elif defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
     gpuInfo = "Kokkos";
-#elif defined(WITH_GPU_OMPT)
+#elif defined(PEANO_WITH_GPU_BACKEND_OMPT)
     gpuInfo = "OMPT";
 #endif
     if (gpuInfo != "None") {

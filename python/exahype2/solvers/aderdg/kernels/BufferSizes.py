@@ -10,7 +10,7 @@ class BufferSizes(object):
         self.d = deepcopy(dictionary)
 
     def generate_kernels(
-        self, solver, namespace, output, subdirectory, template_prefix, output_path
+        self, solver, namespace, output, template_prefix, output_path
     ):
         nUnknowns = self.d["NUMBER_OF_UNKNOWNS"]
         nUnknownsPad = self.d["NUMBER_OF_UNKNOWNS_PADDED"]
@@ -67,9 +67,8 @@ class BufferSizes(object):
             headerfile_template=template_prefix + "BufferSizes.template.h",
             classname=output_path + "/BufferSizes",
             namespace=namespace,
-            subdirectory=subdirectory + ".",
+            subdirectory=".",
             dictionary=self.d,
-            default_overwrite=True,
             apply_iteratively=True,
         )
         output.add(generated_kernels)

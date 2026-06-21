@@ -1,6 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#if defined(WITH_OPENMP)
+#if defined(PEANO_WITH_OPENMP)
 #include "omp/RecursiveSemaphore.h"
 #elif !defined(_TARCH_MULTICORE_RECURSIVE_SEMAPHORE_H_)
 #define _TARCH_MULTICORE_RECURSIVE_SEMAPHORE_H_

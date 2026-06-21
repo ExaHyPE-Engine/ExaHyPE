@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 
 #include "tarch/instrumentation/Log.h"
 #include "tarch/tests/TestCase.h"

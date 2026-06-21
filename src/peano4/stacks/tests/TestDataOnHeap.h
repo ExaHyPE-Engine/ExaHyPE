@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 #include <mpi.h>
 #endif
 
@@ -34,7 +34,7 @@ public:
 
   void clone(const TestDataOnHeap& other);
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   static MPI_Datatype getBoundaryExchangeDatatype();
   static MPI_Datatype getMultiscaleDataExchangeDatatype();
   static MPI_Datatype getForkDatatype();

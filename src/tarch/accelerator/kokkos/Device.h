@@ -2,6 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#if defined(WITH_GPU_KOKKOS)
+#if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
 #include <Kokkos_Macros.hpp>
 #endif

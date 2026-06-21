@@ -26,7 +26,6 @@ class StepsToStepRepository(object):
     # print("steps._project.namespaces = ", self.steps._project.namespaces)
     for i in range(len(self.steps._project.namespaces)):
       namespace = self.steps._project.namespaces[i]
-      subdirectory = self.steps._project.subdirectories[i]
       self.d["FORWARD_DECLARATIONS"] = ""
       self.d["ENUM_VARIANTS"]        = ""
       self.d["STRING_RETURN_CASE"]   = ""
@@ -44,7 +43,7 @@ class StepsToStepRepository(object):
       # print("steps.subdirectory = ", subdirectory, ", steps.namespace = ", namespace)
 
       class_name = self.__get_class_name()
-      output.makefile.add_cpp_file( subdirectory + "repositories" + "/" + class_name + ".cpp", generated=True )
+      output.makefile.add_cpp_file( "repositories" + "/" + class_name + ".cpp", generated=True )
       templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
       local_d = self.d.copy()
       generated_files = peano4.output.TemplatedHeaderImplementationFilePair(
@@ -52,8 +51,7 @@ class StepsToStepRepository(object):
         templatefile_prefix+".template.cpp",
         class_name, 
         namespace + ["repositories"],
-        subdirectory + "repositories",
-        local_d,
-        True)
+        "repositories",
+        local_d)
       output.add(generated_files)
     pass

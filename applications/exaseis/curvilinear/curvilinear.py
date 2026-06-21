@@ -130,8 +130,8 @@ if use_tracers:
         output_precision=10, clear_database_after_flush=False
     ))
 
-peano4_project = project.generate_Peano4_project(verbose=False)
-peano4_project.build(make_clean_first=True)
+peano4_project = project.generate_Peano4_project()
+peano4_project.generate_and_build()
 
 os.rename("LOH1", filename)
 subprocess.run("make distclean", shell = True, executable="/bin/bash")

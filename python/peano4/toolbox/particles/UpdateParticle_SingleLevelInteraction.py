@@ -139,7 +139,7 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
 
         """
         super(UpdateParticle_SingleLevelInteraction, self).__init__(
-            descend_invocation_order=1, parallel=False
+            descend_invocation_order=1
         )
 
         self._particle_set = particle_set

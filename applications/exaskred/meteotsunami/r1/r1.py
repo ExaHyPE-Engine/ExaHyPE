@@ -305,7 +305,7 @@ project.add_solver(aderdg_solver)
 project.add_solver(fv_solver)
 project.add_solver(limiter_solver)
 project.add_runtime_parameter("bathymetryFile", "string", BATHYMETRY_FILE)
-peano_project = project.generate_Peano4_project(verbose=False)
+peano_project = project.generate_Peano4_project()
 for const_name, (const_val, const_type) in constants.items():
     peano_project.constants.export_constexpr_with_type(
         const_name, str(const_val), const_type
@@ -314,4 +314,4 @@ for const_name, (const_val, const_type) in constants.items():
 peano_project.output.makefile.add_cpp_file("../MathDerivatives.cpp")
 peano_project.output.makefile.add_cpp_file("../MeteotsunamiLaws.cpp")
 peano_project.output.makefile.add_cpp_file("AtmosphericPressure.cpp")
-peano_project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
+peano_project.generate_and_build()

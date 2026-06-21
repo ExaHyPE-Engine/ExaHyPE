@@ -11,12 +11,12 @@ class StepToObserver(object):
     observer = Observer(
       self.step.name,
       self.step.project.namespace + ["observers"],
-      self.step.project.subdirectory + "observers",
+      "observers",
       included_action_sets,
       self.step.vertex_data,
       self.step.face_data,
       self.step.cell_data
     )
     output.artefacts.append(observer)
-    output.makefile.add_h_file(self.step.project.subdirectory + "observers" + "/" + self.step.name + ".h", generated=True)
-    output.makefile.add_cpp_file(self.step.project.subdirectory + "observers" + "/" + self.step.name + ".cpp", generated=True)
+    output.makefile.add_h_file("observers" + "/" + self.step.name + ".h", generated=True)
+    output.makefile.add_cpp_file("observers" + "/" + self.step.name + ".cpp", generated=True)

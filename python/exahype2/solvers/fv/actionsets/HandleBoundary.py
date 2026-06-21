@@ -104,9 +104,9 @@ class HandleBoundary(AbstractFVActionSet):
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
 
-    def generate_kernels(self, namespace, output, dimensions, subdirectory):
+    def generate_kernels(self, namespace, output, dimensions):
         kernels_namespace = namespace + ["kernels", self._solver._name]
-        kernels_output_path = subdirectory + f"kernels/{self._solver._name}"
+        kernels_output_path = f"kernels/{self._solver._name}"
         kernels_templates_prefix = (
             os.path.dirname(os.path.realpath(__file__)) + "/kernels"
         )
@@ -123,9 +123,8 @@ class HandleBoundary(AbstractFVActionSet):
             cppfile_template=kernels_templates_prefix + "/HandleBoundary.template.cpp",
             classname=kernels_output_path + "/HandleBoundary",
             namespace=kernels_namespace,
-            subdirectory=subdirectory + ".",
+            subdirectory=".",
             dictionary=d,
-            default_overwrite=True,
             apply_iteratively=True,
         )
         output.add(generated_kernels)
@@ -136,11 +135,11 @@ class HandleBoundary(AbstractFVActionSet):
             kernels_output_path + "/HandleBoundary.cpp", generated=True
         )
         if self._solver._fuse_compute_kernels:
-            self.generate_fused_kernels(namespace, output, dimensions, subdirectory)
+            self.generate_fused_kernels(namespace, output, dimensions)
 
-    def generate_fused_kernels(self, namespace, output, dimensions, subdirectory):
+    def generate_fused_kernels(self, namespace, output, dimensions):
         kernels_namespace = namespace + ["kernels", self._solver._name]
-        kernels_output_path = subdirectory + f"kernels/{self._solver._name}"
+        kernels_output_path = f"kernels/{self._solver._name}"
         kernels_templates_prefix = (
             os.path.dirname(os.path.realpath(__file__)) + "/kernels"
         )
@@ -161,9 +160,8 @@ class HandleBoundary(AbstractFVActionSet):
             + ".template.cpp",
             classname=kernels_output_path + "/HandleBoundaryFused",
             namespace=kernels_namespace,
-            subdirectory=subdirectory + ".",
+            subdirectory=".",
             dictionary=d,
-            default_overwrite=True,
             apply_iteratively=True,
         )
         output.add(generated_kernels)

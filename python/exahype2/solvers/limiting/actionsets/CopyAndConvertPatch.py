@@ -48,7 +48,7 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
           marker.getH(),
           fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp(),
           fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStepSize(),
-          fineGridCell{{LIMITER_SOLVER_CURRENT_UNKNOWN_IDENTIFIER}}.data() + i * {{NUMBER_OF_DATA}}
+          fineGridCell{{LIMITER_SOLVER_CURRENT_UNKNOWN_IDENTIFIER}}.data() + i * {{NUMBER_OF_DATA_PADDED}}
         );
       }
       {% endif %}

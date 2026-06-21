@@ -71,7 +71,4 @@ exahype2_project.add_solver(my_solver)
 
 peano4_project = exahype2_project.generate_Peano4_project()
 peano4_project.output.makefile.add_cpp_file("EulerSolver.cpp")
-peano4_project.generate()
-peano4_project.build(
-    make=True, make_clean_first=False, throw_away_data_after_build=False
-)
+peano4_project.generate_and_build()

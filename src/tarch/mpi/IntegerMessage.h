@@ -11,7 +11,7 @@
 #include <string>
 
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   #include <mpi.h>
   #include <functional>
 #endif
@@ -43,7 +43,7 @@ struct tarch::mpi::IntegerMessage {
     IntegerMessage(const IntegerMessage& copy) = default;
 
 
-    #ifdef WITH_MPI
+    #ifdef PEANO_WITH_MPI
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -99,7 +99,7 @@ struct tarch::mpi::IntegerMessage {
     static void receive(   tarch::mpi::IntegerMessage& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
     
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
     static void sendAndPollDanglingMessages(const tarch::mpi::IntegerMessage& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
     static void receiveAndPollDanglingMessages(tarch::mpi::IntegerMessage& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
 #endif
@@ -110,7 +110,7 @@ struct tarch::mpi::IntegerMessage {
   private:
       int   _value;
 
-    #ifdef WITH_MPI
+    #ifdef PEANO_WITH_MPI
     private:
       int                  _senderDestinationRank;
       static MPI_Datatype  Datatype;

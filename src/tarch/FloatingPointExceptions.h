@@ -4,9 +4,9 @@
 
 #include "CompilerSpecificSettings.h"
 
-#if defined(WITH_FPE) && defined(_MSC_VER)
+#if defined(PEANO_WITH_FPE) && defined(_MSC_VER)
 #pragma float_control(precise, on)
-#elif defined(WITH_FPE) && (defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER))
+#elif defined(PEANO_WITH_FPE) && (defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER))
 // GCC warns and ignores this pragma in C++, so only enable it on compilers that accept it.
 #pragma STDC FENV_ACCESS ON
 #endif
@@ -28,7 +28,7 @@ namespace tarch {
 
     static constexpr ExceptionMask DefaultExceptions = DivisionByZero | Invalid | Overflow;
 
-#if defined(WITH_FPE)
+#if defined(PEANO_WITH_FPE)
     static bool areExceptionTrapsSupported() noexcept;
     static bool enableExceptionTraps(ExceptionMask exceptions = DefaultExceptions) noexcept;
     static void disableExceptionTraps() noexcept;

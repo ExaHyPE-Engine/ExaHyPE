@@ -1,7 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import os
-import re
 import jinja2
 
 from pathlib import Path
@@ -10,8 +9,6 @@ from copy import deepcopy
 from .Helper import get_jinja2_template
 from .Helper import render_jinja2_template
 from .Helper import write_file
-
-from .Overwrite import Overwrite
 
 from peano4.Logger import log
 
@@ -31,7 +28,6 @@ dictionary entries besides the ones manually handed over by the user.
                namespace,
                subdirectory,
                dictionary,
-               default_overwrite=True,
                apply_iteratively=False):
     """
       The template files should be fully qualified
@@ -45,7 +41,6 @@ dictionary entries besides the ones manually handed over by the user.
     self.classname            = classname
     self.namespace            = namespace
     self.subdirectory         = subdirectory
-    self.default_overwrite    = default_overwrite
     self.apply_iteratively    = apply_iteratively
 
     self.d = deepcopy(dictionary)
@@ -56,8 +51,8 @@ dictionary entries besides the ones manually handed over by the user.
     # Eliminate the prepending "::" that can lead to compatibility issues across the solvers
     self.d["FULL_QUALIFIED_NAMESPACE"] = "::".join(namespace)
 
-  def __generate_file(self,overwrite,full_qualified_filename,template_file):
-    if template_file!=None and write_file(overwrite,self.default_overwrite,full_qualified_filename):
+  def __generate_file(self,directory,protected_files,full_qualified_filename,template_file):
+    if template_file!=None and write_file(directory,protected_files,full_qualified_filename):
       log.debug("Write {}".format(full_qualified_filename))
 
       template = get_jinja2_template(template_file, jinja2.DebugUndefined)
@@ -76,12 +71,12 @@ dictionary entries besides the ones manually handed over by the user.
       with open( full_qualified_filename, "w" ) as output:
         output.write( rendered_text )
 
-  def generate(self,overwrite,directory):
+  def generate(self,directory,protected_files):
     if not os.path.exists( directory + "/" + self.subdirectory ):
       os.mkdir(directory + "/" + self.subdirectory)
 
     header_filename = directory + "/" + self.subdirectory + "/" + self.classname + Path(self.headerfile_template).suffix
     cpp_filename    = directory + "/" + self.subdirectory + "/" + self.classname + Path(self.cppfile_template).suffix
 
-    self.__generate_file(overwrite,header_filename,self.headerfile_template)
-    self.__generate_file(overwrite,cpp_filename   ,self.cppfile_template)
+    self.__generate_file(directory,protected_files,header_filename,self.headerfile_template)
+    self.__generate_file(directory,protected_files,cpp_filename   ,self.cppfile_template)

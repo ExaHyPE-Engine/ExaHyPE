@@ -306,8 +306,8 @@ bool {{FULL_QUALIFIED_NAMESPACE}}::discreteMaximumPrincipleAndMinAndMaxSearch(
   {{COMPUTE_PRECISION}}*                            boundaryMinPerObservable,
   {{COMPUTE_PRECISION}}*                            boundaryMaxPerObservable
 ) {
-  {{COMPUTE_PRECISION}} localMinPerObservable[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(ALIGNMENT)));
-  {{COMPUTE_PRECISION}} localMaxPerObservable[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} localMinPerObservable[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  {{COMPUTE_PRECISION}} localMaxPerObservable[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
   // 1: Determine the new cell-local minimum and maximum
   findCellLocalMinAndMax(solver, luh, localMinPerObservable, localMaxPerObservable);
@@ -367,7 +367,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::findCellLocalLimiterMinAndMax(
   std::fill_n(localMinPerObservable, {{NUMBER_OF_OBSERVABLES}}, +std::numeric_limits<{{COMPUTE_PRECISION}}>::infinity());
   std::fill_n(localMaxPerObservable, {{NUMBER_OF_OBSERVABLES}}, -std::numeric_limits<{{COMPUTE_PRECISION}}>::infinity());
 
-  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
   for (int z = {{GHOST_LAYER_WIDTH_3D}}; z < {{NUMBER_OF_DOF_LIMITER_3D+GHOST_LAYER_WIDTH_3D}}; z++) { // Skip the last element
     for (int y = {{GHOST_LAYER_WIDTH}}; y < {{NUMBER_OF_DOF_LIMITER+GHOST_LAYER_WIDTH}}; y++) {
@@ -395,7 +395,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::findCellLocalMinAndMax(
   std::fill_n(localMinPerObservable, {{NUMBER_OF_OBSERVABLES}}, +std::numeric_limits<{{COMPUTE_PRECISION}}>::infinity());
   std::fill_n(localMaxPerObservable, {{NUMBER_OF_OBSERVABLES}}, -std::numeric_limits<{{COMPUTE_PRECISION}}>::infinity());
 
-  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
   for (int zyx = 0; zyx < {{NUMBER_OF_DOF**DIMENSIONS}}; zyx++) {
     solver.mapDiscreteMaximumPrincipleObservables(
@@ -431,7 +431,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtGaussLobattoNodes(
 
 {%if DIMENSIONS==2 %}
   // y
-  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   // Constant x slice of projected solution
   {{COMPUTE_PRECISION}}* lob = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DATA_PADDED}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
@@ -464,7 +464,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtGaussLobattoNodes(
   tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
 
   // z
-  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   // // Constant x,y slice of projected solution
   {{COMPUTE_PRECISION}}* lob = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int yx = 0; yx < {{NUMBER_OF_DOF}}; yx++) {
@@ -503,7 +503,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtFVSubcellCenters(
 
 {%if DIMENSIONS==2 %}
   // y
-  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   {{COMPUTE_PRECISION}}* lim = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int x = 0; x < {{NUMBER_OF_DOF_LIMITER}}; x++) {
     {{ m.gemm('dg2fv_y_slice', 'tmpX', '{{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>::dg2fv', 'lim',
@@ -534,7 +534,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtFVSubcellCenters(
   tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
 
   // z
-  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   // Constant x,y slice of projected solution
   {{COMPUTE_PRECISION}}* lim = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int yx = 0; yx < {{NUMBER_OF_DOF_LIMITER*NUMBER_OF_DOF_LIMITER}}; yx++) {

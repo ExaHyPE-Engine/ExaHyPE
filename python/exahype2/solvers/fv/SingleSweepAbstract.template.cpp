@@ -206,7 +206,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   if (isLastGridSweepOfTimeStep()) {
     double newMinTimeStamp = _minTimeStampThisTimeStep;
     double newMaxTimeStamp = _maxTimeStampThisTimeStep;

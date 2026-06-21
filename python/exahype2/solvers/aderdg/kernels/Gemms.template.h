@@ -98,8 +98,8 @@ void {{gemm}}(const long double* A, const long double* B, long double* C);
   {{gemms.baseroutinename}}({{A}}{% if A_shift != '0' %}+{{A_shift}}{% endif %}, {{B}}{% if B_shift != '0' %}+{{B_shift}}{% endif %}, {{C}}{% if C_shift != '0' %}+{{C_shift}}{% endif %});
 {% else %}
 {% if force_coeff_matrix %}
-  double {{B}}[{{gemms.LDB*gemms.K}}] __attribute__((aligned(ALIGNMENT)));
-  SIMD(aligned({{Bp}},{{true_Bp}}:ALIGNMENT))
+  double {{B}}[{{gemms.LDB*gemms.K}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  SIMD(aligned({{Bp}},{{true_Bp}}:PEANO_WITH_ALIGNMENT))
   for (int it = 0; it < {{gemms.LDB*gemms.K}}; it++) {
     {{B}}[it] = {{true_alpha}} * {{true_B}}[it];
   }
@@ -109,7 +109,7 @@ void {{gemm}}(const long double* A, const long double* B, long double* C);
 {% if gemms.beta == 0 %}
   // Reset {{C}}
   for (int it_1 = 0; it_1 < {{gemms.N}}; it_1++) {
-    SIMD(aligned({{Cp}}:ALIGNMENT))
+    SIMD(aligned({{Cp}}:PEANO_WITH_ALIGNMENT))
     for (int it_3 = 0; it_3 < {{gemms.M}}; it_3++) {
       {{C}}[{{C_shift}} + it_1 * {{gemms.LDC}} + it_3] = 0.0;
     }
@@ -118,7 +118,7 @@ void {{gemm}}(const long double* A, const long double* B, long double* C);
 
 for (int it_1 = 0; it_1 < {{gemms.N}}; it_1++) {
   for (int it_2 = 0; it_2 < {{gemms.K}}; it_2++) {
-    SIMD(aligned({{Cp}},{{Ap}},{{true_Bp}}:ALIGNMENT))
+    SIMD(aligned({{Cp}},{{Ap}},{{true_Bp}}:PEANO_WITH_ALIGNMENT))
     for (int it_3 = 0; it_3 < {{gemms.M}}; it_3++) {
       {{C}}[{{C_shift}} + it_1 * {{gemms.LDC}} + it_3] {{ '+' if gemms.alpha == 1 else '-' }}= {{A}}[{{A_shift}} + it_2 * {{gemms.LDA}} + it_3]
         * {% if (use_true_B and not force_coeff_matrix) %}{{true_alpha}} * {% endif %}{{true_B}}[{% if B_shift != '0' %}{{B_shift}}+{% endif %}it_1 * {{gemms.LDB}} + it_2];

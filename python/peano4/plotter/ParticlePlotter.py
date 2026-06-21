@@ -75,7 +75,7 @@ class ParticlePlotter(BasePlotter):
     def get_attributes(self):
         return (
             super(ParticlePlotter, self).get_attributes()
-            + f"""
+            + """
   std::unique_ptr<tarch::plotter::FileWriter::CellPlotter> _cellPlotter;
   std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter> _vertexPlotter;
 """

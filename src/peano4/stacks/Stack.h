@@ -33,7 +33,7 @@ protected:
   IOMode _ioMode = IOMode::None;
   int    _ioRank = -1;
   int    _ioTag  = -1;
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   MPI_Request _ioMPIRequest = MPI_REQUEST_NULL;
   bool        _ioMPIActive  = false;
 #endif
@@ -110,7 +110,7 @@ public:
     _ioMode(other._ioMode),
     _ioRank(other._ioRank),
     _ioTag(other._ioTag)
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
     ,
     _ioMPIRequest(other._ioMPIRequest),
     _ioMPIActive(other._ioMPIActive)
@@ -119,7 +119,7 @@ public:
     // Reset the source to a safe empty state
     other._logicalSize = 0;
     other._ioMode      = IOMode::None;
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
     other._ioMPIRequest = MPI_REQUEST_NULL;
     other._ioMPIActive  = false;
 #endif
@@ -132,7 +132,7 @@ public:
       _ioMode      = other._ioMode;
       _ioRank      = other._ioRank;
       _ioTag       = other._ioTag;
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
       _ioMPIRequest = other._ioMPIRequest;
       _ioMPIActive  = other._ioMPIActive;
 
@@ -302,7 +302,7 @@ public:
     _logicalSize = 0;
   }
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   /**
    * Always pairs up with a finish... call. When we trigger the send, the
    * code still might insert additional elements, i.e. starting does not
@@ -424,5 +424,5 @@ public:
   INLINE_METHOD IOMode getIOMode() const { return _ioMode; }
   INLINE_METHOD int    getActiveIORank() const { return _ioMode == IOMode::None ? -1 : _ioRank; }
   INLINE_METHOD int    getActiveIOTag() const { return _ioMode == IOMode::None ? -1 : _ioTag; }
-#endif // WITH_MPI
+#endif // PEANO_WITH_MPI
 };

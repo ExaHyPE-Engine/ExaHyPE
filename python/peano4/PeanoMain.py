@@ -7,7 +7,6 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 class PeanoMain(object):
     def __init__(self, project):
         self.project = project
-        self.overwrite = False
         self.d = {}
         self.is_extended = False
 
@@ -40,14 +39,6 @@ class PeanoMain(object):
         self.d["HEADER_FILE_TEMPLATE"] = os.path.basename(header_file_template)
         self.d["CPP_FILE_TEMPLATE"] = os.path.basename(cpp_file_template)
         self.d["PROJECT_NAME"] = self.project.project_name
-        self.d["SUBNAMESPACE"] = ""
-        if self.project._subdirectory:
-            self.d["SUBNAMESPACE"] = self.project._subdirectory + "::"
-        self.d["SUBDIRECTORY"] = self.project.subdirectory
-        self.d["SUBDIRECTORIES"] = []
-        if self.project.subdirectories:
-            for subdirectory in self.project.subdirectories:
-                self.d["SUBDIRECTORIES"].append(subdirectory)
 
         generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
             header_file_template,
@@ -56,6 +47,5 @@ class PeanoMain(object):
             self.project.rootnamespace,
             "./",
             self.d,
-            self.overwrite,
         )
         output.add(generated_files)

@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Device.h"
 
-#if defined(WITH_GPU_CUDA)
+#if defined(PEANO_WITH_GPU_BACKEND_CUDA)
 
 #include "DevicePropertiesCache.h"
 #include "tarch/Assertions.h"
@@ -94,4 +94,4 @@ cudaStream_t tarch::accelerator::deviceStreamGet() {
   return it == activeStreams.end() ? static_cast<cudaStream_t>(0) : it->second;
 }
 
-#endif // defined(WITH_GPU_CUDA)
+#endif // defined(PEANO_WITH_GPU_BACKEND_CUDA)

@@ -67,7 +67,7 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
 
         """
         super(UpdateParticle_SingleLevelInteraction_ContiguousParticles, self).__init__(
-            descend_invocation_order=1, parallel=False
+            descend_invocation_order=1
         )
 
         self._particle_set = particle_set

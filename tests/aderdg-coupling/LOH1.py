@@ -180,5 +180,5 @@ for theSolver in [hpSolver, lpSolver]:
 # """
 # )
 # project.add_solver(limiter)
-peano4_project = project.generate_Peano4_project(verbose=False)
-peano4_project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
+peano4_project = project.generate_Peano4_project()
+peano4_project.generate_and_build()

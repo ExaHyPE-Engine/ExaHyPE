@@ -8,7 +8,7 @@ class AbstractFVActionSet(ActionSet):
     solver: FV
       Reference to creating class
     """
-    super(AbstractFVActionSet,self).__init__(descend_invocation_order=1,parallel=False)
+    super(AbstractFVActionSet,self).__init__(descend_invocation_order=1)
     self._solver = solver
     pass
 

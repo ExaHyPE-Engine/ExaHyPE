@@ -243,7 +243,7 @@ def install_black_formatting_tool(root):
         print("Installing black formatter")
         print("Running '{}'".format(cmd))
 
-    run = subprocess.run(
+    subprocess.run(
         cmd,
         shell=True,
         check=True,
@@ -303,7 +303,7 @@ def install_clang_formatting_tool(root):
         print("Installing clang-format")
         print("Running '{}'".format(cmd))
 
-    run = subprocess.run(
+    subprocess.run(
         cmd,
         shell=True,
         check=True,
@@ -329,7 +329,7 @@ def setup_venv(root):
 
         if verbose:
             print("Running '{}'".format(cmd))
-        run = subprocess.run(cmd, shell=True, check=True)
+        subprocess.run(cmd, shell=True, check=True)
 
         if not os.path.exists(venv_path):
             raise FileNotFoundError("Something went horribly wrong when creating venv.")

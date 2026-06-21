@@ -5,19 +5,16 @@ from peano4.datamodel.DoF import DoFAssociation
 
 
 class Model(object):
-    def __init__(self, namespace, subdirectory=""):
+    def __init__(self, namespace):
         self.cell_data = []
         self.face_data = []
         self.vertex_data = []
         self.global_data = []
         self.namespaces = []
-        self.subdirectories = []
         self.namespace = namespace
         if namespace:
             if not namespace in self.namespaces:
                 self.namespaces.append(namespace)
-                self._subdirectory = subdirectory
-                self.subdirectories.append(self.subdirectory)
         self.generator = ModelToDataRepository(self)
 
     def __str__(self):
@@ -34,19 +31,19 @@ class Model(object):
         )
 
     def add_cell(self, submodel):
-        submodel.configure(self.namespace, DoFAssociation.Cell, self.subdirectory)
+        submodel.configure(self.namespace, DoFAssociation.Cell)
         self.cell_data.append(submodel)
 
     def add_face(self, submodel):
-        submodel.configure(self.namespace, DoFAssociation.Face, self.subdirectory)
+        submodel.configure(self.namespace, DoFAssociation.Face)
         self.face_data.append(submodel)
 
     def add_vertex(self, submodel):
-        submodel.configure(self.namespace, DoFAssociation.Vertex, self.subdirectory)
+        submodel.configure(self.namespace, DoFAssociation.Vertex)
         self.vertex_data.append(submodel)
 
     def add_global_object(self, submodel):
-        submodel.configure(self.namespace, DoFAssociation.Global, self.subdirectory)
+        submodel.configure(self.namespace, DoFAssociation.Global)
         self.global_data.append(submodel)
 
     def construct_output(self, output):
@@ -74,10 +71,3 @@ class Model(object):
         self.face_data = []
         self.vertex_data = []
         self.global_data = []
-
-    @property
-    def subdirectory(self):
-        subdirectory = self._subdirectory
-        if subdirectory:
-            subdirectory += "/"
-        return subdirectory

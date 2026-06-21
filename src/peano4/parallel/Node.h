@@ -27,7 +27,7 @@ namespace peano4::parallel {
  */
 class peano4::parallel::Node {
 public:
-#if !defined(WITH_MPI)
+#if !defined(PEANO_WITH_MPI)
   typedef int MPI_Comm;
 #ifndef MPI_COMM_NULL
 #define MPI_COMM_NULL 0

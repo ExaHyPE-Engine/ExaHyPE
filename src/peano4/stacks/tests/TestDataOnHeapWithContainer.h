@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 #include <mpi.h>
 #endif
 
@@ -37,7 +37,7 @@ public:
   void clear();
   void clone(const TestDataOnHeapWithContainer& other);
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 public:
   static MPI_Datatype getBoundaryExchangeDatatype();
   static MPI_Datatype getMultiscaleDataExchangeDatatype();

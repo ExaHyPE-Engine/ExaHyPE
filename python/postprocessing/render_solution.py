@@ -561,7 +561,7 @@ def write_animation_if_requested(
     if args.format != "png":
         raise ValueError("--animation requires --format png")
     field_name = extract_frame_field_name(frame_paths[0], stem)
-    animation = save_animation(
+    save_animation(
         frame_paths, output_dir, f"{stem}-{field_name}", args.animation
     )
 

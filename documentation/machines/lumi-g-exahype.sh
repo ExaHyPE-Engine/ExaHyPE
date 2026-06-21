@@ -167,10 +167,10 @@ export CXX=CC
 echo ">>> [BUILD JOB] Running CMake with Ninja..."
 cmake .. -GNinja \
     -DCMAKE_TOOLCHAIN_FILE="\$CMAKE_TOOLCHAIN_FILE" \
-    -DWITH_MPI=ON \
-    -DWITH_MULTITHREADING=ON \
-    -DWITH_HDF5=OFF \
-    -DWITH_NETCDF=ON
+    -DPEANO_WITH_MPI=ON \
+    -DPEANO_WITH_MULTITHREADING=ON \
+    -DPEANO_WITH_HDF5=OFF \
+    -DPEANO_WITH_NETCDF=ON
 
 echo ">>> [BUILD JOB] Building with Ninja (using \$SLURM_CPUS_PER_TASK threads)..."
 ninja -j \$SLURM_CPUS_PER_TASK

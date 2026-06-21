@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "{{CLASSNAME}}.h"
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Datatype = MPI_DATATYPE_NULL;
 #endif
 
@@ -36,7 +36,7 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
   return out.str();
 }
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
   if (Datatype != MPI_DATATYPE_NULL) {
     return;

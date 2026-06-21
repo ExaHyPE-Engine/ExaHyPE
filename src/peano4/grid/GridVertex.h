@@ -111,7 +111,7 @@ struct peano4::grid::GridVertex {
   static std::bitset<TWO_POWER_D> willVerticesBeRefined(GridVertex vertices[TWO_POWER_D]);
   static std::bitset<TWO_POWER_D> haveVerticesBeenRefined(GridVertex vertices[TWO_POWER_D]);
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   static MPI_Datatype Datatype;
 
   static MPI_Datatype getForkDatatype();

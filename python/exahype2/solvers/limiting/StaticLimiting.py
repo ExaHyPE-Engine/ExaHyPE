@@ -437,7 +437,7 @@ class StaticLimiting(object):
         step.add_action_set(self._action_set_spread_limiter_status)
         step.add_action_set(self._action_set_copy_convert_and_project_data)
 
-    def _generate_kernels(self, namespace, d, output, subdirectory, dimensions):
+    def _generate_kernels(self, namespace, d, output, dimensions):
         self.add_entries_to_text_replacement_dictionary(d)
         d["DIMENSIONS"] = dimensions
         d["NUMBER_OF_DOF_3D"] = 1 if dimensions == 2 else d["NUMBER_OF_DOF"]
@@ -448,7 +448,7 @@ class StaticLimiting(object):
         d["FULL_QUALIFIED_SOLVER_NAME"] = "::".join(namespace) + "::" + self._name
 
         kernels_namespace = namespace + ["kernels", self._name]
-        kernels_output_path = subdirectory + "kernels/" + self._name
+        kernels_output_path = "kernels/" + self._name
         kernels_templates_prefix = (
             os.path.dirname(os.path.realpath(__file__)) + "/kernels/"
         )
@@ -459,7 +459,6 @@ class StaticLimiting(object):
         exahype2.solvers.limiting.kernels.Quadrature(d).generate_kernels(
             kernels_namespace,
             output,
-            subdirectory,
             kernels_templates_prefix,
             kernels_output_path,
         )
@@ -467,16 +466,13 @@ class StaticLimiting(object):
         exahype2.solvers.limiting.kernels.Limiter(d).generate_kernels(
             kernels_namespace,
             output,
-            subdirectory,
             kernels_templates_prefix,
             kernels_output_path,
         )
 
     def add_implementation_files_to_project(
-        self, namespace, output, dimensions, subdirectory=""
+        self, namespace, output, dimensions
     ):
-        if subdirectory:
-            subdirectory += "/"
 
         d = {}
         self._init_dictionary_with_default_parameters(d)
@@ -489,9 +485,8 @@ class StaticLimiting(object):
                 + "/StaticLimitingAbstract.template.cpp",
                 "Abstract" + self._name,
                 namespace,
-                subdirectory + ".",
+                ".",
                 d,
-                True,
                 True,
             )
         )
@@ -504,26 +499,25 @@ class StaticLimiting(object):
                 + "/StaticLimiting.template.cpp",
                 self._name,
                 namespace,
-                subdirectory + ".",
+                ".",
                 d,
-                False,
                 True,
             )
         )
 
         output.add(generated_abstract_files)
         output.makefile.add_cpp_file(
-            subdirectory + "Abstract" + self._name + ".cpp", generated=True
+            "Abstract" + self._name + ".cpp", generated=True
         )
         output.makefile.add_h_file(
-            subdirectory + "Abstract" + self._name + ".h", generated=True
+            "Abstract" + self._name + ".h", generated=True
         )
 
         output.add(generated_solver_files)
-        output.makefile.add_cpp_file(subdirectory + self._name + ".cpp", generated=True)
-        output.makefile.add_h_file(subdirectory + self._name + ".h", generated=True)
+        output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
+        output.makefile.add_h_file(self._name + ".h", generated=True)
 
-        self._generate_kernels(namespace, d, output, subdirectory, dimensions)
+        self._generate_kernels(namespace, d, output, dimensions)
 
     @abstractmethod
     def add_entries_to_text_replacement_dictionary(self, d):

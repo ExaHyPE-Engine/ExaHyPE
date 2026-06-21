@@ -3,12 +3,8 @@
 from peano4.solversteps.ActionSet import ActionSet
 
 
-import jinja2
-import peano4
 
 
-from .EnumerateCellsAndVertices import ClearNumbersOnMesh
-from .EnumerateCellsAndVertices import create_cell_marker
 from .EnumerateCellsAndVertices import construct_marker_name
 
 
@@ -75,8 +71,6 @@ class AssignNumbersToCells(ActionSet):
               logDebug("set number " << fineGridCell{}.toString());
             }}
             """.format(
-                construct_marker_name(self._task_name),
-                construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),

@@ -83,7 +83,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
         """
         return """
   if (isLastGridSweepOfTimeStep()) {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
     double newMaxEigenvalue = _maxEigenvalueThisTimeStep;
     tarch::mpi::Rank::getInstance().allReduce(
       &newMaxEigenvalue,

@@ -99,7 +99,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   if (_solverState == SolverState::LimiterStatusSpreadingToNeighbours) {
     int local = _numberOfTroubledCells;
     int global = 0;

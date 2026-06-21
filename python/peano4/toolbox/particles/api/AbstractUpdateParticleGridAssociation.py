@@ -197,7 +197,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 
     def __init__(self, particle_set, guard="true"):
         super(AbstractUpdateParticleGridAssociation, self).__init__(
-            descend_invocation_order=-65536, parallel=False
+            descend_invocation_order=-65536
         )
         self._particle_set = particle_set
         self.d = {}

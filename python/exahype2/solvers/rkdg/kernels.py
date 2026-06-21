@@ -4,8 +4,6 @@ import jinja2
 
 from enum import Enum
 
-from exahype2.solvers.PDETerms import PDETerms
-import exahype2
 
 from exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix import GaussLegendreBasis
 

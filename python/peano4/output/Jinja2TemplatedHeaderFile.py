@@ -1,7 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import os
-import re
 import jinja2
 
 from pathlib import Path
@@ -11,12 +10,10 @@ from .Helper import get_jinja2_template
 from .Helper import render_jinja2_template
 from .Helper import write_file
 
-from .Overwrite import Overwrite
-
 from peano4.Logger import log
 
 class Jinja2TemplatedHeaderFile(object):
-  def __init__(self,headerfile_template,classname,namespace,subdirectory,dictionary,default_overwrite=True,apply_iteratively=False):
+  def __init__(self,headerfile_template,classname,namespace,subdirectory,dictionary,apply_iteratively=False):
     """
       The template files should be fully qualified
 
@@ -28,7 +25,6 @@ class Jinja2TemplatedHeaderFile(object):
     self.classname            = classname
     self.namespace            = namespace
     self.subdirectory         = subdirectory
-    self.default_overwrite    = default_overwrite
     self.apply_iteratively    = apply_iteratively
 
     self.d = deepcopy(dictionary)
@@ -39,12 +35,12 @@ class Jinja2TemplatedHeaderFile(object):
     # Eliminate the prepending "::" that can lead to compatibility issues across the solvers
     self.d["FULL_QUALIFIED_NAMESPACE"] = "::".join(namespace)
 
-  def __generate_file(self,overwrite,full_qualified_filename,template_file):
+  def __generate_file(self,directory,protected_files,full_qualified_filename,template_file):
     """
       template_file: string
          Usually, this is an absolute file name.
     """
-    if template_file!=None and write_file(overwrite,self.default_overwrite,full_qualified_filename):
+    if template_file!=None and write_file(directory,protected_files,full_qualified_filename):
       log.debug("Write " + full_qualified_filename )
 
       template = get_jinja2_template(template_file, jinja2.DebugUndefined)
@@ -63,10 +59,10 @@ class Jinja2TemplatedHeaderFile(object):
       with open( full_qualified_filename, "w" ) as output:
         output.write( rendered_text )
 
-  def generate(self,overwrite,directory):
+  def generate(self,directory,protected_files):
     if not os.path.exists( directory + "/" + self.subdirectory ):
       os.mkdir(directory + "/" + self.subdirectory)
 
     header_filename = directory + "/" + self.subdirectory + "/" + self.classname + Path(self.headerfile_template).suffix
 
-    self.__generate_file(overwrite,header_filename,self.headerfile_template)
+    self.__generate_file(directory,protected_files,header_filename,self.headerfile_template)

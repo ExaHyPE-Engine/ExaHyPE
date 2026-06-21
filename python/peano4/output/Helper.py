@@ -5,29 +5,26 @@ from functools import lru_cache
 
 import jinja2
 
-from .Overwrite import Overwrite
-
 from peano4.Logger import log
 
-def write_file(overwrite,overwrite_is_default,full_qualified_filename):
+def write_file(directory, protected_files, full_qualified_filename):
   """
-    overwrite is of type Overwrite and is what the user passes in
-    overwrite_is_default is a boolean
+    Decide whether the code generator may (over)write full_qualified_filename.
+
+    The policy is fixed and not user-configurable: every generated file is
+    overwritten, except files the user registered as non-generated source files
+    via makefile.add_h_file()/add_cpp_file()/add_Fortran_file(). Those belong to
+    the user and are never touched.
+
+    directory: project root directory the relative paths are resolved against.
+    protected_files: set of normalised relative paths of the user's
+      non-generated files.
   """
-  if overwrite==Overwrite.Always:
-    return True
-  elif overwrite==Overwrite.Never and os.path.exists(full_qualified_filename):
+  relative_filename = os.path.normpath(os.path.relpath(full_qualified_filename, directory))
+  if relative_filename in protected_files:
+    log.debug("Preserve user-provided (non-generated) file %s", relative_filename)
     return False
-  elif overwrite==Overwrite.Never and not os.path.exists(full_qualified_filename):
-    return True
-  elif overwrite==Overwrite.Default:
-    if not overwrite_is_default and os.path.exists(full_qualified_filename):
-      return False
-    else:
-      return True
-  else:
-    log.error("Undefined overwrite strategy")
-    return True
+  return True
 
 
 @lru_cache(maxsize=None)

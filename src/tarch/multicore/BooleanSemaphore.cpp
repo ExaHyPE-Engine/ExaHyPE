@@ -1,7 +1,7 @@
 #include "tarch/multicore/multicore.h"
 
 
-#if !defined(WITH_MULTITHREADING)
+#if !defined(PEANO_WITH_MULTITHREADING)
 #include "tarch/multicore/BooleanSemaphore.h"
 tarch::multicore::BooleanSemaphore::BooleanSemaphore() {
 }

@@ -45,7 +45,7 @@
   {% endif %}
 
   {% if NCP_IMPLEMENTATION!="<none>" %}
-  #if defined(WITH_OPENMP)
+  #if defined(PEANO_WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
@@ -66,7 +66,7 @@
   assertion(std::isfinite(maxEigenvalueGatheredRightNeighborLeftBoundary));
   assertion(std::isfinite(maxEigenvalueGatheredLeftNeighborRightBoundary));
 
-  #if defined(WITH_OPENMP)
+  #if defined(PEANO_WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
@@ -114,7 +114,7 @@
 
 {% macro computeMaxEigenvalueAfterTimeStep() %}
   // Compute max eigenvalue (wave speed) after time step
-  #if defined(WITH_OPENMP)
+  #if defined(PEANO_WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll

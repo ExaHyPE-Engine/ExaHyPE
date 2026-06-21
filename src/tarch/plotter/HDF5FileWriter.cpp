@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "HDF5FileWriter.h"
 
-#ifdef WITH_HDF5
+#ifdef PEANO_WITH_HDF5
 
 #include "tarch/mpi/Rank.h"
 
@@ -88,7 +88,7 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
   unsigned long long totalCells  = localNumCells;
   unsigned long long totalTopo   = localTopoSize;
 
-#if defined(WITH_MPI)
+#if defined(PEANO_WITH_MPI)
   auto&    rank          = tarch::mpi::Rank::getInstance();
   MPI_Comm comm          = rank.getCommunicator();
   bool     useParallelIO = rank.getNumberOfRanks() > 1;
@@ -148,7 +148,7 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
   hid_t fapl = H5P_DEFAULT;
   hid_t dxpl = H5P_DEFAULT; // Data transfer property list
 
-#if defined(WITH_MPI)
+#if defined(PEANO_WITH_MPI)
   if (useParallelIO) {
     // Property list for parallel file access
     fapl = H5Pcreate(H5P_FILE_ACCESS);

@@ -12,7 +12,7 @@ class DGMatrices(object):
         self.d = deepcopy(dictionary)
 
     def generate_kernels(
-        self, solver, namespace, output, subdirectory, template_prefix, output_path
+        self, solver, namespace, output, template_prefix, output_path
     ):
         if self.d["POLYNOMIAL_TYPE"] == "legendre":
             # Get GL nodes
@@ -113,9 +113,8 @@ class DGMatrices(object):
             cppfile_template=template_prefix + "DGMatrices.template.cpp",
             classname=output_path + "/DGMatrices",
             namespace=namespace,
-            subdirectory=subdirectory + ".",
+            subdirectory=".",
             dictionary=self.d,
-            default_overwrite=True,
             apply_iteratively=True,
         )
         output.add(generated_kernels)

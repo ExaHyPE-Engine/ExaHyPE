@@ -6,7 +6,7 @@
 
 #include <string>
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 #include <mpi.h>
 #endif
 
@@ -41,7 +41,7 @@ namespace peano4::stacks {
     PeriodicBoundaryDataSwap
   };
 
-#if defined(WITH_MPI)
+#if defined(PEANO_WITH_MPI)
   template <class T>
   static inline MPI_Datatype translateContextIntoDatatype(SendReceiveContext context) {
     switch (context) {

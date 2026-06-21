@@ -15,7 +15,7 @@ void tarch::mpi::tests::StringTest::run() {
 
 
 void tarch::mpi::tests::StringTest::testSendReceive() {
-  #ifdef WITH_MPI
+  #ifdef PEANO_WITH_MPI
   const std::string testString = "unittest";
   if (
     tarch::mpi::Rank::getInstance().getNumberOfRanks()>1

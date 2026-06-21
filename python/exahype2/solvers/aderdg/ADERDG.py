@@ -606,7 +606,7 @@ class ADERDG(object):
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
 
-    def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory="", abstract_overwrite=True):
+    def add_implementation_files_to_project(self, namespace, output, dimensions):
         self._dimensions = dimensions
         self._namespace = namespace
         self._simd_width = int(output.makefile.d["SIMDLEN"])
@@ -636,14 +636,12 @@ class ADERDG(object):
         else:
             self._templatefile_prefix += self._solver_template_file_class_name
 
-        if subdirectory:
-            subdirectory += "/"
 
         d = {}
         self._init_dictionary_with_default_parameters(d)
         self.add_entries_to_text_replacement_dictionary(d)
 
-        self._variable_shortcuts.generate_shortcut_file(d, namespace, output, subdirectory)
+        self._variable_shortcuts.generate_shortcut_file(d, namespace, output)
 
         generated_abstract_header_file = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -651,9 +649,8 @@ class ADERDG(object):
                 self._templatefile_prefix + "Abstract.template.cpp",
                 "Abstract" + self._name,
                 namespace,
-                subdirectory + ".",
+                ".",
                 d,
-                abstract_overwrite,
                 True,
             )
         )
@@ -663,21 +660,20 @@ class ADERDG(object):
                 self._templatefile_prefix + ".template.cpp",
                 self._name,
                 namespace,
-                subdirectory + ".",
+                ".",
                 d,
-                False,
                 True,
             )
         )
 
         output.add(generated_abstract_header_file)
         output.add(generated_solver_files)
-        output.makefile.add_h_file(subdirectory + "Abstract" + self._name + ".h", generated=True)
-        output.makefile.add_h_file(subdirectory + self._name + ".h", generated=True)
-        output.makefile.add_cpp_file(subdirectory + "Abstract" + self._name + ".cpp", generated=True)
-        output.makefile.add_cpp_file(subdirectory + self._name + ".cpp", generated=True)
+        output.makefile.add_h_file("Abstract" + self._name + ".h", generated=True)
+        output.makefile.add_h_file(self._name + ".h", generated=True)
+        output.makefile.add_cpp_file("Abstract" + self._name + ".cpp", generated=True)
+        output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
 
-        generate_kernels(solver=self, d=d, output=output, subdirectory=subdirectory)
+        generate_kernels(solver=self, d=d, output=output)
 
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring

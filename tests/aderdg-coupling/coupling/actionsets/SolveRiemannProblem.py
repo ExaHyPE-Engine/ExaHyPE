@@ -15,6 +15,20 @@ class SolveRiemannProblem(AbstractLimiterActionSet):
     constexpr int FluxElementsPerFace2  = facedata::{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates::Cardinality / 2;
     constexpr int BasisElementsPerFace2 = facedata::{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}Estimates::Cardinality / 2;
 
+    #if DIMENSIONS == 2
+    constexpr int RegularFaceSize = RegularSolverPoints;
+    constexpr int LimiterFaceSize = LimiterSolverPoints;
+    #else
+    constexpr int RegularFaceSize = RegularSolverPoints*RegularSolverPoints;
+    constexpr int LimiterFaceSize = LimiterSolverPoints*LimiterSolverPoints;
+    #endif
+
+    constexpr int FluxElementsPerFace   = RegularFaceSize * NumberOfVariables;
+    constexpr int BasisElementsPerFace  = RegularFaceSize * (NumberOfVariables + NumberOfParameters);
+
+    constexpr int FluxElementsPerFace2  = LimiterFaceSize * NumberOfVariables;
+    constexpr int BasisElementsPerFace2 = LimiterFaceSize * (NumberOfVariables + NumberOfParameters);
+
     if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubledMarker()==celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker::REGULAR){
       for(int d=0; d<DIMENSIONS; d++){
         if( fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getTroubledMarker()==facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::TROUBLED ){

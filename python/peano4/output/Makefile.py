@@ -2,13 +2,10 @@
 # use, please see the copyright notice at www.peano-framework.org
 import os
 import re
-import subprocess
-import jinja2
 
 from copy import deepcopy
 
 from .Helper import get_jinja2_template
-from .Helper import write_file
 
 from .CompileMode import CompileMode
 
@@ -18,99 +15,19 @@ from peano4.Logger import log
 class Makefile(object):
     """Represents the created Makefile of a Peano 4 project"""
 
-    default_overwrite = True
+    def protected_files(self):
+        """
+        Set of normalised relative paths the user registered as non-generated
+        source files (via add_h_file/add_cpp_file/add_Fortran_file). The code
+        generator must never overwrite these.
+        """
+        return set(
+            os.path.normpath(filename)
+            for filename in (self.hfiles + self.cppfiles + self.fortranfiles)
+        )
 
     def __init__(self):
         self.clear()
-
-    @property
-    def readme_entry(self):
-        result_template = jinja2.Template(
-            """
-## Makefile settings
-
-CXX                     = {{CXX}}
-CXXFLAGS                = {{CXXFLAGS}}
-FC                      = {{FC}}
-FCFLAGS                 = {{FCFLAGS}}
-LDFLAGS                 = {{LDFLAGS}}
-LIBS                    = {{LIBS}}
-DIMENSIONS              = {{DIMENSIONS}}
-CONFIGUREPATH           = {{CONFIGUREPATH}}
-CMAKE_BUILD_DIR         = {{CMAKE_BUILD_DIR}}
-EXECUTABLENAME          = {{EXECUTABLENAME}}
-MULTITHREADING          = {{MULTITHREADING}}
-ALIGNMENT               = {{ALIGNMENT}}
-SIMDLEN                 = {{SIMDLEN}}
-GPU                     = {{GPU}}
-GPU_ARCH                = {{GPU_ARCH}}
-ACPP_DEBUG_LEVEL        = {{ACPP_DEBUG_LEVEL}}
-ACPP_TARGETS            = {{ACPP_TARGETS}}
-ACPP_DIR                = {{ACPP_DIR}}
-FORTRAN_MODULES         = {{FORTRAN_MODULES}}
-MODE                    = {{MODE}}
-
-## Compiler version
-
-{{VERSION}}
-
-"""
-        )
-        try:
-            version_string = subprocess.run(
-                [self.d["CXX"], "--version"], stdout=subprocess.PIPE
-            )
-        except Exception:
-            version_string = subprocess.run(
-                ["echo", "Unknown"], shell=True, stdout=subprocess.PIPE
-            )
-        self.d["VERSION"] = version_string.stdout.decode("utf-8")
-        return result_template.render(**self.d)
-
-    @property
-    def readme_package_descriptor(self):
-        return jinja2.Template(
-            """
-### MPI parallelisation
-
-Peano's distributed memory parallelisation is based upon plain space-filling
-curves which are used first to split the cells among the ranks, and, after
-that, to split the cells into chunks and deploy them onto cores (if shared
-memory is used). There is no particularly novel contribution/paper on this
-aspect of the code. The paper that is (algorithmically) most interesting is
-an old EuroPar publication:
-
-       @InProceedings{Bungartz:2006:Parallelisation,
-         author={Bungartz, Hans-Joachim and Mehl, Miriam and Weinzierl, Tobias},
-         editor={Nagel, Wolfgang E. and Walter, Wolfgang V. and Lehner, Wolfgang},
-         title={A Parallel Adaptive Cartesian PDE Solver Using Space--Filling Curves},
-         booktitle={Euro-Par 2006 Parallel Processing},
-         year={2006},
-         publisher={Springer Berlin Heidelberg},
-         address={Berlin, Heidelberg},
-         pages={1064--1074},
-         abstract={In this paper, we present a parallel multigrid PDE solver working on adaptive hierarchical cartesian grids. The presentation is restricted to the linear elliptic operator of second order, but extensions are possible and have already been realised as prototypes. Within the solver the handling of the vertices and the degrees of freedom associated to them is implemented solely using stacks and iterates of a Peano space--filling curve. Thus, due to the structuredness of the grid, two administrative bits per vertex are sufficient to store both geometry and grid refinement information. The implementation and parallel extension, using a space--filling curve to obtain a load balanced domain decomposition, will be formalised. In view of the fact that we are using a multigrid solver of linear complexity {\\$}{\\backslash}mathcal{\\{}O{\\}}(n){\\$}, it has to be ensured that communication cost and, hence, the parallel algorithm's overall complexity do not exceed this linear behaviour.}, 
-         isbn={978-3-540-37784-9}
-       }
-
-### OpenMP parallelisation
-
-Peano 4 run uses a wrapper around OpenMP to obtain a high task efficiency.
-The wrapper can be read as user-level threading implemented on top of OpenMP's
-tasking mechanism. It is described in
-
-       @article{Schulz:2021:Tasking,
-         title = {Task inefficiency patterns for a wave equation solver},
-         journal = {IWOMP},"
-         year = {2021},
-         author = {Holger Schulz and Gonzalo Brito Gadeschi and Oleksandr Rudyy and Tobias Weinzierl},
-      }
-
-Peano relies on a mixture of classic domain decomposition and task-based
-parallelism. The domain decomposition provides the baseline performance,
-and the tasking adds flexibility and scalability on top.
-"""
-        ).render(**self.d)
 
     def executable_name(self):
         return self.d["EXECUTABLENAME"]
@@ -120,28 +37,37 @@ and the tasking adds flexibility and scalability on top.
 
     def clear(self):
         self.d = {}
-        self.d["CXX"] = ""
-        self.d["CXXFLAGS"] = ""
-        self.d["FC"] = ""
-        self.d["FCFLAGS"] = ""
-        self.d["LDFLAGS"] = ""
-        self.d["LIBS"] = ""
+        self.d["COMPILE_DEFINITIONS"] = []
+        self.d["COMPILE_OPTIONS"] = []
+        self.d["INCLUDE_DIRECTORIES"] = []
+        self.d["LINK_LIBRARIES"] = []
+        self.d["LINK_OPTIONS"] = []
         self.d["DIMENSIONS"] = "2"
-        self.d["CONFIGUREPATH"] = "."
         self.d["EXECUTABLENAME"] = ""
-        self.d["MULTITHREADING"] = ""
-        self.d["ALIGNMENT"] = ""
-        self.d["SIMDLEN"] = ""
-        self.d["GPU"] = ""
-        self.d["GPU_ARCH"] = ""
-        self.d["ACPP_DEBUG_LEVEL"] = ""
-        self.d["ACPP_TARGETS"] = ""
-        self.d["ACPP_DIR"] = ""
+        self.d["SIMDLEN"] = "1"
+        self.d["GPU"] = "no"
         self.d["CMAKE_BUILD_DIR"] = ""
-        self.d["FORTRAN_MODULES"] = []
-        self.d["APP_SUBDIRECTORIES"] = []
+        self.d["CMAKE_GENERATOR"] = ""
+        self.d["CMAKE_GENERATOR_PLATFORM"] = ""
+        self.d["CMAKE_GENERATOR_TOOLSET"] = ""
+        self.d["CMAKE_C_COMPILER"] = ""
+        self.d["CMAKE_CXX_COMPILER"] = ""
+        self.d["CMAKE_FORTRAN_COMPILER"] = ""
         self.set_mode(CompileMode.Release)
         self.clear_files()
+
+    def _append_unique(self, key, value, force=False):
+        if value in self.d[key] and not force:
+            log.warning("%s %s is already present. Ignored as force attribute is not set", key, value)
+            return
+        self.d[key].append(value)
+
+    def _unique(self, items):
+        result = []
+        for item in items:
+            if item not in result:
+                result.append(item)
+        return result
 
     def set_executable_name(self, fname):
         self.d["EXECUTABLENAME"] = fname
@@ -156,42 +82,6 @@ and the tasking adds flexibility and scalability on top.
 
     def set_dimension(self, dimension):
         self.d["DIMENSIONS"] = str(dimension)
-
-    def get_configure_path(self):
-        """
-        Returns the directory where the project is configured.
-        """
-        return self.d["CONFIGUREPATH"]
-
-    def get_source_path(self):
-        """
-        Returns the directory where the source files are located.
-        """
-        return self.get_configure_path() + "/src"
-
-    def add_header_search_path(self, path):
-        """
-        Add the header search path to both the C++ and the Fortran
-        call command.
-        """
-        self.d["CXXFLAGS"] += " -I" + path
-        self.d["FCFLAGS"] += " -I" + path
-
-    def add_library(self, library_name, library_path=""):
-        """
-        If you want to link against a library from Peano, feel free to use
-        get_Peano4_source_directory() and hand in a concatenation of this
-        path plus a subpath. Otherwise, specify the absolute path where to
-        search for. By default, Peano's src directory is in the search
-        path.
-
-        A popular invocation including one of Peano's toolboxes is
-
-        project.output.makefile.add_library("ToolboxFiniteElements2d_trace", project.output.makefile.get_source_path() + "/toolbox/finiteelements")
-        """
-        if library_path != "":
-            self.d["LIBS"] = "-L" + library_path + " " + self.d["LIBS"]
-        self.d["LIBS"] += library_name + " "
 
     def set_mode(self, mode):
         """
@@ -212,47 +102,28 @@ and the tasking adds flexibility and scalability on top.
         else:
             assert False
 
-    def set_CXX_compiler(self, value):
-        self.d["CXX"] = value
-
-    def set_CXX_flags(self, value):
-        self.d["CXXFLAGS"] = value
-
-    def add_CXX_flag(self, value, force=False):
-        if value in self.d["CXXFLAGS"] and not force:
-            log.warning(
-                "CXXFLAG "
-                + value
-                + " is already in list of flags. Ignored as force attribute is not set"
-            )
+    def add_compile_definition(self, name, value=None, force=False):
+        if value is None:
+            self._append_unique("COMPILE_DEFINITIONS", name, force)
         else:
-            self.d["CXXFLAGS"] += " " + value
+            self._append_unique("COMPILE_DEFINITIONS", name + "=" + str(value), force)
 
-    def set_Fortran_compiler(self, value):
-        self.d["FC"] = value
+    def add_compile_option(self, value, force=False):
+        self._append_unique("COMPILE_OPTIONS", value, force)
 
-    def set_Fortran_flags(self, value):
-        self.d["FCFLAGS"] = value
+    def add_include_directory(self, value, force=False):
+        self._append_unique("INCLUDE_DIRECTORIES", value, force)
 
-    def add_Fortran_flag(self, value, force=False):
-        if value in self.d["FCFLAGS"] and not force:
-            log.warning(
-                "FCFLAGS "
-                + value
-                + " is already in list of flags. Ignored as force attribute is not set"
-            )
-        else:
-            self.d["FCFLAGS"] += " " + value
+    def add_link_library(self, value, force=False):
+        self._append_unique("LINK_LIBRARIES", value, force)
 
-    def add_linker_flag(self, value):
-        self.d["LDFLAGS"] += " " + value
-
-    def set_linker_flags(self, value):
-        self.d["LDFLAGS"] = value + " "
+    def add_link_option(self, value, force=False):
+        self._append_unique("LINK_OPTIONS", value, force)
 
     def parse_configuration_outcome(self):
         """
-        Tries to automatically locate the generated CMake build.
+        Locate the Peano CMake package and read the small amount of core
+        configuration still needed by Python code generation.
         """
         if "PEANO_SRC_ROOT_DIR" in os.environ:
             search_start = os.environ["PEANO_SRC_ROOT_DIR"]
@@ -267,14 +138,14 @@ and the tasking adds flexibility and scalability on top.
         if self.d["CMAKE_BUILD_DIR"] == "":
             curr = os.path.abspath(search_start)
             while True:
-                if os.path.isfile(os.path.join(curr, "PeanoTargets.cmake")):
+                if os.path.isfile(os.path.join(curr, "PeanoConfig.cmake")):
                     self.d["CMAKE_BUILD_DIR"] = curr
                     break
                 try:
                     for candidate in os.listdir(curr):
                         path = os.path.join(curr, candidate)
                         if os.path.isdir(path) and os.path.isfile(
-                            os.path.join(path, "PeanoTargets.cmake")
+                            os.path.join(path, "PeanoConfig.cmake")
                         ):
                             self.d["CMAKE_BUILD_DIR"] = path
                             break
@@ -289,55 +160,50 @@ and the tasking adds flexibility and scalability on top.
                 curr = parent
 
         if self.d["CMAKE_BUILD_DIR"] != "":
-            # Default fallback for CONFIGUREPATH is parent of build dir if CMAKE_HOME_DIRECTORY missing
-            self.d["CONFIGUREPATH"] = os.path.dirname(self.d["CMAKE_BUILD_DIR"])
-
-            cmake_cache_file = self.d["CMAKE_BUILD_DIR"] + "/CMakeCache.txt"
-            if os.path.isfile(cmake_cache_file):
-                with open(cmake_cache_file, "r") as input:
-                    for line in input:
-                        if line.strip().startswith("//") or line.strip().startswith(
-                            "#"
-                        ):
-                            continue
-
-                        key_value = line.split("=", 1)
-                        if len(key_value) == 2:
-                            key, value = key_value
-                            key = key.split(":")[0].strip()
-                            value = value.strip()
-
-                            if key == "CMAKE_CXX_COMPILER":
-                                self.d["CXX"] = os.path.basename(value)
-                            elif key == "CMAKE_Fortran_COMPILER":
-                                self.d["FC"] = os.path.basename(value)
-                            elif key == "WITH_MULTITHREADING":
-                                self.d["MULTITHREADING"] = value
-                            elif key == "WITH_ALIGNMENT":
-                                self.d["ALIGNMENT"] = value
-                            elif key == "WITH_SIMDLEN":
-                                self.d["SIMDLEN"] = value
-                            elif key == "WITH_GPU":
-                                self.d["GPU"] = value
-                            elif key == "WITH_GPU_ARCH":
-                                self.d["GPU_ARCH"] = value
-                            elif key == "ACPP_DEBUG_LEVEL":
-                                self.d["ACPP_DEBUG_LEVEL"] = value
-                            elif key == "ACPP_TARGETS":
-                                self.d["ACPP_TARGETS"] = value
-                            elif key == "AdaptiveCpp_DIR":
-                                self.d["ACPP_DIR"] = value
-                            elif key == "CMAKE_HOME_DIRECTORY":
-                                self.d["CONFIGUREPATH"] = value
-            else:
+            peano_config_file = os.path.join(
+                self.d["CMAKE_BUILD_DIR"], "PeanoConfig.cmake"
+            )
+            if not os.path.isfile(peano_config_file):
                 raise Exception(
-                    "Cannot parse the CMakeCache.txt file: " + cmake_cache_file
+                    "Cannot locate the PeanoConfig.cmake file: " + peano_config_file
                 )
+
+            with open(peano_config_file, "r") as input:
+                for line in input:
+                    # Values are emitted by PeanoConfig.cmake double-quoted.
+                    # Capture the full quoted string (which may legitimately
+                    # contain spaces or ')', e.g. a compiler path under
+                    # "Program Files (x86)") and fall back to a bare token for
+                    # any unquoted value.
+                    match = re.match(
+                        r'\s*set\(\s*(PEANO_[A-Za-z0-9_]+)\s+(?:"(.*)"|([^)"\s]+))\s*\)',
+                        line,
+                    )
+                    if match:
+                        key = match.group(1)
+                        value = match.group(2) if match.group(2) is not None else match.group(3)
+                        if key == "PEANO_WITH_SIMDLEN":
+                            self.d["SIMDLEN"] = value
+                        elif key == "PEANO_WITH_GPU_BACKEND":
+                            self.d["GPU"] = value
+                        elif key == "PEANO_CMAKE_GENERATOR":
+                            self.d["CMAKE_GENERATOR"] = value
+                        elif key == "PEANO_CMAKE_GENERATOR_PLATFORM":
+                            self.d["CMAKE_GENERATOR_PLATFORM"] = value
+                        elif key == "PEANO_CMAKE_GENERATOR_TOOLSET":
+                            self.d["CMAKE_GENERATOR_TOOLSET"] = value
+                        elif key == "PEANO_CMAKE_C_COMPILER":
+                            self.d["CMAKE_C_COMPILER"] = value
+                        elif key == "PEANO_CMAKE_CXX_COMPILER":
+                            self.d["CMAKE_CXX_COMPILER"] = value
+                        elif key == "PEANO_CMAKE_FORTRAN_COMPILER":
+                            self.d["CMAKE_FORTRAN_COMPILER"] = value
+
         else:
             raise Exception(
                 """
   Error: parse_configuration_outcome() could not locate a valid CMake build directory
-  (containing PeanoTargets.cmake) starting from:
+  (containing PeanoConfig.cmake) starting from:
   """
                 + search_start
                 + """
@@ -432,9 +298,6 @@ and the tasking adds flexibility and scalability on top.
         the stuff in the right order. Otherwise, Fortran might complain. This is
         your responsibility.
 
-        If your file defines a module, please do not use this routine, but use
-        add_Fortran_module() instead.
-
         filename: String
            Filename of a Fortran file. They usually should have the .f90 extension.
         generated: Bool
@@ -459,56 +322,12 @@ and the tasking adds flexibility and scalability on top.
         if filename in self.fortranfiles:
             self.fortranfiles.remove(filename)
 
-    def add_Fortran_module(self, module_file, force=False):
-        """
-        Add a Fortran module
-
-        module_file: String
-          Filename of a Fortran source code file which hosts a module. It should
-          have the extension .f90 or similar.
-
-        force: Boolean
-          Enforce that Fortran module is added even though it might already be in
-          the list.
-        """
-        if not module_file.endswith(".f90"):
-            print(
-                "Warning: Fortran module file does not have extension .f90 ("
-                + module_file
-                + ") and translation thus might fail"
-            )
-        if module_file in self.d["FORTRAN_MODULES"] and not force:
-            print(
-                """Fortran module file
-"""
-                + module_file
-                + """
-is already in module file list. Did not add it once more. You can overwrite
-this default behaviour via the force attribute in add_Fortran_module(). If
-you create multiple Peano 4 makefiles in a row (as you change parameters, e.g.)
-then this message can typically be ignored.
-"""
-            )
-        elif module_file in self.d["FORTRAN_MODULES"] and force:
-            print(
-                "Fortran module file "
-                + module_file
-                + " is already in module file list but force flag is set. Add it"
-            )
-            self.d["FORTRAN_MODULES"].append(module_file)
-        else:
-            self.d["FORTRAN_MODULES"].append(module_file)
-
-    def add_Fortran_modules(self, module_files):
-        for i in module_files:
-            self.add_Fortran_module(i)
-
-    def generate(self, overwrite, directory, subdirectories=[]):
+    def generate(self, directory):
         """
         Generates build files and other project-related files based on templates.
+        These are always (re)generated build artefacts (.gitignore, CMakeLists.txt,
+        Makefile), so they are unconditionally overwritten.
 
-        :param overwrite: Specifies whether existing files should be overwritten.
-        :type overwrite: bool
         :param directory: The directory where the generated files will be placed.
         :type directory: str
         """
@@ -518,17 +337,29 @@ then this message can typically be ignored.
         self.d["GENERATED_H_HEADERS"] = self.generated_hfiles
         self.d["GENERATED_CXX_SOURCES"] = self.generated_cppfiles
         self.d["GENERATED_FORTRAN_SOURCES"] = self.generated_fortranfiles
-        if subdirectories:
-            for subdirectory in subdirectories:
-                self.d["APP_SUBDIRECTORIES"].append(subdirectory)
+        self.d["GENERATED_COMPILE_DEFINITIONS"] = self._unique(
+            self.d["COMPILE_DEFINITIONS"]
+        )
+        self.d["GENERATED_COMPILE_OPTIONS"] = self._unique(
+            self.d["COMPILE_OPTIONS"]
+        )
+        self.d["GENERATED_INCLUDE_DIRECTORIES"] = self._unique(
+            self.d["INCLUDE_DIRECTORIES"]
+        )
+        self.d["GENERATED_LINK_LIBRARIES"] = self._unique(
+            self.d["LINK_LIBRARIES"]
+        )
+        self.d["GENERATED_LINK_OPTIONS"] = self._unique(
+            self.d["LINK_OPTIONS"]
+        )
 
-        # Encapsulate file generation as a function
+        # Encapsulate file generation as a function. The build files are pure
+        # generator output and are always overwritten.
         def generate_output_file(input_file_path, output_file_path):
-            if write_file(overwrite, self.default_overwrite, output_file_path):
-                log.debug("Write " + output_file_path)
-                template = get_jinja2_template(input_file_path)
-                with open(output_file_path, "w") as output:
-                    output.write(template.render(self.d))
+            log.debug("Write " + output_file_path)
+            template = get_jinja2_template(input_file_path)
+            with open(output_file_path, "w") as output:
+                output.write(template.render(self.d))
 
         file_dir = os.path.dirname(os.path.realpath(__file__))
 

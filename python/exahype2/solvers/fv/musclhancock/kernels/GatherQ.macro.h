@@ -6,7 +6,7 @@
 
 {% macro gatherQ() %}
   // Gather data
-  #if defined(WITH_OPENMP)
+  #if defined(PEANO_WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
@@ -19,7 +19,7 @@
   }
   {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
   {{ terms.applySource('QInGathered', 'sourceGathered', 'volumeCentre', 'timeStamp') }}
-  #if defined(WITH_OPENMP)
+  #if defined(PEANO_WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
@@ -29,7 +29,7 @@
     QInExtrapolationUpdate[unknown] = sourceGathered[unknown];
   }
   {% else %}
-  #if defined(WITH_OPENMP)
+  #if defined(PEANO_WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll

@@ -221,6 +221,6 @@ tracing_action_set.descend_invocation_order = (
 project.add_action_set_to_timestepping(tracing_action_set)
 project.add_action_set_to_initialisation(tracing_action_set)
 
-project = project.generate_Peano4_project(verbose=False)
-project.output.makefile.add_CXX_flag("-DGAMMA=1.4")
-project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
+project = project.generate_Peano4_project()
+project.output.makefile.add_compile_definition("GAMMA=1.4")
+project.generate_and_build()

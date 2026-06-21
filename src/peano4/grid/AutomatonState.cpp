@@ -138,7 +138,7 @@ void peano4::grid::AutomatonState::refineState(
   }
 }
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 MPI_Datatype peano4::grid::AutomatonState::Datatype = MPI_DATATYPE_NULL;
 
 MPI_Datatype peano4::grid::AutomatonState::getForkDatatype() { return Datatype; }

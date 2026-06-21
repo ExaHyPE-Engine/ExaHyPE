@@ -4,7 +4,7 @@
 
 #include <array>
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 #include <mpi.h>
 #endif
 
@@ -29,7 +29,7 @@ public:
 
   void clone(const TestDataOnStack& other);
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   static MPI_Datatype Datatype;
   static void         initDatatype();
   static void         shutdownDatatype();

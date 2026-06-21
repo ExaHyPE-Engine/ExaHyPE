@@ -85,7 +85,8 @@ install(
 
 foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
   foreach(dim IN LISTS SUPPORTED_DIMENSIONS)
-    add_peano_library(
+    peano_add_target(
+      TYPE STATIC_LIBRARY
       NAME Peano4${mode}${dim}d
       MODE ${mode}
       DIMENSION ${dim}

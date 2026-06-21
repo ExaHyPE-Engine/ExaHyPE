@@ -20,12 +20,8 @@
     MAX_GRID_LEVELS: "3"
     EXTRA_CONFIGURATION_OPTIONS: ""
     CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
-                            -DENABLE_EXAHYPE=ON \
-                            -DENABLE_TOOLBOX_LOADBALANCING=ON \
-                            -DENABLE_TOOLBOX_BLOCKSTRUCTURED=ON \
-                            -DENABLE_TOOLBOX_PARTICLES=ON \
-                            -DENABLE_TOOLBOX_CURVI=ON \
-                            -DWITH_FPE=OFF \
-                            -DWITH_HDF5=ON \
-                            -DWITH_NETCDF=ON \
-                            -DWITH_EASI=ON"
+                            -DPEANO_WITH_CURVI=ON \
+                            -DPEANO_WITH_FPE=OFF \
+                            -DPEANO_WITH_HDF5=ON \
+                            -DPEANO_WITH_NETCDF=ON \
+                            -DPEANO_WITH_EASI=ON"

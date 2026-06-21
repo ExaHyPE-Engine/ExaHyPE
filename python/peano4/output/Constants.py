@@ -1,11 +1,8 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import os
-import re
 
 from .Helper import write_file
-
-from .Overwrite  import Overwrite
 
 from peano4.Logger import log
 
@@ -28,7 +25,6 @@ class Constants(object):
 
     Constants also allows you to add defines (precompiler statements).
   """
-  default_overwrite = True
 
   def __init__(self,project):
     self.defines = []
@@ -179,9 +175,9 @@ These constants are available to the application within its namespace.
 """
     return result
 
-  def generate(self, overwrite, directory, subdirectory=""):
-    filename = directory + "/" + subdirectory + "Constants.h"
-    if write_file(overwrite,self.default_overwrite,filename):
+  def generate(self, directory, protected_files):
+    filename = directory + "/" + "Constants.h"
+    if write_file(directory,protected_files,filename):
       log.debug("Write {}".format(filename))
 
       #for i in self.cppfiles:

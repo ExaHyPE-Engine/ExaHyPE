@@ -34,7 +34,7 @@ private:
 {{ATTRIBUTES}}
 {{STATIC_ATTRIBUTES}}
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   static MPI_Datatype Datatype;
 #endif
 
@@ -139,7 +139,7 @@ public:
   }
 {% endif -%}
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   static void initDatatype();
   static void shutdownDatatype();
 

@@ -417,7 +417,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticles({{CLASSNAME}}&  pa
   return _container.erase(particle);
 }
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getBoundaryExchangeDatatype() {
   return {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}::getBoundaryExchangeDatatype();
 }

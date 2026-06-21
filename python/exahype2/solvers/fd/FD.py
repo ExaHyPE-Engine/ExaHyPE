@@ -612,9 +612,6 @@ Grid resolution is selected at runtime through RuntimeParameters.
         else:
             step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
-    def set_plotter(self, plotter_option):
-        self._plotter_option = plotter_option
-
     def add_actions_to_plot_solution(
         self, step, output_path
     ):
@@ -691,17 +688,17 @@ Grid resolution is selected at runtime through RuntimeParameters.
         pass
 
     def add_implementation_files_to_project(
-        self, namespace, output, dimensions, subdirectory="", abstract_overwrite=True
+        self, namespace, output, dimensions
     ):
         self._dimensions = dimensions
         self._namespace = namespace
 
-        self._generate_kernels(output, subdirectory)
+        self._generate_kernels(output)
         self._action_set_reconstruct_patch.generate_kernels(
-            namespace, output, dimensions, subdirectory
+            namespace, output, dimensions
         )
         self._action_set_project_patch_onto_faces.generate_kernels(
-            namespace, output, dimensions, subdirectory
+            namespace, output, dimensions
         )
 
         if self._solver_template_file_class_name is None:
@@ -709,14 +706,12 @@ Grid resolution is selected at runtime through RuntimeParameters.
         else:
             self._templatefile_prefix += self._solver_template_file_class_name
 
-        if subdirectory:
-            subdirectory += "/"
 
         d = {}
         self._init_dictionary_with_default_parameters(d)
         self.add_entries_to_text_replacement_dictionary(d)
 
-        self._variable_shortcuts.generate_shortcut_file(d, namespace, output, subdirectory)
+        self._variable_shortcuts.generate_shortcut_file(d, namespace, output)
 
         header_file_abstr_template = self._templatefile_prefix + "Abstract.template.h"
         cpp_file_abstr_template = self._templatefile_prefix + "Abstract.template.cpp"
@@ -729,9 +724,8 @@ Grid resolution is selected at runtime through RuntimeParameters.
                 cpp_file_abstr_template,
                 "Abstract" + self._name,
                 namespace,
-                subdirectory + ".",
+                ".",
                 d,
-                abstract_overwrite,
                 True,
             )
         )
@@ -741,9 +735,8 @@ Grid resolution is selected at runtime through RuntimeParameters.
                 cpp_file_template,
                 self._name,
                 namespace,
-                subdirectory + ".",
+                ".",
                 d,
-                False,
                 True,
             )
         )
@@ -751,13 +744,13 @@ Grid resolution is selected at runtime through RuntimeParameters.
         output.add(generated_abstract_header_file)
         output.add(generated_solver_files)
         output.makefile.add_h_file(
-            subdirectory + "Abstract" + self._name + ".h", generated=True
+            "Abstract" + self._name + ".h", generated=True
         )
-        output.makefile.add_h_file(subdirectory + self._name + ".h", generated=True)
+        output.makefile.add_h_file(self._name + ".h", generated=True)
         output.makefile.add_cpp_file(
-            subdirectory + "Abstract" + self._name + ".cpp", generated=True
+            "Abstract" + self._name + ".cpp", generated=True
         )
-        output.makefile.add_cpp_file(subdirectory + self._name + ".cpp", generated=True)
+        output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
 
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring
@@ -1069,5 +1062,5 @@ Grid resolution is selected at runtime through RuntimeParameters.
         self._plotter = plotter
 
     @abstractmethod
-    def _generate_kernels(self, namespace, output, subdirectory, dimensions):
+    def _generate_kernels(self, namespace, output, dimensions):
         pass

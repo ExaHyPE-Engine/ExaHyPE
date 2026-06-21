@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Vector.h"
 
-#if defined(WITH_GPU_SYCL)
+#if defined(PEANO_WITH_GPU_BACKEND_SYCL)
 #include <sycl/sycl.hpp>
 #endif
 
@@ -26,7 +26,7 @@ static_assert(
   "Vector should be trivially copyable!"
 );
 
-#if defined(WITH_GPU_SYCL)
+#if defined(PEANO_WITH_GPU_BACKEND_SYCL)
 static_assert(
   sycl::is_device_copyable<tarch::la::Vector<1, int>>::value,
   "Vector should be SYCL device copyable!"

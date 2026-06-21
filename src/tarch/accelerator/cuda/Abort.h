@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#if defined(WITH_GPU_CUDA)
+#if defined(PEANO_WITH_GPU_BACKEND_CUDA)
 
 #include "Device.h"
 

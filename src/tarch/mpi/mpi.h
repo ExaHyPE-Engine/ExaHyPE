@@ -7,7 +7,7 @@
 
 #include <string>
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 #include <mpi.h>
 #endif
 
@@ -71,7 +71,7 @@ tarch::mpi::IntegerMessage::receive(
 
 namespace tarch {
   namespace mpi {
-    #ifdef WITH_MPI
+    #ifdef PEANO_WITH_MPI
     /**
      * Returns a string representation of the mpi status. For a detailed
      * description of the mpi status itself see the file mpi.h.

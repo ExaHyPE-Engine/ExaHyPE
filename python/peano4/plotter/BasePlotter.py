@@ -16,7 +16,7 @@ class BasePlotter(ActionSet):
         time_stamp_evaluation,
         guard,
     ):
-        super().__init__(descend_invocation_order=1, parallel=False)
+        super().__init__(descend_invocation_order=1)
 
         self.d = {}
         self.d["NAME"] = dataset_name

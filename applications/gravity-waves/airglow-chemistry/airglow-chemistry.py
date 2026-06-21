@@ -194,13 +194,13 @@ if __name__ == "__main__":
         chemical_solver=riemann_solver,
     )
 
-    project.output.makefile.add_CXX_flag(f"""-DHORIZONTAL_WINDSPEED=10.5""")
-    project.output.makefile.add_CXX_flag(f"""-DCHEMISTRY_NUMERICAL_THRESHOLD=1E-5""")
-    project.output.makefile.add_CXX_flag(
-        f"""-DEINSTEIN_BANDWIDTH=applications::exahype2::GravityWaves::Airglow::ProductionRates::{args.einstein_coefficients.upper()}BANDWIDTH"""
+    project.output.makefile.add_compile_definition(f"""HORIZONTAL_WINDSPEED=10.5""")
+    project.output.makefile.add_compile_definition(f"""CHEMISTRY_NUMERICAL_THRESHOLD=1E-5""")
+    project.output.makefile.add_compile_definition(
+        f"""EINSTEIN_BANDWIDTH=applications::exahype2::GravityWaves::Airglow::ProductionRates::{args.einstein_coefficients.upper()}BANDWIDTH"""
     )
-    project.output.makefile.add_CXX_flag(
-        f"""-DEINSTEIN_COEFFICIENTS=applications::exahype2::GravityWaves::Airglow::ProductionRates::{args.einstein_coefficients}EinsteinCoefficients"""
+    project.output.makefile.add_compile_definition(
+        f"""EINSTEIN_COEFFICIENTS=applications::exahype2::GravityWaves::Airglow::ProductionRates::{args.einstein_coefficients}EinsteinCoefficients"""
     )
 
-    project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
+    project.generate_and_build()

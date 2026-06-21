@@ -70,13 +70,13 @@ namespace {
 peano4::stacks::tests::StackTest::StackTest():
   TestCase("peano4::stacks::tests::StackTest") {
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   TestDataOnStack::initDatatype();
 #endif
 }
 
 peano4::stacks::tests::StackTest::~StackTest() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   TestDataOnStack::shutdownDatatype();
 #endif
 }
@@ -715,7 +715,7 @@ void peano4::stacks::tests::StackTest::testPopBlockView() {
 }
 
 void peano4::stacks::tests::StackTest::testMPIDatatype() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() == 1) {
     return;
   }
@@ -835,7 +835,7 @@ void peano4::stacks::tests::StackTest::testMPIDatatype() {
 }
 
 void peano4::stacks::tests::StackTest::testMPIDatatype2() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() == 1) {
     return;
   }

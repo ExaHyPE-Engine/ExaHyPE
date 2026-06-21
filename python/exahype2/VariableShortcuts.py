@@ -53,7 +53,7 @@ class VariableShortcuts:
             "Parameter must be an int or a dictionary."
         )
 
-    def generate_shortcut_file(self, dictionary, namespace, output, subdirectory):
+    def generate_shortcut_file(self, dictionary, namespace, output):
         if not self._generate_shortcut_file:
             return
 
@@ -67,14 +67,13 @@ class VariableShortcuts:
             + "VariableShortcuts.template.h",
             "VariableShortcuts" + self._name,
             namespace,
-            subdirectory + ".",
+            ".",
             dictionary,
-            True,
             True,
         )
         output.add(generated_shortcut_file)
         output.makefile.add_h_file(
-            subdirectory + "VariableShortcuts" + self._name + ".h", generated=True
+            "VariableShortcuts" + self._name + ".h", generated=True
         )
 
     @property

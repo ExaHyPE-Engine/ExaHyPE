@@ -3,7 +3,6 @@
 
 from peano4.solversteps.ActionSet import ActionSet
 import jinja2
-import numpy as np
 
 
 class InsertParticlesFromFile(ActionSet):

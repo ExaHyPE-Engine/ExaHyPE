@@ -32,7 +32,7 @@ void tarch::multicore::waitForTask(const void* const inDependency) { native::wai
 
 void tarch::multicore::waitForAllTasks() { native::waitForAllTasks(); }
 
-#ifndef WITH_MULTITHREADING
+#ifndef PEANO_WITH_MULTITHREADING
 
 void tarch::multicore::native::spawnTask(Task* task, const void* const, const void* const) {
   while (task->run()) {
@@ -64,4 +64,4 @@ void tarch::multicore::native::waitForTask(const void* const) {}
 
 void tarch::multicore::native::waitForAllTasks() {}
 
-#endif // WITH_MULTITHREADING
+#endif // PEANO_WITH_MULTITHREADING

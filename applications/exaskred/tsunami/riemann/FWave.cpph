@@ -91,7 +91,7 @@ namespace applications::exahype2::exaskred::riemann {
       const T waveSpeeds[2]{einfeldtSpeeds[0], einfeldtSpeeds[1]};
       const T deltaLambda = waveSpeeds[1] - waveSpeeds[0];
 
-#if !defined(WITH_GPU)
+#if !defined(PEANO_WITH_GPU_BACKEND)
       assertion(waveSpeeds[0] < waveSpeeds[1]);
       assertion(std::fabs(deltaLambda) > 0);
 #endif
@@ -157,7 +157,7 @@ namespace applications::exahype2::exaskred::riemann {
 
       const T maxWaveSpeed = std::fmax(std::fabs(waveSpeeds[0]), std::fabs(waveSpeeds[1]));
 
-#if !defined(WITH_GPU)
+#if !defined(PEANO_WITH_GPU_BACKEND)
       assertion(!std::isnan(hUpdateLeft));
       assertion(!std::isnan(hUpdateRight));
       assertion(!std::isnan(huUpdateLeft));

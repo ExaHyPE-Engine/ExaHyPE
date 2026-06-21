@@ -37,7 +37,7 @@ void   tarch::mpi::IntegerMessage::setValue(int value) {
 
 
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 
 MPI_Datatype tarch::mpi::IntegerMessage::Datatype = MPI_DATATYPE_NULL;
 
@@ -218,7 +218,7 @@ void tarch::mpi::IntegerMessage::receive(
 }
 #endif
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 void tarch::mpi::IntegerMessage::sendAndPollDanglingMessages(const tarch::mpi::IntegerMessage& message, int destination, int tag, MPI_Comm communicator ) {
   tarch::mpi::IntegerMessage::send(
     message, destination, tag,
@@ -252,4 +252,3 @@ void tarch::mpi::IntegerMessage::receiveAndPollDanglingMessages(tarch::mpi::Inte
   );
 }
 #endif
-    

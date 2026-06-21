@@ -71,7 +71,7 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
 
         """
         super(InsertParticlesAlongCartesianLayoutIntoUnrefinedCells, self).__init__(
-            descend_invocation_order=1, parallel=False
+            descend_invocation_order=1
         )
 
         self.d = {}
@@ -160,7 +160,7 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
         return result.render(**self.d) + self.additional_includes
 
     def get_attributes(self):
-        return f"""
+        return """
     int                                        _spacetreeId;
 """
 

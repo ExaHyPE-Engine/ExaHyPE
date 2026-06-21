@@ -12,7 +12,7 @@ class Limiter:
         self.d = deepcopy(dictionary)
 
     def generate_kernels(
-        self, namespace, output, subdirectory, template_prefix, output_path
+        self, namespace, output, template_prefix, output_path
     ):
         Limiter.build_gemms(self.d)
 
@@ -21,9 +21,8 @@ class Limiter:
             cppfile_template=template_prefix + "Limiter.template.cpp",
             classname=output_path + "/Limiter",
             namespace=namespace,
-            subdirectory=subdirectory + ".",
+            subdirectory=".",
             dictionary=self.d,
-            default_overwrite=True,
             apply_iteratively=True,
         )
         output.add(generated_kernels)
@@ -74,7 +73,7 @@ class Limiter:
                 "dg2fv_y",
                 "nopf",
                 "gemm",
-                self.d["COMPUTE_PRECISION"],
+                d["COMPUTE_PRECISION"],
             )  # M is padded in both input and output
             d["GEMMS"]["dg2fv_z"] = Gemms(
                 nData,
@@ -90,7 +89,7 @@ class Limiter:
                 "dg2fv_z",
                 "nopf",
                 "gemm",
-                self.d["COMPUTE_PRECISION"],
+                d["COMPUTE_PRECISION"],
             )  # output slice not aligned
         else:
             d["GEMMS"]["dg2fv_y"] = Gemms(

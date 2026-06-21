@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#if defined(WITH_GPU_HIP)
+#if defined(PEANO_WITH_GPU_BACKEND_HIP)
 
 #include <hip/hip_runtime.h>
 
@@ -24,4 +24,4 @@ namespace tarch::accelerator::hip {
 #define CHECK_HIP_LAST_ERROR()
 #endif
 
-#endif // defined(WITH_GPU_HIP)
+#endif // defined(PEANO_WITH_GPU_BACKEND_HIP)

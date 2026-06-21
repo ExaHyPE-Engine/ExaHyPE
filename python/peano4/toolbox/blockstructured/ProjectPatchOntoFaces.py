@@ -36,7 +36,7 @@ class ProjectPatchOntoFaces(ActionSet):
             Consult remark above about how the dimensions of this overlap patch have to match
         """
         super(ProjectPatchOntoFaces, self).__init__(
-            descend_invocation_order=1, parallel=False
+            descend_invocation_order=1
         )
 
         assert patch_overlap.dim[0] % 2 == 0
@@ -108,9 +108,9 @@ class ProjectPatchOntoFaces(ActionSet):
             pass
         return result
 
-    def generate_kernels(self, namespace, output, dimensions, subdirectory):
+    def generate_kernels(self, namespace, output, dimensions):
         kernels_namespace = namespace + ["kernels", self.solver_name]
-        kernels_output_path = subdirectory + f"kernels/{self.solver_name}"
+        kernels_output_path = f"kernels/{self.solver_name}"
         kernels_templates_prefix = (
             os.path.dirname(os.path.realpath(__file__)) + "/kernels"
         )
@@ -131,9 +131,8 @@ class ProjectPatchOntoFaces(ActionSet):
             cppfile_template=kernels_templates_prefix + "/ProjectPatch.template.cpp",
             classname=kernels_output_path + "/ProjectPatch",
             namespace=kernels_namespace,
-            subdirectory=subdirectory + ".",
+            subdirectory=".",
             dictionary=d,
-            default_overwrite=True,
             apply_iteratively=True,
         )
         output.add(generated_kernels)
@@ -144,9 +143,9 @@ class ProjectPatchOntoFaces(ActionSet):
             kernels_output_path + "/ProjectPatch.cpp", generated=True
         )
 
-    def generate_fused_kernels(self, namespace, output, dimensions, subdirectory):
+    def generate_fused_kernels(self, namespace, output, dimensions):
         kernels_namespace = namespace + ["kernels", self.solver_name]
-        kernels_output_path = subdirectory + f"kernels/{self.solver_name}"
+        kernels_output_path = f"kernels/{self.solver_name}"
         kernels_templates_prefix = (
             os.path.dirname(os.path.realpath(__file__)) + "/kernels"
         )
@@ -171,9 +170,8 @@ class ProjectPatchOntoFaces(ActionSet):
             + ".template.cpp",
             classname=kernels_output_path + "/ProjectPatchFused",
             namespace=kernels_namespace,
-            subdirectory=subdirectory + ".",
+            subdirectory=".",
             dictionary=d,
-            default_overwrite=True,
             apply_iteratively=True,
         )
         output.add(generated_kernels)

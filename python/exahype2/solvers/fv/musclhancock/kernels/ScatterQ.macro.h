@@ -14,7 +14,7 @@
       const int overlapIdx = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
         overlapCell, {{NUMBER_OF_VOLUMES_PER_AXIS}}, {{HALO_SIZE}}, normal
       );
-      #if defined(WITH_OPENMP)
+      #if defined(PEANO_WITH_OPENMP)
       #pragma omp simd
       #else
       #pragma unroll
@@ -30,7 +30,7 @@
       const int overlapIdx = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
         overlapCell, {{NUMBER_OF_VOLUMES_PER_AXIS}}, {{HALO_SIZE}}, normal
       );
-      #if defined(WITH_OPENMP)
+      #if defined(PEANO_WITH_OPENMP)
       #pragma omp simd
       #else
       #pragma unroll
@@ -44,7 +44,7 @@
 
 {% macro scatterQ() %}
   {{ muscl.addSourceAndNCP() }}
-  #if defined(WITH_OPENMP)
+  #if defined(PEANO_WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll

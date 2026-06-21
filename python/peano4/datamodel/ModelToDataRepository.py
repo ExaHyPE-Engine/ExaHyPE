@@ -22,7 +22,6 @@ class ModelToDataRepository(object):
         )
 
     def __parse_data_declarations_in_model(self, n):
-        subdirectory = self.model.subdirectories[n]
         for prefix in ["CELL", "FACE", "VERTEX"]:
             self.d[prefix + "_DATA_CONTAINER_INCLUDES"] = ""
             self.d[prefix + "_DATA_CONTAINERS"] = []
@@ -34,16 +33,13 @@ class ModelToDataRepository(object):
         self.d["FULL_QUALIFIED_CLASSNAME"] += self.__get_class_name()
 
         for i in self.model.cell_data:
-            if i.subdirectory == subdirectory:
-                self.__build_up_dictionary_for_one_data_set(i, "CELL")
+            self.__build_up_dictionary_for_one_data_set(i, "CELL")
 
         for i in self.model.face_data:
-            if i.subdirectory == subdirectory:
-                self.__build_up_dictionary_for_one_data_set(i, "FACE")
+            self.__build_up_dictionary_for_one_data_set(i, "FACE")
 
         for i in self.model.vertex_data:
-            if i.subdirectory == subdirectory:
-                self.__build_up_dictionary_for_one_data_set(i, "VERTEX")
+            self.__build_up_dictionary_for_one_data_set(i, "VERTEX")
 
     def __get_full_namespace(self, i):
         return self.model.namespaces[i] + ["repositories"]
@@ -58,8 +54,7 @@ class ModelToDataRepository(object):
             namespace = self.__get_full_namespace(i)
             class_name = self.__get_class_name()
             output.makefile.add_cpp_file(
-                self.model.subdirectories[i]
-                + namespace[-1]
+                namespace[-1]
                 + "/"
                 + class_name
                 + ".cpp",
@@ -78,9 +73,8 @@ class ModelToDataRepository(object):
                 cppfile_template=cppfile_template,
                 classname=class_name,
                 namespace=namespace,
-                subdirectory=self.model.subdirectories[i] + namespace[-1],
+                subdirectory=namespace[-1],
                 dictionary=self.d,
-                default_overwrite=True,
                 apply_iteratively=True,
             )
             output.add(generated_files)

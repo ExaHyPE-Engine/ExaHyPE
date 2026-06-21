@@ -300,9 +300,15 @@ void exahype2::RuntimeParameters::setGeneratedDefaults(double minTerminalTime,
   }
   if (gridLevels >= 0) {
     _gridLevels = gridLevels;
+    if (maxGridLevels < 0) {
+      _maxGridLevels = gridLevels;
+    }
   }
   if (maxGridLevels >= 0) {
     _maxGridLevels = maxGridLevels;
+    if (gridLevels < 0) {
+      _gridLevels = maxGridLevels;
+    }
   }
 }
 
