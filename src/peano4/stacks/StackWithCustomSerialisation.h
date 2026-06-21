@@ -19,7 +19,7 @@ public:
 
   INLINE_METHOD StackWithCustomSerialisation(StackWithCustomSerialisation&& other) noexcept:
     Stack<T>(std::move(other)) // Calls the base move logic
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
     ,
     mpiCountRequest(other.mpiCountRequest),
     mpiDataRequest(other.mpiDataRequest),
@@ -29,7 +29,7 @@ public:
     mpiContext(other.mpiContext)
 #endif
   {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
     // Reset source handles so two objects don't think they own the same MPI request
     other.mpiCountRequest = MPI_REQUEST_NULL;
     other.mpiDataRequest  = MPI_REQUEST_NULL;
@@ -42,7 +42,7 @@ public:
       // Call base class move assignment
       Stack<T>::operator=(std::move(other));
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
       countBuffer = std::move(other.countBuffer);
       dataBuffer  = std::move(other.dataBuffer);
 
@@ -59,7 +59,7 @@ public:
     return *this;
   }
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   MPI_Request mpiCountRequest = MPI_REQUEST_NULL;
   MPI_Request mpiDataRequest  = MPI_REQUEST_NULL;
 
@@ -140,5 +140,5 @@ public:
 
     return finished;
   }
-#endif // WITH_MPI
+#endif // PEANO_WITH_MPI
 };

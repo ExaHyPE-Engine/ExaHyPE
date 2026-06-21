@@ -3,7 +3,6 @@
 
 import sys
 
-from .Makefile import Makefile
 
 class Readme(object):
   """

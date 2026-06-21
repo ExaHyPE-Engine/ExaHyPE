@@ -10,7 +10,6 @@ class ExaHyPEMain(peano4.PeanoMain):
         project: peano4.Project
         """
         super(ExaHyPEMain, self).__init__(peano_project)
-        self.overwrite = False
 
     def _get_header_file_template(self):
         templatefile_prefix = (

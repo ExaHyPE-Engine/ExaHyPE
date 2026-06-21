@@ -89,7 +89,7 @@ public:
 
   std::string toString() const;
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 public:
   static MPI_Datatype getBoundaryExchangeDatatype();
   static MPI_Datatype getMultiscaleDataExchangeDatatype();

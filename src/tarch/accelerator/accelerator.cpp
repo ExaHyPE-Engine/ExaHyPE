@@ -8,24 +8,12 @@
 
 #include <cstring>
 
-#ifdef USE_MIMALLOC
-#include <mimalloc.h>
-#endif
-
 void* tarch::accelerator::allocateHeapMemory(std::size_t sizeInBytes) {
-#ifdef USE_MIMALLOC
-  return mi_malloc_aligned(sizeInBytes, ALIGNMENT);
-#else
-  return ::operator new(sizeInBytes, std::align_val_t(ALIGNMENT));
-#endif
+  return ::operator new(sizeInBytes, std::align_val_t(PEANO_WITH_ALIGNMENT));
 }
 
 void tarch::accelerator::freeHeapMemory(void* data) {
-#ifdef USE_MIMALLOC
-  mi_free(data);
-#else
-  ::operator delete(data, std::align_val_t(ALIGNMENT));
-#endif
+  ::operator delete(data, std::align_val_t(PEANO_WITH_ALIGNMENT));
 }
 
 void tarch::accelerator::copyToHeapMemory(void* target, const void* source, std::size_t sizeInBytes) {
@@ -125,7 +113,7 @@ void tarch::accelerator::
   }
 }
 
-#if !defined(WITH_GPU)
+#if !defined(PEANO_WITH_GPU_BACKEND)
 void* tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, [[maybe_unused]] int device) {
   return allocateHeapMemory(sizeInBytes);
 }
@@ -157,4 +145,4 @@ void tarch::accelerator::
   copyFromPinnedMemory(const void* source, void* target, std::size_t sizeInBytes, [[maybe_unused]] int device) {
   copyFromHeapMemory(source, target, sizeInBytes);
 }
-#endif // WITH_GPU
+#endif // PEANO_WITH_GPU_BACKEND

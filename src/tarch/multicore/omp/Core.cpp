@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/multicore/Core.h"
 
-#if defined(WITH_OPENMP)
+#if defined(PEANO_WITH_OPENMP)
 
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/multicore/Task.h"

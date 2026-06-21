@@ -33,7 +33,7 @@ private:
   tarch::la::Vector<DIMENSIONS,double> _debugH;
 #endif
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   static MPI_Datatype Datatype;
 #endif
 
@@ -78,7 +78,7 @@ public:
 
   std::string toString() const;
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   static void initDatatype();
   static void shutdownDatatype();
 

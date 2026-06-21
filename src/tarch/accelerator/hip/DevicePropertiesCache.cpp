@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "DevicePropertiesCache.h"
 
-#if defined(WITH_GPU_HIP)
+#if defined(PEANO_WITH_GPU_BACKEND_HIP)
 
 #include "ErrorCheck.h"
 #include "tarch/Assertions.h"

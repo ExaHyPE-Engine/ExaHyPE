@@ -35,21 +35,6 @@ class InitialCondition(AbstractFDActionSet):
         result = "\n"
         return result
 
-    def get_action_set_name(self):
-        return __name__.replace(".py", "").replace(".", "_")
-
-    def get_includes(self):
-        return (
-            """
-#include <functional>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-"""
-            + self._solver._get_default_includes()
-            + self._solver.user_action_set_includes
-        )
-
     def get_static_initialisations(self, full_qualified_classname):
         return """\n"""
 

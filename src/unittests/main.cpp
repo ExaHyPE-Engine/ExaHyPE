@@ -6,22 +6,10 @@
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/UnitTests.h"
 #include "tarch/instrumentation/Log.h"
-
-#ifdef ENABLE_TOOLBOX_BLOCKSTRUCTURED
 #include "toolbox/blockstructured/UnitTests.h"
-#endif
-
-#ifdef ENABLE_TOOLBOX_LOADBALANCING
 #include "toolbox/loadbalancing/UnitTests.h"
-#endif
-
-#ifdef ENABLE_TOOLBOX_PARTICLES
 #include "toolbox/particles/UnitTests.h"
-#endif
-
-#ifdef ENABLE_EXAHYPE
 #include "exahype2/UnitTests.h"
-#endif
 
 int runTests() {
   int                     unitTestsErrors = 0;
@@ -37,33 +25,25 @@ int runTests() {
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
 
-#ifdef ENABLE_TOOLBOX_BLOCKSTRUCTURED
   tests = toolbox::blockstructured::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
-#endif
 
-#ifdef ENABLE_TOOLBOX_LOADBALANCING
   tests = toolbox::loadbalancing::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
-#endif
 
-#ifdef ENABLE_TOOLBOX_PARTICLES
   tests = toolbox::particles::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
-#endif
 
-#ifdef ENABLE_EXAHYPE
   tests = exahype2::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
-#endif
 
   if (unitTestsErrors != 0) {
     logError(unitTestsErrors << " unit tests failed. Quit.");
@@ -86,7 +66,7 @@ int main(int argc, char** argv) {
 
   int returnCode = EXIT_SUCCESS;
 
-#if defined(WITH_OPENMP)
+#if defined(PEANO_WITH_OPENMP)
 #pragma omp parallel
   {
 #pragma omp master
@@ -101,7 +81,7 @@ int main(int argc, char** argv) {
         logError("Noncritical assertion has been triggered while running the unit tests. Quit.");
         returnCode = EXIT_FAILURE;
       }
-#if defined(WITH_OPENMP)
+#if defined(PEANO_WITH_OPENMP)
     }
   }
 #endif

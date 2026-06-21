@@ -4,7 +4,7 @@
 
 #include "FileWriter.h"
 
-#ifdef WITH_HDF5
+#ifdef PEANO_WITH_HDF5
 
 namespace tarch::plotter {
   class HDF5FileWriter;

@@ -129,7 +129,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if (isLastGridSweepOfTimeStep()) {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
     int local = _numberOfTroubledCellsThisTimeStep;
     int global = 0;
     tarch::mpi::Rank::getInstance().allReduce(

@@ -132,7 +132,7 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::unlockSemaphoreOnGlo
 void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::serveLockRequests() {
   assertion(tarch::mpi::Rank::getInstance().isGlobalMaster());
 
-  #ifdef WITH_MPI
+  #ifdef PEANO_WITH_MPI
   tarch::multicore::Lock lock(_reserverationRequestsSemaphore);
 
   bool servedLockRequest = true;
@@ -158,7 +158,7 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::serveLockRequests() 
 
 void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::receiveDanglingMessages() {
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    #ifdef WITH_MPI
+    #ifdef PEANO_WITH_MPI
     int flag = false;
     MPI_Message msg;
     MPI_Status status;
@@ -217,7 +217,7 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::acquireLock( int num
     lockSemaphoreOnGlobalMaster(number, tarch::mpi::Rank::getGlobalMasterRank());
   }
   else {
-    #ifdef WITH_MPI
+    #ifdef PEANO_WITH_MPI
     logDebug("have to acquire lock on global master " << tarch::mpi::Rank::getGlobalMasterRank() << " and thus send master a " << number);
     
     MPI_Send( &number, 1, MPI_INT, tarch::mpi::Rank::getGlobalMasterRank(), _semaphoreTag, tarch::mpi::Rank::getInstance().getCommunicator() );
@@ -257,7 +257,7 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::releaseLock( int num
     serveLockRequests();
   }
   else {
-    #ifdef WITH_MPI
+    #ifdef PEANO_WITH_MPI
     number = -number;
     logDebug("send global master " << number << " to release global lock");
    

@@ -5,7 +5,7 @@
 #include "tarch/services/ServiceRepository.h"
 
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 std::string tarch::mpi::MPIReturnValueToString( int result ) {
   std::ostringstream out;
 

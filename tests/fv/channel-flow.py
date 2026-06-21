@@ -85,6 +85,6 @@ fv_solver.set_implementation(
 
 project.add_solver(fv_solver)
 
-project = project.generate_Peano4_project(verbose=False)
-project.output.makefile.add_CXX_flag("-DGAMMA=1.4")
-project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
+project = project.generate_Peano4_project()
+project.output.makefile.add_compile_definition("GAMMA=1.4")
+project.generate_and_build()

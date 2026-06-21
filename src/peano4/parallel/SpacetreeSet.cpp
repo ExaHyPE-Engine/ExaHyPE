@@ -83,7 +83,7 @@ void peano4::parallel::SpacetreeSet::init(
   );
   tarch::services::ServiceRepository::getInstance().addService(this, "peano4::parallel::SpacetreeSet");
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   assertion(
     (peano4::parallel::Node::getInstance().getNumberOfRegisteredTrees() == 1
      and tarch::mpi::Rank::getInstance().getRank() == 0)
@@ -110,7 +110,7 @@ int peano4::parallel::SpacetreeSet::getAnswerTag(int targetSpacetreeId) const {
 }
 
 void peano4::parallel::SpacetreeSet::answerQuestions() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() == 1) {
     return;
   }
@@ -209,7 +209,7 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
 }
 
 void peano4::parallel::SpacetreeSet::receiveDanglingMessages() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   if (tarch::mpi::Rank::getInstance().isMessageInQueue(_requestMessageTag)) {
     peano4::parallel::TreeManagementMessage message;
     peano4::parallel::TreeManagementMessage::
@@ -226,7 +226,7 @@ void peano4::parallel::SpacetreeSet::receiveDanglingMessages() {
 void peano4::parallel::SpacetreeSet::addSpacetree(int masterId, int newTreeId) {
   if (peano4::parallel::Node::getInstance().getRank(masterId)
       != peano4::parallel::Node::getInstance().getRank(newTreeId)) {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
     const int targetRank = peano4::parallel::Node::getInstance().getRank(newTreeId);
 
     TreeManagementMessage message;
@@ -456,7 +456,7 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::GridTraversalObs
 
       if (Node::getInstance().getRank(p->_masterId) != tarch::mpi::Rank::getInstance().getRank()) {
         logDebug("Parent tree " << p->_masterId << " is not local on this rank. Remove child reference");
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
         TreeManagementMessage
           message(p->_masterId, p->_id, TreeManagementMessage::Action::RemoveChildTreeFromBooksAsChildBecameEmpty);
         TreeManagementMessage::send(
@@ -558,7 +558,7 @@ bool peano4::parallel::SpacetreeSet::split(int treeId, const grid::SplitInstruct
     int newSpacetreeId = -1;
 
     if (tarch::mpi::Rank::getInstance().getRank() != targetRank) {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
       logDebug("Request new tree on rank " << targetRank);
       peano4::parallel::TreeManagementMessage requestMessage;
       requestMessage.setMasterSpacetreeId(treeId);

@@ -60,7 +60,7 @@ void peano4::parallel::SpacetreeSet::
       targetStack = std::move(sourceStack);
       return;
     }
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
     const auto metaInfo = Node::getInstance().getGridDataExchangeMetaInformation(
       master,
       worker,
@@ -81,7 +81,7 @@ void peano4::parallel::SpacetreeSet::
   }
   // We are the receiver
   else if (thisRank == targetRank) {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
     const auto metaInfo = Node::getInstance().getGridDataExchangeMetaInformation(
       master,
       worker,
@@ -135,7 +135,7 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(
     }
 
     if (thisRank != targetRank) {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
       const int messageSize = sourceStack.size();
       assertion(messageSize > 0, spacetreeId, targetTreeId, neighborSlot);
 
@@ -182,7 +182,7 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(
     }
 
     // Shared memory exchange
-    // We only reach here if !WITH_MPI or (WITH_MPI and thisRank == targetRank)
+    // We only reach here if !PEANO_WITH_MPI or (PEANO_WITH_MPI and thisRank == targetRank)
     assertion(thisRank == targetRank);
     const int targetSlot = getInstance().getSpacetree(targetTreeId).getNeighbourSlot(spacetreeId);
     assertion(targetSlot >= 0, spacetreeId, targetTreeId, neighborSlot);
@@ -214,7 +214,7 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(
 
 template <class Container>
 void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(Container& stackContainer, int spacetreeId) {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() <= 1) {
     return;
   }

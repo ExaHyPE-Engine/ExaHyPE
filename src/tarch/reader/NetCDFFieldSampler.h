@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#ifdef WITH_NETCDF
+#ifdef PEANO_WITH_NETCDF
 
 #include "NetCDFFileReader.h"
 #include "tarch/instrumentation/Log.h"

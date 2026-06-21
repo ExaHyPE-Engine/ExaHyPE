@@ -123,8 +123,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishTimeStep() override;
 
-    virtual void logTimeStep() override;
-
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
@@ -214,4 +212,3 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
   {{SOLVER_USER_DECLARATIONS}}
 };
-

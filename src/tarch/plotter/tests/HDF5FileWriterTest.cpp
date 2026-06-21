@@ -12,7 +12,7 @@
 
 namespace fs = std::filesystem;
 
-#ifdef WITH_HDF5
+#ifdef PEANO_WITH_HDF5
 
 namespace {
   /**

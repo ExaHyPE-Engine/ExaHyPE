@@ -176,7 +176,7 @@ if project.dimensions != scenario._dimensions:
 
 project.add_solver(ader_solver)
 
-project = project.generate_Peano4_project(verbose=False)
+project = project.generate_Peano4_project()
 
 project.constants.export_constexpr_with_type(
     "BenchmarkMinTerminalTime", str(end_time), "double"
@@ -209,16 +209,16 @@ makefile.add_cpp_file("FusedDataRepository.cpp")
 makefile.add_h_file("FusedTasks.h")
 makefile.add_cpp_file("FusedTasks.cpp")
 
-makefile.add_CXX_flag(
-    "-DSolverStoragePrecision=" + ader_solver._solution_persistent_storage_precision
+makefile.add_compile_definition(
+    "SolverStoragePrecision=" + ader_solver._solution_persistent_storage_precision
 )
-makefile.add_CXX_flag(
-    "-DSolverPredictorPrecision=" + ader_solver._predictor_computation_precisions[0]
+makefile.add_compile_definition(
+    "SolverPredictorPrecision=" + ader_solver._predictor_computation_precisions[0]
 )
-makefile.add_CXX_flag(
-    "-DSolverCorrectorPrecision=" + ader_solver._corrector_computation_precision
+makefile.add_compile_definition(
+    "SolverCorrectorPrecision=" + ader_solver._corrector_computation_precision
 )
 
 print(ader_solver._predictor_computation_precisions[0])
 
-project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
+project.generate_and_build()

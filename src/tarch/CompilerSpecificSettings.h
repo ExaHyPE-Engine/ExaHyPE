@@ -14,12 +14,12 @@
 #define LITTLE_ENDIAN
 #endif
 
-#ifndef ALIGNMENT
-#error "ALIGNMENT must be provided by the build system (CMake)"
+#ifndef PEANO_WITH_ALIGNMENT
+#error "PEANO_WITH_ALIGNMENT must be provided by the build system (CMake)"
 #endif
 
-#ifndef SIMDLEN
-#error "SIMDLEN must be provided by the build system (CMake)"
+#ifndef PEANO_WITH_SIMDLEN
+#error "PEANO_WITH_SIMDLEN must be provided by the build system (CMake)"
 #endif
 
 #ifndef PEANO_TRACE
@@ -54,8 +54,8 @@
 #define STR(...) STR1(__VA_ARGS__)
 #define _PRAGMA(...) _Pragma(STR(__VA_ARGS__))
 
-#if defined(WITH_OPENMP)
-#define SIMD(...) _PRAGMA(omp simd __VA_ARGS__ simdlen(SIMDLEN))
+#if defined(PEANO_WITH_OPENMP)
+#define SIMD(...) _PRAGMA(omp simd __VA_ARGS__ simdlen(PEANO_WITH_SIMDLEN))
 
 #else
 // No OpenMP: Compiler-specific hints
@@ -63,7 +63,7 @@
 #if defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
 #define SIMD(...) _PRAGMA(ivdep)
 #elif defined(__clang__)
-#define SIMD(...) _PRAGMA(clang loop vectorize(enable) vectorize_width(SIMDLEN))
+#define SIMD(...) _PRAGMA(clang loop vectorize(enable) vectorize_width(PEANO_WITH_SIMDLEN))
 #elif defined(__GNUC__)
 #define SIMD(...) _PRAGMA(GCC ivdep)
 #elif defined(_MSC_VER)

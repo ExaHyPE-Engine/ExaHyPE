@@ -24,6 +24,7 @@
 {% endfor %}
 
 #include <algorithm>
+#include <cmath>
 #include <iomanip>
 #include <sstream>
 #include <string>

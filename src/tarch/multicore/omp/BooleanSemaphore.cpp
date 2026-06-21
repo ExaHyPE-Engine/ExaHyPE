@@ -1,6 +1,6 @@
 #include "tarch/multicore/multicore.h"
 
-#if defined(WITH_OPENMP)
+#if defined(PEANO_WITH_OPENMP)
 #include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Core.h"

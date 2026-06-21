@@ -9,7 +9,7 @@ tarch::accelerator::Device& tarch::accelerator::Device::getInstance() {
   return instance;
 }
 
-#if !defined(WITH_GPU)
+#if !defined(PEANO_WITH_GPU_BACKEND)
 
 bool tarch::accelerator::Device::init() { return isInitialised(); }
 
@@ -19,4 +19,4 @@ bool tarch::accelerator::Device::isInitialised() const { return true; }
 
 int tarch::accelerator::Device::getNumberOfDevices() const { return 0; }
 
-#endif // WITH_GPU
+#endif // PEANO_WITH_GPU_BACKEND

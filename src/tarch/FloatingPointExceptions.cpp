@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "FloatingPointExceptions.h"
 
-#if defined(WITH_FPE)
+#if defined(PEANO_WITH_FPE)
 
 #include "tarch/NonCriticalAssertions.h"
 

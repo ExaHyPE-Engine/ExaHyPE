@@ -143,5 +143,5 @@ theSolver.set_face_plotter(peano4.plotter.HDF5FaceNodalPlotter, """
         + theSolver.get_name_of_global_instance() + """.context->fault_normal]
       """)
 
-peano4_project = project.generate_Peano4_project(verbose=False)
-peano4_project.build(make_clean_first=True)
+peano4_project = project.generate_Peano4_project()
+peano4_project.generate_and_build()

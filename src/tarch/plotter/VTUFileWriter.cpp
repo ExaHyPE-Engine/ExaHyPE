@@ -12,7 +12,7 @@
 #include <stdexcept>
 #include <type_traits>
 
-#ifdef USE_ZLIB
+#ifdef PEANO_WITH_ZLIB
 #include <zlib.h>
 #endif
 
@@ -69,7 +69,7 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
     return;
   }
 
-#ifdef USE_ZLIB
+#ifdef PEANO_WITH_ZLIB
   struct Block {
     std::vector<std::uint8_t> binaryData;
   };
@@ -105,7 +105,7 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
     using T                       = typename std::decay_t<decltype(dataVec)>::value_type;
     const std::uint64_t dataBytes = static_cast<std::uint64_t>(dataVec.size()) * sizeof(T);
 
-#ifdef USE_ZLIB
+#ifdef PEANO_WITH_ZLIB
     static_assert(
       sizeof(uLong) >= 8,
       "Critical Safety Error: ZLib's 'uLong' is only 32-bit on this platform (likely Windows). "
@@ -166,7 +166,7 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
   const std::string   byteOrder      = isLittleEndian ? "LittleEndian" : "BigEndian";
 
   std::string compressorAttr = "";
-#ifdef USE_ZLIB
+#ifdef PEANO_WITH_ZLIB
   compressorAttr = " compressor=\"vtkZLibDataCompressor\"";
 #endif
 
@@ -211,7 +211,7 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
   out << "  <AppendedData encoding=\"raw\">\n";
   out << "_"; // Separator
 
-#ifdef USE_ZLIB
+#ifdef PEANO_WITH_ZLIB
   for (const auto& b : appendedBlocks) {
     out.write(reinterpret_cast<const char*>(b.binaryData.data()), b.binaryData.size());
   }

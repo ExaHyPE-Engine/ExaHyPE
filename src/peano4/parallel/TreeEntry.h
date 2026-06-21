@@ -4,7 +4,7 @@
 
 #include <string>
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   #include <mpi.h>
   #include <functional>
 #endif
@@ -35,7 +35,7 @@ struct peano4::parallel::TreeEntry {
     TreeEntry(const TreeEntry& copy) = default;
 
 
-    #ifdef WITH_MPI
+    #ifdef PEANO_WITH_MPI
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -91,7 +91,7 @@ struct peano4::parallel::TreeEntry {
     static void receive(   peano4::parallel::TreeEntry& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
     static void sendAndPollDanglingMessages(const peano4::parallel::TreeEntry& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
     static void receiveAndPollDanglingMessages(peano4::parallel::TreeEntry& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
 #endif
@@ -103,7 +103,7 @@ struct peano4::parallel::TreeEntry {
     int   _id;
     int   _master;
 
-    #ifdef WITH_MPI
+    #ifdef PEANO_WITH_MPI
     private:
       int _senderDestinationRank;
       static MPI_Datatype  Datatype;

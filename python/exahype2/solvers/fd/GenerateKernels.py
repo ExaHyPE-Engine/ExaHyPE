@@ -9,10 +9,9 @@ import peano4.output
 def generate_kernels(
     solver,
     output,
-    subdirectory,
 ):
     kernels_namespace = solver._namespace + ["kernels", solver._name]
-    kernels_output_path = subdirectory + "kernels/" + solver._name
+    kernels_output_path = "kernels/" + solver._name
     kernels_templates_prefix = os.path.dirname(os.path.realpath(__file__)) + "/kernels/"
 
     if not os.path.exists(kernels_output_path):
@@ -29,9 +28,8 @@ def generate_kernels(
         cppfile_template=kernels_templates_prefix + f"{solver_file}.template.cpp",
         classname=kernels_output_path + f"/{solver_file}",
         namespace=kernels_namespace,
-        subdirectory=subdirectory + ".",
+        subdirectory=".",
         dictionary=d,
-        default_overwrite=True,
         apply_iteratively=True,
     )
     output.add(generated_kernels)
@@ -67,9 +65,8 @@ def generate_kernels(
         cppfile_template=kernels_templates_prefix + f"{boundary_file}.template.cpph",
         classname=kernels_output_path + f"/{boundary_file}",
         namespace=kernels_namespace,
-        subdirectory=subdirectory + ".",
+        subdirectory=".",
         dictionary=d,
-        default_overwrite=True,
         apply_iteratively=True,
     )
     output.add(generated_kernels)
@@ -78,9 +75,8 @@ def generate_kernels(
         cppfile_template=kernels_templates_prefix + f"{boundary_file}.cpp",
         classname=kernels_output_path + f"/{boundary_file}",
         namespace=kernels_namespace,
-        subdirectory=subdirectory + ".",
+        subdirectory=".",
         dictionary=d,
-        default_overwrite=True,
         apply_iteratively=True,
     )
     output.add(generated_kernels)

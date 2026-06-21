@@ -112,6 +112,6 @@ fd_solver.set_implementation(
 
 project.add_solver(fd_solver)
 
-project = project.generate_Peano4_project(verbose=False)
-project.output.makefile.add_CXX_flag(f"""-DTHERMAL_DIFFUSIVITY={THERMAL_DIFFUSIVITY}""")
-project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
+project = project.generate_Peano4_project()
+project.output.makefile.add_compile_definition(f"""THERMAL_DIFFUSIVITY={THERMAL_DIFFUSIVITY}""")
+project.generate_and_build()

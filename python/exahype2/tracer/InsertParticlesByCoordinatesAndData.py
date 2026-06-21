@@ -2,7 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 from peano4.solversteps.ActionSet import ActionSet
-import peano4.toolbox.particles
 import jinja2
 
 
@@ -38,7 +37,7 @@ class InsertParticlesByCoordinatesAndData(ActionSet):
         self, particle_set, initial_data, unknowns_per_particle, additional_includes=""
     ):
         super(InsertParticlesByCoordinatesAndData, self).__init__(
-            descend_invocation_order=1, parallel=False
+            descend_invocation_order=1
         )
 
         self.d = {

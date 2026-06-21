@@ -43,7 +43,7 @@ class DynamicAMR(ActionSet):
           - linear_precomputed_operators<3>. The 3 has to be replaced by the
             number of unknowns that you use per coordinate axis.
         """
-        super(DynamicAMR, self).__init__(descend_invocation_order=1, parallel=False)
+        super(DynamicAMR, self).__init__(descend_invocation_order=1)
         self.d = {}
         if patch_overlap_interpolation.dim[0] % 2 != 0:
             raise Exception(

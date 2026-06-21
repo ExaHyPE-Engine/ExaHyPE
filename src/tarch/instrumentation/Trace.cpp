@@ -561,7 +561,7 @@ for(const rank of data.ranks||[]){
     }
 
     static std::string traceFileStem(bool useCollective) {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
       int mpiInitialised = 0;
       MPI_Initialized(&mpiInitialised);
 
@@ -596,7 +596,7 @@ for(const rank of data.ranks||[]){
       const std::string& localFragment,
       bool               useCollective
     ) {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
       int mpiInitialised = 0;
       int mpiFinalised   = 0;
       MPI_Initialized(&mpiInitialised);

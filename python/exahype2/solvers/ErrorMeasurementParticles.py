@@ -110,7 +110,7 @@ def create_finish_time_step_implementation_for_error_measurement(guard):
     if ("""
         + guard
         + """) {
-      #ifdef WITH_MPI
+      #ifdef PEANO_WITH_MPI
       double errorsThisTimeStamp[3] = {_errors[0], _errors[1], _errors[2]};
 
       tarch::mpi::Rank::getInstance().allReduce(

@@ -111,7 +111,7 @@ bool shouldContinueGridConstruction(double& currentMinH, int& currentGlobalNumbe
     // Therefore, we don't use this at the moment (set to true). This should be used as soon as periodic BCs work across subdomains.
     const bool hasConfirmedStationarySweep = /*repositories::loadBalancer.getStatistics().getGlobalNumberOfStationarySweeps() > 0;*/ true;
     if (finishConditionSeenLastSweep and hasConfirmedStationarySweep) {
-      logInfo("Grid construction complete: Admissible mesh size reached (h_{min}=" << currentMinH << ", admissible h_{min}=" << minAdmissiblePatchSize << ") and load balancing has converged");
+      logInfo("Admissible mesh size reached (h_{min}=" << currentMinH << ", admissible h_{min}=" << minAdmissiblePatchSize << ") and load balancing has converged");
       return false;
     }
 
@@ -605,7 +605,7 @@ int main(int argc, char** argv) {
 
   int returnCode = EXIT_SUCCESS;
 
-#if defined(WITH_OPENMP)
+#if defined(PEANO_WITH_OPENMP)
 #pragma omp parallel
   {
 #pragma omp master
@@ -616,7 +616,7 @@ int main(int argc, char** argv) {
       } else {
         runWorker();
       }
-#if defined(WITH_OPENMP)
+#if defined(PEANO_WITH_OPENMP)
     }
   }
 #endif

@@ -154,7 +154,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
   @guards.setter
   def guards(self,new_guards):
     if new_guards!=[] and len(new_guards)!=self._solver.number_of_Runge_Kutta_steps():
-      raise Exception( "Expect one guard per Runge Kutta step. Have {} steps but got guards {}".format(solver.number_of_Runge_Kutta_steps(),guards) )
+      raise Exception( "Expect one guard per Runge Kutta step. Have {} steps but got guards {}".format(self._solver.number_of_Runge_Kutta_steps(),new_guards) )
     self._guards = new_guards
     
 

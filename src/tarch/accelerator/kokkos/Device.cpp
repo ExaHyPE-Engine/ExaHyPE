@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/Device.h"
 
-#if defined(WITH_GPU_KOKKOS)
+#if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
 
 #include "tarch/accelerator/MemoryAllocationCache.h"
 
@@ -42,4 +42,4 @@ bool tarch::accelerator::Device::isInitialised() const { return numberOfDevices 
 
 int tarch::accelerator::Device::getNumberOfDevices() const { return numberOfDevices; }
 
-#endif // defined(WITH_GPU_KOKKOS)
+#endif // defined(PEANO_WITH_GPU_BACKEND_KOKKOS)

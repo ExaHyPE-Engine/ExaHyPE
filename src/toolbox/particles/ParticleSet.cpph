@@ -130,7 +130,7 @@ std::string toolbox::particles::ParticleSet<T>::printParticleStateStatistics() {
 
 template <typename T>
 void toolbox::particles::ParticleSet<T>::reduceNumberOfParticles() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   std::vector<int> localParticleNumbers;
   localParticleNumbers.reserve(2 * _remainingLocalParticleNumbers.size());
   for (const auto& particleNumber: _remainingLocalParticleNumbers) {
@@ -189,7 +189,7 @@ int toolbox::particles::ParticleSet<T>::getTotalNumberOfParticles() {
 
 template <typename T>
 void toolbox::particles::ParticleSet<T>::reduceParticleStateStatistics() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   const int localNumberOfRemainingLocalParticles          = _numberOfRemainingLocalParticles;
   const int localNumberOfExpiredHaloParticles             = _numberOfExpiredHaloParticles;
   const int localNumberOfParticlesThatHaveLeftTheirDomain = _numberOfParticlesThatHaveLeftTheirDomain;
@@ -291,7 +291,7 @@ std::string toolbox::particles::ParticleSet<T>::printReassignmentStatistics() {
 
 template <typename T>
 void toolbox::particles::ParticleSet<T>::reduceReassignmentStatistics() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   int localNumberOfLifts                                = _numberOfLifts;
   int localNumberOfDrops                                = _numberOfDrops;
   int localNumberOfLiftsIntoSieveSet                    = _numberOfLiftsIntoSieveSet;
@@ -405,7 +405,7 @@ bool toolbox::particles::ParticleSet<T>::registeredAnyResorting() {
 }
 
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 template <typename T>
 void toolbox::particles::ParticleSet<T>::initDatatype() {
   T::initDatatype();

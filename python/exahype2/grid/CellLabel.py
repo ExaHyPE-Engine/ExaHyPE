@@ -16,7 +16,7 @@ class UpdateCellLabel(ActionSet):
 
     def __init__(self, solver_name):
         super(UpdateCellLabel, self).__init__(
-            descend_invocation_order=1, parallel=False
+            descend_invocation_order=1
         )
         self._solver_name = solver_name
         pass

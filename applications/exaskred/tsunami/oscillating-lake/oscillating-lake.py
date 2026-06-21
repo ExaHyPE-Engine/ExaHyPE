@@ -194,11 +194,11 @@ exahype2.solvers.fv.ErrorMeasurement(
 )
 
 project.add_solver(fv_solver)
-peano_project = project.generate_Peano4_project(verbose=False)
+peano_project = project.generate_Peano4_project()
 
 for const_name, (const_val, const_type) in constants.items():
     peano_project.constants.export_constexpr_with_type(
         const_name, str(const_val), const_type
     )
 
-peano_project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
+peano_project.generate_and_build()

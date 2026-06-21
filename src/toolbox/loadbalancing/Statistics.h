@@ -113,7 +113,7 @@ private:
   int _localNumberOfStationarySweeps;
   int _globalNumberOfStationarySweeps;
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   // Pack everything into one record (uint64_t words), reduced via a custom MPI_Op.
   // Store the double as raw bits in a uint64_t.
   std::array<std::uint64_t, NumberOfWords> _globalExchangeSend{};

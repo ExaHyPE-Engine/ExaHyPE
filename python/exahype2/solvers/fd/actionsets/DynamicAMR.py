@@ -2,7 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 import peano4
 import exahype2
-import jinja2
 
 import peano4.toolbox.blockstructured.DynamicAMR
 

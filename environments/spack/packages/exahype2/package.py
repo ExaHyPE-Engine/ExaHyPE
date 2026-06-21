@@ -31,6 +31,7 @@ class Exahype2(CMakePackage, CudaPackage):
     variant("mpi", default=True, description="Build with Message Passing Interface (MPI) support")
     variant("hdf5", default=True, description="Build with HDF5 support")
     variant("netcdf", default=True, description="Build with NetCDF support")
+    variant("curvi", default=True, description="Build with Curvi toolbox support")
 
     depends_on("python")
     depends_on("py-pip")
@@ -55,36 +56,33 @@ class Exahype2(CMakePackage, CudaPackage):
         when="+cuda",
         msg="A value for cuda_arch must be specified. Add cuda_arch=XX",
     )
+    conflicts("+curvi~netcdf", msg="Curvi requires NetCDF support")
 
     variant(
         "gpu_backend",
-        default="cuda",
+        default="native",
         description="GPU accelerator backend",
-        values=("sycl", "cuda", "kokkos"),
+        values=("native", "kokkos", "acpp", "ompt"),
         when="+cuda",
     )
 
 
     def cmake_args(self):
         args = [
-            "-DENABLE_EXAHYPE=ON",
-            "-DENABLE_TOOLBOX_LOADBALANCING=ON",
-            "-DENABLE_TOOLBOX_BLOCKSTRUCTURED=ON",
-            "-DENABLE_TOOLBOX_PARTICLES=ON",
-            "-DENABLE_TOOLBOX_CURVI=ON",
-            "-DWITH_EASI=ON",
-            "-DWITH_LIBXSMM=OFF",
-            self.define_from_variant("WITH_MULTITHREADING", "multithreading"),
-            self.define_from_variant("WITH_MPI", "mpi"),
-            self.define_from_variant("WITH_HDF5", "hdf5"),
-            self.define_from_variant("WITH_NETCDF", "netcdf"),
+            "-DPEANO_WITH_EASI=ON",
+            "-DPEANO_WITH_LIBXSMM=OFF",
+            self.define_from_variant("PEANO_WITH_MULTITHREADING", "multithreading"),
+            self.define_from_variant("PEANO_WITH_MPI", "mpi"),
+            self.define_from_variant("PEANO_WITH_HDF5", "hdf5"),
+            self.define_from_variant("PEANO_WITH_NETCDF", "netcdf"),
+            self.define_from_variant("PEANO_WITH_CURVI", "curvi"),
         ]
 
         if self.spec.satisfies("+cuda"):
             cuda_arch = self.spec.variants["cuda_arch"].value[0]
             gpu_backend = self.spec.variants["gpu_backend"].value
-            args.append(f"-DWITH_GPU={gpu_backend}")
-            args.append(f"-DWITH_GPU_ARCH=sm_{cuda_arch}")
+            args.append(f"-DPEANO_WITH_GPU_BACKEND={gpu_backend}")
+            args.append(f"-DPEANO_WITH_GPU_ARCH=sm_{cuda_arch}")
 
         return args
 

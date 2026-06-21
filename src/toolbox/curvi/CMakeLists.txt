@@ -32,7 +32,8 @@ install_peano_headers(
 )
 
 foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
-  add_peano_library(
+  peano_add_target(
+    TYPE STATIC_LIBRARY
     NAME ToolboxCurvi${mode}
     MODE ${mode}
     SOURCES ${SOURCES}

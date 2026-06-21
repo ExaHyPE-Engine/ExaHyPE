@@ -41,21 +41,21 @@ class StepToActionSet(object):
         new_action_set = peano4.output.ActionSet(
             action_set_name,
             self.step.project.namespace + [subnamespace],
-            self.step.project.subdirectory + subnamespace,
+            subnamespace,
             action_set,
         )
 
         for i in self.step.vertex_data:
             new_action_set.include_files.append(
-                i.subdirectory + "vertexdata/" + i.name + ".h"
+                "vertexdata/" + i.name + ".h"
             )
         for i in self.step.face_data:
             new_action_set.include_files.append(
-                i.subdirectory + "facedata/" + i.name + ".h"
+                "facedata/" + i.name + ".h"
             )
         for i in self.step.cell_data:
             new_action_set.include_files.append(
-                i.subdirectory + "celldata/" + i.name + ".h"
+                "celldata/" + i.name + ".h"
             )
 
         if len(self.step.vertex_data) > 0:

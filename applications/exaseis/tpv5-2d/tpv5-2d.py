@@ -123,5 +123,5 @@ project.add_action_set_to_timestepping(
     )
 )
 
-peano4_project = project.generate_Peano4_project(verbose=False)
-peano4_project.build(make_clean_first=True)
+peano4_project = project.generate_Peano4_project()
+peano4_project.generate_and_build()

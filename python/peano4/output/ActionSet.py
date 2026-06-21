@@ -4,8 +4,6 @@ import os
 
 from .Helper import write_file
 
-from .Overwrite import Overwrite
-
 import peano4.solversteps.ActionSet
 
 from peano4.Logger import log
@@ -79,13 +77,9 @@ class ActionSet(object):
     full_qualified_classname += self.classname
     return full_qualified_classname
 
-  def __generate_header(self,overwrite,directory):
+  def __generate_header(self,directory,protected_files):
     filename = directory + "/" + self.subdirectory + "/" + self.classname + ".h";
-    default_overwrite = True
-    if self.implementation.user_should_modify_template():
-      default_overwrite = False
-
-    if write_file(overwrite,default_overwrite,filename):
+    if write_file(directory,protected_files,filename):
       log.debug("Write {}".format(filename))
 
       with open( filename, "w" ) as outputfile:
@@ -156,12 +150,9 @@ class ActionSet(object):
   def get_cpp_file_name(self):
     return self.subdirectory + "/" + self.classname + ".cpp"
 
-  def __generate_implementation(self,overwrite,directory):
+  def __generate_implementation(self,directory,protected_files):
     filename = directory + "/" + self.get_cpp_file_name()
-    default_overwrite = True
-    if self.implementation.user_should_modify_template():
-      default_overwrite = False
-    if write_file(overwrite,default_overwrite,filename):
+    if write_file(directory,protected_files,filename):
       log.debug("Write {}".format(filename))
       outputfile = open( filename, "w" )
 
@@ -203,8 +194,8 @@ class ActionSet(object):
         outputfile.write( "\n" )
         outputfile.write( "}\n\n\n" )
 
-  def generate(self,overwrite,directory):
+  def generate(self,directory,protected_files):
     if not os.path.exists( directory + "/" + self.subdirectory ):
       os.mkdir(directory + "/" + self.subdirectory)
-    self.__generate_header(overwrite,directory)
-    self.__generate_implementation(overwrite,directory)
+    self.__generate_header(directory,protected_files)
+    self.__generate_implementation(directory,protected_files)

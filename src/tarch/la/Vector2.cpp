@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Vector.h"
 
-#if defined(WITH_GPU_SYCL)
+#if defined(PEANO_WITH_GPU_BACKEND_SYCL)
 #include <sycl/sycl.hpp>
 #endif
 
@@ -15,7 +15,7 @@ static_assert(
 );
 static_assert(sizeof(tarch::la::Vector<2, double>) == 16, "Vector<2,double> should stay tightly packed");
 
-#if defined(WITH_GPU_SYCL)
+#if defined(PEANO_WITH_GPU_BACKEND_SYCL)
 static_assert(
   sycl::is_device_copyable<tarch::la::Vector<2, int>>::value,
   "Vector<2,int> should be SYCL device copyable"

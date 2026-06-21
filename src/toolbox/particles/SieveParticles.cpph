@@ -37,7 +37,7 @@ void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally(
 
   deleteParticles(_particlesThatHaveToBeSieved);
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   const int numberOfParticlesToSend = _particlesThatCanNotBeLiftedWithinTheirTree.size();
   logDebug("inform all other ranks that I host " << numberOfParticlesToSend << " particles that cannot be sorted locally. Use tag " << _SieveReductionTag);
   for (int rank = 0; rank < tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {

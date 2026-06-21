@@ -17,7 +17,7 @@
 #include "grid/tests/VertexLookupTableTest.h"
 #include "grid/tests/VertexTypeTest.h"
 #include "parallel/tests/NodeTest.h"
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 #include "parallel/tests/PingPongTest.h"
 #endif
 #include "stacks/tests/StackTest.h"
@@ -43,7 +43,7 @@ tarch::tests::TestCase* peano4::getUnitTests() {
   result->addTestCase(new grid::tests::VertexTypeTest());
 
   result->addTestCase(new parallel::tests::NodeTest());
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   result->addTestCase(new parallel::tests::PingPongTest());
 #endif
 

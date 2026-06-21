@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ExecutionPolicy.h"
 
-#if defined(WITH_GPU_HIP)
+#if defined(PEANO_WITH_GPU_BACKEND_HIP)
 
 tarch::accelerator::hip::ExecutionPolicy::ExecutionPolicy():
   _state(Automatic),

@@ -65,7 +65,7 @@ dimensions, clean-first and parallel build jobs can be selected through the
 project script's command line:
 
     peano4_project = exahype2_project.generate_Peano4_project()
-    peano4_project.build()
+    peano4_project.generate_and_build()
 
 Once this is finished compiling, let's run it:
 

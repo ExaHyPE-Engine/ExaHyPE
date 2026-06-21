@@ -71,7 +71,7 @@ class tarch::mpi::Rank {
 
     int _providedThreadLevelSupport;
 
-    #ifdef WITH_MPI
+    #ifdef PEANO_WITH_MPI
     /**
      * MPI Communicator this process belongs to.
      */
@@ -222,7 +222,7 @@ class tarch::mpi::Rank {
      */
     void barrier(std::function<void()> waitor = []() -> void {} );
 
-    #ifdef WITH_MPI
+    #ifdef PEANO_WITH_MPI
     /**
      * Wrapper around allreduce
      *
@@ -407,7 +407,7 @@ class tarch::mpi::Rank {
      */
     static int getGlobalMasterRank();
 
-    #ifdef WITH_MPI
+    #ifdef PEANO_WITH_MPI
     /**
      * @return Communicator of Peano
      */
@@ -415,7 +415,7 @@ class tarch::mpi::Rank {
     #endif
 
     inline int getNumberOfRanks() const {
-      #ifdef WITH_MPI
+      #ifdef PEANO_WITH_MPI
       assertion(_initIsCalled);
       #endif
       return _numberOfProcessors;

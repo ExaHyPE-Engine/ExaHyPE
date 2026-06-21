@@ -66,8 +66,7 @@ class ParticleToData(object):
     def construct_output(self, output):
         d = self._get_dictionary_for_output()
         output.makefile.add_cpp_file(
-            self.data.subdirectory
-            + self.data.namespace[-1]
+            self.data.namespace[-1]
             + "/"
             + self.data.name
             + ".cpp",
@@ -84,8 +83,7 @@ class ParticleToData(object):
             cppfile_template,
             self.data.name,
             self.data.namespace,
-            self.data.subdirectory + self.data.namespace[-1],
+            self.data.namespace[-1],
             d,
-            True,
         )
         output.add(generated_files)

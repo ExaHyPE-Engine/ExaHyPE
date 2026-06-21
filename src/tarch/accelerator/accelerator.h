@@ -5,15 +5,15 @@
 #include "Device.h"
 #include "MemoryLocation.h"
 
-#if defined(WITH_GPU_CUDA)
+#if defined(PEANO_WITH_GPU_BACKEND_CUDA)
 #include "cuda/Device.h" // To get access to the __device__ keyword
 #endif
 
-#if defined(WITH_GPU_HIP)
+#if defined(PEANO_WITH_GPU_BACKEND_HIP)
 #include "hip/Device.h" // To get access to the __device__ keyword
 #endif
 
-#if defined(WITH_GPU_KOKKOS)
+#if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
 #include "kokkos/Device.h" // To get access to the KOKKOS_FUNCTION keyword
 #endif
 
@@ -29,24 +29,24 @@
 
 // https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#nvcc-identification-macro
 // defined(_NVHPC_CUDA) || defined(__NVCOMPILER_CUDA__) || defined(__CUDACC__) || defined(NVCC) || defined(__NVCC__)
-#if defined(WITH_GPU_CUDA) || defined(WITH_GPU_HIP)
+#if defined(PEANO_WITH_GPU_BACKEND_CUDA) || defined(PEANO_WITH_GPU_BACKEND_HIP)
 #undef GPU_CALLABLE_METHOD
 #define GPU_CALLABLE_METHOD __host__ __device__
 #endif
 
-#if defined(WITH_GPU_KOKKOS)
+#if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
 #undef GPU_CALLABLE_METHOD
 #define GPU_CALLABLE_METHOD KOKKOS_FUNCTION
 #endif
 
-#if defined(WITH_GPU_OMPT)
+#if defined(PEANO_WITH_GPU_BACKEND_OMPT)
 #undef TARGET_DECLARE
 #undef TARGET_DECLARE_END
 #define TARGET_DECLARE _Pragma("omp declare target")
 #define TARGET_DECLARE_END _Pragma("omp end declare target")
 #endif
 
-#if defined(WITH_GPU_KOKKOS)
+#if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
 #define COMPILE_IF_ON_DEVICE(CODE) KOKKOS_IF_ON_DEVICE(CODE)
 #define COMPILE_IF_ON_HOST(CODE) KOKKOS_IF_ON_HOST(CODE)
 #else
@@ -60,22 +60,22 @@
 #endif
 #endif
 
-#if defined(WITH_GPU_KOKKOS)
+#if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
 #include "kokkos/Abort.h"
-#elif defined(WITH_GPU_CUDA)
+#elif defined(PEANO_WITH_GPU_BACKEND_CUDA)
 #include "cuda/Abort.h"
-#elif defined(WITH_GPU_HIP)
+#elif defined(PEANO_WITH_GPU_BACKEND_HIP)
 #include "hip/Abort.h"
-#elif defined(WITH_GPU_SYCL)
+#elif defined(PEANO_WITH_GPU_BACKEND_SYCL)
 #include "sycl/Abort.h"
-#elif defined(WITH_GPU_OMPT)
+#elif defined(PEANO_WITH_GPU_BACKEND_OMPT)
 #include "ompt/Abort.h"
 #endif
 
 namespace tarch {
   namespace accelerator {
-#if !defined(WITH_GPU_KOKKOS) && !defined(WITH_GPU_CUDA) && !defined(WITH_GPU_HIP) && !defined(WITH_GPU_SYCL) \
-  && !defined(WITH_GPU_OMPT)
+#if !defined(PEANO_WITH_GPU_BACKEND_KOKKOS) && !defined(PEANO_WITH_GPU_BACKEND_CUDA) && !defined(PEANO_WITH_GPU_BACKEND_HIP) && !defined(PEANO_WITH_GPU_BACKEND_SYCL) \
+  && !defined(PEANO_WITH_GPU_BACKEND_OMPT)
     TARGET_DECLARE
     inline GPU_CALLABLE_METHOD void abort(const char* message) {
       std::fputs(message, stderr);

@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Device.h"
 
-#if defined(WITH_GPU_HIP)
+#if defined(PEANO_WITH_GPU_BACKEND_HIP)
 
 #include "DevicePropertiesCache.h"
 #include "tarch/Assertions.h"
@@ -92,4 +92,4 @@ hipStream_t tarch::accelerator::deviceStreamGet() {
   return it == activeStreams.end() ? static_cast<hipStream_t>(0) : it->second;
 }
 
-#endif // defined(WITH_GPU_HIP)
+#endif // defined(PEANO_WITH_GPU_BACKEND_HIP)

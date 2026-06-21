@@ -36,7 +36,7 @@ class InsertParticlesByCoordinates(ActionSet):
 
         """
         super(InsertParticlesByCoordinates, self).__init__(
-            descend_invocation_order=1, parallel=False
+            descend_invocation_order=1
         )
 
         self.d = {}
@@ -205,7 +205,7 @@ tarch::multicore::BooleanSemaphore     """
         )
 
     def get_attributes(self):
-        return f"""
+        return """
     static tarch::multicore::BooleanSemaphore     _coordinatesSemaphore;
     static tarch::la::Vector<DIMENSIONS,double>*  _coordinates;
     

@@ -185,7 +185,7 @@ std::string peano4::grid::GridVertex::toString() const {
   return out.str();
 }
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 MPI_Datatype peano4::grid::GridVertex::Datatype = MPI_DATATYPE_NULL;
 
 MPI_Datatype peano4::grid::GridVertex::getForkDatatype() { return Datatype; }

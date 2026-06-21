@@ -4,7 +4,7 @@
 
 #include "FileWriter.h"
 
-#ifdef WITH_NETCDF
+#ifdef PEANO_WITH_NETCDF
 
 namespace tarch::plotter {
   class NetCDFFileWriter;

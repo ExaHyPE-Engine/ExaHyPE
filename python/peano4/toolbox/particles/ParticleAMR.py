@@ -74,7 +74,7 @@ class ParticleAMR(ActionSet):
            even refines a cell if there's only one particle in it.
 
         """
-        super(ParticleAMR, self).__init__(descend_invocation_order=1, parallel=False)
+        super(ParticleAMR, self).__init__(descend_invocation_order=1)
         if min_particles_per_cell < 0:
             raise ValueError(
                 "invalid min number of particles pre cell (has to be positive): {}".format(
@@ -237,7 +237,7 @@ std::vector< ::peano4::grid::GridControlEvent >  """
 
     def get_body_of_unprepareTraversal(self):
         return """
-    #if defined(WITH_MPI)
+    #if defined(PEANO_WITH_MPI)
     #error not implemented yet
     #endif
 _oldGridControlEvents.clear();

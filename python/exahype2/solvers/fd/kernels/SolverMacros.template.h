@@ -4,7 +4,7 @@
 {% import 'Index.template.h' as id with context %}{# get template macros #}
 
 {% macro createMemoryOnStack() %}
-  {{COMPUTE_PRECISION}} QInGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   {% if DIMENSIONS==2 %}
   {% for i in range(ORDER) -%}
   {%- if loop.first -%}
@@ -12,10 +12,10 @@
   {%- elif loop.last %}
   // Furthest from node
   {%- endif -%} {# comments #}
-  {{COMPUTE_PRECISION}} QInGatheredLeft{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
-  {{COMPUTE_PRECISION}} QInGatheredRight{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
-  {{COMPUTE_PRECISION}} QInGatheredDown{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
-  {{COMPUTE_PRECISION}} QInGatheredTop{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredLeft{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredRight{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredDown{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredTop{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   {% endfor %} {# order range #}
   {% else %}
   {% for i in range(ORDER) -%}
@@ -24,16 +24,16 @@
   {%- elif loop.last %}
   // Furthest from node
   {%- endif -%} {# comments #}
-  {{COMPUTE_PRECISION}} QInGatheredLeft{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
-  {{COMPUTE_PRECISION}} QInGatheredRight{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
-  {{COMPUTE_PRECISION}} QInGatheredDown{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
-  {{COMPUTE_PRECISION}} QInGatheredTop{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
-  {{COMPUTE_PRECISION}} QInGatheredBack{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
-  {{COMPUTE_PRECISION}} QInGatheredFront{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredLeft{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredRight{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredDown{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredTop{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredBack{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QInGatheredFront{{i}}[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   {% endfor %} {# order range #}
   {% endif %}
 
-  {{COMPUTE_PRECISION}} QOutGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+  {{COMPUTE_PRECISION}} QOutGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 {% endmacro %}
 
 {% macro gatherQ() %}

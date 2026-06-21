@@ -7,25 +7,16 @@ foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
   foreach(dimensions IN LISTS SUPPORTED_DIMENSIONS)
     set(target "UnitTests${mode}${dimensions}d")
 
-    set(test_dependencies Peano4${mode}${dimensions}d)
+    set(test_dependencies
+      Peano4${mode}${dimensions}d
+      ToolboxParticles${mode}${dimensions}d
+      ToolboxBlockStructured${mode}${dimensions}d
+      ToolboxLoadBalancing${mode}${dimensions}d
+      ExaHyPE2${mode}${dimensions}d
+    )
 
-    if(ENABLE_TOOLBOX_PARTICLES)
-      list(APPEND test_dependencies ToolboxParticles${mode}${dimensions}d)
-    endif()
-
-    if(ENABLE_TOOLBOX_BLOCKSTRUCTURED)
-      list(APPEND test_dependencies ToolboxBlockStructured${mode}${dimensions}d)
-    endif()
-
-    if(ENABLE_TOOLBOX_LOADBALANCING)
-      list(APPEND test_dependencies ToolboxLoadBalancing${mode}${dimensions}d)
-    endif()
-
-    if(ENABLE_EXAHYPE)
-      list(APPEND test_dependencies ExaHyPE2${mode}${dimensions}d)
-    endif()
-
-    add_peano_executable(
+    peano_add_target(
+      TYPE            EXECUTABLE
       NAME            ${target}
       MODE            ${mode}
       DIMENSION       ${dimensions}
@@ -42,7 +33,7 @@ foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
         WORKING_DIRECTORY "${test_working_directory}"
     )
 
-    if(WITH_MPI)
+    if(PEANO_WITH_MPI)
       cmake_host_system_information(RESULT logical_cores QUERY NUMBER_OF_LOGICAL_CORES)
       set(mpi_ranks ${logical_cores} ${MPIEXEC_MAX_NUMPROCS} 16)
       list(SORT mpi_ranks COMPARE NATURAL ORDER ASCENDING)

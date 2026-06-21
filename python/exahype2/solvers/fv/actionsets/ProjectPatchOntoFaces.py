@@ -59,7 +59,7 @@ class ProjectPatchOntoFaces(peano4.toolbox.blockstructured.ProjectPatchOntoFaces
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
 
-    def generate_kernels(self, namespace, output, dimensions, subdirectory):
-        super().generate_kernels(namespace, output, dimensions, subdirectory)
+    def generate_kernels(self, namespace, output, dimensions):
+        super().generate_kernels(namespace, output, dimensions)
         if self._fuse_compute_kernels:
-            self.generate_fused_kernels(namespace, output, dimensions, subdirectory)
+            self.generate_fused_kernels(namespace, output, dimensions)

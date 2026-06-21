@@ -4,7 +4,7 @@
 
 #include <string>
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   #include <mpi.h>
   #include <functional>
 #endif
@@ -33,7 +33,7 @@ struct peano4::parallel::StartTraversalMessage {
     StartTraversalMessage(const StartTraversalMessage& copy) = default;
 
 
-    #ifdef WITH_MPI
+    #ifdef PEANO_WITH_MPI
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -89,7 +89,7 @@ struct peano4::parallel::StartTraversalMessage {
     static void receive(   peano4::parallel::StartTraversalMessage& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
     static void sendAndPollDanglingMessages(const peano4::parallel::StartTraversalMessage& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
     static void receiveAndPollDanglingMessages(peano4::parallel::StartTraversalMessage& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
 #endif
@@ -100,7 +100,7 @@ struct peano4::parallel::StartTraversalMessage {
   private:
     int   _stepIdentifier;
 
-    #ifdef WITH_MPI
+    #ifdef PEANO_WITH_MPI
     private:
       int _senderDestinationRank;
       static MPI_Datatype  Datatype;

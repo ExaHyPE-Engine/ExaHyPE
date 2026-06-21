@@ -250,5 +250,5 @@ error_measurement = exahype2.solvers.fv.ErrorMeasurementParticles(
     descend_invocation_order=65536,  # After all other action sets
 )
 
-project = project.generate_Peano4_project(verbose=False)
-project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
+project = project.generate_Peano4_project()
+project.generate_and_build()

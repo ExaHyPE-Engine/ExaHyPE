@@ -1,8 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import gc
 import os
-import re
 import sys
 import subprocess
 import multiprocessing
@@ -30,29 +28,20 @@ class Project (object):
   file Constants.h. See peano4.output.Constants for further info.
   """
 
-  def __init__(self, namespace, project_name, directory = ".", subdirectory = "", executable = ""):
+  def __init__(self, namespace, project_name, directory = ".", executable = ""):
     setup_logging()
 
     if sys.version_info < (3, 11):
         log.warning("Python 3.11 or higher is recommended to support all features. Current version: %s", sys.version)
 
-    if subdirectory and not os.path.exists(subdirectory):
-      os.mkdir(subdirectory)
-
     self.rootnamespace = namespace.copy()
     self.namespace = namespace
     self.namespaces = []
-    self.subdirectories = []
     self.project_name = project_name
     self.directory = directory
-    self._subdirectory = subdirectory
-    if subdirectory:
-      self.namespace += [ subdirectory ]
     if self.namespace:
       if not self.namespace in self.namespaces:
         self.namespaces.append(self.namespace)
-      if not self.subdirectory in self.subdirectories:
-        self.subdirectories.append(self.subdirectory)
 
     #
     # Create default output model, i.e. those parts that have to be there
@@ -63,7 +52,7 @@ class Project (object):
     #
     # Empty model by default
     #
-    self.datamodel    = peano4.datamodel.Model(self.namespace, self._subdirectory)
+    self.datamodel    = peano4.datamodel.Model(self.namespace)
 
     self.solversteps  = peano4.solversteps.Steps(self)
 
@@ -77,7 +66,6 @@ class Project (object):
     self._build_jobs_override = None
 
     self.constants  = peano4.output.Constants(self)
-    self.subconstants = []
 
     if executable:
       self.output.makefile.set_executable_name(executable)
@@ -102,33 +90,24 @@ class Project (object):
     self.is_built     = False
 
     self.constants  = peano4.output.Constants(self)
-    self.subconstants = []
 
-  def generate(self,
-               overwrite=peano4.output.Overwrite.Default,
-               throw_away_data_after_generation=False):
+  def generate_and_build(self):
     """!
-    Generate all code. If you add stuff to your project after a
-    build, you have to (re-)generate the code. If you compile only
-    once, you don't have to invoke this routine explicitly. It is
-    lazily called by the other project routines - the latest before
-    you run the code.
+    Generate the application's source files and, unless code generation only is
+    requested, configure and (incrementally) compile it via CMake.
 
-    It is important that I reset the output after each generate
-    call before you change parameter settings and call generate
-    again. To do so, invoke cleanup(). If you forget this, two
-    subsequent generate calls enrich the output twice.
+    All behaviour is controlled through the project-internal command-line
+    arguments (see exahype2.Project):
 
-    throw_away_data_after_generation: Bool
-      The Peano 4 memory footprint can become quite substantial
-      effectively reducing the translation capabilities (as compilers
-      tend to require a lot of memory, too). So pass in True if you
-      want the script to throw away the data structures (and run a
-      garbage collection) after all files have been generated. Please
-      note that it invalidates both this object (and maybe another
-      object that you've used to generate the present one - such as
-      ExaHyPE). It really strips everything down to the stuff you
-      absolutely need to translate and run the code.
+    - --generate-only / --no-build : generate the sources but skip compilation
+    - -j / --jobs N                : build parallelism (default: all cores)
+    - --clean-first                : wipe CMake's incremental state first
+    - -v / --verbose               : enable debug logging
+
+    The CMake/compiler output is streamed to stdout as the build progresses.
+
+    Reset the output (via cleanup()) before changing parameters and calling this
+    again; otherwise two subsequent calls enrich the output twice.
     """
     log.info(
       "Generate project %s in %s",
@@ -149,81 +128,87 @@ class Project (object):
     self.solversteps.construct_output(self.output)
 
     self.main.construct_output(self.output,self.project_name + "-main")
-    self.output.generate(overwrite, self.directory, self.subdirectories)
-    if self.subconstants:
-      for i in range(len(self.subconstants)):
-        self.subconstants[i].generate(overwrite, self.directory, self.subdirectories[i])
-    else:
-      self.constants.generate(overwrite, self.directory)
+    self.output.generate(self.directory)
+    self.constants.generate(self.directory, self.output.makefile.protected_files())
 
     log.info("Generation complete (%d artefacts)", len(self.output.artefacts))
 
-    if throw_away_data_after_generation:
-      self.datamodel = None
-      self.solversteps = None
-      self.output      = None
-      gc.collect()
-      log.info("Threw away all data and ran garbage collection")
-
-  def build(self,
-            make=True,
-            make_clean_first=True,
-            throw_away_data_after_build=False,
-            number_of_parallel_builds=-1):
-    """!
-      Invokes the underlying make build mechanism on the project.
-
-      number_of_parallel_builds: int
-        This is mapped onto make -jnumber_of_parallel_builds, i.e., it
-        determines how many parallel make instances the code spawns.
-        Usually, a lot of the generated code is quite lengthy. Therefore
-        compile time can be high. If you pass something smaller or equal
-        to zero, it will use the core count as guideline how to compile.
-
-      throw_away_data_after_build: Bool
-        see generate()
-    """
-    if self._build_make_override is not None:
-      make = self._build_make_override
-    if self._build_clean_first_override is not None:
-      make_clean_first = self._build_clean_first_override
-    if self._build_jobs_override is not None:
-      number_of_parallel_builds = self._build_jobs_override
-
-    if number_of_parallel_builds <= 0:
+    make = True if self._build_make_override is None else self._build_make_override
+    make_clean_first = bool(self._build_clean_first_override)
+    number_of_parallel_builds = self._build_jobs_override
+    if number_of_parallel_builds is None or number_of_parallel_builds <= 0:
         number_of_parallel_builds = multiprocessing.cpu_count()
 
-    if not self.is_generated:
-      self.generate()
+    def run_cmake_command(command, build_environment, action):
+      # Stream the CMake/compiler output to stdout as it is produced while also
+      # capturing it, so it can be embedded in the exception if the command fails.
+      process = subprocess.Popen(
+        command,
+        cwd=self.directory,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        env=build_environment,
+        text=True,
+      )
+      captured = []
+      for line in process.stdout:
+        sys.stdout.write(line)
+        captured.append(line)
+      process.stdout.close()
+      if process.wait() != 0:
+        raise Exception("{} failed:\n{}".format(action, "".join(captured).strip()))
 
     if make:
+      build_environment = os.environ.copy()
+      build_environment["CMAKE_BUILD_PARALLEL_LEVEL"] = str(number_of_parallel_builds)
+      cmake_build_dir = "build." + self.output.makefile.executable_name()
+      cmake_build_cache = os.path.join(self.directory, cmake_build_dir, "CMakeCache.txt")
+      cmake_configure_stamp = os.path.join(self.directory, cmake_build_dir, ".configured")
+
       if make_clean_first:
         log.info("Clean up project in %s", os.path.abspath(self.directory))
         try:
-          subprocess.check_call(["make", "clean"], cwd=self.directory, stderr=subprocess.DEVNULL)
+          if os.path.exists(cmake_build_cache):
+            run_cmake_command(
+              ["cmake", "--build", cmake_build_dir, "--target", "clean"],
+              build_environment,
+              "CMake clean",
+            )
         except Exception as e:
-          log.debug("Ignore failing make clean in %s: %s", os.path.abspath(self.directory), e)
+          log.debug("Ignore failing CMake clean in %s: %s", os.path.abspath(self.directory), e)
         self.is_built = False
         log.info("Clean complete")
 
       if not self.is_built:
         log.info("Start to compile in %s with concurrency level %d", os.path.abspath(self.directory), number_of_parallel_builds)
         try:
-          process = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], cwd=self.directory, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-          # Extract warnings and errors from error message
-          error_message = process.stderr.decode().strip()
-          warnings = re.findall(r"(?i)Warning:.*", error_message)
-          errors = re.findall(r"(?i)Error:.*", error_message)
-          # Print warnings into the terminal
-          # if warnings:
-          #   log.warning("\n".join(warnings))
-          if errors:
-            error_message = "\n".join(errors)
-          # Check the return code for linker errors
-          # Raise exception with errors
-          if process.returncode != 0:
-            linker_error_message = process.stderr.decode().strip() + "\n" + error_message
-            raise Exception(linker_error_message)
+          makefile_dictionary = self.output.makefile.dictionary()
+          configure_command = ["cmake", "-S", ".", "-B", cmake_build_dir]
+          if makefile_dictionary.get("CMAKE_GENERATOR"):
+            configure_command += ["-G", makefile_dictionary["CMAKE_GENERATOR"]]
+          if makefile_dictionary.get("CMAKE_GENERATOR_PLATFORM"):
+            configure_command += ["-A", makefile_dictionary["CMAKE_GENERATOR_PLATFORM"]]
+          if makefile_dictionary.get("CMAKE_GENERATOR_TOOLSET"):
+            configure_command += ["-T", makefile_dictionary["CMAKE_GENERATOR_TOOLSET"]]
+
+          configure_required = not os.path.exists(cmake_build_cache) or not os.path.exists(cmake_configure_stamp)
+          if not configure_required:
+            configure_stamp_time = os.path.getmtime(cmake_configure_stamp)
+            for dependency in ("CMakeLists.txt", "Makefile"):
+              dependency_path = os.path.join(self.directory, dependency)
+              if os.path.exists(dependency_path) and os.path.getmtime(dependency_path) > configure_stamp_time:
+                configure_required = True
+
+          if configure_required:
+            run_cmake_command(configure_command, build_environment, "CMake configure")
+            with open(cmake_configure_stamp, "a"):
+              os.utime(cmake_configure_stamp, None)
+
+          run_cmake_command(
+            ["cmake", "--build", cmake_build_dir, "--parallel", str(number_of_parallel_builds)],
+            build_environment,
+            "CMake build",
+          )
           log.info("Compile completed successfully")
           self.is_built = True
           self.build_was_successful = True
@@ -236,14 +221,6 @@ class Project (object):
       else:
         log.info("Skip build because project is already marked as built")
 
-    if throw_away_data_after_build:
-      self.cleanup()
-      self.datamodel    = None
-      self.solversteps  = None
-      self.output       = None
-      gc.collect()
-      log.info("Threw away all data and ran garbage collection")
-
   def run(self, executable, args=[], prefix=None, pipefile=None, rebuild_if_required=True):
     """!
     Runs the code. args should be a list of strings or the empty list.
@@ -255,7 +232,7 @@ class Project (object):
     """
     success = False
     if rebuild_if_required and not self.is_built and not self.build_was_successful:
-      self.build()
+      self.generate_and_build()
 
     if not rebuild_if_required or (self.is_built and self.build_was_successful):
       log.info("Run executable %s", executable)
@@ -292,11 +269,3 @@ class Project (object):
     else:
       log.error("Cannot run as code compilation has not been successful")
     return success
-
-  # TODO: Remove
-  @property
-  def subdirectory(self):
-      subdirectory = self._subdirectory
-      if subdirectory:
-          subdirectory += "/"
-      return subdirectory

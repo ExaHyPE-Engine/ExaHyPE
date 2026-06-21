@@ -71,7 +71,7 @@ bool tarch::mpi::Rank::isInitialised() const {
 
 
 void tarch::mpi::Rank::ensureThatMessageQueuesAreEmpty( [[maybe_unused]] int fromRank, [[maybe_unused]] int tag ) {
-  #ifdef WITH_MPI
+  #ifdef PEANO_WITH_MPI
   int          flag;
   MPI_Iprobe(fromRank, tag, _communicator, &flag, MPI_STATUS_IGNORE);
   if (flag!=0) {
@@ -83,7 +83,7 @@ void tarch::mpi::Rank::ensureThatMessageQueuesAreEmpty( [[maybe_unused]] int fro
 
 
 void tarch::mpi::Rank::plotMessageQueues() {
-  #ifdef WITH_MPI
+  #ifdef PEANO_WITH_MPI
   int          flag;
   MPI_Status   status;
   MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, _communicator, &flag, &status);
@@ -189,7 +189,7 @@ void tarch::mpi::Rank::suspendTimeouts( bool timeoutsDisabled ) {
 }
 
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 tarch::mpi::Rank::Rank():
   _initIsCalled(false),
   _rank(-1),
@@ -211,7 +211,7 @@ tarch::mpi::Rank::Rank():
 
 tarch::mpi::Rank::~Rank() {}
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 void tarch::mpi::Rank::allReduce(
   const void *sendbuf, void *recvbuf, int count,
   MPI_Datatype datatype,
@@ -277,7 +277,7 @@ void tarch::mpi::Rank::reduce(
 
 
 void tarch::mpi::Rank::barrier([[maybe_unused]] std::function<void()> waitor) {
-  #ifdef WITH_MPI
+  #ifdef PEANO_WITH_MPI
 
   if (getNumberOfRanks()>1) {
     MPI_Request* request = new MPI_Request();
@@ -305,7 +305,7 @@ void tarch::mpi::Rank::barrier([[maybe_unused]] std::function<void()> waitor) {
 
 
 bool tarch::mpi::Rank::isMessageInQueue([[maybe_unused]] int tag) const {
-  #ifdef WITH_MPI
+  #ifdef PEANO_WITH_MPI
   int  flag        = 0;
   MPI_Iprobe(
     MPI_ANY_SOURCE, tag,
@@ -319,7 +319,7 @@ bool tarch::mpi::Rank::isMessageInQueue([[maybe_unused]] int tag) const {
 
 void tarch::mpi::Rank::shutdown() {
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   assertion(_rank!=-1);
 
   IntegerMessage::shutdownDatatype();
@@ -340,7 +340,7 @@ int tarch::mpi::Rank::getGlobalMasterRank() {
 
 
 bool tarch::mpi::Rank::isGlobalMaster() const {
-  #ifdef WITH_MPI
+  #ifdef PEANO_WITH_MPI
   assertion(_initIsCalled);
   return getRank() == getGlobalMasterRank();
   #else
@@ -364,7 +364,7 @@ void tarch::mpi::Rank::logStatus() const {
   #endif
 
   statusMessage << ", rank=" << _rank;
-  #ifdef WITH_MPI
+  #ifdef PEANO_WITH_MPI
   statusMessage << ", communicator=" << _communicator;
   #endif
   statusMessage << ", #processors=" << _numberOfProcessors;
@@ -392,10 +392,10 @@ int tarch::mpi::Rank::getProvidedThreadLevelSupport() const {
 }
 
 bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char*** argv) {
-  #ifdef WITH_MPI
+  #ifdef PEANO_WITH_MPI
   int result = MPI_SUCCESS;
 
-  #if defined( WITH_MULTITHREADING )
+  #if defined( PEANO_WITH_MULTITHREADING )
   result = MPI_Init_thread( argc, argv, MPI_THREAD_MULTIPLE, &_providedThreadLevelSupport );
   if (_providedThreadLevelSupport!=MPI_THREAD_MULTIPLE ) {
     std::cerr << "warning: MPI implementation does not support MPI_THREAD_MULTIPLE. Support multithreading level is "
@@ -455,7 +455,7 @@ tarch::mpi::Rank& tarch::mpi::Rank::getInstance() {
 }
 
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 MPI_Comm tarch::mpi::Rank::getCommunicator() const {
   assertion(_initIsCalled);
   return _communicator;
@@ -480,7 +480,7 @@ void tarch::mpi::Rank::setDeadlockTimeOut( int value ) {
 void tarch::mpi::abort([[maybe_unused]] int errorCode) {
   std::cout.flush();
   std::cerr.flush();
-  #ifdef WITH_MPI
+  #ifdef PEANO_WITH_MPI
   MPI_Abort(MPI_COMM_WORLD,errorCode);
   #else
   std::_Exit(errorCode);

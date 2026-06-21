@@ -12,7 +12,7 @@
 
 namespace fs = std::filesystem;
 
-#ifdef WITH_NETCDF
+#ifdef PEANO_WITH_NETCDF
 
 namespace {
   void validateFileExists(const std::string& filepath) {
@@ -203,7 +203,7 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testUnsupportedCellType() {
   tarch::mpi::Rank::getInstance().barrier();
 }
 
-#else // WITH_NETCDF
+#else // PEANO_WITH_NETCDF
 
 // Dummy implementation for compilation when NetCDF is disabled
 tarch::plotter::tests::NetCDFFileWriterTest::NetCDFFileWriterTest():

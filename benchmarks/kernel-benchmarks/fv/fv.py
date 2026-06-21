@@ -94,7 +94,7 @@ fv_solver.set_implementation(
 
 project.add_solver(fv_solver)
 
-project = project.generate_Peano4_project(verbose=False)
+project = project.generate_Peano4_project()
 
 project.constants.export_constexpr_with_type(
     "BenchmarkMinTerminalTime", str(args.end_time), "double"
@@ -124,6 +124,6 @@ makefile.add_cpp_file("DataRepository.cpp")
 makefile.add_h_file("FusedDataRepository.h")
 makefile.add_cpp_file("FusedDataRepository.cpp")
 
-makefile.add_CXX_flag("-DGAMMA=1.4")
+makefile.add_compile_definition("GAMMA=1.4")
 
-project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
+project.generate_and_build()

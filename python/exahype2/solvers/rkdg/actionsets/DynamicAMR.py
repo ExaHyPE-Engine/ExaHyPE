@@ -1,7 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import peano4
-import exahype2
 import jinja2
 
 from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
@@ -145,7 +144,7 @@ class DynamicAMR(AbstractRungeKuttaDGActionSet):
         ):
             raise Exception(
                 "Expect one guard per Runge Kutta step. Have {} steps but got guards {}".format(
-                    solver.number_of_Runge_Kutta_steps(), guards
+                    self._solver.number_of_Runge_Kutta_steps(), new_guards
                 )
             )
         self._guards = new_guards

@@ -13,18 +13,17 @@ class AMRRoutines(object):
         self.d = deepcopy(dictionary)
 
     def generate_kernels(
-        self, solver, namespace, output, subdirectory, template_prefix, output_path
+        self, solver, namespace, output, template_prefix, output_path
     ):
-        self._build_gemms(namespace, output, subdirectory, template_prefix, output_path)
+        self._build_gemms(namespace, output, template_prefix, output_path)
 
         generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
             headfile_template=template_prefix + "AMRRoutines.template.h",
             cppfile_template=template_prefix + "AMRRoutines.template.cpp",
             classname=output_path + "/AMRRoutines",
             namespace=namespace,
-            subdirectory=subdirectory + ".",
+            subdirectory=".",
             dictionary=self.d,
-            default_overwrite=True,
             apply_iteratively=True,
         )
         output.add(generated_kernels)
@@ -33,7 +32,7 @@ class AMRRoutines(object):
         solver._user_action_set_includes += f'#include "{output_path}/AMRRoutines.h"\n'
 
     def _build_gemms(
-        self, namespace, output, subdirectory, template_prefix, output_path
+        self, namespace, output, template_prefix, output_path
     ):
         # Define a sequence of GEMMS
         self.d["GEMMS"] = {}

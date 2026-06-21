@@ -26,7 +26,7 @@ namespace {
    */
   tarch::multicore::BooleanSemaphore   assertionSemaphore;
 
-  #if defined(WITH_MPI)
+  #if defined(PEANO_WITH_MPI)
   /**
    * An assertion is triggered just by sending a message to
    * rank 0 on an error tag.
@@ -44,14 +44,14 @@ void tarch::enableNonCriticalAssertions(bool value) {
 
 
 void tarch::shutdownNonCriticalAssertionEnvironment() {
-  #if defined(WITH_MPI)
+  #if defined(PEANO_WITH_MPI)
   tarch::mpi::Rank::releaseTag( assertionExchangeTag );
   #endif
 }
 
 
 void tarch::initNonCriticalAssertionEnvironment() {
-  #if defined(WITH_MPI)
+  #if defined(PEANO_WITH_MPI)
   assertionExchangeTag = tarch::mpi::Rank::reserveFreeTag( "mpi::noncriticalassertion" );
   #endif
 }
@@ -74,7 +74,7 @@ void tarch::triggerNonCriticalAssertion( std::string file, int line, std::string
     rankWhichHasSetNonCriticalAssertion = tarch::mpi::Rank::getInstance().getRank();
 
     if (not tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      #if defined(WITH_MPI)
+      #if defined(PEANO_WITH_MPI)
       int rank = tarch::mpi::Rank::getInstance().getRank();
       tarch::mpi::IntegerMessage message( rank );
       tarch::mpi::IntegerMessage::send(
@@ -90,7 +90,7 @@ void tarch::triggerNonCriticalAssertion( std::string file, int line, std::string
 
 
 bool tarch::hasNonCriticalAssertionBeenViolated() {
-  #if defined(WITH_MPI)
+  #if defined(PEANO_WITH_MPI)
 
   if (rankWhichHasSetNonCriticalAssertion<0) {
     int         flag = 0;

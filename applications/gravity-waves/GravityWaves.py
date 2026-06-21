@@ -188,17 +188,17 @@ def create_peano_project(
         chemical_solver=chemical_solver,
     )
 
-    project = project.generate_Peano4_project(verbose=True)
+    project = project.generate_Peano4_project()
 
-    project.output.makefile.add_CXX_flag(f"""-DGRAVITY={GRAVITY}""")
-    project.output.makefile.add_CXX_flag(f"""-DUNIVERSAL_GAS_CONSTANT={R}""")
-    project.output.makefile.add_CXX_flag(
-        f"""-DMOLAR_MASS_ATOMIC_OXYGEN=0.016"""
+    project.output.makefile.add_compile_definition(f"""GRAVITY={GRAVITY}""")
+    project.output.makefile.add_compile_definition(f"""UNIVERSAL_GAS_CONSTANT={R}""")
+    project.output.makefile.add_compile_definition(
+        f"""MOLAR_MASS_ATOMIC_OXYGEN=0.016"""
     )  # in kg/mol
-    project.output.makefile.add_CXX_flag(
-        f"""-DMOLAR_MASS_MOLECULAR_OXYGEN=0.032"""
+    project.output.makefile.add_compile_definition(
+        f"""MOLAR_MASS_MOLECULAR_OXYGEN=0.032"""
     )  # in kg/mol
-    project.output.makefile.add_CXX_flag(
-        f"""-DMOLAR_MASS_NITROGEN=0.028"""
+    project.output.makefile.add_compile_definition(
+        f"""MOLAR_MASS_NITROGEN=0.028"""
     )  # in kg/mol
     return project

@@ -6,7 +6,6 @@ from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto # quadratur
 
 from abc import abstractmethod
 
-import re
 
 PREC_DIGITS   = 256
 RENDER_DIGITS = 64
@@ -52,7 +51,7 @@ class LagrangeBasis():
       
   def __str__(self):
     d = {}
-    self._init_dictionary_with_default_parameters(d)
+    self.init_dictionary_with_default_parameters(d)
     return "<{}.{} object>: {}".format(self.__class__.__module__,self.__class__.__name__,d)
   __repr__ = __str__
   
@@ -305,8 +304,8 @@ class LagrangeBasis():
   
 
   # private class methods
-  @classmethod
-  def __make_initializer_list(cls,rendered_tensor):
+  @staticmethod
+  def __make_initializer_list(rendered_tensor):
     """
     
     This implementation is a little bit nasty: We use the resulting strings within
@@ -333,8 +332,8 @@ class LagrangeBasis():
     return descend(rendered_tensor)
   
 
-  @classmethod
-  def __render_tensor_1(cls,tensor):
+  @staticmethod
+  def __render_tensor_1(tensor):
     """
     Converts nested list or numpy matrix to nested list of strings.
     :param tensor: list or numpy vector storing  mpmath numbers
@@ -345,8 +344,8 @@ class LagrangeBasis():
     return result
   
   
-  @classmethod
-  def __render_tensor_2(cls,tensor,multiDimArray=True):
+  @staticmethod
+  def __render_tensor_2(tensor,multiDimArray=True):
     """
     Converts nested list or numpy matrix to nested list of strings.
     :param tensor: nested list or numpy matrix storing  mpmath numbers
@@ -362,28 +361,6 @@ class LagrangeBasis():
          result += resultRow
     return result
   
-
-  @classmethod
-  def __render_tensor_3(cls,tensor,multiDimArray=True):
-    """
-    Converts nested list or numpy matrix to nested list of strings.
-    :param tensor: nested list or numpy matrix storing  mpmath numbers
-    """
-    result = []
-    for r1 in tensor:
-       tmp1 = []
-       for r2 in r1:
-          tmp2 = []
-          for elem in r2:
-            tmp2.append(mp.nstr(elem,n=RENDER_DIGITS))
-          if multiDimArray:
-            tmp1.append(tmp2)
-          else:
-            result += tmp2
-       if multiDimArray:
-         result.append(tmp1)
-    return result
-
 
   # protected 
   @abstractmethod
@@ -430,23 +407,23 @@ class LagrangeBasis():
       if var == "quadrature_points":
         var_name = "QuadraturePoints1d"
       if var in ["quadrature_points","quadrature_weights","barycentric_weights","basis_function_values_left","basis_function_values_right"]:
-          basisDeclarations += "const double {var_name}[{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+          basisDeclarations += "const double {var_name}[{order}+1];\n".format(var_name=var_name,order=self.__max_poly_order)
           basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
               initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_1(getattr(self,var_key))))
       elif var in ["fine_grid_projector"]:
           if multiDimArrays:
-            basisDeclarations += "const double {var_name}[3][{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+            basisDeclarations += "const double {var_name}[3][{order}+1][{order}+1];\n".format(var_name=var_name,order=self.__max_poly_order)
           else:
-            basisDeclarations += "const double {var_name}[3][({order}+1)*({order}+1)];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+            basisDeclarations += "const double {var_name}[3][({order}+1)*({order}+1)];\n".format(var_name=var_name,order=self.__max_poly_order)
           basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
             initializer="{" + \
               ",".join([LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(elem,multiDimArrays)) for elem in self.__fine_grid_projector]) +\
              "}")
       else:
           if multiDimArrays:
-            basisDeclarations += "const double {var_name}[{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+            basisDeclarations += "const double {var_name}[{order}+1][{order}+1];\n".format(var_name=var_name,order=self.__max_poly_order)
           else:
-            basisDeclarations += "const double {var_name}[({order}+1)*({order}+1)];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+            basisDeclarations += "const double {var_name}[({order}+1)*({order}+1)];\n".format(var_name=var_name,order=self.__max_poly_order)
           basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
               initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(getattr(self,var_key),multiDimArrays)))
 
@@ -467,7 +444,7 @@ class GaussLegendreBasis(LagrangeBasis):
     x,w = gauss_legendre(num_points,PREC_DIGITS)
     return self._transform_and_sort_points_and_weights(x,w)
 
-  def __str__(LagrangeBasis):
+  def __str__(self):
     return "GaussLegendreBasis"
 
 class GaussLobattoBasis(LagrangeBasis):
@@ -475,5 +452,5 @@ class GaussLobattoBasis(LagrangeBasis):
     x,w = gauss_lobatto(num_points,PREC_DIGITS)
     return self._transform_and_sort_points_and_weights(x,w)
 
-  def __str__(LagrangeBasis):
+  def __str__(self):
     return "GaussLobattoBasis"

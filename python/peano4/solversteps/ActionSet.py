@@ -108,21 +108,14 @@ class ActionSet(object):
     @ref peano_action_sets.
 
 
-
-
-    @param parallel: Boolean
-      See section on "Order of invocation and concurrency level" in class
-      documentation.
-
     @param descend_invocation_order: Integer
       See section on "Order of invocation and concurrency level" in class
       documentation.
 
     """
 
-    def __init__(self, descend_invocation_order=0, parallel=False):
+    def __init__(self, descend_invocation_order=0):
         self.descend_invocation_order = descend_invocation_order
-        self.parallel = parallel
         pass
 
     @abstractmethod

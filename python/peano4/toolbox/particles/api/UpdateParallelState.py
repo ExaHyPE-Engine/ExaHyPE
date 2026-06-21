@@ -115,7 +115,7 @@ class UpdateParallelState(ActionSet):
         particle_set,
     ):
         super(UpdateParallelState, self).__init__(
-            descend_invocation_order=self.DefaultDescendInvocationOrder, parallel=False
+            descend_invocation_order=self.DefaultDescendInvocationOrder
         )
         self._particle_set = particle_set
         self.d = {}
@@ -246,7 +246,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
       _treeNumber,
       "UpdateParallelState::__Template_TouchVertexLastTime"
     );
-    // #if !defined(WITH_MPI)
+    // #if !defined(PEANO_WITH_MPI)
     // This assertion breaks when running without MPI on 1 tree with periodic
     // boundary conditions on. It doesn't account for periodic BCs being mapped
     // onto a boundary exchange too.

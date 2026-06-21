@@ -26,7 +26,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatch(
     const int sourceCellSerialised      = ::peano4::utils::dLinearised(sourceCell, {{DOFS_PER_AXIS}});
     const int destinationCellSerialised = ::peano4::utils::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
 
-    #if defined(WITH_OPENMP)
+    #if defined(PEANO_WITH_OPENMP)
     #pragma omp simd
     #else
     #pragma unroll
@@ -49,7 +49,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatch(
         int sourceCellSerialised      = toolbox::blockstructured::serialiseVoxelIndexInOverlap(sourceCell, {{DOFS_PER_AXIS}}, {{OVERLAP}}, d);
         int destinationCellSerialised = ::peano4::utils::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
 
-        #if defined(WITH_OPENMP)
+        #if defined(PEANO_WITH_OPENMP)
         #pragma omp simd
         #else
         #pragma unroll
@@ -64,7 +64,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatch(
         sourceCellSerialised      = toolbox::blockstructured::serialiseVoxelIndexInOverlap(sourceCell, {{DOFS_PER_AXIS}}, {{OVERLAP}}, d);
         destinationCellSerialised = ::peano4::utils::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
 
-        #if defined(WITH_OPENMP)
+        #if defined(PEANO_WITH_OPENMP)
         #pragma omp simd
         #else
         #pragma unroll

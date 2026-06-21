@@ -49,7 +49,7 @@
   // Compute max eigenvalue (wave speed) after time step
   maxEigenvalueAfterTimeStep = std::fmax(maxEigenvalueAfterTimeStep, std::fmax(maxEigenvalueGatheredLeftInterface, maxEigenvalueGatheredRightInterface));
 
-  #if defined(WITH_OPENMP)
+  #if defined(PEANO_WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll

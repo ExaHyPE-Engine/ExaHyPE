@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ExecutionPolicy.h"
 
-#if defined(WITH_GPU_CUDA)
+#if defined(PEANO_WITH_GPU_BACKEND_CUDA)
 
 tarch::accelerator::cuda::ExecutionPolicy::ExecutionPolicy():
   _state(Automatic),

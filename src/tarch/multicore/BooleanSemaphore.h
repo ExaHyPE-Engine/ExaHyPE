@@ -14,7 +14,7 @@ namespace tarch {
   }
 }
 
-#if defined(WITH_OPENMP)
+#if defined(PEANO_WITH_OPENMP)
 #include "omp/BooleanSemaphore.h"
 #elif !defined(_TARCH_MULTICORE_BOOLEAN_SEMAPHORE_H_)
 #define _TARCH_MULTICORE_BOOLEAN_SEMAPHORE_H_

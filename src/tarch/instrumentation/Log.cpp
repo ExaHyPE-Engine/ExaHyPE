@@ -32,7 +32,7 @@ std::atomic<std::string::size_type> tarch::instrumentation::Log::_alignedMessage
 
 namespace {
   bool isGlobalMasterRankOrMpiUninitialised() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
     const tarch::mpi::Rank& rank = tarch::mpi::Rank::getInstance();
     return not rank.isInitialised() or rank.isGlobalMaster();
 #else

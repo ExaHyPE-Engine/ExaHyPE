@@ -202,7 +202,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if (isLastGridSweepOfTimeStep() or _solverState == SolverState::InitialPrediction) {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
     double newMinTimeStamp    = _minTimeStampThisTimeStep;
     double newMaxTimeStamp    = _maxTimeStampThisTimeStep;
     double newMinCellH        = _minCellHThisTimeStep;

@@ -37,7 +37,7 @@ void   tarch::mpi::DoubleMessage::setValue(double value) {
 
 
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 
 MPI_Datatype tarch::mpi::DoubleMessage::Datatype = MPI_DATATYPE_NULL;
 
@@ -209,7 +209,7 @@ void tarch::mpi::DoubleMessage::receive(
 }
 #endif
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 void tarch::mpi::DoubleMessage::sendAndPollDanglingMessages(const tarch::mpi::DoubleMessage& message, int destination, int tag, MPI_Comm communicator ) {
   tarch::mpi::DoubleMessage::send(
     message, destination, tag,
@@ -243,4 +243,3 @@ void tarch::mpi::DoubleMessage::receiveAndPollDanglingMessages(tarch::mpi::Doubl
   );
 }
 #endif
-    

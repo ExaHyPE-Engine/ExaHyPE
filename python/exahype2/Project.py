@@ -5,7 +5,6 @@ import sys
 import logging
 import re
 import json
-import inspect
 import argparse
 
 import peano4
@@ -43,16 +42,16 @@ class Project(object):
         periodic_BC,
         executable="ExaHyPE",
         directory=".",
-        subdirectory="",
-        abstract_overwrite=True,
         min_end_time=None,
         max_end_time=None,
         min_grid_levels=None,
         max_grid_levels=None,
     ):
-        self._project = peano4.Project(namespace, project_name, directory, subdirectory)
-        self._subdirectory = subdirectory
-        self._abstract_overwrite = abstract_overwrite
+        self._project = peano4.Project(namespace, project_name, directory)
+
+        project_arguments = Project._parse_project_arguments()
+        if project_arguments.dimensions is not None:
+            dimensions = project_arguments.dimensions
 
         project_arguments = Project._parse_project_arguments()
         if project_arguments.dimensions is not None:
@@ -324,15 +323,14 @@ thus appreciate any citation of the original release paper
                 templatefile_prefix + "SolverRepository.template.cpp",
                 "SolverRepository",
                 self._project.namespace + ["repositories"],
-                self._project.subdirectory + "repositories",
+                "repositories",
                 self.solverRepositoryDictionary,
-                True,
             )
         )
 
         self._project.output.add(generated_solver_files)
         self._project.output.makefile.add_cpp_file(
-            self._project.subdirectory + "repositories/SolverRepository.cpp", generated=True
+            "repositories/SolverRepository.cpp", generated=True
         )
 
     def __generate_runtime_parameters(self):
@@ -361,16 +359,15 @@ thus appreciate any citation of the original release paper
             os.path.join(template_directory, "RuntimeParameters.template.cpp"),
             "RuntimeParameters",
             self._project.namespace,
-            self._project.subdirectory,
+            "",
             dictionary,
-            True,
         )
         self._project.output.add(generated_files)
         self._project.output.makefile.add_h_file(
-            self._project.subdirectory + "RuntimeParameters.h", generated=True
+            "RuntimeParameters.h", generated=True
         )
         self._project.output.makefile.add_cpp_file(
-            self._project.subdirectory + "RuntimeParameters.cpp", generated=True
+            "RuntimeParameters.cpp", generated=True
         )
 
     @staticmethod
@@ -408,23 +405,11 @@ thus appreciate any citation of the original release paper
         self._project._build_jobs_override = project_arguments.jobs
         self._project._build_clean_first_override = project_arguments.clean_first
 
-    @staticmethod
-    def __solver_accepts_abstract_overwrite(solver):
-        try:
-            signature = inspect.signature(solver.add_implementation_files_to_project)
-        except (TypeError, ValueError):
-            return False
-        return "abstract_overwrite" in signature.parameters
-
     def __add_solver_implementation_files(self, solver):
-        kwargs = {"subdirectory": self._subdirectory}
-        if self.__solver_accepts_abstract_overwrite(solver):
-            kwargs["abstract_overwrite"] = self._abstract_overwrite
         solver.add_implementation_files_to_project(
             self._project.namespace,
             self._project.output,
             self._dimensions,
-            **kwargs,
         )
 
     # TODO: Move to solvers
@@ -485,7 +470,6 @@ thus appreciate any citation of the original release paper
             peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(particles)
         )
         update_particle_association_action_set.descend_invocation_order = sort_descend_invocation_order_within_action_sets
-        update_particle_association_action_set.parallel = True
 
         update_particle_parallel_state_action_set = (
             peano4.toolbox.particles.api.UpdateParallelState(particles)
@@ -493,7 +477,6 @@ thus appreciate any citation of the original release paper
         update_particle_parallel_state_action_set.descend_invocation_order = (
             sort_descend_invocation_order_within_action_sets
         )
-        update_particle_parallel_state_action_set.parallel = True
 
         #
         # Move particles
@@ -511,7 +494,7 @@ thus appreciate any citation of the original release paper
             os.path.join(os.path.dirname(os.path.realpath(__file__)), "VariableShortcuts.template.h"),
             "VariableShortcuts" + name,
             self._project.namespace,
-            self._subdirectory + ".",
+            ".",
             {
                 "NUMBER_OF_VARIABLES": len(self._particle_variable_names),  # Standardised naming
                 "VARIABLE_NAMES": self._particle_variable_names,
@@ -519,10 +502,9 @@ thus appreciate any citation of the original release paper
                 "SOLVER_NAME": name,
             },
             True,
-            True,
         )
         self._project.output.add(generated_shortcut_file)
-        self._project.output.makefile.add_h_file(self._subdirectory + "VariableShortcuts"+ name + ".h", generated=True)
+        self._project.output.makefile.add_h_file("VariableShortcuts"+ name + ".h", generated=True)
 
     def add_action_set_to_timestepping(self, action_set):
         """!
@@ -563,7 +545,7 @@ thus appreciate any citation of the original release paper
         self.create_grid_with_refinement.add_action_set(action_set)
         self.create_grid_without_refinement.add_action_set(action_set)
 
-    def generate_Peano4_project(self, verbose=False):
+    def generate_Peano4_project(self):
         """!
         Construct a Peano 4 project and return it
 
@@ -578,6 +560,7 @@ thus appreciate any citation of the original release paper
         generate_Peano4_project() again to get a new snapshot/version of the
         Peano setup.
         """
+        verbose = Project._parse_project_arguments().verbose
         setup_logging(level=logging.DEBUG if verbose else logging.INFO)
 
         # self._project.cleanup()
@@ -661,10 +644,6 @@ thus appreciate any citation of the original release paper
             step.use_vertex(tracer_set)
 
     @property
-    def subdirectory(self):
-        return self._subdirectory
-
-    @property
     def additional_includes(self):
         return self._additional_includes
 
@@ -711,7 +690,14 @@ thus appreciate any citation of the original release paper
                 "--clean-first",
                 action=argparse.BooleanOptionalAction,
                 default=None,
-                help="Run make clean before compiling.",
+                help="Wipe CMake's incremental build state before compiling.",
+            )
+            parser.add_argument(
+                "-v",
+                "--verbose",
+                action="store_true",
+                default=False,
+                help="Enable verbose (debug) logging during code generation.",
             )
             Project._project_arguments, _ = parser.parse_known_args()
         return Project._project_arguments

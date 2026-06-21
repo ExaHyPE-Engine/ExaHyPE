@@ -10,7 +10,6 @@ import peano4.output.TemplatedHeaderImplementationFilePair
 import peano4.output.Jinja2TemplatedHeaderFile
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
-from peano4.solversteps.ActionSet import ActionSet
 
 from exahype2.solvers.ButcherTableau import RungeKutta_steps
 
@@ -926,9 +925,6 @@ We use RK("""
         else:
             step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
-    def set_plotter(self, plotter_option):
-        self._plotter_option = plotter_option
-
     def add_actions_to_plot_solution(self, step, output_path):
         """!
         Dump snapshot of solution
@@ -1029,7 +1025,7 @@ We use RK("""
         pass
 
 
-    def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory=""):
+    def add_implementation_files_to_project(self, namespace, output, dimensions):
         """
         The ExaHyPE project will call this operation when it sets
         up the overall environment.
@@ -1045,8 +1041,6 @@ We use RK("""
         else:
             templatefile_prefix += self._solver_template_file_class_name
 
-        if(subdirectory):
-            subdirectory += "/"
 
         # TODO: Combine to one dictionary
         abstractHeaderDictionary = {}
@@ -1056,7 +1050,7 @@ We use RK("""
         self.add_entries_to_text_replacement_dictionary(abstractHeaderDictionary)
         self.add_entries_to_text_replacement_dictionary(implementationDictionary)
 
-        self._variable_shortcuts.generate_shortcut_file(abstractHeaderDictionary, namespace, output, subdirectory)
+        self._variable_shortcuts.generate_shortcut_file(abstractHeaderDictionary, namespace, output)
 
         generated_abstract_header_file = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -1064,9 +1058,8 @@ We use RK("""
                 templatefile_prefix + "Abstract.template.cpp",
                 "Abstract" + self._name,
                 namespace,
-                subdirectory + ".",
+                ".",
                 abstractHeaderDictionary,
-                True,
                 True,
             )
         )
@@ -1076,19 +1069,18 @@ We use RK("""
                 templatefile_prefix + ".template.cpp",
                 self._name,
                 namespace,
-                subdirectory + ".",
+                ".",
                 implementationDictionary,
-                False,
                 True,
             )
         )
 
         output.add(generated_abstract_header_file)
         output.add(generated_solver_files)
-        output.makefile.add_h_file(subdirectory + "Abstract" + self._name + ".h", generated=True)
-        output.makefile.add_h_file(subdirectory + self._name + ".h", generated=True)
-        output.makefile.add_cpp_file(subdirectory + "Abstract" + self._name + ".cpp", generated=True)
-        output.makefile.add_cpp_file(subdirectory + self._name + ".cpp", generated=True)
+        output.makefile.add_h_file("Abstract" + self._name + ".h", generated=True)
+        output.makefile.add_h_file(self._name + ".h", generated=True)
+        output.makefile.add_cpp_file("Abstract" + self._name + ".cpp", generated=True)
+        output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
 
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring

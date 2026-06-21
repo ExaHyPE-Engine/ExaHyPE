@@ -85,14 +85,13 @@ class DoF(object):
         self.name = name
         self.namespace = []
 
-    def configure(self, namespace, association, subdirectory=""):
+    def configure(self, namespace, association):
         """
         Typically called by model as soon as you add an object to it
         """
         self.namespace = [x for x in namespace]
         self.association = association
         self.namespace += [get_subnamespace_for_association(association)]
-        self.subdirectory = subdirectory
 
     def get_full_qualified_type(self):
         result = ""
@@ -123,8 +122,3 @@ class DoF(object):
         result += self.get_full_qualified_type()
         result += ">"
         return result
-
-    @property
-    def subnamespace(self):
-        # Replace "/" with "::" in the directory string to make it a namespace
-        return self.subdirectory.replace("/", "::")

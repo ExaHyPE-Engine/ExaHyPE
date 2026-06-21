@@ -335,10 +335,10 @@ if __name__ == "__main__":
 
     project.output.makefile.add_cpp_file("ForcingTerms.cpph")
 
-    project.output.makefile.add_CXX_flag(f"""-DDENSITY_THRESHOLD=1E-9""")
-    project.output.makefile.add_CXX_flag(f"""-DPRESSURE_THRESHOLD=1E-9""")
-    project.output.makefile.add_CXX_flag(f"""-DTEMPERATURE_THRESHOLD=1E-9""")
-    project.output.makefile.add_CXX_flag(f"""-DVELOCITY_THRESHOLD=1E-9""")
-    project.output.makefile.add_CXX_flag(f"""-DHORIZONTAL_WINDSPEED=0.0""")
+    project.output.makefile.add_compile_definition(f"""DENSITY_THRESHOLD=1E-9""")
+    project.output.makefile.add_compile_definition(f"""PRESSURE_THRESHOLD=1E-9""")
+    project.output.makefile.add_compile_definition(f"""TEMPERATURE_THRESHOLD=1E-9""")
+    project.output.makefile.add_compile_definition(f"""VELOCITY_THRESHOLD=1E-9""")
+    project.output.makefile.add_compile_definition(f"""HORIZONTAL_WINDSPEED=0.0""")
 
-    project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
+    project.generate_and_build()

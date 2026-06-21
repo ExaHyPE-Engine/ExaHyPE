@@ -350,7 +350,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
         """
         super(
             UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles, self
-        ).__init__(descend_invocation_order=1, parallel=False)
+        ).__init__(descend_invocation_order=1)
 
         self._particle_set = particle_set
         self.d = {}

@@ -38,7 +38,7 @@ class CurviTracer(ActionSet):
         unknowns_to_store=0,
     ):
         """@see FiniteVolumesTracing.__init()__."""
-        super(CurviTracer, self).__init__(descend_invocation_order=1, parallel=False)
+        super(CurviTracer, self).__init__(descend_invocation_order=1)
 
         self._fault_coordinates = fault_coordinates
         self._coordinates = coordinates

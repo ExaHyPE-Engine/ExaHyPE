@@ -15,13 +15,13 @@
   {{STORAGE_PRECISION}}*       const NOALIAS QOutCenter = &QOut[volumeIndex(2) * {{PATCH_CARDINALITY_2D}} + volumeIndex(1) * {{PATCH_CARDINALITY_1D}} + volumeIndex(0) * {{NUMBER_OF_DATA}}];
 {% endif %}
 
-  #if defined(WITH_GPU)
-  {{STORAGE_PRECISION}} QC[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
-  {{STORAGE_PRECISION}} QL[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
-  {{STORAGE_PRECISION}} QR[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
-  {{STORAGE_PRECISION}} QO[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+  #if defined(PEANO_WITH_GPU_BACKEND)
+  {{STORAGE_PRECISION}} QC[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  {{STORAGE_PRECISION}} QL[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  {{STORAGE_PRECISION}} QR[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  {{STORAGE_PRECISION}} QO[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
-  SIMD(aligned(QC:ALIGNMENT))
+  SIMD(aligned(QC:PEANO_WITH_ALIGNMENT))
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
     QC[unknown] = QInCenter[unknown];
   }
@@ -33,7 +33,7 @@
   #endif
 
   // QO = QC (all unknowns + aux vars).
-  SIMD(/*aligned(QO,QC:ALIGNMENT)*/)
+  SIMD(/*aligned(QO,QC:PEANO_WITH_ALIGNMENT)*/)
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
     QO[unknown] = QC[unknown];
   }
@@ -44,14 +44,14 @@
   traceEnter("Source term evaluation");
 {% endif %}
   {
-    {{COMPUTE_PRECISION}} sources[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
+    {{COMPUTE_PRECISION}} sources[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 {% if STATELESS_SOURCE_TERM %}
     {{FULL_QUALIFIED_SOLVER_NAME}}::sourceTerm(QC, volumeCentre, volumeSize, timeStamp, timeStepSize, sources);
 {% else %}
     solver.sourceTerm(QC, volumeCentre, volumeSize, timeStamp, timeStepSize, sources);
 {% endif %}
 
-    SIMD(aligned(/*QO,*/sources:ALIGNMENT))
+    SIMD(aligned(/*QO,*/sources:PEANO_WITH_ALIGNMENT))
     for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; ++unknown) {
       QO[unknown] += timeStepSize * sources[unknown];
     }
@@ -67,7 +67,7 @@
   traceEnter("Diffusive source term evaluation");
 {% endif %}
   {
-    {{COMPUTE_PRECISION}} gradQ[{{DIMENSIONS}} * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}})] __attribute__((aligned(ALIGNMENT)));
+    {{COMPUTE_PRECISION}} gradQ[{{DIMENSIONS}} * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}})] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
     for (int normal = 0; normal < {{DIMENSIONS}}; ++normal) {
       // Forward difference: needs the right neighbour. Interior -> QIn;
       // otherwise the right face of this patch (faceQIn[normal + DIMENSIONS]).
@@ -90,20 +90,20 @@
       }
 
       const {{COMPUTE_PRECISION}} invDx = static_cast<{{COMPUTE_PRECISION}}>(0.5) * ({{NUMBER_OF_VOLUMES_PER_AXIS}} / patchSize(normal));
-      SIMD(aligned(gradQ:ALIGNMENT))
+      SIMD(aligned(gradQ:PEANO_WITH_ALIGNMENT))
       for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; ++unknown) {
         gradQ[normal * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}) + unknown] = invDx * (QInRight[unknown] - QC[unknown]);
       }
     }
 
-    {{COMPUTE_PRECISION}} diffSource[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
+    {{COMPUTE_PRECISION}} diffSource[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 {% if STATELESS_DIFFUSIVE_SOURCE_TERM %}
     {{FULL_QUALIFIED_SOLVER_NAME}}::diffusiveSourceTerm(QC, gradQ, volumeCentre, volumeSize, timeStamp, timeStepSize, diffSource);
 {% else %}
     solver.diffusiveSourceTerm(QC, gradQ, volumeCentre, volumeSize, timeStamp, timeStepSize, diffSource);
 {% endif %}
 
-    SIMD(aligned(/*QO,*/diffSource:ALIGNMENT))
+    SIMD(aligned(/*QO,*/diffSource:PEANO_WITH_ALIGNMENT))
     for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; ++unknown) {
       QO[unknown] += timeStepSize * diffSource[unknown];
     }
@@ -165,12 +165,12 @@
       QInRight = &faceQIn[normal + {{DIMENSIONS}}][overlapIdx * {{NUMBER_OF_DATA}}];
     }
 
-    #if defined(WITH_GPU)
-    SIMD(aligned(QL:ALIGNMENT))
+    #if defined(PEANO_WITH_GPU_BACKEND)
+    SIMD(aligned(QL:PEANO_WITH_ALIGNMENT))
     for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
       QL[unknown] = QInLeft[unknown];
     }
-    SIMD(aligned(QR:ALIGNMENT))
+    SIMD(aligned(QR:PEANO_WITH_ALIGNMENT))
     for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
       QR[unknown] = QInRight[unknown];
     }
@@ -193,10 +193,10 @@
     faceCentreRight(normal) += static_cast<{{COMPUTE_PRECISION}}>(0.5) * volumeSize(normal);
 
     // Flux buffers for the two faces: (Left,Center) and (Center,Right)
-    {{COMPUTE_PRECISION}} leftGoingFluxLeftFace  [{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
-    {{COMPUTE_PRECISION}} rightGoingFluxLeftFace [{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
-    {{COMPUTE_PRECISION}} leftGoingFluxRightFace [{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
-    {{COMPUTE_PRECISION}} rightGoingFluxRightFace[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
+    {{COMPUTE_PRECISION}} leftGoingFluxLeftFace  [{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    {{COMPUTE_PRECISION}} rightGoingFluxLeftFace [{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    {{COMPUTE_PRECISION}} leftGoingFluxRightFace [{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    {{COMPUTE_PRECISION}} rightGoingFluxRightFace[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
 {% if STATELESS_RIEMANN_SOLVER==True %}
     const {{COMPUTE_PRECISION}} maxWaveSpeedLeft  = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(QL, QC, faceCentreLeft,  volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxLeftFace,  rightGoingFluxLeftFace);
@@ -212,7 +212,7 @@
 {% endif %}
 
     const {{COMPUTE_PRECISION}} scale = (timeStepSize * {{NUMBER_OF_VOLUMES_PER_AXIS}}) / patchSize(normal);
-    SIMD(aligned(leftGoingFluxLeftFace,rightGoingFluxLeftFace,leftGoingFluxRightFace,rightGoingFluxRightFace/*,QC,QL,QR,QO*/:ALIGNMENT))
+    SIMD(aligned(leftGoingFluxLeftFace,rightGoingFluxLeftFace,leftGoingFluxRightFace,rightGoingFluxRightFace/*,QC,QL,QR,QO*/:PEANO_WITH_ALIGNMENT))
     for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; ++unknown) {
       assertion(std::isfinite(QL[unknown]));
       assertion(std::isfinite(QC[unknown]));
@@ -241,8 +241,8 @@
 {% if enable_trace %}
     traceEnter("Flux evaluation");
 {% endif %}
-    {{COMPUTE_PRECISION}} fluxesLeft[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
-    {{COMPUTE_PRECISION}} fluxesRight[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
+    {{COMPUTE_PRECISION}} fluxesLeft[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    {{COMPUTE_PRECISION}} fluxesRight[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
     {
 {% if STATELESS_FLUX %}
       {{FULL_QUALIFIED_SOLVER_NAME}}::flux(QL, volumeCentreLeft,  volumeSize, timeStamp, timeStepSize, normal, fluxesLeft);
@@ -262,15 +262,15 @@
 {% if enable_trace %}
     traceEnter("Nonconservative product evaluation");
 {% endif %}
-    {{COMPUTE_PRECISION}} ncpCenter[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
-    {{COMPUTE_PRECISION}} ncpLeft  [{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(ALIGNMENT)));
+    {{COMPUTE_PRECISION}} ncpCenter[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    {{COMPUTE_PRECISION}} ncpLeft  [{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
     {
-      {{COMPUTE_PRECISION}} averageQCenter[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
-      {{COMPUTE_PRECISION}} averageQLeft  [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
-      {{COMPUTE_PRECISION}} deltaQCenter  [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
-      {{COMPUTE_PRECISION}} deltaQLeft    [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(ALIGNMENT)));
+      {{COMPUTE_PRECISION}} averageQCenter[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      {{COMPUTE_PRECISION}} averageQLeft  [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      {{COMPUTE_PRECISION}} deltaQCenter  [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      {{COMPUTE_PRECISION}} deltaQLeft    [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
-      SIMD(aligned(averageQCenter,averageQLeft,deltaQCenter,deltaQLeft/*,QC,QL,QR*/:ALIGNMENT))
+      SIMD(aligned(averageQCenter,averageQLeft,deltaQCenter,deltaQLeft/*,QC,QL,QR*/:PEANO_WITH_ALIGNMENT))
       for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; ++unknown) {
         averageQCenter[unknown] = 0.5 * QC[unknown] + 0.5 * QR[unknown];
         averageQLeft  [unknown] = 0.5 * QL[unknown] + 0.5 * QC[unknown];
@@ -320,7 +320,7 @@
 {% endif %}
 
     const {{COMPUTE_PRECISION}} scale = (timeStepSize * {{NUMBER_OF_VOLUMES_PER_AXIS}} * static_cast<{{COMPUTE_PRECISION}}>(0.5)) / patchSize(normal);
-    //SIMD(aligned(QC,QL,QR,QO:ALIGNMENT)) // TODO: Missing alignment for fluxesLeft and fluxesRight
+    //SIMD(aligned(QC,QL,QR,QO:PEANO_WITH_ALIGNMENT)) // TODO: Missing alignment for fluxesLeft and fluxesRight
     UNROLL({{DIMENSIONS}})
     for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; ++unknown) {
       assertion(std::isfinite(QL[unknown]));
@@ -374,8 +374,8 @@
 {% endif %}
 {% endif %}
 
-  #if defined(WITH_GPU)
-  SIMD(aligned(QO:ALIGNMENT))
+  #if defined(PEANO_WITH_GPU_BACKEND)
+  SIMD(aligned(QO:PEANO_WITH_ALIGNMENT))
   for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
     QOutCenter[unknown] = QO[unknown];
   }
@@ -391,7 +391,7 @@
         overlapCell, {{NUMBER_OF_VOLUMES_PER_AXIS}}, {{HALO_SIZE}}, normal
       );
       {{STORAGE_PRECISION}}* const NOALIAS faceQOutData = faceQOut[normal];
-      SIMD(/*aligned(faceQOutData,QOutCenter:ALIGNMENT)*/)
+      SIMD(/*aligned(faceQOutData,QOutCenter:PEANO_WITH_ALIGNMENT)*/)
       for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
         faceQOutData[overlapIdx * {{NUMBER_OF_DATA}} + unknown] = QOutCenter[unknown];
       }
@@ -404,7 +404,7 @@
         overlapCell, {{NUMBER_OF_VOLUMES_PER_AXIS}}, {{HALO_SIZE}}, normal
       );
       {{STORAGE_PRECISION}}* const NOALIAS faceQOutData = faceQOut[normal + {{DIMENSIONS}}];
-      SIMD(/*aligned(faceQOutData,QOutCenter:ALIGNMENT)*/)
+      SIMD(/*aligned(faceQOutData,QOutCenter:PEANO_WITH_ALIGNMENT)*/)
       for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
         faceQOutData[overlapIdx * {{NUMBER_OF_DATA}} + unknown] = QOutCenter[unknown];
       }

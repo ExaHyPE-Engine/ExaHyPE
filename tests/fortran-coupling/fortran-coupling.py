@@ -176,10 +176,9 @@ limiter = exahype2.solvers.limiting.PosterioriLimiting(
 )
 project.add_solver(limiter)
 
-project._project.output.makefile.set_Fortran_compiler("gfortran")
 # project._project.output.makefile.add_Fortran_file("rpn2_testing.f90")
 project._project.output.makefile.add_cpp_file("fvSWE.cpp")
 project._project.output.makefile.add_cpp_file("aderSWE.cpp")
 
-peano4_project = project.generate_Peano4_project(verbose=False)
-peano4_project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
+peano4_project = project.generate_Peano4_project()
+peano4_project.generate_and_build()

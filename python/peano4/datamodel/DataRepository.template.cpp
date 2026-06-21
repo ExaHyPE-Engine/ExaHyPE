@@ -28,7 +28,7 @@ std::uint64_t {{FULL_QUALIFIED_CLASSNAME}}::_globalVertexDataMemoryUsageInBytes 
 std::size_t   {{FULL_QUALIFIED_CLASSNAME}}::_numberOfMaxGlobalSpacetrees = 0;
 
 void {{FULL_QUALIFIED_CLASSNAME}}::init() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 {%- for container in VERTEX_DATA_CONTAINERS %}
   {{ container.fq }}::initDatatype();
 {%- endfor %}
@@ -54,7 +54,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::shutdown() {
   {{ container.name }}StackContainer.clear();
 {%- endfor %}
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 {%- for container in VERTEX_DATA_CONTAINERS %}
   {{ container.fq }}::shutdownDatatype();
 {%- endfor %}
@@ -84,7 +84,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::updateMemoryUsage() {
   _localVertexDataMemoryUsageInBytes += {{container.name}}HangingStackContainer.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
 {%- endfor %}
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   tarch::mpi::Rank::getInstance().allReduce(
     &_localCellDataMemoryUsageInBytes,
     &_globalCellDataMemoryUsageInBytes,

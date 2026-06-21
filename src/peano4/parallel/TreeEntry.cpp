@@ -49,7 +49,7 @@ void   peano4::parallel::TreeEntry::setMaster(int value) {
 
 
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 
 MPI_Datatype peano4::parallel::TreeEntry::Datatype = MPI_DATATYPE_NULL;
 
@@ -227,7 +227,7 @@ void peano4::parallel::TreeEntry::receive(
 }
 #endif
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 void peano4::parallel::TreeEntry::sendAndPollDanglingMessages(const peano4::parallel::TreeEntry& message, int destination, int tag, MPI_Comm communicator ) {
   peano4::parallel::TreeEntry::send(
     message, destination, tag,
@@ -261,4 +261,3 @@ void peano4::parallel::TreeEntry::receiveAndPollDanglingMessages(peano4::paralle
   );
 }
 #endif
-    

@@ -152,7 +152,7 @@ public:
   }
 {% endif -%}
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   static void initDatatype();
   static void shutdownDatatype();
 

@@ -132,7 +132,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 	if ( isLastGridSweepOfTimeStep() ) {
 
-  #ifdef WITH_MPI
+  #ifdef PEANO_WITH_MPI
 
   int newCellUpdates = _cellUpdates;
 
@@ -159,16 +159,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 
   {{FINISH_TIME_STEP_IMPLEMENTATION}}
 
-  }
-}
-
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::logTimeStep() {
-  {{PRINT_TIME_STEP_IMPLEMENTATION}}
-
-  if (getNumberOfTroubledCells() > 0) {
-    logInfo("Solver {{SOLVER_NAME}}:");
-    logInfo("Number of troubled cells: " << getNumberOfTroubledCells());
   }
 }
 

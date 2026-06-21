@@ -133,17 +133,32 @@ set(SOURCES
   instrumentation/Watch.cpp
 )
 
+if(_peano_gpu_backend STREQUAL "cuda")
+  list(APPEND SOURCES accelerator/cuda/tests/ReductionTest.cpp)
+  set_source_files_properties(accelerator/cuda/tests/ReductionTest.cpp PROPERTIES LANGUAGE CUDA)
+elseif(_peano_gpu_backend STREQUAL "hip")
+  list(APPEND SOURCES accelerator/hip/tests/ReductionTest.cpp)
+  set_source_files_properties(accelerator/hip/tests/ReductionTest.cpp PROPERTIES LANGUAGE HIP)
+elseif(_peano_gpu_backend STREQUAL "sycl")
+  list(APPEND SOURCES accelerator/sycl/tests/ReductionTest.cpp)
+elseif(_peano_gpu_backend STREQUAL "kokkos")
+  list(APPEND SOURCES accelerator/kokkos/tests/ReductionTest.cpp)
+elseif(_peano_gpu_backend STREQUAL "ompt")
+  list(APPEND SOURCES accelerator/ompt/tests/ReductionTest.cpp)
+endif()
+
 install_peano_headers(
   PATTERNS ${HEADER_EXTENSIONS_TO_GLOB}
 )
 
 set(TARCH_LINK_LIBRARIES)
-if(WITH_FPE AND CMAKE_DL_LIBS)
+if(PEANO_WITH_FPE AND CMAKE_DL_LIBS)
   list(APPEND TARCH_LINK_LIBRARIES ${CMAKE_DL_LIBS})
 endif()
 
 foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
-  add_peano_library(
+  peano_add_target(
+    TYPE STATIC_LIBRARY
     NAME Tarch${mode}
     MODE ${mode}
     SOURCES ${SOURCES}

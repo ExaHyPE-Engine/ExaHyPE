@@ -27,7 +27,7 @@ void peano4::stacks::tests::TestDataOnStack::clone(const TestDataOnStack& other)
   std::copy(std::begin(other.data), std::end(other.data), std::begin(data));
 }
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 MPI_Datatype peano4::stacks::tests::TestDataOnStack::Datatype = MPI_DATATYPE_NULL;
 
 void peano4::stacks::tests::TestDataOnStack::initDatatype() {

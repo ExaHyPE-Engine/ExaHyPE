@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#if defined(WITH_GPU_OMPT)
+#if defined(PEANO_WITH_GPU_BACKEND_OMPT)
 
 #include <cstdio>
 #include <cstdlib>

@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "NetCDFFileWriter.h"
 
-#ifdef WITH_NETCDF
+#ifdef PEANO_WITH_NETCDF
 
 #include "tarch/mpi/Rank.h"
 
@@ -15,7 +15,7 @@
 #include <string>
 #include <vector>
 
-#if defined(WITH_MPI)
+#if defined(PEANO_WITH_MPI)
 #include <netcdf_par.h>
 #endif
 
@@ -97,7 +97,7 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   unsigned long long totalNodes  = localNumNodes;
   unsigned long long totalFaces  = localNumFaces;
 
-#if defined(WITH_MPI)
+#if defined(PEANO_WITH_MPI)
   auto&    rank          = tarch::mpi::Rank::getInstance();
   MPI_Comm comm          = rank.getCommunicator();
   bool     useParallelIO = rank.getNumberOfRanks() > 1;
@@ -107,7 +107,7 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   bool isMasterRank  = true;
 #endif
 
-#if defined(WITH_MPI)
+#if defined(PEANO_WITH_MPI)
   if (useParallelIO) {
     MPI_Scan(&localNumNodes, &offsetNodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
     MPI_Scan(&localNumFaces, &offsetFaces, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
@@ -129,7 +129,7 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
 
   int ncid = -1;
 
-#if defined(WITH_MPI)
+#if defined(PEANO_WITH_MPI)
   if (useParallelIO) {
     check(
       nc_create_par(filePath.string().c_str(), NC_NETCDF4 | NC_CLOBBER, comm, MPI_INFO_NULL, &ncid),
@@ -312,7 +312,7 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
 
   check(nc_enddef(ncid), "nc_enddef");
 
-#if defined(WITH_MPI)
+#if defined(PEANO_WITH_MPI)
   if (useParallelIO) {
     // Scalar metadata variables are written collectively below. Non-master ranks
     // contribute an empty selection, which keeps parallel NetCDF/HDF5 backends in

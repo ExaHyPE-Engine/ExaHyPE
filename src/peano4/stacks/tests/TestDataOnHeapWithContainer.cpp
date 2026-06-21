@@ -78,7 +78,7 @@ void peano4::stacks::tests::TestDataOnHeapWithContainer::clone(const TestDataOnH
   }
 }
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 MPI_Datatype peano4::stacks::tests::TestDataOnHeapWithContainer::getBoundaryExchangeDatatype() { return MPI_INT; }
 MPI_Datatype peano4::stacks::tests::TestDataOnHeapWithContainer::getMultiscaleDataExchangeDatatype() { return MPI_INT; }
 MPI_Datatype peano4::stacks::tests::TestDataOnHeapWithContainer::getForkDatatype() { return MPI_INT; }

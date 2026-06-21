@@ -45,7 +45,7 @@ class Limiter:
         self.d = deepcopy(dictionary)
 
     def generate_kernels(
-        self, namespace, output, subdirectory, template_prefix, output_path,
+        self, namespace, output, template_prefix, output_path,
         regular_solver_quadpoints, limiter_solver_quadpoints
     ):
 
@@ -66,9 +66,8 @@ class Limiter:
             cppfile_template=template_prefix + "Limiter.template.cpp",
             classname=output_path + "/Limiter",
             namespace=namespace,
-            subdirectory=subdirectory + ".",
+            subdirectory=".",
             dictionary=self.d,
-            default_overwrite=True,
             apply_iteratively=True,
         )
         output.add(generated_kernels)

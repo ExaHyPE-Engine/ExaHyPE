@@ -153,7 +153,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
 }
 {% endif %}
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::shutdownDatatype() {}

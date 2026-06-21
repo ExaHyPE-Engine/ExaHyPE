@@ -10,7 +10,7 @@ class AbstractFDActionSet(ActionSet):
           Reference to creating class
         """
         super(AbstractFDActionSet, self).__init__(
-            descend_invocation_order=1, parallel=False
+            descend_invocation_order=1
         )
         self._solver = solver
         pass

@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/accelerator.h"
 
-#if defined(WITH_GPU_SYCL)
+#if defined(PEANO_WITH_GPU_BACKEND_SYCL)
 
 #include "Device.h"
 #include "tarch/Assertions.h"
@@ -56,4 +56,4 @@ void tarch::accelerator::
   std::memcpy(target, source, sizeInBytes);
 }
 
-#endif // defined(WITH_GPU_SYCL)
+#endif // defined(PEANO_WITH_GPU_BACKEND_SYCL)

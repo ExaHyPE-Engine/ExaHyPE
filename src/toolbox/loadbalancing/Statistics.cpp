@@ -8,7 +8,7 @@
 #include <cstring>
 #include <limits>
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 namespace {
   enum WordIndex : int {
     SumInnerCells = 0,
@@ -136,7 +136,7 @@ toolbox::loadbalancing::Statistics::Statistics():
   _globalMinH(std::numeric_limits<double>::max()),
   _localNumberOfStationarySweeps(0),
   _globalNumberOfStationarySweeps(0)
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   ,
   _globalExchangeRequest(MPI_REQUEST_NULL),
   _globalExchangeInFlight(false)
@@ -145,7 +145,7 @@ toolbox::loadbalancing::Statistics::Statistics():
 }
 
 toolbox::loadbalancing::Statistics::~Statistics() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   // updateGlobalView() may leave a non-blocking Iallreduce in flight. If the
   // program/unit tests terminate right after the last update, MPI_Finalize()
   // can be called with outstanding requests, which may crash/hang.
@@ -164,7 +164,7 @@ toolbox::loadbalancing::Statistics::~Statistics() {
 }
 
 void toolbox::loadbalancing::Statistics::waitForGlobalDataExchange() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   if (not _globalExchangeInFlight) {
     return;
   }
@@ -246,7 +246,7 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
     _localMaxTreeLoad = localMax;
   }
   bool publishLocalAsGlobal = true;
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
     init();
     if (gReady) {

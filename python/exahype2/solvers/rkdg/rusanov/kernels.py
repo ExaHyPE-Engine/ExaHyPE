@@ -3,7 +3,6 @@
 import exahype2
 
 from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
-from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import compute_number_of_face_projection_quantities
 
 def create_Riemann_solver_call(polynomial_basis,
                                face_projections: FaceProjections):
@@ -66,7 +65,7 @@ def create_Riemann_solver_call(polynomial_basis,
       fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.data()
     );
 """
-  elif isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and number_of_face_projections==2:
+  elif isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and face_projections==FaceProjections.SolutionAndGradient:
     return """solveRiemannProblem_pointwise_in_situ_with_gradient_projection(
       [&](
         const double * NOALIAS                  Q,

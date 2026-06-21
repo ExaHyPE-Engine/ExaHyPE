@@ -34,9 +34,8 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             self._time_step_relaxation
         )
 
-    def _generate_kernels(self, output, subdirectory):
+    def _generate_kernels(self, output):
         generate_kernels(
             solver=self,
             output=output,
-            subdirectory=subdirectory,
         )

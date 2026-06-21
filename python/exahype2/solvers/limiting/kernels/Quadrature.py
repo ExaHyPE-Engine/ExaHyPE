@@ -12,7 +12,7 @@ class Quadrature(object):
         self.d = deepcopy(dictionary)
 
     def generate_kernels(
-        self, namespace, output, subdirectory, template_prefix, output_path
+        self, namespace, output, template_prefix, output_path
     ):
         if self.d["POLYNOMIAL_TYPE"] == "legendre":
             QuadratureWeights, QuadratureNodes = MathUtils.getGaussLegendre(
@@ -77,9 +77,8 @@ class Quadrature(object):
             cppfile_template=template_prefix + "Quadrature.template.cpp",
             classname=output_path + "/Quadrature",
             namespace=namespace,
-            subdirectory=subdirectory + ".",
+            subdirectory=".",
             dictionary=self.d,
-            default_overwrite=True,
             apply_iteratively=True,
         )
         output.add(generated_kernels)

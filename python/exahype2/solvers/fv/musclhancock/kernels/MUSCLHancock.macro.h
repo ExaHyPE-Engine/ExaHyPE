@@ -5,7 +5,7 @@
 
 {% macro addSourceAndNCP() %}
   {% if SOURCE_TERM_IMPLEMENTATION!="<none>" or NCP_IMPLEMENTATION!="<none>" %}
-  #if defined(WITH_OPENMP)
+  #if defined(PEANO_WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
@@ -16,7 +16,7 @@
   {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
   // apply source term to extrapolated QIn and add to evolved values in QOut
   {{ terms.applySource('QInGathered', 'sourceGathered', 'volumeCentre', 'timeStamp + 0.5 * timeStepSize') }}
-  #if defined(WITH_OPENMP)
+  #if defined(PEANO_WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
@@ -29,7 +29,7 @@
   for (int normal = 0; normal < {{DIMENSIONS}}; normal ++) {
     // apply ncp to extrapolated QIn and subtract from evolved values in QOut
     {{ terms.applyNCP('QInGathered', 'slopeGathered[normal]', 'cellCenteredNCPGathered[normal]', 'volumeCentre', 'timeStamp + 0.5 * timeStepSize') }}
-    #if defined(WITH_OPENMP)
+    #if defined(PEANO_WITH_OPENMP)
     #pragma omp simd
     #else
     #pragma unroll
@@ -43,7 +43,7 @@
 {% endmacro %}
 
 {% macro gatherSlopes() %}
-  #if defined(WITH_OPENMP)
+  #if defined(PEANO_WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
@@ -60,7 +60,7 @@
 {% endmacro %}
 
 {% macro boundaryExtrapolation() %}
-  #if defined(WITH_OPENMP)
+  #if defined(PEANO_WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll
@@ -100,7 +100,7 @@
   {{ terms.applyNCP('QInGatheredRight', 'slopeGatheredRight[normal]', 'cellCenteredNCPGatheredRight', 'volumeCentreRight', 'timeStamp') }}
   {% endif %}
 
-  #if defined(WITH_OPENMP)
+  #if defined(PEANO_WITH_OPENMP)
   #pragma omp simd
   #else
   #pragma unroll

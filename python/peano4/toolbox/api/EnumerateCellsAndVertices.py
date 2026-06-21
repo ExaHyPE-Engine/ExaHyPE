@@ -3,7 +3,6 @@
 from peano4.solversteps.ActionSet import ActionSet
 
 
-import jinja2
 import peano4
 
 
@@ -144,7 +143,6 @@ class AssignNumbersToMesh(ActionSet):
             """.format(
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
-                construct_marker_name(self._task_name),
             )
         if operation_name == ActionSet.OPERATION_DESTROY_VERTEX:
             return """
@@ -160,7 +158,6 @@ class AssignNumbersToMesh(ActionSet):
               logDebug("set number " << fineGridVertex{}.toString());
             }}
             """.format(
-                construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
@@ -244,14 +241,12 @@ class ClearNumbersOnMesh(ActionSet):
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
-                construct_marker_name(self._task_name),
             )
         if operation_name == ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
             return """
             fineGridCell{}.setNumber(tarch::Enumerator::NoNumber);
             logDebug("reset " << fineGridCell{}.toString());
             """.format(
-                construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
             )

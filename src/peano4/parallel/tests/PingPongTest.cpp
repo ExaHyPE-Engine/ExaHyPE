@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "PingPongTest.h"
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 
 #include "peano4/parallel/StartTraversalMessage.h"
 #include "peano4/parallel/TreeManagementMessage.h"

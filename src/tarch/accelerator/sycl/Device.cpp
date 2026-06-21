@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Device.h"
 
-#if defined(WITH_GPU_SYCL)
+#if defined(PEANO_WITH_GPU_BACKEND_SYCL)
 
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/Device.h"
@@ -89,4 +89,4 @@ void* tarch::accelerator::getSYCLQueue(int number) {
   return &syclQueues[number];
 }
 
-#endif // defined(WITH_GPU_SYCL)
+#endif // defined(PEANO_WITH_GPU_BACKEND_SYCL)

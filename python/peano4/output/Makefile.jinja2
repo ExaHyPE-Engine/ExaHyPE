@@ -1,38 +1,58 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-.PHONY: all solver clean help distclean maintainter-clean
+.PHONY: all solver clean help distclean maintainer-clean
+
+CMAKE_APPLICATION_BUILD_DIR := build.{{EXECUTABLENAME}}
+CMAKE_APPLICATION_CONFIGURE_STAMP := $(CMAKE_APPLICATION_BUILD_DIR)/.configured
+CMAKE_CONFIGURE_ARGS :=
+CMAKE_BUILD_JOBS = $(firstword $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS))))
+
+{% if CMAKE_GENERATOR is defined and CMAKE_GENERATOR != "" -%}
+CMAKE_CONFIGURE_ARGS += -G "{{CMAKE_GENERATOR}}"
+{% endif -%}
+{% if CMAKE_GENERATOR_PLATFORM is defined and CMAKE_GENERATOR_PLATFORM != "" -%}
+CMAKE_CONFIGURE_ARGS += -A "{{CMAKE_GENERATOR_PLATFORM}}"
+{% endif -%}
+{% if CMAKE_GENERATOR_TOOLSET is defined and CMAKE_GENERATOR_TOOLSET != "" -%}
+CMAKE_CONFIGURE_ARGS += -T "{{CMAKE_GENERATOR_TOOLSET}}"
+{% endif -%}
+
+CMAKE_BUILD_PARALLEL_LEVEL ?= $(CMAKE_BUILD_JOBS)
+export CMAKE_BUILD_PARALLEL_LEVEL
+
+CMAKE_BUILD_PARALLEL_ARGS = $(if $(strip $(CMAKE_BUILD_PARALLEL_LEVEL)),--parallel $(strip $(CMAKE_BUILD_PARALLEL_LEVEL)),)
 
 all: solver
 
-solver:
-	bash -c "mkdir -p build.{{EXECUTABLENAME}} && cd build.{{EXECUTABLENAME}} && cmake .. && make $(MAKEFLAGS)"
+$(CMAKE_APPLICATION_CONFIGURE_STAMP): CMakeLists.txt Makefile
+	cmake -S . -B $(CMAKE_APPLICATION_BUILD_DIR) $(CMAKE_CONFIGURE_ARGS)
+	cmake -E touch $(CMAKE_APPLICATION_CONFIGURE_STAMP)
+
+solver: $(CMAKE_APPLICATION_CONFIGURE_STAMP)
+	+cmake --build $(CMAKE_APPLICATION_BUILD_DIR) $(CMAKE_BUILD_PARALLEL_ARGS)
 
 clean:
-	bash -c "cd build.{{EXECUTABLENAME}} && make clean"
+	@test ! -f $(CMAKE_APPLICATION_BUILD_DIR)/CMakeCache.txt || cmake --build $(CMAKE_APPLICATION_BUILD_DIR) --target clean
 
-help:
-	bash -c "cd build.{{EXECUTABLENAME}} && make help"
+help: $(CMAKE_APPLICATION_CONFIGURE_STAMP)
+	cmake --build $(CMAKE_APPLICATION_BUILD_DIR) --target help
 
 GENERATED_H_HEADERS={% for item in GENERATED_H_HEADERS -%} {{item+" "}} {%- endfor %}
 GENERATED_CXX_SOURCES={% for item in GENERATED_CXX_SOURCES -%} {{item+" "}} {%- endfor %}
 GENERATED_FORTRAN_SOURCES={% for item in GENERATED_FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %}
-{% if APP_SUBDIRECTORY %}APP_SUBDIRECTORY={{APP_SUBDIRECTORY}}{% endif %}
 
 distclean:
-	rm -f {{EXECUTABLENAME}}
-	rm -rf build.{{EXECUTABLENAME}}
-	rm -f ${GENERATED_H_HEADERS}
-	rm -f ${GENERATED_CXX_SOURCES}
-	rm -f ${GENERATED_FORTRAN_SOURCES}
-	{% if APP_SUBDIRECTORY %}cd ${APP_SUBDIRECTORY}{% endif %}
-	rm -rf globaldata celldata facedata vertexdata observers repositories tasks kernels
-	rm -f Constants.h
-	{% if APP_SUBDIRECTORY %}cd ..
-	rm -rf ${APP_SUBDIRECTORY}{% endif %}
-	rm -f README-*
-	rm -f .gitignore
-	rm -f Makefile
-	rm -f CMakeLists.txt
+	cmake -E rm -f -- __peano_nonexistent__ {{EXECUTABLENAME}}
+	cmake -E rm -rf -- $(CMAKE_APPLICATION_BUILD_DIR)
+	cmake -E rm -f -- __peano_nonexistent__ ${GENERATED_H_HEADERS}
+	cmake -E rm -f -- __peano_nonexistent__ ${GENERATED_CXX_SOURCES}
+	cmake -E rm -f -- __peano_nonexistent__ ${GENERATED_FORTRAN_SOURCES}
+	cmake -E rm -rf -- globaldata celldata facedata vertexdata observers repositories tasks kernels
+	cmake -E rm -f -- __peano_nonexistent__ Constants.h
+	cmake -E rm -f -- __peano_nonexistent__ README-*
+	cmake -E rm -f -- __peano_nonexistent__ .gitignore
+	cmake -E rm -f -- __peano_nonexistent__ Makefile
+	cmake -E rm -f -- __peano_nonexistent__ CMakeLists.txt
 
 maintainer-clean: distclean

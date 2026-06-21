@@ -34,7 +34,7 @@ namespace {
 } // namespace
 
 void peano4::parallel::Node::initMPIDatatypes() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   StartTraversalMessage::initDatatype();
   TreeManagementMessage::initDatatype();
 
@@ -44,7 +44,7 @@ void peano4::parallel::Node::initMPIDatatypes() {
 }
 
 void peano4::parallel::Node::shutdownMPIDatatypes() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   StartTraversalMessage::shutdownDatatype();
   TreeManagementMessage::shutdownDatatype();
 
@@ -117,7 +117,7 @@ void peano4::parallel::Node::registerId(int id, int masterId) {
   tarch::multicore::Lock lock(_semaphore);
   assertion(_treeEntries.count(id) == 0, id, masterId);
   assertion(id != masterId, id, masterId);
-#ifndef WITH_MPI
+#ifndef PEANO_WITH_MPI
   assertion(isGlobalMaster(id) or _treeEntries.count(masterId) == 1);
 #endif
 
@@ -132,7 +132,7 @@ void peano4::parallel::Node::registerId(int id, int masterId) {
 }
 
 void peano4::parallel::Node::createPendingCommunicators() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   const int        n = MAX_SPACETREES_PER_RANK;
   std::vector<int> local(n), global(n);
   for (int i = 0; i < n; ++i) {
@@ -162,7 +162,7 @@ void peano4::parallel::Node::deregisterId(int id) {
 }
 
 bool peano4::parallel::Node::continueToRun() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     for (int i = 1; i < tarch::mpi::Rank::getInstance().getNumberOfRanks(); i++) {
       StartTraversalMessage message;
@@ -195,7 +195,7 @@ void peano4::parallel::Node::shutdown() {
     tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
   });
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   for (int i = 0; i < MAX_SPACETREES_PER_RANK; i++) {
     if (_dataExchangeCommunicators[i] != MPI_COMM_NULL) {
       MPI_Comm_free(&(_dataExchangeCommunicators[i]));
@@ -205,7 +205,7 @@ void peano4::parallel::Node::shutdown() {
   }
 #endif
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   MPI_Barrier(tarch::mpi::Rank::getInstance().getCommunicator());
 #endif
 }

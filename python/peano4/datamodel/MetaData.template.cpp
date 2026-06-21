@@ -4,7 +4,7 @@
 
 #include <sstream>
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Datatype = MPI_DATATYPE_NULL;
 #endif
 {{STATIC_ATTRIBUTE_DEFINITIONS}}
@@ -65,7 +65,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
 }
 {% endif %}
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
   if (Datatype != MPI_DATATYPE_NULL) {
     return;

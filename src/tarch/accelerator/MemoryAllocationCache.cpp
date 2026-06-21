@@ -61,14 +61,14 @@ struct MemoryAllocationCacheState {
   ~MemoryAllocationCacheState();
 };
 
-static constexpr std::size_t CachedAllocationHeaderSize = ((sizeof(CachedAllocationHeader) + ALIGNMENT - 1) / ALIGNMENT)
-                                                          * ALIGNMENT;
+static constexpr std::size_t CachedAllocationHeaderSize = ((sizeof(CachedAllocationHeader) + PEANO_WITH_ALIGNMENT - 1) / PEANO_WITH_ALIGNMENT)
+                                                          * PEANO_WITH_ALIGNMENT;
 static constexpr std::size_t MaxCachedBlockSize       = 8 * 1024 * 1024;
 static constexpr std::size_t MaxCachedBytesPerThread  = 64 * 1024 * 1024;
 static constexpr std::size_t MaxCachedBlocksPerBucket = 8;
 
 static_assert(
-  CachedAllocationHeaderSize % ALIGNMENT == 0,
+  CachedAllocationHeaderSize % PEANO_WITH_ALIGNMENT == 0,
   "Memory allocation cache metadata has to preserve the public pointer alignment"
 );
 

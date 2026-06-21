@@ -94,14 +94,14 @@ void toolbox::loadbalancing::tests::StatisticsTest::testPackedReductionMatchesSi
     validateEquals(stats.getGlobalNumberOfStationarySweeps(), locSweeps);
   };
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   // Second call: waits for completion of the first non-blocking global exchange and unpacks it.
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
     stats.updateGlobalView();
   }
 #endif
 
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   int mpiInitialised = 0;
   MPI_Initialized(&mpiInitialised);
   if (mpiInitialised and tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
@@ -202,7 +202,7 @@ void toolbox::loadbalancing::tests::StatisticsTest::testStateUpdatesWithoutSplit
 
   // After enough updates without splits, the counter must start increasing again.
   stats.updateGlobalView();
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and stats.getNumberOfStateUpdatesWithoutAnySplit() == 0) {
     // With non-blocking exchange, the split can still appear in the global snapshot for one extra iteration.
     stats.updateGlobalView();

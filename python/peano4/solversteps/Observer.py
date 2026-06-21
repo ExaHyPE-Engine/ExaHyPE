@@ -6,8 +6,6 @@ import peano4.output
 
 
 class Observer(object):
-    default_overwrite = True
-
     def __init__(
         self,
         classname,
@@ -29,8 +27,6 @@ class Observer(object):
         self.vertices = vertices
         self.faces = faces
         self.cells = cells
-
-        subdirectories = set()
 
         self.d = {}
         self.d["OPEN_NAMESPACE"] = ""
@@ -68,11 +64,8 @@ class Observer(object):
                     "name": cell.name,
                     "logical_type_name": cell.get_logical_type_name(),
                     "full_qualified_type": cell.get_full_qualified_type(),
-                    "subnamespace": cell.subnamespace,
                 }
             )
-            if cell.subdirectory:
-                subdirectories.add(cell.subdirectory)
 
         self.d["FACES"] = []
         for face in self.faces:
@@ -82,11 +75,8 @@ class Observer(object):
                     "enumeration_type": face.get_enumeration_type(),
                     "logical_type_name": face.get_logical_type_name(),
                     "full_qualified_type": face.get_full_qualified_type(),
-                    "subnamespace": face.subnamespace,
                 }
             )
-            if face.subdirectory:
-                subdirectories.add(face.subdirectory)
 
         self.d["VERTICES"] = []
         for vertex in self.vertices:
@@ -96,30 +86,14 @@ class Observer(object):
                     "enumeration_type": vertex.get_enumeration_type(),
                     "logical_type_name": vertex.get_logical_type_name(),
                     "full_qualified_type": vertex.get_full_qualified_type(),
-                    "subnamespace": vertex.subnamespace,
                 }
             )
-            if vertex.subdirectory:
-                subdirectories.add(vertex.subdirectory)
 
-        self.d["DATAREPOSITORY_INCLUDES"] = ""
-        if subdirectories:
-            for subdir in subdirectories:
-                self.d["INCLUDES"] = (
-                    '#include "../'
-                    + subdir
-                    + 'repositories/DataRepository.h"\n'
-                    + self.d["INCLUDES"]
-                )
-                self.d["DATAREPOSITORY_INCLUDES"] += (
-                    '#include "../../' + subdir + 'repositories/DataRepository.h"\n'
-                )
-        else:
-            self.d[
-                "DATAREPOSITORY_INCLUDES"
-            ] = '#include "../repositories/DataRepository.h"\n'
+        self.d[
+            "DATAREPOSITORY_INCLUDES"
+        ] = '#include "../repositories/DataRepository.h"\n'
 
-    def generate(self, overwrite, directory):
+    def generate(self, directory, protected_files):
         if not os.path.exists(directory + "/" + self.subdirectory):
             os.mkdir(directory + "/" + self.subdirectory)
 
@@ -138,8 +112,7 @@ class Observer(object):
                 namespace=self.namespace,
                 subdirectory=self.subdirectory,
                 dictionary=self.d,
-                default_overwrite=self.default_overwrite,
                 apply_iteratively=True,
             )
         )
-        generated_implementation_file_pair.generate(overwrite, directory)
+        generated_implementation_file_pair.generate(directory, protected_files)

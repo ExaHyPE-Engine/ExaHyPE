@@ -98,7 +98,7 @@ void peano4::grid::tests::GridVertexTest::testCreateGridVertex() {
 }
 
 void peano4::grid::tests::GridVertexTest::testMPIDatatype() {
-#ifdef WITH_MPI
+#ifdef PEANO_WITH_MPI
   auto&     rank          = tarch::mpi::Rank::getInstance();
   MPI_Comm  comm          = rank.getCommunicator();
   const int me            = rank.getRank();

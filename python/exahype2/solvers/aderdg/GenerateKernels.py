@@ -9,9 +9,9 @@ import exahype2.solvers.aderdg.kernels
 
 from exahype2.solvers.PDETerms import PDETerms
 
-def generate_kernels(solver, d, output, subdirectory):
+def generate_kernels(solver, d, output):
     kernels_namespace = solver._namespace + ["kernels", solver._name]
-    kernels_output_path = subdirectory + "kernels/" + solver._name
+    kernels_output_path = "kernels/" + solver._name
     kernels_templates_prefix = os.path.dirname(os.path.realpath(__file__)) + "/kernels/"
 
     if not os.path.exists(kernels_output_path):
@@ -23,9 +23,8 @@ def generate_kernels(solver, d, output, subdirectory):
             cppfile_template=kernels_templates_prefix + "CellErrorIntegral.template.cpp",
             classname=kernels_output_path + "/CellErrorIntegral",
             namespace=kernels_namespace,
-            subdirectory=subdirectory + ".",
+            subdirectory=".",
             dictionary=d,
-            default_overwrite=True,
             apply_iteratively=True,
         )
     )
@@ -40,9 +39,8 @@ def generate_kernels(solver, d, output, subdirectory):
             cppfile_template=kernels_templates_prefix + "MaxScaledEigenvalue.template.cpp",
             classname=kernels_output_path + "/MaxScaledEigenvalue",
             namespace=kernels_namespace,
-            subdirectory=subdirectory + ".",
+            subdirectory=".",
             dictionary=d,
-            default_overwrite=True,
             apply_iteratively=True,
         )
     )
@@ -57,9 +55,8 @@ def generate_kernels(solver, d, output, subdirectory):
             cppfile_template=kernels_templates_prefix + "FaceIntegral.template.cpp",
             classname=kernels_output_path + "/FaceIntegral",
             namespace=kernels_namespace,
-            subdirectory=subdirectory + ".",
+            subdirectory=".",
             dictionary=d,
-            default_overwrite=True,
             apply_iteratively=True,
         )
     )
@@ -75,9 +72,8 @@ def generate_kernels(solver, d, output, subdirectory):
             else kernels_templates_prefix + "RiemannSolverNonlinear.template.cpp",
             classname=kernels_output_path + "/RiemannSolver",
             namespace=kernels_namespace,
-            subdirectory=subdirectory + ".",
+            subdirectory=".",
             dictionary=d,
-            default_overwrite=True,
             apply_iteratively=True,
         )
     )
@@ -93,9 +89,8 @@ def generate_kernels(solver, d, output, subdirectory):
                 cppfile_template=kernels_templates_prefix + "PointSources.template.cpp",
                 classname=kernels_output_path + "/PointSources",
                 namespace=kernels_namespace,
-                subdirectory=subdirectory + ".",
+                subdirectory=".",
                 dictionary=d,
-                default_overwrite=True,
                 apply_iteratively=True,
             )
         )
@@ -111,9 +106,8 @@ def generate_kernels(solver, d, output, subdirectory):
                 cppfile_template=kernels_templates_prefix + "Gemms.template.cpp",
                 classname=kernels_output_path + "/Gemms",
                 namespace=kernels_namespace,
-                subdirectory=subdirectory + ".",
+                subdirectory=".",
                 dictionary=d,
-                default_overwrite=True,
                 apply_iteratively=True,
             )
         )
@@ -123,19 +117,19 @@ def generate_kernels(solver, d, output, subdirectory):
         solver._user_action_set_includes += (f'#include "{kernels_output_path}/Gemms.h"\n')
 
     exahype2.solvers.aderdg.kernels.AMRRoutines(d).generate_kernels(
-        solver, kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
+        solver, kernels_namespace, output, kernels_templates_prefix, kernels_output_path
     )
     exahype2.solvers.aderdg.kernels.BufferSizes(d).generate_kernels(
-        solver, kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
+        solver, kernels_namespace, output, kernels_templates_prefix, kernels_output_path
     )
     exahype2.solvers.aderdg.kernels.DGMatrices(d).generate_kernels(
-        solver, kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
+        solver, kernels_namespace, output, kernels_templates_prefix, kernels_output_path
     )
     exahype2.solvers.aderdg.kernels.Quadrature(d).generate_kernels(
-        solver, kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
+        solver, kernels_namespace, output, kernels_templates_prefix, kernels_output_path
     )
     exahype2.solvers.aderdg.kernels.FusedSpaceTimePredictorVolumeIntegral(d).generate_kernels(
-        solver, kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
+        solver, kernels_namespace, output, kernels_templates_prefix, kernels_output_path
     )
 
     solver._space_time_predictor_call = jinja2.Template(
